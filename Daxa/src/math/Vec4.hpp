@@ -184,4 +184,5 @@ namespace daxa {
         return os;
     }
 
+    using Vec4 = TVec4<f32>;
 }
