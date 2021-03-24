@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../DaxaCore.hpp"
+#include <ostream>
 
-#include <iostream>
+#include "../DaxaCore.hpp"
 
 #include "math.hpp"
 
@@ -10,14 +10,20 @@
 
 namespace daxa {
 
-
     template<std::floating_point T>
     struct TVec3 {
         constexpr TVec3() = default;
 
         constexpr TVec3(TVec2<T> xy, T z) :
-            x{ xy.x }, y{ xy.y }, z{ z }
+            x{ xy.x },
+            y{ xy.y },
+            z{ z }
         {}
+
+        constexpr static TVec3<T> From255(u8 r, u8 g, u8 b)
+        {
+            return TVec3{ static_cast<T>(r) / 255.0, static_cast<T>(g) / 255.0, static_cast<T>(b) / 255.0 };
+        }
 
         constexpr T const* data() const { return &x; }
 
@@ -104,25 +110,41 @@ namespace daxa {
     }
 
     template<std::floating_point T>
-    inline constexpr TVec3<T> min(TVec3<T> vecA, TVec3<T> vecB)
+    inline TVec3<T> round(TVec3<T> vec)
     {
-        return { std::min(vecA.x, vecB.x),
-                    std::min(vecA.y, vecB.y),
-                    std::min(vecA.z, vecB.z) };
+        return TVec3{ std::round(vec.x), std::round(vec.y), std::round(vec.z) };
     }
 
     template<std::floating_point T>
-    inline constexpr TVec3<T> max(TVec3<T> vecA, TVec3<T> vecB)
+    inline TVec3<T> floor(TVec3<T> vec)
     {
-        return { std::max(vecA.x, vecB.x),
-                    std::max(vecA.y, vecB.y),
-                    std::max(vecA.z, vecB.z) };
+        return TVec3{ std::floor(vec.x), std::floor(vec.y), std::floor(vec.z) };
     }
 
     template<std::floating_point T>
-    inline T norm(TVec3<T> vec)
+    inline TVec3<T> ceil(TVec3<T> vec)
     {
-        return sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+        return TVec3{ std::ceil(vec.x), std::ceil(vec.y), std::ceil(vec.z) };
+    }
+
+    template<std::floating_point T>
+    inline constexpr TVec3<T> min(TVec3<T> a, TVec3<T> b)
+    {
+        return {
+            std::min(a.x, b.x),
+            std::min(a.y, b.y),
+            std::min(a.z, b.z)
+        };
+    }
+
+    template<std::floating_point T>
+    inline constexpr TVec3<T> max(TVec3<T> a, TVec3<T> b)
+    {
+        return {
+            std::max(a.x, b.x),
+            std::max(a.y, b.y),
+            std::max(a.z, b.z)
+        };
     }
 
     template<std::floating_point T>
@@ -170,16 +192,9 @@ namespace daxa {
     }
 
     template<std::floating_point T>
-    inline std::istream& operator>>(std::istream& is, TVec3<T>& vec)
-    {
-        is >> vec.x >> vec.y >> vec.z;
-        return is;
-    }
-
-    template<std::floating_point T>
     inline std::ostream& operator<<(std::ostream& os, TVec3<T> const& vec)
     {
-        os << '(' << vec.x << ", " << vec.y << ", " << vec.z << ')';
+        os << '(' << vec.x << ',' << vec.y << ',' << vec.z << ')';
         return os;
     }
 

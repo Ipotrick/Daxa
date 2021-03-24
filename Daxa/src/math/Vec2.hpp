@@ -1,6 +1,6 @@
 #pragma once
 
-#include <iostream>
+#include <ostream>
 
 #include "../DaxaCore.hpp"
 
@@ -10,7 +10,6 @@ namespace daxa {
 
 	template<std::floating_point T>
 	struct TVec2 {
-
 		constexpr T const* data() const { return &x; }
 
 		constexpr T& operator[](u32 index)
@@ -111,13 +110,19 @@ namespace daxa {
 	template<std::floating_point T>
 	inline constexpr TVec2<T> min(TVec2<T> vecA, TVec2<T> vecB)
 	{
-		return { std::min(vecA.x, vecB.x), std::min(vecA.y, vecB.y) };
+		return { 
+			std::min(vecA.x, vecB.x), 
+			std::min(vecA.y, vecB.y)
+		};
 	}
 
 	template<std::floating_point T>
 	inline constexpr TVec2<T> max(TVec2<T> vecA, TVec2<T> vecB)
 	{
-		return { std::max(vecA.x, vecB.x), std::max(vecA.y, vecB.y) };
+		return { 
+			std::max(vecA.x, vecB.x),
+			std::max(vecA.y, vecB.y)
+		};
 	}
 
 	template<std::floating_point T>
@@ -171,16 +176,9 @@ namespace daxa {
 	}
 
 	template<std::floating_point T>
-	inline std::istream& operator>>(std::istream& is, TVec2<T>& vec)
-	{
-		is >> vec.x >> vec.y;
-		return is;
-	}
-
-	template<std::floating_point T>
 	inline std::ostream& operator<<(std::ostream& os, const TVec2<T>& vec)
 	{
-		os << '(' << vec.x << ", " << vec.y << ')';
+		os << '(' << vec.x << ',' << vec.y << ')';
 		return os;
 	}
 
