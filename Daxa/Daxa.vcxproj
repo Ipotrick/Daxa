@@ -30,6 +30,7 @@
     <ClInclude Include="src\math\Vec2.hpp" />
     <ClInclude Include="src\math\Vec3.hpp" />
     <ClInclude Include="src\math\Vec4.hpp" />
+    <ClInclude Include="src\types\OwningMutex.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\stb_image.cpp" />

@@ -13,6 +13,9 @@
     <Filter Include="src\math">
       <UniqueIdentifier>{a25eca48-c302-4cd5-848a-9e52245d2d3c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\types">
+      <UniqueIdentifier>{d09e8861-4a63-4092-bcf9-5051db7eca8a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\Daxa.hpp">
@@ -47,6 +50,9 @@
     </ClInclude>
     <ClInclude Include="src\math\Rota2.hpp">
       <Filter>src\math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\types\OwningMutex.hpp">
+      <Filter>src\types</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

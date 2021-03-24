@@ -5,12 +5,13 @@ The engine is not tested in any extensive format.
 
 Things the engine aims to provide:
 * simplicity
-* fast compile times
-* audio
-* easy to use GUI
-* fast simple 2d and 3d vulkan renderer
-* scriptable rendering in the main renderers
 * a heavy focus on multithreading friendliness
+* fast compile times
+* scriptable rendering in the main renderers
+* fast simple 2d and 3d vulkan renderer
+* entity component manager
+* easy to use GUI
+* audio
 * 2d and 3d collision detection
 * 2d and 3d physics solvers
 
