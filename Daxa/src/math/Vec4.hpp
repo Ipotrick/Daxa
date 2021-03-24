@@ -1,18 +1,36 @@
 #pragma once
 
-#include <iostream>
+#include <ostream>
 
 #include "../DaxaCore.hpp"
 
 #include "math.hpp"
 
+#include "Vec3.hpp"
+
 namespace daxa {
 
     template<std::floating_point T>
     struct TVec4 {
+        constexpr TVec4() = default;
+
+        constexpr TVec4(TVec2<T> vec, T z, T w) :
+            x{ vec.x },
+            y{ vec.y },
+            z{ z },
+            w{ w }
+        {} 
+        
+        constexpr TVec4(TVec2<T> vec, T w) :
+            x{ vec.x },
+            y{ vec.y },
+            z{ vec.z },
+            w{ w }
+        {}
+
         constexpr static TVec4<T> From255(u8 r, u8 g, u8 b, u8 a = 255)
         {
-            return TVec4{ static_cast<T>(r) / 255.0f, static_cast<T>(g) / 255.0f, static_cast<T>(b) / 255.0f, static_cast<T>(a) / 255.0f };
+            return TVec4{ static_cast<T>(r) / 255.0, static_cast<T>(g) / 255.0, static_cast<T>(b) / 255.0, static_cast<T>(a) / 255.0 };
         }
 
         constexpr T const* data() const { return &x; }
@@ -36,12 +54,6 @@ namespace daxa {
     };
 
     template<std::floating_point T>
-    inline constexpr  TVec4<T> operator-(TVec4<T> const& vec)
-    {
-        return TVec4<T>(-vec.x, -vec.y, -vec.z, -vec.w);
-    }
-
-    template<std::floating_point T>
     bool operator==(const TVec4<T>& a, const TVec4<T>& b)
     {
         return a.x == b.x &&
@@ -54,6 +66,12 @@ namespace daxa {
     bool operator!=(const TVec4<T>& a, const TVec4<T>& b)
     {
         return !operator==(a, b);
+    }
+
+    template<std::floating_point T>
+    inline constexpr  TVec4<T> operator-(TVec4<T> const& vec)
+    {
+        return TVec4<T>(-vec.x, -vec.y, -vec.z, -vec.w);
     }
 
     #define DAXA_TVEC4_OPERATOR_IMPL(op)\
@@ -108,9 +126,43 @@ namespace daxa {
     }
 
     template<std::floating_point T>
-    inline T norm(TVec4<T> const& vec)
+    inline TVec4<T> round(TVec4<T> vec)
     {
-        return sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z + vec.w * vec.w);
+        return TVec4{ std::round(vec.x), std::round(vec.y), std::round(vec.z), std::round(vec.w) };
+    }
+
+    template<std::floating_point T>
+    inline TVec4<T> floor(TVec4<T> vec)
+    {
+        return TVec4{ std::floor(vec.x), std::floor(vec.y), std::floor(vec.z), std::floor(vec.w) };
+    }
+
+    template<std::floating_point T>
+    inline TVec4<T> ceil(TVec4<T> vec)
+    {
+        return TVec4{ std::ceil(vec.x), std::ceil(vec.y), std::ceil(vec.z), std::ceil(vec.w) };
+    }
+
+    template<std::floating_point T>
+    inline constexpr TVec4<T> min(TVec4<T> a, TVec4<T> b)
+    {
+        return { 
+            std::min(a.x, b.x),
+            std::min(a.y, b.y),
+            std::min(a.z, b.z),
+            std::min(a.w, b.w)
+        };
+    }
+
+    template<std::floating_point T>
+    inline constexpr TVec4<T> max(TVec4<T> a, TVec4<T> b)
+    {
+        return {
+            std::max(a.x, b.x),
+            std::max(a.y, b.y),
+            std::max(a.z, b.z),
+            std::max(a.w, b.w)
+        };
     }
 
     template<std::floating_point T>
@@ -120,22 +172,15 @@ namespace daxa {
     }
 
     template<std::floating_point T>
-    inline T dot(TVec4<T> const& vecA, TVec4<T> const& vecB)
+    inline T dot(TVec4<T> const& a, TVec4<T> const& b)
     {
-        return (vecA.x * vecB.x + vecA.y * vecB.y + vecA.z * vecB.z + vecA.w * vecB.w);
-    }
-
-    template<std::floating_point T>
-    inline std::istream& operator>>(std::istream& is, TVec4<T>& vec)
-    {
-        is >> vec.x >> vec.y >> vec.z >> vec.w;
-        return is;
+        return (a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w);
     }
 
     template<std::floating_point T>
     inline std::ostream& operator<<(std::ostream& os, TVec4<T> const& vec)
     {
-        os << '(' << vec.x << ", " << vec.y << ", " << vec.z << ", " << vec.w << ')';
+        os << '(' << vec.x << ',' << vec.y << ',' << vec.z << ',' << vec.w << ')';
         return os;
     }
 
