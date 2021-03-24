@@ -5,21 +5,42 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
-    <Filter Include="Headerdateien">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
-    <Filter Include="Ressourcendateien">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
-    </Filter>
     <Filter Include="Quelldateien\src">
       <UniqueIdentifier>{3e15c254-1047-4cff-af28-6979367d78f0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="dependencies">
+      <UniqueIdentifier>{0bb50620-66ef-4822-93d8-08e136bbbf26}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{7dbf6693-93c8-4c1f-8ca8-1cf8f9fdd152}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\Daxa.cpp">
-      <Filter>Quelldateien\src</Filter>
+    <ClInclude Include="src\DaxaCore.hpp">
+      <Filter>Quelldateien</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Daxa.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\stb_image.hpp">
+      <Filter>dependencies</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\tiny_obj_loader.hpp">
+      <Filter>dependencies</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\vk_mem_alloc.hpp">
+      <Filter>dependencies</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\VkBootstrap.hpp">
+      <Filter>dependencies</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="dependencies\stb_image.cpp">
+      <Filter>dependencies</Filter>
+    </ClCompile>
+    <ClCompile Include="dependencies\VkBootstrap.cpp">
+      <Filter>dependencies</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
