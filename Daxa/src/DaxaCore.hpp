@@ -16,3 +16,9 @@ using i8 = int8_t;
 
 using f32 = float;
 using f64 = double;
+
+#ifdef _DEBUG
+#define DAXA_ASSERT(x) x
+#else
+#define DAXA_ASSERT(x)
+#endif

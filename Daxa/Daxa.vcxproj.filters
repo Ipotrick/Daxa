@@ -1,24 +1,20 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Quelldateien">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="Quelldateien\src">
-      <UniqueIdentifier>{3e15c254-1047-4cff-af28-6979367d78f0}</UniqueIdentifier>
-    </Filter>
     <Filter Include="dependencies">
       <UniqueIdentifier>{0bb50620-66ef-4822-93d8-08e136bbbf26}</UniqueIdentifier>
     </Filter>
     <Filter Include="include">
       <UniqueIdentifier>{7dbf6693-93c8-4c1f-8ca8-1cf8f9fdd152}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{27d5c43a-b4c5-455b-86fb-3bfd59df15f5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\math">
+      <UniqueIdentifier>{a25eca48-c302-4cd5-848a-9e52245d2d3c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\DaxaCore.hpp">
-      <Filter>Quelldateien</Filter>
-    </ClInclude>
     <ClInclude Include="include\Daxa.hpp">
       <Filter>include</Filter>
     </ClInclude>
@@ -33,6 +29,24 @@
     </ClInclude>
     <ClInclude Include="dependencies\VkBootstrap.hpp">
       <Filter>dependencies</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DaxaCore.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\math\Vec2.hpp">
+      <Filter>src\math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\math\Vec3.hpp">
+      <Filter>src\math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\math\Vec4.hpp">
+      <Filter>src\math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\math\math.hpp">
+      <Filter>src\math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\math\Rota2.hpp">
+      <Filter>src\math</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
