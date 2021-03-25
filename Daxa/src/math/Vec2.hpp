@@ -24,8 +24,8 @@ namespace daxa {
 			return (&x)[index];
 		}
 
-		T x{ 0.0f };
-		T y{ 0.0f };
+		T x{ static_cast<T>(0.0) };
+		T y{ static_cast<T>(0.0) };
 	};
 
 	template<std::floating_point T>
@@ -134,8 +134,8 @@ namespace daxa {
 	template<std::floating_point T>
 	inline TVec2<T> normalize(TVec2<T> vec)
 	{
-		DAXA_ASSERT(vec.x != 0.0f || vec.y != 0.0f);
-		T invLen = 1.0f / length(vec);
+		DAXA_ASSERT(vec.x != static_cast<T>(0.0) || vec.y != static_cast<T>(0.0));
+		T invLen = static_cast<T>(1.0) / length(vec);
 		return { vec.x * invLen, vec.y * invLen };
 	}
 
@@ -185,8 +185,8 @@ namespace daxa {
 	template<std::floating_point T>
 	inline TVec2<T> rotate(TVec2<T> vec, T angle)
 	{
-		T ca = std::cos(angle * (PI_F32 / 180.0f));
-		T sa = std::sin(angle * (PI_F32 / 180.0f));
+		T ca = std::cos(angle * (PI<T>::value / static_cast<T>(180.0)));
+		T sa = std::sin(angle * (PI<T>::value / static_cast<T>(180.0)));
 		return { ca * vec.x - sa * vec.y , sa * vec.x + ca * vec.y };
 	}
 
@@ -211,21 +211,21 @@ namespace daxa {
 	template<std::floating_point T>
 	inline T angle(TVec2<T> vec)
 	{
-		if (vec.y == 0)
-			return vec.x < 0 ? 180 : 0;
-		else if (vec.x == 0)
-			return vec.y < 0 ? 270 : 90;
+		if (vec.y == static_cast<T>(0.0))
+			return vec.x < static_cast<T>(0.0) ? static_cast<T>(180.0) : static_cast<T>(0.0);
+		else if (vec.x == static_cast<T>(0.0))
+			return vec.y < static_cast<T>(0.0) ? static_cast<T>(270.0) : static_cast<T>(90.0);
 
-		if (vec.y > 0)
-			if (vec.x > 0)
+		if (vec.y > static_cast<T>(0.0))
+			if (vec.x > static_cast<T>(0.0))
 				return std::atan(vec.y / vec.x) * RAD<T>::value;
 			else
-				return 180 - std::atan(vec.y / -vec.x) * RAD<T>::value;
+				return static_cast<T>(180.0) - std::atan(vec.y / -vec.x) * RAD<T>::value;
 		else
-			if (vec.x > 0)
-				return 360 - std::atan(-vec.y / vec.x) * RAD<T>::value;
+			if (vec.x > static_cast<T>(0.0))
+				return static_cast<T>(360.0) - std::atan(-vec.y / vec.x) * RAD<T>::value;
 			else
-				return 180 + std::atan(-vec.y / -vec.x) * RAD<T>::value;
+				return static_cast<T>(180.0) + std::atan(-vec.y / -vec.x) * RAD<T>::value;
 	}
 
 	template<std::floating_point T>
@@ -248,7 +248,7 @@ namespace daxa {
 	inline constexpr bool isPointInAABB(TVec2<T> p, TVec2<T> aabbCenter, TVec2<T> aabbSize)
 	{
 		const TVec2<T> relativePointPos = p - aabbCenter;
-		aabbSize *= 0.5f;
+		aabbSize *= static_cast<T>(0.5);
 		return
 			relativePointPos.x <= aabbSize.x &
 			relativePointPos.y <= aabbSize.y &

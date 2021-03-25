@@ -27,7 +27,7 @@ namespace daxa {
 
         constexpr static TVec3<T> From255(u8 r, u8 g, u8 b)
         {
-            return TVec3{ static_cast<T>(r) / 255.0, static_cast<T>(g) / 255.0, static_cast<T>(b) / 255.0 };
+            return TVec3{ static_cast<T>(r) / static_cast<T>(255.0), static_cast<T>(g) / static_cast<T>(255.0), static_cast<T>(b) / static_cast<T>(255.0) };
         }
 
         constexpr T const* data() const { return &x; }
@@ -44,9 +44,9 @@ namespace daxa {
             return (&x)[index];
         }
 
-        T x{ 0.0f }; // x coordinate
-        T y{ 0.0f }; // y coordinate
-        T z{ 0.0f }; // z coordinate
+        T x{ static_cast<T>(0.0) }; // x coordinate
+        T y{ static_cast<T>(0.0) }; // y coordinate
+        T z{ static_cast<T>(0.0) }; // z coordinate
     };
 
     template<std::floating_point T>
@@ -162,7 +162,7 @@ namespace daxa {
     inline TVec3<T> normalize(TVec3<T> vec)
     {
         const T n = norm(vec);
-        if (n != 0.0)     {
+        if (n != static_cast<T>(0.0))     {
             return TVec3<T>(vec.x / n,
                 vec.y / n,
                 vec.z / n);
@@ -193,7 +193,7 @@ namespace daxa {
     template<std::floating_point T>
     inline constexpr TVec3<T> reflect(TVec3<T> vec, TVec3<T> n)
     {
-        return vec - (2.0f * dot(n, vec)) * n;
+        return vec - (static_cast<T>(2.0) * dot(n, vec)) * n;
     }
 
     template<std::floating_point T>

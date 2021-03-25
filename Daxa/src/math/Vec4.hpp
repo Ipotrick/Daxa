@@ -47,10 +47,10 @@ namespace daxa {
             return (&x)[index];
         }
 
-        T x{ 0.0f }; // x coordinate
-        T y{ 0.0f }; // y coordinate
-        T z{ 0.0f }; // z coordinate
-        T w{ 0.0f }; // w coordinate
+        T x{ static_cast<T>(0.0) }; // x coordinate
+        T y{ static_cast<T>(0.0) }; // y coordinate
+        T z{ static_cast<T>(0.0) }; // z coordinate
+        T w{ static_cast<T>(0.0) }; // w coordinate
     };
 
     template<std::floating_point T>

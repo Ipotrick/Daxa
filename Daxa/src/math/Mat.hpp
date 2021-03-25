@@ -13,6 +13,7 @@
 namespace daxa {
 
 	template<size_t M, size_t N, std::floating_point T>
+	requires requires{ M >= 2; M <= 4; N >= 2; N <= 4; }
 	struct Mat {
 
 		std::array<T, M * N>& linear()
@@ -40,7 +41,7 @@ namespace daxa {
 			return values[index];
 		}
 
-		std::array<std::array<T, N>, M> values{ 0 };
+		std::array<std::array<T, N>, M> values{ static_cast<T>(0.0) };
 	};
 
 	template<size_t M, size_t N, std::floating_point T>
@@ -114,7 +115,6 @@ namespace daxa {
 	}
 
 	template<size_t M, size_t N, std::floating_point T>
-		requires requires() { M >= 2; M <= 4; N >= 2; N <= 4; }
 	inline constexpr VecType<M,T>::type operator*(const Mat<M, N, T>& mat, typename VecType<N, T>::type vec)
 	{
 		typename VecType<M, T>::type ret;
@@ -128,7 +128,6 @@ namespace daxa {
 	}
 	
 	template<size_t M, size_t N, std::floating_point T>
-		requires requires() { M >= 2; M <= 4; N >= 2; N <= 4; }
 	inline constexpr VecType<N, T>::type operator*(typename VecType<M, T>::type vec, const Mat<M, N, T>& mat)
 	{
 		typename VecType<N, T>::type ret;
