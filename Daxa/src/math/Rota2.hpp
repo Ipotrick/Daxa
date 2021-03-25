@@ -35,8 +35,8 @@ namespace daxa {
 			return { cos,sin };
 		}
 
-		T cos{ 1.0f };
-		T sin{ 0.0f };
+		T cos{ static_cast<T>(1.0) };
+		T sin{ static_cast<T>(0.0) };
 	};
 
 	template<std::floating_point T>

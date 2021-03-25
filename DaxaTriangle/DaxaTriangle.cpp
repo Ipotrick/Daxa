@@ -8,18 +8,6 @@ const int SCREEN_HEIGHT = 480;
 
 int main(int argc, char* args[])
 {
-    daxa::Mat3x3 mat{ std::array{1.0f,2.0f,1.0f}, std::array{2.0f,2.0f,2.0f}, std::array{ 2.0f,3.0f,6.0f } };
-
-    auto inv = daxa::inverse(mat);
-    std::cout << "inverse: " << inv << std::endl;
-
-    daxa::Mat3x3 mat3{ std::array{2.0f,0.0f,0.0f}, std::array{0.0f,2.0f,0.0f}, {1.0f, 5.0f, -4.0f} };
-    auto mat4 = daxa::reform<4, 3>(mat3);
-    daxa::Vec3 vec3{ 1.0f,2.0f,3.0f };
-
-    std::cout << mat4 << " * " << vec3 << " = ";
-    auto res = mat4 * vec3;
-    std::cout << res << std::endl;
 
     //The window we'll be rendering to
     SDL_Window* window = NULL;

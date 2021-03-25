@@ -37,13 +37,11 @@ namespace daxa {
 
         constexpr T& operator[](u32 index)
         {
-            DAXA_ASSERT(index < 4);
             return (&x)[index];
         }
 
         constexpr T const operator[](u32 index) const
         {
-            DAXA_ASSERT(index < 4);
             return (&x)[index];
         }
 
@@ -185,5 +183,6 @@ namespace daxa {
     }
 
     using Vec4 = TVec4<f32>;
+    using Vec4f64 = TVec4<f64>;
 
 }

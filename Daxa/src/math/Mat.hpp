@@ -298,4 +298,13 @@ namespace daxa {
 	using Mat4x2 = Mat<4, 2, f32>;
 	using Mat4x3 = Mat<4, 3, f32>;
 	using Mat4x4 = Mat<4, 4, f32>;
+	using Mat2x2f64 = Mat<2, 2, f64>;
+	using Mat2x3f64 = Mat<2, 3, f64>;
+	using Mat2x4f64 = Mat<2, 4, f64>;
+	using Mat3x2f64 = Mat<3, 2, f64>;
+	using Mat3x3f64 = Mat<3, 3, f64>;
+	using Mat3x4f64 = Mat<3, 4, f64>;
+	using Mat4x2f64 = Mat<4, 2, f64>;
+	using Mat4x3f64 = Mat<4, 3, f64>;
+	using Mat4x4f64 = Mat<4, 4, f64>;
 }

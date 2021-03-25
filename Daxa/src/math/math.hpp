@@ -9,7 +9,7 @@ namespace daxa {
 
 	template<std::floating_point T>
 	struct PI {
-		T value = PI_F64;
+		T value = static_cast<T>(PI_F64);
 	};
 
 	static inline constexpr f64 RAD_F64 = 180.0 / PI_F64;
@@ -17,18 +17,18 @@ namespace daxa {
 
 	template<std::floating_point T>
 	struct RAD {
-		T value = RAD_F64;
+		T value = static_cast<T>(RAD_F64);
 	};
 
 	// credit: https://en.wikipedia.org/wiki/Fast_inverse_square_root
 	inline constexpr float invSqrt(f32 number)
 	{
-		const float x2 = number * 0.5f;
-		const float threehalfs = 1.5f;
+		const f32 x2 = number * 0.5f;
+		const f32 threehalfs = 1.5f;
 
 		union {
-			float f;
-			uint32_t i;
+			f32 f;
+			u32 i;
 		} conv = { .f = number };
 		conv.i = 0x5f3759df - (conv.i >> 1);
 		conv.f *= threehalfs - (x2 * conv.f * conv.f);
