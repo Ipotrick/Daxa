@@ -14,5 +14,6 @@
 #include "../src/math/Vec3.hpp"
 #include "../src/math/Vec4.hpp"
 #include "../src/math/Rota2.hpp"
+#include "../src/math/Mat.hpp"
 
 #include "../src/types/OwningMutex.hpp"

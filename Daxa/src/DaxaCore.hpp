@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cinttypes>
+#include <cassert>
 
 using u64 = uint64_t;
 using i64 = int64_t;
@@ -18,7 +19,7 @@ using f32 = float;
 using f64 = double;
 
 #ifdef _DEBUG
-#define DAXA_ASSERT(x) x
+#define DAXA_ASSERT(x) assert(x)
 #else
 #define DAXA_ASSERT(x)
 #endif
