@@ -29,13 +29,13 @@ namespace daxa {
 
         constexpr T& operator[](u32 index)
         {
-            DAXA_ASSERT(i < 3);
+            DAXA_ASSERT(index < 3);
             return (&x)[index];
         }
 
         constexpr const T& operator[](u32 index) const
         {
-            DAXA_ASSERT(i < 3);
+            DAXA_ASSERT(index < 3);
             return (&x)[index];
         }
 

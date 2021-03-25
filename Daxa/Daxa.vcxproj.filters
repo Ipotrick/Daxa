@@ -54,6 +54,9 @@
     <ClInclude Include="src\types\OwningMutex.hpp">
       <Filter>src\types</Filter>
     </ClInclude>
+    <ClInclude Include="src\math\Mat.hpp">
+      <Filter>src\math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\stb_image.cpp">
