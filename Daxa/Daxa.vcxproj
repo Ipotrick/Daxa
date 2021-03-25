@@ -28,6 +28,7 @@
     <ClInclude Include="src\math\Mat.hpp" />
     <ClInclude Include="src\math\math.hpp" />
     <ClInclude Include="src\math\Rota2.hpp" />
+    <ClInclude Include="src\math\Vec.hpp" />
     <ClInclude Include="src\math\Vec2.hpp" />
     <ClInclude Include="src\math\Vec3.hpp" />
     <ClInclude Include="src\math\Vec4.hpp" />

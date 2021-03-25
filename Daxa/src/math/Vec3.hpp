@@ -13,6 +13,11 @@ namespace daxa {
     template<std::floating_point T>
     struct TVec3 {
         constexpr TVec3() = default;
+        constexpr TVec3(T x, T y, T z) : 
+            x{ x },
+            y{ y }, 
+            z{ z }
+        {}
 
         constexpr TVec3(TVec2<T> xy, T z) :
             x{ xy.x },

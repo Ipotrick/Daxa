@@ -57,6 +57,9 @@
     <ClInclude Include="src\math\Mat.hpp">
       <Filter>src\math</Filter>
     </ClInclude>
+    <ClInclude Include="src\math\Vec.hpp">
+      <Filter>src\math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\stb_image.cpp">
