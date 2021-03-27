@@ -24,6 +24,7 @@
     <ClInclude Include="dependencies\VkBootstrap.hpp" />
     <ClInclude Include="dependencies\vk_mem_alloc.hpp" />
     <ClInclude Include="include\Daxa.hpp" />
+    <ClInclude Include="src\DaxaApplication.hpp" />
     <ClInclude Include="src\DaxaCore.hpp" />
     <ClInclude Include="src\math\Mat.hpp" />
     <ClInclude Include="src\math\math.hpp" />
@@ -32,11 +33,17 @@
     <ClInclude Include="src\math\Vec2.hpp" />
     <ClInclude Include="src\math\Vec3.hpp" />
     <ClInclude Include="src\math\Vec4.hpp" />
-    <ClInclude Include="src\types\OwningMutex.hpp" />
+    <ClInclude Include="src\platform\Window.hpp" />
+    <ClInclude Include="src\threading\Jobs.hpp" />
+    <ClInclude Include="src\threading\OwningMutex.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\stb_image.cpp" />
     <ClCompile Include="dependencies\VkBootstrap.cpp" />
+    <ClCompile Include="src\Daxa.cpp" />
+    <ClCompile Include="src\DaxaApplication.cpp" />
+    <ClCompile Include="src\platform\Window.cpp" />
+    <ClCompile Include="src\threading\Jobs.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -157,6 +164,7 @@
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalIncludeDirectories>S:\VulkanSDK\1.2.170.0\Include;$(ProjectDir)dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

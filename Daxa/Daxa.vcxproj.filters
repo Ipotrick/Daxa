@@ -16,6 +16,12 @@
     <Filter Include="src\types">
       <UniqueIdentifier>{d09e8861-4a63-4092-bcf9-5051db7eca8a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\threading">
+      <UniqueIdentifier>{3705ee84-c3cc-45bd-8909-2b8a03547361}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\platform">
+      <UniqueIdentifier>{73316a58-b799-4260-90fa-154c3668c056}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\Daxa.hpp">
@@ -51,14 +57,23 @@
     <ClInclude Include="src\math\Rota2.hpp">
       <Filter>src\math</Filter>
     </ClInclude>
-    <ClInclude Include="src\types\OwningMutex.hpp">
-      <Filter>src\types</Filter>
-    </ClInclude>
     <ClInclude Include="src\math\Mat.hpp">
       <Filter>src\math</Filter>
     </ClInclude>
     <ClInclude Include="src\math\Vec.hpp">
       <Filter>src\math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DaxaApplication.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\threading\Jobs.hpp">
+      <Filter>src\threading</Filter>
+    </ClInclude>
+    <ClInclude Include="src\threading\OwningMutex.hpp">
+      <Filter>src\threading</Filter>
+    </ClInclude>
+    <ClInclude Include="src\platform\Window.hpp">
+      <Filter>src\platform</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -67,6 +82,18 @@
     </ClCompile>
     <ClCompile Include="dependencies\VkBootstrap.cpp">
       <Filter>dependencies</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DaxaApplication.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\threading\Jobs.cpp">
+      <Filter>src\threading</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Daxa.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platform\Window.cpp">
+      <Filter>src\platform</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
