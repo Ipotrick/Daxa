@@ -5,6 +5,8 @@
 
 #include <iostream>
 
+static u32 dummy{ 0 };
+
 int main(int argc, char* args[])
 {
     daxa::initialize();
@@ -13,7 +15,7 @@ int main(int argc, char* args[])
 
     bool running{ true };
     while (running) {
-        auto window = app.windowMutex.lock();
+        auto window = app.windowMutex->lock();
         if (window->update(0.01f)) {
             running = false;
             continue;
@@ -21,8 +23,6 @@ int main(int argc, char* args[])
     }
 
     using namespace std::chrono_literals;
-
-    std::this_thread::sleep_for(1s);
 
     daxa::cleanup();
 

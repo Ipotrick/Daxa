@@ -34,6 +34,7 @@
     <ClInclude Include="src\math\Vec3.hpp" />
     <ClInclude Include="src\math\Vec4.hpp" />
     <ClInclude Include="src\platform\Window.hpp" />
+    <ClInclude Include="src\rendering\Vulkan.hpp" />
     <ClInclude Include="src\threading\Jobs.hpp" />
     <ClInclude Include="src\threading\OwningMutex.hpp" />
   </ItemGroup>
@@ -43,6 +44,7 @@
     <ClCompile Include="src\Daxa.cpp" />
     <ClCompile Include="src\DaxaApplication.cpp" />
     <ClCompile Include="src\platform\Window.cpp" />
+    <ClCompile Include="src\rendering\Vulkan.cpp" />
     <ClCompile Include="src\threading\Jobs.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

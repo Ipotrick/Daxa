@@ -1,28 +1,62 @@
 #include "Window.hpp"
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_vulkan.h>
+#include <iostream>
+
+#include <VkBootstrap.hpp>
 
 namespace daxa {
-	Window::Window(std::string name, std::array<u32, 2> size) :
-		name{ name }, size{ size }
+	Window::Window(std::string name, std::array<u32, 2> size, VkInstance instance, VkDevice device, VkPhysicalDevice physicalDevice) :
+		name{ name }, size{ size }, vulkanInstance{instance}, vulkanDevice{device}, vulkanPhysicalDevice{physicalDevice}
 	{
-		SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_SHOWN);
+		//create blank SDL window for our application
 		sdlWindowHandle = SDL_CreateWindow(
-			this->name.c_str(), //window title
-			SDL_WINDOWPOS_UNDEFINED, //window position x (don't care)
-			SDL_WINDOWPOS_UNDEFINED, //window position y (don't care)
-			this->size[0],  //window width in pixels
-			this->size[1], //window height in pixels
-			window_flags
+			name.c_str(),				//window title
+			SDL_WINDOWPOS_UNDEFINED,	//window position x (don't care)
+			SDL_WINDOWPOS_UNDEFINED,	//window position y (don't care)
+			size[0],					//window width in pixels
+			size[1],					//window height in pixels
+			SDL_WINDOW_VULKAN
 		);
-		sdlWindowId = SDL_GetWindowID(reinterpret_cast<SDL_Window*>(sdlWindowHandle));
+
+		if (!sdlWindowHandle) {
+			std::cerr << SDL_GetError() << std::endl;
+			exit(-1);
+		}
+
+		sdlWindowId = SDL_GetWindowID(sdlWindowHandle);
+
+		SDL_Vulkan_CreateSurface(sdlWindowHandle, instance, &surface);
+
+		vkb::SwapchainBuilder swapchainBuilder{ vulkanPhysicalDevice, vulkanDevice, surface };
+
+		vkb::Swapchain vkbSwapchain = swapchainBuilder
+			.use_default_format_selection()
+			//use vsync present mode
+			.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
+			.set_desired_extent(size[0], size[1])
+			.build()
+			.value();
+
+		//store swapchain and its related images
+		swapchain = vkbSwapchain.swapchain;
+		swapchainImages = vkbSwapchain.get_images().value();
+		swapchainImageViews = vkbSwapchain.get_image_views().value();
+
+		swapchainImageFormat = vkbSwapchain.image_format;
 	}
 	Window::~Window()
 	{
-		if (sdlWindowHandle) {
-			SDL_DestroyWindow(reinterpret_cast<SDL_Window*>(sdlWindowHandle));
+		vkDestroySwapchainKHR(vulkanDevice, swapchain, nullptr);
+
+		//destroy swapchain resources
+		for (int i = 0; i < swapchainImageViews.size(); i++) {
+
+			vkDestroyImageView(vulkanDevice, swapchainImageViews[i], nullptr);
 		}
+		
+		vkDestroySurfaceKHR(vulkanInstance, surface, nullptr);
+		SDL_DestroyWindow(sdlWindowHandle);
+		sdlWindowHandle = nullptr;
 	}
 	void Window::setSize(std::array<u32, 2> size)
 	{
@@ -45,10 +79,8 @@ namespace daxa {
 		bool close{ false };
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
-			if (event.window.windowID == sdlWindowId) {
-				if (event.type = SDL_QUIT) {
-					close = true;
-				}
+			if (event.type == SDL_QUIT) {
+				close = true;
 			}
 		}
 		return close;
@@ -56,12 +88,5 @@ namespace daxa {
 	bool Window::isFocused() const
 	{
 		return false;
-	}
-	void Window::swapBuffers()
-	{
-	}
-	void* Window::getNativeHandle()
-	{
-		return sdlWindowHandle;
 	}
 }
