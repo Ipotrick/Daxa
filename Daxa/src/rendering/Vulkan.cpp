@@ -4,15 +4,19 @@
 #include <algorithm>
 
 #include <VkBootstrap.hpp>
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_vulkan.h>
 
 namespace daxa {
 	namespace vulkan {
-		VkInstance instance{ VK_NULL_HANDLE };
-		VkPhysicalDevice mainPhysicalDevice{ VK_NULL_HANDLE };
-		VkDevice mainDevice{ VK_NULL_HANDLE };
-		VkDebugUtilsMessengerEXT debugMessenger{ VK_NULL_HANDLE };
+		VkInstance					instance{ VK_NULL_HANDLE };
+		VkDebugUtilsMessengerEXT	debugMessenger{ VK_NULL_HANDLE };
+		VkPhysicalDevice			mainPhysicalDevice{ VK_NULL_HANDLE };
+		VkDevice					mainDevice{ VK_NULL_HANDLE };
+		VkQueue						mainGraphicsQueue{ VK_NULL_HANDLE };
+		u32							mainGraphicsQueueFamiltyIndex{ VK_NULL_HANDLE };
+		VkQueue						mainTransferQueue{ VK_NULL_HANDLE };
+		u32							mainTransferQueueFamiltyIndex{ VK_NULL_HANDLE };
+		VkQueue						mainComputeQueue{ VK_NULL_HANDLE };
+		u32							mainComputeQueueFamiltyIndex{ VK_NULL_HANDLE };
 
 		void initialise()
 		{
@@ -36,6 +40,8 @@ namespace daxa {
 			vkb::PhysicalDevice physicalDevice = selector
 				.set_minimum_version(1, 1)
 				.defer_surface_initialization()
+				.require_separate_compute_queue()
+				.require_separate_transfer_queue()
 				.select()
 				.value();
 
@@ -46,6 +52,13 @@ namespace daxa {
 			vkb::Device vkbDevice = deviceBuilder.build().value();
 
 			mainDevice = vkbDevice.device;
+
+			mainGraphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
+			mainGraphicsQueueFamiltyIndex = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
+			mainTransferQueue = vkbDevice.get_queue(vkb::QueueType::transfer).value();
+			mainTransferQueueFamiltyIndex = vkbDevice.get_queue_index(vkb::QueueType::transfer).value();
+			mainComputeQueue = vkbDevice.get_queue(vkb::QueueType::compute).value();
+			mainComputeQueueFamiltyIndex = vkbDevice.get_queue_index(vkb::QueueType::compute).value();
 		}
 
 		void cleanup()

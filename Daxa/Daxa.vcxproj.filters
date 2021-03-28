@@ -25,6 +25,9 @@
     <Filter Include="src\rendering">
       <UniqueIdentifier>{05487c95-8473-4338-8e35-949c4c47d36d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\rendering\wrapper">
+      <UniqueIdentifier>{72d90b73-031a-4ce2-b9e8-ccec4ee704c7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\Daxa.hpp">
@@ -81,6 +84,15 @@
     <ClInclude Include="src\rendering\Vulkan.hpp">
       <Filter>src\rendering</Filter>
     </ClInclude>
+    <ClInclude Include="src\rendering\wrapper\CommandBuffer.hpp">
+      <Filter>src\rendering\wrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\wrapper\CommandPool.hpp">
+      <Filter>src\rendering\wrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\Rendering.hpp">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\stb_image.cpp">
@@ -103,6 +115,13 @@
     </ClCompile>
     <ClCompile Include="src\rendering\Vulkan.cpp">
       <Filter>src\rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\rendering\vulkan\CommandPool.cpp" />
+    <ClCompile Include="src\rendering\wrapper\CommandPool.cpp">
+      <Filter>src\rendering\wrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="src\rendering\wrapper\VulkanAbstraction.cpp">
+      <Filter>src\rendering\wrapper</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

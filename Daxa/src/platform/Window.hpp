@@ -8,6 +8,8 @@
 #include "../DaxaCore.hpp"
 #include "../rendering/Vulkan.hpp"
 
+struct SDL_Window;
+
 namespace daxa {
 	/**
 	 * Window abstraction class.
@@ -38,7 +40,6 @@ namespace daxa {
 
 		void swapBuffers();
 
-	private:
 		std::string name;
 		std::array<u32, 2> size;
 
