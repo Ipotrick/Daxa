@@ -95,7 +95,7 @@ namespace daxa{
 			);
 			if (!bWorkerRunning) return;
 
-			auto [handle, job] = jobQueue.back();
+			auto [handle, job, _] = jobQueue.back();
 			jobQueue.pop_back();
 
 			lock.unlock();

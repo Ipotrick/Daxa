@@ -1180,7 +1180,6 @@ namespace vkb {
 				return detail::Result<PhysicalDevice>{ PhysicalDeviceError::no_surface_provided };
 		}
 
-
 		std::vector<VkPhysicalDevice> physical_devices;
 
 		auto physical_devices_ret = detail::get_vector<VkPhysicalDevice>(

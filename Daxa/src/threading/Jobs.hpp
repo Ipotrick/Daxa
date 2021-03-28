@@ -8,6 +8,7 @@
 #include <deque>
 #include <optional>
 #include <memory>
+#include <algorithm>
 
 #include "../DaxaCore.hpp"
 
@@ -45,7 +46,7 @@ namespace daxa {
 		static void cleanup();
 
 		template<CJob T>
-		static Handle schedule(T&& job)
+		static Handle schedule(T&& job, f32 priority = 0.0f)
 		{
 			std::unique_lock lock(mtx);
 			Handle handle;
@@ -64,13 +65,19 @@ namespace daxa {
 			jg.unfinishedJobs = 1;
 			jg.mem = new T(std::move(job));
 			jg.destructor = destructorOf<T>;
-			jobQueue.push_back({ handle, reinterpret_cast<T*>(jg.mem) });
+			auto place = std::upper_bound(
+				jobQueue.begin(), 
+				jobQueue.end(), 
+				QueuedJob{ .priority = priority }, 
+				[](const QueuedJob& a, const QueuedJob& b) { return a.priority < b.priority; }
+			);
+			jobQueue.insert(place, { handle, reinterpret_cast<T*>(jg.mem), priority });
 			workerCV.notify_one();
 			return handle;
 		}
 
 		template<CJob T>
-		static Handle schedule(std::vector<T>&& jobs)
+		static Handle schedule(std::vector<T>&& jobs, f32 priority = 0.0f)
 		{
 			std::unique_lock lock(mtx);
 			Handle handle;
@@ -89,9 +96,21 @@ namespace daxa {
 			jg.unfinishedJobs = jobs.size();
 			jg.mem = new std::vector<T>(std::move(jobs));
 			jg.destructor = destructorOf<T>;
+
+			static std::vector<QueuedJob> tempQueuedJobsBuffer;
+			tempQueuedJobsBuffer.clear();
+			tempQueuedJobsBuffer.reserve(jobs.size());
 			for (auto& job : *reinterpret_cast<std::vector<T>*>(jg.mem)) {
-				jobQueue.push_back({ handle, &job });
+				tempQueuedJobsBuffer.push_back({ handle, &job, priority });
 			}
+			auto insertionPlace = std::upper_bound(
+				jobQueue.begin(), 
+				jobQueue.end(), 
+				QueuedJob{.priority = priority}, 
+				[](const QueuedJob& a, const QueuedJob& b) { return a.priority < b.priority; }
+			);
+			jobQueue.insert(insertionPlace, tempQueuedJobsBuffer.begin(), tempQueuedJobsBuffer.end());
+
 			workerCV.notify_all();
 			return handle;
 		}
@@ -131,7 +150,13 @@ namespace daxa {
 			u32 version{ 0 };
 		};
 
-		inline static std::deque<std::pair<Handle, IJob*>> jobQueue;
+		struct QueuedJob {
+			Handle handle;
+			IJob* job{ nullptr };
+			f32 priority{ 0.0f };
+		};
+
+		inline static std::deque<QueuedJob> jobQueue;
 		inline static std::vector<JobBatchSlot> jobBatches;
 		inline static std::vector<u32> freeList;
 	};
