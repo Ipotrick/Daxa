@@ -5,13 +5,26 @@
 
 #include <iostream>
 
-static u32 dummy{ 0 };
-
 int main(int argc, char* args[])
 {
     daxa::initialize();
 
     daxa::Application app{ "Test", 256, 256 };
+
+    daxa::CommandPool cmdPool{};
+
+    daxa::CommandBuffer cmd{ cmdPool };
+    
+    vkBeginCommandBuffer(cmd, ...);
+
+    vkCmdBeginRenderPass(cmd, ...);
+
+    //rendering commands go here
+
+    vkCmdEndRenderPass(cmd);
+
+    vkEndCommandBuffer(cmd)
+
 
     bool running{ true };
     while (running) {

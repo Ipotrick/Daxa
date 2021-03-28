@@ -15,6 +15,8 @@
 
 #include "../src/DaxaApplication.hpp"
 
+#include "../src/rendering/Rendering.hpp"
+
 namespace daxa 
 {
 	void initialize();

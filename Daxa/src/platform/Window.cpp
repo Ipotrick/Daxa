@@ -3,6 +3,8 @@
 #include <iostream>
 
 #include <VkBootstrap.hpp>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_vulkan.h>
 
 namespace daxa {
 	Window::Window(std::string name, std::array<u32, 2> size, VkInstance instance, VkDevice device, VkPhysicalDevice physicalDevice) :
