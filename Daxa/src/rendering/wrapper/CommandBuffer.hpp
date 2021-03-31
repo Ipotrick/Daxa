@@ -4,16 +4,20 @@
 #include "CommandPool.hpp"
 
 namespace daxa {
+    namespace vk {
+        class CommandBuffer {
+        public:
+            CommandBuffer(VkCommandPool pool, VkDevice device = vk::mainDevice);
 
+            CommandBuffer(CommandBuffer&& other) noexcept;
 
-    class CommandBuffer {
-    public:
-        CommandBuffer(VkCommandPool pool, VkDevice device);
+            operator const VkCommandBuffer&();
 
-        CommandBuffer(const CommandPool& pool);
-
-        operator VkCommandBuffer();
-
-        VkCommandBuffer buffer{ VK_NULL_HANDLE };
-    };
+            const VkCommandBuffer& get();
+        private:
+            VkDevice device{ VK_NULL_HANDLE };
+            VkCommandPool pool{ VK_NULL_HANDLE };
+            VkCommandBuffer buffer{ VK_NULL_HANDLE };
+        };
+    }
 }

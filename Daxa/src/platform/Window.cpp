@@ -68,6 +68,10 @@ namespace daxa {
 	{
 		return size;
 	}
+	VkExtent2D Window::getExtent() const
+	{
+		return VkExtent2D{size[0],size[1]};
+	}
 	void Window::setName(std::string name)
 	{
 		this->name = std::move(name);
@@ -83,6 +87,11 @@ namespace daxa {
 		while (SDL_PollEvent(&event)) {
 			if (event.type == SDL_QUIT) {
 				close = true;
+			}
+			else if (event.type == SDL_KEYDOWN) {
+				if (event.key.keysym.sym == SDLK_SPACE) {
+					bSpacePressed ^= 1;
+				}
 			}
 		}
 		return close;

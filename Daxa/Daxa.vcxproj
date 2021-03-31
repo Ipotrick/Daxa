@@ -38,6 +38,10 @@
     <ClInclude Include="src\rendering\Vulkan.hpp" />
     <ClInclude Include="src\rendering\wrapper\CommandBuffer.hpp" />
     <ClInclude Include="src\rendering\wrapper\CommandPool.hpp" />
+    <ClInclude Include="src\rendering\wrapper\Fence.hpp" />
+    <ClInclude Include="src\rendering\wrapper\Pipeline.hpp" />
+    <ClInclude Include="src\rendering\wrapper\Semaphore.hpp" />
+    <ClInclude Include="src\rendering\wrapper\Shader.hpp" />
     <ClInclude Include="src\threading\Jobs.hpp" />
     <ClInclude Include="src\threading\OwningMutex.hpp" />
   </ItemGroup>
@@ -48,10 +52,14 @@
     <ClCompile Include="src\DaxaApplication.cpp" />
     <ClCompile Include="src\platform\Window.cpp" />
     <ClCompile Include="src\rendering\Vulkan.cpp" />
-    <ClCompile Include="src\rendering\vulkan\CommandPool.cpp" />
-    <ClCompile Include="src\rendering\wrapper\CommandPool.cpp" />
-    <ClCompile Include="src\rendering\wrapper\VulkanAbstraction.cpp" />
+    <ClCompile Include="src\rendering\wrapper\WrapperCompilationUnit.cpp" />
     <ClCompile Include="src\threading\Jobs.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\rendering\shader\colortri.frag" />
+    <None Include="src\rendering\shader\colortri.vert" />
+    <None Include="src\rendering\shader\redtri.frag" />
+    <None Include="src\rendering\shader\redtri.vert" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -173,12 +181,23 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalIncludeDirectories>S:\VulkanSDK\1.2.170.0\Include;$(ProjectDir)dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>compileshaders.bat $(ProjectDir) $(TargetDir)</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>compiling shaders...</Message>
+    </PostBuildEvent>
+    <CustomBuildStep>
+      <Inputs>S:\VulkanSDK}1.2.170.0\Bin\;%(Inputs)</Inputs>
+      <Message />
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -191,6 +210,7 @@
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <AdditionalIncludeDirectories>S:\VulkanSDK\1.2.170.0\Include;$(ProjectDir)dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -199,6 +219,16 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CustomBuildStep>
+      <Inputs>S:\VulkanSDK}1.2.170.0\Bin\;%(Inputs)</Inputs>
+      <Message />
+    </CustomBuildStep>
+    <PostBuildEvent>
+      <Command>compileshaders.bat $(ProjectDir) $(TargetDir)</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>compiling shaders...</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

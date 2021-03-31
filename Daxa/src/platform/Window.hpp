@@ -30,6 +30,7 @@ namespace daxa {
 
 		void setSize(std::array<u32, 2> size);
 		std::array<u32,2> getSize() const;
+		VkExtent2D getExtent() const;
 
 		void setName(std::string name);
 		const std::string& getName();
@@ -46,6 +47,7 @@ namespace daxa {
 		SDL_Window* sdlWindowHandle{ nullptr };
 		u32 sdlWindowId{ 0xFFFFFFFF };
 
+		bool bSpacePressed{ false };
 		VkPresentModeKHR presentMode{ VK_PRESENT_MODE_FIFO_KHR };
 		VkInstance vulkanInstance{ VK_NULL_HANDLE };
 		VkDevice vulkanDevice{ VK_NULL_HANDLE };
