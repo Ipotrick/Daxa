@@ -18,6 +18,8 @@ using i8 = int8_t;
 using f32 = float;
 using f64 = double;
 
+using uz = size_t;
+
 #ifdef _DEBUG
 #define DAXA_ASSERT(x) assert(x)
 #else

@@ -4,8 +4,19 @@
 
 #include "../DaxaCore.hpp"
 
+#define VK_CHECK(x)                                                 \
+	do                                                              \
+	{                                                               \
+		VkResult err = x;                                           \
+		if (err)                                                    \
+		{                                                           \
+			std::cout <<"Detected Vulkan error: " << err << std::endl; \
+			abort();                                                \
+		}                                                           \
+	} while (0)
+
 namespace daxa{
-	namespace vulkan {
+	namespace vk {
 		extern VkInstance				instance;
 		extern VkDebugUtilsMessengerEXT debugMessenger;
 		extern VkPhysicalDevice			mainPhysicalDevice;

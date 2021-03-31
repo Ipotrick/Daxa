@@ -6,7 +6,7 @@
 #include <VkBootstrap.hpp>
 
 namespace daxa {
-	namespace vulkan {
+	namespace vk {
 		VkInstance					instance{ VK_NULL_HANDLE };
 		VkDebugUtilsMessengerEXT	debugMessenger{ VK_NULL_HANDLE };
 		VkPhysicalDevice			mainPhysicalDevice{ VK_NULL_HANDLE };

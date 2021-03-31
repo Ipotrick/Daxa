@@ -12,14 +12,14 @@ namespace daxa {
 			printf("error initializing SDL: %s\n", SDL_GetError());
 			exit(-1);
 		}
-		vulkan::initialise();
+		vk::initialise();
 		Jobs::initialize();
 	}
 
 	void cleanup()
 	{
 		Jobs::cleanup();
-		vulkan::initialise();
+		vk::initialise();
 		SDL_Quit();
 	}
 }
