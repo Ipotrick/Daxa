@@ -6,7 +6,7 @@
 #include <VkBootstrap.hpp>
 
 namespace daxa {
-	namespace vk {
+	namespace vkh {
 		VkInstance					instance{ VK_NULL_HANDLE };
 		VkDebugUtilsMessengerEXT	debugMessenger{ VK_NULL_HANDLE };
 		VkPhysicalDevice			mainPhysicalDevice{ VK_NULL_HANDLE };
@@ -17,6 +17,7 @@ namespace daxa {
 		u32							mainTransferQueueFamiltyIndex{ VK_NULL_HANDLE };
 		VkQueue						mainComputeQueue{ VK_NULL_HANDLE };
 		u32							mainComputeQueueFamiltyIndex{ VK_NULL_HANDLE };
+		VmaAllocator				allocator;
 
 		void initialise()
 		{
@@ -59,11 +60,17 @@ namespace daxa {
 			mainTransferQueueFamiltyIndex = vkbDevice.get_queue_index(vkb::QueueType::transfer).value();
 			mainComputeQueue = vkbDevice.get_queue(vkb::QueueType::compute).value();
 			mainComputeQueueFamiltyIndex = vkbDevice.get_queue_index(vkb::QueueType::compute).value();
+
+			VmaAllocatorCreateInfo allocatorInfo = {};
+			allocatorInfo.physicalDevice = vkh::mainPhysicalDevice;
+			allocatorInfo.device = vkh::mainDevice;
+			allocatorInfo.instance = vkh::instance;
+			vmaCreateAllocator(&allocatorInfo, &allocator);
 		}
 
 		void cleanup()
 		{
-			std::cout << "cleanup\n";
+			vmaDestroyAllocator(allocator);
 			vkb::destroy_debug_utils_messenger(instance, debugMessenger);
 			vkDestroyDevice(mainDevice, nullptr);
 			vkDestroyInstance(instance, nullptr);

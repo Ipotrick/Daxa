@@ -11,9 +11,9 @@ namespace daxa {
 		windowMutex = std::make_unique<OwningMutex<Window>>(
 			name, 
 			std::array<u32, 2>{ width, height }, 
-			vk::instance, 
-			vk::mainDevice,
-			vk::mainPhysicalDevice
+			vkh::instance, 
+			vkh::mainDevice,
+			vkh::mainPhysicalDevice
 			);
 
 		init_default_renderpass();
@@ -21,67 +21,47 @@ namespace daxa {
 		init_framebuffers();
 
 		init_pipelines();
+
+		loadMeshes();
 	}
 
 	Application::~Application()
 	{
-		cleanup();
+		Application::cleanup();
 	}
 
 	void Application::draw()
 	{
-		VK_CHECK(vkResetFences(vk::mainDevice, 1, &_renderFence.get()));
+		semaPool.flush();
+		cmdPool.flush();
+
+		VK_CHECK(vkResetFences(vkh::mainDevice, 1, &*renderFence));
 
 		auto window = windowMutex->lock();
 
 		uint32_t swapchainImageIndex;
-		VK_CHECK(vkAcquireNextImageKHR(vk::mainDevice, window->swapchain, 1000000000, _presentSemaphore, nullptr, &swapchainImageIndex));
+		VK_CHECK(vkAcquireNextImageKHR(vkh::mainDevice, window->swapchain, 1000000000, *presentSem, nullptr, &swapchainImageIndex));
 
-		//now that we are sure that the commands finished executing, we can safely reset the command buffer to begin recording again.
-		VK_CHECK(vkResetCommandBuffer(cmd, 0));
+		VkCommandBuffer cmd = cmdPool.getBuffer();
 
-		//begin the command buffer recording. We will use this command buffer exactly once, so we want to let Vulkan know that
-		VkCommandBufferBeginInfo cmdBeginInfo = {};
-		cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		cmdBeginInfo.pNext = nullptr;
-
-		cmdBeginInfo.pInheritanceInfo = nullptr;
-		cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
+		auto cmdBeginInfo = vkh::makeCmdBeginInfo();
 		VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
-
-
-		///
-		/// RENDER PASS BEGIN
-		/// 
-		/// 
-
-
-		
 		
 		VkClearValue clearValue;
-		float flash = abs(sin(_frameNumber / 120.f));
+		float flash = std::abs(sin(_frameNumber / 120.f));
 		clearValue.color = { { 0.0f, 0.0f, flash, 1.0f } };
 
-		//start the main renderpass. 
-		//We will use the clear color from above, and the framebuffer of the index the swapchain gave us
 		VkRenderPassBeginInfo rpInfo = {};
 		rpInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		rpInfo.pNext = nullptr;
-
-		rpInfo.renderPass = _renderPass;
+		rpInfo.renderPass = *_renderPass;
 		rpInfo.renderArea.offset.x = 0;
 		rpInfo.renderArea.offset.y = 0;
 		rpInfo.renderArea.extent = window->getExtent();
-		rpInfo.framebuffer = _framebuffers[swapchainImageIndex];
-
-		//connect clear values
+		rpInfo.framebuffer = *_framebuffers[swapchainImageIndex];
 		rpInfo.clearValueCount = 1;
 		rpInfo.pClearValues = &clearValue;
-
 		vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-		//once we start adding rendering commands, they will go here
 
 		if (window->bSpacePressed) {
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _trianglePipeline);
@@ -91,109 +71,65 @@ namespace daxa {
 		}
 		vkCmdDraw(cmd, 3, 1, 0, 0);
 		
-		//finalize the render pass
 		vkCmdEndRenderPass(cmd);
-		//finalize the command buffer (we can no longer add commands, but it can now be executed)
 		VK_CHECK(vkEndCommandBuffer(cmd));
-
-
-
-		///
-		/// RENDER PASS END
-		/// 
-
-
-
-		//prepare the submission to the queue. 
-		//we want to wait on the _presentSemaphore, as that semaphore is signaled when the swapchain is ready
-		//we will signal the _renderSemaphore, to signal that rendering has finished
 
 		VkSubmitInfo submit = {};
 		submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		submit.pNext = nullptr;
 
 		VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
 		submit.pWaitDstStageMask = &waitStage;
 
+		VkSemaphore renderSem = semaPool.get();
 		submit.waitSemaphoreCount = 1;
-		submit.pWaitSemaphores = &_presentSemaphore.get();
-
+		submit.pWaitSemaphores = &*presentSem;
 		submit.signalSemaphoreCount = 1;
-		submit.pSignalSemaphores = &_renderSemaphore.get();
-
+		submit.pSignalSemaphores = &renderSem;
 		submit.commandBufferCount = 1;
-		submit.pCommandBuffers = &cmd.get();
+		submit.pCommandBuffers = &cmd;
+		VK_CHECK(vkQueueSubmit(vkh::mainGraphicsQueue, 1, &submit, *renderFence));
 
-		//submit command buffer to the queue and execute it.
-		// _renderFence will now block until the graphic commands finish execution
-		VK_CHECK(vkQueueSubmit(vk::mainGraphicsQueue, 1, &submit, _renderFence));
-
-
-
-		// this will put the image we just rendered into the visible window.
-		// we want to wait on the _renderSemaphore for that, 
-		// as it's necessary that drawing commands have finished before the image is displayed to the user
 		VkPresentInfoKHR presentInfo = {};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 		presentInfo.pNext = nullptr;
-
 		presentInfo.pSwapchains = &window->swapchain;
 		presentInfo.swapchainCount = 1;
-
-		presentInfo.pWaitSemaphores = &_renderSemaphore.get();
+		presentInfo.pWaitSemaphores = &renderSem;
 		presentInfo.waitSemaphoreCount = 1;
-
 		presentInfo.pImageIndices = &swapchainImageIndex;
+		VK_CHECK(vkQueuePresentKHR(vkh::mainGraphicsQueue, &presentInfo));
 
-		VK_CHECK(vkQueuePresentKHR(vk::mainGraphicsQueue, &presentInfo));
-
-		//increase the number of frames drawn
+		VK_CHECK(vkWaitForFences(vkh::mainDevice, 1, &*renderFence, true, 1000000000));
 		_frameNumber++;
-		VK_CHECK(vkWaitForFences(vk::mainDevice, 1, &_renderFence.get(), true, 1000000000));
 	}
 
 	void Application::init_pipelines()
 	{
-		auto fragShaderOpt = vk::loadShaderModule("shaders/colortri.fspv");
-		auto vertShaderOpt = vk::loadShaderModule("shaders/colortri.vspv");
+		vkh::ShaderModule colorFragShader{ "shaders/colortri.frag.spv" };
+		vkh::ShaderModule colorVertShader{ "shaders/colortri.vert.spv" };
 
-		if (!fragShaderOpt || !vertShaderOpt) {
-			std::cout << "Error when building the triangle shader modules" << std::endl;
+		if (!colorFragShader || !colorVertShader) {
+			std::cout << "Error when building the color triangle shader modules" << std::endl;
 			exit(-1);
 		}
 
-		auto triangleFragShader = fragShaderOpt.value();
-		auto triangleVertexShader = vertShaderOpt.value();
-
 		//build the pipeline layout that controls the inputs/outputs of the shader
 		//we are not using descriptor sets or other systems yet, so no need to use anything other than empty default
-		VkPipelineLayoutCreateInfo pipeline_layout_info = vk::makeLayoutCreateInfo();
+		VkPipelineLayoutCreateInfo pipeline_layout_info = vkh::makeLayoutCreateInfo();
 
-		VK_CHECK(vkCreatePipelineLayout(vk::mainDevice, &pipeline_layout_info, nullptr, &_trianglePipelineLayout));
-
-
+		VK_CHECK(vkCreatePipelineLayout(vkh::mainDevice, &pipeline_layout_info, nullptr, &_trianglePipelineLayout));
 
 
-		vk::PipelineBuilder pipelineBuilder;
+		vkh::PipelineBuilder pipelineBuilder;
 
-		pipelineBuilder._shaderStages.push_back(
-			vk::makeShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, triangleVertexShader));
-			//vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, triangleVertexShader));
+		pipelineBuilder._shaderStages.push_back(vkh::makeShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, colorVertShader));
 
-		pipelineBuilder._shaderStages.push_back(
-			vk::makeShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader));
-			//vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader));
+		pipelineBuilder._shaderStages.push_back(vkh::makeShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, colorFragShader));
 
+		pipelineBuilder._vertexInputInfo = vkh::makeVertexInputStageCreateInfo();
 
-		//vertex input controls how to read vertices from vertex buffers. We aren't using it yet
-		pipelineBuilder._vertexInputInfo = vk::makeVertexInputStageCreateInfo();
-		//pipelineBuilder._vertexInputInfo = vkinit::vertex_input_state_create_info();
-
-		//input assembly is the configuration for drawing triangle lists, strips, or individual points.
-		//we are just going to draw triangle list
-		//pipelineBuilder._inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-		pipelineBuilder._inputAssembly = vk::makeInputAssemblyStateCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+		pipelineBuilder._inputAssembly = vkh::makeInputAssemblyStateCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
 		auto _windowExtent = windowMutex->lock()->getExtent();
 
@@ -210,51 +146,82 @@ namespace daxa {
 
 		//configure the rasterizer to draw filled triangles
 		//pipelineBuilder._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
-		pipelineBuilder._rasterizer = vk::makeRasterisationStateCreateInfo(VK_POLYGON_MODE_FILL);
+		pipelineBuilder._rasterizer = vkh::makeRasterisationStateCreateInfo(VK_POLYGON_MODE_FILL);
 
 		//we don't use multisampling, so just run the default one
 		//pipelineBuilder._multisampling = vkinit::multisampling_state_create_info();
-		pipelineBuilder._multisampling = vk::makeMultisampleStateCreateInfo();
+		pipelineBuilder._multisampling = vkh::makeMultisampleStateCreateInfo();
 
 		//a single blend attachment with no blending and writing to RGBA
 		//pipelineBuilder._colorBlendAttachment = vkinit::color_blend_attachment_state();
-		pipelineBuilder._colorBlendAttachment = vk::makeColorBlendSAttachmentState();
+		pipelineBuilder._colorBlendAttachment = vkh::makeColorBlendSAttachmentState();
 
 		//use the triangle layout we created
 		pipelineBuilder._pipelineLayout = _trianglePipelineLayout;
 
 		//finally build the pipeline
-		_trianglePipeline = pipelineBuilder.build(_renderPass, vk::mainDevice);
+		_trianglePipeline = pipelineBuilder.build(*_renderPass, vkh::mainDevice);
 
 
 
+		vkh::ShaderModule redVertShader{ "shaders/redtri.vert.spv" };
+		vkh::ShaderModule redFragShader{ "shaders/redtri.frag.spv" };
 
-
-
-		auto redfragShaderOpt = vk::loadShaderModule("shaders/redtri.fspv");
-		auto redvertShaderOpt = vk::loadShaderModule("shaders/redtri.vspv");
-
-		if (!redfragShaderOpt || !redvertShaderOpt) {
-			std::cout << "Error when building the triangle shader modules" << std::endl;
+		if (!redVertShader || !redFragShader) {
+			std::cout << "Error when building the red triangle shader modules" << std::endl;
 			exit(-1);
 		}
-
-		auto redtriangleFragShader = redfragShaderOpt.value();
-		auto redtriangleVertexShader = redvertShaderOpt.value();
 
 		//clear the shader stages for the builder
 		pipelineBuilder._shaderStages.clear();
 
 		//add the other shaders
 		pipelineBuilder._shaderStages.push_back(
-			vk::makeShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, redtriangleVertexShader));
+			vkh::makeShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, redVertShader));
 		//vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, triangleVertexShader));
 
 		pipelineBuilder._shaderStages.push_back(
-			vk::makeShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, redtriangleFragShader));
+			vkh::makeShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, redFragShader));
 
 		//build the red triangle pipeline
-		_redTrianglePipeline = pipelineBuilder.build(_renderPass, vk::mainDevice);
+		_redTrianglePipeline = pipelineBuilder.build(*_renderPass, vkh::mainDevice);
+
+		init_mesh_pipeline();
+	}
+
+	void Application::init_mesh_pipeline()
+	{
+		vkh::BetterPipelineBuilder pipelineBuilder;
+		pipelineBuilder.setVertexInfo(Vertex::INFO);
+
+		const VkExtent2D windowExtent = windowMutex->lock()->getExtent();
+		pipelineBuilder.viewport = VkViewport{
+			.x = 0.0f,
+			.y = 0.0f,
+			.width = (float)windowExtent.width,
+			.height = (float)windowExtent.height,
+			.minDepth = 0.0f,
+			.maxDepth = 1.0f,
+		};
+
+		pipelineBuilder.pipelineLayout = _trianglePipelineLayout;
+
+		vkh::ShaderModule fragShader{ "shaders/colortri.frag.spv" };
+		if (!fragShader)
+			std::cout << "Error when building the mesh fragment shader module" << std::endl;
+		else
+			std::cout << "Red mesh fragment shader succesfully loaded" << std::endl;
+
+		vkh::ShaderModule vertShader{ "shaders/tri_mesh.vert.spv" };
+		if (!vertShader)
+			std::cout << "Error when building the mesh vertex shader module" << std::endl;
+		else
+			std::cout << "Red mesh vertex shader succesfully loaded" << std::endl;
+
+		pipelineBuilder._shaderStages.push_back( vkh::makeShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, vertShader) );
+		pipelineBuilder._shaderStages.push_back( vkh::makeShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragShader) );
+
+		meshPipeline = pipelineBuilder.build(*_renderPass);
 	}
 
 	void Application::init_default_renderpass()
@@ -299,9 +266,9 @@ namespace daxa {
 		render_pass_info.subpassCount = 1;
 		render_pass_info.pSubpasses = &subpass;
 
-
-		vkCreateRenderPass(vk::mainDevice, &render_pass_info, nullptr, &_renderPass);
+		_renderPass = vkh::makeRenderPass(render_pass_info);
 	}
+
 	void Application::init_framebuffers()
 	{
 		//create the framebuffers for the swapchain images. This will connect the render-pass to the images for rendering
@@ -311,7 +278,7 @@ namespace daxa {
 
 		auto window = windowMutex->lock();
 
-		fb_info.renderPass = _renderPass;
+		fb_info.renderPass = *_renderPass;
 		fb_info.attachmentCount = 1;
 		fb_info.width = window->getSize()[0];
 		fb_info.height = window->getSize()[1];
@@ -319,30 +286,66 @@ namespace daxa {
 
 		//grab how many images we have in the swapchain
 		const u32 swapchain_imagecount = window->swapchainImages.size();
-		_framebuffers = std::vector<VkFramebuffer>(swapchain_imagecount);
+		_framebuffers = std::vector<vkh::UniqueHandle<VkFramebuffer>>(swapchain_imagecount);
 
 		//create framebuffers for each of the swapchain image views
 		for (i32 i = 0; i < swapchain_imagecount; i++) {
 
 			fb_info.pAttachments = &window->swapchainImageViews[i];
-			vkCreateFramebuffer(vk::mainDevice, &fb_info, nullptr, &_framebuffers[i]);
+			VkFramebuffer fb;
+			vkCreateFramebuffer(vkh::mainDevice, &fb_info, nullptr, &fb);
+			_framebuffers[i] = { fb };
 		}
 	}
+
 	void Application::cleanup()
 	{
 		auto window = windowMutex->lock();
+		vkDestroyPipeline(vkh::mainDevice, meshPipeline, nullptr);
+		vmaDestroyBuffer(vkh::allocator, triangleMesh.vertexBuffer.buffer, triangleMesh.vertexBuffer.allocation);
+		vkDestroyPipeline(vkh::mainDevice, _trianglePipeline, nullptr);
+		vkDestroyPipeline(vkh::mainDevice, _redTrianglePipeline, nullptr);
+		vkDestroyPipelineLayout(vkh::mainDevice, _trianglePipelineLayout, nullptr);
+	}
+	void Application::loadMeshes()
+	{
+		//make the array 3 vertices long
+		triangleMesh.vertices.resize(3);
 
-		//vkDestroySemaphore(vulkan::mainDevice, _renderSemaphore, nullptr);
-		//vkDestroySemaphore(vulkan::mainDevice, _presentSemaphore, nullptr);
-		//vkDestroyFence(vulkan::mainDevice, _renderFence, nullptr);
+		//vertex positions
+		triangleMesh.vertices[0].position = { 1.f, 1.f, 0.0f };
+		triangleMesh.vertices[1].position = { -1.f, 1.f, 0.0f };
+		triangleMesh.vertices[2].position = { 0.f,-1.f, 0.0f };
 
-		//destroy the main renderpass
-		vkDestroyRenderPass(vk::mainDevice, _renderPass, nullptr);
+		//vertex colors, all green
+		triangleMesh.vertices[0].color = { 0.f, 1.f, 0.0f }; //pure green
+		triangleMesh.vertices[1].color = { 0.f, 1.f, 0.0f }; //pure green
+		triangleMesh.vertices[2].color = { 0.f, 1.f, 0.0f }; //pure green
 
-		//destroy swapchain resources
-		for (int i = 0; i < _framebuffers.size(); i++) {
-			vkDestroyFramebuffer(vk::mainDevice, _framebuffers[i], nullptr);
-		}
+		//we don't care about the vertex normals
 
+		uploadMesh(triangleMesh);
+	}
+
+	void Application::uploadMesh(SimpleMesh& mesh)
+	{
+		VkBufferCreateInfo bufferInfo = vkh::makeVertexBufferCreateInfo(sizeof(Vertex) * triangleMesh.vertices.size());
+
+		//let the VMA library know that this data should be writeable by CPU, but also readable by GPU
+		VmaAllocationCreateInfo vmaallocInfo = {};
+		vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
+		//allocate the buffer
+		VK_CHECK(vmaCreateBuffer(vkh::allocator, &bufferInfo, &vmaallocInfo,
+			&mesh.vertexBuffer.buffer,
+			&mesh.vertexBuffer.allocation,
+			nullptr));
+
+		void* gpuMemory;
+		vmaMapMemory(vkh::allocator, mesh.vertexBuffer.allocation, &gpuMemory);
+
+		memcpy(gpuMemory, mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex));
+
+		vmaUnmapMemory(vkh::allocator, mesh.vertexBuffer.allocation);
 	}
 }

@@ -7,7 +7,7 @@ del *.spv
 
 echo compiling shaders:´
 if not exist "%1shaders\" mkdir %1shaders
-for /r %%v in (*.vert) do (echo compile shader %%v & glslc "%%v" -o %1shaders\%%~nv.vspv)
-for /r %%v in (*.frag) do (echo compile shader %%v & glslc "%%v" -o %1shaders\%%~nv.fspv)
+for /r %%v in (*.vert) do (echo compile shader %%v & glslc "%%v" -o %1shaders\%%~nxv.spv)
+for /r %%v in (*.frag) do (echo compile shader %%v & glslc "%%v" -o %1shaders\%%~nxv.spv)
 if not exist "%2shaders\" mkdir %2shaders
-for /r %%v in (*.vspv *.fspv) do (copy /Y %%v %2shaders)
+for /r %%v in (*.spv) do (copy /Y %%v %2shaders)

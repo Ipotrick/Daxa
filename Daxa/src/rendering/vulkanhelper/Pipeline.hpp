@@ -1,9 +1,13 @@
 #pragma once
 
+#include <optional>
+
 #include "../Vulkan.hpp"
 
+#include "Vertex.hpp"
+
 namespace daxa {
-	namespace vk {
+	namespace vkh {
 
 		VkPipelineVertexInputStateCreateInfo makeVertexInputStageCreateInfo();
 
@@ -29,12 +33,24 @@ namespace daxa {
 			VkPipelineMultisampleStateCreateInfo _multisampling;
 			VkPipelineLayout _pipelineLayout;
 
-			VkPipeline build(VkRenderPass pass, VkDevice device = vk::mainDevice);
+			VkPipeline build(VkRenderPass pass, VkDevice device = vkh::mainDevice);
 		};
 
-		class Pipeline {
+		class BetterPipelineBuilder {
 		public:
-		private:
+			std::vector<VkPipelineShaderStageCreateInfo> _shaderStages;
+			std::optional<VkPipelineVertexInputStateCreateInfo> vertexInputInfo;
+			std::optional<VkPipelineInputAssemblyStateCreateInfo> inputAssembly;
+			std::optional<VkViewport> viewport;
+			std::optional<VkRect2D> scissor;
+			std::optional<VkPipelineRasterizationStateCreateInfo> rasterizer;
+			std::optional<VkPipelineColorBlendAttachmentState> colorBlendAttachment;
+			std::optional<VkPipelineMultisampleStateCreateInfo> multisampling;
+			std::optional<VkPipelineLayout> pipelineLayout;
+
+			void setVertexInfo(const VertexDescription& vd);
+
+			VkPipeline build(VkRenderPass pass, VkDevice device = vkh::mainDevice);
 		};
 	}
 }
