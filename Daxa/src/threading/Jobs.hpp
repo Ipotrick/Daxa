@@ -133,6 +133,8 @@ namespace daxa {
 			wait(schedule(std::move(jobs), priority));
 		}
 
+		static void yield(u32 minpriority, u32 yieldCount = 5);
+
 		static bool isFinished(Handle handle);
 
 		static void orphan(Handle handle);
@@ -151,6 +153,8 @@ namespace daxa {
 		static void workerFunction(u32 threadId);
 
 		static void waitingWorkerFunction(Handle awaitedJob);
+
+		static void processJob(std::unique_lock<std::mutex>& lock, Handle handle, IJob* job);
 
 		inline static bool bWorkerRunning{ false };
 		inline static const size_t threadCount{ std::max(std::thread::hardware_concurrency() - 1, 1u) };
