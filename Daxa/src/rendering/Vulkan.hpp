@@ -2,6 +2,8 @@
 
 #include <vulkan/vulkan.h>
 
+#include "../dependencies/vk_mem_alloc.hpp"
+
 #include "../DaxaCore.hpp"
 
 #define VK_CHECK(x)                                                 \
@@ -16,7 +18,7 @@
 	} while (0)
 
 namespace daxa{
-	namespace vk {
+	namespace vkh {
 		extern VkInstance				instance;
 		extern VkDebugUtilsMessengerEXT debugMessenger;
 		extern VkPhysicalDevice			mainPhysicalDevice;
@@ -27,6 +29,7 @@ namespace daxa{
 		extern u32						mainTransferQueueFamiltyIndex;
 		extern VkQueue					mainComputeQueue;
 		extern u32						mainComputeQueueFamiltyIndex;
+		extern VmaAllocator				allocator;
 
 		void initialise();
 

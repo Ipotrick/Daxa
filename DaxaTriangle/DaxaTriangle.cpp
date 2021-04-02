@@ -5,6 +5,8 @@
 
 #include <iostream>
 
+std::array<std::atomic_int32_t, 6> accs;
+
 int main(int argc, char* args[])
 {
     daxa::initialize();

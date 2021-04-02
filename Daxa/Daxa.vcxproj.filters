@@ -25,11 +25,11 @@
     <Filter Include="src\rendering">
       <UniqueIdentifier>{05487c95-8473-4338-8e35-949c4c47d36d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\rendering\wrapper">
-      <UniqueIdentifier>{72d90b73-031a-4ce2-b9e8-ccec4ee704c7}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\rendering\shader">
       <UniqueIdentifier>{f6ae04d5-bbab-421d-87fe-455fb38ae8b5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\rendering\vulkan helper">
+      <UniqueIdentifier>{72d90b73-031a-4ce2-b9e8-ccec4ee704c7}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -84,29 +84,41 @@
     <ClInclude Include="src\platform\Window.hpp">
       <Filter>src\platform</Filter>
     </ClInclude>
-    <ClInclude Include="src\rendering\Vulkan.hpp">
-      <Filter>src\rendering</Filter>
+    <ClInclude Include="src\rendering\vulkanhelper\Buffer.hpp">
+      <Filter>src\rendering\vulkan helper</Filter>
     </ClInclude>
-    <ClInclude Include="src\rendering\wrapper\CommandBuffer.hpp">
-      <Filter>src\rendering\wrapper</Filter>
+    <ClInclude Include="src\rendering\vulkanhelper\CommandBuffer.hpp">
+      <Filter>src\rendering\vulkan helper</Filter>
     </ClInclude>
-    <ClInclude Include="src\rendering\wrapper\CommandPool.hpp">
-      <Filter>src\rendering\wrapper</Filter>
+    <ClInclude Include="src\rendering\vulkanhelper\CommandPool.hpp">
+      <Filter>src\rendering\vulkan helper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\vulkanhelper\Pipeline.hpp">
+      <Filter>src\rendering\vulkan helper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\vulkanhelper\Pool.hpp">
+      <Filter>src\rendering\vulkan helper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\vulkanhelper\Shader.hpp">
+      <Filter>src\rendering\vulkan helper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\vulkanhelper\UniqueHandle.hpp">
+      <Filter>src\rendering\vulkan helper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\vulkanhelper\Vertex.hpp">
+      <Filter>src\rendering\vulkan helper</Filter>
     </ClInclude>
     <ClInclude Include="src\rendering\Rendering.hpp">
       <Filter>src\rendering</Filter>
     </ClInclude>
-    <ClInclude Include="src\rendering\wrapper\Fence.hpp">
-      <Filter>src\rendering\wrapper</Filter>
+    <ClInclude Include="src\rendering\SimpleMesh.hpp">
+      <Filter>src\rendering</Filter>
     </ClInclude>
-    <ClInclude Include="src\rendering\wrapper\Semaphore.hpp">
-      <Filter>src\rendering\wrapper</Filter>
+    <ClInclude Include="src\rendering\Vulkan.hpp">
+      <Filter>src\rendering</Filter>
     </ClInclude>
-    <ClInclude Include="src\rendering\wrapper\Shader.hpp">
-      <Filter>src\rendering\wrapper</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\wrapper\Pipeline.hpp">
-      <Filter>src\rendering\wrapper</Filter>
+    <ClInclude Include="src\rendering\vulkanhelper\Initialization.hpp">
+      <Filter>src\rendering\vulkan helper</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -128,11 +140,17 @@
     <ClCompile Include="src\platform\Window.cpp">
       <Filter>src\platform</Filter>
     </ClCompile>
-    <ClCompile Include="src\rendering\Vulkan.cpp">
+    <ClCompile Include="dependencies\vk_mem_alloc.cpp">
+      <Filter>dependencies</Filter>
+    </ClCompile>
+    <ClCompile Include="src\rendering\vulkanhelper\VulkanHelperCompilationUnit.cpp">
+      <Filter>src\rendering\vulkan helper</Filter>
+    </ClCompile>
+    <ClCompile Include="src\rendering\SimpleMesh.cpp">
       <Filter>src\rendering</Filter>
     </ClCompile>
-    <ClCompile Include="src\rendering\wrapper\WrapperCompilationUnit.cpp">
-      <Filter>src\rendering\wrapper</Filter>
+    <ClCompile Include="src\rendering\Vulkan.cpp">
+      <Filter>src\rendering</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -146,6 +164,9 @@
       <Filter>src\rendering\shader</Filter>
     </None>
     <None Include="src\rendering\shader\redtri.vert">
+      <Filter>src\rendering\shader</Filter>
+    </None>
+    <None Include="src\rendering\shader\tri_mesh.vert">
       <Filter>src\rendering\shader</Filter>
     </None>
   </ItemGroup>

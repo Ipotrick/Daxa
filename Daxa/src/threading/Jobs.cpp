@@ -8,7 +8,7 @@ namespace daxa{
 		assert(!bWorkerRunning);
 		bWorkerRunning = true;
 		threads.reserve(threadCount);
-		for (u32 id = 0; id < threadCount; ++id) {
+		for (u32 id = 1; id < threadCount+1; ++id) {
 			threads.push_back(std::thread(workerFunction, id));
 		}
 	}
@@ -29,36 +29,13 @@ namespace daxa{
 		freeList.clear();
 	}
 
-	void Jobs::wait(Handle handle)
-	{
-		std::unique_lock lock(mtx);
-		DAXA_ASSERT(isHandleValid(handle));
-		DAXA_ASSERT(bWorkerRunning);
-		auto& batch = jobBatches[handle.index].batch.value();
-		batch.bWaitedFor = true;
-		DAXA_ASSERT(batch.bOrphaned == false);
-
-		clientCV.wait(lock,
-			[&]() -> bool {
-				return batch.unfinishedJobs == 0;
-			}
-		);
-		deleteJobBatch(handle.index);
-	}
-
-	bool Jobs::finished(Handle handle)
+	bool Jobs::isFinished(Handle handle)
 	{
 		std::unique_lock lock(mtx);
 		DAXA_ASSERT(isHandleValid(handle));
 		DAXA_ASSERT(bWorkerRunning);
 		DAXA_ASSERT(jobBatches[handle.index].batch.value().bOrphaned == false);
-		auto& batch = jobBatches[handle.index].batch.value();
-
-		if (batch.unfinishedJobs == 0) {
-			deleteJobBatch(handle.index);
-			return true;
-		}
-		return false;
+		return unlockedIsFinished(handle);
 	}
 
 	void Jobs::orphan(Handle handle)
@@ -68,6 +45,19 @@ namespace daxa{
 		DAXA_ASSERT(bWorkerRunning);
 		DAXA_ASSERT(!jobBatches[handle.index].batch.value().bOrphaned);
 		jobBatches[handle.index].batch.value().bOrphaned = true;
+	}
+
+	uz Jobs::maxWorkerIndex() { return threadCount; }
+
+	bool Jobs::unlockedIsFinished(Handle handle)
+	{
+		auto& batch = jobBatches[handle.index].batch.value();
+
+		if (batch.unfinishedJobs == 0) {
+			deleteJobBatch(handle.index);
+			return true;
+		}
+		return false;
 	}
 
 	void Jobs::deleteJobBatch(u32 index)
@@ -84,22 +74,25 @@ namespace daxa{
 		return handle.index < jobBatches.size() && jobBatches[handle.index].batch.has_value() && jobBatches[handle.index].version == handle.version;
 	}
 
-	void Jobs::workerFunction(const u32 id)
+	void Jobs::workerFunction(u32 workerIndex)
 	{
+		WORKER_INDEX = workerIndex;
 		std::unique_lock lock(mtx);
+
+		const auto waitingCondition =
+			[]() -> bool {
+				return !jobQueue.empty() || !bWorkerRunning;
+			};
+
 		for (;;) {
-			workerCV.wait(lock,
-				[&]() {
-					return !jobQueue.empty() || !bWorkerRunning;
-				}
-			);
+			workerCV.wait(lock, waitingCondition);
 			if (!bWorkerRunning) return;
 
 			auto [handle, job, _] = jobQueue.back();
 			jobQueue.pop_back();
 
 			lock.unlock();
-			job->execute(id);
+			job->execute();
 			lock.lock();
 
 			auto& batch = jobBatches[handle.index].batch.value();
@@ -109,7 +102,53 @@ namespace daxa{
 					deleteJobBatch(handle.index);
 				}
 				else if (batch.bWaitedFor) {
-					clientCV.notify_one();
+					clientCV.notify_all();
+				}
+			}
+		}
+	}
+
+	void Jobs::wait(Handle handle)
+	{
+		std::unique_lock lock(mtx);
+		DAXA_ASSERT(isHandleValid(handle));
+		DAXA_ASSERT(bWorkerRunning);
+		auto& batch = jobBatches[handle.index].batch.value();
+		batch.bWaitedFor = true;
+		DAXA_ASSERT(batch.bOrphaned == false);
+		lock.unlock();
+
+		waitingWorkerFunction(handle);
+	}
+
+	void Jobs::waitingWorkerFunction(Handle awaitedJob)
+	{
+		std::unique_lock lock(mtx);
+
+		const auto waitingCondition =
+			[=]() -> bool {
+				return unlockedIsFinished(awaitedJob) || !jobQueue.empty();
+			};
+
+		for (;;) {
+			clientCV.wait(lock, waitingCondition);
+			if (!isHandleValid(awaitedJob))  return;
+
+			auto [handle, job, _] = jobQueue.back();
+			jobQueue.pop_back();
+
+			lock.unlock();
+			job->execute();
+			lock.lock();
+
+			auto& batch = jobBatches[handle.index].batch.value();
+			batch.unfinishedJobs -= 1;
+			if (batch.unfinishedJobs == 0) {
+				if (batch.bOrphaned) {
+					deleteJobBatch(handle.index);
+				}
+				else if (batch.bWaitedFor) {
+					clientCV.notify_all();
 				}
 			}
 		}

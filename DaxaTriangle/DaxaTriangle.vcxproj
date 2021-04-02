@@ -150,8 +150,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>Daxa.lib;SDL2main.lib;vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)x64\Release;%(AdditionalLibraryDirectories);S:\VulkanSDK\1.2.170.0\Lib</AdditionalLibraryDirectories>
-      <StackReserveSize>
-      </StackReserveSize>
+      <StackReserveSize>8388608</StackReserveSize>
     </Link>
     <PostBuildEvent>
       <Command>compileshaders.bat $(ProjectDir) $(TargetDir)</Command>
