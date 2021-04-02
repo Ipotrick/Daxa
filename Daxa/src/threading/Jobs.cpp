@@ -29,6 +29,22 @@ namespace daxa{
 		freeList.clear();
 	}
 
+	void Jobs::yield(u32 minpriority, u32 yieldCount)
+	{
+		std::unique_lock lock(mtx);
+		for (i32 i = 0; i < yieldCount; i++) {
+			if (jobQueue.empty()) return;
+
+			auto& [handle, job, jobPrio] = jobQueue.back();
+
+			if (jobPrio < minpriority) return;
+
+			jobQueue.pop_back();
+
+			processJob(lock, handle, job);
+		}
+	}
+
 	bool Jobs::isFinished(Handle handle)
 	{
 		std::unique_lock lock(mtx);
@@ -91,20 +107,7 @@ namespace daxa{
 			auto [handle, job, _] = jobQueue.back();
 			jobQueue.pop_back();
 
-			lock.unlock();
-			job->execute();
-			lock.lock();
-
-			auto& batch = jobBatches[handle.index].batch.value();
-			batch.unfinishedJobs -= 1;
-			if (batch.unfinishedJobs == 0) {
-				if (batch.bOrphaned) {
-					deleteJobBatch(handle.index);
-				}
-				else if (batch.bWaitedFor) {
-					clientCV.notify_all();
-				}
-			}
+			processJob(lock, handle, job);
 		}
 	}
 
@@ -137,19 +140,25 @@ namespace daxa{
 			auto [handle, job, _] = jobQueue.back();
 			jobQueue.pop_back();
 
-			lock.unlock();
-			job->execute();
-			lock.lock();
+			processJob(lock, handle, job);
+		}
+	}
 
-			auto& batch = jobBatches[handle.index].batch.value();
-			batch.unfinishedJobs -= 1;
-			if (batch.unfinishedJobs == 0) {
-				if (batch.bOrphaned) {
-					deleteJobBatch(handle.index);
-				}
-				else if (batch.bWaitedFor) {
-					clientCV.notify_all();
-				}
+	void Jobs::processJob(std::unique_lock<std::mutex>& lock, Handle handle, IJob* job)
+	{
+		assert(lock.owns_lock());
+		lock.unlock();
+		job->execute();
+		lock.lock();
+
+		auto& batch = jobBatches[handle.index].batch.value();
+		batch.unfinishedJobs -= 1;
+		if (batch.unfinishedJobs == 0) {
+			if (batch.bOrphaned) {
+				deleteJobBatch(handle.index);
+			}
+			else if (batch.bWaitedFor) {
+				clientCV.notify_all();
 			}
 		}
 	}

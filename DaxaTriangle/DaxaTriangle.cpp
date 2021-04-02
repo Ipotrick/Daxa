@@ -1,11 +1,6 @@
 #include "Daxa.hpp"
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_vulkan.h>
-
 #include <iostream>
-
-std::array<std::atomic_int32_t, 6> accs;
 
 int main(int argc, char* args[])
 {
