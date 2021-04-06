@@ -1,6 +1,8 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
+#include <vulkan/vulkan.hpp>
 
 #include "../dependencies/vk_mem_alloc.hpp"
 
@@ -19,17 +21,17 @@
 
 namespace daxa{
 	namespace vkh {
-		extern VkInstance				instance;
-		extern VkDebugUtilsMessengerEXT debugMessenger;
-		extern VkPhysicalDevice			mainPhysicalDevice;
-		extern VkDevice					mainDevice;
-		extern VkQueue					mainGraphicsQueue;
-		extern u32						mainGraphicsQueueFamiltyIndex;
-		extern VkQueue					mainTransferQueue;
-		extern u32						mainTransferQueueFamiltyIndex;
-		extern VkQueue					mainComputeQueue;
-		extern u32						mainComputeQueueFamiltyIndex;
-		extern VmaAllocator				allocator;
+		extern vk::Instance					instance;
+		extern vk::DebugUtilsMessengerEXT	debugMessenger;
+		extern vk::PhysicalDevice			mainPhysicalDevice;
+		extern vk::Device					device;
+		extern vk::Queue					mainGraphicsQueue;
+		extern u32							mainGraphicsQueueFamiltyIndex;
+		extern vk::Queue					mainTransferQueue;
+		extern u32							mainTransferQueueFamiltyIndex;
+		extern vk::Queue					mainComputeQueue;
+		extern u32							mainComputeQueueFamiltyIndex;
+		extern VmaAllocator					allocator;
 
 		void initialise();
 

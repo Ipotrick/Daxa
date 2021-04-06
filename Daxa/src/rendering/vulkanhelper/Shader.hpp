@@ -7,30 +7,8 @@
 
 namespace daxa {
 	namespace vkh {
-		std::optional<VkShaderModule> loadShaderModule(std::string filePath, VkDevice device = vkh::mainDevice);
+		std::optional<vk::UniqueShaderModule> loadShaderModule(std::string filePath, vk::Device device = vkh::device);
 
-		class ShaderModule {
-		public:
-			ShaderModule(std::string filePath, VkDevice device = vkh::mainDevice);
-
-			ShaderModule(ShaderModule&& other) noexcept;
-
-			~ShaderModule();
-
-			operator const VkShaderModule&();
-
-			const VkShaderModule& get() const;
-
-			operator bool() const;
-
-			bool valid() const;
-
-		private:
-			DeferedDestructionQueue* destructionQ{ nullptr };
-			VkDevice device{ VK_NULL_HANDLE };
-			VkShaderModule shader{ VK_NULL_HANDLE };
-		};
-
-		VkPipelineShaderStageCreateInfo makeShaderStageCreateInfo(VkShaderStageFlagBits stage, VkShaderModule shaderModule);
+		vk::PipelineShaderStageCreateInfo makeShaderStageCreateInfo(vk::ShaderStageFlagBits stage, vk::ShaderModule shaderModule);
 	}
 }

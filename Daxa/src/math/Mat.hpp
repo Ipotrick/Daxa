@@ -15,28 +15,35 @@ namespace daxa {
 	template<size_t M, size_t N, std::floating_point T>
 	requires requires{ M >= 2; M <= 4; N >= 2; N <= 4; }
 	struct Mat {
+		constexpr Mat() = default;
+		constexpr Mat(T diagInit)
+		{
+			for (i32 i = 0; i < std::min(M, N); i++) {
+				values[i][i] = diagInit;
+			}
+		}
 
-		std::array<T, M * N>& linear()
+		constexpr std::array<T, M * N>& linear()
 		{
 			return static_cast<std::array<T, M* N>>(values);
 		}
 		
-		const std::array<T, M * N>& linear() const
+		constexpr const std::array<T, M * N>& linear() const
 		{
 			return static_cast<std::array<T, M* N>>(values);
 		}
 
-		T* data()
+		constexpr T* data()
 		{
 			return &values[0][0];
 		}
 
-		std::array<T, N>& operator[](u32 index)
+		constexpr std::array<T, N>& operator[](u32 index)
 		{
 			return values[index];
 		}
 
-		const std::array<T, N>& operator[](u32 index) const
+		constexpr const std::array<T, N>& operator[](u32 index) const
 		{
 			return values[index];
 		}
@@ -278,16 +285,100 @@ namespace daxa {
 	}
 
 	template<size_t K, size_t L, size_t M, size_t N, std::floating_point T>
-	inline constexpr Mat<K, L, T> reform(const Mat<M,N,T>& mat)
+	inline constexpr Mat<K, L, T> reform(const Mat<M,N,T>& mat, T diagFill = static_cast<T>(1))
 	{
 		Mat<K, L, T> ret;
-		for (u32 y = 0; y < std::min(M, K); y++) {
-			for (u32 x = 0; x < std::min(N, L); x++) {
-				ret[y][x] = mat[y][x];
+		for (u32 y = 0; y < K; y++) {
+			for (u32 x = 0; x < L; x++) {
+				if ((y < M) & (x < N)) {
+					ret[y][x] = mat[y][x];
+				}
+				else if (y == x) {
+					ret[y][x] = diagFill;
+				}
+				else {
+					ret[y][x] = static_cast<T>(0);
+				}
 			}
 		}
 		return ret;
 	}
+
+	template<size_t M, size_t N, std::floating_point T>
+	requires requires { N == M || N-1 == M;  }
+	inline constexpr Mat<M, N, T> translate(Mat<M, N, T> mat, typename VecType<N-1, T>::type vec)
+	{
+		for (i32 i = 0; i < N - 1; i++) {
+			mat[i][N - 1] = vec[i];
+		}
+		return mat;
+	}
+
+	template<size_t M, std::floating_point T>
+	requires requires { M >= 3; }
+	inline Mat<M ,M, T> makeRotaX(T rad)
+	{
+		Mat<M, M, T> res{ static_cast<T>(1) };
+		const T c = std::cos(rad);
+		const T s = std::sin(rad);
+		res[1][1] =  c;
+		res[1][2] = -s;
+		res[2][1] =  s;
+		res[2][2] =  c;
+		return res;
+	}
+
+	template<size_t M, std::floating_point T>
+	requires requires { M >= 3; }
+	inline Mat<M, M, T> makeRotaY(T rad)
+	{
+		Mat<M, M, T> res{ static_cast<T>(1) };
+		const T c = std::cos(rad);
+		const T s = std::sin(rad);
+		res[0][0] =  c;
+		res[0][2] =  s;
+		res[2][0] = -s;
+		res[2][2] =  c;
+		return res;
+	}
+
+	template<size_t M, std::floating_point T>
+	requires requires { M >= 3; }
+	inline Mat<M, M, T> makeRotaZ(T rad)
+	{
+		Mat<M, M, T> res{ static_cast<T>(1) };
+		const T c = std::cos(rad);
+		const T s = std::sin(rad);
+		res[0][0] =  c;
+		res[0][1] = -s;
+		res[1][0] =  s;
+		res[1][1] =  c;
+		return res;
+	}
+
+	template<size_t M, std::floating_point T>
+	requires requires { M >= 3; }
+	inline Mat<M, M, T> makeProjection(const T viewRadians, const T aspectRatio, const T near, const T far)
+	{
+		Mat<4, 4, T> ret{ static_cast<T>(1) };
+		const T scale = static_cast<T>(1) / std::tan(viewRadians * static_cast<T>(0.5));
+		ret[0][0] = scale / aspectRatio; // scale the x coordinates of the projected point 
+		ret[1][1] = scale; // scale the y coordinates of the projected point 
+		ret[2][2] = -far / (far - near); // used to remap z to [0,1] 
+		ret[2][3] = -far * near / (far - near); // used to remap z [0,1] 
+		ret[3][2] = static_cast<T>(-1); // set w = -z 
+		ret[3][3] = static_cast<T>(0);
+		return ret;
+	}
+
+
+	template<size_t M, std::floating_point T>
+	requires requires { M >= 3; }
+	inline constexpr Mat<M, M, T> rotate(Mat<M,M,T> mat, T x, T y, T z)
+	{	
+		return makeRotaX<M, T>(x) * makeRotaY<M, T>(y) * makeRotaZ<M, T>(z) * mat;
+	}
+
 
 	using Mat2x2 = Mat<2, 2, f32>;
 	using Mat2x3 = Mat<2, 3, f32>;

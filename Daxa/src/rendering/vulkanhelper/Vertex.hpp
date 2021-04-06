@@ -6,28 +6,37 @@
 
 namespace daxa {
 	namespace vkh {
-		VkBufferCreateInfo makeVertexBufferCreateInfo(uz size);
 
 		struct VertexDescription {
-			std::vector<VkVertexInputBindingDescription> bindings;
-			std::vector<VkVertexInputAttributeDescription> attributes;
+			std::vector<vk::VertexInputBindingDescription> bindings;
+			std::vector<vk::VertexInputAttributeDescription> attributes;
 
-			VkPipelineVertexInputStateCreateFlags flags = 0;
+			vk::PipelineVertexInputStateCreateFlags flags{};
+
+			vk::PipelineVertexInputStateCreateInfo makePipelineVertexInpitSCI() const
+			{
+				return vk::PipelineVertexInputStateCreateInfo{
+					.vertexBindingDescriptionCount = (u32)bindings.size(),
+					.pVertexBindingDescriptions = bindings.data(),
+					.vertexAttributeDescriptionCount = (u32)attributes.size(),
+					.pVertexAttributeDescriptions = attributes.data(),
+				};
+			}
 		};
 
 		class VertexDiscriptionBuilder {
 		public:
-			VertexDiscriptionBuilder& beginBinding(u32 stride, VkVertexInputRate inputRate = VK_VERTEX_INPUT_RATE_VERTEX);
-			VertexDiscriptionBuilder& setAttribute(VkFormat format);
-			VertexDiscriptionBuilder& stageCreateFlags(VkPipelineVertexInputStateCreateFlags flags);
+			VertexDiscriptionBuilder& beginBinding(u32 stride, vk::VertexInputRate inputRate = vk::VertexInputRate::eVertex);
+			VertexDiscriptionBuilder& setAttribute(vk::Format format);
+			VertexDiscriptionBuilder& stageCreateFlags(vk::PipelineVertexInputStateCreateFlags flags);
 			VertexDescription build();
 		private:
 			u32 stride{ 0 };
 			u32 offset{ 0 };
 			u32 location{ 0 };
-			VkPipelineVertexInputStateCreateFlags flags = 0;
-			std::vector<VkVertexInputBindingDescription> bindings;
-			std::vector<VkVertexInputAttributeDescription> attributes;
+			vk::PipelineVertexInputStateCreateFlags flags{};
+			std::vector<vk::VertexInputBindingDescription> bindings;
+			std::vector<vk::VertexInputAttributeDescription> attributes;
 		};
 	}
 }

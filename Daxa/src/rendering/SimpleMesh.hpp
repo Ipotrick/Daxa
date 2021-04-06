@@ -17,9 +17,9 @@ namespace daxa {
 			vkh::VertexDiscriptionBuilder builder;
 			return builder
 				.beginBinding(sizeof(Vertex))
-				.setAttribute(VK_FORMAT_R32G32B32_SFLOAT)
-				.setAttribute(VK_FORMAT_R32G32B32_SFLOAT)
-				.setAttribute(VK_FORMAT_R32G32B32_SFLOAT)
+				.setAttribute(vk::Format::eR32G32B32Sfloat)
+				.setAttribute(vk::Format::eR32G32B32Sfloat)
+				.setAttribute(vk::Format::eR32G32B32Sfloat)
 				.build();
 		}
 
@@ -30,4 +30,6 @@ namespace daxa {
 
 		vkh::Buffer vertexBuffer;
 	};
+
+	std::optional<SimpleMesh> loadMeshFromObj(const char* filename);
 }

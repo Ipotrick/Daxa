@@ -5,52 +5,43 @@
 #include "../Vulkan.hpp"
 
 #include "Vertex.hpp"
+#include "Initialization.hpp"
 
 namespace daxa {
 	namespace vkh {
 
-		VkPipelineVertexInputStateCreateInfo makeVertexInputStageCreateInfo();
+		vk::PipelineVertexInputStateCreateInfo makeVertexInputStageCreateInfo();
 
-		VkPipelineInputAssemblyStateCreateInfo makeInputAssemblyStateCreateInfo(VkPrimitiveTopology topology);
+		vk::PipelineInputAssemblyStateCreateInfo makeInputAssemblyStateCreateInfo(vk::PrimitiveTopology topology);
 
-		VkPipelineRasterizationStateCreateInfo makeRasterisationStateCreateInfo(VkPolygonMode polygonMode);
+		vk::PipelineRasterizationStateCreateInfo makeRasterisationStateCreateInfo(vk::PolygonMode polygonMode);
 
-		VkPipelineMultisampleStateCreateInfo makeMultisampleStateCreateInfo();
+		vk::PipelineMultisampleStateCreateInfo makeMultisampleStateCreateInfo();
 
-		VkPipelineColorBlendAttachmentState makeColorBlendSAttachmentState();
+		vk::PipelineColorBlendAttachmentState makeColorBlendSAttachmentState();
 
-		VkPipelineLayoutCreateInfo makeLayoutCreateInfo();
+		vk::PipelineLayoutCreateInfo makePipelineLayoutCreateInfo();
+
+		struct Pipeline {
+			vk::UniquePipeline pipeline;
+			vk::UniquePipelineLayout layout;
+		};
 
 		class PipelineBuilder {
 		public:
-			std::vector<VkPipelineShaderStageCreateInfo> _shaderStages;
-			VkPipelineVertexInputStateCreateInfo _vertexInputInfo;
-			VkPipelineInputAssemblyStateCreateInfo _inputAssembly;
-			VkViewport _viewport;
-			VkRect2D _scissor;
-			VkPipelineRasterizationStateCreateInfo _rasterizer;
-			VkPipelineColorBlendAttachmentState _colorBlendAttachment;
-			VkPipelineMultisampleStateCreateInfo _multisampling;
-			VkPipelineLayout _pipelineLayout;
+			std::optional<vk::Viewport> viewport;
+			std::optional<vk::Rect2D> scissor;
+			std::optional<vk::PipelineVertexInputStateCreateInfo> vertexInput;
+			std::optional<vk::PipelineInputAssemblyStateCreateInfo> inputAssembly;
+			std::optional<vk::PipelineRasterizationStateCreateInfo> rasterization;
+			std::optional<vk::PipelineMultisampleStateCreateInfo> multisampling;
+			std::optional<vk::PipelineDepthStencilStateCreateInfo> depthStencil;
+			std::optional<vk::PipelineColorBlendAttachmentState> colorBlendAttachment;
+			std::vector<vk::PipelineShaderStageCreateInfo> shaderStages;
+			std::vector<vk::DynamicState> dynamicStateEnable;
+			std::vector<vk::PushConstantRange> pushConstants;
 
-			VkPipeline build(VkRenderPass pass, VkDevice device = vkh::mainDevice);
-		};
-
-		class BetterPipelineBuilder {
-		public:
-			std::vector<VkPipelineShaderStageCreateInfo> _shaderStages;
-			std::optional<VkPipelineVertexInputStateCreateInfo> vertexInputInfo;
-			std::optional<VkPipelineInputAssemblyStateCreateInfo> inputAssembly;
-			std::optional<VkViewport> viewport;
-			std::optional<VkRect2D> scissor;
-			std::optional<VkPipelineRasterizationStateCreateInfo> rasterizer;
-			std::optional<VkPipelineColorBlendAttachmentState> colorBlendAttachment;
-			std::optional<VkPipelineMultisampleStateCreateInfo> multisampling;
-			std::optional<VkPipelineLayout> pipelineLayout;
-
-			void setVertexInfo(const VertexDescription& vd);
-
-			VkPipeline build(VkRenderPass pass, VkDevice device = vkh::mainDevice);
+			Pipeline build(vk::RenderPass pass, u32 subpass = 0, vk::Device device = vkh::device);
 		};
 	}
 }

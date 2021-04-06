@@ -6,38 +6,34 @@
 
 namespace daxa {
     namespace vkh {
-        class DeferedDestructionQueue;
-
-        VkCommandPool makeCommandPool(
+        vk::UniqueCommandPool makeCommandPool(
             u32 queueFamilyIndex = daxa::vkh::mainGraphicsQueueFamiltyIndex,
-            VkCommandPoolCreateFlagBits flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-            VkDevice device = daxa::vkh::mainDevice);
+            vk::CommandPoolCreateFlagBits flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+            vk::Device device = daxa::vkh::device);
 
         class CommandPool {
         public:
             CommandPool(
                 u32 queueFamilyIndex = daxa::vkh::mainGraphicsQueueFamiltyIndex,
-                VkCommandPoolCreateFlagBits flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-                VkDevice device = daxa::vkh::mainDevice
+                vk::CommandPoolCreateFlagBits flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+                vk::Device device = daxa::vkh::device
             );
 
             CommandPool(CommandPool&& other) noexcept;
 
-            ~CommandPool();
+            operator const vk::UniqueCommandPool&();
 
-            operator const VkCommandPool&();
+            const vk::UniqueCommandPool& get();
 
-            const VkCommandPool& get();
-
-            VkCommandBuffer getBuffer();
+            vk::CommandBuffer getBuffer();
 
             void flush();
 
         private:
             u32 queueFamilyIndex{ 0xFFFFFFFF };
-            VkDevice device{ VK_NULL_HANDLE };
-            VkCommandPool pool{ VK_NULL_HANDLE };
-            Pool<VkCommandBuffer> bufferPool;
+            vk::Device device;
+            vk::UniqueCommandPool pool{};
+            Pool<vk::CommandBuffer> bufferPool;
         };
     }
 }

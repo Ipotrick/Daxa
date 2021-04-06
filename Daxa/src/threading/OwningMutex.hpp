@@ -1,6 +1,7 @@
 #pragma once
 
 #include <shared_mutex>
+#include <optional>
 
 #include "../DaxaCore.hpp"
 
@@ -9,8 +10,8 @@ namespace daxa {
 	template<typename T>
 	class ReadWriteLock {
 	public:
-		ReadWriteLock(std::shared_mutex& mtx, T* data) :
-			lock{ mtx }, data{ data }
+		ReadWriteLock(std::unique_lock<std::shared_mutex>&& lck, T* data) :
+			lock{ std::move(lck) }, data{ data }
 		{ }
 
 		T& operator*()
@@ -48,8 +49,8 @@ namespace daxa {
 	template<typename T>
 	class ReadOnlyLock {
 	public:
-		ReadOnlyLock(std::shared_mutex& mtx, T const* data) :
-			lock{ mtx }, data{ data }
+		ReadOnlyLock(std::shared_lock<std::shared_mutex>&& lck, T const* data) :
+			lock{ std::move(lck) }, data{ data }
 		{ }
 
 		const T& operator*()
@@ -95,12 +96,36 @@ namespace daxa {
 
 		ReadWriteLock<T> lock()
 		{
-			return ReadWriteLock<T>(mtx , &data);
+			return ReadWriteLock<T>(std::unique_lock<std::shared_mutex>(mtx), &data);
 		}
+
+		std::optional<ReadWriteLock<T>> tryLock()
+		{
+			std::unique_lock<std::shared_mutex> lock(mtx, std::defer_lock);
+			if (lock.try_lock()) {
+				return ReadWriteLock<T>(std::move(lock), &data);
+			}
+			else {
+				return {};
+			}
+		}
+
 		ReadOnlyLock<T> lockReadOnly() const
 		{
-			return ReadOnlyLock<T>(mtx, &data);
+			return ReadOnlyLock<T>(std::shared_lock<std::shared_mutex>(mtx), &data);
 		}
+
+		std::optional<ReadOnlyLock<T>> tryLockReadOnly()
+		{
+			std::shared_lock<std::shared_mutex> lock(mtx, std::defer_lock);
+			if (lock.try_lock()) {
+				return ReadOnlyLock<T>(std::move(lock), &data);
+			}
+			else {
+				return {};
+			}
+		}
+
 	private:
 		T data;
 		mutable std::shared_mutex mtx;
