@@ -7,16 +7,16 @@
 
 namespace daxa {
 	namespace vkh {
-		VkInstance					instance{ VK_NULL_HANDLE };
-		VkDebugUtilsMessengerEXT	debugMessenger{ VK_NULL_HANDLE };
-		VkPhysicalDevice			mainPhysicalDevice{ VK_NULL_HANDLE };
-		VkDevice					mainDevice{ VK_NULL_HANDLE };
-		VkQueue						mainGraphicsQueue{ VK_NULL_HANDLE };
-		u32							mainGraphicsQueueFamiltyIndex{ VK_NULL_HANDLE };
-		VkQueue						mainTransferQueue{ VK_NULL_HANDLE };
-		u32							mainTransferQueueFamiltyIndex{ VK_NULL_HANDLE };
-		VkQueue						mainComputeQueue{ VK_NULL_HANDLE };
-		u32							mainComputeQueueFamiltyIndex{ VK_NULL_HANDLE };
+		vk::Instance				instance;
+		vk::DebugUtilsMessengerEXT	debugMessenger;
+		vk::PhysicalDevice			mainPhysicalDevice;
+		vk::Device					device;
+		vk::Queue					mainGraphicsQueue;
+		u32							mainGraphicsQueueFamiltyIndex;
+		vk::Queue					mainTransferQueue;
+		u32							mainTransferQueueFamiltyIndex;
+		vk::Queue					mainComputeQueue;
+		u32							mainComputeQueueFamiltyIndex;
 		VmaAllocator				allocator;
 
 		void initialise()
@@ -52,7 +52,7 @@ namespace daxa {
 
 			vkb::Device vkbDevice = deviceBuilder.build().value();
 
-			mainDevice = vkbDevice.device;
+			device = vkbDevice.device;
 
 			mainGraphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
 			mainGraphicsQueueFamiltyIndex = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
@@ -62,9 +62,9 @@ namespace daxa {
 			mainComputeQueueFamiltyIndex = vkbDevice.get_queue_index(vkb::QueueType::compute).value();
 
 			VmaAllocatorCreateInfo allocatorInfo = {};
-			allocatorInfo.physicalDevice = vkh::mainPhysicalDevice;
-			allocatorInfo.device = vkh::mainDevice;
-			allocatorInfo.instance = vkh::instance;
+			allocatorInfo.physicalDevice = mainPhysicalDevice;
+			allocatorInfo.device = device;
+			allocatorInfo.instance = instance;
 			vmaCreateAllocator(&allocatorInfo, &allocator);
 		}
 
@@ -72,7 +72,7 @@ namespace daxa {
 		{
 			vmaDestroyAllocator(allocator);
 			vkb::destroy_debug_utils_messenger(instance, debugMessenger);
-			vkDestroyDevice(mainDevice, nullptr);
+			vkDestroyDevice(device, nullptr);
 			vkDestroyInstance(instance, nullptr);
 		}
 	}

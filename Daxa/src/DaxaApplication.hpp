@@ -1,12 +1,18 @@
 #pragma once
 
+#include "DaxaCore.hpp"
+
 #include "threading/OwningMutex.hpp"
 #include "threading/Jobs.hpp"
 #include "platform/Window.hpp"
 #include "rendering/Rendering.hpp"
 
-
 namespace daxa {
+
+	struct MeshPushConstants {
+		daxa::Mat4x4 renderMatrix;
+		daxa::Vec4 data;
+	};
 
 	class Application {
 	public:
@@ -33,29 +39,25 @@ namespace daxa {
 
 		void uploadMesh(SimpleMesh& mesh);
 
-		vkh::Pool<VkSemaphore> semaPool{
-				[=]() { return vkh::makeSemaphore(vkh::mainDevice); },
-				[=](VkSemaphore sem) { vkDestroySemaphore(vkh::mainDevice, sem, nullptr); },
-				[=](VkSemaphore sem) { /* pool destruction deallocs anyway */ }
+		vkh::Pool<vk::Semaphore> semaPool{
+				[]() { return vkh::device.createSemaphore(vkh::makeDefaultSemaphoreCI()); },
+				[](vk::Semaphore sem) { vkh::device.destroySemaphore(sem,nullptr); },
+				[](vk::Semaphore sem) { /* dont need to reset a semaphore */ }
 		};
 
 		vkh::CommandPool cmdPool{};
 
-		std::vector<vkh::UniqueHandle<VkFramebuffer>> _framebuffers;
+		std::vector<vk::UniqueFramebuffer> framebuffers;
 
-		vkh::UniqueHandle<VkSemaphore> presentSem{ vkh::makeSemaphore() };
-		vkh::UniqueHandle<VkFence> renderFence{ vkh::makeFence() };
+		vk::UniqueFence renderFence{ vkh::device.createFenceUnique(vk::FenceCreateInfo{}) };
+
+		vk::UniqueSemaphore presentSem;
 
 		u32 _frameNumber{ 0 };
 
-		vkh::UniqueHandle<VkRenderPass> _renderPass;
+		vk::UniqueRenderPass mainRenderpass;
 
-		VkPipelineLayout _trianglePipelineLayout;
-
-		VkPipeline _trianglePipeline;
-		VkPipeline _redTrianglePipeline;
-
-		VkPipeline meshPipeline;
-		SimpleMesh triangleMesh;
+		SimpleMesh monkeyMesh;
+		vkh::Pipeline meshPipeline;
 	};
 }

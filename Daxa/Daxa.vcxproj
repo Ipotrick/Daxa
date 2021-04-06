@@ -34,28 +34,32 @@
     <ClInclude Include="src\math\Vec3.hpp" />
     <ClInclude Include="src\math\Vec4.hpp" />
     <ClInclude Include="src\platform\Window.hpp" />
+    <ClInclude Include="src\rendering\ImageManager.hpp" />
     <ClInclude Include="src\rendering\Rendering.hpp" />
     <ClInclude Include="src\rendering\SimpleMesh.hpp" />
     <ClInclude Include="src\rendering\Vulkan.hpp" />
     <ClInclude Include="src\rendering\vulkanhelper\Buffer.hpp" />
-    <ClInclude Include="src\rendering\vulkanhelper\CommandBuffer.hpp" />
     <ClInclude Include="src\rendering\vulkanhelper\CommandPool.hpp" />
+    <ClInclude Include="src\rendering\vulkanhelper\Framebuffer.hpp" />
+    <ClInclude Include="src\rendering\vulkanhelper\Image.hpp" />
     <ClInclude Include="src\rendering\vulkanhelper\Initialization.hpp" />
     <ClInclude Include="src\rendering\vulkanhelper\Pipeline.hpp" />
     <ClInclude Include="src\rendering\vulkanhelper\Pool.hpp" />
     <ClInclude Include="src\rendering\vulkanhelper\Shader.hpp" />
-    <ClInclude Include="src\rendering\vulkanhelper\UniqueHandle.hpp" />
     <ClInclude Include="src\rendering\vulkanhelper\Vertex.hpp" />
     <ClInclude Include="src\threading\Jobs.hpp" />
     <ClInclude Include="src\threading\OwningMutex.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\stb_image.cpp" />
+    <ClCompile Include="dependencies\tiny_obj_loader.cpp" />
     <ClCompile Include="dependencies\VkBootstrap.cpp" />
     <ClCompile Include="dependencies\vk_mem_alloc.cpp" />
     <ClCompile Include="src\Daxa.cpp" />
     <ClCompile Include="src\DaxaApplication.cpp" />
     <ClCompile Include="src\platform\Window.cpp" />
+    <ClCompile Include="src\rendering\ImageManager.cpp" />
+    <ClCompile Include="src\rendering\RenderTypesCompilationUnit.cpp" />
     <ClCompile Include="src\rendering\SimpleMesh.cpp" />
     <ClCompile Include="src\rendering\Vulkan.cpp" />
     <ClCompile Include="src\rendering\vulkanhelper\VulkanHelperCompilationUnit.cpp" />
@@ -218,6 +222,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <AdditionalIncludeDirectories>S:\VulkanSDK\1.2.170.0\Include;$(ProjectDir)dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

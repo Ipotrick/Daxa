@@ -8,102 +8,40 @@
 
 namespace daxa {
     namespace vkh {
-        VkFence makeFence(VkDevice device)
+        vk::FenceCreateInfo makeDefaultFenceCI()
         {
-            VkFenceCreateInfo fenceCreateInfo = {};
-            fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-            fenceCreateInfo.pNext = nullptr;
-
-            //we want to create the fence with the Create Signaled flag, so we can wait on it before using it on a GPU command (for the first frame)
-            fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-            VkFence fence;
-            vkCreateFence(device, &fenceCreateInfo, nullptr, &fence);
-            return fence;
+            vk::FenceCreateInfo info{};
+            info.flags |= vk::FenceCreateFlagBits::eSignaled;
+            return info;
         }
 
-        VkSemaphore makeSemaphore(VkDevice device)
+        vk::SemaphoreCreateInfo makeDefaultSemaphoreCI()
         {
-            VkSemaphoreCreateInfo semaphoreCreateInfo = {};
-            semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-            semaphoreCreateInfo.pNext = nullptr;
-            semaphoreCreateInfo.flags = 0;
-
-            VkSemaphore sem;
-            vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &sem);
-            return sem;
+            return vk::SemaphoreCreateInfo();
         }
 
-        VkRenderPass makeRenderPass(VkRenderPassCreateInfo info, VkDevice device)
+        vk::PipelineRasterizationStateCreateInfo makeDefaultPipelineRasterizationSCI()
         {
-            VkRenderPass renderpass;
-            vkCreateRenderPass(device, &info, nullptr, &renderpass);
-            return renderpass;
-        }
-    }
-}
-
-
-#include "CommandBuffer.hpp"
-
-namespace daxa {
-    namespace vkh {
-
-        VkCommandBuffer makeCommandBuffer(VkCommandPool pool, VkDevice device)
-        {
-            VkCommandBufferAllocateInfo cmdAllocInfo = {};
-            cmdAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-            cmdAllocInfo.pNext = nullptr;
-            cmdAllocInfo.commandPool = pool;                        // commands will be made from our _commandPool
-            cmdAllocInfo.commandBufferCount = 1;                    // we will allocate 1 command buffer
-            cmdAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;   // command level is Primary
-
-            VkCommandBuffer buffer;
-            vkAllocateCommandBuffers(device, &cmdAllocInfo, &buffer);
-            return buffer;
+            return vk::PipelineRasterizationStateCreateInfo{
+                .polygonMode = vk::PolygonMode::eFill,
+                .cullMode = vk::CullModeFlagBits::eNone,
+                .frontFace = vk::FrontFace::eClockwise,
+                .lineWidth = 1.0f,
+            };
         }
 
-        VkCommandBufferBeginInfo makeCmdBeginInfo(VkCommandBufferUsageFlags usage)
+        vk::AttachmentDescription makeDefaultAttackmentDescription()
         {
-            VkCommandBufferBeginInfo cmdBeginInfo = {};
-            cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-            cmdBeginInfo.pNext = nullptr;
-            cmdBeginInfo.pInheritanceInfo = nullptr;
-            cmdBeginInfo.flags = usage;
-            return cmdBeginInfo;
-        }
-
-        CommandBuffer::CommandBuffer(VkCommandPool pool, VkDevice device) :
-            pool{ pool }, device{ device }
-        {
-            buffer = makeCommandBuffer(pool, device);
-        }
-
-        CommandBuffer::CommandBuffer(CommandBuffer&& other) noexcept
-        {
-            this->device = other.device;
-            this->pool = other.pool;
-            this->buffer = other.buffer;
-            other.pool = VK_NULL_HANDLE;
-            other.device = VK_NULL_HANDLE;
-            other.buffer = VK_NULL_HANDLE;
-        }
-
-        CommandBuffer::~CommandBuffer()
-        {
-            if (buffer) {
-                vkFreeCommandBuffers(device, pool, 1, &buffer);
-            }
-        }
-
-        CommandBuffer::operator const VkCommandBuffer&()
-        {
-            assert(buffer != VK_NULL_HANDLE);   // USE AFTER MOVE
-            return buffer;
-        }
-        const VkCommandBuffer& CommandBuffer::get()
-        {
-            assert(buffer != VK_NULL_HANDLE);   // USE AFTER MOVE
-            return buffer;
+            return vk::AttachmentDescription{
+                .format = vk::Format::eUndefined,
+                .samples = vk::SampleCountFlagBits::e1,
+                .loadOp = vk::AttachmentLoadOp::eClear,
+                .storeOp = vk::AttachmentStoreOp::eStore,
+                .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
+                .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
+                .initialLayout = vk::ImageLayout::eUndefined,
+                .finalLayout = vk::ImageLayout::ePresentSrcKHR,
+            };
         }
     }
 }
@@ -113,68 +51,55 @@ namespace daxa {
 
 namespace daxa {
     namespace vkh {
-        VkCommandPool makeCommandPool(
+        vk::UniqueCommandPool makeCommandPool(
             u32 queueFamilyIndex,
-            VkCommandPoolCreateFlagBits flags,
-            VkDevice device)
+            vk::CommandPoolCreateFlagBits flags,
+            vk::Device device)
         {
-            VkCommandPoolCreateInfo cmdPoolCreateInfo = {};
-            cmdPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-            cmdPoolCreateInfo.pNext = nullptr;
+            vk::CommandPoolCreateInfo cmdPoolCreateInfo = {};
             cmdPoolCreateInfo.flags = flags;   // we can reset individual command buffers from this pool
             cmdPoolCreateInfo.queueFamilyIndex = queueFamilyIndex;
 
-            VkCommandPool pool;
-            vkCreateCommandPool(daxa::vkh::mainDevice, &cmdPoolCreateInfo, nullptr, &pool);
-            return pool;
+            return device.createCommandPoolUnique(cmdPoolCreateInfo);
         }
 
         CommandPool::CommandPool(
             u32 queueFamilyIndex,
-            VkCommandPoolCreateFlagBits flags,
-            VkDevice device
+            vk::CommandPoolCreateFlagBits flags,
+            vk::Device device
         ) :
             queueFamilyIndex{ queueFamilyIndex },
             device{ device },
             pool{ makeCommandPool(queueFamilyIndex, flags, device) },
             bufferPool{
-                [=]() { return makeCommandBuffer(pool, device); },
-                [=](VkCommandBuffer buffer) { /* gets freed anyway */ },
-                [=](VkCommandBuffer buffer) { vkResetCommandBuffer(buffer, 0); }
+                [=]() { return device.allocateCommandBuffers(vk::CommandBufferAllocateInfo{.commandPool= *pool, .commandBufferCount= 1}).front(); },
+                [=](vk::CommandBuffer buffer) { /* gets freed anyway */ },
+                [=](vk::CommandBuffer buffer) { buffer.reset(); }
             }
-        {
-        }
+        { }
 
         CommandPool::CommandPool(CommandPool&& other) noexcept
         {
             this->queueFamilyIndex = other.queueFamilyIndex;
-            this->device = other.device;
-            this->pool = other.pool;
+            this->device = std::move(other.device);
+            this->pool = std::move(other.pool);
             this->bufferPool = std::move(other.bufferPool);
             other.queueFamilyIndex = 0xFFFFFFFF;
-            other.device = VK_NULL_HANDLE;
-            other.pool = VK_NULL_HANDLE;
         }
 
-        CommandPool::~CommandPool()
+        CommandPool::operator const vk::UniqueCommandPool&()
         {
-            if (pool)
-                vkDestroyCommandPool(device, pool, nullptr);
-        }
-
-        CommandPool::operator const VkCommandPool&()
-        {
-            assert(pool != VK_NULL_HANDLE); // USE AFTER MOVE
+            assert(pool); // USE AFTER MOVE
             return pool;
         }
 
-        const VkCommandPool& CommandPool::get()
+        const vk::UniqueCommandPool& CommandPool::get()
         {
-            assert(pool != VK_NULL_HANDLE); // USE AFTER MOVE
+            assert(pool); // USE AFTER MOVE
             return pool;
         }
 
-        VkCommandBuffer CommandPool::getBuffer()
+        vk::CommandBuffer CommandPool::getBuffer()
         {
             return bufferPool.get();
         }
@@ -192,55 +117,7 @@ namespace daxa {
 namespace daxa {
     namespace vkh {
 
-        ShaderModule::ShaderModule(std::string filePath, VkDevice device) :
-            device { device }
-        {
-            auto opt = loadShaderModule(filePath, device);
-            if (opt) {
-                shader = opt.value();
-            }
-        }
-
-        ShaderModule::ShaderModule(ShaderModule&& other) noexcept
-        {
-            this->destructionQ = other.destructionQ;
-            this->device = other.device;
-            this->shader = other.shader;
-            other.destructionQ = nullptr;
-            other.device = VK_NULL_HANDLE;
-            other.shader = VK_NULL_HANDLE;
-        }
-
-        ShaderModule::~ShaderModule()
-        {
-            if (shader) {
-                vkDestroyShaderModule(device, shader, nullptr);
-            }
-        }
-
-        ShaderModule::operator const VkShaderModule& ()
-        {
-            assert(shader);
-            return shader;
-        }
-
-        const VkShaderModule& ShaderModule::get() const
-        {
-            assert(shader);
-            return shader;
-        }
-
-        ShaderModule::operator bool() const
-        {
-            return shader != VK_NULL_HANDLE;
-        }
-
-        bool ShaderModule::valid() const
-        {
-            return shader != VK_NULL_HANDLE;
-        }
-
-        std::optional<VkShaderModule> loadShaderModule(std::string filePath, VkDevice device)
+        std::optional<vk::UniqueShaderModule> loadShaderModule(std::string filePath, vk::Device device)
         {
             //open the file. With cursor at the end
             std::ifstream file{ filePath, std::ios::ate | std::ios::binary };
@@ -265,27 +142,20 @@ namespace daxa {
 
 
             //create a new shader module, using the buffer we loaded
-            VkShaderModuleCreateInfo createInfo = {};
-            createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-            createInfo.pNext = nullptr;
+            vk::ShaderModuleCreateInfo createInfo = {};
 
             //codeSize has to be in bytes, so multply the ints in the buffer by size of int to know the real size of the buffer
             createInfo.codeSize = buffer.size() * sizeof(u32);
             createInfo.pCode = buffer.data();
 
             //check that the creation goes well.
-            VkShaderModule shaderModule;
-            if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-                return {};
-            }
-            return shaderModule;
+            vk::ShaderModule shaderModule;
+            return std::move(device.createShaderModuleUnique(createInfo));
         }
 
-        VkPipelineShaderStageCreateInfo makeShaderStageCreateInfo(VkShaderStageFlagBits stage, VkShaderModule shaderModule)
+        vk::PipelineShaderStageCreateInfo makeShaderStageCreateInfo(vk::ShaderStageFlagBits stage, vk::ShaderModule shaderModule)
         {
-            VkPipelineShaderStageCreateInfo info{};
-            info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-            info.pNext = nullptr;
+            vk::PipelineShaderStageCreateInfo info{};
 
             //shader stage
             info.stage = stage;
@@ -304,11 +174,9 @@ namespace daxa {
 namespace daxa {
     namespace vkh {
 
-        VkPipelineVertexInputStateCreateInfo makeVertexInputStageCreateInfo()
+        vk::PipelineVertexInputStateCreateInfo makeVertexInputStageCreateInfo()
         {
-            VkPipelineVertexInputStateCreateInfo info = {};
-            info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-            info.pNext = nullptr;
+            vk::PipelineVertexInputStateCreateInfo info = {};
 
             //no vertex bindings or attributes
             info.vertexBindingDescriptionCount = 0;
@@ -316,23 +184,18 @@ namespace daxa {
             return info;
         }
 
-        VkPipelineInputAssemblyStateCreateInfo makeInputAssemblyStateCreateInfo(VkPrimitiveTopology topology)
+        vk::PipelineInputAssemblyStateCreateInfo makeInputAssemblyStateCreateInfo(vk::PrimitiveTopology topology)
         {
-            VkPipelineInputAssemblyStateCreateInfo info = {};
-            info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-            info.pNext = nullptr;
-
+            vk::PipelineInputAssemblyStateCreateInfo info = {};
             info.topology = topology;
             //we are not going to use primitive restart on the entire tutorial so leave it on false
             info.primitiveRestartEnable = VK_FALSE;
             return info;
         }
 
-        VkPipelineRasterizationStateCreateInfo makeRasterisationStateCreateInfo(VkPolygonMode polygonMode)
+        vk::PipelineRasterizationStateCreateInfo makeRasterisationStateCreateInfo(vk::PolygonMode polygonMode)
         {
-            VkPipelineRasterizationStateCreateInfo info = {};
-            info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-            info.pNext = nullptr;
+            vk::PipelineRasterizationStateCreateInfo info = {};
 
             info.depthClampEnable = VK_FALSE;
             //discards all primitives before the rasterization stage if enabled which we don't want
@@ -341,8 +204,8 @@ namespace daxa {
             info.polygonMode = polygonMode;
             info.lineWidth = 1.0f;
             //no backface cull
-            info.cullMode = VK_CULL_MODE_NONE;
-            info.frontFace = VK_FRONT_FACE_CLOCKWISE;
+            info.cullMode = vk::CullModeFlagBits::eNone;
+            info.frontFace = vk::FrontFace::eClockwise;
             //no depth bias
             info.depthBiasEnable = VK_FALSE;
             info.depthBiasConstantFactor = 0.0f;
@@ -352,15 +215,13 @@ namespace daxa {
             return info;
         }
 
-        VkPipelineMultisampleStateCreateInfo makeMultisampleStateCreateInfo()
+        vk::PipelineMultisampleStateCreateInfo makeMultisampleStateCreateInfo()
         {
-            VkPipelineMultisampleStateCreateInfo info = {};
-            info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-            info.pNext = nullptr;
+            vk::PipelineMultisampleStateCreateInfo info = {};
 
             info.sampleShadingEnable = VK_FALSE;
             //multisampling defaulted to no multisampling (1 sample per pixel)
-            info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+            info.rasterizationSamples = vk::SampleCountFlagBits::e1;
             info.minSampleShading = 1.0f;
             info.pSampleMask = nullptr;
             info.alphaToCoverageEnable = VK_FALSE;
@@ -368,184 +229,103 @@ namespace daxa {
             return info;
         }
 
-        VkPipelineColorBlendAttachmentState makeColorBlendSAttachmentState()
+        vk::PipelineColorBlendAttachmentState makeColorBlendSAttachmentState()
         {
-            VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
-            colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-                VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+            vk::PipelineColorBlendAttachmentState colorBlendAttachment = {};
+            colorBlendAttachment.colorWriteMask =
+                vk::ColorComponentFlagBits::eR |
+                vk::ColorComponentFlagBits::eG |
+                vk::ColorComponentFlagBits::eB |
+                vk::ColorComponentFlagBits::eA;
             colorBlendAttachment.blendEnable = VK_FALSE;
             return colorBlendAttachment;
         }
 
-        VkPipelineLayoutCreateInfo makeLayoutCreateInfo()
+        vk::PipelineLayoutCreateInfo makePipelineLayoutCreateInfo()
         {
-            VkPipelineLayoutCreateInfo info{};
-            info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-            info.pNext = nullptr;
-
-            //empty defaults
-            info.flags = 0;
-            info.setLayoutCount = 0;
-            info.pSetLayouts = nullptr;
-            info.pushConstantRangeCount = 0;
-            info.pPushConstantRanges = nullptr;
-            return info;
+            return vk::PipelineLayoutCreateInfo{};
         }
 
-        VkPipeline PipelineBuilder::build(VkRenderPass pass, VkDevice device) {
-            //make viewport state from our stored viewport and scissor.
-            //at the moment we won't support multiple viewports or scissors
-            VkPipelineViewportStateCreateInfo viewportState = {};
-            viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-            viewportState.pNext = nullptr;
+        Pipeline  daxa::vkh::PipelineBuilder::build(vk::RenderPass pass, u32 subpass, vk::Device device)
+        {
+            if (!vertexInput) {
+                std::cout << "error: vertexInput was not specified in pipeline builder!\n";
+                exit(-1);
+            }
 
-            viewportState.viewportCount = 1;
-            viewportState.pViewports = &_viewport;
-            viewportState.scissorCount = 1;
-            viewportState.pScissors = &_scissor;
+            // set state create infos:
+            vk::PipelineVertexInputStateCreateInfo    pvertexInputCI = vertexInput.value();
+            vk::PipelineColorBlendAttachmentState     pcolorBlendAttachmentCI = colorBlendAttachment.value_or(vkh::makeColorBlendSAttachmentState());
+            vk::PipelineInputAssemblyStateCreateInfo  pinputAssemlyStateCI = inputAssembly.value_or(vkh::makeInputAssemblyStateCreateInfo(vk::PrimitiveTopology::eTriangleList ));
+            vk::PipelineRasterizationStateCreateInfo  prasterizationStateCI = rasterization.value_or(vkh::makeRasterisationStateCreateInfo(vk::PolygonMode::eFill));
+            vk::PipelineMultisampleStateCreateInfo    multisamplerStateCI = multisampling.value_or(vkh::makeMultisampleStateCreateInfo());
+            vk::PipelineDepthStencilStateCreateInfo   pDepthStencilStateCI = depthStencil.value_or(vk::PipelineDepthStencilStateCreateInfo{});
+            vk::Viewport                              pviewport = viewport.value_or(vk::Viewport{ .width = 1,.height = 1 });
+            vk::Rect2D                                pscissor = scissor.value_or(vk::Rect2D{ .extent = {static_cast<u32>(pviewport.width), static_cast<u32>(pviewport.height)} });
+
+            Pipeline pipeline;
+
+            //build pipeline layout:
+            vk::PipelineLayoutCreateInfo layoutCI{
+                .pushConstantRangeCount = u32(pushConstants.size()),
+                .pPushConstantRanges = pushConstants.data(),
+            };
+            pipeline.layout = device.createPipelineLayoutUnique(layoutCI);
+
+            vk::PipelineViewportStateCreateInfo viewportStateCI{
+                .viewportCount = 1,
+                .pViewports = &pviewport,
+                .scissorCount = 1,
+                .pScissors = &pscissor,
+            };
 
             //setup dummy color blending. We aren't using transparent objects yet
             //the blending is just "no blend", but we do write to the color attachment
-            VkPipelineColorBlendStateCreateInfo colorBlending = {};
-            colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-            colorBlending.pNext = nullptr;
+            vk::PipelineColorBlendStateCreateInfo colorBlendingSCI{
+                .logicOpEnable = VK_FALSE,
+                .logicOp = vk::LogicOp::eCopy,
+                .attachmentCount = 1,
+                .pAttachments = &pcolorBlendAttachmentCI,
+            };
 
-            colorBlending.logicOpEnable = VK_FALSE;
-            colorBlending.logicOp = VK_LOGIC_OP_COPY;
-            colorBlending.attachmentCount = 1;
-            colorBlending.pAttachments = &_colorBlendAttachment;
+            // dynamic state setup:
+            if (std::find(dynamicStateEnable.begin(), dynamicStateEnable.end(), vk::DynamicState::eViewport) == dynamicStateEnable.end()) {
+                dynamicStateEnable.push_back(vk::DynamicState::eViewport);
+            }
+            if (std::find(dynamicStateEnable.begin(), dynamicStateEnable.end(), vk::DynamicState::eScissor) == dynamicStateEnable.end()) {
+                dynamicStateEnable.push_back(vk::DynamicState::eScissor);
+            }
 
-
-
-
+            vk::PipelineDynamicStateCreateInfo dynamicStateCI{
+                .dynamicStateCount = (u32)dynamicStateEnable.size(),
+                .pDynamicStates = dynamicStateEnable.data(),
+            };
 
             //we now use all of the info structs we have been writing into into this one to create the pipeline
-            VkGraphicsPipelineCreateInfo pipelineInfo = {};
-            pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-            pipelineInfo.pNext = nullptr;
+            vk::GraphicsPipelineCreateInfo pipelineCI{
+                .stageCount = (u32)shaderStages.size(),
+                .pStages = shaderStages.data(),
+                .pVertexInputState = &pvertexInputCI,
+                .pInputAssemblyState = &pinputAssemlyStateCI,
+                .pViewportState = &viewportStateCI,
+                .pRasterizationState = &prasterizationStateCI,
+                .pMultisampleState = &multisamplerStateCI,
+                .pDepthStencilState = &pDepthStencilStateCI,
+                .pColorBlendState = &colorBlendingSCI,
+                .pDynamicState = &dynamicStateCI,
+                .layout = pipeline.layout.get(),
+                .renderPass = pass,
+                .subpass = subpass,
+            };
 
-            pipelineInfo.stageCount = _shaderStages.size();
-            pipelineInfo.pStages = _shaderStages.data();
-            pipelineInfo.pVertexInputState = &_vertexInputInfo;
-            pipelineInfo.pInputAssemblyState = &_inputAssembly;
-            pipelineInfo.pViewportState = &viewportState;
-            pipelineInfo.pRasterizationState = &_rasterizer;
-            pipelineInfo.pMultisampleState = &_multisampling;
-            pipelineInfo.pColorBlendState = &colorBlending;
-            pipelineInfo.layout = _pipelineLayout;
-            pipelineInfo.renderPass = pass;
-            pipelineInfo.subpass = 0;
-            pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-
-            //it's easy to error out on create graphics pipeline, so we handle it a bit better than the common VK_CHECK case
-            VkPipeline newPipeline;
-            if (vkCreateGraphicsPipelines(
-                device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &newPipeline) != VK_SUCCESS) {
-                std::cout << "failed to create pipline\n";
-                return VK_NULL_HANDLE; // failed to create graphics pipeline
-            }
-            else 	{
-                return newPipeline;
-            }
-        }
-
-
-        void BetterPipelineBuilder::setVertexInfo(const VertexDescription& vd)
-        {
-            VkPipelineVertexInputStateCreateInfo vertexInputStateCreate = {};
-            vertexInputStateCreate.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-            vertexInputStateCreate.pVertexAttributeDescriptions = vd.attributes.data();
-            vertexInputStateCreate.vertexAttributeDescriptionCount = vd.attributes.size();
-            vertexInputStateCreate.pVertexBindingDescriptions = vd.bindings.data();
-            vertexInputStateCreate.vertexBindingDescriptionCount = vd.bindings.size();
-            vertexInputInfo = vertexInputStateCreate;
-        }
-
-        VkPipeline BetterPipelineBuilder::build(VkRenderPass pass, VkDevice device)
-        {
-            if (!viewport) {
-                std::cout << "error: viewport was not specified in pipeline builder!\n";
+            auto ret = device.createGraphicsPipelineUnique({}, pipelineCI);
+            if (ret.result != vk::Result::eSuccess) {
+                std::cerr << "error: could not compile pipeline!\n";
                 exit(-1);
             }
-            if (!pipelineLayout) {
-                std::cout << "error: pipelineLayout was not specified in pipeline builder!\n";
-                exit(-1);
-            }
-            if (!vertexInputInfo) {
-                std::cout << "error: vertexInputInfo was not specified in pipeline builder!\n";
-                exit(-1);
-            }
-            if (!scissor) {
-                VkRect2D s;
-                s.offset = { i32(viewport.value().x), i32(viewport.value().y) };
-                s.extent = { u32(viewport.value().width), u32(viewport.value().height) };
-                this->scissor = s;
-            }
-            //make viewport state from our stored viewport and scissor.
-            //at the moment we won't support multiple viewports or scissors
-            VkPipelineViewportStateCreateInfo viewportState = {};
-            viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-            viewportState.pNext = nullptr;
+            pipeline.pipeline = std::move(ret.value);
 
-            viewportState.viewportCount = 1;
-            viewportState.pViewports = &viewport.value();
-            viewportState.scissorCount = 1;
-            viewportState.pScissors = &scissor.value();
-
-            if (!colorBlendAttachment) {
-                colorBlendAttachment = vkh::makeColorBlendSAttachmentState();
-            }
-
-            //setup dummy color blending. We aren't using transparent objects yet
-            //the blending is just "no blend", but we do write to the color attachment
-            VkPipelineColorBlendStateCreateInfo colorBlending = {};
-            colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-            colorBlending.pNext = nullptr;
-
-            colorBlending.logicOpEnable = VK_FALSE;
-            colorBlending.logicOp = VK_LOGIC_OP_COPY;
-            colorBlending.attachmentCount = 1;
-            colorBlending.pAttachments = &colorBlendAttachment.value();
-
-            if (!inputAssembly) {
-                inputAssembly = vkh::makeInputAssemblyStateCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-            }
-            if (!rasterizer) {
-                rasterizer = vkh::makeRasterisationStateCreateInfo(VK_POLYGON_MODE_FILL);
-            }
-            if (!multisampling) {
-                multisampling = vkh::makeMultisampleStateCreateInfo();
-            }
-
-            //we now use all of the info structs we have been writing into into this one to create the pipeline
-            VkGraphicsPipelineCreateInfo pipelineInfo = {};
-            pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-            pipelineInfo.pNext = nullptr;
-
-            pipelineInfo.stageCount = _shaderStages.size();
-            pipelineInfo.pStages = _shaderStages.data();
-            pipelineInfo.pVertexInputState = &vertexInputInfo.value();
-            pipelineInfo.pInputAssemblyState = &inputAssembly.value();
-            pipelineInfo.pViewportState = &viewportState;
-            pipelineInfo.pRasterizationState = &rasterizer.value();
-            pipelineInfo.pMultisampleState = &multisampling.value();
-            pipelineInfo.pColorBlendState = &colorBlending;
-            pipelineInfo.layout = pipelineLayout.value();
-            pipelineInfo.renderPass = pass;
-            pipelineInfo.subpass = 0;
-            pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-
-            //it's easy to error out on create graphics pipeline, so we handle it a bit better than the common VK_CHECK case
-            VkPipeline newPipeline;
-            if (vkCreateGraphicsPipelines(
-                device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &newPipeline) != VK_SUCCESS) {
-                std::cout << "failed to create pipline\n";
-                exit(-1);
-                return VK_NULL_HANDLE; // failed to create graphics pipeline
-            }
-            else {
-                return newPipeline;
-            }
+            return pipeline;
         }
     }
 }
@@ -555,65 +335,62 @@ namespace daxa {
 
 namespace daxa {
     namespace vkh {
-        VkBufferCreateInfo makeVertexBufferCreateInfo(uz size)
-        {
-            VkBufferCreateInfo bufferInfo = {};
-            bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-            bufferInfo.size = size;
-            bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-            return bufferInfo;
-        }
 
-        VertexDiscriptionBuilder& VertexDiscriptionBuilder::beginBinding(u32 stride, VkVertexInputRate inputRate)
+        VertexDiscriptionBuilder& VertexDiscriptionBuilder::beginBinding(u32 stride, vk::VertexInputRate inputRate)
         {
             offset = 0;
             location = 0;
-            VkVertexInputBindingDescription binding = {};
-            binding.binding = bindings.size();
-            binding.stride = stride;
-            binding.inputRate = inputRate;
+            vk::VertexInputBindingDescription binding{
+                .binding = (u32)bindings.size(),
+                .stride = stride,
+                .inputRate = inputRate,
+            };
             bindings.push_back(binding);
             return *this;
         }
 
-        VertexDiscriptionBuilder& VertexDiscriptionBuilder::setAttribute(VkFormat format)
+        VertexDiscriptionBuilder& VertexDiscriptionBuilder::setAttribute(vk::Format format)
         {
+            vk::VertexInputAttributeDescription attribute{
+                .location = location,
+                .binding = u32(bindings.size() - 1),
+                .format = format,
+                .offset = offset,
+            };
+
+            attributes.push_back(attribute);
+
+            location += 1;
+
             switch (format) {
-            case VK_FORMAT_R32_SFLOAT:
-            case VK_FORMAT_R32_UINT:
-            case VK_FORMAT_R32_SINT:
-                offset += sizeof(u32);
+            case vk::Format::eR32G32B32A32Sfloat:
+            case vk::Format::eR32G32B32A32Sint:
+            case vk::Format::eR32G32B32A32Uint:
+                offset += sizeof(f32) * 4;
                 break;
-            case VK_FORMAT_R32G32_SFLOAT:
-            case VK_FORMAT_R32G32_UINT:
-            case VK_FORMAT_R32G32_SINT:
-                offset += sizeof(u32) * 2;
+            case vk::Format::eR32G32B32Sfloat:
+            case vk::Format::eR32G32B32Sint:
+            case vk::Format::eR32G32B32Uint:
+                offset += sizeof(f32) * 3;
                 break;
-            case VK_FORMAT_R32G32B32_SFLOAT:
-            case VK_FORMAT_R32G32B32_UINT:
-            case VK_FORMAT_R32G32B32_SINT:
-                offset += sizeof(u32) * 3;
+            case vk::Format::eR32G32Sfloat:
+            case vk::Format::eR32G32Sint:
+            case vk::Format::eR32G32Uint:
+                offset += sizeof(f32) * 2;
                 break;
-            case VK_FORMAT_R32G32B32A32_SFLOAT:
-            case VK_FORMAT_R32G32B32A32_UINT:
-            case VK_FORMAT_R32G32B32A32_SINT:
-                offset += sizeof(u32) * 4;
+            case vk::Format::eR32Sfloat:
+            case vk::Format::eR32Sint:
+            case vk::Format::eR32Uint:
+                offset += sizeof(f32) * 1;
                 break;
             default:
                 assert(false);
             }
 
-            VkVertexInputAttributeDescription attribute = {};
-            attribute.binding = bindings.size() - 1;
-            attribute.location = location;
-            attribute.format = format;
-            attribute.offset = offset;
-            attributes.push_back(attribute);
-            location += 1;
             return *this;
         }
 
-        VertexDiscriptionBuilder& VertexDiscriptionBuilder::stageCreateFlags(VkPipelineVertexInputStateCreateFlags flags)
+        VertexDiscriptionBuilder& VertexDiscriptionBuilder::stageCreateFlags(vk::PipelineVertexInputStateCreateFlags flags)
         {
             this->flags = flags;
             return *this;
@@ -627,6 +404,163 @@ namespace daxa {
                 attributes,
                 flags
             };
+        }
+    }
+}
+
+#include "Image.hpp"
+#include "Buffer.hpp"
+
+#include "stb_image.hpp"
+
+namespace daxa {
+    namespace vkh {
+
+        Image::Image(Image && other) noexcept
+        {
+            std::swap(this->image, other.image);
+            std::swap(this->allocation, other.allocation);
+            std::swap(this->allocator, other.allocator);
+        }
+
+        Image& Image::operator=(Image && other) noexcept
+        {
+            Image::~Image();
+            new(this) Image(std::move(other));
+            return *this;
+        }
+
+        Image::~Image()
+        {
+            if (valid()) {
+                vmaDestroyImage(allocator, image, allocation);
+            }
+            image = vk::Image{};
+            allocation = {};
+            allocator = {};
+        }
+
+        void Image::reset()
+        {
+            Image::~Image();
+        }
+
+        bool Image::valid() const
+        {
+            return image.operator bool();
+        }
+
+        Image makeImage(
+            const vk::ImageCreateInfo& createInfo,
+            const VmaAllocationCreateInfo& allocInfo,
+            VmaAllocator allocator)
+        {
+            Image img;
+            img.allocator = allocator;
+            vmaCreateImage(img.allocator, (VkImageCreateInfo*)&createInfo, &allocInfo, (VkImage*)&img.image, &img.allocation, nullptr);
+            return std::move(img);
+        }
+
+        Image loadImage(vk::CommandBuffer& cmd, vk::Fence fence, std::string& path, vk::Device device, VmaAllocator allocator)
+        {
+            i32 width;
+            i32 height;
+            i32 channels;
+
+            // load image data from disc
+            stbi_uc* loadedData = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+
+            if (!loadedData) {
+                std::cout << "Warning: could not load file from path: " << path << std::endl;
+                return {};
+            }
+
+
+            // move cpu data into a staging buffer, so that we can read the image data on the gpu:
+            void* pixel_ptr = loadedData;
+            VkDeviceSize imageSize = width * height * 4;
+
+            vk::Format image_format = vk::Format::eR8G8B8A8Srgb;
+
+            vkh::Buffer stagingBuffer = createBuffer(imageSize, vk::BufferUsageFlagBits::eTransferSrc, VMA_MEMORY_USAGE_CPU_ONLY, allocator);
+
+            void* data;
+            vmaMapMemory(allocator, stagingBuffer.allocation, &data);
+
+            memcpy(data, pixel_ptr, static_cast<size_t>(imageSize));
+
+            vmaUnmapMemory(allocator, stagingBuffer.allocation);
+
+            stbi_image_free(loadedData);
+
+
+            // create image:
+            vk::Extent3D imageExtent;
+            imageExtent.width = static_cast<u32>(width);
+            imageExtent.height = static_cast<u32>(height);
+            imageExtent.depth = 1;
+
+            vk::ImageCreateInfo imgCI{
+                .imageType = vk::ImageType::e2D,
+                .format = image_format,
+                .extent = imageExtent,
+                .mipLevels = 1,
+                .arrayLayers = 1,
+                .usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst,
+            };
+
+            vkh::Image newImage;
+
+            VmaAllocationCreateInfo dimg_allocinfo = {};
+            dimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+            vmaCreateImage(allocator, (VkImageCreateInfo*)&imgCI, &dimg_allocinfo, (VkImage*)&newImage.image, &newImage.allocation, nullptr);
+            newImage.allocator = allocator;
+
+
+            // change image layout to transfer dist optiomal:
+            VkImageSubresourceRange range;
+            range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            range.baseMipLevel = 0;
+            range.levelCount = 1;
+            range.baseArrayLayer = 0;
+            range.layerCount = 1;
+
+            VkImageMemoryBarrier imageBarrier_toTransfer = {};
+            imageBarrier_toTransfer.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+
+            imageBarrier_toTransfer.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            imageBarrier_toTransfer.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            imageBarrier_toTransfer.image = newImage.image;
+            imageBarrier_toTransfer.subresourceRange = range;
+
+            imageBarrier_toTransfer.srcAccessMask = 0;
+            imageBarrier_toTransfer.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+            cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
+
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toTransfer);
+
+
+            //copy the buffer into the image:
+            VkBufferImageCopy copyRegion = {};
+            copyRegion.bufferOffset = 0;
+            copyRegion.bufferRowLength = 0;
+            copyRegion.bufferImageHeight = 0;
+
+            copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            copyRegion.imageSubresource.mipLevel = 0;
+            copyRegion.imageSubresource.baseArrayLayer = 0;
+            copyRegion.imageSubresource.layerCount = 1;
+            copyRegion.imageExtent = imageExtent;
+
+            vkCmdCopyBufferToImage(cmd, stagingBuffer.buffer, newImage.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+
+            cmd.end();
+            vkh::mainTransferQueue.submit(vk::SubmitInfo{ .pCommandBuffers = &cmd }, fence);
+            device.waitForFences(fence, true, 9999999999);
+
+            return std::move(newImage);
         }
     }
 }

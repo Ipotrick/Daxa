@@ -6,7 +6,8 @@
 #include <vector>
 
 #include "../DaxaCore.hpp"
-#include "../rendering/Vulkan.hpp"
+#include "../rendering/Rendering.hpp"
+#include "../math/Vec2.hpp"
 
 struct SDL_Window;
 
@@ -21,16 +22,16 @@ namespace daxa {
 		Window(
 			std::string name,
 			std::array<u32,2> size,
-			VkInstance instance,
-			VkDevice device,
-			VkPhysicalDevice physicalDevice
+			vk::Device device,
+			vk::PhysicalDevice physicalDevice
 		);
 		~Window();
 		Window(Window&&) = delete;
 
 		void setSize(std::array<u32, 2> size);
 		std::array<u32,2> getSize() const;
-		VkExtent2D getExtent() const;
+		Vec2 getSizeVec() const;
+		vk::Extent2D getExtent() const;
 
 		void setName(std::string name);
 		const std::string& getName();
@@ -48,14 +49,16 @@ namespace daxa {
 		u32 sdlWindowId{ 0xFFFFFFFF };
 
 		bool bSpacePressed{ false };
-		VkPresentModeKHR presentMode{ VK_PRESENT_MODE_FIFO_KHR };
-		VkInstance vulkanInstance{ VK_NULL_HANDLE };
-		VkDevice vulkanDevice{ VK_NULL_HANDLE };
-		VkPhysicalDevice vulkanPhysicalDevice{ VK_NULL_HANDLE };
-		VkSurfaceKHR surface{ VK_NULL_HANDLE };
-		VkSwapchainKHR swapchain{ VK_NULL_HANDLE }; // from other articles
-		VkFormat swapchainImageFormat; // image format expected by the windowing system
-		std::vector<VkImage> swapchainImages; //array of images from the swapchain
-		std::vector<VkImageView> swapchainImageViews; //array of image-views from the swapchain
+		vk::PresentModeKHR presentMode{ vk::PresentModeKHR::eFifo };
+		vk::Device vulkanDevice;
+		vk::PhysicalDevice vulkanPhysicalDevice;
+		vk::SurfaceKHR surface;
+		vk::SwapchainKHR swapchain; // from other articles
+		vk::Format swapchainImageFormat; // image format expected by the windowing system
+		std::vector<vk::Image> swapchainImages; //array of images from the swapchain
+		std::vector<vk::ImageView> swapchainImageViews; //array of image-views from the swapchain
+		vkh::Image depthImage;
+		vk::UniqueImageView depthImageView;
+		vk::Format depthImageFormat;
 	};
 }

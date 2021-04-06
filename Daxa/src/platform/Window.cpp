@@ -7,18 +7,44 @@
 #include <SDL2/SDL_vulkan.h>
 
 namespace daxa {
-	Window::Window(std::string name, std::array<u32, 2> size, VkInstance instance, VkDevice device, VkPhysicalDevice physicalDevice) :
-		name{ name }, size{ size }, vulkanInstance{instance}, vulkanDevice{device}, vulkanPhysicalDevice{physicalDevice}
+	Window::Window(std::string name, std::array<u32, 2> size, vk::Device device, vk::PhysicalDevice physicalDevice) :
+		name{ name }, size{ size }, vulkanDevice{device}, vulkanPhysicalDevice{physicalDevice}
 	{
 		//create blank SDL window for our application
 		sdlWindowHandle = SDL_CreateWindow(
-			name.c_str(),				//window title
-			SDL_WINDOWPOS_UNDEFINED,	//window position x (don't care)
-			SDL_WINDOWPOS_UNDEFINED,	//window position y (don't care)
-			size[0],					//window width in pixels
-			size[1],					//window height in pixels
+			name.c_str(),				// window title
+			SDL_WINDOWPOS_UNDEFINED,	// window position x (don't care)
+			SDL_WINDOWPOS_UNDEFINED,	// window position y (don't care)
+			size[0],					// window width in pixels
+			size[1],					// window height in pixels
 			SDL_WINDOW_VULKAN
 		);
+
+		depthImageFormat = vk::Format::eD32Sfloat;
+		
+		depthImage = vkh::makeImage(
+			vk::ImageCreateInfo{
+				.imageType = vk::ImageType::e2D,
+				.format = depthImageFormat,
+				.extent = vk::Extent3D{.width=size[0],.height=size[1],.depth=1},
+				.mipLevels = 1,
+				.arrayLayers = 1,
+				.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
+			}
+		);
+		
+		depthImageView = device.createImageViewUnique(vk::ImageViewCreateInfo{
+			.image = depthImage.image,
+			.viewType = vk::ImageViewType::e2D,
+			.format = depthImageFormat,
+			.subresourceRange = vk::ImageSubresourceRange {
+				.aspectMask = vk::ImageAspectFlagBits::eDepth,
+				.baseMipLevel = 0,
+				.levelCount = 1,
+				.baseArrayLayer = 0,
+				.layerCount = 1,
+			}
+		});
 
 		if (!sdlWindowHandle) {
 			std::cerr << SDL_GetError() << std::endl;
@@ -27,7 +53,7 @@ namespace daxa {
 
 		sdlWindowId = SDL_GetWindowID(sdlWindowHandle);
 
-		SDL_Vulkan_CreateSurface(sdlWindowHandle, instance, &surface);
+		SDL_Vulkan_CreateSurface(sdlWindowHandle, vkh::instance, (VkSurfaceKHR*)&surface);
 
 		vkb::SwapchainBuilder swapchainBuilder{ vulkanPhysicalDevice, vulkanDevice, surface };
 
@@ -40,11 +66,17 @@ namespace daxa {
 			.value();
 
 		//store swapchain and its related images
-		swapchain = vkbSwapchain.swapchain;
-		swapchainImages = vkbSwapchain.get_images().value();
-		swapchainImageViews = vkbSwapchain.get_image_views().value();
+		swapchain = (vk::SwapchainKHR)vkbSwapchain.swapchain;
+		auto vkImages = vkbSwapchain.get_images().value();
+		for (VkImage& img : vkImages) {
+			swapchainImages.push_back((vk::Image)img);
+		}
+		auto vkImageViews = vkbSwapchain.get_image_views().value();
+		for (VkImageView& img : vkImageViews) {
+			swapchainImageViews.push_back((vk::ImageView)img);
+		}
 
-		swapchainImageFormat = vkbSwapchain.image_format;
+		swapchainImageFormat = (vk::Format)vkbSwapchain.image_format;
 	}
 	Window::~Window()
 	{
@@ -56,7 +88,7 @@ namespace daxa {
 			vkDestroyImageView(vulkanDevice, swapchainImageViews[i], nullptr);
 		}
 		
-		vkDestroySurfaceKHR(vulkanInstance, surface, nullptr);
+		vkDestroySurfaceKHR(vkh::instance, surface, nullptr);
 		SDL_DestroyWindow(sdlWindowHandle);
 		sdlWindowHandle = nullptr;
 	}
@@ -68,9 +100,13 @@ namespace daxa {
 	{
 		return size;
 	}
-	VkExtent2D Window::getExtent() const
+	Vec2 Window::getSizeVec() const
 	{
-		return VkExtent2D{size[0],size[1]};
+		return { static_cast<f32>(size[0]), static_cast<f32>(size[1]) };
+	}
+	vk::Extent2D Window::getExtent() const
+	{
+		return vk::Extent2D{size[0],size[1]};
 	}
 	void Window::setName(std::string name)
 	{

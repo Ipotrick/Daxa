@@ -14,6 +14,13 @@ namespace daxa {
     struct TVec4 {
         constexpr TVec4() = default;
 
+        constexpr TVec4(T x, T y, T z, T w) :
+            x{ x },
+            y{ y },
+            z{ z },
+            w{ w }
+        {}
+
         constexpr TVec4(TVec2<T> vec, T z, T w) :
             x{ vec.x },
             y{ vec.y },
@@ -21,7 +28,7 @@ namespace daxa {
             w{ w }
         {} 
         
-        constexpr TVec4(TVec2<T> vec, T w) :
+        constexpr TVec4(TVec3<T> vec, T w) :
             x{ vec.x },
             y{ vec.y },
             z{ vec.z },

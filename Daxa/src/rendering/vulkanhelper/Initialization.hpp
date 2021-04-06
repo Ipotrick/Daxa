@@ -4,10 +4,12 @@
 
 namespace daxa {
 	namespace vkh {
-		VkFence makeFence(VkDevice device = vkh::mainDevice);
+		vk::FenceCreateInfo makeDefaultFenceCI();
 
-		VkSemaphore makeSemaphore(VkDevice device = vkh::mainDevice);
+		vk::SemaphoreCreateInfo makeDefaultSemaphoreCI();
 
-		VkRenderPass makeRenderPass(VkRenderPassCreateInfo info, VkDevice device = vkh::mainDevice);
+		vk::AttachmentDescription makeDefaultAttackmentDescription();
+
+		vk::PipelineRasterizationStateCreateInfo makeDefaultPipelineRasterizationSCI();
 	}
 }
