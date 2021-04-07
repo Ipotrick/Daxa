@@ -4,16 +4,16 @@ This engine is written for learning purposes and for use in personal projects.
 The engine is not tested in any extensive format.
 
 Things the engine aims to provide:
-* simplicity
+* ease of use
 * a heavy focus on multithreading friendliness
-* fast compile times
-* scriptable rendering in the main renderers
-* fast simple 2d and 3d vulkan renderer
+* a capable easy to use Job System
+* fast 2d and 3d vulkan renderers
+* (relatively) easy to use vulkan interface for custom rendering and compute
 * entity component manager
-* easy to use GUI
+* very fast GUI library
 * audio
 * 2d and 3d collision detection
-* 2d and 3d physics solvers
+* 2d and 3d physics
 
 external Dependencies:
 * SDL2 
