@@ -57,7 +57,7 @@ namespace daxa {
 		vk::Format swapchainImageFormat; // image format expected by the windowing system
 		std::vector<vk::Image> swapchainImages; //array of images from the swapchain
 		std::vector<vk::ImageView> swapchainImageViews; //array of image-views from the swapchain
-		vkh::Image depthImage;
+		Image depthImage;
 		vk::UniqueImageView depthImageView;
 		vk::Format depthImageFormat;
 	};

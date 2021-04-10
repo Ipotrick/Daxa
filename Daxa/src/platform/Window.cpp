@@ -22,7 +22,7 @@ namespace daxa {
 
 		depthImageFormat = vk::Format::eD32Sfloat;
 		
-		depthImage = vkh::makeImage(
+		depthImage = makeImage(
 			vk::ImageCreateInfo{
 				.imageType = vk::ImageType::e2D,
 				.format = depthImageFormat,
@@ -53,7 +53,7 @@ namespace daxa {
 
 		sdlWindowId = SDL_GetWindowID(sdlWindowHandle);
 
-		SDL_Vulkan_CreateSurface(sdlWindowHandle, vkh::instance, (VkSurfaceKHR*)&surface);
+		SDL_Vulkan_CreateSurface(sdlWindowHandle, vkh_old::instance, (VkSurfaceKHR*)&surface);
 
 		vkb::SwapchainBuilder swapchainBuilder{ vulkanPhysicalDevice, vulkanDevice, surface };
 
@@ -88,7 +88,7 @@ namespace daxa {
 			vkDestroyImageView(vulkanDevice, swapchainImageViews[i], nullptr);
 		}
 		
-		vkDestroySurfaceKHR(vkh::instance, surface, nullptr);
+		vkDestroySurfaceKHR(vkh_old::instance, surface, nullptr);
 		SDL_DestroyWindow(sdlWindowHandle);
 		sdlWindowHandle = nullptr;
 	}

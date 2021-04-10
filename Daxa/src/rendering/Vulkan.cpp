@@ -6,7 +6,7 @@
 #include <VkBootstrap.hpp>
 
 namespace daxa {
-	namespace vkh {
+	namespace vkh_old {
 		vk::Instance				instance;
 		vk::DebugUtilsMessengerEXT	debugMessenger;
 		vk::PhysicalDevice			mainPhysicalDevice;
@@ -26,7 +26,7 @@ namespace daxa {
 				.set_app_name("Daxa Application")
 				.set_engine_name("Daxa")
 				.request_validation_layers(true)
-				.require_api_version(1, 1, 0)
+				.require_api_version(1, 2, 0)
 				.use_default_debug_messenger();
 			auto instanceBuildReturn = instanceBuilder.build();
 			if (!instanceBuildReturn) {

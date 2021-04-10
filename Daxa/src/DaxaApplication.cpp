@@ -11,11 +11,11 @@ namespace daxa {
 		windowMutex = std::make_unique<OwningMutex<Window>>(
 			name, 
 			std::array<u32, 2>{ width, height }, 
-			vkh::device,
-			vkh::mainPhysicalDevice
+			vkh_old::device,
+			vkh_old::mainPhysicalDevice
 		);
 
-		presentSem = vkh::device.createSemaphoreUnique(vkh::makeDefaultSemaphoreCI());
+		presentSem = vkh_old::device.createSemaphoreUnique({});
 
 		init_default_renderpass();
 
@@ -36,12 +36,12 @@ namespace daxa {
 		semaPool.flush();
 		cmdPool.flush();
 
-		vkh::device.resetFences(*renderFence);
+		vkh_old::device.resetFences(*renderFence);
 
 		auto window = windowMutex->lock();
 
 		u32 swapchainImageIndex;
-		VK_CHECK(vkAcquireNextImageKHR(vkh::device, window->swapchain, 1000000000, *presentSem, nullptr, &swapchainImageIndex));
+		VK_CHECK(vkAcquireNextImageKHR(vkh_old::device, window->swapchain, 1000000000, *presentSem, nullptr, &swapchainImageIndex));
 
 		vk::CommandBuffer cmd = cmdPool.getBuffer();
 
@@ -109,7 +109,7 @@ namespace daxa {
 		submit.pSignalSemaphores = &renderSem;
 		submit.commandBufferCount = 1;
 		submit.pCommandBuffers = &cmd;
-		vkQueueSubmit(vkh::mainGraphicsQueue, 1, (VkSubmitInfo*)&submit, *renderFence);
+		vkQueueSubmit(vkh_old::mainGraphicsQueue, 1, (VkSubmitInfo*)&submit, *renderFence);
 
 		vk::PresentInfoKHR presentInfo = {};
 		presentInfo.pSwapchains = &window->swapchain;
@@ -117,9 +117,9 @@ namespace daxa {
 		presentInfo.pWaitSemaphores = &renderSem;
 		presentInfo.waitSemaphoreCount = 1;
 		presentInfo.pImageIndices = &swapchainImageIndex;
-		VK_CHECK(vkQueuePresentKHR(vkh::mainGraphicsQueue, (VkPresentInfoKHR*)&presentInfo));
+		VK_CHECK(vkQueuePresentKHR(vkh_old::mainGraphicsQueue, (VkPresentInfoKHR*)&presentInfo));
 
-		VK_CHECK(vkWaitForFences(vkh::device, 1, (VkFence*)&*renderFence, true, 1000000000));
+		VK_CHECK(vkWaitForFences(vkh_old::device, 1, (VkFence*)&*renderFence, true, 1000000000));
 		_frameNumber++;
 	}
 
@@ -132,7 +132,7 @@ namespace daxa {
 	{
 		vkh::PipelineBuilder pipelineBuilder;
 
-		pipelineBuilder.vertexInput = Vertex::INFO.makePipelineVertexInpitSCI();
+		pipelineBuilder.vertexInput = Vertex::INFO.makePipelineVertexInputStateCreateInfo();
 
 		pipelineBuilder.pushConstants.push_back(vk::PushConstantRange{
 			.stageFlags = vk::ShaderStageFlagBits::eVertex,
@@ -140,8 +140,8 @@ namespace daxa {
 			.size = sizeof(MeshPushConstants),
 		});
 
-		auto fragShaderOpt = vkh::loadShaderModule( "shaders/colortri.frag.spv");
-		auto vertShaderOpt = vkh::loadShaderModule("shaders/tri_mesh.vert.spv" );
+		auto fragShaderOpt = vkh::loadShaderModule(vkh_old::device, "shaders/colortri.frag.spv");
+		auto vertShaderOpt = vkh::loadShaderModule(vkh_old::device, "shaders/tri_mesh.vert.spv" );
 
 		if (!fragShaderOpt) std::cout << "Error when building the mesh fragment shader module" << std::endl;
 		else std::cout << "Red mesh fragment shader succesfully loaded" << std::endl;
@@ -161,7 +161,7 @@ namespace daxa {
 			.maxDepthBounds = 1.0f,
 		};
 
-		meshPipeline = pipelineBuilder.build(*mainRenderpass);
+		meshPipeline = pipelineBuilder.build(vkh_old::device,*mainRenderpass);
 	}
 
 	void Application::init_default_renderpass()
@@ -207,7 +207,7 @@ namespace daxa {
 			.pDepthStencilAttachment = &depthAttachmentRef,
 		};
 
-		mainRenderpass = vkh::device.createRenderPassUnique(vk::RenderPassCreateInfo{
+		mainRenderpass = vkh_old::device.createRenderPassUnique(vk::RenderPassCreateInfo{
 			.attachmentCount = (u32)attachmentDescriptions.size(),
 			.pAttachments = attachmentDescriptions.data(),
 			.subpassCount = 1,
@@ -235,7 +235,7 @@ namespace daxa {
 			std::array<vk::ImageView, 2> attachments{ window->swapchainImageViews[i], window->depthImageView.get() };
 			framebufferCI.attachmentCount = (u32)attachments.size();
 			framebufferCI.pAttachments = attachments.data();
-			framebuffers[i] = vkh::device.createFramebufferUnique(framebufferCI);
+			framebuffers[i] = vkh_old::device.createFramebufferUnique(framebufferCI);
 		}
 	}
 
@@ -266,16 +266,16 @@ namespace daxa {
 		vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 
 		//allocate the buffer
-		vmaCreateBuffer(vkh::allocator, (VkBufferCreateInfo*)&bufferInfo, &vmaallocInfo,
+		vmaCreateBuffer(vkh_old::allocator, (VkBufferCreateInfo*)&bufferInfo, &vmaallocInfo,
 			(VkBuffer*)&mesh.vertexBuffer.buffer,
 			&mesh.vertexBuffer.allocation,
 			nullptr);
 
 		void* gpuMemory;
-		vmaMapMemory(vkh::allocator, mesh.vertexBuffer.allocation, &gpuMemory);
+		vmaMapMemory(vkh_old::allocator, mesh.vertexBuffer.allocation, &gpuMemory);
 
 		memcpy(gpuMemory, mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex));
 
-		vmaUnmapMemory(vkh::allocator, mesh.vertexBuffer.allocation);
+		vmaUnmapMemory(vkh_old::allocator, mesh.vertexBuffer.allocation);
 	}
 }

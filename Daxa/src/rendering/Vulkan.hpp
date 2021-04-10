@@ -5,6 +5,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include "../dependencies/vk_mem_alloc.hpp"
+#include "../dependencies/vulkanhelper.hpp"
 
 #include "../DaxaCore.hpp"
 
@@ -20,7 +21,7 @@
 	} while (0)
 
 namespace daxa{
-	namespace vkh {
+	namespace vkh_old {
 		extern vk::Instance					instance;
 		extern vk::DebugUtilsMessengerEXT	debugMessenger;
 		extern vk::PhysicalDevice			mainPhysicalDevice;

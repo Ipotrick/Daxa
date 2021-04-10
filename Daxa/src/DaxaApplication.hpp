@@ -40,16 +40,16 @@ namespace daxa {
 		void uploadMesh(SimpleMesh& mesh);
 
 		vkh::Pool<vk::Semaphore> semaPool{
-				[]() { return vkh::device.createSemaphore(vkh::makeDefaultSemaphoreCI()); },
-				[](vk::Semaphore sem) { vkh::device.destroySemaphore(sem,nullptr); },
+				[]() { return vkh_old::device.createSemaphore({}); },
+				[](vk::Semaphore sem) { vkh_old::device.destroySemaphore(sem,nullptr); },
 				[](vk::Semaphore sem) { /* dont need to reset a semaphore */ }
 		};
 
-		vkh::CommandPool cmdPool{};
+		vkh::CommandPool cmdPool{vkh_old::device, vkh_old::mainGraphicsQueueFamiltyIndex};
 
 		std::vector<vk::UniqueFramebuffer> framebuffers;
 
-		vk::UniqueFence renderFence{ vkh::device.createFenceUnique(vk::FenceCreateInfo{}) };
+		vk::UniqueFence renderFence{ vkh_old::device.createFenceUnique(vk::FenceCreateInfo{}) };
 
 		vk::UniqueSemaphore presentSem;
 

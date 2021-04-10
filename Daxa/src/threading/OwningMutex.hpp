@@ -11,38 +11,42 @@ namespace daxa {
 	class ReadWriteLock {
 	public:
 		ReadWriteLock(std::unique_lock<std::shared_mutex>&& lck, T* data) :
-			lock{ std::move(lck) }, data{ data }
+			ulock{ std::move(lck) }, data{ data }
 		{ }
 
 		T& operator*()
 		{
-			DAXA_ASSERT(data);
+			DAXA_ASSERT(ulock.owns_lock());
 			return *data;
 		}
 		const T& operator*() const
 		{
-			DAXA_ASSERT(data);
+			DAXA_ASSERT(ulock.owns_lock());
 			return *data;
 		}
 		T* operator->()
 		{
-			DAXA_ASSERT(data);
+			DAXA_ASSERT(ulock.owns_lock());
 			return data;
 		}
 		const T* operator->() const
 		{
-			DAXA_ASSERT(data);
+			DAXA_ASSERT(ulock.owns_lock());
 			return data;
 		}
 
 		void unlock()
 		{
-			lock.unlock();
-			data = nullptr;
+			ulock.unlock();
+		}
+
+		void lock()
+		{
+			ulock.lock();
 		}
 
 	private:
-		std::unique_lock<std::shared_mutex> lock;
+		std::unique_lock<std::shared_mutex> ulock;
 		T* data{ nullptr };
 	};
 
@@ -50,28 +54,32 @@ namespace daxa {
 	class ReadOnlyLock {
 	public:
 		ReadOnlyLock(std::shared_lock<std::shared_mutex>&& lck, T const* data) :
-			lock{ std::move(lck) }, data{ data }
+			slock{ std::move(lck) }, data{ data }
 		{ }
 
 		const T& operator*()
 		{
-			DAXA_ASSERT(data);
+			DAXA_ASSERT(slock.owns_lock());
 			return *data;
 		}
 		const T* operator->() const
 		{
-			DAXA_ASSERT(data);
+			DAXA_ASSERT(slock.owns_lock());
 			return data;
 		}
 
 		void unlock()
 		{
-			lock.unlock();
-			data = nullptr;
+			slock.unlock();
+		}
+
+		void lock()
+		{
+			slock.lock();
 		}
 
 	private:
-		std::shared_lock<std::shared_mutex> lock;
+		std::shared_lock<std::shared_mutex> slock;
 		T const* data{ nullptr };
 	};
 

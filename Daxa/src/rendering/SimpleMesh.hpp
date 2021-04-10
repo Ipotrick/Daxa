@@ -14,6 +14,7 @@ namespace daxa {
 
 		static vkh::VertexDescription getVertexDescription()
 		{
+			
 			vkh::VertexDiscriptionBuilder builder;
 			return builder
 				.beginBinding(sizeof(Vertex))
@@ -28,7 +29,7 @@ namespace daxa {
 	struct SimpleMesh {
 		std::vector<Vertex> vertices;
 
-		vkh::Buffer vertexBuffer;
+		Buffer vertexBuffer;
 	};
 
 	std::optional<SimpleMesh> loadMeshFromObj(const char* filename);
