@@ -82,6 +82,35 @@ namespace daxa {
 #include "ImageManager.hpp"
 
 namespace daxa {
+
+    ImageManager::WeakHandle::WeakHandle(ImageSlot* imgSlot) : imgSlot{imgSlot} { }
+
+    ReadWriteLock<Image> ImageManager::WeakHandle::get()
+    {
+        DAXA_ASSERT(imgSlot);
+        DAXA_ASSERT(imgSlot->slotSurvivalTime < ImageManager::SLOT_SURVIVAL_FRAMES);
+        return imgSlot->imageMut.lock();
+    }
+
+    ReadOnlyLock<Image> ImageManager::WeakHandle::getConst() const
+    {
+        DAXA_ASSERT(imgSlot);
+        DAXA_ASSERT(imgSlot->slotSurvivalTime < ImageManager::SLOT_SURVIVAL_FRAMES);
+        return imgSlot->imageMut.lockReadOnly();
+    }
+
+    OwningMutex<Image>& ImageManager::WeakHandle::getMtx()
+    {
+        DAXA_ASSERT(imgSlot);
+        DAXA_ASSERT(imgSlot->slotSurvivalTime < ImageManager::SLOT_SURVIVAL_FRAMES);
+        return imgSlot->imageMut;
+    }
+
+    ImageManager::Handle ImageManager::WeakHandle::getStrongHandle() const
+    {
+        return Handle{ imgSlot };
+    }
+
 	ImageManager::Handle::Handle(ImageSlot* slot)
 	{
 		imgSlot = slot;
@@ -102,36 +131,264 @@ namespace daxa {
 			--imgSlot->refCount;
 		}
 	}
-	ReadWriteLock<vkh::Image> ImageManager::Handle::get()
+	ReadWriteLock<Image> ImageManager::Handle::get()
 	{
 		assert(imgSlot);
 		return imgSlot->imageMut.lock();
 	}
-	ReadOnlyLock<vkh::Image> ImageManager::Handle::getConst()
+
+	ReadOnlyLock<Image> ImageManager::Handle::getConst() const
 	{
 		assert(imgSlot);
 		return imgSlot->imageMut.lockReadOnly();
 	}
 
+    OwningMutex<Image>& ImageManager::Handle::getMtx()
+    {
+        DAXA_ASSERT(imgSlot);
+        return imgSlot->imageMut;
+    }
 
-	void ImageManager::CreateJob::execute()
-	{
-		std::vector<std::pair<std::string, u32>> remainingCreateQ;
-		auto manager = managerMtx->lock();
-		for (auto [alias, index] : manager->createQ) {
-			if (auto imgOpt = manager->imageSlots[index]->imageMut.tryLock()) {
-				auto& img = imgOpt.value();
-				if (!img->valid()) {
-					auto cmd = manager->cmdPool.getBuffer();
-					auto fence = manager->fencePool.get();
-					*img = vkh::loadImage(cmd, fence, alias, manager->device);
-				}
-			}
-			else {
-				remainingCreateQ.emplace_back(alias, index);
-			}
-		}
+    ImageManager::WeakHandle ImageManager::Handle::getWeakHandle() const
+    {
+        return WeakHandle{ imgSlot };
+    }
 
-		manager->createQ = remainingCreateQ;
-	}
+    void ImageManager::DestroyJob::execute()
+    {
+        auto manager = managerMtx->lock();
+        auto destroyQ = std::move(manager->destroyQ);
+        decltype(destroyQ) leftOverQ;
+        manager->destroyQ = {};
+        manager.unlock();
+
+        for (auto* slot : destroyQ) {
+            if (slot->refCount == 0) {
+                if (auto imgOpt = slot->imageMut.tryLock()) {
+                    auto& img = *imgOpt.value();
+                    img = {};
+                }
+                else {
+                    leftOverQ.push_back(slot);
+                }
+            }
+            else {
+                leftOverQ.push_back(slot);
+            }
+        }
+
+        manager.lock();
+        manager->destroyQ.insert(manager->destroyQ.end(), leftOverQ.begin(), leftOverQ.end());
+    }
+
+    void ImageManager::CreateJob::execute()
+    {
+        auto manager = managerMtx->lock();
+        auto createQ = std::move(manager->createQ);
+        manager->createQ = {};
+        decltype(createQ) leftOverQ;
+
+        auto cmd = manager->cmdPool.getBuffer();
+        auto fence = manager->fencePool.get();
+        manager.unlock();
+
+        for (auto& [path, slot] : createQ) {
+            if (auto lockOpt = slot->imageMut.tryLock()) {
+                auto& img = *lockOpt.value();
+                img = loadImage(cmd, fence, path);
+            }
+            else {
+                leftOverQ.push_back({ path,slot });
+            }
+        }
+
+        manager.lock();
+        manager->createQ.insert(manager->createQ.end(), leftOverQ.begin(), leftOverQ.end());
+    }
+
+    ImageManager::Handle ImageManager::getHandle(const std::string& alias)
+    {
+        ImageSlot* slot{ nullptr };
+        if (aliasToSlot.contains(alias)) {
+            slot = aliasToSlot[alias];
+        }
+        else {
+            imageSlots.emplace_back(std::make_unique<ImageSlot>());
+            slot = imageSlots.back().get();
+            aliasToSlot.insert({ alias,slot });
+            createQ.push_back({ alias,slot });
+        }
+        return { slot };
+    }
+
+    void ImageManager::update()
+    {
+        cmdPool.flush();
+        for (auto& slot : imageSlots) {
+            if (slot) {
+                if (slot->refCount == 0) {
+                    slot->framesSinceZeroRefs++;
+                    if (slot->framesSinceZeroRefs >= SLOT_SURVIVAL_FRAMES) {
+                        destroyQ.emplace_back(slot.get());
+                    }
+                }
+                else {
+                    slot->framesSinceZeroRefs = 0;
+                }
+            }
+        }
+    }
+}
+
+#include "Image.hpp"
+#include "Buffer.hpp"
+
+#include "stb_image.hpp"
+
+namespace daxa {
+    Image::Image(Image&& other) noexcept
+    {
+        std::swap(this->image, other.image);
+        std::swap(this->allocation, other.allocation);
+        std::swap(this->allocator, other.allocator);
+    }
+
+    Image& Image::operator=(Image&& other) noexcept
+    {
+        Image::~Image();
+        new(this) Image(std::move(other));
+        return *this;
+    }
+
+    Image::~Image()
+    {
+        if (valid()) {
+            vmaDestroyImage(allocator, image, allocation);
+        }
+        image = vk::Image{};
+        allocation = {};
+        allocator = {};
+    }
+
+    void Image::reset()
+    {
+        Image::~Image();
+    }
+
+    bool Image::valid() const
+    {
+        return image.operator bool();
+    }
+
+    Image makeImage(
+        const vk::ImageCreateInfo& createInfo,
+        const VmaAllocationCreateInfo& allocInfo,
+        VmaAllocator allocator)
+    {
+        Image img;
+        img.allocator = allocator;
+        vmaCreateImage(img.allocator, (VkImageCreateInfo*)&createInfo, &allocInfo, (VkImage*)&img.image, &img.allocation, nullptr);
+        return std::move(img);
+    }
+
+    Image loadImage(vk::CommandBuffer& cmd, vk::Fence fence, std::string& path, vk::Device device, VmaAllocator allocator)
+    {
+        i32 width;
+        i32 height;
+        i32 channels;
+
+        // load image data from disc
+        stbi_uc* loadedData = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+
+        if (!loadedData) {
+            std::cout << "Warning: could not load file from path: " << path << std::endl;
+            return {};
+        }
+
+
+        // move cpu data into a staging buffer, so that we can read the image data on the gpu:
+        void* pixel_ptr = loadedData;
+        VkDeviceSize imageSize = width * height * 4;
+
+        vk::Format image_format = vk::Format::eR8G8B8A8Srgb;
+
+        Buffer stagingBuffer = createBuffer(imageSize, vk::BufferUsageFlagBits::eTransferSrc, VMA_MEMORY_USAGE_CPU_ONLY, allocator);
+
+        void* data;
+        vmaMapMemory(allocator, stagingBuffer.allocation, &data);
+
+        memcpy(data, pixel_ptr, static_cast<size_t>(imageSize));
+
+        vmaUnmapMemory(allocator, stagingBuffer.allocation);
+
+        stbi_image_free(loadedData); 
+
+        // create image:
+        vk::Extent3D imageExtent;
+        imageExtent.width = static_cast<u32>(width);
+        imageExtent.height = static_cast<u32>(height);
+        imageExtent.depth = 1;
+
+        vk::ImageCreateInfo imgCI{
+            .imageType = vk::ImageType::e2D,
+            .format = image_format,
+            .extent = imageExtent,
+            .mipLevels = 1,
+            .arrayLayers = 1,
+            .usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst,
+        };
+
+        Image newImage;
+
+        VmaAllocationCreateInfo dimg_allocinfo = {};
+        dimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+        vmaCreateImage(allocator, (VkImageCreateInfo*)&imgCI, &dimg_allocinfo, (VkImage*)&newImage.image, &newImage.allocation, nullptr);
+        newImage.allocator = allocator;
+
+
+        // change image layout to transfer dist optiomal:
+        VkImageSubresourceRange range;
+        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        range.baseMipLevel = 0;
+        range.levelCount = 1;
+        range.baseArrayLayer = 0;
+        range.layerCount = 1;
+
+        VkImageMemoryBarrier imageBarrier_toTransfer = {};
+        imageBarrier_toTransfer.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+
+        imageBarrier_toTransfer.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        imageBarrier_toTransfer.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        imageBarrier_toTransfer.image = newImage.image;
+        imageBarrier_toTransfer.subresourceRange = range;
+
+        imageBarrier_toTransfer.srcAccessMask = 0;
+        imageBarrier_toTransfer.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+        cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
+
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toTransfer);
+
+
+        //copy the buffer into the image:
+        VkBufferImageCopy copyRegion = {};
+        copyRegion.bufferOffset = 0;
+        copyRegion.bufferRowLength = 0;
+        copyRegion.bufferImageHeight = 0;
+
+        copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        copyRegion.imageSubresource.mipLevel = 0;
+        copyRegion.imageSubresource.baseArrayLayer = 0;
+        copyRegion.imageSubresource.layerCount = 1;
+        copyRegion.imageExtent = imageExtent;
+
+        vkCmdCopyBufferToImage(cmd, stagingBuffer.buffer, newImage.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+
+        cmd.end();
+        vkh_old::mainTransferQueue.submit(vk::SubmitInfo{ .pCommandBuffers = &cmd }, fence);
+        device.waitForFences(fence, true, 9999999999);
+
+        return std::move(newImage);
+    }
 }

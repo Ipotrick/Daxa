@@ -25,9 +25,6 @@
     <Filter Include="src\rendering\shader">
       <UniqueIdentifier>{f6ae04d5-bbab-421d-87fe-455fb38ae8b5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\rendering\vulkan helper">
-      <UniqueIdentifier>{72d90b73-031a-4ce2-b9e8-ccec4ee704c7}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\util">
       <UniqueIdentifier>{da4a81d9-df42-4ca0-818a-6bdb9d965dae}</UniqueIdentifier>
     </Filter>
@@ -84,24 +81,6 @@
     <ClInclude Include="src\platform\Window.hpp">
       <Filter>src\platform</Filter>
     </ClInclude>
-    <ClInclude Include="src\rendering\vulkanhelper\Buffer.hpp">
-      <Filter>src\rendering\vulkan helper</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\vulkanhelper\CommandPool.hpp">
-      <Filter>src\rendering\vulkan helper</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\vulkanhelper\Pipeline.hpp">
-      <Filter>src\rendering\vulkan helper</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\vulkanhelper\Pool.hpp">
-      <Filter>src\rendering\vulkan helper</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\vulkanhelper\Shader.hpp">
-      <Filter>src\rendering\vulkan helper</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\vulkanhelper\Vertex.hpp">
-      <Filter>src\rendering\vulkan helper</Filter>
-    </ClInclude>
     <ClInclude Include="src\rendering\Rendering.hpp">
       <Filter>src\rendering</Filter>
     </ClInclude>
@@ -111,16 +90,19 @@
     <ClInclude Include="src\rendering\Vulkan.hpp">
       <Filter>src\rendering</Filter>
     </ClInclude>
-    <ClInclude Include="src\rendering\vulkanhelper\Initialization.hpp">
-      <Filter>src\rendering\vulkan helper</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\vulkanhelper\Framebuffer.hpp">
-      <Filter>src\rendering\vulkan helper</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\vulkanhelper\Image.hpp">
-      <Filter>src\rendering\vulkan helper</Filter>
-    </ClInclude>
     <ClInclude Include="src\rendering\ImageManager.hpp">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\Timing.hpp">
+      <Filter>src\util</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\vulkanhelper.hpp">
+      <Filter>dependencies</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\Buffer.hpp">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\Image.hpp">
       <Filter>src\rendering</Filter>
     </ClInclude>
   </ItemGroup>
@@ -146,9 +128,6 @@
     <ClCompile Include="dependencies\vk_mem_alloc.cpp">
       <Filter>dependencies</Filter>
     </ClCompile>
-    <ClCompile Include="src\rendering\vulkanhelper\VulkanHelperCompilationUnit.cpp">
-      <Filter>src\rendering\vulkan helper</Filter>
-    </ClCompile>
     <ClCompile Include="src\rendering\SimpleMesh.cpp">
       <Filter>src\rendering</Filter>
     </ClCompile>
@@ -161,7 +140,12 @@
     <ClCompile Include="dependencies\tiny_obj_loader.cpp">
       <Filter>dependencies</Filter>
     </ClCompile>
-    <ClCompile Include="src\rendering\ImageManager.cpp" />
+    <ClCompile Include="src\rendering\ImageManager.cpp">
+      <Filter>src\rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="dependencies\vulkanhelper.cpp">
+      <Filter>dependencies</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\rendering\shader\colortri.vert">

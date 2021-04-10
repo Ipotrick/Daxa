@@ -10,86 +10,75 @@
 #include "../threading/Jobs.hpp"
 #include "../threading/OwningMutex.hpp"
 
-#include "Vulkan.hpp"
-#include "vulkanhelper/Image.hpp"
 
-// TODO have chage like behaviour:
-// TODO add loadfactor requirement (erase elements when the load gets too big)
-// TODO add time to destruction (things that have a zero ref for longer are getting destroyed earlier)
+#include "Vulkan.hpp"
+#include "Image.hpp"
 
 namespace daxa {
 	class ImageManager {
+		inline static const u32 SLOT_SURVIVAL_FRAMES{ 2 };
 	public:
-		ImageManager(vk::Device device = vkh::device) : device{device} {}
+		ImageManager(vk::Device device = vkh_old::device) : device{device} {}
 
 		struct ImageSlot {
-			ImageSlot()
-			{
-				std::cout << "created image slot\n";
-			}
-
-			mutable OwningMutex<vkh::Image> imageMut;
+			mutable OwningMutex<Image> imageMut;
 			mutable std::atomic_uint32_t refCount{ 0 };
+			mutable std::atomic_uint32_t framesSinceZeroRefs{ 0 };
 		};
 
-		struct Handle {
-			Handle() = default;
+		class Handle;
 
-			Handle(ImageSlot* slot);
+		class WeakHandle {
+		public:
+			WeakHandle() = default;
 
-			Handle(const Handle& other);
+			bool operator==(const WeakHandle&) const = default;
+			bool operator!=(const WeakHandle&) const = default;
 
-			Handle(Handle&& other);
-
-			~Handle();
-
-			ReadWriteLock<vkh::Image> get();
-
-			ReadOnlyLock<vkh::Image> getConst();
-
-			bool operator==(const Handle&) const = default;
-			bool operator!=(const Handle&) const = default;
+			ReadWriteLock<Image> get();
+			ReadOnlyLock<Image> getConst() const;
+			OwningMutex<Image>& getMtx();
+			Handle getStrongHandle() const;
 		private:
+			friend class Handle;
 			friend class ImageManager;
+
+			WeakHandle(ImageSlot* imgSlot);
+
 			ImageSlot* imgSlot{ nullptr };
 		};
 
-		Handle getHandle(const std::string& alias)
-		{
-			u32 index{ 0xFFFFFFFF };
-			if (aliasToIndex.contains(alias)) {
-				index = aliasToIndex[alias];
-			} 
-			else{
-				if (freeIndices.empty()) {
-					imageSlots.emplace_back(std::make_unique<ImageSlot>());
-					index = static_cast<u32>(imageSlots.size() - 1);
-				}
-				else {
-					index = freeIndices.back();
-					freeIndices.pop_back();
-				}
-				aliasToIndex.insert({ alias,index });
-			}
-			createQ.push_back({ alias,index });
-			return { imageSlots.at(index).get() };
-		}
+		class Handle {
+		public:
+			Handle() = default;
+			Handle(const Handle& other);
+			Handle(Handle&& other);
+			~Handle();
+
+			bool operator==(const Handle&) const = default;
+			bool operator!=(const Handle&) const = default;
+			Handle& operator=(Handle&&) = default;
+			Handle& operator=(const Handle&) = default;
+
+			ReadWriteLock<Image> get();
+			ReadOnlyLock<Image> getConst() const;
+			OwningMutex<Image>& getMtx();
+			WeakHandle getWeakHandle() const;
+		private:
+			friend class ImageManager;
+			friend class WeakHandle;
+
+			Handle(ImageSlot* slot);
+
+			ImageSlot* imgSlot{ nullptr };
+		};
+
+		Handle getHandle(const std::string& alias);
 
 		class DestroyJob : public IJob {
 		public:
 			DestroyJob(OwningMutex<ImageManager>* managerMtx) : managerMtx{ managerMtx } {}
-			void execute() override
-			{
-				auto manager = managerMtx->lock();
-				for (auto [alias, index] : manager->destroyQ) {
-					if (manager->imageSlots.at(index)->refCount == 0) {
-						manager->aliasToIndex.erase(alias);
-						*manager->imageSlots.at(index)->imageMut.lock() = vkh::Image{};
-						manager->freeIndices.push_back(index);
-					}
-				}
-				manager->destroyQ.clear();
-			}
+			void execute() override;
 		private:
 			OwningMutex<ImageManager>* managerMtx{ nullptr };
 		};
@@ -102,35 +91,23 @@ namespace daxa {
 			OwningMutex<ImageManager>* managerMtx{ nullptr };
 		};
 
-		void update()
-		{
-			for (uz i = 0; i < imageSlots.size(); ++i) {
-				if (imageSlots[i]) {
-					if (imageSlots[i]->refCount == 0) {
-						destroyQ.emplace_back(indexToAlias[i], i);
-					}
-				}
-			}
-			cmdPool.flush();
-		}
+		void update();
 
 	private:
 		vk::Device device;
-		vkh::CommandPool cmdPool{ vkh::mainTransferQueueFamiltyIndex };
+		vkh::CommandPool cmdPool{ vkh_old::device, vkh_old::mainTransferQueueFamiltyIndex };
 		vkh::Pool<vk::Fence> fencePool {
 			[=]() { return device.createFence(vk::FenceCreateInfo{}); },
 			[=](vk::Fence fence) { device.destroyFence(fence); },
 			[=](vk::Fence fence) { device.resetFences(fence); }
 		};
 
-		std::unordered_map<std::string, u32> aliasToIndex;
-		std::unordered_map<u32, std::string> indexToAlias;
+		std::unordered_map<std::string, ImageSlot*> aliasToSlot;
 
-		std::vector<u32> freeIndices;
 		std::vector<std::unique_ptr<ImageSlot>> imageSlots;
 
-		std::vector<std::pair<std::string, u32>> createQ;
-		std::vector<std::pair<std::string, u32>> destroyQ;
+		std::vector<std::pair<std::string,ImageSlot*>> createQ;
+		std::vector<ImageSlot*> destroyQ;
 	};
 
 	using ImageHandle = ImageManager::Handle;

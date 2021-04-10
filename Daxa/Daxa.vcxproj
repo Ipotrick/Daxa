@@ -23,6 +23,7 @@
     <ClInclude Include="dependencies\tiny_obj_loader.hpp" />
     <ClInclude Include="dependencies\VkBootstrap.hpp" />
     <ClInclude Include="dependencies\vk_mem_alloc.hpp" />
+    <ClInclude Include="dependencies\vulkanhelper.hpp" />
     <ClInclude Include="include\Daxa.hpp" />
     <ClInclude Include="src\DaxaApplication.hpp" />
     <ClInclude Include="src\DaxaCore.hpp" />
@@ -34,27 +35,22 @@
     <ClInclude Include="src\math\Vec3.hpp" />
     <ClInclude Include="src\math\Vec4.hpp" />
     <ClInclude Include="src\platform\Window.hpp" />
+    <ClInclude Include="src\rendering\Buffer.hpp" />
+    <ClInclude Include="src\rendering\Image.hpp" />
     <ClInclude Include="src\rendering\ImageManager.hpp" />
     <ClInclude Include="src\rendering\Rendering.hpp" />
     <ClInclude Include="src\rendering\SimpleMesh.hpp" />
     <ClInclude Include="src\rendering\Vulkan.hpp" />
-    <ClInclude Include="src\rendering\vulkanhelper\Buffer.hpp" />
-    <ClInclude Include="src\rendering\vulkanhelper\CommandPool.hpp" />
-    <ClInclude Include="src\rendering\vulkanhelper\Framebuffer.hpp" />
-    <ClInclude Include="src\rendering\vulkanhelper\Image.hpp" />
-    <ClInclude Include="src\rendering\vulkanhelper\Initialization.hpp" />
-    <ClInclude Include="src\rendering\vulkanhelper\Pipeline.hpp" />
-    <ClInclude Include="src\rendering\vulkanhelper\Pool.hpp" />
-    <ClInclude Include="src\rendering\vulkanhelper\Shader.hpp" />
-    <ClInclude Include="src\rendering\vulkanhelper\Vertex.hpp" />
     <ClInclude Include="src\threading\Jobs.hpp" />
     <ClInclude Include="src\threading\OwningMutex.hpp" />
+    <ClInclude Include="src\util\Timing.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\stb_image.cpp" />
     <ClCompile Include="dependencies\tiny_obj_loader.cpp" />
     <ClCompile Include="dependencies\VkBootstrap.cpp" />
     <ClCompile Include="dependencies\vk_mem_alloc.cpp" />
+    <ClCompile Include="dependencies\vulkanhelper.cpp" />
     <ClCompile Include="src\Daxa.cpp" />
     <ClCompile Include="src\DaxaApplication.cpp" />
     <ClCompile Include="src\platform\Window.cpp" />
@@ -62,7 +58,6 @@
     <ClCompile Include="src\rendering\RenderTypesCompilationUnit.cpp" />
     <ClCompile Include="src\rendering\SimpleMesh.cpp" />
     <ClCompile Include="src\rendering\Vulkan.cpp" />
-    <ClCompile Include="src\rendering\vulkanhelper\VulkanHelperCompilationUnit.cpp" />
     <ClCompile Include="src\threading\Jobs.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -190,9 +185,10 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>S:\VulkanSDK\1.2.170.0\Include;$(ProjectDir)dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>S:\VulkanSDK\1.2.170.0\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
+      <PrecompiledHeader>Use</PrecompiledHeader>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
