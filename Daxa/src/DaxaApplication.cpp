@@ -6,7 +6,8 @@
 #include <iostream>
 
 namespace daxa {
-	Application::Application(std::string name, u32 width, u32 height)
+	Application::Application(std::string name, u32 width, u32 height) : 
+		frames{ &*descLayout, &*descLayout }
 	{
 		windowMutex = std::make_unique<OwningMutex<Window>>(
 			name, 
@@ -14,8 +15,6 @@ namespace daxa {
 			vkh_old::device,
 			vkh_old::mainPhysicalDevice
 		);
-
-		presentSem = vkh_old::device.createSemaphoreUnique({});
 
 		init_default_renderpass();
 
@@ -28,22 +27,86 @@ namespace daxa {
 
 	Application::~Application()
 	{
-		Application::cleanup();
+		for (auto& frame : frames) {
+			vkh_old::device.waitForFences(*frame.fence, VK_TRUE, 1000000000);
+			vkh_old::device.resetFences(*frame.fence);
+		}
+	}
+
+	void Application::update(f32 dt) {
+		constexpr f32 cameraMoveSpeed = 4.0f;
+		constexpr f32 cameraSensitivity = 0.2f;
+
+		auto window = windowMutex->lock();
+
+		auto [ax, ay, az] = daxa::getFPSViewAxis(camera.position, camera.pitch, camera.yaw);
+		if (bCameraControll) {
+			if (window->isKeyPressed(daxa::Scancode::A)) {
+				camera.position -= ax * dt * cameraMoveSpeed;
+			} 
+			if (window->isKeyPressed(daxa::Scancode::D)) {
+				camera.position += ax * dt * cameraMoveSpeed;
+			}
+			if (window->isKeyPressed(daxa::Scancode::SPACE)) {
+				camera.position -= ay * dt * cameraMoveSpeed;
+			}
+			if (window->isKeyPressed(daxa::Scancode::LSHIFT)) {
+				camera.position += ay * dt * cameraMoveSpeed;
+			}
+			if (window->isKeyPressed(daxa::Scancode::W)) {
+				camera.position += az * dt * cameraMoveSpeed;
+			}
+			if (window->isKeyPressed(daxa::Scancode::S)) {
+				camera.position -= az * dt * cameraMoveSpeed;
+			}
+			if (window->isKeyPressed(daxa::Scancode::Q)) {
+				camera.rotation += dt * cameraMoveSpeed;
+			}
+			if (window->isKeyPressed(daxa::Scancode::E)) {
+				camera.rotation -= dt * cameraMoveSpeed;
+			}
+			camera.yaw -= window->getCursorPositionChange()[0] / 180.0f * cameraSensitivity;
+			camera.pitch -= window->getCursorPositionChange()[1] / 180.0f * cameraSensitivity;
+		}
+		if (window->isKeyJustPressed(daxa::Scancode::ESCAPE)) {
+			bCameraControll = !bCameraControll;
+			if (bCameraControll) {
+				window->captureCursor();
+			}
+			else {
+				window->releaseCursor();
+			}
+		}
+
+		{
+			auto [ax, ay, az] = daxa::getFPSViewAxis(camera.position, camera.pitch, camera.yaw);
+
+			ay = rotate(ay, az, camera.rotation);
+			ax = rotate(ax, az, camera.rotation);
+
+			camera.view = daxa::makeView({ax,ay,az}, camera.position);
+		}
+
+
+		std::cout << "view matrix: " << camera.view << std::endl;
 	}
 
 	void Application::draw()
 	{
-		semaPool.flush();
-		cmdPool.flush();
+		auto& frame = frames[_frameNumber & 1];
 
-		vkh_old::device.resetFences(*renderFence);
+		vkh_old::device.waitForFences(*frame.fence,VK_TRUE, 1000000000);
+		vkh_old::device.resetFences(*frame.fence);
+
+		frame.semaPool.flush();
+		frame.cmdPool.flush();
 
 		auto window = windowMutex->lock();
 
 		u32 swapchainImageIndex;
-		VK_CHECK(vkAcquireNextImageKHR(vkh_old::device, window->swapchain, 1000000000, *presentSem, nullptr, &swapchainImageIndex));
+		VK_CHECK(vkAcquireNextImageKHR(vkh_old::device, window->swapchain, 1000000000, *frame.presentSem, nullptr, &swapchainImageIndex));
 
-		vk::CommandBuffer cmd = cmdPool.getBuffer();
+		vk::CommandBuffer cmd = frame.cmdPool.getElement();
 
 		auto cmdBeginInfo = vk::CommandBufferBeginInfo{};
 		cmd.begin(cmdBeginInfo);
@@ -75,13 +138,12 @@ namespace daxa {
 		};
 		cmd.setScissor(0, scissor);
 
-		daxa::Vec3 camPos = { 0.f, 0.0f, -3.0f };
+		//daxa::Vec3 camPos = { 0.f, 0.0f, -3.0f };
 
-		daxa::Mat4x4 view = daxa::translate(daxa::Mat4x4(1.f), camPos);
-		daxa::Mat4x4 projection = daxa::makeProjection<4,f32>(daxa::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
+		daxa::Mat4x4 projection = daxa::makeProjection<4,f32>(daxa::radians(70.f), window->getSizeVec().x / window->getSizeVec().y, 0.1f, 200.0f);
 		projection[1][1] *= -1;
 		daxa::Mat4x4 model = daxa::rotate(daxa::Mat4x4{1.0f}, 0.0f, daxa::radians(_frameNumber * 0.04f), 0.0f);
-		daxa::Mat4x4 mesh_matrix = projection * view * model;
+		daxa::Mat4x4 mesh_matrix = projection * camera.view * model;
 		MeshPushConstants constants;
 		constants.renderMatrix = daxa::transpose(mesh_matrix);
 		std::array< MeshPushConstants, 1> c{ constants };
@@ -92,7 +154,6 @@ namespace daxa {
 
 		vk::DeviceSize offset = 0;
 		vkCmdBindVertexBuffers(cmd, 0, 1, (VkBuffer*)&monkeyMesh.vertexBuffer, &offset);
-		//cmd.bindVertexBuffers(0, monkeyMesh.vertexBuffer.buffer, 0ull);
 		cmd.draw(monkeyMesh.vertices.size(), 1, 0, 0);
 
 		cmd.endRenderPass();
@@ -102,14 +163,14 @@ namespace daxa {
 		vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
 		submit.pWaitDstStageMask = &waitStage;
 
-		vk::Semaphore renderSem = semaPool.get();
+		vk::Semaphore renderSem = frame.semaPool.get();
 		submit.waitSemaphoreCount = 1;
-		submit.pWaitSemaphores = &*presentSem;
+		submit.pWaitSemaphores = &*frame.presentSem;
 		submit.signalSemaphoreCount = 1;
 		submit.pSignalSemaphores = &renderSem;
 		submit.commandBufferCount = 1;
 		submit.pCommandBuffers = &cmd;
-		vkQueueSubmit(vkh_old::mainGraphicsQueue, 1, (VkSubmitInfo*)&submit, *renderFence);
+		vkQueueSubmit(vkh_old::mainGraphicsQueue, 1, (VkSubmitInfo*)&submit, *frame.fence);
 
 		vk::PresentInfoKHR presentInfo = {};
 		presentInfo.pSwapchains = &window->swapchain;
@@ -118,8 +179,6 @@ namespace daxa {
 		presentInfo.waitSemaphoreCount = 1;
 		presentInfo.pImageIndices = &swapchainImageIndex;
 		VK_CHECK(vkQueuePresentKHR(vkh_old::mainGraphicsQueue, (VkPresentInfoKHR*)&presentInfo));
-
-		VK_CHECK(vkWaitForFences(vkh_old::device, 1, (VkFence*)&*renderFence, true, 1000000000));
 		_frameNumber++;
 	}
 
@@ -130,36 +189,39 @@ namespace daxa {
 
 	void Application::init_mesh_pipeline()
 	{
-		vkh::PipelineBuilder pipelineBuilder;
-
-		pipelineBuilder.vertexInput = Vertex::INFO.makePipelineVertexInputStateCreateInfo();
-
-		pipelineBuilder.pushConstants.push_back(vk::PushConstantRange{
-			.stageFlags = vk::ShaderStageFlagBits::eVertex,
-			.offset = 0,
-			.size = sizeof(MeshPushConstants),
-		});
-
 		auto fragShaderOpt = vkh::loadShaderModule(vkh_old::device, "shaders/colortri.frag.spv");
-		auto vertShaderOpt = vkh::loadShaderModule(vkh_old::device, "shaders/tri_mesh.vert.spv" );
+		auto vertShaderOpt = vkh::loadShaderModule(vkh_old::device, "shaders/tri_mesh.vert.spv");
 
 		if (!fragShaderOpt) std::cout << "Error when building the mesh fragment shader module" << std::endl;
 		else std::cout << "Red mesh fragment shader succesfully loaded" << std::endl;
 		if (!vertShaderOpt) std::cout << "Error when building the mesh vertex shader module" << std::endl;
 		else std::cout << "Red mesh vertex shader succesfully loaded" << std::endl;
 
-		pipelineBuilder.shaderStages.push_back(vkh::makeShaderStageCreateInfo(vk::ShaderStageFlagBits::eFragment, **fragShaderOpt));  
-		pipelineBuilder.shaderStages.push_back(vkh::makeShaderStageCreateInfo(vk::ShaderStageFlagBits::eVertex, **vertShaderOpt));
+		vkh::GraphicsPipelineBuilder pipelineBuilder;
 
-		pipelineBuilder.depthStencil = vk::PipelineDepthStencilStateCreateInfo{
-			.depthTestEnable = VK_TRUE,
-			.depthWriteEnable = VK_TRUE,
-			.depthCompareOp = vk::CompareOp::eLess,
-			.depthBoundsTestEnable = VK_FALSE,
-			.stencilTestEnable = VK_FALSE,
-			.minDepthBounds = 0.0f,
-			.maxDepthBounds = 1.0f,
-		};
+		pipelineBuilder
+			.setVertexInput(Vertex::INFO.makePipelineVertexInputStateCreateInfo())
+			.addPushConstants(vk::PushConstantRange{
+				.stageFlags = vk::ShaderStageFlagBits::eVertex,
+				.offset = 0,
+				.size = sizeof(MeshPushConstants),
+				})
+				.addShaderStage(vkh::makeShaderStageCreateInfo(vk::ShaderStageFlagBits::eFragment, **fragShaderOpt))
+			.addShaderStage(vkh::makeShaderStageCreateInfo(vk::ShaderStageFlagBits::eVertex, **vertShaderOpt))
+			.setDepthStencil(vk::PipelineDepthStencilStateCreateInfo{
+				.depthTestEnable = VK_TRUE,
+				.depthWriteEnable = VK_TRUE,
+				.depthCompareOp = vk::CompareOp::eLess,
+				.depthBoundsTestEnable = VK_FALSE,
+				.stencilTestEnable = VK_FALSE,
+				.minDepthBounds = 0.0f,
+				.maxDepthBounds = 1.0f,
+				})
+			.setRasterization(vk::PipelineRasterizationStateCreateInfo{
+				.cullMode = vk::CullModeFlagBits::eBack,
+				.frontFace = vk::FrontFace::eCounterClockwise,
+				.lineWidth = 1.0f,
+				});
 
 		meshPipeline = pipelineBuilder.build(vkh_old::device,*mainRenderpass);
 	}
@@ -169,7 +231,6 @@ namespace daxa {
 		std::array<vk::AttachmentDescription, 2> attachmentDescriptions{
 			vk::AttachmentDescription{
 				.format = windowMutex->lock()->swapchainImageFormat,
-				.samples = vk::SampleCountFlagBits::e1,
 				.loadOp = vk::AttachmentLoadOp::eClear,
 				.storeOp = vk::AttachmentStoreOp::eStore,
 				.stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
@@ -183,7 +244,7 @@ namespace daxa {
 				.storeOp = vk::AttachmentStoreOp::eStore,
 				.stencilLoadOp = vk::AttachmentLoadOp::eClear,
 				.stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-				.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal
+				.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
 			}
 		};
 
@@ -232,7 +293,7 @@ namespace daxa {
 
 		//create framebuffers for each of the swapchain image views
 		for (i32 i = 0; i < swapchain_imagecount; i++) {
-			std::array<vk::ImageView, 2> attachments{ window->swapchainImageViews[i], window->depthImageView.get() };
+			std::array<vk::ImageView, 2> attachments{ window->swapchainImageViews[i], window->depthImage.view.get() };
 			framebufferCI.attachmentCount = (u32)attachments.size();
 			framebufferCI.pAttachments = attachments.data();
 			framebuffers[i] = vkh_old::device.createFramebufferUnique(framebufferCI);

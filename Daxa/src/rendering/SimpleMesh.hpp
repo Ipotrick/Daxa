@@ -18,9 +18,9 @@ namespace daxa {
 			vkh::VertexDiscriptionBuilder builder;
 			return builder
 				.beginBinding(sizeof(Vertex))
-				.setAttribute(vk::Format::eR32G32B32Sfloat)
-				.setAttribute(vk::Format::eR32G32B32Sfloat)
-				.setAttribute(vk::Format::eR32G32B32Sfloat)
+				.addAttribute(vk::Format::eR32G32B32Sfloat)
+				.addAttribute(vk::Format::eR32G32B32Sfloat)
+				.addAttribute(vk::Format::eR32G32B32Sfloat)
 				.build();
 		}
 

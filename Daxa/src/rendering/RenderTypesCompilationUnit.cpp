@@ -85,24 +85,24 @@ namespace daxa {
 
     ImageManager::WeakHandle::WeakHandle(ImageSlot* imgSlot) : imgSlot{imgSlot} { }
 
-    ReadWriteLock<Image> ImageManager::WeakHandle::get()
+    ReadWriteLock<ImageManager::ImageTuple> ImageManager::WeakHandle::get()
     {
         DAXA_ASSERT(imgSlot);
-        DAXA_ASSERT(imgSlot->slotSurvivalTime < ImageManager::SLOT_SURVIVAL_FRAMES);
+        DAXA_ASSERT(imgSlot->framesSinceZeroRefs < ImageManager::SLOT_SURVIVAL_FRAMES);
         return imgSlot->imageMut.lock();
     }
 
-    ReadOnlyLock<Image> ImageManager::WeakHandle::getConst() const
+    ReadOnlyLock<ImageManager::ImageTuple> ImageManager::WeakHandle::getConst() const
     {
         DAXA_ASSERT(imgSlot);
-        DAXA_ASSERT(imgSlot->slotSurvivalTime < ImageManager::SLOT_SURVIVAL_FRAMES);
+        DAXA_ASSERT(imgSlot->framesSinceZeroRefs < ImageManager::SLOT_SURVIVAL_FRAMES);
         return imgSlot->imageMut.lockReadOnly();
     }
 
-    OwningMutex<Image>& ImageManager::WeakHandle::getMtx()
+    OwningMutex<ImageManager::ImageTuple>& ImageManager::WeakHandle::getMtx()
     {
         DAXA_ASSERT(imgSlot);
-        DAXA_ASSERT(imgSlot->slotSurvivalTime < ImageManager::SLOT_SURVIVAL_FRAMES);
+        DAXA_ASSERT(imgSlot->framesSinceZeroRefs < ImageManager::SLOT_SURVIVAL_FRAMES);
         return imgSlot->imageMut;
     }
 
@@ -131,19 +131,19 @@ namespace daxa {
 			--imgSlot->refCount;
 		}
 	}
-	ReadWriteLock<Image> ImageManager::Handle::get()
+	ReadWriteLock<ImageManager::ImageTuple> ImageManager::Handle::get()
 	{
 		assert(imgSlot);
 		return imgSlot->imageMut.lock();
 	}
 
-	ReadOnlyLock<Image> ImageManager::Handle::getConst() const
+	ReadOnlyLock<ImageManager::ImageTuple> ImageManager::Handle::getConst() const
 	{
 		assert(imgSlot);
 		return imgSlot->imageMut.lockReadOnly();
 	}
 
-    OwningMutex<Image>& ImageManager::Handle::getMtx()
+    OwningMutex<ImageManager::ImageTuple>& ImageManager::Handle::getMtx()
     {
         DAXA_ASSERT(imgSlot);
         return imgSlot->imageMut;
@@ -188,14 +188,15 @@ namespace daxa {
         manager->createQ = {};
         decltype(createQ) leftOverQ;
 
-        auto cmd = manager->cmdPool.getBuffer();
+        auto cmd = manager->cmdPool.getElement();
         auto fence = manager->fencePool.get();
         manager.unlock();
 
         for (auto& [path, slot] : createQ) {
             if (auto lockOpt = slot->imageMut.tryLock()) {
                 auto& img = *lockOpt.value();
-                img = loadImage(cmd, fence, path);
+                img.image = loadImage(cmd, fence, path);
+                img.tableIndex = -2;    // TODO add entry in table index
             }
             else {
                 leftOverQ.push_back({ path,slot });
@@ -216,6 +217,7 @@ namespace daxa {
             imageSlots.emplace_back(std::make_unique<ImageSlot>());
             slot = imageSlots.back().get();
             aliasToSlot.insert({ alias,slot });
+            slotToAlias.insert({ slot, alias });
             createQ.push_back({ alias,slot });
         }
         return { slot };
@@ -238,6 +240,16 @@ namespace daxa {
             }
         }
     }
+    void ImageManager::clearRegestry()
+    {
+        auto delBegin = std::remove_if(imageSlots.begin(), imageSlots.end(), [](std::unique_ptr<ImageSlot>& slot) { return slot->framesSinceZeroRefs >= SLOT_SURVIVAL_FRAMES; });
+        for (auto iter = delBegin; iter != imageSlots.end(); ++iter) {
+            const auto& alias = slotToAlias[iter->get()];
+            slotToAlias.erase(iter->get());
+            aliasToSlot.erase(alias);
+        }
+        imageSlots.erase(delBegin, imageSlots.end());
+    }
 }
 
 #include "Image.hpp"
@@ -249,6 +261,9 @@ namespace daxa {
     Image::Image(Image&& other) noexcept
     {
         std::swap(this->image, other.image);
+        std::swap(this->view, other.view);
+        std::swap(this->info, other.info);
+        std::swap(this->viewInfo, other.viewInfo);
         std::swap(this->allocation, other.allocation);
         std::swap(this->allocator, other.allocator);
     }
@@ -266,6 +281,8 @@ namespace daxa {
             vmaDestroyImage(allocator, image, allocation);
         }
         image = vk::Image{};
+        info = vk::ImageCreateInfo{};
+        viewInfo = vk::ImageViewCreateInfo{};
         allocation = {};
         allocator = {};
     }
@@ -282,12 +299,18 @@ namespace daxa {
 
     Image makeImage(
         const vk::ImageCreateInfo& createInfo,
+        vk::ImageViewCreateInfo viewCreateInfo,
         const VmaAllocationCreateInfo& allocInfo,
+        vk::Device device,
         VmaAllocator allocator)
     {
         Image img;
         img.allocator = allocator;
+        img.info = createInfo;
         vmaCreateImage(img.allocator, (VkImageCreateInfo*)&createInfo, &allocInfo, (VkImage*)&img.image, &img.allocation, nullptr);
+        viewCreateInfo.image = img.image;
+        img.viewInfo = viewCreateInfo;
+        img.view = device.createImageViewUnique(viewCreateInfo);
         return std::move(img);
     }
 
@@ -388,6 +411,22 @@ namespace daxa {
         cmd.end();
         vkh_old::mainTransferQueue.submit(vk::SubmitInfo{ .pCommandBuffers = &cmd }, fence);
         device.waitForFences(fence, true, 9999999999);
+
+
+        auto viewCI = vk::ImageViewCreateInfo{
+            .image = newImage.image,
+            .viewType = vk::ImageViewType::e2D,
+            .format = newImage.info.format,
+            .subresourceRange = vk::ImageSubresourceRange {
+                .aspectMask = vk::ImageAspectFlagBits::eColor,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            }
+        };
+        newImage.viewInfo = viewCI;
+        newImage.view = device.createImageViewUnique(viewCI);
 
         return std::move(newImage);
     }

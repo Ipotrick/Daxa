@@ -20,8 +20,13 @@ namespace daxa {
 	public:
 		ImageManager(vk::Device device = vkh_old::device) : device{device} {}
 
+		struct ImageTuple {
+			Image image;
+			i32 tableIndex{ -1 };
+		};
+
 		struct ImageSlot {
-			mutable OwningMutex<Image> imageMut;
+			mutable OwningMutex<ImageTuple> imageMut;
 			mutable std::atomic_uint32_t refCount{ 0 };
 			mutable std::atomic_uint32_t framesSinceZeroRefs{ 0 };
 		};
@@ -35,9 +40,9 @@ namespace daxa {
 			bool operator==(const WeakHandle&) const = default;
 			bool operator!=(const WeakHandle&) const = default;
 
-			ReadWriteLock<Image> get();
-			ReadOnlyLock<Image> getConst() const;
-			OwningMutex<Image>& getMtx();
+			ReadWriteLock<ImageTuple> get();
+			ReadOnlyLock<ImageTuple> getConst() const;
+			OwningMutex<ImageTuple>& getMtx();
 			Handle getStrongHandle() const;
 		private:
 			friend class Handle;
@@ -60,9 +65,9 @@ namespace daxa {
 			Handle& operator=(Handle&&) = default;
 			Handle& operator=(const Handle&) = default;
 
-			ReadWriteLock<Image> get();
-			ReadOnlyLock<Image> getConst() const;
-			OwningMutex<Image>& getMtx();
+			ReadWriteLock<ImageTuple> get();
+			ReadOnlyLock<ImageTuple> getConst() const;
+			OwningMutex<ImageTuple>& getMtx();
 			WeakHandle getWeakHandle() const;
 		private:
 			friend class ImageManager;
@@ -93,9 +98,11 @@ namespace daxa {
 
 		void update();
 
+		void clearRegestry();
+
 	private:
 		vk::Device device;
-		vkh::CommandPool cmdPool{ vkh_old::device, vkh_old::mainTransferQueueFamiltyIndex };
+		vkh::CommandBufferPool cmdPool{ vkh_old::device, vk::CommandPoolCreateInfo{.queueFamilyIndex = vkh_old::mainTransferQueueFamiltyIndex } };
 		vkh::Pool<vk::Fence> fencePool {
 			[=]() { return device.createFence(vk::FenceCreateInfo{}); },
 			[=](vk::Fence fence) { device.destroyFence(fence); },
@@ -103,6 +110,7 @@ namespace daxa {
 		};
 
 		std::unordered_map<std::string, ImageSlot*> aliasToSlot;
+		std::unordered_map<ImageSlot* , std::string> slotToAlias;
 
 		std::vector<std::unique_ptr<ImageSlot>> imageSlots;
 
