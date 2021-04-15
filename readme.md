@@ -5,16 +5,16 @@ The engine is not tested in any extensive format.
 
 Things the engine aims to provide:
 * ease of use
-* a heavy focus on multithreading friendliness
+* focus on multithreading friendliness
 * a capable easy to use Job System
 * fast 2d and 3d vulkan renderers
 * (relatively) easy to use vulkan interface for custom rendering and compute
 * entity component manager
-* very fast GUI library
+* fast and flexible GUI library
 * audio
 * 2d and 3d collision detection
 * 2d and 3d physics
 
-external Dependencies:
+external Dependencies that are not included in the headers:
 * SDL2 
 * vulkan sdk
