@@ -76,6 +76,15 @@ namespace daxa {
         }; \
     } \
     template<std::floating_point T> \
+    inline constexpr TVec3<T> operator##op##(T scalar, TVec3<T> vec) \
+    { \
+        return { \
+            vec.x op scalar, \
+            vec.y op scalar, \
+            vec.z op scalar, \
+        }; \
+    } \
+    template<std::floating_point T> \
     inline constexpr TVec3<T> operator##op##(TVec3<T> a, TVec3<T> b) \
     { \
         return { \
