@@ -159,7 +159,7 @@ namespace daxa {
     template<std::floating_point T>
     inline TVec3<T> normalize(TVec3<T> vec)
     {
-        const T n = norm(vec);
+        const T n = length(vec);
         if (n != static_cast<T>(0.0))     {
             return TVec3<T>(vec.x / n,
                 vec.y / n,

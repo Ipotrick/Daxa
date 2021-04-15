@@ -28,6 +28,9 @@
     <Filter Include="src\util">
       <UniqueIdentifier>{da4a81d9-df42-4ca0-818a-6bdb9d965dae}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\rendering\managers">
+      <UniqueIdentifier>{797e623e-85c3-4620-a4a8-b109ce8bd49e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\Daxa.hpp">
@@ -90,9 +93,6 @@
     <ClInclude Include="src\rendering\Vulkan.hpp">
       <Filter>src\rendering</Filter>
     </ClInclude>
-    <ClInclude Include="src\rendering\ImageManager.hpp">
-      <Filter>src\rendering</Filter>
-    </ClInclude>
     <ClInclude Include="src\util\Timing.hpp">
       <Filter>src\util</Filter>
     </ClInclude>
@@ -104,6 +104,18 @@
     </ClInclude>
     <ClInclude Include="src\rendering\Image.hpp">
       <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\ImageManager.hpp">
+      <Filter>src\rendering\managers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\SamplerManager.hpp">
+      <Filter>src\rendering\managers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\Renderer.hpp">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\platform\Scancodes.hpp">
+      <Filter>src\platform</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -140,11 +152,14 @@
     <ClCompile Include="dependencies\tiny_obj_loader.cpp">
       <Filter>dependencies</Filter>
     </ClCompile>
-    <ClCompile Include="src\rendering\ImageManager.cpp">
-      <Filter>src\rendering</Filter>
-    </ClCompile>
     <ClCompile Include="dependencies\vulkanhelper.cpp">
       <Filter>dependencies</Filter>
+    </ClCompile>
+    <ClCompile Include="src\rendering\ImageManager.cpp">
+      <Filter>src\rendering\managers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platform\Scancodes.cpp">
+      <Filter>src\platform</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

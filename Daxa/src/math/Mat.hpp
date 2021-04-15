@@ -22,6 +22,13 @@ namespace daxa {
 				values[i][i] = diagInit;
 			}
 		}
+		constexpr Mat(const std::array<typename VecType<N, T>::type, M>& arr) {
+			for (i32 y = 0; y < M; y++) {
+				for (i32 x = 0; x < N; x++) {
+					values[y][x] = arr[y][x];
+				}
+			}
+		}
 
 		constexpr std::array<T, M * N>& linear()
 		{
@@ -309,7 +316,17 @@ namespace daxa {
 	inline constexpr Mat<M, N, T> translate(Mat<M, N, T> mat, typename VecType<N-1, T>::type vec)
 	{
 		for (i32 i = 0; i < N - 1; i++) {
-			mat[i][N - 1] = vec[i];
+			mat[i][N - 1] += vec[i];
+		}
+		return mat;
+	}
+
+	template<size_t M, size_t N, std::floating_point T>
+	requires requires { N == M || N - 1 == M;  }
+	inline constexpr Mat<M, N, T> makeTranslate(typename VecType<N - 1, T>::type vec) 	{
+		Mat<M, N, T> mat{static_cast<T>(1)};
+		for (i32 i = 0; i < N - 1; i++) {
+			mat[i][N - 1] += vec[i];
 		}
 		return mat;
 	}
@@ -369,6 +386,73 @@ namespace daxa {
 		ret[3][2] = static_cast<T>(-1); // set w = -z 
 		ret[3][3] = static_cast<T>(0);
 		return ret;
+	}
+
+	template<std::floating_point T>
+	inline constexpr std::array<TVec3<T>, 3> getFPSViewAxis(TVec3<T> eye, T pitch, T yaw) 
+	{
+		T cosPitch = cos(pitch);
+		T sinPitch = sin(pitch);
+		T cosYaw = cos(yaw);
+		T sinYaw = sin(yaw);
+
+		TVec3<T> xaxis = { cosYaw, 0, -sinYaw };
+		TVec3<T> yaxis = { sinYaw * sinPitch, cosPitch, cosYaw * sinPitch };
+		TVec3<T> zaxis = { sinYaw * cosPitch, -sinPitch, cosPitch * cosYaw };
+		return { xaxis, -yaxis, -zaxis };
+	}
+
+	template<std::floating_point T>
+	inline constexpr std::array<TVec3<T>, 3> getLookAtAxis(TVec3<T> eye, TVec3<T> at, TVec3<T> up)
+	{
+		TVec3<T> zaxis = normalize(at - eye);
+		TVec3<T> xaxis = normalize(cross(zaxis, up));
+		TVec3<T> yaxis = cross(xaxis, zaxis);
+		return { xaxis, -yaxis, -zaxis };
+	}
+
+	template<std::floating_point T>
+	inline constexpr Mat<4, 4, T> makeView(std::array<TVec3<T>, 3> axis, TVec3<T> eye) 
+	{
+		axis[1] *= static_cast<T>(-1);
+		axis[2] *= static_cast<T>(-1);
+		return Mat<4, 4, T>{
+			{
+				TVec4<T>{axis[0].x, axis[0].y, axis[0].z, -dot(axis[0], eye)},
+					TVec4<T>{axis[1].x, axis[1].y, axis[1].z, -dot(axis[1], eye)},
+					TVec4<T>{axis[2].x, axis[2].y, axis[2].z, -dot(axis[2], eye)},
+					TVec4<T>{ 0, 0, 0, 1 }
+			} };
+	}
+
+	template<std::floating_point T>
+	TVec3<T> rotate(TVec3<T> vec, TVec3<T> normal, T amount)
+	{
+		TVec3<T> vecInNormal = normal * (dot(normal, vec) / dot(normal,normal));
+		TVec3<T> clean = vec - vecInNormal;
+		TVec3<T> orth = cross(clean, normal);
+		T x1 = std::cos(amount) / length(clean);
+		T x2 = std::sin(amount) / length(orth);
+		TVec3<T> abt = (clean * x1 + orth * x2) * length(clean);
+		return abt + vecInNormal;
+	}
+
+	template<std::floating_point T>
+	inline constexpr Mat<4, 4, T> makeView(TVec3<T> xaxis, TVec3<T> yaxis, TVec3<T> zaxis, TVec3<T> eye) 
+	{
+		makeView({ xaxis,yaxis,zaxis }, eye);
+	}
+
+	template<std::floating_point T>
+	inline Mat<4, 4, T> makeLookAt(TVec3<T> eye, TVec3<T> at, TVec3<T> up) 
+	{
+		return makeView(getLookAtAxis(eye, at, up), eye);
+	}
+
+	template<std::floating_point T>
+	inline Mat<4, 4, T> makeFPSView(TVec3<T> eye, T pitch, T yaw) 
+	{
+		return makeView(getFPSViewAxis(eye, pitch, yaw), eye);
 	}
 
 

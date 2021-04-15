@@ -30,10 +30,8 @@ namespace daxa {
 				.mipLevels = 1,
 				.arrayLayers = 1,
 				.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
-			}
-		);
-		
-		depthImageView = device.createImageViewUnique(vk::ImageViewCreateInfo{
+			},
+			vk::ImageViewCreateInfo{
 			.image = depthImage.image,
 			.viewType = vk::ImageViewType::e2D,
 			.format = depthImageFormat,
@@ -43,8 +41,11 @@ namespace daxa {
 				.levelCount = 1,
 				.baseArrayLayer = 0,
 				.layerCount = 1,
+				}
 			}
-		});
+		);
+
+		SDL_CaptureMouse(SDL_TRUE);
 
 		if (!sdlWindowHandle) {
 			std::cerr << SDL_GetError() << std::endl;
@@ -59,7 +60,6 @@ namespace daxa {
 
 		vkb::Swapchain vkbSwapchain = swapchainBuilder
 			.use_default_format_selection()
-			//use vsync present mode
 			.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
 			.set_desired_extent(size[0], size[1])
 			.build()
@@ -118,6 +118,30 @@ namespace daxa {
 	}
 	bool Window::update(f32 deltaTime)
 	{
+		if (bCursorCaptured) {
+			std::cout << "warp mouse to 1,1 \n";
+			if (SDL_WarpMouseGlobal(0, 0) < 0) {
+				std::cout << "warp failed\n";
+			}
+			//SDL_WarpMouseInWindow(sdlWindowHandle, 1, 1);
+		}
+
+		for (i32 i = 0; i < 512; ++i) {
+			prevKeyStates[i] = keyStates[i];
+		}
+
+		const u8* keystate = SDL_GetKeyboardState(nullptr /* its 512 */);
+
+		for (i32 i = 0; i < 512; ++i) {
+			keyStates[i] = keystate[i];
+		}
+		for (i32 i = 0; i < 512; ++i) {
+			keyHidden[i] = false;
+		}
+
+		prevCursorPos = cursorPos;
+		SDL_GetMouseState(&cursorPos[0], &cursorPos[1]);
+
 		bool close{ false };
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
@@ -129,11 +153,56 @@ namespace daxa {
 					bSpacePressed ^= 1;
 				}
 			}
+
+
 		}
 		return close;
 	}
-	bool Window::isFocused() const
-	{
+	bool Window::isFocused() const {
 		return false;
+	}
+	bool Window::isKeyPressed(Scancode key) const {
+		return !keyHidden[u32(key)] && keyStates[u32(key)];
+	}
+	bool Window::isKeyJustPressed(Scancode key) const {
+		return !keyHidden[u32(key)] && keyStates[u32(key)] && !prevKeyStates[u32(key)];
+	}
+	bool Window::isKeyReleased(Scancode key) const {
+		return !keyHidden[u32(key)] && !keyStates[u32(key)];
+	}
+	bool Window::isKeyJustReleased(Scancode key) const {
+		return !keyHidden[u32(key)] && !keyStates[u32(key)] && prevKeyStates[u32(key)];
+	}
+	void Window::hideKey(Scancode key) {
+		keyHidden[u32(key)] = true;
+	}
+	std::array<i32, 2> Window::getCursorPosition() const {
+		return cursorPos;
+	}
+	Vec2 Window::getCursorPositionRelative() const {
+		return {
+			f32(cursorPos[0]) / f32(size[0]) * 2.0f - 1.0f,
+			f32(cursorPos[1]) / f32(size[1]) * 2.0f - 1.0f,
+		};
+	}
+	std::array<i32, 2> Window::getCursorPositionChange() const {
+		return { 
+			cursorPos[0] - prevCursorPos[0],
+			cursorPos[1] - prevCursorPos[1],
+		};
+	}
+	Vec2 Window::getCursorPositionChangeRelative() const {
+		return getCursorPositionRelative() - Vec2{
+			f32(prevCursorPos[0]) / f32(size[0]) * 2.0f - 1.0f,
+			f32(prevCursorPos[1]) / f32(size[1]) * 2.0f - 1.0f,
+		};
+	}
+	void Window::captureCursor() {
+		SDL_SetRelativeMouseMode(SDL_TRUE);
+		bCursorCaptured = true;
+	}
+	void Window::releaseCursor() {
+		SDL_SetRelativeMouseMode(SDL_FALSE);
+		bCursorCaptured = false;
 	}
 }

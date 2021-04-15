@@ -19,7 +19,9 @@ namespace daxa {
 
 		bool valid() const;
 
+		vk::ImageViewCreateInfo viewInfo;
 		vk::ImageCreateInfo info;
+		vk::UniqueImageView view;
 		vk::Image image;
 		VmaAllocation allocation;
 		VmaAllocator allocator;
@@ -29,10 +31,12 @@ namespace daxa {
 
 	Image makeImage(
 		const vk::ImageCreateInfo& createInfo,
+		const vk::ImageViewCreateInfo viewCreateInfo,
 		const VmaAllocationCreateInfo& allocInfo = {
 			.usage = VMA_MEMORY_USAGE_GPU_ONLY,
 			.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
 		},
+		vk::Device device = vkh_old::device,
 		VmaAllocator allocator = vkh_old::allocator
 	);
 }
