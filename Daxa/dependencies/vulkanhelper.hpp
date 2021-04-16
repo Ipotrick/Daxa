@@ -152,6 +152,7 @@ namespace vkh {
 		GraphicsPipelineBuilder& addShaderStage(const vk::PipelineShaderStageCreateInfo &shaderStage);
 		GraphicsPipelineBuilder& addDynamicState(const vk::DynamicState &dynamicstates);
 		GraphicsPipelineBuilder& addPushConstants(const vk::PushConstantRange &pushconstants);
+		GraphicsPipelineBuilder& addDescriptorLayout(const vk::DescriptorSetLayout& layout);
 
 	private:
 		std::optional<vk::Viewport> viewport;
@@ -166,6 +167,7 @@ namespace vkh {
 		std::vector<vk::PipelineShaderStageCreateInfo> shaderStages;
 		std::vector<vk::DynamicState> dynamicStateEnable;
 		std::vector<vk::PushConstantRange> pushConstants;
+		std::vector<vk::DescriptorSetLayout> descLayouts;
 	};
 
 #if defined(VULKANHELPER_IMPLEMENTATION)
@@ -218,6 +220,11 @@ namespace vkh {
 		return *this;
 	}
 
+	GraphicsPipelineBuilder& GraphicsPipelineBuilder::addDescriptorLayout(const vk::DescriptorSetLayout& layout) {
+		this->descLayouts.push_back(layout);
+		return *this;
+	}
+
 	vk::PipelineRasterizationStateCreateInfo makeDefaultRasterisationStateCreateInfo(vk::PolygonMode polygonMode) {
 		return vk::PipelineRasterizationStateCreateInfo{
 			.polygonMode = polygonMode,
@@ -261,9 +268,12 @@ namespace vkh {
 
 		//build pipeline layout:
 		vk::PipelineLayoutCreateInfo layoutCI{
+			.setLayoutCount = static_cast<uint32_t>(descLayouts.size()),
+			.pSetLayouts = descLayouts.data(),
 			.pushConstantRangeCount = uint32_t(pushConstants.size()),
 			.pPushConstantRanges = pushConstants.data(),
 		};
+
 		pipeline.layout = device.createPipelineLayoutUnique(layoutCI);
 
 		vk::PipelineViewportStateCreateInfo viewportStateCI{

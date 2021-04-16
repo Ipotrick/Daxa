@@ -6,8 +6,7 @@
 #include <iostream>
 
 namespace daxa {
-	Application::Application(std::string name, u32 width, u32 height) : 
-		frames{ &*descLayout, &*descLayout }
+	Application::Application(std::string name, u32 width, u32 height)
 	{
 		windowMutex = std::make_unique<OwningMutex<Window>>(
 			name, 
@@ -15,6 +14,24 @@ namespace daxa {
 			vkh_old::device,
 			vkh_old::mainPhysicalDevice
 		);
+
+		std::vector descriptorBindings{
+			vk::DescriptorSetLayoutBinding{
+				.binding = 0,
+				.descriptorType = vk::DescriptorType::eUniformBuffer,
+				.descriptorCount = 1,
+				.stageFlags = vk::ShaderStageFlagBits::eVertex,
+			}
+		};
+
+		descLayout = vkh_old::device.createDescriptorSetLayoutUnique(vk::DescriptorSetLayoutCreateInfo{
+			.bindingCount = static_cast<u32>(descriptorBindings.size()),
+			.pBindings = descriptorBindings.data()
+			});
+
+		for (i64 i = 0; i < FRAME_OVERLAP; i++) {
+			frames.emplace_back( &*descLayout );
+		}
 
 		init_default_renderpass();
 
@@ -142,6 +159,7 @@ namespace daxa {
 
 		daxa::Mat4x4 projection = daxa::makeProjection<4,f32>(daxa::radians(70.f), window->getSizeVec().x / window->getSizeVec().y, 0.1f, 200.0f);
 		projection[1][1] *= -1;
+		camera.proj = projection;
 		daxa::Mat4x4 model = daxa::rotate(daxa::Mat4x4{1.0f}, 0.0f, daxa::radians(_frameNumber * 0.04f), 0.0f);
 		daxa::Mat4x4 mesh_matrix = projection * camera.view * model;
 		MeshPushConstants constants;
@@ -149,6 +167,22 @@ namespace daxa {
 		std::array< MeshPushConstants, 1> c{ constants };
 
 		//upload the matrix to the GPU via pushconstants
+		GPUData gpudata{
+			.model = transpose(model),
+			.view = transpose(camera.view),
+			.proj = transpose(camera.proj)
+		};
+		{
+			// UPDATE UNIFORM BUFFERS:
+			void* data;
+			vmaMapMemory(vkh_old::allocator, frame.gpuDataBuffer.allocation, &data);
+
+			memcpy(data, &gpudata, sizeof(GPUData));
+
+			vmaUnmapMemory(vkh_old::allocator, frame.gpuDataBuffer.allocation);
+		}
+
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, meshPipeline.layout.get(), 0, std::array{ frame.descSet.get() }, {});
 		 
 		vkCmdPushConstants(cmd, meshPipeline.layout.get(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
 
@@ -216,12 +250,13 @@ namespace daxa {
 				.stencilTestEnable = VK_FALSE,
 				.minDepthBounds = 0.0f,
 				.maxDepthBounds = 1.0f,
-				})
+			})
 			.setRasterization(vk::PipelineRasterizationStateCreateInfo{
 				.cullMode = vk::CullModeFlagBits::eBack,
 				.frontFace = vk::FrontFace::eCounterClockwise,
 				.lineWidth = 1.0f,
-				});
+			})
+			.addDescriptorLayout(descLayout.get());
 
 		meshPipeline = pipelineBuilder.build(vkh_old::device,*mainRenderpass);
 	}

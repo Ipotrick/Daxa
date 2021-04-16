@@ -7,6 +7,14 @@
 #include "platform/Window.hpp"
 #include "rendering/Rendering.hpp"
 
+namespace vkh {
+	class DescriptorSetPool {
+	public:
+		vk::UniqueDescriptorSetLayout layout;
+		vk::UniqueDescriptorPool pool;
+	};
+}
+
 namespace daxa {
 
 	struct Camera {
@@ -15,6 +23,13 @@ namespace daxa {
 		f32 pitch{ 0.0f };
 		f32 rotation{ 0.0f };
 		daxa::Mat4x4 view;
+		daxa::Mat4x4 proj;
+	};
+
+	struct GPUData {
+		daxa::Mat4x4 model;
+		daxa::Mat4x4 view;
+		daxa::Mat4x4 proj;
 	};
 
 	struct FrameData {
@@ -25,16 +40,51 @@ namespace daxa {
 				[](vk::Semaphore sem) { /* dont need to reset a semaphore */ }
 			},
 			cmdPool{ vkh_old::device, vk::CommandPoolCreateInfo{.queueFamilyIndex = vkh_old::mainGraphicsQueueFamiltyIndex } },
-
+			gpuDataBuffer{ createBuffer(sizeof(GPUData), vk::BufferUsageFlagBits::eUniformBuffer, VMA_MEMORY_USAGE_CPU_TO_GPU) },
 
 			fence{ vkh_old::device.createFenceUnique(vk::FenceCreateInfo{}) },
 			presentSem{ vkh_old::device.createSemaphoreUnique({}) }
-		{ }
+		{ 
+			std::vector sizes{
+				vk::DescriptorPoolSize{ .type = vk::DescriptorType::eUniformBuffer, .descriptorCount = 10 }
+			};
+
+			descPool = vkh_old::device.createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
+				.maxSets = 10,
+				.poolSizeCount = static_cast<u32>(sizes.size()),
+				.pPoolSizes = sizes.data()
+			});
+
+			descSet = std::move(vkh_old::device.allocateDescriptorSetsUnique(vk::DescriptorSetAllocateInfo{
+				.descriptorPool = descPool.get(),
+				.descriptorSetCount = 1,
+				.pSetLayouts = descriptorLayout,
+			}).front());
+
+			// link uniform buffer with descriptor set:
+			vk::DescriptorBufferInfo binfo{
+				.buffer = gpuDataBuffer.buffer,
+				.offset = 0,
+				.range = sizeof(GPUData)
+			};
+
+			vk::WriteDescriptorSet write{
+				.dstSet = descSet.get(),
+				.dstBinding = 0,
+				.descriptorCount = 1,
+				.descriptorType = vk::DescriptorType::eUniformBuffer,
+				.pBufferInfo = &binfo,
+			};
+
+			vkh_old::device.updateDescriptorSets({ write }, {});
+		}
 
 		vkh::Pool<vk::Semaphore> semaPool;
 		vkh::CommandBufferPool cmdPool;
+		Buffer gpuDataBuffer;
+		vk::UniqueDescriptorSetLayout descLayout;
 		vk::UniqueDescriptorPool descPool;
-		vk::DescriptorSet descSet;
+		vk::UniqueDescriptorSet descSet;
 		vk::UniqueFence fence;
 		vk::UniqueSemaphore presentSem;
 	};
@@ -93,6 +143,6 @@ namespace daxa {
 
 		inline static constexpr u32 FRAME_OVERLAP{ 2 };
 
-		std::array<FrameData, FRAME_OVERLAP> frames;
+		std::vector<FrameData> frames;
 	};
 }
