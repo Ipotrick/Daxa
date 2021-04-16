@@ -15,6 +15,6 @@ Things the engine aims to provide:
 * 2d and 3d collision detection
 * 2d and 3d physics
 
-external Dependencies that are not included in the headers:
+external Dependencies that are not included in the dependency folder:
 * SDL2 
 * vulkan sdk
