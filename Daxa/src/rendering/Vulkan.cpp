@@ -6,7 +6,7 @@
 #include <VkBootstrap.hpp>
 
 namespace daxa {
-	namespace vkh_old {
+	namespace VulkanContext {
 		vk::Instance				instance;
 		vk::DebugUtilsMessengerEXT	debugMessenger;
 		vk::PhysicalDevice			mainPhysicalDevice;
@@ -39,7 +39,7 @@ namespace daxa {
 
 			vkb::PhysicalDeviceSelector selector{ vkbInstance };
 			vkb::PhysicalDevice physicalDevice = selector
-				.set_minimum_version(1, 1)
+				.set_minimum_version(1,2)
 				.defer_surface_initialization()
 				.require_separate_compute_queue()
 				.require_separate_transfer_queue()
@@ -48,7 +48,15 @@ namespace daxa {
 
 			mainPhysicalDevice = physicalDevice.physical_device;
 
+			vk::PhysicalDeviceDescriptorIndexingFeatures descriptor_indexing_features{
+				.shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
+				.descriptorBindingPartiallyBound = VK_TRUE,
+				.descriptorBindingVariableDescriptorCount = VK_TRUE,
+				.runtimeDescriptorArray = VK_TRUE,
+			};
+
 			vkb::DeviceBuilder deviceBuilder{ physicalDevice };
+			deviceBuilder.add_pNext(&descriptor_indexing_features);
 
 			vkb::Device vkbDevice = deviceBuilder.build().value();
 

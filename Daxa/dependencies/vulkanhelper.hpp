@@ -27,6 +27,13 @@
 
 namespace vkh {
 
+	//class DescriptorAllocator {
+	//public:
+	//	vk::DescriptorType::
+	//private:
+	//	std::array<vk::Descritpor
+	//};
+
 	struct VertexDescription {
 		std::vector<vk::VertexInputBindingDescription> bindings;
 		std::vector<vk::VertexInputAttributeDescription> attributes;
@@ -350,6 +357,7 @@ namespace vkh {
 	vk::PipelineShaderStageCreateInfo makeShaderStageCreateInfo(vk::ShaderStageFlagBits stage, vk::ShaderModule shaderModule);
 
 #if defined(VULKANHELPER_IMPLEMENTATION)
+
 	std::optional<vk::UniqueShaderModule> loadShaderModule(vk::Device device, std::filesystem::path filePath) {
 		std::ifstream file{filePath, std::ios::ate | std::ios::binary};
 

@@ -35,27 +35,28 @@ namespace daxa {
 	struct FrameData {
 		FrameData(vk::DescriptorSetLayout* descriptorLayout) :
 			semaPool{
-				[]() { return vkh_old::device.createSemaphore({}); },
-				[](vk::Semaphore sem) { vkh_old::device.destroySemaphore(sem,nullptr); },
+				[]() { return VulkanContext::device.createSemaphore({}); },
+				[](vk::Semaphore sem) { VulkanContext::device.destroySemaphore(sem,nullptr); },
 				[](vk::Semaphore sem) { /* dont need to reset a semaphore */ }
 			},
-			cmdPool{ vkh_old::device, vk::CommandPoolCreateInfo{.queueFamilyIndex = vkh_old::mainGraphicsQueueFamiltyIndex } },
+			cmdPool{ VulkanContext::device, vk::CommandPoolCreateInfo{.queueFamilyIndex = VulkanContext::mainGraphicsQueueFamiltyIndex } },
 			gpuDataBuffer{ createBuffer(sizeof(GPUData), vk::BufferUsageFlagBits::eUniformBuffer, VMA_MEMORY_USAGE_CPU_TO_GPU) },
 
-			fence{ vkh_old::device.createFenceUnique(vk::FenceCreateInfo{}) },
-			presentSem{ vkh_old::device.createSemaphoreUnique({}) }
+			fence{ VulkanContext::device.createFenceUnique(vk::FenceCreateInfo{}) },
+			presentSem{ VulkanContext::device.createSemaphoreUnique({}) }
 		{ 
 			std::vector sizes{
 				vk::DescriptorPoolSize{ .type = vk::DescriptorType::eUniformBuffer, .descriptorCount = 10 }
 			};
 
-			descPool = vkh_old::device.createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
+			descPool = VulkanContext::device.createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
+				.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
 				.maxSets = 10,
 				.poolSizeCount = static_cast<u32>(sizes.size()),
 				.pPoolSizes = sizes.data()
 			});
 
-			descSet = std::move(vkh_old::device.allocateDescriptorSetsUnique(vk::DescriptorSetAllocateInfo{
+			descSet = std::move(VulkanContext::device.allocateDescriptorSetsUnique(vk::DescriptorSetAllocateInfo{
 				.descriptorPool = descPool.get(),
 				.descriptorSetCount = 1,
 				.pSetLayouts = descriptorLayout,
@@ -76,7 +77,7 @@ namespace daxa {
 				.pBufferInfo = &binfo,
 			};
 
-			vkh_old::device.updateDescriptorSets({ write }, {});
+			VulkanContext::device.updateDescriptorSets({ write }, {});
 		}
 
 		vkh::Pool<vk::Semaphore> semaPool;
@@ -115,11 +116,24 @@ namespace daxa {
 
 		void init_mesh_pipeline();
 
+		std::optional<vkh::Pipeline> createMeshPipeline();
+
 		void cleanup();
 
 		void loadMeshes();
 
 		void uploadMesh(SimpleMesh& mesh);
+
+		daxa::ShaderHotLoader testHotLoader{ {"Daxa/shaders/mesh.vert","Daxa/shaders/mesh.frag"},
+			[&]() {
+				std::cout << "hotload\n";
+				VulkanContext::device.waitIdle();
+				auto pipeOpt = createMeshPipeline();
+				if (pipeOpt) {
+					meshPipeline = std::move(pipeOpt.value());
+				}
+			} 
+		};
 
 		// PERSISTENT DATA:
 

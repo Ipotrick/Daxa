@@ -5,3 +5,4 @@
 #include "ImageManager.hpp"
 #include "SimpleMesh.hpp"
 #include "SamplerManager.hpp"
+#include "ShaderUtil.hpp"

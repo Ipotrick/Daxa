@@ -54,7 +54,7 @@ namespace daxa {
 
 		sdlWindowId = SDL_GetWindowID(sdlWindowHandle);
 
-		SDL_Vulkan_CreateSurface(sdlWindowHandle, vkh_old::instance, (VkSurfaceKHR*)&surface);
+		SDL_Vulkan_CreateSurface(sdlWindowHandle, VulkanContext::instance, (VkSurfaceKHR*)&surface);
 
 		vkb::SwapchainBuilder swapchainBuilder{ vulkanPhysicalDevice, vulkanDevice, surface };
 
@@ -88,7 +88,7 @@ namespace daxa {
 			vkDestroyImageView(vulkanDevice, swapchainImageViews[i], nullptr);
 		}
 		
-		vkDestroySurfaceKHR(vkh_old::instance, surface, nullptr);
+		vkDestroySurfaceKHR(VulkanContext::instance, surface, nullptr);
 		SDL_DestroyWindow(sdlWindowHandle);
 		sdlWindowHandle = nullptr;
 	}
