@@ -21,7 +21,7 @@
 	} while (0)
 
 namespace daxa{
-	namespace vkh_old {
+	namespace VulkanContext {
 		extern vk::Instance					instance;
 		extern vk::DebugUtilsMessengerEXT	debugMessenger;
 		extern vk::PhysicalDevice			mainPhysicalDevice;

@@ -15,8 +15,6 @@ layout(set = 0, binding = 0) uniform Data {
 	mat4 proj;
 } data;
 
-layout(set = 0, binding = 1) uniform texture2D textures[8];
-
 layout(push_constant) uniform PushConstants
 {
 	mat4 render_matrix;

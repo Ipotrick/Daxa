@@ -25,3 +25,5 @@ using uz = size_t;
 #else
 #define DAXA_ASSERT(x)
 #endif
+
+#define DAXA_ALLWAYS_ASSERT(x) assert(x)

@@ -22,14 +22,14 @@
     <Filter Include="src\rendering">
       <UniqueIdentifier>{05487c95-8473-4338-8e35-949c4c47d36d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\rendering\shader">
-      <UniqueIdentifier>{f6ae04d5-bbab-421d-87fe-455fb38ae8b5}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\util">
       <UniqueIdentifier>{da4a81d9-df42-4ca0-818a-6bdb9d965dae}</UniqueIdentifier>
     </Filter>
     <Filter Include="src\rendering\managers">
       <UniqueIdentifier>{797e623e-85c3-4620-a4a8-b109ce8bd49e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\rendering\shaders">
+      <UniqueIdentifier>{33c95795-1c21-4e29-8fc9-480a3fdcdd80}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -117,6 +117,9 @@
     <ClInclude Include="src\platform\Scancodes.hpp">
       <Filter>src\platform</Filter>
     </ClInclude>
+    <ClInclude Include="src\rendering\ShaderUtil.hpp">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\stb_image.cpp">
@@ -163,20 +166,11 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="src\rendering\shader\colortri.vert">
-      <Filter>src\rendering\shader</Filter>
+    <None Include="shaders\mesh.frag">
+      <Filter>src\rendering\shaders</Filter>
     </None>
-    <None Include="src\rendering\shader\colortri.frag">
-      <Filter>src\rendering\shader</Filter>
-    </None>
-    <None Include="src\rendering\shader\redtri.frag">
-      <Filter>src\rendering\shader</Filter>
-    </None>
-    <None Include="src\rendering\shader\redtri.vert">
-      <Filter>src\rendering\shader</Filter>
-    </None>
-    <None Include="src\rendering\shader\tri_mesh.vert">
-      <Filter>src\rendering\shader</Filter>
+    <None Include="shaders\mesh.vert">
+      <Filter>src\rendering\shaders</Filter>
     </None>
   </ItemGroup>
 </Project>

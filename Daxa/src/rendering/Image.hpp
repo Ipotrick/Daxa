@@ -27,7 +27,7 @@ namespace daxa {
 		VmaAllocator allocator;
 	};
 
-	Image loadImage(vk::CommandBuffer& cmd, vk::Fence fence, std::string& path, vk::Device device = vkh_old::device, VmaAllocator allocator = vkh_old::allocator);
+	Image loadImage(vk::CommandBuffer& cmd, vk::Fence fence, std::string& path, vk::Device device = VulkanContext::device, VmaAllocator allocator = VulkanContext::allocator);
 
 	Image makeImage(
 		const vk::ImageCreateInfo& createInfo,
@@ -36,7 +36,7 @@ namespace daxa {
 			.usage = VMA_MEMORY_USAGE_GPU_ONLY,
 			.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
 		},
-		vk::Device device = vkh_old::device,
-		VmaAllocator allocator = vkh_old::allocator
+		vk::Device device = VulkanContext::device,
+		VmaAllocator allocator = VulkanContext::allocator
 	);
 }

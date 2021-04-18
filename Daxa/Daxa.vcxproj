@@ -42,6 +42,7 @@
     <ClInclude Include="src\rendering\Renderer.hpp" />
     <ClInclude Include="src\rendering\Rendering.hpp" />
     <ClInclude Include="src\rendering\SamplerManager.hpp" />
+    <ClInclude Include="src\rendering\ShaderUtil.hpp" />
     <ClInclude Include="src\rendering\SimpleMesh.hpp" />
     <ClInclude Include="src\rendering\Vulkan.hpp" />
     <ClInclude Include="src\threading\Jobs.hpp" />
@@ -65,11 +66,8 @@
     <ClCompile Include="src\threading\Jobs.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="src\rendering\shader\colortri.frag" />
-    <None Include="src\rendering\shader\colortri.vert" />
-    <None Include="src\rendering\shader\redtri.frag" />
-    <None Include="src\rendering\shader\redtri.vert" />
-    <None Include="src\rendering\shader\tri_mesh.vert" />
+    <None Include="shaders\mesh.frag" />
+    <None Include="shaders\mesh.vert" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -151,6 +149,9 @@
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <VcpkgUseStatic>false</VcpkgUseStatic>
   </PropertyGroup>
+  <PropertyGroup Label="Vcpkg">
+    <VcpkgAutoLink>false</VcpkgAutoLink>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -188,7 +189,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <AdditionalIncludeDirectories>S:\VulkanSDK\1.2.170.0\Include;$(ProjectDir)dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
@@ -200,10 +201,12 @@
       <AdditionalDependencies>SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>compileshaders.bat $(ProjectDir) $(TargetDir)</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
     <PostBuildEvent>
-      <Message>compiling shaders...</Message>
+      <Message>
+      </Message>
     </PostBuildEvent>
     <CustomBuildStep>
       <Inputs>S:\VulkanSDK}1.2.170.0\Bin\;%(Inputs)</Inputs>
