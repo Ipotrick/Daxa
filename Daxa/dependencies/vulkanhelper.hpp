@@ -5,18 +5,13 @@
 #include <optional>
 #include <filesystem>
 #include <functional>
-
-
-#include <iostream>
+#include <set>
+#include <unordered_map>
 
 #if defined(VULKANHELPER_IMPLEMENTATION)
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <iostream>
 #include <fstream>
-
-// temp?
-#include <fmt/core.h>
-#include <set>
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -29,191 +24,6 @@
 #endif
 
 namespace vkh {
-	class DescriptorAllocator {
-	public:
-		DescriptorAllocator() = default;
-		DescriptorAllocator(vk::Device device, std::vector<vk::DescriptorPoolSize> specificPoolSizes, vk::DescriptorPoolCreateFlagBits poolCreateFlags = {}, uint32_t maxSetsPerPool = 500);
-		void reset();
-		vk::UniqueDescriptorSet allocate(vk::DescriptorSetLayout layout);
-		std::vector<vk::UniqueDescriptorSet> allocate(vk::DescriptorSetLayout layout, uint32_t count);
-
-	protected:
-		DescriptorAllocator(vk::Device device, vk::DescriptorPoolCreateFlagBits poolFlags, uint32_t maxSetsPerPool);
-
-		vk::UniqueDescriptorPool getUnusedPool();
-		vk::UniqueDescriptorPool createPool();
-
-		const vk::DescriptorPoolCreateFlagBits poolCreateFlags;
-		const uint32_t maxSetsPerPool;
-
-		vk::Device device;
-		vk::UniqueDescriptorPool currentPool;
-		std::vector<vk::DescriptorPoolSize> descriptorPoolSizes;
-		std::vector<vk::UniqueDescriptorPool> usedPools;
-		std::vector<vk::UniqueDescriptorPool> unusedPools;
-	};
-
-#if defined(VULKANHELPER_IMPLEMENTATION)
-	DescriptorAllocator::DescriptorAllocator(vk::Device device, std::vector<vk::DescriptorPoolSize> specificPoolSizes, vk::DescriptorPoolCreateFlagBits poolCreateFlags, uint32_t maxSetsPerPool)
-		: device{ device }
-		, maxSetsPerPool{ maxSetsPerPool }
-		, poolCreateFlags{ poolCreateFlags } {
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eSampler, .descriptorCount = 500u });
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eCombinedImageSampler, .descriptorCount = 4000u });
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eSampledImage, .descriptorCount = 4000u });
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eUniformTexelBuffer, .descriptorCount = 1000u });
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eStorageTexelBuffer, .descriptorCount = 1000u });
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eUniformBuffer, .descriptorCount = 1000u });
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eStorageBuffer, .descriptorCount = 1000u });
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eUniformBuffer, .descriptorCount = 1000u });
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eStorageBuffer, .descriptorCount = 1000u });
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eUniformBufferDynamic, .descriptorCount = 1000u });
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eStorageBufferDynamic, .descriptorCount = 1000u });
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eInputAttachment, .descriptorCount = 500u });
-
-		for (auto specificPoolSize : specificPoolSizes) {
-			vk::DescriptorPoolSize* foundValue = nullptr;
-			for (auto& poolSize : this->descriptorPoolSizes) {
-				if (poolSize.type == specificPoolSize.type) {
-					foundValue = &poolSize;
-					break;
-				}
-			}
-			if (foundValue) {
-				foundValue->descriptorCount = specificPoolSize.descriptorCount;
-			}
-			else {
-				this->descriptorPoolSizes.push_back(specificPoolSize);
-			}
-		}
-
-		currentPool = createPool();
-	}
-	DescriptorAllocator::DescriptorAllocator(vk::Device device, vk::DescriptorPoolCreateFlagBits poolFlags, uint32_t maxSetsPerPool)
-		: device{ device }
-		, poolCreateFlags{ poolFlags }
-		, maxSetsPerPool{ maxSetsPerPool } {
-	}
-	void DescriptorAllocator::reset() {
-		if (currentPool) {
-			device.resetDescriptorPool(*currentPool);
-			unusedPools.push_back(std::move(currentPool));
-			currentPool.release();
-		}
-
-		for (auto&& pool : usedPools) {
-			device.resetDescriptorPool(*pool);
-			unusedPools.push_back(std::move(pool));
-		}
-		usedPools.clear();
-	}
-	vk::UniqueDescriptorSet DescriptorAllocator::allocate(vk::DescriptorSetLayout layout) {
-		auto result = device.allocateDescriptorSetsUnique({ .descriptorPool = *currentPool, .descriptorSetCount = 1, .pSetLayouts = &layout });
-		if (result.size() == 0) /* we need to reallocate with another pool */ {
-			usedPools.push_back(std::move(currentPool));
-			currentPool = getUnusedPool();
-
-			result = device.allocateDescriptorSetsUnique({ .descriptorPool = *currentPool, .descriptorSetCount = 1, .pSetLayouts = &layout });
-
-			if (result.size() == 0) {
-				// possible cause for this error is that the requested descriptor count exceeds the maximum descriptor pool size
-				std::cerr << "error: discriptor allocator can not allocate this descriptor set layout!\n";
-				assert(false);
-			}
-		}
-
-		return std::move(result.front());
-	}
-	std::vector<vk::UniqueDescriptorSet> DescriptorAllocator::allocate(vk::DescriptorSetLayout layout, uint32_t count) {
-		std::vector<vk::DescriptorSetLayout> layouts(count, layout);
-		auto result = device.allocateDescriptorSetsUnique({ .descriptorPool = *currentPool, .descriptorSetCount = count, .pSetLayouts = layouts.data() });
-		if (result.size() == 0) /* we need to reallocate with another pool */ {
-			usedPools.push_back(std::move(currentPool));
-			currentPool = getUnusedPool();
-
-			result = device.allocateDescriptorSetsUnique({ .descriptorPool = *currentPool, .descriptorSetCount = count, .pSetLayouts = layouts.data() });
-
-			if (result.size() == 0) {
-				// possible cause for this error is that the requested descriptor count exceeds the maximum descriptor pool size
-				std::cerr << "error: discriptor allocator can not allocate this descriptor set layout!\n";
-				assert(false);
-			}
-		}
-
-		return std::move(result);
-	}
-	vk::UniqueDescriptorPool DescriptorAllocator::getUnusedPool() {
-		if (unusedPools.empty()) {
-			return std::move(createPool());
-		}
-		else {
-			auto pool = std::move(unusedPools.back());
-			unusedPools.pop_back();
-			return std::move(pool);
-		}
-	}
-	vk::UniqueDescriptorPool DescriptorAllocator::createPool() {
-		auto allocInfo = vk::DescriptorPoolCreateInfo{
-			.flags = poolCreateFlags,
-			.maxSets = maxSetsPerPool,
-			.poolSizeCount = static_cast<uint32_t>(descriptorPoolSizes.size()),
-			.pPoolSizes = descriptorPoolSizes.data(),
-		};
-
-		return device.createDescriptorPoolUnique(allocInfo);
-	}
-#endif
-
-
-
-	class DescriptorSetAllocator : public DescriptorAllocator {
-	public:
-		DescriptorSetAllocator(vk::Device device, vk::DescriptorSetLayoutCreateInfo layoutCreateInfo, vk::DescriptorSetLayout layout, vk::DescriptorPoolCreateFlagBits poolFlags = {}, uint32_t maxSetsPerPool = 500);
-		vk::UniqueDescriptorSet allocate();
-		std::vector<vk::UniqueDescriptorSet> allocate(uint32_t count);
-	private:
-		using DescriptorAllocator::allocate;
-		vk::DescriptorSetLayout layout;
-	};
-
-#if defined(VULKANHELPER_IMPLEMENTATION)
-	DescriptorSetAllocator::DescriptorSetAllocator(vk::Device device, vk::DescriptorSetLayoutCreateInfo layoutCreateInfo, vk::DescriptorSetLayout layout, vk::DescriptorPoolCreateFlagBits poolFlags, uint32_t maxSetsPerPool)
-		: DescriptorAllocator{ device, poolFlags, maxSetsPerPool } {
-		const uint32_t descriptorPoolSizesCount = layoutCreateInfo.bindingCount;
-		this->descriptorPoolSizes.resize(descriptorPoolSizesCount);
-
-		for (uint32_t i = 0; i < descriptorPoolSizesCount; i++) {
-			this->descriptorPoolSizes[i].type = layoutCreateInfo.pBindings[i].descriptorType;
-			this->descriptorPoolSizes[i].descriptorCount = layoutCreateInfo.pBindings[i].descriptorCount;
-		}
-	}
-	vk::UniqueDescriptorSet DescriptorSetAllocator::allocate() {
-		auto result = device.allocateDescriptorSetsUnique({ .descriptorPool = *currentPool, .descriptorSetCount = 1, .pSetLayouts = &layout });
-		if (result.size() == 0) /* we need to reallocate with another pool */ {
-			usedPools.push_back(std::move(currentPool));
-			currentPool = getUnusedPool();
-
-			result = device.allocateDescriptorSetsUnique({ .descriptorPool = *currentPool, .descriptorSetCount = 1, .pSetLayouts = &layout });
-		}
-
-		return std::move(result.front());
-	}
-	std::vector<vk::UniqueDescriptorSet> DescriptorSetAllocator::allocate(uint32_t count) {
-		std::vector<vk::DescriptorSetLayout> layouts(count, layout);
-		auto result = device.allocateDescriptorSetsUnique({ .descriptorPool = *currentPool, .descriptorSetCount = count, .pSetLayouts = layouts.data() });
-		if (result.size() == 0) /* we need to reallocate with another pool */ {
-			usedPools.push_back(std::move(currentPool));
-			currentPool = getUnusedPool();
-
-			result = device.allocateDescriptorSetsUnique({ .descriptorPool = *currentPool, .descriptorSetCount = count, .pSetLayouts = layouts.data() });
-		}
-
-		return std::move(result);
-	}
-#endif
-
-
-
 	struct VertexDescription {
 		std::vector<vk::VertexInputBindingDescription> bindings;
 		std::vector<vk::VertexInputAttributeDescription> attributes;
@@ -231,22 +41,22 @@ namespace vkh {
 
 	class VertexDiscriptionBuilder {
 	public:
-		VertexDiscriptionBuilder &beginBinding(uint32_t stride, vk::VertexInputRate inputRate = vk::VertexInputRate::eVertex);
-		VertexDiscriptionBuilder &addAttribute(vk::Format format);
-		VertexDiscriptionBuilder &stageCreateFlags(vk::PipelineVertexInputStateCreateFlags flags);
+		VertexDiscriptionBuilder& beginBinding(uint32_t stride, vk::VertexInputRate inputRate = vk::VertexInputRate::eVertex);
+		VertexDiscriptionBuilder& addAttribute(vk::Format format);
+		VertexDiscriptionBuilder& stageCreateFlags(vk::PipelineVertexInputStateCreateFlags flags);
 		VertexDescription build();
 
 	private:
-		uint32_t stride{0};
-		uint32_t offset{0};
-		uint32_t location{0};
+		uint32_t stride{ 0 };
+		uint32_t offset{ 0 };
+		uint32_t location{ 0 };
 		vk::PipelineVertexInputStateCreateFlags flags{};
 		std::vector<vk::VertexInputBindingDescription> bindings;
 		std::vector<vk::VertexInputAttributeDescription> attributes;
 	};
 
 #if defined(VULKANHELPER_IMPLEMENTATION)
-	VertexDiscriptionBuilder &VertexDiscriptionBuilder::beginBinding(uint32_t stride, vk::VertexInputRate inputRate) {
+	VertexDiscriptionBuilder& VertexDiscriptionBuilder::beginBinding(uint32_t stride, vk::VertexInputRate inputRate) {
 		offset = 0;
 		location = 0;
 		vk::VertexInputBindingDescription binding{
@@ -258,7 +68,7 @@ namespace vkh {
 		return *this;
 	}
 
-	VertexDiscriptionBuilder &VertexDiscriptionBuilder::addAttribute(vk::Format format) {
+	VertexDiscriptionBuilder& VertexDiscriptionBuilder::addAttribute(vk::Format format) {
 		vk::VertexInputAttributeDescription attribute{
 			.location = location,
 			.binding = static_cast<uint32_t>(bindings.size() - 1),
@@ -298,7 +108,7 @@ namespace vkh {
 		return *this;
 	}
 
-	VertexDiscriptionBuilder &VertexDiscriptionBuilder::stageCreateFlags(vk::PipelineVertexInputStateCreateFlags flags) {
+	VertexDiscriptionBuilder& VertexDiscriptionBuilder::stageCreateFlags(vk::PipelineVertexInputStateCreateFlags flags) {
 		this->flags = flags;
 		return *this;
 	}
@@ -308,7 +118,7 @@ namespace vkh {
 		return VertexDescription{
 			bindings,
 			attributes,
-			flags};
+			flags };
 	}
 #endif
 
@@ -322,23 +132,22 @@ namespace vkh {
 		vk::UniquePipeline pipeline;
 		vk::UniquePipelineLayout layout;
 	};
-
 	class GraphicsPipelineBuilder {
 	public:
 		Pipeline build(vk::Device device, vk::RenderPass pass, uint32_t subpass = 0, vk::PipelineCache pipelineCache = nullptr);
 
-		GraphicsPipelineBuilder& setViewport(const vk::Viewport &viewport);
-		GraphicsPipelineBuilder& setScissor(const vk::Rect2D &scissor);
-		GraphicsPipelineBuilder& setVertexInput(const vk::PipelineVertexInputStateCreateInfo &vertexInput);
-		GraphicsPipelineBuilder& setInputAssembly(const vk::PipelineInputAssemblyStateCreateInfo &inputassembly);
-		GraphicsPipelineBuilder& setRasterization(const vk::PipelineRasterizationStateCreateInfo &rasterization);
-		GraphicsPipelineBuilder& setMultisampling(const vk::PipelineMultisampleStateCreateInfo &multisampling);
-		GraphicsPipelineBuilder& setDepthStencil(const vk::PipelineDepthStencilStateCreateInfo &depthStencil);
-		GraphicsPipelineBuilder& setColorBlend(const vk::PipelineColorBlendStateCreateInfo &colorBlend);
-		GraphicsPipelineBuilder& addColorBlendAttachemnt(const vk::PipelineColorBlendAttachmentState &colorAttachmentBlend);
-		GraphicsPipelineBuilder& addShaderStage(const vk::PipelineShaderStageCreateInfo &shaderStage);
-		GraphicsPipelineBuilder& addDynamicState(const vk::DynamicState &dynamicstates);
-		GraphicsPipelineBuilder& addPushConstants(const vk::PushConstantRange &pushconstants);
+		GraphicsPipelineBuilder& setViewport(const vk::Viewport& viewport);
+		GraphicsPipelineBuilder& setScissor(const vk::Rect2D& scissor);
+		GraphicsPipelineBuilder& setVertexInput(const vk::PipelineVertexInputStateCreateInfo& vertexInput);
+		GraphicsPipelineBuilder& setInputAssembly(const vk::PipelineInputAssemblyStateCreateInfo& inputassembly);
+		GraphicsPipelineBuilder& setRasterization(const vk::PipelineRasterizationStateCreateInfo& rasterization);
+		GraphicsPipelineBuilder& setMultisampling(const vk::PipelineMultisampleStateCreateInfo& multisampling);
+		GraphicsPipelineBuilder& setDepthStencil(const vk::PipelineDepthStencilStateCreateInfo& depthStencil);
+		GraphicsPipelineBuilder& setColorBlend(const vk::PipelineColorBlendStateCreateInfo& colorBlend);
+		GraphicsPipelineBuilder& addColorBlendAttachemnt(const vk::PipelineColorBlendAttachmentState& colorAttachmentBlend);
+		GraphicsPipelineBuilder& addShaderStage(const vk::PipelineShaderStageCreateInfo& shaderStage);
+		GraphicsPipelineBuilder& addDynamicState(const vk::DynamicState& dynamicstates);
+		GraphicsPipelineBuilder& addPushConstants(const vk::PushConstantRange& pushconstants);
 		GraphicsPipelineBuilder& addDescriptorLayout(const vk::DescriptorSetLayout& layout);
 
 	private:
@@ -358,51 +167,51 @@ namespace vkh {
 	};
 
 #if defined(VULKANHELPER_IMPLEMENTATION)
-	GraphicsPipelineBuilder &GraphicsPipelineBuilder::setViewport(const vk::Viewport &viewport) {
+	GraphicsPipelineBuilder& GraphicsPipelineBuilder::setViewport(const vk::Viewport& viewport) {
 		this->viewport = viewport;
 		return *this;
 	}
-	GraphicsPipelineBuilder &GraphicsPipelineBuilder::setScissor(const vk::Rect2D &scissor) {
+	GraphicsPipelineBuilder& GraphicsPipelineBuilder::setScissor(const vk::Rect2D& scissor) {
 		this->scissor = scissor;
 		return *this;
 	}
-	GraphicsPipelineBuilder &GraphicsPipelineBuilder::setVertexInput(const vk::PipelineVertexInputStateCreateInfo &vertexInput) {
+	GraphicsPipelineBuilder& GraphicsPipelineBuilder::setVertexInput(const vk::PipelineVertexInputStateCreateInfo& vertexInput) {
 		this->vertexInput = vertexInput;
 		return *this;
 	}
-	GraphicsPipelineBuilder &GraphicsPipelineBuilder::setInputAssembly(const vk::PipelineInputAssemblyStateCreateInfo &inputAssembly) {
+	GraphicsPipelineBuilder& GraphicsPipelineBuilder::setInputAssembly(const vk::PipelineInputAssemblyStateCreateInfo& inputAssembly) {
 		this->inputAssembly = inputAssembly;
 		return *this;
 	}
-	GraphicsPipelineBuilder &GraphicsPipelineBuilder::setRasterization(const vk::PipelineRasterizationStateCreateInfo &rasterization) {
+	GraphicsPipelineBuilder& GraphicsPipelineBuilder::setRasterization(const vk::PipelineRasterizationStateCreateInfo& rasterization) {
 		this->rasterization = rasterization;
 		return *this;
 	}
-	GraphicsPipelineBuilder &GraphicsPipelineBuilder::setMultisampling(const vk::PipelineMultisampleStateCreateInfo &multisampling) {
+	GraphicsPipelineBuilder& GraphicsPipelineBuilder::setMultisampling(const vk::PipelineMultisampleStateCreateInfo& multisampling) {
 		this->multisampling = multisampling;
 		return *this;
 	}
-	GraphicsPipelineBuilder &GraphicsPipelineBuilder::setDepthStencil(const vk::PipelineDepthStencilStateCreateInfo &depthStencil) {
+	GraphicsPipelineBuilder& GraphicsPipelineBuilder::setDepthStencil(const vk::PipelineDepthStencilStateCreateInfo& depthStencil) {
 		this->depthStencil = depthStencil;
 		return *this;
 	}
-	GraphicsPipelineBuilder &GraphicsPipelineBuilder::setColorBlend(const vk::PipelineColorBlendStateCreateInfo &colorBlend) {
+	GraphicsPipelineBuilder& GraphicsPipelineBuilder::setColorBlend(const vk::PipelineColorBlendStateCreateInfo& colorBlend) {
 		this->colorBlend = colorBlend;
 		return *this;
 	}
-	GraphicsPipelineBuilder &GraphicsPipelineBuilder::addColorBlendAttachemnt(const vk::PipelineColorBlendAttachmentState &colorAttachmentBlend) {
+	GraphicsPipelineBuilder& GraphicsPipelineBuilder::addColorBlendAttachemnt(const vk::PipelineColorBlendAttachmentState& colorAttachmentBlend) {
 		this->colorAttachmentBlends.push_back(colorAttachmentBlend);
 		return *this;
 	}
-	GraphicsPipelineBuilder &GraphicsPipelineBuilder::addShaderStage(const vk::PipelineShaderStageCreateInfo &shaderStage) {
+	GraphicsPipelineBuilder& GraphicsPipelineBuilder::addShaderStage(const vk::PipelineShaderStageCreateInfo& shaderStage) {
 		this->shaderStages.push_back(shaderStage);
 		return *this;
 	}
-	GraphicsPipelineBuilder &GraphicsPipelineBuilder::addDynamicState(const vk::DynamicState &dynamicstates) {
+	GraphicsPipelineBuilder& GraphicsPipelineBuilder::addDynamicState(const vk::DynamicState& dynamicstates) {
 		this->dynamicStateEnable.push_back(dynamicstates);
 		return *this;
 	}
-	GraphicsPipelineBuilder &GraphicsPipelineBuilder::addPushConstants(const vk::PushConstantRange &pushconstant) {
+	GraphicsPipelineBuilder& GraphicsPipelineBuilder::addPushConstants(const vk::PushConstantRange& pushconstant) {
 		this->pushConstants.push_back(pushconstant);
 		return *this;
 	}
@@ -422,7 +231,7 @@ namespace vkh {
 	}
 
 	vk::PipelineMultisampleStateCreateInfo makeDefaultMultisampleStateCreateInfo() {
-		return vk::PipelineMultisampleStateCreateInfo{.minSampleShading = 1.0f};
+		return vk::PipelineMultisampleStateCreateInfo{ .minSampleShading = 1.0f };
 	}
 
 	vk::PipelineColorBlendAttachmentState makeDefaultColorBlendSAttachmentState() {
@@ -444,12 +253,12 @@ namespace vkh {
 
 		// set state create infos:
 		vk::PipelineVertexInputStateCreateInfo pvertexInputCI = vertexInput.value();
-		vk::PipelineInputAssemblyStateCreateInfo pinputAssemlyStateCI = inputAssembly.value_or(vk::PipelineInputAssemblyStateCreateInfo{.topology = vk::PrimitiveTopology::eTriangleList});
+		vk::PipelineInputAssemblyStateCreateInfo pinputAssemlyStateCI = inputAssembly.value_or(vk::PipelineInputAssemblyStateCreateInfo{ .topology = vk::PrimitiveTopology::eTriangleList });
 		vk::PipelineRasterizationStateCreateInfo prasterizationStateCI = rasterization.value_or(vkh::makeDefaultRasterisationStateCreateInfo(vk::PolygonMode::eFill));
 		vk::PipelineMultisampleStateCreateInfo multisamplerStateCI = multisampling.value_or(vkh::makeDefaultMultisampleStateCreateInfo());
 		vk::PipelineDepthStencilStateCreateInfo pDepthStencilStateCI = depthStencil.value_or(vk::PipelineDepthStencilStateCreateInfo{});
-		vk::Viewport pviewport = viewport.value_or(vk::Viewport{.width = 1, .height = 1});
-		vk::Rect2D pscissor = scissor.value_or(vk::Rect2D{.extent = {static_cast<uint32_t>(pviewport.width), static_cast<uint32_t>(pviewport.height)}});
+		vk::Viewport pviewport = viewport.value_or(vk::Viewport{ .width = 1, .height = 1 });
+		vk::Rect2D pscissor = scissor.value_or(vk::Rect2D{ .extent = {static_cast<uint32_t>(pviewport.width), static_cast<uint32_t>(pviewport.height)} });
 
 		Pipeline pipeline;
 
@@ -474,7 +283,7 @@ namespace vkh {
 		vk::PipelineColorBlendStateCreateInfo colorBlendingSCI;
 		if (this->colorBlend.has_value()) {
 			colorBlendingSCI = this->colorBlend.value();
-		} 
+		}
 		else if (this->colorAttachmentBlends.size() > 0) {
 			colorBlendingSCI = vk::PipelineColorBlendStateCreateInfo{
 				.logicOpEnable = VK_FALSE,
@@ -482,9 +291,9 @@ namespace vkh {
 				.attachmentCount = static_cast<uint32_t>(this->colorAttachmentBlends.size()),
 				.pAttachments = this->colorAttachmentBlends.data(),
 			};
-		} 
+		}
 		else {
-			colorBlendingSCI = vk::PipelineColorBlendStateCreateInfo {
+			colorBlendingSCI = vk::PipelineColorBlendStateCreateInfo{
 				.logicOpEnable = VK_FALSE,
 				.logicOp = vk::LogicOp::eCopy,
 				.attachmentCount = 1,
@@ -537,9 +346,8 @@ namespace vkh {
 	vk::PipelineShaderStageCreateInfo makeShaderStageCreateInfo(vk::ShaderStageFlagBits stage, vk::ShaderModule shaderModule);
 
 #if defined(VULKANHELPER_IMPLEMENTATION)
-
 	std::optional<vk::UniqueShaderModule> loadShaderModule(vk::Device device, std::filesystem::path filePath) {
-		std::ifstream file{filePath, std::ios::ate | std::ios::binary};
+		std::ifstream file{ filePath, std::ios::ate | std::ios::binary };
 
 		if (!file.is_open()) {
 			return {};
@@ -548,7 +356,7 @@ namespace vkh {
 		size_t fileSize = static_cast<size_t>(file.tellg());
 		std::vector<uint32_t> buffer(fileSize / sizeof(uint32_t));
 		file.seekg(0);
-		file.read((char *)buffer.data(), fileSize);
+		file.read((char*)buffer.data(), fileSize);
 		file.close();
 
 		vk::ShaderModuleCreateInfo createInfo = {};
@@ -596,64 +404,13 @@ namespace vkh {
 	}
 #endif
 
-	class CommandBufferPool { 
-	public:
-		CommandBufferPool() = default;
-		CommandBufferPool(vk::Device device, const vk::CommandPoolCreateInfo& poolCI, const vk::CommandBufferLevel& bufferLevel = vk::CommandBufferLevel::ePrimary);
-		
-		void flush();
-
-		vk::CommandBuffer getElement();
-
-		vk::CommandPool get();
-
-		vk::CommandPool operator*();
-
-	private:
-		vk::Device device;
-		vk::UniqueCommandPool pool;
-		vk::CommandBufferLevel bufferLevel;
-		std::vector<vk::CommandBuffer> unused;
-		std::vector<vk::CommandBuffer> used;
-	};
-
-#if defined(VULKANHELPER_IMPLEMENTATION)
-	CommandBufferPool::CommandBufferPool(vk::Device device, const vk::CommandPoolCreateInfo& createInfo, const vk::CommandBufferLevel& bufferLevel) :
-		device{ device }, pool{ device.createCommandPoolUnique(createInfo) }, bufferLevel{ bufferLevel } {}
-	void CommandBufferPool::flush() {
-		device.resetCommandPool(*pool);
-		unused.insert(unused.end(), used.begin(), used.end());
-		used.clear();
-		}
-
-	vk::CommandBuffer CommandBufferPool::getElement() {
-		if (unused.empty()) {
-			unused.push_back(device.allocateCommandBuffers(vk::CommandBufferAllocateInfo{ .commandPool = pool.get(), .level = bufferLevel,.commandBufferCount = 1 }).back());
-		}
-		auto buffer = unused.back();
-		unused.pop_back();
-		used.push_back(buffer);
-		return buffer;
-	}
-
-	vk::CommandPool CommandBufferPool::get() {
-		return pool.get();
-	}
-
-	vk::CommandPool CommandBufferPool::operator*() {
-		return get();
-	}
-
-#endif
-
-
 	template <typename T>
 	class Pool {
 	public:
 		Pool() = default;
-		Pool(std::function<T(void)> creator, std::function<void(T)> destroyer, std::function<void(T)> resetter) : creator{std::move(creator)}, destroyer{std::move(destroyer)}, resetter{std::move(resetter)} {}
+		Pool(std::function<T(void)> creator, std::function<void(T)> destroyer, std::function<void(T)> resetter) : creator{ std::move(creator) }, destroyer{ std::move(destroyer) }, resetter{ std::move(resetter) } {}
 
-		Pool(Pool &&other) {
+		Pool(Pool&& other) {
 			this->creator = std::move(other.creator);
 			this->destroyer = std::move(other.destroyer);
 			this->resetter = std::move(other.resetter);
@@ -661,24 +418,24 @@ namespace vkh {
 			this->usedList = std::move(other.usedList);
 		}
 
-		Pool &operator=(Pool &&other) {
+		Pool& operator=(Pool&& other) {
 			if (&other == this)
 				return *this;
 			return *new (this) Pool(std::move(other));
 		}
 
 		~Pool() {
-			for (auto &el : pool) {
+			for (auto& el : pool) {
 				destroyer(el);
 			}
-			for (auto &el : usedList) {
+			for (auto& el : usedList) {
 				destroyer(el);
 			}
 			pool.clear();
 		}
 
 		void flush() {
-			for (auto &el : usedList) {
+			for (auto& el : usedList) {
 				resetter(el);
 			}
 			pool.insert(pool.end(), usedList.begin(), usedList.end());
@@ -703,6 +460,302 @@ namespace vkh {
 		std::vector<T> pool;
 		std::vector<T> usedList;
 	};
+
+
+
+	class DescriptorLayoutCache {
+	public:
+		DescriptorLayoutCache(vk::Device device);
+		vk::DescriptorSetLayout getLayout(const std::vector<vk::DescriptorSetLayoutBinding>& bindings);
+	private:
+		struct DescriptorLayoutHash {
+			std::size_t operator()(const std::vector<vk::DescriptorSetLayoutBinding>& bindings) const;
+		};
+
+		vk::Device device;
+		std::unordered_map<std::vector<vk::DescriptorSetLayoutBinding>, vk::UniqueDescriptorSetLayout, DescriptorLayoutHash> bindingsToLayout;
+	};
+
+#if defined(VULKANHELPER_IMPLEMENTATION)
+	DescriptorLayoutCache::DescriptorLayoutCache(vk::Device device)
+		: device{ device } {
+	}
+
+	vk::DescriptorSetLayout DescriptorLayoutCache::getLayout(const std::vector<vk::DescriptorSetLayoutBinding>& bindings) {
+		auto iter = bindingsToLayout.find(bindings);
+		if (iter != bindingsToLayout.end()) {
+			return *iter->second;
+		}
+		else {
+			auto allocateInfo = vk::DescriptorSetLayoutCreateInfo{
+				.bindingCount = static_cast<uint32_t>(bindings.size()),
+				.pBindings = bindings.data(),
+			};
+			return *(bindingsToLayout[bindings] = device.createDescriptorSetLayoutUnique(allocateInfo));
+		}
+	}
+	std::size_t DescriptorLayoutCache::DescriptorLayoutHash::operator()(const std::vector<vk::DescriptorSetLayoutBinding>& bindings) const {
+		size_t h{ 0 };
+		for (const auto& binding : bindings) {
+			h ^= static_cast<size_t>(binding.descriptorType);
+			h ^= static_cast<size_t>(binding.descriptorType);
+		}
+		return h;
+	}
+#endif
+
+
+
+	class DescriptorAllocator {
+	public:
+		DescriptorAllocator() = default;
+		DescriptorAllocator(vk::Device device, std::vector<vk::DescriptorPoolSize> specificPoolSizes = {}, vk::DescriptorPoolCreateFlagBits poolCreateFlags = {}, uint32_t maxSetsPerPool = 500);
+		void reset();
+		vk::DescriptorSet allocate(vk::DescriptorSetLayout layout);
+		std::vector<vk::DescriptorSet> allocate(vk::DescriptorSetLayout layout, uint32_t count);
+
+	protected:
+		DescriptorAllocator(vk::Device device, vk::DescriptorPoolCreateFlagBits poolFlags, uint32_t maxSetsPerPool);
+
+		vk::UniqueDescriptorPool getUnusedPool();
+		vk::UniqueDescriptorPool createPool();
+
+		const vk::DescriptorPoolCreateFlagBits poolCreateFlags;
+		const uint32_t maxSetsPerPool;
+
+		vk::Device device;
+		vk::UniqueDescriptorPool currentPool;
+		std::vector<vk::DescriptorPoolSize> descriptorPoolSizes;
+		std::vector<vk::UniqueDescriptorPool> usedPools;
+		std::vector<vk::UniqueDescriptorPool> unusedPools;
+	};
+
+#if defined(VULKANHELPER_IMPLEMENTATION)
+	DescriptorAllocator::DescriptorAllocator(vk::Device device, std::vector<vk::DescriptorPoolSize> specificPoolSizes, vk::DescriptorPoolCreateFlagBits poolCreateFlags, uint32_t maxSetsPerPool)
+		: device{ device }, maxSetsPerPool{ maxSetsPerPool }, poolCreateFlags{ poolCreateFlags } {
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eSampler, .descriptorCount = 500u });
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eCombinedImageSampler, .descriptorCount = 4000u });
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eSampledImage, .descriptorCount = 4000u });
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eUniformTexelBuffer, .descriptorCount = 1000u });
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eStorageTexelBuffer, .descriptorCount = 1000u });
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eUniformBuffer, .descriptorCount = 1000u });
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eStorageBuffer, .descriptorCount = 1000u });
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eUniformBuffer, .descriptorCount = 1000u });
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eStorageBuffer, .descriptorCount = 1000u });
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eUniformBufferDynamic, .descriptorCount = 1000u });
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eStorageBufferDynamic, .descriptorCount = 1000u });
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eInputAttachment, .descriptorCount = 500u });
+
+		for (auto specificPoolSize : specificPoolSizes) {
+			vk::DescriptorPoolSize* foundValue = nullptr;
+			for (auto& poolSize : this->descriptorPoolSizes) {
+				if (poolSize.type == specificPoolSize.type) {
+					foundValue = &poolSize;
+					break;
+				}
+			}
+			if (foundValue) {
+				foundValue->descriptorCount = specificPoolSize.descriptorCount;
+			}
+			else {
+				this->descriptorPoolSizes.push_back(specificPoolSize);
+			}
+		}
+
+		currentPool = createPool();
+	}
+	DescriptorAllocator::DescriptorAllocator(vk::Device device, vk::DescriptorPoolCreateFlagBits poolFlags, uint32_t maxSetsPerPool)
+		: device{ device }, poolCreateFlags{ poolFlags }, maxSetsPerPool{ maxSetsPerPool } {
+	}
+	void DescriptorAllocator::reset() {
+		if (currentPool) {
+			device.resetDescriptorPool(*currentPool);
+			unusedPools.push_back(std::move(currentPool));
+			currentPool.release();
+		}
+
+		for (auto&& pool : usedPools) {
+			device.resetDescriptorPool(*pool);
+			unusedPools.push_back(std::move(pool));
+		}
+		usedPools.clear();
+	}
+	vk::DescriptorSet DescriptorAllocator::allocate(vk::DescriptorSetLayout layout) {
+		auto result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = 1, .pSetLayouts = &layout });
+		if (result.size() == 0) /* we need to reallocate with another pool */ {
+			usedPools.push_back(std::move(currentPool));
+			currentPool = getUnusedPool();
+
+			result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = 1, .pSetLayouts = &layout });
+
+			if (result.size() == 0) {
+				// possible cause for this error is that the requested descriptor count exceeds the maximum descriptor pool size
+				std::cerr << "error: discriptor allocator can not allocate this descriptor set layout!\n";
+				assert(false);
+			}
+		}
+
+		return std::move(result.front());
+	}
+	std::vector<vk::DescriptorSet> DescriptorAllocator::allocate(vk::DescriptorSetLayout layout, uint32_t count) {
+		std::vector<vk::DescriptorSetLayout> layouts(count, layout);
+		auto result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = count, .pSetLayouts = layouts.data() });
+		if (result.size() == 0) /* we need to reallocate with another pool */ {
+			usedPools.push_back(std::move(currentPool));
+			currentPool = getUnusedPool();
+
+			result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = count, .pSetLayouts = layouts.data() });
+
+			if (result.size() == 0) {
+				// possible cause for this error is that the requested descriptor count exceeds the maximum descriptor pool size
+				std::cerr << "error: discriptor allocator can not allocate this descriptor set layout!\n";
+				assert(false);
+			}
+		}
+
+		return std::move(result);
+	}
+	vk::UniqueDescriptorPool DescriptorAllocator::getUnusedPool() {
+		if (unusedPools.empty()) {
+			return std::move(createPool());
+		}
+		else {
+			auto pool = std::move(unusedPools.back());
+			unusedPools.pop_back();
+			return std::move(pool);
+		}
+	}
+	vk::UniqueDescriptorPool DescriptorAllocator::createPool() {
+		auto allocInfo = vk::DescriptorPoolCreateInfo{
+			.flags = poolCreateFlags,
+			.maxSets = maxSetsPerPool,
+			.poolSizeCount = static_cast<uint32_t>(descriptorPoolSizes.size()),
+			.pPoolSizes = descriptorPoolSizes.data(),
+		};
+
+		return device.createDescriptorPoolUnique(allocInfo);
+	}
+#endif
+
+
+
+	class DescriptorSetAllocator : public DescriptorAllocator {
+	public:
+		DescriptorSetAllocator(vk::Device device, vk::DescriptorSetLayoutCreateInfo layoutCreateInfo, vk::DescriptorSetLayout layout, vk::DescriptorPoolCreateFlagBits poolFlags = {}, uint32_t maxSetsPerPool = 500);
+		vk::DescriptorSet allocate();
+		std::vector<vk::DescriptorSet> allocate(uint32_t count);
+
+	private:
+		using DescriptorAllocator::allocate;
+		vk::DescriptorSetLayout layout;
+	};
+
+#if defined(VULKANHELPER_IMPLEMENTATION)
+	DescriptorSetAllocator::DescriptorSetAllocator(vk::Device device, vk::DescriptorSetLayoutCreateInfo layoutCreateInfo, vk::DescriptorSetLayout layout, vk::DescriptorPoolCreateFlagBits poolFlags, uint32_t maxSetsPerPool)
+		: DescriptorAllocator{ device, poolFlags, maxSetsPerPool }, layout{ layout } {
+		const uint32_t descriptorPoolSizesCount = layoutCreateInfo.bindingCount;
+		this->descriptorPoolSizes.resize(descriptorPoolSizesCount);
+
+		for (uint32_t i = 0; i < descriptorPoolSizesCount; i++) {
+			this->descriptorPoolSizes[i].type = layoutCreateInfo.pBindings[i].descriptorType;
+			this->descriptorPoolSizes[i].descriptorCount = layoutCreateInfo.pBindings[i].descriptorCount * maxSetsPerPool;
+		}
+
+		currentPool = createPool();
+	}
+	vk::DescriptorSet DescriptorSetAllocator::allocate() {
+		auto result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = 1, .pSetLayouts = &layout });
+		if (result.size() == 0) /* we need to reallocate with another pool */ {
+			usedPools.push_back(std::move(currentPool));
+			currentPool = getUnusedPool();
+
+			result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = 1, .pSetLayouts = &layout });
+		}
+
+		return std::move(result.front());
+	}
+	std::vector<vk::DescriptorSet> DescriptorSetAllocator::allocate(uint32_t count) {
+		std::vector<vk::DescriptorSetLayout> layouts(count, layout);
+		auto result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = count, .pSetLayouts = layouts.data() });
+		if (result.size() == 0) /* we need to reallocate with another pool */ {
+			usedPools.push_back(std::move(currentPool));
+			currentPool = getUnusedPool();
+
+			result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = count, .pSetLayouts = layouts.data() });
+		}
+
+		return std::move(result);
+	}
+#endif
+
+
+
+	vk::DescriptorSet createDescriptorSet(const std::vector<vk::DescriptorSetLayoutBinding>& bindings, DescriptorAllocator& alloc, DescriptorLayoutCache& layoutCache);
+
+#if defined(VULKANHELPER_IMPLEMENTATION)
+	vk::DescriptorSet createDescriptorSet(const std::vector<vk::DescriptorSetLayoutBinding>& bindings, DescriptorAllocator& alloc, DescriptorLayoutCache& layoutCache) {
+		return alloc.allocate(layoutCache.getLayout(bindings));
+	}
+#endif
+
+
+
+	// TODO ADD DESCRIPTOR SET BUILDER THAT DIRECTLY LINKS THE DESCRIPTORS
+
+
+
+	// TODO ADD EASY TO USE DESCRIPTOR BINDING UPDATE FUNCTION
+
+
+
+	class CommandBufferAllocator {
+	public:
+		CommandBufferAllocator() = default;
+		CommandBufferAllocator(vk::Device device, const vk::CommandPoolCreateInfo& poolCI, const vk::CommandBufferLevel& bufferLevel = vk::CommandBufferLevel::ePrimary);
+
+		void flush();
+
+		vk::CommandBuffer getElement();
+
+		vk::CommandPool get();
+
+		vk::CommandPool operator*();
+
+	private:
+		vk::Device device;
+		vk::UniqueCommandPool pool;
+		vk::CommandBufferLevel bufferLevel;
+		std::vector<vk::CommandBuffer> unused;
+		std::vector<vk::CommandBuffer> used;
+	};
+
+#if defined(VULKANHELPER_IMPLEMENTATION)
+	CommandBufferAllocator::CommandBufferAllocator(vk::Device device, const vk::CommandPoolCreateInfo& createInfo, const vk::CommandBufferLevel& bufferLevel) : device{ device }, pool{ device.createCommandPoolUnique(createInfo) }, bufferLevel{ bufferLevel } {}
+	void CommandBufferAllocator::flush() {
+		device.resetCommandPool(*pool);
+		unused.insert(unused.end(), used.begin(), used.end());
+		used.clear();
+	}
+
+	vk::CommandBuffer CommandBufferAllocator::getElement() {
+		if (unused.empty()) {
+			unused.push_back(device.allocateCommandBuffers(vk::CommandBufferAllocateInfo{ .commandPool = pool.get(), .level = bufferLevel, .commandBufferCount = 1 }).back());
+		}
+		auto buffer = unused.back();
+		unused.pop_back();
+		used.push_back(buffer);
+		return buffer;
+	}
+
+	vk::CommandPool CommandBufferAllocator::get() {
+		return pool.get();
+	}
+
+	vk::CommandPool CommandBufferAllocator::operator*() {
+		return get();
+	}
+
+#endif
 } // namespace vkh
 
 namespace vkh_detail {
@@ -711,95 +764,96 @@ namespace vkh_detail {
 } // namespace vkh_detail
 
 #if defined(VULKANHELPER_IMPLEMENTATION)
-VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkDebugUtilsMessengerEXT *pMessenger) {
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pMessenger) {
 	return vkh_detail::pfnVkCreateDebugUtilsMessengerEXT(instance, pCreateInfo, pAllocator, pMessenger);
 }
-VKAPI_ATTR void VKAPI_CALL vkDestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT messenger, VkAllocationCallbacks const *pAllocator) {
+VKAPI_ATTR void VKAPI_CALL vkDestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT messenger, VkAllocationCallbacks const* pAllocator) {
 	return vkh_detail::pfnVkDestroyDebugUtilsMessengerEXT(instance, messenger, pAllocator);
 }
 #endif
 
 namespace vkh {
-	vk::Instance createInstance(const std::vector<const char *> &layers, const std::vector<const char *> &extensions);
+	vk::Instance createInstance(const std::vector<const char*>& layers, const std::vector<const char*>& extensions);
 
 	vk::DebugUtilsMessengerEXT createDebugMessenger(vk::Instance instance);
 
-	vk::PhysicalDevice selectPhysicalDevice(vk::Instance instance, const std::function<std::size_t(vk::PhysicalDevice)> &rateDeviceSuitability);
+	vk::PhysicalDevice selectPhysicalDevice(vk::Instance instance, const std::function<std::size_t(vk::PhysicalDevice)>& rateDeviceSuitability);
 
-	std::uint32_t findMemoryTypeIndex(vk::PhysicalDeviceMemoryProperties const &memoryProperties, uint32_t typeBits, vk::MemoryPropertyFlags requirementsMask);
+	vk::Device createLogicalDevice(vk::PhysicalDevice physicalDevice, const std::set<std::size_t>& queueIndices, const std::vector<const char*>& extensions);
+
+	std::uint32_t findMemoryTypeIndex(vk::PhysicalDeviceMemoryProperties const& memoryProperties, uint32_t typeBits, vk::MemoryPropertyFlags requirementsMask);
 
 #if defined(VULKANHELPER_IMPLEMENTATION)
-	//vk::Instance createInstance(const std::vector<const char *> &layers, const std::vector<const char *> &extensions) {
-	//	vk::ApplicationInfo vulkanApplicationInfo{.apiVersion = VK_API_VERSION_1_1};
-	//	return vk::createInstance({
-	//		.pApplicationInfo = &vulkanApplicationInfo,
-	//		.enabledLayerCount = static_cast<uint32_t>(layers.size()),
-	//		.ppEnabledLayerNames = layers.data(),
-	//		.enabledExtensionCount = static_cast<uint32_t>(extensions.size()),
-	//		.ppEnabledExtensionNames = extensions.data(),
-	//	});
-	//}
-	//
-	//vk::DebugUtilsMessengerEXT createDebugMessenger(vk::Instance instance) {
-	//	vkh_detail::pfnVkCreateDebugUtilsMessengerEXT = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(instance.getProcAddr("vkCreateDebugUtilsMessengerEXT"));
-	//	if (!vkh_detail::pfnVkCreateDebugUtilsMessengerEXT)
-	//		throw std::runtime_error("GetInstanceProcAddr: Unable to find pfnVkCreateDebugUtilsMessengerEXT function.");
-	//	vkh_detail::pfnVkDestroyDebugUtilsMessengerEXT = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(instance.getProcAddr("vkDestroyDebugUtilsMessengerEXT"));
-	//	if (!vkh_detail::pfnVkDestroyDebugUtilsMessengerEXT)
-	//		throw std::runtime_error("GetInstanceProcAddr: Unable to find pfnVkDestroyDebugUtilsMessengerEXT function.");
-	//
-	//	return instance.createDebugUtilsMessengerEXT(vk::DebugUtilsMessengerCreateInfoEXT{
-	//		.messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
-	//		.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation,
-	//		.pfnUserCallback = [](VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes,
-	//							  const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData) -> VkBool32 {
-	//			if (pCallbackData->messageIdNumber == 648835635) {
-	//				// UNASSIGNED-khronos-Validation-debug-build-warning-message
-	//				return VK_FALSE;
-	//			}
-	//			if (pCallbackData->messageIdNumber == 767975156) {
-	//				// UNASSIGNED-BestPractices-vkCreateInstance-specialuse-extension
-	//				return VK_FALSE;
-	//			}
-	//			std::string message = fmt::format(
-	//				"{}: {}:\n\tmessage name   = <{}>\n\tmessage number = {}\n\tmessage        = <{}>\n",
-	//				vk::to_string(static_cast<vk::DebugUtilsMessageSeverityFlagBitsEXT>(messageSeverity)),
-	//				vk::to_string(static_cast<vk::DebugUtilsMessageTypeFlagsEXT>(messageTypes)),
-	//				pCallbackData->pMessageIdName,
-	//				pCallbackData->messageIdNumber,
-	//				pCallbackData->pMessage);
-	//			if (0 < pCallbackData->queueLabelCount) {
-	//				message += fmt::format("\tQueue Labels:\n");
-	//				for (uint8_t i = 0; i < pCallbackData->queueLabelCount; i++)
-	//					message += fmt::format("\t\tlabelName = <{}>\n", pCallbackData->pQueueLabels[i].pLabelName);
-	//			}
-	//			if (0 < pCallbackData->cmdBufLabelCount) {
-	//				message += fmt::format("\tCommandBuffer Labels:\n");
-	//				for (uint8_t i = 0; i < pCallbackData->cmdBufLabelCount; i++)
-	//					message += fmt::format("\t\tlabelName = <{}>\n", pCallbackData->pCmdBufLabels[i].pLabelName);
-	//			}
-	//			if (0 < pCallbackData->objectCount) {
-	//				message += fmt::format("\tObjects:\n");
-	//				for (uint8_t i = 0; i < pCallbackData->cmdBufLabelCount; i++) {
-	//					message += fmt::format("\t\tlabelName = <{}>\nObject {}\n\t\t\tobjectType   = {}\n\t\t\tobjectHandle = {}\n",
-	//										   pCallbackData->pCmdBufLabels[i].pLabelName, i,
-	//										   vk::to_string(static_cast<vk::ObjectType>(pCallbackData->pObjects[i].objectType)),
-	//										   pCallbackData->pObjects[i].objectHandle);
-	//					if (pCallbackData->pObjects[i].pObjectName)
-	//						message += fmt::format("\t\t\tobjectName   = <{}>\n", pCallbackData->pObjects[i].pObjectName);
-	//				}
-	//			}
-	//			MessageBox(nullptr, message.c_str(), "Vulkan Validation Error", MB_OK);
-	//			return VK_TRUE;
-	//		},
-	//	});
-	//}
+	vk::Instance createInstance(const std::vector<const char*>& layers, const std::vector<const char*>& extensions) {
+		vk::ApplicationInfo vulkanApplicationInfo{ .apiVersion = VK_API_VERSION_1_1 };
+		return vk::createInstance({
+			.pApplicationInfo = &vulkanApplicationInfo,
+			.enabledLayerCount = static_cast<uint32_t>(layers.size()),
+			.ppEnabledLayerNames = layers.data(),
+			.enabledExtensionCount = static_cast<uint32_t>(extensions.size()),
+			.ppEnabledExtensionNames = extensions.data(),
+			});
+	}
 
-	vk::PhysicalDevice selectPhysicalDevice(vk::Instance instance, const std::function<std::size_t(vk::PhysicalDevice)> &rateDeviceSuitability) {
+	vk::DebugUtilsMessengerEXT createDebugMessenger(vk::Instance instance) {
+		vkh_detail::pfnVkCreateDebugUtilsMessengerEXT = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(instance.getProcAddr("vkCreateDebugUtilsMessengerEXT"));
+		if (!vkh_detail::pfnVkCreateDebugUtilsMessengerEXT)
+			throw std::runtime_error("GetInstanceProcAddr: Unable to find pfnVkCreateDebugUtilsMessengerEXT function.");
+		vkh_detail::pfnVkDestroyDebugUtilsMessengerEXT = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(instance.getProcAddr("vkDestroyDebugUtilsMessengerEXT"));
+		if (!vkh_detail::pfnVkDestroyDebugUtilsMessengerEXT)
+			throw std::runtime_error("GetInstanceProcAddr: Unable to find pfnVkDestroyDebugUtilsMessengerEXT function.");
+
+		return instance.createDebugUtilsMessengerEXT(vk::DebugUtilsMessengerCreateInfoEXT{
+			.messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
+			.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation,
+			.pfnUserCallback = [](VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+								  const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) -> VkBool32 {
+				if (pCallbackData->messageIdNumber == 648835635) {
+					// UNASSIGNED-khronos-Validation-debug-build-warning-message
+					return VK_FALSE;
+				}
+				if (pCallbackData->messageIdNumber == 767975156) {
+					// UNASSIGNED-BestPractices-vkCreateInstance-specialuse-extension
+					return VK_FALSE;
+				}
+				std::string message =
+					vk::to_string(static_cast<vk::DebugUtilsMessageSeverityFlagBitsEXT>(messageSeverity)) + ": " +
+					vk::to_string(static_cast<vk::DebugUtilsMessageTypeFlagsEXT>(messageTypes)) + ":\n\ttmessage name   = <" +
+					pCallbackData->pMessageIdName + ">\n\tmessage number = " +
+					std::to_string(pCallbackData->messageIdNumber) + "\n\tmessage        = <" +
+					pCallbackData->pMessage + ">\n";
+				if (0 < pCallbackData->queueLabelCount) {
+					message += "\tQueue Labels:\n";
+					for (uint8_t i = 0; i < pCallbackData->queueLabelCount; i++)
+						message += std::string("\t\tlabelName = <") + pCallbackData->pQueueLabels[i].pLabelName + ">\n";
+				}
+				if (0 < pCallbackData->cmdBufLabelCount) {
+					message += "\tCommandBuffer Labels:\n";
+					for (uint8_t i = 0; i < pCallbackData->cmdBufLabelCount; i++)
+						message += std::string("\t\tlabelName = <") + pCallbackData->pCmdBufLabels[i].pLabelName + ">\n";
+				}
+				if (0 < pCallbackData->objectCount) {
+					message += "\tObjects:\n";
+					for (uint8_t i = 0; i < pCallbackData->cmdBufLabelCount; i++) {
+						message += std::string("\t\tlabelName = <") +
+								   pCallbackData->pCmdBufLabels[i].pLabelName + ">\nObject " + std::to_string(i) + "\n\t\t\tobjectType   = " +
+								   vk::to_string(static_cast<vk::ObjectType>(pCallbackData->pObjects[i].objectType)) + "\n\t\t\tobjectHandle = " +
+								   std::to_string(pCallbackData->pObjects[i].objectHandle) + "\n";
+						if (pCallbackData->pObjects[i].pObjectName)
+							message += std::string("\t\t\tobjectName   = <") + pCallbackData->pObjects[i].pObjectName + ">\n";
+					}
+				}
+				//MessageBox(nullptr, message.c_str(), "Vulkan Validation Error", MB_OK);
+				return VK_TRUE;
+			},
+			});
+	}
+
+	vk::PhysicalDevice selectPhysicalDevice(vk::Instance instance, const std::function<std::size_t(vk::PhysicalDevice)>& rateDeviceSuitability) {
 		auto devices = instance.enumeratePhysicalDevices();
 		std::vector<std::size_t> devicesSuitability;
 		devicesSuitability.reserve(devices.size());
-		for (const auto &device : devices)
+		for (const auto& device : devices)
 			devicesSuitability.push_back(rateDeviceSuitability(device));
 		auto bestDeviceIter = std::max_element(devicesSuitability.begin(), devicesSuitability.end());
 		if (*bestDeviceIter == 0)
@@ -807,7 +861,7 @@ namespace vkh {
 		return devices[std::distance(devicesSuitability.begin(), bestDeviceIter)];
 	}
 
-	auto createLogicalDevice(vk::PhysicalDevice physicalDevice, const std::set<std::size_t> &queueIndices, const std::vector<const char *> &extensions) {
+	vk::Device createLogicalDevice(vk::PhysicalDevice physicalDevice, const std::set<std::size_t>& queueIndices, const std::vector<const char*>& extensions) {
 		float queuePriority = 0.0f;
 		std::vector<vk::DeviceQueueCreateInfo> deviceQueueCreateinfos;
 		for (auto index : queueIndices) {
@@ -815,17 +869,17 @@ namespace vkh {
 				.queueFamilyIndex = static_cast<std::uint32_t>(index),
 				.queueCount = 1,
 				.pQueuePriorities = &queuePriority,
-			});
+				});
 		}
 		return physicalDevice.createDevice({
 			.queueCreateInfoCount = static_cast<std::uint32_t>(deviceQueueCreateinfos.size()),
 			.pQueueCreateInfos = deviceQueueCreateinfos.data(),
 			.enabledExtensionCount = static_cast<uint32_t>(extensions.size()),
 			.ppEnabledExtensionNames = extensions.data(),
-		});
+			});
 	}
 
-	std::uint32_t findMemoryTypeIndex(vk::PhysicalDeviceMemoryProperties const &memoryProperties, uint32_t typeBits, vk::MemoryPropertyFlags requirementsMask) {
+	std::uint32_t findMemoryTypeIndex(vk::PhysicalDeviceMemoryProperties const& memoryProperties, uint32_t typeBits, vk::MemoryPropertyFlags requirementsMask) {
 		std::uint32_t type_index = std::uint32_t(~0);
 		for (std::uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i) {
 			if (typeBits & 1 && (memoryProperties.memoryTypes[i].propertyFlags & requirementsMask) == requirementsMask) {
