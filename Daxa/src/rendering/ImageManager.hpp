@@ -102,7 +102,7 @@ namespace daxa {
 
 	private:
 		vk::Device device;
-		vkh::CommandBufferPool cmdPool{ VulkanContext::device, vk::CommandPoolCreateInfo{.queueFamilyIndex = VulkanContext::mainTransferQueueFamiltyIndex } };
+		vkh::CommandBufferAllocator cmdPool{ VulkanContext::device, vk::CommandPoolCreateInfo{.queueFamilyIndex = VulkanContext::mainTransferQueueFamiltyIndex } };
 		vkh::Pool<vk::Fence> fencePool {
 			[=]() { return device.createFence(vk::FenceCreateInfo{}); },
 			[=](vk::Fence fence) { device.destroyFence(fence); },

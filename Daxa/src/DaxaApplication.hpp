@@ -33,7 +33,7 @@ namespace daxa {
 	};
 
 	struct FrameData {
-		FrameData(vk::DescriptorSetLayout* descriptorLayout) :
+		FrameData(vk::DescriptorSetLayoutCreateInfo layoutCI, vk::DescriptorSetLayout* descriptorLayout) :
 			semaPool{
 				[]() { return VulkanContext::device.createSemaphore({}); },
 				[](vk::Semaphore sem) { VulkanContext::device.destroySemaphore(sem,nullptr); },
@@ -43,24 +43,27 @@ namespace daxa {
 			gpuDataBuffer{ createBuffer(sizeof(GPUData), vk::BufferUsageFlagBits::eUniformBuffer, VMA_MEMORY_USAGE_CPU_TO_GPU) },
 
 			fence{ VulkanContext::device.createFenceUnique(vk::FenceCreateInfo{}) },
-			presentSem{ VulkanContext::device.createSemaphoreUnique({}) }
+			presentSem{ VulkanContext::device.createSemaphoreUnique({}) },
+			descSetAlloc{ VulkanContext::device, layoutCI , *descriptorLayout }
 		{ 
 			std::vector sizes{
 				vk::DescriptorPoolSize{ .type = vk::DescriptorType::eUniformBuffer, .descriptorCount = 10 }
 			};
 
-			descPool = VulkanContext::device.createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
-				.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
-				.maxSets = 10,
-				.poolSizeCount = static_cast<u32>(sizes.size()),
-				.pPoolSizes = sizes.data()
-			});
+			//descPool = VulkanContext::device.createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
+			//	.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+			//	.maxSets = 10,
+			//	.poolSizeCount = static_cast<u32>(sizes.size()),
+			//	.pPoolSizes = sizes.data()
+			//});
+			//
+			//descSet = std::move(VulkanContext::device.allocateDescriptorSetsUnique(vk::DescriptorSetAllocateInfo{
+			//	.descriptorPool = descPool.get(),
+			//	.descriptorSetCount = 1,
+			//	.pSetLayouts = descriptorLayout,
+			//}).front());
 
-			descSet = std::move(VulkanContext::device.allocateDescriptorSetsUnique(vk::DescriptorSetAllocateInfo{
-				.descriptorPool = descPool.get(),
-				.descriptorSetCount = 1,
-				.pSetLayouts = descriptorLayout,
-			}).front());
+			descSet = descSetAlloc.allocate();
 
 			// link uniform buffer with descriptor set:
 			vk::DescriptorBufferInfo binfo{
@@ -70,7 +73,7 @@ namespace daxa {
 			};
 
 			vk::WriteDescriptorSet write{
-				.dstSet = descSet.get(),
+				.dstSet = descSet,
 				.dstBinding = 0,
 				.descriptorCount = 1,
 				.descriptorType = vk::DescriptorType::eUniformBuffer,
@@ -81,11 +84,12 @@ namespace daxa {
 		}
 
 		vkh::Pool<vk::Semaphore> semaPool;
-		vkh::CommandBufferPool cmdPool;
+		vkh::CommandBufferAllocator cmdPool;
 		Buffer gpuDataBuffer;
 		vk::UniqueDescriptorSetLayout descLayout;
 		vk::UniqueDescriptorPool descPool;
-		vk::UniqueDescriptorSet descSet;
+		vkh::DescriptorSetAllocator descSetAlloc;
+		vk::DescriptorSet descSet;
 		vk::UniqueFence fence;
 		vk::UniqueSemaphore presentSem;
 	};
@@ -146,9 +150,8 @@ namespace daxa {
 
 		vk::UniqueRenderPass mainRenderpass;
 
-		vk::UniqueDescriptorSetLayout descLayout{
-
-		};
+		vk::DescriptorSetLayoutCreateInfo descLayoutCI;
+		vk::UniqueDescriptorSetLayout descLayout;
 
 		Camera camera;
 		bool bCameraControll{ false };

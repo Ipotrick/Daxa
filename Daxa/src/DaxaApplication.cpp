@@ -20,17 +20,19 @@ namespace daxa {
 				.binding = 0,
 				.descriptorType = vk::DescriptorType::eUniformBuffer,
 				.descriptorCount = 1,
-				.stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eCompute,
+				.stageFlags = vk::ShaderStageFlagBits::eVertex,
 			}
 		};
 
-		descLayout = VulkanContext::device.createDescriptorSetLayoutUnique(vk::DescriptorSetLayoutCreateInfo{
+		descLayoutCI = vk::DescriptorSetLayoutCreateInfo{
 			.bindingCount = static_cast<u32>(descriptorBindings.size()),
 			.pBindings = descriptorBindings.data()
-		});
+			};
+
+		descLayout = VulkanContext::device.createDescriptorSetLayoutUnique(descLayoutCI);
 
 		for (i64 i = 0; i < FRAME_OVERLAP; i++) {
-			frames.emplace_back( &*descLayout );
+			frames.emplace_back(descLayoutCI , &*descLayout );
 		}
 
 
@@ -182,7 +184,7 @@ namespace daxa {
 			vmaUnmapMemory(VulkanContext::allocator, frame.gpuDataBuffer.allocation);
 		}
 
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, meshPipeline.layout.get(), 0, std::array{ frame.descSet.get() }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, meshPipeline.layout.get(), 0, std::array{ frame.descSet }, {});
 		 
 		vkCmdPushConstants(cmd, meshPipeline.layout.get(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
 
