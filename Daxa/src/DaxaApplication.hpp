@@ -32,8 +32,12 @@ namespace daxa {
 		daxa::Mat4x4 proj;
 	};
 
+	struct TestData {
+		daxa::Vec4 color{ 1,0,0,1 };
+	};
+
 	struct FrameData {
-		FrameData(vk::DescriptorSetLayoutCreateInfo layoutCI, vk::DescriptorSetLayout* descriptorLayout) :
+		FrameData(vkh::DescriptorSetLayoutCache* layoutCache) :
 			semaPool{
 				[]() { return VulkanContext::device.createSemaphore({}); },
 				[](vk::Semaphore sem) { VulkanContext::device.destroySemaphore(sem,nullptr); },
@@ -41,55 +45,32 @@ namespace daxa {
 			},
 			cmdPool{ VulkanContext::device, vk::CommandPoolCreateInfo{.queueFamilyIndex = VulkanContext::mainGraphicsQueueFamiltyIndex } },
 			gpuDataBuffer{ createBuffer(sizeof(GPUData), vk::BufferUsageFlagBits::eUniformBuffer, VMA_MEMORY_USAGE_CPU_TO_GPU) },
+			testBuffer{ createBuffer(sizeof(TestData), vk::BufferUsageFlagBits::eUniformBuffer, VMA_MEMORY_USAGE_CPU_TO_GPU) },
 
 			fence{ VulkanContext::device.createFenceUnique(vk::FenceCreateInfo{}) },
 			presentSem{ VulkanContext::device.createSemaphoreUnique({}) },
-			descSetAlloc{ VulkanContext::device, layoutCI , *descriptorLayout }
-		{ 
-			std::vector sizes{
-				vk::DescriptorPoolSize{ .type = vk::DescriptorType::eUniformBuffer, .descriptorCount = 10 }
-			};
+			descAlloc{ VulkanContext::device }
+		{
+			descSet = vkh::DescriptorSetBuilder(&descAlloc, layoutCache)
+				.addBufferBinding(
+					{ .binding = 0, .descriptorType = vk::DescriptorType::eUniformBuffer, .descriptorCount = 1, .stageFlags = vk::ShaderStageFlagBits::eVertex },
+					{ .buffer = gpuDataBuffer.buffer , .range = sizeof(GPUData) })
+				.build();
 
-			//descPool = VulkanContext::device.createDescriptorPoolUnique(vk::DescriptorPoolCreateInfo{
-			//	.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
-			//	.maxSets = 10,
-			//	.poolSizeCount = static_cast<u32>(sizes.size()),
-			//	.pPoolSizes = sizes.data()
-			//});
-			//
-			//descSet = std::move(VulkanContext::device.allocateDescriptorSetsUnique(vk::DescriptorSetAllocateInfo{
-			//	.descriptorPool = descPool.get(),
-			//	.descriptorSetCount = 1,
-			//	.pSetLayouts = descriptorLayout,
-			//}).front());
-
-			descSet = descSetAlloc.allocate();
-
-			// link uniform buffer with descriptor set:
-			vk::DescriptorBufferInfo binfo{
-				.buffer = gpuDataBuffer.buffer,
-				.offset = 0,
-				.range = sizeof(GPUData)
-			};
-
-			vk::WriteDescriptorSet write{
-				.dstSet = descSet,
-				.dstBinding = 0,
-				.descriptorCount = 1,
-				.descriptorType = vk::DescriptorType::eUniformBuffer,
-				.pBufferInfo = &binfo,
-			};
-
-			VulkanContext::device.updateDescriptorSets({ write }, {});
+			testSet = vkh::DescriptorSetBuilder(&descAlloc, layoutCache)
+				.addBufferBinding(
+					{ .binding = 0, .descriptorType = vk::DescriptorType::eUniformBuffer , .descriptorCount = 1, .stageFlags = vk::ShaderStageFlagBits::eFragment },
+					{ .buffer = testBuffer.buffer, .range= sizeof(TestData) })
+				.build();
 		}
 
 		vkh::Pool<vk::Semaphore> semaPool;
 		vkh::CommandBufferAllocator cmdPool;
 		Buffer gpuDataBuffer;
-		vk::UniqueDescriptorSetLayout descLayout;
-		vk::UniqueDescriptorPool descPool;
-		vkh::DescriptorSetAllocator descSetAlloc;
+		Buffer testBuffer;
+		vkh::DescriptorAllocator descAlloc;
 		vk::DescriptorSet descSet;
+		vk::DescriptorSet testSet;
 		vk::UniqueFence fence;
 		vk::UniqueSemaphore presentSem;
 	};
@@ -141,6 +122,8 @@ namespace daxa {
 
 		// PERSISTENT DATA:
 
+		vkh::DescriptorSetLayoutCache descLayoutCache;
+
 		std::vector<vk::UniqueFramebuffer> framebuffers;
 
 		u32 _frameNumber{ 0 };
@@ -150,8 +133,8 @@ namespace daxa {
 
 		vk::UniqueRenderPass mainRenderpass;
 
-		vk::DescriptorSetLayoutCreateInfo descLayoutCI;
-		vk::UniqueDescriptorSetLayout descLayout;
+		vk::DescriptorSetLayout descLayout;
+		vk::DescriptorSetLayout testLayout;
 
 		Camera camera;
 		bool bCameraControll{ false };

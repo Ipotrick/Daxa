@@ -8,10 +8,23 @@
 #include <set>
 #include <unordered_map>
 
+// If you want to use spirv reflect for reflection on descriptor sets in pipeline creation, 
+// set the following define to your include path of spirv_reflect like the following:
+// #define VULKANHELPER_SPIRV_REFLECT_INCLUDE_PATH <spirv_reflect.h>
+#define VULKANHELPER_SPIRV_REFLECT_INCLUDE_PATH <spirv_reflect.hpp>
+
+#if defined(VULKANHELPER_SPIRV_REFLECT_INCLUDE_PATH)
+#define VULKANHELPER_USE_SPIRV_REFLECT
+#endif
+
+
 #if defined(VULKANHELPER_IMPLEMENTATION)
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <iostream>
 #include <fstream>
+#ifdef VULKANHELPER_USE_SPIRV_REFLECT
+#include VULKANHELPER_SPIRV_REFLECT_INCLUDE_PATH
+#endif
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -122,6 +135,418 @@ namespace vkh {
 	}
 #endif
 
+	class DescriptorSetLayoutCache {
+	public:
+		DescriptorSetLayoutCache(vk::Device device);
+		vk::DescriptorSetLayout getLayout(const std::vector<vk::DescriptorSetLayoutBinding>& bindings);
+	private:
+		struct DescriptorLayoutHash {
+			std::size_t operator()(const std::vector<vk::DescriptorSetLayoutBinding>& bindings) const;
+		};
+
+		vk::Device device;
+		std::unordered_map<std::vector<vk::DescriptorSetLayoutBinding>, vk::UniqueDescriptorSetLayout, DescriptorLayoutHash> bindingsToLayout;
+	};
+
+#if defined(VULKANHELPER_IMPLEMENTATION)
+	DescriptorSetLayoutCache::DescriptorSetLayoutCache(vk::Device device)
+		: device{ device } {
+	}
+
+	vk::DescriptorSetLayout DescriptorSetLayoutCache::getLayout(const std::vector<vk::DescriptorSetLayoutBinding>& bindings) {
+		auto iter = bindingsToLayout.find(bindings);
+		if (iter != bindingsToLayout.end()) {
+			return *iter->second;
+		}
+		else {
+			auto allocateInfo = vk::DescriptorSetLayoutCreateInfo{
+				.bindingCount = static_cast<uint32_t>(bindings.size()),
+				.pBindings = bindings.data(),
+			};
+			return *(bindingsToLayout[bindings] = device.createDescriptorSetLayoutUnique(allocateInfo));
+		}
+	}
+	std::size_t DescriptorSetLayoutCache::DescriptorLayoutHash::operator()(const std::vector<vk::DescriptorSetLayoutBinding>& bindings) const {
+		size_t h{ 0 };
+		for (const auto& binding : bindings) {
+			h ^= static_cast<size_t>(binding.descriptorType);
+			h ^= static_cast<size_t>(binding.descriptorType);
+		}
+		return h;
+	}
+#endif
+
+	class DescriptorAllocator {
+	public:
+		DescriptorAllocator() = default;
+		DescriptorAllocator(vk::Device device, std::vector<vk::DescriptorPoolSize> specificPoolSizes = {}, vk::DescriptorPoolCreateFlagBits poolCreateFlags = {}, uint32_t maxSetsPerPool = 500);
+		void reset();
+		vk::DescriptorSet allocate(vk::DescriptorSetLayout layout);
+		std::vector<vk::DescriptorSet> allocate(vk::DescriptorSetLayout layout, uint32_t count);
+
+		const vk::Device device;
+	protected:
+		DescriptorAllocator(vk::Device device, vk::DescriptorPoolCreateFlagBits poolFlags, uint32_t maxSetsPerPool);
+
+		vk::UniqueDescriptorPool getUnusedPool();
+		vk::UniqueDescriptorPool createPool();
+
+		const vk::DescriptorPoolCreateFlagBits poolCreateFlags;
+		const uint32_t maxSetsPerPool;
+
+		vk::UniqueDescriptorPool currentPool;
+		std::vector<vk::DescriptorPoolSize> descriptorPoolSizes;
+		std::vector<vk::UniqueDescriptorPool> usedPools;
+		std::vector<vk::UniqueDescriptorPool> unusedPools;
+	};
+
+#if defined(VULKANHELPER_IMPLEMENTATION)
+	DescriptorAllocator::DescriptorAllocator(vk::Device device, std::vector<vk::DescriptorPoolSize> specificPoolSizes, vk::DescriptorPoolCreateFlagBits poolCreateFlags, uint32_t maxSetsPerPool)
+		: device{ device }, maxSetsPerPool{ maxSetsPerPool }, poolCreateFlags{ poolCreateFlags } {
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eSampler, .descriptorCount = 500u });
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eCombinedImageSampler, .descriptorCount = 4000u });
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eSampledImage, .descriptorCount = 4000u });
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eUniformTexelBuffer, .descriptorCount = 1000u });
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eStorageTexelBuffer, .descriptorCount = 1000u });
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eUniformBuffer, .descriptorCount = 1000u });
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eStorageBuffer, .descriptorCount = 1000u });
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eUniformBuffer, .descriptorCount = 1000u });
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eStorageBuffer, .descriptorCount = 1000u });
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eUniformBufferDynamic, .descriptorCount = 1000u });
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eStorageBufferDynamic, .descriptorCount = 1000u });
+		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eInputAttachment, .descriptorCount = 500u });
+
+		for (auto specificPoolSize : specificPoolSizes) {
+			vk::DescriptorPoolSize* foundValue = nullptr;
+			for (auto& poolSize : this->descriptorPoolSizes) {
+				if (poolSize.type == specificPoolSize.type) {
+					foundValue = &poolSize;
+					break;
+				}
+			}
+			if (foundValue) {
+				foundValue->descriptorCount = specificPoolSize.descriptorCount;
+			}
+			else {
+				this->descriptorPoolSizes.push_back(specificPoolSize);
+			}
+		}
+
+		currentPool = createPool();
+	}
+	DescriptorAllocator::DescriptorAllocator(vk::Device device, vk::DescriptorPoolCreateFlagBits poolFlags, uint32_t maxSetsPerPool)
+		: device{ device }, poolCreateFlags{ poolFlags }, maxSetsPerPool{ maxSetsPerPool } {
+	}
+	void DescriptorAllocator::reset() {
+		if (currentPool) {
+			device.resetDescriptorPool(*currentPool);
+			unusedPools.push_back(std::move(currentPool));
+			currentPool.release();
+		}
+
+		for (auto&& pool : usedPools) {
+			device.resetDescriptorPool(*pool);
+			unusedPools.push_back(std::move(pool));
+		}
+		usedPools.clear();
+	}
+	vk::DescriptorSet DescriptorAllocator::allocate(vk::DescriptorSetLayout layout) {
+		auto result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = 1, .pSetLayouts = &layout });
+		if (result.size() == 0) /* we need to reallocate with another pool */ {
+			usedPools.push_back(std::move(currentPool));
+			currentPool = getUnusedPool();
+
+			result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = 1, .pSetLayouts = &layout });
+
+			if (result.size() == 0) {
+				// possible cause for this error is that the requested descriptor count exceeds the maximum descriptor pool size
+				std::cerr << "error: discriptor allocator can not allocate this descriptor set layout!\n";
+				assert(false);
+			}
+		}
+
+		return std::move(result.front());
+	}
+	std::vector<vk::DescriptorSet> DescriptorAllocator::allocate(vk::DescriptorSetLayout layout, uint32_t count) {
+		std::vector<vk::DescriptorSetLayout> layouts(count, layout);
+		auto result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = count, .pSetLayouts = layouts.data() });
+		if (result.size() == 0) /* we need to reallocate with another pool */ {
+			usedPools.push_back(std::move(currentPool));
+			currentPool = getUnusedPool();
+
+			result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = count, .pSetLayouts = layouts.data() });
+
+			if (result.size() == 0) {
+				// possible cause for this error is that the requested descriptor count exceeds the maximum descriptor pool size
+				std::cerr << "error: discriptor allocator can not allocate this descriptor set layout!\n";
+				assert(false);
+			}
+		}
+
+		return std::move(result);
+	}
+	vk::UniqueDescriptorPool DescriptorAllocator::getUnusedPool() {
+		if (unusedPools.empty()) {
+			return std::move(createPool());
+		}
+		else {
+			auto pool = std::move(unusedPools.back());
+			unusedPools.pop_back();
+			return std::move(pool);
+		}
+	}
+	vk::UniqueDescriptorPool DescriptorAllocator::createPool() {
+		auto allocInfo = vk::DescriptorPoolCreateInfo{
+			.flags = poolCreateFlags,
+			.maxSets = maxSetsPerPool,
+			.poolSizeCount = static_cast<uint32_t>(descriptorPoolSizes.size()),
+			.pPoolSizes = descriptorPoolSizes.data(),
+		};
+
+		return device.createDescriptorPoolUnique(allocInfo);
+	}
+#endif
+
+	class DescriptorSetAllocator : public DescriptorAllocator {
+	public:
+		DescriptorSetAllocator(vk::Device device, vk::DescriptorSetLayoutCreateInfo layoutCreateInfo, vk::DescriptorSetLayout layout, vk::DescriptorPoolCreateFlagBits poolFlags = {}, uint32_t maxSetsPerPool = 500);
+		vk::DescriptorSet allocate();
+		std::vector<vk::DescriptorSet> allocate(uint32_t count);
+
+	private:
+		using DescriptorAllocator::allocate;
+		vk::DescriptorSetLayout layout;
+	};
+
+#if defined(VULKANHELPER_IMPLEMENTATION)
+	DescriptorSetAllocator::DescriptorSetAllocator(vk::Device device, vk::DescriptorSetLayoutCreateInfo layoutCreateInfo, vk::DescriptorSetLayout layout, vk::DescriptorPoolCreateFlagBits poolFlags, uint32_t maxSetsPerPool)
+		: DescriptorAllocator{ device, poolFlags, maxSetsPerPool }, layout{ layout } {
+		const uint32_t descriptorPoolSizesCount = layoutCreateInfo.bindingCount;
+		this->descriptorPoolSizes.resize(descriptorPoolSizesCount);
+
+		for (uint32_t i = 0; i < descriptorPoolSizesCount; i++) {
+			this->descriptorPoolSizes[i].type = layoutCreateInfo.pBindings[i].descriptorType;
+			this->descriptorPoolSizes[i].descriptorCount = layoutCreateInfo.pBindings[i].descriptorCount * maxSetsPerPool;
+		}
+
+		currentPool = createPool();
+	}
+	vk::DescriptorSet DescriptorSetAllocator::allocate() {
+		auto result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = 1, .pSetLayouts = &layout });
+		if (result.size() == 0) /* we need to reallocate with another pool */ {
+			usedPools.push_back(std::move(currentPool));
+			currentPool = getUnusedPool();
+
+			result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = 1, .pSetLayouts = &layout });
+		}
+
+		return std::move(result.front());
+	}
+	std::vector<vk::DescriptorSet> DescriptorSetAllocator::allocate(uint32_t count) {
+		std::vector<vk::DescriptorSetLayout> layouts(count, layout);
+		auto result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = count, .pSetLayouts = layouts.data() });
+		if (result.size() == 0) /* we need to reallocate with another pool */ {
+			usedPools.push_back(std::move(currentPool));
+			currentPool = getUnusedPool();
+
+			result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = count, .pSetLayouts = layouts.data() });
+		}
+
+		return std::move(result);
+	}
+#endif
+
+	vk::DescriptorSet createDescriptorSet(const std::vector<vk::DescriptorSetLayoutBinding>& bindings, DescriptorAllocator& alloc, DescriptorSetLayoutCache& layoutCache);
+
+#if defined(VULKANHELPER_IMPLEMENTATION)
+	vk::DescriptorSet createDescriptorSet(const std::vector<vk::DescriptorSetLayoutBinding>& bindings, DescriptorAllocator& alloc, DescriptorSetLayoutCache& layoutCache) {
+		return alloc.allocate(layoutCache.getLayout(bindings));
+	}
+#endif
+
+	class DescriptorSetBuilder {
+	public:
+		DescriptorSetBuilder(DescriptorAllocator* alloc, DescriptorSetLayoutCache* layoutCache);
+		DescriptorSetBuilder(DescriptorAllocator* alloc, vk::DescriptorSetLayout setLayout);
+
+		DescriptorSetBuilder& addBufferBinding(const vk::DescriptorSetLayoutBinding& binding, const vk::DescriptorBufferInfo& bufferInfo);
+		DescriptorSetBuilder& addImageBinding(const vk::DescriptorSetLayoutBinding& binding, const vk::DescriptorImageInfo& imageInfo);
+		vk::DescriptorSet build();
+	private:
+		DescriptorAllocator* alloc;
+		DescriptorSetLayoutCache* layoutCache;
+		vk::DescriptorSetLayout setLayout;
+
+		std::vector<std::pair<vk::DescriptorSetLayoutBinding, vk::DescriptorBufferInfo>> bufferBindings;
+		std::vector<std::pair<vk::DescriptorSetLayoutBinding, vk::DescriptorImageInfo>> imageBindings;
+	};
+
+#if defined(VULKANHELPER_IMPLEMENTATION)
+	DescriptorSetBuilder::DescriptorSetBuilder(DescriptorAllocator* alloc, DescriptorSetLayoutCache* layoutCache)
+		: alloc{ alloc }
+		, layoutCache{ layoutCache } {
+	}
+	DescriptorSetBuilder::DescriptorSetBuilder(DescriptorAllocator* alloc, vk::DescriptorSetLayout setLayout)
+		: alloc{ alloc }
+		, setLayout{ setLayout } {
+	}
+
+	DescriptorSetBuilder& DescriptorSetBuilder::addBufferBinding(const vk::DescriptorSetLayoutBinding& binding, const vk::DescriptorBufferInfo& bufferInfo) {
+		bufferBindings.emplace_back(binding, bufferInfo);
+		return *this;
+	}
+	DescriptorSetBuilder& DescriptorSetBuilder::addImageBinding(const vk::DescriptorSetLayoutBinding& binding, const vk::DescriptorImageInfo& imageInfo) {
+		imageBindings.emplace_back(binding, imageInfo);
+		return *this;
+	}
+	vk::DescriptorSet DescriptorSetBuilder::build() {
+		if (!setLayout) {
+			std::vector<vk::DescriptorSetLayoutBinding> bindings;
+			bindings.reserve(bufferBindings.size() + imageBindings.size());
+			for (auto& [binding, bufferInfo] : bufferBindings) {
+				bindings.emplace_back(binding);
+			}
+			for (auto& [binding, imageInfo] : imageBindings) {
+				bindings.emplace_back(binding);
+			}
+			setLayout = layoutCache->getLayout(bindings);
+		}
+
+		vk::DescriptorSet set = alloc->allocate(setLayout);
+
+		std::vector<vk::WriteDescriptorSet> writes;
+		writes.reserve(bufferBindings.size() + imageBindings.size());
+		for (auto& [binding, bufferInfo] : bufferBindings) {
+			writes.push_back(
+				vk::WriteDescriptorSet{
+					.dstSet = set,
+					.dstBinding = binding.binding,
+					.descriptorCount = binding.descriptorCount,
+					.descriptorType = binding.descriptorType,
+					.pBufferInfo = &bufferInfo
+				}
+			);
+		}
+		for (auto& [binding, imageInfo] : imageBindings) {
+			writes.push_back(
+				vk::WriteDescriptorSet{
+					.dstSet = set,
+					.dstBinding = binding.binding,
+					.descriptorCount = binding.descriptorCount,
+					.descriptorType = binding.descriptorType,
+					.pImageInfo = &imageInfo
+				}
+			);
+		}
+
+		alloc->device.updateDescriptorSets(writes, {});
+		return set;
+	}
+#endif
+
+	vk::DescriptorSetLayout createDescriptorLayout(vk::Device device, std::vector<vk::DescriptorSetLayoutBinding> binding);
+	vk::UniqueDescriptorSetLayout createDescriptorLayoutUnique(vk::Device device, std::vector<vk::DescriptorSetLayoutBinding> binding);
+
+#if defined(VULKANHELPER_IMPLEMENTATION)
+	vk::DescriptorSetLayout createDescriptorLayout(vk::Device device, std::vector<vk::DescriptorSetLayoutBinding> binding) {
+		vk::DescriptorSetLayoutCreateInfo createInfo{
+			.bindingCount = static_cast<uint32_t>(binding.size()),
+			.pBindings = binding.data()
+		};
+		return device.createDescriptorSetLayout(createInfo);
+	}
+
+	vk::UniqueDescriptorSetLayout createDescriptorLayoutUnique(vk::Device device, std::vector<vk::DescriptorSetLayoutBinding> binding) {
+		vk::DescriptorSetLayoutCreateInfo createInfo{
+			.bindingCount = static_cast<uint32_t>(binding.size()),
+			.pBindings = binding.data()
+		};
+		return device.createDescriptorSetLayoutUnique(createInfo);
+	}
+#endif
+
+	std::unordered_map<uint32_t, std::unordered_map<uint32_t, vk::DescriptorSetLayoutBinding>>
+		reflectSetBindings(std::vector<uint32_t> spv, vk::ShaderStageFlagBits shaderStage);
+
+	std::vector<vk::DescriptorSetLayout> mergeReflectedSetBindings(
+		std::vector<std::unordered_map<uint32_t, std::unordered_map<uint32_t, vk::DescriptorSetLayoutBinding>>> setMaps,
+		vkh::DescriptorSetLayoutCache& layoutCache);
+
+#if defined(VULKANHELPER_IMPLEMENTATION)
+#if defined(VULKANHELPER_USE_SPIRV_REFLECT)
+	std::unordered_map<uint32_t, std::unordered_map<uint32_t, vk::DescriptorSetLayoutBinding>>
+		reflectSetBindings(std::vector<uint32_t> spv, vk::ShaderStageFlagBits shaderStage) 	{
+		SpvReflectShaderModule module = {};
+		SpvReflectResult result = spvReflectCreateShaderModule(spv.size() * sizeof(uint32_t), spv.data(), &module);
+		assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+		uint32_t count = 0;
+		result = spvReflectEnumerateDescriptorSets(&module, &count, NULL);
+		assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+		std::vector<SpvReflectDescriptorSet*> sets(count);
+		result = spvReflectEnumerateDescriptorSets(&module, &count, sets.data());
+		assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+		std::unordered_map<uint32_t, std::unordered_map<uint32_t, vk::DescriptorSetLayoutBinding>> setMap;
+		for (auto* set : sets) {
+			std::vector<vk::DescriptorSetLayoutBinding> bindings;
+			for (uint32_t i = 0; i < set->binding_count; i++) {
+				auto* reflBinding = set->bindings[i];
+
+				vk::DescriptorSetLayoutBinding binding{
+					.binding = reflBinding->binding,
+					.descriptorType = static_cast<vk::DescriptorType>(reflBinding->descriptor_type),
+					.descriptorCount = reflBinding->count,
+					.stageFlags = shaderStage
+				};
+				setMap[set->set][binding.binding] = binding;
+			}
+		}
+
+		spvReflectDestroyShaderModule(&module);
+		return std::move(setMap);
+	}
+
+	std::vector<vk::DescriptorSetLayout> mergeReflectedSetBindings(
+		std::vector<std::unordered_map<uint32_t, std::unordered_map<uint32_t, vk::DescriptorSetLayoutBinding>>> setMaps,
+		vkh::DescriptorSetLayoutCache& layoutCache) {
+		auto mainSetMap = std::move(setMaps.back());
+		setMaps.pop_back();
+
+		for (auto& setMap : setMaps) {
+			for (auto& [set, bindingMap] : setMap) {
+				if (!mainSetMap.contains(set)) {
+					mainSetMap[set] = bindingMap;
+				}
+				else {
+					for (auto& [bindingIndex, binding] : bindingMap) {
+						if (!mainSetMap[set].contains(bindingIndex)) {
+							mainSetMap[set][bindingIndex] = binding;
+						}
+						else {
+							mainSetMap[set][bindingIndex].stageFlags |= binding.stageFlags;
+						}
+					}
+				}
+			}
+		}
+
+		std::vector<vk::DescriptorSetLayout> layouts;
+		std::vector<vk::DescriptorSetLayoutBinding> bindings;
+		for (auto& [set, bindingMap] : mainSetMap) {
+			bindings.clear();
+			for (auto& [bindingIndex, binding] : bindingMap) {
+				bindings.push_back(binding);
+			}
+			layouts.push_back(layoutCache.getLayout(bindings));
+		}
+		return layouts;
+	}
+
+#endif // #if defined(VULKANHELPER_USE_SPIRV_REFLECT)
+#endif // #if defined(VULKANHELPER_IMPLEMENTATION)
+
 	vk::PipelineRasterizationStateCreateInfo makeDefaultRasterisationStateCreateInfo(vk::PolygonMode polygonMode);
 
 	vk::PipelineMultisampleStateCreateInfo makeDefaultMultisampleStateCreateInfo();
@@ -134,8 +559,10 @@ namespace vkh {
 	};
 	class GraphicsPipelineBuilder {
 	public:
-		Pipeline build(vk::Device device, vk::RenderPass pass, uint32_t subpass = 0, vk::PipelineCache pipelineCache = nullptr);
+		GraphicsPipelineBuilder(vk::Device device, vk::RenderPass pass, vk::PipelineCache pipelineCache = nullptr);
+		Pipeline build();
 
+		GraphicsPipelineBuilder& setSubPass(uint32_t index);
 		GraphicsPipelineBuilder& setViewport(const vk::Viewport& viewport);
 		GraphicsPipelineBuilder& setScissor(const vk::Rect2D& scissor);
 		GraphicsPipelineBuilder& setVertexInput(const vk::PipelineVertexInputStateCreateInfo& vertexInput);
@@ -145,12 +572,26 @@ namespace vkh {
 		GraphicsPipelineBuilder& setDepthStencil(const vk::PipelineDepthStencilStateCreateInfo& depthStencil);
 		GraphicsPipelineBuilder& setColorBlend(const vk::PipelineColorBlendStateCreateInfo& colorBlend);
 		GraphicsPipelineBuilder& addColorBlendAttachemnt(const vk::PipelineColorBlendAttachmentState& colorAttachmentBlend);
-		GraphicsPipelineBuilder& addShaderStage(const vk::PipelineShaderStageCreateInfo& shaderStage);
+		GraphicsPipelineBuilder& addShaderStage(
+			const std::vector<uint32_t>* spv,	
+			vk::ShaderStageFlagBits shaderStage,
+			vk::PipelineShaderStageCreateFlags flags = {},
+			vk::SpecializationInfo* pSpecializationInfo = {});
 		GraphicsPipelineBuilder& addDynamicState(const vk::DynamicState& dynamicstates);
 		GraphicsPipelineBuilder& addPushConstants(const vk::PushConstantRange& pushconstants);
 		GraphicsPipelineBuilder& addDescriptorLayout(const vk::DescriptorSetLayout& layout);
+#if defined(VULKANHELPER_USE_SPIRV_REFLECT)
+		GraphicsPipelineBuilder& reflectSPVForDescriptors(DescriptorSetLayoutCache& layoutCache);
+#endif // VULKANHELPER_USE_SPIRV_REFLECT
 
 	private:
+#if defined(VULKANHELPER_USE_SPIRV_REFLECT)
+		std::vector<std::pair<vk::ShaderStageFlagBits, const std::vector<uint32_t>*>> spvs;
+#endif // VULKANHELPER_USE_SPIRV_REFLECT
+		vk::Device device;
+		vk::RenderPass renderPass;
+		uint32_t subPass;
+		vk::PipelineCache pipelineCache;
 		std::optional<vk::Viewport> viewport;
 		std::optional<vk::Rect2D> scissor;
 		std::optional<vk::PipelineVertexInputStateCreateInfo> vertexInput;
@@ -164,9 +605,47 @@ namespace vkh {
 		std::vector<vk::DynamicState> dynamicStateEnable;
 		std::vector<vk::PushConstantRange> pushConstants;
 		std::vector<vk::DescriptorSetLayout> descLayouts;
+
+		std::vector<vk::UniqueShaderModule> shaderModules;
 	};
 
 #if defined(VULKANHELPER_IMPLEMENTATION)
+#if defined(VULKANHELPER_USE_SPIRV_REFLECT)
+	GraphicsPipelineBuilder& GraphicsPipelineBuilder::reflectSPVForDescriptors(DescriptorSetLayoutCache& layoutCache) {
+		std::vector<std::unordered_map<uint32_t, std::unordered_map<uint32_t, vk::DescriptorSetLayoutBinding>>> setMaps;
+
+		if (this->descLayouts.size() > 0) {
+			std::cerr << "vulkan helper warning: there are diescriptor set layouts set brefore reflectSPVForDescriptors. All descriptor set layouts will be replaced by reflectSPVForDescriptors!\n";
+		}
+
+		for (auto [stage, spvPtr] : spvs) {
+			setMaps.push_back(reflectSetBindings(*spvPtr, stage));
+		}
+		this->descLayouts = mergeReflectedSetBindings(setMaps, layoutCache);
+
+		const std::vector<uint32_t>* vertexShaderSPV{ nullptr };
+		for (auto [stage, spvPtr] : spvs) {
+			if (stage == vk::ShaderStageFlagBits::eVertex) {
+				vertexShaderSPV = spvPtr;
+				break;
+			}
+		}
+
+		if (vertexShaderSPV) {
+
+		}
+
+		return *this;
+	}
+#endif	// VULKANHELPER_USE_SPIRV_REFLECT
+
+	GraphicsPipelineBuilder::GraphicsPipelineBuilder(vk::Device device, vk::RenderPass pass, vk::PipelineCache pipelineCache)
+		:device{ device }, renderPass{ pass }, pipelineCache{ pipelineCache } {
+	}
+	GraphicsPipelineBuilder& GraphicsPipelineBuilder::setSubPass(uint32_t index) {
+		this->subPass = index;
+		return *this;
+	}
 	GraphicsPipelineBuilder& GraphicsPipelineBuilder::setViewport(const vk::Viewport& viewport) {
 		this->viewport = viewport;
 		return *this;
@@ -203,8 +682,25 @@ namespace vkh {
 		this->colorAttachmentBlends.push_back(colorAttachmentBlend);
 		return *this;
 	}
-	GraphicsPipelineBuilder& GraphicsPipelineBuilder::addShaderStage(const vk::PipelineShaderStageCreateInfo& shaderStage) {
-		this->shaderStages.push_back(shaderStage);
+	GraphicsPipelineBuilder& GraphicsPipelineBuilder::addShaderStage(
+		const std::vector<uint32_t>* spv,
+		vk::ShaderStageFlagBits shaderStage,
+		vk::PipelineShaderStageCreateFlags flags,
+		vk::SpecializationInfo* pSpecializationInfo) {
+		vk::ShaderModuleCreateInfo moduleCreateInfo{
+			.codeSize = static_cast<uint32_t>(spv->size()) * sizeof(uint32_t),
+			.pCode = spv->data()
+		};
+#if defined(VULKANHELPER_USE_SPIRV_REFLECT)
+		this->spvs.emplace_back(shaderStage, spv);
+#endif	// VULKANHELPER_USE_SPIRV_REFLECT
+		this->shaderModules.push_back(device.createShaderModuleUnique(moduleCreateInfo));
+		vk::PipelineShaderStageCreateInfo pipelineStageCI{
+			.stage = shaderStage,
+			.module = this->shaderModules.back().get(),
+			.pName = "main"
+		};
+		this->shaderStages.push_back(pipelineStageCI);
 		return *this;
 	}
 	GraphicsPipelineBuilder& GraphicsPipelineBuilder::addDynamicState(const vk::DynamicState& dynamicstates) {
@@ -245,7 +741,7 @@ namespace vkh {
 		};
 	}
 
-	Pipeline GraphicsPipelineBuilder::build(vk::Device device, vk::RenderPass pass, uint32_t subpass, vk::PipelineCache pipelineCache) {
+	Pipeline GraphicsPipelineBuilder::build() {
 		if (!vertexInput) {
 			std::cout << "error: vertexInput was not specified in pipeline builder!\n";
 			exit(-1);
@@ -327,8 +823,8 @@ namespace vkh {
 			.pColorBlendState = &colorBlendingSCI,
 			.pDynamicState = &dynamicStateCI,
 			.layout = pipeline.layout.get(),
-			.renderPass = pass,
-			.subpass = subpass,
+			.renderPass = renderPass,
+			.subpass = subPass,
 		};
 
 		auto ret = device.createGraphicsPipelineUnique(pipelineCache, pipelineCI);
@@ -460,253 +956,6 @@ namespace vkh {
 		std::vector<T> pool;
 		std::vector<T> usedList;
 	};
-
-
-
-	class DescriptorLayoutCache {
-	public:
-		DescriptorLayoutCache(vk::Device device);
-		vk::DescriptorSetLayout getLayout(const std::vector<vk::DescriptorSetLayoutBinding>& bindings);
-	private:
-		struct DescriptorLayoutHash {
-			std::size_t operator()(const std::vector<vk::DescriptorSetLayoutBinding>& bindings) const;
-		};
-
-		vk::Device device;
-		std::unordered_map<std::vector<vk::DescriptorSetLayoutBinding>, vk::UniqueDescriptorSetLayout, DescriptorLayoutHash> bindingsToLayout;
-	};
-
-#if defined(VULKANHELPER_IMPLEMENTATION)
-	DescriptorLayoutCache::DescriptorLayoutCache(vk::Device device)
-		: device{ device } {
-	}
-
-	vk::DescriptorSetLayout DescriptorLayoutCache::getLayout(const std::vector<vk::DescriptorSetLayoutBinding>& bindings) {
-		auto iter = bindingsToLayout.find(bindings);
-		if (iter != bindingsToLayout.end()) {
-			return *iter->second;
-		}
-		else {
-			auto allocateInfo = vk::DescriptorSetLayoutCreateInfo{
-				.bindingCount = static_cast<uint32_t>(bindings.size()),
-				.pBindings = bindings.data(),
-			};
-			return *(bindingsToLayout[bindings] = device.createDescriptorSetLayoutUnique(allocateInfo));
-		}
-	}
-	std::size_t DescriptorLayoutCache::DescriptorLayoutHash::operator()(const std::vector<vk::DescriptorSetLayoutBinding>& bindings) const {
-		size_t h{ 0 };
-		for (const auto& binding : bindings) {
-			h ^= static_cast<size_t>(binding.descriptorType);
-			h ^= static_cast<size_t>(binding.descriptorType);
-		}
-		return h;
-	}
-#endif
-
-
-
-	class DescriptorAllocator {
-	public:
-		DescriptorAllocator() = default;
-		DescriptorAllocator(vk::Device device, std::vector<vk::DescriptorPoolSize> specificPoolSizes = {}, vk::DescriptorPoolCreateFlagBits poolCreateFlags = {}, uint32_t maxSetsPerPool = 500);
-		void reset();
-		vk::DescriptorSet allocate(vk::DescriptorSetLayout layout);
-		std::vector<vk::DescriptorSet> allocate(vk::DescriptorSetLayout layout, uint32_t count);
-
-	protected:
-		DescriptorAllocator(vk::Device device, vk::DescriptorPoolCreateFlagBits poolFlags, uint32_t maxSetsPerPool);
-
-		vk::UniqueDescriptorPool getUnusedPool();
-		vk::UniqueDescriptorPool createPool();
-
-		const vk::DescriptorPoolCreateFlagBits poolCreateFlags;
-		const uint32_t maxSetsPerPool;
-
-		vk::Device device;
-		vk::UniqueDescriptorPool currentPool;
-		std::vector<vk::DescriptorPoolSize> descriptorPoolSizes;
-		std::vector<vk::UniqueDescriptorPool> usedPools;
-		std::vector<vk::UniqueDescriptorPool> unusedPools;
-	};
-
-#if defined(VULKANHELPER_IMPLEMENTATION)
-	DescriptorAllocator::DescriptorAllocator(vk::Device device, std::vector<vk::DescriptorPoolSize> specificPoolSizes, vk::DescriptorPoolCreateFlagBits poolCreateFlags, uint32_t maxSetsPerPool)
-		: device{ device }, maxSetsPerPool{ maxSetsPerPool }, poolCreateFlags{ poolCreateFlags } {
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eSampler, .descriptorCount = 500u });
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eCombinedImageSampler, .descriptorCount = 4000u });
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eSampledImage, .descriptorCount = 4000u });
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eUniformTexelBuffer, .descriptorCount = 1000u });
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eStorageTexelBuffer, .descriptorCount = 1000u });
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eUniformBuffer, .descriptorCount = 1000u });
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eStorageBuffer, .descriptorCount = 1000u });
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eUniformBuffer, .descriptorCount = 1000u });
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eStorageBuffer, .descriptorCount = 1000u });
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eUniformBufferDynamic, .descriptorCount = 1000u });
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eStorageBufferDynamic, .descriptorCount = 1000u });
-		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eInputAttachment, .descriptorCount = 500u });
-
-		for (auto specificPoolSize : specificPoolSizes) {
-			vk::DescriptorPoolSize* foundValue = nullptr;
-			for (auto& poolSize : this->descriptorPoolSizes) {
-				if (poolSize.type == specificPoolSize.type) {
-					foundValue = &poolSize;
-					break;
-				}
-			}
-			if (foundValue) {
-				foundValue->descriptorCount = specificPoolSize.descriptorCount;
-			}
-			else {
-				this->descriptorPoolSizes.push_back(specificPoolSize);
-			}
-		}
-
-		currentPool = createPool();
-	}
-	DescriptorAllocator::DescriptorAllocator(vk::Device device, vk::DescriptorPoolCreateFlagBits poolFlags, uint32_t maxSetsPerPool)
-		: device{ device }, poolCreateFlags{ poolFlags }, maxSetsPerPool{ maxSetsPerPool } {
-	}
-	void DescriptorAllocator::reset() {
-		if (currentPool) {
-			device.resetDescriptorPool(*currentPool);
-			unusedPools.push_back(std::move(currentPool));
-			currentPool.release();
-		}
-
-		for (auto&& pool : usedPools) {
-			device.resetDescriptorPool(*pool);
-			unusedPools.push_back(std::move(pool));
-		}
-		usedPools.clear();
-	}
-	vk::DescriptorSet DescriptorAllocator::allocate(vk::DescriptorSetLayout layout) {
-		auto result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = 1, .pSetLayouts = &layout });
-		if (result.size() == 0) /* we need to reallocate with another pool */ {
-			usedPools.push_back(std::move(currentPool));
-			currentPool = getUnusedPool();
-
-			result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = 1, .pSetLayouts = &layout });
-
-			if (result.size() == 0) {
-				// possible cause for this error is that the requested descriptor count exceeds the maximum descriptor pool size
-				std::cerr << "error: discriptor allocator can not allocate this descriptor set layout!\n";
-				assert(false);
-			}
-		}
-
-		return std::move(result.front());
-	}
-	std::vector<vk::DescriptorSet> DescriptorAllocator::allocate(vk::DescriptorSetLayout layout, uint32_t count) {
-		std::vector<vk::DescriptorSetLayout> layouts(count, layout);
-		auto result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = count, .pSetLayouts = layouts.data() });
-		if (result.size() == 0) /* we need to reallocate with another pool */ {
-			usedPools.push_back(std::move(currentPool));
-			currentPool = getUnusedPool();
-
-			result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = count, .pSetLayouts = layouts.data() });
-
-			if (result.size() == 0) {
-				// possible cause for this error is that the requested descriptor count exceeds the maximum descriptor pool size
-				std::cerr << "error: discriptor allocator can not allocate this descriptor set layout!\n";
-				assert(false);
-			}
-		}
-
-		return std::move(result);
-	}
-	vk::UniqueDescriptorPool DescriptorAllocator::getUnusedPool() {
-		if (unusedPools.empty()) {
-			return std::move(createPool());
-		}
-		else {
-			auto pool = std::move(unusedPools.back());
-			unusedPools.pop_back();
-			return std::move(pool);
-		}
-	}
-	vk::UniqueDescriptorPool DescriptorAllocator::createPool() {
-		auto allocInfo = vk::DescriptorPoolCreateInfo{
-			.flags = poolCreateFlags,
-			.maxSets = maxSetsPerPool,
-			.poolSizeCount = static_cast<uint32_t>(descriptorPoolSizes.size()),
-			.pPoolSizes = descriptorPoolSizes.data(),
-		};
-
-		return device.createDescriptorPoolUnique(allocInfo);
-	}
-#endif
-
-
-
-	class DescriptorSetAllocator : public DescriptorAllocator {
-	public:
-		DescriptorSetAllocator(vk::Device device, vk::DescriptorSetLayoutCreateInfo layoutCreateInfo, vk::DescriptorSetLayout layout, vk::DescriptorPoolCreateFlagBits poolFlags = {}, uint32_t maxSetsPerPool = 500);
-		vk::DescriptorSet allocate();
-		std::vector<vk::DescriptorSet> allocate(uint32_t count);
-
-	private:
-		using DescriptorAllocator::allocate;
-		vk::DescriptorSetLayout layout;
-	};
-
-#if defined(VULKANHELPER_IMPLEMENTATION)
-	DescriptorSetAllocator::DescriptorSetAllocator(vk::Device device, vk::DescriptorSetLayoutCreateInfo layoutCreateInfo, vk::DescriptorSetLayout layout, vk::DescriptorPoolCreateFlagBits poolFlags, uint32_t maxSetsPerPool)
-		: DescriptorAllocator{ device, poolFlags, maxSetsPerPool }, layout{ layout } {
-		const uint32_t descriptorPoolSizesCount = layoutCreateInfo.bindingCount;
-		this->descriptorPoolSizes.resize(descriptorPoolSizesCount);
-
-		for (uint32_t i = 0; i < descriptorPoolSizesCount; i++) {
-			this->descriptorPoolSizes[i].type = layoutCreateInfo.pBindings[i].descriptorType;
-			this->descriptorPoolSizes[i].descriptorCount = layoutCreateInfo.pBindings[i].descriptorCount * maxSetsPerPool;
-		}
-
-		currentPool = createPool();
-	}
-	vk::DescriptorSet DescriptorSetAllocator::allocate() {
-		auto result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = 1, .pSetLayouts = &layout });
-		if (result.size() == 0) /* we need to reallocate with another pool */ {
-			usedPools.push_back(std::move(currentPool));
-			currentPool = getUnusedPool();
-
-			result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = 1, .pSetLayouts = &layout });
-		}
-
-		return std::move(result.front());
-	}
-	std::vector<vk::DescriptorSet> DescriptorSetAllocator::allocate(uint32_t count) {
-		std::vector<vk::DescriptorSetLayout> layouts(count, layout);
-		auto result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = count, .pSetLayouts = layouts.data() });
-		if (result.size() == 0) /* we need to reallocate with another pool */ {
-			usedPools.push_back(std::move(currentPool));
-			currentPool = getUnusedPool();
-
-			result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = count, .pSetLayouts = layouts.data() });
-		}
-
-		return std::move(result);
-	}
-#endif
-
-
-
-	vk::DescriptorSet createDescriptorSet(const std::vector<vk::DescriptorSetLayoutBinding>& bindings, DescriptorAllocator& alloc, DescriptorLayoutCache& layoutCache);
-
-#if defined(VULKANHELPER_IMPLEMENTATION)
-	vk::DescriptorSet createDescriptorSet(const std::vector<vk::DescriptorSetLayoutBinding>& bindings, DescriptorAllocator& alloc, DescriptorLayoutCache& layoutCache) {
-		return alloc.allocate(layoutCache.getLayout(bindings));
-	}
-#endif
-
-
-
-	// TODO ADD DESCRIPTOR SET BUILDER THAT DIRECTLY LINKS THE DESCRIPTORS
-
-
-
-	// TODO ADD EASY TO USE DESCRIPTOR BINDING UPDATE FUNCTION
-
-
 
 	class CommandBufferAllocator {
 	public:

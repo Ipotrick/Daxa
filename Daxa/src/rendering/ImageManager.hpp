@@ -10,48 +10,28 @@
 #include "../threading/Jobs.hpp"
 #include "../threading/OwningMutex.hpp"
 
-
 #include "Vulkan.hpp"
 #include "Image.hpp"
 
 namespace daxa {
 	class ImageManager {
-		inline static const u32 SLOT_SURVIVAL_FRAMES{ 2 };
+		inline static const u32 SLOT_SURVIVAL_FRAMES{ 100 };
 	public:
-		ImageManager(vk::Device device = VulkanContext::device) : device{device} {}
-
-		struct ImageTuple {
-			Image image;
-			i32 tableIndex{ -1 };
-		};
+		ImageManager(vk::Device device = VulkanContext::device, u16 maxImages = (1024-1));
 
 		struct ImageSlot {
-			mutable OwningMutex<ImageTuple> imageMut;
+			mutable OwningMutex<Image> imageMut;
 			mutable std::atomic_uint32_t refCount{ 0 };
-			mutable std::atomic_uint32_t framesSinceZeroRefs{ 0 };
+			uint32_t leftSurvivalFrames{ 0 };
+
+			bool holdsImage() const {
+				return refCount != 0 && leftSurvivalFrames != 0;
+			}
+
+			operator bool() const { return holdsImage(); }
 		};
 
 		class Handle;
-
-		class WeakHandle {
-		public:
-			WeakHandle() = default;
-
-			bool operator==(const WeakHandle&) const = default;
-			bool operator!=(const WeakHandle&) const = default;
-
-			ReadWriteLock<ImageTuple> get();
-			ReadOnlyLock<ImageTuple> getConst() const;
-			OwningMutex<ImageTuple>& getMtx();
-			Handle getStrongHandle() const;
-		private:
-			friend class Handle;
-			friend class ImageManager;
-
-			WeakHandle(ImageSlot* imgSlot);
-
-			ImageSlot* imgSlot{ nullptr };
-		};
 
 		class Handle {
 		public:
@@ -65,20 +45,24 @@ namespace daxa {
 			Handle& operator=(Handle&&) = default;
 			Handle& operator=(const Handle&) = default;
 
-			ReadWriteLock<ImageTuple> get();
-			ReadOnlyLock<ImageTuple> getConst() const;
-			OwningMutex<ImageTuple>& getMtx();
-			WeakHandle getWeakHandle() const;
+			ReadWriteLock<Image> get();
+			ReadOnlyLock<Image> getConst() const;
+			OwningMutex<Image>& getMtx();
+
+			u16 getIndex() const { return index; }
 		private:
 			friend class ImageManager;
 			friend class WeakHandle;
 
-			Handle(ImageSlot* slot);
+			Handle(ImageManager* manager, u16 index);
 
-			ImageSlot* imgSlot{ nullptr };
+			ImageManager* manager{ nullptr };
+			u16 index{ static_cast<u16>(~0) };
 		};
 
 		Handle getHandle(const std::string& alias);
+
+		Handle getHandle(u16 index);
 
 		class DestroyJob : public IJob {
 		public:
@@ -98,9 +82,10 @@ namespace daxa {
 
 		void update();
 
-		void clearRegestry();
+		std::vector<vk::Image> getImages() const;
 
 	private:
+		const u16 MAX_IMAGE_SLOTS;
 		vk::Device device;
 		vkh::CommandBufferAllocator cmdPool{ VulkanContext::device, vk::CommandPoolCreateInfo{.queueFamilyIndex = VulkanContext::mainTransferQueueFamiltyIndex } };
 		vkh::Pool<vk::Fence> fencePool {
@@ -109,13 +94,14 @@ namespace daxa {
 			[=](vk::Fence fence) { device.resetFences(fence); }
 		};
 
-		std::unordered_map<std::string, ImageSlot*> aliasToSlot;
-		std::unordered_map<ImageSlot* , std::string> slotToAlias;
+		std::unordered_map<std::string, u16> aliasToSlot;
+		std::unordered_map<u16, std::string> slotToAlias;
 
-		std::vector<std::unique_ptr<ImageSlot>> imageSlots;
+		std::vector<u16>		freeImageSlots;
+		std::vector<ImageSlot>	imageSlots;
 
-		std::vector<std::pair<std::string,ImageSlot*>> createQ;
-		std::vector<ImageSlot*> destroyQ;
+		std::vector<std::pair<std::string, u16>> createQ;
+		std::vector<u16> destroyQ;
 	};
 
 	using ImageHandle = ImageManager::Handle;

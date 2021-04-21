@@ -7,7 +7,7 @@
 namespace daxa { 
 	class Image {
 	public:
-		Image() : info{}, image{}, allocation{}, allocator{} {}
+		Image() = default;
 
 		Image(Image&& other) noexcept;
 
@@ -19,12 +19,14 @@ namespace daxa {
 
 		bool valid() const;
 
-		vk::ImageViewCreateInfo viewInfo;
-		vk::ImageCreateInfo info;
-		vk::UniqueImageView view;
-		vk::Image image;
-		VmaAllocation allocation;
-		VmaAllocator allocator;
+		operator bool() const;
+
+		vk::ImageViewCreateInfo viewInfo{};
+		vk::ImageCreateInfo info{};
+		vk::UniqueImageView view{};
+		vk::Image image{};
+		VmaAllocation allocation{};
+		VmaAllocator allocator{};
 	};
 
 	Image loadImage(vk::CommandBuffer& cmd, vk::Fence fence, std::string& path, vk::Device device = VulkanContext::device, VmaAllocator allocator = VulkanContext::allocator);

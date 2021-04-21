@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="dependencies\spirv_reflect.hpp" />
     <ClInclude Include="dependencies\stb_image.hpp" />
     <ClInclude Include="dependencies\tiny_obj_loader.hpp" />
     <ClInclude Include="dependencies\VkBootstrap.hpp" />
@@ -50,6 +51,7 @@
     <ClInclude Include="src\util\Timing.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="dependencies\spirv_reflect.cpp" />
     <ClCompile Include="dependencies\stb_image.cpp" />
     <ClCompile Include="dependencies\tiny_obj_loader.cpp" />
     <ClCompile Include="dependencies\VkBootstrap.cpp" />
