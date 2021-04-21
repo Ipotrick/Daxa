@@ -7,7 +7,7 @@ int main(int argc, char* args[])
 {
     daxa::initialize();
 
-    std::cout << "sizeof image slot: " << sizeof(daxa::ImageManager::ImageSlot) << std::endl;
+    std::cout << "sizeof image slot: " << sizeof(daxa::ImageManager::ImageSlot) * (1 << 16) << std::endl;
 
     {
         daxa::OwningMutex<daxa::ImageManager> imagesMtx;

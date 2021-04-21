@@ -94,6 +94,10 @@ namespace daxa {
         std::swap(this->allocator, other.allocator);
     }
 
+    Image::operator bool() const {
+        return image.operator bool();
+    }
+
     Image& Image::operator=(Image&& other) noexcept
     {
         Image::~Image();

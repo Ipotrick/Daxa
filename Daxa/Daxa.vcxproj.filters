@@ -120,6 +120,9 @@
     <ClInclude Include="src\rendering\ShaderUtil.hpp">
       <Filter>src\rendering</Filter>
     </ClInclude>
+    <ClInclude Include="dependencies\spirv_reflect.hpp">
+      <Filter>dependencies</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\stb_image.cpp">
@@ -163,6 +166,9 @@
     </ClCompile>
     <ClCompile Include="src\platform\Scancodes.cpp">
       <Filter>src\platform</Filter>
+    </ClCompile>
+    <ClCompile Include="dependencies\spirv_reflect.cpp">
+      <Filter>dependencies</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
