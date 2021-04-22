@@ -41,4 +41,6 @@ namespace daxa {
 		vk::Device device = VulkanContext::device,
 		VmaAllocator allocator = VulkanContext::allocator
 	);
+
+	Image createImage(vk::Device device, vk::CommandBuffer& cmd, vk::Fence fence, u32 width, u32 height, u8* data, VmaAllocator allocator = VulkanContext::allocator);
 }
