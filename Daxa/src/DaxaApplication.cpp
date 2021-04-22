@@ -18,28 +18,16 @@ namespace daxa {
 			VulkanContext::mainPhysicalDevice
 		);
 
-		descLayout = descLayoutCache.getLayout({
-			vk::DescriptorSetLayoutBinding{
-				.binding = 0,
-				.descriptorType = vk::DescriptorType::eUniformBuffer,
-				.descriptorCount = 1,
-				.stageFlags = vk::ShaderStageFlagBits::eVertex,
-			} 
-		});
-
-		testLayout = descLayoutCache.getLayout({
-			vk::DescriptorSetLayoutBinding{
-				.binding = 0,
-				.descriptorType = vk::DescriptorType::eUniformBuffer,
-				.descriptorCount = 1,
-				.stageFlags = vk::ShaderStageFlagBits::eFragment,
-			}
-		});
-
-
 		for (i64 i = 0; i < FRAME_OVERLAP; i++) {
-			frames.emplace_back(&descLayoutCache);
+			frames.emplace_back(&descLayoutCache, globalSetAllocator.allocate());
 		}
+
+		vk::SamplerCreateInfo samplerCI{
+			.addressModeU = vk::SamplerAddressMode::eClampToEdge,
+			.addressModeV = vk::SamplerAddressMode::eClampToEdge,
+			.borderColor = vk::BorderColor::eFloatOpaqueWhite,
+		};
+		sampler = VulkanContext::device.createSamplerUnique(samplerCI);
 
 		init_default_renderpass();
 
@@ -117,8 +105,16 @@ namespace daxa {
 	}
 
 	void Application::draw()
-	{
+	{ 
 		auto& frame = frames[_frameNumber & 1];
+
+		if (_frameNumber == 0) {
+			vk::CommandBuffer cmd = frame.cmdPool.getElement();
+			vk::UniqueFence fence = VulkanContext::device.createFenceUnique(vkh::makeDefaultFenceCI());
+			VulkanContext::device.resetFences(fence.get());
+			u8 whiteColor[4] = { 0,255,255,255 };
+			defaultDummyImage = createImage(VulkanContext::device, cmd, fence.get(), 1, 1, whiteColor);
+		}
 
 		VulkanContext::device.waitForFences(*frame.fence,VK_TRUE, 1000000000);
 		VulkanContext::device.resetFences(*frame.fence);
@@ -132,6 +128,8 @@ namespace daxa {
 		VK_CHECK(vkAcquireNextImageKHR(VulkanContext::device, window->swapchain, 1000000000, *frame.presentSem, nullptr, &swapchainImageIndex));
 
 		vk::CommandBuffer cmd = frame.cmdPool.getElement();
+
+
 
 		auto cmdBeginInfo = vk::CommandBufferBeginInfo{};
 		cmd.begin(cmdBeginInfo);
@@ -178,25 +176,47 @@ namespace daxa {
 			.view = transpose(camera.view),
 			.proj = transpose(camera.proj)
 		};
-		TestData testData{
-			.color = {1,0,0,1}
-		};
 		{
 			// UPDATE UNIFORM BUFFERS:
 			void* data;
 			vmaMapMemory(VulkanContext::allocator, frame.gpuDataBuffer.allocation, &data);
 
-			memcpy(data, &gpudata, sizeof(GPUData));
+			memcpy(data, &gpudata, frame.gpuDataBuffer.size);
 
 			vmaUnmapMemory(VulkanContext::allocator, frame.gpuDataBuffer.allocation);
-			vmaMapMemory(VulkanContext::allocator, frame.testBuffer.allocation, &data);
+		}
+		{
+			//update texture table:
+			std::array< vk::DescriptorImageInfo, 1 << 12> imageInfos;
+			for (auto i = 0; i < 1 << 12; i++) {
+				imageInfos[i] = vk::DescriptorImageInfo{
+					.imageView = defaultDummyImage.view.get(),
+					.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+				};
+			}
 
-			memcpy(data, &testData, sizeof(TestData));
+			vk::WriteDescriptorSet write{
+				.dstSet = frame.globalSet,
+				.dstBinding = 0,
+				.descriptorCount = 1 << 12,
+				.descriptorType = vk::DescriptorType::eSampledImage,
+				.pImageInfo = &imageInfos[0],
+			};
 
-			vmaUnmapMemory(VulkanContext::allocator, frame.testBuffer.allocation);
+			vk::DescriptorImageInfo samplerImageInfo{
+				.sampler = sampler.get()
+			};
+			vk::WriteDescriptorSet writeSampler{
+				.dstSet = frame.globalSet,
+				.dstBinding = 1,
+				.descriptorCount = 1,
+				.descriptorType = vk::DescriptorType::eSampler,
+				.pImageInfo = &samplerImageInfo,
+			};
+			VulkanContext::device.updateDescriptorSets({ write, writeSampler }, {});
 		}
 
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, meshPipeline.layout.get(), 0, std::array{ frame.descSet, frame.testSet }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, meshPipeline.layout.get(), 0, std::array{ frame.globalSet, frame.descSet }, {});
 		 
 		vkCmdPushConstants(cmd, meshPipeline.layout.get(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
 
@@ -229,6 +249,7 @@ namespace daxa {
 		VK_CHECK(vkQueuePresentKHR(VulkanContext::mainGraphicsQueue, (VkPresentInfoKHR*)&presentInfo));
 		_frameNumber++;
 	}
+
 	void Application::init_pipelines()
 	{
 		init_mesh_pipeline();
@@ -246,10 +267,8 @@ namespace daxa {
 	}
 
 	std::optional<vkh::Pipeline> Application::createMeshPipeline() {
-		auto fopt = loadGLSLShaderToSpv("Daxa/shaders/mesh.frag");
-		if (!fopt) return {};
-		auto vopt = loadGLSLShaderToSpv("Daxa/shaders/mesh.vert");
-		if (!vopt) return {};
+		auto f = loadGLSLShaderToSpv("Daxa/shaders/mesh.frag").value();
+		auto v = loadGLSLShaderToSpv("Daxa/shaders/mesh.vert").value();
 
 		vkh::GraphicsPipelineBuilder pipelineBuilder(
 			VulkanContext::device,
@@ -262,8 +281,8 @@ namespace daxa {
 				.offset = 0,
 				.size = sizeof(MeshPushConstants),
 				})
-			.addShaderStage(&fopt.value(), vk::ShaderStageFlagBits::eFragment)
-			.addShaderStage(&vopt.value(), vk::ShaderStageFlagBits::eVertex)
+			.addShaderStage(&v, vk::ShaderStageFlagBits::eVertex)
+			.addShaderStage(&f, vk::ShaderStageFlagBits::eFragment)
 			.setDepthStencil(vk::PipelineDepthStencilStateCreateInfo{
 				.depthTestEnable = VK_TRUE,
 				.depthWriteEnable = VK_TRUE,

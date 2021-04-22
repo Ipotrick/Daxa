@@ -9,7 +9,7 @@ layout (location = 2) in vec3 vColor;
 
 layout (location = 0) out vec3 v_color;
 
-layout(set = 0, binding = 0) uniform Data {
+layout(set = 1, binding = 0) uniform Data {
 	mat4 model;
 	mat4 view;
 	mat4 proj;
@@ -20,6 +20,7 @@ layout(push_constant) uniform PushConstants
 	mat4 render_matrix;
 	vec4 data;
 } constants;
+
 void main() 
 {	
 	mat4 mvp = data.proj * data.view * data.model;

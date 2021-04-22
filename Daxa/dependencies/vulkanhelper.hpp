@@ -22,6 +22,7 @@
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 #ifdef VULKANHELPER_USE_SPIRV_REFLECT
 #include VULKANHELPER_SPIRV_REFLECT_INCLUDE_PATH
 #endif
@@ -472,6 +473,7 @@ namespace vkh {
 		std::vector<std::unordered_map<uint32_t, std::unordered_map<uint32_t, vk::DescriptorSetLayoutBinding>>> setMaps,
 		vkh::DescriptorSetLayoutCache& layoutCache);
 
+
 #if defined(VULKANHELPER_IMPLEMENTATION)
 #if defined(VULKANHELPER_USE_SPIRV_REFLECT)
 	std::unordered_map<uint32_t, std::unordered_map<uint32_t, vk::DescriptorSetLayoutBinding>>
@@ -504,6 +506,8 @@ namespace vkh {
 			}
 		}
 
+
+
 		spvReflectDestroyShaderModule(&module);
 		return std::move(setMap);
 	}
@@ -511,22 +515,23 @@ namespace vkh {
 	std::vector<vk::DescriptorSetLayout> mergeReflectedSetBindings(
 		std::vector<std::unordered_map<uint32_t, std::unordered_map<uint32_t, vk::DescriptorSetLayoutBinding>>> setMaps,
 		vkh::DescriptorSetLayoutCache& layoutCache) {
-		auto mainSetMap = std::move(setMaps.back());
-		setMaps.pop_back();
+
+		std::vector<std::vector<std::optional<vk::DescriptorSetLayoutBinding>>> setLayoutBindings;
 
 		for (auto& setMap : setMaps) {
 			for (auto& [set, bindingMap] : setMap) {
-				if (!mainSetMap.contains(set)) {
-					mainSetMap[set] = bindingMap;
+				if (setLayoutBindings.size() <= set) {
+					setLayoutBindings.resize(set + 1);
 				}
-				else {
-					for (auto& [bindingIndex, binding] : bindingMap) {
-						if (!mainSetMap[set].contains(bindingIndex)) {
-							mainSetMap[set][bindingIndex] = binding;
-						}
-						else {
-							mainSetMap[set][bindingIndex].stageFlags |= binding.stageFlags;
-						}
+				for (auto& [bindingIndex, binding] : bindingMap) {
+					if (setLayoutBindings[set].size() <= bindingIndex) {
+						setLayoutBindings[set].resize(bindingIndex + 1);
+					}
+					if (!setLayoutBindings[set][bindingIndex].has_value()) {
+						setLayoutBindings[set][bindingIndex] = binding;
+					}
+					else {
+						setLayoutBindings[set][bindingIndex]->stageFlags |= binding.stageFlags;
 					}
 				}
 			}
@@ -534,13 +539,16 @@ namespace vkh {
 
 		std::vector<vk::DescriptorSetLayout> layouts;
 		std::vector<vk::DescriptorSetLayoutBinding> bindings;
-		for (auto& [set, bindingMap] : mainSetMap) {
+		for (auto& setBindings : setLayoutBindings) {
 			bindings.clear();
-			for (auto& [bindingIndex, binding] : bindingMap) {
-				bindings.push_back(binding);
+			for (auto& bindingOpt : setBindings) {
+				if (bindingOpt) {
+					bindings.push_back(*bindingOpt);
+				}
 			}
 			layouts.push_back(layoutCache.getLayout(bindings));
 		}
+
 		return layouts;
 	}
 
@@ -579,7 +587,7 @@ namespace vkh {
 			vk::SpecializationInfo* pSpecializationInfo = {});
 		GraphicsPipelineBuilder& addDynamicState(const vk::DynamicState& dynamicstates);
 		GraphicsPipelineBuilder& addPushConstants(const vk::PushConstantRange& pushconstants);
-		GraphicsPipelineBuilder& addDescriptorLayout(const vk::DescriptorSetLayout& layout);
+		GraphicsPipelineBuilder& setDescriptorLayouts(const std::vector<vk::DescriptorSetLayout>& layouts);
 #if defined(VULKANHELPER_USE_SPIRV_REFLECT)
 		GraphicsPipelineBuilder& reflectSPVForDescriptors(DescriptorSetLayoutCache& layoutCache);
 #endif // VULKANHELPER_USE_SPIRV_REFLECT
@@ -712,8 +720,8 @@ namespace vkh {
 		return *this;
 	}
 
-	GraphicsPipelineBuilder& GraphicsPipelineBuilder::addDescriptorLayout(const vk::DescriptorSetLayout& layout) {
-		this->descLayouts.push_back(layout);
+	GraphicsPipelineBuilder& GraphicsPipelineBuilder::setDescriptorLayouts(const std::vector<vk::DescriptorSetLayout>& layouts) {
+		this->descLayouts = layouts;
 		return *this;
 	}
 

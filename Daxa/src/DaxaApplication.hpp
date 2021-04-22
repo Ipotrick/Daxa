@@ -32,12 +32,9 @@ namespace daxa {
 		daxa::Mat4x4 proj;
 	};
 
-	struct TestData {
-		daxa::Vec4 color{ 1,0,0,1 };
-	};
-
 	struct FrameData {
-		FrameData(vkh::DescriptorSetLayoutCache* layoutCache) :
+		FrameData(vkh::DescriptorSetLayoutCache* layoutCache, vk::DescriptorSet globalSet) :
+			globalSet{ globalSet },
 			semaPool{
 				[]() { return VulkanContext::device.createSemaphore({}); },
 				[](vk::Semaphore sem) { VulkanContext::device.destroySemaphore(sem,nullptr); },
@@ -45,7 +42,6 @@ namespace daxa {
 			},
 			cmdPool{ VulkanContext::device, vk::CommandPoolCreateInfo{.queueFamilyIndex = VulkanContext::mainGraphicsQueueFamiltyIndex } },
 			gpuDataBuffer{ createBuffer(sizeof(GPUData), vk::BufferUsageFlagBits::eUniformBuffer, VMA_MEMORY_USAGE_CPU_TO_GPU) },
-			testBuffer{ createBuffer(sizeof(TestData), vk::BufferUsageFlagBits::eUniformBuffer, VMA_MEMORY_USAGE_CPU_TO_GPU) },
 
 			fence{ VulkanContext::device.createFenceUnique(vk::FenceCreateInfo{}) },
 			presentSem{ VulkanContext::device.createSemaphoreUnique({}) },
@@ -56,14 +52,8 @@ namespace daxa {
 					{ .binding = 0, .descriptorType = vk::DescriptorType::eUniformBuffer, .descriptorCount = 1, .stageFlags = vk::ShaderStageFlagBits::eVertex },
 					{ .buffer = gpuDataBuffer.buffer , .range = sizeof(GPUData) })
 				.build();
-
-			testSet = vkh::DescriptorSetBuilder(&descAlloc, layoutCache)
-				.addBufferBinding(
-					{ .binding = 0, .descriptorType = vk::DescriptorType::eUniformBuffer , .descriptorCount = 1, .stageFlags = vk::ShaderStageFlagBits::eFragment },
-					{ .buffer = testBuffer.buffer, .range= sizeof(TestData) })
-				.build();
 		}
-
+		vk::DescriptorSet globalSet;
 		vkh::Pool<vk::Semaphore> semaPool;
 		vkh::CommandBufferAllocator cmdPool;
 		Buffer gpuDataBuffer;
@@ -90,7 +80,7 @@ namespace daxa {
 
 		void draw();
 
-		std::unique_ptr<OwningMutex<Window>> windowMutex; 
+		std::unique_ptr<OwningMutex<Window>> windowMutex;
 	private:
 
 		void init_default_renderpass();
@@ -117,12 +107,42 @@ namespace daxa {
 				if (pipeOpt) {
 					meshPipeline = std::move(pipeOpt.value());
 				}
-			} 
+			}
 		};
 
 		// PERSISTENT DATA:
 
+		Image defaultDummyImage;
+
+		const u32 MAX_IMAGE_UNITS = 1 << 12;
+
 		vkh::DescriptorSetLayoutCache descLayoutCache;
+		vk::UniqueSampler sampler;
+
+		std::vector<vk::DescriptorSetLayoutBinding> globalSetLayoutBindings{
+			vk::DescriptorSetLayoutBinding{
+				.binding = 0,
+				.descriptorType = vk::DescriptorType::eSampledImage,
+				.descriptorCount = MAX_IMAGE_UNITS,
+				.stageFlags = vk::ShaderStageFlagBits::eFragment
+			},
+			vk::DescriptorSetLayoutBinding{
+				.binding = 1,
+				.descriptorType = vk::DescriptorType::eSampler,
+				.descriptorCount = 1,
+				.stageFlags = vk::ShaderStageFlagBits::eFragment
+			}
+		};
+		vk::DescriptorSetLayout globalSetLayout = descLayoutCache.getLayout(globalSetLayoutBindings);
+		vk::DescriptorSetLayoutCreateInfo gLayoutCI{
+				.bindingCount = static_cast<u32>(globalSetLayoutBindings.size()),
+				.pBindings = globalSetLayoutBindings.data(),
+		};
+		vkh::DescriptorSetAllocator globalSetAllocator{
+			VulkanContext::device,
+			gLayoutCI,
+			globalSetLayout
+		};
 
 		std::vector<vk::UniqueFramebuffer> framebuffers;
 

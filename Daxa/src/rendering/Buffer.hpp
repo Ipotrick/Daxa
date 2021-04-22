@@ -12,8 +12,10 @@ namespace daxa {
 		{
 			std::swap(this->buffer, other.buffer);
 			std::swap(this->allocation, other.allocation);
+			std::swap(this->size, other.size);
 			other.buffer = vk::Buffer{};
 			other.allocation = {};
+			other.size = 0;
 		}
 
 		Buffer& operator=(Buffer&& other)
@@ -32,6 +34,7 @@ namespace daxa {
 
 		vk::Buffer buffer;
 		VmaAllocation allocation;
+		size_t size{ 0 };
 	};
 
 	inline Buffer createBuffer(uz allocSize, vk::BufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocator allocator = VulkanContext::allocator)
@@ -46,6 +49,7 @@ namespace daxa {
 		vmaallocInfo.usage = memoryUsage;
 
 		Buffer newBuffer;
+		newBuffer.size = allocSize;
 
 		//allocate the buffer
 		VK_CHECK(vmaCreateBuffer(allocator, (VkBufferCreateInfo*)&bufferInfo, &vmaallocInfo,
