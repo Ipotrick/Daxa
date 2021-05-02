@@ -6,6 +6,7 @@
 
 namespace daxa {
 	class Camera2d {
+	public:
 		Vec2 position{ 0,0 };
 		Vec2 frustumBend{ 1,1 };
 		float zoom{ 1 };

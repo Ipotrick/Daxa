@@ -57,34 +57,34 @@ namespace daxa {
 
 		auto [ax, ay, az] = daxa::getFPSViewAxis(camera.position, camera.pitch, camera.yaw);
 		if (bCameraControll) {
-			if (window->isKeyPressed(daxa::Scancode::A)) {
+			if (window->keyPressed(daxa::Scancode::A)) {
 				camera.position -= ax * dt * cameraMoveSpeed;
 			} 
-			if (window->isKeyPressed(daxa::Scancode::D)) {
+			if (window->keyPressed(daxa::Scancode::D)) {
 				camera.position += ax * dt * cameraMoveSpeed;
 			}
-			if (window->isKeyPressed(daxa::Scancode::SPACE)) {
+			if (window->keyPressed(daxa::Scancode::SPACE)) {
 				camera.position -= ay * dt * cameraMoveSpeed;
 			}
-			if (window->isKeyPressed(daxa::Scancode::LSHIFT)) {
+			if (window->keyPressed(daxa::Scancode::LSHIFT)) {
 				camera.position += ay * dt * cameraMoveSpeed;
 			}
-			if (window->isKeyPressed(daxa::Scancode::W)) {
+			if (window->keyPressed(daxa::Scancode::W)) {
 				camera.position += az * dt * cameraMoveSpeed;
 			}
-			if (window->isKeyPressed(daxa::Scancode::S)) {
+			if (window->keyPressed(daxa::Scancode::S)) {
 				camera.position -= az * dt * cameraMoveSpeed;
 			}
-			if (window->isKeyPressed(daxa::Scancode::Q)) {
+			if (window->keyPressed(daxa::Scancode::Q)) {
 				camera.rotation += dt * cameraMoveSpeed;
 			}
-			if (window->isKeyPressed(daxa::Scancode::E)) {
+			if (window->keyPressed(daxa::Scancode::E)) {
 				camera.rotation -= dt * cameraMoveSpeed;
 			}
 			camera.yaw -= window->getCursorPositionChange()[0] / 180.0f * cameraSensitivity;
 			camera.pitch -= window->getCursorPositionChange()[1] / 180.0f * cameraSensitivity;
 		}
-		if (window->isKeyJustPressed(daxa::Scancode::ESCAPE)) {
+		if (window->keyJustPressed(daxa::Scancode::ESCAPE)) {
 			bCameraControll = !bCameraControll;
 			if (bCameraControll) {
 				window->captureCursor();

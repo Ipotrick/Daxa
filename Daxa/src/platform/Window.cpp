@@ -8,7 +8,7 @@
 
 namespace daxa {
 	Window::Window(std::string name, std::array<u32, 2> size, vk::Device device, vk::PhysicalDevice physicalDevice) :
-		name{ name }, size{ size }, vulkanDevice{device}, vulkanPhysicalDevice{physicalDevice}
+		name{ name }, size{ size }, vulkanDevice{ device }, vulkanPhysicalDevice{ physicalDevice }
 	{
 		//create blank SDL window for our application
 		sdlWindowHandle = SDL_CreateWindow(
@@ -21,12 +21,12 @@ namespace daxa {
 		);
 
 		depthImageFormat = vk::Format::eD32Sfloat;
-		
+
 		depthImage = makeImage(
 			vk::ImageCreateInfo{
 				.imageType = vk::ImageType::e2D,
 				.format = depthImageFormat,
-				.extent = vk::Extent3D{.width=size[0],.height=size[1],.depth=1},
+				.extent = vk::Extent3D{.width = size[0],.height = size[1],.depth = 1},
 				.mipLevels = 1,
 				.arrayLayers = 1,
 				.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
@@ -78,8 +78,7 @@ namespace daxa {
 
 		swapchainImageFormat = (vk::Format)vkbSwapchain.image_format;
 	}
-	Window::~Window()
-	{
+	Window::~Window() 	{
 		vkDestroySwapchainKHR(vulkanDevice, swapchain, nullptr);
 
 		//destroy swapchain resources
@@ -87,94 +86,61 @@ namespace daxa {
 
 			vkDestroyImageView(vulkanDevice, swapchainImageViews[i], nullptr);
 		}
-		
+
 		vkDestroySurfaceKHR(VulkanContext::instance, surface, nullptr);
 		SDL_DestroyWindow(sdlWindowHandle);
 		sdlWindowHandle = nullptr;
 	}
-	void Window::setSize(std::array<u32, 2> size)
-	{
+	void Window::setSize(std::array<u32, 2> size) 	{
 		this->size = size;
 	}
-	std::array<u32, 2> Window::getSize() const
-	{
+	std::array<u32, 2> Window::getSize() const 	{
 		return size;
 	}
-	Vec2 Window::getSizeVec() const
-	{
+	Vec2 Window::getSizeVec() const 	{
 		return { static_cast<f32>(size[0]), static_cast<f32>(size[1]) };
 	}
-	vk::Extent2D Window::getExtent() const
-	{
-		return vk::Extent2D{size[0],size[1]};
+	vk::Extent2D Window::getExtent() const 	{
+		return vk::Extent2D{ size[0],size[1] };
 	}
-	void Window::setName(std::string name)
-	{
+	void Window::setName(std::string name) 	{
 		this->name = std::move(name);
 	}
-	const std::string& Window::getName()
-	{
+	const std::string& Window::getName() 	{
 		return name;
-	}
-	bool Window::update(f32 deltaTime)
-	{
-		if (bCursorCaptured) {
-			std::cout << "warp mouse to 1,1 \n";
-			if (SDL_WarpMouseGlobal(0, 0) < 0) {
-				std::cout << "warp failed\n";
-			}
-			//SDL_WarpMouseInWindow(sdlWindowHandle, 1, 1);
-		}
-
-		for (i32 i = 0; i < 512; ++i) {
-			prevKeyStates[i] = keyStates[i];
-		}
-
-		const u8* keystate = SDL_GetKeyboardState(nullptr /* its 512 */);
-
-		for (i32 i = 0; i < 512; ++i) {
-			keyStates[i] = keystate[i];
-		}
-		for (i32 i = 0; i < 512; ++i) {
-			keyHidden[i] = false;
-		}
-
-		prevCursorPos = cursorPos;
-		SDL_GetMouseState(&cursorPos[0], &cursorPos[1]);
-
-		bool close{ false };
-		SDL_Event event;
-		while (SDL_PollEvent(&event)) {
-			if (event.type == SDL_QUIT) {
-				close = true;
-			}
-			else if (event.type == SDL_KEYDOWN) {
-				if (event.key.keysym.sym == SDLK_SPACE) {
-					bSpacePressed ^= 1;
-				}
-			}
-
-
-		}
-		return close;
 	}
 	bool Window::isFocused() const {
 		return false;
 	}
-	bool Window::isKeyPressed(Scancode key) const {
-		return !keyHidden[u32(key)] && keyStates[u32(key)];
+	bool Window::keyPressed(Scancode key) const {
+		return !keyHidden[u32(key)] && (*keyStates)[u32(key)];
 	}
-	bool Window::isKeyJustPressed(Scancode key) const {
-		return !keyHidden[u32(key)] && keyStates[u32(key)] && !prevKeyStates[u32(key)];
+	bool Window::keyJustPressed(Scancode key) const {
+		return !keyHidden[u32(key)] && (*keyStates)[u32(key)] && !(*prevKeyStates)[u32(key)];
 	}
-	bool Window::isKeyReleased(Scancode key) const {
-		return !keyHidden[u32(key)] && !keyStates[u32(key)];
+	bool Window::keyReleased(Scancode key) const {
+		return !keyHidden[u32(key)] && !(*keyStates)[u32(key)];
 	}
-	bool Window::isKeyJustReleased(Scancode key) const {
-		return !keyHidden[u32(key)] && !keyStates[u32(key)] && prevKeyStates[u32(key)];
+	bool Window::keyJustReleased(Scancode key) const {
+		return !keyHidden[u32(key)] && !(*keyStates)[u32(key)] && (*prevKeyStates)[u32(key)];
 	}
 	void Window::hideKey(Scancode key) {
 		keyHidden[u32(key)] = true;
+	}
+	bool Window::buttonPressed(MouseButton button) const {
+		return (*buttonStates)[u8(button)] && !buttonHidden[u8(button)];
+	}
+	bool Window::buttonJustPressed(MouseButton button) const {
+		return !(*prevButtonStates)[u8(button)] && (*buttonStates)[u8(button)] && !buttonHidden[u8(button)];
+	}
+	bool Window::buttonReleased(MouseButton button) const {
+		return !(*buttonStates)[u8(button)] && !buttonHidden[u8(button)];
+	}
+	bool Window::buttonJustReleased(MouseButton button) const {
+		return (*prevButtonStates)[u8(button)] && !(*buttonStates)[u8(button)] && !buttonHidden[u8(button)];
+	}
+	void Window::hideButton(MouseButton button) {
+		buttonHidden[u8(button)] = true;
 	}
 	std::array<i32, 2> Window::getCursorPosition() const {
 		return cursorPos;
@@ -190,7 +156,7 @@ namespace daxa {
 		};
 	}
 	std::array<i32, 2> Window::getCursorPositionChange() const {
-		return { 
+		return {
 			cursorPos[0] - prevCursorPos[0],
 			cursorPos[1] - prevCursorPos[1],
 		};
@@ -212,5 +178,52 @@ namespace daxa {
 	void Window::releaseCursor() {
 		SDL_SetRelativeMouseMode(SDL_FALSE);
 		bCursorCaptured = false;
+	}
+	bool Window::update(f32 deltaTime) 	{
+		if (bCursorCaptured) {
+			std::cout << "warp mouse to 1,1 \n";
+			if (SDL_WarpMouseGlobal(0, 0) < 0) {
+				std::cout << "warp failed\n";
+			}
+			//SDL_WarpMouseInWindow(sdlWindowHandle, 1, 1);
+		}
+
+		// Keyboard1
+		std::swap(keyStates, prevKeyStates);
+		const u8* keystate = SDL_GetKeyboardState(nullptr /* its 512 */);
+		for (i32 i = 0; i < 512; ++i) {
+			(*keyStates)[i] = keystate[i];
+		}
+		for (i32 i = 0; i < 512; ++i) {
+			keyHidden[i] = false;
+		}
+
+		// Mouse
+		prevCursorPos = cursorPos;
+		std::swap(buttonStates, prevButtonStates);
+		const u32 buttonMask = SDL_GetMouseState(&cursorPos[0], &cursorPos[1]);
+		for (i32 i = 0; i < 5; ++i) {
+			(*buttonStates)[i] = buttonMask & SDL_BUTTON(i + 1 /*button index starts with 11 for some reason! SDL2 moment*/);
+		}
+		for (i32 i = 0; i < 5; ++i) {
+			buttonHidden[i] = false;
+		}
+
+		// Events
+		bool close{ false };
+		SDL_Event event;
+		while (SDL_PollEvent(&event)) {
+			switch (event.type) {
+			case SDL_QUIT:
+				close = true;
+				break;
+			case SDL_KEYDOWN:
+				if (event.key.keysym.sym == SDLK_SPACE) {
+					bSpacePressed ^= 1;
+				}
+				break;
+			}
+			return close;
+		}
 	}
 }

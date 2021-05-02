@@ -113,27 +113,27 @@ namespace daxa {
 		/**
 		 * \return 4 rectangles representing the corners of the bounds of the given context.
 		 */
-		inline static std::array<Sprite, 4> debugContextCorners(DrawContext const& context) 	{
+		inline static std::array<UISprite, 4> debugContextCorners(DrawContext const& context) 	{
 			return {
-				Sprite{
+				UISprite{
 					.color = Vec4{1,0.5,1,1},
 					.position = {context.topleft, context.renderDepth},
 					.scale = {2,2},
 					.drawMode = context.renderSpace
 				},
-				Sprite{
+				UISprite{
 					.color = Vec4{1,0.5,1,1},
 					.position = {context.bottomright, context.renderDepth},
 					.scale = {2,2},
 					.drawMode = context.renderSpace
 				},
-				Sprite{
+				UISprite{
 					.color = Vec4{1,0.5,1,1},
 					.position = Vec3{context.topleft.x, context.bottomright.y, context.renderDepth},
 					.scale = {2,2},
 					.drawMode = context.renderSpace
 				},
-				Sprite{
+				UISprite{
 					.color = Vec4{1,0.5,1,1},
 					.position = Vec3{context.bottomright.x, context.topleft.y, context.renderDepth},
 					.scale = {2,2},

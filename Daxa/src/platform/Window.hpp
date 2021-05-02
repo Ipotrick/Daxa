@@ -15,6 +15,14 @@ struct SDL_Window;
 
 namespace daxa {
 
+	enum class MouseButton : u8 {
+		Left     = 1,
+		Middle   = 2,
+		Right    = 3,
+		X1       = 4,
+		X2       = 5
+	};
+
 	struct KeyEvent {
 		Scancode scancode;
 		enum class Type : u8 {
@@ -53,11 +61,17 @@ namespace daxa {
 
 		bool isFocused() const;
 
-		bool isKeyPressed(Scancode key) const;
-		bool isKeyJustPressed(Scancode key) const;
-		bool isKeyReleased(Scancode key) const;
-		bool isKeyJustReleased(Scancode key) const;
+		bool keyPressed(Scancode key) const;
+		bool keyJustPressed(Scancode key) const;
+		bool keyReleased(Scancode key) const;
+		bool keyJustReleased(Scancode key) const;
 		void hideKey(Scancode key);
+
+		bool buttonPressed(MouseButton button) const;
+		bool buttonJustPressed(MouseButton button) const;
+		bool buttonReleased(MouseButton button) const;
+		bool buttonJustReleased(MouseButton button) const;
+		void hideButton(MouseButton button);
 
 		std::array<i32,2> getCursorPosition() const; 
 		Vec2 getCursorPositionVec() const;
@@ -78,9 +92,12 @@ namespace daxa {
 		bool bCursorCaptured{ false };
 
 		std::vector<KeyEvent> keyEvents;
-		std::array<bool, 512> keyStates;
-		std::array<bool, 512> prevKeyStates;
+		std::unique_ptr<std::array<bool, 512>> keyStates{ std::make_unique<std::array<bool, 512>>() };
+		std::unique_ptr < std::array<bool, 512>> prevKeyStates{ std::make_unique<std::array<bool, 512>>() };
 		std::array<bool, 512> keyHidden;
+		std::unique_ptr < std::array<bool, 5>> buttonStates{ std::make_unique<std::array<bool, 5>>() };
+		std::unique_ptr < std::array<bool, 5>> prevButtonStates{ std::make_unique<std::array<bool, 5>>() };
+		std::array<bool, 5> buttonHidden;
 
 		std::array<i32, 2> cursorPos;
 		std::array<i32, 2> prevCursorPos;
