@@ -276,11 +276,6 @@ namespace daxa {
 
 		pipelineBuilder
 			.setVertexInput(Vertex::INFO.makePipelineVertexInputStateCreateInfo())
-			.addPushConstants(vk::PushConstantRange{
-				.stageFlags = vk::ShaderStageFlagBits::eVertex,
-				.offset = 0,
-				.size = sizeof(MeshPushConstants),
-				})
 			.addShaderStage(&v, vk::ShaderStageFlagBits::eVertex)
 			.addShaderStage(&f, vk::ShaderStageFlagBits::eFragment)
 			.setDepthStencil(vk::PipelineDepthStencilStateCreateInfo{
@@ -296,8 +291,9 @@ namespace daxa {
 				.cullMode = vk::CullModeFlagBits::eBack,
 				.frontFace = vk::FrontFace::eCounterClockwise,
 				.lineWidth = 1.0f,
-			})
-			.reflectSPVForDescriptors(descLayoutCache);
+				})
+			.reflectSPVForDescriptors(descLayoutCache)
+			.reflectSPVForPushConstants();
 
 		return std::move(pipelineBuilder.build());
 	}

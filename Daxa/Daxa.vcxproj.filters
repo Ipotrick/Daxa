@@ -31,6 +31,21 @@
     <Filter Include="src\rendering\shaders">
       <UniqueIdentifier>{33c95795-1c21-4e29-8fc9-480a3fdcdd80}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\entity">
+      <UniqueIdentifier>{a2ab85e6-b341-4bdc-8c01-5325a1863b52}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\gui">
+      <UniqueIdentifier>{6af0a78b-d5f8-44bf-8dbc-8b3b8ca79b7f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\gui\base">
+      <UniqueIdentifier>{a8498bb9-a01f-4b28-9165-a7f07501db10}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\gui\common">
+      <UniqueIdentifier>{e2ed38b7-0b13-4cc5-b33e-3f47271c6370}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\gui\font">
+      <UniqueIdentifier>{4052cb9f-4075-451d-a7fa-02ee8abe082e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\Daxa.hpp">
@@ -123,6 +138,84 @@
     <ClInclude Include="dependencies\spirv_reflect.hpp">
       <Filter>dependencies</Filter>
     </ClInclude>
+    <ClInclude Include="src\entity\ECS.hpp">
+      <Filter>src\entity</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gui\GUIManager.hpp">
+      <Filter>src\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gui\base\GUIDrawContext.hpp">
+      <Filter>src\gui\base</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gui\base\GUIDrawUtil.hpp">
+      <Filter>src\gui\base</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gui\base\GUIElement.hpp">
+      <Filter>src\gui\base</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gui\base\GUIRootElement.hpp">
+      <Filter>src\gui\base</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gui\base\GUIStyle.hpp">
+      <Filter>src\gui\base</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gui\base\GUITextUtil.hpp">
+      <Filter>src\gui\base</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gui\components\GUIChildAccess.hpp">
+      <Filter>src\gui\common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gui\components\GUICommonElements.hpp">
+      <Filter>src\gui\common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gui\components\GUICommonElementsDraw.hpp">
+      <Filter>src\gui\common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gui\components\GUICommonElementsStyling.hpp">
+      <Filter>src\gui\common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gui\components\GUIDragEvent.hpp">
+      <Filter>src\gui\common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gui\components\GUIDraw.hpp">
+      <Filter>src\gui\common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gui\components\GUIMouseEvent.hpp">
+      <Filter>src\gui\common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gui\components\GUITextElements.hpp">
+      <Filter>src\gui\common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gui\components\GUITextElementsDraw.hpp">
+      <Filter>src\gui\common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gui\components\GUITextElementsStyling.hpp">
+      <Filter>src\gui\common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gui\font\Font.hpp">
+      <Filter>src\gui\font</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gui\font\Glyph.hpp">
+      <Filter>src\gui\font</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\StableVector.hpp">
+      <Filter>src\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\CoordSystem2d.hpp">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\Camera2d.hpp">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\UISprite.hpp">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\PagedIndexMap.hpp">
+      <Filter>src\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gui\font\FontManager.hpp">
+      <Filter>src\gui\font</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\stb_image.cpp">
@@ -169,6 +262,24 @@
     </ClCompile>
     <ClCompile Include="dependencies\spirv_reflect.cpp">
       <Filter>dependencies</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gui\GUIManager.cpp">
+      <Filter>src\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gui\base\GUIDrawContext.cpp">
+      <Filter>src\gui\base</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gui\font\Font.cpp">
+      <Filter>src\gui\font</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gui\font\Glyph.cpp">
+      <Filter>src\gui\font</Filter>
+    </ClCompile>
+    <ClCompile Include="src\rendering\CoordSystem2d.cpp">
+      <Filter>src\rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gui\font\FontManager.cpp">
+      <Filter>src\gui\font</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

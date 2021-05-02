@@ -1,6 +1,6 @@
 #include "ImageManager.hpp"
 namespace daxa {
-    ImageManager::ImageManager(vk::Device device, u16 maxImages) : device{ device }, MAX_IMAGE_SLOTS{ maxImages }, imageSlots(1024) {
+    ImageManager::ImageManager(vk::Device device, u16 maxImages) : device{ device }, MAX_IMAGE_SLOTS{ maxImages }, imageSlots(maxImages) {
         for (u16 i = 0; i < MAX_IMAGE_SLOTS; i++) {
             freeImageSlots.emplace_back(MAX_IMAGE_SLOTS-1-i);
         }

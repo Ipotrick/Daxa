@@ -48,17 +48,17 @@ namespace daxa {
 			descAlloc{ VulkanContext::device }
 		{
 			descSet = vkh::DescriptorSetBuilder(&descAlloc, layoutCache)
-				.addBufferBinding(
-					{ .binding = 0, .descriptorType = vk::DescriptorType::eUniformBuffer, .descriptorCount = 1, .stageFlags = vk::ShaderStageFlagBits::eVertex },
-					{ .buffer = gpuDataBuffer.buffer , .range = sizeof(GPUData) })
-				.build();
+			.addBufferBinding(
+				{ .binding = 0, .descriptorType = vk::DescriptorType::eUniformBuffer, .descriptorCount = 1, .stageFlags = vk::ShaderStageFlagBits::eVertex },
+				{ .buffer = gpuDataBuffer.buffer , .range = sizeof(GPUData) })
+			.build();
 		}
 		vk::DescriptorSet globalSet;
 		vkh::Pool<vk::Semaphore> semaPool;
 		vkh::CommandBufferAllocator cmdPool;
 		Buffer gpuDataBuffer;
 		Buffer testBuffer;
-		vkh::DescriptorAllocator descAlloc;
+		vkh::GeneralDescriptorSetAllocator descAlloc;
 		vk::DescriptorSet descSet;
 		vk::DescriptorSet testSet;
 		vk::UniqueFence fence;
@@ -134,13 +134,9 @@ namespace daxa {
 			}
 		};
 		vk::DescriptorSetLayout globalSetLayout = descLayoutCache.getLayout(globalSetLayoutBindings);
-		vk::DescriptorSetLayoutCreateInfo gLayoutCI{
-				.bindingCount = static_cast<u32>(globalSetLayoutBindings.size()),
-				.pBindings = globalSetLayoutBindings.data(),
-		};
 		vkh::DescriptorSetAllocator globalSetAllocator{
 			VulkanContext::device,
-			gLayoutCI,
+			globalSetLayoutBindings,
 			globalSetLayout
 		};
 

@@ -9,6 +9,7 @@
 #include "../DaxaCore.hpp"
 #include "../threading/Jobs.hpp"
 #include "../threading/OwningMutex.hpp"
+#include "../math/Vec2.hpp"
 
 #include "Vulkan.hpp"
 #include "Image.hpp"
@@ -105,4 +106,11 @@ namespace daxa {
 	};
 
 	using ImageHandle = ImageManager::Handle;
+
+	struct ImageSectionHandle {
+		ImageHandle handle;
+		Vec2 min{0.0f,0.0f};
+		Vec2 max{1.0f,1.0f};
+	};
+
 }

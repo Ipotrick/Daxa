@@ -5,6 +5,8 @@
 #include "../DaxaCore.hpp"
 
 #include "math.hpp"
+#include "Rota2.hpp"
+
 
 namespace daxa {
 

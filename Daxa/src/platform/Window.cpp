@@ -179,6 +179,10 @@ namespace daxa {
 	std::array<i32, 2> Window::getCursorPosition() const {
 		return cursorPos;
 	}
+	Vec2 Window::getCursorPositionVec() const {
+		auto [x, y] = getCursorPosition();
+		return Vec2{ static_cast<f32>(x), static_cast<f32>(y) };
+	}
 	Vec2 Window::getCursorPositionRelative() const {
 		return {
 			f32(cursorPos[0]) / f32(size[0]) * 2.0f - 1.0f,
@@ -190,6 +194,10 @@ namespace daxa {
 			cursorPos[0] - prevCursorPos[0],
 			cursorPos[1] - prevCursorPos[1],
 		};
+	}
+	Vec2 Window::getCursorPositionChangeVec() const {
+		auto [x, y] = getCursorPositionChange();
+		return Vec2{ static_cast<f32>(x), static_cast<f32>(y) };
 	}
 	Vec2 Window::getCursorPositionChangeRelative() const {
 		return getCursorPositionRelative() - Vec2{
