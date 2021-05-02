@@ -59,9 +59,11 @@ namespace daxa {
 		bool isKeyJustReleased(Scancode key) const;
 		void hideKey(Scancode key);
 
-		std::array<i32,2> getCursorPosition() const;
+		std::array<i32,2> getCursorPosition() const; 
+		Vec2 getCursorPositionVec() const;
 		Vec2 getCursorPositionRelative() const;
 		std::array<i32, 2> getCursorPositionChange() const;
+		Vec2 getCursorPositionChangeVec() const;
 		Vec2 getCursorPositionChangeRelative() const;
 		void captureCursor();
 		void releaseCursor();

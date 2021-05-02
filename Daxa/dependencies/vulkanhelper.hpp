@@ -8,7 +8,8 @@
 #include <set>
 #include <unordered_map>
 
-// If you want to use spirv reflect for reflection on descriptor sets in pipeline creation, 
+
+// If you want to use spirv reflect for reflection on descriptor sets in pipeline creation,
 // set the following define to your include path of spirv_reflect like the following:
 // #define VULKANHELPER_SPIRV_REFLECT_INCLUDE_PATH <spirv_reflect.h>
 #define VULKANHELPER_SPIRV_REFLECT_INCLUDE_PATH <spirv_reflect.hpp>
@@ -16,7 +17,6 @@
 #if defined(VULKANHELPER_SPIRV_REFLECT_INCLUDE_PATH)
 #define VULKANHELPER_USE_SPIRV_REFLECT
 #endif
-
 
 #if defined(VULKANHELPER_IMPLEMENTATION)
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
@@ -140,6 +140,7 @@ namespace vkh {
 	public:
 		DescriptorSetLayoutCache(vk::Device device);
 		vk::DescriptorSetLayout getLayout(const std::vector<vk::DescriptorSetLayoutBinding>& bindings);
+
 	private:
 		struct DescriptorLayoutHash {
 			std::size_t operator()(const std::vector<vk::DescriptorSetLayoutBinding>& bindings) const;
@@ -177,17 +178,18 @@ namespace vkh {
 	}
 #endif
 
-	class DescriptorAllocator {
+	class GeneralDescriptorSetAllocator {
 	public:
-		DescriptorAllocator() = default;
-		DescriptorAllocator(vk::Device device, std::vector<vk::DescriptorPoolSize> specificPoolSizes = {}, vk::DescriptorPoolCreateFlagBits poolCreateFlags = {}, uint32_t maxSetsPerPool = 500);
+		GeneralDescriptorSetAllocator() = default;
+		GeneralDescriptorSetAllocator(vk::Device device, std::vector<vk::DescriptorPoolSize> specificPoolSizes = {}, vk::DescriptorPoolCreateFlagBits poolCreateFlags = {}, uint32_t maxSetsPerPool = 500);
 		void reset();
 		vk::DescriptorSet allocate(vk::DescriptorSetLayout layout);
 		std::vector<vk::DescriptorSet> allocate(vk::DescriptorSetLayout layout, uint32_t count);
 
 		const vk::Device device;
+
 	protected:
-		DescriptorAllocator(vk::Device device, vk::DescriptorPoolCreateFlagBits poolFlags, uint32_t maxSetsPerPool);
+		GeneralDescriptorSetAllocator(vk::Device device, vk::DescriptorPoolCreateFlagBits poolFlags, uint32_t maxSetsPerPool);
 
 		vk::UniqueDescriptorPool getUnusedPool();
 		vk::UniqueDescriptorPool createPool();
@@ -202,7 +204,7 @@ namespace vkh {
 	};
 
 #if defined(VULKANHELPER_IMPLEMENTATION)
-	DescriptorAllocator::DescriptorAllocator(vk::Device device, std::vector<vk::DescriptorPoolSize> specificPoolSizes, vk::DescriptorPoolCreateFlagBits poolCreateFlags, uint32_t maxSetsPerPool)
+	GeneralDescriptorSetAllocator::GeneralDescriptorSetAllocator(vk::Device device, std::vector<vk::DescriptorPoolSize> specificPoolSizes, vk::DescriptorPoolCreateFlagBits poolCreateFlags, uint32_t maxSetsPerPool)
 		: device{ device }, maxSetsPerPool{ maxSetsPerPool }, poolCreateFlags{ poolCreateFlags } {
 		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eSampler, .descriptorCount = 500u });
 		this->descriptorPoolSizes.push_back(vk::DescriptorPoolSize{ .type = vk::DescriptorType::eCombinedImageSampler, .descriptorCount = 4000u });
@@ -235,10 +237,10 @@ namespace vkh {
 
 		currentPool = createPool();
 	}
-	DescriptorAllocator::DescriptorAllocator(vk::Device device, vk::DescriptorPoolCreateFlagBits poolFlags, uint32_t maxSetsPerPool)
+	GeneralDescriptorSetAllocator::GeneralDescriptorSetAllocator(vk::Device device, vk::DescriptorPoolCreateFlagBits poolFlags, uint32_t maxSetsPerPool)
 		: device{ device }, poolCreateFlags{ poolFlags }, maxSetsPerPool{ maxSetsPerPool } {
 	}
-	void DescriptorAllocator::reset() {
+	void GeneralDescriptorSetAllocator::reset() {
 		if (currentPool) {
 			device.resetDescriptorPool(*currentPool);
 			unusedPools.push_back(std::move(currentPool));
@@ -251,7 +253,7 @@ namespace vkh {
 		}
 		usedPools.clear();
 	}
-	vk::DescriptorSet DescriptorAllocator::allocate(vk::DescriptorSetLayout layout) {
+	vk::DescriptorSet GeneralDescriptorSetAllocator::allocate(vk::DescriptorSetLayout layout) {
 		auto result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = 1, .pSetLayouts = &layout });
 		if (result.size() == 0) /* we need to reallocate with another pool */ {
 			usedPools.push_back(std::move(currentPool));
@@ -268,7 +270,7 @@ namespace vkh {
 
 		return std::move(result.front());
 	}
-	std::vector<vk::DescriptorSet> DescriptorAllocator::allocate(vk::DescriptorSetLayout layout, uint32_t count) {
+	std::vector<vk::DescriptorSet> GeneralDescriptorSetAllocator::allocate(vk::DescriptorSetLayout layout, uint32_t count) {
 		std::vector<vk::DescriptorSetLayout> layouts(count, layout);
 		auto result = device.allocateDescriptorSets({ .descriptorPool = *currentPool, .descriptorSetCount = count, .pSetLayouts = layouts.data() });
 		if (result.size() == 0) /* we need to reallocate with another pool */ {
@@ -286,7 +288,7 @@ namespace vkh {
 
 		return std::move(result);
 	}
-	vk::UniqueDescriptorPool DescriptorAllocator::getUnusedPool() {
+	vk::UniqueDescriptorPool GeneralDescriptorSetAllocator::getUnusedPool() {
 		if (unusedPools.empty()) {
 			return std::move(createPool());
 		}
@@ -296,7 +298,7 @@ namespace vkh {
 			return std::move(pool);
 		}
 	}
-	vk::UniqueDescriptorPool DescriptorAllocator::createPool() {
+	vk::UniqueDescriptorPool GeneralDescriptorSetAllocator::createPool() {
 		auto allocInfo = vk::DescriptorPoolCreateInfo{
 			.flags = poolCreateFlags,
 			.maxSets = maxSetsPerPool,
@@ -308,26 +310,26 @@ namespace vkh {
 	}
 #endif
 
-	class DescriptorSetAllocator : public DescriptorAllocator {
+	class DescriptorSetAllocator : public GeneralDescriptorSetAllocator {
 	public:
-		DescriptorSetAllocator(vk::Device device, vk::DescriptorSetLayoutCreateInfo layoutCreateInfo, vk::DescriptorSetLayout layout, vk::DescriptorPoolCreateFlagBits poolFlags = {}, uint32_t maxSetsPerPool = 500);
+		DescriptorSetAllocator(vk::Device device, const std::vector<vk::DescriptorSetLayoutBinding>& bindings, vk::DescriptorSetLayout layout, vk::DescriptorPoolCreateFlagBits poolFlags = {}, uint32_t maxSetsPerPool = 500);
 		vk::DescriptorSet allocate();
 		std::vector<vk::DescriptorSet> allocate(uint32_t count);
 
 	private:
-		using DescriptorAllocator::allocate;
+		using GeneralDescriptorSetAllocator::allocate;
 		vk::DescriptorSetLayout layout;
 	};
 
 #if defined(VULKANHELPER_IMPLEMENTATION)
-	DescriptorSetAllocator::DescriptorSetAllocator(vk::Device device, vk::DescriptorSetLayoutCreateInfo layoutCreateInfo, vk::DescriptorSetLayout layout, vk::DescriptorPoolCreateFlagBits poolFlags, uint32_t maxSetsPerPool)
-		: DescriptorAllocator{ device, poolFlags, maxSetsPerPool }, layout{ layout } {
-		const uint32_t descriptorPoolSizesCount = layoutCreateInfo.bindingCount;
+	DescriptorSetAllocator::DescriptorSetAllocator(vk::Device device, const std::vector<vk::DescriptorSetLayoutBinding>& bindings, vk::DescriptorSetLayout layout, vk::DescriptorPoolCreateFlagBits poolFlags, uint32_t maxSetsPerPool)
+		: GeneralDescriptorSetAllocator{ device, poolFlags, maxSetsPerPool }, layout{ layout } {
+		const uint32_t descriptorPoolSizesCount = static_cast<uint32_t>(bindings.size());
 		this->descriptorPoolSizes.resize(descriptorPoolSizesCount);
 
 		for (uint32_t i = 0; i < descriptorPoolSizesCount; i++) {
-			this->descriptorPoolSizes[i].type = layoutCreateInfo.pBindings[i].descriptorType;
-			this->descriptorPoolSizes[i].descriptorCount = layoutCreateInfo.pBindings[i].descriptorCount * maxSetsPerPool;
+			this->descriptorPoolSizes[i].type = bindings[i].descriptorType;
+			this->descriptorPoolSizes[i].descriptorCount = bindings[i].descriptorCount * maxSetsPerPool;
 		}
 
 		currentPool = createPool();
@@ -357,24 +359,25 @@ namespace vkh {
 	}
 #endif
 
-	vk::DescriptorSet createDescriptorSet(const std::vector<vk::DescriptorSetLayoutBinding>& bindings, DescriptorAllocator& alloc, DescriptorSetLayoutCache& layoutCache);
+	vk::DescriptorSet createDescriptorSet(const std::vector<vk::DescriptorSetLayoutBinding>& bindings, GeneralDescriptorSetAllocator& alloc, DescriptorSetLayoutCache& layoutCache);
 
 #if defined(VULKANHELPER_IMPLEMENTATION)
-	vk::DescriptorSet createDescriptorSet(const std::vector<vk::DescriptorSetLayoutBinding>& bindings, DescriptorAllocator& alloc, DescriptorSetLayoutCache& layoutCache) {
+	vk::DescriptorSet createDescriptorSet(const std::vector<vk::DescriptorSetLayoutBinding>& bindings, GeneralDescriptorSetAllocator& alloc, DescriptorSetLayoutCache& layoutCache) {
 		return alloc.allocate(layoutCache.getLayout(bindings));
 	}
 #endif
 
 	class DescriptorSetBuilder {
 	public:
-		DescriptorSetBuilder(DescriptorAllocator* alloc, DescriptorSetLayoutCache* layoutCache);
-		DescriptorSetBuilder(DescriptorAllocator* alloc, vk::DescriptorSetLayout setLayout);
+		DescriptorSetBuilder(GeneralDescriptorSetAllocator* alloc, DescriptorSetLayoutCache* layoutCache);
+		DescriptorSetBuilder(GeneralDescriptorSetAllocator* alloc, vk::DescriptorSetLayout setLayout);
 
 		DescriptorSetBuilder& addBufferBinding(const vk::DescriptorSetLayoutBinding& binding, const vk::DescriptorBufferInfo& bufferInfo);
 		DescriptorSetBuilder& addImageBinding(const vk::DescriptorSetLayoutBinding& binding, const vk::DescriptorImageInfo& imageInfo);
 		vk::DescriptorSet build();
+
 	private:
-		DescriptorAllocator* alloc;
+		GeneralDescriptorSetAllocator* alloc;
 		DescriptorSetLayoutCache* layoutCache;
 		vk::DescriptorSetLayout setLayout;
 
@@ -383,13 +386,11 @@ namespace vkh {
 	};
 
 #if defined(VULKANHELPER_IMPLEMENTATION)
-	DescriptorSetBuilder::DescriptorSetBuilder(DescriptorAllocator* alloc, DescriptorSetLayoutCache* layoutCache)
-		: alloc{ alloc }
-		, layoutCache{ layoutCache } {
+	DescriptorSetBuilder::DescriptorSetBuilder(GeneralDescriptorSetAllocator* alloc, DescriptorSetLayoutCache* layoutCache)
+		: alloc{ alloc }, layoutCache{ layoutCache } {
 	}
-	DescriptorSetBuilder::DescriptorSetBuilder(DescriptorAllocator* alloc, vk::DescriptorSetLayout setLayout)
-		: alloc{ alloc }
-		, setLayout{ setLayout } {
+	DescriptorSetBuilder::DescriptorSetBuilder(GeneralDescriptorSetAllocator* alloc, vk::DescriptorSetLayout setLayout)
+		: alloc{ alloc }, setLayout{ setLayout } {
 	}
 
 	DescriptorSetBuilder& DescriptorSetBuilder::addBufferBinding(const vk::DescriptorSetLayoutBinding& binding, const vk::DescriptorBufferInfo& bufferInfo) {
@@ -424,9 +425,7 @@ namespace vkh {
 					.dstBinding = binding.binding,
 					.descriptorCount = binding.descriptorCount,
 					.descriptorType = binding.descriptorType,
-					.pBufferInfo = &bufferInfo
-				}
-			);
+					.pBufferInfo = &bufferInfo });
 		}
 		for (auto& [binding, imageInfo] : imageBindings) {
 			writes.push_back(
@@ -435,9 +434,7 @@ namespace vkh {
 					.dstBinding = binding.binding,
 					.descriptorCount = binding.descriptorCount,
 					.descriptorType = binding.descriptorType,
-					.pImageInfo = &imageInfo
-				}
-			);
+					.pImageInfo = &imageInfo });
 		}
 
 		alloc->device.updateDescriptorSets(writes, {});
@@ -452,32 +449,73 @@ namespace vkh {
 	vk::DescriptorSetLayout createDescriptorLayout(vk::Device device, std::vector<vk::DescriptorSetLayoutBinding> binding) {
 		vk::DescriptorSetLayoutCreateInfo createInfo{
 			.bindingCount = static_cast<uint32_t>(binding.size()),
-			.pBindings = binding.data()
-		};
+			.pBindings = binding.data() };
 		return device.createDescriptorSetLayout(createInfo);
 	}
 
 	vk::UniqueDescriptorSetLayout createDescriptorLayoutUnique(vk::Device device, std::vector<vk::DescriptorSetLayoutBinding> binding) {
 		vk::DescriptorSetLayoutCreateInfo createInfo{
 			.bindingCount = static_cast<uint32_t>(binding.size()),
-			.pBindings = binding.data()
-		};
+			.pBindings = binding.data() };
 		return device.createDescriptorSetLayoutUnique(createInfo);
 	}
 #endif
 
+#if defined(VULKANHELPER_USE_SPIRV_REFLECT)
 	std::unordered_map<uint32_t, std::unordered_map<uint32_t, vk::DescriptorSetLayoutBinding>>
-		reflectSetBindings(std::vector<uint32_t> spv, vk::ShaderStageFlagBits shaderStage);
+		reflectSetBindings(const std::vector<uint32_t>& spv, vk::ShaderStageFlagBits shaderStage);
 
 	std::vector<vk::DescriptorSetLayout> mergeReflectedSetBindings(
 		std::vector<std::unordered_map<uint32_t, std::unordered_map<uint32_t, vk::DescriptorSetLayoutBinding>>> setMaps,
 		vkh::DescriptorSetLayoutCache& layoutCache);
 
+	std::vector<vk::PushConstantRange> reflectPushConstants(const std::vector<uint32_t>& spv, vk::ShaderStageFlagBits shaderStage);
+	std::vector<vk::PushConstantRange> mergeReflectedPushConstants(const std::vector<std::vector<vk::PushConstantRange>>& pushConstantsRanges);
+
+#endif
 
 #if defined(VULKANHELPER_IMPLEMENTATION)
 #if defined(VULKANHELPER_USE_SPIRV_REFLECT)
+	std::vector<vk::PushConstantRange> mergeReflectedPushConstants(const std::vector<std::vector<vk::PushConstantRange>>& pushConstantsRanges) {
+		std::vector<vk::PushConstantRange> ret;
+		for (auto& ranges : pushConstantsRanges) {
+			for (auto pushConstant : ranges) {
+				if (auto iter = std::find(ret.begin(), ret.end(), pushConstant); 
+					iter != ret.end()) 
+				{
+					iter->stageFlags |= pushConstant.stageFlags;
+				}
+				else {
+					ret.push_back(pushConstant);
+				}
+			}
+		}
+		return std::move(ret);
+	}
+	std::vector<vk::PushConstantRange> reflectPushConstants(const std::vector<uint32_t>& spv, vk::ShaderStageFlagBits shaderStage) {
+		SpvReflectShaderModule module = {};
+		SpvReflectResult result = spvReflectCreateShaderModule(spv.size() * sizeof(uint32_t), spv.data(), &module);
+		assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+		uint32_t count = 0;
+		result = spvReflectEnumeratePushConstantBlocks(&module, &count, NULL);
+
+		std::vector<SpvReflectBlockVariable*> blocks(count);
+		result = spvReflectEnumeratePushConstantBlocks(&module, &count, blocks.data());
+		assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+		std::vector<vk::PushConstantRange> ret;
+		for (auto* block : blocks) {
+			ret.push_back(vk::PushConstantRange{
+				.stageFlags = shaderStage,
+				.offset = block->offset,
+				.size = block->size,
+			});
+		}
+		return std::move(ret);
+	}
 	std::unordered_map<uint32_t, std::unordered_map<uint32_t, vk::DescriptorSetLayoutBinding>>
-		reflectSetBindings(std::vector<uint32_t> spv, vk::ShaderStageFlagBits shaderStage) 	{
+		reflectSetBindings(const std::vector<uint32_t>& spv, vk::ShaderStageFlagBits shaderStage) {
 		SpvReflectShaderModule module = {};
 		SpvReflectResult result = spvReflectCreateShaderModule(spv.size() * sizeof(uint32_t), spv.data(), &module);
 		assert(result == SPV_REFLECT_RESULT_SUCCESS);
@@ -500,13 +538,10 @@ namespace vkh {
 					.binding = reflBinding->binding,
 					.descriptorType = static_cast<vk::DescriptorType>(reflBinding->descriptor_type),
 					.descriptorCount = reflBinding->count,
-					.stageFlags = shaderStage
-				};
+					.stageFlags = shaderStage };
 				setMap[set->set][binding.binding] = binding;
 			}
 		}
-
-
 
 		spvReflectDestroyShaderModule(&module);
 		return std::move(setMap);
@@ -581,7 +616,7 @@ namespace vkh {
 		GraphicsPipelineBuilder& setColorBlend(const vk::PipelineColorBlendStateCreateInfo& colorBlend);
 		GraphicsPipelineBuilder& addColorBlendAttachemnt(const vk::PipelineColorBlendAttachmentState& colorAttachmentBlend);
 		GraphicsPipelineBuilder& addShaderStage(
-			const std::vector<uint32_t>* spv,	
+			const std::vector<uint32_t>* spv,
 			vk::ShaderStageFlagBits shaderStage,
 			vk::PipelineShaderStageCreateFlags flags = {},
 			vk::SpecializationInfo* pSpecializationInfo = {});
@@ -590,6 +625,7 @@ namespace vkh {
 		GraphicsPipelineBuilder& setDescriptorLayouts(const std::vector<vk::DescriptorSetLayout>& layouts);
 #if defined(VULKANHELPER_USE_SPIRV_REFLECT)
 		GraphicsPipelineBuilder& reflectSPVForDescriptors(DescriptorSetLayoutCache& layoutCache);
+		GraphicsPipelineBuilder& reflectSPVForPushConstants();
 #endif // VULKANHELPER_USE_SPIRV_REFLECT
 
 	private:
@@ -616,6 +652,34 @@ namespace vkh {
 
 		std::vector<vk::UniqueShaderModule> shaderModules;
 	};
+	class ComputePipelineBuilder {
+	public:
+		ComputePipelineBuilder(vk::Device device, vk::PipelineCache pipelineCache = nullptr);
+		Pipeline build();
+
+		ComputePipelineBuilder& setShaderStage(
+			const std::vector<uint32_t>* spv,
+			vk::PipelineShaderStageCreateFlags flags = {},
+			vk::SpecializationInfo* pSpecializationInfo = {});
+		ComputePipelineBuilder& addPushConstants(const vk::PushConstantRange& pushconstants);
+		ComputePipelineBuilder& setDescriptorLayouts(const std::vector<vk::DescriptorSetLayout>& layouts);
+#if defined(VULKANHELPER_USE_SPIRV_REFLECT)
+		ComputePipelineBuilder& reflectSPVForDescriptors(DescriptorSetLayoutCache& layoutCache);
+		ComputePipelineBuilder& reflectSPVForPushConstants();
+#endif
+
+	private:
+		vk::Device device;
+		vk::PipelineCache pipelineCache;
+#if defined(VULKANHELPER_USE_SPIRV_REFLECT)
+		const std::vector<uint32_t>* spv;
+#endif
+		vk::PipelineShaderStageCreateInfo shaderStage;
+		std::vector<vk::PushConstantRange> pushConstants;
+		std::vector<vk::DescriptorSetLayout> descLayouts;
+
+		vk::UniqueShaderModule shaderModule;
+	};
 
 #if defined(VULKANHELPER_IMPLEMENTATION)
 #if defined(VULKANHELPER_USE_SPIRV_REFLECT)
@@ -623,7 +687,7 @@ namespace vkh {
 		std::vector<std::unordered_map<uint32_t, std::unordered_map<uint32_t, vk::DescriptorSetLayoutBinding>>> setMaps;
 
 		if (this->descLayouts.size() > 0) {
-			std::cerr << "vulkan helper warning: there are diescriptor set layouts set brefore reflectSPVForDescriptors. All descriptor set layouts will be replaced by reflectSPVForDescriptors!\n";
+			std::cerr << "vulkan helper warning: there are diescriptor set layouts set before reflectSPV. All descriptor set layouts will be replaced by reflectSPV!\n";
 		}
 
 		for (auto [stage, spvPtr] : spvs) {
@@ -631,24 +695,25 @@ namespace vkh {
 		}
 		this->descLayouts = mergeReflectedSetBindings(setMaps, layoutCache);
 
-		const std::vector<uint32_t>* vertexShaderSPV{ nullptr };
-		for (auto [stage, spvPtr] : spvs) {
-			if (stage == vk::ShaderStageFlagBits::eVertex) {
-				vertexShaderSPV = spvPtr;
-				break;
-			}
-		}
-
-		if (vertexShaderSPV) {
-
-		}
-
 		return *this;
 	}
-#endif	// VULKANHELPER_USE_SPIRV_REFLECT
+
+	GraphicsPipelineBuilder& GraphicsPipelineBuilder::reflectSPVForPushConstants() {
+		std::vector<std::vector<vk::PushConstantRange>> results; 
+		if (this->descLayouts.size() > 0) {
+			std::cerr << "vulkan helper warning: there are push constants ranges set before reflectSPV. All push constant ranges will be replaced by reflectSPVs!\n";
+		}
+		std::vector<std::vector<vk::PushConstantRange>> ranges;
+		for (auto [stage, spvPtr] : spvs) {
+			ranges.push_back(reflectPushConstants(*spvPtr, stage));
+		}
+		this->pushConstants = mergeReflectedPushConstants(ranges);
+		return *this;
+	}
+#endif // VULKANHELPER_USE_SPIRV_REFLECT
 
 	GraphicsPipelineBuilder::GraphicsPipelineBuilder(vk::Device device, vk::RenderPass pass, vk::PipelineCache pipelineCache)
-		:device{ device }, renderPass{ pass }, pipelineCache{ pipelineCache } {
+		: device{ device }, renderPass{ pass }, pipelineCache{ pipelineCache } {
 	}
 	GraphicsPipelineBuilder& GraphicsPipelineBuilder::setSubPass(uint32_t index) {
 		this->subPass = index;
@@ -697,17 +762,15 @@ namespace vkh {
 		vk::SpecializationInfo* pSpecializationInfo) {
 		vk::ShaderModuleCreateInfo moduleCreateInfo{
 			.codeSize = static_cast<uint32_t>(spv->size()) * sizeof(uint32_t),
-			.pCode = spv->data()
-		};
+			.pCode = spv->data() };
 #if defined(VULKANHELPER_USE_SPIRV_REFLECT)
 		this->spvs.emplace_back(shaderStage, spv);
-#endif	// VULKANHELPER_USE_SPIRV_REFLECT
+#endif // VULKANHELPER_USE_SPIRV_REFLECT
 		this->shaderModules.push_back(device.createShaderModuleUnique(moduleCreateInfo));
 		vk::PipelineShaderStageCreateInfo pipelineStageCI{
 			.stage = shaderStage,
 			.module = this->shaderModules.back().get(),
-			.pName = "main"
-		};
+			.pName = "main" };
 		this->shaderStages.push_back(pipelineStageCI);
 		return *this;
 	}
@@ -838,6 +901,90 @@ namespace vkh {
 		auto ret = device.createGraphicsPipelineUnique(pipelineCache, pipelineCI);
 		if (ret.result != vk::Result::eSuccess) {
 			throw std::runtime_error("error: Failed to create graphics pipeline!");
+		}
+		pipeline.pipeline = std::move(ret.value);
+
+		return pipeline;
+	}
+
+	ComputePipelineBuilder::ComputePipelineBuilder(vk::Device device, vk::PipelineCache pipelineCache)
+		: device{ device }, pipelineCache{ pipelineCache } {
+	}
+	ComputePipelineBuilder& ComputePipelineBuilder::setShaderStage(
+		const std::vector<uint32_t>* spv,
+		vk::PipelineShaderStageCreateFlags flags,
+		vk::SpecializationInfo* pSpecializationInfo) {
+#if defined(VULKANHELPER_USE_SPIRV_REFLECT)
+		this->spv = spv;
+#endif
+		vk::ShaderModuleCreateInfo moduleCreateInfo{
+			.codeSize = static_cast<uint32_t>(spv->size()) * sizeof(uint32_t),
+			.pCode = spv->data() };
+		this->shaderModule = device.createShaderModuleUnique(moduleCreateInfo);
+		vk::PipelineShaderStageCreateInfo pipelineStageCI{
+			.stage = vk::ShaderStageFlagBits::eCompute,
+			.module = this->shaderModule.get(),
+			.pName = "main" };
+		this->shaderStage = pipelineStageCI;
+		return *this;
+	}
+	ComputePipelineBuilder& ComputePipelineBuilder::addPushConstants(const vk::PushConstantRange& pushconstant) {
+		this->pushConstants.push_back(pushconstant);
+		return *this;
+	}
+
+	ComputePipelineBuilder& ComputePipelineBuilder::setDescriptorLayouts(const std::vector<vk::DescriptorSetLayout>& layouts) {
+		this->descLayouts = layouts;
+		return *this;
+	}
+
+#if defined(VULKANHELPER_USE_SPIRV_REFLECT)
+	ComputePipelineBuilder& ComputePipelineBuilder::reflectSPVForDescriptors(DescriptorSetLayoutCache& layoutCache) {
+
+		if (this->descLayouts.size() > 0) {
+			std::cerr << "vulkan helper warning: there are diescriptor set layouts set brefore reflectSPVForDescriptors. All descriptor set layouts will be replaced by reflectSPVForDescriptors!\n";
+		}
+
+		auto setMap = reflectSetBindings(*spv, vk::ShaderStageFlagBits::eCompute);
+		std::vector vec{ setMap };
+		this->descLayouts = mergeReflectedSetBindings(vec, layoutCache);
+
+		const std::vector<uint32_t>* vertexShaderSPV{ nullptr };
+
+		return *this;
+	}
+	ComputePipelineBuilder& ComputePipelineBuilder::reflectSPVForPushConstants() {
+		std::vector<std::vector<vk::PushConstantRange>> results;
+		if (this->descLayouts.size() > 0) {
+			std::cerr << "vulkan helper warning: there are push constants ranges set before reflectSPV. All push constant ranges will be replaced by reflectSPVs!\n";
+		}
+		this->pushConstants = reflectPushConstants(*spv, vk::ShaderStageFlagBits::eCompute);
+		return *this;
+	}
+#endif // #if defined(VULKANHELPER_USE_SPIRV_REFLECT)
+
+	Pipeline ComputePipelineBuilder::build() {
+		Pipeline pipeline;
+
+		//build pipeline layout:
+		vk::PipelineLayoutCreateInfo layoutCI{
+			.setLayoutCount = static_cast<uint32_t>(descLayouts.size()),
+			.pSetLayouts = descLayouts.data(),
+			.pushConstantRangeCount = uint32_t(pushConstants.size()),
+			.pPushConstantRanges = pushConstants.data(),
+		};
+
+		pipeline.layout = device.createPipelineLayoutUnique(layoutCI);
+
+		//we now use all of the info structs we have been writing into into this one to create the pipeline
+		vk::ComputePipelineCreateInfo pipelineCI{
+			.stage = this->shaderStage,
+			.layout = pipeline.layout.get(),
+		};
+
+		auto ret = device.createComputePipelineUnique(pipelineCache, pipelineCI);
+		if (ret.result != vk::Result::eSuccess) {
+			throw std::runtime_error("error: Failed to create compute pipeline!");
 		}
 		pipeline.pipeline = std::move(ret.value);
 
