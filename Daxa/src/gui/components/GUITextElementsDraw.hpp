@@ -3,7 +3,7 @@
 #include <charconv>
 
 #include "GUICommonElementsDraw.hpp"
-#include "../../rendering/Window.hpp"
+#include "../../platform/Window.hpp"
 namespace daxa {
 	namespace gui {
 

@@ -29,7 +29,7 @@ namespace daxa {
 		void emplaceBack(Args && ... args) {
 			uz pageIndex = page(elementsSize);
 			assurePages(pageIndex);
-			new (&pages[pageIndex][offset(elementsSize)]) (std::move(args));
+			new (&pages[pageIndex][offset(elementsSize)]) T(std::move(args));
 			elementsSize++;
 		}
 
@@ -42,27 +42,27 @@ namespace daxa {
 		}
 
 		const T& operator[](uz index) const {
-			return pages[page(lastElementIndex)][offset(lastElementIndex)];
+			return pages[page(index)][offset(index)];
 		}
 
 		T& operator[](uz index) {
-			return pages[page(lastElementIndex)][offset(lastElementIndex)];
+			return pages[page(index)][offset(index)];
 		}
 
 		const T& at(uz index) const {
-			return pages.at(page(lastElementIndex))[offset(lastElementIndex)];
+			return pages.at(page(index))[offset(index)];
 		}
 
 		T& at(uz index) {
-			return pages.at(page(lastElementIndex))[offset(lastElementIndex)];
+			return pages.at(page(index))[offset(index)];
 		}
 
 		bool empty() const {
-			return elementSize > 0;
+			return elementsSize > 0;
 		}
 
 		uz size() const {
-			return elementSize;
+			return elementsSize;
 		}
 
 		uz capacity() const {
@@ -75,7 +75,7 @@ namespace daxa {
 
 		void clear() {
 			if constexpr (!std::is_trivially_destructible_v<T>) {
-				for (uz i = 0; i < elementSize; i++) {
+				for (uz i = 0; i < elementsSize; i++) {
 					operator[](i).~T();
 				}
 			}
@@ -91,11 +91,11 @@ namespace daxa {
 		}
 
 		const T& back() const {
-			return operator[](elementSize-1);
+			return operator[](elementsSize-1);
 		}
 
 		T& back() {
-			return operator[](elementSize - 1);
+			return operator[](elementsSize - 1);
 		}
 
 	private:
@@ -106,7 +106,7 @@ namespace daxa {
 		static constexpr uz page(uz index) {
 			return index >> PAGE_EXPONENT;
 		}
-		static constexpr uz offset() {
+		static constexpr uz offset(uz index) {
 			return index & OFFSET_MASK;
 		}
 		void assurePages(uz pageIndex) {

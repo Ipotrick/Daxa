@@ -1,6 +1,8 @@
 #pragma once
 
 #include "../base/GUIElement.hpp"
+#include "../font/FontManager.hpp"
+
 namespace daxa {
 	namespace gui {
 

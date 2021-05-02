@@ -191,8 +191,8 @@ namespace daxa {
 			return std::isnan(p.left) || std::isnan(p.right) || std::isnan(p.top) || std::isnan(p.bottom);
 		}
 		void fit(DrawContext& context, Vec2 scaledSize, Vec2 place) 	{
-			context.topleft = place + Vec2{ -scaledSize.x, scaledSize.y } *0.5;
-			context.bottomright = place - Vec2{ -scaledSize.x, scaledSize.y } *0.5;
+			context.topleft = place + Vec2{ -scaledSize.x, scaledSize.y } * 0.5f;
+			context.bottomright = place - Vec2{ -scaledSize.x, scaledSize.y } *0.5f;
 		}
 		void fit(DrawContext& context, Padding const& padding) 	{
 			switch (padding.topmode) {

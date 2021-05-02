@@ -236,9 +236,9 @@ namespace daxa {
 				onMouseEvent(*this, elements[mouseEvent.element], mouseEvent.element, mouseEvent.root);
 			}
 			if (mouseEvenetQueue.size()) {
-				window.consumeMouseButtonEvent(MouseButton::MB_LEFT);
-				window.consumeMouseButtonEvent(MouseButton::MB_MIDDLE);
-				window.consumeMouseButtonEvent(MouseButton::MB_RIGHT);
+				window.consumeMouseButtonEvent(MouseButton::Left);
+				window.consumeMouseButtonEvent(MouseButton::Middle);
+				window.consumeMouseButtonEvent(MouseButton::Right);
 				window.consumeMouseButtonEvent(MouseButton::MB_4);
 				window.consumeMouseButtonEvent(MouseButton::MB_5);
 				window.consumeMouseScrollX();
@@ -293,15 +293,15 @@ namespace daxa {
 			droppedElement = nullptr;
 			droppedElementId = INVALID_ELEMENT_ID;
 			auto& [elementid, roothandle] = draggedElement;
-			if (window->buttonPressed(MouseButton::MB_LEFT) && elementid != INVALID_ELEMENT_ID && isHandleValid(roothandle)) {
+			if (window->buttonPressed(MouseButton::Left) && elementid != INVALID_ELEMENT_ID && isHandleValid(roothandle)) {
 
 				onDragEvent(*this, elements[elementid], elementid, roothandle.index);
 
-				window->consumeMouseButtonEvent(MouseButton::MB_LEFT);
-				window->consumeMouseButtonEvent(MouseButton::MB_MIDDLE);
-				window->consumeMouseButtonEvent(MouseButton::MB_RIGHT);
-				window->consumeMouseButtonEvent(MouseButton::MB_4);
-				window->consumeMouseButtonEvent(MouseButton::MB_5);
+				window->hideButton(MouseButton::Left);
+				window->hideButton(MouseButton::Middle);
+				window->hideButton(MouseButton::Right);
+				window->hideButton(MouseButton::X1);
+				window->hideButton(MouseButton::X2);
 			}
 			else {
 				if (elementid != INVALID_ELEMENT_ID && isHandleValid(roothandle)) {
@@ -316,7 +316,7 @@ namespace daxa {
 
 		void Manager::updateFocusedTextInput() 	{
 			auto& [elementid, roothandle] = focusedTextInput;
-			if (!(elementid != INVALID_ELEMENT_ID && isHandleValid(roothandle)) || window->buttonJustPressed(MouseButton::MB_LEFT)) {
+			if (!(elementid != INVALID_ELEMENT_ID && isHandleValid(roothandle)) || window->buttonJustPressed(MouseButton::Left)) {
 				focusedTextInput = { INVALID_ELEMENT_ID, {} };
 			}
 		}

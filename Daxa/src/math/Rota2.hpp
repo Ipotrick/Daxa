@@ -7,7 +7,7 @@ namespace daxa {
 	template<std::floating_point T>
 	struct TRotation2 {
 		constexpr TRotation2() = default;
-		TRotation2(T angle) : cos{ std::cos(angle/RAD<T>::value) }, sin{ std::sin(angle/RAD<T>::value) }{}
+		TRotation2(T angle) : cos{ std::cos(angle * INV_RAD<T>::value) }, sin{ std::sin(angle * INV_RAD<T>::value) }{}
 
 		static constexpr TRotation2<T> fromUnitVec(TVec2<T> vec)
 		{
@@ -30,7 +30,7 @@ namespace daxa {
 			return this->cos == v.cos && this->sin == v.sin;
 		}
 
-		constexpr TVec2<T> toUnitVec()
+		constexpr TVec2<T> toUnitVec() const
 		{
 			return { cos,sin };
 		}

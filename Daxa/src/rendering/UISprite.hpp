@@ -22,6 +22,6 @@ namespace daxa {
 		uint32_t isMSDF{ false };
 		RenderSpace2d drawMode{ RenderSpace2d::Window };
 		uint8_t p0;
-		uint16_t p0;
+		uint16_t p1;
 	};
 }

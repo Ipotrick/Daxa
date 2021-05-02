@@ -16,26 +16,26 @@ namespace daxa {
 		PagedIndexMap(PagedIndexMap&& rhs) = default;
 		PagedIndexMap(const PagedIndexMap& rhs) = delete;
 
-		void insert(const T& t, cu32 index) 	{
+		void insert(const T& t, const u32 index) 	{
 			assert(!contains(index));
 			assurePage(index);
 			std::unique_ptr<Page>& pagePtr = pages[page(index)];
-			cu32 offsetIndex = offset(index);
+			const u32 offsetIndex = offset(index);
 			pagePtr->usedSlotsCount += 1;
 			pagePtr->slots[offsetIndex] = t;
 		}
 
-		void insert(T&& t, cu32 index) 	{
+		void insert(T&& t, const u32 index) 	{
 			assert(!contains(index));
 			assurePage(index);
 			std::unique_ptr<Page>& pagePtr = pages[page(index)];
-			cu32 offsetIndex = offset(index);
+			const u32 offsetIndex = offset(index);
 			pagePtr->usedSlotsCount += 1;
 			pagePtr->slots[offsetIndex] = std::move(t);
 		}
 
 		bool contains(u32 index) const 	{
-			cu32 pageIndex = page(index);
+			const u32 pageIndex = page(index);
 			return
 				pageIndex < pages.size() &&
 				pages[pageIndex] != nullptr &&
@@ -60,7 +60,7 @@ namespace daxa {
 		void erase(u32 index) 	{
 			assert(contains(index));
 			std::unique_ptr<Page>& pagePtr = pages[page(index)];
-			cu32 offsetIndex = offset(index);
+			const u32 offsetIndex = offset(index);
 			assert(pagePtr->slots[offsetIndex].has_value());
 			pagePtr->usedSlotsCount -= 1;
 			pagePtr->slots[offsetIndex] = std::nullopt;
@@ -101,7 +101,7 @@ namespace daxa {
 			return entity & OFFSET_MASK;
 		}
 
-		void assurePage(cu32 index) 	{
+		void assurePage(const u32 index) 	{
 			if (page(index) + 1 > pages.size()) {
 				pages.resize(page(index) + 1);
 			}
