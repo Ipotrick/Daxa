@@ -26,8 +26,10 @@ namespace daxa {
 	struct KeyEvent {
 		Scancode scancode;
 		enum class Type : u8 {
-			Up,
-			Down,
+			JustPressed,
+			Pressed,
+			Released,
+			JustReleased,
 			Repeat
 		};
 		Type type;
@@ -73,14 +75,30 @@ namespace daxa {
 		bool buttonJustReleased(MouseButton button) const;
 		void hideButton(MouseButton button);
 
+		bool buttonPressedAndHide(MouseButton button);
+		bool buttonJustPressedAndHide(MouseButton button);
+		bool buttonReleasedAndHide(MouseButton button);
+		bool buttonJustReleasedAndHide(MouseButton button);
+
 		std::array<i32,2> getCursorPosition() const; 
+		std::array<i32,2> getPrevCursorPosition() const; 
 		Vec2 getCursorPositionVec() const;
+		Vec2 getPrevCursorPositionVec() const;
 		Vec2 getCursorPositionRelative() const;
 		std::array<i32, 2> getCursorPositionChange() const;
 		Vec2 getCursorPositionChangeVec() const;
 		Vec2 getCursorPositionChangeRelative() const;
 		void captureCursor();
 		void releaseCursor();
+
+		f32 scrollX() const;
+		f32 scrollY() const;
+		void hideScrollX();
+		void hideScrollY();
+		f32 scrollXAndHide();
+		f32 scrollYAndHide();
+
+		std::vector<KeyEvent> getKeyEventsInOrder() const;
 
 	private:
 
@@ -98,6 +116,11 @@ namespace daxa {
 		std::unique_ptr < std::array<bool, 5>> buttonStates{ std::make_unique<std::array<bool, 5>>() };
 		std::unique_ptr < std::array<bool, 5>> prevButtonStates{ std::make_unique<std::array<bool, 5>>() };
 		std::array<bool, 5> buttonHidden;
+		f32 m_scrollX{ 0.0f };
+		f32 m_scrollY{ 0.0f };
+		bool scrollXHidden{ false };
+		bool scrollYHidden{ false };
+		std::vector<KeyEvent> eventQ;
 
 		std::array<i32, 2> cursorPos;
 		std::array<i32, 2> prevCursorPos;

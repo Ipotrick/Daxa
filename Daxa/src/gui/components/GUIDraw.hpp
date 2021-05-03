@@ -6,25 +6,25 @@
 namespace daxa {
 	namespace gui {
 		template<typename T>
-		void onDraw(Manager& manager, T& element, u32 id, DrawContext const& context, std::vector<Sprite>& out) { static_assert(false); }
+		void onDraw(Manager& manager, T& element, u32 id, DrawContext const& context, std::vector<UISprite>& out) { static_assert(false); }
 
-		template<> void onDraw(Manager& manager, std::monostate& self, u32 id, DrawContext const& context, std::vector<Sprite>& out) {}
-		template<> void onDraw(Manager& manager, Box& self, u32 id, DrawContext const& context, std::vector<Sprite>& out);
-		template<> void onDraw(Manager& manager, Group& self, u32 id, DrawContext const& context, std::vector<Sprite>& out);
-		template<> void onDraw(Manager& manager, _Button& self, u32 id, DrawContext const& context, std::vector<Sprite>& out);
-		template<> void onDraw(Manager& manager, _StaticText& self, u32 id, DrawContext const& context, std::vector<Sprite>& out);
-		template<> void onDraw(Manager& manager, _Text& self, u32 id, DrawContext const& context, std::vector<Sprite>& out);
-		template<> void onDraw(Manager& manager, _TextInput& self, u32 id, DrawContext const& context, std::vector<Sprite>& out);
-		template<> void onDraw(Manager& manager, _Checkbox& self, u32 id, DrawContext const& context, std::vector<Sprite>& out);
-		template<> void onDraw(Manager& manager, _Radiobox& self, u32 id, DrawContext const& context, std::vector<Sprite>& out);
-		template<> void onDraw(Manager& manager, SliderF64& self, u32 id, DrawContext const& context, std::vector<Sprite>& out);
-		template<> void onDraw(Manager& manager, DragDroppable& self, u32 id, DrawContext const& context, std::vector<Sprite>& out);
-		template<> void onDraw(Manager& manager, DropBox& self, u32 id, DrawContext const& context, std::vector<Sprite>& out);
-		template<> void onDraw(Manager& manager, _TextInputF64& self, u32 id, DrawContext const& context, std::vector<Sprite>& out);
-		template<> void onDraw(Manager& manager, HeadTail& self, u32 id, DrawContext const& context, std::vector<Sprite>& out);
-		template<> void onDraw(Manager& manager, _ScrollBox& self, u32 id, DrawContext const& context, std::vector<Sprite>& out);
+		template<> void onDraw(Manager& manager, std::monostate& self, u32 id, DrawContext const& context, std::vector<UISprite>& out) {}
+		template<> void onDraw(Manager& manager, Box& self, u32 id, DrawContext const& context, std::vector<UISprite>& out);
+		template<> void onDraw(Manager& manager, Group& self, u32 id, DrawContext const& context, std::vector<UISprite>& out);
+		template<> void onDraw(Manager& manager, _Button& self, u32 id, DrawContext const& context, std::vector<UISprite>& out);
+		template<> void onDraw(Manager& manager, _StaticText& self, u32 id, DrawContext const& context, std::vector<UISprite>& out);
+		template<> void onDraw(Manager& manager, _Text& self, u32 id, DrawContext const& context, std::vector<UISprite>& out);
+		template<> void onDraw(Manager& manager, _TextInput& self, u32 id, DrawContext const& context, std::vector<UISprite>& out);
+		template<> void onDraw(Manager& manager, _Checkbox& self, u32 id, DrawContext const& context, std::vector<UISprite>& out);
+		template<> void onDraw(Manager& manager, _Radiobox& self, u32 id, DrawContext const& context, std::vector<UISprite>& out);
+		template<> void onDraw(Manager& manager, SliderF64& self, u32 id, DrawContext const& context, std::vector<UISprite>& out);
+		template<> void onDraw(Manager& manager, DragDroppable& self, u32 id, DrawContext const& context, std::vector<UISprite>& out);
+		template<> void onDraw(Manager& manager, DropBox& self, u32 id, DrawContext const& context, std::vector<UISprite>& out);
+		template<> void onDraw(Manager& manager, _TextInputF64& self, u32 id, DrawContext const& context, std::vector<UISprite>& out);
+		template<> void onDraw(Manager& manager, HeadTail& self, u32 id, DrawContext const& context, std::vector<UISprite>& out);
+		template<> void onDraw(Manager& manager, _ScrollBox& self, u32 id, DrawContext const& context, std::vector<UISprite>& out);
 
-		inline void draw(Manager& manager, ElementVariant& var, u32 id, DrawContext const& context, std::vector<Sprite>& out) 	{
+		inline void draw(Manager& manager, ElementVariant& var, u32 id, DrawContext const& context, std::vector<UISprite>& out) 	{
 			std::visit([&](auto&& element) { onDraw(manager, element, id, context, out); }, var);
 		}
 
@@ -60,7 +60,7 @@ namespace daxa {
 			return manager.minsizes[id];
 		}
 
-		inline void drawRoot(Manager& manager, u32 id, std::vector<Sprite>& out) 	{
+		inline void drawRoot(Manager& manager, u32 id, std::vector<UISprite>& out) 	{
 			Root& self = manager.rootElements[id].element;
 
 			if (self.onUpdate) self.onUpdate(self, id);
@@ -68,8 +68,8 @@ namespace daxa {
 			if (self.child != INVALID_ELEMENT_ID) {
 				DrawContext myContext;
 				myContext.scale = manager.globalScaling;
-				myContext.topleft = Vec2{ 0, cast<f32>(manager.window->getHeight()) };
-				myContext.bottomright = Vec2{ cast<f32>(manager.window->getWidth()), 0 };
+				myContext.topleft = Vec2{ 0, manager.window->getSizeVec().y };
+				myContext.bottomright = Vec2{ manager.window->getSizeVec().x, 0 };
 
 				auto scaledSize = getSize(self.sizing, myContext);
 				auto place = getPlace(scaledSize, self.placing, myContext);

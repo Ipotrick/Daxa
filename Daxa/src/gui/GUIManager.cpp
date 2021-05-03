@@ -103,8 +103,6 @@ namespace daxa {
 						}
 						else {
 							auto [staticChildren, staticChildrenCount] = getStaticChildren(element);
-							assert(position < staticChildrenCount);
-							assert(*(staticChildren + position) != INVALID_ELEMENT_ID);
 							*(staticChildren + toOrphanChild) = INVALID_ELEMENT_ID;
 						}
 					},
@@ -236,13 +234,13 @@ namespace daxa {
 				onMouseEvent(*this, elements[mouseEvent.element], mouseEvent.element, mouseEvent.root);
 			}
 			if (mouseEvenetQueue.size()) {
-				window.consumeMouseButtonEvent(MouseButton::Left);
-				window.consumeMouseButtonEvent(MouseButton::Middle);
-				window.consumeMouseButtonEvent(MouseButton::Right);
-				window.consumeMouseButtonEvent(MouseButton::MB_4);
-				window.consumeMouseButtonEvent(MouseButton::MB_5);
-				window.consumeMouseScrollX();
-				window.consumeMouseScrollY();
+				window.hideButton(MouseButton::Left);
+				window.hideButton(MouseButton::Middle);
+				window.hideButton(MouseButton::Right);
+				window.hideButton(MouseButton::X1);
+				window.hideButton(MouseButton::X2);
+				window.hideScrollX();
+				window.hideScrollY();
 			}
 
 			this->deltaTime = NAN;
