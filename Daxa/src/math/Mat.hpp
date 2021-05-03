@@ -463,6 +463,17 @@ namespace daxa {
 		return makeRotaX<M, T>(x) * makeRotaY<M, T>(y) * makeRotaZ<M, T>(z) * mat;
 	}
 
+	template<size_t M, size_t N, std::floating_point T>
+	inline constexpr bool hasNANS(const Mat<M, N, T>& mat) {
+		auto& lin = mat.linear();
+		for (u32 i = 0; i < M * N; i++) {
+			if (std::isnan(lin[i])) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 
 	using Mat2x2 = Mat<2, 2, f32>;
 	using Mat2x3 = Mat<2, 3, f32>;

@@ -98,19 +98,19 @@ namespace daxa {
 	template<std::floating_point T>
 	inline TVec2<T> round(TVec2<T> vec)
 	{
-		return TVec2{ std::round(vec.x), std::round(vec.y) };
+		return TVec2<T>{ std::round(vec.x), std::round(vec.y) };
 	}
 
 	template<std::floating_point T>
 	inline TVec2<T> floor(TVec2<T> vec)
 	{
-		return TVec2{ std::floor(vec.x), std::floor(vec.y) };
+		return TVec2<T>{ std::floor(vec.x), std::floor(vec.y) };
 	}
 
 	template<std::floating_point T>
 	inline TVec2<T> ceil(TVec2<T> vec)
 	{
-		return TVec2{ std::ceil(vec.x), std::ceil(vec.y) };
+		return TVec2<T>{ std::ceil(vec.x), std::ceil(vec.y) };
 	}
 
 	template<std::floating_point T>

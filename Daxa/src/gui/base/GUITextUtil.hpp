@@ -48,7 +48,7 @@ namespace daxa {
 		 * \param out buffer to write sprites to
 		 * \return first: number of codepoints processed in the string; second: unscaled bounding size of the drawn text.
 		 */
-		inline std::pair<u32, Vec2> drawFontText(const char* str, TextContext const& context, std::vector<Sprite>& out) 	{
+		inline std::pair<u32, Vec2> drawFontText(const char* str, TextContext const& context, std::vector<UISprite>& out) 	{
 			if (str == nullptr || str[0] == 0x00) return { 0,{} };
 
 			const Font& FONT = *context.font;
@@ -141,17 +141,17 @@ namespace daxa {
 								SCALED_FONT_SIZE * scaledGlyph.planeBounds.bottom + size.y * 0.5f
 						};
 						out.push_back(
-							Sprite{
+							UISprite{
 								.color = context.color,
 								.position = Vec3{ place, context.renderDepth },
 								.scale = size,
-								.texHandle = context.tex,
+								.imageIndex = context.tex.getIndex(),
 								.texMin = Vec2{scaledGlyph.atlasBounds.left, scaledGlyph.atlasBounds.bottom},
 								.texMax = Vec2{scaledGlyph.atlasBounds.right, scaledGlyph.atlasBounds.top},
 								.clipMin = context.clipMin,
 								.clipMax = context.clipMax,
 								.isMSDF = true,
-								.drawMode = RenderSpace::Pixel,
+								.drawMode = RenderSpace2d::Pixel,
 							}
 						);
 

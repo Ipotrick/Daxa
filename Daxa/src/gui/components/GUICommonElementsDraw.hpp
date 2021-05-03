@@ -14,28 +14,28 @@ namespace daxa {
 			minsize = max(minsize, self.minsize);
 			return minsize;
 		}
-		template<> inline void onDraw<Box>(Manager& manager, Box& self, u32 id, DrawContext const& context, std::vector<Sprite>& out) 	{
+		template<> inline void onDraw<Box>(Manager& manager, Box& self, u32 id, DrawContext const& context, std::vector<UISprite>& out) 	{
 			const Vec2 scaledSize = (self.bFillSpace ? context.size() : manager.minsizes[id] * context.scale);
 			const Vec2 place = getPlace(scaledSize, context);
 
-			TextureSection& tex = cast<TextureSection&>(self.texture);
+			ImageSectionHandle& tex = static_cast<ImageSectionHandle&>(self.texture);
 			auto [texMin, texMax] = self.bScreenTexture ?
 				getScreenTextureMinMax(place, scaledSize, context.renderSpace, manager.coordSys) :
 				std::pair<Vec2, Vec2>{ tex.min, tex.max };
 
-			if (cast<Vec4&>(self.color).a != 0.0f) {
+			if (static_cast<Vec4&>(self.color).w != 0.0f) {
 				out.push_back(
-					Sprite{
+					UISprite{
 						.color = self.color,
 						.position = Vec3{place, context.renderDepth},
 						.scale = scaledSize,
-						.texHandle = tex.handle,
+						.imageIndex = tex.handle.getIndex(),
 						.texMin = texMin,
 						.texMax = texMax,
 						.clipMin = context.clipMin,
 						.clipMax = context.clipMax,
 						.cornerRounding = self.cornerRounding * context.scale,
-						.drawMode = RenderSpace::Pixel
+						.drawMode = RenderSpace2d::Pixel
 					}
 				);
 			}
@@ -64,7 +64,7 @@ namespace daxa {
 			}
 			return minsize;
 		}
-		template<> inline void onDraw<_Button>(Manager& manager, _Button& self, u32 id, DrawContext const& context, std::vector<Sprite>& out) 	{
+		template<> inline void onDraw<_Button>(Manager& manager, _Button& self, u32 id, DrawContext const& context, std::vector<UISprite>& out) 	{
 			auto scaledSize = manager.minsizes[id] * context.scale;
 			auto place = getPlace(scaledSize, context);
 
@@ -78,23 +78,23 @@ namespace daxa {
 
 			const Vec4 colorAddition = self.bHover ? Vec4{ 0.1,0.1,0.1,0 } : Vec4{};
 
-			TextureSection& tex = cast<TextureSection&>(self.texture);
+			ImageSectionHandle& tex = static_cast<ImageSectionHandle&>(self.texture);
 			auto [texMin, texMax] = self.bScreenTexture ?
 				getScreenTextureMinMax(place, scaledSize, context.renderSpace, manager.coordSys) :
 				std::pair<Vec2, Vec2>{ tex.min, tex.max };
 
 			out.push_back(
-				Sprite{
+				UISprite{
 					.color = (self.bHold ? self.holdColor : self.color) + colorAddition,
 					.position = Vec3{place, context.renderDepth },
 					.scale = scaledSize,
-					.texHandle = tex.handle,
+					.imageIndex = tex.handle.getIndex(),
 					.texMin = texMin,
 					.texMax = texMax,
 					.clipMin = context.clipMin,
 					.clipMax = context.clipMax,
 					.cornerRounding = 3.0f * context.scale,
-					.drawMode = RenderSpace::Pixel
+					.drawMode = RenderSpace2d::Pixel
 				}
 			);
 
@@ -115,7 +115,7 @@ namespace daxa {
 			if (self.onUpdate) self.onUpdate(self, id);
 			return self.size;
 		}
-		template<> inline void onDraw<_Checkbox>(Manager& manager, _Checkbox& self, u32 id, DrawContext const& context, std::vector<Sprite>& out) 	{
+		template<> inline void onDraw<_Checkbox>(Manager& manager, _Checkbox& self, u32 id, DrawContext const& context, std::vector<UISprite>& out) 	{
 			Vec2 scaledSize = self.size * context.scale;
 			Vec2 place = getPlace(scaledSize, context);
 
@@ -126,14 +126,14 @@ namespace daxa {
 			}
 
 			out.push_back(
-				Sprite{
+				UISprite{
 					.color = self.color,
 					.position = Vec3{place, context.renderDepth},
 					.scale = scaledSize,
 					.clipMin = context.clipMin,
 					.clipMax = context.clipMax,
 					.cornerRounding = 2.0f * context.scale,
-					.drawMode = RenderSpace::Pixel
+					.drawMode = RenderSpace2d::Pixel
 				}
 			);
 
@@ -152,14 +152,14 @@ namespace daxa {
 				scaledSize -= Vec2{ smallerDiemnsion ,smallerDiemnsion };
 
 				out.push_back(
-					Sprite{
+					UISprite{
 						.color = (*self.value ? self.colorEnabled : self.colorDisabled),
 						.position = Vec3{place, context.renderDepth },
 						.scale = scaledSize,
 						.clipMin = context.clipMin,
 						.clipMax = context.clipMax,
 						.cornerRounding = 1.5f * context.scale,
-						.drawMode = RenderSpace::Pixel
+						.drawMode = RenderSpace2d::Pixel
 					}
 				);
 			}
@@ -170,7 +170,7 @@ namespace daxa {
 			if (self.child != INVALID_ELEMENT_ID) updateAndGetMinsize(manager, self.child);
 			return self.size;
 		}
-		template<> inline void onDraw<SliderF64>(Manager& manager, SliderF64& self, u32 id, DrawContext const& context, std::vector<Sprite>& out) 	{
+		template<> inline void onDraw<SliderF64>(Manager& manager, SliderF64& self, u32 id, DrawContext const& context, std::vector<UISprite>& out) 	{
 			const Vec2 responsiveArea = self.size * context.scale;
 			const Vec2 place = getPlace(responsiveArea, context);
 			const Vec2 scaledBarSize = responsiveArea * (self.bThin ? (self.bVertical ? Vec2{ 0.225f, 1.0f } : Vec2{ 1.0f, 0.225f }) : Vec2{ 1,1 });
@@ -183,34 +183,34 @@ namespace daxa {
 			const bool rangeOK{ self.max > self.min };
 			// Draw bar:
 			out.push_back(
-				Sprite{
+				UISprite{
 					.color = rangeOK ? self.colorBar : self.colorError,
 					.position = Vec3{place, context.renderDepth},
 					.scale = scaledBarSize,
 					.clipMin = context.clipMin,
 					.clipMax = context.clipMax,
 					.cornerRounding = biggerInidcatorSize * 0.2f * 0.5f,
-					.drawMode = RenderSpace::Pixel
+					.drawMode = RenderSpace2d::Pixel
 				}
 			);
 
 			const auto [isCursorOver, cursor] = manager.isCursorOver(place, responsiveArea, context);
 
-			//const Vec2 cursor = manager.coordSys.convertCoordSys(manager.window->getCursorPos(), RenderSpace::Window, RenderSpace::Pixel);
+			//const Vec2 cursor = manager.coordSys.convertCoordSys(manager.window->getCursorPos(), RenderSpace2d::Window, RenderSpace2d::Pixel);
 			if (isCursorOver) {
 				manager.requestMouseEvent(id, context.root, context.renderDepth);
 			}
 
 			auto drawInvalidSlider = [&]() {
 				out.push_back(
-					Sprite{
+					UISprite{
 						.color = rangeOK ? self.colorBar : self.colorError,
 						.position = Vec3{place, context.renderDepth},
 						.scale = indicatorSize2,
 						.clipMin = context.clipMin,
 						.clipMax = context.clipMax,
 						.cornerRounding = smallerInidcatorSize * 0.5f,
-						.drawMode = RenderSpace::Pixel
+						.drawMode = RenderSpace2d::Pixel
 					}
 				);
 			};
@@ -236,14 +236,14 @@ namespace daxa {
 
 					// Draw Slider indexer:
 					out.push_back(
-						Sprite{
+						UISprite{
 							.color = self.colorSlider * (bDragged ? 0.9f : 1.0f),
 							.position = Vec3{sliderPos, context.renderDepth},
 							.scale = indicatorSize2,
 							.clipMin = context.clipMin,
 							.clipMax = context.clipMax,
 							.cornerRounding = smallerInidcatorSize * 0.5f,
-							.drawMode = RenderSpace::Pixel
+							.drawMode = RenderSpace2d::Pixel
 						}
 					);
 
@@ -289,7 +289,7 @@ namespace daxa {
 			minsize += size(self.padding);
 			return minsize;
 		}
-		template<> inline void onDraw<Group>(Manager& manager, Group& self, u32 id, DrawContext const& context, std::vector<Sprite>& out) 	{
+		template<> inline void onDraw<Group>(Manager& manager, Group& self, u32 id, DrawContext const& context, std::vector<UISprite>& out) 	{
 			const Vec2 scaledWholeSize = context.size();
 			const Vec2 scaledHalfSize = scaledWholeSize * 0.5f;
 			const Vec2 place = getPlace(scaledWholeSize, context);
@@ -382,7 +382,7 @@ namespace daxa {
 			}
 			return minsize;
 		}
-		template<> inline void onDraw<DragDroppable>(Manager& manager, DragDroppable& self, u32 id, DrawContext const& context, std::vector<Sprite>& out) 	{
+		template<> inline void onDraw<DragDroppable>(Manager& manager, DragDroppable& self, u32 id, DrawContext const& context, std::vector<UISprite>& out) 	{
 			const Vec2 scaledSize = manager.minsizes[id] * context.scale;
 			Vec2 place = getPlace(scaledSize, context);
 
@@ -421,26 +421,26 @@ namespace daxa {
 			minsize = max(minsize, self.minsize);
 			return minsize;
 		}
-		template<> inline void onDraw<DropBox>(Manager& manager, DropBox& self, u32 id, DrawContext const& context, std::vector<Sprite>& out) 	{
+		template<> inline void onDraw<DropBox>(Manager& manager, DropBox& self, u32 id, DrawContext const& context, std::vector<UISprite>& out) 	{
 			const Vec2 scaledSize = manager.minsizes[id] * context.scale;
 			const Vec2 place = getPlace(scaledSize, context);
 
 			if (manager.isCursorOver(place, scaledSize, context)) {
-				if (manager.window->buttonJustReleased(MouseButton::MB_LEFT) || self.bCatchMouseInput) {
+				if (manager.window->buttonJustReleased(MouseButton::Left) || self.bCatchMouseInput) {
 					manager.requestMouseEvent(id, context.root, context.renderDepth);
 				}
 			}
 
-			if (cast<Vec4&>(self.color).a != 0.0f) {
+			if (static_cast<Vec4&>(self.color).w != 0.0f) {
 				out.push_back(
-					Sprite{
+					UISprite{
 						.color = self.color,
 						.position = Vec3{place, context.renderDepth},
 						.scale = scaledSize,
 						.clipMin = context.clipMin,
 						.clipMax = context.clipMax,
 						.cornerRounding = 3.0f * context.scale,
-						.drawMode = RenderSpace::Pixel
+						.drawMode = RenderSpace2d::Pixel
 					}
 				);
 			}
@@ -465,7 +465,7 @@ namespace daxa {
 			minsize.y += self.spacing;
 			return minsize;
 		}
-		template<> inline void onDraw<HeadTail>(Manager& manager, HeadTail& self, u32 id, DrawContext const& context, std::vector<Sprite>& out) 	{
+		template<> inline void onDraw<HeadTail>(Manager& manager, HeadTail& self, u32 id, DrawContext const& context, std::vector<UISprite>& out) 	{
 			const f32 scaledFooterSize = self.size * context.scale;
 			const f32 scaledSpacing = self.spacing * context.scale;
 			const f32 scaledHeadderSize = context.size().y - scaledFooterSize - scaledSpacing;
@@ -494,11 +494,11 @@ namespace daxa {
 			if (self.onUpdate) self.onUpdate(self, id);
 			return self.size;
 		}
-		template<> inline void onDraw<_Radiobox>(Manager& manager, _Radiobox& self, u32 id, DrawContext const& context, std::vector<Sprite>& out) 	{
+		template<> inline void onDraw<_Radiobox>(Manager& manager, _Radiobox& self, u32 id, DrawContext const& context, std::vector<UISprite>& out) 	{
 			Vec2 scaledSize = self.size * context.scale;
 			Vec2 place = getPlace(scaledSize, context);
 
-			//const Vec2 cursor = manager.coordSys.convertCoordSys(manager.window->getCursorPos(), RenderSpace::Window, RenderSpace::Pixel);
+			//const Vec2 cursor = manager.coordSys.convertCoordSys(manager.window->getCursorPos(), RenderSpace2d::Window, RenderSpace2d::Pixel);
 			//const bool cursorOverElement = isPointInAABB(cursor, place, scaledSize);
 
 			f32 HOVER_SCALING{ 0.9f };
@@ -510,14 +510,14 @@ namespace daxa {
 			const f32 smallerScale = std::min(scaledSize.x, scaledSize.y);
 
 			out.push_back(
-				Sprite{
+				UISprite{
 					.color = self.color,
 					.position = Vec3{place, context.renderDepth},
 					.scale = scaledSize,
 					.clipMin = context.clipMin,
 					.clipMax = context.clipMax,
 					.cornerRounding = smallerScale * 0.5f,
-					.drawMode = RenderSpace::Pixel
+					.drawMode = RenderSpace2d::Pixel
 				}
 			);
 
@@ -533,14 +533,14 @@ namespace daxa {
 				const bool enabled = *self.value == self.index;
 
 				out.push_back(
-					Sprite{
+					UISprite{
 						.color = (enabled ? self.colorEnabled : self.colorDisabled),
 						.position = Vec3{place, context.renderDepth },
 						.scale = scaledSize * 0.75f,
 						.clipMin = context.clipMin,
 						.clipMax = context.clipMax,
 						.cornerRounding = smallerScale * 0.75f * 0.5f,
-						.drawMode = RenderSpace::Pixel
+						.drawMode = RenderSpace2d::Pixel
 					}
 				);
 			}
@@ -552,33 +552,33 @@ namespace daxa {
 			Vec2 minsize = size(self.padding) + self.minsize;
 			return minsize;
 		}
-		template<> inline void onDraw<_ScrollBox>(Manager& manager, _ScrollBox& self, u32 id, DrawContext const& context, std::vector<Sprite>& out) 	{
+		template<> inline void onDraw<_ScrollBox>(Manager& manager, _ScrollBox& self, u32 id, DrawContext const& context, std::vector<UISprite>& out) 	{
 			const Vec2 scaledSize = (self.bFillSpace ? context.size() : manager.minsizes[id] * context.scale);
 			const Vec2 place = getPlace(scaledSize, context);
 
 
-			TextureSection& tex = cast<TextureSection&>(self.textureView);
+			ImageSectionHandle& tex = static_cast<ImageSectionHandle&>(self.textureView);
 			auto [texMin, texMax] = self.bScreenTextureView ?
 				getScreenTextureMinMax(place, scaledSize, context.renderSpace, manager.coordSys) :
 				std::pair<Vec2, Vec2>{ tex.min, tex.max };
 
 
 			out.push_back(
-				Sprite{
+				UISprite{
 					.color = self.colorView,
 					.position = Vec3{place, context.renderDepth},
 					.scale = scaledSize,
-					.texHandle = tex.handle,
+					.imageIndex = tex.handle.getIndex(),
 					.texMin = texMin,
 					.texMax = texMax,
 					.clipMin = context.clipMin,
 					.clipMax = context.clipMax,
-					.drawMode = RenderSpace::Pixel
+					.drawMode = RenderSpace2d::Pixel
 				}
 			);
 
 			if (self.child != INVALID_ELEMENT_ID) {
-				const Vec2 cursor = manager.coordSys.convertCoordSys(manager.window->getCursorPos(), RenderSpace::Window, RenderSpace::Pixel);
+				const Vec2 cursor = manager.coordSys.convertCoordSys(manager.window->getCursorPositionVec(), RenderSpace2d::Window, RenderSpace2d::Pixel);
 				const Vec2 scaledChildMinSize = (manager.minsizes[self.child] + size(self.padding)) * context.scale;
 				const f32 scaledScrollerWidth = self.scrollerWidth * context.scale;
 				Vec2 scaledViewSize = scaledSize;
@@ -596,13 +596,13 @@ namespace daxa {
 					Vec2 scrollBarPlace = scaledViewPlace + Vec2{ (scaledViewSize.x + scaledScrollerWidth) * 0.5f, 0 };
 					Vec2 scrollBarSize = Vec2{ scaledScrollerWidth, scaledViewSize.y };
 					const f32 scrollerHeight = std::max(scaledViewSize.y * (scaledViewSize.y / scaledChildMinSize.y), scaledScrollerWidth);
-					out.push_back(Sprite{
+					out.push_back(UISprite{
 						.color = self.colorScrollBar,
 						.position = Vec3{scrollBarPlace, context.renderDepth},
 						.scale = scrollBarSize,
 						.clipMin = context.clipMin,
 						.clipMax = context.clipMax,
-						.drawMode = RenderSpace::Pixel
+						.drawMode = RenderSpace2d::Pixel
 						});
 
 					const f32 scrollerPlaceMax = scrollBarPlace.y + (scrollBarSize.y - scrollerHeight) * 0.5f;
@@ -624,17 +624,17 @@ namespace daxa {
 					childContextSize.x = scaledViewSize.x;
 					childContextSize.y = scaledChildMinSize.y;
 
-					out.push_back(Sprite{
+					out.push_back(UISprite{
 						.color = self.colorScroller,
 						.position = Vec3{scrollerPlace, context.renderDepth},
 						.scale = scrollerSize,
 						.clipMin = context.clipMin,
 						.clipMax = context.clipMax,
-						.drawMode = RenderSpace::Pixel
+						.drawMode = RenderSpace2d::Pixel
 						});
 
 					if (manager.draggedElement.first == id) {
-						const Vec2 prevCursor = manager.coordSys.convertCoordSys(manager.window->getPrevCursorPos(), RenderSpace::Window, RenderSpace::Pixel);
+						const Vec2 prevCursor = manager.coordSys.convertCoordSys(manager.window->getPrevCursorPositionVec(), RenderSpace2d::Window, RenderSpace2d::Pixel);
 						const f32 cursorYDistTraveled = cursor.y - prevCursor.y;
 						const f32 relativeScrollerPosChange = cursorYDistTraveled / scrollerCoordRange;
 						self.viewOffset -= (relativeScrollerPosChange * viewScrollableRange) / context.scale;
@@ -667,10 +667,10 @@ namespace daxa {
 				auto childcontext = context;
 				childcontext.xalign = self.xalign;
 				childcontext.yalign = self.yalign;
-				const Vec2 viewClipMin = scaledViewPlace - scaledViewSize * 0.5f + Vec2{ cast<Padding>(self.padding).left, cast<Padding>(self.padding).bottom } *context.scale;
-				const Vec2 viewClipMax = scaledViewPlace + scaledViewSize * 0.5f - Vec2{ cast<Padding>(self.padding).right, cast<Padding>(self.padding).top } *context.scale;
-				childcontext.clipMin = manager.coordSys.convertCoordSys(viewClipMin, context.renderSpace, RenderSpace::Window);
-				childcontext.clipMax = manager.coordSys.convertCoordSys(viewClipMax, context.renderSpace, RenderSpace::Window);
+				const Vec2 viewClipMin = scaledViewPlace - scaledViewSize * 0.5f + Vec2{ static_cast<Padding>(self.padding).left, static_cast<Padding>(self.padding).bottom } *context.scale;
+				const Vec2 viewClipMax = scaledViewPlace + scaledViewSize * 0.5f - Vec2{ static_cast<Padding>(self.padding).right, static_cast<Padding>(self.padding).top } *context.scale;
+				childcontext.clipMin = manager.coordSys.convertCoordSys(viewClipMin, context.renderSpace, RenderSpace2d::Window);
+				childcontext.clipMax = manager.coordSys.convertCoordSys(viewClipMax, context.renderSpace, RenderSpace2d::Window);
 				fit(childcontext, childContextSize, childContextPlace);
 				fit(childcontext, self.padding);
 

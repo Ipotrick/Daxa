@@ -1,6 +1,9 @@
 #pragma once
 
 #include <ostream>
+#include <optional>
+
+#include "../DaxaCore.hpp"
 
 namespace daxa {
 
@@ -367,4 +370,21 @@ namespace daxa {
 	const char* keyScancodeToString(Scancode key);
 
 	std::ostream& operator<<(std::ostream& os, Scancode key);
+
+	inline std::optional<u8> scanCodeToChar(Scancode key, bool shift) {
+		if (key <= Scancode::N9 && key >= Scancode::NP_0) {
+			return (u8)key - (u8)Scancode::NP_0 + (u8)'0';
+		}
+		else if (key <= Scancode::EQUALS && key >= Scancode::SPACE) {
+			return (u8)key - (shift ? 0x10 : 0x00);
+		}
+		else if (key <= Scancode::Z && key >= Scancode::A) {
+			return (u8)key + (shift ? 0x00 : 0x20);
+		}
+		else if (key <= Scancode::NP_9 && key >= Scancode::NP_0) {
+			return (u8)key - (u8)Scancode::NP_0 + (u8)Scancode::N0;
+		}
+		return {};
+	}
+
 }

@@ -37,7 +37,11 @@ namespace daxa {
 
         constexpr static TVec4<T> From255(u8 r, u8 g, u8 b, u8 a = 255)
         {
-            return TVec4{ static_cast<T>(r) / 255.0, static_cast<T>(g) / 255.0, static_cast<T>(b) / 255.0, static_cast<T>(a) / 255.0 };
+            return TVec4{
+                static_cast<T>(r) / static_cast<T>(255.0), 
+                static_cast<T>(g) / static_cast<T>(255.0),
+                static_cast<T>(b) / static_cast<T>(255.0), 
+                static_cast<T>(a) / static_cast<T>(255.0) };
         }
 
         constexpr T const* data() const { return &x; }
@@ -198,6 +202,7 @@ namespace daxa {
         os << '(' << vec.x << ',' << vec.y << ',' << vec.z << ',' << vec.w << ')';
         return os;
     }
+
 
     using Vec4 = TVec4<f32>;
     using Vec4f64 = TVec4<f64>;

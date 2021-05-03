@@ -142,11 +142,38 @@ namespace daxa {
 	void Window::hideButton(MouseButton button) {
 		buttonHidden[u8(button)] = true;
 	}
+	bool Window::buttonPressedAndHide(MouseButton button) {
+		auto ret = buttonPressed(button);
+		hideButton(button);
+		return ret;
+	}
+	bool Window::buttonJustPressedAndHide(MouseButton button) {
+		auto ret = buttonJustPressed(button);
+		hideButton(button);
+		return ret;
+	}
+	bool Window::buttonReleasedAndHide(MouseButton button) {
+		auto ret = buttonReleased(button);
+		hideButton(button);
+		return ret;
+	}
+	bool Window::buttonJustReleasedAndHide(MouseButton button) {
+		auto ret = buttonJustReleased(button);
+		hideButton(button);
+		return ret;
+	}
 	std::array<i32, 2> Window::getCursorPosition() const {
 		return cursorPos;
 	}
+	std::array<i32, 2> Window::getPrevCursorPosition() const {
+		return prevCursorPos;
+	}
 	Vec2 Window::getCursorPositionVec() const {
 		auto [x, y] = getCursorPosition();
+		return Vec2{ static_cast<f32>(x), static_cast<f32>(y) };
+	}
+	Vec2 Window::getPrevCursorPositionVec() const {
+		auto [x, y] = getPrevCursorPosition();
 		return Vec2{ static_cast<f32>(x), static_cast<f32>(y) };
 	}
 	Vec2 Window::getCursorPositionRelative() const {
@@ -179,6 +206,28 @@ namespace daxa {
 		SDL_SetRelativeMouseMode(SDL_FALSE);
 		bCursorCaptured = false;
 	}
+	f32 Window::scrollX() const {
+		return scrollXHidden ? 0.0f : m_scrollX;
+	}
+	f32 Window::scrollY() const {
+		return scrollYHidden ? 0.0f : m_scrollY;
+	}
+	void Window::hideScrollX() {
+		scrollXHidden = true;
+	}
+	void Window::hideScrollY() {
+		scrollYHidden = true;
+	}
+	f32 Window::scrollXAndHide() {
+		auto ret = scrollXHidden ? 0.0f : m_scrollX;
+		hideScrollX();
+		return ret;
+	}
+	f32 Window::scrollYAndHide() {
+		auto ret = scrollYHidden ? 0.0f : m_scrollY;
+		hideScrollY();
+		return ret;
+	}
 	bool Window::update(f32 deltaTime) 	{
 		if (bCursorCaptured) {
 			std::cout << "warp mouse to 1,1 \n";
@@ -188,7 +237,13 @@ namespace daxa {
 			//SDL_WarpMouseInWindow(sdlWindowHandle, 1, 1);
 		}
 
-		// Keyboard1
+
+		scrollXHidden = false;
+		scrollYHidden = false;
+
+
+
+		// Keyboard
 		std::swap(keyStates, prevKeyStates);
 		const u8* keystate = SDL_GetKeyboardState(nullptr /* its 512 */);
 		for (i32 i = 0; i < 512; ++i) {
@@ -225,5 +280,15 @@ namespace daxa {
 			}
 			return close;
 		}
+	}
+
+	std::vector<KeyEvent> Window::getKeyEventsInOrder() const {
+		std::vector<KeyEvent> ret;
+		for (auto e : eventQ) {
+			if (keyHidden[u32(e.scancode)]) {
+				ret.push_back(e);
+			}
+		}
+		return ret;
 	}
 }

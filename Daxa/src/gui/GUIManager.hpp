@@ -93,8 +93,8 @@ namespace daxa {
 					elements[index] = std::move(element);
 				}
 				else {
-					elements.emplace_back(std::move(element));
-					parents.emplace_back(INVALID_ELEMENT_ID);
+					elements.emplaceBack(std::move(element));
+					parents.emplaceBack(INVALID_ELEMENT_ID);
 					minsizes.resize(elements.size(), Vec2{ 0.0f, 0.0f });
 					index = static_cast<u32>(elements.size() - 1);
 				}

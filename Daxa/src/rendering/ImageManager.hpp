@@ -25,11 +25,11 @@ namespace daxa {
 			mutable std::atomic_uint32_t refCount{ 0 };
 			uint32_t leftSurvivalFrames{ 0 };
 
-			bool holdsImage() const {
+			bool holdsValue() const {
 				return refCount != 0 && leftSurvivalFrames != 0;
 			}
 
-			operator bool() const { return holdsImage(); }
+			operator bool() const { return holdsValue(); }
 		};
 
 		class Handle;
@@ -51,6 +51,14 @@ namespace daxa {
 			OwningMutex<Image>& getMtx();
 
 			u16 getIndex() const { return index; }
+
+			bool holdsValue() const {
+				return manager != nullptr;
+			}
+
+			operator bool() const {
+				return holdsValue();
+			}
 		private:
 			friend class ImageManager;
 			friend class WeakHandle;
