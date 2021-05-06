@@ -7,6 +7,7 @@
 #include <functional>
 #include <set>
 #include <unordered_map>
+#include <variant>
 
 
 // If you want to use spirv reflect for reflection on descriptor sets in pipeline creation,
@@ -700,7 +701,7 @@ namespace vkh {
 
 	GraphicsPipelineBuilder& GraphicsPipelineBuilder::reflectSPVForPushConstants() {
 		std::vector<std::vector<vk::PushConstantRange>> results; 
-		if (this->descLayouts.size() > 0) {
+		if (this->pushConstants.size() > 0) {
 			std::cerr << "vulkan helper warning: there are push constants ranges set before reflectSPV. All push constant ranges will be replaced by reflectSPVs!\n";
 		}
 		std::vector<std::vector<vk::PushConstantRange>> ranges;
@@ -1160,6 +1161,108 @@ namespace vkh {
 	}
 
 #endif
+	class RenderPassBuilder {
+	public:
+		RenderPassBuilder(vk::Device device) : device{device} {}
+		vk::UniqueRenderPass build() {
+			if (subpasses.empty()) {
+				subpasses.push_back({});
+
+				auto& [desc, attachmentRefs] = subpasses.back();
+				attachmentRefs.reserve(attachmentDescs.size());
+
+				std::optional<vk::AttachmentReference> depthAttachment;
+
+				for (uint32_t i = 0; i < attachmentDescs.size(); ++i) {
+					vk::ImageLayout layout;
+					switch (attachmentDescs[i].initialLayout) {
+					case vk::ImageLayout::eDepthAttachmentOptimal:
+					case vk::ImageLayout::eDepthAttachmentStencilReadOnlyOptimal:
+					case vk::ImageLayout::eDepthReadOnlyOptimal:
+					case vk::ImageLayout::eDepthReadOnlyStencilAttachmentOptimal:
+					case vk::ImageLayout::eDepthStencilAttachmentOptimal:
+						layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+						assert(!depthAttachment);	// can only have one depth stencil attachment 
+						depthAttachment = vk::AttachmentReference{ .attachment = i, .layout = layout, };
+						break;
+					case vk::ImageLayout::eDepthStencilReadOnlyOptimal:
+						layout = vk::ImageLayout::eDepthStencilReadOnlyOptimal;
+						assert(!depthAttachment);	// can only have one depth stencil attachment 
+						depthAttachment = vk::AttachmentReference{ .attachment = i, .layout = layout, };
+						break;
+					default:
+						layout = vk::ImageLayout::eColorAttachmentOptimal;
+						desc.colorAttachmentCount += 1;
+						attachmentRefs.push_back({ .attachment = i, .layout = layout, });
+					}
+				}
+
+				desc.pColorAttachments = attachmentRefs.data();
+				if (depthAttachment) {
+					attachmentRefs.push_back(*depthAttachment);
+					desc.pDepthStencilAttachment = attachmentRefs.data() + desc.colorAttachmentCount;
+				}
+			}
+
+			std::vector<vk::SubpassDescription> subpassDescriptions;
+			subpassDescriptions.reserve(subpasses.size());
+			for (auto& [subpassDescription, _] : subpasses) {
+				subpassDescriptions.push_back(subpassDescription);
+			}
+
+			vk::RenderPassCreateInfo passCI{
+				.flags = flags,
+				.attachmentCount = static_cast<uint32_t>(attachmentDescs.size()),
+				.pAttachments = attachmentDescs.data(),
+				.subpassCount = static_cast<uint32_t>(subpassDescriptions.size()),
+				.pSubpasses = subpassDescriptions.data(),
+			};
+
+			return device.createRenderPassUnique(passCI);
+		}
+
+		RenderPassBuilder& addAttachment(vk::AttachmentDescription desc) {
+			attachmentDescs.emplace_back(desc);
+			return *this;
+		}
+
+		RenderPassBuilder& addSubpass(
+			std::vector<vk::AttachmentReference> colorAttachments,
+			std::optional<vk::AttachmentReference> depthAttachment = {},
+			vk::SubpassDescriptionFlags flags = {}
+		) {
+			subpasses.push_back({});
+
+			auto& [desc, attachmentRefs] = subpasses.back();
+
+			desc.flags = flags;
+			desc.colorAttachmentCount = colorAttachments.size();
+
+			attachmentRefs = std::move(colorAttachments);
+			if (depthAttachment) {
+				attachmentRefs.push_back(*depthAttachment);
+			}
+
+			desc.pColorAttachments = attachmentRefs.data();
+			if (depthAttachment) {
+				desc.pDepthStencilAttachment = attachmentRefs.data() + desc.colorAttachmentCount;
+			}
+
+			return *this;
+		}
+
+		RenderPassBuilder& setCreateFags(vk::RenderPassCreateFlags flags) {
+			this->flags = flags;
+			return *this;
+		}
+
+	private:
+		vk::Device device;
+		vk::RenderPassCreateFlags flags = {};
+		std::vector<vk::AttachmentDescription> attachmentDescs;
+		std::vector<std::pair<vk::SubpassDescription, std::vector<vk::AttachmentReference>>> subpasses;
+	};
+
 } // namespace vkh
 
 namespace vkh_detail {

@@ -75,6 +75,7 @@
     <ClInclude Include="src\util\PagedIndexMap.hpp" />
     <ClInclude Include="src\util\StableVector.hpp" />
     <ClInclude Include="src\util\Timing.hpp" />
+    <ClInclude Include="src\util\UUID.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\spirv_reflect.cpp" />
@@ -98,6 +99,7 @@
     <ClCompile Include="src\rendering\SimpleMesh.cpp" />
     <ClCompile Include="src\rendering\Vulkan.cpp" />
     <ClCompile Include="src\threading\Jobs.cpp" />
+    <ClCompile Include="src\util\UUID.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\mesh.frag" />

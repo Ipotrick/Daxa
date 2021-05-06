@@ -100,7 +100,17 @@ namespace daxa {
 
 		std::vector<KeyEvent> getKeyEventsInOrder() const;
 
+		vk::PresentModeKHR presentMode{ vk::PresentModeKHR::eFifo };
+		vk::PhysicalDevice vulkanPhysicalDevice;
+		vk::SurfaceKHR surface;
+		vk::SwapchainKHR swapchain; // from other articles
+		vk::Format swapchainImageFormat; // image format expected by the windowing system
+		std::vector<vk::Image> swapchainImages; //array of images from the swapchain
+		std::vector<vk::ImageView> swapchainImageViews; //array of image-views from the swapchain
+		vk::Format depthImageFormat;
+		Image depthImage;
 	private:
+		vk::Device vulkanDevice;
 
 		std::string name;
 		std::array<u32, 2> size;
@@ -124,18 +134,5 @@ namespace daxa {
 
 		std::array<i32, 2> cursorPos;
 		std::array<i32, 2> prevCursorPos;
-	public:
-
-		bool bSpacePressed{ false };
-		vk::PresentModeKHR presentMode{ vk::PresentModeKHR::eFifo };
-		vk::Device vulkanDevice;
-		vk::PhysicalDevice vulkanPhysicalDevice;
-		vk::SurfaceKHR surface;
-		vk::SwapchainKHR swapchain; // from other articles
-		vk::Format swapchainImageFormat; // image format expected by the windowing system
-		std::vector<vk::Image> swapchainImages; //array of images from the swapchain
-		std::vector<vk::ImageView> swapchainImageViews; //array of image-views from the swapchain
-		vk::Format depthImageFormat;
-		Image depthImage;
 	};
 }

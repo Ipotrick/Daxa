@@ -216,6 +216,9 @@
     <ClInclude Include="src\gui\font\FontManager.hpp">
       <Filter>src\gui\font</Filter>
     </ClInclude>
+    <ClInclude Include="src\util\UUID.hpp">
+      <Filter>src\util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\stb_image.cpp">
@@ -280,6 +283,9 @@
     </ClCompile>
     <ClCompile Include="src\gui\font\FontManager.cpp">
       <Filter>src\gui\font</Filter>
+    </ClCompile>
+    <ClCompile Include="src\util\UUID.cpp">
+      <Filter>src\util</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

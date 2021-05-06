@@ -300,52 +300,73 @@ namespace daxa {
 
 	void Application::init_default_renderpass()
 	{
-		std::array<vk::AttachmentDescription, 2> attachmentDescriptions{
-			vk::AttachmentDescription{
-				.format = windowMutex->lock()->swapchainImageFormat,
+		auto swapchainImageFormat = windowMutex->lock()->swapchainImageFormat;
+		mainRenderpass = vkh::RenderPassBuilder { VulkanContext::device }
+			.addAttachment(vk::AttachmentDescription{
+				.format = swapchainImageFormat,
 				.loadOp = vk::AttachmentLoadOp::eClear,
 				.storeOp = vk::AttachmentStoreOp::eStore,
 				.stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
 				.stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
 				.initialLayout = vk::ImageLayout::eUndefined,
 				.finalLayout = vk::ImageLayout::ePresentSrcKHR,
-			},
-			vk::AttachmentDescription{
-				.format = windowMutex->lock()->depthImageFormat,
+			})
+			.addAttachment(vk::AttachmentDescription{
+				.format = swapchainImageFormat,
 				.loadOp = vk::AttachmentLoadOp::eClear,
 				.storeOp = vk::AttachmentStoreOp::eStore,
 				.stencilLoadOp = vk::AttachmentLoadOp::eClear,
 				.stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
 				.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
-			}
-		};
+			})
+			.build();
 
-		std::array colorAttachmentRefs{
-			vk::AttachmentReference{
-				.attachment = 0,
-				.layout = vk::ImageLayout::eColorAttachmentOptimal
-			},
-		};
-
-		vk::AttachmentReference depthAttachmentRef{
-			.attachment = 1,
-			.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal
-		};
-
-		//we are going to create 1 subpass, which is the minimum you can do
-		vk::SubpassDescription subpass{
-			.pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
-			.colorAttachmentCount = (u32)colorAttachmentRefs.size(),
-			.pColorAttachments = colorAttachmentRefs.data(),
-			.pDepthStencilAttachment = &depthAttachmentRef,
-		};
-
-		mainRenderpass = VulkanContext::device.createRenderPassUnique(vk::RenderPassCreateInfo{
-			.attachmentCount = (u32)attachmentDescriptions.size(),
-			.pAttachments = attachmentDescriptions.data(),
-			.subpassCount = 1,
-			.pSubpasses = &subpass
-			});
+		//std::array<vk::AttachmentDescription, 2> attachmentDescriptions{
+		//	vk::AttachmentDescription{
+		//		.format = windowMutex->lock()->swapchainImageFormat,
+		//		.loadOp = vk::AttachmentLoadOp::eClear,
+		//		.storeOp = vk::AttachmentStoreOp::eStore,
+		//		.stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
+		//		.stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
+		//		.initialLayout = vk::ImageLayout::eUndefined,
+		//		.finalLayout = vk::ImageLayout::ePresentSrcKHR,
+		//	},
+		//	vk::AttachmentDescription{
+		//		.format = windowMutex->lock()->depthImageFormat,
+		//		.loadOp = vk::AttachmentLoadOp::eClear,
+		//		.storeOp = vk::AttachmentStoreOp::eStore,
+		//		.stencilLoadOp = vk::AttachmentLoadOp::eClear,
+		//		.stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
+		//		.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
+		//	}
+		//};
+		//
+		//std::array colorAttachmentRefs{
+		//	vk::AttachmentReference{
+		//		.attachment = 0,
+		//		.layout = vk::ImageLayout::eColorAttachmentOptimal
+		//	},
+		//};
+		//
+		//vk::AttachmentReference depthAttachmentRef{
+		//	.attachment = 1,
+		//	.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal
+		//};
+		//
+		////we are going to create 1 subpass, which is the minimum you can do
+		//vk::SubpassDescription subpass{
+		//	.pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
+		//	.colorAttachmentCount = (u32)colorAttachmentRefs.size(),
+		//	.pColorAttachments = colorAttachmentRefs.data(),
+		//	.pDepthStencilAttachment = &depthAttachmentRef,
+		//};
+		//
+		//mainRenderpass = VulkanContext::device.createRenderPassUnique(vk::RenderPassCreateInfo{
+		//	.attachmentCount = (u32)attachmentDescriptions.size(),
+		//	.pAttachments = attachmentDescriptions.data(),
+		//	.subpassCount = 1,
+		//	.pSubpasses = &subpass
+		//	});
 	}
 
 	void Application::init_framebuffers()
