@@ -273,9 +273,6 @@ namespace daxa {
 				close = true;
 				break;
 			case SDL_KEYDOWN:
-				if (event.key.keysym.sym == SDLK_SPACE) {
-					bSpacePressed ^= 1;
-				}
 				break;
 			}
 			return close;
