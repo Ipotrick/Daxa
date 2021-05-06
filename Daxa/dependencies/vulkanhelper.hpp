@@ -1175,25 +1175,25 @@ namespace vkh {
 
 				for (uint32_t i = 0; i < attachmentDescs.size(); ++i) {
 					vk::ImageLayout layout;
-					switch (attachmentDescs[i].initialLayout) {
+					switch (attachmentDescs[i].finalLayout) {
 					case vk::ImageLayout::eDepthAttachmentOptimal:
 					case vk::ImageLayout::eDepthAttachmentStencilReadOnlyOptimal:
 					case vk::ImageLayout::eDepthReadOnlyOptimal:
 					case vk::ImageLayout::eDepthReadOnlyStencilAttachmentOptimal:
 					case vk::ImageLayout::eDepthStencilAttachmentOptimal:
-						layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+						printf("depth\n");
 						assert(!depthAttachment);	// can only have one depth stencil attachment 
-						depthAttachment = vk::AttachmentReference{ .attachment = i, .layout = layout, };
+						depthAttachment = vk::AttachmentReference{ .attachment = i, .layout = vk::ImageLayout::eDepthStencilAttachmentOptimal, };
 						break;
 					case vk::ImageLayout::eDepthStencilReadOnlyOptimal:
-						layout = vk::ImageLayout::eDepthStencilReadOnlyOptimal;
+						printf("depth\n");
 						assert(!depthAttachment);	// can only have one depth stencil attachment 
-						depthAttachment = vk::AttachmentReference{ .attachment = i, .layout = layout, };
+						depthAttachment = vk::AttachmentReference{ .attachment = i, .layout = vk::ImageLayout::eDepthStencilReadOnlyOptimal, };
 						break;
 					default:
-						layout = vk::ImageLayout::eColorAttachmentOptimal;
+						printf("color\n");
 						desc.colorAttachmentCount += 1;
-						attachmentRefs.push_back({ .attachment = i, .layout = layout, });
+						attachmentRefs.push_back({ .attachment = i, .layout = vk::ImageLayout::eColorAttachmentOptimal, });
 					}
 				}
 
