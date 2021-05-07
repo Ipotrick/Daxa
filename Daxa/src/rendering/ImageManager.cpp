@@ -41,7 +41,7 @@ namespace daxa {
         return manager->imageSlots[index].imageMut;
     }
 
-    void ImageManager::DestroyJob::execute() {
+    bool ImageManager::DestroyJob::execute() {
         auto manager = managerMtx->lock();
         auto destroyQ = std::move(manager->destroyQ);
         manager->destroyQ = {};
@@ -58,9 +58,10 @@ namespace daxa {
 
         manager.lock();
         manager->freeImageSlots.insert(manager->freeImageSlots.end(), freeIndices.begin(), freeIndices.end());
+        return false;
     }
 
-    void ImageManager::CreateJob::execute() {
+    bool ImageManager::CreateJob::execute() {
         auto manager = managerMtx->lock();
         auto createQ = std::move(manager->createQ);
         manager->createQ = {};
@@ -74,6 +75,7 @@ namespace daxa {
             auto imgLock = imageSlots[slot].imageMut.lock();
             *imgLock = std::move(loadImage(cmd, fence, path));
         }
+        return false;
     }
 
     ImageManager::Handle ImageManager::getHandle(const std::string& alias)

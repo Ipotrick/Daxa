@@ -42,7 +42,7 @@ namespace daxa {
         return manager->slots[index].mtx;
     }
 
-    void FontManager::CreateJob::execute() {
+    bool FontManager::CreateJob::execute() {
         auto manager = managerMtx->lock();
         auto createQ = std::move(manager->createQ);
         manager->createQ = {};
@@ -53,6 +53,7 @@ namespace daxa {
             auto lck = slots[slot].mtx.lock();
             lck->load(path);
         }
+        return false;
     }
 
     FontManager::Handle FontManager::getHandle(const std::string& alias)     {

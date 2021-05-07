@@ -3,16 +3,13 @@
 #include "../Daxa/src/entity/ECS.hpp"
 
 #include <iostream>
+#include <atomic>
 
 int main(int argc, char* args[])
 {
     daxa::initialize();
-
-    std::cout << "sizeof image slot: " << sizeof(daxa::ImageManager::ImageSlot) * (1 << 16) << std::endl;
-
     {
         daxa::OwningMutex<daxa::ImageManager> imagesMtx;
-
 
         daxa::Application app{ "Test", 1000, 1000 };
 

@@ -74,7 +74,7 @@ namespace daxa {
 		class DestroyJob : public IJob {
 		public:
 			DestroyJob(OwningMutex<FontManager>* managerMtx) : managerMtx{ managerMtx } {}
-			void execute() override;
+			bool execute() override;
 		private:
 			OwningMutex<FontManager>* managerMtx{ nullptr };
 		};
@@ -82,7 +82,7 @@ namespace daxa {
 		class CreateJob : public IJob {
 		public:
 			CreateJob(OwningMutex<FontManager>* managerMtx) : managerMtx{ managerMtx } {}
-			void execute() override;
+			bool execute() override;
 		private:
 			OwningMutex<FontManager>* managerMtx{ nullptr };
 		};

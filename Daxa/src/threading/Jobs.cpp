@@ -35,13 +35,13 @@ namespace daxa{
 		for (i32 i = 0; i < yieldCount; i++) {
 			if (jobQueue.empty()) return;
 
-			auto& [handle, job, jobPrio] = jobQueue.back();
+			QueuedJob job = jobQueue.back();
 
-			if (jobPrio < minpriority) return;
+			if (job.priority < minpriority) return;
 
 			jobQueue.pop_back();
 
-			processJob(lock, handle, job);
+			processJob(lock, job);
 		}
 	}
 
@@ -52,6 +52,11 @@ namespace daxa{
 		DAXA_ASSERT(bWorkerRunning);
 		DAXA_ASSERT(jobBatches[handle.index].batch.value().bOrphaned == false);
 		return unlockedIsFinished(handle);
+	}
+
+	bool Jobs::exists(Handle handle) {
+		std::unique_lock lock(mtx);
+		return isHandleValid(handle);
 	}
 
 	void Jobs::orphan(Handle handle)
@@ -104,10 +109,10 @@ namespace daxa{
 			workerCV.wait(lock, waitingCondition);
 			if (!bWorkerRunning) return;
 
-			auto [handle, job, _] = jobQueue.back();
+			QueuedJob job = jobQueue.back();
 			jobQueue.pop_back();
 
-			processJob(lock, handle, job);
+			processJob(lock, job);
 		}
 	}
 
@@ -137,28 +142,40 @@ namespace daxa{
 			clientCV.wait(lock, waitingCondition);
 			if (!isHandleValid(awaitedJob))  return;
 
-			auto [handle, job, _] = jobQueue.back();
+			QueuedJob job = jobQueue.back();
 			jobQueue.pop_back();
 
-			processJob(lock, handle, job);
+			processJob(lock, job);
 		}
 	}
 
-	void Jobs::processJob(std::unique_lock<std::mutex>& lock, Handle handle, IJob* job)
+	void Jobs::processJob(std::unique_lock<std::mutex>& lock, QueuedJob& job)
 	{
 		assert(lock.owns_lock());
 		lock.unlock();
-		job->execute();
+		const bool requeue = job.job->execute();
 		lock.lock();
 
-		auto& batch = jobBatches[handle.index].batch.value();
-		batch.unfinishedJobs -= 1;
-		if (batch.unfinishedJobs == 0) {
-			if (batch.bOrphaned) {
-				deleteJobBatch(handle.index);
-			}
-			else if (batch.bWaitedFor) {
-				clientCV.notify_all();
+		if (requeue) {
+			auto insertionPlace = std::upper_bound(
+				jobQueue.begin(),
+				jobQueue.end(),
+				QueuedJob{ .priority = job.priority },
+				[](const QueuedJob& a, const QueuedJob& b) { return a.priority < b.priority; }
+			);
+			jobQueue.insert(insertionPlace, job);
+			workerCV.notify_one();
+		}
+		else {
+			auto& batch = jobBatches[job.handle.index].batch.value();
+			batch.unfinishedJobs -= 1;
+			if (batch.unfinishedJobs == 0) {
+				if (batch.bOrphaned) {
+					deleteJobBatch(job.handle.index);
+				}
+				else if (batch.bWaitedFor) {
+					clientCV.notify_all();
+				}
 			}
 		}
 	}

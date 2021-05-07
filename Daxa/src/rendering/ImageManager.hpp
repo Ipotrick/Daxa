@@ -76,7 +76,7 @@ namespace daxa {
 		class DestroyJob : public IJob {
 		public:
 			DestroyJob(OwningMutex<ImageManager>* managerMtx) : managerMtx{ managerMtx } {}
-			void execute() override;
+			bool execute() override;
 		private:
 			OwningMutex<ImageManager>* managerMtx{ nullptr };
 		};
@@ -84,7 +84,7 @@ namespace daxa {
 		class CreateJob : public IJob {
 		public:
 			CreateJob(OwningMutex<ImageManager>* managerMtx) : managerMtx{ managerMtx } {}
-			void execute() override;
+			bool execute() override;
 		private:
 			OwningMutex<ImageManager>* managerMtx{ nullptr };
 		};
