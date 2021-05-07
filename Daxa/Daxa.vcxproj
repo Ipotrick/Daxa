@@ -64,6 +64,7 @@
     <ClInclude Include="src\rendering\ImageManager.hpp" />
     <ClInclude Include="src\rendering\CoordSystem2d.hpp" />
     <ClInclude Include="src\rendering\Renderer.hpp" />
+    <ClInclude Include="src\rendering\Renderer2d.hpp" />
     <ClInclude Include="src\rendering\Rendering.hpp" />
     <ClInclude Include="src\rendering\SamplerManager.hpp" />
     <ClInclude Include="src\rendering\ShaderUtil.hpp" />
@@ -258,7 +259,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <AdditionalIncludeDirectories>S:\VulkanSDK\1.2.170.0\Include;$(ProjectDir)dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -276,10 +277,12 @@
       <Message />
     </CustomBuildStep>
     <PostBuildEvent>
-      <Command>compileshaders.bat $(ProjectDir) $(TargetDir)</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
     <PostBuildEvent>
-      <Message>compiling shaders...</Message>
+      <Message>
+      </Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

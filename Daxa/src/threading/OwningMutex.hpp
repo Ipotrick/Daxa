@@ -85,7 +85,7 @@ namespace daxa {
 
 	template<typename T>
 	class OwningMutex {
-		static_assert(std::is_fundamental<T>::value == false, "please use an atomic for fundamental types!");
+		//static_assert(std::is_fundamental<T>::value == false, "please use an atomic for fundamental types!");
 	public:
 		OwningMutex() = default;
 

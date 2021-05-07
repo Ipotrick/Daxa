@@ -18,7 +18,8 @@ namespace daxa {
 	 */
 	class IJob {
 	public:
-		virtual void execute() = 0;
+		// return value determines if the job want to be requeued after execution.
+		virtual bool execute() = 0;
 	};
 
 	template<typename T>
@@ -137,6 +138,8 @@ namespace daxa {
 
 		static bool isFinished(Handle handle);
 
+		static bool exists(Handle handle);
+
 		static void orphan(Handle handle);
 
 		inline static thread_local u32 WORKER_INDEX{ 0 };
@@ -154,7 +157,8 @@ namespace daxa {
 
 		static void waitingWorkerFunction(Handle awaitedJob);
 
-		static void processJob(std::unique_lock<std::mutex>& lock, Handle handle, IJob* job);
+		struct QueuedJob;
+		static void processJob(std::unique_lock<std::mutex>& lock, QueuedJob& job);
 
 		inline static bool bWorkerRunning{ false };
 		inline static const size_t threadCount{ std::max(std::thread::hardware_concurrency() - 1, 1u) };

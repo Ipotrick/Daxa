@@ -219,6 +219,9 @@
     <ClInclude Include="src\util\UUID.hpp">
       <Filter>src\util</Filter>
     </ClInclude>
+    <ClInclude Include="src\rendering\Renderer2d.hpp">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\stb_image.cpp">

@@ -39,6 +39,59 @@
 #endif
 
 namespace vkh {
+	std::size_t sizeofFormat(vk::Format format);
+
+#if defined(VULKANHELPER_IMPLEMENTATION)
+	std::size_t sizeofFormat(vk::Format format) {
+		if (format == vk::Format::eUndefined)
+			return -1;
+		if (format == vk::Format::eR4G4UnormPack8)
+			return 1;
+		if (format >= vk::Format::eR4G4B4A4UnormPack16 && format <= vk::Format::eA1R5G5B5UnormPack16)
+			return 2;
+		if (format >= vk::Format::eR8Unorm && format <= vk::Format::eR8Srgb)
+			return 1;
+		if (format >= vk::Format::eR8G8Unorm && format <= vk::Format::eR8G8Srgb)
+			return 2;
+		if (format >= vk::Format::eR8G8B8Unorm && format <= vk::Format::eB8G8R8Srgb)
+			return 3;
+		if (format >= vk::Format::eR8G8B8A8Unorm && format <= vk::Format::eA2B10G10R10SintPack32)
+			return 4;
+		if (format >= vk::Format::eR16Unorm && format <= vk::Format::eR16Sfloat)
+			return 2;
+		if (format >= vk::Format::eR16G16Unorm && format <= vk::Format::eR16G16Sfloat)
+			return 4;
+		if (format >= vk::Format::eR16G16B16Unorm && format <= vk::Format::eR16G16B16Sfloat)
+			return 6;
+		if (format >= vk::Format::eR16G16B16A16Unorm && format <= vk::Format::eR16G16B16A16Sfloat)
+			return 8;
+		if (format >= vk::Format::eR32Uint && format <= vk::Format::eR32Sfloat)
+			return 4;
+		if (format >= vk::Format::eR32G32Uint && format <= vk::Format::eR32G32Sfloat)
+			return 8;
+		if (format >= vk::Format::eR32G32B32Uint && format <= vk::Format::eR32G32B32Sfloat)
+			return 12;
+		if (format >= vk::Format::eR32G32B32A32Uint && format <= vk::Format::eR32G32B32A32Sfloat)
+			return 16;
+		if (format >= vk::Format::eR64Uint && format <= vk::Format::eR64Sfloat)
+			return 8;
+		if (format >= vk::Format::eR64G64Uint && format <= vk::Format::eR64G64Sfloat)
+			return 16;
+		if (format >= vk::Format::eR64G64B64Uint && format <= vk::Format::eR64G64B64Sfloat)
+			return 24;
+		if (format >= vk::Format::eR64G64B64A64Uint && format <= vk::Format::eR64G64B64A64Sfloat)
+			return 32;
+		if (format == vk::Format::eB10G11R11UfloatPack32 || format == vk::Format::eE5B9G9R9UfloatPack32)
+			return 32;
+		if (format == vk::Format::eD16Unorm)
+			return 16;
+		if (format == vk::Format::eX8D24UnormPack32 || format == vk::Format::eD32Sfloat)
+			return 32;
+		if (format == vk::Format::eS8Uint)
+			return 8;
+		return -1;
+	}
+#endif
 	struct VertexDescription {
 		std::vector<vk::VertexInputBindingDescription> bindings;
 		std::vector<vk::VertexInputAttributeDescription> attributes;
@@ -95,30 +148,7 @@ namespace vkh {
 
 		location += 1;
 
-		switch (format) {
-		case vk::Format::eR32G32B32A32Sfloat:
-		case vk::Format::eR32G32B32A32Sint:
-		case vk::Format::eR32G32B32A32Uint:
-			offset += sizeof(uint32_t) * 4;
-			break;
-		case vk::Format::eR32G32B32Sfloat:
-		case vk::Format::eR32G32B32Sint:
-		case vk::Format::eR32G32B32Uint:
-			offset += sizeof(uint32_t) * 3;
-			break;
-		case vk::Format::eR32G32Sfloat:
-		case vk::Format::eR32G32Sint:
-		case vk::Format::eR32G32Uint:
-			offset += sizeof(uint32_t) * 2;
-			break;
-		case vk::Format::eR32Sfloat:
-		case vk::Format::eR32Sint:
-		case vk::Format::eR32Uint:
-			offset += sizeof(uint32_t) * 1;
-			break;
-		default:
-			assert(false);
-		}
+		offset += sizeofFormat(format);
 
 		return *this;
 	}
