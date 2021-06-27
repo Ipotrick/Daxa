@@ -18,7 +18,7 @@ namespace daxa {
 	class ImageManager {
 		inline static const u32 SLOT_SURVIVAL_FRAMES{ 100 };
 	public:
-		ImageManager(vk::Device device = VulkanContext::device, u16 maxImages = (1024-1));
+		ImageManager(vk::Device device = VulkanGlobals::device, u16 maxImages = (1024-1));
 
 		struct ImageSlot {
 			mutable OwningMutex<Image> imageMut;
@@ -96,7 +96,7 @@ namespace daxa {
 	private:
 		const u16 MAX_IMAGE_SLOTS;
 		vk::Device device;
-		vkh::CommandBufferAllocator cmdPool{ VulkanContext::device, vk::CommandPoolCreateInfo{.queueFamilyIndex = VulkanContext::mainTransferQueueFamiltyIndex } };
+		vkh::CommandBufferAllocator cmdPool{ VulkanGlobals::device, vk::CommandPoolCreateInfo{.queueFamilyIndex = VulkanGlobals::mainTransferQueueFamiltyIndex } };
 		vkh::Pool<vk::Fence> fencePool {
 			[=]() { return device.createFence(vk::FenceCreateInfo{}); },
 			[=](vk::Fence fence) { device.destroyFence(fence); },

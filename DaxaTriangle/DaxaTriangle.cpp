@@ -20,13 +20,13 @@ int main(int argc, char* args[])
             f32 dt = timer.getSecs();
             timer.clear();
             timer.start();
-
-
+        
+        
             imagesMtx.lock()->update();
-
+        
             app.update(dt);
             app.draw();
-
+        
             if (app.windowMutex->lock()->update(0.01f)) {
                 running = false;
                 continue;

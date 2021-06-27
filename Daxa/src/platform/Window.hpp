@@ -45,8 +45,7 @@ namespace daxa {
 		Window(
 			std::string name,
 			std::array<u32,2> size,
-			vk::Device device,
-			vk::PhysicalDevice physicalDevice
+			GPUContext gpu
 		);
 		~Window();
 		Window(Window&&) = delete;
@@ -101,16 +100,16 @@ namespace daxa {
 		std::vector<KeyEvent> getKeyEventsInOrder() const;
 
 		vk::PresentModeKHR presentMode{ vk::PresentModeKHR::eFifo };
-		vk::PhysicalDevice vulkanPhysicalDevice;
 		vk::SurfaceKHR surface;
 		vk::SwapchainKHR swapchain; // from other articles
 		vk::Format swapchainImageFormat; // image format expected by the windowing system
 		std::vector<vk::Image> swapchainImages; //array of images from the swapchain
 		std::vector<vk::ImageView> swapchainImageViews; //array of image-views from the swapchain
+		u32 imagesInFlight{ 2 };
 		vk::Format depthImageFormat;
 		Image depthImage;
 	private:
-		vk::Device vulkanDevice;
+		GPUContext gpu;
 
 		std::string name;
 		std::array<u32, 2> size;

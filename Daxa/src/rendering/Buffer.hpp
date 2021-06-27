@@ -28,7 +28,7 @@ namespace daxa {
 		~Buffer()
 		{
 			if (buffer) {
-				vmaDestroyBuffer(VulkanContext::allocator, buffer, allocation);
+				vmaDestroyBuffer(VulkanGlobals::allocator, buffer, allocation);
 			}
 		}
 
@@ -37,7 +37,7 @@ namespace daxa {
 		size_t size{ 0 };
 	};
 
-	inline Buffer createBuffer(uz allocSize, vk::BufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocator allocator = VulkanContext::allocator)
+	inline Buffer createBuffer(uz allocSize, vk::BufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocator allocator = VulkanGlobals::allocator)
 	{
 		//allocate vertex buffer
 		vk::BufferCreateInfo bufferInfo{

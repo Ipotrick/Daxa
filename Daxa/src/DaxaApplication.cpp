@@ -9,13 +9,12 @@
 
 namespace daxa {
 	Application::Application(std::string name, u32 width, u32 height): 
-		descLayoutCache(VulkanContext::device)
+		gpu{ VulkanGlobals::getGlobalContext() }, descLayoutCache(gpu.device)
 	{
 		windowMutex = std::make_unique<OwningMutex<Window>>(
 			name, 
 			std::array<u32, 2>{ width, height },
-			VulkanContext::device,
-			VulkanContext::mainPhysicalDevice
+			gpu
 		);
 
 		for (i64 i = 0; i < FRAME_OVERLAP; i++) {
@@ -27,7 +26,7 @@ namespace daxa {
 			.addressModeV = vk::SamplerAddressMode::eClampToEdge,
 			.borderColor = vk::BorderColor::eFloatOpaqueWhite,
 		};
-		sampler = VulkanContext::device.createSamplerUnique(samplerCI);
+		sampler = gpu.device.createSamplerUnique(samplerCI);
 
 		init_default_renderpass();
 
@@ -36,13 +35,17 @@ namespace daxa {
 		init_pipelines();
 
 		loadMeshes();
+
+		constexpr u8 DEFAULT_COLOR[4]{ 0xFF,0xF0,0xFF,0xFF };
+		defaultDummyImage = createImage2d(gpu, { .usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst });
+		uploadImage2d(gpu, frames[0].cmdPool.getElement(), defaultDummyImage, DEFAULT_COLOR);
 	}
 
 	Application::~Application()
 	{
 		for (auto& frame : frames) {
-			VulkanContext::device.waitForFences(*frame.fence, VK_TRUE, 1000000000);
-			VulkanContext::device.resetFences(*frame.fence);
+			gpu.device.waitForFences(*frame.fence, VK_TRUE, 1000000000);
+			gpu.device.resetFences(*frame.fence);
 		}
 	}
 
@@ -108,16 +111,8 @@ namespace daxa {
 	{ 
 		auto& frame = frames[_frameNumber & 1];
 
-		if (_frameNumber == 0) {
-			vk::CommandBuffer cmd = frame.cmdPool.getElement();
-			vk::UniqueFence fence = VulkanContext::device.createFenceUnique(vkh::makeDefaultFenceCI());
-			VulkanContext::device.resetFences(fence.get());
-			u8 whiteColor[4] = { 0,255,255,255 };
-			defaultDummyImage = createImage(VulkanContext::device, cmd, fence.get(), 1, 1, whiteColor);
-		}
-
-		VulkanContext::device.waitForFences(*frame.fence,VK_TRUE, 1000000000);
-		VulkanContext::device.resetFences(*frame.fence);
+		gpu.device.waitForFences(*frame.fence,VK_TRUE, 1000000000);
+		gpu.device.resetFences(*frame.fence);
 
 		frame.semaPool.flush();
 		frame.cmdPool.flush();
@@ -125,11 +120,9 @@ namespace daxa {
 		auto window = windowMutex->lock();
 		//
 		u32 swapchainImageIndex;
-		VK_CHECK(vkAcquireNextImageKHR(VulkanContext::device, window->swapchain, 1000000000, *frame.presentSem, nullptr, &swapchainImageIndex));
+		VK_CHECK(vkAcquireNextImageKHR(gpu.device, window->swapchain, 1000000000, *frame.presentSem, nullptr, &swapchainImageIndex));
 
 		vk::CommandBuffer cmd = frame.cmdPool.getElement();
-
-
 
 		auto cmdBeginInfo = vk::CommandBufferBeginInfo{};
 		cmd.begin(cmdBeginInfo);
@@ -179,11 +172,11 @@ namespace daxa {
 		{
 			// UPDATE UNIFORM BUFFERS:
 			void* data;
-			vmaMapMemory(VulkanContext::allocator, frame.gpuDataBuffer.allocation, &data);
+			vmaMapMemory(gpu.allocator, frame.gpuDataBuffer.allocation, &data);
 
 			memcpy(data, &gpudata, frame.gpuDataBuffer.size);
 
-			vmaUnmapMemory(VulkanContext::allocator, frame.gpuDataBuffer.allocation);
+			vmaUnmapMemory(gpu.allocator, frame.gpuDataBuffer.allocation);
 		}
 		{
 			//update texture table:
@@ -213,7 +206,7 @@ namespace daxa {
 				.descriptorType = vk::DescriptorType::eSampler,
 				.pImageInfo = &samplerImageInfo,
 			};
-			VulkanContext::device.updateDescriptorSets({ write, writeSampler }, {});
+			gpu.device.updateDescriptorSets({ write, writeSampler }, {});
 		}
 
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, meshPipeline.layout.get(), 0, std::array{ frame.globalSet, frame.descSet }, {});
@@ -238,7 +231,7 @@ namespace daxa {
 		submit.pSignalSemaphores = &renderSem;
 		submit.commandBufferCount = 1;
 		submit.pCommandBuffers = &cmd;
-		vkQueueSubmit(VulkanContext::mainGraphicsQueue, 1, (VkSubmitInfo*)&submit, *frame.fence);
+		vkQueueSubmit(gpu.graphicsQ, 1, (VkSubmitInfo*)&submit, *frame.fence);
 
 		vk::PresentInfoKHR presentInfo = {};
 		presentInfo.pSwapchains = &window->swapchain;
@@ -246,7 +239,7 @@ namespace daxa {
 		presentInfo.pWaitSemaphores = &renderSem;
 		presentInfo.waitSemaphoreCount = 1;
 		presentInfo.pImageIndices = &swapchainImageIndex;
-		VK_CHECK(vkQueuePresentKHR(VulkanContext::mainGraphicsQueue, (VkPresentInfoKHR*)&presentInfo));
+		VK_CHECK(vkQueuePresentKHR(gpu.graphicsQ, (VkPresentInfoKHR*)&presentInfo));
 		_frameNumber++;
 	}
 
@@ -271,7 +264,7 @@ namespace daxa {
 		auto v = loadGLSLShaderToSpv("Daxa/shaders/mesh.vert").value();
 
 		vkh::GraphicsPipelineBuilder pipelineBuilder(
-			VulkanContext::device,
+			gpu.device,
 			*mainRenderpass);
 
 		pipelineBuilder
@@ -302,7 +295,7 @@ namespace daxa {
 	{
 		auto swapchainImageFormat = windowMutex->lock()->swapchainImageFormat;
 		auto depthFormat = windowMutex->lock()->depthImageFormat;
-		mainRenderpass = vkh::RenderPassBuilder { VulkanContext::device }
+		mainRenderpass = vkh::RenderPassBuilder { gpu.device }
 			.addAttachment(vk::AttachmentDescription{
 				.format = swapchainImageFormat,
 				.loadOp = vk::AttachmentLoadOp::eClear,
@@ -343,7 +336,7 @@ namespace daxa {
 			std::array<vk::ImageView, 2> attachments{ window->swapchainImageViews[i], window->depthImage.view.get() };
 			framebufferCI.attachmentCount = (u32)attachments.size();
 			framebufferCI.pAttachments = attachments.data();
-			framebuffers[i] = VulkanContext::device.createFramebufferUnique(framebufferCI);
+			framebuffers[i] = gpu.device.createFramebufferUnique(framebufferCI);
 		}
 	}
 
@@ -374,16 +367,16 @@ namespace daxa {
 		vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 
 		//allocate the buffer
-		vmaCreateBuffer(VulkanContext::allocator, (VkBufferCreateInfo*)&bufferInfo, &vmaallocInfo,
+		vmaCreateBuffer(gpu.allocator, (VkBufferCreateInfo*)&bufferInfo, &vmaallocInfo,
 			(VkBuffer*)&mesh.vertexBuffer.buffer,
 			&mesh.vertexBuffer.allocation,
 			nullptr);
 
 		void* gpuMemory;
-		vmaMapMemory(VulkanContext::allocator, mesh.vertexBuffer.allocation, &gpuMemory);
+		vmaMapMemory(gpu.allocator, mesh.vertexBuffer.allocation, &gpuMemory);
 
 		memcpy(gpuMemory, mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex));
 
-		vmaUnmapMemory(VulkanContext::allocator, mesh.vertexBuffer.allocation);
+		vmaUnmapMemory(gpu.allocator, mesh.vertexBuffer.allocation);
 	}
 }

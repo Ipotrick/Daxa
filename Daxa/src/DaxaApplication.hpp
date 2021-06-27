@@ -7,14 +7,6 @@
 #include "platform/Window.hpp"
 #include "rendering/Rendering.hpp"
 
-namespace vkh {
-	class DescriptorSetPool {
-	public:
-		vk::UniqueDescriptorSetLayout layout;
-		vk::UniqueDescriptorPool pool;
-	};
-}
-
 namespace daxa {
 
 	struct Camera {
@@ -36,16 +28,16 @@ namespace daxa {
 		FrameData(vkh::DescriptorSetLayoutCache* layoutCache, vk::DescriptorSet globalSet) :
 			globalSet{ globalSet },
 			semaPool{
-				[]() { return VulkanContext::device.createSemaphore({}); },
-				[](vk::Semaphore sem) { VulkanContext::device.destroySemaphore(sem,nullptr); },
+				[]() { return VulkanGlobals::device.createSemaphore({}); },
+				[](vk::Semaphore sem) { VulkanGlobals::device.destroySemaphore(sem,nullptr); },
 				[](vk::Semaphore sem) { /* dont need to reset a semaphore */ }
 			},
-			cmdPool{ VulkanContext::device, vk::CommandPoolCreateInfo{.queueFamilyIndex = VulkanContext::mainGraphicsQueueFamiltyIndex } },
+			cmdPool{ VulkanGlobals::device, vk::CommandPoolCreateInfo{.queueFamilyIndex = VulkanGlobals::mainGraphicsQueueFamiltyIndex } },
 			gpuDataBuffer{ createBuffer(sizeof(GPUData), vk::BufferUsageFlagBits::eUniformBuffer, VMA_MEMORY_USAGE_CPU_TO_GPU) },
 
-			fence{ VulkanContext::device.createFenceUnique(vk::FenceCreateInfo{}) },
-			presentSem{ VulkanContext::device.createSemaphoreUnique({}) },
-			descAlloc{ VulkanContext::device }
+			fence{ VulkanGlobals::device.createFenceUnique(vk::FenceCreateInfo{}) },
+			presentSem{ VulkanGlobals::device.createSemaphoreUnique({}) },
+			descAlloc{ VulkanGlobals::device }
 		{
 			descSet = vkh::DescriptorSetBuilder(&descAlloc, layoutCache)
 			.addBufferBinding(
@@ -102,7 +94,7 @@ namespace daxa {
 		daxa::ShaderHotLoader testHotLoader{ {"Daxa/shaders/mesh.vert","Daxa/shaders/mesh.frag"},
 			[&]() {
 				std::cout << "hotload\n";
-				VulkanContext::device.waitIdle();
+				VulkanGlobals::device.waitIdle();
 				auto pipeOpt = createMeshPipeline();
 				if (pipeOpt) {
 					meshPipeline = std::move(pipeOpt.value());
@@ -111,6 +103,8 @@ namespace daxa {
 		};
 
 		// PERSISTENT DATA:
+
+		GPUContext gpu;
 
 		Image defaultDummyImage;
 
@@ -135,7 +129,7 @@ namespace daxa {
 		};
 		vk::DescriptorSetLayout globalSetLayout = descLayoutCache.getLayout(globalSetLayoutBindings);
 		vkh::DescriptorSetAllocator globalSetAllocator{
-			VulkanContext::device,
+			VulkanGlobals::device,
 			globalSetLayoutBindings,
 			globalSetLayout
 		};
