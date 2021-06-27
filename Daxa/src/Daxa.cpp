@@ -12,7 +12,7 @@ namespace daxa {
 			printf("error initializing SDL: %s\n", SDL_GetError());
 			exit(-1);
 		}
-		VulkanContext::initialise();
+		VulkanGlobals::initialise();
 		glslang::InitializeProcess();
 		Jobs::initialize();
 	}
@@ -21,7 +21,7 @@ namespace daxa {
 	{
 		Jobs::cleanup();
 		glslang::FinalizeProcess();
-		VulkanContext::cleanup();
+		VulkanGlobals::cleanup();
 		SDL_Quit();
 	}
 }

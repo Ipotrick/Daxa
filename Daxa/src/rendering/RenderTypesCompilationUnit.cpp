@@ -84,299 +84,312 @@ namespace daxa {
 #include "stb_image.hpp"
 
 namespace daxa {
-    Image::Image(Image&& other) noexcept
-    {
-        std::swap(this->image, other.image);
-        std::swap(this->view, other.view);
-        std::swap(this->info, other.info);
-        std::swap(this->viewInfo, other.viewInfo);
-        std::swap(this->allocation, other.allocation);
-        std::swap(this->allocator, other.allocator);
-    }
+	Image::Image(Image&& other) noexcept
+	{
+		std::swap(this->image, other.image);
+		std::swap(this->view, other.view);
+		std::swap(this->info, other.info);
+		std::swap(this->viewInfo, other.viewInfo);
+		std::swap(this->allocation, other.allocation);
+		std::swap(this->allocator, other.allocator);
+	}
 
-    Image::operator bool() const {
-        return image.operator bool();
-    }
+	Image::operator bool() const {
+		return image.operator bool();
+	}
 
-    Image& Image::operator=(Image&& other) noexcept
-    {
-        Image::~Image();
-        new(this) Image(std::move(other));
-        return *this;
-    }
+	Image& Image::operator=(Image&& other) noexcept
+	{
+		Image::~Image();
+		new(this) Image(std::move(other));
+		return *this;
+	}
 
-    Image::~Image()
-    {
-        if (valid()) {
-            vmaDestroyImage(allocator, image, allocation);
-        }
-        image = vk::Image{};
-        info = vk::ImageCreateInfo{};
-        viewInfo = vk::ImageViewCreateInfo{};
-        allocation = {};
-        allocator = {};
-    }
+	Image::~Image()
+	{
+		if (valid()) {
+			vmaDestroyImage(allocator, image, allocation);
+		}
+		image = vk::Image{};
+		info = vk::ImageCreateInfo{};
+		viewInfo = vk::ImageViewCreateInfo{};
+		allocation = {};
+		allocator = {};
+	}
 
-    void Image::reset()
-    {
-        Image::~Image();
-    }
+	void Image::reset()
+	{
+		Image::~Image();
+	}
 
-    bool Image::valid() const
-    {
-        return image.operator bool();
-    }
+	bool Image::valid() const
+	{
+		return image.operator bool();
+	}
 
-    Image makeImage(
-        const vk::ImageCreateInfo& createInfo,
-        vk::ImageViewCreateInfo viewCreateInfo,
-        const VmaAllocationCreateInfo& allocInfo,
-        vk::Device device,
-        VmaAllocator allocator)
-    {
-        Image img;
-        img.allocator = allocator;
-        img.info = createInfo;
-        vmaCreateImage(img.allocator, (VkImageCreateInfo*)&createInfo, &allocInfo, (VkImage*)&img.image, &img.allocation, nullptr);
-        viewCreateInfo.image = img.image;
-        img.viewInfo = viewCreateInfo;
-        img.view = device.createImageViewUnique(viewCreateInfo);
-        return std::move(img);
-    }
+	Image makeImage(
+		const vk::ImageCreateInfo& createInfo,
+		vk::ImageViewCreateInfo viewCreateInfo,
+		const VmaAllocationCreateInfo& allocInfo,
+		vk::Device device,
+		VmaAllocator allocator)
+	{
+		Image img;
+		img.allocator = allocator;
+		img.info = createInfo;
+		vmaCreateImage(img.allocator, (VkImageCreateInfo*)&createInfo, &allocInfo, (VkImage*)&img.image, &img.allocation, nullptr);
+		viewCreateInfo.image = img.image;
+		img.viewInfo = viewCreateInfo;
+		img.view = device.createImageViewUnique(viewCreateInfo);
+		return std::move(img);
+	}
 
-    Image loadImage(vk::CommandBuffer& cmd, vk::Fence fence, std::string& path, vk::Device device, VmaAllocator allocator)
-    {
-        i32 width;
-        i32 height;
-        i32 channels;
+	Image loadImage2d(vk::CommandBuffer& cmd, vk::Fence fence, std::string& path, vk::Device device, VmaAllocator allocator)
+	{
+		i32 width;
+		i32 height;
+		i32 channels;
 
-        // load image data from disc
-        stbi_uc* loadedData = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+		// load image data from disc
+		stbi_uc* loadedData = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
 
-        if (!loadedData) {
-            std::cout << "Warning: could not load file from path: " << path << std::endl;
-            return {};
-        }
-
-
-        // move cpu data into a staging buffer, so that we can read the image data on the gpu:
-        void* pixel_ptr = loadedData;
-        VkDeviceSize imageSize = width * height * 4;
-
-        vk::Format image_format = vk::Format::eR8G8B8A8Srgb;
-
-        Buffer stagingBuffer = createBuffer(imageSize, vk::BufferUsageFlagBits::eTransferSrc, VMA_MEMORY_USAGE_CPU_ONLY, allocator);
-
-        void* data;
-        vmaMapMemory(allocator, stagingBuffer.allocation, &data);
-
-        memcpy(data, pixel_ptr, static_cast<size_t>(imageSize));
-
-        vmaUnmapMemory(allocator, stagingBuffer.allocation);
-
-        stbi_image_free(loadedData); 
-
-        // create image:
-        vk::Extent3D imageExtent;
-        imageExtent.width = static_cast<u32>(width);
-        imageExtent.height = static_cast<u32>(height);
-        imageExtent.depth = 1;
-
-        vk::ImageCreateInfo imgCI{
-            .imageType = vk::ImageType::e2D,
-            .format = image_format,
-            .extent = imageExtent,
-            .mipLevels = 1,
-            .arrayLayers = 1,
-            .usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst,
-        };
-
-        Image newImage;
-
-        VmaAllocationCreateInfo dimg_allocinfo = {};
-        dimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-
-        vmaCreateImage(allocator, (VkImageCreateInfo*)&imgCI, &dimg_allocinfo, (VkImage*)&newImage.image, &newImage.allocation, nullptr);
-        newImage.allocator = allocator;
+		if (!loadedData) {
+			std::cout << "Warning: could not load file from path: " << path << std::endl;
+			return {};
+		}
 
 
-        // change image layout to transfer dist optiomal:
-        VkImageSubresourceRange range;
-        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        range.baseMipLevel = 0;
-        range.levelCount = 1;
-        range.baseArrayLayer = 0;
-        range.layerCount = 1;
+		// move cpu data into a staging buffer, so that we can read the image data on the gpu:
+		void* pixel_ptr = loadedData;
+		VkDeviceSize imageSize = width * height * 4;
 
-        VkImageMemoryBarrier imageBarrier_toTransfer = {};
-        imageBarrier_toTransfer.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		vk::Format image_format = vk::Format::eR8G8B8A8Srgb;
 
-        imageBarrier_toTransfer.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        imageBarrier_toTransfer.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        imageBarrier_toTransfer.image = newImage.image;
-        imageBarrier_toTransfer.subresourceRange = range;
+		Buffer stagingBuffer = createBuffer(imageSize, vk::BufferUsageFlagBits::eTransferSrc, VMA_MEMORY_USAGE_CPU_ONLY, allocator);
 
-        imageBarrier_toTransfer.srcAccessMask = 0;
-        imageBarrier_toTransfer.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		void* data;
+		vmaMapMemory(allocator, stagingBuffer.allocation, &data);
 
-        cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
+		memcpy(data, pixel_ptr, static_cast<size_t>(imageSize));
 
-        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toTransfer);
+		vmaUnmapMemory(allocator, stagingBuffer.allocation);
 
+		stbi_image_free(loadedData); 
 
-        //copy the buffer into the image:
-        VkBufferImageCopy copyRegion = {};
-        copyRegion.bufferOffset = 0;
-        copyRegion.bufferRowLength = 0;
-        copyRegion.bufferImageHeight = 0;
+		// create image:
+		vk::Extent3D imageExtent;
+		imageExtent.width = static_cast<u32>(width);
+		imageExtent.height = static_cast<u32>(height);
+		imageExtent.depth = 1;
 
-        copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        copyRegion.imageSubresource.mipLevel = 0;
-        copyRegion.imageSubresource.baseArrayLayer = 0;
-        copyRegion.imageSubresource.layerCount = 1;
-        copyRegion.imageExtent = imageExtent;
+		vk::ImageCreateInfo imgCI{
+			.imageType = vk::ImageType::e2D,
+			.format = image_format,
+			.extent = imageExtent,
+			.mipLevels = 1,
+			.arrayLayers = 1,
+			.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst,
+		};
 
-        vkCmdCopyBufferToImage(cmd, stagingBuffer.buffer, newImage.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+		Image newImage;
 
-        cmd.end();
-        VulkanContext::mainTransferQueue.submit(vk::SubmitInfo{ .pCommandBuffers = &cmd }, fence);
-        device.waitForFences(fence, true, 9999999999);
+		VmaAllocationCreateInfo dimg_allocinfo = {};
+		dimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+		vmaCreateImage(allocator, (VkImageCreateInfo*)&imgCI, &dimg_allocinfo, (VkImage*)&newImage.image, &newImage.allocation, nullptr);
+		newImage.allocator = allocator;
 
 
-        auto viewCI = vk::ImageViewCreateInfo{
-            .image = newImage.image,
-            .viewType = vk::ImageViewType::e2D,
-            .format = newImage.info.format,
-            .subresourceRange = vk::ImageSubresourceRange {
-                .aspectMask = vk::ImageAspectFlagBits::eColor,
-                .baseMipLevel = 0,
-                .levelCount = 1,
-                .baseArrayLayer = 0,
-                .layerCount = 1,
-            }
-        };
-        newImage.viewInfo = viewCI;
-        newImage.view = device.createImageViewUnique(viewCI);
+		// change image layout to transfer dist optiomal:
+		VkImageSubresourceRange range;
+		range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		range.baseMipLevel = 0;
+		range.levelCount = 1;
+		range.baseArrayLayer = 0;
+		range.layerCount = 1;
 
-        return std::move(newImage);
-    }
+		VkImageMemoryBarrier imageBarrier_toTransfer = {};
+		imageBarrier_toTransfer.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 
+		imageBarrier_toTransfer.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		imageBarrier_toTransfer.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		imageBarrier_toTransfer.image = newImage.image;
+		imageBarrier_toTransfer.subresourceRange = range;
 
-    Image createImage(vk::Device device, vk::CommandBuffer& cmd, vk::Fence fence, u32 width, u32 height, u8* imageData, VmaAllocator allocator) {
+		imageBarrier_toTransfer.srcAccessMask = 0;
+		imageBarrier_toTransfer.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
-        // move cpu data into a staging buffer, so that we can read the image data on the gpu:
-        VkDeviceSize imageSize = width * height * 4;
+		cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
 
-        Buffer stagingBuffer = createBuffer(imageSize, vk::BufferUsageFlagBits::eTransferSrc, VMA_MEMORY_USAGE_CPU_ONLY, allocator);
-
-        void* data;
-        vmaMapMemory(allocator, stagingBuffer.allocation, &data);
-
-        memcpy(data, imageData, static_cast<size_t>(imageSize));
-
-        vmaUnmapMemory(allocator, stagingBuffer.allocation);
-
-        // create image:
-        vk::Extent3D imageExtent;
-        imageExtent.width = static_cast<u32>(width);
-        imageExtent.height = static_cast<u32>(height);
-        imageExtent.depth = 1;
-
-        uint32_t familyQueueIndices[2] = {VulkanContext::mainGraphicsQueueFamiltyIndex, VulkanContext::mainTransferQueueFamiltyIndex};
-        vk::ImageCreateInfo imgCI{
-            .imageType = vk::ImageType::e2D,
-            .format = vk::Format::eR8G8B8A8Srgb,
-            .extent = imageExtent,
-            .mipLevels = 1,
-            .arrayLayers = 1,
-            .usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst,
-            .sharingMode = vk::SharingMode::eConcurrent,
-            .queueFamilyIndexCount = 2,
-            .pQueueFamilyIndices = familyQueueIndices,
-        };
-
-        Image newImage;
-
-        VmaAllocationCreateInfo dimg_allocinfo = {};
-        dimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-
-        vmaCreateImage(allocator, (VkImageCreateInfo*)&imgCI, &dimg_allocinfo, (VkImage*)&newImage.image, &newImage.allocation, nullptr);
-        newImage.allocator = allocator;
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toTransfer);
 
 
-        // change image layout to transfer dist optiomal:
-        VkImageSubresourceRange range;
-        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        range.baseMipLevel = 0;
-        range.levelCount = 1;
-        range.baseArrayLayer = 0;
-        range.layerCount = 1;
-        
-        VkImageMemoryBarrier imageBarrier_toTransfer = {};
-        imageBarrier_toTransfer.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        
-        imageBarrier_toTransfer.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        imageBarrier_toTransfer.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        
-        imageBarrier_toTransfer.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        imageBarrier_toTransfer.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        imageBarrier_toTransfer.image = newImage.image;
-        imageBarrier_toTransfer.subresourceRange = range;
-        
-        imageBarrier_toTransfer.srcAccessMask = 0;
-        imageBarrier_toTransfer.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        
-        cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
-        
-        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toTransfer);
-        
-        
-        //copy the buffer into the image:
-        VkBufferImageCopy copyRegion = {};
-        copyRegion.bufferOffset = 0;
-        copyRegion.bufferRowLength = 0;
-        copyRegion.bufferImageHeight = 0;
-        
-        copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        copyRegion.imageSubresource.mipLevel = 0;
-        copyRegion.imageSubresource.baseArrayLayer = 0;
-        copyRegion.imageSubresource.layerCount = 1;
-        copyRegion.imageExtent = imageExtent;
-        
-        vkCmdCopyBufferToImage(cmd, stagingBuffer.buffer, newImage.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
-        
-        VkImageMemoryBarrier imageBarrier_toReadable = imageBarrier_toTransfer;
-        
-        imageBarrier_toReadable.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        imageBarrier_toReadable.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        
-        imageBarrier_toReadable.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        imageBarrier_toReadable.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        
-        //barrier the image into the shader readable layout
-        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
-        
-        cmd.end();
-        VulkanContext::mainGraphicsQueue.submit(vk::SubmitInfo{ .commandBufferCount = 1,.pCommandBuffers = &cmd }, fence);
-        device.waitForFences(fence, true, 9999999999);
-        
-        auto viewCI = vk::ImageViewCreateInfo{
-            .image = newImage.image,
-            .viewType = vk::ImageViewType::e2D,
-            .format = vk::Format::eR8G8B8A8Srgb,
-            .subresourceRange = vk::ImageSubresourceRange {
-                .aspectMask = vk::ImageAspectFlagBits::eColor,
-                .baseMipLevel = 0,
-                .levelCount = 1,
-                .baseArrayLayer = 0,
-                .layerCount = 1,
-            }
-        };
-        newImage.viewInfo = viewCI;
-        newImage.view = device.createImageViewUnique(viewCI);
+		//copy the buffer into the image:
+		VkBufferImageCopy copyRegion = {};
+		copyRegion.bufferOffset = 0;
+		copyRegion.bufferRowLength = 0;
+		copyRegion.bufferImageHeight = 0;
 
-        std::cout << "image: " << newImage.image << std::endl;
+		copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		copyRegion.imageSubresource.mipLevel = 0;
+		copyRegion.imageSubresource.baseArrayLayer = 0;
+		copyRegion.imageSubresource.layerCount = 1;
+		copyRegion.imageExtent = imageExtent;
 
-        return std::move(newImage);
-    }
+		vkCmdCopyBufferToImage(cmd, stagingBuffer.buffer, newImage.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+
+		cmd.end();
+		VulkanGlobals::mainTransferQueue.submit(vk::SubmitInfo{ .pCommandBuffers = &cmd }, fence);
+		device.waitForFences(fence, true, 9999999999);
+
+
+		auto viewCI = vk::ImageViewCreateInfo{
+			.image = newImage.image,
+			.viewType = vk::ImageViewType::e2D,
+			.format = newImage.info.format,
+			.subresourceRange = vk::ImageSubresourceRange {
+				.aspectMask = vk::ImageAspectFlagBits::eColor,
+				.baseMipLevel = 0,
+				.levelCount = 1,
+				.baseArrayLayer = 0,
+				.layerCount = 1,
+			}
+		};
+		newImage.viewInfo = viewCI;
+		newImage.view = device.createImageViewUnique(viewCI);
+
+		return std::move(newImage);
+	}
+
+	Image createImage2d(GPUContext& gpu, const Image2dCreateInfo& createInfo) {
+		
+		u32 defaultFamilyQIndices[1] = { gpu.graphicsQFamilyIndex };
+
+		vk::ImageCreateInfo imageCI{
+			.imageType = vk::ImageType::e2D,
+			.format = createInfo.format,
+			.extent = vk::Extent3D{.width = createInfo.size.width, .height = createInfo.size.height,.depth = 1},
+			.mipLevels = createInfo.mipLevels,
+			.arrayLayers = 1,
+			.usage = createInfo.usage,
+			.sharingMode = createInfo.familyQIndexSharingMode,
+			.queueFamilyIndexCount = (createInfo.familityQIndices ? createInfo.familtyQIndcexCount : 1u                   ),
+			.pQueueFamilyIndices   = (createInfo.familityQIndices ? createInfo.familityQIndices    : defaultFamilyQIndices),
+		};
+
+		Image newImage;
+		newImage.info = imageCI;
+
+		VmaAllocationCreateInfo dimg_allocinfo{
+			.usage = createInfo.memoryUsage
+		};
+
+		vmaCreateImage(gpu.allocator, (VkImageCreateInfo*)&imageCI, &dimg_allocinfo, (VkImage*)&newImage.image, &newImage.allocation, nullptr);
+		newImage.allocator = gpu.allocator;
+
+		vk::ImageViewCreateInfo viewCI{
+			.image = newImage.image,
+			.viewType = vk::ImageViewType::e2D,
+			.format = createInfo.format,
+			.subresourceRange = vk::ImageSubresourceRange {
+				.aspectMask = createInfo.viewImageAspectFlags,
+				.baseMipLevel = 0,
+				.levelCount = createInfo.mipLevels,
+				.baseArrayLayer = 0,
+				.layerCount = 1,
+			}
+		};
+		newImage.viewInfo = viewCI;
+		newImage.view = gpu.device.createImageViewUnique(viewCI);
+
+		return newImage;
+	}
+
+	void uploadImage2d(GPUContext& gpu, vk::CommandBuffer cmd, Image& image, const u8* imageData) {
+		cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
+
+		VkDeviceSize imageSize = image.info.extent.width * image.info.extent.height * vkh::sizeofFormat(image.info.format);
+
+		Buffer stagingBuffer = createBuffer(imageSize, vk::BufferUsageFlagBits::eTransferSrc, VMA_MEMORY_USAGE_CPU_ONLY, gpu.allocator);
+
+		if (imageData) {
+			void* data;
+			vmaMapMemory(gpu.allocator, stagingBuffer.allocation, &data);
+
+			memcpy(data, imageData, static_cast<size_t>(imageSize));
+
+			vmaUnmapMemory(gpu.allocator, stagingBuffer.allocation);
+		}
+
+		// change image layout to transfer dist optiomal:
+		VkImageSubresourceRange range;
+		range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		range.baseMipLevel = 0;
+		range.levelCount = 1;
+		range.baseArrayLayer = 0;
+		range.layerCount = 1;
+
+		VkImageMemoryBarrier imageBarrier_toTransfer = {};
+		imageBarrier_toTransfer.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+
+		imageBarrier_toTransfer.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		imageBarrier_toTransfer.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+		imageBarrier_toTransfer.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		imageBarrier_toTransfer.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		imageBarrier_toTransfer.image = image.image;
+		imageBarrier_toTransfer.subresourceRange = range;
+
+		imageBarrier_toTransfer.srcAccessMask = 0;
+		imageBarrier_toTransfer.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toTransfer);
+
+		//copy the buffer into the image:
+		VkBufferImageCopy copyRegion = {};
+		copyRegion.bufferOffset = 0;
+		copyRegion.bufferRowLength = 0;
+		copyRegion.bufferImageHeight = 0;
+
+		copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		copyRegion.imageSubresource.mipLevel = 0;
+		copyRegion.imageSubresource.baseArrayLayer = 0;
+		copyRegion.imageSubresource.layerCount = 1;
+		copyRegion.imageExtent = image.info.extent;
+
+		vkCmdCopyBufferToImage(cmd, stagingBuffer.buffer, image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+
+		VkImageMemoryBarrier imageBarrier_toReadable = imageBarrier_toTransfer;
+
+		imageBarrier_toReadable.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		imageBarrier_toReadable.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		imageBarrier_toReadable.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		imageBarrier_toReadable.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+		//barrier the image into the shader readable layout
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
+		cmd.end();
+		auto fence = gpu.device.createFenceUnique(vk::FenceCreateInfo{});
+		gpu.graphicsQ.submit(vk::SubmitInfo{ .commandBufferCount = 1,.pCommandBuffers = &cmd }, *fence);
+		gpu.device.waitForFences(*fence, true, 9999999999);
+	}
+
+	void updateImageLayoutToShaderReadOnly(GPUContext& gpu, vk::CommandBuffer cmd, Image& image) {
+
+		VkImageMemoryBarrier imageBarrier_toReadable = {};
+		imageBarrier_toReadable.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		imageBarrier_toReadable.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		imageBarrier_toReadable.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		imageBarrier_toReadable.image = image.image;
+		imageBarrier_toReadable.subresourceRange = image.viewInfo.subresourceRange;
+		imageBarrier_toReadable.srcAccessMask = 0;
+		imageBarrier_toReadable.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		imageBarrier_toReadable.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		imageBarrier_toReadable.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		imageBarrier_toReadable.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		imageBarrier_toReadable.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		//barrier the image into the shader readable layout
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
+	}
 }

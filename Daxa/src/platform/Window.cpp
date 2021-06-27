@@ -7,8 +7,8 @@
 #include <SDL2/SDL_vulkan.h>
 
 namespace daxa {
-	Window::Window(std::string name, std::array<u32, 2> size, vk::Device device, vk::PhysicalDevice physicalDevice) :
-		name{ name }, size{ size }, vulkanDevice{ device }, vulkanPhysicalDevice{ physicalDevice }
+	Window::Window(std::string name, std::array<u32, 2> size, GPUContext gpu) :
+		name{ name }, size{ size }, gpu{ gpu }
 	{
 		//create blank SDL window for our application
 		sdlWindowHandle = SDL_CreateWindow(
@@ -22,28 +22,12 @@ namespace daxa {
 
 		depthImageFormat = vk::Format::eD32Sfloat;
 
-		depthImage = makeImage(
-			vk::ImageCreateInfo{
-				.imageType = vk::ImageType::e2D,
-				.format = depthImageFormat,
-				.extent = vk::Extent3D{.width = size[0],.height = size[1],.depth = 1},
-				.mipLevels = 1,
-				.arrayLayers = 1,
-				.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
-			},
-			vk::ImageViewCreateInfo{
-			.image = depthImage.image,
-			.viewType = vk::ImageViewType::e2D,
+		depthImage = createImage2d(gpu, daxa::Image2dCreateInfo{
 			.format = depthImageFormat,
-			.subresourceRange = vk::ImageSubresourceRange {
-				.aspectMask = vk::ImageAspectFlagBits::eDepth,
-				.baseMipLevel = 0,
-				.levelCount = 1,
-				.baseArrayLayer = 0,
-				.layerCount = 1,
-				}
-			}
-		);
+			.size = {.width = size[0],.height = size[1]},
+			.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
+			.viewImageAspectFlags = vk::ImageAspectFlagBits::eDepth,
+		});
 
 		SDL_CaptureMouse(SDL_TRUE);
 
@@ -54,9 +38,9 @@ namespace daxa {
 
 		sdlWindowId = SDL_GetWindowID(sdlWindowHandle);
 
-		SDL_Vulkan_CreateSurface(sdlWindowHandle, VulkanContext::instance, (VkSurfaceKHR*)&surface);
+		SDL_Vulkan_CreateSurface(sdlWindowHandle, VulkanGlobals::instance, (VkSurfaceKHR*)&surface);
 
-		vkb::SwapchainBuilder swapchainBuilder{ vulkanPhysicalDevice, vulkanDevice, surface };
+		vkb::SwapchainBuilder swapchainBuilder{ gpu.physicalDevice, gpu.device, surface };
 
 		vkb::Swapchain vkbSwapchain = swapchainBuilder
 			.use_default_format_selection()
@@ -79,15 +63,15 @@ namespace daxa {
 		swapchainImageFormat = (vk::Format)vkbSwapchain.image_format;
 	}
 	Window::~Window() 	{
-		vkDestroySwapchainKHR(vulkanDevice, swapchain, nullptr);
+		vkDestroySwapchainKHR(gpu.device, swapchain, nullptr);
 
 		//destroy swapchain resources
 		for (int i = 0; i < swapchainImageViews.size(); i++) {
 
-			vkDestroyImageView(vulkanDevice, swapchainImageViews[i], nullptr);
+			vkDestroyImageView(gpu.device, swapchainImageViews[i], nullptr);
 		}
 
-		vkDestroySurfaceKHR(VulkanContext::instance, surface, nullptr);
+		vkDestroySurfaceKHR(VulkanGlobals::instance, surface, nullptr);
 		SDL_DestroyWindow(sdlWindowHandle);
 		sdlWindowHandle = nullptr;
 	}

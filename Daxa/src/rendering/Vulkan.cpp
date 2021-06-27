@@ -6,7 +6,7 @@
 #include <VkBootstrap.hpp>
 
 namespace daxa {
-	namespace VulkanContext {
+	namespace VulkanGlobals {
 		vk::Instance				instance;
 		vk::DebugUtilsMessengerEXT	debugMessenger;
 		vk::PhysicalDevice			mainPhysicalDevice;
@@ -74,6 +74,20 @@ namespace daxa {
 			allocatorInfo.device = device;
 			allocatorInfo.instance = instance;
 			vmaCreateAllocator(&allocatorInfo, &allocator);
+		}
+
+		GPUContext getGlobalContext() {
+			return GPUContext{
+				.physicalDevice = mainPhysicalDevice,
+				.device = device,
+				.allocator = allocator,
+				.graphicsQ = mainGraphicsQueue,
+				.graphicsQFamilyIndex = mainGraphicsQueueFamiltyIndex,
+				.transferQ = mainTransferQueue,
+				.transferQFamiltyIndex = mainTransferQueueFamiltyIndex,
+				.computeQ = mainComputeQueue,
+				.computeQFamiltyIndex = mainComputeQueueFamiltyIndex
+			};
 		}
 
 		void cleanup()

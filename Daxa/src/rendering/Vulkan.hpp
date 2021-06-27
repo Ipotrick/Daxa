@@ -9,19 +9,30 @@
 
 #include "../DaxaCore.hpp"
 
-#define VK_CHECK(x)                                                 \
-	do                                                              \
-	{                                                               \
-		VkResult err = x;                                           \
-		if (err)                                                    \
-		{                                                           \
-			std::cout <<"Detected Vulkan error: " << err << std::endl; \
-			abort();                                                \
-		}                                                           \
+#define VK_CHECK(x)														\
+	do																	\
+	{																	\
+		VkResult err = x;												\
+		if (err)														\
+		{																\
+			std::cout <<"Detected Vulkan error: " << err << std::endl;	\
+			abort();													\
+		}																\
 	} while (0)
 
 namespace daxa{
-	namespace VulkanContext {
+	struct GPUContext {
+		vk::PhysicalDevice			physicalDevice;
+		vk::Device					device;
+		VmaAllocator				allocator;
+		vk::Queue					graphicsQ;
+		u32							graphicsQFamilyIndex;
+		vk::Queue					transferQ;
+		u32							transferQFamiltyIndex;
+		vk::Queue					computeQ;
+		u32							computeQFamiltyIndex;
+	};
+	namespace VulkanGlobals {
 		extern vk::Instance					instance;
 		extern vk::DebugUtilsMessengerEXT	debugMessenger;
 		extern vk::PhysicalDevice			mainPhysicalDevice;
@@ -35,6 +46,8 @@ namespace daxa{
 		extern VmaAllocator					allocator;
 
 		void initialise();
+
+		GPUContext getGlobalContext();
 
 		void cleanup();
 	}

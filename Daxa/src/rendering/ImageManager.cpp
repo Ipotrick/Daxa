@@ -73,7 +73,7 @@ namespace daxa {
 
         for (auto& [path, slot] : createQ) {
             auto imgLock = imageSlots[slot].imageMut.lock();
-            *imgLock = std::move(loadImage(cmd, fence, path));
+            *imgLock = std::move(loadImage2d(cmd, fence, path));
         }
         return false;
     }
