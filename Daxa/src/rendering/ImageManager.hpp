@@ -96,7 +96,7 @@ namespace daxa {
 	private:
 		const u16 MAX_IMAGE_SLOTS;
 		vk::Device device;
-		vkh::CommandBufferAllocator cmdPool{ VulkanGlobals::device, vk::CommandPoolCreateInfo{.queueFamilyIndex = VulkanGlobals::mainTransferQueueFamiltyIndex } };
+		vkh::CommandBufferPool cmdPool{ VulkanGlobals::device, vk::CommandPoolCreateInfo{.queueFamilyIndex = VulkanGlobals::mainTransferQueueFamiltyIndex } };
 		vkh::Pool<vk::Fence> fencePool {
 			[=]() { return device.createFence(vk::FenceCreateInfo{}); },
 			[=](vk::Fence fence) { device.destroyFence(fence); },

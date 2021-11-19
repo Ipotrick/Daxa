@@ -59,6 +59,9 @@ namespace daxa {
 		for (VkImageView& img : vkImageViews) {
 			swapchainImageViews.push_back((vk::ImageView)img);
 		}
+		for (VkImageView& img : vkImageViews) {
+			presentSemaphores.push_back(gpu.device.createSemaphoreUnique({}));
+		}
 
 		swapchainImageFormat = (vk::Format)vkbSwapchain.image_format;
 	}

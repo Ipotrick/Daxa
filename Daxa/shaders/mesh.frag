@@ -13,5 +13,5 @@ const vec3 lightDir = vec3(-0.66,-0.66,0);
 void main() 
 {
 	vec4 sampledColor = texture(sampler2D(textures[0], s), vec2(0,0));
-	outFragColor = sampledColor;//vec4(sampledColor.rgb * dot(-lightDir,v_color) * 0.9f + 0.1f * vec3(0.3,0.3,0),1);
+	outFragColor = vec4(sampledColor.rgb * dot(-lightDir,v_color) * 0.9f + 0.1f * vec3(0.3,0.3,0),1);
 }

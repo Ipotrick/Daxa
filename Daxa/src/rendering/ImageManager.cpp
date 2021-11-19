@@ -67,7 +67,7 @@ namespace daxa {
         manager->createQ = {};
         auto& imageSlots = manager->imageSlots;
 
-        auto cmd = manager->cmdPool.getElement();
+        auto cmd = manager->cmdPool.getCommandBuffer();
         auto fence = manager->fencePool.get();
         manager.unlock();
 
@@ -98,7 +98,7 @@ namespace daxa {
 
     void ImageManager::update()
     {
-        cmdPool.flush();
+        cmdPool.reset();
         for (u16 i = 0; i < MAX_IMAGE_SLOTS; i++) {
             if (imageSlots[i].refCount == 0 && imageSlots[i].leftSurvivalFrames > 0) {
                 --imageSlots[i].leftSurvivalFrames;

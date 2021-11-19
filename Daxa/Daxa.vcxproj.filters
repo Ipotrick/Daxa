@@ -228,6 +228,9 @@
     <ClInclude Include="src\rendering\Camera.hpp">
       <Filter>src\rendering</Filter>
     </ClInclude>
+    <ClInclude Include="src\rendering\FrameContext.hpp">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\stb_image.cpp">

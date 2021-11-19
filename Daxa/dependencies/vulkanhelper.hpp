@@ -1116,7 +1116,7 @@ namespace vkh {
 			pool.clear();
 		}
 
-		void flush() {
+		void reset() {
 			for (auto& el : usedList) {
 				resetter(el);
 			}
@@ -1143,16 +1143,17 @@ namespace vkh {
 		std::vector<T> usedList;
 	};
 
-	class CommandBufferAllocator {
+	class CommandBufferPool {
 	public:
-		CommandBufferAllocator() = default;
-		CommandBufferAllocator(vk::Device device, const vk::CommandPoolCreateInfo& poolCI, const vk::CommandBufferLevel& bufferLevel = vk::CommandBufferLevel::ePrimary);
+		CommandBufferPool() = default;
+		CommandBufferPool(vk::Device device, const vk::CommandPoolCreateInfo& poolCI, const vk::CommandBufferLevel& bufferLevel = vk::CommandBufferLevel::ePrimary);
 
-		void flush();
+		/* resets the CommandPool. All distributed CommandBuffers will be reused. */
+		void reset();
 
-		vk::CommandBuffer getElement();
+		vk::CommandBuffer getCommandBuffer();
 
-		vk::CommandPool get();
+		vk::CommandPool getCommandPool();
 
 		vk::CommandPool operator*();
 
@@ -1165,14 +1166,14 @@ namespace vkh {
 	};
 
 #if defined(VULKANHELPER_IMPLEMENTATION)
-	CommandBufferAllocator::CommandBufferAllocator(vk::Device device, const vk::CommandPoolCreateInfo& createInfo, const vk::CommandBufferLevel& bufferLevel) : device{ device }, pool{ device.createCommandPoolUnique(createInfo) }, bufferLevel{ bufferLevel } {}
-	void CommandBufferAllocator::flush() {
+	CommandBufferPool::CommandBufferPool(vk::Device device, const vk::CommandPoolCreateInfo& createInfo, const vk::CommandBufferLevel& bufferLevel) : device{ device }, pool{ device.createCommandPoolUnique(createInfo) }, bufferLevel{ bufferLevel } {}
+	void CommandBufferPool::reset() {
 		device.resetCommandPool(*pool);
 		unused.insert(unused.end(), used.begin(), used.end());
 		used.clear();
 	}
 
-	vk::CommandBuffer CommandBufferAllocator::getElement() {
+	vk::CommandBuffer CommandBufferPool::getCommandBuffer() {
 		if (unused.empty()) {
 			unused.push_back(device.allocateCommandBuffers(vk::CommandBufferAllocateInfo{ .commandPool = pool.get(), .level = bufferLevel, .commandBufferCount = 1 }).back());
 		}
@@ -1182,12 +1183,12 @@ namespace vkh {
 		return buffer;
 	}
 
-	vk::CommandPool CommandBufferAllocator::get() {
+	vk::CommandPool CommandBufferPool::getCommandPool() {
 		return pool.get();
 	}
 
-	vk::CommandPool CommandBufferAllocator::operator*() {
-		return get();
+	vk::CommandPool CommandBufferPool::operator*() {
+		return getCommandPool();
 	}
 
 #endif
