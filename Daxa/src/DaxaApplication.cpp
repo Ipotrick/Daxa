@@ -8,14 +8,16 @@
 #include <VkBootstrap.hpp>
 
 namespace daxa {
-	Application::Application(std::string name, u32 width, u32 height): 
-		gpu{ VulkanGlobals::getGlobalContext() }, descLayoutCache(gpu.device)
+	Application::Application(std::string name, u32 width, u32 height) :
+		gpu{ VulkanGlobals::getGlobalContext() }, descLayoutCache{ VulkanGlobals::getGlobalContext().device }
 	{
-		windowMutex = std::make_unique<OwningMutex<Window>>(
+		this->window = std::make_shared<Window>(
 			name, 
 			std::array<u32, 2>{ width, height },
 			gpu
 		);
+
+		this->renderer = std::make_unique<Renderer>(this->window);
 
 		for (i64 i = 0; i < FRAME_OVERLAP; i++) {
 			frames.emplace_back(&descLayoutCache, globalSetAllocator.allocate());
@@ -36,9 +38,18 @@ namespace daxa {
 
 		loadMeshes();
 
+		auto cmd = frames[0].cmdPool.getCommandBuffer(); 
+		cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
+
 		constexpr u8 DEFAULT_COLOR[4]{ 0xFF,0xF0,0xFF,0xFF };
 		defaultDummyImage = createImage2d(gpu, { .usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst });
-		uploadImage2d(gpu, frames[0].cmdPool.getElement(), defaultDummyImage, DEFAULT_COLOR);
+		uploadImage2d(gpu, cmd, defaultDummyImage, DEFAULT_COLOR);
+		updateImageLayoutToShaderReadOnly(gpu, cmd, defaultDummyImage);
+
+		cmd.end();
+		auto fence = gpu.device.createFenceUnique(vk::FenceCreateInfo{});
+		gpu.graphicsQ.submit(vk::SubmitInfo{ .commandBufferCount = 1,.pCommandBuffers = &cmd }, * fence);
+		gpu.device.waitForFences(*fence, true, 9999999999);
 	}
 
 	Application::~Application()
@@ -55,8 +66,6 @@ namespace daxa {
 
 		constexpr f32 cameraMoveSpeed = 4.0f;
 		constexpr f32 cameraSensitivity = 0.2f;
-
-		auto window = windowMutex->lock();
 
 		auto [ax, ay, az] = daxa::getFPSViewAxis(camera.position, camera.pitch, camera.yaw);
 		if (bCameraControll) {
@@ -111,18 +120,16 @@ namespace daxa {
 	{ 
 		auto& frame = frames[_frameNumber & 1];
 
-		gpu.device.waitForFences(*frame.fence,VK_TRUE, 1000000000);
+		gpu.device.waitForFences(*frame.fence, VK_TRUE, 1000000000);
 		gpu.device.resetFences(*frame.fence);
 
-		frame.semaPool.flush();
-		frame.cmdPool.flush();
-
-		auto window = windowMutex->lock();
-		//
+		frame.semaPool.reset();
+		frame.cmdPool.reset();
+		
 		u32 swapchainImageIndex;
 		VK_CHECK(vkAcquireNextImageKHR(gpu.device, window->swapchain, 1000000000, *frame.presentSem, nullptr, &swapchainImageIndex));
 
-		vk::CommandBuffer cmd = frame.cmdPool.getElement();
+		vk::CommandBuffer cmd = frame.cmdPool.getCommandBuffer();
 
 		auto cmdBeginInfo = vk::CommandBufferBeginInfo{};
 		cmd.begin(cmdBeginInfo);
@@ -184,7 +191,7 @@ namespace daxa {
 			for (auto i = 0; i < 1 << 12; i++) {
 				imageInfos[i] = vk::DescriptorImageInfo{
 					.imageView = defaultDummyImage.view.get(),
-					.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+					.imageLayout = defaultDummyImage.info.initialLayout,
 				};
 			}
 
@@ -293,8 +300,8 @@ namespace daxa {
 
 	void Application::init_default_renderpass()
 	{
-		auto swapchainImageFormat = windowMutex->lock()->swapchainImageFormat;
-		auto depthFormat = windowMutex->lock()->depthImageFormat;
+		auto swapchainImageFormat = window->swapchainImageFormat;
+		auto depthFormat = window->depthImageFormat;
 		mainRenderpass = vkh::RenderPassBuilder { gpu.device }
 			.addAttachment(vk::AttachmentDescription{
 				.format = swapchainImageFormat,
@@ -318,7 +325,6 @@ namespace daxa {
 
 	void Application::init_framebuffers()
 	{
-		auto window = windowMutex->lock();
 		//create the framebuffers for the swapchain images. This will connect the render-pass to the images for rendering
 		vk::FramebufferCreateInfo framebufferCI{
 			.renderPass = *mainRenderpass,

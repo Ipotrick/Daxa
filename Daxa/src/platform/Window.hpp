@@ -35,11 +35,6 @@ namespace daxa {
 		Type type;
 	};
 
-	/**
-	 * Window abstraction class.
-	 * Handles Input.
-	 * threadsave (every functions locks).
-	 */
 	class Window {
 	public:
 		Window(
@@ -99,12 +94,21 @@ namespace daxa {
 
 		std::vector<KeyEvent> getKeyEventsInOrder() const;
 
+		std::tuple<vk::Image, vk::ImageView, vk::Semaphore> getNextImage() {
+			auto index = imageIndex++;
+			u32 dummy;
+			vkAcquireNextImageKHR(gpu.device, swapchain, 1000000000, *presentSemaphores[index], nullptr, &dummy);
+			return { swapchainImages[index], swapchainImageViews[index], *presentSemaphores[index] };
+		}
+
 		vk::PresentModeKHR presentMode{ vk::PresentModeKHR::eFifo };
 		vk::SurfaceKHR surface;
 		vk::SwapchainKHR swapchain; // from other articles
 		vk::Format swapchainImageFormat; // image format expected by the windowing system
 		std::vector<vk::Image> swapchainImages; //array of images from the swapchain
 		std::vector<vk::ImageView> swapchainImageViews; //array of image-views from the swapchain
+		std::vector<vk::UniqueSemaphore> presentSemaphores;
+		u32 imageIndex{ 0 };
 		u32 imagesInFlight{ 2 };
 		vk::Format depthImageFormat;
 		Image depthImage;

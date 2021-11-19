@@ -27,7 +27,7 @@ int main(int argc, char* args[])
             app.update(dt);
             app.draw();
         
-            if (app.windowMutex->lock()->update(0.01f)) {
+            if (app.window->update(0.01f)) {
                 running = false;
                 continue;
             }

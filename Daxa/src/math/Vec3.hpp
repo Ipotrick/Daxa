@@ -50,7 +50,7 @@ namespace daxa {
     template<std::floating_point T>
     inline constexpr bool operator==(const TVec3<T>& a, const TVec3<T>& b)
     {
-        return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+        return a.x == b.x && a.y == b.y && a.z == b.z;
     }
 
     template<std::floating_point T>

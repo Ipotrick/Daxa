@@ -62,6 +62,7 @@
     <ClInclude Include="src\rendering\Buffer.hpp" />
     <ClInclude Include="src\rendering\Camera.hpp" />
     <ClInclude Include="src\rendering\Camera2d.hpp" />
+    <ClInclude Include="src\rendering\FrameContext.hpp" />
     <ClInclude Include="src\rendering\Image.hpp" />
     <ClInclude Include="src\rendering\ImageManager.hpp" />
     <ClInclude Include="src\rendering\CoordSystem2d.hpp" />

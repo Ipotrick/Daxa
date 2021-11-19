@@ -306,8 +306,6 @@ namespace daxa {
 	}
 
 	void uploadImage2d(GPUContext& gpu, vk::CommandBuffer cmd, Image& image, const u8* imageData) {
-		cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
-
 		VkDeviceSize imageSize = image.info.extent.width * image.info.extent.height * vkh::sizeofFormat(image.info.format);
 
 		Buffer stagingBuffer = createBuffer(imageSize, vk::BufferUsageFlagBits::eTransferSrc, VMA_MEMORY_USAGE_CPU_ONLY, gpu.allocator);
@@ -369,14 +367,11 @@ namespace daxa {
 
 		//barrier the image into the shader readable layout
 		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
-		cmd.end();
-		auto fence = gpu.device.createFenceUnique(vk::FenceCreateInfo{});
-		gpu.graphicsQ.submit(vk::SubmitInfo{ .commandBufferCount = 1,.pCommandBuffers = &cmd }, *fence);
-		gpu.device.waitForFences(*fence, true, 9999999999);
 	}
 
 	void updateImageLayoutToShaderReadOnly(GPUContext& gpu, vk::CommandBuffer cmd, Image& image) {
 
+		image.info.initialLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 		VkImageMemoryBarrier imageBarrier_toReadable = {};
 		imageBarrier_toReadable.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 		imageBarrier_toReadable.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;

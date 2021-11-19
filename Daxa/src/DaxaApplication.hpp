@@ -6,6 +6,7 @@
 #include "threading/Jobs.hpp"
 #include "platform/Window.hpp"
 #include "rendering/Rendering.hpp"
+#include "rendering/Renderer.hpp"
 
 namespace daxa {
 
@@ -47,7 +48,7 @@ namespace daxa {
 		}
 		vk::DescriptorSet globalSet;
 		vkh::Pool<vk::Semaphore> semaPool;
-		vkh::CommandBufferAllocator cmdPool;
+		vkh::CommandBufferPool cmdPool;
 		Buffer gpuDataBuffer;
 		Buffer testBuffer;
 		vkh::GeneralDescriptorSetAllocator descAlloc;
@@ -72,8 +73,10 @@ namespace daxa {
 
 		void draw();
 
-		std::unique_ptr<OwningMutex<Window>> windowMutex;
+		std::shared_ptr<Window> window;
 	private:
+
+		std::unique_ptr<Renderer> renderer;
 
 		void init_default_renderpass();
 

@@ -13,7 +13,7 @@
 namespace daxa {
 	struct Renderer2dFrame {
 		vk::UniqueFramebuffer framebuffer;
-		vkh::CommandBufferAllocator cmdAlloc;
+		vkh::CommandBufferPool cmdAlloc;
 		vk::UniqueFence fence;
 		std::vector<UISprite> spriteInstances;
 		std::vector<ReadOnlyLock<Image>> imageLocks;
@@ -36,7 +36,7 @@ namespace daxa {
 		{
 			for (int i = 0; i < 2; ++i) {
 				frames[i].fence = device.createFenceUnique(vkh::makeDefaultFenceCI());
-				frames[i].cmdAlloc = vkh::CommandBufferAllocator(device, {});
+				frames[i].cmdAlloc = vkh::CommandBufferPool(device, {});
 			}
 		}
 
