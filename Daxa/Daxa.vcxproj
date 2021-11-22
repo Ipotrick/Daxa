@@ -103,6 +103,7 @@
     <ClCompile Include="src\platform\Scancodes.cpp" />
     <ClCompile Include="src\platform\Window.cpp" />
     <ClCompile Include="src\rendering\api_abstration\Buffer.cpp" />
+    <ClCompile Include="src\rendering\api_abstration\CommandList.cpp" />
     <ClCompile Include="src\rendering\api_abstration\Device.cpp" />
     <ClCompile Include="src\rendering\api_abstration\Image.cpp" />
     <ClCompile Include="src\rendering\ImageManager.cpp" />
@@ -238,7 +239,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <AdditionalIncludeDirectories>S:\VulkanSDK\1.2.170.0\Include;$(ProjectDir)dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>S:\VulkanSDK\Include;$(ProjectDir)dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -271,7 +272,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <AdditionalIncludeDirectories>S:\VulkanSDK\1.2.170.0\Include;$(ProjectDir)dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>S:\VulkanSDK\Include;$(ProjectDir)dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
