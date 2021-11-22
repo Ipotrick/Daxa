@@ -59,10 +59,14 @@
     <ClInclude Include="src\math\Vec4.hpp" />
     <ClInclude Include="src\platform\Scancodes.hpp" />
     <ClInclude Include="src\platform\Window.hpp" />
+    <ClInclude Include="src\rendering\api_abstration\Buffer.hpp" />
+    <ClInclude Include="src\rendering\api_abstration\CommandList.hpp" />
+    <ClInclude Include="src\rendering\api_abstration\Device.hpp" />
+    <ClInclude Include="src\rendering\api_abstration\Image.hpp" />
+    <ClInclude Include="src\rendering\api_abstration\Pipeline.hpp" />
     <ClInclude Include="src\rendering\Buffer.hpp" />
     <ClInclude Include="src\rendering\Camera.hpp" />
     <ClInclude Include="src\rendering\Camera2d.hpp" />
-    <ClInclude Include="src\rendering\FrameContext.hpp" />
     <ClInclude Include="src\rendering\Image.hpp" />
     <ClInclude Include="src\rendering\ImageManager.hpp" />
     <ClInclude Include="src\rendering\CoordSystem2d.hpp" />
@@ -97,6 +101,9 @@
     <ClCompile Include="src\gui\GUIManager.cpp" />
     <ClCompile Include="src\platform\Scancodes.cpp" />
     <ClCompile Include="src\platform\Window.cpp" />
+    <ClCompile Include="src\rendering\api_abstration\Buffer.cpp" />
+    <ClCompile Include="src\rendering\api_abstration\Device.cpp" />
+    <ClCompile Include="src\rendering\api_abstration\Image.cpp" />
     <ClCompile Include="src\rendering\ImageManager.cpp" />
     <ClCompile Include="src\rendering\CoordSystem2d.cpp" />
     <ClCompile Include="src\rendering\RenderTypesCompilationUnit.cpp" />

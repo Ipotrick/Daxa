@@ -118,6 +118,7 @@ namespace daxa {
 
 	void Application::draw()
 	{ 
+		renderer->draw();
 		auto& frame = frames[_frameNumber & 1];
 
 		gpu.device.waitForFences(*frame.fence, VK_TRUE, 1000000000);
