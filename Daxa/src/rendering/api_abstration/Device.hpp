@@ -20,7 +20,7 @@ namespace gpu {
 	public:
 		static Device createNewDevice();
 
-		ImageHandle createImage2d(ImageCreateInfo ci);
+		ImageHandle createImage2d(Image2dCreateInfo ci);
 
 		BufferHandle createBuffer(BufferCreateInfo ci);
 

@@ -77,44 +77,8 @@ namespace gpu {
 		return ret;
 	}
 
-	ImageHandle Device::createImage2d(ImageCreateInfo ci) {
-		ImageHandle ret;
-		ret.image = std::make_shared<Image>();
-	
-		vk::ImageCreateInfo ici{};
-		ici.imageType = vk::ImageType::e2D;
-		ici.format = ci.format;
-		ici.extent = vk::Extent3D{ ci.width, ci.height,1 };
-		ici.mipLevels = 1;
-		ici.arrayLayers = 1;
-		ici.usage = ci.imageUsage;
-		ici.tiling = vk::ImageTiling::eOptimal;
-		ici.initialLayout = vk::ImageLayout::eUndefined;
-		ici.sharingMode = vk::SharingMode::eExclusive;
-		ici.samples = vk::SampleCountFlagBits::e1;
-
-		VmaAllocationCreateInfo aci{};
-		aci.usage = ci.memoryUsage;
-		aci.requiredFlags = (VkMemoryPropertyFlags)ci.memoryPropertyFlags;
-
-		vmaCreateImage(allocator, (VkImageCreateInfo*)&ici, &aci, (VkImage*)&*ret->image, &ret->allocation, nullptr);
-
-		vk::ImageViewCreateInfo ivci{};
-		ivci.image = ret->image;
-		ivci.format = ci.format;
-		ivci.subresourceRange.baseMipLevel = 0;
-		ivci.subresourceRange.levelCount = 1;
-		ivci.subresourceRange.baseArrayLayer = 0;
-		ivci.subresourceRange.layerCount = 1;
-		ivci.subresourceRange.aspectMask = ci.imageAspekt;
-
-		ret->view = device.createImageViewUnique(ivci);
-
-		ret.image->allocator = allocator;
-		ret->createInfo = ici;
-		ret->viewCreateInfo = ivci;
-
-		return ret;
+	ImageHandle Device::createImage2d(Image2dCreateInfo ci) {
+		return ImageHandle{ std::make_shared<Image>(std::move(Image::create2dImage(device, allocator, ci))) };
 	}
 
 	BufferHandle Device::createBuffer(BufferCreateInfo ci) {

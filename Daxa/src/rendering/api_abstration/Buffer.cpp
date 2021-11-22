@@ -1,4 +1,5 @@
 #include "Buffer.hpp"
+#include "common.hpp"
 
 namespace gpu {
 
@@ -22,16 +23,7 @@ namespace gpu {
 		std::memset(this, 0, sizeof(buffer));
 	}
 
-	Buffer::Buffer(Buffer&& rhs) noexcept  {
-		std::memcpy(this, &rhs, sizeof(Buffer));
-		std::memset(&rhs, 0, sizeof(buffer));
-	}
-
-	Buffer& Buffer::operator=(Buffer&& rhs) noexcept {
-		std::memcpy(this, &rhs, sizeof(Buffer));
-		std::memset(&rhs, 0, sizeof(buffer));
-		return *this;
-	}
+	DAXA_DEFINE_TRIVIAL_MOVE(Buffer)
 
 	Buffer::~Buffer() {
 		if (allocator) {

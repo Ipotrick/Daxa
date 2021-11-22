@@ -11,7 +11,7 @@
 #include "../../DaxaCore.hpp"
 
 namespace gpu {
-	struct ImageCreateInfo {
+	struct Image2dCreateInfo {
 		u32 width;
 		u32 height;
 		vk::Format format;
@@ -24,11 +24,17 @@ namespace gpu {
 	class Image {
 	public: 
 		Image() = default;
-		Image(Image&&) = delete;
-		Image& operator=(Image&&) = delete;
+		Image(Image&&) noexcept;
+		Image& operator=(Image&&) noexcept;
 
 		~Image();
+
+		vk::ImageCreateInfo getVkCreateInfo() const { return createInfo; }
+		vk::ImageViewCreateInfo getVkViewCreateInfo() const { return viewCreateInfo; }
+		vk::Image getVkImage() const { return image; }
+		vk::ImageView getVkView() const { return *view; }
 	private:
+		static Image create2dImage(vk::Device device, VmaAllocator allocator, Image2dCreateInfo ci);
 		friend class Device;
 		friend class ImageHandle;
 		VmaAllocator allocator;
@@ -44,6 +50,7 @@ namespace gpu {
 		Image& operator*() { return *image; }
 		Image* operator->() { return image.get(); }
 	private:
+		ImageHandle(std::shared_ptr<Image> image);
 		friend class Device;
 		std::shared_ptr<Image> image;
 	};
