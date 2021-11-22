@@ -246,6 +246,9 @@
     <ClInclude Include="src\rendering\api_abstration\Pipeline.hpp">
       <Filter>src\rendering\api_abstraction</Filter>
     </ClInclude>
+    <ClInclude Include="src\rendering\api_abstration\common.hpp">
+      <Filter>src\rendering\api_abstraction</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\stb_image.cpp">

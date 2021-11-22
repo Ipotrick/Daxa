@@ -24,6 +24,8 @@ namespace gpu {
 		Buffer& operator=(Buffer&&) noexcept;
 
 		~Buffer();
+
+		vk::Buffer getVkBuffer() const { return buffer; }
 	private:
 		Buffer(vk::Device device, u32 queueFamilyIndex, VmaAllocator allocator, BufferCreateInfo ci);
 		friend class Device;

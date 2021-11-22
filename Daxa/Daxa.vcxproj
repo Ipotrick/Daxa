@@ -61,6 +61,7 @@
     <ClInclude Include="src\platform\Window.hpp" />
     <ClInclude Include="src\rendering\api_abstration\Buffer.hpp" />
     <ClInclude Include="src\rendering\api_abstration\CommandList.hpp" />
+    <ClInclude Include="src\rendering\api_abstration\common.hpp" />
     <ClInclude Include="src\rendering\api_abstration\Device.hpp" />
     <ClInclude Include="src\rendering\api_abstration\Image.hpp" />
     <ClInclude Include="src\rendering\api_abstration\Pipeline.hpp" />
