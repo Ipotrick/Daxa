@@ -91,19 +91,22 @@ namespace gpu {
 		return bufferHandle;
 	}
 
-	CommandList Device::createFramedCommandList() {
+	CommandList Device::createCommandList() {
 		CommandList ret;
 
 		vk::CommandBufferAllocateInfo cbai{};
 		cbai.commandPool = *this->frameContexts.front()->cmdPool;
 		cbai.level = vk::CommandBufferLevel::ePrimary;
-		ret.cmd = device.allocateCommandBuffers(cbai).front();
+		ret.cmd = std::move(device.allocateCommandBuffersUnique(cbai).front());
 
 		return ret;
 	}
 
-	void Device::submit(CommandList& cmdList) {
-		auto prevSubmitSema = this->frameContexts.front()->usedSemaphores.back();
+	void Device::submit(CommandList&& cmdList) {
+		CommandList list{ std::move(cmdList) };
+		assert(!list.bUnfinishedOperationInProgress);
+		auto& frame = *this->frameContexts.front();
+		auto prevSubmitSema = frame.usedSemaphores.back();
 		auto thisSubmitSema = getNextSemaphore();
 		auto thisSubmitFence = getNextFence();
 
@@ -112,7 +115,7 @@ namespace gpu {
 		vk::PipelineStageFlags pipelineStages = vk::PipelineStageFlagBits::eAllCommands;
 		si.pWaitDstStageMask = &pipelineStages;
 
-		vk::CommandBuffer commandBuffers[] = { cmdList.cmd };
+		vk::CommandBuffer commandBuffers[] = { *list.cmd };
 		si.pCommandBuffers = commandBuffers;
 		si.commandBufferCount = 1;
 
@@ -121,6 +124,8 @@ namespace gpu {
 		si.signalSemaphoreCount = 1;
 
 		graphicsQ.submit(si, thisSubmitFence);
+
+		frame.usedCommandLists.push_back(std::move(list));
 	}
 
 	void Device::nextFrameContext() {
@@ -129,7 +134,6 @@ namespace gpu {
 		frameContexts.pop_front();
 		frameContexts.push_back(std::move(lastFrame));
 
-		// shortcut for frame
 		auto& frame = *frameContexts.front();
 
 		// wait on frame context to finish on gpu:
@@ -144,11 +148,22 @@ namespace gpu {
 			frame.usedFences.pop_back();
 			frame.unusedFences.push_back(back);
 		}
-		device.resetCommandPool(*frame.cmdPool, vk::CommandPoolResetFlagBits::eReleaseResources);
+		// we reset the command buffers individually as there is generally no big performance cost to that
+		//device.resetCommandPool(*frame.cmdPool, vk::CommandPoolResetFlagBits::eReleaseResources);
 		frame.framedBuffers.clear();
+
+		// reset and recycle CommandLists
+		while (!frame.usedCommandLists.empty()) {
+			auto list = std::move(frame.unusedCommandLists.back());
+			frame.unusedCommandLists.pop_back();
+			list.reset();
+			frame.unusedCommandLists.push_back(std::move(list));
+		}
 	}
 
 	void Device::initFrameContexts() {
+		// The amount of contexts is currently hardcoded to two wich is fine for now.
+		// A later extention to adapt the amount of contexts may be a nice feature.
 		for (int i = 0; i < 2; i++) {
 			std::unique_ptr<FrameContext> fc = std::make_unique<FrameContext>();
 
