@@ -46,6 +46,9 @@
     <Filter Include="src\gui\font">
       <UniqueIdentifier>{4052cb9f-4075-451d-a7fa-02ee8abe082e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\rendering\api_abstraction">
+      <UniqueIdentifier>{791dcf9d-ae7d-4ee5-b7c2-74390e718e9c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\Daxa.hpp">
@@ -228,8 +231,20 @@
     <ClInclude Include="src\rendering\Camera.hpp">
       <Filter>src\rendering</Filter>
     </ClInclude>
-    <ClInclude Include="src\rendering\FrameContext.hpp">
-      <Filter>src\rendering</Filter>
+    <ClInclude Include="src\rendering\api_abstration\Device.hpp">
+      <Filter>src\rendering\api_abstraction</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\api_abstration\CommandList.hpp">
+      <Filter>src\rendering\api_abstraction</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\api_abstration\Image.hpp">
+      <Filter>src\rendering\api_abstraction</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\api_abstration\Buffer.hpp">
+      <Filter>src\rendering\api_abstraction</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\api_abstration\Pipeline.hpp">
+      <Filter>src\rendering\api_abstraction</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -298,6 +313,15 @@
     </ClCompile>
     <ClCompile Include="src\util\UUID.cpp">
       <Filter>src\util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\rendering\api_abstration\Device.cpp">
+      <Filter>src\rendering\api_abstraction</Filter>
+    </ClCompile>
+    <ClCompile Include="src\rendering\api_abstration\Image.cpp">
+      <Filter>src\rendering\api_abstraction</Filter>
+    </ClCompile>
+    <ClCompile Include="src\rendering\api_abstration\Buffer.cpp">
+      <Filter>src\rendering\api_abstraction</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
