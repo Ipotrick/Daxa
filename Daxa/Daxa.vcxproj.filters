@@ -249,6 +249,12 @@
     <ClInclude Include="src\rendering\api_abstration\common.hpp">
       <Filter>src\rendering\api_abstraction</Filter>
     </ClInclude>
+    <ClInclude Include="src\rendering\api_abstration\RenderPassCache.hpp">
+      <Filter>src\rendering\api_abstraction</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\api_abstration\ShaderModule.hpp">
+      <Filter>src\rendering\api_abstraction</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\stb_image.cpp">
@@ -330,6 +336,9 @@
       <Filter>src\rendering\api_abstraction</Filter>
     </ClCompile>
     <ClCompile Include="src\rendering\api_abstration\Pipeline.cpp">
+      <Filter>src\rendering\api_abstraction</Filter>
+    </ClCompile>
+    <ClCompile Include="src\rendering\api_abstration\ShaderModule.cpp">
       <Filter>src\rendering\api_abstraction</Filter>
     </ClCompile>
   </ItemGroup>

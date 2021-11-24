@@ -10,38 +10,40 @@
 
 #include "../../DaxaCore.hpp"
 
-namespace gpu {
-	struct BufferCreateInfo {
-		uz size;
-		vk::BufferUsageFlags usage;
-		VmaMemoryUsage memoryUsage;
-	};
+namespace daxa {
+	namespace gpu {
+		struct BufferCreateInfo {
+			uz size;
+			vk::BufferUsageFlags usage;
+			VmaMemoryUsage memoryUsage;
+		};
 
-	class Buffer {
-	public:
-		Buffer();
-		Buffer(Buffer&&) noexcept;
-		Buffer& operator=(Buffer&&) noexcept;
+		class Buffer {
+		public:
+			Buffer();
+			Buffer(Buffer&&) noexcept;
+			Buffer& operator=(Buffer&&) noexcept;
 
-		~Buffer();
+			~Buffer();
 
-		vk::Buffer getVkBuffer() const { return buffer; }
-	private:
-		Buffer(vk::Device device, u32 queueFamilyIndex, VmaAllocator allocator, BufferCreateInfo ci);
-		friend class Device;
-		friend class BufferHandle;
-		vk::Buffer buffer;
-		VmaAllocation allocation;
-		VmaAllocator allocator;
-	};
+			vk::Buffer getVkBuffer() const { return buffer; }
+		private:
+			Buffer(vk::Device device, u32 queueFamilyIndex, VmaAllocator allocator, BufferCreateInfo ci);
+			friend class Device;
+			friend class BufferHandle;
+			vk::Buffer buffer;
+			VmaAllocation allocation;
+			VmaAllocator allocator;
+		};
 
-	class BufferHandle {
-	public:
-		Buffer& operator*() { return *buffer; }
-		Buffer* operator->() { return buffer.get(); }
-	private:
-		BufferHandle(std::shared_ptr<Buffer> buffer);
-		friend class Device;
-		std::shared_ptr<Buffer> buffer;
-	};
+		class BufferHandle {
+		public:
+			Buffer& operator*() { return *buffer; }
+			Buffer* operator->() { return buffer.get(); }
+		private:
+			friend class Device;
+			BufferHandle(std::shared_ptr<Buffer> buffer);
+			std::shared_ptr<Buffer> buffer;
+		};
+	}
 }

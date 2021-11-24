@@ -6,6 +6,7 @@
 #include <SDL2/SDL_vulkan.h>
 
 #include <VkBootstrap.hpp>
+#include "rendering/api_abstration/ShaderModule.hpp"
 
 namespace daxa {
 	Application::Application(std::string name, u32 width, u32 height) :
@@ -19,6 +20,10 @@ namespace daxa {
 		);
 
 		this->renderer = std::make_unique<Renderer>(this->window);
+
+		auto moduleOpt = daxa::gpu::ShaderModuleHandle::tryCreateDAXAShaderModule(VulkanGlobals::getGlobalContext().device, "Daxa/shaders/mesh.vert", "some shader name", vk::ShaderStageFlagBits::eVertex);
+
+		std::cout << "shader creation worked: " << std::boolalpha << moduleOpt.has_value() << std::endl;
 
 		for (i64 i = 0; i < FRAME_OVERLAP; i++) {
 			frames.emplace_back(&descLayoutCache, globalSetAllocator.allocate());

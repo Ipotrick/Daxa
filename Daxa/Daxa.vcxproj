@@ -65,6 +65,8 @@
     <ClInclude Include="src\rendering\api_abstration\Device.hpp" />
     <ClInclude Include="src\rendering\api_abstration\Image.hpp" />
     <ClInclude Include="src\rendering\api_abstration\Pipeline.hpp" />
+    <ClInclude Include="src\rendering\api_abstration\RenderPassCache.hpp" />
+    <ClInclude Include="src\rendering\api_abstration\ShaderModule.hpp" />
     <ClInclude Include="src\rendering\Buffer.hpp" />
     <ClInclude Include="src\rendering\Camera.hpp" />
     <ClInclude Include="src\rendering\Camera2d.hpp" />
@@ -107,6 +109,7 @@
     <ClCompile Include="src\rendering\api_abstration\Device.cpp" />
     <ClCompile Include="src\rendering\api_abstration\Image.cpp" />
     <ClCompile Include="src\rendering\api_abstration\Pipeline.cpp" />
+    <ClCompile Include="src\rendering\api_abstration\ShaderModule.cpp" />
     <ClCompile Include="src\rendering\ImageManager.cpp" />
     <ClCompile Include="src\rendering\CoordSystem2d.cpp" />
     <ClCompile Include="src\rendering\RenderTypesCompilationUnit.cpp" />
