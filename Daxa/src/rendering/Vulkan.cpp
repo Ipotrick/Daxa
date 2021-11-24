@@ -57,6 +57,7 @@ namespace daxa {
 
 			vkb::DeviceBuilder deviceBuilder{ physicalDevice };
 			deviceBuilder.add_pNext(&descriptor_indexing_features);
+			
 
 			vkb::Device vkbDevice = deviceBuilder.build().value();
 
