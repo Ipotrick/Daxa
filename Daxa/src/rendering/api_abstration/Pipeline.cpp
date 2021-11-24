@@ -40,21 +40,20 @@ namespace daxa {
 			return *this;
 		}
 
-		GraphicsPipelineBuilder& GraphicsPipelineBuilder::addShaderStage(const ShaderModule& shaderModule) {
-
+		GraphicsPipelineBuilder& GraphicsPipelineBuilder::addShaderStage(const ShaderModuleHandle& shaderModule) {
 			vk::PipelineShaderStageCreateInfo sci{};
-			sci.module = *shaderModule.shaderModule;
-			sci.stage = shaderModule.shaderStage;
-			sci.pName = shaderModule.name.c_str();
+			sci.module = *shaderModule->shaderModule;
+			sci.stage = shaderModule->shaderStage;
+			sci.pName = shaderModule->name.c_str();
 
 			this->shaderStageCreateInfo.push_back(sci);
 
 			// reflect spirv push constants:
-			auto refl = vkh::reflectPushConstants(shaderModule.spirv, shaderModule.shaderStage);
+			auto refl = vkh::reflectPushConstants(shaderModule->spirv, shaderModule->shaderStage);
 			for (auto& r : refl) {
 				if (auto iter = std::find(pushConstants.begin(), pushConstants.end(), r); iter != pushConstants.end()) {
 					// if the same push constant is present in multiple stages we combine them to one
-					iter->stageFlags |= shaderModule.shaderStage;
+					iter->stageFlags |= shaderModule->shaderStage;
 				}
 				else {
 					pushConstants.push_back(r);
@@ -62,7 +61,7 @@ namespace daxa {
 			}
 
 			// reflect spirv descriptor sets:
-			auto reflDesc = vkh::reflectSetBindings(shaderModule.spirv, shaderModule.shaderStage);
+			auto reflDesc = vkh::reflectSetBindings(shaderModule->spirv, shaderModule->shaderStage);
 			for (auto& r : reflDesc) {
 				if (!descriptorSets.contains(r.first)) {
 					descriptorSets[r.first] = std::unordered_map<u32, vk::DescriptorSetLayoutBinding>{};
@@ -72,7 +71,7 @@ namespace daxa {
 					if (!descriptorSets[r.first].contains(binding.first)) {
 						descriptorSets[r.first][binding.first] = binding.second;
 					}
-					descriptorSets[r.first][binding.first].stageFlags |= shaderModule.shaderStage;
+					descriptorSets[r.first][binding.first].stageFlags |= shaderModule->shaderStage;
 				}
 			}
 

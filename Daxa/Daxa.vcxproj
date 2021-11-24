@@ -65,7 +65,6 @@
     <ClInclude Include="src\rendering\api_abstration\Device.hpp" />
     <ClInclude Include="src\rendering\api_abstration\Image.hpp" />
     <ClInclude Include="src\rendering\api_abstration\Pipeline.hpp" />
-    <ClInclude Include="src\rendering\api_abstration\RenderPassCache.hpp" />
     <ClInclude Include="src\rendering\api_abstration\ShaderModule.hpp" />
     <ClInclude Include="src\rendering\Buffer.hpp" />
     <ClInclude Include="src\rendering\Camera.hpp" />
