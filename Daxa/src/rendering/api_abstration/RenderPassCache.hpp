@@ -10,6 +10,8 @@
 
 #include "../../DaxaCore.hpp"
 
-namespace gpu {
+namespace daxa {
+	namespace gpu {
 
+	}
 }

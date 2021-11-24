@@ -11,37 +11,39 @@
 #include "Image.hpp"
 #include "Buffer.hpp"
 
-namespace gpu {
+namespace daxa {
+	namespace gpu {
 
-	struct BeginRenderingInfo {
-		ImageHandle* colorAttachemnts = nullptr;
-		size_t colorAttachmentCount = 0;
-		ImageHandle* depthStencilAttachment = nullptr;
-	};
+		struct BeginRenderingInfo {
+			ImageHandle* colorAttachemnts = nullptr;
+			size_t colorAttachmentCount = 0;
+			ImageHandle* depthStencilAttachment = nullptr;
+		};
 
-	class CommandList {
-	public:
-		~CommandList();
+		class CommandList {
+		public:
+			~CommandList();
 
-		CommandList(CommandList&& rhs) noexcept;
-		CommandList& operator=(CommandList&& rhs) noexcept;
+			CommandList(CommandList&& rhs) noexcept;
+			CommandList& operator=(CommandList&& rhs) noexcept;
 
-		CommandList(CommandList const& rhs) = delete;
-		CommandList& operator=(CommandList const& rhs) = delete;
+			CommandList(CommandList const& rhs) = delete;
+			CommandList& operator=(CommandList const& rhs) = delete;
 
-		void beginRendering(BeginRenderingInfo ri);
-		void endRendering();
+			void beginRendering(BeginRenderingInfo ri);
+			void endRendering();
 
-		vk::CommandBuffer getVkCommandBuffer() { return *cmd; }
-	private:
-		friend class Device;
-		CommandList();
-		void reset();
-		bool empty = false;
-		bool bUnfinishedOperationInProgress = false;
-		std::vector<ImageHandle> usedImages;
-		std::vector<BufferHandle> usedBuffers;
-		vk::UniqueCommandBuffer cmd;
-	};
+			vk::CommandBuffer getVkCommandBuffer() { return *cmd; }
+		private:
+			friend class Device;
+			CommandList();
+			void reset();
+			bool empty = false;
+			bool bUnfinishedOperationInProgress = false;
+			std::vector<ImageHandle> usedImages;
+			std::vector<BufferHandle> usedBuffers;
+			vk::UniqueCommandBuffer cmd;
+		};
 
+	}
 }
