@@ -329,6 +329,9 @@
     <ClCompile Include="src\rendering\api_abstration\CommandList.cpp">
       <Filter>src\rendering\api_abstraction</Filter>
     </ClCompile>
+    <ClCompile Include="src\rendering\api_abstration\Pipeline.cpp">
+      <Filter>src\rendering\api_abstraction</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\mesh.frag">

@@ -1,6 +1,10 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
+#include <vector>
+#include <array>
+#include <string>
 
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <vulkan/vulkan.hpp>
@@ -12,32 +16,71 @@
 
 namespace gpu {
 
-	class PipelineBuilder {
+	class GraphicsPipeline {
 	public:
-		PipelineBuilder() = default;
-		PipelineBuilder& setViewport(vk::Viewport viewport);
-		PipelineBuilder& setScissor(vk::Rect2D scissor);
-		PipelineBuilder& setVertexInput(const vk::PipelineVertexInputStateCreateInfo& vertexInput);
-		PipelineBuilder& setInputAssembly(const vk::PipelineInputAssemblyStateCreateInfo& inputassembly);
-		PipelineBuilder& setRasterization(const vk::PipelineRasterizationStateCreateInfo& rasterization);
-		PipelineBuilder& setMultisampling(const vk::PipelineMultisampleStateCreateInfo& multisampling);
-		PipelineBuilder& setDepthStencil(const vk::PipelineDepthStencilStateCreateInfo& depthStencil);
-		PipelineBuilder& setColorBlend(const vk::PipelineColorBlendStateCreateInfo& colorBlend);
-		PipelineBuilder& addColorBlendAttachemnt(const vk::PipelineColorBlendAttachmentState& colorAttachmentBlend);
-		PipelineBuilder& addShaderStage(
-			const std::vector<uint32_t>* spv,
-			vk::ShaderStageFlagBits shaderStage,
-			vk::PipelineShaderStageCreateFlags flags = {},
-			vk::SpecializationInfo* pSpecializationInfo = {});
+		vk::Pipeline const& getVkPipeline() const { return *pipeline; }
+		vk::PipelineLayout const& getVkPipelineLayout() const { return *layout; }
 	private:
-
+		friend class GraphicsPipelineBuilder;
+		vk::UniquePipeline pipeline;
+		vk::UniquePipelineLayout layout;
 	};
 
-	class Pipeline {
+	class GraphicsPipelineHandle {
 	public:
-
+		GraphicsPipeline const& operator * () const { return *pipeline; }
+		GraphicsPipeline const* operator -> () const { return &*pipeline; }
 	private:
-		vkh::Pipeline pipeline;
+		friend class GraphicsPipelineBuilder;
+		std::shared_ptr<GraphicsPipeline> pipeline;
+	};
+
+	class ShaderModule {
+	public:
+	private:
+		friend class GraphicsPipelineBuilder;
+		std::vector<u32> spirv;
+		vk::UniqueShaderModule shaderModule;
+		vk::ShaderStageFlagBits shaderStage;
+		std::string name;
+	};
+
+	class GraphicsPipelineBuilder {
+	public:
+		GraphicsPipelineBuilder() = default;
+		GraphicsPipelineBuilder& setViewport(vk::Viewport viewport);
+		GraphicsPipelineBuilder& setScissor(vk::Rect2D scissor);
+		GraphicsPipelineBuilder& setVertexInput(const vk::PipelineVertexInputStateCreateInfo& vertexInput);
+		GraphicsPipelineBuilder& setInputAssembly(const vk::PipelineInputAssemblyStateCreateInfo& inputassembly);
+		GraphicsPipelineBuilder& setRasterization(const vk::PipelineRasterizationStateCreateInfo& rasterization);
+		GraphicsPipelineBuilder& setMultisampling(const vk::PipelineMultisampleStateCreateInfo& multisampling);
+		GraphicsPipelineBuilder& setDepthStencil(const vk::PipelineDepthStencilStateCreateInfo& depthStencil);
+		GraphicsPipelineBuilder& addShaderStage(const ShaderModule& shaderModule);
+		GraphicsPipelineBuilder& addColorAttachment(const vk::AttachmentDescription& attachmentDescription);
+		GraphicsPipelineBuilder& addColorAttachment(const vk::AttachmentDescription& attachmentDescription, const vk::PipelineColorBlendAttachmentState&);
+		GraphicsPipelineBuilder& addDepthAttachment(const vk::AttachmentDescription& attachmentDescription);
+	private:
+		friend class Device;
+		GraphicsPipelineHandle build(vk::Device, vkh::DescriptorSetLayoutCache& layoutCache);
+
+		vk::PipelineCache pipelineCache;
+		std::optional<vk::Viewport> viewport;
+		std::optional<vk::Rect2D> scissor;
+		std::optional<vk::PipelineVertexInputStateCreateInfo> vertexInput;
+		std::optional<vk::PipelineInputAssemblyStateCreateInfo> inputAssembly;
+		std::optional<vk::PipelineRasterizationStateCreateInfo> rasterization;
+		std::optional<vk::PipelineMultisampleStateCreateInfo> multisampling;
+		std::optional<vk::PipelineDepthStencilStateCreateInfo> depthStencil;
+		std::vector<vk::PipelineShaderStageCreateInfo> shaderStages;
+		std::vector<vk::DynamicState> dynamicStateEnable;
+		std::vector<vk::PushConstantRange> pushConstants;
+		std::unordered_map<u32, std::unordered_map<u32, vk::DescriptorSetLayoutBinding>> descriptorSets;
+		std::vector<vk::PipelineShaderStageCreateInfo> shaderStageCreateInfo;
+		std::vector<vk::AttachmentDescription> attachmentDescriptions;
+		std::vector<vk::PipelineColorBlendAttachmentState> colorAttachmentBlends;
+		std::vector<vk::AttachmentReference> colorAttachmentRefs;
+		std::optional<vk::AttachmentReference> depthAttachmentRef;
+		std::optional<vk::AttachmentDescription> depthAttachmentDescription;
 	};
 
 }
