@@ -12,7 +12,6 @@ namespace daxa {
 	Application::Application(std::string name, u32 width, u32 height) :
 		gpu{ VulkanGlobals::getGlobalContext() }, descLayoutCache{ VulkanGlobals::getGlobalContext().device }
 	{
-
 		this->window = std::make_shared<Window>(
 			name, 
 			std::array<u32, 2>{ width, height },

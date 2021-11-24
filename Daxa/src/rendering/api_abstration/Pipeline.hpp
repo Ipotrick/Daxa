@@ -47,7 +47,7 @@ namespace daxa {
 			GraphicsPipelineBuilder& setRasterization(const vk::PipelineRasterizationStateCreateInfo& rasterization);
 			GraphicsPipelineBuilder& setMultisampling(const vk::PipelineMultisampleStateCreateInfo& multisampling);
 			GraphicsPipelineBuilder& setDepthStencil(const vk::PipelineDepthStencilStateCreateInfo& depthStencil);
-			GraphicsPipelineBuilder& addShaderStage(const ShaderModule& shaderModule);
+			GraphicsPipelineBuilder& addShaderStage(const ShaderModuleHandle& shaderModule);
 			GraphicsPipelineBuilder& addColorAttachment(const vk::Format& attachmentFormat);
 			GraphicsPipelineBuilder& addColorAttachment(const vk::Format& attachmentFormat, const vk::PipelineColorBlendAttachmentState&);
 			GraphicsPipelineBuilder& addDepthAttachment(const vk::Format& attachmentFormat);

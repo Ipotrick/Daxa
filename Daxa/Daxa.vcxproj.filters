@@ -249,9 +249,6 @@
     <ClInclude Include="src\rendering\api_abstration\common.hpp">
       <Filter>src\rendering\api_abstraction</Filter>
     </ClInclude>
-    <ClInclude Include="src\rendering\api_abstration\RenderPassCache.hpp">
-      <Filter>src\rendering\api_abstraction</Filter>
-    </ClInclude>
     <ClInclude Include="src\rendering\api_abstration\ShaderModule.hpp">
       <Filter>src\rendering\api_abstraction</Filter>
     </ClInclude>
