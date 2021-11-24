@@ -9,3 +9,5 @@ With this abstraction layer i build a renderer, wich is general in design and al
 The Engine also makes sue of multithreadding via a threadpool. This threadpool will be expaneded to also utalize co routines so that asyncronous operations can be executed.
 
 The Engine has minimal dependencies, all major systems (like renderer, ecs and maths library) are self written, as this engine is made for learning purposes and a tool to explore engine design.
+
+Outside of the Daxa-Folder there will be many examples and Demos utalizing the Daxa engine.
