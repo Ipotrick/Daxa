@@ -13,7 +13,7 @@
 #include "../src/threading/OwningMutex.hpp"
 #include "../src/threading/Jobs.hpp"
 
-#include "../src/DaxaApplication.hpp"
+#include "../src/Application.hpp"
 
 #include "../src/rendering/Rendering.hpp"
 

@@ -11,36 +11,44 @@
 #include "Image.hpp"
 
 #include "api_abstration/Device.hpp"
+#include "api_abstration/RenderWindow.hpp"
 
 namespace daxa {
 
-	struct RenderingRessources {
-		vkh::DescriptorSetLayoutCache descLayoutCache;
-		std::unordered_map<std::string_view, vk::UniqueRenderPass> renderPasses;
-		std::unordered_map<std::string_view, vkh::Pipeline> pipelines;
-		std::unordered_map<std::string_view, vkh::DescriptorSetAllocator> descSetAllocators;
-		std::unordered_map<std::string_view, vk::UniqueSampler> samplers;
+	struct PersistentRessources {
+		std::unordered_map<std::string_view, gpu::GraphicsPipelineHandle> pipelines;
 		std::unordered_map<std::string_view, gpu::ImageHandle> images;
-		std::unordered_map<std::string_view, SimpleMesh> meshes;
+		std::unordered_map<std::string_view, gpu::BufferHandle> buffers;
+	};
+
+	struct PerFrameRessources {
+		std::unordered_map<std::string_view, gpu::ImageHandle> images;
+		std::unordered_map<std::string_view, gpu::BufferHandle> buffers;
 	};
 
 	class Renderer {
 	public:
-		Renderer(std::shared_ptr<Window> win) 
-			: window{ std::move(win) }
-			, device{ gpu::Device::createNewDevice() }
-			, ressources{ std::make_shared<RenderingRessources>(RenderingRessources{.descLayoutCache = {device.getDevice()}}) }
-		{ }
+		Renderer(std::shared_ptr<Window> win);
+
+		void init() {}
 
 		void draw() {
+			auto [image, view] = renderWindow.getNextImage();
 
-			device.nextFrameContext();
+
+
+			nextFrameContext();
 		}
 
+		void deinit() {}
+
 		FPSCamera camera;
-		std::shared_ptr<Window> window{ nullptr };
-		gpu::Device device;
-		std::shared_ptr<RenderingRessources> ressources;
+		std::shared_ptr<gpu::Device> device;
+		PersistentRessources persResc;
+		std::deque<PerFrameRessources> frameResc;
 	private:
+		std::shared_ptr<Window> window{ nullptr };
+		gpu::RenderWindow renderWindow;
+		void nextFrameContext();
 	};
 }

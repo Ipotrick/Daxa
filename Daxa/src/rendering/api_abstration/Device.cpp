@@ -7,7 +7,7 @@
 
 namespace daxa {
 	namespace gpu {
-		vkb::Instance instance;
+		std::shared_ptr<vkb::Instance> instance;
 		vk::DebugUtilsMessengerEXT debugMessenger;
 		bool initialized = false;
 
@@ -24,8 +24,17 @@ namespace daxa {
 				std::cerr << "could not create vulkan instance!\n";
 			}
 
-			instance = instanceBuildReturn.value();
-			debugMessenger = instance.debug_messenger;
+			instance = std::make_shared<vkb::Instance>(std::move(instanceBuildReturn.value()));
+			debugMessenger = instance->debug_messenger;
+		}
+
+
+		std::shared_ptr<vkb::Instance> Device::getInstance() {
+			if (!initialized) {
+				initGlobals();
+				initialized = true;
+			}
+			return instance;
 		}
 
 		Device::Device(vk::Device device) : device{ device }, descriptorLayoutCache{ device } {}
@@ -35,7 +44,7 @@ namespace daxa {
 				initGlobals();
 				initialized = true;
 			}
-			vkb::PhysicalDeviceSelector selector{ instance };
+			vkb::PhysicalDeviceSelector selector{ *instance };
 			vkb::PhysicalDevice physicalDevice = selector
 				.set_minimum_version(1, 2)
 				.defer_surface_initialization()
@@ -66,7 +75,7 @@ namespace daxa {
 			VmaAllocatorCreateInfo allocatorInfo = {};
 			allocatorInfo.physicalDevice = physicslDevice;
 			allocatorInfo.device = device;
-			allocatorInfo.instance = instance.instance;
+			allocatorInfo.instance = instance->instance;
 			VmaAllocator allocator;
 			vmaCreateAllocator(&allocatorInfo, &allocator);
 
@@ -108,7 +117,8 @@ namespace daxa {
 			CommandList list{ std::move(cmdList) };
 			assert(!list.bUnfinishedOperationInProgress);
 			auto& frame = *this->frameContexts.front();
-			auto prevSubmitSema = frame.usedSemaphores.back();
+			bool syncOnPreviousSema = !frame.usedSemaphores.empty();
+			auto prevSubmitSema = syncOnPreviousSema ? frame.usedSemaphores.back() : nullptr;
 			auto thisSubmitSema = getNextSemaphore();
 			auto thisSubmitFence = getNextFence();
 
@@ -123,11 +133,15 @@ namespace daxa {
 
 			vk::Semaphore previousSemaphores[] = { prevSubmitSema };
 			si.pSignalSemaphores = previousSemaphores;
-			si.signalSemaphoreCount = 1;
+			si.signalSemaphoreCount = (syncOnPreviousSema) ? 1 : 0;
 
 			graphicsQ.submit(si, thisSubmitFence);
 
 			frame.usedCommandLists.push_back(std::move(list));
+		}
+
+		void Device::submit(std::vector<CommandList>&& cmdLists) {
+
 		}
 
 		void Device::nextFrameContext() {

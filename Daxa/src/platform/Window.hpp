@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "../DaxaCore.hpp"
-#include "../rendering/Rendering.hpp"
 #include "../math/Vec2.hpp"
 
 #include "Scancodes.hpp"
@@ -39,8 +38,7 @@ namespace daxa {
 	public:
 		Window(
 			std::string name,
-			std::array<u32,2> size,
-			GPUContext gpu
+			std::array<u32,2> size
 		);
 		~Window();
 		Window(Window&&) = delete;
@@ -48,7 +46,6 @@ namespace daxa {
 		void setSize(std::array<u32, 2> size);
 		std::array<u32,2> getSize() const;
 		Vec2 getSizeVec() const;
-		vk::Extent2D getExtent() const;
 
 		void setName(std::string name);
 		const std::string& getName();
@@ -94,26 +91,28 @@ namespace daxa {
 
 		std::vector<KeyEvent> getKeyEventsInOrder() const;
 
-		std::tuple<vk::Image, vk::ImageView, vk::Semaphore> getNextImage() {
-			auto index = imageIndex++;
-			u32 dummy;
-			vkAcquireNextImageKHR(gpu.device, swapchain, 1000000000, *presentSemaphores[index], nullptr, &dummy);
-			return { swapchainImages[index], swapchainImageViews[index], *presentSemaphores[index] };
-		}
+		void* getWindowHandleSDL();
 
-		vk::PresentModeKHR presentMode{ vk::PresentModeKHR::eFifo };
-		vk::SurfaceKHR surface;
-		vk::SwapchainKHR swapchain; // from other articles
-		vk::Format swapchainImageFormat; // image format expected by the windowing system
-		std::vector<vk::Image> swapchainImages; //array of images from the swapchain
-		std::vector<vk::ImageView> swapchainImageViews; //array of image-views from the swapchain
-		std::vector<vk::UniqueSemaphore> presentSemaphores;
-		u32 imageIndex{ 0 };
-		u32 imagesInFlight{ 2 };
-		vk::Format depthImageFormat;
-		Image depthImage;
+		//std::tuple<vk::Image, vk::ImageView, vk::Semaphore> getNextImage() {
+		//	auto index = imageIndex++;
+		//	u32 dummy;
+		//	vkAcquireNextImageKHR(gpu.device, swapchain, 1000000000, *presentSemaphores[index], nullptr, &dummy);
+		//	return { swapchainImages[index], swapchainImageViews[index], *presentSemaphores[index] };
+		//}
+
+		//vk::PresentModeKHR presentMode{ vk::PresentModeKHR::eFifo };
+		//vk::SurfaceKHR surface;
+		//vk::SwapchainKHR swapchain; // from other articles
+		//vk::Format swapchainImageFormat; // image format expected by the windowing system
+		//std::vector<vk::Image> swapchainImages; //array of images from the swapchain
+		//std::vector<vk::ImageView> swapchainImageViews; //array of image-views from the swapchain
+		//std::vector<vk::UniqueSemaphore> presentSemaphores;
+		//u32 imageIndex{ 0 };
+		//u32 imagesInFlight{ 2 };
+		//vk::Format depthImageFormat;
+		//Image depthImage;
 	private:
-		GPUContext gpu;
+		//GPUContext gpu;
 
 		std::string name;
 		std::array<u32, 2> size;
