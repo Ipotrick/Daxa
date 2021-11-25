@@ -28,6 +28,8 @@ namespace daxa {
 			debugMessenger = instance.debug_messenger;
 		}
 
+		Device::Device(vk::Device device) : device{ device }, descriptorLayoutCache{ device } {}
+
 		Device Device::createNewDevice() {
 			if (!initialized) {
 				initGlobals();
@@ -68,8 +70,7 @@ namespace daxa {
 			VmaAllocator allocator;
 			vmaCreateAllocator(&allocatorInfo, &allocator);
 
-			Device ret;
-			ret.device = device;
+			Device ret{ device };
 			ret.physicalDevice = physicalDevice.physical_device;
 			ret.graphicsQ = mainGraphicsQueue;
 			ret.graphicsQFamilyIndex = mainGraphicsQueueFamiltyIndex;
@@ -78,7 +79,7 @@ namespace daxa {
 			return ret;
 		}
 
-		ImageHandle Device::createImage2d(Image2dCreateInfo ci) {
+		ImageHandle Device::createImage2d(Image2dCreateInfo ci) { 
 			return ImageHandle{ std::make_shared<Image>(std::move(Image::create2dImage(device, allocator, ci))) };
 		}
 
@@ -197,6 +198,18 @@ namespace daxa {
 			frame.usedFences.push_back(ret);
 			frame.unusedFences.pop_back();
 			return ret;
+		}
+
+		std::optional<ShaderModuleHandle> Device::tryCreateShderModuleFromGLSL(std::string const& glslSource, vk::ShaderStageFlagBits stage, std::string const& name) {
+			return ShaderModuleHandle::tryCreateDAXAShaderModule(device, glslSource, name, stage);
+		}
+
+		std::optional<ShaderModuleHandle> Device::tryCreateShderModuleFromGLSL(std::filesystem::path const& pathToGlsl, vk::ShaderStageFlagBits stage, std::string const& name) {
+			return ShaderModuleHandle::tryCreateDAXAShaderModule(device, pathToGlsl, name, stage);
+		}
+
+		GraphicsPipelineHandle Device::createGraphicsPipeline(GraphicsPipelineBuilder const& pipelineBuilder) {
+			return pipelineBuilder.build(device, descriptorLayoutCache);
 		}
 	}
 }

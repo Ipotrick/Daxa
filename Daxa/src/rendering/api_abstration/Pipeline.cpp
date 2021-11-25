@@ -128,7 +128,7 @@ namespace daxa {
 			.height = 1
 		};
 
-		GraphicsPipelineHandle GraphicsPipelineBuilder::build(vk::Device device, vkh::DescriptorSetLayoutCache& layoutCache) {
+		GraphicsPipelineHandle GraphicsPipelineBuilder::build(vk::Device device, vkh::DescriptorSetLayoutCache& layoutCache) const {
 			if (!vertexInput) {
 				std::cerr << "error: vertexInput must be specified when building a GraphicsPipeline!" << std::endl;
 				exit(-1);
@@ -207,7 +207,7 @@ namespace daxa {
 			pci.subpass = 0;
 
 			auto [err, pipeline] = device.createGraphicsPipelineUnique(nullptr, pci);
-			assert(err == VK_SUCCESS);
+			assert(err == vk::Result::eSuccess);
 
 			GraphicsPipeline gpipeline;
 			gpipeline.pipeline = std::move(pipeline);

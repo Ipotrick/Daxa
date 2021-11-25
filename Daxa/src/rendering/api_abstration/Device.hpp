@@ -13,6 +13,8 @@
 #include "CommandList.hpp"
 #include "Image.hpp"
 #include "Buffer.hpp"
+#include "ShaderModule.hpp"
+#include "Pipeline.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -46,7 +48,33 @@ namespace daxa {
 			CommandList createCommandList();
 
 			/**
+			 * \param glslSource a string with valid glsl source code.
+			 * \param stage the shader stage, can be any of the VkShaderStageFlagBits.
+			 * \param name a name for the shader stage, only used for debugging.
+			 * \return newly created ShaderModule from the given source IF source is valid, or a nullopt if the source or path is invalid.
+			 */
+			std::optional<ShaderModuleHandle> tryCreateShderModuleFromGLSL(std::string const& glslSource, vk::ShaderStageFlagBits stage, std::string const& name = "Unnamed Shader");
+
+			/**
+			 * \param pathToGlsl a path to a file that contains valid glsl source code.
+			 * \param stage the shader stage, can be any of the VkShaderStageFlagBits.
+			 * \param name a name for the shader stage, only used for debugging.
+			 * \return newly created ShaderModule from the given source IF source path is valid, or a nullopt if the source or path is invalid.
+			 */
+			std::optional<ShaderModuleHandle> tryCreateShderModuleFromGLSL(std::filesystem::path const& pathToGlsl, vk::ShaderStageFlagBits stage, std::string const& name = "Unnamed Shader");
+
+			/**
+			 * Creates a graphics pipeline, wich is specified by the pipeline builder.
+			 * 
+			 * \param pipelineBuilder specifies how the pipeline is layed out.
+			 * \return a handle to a new graphics pipeline created from the pipeline builder.
+			 */
+			GraphicsPipelineHandle createGraphicsPipeline(GraphicsPipelineBuilder const& pipelineBuilder);
+
+			/**
 			 * Submits a CommandList to be executed on the GPU.
+			 *
+			 * It is guaranteed that all ressouces used in the cmdList and the cmdList itself live until after the gpu has finished executing it.
 			 *
 			 * \param cmdList holds commands to be executed.
 			 */
@@ -65,6 +93,8 @@ namespace daxa {
 			const vk::Queue& getGraphicsQ() { return graphicsQ; }
 			const u32& getGraphicsQFamilyIndex() { return graphicsQFamilyIndex; }
 		private:
+			Device(vk::Device device);
+
 			struct FrameContext {
 				vk::UniqueCommandPool cmdPool;
 				std::vector<CommandList> unusedCommandLists;
@@ -84,6 +114,7 @@ namespace daxa {
 
 			std::deque<std::unique_ptr<FrameContext>> frameContexts;
 
+			vkh::DescriptorSetLayoutCache descriptorLayoutCache;
 			vk::PhysicalDevice physicalDevice;
 			vk::Device device;
 			VmaAllocator allocator;

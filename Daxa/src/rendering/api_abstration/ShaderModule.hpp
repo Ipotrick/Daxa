@@ -25,7 +25,6 @@ namespace daxa {
 
 		class ShaderModule {
 		public:
-			
 		private:
 			friend class GraphicsPipelineBuilder;
 			friend class ShaderModuleHandle;
@@ -41,6 +40,7 @@ namespace daxa {
 		class ShaderModuleHandle {
 		public:
 			static std::optional<ShaderModuleHandle> tryCreateDAXAShaderModule(vk::Device device, std::filesystem::path const& path, std::string const& name, vk::ShaderStageFlagBits shaderStage);
+			static std::optional<ShaderModuleHandle> tryCreateDAXAShaderModule(vk::Device device, std::string const& glsl, std::string const& name, vk::ShaderStageFlagBits shaderStage);
 			ShaderModule const& operator * () const { return *shaderModule; }
 			ShaderModule const* operator -> () const { return &*shaderModule; }
 		private:
@@ -48,7 +48,5 @@ namespace daxa {
 
 			std::shared_ptr<ShaderModule> shaderModule;
 		};
-
-		
 	}
 }
