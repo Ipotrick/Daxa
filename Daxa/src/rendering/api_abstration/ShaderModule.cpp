@@ -213,19 +213,24 @@ namespace daxa {
 		std::optional<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(vk::Device device, std::filesystem::path const& path, std::string const& name, vk::ShaderStageFlagBits shaderStage) {
 			auto src = tryLoadGLSLShaderFromFile(path);
 			if (src.has_value()) {
-				auto spirv = tryGenSPIRVFromGLSL(src.value(), shaderStage);
-				if (spirv.has_value()) {
-					auto shaderModuleOpt = tryCreateVkShaderModule(device, spirv.value());
-					if (shaderModuleOpt.has_value()) {
-						ShaderModule shaderMod;
-						shaderMod.name = name;
-						shaderMod.shaderModule = std::move(shaderModuleOpt.value());
-						shaderMod.spirv = spirv.value();
-						shaderMod.shaderStage = shaderStage;
-						ShaderModuleHandle handle;
-						handle.shaderModule = std::make_shared<ShaderModule>(std::move(shaderMod));
-						return handle;
-					}
+				return tryCreateDAXAShaderModule(device, src.value(), name, shaderStage);
+			}
+			return std::nullopt;
+		}
+
+		std::optional<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(vk::Device device, std::string const& glsl, std::string const& name, vk::ShaderStageFlagBits shaderStage) {
+			auto spirv = tryGenSPIRVFromGLSL(glsl, shaderStage);
+			if (spirv.has_value()) {
+				auto shaderModuleOpt = tryCreateVkShaderModule(device, spirv.value());
+				if (shaderModuleOpt.has_value()) {
+					ShaderModule shaderMod;
+					shaderMod.name = name;
+					shaderMod.shaderModule = std::move(shaderModuleOpt.value());
+					shaderMod.spirv = spirv.value();
+					shaderMod.shaderStage = shaderStage;
+					ShaderModuleHandle handle;
+					handle.shaderModule = std::make_shared<ShaderModule>(std::move(shaderMod));
+					return handle;
 				}
 			}
 			return std::nullopt;

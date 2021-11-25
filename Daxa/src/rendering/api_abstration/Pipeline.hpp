@@ -54,7 +54,7 @@ namespace daxa {
 			GraphicsPipelineBuilder& addStencilAttachment(const vk::Format& attachmentFormat);
 		private:
 			friend class Device;
-			GraphicsPipelineHandle build(vk::Device, vkh::DescriptorSetLayoutCache& layoutCache);
+			GraphicsPipelineHandle build(vk::Device, vkh::DescriptorSetLayoutCache& layoutCache) const;
 
 			vk::PipelineCache pipelineCache;
 			std::optional<vk::Viewport> viewport;

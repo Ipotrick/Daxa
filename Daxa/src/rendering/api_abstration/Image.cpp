@@ -1,12 +1,13 @@
 #include "Image.hpp"
 #include "common.hpp"
+#include <cassert>
 
 namespace daxa {
 	namespace gpu {
 
 		DAXA_DEFINE_TRIVIAL_MOVE(Image)
 
-			Image::~Image() {
+		Image::~Image() {
 			if (allocator) {
 				vmaDestroyImage(allocator, image, allocation);
 				allocator = nullptr;
@@ -15,7 +16,6 @@ namespace daxa {
 				view = {};
 			}
 		}
-
 
 		Image Image::create2dImage(vk::Device device, VmaAllocator allocator, Image2dCreateInfo ci) {
 			Image ret;
@@ -36,11 +36,13 @@ namespace daxa {
 			aci.usage = ci.memoryUsage;
 			aci.requiredFlags = (VkMemoryPropertyFlags)ci.memoryPropertyFlags;
 
-			vmaCreateImage(allocator, (VkImageCreateInfo*)&ici, &aci, (VkImage*)&*ret.image, &ret.allocation, nullptr);
+			auto err = vmaCreateImage(allocator, (VkImageCreateInfo*)&ici, &aci, (VkImage*)&ret.image, &ret.allocation, nullptr);
+			assert(err == VK_SUCCESS);
 
 			vk::ImageViewCreateInfo ivci{};
 			ivci.image = ret.image;
 			ivci.format = ci.format;
+			ivci.viewType = vk::ImageViewType::e2D;
 			ivci.subresourceRange.baseMipLevel = 0;
 			ivci.subresourceRange.levelCount = 1;
 			ivci.subresourceRange.baseArrayLayer = 0;

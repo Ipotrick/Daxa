@@ -20,9 +20,13 @@ namespace daxa {
 
 		this->renderer = std::make_unique<Renderer>(this->window);
 
-		auto moduleOpt = daxa::gpu::ShaderModuleHandle::tryCreateDAXAShaderModule(VulkanGlobals::getGlobalContext().device, "Daxa/shaders/mesh.vert", "some shader name", vk::ShaderStageFlagBits::eVertex);
+		daxa::gpu::Image2dCreateInfo ici{
+			.width = 100,
+			.height = 100,
+			.format = vk::Format::eR8G8B8A8Snorm
+		};
 
-		std::cout << "shader creation worked: " << std::boolalpha << moduleOpt.has_value() << std::endl;
+		this->renderer->device.createImage2d(ici);
 
 		for (i64 i = 0; i < FRAME_OVERLAP; i++) {
 			frames.emplace_back(&descLayoutCache, globalSetAllocator.allocate());
