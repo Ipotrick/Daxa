@@ -7,6 +7,7 @@
 
 #include "../dependencies/vk_mem_alloc.hpp"
 #include "../dependencies/vulkanhelper.hpp"
+#include "../dependencies/VkBootstrap.hpp"
 
 #include "../../DaxaCore.hpp"
 
@@ -22,6 +23,8 @@ namespace daxa {
 		class Device {
 		public:
 			static Device createNewDevice();
+
+			static std::shared_ptr<vkb::Instance> getInstance();
 
 			/**
 			 * \param ci all information defining the 2d image
@@ -80,6 +83,8 @@ namespace daxa {
 			 */
 			void submit(CommandList&& cmdList);
 
+			void submit(std::vector<CommandList>&& cmdLists);
+
 			/**
 			 * Marks the beginning of the next frame of execution.
 			 * If the GPU stalls, this will block until a frame context is available again.
@@ -87,8 +92,8 @@ namespace daxa {
 			 */
 			void nextFrameContext();
 
-			const vk::PhysicalDevice& getPhysicalDevice() { return physicalDevice; }
-			const vk::Device& getDevice() { return device; }
+			const vk::PhysicalDevice& getVkPhysicalDevice() { return physicalDevice; }
+			const vk::Device& getVkDevice() { return device; }
 			const VmaAllocator& getVma() { return allocator; }
 			const vk::Queue& getGraphicsQ() { return graphicsQ; }
 			const u32& getGraphicsQFamilyIndex() { return graphicsQFamilyIndex; }

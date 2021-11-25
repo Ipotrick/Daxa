@@ -7,8 +7,9 @@
 #include <SDL2/SDL_vulkan.h>
 
 namespace daxa {
-	Window::Window(std::string name, std::array<u32, 2> size, GPUContext gpu) :
-		name{ name }, size{ size }, gpu{ gpu }
+	Window::Window(std::string name, std::array<u32, 2> size) 
+		: name{ name }
+		, size{ size }
 	{
 		//create blank SDL window for our application
 		sdlWindowHandle = SDL_CreateWindow(
@@ -20,15 +21,6 @@ namespace daxa {
 			SDL_WINDOW_VULKAN
 		);
 
-		depthImageFormat = vk::Format::eD32Sfloat;
-
-		depthImage = createImage2d(gpu, daxa::Image2dCreateInfo{
-			.format = depthImageFormat,
-			.size = {.width = size[0],.height = size[1]},
-			.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
-			.viewImageAspectFlags = vk::ImageAspectFlagBits::eDepth,
-		});
-
 		SDL_CaptureMouse(SDL_TRUE);
 
 		if (!sdlWindowHandle) {
@@ -38,43 +30,43 @@ namespace daxa {
 
 		sdlWindowId = SDL_GetWindowID(sdlWindowHandle);
 
-		SDL_Vulkan_CreateSurface(sdlWindowHandle, VulkanGlobals::instance, (VkSurfaceKHR*)&surface);
+		//SDL_Vulkan_CreateSurface(sdlWindowHandle, VulkanGlobals::instance, (VkSurfaceKHR*)&surface);
 
-		vkb::SwapchainBuilder swapchainBuilder{ gpu.physicalDevice, gpu.device, surface };
+		//vkb::SwapchainBuilder swapchainBuilder{ gpu.physicalDevice, gpu.device, surface };
 
-		vkb::Swapchain vkbSwapchain = swapchainBuilder
-			.use_default_format_selection()
-			.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
-			.set_desired_extent(size[0], size[1])
-			.build()
-			.value();
-
-		//store swapchain and its related images
-		swapchain = (vk::SwapchainKHR)vkbSwapchain.swapchain;
-		auto vkImages = vkbSwapchain.get_images().value();
-		for (VkImage& img : vkImages) {
-			swapchainImages.push_back((vk::Image)img);
-		}
-		auto vkImageViews = vkbSwapchain.get_image_views().value();
-		for (VkImageView& img : vkImageViews) {
-			swapchainImageViews.push_back((vk::ImageView)img);
-		}
-		for (VkImageView& img : vkImageViews) {
-			presentSemaphores.push_back(gpu.device.createSemaphoreUnique({}));
-		}
-
-		swapchainImageFormat = (vk::Format)vkbSwapchain.image_format;
+		//vkb::Swapchain vkbSwapchain = swapchainBuilder
+		//	.use_default_format_selection()
+		//	.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
+		//	.set_desired_extent(size[0], size[1])
+		//	.build()
+		//	.value();
+		//
+		////store swapchain and its related images
+		//swapchain = (vk::SwapchainKHR)vkbSwapchain.swapchain;
+		//auto vkImages = vkbSwapchain.get_images().value();
+		//for (VkImage& img : vkImages) {
+		//	swapchainImages.push_back((vk::Image)img);
+		//}
+		//auto vkImageViews = vkbSwapchain.get_image_views().value();
+		//for (VkImageView& img : vkImageViews) {
+		//	swapchainImageViews.push_back((vk::ImageView)img);
+		//}
+		//for (VkImageView& img : vkImageViews) {
+		//	presentSemaphores.push_back(gpu.device.createSemaphoreUnique({}));
+		//}
+		//
+		//swapchainImageFormat = (vk::Format)vkbSwapchain.image_format;
 	}
 	Window::~Window() 	{
-		vkDestroySwapchainKHR(gpu.device, swapchain, nullptr);
+		//vkDestroySwapchainKHR(gpu.device, swapchain, nullptr);
 
 		//destroy swapchain resources
-		for (int i = 0; i < swapchainImageViews.size(); i++) {
+		//for (int i = 0; i < swapchainImageViews.size(); i++) {
+		//
+		//	vkDestroyImageView(gpu.device, swapchainImageViews[i], nullptr);
+		//}
 
-			vkDestroyImageView(gpu.device, swapchainImageViews[i], nullptr);
-		}
-
-		vkDestroySurfaceKHR(VulkanGlobals::instance, surface, nullptr);
+		//vkDestroySurfaceKHR(VulkanGlobals::instance, surface, nullptr);
 		SDL_DestroyWindow(sdlWindowHandle);
 		sdlWindowHandle = nullptr;
 	}
@@ -86,9 +78,6 @@ namespace daxa {
 	}
 	Vec2 Window::getSizeVec() const 	{
 		return { static_cast<f32>(size[0]), static_cast<f32>(size[1]) };
-	}
-	vk::Extent2D Window::getExtent() const 	{
-		return vk::Extent2D{ size[0],size[1] };
 	}
 	void Window::setName(std::string name) 	{
 		this->name = std::move(name);
@@ -274,5 +263,9 @@ namespace daxa {
 			}
 		}
 		return ret;
+	}
+
+	void* Window::getWindowHandleSDL() {
+		return sdlWindowHandle;
 	}
 }

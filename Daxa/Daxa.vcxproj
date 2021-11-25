@@ -26,7 +26,8 @@
     <ClInclude Include="dependencies\vk_mem_alloc.hpp" />
     <ClInclude Include="dependencies\vulkanhelper.hpp" />
     <ClInclude Include="include\Daxa.hpp" />
-    <ClInclude Include="src\DaxaApplication.hpp" />
+    <ClInclude Include="src\Application.hpp" />
+    <ClInclude Include="src\DaxaApplicationOLD.hpp" />
     <ClInclude Include="src\DaxaCore.hpp" />
     <ClInclude Include="src\DaxaInstance.hpp" />
     <ClInclude Include="src\entity\ECS.hpp" />
@@ -65,6 +66,7 @@
     <ClInclude Include="src\rendering\api_abstration\Device.hpp" />
     <ClInclude Include="src\rendering\api_abstration\Image.hpp" />
     <ClInclude Include="src\rendering\api_abstration\Pipeline.hpp" />
+    <ClInclude Include="src\rendering\api_abstration\RenderWindow.hpp" />
     <ClInclude Include="src\rendering\api_abstration\ShaderModule.hpp" />
     <ClInclude Include="src\rendering\Buffer.hpp" />
     <ClInclude Include="src\rendering\Camera.hpp" />
@@ -73,7 +75,6 @@
     <ClInclude Include="src\rendering\ImageManager.hpp" />
     <ClInclude Include="src\rendering\CoordSystem2d.hpp" />
     <ClInclude Include="src\rendering\Renderer.hpp" />
-    <ClInclude Include="src\rendering\Renderer2d.hpp" />
     <ClInclude Include="src\rendering\Rendering.hpp" />
     <ClInclude Include="src\rendering\SamplerManager.hpp" />
     <ClInclude Include="src\rendering\ShaderUtil.hpp" />
@@ -94,8 +95,9 @@
     <ClCompile Include="dependencies\VkBootstrap.cpp" />
     <ClCompile Include="dependencies\vk_mem_alloc.cpp" />
     <ClCompile Include="dependencies\vulkanhelper.cpp" />
+    <ClCompile Include="src\Application.cpp" />
     <ClCompile Include="src\Daxa.cpp" />
-    <ClCompile Include="src\DaxaApplication.cpp" />
+    <ClCompile Include="src\DaxaApplicationOLD.cpp" />
     <ClCompile Include="src\gui\base\GUIDrawContext.cpp" />
     <ClCompile Include="src\gui\font\Font.cpp" />
     <ClCompile Include="src\gui\font\FontManager.cpp" />
@@ -108,9 +110,11 @@
     <ClCompile Include="src\rendering\api_abstration\Device.cpp" />
     <ClCompile Include="src\rendering\api_abstration\Image.cpp" />
     <ClCompile Include="src\rendering\api_abstration\Pipeline.cpp" />
+    <ClCompile Include="src\rendering\api_abstration\RenderWindow.cpp" />
     <ClCompile Include="src\rendering\api_abstration\ShaderModule.cpp" />
     <ClCompile Include="src\rendering\ImageManager.cpp" />
     <ClCompile Include="src\rendering\CoordSystem2d.cpp" />
+    <ClCompile Include="src\rendering\Renderer.cpp" />
     <ClCompile Include="src\rendering\RenderTypesCompilationUnit.cpp" />
     <ClCompile Include="src\rendering\SimpleMesh.cpp" />
     <ClCompile Include="src\rendering\Vulkan.cpp" />

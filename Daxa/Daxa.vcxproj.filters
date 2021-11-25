@@ -90,7 +90,7 @@
     <ClInclude Include="src\math\Vec.hpp">
       <Filter>src\math</Filter>
     </ClInclude>
-    <ClInclude Include="src\DaxaApplication.hpp">
+    <ClInclude Include="src\DaxaApplicationOLD.hpp">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\threading\Jobs.hpp">
@@ -222,9 +222,6 @@
     <ClInclude Include="src\util\UUID.hpp">
       <Filter>src\util</Filter>
     </ClInclude>
-    <ClInclude Include="src\rendering\Renderer2d.hpp">
-      <Filter>src\rendering</Filter>
-    </ClInclude>
     <ClInclude Include="src\DaxaInstance.hpp">
       <Filter>src</Filter>
     </ClInclude>
@@ -252,6 +249,12 @@
     <ClInclude Include="src\rendering\api_abstration\ShaderModule.hpp">
       <Filter>src\rendering\api_abstraction</Filter>
     </ClInclude>
+    <ClInclude Include="src\Application.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\api_abstration\RenderWindow.hpp">
+      <Filter>src\rendering\api_abstraction</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\stb_image.cpp">
@@ -260,7 +263,7 @@
     <ClCompile Include="dependencies\VkBootstrap.cpp">
       <Filter>dependencies</Filter>
     </ClCompile>
-    <ClCompile Include="src\DaxaApplication.cpp">
+    <ClCompile Include="src\DaxaApplicationOLD.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\threading\Jobs.cpp">
@@ -336,6 +339,15 @@
       <Filter>src\rendering\api_abstraction</Filter>
     </ClCompile>
     <ClCompile Include="src\rendering\api_abstration\ShaderModule.cpp">
+      <Filter>src\rendering\api_abstraction</Filter>
+    </ClCompile>
+    <ClCompile Include="src\rendering\Renderer.cpp">
+      <Filter>src\rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Application.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\rendering\api_abstration\RenderWindow.cpp">
       <Filter>src\rendering\api_abstraction</Filter>
     </ClCompile>
   </ItemGroup>
