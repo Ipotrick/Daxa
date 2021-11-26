@@ -255,6 +255,9 @@
     <ClInclude Include="src\rendering\api_abstration\RenderWindow.hpp">
       <Filter>src\rendering\api_abstraction</Filter>
     </ClInclude>
+    <ClInclude Include="src\rendering\api_abstration\SwapchainImage.hpp">
+      <Filter>src\rendering\api_abstraction</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\stb_image.cpp">

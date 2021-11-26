@@ -68,6 +68,7 @@
     <ClInclude Include="src\rendering\api_abstration\Pipeline.hpp" />
     <ClInclude Include="src\rendering\api_abstration\RenderWindow.hpp" />
     <ClInclude Include="src\rendering\api_abstration\ShaderModule.hpp" />
+    <ClInclude Include="src\rendering\api_abstration\SwapchainImage.hpp" />
     <ClInclude Include="src\rendering\Buffer.hpp" />
     <ClInclude Include="src\rendering\Camera.hpp" />
     <ClInclude Include="src\rendering\Camera2d.hpp" />

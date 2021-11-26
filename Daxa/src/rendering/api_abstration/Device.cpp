@@ -37,9 +37,7 @@ namespace daxa {
 			return instance;
 		}
 
-		Device::Device(vk::Device device) : device{ device }, descriptorLayoutCache{ device } {}
-
-		Device Device::createNewDevice() {
+		std::shared_ptr<Device> Device::createNewDevice() {
 			if (!initialized) {
 				initGlobals();
 				initialized = true;
@@ -79,13 +77,15 @@ namespace daxa {
 			VmaAllocator allocator;
 			vmaCreateAllocator(&allocatorInfo, &allocator);
 
-			Device ret{ device };
-			ret.physicalDevice = physicalDevice.physical_device;
-			ret.graphicsQ = mainGraphicsQueue;
-			ret.graphicsQFamilyIndex = mainGraphicsQueueFamiltyIndex;
-			ret.allocator = allocator;
-			ret.initFrameContexts();
-			return ret;
+			std::shared_ptr<Device> ret = std::make_shared<Device>();
+			ret->device = device;
+			ret->descriptorLayoutCache = { device };
+			ret->physicalDevice = physicalDevice.physical_device;
+			ret->graphicsQ = mainGraphicsQueue;
+			ret->graphicsQFamilyIndex = mainGraphicsQueueFamiltyIndex;
+			ret->allocator = allocator;
+			ret->initFrameContexts();
+			return std::move(ret);
 		}
 
 		ImageHandle Device::createImage2d(Image2dCreateInfo ci) { 
@@ -96,30 +96,15 @@ namespace daxa {
 			return BufferHandle{ std::make_shared<Buffer>(std::move(Buffer(device, graphicsQFamilyIndex, allocator, ci))) };
 		}
 
-		BufferHandle Device::createFramedBuffer(BufferCreateInfo ci) {
-			auto bufferHandle = createBuffer(ci);
-			this->frameContexts.front()->framedBuffers.push_back(bufferHandle);
-			return bufferHandle;
+		CommandList Device::getEmptyCommandList() {
+			return std::move(getNextCommandList());
 		}
 
-		CommandList Device::createCommandList() {
-			CommandList ret;
-
-			vk::CommandBufferAllocateInfo cbai{};
-			cbai.commandPool = *this->frameContexts.front()->cmdPool;
-			cbai.level = vk::CommandBufferLevel::ePrimary;
-			ret.cmd = std::move(device.allocateCommandBuffersUnique(cbai).front());
-
-			return ret;
-		}
-
-		void Device::submit(CommandList&& cmdList) {
+		void Device::submit(CommandList&& cmdList, SubmitInfo const& submitInfo) {
 			CommandList list{ std::move(cmdList) };
 			assert(!list.bUnfinishedOperationInProgress);
 			auto& frame = *this->frameContexts.front();
-			bool syncOnPreviousSema = !frame.usedSemaphores.empty();
-			auto prevSubmitSema = syncOnPreviousSema ? frame.usedSemaphores.back() : nullptr;
-			auto thisSubmitSema = getNextSemaphore();
+
 			auto thisSubmitFence = getNextFence();
 
 			vk::SubmitInfo si{};
@@ -127,21 +112,57 @@ namespace daxa {
 			vk::PipelineStageFlags pipelineStages = vk::PipelineStageFlagBits::eAllCommands;
 			si.pWaitDstStageMask = &pipelineStages;
 
-			vk::CommandBuffer commandBuffers[] = { *list.cmd };
+			vk::CommandBuffer commandBuffers[] = { list.cmd };
 			si.pCommandBuffers = commandBuffers;
 			si.commandBufferCount = 1;
-
-			vk::Semaphore previousSemaphores[] = { prevSubmitSema };
-			si.pSignalSemaphores = previousSemaphores;
-			si.signalSemaphoreCount = (syncOnPreviousSema) ? 1 : 0;
+			si.pWaitSemaphores = submitInfo.waitOnSemaphores.data();
+			si.waitSemaphoreCount = submitInfo.waitOnSemaphores.size();
+			si.pSignalSemaphores = submitInfo.signalSemaphores.data();
+			si.signalSemaphoreCount = submitInfo.signalSemaphores.size();
 
 			graphicsQ.submit(si, thisSubmitFence);
 
 			frame.usedCommandLists.push_back(std::move(list));
 		}
 
-		void Device::submit(std::vector<CommandList>&& cmdLists) {
+		void Device::submit(std::vector<CommandList>& cmdLists, SubmitInfo const& submitInfo) {
+			auto& frame = *this->frameContexts.front();
+			auto thisSubmitFence = getNextFence();
 
+			submitCommandBufferBuffer.clear();
+			for (auto& cmdList : cmdLists) {
+				assert(!cmdList.bUnfinishedOperationInProgress);
+				submitCommandBufferBuffer.push_back(cmdList.cmd);
+			}
+
+			vk::PipelineStageFlags pipelineStages = vk::PipelineStageFlagBits::eAllCommands;
+			vk::SubmitInfo si{};
+			si.pWaitDstStageMask = &pipelineStages;
+			si.pCommandBuffers = submitCommandBufferBuffer.data();
+			si.commandBufferCount = static_cast<u32>(submitCommandBufferBuffer.size());
+			si.pWaitSemaphores = submitInfo.waitOnSemaphores.data();
+			si.waitSemaphoreCount = submitInfo.waitOnSemaphores.size();
+			si.pSignalSemaphores = submitInfo.signalSemaphores.data();
+			si.signalSemaphoreCount = submitInfo.signalSemaphores.size();
+
+			graphicsQ.submit(si, thisSubmitFence);
+
+			while (!cmdLists.empty()) {
+				auto list = std::move(cmdLists.back());
+				cmdLists.pop_back();
+				frame.usedCommandLists.push_back(std::move(list));
+			}
+		}
+
+		void Device::present(SwapchainImage const& sImage, std::vector<vk::Semaphore> const& waitOn) {
+			vk::PresentInfoKHR presentInfo{};
+			presentInfo.pImageIndices = &sImage.imageIndex;
+			presentInfo.pSwapchains = &sImage.swapchain;
+			presentInfo.swapchainCount = 1;
+			presentInfo.pWaitSemaphores = waitOn.data();
+			presentInfo.waitSemaphoreCount = static_cast<u32>(waitOn.size());
+
+			graphicsQ.presentKHR(presentInfo);
 		}
 
 		void Device::nextFrameContext() {
@@ -162,55 +183,70 @@ namespace daxa {
 			while (!frame.usedFences.empty()) {
 				auto back = frame.usedFences.back();
 				frame.usedFences.pop_back();
-				frame.unusedFences.push_back(back);
+				unusedFences.push_back(back);
 			}
 			// we reset the command buffers individually as there is generally no big performance cost to that
 			//device.resetCommandPool(*frame.cmdPool, vk::CommandPoolResetFlagBits::eReleaseResources);
-			frame.framedBuffers.clear();
-
 			// reset and recycle CommandLists
 			while (!frame.usedCommandLists.empty()) {
-				auto list = std::move(frame.unusedCommandLists.back());
-				frame.unusedCommandLists.pop_back();
+				auto list = std::move(frame.usedCommandLists.back());
+				frame.usedCommandLists.pop_back();
 				list.reset();
-				frame.unusedCommandLists.push_back(std::move(list));
+				unusedCommandLists.push_back(std::move(list));
 			}
 		}
 
 		void Device::initFrameContexts() {
 			// The amount of contexts is currently hardcoded to two wich is fine for now.
 			// A later extention to adapt the amount of contexts may be a nice feature.
-			for (int i = 0; i < 2; i++) {
-				std::unique_ptr<FrameContext> fc = std::make_unique<FrameContext>();
-
-				vk::CommandPoolCreateInfo cpci{};
-				cpci.queueFamilyIndex = graphicsQFamilyIndex;
-				cpci.flags |= vk::CommandPoolCreateFlagBits::eTransient;
-				fc->cmdPool = device.createCommandPoolUnique(cpci);
-
+			for (int i = 0; i < 3; i++) {
+				auto fc = std::make_unique<FrameContext>();
 				this->frameContexts.push_back(std::move(fc));
 			}
 		}
 
+		CommandList Device::getNextCommandList() {
+			auto& frame = *frameContexts.front();
+			if (unusedCommandLists.empty()) {
+				// we have no command lists left, we need to create new ones:
+				CommandList list;
+				list.device = device;
+				vk::CommandPoolCreateInfo cpci{};
+				cpci.queueFamilyIndex = graphicsQFamilyIndex;
+				list.cmdPool = device.createCommandPool(cpci);
+				vk::CommandBufferAllocateInfo cbai{};
+				cbai.commandPool = list.cmdPool;
+				cbai.commandBufferCount = 1;
+				cbai.level = vk::CommandBufferLevel::ePrimary;
+				list.cmd = std::move(device.allocateCommandBuffers(cbai).front());
+				unusedCommandLists.push_back(std::move(list));
+			} else {
+				printf("recycling!\n");
+			}
+			auto ret = std::move(unusedCommandLists.back());
+			unusedCommandLists.pop_back();
+			return std::move(ret);
+		}
+
 		vk::Semaphore Device::getNextSemaphore() {
 			auto& frame = *frameContexts.front();
-			if (frame.unusedSemaphores.empty()) {
-				frame.unusedSemaphores.push_back(device.createSemaphore({}));
+			if (unusedSemaphores.empty()) {
+				unusedSemaphores.push_back(device.createSemaphore({}));
 			}
-			auto ret = frame.unusedSemaphores.back();
+			auto ret = unusedSemaphores.back();
+			unusedSemaphores.pop_back();
 			frame.usedSemaphores.push_back(ret);
-			frame.unusedSemaphores.pop_back();
 			return ret;
 		}
 
 		vk::Fence Device::getNextFence() {
 			auto& frame = *frameContexts.front();
-			if (frame.unusedFences.empty()) {
-				frame.unusedFences.push_back(device.createFence({}));
+			if (unusedFences.empty()) {
+				unusedFences.push_back(device.createFence({}));
 			}
-			auto ret = this->frameContexts.front()->unusedFences.back();
+			auto ret = unusedFences.back();
+			unusedFences.pop_back();
 			frame.usedFences.push_back(ret);
-			frame.unusedFences.pop_back();
 			return ret;
 		}
 
@@ -223,7 +259,7 @@ namespace daxa {
 		}
 
 		GraphicsPipelineHandle Device::createGraphicsPipeline(GraphicsPipelineBuilder const& pipelineBuilder) {
-			return pipelineBuilder.build(device, descriptorLayoutCache);
+			return pipelineBuilder.build(device, *descriptorLayoutCache);
 		}
 	}
 }
