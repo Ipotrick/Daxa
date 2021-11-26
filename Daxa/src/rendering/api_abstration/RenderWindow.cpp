@@ -32,10 +32,7 @@ namespace daxa {
 			for (VkImageView& img : vkImageViews) {
 				swapchainImageViews.push_back((vk::ImageView)img);
 			}
-			for (int i = 0; i < imagesInFlight; i++) {
-				presentationFences.push_back(device->getVkDevice().createFence({}));
-			}
-			
+			presentationSemaphore = device->getVkDevice().createSemaphore({});
 			swapchainImageFormat = (vk::Format)vkbSwapchain.image_format;
 		}
 
@@ -45,11 +42,10 @@ namespace daxa {
 				for (int i = 0; i < imagesInFlight; i++) {
 					device->getVkDevice().destroyImage(swapchainImages[i]);
 					device->getVkDevice().destroyImageView(swapchainImageViews[i]);
-					device->getVkDevice().destroyFence(presentationFences[i]);
+					device->getVkDevice().destroySemaphore(presentationSemaphore);
 				}
 				swapchainImages.clear();
 				swapchainImageViews.clear();
-				presentationFences.clear();
 				vkDestroySurfaceKHR(instance->instance, surface, nullptr);
 				instance = nullptr;
 				surface = nullptr;
@@ -57,13 +53,17 @@ namespace daxa {
 			}
 		}
 
-		std::tuple<vk::Image, vk::ImageView> RenderWindow::getNextImage() {
-			auto index = imageIndex++ % 2;
-			u32 dummy;
-			device->getVkDevice().waitForFences(presentationFences[index], VK_TRUE, 10000000000);
-			auto err = device->getVkDevice().acquireNextImageKHR(swapchain, 10000000000, nullptr, presentationFences[index], &dummy);
+		SwapchainImage RenderWindow::getNextImage() {
+			u32 index{ 0 };
+			auto err = device->getVkDevice().acquireNextImageKHR(swapchain, 10000000000, presentationSemaphore, nullptr, &index);
 			assert(err == vk::Result::eSuccess);
-			return { swapchainImages[index], swapchainImageViews[index] };
+			SwapchainImage si{};
+			si.swapchain = swapchain;
+			si.imageIndex = index;
+			si.image = swapchainImages[index];
+			si.imageView = swapchainImageViews[index];
+			si.presentSemaphore = presentationSemaphore;
+			return si;
 		}
 	}
 }

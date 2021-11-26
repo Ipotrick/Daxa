@@ -1,6 +1,7 @@
 #pragma once
 
 #include <deque>
+#include <memory>
 
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <vulkan/vulkan.hpp>
@@ -16,13 +17,17 @@
 #include "Buffer.hpp"
 #include "ShaderModule.hpp"
 #include "Pipeline.hpp"
+#include "SwapchainImage.hpp"
 
 namespace daxa {
 	namespace gpu {
 
 		class Device {
 		public:
-			static Device createNewDevice();
+			Device() = default;
+			Device(Device const& other) = delete;
+
+			static std::shared_ptr<Device> createNewDevice();
 
 			static std::shared_ptr<vkb::Instance> getInstance();
 
@@ -39,16 +44,9 @@ namespace daxa {
 			BufferHandle createBuffer(BufferCreateInfo ci);
 
 			/**
-			 * Creates a buffer object wich is guaranteed to live for at least one frame context cycle.
-			 * \param ci all information defining the buffer
-			 * \return a reference counted buffer handle of the created buffer ressource.
-			 */
-			BufferHandle createFramedBuffer(BufferCreateInfo ci);
-
-			/**
 			 * \return returns an empty CommandList.
 			 */
-			CommandList createCommandList();
+			CommandList getEmptyCommandList();
 
 			/**
 			 * \param glslSource a string with valid glsl source code.
@@ -74,16 +72,33 @@ namespace daxa {
 			 */
 			GraphicsPipelineHandle createGraphicsPipeline(GraphicsPipelineBuilder const& pipelineBuilder);
 
+			struct SubmitInfo {
+				std::vector<vk::Semaphore> waitOnSemaphores;	// TODO REPLACE WITH STACK ALLOCATED VECTOR
+				std::vector<vk::Semaphore> signalSemaphores;	// TODO REPLACE WITH STACK ALLOCATED VECTOR
+			};
+
 			/**
 			 * Submits a CommandList to be executed on the GPU.
 			 *
 			 * It is guaranteed that all ressouces used in the cmdList and the cmdList itself live until after the gpu has finished executing it.
 			 *
 			 * \param cmdList holds commands to be executed.
+			 * \param submitInfo defines the syncronization on gpu of this submit.
 			 */
-			void submit(CommandList&& cmdList);
+			void submit(CommandList&& cmdList, SubmitInfo const& submitInfo);
 
-			void submit(std::vector<CommandList>&& cmdLists);
+			/**
+			 * Submit CommandLists to be executed on the GPU.
+			 * Per default the submits are synced to wait on each other based on submission ordering.
+			 *
+			 * It is guaranteed that all ressouces used in the cmdList and the cmdList itself live until after the gpu has finished executing it.
+			 * 
+			 * \param cmdLists a vector containing the command lists. This vector will be emptied.
+			 * \param submitInfo defines the syncronization on gpu of this submit.
+			 */
+			void submit(std::vector<CommandList>& cmdLists, SubmitInfo const& submitInfo);
+
+			void present(SwapchainImage const& sImage, std::vector<vk::Semaphore> const& waitOn /* TODO REPLACE WITH STACK ALLLOCATED VECTOR*/);
 
 			/**
 			 * Marks the beginning of the next frame of execution.
@@ -95,37 +110,36 @@ namespace daxa {
 			const vk::PhysicalDevice& getVkPhysicalDevice() { return physicalDevice; }
 			const vk::Device& getVkDevice() { return device; }
 			const VmaAllocator& getVma() { return allocator; }
-			const vk::Queue& getGraphicsQ() { return graphicsQ; }
-			const u32& getGraphicsQFamilyIndex() { return graphicsQFamilyIndex; }
+			const vk::Queue& getVkGraphicsQueue() { return graphicsQ; }
+			const u32& getVkGraphicsQueueFamilyIndex() { return graphicsQFamilyIndex; }
 		private:
-			Device(vk::Device device);
+			void initFrameContexts();
+			vk::Semaphore getNextSemaphore();
+			vk::Fence getNextFence();
+			CommandList getNextCommandList();
+
+			std::vector<CommandList> unusedCommandLists;
+			std::vector<vk::Semaphore> unusedSemaphores;
+			std::vector<vk::Fence> unusedFences;
 
 			struct FrameContext {
-				vk::UniqueCommandPool cmdPool;
-				std::vector<CommandList> unusedCommandLists;
 				std::vector<CommandList> usedCommandLists;
-				std::vector<vk::Semaphore> unusedSemaphores;
 				std::vector<vk::Semaphore> usedSemaphores;
-				std::vector<vk::Fence> unusedFences;
 				std::vector<vk::Fence> usedFences;
-				std::vector<BufferHandle> framedBuffers;
 				std::vector<ImageHandle> usedImages;
 				std::vector<BufferHandle> usedBuffers;
 			};
 
-			void initFrameContexts();
-			vk::Semaphore getNextSemaphore();
-			vk::Fence getNextFence();
+			std::vector<vk::CommandBuffer> submitCommandBufferBuffer;
 
 			std::deque<std::unique_ptr<FrameContext>> frameContexts;
 
-			vkh::DescriptorSetLayoutCache descriptorLayoutCache;
+			std::optional<vkh::DescriptorSetLayoutCache> descriptorLayoutCache;
 			vk::PhysicalDevice physicalDevice;
 			vk::Device device;
 			VmaAllocator allocator;
 			vk::Queue graphicsQ;
 			u32 graphicsQFamilyIndex;
 		};
-
 	}
 }

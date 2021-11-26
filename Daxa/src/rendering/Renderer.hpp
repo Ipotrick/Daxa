@@ -24,18 +24,38 @@ namespace daxa {
 	struct PerFrameRessources {
 		std::unordered_map<std::string_view, gpu::ImageHandle> images;
 		std::unordered_map<std::string_view, gpu::BufferHandle> buffers;
+		std::unordered_map<std::string_view, vk::UniqueSemaphore> semaphores;
 	};
 
 	class Renderer {
 	public:
 		Renderer(std::shared_ptr<Window> win);
 
-		void init() {}
+		void init() {
+			for (int i = 0; i < 3; i++) {
+				frameResc[i].semaphores["render"] = device->getVkDevice().createSemaphoreUnique({});
+			}
+		}
 
 		void draw() {
-			auto [image, view] = renderWindow.getNextImage();
+			auto& frame = frameResc.front();
+
+			auto swapchainImage = renderWindow.getNextImage();
+
+			auto cmdList = device->getEmptyCommandList();
+
+			cmdList.begin();
 
 
+
+			cmdList.end();
+
+			device->submit(std::move(cmdList), {
+				.waitOnSemaphores = {swapchainImage.getVkSemaphore()},
+				.signalSemaphores = {*frame.semaphores["render"]}
+			});
+
+			device->present(swapchainImage, { *frame.semaphores["render"] });
 
 			nextFrameContext();
 		}

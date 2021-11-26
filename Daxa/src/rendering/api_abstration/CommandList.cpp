@@ -6,13 +6,32 @@ namespace daxa {
 
 		DAXA_DEFINE_TRIVIAL_MOVE(CommandList)
 
-			CommandList::CommandList() {
+		CommandList::CommandList() {
 
 		}
 
 		CommandList::~CommandList() {
-			assert(!bUnfinishedOperationInProgress);
-			assert(empty);
+			if (bIsNotMovedOutOf) {
+				device.freeCommandBuffers(cmdPool, cmd);
+				device.destroyCommandPool(cmdPool);
+				cmd = nullptr;
+				cmdPool = nullptr;
+				device = nullptr;
+				assert(!bUnfinishedOperationInProgress);
+				assert(empty);
+			}
+		}
+
+		void CommandList::begin() {
+			bUnfinishedOperationInProgress = true;
+			vk::CommandBufferBeginInfo cbbi{};
+			cbbi.flags |= vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+			cmd.begin(cbbi);
+		}
+
+		void CommandList::end() {
+			bUnfinishedOperationInProgress = false;
+			cmd.end();
 		}
 
 		void CommandList::beginRendering(BeginRenderingInfo ri) {

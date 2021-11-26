@@ -30,19 +30,27 @@ namespace daxa {
 			CommandList(CommandList const& rhs) = delete;
 			CommandList& operator=(CommandList const& rhs) = delete;
 
+			void begin();
+			void end();
+
 			void beginRendering(BeginRenderingInfo ri);
 			void endRendering();
 
-			vk::CommandBuffer getVkCommandBuffer() { return *cmd; }
+			vk::CommandBuffer getVkCommandBuffer() { return cmd; }
 		private:
 			friend class Device;
+
 			CommandList();
 			void reset();
-			bool empty = false;
+
+			bool bIsNotMovedOutOf = true;
+			bool empty = true;
 			bool bUnfinishedOperationInProgress = false;
 			std::vector<ImageHandle> usedImages;
 			std::vector<BufferHandle> usedBuffers;
-			vk::UniqueCommandBuffer cmd;
+			vk::Device device;
+			vk::CommandBuffer cmd;
+			vk::CommandPool cmdPool;
 		};
 
 	}
