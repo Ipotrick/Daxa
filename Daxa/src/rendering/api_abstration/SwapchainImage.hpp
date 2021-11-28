@@ -22,6 +22,7 @@ namespace daxa {
 			u32 getImageIndex() const { return imageIndex; }
 			vk::SwapchainKHR getVkSwapchain() const { return swapchain; }
 			vk::Semaphore getVkSemaphore() const { return presentSemaphore; }
+			ImageHandle& getImageHandle() { return image; }
 			ImageHandle const& getImageHandle() const { return image; }
 		private:
 			friend class Device;

@@ -63,6 +63,7 @@ namespace daxa {
 			ret.type = VK_IMAGE_TYPE_2D;
 			ret.extent = ici.extent;
 			ret.device = device;
+			ret.aspect = (VkImageAspectFlags)ci.imageAspekt;
 
 			return std::move(ret);
 		}

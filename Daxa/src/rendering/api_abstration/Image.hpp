@@ -36,9 +36,10 @@ namespace daxa {
 			VkFormat getViewFormat() const { return viewFormat; }
 			VkImageType getImageType() const { return type; }
 			VkExtent3D getExtent() const { return extent; }
+			VkImageAspectFlags getVkAspect() const { return aspect; }
 			vk::Image getVkImage() const { return image; }
 			vk::ImageView getVkView() const { return view; }
-		private:
+		//private:
 			friend class Device;
 			friend class ImageHandle;
 			friend class RenderWindow;
@@ -54,6 +55,7 @@ namespace daxa {
 			VkFormat viewFormat;
 			VkImageType type;
 			VkExtent3D extent;
+			VkImageAspectFlags aspect;
 			vk::Image image;
 			vk::ImageView view;
 		};
@@ -61,7 +63,9 @@ namespace daxa {
 		class ImageHandle {
 		public:
 			ImageHandle() = default;
+			Image const& operator*() const { return *image; }
 			Image& operator*() { return *image; }
+			Image const* operator->() const { return image.get(); }
 			Image* operator->() { return image.get(); }
 		private:
 			friend class Device;
