@@ -30,6 +30,10 @@ namespace daxa {
 	class Renderer {
 	public:
 		Renderer(std::shared_ptr<Window> win);
+		~Renderer() {
+			frameResc.clear();
+			persResc.reset();
+		}
 
 		void init() {
 			for (int i = 0; i < 3; i++) {
@@ -44,15 +48,21 @@ namespace daxa {
 
 			auto cmdList = device->getEmptyCommandList();
 
+			gpu::RenderAttachmentInfo surfaceInfo;
+			surfaceInfo.clearValue = VkClearValue{ .color = VkClearColorValue{.uint32 = 0x808080FF } };
+			surfaceInfo.loadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR;
+
 			cmdList.begin();
+			gpu::BeginRenderingInfo renderInfo;
 
-
+			cmdList.beginRendering(renderInfo);
+			cmdList.endRendering();
 
 			cmdList.end();
 
 			device->submit(std::move(cmdList), {
-				.waitOnSemaphores = {swapchainImage.getVkSemaphore()},
-				.signalSemaphores = {*frame.semaphores["render"]}
+				.waitOnSemaphores = { swapchainImage.getVkSemaphore() },
+				.signalSemaphores = { *frame.semaphores["render"] }
 			});
 
 			device->present(swapchainImage, { *frame.semaphores["render"] });
@@ -60,11 +70,12 @@ namespace daxa {
 			nextFrameContext();
 		}
 
-		void deinit() {}
+		void deinit() {  
+		}
 
 		FPSCamera camera;
 		std::shared_ptr<gpu::Device> device;
-		PersistentRessources persResc;
+		std::optional<PersistentRessources> persResc;
 		std::deque<PerFrameRessources> frameResc;
 	private:
 		std::shared_ptr<Window> window{ nullptr };

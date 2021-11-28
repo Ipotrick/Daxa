@@ -26,6 +26,7 @@ namespace daxa {
 		public:
 			Device() = default;
 			Device(Device const& other) = delete;
+			~Device();
 
 			static std::shared_ptr<Device> createNewDevice();
 
@@ -112,6 +113,7 @@ namespace daxa {
 			const VmaAllocator& getVma() { return allocator; }
 			const vk::Queue& getVkGraphicsQueue() { return graphicsQ; }
 			const u32& getVkGraphicsQueueFamilyIndex() { return graphicsQFamilyIndex; }
+
 		private:
 			void initFrameContexts();
 			vk::Semaphore getNextSemaphore();
@@ -129,6 +131,10 @@ namespace daxa {
 				std::vector<ImageHandle> usedImages;
 				std::vector<BufferHandle> usedBuffers;
 			};
+
+			// VK_KHR_dynamic_rendering:
+			void (*vkCmdBeginRenderingKHR)(VkCommandBuffer, const VkRenderingInfoKHR*);
+			void (*vkCmdEndRenderingKHR)(VkCommandBuffer);
 
 			std::vector<vk::CommandBuffer> submitCommandBufferBuffer;
 

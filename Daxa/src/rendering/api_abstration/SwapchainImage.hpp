@@ -12,22 +12,22 @@
 
 #include "../../DaxaCore.hpp"
 
+#include "Image.hpp"
+
 namespace daxa {
 	namespace gpu {
 
 		class SwapchainImage {
 		public:
-			vk::Image getVkImage() const { return image; }
-			vk::ImageView getVkImageView() const { return imageView; }
 			u32 getImageIndex() const { return imageIndex; }
 			vk::SwapchainKHR getVkSwapchain() const { return swapchain; }
 			vk::Semaphore getVkSemaphore() const { return presentSemaphore; }
+			ImageHandle const& getImageHandle() const { return image; }
 		private:
 			friend class Device;
 			friend class RenderWindow;
 
-			vk::Image image;
-			vk::ImageView imageView;
+			ImageHandle image;
 			u32 imageIndex;
 			vk::SwapchainKHR swapchain;
 			vk::Semaphore presentSemaphore;

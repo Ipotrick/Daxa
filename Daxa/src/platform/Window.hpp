@@ -50,6 +50,12 @@ namespace daxa {
 		void setName(std::string name);
 		const std::string& getName();
 
+		/**
+		 * Intercepts certain window related Events like window close wich are abstracted in this class.
+		 * 
+		 * \param deltaTime time that passed since the last call.
+		 * \return if the window should be closed (Exit pas pressed)
+		 */
 		bool update(f32 deltaTime);
 
 		bool isFocused() const;

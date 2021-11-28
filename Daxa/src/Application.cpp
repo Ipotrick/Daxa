@@ -17,6 +17,8 @@ namespace daxa {
 		}
 
 		while (this->appstate->continueRunning) {
+			if (window->update(0.01f)) break;
+
 			if (user) {
 				user->update(this->appstate);
 			}
