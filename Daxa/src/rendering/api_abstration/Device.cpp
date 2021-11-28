@@ -236,9 +236,7 @@ namespace daxa {
 				list.vkCmdBeginRenderingKHR = this->vkCmdBeginRenderingKHR;
 				list.vkCmdEndRenderingKHR = this->vkCmdEndRenderingKHR;
 				unusedCommandLists.push_back(std::move(list));
-			} else {
-				printf("recycling!\n");
-			}
+			} 
 			auto ret = std::move(unusedCommandLists.back());
 			unusedCommandLists.pop_back();
 			return std::move(ret);

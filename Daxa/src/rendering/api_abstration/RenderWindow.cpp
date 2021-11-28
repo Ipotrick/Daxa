@@ -42,6 +42,7 @@ namespace daxa {
 				img.viewFormat = vkbSwapchain.image_format;
 				img.tiling = VK_IMAGE_TILING_OPTIMAL;
 				img.usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+				img.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 			}
 			presentationSemaphore = device->getVkDevice().createSemaphore({});
 			swapchainImageFormat = (vk::Format)vkbSwapchain.image_format;

@@ -41,6 +41,42 @@ namespace daxa {
 			}
 		}
 
+		void setLayoutOfImage2D(gpu::CommandList& cmd, gpu::Image& image, VkImageLayout dstLayout) {
+
+			VkImageMemoryBarrier imgMemBarr = {};
+			imgMemBarr.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			imgMemBarr.pNext = nullptr;
+			imgMemBarr.oldLayout = image.getLayout();
+			imgMemBarr.newLayout = dstLayout;
+			imgMemBarr.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			imgMemBarr.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			imgMemBarr.image = image.getVkImage();
+			imgMemBarr.subresourceRange = VkImageSubresourceRange{
+				.aspectMask = image.getVkAspect(),
+				.baseMipLevel = 0,
+				.levelCount = 1,
+				.baseArrayLayer = 0,
+				.layerCount = 1,
+			};
+			imgMemBarr.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+			imgMemBarr.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+
+			vkCmdPipelineBarrier(
+				cmd.getVkCommandBuffer(),
+				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+				VK_DEPENDENCY_DEVICE_GROUP_BIT,
+				0,
+				nullptr,
+				0,
+				nullptr,
+				1,
+				&imgMemBarr
+			);
+
+			image.layout = dstLayout;
+		}
+
 		void draw() {
 			auto& frame = frameResc.front();
 
@@ -48,15 +84,23 @@ namespace daxa {
 
 			auto cmdList = device->getEmptyCommandList();
 
-			gpu::RenderAttachmentInfo surfaceInfo;
-			surfaceInfo.clearValue = VkClearValue{ .color = VkClearColorValue{.uint32 = 0x808080FF } };
-			surfaceInfo.loadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR;
-
 			cmdList.begin();
-			gpu::BeginRenderingInfo renderInfo;
 
+			setLayoutOfImage2D(cmdList, *swapchainImage.getImageHandle(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+			std::array colorAttachments{
+				gpu::RenderAttachmentInfo{
+					.image = swapchainImage.getImageHandle(),
+				}
+			};
+			gpu::BeginRenderingInfo renderInfo;
+			renderInfo.colorAttachmentCount = (u32)colorAttachments.size();
+			renderInfo.colorAttachments = colorAttachments.data();
 			cmdList.beginRendering(renderInfo);
+
 			cmdList.endRendering();
+
+			setLayoutOfImage2D(cmdList, *swapchainImage.getImageHandle(), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
 			cmdList.end();
 

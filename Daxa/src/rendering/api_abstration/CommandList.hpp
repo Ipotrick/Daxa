@@ -19,9 +19,9 @@ namespace daxa {
 		struct RenderAttachmentInfo {
 			ImageHandle image;
 			VkResolveModeFlagBits resolveMode = VK_RESOLVE_MODE_NONE;
-			VkAttachmentLoadOp loadOp;
-			VkAttachmentStoreOp storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			VkClearValue clearValue = VkClearValue{ .color = VkClearColorValue{.uint32 = 0x808080FF } };
+			VkAttachmentLoadOp loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			VkAttachmentStoreOp storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE;
+			VkClearValue clearValue = VkClearValue{ .color = VkClearColorValue{.float32 = { 0.4f, 0.8f, 0.4f, 1.0f } } };
 		};
 
 		struct BeginRenderingInfo {
