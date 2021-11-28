@@ -48,6 +48,7 @@ namespace daxa {
 				.defer_surface_initialization()
 				.require_separate_compute_queue()
 				.require_separate_transfer_queue()
+				.add_desired_extension(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)
 				.select()
 				.value();
 
@@ -77,6 +78,10 @@ namespace daxa {
 			VmaAllocator allocator;
 			vmaCreateAllocator(&allocatorInfo, &allocator);
 
+			auto fnPtrvkCmdBeginRenderingKHR = (void(*)(VkCommandBuffer, const VkRenderingInfoKHR*))vkGetDeviceProcAddr(device, "vkCmdBeginRenderingKHR");
+			auto fnPtrvkCmdEndRenderingKHR = (void(*)(VkCommandBuffer))vkGetDeviceProcAddr(device, "vkCmdEndRenderingKHR");
+			assert(fnPtrvkCmdBeginRenderingKHR != nullptr && fnPtrvkCmdEndRenderingKHR != nullptr);
+
 			std::shared_ptr<Device> ret = std::make_shared<Device>();
 			ret->device = device;
 			ret->descriptorLayoutCache = { device };
@@ -84,8 +89,17 @@ namespace daxa {
 			ret->graphicsQ = mainGraphicsQueue;
 			ret->graphicsQFamilyIndex = mainGraphicsQueueFamiltyIndex;
 			ret->allocator = allocator;
+			ret->vkCmdBeginRenderingKHR = fnPtrvkCmdBeginRenderingKHR;
+			ret->vkCmdEndRenderingKHR = fnPtrvkCmdEndRenderingKHR;
 			ret->initFrameContexts();
 			return std::move(ret);
+		}
+
+		Device::~Device() {
+			for (int i = 0; i < 3; i++) {
+				nextFrameContext();
+			}
+			printf("Device is now gone!\n");
 		}
 
 		ImageHandle Device::createImage2d(Image2dCreateInfo ci) { 
@@ -102,7 +116,7 @@ namespace daxa {
 
 		void Device::submit(CommandList&& cmdList, SubmitInfo const& submitInfo) {
 			CommandList list{ std::move(cmdList) };
-			assert(!list.bUnfinishedOperationInProgress);
+			assert(list.operationsInProgress == 0);
 			auto& frame = *this->frameContexts.front();
 
 			auto thisSubmitFence = getNextFence();
@@ -131,7 +145,7 @@ namespace daxa {
 
 			submitCommandBufferBuffer.clear();
 			for (auto& cmdList : cmdLists) {
-				assert(!cmdList.bUnfinishedOperationInProgress);
+				assert(cmdList.operationsInProgress == 0);
 				submitCommandBufferBuffer.push_back(cmdList.cmd);
 			}
 
@@ -219,6 +233,8 @@ namespace daxa {
 				cbai.commandBufferCount = 1;
 				cbai.level = vk::CommandBufferLevel::ePrimary;
 				list.cmd = std::move(device.allocateCommandBuffers(cbai).front());
+				list.vkCmdBeginRenderingKHR = this->vkCmdBeginRenderingKHR;
+				list.vkCmdEndRenderingKHR = this->vkCmdEndRenderingKHR;
 				unusedCommandLists.push_back(std::move(list));
 			} else {
 				printf("recycling!\n");

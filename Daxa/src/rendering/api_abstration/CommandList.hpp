@@ -2,6 +2,7 @@
 
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <vulkan/vulkan.hpp>
+#include <variant>
 
 #include "../dependencies/vk_mem_alloc.hpp"
 #include "../dependencies/vulkanhelper.hpp"
@@ -10,14 +11,25 @@
 
 #include "Image.hpp"
 #include "Buffer.hpp"
+#include "SwapchainImage.hpp"
 
 namespace daxa {
 	namespace gpu {
 
+		struct RenderAttachmentInfo {
+			ImageHandle image;
+			VkResolveModeFlagBits resolveMode = VK_RESOLVE_MODE_NONE;
+			VkAttachmentLoadOp loadOp;
+			VkAttachmentStoreOp storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			VkClearValue clearValue = VkClearValue{ .color = VkClearColorValue{.uint32 = 0x808080FF } };
+		};
+
 		struct BeginRenderingInfo {
-			ImageHandle* colorAttachemnts = nullptr;
-			size_t colorAttachmentCount = 0;
-			ImageHandle* depthStencilAttachment = nullptr;
+			RenderAttachmentInfo* colorAttachments = nullptr;
+			u32 colorAttachmentCount = 0;
+			RenderAttachmentInfo* depthAttachment = nullptr;
+			RenderAttachmentInfo* stencilAttachment = nullptr;
+			VkRect2D* renderArea = nullptr;
 		};
 
 		class CommandList {
@@ -43,9 +55,14 @@ namespace daxa {
 			CommandList();
 			void reset();
 
+			void (*vkCmdBeginRenderingKHR)(VkCommandBuffer, const VkRenderingInfoKHR*);
+			void (*vkCmdEndRenderingKHR)(VkCommandBuffer);
+			u32	operationsInProgress = 0;
 			bool bIsNotMovedOutOf = true;
 			bool empty = true;
-			bool bUnfinishedOperationInProgress = false;
+
+			std::vector<VkRenderingAttachmentInfoKHR> renderAttachmentBuffer;
+
 			std::vector<ImageHandle> usedImages;
 			std::vector<BufferHandle> usedBuffers;
 			vk::Device device;

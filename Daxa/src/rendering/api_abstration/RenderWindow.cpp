@@ -25,12 +25,23 @@ namespace daxa {
 			//store swapchain and its related images
 			swapchain = (vk::SwapchainKHR)vkbSwapchain.swapchain;
 			auto vkImages = vkbSwapchain.get_images().value();
-			for (VkImage& img : vkImages) {
-				swapchainImages.push_back((vk::Image)img);
-			}
 			auto vkImageViews = vkbSwapchain.get_image_views().value();
-			for (VkImageView& img : vkImageViews) {
-				swapchainImageViews.push_back((vk::ImageView)img);
+			for (int i = 0; i < vkImages.size(); i++) {
+				swapchainImages.push_back(ImageHandle{ std::make_shared<Image>(Image{}) });
+				auto& img = *swapchainImages.back();
+				img.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+				img.extent.width = width;
+				img.extent.height = height;
+				img.extent.depth = 1;
+				img.allocation = nullptr;
+				img.allocator = nullptr;
+				img.image = vkImages[i];
+				img.view = vkImageViews[i];
+				img.device = device->getVkDevice();
+				img.type = VK_IMAGE_TYPE_2D;
+				img.viewFormat = vkbSwapchain.image_format;
+				img.tiling = VK_IMAGE_TILING_OPTIMAL;
+				img.usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 			}
 			presentationSemaphore = device->getVkDevice().createSemaphore({});
 			swapchainImageFormat = (vk::Format)vkbSwapchain.image_format;
@@ -40,12 +51,9 @@ namespace daxa {
 			if (device) {
 				device->getVkDevice().destroySwapchainKHR(swapchain);
 				for (int i = 0; i < imagesInFlight; i++) {
-					device->getVkDevice().destroyImage(swapchainImages[i]);
-					device->getVkDevice().destroyImageView(swapchainImageViews[i]);
 					device->getVkDevice().destroySemaphore(presentationSemaphore);
 				}
 				swapchainImages.clear();
-				swapchainImageViews.clear();
 				vkDestroySurfaceKHR(instance->instance, surface, nullptr);
 				instance = nullptr;
 				surface = nullptr;
@@ -61,7 +69,6 @@ namespace daxa {
 			si.swapchain = swapchain;
 			si.imageIndex = index;
 			si.image = swapchainImages[index];
-			si.imageView = swapchainImageViews[index];
 			si.presentSemaphore = presentationSemaphore;
 			return si;
 		}

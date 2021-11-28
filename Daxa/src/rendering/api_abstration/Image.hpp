@@ -30,29 +30,45 @@ namespace daxa {
 
 			~Image();
 
-			vk::ImageCreateInfo getVkCreateInfo() const { return createInfo; }
-			vk::ImageViewCreateInfo getVkViewCreateInfo() const { return viewCreateInfo; }
+			VkImageTiling getTiling() const { return tiling; };
+			VkImageUsageFlags getUsageFlags() const { return usageFlags; };
+			VkImageLayout getLayout() const { return layout; }
+			VkFormat getViewFormat() const { return viewFormat; }
+			VkImageType getImageType() const { return type; }
+			VkExtent3D getExtent() const { return extent; }
 			vk::Image getVkImage() const { return image; }
-			vk::ImageView getVkView() const { return *view; }
+			vk::ImageView getVkView() const { return view; }
 		private:
-			static Image create2dImage(vk::Device device, VmaAllocator allocator, Image2dCreateInfo ci);
 			friend class Device;
 			friend class ImageHandle;
+			friend class RenderWindow;
+
+			static Image create2dImage(vk::Device device, VmaAllocator allocator, Image2dCreateInfo ci);
+
+			VkDevice device;
 			VmaAllocator allocator;
 			VmaAllocation allocation;
-			vk::ImageCreateInfo createInfo;
-			vk::ImageViewCreateInfo viewCreateInfo;
+			VkImageTiling tiling;
+			VkImageUsageFlags usageFlags;
+			VkImageLayout layout;
+			VkFormat viewFormat;
+			VkImageType type;
+			VkExtent3D extent;
 			vk::Image image;
-			vk::UniqueImageView view;
+			vk::ImageView view;
 		};
 
 		class ImageHandle {
 		public:
+			ImageHandle() = default;
 			Image& operator*() { return *image; }
 			Image* operator->() { return image.get(); }
 		private:
-			ImageHandle(std::shared_ptr<Image> image);
 			friend class Device;
+			friend class RenderWindow;
+
+			ImageHandle(std::shared_ptr<Image> image);
+
 			std::shared_ptr<Image> image;
 		};
 	}

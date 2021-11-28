@@ -7,7 +7,7 @@ namespace daxa {
 		DAXA_DEFINE_TRIVIAL_MOVE(CommandList)
 
 		CommandList::CommandList() {
-
+			this->renderAttachmentBuffer.reserve(10);
 		}
 
 		CommandList::~CommandList() {
@@ -17,48 +17,106 @@ namespace daxa {
 				cmd = nullptr;
 				cmdPool = nullptr;
 				device = nullptr;
-				assert(!bUnfinishedOperationInProgress);
+				assert(operationsInProgress == 0);
 				assert(empty);
 			}
 		}
 
 		void CommandList::begin() {
-			bUnfinishedOperationInProgress = true;
+			operationsInProgress += 1;
 			vk::CommandBufferBeginInfo cbbi{};
 			cbbi.flags |= vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 			cmd.begin(cbbi);
 		}
 
 		void CommandList::end() {
-			bUnfinishedOperationInProgress = false;
+			operationsInProgress -= 1;
 			cmd.end();
 		}
 
 		void CommandList::beginRendering(BeginRenderingInfo ri) {
-			vk::RenderingInfoKHR renderInfo{};
+			operationsInProgress += 1;
+			for (int i = 0; i < ri.colorAttachmentCount; i++) {
+				usedImages.push_back(ri.colorAttachments[i].image);
 
-			// Maybe add the ability to change the renderArea later.
-			// For now this is enough:
-			if (ri.colorAttachmentCount > 0) {
-				renderInfo.renderArea.extent.width = ri.colorAttachemnts[0]->getVkCreateInfo().extent.width;
-				renderInfo.renderArea.extent.height = ri.colorAttachemnts[0]->getVkCreateInfo().extent.height;
-			}
-			else {
-				assert(ri.depthStencilAttachment);
-				renderInfo.renderArea.extent.width = (**ri.depthStencilAttachment).getVkCreateInfo().extent.width;
-				renderInfo.renderArea.extent.height = (**ri.depthStencilAttachment).getVkCreateInfo().extent.height;
+				renderAttachmentBuffer.push_back(VkRenderingAttachmentInfoKHR{
+					.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
+					.pNext = nullptr,
+					.imageView = ri.colorAttachments[i].image->getVkView(),
+					.imageLayout = ri.colorAttachments[i].image->getLayout(),
+					.resolveMode = ri.colorAttachments[i].resolveMode,
+					.loadOp = ri.colorAttachments[i].loadOp,
+					.storeOp = ri.colorAttachments[i].storeOp,
+					.clearValue = ri.colorAttachments[i].clearValue
+				});
 			}
 
-			// TODO
+			std::optional<VkRenderingAttachmentInfoKHR> depthAttachmentInfo = ri.depthAttachment == nullptr ? std::nullopt :
+				std::optional{
+					VkRenderingAttachmentInfoKHR{
+						.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
+						.pNext = nullptr,
+						.imageView = ri.depthAttachment->image->getVkView(),
+						.imageLayout = ri.depthAttachment->image->getLayout(),
+						.resolveMode = ri.depthAttachment->resolveMode,
+						.loadOp = ri.depthAttachment->loadOp,
+						.storeOp = ri.depthAttachment->storeOp
+					}
+				};
+
+			std::optional<VkRenderingAttachmentInfoKHR> stencilAttachmentInfo = ri.stencilAttachment == nullptr ? std::nullopt :
+				std::optional{
+					VkRenderingAttachmentInfoKHR{
+						.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
+						.pNext = nullptr,
+						.imageView = ri.stencilAttachment->image->getVkView(),
+						.imageLayout = ri.stencilAttachment->image->getLayout(),
+						.resolveMode = ri.stencilAttachment->resolveMode,
+						.loadOp = ri.stencilAttachment->loadOp,
+						.storeOp = ri.stencilAttachment->storeOp
+					}
+				};
+
+			VkRenderingInfoKHR renderInfo{};
+			renderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
+			renderInfo.pNext = nullptr;
+			if (ri.renderArea) {
+				renderInfo.renderArea = *ri.renderArea;
+			}
+			else if (ri.colorAttachmentCount > 0) {
+				renderInfo.renderArea.extent.width = ri.colorAttachments[0].image->getExtent().width;
+				renderInfo.renderArea.extent.height = ri.colorAttachments[0].image->getExtent().height;
+			}
+			else if (ri.depthAttachment != nullptr) {
+				renderInfo.renderArea.extent.width = ri.depthAttachment->image->getExtent().width;
+				renderInfo.renderArea.extent.height = ri.depthAttachment->image->getExtent().height;
+			}
+			else if (ri.stencilAttachment != nullptr) {
+				renderInfo.renderArea.extent.width = ri.stencilAttachment->image->getExtent().width;
+				renderInfo.renderArea.extent.height = ri.stencilAttachment->image->getExtent().height;
+			}	// otherwise let it be zero, as we dont render anything anyways
+
+			renderInfo.layerCount = 1;	// Not sure what this does
+
+			renderInfo.colorAttachmentCount = ri.colorAttachmentCount;
+			renderInfo.pColorAttachments = renderAttachmentBuffer.data();
+			renderInfo.pDepthAttachment = depthAttachmentInfo.has_value() ? &depthAttachmentInfo.value() : nullptr;
+			renderInfo.pStencilAttachment = stencilAttachmentInfo.has_value() ? &stencilAttachmentInfo.value() : nullptr;
+
+			this->vkCmdBeginRenderingKHR(cmd, (VkRenderingInfoKHR*)&renderInfo);
+
+			renderAttachmentBuffer.clear();
 		}
 		void CommandList::endRendering() {
 
-			// TODO
+			operationsInProgress -= 1;
+			this->vkCmdEndRenderingKHR(cmd);
 		}
 
 		void CommandList::reset() {
+			assert(operationsInProgress == 0);
 			empty = true;
-			cmd.reset();
+			device.resetCommandPool(cmdPool);
 			usedBuffers.clear();
 			usedImages.clear();
 		}

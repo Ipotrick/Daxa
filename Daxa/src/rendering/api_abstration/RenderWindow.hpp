@@ -13,6 +13,7 @@
 #include "../../DaxaCore.hpp"
 
 #include "Device.hpp"
+#include "Image.hpp"
 #include "SwapchainImage.hpp"
 
 namespace daxa {
@@ -32,8 +33,7 @@ namespace daxa {
 			vk::SurfaceKHR surface;
 			vk::SwapchainKHR swapchain; 
 			vk::Format swapchainImageFormat;
-			std::vector<vk::Image> swapchainImages; 
-			std::vector<vk::ImageView> swapchainImageViews;
+			std::vector<ImageHandle> swapchainImages;
 			vk::Semaphore presentationSemaphore;
 			u32 imagesInFlight{ 2 };
 		};
