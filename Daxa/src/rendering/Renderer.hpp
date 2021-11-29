@@ -21,29 +21,40 @@ namespace daxa {
 	struct PerFrameRessources {
 		std::unordered_map<std::string_view, gpu::ImageHandle> images;
 		std::unordered_map<std::string_view, gpu::BufferHandle> buffers;
-		std::unordered_map<std::string_view, vk::UniqueSemaphore> semaphores;
-		std::unordered_map<std::string_view, vk::UniqueFence> fences;
+		std::unordered_map<std::string_view, VkSemaphore> semaphores;
+		std::unordered_map<std::string_view, VkFence> fences;
 	};
 
 	class Renderer {
 	public:
 		Renderer(std::shared_ptr<Window> win);
 		~Renderer() {
+			for (int i = 0; i < 3; i++) {
+				nextFrameContext();			// wait for all frames in flight to complete
+			}
+			for (auto& frame : frameResc) {
+				for (auto& [name, sema] : frame.semaphores) {
+					vkDestroySemaphore(device->getVkDevice(), sema, nullptr);
+				}
+				for (auto& [name, fence] : frame.fences) {
+					vkDestroyFence(device->getVkDevice(), fence, nullptr);
+				}
+			}
 			frameResc.clear();
 			persResc.reset();
 		}
 
 		void init() {
 			for (int i = 0; i < 3; i++) {
-				frameResc[i].semaphores["render"] = device->getVkDevice().createSemaphoreUnique({});
-				frameResc[i].semaphores["aquireSwapchainImage"] = device->getVkDevice().createSemaphoreUnique({});
+				frameResc[i].semaphores["render"] = device->getVkDevice().createSemaphore({});
+				frameResc[i].semaphores["aquireSwapchainImage"] = device->getVkDevice().createSemaphore({});
 			}
 		}
 
-		void draw() {
+		void draw(float deltaTime) {
 			auto& frame = frameResc.front();
 
-			auto swapchainImage = renderWindow.getNextImage(*frame.semaphores["aquireSwapchainImage"]);
+			auto swapchainImage = renderWindow.getNextImage(frame.semaphores["aquireSwapchainImage"]);
 
 			auto cmdList = device->getEmptyCommandList();
 
@@ -51,15 +62,23 @@ namespace daxa {
 
 			cmdList.changeImageLayout(swapchainImage.getImageHandle(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
+			double intpart;
+			totalElapsedTime += deltaTime;
+			float r = std::cos(totalElapsedTime* 0.21313) * 0.3f + 0.5f;
+			float g = std::cos(totalElapsedTime * 0.75454634) * 0.3f + 0.5f;
+			float b = std::cos(totalElapsedTime) * 0.3f + 0.5f;
+			printf("color: %f, %f, %f\n",r,g,b);
+
+			VkClearValue clear{ .color = VkClearColorValue{.float32 = { r, g, b, 1.0f } } };
+
 			std::array colorAttachments{
 				gpu::RenderAttachmentInfo{
 					.image = swapchainImage.getImageHandle(),
-					.clearValue = VkClearValue{.color = VkClearColorValue{.float32 = { 0.4f, 0.5f, 0.7f, 1.0f } } },
+					.clearValue = clear,
 				}
 			};
 			gpu::BeginRenderingInfo renderInfo;
-			renderInfo.colorAttachmentCount = (u32)colorAttachments.size();
-			renderInfo.colorAttachments = colorAttachments.data();
+			renderInfo.colorAttachments = colorAttachments;
 			cmdList.beginRendering(renderInfo);
 
 			cmdList.endRendering();
@@ -68,12 +87,15 @@ namespace daxa {
 
 			cmdList.end();
 
+			std::array waitOnSemasSubmit = { frame.semaphores["aquireSwapchainImage"] };
+			std::array singalSemasSubmit = { frame.semaphores["render"] };
 			device->submit(std::move(cmdList), {
-				.waitOnSemaphores = { *frame.semaphores["aquireSwapchainImage"] },
-				.signalSemaphores = { *frame.semaphores["render"] },
+				.waitOnSemaphores = waitOnSemasSubmit,
+				.signalSemaphores = singalSemasSubmit,
 			});
 
-			device->present(swapchainImage, { *frame.semaphores["render"] });
+			std::array waitOnSemasPresent = { frame.semaphores["render"] };
+			device->present(swapchainImage, waitOnSemasPresent);
 
 			nextFrameContext();
 		}
@@ -86,6 +108,7 @@ namespace daxa {
 		std::shared_ptr<gpu::Device> device;
 		std::optional<PersistentRessources> persResc;
 		std::deque<PerFrameRessources> frameResc;
+		double totalElapsedTime{ 0.0 };
 	private:
 		std::shared_ptr<Window> window{ nullptr };
 		gpu::RenderWindow renderWindow;

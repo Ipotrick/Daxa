@@ -21,9 +21,6 @@ namespace daxa {
 				.enable_layer("VK_LAYER_LUNARG_monitor")
 				.use_default_debug_messenger();
 			auto instanceBuildReturn = instanceBuilder.build();
-			if (!instanceBuildReturn) {
-				std::cerr << "could not create vulkan instance!\n";
-			}
 
 			instance = std::make_shared<vkb::Instance>(std::move(instanceBuildReturn.value()));
 			debugMessenger = instance->debug_messenger;
@@ -131,9 +128,9 @@ namespace daxa {
 			vk::CommandBuffer commandBuffers[] = { list.cmd };
 			si.pCommandBuffers = commandBuffers;
 			si.commandBufferCount = 1;
-			si.pWaitSemaphores = submitInfo.waitOnSemaphores.data();
+			si.pWaitSemaphores = (vk::Semaphore*)submitInfo.waitOnSemaphores.data();
 			si.waitSemaphoreCount = submitInfo.waitOnSemaphores.size();
-			si.pSignalSemaphores = submitInfo.signalSemaphores.data();
+			si.pSignalSemaphores = (vk::Semaphore*)submitInfo.signalSemaphores.data();
 			si.signalSemaphoreCount = submitInfo.signalSemaphores.size();
 
 			graphicsQ.submit(si, thisSubmitFence);
@@ -156,9 +153,9 @@ namespace daxa {
 			si.pWaitDstStageMask = &pipelineStages;
 			si.pCommandBuffers = submitCommandBufferBuffer.data();
 			si.commandBufferCount = static_cast<u32>(submitCommandBufferBuffer.size());
-			si.pWaitSemaphores = submitInfo.waitOnSemaphores.data();
+			si.pWaitSemaphores = (vk::Semaphore*)submitInfo.waitOnSemaphores.data();
 			si.waitSemaphoreCount = submitInfo.waitOnSemaphores.size();
-			si.pSignalSemaphores = submitInfo.signalSemaphores.data();
+			si.pSignalSemaphores = (vk::Semaphore*)submitInfo.signalSemaphores.data();
 			si.signalSemaphoreCount = submitInfo.signalSemaphores.size();
 
 			graphicsQ.submit(si, thisSubmitFence);
@@ -170,12 +167,12 @@ namespace daxa {
 			}
 		}
 
-		void Device::present(SwapchainImage const& sImage, std::vector<vk::Semaphore> const& waitOn) {
+		void Device::present(SwapchainImage const& sImage, std::span<VkSemaphore> waitOn) {
 			vk::PresentInfoKHR presentInfo{};
 			presentInfo.pImageIndices = &sImage.imageIndex;
 			presentInfo.pSwapchains = &sImage.swapchain;
 			presentInfo.swapchainCount = 1;
-			presentInfo.pWaitSemaphores = waitOn.data();
+			presentInfo.pWaitSemaphores = (vk::Semaphore*)waitOn.data();
 			presentInfo.waitSemaphoreCount = static_cast<u32>(waitOn.size());
 
 			graphicsQ.presentKHR(presentInfo);

@@ -36,7 +36,7 @@ namespace daxa {
 
 		void CommandList::beginRendering(BeginRenderingInfo ri) {
 			operationsInProgress += 1;
-			for (int i = 0; i < ri.colorAttachmentCount; i++) {
+			for (int i = 0; i < ri.colorAttachments.size(); i++) {
 				usedImages.push_back(ri.colorAttachments[i].image);
 
 				renderAttachmentBuffer.push_back(VkRenderingAttachmentInfoKHR{
@@ -83,7 +83,7 @@ namespace daxa {
 			if (ri.renderArea) {
 				renderInfo.renderArea = *ri.renderArea;
 			}
-			else if (ri.colorAttachmentCount > 0) {
+			else if (ri.colorAttachments.size() > 0) {
 				renderInfo.renderArea.extent.width = ri.colorAttachments[0].image->getExtent().width;
 				renderInfo.renderArea.extent.height = ri.colorAttachments[0].image->getExtent().height;
 			}
@@ -98,7 +98,7 @@ namespace daxa {
 
 			renderInfo.layerCount = 1;	// Not sure what this does
 
-			renderInfo.colorAttachmentCount = ri.colorAttachmentCount;
+			renderInfo.colorAttachmentCount = ri.colorAttachments.size();
 			renderInfo.pColorAttachments = renderAttachmentBuffer.data();
 			renderInfo.pDepthAttachment = depthAttachmentInfo.has_value() ? &depthAttachmentInfo.value() : nullptr;
 			renderInfo.pStencilAttachment = stencilAttachmentInfo.has_value() ? &stencilAttachmentInfo.value() : nullptr;

@@ -3,6 +3,7 @@
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <vulkan/vulkan.hpp>
 #include <variant>
+#include <span>
 
 #include "../dependencies/vk_mem_alloc.hpp"
 #include "../dependencies/vulkanhelper.hpp"
@@ -25,8 +26,7 @@ namespace daxa {
 		};
 
 		struct BeginRenderingInfo {
-			RenderAttachmentInfo* colorAttachments = nullptr;
-			u32 colorAttachmentCount = 0;
+			std::span<RenderAttachmentInfo> colorAttachments;
 			RenderAttachmentInfo* depthAttachment = nullptr;
 			RenderAttachmentInfo* stencilAttachment = nullptr;
 			VkRect2D* renderArea = nullptr;
