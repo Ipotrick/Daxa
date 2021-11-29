@@ -74,6 +74,5 @@ namespace daxa {
 			std::optional<vk::Format> depthAttachmentFormat;
 			std::optional<vk::Format> stencilAttachmentFormat;
 		};
-
 	}
 }

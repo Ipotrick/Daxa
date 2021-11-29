@@ -210,7 +210,6 @@ namespace daxa {
 		// Events
 		bool close{ false };
 		SDL_Event event;
-		printf("before ");
 		while (SDL_PollEvent(&event)) {
 			switch (event.type) {
 			case SDL_QUIT:
@@ -221,7 +220,6 @@ namespace daxa {
 			}
 		}
 		SDL_GetWindowSize(sdlWindowHandle, (int*)&this->size[0], (int*)&this->size[1]);
-		printf("after\n");
 		return close;
 	}
 

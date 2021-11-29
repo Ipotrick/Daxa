@@ -27,6 +27,8 @@ namespace daxa {
 
 			void setPresentMode(VkPresentModeKHR newPresentMode);
 
+			VkFormat getVkFormat() const { return swapchainImageFormat; }
+
 			SwapchainImage getNextImage(VkSemaphore presentSemaphore);
 
 			VkExtent2D getSize() const { return size; }
