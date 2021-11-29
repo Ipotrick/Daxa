@@ -8,7 +8,6 @@
 namespace daxa {
 	namespace gpu {
 		std::shared_ptr<vkb::Instance> instance;
-		vk::DebugUtilsMessengerEXT debugMessenger;
 		bool initialized = false;
 
 		void initGlobals() {
@@ -23,7 +22,6 @@ namespace daxa {
 			auto instanceBuildReturn = instanceBuilder.build();
 
 			instance = std::make_shared<vkb::Instance>(std::move(instanceBuildReturn.value()));
-			debugMessenger = instance->debug_messenger;
 		}
 
 
@@ -52,15 +50,22 @@ namespace daxa {
 
 			auto physicslDevice = physicalDevice.physical_device;
 
-			vk::PhysicalDeviceDescriptorIndexingFeatures descriptor_indexing_features{
+			vk::PhysicalDeviceDescriptorIndexingFeatures descriptor_indexing_feature{
 				.shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
 				.descriptorBindingPartiallyBound = VK_TRUE,
 				.descriptorBindingVariableDescriptorCount = VK_TRUE,
 				.runtimeDescriptorArray = VK_TRUE,
 			};
 
+			VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamic_rendering_feature{
+				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
+				.pNext = nullptr,
+				.dynamicRendering = VK_TRUE,
+			};
+
 			vkb::DeviceBuilder deviceBuilder{ physicalDevice };
-			deviceBuilder.add_pNext(&descriptor_indexing_features);
+			deviceBuilder.add_pNext(&descriptor_indexing_feature);
+			deviceBuilder.add_pNext(&dynamic_rendering_feature);
 
 			vkb::Device vkbDevice = deviceBuilder.build().value();
 
@@ -78,7 +83,7 @@ namespace daxa {
 
 			auto fnPtrvkCmdBeginRenderingKHR = (void(*)(VkCommandBuffer, const VkRenderingInfoKHR*))vkGetDeviceProcAddr(device, "vkCmdBeginRenderingKHR");
 			auto fnPtrvkCmdEndRenderingKHR = (void(*)(VkCommandBuffer))vkGetDeviceProcAddr(device, "vkCmdEndRenderingKHR");
-			assert(fnPtrvkCmdBeginRenderingKHR != nullptr && fnPtrvkCmdEndRenderingKHR != nullptr);
+			assert(fnPtrvkCmdBeginRenderingKHR != nullptr && fnPtrvkCmdEndRenderingKHR != nullptr, "ERROR: could not load VK_KHR_DYNAMIC_RENDERING_EXTENSION");
 
 			std::shared_ptr<Device> ret = std::make_shared<Device>();
 			ret->device = device;
@@ -97,7 +102,6 @@ namespace daxa {
 			for (int i = 0; i < 3; i++) {
 				nextFrameContext();
 			}
-			printf("Device is now gone!\n");
 		}
 
 		ImageHandle Device::createImage2d(Image2dCreateInfo ci) { 
@@ -118,7 +122,6 @@ namespace daxa {
 			auto& frame = *this->frameContexts.front();
 
 			auto thisSubmitFence = getNextFence();
-			printf("submitting to fence: %p\n", thisSubmitFence);
 
 			vk::SubmitInfo si{};
 
@@ -187,7 +190,6 @@ namespace daxa {
 			auto& frame = *frameContexts.front();
 
 			if (!frame.usedFences.empty()) {
-				printf("wait on fence: %p\n", frame.usedFences[0]);
 				device.waitForFences(frame.usedFences, VK_TRUE, std::numeric_limits<u64>::max());
 				device.resetFences(frame.usedFences);
 			}
@@ -208,6 +210,9 @@ namespace daxa {
 		}
 
 		void Device::waitIdle() {
+			for (int i = 0; i < 3; i++) {
+				nextFrameContext();
+			}
 			device.waitIdle();
 		}
 
@@ -265,12 +270,12 @@ namespace daxa {
 			return ret;
 		}
 
-		std::optional<ShaderModuleHandle> Device::tryCreateShderModuleFromGLSL(std::string const& glslSource, vk::ShaderStageFlagBits stage, std::string const& name) {
-			return ShaderModuleHandle::tryCreateDAXAShaderModule(device, glslSource, name, stage);
+		std::optional<ShaderModuleHandle> Device::tryCreateShderModuleFromGLSL(std::string const& glslSource, vk::ShaderStageFlagBits stage, std::string const& entrypoint) {
+			return ShaderModuleHandle::tryCreateDAXAShaderModule(device, glslSource, entrypoint, stage);
 		}
 
-		std::optional<ShaderModuleHandle> Device::tryCreateShderModuleFromGLSL(std::filesystem::path const& pathToGlsl, vk::ShaderStageFlagBits stage, std::string const& name) {
-			return ShaderModuleHandle::tryCreateDAXAShaderModule(device, pathToGlsl, name, stage);
+		std::optional<ShaderModuleHandle> Device::tryCreateShderModuleFromGLSL(std::filesystem::path const& pathToGlsl, vk::ShaderStageFlagBits stage, std::string const& entrypoint) {
+			return ShaderModuleHandle::tryCreateDAXAShaderModule(device, pathToGlsl, entrypoint, stage);
 		}
 
 		GraphicsPipelineHandle Device::createGraphicsPipeline(GraphicsPipelineBuilder const& pipelineBuilder) {

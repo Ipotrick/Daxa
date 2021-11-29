@@ -44,7 +44,7 @@ namespace daxa {
 			vk::PipelineShaderStageCreateInfo sci{};
 			sci.module = *shaderModule->shaderModule;
 			sci.stage = shaderModule->shaderStage;
-			sci.pName = shaderModule->name.c_str();
+			sci.pName = shaderModule->entryPoint.c_str();
 
 			this->shaderStageCreateInfo.push_back(sci);
 
@@ -79,7 +79,8 @@ namespace daxa {
 		}
 
 		constexpr vk::PipelineColorBlendAttachmentState NO_BLEND{
-			.blendEnable = VK_FALSE
+			.blendEnable = VK_FALSE,
+			.colorWriteMask = (vk::ColorComponentFlags)(VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT),
 		};
 
 		GraphicsPipelineBuilder& GraphicsPipelineBuilder::addColorAttachment(const vk::Format& attachmentFormat) {
@@ -107,7 +108,7 @@ namespace daxa {
 		constexpr vk::PipelineRasterizationStateCreateInfo DEFAULT_RASTER_STATE_CI{
 			.polygonMode = vk::PolygonMode::eFill,
 			.cullMode = vk::CullModeFlagBits::eNone,
-			.frontFace = vk::FrontFace::eClockwise,
+			.frontFace = vk::FrontFace::eCounterClockwise,
 			.lineWidth = 1.0f,
 		};
 
@@ -120,7 +121,8 @@ namespace daxa {
 		};
 
 		constexpr vk::PipelineDepthStencilStateCreateInfo DEFAULT_DEPTH_STENCIL_STATE_CI{
-
+			.depthTestEnable = VK_FALSE,
+			.stencilTestEnable = VK_FALSE,
 		};
 
 		constexpr vk::Viewport DEFAULT_VIEWPORT{
@@ -128,11 +130,14 @@ namespace daxa {
 			.height = 1
 		};
 
+		constexpr vk::PipelineVertexInputStateCreateInfo DEFAULT_VERTEX_INPUT_STATE_CI{
+			.vertexBindingDescriptionCount = 0,
+			.pVertexBindingDescriptions = nullptr,
+			.vertexAttributeDescriptionCount = 0,
+			.pVertexAttributeDescriptions = nullptr,
+		};
+
 		GraphicsPipelineHandle GraphicsPipelineBuilder::build(vk::Device device, vkh::DescriptorSetLayoutCache& layoutCache) const {
-			if (!vertexInput) {
-				std::cerr << "error: vertexInput must be specified when building a GraphicsPipeline!" << std::endl;
-				exit(-1);
-			}
 
 			std::vector<vk::DescriptorSetLayout> descLayouts;
 			{
@@ -156,6 +161,7 @@ namespace daxa {
 			auto pipelineLayout = device.createPipelineLayoutUnique(lci);
 
 			// create pipeline:
+			vk::PipelineVertexInputStateCreateInfo pVertexInput = vertexInput.value_or(DEFAULT_VERTEX_INPUT_STATE_CI);
 			vk::PipelineInputAssemblyStateCreateInfo pinputAssemlyStateCI = inputAssembly.value_or(DEFAULT_INPUT_ASSEMBLY_STATE_CI);
 			vk::PipelineRasterizationStateCreateInfo prasterizationStateCI = rasterization.value_or(DEFAULT_RASTER_STATE_CI);
 			vk::PipelineMultisampleStateCreateInfo pmultisamplerStateCI = multisampling.value_or(DEFAULT_MULTISAMPLE_STATE_CI);
@@ -187,14 +193,14 @@ namespace daxa {
 			vk::PipelineRenderingCreateInfoKHR rciKHR{};
 			rciKHR.colorAttachmentCount = static_cast<u32>(this->colorAttachmentFormats.size());
 			rciKHR.pColorAttachmentFormats = this->colorAttachmentFormats.data();
-			rciKHR.depthAttachmentFormat = this->depthAttachmentFormat.has_value() ? this->depthAttachmentFormat.value() : vk::Format::eUndefined;
-			rciKHR.stencilAttachmentFormat = this->stencilAttachmentFormat.has_value() ? this->stencilAttachmentFormat.value() : vk::Format::eUndefined;
+			rciKHR.depthAttachmentFormat = this->depthAttachmentFormat.value_or(vk::Format::eUndefined);
+			rciKHR.stencilAttachmentFormat = this->stencilAttachmentFormat.value_or(vk::Format::eUndefined);
 
 			vk::GraphicsPipelineCreateInfo pci{};
 			pci.pNext = &rciKHR;
 			pci.stageCount = static_cast<u32>(this->shaderStageCreateInfo.size());
 			pci.pStages = shaderStageCreateInfo.data();
-			pci.pVertexInputState = &vertexInput.value();
+			pci.pVertexInputState = &pVertexInput;
 			pci.pInputAssemblyState = &pinputAssemlyStateCI;
 			pci.pViewportState = &viewportStateCI;
 			pci.pRasterizationState = &prasterizationStateCI;

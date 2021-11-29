@@ -88,6 +88,8 @@
   <ItemGroup>
     <None Include="shaders\mesh.frag" />
     <None Include="shaders\mesh.vert" />
+    <None Include="shaders\test.frag" />
+    <None Include="shaders\test.vert" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

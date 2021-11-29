@@ -33,14 +33,14 @@ namespace daxa {
 
 			std::vector<u32> spirv;
 			vk::ShaderStageFlagBits shaderStage;
-			std::string name;
+			std::string entryPoint;
 			vk::UniqueShaderModule shaderModule;
 		};
 
 		class ShaderModuleHandle {
 		public:
-			static std::optional<ShaderModuleHandle> tryCreateDAXAShaderModule(vk::Device device, std::filesystem::path const& path, std::string const& name, vk::ShaderStageFlagBits shaderStage);
-			static std::optional<ShaderModuleHandle> tryCreateDAXAShaderModule(vk::Device device, std::string const& glsl, std::string const& name, vk::ShaderStageFlagBits shaderStage);
+			static std::optional<ShaderModuleHandle> tryCreateDAXAShaderModule(vk::Device device, std::filesystem::path const& path, std::string const& entryPoint, vk::ShaderStageFlagBits shaderStage);
+			static std::optional<ShaderModuleHandle> tryCreateDAXAShaderModule(vk::Device device, std::string const& glsl, std::string const& entryPoint, vk::ShaderStageFlagBits shaderStage);
 			ShaderModule const& operator * () const { return *shaderModule; }
 			ShaderModule const* operator -> () const { return &*shaderModule; }
 		private:

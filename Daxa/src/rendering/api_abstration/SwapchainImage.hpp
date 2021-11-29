@@ -31,5 +31,6 @@ namespace daxa {
 			u32 imageIndex;
 			vk::SwapchainKHR swapchain;
 		};
+
 	}
 }

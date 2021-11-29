@@ -44,7 +44,7 @@ namespace daxa {
 					.pNext = nullptr,
 					.imageView = ri.colorAttachments[i].image->getVkView(),
 					.imageLayout = ri.colorAttachments[i].image->getLayout(),
-					.resolveMode = ri.colorAttachments[i].resolveMode,
+					.resolveMode = VK_RESOLVE_MODE_NONE,// ri.colorAttachments[i].resolveMode,
 					.loadOp = ri.colorAttachments[i].loadOp,
 					.storeOp = ri.colorAttachments[i].storeOp,
 					.clearValue = ri.colorAttachments[i].clearValue

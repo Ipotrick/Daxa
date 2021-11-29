@@ -56,7 +56,7 @@ namespace daxa {
 			 * \param name a name for the shader stage, only used for debugging.
 			 * \return newly created ShaderModule from the given source IF source is valid, or a nullopt if the source or path is invalid.
 			 */
-			std::optional<ShaderModuleHandle> tryCreateShderModuleFromGLSL(std::string const& glslSource, vk::ShaderStageFlagBits stage, std::string const& name = "Unnamed Shader");
+			std::optional<ShaderModuleHandle> tryCreateShderModuleFromGLSL(std::string const& glslSource, vk::ShaderStageFlagBits stage, std::string const& entryPoint = "main");
 
 			/**
 			 * \param pathToGlsl a path to a file that contains valid glsl source code.
@@ -64,7 +64,7 @@ namespace daxa {
 			 * \param name a name for the shader stage, only used for debugging.
 			 * \return newly created ShaderModule from the given source IF source path is valid, or a nullopt if the source or path is invalid.
 			 */
-			std::optional<ShaderModuleHandle> tryCreateShderModuleFromGLSL(std::filesystem::path const& pathToGlsl, vk::ShaderStageFlagBits stage, std::string const& name = "Unnamed Shader");
+			std::optional<ShaderModuleHandle> tryCreateShderModuleFromGLSL(std::filesystem::path const& pathToGlsl, vk::ShaderStageFlagBits stage, std::string const& entryPoint = "main");
 
 			/**
 			 * Creates a graphics pipeline, wich is specified by the pipeline builder.

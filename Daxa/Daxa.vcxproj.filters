@@ -235,5 +235,11 @@
     <None Include="shaders\mesh.vert">
       <Filter>src\rendering\shaders</Filter>
     </None>
+    <None Include="shaders\test.vert">
+      <Filter>src\rendering\shaders</Filter>
+    </None>
+    <None Include="shaders\test.frag">
+      <Filter>src\rendering\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>
