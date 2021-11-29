@@ -12,7 +12,7 @@ namespace daxa {
 			f32 fontSize{ NAN };
 			Vec4 color{ UNSET_COLOR };
 			FontHandle font;
-			ImageHandle fontTexture;
+			//ImageHandle fontTexture;
 		};
 		namespace {
 			struct _StaticText : public StaticText {
@@ -27,7 +27,7 @@ namespace daxa {
 			f32 fontSize{ NAN };
 			Vec4 color{ UNSET_COLOR };
 			FontHandle font;
-			ImageHandle fontTexture;
+			//ImageHandle fontTexture;
 		};
 		namespace {
 			struct _Text : public Text {
@@ -45,7 +45,7 @@ namespace daxa {
 			f32 fontSize{ NAN };
 			Vec4 color{ UNSET_COLOR };
 			FontHandle font;
-			ImageHandle fontTexture;
+			//ImageHandle fontTexture;
 			bool bClearOnEnter{ false };
 		};
 		namespace {
@@ -65,7 +65,7 @@ namespace daxa {
 			Vec4 colorFontError{ UNSET_COLOR };
 			Padding textPadding{ NAN,NAN,NAN,NAN };
 			FontHandle font;
-			ImageHandle fontTexture;
+			//ImageHandle fontTexture;
 		};
 		namespace {
 			struct _TextInputF64 : public TextInputF64 {

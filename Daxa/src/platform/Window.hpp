@@ -48,7 +48,7 @@ namespace daxa {
 		Vec2 getSizeVec() const;
 
 		void setName(std::string name);
-		const std::string& getName();
+		std::string const& getName();
 
 		/**
 		 * Intercepts certain window related Events like window close wich are abstracted in this class.
@@ -98,29 +98,9 @@ namespace daxa {
 		std::vector<KeyEvent> getKeyEventsInOrder() const;
 
 		void* getWindowHandleSDL();
-
-		//std::tuple<vk::Image, vk::ImageView, vk::Semaphore> getNextImage() {
-		//	auto index = imageIndex++;
-		//	u32 dummy;
-		//	vkAcquireNextImageKHR(gpu.device, swapchain, 1000000000, *presentSemaphores[index], nullptr, &dummy);
-		//	return { swapchainImages[index], swapchainImageViews[index], *presentSemaphores[index] };
-		//}
-
-		//vk::PresentModeKHR presentMode{ vk::PresentModeKHR::eFifo };
-		//vk::SurfaceKHR surface;
-		//vk::SwapchainKHR swapchain; // from other articles
-		//vk::Format swapchainImageFormat; // image format expected by the windowing system
-		//std::vector<vk::Image> swapchainImages; //array of images from the swapchain
-		//std::vector<vk::ImageView> swapchainImageViews; //array of image-views from the swapchain
-		//std::vector<vk::UniqueSemaphore> presentSemaphores;
-		//u32 imageIndex{ 0 };
-		//u32 imagesInFlight{ 2 };
-		//vk::Format depthImageFormat;
-		//Image depthImage;
 	private:
-		//GPUContext gpu;
-
 		std::string name;
+		bool bChangedSize{ false };
 		std::array<u32, 2> size;
 
 		SDL_Window* sdlWindowHandle{ nullptr };

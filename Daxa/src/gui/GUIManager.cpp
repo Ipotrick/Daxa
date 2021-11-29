@@ -7,7 +7,7 @@
 
 namespace daxa {
 	namespace gui {
-		Manager::Manager(ImageManager* tex, FontManager* fonts) 	{
+		Manager::Manager(/*ImageManager* tex,*/ FontManager* fonts) {
 			this->tex = tex;
 			this->fonts = fonts;
 			defaultStyle.font = fonts->getHandle(DEFAULT_FONT.string());

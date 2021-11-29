@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../rendering/ImageManager.hpp"
+#include "../../rendering/api_abstration/Image.hpp"
 
 #include "../font/FontManager.hpp"
 
@@ -24,7 +24,7 @@ namespace daxa {
 			f32 cornerRounding;
 			f32 scrollerWidth;
 			FontHandle font;
-			ImageHandle fontTexture;
+			gpu::ImageHandle fontTexture;
 		};
 
 		template<CElement T>

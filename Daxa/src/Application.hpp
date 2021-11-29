@@ -1,5 +1,7 @@
 #include "DaxaCore.hpp"
 
+#include <chrono>
+
 #include "rendering/Renderer.hpp"
 #include "platform/Window.hpp"
 
@@ -7,6 +9,9 @@ namespace daxa {
 
 	struct AppState {
 		bool continueRunning = true;
+		std::chrono::microseconds deltaTimeLastFrame{ 0 };
+
+		float getDeltaTimeSeconds() const { return deltaTimeLastFrame.count() * 0.00'0001f; }
 	};
 
 	class User {

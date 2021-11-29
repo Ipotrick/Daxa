@@ -21,7 +21,7 @@ namespace daxa {
 			VkResolveModeFlagBits resolveMode = VK_RESOLVE_MODE_NONE;
 			VkAttachmentLoadOp loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 			VkAttachmentStoreOp storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE;
-			VkClearValue clearValue = VkClearValue{ .color = VkClearColorValue{.float32 = { 0.4f, 0.8f, 0.4f, 1.0f } } };
+			VkClearValue clearValue = VkClearValue{ .color = VkClearColorValue{.float32 = { 0.0f, 0.0f, 0.0f, 0.0f } } };
 		};
 
 		struct BeginRenderingInfo {
@@ -47,6 +47,8 @@ namespace daxa {
 
 			void beginRendering(BeginRenderingInfo ri);
 			void endRendering();
+
+			void changeImageLayout(ImageHandle image, VkImageLayout newLayout);
 
 			vk::CommandBuffer getVkCommandBuffer() { return cmd; }
 		private:

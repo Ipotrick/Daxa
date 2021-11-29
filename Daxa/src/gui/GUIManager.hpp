@@ -48,7 +48,7 @@ namespace daxa {
 				u32 version = 0xFFFFFFFF;
 			};
 
-			Manager(ImageManager* tex, FontManager* fonts);
+			Manager(/*ImageManager* tex,*/ FontManager* fonts);
 
 			Manager(Manager&& rhs) = delete;
 
@@ -245,7 +245,7 @@ namespace daxa {
 			void updateFocusedTextInput();
 
 			/// Temporary variables with lifetime of the draw:  ///
-			ImageHandle blurTextureHandle{};
+			//ImageHandle blurTextureHandle{};
 			Window* window{ nullptr };
 			RenderCoordSys coordSys;
 			float deltaTime{ 0.0f };
@@ -263,7 +263,7 @@ namespace daxa {
 
 
 			std::vector<UISprite> spritesOfLastDraw;
-			ImageManager* tex{ nullptr };
+			//ImageManager* tex{ nullptr };
 			FontManager* fonts{ nullptr };
 
 			static inline const std::filesystem::path DEFAULT_FONT_TEXTURE{ "ressources/fonts/Consolas_font.png" };
