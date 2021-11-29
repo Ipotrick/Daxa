@@ -1,9 +1,8 @@
 #include "../include/Daxa.hpp"
+#include "glslang/Public/ShaderLang.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
-
-#include "rendering/Vulkan.hpp"
 
 namespace daxa {
 	void initialize()
@@ -12,7 +11,6 @@ namespace daxa {
 			printf("error initializing SDL: %s\n", SDL_GetError());
 			exit(-1);
 		}
-		VulkanGlobals::initialise();
 		glslang::InitializeProcess();
 		Jobs::initialize();
 	}
@@ -21,7 +19,6 @@ namespace daxa {
 	{
 		Jobs::cleanup();
 		glslang::FinalizeProcess();
-		VulkanGlobals::cleanup();
 		SDL_Quit();
 	}
 }

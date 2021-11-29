@@ -7,23 +7,35 @@
 namespace daxa {
 	namespace gpu {
 
-		RenderWindow::RenderWindow(std::shared_ptr<Device> device, std::shared_ptr<vkb::Instance> instance, void* sdl_window_handle, u32 width, u32 height, vk::PresentModeKHR presentmode)
+		RenderWindow::RenderWindow(std::shared_ptr<Device> device, std::shared_ptr<vkb::Instance> instance, void* sdl_window_handle, u32 width, u32 height, VkPresentModeKHR presentMode, VkSwapchainKHR oldSwapchain, VkSurfaceKHR oldSurface)
 			: device{device}
 			, instance{ instance }
+			, sdl_window_handle{ sdl_window_handle }
+			, size{ .width = width, .height = height }
+			, presentMode{ presentMode }
 		{
-			SDL_Vulkan_CreateSurface((SDL_Window*)sdl_window_handle, instance->instance, (VkSurfaceKHR*)&surface);
+			if (!oldSwapchain) {
+				SDL_Vulkan_CreateSurface((SDL_Window*)sdl_window_handle, instance->instance, (VkSurfaceKHR*)&surface);
+			}
+			else {
+				this->surface = oldSurface;
+			}
 
 			vkb::SwapchainBuilder swapchainBuilder{ device->getVkPhysicalDevice(), device->getVkDevice(), surface };
 
+			if (oldSwapchain) {
+				swapchainBuilder.set_old_swapchain(oldSwapchain);
+			}
+
 			vkb::Swapchain vkbSwapchain = swapchainBuilder
 				.use_default_format_selection()
-				.set_desired_present_mode((VkPresentModeKHR)presentmode)
+				.set_desired_present_mode(presentMode)
 				.set_desired_extent(width, height)
 				.build()
 				.value();
 			
 			//store swapchain and its related images
-			swapchain = (vk::SwapchainKHR)vkbSwapchain.swapchain;
+			swapchain = vkbSwapchain.swapchain;
 			auto vkImages = vkbSwapchain.get_images().value();
 			auto vkImageViews = vkbSwapchain.get_image_views().value();
 			for (int i = 0; i < vkImages.size(); i++) {
@@ -44,34 +56,59 @@ namespace daxa {
 				img.usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 				img.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 			}
-			presentationSemaphore = device->getVkDevice().createSemaphore({});
-			swapchainImageFormat = (vk::Format)vkbSwapchain.image_format;
+			swapchainImageFormat = vkbSwapchain.image_format;
+		}
+
+		RenderWindow::RenderWindow(RenderWindow&& other) {
+			// trivial move
+			std::memcpy(this, &other, sizeof(RenderWindow));
+			std::memset(&other, 0, sizeof(RenderWindow));
+		}
+
+		RenderWindow& RenderWindow::operator=(RenderWindow&& other) {
+			// trivial move
+			std::memcpy(this, &other, sizeof(RenderWindow));
+			std::memset(&other, 0, sizeof(RenderWindow));
+			return *this;
 		}
 
 		RenderWindow::~RenderWindow() {
 			if (device) {
 				device->getVkDevice().destroySwapchainKHR(swapchain);
-				for (int i = 0; i < imagesInFlight; i++) {
-					device->getVkDevice().destroySemaphore(presentationSemaphore);
-				}
 				swapchainImages.clear();
 				vkDestroySurfaceKHR(instance->instance, surface, nullptr);
 				instance = nullptr;
 				surface = nullptr;
 				device = nullptr;
+				printf("real destruction");
 			}
 		}
 
-		SwapchainImage RenderWindow::getNextImage() {
+		SwapchainImage RenderWindow::getNextImage(VkSemaphore presentSemaphore) {
+			VkExtent2D realSize;
+			SDL_GetWindowSize((SDL_Window*)sdl_window_handle, (int*)&realSize.width, (int*)&realSize.height);
+			if (realSize.width != size.width || realSize.height != size.height) {
+				this->resize(realSize);
+			}
+
 			u32 index{ 0 };
-			auto err = device->getVkDevice().acquireNextImageKHR(swapchain, 10000000000, presentationSemaphore, nullptr, &index);
+			auto err = device->getVkDevice().acquireNextImageKHR(swapchain, UINT64_MAX, presentSemaphore, nullptr, &index);
 			assert(err == vk::Result::eSuccess);
 			SwapchainImage si{};
 			si.swapchain = swapchain;
 			si.imageIndex = index;
 			si.image = swapchainImages[index];
-			si.presentSemaphore = presentationSemaphore;
 			return si;
+		}
+
+		void RenderWindow::resize(VkExtent2D newSize) {
+			device->waitIdle();
+			*this = RenderWindow{ device, instance, sdl_window_handle, newSize.width, newSize.height, presentMode, this->swapchain, this->surface };
+		}
+
+		void RenderWindow::setPresentMode(VkPresentModeKHR newPresentMode) {
+			device->waitIdle();
+			*this = RenderWindow{ device, instance, sdl_window_handle, size.width,  size.height, newPresentMode, this->swapchain, this->surface };
 		}
 	}
 }

@@ -1,6 +1,5 @@
 #pragma once
 #include "../../rendering/UISprite.hpp"
-#include "../../rendering/ImageManager.hpp"
 
 #include "../font/FontManager.hpp"
 
@@ -13,7 +12,7 @@ namespace daxa {
 			TextContext(DrawContext const& super) : DrawContext{ super } {}
 			f32 fontSize;
 			Vec4 color{ 0,0,0,1 };
-			ImageHandle tex;
+			//ImageHandle tex;
 			Font const* font{ nullptr };
 			bool bPixelPerfectAlignment{ false };
 		};
@@ -145,7 +144,7 @@ namespace daxa {
 								.color = context.color,
 								.position = Vec3{ place, context.renderDepth },
 								.scale = size,
-								.imageIndex = context.tex.getIndex(),
+								//.imageIndex = context.tex.getIndex(),
 								.texMin = Vec2{scaledGlyph.atlasBounds.left, scaledGlyph.atlasBounds.bottom},
 								.texMax = Vec2{scaledGlyph.atlasBounds.right, scaledGlyph.atlasBounds.top},
 								.clipMin = context.clipMin,

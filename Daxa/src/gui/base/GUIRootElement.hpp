@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <functional>
 
 #include "GUIDrawContext.hpp"
 #include "GUIDrawUtil.hpp"

@@ -1,4 +1,8 @@
 #include "Application.hpp"
+#include <iostream>
+#include <iomanip>
+
+using namespace std::chrono;
 
 namespace daxa {
 
@@ -16,7 +20,14 @@ namespace daxa {
 			user->init(this->appstate);
 		}
 
+		auto lastFrameStartTimePoint = system_clock::now();
 		while (this->appstate->continueRunning) {
+			auto now = system_clock::now();
+			this->appstate->deltaTimeLastFrame = duration_cast<microseconds>(now - lastFrameStartTimePoint);
+			lastFrameStartTimePoint = now;
+
+			std::cout << "delta time: " << std::setw(8) << appstate->getDeltaTimeSeconds() * 1000.0f << "ms, fps: " << 1.0f / (appstate->getDeltaTimeSeconds()) << std::endl;
+
 			if (window->update(0.01f)) break;
 
 			if (user) {

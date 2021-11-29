@@ -18,7 +18,7 @@ namespace daxa {
 			SDL_WINDOWPOS_UNDEFINED,	// window position y (don't care)
 			size[0],					// window width in pixels
 			size[1],					// window height in pixels
-			SDL_WINDOW_VULKAN
+			SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE
 		);
 
 		SDL_CaptureMouse(SDL_TRUE);
@@ -29,48 +29,13 @@ namespace daxa {
 		}
 
 		sdlWindowId = SDL_GetWindowID(sdlWindowHandle);
-
-		//SDL_Vulkan_CreateSurface(sdlWindowHandle, VulkanGlobals::instance, (VkSurfaceKHR*)&surface);
-
-		//vkb::SwapchainBuilder swapchainBuilder{ gpu.physicalDevice, gpu.device, surface };
-
-		//vkb::Swapchain vkbSwapchain = swapchainBuilder
-		//	.use_default_format_selection()
-		//	.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
-		//	.set_desired_extent(size[0], size[1])
-		//	.build()
-		//	.value();
-		//
-		////store swapchain and its related images
-		//swapchain = (vk::SwapchainKHR)vkbSwapchain.swapchain;
-		//auto vkImages = vkbSwapchain.get_images().value();
-		//for (VkImage& img : vkImages) {
-		//	swapchainImages.push_back((vk::Image)img);
-		//}
-		//auto vkImageViews = vkbSwapchain.get_image_views().value();
-		//for (VkImageView& img : vkImageViews) {
-		//	swapchainImageViews.push_back((vk::ImageView)img);
-		//}
-		//for (VkImageView& img : vkImageViews) {
-		//	presentSemaphores.push_back(gpu.device.createSemaphoreUnique({}));
-		//}
-		//
-		//swapchainImageFormat = (vk::Format)vkbSwapchain.image_format;
 	}
 	Window::~Window() 	{
-		//vkDestroySwapchainKHR(gpu.device, swapchain, nullptr);
-
-		//destroy swapchain resources
-		//for (int i = 0; i < swapchainImageViews.size(); i++) {
-		//
-		//	vkDestroyImageView(gpu.device, swapchainImageViews[i], nullptr);
-		//}
-
-		//vkDestroySurfaceKHR(VulkanGlobals::instance, surface, nullptr);
 		SDL_DestroyWindow(sdlWindowHandle);
 		sdlWindowHandle = nullptr;
 	}
-	void Window::setSize(std::array<u32, 2> size) 	{
+	void Window::setSize(std::array<u32, 2> size) {
+		bChangedSize = true;
 		this->size = size;
 	}
 	std::array<u32, 2> Window::getSize() const 	{
@@ -213,11 +178,8 @@ namespace daxa {
 			//SDL_WarpMouseInWindow(sdlWindowHandle, 1, 1);
 		}
 
-
 		scrollXHidden = false;
 		scrollYHidden = false;
-
-
 
 		// Keyboard
 		std::swap(keyStates, prevKeyStates);
@@ -240,9 +202,15 @@ namespace daxa {
 			buttonHidden[i] = false;
 		}
 
+		if (bChangedSize) {
+			bChangedSize = false;
+			SDL_SetWindowSize(sdlWindowHandle, size[0], size[1]);
+		}
+
 		// Events
 		bool close{ false };
 		SDL_Event event;
+		printf("before ");
 		while (SDL_PollEvent(&event)) {
 			switch (event.type) {
 			case SDL_QUIT:
@@ -251,8 +219,10 @@ namespace daxa {
 			case SDL_KEYDOWN:
 				break;
 			}
-			return close;
 		}
+		SDL_GetWindowSize(sdlWindowHandle, (int*)&this->size[0], (int*)&this->size[1]);
+		printf("after\n");
+		return close;
 	}
 
 	std::vector<KeyEvent> Window::getKeyEventsInOrder() const {

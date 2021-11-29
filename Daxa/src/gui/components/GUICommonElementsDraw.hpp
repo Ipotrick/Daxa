@@ -18,10 +18,10 @@ namespace daxa {
 			const Vec2 scaledSize = (self.bFillSpace ? context.size() : manager.minsizes[id] * context.scale);
 			const Vec2 place = getPlace(scaledSize, context);
 
-			ImageSectionHandle& tex = static_cast<ImageSectionHandle&>(self.texture);
+			//ImageSectionHandle& tex = static_cast<ImageSectionHandle&>(self.texture);
 			auto [texMin, texMax] = self.bScreenTexture ?
 				getScreenTextureMinMax(place, scaledSize, context.renderSpace, manager.coordSys) :
-				std::pair<Vec2, Vec2>{ tex.min, tex.max };
+				//std::pair<Vec2, Vec2>{ tex.min, tex.max };
 
 			if (static_cast<Vec4&>(self.color).w != 0.0f) {
 				out.push_back(

@@ -74,7 +74,7 @@ namespace daxa {
 			bool bFillSpace{ false };
 			bool bDragable{ false };
 			bool bScreenTexture{ false };
-			ImageSectionHandle texture{ ImageSectionHandle{} };
+			//ImageSectionHandle texture{ ImageSectionHandle{} };
 			Vec4 color{ UNSET_COLOR };
 			Padding padding{ Padding{NAN, NAN, NAN, NAN} };
 			f32 cornerRounding{ NAN };
@@ -99,7 +99,7 @@ namespace daxa {
 			Vec2 minsize{ Vec2{} };
 			bool bFillSpace{ true };
 			bool bScreenTextureView{ false };
-			ImageSectionHandle textureView{ ImageSectionHandle{} };
+			//ImageSectionHandle textureView{ ImageSectionHandle{} };
 			Vec4 colorView{ UNSET_COLOR };
 			Vec4 colorScroller{ UNSET_COLOR };
 			Vec4 colorScrollBar{ UNSET_COLOR };
@@ -131,7 +131,7 @@ namespace daxa {
 			Vec4 color{ UNSET_COLOR };
 			Vec4 holdColor{ UNSET_COLOR };
 			bool bScreenTexture{ false };
-			ImageSectionHandle texture{ ImageSectionHandle{} };
+			//ImageSectionHandle texture{ ImageSectionHandle{} };
 			std::function<void(Button& self)> onPress;
 			std::function<void(Button& self)> onHold;
 			std::function<void(Button& self)> onRelease;

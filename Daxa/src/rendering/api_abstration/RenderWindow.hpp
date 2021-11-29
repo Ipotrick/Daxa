@@ -5,10 +5,9 @@
 #include <deque>
 
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 
 #include "../dependencies/vk_mem_alloc.hpp"
-#include "../dependencies/vulkanhelper.hpp"
 
 #include "../../DaxaCore.hpp"
 
@@ -21,21 +20,29 @@ namespace daxa {
 
 		class RenderWindow {
 		public:
-			RenderWindow(std::shared_ptr<Device> device, std::shared_ptr<vkb::Instance> instance, void* sdl_window_handle, u32 width, u32 height, vk::PresentModeKHR presentmode);
+			RenderWindow(std::shared_ptr<Device> device, std::shared_ptr<vkb::Instance> instance, void* sdl_window_handle, u32 width, u32 height, VkPresentModeKHR presentmode, VkSwapchainKHR = nullptr, VkSurfaceKHR oldSurface = nullptr);
+			RenderWindow(RenderWindow&& other);
+			RenderWindow& operator=(RenderWindow&& other);
 			~RenderWindow();
 
-			SwapchainImage getNextImage();
+			void setPresentMode(VkPresentModeKHR newPresentMode);
+
+			SwapchainImage getNextImage(VkSemaphore presentSemaphore);
+
+			VkExtent2D getSize() const { return size; }
+		private:
+			void resize(VkExtent2D newSize);
 
 			std::shared_ptr<Device> device;
 			std::shared_ptr<vkb::Instance> instance;
-
-			vk::PresentModeKHR presentMode{ vk::PresentModeKHR::eFifo };
-			vk::SurfaceKHR surface;
-			vk::SwapchainKHR swapchain; 
-			vk::Format swapchainImageFormat;
+			VkPresentModeKHR presentMode{ VK_PRESENT_MODE_FIFO_KHR };
+			VkSurfaceKHR surface;
+			VkSwapchainKHR swapchain; 
+			VkFormat swapchainImageFormat;
 			std::vector<ImageHandle> swapchainImages;
-			vk::Semaphore presentationSemaphore;
 			u32 imagesInFlight{ 2 };
+			VkExtent2D size;
+			void* sdl_window_handle = nullptr;
 		};
 
 	}

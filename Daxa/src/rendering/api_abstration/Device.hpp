@@ -74,8 +74,8 @@ namespace daxa {
 			GraphicsPipelineHandle createGraphicsPipeline(GraphicsPipelineBuilder const& pipelineBuilder);
 
 			struct SubmitInfo {
-				std::vector<vk::Semaphore> waitOnSemaphores;	// TODO REPLACE WITH STACK ALLOCATED VECTOR
-				std::vector<vk::Semaphore> signalSemaphores;	// TODO REPLACE WITH STACK ALLOCATED VECTOR
+				std::vector<vk::Semaphore>	waitOnSemaphores;	// TODO REPLACE WITH STACK ALLOCATED VECTOR
+				std::vector<vk::Semaphore>	signalSemaphores;	// TODO REPLACE WITH STACK ALLOCATED VECTOR
 			};
 
 			/**
@@ -107,6 +107,11 @@ namespace daxa {
 			 * As soon as a new frame context is taken, all framed ressources are freed and or reused for the next frame.
 			 */
 			void nextFrameContext();
+
+			/**
+			 * Waits for the device to complete all submitted operations and idle.
+			 */
+			void waitIdle();
 
 			const vk::PhysicalDevice& getVkPhysicalDevice() { return physicalDevice; }
 			const vk::Device& getVkDevice() { return device; }

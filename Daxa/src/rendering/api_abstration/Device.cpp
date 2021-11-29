@@ -18,6 +18,7 @@ namespace daxa {
 				.set_engine_name("Daxa")
 				.request_validation_layers(true)
 				.require_api_version(1, 2, 0)
+				.enable_layer("VK_LAYER_LUNARG_monitor")
 				.use_default_debug_messenger();
 			auto instanceBuildReturn = instanceBuilder.build();
 			if (!instanceBuildReturn) {
@@ -120,6 +121,7 @@ namespace daxa {
 			auto& frame = *this->frameContexts.front();
 
 			auto thisSubmitFence = getNextFence();
+			printf("submitting to fence: %p\n", thisSubmitFence);
 
 			vk::SubmitInfo si{};
 
@@ -181,19 +183,17 @@ namespace daxa {
 
 		void Device::nextFrameContext() {
 			// get new frame context
-			auto lastFrame = std::move(frameContexts.front());
-			frameContexts.pop_front();
-			frameContexts.push_back(std::move(lastFrame));
+			auto lastFrame = std::move(frameContexts.back());
+			frameContexts.pop_back();
+			frameContexts.push_front(std::move(lastFrame));
 
 			auto& frame = *frameContexts.front();
 
-			// wait on frame context to finish on gpu:
-			if (!frame.usedFences.empty())
-				device.waitForFences(frame.usedFences, VK_TRUE, 100000000);
-
-			// reset frame ressources:
-			if (!frame.usedFences.empty())
+			if (!frame.usedFences.empty()) {
+				printf("wait on fence: %p\n", frame.usedFences[0]);
+				device.waitForFences(frame.usedFences, VK_TRUE, std::numeric_limits<u64>::max());
 				device.resetFences(frame.usedFences);
+			}
 			while (!frame.usedFences.empty()) {
 				auto back = frame.usedFences.back();
 				frame.usedFences.pop_back();
@@ -208,6 +208,10 @@ namespace daxa {
 				list.reset();
 				unusedCommandLists.push_back(std::move(list));
 			}
+		}
+
+		void Device::waitIdle() {
+			device.waitIdle();
 		}
 
 		void Device::initFrameContexts() {

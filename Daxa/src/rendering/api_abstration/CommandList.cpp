@@ -120,5 +120,42 @@ namespace daxa {
 			usedBuffers.clear();
 			usedImages.clear();
 		}
+
+		void CommandList::changeImageLayout(ImageHandle image, VkImageLayout newLayout) {
+
+			VkImageMemoryBarrier imgMemBarr = {};
+			imgMemBarr.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			imgMemBarr.pNext = nullptr;
+			imgMemBarr.oldLayout = image->getLayout();
+			imgMemBarr.newLayout = newLayout;
+			imgMemBarr.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			imgMemBarr.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			imgMemBarr.image = image->getVkImage();
+			imgMemBarr.subresourceRange = VkImageSubresourceRange{
+				.aspectMask = image->getVkAspect(),
+				.baseMipLevel = 0,
+				.levelCount = 1,
+				.baseArrayLayer = 0,
+				.layerCount = 1,
+			};
+			imgMemBarr.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+			imgMemBarr.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+
+			vkCmdPipelineBarrier(
+				cmd,
+				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+				VK_DEPENDENCY_DEVICE_GROUP_BIT,
+				0,
+				nullptr,
+				0,
+				nullptr,
+				1,
+				&imgMemBarr
+			);
+
+			image->layout = newLayout;
+			usedImages.push_back(std::move(image));
+		}
 	}
 }
