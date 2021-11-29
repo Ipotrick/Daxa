@@ -13,7 +13,7 @@ int main(int argc, char* args[])
 
         app.run();
     }
-
     daxa::cleanup();
+
     return 0;
 }

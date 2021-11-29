@@ -2,6 +2,7 @@
 
 #include <deque>
 #include <memory>
+#include <span>
 
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <vulkan/vulkan.hpp>
@@ -74,8 +75,8 @@ namespace daxa {
 			GraphicsPipelineHandle createGraphicsPipeline(GraphicsPipelineBuilder const& pipelineBuilder);
 
 			struct SubmitInfo {
-				std::vector<vk::Semaphore>	waitOnSemaphores;	// TODO REPLACE WITH STACK ALLOCATED VECTOR
-				std::vector<vk::Semaphore>	signalSemaphores;	// TODO REPLACE WITH STACK ALLOCATED VECTOR
+				std::span<VkSemaphore>	waitOnSemaphores;
+				std::span<VkSemaphore>	signalSemaphores;
 			};
 
 			/**
@@ -99,7 +100,7 @@ namespace daxa {
 			 */
 			void submit(std::vector<CommandList>& cmdLists, SubmitInfo const& submitInfo);
 
-			void present(SwapchainImage const& sImage, std::vector<vk::Semaphore> const& waitOn /* TODO REPLACE WITH STACK ALLLOCATED VECTOR*/);
+			void present(SwapchainImage const& sImage, std::span<VkSemaphore> waitOn);
 
 			/**
 			 * Marks the beginning of the next frame of execution.

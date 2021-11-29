@@ -34,7 +34,7 @@ namespace daxa {
 				user->update(this->appstate);
 			}
 
-			renderer->draw();
+			renderer->draw(appstate->getDeltaTimeSeconds());
 		}
 
 		if (user) {
