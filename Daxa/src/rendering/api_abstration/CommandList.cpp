@@ -157,5 +157,17 @@ namespace daxa {
 			image->layout = newLayout;
 			usedImages.push_back(std::move(image));
 		}
+
+		void CommandList::setViewport(VkViewport const& viewport) {
+			vkCmdSetViewport(cmd, 0, 1, &viewport);
+		}
+
+		void CommandList::setScissor(VkRect2D const& scissor) {
+			vkCmdSetScissor(cmd, 0, 1, &scissor);
+		}
+
+		void CommandList::draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance) {
+			vkCmdDraw(cmd, vertexCount, instanceCount, firstVertex, firstInstance);
+		}
 	}
 }

@@ -278,7 +278,7 @@ namespace daxa {
 			return ShaderModuleHandle::tryCreateDAXAShaderModule(device, pathToGlsl, entrypoint, stage);
 		}
 
-		GraphicsPipelineHandle Device::createGraphicsPipeline(GraphicsPipelineBuilder const& pipelineBuilder) {
+		GraphicsPipelineHandle Device::createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder) {
 			return pipelineBuilder.build(device, *descriptorLayoutCache);
 		}
 	}

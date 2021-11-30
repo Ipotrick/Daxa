@@ -43,6 +43,7 @@ namespace daxa {
 		).value();
 
 		printf("after frag creation\n");
+		VkPipelineVertexInputStateCreateInfo d;
 		gpu::GraphicsPipelineBuilder pipelineBuilder;
 		pipelineBuilder.addShaderStage(vertexShader);
 		pipelineBuilder.addShaderStage(fragmenstShader);
@@ -98,15 +99,15 @@ namespace daxa {
 			.minDepth = 0,
 			.maxDepth = 1,
 		};
-		vkCmdSetViewport(cmdList.getVkCommandBuffer(), 0, 1, &viewport);
+		cmdList.setViewport(viewport);
 
 		VkRect2D scissor{
 			.offset = {0,0},
 			.extent = { (u32)viewport.width, (u32)viewport.height },
 		};
-		vkCmdSetScissor(cmdList.getVkCommandBuffer(), 0, 1, &scissor);
+		cmdList.setScissor(scissor);
 
-		vkCmdDraw(cmdList.getVkCommandBuffer(), 3, 1, 0, 0);
+		cmdList.draw(3, 1, 0, 0);
 
 		cmdList.endRendering();
 

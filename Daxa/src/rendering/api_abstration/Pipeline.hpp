@@ -40,9 +40,10 @@ namespace daxa {
 		class GraphicsPipelineBuilder {
 		public:
 			GraphicsPipelineBuilder() = default;
-			GraphicsPipelineBuilder& setViewport(vk::Viewport viewport);
-			GraphicsPipelineBuilder& setScissor(vk::Rect2D scissor);
-			GraphicsPipelineBuilder& setVertexInput(const vk::PipelineVertexInputStateCreateInfo& vertexInput);
+			GraphicsPipelineBuilder& beginVertexInputAttributeBinding(VkVertexInputRate rate);
+			GraphicsPipelineBuilder& addVertexInputAttribute(VkFormat format);
+			GraphicsPipelineBuilder& addVertexInputAttributeSpacer(u32 spacing);
+			GraphicsPipelineBuilder& endVertexInputAttributeBinding();
 			GraphicsPipelineBuilder& setInputAssembly(const vk::PipelineInputAssemblyStateCreateInfo& inputassembly);
 			GraphicsPipelineBuilder& setRasterization(const vk::PipelineRasterizationStateCreateInfo& rasterization);
 			GraphicsPipelineBuilder& setMultisampling(const vk::PipelineMultisampleStateCreateInfo& multisampling);
@@ -54,12 +55,17 @@ namespace daxa {
 			GraphicsPipelineBuilder& addStencilAttachment(const vk::Format& attachmentFormat);
 		private:
 			friend class Device;
-			GraphicsPipelineHandle build(vk::Device, vkh::DescriptorSetLayoutCache& layoutCache) const;
+			GraphicsPipelineHandle build(vk::Device, vkh::DescriptorSetLayoutCache& layoutCache);
+
+			// Vertex Input Attribute building:
+			bool bVertexAtrributeBindingBuildingOpen = false;
+			VkVertexInputRate currentVertexAttributeBindingInputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+			u32 currentVertexAttributeBindingOffset = 0;
+			u32 currentVertexAttributeLocation = 0;
+			std::vector<VkVertexInputBindingDescription> vertexInputBindingDescriptions;
+			std::vector<VkVertexInputAttributeDescription> vertexInputAttributeDescriptions;
 
 			vk::PipelineCache pipelineCache;
-			std::optional<vk::Viewport> viewport;
-			std::optional<vk::Rect2D> scissor;
-			std::optional<vk::PipelineVertexInputStateCreateInfo> vertexInput;
 			std::optional<vk::PipelineInputAssemblyStateCreateInfo> inputAssembly;
 			std::optional<vk::PipelineRasterizationStateCreateInfo> rasterization;
 			std::optional<vk::PipelineMultisampleStateCreateInfo> multisampling;

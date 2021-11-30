@@ -72,7 +72,7 @@ namespace daxa {
 			 * \param pipelineBuilder specifies how the pipeline is layed out.
 			 * \return a handle to a new graphics pipeline created from the pipeline builder.
 			 */
-			GraphicsPipelineHandle createGraphicsPipeline(GraphicsPipelineBuilder const& pipelineBuilder);
+			GraphicsPipelineHandle createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder);
 
 			struct SubmitInfo {
 				std::span<VkSemaphore>	waitOnSemaphores;

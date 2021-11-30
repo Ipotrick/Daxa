@@ -50,6 +50,12 @@ namespace daxa {
 
 			void changeImageLayout(ImageHandle image, VkImageLayout newLayout);
 
+			void setViewport(VkViewport const& viewport);
+
+			void setScissor(VkRect2D const& scissor);
+
+			void draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance);
+
 			vk::CommandBuffer getVkCommandBuffer() { return cmd; }
 		private:
 			friend class Device;
