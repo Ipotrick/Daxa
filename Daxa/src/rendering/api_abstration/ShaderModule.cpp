@@ -3,11 +3,28 @@
 #include <fstream>
 #include <iostream>
 
+#define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
+#include <vulkan/vulkan.hpp>
+#include "../dependencies/vulkanhelper.hpp"
+
 #include <glslang/Public/ShaderLang.h>
 #include <SPIRV/GlslangToSpv.h>
 
+#include "common.hpp"
+
 namespace daxa {
 	namespace gpu {
+
+		ShaderModule::~ShaderModule() {
+			if (device) {
+				vkDestroyShaderModule(device, shaderModule, nullptr);
+				spirv.~vector();
+				entryPoint.~basic_string();
+				std::memset(this, 0, sizeof(ShaderModule));
+			}
+		}
+
+		DAXA_DEFINE_TRIVIAL_MOVE(ShaderModule);
 
 		constexpr TBuiltInResource DAXA_DEFAULT_SHADER_RESSOURCE_SIZES = TBuiltInResource{
 			.maxLights = 32,
@@ -137,23 +154,23 @@ namespace daxa {
 			}
 		}
 
-		std::optional<std::vector<u32>> tryGenSPIRVFromGLSL(std::string const& src, vk::ShaderStageFlagBits shaderStage) {
-			auto translateShaderStage = [](vk::ShaderStageFlagBits stage) -> EShLanguage {
+		std::optional<std::vector<u32>> tryGenSPIRVFromGLSL(std::string const& src, VkShaderStageFlagBits shaderStage) {
+			auto translateShaderStage = [](VkShaderStageFlagBits stage) -> EShLanguage {
 				switch (stage) {
-				case vk::ShaderStageFlagBits::eVertex: return EShLangVertex;
-				case vk::ShaderStageFlagBits::eTessellationControl: return EShLangTessControl;
-				case vk::ShaderStageFlagBits::eTessellationEvaluation: return EShLangTessEvaluation;
-				case vk::ShaderStageFlagBits::eGeometry: return EShLangGeometry;
-				case vk::ShaderStageFlagBits::eFragment: return EShLangFragment;
-				case vk::ShaderStageFlagBits::eCompute: return EShLangCompute;
-				case vk::ShaderStageFlagBits::eRaygenNV: return EShLangRayGenNV;
-				case vk::ShaderStageFlagBits::eAnyHitNV: return EShLangAnyHitNV;
-				case vk::ShaderStageFlagBits::eClosestHitNV: return EShLangClosestHitNV;
-				case vk::ShaderStageFlagBits::eMissNV: return EShLangMissNV;
-				case vk::ShaderStageFlagBits::eIntersectionNV: return EShLangIntersectNV;
-				case vk::ShaderStageFlagBits::eCallableNV: return EShLangCallableNV;
-				case vk::ShaderStageFlagBits::eTaskNV: return EShLangTaskNV;
-				case vk::ShaderStageFlagBits::eMeshNV: return EShLangMeshNV;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT: return EShLangVertex;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT: return EShLangTessControl;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT: return EShLangTessEvaluation;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_GEOMETRY_BIT: return EShLangGeometry;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT: return EShLangFragment;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT: return EShLangCompute;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_RAYGEN_BIT_KHR: return EShLangRayGenNV;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_ANY_HIT_BIT_KHR: return EShLangAnyHitNV;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR: return EShLangClosestHitNV;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_MISS_BIT_KHR: return EShLangMissNV;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_INTERSECTION_BIT_KHR: return EShLangIntersectNV;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_CALLABLE_BIT_KHR: return EShLangCallableNV;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_TASK_BIT_NV: return EShLangTaskNV;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_MESH_BIT_NV: return EShLangMeshNV;
 				default:
 					std::cerr << "error: glslToSPIRV: UNKNOWN SHADER STAGE!\n";
 					return {};
@@ -180,26 +197,21 @@ namespace daxa {
 			return ret;
 		}
 
-		std::optional<vk::UniqueShaderModule> tryCreateVkShaderModule(vk::Device device, std::vector<u32> const& spirv) {
+		std::optional<VkShaderModule> tryCreateVkShaderModule(VkDevice device, std::vector<u32> const& spirv) {
 
-			vk::ShaderModuleCreateInfo sci{};
-			sci.codeSize = static_cast<u32>(spirv.size() * sizeof(u32));
-			sci.pCode = spirv.data();
-
+			VkShaderModuleCreateInfo shaderModuleCI{
+				.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+				.pNext = nullptr,
+				.codeSize = (u32)(spirv.size() * sizeof(u32)),
+				.pCode = spirv.data(),
+			};
 			VkShaderModule shaderModule;
+			auto err = vkCreateShaderModule(device, (VkShaderModuleCreateInfo*)&shaderModuleCI, nullptr, &shaderModule);
 
-
-
-			auto err = vkCreateShaderModule(device, (VkShaderModuleCreateInfo*)&sci, nullptr, &shaderModule);
-			if (err == VK_SUCCESS) {
-				return vk::UniqueShaderModule{ shaderModule, device };
-			}
-			else {
-				return std::nullopt;
-			}
+			return err == VK_SUCCESS ? std::optional{ shaderModule } : std::nullopt;
 		}
 
-		std::optional<vk::UniqueShaderModule> tryCreateVkShaderModule(vk::Device device, std::filesystem::path const& path, vk::ShaderStageFlagBits shaderStage) {
+		std::optional<VkShaderModule> tryCreateVkShaderModule(VkDevice device, std::filesystem::path const& path, VkShaderStageFlagBits shaderStage) {
 			auto src = tryLoadGLSLShaderFromFile(path);
 			if (src.has_value()) {
 				auto spirv = tryGenSPIRVFromGLSL(src.value(), shaderStage);
@@ -210,7 +222,7 @@ namespace daxa {
 			return std::nullopt;
 		}
 
-		std::optional<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(vk::Device device, std::filesystem::path const& path, std::string const& entryPoint, vk::ShaderStageFlagBits shaderStage) {
+		std::optional<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(VkDevice device, std::filesystem::path const& path, std::string const& entryPoint, VkShaderStageFlagBits shaderStage) {
 			auto src = tryLoadGLSLShaderFromFile(path);
 			if (src.has_value()) {
 				return tryCreateDAXAShaderModule(device, src.value(), entryPoint, shaderStage);
@@ -218,7 +230,7 @@ namespace daxa {
 			return std::nullopt;
 		}
 
-		std::optional<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(vk::Device device, std::string const& glsl, std::string const& entryPoint, vk::ShaderStageFlagBits shaderStage) {
+		std::optional<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(VkDevice device, std::string const& glsl, std::string const& entryPoint, VkShaderStageFlagBits shaderStage) {
 			auto spirv = tryGenSPIRVFromGLSL(glsl, shaderStage);
 			if (spirv.has_value()) {
 				auto shaderModuleOpt = tryCreateVkShaderModule(device, spirv.value());
@@ -228,6 +240,7 @@ namespace daxa {
 					shaderMod.shaderModule = std::move(shaderModuleOpt.value());
 					shaderMod.spirv = spirv.value();
 					shaderMod.shaderStage = shaderStage;
+					shaderMod.device = device;
 					ShaderModuleHandle handle;
 					handle.shaderModule = std::make_shared<ShaderModule>(std::move(shaderMod));
 					return handle;

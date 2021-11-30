@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../../DaxaCore.hpp"
+
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -8,24 +10,29 @@
 
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <vulkan/vulkan.hpp>
+#include <../dependencies/vulkanhelper.hpp>
 #include "../dependencies/vk_mem_alloc.hpp"
-#include "../dependencies/vulkanhelper.hpp"
-
-#include "../../DaxaCore.hpp"
 
 #include "ShaderModule.hpp"
+#include "DescriptorSetLayoutCache.hpp"
 
 namespace daxa {
 	namespace gpu {
 
 		class GraphicsPipeline {
 		public:
-			vk::Pipeline const& getVkPipeline() const { return *pipeline; }
-			vk::PipelineLayout const& getVkPipelineLayout() const { return *layout; }
+			GraphicsPipeline() = default;
+			GraphicsPipeline(GraphicsPipeline&&) noexcept;
+			GraphicsPipeline& operator=(GraphicsPipeline&&) noexcept;
+			~GraphicsPipeline();
+
+			VkPipeline const& getVkPipeline() const { return pipeline; }
+			VkPipelineLayout const& getVkPipelineLayout() const { return layout; }
 		private:
 			friend class GraphicsPipelineBuilder;
-			vk::UniquePipeline pipeline;
-			vk::UniquePipelineLayout layout;
+			VkDevice device;
+			VkPipeline pipeline;
+			VkPipelineLayout layout;
 		};
 
 		class GraphicsPipelineHandle {
@@ -44,18 +51,18 @@ namespace daxa {
 			GraphicsPipelineBuilder& addVertexInputAttribute(VkFormat format);
 			GraphicsPipelineBuilder& addVertexInputAttributeSpacer(u32 spacing);
 			GraphicsPipelineBuilder& endVertexInputAttributeBinding();
-			GraphicsPipelineBuilder& setInputAssembly(const vk::PipelineInputAssemblyStateCreateInfo& inputassembly);
-			GraphicsPipelineBuilder& setRasterization(const vk::PipelineRasterizationStateCreateInfo& rasterization);
-			GraphicsPipelineBuilder& setMultisampling(const vk::PipelineMultisampleStateCreateInfo& multisampling);
-			GraphicsPipelineBuilder& setDepthStencil(const vk::PipelineDepthStencilStateCreateInfo& depthStencil);
+			GraphicsPipelineBuilder& setInputAssembly(const VkPipelineInputAssemblyStateCreateInfo& inputassembly);
+			GraphicsPipelineBuilder& setRasterization(const VkPipelineRasterizationStateCreateInfo& rasterization);
+			GraphicsPipelineBuilder& setMultisampling(const VkPipelineMultisampleStateCreateInfo& multisampling);
+			GraphicsPipelineBuilder& setDepthStencil(const VkPipelineDepthStencilStateCreateInfo& depthStencil);
 			GraphicsPipelineBuilder& addShaderStage(const ShaderModuleHandle& shaderModule);
-			GraphicsPipelineBuilder& addColorAttachment(const vk::Format& attachmentFormat);
-			GraphicsPipelineBuilder& addColorAttachment(const vk::Format& attachmentFormat, const vk::PipelineColorBlendAttachmentState&);
-			GraphicsPipelineBuilder& addDepthAttachment(const vk::Format& attachmentFormat);
-			GraphicsPipelineBuilder& addStencilAttachment(const vk::Format& attachmentFormat);
+			GraphicsPipelineBuilder& addColorAttachment(const VkFormat& attachmentFormat);
+			GraphicsPipelineBuilder& addColorAttachment(const VkFormat& attachmentFormat, const VkPipelineColorBlendAttachmentState&);
+			GraphicsPipelineBuilder& addDepthAttachment(const VkFormat& attachmentFormat);
+			GraphicsPipelineBuilder& addStencilAttachment(const VkFormat& attachmentFormat);
 		private:
 			friend class Device;
-			GraphicsPipelineHandle build(vk::Device, vkh::DescriptorSetLayoutCache& layoutCache);
+			GraphicsPipelineHandle build(VkDevice, DescriptorSetLayoutCache& layoutCache);
 
 			// Vertex Input Attribute building:
 			bool bVertexAtrributeBindingBuildingOpen = false;
@@ -65,20 +72,20 @@ namespace daxa {
 			std::vector<VkVertexInputBindingDescription> vertexInputBindingDescriptions;
 			std::vector<VkVertexInputAttributeDescription> vertexInputAttributeDescriptions;
 
-			vk::PipelineCache pipelineCache;
-			std::optional<vk::PipelineInputAssemblyStateCreateInfo> inputAssembly;
-			std::optional<vk::PipelineRasterizationStateCreateInfo> rasterization;
-			std::optional<vk::PipelineMultisampleStateCreateInfo> multisampling;
-			std::optional<vk::PipelineDepthStencilStateCreateInfo> depthStencil;
-			std::vector<vk::PipelineShaderStageCreateInfo> shaderStages;
-			std::vector<vk::DynamicState> dynamicStateEnable;
-			std::vector<vk::PushConstantRange> pushConstants;
-			std::unordered_map<u32, std::unordered_map<u32, vk::DescriptorSetLayoutBinding>> descriptorSets;
-			std::vector<vk::PipelineShaderStageCreateInfo> shaderStageCreateInfo;
-			std::vector<vk::PipelineColorBlendAttachmentState> colorAttachmentBlends;
-			std::vector<vk::Format> colorAttachmentFormats;
-			std::optional<vk::Format> depthAttachmentFormat;
-			std::optional<vk::Format> stencilAttachmentFormat;
+			VkPipelineCache pipelineCache;
+			std::optional<VkPipelineInputAssemblyStateCreateInfo> inputAssembly;
+			std::optional<VkPipelineRasterizationStateCreateInfo> rasterization;
+			std::optional<VkPipelineMultisampleStateCreateInfo> multisampling;
+			std::optional<VkPipelineDepthStencilStateCreateInfo> depthStencil;
+			std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
+			std::vector<VkDynamicState> dynamicStateEnable;
+			std::vector<VkPushConstantRange> pushConstants;
+			std::unordered_map<u32, std::unordered_map<u32, VkDescriptorSetLayoutBinding>> descriptorSets;
+			std::vector<VkPipelineShaderStageCreateInfo> shaderStageCreateInfo;
+			std::vector<VkPipelineColorBlendAttachmentState> colorAttachmentBlends;
+			std::vector<VkFormat> colorAttachmentFormats;
+			std::optional<VkFormat> depthAttachmentFormat;
+			std::optional<VkFormat> stencilAttachmentFormat;
 		};
 	}
 }

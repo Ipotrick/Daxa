@@ -4,11 +4,9 @@
 
 #include <deque>
 
-#define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 
 #include "../dependencies/vk_mem_alloc.hpp"
-#include "../dependencies/vulkanhelper.hpp"
 
 #include "../../DaxaCore.hpp"
 
@@ -20,7 +18,7 @@ namespace daxa {
 		class SwapchainImage {
 		public:
 			u32 getImageIndex() const { return imageIndex; }
-			vk::SwapchainKHR getVkSwapchain() const { return swapchain; }
+			VkSwapchainKHR getVkSwapchain() const { return swapchain; }
 			ImageHandle& getImageHandle() { return image; }
 			ImageHandle const& getImageHandle() const { return image; }
 		private:
@@ -29,7 +27,7 @@ namespace daxa {
 
 			ImageHandle image;
 			u32 imageIndex;
-			vk::SwapchainKHR swapchain;
+			VkSwapchainKHR swapchain;
 		};
 
 	}

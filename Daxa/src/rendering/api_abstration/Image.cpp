@@ -21,39 +21,49 @@ namespace daxa {
 			view		= nullptr;
 		}
 
-		Image Image::create2dImage(vk::Device device, VmaAllocator allocator, Image2dCreateInfo ci) {
+		Image Image::create2dImage(VkDevice device, VmaAllocator allocator, Image2dCreateInfo ci) {
 			Image ret;
 
-			vk::ImageCreateInfo ici{};
-			ici.imageType = vk::ImageType::e2D;
-			ici.format = ci.format;
-			ici.extent = vk::Extent3D{ ci.width, ci.height,1 };
-			ici.mipLevels = 1;
-			ici.arrayLayers = 1;
-			ici.usage = ci.imageUsage;
-			ici.tiling = vk::ImageTiling::eOptimal;
-			ici.initialLayout = vk::ImageLayout::eUndefined;
-			ici.sharingMode = vk::SharingMode::eExclusive;
-			ici.samples = vk::SampleCountFlagBits::e1;
+			VkImageCreateInfo ici{
+				.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+				.pNext = nullptr,
+				.imageType = VkImageType::VK_IMAGE_TYPE_2D,
+				.format = ci.format,
+				.extent = VkExtent3D{ ci.width, ci.height,1 },
+				.mipLevels = 1,
+				.arrayLayers = 1,
+				.samples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT,
+				.tiling = VkImageTiling::VK_IMAGE_TILING_OPTIMAL,
+				.usage = ci.imageUsage,
+				.sharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
+				.initialLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED,
+			};
 
-			VmaAllocationCreateInfo aci{};
-			aci.usage = ci.memoryUsage;
-			aci.requiredFlags = (VkMemoryPropertyFlags)ci.memoryPropertyFlags;
+			VmaAllocationCreateInfo aci{ 
+				.usage = ci.memoryUsage,
+				.requiredFlags = (VkMemoryPropertyFlags)ci.memoryPropertyFlags,
+			};
+			
 
 			auto err = vmaCreateImage(allocator, (VkImageCreateInfo*)&ici, &aci, (VkImage*)&ret.image, &ret.allocation, nullptr);
 			assert(err == VK_SUCCESS);
 
-			vk::ImageViewCreateInfo ivci{};
-			ivci.image = ret.image;
-			ivci.format = ci.format;
-			ivci.viewType = vk::ImageViewType::e2D;
-			ivci.subresourceRange.baseMipLevel = 0;
-			ivci.subresourceRange.levelCount = 1;
-			ivci.subresourceRange.baseArrayLayer = 0;
-			ivci.subresourceRange.layerCount = 1;
-			ivci.subresourceRange.aspectMask = ci.imageAspekt;
+			VkImageViewCreateInfo ivci{
+				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+				.pNext = nullptr,
+				.image = ret.image,
+				.viewType = VkImageViewType::VK_IMAGE_VIEW_TYPE_2D,
+				.format = ci.format,
+				.subresourceRange = VkImageSubresourceRange{
+					.aspectMask = ci.imageAspekt,
+					.baseMipLevel = 0,
+					.levelCount = 1,
+					.baseArrayLayer = 0,
+					.layerCount = 1
+				}
+			};
 
-			ret.view = device.createImageView(ivci);
+			vkCreateImageView(device, &ivci, nullptr, &ret.view);
 
 			ret.allocator = allocator;
 			ret.layout = (VkImageLayout)ici.initialLayout;

@@ -4,6 +4,7 @@
 #include <algorithm>
 
 #include <VkBootstrap.hpp>
+#include "../dependencies/vulkanhelper.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -50,7 +51,9 @@ namespace daxa {
 
 			auto physicslDevice = physicalDevice.physical_device;
 
-			vk::PhysicalDeviceDescriptorIndexingFeatures descriptor_indexing_feature{
+			VkPhysicalDeviceDescriptorIndexingFeatures descriptor_indexing_feature{
+				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
+				.pNext = nullptr,
 				.shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
 				.descriptorBindingPartiallyBound = VK_TRUE,
 				.descriptorBindingVariableDescriptorCount = VK_TRUE,
@@ -74,10 +77,11 @@ namespace daxa {
 			auto mainGraphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
 			auto mainGraphicsQueueFamiltyIndex = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 
-			VmaAllocatorCreateInfo allocatorInfo = {};
-			allocatorInfo.physicalDevice = physicslDevice;
-			allocatorInfo.device = device;
-			allocatorInfo.instance = instance->instance;
+			VmaAllocatorCreateInfo allocatorInfo = {
+				.physicalDevice = physicslDevice,
+				.device = device,
+				.instance = instance->instance,
+			};
 			VmaAllocator allocator;
 			vmaCreateAllocator(&allocatorInfo, &allocator);
 
@@ -123,20 +127,20 @@ namespace daxa {
 
 			auto thisSubmitFence = getNextFence();
 
-			vk::SubmitInfo si{};
-
-			vk::PipelineStageFlags pipelineStages = vk::PipelineStageFlagBits::eAllCommands;
-			si.pWaitDstStageMask = &pipelineStages;
-
-			vk::CommandBuffer commandBuffers[] = { list.cmd };
-			si.pCommandBuffers = commandBuffers;
-			si.commandBufferCount = 1;
-			si.pWaitSemaphores = (vk::Semaphore*)submitInfo.waitOnSemaphores.data();
-			si.waitSemaphoreCount = submitInfo.waitOnSemaphores.size();
-			si.pSignalSemaphores = (vk::Semaphore*)submitInfo.signalSemaphores.data();
-			si.signalSemaphoreCount = submitInfo.signalSemaphores.size();
-
-			graphicsQ.submit(si, thisSubmitFence);
+			VkPipelineStageFlags pipelineStages = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+			VkCommandBuffer commandBuffers[] = { list.cmd };
+			VkSubmitInfo si{
+				.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+				.pNext = nullptr,
+				.waitSemaphoreCount = (u32)submitInfo.waitOnSemaphores.size(),
+				.pWaitSemaphores = (VkSemaphore*)submitInfo.waitOnSemaphores.data(),
+				.pWaitDstStageMask = &pipelineStages,
+				.commandBufferCount = 1,
+				.pCommandBuffers = commandBuffers,
+				.signalSemaphoreCount = (u32)submitInfo.signalSemaphores.size(),
+				.pSignalSemaphores = (VkSemaphore*)submitInfo.signalSemaphores.data(),
+			};
+			vkQueueSubmit(graphicsQ, 1, &si, thisSubmitFence);
 
 			frame.usedCommandLists.push_back(std::move(list));
 		}
@@ -151,17 +155,19 @@ namespace daxa {
 				submitCommandBufferBuffer.push_back(cmdList.cmd);
 			}
 
-			vk::PipelineStageFlags pipelineStages = vk::PipelineStageFlagBits::eAllCommands;
-			vk::SubmitInfo si{};
-			si.pWaitDstStageMask = &pipelineStages;
-			si.pCommandBuffers = submitCommandBufferBuffer.data();
-			si.commandBufferCount = static_cast<u32>(submitCommandBufferBuffer.size());
-			si.pWaitSemaphores = (vk::Semaphore*)submitInfo.waitOnSemaphores.data();
-			si.waitSemaphoreCount = submitInfo.waitOnSemaphores.size();
-			si.pSignalSemaphores = (vk::Semaphore*)submitInfo.signalSemaphores.data();
-			si.signalSemaphoreCount = submitInfo.signalSemaphores.size();
-
-			graphicsQ.submit(si, thisSubmitFence);
+			VkPipelineStageFlags pipelineStages = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+			VkSubmitInfo si{
+				.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+				.pNext = nullptr,
+				.waitSemaphoreCount = (u32)submitInfo.waitOnSemaphores.size(),
+				.pWaitSemaphores = (VkSemaphore*)submitInfo.waitOnSemaphores.data(),
+				.pWaitDstStageMask = &pipelineStages,
+				.commandBufferCount = static_cast<u32>(submitCommandBufferBuffer.size()),
+				.pCommandBuffers = submitCommandBufferBuffer.data(),
+				.signalSemaphoreCount = (u32)submitInfo.signalSemaphores.size(),
+				.pSignalSemaphores = (VkSemaphore*)submitInfo.signalSemaphores.data(),
+			};
+			vkQueueSubmit(graphicsQ, 1, &si, thisSubmitFence);
 
 			while (!cmdLists.empty()) {
 				auto list = std::move(cmdLists.back());
@@ -171,14 +177,16 @@ namespace daxa {
 		}
 
 		void Device::present(SwapchainImage const& sImage, std::span<VkSemaphore> waitOn) {
-			vk::PresentInfoKHR presentInfo{};
-			presentInfo.pImageIndices = &sImage.imageIndex;
-			presentInfo.pSwapchains = &sImage.swapchain;
-			presentInfo.swapchainCount = 1;
-			presentInfo.pWaitSemaphores = (vk::Semaphore*)waitOn.data();
-			presentInfo.waitSemaphoreCount = static_cast<u32>(waitOn.size());
-
-			graphicsQ.presentKHR(presentInfo);
+			VkPresentInfoKHR presentInfo{
+				.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+				.pNext = nullptr,
+				.waitSemaphoreCount = static_cast<u32>(waitOn.size()),
+				.pWaitSemaphores = (VkSemaphore*)waitOn.data(),
+				.swapchainCount = 1,
+				.pSwapchains = &sImage.swapchain,
+				.pImageIndices = &sImage.imageIndex,
+			};
+			vkQueuePresentKHR(graphicsQ, &presentInfo);
 		}
 
 		void Device::nextFrameContext() {
@@ -190,8 +198,8 @@ namespace daxa {
 			auto& frame = *frameContexts.front();
 
 			if (!frame.usedFences.empty()) {
-				device.waitForFences(frame.usedFences, VK_TRUE, std::numeric_limits<u64>::max());
-				device.resetFences(frame.usedFences);
+				vkWaitForFences(device, frame.usedFences.size(), frame.usedFences.data(), VK_TRUE, UINT64_MAX);
+				vkResetFences(device, frame.usedFences.size(), frame.usedFences.data());
 			}
 			while (!frame.usedFences.empty()) {
 				auto back = frame.usedFences.back();
@@ -199,7 +207,7 @@ namespace daxa {
 				unusedFences.push_back(back);
 			}
 			// we reset the command buffers individually as there is generally no big performance cost to that
-			//device.resetCommandPool(*frame.cmdPool, vk::CommandPoolResetFlagBits::eReleaseResources);
+			//device.resetCommandPool(*frame.cmdPool, VkCommandPoolResetFlagBits::eReleaseResources);
 			// reset and recycle CommandLists
 			while (!frame.usedCommandLists.empty()) {
 				auto list = std::move(frame.usedCommandLists.back());
@@ -213,7 +221,7 @@ namespace daxa {
 			for (int i = 0; i < 3; i++) {
 				nextFrameContext();
 			}
-			device.waitIdle();
+			vkDeviceWaitIdle(device);
 		}
 
 		void Device::initFrameContexts() {
@@ -231,16 +239,25 @@ namespace daxa {
 				// we have no command lists left, we need to create new ones:
 				CommandList list;
 				list.device = device;
-				vk::CommandPoolCreateInfo cpci{};
-				cpci.queueFamilyIndex = graphicsQFamilyIndex;
-				list.cmdPool = device.createCommandPool(cpci);
-				vk::CommandBufferAllocateInfo cbai{};
-				cbai.commandPool = list.cmdPool;
-				cbai.commandBufferCount = 1;
-				cbai.level = vk::CommandBufferLevel::ePrimary;
-				list.cmd = std::move(device.allocateCommandBuffers(cbai).front());
 				list.vkCmdBeginRenderingKHR = this->vkCmdBeginRenderingKHR;
 				list.vkCmdEndRenderingKHR = this->vkCmdEndRenderingKHR;
+
+				VkCommandPoolCreateInfo commandPoolCI{
+					.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+					.pNext = nullptr,
+					.queueFamilyIndex = graphicsQFamilyIndex,
+				};
+				vkCreateCommandPool(device, &commandPoolCI, nullptr, &list.cmdPool);
+
+				VkCommandBufferAllocateInfo commandBufferAllocateInfo{
+					.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+					.pNext = nullptr,
+					.commandPool = list.cmdPool,
+					.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+					.commandBufferCount = 1,
+				};
+				vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &list.cmd);
+
 				unusedCommandLists.push_back(std::move(list));
 			} 
 			auto ret = std::move(unusedCommandLists.back());
@@ -248,10 +265,16 @@ namespace daxa {
 			return std::move(ret);
 		}
 
-		vk::Semaphore Device::getNextSemaphore() {
+		VkSemaphore Device::getNextSemaphore() {
 			auto& frame = *frameContexts.front();
 			if (unusedSemaphores.empty()) {
-				unusedSemaphores.push_back(device.createSemaphore({}));
+				unusedSemaphores.push_back({});
+
+				VkSemaphoreCreateInfo semaphoreCreateInfo{
+					.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+					.pNext = nullptr,
+				};
+				vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &unusedSemaphores.back());
 			}
 			auto ret = unusedSemaphores.back();
 			unusedSemaphores.pop_back();
@@ -259,10 +282,16 @@ namespace daxa {
 			return ret;
 		}
 
-		vk::Fence Device::getNextFence() {
+		VkFence Device::getNextFence() {
 			auto& frame = *frameContexts.front();
 			if (unusedFences.empty()) {
-				unusedFences.push_back(device.createFence({}));
+				unusedFences.push_back({});
+
+				VkFenceCreateInfo fenceCreateInfo{
+					.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+					.pNext = nullptr,
+				};
+				vkCreateFence(device, &fenceCreateInfo, nullptr, &unusedFences.back());
 			}
 			auto ret = unusedFences.back();
 			unusedFences.pop_back();
@@ -270,11 +299,11 @@ namespace daxa {
 			return ret;
 		}
 
-		std::optional<ShaderModuleHandle> Device::tryCreateShderModuleFromGLSL(std::string const& glslSource, vk::ShaderStageFlagBits stage, std::string const& entrypoint) {
+		std::optional<ShaderModuleHandle> Device::tryCreateShderModuleFromGLSL(std::string const& glslSource, VkShaderStageFlagBits stage, std::string const& entrypoint) {
 			return ShaderModuleHandle::tryCreateDAXAShaderModule(device, glslSource, entrypoint, stage);
 		}
 
-		std::optional<ShaderModuleHandle> Device::tryCreateShderModuleFromGLSL(std::filesystem::path const& pathToGlsl, vk::ShaderStageFlagBits stage, std::string const& entrypoint) {
+		std::optional<ShaderModuleHandle> Device::tryCreateShderModuleFromGLSL(std::filesystem::path const& pathToGlsl, VkShaderStageFlagBits stage, std::string const& entrypoint) {
 			return ShaderModuleHandle::tryCreateDAXAShaderModule(device, pathToGlsl, entrypoint, stage);
 		}
 

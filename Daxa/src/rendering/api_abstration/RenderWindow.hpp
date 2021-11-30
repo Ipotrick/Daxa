@@ -4,7 +4,6 @@
 
 #include <deque>
 
-#define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <vulkan/vulkan.h>
 
 #include "../dependencies/vk_mem_alloc.hpp"
