@@ -12,26 +12,27 @@ namespace daxa {
 
 		CommandList::~CommandList() {
 			if (bIsNotMovedOutOf) {
-				device.freeCommandBuffers(cmdPool, cmd);
-				device.destroyCommandPool(cmdPool);
-				cmd = nullptr;
-				cmdPool = nullptr;
-				device = nullptr;
 				assert(operationsInProgress == 0);
 				assert(empty);
+				vkFreeCommandBuffers(device, cmdPool, 1, &cmd);
+				vkDestroyCommandPool(device, cmdPool, nullptr);
+				std::memset(this, 0, sizeof(CommandList));
 			}
 		}
 
 		void CommandList::begin() {
 			operationsInProgress += 1;
-			vk::CommandBufferBeginInfo cbbi{};
-			cbbi.flags |= vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
-			cmd.begin(cbbi);
+			VkCommandBufferBeginInfo cbbi{
+				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+				.pNext = nullptr,
+				.flags = VkCommandBufferUsageFlagBits::VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+			};
+			vkBeginCommandBuffer(cmd, &cbbi);
 		}
 
 		void CommandList::end() {
 			operationsInProgress -= 1;
-			cmd.end();
+			vkEndCommandBuffer(cmd);
 		}
 
 		void CommandList::beginRendering(BeginRenderingInfo ri) {
@@ -116,7 +117,7 @@ namespace daxa {
 		void CommandList::reset() {
 			assert(operationsInProgress == 0);
 			empty = true;
-			device.resetCommandPool(cmdPool);
+			vkResetCommandPool(device, cmdPool, VkCommandPoolResetFlagBits::VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
 			usedBuffers.clear();
 			usedImages.clear();
 		}
@@ -168,6 +169,15 @@ namespace daxa {
 
 		void CommandList::draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance) {
 			vkCmdDraw(cmd, vertexCount, instanceCount, firstVertex, firstInstance);
+		}
+
+		void CommandList::copyBufferToBuffer(BufferHandle src, BufferHandle dst, std::span<VkBufferCopy> copyRegions) {
+			assert(copyRegions.size() > 0, "ERROR: tried copying 0 regions from buffer to buffer, this is a bug!");
+			for (int i = 0; i < copyRegions.size(); i++) {
+				assert(src->getSize() >= copyRegions[i].size + copyRegions[i].srcOffset, "ERROR: src buffer is smaller than the region that shouly be copied!");
+				assert(dst->getSize() >= copyRegions[i].size + copyRegions[i].dstOffset, "ERROR: dst buffer is smaller than the region that shouly be copied!");
+			}
+			vkCmdCopyBuffer(cmd, src->getVkBuffer(), dst->getVkBuffer(), copyRegions.size(), copyRegions.data());
 		}
 	}
 }

@@ -28,18 +28,26 @@ namespace daxa {
 
 	void Renderer::init() {
 		for (int i = 0; i < 3; i++) {
-			frameResc[i].semaphores["render"] = device->getVkDevice().createSemaphore({});
-			frameResc[i].semaphores["aquireSwapchainImage"] = device->getVkDevice().createSemaphore({});
+			VkSemaphoreCreateInfo semaphoreCreateInfo{
+				.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+				.pNext = nullptr,
+			}; 
+			VkFenceCreateInfo fenceCreateInfo{
+					.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+					.pNext = nullptr,
+			};
+			vkCreateSemaphore(device->getVkDevice(), &semaphoreCreateInfo, nullptr, &frameResc[i].semaphores["render"]);
+			vkCreateSemaphore(device->getVkDevice(), &semaphoreCreateInfo, nullptr, &frameResc[i].semaphores["aquireSwapchainImage"]);
 		}
 
 		gpu::ShaderModuleHandle vertexShader = device->tryCreateShderModuleFromGLSL(
 			std::filesystem::path{ "daxa/shaders/test.vert" }, 
-			(vk::ShaderStageFlagBits)VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT
+			VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT
 		).value();
 
 		gpu::ShaderModuleHandle fragmenstShader = device->tryCreateShderModuleFromGLSL(
 			std::filesystem::path{ "daxa/shaders/test.frag" },
-			(vk::ShaderStageFlagBits)VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT
+			VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT
 		).value();
 
 		printf("after frag creation\n");
@@ -47,7 +55,7 @@ namespace daxa {
 		gpu::GraphicsPipelineBuilder pipelineBuilder;
 		pipelineBuilder.addShaderStage(vertexShader);
 		pipelineBuilder.addShaderStage(fragmenstShader);
-		pipelineBuilder.addColorAttachment((vk::Format)renderWindow.getVkFormat());
+		pipelineBuilder.addColorAttachment(renderWindow.getVkFormat());
 		testPipeline = device->createGraphicsPipeline(pipelineBuilder);
 	}
 
@@ -102,7 +110,7 @@ namespace daxa {
 		cmdList.setViewport(viewport);
 
 		VkRect2D scissor{
-			.offset = {0,0},
+			.offset = { 0, 0 },
 			.extent = { (u32)viewport.width, (u32)viewport.height },
 		};
 		cmdList.setScissor(scissor);

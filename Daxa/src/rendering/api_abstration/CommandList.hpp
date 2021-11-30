@@ -1,12 +1,13 @@
 #pragma once
 
-#define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
-#include <vulkan/vulkan.hpp>
 #include <variant>
 #include <span>
+#include <vector>
+#include <optional>
+
+#include <vulkan/vulkan.h>
 
 #include "../dependencies/vk_mem_alloc.hpp"
-#include "../dependencies/vulkanhelper.hpp"
 
 #include "../../DaxaCore.hpp"
 
@@ -43,12 +44,20 @@ namespace daxa {
 			CommandList& operator=(CommandList const& rhs) = delete;
 
 			void begin();
+
 			void end();
 
-			void beginRendering(BeginRenderingInfo ri);
-			void endRendering();
+			// Ressource management:
 
 			void changeImageLayout(ImageHandle image, VkImageLayout newLayout);
+
+			void copyBufferToBuffer(BufferHandle src, BufferHandle dst, std::span<VkBufferCopy> copyRegions);
+
+			// Rendering:
+
+			void beginRendering(BeginRenderingInfo ri);
+
+			void endRendering();
 
 			void setViewport(VkViewport const& viewport);
 
@@ -56,11 +65,14 @@ namespace daxa {
 
 			void draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance);
 
-			vk::CommandBuffer getVkCommandBuffer() { return cmd; }
+			// Accessors:
+
+			VkCommandBuffer getVkCommandBuffer() { return cmd; }
 		private:
 			friend class Device;
 
 			CommandList();
+
 			void reset();
 
 			void (*vkCmdBeginRenderingKHR)(VkCommandBuffer, const VkRenderingInfoKHR*);
@@ -68,15 +80,12 @@ namespace daxa {
 			u32	operationsInProgress = 0;
 			bool bIsNotMovedOutOf = true;
 			bool empty = true;
-
 			std::vector<VkRenderingAttachmentInfoKHR> renderAttachmentBuffer;
-
 			std::vector<ImageHandle> usedImages;
 			std::vector<BufferHandle> usedBuffers;
-			vk::Device device;
-			vk::CommandBuffer cmd;
-			vk::CommandPool cmdPool;
+			VkDevice device;
+			VkCommandBuffer cmd;
+			VkCommandPool cmdPool;
 		};
-
 	}
 }

@@ -2,11 +2,9 @@
 
 #include <memory>
 
-#define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 
 #include "../dependencies/vk_mem_alloc.hpp"
-#include "../dependencies/vulkanhelper.hpp"
 
 #include "../../DaxaCore.hpp"
 
@@ -15,11 +13,11 @@ namespace daxa {
 		struct Image2dCreateInfo {
 			u32 width;
 			u32 height;
-			vk::Format format;
-			vk::ImageUsageFlags imageUsage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
-			vk::ImageAspectFlags imageAspekt = vk::ImageAspectFlagBits::eColor;
+			VkFormat format;
+			VkImageUsageFlags imageUsage = VkImageUsageFlagBits::VK_IMAGE_USAGE_SAMPLED_BIT | VkImageUsageFlagBits::VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+			VkImageAspectFlags imageAspekt = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
 			VmaMemoryUsage memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY;
-			vk::MemoryPropertyFlags memoryPropertyFlags = vk::MemoryPropertyFlagBits::eDeviceLocal;
+			VkMemoryPropertyFlags memoryPropertyFlags = VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 		};
 
 		class Image {
@@ -37,14 +35,14 @@ namespace daxa {
 			VkImageType getImageType() const { return type; }
 			VkExtent3D getExtent() const { return extent; }
 			VkImageAspectFlags getVkAspect() const { return aspect; }
-			vk::Image getVkImage() const { return image; }
-			vk::ImageView getVkView() const { return view; }
+			VkImage getVkImage() const { return image; }
+			VkImageView getVkView() const { return view; }
 		//private:
 			friend class Device;
 			friend class ImageHandle;
 			friend class RenderWindow;
 
-			static Image create2dImage(vk::Device device, VmaAllocator allocator, Image2dCreateInfo ci);
+			static Image create2dImage(VkDevice device, VmaAllocator allocator, Image2dCreateInfo ci);
 
 			VkDevice device;
 			VmaAllocator allocator;
@@ -56,8 +54,8 @@ namespace daxa {
 			VkImageType type;
 			VkExtent3D extent;
 			VkImageAspectFlags aspect;
-			vk::Image image;
-			vk::ImageView view;
+			VkImage image;
+			VkImageView view;
 		};
 
 		class ImageHandle {

@@ -1,46 +1,46 @@
 #pragma once
+
+#include "../../DaxaCore.hpp"
+
+#include <vulkan/vulkan.h>
+
 #include <memory>
 #include <vector>
 #include <string>
 #include <filesystem>
 
-#define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
-#include <vulkan/vulkan.hpp>
-
 #include "../dependencies/vk_mem_alloc.hpp"
-#include "../dependencies/vulkanhelper.hpp"
-
-#include "../../DaxaCore.hpp"
 
 namespace daxa {
 	namespace gpu {
 
 		std::optional<std::string> tryLoadGLSLShaderFromFile(std::filesystem::path const& path);
 
-		std::optional<std::vector<u32>> tryGenSPIRVFromGLSL(std::string const& src, vk::ShaderStageFlagBits shaderStage);
-
-		std::optional<vk::UniqueShaderModule> tryCreateVkShaderModule(vk::Device device, std::vector<u32> const& spirv);
-
-		std::optional<vk::UniqueShaderModule> tryCreateVkShaderModule(vk::Device device, std::filesystem::path const& path, vk::ShaderStageFlagBits shaderStage);
+		std::optional<std::vector<u32>> tryGenSPIRVFromGLSL(std::string const& src, VkShaderStageFlagBits shaderStage);
 
 		class ShaderModule {
 		public:
+			ShaderModule() = default;
+			ShaderModule(ShaderModule&& other) noexcept;
+			ShaderModule& operator=(ShaderModule&& other) noexcept;
+			~ShaderModule();
 		private:
 			friend class GraphicsPipelineBuilder;
 			friend class ShaderModuleHandle;
 			friend class Device;
 			friend class CommandList;
 
+			VkDevice device;
 			std::vector<u32> spirv;
-			vk::ShaderStageFlagBits shaderStage;
+			VkShaderStageFlagBits shaderStage;
 			std::string entryPoint;
-			vk::UniqueShaderModule shaderModule;
+			VkShaderModule shaderModule;
 		};
 
 		class ShaderModuleHandle {
 		public:
-			static std::optional<ShaderModuleHandle> tryCreateDAXAShaderModule(vk::Device device, std::filesystem::path const& path, std::string const& entryPoint, vk::ShaderStageFlagBits shaderStage);
-			static std::optional<ShaderModuleHandle> tryCreateDAXAShaderModule(vk::Device device, std::string const& glsl, std::string const& entryPoint, vk::ShaderStageFlagBits shaderStage);
+			static std::optional<ShaderModuleHandle> tryCreateDAXAShaderModule(VkDevice device, std::filesystem::path const& path, std::string const& entryPoint, VkShaderStageFlagBits shaderStage);
+			static std::optional<ShaderModuleHandle> tryCreateDAXAShaderModule(VkDevice device, std::string const& glsl, std::string const& entryPoint, VkShaderStageFlagBits shaderStage);
 			ShaderModule const& operator * () const { return *shaderModule; }
 			ShaderModule const* operator -> () const { return &*shaderModule; }
 		private:

@@ -4,11 +4,9 @@
 #include <memory>
 #include <span>
 
-#define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 
 #include "../dependencies/vk_mem_alloc.hpp"
-#include "../dependencies/vulkanhelper.hpp"
 #include "../dependencies/VkBootstrap.hpp"
 
 #include "../../DaxaCore.hpp"
@@ -19,6 +17,7 @@
 #include "ShaderModule.hpp"
 #include "Pipeline.hpp"
 #include "SwapchainImage.hpp"
+#include "DescriptorSetLayoutCache.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -56,7 +55,7 @@ namespace daxa {
 			 * \param name a name for the shader stage, only used for debugging.
 			 * \return newly created ShaderModule from the given source IF source is valid, or a nullopt if the source or path is invalid.
 			 */
-			std::optional<ShaderModuleHandle> tryCreateShderModuleFromGLSL(std::string const& glslSource, vk::ShaderStageFlagBits stage, std::string const& entryPoint = "main");
+			std::optional<ShaderModuleHandle> tryCreateShderModuleFromGLSL(std::string const& glslSource, VkShaderStageFlagBits stage, std::string const& entryPoint = "main");
 
 			/**
 			 * \param pathToGlsl a path to a file that contains valid glsl source code.
@@ -64,7 +63,7 @@ namespace daxa {
 			 * \param name a name for the shader stage, only used for debugging.
 			 * \return newly created ShaderModule from the given source IF source path is valid, or a nullopt if the source or path is invalid.
 			 */
-			std::optional<ShaderModuleHandle> tryCreateShderModuleFromGLSL(std::filesystem::path const& pathToGlsl, vk::ShaderStageFlagBits stage, std::string const& entryPoint = "main");
+			std::optional<ShaderModuleHandle> tryCreateShderModuleFromGLSL(std::filesystem::path const& pathToGlsl, VkShaderStageFlagBits stage, std::string const& entryPoint = "main");
 
 			/**
 			 * Creates a graphics pipeline, wich is specified by the pipeline builder.
@@ -114,26 +113,30 @@ namespace daxa {
 			 */
 			void waitIdle();
 
-			const vk::PhysicalDevice& getVkPhysicalDevice() { return physicalDevice; }
-			const vk::Device& getVkDevice() { return device; }
+			operator VkDevice() {
+				return getVkDevice();
+			}
+
+			const VkPhysicalDevice& getVkPhysicalDevice() { return physicalDevice; }
+			const VkDevice& getVkDevice() { return device; }
 			const VmaAllocator& getVma() { return allocator; }
-			const vk::Queue& getVkGraphicsQueue() { return graphicsQ; }
+			const VkQueue& getVkGraphicsQueue() { return graphicsQ; }
 			const u32& getVkGraphicsQueueFamilyIndex() { return graphicsQFamilyIndex; }
 
 		private:
 			void initFrameContexts();
-			vk::Semaphore getNextSemaphore();
-			vk::Fence getNextFence();
+			VkSemaphore getNextSemaphore();
+			VkFence getNextFence();
 			CommandList getNextCommandList();
 
 			std::vector<CommandList> unusedCommandLists;
-			std::vector<vk::Semaphore> unusedSemaphores;
-			std::vector<vk::Fence> unusedFences;
+			std::vector<VkSemaphore> unusedSemaphores;
+			std::vector<VkFence> unusedFences;
 
 			struct FrameContext {
 				std::vector<CommandList> usedCommandLists;
-				std::vector<vk::Semaphore> usedSemaphores;
-				std::vector<vk::Fence> usedFences;
+				std::vector<VkSemaphore> usedSemaphores;
+				std::vector<VkFence> usedFences;
 				std::vector<ImageHandle> usedImages;
 				std::vector<BufferHandle> usedBuffers;
 			};
@@ -142,15 +145,15 @@ namespace daxa {
 			void (*vkCmdBeginRenderingKHR)(VkCommandBuffer, const VkRenderingInfoKHR*);
 			void (*vkCmdEndRenderingKHR)(VkCommandBuffer);
 
-			std::vector<vk::CommandBuffer> submitCommandBufferBuffer;
+			std::vector<VkCommandBuffer> submitCommandBufferBuffer;
 
 			std::deque<std::unique_ptr<FrameContext>> frameContexts;
 
-			std::optional<vkh::DescriptorSetLayoutCache> descriptorLayoutCache;
-			vk::PhysicalDevice physicalDevice;
-			vk::Device device;
+			std::optional<DescriptorSetLayoutCache> descriptorLayoutCache;
+			VkPhysicalDevice physicalDevice;
+			VkDevice device;
 			VmaAllocator allocator;
-			vk::Queue graphicsQ;
+			VkQueue graphicsQ;
 			u32 graphicsQFamilyIndex;
 		};
 	}

@@ -159,6 +159,9 @@
     <ClInclude Include="dependencies\VkBootstrapDispatch.h">
       <Filter>dependencies</Filter>
     </ClInclude>
+    <ClInclude Include="src\rendering\api_abstration\DescriptorSetLayoutCache.hpp">
+      <Filter>src\rendering\api_abstraction</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\stb_image.cpp">
@@ -225,6 +228,9 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\rendering\api_abstration\RenderWindow.cpp">
+      <Filter>src\rendering\api_abstraction</Filter>
+    </ClCompile>
+    <ClCompile Include="src\rendering\api_abstration\DescriptorSetLayoutCache.cpp">
       <Filter>src\rendering\api_abstraction</Filter>
     </ClCompile>
   </ItemGroup>

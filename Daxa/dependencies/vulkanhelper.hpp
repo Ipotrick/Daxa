@@ -1206,7 +1206,6 @@ namespace vkh {
 				std::optional<vk::AttachmentReference> depthAttachment;
 
 				for (uint32_t i = 0; i < attachmentDescs.size(); ++i) {
-					vk::ImageLayout layout;
 					switch (attachmentDescs[i].finalLayout) {
 					case vk::ImageLayout::eDepthAttachmentOptimal:
 					case vk::ImageLayout::eDepthAttachmentStencilReadOnlyOptimal:
@@ -1268,7 +1267,7 @@ namespace vkh {
 			auto& [desc, attachmentRefs] = subpasses.back();
 
 			desc.flags = flags;
-			desc.colorAttachmentCount = colorAttachments.size();
+			desc.colorAttachmentCount = (uint32_t)colorAttachments.size();
 
 			attachmentRefs = std::move(colorAttachments);
 			if (depthAttachment) {

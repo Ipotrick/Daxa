@@ -2,8 +2,69 @@
 
 #include <iostream>
 
+#include "common.hpp"
+
 namespace daxa {
 	namespace gpu {
+		std::size_t sizeofFormat(VkFormat format) {
+			if (format == VkFormat::VK_FORMAT_UNDEFINED)
+				return -1;
+			if (format == VkFormat::VK_FORMAT_R4G4_UNORM_PACK8)
+				return 1;
+			if (format >= VkFormat::VK_FORMAT_R4G4B4A4_UNORM_PACK16 && format <= VkFormat::VK_FORMAT_A1R5G5B5_UNORM_PACK16)
+				return 2;
+			if (format >= VkFormat::VK_FORMAT_R8_UNORM && format <= VkFormat::VK_FORMAT_R8_SRGB)
+				return 1;
+			if (format >= VkFormat::VK_FORMAT_R8G8_UNORM && format <= VkFormat::VK_FORMAT_R8G8_SRGB)
+				return 2;
+			if (format >= VkFormat::VK_FORMAT_R8G8B8_UNORM && format <= VkFormat::VK_FORMAT_R8G8B8_SRGB)
+				return 3;
+			if (format >= VkFormat::VK_FORMAT_R8G8B8_UNORM && format <= VkFormat::VK_FORMAT_A2B10G10R10_SINT_PACK32)
+				return 4;
+			if (format >= VkFormat::VK_FORMAT_R16_UNORM && format <= VkFormat::VK_FORMAT_R16_SFLOAT)
+				return 2;
+			if (format >= VkFormat::VK_FORMAT_R16G16_UNORM && format <= VkFormat::VK_FORMAT_R16G16_SFLOAT)
+				return 4;
+			if (format >= VkFormat::VK_FORMAT_R16G16B16_UNORM && format <= VkFormat::VK_FORMAT_R16G16B16_SFLOAT)
+				return 6;
+			if (format >= VkFormat::VK_FORMAT_R16G16B16A16_UNORM && format <= VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT)
+				return 8;
+			if (format >= VkFormat::VK_FORMAT_R32_UINT && format <= VkFormat::VK_FORMAT_R32_SFLOAT)
+				return 4;
+			if (format >= VkFormat::VK_FORMAT_R32G32_UINT && format <= VkFormat::VK_FORMAT_R32G32_SFLOAT)
+				return 8;
+			if (format >= VkFormat::VK_FORMAT_R32G32B32_UINT && format <= VkFormat::VK_FORMAT_R32G32B32_SFLOAT)
+				return 12;
+			if (format >= VkFormat::VK_FORMAT_R32G32B32A32_UINT && format <= VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT)
+				return 16;
+			if (format >= VkFormat::VK_FORMAT_R64_UINT && format <= VkFormat::VK_FORMAT_R64_SFLOAT)
+				return 8;
+			if (format >= VkFormat::VK_FORMAT_R64G64_UINT && format <= VkFormat::VK_FORMAT_R64G64_SFLOAT)
+				return 16;
+			if (format >= VkFormat::VK_FORMAT_R64G64B64_UINT && format <= VkFormat::VK_FORMAT_R64G64B64_SFLOAT)
+				return 24;
+			if (format >= VkFormat::VK_FORMAT_R64G64B64A64_UINT && format <= VkFormat::VK_FORMAT_R64G64B64A64_SFLOAT)
+				return 32;
+			if (format == VkFormat::VK_FORMAT_B10G11R11_UFLOAT_PACK32 || format == VkFormat::VK_FORMAT_E5B9G9R9_UFLOAT_PACK32)
+				return 32;
+			if (format == VkFormat::VK_FORMAT_D16_UNORM)
+				return 16;
+			if (format == VkFormat::VK_FORMAT_X8_D24_UNORM_PACK32 || format == VkFormat::VK_FORMAT_D32_SFLOAT)
+				return 32;
+			if (format == VkFormat::VK_FORMAT_S8_UINT)
+				return 8;
+			return -1;
+		}
+
+		DAXA_DEFINE_TRIVIAL_MOVE(GraphicsPipeline)
+
+		GraphicsPipeline::~GraphicsPipeline() {
+			if (device) {
+				vkDestroyPipelineLayout(device, layout, nullptr);
+				vkDestroyPipeline(device, pipeline, nullptr);
+				std::memset(this, 0, sizeof(GraphicsPipeline));
+			}
+		}
 
 		GraphicsPipelineBuilder& GraphicsPipelineBuilder::beginVertexInputAttributeBinding(VkVertexInputRate inputRate) {
 			if (bVertexAtrributeBindingBuildingOpen) {
@@ -28,7 +89,7 @@ namespace daxa {
 				.offset = currentVertexAttributeBindingOffset,
 			});
 			currentVertexAttributeLocation += 1;
-			currentVertexAttributeBindingOffset += vkh::sizeofFormat((vk::Format)format);
+			currentVertexAttributeBindingOffset += (u32)sizeofFormat(format);
 			return *this;
 		}
 
@@ -46,40 +107,49 @@ namespace daxa {
 			return *this;
 		}
 
-		GraphicsPipelineBuilder& GraphicsPipelineBuilder::setInputAssembly(const vk::PipelineInputAssemblyStateCreateInfo& inputAssembly) {
+		GraphicsPipelineBuilder& GraphicsPipelineBuilder::setInputAssembly(const VkPipelineInputAssemblyStateCreateInfo& inputAssembly) {
 			this->inputAssembly = inputAssembly;
 			return *this;
 		}
 
-		GraphicsPipelineBuilder& GraphicsPipelineBuilder::setRasterization(const vk::PipelineRasterizationStateCreateInfo& rasterization) {
+		GraphicsPipelineBuilder& GraphicsPipelineBuilder::setRasterization(const VkPipelineRasterizationStateCreateInfo& rasterization) {
 			this->rasterization = rasterization;
 			return *this;
 		}
 
-		GraphicsPipelineBuilder& GraphicsPipelineBuilder::setMultisampling(const vk::PipelineMultisampleStateCreateInfo& multisampling) {
+		GraphicsPipelineBuilder& GraphicsPipelineBuilder::setMultisampling(const VkPipelineMultisampleStateCreateInfo& multisampling) {
 			this->multisampling = multisampling;
 			return *this;
 		}
 
-		GraphicsPipelineBuilder& GraphicsPipelineBuilder::setDepthStencil(const vk::PipelineDepthStencilStateCreateInfo& depthStencil) {
+		GraphicsPipelineBuilder& GraphicsPipelineBuilder::setDepthStencil(const VkPipelineDepthStencilStateCreateInfo& depthStencil) {
 			this->depthStencil = depthStencil;
 			return *this;
 		}
 
 		GraphicsPipelineBuilder& GraphicsPipelineBuilder::addShaderStage(const ShaderModuleHandle& shaderModule) {
-			vk::PipelineShaderStageCreateInfo sci{};
-			sci.module = *shaderModule->shaderModule;
-			sci.stage = shaderModule->shaderStage;
-			sci.pName = shaderModule->entryPoint.c_str();
-
-			this->shaderStageCreateInfo.push_back(sci);
+			VkPipelineShaderStageCreateInfo pipelineShaderStageCI{
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+				.pNext = nullptr,
+				.stage = shaderModule->shaderStage,
+				.module = shaderModule->shaderModule,
+				.pName = shaderModule->entryPoint.c_str(),
+			};
+			this->shaderStageCreateInfo.push_back(pipelineShaderStageCI);
 
 			// reflect spirv push constants:
-			auto refl = vkh::reflectPushConstants(shaderModule->spirv, shaderModule->shaderStage);
+			auto falserefl = vkh::reflectPushConstants(shaderModule->spirv, (vk::ShaderStageFlagBits)shaderModule->shaderStage);
+			auto refl2 = reinterpret_cast<std::vector<VkPushConstantRange>*>(&falserefl);
+			auto& refl = *refl2;
 			for (auto& r : refl) {
-				if (auto iter = std::find(pushConstants.begin(), pushConstants.end(), r); iter != pushConstants.end()) {
+				auto iter = pushConstants.begin();
+				for (; iter != pushConstants.end(); iter++) {
+					if (iter->offset == r.offset && iter->size == r.size && iter->stageFlags == r.stageFlags) break;
+				}
+
+				if (iter != pushConstants.end()) {
 					// if the same push constant is present in multiple stages we combine them to one
-					iter->stageFlags |= shaderModule->shaderStage;
+					iter->stageFlags |= (VkShaderStageFlagBits)shaderModule->shaderStage;
 				}
 				else {
 					pushConstants.push_back(r);
@@ -87,94 +157,108 @@ namespace daxa {
 			}
 
 			// reflect spirv descriptor sets:
-			auto reflDesc = vkh::reflectSetBindings(shaderModule->spirv, shaderModule->shaderStage);
+			auto reflDesc = vkh::reflectSetBindings(shaderModule->spirv, (vk::ShaderStageFlagBits)shaderModule->shaderStage);
 			for (auto& r : reflDesc) {
 				if (!descriptorSets.contains(r.first)) {
-					descriptorSets[r.first] = std::unordered_map<u32, vk::DescriptorSetLayoutBinding>{};
+					descriptorSets[r.first] = std::unordered_map<u32, VkDescriptorSetLayoutBinding>{};
 				}
 
 				for (auto& binding : r.second) {
 					if (!descriptorSets[r.first].contains(binding.first)) {
 						descriptorSets[r.first][binding.first] = binding.second;
 					}
-					descriptorSets[r.first][binding.first].stageFlags |= shaderModule->shaderStage;
+					descriptorSets[r.first][binding.first].stageFlags |= (VkShaderStageFlagBits)shaderModule->shaderStage;
 				}
 			}
 
 			return *this;
 		}
 
-		constexpr vk::PipelineColorBlendAttachmentState NO_BLEND{
+		constexpr VkPipelineColorBlendAttachmentState NO_BLEND{
 			.blendEnable = VK_FALSE,
-			.colorWriteMask = (vk::ColorComponentFlags)(VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT),
+			.colorWriteMask = (VkColorComponentFlags)(VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT),
 		};
 
-		GraphicsPipelineBuilder& GraphicsPipelineBuilder::addColorAttachment(const vk::Format& attachmentFormat) {
+		GraphicsPipelineBuilder& GraphicsPipelineBuilder::addColorAttachment(const VkFormat& attachmentFormat) {
 			this->colorAttachmentFormats.push_back(attachmentFormat);
 			this->colorAttachmentBlends.push_back(NO_BLEND);
 			return *this;
 		}
 
-		GraphicsPipelineBuilder& GraphicsPipelineBuilder::addColorAttachment(const vk::Format& attachmentFormat, const vk::PipelineColorBlendAttachmentState& blend) {
+		GraphicsPipelineBuilder& GraphicsPipelineBuilder::addColorAttachment(const VkFormat& attachmentFormat, const VkPipelineColorBlendAttachmentState& blend) {
 			this->colorAttachmentFormats.push_back(attachmentFormat);
 			this->colorAttachmentBlends.push_back(blend);
 			return *this;
 		}
 
-		GraphicsPipelineBuilder& GraphicsPipelineBuilder::addDepthAttachment(const vk::Format& attachmentFormat) {
+		GraphicsPipelineBuilder& GraphicsPipelineBuilder::addDepthAttachment(const VkFormat& attachmentFormat) {
 			this->depthAttachmentFormat = attachmentFormat;
 			return *this;
 		}
 
-		GraphicsPipelineBuilder& GraphicsPipelineBuilder::addStencilAttachment(const vk::Format& attachmentFormat) {
+		GraphicsPipelineBuilder& GraphicsPipelineBuilder::addStencilAttachment(const VkFormat& attachmentFormat) {
 			this->stencilAttachmentFormat = attachmentFormat;
 			return *this;
 		}
 
-		constexpr vk::PipelineRasterizationStateCreateInfo DEFAULT_RASTER_STATE_CI{
-			.polygonMode = vk::PolygonMode::eFill,
-			.cullMode = vk::CullModeFlagBits::eNone,
-			.frontFace = vk::FrontFace::eCounterClockwise,
+		constexpr VkPipelineRasterizationStateCreateInfo DEFAULT_RASTER_STATE_CI{
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+			.pNext = nullptr,
+			.polygonMode = VkPolygonMode::VK_POLYGON_MODE_FILL,
+			.cullMode = VkCullModeFlagBits::VK_CULL_MODE_NONE,
+			.frontFace = VkFrontFace::VK_FRONT_FACE_COUNTER_CLOCKWISE,
 			.lineWidth = 1.0f,
 		};
 
-		constexpr vk::PipelineInputAssemblyStateCreateInfo DEFAULT_INPUT_ASSEMBLY_STATE_CI{
-			.topology = vk::PrimitiveTopology::eTriangleList
+		constexpr VkPipelineInputAssemblyStateCreateInfo DEFAULT_INPUT_ASSEMBLY_STATE_CI{
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+			.pNext = nullptr,
+			.topology = VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST
 		};
 
-		constexpr vk::PipelineMultisampleStateCreateInfo DEFAULT_MULTISAMPLE_STATE_CI{
-			.minSampleShading = 1.0f
+		constexpr VkPipelineMultisampleStateCreateInfo DEFAULT_MULTISAMPLE_STATE_CI{
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+			.pNext = nullptr,
+			.rasterizationSamples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT,
+			.minSampleShading = 1.0f,
 		};
 
-		constexpr vk::PipelineDepthStencilStateCreateInfo DEFAULT_DEPTH_STENCIL_STATE_CI{
+		constexpr VkPipelineDepthStencilStateCreateInfo DEFAULT_DEPTH_STENCIL_STATE_CI{
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+			.pNext = nullptr,
 			.depthTestEnable = VK_FALSE,
 			.stencilTestEnable = VK_FALSE,
 		};
 
-		constexpr vk::Viewport DEFAULT_VIEWPORT{
+		constexpr VkViewport DEFAULT_VIEWPORT{
 			.width = 1,
 			.height = 1
 		};
 
-		constexpr vk::Rect2D DEFAULT_SCISSOR{
+		constexpr VkRect2D DEFAULT_SCISSOR{
 			.extent = {1,1},
 		};
 
-		constexpr vk::PipelineVertexInputStateCreateInfo DEFAULT_VERTEX_INPUT_STATE_CI{
+		constexpr VkPipelineVertexInputStateCreateInfo DEFAULT_VERTEX_INPUT_STATE_CI{
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+			.pNext = nullptr,
 			.vertexBindingDescriptionCount = 0,
 			.pVertexBindingDescriptions = nullptr,
 			.vertexAttributeDescriptionCount = 0,
 			.pVertexAttributeDescriptions = nullptr,
 		};
 
-		GraphicsPipelineHandle GraphicsPipelineBuilder::build(vk::Device device, vkh::DescriptorSetLayoutCache& layoutCache) {
+		GraphicsPipelineHandle GraphicsPipelineBuilder::build(VkDevice device, DescriptorSetLayoutCache& layoutCache) {
 			if (bVertexAtrributeBindingBuildingOpen) {
 				endVertexInputAttributeBinding();
 			}
 
-			std::vector<vk::DescriptorSetLayout> descLayouts;
+			GraphicsPipeline ret;
+			ret.device = device;
+
+			std::vector<VkDescriptorSetLayout> descLayouts;
 			{
-				std::vector<vk::DescriptorSetLayoutBinding> tempBindings;
+				std::vector<VkDescriptorSetLayoutBinding> tempBindings;
 				for (auto& [index, bindings] : this->descriptorSets) {
 					tempBindings.clear();
 					for (auto& [index, binding] : bindings) {
@@ -185,76 +269,91 @@ namespace daxa {
 			}
 
 			// create pipeline layout:
-			vk::PipelineLayoutCreateInfo lci{};
-			lci.setLayoutCount = static_cast<u32>(descLayouts.size());
-			lci.pSetLayouts = descLayouts.data();
-			lci.pushConstantRangeCount = static_cast<u32>(pushConstants.size());
-			lci.pPushConstantRanges = pushConstants.data();
-
-			auto pipelineLayout = device.createPipelineLayoutUnique(lci);
+			VkPipelineLayoutCreateInfo pipelineLayoutCI{
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+				.pNext = nullptr,
+				.setLayoutCount = static_cast<u32>(descLayouts.size()),
+				.pSetLayouts = descLayouts.data(),
+				.pushConstantRangeCount = static_cast<u32>(pushConstants.size()),
+				.pPushConstantRanges = pushConstants.data(),
+			};
+			vkCreatePipelineLayout(device, &pipelineLayoutCI, nullptr, &ret.layout);
 
 			// create pipeline:
-			vk::PipelineVertexInputStateCreateInfo pVertexInput = vk::PipelineVertexInputStateCreateInfo{
+			VkPipelineVertexInputStateCreateInfo pVertexInput = VkPipelineVertexInputStateCreateInfo{
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+				.pNext = nullptr,
 				.vertexBindingDescriptionCount = (u32)vertexInputBindingDescriptions.size(),
-				.pVertexBindingDescriptions = (vk::VertexInputBindingDescription*)vertexInputBindingDescriptions.data(),
+				.pVertexBindingDescriptions = (VkVertexInputBindingDescription*)vertexInputBindingDescriptions.data(),
 				.vertexAttributeDescriptionCount = (u32)vertexInputAttributeDescriptions.size(),
-				.pVertexAttributeDescriptions = (vk::VertexInputAttributeDescription*)vertexInputAttributeDescriptions.data(),
+				.pVertexAttributeDescriptions = (VkVertexInputAttributeDescription*)vertexInputAttributeDescriptions.data(),
 			};
-			vk::PipelineInputAssemblyStateCreateInfo pinputAssemlyStateCI = inputAssembly.value_or(DEFAULT_INPUT_ASSEMBLY_STATE_CI);
-			vk::PipelineRasterizationStateCreateInfo prasterizationStateCI = rasterization.value_or(DEFAULT_RASTER_STATE_CI);
-			vk::PipelineMultisampleStateCreateInfo pmultisamplerStateCI = multisampling.value_or(DEFAULT_MULTISAMPLE_STATE_CI);
-			vk::PipelineDepthStencilStateCreateInfo pDepthStencilStateCI = depthStencil.value_or(DEFAULT_DEPTH_STENCIL_STATE_CI);
+			VkPipelineInputAssemblyStateCreateInfo pinputAssemlyStateCI = inputAssembly.value_or(DEFAULT_INPUT_ASSEMBLY_STATE_CI);
+			VkPipelineRasterizationStateCreateInfo prasterizationStateCI = rasterization.value_or(DEFAULT_RASTER_STATE_CI);
+			VkPipelineMultisampleStateCreateInfo pmultisamplerStateCI = multisampling.value_or(DEFAULT_MULTISAMPLE_STATE_CI);
+			VkPipelineDepthStencilStateCreateInfo pDepthStencilStateCI = depthStencil.value_or(DEFAULT_DEPTH_STENCIL_STATE_CI);
 
-			vk::PipelineViewportStateCreateInfo viewportStateCI{};
-			viewportStateCI.viewportCount = 1;
-			viewportStateCI.pViewports = &DEFAULT_VIEWPORT;
-			viewportStateCI.scissorCount = 1;
-			viewportStateCI.pScissors = &DEFAULT_SCISSOR;
+			VkPipelineViewportStateCreateInfo viewportStateCI{
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+				.pNext = nullptr,
+				.viewportCount = 1,
+				.pViewports = &DEFAULT_VIEWPORT,
+				.scissorCount = 1,
+				.pScissors = &DEFAULT_SCISSOR,
+			};
 
 			// create color blend state:
-			vk::PipelineColorBlendStateCreateInfo pcolorBlendStateCI{};
-			pcolorBlendStateCI.attachmentCount = static_cast<u32>(this->colorAttachmentBlends.size());
-			pcolorBlendStateCI.pAttachments = this->colorAttachmentBlends.data();
-			pcolorBlendStateCI.blendConstants = std::array{ 1.0f, 1.0f, 1.0f, 1.0f };
+			VkPipelineColorBlendStateCreateInfo pcolorBlendStateCI{
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+				.pNext = nullptr,
+				.attachmentCount = static_cast<u32>(this->colorAttachmentBlends.size()),
+				.pAttachments = this->colorAttachmentBlends.data(),
+				.blendConstants = { 1.0f, 1.0f, 1.0f, 1.0f },
+			};
 
 			auto dynamicState = std::array{
-				vk::DynamicState::eViewport,
-				vk::DynamicState::eScissor,
+				VkDynamicState::VK_DYNAMIC_STATE_VIEWPORT,
+				VkDynamicState::VK_DYNAMIC_STATE_SCISSOR,
 			};
-			vk::PipelineDynamicStateCreateInfo pdynamicStateCI{};
-			pdynamicStateCI.dynamicStateCount = dynamicState.size();
-			pdynamicStateCI.pDynamicStates = dynamicState.data();
+			VkPipelineDynamicStateCreateInfo pdynamicStateCI{
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+				.pNext = nullptr,
+				.dynamicStateCount = dynamicState.size(),
+				.pDynamicStates = dynamicState.data(),
+			};
 
-			vk::PipelineRenderingCreateInfoKHR rciKHR{};
-			rciKHR.colorAttachmentCount = static_cast<u32>(this->colorAttachmentFormats.size());
-			rciKHR.pColorAttachmentFormats = this->colorAttachmentFormats.data();
-			rciKHR.depthAttachmentFormat = this->depthAttachmentFormat.value_or(vk::Format::eUndefined);
-			rciKHR.stencilAttachmentFormat = this->stencilAttachmentFormat.value_or(vk::Format::eUndefined);
+			VkPipelineRenderingCreateInfoKHR pipelineRenderingCIKHR{
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
+				.pNext = nullptr,
+				.colorAttachmentCount = static_cast<u32>(this->colorAttachmentFormats.size()),
+				.pColorAttachmentFormats = this->colorAttachmentFormats.data(),
+				.depthAttachmentFormat = this->depthAttachmentFormat.value_or(VkFormat::VK_FORMAT_UNDEFINED),
+				.stencilAttachmentFormat = this->stencilAttachmentFormat.value_or(VkFormat::VK_FORMAT_UNDEFINED),
+			};
 
-			vk::GraphicsPipelineCreateInfo pci{};
-			pci.pNext = &rciKHR;
-			pci.stageCount = static_cast<u32>(this->shaderStageCreateInfo.size());
-			pci.pStages = shaderStageCreateInfo.data();
-			pci.pVertexInputState = &pVertexInput;
-			pci.pInputAssemblyState = &pinputAssemlyStateCI;
-			pci.pViewportState = &viewportStateCI;
-			pci.pRasterizationState = &prasterizationStateCI;
-			pci.pMultisampleState = &pmultisamplerStateCI;
-			pci.pDepthStencilState = &pDepthStencilStateCI;
-			pci.pColorBlendState = &pcolorBlendStateCI;
-			pci.pDynamicState = &pdynamicStateCI;
-			pci.layout = *pipelineLayout;
-			pci.renderPass = nullptr;							// we do dynamic rendering!
-			pci.subpass = 0;
+			VkGraphicsPipelineCreateInfo pipelineCI{
+				.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+				.pNext = &pipelineRenderingCIKHR,
+				.stageCount = static_cast<u32>(this->shaderStageCreateInfo.size()),
+				.pStages = shaderStageCreateInfo.data(),
+				.pVertexInputState = &pVertexInput,
+				.pInputAssemblyState = &pinputAssemlyStateCI,
+				.pViewportState = &viewportStateCI,
+				.pRasterizationState = &prasterizationStateCI,
+				.pMultisampleState = &pmultisamplerStateCI,
+				.pDepthStencilState = &pDepthStencilStateCI,
+				.pColorBlendState = &pcolorBlendStateCI,
+				.pDynamicState = &pdynamicStateCI,
+				.layout = ret.layout,
+				.renderPass = nullptr,							// we do dynamic rendering!
+				.subpass = 0,
+			};
 
-			auto [err, pipeline] = device.createGraphicsPipelineUnique(nullptr, pci);
-			assert(err == vk::Result::eSuccess);
+			auto err = vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline);
+			assert(err ==VK_SUCCESS);
 
-			GraphicsPipeline gpipeline;
-			gpipeline.pipeline = std::move(pipeline);
-			gpipeline.layout = std::move(pipelineLayout);
 			GraphicsPipelineHandle pipelineHandle;
-			pipelineHandle.pipeline = std::make_shared<GraphicsPipeline>(std::move(gpipeline));
+			pipelineHandle.pipeline = std::make_shared<GraphicsPipeline>(std::move(ret));
 			return pipelineHandle;
 		}
 	}
