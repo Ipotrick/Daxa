@@ -5,18 +5,44 @@
 namespace daxa {
 	namespace gpu {
 
-		GraphicsPipelineBuilder& GraphicsPipelineBuilder::setViewport(vk::Viewport viewport) {
-			this->viewport = viewport;
+		GraphicsPipelineBuilder& GraphicsPipelineBuilder::beginVertexInputAttributeBinding(VkVertexInputRate inputRate) {
+			if (bVertexAtrributeBindingBuildingOpen) {
+				endVertexInputAttributeBinding();
+			}
+			bVertexAtrributeBindingBuildingOpen = true;
+			currentVertexAttributeBindingInputRate = inputRate;
 			return *this;
 		}
 
-		GraphicsPipelineBuilder& GraphicsPipelineBuilder::setScissor(vk::Rect2D scissor) {
-			this->scissor = scissor;
+		GraphicsPipelineBuilder& GraphicsPipelineBuilder::addVertexInputAttributeSpacer(u32 spacing) {
+			assert(bVertexAtrributeBindingBuildingOpen);
+			currentVertexAttributeBindingOffset += spacing;
 			return *this;
 		}
 
-		GraphicsPipelineBuilder& GraphicsPipelineBuilder::setVertexInput(const vk::PipelineVertexInputStateCreateInfo& vertexInput) {
-			this->vertexInput = vertexInput;
+		GraphicsPipelineBuilder& GraphicsPipelineBuilder::addVertexInputAttribute(VkFormat format) {
+			vertexInputAttributeDescriptions.push_back({
+				.location = currentVertexAttributeLocation,
+				.binding = (u32)vertexInputBindingDescriptions.size(),
+				.format = format,
+				.offset = currentVertexAttributeBindingOffset,
+			});
+			currentVertexAttributeLocation += 1;
+			currentVertexAttributeBindingOffset += vkh::sizeofFormat((vk::Format)format);
+			return *this;
+		}
+
+		GraphicsPipelineBuilder& GraphicsPipelineBuilder::endVertexInputAttributeBinding() {
+			assert(bVertexAtrributeBindingBuildingOpen);
+			bVertexAtrributeBindingBuildingOpen = false;
+
+			vertexInputBindingDescriptions.push_back({
+				.binding = (u32)vertexInputBindingDescriptions.size(),
+				.stride = currentVertexAttributeBindingOffset,
+				.inputRate = currentVertexAttributeBindingInputRate,
+			});
+			currentVertexAttributeBindingOffset = 0;
+			currentVertexAttributeLocation = 0;
 			return *this;
 		}
 
@@ -130,6 +156,10 @@ namespace daxa {
 			.height = 1
 		};
 
+		constexpr vk::Rect2D DEFAULT_SCISSOR{
+			.extent = {1,1},
+		};
+
 		constexpr vk::PipelineVertexInputStateCreateInfo DEFAULT_VERTEX_INPUT_STATE_CI{
 			.vertexBindingDescriptionCount = 0,
 			.pVertexBindingDescriptions = nullptr,
@@ -137,7 +167,10 @@ namespace daxa {
 			.pVertexAttributeDescriptions = nullptr,
 		};
 
-		GraphicsPipelineHandle GraphicsPipelineBuilder::build(vk::Device device, vkh::DescriptorSetLayoutCache& layoutCache) const {
+		GraphicsPipelineHandle GraphicsPipelineBuilder::build(vk::Device device, vkh::DescriptorSetLayoutCache& layoutCache) {
+			if (bVertexAtrributeBindingBuildingOpen) {
+				endVertexInputAttributeBinding();
+			}
 
 			std::vector<vk::DescriptorSetLayout> descLayouts;
 			{
@@ -161,20 +194,22 @@ namespace daxa {
 			auto pipelineLayout = device.createPipelineLayoutUnique(lci);
 
 			// create pipeline:
-			vk::PipelineVertexInputStateCreateInfo pVertexInput = vertexInput.value_or(DEFAULT_VERTEX_INPUT_STATE_CI);
+			vk::PipelineVertexInputStateCreateInfo pVertexInput = vk::PipelineVertexInputStateCreateInfo{
+				.vertexBindingDescriptionCount = (u32)vertexInputBindingDescriptions.size(),
+				.pVertexBindingDescriptions = (vk::VertexInputBindingDescription*)vertexInputBindingDescriptions.data(),
+				.vertexAttributeDescriptionCount = (u32)vertexInputAttributeDescriptions.size(),
+				.pVertexAttributeDescriptions = (vk::VertexInputAttributeDescription*)vertexInputAttributeDescriptions.data(),
+			};
 			vk::PipelineInputAssemblyStateCreateInfo pinputAssemlyStateCI = inputAssembly.value_or(DEFAULT_INPUT_ASSEMBLY_STATE_CI);
 			vk::PipelineRasterizationStateCreateInfo prasterizationStateCI = rasterization.value_or(DEFAULT_RASTER_STATE_CI);
 			vk::PipelineMultisampleStateCreateInfo pmultisamplerStateCI = multisampling.value_or(DEFAULT_MULTISAMPLE_STATE_CI);
 			vk::PipelineDepthStencilStateCreateInfo pDepthStencilStateCI = depthStencil.value_or(DEFAULT_DEPTH_STENCIL_STATE_CI);
-			vk::Viewport pviewport = viewport.value_or(DEFAULT_VIEWPORT);
-			const vk::Rect2D DEFAULT_SCISSOR{ .extent = {static_cast<uint32_t>(pviewport.width), static_cast<uint32_t>(pviewport.height)} };
-			vk::Rect2D pscissor = scissor.value_or(DEFAULT_SCISSOR);
 
 			vk::PipelineViewportStateCreateInfo viewportStateCI{};
 			viewportStateCI.viewportCount = 1;
-			viewportStateCI.pViewports = &pviewport;
+			viewportStateCI.pViewports = &DEFAULT_VIEWPORT;
 			viewportStateCI.scissorCount = 1;
-			viewportStateCI.pScissors = &pscissor;
+			viewportStateCI.pScissors = &DEFAULT_SCISSOR;
 
 			// create color blend state:
 			vk::PipelineColorBlendStateCreateInfo pcolorBlendStateCI{};

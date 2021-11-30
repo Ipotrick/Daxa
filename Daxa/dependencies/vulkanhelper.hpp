@@ -99,6 +99,7 @@ namespace vkh {
 
 		vk::PipelineVertexInputStateCreateInfo makePipelineVertexInputStateCreateInfo() const {
 			return vk::PipelineVertexInputStateCreateInfo{
+				.flags = flags,
 				.vertexBindingDescriptionCount = static_cast<uint32_t>(bindings.size()),
 				.pVertexBindingDescriptions = bindings.data(),
 				.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributes.size()),
