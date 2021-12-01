@@ -25,8 +25,11 @@ namespace daxa {
 
 		class Device {
 		public:
-			Device() = default;
-			Device(Device const& other) = delete;
+			Device()								= default;
+			Device(Device const& other)				= delete;
+			Device& operator=(Device const&)		= delete;
+			Device(Device&&) noexcept				= delete;
+			Device& operator=(Device&&) noexcept	= delete;
 			~Device();
 
 			static std::shared_ptr<Device> createNewDevice();
@@ -74,11 +77,6 @@ namespace daxa {
 			 */
 			GraphicsPipelineHandle createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder);
 
-			struct SubmitInfo {
-				std::span<VkSemaphore>	waitOnSemaphores;
-				std::span<VkSemaphore>	signalSemaphores;
-			};
-
 			/**
 			 * Submits a CommandList to be executed on the GPU.
 			 *
@@ -88,7 +86,7 @@ namespace daxa {
 			 * \param submitInfo defines the syncronization on gpu of this submit.
 			 * \return a fence handle that can be used to check if the execution is complete or waited upon completion.
 			 */
-			FenceHandle submit(CommandList&& cmdList, SubmitInfo const& submitInfo);
+			FenceHandle submit(CommandList&& cmdList, std::span<VkSemaphore> waitOnSemaphores, std::span<VkSemaphore> signalSemaphores);
 
 			/**
 			 * Submit CommandLists to be executed on the GPU.
@@ -100,34 +98,31 @@ namespace daxa {
 			 * \param submitInfo defines the syncronization on gpu of this submit.
 			 * \return a fence handle that can be used to check if the execution is complete or waited upon completion.
 			 */
-			FenceHandle submit(std::vector<CommandList>& cmdLists, SubmitInfo const& submitInfo);
+			FenceHandle submit(std::vector<CommandList>& cmdLists, std::span<VkSemaphore> waitOnSemaphores, std::span<VkSemaphore> signalSemaphores);
 
+			/**
+			 * Orders the gpu to present the specified image to the window.
+			 * \param sImage the swapchain image to present to.
+			 * \param waitOn is an optional list of Semaphores that are waited on before the present is executed on the gpu.
+			*/
 			void present(SwapchainImage const& sImage, std::span<VkSemaphore> waitOn);
 
 			/**
-			 * Marks the beginning of the next frame of execution.
-			 * If the GPU stalls, this will block until a frame context is available again.
-			 * As soon as a new frame context is taken, all framed ressources are freed and or reused for the next frame.
-			 */
-			//void nextFrameContext();
-
+			 * The device keeps track of all objects that are used in submits and keeps them alive.
+			 * To recycle these objects, one can call this function once per frame.
+			*/
 			void recycle();
 
 			/**
-			 * Waits for the device to complete all submitted operations and idle.
+			 * Waits for the device to complete all submitted operations and the gpu to idle.
 			 */
 			void waitIdle();
 
-			operator VkDevice() {
-				return getVkDevice();
-			}
-
-			const VkPhysicalDevice& getVkPhysicalDevice() { return physicalDevice; }
-			const VkDevice& getVkDevice() { return device; }
-			const VmaAllocator& getVma() { return allocator; }
-			const VkQueue& getVkGraphicsQueue() { return graphicsQ; }
-			const u32& getVkGraphicsQueueFamilyIndex() { return graphicsQFamilyIndex; }
-
+			const VkPhysicalDevice& getVkPhysicalDevice() const { return physicalDevice; }
+			const VkDevice& getVkDevice() const { return device; }
+			const VmaAllocator& getVma() const { return allocator; }
+			const VkQueue& getVkGraphicsQueue() const { return graphicsQ; }
+			const u32& getVkGraphicsQueueFamilyIndex() const { return graphicsQFamilyIndex; }
 		private:
 			CommandList getNextCommandList();
 			FenceHandle getNextFenceHandle();

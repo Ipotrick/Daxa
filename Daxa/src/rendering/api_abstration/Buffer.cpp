@@ -28,6 +28,10 @@ namespace daxa {
 			this->memoryUsage = ci.memoryUsage;
 		}
 
+		bool Buffer::isUsedByGPU() const {
+			return bInUseOnGPU;
+		}
+
 		Buffer::Buffer() {
 			std::memset(this, 0, sizeof(buffer));
 		}
@@ -41,13 +45,14 @@ namespace daxa {
 			}
 		}
 
-		BufferHandle::BufferHandle(std::shared_ptr<Buffer> buffer) {
-			this->buffer = buffer;
-		}
+		BufferHandle::BufferHandle(Buffer&& buffer)
+			: buffer{ std::make_shared<Buffer>(std::move(buffer)) }
+		{ }
 
 		void uploadToStagingBuffer(std::span<u8> hostMemorySrc, BufferHandle bufferDst, size_t offset) {
 			assert(bufferDst->getVkBufferUsage() & VMA_MEMORY_USAGE_CPU_TO_GPU, "ERROR: staging buffer must be of memory type: VMA_MEMORY_USAGE_CPU_TO_GPU!");
 			assert(bufferDst->getSize() + offset >= hostMemorySrc.size(), "ERROR: staging buffer must be at last or greater than (size of memory that is to be uploaded + offset)!");
+			assert(!bufferDst->bInUseOnGPU());
 
 			void* bufferMemPtr{ nullptr };
 			vmaMapMemory(bufferDst->allocator, bufferDst->allocation, &bufferMemPtr);

@@ -6,6 +6,7 @@ namespace daxa {
 		: window{ std::move(win) }
 		, device{ gpu::Device::createNewDevice() }
 		, renderWindow{ this->device, gpu::Device::getInstance(), window->getWindowHandleSDL(), window->getSize()[0], window->getSize()[1], VK_PRESENT_MODE_FIFO_KHR }
+		, stagingBufferPool{ &*device, (size_t)100'000, (VkBufferUsageFlags)VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VmaMemoryUsage::VMA_MEMORY_USAGE_CPU_TO_GPU }
 	{ 
 		for (int i = 0; i < 3; i++) {
 			this->frameResc.push_back(PerFrameRessources{});
@@ -98,7 +99,7 @@ namespace daxa {
 		renderInfo.colorAttachments = colorAttachments; 
 		cmdList.beginRendering(renderInfo);
 
-		vkCmdBindPipeline(cmdList.getVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, testPipeline->getVkPipeline());
+		cmdList.bindPipeline(testPipeline);
 
 		VkViewport viewport{
 			.x = 0,
@@ -126,10 +127,7 @@ namespace daxa {
 
 		std::array waitOnSemasSubmit = { frame.semaphores["aquireSwapchainImage"] };
 		std::array singalSemasSubmit = { frame.semaphores["render"] };
-		frame.finishHandle = device->submit(std::move(cmdList), {
-			.waitOnSemaphores = waitOnSemasSubmit,
-			.signalSemaphores = singalSemasSubmit,
-		});
+		frame.finishHandle = device->submit(std::move(cmdList), waitOnSemasSubmit, singalSemasSubmit);
 
 		std::array waitOnSemasPresent = { frame.semaphores["render"] };
 		device->present(swapchainImage, waitOnSemasPresent);
