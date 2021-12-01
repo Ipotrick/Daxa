@@ -98,14 +98,15 @@ namespace daxa {
 			ret->allocator = allocator;
 			ret->vkCmdBeginRenderingKHR = fnPtrvkCmdBeginRenderingKHR;
 			ret->vkCmdEndRenderingKHR = fnPtrvkCmdEndRenderingKHR;
-			ret->initFrameContexts();
 			return std::move(ret);
 		}
 
 		Device::~Device() {
-			for (int i = 0; i < 3; i++) {
-				nextFrameContext();
+			waitIdle();
+			for (auto& fence : unusedFences) {
+				fence.disableRecycling();
 			}
+			unusedFences.clear();
 		}
 
 		ImageHandle Device::createImage2d(Image2dCreateInfo ci) { 
@@ -120,12 +121,11 @@ namespace daxa {
 			return std::move(getNextCommandList());
 		}
 
-		void Device::submit(CommandList&& cmdList, SubmitInfo const& submitInfo) {
+		FenceHandle Device::submit(CommandList&& cmdList, SubmitInfo const& submitInfo) {
 			CommandList list{ std::move(cmdList) };
 			assert(list.operationsInProgress == 0);
-			auto& frame = *this->frameContexts.front();
 
-			auto thisSubmitFence = getNextFence();
+			auto thisSubmitFence = getNextFenceHandle();
 
 			VkPipelineStageFlags pipelineStages = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 			VkCommandBuffer commandBuffers[] = { list.cmd };
@@ -140,14 +140,19 @@ namespace daxa {
 				.signalSemaphoreCount = (u32)submitInfo.signalSemaphores.size(),
 				.pSignalSemaphores = (VkSemaphore*)submitInfo.signalSemaphores.data(),
 			};
-			vkQueueSubmit(graphicsQ, 1, &si, thisSubmitFence);
+			vkQueueSubmit(graphicsQ, 1, &si, thisSubmitFence.fence->fence);
 
-			frame.usedCommandLists.push_back(std::move(list));
+			PendingSubmit pendingSubmit{
+				.fence = thisSubmitFence,
+			};
+			pendingSubmit.cmdLists.push_back(std::move(list));
+			unfinishedSubmits.push_back(std::move(pendingSubmit));
+
+			return thisSubmitFence;
 		}
 
-		void Device::submit(std::vector<CommandList>& cmdLists, SubmitInfo const& submitInfo) {
-			auto& frame = *this->frameContexts.front();
-			auto thisSubmitFence = getNextFence();
+		FenceHandle Device::submit(std::vector<CommandList>& cmdLists, SubmitInfo const& submitInfo) {
+			auto thisSubmitFence = getNextFenceHandle();
 
 			submitCommandBufferBuffer.clear();
 			for (auto& cmdList : cmdLists) {
@@ -167,13 +172,19 @@ namespace daxa {
 				.signalSemaphoreCount = (u32)submitInfo.signalSemaphores.size(),
 				.pSignalSemaphores = (VkSemaphore*)submitInfo.signalSemaphores.data(),
 			};
-			vkQueueSubmit(graphicsQ, 1, &si, thisSubmitFence);
+			vkQueueSubmit(graphicsQ, 1, &si, thisSubmitFence.fence->fence);
 
+			PendingSubmit pendingSubmit{
+				.fence = thisSubmitFence
+			};
 			while (!cmdLists.empty()) {
 				auto list = std::move(cmdLists.back());
 				cmdLists.pop_back();
-				frame.usedCommandLists.push_back(std::move(list));
+				pendingSubmit.cmdLists.push_back(std::move(list));
 			}
+			unfinishedSubmits.push_back(std::move(pendingSubmit));
+
+			return thisSubmitFence;
 		}
 
 		void Device::present(SwapchainImage const& sImage, std::span<VkSemaphore> waitOn) {
@@ -189,52 +200,32 @@ namespace daxa {
 			vkQueuePresentKHR(graphicsQ, &presentInfo);
 		}
 
-		void Device::nextFrameContext() {
-			// get new frame context
-			auto lastFrame = std::move(frameContexts.back());
-			frameContexts.pop_back();
-			frameContexts.push_front(std::move(lastFrame));
-
-			auto& frame = *frameContexts.front();
-
-			if (!frame.usedFences.empty()) {
-				vkWaitForFences(device, frame.usedFences.size(), frame.usedFences.data(), VK_TRUE, UINT64_MAX);
-				vkResetFences(device, frame.usedFences.size(), frame.usedFences.data());
-			}
-			while (!frame.usedFences.empty()) {
-				auto back = frame.usedFences.back();
-				frame.usedFences.pop_back();
-				unusedFences.push_back(back);
-			}
-			// we reset the command buffers individually as there is generally no big performance cost to that
-			//device.resetCommandPool(*frame.cmdPool, VkCommandPoolResetFlagBits::eReleaseResources);
-			// reset and recycle CommandLists
-			while (!frame.usedCommandLists.empty()) {
-				auto list = std::move(frame.usedCommandLists.back());
-				frame.usedCommandLists.pop_back();
-				list.reset();
-				unusedCommandLists.push_back(std::move(list));
+		void Device::recycle() {
+			for (auto iter = unfinishedSubmits.begin(); iter != unfinishedSubmits.end();) {
+				if (iter->fence.checkStatus() == VK_SUCCESS) {
+					while (!iter->cmdLists.empty()) {
+						auto list = std::move(iter->cmdLists.back());
+						iter->cmdLists.pop_back();
+						list.reset();
+						unusedCommandLists.push_back(std::move(list));
+					}
+					iter->fence.reset();
+					iter = unfinishedSubmits.erase(iter);
+				}
+				else {
+					++iter;
+				}
 			}
 		}
 
 		void Device::waitIdle() {
-			for (int i = 0; i < 3; i++) {
-				nextFrameContext();
+			for (auto iter = unfinishedSubmits.begin(); iter != unfinishedSubmits.end(); ++iter) {
+				iter->fence.wait(UINT64_MAX);
 			}
 			vkDeviceWaitIdle(device);
 		}
 
-		void Device::initFrameContexts() {
-			// The amount of contexts is currently hardcoded to two wich is fine for now.
-			// A later extention to adapt the amount of contexts may be a nice feature.
-			for (int i = 0; i < 3; i++) {
-				auto fc = std::make_unique<FrameContext>();
-				this->frameContexts.push_back(std::move(fc));
-			}
-		}
-
 		CommandList Device::getNextCommandList() {
-			auto& frame = *frameContexts.front();
 			if (unusedCommandLists.empty()) {
 				// we have no command lists left, we need to create new ones:
 				CommandList list;
@@ -265,38 +256,14 @@ namespace daxa {
 			return std::move(ret);
 		}
 
-		VkSemaphore Device::getNextSemaphore() {
-			auto& frame = *frameContexts.front();
-			if (unusedSemaphores.empty()) {
-				unusedSemaphores.push_back({});
-
-				VkSemaphoreCreateInfo semaphoreCreateInfo{
-					.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-					.pNext = nullptr,
-				};
-				vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &unusedSemaphores.back());
-			}
-			auto ret = unusedSemaphores.back();
-			unusedSemaphores.pop_back();
-			frame.usedSemaphores.push_back(ret);
-			return ret;
-		}
-
-		VkFence Device::getNextFence() {
-			auto& frame = *frameContexts.front();
+		FenceHandle Device::getNextFenceHandle() {
 			if (unusedFences.empty()) {
-				unusedFences.push_back({});
-
-				VkFenceCreateInfo fenceCreateInfo{
-					.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-					.pNext = nullptr,
-				};
-				vkCreateFence(device, &fenceCreateInfo, nullptr, &unusedFences.back());
+				unusedFences.push_back(Fence{ device, &unusedFences });
 			}
-			auto ret = unusedFences.back();
+
+			auto fence = std::move(unusedFences.back());
 			unusedFences.pop_back();
-			frame.usedFences.push_back(ret);
-			return ret;
+			return FenceHandle{ std::move(fence) };
 		}
 
 		std::optional<ShaderModuleHandle> Device::tryCreateShderModuleFromGLSL(std::string const& glslSource, VkShaderStageFlagBits stage, std::string const& entrypoint) {

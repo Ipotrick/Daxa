@@ -18,6 +18,7 @@
 #include "Pipeline.hpp"
 #include "SwapchainImage.hpp"
 #include "DescriptorSetLayoutCache.hpp"
+#include "Fence.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -85,8 +86,9 @@ namespace daxa {
 			 *
 			 * \param cmdList holds commands to be executed.
 			 * \param submitInfo defines the syncronization on gpu of this submit.
+			 * \return a fence handle that can be used to check if the execution is complete or waited upon completion.
 			 */
-			void submit(CommandList&& cmdList, SubmitInfo const& submitInfo);
+			FenceHandle submit(CommandList&& cmdList, SubmitInfo const& submitInfo);
 
 			/**
 			 * Submit CommandLists to be executed on the GPU.
@@ -96,8 +98,9 @@ namespace daxa {
 			 * 
 			 * \param cmdLists a vector containing the command lists. This vector will be emptied.
 			 * \param submitInfo defines the syncronization on gpu of this submit.
+			 * \return a fence handle that can be used to check if the execution is complete or waited upon completion.
 			 */
-			void submit(std::vector<CommandList>& cmdLists, SubmitInfo const& submitInfo);
+			FenceHandle submit(std::vector<CommandList>& cmdLists, SubmitInfo const& submitInfo);
 
 			void present(SwapchainImage const& sImage, std::span<VkSemaphore> waitOn);
 
@@ -106,7 +109,9 @@ namespace daxa {
 			 * If the GPU stalls, this will block until a frame context is available again.
 			 * As soon as a new frame context is taken, all framed ressources are freed and or reused for the next frame.
 			 */
-			void nextFrameContext();
+			//void nextFrameContext();
+
+			void recycle();
 
 			/**
 			 * Waits for the device to complete all submitted operations and idle.
@@ -124,30 +129,24 @@ namespace daxa {
 			const u32& getVkGraphicsQueueFamilyIndex() { return graphicsQFamilyIndex; }
 
 		private:
-			void initFrameContexts();
-			VkSemaphore getNextSemaphore();
-			VkFence getNextFence();
 			CommandList getNextCommandList();
+			FenceHandle getNextFenceHandle();
 
 			std::vector<CommandList> unusedCommandLists;
 			std::vector<VkSemaphore> unusedSemaphores;
-			std::vector<VkFence> unusedFences;
+			std::vector<Fence> unusedFences;
 
-			struct FrameContext {
-				std::vector<CommandList> usedCommandLists;
-				std::vector<VkSemaphore> usedSemaphores;
-				std::vector<VkFence> usedFences;
-				std::vector<ImageHandle> usedImages;
-				std::vector<BufferHandle> usedBuffers;
+			struct PendingSubmit {
+				std::vector<CommandList> cmdLists;
+				FenceHandle fence;
 			};
+			std::vector<PendingSubmit> unfinishedSubmits;
 
 			// VK_KHR_dynamic_rendering:
 			void (*vkCmdBeginRenderingKHR)(VkCommandBuffer, const VkRenderingInfoKHR*);
 			void (*vkCmdEndRenderingKHR)(VkCommandBuffer);
 
 			std::vector<VkCommandBuffer> submitCommandBufferBuffer;
-
-			std::deque<std::unique_ptr<FrameContext>> frameContexts;
 
 			std::optional<DescriptorSetLayoutCache> descriptorLayoutCache;
 			VkPhysicalDevice physicalDevice;
