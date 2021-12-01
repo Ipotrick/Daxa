@@ -162,6 +162,9 @@
     <ClInclude Include="src\rendering\api_abstration\DescriptorSetLayoutCache.hpp">
       <Filter>src\rendering\api_abstraction</Filter>
     </ClInclude>
+    <ClInclude Include="src\rendering\api_abstration\Fence.hpp">
+      <Filter>src\rendering\api_abstraction</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\stb_image.cpp">
@@ -231,6 +234,9 @@
       <Filter>src\rendering\api_abstraction</Filter>
     </ClCompile>
     <ClCompile Include="src\rendering\api_abstration\DescriptorSetLayoutCache.cpp">
+      <Filter>src\rendering\api_abstraction</Filter>
+    </ClCompile>
+    <ClCompile Include="src\rendering\api_abstration\Fence.cpp">
       <Filter>src\rendering\api_abstraction</Filter>
     </ClCompile>
   </ItemGroup>

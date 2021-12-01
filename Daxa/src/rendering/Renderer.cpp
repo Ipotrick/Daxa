@@ -18,9 +18,7 @@ namespace daxa {
 			for (auto& [name, sema] : frame.semaphores) {
 				vkDestroySemaphore(device->getVkDevice(), sema, nullptr);
 			}
-			for (auto& [name, fence] : frame.fences) {
-				vkDestroyFence(device->getVkDevice(), fence, nullptr);
-			}
+			frame.finishHandle.reset();
 		}
 		frameResc.clear();
 		persResc.reset();
@@ -63,11 +61,14 @@ namespace daxa {
 		auto frameContext = std::move(frameResc.back());
 		frameResc.pop_back();
 		frameResc.push_front(std::move(frameContext));
-		device->nextFrameContext();
+		device->recycle();
 	}
 	
 	void Renderer::draw(float deltaTime) {
 		auto& frame = frameResc.front();
+		if (frame.finishHandle) {
+			frame.finishHandle.wait(UINT64_MAX);
+		}
 
 		auto swapchainImage = renderWindow.getNextImage(frame.semaphores["aquireSwapchainImage"]);
 
@@ -125,10 +126,10 @@ namespace daxa {
 
 		std::array waitOnSemasSubmit = { frame.semaphores["aquireSwapchainImage"] };
 		std::array singalSemasSubmit = { frame.semaphores["render"] };
-		device->submit(std::move(cmdList), {
+		frame.finishHandle = device->submit(std::move(cmdList), {
 			.waitOnSemaphores = waitOnSemasSubmit,
 			.signalSemaphores = singalSemasSubmit,
-			});
+		});
 
 		std::array waitOnSemasPresent = { frame.semaphores["render"] };
 		device->present(swapchainImage, waitOnSemasPresent);

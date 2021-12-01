@@ -11,11 +11,12 @@ namespace daxa {
 		}
 
 		CommandList::~CommandList() {
-			if (bIsNotMovedOutOf) {
+			if (device) {
 				assert(operationsInProgress == 0);
 				assert(empty);
 				vkFreeCommandBuffers(device, cmdPool, 1, &cmd);
 				vkDestroyCommandPool(device, cmdPool, nullptr);
+				printf("command list complete destruction!\n");
 				std::memset(this, 0, sizeof(CommandList));
 			}
 		}

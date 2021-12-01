@@ -46,6 +46,7 @@
     <ClInclude Include="src\rendering\api_abstration\common.hpp" />
     <ClInclude Include="src\rendering\api_abstration\DescriptorSetLayoutCache.hpp" />
     <ClInclude Include="src\rendering\api_abstration\Device.hpp" />
+    <ClInclude Include="src\rendering\api_abstration\Fence.hpp" />
     <ClInclude Include="src\rendering\api_abstration\Image.hpp" />
     <ClInclude Include="src\rendering\api_abstration\Pipeline.hpp" />
     <ClInclude Include="src\rendering\api_abstration\RenderWindow.hpp" />
@@ -78,6 +79,7 @@
     <ClCompile Include="src\rendering\api_abstration\CommandList.cpp" />
     <ClCompile Include="src\rendering\api_abstration\DescriptorSetLayoutCache.cpp" />
     <ClCompile Include="src\rendering\api_abstration\Device.cpp" />
+    <ClCompile Include="src\rendering\api_abstration\Fence.cpp" />
     <ClCompile Include="src\rendering\api_abstration\Image.cpp" />
     <ClCompile Include="src\rendering\api_abstration\Pipeline.cpp" />
     <ClCompile Include="src\rendering\api_abstration\RenderWindow.cpp" />

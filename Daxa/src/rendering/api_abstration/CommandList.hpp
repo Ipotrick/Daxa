@@ -78,7 +78,6 @@ namespace daxa {
 			void (*vkCmdBeginRenderingKHR)(VkCommandBuffer, const VkRenderingInfoKHR*);
 			void (*vkCmdEndRenderingKHR)(VkCommandBuffer);
 			u32	operationsInProgress = 0;
-			bool bIsNotMovedOutOf = true;
 			bool empty = true;
 			std::vector<VkRenderingAttachmentInfoKHR> renderAttachmentBuffer;
 			std::vector<ImageHandle> usedImages;
