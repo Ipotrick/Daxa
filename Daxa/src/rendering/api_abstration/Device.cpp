@@ -103,10 +103,6 @@ namespace daxa {
 
 		Device::~Device() {
 			waitIdle();
-			for (auto& fence : unusedFences) {
-				fence.disableRecycling();
-			}
-			unusedFences.clear();
 		}
 
 		ImageHandle Device::createImage2d(Image2dCreateInfo ci) { 
@@ -257,13 +253,13 @@ namespace daxa {
 		}
 
 		FenceHandle Device::getNextFenceHandle() {
-			if (unusedFences.empty()) {
-				unusedFences.push_back(Fence{ device, &unusedFences });
+			if (unusedFences->empty()) {
+				unusedFences->push_back(Fence{ device });
 			}
 
-			auto fence = std::move(unusedFences.back());
-			unusedFences.pop_back();
-			return FenceHandle{ std::move(fence) };
+			auto fence = std::move(unusedFences->back());
+			unusedFences->pop_back();
+			return FenceHandle{ std::move(fence), unusedFences };
 		}
 
 		std::optional<ShaderModuleHandle> Device::tryCreateShderModuleFromGLSL(std::string const& glslSource, VkShaderStageFlagBits stage, std::string const& entrypoint) {
