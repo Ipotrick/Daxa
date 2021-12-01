@@ -6,8 +6,9 @@ namespace daxa {
 	namespace gpu {
 		DAXA_DEFINE_TRIVIAL_MOVE(Fence)
 
-		Fence::Fence(VkDevice device) {
-			this->device = device;
+		Fence::Fence(VkDevice device) 
+			: device{ device }
+		{
 			VkFenceCreateInfo fenceCI{
 				.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
 				.pNext = nullptr,
@@ -15,20 +16,10 @@ namespace daxa {
 			vkCreateFence(device, &fenceCI, nullptr, &fence);
 		}
 
-		Fence::Fence(VkDevice device, std::vector<Fence>* recyclingQueue) : Fence{device} {
-			this->recyclingQueue = recyclingQueue;
-		}
-
 		Fence::~Fence() {
 			if (device && fence) {
-				if (recyclingQueue) {
-					vkResetFences(device, 1, &fence);
-					recyclingQueue->push_back(std::move(*this));
-				}
-				else {
-					vkDestroyFence(device, fence, nullptr);
-					std::memset(this, 0, sizeof(Fence));
-				}
+				vkDestroyFence(device, fence, nullptr);
+				std::memset(this, 0, sizeof(Fence));
 			}
 		}
 
@@ -62,12 +53,21 @@ namespace daxa {
 			this->fence = std::make_shared<Fence>(std::move(fence));
 		}
 
-		FenceHandle::operator bool() const {
-			return isValid();
+		FenceHandle::~FenceHandle() {
+			if (fence) {
+				if (fence.use_count() == 1) {
+					recyclingVec.lock()->push_back(std::move(*fence));
+				}
+			}
 		}
 
-		void Fence::disableRecycling() {
-			this->recyclingQueue = nullptr;
+		FenceHandle::FenceHandle(Fence&& fence, std::weak_ptr<std::vector<Fence>>&& recyclingVec)
+			: fence{ std::make_shared<Fence>(std::move(fence)) }
+			, recyclingVec{ recyclingVec }
+		{ }
+
+		FenceHandle::operator bool() const {
+			return isValid();
 		}
 	}
 }

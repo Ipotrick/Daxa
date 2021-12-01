@@ -5,6 +5,7 @@
 #include <memory>
 #include <cassert>
 #include <vector>
+#include <optional>
 
 #include <vulkan/vulkan.h>
 
@@ -17,23 +18,19 @@ namespace daxa {
 			Fence(VkDevice device);
 			Fence(Fence&&) noexcept;
 			Fence& operator=(Fence&&) noexcept;
-			Fence(VkDevice device, std::vector<Fence>* recyclingQueue);
 			~Fence();
 		private:
 			friend class FenceHandle;
 			friend class Device;
 
-			void disableRecycling();
-
 			VkDevice device{ VK_NULL_HANDLE };
 			VkFence fence{ VK_NULL_HANDLE };
-			std::vector<Fence>* recyclingQueue{ nullptr };
 		};
 
 		class FenceHandle {
 		public:
 			FenceHandle() = default;
-			~FenceHandle() = default;
+			~FenceHandle();
 			FenceHandle(FenceHandle&&) noexcept = default;
 			FenceHandle& operator=(FenceHandle&&) noexcept = default;
 			FenceHandle(FenceHandle const& other);
@@ -52,8 +49,10 @@ namespace daxa {
 			friend class Device;
 
 			FenceHandle(Fence&&);
+			FenceHandle(Fence&&, std::weak_ptr<std::vector<Fence>>&& recyclingVec);
 
-			std::shared_ptr<Fence> fence{ nullptr };
+			std::weak_ptr<std::vector<Fence>> recyclingVec = {};
+			std::shared_ptr<Fence> fence = {};
 		};
 	}
 }

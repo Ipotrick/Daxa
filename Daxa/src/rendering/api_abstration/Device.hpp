@@ -134,7 +134,7 @@ namespace daxa {
 
 			std::vector<CommandList> unusedCommandLists;
 			std::vector<VkSemaphore> unusedSemaphores;
-			std::vector<Fence> unusedFences;
+			std::shared_ptr<std::vector<Fence>> unusedFences = std::make_shared<std::vector<Fence>>();
 
 			struct PendingSubmit {
 				std::vector<CommandList> cmdLists;
