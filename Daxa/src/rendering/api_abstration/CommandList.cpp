@@ -8,6 +8,9 @@ namespace daxa {
 
 		CommandList::CommandList() {
 			this->renderAttachmentBuffer.reserve(10);
+			usedBuffers.reserve(10);
+			usedGraphicsPipelines.reserve(10);
+			usedImages.reserve(10);
 		}
 
 		CommandList::~CommandList() {
@@ -115,12 +118,18 @@ namespace daxa {
 			this->vkCmdEndRenderingKHR(cmd);
 		}
 
+		void CommandList::bindPipeline(GraphicsPipelineHandle graphicsPipeline) {
+			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->getVkPipeline());
+			usedGraphicsPipelines.push_back(graphicsPipeline);
+		}
+
 		void CommandList::reset() {
 			assert(operationsInProgress == 0);
 			empty = true;
 			vkResetCommandPool(device, cmdPool, VkCommandPoolResetFlagBits::VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
 			usedBuffers.clear();
 			usedImages.clear();
+			usedGraphicsPipelines.clear();
 		}
 
 		void CommandList::changeImageLayout(ImageHandle image, VkImageLayout newLayout) {

@@ -55,7 +55,9 @@
     <ClInclude Include="src\rendering\Camera.hpp" />
     <ClInclude Include="src\rendering\Camera2d.hpp" />
     <ClInclude Include="src\rendering\CoordSystem2d.hpp" />
+    <ClInclude Include="src\rendering\gpu.hpp" />
     <ClInclude Include="src\rendering\Renderer.hpp" />
+    <ClInclude Include="src\rendering\StagingBufferPool.hpp" />
     <ClInclude Include="src\threading\Jobs.hpp" />
     <ClInclude Include="src\threading\OwningMutex.hpp" />
     <ClInclude Include="src\util\PagedIndexMap.hpp" />

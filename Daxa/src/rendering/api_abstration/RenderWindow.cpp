@@ -74,7 +74,7 @@ namespace daxa {
 
 		RenderWindow::~RenderWindow() {
 			if (device) {
-				vkDestroySwapchainKHR(*device, swapchain, nullptr);
+				vkDestroySwapchainKHR(device->getVkDevice(), swapchain, nullptr);
 				swapchainImages.clear();
 				vkDestroySurfaceKHR(instance->instance, surface, nullptr);
 				instance = nullptr;
@@ -92,7 +92,7 @@ namespace daxa {
 			}
 
 			u32 index{ 0 };
-			auto err = vkAcquireNextImageKHR(*device, swapchain, UINT64_MAX, presentSemaphore, nullptr, &index);
+			auto err = vkAcquireNextImageKHR(device->getVkDevice(), swapchain, UINT64_MAX, presentSemaphore, nullptr, &index);
 			assert(err == VK_SUCCESS);
 			SwapchainImage si{};
 			si.swapchain = swapchain;

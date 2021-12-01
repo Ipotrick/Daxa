@@ -6,6 +6,8 @@
 #include <VkBootstrap.hpp>
 #include "../dependencies/vulkanhelper.hpp"
 
+#include "common.hpp"
+
 namespace daxa {
 	namespace gpu {
 		std::shared_ptr<vkb::Instance> instance;
@@ -24,7 +26,6 @@ namespace daxa {
 
 			instance = std::make_shared<vkb::Instance>(std::move(instanceBuildReturn.value()));
 		}
-
 
 		std::shared_ptr<vkb::Instance> Device::getInstance() {
 			if (!initialized) {
@@ -89,7 +90,7 @@ namespace daxa {
 			auto fnPtrvkCmdEndRenderingKHR = (void(*)(VkCommandBuffer))vkGetDeviceProcAddr(device, "vkCmdEndRenderingKHR");
 			assert(fnPtrvkCmdBeginRenderingKHR != nullptr && fnPtrvkCmdEndRenderingKHR != nullptr, "ERROR: could not load VK_KHR_DYNAMIC_RENDERING_EXTENSION");
 
-			std::shared_ptr<Device> ret = std::make_shared<Device>();
+			auto ret = std::make_shared<Device>();
 			ret->device = device;
 			ret->descriptorLayoutCache = { device };
 			ret->physicalDevice = physicalDevice.physical_device;
@@ -110,16 +111,20 @@ namespace daxa {
 		}
 
 		BufferHandle Device::createBuffer(BufferCreateInfo ci) {
-			return BufferHandle{ std::make_shared<Buffer>(std::move(Buffer(device, graphicsQFamilyIndex, allocator, ci))) };
+			return BufferHandle{ std::move(Buffer(device, graphicsQFamilyIndex, allocator, ci)) };
 		}
 
 		CommandList Device::getEmptyCommandList() {
 			return std::move(getNextCommandList());
 		}
 
-		FenceHandle Device::submit(CommandList&& cmdList, SubmitInfo const& submitInfo) {
+		FenceHandle Device::submit(CommandList&& cmdList, std::span<VkSemaphore> waitOnSemaphores, std::span<VkSemaphore> signalSemaphores) {
 			CommandList list{ std::move(cmdList) };
 			assert(list.operationsInProgress == 0);
+
+			for (auto& buffer : list.usedBuffers) {
+				buffer.buffer->bInUseOnGPU = true;
+			}
 
 			auto thisSubmitFence = getNextFenceHandle();
 
@@ -128,13 +133,13 @@ namespace daxa {
 			VkSubmitInfo si{
 				.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
 				.pNext = nullptr,
-				.waitSemaphoreCount = (u32)submitInfo.waitOnSemaphores.size(),
-				.pWaitSemaphores = (VkSemaphore*)submitInfo.waitOnSemaphores.data(),
+				.waitSemaphoreCount = (u32)waitOnSemaphores.size(),
+				.pWaitSemaphores = (VkSemaphore*)waitOnSemaphores.data(),
 				.pWaitDstStageMask = &pipelineStages,
 				.commandBufferCount = 1,
 				.pCommandBuffers = commandBuffers,
-				.signalSemaphoreCount = (u32)submitInfo.signalSemaphores.size(),
-				.pSignalSemaphores = (VkSemaphore*)submitInfo.signalSemaphores.data(),
+				.signalSemaphoreCount = (u32)signalSemaphores.size(),
+				.pSignalSemaphores = (VkSemaphore*)signalSemaphores.data(),
 			};
 			vkQueueSubmit(graphicsQ, 1, &si, thisSubmitFence.fence->fence);
 
@@ -147,7 +152,7 @@ namespace daxa {
 			return thisSubmitFence;
 		}
 
-		FenceHandle Device::submit(std::vector<CommandList>& cmdLists, SubmitInfo const& submitInfo) {
+		FenceHandle Device::submit(std::vector<CommandList>& cmdLists, std::span<VkSemaphore> waitOnSemaphores, std::span<VkSemaphore> signalSemaphores) {
 			auto thisSubmitFence = getNextFenceHandle();
 
 			submitCommandBufferBuffer.clear();
@@ -160,13 +165,13 @@ namespace daxa {
 			VkSubmitInfo si{
 				.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
 				.pNext = nullptr,
-				.waitSemaphoreCount = (u32)submitInfo.waitOnSemaphores.size(),
-				.pWaitSemaphores = (VkSemaphore*)submitInfo.waitOnSemaphores.data(),
+				.waitSemaphoreCount = (u32)waitOnSemaphores.size(),
+				.pWaitSemaphores = (VkSemaphore*)waitOnSemaphores.data(),
 				.pWaitDstStageMask = &pipelineStages,
 				.commandBufferCount = static_cast<u32>(submitCommandBufferBuffer.size()),
 				.pCommandBuffers = submitCommandBufferBuffer.data(),
-				.signalSemaphoreCount = (u32)submitInfo.signalSemaphores.size(),
-				.pSignalSemaphores = (VkSemaphore*)submitInfo.signalSemaphores.data(),
+				.signalSemaphoreCount = (u32)signalSemaphores.size(),
+				.pSignalSemaphores = (VkSemaphore*)signalSemaphores.data(),
 			};
 			vkQueueSubmit(graphicsQ, 1, &si, thisSubmitFence.fence->fence);
 
@@ -202,6 +207,9 @@ namespace daxa {
 					while (!iter->cmdLists.empty()) {
 						auto list = std::move(iter->cmdLists.back());
 						iter->cmdLists.pop_back();
+						for (auto& buffer : list.usedBuffers) {
+							buffer->bInUseOnGPU = false;
+						}
 						list.reset();
 						unusedCommandLists.push_back(std::move(list));
 					}

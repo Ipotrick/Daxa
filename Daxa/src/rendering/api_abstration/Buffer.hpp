@@ -27,6 +27,11 @@ namespace daxa {
 
 			~Buffer();
 
+			/**
+			 * \return False when the buffer is safe to be written to from CPU. True when it might be used by the GPU.
+			*/
+			bool isUsedByGPU() const;
+
 			VkBuffer getVkBuffer() const { return buffer; }
 			size_t getSize() const { return size; }
 			VkBufferUsageFlags getVkBufferUsage() const { return usage; }
@@ -45,15 +50,22 @@ namespace daxa {
 			VmaMemoryUsage memoryUsage;
 			VmaAllocation allocation;
 			VmaAllocator allocator;
+			bool bInUseOnGPU = false;
 		};
 
 		class BufferHandle {
 		public:
+			BufferHandle() = default;
+
 			Buffer& operator*() { return *buffer; }
 			Buffer* operator->() { return buffer.get(); }
+
+			size_t getRefCount() const { return buffer.use_count(); }
 		private:
 			friend class Device;
-			BufferHandle(std::shared_ptr<Buffer> buffer);
+
+			BufferHandle(Buffer&& buffer);
+
 			std::shared_ptr<Buffer> buffer;
 		};
 

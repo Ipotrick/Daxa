@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../../DaxaCore.hpp"
+
 #include <variant>
 #include <span>
 #include <vector>
@@ -9,11 +11,10 @@
 
 #include "../dependencies/vk_mem_alloc.hpp"
 
-#include "../../DaxaCore.hpp"
-
 #include "Image.hpp"
 #include "Buffer.hpp"
 #include "SwapchainImage.hpp"
+#include "Pipeline.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -59,6 +60,8 @@ namespace daxa {
 
 			void endRendering();
 
+			void bindPipeline(GraphicsPipelineHandle graphicsPipeline);
+
 			void setViewport(VkViewport const& viewport);
 
 			void setScissor(VkRect2D const& scissor);
@@ -82,6 +85,7 @@ namespace daxa {
 			std::vector<VkRenderingAttachmentInfoKHR> renderAttachmentBuffer;
 			std::vector<ImageHandle> usedImages;
 			std::vector<BufferHandle> usedBuffers;
+			std::vector<GraphicsPipelineHandle> usedGraphicsPipelines;
 			VkDevice device;
 			VkCommandBuffer cmd;
 			VkCommandPool cmdPool;

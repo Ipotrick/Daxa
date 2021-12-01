@@ -5,10 +5,10 @@
 
 #include "../platform/Window.hpp"
 
-#include "Camera.hpp"
+#include "gpu.hpp"
 
-#include "api_abstration/Device.hpp"
-#include "api_abstration/RenderWindow.hpp"
+#include "Camera.hpp"
+#include "StagingBufferPool.hpp"
 
 namespace daxa {
 
@@ -43,9 +43,11 @@ namespace daxa {
 		std::deque<PerFrameRessources> frameResc;
 		double totalElapsedTime{ 0.0 };
 	private:
+		void nextFrameContext();
+
 		gpu::GraphicsPipelineHandle testPipeline;
 		std::shared_ptr<Window> window{ nullptr };
 		gpu::RenderWindow renderWindow;
-		void nextFrameContext();
+		StagingBufferPool stagingBufferPool;
 	};
 }
