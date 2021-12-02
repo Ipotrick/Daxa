@@ -41,7 +41,6 @@ namespace daxa {
 			VkSwapchainKHR swapchain; 
 			VkFormat swapchainImageFormat;
 			std::vector<ImageHandle> swapchainImages;
-			u32 imagesInFlight{ 2 };
 			VkExtent2D size;
 			void* sdl_window_handle = nullptr;
 		};

@@ -159,9 +159,6 @@
     <ClInclude Include="src\rendering\api_abstration\DescriptorSetLayoutCache.hpp">
       <Filter>src\rendering\gpu</Filter>
     </ClInclude>
-    <ClInclude Include="src\rendering\api_abstration\Fence.hpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClInclude>
     <ClInclude Include="src\rendering\StagingBufferPool.hpp">
       <Filter>src\rendering</Filter>
     </ClInclude>
@@ -170,6 +167,9 @@
     </ClInclude>
     <ClInclude Include="src\rendering\gpu.hpp">
       <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\api_abstration\TimelineSemaphore.hpp">
+      <Filter>src\rendering\gpu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -242,7 +242,7 @@
     <ClCompile Include="src\rendering\api_abstration\DescriptorSetLayoutCache.cpp">
       <Filter>src\rendering\gpu</Filter>
     </ClCompile>
-    <ClCompile Include="src\rendering\api_abstration\Fence.cpp">
+    <ClCompile Include="src\rendering\api_abstration\TimelineSemaphore.cpp">
       <Filter>src\rendering\gpu</Filter>
     </ClCompile>
   </ItemGroup>

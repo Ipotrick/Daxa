@@ -9,7 +9,9 @@ namespace daxa {
 		, stagingBufferPool{ &*device, (size_t)100'000, (VkBufferUsageFlags)VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VmaMemoryUsage::VMA_MEMORY_USAGE_CPU_TO_GPU }
 	{ 
 		for (int i = 0; i < 3; i++) {
-			this->frameResc.push_back(PerFrameRessources{});
+			this->frameResc.push_back(PerFrameRessources{ 
+				.timeline = device->createTimelineSemaphore()
+			});
 		}
 	}
 
@@ -19,7 +21,6 @@ namespace daxa {
 			for (auto& [name, sema] : frame.semaphores) {
 				vkDestroySemaphore(device->getVkDevice(), sema, nullptr);
 			}
-			frame.finishHandle.reset();
 		}
 		frameResc.clear();
 		persResc.reset();
@@ -67,9 +68,8 @@ namespace daxa {
 	
 	void Renderer::draw(float deltaTime) {
 		auto& frame = frameResc.front();
-		if (frame.finishHandle) {
-			frame.finishHandle.wait(UINT64_MAX);
-		}
+
+		frame.timeline.wait(frame.finishCounter);	// wait for the render queue to set the timeline past the finish counter
 
 		auto swapchainImage = renderWindow.getNextImage(frame.semaphores["aquireSwapchainImage"]);
 
@@ -127,7 +127,15 @@ namespace daxa {
 
 		std::array waitOnSemasSubmit = { frame.semaphores["aquireSwapchainImage"] };
 		std::array singalSemasSubmit = { frame.semaphores["render"] };
-		frame.finishHandle = device->submit(std::move(cmdList), waitOnSemasSubmit, singalSemasSubmit);
+		std::array signalTimelines = { std::tuple{ &frame.timeline, ++frame.finishCounter } };
+		std::vector<gpu::CommandList> commandLists;
+		commandLists.push_back(std::move(cmdList));
+		device->submit({
+			.commandLists = std::move(commandLists),
+			.signalTimelines = signalTimelines,
+			.waitOnSemaphores = waitOnSemasSubmit,
+			.signalSemaphores = singalSemasSubmit,
+		});
 
 		std::array waitOnSemasPresent = { frame.semaphores["render"] };
 		device->present(swapchainImage, waitOnSemasPresent);

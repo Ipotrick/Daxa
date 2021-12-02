@@ -67,9 +67,16 @@ namespace daxa {
 				.dynamicRendering = VK_TRUE,
 			};
 
+			VkPhysicalDeviceTimelineSemaphoreFeatures timeline_semaphore_features{
+				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES,
+				.pNext = nullptr,
+				.timelineSemaphore = VK_TRUE,
+			};
+
 			vkb::DeviceBuilder deviceBuilder{ physicalDevice };
 			deviceBuilder.add_pNext(&descriptor_indexing_feature);
 			deviceBuilder.add_pNext(&dynamic_rendering_feature);
+			deviceBuilder.add_pNext(&timeline_semaphore_features);
 
 			vkb::Device vkbDevice = deviceBuilder.build().value();
 
@@ -114,78 +121,77 @@ namespace daxa {
 			return BufferHandle{ std::move(Buffer(device, graphicsQFamilyIndex, allocator, ci)) };
 		}
 
+		TimelineSemaphore Device::createTimelineSemaphore() {
+			return TimelineSemaphore{ device };
+		}
+
 		CommandList Device::getEmptyCommandList() {
 			return std::move(getNextCommandList());
 		}
 
-		FenceHandle Device::submit(CommandList&& cmdList, std::span<VkSemaphore> waitOnSemaphores, std::span<VkSemaphore> signalSemaphores) {
-			CommandList list{ std::move(cmdList) };
-			assert(list.operationsInProgress == 0);
-
-			for (auto& buffer : list.usedBuffers) {
-				buffer.buffer->bInUseOnGPU = true;
-			}
-
-			auto thisSubmitFence = getNextFenceHandle();
-
-			VkPipelineStageFlags pipelineStages = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-			VkCommandBuffer commandBuffers[] = { list.cmd };
-			VkSubmitInfo si{
-				.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-				.pNext = nullptr,
-				.waitSemaphoreCount = (u32)waitOnSemaphores.size(),
-				.pWaitSemaphores = (VkSemaphore*)waitOnSemaphores.data(),
-				.pWaitDstStageMask = &pipelineStages,
-				.commandBufferCount = 1,
-				.pCommandBuffers = commandBuffers,
-				.signalSemaphoreCount = (u32)signalSemaphores.size(),
-				.pSignalSemaphores = (VkSemaphore*)signalSemaphores.data(),
-			};
-			vkQueueSubmit(graphicsQ, 1, &si, thisSubmitFence.fence->fence);
-
-			PendingSubmit pendingSubmit{
-				.fence = thisSubmitFence,
-			};
-			pendingSubmit.cmdLists.push_back(std::move(list));
-			unfinishedSubmits.push_back(std::move(pendingSubmit));
-
-			return thisSubmitFence;
-		}
-
-		FenceHandle Device::submit(std::vector<CommandList>& cmdLists, std::span<VkSemaphore> waitOnSemaphores, std::span<VkSemaphore> signalSemaphores) {
-			auto thisSubmitFence = getNextFenceHandle();
-
+		void Device::submit(SubmitInfo&& si) {
 			submitCommandBufferBuffer.clear();
-			for (auto& cmdList : cmdLists) {
+			for (auto& cmdList : si.commandLists) {
 				assert(cmdList.operationsInProgress == 0);
 				submitCommandBufferBuffer.push_back(cmdList.cmd);
 			}
 
-			VkPipelineStageFlags pipelineStages = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-			VkSubmitInfo si{
-				.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			for (auto [timelineSema, waitValue] : si.waitOnTimelines) {
+				this->submitSemaphoreWaitOnBuffer.push_back(timelineSema->getVkSemaphore());
+				this->submitSemaphoreWaitOnValueBuffer.push_back(waitValue);
+			}
+			for (auto binarySemaphore : si.waitOnSemaphores) {
+				this->submitSemaphoreWaitOnBuffer.push_back(binarySemaphore);
+				this->submitSemaphoreWaitOnValueBuffer.push_back(0);
+			}
+			for (auto [timelineSema, signalValue] : si.signalTimelines) {
+				this->submitSemaphoreSignalBuffer.push_back(timelineSema->getVkSemaphore());
+				this->submitSemaphoreSignalValueBuffer.push_back(signalValue);
+			}
+			for (auto binarySema : si.signalSemaphores) {
+				this->submitSemaphoreSignalBuffer.push_back(binarySema);
+				this->submitSemaphoreSignalValueBuffer.push_back(0);
+			}
+
+			auto thisSubmitTimelineSema = getNextTimeline();
+			auto thisSubmitTimelineFinishCounter = thisSubmitTimelineSema.getCounter() + 1;
+			this->submitSemaphoreSignalBuffer.push_back(thisSubmitTimelineSema.getVkSemaphore());
+			this->submitSemaphoreSignalValueBuffer.push_back(thisSubmitTimelineFinishCounter);
+
+			VkTimelineSemaphoreSubmitInfo timelineSI{
+				.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
 				.pNext = nullptr,
-				.waitSemaphoreCount = (u32)waitOnSemaphores.size(),
-				.pWaitSemaphores = (VkSemaphore*)waitOnSemaphores.data(),
-				.pWaitDstStageMask = &pipelineStages,
-				.commandBufferCount = static_cast<u32>(submitCommandBufferBuffer.size()),
-				.pCommandBuffers = submitCommandBufferBuffer.data(),
-				.signalSemaphoreCount = (u32)signalSemaphores.size(),
-				.pSignalSemaphores = (VkSemaphore*)signalSemaphores.data(),
+				.waitSemaphoreValueCount = (u32)submitSemaphoreWaitOnValueBuffer.size(),
+				.pWaitSemaphoreValues = submitSemaphoreWaitOnValueBuffer.data(),
+				.signalSemaphoreValueCount = (u32)submitSemaphoreSignalValueBuffer.size(),
+				.pSignalSemaphoreValues = submitSemaphoreSignalValueBuffer.data(),
 			};
-			vkQueueSubmit(graphicsQ, 1, &si, thisSubmitFence.fence->fence);
+
+			VkPipelineStageFlags pipelineStages = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;	// TODO maybe remove this
+			VkSubmitInfo submitInfo{
+				.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+				.pNext = &timelineSI,
+				.waitSemaphoreCount = (u32)submitSemaphoreWaitOnBuffer.size(),
+				.pWaitSemaphores = submitSemaphoreWaitOnBuffer.data(),
+				.pWaitDstStageMask = &pipelineStages,
+				.commandBufferCount = (u32)submitCommandBufferBuffer.size(),
+				.pCommandBuffers = submitCommandBufferBuffer.data() ,
+				.signalSemaphoreCount = (u32)submitSemaphoreSignalBuffer.size(),
+				.pSignalSemaphores = submitSemaphoreSignalBuffer.data(),
+			};
+			vkQueueSubmit(graphicsQ, 1, &submitInfo, nullptr);
 
 			PendingSubmit pendingSubmit{
-				.fence = thisSubmitFence
+				.cmdLists = std::move(si.commandLists),
+				.timelineSema = std::move(thisSubmitTimelineSema),
+				.finishCounter = thisSubmitTimelineFinishCounter,
 			};
-			while (!cmdLists.empty()) {
-				auto list = std::move(cmdLists.back());
-				cmdLists.pop_back();
-				pendingSubmit.cmdLists.push_back(std::move(list));
-			}
 			unfinishedSubmits.push_back(std::move(pendingSubmit));
 
-			return thisSubmitFence;
+			submitSemaphoreWaitOnBuffer.clear();
+			submitSemaphoreWaitOnBuffer.clear();
+			submitSemaphoreSignalBuffer.clear();
+			submitSemaphoreSignalValueBuffer.clear();
 		}
 
 		void Device::present(SwapchainImage const& sImage, std::span<VkSemaphore> waitOn) {
@@ -203,7 +209,7 @@ namespace daxa {
 
 		void Device::recycle() {
 			for (auto iter = unfinishedSubmits.begin(); iter != unfinishedSubmits.end();) {
-				if (iter->fence.checkStatus() == VK_SUCCESS) {
+				if (iter->timelineSema.getCounter() >= iter->finishCounter) {
 					while (!iter->cmdLists.empty()) {
 						auto list = std::move(iter->cmdLists.back());
 						iter->cmdLists.pop_back();
@@ -213,7 +219,7 @@ namespace daxa {
 						list.reset();
 						unusedCommandLists.push_back(std::move(list));
 					}
-					iter->fence.reset();
+					unusedTimelines.push_back(std::move(iter->timelineSema));
 					iter = unfinishedSubmits.erase(iter);
 				}
 				else {
@@ -224,7 +230,7 @@ namespace daxa {
 
 		void Device::waitIdle() {
 			for (auto iter = unfinishedSubmits.begin(); iter != unfinishedSubmits.end(); ++iter) {
-				iter->fence.wait(UINT64_MAX);
+				iter->timelineSema.wait(iter->finishCounter);
 			}
 			vkDeviceWaitIdle(device);
 		}
@@ -260,14 +266,14 @@ namespace daxa {
 			return std::move(ret);
 		}
 
-		FenceHandle Device::getNextFenceHandle() {
-			if (unusedFences->empty()) {
-				unusedFences->push_back(Fence{ device });
-			}
 
-			auto fence = std::move(unusedFences->back());
-			unusedFences->pop_back();
-			return FenceHandle{ std::move(fence), unusedFences };
+		TimelineSemaphore Device::getNextTimeline() {
+			if (unusedTimelines.empty()) {
+				unusedTimelines.push_back(TimelineSemaphore{ device });
+			}
+			auto timeline = std::move(unusedTimelines.back());
+			unusedTimelines.pop_back();
+			return timeline;
 		}
 
 		std::optional<ShaderModuleHandle> Device::tryCreateShderModuleFromGLSL(std::string const& glslSource, VkShaderStageFlagBits stage, std::string const& entrypoint) {
