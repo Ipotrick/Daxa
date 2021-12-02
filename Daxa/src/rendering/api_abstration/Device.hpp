@@ -18,7 +18,7 @@
 #include "Pipeline.hpp"
 #include "SwapchainImage.hpp"
 #include "DescriptorSetLayoutCache.hpp"
-#include "Fence.hpp"
+#include "TimelineSemaphore.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -47,6 +47,8 @@ namespace daxa {
 			 * \return a reference counted buffer handle of the created buffer ressource.
 			 */
 			BufferHandle createBuffer(BufferCreateInfo ci);
+
+			TimelineSemaphore createTimelineSemaphore();
 
 			/**
 			 * \return returns an empty CommandList.
@@ -77,16 +79,14 @@ namespace daxa {
 			 */
 			GraphicsPipelineHandle createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder);
 
-			/**
-			 * Submits a CommandList to be executed on the GPU.
-			 *
-			 * It is guaranteed that all ressouces used in the cmdList and the cmdList itself live until after the gpu has finished executing it.
-			 *
-			 * \param cmdList holds commands to be executed.
-			 * \param submitInfo defines the syncronization on gpu of this submit.
-			 * \return a fence handle that can be used to check if the execution is complete or waited upon completion.
-			 */
-			FenceHandle submit(CommandList&& cmdList, std::span<VkSemaphore> waitOnSemaphores, std::span<VkSemaphore> signalSemaphores);
+
+			struct SubmitInfo {
+				std::vector<CommandList>						commandLists;		// TODO REPLACE THIS VECTOR WITH HEAPLESS VERSION
+				std::span<std::tuple<TimelineSemaphore*, u64>>	waitOnTimelines;
+				std::span<std::tuple<TimelineSemaphore*, u64>>	signalTimelines;
+				std::span<VkSemaphore>							waitOnSemaphores;
+				std::span<VkSemaphore>							signalSemaphores;
+			};
 
 			/**
 			 * Submit CommandLists to be executed on the GPU.
@@ -98,7 +98,7 @@ namespace daxa {
 			 * \param submitInfo defines the syncronization on gpu of this submit.
 			 * \return a fence handle that can be used to check if the execution is complete or waited upon completion.
 			 */
-			FenceHandle submit(std::vector<CommandList>& cmdLists, std::span<VkSemaphore> waitOnSemaphores, std::span<VkSemaphore> signalSemaphores);
+			void submit(SubmitInfo&& submitInfo);
 
 			/**
 			 * Orders the gpu to present the specified image to the window.
@@ -125,15 +125,16 @@ namespace daxa {
 			const u32& getVkGraphicsQueueFamilyIndex() const { return graphicsQFamilyIndex; }
 		private:
 			CommandList getNextCommandList();
-			FenceHandle getNextFenceHandle();
+			TimelineSemaphore getNextTimeline();
 
+			std::vector<TimelineSemaphore> unusedTimelines;
 			std::vector<CommandList> unusedCommandLists;
 			std::vector<VkSemaphore> unusedSemaphores;
-			std::shared_ptr<std::vector<Fence>> unusedFences = std::make_shared<std::vector<Fence>>();
 
 			struct PendingSubmit {
 				std::vector<CommandList> cmdLists;
-				FenceHandle fence;
+				TimelineSemaphore timelineSema;
+				u64 finishCounter = 0;
 			};
 			std::vector<PendingSubmit> unfinishedSubmits;
 
@@ -142,6 +143,10 @@ namespace daxa {
 			void (*vkCmdEndRenderingKHR)(VkCommandBuffer);
 
 			std::vector<VkCommandBuffer> submitCommandBufferBuffer;
+			std::vector<VkSemaphore> submitSemaphoreWaitOnBuffer;
+			std::vector<VkSemaphore> submitSemaphoreSignalBuffer;
+			std::vector<u64> submitSemaphoreWaitOnValueBuffer;
+			std::vector<u64> submitSemaphoreSignalValueBuffer;
 
 			std::optional<DescriptorSetLayoutCache> descriptorLayoutCache;
 			VkPhysicalDevice physicalDevice;

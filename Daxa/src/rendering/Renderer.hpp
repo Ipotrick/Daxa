@@ -22,7 +22,8 @@ namespace daxa {
 		std::unordered_map<std::string_view, gpu::ImageHandle> images;
 		std::unordered_map<std::string_view, gpu::BufferHandle> buffers;
 		std::unordered_map<std::string_view, VkSemaphore> semaphores;
-		gpu::FenceHandle finishHandle;
+		gpu::TimelineSemaphore timeline;
+		u64 finishCounter = 0;
 	};
 
 	class Renderer {
