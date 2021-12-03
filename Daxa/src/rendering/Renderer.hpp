@@ -46,6 +46,10 @@ namespace daxa {
 	private:
 		void nextFrameContext();
 
+		gpu::SwapchainImage swapchainImage;
+
+		inline static constexpr size_t FRAMES_IN_FLIGHT{ 2 };
+
 		gpu::GraphicsPipelineHandle testPipeline;
 		std::shared_ptr<Window> window{ nullptr };
 		gpu::RenderWindow renderWindow;

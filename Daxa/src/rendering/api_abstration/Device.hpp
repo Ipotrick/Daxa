@@ -19,6 +19,7 @@
 #include "SwapchainImage.hpp"
 #include "DescriptorSetLayoutCache.hpp"
 #include "TimelineSemaphore.hpp"
+#include "RenderWindow.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -50,6 +51,8 @@ namespace daxa {
 
 			TimelineSemaphore createTimelineSemaphore();
 
+			RenderWindow createRenderWindow(void* sdlWindowHandle, u32 width, u32 height, VkPresentModeKHR presentMode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR);
+
 			/**
 			 * \return returns an empty CommandList.
 			 */
@@ -79,7 +82,6 @@ namespace daxa {
 			 */
 			GraphicsPipelineHandle createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder);
 
-
 			struct SubmitInfo {
 				std::vector<CommandList>						commandLists;		// TODO REPLACE THIS VECTOR WITH HEAPLESS VERSION
 				std::span<std::tuple<TimelineSemaphore*, u64>>	waitOnTimelines;
@@ -87,15 +89,13 @@ namespace daxa {
 				std::span<VkSemaphore>							waitOnSemaphores;
 				std::span<VkSemaphore>							signalSemaphores;
 			};
-
 			/**
 			 * Submit CommandLists to be executed on the GPU.
-			 * Per default the submits are synced to wait on each other based on submission ordering.
+			 * Per default the submits are NOT synced to wait on each other based on submission ordering.
 			 *
-			 * It is guaranteed that all ressouces used in the cmdList and the cmdList itself live until after the gpu has finished executing it.
+			 * It is guaranteed that all ressouces used in the cmdLists and the cmdLists themselfes are kept alive until after the gpu has finished executing it.
 			 * 
-			 * \param cmdLists a vector containing the command lists. This vector will be emptied.
-			 * \param submitInfo defines the syncronization on gpu of this submit.
+			 * \param submitInfo contains all information about the submit.
 			 * \return a fence handle that can be used to check if the execution is complete or waited upon completion.
 			 */
 			void submit(SubmitInfo&& submitInfo);

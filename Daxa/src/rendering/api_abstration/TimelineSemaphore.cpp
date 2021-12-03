@@ -11,14 +11,14 @@ namespace daxa {
 			: device{ device }
 		{
 
-			constexpr VkSemaphoreTypeCreateInfo semaphoreTypeCI{
+			VkSemaphoreTypeCreateInfo semaphoreTypeCI{
 				.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
 				.pNext = nullptr,
 				.semaphoreType = VkSemaphoreType::VK_SEMAPHORE_TYPE_TIMELINE,
 				.initialValue = 0,
 			};
 
-			constexpr VkSemaphoreCreateInfo timelineSemaphoreCI{
+			VkSemaphoreCreateInfo timelineSemaphoreCI{
 				.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
 				.pNext = &semaphoreTypeCI,
 				.flags = 0,

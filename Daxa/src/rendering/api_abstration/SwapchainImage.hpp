@@ -17,6 +17,19 @@ namespace daxa {
 
 		class SwapchainImage {
 		public:
+			SwapchainImage() = default;
+			SwapchainImage(SwapchainImage const&) = default;
+			SwapchainImage& operator=(SwapchainImage const&) = default;
+			SwapchainImage(SwapchainImage&& other) noexcept {
+				std::memcpy(this, &other, sizeof(SwapchainImage));
+				std::memset(&other, 0, sizeof(SwapchainImage));
+			}
+			SwapchainImage& operator=(SwapchainImage&& other) {
+				std::memcpy(this, &other, sizeof(SwapchainImage));
+				std::memset(&other, 0, sizeof(SwapchainImage));
+				return *this;
+			}
+
 			u32 getImageIndex() const { return imageIndex; }
 			VkSwapchainKHR getVkSwapchain() const { return swapchain; }
 			ImageHandle& getImageHandle() { return image; }
