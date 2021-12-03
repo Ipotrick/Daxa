@@ -1,18 +1,22 @@
 #include "Renderer.hpp"
 
+#include <chrono>
+using namespace std::chrono;
+
 namespace daxa {
 
 	Renderer::Renderer(std::shared_ptr<Window> win)
 		: window{ std::move(win) }
 		, device{ gpu::Device::createNewDevice() }
-		, renderWindow{ this->device, gpu::Device::getInstance(), window->getWindowHandleSDL(), window->getSize()[0], window->getSize()[1], VK_PRESENT_MODE_FIFO_KHR }
+		, renderWindow{ device->createRenderWindow(window->getWindowHandleSDL(), window->getSize()[0], window->getSize()[1]) }
 		, stagingBufferPool{ &*device, (size_t)100'000, (VkBufferUsageFlags)VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VmaMemoryUsage::VMA_MEMORY_USAGE_CPU_TO_GPU }
 	{ 
-		for (int i = 0; i < 3; i++) {
+		for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
 			this->frameResc.push_back(PerFrameRessources{ 
 				.timeline = device->createTimelineSemaphore()
 			});
 		}
+		swapchainImage = renderWindow.aquireNextImage();
 	}
 
 	Renderer::~Renderer() {
@@ -27,7 +31,7 @@ namespace daxa {
 	}
 
 	void Renderer::init() {
-		for (int i = 0; i < 3; i++) {
+		for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
 			VkSemaphoreCreateInfo semaphoreCreateInfo{
 				.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
 				.pNext = nullptr,
@@ -37,7 +41,6 @@ namespace daxa {
 					.pNext = nullptr,
 			};
 			vkCreateSemaphore(device->getVkDevice(), &semaphoreCreateInfo, nullptr, &frameResc[i].semaphores["render"]);
-			vkCreateSemaphore(device->getVkDevice(), &semaphoreCreateInfo, nullptr, &frameResc[i].semaphores["aquireSwapchainImage"]);
 		}
 
 		gpu::ShaderModuleHandle vertexShader = device->tryCreateShderModuleFromGLSL(
@@ -69,10 +72,6 @@ namespace daxa {
 	void Renderer::draw(float deltaTime) {
 		auto& frame = frameResc.front();
 
-		frame.timeline.wait(frame.finishCounter);	// wait for the render queue to set the timeline past the finish counter
-
-		auto swapchainImage = renderWindow.getNextImage(frame.semaphores["aquireSwapchainImage"]);
-
 		auto cmdList = device->getEmptyCommandList();
 
 		cmdList.begin();
@@ -84,7 +83,6 @@ namespace daxa {
 		float r = std::cos(totalElapsedTime * 0.21313) * 0.3f + 0.5f;
 		float g = std::cos(totalElapsedTime * 0.75454634) * 0.3f + 0.5f;
 		float b = std::cos(totalElapsedTime) * 0.3f + 0.5f;
-		printf("color: %f, %f, %f\n", r, g, b);
 
 		VkClearValue clear{ .color = VkClearColorValue{.float32 = { r, g, b, 1.0f } } };
 
@@ -125,20 +123,26 @@ namespace daxa {
 
 		cmdList.end();
 
-		std::array waitOnSemasSubmit = { frame.semaphores["aquireSwapchainImage"] };
-		std::array singalSemasSubmit = { frame.semaphores["render"] };
 		std::array signalTimelines = { std::tuple{ &frame.timeline, ++frame.finishCounter } };
 		std::vector<gpu::CommandList> commandLists;
 		commandLists.push_back(std::move(cmdList));
 		device->submit({
 			.commandLists = std::move(commandLists),
 			.signalTimelines = signalTimelines,
-			.waitOnSemaphores = waitOnSemasSubmit,
-			.signalSemaphores = singalSemasSubmit,
+			.signalSemaphores = { &frame.semaphores["render"], 1 },
 		});
 
 		std::array waitOnSemasPresent = { frame.semaphores["render"] };
-		device->present(swapchainImage, waitOnSemasPresent);
+		// present and aquire are combined as differencevendors implement the vsync waiting differently
+		// nvidia waits in present, amd mostly waits on aquire
+		// by grouping them here we allways get the same waiting behavior
+		renderWindow.present(std::move(swapchainImage), { &frame.semaphores["render"], 1 });
+
+		if (window->getSize()[0] != renderWindow.getSize().width || window->getSize()[1] != renderWindow.getSize().height) {
+			device->waitIdle();
+			renderWindow.resize(VkExtent2D{ .width = window->getSize()[0], .height = window->getSize()[1] });
+		}
+		swapchainImage = renderWindow.aquireNextImage();
 
 		nextFrameContext();
 	}

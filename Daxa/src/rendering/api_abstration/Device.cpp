@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <algorithm>
+#include <chrono>
 
 #include <VkBootstrap.hpp>
 #include "../dependencies/vulkanhelper.hpp"
@@ -125,11 +126,16 @@ namespace daxa {
 			return TimelineSemaphore{ device };
 		}
 
+		RenderWindow Device::createRenderWindow(void* sdlWindowHandle, u32 width, u32 height, VkPresentModeKHR presentMode) {
+			return RenderWindow{ device, physicalDevice, instance->instance, graphicsQ, sdlWindowHandle, width, height, presentMode };
+		}
+
 		CommandList Device::getEmptyCommandList() {
 			return std::move(getNextCommandList());
 		}
 
 		void Device::submit(SubmitInfo&& si) {
+
 			submitCommandBufferBuffer.clear();
 			for (auto& cmdList : si.commandLists) {
 				assert(cmdList.operationsInProgress == 0);
@@ -194,19 +200,6 @@ namespace daxa {
 			submitSemaphoreSignalValueBuffer.clear();
 		}
 
-		void Device::present(SwapchainImage const& sImage, std::span<VkSemaphore> waitOn) {
-			VkPresentInfoKHR presentInfo{
-				.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-				.pNext = nullptr,
-				.waitSemaphoreCount = static_cast<u32>(waitOn.size()),
-				.pWaitSemaphores = (VkSemaphore*)waitOn.data(),
-				.swapchainCount = 1,
-				.pSwapchains = &sImage.swapchain,
-				.pImageIndices = &sImage.imageIndex,
-			};
-			vkQueuePresentKHR(graphicsQ, &presentInfo);
-		}
-
 		void Device::recycle() {
 			for (auto iter = unfinishedSubmits.begin(); iter != unfinishedSubmits.end();) {
 				if (iter->timelineSema.getCounter() >= iter->finishCounter) {
@@ -266,10 +259,10 @@ namespace daxa {
 			return std::move(ret);
 		}
 
-
 		TimelineSemaphore Device::getNextTimeline() {
 			if (unusedTimelines.empty()) {
 				unusedTimelines.push_back(TimelineSemaphore{ device });
+				printf("create new timeline\n");
 			}
 			auto timeline = std::move(unusedTimelines.back());
 			unusedTimelines.pop_back();

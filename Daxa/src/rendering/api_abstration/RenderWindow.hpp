@@ -1,8 +1,9 @@
 #pragma once
 
 #include <memory>
-
+#include <vector>
 #include <deque>
+#include <span>
 
 #include <vulkan/vulkan.h>
 
@@ -10,7 +11,6 @@
 
 #include "../../DaxaCore.hpp"
 
-#include "Device.hpp"
 #include "Image.hpp"
 #include "SwapchainImage.hpp"
 
@@ -19,28 +19,40 @@ namespace daxa {
 
 		class RenderWindow {
 		public:
-			RenderWindow(std::shared_ptr<Device> device, std::shared_ptr<vkb::Instance> instance, void* sdl_window_handle, u32 width, u32 height, VkPresentModeKHR presentmode, VkSwapchainKHR = nullptr, VkSurfaceKHR oldSurface = nullptr);
-			RenderWindow(RenderWindow&& other);
-			RenderWindow& operator=(RenderWindow&& other);
+			RenderWindow(RenderWindow&&) noexcept;
+			RenderWindow& operator=(RenderWindow&&) noexcept;
+			RenderWindow(RenderWindow const&) = delete;
+			RenderWindow& operator=(RenderWindow const&) = delete;
 			~RenderWindow();
+
+			void resize(VkExtent2D newSize);
 
 			void setPresentMode(VkPresentModeKHR newPresentMode);
 
-			VkFormat getVkFormat() const { return swapchainImageFormat; }
+			SwapchainImage aquireNextImage();
 
-			SwapchainImage getNextImage(VkSemaphore presentSemaphore);
+			void present(SwapchainImage&& image, std::span<VkSemaphore> waitOn);
+
+			SwapchainImage presentAquireNextImage(SwapchainImage&& image, std::span<VkSemaphore> waitOn);
 
 			VkExtent2D getSize() const { return size; }
-		private:
-			void resize(VkExtent2D newSize);
 
-			std::shared_ptr<Device> device;
-			std::shared_ptr<vkb::Instance> instance;
+			VkFormat getVkFormat() const { return swapchainImageFormat; }
+		private:
+			friend class Device;
+
+			RenderWindow(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance, VkQueue graphicsQueue, void* sdl_window_handle, u32 width, u32 height, VkPresentModeKHR presentmode, VkSwapchainKHR = nullptr, VkSurfaceKHR oldSurface = nullptr);
+
+			VkDevice device = VK_NULL_HANDLE;
+			VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+			VkQueue graphicsQueue = VK_NULL_HANDLE;
+			VkInstance instance = VK_NULL_HANDLE;
+			VkFence aquireFence = VK_NULL_HANDLE;
 			VkPresentModeKHR presentMode{ VK_PRESENT_MODE_FIFO_KHR };
 			VkSurfaceKHR surface;
 			VkSwapchainKHR swapchain; 
 			VkFormat swapchainImageFormat;
-			std::vector<ImageHandle> swapchainImages;
+			std::vector<ImageHandle> swapchainImages;					// TODO REPLACE WITH STACK ALLOCATED VECTOR TYPE
 			VkExtent2D size;
 			void* sdl_window_handle = nullptr;
 		};

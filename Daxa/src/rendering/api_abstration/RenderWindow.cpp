@@ -4,24 +4,30 @@
 #include <SDL2/SDL_vulkan.h>
 #include <VkBootstrap.hpp>
 
+#include "common.hpp"
+
 namespace daxa {
 	namespace gpu {
 
-		RenderWindow::RenderWindow(std::shared_ptr<Device> device, std::shared_ptr<vkb::Instance> instance, void* sdl_window_handle, u32 width, u32 height, VkPresentModeKHR presentMode, VkSwapchainKHR oldSwapchain, VkSurfaceKHR oldSurface)
+		DAXA_DEFINE_TRIVIAL_MOVE(RenderWindow)
+
+		RenderWindow::RenderWindow(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance, VkQueue graphicsQueue, void* sdl_window_handle, u32 width, u32 height, VkPresentModeKHR presentMode, VkSwapchainKHR oldSwapchain, VkSurfaceKHR oldSurface)
 			: device{device}
+			, physicalDevice{ physicalDevice }
+			, graphicsQueue{ graphicsQueue }
 			, instance{ instance }
 			, sdl_window_handle{ sdl_window_handle }
 			, size{ .width = width, .height = height }
 			, presentMode{ presentMode }
 		{
 			if (!oldSwapchain) {
-				SDL_Vulkan_CreateSurface((SDL_Window*)sdl_window_handle, instance->instance, (VkSurfaceKHR*)&surface);
+				SDL_Vulkan_CreateSurface((SDL_Window*)sdl_window_handle, instance, (VkSurfaceKHR*)&surface);
 			}
 			else {
 				this->surface = oldSurface;
 			}
 
-			vkb::SwapchainBuilder swapchainBuilder{ device->getVkPhysicalDevice(), device->getVkDevice(), surface };
+			vkb::SwapchainBuilder swapchainBuilder{ physicalDevice, device, surface };
 
 			if (oldSwapchain) {
 				swapchainBuilder.set_old_swapchain(oldSwapchain);
@@ -49,7 +55,7 @@ namespace daxa {
 				img.allocator = nullptr;
 				img.image = vkImages[i];
 				img.view = vkImageViews[i];
-				img.device = device->getVkDevice();
+				img.device = device;
 				img.type = VK_IMAGE_TYPE_2D;
 				img.viewFormat = vkbSwapchain.image_format;
 				img.tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -57,58 +63,71 @@ namespace daxa {
 				img.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 			}
 			swapchainImageFormat = vkbSwapchain.image_format;
-		}
 
-		RenderWindow::RenderWindow(RenderWindow&& other) {
-			// trivial move
-			std::memcpy(this, &other, sizeof(RenderWindow));
-			std::memset(&other, 0, sizeof(RenderWindow));
-		}
-
-		RenderWindow& RenderWindow::operator=(RenderWindow&& other) {
-			// trivial move
-			std::memcpy(this, &other, sizeof(RenderWindow));
-			std::memset(&other, 0, sizeof(RenderWindow));
-			return *this;
+			VkFenceCreateInfo fenceCI{
+				.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+				.pNext = nullptr,
+				.flags = 0,
+			};
+			vkCreateFence(device, &fenceCI, nullptr, &aquireFence);
 		}
 
 		RenderWindow::~RenderWindow() {
 			if (device) {
-				vkDestroySwapchainKHR(device->getVkDevice(), swapchain, nullptr);
+				vkDestroySwapchainKHR(device, swapchain, nullptr);
 				swapchainImages.clear();
-				vkDestroySurfaceKHR(instance->instance, surface, nullptr);
+				vkDestroySurfaceKHR(instance, surface, nullptr);
+				vkDestroyFence(device, aquireFence, nullptr);
 				instance = nullptr;
 				surface = nullptr;
 				device = nullptr;
-				printf("real destruction");
+				physicalDevice = nullptr;
+				aquireFence = nullptr;
+				graphicsQueue = nullptr;
 			}
 		}
 
-		SwapchainImage RenderWindow::getNextImage(VkSemaphore presentSemaphore) {
-			VkExtent2D realSize;
-			SDL_GetWindowSize((SDL_Window*)sdl_window_handle, (int*)&realSize.width, (int*)&realSize.height);
-			if (realSize.width != size.width || realSize.height != size.height) {
-				this->resize(realSize);
-			}
+		SwapchainImage RenderWindow::aquireNextImage() {
 
 			u32 index{ 0 };
-			auto err = vkAcquireNextImageKHR(device->getVkDevice(), swapchain, UINT64_MAX, presentSemaphore, nullptr, &index);
+			auto err = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, nullptr, aquireFence, &index);
 			assert(err == VK_SUCCESS);
 			SwapchainImage si{};
 			si.swapchain = swapchain;
 			si.imageIndex = index;
 			si.image = swapchainImages[index];
+
+			vkWaitForFences(device, 1, &aquireFence, VK_TRUE, UINT64_MAX);
+			vkResetFences(device, 1, &aquireFence);
+
 			return si;
 		}
 
+		void RenderWindow::present(SwapchainImage&& image, std::span<VkSemaphore> waitOn) {
+			assert(image.swapchain == swapchain);
+			VkPresentInfoKHR presentInfo{
+				.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+				.pNext = nullptr,
+				.waitSemaphoreCount = static_cast<u32>(waitOn.size()),
+				.pWaitSemaphores = (VkSemaphore*)waitOn.data(),
+				.swapchainCount = 1,
+				.pSwapchains = &image.swapchain,
+				.pImageIndices = &image.imageIndex,
+			};
+			vkQueuePresentKHR(graphicsQueue, &presentInfo);
+		}
+
+		SwapchainImage RenderWindow::presentAquireNextImage(SwapchainImage&& image, std::span<VkSemaphore> waitOn) {
+			present(std::move(image), waitOn);
+			return aquireNextImage();
+		}
+
 		void RenderWindow::resize(VkExtent2D newSize) {
-			device->waitIdle();
-			*this = RenderWindow{ device, instance, sdl_window_handle, newSize.width, newSize.height, presentMode, this->swapchain, this->surface };
+			*this = RenderWindow{ device, physicalDevice, instance, graphicsQueue, sdl_window_handle, newSize.width, newSize.height, presentMode, this->swapchain, this->surface };
 		}
 
 		void RenderWindow::setPresentMode(VkPresentModeKHR newPresentMode) {
-			device->waitIdle();
-			*this = RenderWindow{ device, instance, sdl_window_handle, size.width,  size.height, newPresentMode, this->swapchain, this->surface };
+			*this = RenderWindow{ device, physicalDevice, instance, graphicsQueue, sdl_window_handle, size.width,  size.height, newPresentMode, this->swapchain, this->surface };
 		}
 	}
 }
