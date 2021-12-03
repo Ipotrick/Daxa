@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../../DaxaCore.hpp"
+
 #include <deque>
 #include <memory>
 #include <span>
@@ -8,8 +10,6 @@
 
 #include "../dependencies/vk_mem_alloc.hpp"
 #include "../dependencies/VkBootstrap.hpp"
-
-#include "../../DaxaCore.hpp"
 
 #include "CommandList.hpp"
 #include "Image.hpp"
