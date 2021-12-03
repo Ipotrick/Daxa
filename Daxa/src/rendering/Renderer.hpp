@@ -11,7 +11,6 @@
 #include "StagingBufferPool.hpp"
 
 namespace daxa {
-
 	struct PersistentRessources {
 		std::unordered_map<std::string_view, gpu::GraphicsPipelineHandle> pipelines;
 		std::unordered_map<std::string_view, gpu::ImageHandle> images;
@@ -29,7 +28,6 @@ namespace daxa {
 	class Renderer {
 	public:
 		Renderer(std::shared_ptr<Window> win);
-
 		~Renderer();
 
 		void init();
@@ -42,13 +40,14 @@ namespace daxa {
 		std::shared_ptr<gpu::Device> device;
 		std::optional<PersistentRessources> persResc;
 		std::deque<PerFrameRessources> frameResc;
+		PerFrameRessources* currentFrame = {};
 		double totalElapsedTime{ 0.0 };
 	private:
 		void nextFrameContext();
 
 		gpu::SwapchainImage swapchainImage;
 
-		inline static constexpr size_t FRAMES_IN_FLIGHT{ 2 };
+		inline static constexpr size_t FRAMES_IN_FLIGHT{ 3 };
 
 		gpu::GraphicsPipelineHandle testPipeline;
 		std::shared_ptr<Window> window{ nullptr };
