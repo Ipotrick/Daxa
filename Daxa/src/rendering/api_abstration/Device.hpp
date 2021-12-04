@@ -53,6 +53,8 @@ namespace daxa {
 
 			RenderWindow createRenderWindow(void* sdlWindowHandle, u32 width, u32 height, VkPresentModeKHR presentMode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR);
 
+			BindingSetDescription createBindingSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings);
+
 			/**
 			 * \return returns an empty CommandList.
 			 */

@@ -130,6 +130,21 @@ namespace daxa {
 			return RenderWindow{ device, physicalDevice, instance->instance, graphicsQ, sdlWindowHandle, width, height, presentMode };
 		}
 
+		BindingSetDescription Device::createBindingSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings) {
+			BindingSetDescription bindingSetDescription{};
+
+			std::vector<VkDescriptorSetLayoutBinding> bindingsVec;
+			for (auto binding : bindings) {
+				bindingsVec.push_back(binding);
+				bindingSetDescription.layoutBindings[bindingSetDescription.size++] = binding;
+				bindingSetDescription.descriptorCount += binding.descriptorCount;
+			}
+
+			bindingSetDescription.layout = descriptorLayoutCache->getLayout(bindingsVec);
+
+			return std::move(bindingSetDescription);
+		}
+
 		CommandList Device::getEmptyCommandList() {
 			return std::move(getNextCommandList());
 		}

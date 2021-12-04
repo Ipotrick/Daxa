@@ -121,6 +121,11 @@ namespace daxa {
 		void CommandList::bindPipeline(GraphicsPipelineHandle graphicsPipeline) {
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->getVkPipeline());
 			usedGraphicsPipelines.push_back(graphicsPipeline);
+
+			boundPipeline = BoundPipeline{
+				.bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+				.layout = graphicsPipeline->getVkPipelineLayout(),
+			};
 		}
 
 		void CommandList::reset() {
@@ -130,6 +135,7 @@ namespace daxa {
 			usedBuffers.clear();
 			usedImages.clear();
 			usedGraphicsPipelines.clear();
+			boundPipeline.reset();
 		}
 
 		void CommandList::changeImageLayout(ImageHandle image, VkImageLayout newLayout) {
@@ -188,6 +194,158 @@ namespace daxa {
 				assert(dst->getSize() >= copyRegions[i].size + copyRegions[i].dstOffset, "ERROR: dst buffer is smaller than the region that shouly be copied!");
 			}
 			vkCmdCopyBuffer(cmd, src->getVkBuffer(), dst->getVkBuffer(), copyRegions.size(), copyRegions.data());
+		}
+
+		void CommandList::updateSetImages(BindingSetHandle& set, u32 binding, std::span<ImageHandle> images, VkDescriptorType type, u32 offset) {
+			for (auto& image : images) {
+				VkSampler sampler = VK_NULL_HANDLE;
+				switch (type) {
+				case VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+					// TODO REPLACE THIS WITH AN ACTUAL SAMPLER!
+					sampler = VK_NULL_HANDLE;		
+					break;
+				case VkDescriptorType::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+					sampler = VK_NULL_HANDLE;
+					break;
+				case VkDescriptorType::VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+					sampler = VK_NULL_HANDLE;
+					break;
+				default:
+					assert(false);
+				}
+
+				imageInfoBuffer.push_back(VkDescriptorImageInfo{
+					.sampler = sampler,
+					.imageView = image->view,
+					.imageLayout = image->layout,
+				});
+
+				// update the handles inside the set
+				u32 bindingSetIndex = set->bindingToHandleVectorIndex[binding];
+				set->handles[bindingSetIndex] = image;
+			}
+
+			VkWriteDescriptorSet write{
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.pNext = nullptr,
+				.dstSet = set->set,
+				.dstBinding = binding,
+				.dstArrayElement = offset,
+				.descriptorCount = (u32)imageInfoBuffer.size(),
+				.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.pImageInfo = imageInfoBuffer.data()
+			};
+
+			vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+
+			imageInfoBuffer.clear();
+		}
+
+		// shortcut call multiple descriptor update image:
+
+		void CommandList::updateSetCombinedImageSamplers(BindingSetHandle& set, u32 binding, std::span<ImageHandle> images, u32 offset = 0) {
+			updateSetImages(set, binding, images, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, offset);
+		}
+
+		void CommandList::updateSetSampledImages(BindingSetHandle& set, u32 binding, std::span<ImageHandle> images, u32 offset = 0) {
+			updateSetImages(set, binding, images, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, offset);
+		}
+
+		void CommandList::updateSetStorageImages(BindingSetHandle& set, u32 binding, std::span<ImageHandle> images, u32 offset = 0) {
+			updateSetImages(set, binding, images, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, offset);
+		}
+
+		// shortcut call single descriptor update image:
+
+		void CommandList::updateSetImage(BindingSetHandle& set, u32 binding, ImageHandle image, VkDescriptorType type) {
+			updateSetImages(set, binding, { &image, 1 }, type);
+		}
+
+		void CommandList::updateSetCombinedImageSampler(BindingSetHandle& set, u32 binding, ImageHandle image) {
+			updateSetImages(set, binding, { &image, 1 }, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+		}
+
+		void CommandList::updateSetSampledImage(BindingSetHandle& set, u32 binding, ImageHandle image) {
+			updateSetImages(set, binding, { &image, 1 }, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
+		}
+
+		void CommandList::updateSetStorageImage(BindingSetHandle& set, u32 binding, ImageHandle image) {
+			updateSetImages(set, binding, { &image, 1 }, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+		}
+
+		void CommandList::updateSetBuffers(BindingSetHandle& set, u32 binding, std::span<BufferHandle> buffers, VkDescriptorType type, u32 offset = 0) {
+			for (auto& buffer : buffers) {
+				bufferInfoBuffer.push_back(VkDescriptorBufferInfo{
+					.buffer = buffer->buffer,
+					.offset = 0,									// TODO Unsure what to put here
+					.range = buffer->size,
+				});
+
+				// update the handles inside the set
+				u32 bindingSetIndex = set->bindingToHandleVectorIndex[binding];
+				set->handles[bindingSetIndex] = buffer;
+			}
+			
+			VkWriteDescriptorSet write{
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.pNext = nullptr,
+				.dstSet = set->set,
+				.dstBinding = binding,
+				.dstArrayElement = offset,
+				.descriptorCount = (u32)bufferInfoBuffer.size(),
+				.descriptorType = type,
+				.pBufferInfo = bufferInfoBuffer.data(),
+			};
+
+			vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+
+			bufferInfoBuffer.clear();
+		}
+
+		// shortcut call multiple descriptor update buffer:
+
+		void CommandList::updateSetUnifromBuffers(BindingSetHandle& set, u32 binding, std::span<BufferHandle> buffers, u32 offset = 0) {
+			updateSetBuffers(set, binding, buffers, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, offset);
+		}
+
+		void CommandList::updateSetStorageBuffers(BindingSetHandle& set, u32 binding, std::span<BufferHandle> buffers, u32 offset = 0) {
+			updateSetBuffers(set, binding, buffers, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, offset);
+		}
+
+		void CommandList::updateSetDynamicUnifromBuffers(BindingSetHandle& set, u32 binding, std::span<BufferHandle> buffers, u32 offset = 0) {
+			updateSetBuffers(set, binding, buffers, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, offset);
+		}
+
+		void CommandList::updateSetDynamicStorageBuffers(BindingSetHandle& set, u32 binding, std::span<BufferHandle> buffers, u32 offset = 0) {
+			updateSetBuffers(set, binding, buffers, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, offset);
+		}
+
+		// shortcut call single descriptor update buffer:
+
+		void CommandList::updateSetBuffer(BindingSetHandle& set, u32 binding, BufferHandle buffer, VkDescriptorType type) {
+			updateSetBuffers(set, binding, { &buffer, 1 }, type);
+		}
+
+		void CommandList::updateSetUnifromBuffer(BindingSetHandle& set, u32 binding, BufferHandle buffer) {
+			updateSetBuffers(set, binding, { &buffer, 1 }, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+		}
+
+		void CommandList::updateSetStorageBuffer(BindingSetHandle& set, u32 binding, BufferHandle buffer) {
+			updateSetBuffers(set, binding, { &buffer, 1 }, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+		}
+
+		void CommandList::updateSetDynamicUnifromBuffer(BindingSetHandle& set, u32 binding, BufferHandle buffer) {
+			updateSetBuffers(set, binding, { &buffer, 1 }, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
+		}
+
+		void CommandList::updateSetDynamicStorageBuffer(BindingSetHandle& set, u32 binding, BufferHandle buffer) {
+			updateSetBuffers(set, binding, { &buffer, 1 }, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC);
+		}
+
+		void CommandList::bindSet(BindingSetHandle& set) {
+			// TODO: make the bind point dependant on what type of pipeline is bound
+			assert(boundPipeline.has_value());
+			vkCmdBindDescriptorSets(cmd, boundPipeline->bindPoint, boundPipeline->layout, 0, 1, &set->set, 0, nullptr);
 		}
 	}
 }
