@@ -19,6 +19,8 @@
 namespace daxa {
 	namespace gpu {
 
+		constexpr inline size_t MAX_SETS_PER_PIPELINE = 4;
+
 		class GraphicsPipeline {
 		public:
 			GraphicsPipeline() = default;
@@ -26,10 +28,19 @@ namespace daxa {
 			GraphicsPipeline& operator=(GraphicsPipeline&&) noexcept;
 			~GraphicsPipeline();
 
+			BindingSetDescription const* getSetDescription(u32 set) const { 
+				auto setDescr = bindingSetDescriptions.at(set);
+				assert(setDescr);
+				return setDescr;
+			}
+
 			VkPipeline const& getVkPipeline() const { return pipeline; }
 			VkPipelineLayout const& getVkPipelineLayout() const { return layout; }
 		private:
 			friend class GraphicsPipelineBuilder;
+
+			std::array<BindingSetDescription const*, MAX_SETS_PER_PIPELINE> bindingSetDescriptions = {};
+
 			VkDevice device;
 			VkPipeline pipeline;
 			VkPipelineLayout layout;

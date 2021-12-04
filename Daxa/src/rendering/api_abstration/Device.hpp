@@ -53,12 +53,7 @@ namespace daxa {
 
 			RenderWindow createRenderWindow(void* sdlWindowHandle, u32 width, u32 height, VkPresentModeKHR presentMode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR);
 
-			BindingSetDescription* createBindingSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings);
-
-			/**
-			 * \return returns an empty CommandList.
-			 */
-			CommandList getEmptyCommandList();
+			BindingSetDescription const* createBindingSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings);
 
 			/**
 			 * \param glslSource a string with valid glsl source code.
@@ -74,15 +69,22 @@ namespace daxa {
 			 * \param name a name for the shader stage, only used for debugging.
 			 * \return newly created ShaderModule from the given source IF source path is valid, or a nullopt if the source or path is invalid.
 			 */
-			std::optional<ShaderModuleHandle> tryCreateShderModuleFromGLSL(std::filesystem::path const& pathToGlsl, VkShaderStageFlagBits stage, std::string const& entryPoint = "main");
+			std::optional<ShaderModuleHandle> tryCreateShderModuleFromFile(std::filesystem::path const& pathToGlsl, VkShaderStageFlagBits stage, std::string const& entryPoint = "main");
 
 			/**
 			 * Creates a graphics pipeline, wich is specified by the pipeline builder.
-			 * 
+			 *
 			 * \param pipelineBuilder specifies how the pipeline is layed out.
 			 * \return a handle to a new graphics pipeline created from the pipeline builder.
 			 */
 			GraphicsPipelineHandle createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder);
+
+			BindingSetAllocator createBindingSetAllocator(BindingSetDescription const* setDescription, size_t setPerPool = 64);
+
+			/**
+			 * \return returns an empty CommandList.
+			 */
+			CommandList getEmptyCommandList();
 
 			struct SubmitInfo {
 				std::vector<CommandList>						commandLists;		// TODO REPLACE THIS VECTOR WITH HEAPLESS VERSION

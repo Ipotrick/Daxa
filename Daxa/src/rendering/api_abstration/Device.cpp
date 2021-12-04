@@ -130,7 +130,7 @@ namespace daxa {
 			return RenderWindow{ device, physicalDevice, instance->instance, graphicsQ, sdlWindowHandle, width, height, presentMode };
 		}
 
-		BindingSetDescription* Device::createBindingSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings) {
+		BindingSetDescription const* Device::createBindingSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings) {
 			return bindingSetDescriptionCache.getSetDescription(bindings);
 		}
 
@@ -277,12 +277,16 @@ namespace daxa {
 			return ShaderModuleHandle::tryCreateDAXAShaderModule(device, glslSource, entrypoint, stage);
 		}
 
-		std::optional<ShaderModuleHandle> Device::tryCreateShderModuleFromGLSL(std::filesystem::path const& pathToGlsl, VkShaderStageFlagBits stage, std::string const& entrypoint) {
+		std::optional<ShaderModuleHandle> Device::tryCreateShderModuleFromFile(std::filesystem::path const& pathToGlsl, VkShaderStageFlagBits stage, std::string const& entrypoint) {
 			return ShaderModuleHandle::tryCreateDAXAShaderModule(device, pathToGlsl, entrypoint, stage);
 		}
 
 		GraphicsPipelineHandle Device::createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder) {
 			return pipelineBuilder.build(device, bindingSetDescriptionCache);
+		}
+
+		BindingSetAllocator Device::createBindingSetAllocator(BindingSetDescription const* setDescription, size_t setPerPool) {
+			return BindingSetAllocator{ device, setDescription, setPerPool };
 		}
 	}
 }
