@@ -264,7 +264,9 @@ namespace daxa {
 					for (auto& [index, binding] : bindings) {
 						tempBindings.push_back(binding);
 					}
-					descLayouts.push_back(bindingSetCache.getSetDescription(tempBindings)->layout);
+					auto description = bindingSetCache.getSetDescription(tempBindings);
+					descLayouts.push_back(description->layout);
+					ret.bindingSetDescriptions[index] = description;
 				}
 			}
 

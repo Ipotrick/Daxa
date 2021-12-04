@@ -7,7 +7,7 @@ namespace daxa {
 
 		DAXA_DEFINE_TRIVIAL_MOVE(BindingSet)
 
-		BindingSet::BindingSet(VkDescriptorSet set, PoolInfo* poolInfo, BindingSetDescription* description)
+		BindingSet::BindingSet(VkDescriptorSet set, PoolInfo* poolInfo, BindingSetDescription const* description)
 			: set{ set }
 			, poolInfo{ poolInfo }
 			, description{ description }
@@ -36,11 +36,12 @@ namespace daxa {
 
 		DAXA_DEFINE_TRIVIAL_MOVE(BindingSetAllocator)
 
-		BindingSetAllocator::BindingSetAllocator(VkDevice device, BindingSetDescription* setDescription, size_t setsPerPool)
+		BindingSetAllocator::BindingSetAllocator(VkDevice device, BindingSetDescription const* setDescription, size_t setsPerPool)
 			: device{ device }
 			, setDescription{ setDescription }
 			, setsPerPool{ setsPerPool }
 		{
+			assert(setDescription);
 			initPoolSizes();
 		}
 

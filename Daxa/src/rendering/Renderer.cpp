@@ -37,20 +37,16 @@ namespace daxa {
 				.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
 				.pNext = nullptr,
 			}; 
-			VkFenceCreateInfo fenceCreateInfo{
-					.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-					.pNext = nullptr,
-			};
 			vkCreateSemaphore(device->getVkDevice(), &semaphoreCreateInfo, nullptr, &frameResc[i].semaphores["render"]);
 		}
 
-		gpu::ShaderModuleHandle vertexShader = device->tryCreateShderModuleFromGLSL(
-			std::filesystem::path{ "daxa/shaders/test.vert" }, 
+		gpu::ShaderModuleHandle vertexShader = device->tryCreateShderModuleFromFile(
+			"daxa/shaders/test.vert", 
 			VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT
 		).value();
 
-		gpu::ShaderModuleHandle fragmenstShader = device->tryCreateShderModuleFromGLSL(
-			std::filesystem::path{ "daxa/shaders/test.frag" },
+		gpu::ShaderModuleHandle fragmenstShader = device->tryCreateShderModuleFromFile(
+			"daxa/shaders/test.frag",
 			VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT
 		).value();
 
@@ -60,6 +56,13 @@ namespace daxa {
 		pipelineBuilder.addShaderStage(fragmenstShader);
 		pipelineBuilder.addColorAttachment(renderWindow.getVkFormat());
 		testPipeline = device->createGraphicsPipeline(pipelineBuilder);
+
+		auto setAllocator = device->createBindingSetAllocator(testPipeline->getSetDescription(/*set:*/0));
+
+		auto set = setAllocator.getSet();
+
+		// set will automaticly be recycled into the allocator
+		// allocator dies and kills all its sets, it also checks if all sets are released as a debug messure
 	}
 
 	void Renderer::nextFrameContext() {
