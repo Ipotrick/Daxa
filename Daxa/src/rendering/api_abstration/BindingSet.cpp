@@ -7,33 +7,36 @@ namespace daxa {
 
 		DAXA_DEFINE_TRIVIAL_MOVE(BindingSet)
 
-		BindingSet::BindingSet(VkDescriptorSet set, PoolInfo* poolInfo, BindingSetDescription& description)
+		BindingSet::BindingSet(VkDescriptorSet set, PoolInfo* poolInfo, BindingSetDescription* description)
 			: set{ set }
 			, poolInfo{ poolInfo }
+			, description{ description }
 		{
-			handles.resize(description.descriptorCount, std::monostate{});
-			size_t nextBindingHandleIndex = 0;
-			for (int i = 0; i < description.size; i++) {
-				bindingToHandleVectorIndex[i] = nextBindingHandleIndex;
-				nextBindingHandleIndex += description.layoutBindings[i].descriptorCount;
-			}
+			handles.resize(description->descriptorCount, std::monostate{});
 		}
 
-		BindingSet::~BindingSet() {
-			if (poolInfo) {
-				poolInfo->zombies.push_back(set);
-				this->set = {};
-				this->poolInfo = {};
-			}
-		}
+		//BindingSet::~BindingSet() {
+		//	if (poolInfo) {
+		//		poolInfo->zombies.push_back(set);
+		//		this->set = {};
+		//		this->poolInfo = {};
+		//	}
+		//}
 
-		BindingSetHandle::BindingSetHandle(BindingSet&& set) 
-			: set { std::make_shared<BindingSet>(std::move(set)) }
+		BindingSetHandle::BindingSetHandle(std::shared_ptr<BindingSet>&& set) 
+			: set { std::move(set) }
 		{ }
+
+		BindingSetHandle::~BindingSetHandle() {
+			if (set.use_count() == 1) {
+				set->handles.clear();
+				set->poolInfo->zombies.push_back(set);
+			}
+		}
 
 		DAXA_DEFINE_TRIVIAL_MOVE(BindingSetAllocator)
 
-		BindingSetAllocator::BindingSetAllocator(VkDevice device, BindingSetDescription setDescription, size_t setsPerPool)
+		BindingSetAllocator::BindingSetAllocator(VkDevice device, BindingSetDescription* setDescription, size_t setsPerPool)
 			: device{ device }
 			, setDescription{ setDescription }
 			, setsPerPool{ setsPerPool }
@@ -53,7 +56,7 @@ namespace daxa {
 			std::optional<BindingSetHandle> handleOpt = std::nullopt;
 			for (auto& pool : pools) {
 				if (!pool->zombies.empty()) {
-					handleOpt = BindingSetHandle{ BindingSet{ pool->zombies.back(), &*pool, setDescription } };
+					handleOpt = BindingSetHandle{ std::move(pool->zombies.back()) };
 					pool->zombies.pop_back();
 					break;
 				}
@@ -72,11 +75,11 @@ namespace daxa {
 		}
 
 		void BindingSetAllocator::initPoolSizes() {
-			for (int i = 0; i < setDescription.size; i++) {
+			for (int i = 0; i < setDescription->descriptorCount; i++) {
 				poolSizes.push_back(VkDescriptorPoolSize{
-					.type = setDescription.layoutBindings[i].descriptorType,
-					.descriptorCount = (u32)(setsPerPool * setDescription.layoutBindings[i].descriptorCount),
-					});
+					.type = setDescription->layoutBindings.bindings[i].descriptorType,
+					.descriptorCount = (u32)(setsPerPool * setDescription->layoutBindings.bindings[i].descriptorCount),
+				});
 			}
 		}
 
@@ -86,13 +89,13 @@ namespace daxa {
 				.pNext = nullptr,
 				.descriptorPool = pool->pool,
 				.descriptorSetCount = 1,
-				.pSetLayouts = &setDescription.layout,
+				.pSetLayouts = &setDescription->layout,
 			};
 			pool->allocatedSets += 1;
 			VkDescriptorSet set;
 			vkAllocateDescriptorSets(device, &descriptorSetAI, &set);
 
-			return BindingSetHandle{ BindingSet{ set, pool, setDescription } };
+			return BindingSetHandle{ std::make_shared<BindingSet>(BindingSet{ set, pool, setDescription }) };
 		}
 
 		PoolInfo BindingSetAllocator::getNewPool() {
@@ -100,7 +103,7 @@ namespace daxa {
 				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 				.pNext = nullptr,
 				.flags = 0,
-				.maxSets = setsPerPool,
+				.maxSets = (u32)setsPerPool,
 				.poolSizeCount = (u32)poolSizes.size(),
 				.pPoolSizes = poolSizes.data(),
 			};

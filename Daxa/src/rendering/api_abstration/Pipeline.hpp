@@ -14,7 +14,7 @@
 #include "../dependencies/vk_mem_alloc.hpp"
 
 #include "ShaderModule.hpp"
-#include "DescriptorSetLayoutCache.hpp"
+#include "BindingSet.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -62,7 +62,7 @@ namespace daxa {
 			GraphicsPipelineBuilder& addStencilAttachment(const VkFormat& attachmentFormat);
 		private:
 			friend class Device;
-			GraphicsPipelineHandle build(VkDevice, DescriptorSetLayoutCache& layoutCache);
+			GraphicsPipelineHandle build(VkDevice, BindingSetDescriptionCache& bindingSetCache);
 
 			// Vertex Input Attribute building:
 			bool bVertexAtrributeBindingBuildingOpen = false;

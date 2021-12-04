@@ -26,6 +26,9 @@ namespace daxa {
 			this->appstate->deltaTimeLastFrame = duration_cast<microseconds>(now - lastFrameStartTimePoint);
 			lastFrameStartTimePoint = now;
 
+			std::cout << "size of BindingSet: " << sizeof(daxa::gpu::BindingSet) << std::endl;
+			std::cout << "size of BindingSetDescription: " << sizeof(daxa::gpu::BindingSetDescription) << std::endl;
+
 			std::cout << "delta time: " << std::setw(8) << appstate->getDeltaTimeSeconds() * 1000.0f << "ms, fps: " << 1.0f / (appstate->getDeltaTimeSeconds()) << std::endl;
 
 			if (window->update(0.01f)) break;

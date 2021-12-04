@@ -196,13 +196,13 @@ namespace daxa {
 			vkCmdCopyBuffer(cmd, src->getVkBuffer(), dst->getVkBuffer(), copyRegions.size(), copyRegions.data());
 		}
 
-		void CommandList::updateSetImages(BindingSetHandle& set, u32 binding, std::span<ImageHandle> images, VkDescriptorType type, u32 offset) {
+		void CommandList::updateSetImages(BindingSetHandle& set, u32 binding, std::span<ImageHandle> images, u32 descriptorArrayOffset) {
 			for (auto& image : images) {
 				VkSampler sampler = VK_NULL_HANDLE;
-				switch (type) {
+				switch (set->description->layoutBindings.bindings[binding].descriptorType) {
 				case VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
 					// TODO REPLACE THIS WITH AN ACTUAL SAMPLER!
-					sampler = VK_NULL_HANDLE;		
+					sampler = VK_NULL_HANDLE;
 					break;
 				case VkDescriptorType::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
 					sampler = VK_NULL_HANDLE;
@@ -218,10 +218,10 @@ namespace daxa {
 					.sampler = sampler,
 					.imageView = image->view,
 					.imageLayout = image->layout,
-				});
+					});
 
 				// update the handles inside the set
-				u32 bindingSetIndex = set->bindingToHandleVectorIndex[binding];
+				u32 bindingSetIndex = set->description->bindingToHandleVectorIndex[binding];
 				set->handles[bindingSetIndex] = image;
 			}
 
@@ -230,7 +230,7 @@ namespace daxa {
 				.pNext = nullptr,
 				.dstSet = set->set,
 				.dstBinding = binding,
-				.dstArrayElement = offset,
+				.dstArrayElement = descriptorArrayOffset,
 				.descriptorCount = (u32)imageInfoBuffer.size(),
 				.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				.pImageInfo = imageInfoBuffer.data()
@@ -241,39 +241,11 @@ namespace daxa {
 			imageInfoBuffer.clear();
 		}
 
-		// shortcut call multiple descriptor update image:
-
-		void CommandList::updateSetCombinedImageSamplers(BindingSetHandle& set, u32 binding, std::span<ImageHandle> images, u32 offset = 0) {
-			updateSetImages(set, binding, images, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, offset);
+		void CommandList::updateSetImage(BindingSetHandle& set, u32 binding, ImageHandle image) {
+			updateSetImages(set, binding, { &image, 1 });
 		}
 
-		void CommandList::updateSetSampledImages(BindingSetHandle& set, u32 binding, std::span<ImageHandle> images, u32 offset = 0) {
-			updateSetImages(set, binding, images, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, offset);
-		}
-
-		void CommandList::updateSetStorageImages(BindingSetHandle& set, u32 binding, std::span<ImageHandle> images, u32 offset = 0) {
-			updateSetImages(set, binding, images, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, offset);
-		}
-
-		// shortcut call single descriptor update image:
-
-		void CommandList::updateSetImage(BindingSetHandle& set, u32 binding, ImageHandle image, VkDescriptorType type) {
-			updateSetImages(set, binding, { &image, 1 }, type);
-		}
-
-		void CommandList::updateSetCombinedImageSampler(BindingSetHandle& set, u32 binding, ImageHandle image) {
-			updateSetImages(set, binding, { &image, 1 }, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-		}
-
-		void CommandList::updateSetSampledImage(BindingSetHandle& set, u32 binding, ImageHandle image) {
-			updateSetImages(set, binding, { &image, 1 }, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
-		}
-
-		void CommandList::updateSetStorageImage(BindingSetHandle& set, u32 binding, ImageHandle image) {
-			updateSetImages(set, binding, { &image, 1 }, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-		}
-
-		void CommandList::updateSetBuffers(BindingSetHandle& set, u32 binding, std::span<BufferHandle> buffers, VkDescriptorType type, u32 offset = 0) {
+		void CommandList::updateSetBuffers(BindingSetHandle& set, u32 binding, std::span<BufferHandle> buffers, u32 offset) {
 			for (auto& buffer : buffers) {
 				bufferInfoBuffer.push_back(VkDescriptorBufferInfo{
 					.buffer = buffer->buffer,
@@ -282,7 +254,7 @@ namespace daxa {
 				});
 
 				// update the handles inside the set
-				u32 bindingSetIndex = set->bindingToHandleVectorIndex[binding];
+				u32 bindingSetIndex = set->description->bindingToHandleVectorIndex[binding];
 				set->handles[bindingSetIndex] = buffer;
 			}
 			
@@ -293,7 +265,7 @@ namespace daxa {
 				.dstBinding = binding,
 				.dstArrayElement = offset,
 				.descriptorCount = (u32)bufferInfoBuffer.size(),
-				.descriptorType = type,
+				.descriptorType = set->description->layoutBindings.bindings[binding].descriptorType,
 				.pBufferInfo = bufferInfoBuffer.data(),
 			};
 
@@ -302,44 +274,8 @@ namespace daxa {
 			bufferInfoBuffer.clear();
 		}
 
-		// shortcut call multiple descriptor update buffer:
-
-		void CommandList::updateSetUnifromBuffers(BindingSetHandle& set, u32 binding, std::span<BufferHandle> buffers, u32 offset = 0) {
-			updateSetBuffers(set, binding, buffers, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, offset);
-		}
-
-		void CommandList::updateSetStorageBuffers(BindingSetHandle& set, u32 binding, std::span<BufferHandle> buffers, u32 offset = 0) {
-			updateSetBuffers(set, binding, buffers, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, offset);
-		}
-
-		void CommandList::updateSetDynamicUnifromBuffers(BindingSetHandle& set, u32 binding, std::span<BufferHandle> buffers, u32 offset = 0) {
-			updateSetBuffers(set, binding, buffers, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, offset);
-		}
-
-		void CommandList::updateSetDynamicStorageBuffers(BindingSetHandle& set, u32 binding, std::span<BufferHandle> buffers, u32 offset = 0) {
-			updateSetBuffers(set, binding, buffers, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, offset);
-		}
-
-		// shortcut call single descriptor update buffer:
-
-		void CommandList::updateSetBuffer(BindingSetHandle& set, u32 binding, BufferHandle buffer, VkDescriptorType type) {
-			updateSetBuffers(set, binding, { &buffer, 1 }, type);
-		}
-
-		void CommandList::updateSetUnifromBuffer(BindingSetHandle& set, u32 binding, BufferHandle buffer) {
-			updateSetBuffers(set, binding, { &buffer, 1 }, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-		}
-
-		void CommandList::updateSetStorageBuffer(BindingSetHandle& set, u32 binding, BufferHandle buffer) {
-			updateSetBuffers(set, binding, { &buffer, 1 }, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-		}
-
-		void CommandList::updateSetDynamicUnifromBuffer(BindingSetHandle& set, u32 binding, BufferHandle buffer) {
-			updateSetBuffers(set, binding, { &buffer, 1 }, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
-		}
-
-		void CommandList::updateSetDynamicStorageBuffer(BindingSetHandle& set, u32 binding, BufferHandle buffer) {
-			updateSetBuffers(set, binding, { &buffer, 1 }, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC);
+		void CommandList::updateSetBuffer(BindingSetHandle& set, u32 binding, BufferHandle buffer) {
+			updateSetBuffers(set, binding, { &buffer, 1 });
 		}
 
 		void CommandList::bindSet(BindingSetHandle& set) {
