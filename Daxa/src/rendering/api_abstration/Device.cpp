@@ -100,7 +100,7 @@ namespace daxa {
 
 			auto ret = std::make_shared<Device>();
 			ret->device = device;
-			ret->descriptorLayoutCache = { device };
+			ret->bindingSetDescriptionCache.init(device);
 			ret->physicalDevice = physicalDevice.physical_device;
 			ret->graphicsQ = mainGraphicsQueue;
 			ret->graphicsQFamilyIndex = mainGraphicsQueueFamiltyIndex;
@@ -130,19 +130,8 @@ namespace daxa {
 			return RenderWindow{ device, physicalDevice, instance->instance, graphicsQ, sdlWindowHandle, width, height, presentMode };
 		}
 
-		BindingSetDescription Device::createBindingSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings) {
-			BindingSetDescription bindingSetDescription{};
-
-			std::vector<VkDescriptorSetLayoutBinding> bindingsVec;
-			for (auto binding : bindings) {
-				bindingsVec.push_back(binding);
-				bindingSetDescription.layoutBindings[bindingSetDescription.size++] = binding;
-				bindingSetDescription.descriptorCount += binding.descriptorCount;
-			}
-
-			bindingSetDescription.layout = descriptorLayoutCache->getLayout(bindingsVec);
-
-			return std::move(bindingSetDescription);
+		BindingSetDescription* Device::createBindingSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings) {
+			return bindingSetDescriptionCache.getSetDescription(bindings);
 		}
 
 		CommandList Device::getEmptyCommandList() {
@@ -293,7 +282,7 @@ namespace daxa {
 		}
 
 		GraphicsPipelineHandle Device::createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder) {
-			return pipelineBuilder.build(device, *descriptorLayoutCache);
+			return pipelineBuilder.build(device, bindingSetDescriptionCache);
 		}
 	}
 }

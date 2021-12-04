@@ -53,7 +53,7 @@ namespace daxa {
 
 			RenderWindow createRenderWindow(void* sdlWindowHandle, u32 width, u32 height, VkPresentModeKHR presentMode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR);
 
-			BindingSetDescription createBindingSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings);
+			BindingSetDescription* createBindingSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings);
 
 			/**
 			 * \return returns an empty CommandList.
@@ -150,7 +150,7 @@ namespace daxa {
 			std::vector<u64> submitSemaphoreWaitOnValueBuffer;
 			std::vector<u64> submitSemaphoreSignalValueBuffer;
 
-			std::optional<DescriptorSetLayoutCache> descriptorLayoutCache;
+			BindingSetDescriptionCache bindingSetDescriptionCache;
 			VkPhysicalDevice physicalDevice;
 			VkDevice device;
 			VmaAllocator allocator;

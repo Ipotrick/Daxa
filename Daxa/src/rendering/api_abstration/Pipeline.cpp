@@ -248,7 +248,7 @@ namespace daxa {
 			.pVertexAttributeDescriptions = nullptr,
 		};
 
-		GraphicsPipelineHandle GraphicsPipelineBuilder::build(VkDevice device, DescriptorSetLayoutCache& layoutCache) {
+		GraphicsPipelineHandle GraphicsPipelineBuilder::build(VkDevice device, BindingSetDescriptionCache& bindingSetCache) {
 			if (bVertexAtrributeBindingBuildingOpen) {
 				endVertexInputAttributeBinding();
 			}
@@ -264,7 +264,7 @@ namespace daxa {
 					for (auto& [index, binding] : bindings) {
 						tempBindings.push_back(binding);
 					}
-					descLayouts.push_back(layoutCache.getLayout(tempBindings));
+					descLayouts.push_back(bindingSetCache.getSetDescription(tempBindings)->layout);
 				}
 			}
 
