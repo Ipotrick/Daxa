@@ -171,7 +171,7 @@
     <ClInclude Include="src\rendering\api_abstration\TimelineSemaphore.hpp">
       <Filter>src\rendering\gpu</Filter>
     </ClInclude>
-    <ClInclude Include="src\rendering\api_abstration\DescriptorSet.hpp">
+    <ClInclude Include="src\rendering\api_abstration\BindingSet.hpp">
       <Filter>src\rendering\gpu</Filter>
     </ClInclude>
   </ItemGroup>
@@ -248,7 +248,7 @@
     <ClCompile Include="src\rendering\api_abstration\TimelineSemaphore.cpp">
       <Filter>src\rendering\gpu</Filter>
     </ClCompile>
-    <ClCompile Include="src\rendering\api_abstration\DescriptorSet.cpp">
+    <ClCompile Include="src\rendering\api_abstration\BindingSet.cpp">
       <Filter>src\rendering\gpu</Filter>
     </ClCompile>
   </ItemGroup>

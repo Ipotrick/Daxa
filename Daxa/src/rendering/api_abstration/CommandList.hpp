@@ -15,6 +15,7 @@
 #include "Buffer.hpp"
 #include "SwapchainImage.hpp"
 #include "Pipeline.hpp"
+#include "BindingSet.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -54,6 +55,43 @@ namespace daxa {
 
 			void copyBufferToBuffer(BufferHandle src, BufferHandle dst, std::span<VkBufferCopy> copyRegions);
 
+			// Binding set management:
+
+		private:
+			std::vector<VkDescriptorBufferInfo> bufferInfoBuffer;
+			std::vector<VkDescriptorImageInfo> imageInfoBuffer;
+		public:
+
+			void updateSetSamplers() { /* TODO */ }
+			void updateSetSampler() { /* TODO */ }
+
+			void updateSetImages(DescriptorSetHandle& set, u32 binding, std::span<ImageHandle> images, VkDescriptorType type, u32 descriptorArrayOffset = 0);
+			void updateSetCombinedImageSamplers(DescriptorSetHandle& set, u32 binding, std::span<ImageHandle> images, u32 descriptorArrayOffset = 0);
+			void updateSetSampledImages(DescriptorSetHandle& set, u32 binding, std::span<ImageHandle> images, u32 descriptorArrayOffset = 0);
+			void updateSetStorageImages(DescriptorSetHandle& set, u32 binding, std::span<ImageHandle> images, u32 descriptorArrayOffset = 0);
+
+			void updateSetImage(DescriptorSetHandle& set, u32 binding, ImageHandle image, VkDescriptorType type);
+			void updateSetCombinedImageSampler(DescriptorSetHandle& set, u32 binding, ImageHandle image);
+			void updateSetSampledImage(DescriptorSetHandle& set, u32 binding, ImageHandle image);
+			void updateSetStorageImage(DescriptorSetHandle& set, u32 binding, ImageHandle image);
+
+			void updateSetUniformTexelBuffers(DescriptorSetHandle& set, u32 binding) { /* TOODO */ }
+			void updateSetStorageTexelBuffers(DescriptorSetHandle& set, u32 binding) { /* TOODO */ }
+
+			void updateSetBuffers(DescriptorSetHandle& set, u32 binding, std::span<BufferHandle> buffers, VkDescriptorType type, u32 descriptorArrayOffset = 0);
+			void updateSetUnifromBuffers(DescriptorSetHandle& set, u32 binding, std::span<BufferHandle> buffers, u32 descriptorArrayOffset = 0);
+			void updateSetStorageBuffers(DescriptorSetHandle& set, u32 binding, std::span<BufferHandle> buffers, u32 descriptorArrayOffset = 0);
+			void updateSetDynamicUnifromBuffers(DescriptorSetHandle& set, u32 binding, std::span<BufferHandle> buffers, u32 descriptorArrayOffset = 0);
+			void updateSetDynamicStorageBuffers(DescriptorSetHandle& set, u32 binding, std::span<BufferHandle> buffers, u32 descriptorArrayOffset = 0);
+
+			void updateSetBuffer(DescriptorSetHandle& set, u32 binding, BufferHandle buffer, VkDescriptorType type);
+			void updateSetUnifromBuffer(DescriptorSetHandle& set, u32 binding, BufferHandle buffer);
+			void updateSetStorageBuffer(DescriptorSetHandle& set, u32 binding, BufferHandle buffer);
+			void updateSetDynamicUnifromBuffer(DescriptorSetHandle& set, u32 binding, BufferHandle buffer);
+			void updateSetDynamicStorageBuffer(DescriptorSetHandle& set, u32 binding, BufferHandle buffer);
+
+			void bindSet(DescriptorSetHandle& set);
+
 			// Rendering:
 
 			void beginRendering(BeginRenderingInfo ri);
@@ -77,6 +115,13 @@ namespace daxa {
 			CommandList();
 
 			void reset();
+
+			struct BoundPipeline {
+				VkPipelineBindPoint bindPoint;
+				VkPipelineLayout layout;
+			};
+
+			std::optional<BoundPipeline> boundPipeline;
 
 			void (*vkCmdBeginRenderingKHR)(VkCommandBuffer, const VkRenderingInfoKHR*);
 			void (*vkCmdEndRenderingKHR)(VkCommandBuffer);
