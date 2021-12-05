@@ -5,6 +5,11 @@
 class MyUser : public daxa::User {
     std::unique_ptr<daxa::Renderer> defaultRenderer;
 public:
+    virtual ~MyUser() override = default;
+    MyUser() = default;
+    MyUser(MyUser&&) noexcept = default;
+    MyUser& operator=(MyUser&&) noexcept = default;
+
     virtual void init(daxa::AppState* appstate) override {
         defaultRenderer = std::make_unique<daxa::Renderer>(appstate->window);
         defaultRenderer->init();

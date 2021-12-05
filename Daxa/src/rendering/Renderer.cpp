@@ -77,6 +77,12 @@ namespace daxa {
 	}
 	
 	void Renderer::draw(float deltaTime) {
+		if (window->getSize()[0] != renderWindow.getSize().width || window->getSize()[1] != renderWindow.getSize().height) {
+			device->waitIdle();
+			renderWindow.resize(VkExtent2D{ .width = window->getSize()[0], .height = window->getSize()[1] });
+		}
+		swapchainImage = renderWindow.aquireNextImage();
+
 		auto cmdList = device->getEmptyCommandList();
 
 		cmdList.begin();
@@ -142,12 +148,6 @@ namespace daxa {
 
 		std::array waitOnSemasPresent = { currentFrame->semaphores["render"] };
 		renderWindow.present(std::move(swapchainImage), { &currentFrame->semaphores["render"], 1 });
-
-		if (window->getSize()[0] != renderWindow.getSize().width || window->getSize()[1] != renderWindow.getSize().height) {
-			device->waitIdle();
-			renderWindow.resize(VkExtent2D{ .width = window->getSize()[0], .height = window->getSize()[1] });
-		}
-		swapchainImage = renderWindow.aquireNextImage();
 
 		nextFrameContext();
 
