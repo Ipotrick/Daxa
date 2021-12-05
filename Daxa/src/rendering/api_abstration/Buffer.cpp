@@ -1,8 +1,6 @@
 #include "Buffer.hpp"
 #include "common.hpp"
 
-#include <assert.h>
-
 namespace daxa {
 	namespace gpu {
 
@@ -52,9 +50,8 @@ namespace daxa {
 		{ }
 
 		void uploadToStagingBuffer(std::span<u8> hostMemorySrc, BufferHandle bufferDst, size_t offset) {
-			// assert(bufferDst->getVkBufferUsage() & VMA_MEMORY_USAGE_CPU_TO_GPU, "ERROR: staging buffer must be of memory type: VMA_MEMORY_USAGE_CPU_TO_GPU!");
-			// assert(bufferDst->getSize() + offset >= hostMemorySrc.size(), "ERROR: staging buffer must be at last or greater than (size of memory that is to be uploaded + offset)!");
-			//assert(bool(bufferDst->bInUseOnGPU()));
+			DAXA_ASSERT_M(bufferDst->getVmaMemoryUsage() & VMA_MEMORY_USAGE_CPU_TO_GPU, "staging buffer must be of memory type: VMA_MEMORY_USAGE_CPU_TO_GPU!");
+			DAXA_ASSERT_M(bufferDst->getSize() + offset >= hostMemorySrc.size(), "staging buffer must be at last or greater than (size of memory that is to be uploaded + offset)!");
 
 			void* bufferMemPtr{ nullptr };
 			vmaMapMemory(bufferDst->allocator, bufferDst->allocation, &bufferMemPtr);

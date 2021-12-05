@@ -76,7 +76,7 @@ namespace daxa {
 		}
 
 		GraphicsPipelineBuilder& GraphicsPipelineBuilder::addVertexInputAttributeSpacer(u32 spacing) {
-			assert(bVertexAtrributeBindingBuildingOpen);
+			DAXA_ASSERT_M(bVertexAtrributeBindingBuildingOpen, "can not record attributes with no vertex binding");
 			currentVertexAttributeBindingOffset += spacing;
 			return *this;
 		}
@@ -94,7 +94,7 @@ namespace daxa {
 		}
 
 		GraphicsPipelineBuilder& GraphicsPipelineBuilder::endVertexInputAttributeBinding() {
-			assert(bVertexAtrributeBindingBuildingOpen);
+			DAXA_ASSERT_M(bVertexAtrributeBindingBuildingOpen, "can not end vertex binding if there is no binding beeing recorded");
 			bVertexAtrributeBindingBuildingOpen = false;
 
 			vertexInputBindingDescriptions.push_back({
@@ -352,7 +352,7 @@ namespace daxa {
 			};
 
 			auto err = vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline);
-			assert(err ==VK_SUCCESS);
+			DAXA_ASSERT_M(err == VK_SUCCESS, "could not create graphics pipeline");
 
 			GraphicsPipelineHandle pipelineHandle;
 			pipelineHandle.pipeline = std::make_shared<GraphicsPipeline>(std::move(ret));

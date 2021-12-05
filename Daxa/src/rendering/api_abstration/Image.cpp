@@ -46,7 +46,7 @@ namespace daxa {
 			
 
 			auto err = vmaCreateImage(allocator, (VkImageCreateInfo*)&ici, &aci, (VkImage*)&ret.image, &ret.allocation, nullptr);
-			assert(err == VK_SUCCESS);
+			DAXA_ASSERT_M(err == VK_SUCCESS, "could not create image");
 
 			VkImageViewCreateInfo ivci{
 				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
