@@ -18,19 +18,22 @@ namespace daxa {
 	class User {
 	public:
 		virtual ~User() = default;
-		virtual void init(AppState* appstate)	= 0;
-		virtual void update(AppState* appstate)	= 0;
-		virtual void deinit(AppState* appstate)	= 0;
+		virtual void init(std::shared_ptr<AppState> appstate)	= 0;
+		virtual void update(std::shared_ptr<AppState> appstate)	= 0;
+		virtual void deinit(std::shared_ptr<AppState> appstate)	= 0;
 	};
 
 	class Application {
 	public:
 		Application(u32 winWidth, u32 winHeight, std::string const& winName, std::unique_ptr<User> user);
+
 		void run();
 	private:
+		void update();
+
 		// the reason behind the exessive use of shared ptr here is for later multithreadding use.
 		// the lifetimes in multithreadding can get very complex so shared_ptrs are appropriate for and ONLY FOR these "low frequency" types wich are accessed and copied rarely.
-		std::unique_ptr<AppState> appstate;
+		std::shared_ptr<AppState> appstate;
 		std::shared_ptr<Window> window;
 		std::unique_ptr<User> user;
 	};

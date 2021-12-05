@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #define DAXA_DEFINE_TRIVIAL_MOVE(CLASS_NAME) \
 CLASS_NAME::CLASS_NAME(CLASS_NAME&& rhs) noexcept  {\
 	std::memcpy(this, &rhs, sizeof(CLASS_NAME));\
