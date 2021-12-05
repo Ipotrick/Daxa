@@ -8,7 +8,7 @@ namespace daxa {
 	Renderer::Renderer(std::shared_ptr<Window> win)
 		: window{ std::move(win) }
 		, device{ gpu::Device::createNewDevice() }
-		, renderWindow{ device->createRenderWindow(window->getWindowHandleSDL(), window->getSize()[0], window->getSize()[1]) }
+		, renderWindow{ device->createRenderWindow(window->getWindowHandleSDL(), window->getSize()[0], window->getSize()[1], VK_PRESENT_MODE_IMMEDIATE_KHR) }
 		, stagingBufferPool{ &*device, (size_t)100'000, (VkBufferUsageFlags)VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VmaMemoryUsage::VMA_MEMORY_USAGE_CPU_TO_GPU }
 	{ 
 		for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
@@ -57,9 +57,9 @@ namespace daxa {
 		pipelineBuilder.addColorAttachment(renderWindow.getVkFormat());
 		testPipeline = device->createGraphicsPipeline(pipelineBuilder);
 
-		auto setAllocator = device->createBindingSetAllocator(testPipeline->getSetDescription(/*set:*/0));
-
-		auto set = setAllocator.getSet();
+		//auto setAllocator = device->createBindingSetAllocator(testPipeline->getSetDescription(/*set:*/0));
+		//
+		//auto set = setAllocator.getSet();
 
 		// set will automaticly be recycled into the allocator
 		// allocator dies and kills all its sets, it also checks if all sets are released as a debug messure
