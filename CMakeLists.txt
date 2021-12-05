@@ -43,3 +43,5 @@ target_include_directories(Daxa PUBLIC "Daxa/include" "Daxa/dependencies")
 
 add_executable(DaxaTriangle "DaxaTriangle/DaxaTriangle.cpp")
 target_link_libraries(DaxaTriangle PUBLIC Daxa)
+
+add_subdirectory(DaxaMinecraft)
