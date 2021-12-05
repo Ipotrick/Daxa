@@ -17,7 +17,8 @@ namespace daxa {
 
 	class User {
 	public:
-		virtual void init(AppState* appstate)		= 0;
+		virtual ~User() = default;
+		virtual void init(AppState* appstate)	= 0;
 		virtual void update(AppState* appstate)	= 0;
 		virtual void deinit(AppState* appstate)	= 0;
 	};
