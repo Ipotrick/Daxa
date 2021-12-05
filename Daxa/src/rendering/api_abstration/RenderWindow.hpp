@@ -13,6 +13,7 @@
 
 #include "Image.hpp"
 #include "SwapchainImage.hpp"
+#include "Signal.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -31,9 +32,9 @@ namespace daxa {
 
 			SwapchainImage aquireNextImage();
 
-			void present(SwapchainImage&& image, std::span<VkSemaphore> waitOn);
+			void present(SwapchainImage&& image, SignalHandle waitOn);
 
-			SwapchainImage presentAquireNextImage(SwapchainImage&& image, std::span<VkSemaphore> waitOn);
+			SwapchainImage presentAquireNextImage(SwapchainImage&& image, SignalHandle waitOn);
 
 			VkExtent2D getSize() const { return size; }
 

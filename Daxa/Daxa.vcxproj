@@ -49,6 +49,7 @@
     <ClInclude Include="src\rendering\api_abstration\Pipeline.hpp" />
     <ClInclude Include="src\rendering\api_abstration\RenderWindow.hpp" />
     <ClInclude Include="src\rendering\api_abstration\ShaderModule.hpp" />
+    <ClInclude Include="src\rendering\api_abstration\Signal.hpp" />
     <ClInclude Include="src\rendering\api_abstration\SwapchainImage.hpp" />
     <ClInclude Include="src\rendering\api_abstration\TimelineSemaphore.hpp" />
     <ClInclude Include="src\rendering\Camera.hpp" />
@@ -84,6 +85,7 @@
     <ClCompile Include="src\rendering\api_abstration\Pipeline.cpp" />
     <ClCompile Include="src\rendering\api_abstration\RenderWindow.cpp" />
     <ClCompile Include="src\rendering\api_abstration\ShaderModule.cpp" />
+    <ClCompile Include="src\rendering\api_abstration\Signal.cpp" />
     <ClCompile Include="src\rendering\api_abstration\TimelineSemaphore.cpp" />
     <ClCompile Include="src\rendering\CoordSystem2d.cpp" />
     <ClCompile Include="src\rendering\Renderer.cpp" />

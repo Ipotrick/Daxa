@@ -19,6 +19,7 @@
 #include "SwapchainImage.hpp"
 #include "TimelineSemaphore.hpp"
 #include "RenderWindow.hpp"
+#include "Signal.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -49,6 +50,8 @@ namespace daxa {
 			BufferHandle createBuffer(BufferCreateInfo ci);
 
 			TimelineSemaphore createTimelineSemaphore();
+
+			SignalHandle createSignal();
 
 			RenderWindow createRenderWindow(void* sdlWindowHandle, u32 width, u32 height, VkPresentModeKHR presentMode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR);
 
@@ -89,8 +92,8 @@ namespace daxa {
 				std::vector<CommandList>						commandLists;		// TODO REPLACE THIS VECTOR WITH HEAPLESS VERSION
 				std::span<std::tuple<TimelineSemaphore*, u64>>	waitOnTimelines;
 				std::span<std::tuple<TimelineSemaphore*, u64>>	signalTimelines;
-				std::span<VkSemaphore>							waitOnSemaphores;
-				std::span<VkSemaphore>							signalSemaphores;
+				std::span<SignalHandle>							waitOnSignals;
+				std::span<SignalHandle>							signalOnCompletion;
 			};
 			/**
 			 * Submit CommandLists to be executed on the GPU.
@@ -102,13 +105,6 @@ namespace daxa {
 			 * \return a fence handle that can be used to check if the execution is complete or waited upon completion.
 			 */
 			void submit(SubmitInfo&& submitInfo);
-
-			/**
-			 * Orders the gpu to present the specified image to the window.
-			 * \param sImage the swapchain image to present to.
-			 * \param waitOn is an optional list of Semaphores that are waited on before the present is executed on the gpu.
-			*/
-			void present(SwapchainImage const& sImage, std::span<VkSemaphore> waitOn);
 
 			/**
 			 * The device keeps track of all objects that are used in submits and keeps them alive.
@@ -132,7 +128,6 @@ namespace daxa {
 
 			std::vector<TimelineSemaphore> unusedTimelines;
 			std::vector<CommandList> unusedCommandLists;
-			std::vector<VkSemaphore> unusedSemaphores;
 
 			struct PendingSubmit {
 				std::vector<CommandList> cmdLists;

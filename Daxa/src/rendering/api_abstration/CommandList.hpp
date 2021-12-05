@@ -75,6 +75,8 @@ namespace daxa {
 
 			// Rendering:
 
+			void bindVertexBuffer(u32 binding, BufferHandle buffer, size_t bufferOffset = 0);
+
 			template<typename T>
 			void pushConstant(VkShaderStageFlagBits shaderStage, T* constant, size_t offset = 0) {
 				vkCmdPushConstants(cmd, boundPipeline.value().layout, shaderStage, offset, sizeof(T), constant);
