@@ -7,17 +7,15 @@ using namespace std::chrono;
 namespace daxa {
 
 	Application::Application(u32 winWidth, u32 winHeight, std::string const& winName, std::unique_ptr<User> user) {
-		this->window = std::make_shared<Window>(winName, std::array{ winWidth, winHeight });
-		this->renderer = std::make_shared<Renderer>( this->window );
+		this->window = std::make_unique<Window>(winName, std::array{ winWidth, winHeight });
 		this->user = std::move(user);
-		this->appstate = std::make_shared<AppState>();
-		renderer->init();
+		this->appstate = std::make_unique<AppState>();
 	}
 
 	void Application::run() {
-		renderer->init();
+		appstate->window = window;
 		if (user) {
-			user->init(this->appstate);
+			user->init(&*this->appstate);
 		}
 
 		auto lastFrameStartTimePoint = system_clock::now();
@@ -26,20 +24,15 @@ namespace daxa {
 			this->appstate->deltaTimeLastFrame = duration_cast<microseconds>(now - lastFrameStartTimePoint);
 			lastFrameStartTimePoint = now;
 
-			std::cout << "delta time: " << std::setw(8) << appstate->getDeltaTimeSeconds() * 1000.0f << "ms, fps: " << 1.0f / (appstate->getDeltaTimeSeconds()) << std::endl;
-
-			if (window->update(0.01f)) break;
+			if (window->update(appstate->getDeltaTimeSeconds())) break;
 
 			if (user) {
-				user->update(this->appstate);
+				user->update(&*this->appstate);
 			}
-
-			renderer->draw(appstate->getDeltaTimeSeconds());
 		}
 
 		if (user) {
-			user->deinit(this->appstate);
+			user->deinit(&*this->appstate);
 		}
-		renderer->deinit();
 	}
 }
