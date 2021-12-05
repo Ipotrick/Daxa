@@ -3,6 +3,8 @@
     "version": "0.1.0",
     "dependencies": [
         "glslang",
+        "stb",
+        "glm",
         {
             "name": "sdl2",
             "features": ["vulkan"]

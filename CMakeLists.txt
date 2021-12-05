@@ -20,7 +20,6 @@ add_library(Daxa STATIC
     "Daxa/src/rendering/api_abstration/Buffer.cpp"
     "Daxa/src/rendering/api_abstration/CommandList.cpp"
     "Daxa/src/rendering/api_abstration/BindingSet.cpp"
-    "Daxa/src/rendering/api_abstration/DescriptorSetLayoutCache.cpp"
     "Daxa/src/rendering/api_abstration/Device.cpp"
     "Daxa/src/rendering/api_abstration/Image.cpp"
     "Daxa/src/rendering/api_abstration/Pipeline.cpp"
