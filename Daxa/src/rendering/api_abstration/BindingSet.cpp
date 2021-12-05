@@ -41,13 +41,13 @@ namespace daxa {
 			, setDescription{ setDescription }
 			, setsPerPool{ setsPerPool }
 		{
-			assert(setDescription);
+			DAXA_ASSERT_M(setDescription, "setDescription was nullptr");
 			initPoolSizes();
 		}
 
 		BindingSetAllocator::~BindingSetAllocator() {
 			for (auto& pool : pools) {
-				assert(pool->allocatedSets == pool->zombies.size());	// assert that all given out set handles have died
+				DAXA_ASSERT_M(pool->allocatedSets == pool->zombies.size(), "at the time of the descruction of a BindingSetAllocator, there were still living bindingsets left");
 				vkResetDescriptorPool(device, pool->pool, 0 /*TODO COULD BE WRONG*/);
 				vkDestroyDescriptorPool(device, pool->pool, nullptr);
 			}

@@ -30,7 +30,7 @@ namespace daxa {
 
 			BindingSetDescription const* getSetDescription(u32 set) const { 
 				auto setDescr = bindingSetDescriptions.at(set);
-				assert(setDescr);
+				DAXA_ASSERT_M(setDescr, "tried querring non existant binding set description from pipeline");
 				return setDescr;
 			}
 

@@ -1,8 +1,6 @@
 #include "CommandList.hpp"
 #include "common.hpp"
 
-#include <assert.h>
-
 namespace daxa {
 	namespace gpu {
 
@@ -17,8 +15,8 @@ namespace daxa {
 
 		CommandList::~CommandList() {
 			if (device) {
-				assert(operationsInProgress == 0);
-				assert(empty);
+				DAXA_ASSERT_M(operationsInProgress == 0, "a command list can not be descroyed when there are still commands recorded");
+				DAXA_ASSERT_M(empty, "a command list can not be destroyed when not empty");
 				vkFreeCommandBuffers(device, cmdPool, 1, &cmd);
 				vkDestroyCommandPool(device, cmdPool, nullptr);
 				printf("command list complete destruction!\n");
@@ -122,6 +120,7 @@ namespace daxa {
 
 			operationsInProgress -= 1;
 			this->vkCmdEndRenderingKHR(cmd);
+			boundPipeline = std::nullopt;
 		}
 
 		void CommandList::bindPipeline(GraphicsPipelineHandle graphicsPipeline) {
@@ -135,7 +134,7 @@ namespace daxa {
 		}
 
 		void CommandList::reset() {
-			assert(operationsInProgress == 0);
+			DAXA_ASSERT_M(operationsInProgress == 0, "can not reset command list with recordings in progress");
 			empty = true;
 			vkResetCommandPool(device, cmdPool, VkCommandPoolResetFlagBits::VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
 			usedBuffers.clear();
@@ -194,11 +193,11 @@ namespace daxa {
 		}
 
 		void CommandList::copyBufferToBuffer(BufferHandle src, BufferHandle dst, std::span<VkBufferCopy> copyRegions) {
-			// assert(copyRegions.size() > 0, "ERROR: tried copying 0 regions from buffer to buffer, this is a bug!");
-			// for (int i = 0; i < copyRegions.size(); i++) {
-			// 	assert(src->getSize() >= copyRegions[i].size + copyRegions[i].srcOffset, "ERROR: src buffer is smaller than the region that shouly be copied!");
-			// 	assert(dst->getSize() >= copyRegions[i].size + copyRegions[i].dstOffset, "ERROR: dst buffer is smaller than the region that shouly be copied!");
-			// }
+			DAXA_ASSERT_M(copyRegions.size() > 0, "ERROR: tried copying 0 regions from buffer to buffer, this is a bug!");
+			for (int i = 0; i < copyRegions.size(); i++) {
+				DAXA_ASSERT_M(src->getSize() >= copyRegions[i].size + copyRegions[i].srcOffset, "ERROR: src buffer is smaller than the region that shouly be copied!");
+				DAXA_ASSERT_M(dst->getSize() >= copyRegions[i].size + copyRegions[i].dstOffset, "ERROR: dst buffer is smaller than the region that shouly be copied!");
+			}
 			vkCmdCopyBuffer(cmd, src->getVkBuffer(), dst->getVkBuffer(), copyRegions.size(), copyRegions.data());
 		}
 
@@ -217,7 +216,7 @@ namespace daxa {
 					sampler = VK_NULL_HANDLE;
 					break;
 				default:
-					assert(false);
+					DAXA_ASSERT_M(false, "binding set binding mismatch");
 				}
 
 				imageInfoBuffer.push_back(VkDescriptorImageInfo{
@@ -286,7 +285,7 @@ namespace daxa {
 
 		void CommandList::bindSet(BindingSetHandle& set) {
 			// TODO: make the bind point dependant on what type of pipeline is bound
-			assert(boundPipeline.has_value());
+			DAXA_ASSERT_M(boundPipeline.has_value(), "can not bind descriptor sets if there is no pipeline bound");
 			vkCmdBindDescriptorSets(cmd, boundPipeline->bindPoint, boundPipeline->layout, 0, 1, &set->set, 0, nullptr);
 		}
 	}

@@ -106,8 +106,8 @@ namespace daxa {
 			}
 
 			BindingSetDescription const* getSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings) {
-				assert(device);
-				assert(bindings.size() < MAX_BINDINGS_PER_SET);
+				DAXA_ASSERT_M(device, "BindingSetDescriptionCache was not initialized");
+				DAXA_ASSERT_M(bindings.size() < MAX_BINDINGS_PER_SET, "a binding set can only have up to 16 bindings");
 				BindingsArray bindingArray = {};
 				bindingArray.size = bindings.size();
 				for (int i = 0; i < bindings.size(); i++) {
@@ -135,7 +135,7 @@ namespace daxa {
 
 				size_t nextHandleVectorIndex = 0;
 				for (int i = 0; i < bindingArray.size; i++) {
-					assert(bindingArray.bindings[i].binding < MAX_BINDINGS_PER_SET);
+					DAXA_ASSERT_M(bindingArray.bindings[i].binding < MAX_BINDINGS_PER_SET, "all bindings of a binding set must be smaller than 16");
 					description.bindingToHandleVectorIndex[bindingArray.bindings[i].binding] = nextHandleVectorIndex;
 					nextHandleVectorIndex += bindingArray.bindings[i].descriptorCount;
 				}
