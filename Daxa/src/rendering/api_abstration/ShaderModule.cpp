@@ -3,9 +3,7 @@
 #include <fstream>
 #include <iostream>
 
-#define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
-#include <vulkan/vulkan.hpp>
-#include "../dependencies/vulkanhelper.hpp"
+#include <vulkan/vulkan.h>
 
 #include <glslang/Public/ShaderLang.h>
 #include <glslang/SPIRV/GlslangToSpv.h>
