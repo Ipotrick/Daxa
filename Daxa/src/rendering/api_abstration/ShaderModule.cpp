@@ -8,7 +8,7 @@
 #include "../dependencies/vulkanhelper.hpp"
 
 #include <glslang/Public/ShaderLang.h>
-#include <SPIRV/GlslangToSpv.h>
+#include <glslang/SPIRV/GlslangToSpv.h>
 
 #include "common.hpp"
 

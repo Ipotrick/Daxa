@@ -101,10 +101,10 @@ namespace daxa {
 	{
 		const Vec2 halfsize = size * 0.5f;
 
-		const Vec2 point1 = rotate(Vec2(halfsize.x, halfsize.y), rotaVec);
-		const Vec2 point2 = rotate(Vec2(halfsize.x, -halfsize.y), rotaVec);
-		const Vec2 point3 = rotate(Vec2(-halfsize.x, halfsize.y), rotaVec);
-		const Vec2 point4 = rotate(Vec2(-halfsize.x, -halfsize.y), rotaVec);
+		const Vec2 point1 = rotate(Vec2{halfsize.x, halfsize.y}, rotaVec);
+		const Vec2 point2 = rotate(Vec2{halfsize.x, -halfsize.y}, rotaVec);
+		const Vec2 point3 = rotate(Vec2{-halfsize.x, halfsize.y}, rotaVec);
+		const Vec2 point4 = rotate(Vec2{-halfsize.x, -halfsize.y}, rotaVec);
 
 		const Vec2 maxPos = max(max(point1, point2), max(point3, point4));
 		const Vec2 minPos = min(min(point1, point2), min(point3, point4));

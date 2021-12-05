@@ -1,0 +1,12 @@
+{
+    "name": "vulkan-playground",
+    "version": "0.1.0",
+    "dependencies": [
+        "glslang",
+        {
+            "name": "sdl2",
+            "features": ["vulkan"]
+        },
+        "vulkan"
+    ]
+}
