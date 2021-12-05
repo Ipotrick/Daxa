@@ -127,6 +127,10 @@ namespace daxa {
 			return TimelineSemaphore{ device };
 		}
 
+		SignalHandle Device::createSignal() {
+			return SignalHandle{ std::make_shared<Signal>(Signal{device}) };
+		}
+
 		RenderWindow Device::createRenderWindow(void* sdlWindowHandle, u32 width, u32 height, VkPresentModeKHR presentMode) {
 			return RenderWindow{ device, physicalDevice, instance->instance, graphicsQ, sdlWindowHandle, width, height, presentMode };
 		}
@@ -151,16 +155,16 @@ namespace daxa {
 				this->submitSemaphoreWaitOnBuffer.push_back(timelineSema->getVkSemaphore());
 				this->submitSemaphoreWaitOnValueBuffer.push_back(waitValue);
 			}
-			for (auto binarySemaphore : si.waitOnSemaphores) {
-				this->submitSemaphoreWaitOnBuffer.push_back(binarySemaphore);
+			for (auto signal : si.waitOnSignals) {
+				this->submitSemaphoreWaitOnBuffer.push_back(signal->getVkSemaphore());
 				this->submitSemaphoreWaitOnValueBuffer.push_back(0);
 			}
 			for (auto [timelineSema, signalValue] : si.signalTimelines) {
 				this->submitSemaphoreSignalBuffer.push_back(timelineSema->getVkSemaphore());
 				this->submitSemaphoreSignalValueBuffer.push_back(signalValue);
 			}
-			for (auto binarySema : si.signalSemaphores) {
-				this->submitSemaphoreSignalBuffer.push_back(binarySema);
+			for (auto signal : si.signalOnCompletion) {
+				this->submitSemaphoreSignalBuffer.push_back(signal->getVkSemaphore());
 				this->submitSemaphoreSignalValueBuffer.push_back(0);
 			}
 

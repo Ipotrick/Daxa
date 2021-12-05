@@ -41,6 +41,10 @@ namespace daxa {
 			vkEndCommandBuffer(cmd);
 		}
 
+		void CommandList::bindVertexBuffer(u32 binding, BufferHandle buffer, size_t bufferOffset) {
+			vkCmdBindVertexBuffers(cmd, binding, 1, &buffer->buffer, &bufferOffset);
+		}
+
 		void CommandList::beginRendering(BeginRenderingInfo ri) {
 			operationsInProgress += 1;
 			for (int i = 0; i < ri.colorAttachments.size(); i++) {

@@ -12,23 +12,19 @@ namespace daxa {
 		, stagingBufferPool{ &*device, (size_t)100'000, (VkBufferUsageFlags)VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VmaMemoryUsage::VMA_MEMORY_USAGE_CPU_TO_GPU }
 	{ 
 		for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
-			this->frameResc.push_back(PerFrameRessources{ 
-				.timeline = device->createTimelineSemaphore()
+			this->frameResc.push_back(PerFrameRessources{
+				.renderingFinishedSignal = device->createSignal(),
+				.timeline = device->createTimelineSemaphore(),
 			});
 		}
+		
 		currentFrame = &frameResc.front();
 		swapchainImage = renderWindow.aquireNextImage();
 	}
 
 	Renderer::~Renderer() {
 		device->waitIdle();
-		for (auto& frame : frameResc) {
-			for (auto& [name, sema] : frame.semaphores) {
-				vkDestroySemaphore(device->getVkDevice(), sema, nullptr);
-			}
-		}
 		frameResc.clear();
-		persResc.reset();
 	}
 
 	void Renderer::init() {
@@ -37,7 +33,7 @@ namespace daxa {
 				.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
 				.pNext = nullptr,
 			}; 
-			vkCreateSemaphore(device->getVkDevice(), &semaphoreCreateInfo, nullptr, &frameResc[i].semaphores["render"]);
+			frameResc[i].renderingFinishedSignal = device->createSignal();
 		}
 
 		gpu::ShaderModuleHandle vertexShader = device->tryCreateShderModuleFromFile(
@@ -54,18 +50,26 @@ namespace daxa {
 		gpu::GraphicsPipelineBuilder pipelineBuilder;
 		pipelineBuilder.addShaderStage(vertexShader);
 		pipelineBuilder.addShaderStage(fragmenstShader);
-		//VkPipelineColorBlendAttachmentState blending{
-		//	.blendEnable = VK_TRUE,
-		//};
+		pipelineBuilder.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX);	// add vertex attributes:
+		pipelineBuilder.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT);			// positions
+		pipelineBuilder.addVertexInputAttribute(VK_FORMAT_R32G32B32A32_SFLOAT);			// colors
 		pipelineBuilder.addColorAttachment(renderWindow.getVkFormat());
-		testPipeline = device->createGraphicsPipeline(pipelineBuilder);
+		pipelines["triangle"] = device->createGraphicsPipeline(pipelineBuilder);
 
-		//auto setAllocator = device->createBindingSetAllocator(testPipeline->getSetDescription(/*set:*/0));
-		//
-		//auto set = setAllocator.getSet();
+		constexpr size_t vertexBufferSize = sizeof(float) * 3 * 3 /* positions */ + sizeof(float) * 4 * 3 /* colors */;
+		gpu::BufferCreateInfo bufferCI{
+			.size = vertexBufferSize,
+			.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+			.memoryUsage = VMA_MEMORY_USAGE_CPU_TO_GPU,
+		};
+		buffers["vertex"] = device->createBuffer(bufferCI);
+		std::array<float, vertexBufferSize> vertecies = {
+			 1.f, 1.f, 0.0f,		1.f, 0.f, 0.f, 1.f,
+			-1.f, 1.f, 0.0f,		0.f, 1.f, 0.f, 1.f,
+			 0.f,-1.f, 0.0f,		0.f, 0.f, 1.f, 1.f,
+		};
 
-		// set will automaticly be recycled into the allocator
-		// allocator dies and kills all its sets, it also checks if all sets are released as a debug messure
+		gpu::uploadToStagingBuffer({(u8*)vertecies.data(), vertecies.size()}, buffers["vertex"], 0);
 	}
 
 	void Renderer::nextFrameContext() {
@@ -100,7 +104,6 @@ namespace daxa {
 		std::array colorAttachments{
 			gpu::RenderAttachmentInfo{
 				.image = swapchainImage.getImageHandle(),
-				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 				.clearValue = clear,
 			}
 		};
@@ -108,7 +111,7 @@ namespace daxa {
 			.colorAttachments = colorAttachments,
 		});
 
-		cmdList.bindPipeline(testPipeline);
+		cmdList.bindPipeline(pipelines["triangle"]);
 
 		VkViewport viewport{
 			.x = 0,
@@ -129,6 +132,8 @@ namespace daxa {
 		float triangleAlpha = (std::sin(totalElapsedTime) + 1.0f) * 0.5f;
 		cmdList.pushConstant(VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT, &triangleAlpha);
 
+		cmdList.bindVertexBuffer(0, buffers["vertex"]);
+
 		cmdList.draw(3, 1, 0, 0);
 
 		cmdList.endRendering(); 
@@ -137,21 +142,23 @@ namespace daxa {
 
 		cmdList.end();
 
-		std::array signalTimelines = { std::tuple{ &currentFrame->timeline, ++currentFrame->finishCounter } };
-		std::vector<gpu::CommandList> commandLists;
-		commandLists.push_back(std::move(cmdList));
-		device->submit({
-			.commandLists = std::move(commandLists),
-			.signalTimelines = signalTimelines,
-			.signalSemaphores = { &currentFrame->semaphores["render"], 1 },
-		});
+		// "++currentFrame->finishCounter " is the value that will be set to the timeline when the execution is finished, basicly incrementing it 
+		// the timeline is the counter we use to see if the frame is finished executing on the gpu later.
+		std::array signalTimelines = { std::tuple{ &currentFrame->timeline, ++currentFrame->finishCounter }};
 
-		std::array waitOnSemasPresent = { currentFrame->semaphores["render"] };
-		renderWindow.present(std::move(swapchainImage), { &currentFrame->semaphores["render"], 1 });
+		gpu::Device::SubmitInfo submitInfo;
+		submitInfo.commandLists.push_back(std::move(cmdList));
+		submitInfo.signalOnCompletion = { &currentFrame->renderingFinishedSignal, 1 };
+		submitInfo.signalTimelines = signalTimelines;
+		device->submit(std::move(submitInfo));
 
-		nextFrameContext();
+		renderWindow.present(std::move(swapchainImage), currentFrame->renderingFinishedSignal);
 
-		currentFrame->timeline.wait(currentFrame->finishCounter);
+		nextFrameContext();											// we get the next frame context
+		// we wait on the gpu to finish executing the frame
+		// as we have two frame contexts we are actually waiting on the previous frame to complete.
+		// if you only have one frame in flight you can just wait on the frame to finish here too.
+		currentFrame->timeline.wait(currentFrame->finishCounter);	
 	}
 
 	void Renderer::deinit() {

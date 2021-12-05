@@ -168,6 +168,9 @@
     <ClInclude Include="src\rendering\Camera2d.hpp">
       <Filter>src\rendering</Filter>
     </ClInclude>
+    <ClInclude Include="src\rendering\api_abstration\Signal.hpp">
+      <Filter>src\rendering\gpu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\stb_image.cpp">
@@ -240,6 +243,9 @@
       <Filter>src\rendering\gpu</Filter>
     </ClCompile>
     <ClCompile Include="src\rendering\api_abstration\BindingSet.cpp">
+      <Filter>src\rendering\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\rendering\api_abstration\Signal.cpp">
       <Filter>src\rendering\gpu</Filter>
     </ClCompile>
   </ItemGroup>
