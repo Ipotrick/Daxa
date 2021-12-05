@@ -2,6 +2,7 @@
 
 #include <cinttypes>
 #include <cassert>
+#include <iostream>
 
 using u64 = uint64_t;
 using i64 = int64_t;
@@ -27,3 +28,14 @@ using uz = size_t;
 #endif
 
 #define DAXA_ALLWAYS_ASSERT(x) assert(x)
+
+#ifdef _DEBUG
+#define DAXA_ASSERT_M(x, message) \
+if (!(x)) {\
+	std::cerr << "[[DAXA ASSERTION FALIURE]] " << message << std::endl;\
+	assert(false);\
+}\
+((void)0)
+#else
+((void)0)
+#endif

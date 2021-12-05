@@ -8,7 +8,6 @@
 #include "../dependencies/vulkanhelper.hpp"
 
 #include "common.hpp"
-#include <assert.h>
 
 namespace daxa {
 	namespace gpu {
@@ -97,7 +96,7 @@ namespace daxa {
 
 			auto fnPtrvkCmdBeginRenderingKHR = (void(*)(VkCommandBuffer, const VkRenderingInfoKHR*))vkGetDeviceProcAddr(device, "vkCmdBeginRenderingKHR");
 			auto fnPtrvkCmdEndRenderingKHR = (void(*)(VkCommandBuffer))vkGetDeviceProcAddr(device, "vkCmdEndRenderingKHR");
-			// assert(fnPtrvkCmdBeginRenderingKHR != nullptr && fnPtrvkCmdEndRenderingKHR != nullptr, "ERROR: could not load VK_KHR_DYNAMIC_RENDERING_EXTENSION");
+			DAXA_ASSERT_M(fnPtrvkCmdBeginRenderingKHR != nullptr && fnPtrvkCmdEndRenderingKHR != nullptr, "could not load VK_KHR_DYNAMIC_RENDERING_EXTENSION");
 
 			auto ret = std::make_shared<Device>();
 			ret->device = device;
@@ -147,7 +146,7 @@ namespace daxa {
 
 			submitCommandBufferBuffer.clear();
 			for (auto& cmdList : si.commandLists) {
-				assert(cmdList.operationsInProgress == 0);
+				DAXA_ASSERT_M(cmdList.operationsInProgress == 0, "can not submit command list with recording in progress");
 				submitCommandBufferBuffer.push_back(cmdList.cmd);
 			}
 

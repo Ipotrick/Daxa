@@ -94,7 +94,7 @@ namespace daxa {
 
 			u32 index{ 0 };
 			auto err = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, nullptr, aquireFence, &index);
-			assert(err == VK_SUCCESS);
+			DAXA_ASSERT_M(err == VK_SUCCESS, "could not aquire next image from swapchain");
 			SwapchainImage si{};
 			si.swapchain = swapchain;
 			si.imageIndex = index;
@@ -107,7 +107,7 @@ namespace daxa {
 		}
 
 		void RenderWindow::present(SwapchainImage&& image, SignalHandle waitOn) {
-			assert(image.swapchain == swapchain);
+			DAXA_ASSERT_M(image.swapchain == swapchain, "presented images must be from the same render window");
 			auto sema = waitOn->getVkSemaphore();
 			VkPresentInfoKHR presentInfo{
 				.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
