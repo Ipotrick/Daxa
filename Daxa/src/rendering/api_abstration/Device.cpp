@@ -8,6 +8,7 @@
 #include "../dependencies/vulkanhelper.hpp"
 
 #include "common.hpp"
+#include <assert.h>
 
 namespace daxa {
 	namespace gpu {
@@ -96,7 +97,7 @@ namespace daxa {
 
 			auto fnPtrvkCmdBeginRenderingKHR = (void(*)(VkCommandBuffer, const VkRenderingInfoKHR*))vkGetDeviceProcAddr(device, "vkCmdBeginRenderingKHR");
 			auto fnPtrvkCmdEndRenderingKHR = (void(*)(VkCommandBuffer))vkGetDeviceProcAddr(device, "vkCmdEndRenderingKHR");
-			assert(fnPtrvkCmdBeginRenderingKHR != nullptr && fnPtrvkCmdEndRenderingKHR != nullptr, "ERROR: could not load VK_KHR_DYNAMIC_RENDERING_EXTENSION");
+			// assert(fnPtrvkCmdBeginRenderingKHR != nullptr && fnPtrvkCmdEndRenderingKHR != nullptr, "ERROR: could not load VK_KHR_DYNAMIC_RENDERING_EXTENSION");
 
 			auto ret = std::make_shared<Device>();
 			ret->device = device;

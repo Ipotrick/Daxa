@@ -129,7 +129,7 @@ namespace daxa {
 	}
 
 	template<size_t M, size_t N, std::floating_point T>
-	inline constexpr VecType<M,T>::type operator*(const Mat<M, N, T>& mat, typename VecType<N, T>::type vec)
+	inline constexpr typename VecType<M,T>::type operator*(const Mat<M, N, T>& mat, typename VecType<N, T>::type vec)
 	{
 		typename VecType<M, T>::type ret;
 		for (u32 i = 0; i < M; i++) {
@@ -142,7 +142,7 @@ namespace daxa {
 	}
 	
 	template<size_t M, size_t N, std::floating_point T>
-	inline constexpr VecType<N, T>::type operator*(typename VecType<M, T>::type vec, const Mat<M, N, T>& mat)
+	inline constexpr typename VecType<N, T>::type operator*(typename VecType<M, T>::type vec, const Mat<M, N, T>& mat)
 	{
 		typename VecType<N, T>::type ret;
 		for (u32 i = 0; i < N; i++) {
