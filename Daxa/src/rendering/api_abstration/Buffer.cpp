@@ -22,7 +22,7 @@ namespace daxa {
 				.usage = ci.memoryUsage,
 			};
 
-			vmaCreateBuffer(allocator, (VkBufferCreateInfo*)&bci, &aci, (VkBuffer*)&*buffer, &allocation, nullptr);
+			vmaCreateBuffer(allocator, (VkBufferCreateInfo*)&bci, &aci, &buffer, &allocation, nullptr);
 
 			this->allocator = allocator;
 			this->size = ci.size;

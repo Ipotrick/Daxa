@@ -69,6 +69,6 @@ namespace daxa {
 			std::shared_ptr<Buffer> buffer;
 		};
 
-		void uploadToStagingBuffer(std::span<u8> hostMemorySrc, BufferHandle bufferDst, size_t offset);
+		void uploadToStagingBuffer(std::span<u8> hostMemorySrc, BufferHandle bufferDst, size_t offset = 0);
 	}
 }
