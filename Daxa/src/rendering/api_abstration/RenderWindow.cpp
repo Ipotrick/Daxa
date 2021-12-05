@@ -107,7 +107,6 @@ namespace daxa {
 		}
 
 		void RenderWindow::present(SwapchainImage&& image, std::span<VkSemaphore> waitOn) {
-			auto before = std::chrono::system_clock::now();
 			assert(image.swapchain == swapchain);
 			VkPresentInfoKHR presentInfo{
 				.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
@@ -119,7 +118,6 @@ namespace daxa {
 				.pImageIndices = &image.imageIndex,
 			};
 			vkQueuePresentKHR(graphicsQueue, &presentInfo);
-			std::cout << "\ntime taken: " << std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - before).count() << "mics\n\n";
 		}
 
 		SwapchainImage RenderWindow::presentAquireNextImage(SwapchainImage&& image, std::span<VkSemaphore> waitOn) {
