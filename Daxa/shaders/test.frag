@@ -3,11 +3,15 @@
 
 layout(location = 10) in vec4 v_color;
 
-//output write
 layout (location = 0) out vec4 outFragColor;
+
+layout (push_constant) uniform constant{
+	float triAlpha;
+} pushConstants;
 
 void main()
 {
-	//return red
-	outFragColor = v_color;
+	vec4 color = v_color;
+	color.a = pushConstants.triAlpha;
+	outFragColor = color;
 }

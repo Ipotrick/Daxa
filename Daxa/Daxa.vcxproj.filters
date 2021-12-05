@@ -111,17 +111,11 @@
     <ClInclude Include="src\rendering\CoordSystem2d.hpp">
       <Filter>src\rendering</Filter>
     </ClInclude>
-    <ClInclude Include="src\rendering\Camera2d.hpp">
-      <Filter>src\rendering</Filter>
-    </ClInclude>
     <ClInclude Include="src\util\PagedIndexMap.hpp">
       <Filter>src\util</Filter>
     </ClInclude>
     <ClInclude Include="src\util\UUID.hpp">
       <Filter>src\util</Filter>
-    </ClInclude>
-    <ClInclude Include="src\DaxaInstance.hpp">
-      <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\rendering\Camera.hpp">
       <Filter>src\rendering</Filter>
@@ -156,9 +150,6 @@
     <ClInclude Include="dependencies\VkBootstrapDispatch.h">
       <Filter>dependencies</Filter>
     </ClInclude>
-    <ClInclude Include="src\rendering\api_abstration\DescriptorSetLayoutCache.hpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClInclude>
     <ClInclude Include="src\rendering\StagingBufferPool.hpp">
       <Filter>src\rendering</Filter>
     </ClInclude>
@@ -173,6 +164,9 @@
     </ClInclude>
     <ClInclude Include="src\rendering\api_abstration\BindingSet.hpp">
       <Filter>src\rendering\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\Camera2d.hpp">
+      <Filter>src\rendering</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -240,9 +234,6 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\rendering\api_abstration\RenderWindow.cpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="src\rendering\api_abstration\DescriptorSetLayoutCache.cpp">
       <Filter>src\rendering\gpu</Filter>
     </ClCompile>
     <ClCompile Include="src\rendering\api_abstration\TimelineSemaphore.cpp">

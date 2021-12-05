@@ -30,7 +30,6 @@
     <ClInclude Include="src\Application.hpp" />
     <ClInclude Include="src\DaxaApplicationOLD.hpp" />
     <ClInclude Include="src\DaxaCore.hpp" />
-    <ClInclude Include="src\DaxaInstance.hpp" />
     <ClInclude Include="src\entity\ECS.hpp" />
     <ClInclude Include="src\math\Mat.hpp" />
     <ClInclude Include="src\math\math.hpp" />
@@ -45,7 +44,6 @@
     <ClInclude Include="src\rendering\api_abstration\CommandList.hpp" />
     <ClInclude Include="src\rendering\api_abstration\common.hpp" />
     <ClInclude Include="src\rendering\api_abstration\BindingSet.hpp" />
-    <ClInclude Include="src\rendering\api_abstration\DescriptorSetLayoutCache.hpp" />
     <ClInclude Include="src\rendering\api_abstration\Device.hpp" />
     <ClInclude Include="src\rendering\api_abstration\Image.hpp" />
     <ClInclude Include="src\rendering\api_abstration\Pipeline.hpp" />
@@ -81,7 +79,6 @@
     <ClCompile Include="src\rendering\api_abstration\Buffer.cpp" />
     <ClCompile Include="src\rendering\api_abstration\CommandList.cpp" />
     <ClCompile Include="src\rendering\api_abstration\BindingSet.cpp" />
-    <ClCompile Include="src\rendering\api_abstration\DescriptorSetLayoutCache.cpp" />
     <ClCompile Include="src\rendering\api_abstration\Device.cpp" />
     <ClCompile Include="src\rendering\api_abstration\Image.cpp" />
     <ClCompile Include="src\rendering\api_abstration\Pipeline.cpp" />

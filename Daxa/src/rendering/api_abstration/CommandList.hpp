@@ -75,6 +75,11 @@ namespace daxa {
 
 			// Rendering:
 
+			template<typename T>
+			void pushConstant(VkShaderStageFlagBits shaderStage, T* constant, size_t offset = 0) {
+				vkCmdPushConstants(cmd, boundPipeline.value().layout, shaderStage, offset, sizeof(T), constant);
+			}
+
 			void beginRendering(BeginRenderingInfo ri);
 
 			void endRendering();

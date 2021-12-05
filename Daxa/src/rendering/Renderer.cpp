@@ -54,6 +54,9 @@ namespace daxa {
 		gpu::GraphicsPipelineBuilder pipelineBuilder;
 		pipelineBuilder.addShaderStage(vertexShader);
 		pipelineBuilder.addShaderStage(fragmenstShader);
+		//VkPipelineColorBlendAttachmentState blending{
+		//	.blendEnable = VK_TRUE,
+		//};
 		pipelineBuilder.addColorAttachment(renderWindow.getVkFormat());
 		testPipeline = device->createGraphicsPipeline(pipelineBuilder);
 
@@ -116,6 +119,9 @@ namespace daxa {
 			.extent = { (u32)viewport.width, (u32)viewport.height },
 		};
 		cmdList.setScissor(scissor);
+
+		float triangleAlpha = (std::sin(totalElapsedTime) + 1.0f) * 0.5f;
+		cmdList.pushConstant(VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT, &triangleAlpha);
 
 		cmdList.draw(3, 1, 0, 0);
 

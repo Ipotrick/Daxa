@@ -17,7 +17,6 @@
 #include "ShaderModule.hpp"
 #include "Pipeline.hpp"
 #include "SwapchainImage.hpp"
-#include "DescriptorSetLayoutCache.hpp"
 #include "TimelineSemaphore.hpp"
 #include "RenderWindow.hpp"
 
