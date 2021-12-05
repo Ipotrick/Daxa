@@ -85,7 +85,7 @@ namespace daxa {
 
     #define DAXA_TVEC4_OPERATOR_IMPL(op)\
     template<std::floating_point T> \
-    inline constexpr TVec4<T> operator##op##(TVec4<T> vec, T scalar) \
+    inline constexpr TVec4<T> operator op(TVec4<T> vec, T scalar) \
     { \
         return { \
             vec.x op scalar, \
@@ -95,7 +95,7 @@ namespace daxa {
         }; \
     } \
     template<std::floating_point T> \
-    inline constexpr TVec4<T> operator##op##(T scalar, TVec4<T> vec) \
+    inline constexpr TVec4<T> operator op(T scalar, TVec4<T> vec) \
     { \
         return { \
             vec.x op scalar, \
@@ -105,7 +105,7 @@ namespace daxa {
         }; \
     } \
     template<std::floating_point T> \
-    inline constexpr TVec4<T> operator##op##(TVec4<T> a, TVec4<T> b) \
+    inline constexpr TVec4<T> operator op(TVec4<T> a, TVec4<T> b) \
     { \
         return { \
             a.x op b.x, \
@@ -115,7 +115,7 @@ namespace daxa {
         }; \
     } \
     template<std::floating_point T> \
-    inline constexpr TVec4<T>& operator##op##=(TVec4<T>& vec, T scalar) \
+    inline constexpr TVec4<T>& operator op##=(TVec4<T>& vec, T scalar) \
     { \
         vec.x op##= scalar;\
         vec.y op##= scalar;\
@@ -124,7 +124,7 @@ namespace daxa {
         return vec; \
     } \
     template<std::floating_point T> \
-    inline constexpr TVec4<T>& operator##op##=(TVec4<T>& a, TVec4<T> b) \
+    inline constexpr TVec4<T>& operator op##=(TVec4<T>& a, TVec4<T> b) \
     { \
         a.x op##= b.x;\
         a.y op##= b.y;\
