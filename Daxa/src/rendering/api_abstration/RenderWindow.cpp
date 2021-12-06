@@ -14,10 +14,9 @@ namespace daxa {
 
 		DAXA_DEFINE_TRIVIAL_MOVE(RenderWindow)
 
-		RenderWindow::RenderWindow(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance, VkQueue graphicsQueue, void* sdl_window_handle, u32 width, u32 height, VkPresentModeKHR presentMode, VkSwapchainKHR oldSwapchain, VkSurfaceKHR oldSurface)
+		RenderWindow::RenderWindow(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance, void* sdl_window_handle, u32 width, u32 height, VkPresentModeKHR presentMode, VkSwapchainKHR oldSwapchain, VkSurfaceKHR oldSurface)
 			: device{device}
 			, physicalDevice{ physicalDevice }
-			, graphicsQueue{ graphicsQueue }
 			, instance{ instance }
 			, sdl_window_handle{ sdl_window_handle }
 			, size{ .width = width, .height = height }
@@ -50,7 +49,6 @@ namespace daxa {
 			for (int i = 0; i < vkImages.size(); i++) {
 				swapchainImages.push_back(ImageHandle{ std::make_shared<Image>(Image{}) });
 				auto& img = *swapchainImages.back();
-				img.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 				img.extent.width = width;
 				img.extent.height = height;
 				img.extent.depth = 1;
@@ -64,6 +62,8 @@ namespace daxa {
 				img.tiling = VK_IMAGE_TILING_OPTIMAL;
 				img.usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 				img.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+				img.arrayLayers = 1;
+				img.mipmapLevels = 1;
 			}
 			swapchainImageFormat = vkbSwapchain.image_format;
 
@@ -86,7 +86,6 @@ namespace daxa {
 				device = nullptr;
 				physicalDevice = nullptr;
 				aquireFence = nullptr;
-				graphicsQueue = nullptr;
 			}
 		}
 
@@ -106,32 +105,32 @@ namespace daxa {
 			return si;
 		}
 
-		void RenderWindow::present(SwapchainImage&& image, SignalHandle waitOn) {
-			DAXA_ASSERT_M(image.swapchain == swapchain, "presented images must be from the same render window");
-			auto sema = waitOn->getVkSemaphore();
-			VkPresentInfoKHR presentInfo{
-				.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-				.pNext = nullptr,
-				.waitSemaphoreCount = 1,
-				.pWaitSemaphores = &sema,
-				.swapchainCount = 1,
-				.pSwapchains = &image.swapchain,
-				.pImageIndices = &image.imageIndex,
-			};
-			vkQueuePresentKHR(graphicsQueue, &presentInfo);
-		}
+		//void RenderWindow::present(SwapchainImage&& image, SignalHandle waitOn) {
+		//	DAXA_ASSERT_M(image.swapchain == swapchain, "presented images must be from the same render window");
+		//	auto sema = waitOn->getVkSemaphore();
+		//	VkPresentInfoKHR presentInfo{
+		//		.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+		//		.pNext = nullptr,
+		//		.waitSemaphoreCount = 1,
+		//		.pWaitSemaphores = &sema,
+		//		.swapchainCount = 1,
+		//		.pSwapchains = &image.swapchain,
+		//		.pImageIndices = &image.imageIndex,
+		//	};
+		//	vkQueuePresentKHR(graphicsQueue, &presentInfo);
+		//}
 
-		SwapchainImage RenderWindow::presentAquireNextImage(SwapchainImage&& image, SignalHandle waitOn) {
-			present(std::move(image), waitOn);
-			return aquireNextImage();
-		}
+		//SwapchainImage RenderWindow::presentAquireNextImage(SwapchainImage&& image, SignalHandle waitOn) {
+		//	present(std::move(image), waitOn);
+		//	return aquireNextImage();
+		//}
 
 		void RenderWindow::resize(VkExtent2D newSize) {
-			*this = RenderWindow{ device, physicalDevice, instance, graphicsQueue, sdl_window_handle, newSize.width, newSize.height, presentMode, this->swapchain, this->surface };
+			*this = RenderWindow{ device, physicalDevice, instance, sdl_window_handle, newSize.width, newSize.height, presentMode, this->swapchain, this->surface };
 		}
 
 		void RenderWindow::setPresentMode(VkPresentModeKHR newPresentMode) {
-			*this = RenderWindow{ device, physicalDevice, instance, graphicsQueue, sdl_window_handle, size.width,  size.height, newPresentMode, this->swapchain, this->surface };
+			*this = RenderWindow{ device, physicalDevice, instance, sdl_window_handle, size.width,  size.height, newPresentMode, this->swapchain, this->surface };
 		}
 	}
 }

@@ -28,6 +28,7 @@ namespace daxa {
 			VkResult wait(u64 counter, u64 timeout = UINT64_MAX);
 		private:
 			friend class Device;
+			friend class Queue;
 
 			TimelineSemaphore(VkDevice);
 

@@ -35,8 +35,8 @@ namespace daxa {
 			ImageHandle& getImageHandle() { return image; }
 			ImageHandle const& getImageHandle() const { return image; }
 		private:
-			friend class Device;
 			friend class RenderWindow;
+			friend class Queue;
 
 			ImageHandle image;
 			u32 imageIndex;
