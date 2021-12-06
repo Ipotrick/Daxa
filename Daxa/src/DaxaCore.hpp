@@ -37,5 +37,5 @@ if (!(x)) {\
 }\
 ((void)0)
 #else
-((void)0)
+#define DAXA_ASSERT_M(x, message) ((void)0)
 #endif

@@ -105,26 +105,6 @@ namespace daxa {
 			return si;
 		}
 
-		//void RenderWindow::present(SwapchainImage&& image, SignalHandle waitOn) {
-		//	DAXA_ASSERT_M(image.swapchain == swapchain, "presented images must be from the same render window");
-		//	auto sema = waitOn->getVkSemaphore();
-		//	VkPresentInfoKHR presentInfo{
-		//		.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-		//		.pNext = nullptr,
-		//		.waitSemaphoreCount = 1,
-		//		.pWaitSemaphores = &sema,
-		//		.swapchainCount = 1,
-		//		.pSwapchains = &image.swapchain,
-		//		.pImageIndices = &image.imageIndex,
-		//	};
-		//	vkQueuePresentKHR(graphicsQueue, &presentInfo);
-		//}
-
-		//SwapchainImage RenderWindow::presentAquireNextImage(SwapchainImage&& image, SignalHandle waitOn) {
-		//	present(std::move(image), waitOn);
-		//	return aquireNextImage();
-		//}
-
 		void RenderWindow::resize(VkExtent2D newSize) {
 			*this = RenderWindow{ device, physicalDevice, instance, sdl_window_handle, newSize.width, newSize.height, presentMode, this->swapchain, this->surface };
 		}

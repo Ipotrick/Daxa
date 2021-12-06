@@ -7,14 +7,14 @@ namespace daxa {
 
 	Renderer::Renderer(std::shared_ptr<Window> win)
 		: window{ std::move(win) }
-		, device{ gpu::Device::createNewDevice() }
-		, renderWindow{ device->createRenderWindow(window->getWindowHandleSDL(), window->getSize()[0], window->getSize()[1], VK_PRESENT_MODE_IMMEDIATE_KHR) }
-		, queue{ this->device->createQueue() }
+		, device{ gpu::Device::create() }
+		, renderWindow{ device.createRenderWindow(window->getWindowHandleSDL(), window->getSize()[0], window->getSize()[1], VK_PRESENT_MODE_IMMEDIATE_KHR) }
+		, queue{ this->device.createQueue() }
 	{ 
 		for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
 			this->frameResc.push_back(PerFrameRessources{
-				.renderingFinishedSignal = device->createSignal(),
-				.timeline = device->createTimelineSemaphore(),
+				.renderingFinishedSignal = device.createSignal(),
+				.timeline = device.createTimelineSemaphore(),
 			});
 		}
 		
@@ -23,7 +23,7 @@ namespace daxa {
 	}
 
 	Renderer::~Renderer() {
-		device->waitIdle();
+		device.waitIdle();
 		frameResc.clear();
 	}
 
@@ -33,20 +33,18 @@ namespace daxa {
 				.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
 				.pNext = nullptr,
 			}; 
-			frameResc[i].renderingFinishedSignal = device->createSignal();
+			frameResc[i].renderingFinishedSignal = device.createSignal();
 		}
 
-		gpu::ShaderModuleHandle vertexShader = device->tryCreateShderModuleFromFile(
+		gpu::ShaderModuleHandle vertexShader = device.tryCreateShderModuleFromFile(
 			"daxa/shaders/test.vert", 
 			VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT
 		).value();
 
-		gpu::ShaderModuleHandle fragmenstShader = device->tryCreateShderModuleFromFile(
+		gpu::ShaderModuleHandle fragmenstShader = device.tryCreateShderModuleFromFile(
 			"daxa/shaders/test.frag",
 			VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT
 		).value();
-
-
 
 		VkPipelineVertexInputStateCreateInfo d;
 		gpu::GraphicsPipelineBuilder pipelineBuilder;
@@ -56,22 +54,15 @@ namespace daxa {
 		pipelineBuilder.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT);			// positions
 		pipelineBuilder.addVertexInputAttribute(VK_FORMAT_R32G32B32A32_SFLOAT);			// colors
 		pipelineBuilder.addColorAttachment(renderWindow.getVkFormat());
-		pipelines["triangle"] = device->createGraphicsPipeline(pipelineBuilder);
+		pipelines["triangle"] = device.createGraphicsPipeline(pipelineBuilder);
 
 		constexpr size_t vertexBufferSize = sizeof(float) * 3 * 3 /* positions */ + sizeof(float) * 4 * 3 /* colors */;
 		gpu::BufferCreateInfo bufferCI{
 			.size = vertexBufferSize,
-			.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,	// these usages are hints to the driver, you the validation layer will allways tell you wich ones are needed
 			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
 		};
-		buffers["vertex"] = device->createBuffer(bufferCI);
-		//std::array<float, vertexBufferSize> vertecies = {
-		//	 1.f, 1.f, 0.0f,		1.f, 0.f, 0.f, 1.f,
-		//	-1.f, 1.f, 0.0f,		0.f, 1.f, 0.f, 1.f,
-		//	 0.f,-1.f, 0.0f,		0.f, 0.f, 1.f, 1.f,
-		//};
-
-		//buffers["vertex"]->uploadFromHost(vertecies);
+		buffers["vertex"] = device.createBuffer(bufferCI);
 	}
 
 	void Renderer::nextFrameContext() {
@@ -84,12 +75,12 @@ namespace daxa {
 	
 	void Renderer::draw(float deltaTime) {
 		if (window->getSize()[0] != renderWindow.getSize().width || window->getSize()[1] != renderWindow.getSize().height) {
-			device->waitIdle();
+			device.waitIdle();
 			renderWindow.resize(VkExtent2D{ .width = window->getSize()[0], .height = window->getSize()[1] });
 		}
 		swapchainImage = renderWindow.aquireNextImage();
 
-		auto cmdList = device->getEmptyCommandList();
+		auto cmdList = device.getEmptyCommandList();
 
 		cmdList.begin();
 
