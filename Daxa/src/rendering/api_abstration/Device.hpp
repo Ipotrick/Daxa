@@ -31,11 +31,11 @@ namespace daxa {
 			Device()								= default;
 			Device(Device const& other)				= delete;
 			Device& operator=(Device const&)		= delete;
-			Device(Device&&) noexcept				= delete;
-			Device& operator=(Device&&) noexcept	= delete;
+			Device(Device&&) noexcept;
+			Device& operator=(Device&&) noexcept;
 			~Device();
 
-			static std::shared_ptr<Device> createNewDevice();
+			static Device create();
 
 			static std::shared_ptr<vkb::Instance> getInstance();
 
@@ -92,30 +92,6 @@ namespace daxa {
 			 */
 			CommandList getEmptyCommandList();
 
-			//struct SubmitInfo {
-			//	std::vector<CommandList>						commandLists;		// TODO REPLACE THIS VECTOR WITH HEAPLESS VERSION
-			//	std::span<std::tuple<TimelineSemaphore*, u64>>	waitOnTimelines;
-			//	std::span<std::tuple<TimelineSemaphore*, u64>>	signalTimelines;
-			//	std::span<SignalHandle>							waitOnSignals;
-			//	std::span<SignalHandle>							signalOnCompletion;
-			//};
-			/**
-			 * Submit CommandLists to be executed on the GPU.
-			 * Per default the submits are NOT synced to wait on each other based on submission ordering.
-			 *
-			 * It is guaranteed that all ressouces used in the cmdLists and the cmdLists themselfes are kept alive until after the gpu has finished executing it.
-			 * 
-			 * \param submitInfo contains all information about the submit.
-			 * \return a fence handle that can be used to check if the execution is complete or waited upon completion.
-			 */
-			//void submit(SubmitInfo&& submitInfo);
-
-			/**
-			 * The device keeps track of all objects that are used in submits and keeps them alive.
-			 * To recycle these objects, one can call this function once per frame.
-			*/
-			//void recycle();
-
 			/**
 			 * Waits for the device to complete all submitted operations and the gpu to idle.
 			 */
@@ -128,9 +104,12 @@ namespace daxa {
 			const u32& getVkGraphicsQueueFamilyIndex() const { return graphicsQFamilyIndex; }
 		private:
 			CommandList getNextCommandList();
-			//TimelineSemaphore getNextTimeline();
 
-			//std::vector<TimelineSemaphore> unusedTimelines;
+			VkDevice device;
+			vkb::Device vkbDevice;
+			VkPhysicalDevice physicalDevice;
+			VmaAllocator allocator;
+			u32 graphicsQFamilyIndex;
 
 			std::shared_ptr<CommandListRecyclingSharedData> cmdListRecyclingSharedData = {};
 			std::vector<CommandList> unusedCommandLists;
@@ -138,25 +117,12 @@ namespace daxa {
 			// VK_KHR_dynamic_rendering:
 			void (*vkCmdBeginRenderingKHR)(VkCommandBuffer, const VkRenderingInfoKHR*);
 			void (*vkCmdEndRenderingKHR)(VkCommandBuffer);
-
 			// Synchronization2KHR:
 			void (*vkCmdPipelineBarrier2KHR)(VkCommandBuffer, VkDependencyInfoKHR const*);
 
-			std::vector<VkCommandBuffer> submitCommandBufferBuffer;
-			std::vector<VkSemaphore> submitSemaphoreWaitOnBuffer;
-			std::vector<VkSemaphore> submitSemaphoreSignalBuffer;
-			std::vector<u64> submitSemaphoreWaitOnValueBuffer;
-			std::vector<u64> submitSemaphoreSignalValueBuffer;
-
 			std::shared_ptr<StagingBufferPool> stagingBufferPool = {};
 
-			BindingSetDescriptionCache bindingSetDescriptionCache;
-			VkPhysicalDevice physicalDevice;
-			VkDevice device;
-			vkb::Device vkbDevice;
-			VmaAllocator allocator;
-			//VkQueue graphicsQ;
-			u32 graphicsQFamilyIndex;
+			std::unique_ptr<BindingSetDescriptionCache> bindingSetDescriptionCache = {};
 		};
 	}
 }
