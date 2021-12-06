@@ -7,10 +7,12 @@ namespace daxa {
 		DAXA_DEFINE_TRIVIAL_MOVE(CommandList)
 
 		CommandList::CommandList() {
-			this->renderAttachmentBuffer.reserve(10);
-			usedBuffers.reserve(10);
-			usedGraphicsPipelines.reserve(10);
+			this->renderAttachmentBuffer.reserve(5);
 			usedImages.reserve(10);
+			usedBuffers.reserve(10);
+			usedSets.reserve(10);
+			usedGraphicsPipelines.reserve(3);
+			usedStagingBuffers.reserve(1);
 		}
 
 		CommandList::~CommandList() {
@@ -52,7 +54,7 @@ namespace daxa {
 					.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
 					.pNext = nullptr,
 					.imageView = ri.colorAttachments[i].image->getVkView(),
-					.imageLayout = ri.colorAttachments[i].image->getLayout(),
+					.imageLayout = ri.colorAttachments[i].layout,
 					.resolveMode = VK_RESOLVE_MODE_NONE,// ri.colorAttachments[i].resolveMode,
 					.loadOp = ri.colorAttachments[i].loadOp,
 					.storeOp = ri.colorAttachments[i].storeOp,
@@ -66,7 +68,7 @@ namespace daxa {
 						.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
 						.pNext = nullptr,
 						.imageView = ri.depthAttachment->image->getVkView(),
-						.imageLayout = ri.depthAttachment->image->getLayout(),
+						.imageLayout = ri.depthAttachment->layout,
 						.resolveMode = ri.depthAttachment->resolveMode,
 						.loadOp = ri.depthAttachment->loadOp,
 						.storeOp = ri.depthAttachment->storeOp
@@ -79,7 +81,7 @@ namespace daxa {
 						.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
 						.pNext = nullptr,
 						.imageView = ri.stencilAttachment->image->getVkView(),
-						.imageLayout = ri.stencilAttachment->image->getLayout(),
+						.imageLayout = ri.stencilAttachment->layout,
 						.resolveMode = ri.stencilAttachment->resolveMode,
 						.loadOp = ri.stencilAttachment->loadOp,
 						.storeOp = ri.stencilAttachment->storeOp
@@ -137,51 +139,27 @@ namespace daxa {
 			DAXA_ASSERT_M(operationsInProgress == 0, "can not reset command list with recordings in progress");
 			empty = true;
 			vkResetCommandPool(device, cmdPool, VkCommandPoolResetFlagBits::VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
+			for (auto& buffer : usedBuffers) {
+				buffer->bInUseOnGPU = false;
+			}
+			for (auto& set : usedSets) {
+				set->bInUseOnGPU = false;
+			}
 			usedBuffers.clear();
-			usedImages.clear();
 			usedGraphicsPipelines.clear();
+			usedImages.clear();
+			usedSets.clear();
 			boundPipeline.reset();
-		}
-
-		void CommandList::changeImageLayout(ImageHandle image, VkImageLayout newLayout) {
-
-			VkImageMemoryBarrier imgMemBarr = {};
-			imgMemBarr.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			imgMemBarr.pNext = nullptr;
-			imgMemBarr.oldLayout = image->getLayout();
-			imgMemBarr.newLayout = newLayout;
-			imgMemBarr.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			imgMemBarr.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			imgMemBarr.image = image->getVkImage();
-			imgMemBarr.subresourceRange = VkImageSubresourceRange{
-				.aspectMask = image->getVkAspect(),
-				.baseMipLevel = 0,
-				.levelCount = 1,
-				.baseArrayLayer = 0,
-				.layerCount = 1,
-			};
-			imgMemBarr.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
-			imgMemBarr.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
-
-			vkCmdPipelineBarrier(
-				cmd,
-				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-				VK_DEPENDENCY_DEVICE_GROUP_BIT,
-				0,
-				nullptr,
-				0,
-				nullptr,
-				1,
-				&imgMemBarr
-			);
-
-			image->layout = newLayout;
-			usedImages.push_back(std::move(image));
+			usedStagingBuffers.clear();
 		}
 
 		void CommandList::setViewport(VkViewport const& viewport) {
-			vkCmdSetViewport(cmd, 0, 1, &viewport);
+			vkCmdSetViewport(cmd, 0, 1, &viewport); 
+			VkRect2D scissor{
+				.offset = { 0, 0 },
+				.extent = { (u32)viewport.width, (u32)viewport.height },
+			};
+			setScissor(scissor);
 		}
 
 		void CommandList::setScissor(VkRect2D const& scissor) {
@@ -192,7 +170,7 @@ namespace daxa {
 			vkCmdDraw(cmd, vertexCount, instanceCount, firstVertex, firstInstance);
 		}
 
-		void CommandList::copyBufferToBuffer(BufferHandle src, BufferHandle dst, std::span<VkBufferCopy> copyRegions) {
+		void CommandList::copyBufferToBufferMulti(BufferHandle src, BufferHandle dst, std::span<VkBufferCopy> copyRegions) {
 			DAXA_ASSERT_M(copyRegions.size() > 0, "ERROR: tried copying 0 regions from buffer to buffer, this is a bug!");
 			for (int i = 0; i < copyRegions.size(); i++) {
 				DAXA_ASSERT_M(src->getSize() >= copyRegions[i].size + copyRegions[i].srcOffset, "ERROR: src buffer is smaller than the region that shouly be copied!");
@@ -201,8 +179,8 @@ namespace daxa {
 			vkCmdCopyBuffer(cmd, src->getVkBuffer(), dst->getVkBuffer(), copyRegions.size(), copyRegions.data());
 		}
 
-		void CommandList::updateSetImages(BindingSetHandle& set, u32 binding, std::span<ImageHandle> images, u32 descriptorArrayOffset) {
-			for (auto& image : images) {
+		void CommandList::updateSetImages(BindingSetHandle& set, u32 binding, std::span<std::pair<ImageHandle, VkImageLayout>> images, u32 descriptorArrayOffset) {
+			for (auto& [image, layout] : images) {
 				VkSampler sampler = VK_NULL_HANDLE;
 				switch (set->description->layoutBindings.bindings[binding].descriptorType) {
 				case VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
@@ -222,7 +200,7 @@ namespace daxa {
 				imageInfoBuffer.push_back(VkDescriptorImageInfo{
 					.sampler = sampler,
 					.imageView = image->view,
-					.imageLayout = image->layout,
+					.imageLayout = layout,
 					});
 
 				// update the handles inside the set
@@ -246,8 +224,9 @@ namespace daxa {
 			imageInfoBuffer.clear();
 		}
 
-		void CommandList::updateSetImage(BindingSetHandle& set, u32 binding, ImageHandle image) {
-			updateSetImages(set, binding, { &image, 1 });
+		void CommandList::updateSetImage(BindingSetHandle& set, u32 binding, ImageHandle image, VkImageLayout layout) {
+			std::pair pair{ image,layout };
+			updateSetImages(set, binding, { &pair, 1 });
 		}
 
 		void CommandList::updateSetBuffers(BindingSetHandle& set, u32 binding, std::span<BufferHandle> buffers, u32 offset) {
@@ -284,9 +263,124 @@ namespace daxa {
 		}
 
 		void CommandList::bindSet(BindingSetHandle& set) {
-			// TODO: make the bind point dependant on what type of pipeline is bound
 			DAXA_ASSERT_M(boundPipeline.has_value(), "can not bind descriptor sets if there is no pipeline bound");
 			vkCmdBindDescriptorSets(cmd, boundPipeline->bindPoint, boundPipeline->layout, 0, 1, &set->set, 0, nullptr);
+			usedSets.push_back(set);
+		}
+
+		void CommandList::uploadToBuffer(void* src, size_t size, BufferHandle dst, size_t dstOffset) {
+			if (size > STAGING_BUFFER_POOL_BUFFER_SIZE) {
+				DAXA_ASSERT_M(false, "currently uploads over a size of 67.108.864 bytes are not supported");
+			}
+			else {
+				if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < size) {
+					usedStagingBuffers.push_back(stagingBufferPool.lock()->getStagingBuffer());
+				}
+
+				auto& stagingBuffer = usedStagingBuffers.back();
+
+				auto offset = stagingBuffer.usedUpSize;
+
+				stagingBuffer.buffer->uploadFromHost(src, size, offset);
+
+				stagingBuffer.usedUpSize += size;
+
+				VkBufferCopy bufferCopyInfo{
+					.srcOffset = offset,
+					.dstOffset = dstOffset,
+					.size = size,
+				};
+
+				copyBufferToBuffer(stagingBuffer.buffer, dst, bufferCopyInfo);
+			}
+		}
+
+		void CommandList::insertBarriers(std::span<MemoryBarrier> memBarriers, std::span<BufferBarrier> bufBarriers, std::span<ImageBarrier> imgBarriers) {
+			std::array<VkMemoryBarrier2KHR, 32> memBarrierBuffer;
+			u32 memBarrierBufferSize = 0;
+			std::array<VkBufferMemoryBarrier2KHR, 32> bufBarrierBuffer;
+			u32 bufBarrierBufferSize = 0;
+			std::array<VkImageMemoryBarrier2KHR, 32> imgBarrierBuffer;
+			u32 imgBarrierBufferSize = 0;
+
+			for (auto& barrier : memBarriers) {
+				DAXA_ASSERT_M(memBarrierBufferSize < 32, "can only insert 32 barriers of one kind in a single insertBarriers call");
+				memBarrierBuffer[memBarrierBufferSize++] = VkMemoryBarrier2KHR{
+					.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2_KHR,
+					.pNext = nullptr,
+					.srcStageMask = barrier.awaitedStages,
+					.srcAccessMask = barrier.awaitedAccess,
+					.dstStageMask = barrier.waitingStages,
+					.dstAccessMask = barrier.waitingAccess,
+				};
+			}
+
+			for (auto& barrier : bufBarriers) {
+				DAXA_ASSERT_M(bufBarrierBufferSize < 32, "can only insert 32 barriers of one kind in a single insertBarriers call");
+				bufBarrierBuffer[bufBarrierBufferSize] = VkBufferMemoryBarrier2KHR{
+					.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR,
+					.pNext = nullptr,
+					.srcStageMask = barrier.awaitedStages,
+					.srcAccessMask = barrier.awaitedAccess,
+					.dstStageMask = barrier.waitingStages,
+					.dstAccessMask = barrier.waitingAccess,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.buffer = barrier.buffer->buffer,
+					.offset = barrier.offset,
+					.size = barrier.buffer->size,
+				};
+
+				usedBuffers.push_back(barrier.buffer);
+
+				if (barrier.size.has_value()) {
+					bufBarrierBuffer[bufBarrierBufferSize].size = *barrier.size;
+				}
+
+				bufBarrierBufferSize++;
+			}
+
+			for (auto& barrier : imgBarriers) {
+				DAXA_ASSERT_M(bufBarrierBufferSize < 32, "can only insert 32 barriers of one kind in a single insertBarriers call");
+
+				imgBarrierBuffer[imgBarrierBufferSize] = VkImageMemoryBarrier2KHR{
+					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR,
+					.pNext = nullptr,
+					.srcStageMask = barrier.awaitedStages,
+					.srcAccessMask = barrier.awaitedAccess,
+					.dstStageMask = barrier.waitingStages,
+					.dstAccessMask = barrier.waitingAccess,
+					.oldLayout = barrier.layoutBefore,
+					.newLayout = barrier.layoutAfter,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.image = barrier.image->image,
+					.subresourceRange = barrier.subRange.value_or(VkImageSubresourceRange{
+						.aspectMask = barrier.image->aspect,
+						.baseMipLevel = 0,
+						.levelCount = barrier.image->mipmapLevels,
+						.baseArrayLayer = 0,
+						.layerCount = barrier.image->arrayLayers,
+					})
+				};
+
+				usedImages.push_back(barrier.image);
+
+				imgBarrierBufferSize++;
+			}
+
+			VkDependencyInfoKHR dependencyInfo{
+				.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
+				.pNext = nullptr,
+				.memoryBarrierCount = memBarrierBufferSize,
+				.pMemoryBarriers = memBarrierBuffer.data(),
+				.bufferMemoryBarrierCount = bufBarrierBufferSize,
+				.pBufferMemoryBarriers = bufBarrierBuffer.data(),
+				.imageMemoryBarrierCount = imgBarrierBufferSize,
+				.pImageMemoryBarriers = imgBarrierBuffer.data(),
+			};
+
+			this->vkCmdPipelineBarrier2KHR(cmd, &dependencyInfo);
 		}
 	}
 }

@@ -32,6 +32,13 @@ namespace daxa {
 			*/
 			bool isUsedByGPU() const;
 
+			void uploadFromHost(void* src, size_t size, size_t dstOffset = 0);
+
+			template<typename T>
+			void uploadFromHost(T& src, size_t dstOffset = 0) {
+				uploadFromHost(src.data(), src.size(), dstOffset);
+			}
+
 			VkBuffer getVkBuffer() const { return buffer; }
 			size_t getSize() const { return size; }
 			VkBufferUsageFlags getVkBufferUsage() const { return usage; }
@@ -40,9 +47,10 @@ namespace daxa {
 			friend class Device;
 			friend class BufferHandle;
 			friend class CommandList;
-			friend void uploadToStagingBuffer(std::span<u8>, BufferHandle, size_t);
+			friend class StagingBufferPool;
+			friend class Queue;
 
-			Buffer(VkDevice device, u32 queueFamilyIndex, VmaAllocator allocator, BufferCreateInfo ci);
+			Buffer(VkDevice device, u32 queueFamilyIndex, VmaAllocator allocator, BufferCreateInfo& ci);
 
 			VkBuffer buffer;
 			size_t size;
@@ -58,17 +66,20 @@ namespace daxa {
 			BufferHandle() = default;
 
 			Buffer& operator*() { return *buffer; }
+			Buffer const& operator*() const { return *buffer; }
 			Buffer* operator->() { return buffer.get(); }
+			Buffer const* operator->() const { return buffer.get(); }
+
+			operator bool() const { return buffer.operator bool(); }
 
 			size_t getRefCount() const { return buffer.use_count(); }
 		private:
 			friend class Device;
+			friend class StagingBufferPool;
 
 			BufferHandle(Buffer&& buffer);
 
 			std::shared_ptr<Buffer> buffer;
 		};
-
-		void uploadToStagingBuffer(std::span<u8> hostMemorySrc, BufferHandle bufferDst, size_t offset = 0);
 	}
 }

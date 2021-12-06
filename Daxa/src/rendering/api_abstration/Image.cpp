@@ -21,7 +21,7 @@ namespace daxa {
 			view		= nullptr;
 		}
 
-		Image Image::create2dImage(VkDevice device, VmaAllocator allocator, Image2dCreateInfo ci) {
+		Image Image::create2dImage(VkDevice device, VmaAllocator allocator, u32 queueFamilyIndex, Image2dCreateInfo ci) {
 			Image ret;
 
 			VkImageCreateInfo ici{
@@ -36,6 +36,8 @@ namespace daxa {
 				.tiling = VkImageTiling::VK_IMAGE_TILING_OPTIMAL,
 				.usage = ci.imageUsage,
 				.sharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
+				.queueFamilyIndexCount = 1,
+				.pQueueFamilyIndices = &queueFamilyIndex,
 				.initialLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED,
 			};
 
@@ -66,7 +68,6 @@ namespace daxa {
 			vkCreateImageView(device, &ivci, nullptr, &ret.view);
 
 			ret.allocator = allocator;
-			ret.layout = (VkImageLayout)ici.initialLayout;
 			ret.tiling = (VkImageTiling)ici.tiling;
 			ret.usageFlags = (VkImageUsageFlags)ici.usage;
 			ret.viewFormat = (VkFormat)ivci.format;
@@ -74,6 +75,8 @@ namespace daxa {
 			ret.extent = ici.extent;
 			ret.device = device;
 			ret.aspect = (VkImageAspectFlags)ci.imageAspekt;
+			ret.arrayLayers = 1;
+			ret.mipmapLevels = 1;
 
 			return std::move(ret);
 		}
