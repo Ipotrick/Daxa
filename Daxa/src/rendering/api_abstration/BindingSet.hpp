@@ -96,55 +96,16 @@ namespace daxa {
 
 		class BindingSetDescriptionCache {
 		public:
-			BindingSetDescriptionCache() = default;
-			~BindingSetDescriptionCache() {
-				for (auto& [_, description] : descriptions) {
-					vkDestroyDescriptorSetLayout(device, description->layout, nullptr);
-				}
-			}
+			BindingSetDescriptionCache(VkDevice device);
+			BindingSetDescriptionCache(BindingSetDescriptionCache const&) = delete;
+			BindingSetDescriptionCache& operator=(BindingSetDescriptionCache const&) = delete;
+			BindingSetDescriptionCache(BindingSetDescriptionCache&&) noexcept = delete;
+			BindingSetDescriptionCache& operator=(BindingSetDescriptionCache&&) noexcept = delete;
+			~BindingSetDescriptionCache();
 
-			void init(VkDevice device) {
-				this->device = device;
-			}
-
-			BindingSetDescription const* getSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings) {
-				DAXA_ASSERT_M(device, "BindingSetDescriptionCache was not initialized");
-				DAXA_ASSERT_M(bindings.size() < MAX_BINDINGS_PER_SET, "a binding set can only have up to 16 bindings");
-				BindingsArray bindingArray = {};
-				bindingArray.size = bindings.size();
-				for (int i = 0; i < bindings.size(); i++) {
-					bindingArray.bindings[i] = bindings[i];
-				}
-				if (!descriptions.contains(bindingArray)) {
-					descriptions[bindingArray] = std::make_unique<BindingSetDescription>(makeNewDescription(bindingArray));
-				}
-				return &*descriptions[bindingArray];
-			}
+			BindingSetDescription const* getSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings);
 		private:
-			BindingSetDescription makeNewDescription(BindingsArray& bindingArray) {
-				BindingSetDescription description = {};
-
-				description.layoutBindings = bindingArray;
-
-				VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI{
-					.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-					.pNext = nullptr,
-					.flags = 0,
-					.bindingCount = (u32)bindingArray.size,
-					.pBindings = bindingArray.bindings.data(),
-				};
-				vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCI, nullptr, &description.layout);
-
-				size_t nextHandleVectorIndex = 0;
-				for (int i = 0; i < bindingArray.size; i++) {
-					DAXA_ASSERT_M(bindingArray.bindings[i].binding < MAX_BINDINGS_PER_SET, "all bindings of a binding set must be smaller than 16");
-					description.bindingToHandleVectorIndex[bindingArray.bindings[i].binding] = nextHandleVectorIndex;
-					nextHandleVectorIndex += bindingArray.bindings[i].descriptorCount;
-				}
-				description.descriptorCount = nextHandleVectorIndex;
-
-				return description;
-			}
+			BindingSetDescription makeNewDescription(BindingsArray& bindingArray);
 
 			VkDevice device = VK_NULL_HANDLE;
 			std::unordered_map<BindingsArray, std::unique_ptr<BindingSetDescription>, BindingsArrayHasher> descriptions;

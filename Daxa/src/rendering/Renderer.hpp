@@ -29,7 +29,7 @@ namespace daxa {
 		void deinit();
 
 		FPSCamera camera;
-		std::shared_ptr<gpu::Device> device;
+		gpu::Device device;
 		gpu::Queue queue;
 		std::unordered_map<std::string_view, gpu::GraphicsPipelineHandle> pipelines;
 		std::unordered_map<std::string_view, gpu::ImageHandle> images;

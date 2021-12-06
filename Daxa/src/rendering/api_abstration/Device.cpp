@@ -11,6 +11,8 @@
 
 namespace daxa {
 	namespace gpu {
+		DAXA_DEFINE_TRIVIAL_MOVE(Device)
+
 		std::shared_ptr<vkb::Instance> instance;
 		bool initialized = false;
 
@@ -22,7 +24,8 @@ namespace daxa {
 				.request_validation_layers(true)
 				.require_api_version(1, 2, 0)
 				.enable_layer("VK_LAYER_LUNARG_monitor")
-				.use_default_debug_messenger();
+				.use_default_debug_messenger()
+				;
 			auto instanceBuildReturn = instanceBuilder.build();
 
 			instance = std::make_shared<vkb::Instance>(std::move(instanceBuildReturn.value()));
@@ -36,7 +39,7 @@ namespace daxa {
 			return instance;
 		}
 
-		std::shared_ptr<Device> Device::createNewDevice() {
+		Device Device::create() {
 			if (!initialized) {
 				initGlobals();
 				initialized = true;
@@ -91,8 +94,7 @@ namespace daxa {
 
 			auto device = vkbDevice.device;
 
-			vkb::QueueType queueTypes = (vkb::QueueType)((int)vkb::QueueType::graphics /*| (int)vkb::QueueType::compute | (int)vkb::QueueType::present*/);
-			auto mainQueueFamilyIndex = vkbDevice.get_queue_index(queueTypes).value();
+			auto mainQueueFamilyIndex = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 
 			VmaAllocatorCreateInfo allocatorInfo = {
 				.physicalDevice = physicslDevice,
@@ -109,28 +111,36 @@ namespace daxa {
 			auto fnPtrvkCmdPipelineBarrier2KHR = (void(*)(VkCommandBuffer, VkDependencyInfoKHR const*))vkGetDeviceProcAddr(device, "vkCmdPipelineBarrier2KHR");
 			DAXA_ASSERT_M(fnPtrvkCmdPipelineBarrier2KHR != nullptr, "could not load VK_KHR_SYNCHRONIZATION_2_EXTENSION");
 
-			auto ret = std::make_shared<Device>();
-			ret->device = device;
-			ret->bindingSetDescriptionCache.init(device);
-			ret->physicalDevice = physicalDevice.physical_device;
-			ret->graphicsQFamilyIndex = mainQueueFamilyIndex;
-			ret->allocator = allocator;
-			ret->vkCmdBeginRenderingKHR = fnPtrvkCmdBeginRenderingKHR;
-			ret->vkCmdEndRenderingKHR = fnPtrvkCmdEndRenderingKHR;
-			ret->vkCmdPipelineBarrier2KHR = fnPtrvkCmdPipelineBarrier2KHR;
-			ret->stagingBufferPool = std::make_shared<StagingBufferPool>(StagingBufferPool{ device, mainQueueFamilyIndex, allocator });
-			ret->vkbDevice = vkbDevice;
-			ret->cmdListRecyclingSharedData = std::make_shared<CommandListRecyclingSharedData>();
+			auto ret = Device{};
+			ret.device = device;
+			ret.bindingSetDescriptionCache = std::make_unique<BindingSetDescriptionCache>(device);
+			ret.physicalDevice = physicalDevice.physical_device;
+			ret.graphicsQFamilyIndex = mainQueueFamilyIndex;
+			ret.allocator = allocator;
+			ret.vkCmdBeginRenderingKHR = fnPtrvkCmdBeginRenderingKHR;
+			ret.vkCmdEndRenderingKHR = fnPtrvkCmdEndRenderingKHR;
+			ret.vkCmdPipelineBarrier2KHR = fnPtrvkCmdPipelineBarrier2KHR;
+			ret.stagingBufferPool = std::make_shared<StagingBufferPool>(StagingBufferPool{ device, mainQueueFamilyIndex, allocator });
+			ret.vkbDevice = vkbDevice;
+			ret.cmdListRecyclingSharedData = std::make_shared<CommandListRecyclingSharedData>();
 			return std::move(ret);
 		}
 
 		Device::~Device() {
-			waitIdle();
+			if (device) {
+				waitIdle();
+				cmdListRecyclingSharedData.~shared_ptr();
+				unusedCommandLists.~vector();
+				stagingBufferPool.~shared_ptr();
+				bindingSetDescriptionCache.~unique_ptr();
+				vmaDestroyAllocator(allocator);
+				vkDestroyDevice(device, nullptr);
+				std::memset(this, 0, sizeof(Device));
+			}
 		}
 
 		Queue Device::createQueue() {
-			vkb::QueueType queueTypes = (vkb::QueueType)((int)vkb::QueueType::graphics  /*| (int)vkb::QueueType::compute  | (int)vkb::QueueType::present */ );
-			return Queue{ device, vkbDevice.get_queue(queueTypes).value(), cmdListRecyclingSharedData };
+			return Queue{ device, vkbDevice.get_queue(vkb::QueueType::graphics).value(), cmdListRecyclingSharedData };
 		}
 
 		ImageHandle Device::createImage2d(Image2dCreateInfo ci) { 
@@ -154,102 +164,12 @@ namespace daxa {
 		}
 
 		BindingSetDescription const* Device::createBindingSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings) {
-			return bindingSetDescriptionCache.getSetDescription(bindings);
+			return bindingSetDescriptionCache->getSetDescription(bindings);
 		}
 
 		CommandList Device::getEmptyCommandList() {
 			return std::move(getNextCommandList());
 		}
-
-		//void Device::submit(SubmitInfo&& si) {
-		//
-		//	submitCommandBufferBuffer.clear();
-		//	for (auto& cmdList : si.commandLists) {
-		//		DAXA_ASSERT_M(cmdList.operationsInProgress == 0, "can not submit command list with recording in progress");
-		//		submitCommandBufferBuffer.push_back(cmdList.cmd);
-		//	}
-		//
-		//	for (auto [timelineSema, waitValue] : si.waitOnTimelines) {
-		//		this->submitSemaphoreWaitOnBuffer.push_back(timelineSema->getVkSemaphore());
-		//		this->submitSemaphoreWaitOnValueBuffer.push_back(waitValue);
-		//	}
-		//	for (auto signal : si.waitOnSignals) {
-		//		this->submitSemaphoreWaitOnBuffer.push_back(signal->getVkSemaphore());
-		//		this->submitSemaphoreWaitOnValueBuffer.push_back(0);
-		//	}
-		//	for (auto [timelineSema, signalValue] : si.signalTimelines) {
-		//		this->submitSemaphoreSignalBuffer.push_back(timelineSema->getVkSemaphore());
-		//		this->submitSemaphoreSignalValueBuffer.push_back(signalValue);
-		//	}
-		//	for (auto signal : si.signalOnCompletion) {
-		//		this->submitSemaphoreSignalBuffer.push_back(signal->getVkSemaphore());
-		//		this->submitSemaphoreSignalValueBuffer.push_back(0);
-		//	}
-		//
-		//	auto thisSubmitTimelineSema = getNextTimeline();
-		//	auto thisSubmitTimelineFinishCounter = thisSubmitTimelineSema.getCounter() + 1;
-		//	this->submitSemaphoreSignalBuffer.push_back(thisSubmitTimelineSema.getVkSemaphore());
-		//	this->submitSemaphoreSignalValueBuffer.push_back(thisSubmitTimelineFinishCounter);
-		//
-		//	VkTimelineSemaphoreSubmitInfo timelineSI{
-		//		.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
-		//		.pNext = nullptr,
-		//		.waitSemaphoreValueCount = (u32)submitSemaphoreWaitOnValueBuffer.size(),
-		//		.pWaitSemaphoreValues = submitSemaphoreWaitOnValueBuffer.data(),
-		//		.signalSemaphoreValueCount = (u32)submitSemaphoreSignalValueBuffer.size(),
-		//		.pSignalSemaphoreValues = submitSemaphoreSignalValueBuffer.data(),
-		//	};
-		//
-		//	VkPipelineStageFlags pipelineStages = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;	// TODO maybe remove this
-		//	VkSubmitInfo submitInfo{
-		//		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-		//		.pNext = &timelineSI,
-		//		.waitSemaphoreCount = (u32)submitSemaphoreWaitOnBuffer.size(),
-		//		.pWaitSemaphores = submitSemaphoreWaitOnBuffer.data(),
-		//		.pWaitDstStageMask = &pipelineStages,
-		//		.commandBufferCount = (u32)submitCommandBufferBuffer.size(),
-		//		.pCommandBuffers = submitCommandBufferBuffer.data() ,
-		//		.signalSemaphoreCount = (u32)submitSemaphoreSignalBuffer.size(),
-		//		.pSignalSemaphores = submitSemaphoreSignalBuffer.data(),
-		//	};
-		//	vkQueueSubmit(graphicsQ, 1, &submitInfo, nullptr);
-		//
-		//	PendingSubmit pendingSubmit{
-		//		.cmdLists = std::move(si.commandLists),
-		//		.timelineSema = std::move(thisSubmitTimelineSema),
-		//		.finishCounter = thisSubmitTimelineFinishCounter,
-		//	};
-		//	unfinishedSubmits.push_back(std::move(pendingSubmit));
-		//
-		//	submitSemaphoreWaitOnBuffer.clear();
-		//	submitSemaphoreWaitOnBuffer.clear();
-		//	submitSemaphoreSignalBuffer.clear();
-		//	submitSemaphoreSignalValueBuffer.clear();
-		//}
-
-		//void Device::recycle() {
-		//	for (auto iter = unfinishedSubmits.begin(); iter != unfinishedSubmits.end();) {
-		//		if (iter->timelineSema.getCounter() >= iter->finishCounter) {
-		//			while (!iter->cmdLists.empty()) {
-		//				auto list = std::move(iter->cmdLists.back());
-		//				iter->cmdLists.pop_back();
-		//				for (auto& buffer : list.usedBuffers) {
-		//					buffer->bInUseOnGPU = false;
-		//				}
-		//				for (auto& set : list.usedSets) {
-		//					set->bInUseOnGPU = false;
-		//				}
-		//				list.reset();
-		//				unusedCommandLists.push_back(std::move(list));
-		//			}
-		//			unusedTimelines.push_back(std::move(iter->timelineSema));
-		//			iter = unfinishedSubmits.erase(iter);
-		//		}
-		//		else {
-		//			++iter;
-		//		}
-		//	}
-		//}
 
 		void Device::waitIdle() {
 			vkDeviceWaitIdle(device);
@@ -296,16 +216,6 @@ namespace daxa {
 			return std::move(ret);
 		}
 
-		//TimelineSemaphore Device::getNextTimeline() {
-		//	if (unusedTimelines.empty()) {
-		//		unusedTimelines.push_back(TimelineSemaphore{ device });
-		//		printf("create new timeline\n");
-		//	}
-		//	auto timeline = std::move(unusedTimelines.back());
-		//	unusedTimelines.pop_back();
-		//	return timeline;
-		//}
-
 		std::optional<ShaderModuleHandle> Device::tryCreateShderModuleFromGLSL(std::string const& glslSource, VkShaderStageFlagBits stage, std::string const& entrypoint) {
 			return ShaderModuleHandle::tryCreateDAXAShaderModule(device, glslSource, entrypoint, stage);
 		}
@@ -315,7 +225,7 @@ namespace daxa {
 		}
 
 		GraphicsPipelineHandle Device::createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder) {
-			return pipelineBuilder.build(device, bindingSetDescriptionCache);
+			return pipelineBuilder.build(device, *bindingSetDescriptionCache);
 		}
 
 		BindingSetAllocator Device::createBindingSetAllocator(BindingSetDescription const* setDescription, size_t setPerPool) {
