@@ -30,7 +30,6 @@ namespace daxa {
 
 			VkImageTiling getTiling() const { return tiling; };
 			VkImageUsageFlags getUsageFlags() const { return usageFlags; };
-			VkImageLayout getLayout() const { return layout; }
 			VkFormat getViewFormat() const { return viewFormat; }
 			VkImageType getImageType() const { return type; }
 			VkExtent3D getExtent() const { return extent; }
@@ -42,20 +41,21 @@ namespace daxa {
 			friend class ImageHandle;
 			friend class RenderWindow;
 
-			static Image create2dImage(VkDevice device, VmaAllocator allocator, Image2dCreateInfo ci);
+			static Image create2dImage(VkDevice device, VmaAllocator allocator, u32 queueFamilyIndex, Image2dCreateInfo ci);
 
 			VkDevice device;
 			VmaAllocator allocator;
 			VmaAllocation allocation;
 			VkImageTiling tiling;
 			VkImageUsageFlags usageFlags;
-			VkImageLayout layout;
 			VkFormat viewFormat;
 			VkImageType type;
 			VkExtent3D extent;
 			VkImageAspectFlags aspect;
 			VkImage image;
 			VkImageView view;
+			u32 mipmapLevels;
+			u32 arrayLayers;
 		};
 
 		class ImageHandle {
