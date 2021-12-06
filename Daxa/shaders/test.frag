@@ -12,6 +12,6 @@ layout (push_constant) uniform constant{
 void main()
 {
 	vec4 color = v_color;
-	color.a = pushConstants.triAlpha;
+	color *= pushConstants.triAlpha;
 	outFragColor = color;
 }

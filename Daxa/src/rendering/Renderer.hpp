@@ -8,7 +8,6 @@
 #include "gpu.hpp"
 
 #include "Camera.hpp"
-#include "StagingBufferPool.hpp"
 
 namespace daxa {
 
@@ -31,6 +30,7 @@ namespace daxa {
 
 		FPSCamera camera;
 		std::shared_ptr<gpu::Device> device;
+		gpu::Queue queue;
 		std::unordered_map<std::string_view, gpu::GraphicsPipelineHandle> pipelines;
 		std::unordered_map<std::string_view, gpu::ImageHandle> images;
 		std::unordered_map<std::string_view, gpu::BufferHandle> buffers;
@@ -46,6 +46,5 @@ namespace daxa {
 
 		std::shared_ptr<Window> window{ nullptr };
 		gpu::RenderWindow renderWindow;
-		StagingBufferPool stagingBufferPool;
 	};
 }

@@ -73,21 +73,23 @@ namespace daxa {
 			BindingSet& operator=(BindingSet const&)	= delete;
 			BindingSet(BindingSet&&) noexcept;
 			BindingSet& operator=(BindingSet&&) noexcept;
-			//~BindingSet();
 
 			using HandleVariants = std::variant<ImageHandle, BufferHandle, std::monostate>;
 
 			VkDescriptorSet getVkDescriptorSet() const { return set; }
 		private:
+			friend class Device;
 			friend class CommandList;
 			friend class BindingSetAllocator;
 			friend class BindingSetHandle;
+			friend class Queue;
 
 			BindingSet(VkDescriptorSet set, PoolInfo* poolInfo, BindingSetDescription const* description);
 
 			VkDescriptorSet set = {};
 			BindingSetDescription const* description = {};
 			PoolInfo* poolInfo = {};
+			bool bInUseOnGPU = false;
 
 			std::vector<HandleVariants> handles = {};
 		};
