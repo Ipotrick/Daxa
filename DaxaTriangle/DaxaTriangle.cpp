@@ -16,7 +16,7 @@ public:
     }
 
     virtual void update(std::shared_ptr<daxa::AppState> appstate) override {
-        //std::cout << "delta time: " << std::setw(8) << appstate->getDeltaTimeSeconds() * 1000.0f << "ms, fps: " << 1.0f / (appstate->getDeltaTimeSeconds()) << std::endl;
+        std::cout << "delta time: " << std::setw(8) << appstate->getDeltaTimeSeconds() * 1000.0f << "ms, fps: " << 1.0f / (appstate->getDeltaTimeSeconds()) << std::endl;
         defaultRenderer->draw(appstate->getDeltaTimeSeconds());
     }
 

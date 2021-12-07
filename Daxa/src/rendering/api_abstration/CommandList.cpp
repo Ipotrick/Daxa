@@ -1,9 +1,9 @@
 #include "CommandList.hpp"
+
 #include "common.hpp"
 
 namespace daxa {
 	namespace gpu {
-
 		DAXA_DEFINE_TRIVIAL_MOVE(CommandList)
 
 		CommandList::CommandList() {
@@ -139,12 +139,6 @@ namespace daxa {
 			DAXA_ASSERT_M(operationsInProgress == 0, "can not reset command list with recordings in progress");
 			empty = true;
 			vkResetCommandPool(device, cmdPool, VkCommandPoolResetFlagBits::VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
-			for (auto& buffer : usedBuffers) {
-				buffer->bInUseOnGPU = false;
-			}
-			for (auto& set : usedSets) {
-				set->bInUseOnGPU = false;
-			}
 			usedBuffers.clear();
 			usedGraphicsPipelines.clear();
 			usedImages.clear();
