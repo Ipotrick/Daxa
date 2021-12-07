@@ -49,6 +49,7 @@
     <ClInclude Include="src\rendering\api_abstration\Pipeline.hpp" />
     <ClInclude Include="src\rendering\api_abstration\Queue.hpp" />
     <ClInclude Include="src\rendering\api_abstration\RenderWindow.hpp" />
+    <ClInclude Include="src\rendering\api_abstration\Sampler.hpp" />
     <ClInclude Include="src\rendering\api_abstration\ShaderModule.hpp" />
     <ClInclude Include="src\rendering\api_abstration\Signal.hpp" />
     <ClInclude Include="src\rendering\api_abstration\StagingBufferPool.hpp" />
@@ -86,6 +87,7 @@
     <ClCompile Include="src\rendering\api_abstration\Pipeline.cpp" />
     <ClCompile Include="src\rendering\api_abstration\Queue.cpp" />
     <ClCompile Include="src\rendering\api_abstration\RenderWindow.cpp" />
+    <ClCompile Include="src\rendering\api_abstration\Sampler.cpp" />
     <ClCompile Include="src\rendering\api_abstration\ShaderModule.cpp" />
     <ClCompile Include="src\rendering\api_abstration\Signal.cpp" />
     <ClCompile Include="src\rendering\api_abstration\StagingBufferPool.cpp" />

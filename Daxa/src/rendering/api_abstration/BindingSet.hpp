@@ -15,6 +15,7 @@
 
 #include "Image.hpp"
 #include "Buffer.hpp"
+#include "Sampler.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -79,7 +80,7 @@ namespace daxa {
 			BindingSet(BindingSet&&) noexcept;
 			BindingSet& operator=(BindingSet&&) noexcept;
 
-			using HandleVariants = std::variant<ImageHandle, BufferHandle, std::monostate>;
+			using HandleVariants = std::variant<ImageHandle, BufferHandle, SamplerHandle, std::monostate>;
 
 			VkDescriptorSet getVkDescriptorSet() const { return set; }
 		private:
