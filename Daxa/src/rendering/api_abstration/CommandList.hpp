@@ -118,8 +118,8 @@ namespace daxa {
 			void updateSetBuffers(BindingSetHandle& set, u32 binding, std::span<BufferHandle> buffers, u32 descriptorArrayOffset = 0);
 			void updateSetBuffer(BindingSetHandle& set, u32 binding, BufferHandle buffer);
 
-			void updateSetSamplers() { /* TODO */ }
-			void updateSetSampler() { /* TODO */ }
+			void updateSetSamplers(BindingSetHandle& set, u32 binding, std::span<SamplerHandle> samplers, u32 descriptorArrayOffset = 0);
+			void updateSetSampler(BindingSetHandle& set, u32 binding, SamplerHandle sampler);
 
 			void bindSet(u32 setBinding, BindingSetHandle& set);
 

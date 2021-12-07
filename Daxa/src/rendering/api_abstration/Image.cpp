@@ -19,7 +19,7 @@ namespace daxa {
 			std::memset(this, 0, sizeof(Image));
 		}
 
-		Image Image::create2dImage(VkDevice device, VmaAllocator allocator, u32 queueFamilyIndex, Image2dCreateInfo ci) {
+		Image Image::create2dImage(VkDevice device, VmaAllocator allocator, u32 queueFamilyIndex, Image2dCreateInfo const& ci) {
 			Image ret;
 
 			VkImageCreateInfo ici{
@@ -76,37 +76,15 @@ namespace daxa {
 			ret.arrayLayers = 1;
 			ret.mipmapLevels = 1;
 
+			if (ci.sampler.has_value()) {
+				ret.sampler = *ci.sampler;
+			}
+
 			return std::move(ret);
 		}
 
-		//ImageHandle::~ImageHandle() {
-		//	if (image) {
-		//	}
-		//	//image.reset();
-		//}
-		//
-		//ImageHandle::ImageHandle(ImageHandle&& other) noexcept {
-		//	this->image = std::move(other.image);
-		//}
-		//
-		//ImageHandle& ImageHandle::operator=(ImageHandle&& other) noexcept {
-		//	this->image = std::move(other.image);
-		//	return *this;
-		//}
-		//
-		//ImageHandle::ImageHandle(ImageHandle const& other) {
-		//	this->image = other.image;
-		//}
-		//
-		//ImageHandle& ImageHandle::operator=(ImageHandle const& other) {
-		//	this->image = other.image;
-		//	return *this;
-		//}
-
 		ImageHandle::ImageHandle(std::shared_ptr<Image> other)
 			:image{ std::move(other) }
-		{
-			//counters[image.get()] = image.use_count();
-		}
+		{ }
 	}
 }
