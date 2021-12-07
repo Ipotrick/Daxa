@@ -95,16 +95,16 @@ namespace daxa {
 				renderInfo.renderArea = *ri.renderArea;
 			}
 			else if (ri.colorAttachments.size() > 0) {
-				renderInfo.renderArea.extent.width = ri.colorAttachments[0].image->getExtent().width;
-				renderInfo.renderArea.extent.height = ri.colorAttachments[0].image->getExtent().height;
+				renderInfo.renderArea.extent.width = ri.colorAttachments[0].image->getVkExtent().width;
+				renderInfo.renderArea.extent.height = ri.colorAttachments[0].image->getVkExtent().height;
 			}
 			else if (ri.depthAttachment != nullptr) {
-				renderInfo.renderArea.extent.width = ri.depthAttachment->image->getExtent().width;
-				renderInfo.renderArea.extent.height = ri.depthAttachment->image->getExtent().height;
+				renderInfo.renderArea.extent.width = ri.depthAttachment->image->getVkExtent().width;
+				renderInfo.renderArea.extent.height = ri.depthAttachment->image->getVkExtent().height;
 			}
 			else if (ri.stencilAttachment != nullptr) {
-				renderInfo.renderArea.extent.width = ri.stencilAttachment->image->getExtent().width;
-				renderInfo.renderArea.extent.height = ri.stencilAttachment->image->getExtent().height;
+				renderInfo.renderArea.extent.width = ri.stencilAttachment->image->getVkExtent().width;
+				renderInfo.renderArea.extent.height = ri.stencilAttachment->image->getVkExtent().height;
 			}	// otherwise let it be zero, as we dont render anything anyways
 
 			renderInfo.layerCount = 1;	// Not sure what this does
@@ -180,8 +180,7 @@ namespace daxa {
 				VkSampler sampler = VK_NULL_HANDLE;
 				switch (set->description->layoutBindings.bindings[binding].descriptorType) {
 				case VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-					// TODO REPLACE THIS WITH AN ACTUAL SAMPLER!
-					sampler = VK_NULL_HANDLE;
+					sampler = image->getSampler()->getVkSampler();
 					break;
 				case VkDescriptorType::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
 					sampler = VK_NULL_HANDLE;
@@ -195,9 +194,9 @@ namespace daxa {
 
 				imageInfoBuffer.push_back(VkDescriptorImageInfo{
 					.sampler = sampler,
-					.imageView = image->view,
+					.imageView = image->getVkView(),
 					.imageLayout = layout,
-					});
+				});
 
 				// update the handles inside the set
 				u32 bindingSetIndex = set->description->bindingToHandleVectorIndex[binding];
@@ -257,6 +256,40 @@ namespace daxa {
 
 		void CommandList::updateSetBuffer(BindingSetHandle& set, u32 binding, BufferHandle buffer) {
 			updateSetBuffers(set, binding, { &buffer, 1 });
+		}
+
+		void CommandList::updateSetSamplers(BindingSetHandle& set, u32 binding, std::span<SamplerHandle> samplers, u32 descriptorArrayOffset) {
+			DAXA_ASSERT_M(!set->bInUseOnGPU, "can not update binding set while it is used on gpu");
+			for (auto& sampler : samplers) {
+				imageInfoBuffer.push_back(VkDescriptorImageInfo{
+					.sampler = sampler->getVkSampler(),
+					.imageView = VK_NULL_HANDLE,
+					.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+				});
+
+				// update the handles inside the set
+				u32 bindingSetIndex = set->description->bindingToHandleVectorIndex[binding];
+				set->handles[bindingSetIndex] = sampler;
+			}
+
+			VkWriteDescriptorSet write{
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.pNext = nullptr,
+				.dstSet = set->set,
+				.dstBinding = binding,
+				.dstArrayElement = descriptorArrayOffset,
+				.descriptorCount = (u32)imageInfoBuffer.size(),
+				.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.pImageInfo = imageInfoBuffer.data()
+			};
+
+			vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+
+			imageInfoBuffer.clear();
+		}
+
+		void CommandList::updateSetSampler(BindingSetHandle& set, u32 binding, SamplerHandle sampler) {
+			updateSetSamplers(set, binding, { &sampler,1 });
 		}
 
 		void CommandList::bindSet(u32 setBinding, BindingSetHandle& set) {
@@ -351,13 +384,13 @@ namespace daxa {
 					.newLayout = barrier.layoutAfter,
 					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.image = barrier.image->image,
+					.image = barrier.image->getVkImage(),
 					.subresourceRange = barrier.subRange.value_or(VkImageSubresourceRange{
-						.aspectMask = barrier.image->aspect,
+						.aspectMask = barrier.image->getVkAspect(),
 						.baseMipLevel = 0,
-						.levelCount = barrier.image->mipmapLevels,
+						.levelCount = barrier.image->getVkMipmapLevels(),
 						.baseArrayLayer = 0,
-						.layerCount = barrier.image->arrayLayers,
+						.layerCount = barrier.image->getVkArrayLayers(),
 					})
 				};
 
