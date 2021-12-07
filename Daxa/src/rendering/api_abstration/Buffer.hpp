@@ -22,9 +22,10 @@ namespace daxa {
 		class Buffer {
 		public:
 			Buffer();
+			Buffer(Buffer const&) = delete;
+			Buffer& operator=(Buffer const&) = delete;
 			Buffer(Buffer&&) noexcept;
 			Buffer& operator=(Buffer&&) noexcept;
-
 			~Buffer();
 
 			/**

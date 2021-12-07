@@ -9,17 +9,8 @@ namespace daxa {
 		: window{ std::move(win) }
 		, device{ gpu::Device::create() }
 		, renderWindow{ device.createRenderWindow(window->getWindowHandleSDL(), window->getSize()[0], window->getSize()[1], VK_PRESENT_MODE_IMMEDIATE_KHR) }
-		, queue{ this->device.createQueue() }
+		, queue{ device.createQueue() }
 	{ 
-		for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
-			this->frameResc.push_back(PerFrameRessources{
-				.renderingFinishedSignal = device.createSignal(),
-				.timeline = device.createTimelineSemaphore(),
-			});
-		}
-		
-		currentFrame = &frameResc.front();
-		swapchainImage = renderWindow.aquireNextImage();
 	}
 
 	Renderer::~Renderer() {
@@ -29,12 +20,14 @@ namespace daxa {
 
 	void Renderer::init() {
 		for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
-			VkSemaphoreCreateInfo semaphoreCreateInfo{
-				.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-				.pNext = nullptr,
-			}; 
-			frameResc[i].renderingFinishedSignal = device.createSignal();
+			this->frameResc.push_back(PerFrameRessources{
+				.renderingFinishedSignal = device.createSignal(),
+				.timeline = device.createTimelineSemaphore(),
+				});
 		}
+
+		currentFrame = &frameResc.front();
+		swapchainImage = renderWindow.aquireNextImage();
 
 		gpu::ShaderModuleHandle vertexShader = device.tryCreateShderModuleFromFile(
 			"daxa/shaders/test.vert", 
@@ -77,8 +70,8 @@ namespace daxa {
 		if (window->getSize()[0] != renderWindow.getSize().width || window->getSize()[1] != renderWindow.getSize().height) {
 			device.waitIdle();
 			renderWindow.resize(VkExtent2D{ .width = window->getSize()[0], .height = window->getSize()[1] });
+			swapchainImage = renderWindow.aquireNextImage();
 		}
-		swapchainImage = renderWindow.aquireNextImage();
 
 		auto cmdList = device.getEmptyCommandList();
 
@@ -92,13 +85,13 @@ namespace daxa {
 		};
 		cmdList.uploadToBuffer(vertecies, buffers["vertex"]);
 
-		gpu::ImageBarrier imgBarrier0[] = {{
+		std::array imgBarrier0 = { gpu::ImageBarrier{
 			.waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,	// as we write to the image in the frag shader we need to make sure its finished transitioning the layout
 			.image = swapchainImage.getImageHandle(),
 			.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,						// dont care about previous layout
 			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,		// set new layout to color attachment optimal
 		}};
-		gpu::MemoryBarrier memBarrier0[] = { gpu::MemoryBarrier{
+		std::array memBarrier0 = { gpu::MemoryBarrier{
 			.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,				// wait for writing the vertex buffer
 			.waitingStages = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT_KHR,		// the vertex creating must wait
 		} };
@@ -143,7 +136,7 @@ namespace daxa {
 
 		cmdList.endRendering(); 
 
-		gpu::ImageBarrier imgBarrier1[] = { gpu::ImageBarrier{
+		std::array imgBarrier1 = { gpu::ImageBarrier{
 			.image = swapchainImage.getImageHandle(),
 			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			.layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
@@ -163,6 +156,7 @@ namespace daxa {
 		queue.submit(std::move(submitInfo));
 
 		queue.present(std::move(swapchainImage), currentFrame->renderingFinishedSignal);
+		swapchainImage = renderWindow.aquireNextImage();
 
 		// we get the next frame context
 		nextFrameContext();					

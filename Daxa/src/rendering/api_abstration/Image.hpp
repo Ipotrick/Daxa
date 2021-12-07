@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
 
 #include <vulkan/vulkan.h>
 
@@ -43,9 +44,9 @@ namespace daxa {
 
 			static Image create2dImage(VkDevice device, VmaAllocator allocator, u32 queueFamilyIndex, Image2dCreateInfo ci);
 
-			VkDevice device;
-			VmaAllocator allocator;
-			VmaAllocation allocation;
+			VkDevice device = VK_NULL_HANDLE;
+			VmaAllocator allocator = VK_NULL_HANDLE;
+			VmaAllocation allocation = VK_NULL_HANDLE;
 			VkImageTiling tiling;
 			VkImageUsageFlags usageFlags;
 			VkFormat viewFormat;
@@ -61,6 +62,14 @@ namespace daxa {
 		class ImageHandle {
 		public:
 			ImageHandle() = default;
+			//ImageHandle(ImageHandle&&) noexcept;
+			//ImageHandle& operator=(ImageHandle&&) noexcept;
+			//ImageHandle(ImageHandle const&);
+			//ImageHandle& operator=(ImageHandle const&);
+			//~ImageHandle();
+
+			size_t getRefCount() const { return image.use_count(); }
+
 			Image const& operator*() const { return *image; }
 			Image& operator*() { return *image; }
 			Image const* operator->() const { return image.get(); }
@@ -71,7 +80,7 @@ namespace daxa {
 
 			ImageHandle(std::shared_ptr<Image> image);
 
-			std::shared_ptr<Image> image;
+			std::shared_ptr<Image> image = {};
 		};
 	}
 }
