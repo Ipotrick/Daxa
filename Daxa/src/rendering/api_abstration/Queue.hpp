@@ -32,11 +32,13 @@ namespace daxa {
 
 		class Queue {
 		public:
+			Queue() = default;
 			Queue(Queue const&) = delete;
 			Queue& operator=(Queue const&) = delete;
 			Queue(Queue&&) noexcept;
 			Queue& operator=(Queue&&) noexcept;
 			~Queue();
+
 			/**
 			 * Submit CommandLists to be executed on the GPU.
 			 * Per default the submits are NOT synced to wait on each other based on submission ordering.
@@ -53,7 +55,7 @@ namespace daxa {
 			void checkForFinishedSubmits();
 
 			void waitForFlush();
-		private:
+		private: 
 			friend class Device;
 
 			Queue(VkDevice device, VkQueue queue, std::shared_ptr<CommandListRecyclingSharedData> sharedData);
@@ -68,18 +70,18 @@ namespace daxa {
 				TimelineSemaphore timelineSema;
 				u64 finishCounter = 0;
 			};
-			std::vector<PendingSubmit> unfinishedSubmits;
+			std::vector<PendingSubmit> unfinishedSubmits = {};
 
 			std::weak_ptr<CommandListRecyclingSharedData> sharedData = {};
 
-			std::vector<TimelineSemaphore> unusedTimelines;
+			std::vector<TimelineSemaphore> unusedTimelines = {};
 
 			// reused temporary buffers:
-			std::vector<VkCommandBuffer> submitCommandBufferBuffer;
-			std::vector<VkSemaphore> submitSemaphoreWaitOnBuffer;
-			std::vector<VkSemaphore> submitSemaphoreSignalBuffer;
-			std::vector<u64> submitSemaphoreWaitOnValueBuffer;
-			std::vector<u64> submitSemaphoreSignalValueBuffer;
+			std::vector<VkCommandBuffer> submitCommandBufferBuffer = {};
+			std::vector<VkSemaphore> submitSemaphoreWaitOnBuffer = {};
+			std::vector<VkSemaphore> submitSemaphoreSignalBuffer = {};
+			std::vector<u64> submitSemaphoreWaitOnValueBuffer = {};
+			std::vector<u64> submitSemaphoreSignalValueBuffer = {};
 		};
 	}
 }
