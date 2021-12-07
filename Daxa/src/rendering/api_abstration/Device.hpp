@@ -37,7 +37,7 @@ namespace daxa {
 
 			static Device create();
 
-			static std::shared_ptr<vkb::Instance> getInstance();
+			static vkb::Instance& getInstance();
 
 			Queue createQueue();
 
@@ -105,20 +105,20 @@ namespace daxa {
 		private:
 			CommandList getNextCommandList();
 
-			VkDevice device;
-			vkb::Device vkbDevice;
-			VkPhysicalDevice physicalDevice;
-			VmaAllocator allocator;
-			u32 graphicsQFamilyIndex;
+			VkDevice device = {};
+			vkb::Device vkbDevice = {};
+			VkPhysicalDevice physicalDevice = {};
+			VmaAllocator allocator = {};
+			u32 graphicsQFamilyIndex = {};
 
 			std::shared_ptr<CommandListRecyclingSharedData> cmdListRecyclingSharedData = {};
 			std::vector<CommandList> unusedCommandLists;
 
 			// VK_KHR_dynamic_rendering:
-			void (*vkCmdBeginRenderingKHR)(VkCommandBuffer, const VkRenderingInfoKHR*);
-			void (*vkCmdEndRenderingKHR)(VkCommandBuffer);
+			void (*vkCmdBeginRenderingKHR)(VkCommandBuffer, const VkRenderingInfoKHR*) = nullptr;
+			void (*vkCmdEndRenderingKHR)(VkCommandBuffer) = nullptr;
 			// Synchronization2KHR:
-			void (*vkCmdPipelineBarrier2KHR)(VkCommandBuffer, VkDependencyInfoKHR const*);
+			void (*vkCmdPipelineBarrier2KHR)(VkCommandBuffer, VkDependencyInfoKHR const*) = nullptr;
 
 			std::shared_ptr<StagingBufferPool> stagingBufferPool = {};
 

@@ -15,7 +15,7 @@ namespace daxa {
 		DAXA_DEFINE_TRIVIAL_MOVE(RenderWindow)
 
 		RenderWindow::RenderWindow(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance, void* sdl_window_handle, u32 width, u32 height, VkPresentModeKHR presentMode, VkSwapchainKHR oldSwapchain, VkSurfaceKHR oldSurface)
-			: device{device}
+			: device{ device }
 			, physicalDevice{ physicalDevice }
 			, instance{ instance }
 			, sdl_window_handle{ sdl_window_handle }
@@ -47,7 +47,8 @@ namespace daxa {
 			auto vkImages = vkbSwapchain.get_images().value();
 			auto vkImageViews = vkbSwapchain.get_image_views().value();
 			for (int i = 0; i < vkImages.size(); i++) {
-				swapchainImages.push_back(ImageHandle{ std::make_shared<Image>(Image{}) });
+				auto handle = ImageHandle{ std::make_shared<Image>() };
+				swapchainImages.push_back(std::move(handle));
 				auto& img = *swapchainImages.back();
 				img.extent.width = width;
 				img.extent.height = height;
@@ -64,6 +65,7 @@ namespace daxa {
 				img.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 				img.arrayLayers = 1;
 				img.mipmapLevels = 1;
+				printf("swapchain image ptr: %p\n", swapchainImages.back().image.get());
 			}
 			swapchainImageFormat = vkbSwapchain.image_format;
 
@@ -76,14 +78,21 @@ namespace daxa {
 		}
 
 		RenderWindow::~RenderWindow() {
+			printf("destroy render window\n");
 			if (device) {
-				vkDestroySwapchainKHR(device, swapchain, nullptr);
+				printf("destroy render window REAL\n");
+				for (auto& img : swapchainImages) {
+					printf("ref count: %i\n", img.getRefCount());
+				}
 				swapchainImages.clear();
-				vkDestroySurfaceKHR(instance, surface, nullptr);
+				vkDestroySwapchainKHR(device, swapchain, nullptr);
+				if (surface) {
+					vkDestroySurfaceKHR(instance, surface, nullptr);
+				}
 				vkDestroyFence(device, aquireFence, nullptr);
+				device = nullptr;
 				instance = nullptr;
 				surface = nullptr;
-				device = nullptr;
 				physicalDevice = nullptr;
 				aquireFence = nullptr;
 			}
@@ -106,11 +115,15 @@ namespace daxa {
 		}
 
 		void RenderWindow::resize(VkExtent2D newSize) {
-			*this = RenderWindow{ device, physicalDevice, instance, sdl_window_handle, newSize.width, newSize.height, presentMode, this->swapchain, this->surface };
+			auto surface = this->surface;
+			this->surface = VK_NULL_HANDLE;
+			*this = RenderWindow{ device, physicalDevice, instance, sdl_window_handle, newSize.width, newSize.height, presentMode, this->swapchain, surface };
 		}
 
 		void RenderWindow::setPresentMode(VkPresentModeKHR newPresentMode) {
-			*this = RenderWindow{ device, physicalDevice, instance, sdl_window_handle, size.width,  size.height, newPresentMode, this->swapchain, this->surface };
+			auto surface = this->surface;
+			this->surface = VK_NULL_HANDLE;
+			*this = RenderWindow{ device, physicalDevice, instance, sdl_window_handle, size.width,  size.height, newPresentMode, this->swapchain, surface };
 		}
 	}
 }

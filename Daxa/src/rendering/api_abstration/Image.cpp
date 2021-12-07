@@ -8,17 +8,15 @@ namespace daxa {
 		DAXA_DEFINE_TRIVIAL_MOVE(Image)
 
 		Image::~Image() {
-			if (allocator && image && allocation) {
-				vmaDestroyImage(allocator, image, allocation);
-			}
 			if (device && view) {
 				vkDestroyImageView(device, view, nullptr);
+				printf("destroy view\n");
 			}
-			allocator	= nullptr;
-			image		= nullptr;
-			allocation	= nullptr;
-			device		= nullptr;
-			view		= nullptr;
+			if (allocator && image && allocation) {
+				vmaDestroyImage(allocator, image, allocation);
+				printf("destroy image\n");
+			}
+			std::memset(this, 0, sizeof(Image));
 		}
 
 		Image Image::create2dImage(VkDevice device, VmaAllocator allocator, u32 queueFamilyIndex, Image2dCreateInfo ci) {
@@ -81,8 +79,34 @@ namespace daxa {
 			return std::move(ret);
 		}
 
-		ImageHandle::ImageHandle(std::shared_ptr<Image> image) {
-			this->image = image;
+		//ImageHandle::~ImageHandle() {
+		//	if (image) {
+		//	}
+		//	//image.reset();
+		//}
+		//
+		//ImageHandle::ImageHandle(ImageHandle&& other) noexcept {
+		//	this->image = std::move(other.image);
+		//}
+		//
+		//ImageHandle& ImageHandle::operator=(ImageHandle&& other) noexcept {
+		//	this->image = std::move(other.image);
+		//	return *this;
+		//}
+		//
+		//ImageHandle::ImageHandle(ImageHandle const& other) {
+		//	this->image = other.image;
+		//}
+		//
+		//ImageHandle& ImageHandle::operator=(ImageHandle const& other) {
+		//	this->image = other.image;
+		//	return *this;
+		//}
+
+		ImageHandle::ImageHandle(std::shared_ptr<Image> other)
+			:image{ std::move(other) }
+		{
+			//counters[image.get()] = image.use_count();
 		}
 	}
 }
