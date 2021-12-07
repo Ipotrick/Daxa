@@ -108,7 +108,11 @@ namespace daxa {
 
 			void copyBufferToBufferMulti(BufferHandle src, BufferHandle dst, std::span<VkBufferCopy> copyRegions);
 
-			void copyBufferToImage(BufferHandle src, ImageHandle dst);
+			void copyBufferToImage(BufferHandle src, size_t srcOffset, size_t size, ImageHandle dst, std::optional<VkImageSubresourceLayers> dstSubRessource = {});
+
+			void uploadToImage(void const* src, size_t size, ImageHandle dst, std::optional<VkImageSubresourceLayers> dstSubRessource = {});
+
+			void uploadToImageSynced(void const* src, size_t size, ImageHandle dst, VkImageLayout dstLayout, std::optional<VkImageSubresourceLayers> dstSubRessource = {});
 
 			// Binding set management:
 
@@ -127,9 +131,10 @@ namespace daxa {
 
 			void bindVertexBuffer(u32 binding, BufferHandle buffer, size_t bufferOffset = 0);
 
+			// TODO REFACTOR, THIS LEADS TO BUGS (EXAMPLE: GIVE VECTOR AS CONSTANT PARAMETER)
 			template<typename T>
-			void pushConstant(VkShaderStageFlagBits shaderStage, T* constant, size_t offset = 0) {
-				vkCmdPushConstants(cmd, boundPipeline.value().layout, shaderStage, offset, sizeof(T), constant);
+			void pushConstant(VkShaderStageFlagBits shaderStage, T& constant, size_t offset = 0) {
+				vkCmdPushConstants(cmd, boundPipeline.value().layout, shaderStage, offset, sizeof(T), &constant);
 			}
 
 			void beginRendering(BeginRenderingInfo ri);
