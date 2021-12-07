@@ -197,7 +197,7 @@ namespace daxa {
 			vkCmdCopyBufferToImage(cmd, src->getVkBuffer(), dst->getVkImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bufferImageCopy);
 		}
 
-		void CommandList::uploadToImage(void const* src, size_t size, ImageHandle dst, std::optional<VkImageSubresourceLayers> dstSubRessource = {}) {
+		void CommandList::uploadToImage(void const* src, size_t size, ImageHandle dst, std::optional<VkImageSubresourceLayers> dstSubRessource) {
 			if (size > STAGING_BUFFER_POOL_BUFFER_SIZE) {
 				DAXA_ASSERT_M(false, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
 				usedImages.push_back(dst);
@@ -226,7 +226,7 @@ namespace daxa {
 			}
 		}
 
-		void CommandList::uploadToImageSynced(void const* src, size_t size, ImageHandle dst, VkImageLayout dstLayout, std::optional<VkImageSubresourceLayers> dstSubRessource = {}) {
+		void CommandList::uploadToImageSynced(void const* src, size_t size, ImageHandle dst, VkImageLayout dstLayout, std::optional<VkImageSubresourceLayers> dstSubRessource) {
 			ImageBarrier initialBarrier{
 				.waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR,
 				.image = dst,

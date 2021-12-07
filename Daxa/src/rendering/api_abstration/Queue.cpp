@@ -20,40 +20,35 @@ namespace daxa {
 		}
 
 		void Queue::submit(SubmitInfo&& si) {
-			submitCommandBufferBuffer.clear();
-			for (auto& cmdList : si.commandLists) {
-				DAXA_ASSERT_M(cmdList.operationsInProgress == 0, "can not submit command list with recording in progress");
-				submitCommandBufferBuffer.push_back(cmdList.cmd);
-
-				for (auto& buffer : cmdList.usedBuffers) {
-					buffer->bInUseOnGPU = true;
-				}
-				for (auto& set : cmdList.usedSets) {
-					set->bInUseOnGPU = true;
-				}
-			}
-
-			for (auto [timelineSema, waitValue] : si.waitOnTimelines) {
-				this->submitSemaphoreWaitOnBuffer.push_back(timelineSema->getVkSemaphore());
-				this->submitSemaphoreWaitOnValueBuffer.push_back(waitValue);
-			}
-			for (auto signal : si.waitOnSignals) {
-				this->submitSemaphoreWaitOnBuffer.push_back(signal->getVkSemaphore());
-				this->submitSemaphoreWaitOnValueBuffer.push_back(0);
-			}
-			for (auto [timelineSema, signalValue] : si.signalTimelines) {
-				this->submitSemaphoreSignalBuffer.push_back(timelineSema->getVkSemaphore());
-				this->submitSemaphoreSignalValueBuffer.push_back(signalValue);
-			}
-			for (auto signal : si.signalOnCompletion) {
-				this->submitSemaphoreSignalBuffer.push_back(signal->getVkSemaphore());
-				this->submitSemaphoreSignalValueBuffer.push_back(0);
-			}
-
-			auto thisSubmitTimelineSema = getNextTimeline();
-			auto thisSubmitTimelineFinishCounter = thisSubmitTimelineSema.getCounter() + 1;
-			this->submitSemaphoreSignalBuffer.push_back(thisSubmitTimelineSema.getVkSemaphore());
-			this->submitSemaphoreSignalValueBuffer.push_back(thisSubmitTimelineFinishCounter);
+			//for (auto& cmdList : si.commandLists) {
+			//	DAXA_ASSERT_M(cmdList.operationsInProgress == 0, "can not submit command list with recording in progress");
+			//	submitCommandBufferBuffer.push_back(cmdList.cmd);
+			//
+			//	for (auto& buffer : cmdList.usedBuffers) {
+			//		buffer->bInUseOnGPU = true;
+			//	}
+			//	for (auto& set : cmdList.usedSets) {
+			//		set->bInUseOnGPU = true;
+			//	}
+			//}
+			//
+			//for (auto [timelineSema, waitValue] : si.waitOnTimelines) {
+			//	this->submitSemaphoreWaitOnBuffer.push_back(timelineSema->getVkSemaphore());
+			//	this->submitSemaphoreWaitOnValueBuffer.push_back(waitValue);
+			//}
+			//for (auto signal : si.waitOnSignals) {
+			//	this->submitSemaphoreWaitOnBuffer.push_back(signal->getVkSemaphore());
+			//	this->submitSemaphoreWaitOnValueBuffer.push_back(0);
+			//}
+			//for (auto [timelineSema, signalValue] : si.signalTimelines) {
+			//	this->submitSemaphoreSignalBuffer.push_back(timelineSema->getVkSemaphore());
+			//	this->submitSemaphoreSignalValueBuffer.push_back(signalValue);
+			//}
+			//for (auto signal : si.signalOnCompletion) {
+			//	this->submitSemaphoreSignalBuffer.push_back(signal->getVkSemaphore());
+			//	this->submitSemaphoreSignalValueBuffer.push_back(0);
+			//}
+			//
 
 			VkTimelineSemaphoreSubmitInfo timelineSI{
 				.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
@@ -78,17 +73,23 @@ namespace daxa {
 			};
 			vkQueueSubmit(queue, 1, &submitInfo, nullptr);
 
+			auto thisSubmitTimelineSema = getNextTimeline();
+			auto thisSubmitTimelineFinishCounter = thisSubmitTimelineSema.getCounter() + 1;
+			this->submitSemaphoreSignalBuffer.push_back(thisSubmitTimelineSema.getVkSemaphore());
+			this->submitSemaphoreSignalValueBuffer.push_back(thisSubmitTimelineFinishCounter);
 			PendingSubmit pendingSubmit{
 				.cmdLists = std::move(si.commandLists),
 				.timelineSema = std::move(thisSubmitTimelineSema),
 				.finishCounter = thisSubmitTimelineFinishCounter,
 			};
-			unfinishedSubmits.push_back(std::move(pendingSubmit));
+			auto someMove = std::move(pendingSubmit);
+			unfinishedSubmits.push_back(std::move(someMove));
 
 			submitSemaphoreWaitOnBuffer.clear();
 			submitSemaphoreWaitOnBuffer.clear();
 			submitSemaphoreSignalBuffer.clear();
 			submitSemaphoreSignalValueBuffer.clear();
+			submitCommandBufferBuffer.clear();
 		}
 
 		TimelineSemaphore Queue::getNextTimeline() {
@@ -101,9 +102,8 @@ namespace daxa {
 		}
 
 		void Queue::checkForFinishedSubmits() {
-			auto data = sharedData.lock();
-			auto lock = std::unique_lock(data->mut);
 			for (auto iter = unfinishedSubmits.begin(); iter != unfinishedSubmits.end();) {
+				auto iter2 = iter;
 				if (iter->timelineSema.getCounter() >= iter->finishCounter) {
 					while (!iter->cmdLists.empty()) {
 						auto list = std::move(iter->cmdLists.back());
@@ -115,7 +115,9 @@ namespace daxa {
 							set->bInUseOnGPU = false;
 						}
 						list.reset();
-
+			
+						auto data = sharedData.lock();
+						auto lock = std::unique_lock(data->mut);
 						data->emptyCommandLists.push_back(std::move(list));
 					}
 					unusedTimelines.push_back(std::move(iter->timelineSema));
