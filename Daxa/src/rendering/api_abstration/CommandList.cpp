@@ -119,7 +119,6 @@ namespace daxa {
 			renderAttachmentBuffer.clear();
 		}
 		void CommandList::endRendering() {
-
 			operationsInProgress -= 1;
 			this->vkCmdEndRenderingKHR(cmd);
 			boundPipeline = std::nullopt;
@@ -170,10 +169,13 @@ namespace daxa {
 				DAXA_ASSERT_M(src->getSize() >= copyRegions[i].size + copyRegions[i].srcOffset, "ERROR: src buffer is smaller than the region that shouly be copied!");
 				DAXA_ASSERT_M(dst->getSize() >= copyRegions[i].size + copyRegions[i].dstOffset, "ERROR: dst buffer is smaller than the region that shouly be copied!");
 			}
+			usedBuffers.push_back(src);
+			usedBuffers.push_back(dst);
 			vkCmdCopyBuffer(cmd, src->getVkBuffer(), dst->getVkBuffer(), copyRegions.size(), copyRegions.data());
 		}
 
 		void CommandList::updateSetImages(BindingSetHandle& set, u32 binding, std::span<std::pair<ImageHandle, VkImageLayout>> images, u32 descriptorArrayOffset) {
+			DAXA_ASSERT_M(!set->bInUseOnGPU, "can not update binding set while it is used on gpu");
 			for (auto& [image, layout] : images) {
 				VkSampler sampler = VK_NULL_HANDLE;
 				switch (set->description->layoutBindings.bindings[binding].descriptorType) {
@@ -224,6 +226,7 @@ namespace daxa {
 		}
 
 		void CommandList::updateSetBuffers(BindingSetHandle& set, u32 binding, std::span<BufferHandle> buffers, u32 offset) {
+			DAXA_ASSERT_M(!set->bInUseOnGPU, "can not update binding set, that is still in use on the gpu");
 			for (auto& buffer : buffers) {
 				bufferInfoBuffer.push_back(VkDescriptorBufferInfo{
 					.buffer = buffer->buffer,
@@ -256,15 +259,15 @@ namespace daxa {
 			updateSetBuffers(set, binding, { &buffer, 1 });
 		}
 
-		void CommandList::bindSet(BindingSetHandle& set) {
+		void CommandList::bindSet(u32 setBinding, BindingSetHandle& set) {
 			DAXA_ASSERT_M(boundPipeline.has_value(), "can not bind descriptor sets if there is no pipeline bound");
-			vkCmdBindDescriptorSets(cmd, boundPipeline->bindPoint, boundPipeline->layout, 0, 1, &set->set, 0, nullptr);
+			vkCmdBindDescriptorSets(cmd, boundPipeline->bindPoint, boundPipeline->layout, setBinding, 1, &set->set, 0, nullptr);
 			usedSets.push_back(set);
 		}
 
-		void CommandList::uploadToBuffer(void* src, size_t size, BufferHandle dst, size_t dstOffset) {
+		void CommandList::uploadToBuffer(void const* src, size_t size, BufferHandle dst, size_t dstOffset) {
 			if (size > STAGING_BUFFER_POOL_BUFFER_SIZE) {
-				DAXA_ASSERT_M(false, "currently uploads over a size of 67.108.864 bytes are not supported");
+				DAXA_ASSERT_M(false, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
 			}
 			else {
 				if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < size) {

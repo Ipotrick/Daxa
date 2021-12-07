@@ -34,6 +34,7 @@ namespace daxa {
 		std::unordered_map<std::string_view, gpu::GraphicsPipelineHandle> pipelines;
 		std::unordered_map<std::string_view, gpu::ImageHandle> images;
 		std::unordered_map<std::string_view, gpu::BufferHandle> buffers;
+		std::unordered_map<std::string_view, gpu::BindingSetAllocator> setAllocators;
 		std::deque<PerFrameRessources> frameResc;
 		PerFrameRessources* currentFrame = {};
 		double totalElapsedTime{ 0.0 };
