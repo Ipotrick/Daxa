@@ -130,8 +130,8 @@ namespace daxa {
 		VkViewport viewport{
 			.x = 0,
 			.y = 0,
-			.width = (f32)swapchainImage.getImageHandle()->getExtent().width,
-			.height = (f32)swapchainImage.getImageHandle()->getExtent().height,
+			.width = (f32)swapchainImage.getImageHandle()->getVkExtent().width,
+			.height = (f32)swapchainImage.getImageHandle()->getVkExtent().height,
 			.minDepth = 0,
 			.maxDepth = 1,
 		};
