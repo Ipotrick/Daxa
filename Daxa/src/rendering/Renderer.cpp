@@ -23,7 +23,7 @@ namespace daxa {
 			this->frameResc.push_back(PerFrameRessources{
 				.renderingFinishedSignal = device.createSignal(),
 				.timeline = device.createTimelineSemaphore(),
-				});
+			});
 		}
 
 		currentFrame = &frameResc.front();
@@ -56,6 +56,15 @@ namespace daxa {
 			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
 		};
 		buffers["vertex"] = device.createBuffer(bufferCI);
+
+		setAllocators["someBuffer"] = device.createBindingSetAllocator(pipelines["triangle"]->getSetDescription(0));
+
+		gpu::BufferCreateInfo someBufferCI{
+			.size = sizeof(float)*4,
+			.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
+		};
+		buffers["someBuffer"] = device.createBuffer(someBufferCI);
 	}
 
 	void Renderer::nextFrameContext() {
@@ -77,13 +86,14 @@ namespace daxa {
 
 		cmdList.begin();
 
-		constexpr size_t vertexBufferSize = sizeof(float) * 3 * 3 /* positions */ + sizeof(float) * 4 * 3 /* colors */;
-		std::array<float, vertexBufferSize> vertecies = {
+		std::array vertecies = {
 			 1.f, 1.f, 0.0f,		1.f, 0.f, 0.f, 1.f, 
 			-1.f, 1.f, 0.0f,		0.f, 1.f, 0.f, 1.f,
 			 0.f,-1.f, 0.0f,		0.f, 0.f, 1.f, 1.f,
 		};
 		cmdList.uploadToBuffer(vertecies, buffers["vertex"]);
+		std::array someBufferdata = { 1.0f , 1.0f , 1.0f ,1.0f };
+		cmdList.uploadToBuffer(someBufferdata, buffers["someBuffer"]);
 
 		std::array imgBarrier0 = { gpu::ImageBarrier{
 			.waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,	// as we write to the image in the frag shader we need to make sure its finished transitioning the layout
@@ -127,8 +137,9 @@ namespace daxa {
 		};
 		cmdList.setViewport(viewport);
 
-		float triangleAlpha = (std::sin(totalElapsedTime) + 1.0f) * 0.5f;
-		cmdList.pushConstant(VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT, &triangleAlpha);
+		auto set = setAllocators["someBuffer"].getSet();
+		cmdList.updateSetBuffer(set, 0, buffers["someBuffer"]);
+		cmdList.bindSet(0, set);
 
 		cmdList.bindVertexBuffer(0, buffers["vertex"]);
 

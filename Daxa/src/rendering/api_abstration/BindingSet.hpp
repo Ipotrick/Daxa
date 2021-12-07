@@ -9,6 +9,7 @@
 #include <span>
 #include <array>
 #include <unordered_map>
+#include <mutex>
 
 #include "vulkan/vulkan.h"
 
@@ -22,17 +23,21 @@ namespace daxa {
 
 		class BindingSet;
 
-		struct PoolInfo {
-			VkDescriptorPool pool;
-			size_t allocatedSets = 0;
-			std::vector<std::shared_ptr<BindingSet>> zombies;
-		};
+		namespace {
+			struct BindingSetAllocatorBindingiSetPool {
+				VkDescriptorPool pool = VK_NULL_HANDLE;
+				size_t allocatedSets = 0;
+				std::vector<std::shared_ptr<BindingSet>> zombies = {};
+				std::mutex mut = {};
+			};
+		}
 
 		struct BindingsArray {
 			std::array<VkDescriptorSetLayoutBinding, MAX_BINDINGS_PER_SET> bindings = {};
 			size_t size = 0;
-			bool operator==(BindingsArray const& other) const {
-				return std::memcmp(this, &other, sizeof(BindingsArray));
+			bool operator==(BindingsArray const& other) const {	
+				auto equal = std::memcmp(this, &other, sizeof(BindingsArray)) == 0;
+				return equal;
 			}
 		};
 
@@ -84,11 +89,11 @@ namespace daxa {
 			friend class BindingSetHandle;
 			friend class Queue;
 
-			BindingSet(VkDescriptorSet set, PoolInfo* poolInfo, BindingSetDescription const* description);
+			BindingSet(VkDescriptorSet set, std::weak_ptr<BindingSetAllocatorBindingiSetPool> pool, BindingSetDescription const* description);
 
 			VkDescriptorSet set = {};
 			BindingSetDescription const* description = {};
-			PoolInfo* poolInfo = {};
+			std::weak_ptr<BindingSetAllocatorBindingiSetPool> pool = {};
 			bool bInUseOnGPU = false;
 
 			std::vector<HandleVariants> handles = {};
@@ -132,8 +137,12 @@ namespace daxa {
 			std::shared_ptr<BindingSet> set;
 		};
 
+		/**
+		* Must be externally Synchronized. given out BindingSets must not be externally synchorized.
+		*/
 		class BindingSetAllocator {
 		public:
+			BindingSetAllocator() = default;
 			BindingSetAllocator(VkDevice device, BindingSetDescription const* setDescription, size_t setsPerPool = 64);
 			BindingSetAllocator(BindingSetAllocator&&) noexcept;
 			BindingSetAllocator& operator=(BindingSetAllocator&&) noexcept;
@@ -145,19 +154,17 @@ namespace daxa {
 		private:
 			void initPoolSizes();
 
-			BindingSetHandle getNewSet(PoolInfo* pool);
+			BindingSetHandle getNewSet(std::shared_ptr<BindingSetAllocatorBindingiSetPool>& pool);
 
-			PoolInfo getNewPool();
+			std::shared_ptr<BindingSetAllocatorBindingiSetPool> getNewPool();
 
-			size_t	setsPerPool;
+			size_t	setsPerPool = 0;
 
-			std::vector<VkDescriptorPoolSize> poolSizes;
+			std::vector<VkDescriptorPoolSize> poolSizes = {};
 			VkDevice device = VK_NULL_HANDLE;
-			BindingSetDescription const* setDescription;
+			BindingSetDescription const* setDescription = nullptr;
 
-			std::vector<std::unique_ptr<PoolInfo>> pools;
+			std::vector<std::shared_ptr<BindingSetAllocatorBindingiSetPool>> pools;
 		};
-
-		// TODO: MAKE GENERIC BINDING SET ALLOCATOR THAT CAN ALLOCATE ALL BINDING SETS
 	}
 }

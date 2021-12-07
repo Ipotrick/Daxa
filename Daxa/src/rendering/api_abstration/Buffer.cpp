@@ -45,13 +45,13 @@ namespace daxa {
 			}
 		}
 
-		void Buffer::uploadFromHost(void* src, size_t size, size_t dstOffset) {
+		void Buffer::uploadFromHost(void const* src, size_t size, size_t dstOffset) {
 			DAXA_ASSERT_M(getVmaMemoryUsage() & VMA_MEMORY_USAGE_CPU_TO_GPU, "can only upload to buffers with the memory usage flag: VMA_MEMORY_USAGE_CPU_TO_GPU");
 			DAXA_ASSERT_M(getSize() + dstOffset >= size, "uploaded memory overruns the buffer size");
 
-			void* bufferMemPtr{ nullptr };
-			vmaMapMemory(allocator, allocation, &bufferMemPtr);
-			std::memcpy(bufferMemPtr, src, size);
+			u8* bufferMemPtr{ nullptr };
+			vmaMapMemory(allocator, allocation, (void**)&bufferMemPtr);
+			std::memcpy(bufferMemPtr + dstOffset, src, size);
 			vmaUnmapMemory(allocator, allocation);
 		}
 

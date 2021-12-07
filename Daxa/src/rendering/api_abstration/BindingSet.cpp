@@ -7,9 +7,9 @@ namespace daxa {
 
 		DAXA_DEFINE_TRIVIAL_MOVE(BindingSet)
 
-		BindingSet::BindingSet(VkDescriptorSet set, PoolInfo* poolInfo, BindingSetDescription const* description)
+		BindingSet::BindingSet(VkDescriptorSet set, std::weak_ptr<BindingSetAllocatorBindingiSetPool> pool, BindingSetDescription const* description)
 			: set{ set }
-			, poolInfo{ poolInfo }
+			, pool{ pool }
 			, description{ description }
 		{
 			handles.resize(description->descriptorCount, std::monostate{});
@@ -21,8 +21,12 @@ namespace daxa {
 
 		BindingSetHandle::~BindingSetHandle() {
 			if (set.use_count() == 1) {
+				size_t handlesSize = set->handles.size();
 				set->handles.clear();
-				set->poolInfo->zombies.push_back(set);
+				set->handles.resize(handlesSize, std::monostate{});
+				auto pool = set->pool.lock();
+				auto lock = std::unique_lock(pool->mut);
+				pool->zombies.push_back(std::move(set));
 			}
 		}
 
@@ -43,7 +47,7 @@ namespace daxa {
 			if (!descriptions.contains(bindingArray)) {
 				descriptions[bindingArray] = std::make_unique<BindingSetDescription>(makeNewDescription(bindingArray));
 			}
-			return &*descriptions[bindingArray];
+			return descriptions[bindingArray].get();
 		}
 
 		BindingSetDescriptionCache::BindingSetDescriptionCache(VkDevice device)
@@ -87,23 +91,27 @@ namespace daxa {
 		}
 
 		BindingSetAllocator::~BindingSetAllocator() {
-			for (auto& pool : pools) {
-				DAXA_ASSERT_M(pool->allocatedSets == pool->zombies.size(), "at the time of the descruction of a BindingSetAllocator, there were still living bindingsets left");
-				vkResetDescriptorPool(device, pool->pool, 0 /*TODO COULD BE WRONG*/);
-				vkDestroyDescriptorPool(device, pool->pool, nullptr);
+			if (device) {
+				for (auto& pool : pools) {
+					auto lock = std::unique_lock(pool->mut);
+					DAXA_ASSERT_M(pool->allocatedSets == pool->zombies.size(), "at the time of the descruction of a BindingSetAllocator, there were still living bindingsets left");
+					vkResetDescriptorPool(device, pool->pool, 0 /*TODO COULD BE WRONG*/);
+					vkDestroyDescriptorPool(device, pool->pool, nullptr);
+				}
 			}
 		}
 
 		BindingSetHandle BindingSetAllocator::getSet() {
 			std::optional<BindingSetHandle> handleOpt = std::nullopt;
 			for (auto& pool : pools) {
+				auto lock = std::unique_lock(pool->mut);
 				if (!pool->zombies.empty()) {
 					handleOpt = BindingSetHandle{ std::move(pool->zombies.back()) };
 					pool->zombies.pop_back();
 					break;
 				}
 				else if (pool->allocatedSets < setsPerPool) {
-					handleOpt = getNewSet(&*pool);
+					handleOpt = getNewSet(pool);
 				}
 			}
 
@@ -111,8 +119,9 @@ namespace daxa {
 				return std::move(handleOpt.value());
 			}
 			else {
-				pools.push_back(std::make_unique<PoolInfo>(getNewPool()));
-				return getNewSet(&*pools.back());
+				pools.push_back(std::move(getNewPool()));
+				// dont need mutex lock, as we are the only ones that have a ptr to the pool:
+				return getNewSet(pools.back());
 			}
 		}
 
@@ -125,7 +134,7 @@ namespace daxa {
 			}
 		}
 
-		BindingSetHandle BindingSetAllocator::getNewSet(PoolInfo* pool) {
+		BindingSetHandle BindingSetAllocator::getNewSet(std::shared_ptr<BindingSetAllocatorBindingiSetPool>& pool) {
 			VkDescriptorSetAllocateInfo descriptorSetAI{
 				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 				.pNext = nullptr,
@@ -137,10 +146,10 @@ namespace daxa {
 			VkDescriptorSet set;
 			vkAllocateDescriptorSets(device, &descriptorSetAI, &set);
 
-			return BindingSetHandle{ std::make_shared<BindingSet>(BindingSet{ set, pool, setDescription }) };
+			return BindingSetHandle{ std::make_shared<BindingSet>(BindingSet{set, pool, setDescription}) };
 		}
 
-		PoolInfo BindingSetAllocator::getNewPool() {
+		std::shared_ptr<BindingSetAllocatorBindingiSetPool> BindingSetAllocator::getNewPool() {
 			VkDescriptorPoolCreateInfo descriptorPoolCI{
 				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 				.pNext = nullptr,
@@ -152,11 +161,11 @@ namespace daxa {
 
 			VkDescriptorPool pool = VK_NULL_HANDLE;
 			vkCreateDescriptorPool(device, &descriptorPoolCI, nullptr, &pool);
-			return PoolInfo{
-				.pool = pool,
-				.allocatedSets = {},
-				.zombies = {},
-			};
+			auto ret = std::make_shared<BindingSetAllocatorBindingiSetPool>();
+			ret->pool = pool;
+			ret->allocatedSets = 0;
+			ret->zombies = {};
+			return std::move(ret);
 		}
 	}
 }
