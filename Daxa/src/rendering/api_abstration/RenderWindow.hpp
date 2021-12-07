@@ -20,6 +20,7 @@ namespace daxa {
 
 		class RenderWindow {
 		public:
+			RenderWindow() = default;
 			RenderWindow(RenderWindow&&) noexcept;
 			RenderWindow& operator=(RenderWindow&&) noexcept;
 			RenderWindow(RenderWindow const&) = delete;
@@ -31,10 +32,6 @@ namespace daxa {
 			void setPresentMode(VkPresentModeKHR newPresentMode);
 
 			SwapchainImage aquireNextImage();
-
-			//void present(SwapchainImage&& image, SignalHandle waitOn);
-
-			//SwapchainImage presentAquireNextImage(SwapchainImage&& image, SignalHandle waitOn);
 
 			VkExtent2D getSize() const { return size; }
 

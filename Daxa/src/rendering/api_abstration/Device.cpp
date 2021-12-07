@@ -11,9 +11,8 @@
 
 namespace daxa {
 	namespace gpu {
-		DAXA_DEFINE_TRIVIAL_MOVE(Device)
 
-		std::shared_ptr<vkb::Instance> instance;
+		vkb::Instance instance;
 		bool initialized = false;
 
 		void initGlobals() {
@@ -28,10 +27,10 @@ namespace daxa {
 				;
 			auto instanceBuildReturn = instanceBuilder.build();
 
-			instance = std::make_shared<vkb::Instance>(std::move(instanceBuildReturn.value()));
+			instance = std::move(instanceBuildReturn.value());
 		}
 
-		std::shared_ptr<vkb::Instance> Device::getInstance() {
+		vkb::Instance& Device::getInstance() {
 			if (!initialized) {
 				initGlobals();
 				initialized = true;
@@ -44,7 +43,7 @@ namespace daxa {
 				initGlobals();
 				initialized = true;
 			}
-			vkb::PhysicalDeviceSelector selector{ *instance };
+			vkb::PhysicalDeviceSelector selector{ instance };
 			vkb::PhysicalDevice physicalDevice = selector
 				.set_minimum_version(1, 2)
 				.defer_surface_initialization()
@@ -99,7 +98,7 @@ namespace daxa {
 			VmaAllocatorCreateInfo allocatorInfo = {
 				.physicalDevice = physicslDevice,
 				.device = device,
-				.instance = instance->instance,
+				.instance = instance,
 			};
 			VmaAllocator allocator;
 			vmaCreateAllocator(&allocatorInfo, &allocator);
@@ -125,6 +124,8 @@ namespace daxa {
 			ret.cmdListRecyclingSharedData = std::make_shared<CommandListRecyclingSharedData>();
 			return std::move(ret);
 		}
+
+		DAXA_DEFINE_TRIVIAL_MOVE(Device)
 
 		Device::~Device() {
 			if (device) {
@@ -160,7 +161,7 @@ namespace daxa {
 		}
 
 		RenderWindow Device::createRenderWindow(void* sdlWindowHandle, u32 width, u32 height, VkPresentModeKHR presentMode) {
-			return RenderWindow{ device, physicalDevice, instance->instance, sdlWindowHandle, width, height, presentMode };
+			return RenderWindow{ device, physicalDevice, instance, sdlWindowHandle, width, height, presentMode };
 		}
 
 		BindingSetDescription const* Device::createBindingSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings) {

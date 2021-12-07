@@ -13,7 +13,10 @@ namespace daxa {
 		{}
 
 		Queue::~Queue() {
-			waitForFlush();
+			if (device) {
+				waitForFlush();
+				device = nullptr;
+			}
 		}
 
 		void Queue::submit(SubmitInfo&& si) {
@@ -91,6 +94,8 @@ namespace daxa {
 		}
 
 		void Queue::checkForFinishedSubmits() {
+			auto data = sharedData.lock();
+			auto lock = std::unique_lock(data->mut);
 			for (auto iter = unfinishedSubmits.begin(); iter != unfinishedSubmits.end();) {
 				if (iter->timelineSema.getCounter() >= iter->finishCounter) {
 					while (!iter->cmdLists.empty()) {
@@ -104,8 +109,6 @@ namespace daxa {
 						}
 						list.reset();
 
-						auto data = sharedData.lock();
-						auto lock = std::unique_lock(data->mut);
 						data->emptyCommandLists.push_back(std::move(list));
 					}
 					unusedTimelines.push_back(std::move(iter->timelineSema));
@@ -118,6 +121,7 @@ namespace daxa {
 		}
 
 		void Queue::present(SwapchainImage&& img, SignalHandle& waitOnSignal) {
+			auto image = std::move(img);
 			auto sema = waitOnSignal->getVkSemaphore();
 			VkPresentInfoKHR presentInfo{
 				.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
@@ -125,8 +129,8 @@ namespace daxa {
 				.waitSemaphoreCount = 1,
 				.pWaitSemaphores = &sema,
 				.swapchainCount = 1,
-				.pSwapchains = &img.swapchain,
-				.pImageIndices = &img.imageIndex,
+				.pSwapchains = &image.swapchain,
+				.pImageIndices = &image.imageIndex,
 			};
 			vkQueuePresentKHR(queue, &presentInfo);
 		}
