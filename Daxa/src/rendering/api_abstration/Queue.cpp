@@ -24,6 +24,13 @@ namespace daxa {
 			for (auto& cmdList : si.commandLists) {
 				DAXA_ASSERT_M(cmdList.operationsInProgress == 0, "can not submit command list with recording in progress");
 				submitCommandBufferBuffer.push_back(cmdList.cmd);
+
+				for (auto& buffer : cmdList.usedBuffers) {
+					buffer->bInUseOnGPU = true;
+				}
+				for (auto& set : cmdList.usedSets) {
+					set->bInUseOnGPU = true;
+				}
 			}
 
 			for (auto [timelineSema, waitValue] : si.waitOnTimelines) {
