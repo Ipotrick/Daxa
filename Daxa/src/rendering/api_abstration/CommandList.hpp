@@ -90,14 +90,17 @@ namespace daxa {
 
 			// Ressource management:
 
-			//void changeImageLayout(ImageHandle image, VkImageLayout newLayout);
-
+			template<typename T, size_t N>
+			void uploadToBuffer(std::array<T, N> const& arraySrc, BufferHandle dst, size_t dstOffset = 0) {
+				uploadToBuffer(arraySrc.data(), sizeof(T) * N, std::move(dst), dstOffset);
+			}
+			
 			template<typename T>
-			void uploadToBuffer(T& src, BufferHandle dst, size_t dstOffset = 0) {
-				uploadToBuffer(src.data(), src.size(), dst, dstOffset);
+				void uploadToBuffer(std::vector<T> const& vecSrc, BufferHandle dst, size_t dstOffset = 0) {
+				uploadToBuffer(vecSrc.data(), sizeof(T) * vecSrc.size(), std::move(dst), dstOffset);
 			}
 
-			void uploadToBuffer(void* src, size_t size, BufferHandle dst, size_t dstOffset = 0);
+			void uploadToBuffer(void const* src, size_t size, BufferHandle dst, size_t dstOffset = 0);
 
 			void copyBufferToBuffer(BufferHandle src, BufferHandle dst, VkBufferCopy region) {
 				copyBufferToBufferMulti(src, dst, { &region, 1 });
@@ -118,7 +121,7 @@ namespace daxa {
 			void updateSetSamplers() { /* TODO */ }
 			void updateSetSampler() { /* TODO */ }
 
-			void bindSet(BindingSetHandle& set);
+			void bindSet(u32 setBinding, BindingSetHandle& set);
 
 			// Rendering:
 
