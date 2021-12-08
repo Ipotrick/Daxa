@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include <spirv_reflect.h>
+
 #include "common.hpp"
 
 namespace daxa {
@@ -127,6 +129,63 @@ namespace daxa {
 			return *this;
 		}
 
+		std::vector<VkPushConstantRange> reflectPushConstants(const std::vector<uint32_t>& spv, VkShaderStageFlagBits shaderStage) {
+			SpvReflectShaderModule module = {};
+			SpvReflectResult result = spvReflectCreateShaderModule(spv.size() * sizeof(uint32_t), spv.data(), &module);
+			assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+			uint32_t count = 0;
+			result = spvReflectEnumeratePushConstantBlocks(&module, &count, NULL);
+
+			std::vector<SpvReflectBlockVariable*> blocks(count);
+			result = spvReflectEnumeratePushConstantBlocks(&module, &count, blocks.data());
+			assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+			std::vector<VkPushConstantRange> ret;
+			for (auto* block : blocks) {
+				ret.push_back(VkPushConstantRange{
+					.stageFlags = (VkShaderStageFlags)shaderStage,
+					.offset = block->offset,
+					.size = block->size,
+					});
+			}
+			return std::move(ret);
+		}
+
+		std::unordered_map<uint32_t, std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding>>
+			reflectSetBindings(const std::vector<uint32_t>& spv, VkShaderStageFlagBits shaderStage) {
+			SpvReflectShaderModule module = {};
+			SpvReflectResult result = spvReflectCreateShaderModule(spv.size() * sizeof(uint32_t), spv.data(), &module);
+			assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+			uint32_t count = 0;
+			result = spvReflectEnumerateDescriptorSets(&module, &count, NULL);
+			assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+			std::vector<SpvReflectDescriptorSet*> sets(count);
+			result = spvReflectEnumerateDescriptorSets(&module, &count, sets.data());
+			assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+			std::unordered_map<uint32_t, std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding>> setMap;
+			for (auto* set : sets) {
+				std::vector<VkDescriptorSetLayoutBinding> bindings;
+				for (uint32_t i = 0; i < set->binding_count; i++) {
+					auto* reflBinding = set->bindings[i];
+
+					VkDescriptorSetLayoutBinding binding{
+						.binding = reflBinding->binding,
+						.descriptorType = static_cast<VkDescriptorType>(reflBinding->descriptor_type),
+						.descriptorCount = reflBinding->count,
+						.stageFlags = (VkShaderStageFlags)shaderStage
+					};
+					setMap[set->set][binding.binding] = binding;
+				}
+			}
+
+			spvReflectDestroyShaderModule(&module);
+			return std::move(setMap);
+		}
+
 		GraphicsPipelineBuilder& GraphicsPipelineBuilder::addShaderStage(const ShaderModuleHandle& shaderModule) {
 			VkPipelineShaderStageCreateInfo pipelineShaderStageCI{
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -138,7 +197,7 @@ namespace daxa {
 			this->shaderStageCreateInfo.push_back(pipelineShaderStageCI);
 
 			// reflect spirv push constants:
-			auto falserefl = vkh::reflectPushConstants(shaderModule->spirv, (vk::ShaderStageFlagBits)shaderModule->shaderStage);
+			auto falserefl = reflectPushConstants(shaderModule->spirv, shaderModule->shaderStage);
 			auto refl2 = reinterpret_cast<std::vector<VkPushConstantRange>*>(&falserefl);
 			auto& refl = *refl2;
 			for (auto& r : refl) {
@@ -157,7 +216,7 @@ namespace daxa {
 			}
 
 			// reflect spirv descriptor sets:
-			auto reflDesc = vkh::reflectSetBindings(shaderModule->spirv, (vk::ShaderStageFlagBits)shaderModule->shaderStage);
+			auto reflDesc = reflectSetBindings(shaderModule->spirv, shaderModule->shaderStage);
 			for (auto& r : reflDesc) {
 				if (!descriptorSets.contains(r.first)) {
 					descriptorSets[r.first] = std::unordered_map<u32, VkDescriptorSetLayoutBinding>{};

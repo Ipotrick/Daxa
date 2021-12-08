@@ -24,7 +24,6 @@
     <ClCompile Include="dependencies\tiny_obj_loader.cpp" />
     <ClCompile Include="dependencies\VkBootstrap.cpp" />
     <ClCompile Include="dependencies\vk_mem_alloc.cpp" />
-    <ClCompile Include="dependencies\vulkanhelper.cpp" />
     <ClCompile Include="src\Application.cpp" />
     <ClCompile Include="src\Daxa.cpp" />
     <ClCompile Include="src\gpu\BindingSet.cpp" />
@@ -51,7 +50,6 @@
     <ClInclude Include="dependencies\tiny_obj_loader.hpp" />
     <ClInclude Include="dependencies\VkBootstrap.h" />
     <ClInclude Include="dependencies\vk_mem_alloc.hpp" />
-    <ClInclude Include="dependencies\vulkanhelper.hpp" />
     <ClInclude Include="include\Daxa.hpp" />
     <ClInclude Include="src\Application.hpp" />
     <ClInclude Include="src\framework.h" />
@@ -64,7 +62,6 @@
     <ClInclude Include="src\gpu\Instance.hpp" />
     <ClInclude Include="src\gpu\Pipeline.hpp" />
     <ClInclude Include="src\gpu\Queue.hpp" />
-    <ClInclude Include="src\gpu\RenderPassCache.hpp" />
     <ClInclude Include="src\gpu\RenderWindow.hpp" />
     <ClInclude Include="src\gpu\Sampler.hpp" />
     <ClInclude Include="src\gpu\ShaderModule.hpp" />

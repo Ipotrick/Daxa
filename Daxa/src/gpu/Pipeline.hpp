@@ -8,10 +8,8 @@
 #include <array>
 #include <string>
 
-#define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
-#include <vulkan/vulkan.hpp>
-#include <../dependencies/vulkanhelper.hpp>
-#include "../dependencies/vk_mem_alloc.hpp"
+#include <vulkan/vulkan.h>
+#include <vk_mem_alloc.hpp>
 
 #include "ShaderModule.hpp"
 #include "BindingSet.hpp"
