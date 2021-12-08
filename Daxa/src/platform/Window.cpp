@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include <VkBootstrap.hpp>
+#include <VkBootstrap.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
 
