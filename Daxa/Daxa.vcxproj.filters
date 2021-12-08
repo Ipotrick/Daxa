@@ -45,9 +45,6 @@
     <ClCompile Include="dependencies\VkBootstrap.cpp">
       <Filter>dependencies</Filter>
     </ClCompile>
-    <ClCompile Include="dependencies\vulkanhelper.cpp">
-      <Filter>dependencies</Filter>
-    </ClCompile>
     <ClCompile Include="src\gpu\BindingSet.cpp">
       <Filter>Source Files\gpu</Filter>
     </ClCompile>
@@ -119,9 +116,6 @@
     <ClInclude Include="dependencies\vk_mem_alloc.hpp">
       <Filter>dependencies</Filter>
     </ClInclude>
-    <ClInclude Include="dependencies\vulkanhelper.hpp">
-      <Filter>dependencies</Filter>
-    </ClInclude>
     <ClInclude Include="src\gpu\BindingSet.hpp">
       <Filter>Source Files\gpu</Filter>
     </ClInclude>
@@ -144,9 +138,6 @@
       <Filter>Source Files\gpu</Filter>
     </ClInclude>
     <ClInclude Include="src\gpu\Queue.hpp">
-      <Filter>Source Files\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="src\gpu\RenderPassCache.hpp">
       <Filter>Source Files\gpu</Filter>
     </ClInclude>
     <ClInclude Include="src\gpu\RenderWindow.hpp">
