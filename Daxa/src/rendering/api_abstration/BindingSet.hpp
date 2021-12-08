@@ -9,11 +9,13 @@
 #include <span>
 #include <array>
 #include <unordered_map>
+#include <mutex>
 
 #include "vulkan/vulkan.h"
 
 #include "Image.hpp"
 #include "Buffer.hpp"
+#include "Sampler.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -22,17 +24,21 @@ namespace daxa {
 
 		class BindingSet;
 
-		struct PoolInfo {
-			VkDescriptorPool pool;
-			size_t allocatedSets = 0;
-			std::vector<std::shared_ptr<BindingSet>> zombies;
-		};
+		namespace {
+			struct BindingSetAllocatorBindingiSetPool {
+				VkDescriptorPool pool = VK_NULL_HANDLE;
+				size_t allocatedSets = 0;
+				std::vector<std::shared_ptr<BindingSet>> zombies = {};
+				std::mutex mut = {};
+			};
+		}
 
 		struct BindingsArray {
 			std::array<VkDescriptorSetLayoutBinding, MAX_BINDINGS_PER_SET> bindings = {};
 			size_t size = 0;
-			bool operator==(BindingsArray const& other) const {
-				return std::memcmp(this, &other, sizeof(BindingsArray));
+			bool operator==(BindingsArray const& other) const {	
+				auto equal = std::memcmp(this, &other, sizeof(BindingsArray)) == 0;
+				return equal;
 			}
 		};
 
@@ -73,76 +79,39 @@ namespace daxa {
 			BindingSet& operator=(BindingSet const&)	= delete;
 			BindingSet(BindingSet&&) noexcept;
 			BindingSet& operator=(BindingSet&&) noexcept;
-			//~BindingSet();
 
-			using HandleVariants = std::variant<ImageHandle, BufferHandle, std::monostate>;
+			using HandleVariants = std::variant<ImageHandle, BufferHandle, SamplerHandle, std::monostate>;
 
 			VkDescriptorSet getVkDescriptorSet() const { return set; }
 		private:
+			friend class Device;
 			friend class CommandList;
 			friend class BindingSetAllocator;
 			friend class BindingSetHandle;
+			friend class Queue;
 
-			BindingSet(VkDescriptorSet set, PoolInfo* poolInfo, BindingSetDescription const* description);
+			BindingSet(VkDescriptorSet set, std::weak_ptr<BindingSetAllocatorBindingiSetPool> pool, BindingSetDescription const* description);
 
 			VkDescriptorSet set = {};
 			BindingSetDescription const* description = {};
-			PoolInfo* poolInfo = {};
+			std::weak_ptr<BindingSetAllocatorBindingiSetPool> pool = {};
+			bool bInUseOnGPU = false;
 
 			std::vector<HandleVariants> handles = {};
 		};
 
 		class BindingSetDescriptionCache {
 		public:
-			BindingSetDescriptionCache() = default;
-			~BindingSetDescriptionCache() {
-				for (auto& [_, description] : descriptions) {
-					vkDestroyDescriptorSetLayout(device, description->layout, nullptr);
-				}
-			}
+			BindingSetDescriptionCache(VkDevice device);
+			BindingSetDescriptionCache(BindingSetDescriptionCache const&) = delete;
+			BindingSetDescriptionCache& operator=(BindingSetDescriptionCache const&) = delete;
+			BindingSetDescriptionCache(BindingSetDescriptionCache&&) noexcept = delete;
+			BindingSetDescriptionCache& operator=(BindingSetDescriptionCache&&) noexcept = delete;
+			~BindingSetDescriptionCache();
 
-			void init(VkDevice device) {
-				this->device = device;
-			}
-
-			BindingSetDescription const* getSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings) {
-				assert(device);
-				assert(bindings.size() < MAX_BINDINGS_PER_SET);
-				BindingsArray bindingArray = {};
-				bindingArray.size = bindings.size();
-				for (int i = 0; i < bindings.size(); i++) {
-					bindingArray.bindings[i] = bindings[i];
-				}
-				if (!descriptions.contains(bindingArray)) {
-					descriptions[bindingArray] = std::make_unique<BindingSetDescription>(makeNewDescription(bindingArray));
-				}
-				return &*descriptions[bindingArray];
-			}
+			BindingSetDescription const* getSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings);
 		private:
-			BindingSetDescription makeNewDescription(BindingsArray& bindingArray) {
-				BindingSetDescription description = {};
-
-				description.layoutBindings = bindingArray;
-
-				VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI{
-					.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-					.pNext = nullptr,
-					.flags = 0,
-					.bindingCount = (u32)bindingArray.size,
-					.pBindings = bindingArray.bindings.data(),
-				};
-				vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCI, nullptr, &description.layout);
-
-				size_t nextHandleVectorIndex = 0;
-				for (int i = 0; i < bindingArray.size; i++) {
-					assert(bindingArray.bindings[i].binding < MAX_BINDINGS_PER_SET);
-					description.bindingToHandleVectorIndex[bindingArray.bindings[i].binding] = nextHandleVectorIndex;
-					nextHandleVectorIndex += bindingArray.bindings[i].descriptorCount;
-				}
-				description.descriptorCount = nextHandleVectorIndex;
-
-				return description;
-			}
+			BindingSetDescription makeNewDescription(BindingsArray& bindingArray);
 
 			VkDevice device = VK_NULL_HANDLE;
 			std::unordered_map<BindingsArray, std::unique_ptr<BindingSetDescription>, BindingsArrayHasher> descriptions;
@@ -169,8 +138,12 @@ namespace daxa {
 			std::shared_ptr<BindingSet> set;
 		};
 
+		/**
+		* Must be externally Synchronized. given out BindingSets must not be externally synchorized.
+		*/
 		class BindingSetAllocator {
 		public:
+			BindingSetAllocator() = default;
 			BindingSetAllocator(VkDevice device, BindingSetDescription const* setDescription, size_t setsPerPool = 64);
 			BindingSetAllocator(BindingSetAllocator&&) noexcept;
 			BindingSetAllocator& operator=(BindingSetAllocator&&) noexcept;
@@ -182,19 +155,17 @@ namespace daxa {
 		private:
 			void initPoolSizes();
 
-			BindingSetHandle getNewSet(PoolInfo* pool);
+			BindingSetHandle getNewSet(std::shared_ptr<BindingSetAllocatorBindingiSetPool>& pool);
 
-			PoolInfo getNewPool();
+			std::shared_ptr<BindingSetAllocatorBindingiSetPool> getNewPool();
 
-			size_t	setsPerPool;
+			size_t	setsPerPool = 0;
 
-			std::vector<VkDescriptorPoolSize> poolSizes;
+			std::vector<VkDescriptorPoolSize> poolSizes = {};
 			VkDevice device = VK_NULL_HANDLE;
-			BindingSetDescription const* setDescription;
+			BindingSetDescription const* setDescription = nullptr;
 
-			std::vector<std::unique_ptr<PoolInfo>> pools;
+			std::vector<std::shared_ptr<BindingSetAllocatorBindingiSetPool>> pools;
 		};
-
-		// TODO: MAKE GENERIC BINDING SET ALLOCATOR THAT CAN ALLOCATE ALL BINDING SETS
 	}
 }

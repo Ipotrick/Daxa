@@ -47,8 +47,12 @@
     <ClInclude Include="src\rendering\api_abstration\Device.hpp" />
     <ClInclude Include="src\rendering\api_abstration\Image.hpp" />
     <ClInclude Include="src\rendering\api_abstration\Pipeline.hpp" />
+    <ClInclude Include="src\rendering\api_abstration\Queue.hpp" />
     <ClInclude Include="src\rendering\api_abstration\RenderWindow.hpp" />
+    <ClInclude Include="src\rendering\api_abstration\Sampler.hpp" />
     <ClInclude Include="src\rendering\api_abstration\ShaderModule.hpp" />
+    <ClInclude Include="src\rendering\api_abstration\Signal.hpp" />
+    <ClInclude Include="src\rendering\api_abstration\StagingBufferPool.hpp" />
     <ClInclude Include="src\rendering\api_abstration\SwapchainImage.hpp" />
     <ClInclude Include="src\rendering\api_abstration\TimelineSemaphore.hpp" />
     <ClInclude Include="src\rendering\Camera.hpp" />
@@ -56,7 +60,6 @@
     <ClInclude Include="src\rendering\CoordSystem2d.hpp" />
     <ClInclude Include="src\rendering\gpu.hpp" />
     <ClInclude Include="src\rendering\Renderer.hpp" />
-    <ClInclude Include="src\rendering\StagingBufferPool.hpp" />
     <ClInclude Include="src\threading\Jobs.hpp" />
     <ClInclude Include="src\threading\OwningMutex.hpp" />
     <ClInclude Include="src\util\PagedIndexMap.hpp" />
@@ -82,8 +85,12 @@
     <ClCompile Include="src\rendering\api_abstration\Device.cpp" />
     <ClCompile Include="src\rendering\api_abstration\Image.cpp" />
     <ClCompile Include="src\rendering\api_abstration\Pipeline.cpp" />
+    <ClCompile Include="src\rendering\api_abstration\Queue.cpp" />
     <ClCompile Include="src\rendering\api_abstration\RenderWindow.cpp" />
+    <ClCompile Include="src\rendering\api_abstration\Sampler.cpp" />
     <ClCompile Include="src\rendering\api_abstration\ShaderModule.cpp" />
+    <ClCompile Include="src\rendering\api_abstration\Signal.cpp" />
+    <ClCompile Include="src\rendering\api_abstration\StagingBufferPool.cpp" />
     <ClCompile Include="src\rendering\api_abstration\TimelineSemaphore.cpp" />
     <ClCompile Include="src\rendering\CoordSystem2d.cpp" />
     <ClCompile Include="src\rendering\Renderer.cpp" />
@@ -216,14 +223,14 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <AdditionalIncludeDirectories>S:\VulkanSDK\Include;$(ProjectDir)dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
-      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

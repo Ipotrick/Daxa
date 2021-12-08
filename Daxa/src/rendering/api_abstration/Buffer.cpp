@@ -1,12 +1,10 @@
 #include "Buffer.hpp"
 #include "common.hpp"
 
-#include <assert.h>
-
 namespace daxa {
 	namespace gpu {
 
-		Buffer::Buffer(VkDevice device, u32 queueFamilyIndex, VmaAllocator allocator, BufferCreateInfo ci) {
+		Buffer::Buffer(VkDevice device, u32 queueFamilyIndex, VmaAllocator allocator, BufferCreateInfo& ci) {
 
 			VkBufferCreateInfo bci{
 				.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -22,7 +20,7 @@ namespace daxa {
 				.usage = ci.memoryUsage,
 			};
 
-			vmaCreateBuffer(allocator, (VkBufferCreateInfo*)&bci, &aci, (VkBuffer*)&*buffer, &allocation, nullptr);
+			vmaCreateBuffer(allocator, (VkBufferCreateInfo*)&bci, &aci, &buffer, &allocation, nullptr);
 
 			this->allocator = allocator;
 			this->size = ci.size;
@@ -47,19 +45,18 @@ namespace daxa {
 			}
 		}
 
+		void Buffer::uploadFromHost(void const* src, size_t size, size_t dstOffset) {
+			DAXA_ASSERT_M(getVmaMemoryUsage() & VMA_MEMORY_USAGE_CPU_TO_GPU, "can only upload to buffers with the memory usage flag: VMA_MEMORY_USAGE_CPU_TO_GPU");
+			DAXA_ASSERT_M(getSize() + dstOffset >= size, "uploaded memory overruns the buffer size");
+
+			u8* bufferMemPtr{ nullptr };
+			vmaMapMemory(allocator, allocation, (void**)&bufferMemPtr);
+			std::memcpy(bufferMemPtr + dstOffset, src, size);
+			vmaUnmapMemory(allocator, allocation);
+		}
+
 		BufferHandle::BufferHandle(Buffer&& buffer)
 			: buffer{ std::make_shared<Buffer>(std::move(buffer)) }
 		{ }
-
-		void uploadToStagingBuffer(std::span<u8> hostMemorySrc, BufferHandle bufferDst, size_t offset) {
-			// assert(bufferDst->getVkBufferUsage() & VMA_MEMORY_USAGE_CPU_TO_GPU, "ERROR: staging buffer must be of memory type: VMA_MEMORY_USAGE_CPU_TO_GPU!");
-			// assert(bufferDst->getSize() + offset >= hostMemorySrc.size(), "ERROR: staging buffer must be at last or greater than (size of memory that is to be uploaded + offset)!");
-			//assert(bool(bufferDst->bInUseOnGPU()));
-
-			void* bufferMemPtr{ nullptr };
-			vmaMapMemory(bufferDst->allocator, bufferDst->allocation, &bufferMemPtr);
-			std::memcpy(bufferMemPtr, hostMemorySrc.data(), hostMemorySrc.size());
-			vmaUnmapMemory(bufferDst->allocator, bufferDst->allocation);
-		}
 	}
 }

@@ -2,15 +2,15 @@
 
 Daxa is a simple Game Engine build with C++ and Vulkan.
 
-Daxa exposes its own graphics api (in the gpu namespace) that is build on top of vulkan.
+Daxa exposes its own graphics api: daxa::gpu that is build on top of vulkan.
 Design goals for the gpu abstaction:
- * hard to missuse
- * fast to get things done
- * automatic (ref counted) lifetime management of common types like buffers
- * high performance and low overhead on high-frequency commands
- * thread save parallel command encoding
+ * easier to use than vulkan
+ * dont expose all vulkan features, but only the ones i care about
+ * a lot of default parameters, beeing a lot less explicit than vulkan
+ * automatic (ref counted) lifetime management of common types like buffers and descriptor sets
+ * low overhead
+ * thread savety: parallel command recording queue submits and synchronized device
  * beeing relatively close to vulkan in spirit (things like descriptor sets are still exposed in an abstracted way)
- * beeing a lot less explicit than vulkan and having default values for everything
 
 The Engine also makes sue of multithreadding via a threadpool. This threadpool will be expaneded to also utalize co-routines so that asyncronous operations can be executed.
 

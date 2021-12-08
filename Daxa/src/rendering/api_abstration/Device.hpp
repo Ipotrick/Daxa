@@ -19,6 +19,9 @@
 #include "SwapchainImage.hpp"
 #include "TimelineSemaphore.hpp"
 #include "RenderWindow.hpp"
+#include "Signal.hpp"
+#include "StagingBufferPool.hpp"
+#include "Queue.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -28,13 +31,15 @@ namespace daxa {
 			Device()								= default;
 			Device(Device const& other)				= delete;
 			Device& operator=(Device const&)		= delete;
-			Device(Device&&) noexcept				= delete;
-			Device& operator=(Device&&) noexcept	= delete;
+			Device(Device&&) noexcept;
+			Device& operator=(Device&&) noexcept;
 			~Device();
 
-			static std::shared_ptr<Device> createNewDevice();
+			static Device create();
 
-			static std::shared_ptr<vkb::Instance> getInstance();
+			static vkb::Instance& getInstance();
+
+			Queue createQueue();
 
 			/**
 			 * \param ci all information defining the 2d image
@@ -49,6 +54,8 @@ namespace daxa {
 			BufferHandle createBuffer(BufferCreateInfo ci);
 
 			TimelineSemaphore createTimelineSemaphore();
+
+			SignalHandle createSignal();
 
 			RenderWindow createRenderWindow(void* sdlWindowHandle, u32 width, u32 height, VkPresentModeKHR presentMode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR);
 
@@ -85,37 +92,6 @@ namespace daxa {
 			 */
 			CommandList getEmptyCommandList();
 
-			struct SubmitInfo {
-				std::vector<CommandList>						commandLists;		// TODO REPLACE THIS VECTOR WITH HEAPLESS VERSION
-				std::span<std::tuple<TimelineSemaphore*, u64>>	waitOnTimelines;
-				std::span<std::tuple<TimelineSemaphore*, u64>>	signalTimelines;
-				std::span<VkSemaphore>							waitOnSemaphores;
-				std::span<VkSemaphore>							signalSemaphores;
-			};
-			/**
-			 * Submit CommandLists to be executed on the GPU.
-			 * Per default the submits are NOT synced to wait on each other based on submission ordering.
-			 *
-			 * It is guaranteed that all ressouces used in the cmdLists and the cmdLists themselfes are kept alive until after the gpu has finished executing it.
-			 * 
-			 * \param submitInfo contains all information about the submit.
-			 * \return a fence handle that can be used to check if the execution is complete or waited upon completion.
-			 */
-			void submit(SubmitInfo&& submitInfo);
-
-			/**
-			 * Orders the gpu to present the specified image to the window.
-			 * \param sImage the swapchain image to present to.
-			 * \param waitOn is an optional list of Semaphores that are waited on before the present is executed on the gpu.
-			*/
-			void present(SwapchainImage const& sImage, std::span<VkSemaphore> waitOn);
-
-			/**
-			 * The device keeps track of all objects that are used in submits and keeps them alive.
-			 * To recycle these objects, one can call this function once per frame.
-			*/
-			void recycle();
-
 			/**
 			 * Waits for the device to complete all submitted operations and the gpu to idle.
 			 */
@@ -124,39 +100,29 @@ namespace daxa {
 			const VkPhysicalDevice& getVkPhysicalDevice() const { return physicalDevice; }
 			const VkDevice& getVkDevice() const { return device; }
 			const VmaAllocator& getVma() const { return allocator; }
-			const VkQueue& getVkGraphicsQueue() const { return graphicsQ; }
+			//const VkQueue& getVkGraphicsQueue() const { return graphicsQ; }
 			const u32& getVkGraphicsQueueFamilyIndex() const { return graphicsQFamilyIndex; }
 		private:
 			CommandList getNextCommandList();
-			TimelineSemaphore getNextTimeline();
 
-			std::vector<TimelineSemaphore> unusedTimelines;
+			VkDevice device = {};
+			vkb::Device vkbDevice = {};
+			VkPhysicalDevice physicalDevice = {};
+			VmaAllocator allocator = {};
+			u32 graphicsQFamilyIndex = {};
+
+			std::shared_ptr<CommandListRecyclingSharedData> cmdListRecyclingSharedData = {};
 			std::vector<CommandList> unusedCommandLists;
-			std::vector<VkSemaphore> unusedSemaphores;
-
-			struct PendingSubmit {
-				std::vector<CommandList> cmdLists;
-				TimelineSemaphore timelineSema;
-				u64 finishCounter = 0;
-			};
-			std::vector<PendingSubmit> unfinishedSubmits;
 
 			// VK_KHR_dynamic_rendering:
-			void (*vkCmdBeginRenderingKHR)(VkCommandBuffer, const VkRenderingInfoKHR*);
-			void (*vkCmdEndRenderingKHR)(VkCommandBuffer);
+			void (*vkCmdBeginRenderingKHR)(VkCommandBuffer, const VkRenderingInfoKHR*) = nullptr;
+			void (*vkCmdEndRenderingKHR)(VkCommandBuffer) = nullptr;
+			// Synchronization2KHR:
+			void (*vkCmdPipelineBarrier2KHR)(VkCommandBuffer, VkDependencyInfoKHR const*) = nullptr;
 
-			std::vector<VkCommandBuffer> submitCommandBufferBuffer;
-			std::vector<VkSemaphore> submitSemaphoreWaitOnBuffer;
-			std::vector<VkSemaphore> submitSemaphoreSignalBuffer;
-			std::vector<u64> submitSemaphoreWaitOnValueBuffer;
-			std::vector<u64> submitSemaphoreSignalValueBuffer;
+			std::shared_ptr<StagingBufferPool> stagingBufferPool = {};
 
-			BindingSetDescriptionCache bindingSetDescriptionCache;
-			VkPhysicalDevice physicalDevice;
-			VkDevice device;
-			VmaAllocator allocator;
-			VkQueue graphicsQ;
-			u32 graphicsQFamilyIndex;
+			std::unique_ptr<BindingSetDescriptionCache> bindingSetDescriptionCache = {};
 		};
 	}
 }

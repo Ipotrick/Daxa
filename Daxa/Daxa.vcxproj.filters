@@ -150,9 +150,6 @@
     <ClInclude Include="dependencies\VkBootstrapDispatch.h">
       <Filter>dependencies</Filter>
     </ClInclude>
-    <ClInclude Include="src\rendering\StagingBufferPool.hpp">
-      <Filter>src\rendering</Filter>
-    </ClInclude>
     <ClInclude Include="src\rendering\api_abstration\SwapchainImage.hpp">
       <Filter>src\rendering\gpu</Filter>
     </ClInclude>
@@ -167,6 +164,18 @@
     </ClInclude>
     <ClInclude Include="src\rendering\Camera2d.hpp">
       <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\api_abstration\Signal.hpp">
+      <Filter>src\rendering\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\api_abstration\StagingBufferPool.hpp">
+      <Filter>src\rendering\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\api_abstration\Queue.hpp">
+      <Filter>src\rendering\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\api_abstration\Sampler.hpp">
+      <Filter>src\rendering\gpu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -240,6 +249,18 @@
       <Filter>src\rendering\gpu</Filter>
     </ClCompile>
     <ClCompile Include="src\rendering\api_abstration\BindingSet.cpp">
+      <Filter>src\rendering\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\rendering\api_abstration\Signal.cpp">
+      <Filter>src\rendering\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\rendering\api_abstration\StagingBufferPool.cpp">
+      <Filter>src\rendering\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\rendering\api_abstration\Queue.cpp">
+      <Filter>src\rendering\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\rendering\api_abstration\Sampler.cpp">
       <Filter>src\rendering\gpu</Filter>
     </ClCompile>
   </ItemGroup>

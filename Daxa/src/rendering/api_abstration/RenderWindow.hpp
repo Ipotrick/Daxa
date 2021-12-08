@@ -13,12 +13,14 @@
 
 #include "Image.hpp"
 #include "SwapchainImage.hpp"
+#include "Signal.hpp"
 
 namespace daxa {
 	namespace gpu {
 
 		class RenderWindow {
 		public:
+			RenderWindow() = default;
 			RenderWindow(RenderWindow&&) noexcept;
 			RenderWindow& operator=(RenderWindow&&) noexcept;
 			RenderWindow(RenderWindow const&) = delete;
@@ -31,21 +33,16 @@ namespace daxa {
 
 			SwapchainImage aquireNextImage();
 
-			void present(SwapchainImage&& image, std::span<VkSemaphore> waitOn);
-
-			SwapchainImage presentAquireNextImage(SwapchainImage&& image, std::span<VkSemaphore> waitOn);
-
 			VkExtent2D getSize() const { return size; }
 
 			VkFormat getVkFormat() const { return swapchainImageFormat; }
 		private:
 			friend class Device;
 
-			RenderWindow(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance, VkQueue graphicsQueue, void* sdl_window_handle, u32 width, u32 height, VkPresentModeKHR presentmode, VkSwapchainKHR = nullptr, VkSurfaceKHR oldSurface = nullptr);
+			RenderWindow(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance, void* sdl_window_handle, u32 width, u32 height, VkPresentModeKHR presentmode, VkSwapchainKHR = nullptr, VkSurfaceKHR oldSurface = nullptr);
 
 			VkDevice device = VK_NULL_HANDLE;
 			VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-			VkQueue graphicsQueue = VK_NULL_HANDLE;
 			VkInstance instance = VK_NULL_HANDLE;
 			VkFence aquireFence = VK_NULL_HANDLE;
 			VkPresentModeKHR presentMode{ VK_PRESENT_MODE_FIFO_KHR };

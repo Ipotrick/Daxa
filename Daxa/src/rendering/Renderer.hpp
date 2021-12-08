@@ -8,19 +8,11 @@
 #include "gpu.hpp"
 
 #include "Camera.hpp"
-#include "StagingBufferPool.hpp"
 
 namespace daxa {
-	struct PersistentRessources {
-		std::unordered_map<std::string_view, gpu::GraphicsPipelineHandle> pipelines;
-		std::unordered_map<std::string_view, gpu::ImageHandle> images;
-		std::unordered_map<std::string_view, gpu::BufferHandle> buffers;
-	};
 
 	struct PerFrameRessources {
-		std::unordered_map<std::string_view, gpu::ImageHandle> images;
-		std::unordered_map<std::string_view, gpu::BufferHandle> buffers;
-		std::unordered_map<std::string_view, VkSemaphore> semaphores;
+		gpu::SignalHandle renderingFinishedSignal;
 		gpu::TimelineSemaphore timeline;
 		u64 finishCounter = 0;
 	};
@@ -37,8 +29,12 @@ namespace daxa {
 		void deinit();
 
 		FPSCamera camera;
-		std::shared_ptr<gpu::Device> device;
-		std::optional<PersistentRessources> persResc;
+		gpu::Device device;
+		gpu::Queue queue;
+		std::unordered_map<std::string_view, gpu::GraphicsPipelineHandle> pipelines;
+		std::unordered_map<std::string_view, gpu::ImageHandle> images;
+		std::unordered_map<std::string_view, gpu::BufferHandle> buffers;
+		std::unordered_map<std::string_view, gpu::BindingSetAllocator> setAllocators;
 		std::deque<PerFrameRessources> frameResc;
 		PerFrameRessources* currentFrame = {};
 		double totalElapsedTime{ 0.0 };
@@ -49,9 +45,7 @@ namespace daxa {
 
 		inline static constexpr size_t FRAMES_IN_FLIGHT{ 3 };
 
-		gpu::GraphicsPipelineHandle testPipeline;
 		std::shared_ptr<Window> window{ nullptr };
 		gpu::RenderWindow renderWindow;
-		StagingBufferPool stagingBufferPool;
 	};
 }

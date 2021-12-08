@@ -8,20 +8,18 @@ namespace daxa {
 		DAXA_DEFINE_TRIVIAL_MOVE(Image)
 
 		Image::~Image() {
-			if (allocator && image && allocation) {
-				vmaDestroyImage(allocator, image, allocation);
-			}
 			if (device && view) {
 				vkDestroyImageView(device, view, nullptr);
+				printf("destroy view\n");
 			}
-			allocator	= nullptr;
-			image		= nullptr;
-			allocation	= nullptr;
-			device		= nullptr;
-			view		= nullptr;
+			if (allocator && image && allocation) {
+				vmaDestroyImage(allocator, image, allocation);
+				printf("destroy image\n");
+			}
+			std::memset(this, 0, sizeof(Image));
 		}
 
-		Image Image::create2dImage(VkDevice device, VmaAllocator allocator, Image2dCreateInfo ci) {
+		Image Image::create2dImage(VkDevice device, VmaAllocator allocator, u32 queueFamilyIndex, Image2dCreateInfo const& ci) {
 			Image ret;
 
 			VkImageCreateInfo ici{
@@ -36,6 +34,8 @@ namespace daxa {
 				.tiling = VkImageTiling::VK_IMAGE_TILING_OPTIMAL,
 				.usage = ci.imageUsage,
 				.sharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
+				.queueFamilyIndexCount = 1,
+				.pQueueFamilyIndices = &queueFamilyIndex,
 				.initialLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED,
 			};
 
@@ -46,7 +46,7 @@ namespace daxa {
 			
 
 			auto err = vmaCreateImage(allocator, (VkImageCreateInfo*)&ici, &aci, (VkImage*)&ret.image, &ret.allocation, nullptr);
-			assert(err == VK_SUCCESS);
+			DAXA_ASSERT_M(err == VK_SUCCESS, "could not create image");
 
 			VkImageViewCreateInfo ivci{
 				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -66,7 +66,6 @@ namespace daxa {
 			vkCreateImageView(device, &ivci, nullptr, &ret.view);
 
 			ret.allocator = allocator;
-			ret.layout = (VkImageLayout)ici.initialLayout;
 			ret.tiling = (VkImageTiling)ici.tiling;
 			ret.usageFlags = (VkImageUsageFlags)ici.usage;
 			ret.viewFormat = (VkFormat)ivci.format;
@@ -74,12 +73,18 @@ namespace daxa {
 			ret.extent = ici.extent;
 			ret.device = device;
 			ret.aspect = (VkImageAspectFlags)ci.imageAspekt;
+			ret.arrayLayers = 1;
+			ret.mipmapLevels = 1;
+
+			if (ci.sampler.has_value()) {
+				ret.sampler = *ci.sampler;
+			}
 
 			return std::move(ret);
 		}
 
-		ImageHandle::ImageHandle(std::shared_ptr<Image> image) {
-			this->image = image;
-		}
+		ImageHandle::ImageHandle(std::shared_ptr<Image> other)
+			:image{ std::move(other) }
+		{ }
 	}
 }
