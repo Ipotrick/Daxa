@@ -18,6 +18,8 @@
 namespace daxa {
 	namespace gpu {
 
+		VkSurfaceKHR createSurface(void* sdlWindowHandle, VkInstance instance);
+
 		class RenderWindow {
 		public:
 			RenderWindow() = default;
@@ -39,7 +41,7 @@ namespace daxa {
 		private:
 			friend class Device;
 
-			RenderWindow(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance, void* sdl_window_handle, u32 width, u32 height, VkPresentModeKHR presentmode, VkSwapchainKHR = nullptr, VkSurfaceKHR oldSurface = nullptr);
+			RenderWindow(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance, VkSurfaceKHR surface, u32 width, u32 height, VkPresentModeKHR presentmode, VkSwapchainKHR = nullptr);
 
 			VkDevice device = VK_NULL_HANDLE;
 			VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;

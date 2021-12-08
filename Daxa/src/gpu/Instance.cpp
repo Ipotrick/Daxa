@@ -26,11 +26,11 @@ namespace daxa {
 		}
 
 		Instance::~Instance() {
-			vkDestroyInstance(instance.instance, nullptr);
+			if (instance.instance) {
+				vkb::destroy_instance(instance);
+			}
 		}
 
-		Device Instance::createDevice() {
-			return Device(instance);
-		}
+		std::unique_ptr<Instance> instance = nullptr;
 	}
 }
