@@ -4,12 +4,12 @@
 
 class MyUser {
 public:
-	MyUser(daxa::AppState& app) 
+	MyUser(daxa::AppState& app)
 		: device{ daxa::gpu::Device::create() }
 		, queue{ this->device.createQueue() }
-		, renderWindow{ this->device.createRenderWindow(app.window->getSurface(), app.window->getSize()[0], app.window->getSize()[1])}
+		, renderWindow{ this->device.createRenderWindow(app.window->getSurface(), app.window->getSize()[0], app.window->getSize()[1]) }
 		, swapchainImage{ this->renderWindow.aquireNextImage() }
-	{ 
+	{
 
 		char const* vertexShaderGLSL = R"(
 			#version 450
@@ -92,8 +92,6 @@ public:
 	void update(daxa::AppState& app) {
 		printf("update, dt: %f\n", app.getDeltaTimeSeconds());
 
-		std::cout << "delta time: " << std::setw(8) << app.getDeltaTimeSeconds() * 1000.0f << "ms, fps: " << 1.0f / (app.getDeltaTimeSeconds()) << std::endl;
-
 		if (app.window->getSize()[0] != renderWindow.getSize().width || app.window->getSize()[1] != renderWindow.getSize().height) {
 			device.waitIdle();
 			renderWindow.resize(VkExtent2D{ .width = app.window->getSize()[0], .height = app.window->getSize()[1] });
@@ -144,17 +142,17 @@ public:
 		cmdList.beginRendering(daxa::gpu::BeginRenderingInfo{
 			.colorAttachments = colorAttachments,
 			});
-		
+
 		cmdList.bindPipeline(pipeline);
-		
+
 		auto set = setAllocator.getSet();
 		cmdList.updateSetBuffer(set, 0, uniformBuffer);
 		cmdList.bindSet(0, set);
-		
+
 		cmdList.bindVertexBuffer(0, vertexBuffer);
-		
+
 		cmdList.draw(3, 1, 0, 0);
-		
+
 		cmdList.endRendering();
 
 		std::array imgBarrier1 = { daxa::gpu::ImageBarrier{
@@ -223,7 +221,7 @@ int main()
 	daxa::initialize();
 
 	{
-		daxa::Application<MyUser> app{ 1000, 1000, "Daxa Triangle Sampler"};
+		daxa::Application<MyUser> app{ 1000, 1000, "Daxa Triangle Sampler" };
 		app.run();
 	}
 
