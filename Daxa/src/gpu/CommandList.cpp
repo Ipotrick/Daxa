@@ -117,6 +117,15 @@ namespace daxa {
 			this->vkCmdBeginRenderingKHR(cmd, (VkRenderingInfoKHR*)&renderInfo);
 
 			renderAttachmentBuffer.clear();
+
+			setViewport(VkViewport{
+				.x = 0,
+				.y = 0,
+				.width = (f32)renderInfo.renderArea.extent.width,
+				.height = (f32)renderInfo.renderArea.extent.height,
+				.minDepth = 0,
+				.maxDepth = 1,
+			});
 		}
 		void CommandList::endRendering() {
 			operationsInProgress -= 1;
