@@ -1,5 +1,7 @@
 #include "Window.hpp"
 
+#include "../DaxaCore.hpp"
+
 #include <iostream>
 
 #include <VkBootstrap.h>
@@ -29,8 +31,12 @@ namespace daxa {
 		}
 
 		sdlWindowId = SDL_GetWindowID(sdlWindowHandle);
+
+		auto ret = SDL_Vulkan_CreateSurface((SDL_Window*)sdlWindowHandle, gpu::instance->getVkInstance(), &surface);
+		DAXA_ASSERT_M(ret == SDL_TRUE, "could not create window surface");
 	}
 	Window::~Window() 	{
+		vkDestroySurfaceKHR(gpu::instance->getVkInstance(), surface, nullptr);
 		SDL_DestroyWindow(sdlWindowHandle);
 		sdlWindowHandle = nullptr;
 	}
@@ -235,5 +241,9 @@ namespace daxa {
 
 	void* Window::getWindowHandleSDL() {
 		return sdlWindowHandle;
+	}
+
+	VkSurfaceKHR Window::getSurface() {
+		return surface;
 	}
 }

@@ -7,6 +7,7 @@
 
 #include "../DaxaCore.hpp"
 #include "../math/Vec2.hpp"
+#include "../gpu/Instance.hpp"
 
 #include "Scancodes.hpp"
 
@@ -98,7 +99,10 @@ namespace daxa {
 		std::vector<KeyEvent> getKeyEventsInOrder() const;
 
 		void* getWindowHandleSDL();
+		VkSurfaceKHR getSurface();
 	private:
+		VkSurfaceKHR surface = VK_NULL_HANDLE;
+
 		std::string name;
 		bool bChangedSize{ false };
 		std::array<u32, 2> size;
