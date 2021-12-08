@@ -200,5 +200,8 @@
     <ClInclude Include="dependencies\VkBootstrap.h">
       <Filter>dependencies</Filter>
     </ClInclude>
+    <ClInclude Include="src\DaxaCore.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -18,98 +18,35 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="dependencies\spirv_reflect.c" />
-    <ClCompile Include="dependencies\stb_image.cpp" />
-    <ClCompile Include="dependencies\tiny_obj_loader.cpp" />
-    <ClCompile Include="dependencies\VkBootstrap.cpp" />
-    <ClCompile Include="dependencies\vk_mem_alloc.cpp" />
-    <ClCompile Include="src\Application.cpp" />
-    <ClCompile Include="src\Daxa.cpp" />
-    <ClCompile Include="src\gpu\BindingSet.cpp" />
-    <ClCompile Include="src\gpu\Buffer.cpp" />
-    <ClCompile Include="src\gpu\CommandList.cpp" />
-    <ClCompile Include="src\gpu\Device.cpp" />
-    <ClCompile Include="src\gpu\Image.cpp" />
-    <ClCompile Include="src\gpu\Instance.cpp" />
-    <ClCompile Include="src\gpu\Pipeline.cpp" />
-    <ClCompile Include="src\gpu\Queue.cpp" />
-    <ClCompile Include="src\gpu\RenderWindow.cpp" />
-    <ClCompile Include="src\gpu\Sampler.cpp" />
-    <ClCompile Include="src\gpu\ShaderModule.cpp" />
-    <ClCompile Include="src\gpu\Signal.cpp" />
-    <ClCompile Include="src\gpu\StagingBufferPool.cpp" />
-    <ClCompile Include="src\gpu\TimelineSemaphore.cpp" />
-    <ClCompile Include="src\platform\Scancodes.cpp" />
-    <ClCompile Include="src\platform\Window.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="dependencies\spirv.h" />
-    <ClInclude Include="dependencies\spirv_reflect.h" />
-    <ClInclude Include="dependencies\stb_image.hpp" />
-    <ClInclude Include="dependencies\tiny_obj_loader.hpp" />
-    <ClInclude Include="dependencies\VkBootstrap.h" />
-    <ClInclude Include="dependencies\vk_mem_alloc.hpp" />
-    <ClInclude Include="include\Daxa.hpp" />
-    <ClInclude Include="src\Application.hpp" />
-    <ClInclude Include="src\DaxaCore.hpp" />
-    <ClInclude Include="src\framework.h" />
-    <ClInclude Include="src\gpu\BindingSet.hpp" />
-    <ClInclude Include="src\gpu\Buffer.hpp" />
-    <ClInclude Include="src\gpu\CommandList.hpp" />
-    <ClInclude Include="src\gpu\common.hpp" />
-    <ClInclude Include="src\gpu\Device.hpp" />
-    <ClInclude Include="src\gpu\Image.hpp" />
-    <ClInclude Include="src\gpu\Instance.hpp" />
-    <ClInclude Include="src\gpu\Pipeline.hpp" />
-    <ClInclude Include="src\gpu\Queue.hpp" />
-    <ClInclude Include="src\gpu\RenderWindow.hpp" />
-    <ClInclude Include="src\gpu\Sampler.hpp" />
-    <ClInclude Include="src\gpu\ShaderModule.hpp" />
-    <ClInclude Include="src\gpu\Signal.hpp" />
-    <ClInclude Include="src\gpu\StagingBufferPool.hpp" />
-    <ClInclude Include="src\gpu\SwapchainImage.hpp" />
-    <ClInclude Include="src\gpu\TimelineSemaphore.hpp" />
-    <ClInclude Include="src\math\Mat.hpp" />
-    <ClInclude Include="src\math\math.hpp" />
-    <ClInclude Include="src\math\Rota2.hpp" />
-    <ClInclude Include="src\math\Vec.hpp" />
-    <ClInclude Include="src\math\Vec2.hpp" />
-    <ClInclude Include="src\math\Vec3.hpp" />
-    <ClInclude Include="src\math\Vec4.hpp" />
-    <ClInclude Include="src\platform\Scancodes.hpp" />
-    <ClInclude Include="src\platform\Window.hpp" />
-  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{d4ce787d-49cd-480d-8a1d-582f7e47e818}</ProjectGuid>
-    <RootNamespace>Daxa</RootNamespace>
+    <ProjectGuid>{5a36b98f-a28c-49b7-9662-8123a6d4939b}</ProjectGuid>
+    <RootNamespace>DaxaCube</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
-    <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -140,10 +77,7 @@
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LinkIncremental>true</LinkIncremental>
-    <TargetName>$(ProjectName)d</TargetName>
-    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(ProjectDir)intermediates\$(Platform)\$(Configuration)\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -152,14 +86,11 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <SubSystem>
-      </SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
@@ -169,14 +100,11 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <SubSystem>
-      </SubSystem>
+      <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -186,32 +114,17 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
-      <AdditionalIncludeDirectories>$(ProjectDir)dependencies;S:\VulkanSDK\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>S:\repos\Daxa\Daxa\dependencies;S:\repos\Daxa\Daxa\include;$(VULKAN_SDK)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
-      <SubSystem>
-      </SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>vulkan-1.lib;Daxad.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)Daxa\$(Platform)\$(Configuration);$(VULKAN_SDK)\Lib</AdditionalLibraryDirectories>
     </Link>
-    <Lib>
-      <AdditionalDependencies>
-      </AdditionalDependencies>
-    </Lib>
-    <Lib>
-      <AdditionalLibraryDirectories>$(VULKAN_SDK)\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-    </Lib>
-    <ProjectReference>
-      <LinkLibraryDependencies>false</LinkLibraryDependencies>
-    </ProjectReference>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -219,19 +132,19 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <SubSystem>
-      </SubSystem>
+      <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="DaxaCube.cpp" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
