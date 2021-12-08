@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../src/Application.hpp"
-#include "../src/gpu/Instance.hpp"
+#include "../src/gpu/Device.hpp"
 
 namespace daxa {
 	void initialize();

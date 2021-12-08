@@ -6,10 +6,16 @@
 
 #include <VkBootstrap.h>
 
+#include "Instance.hpp"
+
 #include "common.hpp"
 
 namespace daxa {
 	namespace gpu {
+
+		Device Device::create() {
+			return Device{ gpu::instance->getVKBInstance() };
+		}
 
 		Device::Device(vkb::Instance& instance) {
 			vkb::PhysicalDeviceSelector selector{ instance };
@@ -128,8 +134,8 @@ namespace daxa {
 			return SignalHandle{ std::make_shared<Signal>(Signal{device}) };
 		}
 
-		RenderWindow Device::createRenderWindow(void* sdlWindowHandle, u32 width, u32 height, VkPresentModeKHR presentMode) {
-			return RenderWindow{ device, physicalDevice, instance, sdlWindowHandle, width, height, presentMode };
+		RenderWindow Device::createRenderWindow(VkSurfaceKHR surface, u32 width, u32 height, VkPresentModeKHR presentMode) {
+			return RenderWindow{ device, physicalDevice, instance, surface, width, height, presentMode };
 		}
 
 		BindingSetDescription const* Device::createBindingSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings) {
