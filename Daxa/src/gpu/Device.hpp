@@ -36,6 +36,8 @@ namespace daxa {
 
 			Queue createQueue();
 
+			static Device create();
+
 			/**
 			 * \param ci all information defining the 2d image
 			 * \return a reference counted image handle of the created image ressource.
@@ -52,7 +54,7 @@ namespace daxa {
 
 			SignalHandle createSignal();
 
-			RenderWindow createRenderWindow(void* sdlWindowHandle, u32 width, u32 height, VkPresentModeKHR presentMode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR);
+			RenderWindow createRenderWindow(VkSurfaceKHR surface, u32 width, u32 height, VkPresentModeKHR presentMode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR);
 
 			BindingSetDescription const* createBindingSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings);
 

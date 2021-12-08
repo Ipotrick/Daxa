@@ -7,10 +7,9 @@
 class MyUser {
 public:
 	MyUser(daxa::AppState& app) 
-		: instance{}
-		, device{ this->instance.createDevice() }
+		: device{ daxa::gpu::Device::create() }
 		, queue{ this->device.createQueue() }
-		, renderWindow{ this->device.createRenderWindow(app.window->getWindowHandleSDL(), app.window->getSize()[0], app.window->getSize()[1]) }
+		, renderWindow{ this->device.createRenderWindow(app.window->getSurface(), app.window->getSize()[0], app.window->getSize()[1])}
 		, swapchainImage{ this->renderWindow.aquireNextImage() }
 	{ 
 		char const* vertexShaderGLSL = R"(
@@ -99,6 +98,7 @@ public:
 		if (app.window->getSize()[0] != renderWindow.getSize().width || app.window->getSize()[1] != renderWindow.getSize().height) {
 			device.waitIdle();
 			renderWindow.resize(VkExtent2D{ .width = app.window->getSize()[0], .height = app.window->getSize()[1] });
+			swapchainImage = renderWindow.aquireNextImage();
 		}
 
 		auto* currentFrame = &frames.front();
@@ -212,8 +212,6 @@ public:
 
 	}
 private:
-	
-	daxa::gpu::Instance instance;
 	daxa::gpu::Device device;
 	daxa::gpu::Queue queue;
 	daxa::gpu::RenderWindow renderWindow;

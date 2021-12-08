@@ -11,24 +11,23 @@
 
 namespace daxa {
 	namespace gpu {
+		VkSurfaceKHR createSurface(void* sdlWindowHandle, VkInstance instance) {
+			VkSurfaceKHR surface;
+			SDL_Vulkan_CreateSurface((SDL_Window*)sdlWindowHandle, instance, &surface);
+			return surface;
+		}
 
 		DAXA_DEFINE_TRIVIAL_MOVE(RenderWindow)
 
-		RenderWindow::RenderWindow(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance, void* sdl_window_handle, u32 width, u32 height, VkPresentModeKHR presentMode, VkSwapchainKHR oldSwapchain, VkSurfaceKHR oldSurface)
+		RenderWindow::RenderWindow(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance, VkSurfaceKHR surface, u32 width, u32 height, VkPresentModeKHR presentMode, VkSwapchainKHR oldSwapchain)
 			: device{ device }
 			, physicalDevice{ physicalDevice }
 			, instance{ instance }
 			, sdl_window_handle{ sdl_window_handle }
 			, size{ .width = width, .height = height }
+			, surface{ surface }
 			, presentMode{ presentMode }
 		{
-			if (!oldSwapchain) {
-				SDL_Vulkan_CreateSurface((SDL_Window*)sdl_window_handle, instance, (VkSurfaceKHR*)&surface);
-			}
-			else {
-				this->surface = oldSurface;
-			}
-
 			vkb::SwapchainBuilder swapchainBuilder{ physicalDevice, device, surface };
 
 			if (oldSwapchain) {
@@ -86,9 +85,6 @@ namespace daxa {
 				}
 				swapchainImages.clear();
 				vkDestroySwapchainKHR(device, swapchain, nullptr);
-				if (surface) {
-					vkDestroySurfaceKHR(instance, surface, nullptr);
-				}
 				vkDestroyFence(device, aquireFence, nullptr);
 				device = nullptr;
 				instance = nullptr;
@@ -117,13 +113,13 @@ namespace daxa {
 		void RenderWindow::resize(VkExtent2D newSize) {
 			auto surface = this->surface;
 			this->surface = VK_NULL_HANDLE;
-			*this = RenderWindow{ device, physicalDevice, instance, sdl_window_handle, newSize.width, newSize.height, presentMode, this->swapchain, surface };
+			*this = RenderWindow{ device, physicalDevice, instance, surface, newSize.width, newSize.height, presentMode, this->swapchain };
 		}
 
 		void RenderWindow::setPresentMode(VkPresentModeKHR newPresentMode) {
 			auto surface = this->surface;
 			this->surface = VK_NULL_HANDLE;
-			*this = RenderWindow{ device, physicalDevice, instance, sdl_window_handle, size.width,  size.height, newPresentMode, this->swapchain, surface };
+			*this = RenderWindow{ device, physicalDevice, instance, surface, size.width,  size.height, newPresentMode, this->swapchain };
 		}
 	}
 }
