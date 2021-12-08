@@ -2,7 +2,6 @@
 
 #include <chrono>
 
-#include "rendering/Renderer.hpp"
 #include "platform/Window.hpp"
 
 namespace daxa {
@@ -10,32 +9,42 @@ namespace daxa {
 	struct AppState {
 		bool continueRunning = true;
 		std::chrono::microseconds deltaTimeLastFrame = {};
-		std::shared_ptr<Window> window;
+		Window* window = nullptr;
 
 		float getDeltaTimeSeconds() const { return deltaTimeLastFrame.count() * 0.00'0001f; }
 	};
 
-	class User {
-	public:
-		virtual ~User() = default;
-		virtual void init(std::shared_ptr<AppState> appstate)	= 0;
-		virtual void update(std::shared_ptr<AppState> appstate)	= 0;
-		virtual void deinit(std::shared_ptr<AppState> appstate)	= 0;
-	};
-
+	template<typename TUser>
 	class Application {
 	public:
-		Application(u32 winWidth, u32 winHeight, std::string const& winName, std::unique_ptr<User> user);
+		Application(u32 winWidth, u32 winHeight, std::string const& winName) 
+			: window{ winName, std::array{ winWidth, winHeight } }
+			, appstate{ .continueRunning = true, .window = &this->window }
+		{ }
 
-		void run();
+		void run() {
+			using namespace std::chrono;
+			user = std::make_unique<TUser>(appstate);
+
+			auto lastFrameStartTimePoint = system_clock::now();
+			while (this->appstate.continueRunning) {
+				auto now = system_clock::now();
+				this->appstate.deltaTimeLastFrame = duration_cast<microseconds>(now - lastFrameStartTimePoint);
+				lastFrameStartTimePoint = now;
+
+				if (window.update(appstate.getDeltaTimeSeconds())) break;
+
+				user->update(appstate);
+			}
+
+			user->cleanup(appstate);
+			user.reset();
+		}
 	private:
-		void update();
 
-		// the reason behind the exessive use of shared ptr here is for later multithreadding use.
-		// the lifetimes in multithreadding can get very complex so shared_ptrs are appropriate for and ONLY FOR these "low frequency" types wich are accessed and copied rarely.
-		std::shared_ptr<AppState> appstate;
-		std::shared_ptr<Window> window;
-		std::unique_ptr<User> user;
+		AppState appstate;
+		Window window;
+		std::unique_ptr<TUser> user;
 	};
 
 }
