@@ -1,43 +1,114 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Source Files\gpu">
+      <UniqueIdentifier>{10b23033-5522-4e40-9a36-2efe8654f098}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\platform">
+      <UniqueIdentifier>{5d541a29-f35a-459e-a051-6260244e67b1}</UniqueIdentifier>
+    </Filter>
     <Filter Include="dependencies">
-      <UniqueIdentifier>{0bb50620-66ef-4822-93d8-08e136bbbf26}</UniqueIdentifier>
+      <UniqueIdentifier>{9beb239a-316d-4e08-a73d-3d1185547584}</UniqueIdentifier>
     </Filter>
-    <Filter Include="include">
-      <UniqueIdentifier>{7dbf6693-93c8-4c1f-8ca8-1cf8f9fdd152}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src">
-      <UniqueIdentifier>{27d5c43a-b4c5-455b-86fb-3bfd59df15f5}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\math">
-      <UniqueIdentifier>{a25eca48-c302-4cd5-848a-9e52245d2d3c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\threading">
-      <UniqueIdentifier>{3705ee84-c3cc-45bd-8909-2b8a03547361}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\platform">
-      <UniqueIdentifier>{73316a58-b799-4260-90fa-154c3668c056}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\rendering">
-      <UniqueIdentifier>{05487c95-8473-4338-8e35-949c4c47d36d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\util">
-      <UniqueIdentifier>{da4a81d9-df42-4ca0-818a-6bdb9d965dae}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\rendering\shaders">
-      <UniqueIdentifier>{33c95795-1c21-4e29-8fc9-480a3fdcdd80}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\entity">
-      <UniqueIdentifier>{a2ab85e6-b341-4bdc-8c01-5325a1863b52}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\rendering\gpu">
-      <UniqueIdentifier>{791dcf9d-ae7d-4ee5-b7c2-74390e718e9c}</UniqueIdentifier>
+    <Filter Include="Source Files\math">
+      <UniqueIdentifier>{202dab04-5b4e-40b4-b11f-606282bf94d0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Daxa.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dependencies\spirv_reflect.c">
+      <Filter>dependencies</Filter>
+    </ClCompile>
+    <ClCompile Include="dependencies\stb_image.cpp">
+      <Filter>dependencies</Filter>
+    </ClCompile>
+    <ClCompile Include="dependencies\tiny_obj_loader.cpp">
+      <Filter>dependencies</Filter>
+    </ClCompile>
+    <ClCompile Include="dependencies\vk_mem_alloc.cpp">
+      <Filter>dependencies</Filter>
+    </ClCompile>
+    <ClCompile Include="dependencies\VkBootstrap.cpp">
+      <Filter>dependencies</Filter>
+    </ClCompile>
+    <ClCompile Include="dependencies\vulkanhelper.cpp">
+      <Filter>dependencies</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gpu\BindingSet.cpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gpu\Buffer.cpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gpu\CommandList.cpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gpu\Device.cpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gpu\Image.cpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gpu\Pipeline.cpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gpu\Queue.cpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gpu\RenderWindow.cpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gpu\Sampler.cpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gpu\ShaderModule.cpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gpu\Signal.cpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gpu\StagingBufferPool.cpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gpu\TimelineSemaphore.cpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platform\Scancodes.cpp">
+      <Filter>Source Files\platform</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platform\Window.cpp">
+      <Filter>Source Files\platform</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gpu\Instance.cpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Application.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\framework.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
     <ClInclude Include="include\Daxa.hpp">
-      <Filter>include</Filter>
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\spirv_reflect.h">
+      <Filter>dependencies</Filter>
     </ClInclude>
     <ClInclude Include="dependencies\stb_image.hpp">
       <Filter>dependencies</Filter>
@@ -48,234 +119,95 @@
     <ClInclude Include="dependencies\vk_mem_alloc.hpp">
       <Filter>dependencies</Filter>
     </ClInclude>
-    <ClInclude Include="dependencies\VkBootstrap.hpp">
-      <Filter>dependencies</Filter>
-    </ClInclude>
-    <ClInclude Include="src\DaxaCore.hpp">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\math\Vec2.hpp">
-      <Filter>src\math</Filter>
-    </ClInclude>
-    <ClInclude Include="src\math\Vec3.hpp">
-      <Filter>src\math</Filter>
-    </ClInclude>
-    <ClInclude Include="src\math\Vec4.hpp">
-      <Filter>src\math</Filter>
-    </ClInclude>
-    <ClInclude Include="src\math\math.hpp">
-      <Filter>src\math</Filter>
-    </ClInclude>
-    <ClInclude Include="src\math\Rota2.hpp">
-      <Filter>src\math</Filter>
-    </ClInclude>
-    <ClInclude Include="src\math\Mat.hpp">
-      <Filter>src\math</Filter>
-    </ClInclude>
-    <ClInclude Include="src\math\Vec.hpp">
-      <Filter>src\math</Filter>
-    </ClInclude>
-    <ClInclude Include="src\DaxaApplicationOLD.hpp">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\threading\Jobs.hpp">
-      <Filter>src\threading</Filter>
-    </ClInclude>
-    <ClInclude Include="src\threading\OwningMutex.hpp">
-      <Filter>src\threading</Filter>
-    </ClInclude>
-    <ClInclude Include="src\platform\Window.hpp">
-      <Filter>src\platform</Filter>
-    </ClInclude>
-    <ClInclude Include="src\util\Timing.hpp">
-      <Filter>src\util</Filter>
-    </ClInclude>
     <ClInclude Include="dependencies\vulkanhelper.hpp">
       <Filter>dependencies</Filter>
     </ClInclude>
-    <ClInclude Include="src\rendering\Renderer.hpp">
-      <Filter>src\rendering</Filter>
+    <ClInclude Include="src\gpu\BindingSet.hpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gpu\Buffer.hpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gpu\CommandList.hpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gpu\common.hpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gpu\Device.hpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gpu\Image.hpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gpu\Pipeline.hpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gpu\Queue.hpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gpu\RenderPassCache.hpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gpu\RenderWindow.hpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gpu\Sampler.hpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gpu\ShaderModule.hpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gpu\Signal.hpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gpu\StagingBufferPool.hpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gpu\SwapchainImage.hpp">
+      <Filter>Source Files\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gpu\TimelineSemaphore.hpp">
+      <Filter>Source Files\gpu</Filter>
     </ClInclude>
     <ClInclude Include="src\platform\Scancodes.hpp">
-      <Filter>src\platform</Filter>
+      <Filter>Source Files\platform</Filter>
     </ClInclude>
-    <ClInclude Include="dependencies\spirv_reflect.hpp">
+    <ClInclude Include="src\platform\Window.hpp">
+      <Filter>Source Files\platform</Filter>
+    </ClInclude>
+    <ClInclude Include="src\math\Mat.hpp">
+      <Filter>Source Files\math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\math\math.hpp">
+      <Filter>Source Files\math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\math\Rota2.hpp">
+      <Filter>Source Files\math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\math\Vec.hpp">
+      <Filter>Source Files\math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\math\Vec2.hpp">
+      <Filter>Source Files\math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\math\Vec3.hpp">
+      <Filter>Source Files\math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\math\Vec4.hpp">
+      <Filter>Source Files\math</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\spirv.h">
       <Filter>dependencies</Filter>
     </ClInclude>
-    <ClInclude Include="src\entity\ECS.hpp">
-      <Filter>src\entity</Filter>
-    </ClInclude>
-    <ClInclude Include="src\util\StableVector.hpp">
-      <Filter>src\util</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\CoordSystem2d.hpp">
-      <Filter>src\rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="src\util\PagedIndexMap.hpp">
-      <Filter>src\util</Filter>
-    </ClInclude>
-    <ClInclude Include="src\util\UUID.hpp">
-      <Filter>src\util</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\Camera.hpp">
-      <Filter>src\rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\api_abstration\Device.hpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\api_abstration\CommandList.hpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\api_abstration\Image.hpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\api_abstration\Buffer.hpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\api_abstration\Pipeline.hpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\api_abstration\common.hpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\api_abstration\ShaderModule.hpp">
-      <Filter>src\rendering\gpu</Filter>
+    <ClInclude Include="src\gpu\Instance.hpp">
+      <Filter>Source Files\gpu</Filter>
     </ClInclude>
     <ClInclude Include="src\Application.hpp">
-      <Filter>src</Filter>
+      <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\rendering\api_abstration\RenderWindow.hpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="dependencies\VkBootstrapDispatch.h">
+    <ClInclude Include="dependencies\VkBootstrap.h">
       <Filter>dependencies</Filter>
     </ClInclude>
-    <ClInclude Include="src\rendering\api_abstration\SwapchainImage.hpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\gpu.hpp">
-      <Filter>src\rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\api_abstration\TimelineSemaphore.hpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\api_abstration\BindingSet.hpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\Camera2d.hpp">
-      <Filter>src\rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\api_abstration\Signal.hpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\api_abstration\StagingBufferPool.hpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\api_abstration\Queue.hpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rendering\api_abstration\Sampler.hpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="dependencies\stb_image.cpp">
-      <Filter>dependencies</Filter>
-    </ClCompile>
-    <ClCompile Include="dependencies\VkBootstrap.cpp">
-      <Filter>dependencies</Filter>
-    </ClCompile>
-    <ClCompile Include="src\DaxaApplicationOLD.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\threading\Jobs.cpp">
-      <Filter>src\threading</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Daxa.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\platform\Window.cpp">
-      <Filter>src\platform</Filter>
-    </ClCompile>
-    <ClCompile Include="dependencies\vk_mem_alloc.cpp">
-      <Filter>dependencies</Filter>
-    </ClCompile>
-    <ClCompile Include="dependencies\tiny_obj_loader.cpp">
-      <Filter>dependencies</Filter>
-    </ClCompile>
-    <ClCompile Include="dependencies\vulkanhelper.cpp">
-      <Filter>dependencies</Filter>
-    </ClCompile>
-    <ClCompile Include="src\platform\Scancodes.cpp">
-      <Filter>src\platform</Filter>
-    </ClCompile>
-    <ClCompile Include="dependencies\spirv_reflect.cpp">
-      <Filter>dependencies</Filter>
-    </ClCompile>
-    <ClCompile Include="src\rendering\CoordSystem2d.cpp">
-      <Filter>src\rendering</Filter>
-    </ClCompile>
-    <ClCompile Include="src\util\UUID.cpp">
-      <Filter>src\util</Filter>
-    </ClCompile>
-    <ClCompile Include="src\rendering\api_abstration\Device.cpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="src\rendering\api_abstration\Image.cpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="src\rendering\api_abstration\Buffer.cpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="src\rendering\api_abstration\CommandList.cpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="src\rendering\api_abstration\Pipeline.cpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="src\rendering\api_abstration\ShaderModule.cpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="src\rendering\Renderer.cpp">
-      <Filter>src\rendering</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Application.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\rendering\api_abstration\RenderWindow.cpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="src\rendering\api_abstration\TimelineSemaphore.cpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="src\rendering\api_abstration\BindingSet.cpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="src\rendering\api_abstration\Signal.cpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="src\rendering\api_abstration\StagingBufferPool.cpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="src\rendering\api_abstration\Queue.cpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClCompile>
-    <ClCompile Include="src\rendering\api_abstration\Sampler.cpp">
-      <Filter>src\rendering\gpu</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="shaders\mesh.frag">
-      <Filter>src\rendering\shaders</Filter>
-    </None>
-    <None Include="shaders\mesh.vert">
-      <Filter>src\rendering\shaders</Filter>
-    </None>
-    <None Include="shaders\test.vert">
-      <Filter>src\rendering\shaders</Filter>
-    </None>
-    <None Include="shaders\test.frag">
-      <Filter>src\rendering\shaders</Filter>
-    </None>
   </ItemGroup>
 </Project>

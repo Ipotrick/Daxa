@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -19,18 +19,59 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="dependencies\spirv_reflect.hpp" />
+    <ClCompile Include="dependencies\spirv_reflect.c" />
+    <ClCompile Include="dependencies\stb_image.cpp" />
+    <ClCompile Include="dependencies\tiny_obj_loader.cpp" />
+    <ClCompile Include="dependencies\VkBootstrap.cpp" />
+    <ClCompile Include="dependencies\vk_mem_alloc.cpp" />
+    <ClCompile Include="dependencies\vulkanhelper.cpp" />
+    <ClCompile Include="src\Application.cpp" />
+    <ClCompile Include="src\Daxa.cpp" />
+    <ClCompile Include="src\gpu\BindingSet.cpp" />
+    <ClCompile Include="src\gpu\Buffer.cpp" />
+    <ClCompile Include="src\gpu\CommandList.cpp" />
+    <ClCompile Include="src\gpu\Device.cpp" />
+    <ClCompile Include="src\gpu\Image.cpp" />
+    <ClCompile Include="src\gpu\Instance.cpp" />
+    <ClCompile Include="src\gpu\Pipeline.cpp" />
+    <ClCompile Include="src\gpu\Queue.cpp" />
+    <ClCompile Include="src\gpu\RenderWindow.cpp" />
+    <ClCompile Include="src\gpu\Sampler.cpp" />
+    <ClCompile Include="src\gpu\ShaderModule.cpp" />
+    <ClCompile Include="src\gpu\Signal.cpp" />
+    <ClCompile Include="src\gpu\StagingBufferPool.cpp" />
+    <ClCompile Include="src\gpu\TimelineSemaphore.cpp" />
+    <ClCompile Include="src\platform\Scancodes.cpp" />
+    <ClCompile Include="src\platform\Window.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="dependencies\spirv.h" />
+    <ClInclude Include="dependencies\spirv_reflect.h" />
     <ClInclude Include="dependencies\stb_image.hpp" />
     <ClInclude Include="dependencies\tiny_obj_loader.hpp" />
-    <ClInclude Include="dependencies\VkBootstrap.hpp" />
-    <ClInclude Include="dependencies\VkBootstrapDispatch.h" />
+    <ClInclude Include="dependencies\VkBootstrap.h" />
     <ClInclude Include="dependencies\vk_mem_alloc.hpp" />
     <ClInclude Include="dependencies\vulkanhelper.hpp" />
     <ClInclude Include="include\Daxa.hpp" />
     <ClInclude Include="src\Application.hpp" />
-    <ClInclude Include="src\DaxaApplicationOLD.hpp" />
-    <ClInclude Include="src\DaxaCore.hpp" />
-    <ClInclude Include="src\entity\ECS.hpp" />
+    <ClInclude Include="src\framework.h" />
+    <ClInclude Include="src\gpu\BindingSet.hpp" />
+    <ClInclude Include="src\gpu\Buffer.hpp" />
+    <ClInclude Include="src\gpu\CommandList.hpp" />
+    <ClInclude Include="src\gpu\common.hpp" />
+    <ClInclude Include="src\gpu\Device.hpp" />
+    <ClInclude Include="src\gpu\Image.hpp" />
+    <ClInclude Include="src\gpu\Instance.hpp" />
+    <ClInclude Include="src\gpu\Pipeline.hpp" />
+    <ClInclude Include="src\gpu\Queue.hpp" />
+    <ClInclude Include="src\gpu\RenderPassCache.hpp" />
+    <ClInclude Include="src\gpu\RenderWindow.hpp" />
+    <ClInclude Include="src\gpu\Sampler.hpp" />
+    <ClInclude Include="src\gpu\ShaderModule.hpp" />
+    <ClInclude Include="src\gpu\Signal.hpp" />
+    <ClInclude Include="src\gpu\StagingBufferPool.hpp" />
+    <ClInclude Include="src\gpu\SwapchainImage.hpp" />
+    <ClInclude Include="src\gpu\TimelineSemaphore.hpp" />
     <ClInclude Include="src\math\Mat.hpp" />
     <ClInclude Include="src\math\math.hpp" />
     <ClInclude Include="src\math\Rota2.hpp" />
@@ -40,101 +81,39 @@
     <ClInclude Include="src\math\Vec4.hpp" />
     <ClInclude Include="src\platform\Scancodes.hpp" />
     <ClInclude Include="src\platform\Window.hpp" />
-    <ClInclude Include="src\rendering\api_abstration\Buffer.hpp" />
-    <ClInclude Include="src\rendering\api_abstration\CommandList.hpp" />
-    <ClInclude Include="src\rendering\api_abstration\common.hpp" />
-    <ClInclude Include="src\rendering\api_abstration\BindingSet.hpp" />
-    <ClInclude Include="src\rendering\api_abstration\Device.hpp" />
-    <ClInclude Include="src\rendering\api_abstration\Image.hpp" />
-    <ClInclude Include="src\rendering\api_abstration\Pipeline.hpp" />
-    <ClInclude Include="src\rendering\api_abstration\Queue.hpp" />
-    <ClInclude Include="src\rendering\api_abstration\RenderWindow.hpp" />
-    <ClInclude Include="src\rendering\api_abstration\Sampler.hpp" />
-    <ClInclude Include="src\rendering\api_abstration\ShaderModule.hpp" />
-    <ClInclude Include="src\rendering\api_abstration\Signal.hpp" />
-    <ClInclude Include="src\rendering\api_abstration\StagingBufferPool.hpp" />
-    <ClInclude Include="src\rendering\api_abstration\SwapchainImage.hpp" />
-    <ClInclude Include="src\rendering\api_abstration\TimelineSemaphore.hpp" />
-    <ClInclude Include="src\rendering\Camera.hpp" />
-    <ClInclude Include="src\rendering\Camera2d.hpp" />
-    <ClInclude Include="src\rendering\CoordSystem2d.hpp" />
-    <ClInclude Include="src\rendering\gpu.hpp" />
-    <ClInclude Include="src\rendering\Renderer.hpp" />
-    <ClInclude Include="src\threading\Jobs.hpp" />
-    <ClInclude Include="src\threading\OwningMutex.hpp" />
-    <ClInclude Include="src\util\PagedIndexMap.hpp" />
-    <ClInclude Include="src\util\StableVector.hpp" />
-    <ClInclude Include="src\util\Timing.hpp" />
-    <ClInclude Include="src\util\UUID.hpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="dependencies\spirv_reflect.cpp" />
-    <ClCompile Include="dependencies\stb_image.cpp" />
-    <ClCompile Include="dependencies\tiny_obj_loader.cpp" />
-    <ClCompile Include="dependencies\VkBootstrap.cpp" />
-    <ClCompile Include="dependencies\vk_mem_alloc.cpp" />
-    <ClCompile Include="dependencies\vulkanhelper.cpp" />
-    <ClCompile Include="src\Application.cpp" />
-    <ClCompile Include="src\Daxa.cpp" />
-    <ClCompile Include="src\DaxaApplicationOLD.cpp" />
-    <ClCompile Include="src\platform\Scancodes.cpp" />
-    <ClCompile Include="src\platform\Window.cpp" />
-    <ClCompile Include="src\rendering\api_abstration\Buffer.cpp" />
-    <ClCompile Include="src\rendering\api_abstration\CommandList.cpp" />
-    <ClCompile Include="src\rendering\api_abstration\BindingSet.cpp" />
-    <ClCompile Include="src\rendering\api_abstration\Device.cpp" />
-    <ClCompile Include="src\rendering\api_abstration\Image.cpp" />
-    <ClCompile Include="src\rendering\api_abstration\Pipeline.cpp" />
-    <ClCompile Include="src\rendering\api_abstration\Queue.cpp" />
-    <ClCompile Include="src\rendering\api_abstration\RenderWindow.cpp" />
-    <ClCompile Include="src\rendering\api_abstration\Sampler.cpp" />
-    <ClCompile Include="src\rendering\api_abstration\ShaderModule.cpp" />
-    <ClCompile Include="src\rendering\api_abstration\Signal.cpp" />
-    <ClCompile Include="src\rendering\api_abstration\StagingBufferPool.cpp" />
-    <ClCompile Include="src\rendering\api_abstration\TimelineSemaphore.cpp" />
-    <ClCompile Include="src\rendering\CoordSystem2d.cpp" />
-    <ClCompile Include="src\rendering\Renderer.cpp" />
-    <ClCompile Include="src\threading\Jobs.cpp" />
-    <ClCompile Include="src\util\UUID.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="shaders\mesh.frag" />
-    <None Include="shaders\mesh.vert" />
-    <None Include="shaders\test.frag" />
-    <None Include="shaders\test.vert" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{00ef9cfe-4a35-4aca-b136-427a58d6d122}</ProjectGuid>
+    <ProjectGuid>{d4ce787d-49cd-480d-8a1d-582f7e47e818}</ProjectGuid>
     <RootNamespace>Daxa</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -164,39 +143,25 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <LibraryPath>$(VcpkgCurrentInstalledDir)$(VcpkgConfigSubdir)lib\manual-link\;$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)d</TargetName>
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)intermediates\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <LibraryPath>$(VcpkgCurrentInstalledDir)$(VcpkgConfigSubdir)lib\manual-link\;$(LibraryPath)</LibraryPath>
-  </PropertyGroup>
-  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <VcpkgUseStatic>false</VcpkgUseStatic>
-  </PropertyGroup>
-  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <VcpkgUseStatic>false</VcpkgUseStatic>
-  </PropertyGroup>
-  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <VcpkgUseStatic>false</VcpkgUseStatic>
-    <VcpkgEnableManifest>false</VcpkgEnableManifest>
-  </PropertyGroup>
-  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <VcpkgUseStatic>false</VcpkgUseStatic>
-  </PropertyGroup>
-  <PropertyGroup Label="Vcpkg">
-    <VcpkgAutoLink>false</VcpkgAutoLink>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>
+      </SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
@@ -206,12 +171,14 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>
+      </SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -221,34 +188,32 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp20</LanguageStandard>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <AdditionalIncludeDirectories>S:\VulkanSDK\Include;$(ProjectDir)dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <AdditionalIncludeDirectories>$(ProjectDir)dependencies;S:\VulkanSDK\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>
+      </SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
-    <PostBuildEvent>
-      <Command>
-      </Command>
-    </PostBuildEvent>
-    <PostBuildEvent>
-      <Message>
-      </Message>
-    </PostBuildEvent>
-    <CustomBuildStep>
-      <Inputs>S:\VulkanSDK}1.2.170.0\Bin\;%(Inputs)</Inputs>
-      <Message />
-    </CustomBuildStep>
+    <Lib>
+      <AdditionalDependencies>
+      </AdditionalDependencies>
+    </Lib>
+    <Lib>
+      <AdditionalLibraryDirectories>$(VULKAN_SDK)\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Lib>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -256,34 +221,18 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <AdditionalIncludeDirectories>S:\VulkanSDK\Include;$(ProjectDir)dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>
+      </SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
-    <CustomBuildStep>
-      <Inputs>S:\VulkanSDK}1.2.170.0\Bin\;%(Inputs)</Inputs>
-      <Message />
-    </CustomBuildStep>
-    <PostBuildEvent>
-      <Command>
-      </Command>
-    </PostBuildEvent>
-    <PostBuildEvent>
-      <Message>
-      </Message>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
