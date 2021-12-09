@@ -101,6 +101,7 @@ namespace daxa {
 
 			void uploadToBuffer(void const* src, size_t size, BufferHandle dst, size_t dstOffset = 0);
 
+			// TODO ELIDE THE REGION
 			void copyBufferToBuffer(BufferHandle src, BufferHandle dst, VkBufferCopy region) {
 				copyBufferToBufferMulti(src, dst, { &region, 1 });
 			}
@@ -113,20 +114,9 @@ namespace daxa {
 
 			void uploadToImageSynced(void const* src, size_t size, ImageHandle dst, VkImageLayout dstLayout, std::optional<VkImageSubresourceLayers> dstSubRessource = {});
 
-			// Binding set management:
-
-			void updateSetImages(BindingSetHandle& set, u32 binding, std::span<std::pair<ImageHandle, VkImageLayout>> images, u32 descriptorArrayOffset = 0);
-			void updateSetImage(BindingSetHandle& set, u32 binding, ImageHandle image, VkImageLayout layout);
-
-			void updateSetBuffers(BindingSetHandle& set, u32 binding, std::span<BufferHandle> buffers, u32 descriptorArrayOffset = 0);
-			void updateSetBuffer(BindingSetHandle& set, u32 binding, BufferHandle buffer);
-
-			void updateSetSamplers(BindingSetHandle& set, u32 binding, std::span<SamplerHandle> samplers, u32 descriptorArrayOffset = 0);
-			void updateSetSampler(BindingSetHandle& set, u32 binding, SamplerHandle sampler);
+			// Rendering:
 
 			void bindSet(u32 setBinding, BindingSetHandle& set);
-
-			// Rendering:
 
 			void bindVertexBuffer(u32 binding, BufferHandle buffer, size_t bufferOffset = 0);
 
@@ -155,6 +145,7 @@ namespace daxa {
 			// Accessors:
 
 			VkCommandBuffer getVkCommandBuffer() { return cmd; }
+			VkCommandPool getVkCommandPool() { return cmdPool; }
 		private:
 			friend class Device;
 			friend class Queue;
