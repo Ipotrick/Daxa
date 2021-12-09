@@ -103,6 +103,28 @@
                 "system_Windows",
                 "defaults"
             ]
+        },
+        {
+            "name": "ninja_vcpkg_release_Windows",
+            "displayName": "ninja_vcpkg_release_Windows",
+            "inherits": [
+                "generator_ninja",
+                "toolchain_vcpkg",
+                "buildtype_release",
+                "system_Windows",
+                "defaults"
+            ]
+        },
+        {
+            "name": "vs2022_vcpkg_release_Windows",
+            "displayName": "vs2022_vcpkg_release_Windows",
+            "inherits": [
+                "generator_vs2022",
+                "toolchain_vcpkg",
+                "buildtype_release",
+                "system_Windows",
+                "defaults"
+            ]
         }
     ]
 }

@@ -74,6 +74,11 @@ struct Game {
 };
 
 int main() {
+    float values[3] = {0, 3, 1};
+    std::cout << values[1000] << "\n";
+
+    return 0;
+    
     Game game;
     while (true) {
         // glfwPollEvents();
