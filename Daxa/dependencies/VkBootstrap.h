@@ -17,12 +17,15 @@
 #pragma once
 
 #include <cassert>
+#include <cstdio>
+#include <cstring>
 
 #include <vector>
 #include <system_error>
 
 #include <vulkan/vulkan.h>
 
+#include "VkBootstrapDispatch.h"
 
 namespace vkb {
 
@@ -117,15 +120,19 @@ template <typename T> class Result {
 
 struct GenericFeaturesPNextNode {
 
+	static const uint32_t field_capacity = 256;
+
 	GenericFeaturesPNextNode();
 
-	template <typename T> void set(T const& features) { *reinterpret_cast<T*>(this) = features; }
+	template <typename T> GenericFeaturesPNextNode(T const& features) noexcept {
+		memset(fields, UINT8_MAX, sizeof(VkBool32) * field_capacity);
+		memcpy(this, &features, sizeof(T));
+	}
 
-	static bool match(GenericFeaturesPNextNode const& requested, GenericFeaturesPNextNode const& supported);
+	static bool match(GenericFeaturesPNextNode const& requested, GenericFeaturesPNextNode const& supported) noexcept;
 
 	VkStructureType sType = static_cast<VkStructureType>(0);
 	void* pNext = nullptr;
-	static const uint32_t field_capacity = 256;
 	VkBool32 fields[field_capacity];
 };
 
@@ -205,6 +212,22 @@ struct SystemInfo {
 	bool debug_utils_available = false;
 };
 
+// Forward declared - check VkBoostrap.cpp for implementations
+const char* to_string_message_severity(VkDebugUtilsMessageSeverityFlagBitsEXT s);
+const char* to_string_message_type(VkDebugUtilsMessageTypeFlagsEXT s);
+
+// Default debug messenger
+// Feel free to copy-paste it into your own code, change it as needed, then call `set_debug_callback()` to use that instead
+inline VKAPI_ATTR VkBool32 VKAPI_CALL default_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+    VkDebugUtilsMessageTypeFlagsEXT messageType,
+    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+    void*) {
+	auto ms = to_string_message_severity(messageSeverity);
+	auto mt = to_string_message_type(messageType);
+	printf("[%s: %s]\n%s\n", ms, mt, pCallbackData->pMessage);
+
+	return VK_FALSE; // Applications must return false here
+}
 
 class InstanceBuilder;
 class PhysicalDeviceSelector;
@@ -213,18 +236,45 @@ struct Instance {
 	VkInstance instance = VK_NULL_HANDLE;
 	VkDebugUtilsMessengerEXT debug_messenger = VK_NULL_HANDLE;
 	VkAllocationCallbacks* allocation_callbacks = VK_NULL_HANDLE;
-
 	PFN_vkGetInstanceProcAddr fp_vkGetInstanceProcAddr = nullptr;
+	PFN_vkGetDeviceProcAddr fp_vkGetDeviceProcAddr = nullptr;
+
+	// A conversion function which allows this Instance to be used
+	// in places where VkInstance would have been used.
+	operator VkInstance() const;
 
 	private:
 	bool headless = false;
+	bool supports_properties2_ext = false;
 	uint32_t instance_version = VK_MAKE_VERSION(1, 0, 0);
 
 	friend class InstanceBuilder;
 	friend class PhysicalDeviceSelector;
 };
 
+void destroy_surface(Instance instance, VkSurfaceKHR surface); // release surface handle
+void destroy_surface(VkInstance instance, VkSurfaceKHR surface, VkAllocationCallbacks* callbacks = nullptr); // release surface handle
 void destroy_instance(Instance instance); // release instance resources
+
+/* If headless mode is false, by default vk-bootstrap use the following logic to enable the windowing extensions
+
+#if defined(_WIN32)
+    VK_KHR_win32_surface
+#elif defined(__linux__)
+    VK_KHR_xcb_surface
+    VK_KHR_xlib_surface
+    VK_KHR_wayland_surface
+#elif defined(__APPLE__)
+    VK_EXT_metal_surface
+#elif defined(__ANDROID__)
+    VK_KHR_android_surface
+#elif defined(_DIRECT2DISPLAY)
+    VK_KHR_display
+#endif
+
+Use `InstanceBuilder::enable_extension()` to add new extensions without altering the default behavior
+Feel free to make a PR or raise an issue to include additional platforms.
+*/
 
 class InstanceBuilder {
 	public:
@@ -240,12 +290,28 @@ class InstanceBuilder {
 	InstanceBuilder& set_app_name(const char* app_name);
 	// Sets the name of the engine. Defaults to "" if none is provided.
 	InstanceBuilder& set_engine_name(const char* engine_name);
+
+	// Sets the version of the application.
+	// Should be constructed with VK_MAKE_VERSION or VK_MAKE_API_VERSION.
+	InstanceBuilder& set_app_version(uint32_t app_version);
 	// Sets the (major, minor, patch) version of the application.
 	InstanceBuilder& set_app_version(uint32_t major, uint32_t minor, uint32_t patch = 0);
+
+	// Sets the version of the engine.
+	// Should be constructed with VK_MAKE_VERSION or VK_MAKE_API_VERSION.
+	InstanceBuilder& set_engine_version(uint32_t engine_version);
 	// Sets the (major, minor, patch) version of the engine.
 	InstanceBuilder& set_engine_version(uint32_t major, uint32_t minor, uint32_t patch = 0);
+
+	// Require a vulkan instance API version. Will fail to create if this version isn't available.
+	// Should be constructed with VK_MAKE_VERSION or VK_MAKE_API_VERSION.
+	InstanceBuilder& require_api_version(uint32_t required_api_version);
 	// Require a vulkan instance API version. Will fail to create if this version isn't available.
 	InstanceBuilder& require_api_version(uint32_t major, uint32_t minor, uint32_t patch = 0);
+
+	// Prefer a vulkan instance API version. If the desired version isn't available, it will use the highest version available.
+	// Should be constructed with VK_MAKE_VERSION or VK_MAKE_API_VERSION.
+	InstanceBuilder& desire_api_version(uint32_t preferred_vulkan_version);
 	// Prefer a vulkan instance API version. If the desired version isn't available, it will use the highest version available.
 	InstanceBuilder& desire_api_version(uint32_t major, uint32_t minor, uint32_t patch = 0);
 
@@ -266,6 +332,8 @@ class InstanceBuilder {
 	InstanceBuilder& use_default_debug_messenger();
 	// Provide a user defined debug callback.
 	InstanceBuilder& set_debug_callback(PFN_vkDebugUtilsMessengerCallbackEXT callback);
+	// Sets the void* to use in the debug messenger - only useful with a custom callback
+	InstanceBuilder& set_debug_callback_user_data_pointer(void* user_data_pointer);
 	// Set what message severity is needed to trigger the callback.
 	InstanceBuilder& set_debug_messenger_severity(VkDebugUtilsMessageSeverityFlagsEXT severity);
 	// Add a message severity to the list that triggers the callback.
@@ -303,16 +371,17 @@ class InstanceBuilder {
 		// VkInstanceCreateInfo
 		std::vector<const char*> layers;
 		std::vector<const char*> extensions;
-		VkInstanceCreateFlags flags = 0;
+		VkInstanceCreateFlags flags = static_cast<VkInstanceCreateFlags>(0);
 		std::vector<VkBaseOutStructure*> pNext_elements;
 
-		// debug callback
-		PFN_vkDebugUtilsMessengerCallbackEXT debug_callback = nullptr;
+		// debug callback - use the default so it is not nullptr
+		PFN_vkDebugUtilsMessengerCallbackEXT debug_callback = default_debug_callback;
 		VkDebugUtilsMessageSeverityFlagsEXT debug_message_severity =
 		    VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
 		VkDebugUtilsMessageTypeFlagsEXT debug_message_type =
 		    VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
 		    VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+		void* debug_user_data_pointer = nullptr;
 
 		// validation features
 		std::vector<VkValidationCheckEXT> disabled_validation_checks;
@@ -365,6 +434,10 @@ struct PhysicalDevice {
 
 	// Advanced: Get the VkQueueFamilyProperties of the device if special queue setup is needed
 	std::vector<VkQueueFamilyProperties> get_queue_families() const;
+
+	// A conversion function which allows this PhysicalDevice to be used
+	// in places where VkPhysicalDevice would have been used.
+	operator VkPhysicalDevice() const;
 
 	private:
 	uint32_t instance_version = VK_MAKE_VERSION(1, 0, 0);
@@ -435,15 +508,7 @@ class PhysicalDeviceSelector {
 #if defined(VK_API_VERSION_1_1)
 	template <typename T>
 	PhysicalDeviceSelector& add_required_extension_features(T const& features) {
-		assert(features.sType != 0 && "Features struct sType must be filled with the struct's "
-		                              "corresponding VkStructureType enum");
-		assert(
-		    features.sType != VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 &&
-		    "Do not pass VkPhysicalDeviceFeatures2 as a required extension feature structure. An "
-		    "instance of this is managed internally for selection criteria and device creation.");
-		detail::GenericFeaturesPNextNode node;
-		node.set(features);
-		criteria.extended_features_chain.push_back(node);
+		criteria.extended_features_chain.push_back(features);
 		return *this;
 	}
 #endif
@@ -472,6 +537,7 @@ class PhysicalDeviceSelector {
 		VkSurfaceKHR surface = VK_NULL_HANDLE;
 		uint32_t version = VK_MAKE_VERSION(1, 0, 0);
 		bool headless = false;
+		bool supports_properties2_ext = false;
 	} instance_info;
 
 	struct PhysicalDeviceDesc {
@@ -481,17 +547,20 @@ class PhysicalDeviceSelector {
 		VkPhysicalDeviceFeatures device_features{};
 		VkPhysicalDeviceProperties device_properties{};
 		VkPhysicalDeviceMemoryProperties mem_properties{};
+
+// Because the KHR version is a typedef in Vulkan 1.1, it is safe to define one or the other.
 #if defined(VK_API_VERSION_1_1)
 		VkPhysicalDeviceFeatures2 device_features2{};
-		std::vector<detail::GenericFeaturesPNextNode> extended_features_chain;
+#else
+		VkPhysicalDeviceFeatures2KHR device_features2{};
 #endif
+		std::vector<detail::GenericFeaturesPNextNode> extended_features_chain;
 	};
 
 	// We copy the extension features stored in the selector criteria under the prose of a
 	// "template" to ensure that after fetching everything is compared 1:1 during a match.
 
-	PhysicalDeviceDesc populate_device_details(uint32_t instance_version,
-	    VkPhysicalDevice phys_device,
+	PhysicalDeviceDesc populate_device_details(VkPhysicalDevice phys_device,
 	    std::vector<detail::GenericFeaturesPNextNode> const& src_extended_features_chain) const;
 
 	struct SelectionCriteria {
@@ -541,6 +610,7 @@ struct Device {
 	VkSurfaceKHR surface = VK_NULL_HANDLE;
 	std::vector<VkQueueFamilyProperties> queue_families;
 	VkAllocationCallbacks* allocation_callbacks = VK_NULL_HANDLE;
+	PFN_vkGetDeviceProcAddr fp_vkGetDeviceProcAddr = nullptr;
 
 	detail::Result<uint32_t> get_queue_index(QueueType type) const;
 	// Only a compute or transfer queue type is valid. All other queue types do not support a 'dedicated' queue index
@@ -549,6 +619,21 @@ struct Device {
 	detail::Result<VkQueue> get_queue(QueueType type) const;
 	// Only a compute or transfer queue type is valid. All other queue types do not support a 'dedicated' queue
 	detail::Result<VkQueue> get_dedicated_queue(QueueType type) const;
+
+	// Return a loaded dispatch table
+	DispatchTable make_table() const;
+
+	// A conversion function which allows this Device to be used
+	// in places where VkDevice would have been used.
+	operator VkDevice() const;
+
+	private:
+	struct {
+		PFN_vkGetDeviceQueue fp_vkGetDeviceQueue = nullptr;
+		PFN_vkDestroyDevice fp_vkDestroyDevice = nullptr;
+	} internal_table;
+	friend class DeviceBuilder;
+	friend void destroy_device(Device device);
 };
 
 // For advanced device queue setup
@@ -585,7 +670,7 @@ class DeviceBuilder {
 	private:
 	PhysicalDevice physical_device;
 	struct DeviceInfo {
-		VkDeviceCreateFlags flags = 0;
+		VkDeviceCreateFlags flags = static_cast<VkDeviceCreateFlags>(0);
 		std::vector<VkBaseOutStructure*> pNext_chain;
 		std::vector<CustomQueueDescription> queue_descriptions;
 		VkAllocationCallbacks* allocation_callbacks = VK_NULL_HANDLE;
@@ -608,19 +693,33 @@ struct Swapchain {
 	// VkImageViews must be destroyed.
 	detail::Result<std::vector<VkImageView>> get_image_views();
 	void destroy_image_views(std::vector<VkImageView> const& image_views);
+
+	// A conversion function which allows this Swapchain to be used
+	// in places where VkSwapchainKHR would have been used.
+	operator VkSwapchainKHR() const;
+
+	private:
+	struct {
+		PFN_vkGetSwapchainImagesKHR fp_vkGetSwapchainImagesKHR = nullptr;
+		PFN_vkCreateImageView fp_vkCreateImageView = nullptr;
+		PFN_vkDestroyImageView fp_vkDestroyImageView = nullptr;
+		PFN_vkDestroySwapchainKHR fp_vkDestroySwapchainKHR = nullptr;
+	} internal_table;
+	friend class SwapchainBuilder;
+	friend void destroy_swapchain(Swapchain const& swapchain);
 };
 
 void destroy_swapchain(Swapchain const& swapchain);
 
 class SwapchainBuilder {
 	public:
-    // Construct a SwapchainBuilder with a `vkb::Device`
+	// Construct a SwapchainBuilder with a `vkb::Device`
 	explicit SwapchainBuilder(Device const& device);
 	// Construct a SwapchainBuilder with a specific VkSurfaceKHR handle and `vkb::Device`
-    explicit SwapchainBuilder(Device const& device, VkSurfaceKHR const surface);
-    // Construct a SwapchainBuilder with Vulkan handles for the physical device, device, and surface
-    // Optionally can provide the uint32_t indices for the graphics and present queue
-    // Note: The constructor will query the graphics & present queue if the indices are not provided
+	explicit SwapchainBuilder(Device const& device, VkSurfaceKHR const surface);
+	// Construct a SwapchainBuilder with Vulkan handles for the physical device, device, and surface
+	// Optionally can provide the uint32_t indices for the graphics and present queue
+	// Note: The constructor will query the graphics & present queue if the indices are not provided
 	explicit SwapchainBuilder(VkPhysicalDevice const physical_device,
 	    VkDevice const device,
 	    VkSurfaceKHR const surface,

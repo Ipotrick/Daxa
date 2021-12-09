@@ -49,6 +49,7 @@
     <ClInclude Include="dependencies\stb_image.hpp" />
     <ClInclude Include="dependencies\tiny_obj_loader.hpp" />
     <ClInclude Include="dependencies\VkBootstrap.h" />
+    <ClInclude Include="dependencies\VkBootstrapDispatch.h" />
     <ClInclude Include="dependencies\vk_mem_alloc.hpp" />
     <ClInclude Include="include\Daxa.hpp" />
     <ClInclude Include="src\Application.hpp" />
@@ -106,7 +107,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
-    <EnableASAN>false</EnableASAN>
+    <EnableASAN>true</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
