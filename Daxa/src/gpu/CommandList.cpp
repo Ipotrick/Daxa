@@ -220,7 +220,7 @@ namespace daxa {
 
 				auto offset = stagingBuffer.usedUpSize;
 
-				stagingBuffer.buffer->uploadFromHost(src, size, offset);
+				stagingBuffer.buffer->upload(src, size, offset);
 
 				stagingBuffer.usedUpSize += size;
 
@@ -253,124 +253,6 @@ namespace daxa {
 			insertBarriers({}, {}, { &followingBarrier, 1 });
 		}
 
-		void CommandList::updateSetImages(BindingSetHandle& set, u32 binding, std::span<std::pair<ImageHandle, VkImageLayout>> images, u32 descriptorArrayOffset) {
-			DAXA_ASSERT_M(!set->bInUseOnGPU, "can not update binding set while it is used on gpu");
-			for (auto& [image, layout] : images) {
-				VkSampler sampler = VK_NULL_HANDLE;
-				switch (set->description->layoutBindings.bindings[binding].descriptorType) {
-				case VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-					sampler = image->getSampler()->getVkSampler();
-					break;
-				case VkDescriptorType::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-					sampler = VK_NULL_HANDLE;
-					break;
-				case VkDescriptorType::VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-					sampler = VK_NULL_HANDLE;
-					break;
-				default:
-					DAXA_ASSERT_M(false, "binding set binding mismatch");
-				}
-
-				imageInfoBuffer.push_back(VkDescriptorImageInfo{
-					.sampler = sampler,
-					.imageView = image->getVkView(),
-					.imageLayout = layout,
-				});
-
-				// update the handles inside the set
-				u32 bindingSetIndex = set->description->bindingToHandleVectorIndex[binding];
-				set->handles[bindingSetIndex] = image;
-			}
-
-			VkWriteDescriptorSet write{
-				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.pNext = nullptr,
-				.dstSet = set->set,
-				.dstBinding = binding,
-				.dstArrayElement = descriptorArrayOffset,
-				.descriptorCount = (u32)imageInfoBuffer.size(),
-				.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				.pImageInfo = imageInfoBuffer.data()
-			};
-
-			vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
-
-			imageInfoBuffer.clear();
-		}
-
-		void CommandList::updateSetImage(BindingSetHandle& set, u32 binding, ImageHandle image, VkImageLayout layout) {
-			std::pair pair{ image,layout };
-			updateSetImages(set, binding, { &pair, 1 });
-		}
-
-		void CommandList::updateSetBuffers(BindingSetHandle& set, u32 binding, std::span<BufferHandle> buffers, u32 offset) {
-			DAXA_ASSERT_M(!set->bInUseOnGPU, "can not update binding set, that is still in use on the gpu");
-			for (auto& buffer : buffers) {
-				bufferInfoBuffer.push_back(VkDescriptorBufferInfo{
-					.buffer = buffer->buffer,
-					.offset = 0,									// TODO Unsure what to put here
-					.range = buffer->size,
-				});
-
-				// update the handles inside the set
-				u32 bindingSetIndex = set->description->bindingToHandleVectorIndex[binding];
-				set->handles[bindingSetIndex] = buffer;
-			}
-			
-			VkWriteDescriptorSet write{
-				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.pNext = nullptr,
-				.dstSet = set->set,
-				.dstBinding = binding,
-				.dstArrayElement = offset,
-				.descriptorCount = (u32)bufferInfoBuffer.size(),
-				.descriptorType = set->description->layoutBindings.bindings[binding].descriptorType,
-				.pBufferInfo = bufferInfoBuffer.data(),
-			};
-
-			vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
-
-			bufferInfoBuffer.clear();
-		}
-
-		void CommandList::updateSetBuffer(BindingSetHandle& set, u32 binding, BufferHandle buffer) {
-			updateSetBuffers(set, binding, { &buffer, 1 });
-		}
-
-		void CommandList::updateSetSamplers(BindingSetHandle& set, u32 binding, std::span<SamplerHandle> samplers, u32 descriptorArrayOffset) {
-			DAXA_ASSERT_M(!set->bInUseOnGPU, "can not update binding set while it is used on gpu");
-			for (auto& sampler : samplers) {
-				imageInfoBuffer.push_back(VkDescriptorImageInfo{
-					.sampler = sampler->getVkSampler(),
-					.imageView = VK_NULL_HANDLE,
-					.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-				});
-
-				// update the handles inside the set
-				u32 bindingSetIndex = set->description->bindingToHandleVectorIndex[binding];
-				set->handles[bindingSetIndex] = sampler;
-			}
-
-			VkWriteDescriptorSet write{
-				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.pNext = nullptr,
-				.dstSet = set->set,
-				.dstBinding = binding,
-				.dstArrayElement = descriptorArrayOffset,
-				.descriptorCount = (u32)imageInfoBuffer.size(),
-				.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				.pImageInfo = imageInfoBuffer.data()
-			};
-
-			vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
-
-			imageInfoBuffer.clear();
-		}
-
-		void CommandList::updateSetSampler(BindingSetHandle& set, u32 binding, SamplerHandle sampler) {
-			updateSetSamplers(set, binding, { &sampler,1 });
-		}
-
 		void CommandList::bindSet(u32 setBinding, BindingSetHandle& set) {
 			DAXA_ASSERT_M(boundPipeline.has_value(), "can not bind descriptor sets if there is no pipeline bound");
 			vkCmdBindDescriptorSets(cmd, boundPipeline->bindPoint, boundPipeline->layout, setBinding, 1, &set->set, 0, nullptr);
@@ -391,7 +273,7 @@ namespace daxa {
 
 				auto offset = stagingBuffer.usedUpSize;
 
-				stagingBuffer.buffer->uploadFromHost(src, size, offset);
+				stagingBuffer.buffer->upload(src, size, offset);
 
 				stagingBuffer.usedUpSize += size;
 
