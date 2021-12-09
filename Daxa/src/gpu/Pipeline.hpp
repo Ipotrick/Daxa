@@ -9,7 +9,7 @@
 #include <string>
 
 #include <vulkan/vulkan.h>
-#include <vk_mem_alloc.hpp>
+#include <vk_mem_alloc.h>
 
 #include "ShaderModule.hpp"
 #include "BindingSet.hpp"

@@ -5,14 +5,6 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
-    <Filter Include="Resource Files">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
-    </Filter>
     <Filter Include="Source Files\gpu">
       <UniqueIdentifier>{10b23033-5522-4e40-9a36-2efe8654f098}</UniqueIdentifier>
     </Filter>
@@ -33,13 +25,7 @@
     <ClCompile Include="dependencies\spirv_reflect.c">
       <Filter>dependencies</Filter>
     </ClCompile>
-    <ClCompile Include="dependencies\stb_image.cpp">
-      <Filter>dependencies</Filter>
-    </ClCompile>
     <ClCompile Include="dependencies\tiny_obj_loader.cpp">
-      <Filter>dependencies</Filter>
-    </ClCompile>
-    <ClCompile Include="dependencies\vk_mem_alloc.cpp">
       <Filter>dependencies</Filter>
     </ClCompile>
     <ClCompile Include="src\gpu\BindingSet.cpp">
@@ -107,13 +93,7 @@
     <ClInclude Include="dependencies\spirv_reflect.h">
       <Filter>dependencies</Filter>
     </ClInclude>
-    <ClInclude Include="dependencies\stb_image.hpp">
-      <Filter>dependencies</Filter>
-    </ClInclude>
     <ClInclude Include="dependencies\tiny_obj_loader.hpp">
-      <Filter>dependencies</Filter>
-    </ClInclude>
-    <ClInclude Include="dependencies\vk_mem_alloc.hpp">
       <Filter>dependencies</Filter>
     </ClInclude>
     <ClInclude Include="src\gpu\BindingSet.hpp">
