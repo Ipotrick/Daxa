@@ -146,7 +146,7 @@ public:
 		cmdList.bindPipeline(pipeline);
 
 		auto set = setAllocator.getSet();
-		cmdList.updateSetBuffer(set, 0, uniformBuffer);
+		set->bindBuffer(0, uniformBuffer);
 		cmdList.bindSet(0, set);
 
 		cmdList.bindVertexBuffer(0, vertexBuffer);
