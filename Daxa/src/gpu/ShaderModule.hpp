@@ -9,7 +9,7 @@
 #include <string>
 #include <filesystem>
 
-#include "../dependencies/vk_mem_alloc.hpp"
+#include <vk_mem_alloc.h>
 
 namespace daxa {
 	namespace gpu {

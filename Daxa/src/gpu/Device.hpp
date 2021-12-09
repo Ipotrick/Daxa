@@ -8,7 +8,7 @@
 
 #include <vulkan/vulkan.h>
 
-#include <vk_mem_alloc.hpp>
+#include <vk_mem_alloc.h>
 #include <VkBootstrap.h>
 
 #include "CommandList.hpp"

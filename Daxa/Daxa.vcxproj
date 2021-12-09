@@ -20,10 +20,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\spirv_reflect.c" />
-    <ClCompile Include="dependencies\stb_image.cpp" />
     <ClCompile Include="dependencies\tiny_obj_loader.cpp" />
     <ClCompile Include="dependencies\VkBootstrap.cpp" />
-    <ClCompile Include="dependencies\vk_mem_alloc.cpp" />
     <ClCompile Include="src\Application.cpp" />
     <ClCompile Include="src\Daxa.cpp" />
     <ClCompile Include="src\gpu\BindingSet.cpp" />
@@ -46,11 +44,9 @@
   <ItemGroup>
     <ClInclude Include="dependencies\spirv.h" />
     <ClInclude Include="dependencies\spirv_reflect.h" />
-    <ClInclude Include="dependencies\stb_image.hpp" />
     <ClInclude Include="dependencies\tiny_obj_loader.hpp" />
     <ClInclude Include="dependencies\VkBootstrap.h" />
     <ClInclude Include="dependencies\VkBootstrapDispatch.h" />
-    <ClInclude Include="dependencies\vk_mem_alloc.hpp" />
     <ClInclude Include="include\Daxa.hpp" />
     <ClInclude Include="src\Application.hpp" />
     <ClInclude Include="src\DaxaCore.hpp" />
