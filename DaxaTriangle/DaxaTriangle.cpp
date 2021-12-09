@@ -58,12 +58,13 @@ public:
 		).value();
 
 		daxa::gpu::GraphicsPipelineBuilder pipelineBuilder;
-		pipelineBuilder.addShaderStage(vertexShader);
-		pipelineBuilder.addShaderStage(fragmenstShader);
-		pipelineBuilder.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX);	// add vertex attributes:
-		pipelineBuilder.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT);			// positions
-		pipelineBuilder.addVertexInputAttribute(VK_FORMAT_R32G32B32A32_SFLOAT);			// colors
-		pipelineBuilder.addColorAttachment(renderWindow.getVkFormat());
+		pipelineBuilder
+			.addShaderStage(vertexShader)
+			.addShaderStage(fragmenstShader)
+			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)	// add vertex attributes:
+			.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)			// positions
+			.addVertexInputAttribute(VK_FORMAT_R32G32B32A32_SFLOAT)			// colors
+			.addColorAttachment(renderWindow.getVkFormat());
 
 		this->pipeline = device.createGraphicsPipeline(pipelineBuilder);
 
@@ -77,12 +78,11 @@ public:
 		};
 		vertexBuffer = device.createBuffer(bufferCI);
 
-		daxa::gpu::BufferCreateInfo someBufferCI{
+		uniformBuffer = device.createBuffer({
 			.size = sizeof(float) * 4,
 			.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
-		};
-		uniformBuffer = device.createBuffer(someBufferCI);
+		});
 
 		for (int i = 0; i < 3; i++) {
 			frames.push_back(PerFrameData{ .presentSignal = device.createSignal(), .timeline = device.createTimelineSemaphore(), .timelineCounter = 0 });
@@ -91,8 +91,6 @@ public:
 
 	void update(daxa::AppState& app) {
 		printf("update, dt: %f\n", app.getDeltaTimeSeconds());
-
-		std::cout << "delta time: " << std::setw(8) << app.getDeltaTimeSeconds() * 1000.0f << "ms, fps: " << 1.0f / (app.getDeltaTimeSeconds()) << std::endl;
 
 		if (app.window->getSize()[0] != renderWindow.getSize().width || app.window->getSize()[1] != renderWindow.getSize().height) {
 			device.waitIdle();
@@ -106,28 +104,38 @@ public:
 
 		cmdList.begin();
 
+
+		/// ------------ Begin Data Uploading ---------------------
+
+
 		std::array vertecies = {
 			 1.f, 1.f, 0.0f,	1.f, 0.f, 0.f, 1.f,
 			-1.f, 1.f, 0.0f,	0.f, 1.f, 0.f, 1.f,
 			 0.f,-1.f, 0.0f,	0.f, 0.f, 1.f, 1.f,
 		};
 		cmdList.uploadToBuffer(vertecies, vertexBuffer);
+
 		std::array someBufferdata = { 1.0f , 1.0f , 1.0f ,1.0f };
 		cmdList.uploadToBuffer(someBufferdata, uniformBuffer);
 
+		// array because we can allways pass multiple barriers at once for driver efficiency
 		std::array imgBarrier0 = { daxa::gpu::ImageBarrier{
 			.waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,	// as we write to the image in the frag shader we need to make sure its finished transitioning the layout
 			.image = swapchainImage.getImageHandle(),
 			.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,						// dont care about previous layout
 			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,		// set new layout to color attachment optimal
 		} };
+		// array because we can allways pass multiple barriers at once for driver efficiency
 		std::array memBarrier0 = { daxa::gpu::MemoryBarrier{
 			.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,				// wait for writing the vertex buffer
 			.waitingStages = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT_KHR,		// the vertex creating must wait
 		} };
 		cmdList.insertBarriers(memBarrier0, {}, imgBarrier0);
+		
+		
+		/// ------------ End Data Uploading ---------------------
 
-		double intpart;
+
 		totalElapsedTime += app.getDeltaTimeSeconds();
 		float r = std::cos(totalElapsedTime * 0.21313) * 0.3f + 0.5f;
 		float g = std::cos(totalElapsedTime * 0.75454634) * 0.3f + 0.5f;
@@ -135,20 +143,20 @@ public:
 
 		VkClearValue clear{ .color = VkClearColorValue{.float32 = { r, g, b, 1.0f } } };
 
-		std::array colorAttachments{
+		std::array framebuffer{
 			daxa::gpu::RenderAttachmentInfo{
 				.image = swapchainImage.getImageHandle(),
 				.clearValue = clear,
 			}
 		};
 		cmdList.beginRendering(daxa::gpu::BeginRenderingInfo{
-			.colorAttachments = colorAttachments,
-			});
+			.colorAttachments = framebuffer,
+		});
 		
 		cmdList.bindPipeline(pipeline);
 		
 		auto set = setAllocator.getSet();
-		cmdList.updateSetBuffer(set, 0, uniformBuffer);
+		set->bindBuffer(0, uniformBuffer);
 		cmdList.bindSet(0, set);
 		
 		cmdList.bindVertexBuffer(0, vertexBuffer);
@@ -157,6 +165,7 @@ public:
 		
 		cmdList.endRendering();
 
+		// array because we can allways pass multiple barriers at once for driver efficiency
 		std::array imgBarrier1 = { daxa::gpu::ImageBarrier{
 			.image = swapchainImage.getImageHandle(),
 			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -223,7 +232,7 @@ int main()
 	daxa::initialize();
 
 	{
-		daxa::Application<MyUser> app{ 1000, 1000, "Daxa Triangle Sampler"};
+		daxa::Application<MyUser> app{ 1000, 1000, "Daxa Triangle Sample"};
 		app.run();
 	}
 

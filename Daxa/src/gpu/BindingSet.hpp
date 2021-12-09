@@ -80,7 +80,14 @@ namespace daxa {
 			BindingSet(BindingSet&&) noexcept;
 			BindingSet& operator=(BindingSet&&) noexcept;
 
-			using HandleVariants = std::variant<ImageHandle, BufferHandle, SamplerHandle, std::monostate>;
+			void bindSamplers(u32 binding, std::span<SamplerHandle> samplers, u32 descriptorArrayOffset = 0);
+			void bindSampler(u32 binding, SamplerHandle set, u32 dstArrayElement = 0);
+
+			void bindBuffers(u32 binding, std::span<BufferHandle> buffers, u32 descriptorArrayOffset = 0);
+			void bindBuffer(u32 binding, BufferHandle, u32 dstArrayElement = 0);
+
+			void bindImages(u32 binding, std::span<std::pair<ImageHandle, VkImageLayout>> images, u32 descriptorArrayOffset = 0);
+			void bindImage(u32 binding, ImageHandle image, VkImageLayout imgLayout, u32 dstArrayElement = 0);
 
 			VkDescriptorSet getVkDescriptorSet() const { return set; }
 		private:
@@ -90,13 +97,16 @@ namespace daxa {
 			friend class BindingSetHandle;
 			friend class Queue;
 
-			BindingSet(VkDescriptorSet set, std::weak_ptr<BindingSetAllocatorBindingiSetPool> pool, BindingSetDescription const* description);
+			BindingSet(VkDevice device, VkDescriptorSet set, std::weak_ptr<BindingSetAllocatorBindingiSetPool> pool, BindingSetDescription const* description);
 
-			VkDescriptorSet set = {};
+			VkDevice device = VK_NULL_HANDLE;
+			VkDescriptorSet set = VK_NULL_HANDLE;
 			BindingSetDescription const* description = {};
 			std::weak_ptr<BindingSetAllocatorBindingiSetPool> pool = {};
 			bool bInUseOnGPU = false;
 
+
+			using HandleVariants = std::variant<ImageHandle, BufferHandle, SamplerHandle, std::monostate>;
 			std::vector<HandleVariants> handles = {};
 		};
 

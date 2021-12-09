@@ -64,7 +64,6 @@ namespace daxa {
 				img.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 				img.arrayLayers = 1;
 				img.mipmapLevels = 1;
-				printf("swapchain image ptr: %p\n", swapchainImages.back().image.get());
 			}
 			swapchainImageFormat = vkbSwapchain.image_format;
 
@@ -77,12 +76,7 @@ namespace daxa {
 		}
 
 		RenderWindow::~RenderWindow() {
-			printf("destroy render window\n");
 			if (device) {
-				printf("destroy render window REAL\n");
-				for (auto& img : swapchainImages) {
-					printf("ref count: %i\n", img.getRefCount());
-				}
 				swapchainImages.clear();
 				vkDestroySwapchainKHR(device, swapchain, nullptr);
 				vkDestroyFence(device, aquireFence, nullptr);

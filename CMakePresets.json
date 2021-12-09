@@ -10,7 +10,8 @@
       "name": "defaults",
       "hidden": true,
       "binaryDir": "${sourceDir}/build",
-      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "generator": "Ninja"
     },
     {
       "name": "Release",
@@ -21,11 +22,21 @@
       }
     },
     {
-      "name": "Debug",
-      "displayName": "Debug",
+      "name": "Debug (hot reload)",
+      "displayName": "Debug (hot reload)",
       "inherits": "defaults",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
+        "CMAKE_BUILD_TYPE": "Debug",
+        "DAXA_DEBUG_BUILD_HOT_RELOAD": true
+      }
+    },
+    {
+      "name": "Debug (asan)",
+      "displayName": "Debug (asan)",
+      "inherits": "defaults",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "DAXA_DEBUG_BUILD_ASAN":  true
       }
     }
   ]

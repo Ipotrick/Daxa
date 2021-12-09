@@ -7,12 +7,137 @@ namespace daxa {
 
 		DAXA_DEFINE_TRIVIAL_MOVE(BindingSet)
 
-		BindingSet::BindingSet(VkDescriptorSet set, std::weak_ptr<BindingSetAllocatorBindingiSetPool> pool, BindingSetDescription const* description)
-			: set{ set }
+		BindingSet::BindingSet(VkDevice device, VkDescriptorSet set, std::weak_ptr<BindingSetAllocatorBindingiSetPool> pool, BindingSetDescription const* description)
+			: device{ device }
+			, set { set }
 			, pool{ pool }
 			, description{ description }
 		{
 			handles.resize(description->descriptorCount, std::monostate{});
+		}
+
+		thread_local std::vector<VkDescriptorImageInfo> descImageInfoBuffer = {};
+
+		void BindingSet::bindSamplers(u32 binding, std::span<SamplerHandle> samplers, u32 descriptorArrayOffset) {
+			DAXA_ASSERT_M(!bInUseOnGPU, "can not update binding set while it is used on gpu");
+			descImageInfoBuffer.reserve(samplers.size());
+
+			for (auto& sampler : samplers) {
+				descImageInfoBuffer.push_back(VkDescriptorImageInfo{
+					.sampler = sampler->getVkSampler(),
+					.imageView = VK_NULL_HANDLE,
+					.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+				});
+
+				// update the handles inside the set
+				u32 bindingSetIndex = this->description->bindingToHandleVectorIndex[binding];
+				handles[bindingSetIndex] = sampler;
+			}
+
+			VkWriteDescriptorSet write{
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.pNext = nullptr,
+				.dstSet = set,
+				.dstBinding = binding,
+				.dstArrayElement = descriptorArrayOffset,
+				.descriptorCount = (u32)descImageInfoBuffer.size(),
+				.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.pImageInfo = descImageInfoBuffer.data()
+			};
+
+			vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+
+			descImageInfoBuffer.clear();
+		}
+
+		void BindingSet::bindSampler(u32 binding, SamplerHandle sampler, u32 dstArrayElement) {
+			bindSamplers(binding, { &sampler,1 }, dstArrayElement);
+		}
+
+		thread_local std::vector<VkDescriptorBufferInfo> descBufferInfoBuffer = {};
+
+		void BindingSet::bindBuffers(u32 binding, std::span<BufferHandle> buffers, u32 descriptorArrayOffset) {
+			DAXA_ASSERT_M(!bInUseOnGPU, "can not update binding set, that is still in use on the gpu");
+			for (auto& buffer : buffers) {
+				descBufferInfoBuffer.push_back(VkDescriptorBufferInfo{
+					.buffer = buffer->getVkBuffer(),
+					.offset = 0,									// TODO Unsure what to put here
+					.range = buffer->getSize(),
+					});
+
+				// update the handles inside the set
+				u32 bindingSetIndex = description->bindingToHandleVectorIndex[binding];
+				handles[bindingSetIndex] = buffer;
+			}
+
+			VkWriteDescriptorSet write{
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.pNext = nullptr,
+				.dstSet = set,
+				.dstBinding = binding,
+				.dstArrayElement = descriptorArrayOffset,
+				.descriptorCount = (u32)descBufferInfoBuffer.size(),
+				.descriptorType = this->description->layoutBindings.bindings[binding].descriptorType,
+				.pBufferInfo = descBufferInfoBuffer.data(),
+			};
+
+			vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+
+			descBufferInfoBuffer.clear();
+		}
+
+		void BindingSet::bindBuffer(u32 binding, BufferHandle image, u32 dstArrayElement) {
+			bindBuffers(binding, { &image, 1 }, dstArrayElement);
+		}
+
+		void BindingSet::bindImages(u32 binding, std::span<std::pair<ImageHandle, VkImageLayout>> images, u32 descriptorArrayOffset) {
+			DAXA_ASSERT_M(!bInUseOnGPU, "can not update binding set while it is used on gpu");
+			for (auto& [image, layout] : images) {
+				VkSampler sampler = VK_NULL_HANDLE;
+				switch (description->layoutBindings.bindings[binding].descriptorType) {
+				case VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+					sampler = image->getSampler()->getVkSampler();
+					break;
+				case VkDescriptorType::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+					sampler = VK_NULL_HANDLE;
+					break;
+				case VkDescriptorType::VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+					sampler = VK_NULL_HANDLE;
+					break;
+				default:
+					DAXA_ASSERT_M(false, "binding set binding mismatch");
+				}
+
+				descImageInfoBuffer.push_back(VkDescriptorImageInfo{
+					.sampler = sampler,
+					.imageView = image->getVkView(),
+					.imageLayout = layout,
+					});
+
+				// update the handles inside the set
+				u32 bindingSetIndex = description->bindingToHandleVectorIndex[binding];
+				handles[bindingSetIndex] = image;
+			}
+
+			VkWriteDescriptorSet write{
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.pNext = nullptr,
+				.dstSet = set,
+				.dstBinding = binding,
+				.dstArrayElement = descriptorArrayOffset,
+				.descriptorCount = (u32)descImageInfoBuffer.size(),
+				.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.pImageInfo = descImageInfoBuffer.data()
+			};
+
+			vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+
+			descImageInfoBuffer.clear();
+		}
+
+		void BindingSet::bindImage(u32 binding, ImageHandle image, VkImageLayout imgLayout, u32 dstArrayElement) {
+			std::pair imgAndLayout = { image, imgLayout };
+			bindImages(binding, { &imgAndLayout, 1 }, dstArrayElement);
 		}
 
 		BindingSetHandle::BindingSetHandle(std::shared_ptr<BindingSet>&& set) 
@@ -146,7 +271,7 @@ namespace daxa {
 			VkDescriptorSet set;
 			vkAllocateDescriptorSets(device, &descriptorSetAI, &set);
 
-			return BindingSetHandle{ std::make_shared<BindingSet>(BindingSet{set, pool, setDescription}) };
+			return BindingSetHandle{ std::make_shared<BindingSet>(BindingSet{device, set, pool, setDescription}) };
 		}
 
 		std::shared_ptr<BindingSetAllocatorBindingiSetPool> BindingSetAllocator::getNewPool() {

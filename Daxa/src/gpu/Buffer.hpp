@@ -33,7 +33,7 @@ namespace daxa {
 			*/
 			bool isUsedByGPU() const;
 
-			void uploadFromHost(void const* src, size_t size, size_t dstOffset = 0);
+			void upload(void const* src, size_t size, size_t dstOffset = 0);
 
 			VkBuffer getVkBuffer() const { return buffer; }
 			size_t getSize() const { return size; }
