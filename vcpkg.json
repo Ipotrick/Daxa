@@ -1,0 +1,17 @@
+{
+  "name": "daxa",
+  "version": "0.1.0",
+  "dependencies": [
+    "stb",
+    {
+      "name": "sdl2",
+      "features": [
+        "vulkan"
+      ]
+    },
+    "vulkan",
+    "glslang",
+    "spirv-cross",
+    "vulkan-memory-allocator"
+  ]
+}
