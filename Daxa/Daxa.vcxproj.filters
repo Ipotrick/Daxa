@@ -42,9 +42,6 @@
     <ClCompile Include="dependencies\vk_mem_alloc.cpp">
       <Filter>dependencies</Filter>
     </ClCompile>
-    <ClCompile Include="dependencies\VkBootstrap.cpp">
-      <Filter>dependencies</Filter>
-    </ClCompile>
     <ClCompile Include="src\gpu\BindingSet.cpp">
       <Filter>Source Files\gpu</Filter>
     </ClCompile>
@@ -95,6 +92,9 @@
     </ClCompile>
     <ClCompile Include="src\Application.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dependencies\VkBootstrap.cpp">
+      <Filter>dependencies</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -197,11 +197,14 @@
     <ClInclude Include="src\Application.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\DaxaCore.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
     <ClInclude Include="dependencies\VkBootstrap.h">
       <Filter>dependencies</Filter>
     </ClInclude>
-    <ClInclude Include="src\DaxaCore.hpp">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="dependencies\VkBootstrapDispatch.h">
+      <Filter>dependencies</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
