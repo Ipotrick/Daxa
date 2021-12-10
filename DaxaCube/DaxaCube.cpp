@@ -109,9 +109,10 @@ public:
 			-1.f, 1.f, 0.0f,	0.f, 1.f, 0.f, 1.f,
 			 0.f,-1.f, 0.0f,	0.f, 0.f, 1.f, 1.f,
 		};
-		cmdList.uploadToBuffer(vertecies, vertexBuffer);
+		cmdList.uploadToBuffer(vertecies.data(), vertecies.size() * sizeof(float), vertexBuffer);
+
 		std::array someBufferdata = { 1.0f , 1.0f , 1.0f ,1.0f };
-		cmdList.uploadToBuffer(someBufferdata, uniformBuffer);
+		cmdList.uploadToBuffer(someBufferdata.data(), someBufferdata.size() * sizeof(float), uniformBuffer);
 
 		std::array imgBarrier0 = { daxa::gpu::ImageBarrier{
 			.waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,	// as we write to the image in the frag shader we need to make sure its finished transitioning the layout
