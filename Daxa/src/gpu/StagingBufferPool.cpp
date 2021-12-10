@@ -7,7 +7,7 @@ namespace daxa {
 
 		DAXA_DEFINE_TRIVIAL_MOVE(StagingBuffer)
 
-		StagingBuffer::StagingBuffer(BufferHandle handle, std::weak_ptr<StagingBufferPoolSharedData> pool)
+		StagingBuffer::StagingBuffer(BufferHandle& handle, std::weak_ptr<StagingBufferPoolSharedData> pool)
 			: buffer{ handle }
 			, sharedData{ std::move(pool) }
 		{ }
