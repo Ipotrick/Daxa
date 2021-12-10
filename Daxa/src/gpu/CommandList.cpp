@@ -42,7 +42,113 @@ namespace daxa {
 			vkEndCommandBuffer(cmd);
 		}
 
-		void CommandList::bindVertexBuffer(u32 binding, BufferHandle& buffer, size_t bufferOffset) {
+		void CommandList::copyHostToBuffer(HostToBufferCopyInfo copyInfo) {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			if (copyInfo.size > STAGING_BUFFER_POOL_BUFFER_SIZE) {
+				DAXA_ASSERT_M(false, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
+				usedBuffers.push_back(copyInfo.dst);
+			}
+			else {
+				if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < copyInfo.size) {
+					usedStagingBuffers.push_back(stagingBufferPool.lock()->getStagingBuffer());
+				}
+
+				auto& stagingBuffer = usedStagingBuffers.back();
+
+				auto offset = stagingBuffer.usedUpSize;
+
+				stagingBuffer.buffer->upload(copyInfo.src, copyInfo.size, offset);
+
+				stagingBuffer.usedUpSize += copyInfo.size;
+
+				BufferToBufferCopyInfo btbCopyInfo{
+					.src = stagingBuffer.buffer,
+					.dst = copyInfo.dst,
+					.region = BufferCopyRegion{
+						.srcOffset = offset,
+						.dstOffset = copyInfo.dstOffset,
+						.size = copyInfo.size,
+					}
+				};
+				copyBufferToBuffer(btbCopyInfo);
+			}
+		}
+
+		void CommandList::copyHostToImage(HostToImageCopyInfo copyInfo) {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			if (copyInfo.size > STAGING_BUFFER_POOL_BUFFER_SIZE) {
+				DAXA_ASSERT_M(false, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
+				usedImages.push_back(copyInfo.dst);
+			}
+			else {
+				if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < copyInfo.size) {
+					usedStagingBuffers.push_back(stagingBufferPool.lock()->getStagingBuffer());
+				}
+
+				auto& stagingBuffer = usedStagingBuffers.back();
+
+				auto offset = stagingBuffer.usedUpSize;
+
+				stagingBuffer.buffer->upload(copyInfo.src, copyInfo.size, offset);
+
+				stagingBuffer.usedUpSize += copyInfo.size;
+
+				BufferToImageCopyInfo btiCopy{
+					.src = stagingBuffer.buffer,
+					.dst = copyInfo.dst,
+					.srcOffset = offset,
+					.subRessourceLayers = copyInfo.dstImgSubressource,
+					.size = copyInfo.size,
+				};
+				copyBufferToImage(btiCopy);
+			}
+		}
+
+		void CommandList::copyMultiBufferToBuffer(BufferToBufferMultiCopyInfo copyInfo) {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			DAXA_ASSERT_M(copyInfo.regions.size() > 0, "ERROR: tried copying 0 regions from buffer to buffer, this is a bug!");
+			for (int i = 0; i < copyInfo.regions.size(); i++) {
+				DAXA_ASSERT_M(copyInfo.src->getSize() >= copyInfo.regions[i].size + copyInfo.regions[i].srcOffset, "ERROR: src buffer is smaller than the region that shouly be copied!");
+				DAXA_ASSERT_M(copyInfo.dst->getSize() >= copyInfo.regions[i].size + copyInfo.regions[i].dstOffset, "ERROR: dst buffer is smaller than the region that shouly be copied!");
+			}
+			usedBuffers.push_back(copyInfo.src);
+			usedBuffers.push_back(copyInfo.dst);
+			vkCmdCopyBuffer(cmd, copyInfo.src->getVkBuffer(), copyInfo.dst->getVkBuffer(), copyInfo.regions.size(), (VkBufferCopy*)copyInfo.regions.data());	// THIS COULD BREAK ON ABI CHANGE
+		}
+
+		void CommandList::copyBufferToBuffer(BufferToBufferCopyInfo copyInfo) {
+			BufferToBufferMultiCopyInfo btbMultiCopy{
+				.src = copyInfo.src,
+				.dst = copyInfo.dst,
+				.regions = { &copyInfo.region, 1 }
+			};
+			copyMultiBufferToBuffer(btbMultiCopy);
+		}
+
+		void CommandList::copyBufferToImage(BufferToImageCopyInfo copyInfo) {
+			usedBuffers.push_back(copyInfo.src);
+			usedImages.push_back(copyInfo.dst);
+
+			VkImageSubresourceLayers imgSubRessource = copyInfo.subRessourceLayers.value_or(VkImageSubresourceLayers{
+				.aspectMask = copyInfo.dst->getVkAspect(),
+				.mipLevel = 0,
+				.baseArrayLayer = 0,
+				.layerCount = copyInfo.dst->getVkArrayLayers(),
+				});
+
+			VkBufferImageCopy bufferImageCopy{
+				.bufferOffset = copyInfo.srcOffset,
+				.bufferRowLength = 0,
+				.bufferImageHeight = 0,
+				.imageSubresource = imgSubRessource,
+				.imageOffset = 0,
+				.imageExtent = copyInfo.dst->getVkExtent(),
+			};
+
+			vkCmdCopyBufferToImage(cmd, copyInfo.src->getVkBuffer(), copyInfo.dst->getVkImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bufferImageCopy);
+		}
+
+		void CommandList::bindVertexBuffer(u32 binding, BufferHandle buffer, size_t bufferOffset) {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			auto vkBuffer = buffer->getVkBuffer();
 			vkCmdBindVertexBuffers(cmd, binding, 1, &vkBuffer, &bufferOffset);
@@ -182,122 +288,11 @@ namespace daxa {
 			vkCmdDraw(cmd, vertexCount, instanceCount, firstVertex, firstInstance);
 		}
 
-		void CommandList::copyBufferToBufferMulti(BufferHandle& src, BufferHandle& dst, std::span<VkBufferCopy const> copyRegions) {
-			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-			DAXA_ASSERT_M(copyRegions.size() > 0, "ERROR: tried copying 0 regions from buffer to buffer, this is a bug!");
-			for (int i = 0; i < copyRegions.size(); i++) {
-				DAXA_ASSERT_M(src->getSize() >= copyRegions[i].size + copyRegions[i].srcOffset, "ERROR: src buffer is smaller than the region that shouly be copied!");
-				DAXA_ASSERT_M(dst->getSize() >= copyRegions[i].size + copyRegions[i].dstOffset, "ERROR: dst buffer is smaller than the region that shouly be copied!");
-			}
-			usedBuffers.push_back(src);
-			usedBuffers.push_back(dst);
-			vkCmdCopyBuffer(cmd, src->getVkBuffer(), dst->getVkBuffer(), copyRegions.size(), copyRegions.data());
-		}
-
-		void CommandList::copyBufferToImage(BufferHandle& src, ImageHandle& dst, BufferToImageCopy const& copyInfo) {
-			usedBuffers.push_back(src);
-			usedImages.push_back(dst);
-
-			VkImageSubresourceLayers imgSubRessource = copyInfo.dstSubRessource.value_or(VkImageSubresourceLayers{
-				.aspectMask = dst->getVkAspect(),
-				.mipLevel = 0,
-				.baseArrayLayer = 0,
-				.layerCount = dst->getVkArrayLayers(),
-			});
-
-			VkBufferImageCopy bufferImageCopy{
-				.bufferOffset = copyInfo.srcOffset,
-				.bufferRowLength = 0,
-				.bufferImageHeight = 0,
-				.imageSubresource = imgSubRessource,
-				.imageOffset = 0,
-				.imageExtent = dst->getVkExtent(),
-			};
-
-			vkCmdCopyBufferToImage(cmd, src->getVkBuffer(), dst->getVkImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bufferImageCopy);
-		}
-
-		void CommandList::uploadToImage(void const* src, size_t size, ImageHandle& dst, std::optional<VkImageSubresourceLayers> dstSubRessource) {
-			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-			if (size > STAGING_BUFFER_POOL_BUFFER_SIZE) {
-				DAXA_ASSERT_M(false, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
-				usedImages.push_back(dst);
-			}
-			else {
-				if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < size) {
-					usedStagingBuffers.push_back(stagingBufferPool.lock()->getStagingBuffer());
-				}
-
-				auto& stagingBuffer = usedStagingBuffers.back();
-
-				auto offset = stagingBuffer.usedUpSize;
-
-				stagingBuffer.buffer->upload(src, size, offset);
-
-				stagingBuffer.usedUpSize += size;
-
-				BufferToImageCopy copyInfo{
-					.srcOffset = offset,
-					.dstSubRessource = dstSubRessource,
-					.size = size,
-				};
-				copyBufferToImage(stagingBuffer.buffer, dst, copyInfo);
-			}
-		}
-
-		void CommandList::uploadToImageSynced(void const* src, size_t size, ImageHandle& dst, VkImageLayout dstLayout, std::optional<VkImageSubresourceLayers> dstSubRessource) {
-			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-			ImageBarrier initialBarrier{
-				.waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR,
-				.image = dst,
-				.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
-				.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			};
-			insertBarriers({}, {}, { &initialBarrier, 1 });
-			uploadToImage(src, size, dst, dstSubRessource);
-			ImageBarrier followingBarrier{
-				.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
-				.image = dst,
-				.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				.layoutAfter = dstLayout,
-			};
-			insertBarriers({}, {}, { &followingBarrier, 1 });
-		}
-
-		void CommandList::bindSet(u32 setBinding, BindingSetHandle& set) {
+		void CommandList::bindSet(u32 setBinding, BindingSetHandle set) {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(boundPipeline.has_value(), "can not bind descriptor sets if there is no pipeline bound");
 			vkCmdBindDescriptorSets(cmd, boundPipeline->bindPoint, boundPipeline->layout, setBinding, 1, &set->set, 0, nullptr);
 			usedSets.push_back(set);
-		}
-
-		void CommandList::uploadToBuffer(void const* src, size_t size, BufferHandle& dst, size_t dstOffset) {
-			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-			if (size > STAGING_BUFFER_POOL_BUFFER_SIZE) {
-				DAXA_ASSERT_M(false, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
-				usedBuffers.push_back(dst);
-			}
-			else {
-				if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < size) {
-					usedStagingBuffers.push_back(stagingBufferPool.lock()->getStagingBuffer());
-				}
-
-				auto& stagingBuffer = usedStagingBuffers.back();
-
-				auto offset = stagingBuffer.usedUpSize;
-
-				stagingBuffer.buffer->upload(src, size, offset);
-
-				stagingBuffer.usedUpSize += size;
-
-				VkBufferCopy bufferCopyInfo{
-					.srcOffset = offset,
-					.dstOffset = dstOffset,
-					.size = size,
-				};
-
-				copyBufferToBuffer(stagingBuffer.buffer, dst, bufferCopyInfo);
-			}
 		}
 
 		void CommandList::insertBarriers(std::span<MemoryBarrier> memBarriers, std::span<BufferBarrier> bufBarriers, std::span<ImageBarrier> imgBarriers) {

@@ -58,31 +58,35 @@ public:
 		).value();
 
 		daxa::gpu::GraphicsPipelineBuilder pipelineBuilder;
-		pipelineBuilder.addShaderStage(vertexShader);
-		pipelineBuilder.addShaderStage(fragmenstShader);
-		pipelineBuilder.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX);	// add vertex attributes:
-		pipelineBuilder.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT);			// positions
-		pipelineBuilder.addVertexInputAttribute(VK_FORMAT_R32G32B32A32_SFLOAT);			// colors
-		pipelineBuilder.addColorAttachment(renderWindow.getVkFormat());
+		pipelineBuilder
+			.addShaderStage(vertexShader)
+			.addShaderStage(fragmenstShader)
+			// adding a vertex input attribute binding:
+			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
+			// all added vertex input attributes are added to the previously added vertex input attribute binding
+			.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)			// positions
+			.addVertexInputAttribute(VK_FORMAT_R32G32B32A32_SFLOAT)			// colors
+			// location of attachments in a shader are implied by the order they are added in the pipeline builder:
+			.addColorAttachment(renderWindow.getVkFormat());
 
 		this->pipeline = device.createGraphicsPipeline(pipelineBuilder);
 
 		this->setAllocator = device.createBindingSetAllocator(pipeline->getSetDescription(0));
 
-		constexpr size_t vertexBufferSize = sizeof(float) * 3 * 3 /* positions */ + sizeof(float) * 4 * 3 /* colors */;
+		// use the explicit create info structs:
 		daxa::gpu::BufferCreateInfo bufferCI{
-			.size = vertexBufferSize,
+			.size = sizeof(float) * 3 * 3 /* positions */ + sizeof(float) * 4 * 3 /* colors */,
 			.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
 		};
-		vertexBuffer = device.createBuffer(bufferCI);
+		this->vertexBuffer = device.createBuffer(bufferCI);
 
-		daxa::gpu::BufferCreateInfo someBufferCI{
+		// or use them embedded, like a named parameter list:
+		this->uniformBuffer = device.createBuffer({
 			.size = sizeof(float) * 4,
 			.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
-		};
-		uniformBuffer = device.createBuffer(someBufferCI);
+			});
 
 		for (int i = 0; i < 3; i++) {
 			frames.push_back(PerFrameData{ .presentSignal = device.createSignal(), .timeline = device.createTimelineSemaphore(), .timelineCounter = 0 });
@@ -102,31 +106,48 @@ public:
 
 		auto cmdList = device.getEmptyCommandList();
 
-		cmdList.begin();
+		cmdList->begin();
+
+
+		/// ------------ Begin Data Uploading ---------------------
+
 
 		std::array vertecies = {
 			 1.f, 1.f, 0.0f,	1.f, 0.f, 0.f, 1.f,
 			-1.f, 1.f, 0.0f,	0.f, 1.f, 0.f, 1.f,
 			 0.f,-1.f, 0.0f,	0.f, 0.f, 1.f, 1.f,
 		};
-		cmdList.uploadToBuffer(vertecies.data(), vertecies.size() * sizeof(float), vertexBuffer);
+		cmdList->copyHostToBuffer(daxa::gpu::HostToBufferCopyInfo{
+			.src = vertecies.data(),
+			.dst = vertexBuffer,
+			.size = vertecies.size() * sizeof(float)
+			});
 
 		std::array someBufferdata = { 1.0f , 1.0f , 1.0f ,1.0f };
-		cmdList.uploadToBuffer(someBufferdata.data(), someBufferdata.size() * sizeof(float), uniformBuffer);
+		cmdList->copyHostToBuffer(daxa::gpu::HostToBufferCopyInfo{
+			.src = someBufferdata.data(),
+			.dst = uniformBuffer,
+			.size = someBufferdata.size() * sizeof(float)
+			});
 
+		// array because we can allways pass multiple barriers at once for driver efficiency
 		std::array imgBarrier0 = { daxa::gpu::ImageBarrier{
 			.waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,	// as we write to the image in the frag shader we need to make sure its finished transitioning the layout
 			.image = swapchainImage.getImageHandle(),
 			.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,						// dont care about previous layout
 			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,		// set new layout to color attachment optimal
 		} };
+		// array because we can allways pass multiple barriers at once for driver efficiency
 		std::array memBarrier0 = { daxa::gpu::MemoryBarrier{
 			.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,				// wait for writing the vertex buffer
 			.waitingStages = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT_KHR,		// the vertex creating must wait
 		} };
-		cmdList.insertBarriers(memBarrier0, {}, imgBarrier0);
+		cmdList->insertBarriers(memBarrier0, {}, imgBarrier0);
 
-		double intpart;
+
+		/// ------------ End Data Uploading ---------------------
+
+
 		totalElapsedTime += app.getDeltaTimeSeconds();
 		float r = std::cos(totalElapsedTime * 0.21313) * 0.3f + 0.5f;
 		float g = std::cos(totalElapsedTime * 0.75454634) * 0.3f + 0.5f;
@@ -134,36 +155,37 @@ public:
 
 		VkClearValue clear{ .color = VkClearColorValue{.float32 = { r, g, b, 1.0f } } };
 
-		std::array colorAttachments{
+		std::array framebuffer{
 			daxa::gpu::RenderAttachmentInfo{
 				.image = swapchainImage.getImageHandle(),
 				.clearValue = clear,
 			}
 		};
-		cmdList.beginRendering(daxa::gpu::BeginRenderingInfo{
-			.colorAttachments = colorAttachments,
+		cmdList->beginRendering(daxa::gpu::BeginRenderingInfo{
+			.colorAttachments = framebuffer,
 			});
 
-		cmdList.bindPipeline(pipeline);
+		cmdList->bindPipeline(pipeline);
 
 		auto set = setAllocator.getSet();
 		set->bindBuffer(0, uniformBuffer);
-		cmdList.bindSet(0, set);
+		cmdList->bindSet(0, set);
 
-		cmdList.bindVertexBuffer(0, vertexBuffer);
+		cmdList->bindVertexBuffer(0, vertexBuffer);
 
-		cmdList.draw(3, 1, 0, 0);
+		cmdList->draw(3, 1, 0, 0);
 
-		cmdList.endRendering();
+		cmdList->endRendering();
 
+		// array because we can allways pass multiple barriers at once for driver efficiency
 		std::array imgBarrier1 = { daxa::gpu::ImageBarrier{
 			.image = swapchainImage.getImageHandle(),
 			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			.layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 		} };
-		cmdList.insertBarriers({}, {}, imgBarrier1);
+		cmdList->insertBarriers({}, {}, imgBarrier1);
 
-		cmdList.end();
+		cmdList->end();
 
 		// "++currentFrame->finishCounter " is the value that will be set to the timeline when the execution is finished, basicly incrementing it 
 		// the timeline is the counter we use to see if the frame is finished executing on the gpu later.
@@ -173,7 +195,7 @@ public:
 		submitInfo.commandLists.push_back(std::move(cmdList));
 		submitInfo.signalOnCompletion = { &currentFrame->presentSignal, 1 };
 		submitInfo.signalTimelines = signalTimelines;
-		queue.submit(std::move(submitInfo));
+		queue.submit(submitInfo);
 
 		queue.present(std::move(swapchainImage), currentFrame->presentSignal);
 		swapchainImage = renderWindow.aquireNextImage();
@@ -222,7 +244,7 @@ int main()
 	daxa::initialize();
 
 	{
-		daxa::Application<MyUser> app{ 1000, 1000, "Daxa Triangle Sampler" };
+		daxa::Application<MyUser> app{ 1000, 1000, "Daxa Triangle Sample" };
 		app.run();
 	}
 
