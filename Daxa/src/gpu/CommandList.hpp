@@ -20,6 +20,12 @@
 namespace daxa {
 	namespace gpu {
 
+		struct BufferToImageCopy {
+			size_t srcOffset = 0; 
+			std::optional<VkImageSubresourceLayers> dstSubRessource = {};
+			size_t size;
+		};
+
 		/**
 		 * use this for all sync inside a queue:
 		*/
@@ -58,11 +64,11 @@ namespace daxa {
 		};
 
 		struct RenderAttachmentInfo {
-			ImageHandle image;
+			ImageHandle image = {};
 			VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 			VkResolveModeFlagBits resolveMode = VK_RESOLVE_MODE_NONE;
 			VkAttachmentLoadOp loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-			VkAttachmentStoreOp storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE;
+			VkAttachmentStoreOp storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 			VkClearValue clearValue = VkClearValue{ .color = VkClearColorValue{.float32 = { 0.0f, 0.0f, 0.0f, 0.0f } } };
 		};
 
@@ -89,52 +95,96 @@ namespace daxa {
 
 			// Ressource management:
 
-			template<typename T, size_t N>
-			void uploadToBuffer(std::array<T, N> const& arraySrc, BufferHandle dst, size_t dstOffset = 0) {
-				uploadToBuffer(arraySrc.data(), sizeof(T) * N, std::move(dst), dstOffset);
+			/**
+			 * Uploads from host memory to a staging buffer. 
+			 * At the execution time of the command list, the data will be copied into the dst buffer from the staging buffer.
+			 * 
+			 * \param src host memory pointer.
+			 * \param size size of the memory to upload in bytes.
+			 * \param dst the buffer that the data will be uploaded to.
+			 * \param dstOffset is a byte sized offset of where the uploaded memory will be placed in the host memory. 
+			*/
+			void uploadToBuffer(void const* src, size_t size, BufferHandle& dst, size_t dstOffset = 0);
+
+			/**
+			 * Uploads from host memory to a staging buffer.
+			 * At the execution time of the command list, the data will be copied into the dst image from the staging buffer.
+			 *
+			 * \param src host memory pointer.
+			 * \param size size of the memory to upload in bytes.
+			 * \param dst the image that the data will be uploaded to.
+			 * \param dstSubRessource gives an optional range defining to what part of the image the data is uploaded to.
+			*/
+			void uploadToImage(void const* src, size_t size, ImageHandle& dst, std::optional<VkImageSubresourceLayers> dstSubRessource = {});
+
+			/**
+			 * Uploads from host memory to a staging buffer.
+			 * At the execution time of the command list, the data will be copied into the dst image from the staging buffer.
+			 * this function insertes memory barriers by itself, wich may be a lot more inefficient manually syncing.
+			 *
+			 * \param src host memory pointer.
+			 * \param size size of the memory to upload in bytes.
+			 * \param dst the image that the data will be uploaded to.
+			 * \param the layout of the image afte the upload.
+			 * \param dstSubRessource gives an optional range defining to what part of the image the data is uploaded to.
+			*/
+			void uploadToImageSynced(void const* src, size_t size, ImageHandle& dst, VkImageLayout dstLayout, std::optional<VkImageSubresourceLayers> dstSubRessource = {});
+
+			/**
+			 * Copies the specified region from buffer src to buffer dst.
+			 * 
+			 * \param src the buffer that is copied from.
+			 * \param dst the buffer that is copied to.
+			 * \param copyInfo defines the src- and dst-offset and size of the memory to copy.
+			*/
+			void copyBufferToBuffer(BufferHandle& src, BufferHandle& dst, VkBufferCopy const& copyInfo) {
+				copyBufferToBufferMulti(src, dst, { &copyInfo, 1 });
 			}
-			
-			template<typename T>
-				void uploadToBuffer(std::vector<T> const& vecSrc, BufferHandle dst, size_t dstOffset = 0) {
-				uploadToBuffer(vecSrc.data(), sizeof(T) * vecSrc.size(), std::move(dst), dstOffset);
-			}
 
-			void uploadToBuffer(void const* src, size_t size, BufferHandle dst, size_t dstOffset = 0);
+			/**
+			 * Copies the specified regions from buffer src to buffer dst.
+			 *
+			 * \param src the buffer that is copied from.
+			 * \param dst the buffer that is copied to.
+			 * \param copyInfos defines multiple ranges of values to be copied from src to dst.
+			*/
+			void copyBufferToBufferMulti(BufferHandle& src, BufferHandle& dst, std::span<VkBufferCopy const> copyInfos);
 
-			// TODO ELIDE THE REGION
-			void copyBufferToBuffer(BufferHandle src, BufferHandle dst, VkBufferCopy region) {
-				copyBufferToBufferMulti(src, dst, { &region, 1 });
-			}
+			// EXPERIMENTAL
+			void copyBufferToImage(BufferHandle& src, ImageHandle& dst, BufferToImageCopy const& copyInfo);
 
-			void copyBufferToBufferMulti(BufferHandle src, BufferHandle dst, std::span<VkBufferCopy> copyRegions);
-
-			void copyBufferToImage(BufferHandle src, size_t srcOffset, size_t size, ImageHandle dst, std::optional<VkImageSubresourceLayers> dstSubRessource = {});
-
-			void uploadToImage(void const* src, size_t size, ImageHandle dst, std::optional<VkImageSubresourceLayers> dstSubRessource = {});
-
-			void uploadToImageSynced(void const* src, size_t size, ImageHandle dst, VkImageLayout dstLayout, std::optional<VkImageSubresourceLayers> dstSubRessource = {});
 
 			// Rendering:
 
-			void bindSet(u32 setBinding, BindingSetHandle& set);
+			/**
+			 * Starts a render pass.
+			*/
+			void beginRendering(BeginRenderingInfo ri);
 
-			void bindVertexBuffer(u32 binding, BufferHandle buffer, size_t bufferOffset = 0);
+			/**
+			 * Ends a render pass.
+			*/
+			void endRendering();
 
-			// TODO REFACTOR, THIS LEADS TO BUGS (EXAMPLE: GIVE VECTOR AS CONSTANT PARAMETER)
+			/**
+			 * Binds a pipeline to be used in the current render pass.
+			 * 
+			 * \param specify all render pass related information like render attachments.
+			*/
+			void bindPipeline(GraphicsPipelineHandle& graphicsPipeline);
+
+			void setViewport(VkViewport const& viewport);
+
+			void setScissor(VkRect2D const& scissor);
+
 			template<typename T>
 			void pushConstant(VkShaderStageFlagBits shaderStage, T& constant, size_t offset = 0) {
 				vkCmdPushConstants(cmd, boundPipeline.value().layout, shaderStage, offset, sizeof(T), &constant);
 			}
 
-			void beginRendering(BeginRenderingInfo ri);
+			void bindVertexBuffer(u32 binding, BufferHandle& buffer, size_t bufferOffset = 0);
 
-			void endRendering();
-
-			void bindPipeline(GraphicsPipelineHandle graphicsPipeline);
-
-			void setViewport(VkViewport const& viewport);
-
-			void setScissor(VkRect2D const& scissor);
+			void bindSet(u32 setBinding, BindingSetHandle& set);
 
 			void draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance);
 

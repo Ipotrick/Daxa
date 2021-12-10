@@ -25,7 +25,7 @@ namespace daxa {
 				submitCommandBufferBuffer.push_back(cmdList.cmd);
 			
 				for (auto& buffer : cmdList.usedBuffers) {
-					buffer->bInUseOnGPU = true;
+					buffer.buffer->bInUseOnGPU = true;
 				}
 				for (auto& set : cmdList.usedSets) {
 					set->bInUseOnGPU = true;
@@ -109,7 +109,7 @@ namespace daxa {
 						auto list = std::move(iter->cmdLists.back());
 						iter->cmdLists.pop_back();
 						for (auto& buffer : list.usedBuffers) {
-							buffer->bInUseOnGPU = false;
+							buffer.buffer->bInUseOnGPU = false;
 						}
 						for (auto& set : list.usedSets) {
 							set->bInUseOnGPU = false;

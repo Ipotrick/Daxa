@@ -61,24 +61,28 @@ public:
 		pipelineBuilder
 			.addShaderStage(vertexShader)
 			.addShaderStage(fragmenstShader)
-			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)	// add vertex attributes:
+			// adding a vertex input attribute binding:
+			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
+			// all added vertex input attributes are added to the previously added vertex input attribute binding
 			.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)			// positions
 			.addVertexInputAttribute(VK_FORMAT_R32G32B32A32_SFLOAT)			// colors
+			// location of attachments in a shader are implied by the order they are added in the pipeline builder:
 			.addColorAttachment(renderWindow.getVkFormat());
 
 		this->pipeline = device.createGraphicsPipeline(pipelineBuilder);
 
 		this->setAllocator = device.createBindingSetAllocator(pipeline->getSetDescription(0));
 
-		constexpr size_t vertexBufferSize = sizeof(float) * 3 * 3 /* positions */ + sizeof(float) * 4 * 3 /* colors */;
+		// use the explicit create info structs:
 		daxa::gpu::BufferCreateInfo bufferCI{
-			.size = vertexBufferSize,
+			.size = sizeof(float) * 3 * 3 /* positions */ + sizeof(float) * 4 * 3 /* colors */,
 			.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
 		};
-		vertexBuffer = device.createBuffer(bufferCI);
+		this->vertexBuffer = device.createBuffer(bufferCI);
 
-		uniformBuffer = device.createBuffer({
+		// or use them embedded, like a named parameter list:
+		this->uniformBuffer = device.createBuffer({
 			.size = sizeof(float) * 4,
 			.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
@@ -113,10 +117,10 @@ public:
 			-1.f, 1.f, 0.0f,	0.f, 1.f, 0.f, 1.f,
 			 0.f,-1.f, 0.0f,	0.f, 0.f, 1.f, 1.f,
 		};
-		cmdList.uploadToBuffer(vertecies, vertexBuffer);
+		cmdList.uploadToBuffer(vertecies.data(), vertecies.size() * sizeof(float), vertexBuffer);
 
 		std::array someBufferdata = { 1.0f , 1.0f , 1.0f ,1.0f };
-		cmdList.uploadToBuffer(someBufferdata, uniformBuffer);
+		cmdList.uploadToBuffer(someBufferdata.data(), someBufferdata.size() * sizeof(float), uniformBuffer);
 
 		// array because we can allways pass multiple barriers at once for driver efficiency
 		std::array imgBarrier0 = { daxa::gpu::ImageBarrier{
