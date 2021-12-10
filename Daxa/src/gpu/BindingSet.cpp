@@ -63,7 +63,7 @@ namespace daxa {
 					.buffer = buffer->getVkBuffer(),
 					.offset = 0,									// TODO Unsure what to put here
 					.range = buffer->getSize(),
-					});
+				});
 
 				// update the handles inside the set
 				u32 bindingSetIndex = description->bindingToHandleVectorIndex[binding];
