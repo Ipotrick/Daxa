@@ -117,10 +117,18 @@ public:
 			-1.f, 1.f, 0.0f,	0.f, 1.f, 0.f, 1.f,
 			 0.f,-1.f, 0.0f,	0.f, 0.f, 1.f, 1.f,
 		};
-		cmdList->uploadToBuffer(vertecies.data(), vertecies.size() * sizeof(float), vertexBuffer);
+		cmdList->copyHostToBuffer(daxa::gpu::HostToBufferCopyInfo{
+			.src = vertecies.data(),
+			.dst = vertexBuffer,
+			.size = vertecies.size() * sizeof(float)
+		});
 
 		std::array someBufferdata = { 1.0f , 1.0f , 1.0f ,1.0f };
-		cmdList->uploadToBuffer(someBufferdata.data(), someBufferdata.size() * sizeof(float), uniformBuffer);
+		cmdList->copyHostToBuffer(daxa::gpu::HostToBufferCopyInfo{
+			.src = someBufferdata.data(),
+			.dst = uniformBuffer,
+			.size = someBufferdata.size() * sizeof(float)
+		});
 
 		// array because we can allways pass multiple barriers at once for driver efficiency
 		std::array imgBarrier0 = { daxa::gpu::ImageBarrier{
