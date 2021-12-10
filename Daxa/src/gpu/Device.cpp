@@ -134,8 +134,8 @@ namespace daxa {
 			return SignalHandle{ std::make_shared<Signal>(Signal{device}) };
 		}
 
-		RenderWindow Device::createRenderWindow(VkSurfaceKHR surface, u32 width, u32 height, VkPresentModeKHR presentMode) {
-			return RenderWindow{ device, physicalDevice, instance, surface, width, height, presentMode };
+		Swapchain Device::createSwapchain(VkSurfaceKHR surface, u32 width, u32 height, VkPresentModeKHR presentMode) {
+			return Swapchain{ device, physicalDevice, instance, surface, width, height, presentMode };
 		}
 
 		BindingSetDescription const* Device::createBindingSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings) {

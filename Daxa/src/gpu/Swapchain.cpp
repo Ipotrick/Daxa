@@ -1,4 +1,4 @@
-#include "RenderWindow.hpp"
+#include "Swapchain.hpp"
 
 #include <iostream>
 #include <chrono>
@@ -17,9 +17,9 @@ namespace daxa {
 			return surface;
 		}
 
-		DAXA_DEFINE_TRIVIAL_MOVE(RenderWindow)
+		DAXA_DEFINE_TRIVIAL_MOVE(Swapchain)
 
-		RenderWindow::RenderWindow(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance, VkSurfaceKHR surface, u32 width, u32 height, VkPresentModeKHR presentMode, VkSwapchainKHR oldSwapchain)
+		Swapchain::Swapchain(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance, VkSurfaceKHR surface, u32 width, u32 height, VkPresentModeKHR presentMode, VkSwapchainKHR oldSwapchain)
 			: device{ device }
 			, physicalDevice{ physicalDevice }
 			, instance{ instance }
@@ -75,7 +75,7 @@ namespace daxa {
 			vkCreateFence(device, &fenceCI, nullptr, &aquireFence);
 		}
 
-		RenderWindow::~RenderWindow() {
+		Swapchain::~Swapchain() {
 			if (device) {
 				swapchainImages.clear();
 				vkDestroySwapchainKHR(device, swapchain, nullptr);
@@ -88,7 +88,7 @@ namespace daxa {
 			}
 		}
 
-		SwapchainImage RenderWindow::aquireNextImage() {
+		SwapchainImage Swapchain::aquireNextImage() {
 
 			u32 index{ 0 };
 			auto err = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, nullptr, aquireFence, &index);
@@ -104,16 +104,16 @@ namespace daxa {
 			return si;
 		}
 
-		void RenderWindow::resize(VkExtent2D newSize) {
+		void Swapchain::resize(VkExtent2D newSize) {
 			auto surface = this->surface;
 			this->surface = VK_NULL_HANDLE;
-			*this = RenderWindow{ device, physicalDevice, instance, surface, newSize.width, newSize.height, presentMode, this->swapchain };
+			*this = Swapchain{ device, physicalDevice, instance, surface, newSize.width, newSize.height, presentMode, this->swapchain };
 		}
 
-		void RenderWindow::setPresentMode(VkPresentModeKHR newPresentMode) {
+		void Swapchain::setPresentMode(VkPresentModeKHR newPresentMode) {
 			auto surface = this->surface;
 			this->surface = VK_NULL_HANDLE;
-			*this = RenderWindow{ device, physicalDevice, instance, surface, size.width,  size.height, newPresentMode, this->swapchain };
+			*this = Swapchain{ device, physicalDevice, instance, surface, size.width,  size.height, newPresentMode, this->swapchain };
 		}
 	}
 }
