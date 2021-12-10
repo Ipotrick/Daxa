@@ -17,13 +17,9 @@
 
 namespace daxa {
 	namespace gpu {
-		struct CommandListRecyclingSharedData {
-			std::mutex mut = {};
-			std::vector<CommandList> emptyCommandLists;
-		}; 
 		
 		struct SubmitInfo {
-			std::vector<CommandList>						commandLists;		// TODO REPLACE THIS VECTOR WITH HEAPLESS VERSION
+			std::vector<CommandListHandle>					commandLists;		// TODO REPLACE THIS VECTOR WITH HEAPLESS VERSION
 			std::span<std::tuple<TimelineSemaphore*, u64>>	waitOnTimelines;
 			std::span<std::tuple<TimelineSemaphore*, u64>>	signalTimelines;
 			std::span<SignalHandle>							waitOnSignals;
@@ -48,7 +44,7 @@ namespace daxa {
 			 * \param submitInfo contains all information about the submit.
 			 * \return a fence handle that can be used to check if the execution is complete or waited upon completion.
 			 */
-			void submit(SubmitInfo&& submitInfo);
+			void submit(SubmitInfo& submitInfo);
 
 			void present(SwapchainImage&& img, SignalHandle& waitOnSignal);
 
@@ -58,7 +54,7 @@ namespace daxa {
 		private: 
 			friend class Device;
 
-			Queue(VkDevice device, VkQueue queue, std::shared_ptr<CommandListRecyclingSharedData> sharedData);
+			Queue(VkDevice device, VkQueue queue);
 
 			VkDevice device = {};
 			VkQueue queue = {};
@@ -66,13 +62,11 @@ namespace daxa {
 			TimelineSemaphore getNextTimeline();
 
 			struct PendingSubmit {
-				std::vector<CommandList> cmdLists;
+				std::vector<CommandListHandle> cmdLists;
 				TimelineSemaphore timelineSema;
 				u64 finishCounter = 0;
 			};
 			std::vector<PendingSubmit> unfinishedSubmits = {};
-
-			std::weak_ptr<CommandListRecyclingSharedData> sharedData = {};
 
 			std::vector<TimelineSemaphore> unusedTimelines = {};
 

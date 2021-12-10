@@ -19,7 +19,7 @@ namespace daxa {
 		thread_local std::vector<VkDescriptorImageInfo> descImageInfoBuffer = {};
 
 		void BindingSet::bindSamplers(u32 binding, std::span<SamplerHandle> samplers, u32 descriptorArrayOffset) {
-			DAXA_ASSERT_M(!bInUseOnGPU, "can not update binding set while it is used on gpu");
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not update binding set while it is used on gpu");
 			descImageInfoBuffer.reserve(samplers.size());
 
 			for (auto& sampler : samplers) {
@@ -57,7 +57,7 @@ namespace daxa {
 		thread_local std::vector<VkDescriptorBufferInfo> descBufferInfoBuffer = {};
 
 		void BindingSet::bindBuffers(u32 binding, std::span<BufferHandle> buffers, u32 descriptorArrayOffset) {
-			DAXA_ASSERT_M(!bInUseOnGPU, "can not update binding set, that is still in use on the gpu");
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not update binding set, that is still in use on the gpu");
 			for (auto& buffer : buffers) {
 				descBufferInfoBuffer.push_back(VkDescriptorBufferInfo{
 					.buffer = buffer->getVkBuffer(),
@@ -91,7 +91,7 @@ namespace daxa {
 		}
 
 		void BindingSet::bindImages(u32 binding, std::span<std::pair<ImageHandle, VkImageLayout>> images, u32 descriptorArrayOffset) {
-			DAXA_ASSERT_M(!bInUseOnGPU, "can not update binding set while it is used on gpu");
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not update binding set while it is used on gpu");
 			for (auto& [image, layout] : images) {
 				VkSampler sampler = VK_NULL_HANDLE;
 				switch (description->layoutBindings.bindings[binding].descriptorType) {

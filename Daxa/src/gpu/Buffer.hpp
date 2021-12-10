@@ -57,7 +57,7 @@ namespace daxa {
 			VmaMemoryUsage memoryUsage;
 			VmaAllocation allocation;
 			VmaAllocator allocator;
-			bool bInUseOnGPU = false;
+			u32 usesOnGPU = 0;
 		};
 
 		class BufferHandle {

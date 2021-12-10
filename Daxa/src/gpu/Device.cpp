@@ -115,7 +115,7 @@ namespace daxa {
 		}
 
 		Queue Device::createQueue() {
-			return Queue{ device, vkbDevice.get_queue(vkb::QueueType::graphics).value(), cmdListRecyclingSharedData };
+			return Queue{ device, vkbDevice.get_queue(vkb::QueueType::graphics).value() };
 		}
 
 		ImageHandle Device::createImage2d(Image2dCreateInfo ci) { 
@@ -142,7 +142,7 @@ namespace daxa {
 			return bindingSetDescriptionCache->getSetDescription(bindings);
 		}
 
-		CommandList Device::getEmptyCommandList() {
+		CommandListHandle Device::getEmptyCommandList() {
 			return std::move(getNextCommandList());
 		}
 
@@ -150,12 +150,12 @@ namespace daxa {
 			vkDeviceWaitIdle(device);
 		}
 
-		CommandList Device::getNextCommandList() {
+		CommandListHandle Device::getNextCommandList() {
 			if (unusedCommandLists.empty()) {
 				auto lock = std::unique_lock(cmdListRecyclingSharedData->mut);
-				while (!cmdListRecyclingSharedData->emptyCommandLists.empty()) {
-					unusedCommandLists.push_back(std::move(cmdListRecyclingSharedData->emptyCommandLists.back()));
-					cmdListRecyclingSharedData->emptyCommandLists.pop_back();
+				while (!cmdListRecyclingSharedData->zombies.empty()) {
+					unusedCommandLists.push_back(std::move(cmdListRecyclingSharedData->zombies.back()));
+					cmdListRecyclingSharedData->zombies.pop_back();
 				}
 			}
 
@@ -167,6 +167,7 @@ namespace daxa {
 				list.vkCmdEndRenderingKHR = this->vkCmdEndRenderingKHR;
 				list.vkCmdPipelineBarrier2KHR = this->vkCmdPipelineBarrier2KHR;
 				list.stagingBufferPool = stagingBufferPool;
+				list.recyclingData = cmdListRecyclingSharedData;
 
 				VkCommandPoolCreateInfo commandPoolCI{
 					.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -184,7 +185,7 @@ namespace daxa {
 				};
 				vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &list.cmd);
 
-				unusedCommandLists.push_back(std::move(list));
+				unusedCommandLists.push_back(CommandListHandle{ std::make_shared<CommandList>(std::move(list)) });
 			} 
 			auto ret = std::move(unusedCommandLists.back());
 			unusedCommandLists.pop_back();
