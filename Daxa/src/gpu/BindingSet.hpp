@@ -129,6 +129,7 @@ namespace daxa {
 
 		class BindingSetHandle {
 		public:
+			BindingSetHandle() = default;
 			BindingSetHandle(BindingSetHandle const&) = default;
 			BindingSetHandle& operator=(BindingSetHandle const&) = default;
 			BindingSetHandle(BindingSetHandle&&) noexcept = default;
@@ -139,6 +140,13 @@ namespace daxa {
 			BindingSet& operator*() { return *set; }
 			BindingSet const* operator->() const { return &*set; }
 			BindingSet* operator->() { return &*set; }
+
+			operator bool() const { return set.operator bool(); }
+			bool operator!() const { return !set.operator bool(); }
+
+			bool valid() const { return set.operator bool(); }
+
+			size_t getRefCount() const { return set.use_count(); }
 		private:
 			friend class BindingSetAllocator;
 			friend class GeneralDescriptorSetAllocator;

@@ -22,7 +22,7 @@ namespace daxa {
 			ImageHandle& getImageHandle() { return image; }
 			ImageHandle const& getImageHandle() const { return image; }
 		private:
-			friend class RenderWindow;
+			friend class Swapchain;
 			friend class Queue;
 
 			ImageHandle image = {};

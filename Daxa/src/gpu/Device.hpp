@@ -18,7 +18,7 @@
 #include "Pipeline.hpp"
 #include "SwapchainImage.hpp"
 #include "TimelineSemaphore.hpp"
-#include "RenderWindow.hpp"
+#include "Swapchain.hpp"
 #include "Signal.hpp"
 #include "StagingBufferPool.hpp"
 #include "Queue.hpp"
@@ -54,7 +54,7 @@ namespace daxa {
 
 			SignalHandle createSignal();
 
-			RenderWindow createRenderWindow(VkSurfaceKHR surface, u32 width, u32 height, VkPresentModeKHR presentMode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR);
+			Swapchain createSwapchain(VkSurfaceKHR surface, u32 width, u32 height, VkPresentModeKHR presentMode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR);
 
 			BindingSetDescription const* createBindingSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings);
 

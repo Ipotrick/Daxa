@@ -12,7 +12,7 @@
 
 #include "CommandList.hpp"
 #include "TimelineSemaphore.hpp"
-#include "RenderWindow.hpp"
+#include "Swapchain.hpp"
 #include "Signal.hpp"
 
 namespace daxa {
@@ -44,7 +44,7 @@ namespace daxa {
 			 * \param submitInfo contains all information about the submit.
 			 * \return a fence handle that can be used to check if the execution is complete or waited upon completion.
 			 */
-			void submit(SubmitInfo& submitInfo);
+			void submit(SubmitInfo submitInfo);
 
 			void present(SwapchainImage&& img, SignalHandle& waitOnSignal);
 
