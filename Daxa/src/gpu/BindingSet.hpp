@@ -103,7 +103,7 @@ namespace daxa {
 			VkDescriptorSet set = VK_NULL_HANDLE;
 			BindingSetDescription const* description = {};
 			std::weak_ptr<BindingSetAllocatorBindingiSetPool> pool = {};
-			bool bInUseOnGPU = false;
+			u32 usesOnGPU = 0;
 
 
 			using HandleVariants = std::variant<ImageHandle, BufferHandle, SamplerHandle, std::monostate>;
