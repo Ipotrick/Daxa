@@ -106,7 +106,7 @@ public:
 
 		auto cmdList = device.getEmptyCommandList();
 
-		cmdList.begin();
+		cmdList->begin();
 
 
 		/// ------------ Begin Data Uploading ---------------------
@@ -117,10 +117,10 @@ public:
 			-1.f, 1.f, 0.0f,	0.f, 1.f, 0.f, 1.f,
 			 0.f,-1.f, 0.0f,	0.f, 0.f, 1.f, 1.f,
 		};
-		cmdList.uploadToBuffer(vertecies.data(), vertecies.size() * sizeof(float), vertexBuffer);
+		cmdList->uploadToBuffer(vertecies.data(), vertecies.size() * sizeof(float), vertexBuffer);
 
 		std::array someBufferdata = { 1.0f , 1.0f , 1.0f ,1.0f };
-		cmdList.uploadToBuffer(someBufferdata.data(), someBufferdata.size() * sizeof(float), uniformBuffer);
+		cmdList->uploadToBuffer(someBufferdata.data(), someBufferdata.size() * sizeof(float), uniformBuffer);
 
 		// array because we can allways pass multiple barriers at once for driver efficiency
 		std::array imgBarrier0 = { daxa::gpu::ImageBarrier{
@@ -134,7 +134,7 @@ public:
 			.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,				// wait for writing the vertex buffer
 			.waitingStages = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT_KHR,		// the vertex creating must wait
 		} };
-		cmdList.insertBarriers(memBarrier0, {}, imgBarrier0);
+		cmdList->insertBarriers(memBarrier0, {}, imgBarrier0);
 		
 		
 		/// ------------ End Data Uploading ---------------------
@@ -153,21 +153,21 @@ public:
 				.clearValue = clear,
 			}
 		};
-		cmdList.beginRendering(daxa::gpu::BeginRenderingInfo{
+		cmdList->beginRendering(daxa::gpu::BeginRenderingInfo{
 			.colorAttachments = framebuffer,
 		});
 		
-		cmdList.bindPipeline(pipeline);
+		cmdList->bindPipeline(pipeline);
 		
 		auto set = setAllocator.getSet();
 		set->bindBuffer(0, uniformBuffer);
-		cmdList.bindSet(0, set);
+		cmdList->bindSet(0, set);
 		
-		cmdList.bindVertexBuffer(0, vertexBuffer);
+		cmdList->bindVertexBuffer(0, vertexBuffer);
 		
-		cmdList.draw(3, 1, 0, 0);
+		cmdList->draw(3, 1, 0, 0);
 		
-		cmdList.endRendering();
+		cmdList->endRendering();
 
 		// array because we can allways pass multiple barriers at once for driver efficiency
 		std::array imgBarrier1 = { daxa::gpu::ImageBarrier{
@@ -175,9 +175,9 @@ public:
 			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			.layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 		} };
-		cmdList.insertBarriers({}, {}, imgBarrier1);
+		cmdList->insertBarriers({}, {}, imgBarrier1);
 
-		cmdList.end();
+		cmdList->end();
 
 		// "++currentFrame->finishCounter " is the value that will be set to the timeline when the execution is finished, basicly incrementing it 
 		// the timeline is the counter we use to see if the frame is finished executing on the gpu later.
@@ -187,7 +187,7 @@ public:
 		submitInfo.commandLists.push_back(std::move(cmdList));
 		submitInfo.signalOnCompletion = { &currentFrame->presentSignal, 1 };
 		submitInfo.signalTimelines = signalTimelines;
-		queue.submit(std::move(submitInfo));
+		queue.submit(submitInfo);
 
 		queue.present(std::move(swapchainImage), currentFrame->presentSignal);
 		swapchainImage = renderWindow.aquireNextImage();

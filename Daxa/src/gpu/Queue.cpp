@@ -6,10 +6,9 @@ namespace daxa {
 	namespace gpu {
 		DAXA_DEFINE_TRIVIAL_MOVE(Queue)
 
-		Queue::Queue(VkDevice device, VkQueue queue, std::shared_ptr<CommandListRecyclingSharedData> sharedData)
+		Queue::Queue(VkDevice device, VkQueue queue)
 			: device{device}
 			, queue{queue}
-			, sharedData{sharedData}
 		{}
 
 		Queue::~Queue() {
@@ -19,16 +18,23 @@ namespace daxa {
 			}
 		}
 
-		void Queue::submit(SubmitInfo&& si) {
+		void Queue::submit(SubmitInfo& si) {
 			for (auto& cmdList : si.commandLists) {
-				DAXA_ASSERT_M(cmdList.operationsInProgress == 0, "can not submit command list with recording in progress");
-				submitCommandBufferBuffer.push_back(cmdList.cmd);
+				DAXA_ASSERT_M(cmdList->operationsInProgress == 0, "can not submit command list with recording in progress");
+				submitCommandBufferBuffer.push_back(cmdList->cmd);
+				cmdList->usesOnGPU += 1;
 			
-				for (auto& buffer : cmdList.usedBuffers) {
-					buffer.buffer->bInUseOnGPU = true;
+				for (auto& buffer : cmdList->usedBuffers) {
+					buffer->usesOnGPU += 1;
 				}
-				for (auto& set : cmdList.usedSets) {
-					set->bInUseOnGPU = true;
+				for (auto& set : cmdList->usedSets) {
+					set->usesOnGPU += 1;
+
+					for (auto& handle : set->handles) {
+						if (auto* buffer = std::get_if<BufferHandle>(&handle)) {
+							(**buffer).usesOnGPU += 1;
+						}
+					}
 				}
 			}
 
@@ -78,7 +84,7 @@ namespace daxa {
 			vkQueueSubmit(queue, 1, &submitInfo, nullptr);
 
 			PendingSubmit pendingSubmit{
-				.cmdLists = std::move(si.commandLists),
+				.cmdLists = { si.commandLists },
 				.timelineSema = std::move(thisSubmitTimelineSema),
 				.finishCounter = thisSubmitTimelineFinishCounter,
 			};
@@ -108,17 +114,20 @@ namespace daxa {
 					while (!iter->cmdLists.empty()) {
 						auto list = std::move(iter->cmdLists.back());
 						iter->cmdLists.pop_back();
-						for (auto& buffer : list.usedBuffers) {
-							buffer.buffer->bInUseOnGPU = false;
+						for (auto& buffer : list->usedBuffers) {
+							buffer.buffer->usesOnGPU -= 1;
 						}
-						for (auto& set : list.usedSets) {
-							set->bInUseOnGPU = false;
+						for (auto& set : list->usedSets) {
+							set->usesOnGPU -= 1;
+
+							for (auto& handle : set->handles) {
+								if (auto* buffer = std::get_if<BufferHandle>(&handle)) {
+									(**buffer).usesOnGPU -= 1;
+								}
+							}
 						}
-						list.reset();
-			
-						auto data = sharedData.lock();
-						auto lock = std::unique_lock(data->mut);
-						data->emptyCommandLists.push_back(std::move(list));
+						list->usesOnGPU -= 1;
+						list = {};
 					}
 					unusedTimelines.push_back(std::move(iter->timelineSema));
 					iter = unfinishedSubmits.erase(iter);

@@ -87,7 +87,7 @@ namespace daxa {
 			/**
 			 * \return returns an empty CommandList.
 			 */
-			CommandList getEmptyCommandList();
+			CommandListHandle getEmptyCommandList();
 
 			/**
 			 * Waits for the device to complete all submitted operations and the gpu to idle.
@@ -104,7 +104,7 @@ namespace daxa {
 
 			Device(vkb::Instance&);
 
-			CommandList getNextCommandList();
+			CommandListHandle getNextCommandList();
 
 			VkInstance instance = VK_NULL_HANDLE;
 			VkDevice device = VK_NULL_HANDLE;
@@ -113,8 +113,8 @@ namespace daxa {
 			VmaAllocator allocator = VK_NULL_HANDLE;
 			u32 graphicsQFamilyIndex = 0;
 
-			std::shared_ptr<CommandListRecyclingSharedData> cmdListRecyclingSharedData = {};
-			std::vector<CommandList> unusedCommandLists;
+			std::shared_ptr<CommandListRecyclingSharedData> cmdListRecyclingSharedData = std::make_shared<CommandListRecyclingSharedData>();
+			std::vector<CommandListHandle> unusedCommandLists;
 
 			// VK_KHR_dynamic_rendering:
 			void (*vkCmdBeginRenderingKHR)(VkCommandBuffer, const VkRenderingInfoKHR*) = nullptr;

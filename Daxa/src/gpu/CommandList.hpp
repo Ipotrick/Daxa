@@ -78,6 +78,13 @@ namespace daxa {
 			RenderAttachmentInfo* stencilAttachment = nullptr;
 			VkRect2D* renderArea = nullptr;
 		};
+		
+		class CommandList;
+
+		struct CommandListRecyclingSharedData {
+			std::mutex mut = {};
+			std::vector<std::shared_ptr<CommandList>> zombies;
+		};
 
 		class CommandList {
 		public:
@@ -199,6 +206,7 @@ namespace daxa {
 		private:
 			friend class Device;
 			friend class Queue;
+			friend class CommandListHandle;
 
 			CommandList();
 
@@ -221,6 +229,7 @@ namespace daxa {
 			void (*vkCmdEndRenderingKHR)(VkCommandBuffer);
 			void (*vkCmdPipelineBarrier2KHR)(VkCommandBuffer, VkDependencyInfoKHR const*);
 			u32	operationsInProgress = 0;
+			u32 usesOnGPU = 0;				// counts in how many pending submits the command list is currently used
 			bool empty = true;
 
 			std::vector<BindingSetHandle> usedSets;
@@ -231,8 +240,33 @@ namespace daxa {
 			VkCommandBuffer cmd;
 			VkCommandPool cmdPool;
 
+			std::weak_ptr<CommandListRecyclingSharedData> recyclingData = {};
 			std::weak_ptr<StagingBufferPool> stagingBufferPool = {};
 			std::vector<StagingBuffer> usedStagingBuffers;
+		};
+
+		class CommandListHandle {
+		public:
+			CommandListHandle() = default;
+			~CommandListHandle();
+
+			CommandList& operator*() { return *list; }
+			CommandList const& operator*() const { return *list; }
+			CommandList* operator->() { return list.get(); }
+			CommandList const* operator->() const { return list.get(); }
+
+			operator bool() const { return list.operator bool(); }
+			bool operator!() const { return !(list.operator bool()); }
+
+			bool valid() const { return list.operator bool(); }
+			
+		private:
+			friend class Device;
+			friend class Queue;
+
+			CommandListHandle(std::shared_ptr<CommandList> list);
+
+			std::shared_ptr<CommandList> list = {};
 		};
 	}
 }
