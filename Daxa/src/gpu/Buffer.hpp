@@ -36,13 +36,16 @@ namespace daxa {
 			void upload(void const* src, size_t size, size_t dstOffset = 0);
 
 			VkBuffer getVkBuffer() const { return buffer; }
+
 			size_t getSize() const { return size; }
+
 			VkBufferUsageFlags getVkBufferUsage() const { return usage; }
+
 			VmaMemoryUsage getVmaMemoryUsage() const { return memoryUsage; }
+
 		private:
 			friend class Device;
 			friend class BufferHandle;
-			friend class CommandList;
 			friend class StagingBufferPool;
 			friend class Queue;
 
@@ -72,6 +75,7 @@ namespace daxa {
 		private:
 			friend class Device;
 			friend class StagingBufferPool;
+			friend class Queue;
 
 			BufferHandle(Buffer&& buffer);
 
