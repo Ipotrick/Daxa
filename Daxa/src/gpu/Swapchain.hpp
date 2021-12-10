@@ -20,14 +20,14 @@ namespace daxa {
 
 		VkSurfaceKHR createSurface(void* sdlWindowHandle, VkInstance instance);
 
-		class RenderWindow {
+		class Swapchain {
 		public:
-			RenderWindow() = default;
-			RenderWindow(RenderWindow&&) noexcept;
-			RenderWindow& operator=(RenderWindow&&) noexcept;
-			RenderWindow(RenderWindow const&) = delete;
-			RenderWindow& operator=(RenderWindow const&) = delete;
-			~RenderWindow();
+			Swapchain() = default;
+			Swapchain(Swapchain&&) noexcept;
+			Swapchain& operator=(Swapchain&&) noexcept;
+			Swapchain(Swapchain const&) = delete;
+			Swapchain& operator=(Swapchain const&) = delete;
+			~Swapchain();
 
 			void resize(VkExtent2D newSize);
 
@@ -41,7 +41,7 @@ namespace daxa {
 		private:
 			friend class Device;
 
-			RenderWindow(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance, VkSurfaceKHR surface, u32 width, u32 height, VkPresentModeKHR presentmode, VkSwapchainKHR = nullptr);
+			Swapchain(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance, VkSurfaceKHR surface, u32 width, u32 height, VkPresentModeKHR presentmode, VkSwapchainKHR = nullptr);
 
 			VkDevice device = VK_NULL_HANDLE;
 			VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
