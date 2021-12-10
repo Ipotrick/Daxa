@@ -49,7 +49,7 @@ namespace daxa {
 		private:
 			friend class Device;
 			friend class ImageHandle;
-			friend class RenderWindow;
+			friend class Swapchain;
 
 			static Image create2dImage(VkDevice device, VmaAllocator allocator, u32 queueFamilyIndex, Image2dCreateInfo const& ci);
 
@@ -85,7 +85,7 @@ namespace daxa {
 			Image* operator->() { return image.get(); }
 		private:
 			friend class Device;
-			friend class RenderWindow;
+			friend class Swapchain;
 
 			ImageHandle(std::shared_ptr<Image> image);
 
