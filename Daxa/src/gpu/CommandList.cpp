@@ -21,12 +21,12 @@ namespace daxa {
 				DAXA_ASSERT_M(empty, "a command list can not be destroyed when not empty");
 				vkFreeCommandBuffers(device, cmdPool, 1, &cmd);
 				vkDestroyCommandPool(device, cmdPool, nullptr);
-				printf("command list complete destruction!\n");
 				std::memset(this, 0, sizeof(CommandList));
 			}
 		}
 
 		void CommandList::begin() {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			operationsInProgress += 1;
 			VkCommandBufferBeginInfo cbbi{
 				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -37,16 +37,19 @@ namespace daxa {
 		}
 
 		void CommandList::end() {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			operationsInProgress -= 1;
 			vkEndCommandBuffer(cmd);
 		}
 
 		void CommandList::bindVertexBuffer(u32 binding, BufferHandle& buffer, size_t bufferOffset) {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			auto vkBuffer = buffer->getVkBuffer();
 			vkCmdBindVertexBuffers(cmd, binding, 1, &vkBuffer, &bufferOffset);
 		}
 
 		void CommandList::beginRendering(BeginRenderingInfo ri) {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			operationsInProgress += 1;
 			for (int i = 0; i < ri.colorAttachments.size(); i++) {
 				usedImages.push_back(ri.colorAttachments[i].image);
@@ -129,12 +132,14 @@ namespace daxa {
 			});
 		}
 		void CommandList::endRendering() {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			operationsInProgress -= 1;
 			this->vkCmdEndRenderingKHR(cmd);
 			boundPipeline = std::nullopt;
 		}
 
 		void CommandList::bindPipeline(GraphicsPipelineHandle& graphicsPipeline) {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->getVkPipeline());
 			usedGraphicsPipelines.push_back(graphicsPipeline);
 
@@ -145,6 +150,7 @@ namespace daxa {
 		}
 
 		void CommandList::reset() {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(operationsInProgress == 0, "can not reset command list with recordings in progress");
 			empty = true;
 			vkResetCommandPool(device, cmdPool, VkCommandPoolResetFlagBits::VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
@@ -157,6 +163,7 @@ namespace daxa {
 		}
 
 		void CommandList::setViewport(VkViewport const& viewport) {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			vkCmdSetViewport(cmd, 0, 1, &viewport); 
 			VkRect2D scissor{
 				.offset = { 0, 0 },
@@ -166,14 +173,17 @@ namespace daxa {
 		}
 
 		void CommandList::setScissor(VkRect2D const& scissor) {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			vkCmdSetScissor(cmd, 0, 1, &scissor);
 		}
-
+		
 		void CommandList::draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance) {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			vkCmdDraw(cmd, vertexCount, instanceCount, firstVertex, firstInstance);
 		}
 
 		void CommandList::copyBufferToBufferMulti(BufferHandle& src, BufferHandle& dst, std::span<VkBufferCopy const> copyRegions) {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(copyRegions.size() > 0, "ERROR: tried copying 0 regions from buffer to buffer, this is a bug!");
 			for (int i = 0; i < copyRegions.size(); i++) {
 				DAXA_ASSERT_M(src->getSize() >= copyRegions[i].size + copyRegions[i].srcOffset, "ERROR: src buffer is smaller than the region that shouly be copied!");
@@ -208,6 +218,7 @@ namespace daxa {
 		}
 
 		void CommandList::uploadToImage(void const* src, size_t size, ImageHandle& dst, std::optional<VkImageSubresourceLayers> dstSubRessource) {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			if (size > STAGING_BUFFER_POOL_BUFFER_SIZE) {
 				DAXA_ASSERT_M(false, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
 				usedImages.push_back(dst);
@@ -235,6 +246,7 @@ namespace daxa {
 		}
 
 		void CommandList::uploadToImageSynced(void const* src, size_t size, ImageHandle& dst, VkImageLayout dstLayout, std::optional<VkImageSubresourceLayers> dstSubRessource) {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			ImageBarrier initialBarrier{
 				.waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR,
 				.image = dst,
@@ -253,12 +265,14 @@ namespace daxa {
 		}
 
 		void CommandList::bindSet(u32 setBinding, BindingSetHandle& set) {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(boundPipeline.has_value(), "can not bind descriptor sets if there is no pipeline bound");
 			vkCmdBindDescriptorSets(cmd, boundPipeline->bindPoint, boundPipeline->layout, setBinding, 1, &set->set, 0, nullptr);
 			usedSets.push_back(set);
 		}
 
 		void CommandList::uploadToBuffer(void const* src, size_t size, BufferHandle& dst, size_t dstOffset) {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			if (size > STAGING_BUFFER_POOL_BUFFER_SIZE) {
 				DAXA_ASSERT_M(false, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
 				usedBuffers.push_back(dst);
@@ -287,6 +301,7 @@ namespace daxa {
 		}
 
 		void CommandList::insertBarriers(std::span<MemoryBarrier> memBarriers, std::span<BufferBarrier> bufBarriers, std::span<ImageBarrier> imgBarriers) {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			std::array<VkMemoryBarrier2KHR, 32> memBarrierBuffer;
 			u32 memBarrierBufferSize = 0;
 			std::array<VkBufferMemoryBarrier2KHR, 32> bufBarrierBuffer;
@@ -373,5 +388,19 @@ namespace daxa {
 
 			this->vkCmdPipelineBarrier2KHR(cmd, &dependencyInfo);
 		}
+
+		CommandListHandle::~CommandListHandle() {
+			if (list && list.use_count() == 1) {
+				if (auto recyclingSharedData = list->recyclingData.lock()) {
+					list->reset();
+					auto lock = std::unique_lock(recyclingSharedData->mut);
+					recyclingSharedData->zombies.push_back(std::move(list));
+				}
+			}
+		}
+		
+		CommandListHandle::CommandListHandle(std::shared_ptr<CommandList> list)
+			: list{ list }
+		{}
 	}
 }
