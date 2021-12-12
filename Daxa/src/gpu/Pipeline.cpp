@@ -4,8 +4,6 @@
 
 #include <spirv_reflect.h>
 
-#include "common.hpp"
-
 namespace daxa {
 	namespace gpu {
 		std::size_t sizeofFormat(VkFormat format) {
@@ -57,8 +55,6 @@ namespace daxa {
 				return 8;
 			return -1;
 		}
-
-		DAXA_DEFINE_TRIVIAL_MOVE(GraphicsPipeline)
 
 		GraphicsPipeline::~GraphicsPipeline() {
 			if (device) {
@@ -312,7 +308,8 @@ namespace daxa {
 				endVertexInputAttributeBinding();
 			}
 
-			GraphicsPipeline ret;
+			auto pipelineHandle = GraphicsPipelineHandle{ std::make_shared<GraphicsPipeline>() };
+			GraphicsPipeline& ret = *pipelineHandle;
 			ret.device = device;
 
 			std::vector<VkDescriptorSetLayout> descLayouts;
@@ -413,8 +410,6 @@ namespace daxa {
 			auto err = vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline);
 			DAXA_ASSERT_M(err == VK_SUCCESS, "could not create graphics pipeline");
 
-			GraphicsPipelineHandle pipelineHandle;
-			pipelineHandle.pipeline = std::make_shared<GraphicsPipeline>(std::move(ret));
 			return pipelineHandle;
 		}
 	}

@@ -8,13 +8,11 @@
 
 #include "Instance.hpp"
 
-#include "common.hpp"
-
 namespace daxa {
 	namespace gpu {
 
-		Device Device::create() {
-			return Device{ gpu::instance->getVKBInstance() };
+		DeviceHandle Device::create() {
+			return DeviceHandle{ std::make_shared<Device>(gpu::instance->getVKBInstance()) };
 		}
 
 		Device::Device(vkb::Instance& instance) {
@@ -99,8 +97,6 @@ namespace daxa {
 			this->cmdListRecyclingSharedData = std::make_shared<CommandListRecyclingSharedData>();
 		}
 
-		DAXA_DEFINE_TRIVIAL_MOVE(Device)
-
 		Device::~Device() {
 			if (device) {
 				waitIdle();
@@ -114,28 +110,32 @@ namespace daxa {
 			}
 		}
 
-		Queue Device::createQueue() {
-			return Queue{ device, vkbDevice.get_queue(vkb::QueueType::graphics).value() };
+		QueueHandle Device::createQueue() {
+			return QueueHandle{ std::make_shared<Queue>(device, vkbDevice.get_queue(vkb::QueueType::graphics).value()) };
 		}
 
 		ImageHandle Device::createImage2d(Image2dCreateInfo ci) { 
-			return ImageHandle{ std::make_shared<Image>(std::move(Image::create2dImage(device, allocator, graphicsQFamilyIndex, ci))) };
+			auto handle = ImageHandle{ std::make_shared<Image>() };
+			Image::construct2dImage(device, allocator,graphicsQFamilyIndex, ci, *handle);
+			return std::move(handle);
 		}
 
 		BufferHandle Device::createBuffer(BufferCreateInfo ci) {
-			return BufferHandle{ std::move(Buffer(device, graphicsQFamilyIndex, allocator, ci)) };
+			return BufferHandle{ std::make_shared<Buffer>(device, graphicsQFamilyIndex, allocator, ci) };
 		}
 
-		TimelineSemaphore Device::createTimelineSemaphore() {
-			return TimelineSemaphore{ device };
+		TimelineSemaphoreHandle Device::createTimelineSemaphore() {
+			return TimelineSemaphoreHandle{ std::make_shared<TimelineSemaphore>(device) };
 		}
 
 		SignalHandle Device::createSignal() {
-			return SignalHandle{ std::make_shared<Signal>(Signal{device}) };
+			return SignalHandle{ std::make_shared<Signal>(device) };
 		}
 
-		Swapchain Device::createSwapchain(VkSurfaceKHR surface, u32 width, u32 height, VkPresentModeKHR presentMode) {
-			return Swapchain{ device, physicalDevice, instance, surface, width, height, presentMode };
+		SwapchainHandle Device::createSwapchain(VkSurfaceKHR surface, u32 width, u32 height, VkPresentModeKHR presentMode) {
+			auto handle = SwapchainHandle{ std::make_shared<Swapchain>() };
+			handle->construct(device, physicalDevice, gpu::instance->getVkInstance(), surface, width ,height, presentMode);
+			return std::move(handle);
 		}
 
 		BindingSetDescription const* Device::createBindingSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings) {
@@ -161,7 +161,8 @@ namespace daxa {
 
 			if (unusedCommandLists.empty()) {
 				// we have no command lists left, we need to create new ones:
-				CommandList list;
+				unusedCommandLists.push_back(CommandListHandle{ std::make_shared<CommandList>() });
+				CommandList& list = *unusedCommandLists.back();
 				list.device = device;
 				list.vkCmdBeginRenderingKHR = this->vkCmdBeginRenderingKHR;
 				list.vkCmdEndRenderingKHR = this->vkCmdEndRenderingKHR;
@@ -184,8 +185,6 @@ namespace daxa {
 					.commandBufferCount = 1,
 				};
 				vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &list.cmd);
-
-				unusedCommandLists.push_back(CommandListHandle{ std::make_shared<CommandList>(std::move(list)) });
 			} 
 			auto ret = std::move(unusedCommandLists.back());
 			unusedCommandLists.pop_back();
@@ -204,8 +203,8 @@ namespace daxa {
 			return pipelineBuilder.build(device, *bindingSetDescriptionCache);
 		}
 
-		BindingSetAllocator Device::createBindingSetAllocator(BindingSetDescription const* setDescription, size_t setPerPool) {
-			return BindingSetAllocator{ device, setDescription, setPerPool };
+		BindingSetAllocatorHandle Device::createBindingSetAllocator(BindingSetDescription const* setDescription, size_t setPerPool) {
+			return BindingSetAllocatorHandle{ std::make_shared<BindingSetAllocator>(device, setDescription, setPerPool) };
 		}
 	}
 }

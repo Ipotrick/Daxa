@@ -16,10 +16,11 @@ namespace daxa {
 		*/
 		class TimelineSemaphore {
 		public:
-			TimelineSemaphore(TimelineSemaphore&&) noexcept;
-			TimelineSemaphore& operator=(TimelineSemaphore&&) noexcept;
-			TimelineSemaphore(TimelineSemaphore const&) = delete;
-			TimelineSemaphore& operator=(TimelineSemaphore const&) = delete;
+			TimelineSemaphore(VkDevice);
+			TimelineSemaphore(TimelineSemaphore&&) noexcept				= delete;
+			TimelineSemaphore& operator=(TimelineSemaphore&&) noexcept	= delete;
+			TimelineSemaphore(TimelineSemaphore const&)					= delete;
+			TimelineSemaphore& operator=(TimelineSemaphore const&) 		= delete;
 			~TimelineSemaphore();
 
 			VkSemaphore getVkSemaphore() const { return timelineSema; }
@@ -30,10 +31,29 @@ namespace daxa {
 			friend class Device;
 			friend class Queue;
 
-			TimelineSemaphore(VkDevice);
+			VkDevice device 			= VK_NULL_HANDLE;
+			VkSemaphore timelineSema 	= VK_NULL_HANDLE;
+		};
 
-			VkDevice device = VK_NULL_HANDLE;
-			VkSemaphore timelineSema = VK_NULL_HANDLE;
+		class TimelineSemaphoreHandle {
+		public:
+			TimelineSemaphoreHandle(std::shared_ptr<TimelineSemaphore> timeline) 
+				: timeline{ std::move(timeline) }
+			{}
+			TimelineSemaphoreHandle() = default;
+
+			TimelineSemaphore const& operator*() const { return *timeline; }
+			TimelineSemaphore& operator*() { return *timeline; }
+			TimelineSemaphore const* operator->() const { return timeline.get(); }
+			TimelineSemaphore* operator->() { return timeline.get(); }
+
+			size_t getRefCount() const { return timeline.use_count(); }
+
+			operator bool() const { return timeline.operator bool(); }
+			bool operator!() const { return !timeline; }
+			bool valid() const { return *this; }
+		private:
+			std::shared_ptr<TimelineSemaphore> timeline = {};
 		};
 	}
 }

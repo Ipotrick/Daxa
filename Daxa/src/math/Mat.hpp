@@ -12,8 +12,8 @@
 
 namespace daxa {
 
-	template<size_t M, size_t N, std::floating_point T>
-	requires requires{ M >= 2; M <= 4; N >= 2; N <= 4; }
+	template<size_t M, std::floating_point T>
+		requires( M >= 2 && M <= 4 )
 	struct Mat {
 		constexpr Mat() = default;
 		constexpr Mat(T diagInit)
@@ -22,7 +22,7 @@ namespace daxa {
 				values[i][i] = diagInit;
 			}
 		}
-		constexpr Mat(const std::array<typename VecType<N, T>::type, M>& arr) {
+		constexpr Mat(const std::array<typename VecType<M, T>::type, M>& arr) {
 			for (i32 y = 0; y < M; y++) {
 				for (i32 x = 0; x < N; x++) {
 					values[y][x] = arr[y][x];
@@ -30,14 +30,14 @@ namespace daxa {
 			}
 		}
 
-		constexpr std::array<T, M * N>& linear()
+		constexpr std::array<T, M * M>& linear()
 		{
-			return static_cast<std::array<T, M* N>>(values);
+			return static_cast<std::array<T, M * M>>(values);
 		}
 		
 		constexpr const std::array<T, M * N>& linear() const
 		{
-			return static_cast<std::array<T, M* N>>(values);
+			return static_cast<std::array<T, M * N>>(values);
 		}
 
 		constexpr T* data()
@@ -45,23 +45,23 @@ namespace daxa {
 			return &values[0][0];
 		}
 
-		constexpr std::array<T, N>& operator[](u32 index)
+		constexpr VecType<M,T>::type& operator[](u32 y)
 		{
 			return values[index];
 		}
 
-		constexpr const std::array<T, N>& operator[](u32 index) const
+		constexpr const VecType<M, T>::type& operator[](u32 index) const
 		{
 			return values[index];
 		}
 
-		std::array<std::array<T, N>, M> values{ static_cast<T>(0.0) };
+		std::array<VecType<M,T>::type, M> values{ static_cast<T>(0.0) };
 	};
 
 	template<size_t M, size_t N, std::floating_point T>
-	inline constexpr Mat<M, N, T> operator+(const Mat<M, N, T>& a, const Mat<M, N, T>& b)
+	inline constexpr Mat<M, T> operator+(const Mat<M, T>& a, const Mat<M, T>& b)
 	{
-		Mat<M, N, T> ret;
+		Mat<M, T> ret;
 		auto& rLinear = ret.linear();
 		auto& aLinear = a.linear();
 		auto& bLinear = b.linear();
@@ -71,50 +71,50 @@ namespace daxa {
 		return ret;
 	}
 
-	template<size_t M, size_t N, std::floating_point T>
-	inline constexpr Mat<M, N, T>& operator+=(Mat<M, N, T>& a, const Mat<M, N, T>& b)
+	template<size_t M, std::floating_point T>
+	inline constexpr Mat<M, T>& operator+=(Mat<M, T>& a, const Mat<M, T>& b)
 	{
 		auto& aLinear = a.linear();
 		auto& bLinear = b.linear();
-		for (u32 i = 0; i < M * N; i++) {
+		for (u32 i = 0; i < M * M; i++) {
 			aLinear[i] = aLinear[i] + bLinear[i];
 		}
 		return a;
 	}
 
-	template<size_t M, size_t N, std::floating_point T>
-	inline constexpr Mat<M, N, T> operator-(const Mat<M, N, T>& a, const Mat<M, N, T>& b)
+	template<size_t M, std::floating_point T>
+	inline constexpr Mat<M, T> operator-(const Mat<M, T>& a, const Mat<M, T>& b)
 	{
-		Mat<M, N, T> ret;
+		Mat<M, T> ret;
 		auto& rLinear = ret.linear();
 		auto& aLinear = a.linear();
 		auto& bLinear = b.linear();
-		for (u32 i = 0; i < M * N; i++) {
+		for (u32 i = 0; i < M * M; i++) {
 			rLinear[i] = aLinear[i] - bLinear[i];
 		}
 		return ret;
 	}
 
-	template<size_t M, size_t N, std::floating_point T>
-	inline constexpr Mat<M, N, T>& operator-=(Mat<M, N, T>& a, const Mat<M, N, T>& b)
+	template<size_t M, std::floating_point T>
+	inline constexpr Mat<M, T>& operator-=(Mat<M, T>& a, const Mat<M, T>& b)
 	{
 		auto& aLinear = a.linear();
 		auto& bLinear = b.linear();
-		for (u32 i = 0; i < M * N; i++) {
+		for (u32 i = 0; i < M * M; i++) {
 			aLinear[i] = aLinear[i] - bLinear[i];
 		}
 		return a;
 	}
 
-	template<size_t M, size_t N, size_t K, std::floating_point T>
-	inline constexpr Mat<M, K, T> operator*(const Mat<M, N, T>& a, const Mat<N, K, T>& b)
+	template<size_t M, std::floating_point T>
+	inline constexpr Mat<M,T> operator*(const Mat<M, T>& a, const Mat<M, T>& b)
 	{
-		Mat<M, K, T> ret;
+		Mat<M, T> ret;
 
 		for (u32 y = 0; y < M; y++) {
-			for (u32 x = 0; x < K; x++) {
+			for (u32 x = 0; x < M; x++) {
 				ret[y][x] = 0;
-				for (u32 i = 0; i < N; i++) {
+				for (u32 i = 0; i < M; i++) {
 					ret[y][x] += a.values[y][i] * b.values[i][x];
 				}
 			}
@@ -373,9 +373,8 @@ namespace daxa {
 		return res;
 	}
 
-	template<size_t M, std::floating_point T>
-	requires requires { M >= 3; }
-	inline Mat<M, M, T> makeProjection(const T viewRadians, const T aspectRatio, const T near, const T far)
+	template<std::floating_point T>
+	inline Mat<4, 4, T> projection4x4(const T viewRadians, const T aspectRatio, const T near, const T far)
 	{
 		Mat<4, 4, T> ret{ static_cast<T>(1) };
 		const T scale = static_cast<T>(1) / std::tan(viewRadians * static_cast<T>(0.5));
