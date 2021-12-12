@@ -60,7 +60,7 @@ namespace daxa {
 			if (device) {
 				vkDestroyPipelineLayout(device, layout, nullptr);
 				vkDestroyPipeline(device, pipeline, nullptr);
-				std::memset(this, 0, sizeof(GraphicsPipeline));
+				device = VK_NULL_HANDLE;
 			}
 		}
 

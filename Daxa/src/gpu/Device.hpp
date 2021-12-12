@@ -107,25 +107,19 @@ namespace daxa {
 
 			CommandListHandle getNextCommandList();
 
-			VkInstance instance = VK_NULL_HANDLE;
-			VkDevice device = VK_NULL_HANDLE;
-			vkb::Device vkbDevice = {};
-			VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-			VmaAllocator allocator = VK_NULL_HANDLE;
-			u32 graphicsQFamilyIndex = 0;
-
-			std::shared_ptr<CommandListRecyclingSharedData> cmdListRecyclingSharedData = std::make_shared<CommandListRecyclingSharedData>();
-			std::vector<CommandListHandle> unusedCommandLists;
-
-			// VK_KHR_dynamic_rendering:
-			void (*vkCmdBeginRenderingKHR)(VkCommandBuffer, const VkRenderingInfoKHR*) = nullptr;
-			void (*vkCmdEndRenderingKHR)(VkCommandBuffer) = nullptr;
-			// Synchronization2KHR:
-			void (*vkCmdPipelineBarrier2KHR)(VkCommandBuffer, VkDependencyInfoKHR const*) = nullptr;
-
-			std::shared_ptr<StagingBufferPool> stagingBufferPool = {};
-
-			std::unique_ptr<BindingSetDescriptionCache> bindingSetDescriptionCache = {};
+			VkInstance instance 															= VK_NULL_HANDLE;
+			VkDevice device		 															= VK_NULL_HANDLE;
+			vkb::Device vkbDevice 															= {};
+			VkPhysicalDevice physicalDevice 												= VK_NULL_HANDLE;
+			VmaAllocator allocator 															= VK_NULL_HANDLE;
+			u32 graphicsQFamilyIndex 														= 0;
+			std::shared_ptr<CommandListRecyclingSharedData> cmdListRecyclingSharedData 		= std::make_shared<CommandListRecyclingSharedData>();
+			std::vector<CommandListHandle> unusedCommandLists								= {};
+			void (*vkCmdBeginRenderingKHR)(VkCommandBuffer, const VkRenderingInfoKHR*) 		= nullptr;
+			void (*vkCmdEndRenderingKHR)(VkCommandBuffer) 									= nullptr;
+			void (*vkCmdPipelineBarrier2KHR)(VkCommandBuffer, VkDependencyInfoKHR const*) 	= nullptr;
+			std::shared_ptr<StagingBufferPool> stagingBufferPool 							= {};
+			std::unique_ptr<BindingSetDescriptionCache> bindingSetDescriptionCache 			= {};
 		};
 
 		class DeviceHandle{

@@ -8,12 +8,16 @@ namespace daxa {
 			if (device && view) {
 				vkDestroyImageView(device, view, nullptr);
 				printf("destroy view\n");
+				device = VK_NULL_HANDLE;
+				view = VK_NULL_HANDLE;
 			}
 			if (allocator && image && allocation) {
 				vmaDestroyImage(allocator, image, allocation);
 				printf("destroy image\n");
+				allocator = VK_NULL_HANDLE;
+				image = VK_NULL_HANDLE;
+				allocation = VK_NULL_HANDLE;
 			}
-			std::memset(this, 0, sizeof(Image));
 		}
 
 		void Image::construct2dImage(VkDevice device, VmaAllocator allocator, u32 queueFamilyIndex, Image2dCreateInfo const& ci, Image& ret) {
