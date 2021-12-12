@@ -26,8 +26,8 @@ namespace daxa {
 		TimelineSemaphore::~TimelineSemaphore() {
 			if (device && timelineSema) {
 				vkDestroySemaphore(device, timelineSema, nullptr);
+				device = VK_NULL_HANDLE;
 			}
-			std::memset(this, 0, sizeof(TimelineSemaphore));
 		}
 
 		u64 TimelineSemaphore::getCounter() const {

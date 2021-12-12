@@ -49,8 +49,8 @@ namespace daxa {
 		Sampler::~Sampler() {
 			if (device) {
 				vkDestroySampler(device, sampler, nullptr);
+				device = VK_NULL_HANDLE;
 			}
-			std::memset(this, 0, sizeof(Sampler));
 		}
 	}
 }

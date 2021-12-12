@@ -71,15 +71,11 @@ namespace daxa {
 		}
 
 		Swapchain::~Swapchain() {
+			swapchainImages.clear();
 			if (device) {
-				swapchainImages.clear();
 				vkDestroySwapchainKHR(device, swapchain, nullptr);
 				vkDestroyFence(device, aquireFence, nullptr);
-				device = nullptr;
-				instance = nullptr;
-				surface = nullptr;
-				physicalDevice = nullptr;
-				aquireFence = nullptr;
+				device = VK_NULL_HANDLE;
 			}
 		}
 

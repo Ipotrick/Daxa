@@ -100,13 +100,13 @@ namespace daxa {
 		Device::~Device() {
 			if (device) {
 				waitIdle();
-				cmdListRecyclingSharedData.~shared_ptr();
-				unusedCommandLists.~vector();
-				stagingBufferPool.~shared_ptr();
-				bindingSetDescriptionCache.~unique_ptr();
+				cmdListRecyclingSharedData.reset();
+				unusedCommandLists.clear();
+				stagingBufferPool.reset();
+				bindingSetDescriptionCache.reset();
 				vmaDestroyAllocator(allocator);
 				vkDestroyDevice(device, nullptr);
-				std::memset(this, 0, sizeof(Device));
+				device = VK_NULL_HANDLE;
 			}
 		}
 

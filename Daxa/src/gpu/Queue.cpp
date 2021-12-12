@@ -9,10 +9,7 @@ namespace daxa {
 		{}
 
 		Queue::~Queue() {
-			if (device) {
-				waitForFlush();
-				device = nullptr;
-			}
+			waitForFlush();
 		}
 
 		void Queue::submit(SubmitInfo si) {

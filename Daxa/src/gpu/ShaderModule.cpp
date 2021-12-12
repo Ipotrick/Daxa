@@ -14,9 +14,7 @@ namespace daxa {
 		ShaderModule::~ShaderModule() {
 			if (device) {
 				vkDestroyShaderModule(device, shaderModule, nullptr);
-				spirv.~vector();
-				entryPoint.~basic_string();
-				std::memset(this, 0, sizeof(ShaderModule));
+				device = VK_NULL_HANDLE;
 			}
 		}
 
