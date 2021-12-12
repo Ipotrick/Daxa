@@ -1,5 +1,4 @@
 #include "Buffer.hpp"
-#include "common.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -32,14 +31,9 @@ namespace daxa {
 			return usesOnGPU == 0;
 		}
 
-		Buffer::Buffer() {
-			std::memset(this, 0, sizeof(buffer));
-		}
-
-		DAXA_DEFINE_TRIVIAL_MOVE(Buffer)
-
 		Buffer::~Buffer() {
 			if (allocator) {
+				printf("destroy buffer for real\n");
 				vmaDestroyBuffer(allocator, buffer, allocation);
 				std::memset(this, 0, sizeof(Buffer));
 			}
@@ -55,9 +49,5 @@ namespace daxa {
 			std::memcpy(bufferMemPtr + dstOffset, src, size);
 			vmaUnmapMemory(allocator, allocation);
 		}
-
-		BufferHandle::BufferHandle(Buffer&& buffer)
-			: buffer{ std::make_shared<Buffer>(std::move(buffer)) }
-		{ }
 	}
 }

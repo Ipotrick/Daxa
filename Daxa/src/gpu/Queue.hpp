@@ -20,19 +20,20 @@ namespace daxa {
 		
 		struct SubmitInfo {
 			std::vector<CommandListHandle>					commandLists;		// TODO REPLACE THIS VECTOR WITH HEAPLESS VERSION
-			std::span<std::tuple<TimelineSemaphore*, u64>>	waitOnTimelines;
-			std::span<std::tuple<TimelineSemaphore*, u64>>	signalTimelines;
+			std::span<std::tuple<TimelineSemaphoreHandle, u64>>	waitOnTimelines;
+			std::span<std::tuple<TimelineSemaphoreHandle, u64>>	signalTimelines;
 			std::span<SignalHandle>							waitOnSignals;
 			std::span<SignalHandle>							signalOnCompletion;
 		};
 
 		class Queue {
 		public:
-			Queue() = default;
-			Queue(Queue const&) = delete;
-			Queue& operator=(Queue const&) = delete;
-			Queue(Queue&&) noexcept;
-			Queue& operator=(Queue&&) noexcept;
+			Queue(VkDevice device, VkQueue queue);
+			Queue() 									= default;
+			Queue(Queue const&) 						= delete;
+			Queue& operator=(Queue const&) 				= delete;
+			Queue(Queue&&) noexcept						= delete;
+			Queue& operator=(Queue&&) noexcept			= delete;
 			~Queue();
 
 			/**
@@ -54,21 +55,19 @@ namespace daxa {
 		private: 
 			friend class Device;
 
-			Queue(VkDevice device, VkQueue queue);
-
 			VkDevice device = {};
 			VkQueue queue = {};
 
-			TimelineSemaphore getNextTimeline();
+			TimelineSemaphoreHandle getNextTimeline();
 
 			struct PendingSubmit {
 				std::vector<CommandListHandle> cmdLists;
-				TimelineSemaphore timelineSema;
+				TimelineSemaphoreHandle timelineSema;
 				u64 finishCounter = 0;
 			};
 			std::vector<PendingSubmit> unfinishedSubmits = {};
 
-			std::vector<TimelineSemaphore> unusedTimelines = {};
+			std::vector<TimelineSemaphoreHandle> unusedTimelines = {};
 
 			// reused temporary buffers:
 			std::vector<VkCommandBuffer> submitCommandBufferBuffer = {};
@@ -76,6 +75,27 @@ namespace daxa {
 			std::vector<VkSemaphore> submitSemaphoreSignalBuffer = {};
 			std::vector<u64> submitSemaphoreWaitOnValueBuffer = {};
 			std::vector<u64> submitSemaphoreSignalValueBuffer = {};
+		};
+
+		class QueueHandle {
+		public:
+			QueueHandle(std::shared_ptr<Queue> queue) 
+				: queue{ std::move(queue) }
+			{}
+			QueueHandle() = default;
+
+			Queue const& operator*() const { return *queue; }
+			Queue& operator*() { return *queue; }
+			Queue const* operator->() const { return queue.get(); }
+			Queue* operator->() { return queue.get(); }
+
+			size_t getRefCount() const { return queue.use_count(); }
+
+			operator bool() const { return queue.operator bool(); }
+			bool operator!() const { return !queue; }
+			bool valid() const { return *this; }
+		private:
+			std::shared_ptr<Queue> queue = {};
 		};
 	}
 }

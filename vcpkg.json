@@ -12,6 +12,7 @@
     "vulkan",
     "glslang",
     "spirv-cross",
-    "vulkan-memory-allocator"
+    "vulkan-memory-allocator",
+    "glm"
   ]
 }

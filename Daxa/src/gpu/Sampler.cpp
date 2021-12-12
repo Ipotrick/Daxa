@@ -1,11 +1,7 @@
 #include "Sampler.hpp"
 
-#include "common.hpp"
-
 namespace daxa {
 	namespace gpu {
-
-		DAXA_DEFINE_TRIVIAL_MOVE(Sampler)
 
 		Sampler::Sampler(VkDevice device, SamplerCreateInfo const& createInfo) 
 			: device{ device }

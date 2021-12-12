@@ -75,10 +75,11 @@ namespace daxa {
 
 		class BindingSet {
 		public:
-			BindingSet(BindingSet const&)				= delete;
-			BindingSet& operator=(BindingSet const&)	= delete;
-			BindingSet(BindingSet&&) noexcept;
-			BindingSet& operator=(BindingSet&&) noexcept;
+			BindingSet(VkDevice device, VkDescriptorSet set, std::weak_ptr<BindingSetAllocatorBindingiSetPool> pool, BindingSetDescription const* description);
+			BindingSet(BindingSet const&)					= delete;
+			BindingSet& operator=(BindingSet const&)		= delete;
+			BindingSet(BindingSet&&) noexcept				= delete;
+			BindingSet& operator=(BindingSet&&) noexcept 	= delete;
 
 			void bindSamplers(u32 binding, std::span<SamplerHandle> samplers, u32 descriptorArrayOffset = 0);
 			void bindSampler(u32 binding, SamplerHandle set, u32 dstArrayElement = 0);
@@ -97,8 +98,6 @@ namespace daxa {
 			friend class BindingSetHandle;
 			friend class Queue;
 
-			BindingSet(VkDevice device, VkDescriptorSet set, std::weak_ptr<BindingSetAllocatorBindingiSetPool> pool, BindingSetDescription const* description);
-
 			VkDevice device = VK_NULL_HANDLE;
 			VkDescriptorSet set = VK_NULL_HANDLE;
 			BindingSetDescription const* description = {};
@@ -113,10 +112,10 @@ namespace daxa {
 		class BindingSetDescriptionCache {
 		public:
 			BindingSetDescriptionCache(VkDevice device);
-			BindingSetDescriptionCache(BindingSetDescriptionCache const&) = delete;
-			BindingSetDescriptionCache& operator=(BindingSetDescriptionCache const&) = delete;
-			BindingSetDescriptionCache(BindingSetDescriptionCache&&) noexcept = delete;
-			BindingSetDescriptionCache& operator=(BindingSetDescriptionCache&&) noexcept = delete;
+			BindingSetDescriptionCache(BindingSetDescriptionCache const&) 					= delete;
+			BindingSetDescriptionCache& operator=(BindingSetDescriptionCache const&) 		= delete;
+			BindingSetDescriptionCache(BindingSetDescriptionCache&&) noexcept 				= delete;
+			BindingSetDescriptionCache& operator=(BindingSetDescriptionCache&&) noexcept 	= delete;
 			~BindingSetDescriptionCache();
 
 			BindingSetDescription const* getSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings);
@@ -130,10 +129,6 @@ namespace daxa {
 		class BindingSetHandle {
 		public:
 			BindingSetHandle() = default;
-			BindingSetHandle(BindingSetHandle const&) = default;
-			BindingSetHandle& operator=(BindingSetHandle const&) = default;
-			BindingSetHandle(BindingSetHandle&&) noexcept = default;
-			BindingSetHandle& operator=(BindingSetHandle&&) noexcept = default;
 			~BindingSetHandle();
 
 			BindingSet const& operator*() const { return *set; }
@@ -161,16 +156,17 @@ namespace daxa {
 		*/
 		class BindingSetAllocator {
 		public:
-			BindingSetAllocator() = default;
 			BindingSetAllocator(VkDevice device, BindingSetDescription const* setDescription, size_t setsPerPool = 64);
-			BindingSetAllocator(BindingSetAllocator&&) noexcept;
-			BindingSetAllocator& operator=(BindingSetAllocator&&) noexcept;
-			BindingSetAllocator(BindingSetAllocator const&) = delete;
-			BindingSetAllocator& operator=(BindingSetAllocator const&) = delete;
+			BindingSetAllocator() 											= default;
+			BindingSetAllocator(BindingSetAllocator&&) noexcept 			= delete;
+			BindingSetAllocator& operator=(BindingSetAllocator&&) noexcept 	= delete;
+			BindingSetAllocator(BindingSetAllocator const&) 				= delete;
+			BindingSetAllocator& operator=(BindingSetAllocator const&) 		= delete;
 			~BindingSetAllocator();
 
 			BindingSetHandle getSet();
 		private:
+
 			void initPoolSizes();
 
 			BindingSetHandle getNewSet(std::shared_ptr<BindingSetAllocatorBindingiSetPool>& pool);
@@ -184,6 +180,28 @@ namespace daxa {
 			BindingSetDescription const* setDescription = nullptr;
 
 			std::vector<std::shared_ptr<BindingSetAllocatorBindingiSetPool>> pools;
+		};
+
+		class BindingSetAllocatorHandle {
+		public:
+			BindingSetAllocatorHandle(std::shared_ptr<BindingSetAllocator> alloc) 
+				: allocator{ alloc }
+			{}
+			BindingSetAllocatorHandle() = default;
+
+			BindingSetAllocator const& operator*() const { return *allocator; }
+			BindingSetAllocator& operator*() { return *allocator; }
+			BindingSetAllocator const* operator->() const { return allocator.get(); }
+			BindingSetAllocator* operator->() { return allocator.get(); }
+
+			size_t getRefCount() const { return allocator.use_count(); }
+
+			operator bool() const { return allocator.operator bool(); }
+			bool operator!() const { return !allocator; }
+			bool valid() const { return *this; }
+		private:
+
+			std::shared_ptr<BindingSetAllocator> allocator = {};
 		};
 	}
 }

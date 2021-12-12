@@ -1,11 +1,7 @@
 #include "TimelineSemaphore.hpp"
 
-#include "common.hpp"
-
 namespace daxa {
 	namespace gpu {
-
-		DAXA_DEFINE_TRIVIAL_MOVE(TimelineSemaphore)
 
 		TimelineSemaphore::TimelineSemaphore(VkDevice device) 
 			: device{ device }

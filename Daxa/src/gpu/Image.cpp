@@ -1,11 +1,8 @@
 #include "Image.hpp"
-#include "common.hpp"
 #include <cassert>
 
 namespace daxa {
 	namespace gpu {
-
-		DAXA_DEFINE_TRIVIAL_MOVE(Image)
 
 		Image::~Image() {
 			if (device && view) {
@@ -19,8 +16,7 @@ namespace daxa {
 			std::memset(this, 0, sizeof(Image));
 		}
 
-		Image Image::create2dImage(VkDevice device, VmaAllocator allocator, u32 queueFamilyIndex, Image2dCreateInfo const& ci) {
-			Image ret;
+		void Image::construct2dImage(VkDevice device, VmaAllocator allocator, u32 queueFamilyIndex, Image2dCreateInfo const& ci, Image& ret) {
 
 			VkImageCreateInfo ici{
 				.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -79,8 +75,6 @@ namespace daxa {
 			if (ci.sampler.has_value()) {
 				ret.sampler = *ci.sampler;
 			}
-
-			return std::move(ret);
 		}
 
 		ImageHandle::ImageHandle(std::shared_ptr<Image> other)

@@ -7,8 +7,6 @@
 #include <SDL2/SDL_vulkan.h>
 #include <VkBootstrap.h>
 
-#include "common.hpp"
-
 namespace daxa {
 	namespace gpu {
 		VkSurfaceKHR createSurface(void* sdlWindowHandle, VkInstance instance) {
@@ -17,21 +15,18 @@ namespace daxa {
 			return surface;
 		}
 
-		DAXA_DEFINE_TRIVIAL_MOVE(Swapchain)
+		void Swapchain::construct(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance, VkSurfaceKHR surface, u32 width, u32 height, VkPresentModeKHR presentMode) {
+			this->device = device;
+			this->physicalDevice = physicalDevice;
+			this->instance = instance;
+			this->size = { .width = width, .height = height };
+			this->surface = surface;
+			this->presentMode = presentMode;
 
-		Swapchain::Swapchain(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance, VkSurfaceKHR surface, u32 width, u32 height, VkPresentModeKHR presentMode, VkSwapchainKHR oldSwapchain)
-			: device{ device }
-			, physicalDevice{ physicalDevice }
-			, instance{ instance }
-			, sdl_window_handle{ sdl_window_handle }
-			, size{ .width = width, .height = height }
-			, surface{ surface }
-			, presentMode{ presentMode }
-		{
 			vkb::SwapchainBuilder swapchainBuilder{ physicalDevice, device, surface };
 
-			if (oldSwapchain) {
-				swapchainBuilder.set_old_swapchain(oldSwapchain);
+			if (swapchain != VK_NULL_HANDLE) {
+				swapchainBuilder.set_old_swapchain(swapchain);
 			}
 
 			vkb::Swapchain vkbSwapchain = swapchainBuilder
@@ -42,13 +37,13 @@ namespace daxa {
 				.value();
 			
 			//store swapchain and its related images
-			swapchain = vkbSwapchain.swapchain;
+			this->swapchain = vkbSwapchain.swapchain;
 			auto vkImages = vkbSwapchain.get_images().value();
 			auto vkImageViews = vkbSwapchain.get_image_views().value();
 			for (int i = 0; i < vkImages.size(); i++) {
 				auto handle = ImageHandle{ std::make_shared<Image>() };
-				swapchainImages.push_back(std::move(handle));
-				auto& img = *swapchainImages.back();
+				this->swapchainImages.push_back(std::move(handle));
+				auto& img = *this->swapchainImages.back();
 				img.extent.width = width;
 				img.extent.height = height;
 				img.extent.depth = 1;
@@ -65,14 +60,14 @@ namespace daxa {
 				img.arrayLayers = 1;
 				img.mipmapLevels = 1;
 			}
-			swapchainImageFormat = vkbSwapchain.image_format;
+			this->swapchainImageFormat = vkbSwapchain.image_format;
 
 			VkFenceCreateInfo fenceCI{
 				.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
 				.pNext = nullptr,
 				.flags = 0,
 			};
-			vkCreateFence(device, &fenceCI, nullptr, &aquireFence);
+			vkCreateFence(device, &fenceCI, nullptr, &this->aquireFence);
 		}
 
 		Swapchain::~Swapchain() {
@@ -89,7 +84,6 @@ namespace daxa {
 		}
 
 		SwapchainImage Swapchain::aquireNextImage() {
-
 			u32 index{ 0 };
 			auto err = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, nullptr, aquireFence, &index);
 			DAXA_ASSERT_M(err == VK_SUCCESS, "could not aquire next image from swapchain");
@@ -105,15 +99,13 @@ namespace daxa {
 		}
 
 		void Swapchain::resize(VkExtent2D newSize) {
-			auto surface = this->surface;
-			this->surface = VK_NULL_HANDLE;
-			*this = Swapchain{ device, physicalDevice, instance, surface, newSize.width, newSize.height, presentMode, this->swapchain };
+			swapchainImages.clear();
+			construct(device, physicalDevice, instance, surface, newSize.width, newSize.height, presentMode);
 		}
 
 		void Swapchain::setPresentMode(VkPresentModeKHR newPresentMode) {
-			auto surface = this->surface;
-			this->surface = VK_NULL_HANDLE;
-			*this = Swapchain{ device, physicalDevice, instance, surface, size.width,  size.height, newPresentMode, this->swapchain };
+			swapchainImages.clear();
+			construct(device, physicalDevice, instance, surface, size.width, size.height, newPresentMode);
 		}
 	}
 }
