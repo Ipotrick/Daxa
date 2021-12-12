@@ -19,7 +19,7 @@ namespace daxa {
 				DAXA_ASSERT_M(empty, "a command list can not be destroyed when not empty");
 				vkFreeCommandBuffers(device, cmdPool, 1, &cmd);
 				vkDestroyCommandPool(device, cmdPool, nullptr);
-				std::memset(this, 0, sizeof(CommandList));
+				device = VK_NULL_HANDLE;
 			}
 		}
 
