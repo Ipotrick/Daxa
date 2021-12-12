@@ -67,7 +67,10 @@ namespace daxa {
 				.pNext = nullptr,
 				.flags = 0,
 			};
-			vkCreateFence(device, &fenceCI, nullptr, &this->aquireFence);
+
+			if (aquireFence == VK_NULL_HANDLE) {
+				vkCreateFence(device, &fenceCI, nullptr, &this->aquireFence);
+			}
 		}
 
 		Swapchain::~Swapchain() {

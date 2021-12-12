@@ -215,6 +215,7 @@ public:
 
 	void cleanup(daxa::AppState& app) {
 		queue->waitForFlush();
+		queue->checkForFinishedSubmits();
 		device->waitIdle();
 		frames.clear();
 	}
