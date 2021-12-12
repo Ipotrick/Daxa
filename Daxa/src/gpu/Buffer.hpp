@@ -21,11 +21,12 @@ namespace daxa {
 
 		class Buffer {
 		public:
-			Buffer();
-			Buffer(Buffer const&) = delete;
-			Buffer& operator=(Buffer const&) = delete;
-			Buffer(Buffer&&) noexcept;
-			Buffer& operator=(Buffer&&) noexcept;
+			Buffer(VkDevice device, u32 queueFamilyIndex, VmaAllocator allocator, BufferCreateInfo& ci);
+			Buffer()								= default;
+			Buffer(Buffer const&) 					= delete;
+			Buffer& operator=(Buffer const&) 		= delete;
+			Buffer(Buffer&&) noexcept 				= delete;
+			Buffer& operator=(Buffer&&) noexcept 	= delete;
 			~Buffer();
 
 			/**
@@ -49,19 +50,20 @@ namespace daxa {
 			friend class StagingBufferPool;
 			friend class Queue;
 
-			Buffer(VkDevice device, u32 queueFamilyIndex, VmaAllocator allocator, BufferCreateInfo& ci);
-
-			VkBuffer buffer;
-			size_t size;
-			VkBufferUsageFlags usage;
-			VmaMemoryUsage memoryUsage;
-			VmaAllocation allocation;
-			VmaAllocator allocator;
-			u32 usesOnGPU = 0;
+			VkBuffer buffer = VK_NULL_HANDLE;
+			size_t size = {};
+			VkBufferUsageFlags usage = {};
+			VmaMemoryUsage memoryUsage = {};
+			VmaAllocation allocation = {};
+			VmaAllocator allocator = {};
+			u32 usesOnGPU = {};
 		};
 
 		class BufferHandle {
 		public:
+			BufferHandle(std::shared_ptr<Buffer> buffer)
+				:buffer{ std::move(buffer) }
+			{}
 			BufferHandle() = default;
 
 			Buffer& operator*() { return *buffer; }
@@ -77,9 +79,7 @@ namespace daxa {
 			friend class StagingBufferPool;
 			friend class Queue;
 
-			BufferHandle(Buffer&& buffer);
-
-			std::shared_ptr<Buffer> buffer;
+			std::shared_ptr<Buffer> buffer = {};
 		};
 	}
 }

@@ -1,10 +1,7 @@
 #include "Queue.hpp"
 
-#include "common.hpp"
-
 namespace daxa {
 	namespace gpu {
-		DAXA_DEFINE_TRIVIAL_MOVE(Queue)
 
 		Queue::Queue(VkDevice device, VkQueue queue)
 			: device{device}
@@ -24,9 +21,6 @@ namespace daxa {
 				submitCommandBufferBuffer.push_back(cmdList->cmd);
 				cmdList->usesOnGPU += 1;
 			
-				for (auto& buffer : cmdList->usedBuffers) {
-					buffer->usesOnGPU += 1;
-				}
 				for (auto& set : cmdList->usedSets) {
 					set->usesOnGPU += 1;
 
@@ -36,9 +30,12 @@ namespace daxa {
 						}
 					}
 				}
+				for (auto& buffer : cmdList->usedBuffers) {
+					buffer->usesOnGPU += 1;
+				}
 			}
 
-			for (auto signal : si.waitOnSignals) {
+			for (auto& signal : si.waitOnSignals) {
 				this->submitSemaphoreWaitOnBuffer.push_back(signal->getVkSemaphore());
 				this->submitSemaphoreWaitOnValueBuffer.push_back(0);
 			}
@@ -56,8 +53,8 @@ namespace daxa {
 			}
 
 			auto thisSubmitTimelineSema = getNextTimeline();
-			auto thisSubmitTimelineFinishCounter = thisSubmitTimelineSema.getCounter() + 1;
-			this->submitSemaphoreSignalBuffer.push_back(thisSubmitTimelineSema.getVkSemaphore());
+			auto thisSubmitTimelineFinishCounter = thisSubmitTimelineSema->getCounter() + 1;
+			this->submitSemaphoreSignalBuffer.push_back(thisSubmitTimelineSema->getVkSemaphore());
 			this->submitSemaphoreSignalValueBuffer.push_back(thisSubmitTimelineFinishCounter);
 
 			VkTimelineSemaphoreSubmitInfo timelineSI{
@@ -98,9 +95,9 @@ namespace daxa {
 			submitCommandBufferBuffer.clear();
 		}
 
-		TimelineSemaphore Queue::getNextTimeline() {
+		TimelineSemaphoreHandle Queue::getNextTimeline() {
 			if (unusedTimelines.empty()) {
-				unusedTimelines.push_back(TimelineSemaphore{ device });
+				unusedTimelines.push_back(TimelineSemaphoreHandle{ std::make_shared<TimelineSemaphore>(device) });
 			}
 			auto timeline = std::move(unusedTimelines.back());
 			unusedTimelines.pop_back();
@@ -109,7 +106,7 @@ namespace daxa {
 
 		void Queue::checkForFinishedSubmits() {
 			for (auto iter = unfinishedSubmits.begin(); iter != unfinishedSubmits.end();) {
-				auto counter = iter->timelineSema.getCounter();
+				auto counter = iter->timelineSema->getCounter();
 				if (counter >= iter->finishCounter) {
 					while (!iter->cmdLists.empty()) {
 						auto list = std::move(iter->cmdLists.back());
@@ -127,7 +124,6 @@ namespace daxa {
 							}
 						}
 						list->usesOnGPU -= 1;
-						list = {};
 					}
 					unusedTimelines.push_back(std::move(iter->timelineSema));
 					iter = unfinishedSubmits.erase(iter);
@@ -160,7 +156,7 @@ namespace daxa {
 					.pNext = nullptr,
 					.flags = 0,
 					.semaphoreCount = 1,
-					.pSemaphores = &pending.timelineSema.timelineSema,
+					.pSemaphores = &pending.timelineSema->timelineSema,
 					.pValues = &pending.finishCounter,
 				};
 				vkWaitSemaphores(device, &semaphoreWaitInfo, UINT64_MAX);

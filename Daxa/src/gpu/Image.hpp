@@ -27,11 +27,11 @@ namespace daxa {
 
 		class Image {
 		public:
-			Image() = default;
-			Image(Image const&) = delete;
-			Image& operator=(Image const&) = delete;
-			Image(Image&&) noexcept;
-			Image& operator=(Image&&) noexcept;
+			Image() 							= default;
+			Image(Image const&) 				= delete;
+			Image& operator=(Image const&) 		= delete;
+			Image(Image&&) noexcept 			= delete;
+			Image& operator=(Image&&) noexcept 	= delete;
 			~Image();
 
 			VkImage getVkImage() const { return image; }
@@ -51,7 +51,7 @@ namespace daxa {
 			friend class ImageHandle;
 			friend class Swapchain;
 
-			static Image create2dImage(VkDevice device, VmaAllocator allocator, u32 queueFamilyIndex, Image2dCreateInfo const& ci);
+			static void construct2dImage(VkDevice device, VmaAllocator allocator, u32 queueFamilyIndex, Image2dCreateInfo const& ci, Image& dst);
 
 			VkDevice device = VK_NULL_HANDLE;
 			VmaAllocator allocator = VK_NULL_HANDLE;
@@ -72,22 +72,21 @@ namespace daxa {
 		class ImageHandle {
 		public:
 			ImageHandle() = default;
-
-			size_t getRefCount() const { return image.use_count(); }
-
-			operator bool() const { return image.operator bool(); }
-			bool operator!() const { return !image; }
-			bool valid() const { return *this; }
+			ImageHandle(std::shared_ptr<Image> image);
 
 			Image const& operator*() const { return *image; }
 			Image& operator*() { return *image; }
 			Image const* operator->() const { return image.get(); }
 			Image* operator->() { return image.get(); }
+
+			operator bool() const { return image.operator bool(); }
+			bool operator!() const { return !image; }
+			bool valid() const { return *this; }
+
+			size_t getRefCount() const { return image.use_count(); }
 		private:
 			friend class Device;
 			friend class Swapchain;
-
-			ImageHandle(std::shared_ptr<Image> image);
 
 			std::shared_ptr<Image> image = {};
 		};

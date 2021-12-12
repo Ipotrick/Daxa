@@ -30,10 +30,10 @@ namespace daxa {
 		class Sampler {
 		public:
 			Sampler(VkDevice device, SamplerCreateInfo const& createInfo);
-			Sampler(Sampler&&) noexcept;
-			Sampler& operator=(Sampler&&) noexcept;
-			Sampler(Sampler const&) = delete;
-			Sampler& operator=(Sampler const&) = delete;
+			Sampler(Sampler&&) noexcept										= delete;
+			Sampler& operator=(Sampler&&) noexcept							= delete;
+			Sampler(Sampler const&) 										= delete;
+			Sampler& operator=(Sampler const&) 								= delete;
 			~Sampler();
 
 			VkSampler getVkSampler() const { return sampler; }
@@ -76,6 +76,7 @@ namespace daxa {
 		class SamplerHandle {
 		public:
 			SamplerHandle() = default;
+			SamplerHandle(std::shared_ptr<Sampler> sampler);
 
 			size_t getRefCount() const { return sampler.use_count(); }
 
@@ -88,8 +89,6 @@ namespace daxa {
 			Sampler const* operator->() const { return sampler.get(); }
 			Sampler* operator->() { return sampler.get(); }
 		private:
-
-			SamplerHandle(std::shared_ptr<Sampler> sampler);
 
 			std::shared_ptr<Sampler> sampler = {};
 		};

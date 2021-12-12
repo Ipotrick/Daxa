@@ -25,10 +25,10 @@ namespace daxa {
 		class StagingBuffer {
 		public:
 			StagingBuffer(BufferHandle& handle, std::weak_ptr<StagingBufferPoolSharedData> pool);
-			StagingBuffer(StagingBuffer&&) noexcept;
-			StagingBuffer& operator=(StagingBuffer&&) noexcept;
-			StagingBuffer(StagingBuffer const&) = delete;
-			StagingBuffer& operator=(StagingBuffer const&) = delete;
+			StagingBuffer(StagingBuffer&&) noexcept													= default;
+			StagingBuffer& operator=(StagingBuffer&&) noexcept										= default;
+			StagingBuffer(StagingBuffer const&) 													= delete;
+			StagingBuffer& operator=(StagingBuffer const&) 											= delete;
 			~StagingBuffer();
 
 			size_t getLeftOverSize() const { return STAGING_BUFFER_POOL_BUFFER_SIZE - usedUpSize; }

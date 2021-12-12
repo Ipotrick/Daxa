@@ -1,11 +1,7 @@
 #include "Signal.hpp"
 
-#include "common.hpp"
-
 namespace daxa {
 	namespace gpu {
-		DAXA_DEFINE_TRIVIAL_MOVE(Signal)
-
 		Signal::Signal(VkDevice device) 
 			: device{ device }
 		{
@@ -20,15 +16,8 @@ namespace daxa {
 		Signal::~Signal() {
 			if (device) {
 				vkDestroySemaphore(device, semaphore, nullptr);
-				std::memset(this, 0, sizeof(Signal));
+				device = VK_NULL_HANDLE;
 			}
 		}
-
-		SignalHandle::SignalHandle(std::shared_ptr<Signal> signal)
-			: signal{ std::move(signal) }
-		{
-
-		}
-
 	}
 }
