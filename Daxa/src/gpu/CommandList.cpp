@@ -1,12 +1,9 @@
 #include "CommandList.hpp"
 
-#include "common.hpp"
-
 namespace daxa {
 	namespace gpu {
-		DAXA_DEFINE_TRIVIAL_MOVE(CommandList)
-
 		CommandList::CommandList() {
+			printf("command list creating\n");
 			this->renderAttachmentBuffer.reserve(5);
 			usedImages.reserve(10);
 			usedBuffers.reserve(10);
@@ -17,6 +14,7 @@ namespace daxa {
 
 		CommandList::~CommandList() {
 			if (device) {
+				printf("command list destruction\n");
 				DAXA_ASSERT_M(operationsInProgress == 0, "a command list can not be descroyed when there are still commands recorded");
 				DAXA_ASSERT_M(empty, "a command list can not be destroyed when not empty");
 				vkFreeCommandBuffers(device, cmdPool, 1, &cmd);
@@ -387,6 +385,7 @@ namespace daxa {
 		CommandListHandle::~CommandListHandle() {
 			if (list && list.use_count() == 1) {
 				if (auto recyclingSharedData = list->recyclingData.lock()) {
+					printf("recycle\n");
 					list->reset();
 					auto lock = std::unique_lock(recyclingSharedData->mut);
 					recyclingSharedData->zombies.push_back(std::move(list));

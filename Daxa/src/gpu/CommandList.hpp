@@ -122,13 +122,12 @@ namespace daxa {
 
 		class CommandList {
 		public:
+			CommandList();
+			CommandList(CommandList&& rhs) noexcept				= delete;
+			CommandList& operator=(CommandList&& rhs) noexcept	= delete;
+			CommandList(CommandList const& rhs) 				= delete;
+			CommandList& operator=(CommandList const& rhs) 		= delete;
 			~CommandList();
-
-			CommandList(CommandList&& rhs) noexcept;
-			CommandList& operator=(CommandList&& rhs) noexcept;
-
-			CommandList(CommandList const& rhs) = delete;
-			CommandList& operator=(CommandList const& rhs) = delete;
 
 			void begin();
 
@@ -192,8 +191,6 @@ namespace daxa {
 			friend class Device;
 			friend class Queue;
 			friend class CommandListHandle;
-
-			CommandList();
 
 			void reset();
 

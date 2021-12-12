@@ -21,9 +21,11 @@ namespace daxa {
 
 		class GraphicsPipeline {
 		public:
-			GraphicsPipeline() = default;
-			GraphicsPipeline(GraphicsPipeline&&) noexcept;
-			GraphicsPipeline& operator=(GraphicsPipeline&&) noexcept;
+			GraphicsPipeline() 													= default;
+			GraphicsPipeline(GraphicsPipeline&&) noexcept						= delete;
+			GraphicsPipeline& operator=(GraphicsPipeline&&) noexcept			= delete;
+			GraphicsPipeline(GraphicsPipeline const&)							= delete;
+			GraphicsPipeline const& operator=(GraphicsPipeline const&) noexcept	= delete;
 			~GraphicsPipeline();
 
 			BindingSetDescription const* getSetDescription(u32 set) const { 
@@ -46,11 +48,23 @@ namespace daxa {
 
 		class GraphicsPipelineHandle {
 		public:
-			GraphicsPipeline const& operator * () const { return *pipeline; }
-			GraphicsPipeline const* operator -> () const { return &*pipeline; }
+			GraphicsPipelineHandle(std::shared_ptr<GraphicsPipeline> pipeline) 
+				: pipeline{ std::move(pipeline) }
+			{}
+			GraphicsPipelineHandle() = default;
+
+			GraphicsPipeline const& operator*() const { return *pipeline; }
+			GraphicsPipeline& operator*() { return *pipeline; }
+			GraphicsPipeline const* operator->() const { return pipeline.get(); }
+			GraphicsPipeline* operator->() { return pipeline.get(); }
+
+			size_t getRefCount() const { return pipeline.use_count(); }
+
+			operator bool() const { return pipeline.operator bool(); }
+			bool operator!() const { return !pipeline; }
+			bool valid() const { return *this; }
 		private:
-			friend class GraphicsPipelineBuilder;
-			std::shared_ptr<GraphicsPipeline> pipeline;
+			std::shared_ptr<GraphicsPipeline> pipeline = {};
 		};
 
 		class GraphicsPipelineBuilder {

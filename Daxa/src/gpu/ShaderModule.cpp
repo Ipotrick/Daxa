@@ -8,8 +8,6 @@
 #include <glslang/Public/ShaderLang.h>
 #include <glslang/SPIRV/GlslangToSpv.h>
 
-#include "common.hpp"
-
 namespace daxa {
 	namespace gpu {
 
@@ -21,8 +19,6 @@ namespace daxa {
 				std::memset(this, 0, sizeof(ShaderModule));
 			}
 		}
-
-		DAXA_DEFINE_TRIVIAL_MOVE(ShaderModule);
 
 		constexpr TBuiltInResource DAXA_DEFAULT_SHADER_RESSOURCE_SIZES = TBuiltInResource{
 			.maxLights = 32,
@@ -233,15 +229,13 @@ namespace daxa {
 			if (spirv.has_value()) {
 				auto shaderModuleOpt = tryCreateVkShaderModule(device, spirv.value());
 				if (shaderModuleOpt.has_value()) {
-					ShaderModule shaderMod;
-					shaderMod.entryPoint = entryPoint;
-					shaderMod.shaderModule = std::move(shaderModuleOpt.value());
-					shaderMod.spirv = spirv.value();
-					shaderMod.shaderStage = shaderStage;
-					shaderMod.device = device;
-					ShaderModuleHandle handle;
-					handle.shaderModule = std::make_shared<ShaderModule>(std::move(shaderMod));
-					return handle;
+					auto shaderMod = std::make_shared<ShaderModule>();
+					shaderMod->entryPoint = entryPoint;
+					shaderMod->shaderModule = std::move(shaderModuleOpt.value());
+					shaderMod->spirv = spirv.value();
+					shaderMod->shaderStage = shaderStage;
+					shaderMod->device = device;
+					return ShaderModuleHandle{ std::move(shaderMod) };
 				}
 			}
 			return std::nullopt;

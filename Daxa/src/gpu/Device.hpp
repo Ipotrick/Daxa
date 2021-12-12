@@ -26,17 +26,20 @@
 namespace daxa {
 	namespace gpu {
 
+		class DeviceHandle;
+
 		class Device {
 		public:
+			Device(vkb::Instance&);
 			Device(Device const& other)				= delete;
 			Device& operator=(Device const&)		= delete;
-			Device(Device&&) noexcept;
-			Device& operator=(Device&&) noexcept;
+			Device(Device&&) noexcept				= delete;
+			Device& operator=(Device&&) noexcept	= delete;
 			~Device();
 
-			Queue createQueue();
+			QueueHandle createQueue();
 
-			static Device create();
+			static DeviceHandle create();
 
 			/**
 			 * \param ci all information defining the 2d image
@@ -50,11 +53,11 @@ namespace daxa {
 			 */
 			BufferHandle createBuffer(BufferCreateInfo ci);
 
-			TimelineSemaphore createTimelineSemaphore();
+			TimelineSemaphoreHandle createTimelineSemaphore();
 
 			SignalHandle createSignal();
 
-			Swapchain createSwapchain(VkSurfaceKHR surface, u32 width, u32 height, VkPresentModeKHR presentMode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR);
+			SwapchainHandle createSwapchain(VkSurfaceKHR surface, u32 width, u32 height, VkPresentModeKHR presentMode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR);
 
 			BindingSetDescription const* createBindingSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings);
 
@@ -82,7 +85,7 @@ namespace daxa {
 			 */
 			GraphicsPipelineHandle createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder);
 
-			BindingSetAllocator createBindingSetAllocator(BindingSetDescription const* setDescription, size_t setPerPool = 64);
+			BindingSetAllocatorHandle createBindingSetAllocator(BindingSetDescription const* setDescription, size_t setPerPool = 64);
 
 			/**
 			 * \return returns an empty CommandList.
@@ -101,8 +104,6 @@ namespace daxa {
 			const u32& getVkGraphicsQueueFamilyIndex() const { return graphicsQFamilyIndex; }
 		private:
 			friend class Instance;
-
-			Device(vkb::Instance&);
 
 			CommandListHandle getNextCommandList();
 
@@ -125,6 +126,27 @@ namespace daxa {
 			std::shared_ptr<StagingBufferPool> stagingBufferPool = {};
 
 			std::unique_ptr<BindingSetDescriptionCache> bindingSetDescriptionCache = {};
+		};
+
+		class DeviceHandle{
+		public:
+			DeviceHandle(std::shared_ptr<Device> device) 
+				: device{ std::move(device) }
+			{}
+			DeviceHandle() = default;
+
+			Device const& operator*() const { return *device; }
+			Device& operator*() { return *device; }
+			Device const* operator->() const { return device.get(); }
+			Device* operator->() { return device.get(); }
+
+			size_t getRefCount() const { return device.use_count(); }
+
+			operator bool() const { return device.operator bool(); }
+			bool operator!() const { return !device; }
+			bool valid() const { return *this; }
+		private:
+			std::shared_ptr<Device> device = {};
 		};
 	}
 }

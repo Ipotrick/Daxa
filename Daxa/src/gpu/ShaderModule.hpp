@@ -20,9 +20,9 @@ namespace daxa {
 
 		class ShaderModule {
 		public:
-			ShaderModule() = default;
-			ShaderModule(ShaderModule&& other) noexcept;
-			ShaderModule& operator=(ShaderModule&& other) noexcept;
+			ShaderModule()						 					= default;
+			ShaderModule(ShaderModule&& other) noexcept				= delete;
+			ShaderModule& operator=(ShaderModule&& other) noexcept	= delete;
 			~ShaderModule();
 		private:
 			friend class GraphicsPipelineBuilder;
@@ -39,14 +39,26 @@ namespace daxa {
 
 		class ShaderModuleHandle {
 		public:
+			ShaderModuleHandle(std::shared_ptr<ShaderModule> shaderModule) 
+				: shaderModule{ std::move(shaderModule) }
+			{}
+			ShaderModuleHandle() = default;
+			
 			static std::optional<ShaderModuleHandle> tryCreateDAXAShaderModule(VkDevice device, std::filesystem::path const& path, std::string const& entryPoint, VkShaderStageFlagBits shaderStage);
 			static std::optional<ShaderModuleHandle> tryCreateDAXAShaderModule(VkDevice device, std::string const& glsl, std::string const& entryPoint, VkShaderStageFlagBits shaderStage);
-			ShaderModule const& operator * () const { return *shaderModule; }
-			ShaderModule const* operator -> () const { return &*shaderModule; }
-		private:
-			friend class Device;
 
-			std::shared_ptr<ShaderModule> shaderModule;
+			ShaderModule const& operator*() const { return *shaderModule; }
+			ShaderModule& operator*() { return *shaderModule; }
+			ShaderModule const* operator->() const { return shaderModule.get(); }
+			ShaderModule* operator->() { return shaderModule.get(); }
+
+			size_t getRefCount() const { return shaderModule.use_count(); }
+
+			operator bool() const { return shaderModule.operator bool(); }
+			bool operator!() const { return !shaderModule; }
+			bool valid() const { return *this; }
+		private:
+			std::shared_ptr<ShaderModule> shaderModule = {};
 		};
 	}
 }

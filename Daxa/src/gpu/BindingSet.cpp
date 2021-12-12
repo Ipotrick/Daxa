@@ -1,12 +1,7 @@
 #include "BindingSet.hpp"
 
-#include "common.hpp"
-
 namespace daxa {
 	namespace gpu {
-
-		DAXA_DEFINE_TRIVIAL_MOVE(BindingSet)
-
 		BindingSet::BindingSet(VkDevice device, VkDescriptorSet set, std::weak_ptr<BindingSetAllocatorBindingiSetPool> pool, BindingSetDescription const* description)
 			: device{ device }
 			, set { set }
@@ -204,8 +199,6 @@ namespace daxa {
 			return description;
 		}
 
-		DAXA_DEFINE_TRIVIAL_MOVE(BindingSetAllocator)
-
 		BindingSetAllocator::BindingSetAllocator(VkDevice device, BindingSetDescription const* setDescription, size_t setsPerPool)
 			: device{ device }
 			, setDescription{ setDescription }
@@ -271,7 +264,7 @@ namespace daxa {
 			VkDescriptorSet set;
 			vkAllocateDescriptorSets(device, &descriptorSetAI, &set);
 
-			return BindingSetHandle{ std::make_shared<BindingSet>(BindingSet{device, set, pool, setDescription}) };
+			return BindingSetHandle{ std::make_shared<BindingSet>(device, set, pool, setDescription) };
 		}
 
 		std::shared_ptr<BindingSetAllocatorBindingiSetPool> BindingSetAllocator::getNewPool() {
