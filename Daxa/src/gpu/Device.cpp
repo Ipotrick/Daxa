@@ -114,6 +114,10 @@ namespace daxa {
 			return QueueHandle{ std::make_shared<Queue>(device, vkbDevice.get_queue(vkb::QueueType::graphics).value()) };
 		}
 
+		SamplerHandle Device::createSampler(SamplerCreateInfo ci) {
+			return SamplerHandle{ std::make_shared<Sampler>(device, ci) };
+		}
+
 		ImageHandle Device::createImage2d(Image2dCreateInfo ci) { 
 			auto handle = ImageHandle{ std::make_shared<Image>() };
 			Image::construct2dImage(device, allocator,graphicsQFamilyIndex, ci, *handle);

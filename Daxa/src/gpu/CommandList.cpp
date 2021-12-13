@@ -40,6 +40,46 @@ namespace daxa {
 			vkEndCommandBuffer(cmd);
 		}
 
+		MappedStagingMemory CommandList::mapMemoryStaged(BufferHandle copyDst, size_t size, size_t dstOffset) {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			DAXA_ASSERT_M(size <= STAGING_BUFFER_POOL_BUFFER_SIZE, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
+			if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < size) {
+				usedStagingBuffers.push_back(stagingBufferPool.lock()->getStagingBuffer());
+			}
+
+			operationsInProgress += 1;
+
+			auto& stagingBuffer = usedStagingBuffers.back();
+
+			auto srcOffset = stagingBuffer.usedUpSize;
+
+			u8* bufferHostPtr = (u8*)stagingBuffer.buffer->mapMemory();
+
+			auto ret = MappedStagingMemory{ (void*)(bufferHostPtr + srcOffset), size, stagingBuffer.buffer };
+
+			stagingBuffer.usedUpSize += size;
+
+			BufferToBufferCopyInfo btbCopyInfo{
+				.src = stagingBuffer.buffer,
+				.dst = copyDst,
+				.region = BufferCopyRegion{
+					.srcOffset = srcOffset,
+					.dstOffset = dstOffset,
+					.size = size,
+				}
+			};
+			copyBufferToBuffer(btbCopyInfo);
+
+			return ret;
+		}
+		
+		void CommandList::unmapMemoryStaged(MappedStagingMemory& mappedstagingMemory) {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			DAXA_ASSERT_M(mappedstagingMemory.buffer->isMemoryMapped(), "the given mappedStagingMemory has allready been unmapped.");
+			operationsInProgress -= 1;
+			mappedstagingMemory.buffer->unmapMemory();
+		}
+
 		void CommandList::copyHostToBuffer(HostToBufferCopyInfo copyInfo) {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			if (copyInfo.size > STAGING_BUFFER_POOL_BUFFER_SIZE) {
@@ -55,6 +95,7 @@ namespace daxa {
 
 				auto offset = stagingBuffer.usedUpSize;
 
+				// memory is currently automaticly unmapped in Queue::submit
 				stagingBuffer.buffer->upload(copyInfo.src, copyInfo.size, offset);
 
 				stagingBuffer.usedUpSize += copyInfo.size;
@@ -179,7 +220,8 @@ namespace daxa {
 						.imageLayout = ri.depthAttachment->layout,
 						.resolveMode = ri.depthAttachment->resolveMode,
 						.loadOp = ri.depthAttachment->loadOp,
-						.storeOp = ri.depthAttachment->storeOp
+						.storeOp = ri.depthAttachment->storeOp,
+						.clearValue = ri.depthAttachment->clearValue,
 					}
 				};
 
@@ -192,7 +234,8 @@ namespace daxa {
 						.imageLayout = ri.stencilAttachment->layout,
 						.resolveMode = ri.stencilAttachment->resolveMode,
 						.loadOp = ri.stencilAttachment->loadOp,
-						.storeOp = ri.stencilAttachment->storeOp
+						.storeOp = ri.stencilAttachment->storeOp,
+						.clearValue = ri.stencilAttachment->clearValue,
 					}
 				};
 
@@ -382,10 +425,19 @@ namespace daxa {
 			this->vkCmdPipelineBarrier2KHR(cmd, &dependencyInfo);
 		}
 
+		void CommandList::insertFullMemoryBarrier() {
+			MemoryBarrier barrier{
+				.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
+				.awaitedStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
+				.waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR,
+				.waitingStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
+			};
+			insertBarriers({&barrier,1}, {}, {});
+		}
+
 		CommandListHandle::~CommandListHandle() {
 			if (list && list.use_count() == 1) {
 				if (auto recyclingSharedData = list->recyclingData.lock()) {
-					printf("recycle\n");
 					list->reset();
 					auto lock = std::unique_lock(recyclingSharedData->mut);
 					recyclingSharedData->zombies.push_back(std::move(list));
