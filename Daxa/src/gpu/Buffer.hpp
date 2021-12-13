@@ -35,6 +35,12 @@ namespace daxa {
 			bool isUsedByGPU() const;
 
 			void upload(void const* src, size_t size, size_t dstOffset = 0);
+			
+			void* mapMemory();
+
+			void unmapMemory();
+
+			bool isMemoryMapped() const { return memoryMapCount > 0; }
 
 			VkBuffer getVkBuffer() const { return buffer; }
 
@@ -57,6 +63,7 @@ namespace daxa {
 			VmaAllocation allocation = {};
 			VmaAllocator allocator = {};
 			u32 usesOnGPU = {};
+			u32 memoryMapCount = 0;
 		};
 
 		class BufferHandle {

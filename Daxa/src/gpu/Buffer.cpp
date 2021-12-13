@@ -49,5 +49,20 @@ namespace daxa {
 			std::memcpy(bufferMemPtr + dstOffset, src, size);
 			vmaUnmapMemory(allocator, allocation);
 		}
+
+		void* Buffer::mapMemory() {
+			DAXA_ASSERT_M(getVmaMemoryUsage() & VMA_MEMORY_USAGE_CPU_TO_GPU, "can only upload to buffers with the memory usage flag: VMA_MEMORY_USAGE_CPU_TO_GPU");
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not upload to buffer that is currently in use on the gpu directly from host. to indirectly upload to this buffer, use the command list upload.");
+			memoryMapCount += 1;
+			void* ret;
+			vmaMapMemory(allocator, allocation, &ret);
+			return ret;
+		}
+
+		void Buffer::unmapMemory() {
+			DAXA_ASSERT_M(memoryMapCount > 0, "can not unmap memory of buffer that has no mapped memory.");
+			memoryMapCount -= 1;
+			vmaUnmapMemory(allocator, allocation);
+		}
 	}
 }

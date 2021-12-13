@@ -76,7 +76,9 @@ namespace daxa {
 		class SamplerHandle {
 		public:
 			SamplerHandle() = default;
-			SamplerHandle(std::shared_ptr<Sampler> sampler);
+			SamplerHandle(std::shared_ptr<Sampler> sampler)
+				: sampler{ std::move(sampler) }
+			{}
 
 			size_t getRefCount() const { return sampler.use_count(); }
 

@@ -20,6 +20,22 @@
 namespace daxa {
 	namespace gpu {
 
+		class MappedStagingMemory{
+		public:
+			MappedStagingMemory(void* hostPtr, size_t size, BufferHandle buffer)
+				: hostPtr{ hostPtr }
+				, size{ size }
+				, buffer{ std::move(buffer) }
+			{}
+			void* const hostPtr;
+			size_t const size;
+		private:
+			friend class CommandList;
+			friend class Queue;
+
+			BufferHandle buffer = {};
+		};
+
 		struct BufferCopyRegion {
 			size_t srcOffset = 0;
 			size_t dstOffset = 0;
@@ -135,6 +151,26 @@ namespace daxa {
 
 			// Ressource management:
 
+			/**
+			 * @brief 	Maps memory to a section of a staging buffer.
+			 * 			The mapped memory will be copied to the specified buffer when the command list is executed.
+			 * 			This means that this function can be used to virtually map memory of GPU_ONLY buffers.
+			 * 			All mapped memory must be unmapped before submitting the command list to a queue.
+			 * 
+			 * @param copyDst is the buffer wich the mapped memory will be copied to.
+			 * @param size size of the mapped memory.
+			 * @param dstOffset offset into the buffer.
+			 * @return MappedStagingMemory mapped memory.
+			 */
+			MappedStagingMemory mapMemoryStaged(BufferHandle copyDst, size_t size, size_t dstOffset);
+
+			/**
+			 * @brief Unmaps staging buffer memory.
+			 * 
+			 * @param mappedStagingMem mapped staging memory to unmap.
+			 */
+			void unmapMemoryStaged(MappedStagingMemory& mappedStagingMem);
+
 			void copyHostToBuffer(HostToBufferCopyInfo copyInfo);
 
 			void copyHostToImage(HostToImageCopyInfo copyInfo);
@@ -182,6 +218,8 @@ namespace daxa {
 			// sync:
 
 			void insertBarriers(std::span<MemoryBarrier> memBarriers, std::span<BufferBarrier> bufBarriers, std::span<ImageBarrier> imgBarriers);
+
+			void insertFullMemoryBarrier();
 
 			// Accessors:
 

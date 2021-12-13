@@ -1,6 +1,78 @@
 #include <iostream>
 
+#define GLM_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
+#include <glm/gtc/constants.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 #include "Daxa.hpp"
+
+class GimbalLockedCameraController {
+public:
+	glm::mat4 update(daxa::Window& window, f32 dt) {
+		if (bCursorCaptured) {
+			if (window.keyJustPressed(daxa::Scancode::ESCAPE)) {
+				printf("release mouse\n");
+				window.releaseCursor();
+				bCursorCaptured = false;
+			}
+		} else {
+			if (window.buttonJustPressed(daxa::MouseButton::Left)) {
+				printf("capture mouse\n");
+				window.captureCursor();
+				bCursorCaptured = true;
+			}
+		}
+
+		auto yawRotaAroundUp = glm::rotate(glm::mat4(1.0f), yaw, {0.f,0.f,1.f});
+		glm::vec4 translation = {};
+		if (window.keyPressed(daxa::Scancode::W)) {
+			glm::vec4 direction = { 0.0f, 1.0f, 0.0f, 0.0f };
+			translation += yawRotaAroundUp * direction * dt * translationSpeed;
+		}
+		if (window.keyPressed(daxa::Scancode::S)) {
+			glm::vec4 direction = { 0.0f, -1.0f, 0.0f, 0.0f };
+			translation += yawRotaAroundUp * direction * dt * translationSpeed;
+		}
+		if (window.keyPressed(daxa::Scancode::A)) {
+			glm::vec4 direction = { -1.0f, 0.0f, 0.0f, 0.0f };
+			translation += yawRotaAroundUp * direction * dt * translationSpeed;
+		}
+		if (window.keyPressed(daxa::Scancode::D)) {
+			glm::vec4 direction = { 1.0f, 0.0f, 0.0f, 0.0f };
+			translation += yawRotaAroundUp * direction * dt * translationSpeed;
+		}
+		if (window.keyPressed(daxa::Scancode::SPACE)) {
+			translation += glm::vec4{ 0.f, 0.f, 1.f, 0.f } * dt * translationSpeed;
+		}
+		if (window.keyPressed(daxa::Scancode::LSHIFT)) {
+			translation += glm::vec4{ 0.f, 0.f, -1.f, 0.f } * dt * translationSpeed;
+		}
+		pitch += window.getCursorPositionChange()[0] * cameraSwaySpeed * dt;
+		pitch = std::clamp(pitch, 0.0f, glm::pi<f32>()*2);
+		yaw += window.getCursorPositionChange()[1] * cameraSwaySpeed * dt;
+
+		//printf("pitch: %f, yaw: %f\n");
+		//printf("position: {%f,%f,%f}\n", position.x, position.y, position.z);
+
+		auto prespective = glm::perspective(fov, (f32)window.getSize()[0]/(f32)window.getSize()[1], near, far);
+		auto rota = yawRotaAroundUp * glm::rotate(glm::mat4(), pitch, glm::vec3{1.f,0.f,0.f});
+		auto cameraModelMat = glm::translate(rota, {translation.x, translation.y, translation.z});
+		auto view = glm::inverse(cameraModelMat);
+		return prespective * view;
+	}
+private:
+	bool bCursorCaptured = false;
+	f32 fov = 74.0f;
+	f32 near = 0.1f;
+	f32 far = 1'000.0f;
+	f32 cameraSwaySpeed = 0.01f;
+	f32 translationSpeed = 1.0f;
+	glm::vec4 up = { 0.f, 0.f, 1.0f, 0.f };
+	glm::vec4 position = { 0.f, 0.f, 0.f, 1.f };
+	f32 yaw = glm::pi<f32>();
+	f32 pitch = glm::pi<f32>();
+};
 
 class MyUser {
 public:
@@ -111,6 +183,7 @@ public:
 
 		/// ------------ Begin Data Uploading ---------------------
 
+		auto vp = cameraController.update(*app.window, app.getDeltaTimeSeconds());
 
 		std::array vertecies = {
 			 1.f, 1.f, 0.0f,	1.f, 0.f, 0.f, 1.f,
@@ -120,7 +193,7 @@ public:
 		cmdList->copyHostToBuffer(daxa::gpu::HostToBufferCopyInfo{
 			.src = vertecies.data(),
 			.dst = vertexBuffer,
-			.size = vertecies.size() * sizeof(float)
+			.size = sizeof(decltype(vertecies))
 		});
 
 		std::array someBufferdata = { 1.0f , 1.0f , 1.0f ,1.0f };
@@ -147,18 +220,10 @@ public:
 		
 		/// ------------ End Data Uploading ---------------------
 
-
-		totalElapsedTime += app.getDeltaTimeSeconds();
-		f32 r = std::cosf((f32)totalElapsedTime * 0.21313f) * 0.3f + 0.5f;
-		f32 g = std::cosf((f32)totalElapsedTime * 0.75454634f) * 0.3f + 0.5f;
-		f32 b = std::cosf((f32)totalElapsedTime) * 0.3f + 0.5f;
-
-		VkClearValue clear{ .color = VkClearColorValue{.float32 = { r, g, b, 1.0f } } };
-
 		std::array framebuffer{
 			daxa::gpu::RenderAttachmentInfo{
 				.image = swapchainImage.getImageHandle(),
-				.clearValue = clear,
+				.clearValue = { .color = VkClearColorValue{.float32 = { 1.f, 1.f, 1.f, 1.f } } },
 			}
 		};
 		cmdList->beginRendering(daxa::gpu::BeginRenderingInfo{
@@ -223,6 +288,7 @@ public:
 
 	}
 private:
+	GimbalLockedCameraController cameraController{};
 	daxa::gpu::DeviceHandle device;
 	daxa::gpu::QueueHandle queue;
 	daxa::gpu::SwapchainHandle swapchain;
