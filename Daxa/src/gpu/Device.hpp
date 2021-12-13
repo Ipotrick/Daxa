@@ -41,6 +41,8 @@ namespace daxa {
 
 			static DeviceHandle create();
 
+			SamplerHandle createSampler(SamplerCreateInfo ci);
+
 			/**
 			 * \param ci all information defining the 2d image
 			 * \return a reference counted image handle of the created image ressource.

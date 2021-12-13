@@ -47,6 +47,9 @@ namespace daxa {
 			 */
 			void submit(SubmitInfo submitInfo);
 
+			
+			void submitBlocking(SubmitInfo submitInfo);
+
 			void present(SwapchainImage&& img, SignalHandle& waitOnSignal);
 
 			void checkForFinishedSubmits();
