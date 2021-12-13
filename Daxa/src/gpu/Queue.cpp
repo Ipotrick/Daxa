@@ -14,7 +14,11 @@ namespace daxa {
 
 		void Queue::submit(SubmitInfo si) {
 			for (auto& cmdList : si.commandLists) {
-				DAXA_ASSERT_M(cmdList->operationsInProgress == 0, "can not submit command list with recording in progress");
+				for (auto& sbuffer : cmdList->usedStagingBuffers) {
+					DAXA_ASSERT_M(!sbuffer.buffer->isMemoryMapped(), "can not submit command list. Some Buffers used in the command list have mapped memory, all memory to used buffers need to be unmapped before a submit.");
+				}
+
+				DAXA_ASSERT_M(cmdList->operationsInProgress == 0, "can not submit command list with recording in progress.");
 				submitCommandBufferBuffer.push_back(cmdList->cmd);
 				cmdList->usesOnGPU += 1;
 			
@@ -28,6 +32,7 @@ namespace daxa {
 					}
 				}
 				for (auto& buffer : cmdList->usedBuffers) {
+					DAXA_ASSERT_M(!buffer->isMemoryMapped(), "can not submit command list. Some Buffers used in the command list have mapped memory, all memory to used buffers need to be unmapped before a submit.");
 					buffer->usesOnGPU += 1;
 				}
 			}
@@ -99,6 +104,11 @@ namespace daxa {
 			auto timeline = std::move(unusedTimelines.back());
 			unusedTimelines.pop_back();
 			return timeline;
+		}
+
+		void Queue::submitBlocking(SubmitInfo submitInfo) {
+			submit(submitInfo);
+			unfinishedSubmits.back().timelineSema->wait(unfinishedSubmits.back().finishCounter);
 		}
 
 		void Queue::checkForFinishedSubmits() {

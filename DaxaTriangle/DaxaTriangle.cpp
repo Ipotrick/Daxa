@@ -117,11 +117,15 @@ public:
 			-1.f, 1.f, 0.0f,	0.f, 1.f, 0.f, 1.f,
 			 0.f,-1.f, 0.0f,	0.f, 0.f, 1.f, 1.f,
 		};
-		cmdList->copyHostToBuffer(daxa::gpu::HostToBufferCopyInfo{
-			.src = vertecies.data(),
-			.dst = vertexBuffer,
-			.size = vertecies.size() * sizeof(float)
-		});
+		auto mappedMemory = cmdList->mapMemoryStaged(vertexBuffer, sizeof(decltype(vertecies)), 0);
+		std::memcpy(mappedMemory.hostPtr, vertecies.data(), mappedMemory.size);
+		cmdList->unmapMemoryStaged(mappedMemory);
+		// this code above is equivalent to the code below:
+		//cmdList->copyHostToBuffer(daxa::gpu::HostToBufferCopyInfo{
+		//	.src = vertecies.data(),
+		//	.dst = vertexBuffer,
+		//	.size = vertecies.size() * sizeof(float)
+		//});
 
 		std::array someBufferdata = { 1.0f , 1.0f , 1.0f ,1.0f };
 		cmdList->copyHostToBuffer(daxa::gpu::HostToBufferCopyInfo{
