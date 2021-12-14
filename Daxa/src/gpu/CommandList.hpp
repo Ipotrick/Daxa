@@ -213,9 +213,13 @@ namespace daxa {
 
 			void bindVertexBuffer(u32 binding, BufferHandle buffer, size_t bufferOffset = 0);
 
+			void bindIndexBuffer(BufferHandle buffer, size_t bufferOffset = 0, VkIndexType indexType = VK_INDEX_TYPE_UINT32);
+
 			void bindSet(u32 setBinding, BindingSetHandle set);
 
 			void draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance);
+
+			void drawIndexed(u32 indexCount, u32 instanceCount, u32 firstIndex, i32 vertexOffset, u32 firstIntance);
 
 			// sync:
 

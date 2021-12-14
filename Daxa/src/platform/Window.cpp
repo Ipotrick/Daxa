@@ -57,7 +57,8 @@ namespace daxa {
 		return name;
 	}
 	bool Window::isFocused() const {
-		return false;
+		auto mask = SDL_GetWindowFlags(sdlWindowHandle);
+		return mask & SDL_WINDOW_INPUT_FOCUS;
 	}
 	bool Window::keyPressed(Scancode key) const {
 		return !keyHidden[u32(key)] && (*keyStates)[u32(key)];
@@ -112,15 +113,8 @@ namespace daxa {
 	std::array<i32, 2> Window::getCursorPosition() const {
 		return cursorPos;
 	}
-	std::array<i32, 2> Window::getPrevCursorPosition() const {
-		return prevCursorPos;
-	}
 	Vec2 Window::getCursorPositionVec() const {
 		auto [x, y] = getCursorPosition();
-		return Vec2{ static_cast<f32>(x), static_cast<f32>(y) };
-	}
-	Vec2 Window::getPrevCursorPositionVec() const {
-		auto [x, y] = getPrevCursorPosition();
 		return Vec2{ static_cast<f32>(x), static_cast<f32>(y) };
 	}
 	Vec2 Window::getCursorPositionRelative() const {
@@ -132,8 +126,8 @@ namespace daxa {
 	std::array<i32, 2> Window::getCursorPositionChange() const {
 		if ((cursorPos[0] < size[0] && cursorPos[0] >= 0 && cursorPos[1] < size[1] && cursorPos[1] >= 0) || bCursorCaptured) {
 			return {
-				cursorPos[0] - prevCursorPos[0],
-				cursorPos[1] - prevCursorPos[1],
+				cursorPosChangeX,
+				cursorPosChangeY,
 			};
 		}	
 		else {
@@ -149,17 +143,27 @@ namespace daxa {
 	}
 	Vec2 Window::getCursorPositionChangeRelative() const {
 		return getCursorPositionRelative() - Vec2{
-			f32(prevCursorPos[0]) / f32(size[0]) * 2.0f - 1.0f,
-			f32(prevCursorPos[1]) / f32(size[1]) * 2.0f - 1.0f,
+			f32(cursorPosChangeX) / f32(size[0]) * 2.0f - 1.0f,
+			f32(cursorPosChangeY) / f32(size[1]) * 2.0f - 1.0f,
 		};
 	}
+	bool Window::isCursorOverWindow() const {
+		return cursorPos[0] >= 0 && cursorPos[0] < size[0] && cursorPos[1] >= 0 && cursorPos[1] < size[1];
+	}
 	void Window::captureCursor() {
-		SDL_SetRelativeMouseMode(SDL_TRUE);
+		SDL_SetWindowGrab(sdlWindowHandle, SDL_TRUE);
+		SDL_ShowCursor(SDL_DISABLE);
+		printf("capture\n");
 		bCursorCaptured = true;
 	}
 	void Window::releaseCursor() {
-		SDL_SetRelativeMouseMode(SDL_FALSE);
+		printf("release\n");
+		SDL_SetWindowGrab(sdlWindowHandle, SDL_FALSE);
+		SDL_ShowCursor(SDL_ENABLE);
 		bCursorCaptured = false;
+	}
+	bool Window::isCursorCaptured() const {
+		return bCursorCaptured;
 	}
 	f32 Window::scrollX() const {
 		return scrollXHidden ? 0.0f : m_scrollX;
@@ -183,16 +187,21 @@ namespace daxa {
 		hideScrollY();
 		return ret;
 	}
-	bool Window::isCursorCaptured() const {
-		return bCursorCaptured;
-	}
 	bool Window::update(f32 deltaTime) 	{
-		if (bCursorCaptured && isFocused()) {
-			std::cout << "warp mouse to 1,1 \n";
-			if (SDL_WarpMouseGlobal(0, 0) < 0) {
-				std::cout << "warp failed\n";
+		bool close{ false };
+		SDL_Event event;
+		while (SDL_PollEvent(&event)) {
+			switch (event.type) {
+			case SDL_QUIT:
+				close = true;
+				break;
+			case SDL_KEYDOWN:
+				break;
+			case SDL_WINDOWEVENT:
+				{
+				}
+				break;
 			}
-			SDL_WarpMouseInWindow(sdlWindowHandle, 1, 1);
 		}
 
 		scrollXHidden = false;
@@ -211,14 +220,20 @@ namespace daxa {
 		}
 
 		// Mouse
-		prevCursorPos = cursorPos;
+		auto prevCursorPos = cursorPos;
 		std::swap(buttonStates, prevButtonStates);
 		const u32 buttonMask = SDL_GetMouseState(&cursorPos[0], &cursorPos[1]);
 		for (i32 i = 0; i < 5; ++i) {
-			(*buttonStates)[i] = buttonMask & SDL_BUTTON(i + 1 /*button index starts with 11 for some reason! SDL2 moment*/);
+			(*buttonStates)[i] = buttonMask & SDL_BUTTON(i);
 		}
 		for (i32 i = 0; i < 5; ++i) {
 			buttonHidden[i] = false;
+		}
+		cursorPosChangeX = cursorPos[0] - prevCursorPos[0];
+		cursorPosChangeY = cursorPos[1] - prevCursorPos[1];
+		if (bCursorCaptured) {
+			SDL_WarpMouseInWindow(sdlWindowHandle, size[0]/2, size[1]/2);
+			cursorPos = {(i32)size[0]/2, (i32)size[1]/2};
 		}
 
 		if (bChangedSize) {
@@ -227,18 +242,12 @@ namespace daxa {
 		}
 
 		// Events
-		bool close{ false };
-		SDL_Event event;
-		while (SDL_PollEvent(&event)) {
-			switch (event.type) {
-			case SDL_QUIT:
-				close = true;
-				break;
-			case SDL_KEYDOWN:
-				break;
-			}
-		}
 		SDL_GetWindowSize(sdlWindowHandle, (int*)&this->size[0], (int*)&this->size[1]);
+
+		if (!isFocused() && bCursorCaptured) {
+			releaseCursor();
+		}
+
 		return close;
 	}
 
