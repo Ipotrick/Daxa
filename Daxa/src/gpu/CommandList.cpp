@@ -213,6 +213,14 @@ namespace daxa {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			auto vkBuffer = buffer->getVkBuffer();
 			vkCmdBindVertexBuffers(cmd, binding, 1, &vkBuffer, &bufferOffset);
+			usedBuffers.push_back(buffer);
+		}
+
+		void CommandList::bindIndexBuffer(BufferHandle buffer, size_t bufferOffset, VkIndexType indexType) {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			auto vkBuffer = buffer->getVkBuffer();
+			vkCmdBindIndexBuffer(cmd, vkBuffer, bufferOffset, indexType);
+			usedBuffers.push_back(buffer);
 		}
 
 		void CommandList::beginRendering(BeginRenderingInfo ri) {
@@ -349,6 +357,11 @@ namespace daxa {
 		void CommandList::draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance) {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			vkCmdDraw(cmd, vertexCount, instanceCount, firstVertex, firstInstance);
+		}
+
+		void CommandList::drawIndexed(u32 indexCount, u32 instanceCount, u32 firstIndex, i32 vertexOffset, u32 firstIntance) {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			vkCmdDrawIndexed(cmd, indexCount, instanceCount, firstIndex, vertexOffset, firstIntance);
 		}
 
 		void CommandList::bindSet(u32 setBinding, BindingSetHandle set) {

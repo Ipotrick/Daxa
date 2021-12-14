@@ -64,6 +64,11 @@ namespace daxa {
 			}
 		}
 
+		GraphicsPipelineBuilder& GraphicsPipelineBuilder::configurateDepthTest(DepthTestSettings depthTestSettings2) {
+			depthTestSettings = depthTestSettings2;
+			return *this;
+		}
+
 		GraphicsPipelineBuilder& GraphicsPipelineBuilder::beginVertexInputAttributeBinding(VkVertexInputRate inputRate) {
 			if (bVertexAtrributeBindingBuildingOpen) {
 				endVertexInputAttributeBinding();
@@ -120,10 +125,10 @@ namespace daxa {
 			return *this;
 		}
 
-		GraphicsPipelineBuilder& GraphicsPipelineBuilder::setDepthStencil(const VkPipelineDepthStencilStateCreateInfo& depthStencil) {
-			this->depthStencil = depthStencil;
-			return *this;
-		}
+		//GraphicsPipelineBuilder& GraphicsPipelineBuilder::setDepthStencil(const VkPipelineDepthStencilStateCreateInfo& depthStencil) {
+		//	this->depthStencil = depthStencil;
+		//	return *this;
+		//}
 
 		std::vector<VkPushConstantRange> reflectPushConstants(const std::vector<uint32_t>& spv, VkShaderStageFlagBits shaderStage) {
 			SpvReflectShaderModule module = {};
@@ -246,15 +251,15 @@ namespace daxa {
 			return *this;
 		}
 
-		GraphicsPipelineBuilder& GraphicsPipelineBuilder::addDepthAttachment(const VkFormat& attachmentFormat) {
-			this->depthAttachmentFormat = attachmentFormat;
-			return *this;
-		}
+		//GraphicsPipelineBuilder& GraphicsPipelineBuilder::addDepthAttachment(const VkFormat& attachmentFormat) {
+		//	this->depthAttachmentFormat = attachmentFormat;
+		//	return *this;
+		//}
 
-		GraphicsPipelineBuilder& GraphicsPipelineBuilder::addStencilAttachment(const VkFormat& attachmentFormat) {
-			this->stencilAttachmentFormat = attachmentFormat;
-			return *this;
-		}
+		//GraphicsPipelineBuilder& GraphicsPipelineBuilder::addStencilAttachment(const VkFormat& attachmentFormat) {
+		//	this->stencilAttachmentFormat = attachmentFormat;
+		//	return *this;
+		//}
 
 		constexpr VkPipelineRasterizationStateCreateInfo DEFAULT_RASTER_STATE_CI{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
@@ -276,13 +281,6 @@ namespace daxa {
 			.pNext = nullptr,
 			.rasterizationSamples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT,
 			.minSampleShading = 1.0f,
-		};
-
-		constexpr VkPipelineDepthStencilStateCreateInfo DEFAULT_DEPTH_STENCIL_STATE_CI{
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-			.pNext = nullptr,
-			.depthTestEnable = VK_FALSE,
-			.stencilTestEnable = VK_FALSE,
 		};
 
 		constexpr VkViewport DEFAULT_VIEWPORT{
@@ -349,7 +347,21 @@ namespace daxa {
 			VkPipelineInputAssemblyStateCreateInfo pinputAssemlyStateCI = inputAssembly.value_or(DEFAULT_INPUT_ASSEMBLY_STATE_CI);
 			VkPipelineRasterizationStateCreateInfo prasterizationStateCI = rasterization.value_or(DEFAULT_RASTER_STATE_CI);
 			VkPipelineMultisampleStateCreateInfo pmultisamplerStateCI = multisampling.value_or(DEFAULT_MULTISAMPLE_STATE_CI);
-			VkPipelineDepthStencilStateCreateInfo pDepthStencilStateCI = depthStencil.value_or(DEFAULT_DEPTH_STENCIL_STATE_CI);
+
+			VkPipelineDepthStencilStateCreateInfo pDepthStencilStateCI{
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+				.pNext = nullptr,
+				.flags = {},
+				.depthTestEnable = depthTestSettings.enableDepthTest,
+				.depthWriteEnable = depthTestSettings.enableDepthWrite,
+				.depthCompareOp = depthTestSettings.depthTestCompareOp,
+				.depthBoundsTestEnable = VK_FALSE,
+				.stencilTestEnable = VK_FALSE,
+				.front = {},
+				.back = {},
+				.minDepthBounds = depthTestSettings.minDepthBounds,
+				.maxDepthBounds = depthTestSettings.maxDepthBounds,
+			};
 
 			VkPipelineViewportStateCreateInfo viewportStateCI{
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
@@ -385,8 +397,8 @@ namespace daxa {
 				.pNext = nullptr,
 				.colorAttachmentCount = static_cast<u32>(this->colorAttachmentFormats.size()),
 				.pColorAttachmentFormats = this->colorAttachmentFormats.data(),
-				.depthAttachmentFormat = this->depthAttachmentFormat.value_or(VkFormat::VK_FORMAT_UNDEFINED),
-				.stencilAttachmentFormat = this->stencilAttachmentFormat.value_or(VkFormat::VK_FORMAT_UNDEFINED),
+				.depthAttachmentFormat = this->depthTestSettings.depthAttachmentFormat,
+				.stencilAttachmentFormat = VkFormat::VK_FORMAT_UNDEFINED,
 			};
 
 			VkGraphicsPipelineCreateInfo pipelineCI{
