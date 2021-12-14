@@ -16,11 +16,11 @@ struct SDL_Window;
 namespace daxa {
 
 	enum class MouseButton : u8 {
-		Left     = 0,
-		Middle   = 1,
-		Right    = 2,
-		X1       = 3,
-		X2       = 4
+		Left     = 1,
+		Middle   = 2,
+		Right    = 3,
+		X1       = 4,
+		X2       = 5
 	};
 
 	struct KeyEvent {
@@ -61,8 +61,6 @@ namespace daxa {
 
 		bool isFocused() const;
 
-		bool isCursorCaptured() const;
-
 		bool keyPressed(Scancode key) const;
 		bool keyJustPressed(Scancode key) const;
 		bool keyReleased(Scancode key) const;
@@ -81,15 +79,15 @@ namespace daxa {
 		bool buttonJustReleasedAndHide(MouseButton button);
 
 		std::array<i32,2> getCursorPosition() const; 
-		std::array<i32,2> getPrevCursorPosition() const; 
 		Vec2 getCursorPositionVec() const;
-		Vec2 getPrevCursorPositionVec() const;
 		Vec2 getCursorPositionRelative() const;
 		std::array<i32, 2> getCursorPositionChange() const;
 		Vec2 getCursorPositionChangeVec() const;
 		Vec2 getCursorPositionChangeRelative() const;
+		bool isCursorOverWindow() const;
 		void captureCursor();
 		void releaseCursor();
+		bool isCursorCaptured() const;
 
 		f32 scrollX() const;
 		f32 scrollY() const;
@@ -125,8 +123,9 @@ namespace daxa {
 		bool scrollXHidden{ false };
 		bool scrollYHidden{ false };
 		std::vector<KeyEvent> eventQ;
-
+		bool bFocused = false;
 		std::array<i32, 2> cursorPos;
-		std::array<i32, 2> prevCursorPos;
+		i32 cursorPosChangeX = 0;
+		i32 cursorPosChangeY = 0;
 	};
 }

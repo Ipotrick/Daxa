@@ -67,6 +67,15 @@ namespace daxa {
 			std::shared_ptr<GraphicsPipeline> pipeline = {};
 		};
 
+		struct DepthTestSettings {
+			VkFormat depthAttachmentFormat = VK_FORMAT_UNDEFINED;
+			bool enableDepthTest = false;
+			bool enableDepthWrite = false;
+			VkCompareOp depthTestCompareOp = VK_COMPARE_OP_LESS;
+			f32 minDepthBounds = 0.0f;
+			f32 maxDepthBounds = 1.0f;
+		};
+
 		class GraphicsPipelineBuilder {
 		public:
 			GraphicsPipelineBuilder() = default;
@@ -74,15 +83,13 @@ namespace daxa {
 			GraphicsPipelineBuilder& addVertexInputAttribute(VkFormat format);
 			GraphicsPipelineBuilder& addVertexInputAttributeSpacer(u32 spacing);
 			GraphicsPipelineBuilder& endVertexInputAttributeBinding();
+			GraphicsPipelineBuilder& configurateDepthTest(DepthTestSettings depthTestSettings2);
 			GraphicsPipelineBuilder& setInputAssembly(const VkPipelineInputAssemblyStateCreateInfo& inputassembly);
 			GraphicsPipelineBuilder& setRasterization(const VkPipelineRasterizationStateCreateInfo& rasterization);
 			GraphicsPipelineBuilder& setMultisampling(const VkPipelineMultisampleStateCreateInfo& multisampling);
-			GraphicsPipelineBuilder& setDepthStencil(const VkPipelineDepthStencilStateCreateInfo& depthStencil);
 			GraphicsPipelineBuilder& addShaderStage(const ShaderModuleHandle& shaderModule);
 			GraphicsPipelineBuilder& addColorAttachment(const VkFormat& attachmentFormat);
 			GraphicsPipelineBuilder& addColorAttachment(const VkFormat& attachmentFormat, const VkPipelineColorBlendAttachmentState&);
-			GraphicsPipelineBuilder& addDepthAttachment(const VkFormat& attachmentFormat);
-			GraphicsPipelineBuilder& addStencilAttachment(const VkFormat& attachmentFormat);
 		private:
 			friend class Device;
 			GraphicsPipelineHandle build(VkDevice, BindingSetDescriptionCache& bindingSetCache);
@@ -99,7 +106,7 @@ namespace daxa {
 			std::optional<VkPipelineInputAssemblyStateCreateInfo> inputAssembly;
 			std::optional<VkPipelineRasterizationStateCreateInfo> rasterization;
 			std::optional<VkPipelineMultisampleStateCreateInfo> multisampling;
-			std::optional<VkPipelineDepthStencilStateCreateInfo> depthStencil;
+			DepthTestSettings depthTestSettings = {};
 			std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 			std::vector<VkDynamicState> dynamicStateEnable;
 			std::vector<VkPushConstantRange> pushConstants;
@@ -107,8 +114,6 @@ namespace daxa {
 			std::vector<VkPipelineShaderStageCreateInfo> shaderStageCreateInfo;
 			std::vector<VkPipelineColorBlendAttachmentState> colorAttachmentBlends;
 			std::vector<VkFormat> colorAttachmentFormats;
-			std::optional<VkFormat> depthAttachmentFormat;
-			std::optional<VkFormat> stencilAttachmentFormat;
 		};
 	}
 }

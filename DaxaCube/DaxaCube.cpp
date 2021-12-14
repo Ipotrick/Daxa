@@ -11,15 +11,13 @@ class GimbalLockedCameraController {
 public:
 	glm::mat4 update(daxa::Window& window, f32 dt) {
 		f32 speed = window.keyPressed(daxa::Scancode::LSHIFT) ? translationSpeed * 4.0f : translationSpeed;
-		if (bCursorCaptured) {
+		if (window.isCursorCaptured()) {
 			if (window.keyJustPressed(daxa::Scancode::ESCAPE)) {
 				window.releaseCursor();
-				bCursorCaptured = false;
 			}
 		} else {
-			if (window.buttonJustPressed(daxa::MouseButton::Left)) {
+			if (window.buttonJustPressed(daxa::MouseButton::Left) && window.isCursorOverWindow()) {
 				window.captureCursor();
-				bCursorCaptured = true;
 			}
 		}
 
@@ -43,12 +41,13 @@ public:
 			translation += yawRotaAroundUp * direction * dt * speed;
 		}
 		if (window.keyPressed(daxa::Scancode::SPACE)) {
-			translation += glm::vec4{ 0.f, 0.f, 1.f, 0.f } * dt * speed;
+			translation += yawRotaAroundUp * pitchRotation * glm::vec4{ 0.f,  1.f, 0.f, 0.f } * dt * speed;
 		}
 		if (window.keyPressed(daxa::Scancode::LCTRL)) {
-			translation += glm::vec4{ 0.f, 0.f, -1.f, 0.f } * dt * speed;
+			translation += yawRotaAroundUp * pitchRotation * glm::vec4{ 0.f, -1.f,  0.f, 0.f } * dt * speed;
 		}
 		if (window.isCursorCaptured()) {
+			printf("change: %i %i\n", window.getCursorPositionChange()[0],window.getCursorPositionChange()[1]);
 			pitch -= window.getCursorPositionChange()[1] * cameraSwaySpeed * dt;
 			pitch = std::clamp(pitch, 0.0f, glm::pi<f32>());
 			yaw += window.getCursorPositionChange()[0] * cameraSwaySpeed * dt;
@@ -62,11 +61,10 @@ public:
 		return prespective * view;
 	}
 private:
-	bool bCursorCaptured = false;
 	f32 fov = 74.0f;
 	f32 near = 0.1f;
 	f32 far = 1'000.0f;
-	f32 cameraSwaySpeed = 0.1f;
+	f32 cameraSwaySpeed = 1.0f;
 	f32 translationSpeed = 5.0f;
 	glm::vec4 up = { 0.f, 0.f, 1.0f, 0.f };
 	glm::vec4 position = { 0.f, 0.f, 0.f, 1.f };
@@ -87,9 +85,9 @@ public:
 			#extension GL_KHR_vulkan_glsl : enable
 
 			layout(location = 0) in vec3 position;
-			layout(location = 1) in vec4 color;
+			layout(location = 1) in vec2 uv;
 
-			layout(location = 10) out vec4 v_color;
+			layout(location = 10) out vec2 vtf_uv;
 
 			layout(set = 0, binding = 0) uniform Globals {
 				mat4 vp;
@@ -97,7 +95,7 @@ public:
 
 			void main()
 			{
-				v_color = color;
+				vtf_uv = uv;
 				gl_Position = globals.vp * vec4(position, 1.0f);
 			}
 		)";
@@ -106,13 +104,13 @@ public:
 			#version 450
 			#extension GL_KHR_vulkan_glsl : enable
 
-			layout(location = 10) in vec4 v_color;
+			layout(location = 10) in vec2 vtf_uv;
 
 			layout (location = 0) out vec4 outFragColor;
 
 			void main()
 			{
-				vec4 color = v_color;
+				vec4 color = vec4(vtf_uv,0.0f,1.0f);
 				outFragColor = color;
 			}
 		)";
@@ -131,6 +129,7 @@ public:
 		pipelineBuilder
 			.addShaderStage(vertexShader)
 			.addShaderStage(fragmenstShader)
+			.configurateDepthTest({.enableDepthTest = true, .enableDepthWrite = true, .depthAttachmentFormat = VK_FORMAT_D32_SFLOAT})
 			// adding a vertex input attribute binding:
 			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
 			// all added vertex input attributes are added to the previously added vertex input attribute binding
@@ -143,19 +142,74 @@ public:
 
 		this->globalsUniformAllocator = device->createBindingSetAllocator(pipeline->getSetDescription(0));
 
-		// use the explicit create info structs:
-		daxa::gpu::BufferCreateInfo bufferCI{
-			.size = sizeof(float) * 3 * 3 /* positions */ + sizeof(float) * 4 * 3 /* colors */,
+		std::array cubeVertecies{
+			/*positions*/			/*tex uv*/
+			-1.f, -1.f, -1.f, 		0.f, 0.f,
+			 1.f, -1.f, -1.f, 		0.f, 1.f,
+			 1.f,  1.f, -1.f, 		1.f, 1.f,
+			-1.f,  1.f, -1.f, 		1.f, 0.f,
+			-1.f,  1.f,  1.f, 		0.f, 0.f,
+			 1.f,  1.f,  1.f, 		0.f, 1.f,
+			 1.f, -1.f,  1.f, 		1.f, 1.f,
+			-1.f, -1.f,  1.f, 		1.f, 0.f,
+		};
+		this->vertexBuffer = device->createBuffer({
+			.size = sizeof(float) * 5 * 8,
 			.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
-		};
-		this->vertexBuffer = device->createBuffer(bufferCI);
+		});
 
-		// or use them embedded, like a named parameter list:
+		std::array cubeIndices{
+			0, 2, 1, //face front
+			0, 3, 2,
+			2, 3, 4, //face top
+			2, 4, 5,
+			1, 2, 5, //face right
+			1, 5, 6,
+			0, 7, 4, //face left
+			0, 4, 3,
+			5, 4, 7, //face back
+			5, 7, 6,
+			0, 6, 7, //face bottom
+			0, 1, 6
+		};
+		this->indexBuffer = device->createBuffer({
+			.size = sizeof(u32) * 3 * 12,
+			.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
+		});
+
+		auto cmdList = device->getEmptyCommandList();
+		cmdList->begin();
+		cmdList->copyHostToBuffer({
+			.src = cubeVertecies.data(),
+			.dst = vertexBuffer,
+			.size = sizeof(decltype(cubeVertecies)),
+		});
+		cmdList->copyHostToBuffer({
+			.src = cubeIndices.data(),
+			.dst = indexBuffer,
+			.size = sizeof(decltype(cubeIndices)),
+		});
+		cmdList->end();
+		queue->submitBlocking({
+			.commandLists = {cmdList},
+		});
+		queue->checkForFinishedSubmits();
+
 		this->globalUniformBuffer = device->createBuffer({
 			.size = sizeof(glm::mat4),
 			.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
+		});
+
+		depthImage = device->createImage2d({
+			.width = app.window->getSize()[0],
+			.height = app.window->getSize()[1],
+			.format = VK_FORMAT_D32_SFLOAT,
+			.imageAspekt = VK_IMAGE_ASPECT_DEPTH_BIT,
+			.imageUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+			.memoryPropertyFlags = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 
 		for (int i = 0; i < 3; i++) {
@@ -170,6 +224,14 @@ public:
 			device->waitIdle();
 			swapchain->resize(VkExtent2D{ .width = app.window->getSize()[0], .height = app.window->getSize()[1] });
 			swapchainImage = swapchain->aquireNextImage();
+			depthImage = device->createImage2d({
+				.width = app.window->getSize()[0],
+				.height = app.window->getSize()[1],
+				.format = VK_FORMAT_D32_SFLOAT,
+				.imageAspekt = VK_IMAGE_ASPECT_DEPTH_BIT,
+				.imageUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+				.memoryPropertyFlags = VMA_MEMORY_USAGE_GPU_ONLY,
+			});
 		}
 
 		auto* currentFrame = &frames.front();
@@ -181,17 +243,6 @@ public:
 
 		/// ------------ Begin Data Uploading ---------------------
 
-
-		std::array vertecies = {
-			 1.f, 1.f, 0.5f,	1.f, 0.f, 0.f, 1.f,
-			-1.f, 1.f, 0.5f,	0.f, 1.f, 0.f, 1.f,
-			 0.f,-1.f, 0.5f,	0.f, 0.f, 1.f, 1.f,
-		};
-		cmdList->copyHostToBuffer(daxa::gpu::HostToBufferCopyInfo{
-			.src = vertecies.data(),
-			.dst = vertexBuffer,
-			.size = sizeof(decltype(vertecies))
-		});
 
 		auto vp = cameraController.update(*app.window, app.getDeltaTimeSeconds());
 		cmdList->copyHostToBuffer(daxa::gpu::HostToBufferCopyInfo{
@@ -209,8 +260,8 @@ public:
 		} };
 		// array because we can allways pass multiple barriers at once for driver efficiency
 		std::array memBarrier0 = { daxa::gpu::MemoryBarrier{
-			.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,				// wait for writing the vertex buffer
-			.waitingStages = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT_KHR,		// the vertex creating must wait
+			.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,				// wait for writing the uniform buffer
+			.waitingStages = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT_KHR,		// the vertex shader must wait until uniform is written
 		} };
 		cmdList->insertBarriers(memBarrier0, {}, imgBarrier0);
 		
@@ -223,8 +274,16 @@ public:
 				.clearValue = { .color = VkClearColorValue{.float32 = { 1.f, 1.f, 1.f, 1.f } } },
 			}
 		};
+		daxa::gpu::RenderAttachmentInfo depthAttachment{
+			.image = depthImage,
+			.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+			.clearValue = { .depthStencil = VkClearDepthStencilValue{ .depth = 1.0f } },
+			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+			.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+		};
 		cmdList->beginRendering(daxa::gpu::BeginRenderingInfo{
 			.colorAttachments = framebuffer,
+			.depthAttachment = &depthAttachment,
 		});
 		
 		cmdList->bindPipeline(pipeline);
@@ -233,9 +292,11 @@ public:
 		set->bindBuffer(0, globalUniformBuffer);
 		cmdList->bindSet(0, set);
 		
+		cmdList->bindIndexBuffer(indexBuffer);
+
 		cmdList->bindVertexBuffer(0, vertexBuffer);
 		
-		cmdList->draw(3, 1, 0, 0);
+		cmdList->drawIndexed(indexBuffer->getSize() / sizeof(u32), 1, 0, 0, 0);
 		
 		cmdList->endRendering();
 
@@ -290,9 +351,11 @@ private:
 	daxa::gpu::QueueHandle queue;
 	daxa::gpu::SwapchainHandle swapchain;
 	daxa::gpu::SwapchainImage swapchainImage;
+	daxa::gpu::ImageHandle depthImage;
 	daxa::gpu::GraphicsPipelineHandle pipeline;
 	daxa::gpu::BindingSetAllocatorHandle globalsUniformAllocator;
 	daxa::gpu::BufferHandle vertexBuffer;
+	daxa::gpu::BufferHandle indexBuffer;
 	daxa::gpu::BufferHandle globalUniformBuffer;
 	double totalElapsedTime = 0.0f;
 	struct PerFrameData {
