@@ -175,6 +175,8 @@ namespace daxa {
 
 			void copyHostToImage(HostToImageCopyInfo copyInfo);
 
+			void copyHostToImageSynced(HostToImageCopyInfo copyInfo, VkImageLayout finalImageLayout);
+
 			void copyMultiBufferToBuffer(BufferToBufferMultiCopyInfo copyInfo);
 
 			void copyBufferToBuffer(BufferToBufferCopyInfo copyInfo);

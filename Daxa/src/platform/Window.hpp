@@ -16,11 +16,11 @@ struct SDL_Window;
 namespace daxa {
 
 	enum class MouseButton : u8 {
-		Left     = 1,
-		Middle   = 2,
-		Right    = 3,
-		X1       = 4,
-		X2       = 5
+		Left     = 0,
+		Middle   = 1,
+		Right    = 2,
+		X1       = 3,
+		X2       = 4
 	};
 
 	struct KeyEvent {
@@ -60,6 +60,8 @@ namespace daxa {
 		bool update(f32 deltaTime);
 
 		bool isFocused() const;
+
+		bool isCursorCaptured() const;
 
 		bool keyPressed(Scancode key) const;
 		bool keyJustPressed(Scancode key) const;
