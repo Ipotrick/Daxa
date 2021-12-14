@@ -130,10 +130,18 @@ namespace daxa {
 		};
 	}
 	std::array<i32, 2> Window::getCursorPositionChange() const {
-		return {
-			cursorPos[0] - prevCursorPos[0],
-			cursorPos[1] - prevCursorPos[1],
-		};
+		if ((cursorPos[0] < size[0] && cursorPos[0] >= 0 && cursorPos[1] < size[1] && cursorPos[1] >= 0) || bCursorCaptured) {
+			return {
+				cursorPos[0] - prevCursorPos[0],
+				cursorPos[1] - prevCursorPos[1],
+			};
+		}	
+		else {
+			return {
+				0,
+				0,
+			};
+		}
 	}
 	Vec2 Window::getCursorPositionChangeVec() const {
 		auto [x, y] = getCursorPositionChange();
@@ -175,13 +183,16 @@ namespace daxa {
 		hideScrollY();
 		return ret;
 	}
+	bool Window::isCursorCaptured() const {
+		return bCursorCaptured;
+	}
 	bool Window::update(f32 deltaTime) 	{
-		if (bCursorCaptured) {
+		if (bCursorCaptured && isFocused()) {
 			std::cout << "warp mouse to 1,1 \n";
 			if (SDL_WarpMouseGlobal(0, 0) < 0) {
 				std::cout << "warp failed\n";
 			}
-			//SDL_WarpMouseInWindow(sdlWindowHandle, 1, 1);
+			SDL_WarpMouseInWindow(sdlWindowHandle, 1, 1);
 		}
 
 		scrollXHidden = false;
@@ -191,6 +202,8 @@ namespace daxa {
 		std::swap(keyStates, prevKeyStates);
 		const u8* keystate = SDL_GetKeyboardState(nullptr /* its 512 */);
 		for (i32 i = 0; i < 512; ++i) {
+			if (keystate[i]) {
+			}
 			(*keyStates)[i] = keystate[i];
 		}
 		for (i32 i = 0; i < 512; ++i) {

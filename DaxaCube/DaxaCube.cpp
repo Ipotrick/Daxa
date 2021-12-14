@@ -10,54 +10,54 @@
 class GimbalLockedCameraController {
 public:
 	glm::mat4 update(daxa::Window& window, f32 dt) {
+		f32 speed = window.keyPressed(daxa::Scancode::LSHIFT) ? translationSpeed * 4.0f : translationSpeed;
 		if (bCursorCaptured) {
 			if (window.keyJustPressed(daxa::Scancode::ESCAPE)) {
-				printf("release mouse\n");
 				window.releaseCursor();
 				bCursorCaptured = false;
 			}
 		} else {
 			if (window.buttonJustPressed(daxa::MouseButton::Left)) {
-				printf("capture mouse\n");
 				window.captureCursor();
 				bCursorCaptured = true;
 			}
 		}
 
 		auto yawRotaAroundUp = glm::rotate(glm::mat4(1.0f), yaw, {0.f,0.f,1.f});
+		auto pitchRotation = glm::rotate(glm::mat4(1.0f), pitch, glm::vec3{1.f,0.f,0.f});
 		glm::vec4 translation = {};
 		if (window.keyPressed(daxa::Scancode::W)) {
-			glm::vec4 direction = { 0.0f, 1.0f, 0.0f, 0.0f };
-			translation += yawRotaAroundUp * direction * dt * translationSpeed;
+			glm::vec4 direction = { 0.0f, 0.0f, -1.0f, 0.0f };
+			translation += yawRotaAroundUp * pitchRotation * direction * dt * speed;
 		}
 		if (window.keyPressed(daxa::Scancode::S)) {
-			glm::vec4 direction = { 0.0f, -1.0f, 0.0f, 0.0f };
-			translation += yawRotaAroundUp * direction * dt * translationSpeed;
+			glm::vec4 direction = { 0.0f, 0.0f, 1.0f, 0.0f };
+			translation += yawRotaAroundUp * pitchRotation * direction * dt * speed;
 		}
 		if (window.keyPressed(daxa::Scancode::A)) {
-			glm::vec4 direction = { -1.0f, 0.0f, 0.0f, 0.0f };
-			translation += yawRotaAroundUp * direction * dt * translationSpeed;
+			glm::vec4 direction = { 1.0f, 0.0f, 0.0f, 0.0f };
+			translation += yawRotaAroundUp * direction * dt * speed;
 		}
 		if (window.keyPressed(daxa::Scancode::D)) {
-			glm::vec4 direction = { 1.0f, 0.0f, 0.0f, 0.0f };
-			translation += yawRotaAroundUp * direction * dt * translationSpeed;
+			glm::vec4 direction = { -1.0f, 0.0f, 0.0f, 0.0f };
+			translation += yawRotaAroundUp * direction * dt * speed;
 		}
 		if (window.keyPressed(daxa::Scancode::SPACE)) {
-			translation += glm::vec4{ 0.f, 0.f, 1.f, 0.f } * dt * translationSpeed;
+			translation += glm::vec4{ 0.f, 0.f, 1.f, 0.f } * dt * speed;
 		}
-		if (window.keyPressed(daxa::Scancode::LSHIFT)) {
-			translation += glm::vec4{ 0.f, 0.f, -1.f, 0.f } * dt * translationSpeed;
+		if (window.keyPressed(daxa::Scancode::LCTRL)) {
+			translation += glm::vec4{ 0.f, 0.f, -1.f, 0.f } * dt * speed;
 		}
-		pitch += window.getCursorPositionChange()[0] * cameraSwaySpeed * dt;
-		pitch = std::clamp(pitch, 0.0f, glm::pi<f32>()*2);
-		yaw += window.getCursorPositionChange()[1] * cameraSwaySpeed * dt;
-
-		//printf("pitch: %f, yaw: %f\n");
-		//printf("position: {%f,%f,%f}\n", position.x, position.y, position.z);
+		if (window.isCursorCaptured()) {
+			pitch -= window.getCursorPositionChange()[1] * cameraSwaySpeed * dt;
+			pitch = std::clamp(pitch, 0.0f, glm::pi<f32>());
+			yaw += window.getCursorPositionChange()[0] * cameraSwaySpeed * dt;
+		}
+		position += translation;
 
 		auto prespective = glm::perspective(fov, (f32)window.getSize()[0]/(f32)window.getSize()[1], near, far);
-		auto rota = yawRotaAroundUp * glm::rotate(glm::mat4(), pitch, glm::vec3{1.f,0.f,0.f});
-		auto cameraModelMat = glm::translate(rota, {translation.x, translation.y, translation.z});
+		auto rota = yawRotaAroundUp * pitchRotation;
+		auto cameraModelMat = glm::translate(glm::mat4(1.0f), {position.x, position.y, position.z}) * rota;
 		auto view = glm::inverse(cameraModelMat);
 		return prespective * view;
 	}
@@ -66,12 +66,12 @@ private:
 	f32 fov = 74.0f;
 	f32 near = 0.1f;
 	f32 far = 1'000.0f;
-	f32 cameraSwaySpeed = 0.01f;
-	f32 translationSpeed = 1.0f;
+	f32 cameraSwaySpeed = 0.1f;
+	f32 translationSpeed = 5.0f;
 	glm::vec4 up = { 0.f, 0.f, 1.0f, 0.f };
 	glm::vec4 position = { 0.f, 0.f, 0.f, 1.f };
-	f32 yaw = glm::pi<f32>();
-	f32 pitch = glm::pi<f32>();
+	f32 yaw = 0.0f;
+	f32 pitch = glm::pi<f32>() * 0.5f;
 };
 
 class MyUser {
@@ -79,10 +79,9 @@ public:
 	MyUser(daxa::AppState& app) 
 		: device{ daxa::gpu::Device::create() }
 		, queue{ this->device->createQueue() }
-		, swapchain{ this->device->createSwapchain(app.window->getSurface(), app.window->getSize()[0], app.window->getSize()[1], VK_PRESENT_MODE_IMMEDIATE_KHR)}
+		, swapchain{ this->device->createSwapchain(app.window->getSurface(), app.window->getSize()[0], app.window->getSize()[1])}
 		, swapchainImage{ this->swapchain->aquireNextImage() }
 	{ 
-
 		char const* vertexShaderGLSL = R"(
 			#version 450
 			#extension GL_KHR_vulkan_glsl : enable
@@ -92,10 +91,14 @@ public:
 
 			layout(location = 10) out vec4 v_color;
 
+			layout(set = 0, binding = 0) uniform Globals {
+				mat4 vp;
+			} globals;
+
 			void main()
 			{
 				v_color = color;
-				gl_Position = vec4(position, 1.0f);
+				gl_Position = globals.vp * vec4(position, 1.0f);
 			}
 		)";
 
@@ -107,14 +110,9 @@ public:
 
 			layout (location = 0) out vec4 outFragColor;
 
-			layout(set = 0, binding = 0) uniform SomeBuffer {
-				vec4 data;
-			} someBuffer;
-
 			void main()
 			{
 				vec4 color = v_color;
-				color *= someBuffer.data.b;
 				outFragColor = color;
 			}
 		)";
@@ -155,7 +153,7 @@ public:
 
 		// or use them embedded, like a named parameter list:
 		this->globalUniformBuffer = device->createBuffer({
-			.size = sizeof(float) * 4,
+			.size = sizeof(glm::mat4),
 			.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
@@ -183,12 +181,11 @@ public:
 
 		/// ------------ Begin Data Uploading ---------------------
 
-		auto vp = cameraController.update(*app.window, app.getDeltaTimeSeconds());
 
 		std::array vertecies = {
-			 1.f, 1.f, 0.0f,	1.f, 0.f, 0.f, 1.f,
-			-1.f, 1.f, 0.0f,	0.f, 1.f, 0.f, 1.f,
-			 0.f,-1.f, 0.0f,	0.f, 0.f, 1.f, 1.f,
+			 1.f, 1.f, 0.5f,	1.f, 0.f, 0.f, 1.f,
+			-1.f, 1.f, 0.5f,	0.f, 1.f, 0.f, 1.f,
+			 0.f,-1.f, 0.5f,	0.f, 0.f, 1.f, 1.f,
 		};
 		cmdList->copyHostToBuffer(daxa::gpu::HostToBufferCopyInfo{
 			.src = vertecies.data(),
@@ -196,11 +193,11 @@ public:
 			.size = sizeof(decltype(vertecies))
 		});
 
-		std::array someBufferdata = { 1.0f , 1.0f , 1.0f ,1.0f };
+		auto vp = cameraController.update(*app.window, app.getDeltaTimeSeconds());
 		cmdList->copyHostToBuffer(daxa::gpu::HostToBufferCopyInfo{
-			.src = someBufferdata.data(),
+			.src = &vp,
 			.dst = globalUniformBuffer,
-			.size = someBufferdata.size() * sizeof(float)
+			.size = sizeof(decltype(vp)),
 		});
 
 		// array because we can allways pass multiple barriers at once for driver efficiency
