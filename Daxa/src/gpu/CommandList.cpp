@@ -2,6 +2,13 @@
 
 namespace daxa {
 	namespace gpu {
+		size_t roundUpToMultipleOf128(size_t n) {
+			size_t remainder = n % 128;
+			n -= remainder;
+			n += 128 * size_t(bool(remainder));
+			return n;
+		}
+
 		CommandList::CommandList() {
 			printf("command list creating\n");
 			this->renderAttachmentBuffer.reserve(5);
@@ -58,6 +65,7 @@ namespace daxa {
 			auto ret = MappedStagingMemory{ (void*)(bufferHostPtr + srcOffset), size, stagingBuffer.buffer };
 
 			stagingBuffer.usedUpSize += size;
+			stagingBuffer.usedUpSize = roundUpToMultipleOf128(stagingBuffer.usedUpSize);
 
 			BufferToBufferCopyInfo btbCopyInfo{
 				.src = stagingBuffer.buffer,
@@ -82,70 +90,84 @@ namespace daxa {
 
 		void CommandList::copyHostToBuffer(HostToBufferCopyInfo copyInfo) {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-			if (copyInfo.size > STAGING_BUFFER_POOL_BUFFER_SIZE) {
-				DAXA_ASSERT_M(false, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
-				usedBuffers.push_back(copyInfo.dst);
+			DAXA_ASSERT_M(copyInfo.size <= STAGING_BUFFER_POOL_BUFFER_SIZE, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
+			if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < copyInfo.size) {
+				usedStagingBuffers.push_back(stagingBufferPool.lock()->getStagingBuffer());
 			}
-			else {
-				if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < copyInfo.size) {
-					usedStagingBuffers.push_back(stagingBufferPool.lock()->getStagingBuffer());
+
+			auto& stagingBuffer = usedStagingBuffers.back();
+
+			auto offset = stagingBuffer.usedUpSize;
+
+			// memory is currently automaticly unmapped in Queue::submit
+			stagingBuffer.buffer->upload(copyInfo.src, copyInfo.size, offset);
+
+			stagingBuffer.usedUpSize += copyInfo.size;
+			stagingBuffer.usedUpSize = roundUpToMultipleOf128(stagingBuffer.usedUpSize);
+
+			BufferToBufferCopyInfo btbCopyInfo{
+				.src = stagingBuffer.buffer,
+				.dst = copyInfo.dst,
+				.region = BufferCopyRegion{
+					.srcOffset = offset,
+					.dstOffset = copyInfo.dstOffset,
+					.size = copyInfo.size,
 				}
-
-				auto& stagingBuffer = usedStagingBuffers.back();
-
-				auto offset = stagingBuffer.usedUpSize;
-
-				// memory is currently automaticly unmapped in Queue::submit
-				stagingBuffer.buffer->upload(copyInfo.src, copyInfo.size, offset);
-
-				stagingBuffer.usedUpSize += copyInfo.size;
-
-				BufferToBufferCopyInfo btbCopyInfo{
-					.src = stagingBuffer.buffer,
-					.dst = copyInfo.dst,
-					.region = BufferCopyRegion{
-						.srcOffset = offset,
-						.dstOffset = copyInfo.dstOffset,
-						.size = copyInfo.size,
-					}
-				};
-				copyBufferToBuffer(btbCopyInfo);
-			}
+			};
+			copyBufferToBuffer(btbCopyInfo);
 		}
 
 		void CommandList::copyHostToImage(HostToImageCopyInfo copyInfo) {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-			if (copyInfo.size > STAGING_BUFFER_POOL_BUFFER_SIZE) {
-				DAXA_ASSERT_M(false, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
-				usedImages.push_back(copyInfo.dst);
+			DAXA_ASSERT_M(copyInfo.size <= STAGING_BUFFER_POOL_BUFFER_SIZE, "Currently uploads over a size of 67.108.864 bytes are not supported by the copyHostToImage function. Please use a staging buffer.");
+			if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < copyInfo.size) {
+				usedStagingBuffers.push_back(stagingBufferPool.lock()->getStagingBuffer());
 			}
-			else {
-				if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < copyInfo.size) {
-					usedStagingBuffers.push_back(stagingBufferPool.lock()->getStagingBuffer());
-				}
 
-				auto& stagingBuffer = usedStagingBuffers.back();
+			auto& stagingBuffer = usedStagingBuffers.back();
 
-				auto offset = stagingBuffer.usedUpSize;
+			auto offset = stagingBuffer.usedUpSize;
 
-				stagingBuffer.buffer->upload(copyInfo.src, copyInfo.size, offset);
+			stagingBuffer.buffer->upload(copyInfo.src, copyInfo.size, offset);
 
-				stagingBuffer.usedUpSize += copyInfo.size;
+			stagingBuffer.usedUpSize += copyInfo.size;
+			stagingBuffer.usedUpSize = roundUpToMultipleOf128(stagingBuffer.usedUpSize);
 
-				BufferToImageCopyInfo btiCopy{
-					.src = stagingBuffer.buffer,
-					.dst = copyInfo.dst,
-					.srcOffset = offset,
-					.subRessourceLayers = copyInfo.dstImgSubressource,
-					.size = copyInfo.size,
-				};
-				copyBufferToImage(btiCopy);
-			}
+			BufferToImageCopyInfo btiCopy{
+				.src = stagingBuffer.buffer,
+				.dst = copyInfo.dst,
+				.srcOffset = offset,
+				.subRessourceLayers = copyInfo.dstImgSubressource,
+				.size = copyInfo.size,
+			};
+			copyBufferToImage(btiCopy);
+		}
+
+		void CommandList::copyHostToImageSynced(HostToImageCopyInfo copyInfo, VkImageLayout finalImageLayout) {
+			ImageBarrier firstBarrier{
+				.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
+				.awaitedStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
+				.waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR,
+				.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
+				.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			};
+			insertBarriers({},{},{&firstBarrier, 1});
+
+			copyHostToImage(copyInfo);
+
+			ImageBarrier secondBarrier{
+				.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
+				.waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR,
+				.waitingStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
+				.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.layoutAfter = finalImageLayout,
+			};
+			insertBarriers({},{},{&firstBarrier, 1});
 		}
 
 		void CommandList::copyMultiBufferToBuffer(BufferToBufferMultiCopyInfo copyInfo) {
-			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-			DAXA_ASSERT_M(copyInfo.regions.size() > 0, "ERROR: tried copying 0 regions from buffer to buffer, this is a bug!");
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu.");
+			DAXA_ASSERT_M(copyInfo.regions.size() > 0, "amount of copy regions must be greater than 0.");
 			for (int i = 0; i < copyInfo.regions.size(); i++) {
 				DAXA_ASSERT_M(copyInfo.src->getSize() >= copyInfo.regions[i].size + copyInfo.regions[i].srcOffset, "ERROR: src buffer is smaller than the region that shouly be copied!");
 				DAXA_ASSERT_M(copyInfo.dst->getSize() >= copyInfo.regions[i].size + copyInfo.regions[i].dstOffset, "ERROR: dst buffer is smaller than the region that shouly be copied!");
