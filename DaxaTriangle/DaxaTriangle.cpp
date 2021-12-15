@@ -7,7 +7,11 @@ public:
 	MyUser(daxa::AppState& app) 
 		: device{ daxa::gpu::Device::create() }
 		, queue{ this->device->createQueue() }
-		, swapchain{ this->device->createSwapchain(app.window->getSurface(), app.window->getSize()[0], app.window->getSize()[1], VK_PRESENT_MODE_IMMEDIATE_KHR)}
+		, swapchain{ this->device->createSwapchain({
+			.surface = app.window->getSurface(),
+			.width = app.window->getSize()[0],
+			.height = app.window->getSize()[1],
+		})}
 		, swapchainImage{ this->swapchain->aquireNextImage() }
 	{ 
 
@@ -146,7 +150,7 @@ public:
 			.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,				// wait for writing the vertex buffer
 			.waitingStages = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT_KHR,		// the vertex creating must wait
 		} };
-		cmdList->insertBarriers(memBarrier0, {}, imgBarrier0);
+		cmdList->insertBarriers(memBarrier0, imgBarrier0);
 		
 		
 		/// ------------ End Data Uploading ---------------------
@@ -187,7 +191,7 @@ public:
 			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			.layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 		} };
-		cmdList->insertBarriers({}, {}, imgBarrier1);
+		cmdList->insertBarriers({}, imgBarrier1);
 
 		cmdList->end();
 
