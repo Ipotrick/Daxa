@@ -87,27 +87,18 @@ namespace daxa {
 
 		void BindingSet::bindImages(u32 binding, std::span<std::pair<ImageHandle, VkImageLayout>> images, u32 descriptorArrayOffset) {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not update binding set while it is used on gpu");
+			VkDescriptorType imageDescriptorType = description->layoutBindings.bindings[binding].descriptorType;
+			
 			for (auto& [image, layout] : images) {
-				VkSampler sampler = VK_NULL_HANDLE;
-				switch (description->layoutBindings.bindings[binding].descriptorType) {
-				case VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-					sampler = image->getSampler()->getVkSampler();
-					break;
-				case VkDescriptorType::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-					sampler = VK_NULL_HANDLE;
-					break;
-				case VkDescriptorType::VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-					sampler = VK_NULL_HANDLE;
-					break;
-				default:
-					DAXA_ASSERT_M(false, "binding set binding mismatch");
-				}
+				VkSampler sampler = imageDescriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER 
+					? image->getSampler()->getVkSampler() 
+					: VK_NULL_HANDLE;
 
 				descImageInfoBuffer.push_back(VkDescriptorImageInfo{
 					.sampler = sampler,
 					.imageView = image->getVkView(),
 					.imageLayout = layout,
-					});
+				});
 
 				// update the handles inside the set
 				u32 bindingSetIndex = description->bindingToHandleVectorIndex[binding];
@@ -121,7 +112,7 @@ namespace daxa {
 				.dstBinding = binding,
 				.dstArrayElement = descriptorArrayOffset,
 				.descriptorCount = (u32)descImageInfoBuffer.size(),
-				.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.descriptorType = imageDescriptorType,
 				.pImageInfo = descImageInfoBuffer.data()
 			};
 
