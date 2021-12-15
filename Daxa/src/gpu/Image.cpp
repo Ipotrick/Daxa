@@ -36,7 +36,7 @@ namespace daxa {
 				.sharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 				.queueFamilyIndexCount = 1,
 				.pQueueFamilyIndices = &queueFamilyIndex,
-				.initialLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED,
+				.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 			};
 
 			VmaAllocationCreateInfo aci{ 

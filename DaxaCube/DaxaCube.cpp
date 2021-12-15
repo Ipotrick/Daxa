@@ -1,5 +1,8 @@
 #include <iostream>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 #define GLM_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
@@ -62,9 +65,9 @@ public:
 	}
 private:
 	f32 fov = 74.0f;
-	f32 near = 0.1f;
+	f32 near = 0.4f;
 	f32 far = 1'000.0f;
-	f32 cameraSwaySpeed = 1.0f;
+	f32 cameraSwaySpeed = 0.1f;
 	f32 translationSpeed = 5.0f;
 	glm::vec4 up = { 0.f, 0.f, 1.0f, 0.f };
 	glm::vec4 position = { 0.f, 0.f, 0.f, 1.f };
@@ -108,9 +111,11 @@ public:
 
 			layout (location = 0) out vec4 outFragColor;
 
+			layout(set = 0, binding = 1) uniform sampler2D tex;
+
 			void main()
 			{
-				vec4 color = vec4(vtf_uv,0.0f,1.0f);
+				vec4 color = texture(tex, vtf_uv);
 				outFragColor = color;
 			}
 		)";
@@ -134,7 +139,7 @@ public:
 			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
 			// all added vertex input attributes are added to the previously added vertex input attribute binding
 			.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)			// positions
-			.addVertexInputAttribute(VK_FORMAT_R32G32B32A32_SFLOAT)			// colors
+			.addVertexInputAttribute(VK_FORMAT_R32G32_SFLOAT)				// uvs
 			// location of attachments in a shader are implied by the order they are added in the pipeline builder:
 			.addColorAttachment(swapchain->getVkFormat());
 
@@ -142,39 +147,79 @@ public:
 
 		this->globalsUniformAllocator = device->createBindingSetAllocator(pipeline->getSetDescription(0));
 
+		// Begin texture creation
+
+		stbi_set_flip_vertically_on_load(true);
+		i32 sizeX, sizeY, numChannels;
+		char const* const filepath = "DaxaCube/atlas.png";
+		std::uint8_t * textureAtlasHostData = stbi_load(filepath, &sizeX, &sizeY, &numChannels, 0);
+		VkFormat       dataFormat;
+		switch (numChannels) {
+			case 1: dataFormat = VK_FORMAT_R8_SRGB; break;
+			case 3: dataFormat = VK_FORMAT_R8G8B8_SRGB; break;
+			case 4:
+			default: dataFormat = VK_FORMAT_R8G8B8A8_SRGB; break;
+		}
+
+		textureAtlas = device->createImage2d({
+			.width = (u32)sizeX,
+			.height = (u32)sizeY,
+			.format = dataFormat,
+			.imageAspekt = VK_IMAGE_ASPECT_COLOR_BIT,
+			.imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+			.sampler = device->createSampler({}),
+		});
+
+		// end texture creation
+
 		std::array cubeVertecies{
-			/*positions*/			/*tex uv*/
-			-1.f, -1.f, -1.f, 		0.f, 0.f,
-			 1.f, -1.f, -1.f, 		0.f, 1.f,
-			 1.f,  1.f, -1.f, 		1.f, 1.f,
-			-1.f,  1.f, -1.f, 		1.f, 0.f,
-			-1.f,  1.f,  1.f, 		0.f, 0.f,
-			 1.f,  1.f,  1.f, 		0.f, 1.f,
-			 1.f, -1.f,  1.f, 		1.f, 1.f,
-			-1.f, -1.f,  1.f, 		1.f, 0.f,
+			/*positions*/			/*tex uv*/ 
+			0.5f, -0.5f, -0.5f,    0.0f, 0.0f,
+			-0.5f, -0.5f, -0.5f,    1.0f, 0.0f,
+			0.5f,  0.5f, -0.5f,    0.0f, 1.0f,
+			-0.5f,  0.5f, -0.5f,    1.0f, 1.0f,
+
+			-0.5f, -0.5f,  0.5f,    0.0f, 0.0f,
+			0.5f, -0.5f,  0.5f,    1.0f, 0.0f,
+			-0.5f,  0.5f,  0.5f,    0.0f, 1.0f,
+			0.5f,  0.5f,  0.5f,    1.0f, 1.0f,
+
+			-0.5f, -0.5f, -0.5f,    0.0f, 0.0f,
+			-0.5f, -0.5f,  0.5f,    1.0f, 0.0f,
+			-0.5f,  0.5f, -0.5f,    0.0f, 1.0f,
+			-0.5f,  0.5f,  0.5f,    1.0f, 1.0f,
+
+			0.5f, -0.5f,  0.5f,    0.0f, 0.0f,
+			0.5f, -0.5f, -0.5f,    1.0f, 0.0f,
+			0.5f,  0.5f,  0.5f,    0.0f, 1.0f,
+			0.5f,  0.5f, -0.5f,    1.0f, 1.0f,
+
+			-0.5f, -0.5f, -0.5f,    0.0f, 0.0f,
+			0.5f, -0.5f, -0.5f,    0.0f, 1.0f,
+			-0.5f, -0.5f,  0.5f,    1.0f, 0.0f,
+			0.5f, -0.5f,  0.5f,    1.0f, 1.0f,
+
+			-0.5f,  0.5f, -0.5f,    0.0f, 0.0f,
+			-0.5f,  0.5f,  0.5f,    1.0f, 0.0f,
+			0.5f,  0.5f, -0.5f,    0.0f, 1.0f,
+			0.5f,  0.5f,  0.5f,    1.0f, 1.0f,
 		};
 		this->vertexBuffer = device->createBuffer({
-			.size = sizeof(float) * 5 * 8,
+			.size = sizeof(decltype(cubeVertecies)),
 			.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 
 		std::array cubeIndices{
-			0, 2, 1, //face front
-			0, 3, 2,
-			2, 3, 4, //face top
-			2, 4, 5,
-			1, 2, 5, //face right
-			1, 5, 6,
-			0, 7, 4, //face left
-			0, 4, 3,
-			5, 4, 7, //face back
-			5, 7, 6,
-			0, 6, 7, //face bottom
-			0, 1, 6
+			0, 1, 2, 1, 2, 3,
+			4, 5, 6, 5, 6, 7,
+			8, 9, 10, 9, 10, 11,
+			12, 13, 14, 13, 14, 15,
+			16, 17, 18, 17, 18, 19,
+			20, 21, 22, 21, 22, 23,
 		};
 		this->indexBuffer = device->createBuffer({
-			.size = sizeof(u32) * 3 * 12,
+			.size = sizeof(decltype(cubeIndices)), 
 			.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
 			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
@@ -191,6 +236,11 @@ public:
 			.dst = indexBuffer,
 			.size = sizeof(decltype(cubeIndices)),
 		});
+		cmdList->copyHostToImageSynced({
+			.dst = textureAtlas,
+			.size = sizeX * sizeY * numChannels * sizeof(u8),
+			.src = textureAtlasHostData,
+		}, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		cmdList->end();
 		queue->submitBlocking({
 			.commandLists = {cmdList},
@@ -209,7 +259,6 @@ public:
 			.format = VK_FORMAT_D32_SFLOAT,
 			.imageAspekt = VK_IMAGE_ASPECT_DEPTH_BIT,
 			.imageUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-			.memoryPropertyFlags = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 
 		for (int i = 0; i < 3; i++) {
@@ -290,6 +339,7 @@ public:
 		
 		auto set = globalsUniformAllocator->getSet();
 		set->bindBuffer(0, globalUniformBuffer);
+		set->bindImage(1, textureAtlas, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		cmdList->bindSet(0, set);
 		
 		cmdList->bindIndexBuffer(indexBuffer);
@@ -357,6 +407,7 @@ private:
 	daxa::gpu::BufferHandle vertexBuffer;
 	daxa::gpu::BufferHandle indexBuffer;
 	daxa::gpu::BufferHandle globalUniformBuffer;
+	daxa::gpu::ImageHandle textureAtlas;
 	double totalElapsedTime = 0.0f;
 	struct PerFrameData {
 		daxa::gpu::SignalHandle presentSignal;
