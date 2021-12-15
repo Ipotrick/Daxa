@@ -33,7 +33,6 @@ namespace daxa {
 
 		Buffer::~Buffer() {
 			if (allocator) {
-				printf("destroy buffer for real\n");
 				vmaDestroyBuffer(allocator, buffer, allocation);
 				allocator = VK_NULL_HANDLE;
 			}

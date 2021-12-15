@@ -24,6 +24,11 @@ namespace daxa {
 			ShaderModule(ShaderModule&& other) noexcept				= delete;
 			ShaderModule& operator=(ShaderModule&& other) noexcept	= delete;
 			~ShaderModule();
+
+			std::vector<u32> const& getSPIRV() const { return spirv; }
+			VkShaderStageFlagBits getVkShaderStage() const { return shaderStage; }
+			std::string const& getVkEntryPoint() const { return entryPoint; }
+			VkShaderModule getVkShaderModule() const { return shaderModule; }
 		private:
 			friend class GraphicsPipelineBuilder;
 			friend class ShaderModuleHandle;

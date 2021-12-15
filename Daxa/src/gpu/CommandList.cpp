@@ -10,7 +10,6 @@ namespace daxa {
 		}
 
 		CommandList::CommandList() {
-			printf("command list creating\n");
 			this->renderAttachmentBuffer.reserve(5);
 			usedImages.reserve(10);
 			usedBuffers.reserve(10);
@@ -21,7 +20,6 @@ namespace daxa {
 
 		CommandList::~CommandList() {
 			if (device) {
-				printf("command list destruction\n");
 				DAXA_ASSERT_M(operationsInProgress == 0, "a command list can not be descroyed when there are still commands recorded");
 				DAXA_ASSERT_M(empty, "a command list can not be destroyed when not empty");
 				vkFreeCommandBuffers(device, cmdPool, 1, &cmd);
@@ -211,6 +209,12 @@ namespace daxa {
 			vkCmdCopyBufferToImage(cmd, copyInfo.src->getVkBuffer(), copyInfo.dst->getVkImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bufferImageCopy);
 		}
 
+		void CommandList::dispatch(u32 groupCountX, u32 groupCountY, u32 grpupCountZ) {
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			DAXA_ASSERT_M(boundPipeline.value().bindPoint == VK_PIPELINE_BIND_POINT_COMPUTE, "can not dispatch compute commands with out a bound compute pipeline.");
+			vkCmdDispatch(cmd, groupCountX, groupCountY, grpupCountZ);
+		}
+
 		void CommandList::bindVertexBuffer(u32 binding, BufferHandle buffer, size_t bufferOffset) {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			auto vkBuffer = buffer->getVkBuffer();
@@ -317,14 +321,14 @@ namespace daxa {
 			boundPipeline = std::nullopt;
 		}
 
-		void CommandList::bindPipeline(GraphicsPipelineHandle& graphicsPipeline) {
+		void CommandList::bindPipeline(PipelineHandle& pipeline) {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->getVkPipeline());
-			usedGraphicsPipelines.push_back(graphicsPipeline);
+			vkCmdBindPipeline(cmd, pipeline->getVkBindPoint(), pipeline->getVkPipeline());
+			usedGraphicsPipelines.push_back(pipeline);
 
 			boundPipeline = BoundPipeline{
-				.bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-				.layout = graphicsPipeline->getVkPipelineLayout(),
+				.bindPoint = pipeline->getVkBindPoint(),
+				.layout = pipeline->getVkPipelineLayout(),
 			};
 		}
 

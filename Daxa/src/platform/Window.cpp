@@ -153,11 +153,9 @@ namespace daxa {
 	void Window::captureCursor() {
 		SDL_SetWindowGrab(sdlWindowHandle, SDL_TRUE);
 		SDL_ShowCursor(SDL_DISABLE);
-		printf("capture\n");
 		bCursorCaptured = true;
 	}
 	void Window::releaseCursor() {
-		printf("release\n");
 		SDL_SetWindowGrab(sdlWindowHandle, SDL_FALSE);
 		SDL_ShowCursor(SDL_ENABLE);
 		bCursorCaptured = false;
