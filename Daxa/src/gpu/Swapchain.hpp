@@ -20,6 +20,14 @@ namespace daxa {
 
 		VkSurfaceKHR createSurface(void* sdlWindowHandle, VkInstance instance);
 
+		struct SwapchainCreateInfo{
+			VkSurfaceKHR surface 				= VK_NULL_HANDLE;
+			u32 width 							= 256;
+			u32 height			 				= 256;
+			VkPresentModeKHR presentMode 		= VK_PRESENT_MODE_FIFO_KHR;
+			VkImageUsageFlags additionalUses 	= {};
+		};
+
 		class Swapchain {
 		public:
 			Swapchain() 								= default;
@@ -41,7 +49,7 @@ namespace daxa {
 		private:
 			friend class Device;
 
-			void construct(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance, VkSurfaceKHR surface, u32 width, u32 height, VkPresentModeKHR presentmode);
+			void construct(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance, SwapchainCreateInfo ci);
 
 			VkDevice device 							= VK_NULL_HANDLE;
 			VkPhysicalDevice physicalDevice 			= VK_NULL_HANDLE;
@@ -52,7 +60,8 @@ namespace daxa {
 			VkSwapchainKHR swapchain 					= VK_NULL_HANDLE; 
 			VkFormat swapchainImageFormat 				= {};
 			std::vector<ImageHandle> swapchainImages	= {}; // TODO REPLACE WITH STACK ALLOCATED VECTOR TYPE
-			VkExtent2D size 							= {};
+			VkExtent2D size 							= {}; 
+			VkImageUsageFlags additionalimageUses		= {};
 		};
 
 		class SwapchainHandle {
