@@ -15,13 +15,14 @@ namespace daxa {
 			return surface;
 		}
 
-		void Swapchain::construct(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance, VkSurfaceKHR surface, u32 width, u32 height, VkPresentModeKHR presentMode) {
+		void Swapchain::construct(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance, SwapchainCreateInfo ci) {
 			this->device = device;
 			this->physicalDevice = physicalDevice;
 			this->instance = instance;
-			this->size = { .width = width, .height = height };
-			this->surface = surface;
-			this->presentMode = presentMode;
+			this->size = { .width = ci.width, .height = ci.height };
+			this->surface = ci.surface;
+			this->presentMode = ci.presentMode;
+			this->additionalimageUses = ci.additionalUses;
 
 			vkb::SwapchainBuilder swapchainBuilder{ physicalDevice, device, surface };
 
@@ -32,7 +33,8 @@ namespace daxa {
 			vkb::Swapchain vkbSwapchain = swapchainBuilder
 				.use_default_format_selection()
 				.set_desired_present_mode(presentMode)
-				.set_desired_extent(width, height)
+				.set_desired_extent(ci.width, ci.height)
+				.add_image_usage_flags(additionalimageUses)
 				.build()
 				.value();
 			
@@ -44,8 +46,8 @@ namespace daxa {
 				auto handle = ImageHandle{ std::make_shared<Image>() };
 				this->swapchainImages.push_back(std::move(handle));
 				auto& img = *this->swapchainImages.back();
-				img.extent.width = width;
-				img.extent.height = height;
+				img.extent.width = ci.width;
+				img.extent.height = ci.height;
 				img.extent.depth = 1;
 				img.allocation = nullptr;
 				img.allocator = nullptr;
@@ -99,12 +101,12 @@ namespace daxa {
 
 		void Swapchain::resize(VkExtent2D newSize) {
 			swapchainImages.clear();
-			construct(device, physicalDevice, instance, surface, newSize.width, newSize.height, presentMode);
+			construct(device, physicalDevice, instance, {surface, newSize.width, newSize.height, presentMode, additionalimageUses});
 		}
 
 		void Swapchain::setPresentMode(VkPresentModeKHR newPresentMode) {
 			swapchainImages.clear();
-			construct(device, physicalDevice, instance, surface, size.width, size.height, newPresentMode);
+			construct(device, physicalDevice, instance, {surface, size.width, size.height, newPresentMode, additionalimageUses});
 		}
 	}
 }

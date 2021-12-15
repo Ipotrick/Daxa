@@ -136,9 +136,9 @@ namespace daxa {
 			return SignalHandle{ std::make_shared<Signal>(device) };
 		}
 
-		SwapchainHandle Device::createSwapchain(VkSurfaceKHR surface, u32 width, u32 height, VkPresentModeKHR presentMode) {
+		SwapchainHandle Device::createSwapchain(SwapchainCreateInfo ci) {
 			auto handle = SwapchainHandle{ std::make_shared<Swapchain>() };
-			handle->construct(device, physicalDevice, gpu::instance->getVkInstance(), surface, width ,height, presentMode);
+			handle->construct(device, physicalDevice, gpu::instance->getVkInstance(), ci);
 			return std::move(handle);
 		}
 
