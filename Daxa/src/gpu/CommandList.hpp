@@ -76,6 +76,26 @@ namespace daxa {
 			size_t size = 0;
 		};
 
+		struct ImageToImageCopyInfo{
+			ImageHandle src 			= {};
+			VkImageLayout srcLayout 	= VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			VkOffset3D srcOffset 		= {};
+			ImageHandle dst 			= {};
+			VkImageLayout dstLayout 	= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			VkOffset3D dstOffset 		= {};
+			VkExtent3D size				= {};
+		};
+
+		struct ImageToImageCopySyncedInfo{
+			ImageHandle src 				= {};
+			VkOffset3D srcOffset 			= {};
+			VkImageLayout srcFinalLayout 	= VK_IMAGE_LAYOUT_UNDEFINED;
+			ImageHandle dst 				= {};
+			VkOffset3D dstOffset 			= {};
+			VkImageLayout dstFinalLayout 	= VK_IMAGE_LAYOUT_UNDEFINED;
+			VkExtent3D size					= {};
+		};
+
 		/**
 		 * use this for all sync inside a queue:
 		*/
@@ -183,6 +203,10 @@ namespace daxa {
 
 			void copyBufferToImage(BufferToImageCopyInfo copyInfo);
 
+			void copyImageToImage(ImageToImageCopyInfo copyInfo);
+
+			void copyImageToImageSynced(ImageToImageCopySyncedInfo copySyncedInfo);
+
 			// Compute:
 
 			void dispatch(u32 groupCountX, u32 groupCountY = 1, u32 grpupCountZ = 1);
@@ -227,7 +251,25 @@ namespace daxa {
 
 			// sync:
 
-			void insertBarriers(std::span<MemoryBarrier> memBarriers, std::span<BufferBarrier> bufBarriers, std::span<ImageBarrier> imgBarriers);
+			void insertBarriers(std::span<MemoryBarrier> memBarriers, std::span<ImageBarrier> imgBarriers);
+
+			template<size_t N>
+			void insertMemoryBarriers(std::array<MemoryBarrier, N> barriers) {
+				insertBarriers({ barriers.data(), barriers.size()}, {});
+			}
+
+			void insertMemoryBarrier(MemoryBarrier barrier) {
+				insertBarriers({ &barrier, 1}, {});
+			}
+
+			template<size_t N>
+			void insertImageBarriers(std::array<ImageBarrier, N> barriers) {
+				insertBarriers({}, { barriers.data(), barriers.size()});
+			}
+
+			void insertImageBarrier(ImageBarrier barrier) {
+				insertBarriers({}, { &barrier, 1});
+			}
 
 			void insertFullMemoryBarrier();
 
