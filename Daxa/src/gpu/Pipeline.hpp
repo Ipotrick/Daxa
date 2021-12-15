@@ -19,14 +19,16 @@ namespace daxa {
 
 		constexpr inline size_t MAX_SETS_PER_PIPELINE = 4;
 
-		class GraphicsPipeline {
+		class PipelineHandle;
+
+		class Pipeline {
 		public:
-			GraphicsPipeline() 													= default;
-			GraphicsPipeline(GraphicsPipeline&&) noexcept						= delete;
-			GraphicsPipeline& operator=(GraphicsPipeline&&) noexcept			= delete;
-			GraphicsPipeline(GraphicsPipeline const&)							= delete;
-			GraphicsPipeline const& operator=(GraphicsPipeline const&) noexcept	= delete;
-			~GraphicsPipeline();
+			Pipeline() 													= default;
+			Pipeline(Pipeline&&) noexcept						= delete;
+			Pipeline& operator=(Pipeline&&) noexcept			= delete;
+			Pipeline(Pipeline const&)							= delete;
+			Pipeline const& operator=(Pipeline const&) noexcept	= delete;
+			~Pipeline();
 
 			BindingSetDescription const* getSetDescription(u32 set) const { 
 				auto setDescr = bindingSetDescriptions.at(set);
@@ -34,29 +36,32 @@ namespace daxa {
 				return setDescr;
 			}
 
+			VkPipelineBindPoint getVkBindPoint() const { return bindPoint; }
 			VkPipeline const& getVkPipeline() const { return pipeline; }
 			VkPipelineLayout const& getVkPipelineLayout() const { return layout; }
 		private:
 			friend class GraphicsPipelineBuilder;
+			friend PipelineHandle createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ShaderModuleHandle const& shaderModule);
 
 			std::array<BindingSetDescription const*, MAX_SETS_PER_PIPELINE> bindingSetDescriptions = {};
 
-			VkDevice device;
-			VkPipeline pipeline;
-			VkPipelineLayout layout;
+			VkPipelineBindPoint bindPoint 	= {};
+			VkDevice device					= {};
+			VkPipeline pipeline				= {};
+			VkPipelineLayout layout			= {};
 		};
 
-		class GraphicsPipelineHandle {
+		class PipelineHandle {
 		public:
-			GraphicsPipelineHandle(std::shared_ptr<GraphicsPipeline> pipeline) 
+			PipelineHandle(std::shared_ptr<Pipeline> pipeline) 
 				: pipeline{ std::move(pipeline) }
 			{}
-			GraphicsPipelineHandle() = default;
+			PipelineHandle() = default;
 
-			GraphicsPipeline const& operator*() const { return *pipeline; }
-			GraphicsPipeline& operator*() { return *pipeline; }
-			GraphicsPipeline const* operator->() const { return pipeline.get(); }
-			GraphicsPipeline* operator->() { return pipeline.get(); }
+			Pipeline const& operator*() const { return *pipeline; }
+			Pipeline& operator*() { return *pipeline; }
+			Pipeline const* operator->() const { return pipeline.get(); }
+			Pipeline* operator->() { return pipeline.get(); }
 
 			size_t getRefCount() const { return pipeline.use_count(); }
 
@@ -64,7 +69,7 @@ namespace daxa {
 			bool operator!() const { return !pipeline; }
 			bool valid() const { return *this; }
 		private:
-			std::shared_ptr<GraphicsPipeline> pipeline = {};
+			std::shared_ptr<Pipeline> pipeline = {};
 		};
 
 		struct DepthTestSettings {
@@ -92,7 +97,7 @@ namespace daxa {
 			GraphicsPipelineBuilder& addColorAttachment(const VkFormat& attachmentFormat, const VkPipelineColorBlendAttachmentState&);
 		private:
 			friend class Device;
-			GraphicsPipelineHandle build(VkDevice, BindingSetDescriptionCache& bindingSetCache);
+			PipelineHandle build(VkDevice, BindingSetDescriptionCache& bindingSetCache);
 
 			// Vertex Input Attribute building:
 			bool bVertexAtrributeBindingBuildingOpen = false;
@@ -115,5 +120,7 @@ namespace daxa {
 			std::vector<VkPipelineColorBlendAttachmentState> colorAttachmentBlends;
 			std::vector<VkFormat> colorAttachmentFormats;
 		};
+
+		PipelineHandle createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ShaderModuleHandle const& shaderModule);
 	}
 }

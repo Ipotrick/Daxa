@@ -24,6 +24,13 @@ public:
 			}
 		}
 
+		auto fov = this->fov;
+		auto cameraSwaySpeed = this->cameraSwaySpeed;
+		if (window.keyPressed(daxa::Scancode::C)) {
+			fov *= 0.25f;
+			cameraSwaySpeed *= 0.25;
+		}
+
 		auto yawRotaAroundUp = glm::rotate(glm::mat4(1.0f), yaw, {0.f,0.f,1.f});
 		auto pitchRotation = glm::rotate(glm::mat4(1.0f), pitch, glm::vec3{1.f,0.f,0.f});
 		glm::vec4 translation = {};
@@ -50,7 +57,6 @@ public:
 			translation += yawRotaAroundUp * pitchRotation * glm::vec4{ 0.f, -1.f,  0.f, 0.f } * dt * speed;
 		}
 		if (window.isCursorCaptured()) {
-			printf("change: %i %i\n", window.getCursorPositionChange()[0],window.getCursorPositionChange()[1]);
 			pitch -= window.getCursorPositionChange()[1] * cameraSwaySpeed * dt;
 			pitch = std::clamp(pitch, 0.0f, glm::pi<f32>());
 			yaw += window.getCursorPositionChange()[0] * cameraSwaySpeed * dt;
@@ -70,7 +76,7 @@ private:
 	f32 cameraSwaySpeed = 0.1f;
 	f32 translationSpeed = 5.0f;
 	glm::vec4 up = { 0.f, 0.f, 1.0f, 0.f };
-	glm::vec4 position = { 0.f, 0.f, 0.f, 1.f };
+	glm::vec4 position = { 0.f, -2.f, 0.f, 1.f };
 	f32 yaw = 0.0f;
 	f32 pitch = glm::pi<f32>() * 0.5f;
 };
@@ -145,7 +151,7 @@ public:
 
 		this->pipeline = device->createGraphicsPipeline(pipelineBuilder);
 
-		this->globalsUniformAllocator = device->createBindingSetAllocator(pipeline->getSetDescription(0));
+		this->bindingSetAllocator = device->createBindingSetAllocator(pipeline->getSetDescription(0));
 
 		// Begin texture creation
 
@@ -167,7 +173,10 @@ public:
 			.format = dataFormat,
 			.imageAspekt = VK_IMAGE_ASPECT_COLOR_BIT,
 			.imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-			.sampler = device->createSampler({}),
+			.sampler = device->createSampler({
+				.minFilter = VK_FILTER_NEAREST,
+				.magFilter = VK_FILTER_NEAREST,
+			}),
 		});
 
 		// end texture creation
@@ -247,7 +256,7 @@ public:
 		});
 		queue->checkForFinishedSubmits();
 
-		this->globalUniformBuffer = device->createBuffer({
+		this->uniformBuffer = device->createBuffer({
 			.size = sizeof(glm::mat4),
 			.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
@@ -296,7 +305,7 @@ public:
 		auto vp = cameraController.update(*app.window, app.getDeltaTimeSeconds());
 		cmdList->copyHostToBuffer(daxa::gpu::HostToBufferCopyInfo{
 			.src = &vp,
-			.dst = globalUniformBuffer,
+			.dst = uniformBuffer,
 			.size = sizeof(decltype(vp)),
 		});
 
@@ -337,8 +346,8 @@ public:
 		
 		cmdList->bindPipeline(pipeline);
 		
-		auto set = globalsUniformAllocator->getSet();
-		set->bindBuffer(0, globalUniformBuffer);
+		auto set = bindingSetAllocator->getSet();
+		set->bindBuffer(0, uniformBuffer);
 		set->bindImage(1, textureAtlas, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		cmdList->bindSet(0, set);
 		
@@ -402,11 +411,11 @@ private:
 	daxa::gpu::SwapchainHandle swapchain;
 	daxa::gpu::SwapchainImage swapchainImage;
 	daxa::gpu::ImageHandle depthImage;
-	daxa::gpu::GraphicsPipelineHandle pipeline;
-	daxa::gpu::BindingSetAllocatorHandle globalsUniformAllocator;
+	daxa::gpu::PipelineHandle pipeline;
+	daxa::gpu::BindingSetAllocatorHandle bindingSetAllocator;
 	daxa::gpu::BufferHandle vertexBuffer;
 	daxa::gpu::BufferHandle indexBuffer;
-	daxa::gpu::BufferHandle globalUniformBuffer;
+	daxa::gpu::BufferHandle uniformBuffer;
 	daxa::gpu::ImageHandle textureAtlas;
 	double totalElapsedTime = 0.0f;
 	struct PerFrameData {

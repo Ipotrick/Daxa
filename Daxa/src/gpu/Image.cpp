@@ -7,13 +7,11 @@ namespace daxa {
 		Image::~Image() {
 			if (device && view) {
 				vkDestroyImageView(device, view, nullptr);
-				printf("destroy view\n");
 				device = VK_NULL_HANDLE;
 				view = VK_NULL_HANDLE;
 			}
 			if (allocator && image && allocation) {
 				vmaDestroyImage(allocator, image, allocation);
-				printf("destroy image\n");
 				allocator = VK_NULL_HANDLE;
 				image = VK_NULL_HANDLE;
 				allocation = VK_NULL_HANDLE;
