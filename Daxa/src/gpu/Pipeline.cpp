@@ -56,7 +56,7 @@ namespace daxa {
 			return -1;
 		}
 
-		GraphicsPipeline::~GraphicsPipeline() {
+		Pipeline::~Pipeline() {
 			if (device) {
 				vkDestroyPipelineLayout(device, layout, nullptr);
 				vkDestroyPipeline(device, pipeline, nullptr);
@@ -301,14 +301,15 @@ namespace daxa {
 			.pVertexAttributeDescriptions = nullptr,
 		};
 
-		GraphicsPipelineHandle GraphicsPipelineBuilder::build(VkDevice device, BindingSetDescriptionCache& bindingSetCache) {
+		PipelineHandle GraphicsPipelineBuilder::build(VkDevice device, BindingSetDescriptionCache& bindingSetCache) {
 			if (bVertexAtrributeBindingBuildingOpen) {
 				endVertexInputAttributeBinding();
 			}
 
-			auto pipelineHandle = GraphicsPipelineHandle{ std::make_shared<GraphicsPipeline>() };
-			GraphicsPipeline& ret = *pipelineHandle;
+			auto pipelineHandle = PipelineHandle{ std::make_shared<Pipeline>() };
+			Pipeline& ret = *pipelineHandle;
 			ret.device = device;
+			ret.bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
 			std::vector<VkDescriptorSetLayout> descLayouts;
 			{
@@ -421,6 +422,97 @@ namespace daxa {
 
 			auto err = vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline);
 			DAXA_ASSERT_M(err == VK_SUCCESS, "could not create graphics pipeline");
+
+			return pipelineHandle;
+		}
+
+		PipelineHandle createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ShaderModuleHandle const& shaderModule) {
+			auto pipelineHandle = PipelineHandle{ std::make_shared<Pipeline>() };
+			Pipeline& ret = *pipelineHandle;
+			ret.device = device;
+			ret.bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
+
+			VkPipelineShaderStageCreateInfo pipelineShaderStageCI{
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+				.pNext = nullptr,
+				.stage = shaderModule->getVkShaderStage(),
+				.module = shaderModule->getVkShaderModule(),
+				.pName = shaderModule->getVkEntryPoint().c_str(),
+			};
+
+			std::vector<VkPushConstantRange> pushConstants;
+
+			// reflect spirv push constants:
+			auto falserefl = reflectPushConstants(shaderModule->getSPIRV(), shaderModule->getVkShaderStage());
+			auto refl2 = reinterpret_cast<std::vector<VkPushConstantRange>*>(&falserefl);
+			auto& refl = *refl2;
+			for (auto& r : refl) {
+				auto iter = pushConstants.begin();
+				for (; iter != pushConstants.end(); iter++) {
+					if (iter->offset == r.offset && iter->size == r.size && iter->stageFlags == r.stageFlags) break;
+				}
+
+				if (iter != pushConstants.end()) {
+					// if the same push constant is present in multiple stages we combine them to one
+					iter->stageFlags |= (VkShaderStageFlagBits)shaderModule->getVkShaderStage();
+				}
+				else {
+					pushConstants.push_back(r);
+				}
+			}
+
+			std::unordered_map<u32, std::unordered_map<u32, VkDescriptorSetLayoutBinding>> descriptorSets;
+
+			// reflect spirv descriptor sets:
+			auto reflDesc = reflectSetBindings(shaderModule->getSPIRV(), shaderModule->getVkShaderStage());
+			for (auto& r : reflDesc) {
+				if (!descriptorSets.contains(r.first)) {
+					descriptorSets[r.first] = std::unordered_map<u32, VkDescriptorSetLayoutBinding>{};
+				}
+
+				for (auto& binding : r.second) {
+					if (!descriptorSets[r.first].contains(binding.first)) {
+						descriptorSets[r.first][binding.first] = binding.second;
+					}
+					descriptorSets[r.first][binding.first].stageFlags |= (VkShaderStageFlagBits)shaderModule->getVkShaderStage();
+				}
+			}
+
+			std::vector<VkDescriptorSetLayout> descLayouts;
+			{
+				std::vector<VkDescriptorSetLayoutBinding> tempBindings;
+				for (auto& [index, bindings] : descriptorSets) {
+					tempBindings.clear();
+					for (auto& [index, binding] : bindings) {
+						tempBindings.push_back(binding);
+					}
+					auto description = bindingSetCache.getSetDescription(tempBindings);
+					descLayouts.push_back(description->getVkDescriptorSetLayout());
+					ret.bindingSetDescriptions[index] = description;
+				}
+			}
+
+			// create pipeline layout:
+			VkPipelineLayoutCreateInfo pipelineLayoutCI{
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+				.pNext = nullptr,
+				.setLayoutCount = static_cast<u32>(descLayouts.size()),
+				.pSetLayouts = descLayouts.data(),
+				.pushConstantRangeCount = static_cast<u32>(pushConstants.size()),
+				.pPushConstantRanges = pushConstants.data(),
+			};
+			vkCreatePipelineLayout(device, &pipelineLayoutCI, nullptr, &ret.layout);
+
+			VkComputePipelineCreateInfo pipelineCI{
+				.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+				.pNext = nullptr,
+				.layout = ret.layout,
+				.stage = pipelineShaderStageCI,
+				.flags = 0,
+				.basePipelineHandle  = VK_NULL_HANDLE,
+				.basePipelineIndex = 0,
+			};
+			vkCreateComputePipelines(device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline);
 
 			return pipelineHandle;
 		}

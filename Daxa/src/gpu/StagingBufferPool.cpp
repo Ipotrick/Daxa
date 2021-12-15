@@ -29,9 +29,6 @@ namespace daxa {
 			auto lock = std::unique_lock(sharedData->mut);
 
 			if (sharedData->pool.empty()) {
-
-				printf("create a new staging buffer\n");
-
 				BufferCreateInfo bufferCI{
 					.size = STAGING_BUFFER_POOL_BUFFER_SIZE,
 					.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,

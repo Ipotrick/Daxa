@@ -183,6 +183,10 @@ namespace daxa {
 
 			void copyBufferToImage(BufferToImageCopyInfo copyInfo);
 
+			// Compute:
+
+			void dispatch(u32 groupCountX, u32 groupCountY = 1, u32 grpupCountZ = 1);
+
 			// Rendering:
 
 			/**
@@ -200,7 +204,7 @@ namespace daxa {
 			 * 
 			 * \param specify all render pass related information like render attachments.
 			*/
-			void bindPipeline(GraphicsPipelineHandle& graphicsPipeline);
+			void bindPipeline(PipelineHandle& pipeline);
 
 			void setViewport(VkViewport const& viewport);
 
@@ -261,7 +265,7 @@ namespace daxa {
 			std::vector<BindingSetHandle> usedSets;
 			std::vector<ImageHandle> usedImages;
 			std::vector<BufferHandle> usedBuffers;
-			std::vector<GraphicsPipelineHandle> usedGraphicsPipelines;
+			std::vector<PipelineHandle> usedGraphicsPipelines;
 			VkDevice device;
 			VkCommandBuffer cmd;
 			VkCommandPool cmdPool;

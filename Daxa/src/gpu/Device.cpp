@@ -203,8 +203,12 @@ namespace daxa {
 			return ShaderModuleHandle::tryCreateDAXAShaderModule(device, pathToGlsl, entrypoint, stage);
 		}
 
-		GraphicsPipelineHandle Device::createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder) {
+		PipelineHandle Device::createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder) {
 			return pipelineBuilder.build(device, *bindingSetDescriptionCache);
+		}
+
+		PipelineHandle Device::createComputePipeline(ShaderModuleHandle& shader) {
+			return gpu::createComputePipeline(device, *bindingSetDescriptionCache, shader);
 		}
 
 		BindingSetAllocatorHandle Device::createBindingSetAllocator(BindingSetDescription const* setDescription, size_t setPerPool) {

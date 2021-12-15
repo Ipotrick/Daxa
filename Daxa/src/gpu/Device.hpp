@@ -85,7 +85,9 @@ namespace daxa {
 			 * \param pipelineBuilder specifies how the pipeline is layed out.
 			 * \return a handle to a new graphics pipeline created from the pipeline builder.
 			 */
-			GraphicsPipelineHandle createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder);
+			PipelineHandle createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder);
+
+			PipelineHandle createComputePipeline(ShaderModuleHandle& shader);
 
 			BindingSetAllocatorHandle createBindingSetAllocator(BindingSetDescription const* setDescription, size_t setPerPool = 64);
 
