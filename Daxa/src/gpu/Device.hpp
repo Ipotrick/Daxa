@@ -59,7 +59,7 @@ namespace daxa {
 
 			SignalHandle createSignal();
 
-			SwapchainHandle createSwapchain(VkSurfaceKHR surface, u32 width, u32 height, VkPresentModeKHR presentMode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR);
+			SwapchainHandle createSwapchain(SwapchainCreateInfo swapchainCI);
 
 			BindingSetDescription const* createBindingSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings);
 
