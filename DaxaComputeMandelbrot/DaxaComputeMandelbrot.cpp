@@ -64,12 +64,7 @@ public:
 
 		auto cmdList = device->getEmptyCommandList();
 		cmdList->begin();
-		daxa::gpu::ImageBarrier layoutChangeResultImage{
-			.image = resultImage,
-			.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
-			.layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
-		};
-		cmdList->insertBarriers({},{},{&layoutChangeResultImage,1});
+		cmdList->insertImageBarrier({.image = resultImage, .layoutAfter = VK_IMAGE_LAYOUT_GENERAL});
 		cmdList->end();
 		queue->submitBlocking({
 			.commandLists = { cmdList }
@@ -85,6 +80,8 @@ public:
 
 		auto cmdList = device->getEmptyCommandList();
 
+		cmdList->begin();
+
 		if (app.window->getSize()[0] != swapchain->getSize().width || app.window->getSize()[1] != swapchain->getSize().height) {
 			device->waitIdle();
 			swapchain->resize(VkExtent2D{ .width = app.window->getSize()[0], .height = app.window->getSize()[1] });
@@ -95,17 +92,10 @@ public:
 				.format = VK_FORMAT_R8G8B8A8_UNORM,
 				.imageUsage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 			});
-			daxa::gpu::ImageBarrier layoutChangeResultImage{
-				.image = resultImage,
-				.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
-				.layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
-			};
-			cmdList->insertBarriers({},{},{&layoutChangeResultImage,1});
+			cmdList->insertImageBarrier({.image = resultImage, .layoutAfter = VK_IMAGE_LAYOUT_GENERAL, .waitingStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR});
 		}
 
 		auto* currentFrame = &frames.front();
-
-		cmdList->begin();
 
 
 		/// ------------ Begin Data Uploading ---------------------
@@ -118,18 +108,10 @@ public:
 		});
 
 		// array because we can allways pass multiple barriers at once for driver efficiency
-		std::array imgBarrier0 = { daxa::gpu::ImageBarrier{
-			.waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,	// as we write to the image in the frag shader we need to make sure its finished transitioning the layout
-			.image = swapchainImage.getImageHandle(),
-			.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,						// dont care about previous layout
-			.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,							// set new layout to general, so it can be used as a storage image in the compute shader
-		} };
-		// array because we can allways pass multiple barriers at once for driver efficiency
-		std::array memBarrier0 = { daxa::gpu::MemoryBarrier{
+		cmdList->insertMemoryBarrier(daxa::gpu::MemoryBarrier{
 			.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,				// wait for writing the vertex buffer
 			.waitingStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,	// the compute shader must wait
-		} };
-		cmdList->insertBarriers(memBarrier0, {}, imgBarrier0);
+		});
 		
 		/// ------------ End Data Uploading ---------------------
 
@@ -142,14 +124,13 @@ public:
 
 		cmdList->dispatch(app.window->getSize()[0] / 8 + 1, app.window->getSize()[1] / 8 + 1);
 
-		// array because we can allways pass multiple barriers at once for driver efficiency
-		std::array imgBarrier1 = { daxa::gpu::ImageBarrier{
-			.awaitedStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
-			.image = swapchainImage.getImageHandle(),
-			.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			.layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-		} };
-		cmdList->insertBarriers({}, {}, imgBarrier1);
+		cmdList->copyImageToImageSynced({
+			.src = resultImage,
+			.srcFinalLayout = VK_IMAGE_LAYOUT_GENERAL,
+			.dst = swapchainImage.getImageHandle(),
+			.dstFinalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+			.size = resultImage->getVkExtent(),
+		});
 
 		cmdList->end();
 
