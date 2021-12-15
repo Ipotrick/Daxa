@@ -7,7 +7,12 @@ public:
 	MyUser(daxa::AppState& app) 
 		: device{ daxa::gpu::Device::create() }
 		, queue{ this->device->createQueue() }
-		, swapchain{ this->device->createSwapchain(app.window->getSurface(), app.window->getSize()[0], app.window->getSize()[1], VK_PRESENT_MODE_IMMEDIATE_KHR)}
+		, swapchain{ this->device->createSwapchain({
+			.surface = app.window->getSurface(), 
+			.width = app.window->getSize()[0], 
+			.height = app.window->getSize()[1], 
+			.additionalUses = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+		})}
 		, swapchainImage{ this->swapchain->aquireNextImage() }
 	{ 
 
@@ -15,7 +20,7 @@ public:
 			#version 450
 			#extension GL_KHR_vulkan_glsl : enable
 
-			layout(local_size_x = 64, local_size_y = 64) in;
+			layout(local_size_x = 8, local_size_y = 8) in;
 
 			layout(set = 0, binding = 0) uniform CameraData {
 				uint imageWidth;
@@ -27,8 +32,9 @@ public:
 			void main()
 			{
 				if (gl_GlobalInvocationID.x < cameraData.imageWidth && gl_GlobalInvocationID.y < cameraData.imageHeight) {
-
-					imageStore(resultImage, ivec2(gl_GlobalInvocationID.xy), vec4(1.0f,0.66f,0.33f,1.0f));
+					ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+					vec4 color = vec4(float(gl_GlobalInvocationID.x) / float(cameraData.imageWidth), float(gl_GlobalInvocationID.y) / float(cameraData.imageHeight), 1.0f, 1.0f);
+					imageStore(resultImage, coord, color);
 				}
 			}
 		)";
@@ -49,6 +55,26 @@ public:
 			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 
+		resultImage = device->createImage2d({
+			.width = app.window->getSize()[0],
+			.height = app.window->getSize()[1],
+			.format = VK_FORMAT_R8G8B8A8_UNORM,
+			.imageUsage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+		});
+
+		auto cmdList = device->getEmptyCommandList();
+		cmdList->begin();
+		daxa::gpu::ImageBarrier layoutChangeResultImage{
+			.image = resultImage,
+			.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
+			.layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
+		};
+		cmdList->insertBarriers({},{},{&layoutChangeResultImage,1});
+		cmdList->end();
+		queue->submitBlocking({
+			.commandLists = { cmdList }
+		});
+
 		for (int i = 0; i < 3; i++) {
 			frames.push_back(PerFrameData{ .presentSignal = device->createSignal(), .timeline = device->createTimelineSemaphore(), .timelineCounter = 0 });
 		}
@@ -57,15 +83,27 @@ public:
 	void update(daxa::AppState& app) {
 		//printf("update, dt: %f\n", app.getDeltaTimeSeconds());
 
+		auto cmdList = device->getEmptyCommandList();
+
 		if (app.window->getSize()[0] != swapchain->getSize().width || app.window->getSize()[1] != swapchain->getSize().height) {
 			device->waitIdle();
 			swapchain->resize(VkExtent2D{ .width = app.window->getSize()[0], .height = app.window->getSize()[1] });
 			swapchainImage = swapchain->aquireNextImage();
+			resultImage = device->createImage2d({
+				.width = app.window->getSize()[0],
+				.height = app.window->getSize()[1],
+				.format = VK_FORMAT_R8G8B8A8_UNORM,
+				.imageUsage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+			});
+			daxa::gpu::ImageBarrier layoutChangeResultImage{
+				.image = resultImage,
+				.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
+				.layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
+			};
+			cmdList->insertBarriers({},{},{&layoutChangeResultImage,1});
 		}
 
 		auto* currentFrame = &frames.front();
-
-		auto cmdList = device->getEmptyCommandList();
 
 		cmdList->begin();
 
@@ -84,7 +122,7 @@ public:
 			.waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,	// as we write to the image in the frag shader we need to make sure its finished transitioning the layout
 			.image = swapchainImage.getImageHandle(),
 			.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,						// dont care about previous layout
-			.layoutAfter = VK_IMAGE_LAYOUT_GENERAL,							// set new layout to general, so it can be used as a storage image in the compute shader
+			.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,							// set new layout to general, so it can be used as a storage image in the compute shader
 		} };
 		// array because we can allways pass multiple barriers at once for driver efficiency
 		std::array memBarrier0 = { daxa::gpu::MemoryBarrier{
@@ -99,16 +137,16 @@ public:
 		
 		auto set = bindingSetAllocator->getSet();
 		set->bindBuffer(0, uniformBuffer);
-		set->bindImage(1, swapchainImage.getImageHandle(), VK_IMAGE_LAYOUT_GENERAL);
+		set->bindImage(1, resultImage, VK_IMAGE_LAYOUT_GENERAL);
 		cmdList->bindSet(0, set);
 
-		cmdList->dispatch(app.window->getSize()[0] / 64 + 1, app.window->getSize()[1] / 64 + 1);
+		cmdList->dispatch(app.window->getSize()[0] / 8 + 1, app.window->getSize()[1] / 8 + 1);
 
 		// array because we can allways pass multiple barriers at once for driver efficiency
 		std::array imgBarrier1 = { daxa::gpu::ImageBarrier{
 			.awaitedStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
 			.image = swapchainImage.getImageHandle(),
-			.layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
+			.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			.layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 		} };
 		cmdList->insertBarriers({}, {}, imgBarrier1);
@@ -156,6 +194,7 @@ private:
 	daxa::gpu::QueueHandle queue;
 	daxa::gpu::SwapchainHandle swapchain;
 	daxa::gpu::SwapchainImage swapchainImage;
+	daxa::gpu::ImageHandle resultImage;
 	daxa::gpu::PipelineHandle pipeline;
 	daxa::gpu::BindingSetAllocatorHandle bindingSetAllocator;
 	daxa::gpu::BufferHandle uniformBuffer;
@@ -173,7 +212,7 @@ int main()
 	daxa::initialize();
 
 	{
-		daxa::Application<MyUser> app{ 1000, 1000, "Daxa Triangle Sample"};
+		daxa::Application<MyUser> app{ 1000, 1000, "Daxa Compute Sample"};
 		app.run();
 	}
 
