@@ -9,8 +9,8 @@ public:
 		, queue{ this->device->createQueue() }
 		, swapchain{ this->device->createSwapchain({
 			.surface = app.window->getSurface(),
-			.width = app.window->getSize()[0],
-			.height = app.window->getSize()[1],
+			.width = app.window->getWidth(),
+			.height = app.window->getHeight(),
 		})}
 		, swapchainImage{ this->swapchain->aquireNextImage() }
 	{ 
@@ -100,9 +100,9 @@ public:
 	void update(daxa::AppState& app) {
 		//printf("update, dt: %f\n", app.getDeltaTimeSeconds());
 
-		if (app.window->getSize()[0] != swapchain->getSize().width || app.window->getSize()[1] != swapchain->getSize().height) {
+		if (app.window->getWidth() != swapchain->getSize().width || app.window->getHeight() != swapchain->getSize().height) {
 			device->waitIdle();
-			swapchain->resize(VkExtent2D{ .width = app.window->getSize()[0], .height = app.window->getSize()[1] });
+			swapchain->resize(VkExtent2D{ .width = app.window->getWidth(), .height = app.window->getHeight() });
 			swapchainImage = swapchain->aquireNextImage();
 		}
 
