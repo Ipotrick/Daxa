@@ -55,12 +55,19 @@ namespace daxa {
 				.pNext = nullptr,
 				.synchronization2 = VK_TRUE,
 			};
+			VkPhysicalDeviceShaderAtomicInt64Features atomicI64Features{
+				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES,
+				.pNext = nullptr,
+				.shaderBufferInt64Atomics = VK_TRUE,
+				.shaderSharedInt64Atomics = VK_TRUE,
+			};
 
 			vkb::DeviceBuilder deviceBuilder{ physicalDevice };
 			deviceBuilder.add_pNext(&descriptorIndexingFeature);
 			deviceBuilder.add_pNext(&dynamicRenderingFeature);
 			deviceBuilder.add_pNext(&timelineSemaphoreFeatures);
 			deviceBuilder.add_pNext(&synchronization2Features);
+			deviceBuilder.add_pNext(&atomicI64Features);
 
 			vkb::Device vkbDevice = deviceBuilder.build().value();
 
