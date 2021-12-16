@@ -12,9 +12,10 @@
 namespace daxa {
 	namespace gpu {
 		struct BufferCreateInfo {
-			uz size;
-			VkBufferUsageFlags usage;
-			VmaMemoryUsage memoryUsage;
+			uz size									= {};
+			VkBufferUsageFlags usage				= {};
+			VmaMemoryUsage memoryUsage				= {};
+			VkMemoryPropertyFlags memoryProperties 	= {};
 		};
 
 		class BufferHandle;
