@@ -37,29 +37,11 @@ namespace daxa {
 
 	class Window {
 	public:
-		Window(
-			std::string name,
-			std::array<u32,2> size
-		);
+		Window(std::string name, u32 width, u32 height);
 		~Window();
 		Window(Window&&) = delete;
 
-		void setSize(std::array<u32, 2> size);
-		std::array<u32,2> getSize() const;
-		Vec2 getSizeVec() const;
-
-		void setName(std::string name);
-		std::string const& getName();
-
-		/**
-		 * Intercepts certain window related Events like window close wich are abstracted in this class.
-		 * 
-		 * \param deltaTime time that passed since the last call.
-		 * \return if the window should be closed (Exit pas pressed)
-		 */
 		bool update(f32 deltaTime);
-
-		bool isFocused() const;
 
 		bool keyPressed(Scancode key) const;
 		bool keyJustPressed(Scancode key) const;
@@ -78,17 +60,6 @@ namespace daxa {
 		bool buttonReleasedAndHide(MouseButton button);
 		bool buttonJustReleasedAndHide(MouseButton button);
 
-		std::array<i32,2> getCursorPosition() const; 
-		Vec2 getCursorPositionVec() const;
-		Vec2 getCursorPositionRelative() const;
-		std::array<i32, 2> getCursorPositionChange() const;
-		Vec2 getCursorPositionChangeVec() const;
-		Vec2 getCursorPositionChangeRelative() const;
-		bool isCursorOverWindow() const;
-		void captureCursor();
-		void releaseCursor();
-		bool isCursorCaptured() const;
-
 		f32 scrollX() const;
 		f32 scrollY() const;
 		void hideScrollX();
@@ -96,36 +67,62 @@ namespace daxa {
 		f32 scrollXAndHide();
 		f32 scrollYAndHide();
 
+		i32 getCursorPosX() const;
+		i32 getCursorPosY() const;
+		f32 getRelativeCursorPosX() const;
+		f32 getRelativeCursorPosY() const;
+		i32 getCursorPosChangeX() const;
+		i32 getCursorPosChangeY() const;
+		f32 getRelativeCursorPosChangeX() const;
+		f32 getRelativeCursorPosChangeY() const;
+		bool isCursorOverWindow() const;
+		void captureCursor();
+		void releaseCursor();
+		bool isCursorCaptured() const;
+
 		std::vector<KeyEvent> getKeyEventsInOrder() const;
+
+		bool isFocused() const;
+
+		void setSize(u32 width, u32 height) { this->width = width; this->height = height; bChangedSize = true; }
+		u32 getWidth() const { return width; }
+		u32 getHeight() const { return height; }
+
+		void setName(std::string name);
+		std::string const& getName();
 
 		void* getWindowHandleSDL();
 		VkSurfaceKHR getSurface();
 	private:
 		VkSurfaceKHR surface = VK_NULL_HANDLE;
 
-		std::string name;
-		bool bChangedSize{ false };
-		std::array<u32, 2> size;
+		std::string name	= "";
+		bool bChangedSize 	= false;
+		u32 width 			= 100;
+		u32 height 			= 100;
 
-		SDL_Window* sdlWindowHandle{ nullptr };
-		u32 sdlWindowId{ 0xFFFFFFFF };
-		bool bCursorCaptured{ false };
+		SDL_Window* sdlWindowHandle	= {};
+		u32 sdlWindowId				= 0xFFFFFFFF;
+		bool bCursorCaptured		= false;
+		bool bFocused 				= false;
 
-		std::vector<KeyEvent> keyEvents;
-		std::unique_ptr<std::array<bool, 512>> keyStates{ std::make_unique<std::array<bool, 512>>() };
-		std::unique_ptr < std::array<bool, 512>> prevKeyStates{ std::make_unique<std::array<bool, 512>>() };
-		std::array<bool, 512> keyHidden;
-		std::unique_ptr < std::array<bool, 5>> buttonStates{ std::make_unique<std::array<bool, 5>>() };
-		std::unique_ptr < std::array<bool, 5>> prevButtonStates{ std::make_unique<std::array<bool, 5>>() };
-		std::array<bool, 5> buttonHidden;
-		f32 m_scrollX{ 0.0f };
-		f32 m_scrollY{ 0.0f };
-		bool scrollXHidden{ false };
-		bool scrollYHidden{ false };
-		std::vector<KeyEvent> eventQ;
-		bool bFocused = false;
-		std::array<i32, 2> cursorPos;
-		i32 cursorPosChangeX = 0;
-		i32 cursorPosChangeY = 0;
+		std::vector<KeyEvent> eventQ							= {};
+		std::vector<KeyEvent> keyEvents							= {};
+		std::unique_ptr<std::array<bool, 512>> keyStates 		= std::make_unique<std::array<bool, 512>>();
+		std::unique_ptr < std::array<bool, 512>> prevKeyStates	= std::make_unique<std::array<bool, 512>>();
+		std::array<bool, 512> keyHidden							= { false };
+		std::unique_ptr < std::array<bool, 5>> buttonStates		= std::make_unique<std::array<bool, 5>>();
+		std::unique_ptr < std::array<bool, 5>> prevButtonStates	= std::make_unique<std::array<bool, 5>>();
+		std::array<bool, 5> buttonHidden						= { false };
+
+		f32 m_scrollX		= 0.0f;
+		f32 m_scrollY		= 0.0f;
+		bool scrollXHidden	= false;
+		bool scrollYHidden	= false;
+
+		i32 cursorPosX 			= 0;
+		i32 cursorPosY			= 0;
+		i32 cursorPosChangeX 	= 0;
+		i32 cursorPosChangeY 	= 0;
 	};
 }
