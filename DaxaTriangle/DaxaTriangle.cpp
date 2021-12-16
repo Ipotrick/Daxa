@@ -186,12 +186,11 @@ public:
 		cmdList->endRendering();
 
 		// array because we can allways pass multiple barriers at once for driver efficiency
-		std::array imgBarrier1 = { daxa::gpu::ImageBarrier{
+		cmdList->insertImageBarrier(daxa::gpu::ImageBarrier{
 			.image = swapchainImage.getImageHandle(),
 			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			.layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-		} };
-		cmdList->insertBarriers({}, imgBarrier1);
+		});
 
 		cmdList->end();
 
