@@ -57,13 +57,13 @@ public:
 			translation += yawRotaAroundUp * pitchRotation * glm::vec4{ 0.f, -1.f,  0.f, 0.f } * dt * speed;
 		}
 		if (window.isCursorCaptured()) {
-			pitch -= window.getCursorPositionChange()[1] * cameraSwaySpeed * dt;
+			pitch -= window.getCursorPosChangeY() * cameraSwaySpeed * dt;
 			pitch = std::clamp(pitch, 0.0f, glm::pi<f32>());
-			yaw += window.getCursorPositionChange()[0] * cameraSwaySpeed * dt;
+			yaw += window.getCursorPosChangeX() * cameraSwaySpeed * dt;
 		}
 		position += translation;
 
-		auto prespective = glm::perspective(fov, (f32)window.getSize()[0]/(f32)window.getSize()[1], near, far);
+		auto prespective = glm::perspective(fov, (f32)window.getHeight()/(f32)window.getHeight(), near, far);
 		auto rota = yawRotaAroundUp * pitchRotation;
 		auto cameraModelMat = glm::translate(glm::mat4(1.0f), {position.x, position.y, position.z}) * rota;
 		auto view = glm::inverse(cameraModelMat);
@@ -88,8 +88,8 @@ public:
 		, queue{ this->device->createQueue() }
 		, swapchain{ this->device->createSwapchain({
 			.surface = app.window->getSurface(),
-			.width = app.window->getSize()[0],
-			.height = app.window->getSize()[1],
+			.width = app.window->getWidth(),
+			.height = app.window->getHeight(),
 		})}
 		, swapchainImage{ this->swapchain->aquireNextImage() }
 	{ 
@@ -267,8 +267,8 @@ public:
 		});
 
 		depthImage = device->createImage2d({
-			.width = app.window->getSize()[0],
-			.height = app.window->getSize()[1],
+			.width = app.window->getWidth(),
+			.height = app.window->getHeight(),
 			.format = VK_FORMAT_D32_SFLOAT,
 			.imageAspekt = VK_IMAGE_ASPECT_DEPTH_BIT,
 			.imageUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
@@ -282,13 +282,13 @@ public:
 	void update(daxa::AppState& app) {
 		//printf("update, dt: %f\n", app.getDeltaTimeSeconds());
 
-		if (app.window->getSize()[0] != swapchain->getSize().width || app.window->getSize()[1] != swapchain->getSize().height) {
+		if (app.window->getWidth() != swapchain->getSize().width || app.window->getHeight() != swapchain->getSize().height) {
 			device->waitIdle();
-			swapchain->resize(VkExtent2D{ .width = app.window->getSize()[0], .height = app.window->getSize()[1] });
+			swapchain->resize(VkExtent2D{ .width = app.window->getWidth(), .height = app.window->getHeight() });
 			swapchainImage = swapchain->aquireNextImage();
 			depthImage = device->createImage2d({
-				.width = app.window->getSize()[0],
-				.height = app.window->getSize()[1],
+				.width = app.window->getWidth(),
+				.height = app.window->getHeight(),
 				.format = VK_FORMAT_D32_SFLOAT,
 				.imageAspekt = VK_IMAGE_ASPECT_DEPTH_BIT,
 				.imageUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,

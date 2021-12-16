@@ -9,17 +9,17 @@
 #include <SDL2/SDL_vulkan.h>
 
 namespace daxa {
-	Window::Window(std::string name, std::array<u32, 2> size) 
+	Window::Window(std::string name, u32 width, u32 height) 
 		: name{ name }
-		, size{ size }
+		, width{ width }
+		, height{ height }
 	{
-		//create blank SDL window for our application
 		sdlWindowHandle = SDL_CreateWindow(
-			name.c_str(),				// window title
-			SDL_WINDOWPOS_UNDEFINED,	// window position x (don't care)
-			SDL_WINDOWPOS_UNDEFINED,	// window position y (don't care)
-			size[0],					// window width in pixels
-			size[1],					// window height in pixels
+			name.c_str(),
+			SDL_WINDOWPOS_UNDEFINED,
+			SDL_WINDOWPOS_UNDEFINED,
+			width,
+			height,	
 			SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE
 		);
 
@@ -35,156 +35,166 @@ namespace daxa {
 		auto ret = SDL_Vulkan_CreateSurface((SDL_Window*)sdlWindowHandle, gpu::instance->getVkInstance(), &surface);
 		DAXA_ASSERT_M(ret == SDL_TRUE, "could not create window surface");
 	}
+
 	Window::~Window() 	{
 		vkDestroySurfaceKHR(gpu::instance->getVkInstance(), surface, nullptr);
 		SDL_DestroyWindow(sdlWindowHandle);
 		sdlWindowHandle = nullptr;
 	}
-	void Window::setSize(std::array<u32, 2> size) {
-		bChangedSize = true;
-		this->size = size;
-	}
-	std::array<u32, 2> Window::getSize() const 	{
-		return size;
-	}
-	Vec2 Window::getSizeVec() const 	{
-		return { static_cast<f32>(size[0]), static_cast<f32>(size[1]) };
-	}
-	void Window::setName(std::string name) 	{
-		this->name = std::move(name);
-	}
-	const std::string& Window::getName() 	{
+
+	const std::string& Window::getName() {
 		return name;
 	}
+
 	bool Window::isFocused() const {
 		auto mask = SDL_GetWindowFlags(sdlWindowHandle);
 		return mask & SDL_WINDOW_INPUT_FOCUS;
 	}
+
 	bool Window::keyPressed(Scancode key) const {
 		return !keyHidden[u32(key)] && (*keyStates)[u32(key)];
 	}
+
 	bool Window::keyJustPressed(Scancode key) const {
 		return !keyHidden[u32(key)] && (*keyStates)[u32(key)] && !(*prevKeyStates)[u32(key)];
 	}
+
 	bool Window::keyReleased(Scancode key) const {
 		return !keyHidden[u32(key)] && !(*keyStates)[u32(key)];
 	}
+
 	bool Window::keyJustReleased(Scancode key) const {
 		return !keyHidden[u32(key)] && !(*keyStates)[u32(key)] && (*prevKeyStates)[u32(key)];
 	}
+
 	void Window::hideKey(Scancode key) {
 		keyHidden[u32(key)] = true;
 	}
+
 	bool Window::buttonPressed(MouseButton button) const {
 		return (*buttonStates)[u8(button)] && !buttonHidden[u8(button)];
 	}
+
 	bool Window::buttonJustPressed(MouseButton button) const {
 		return !(*prevButtonStates)[u8(button)] && (*buttonStates)[u8(button)] && !buttonHidden[u8(button)];
 	}
+
 	bool Window::buttonReleased(MouseButton button) const {
 		return !(*buttonStates)[u8(button)] && !buttonHidden[u8(button)];
 	}
+
 	bool Window::buttonJustReleased(MouseButton button) const {
 		return (*prevButtonStates)[u8(button)] && !(*buttonStates)[u8(button)] && !buttonHidden[u8(button)];
 	}
+
 	void Window::hideButton(MouseButton button) {
 		buttonHidden[u8(button)] = true;
 	}
+
 	bool Window::buttonPressedAndHide(MouseButton button) {
 		auto ret = buttonPressed(button);
 		hideButton(button);
 		return ret;
 	}
+
 	bool Window::buttonJustPressedAndHide(MouseButton button) {
 		auto ret = buttonJustPressed(button);
 		hideButton(button);
 		return ret;
 	}
+
 	bool Window::buttonReleasedAndHide(MouseButton button) {
 		auto ret = buttonReleased(button);
 		hideButton(button);
 		return ret;
 	}
+
 	bool Window::buttonJustReleasedAndHide(MouseButton button) {
 		auto ret = buttonJustReleased(button);
 		hideButton(button);
 		return ret;
 	}
-	std::array<i32, 2> Window::getCursorPosition() const {
-		return cursorPos;
+
+	i32 Window::getCursorPosX() const{
+		return cursorPosX;
 	}
-	Vec2 Window::getCursorPositionVec() const {
-		auto [x, y] = getCursorPosition();
-		return Vec2{ static_cast<f32>(x), static_cast<f32>(y) };
+
+	i32 Window::getCursorPosY() const {
+		return cursorPosY;
 	}
-	Vec2 Window::getCursorPositionRelative() const {
-		return {
-			f32(cursorPos[0]) / f32(size[0]) * 2.0f - 1.0f,
-			f32(cursorPos[1]) / f32(size[1]) * 2.0f - 1.0f,
-		};
+
+	f32 Window::getRelativeCursorPosX() const {
+		return f32(cursorPosX) / f32(width) * 2.0f - 1.0f;
 	}
-	std::array<i32, 2> Window::getCursorPositionChange() const {
-		if ((cursorPos[0] < size[0] && cursorPos[0] >= 0 && cursorPos[1] < size[1] && cursorPos[1] >= 0) || bCursorCaptured) {
-			return {
-				cursorPosChangeX,
-				cursorPosChangeY,
-			};
-		}	
-		else {
-			return {
-				0,
-				0,
-			};
-		}
+
+	f32 Window::getRelativeCursorPosY() const {
+		return f32(cursorPosY) / f32(height) * 2.0f - 1.0f;
 	}
-	Vec2 Window::getCursorPositionChangeVec() const {
-		auto [x, y] = getCursorPositionChange();
-		return Vec2{ static_cast<f32>(x), static_cast<f32>(y) };
+
+	i32 Window::getCursorPosChangeX() const {
+		return (bCursorCaptured || isCursorOverWindow()) ? cursorPosChangeX : 0;
 	}
-	Vec2 Window::getCursorPositionChangeRelative() const {
-		return getCursorPositionRelative() - Vec2{
-			f32(cursorPosChangeX) / f32(size[0]) * 2.0f - 1.0f,
-			f32(cursorPosChangeY) / f32(size[1]) * 2.0f - 1.0f,
-		};
+
+	i32 Window::getCursorPosChangeY() const {
+		return (bCursorCaptured || isCursorOverWindow()) ? cursorPosChangeY : 0;
 	}
+
+	f32 Window::getRelativeCursorPosChangeX() const {
+		return (bCursorCaptured || isCursorOverWindow()) ? f32(cursorPosChangeX) * 2.0f - 1.0f : 0.f;
+	}
+
+	f32 Window::getRelativeCursorPosChangeY() const {
+		return (bCursorCaptured || isCursorOverWindow()) ? f32(cursorPosChangeY) * 2.0f - 1.0f : 0.f;
+	}
+
 	bool Window::isCursorOverWindow() const {
-		return cursorPos[0] >= 0 && cursorPos[0] < size[0] && cursorPos[1] >= 0 && cursorPos[1] < size[1];
+		return cursorPosX >= 0 && cursorPosX < width && cursorPosY >= 0 && cursorPosY < height;
 	}
+
 	void Window::captureCursor() {
 		SDL_SetWindowGrab(sdlWindowHandle, SDL_TRUE);
 		SDL_ShowCursor(SDL_DISABLE);
 		bCursorCaptured = true;
 	}
+
 	void Window::releaseCursor() {
 		SDL_SetWindowGrab(sdlWindowHandle, SDL_FALSE);
 		SDL_ShowCursor(SDL_ENABLE);
 		bCursorCaptured = false;
 	}
+
 	bool Window::isCursorCaptured() const {
 		return bCursorCaptured;
 	}
+
 	f32 Window::scrollX() const {
 		return scrollXHidden ? 0.0f : m_scrollX;
 	}
+
 	f32 Window::scrollY() const {
 		return scrollYHidden ? 0.0f : m_scrollY;
 	}
+
 	void Window::hideScrollX() {
 		scrollXHidden = true;
 	}
+
 	void Window::hideScrollY() {
 		scrollYHidden = true;
 	}
+
 	f32 Window::scrollXAndHide() {
 		auto ret = scrollXHidden ? 0.0f : m_scrollX;
 		hideScrollX();
 		return ret;
 	}
+
 	f32 Window::scrollYAndHide() {
 		auto ret = scrollYHidden ? 0.0f : m_scrollY;
 		hideScrollY();
 		return ret;
 	}
+
 	bool Window::update(f32 deltaTime) 	{
 		bool close{ false };
 		SDL_Event event;
@@ -218,29 +228,31 @@ namespace daxa {
 		}
 
 		// Mouse
-		auto prevCursorPos = cursorPos;
+		auto prevCursorPosX = cursorPosX;
+		auto prevCursorPosY = cursorPosY;
 		std::swap(buttonStates, prevButtonStates);
-		const u32 buttonMask = SDL_GetMouseState(&cursorPos[0], &cursorPos[1]);
+		const u32 buttonMask = SDL_GetMouseState(&cursorPosX, &cursorPosY);
 		for (i32 i = 0; i < 5; ++i) {
 			(*buttonStates)[i] = buttonMask & SDL_BUTTON(i);
 		}
 		for (i32 i = 0; i < 5; ++i) {
 			buttonHidden[i] = false;
 		}
-		cursorPosChangeX = cursorPos[0] - prevCursorPos[0];
-		cursorPosChangeY = cursorPos[1] - prevCursorPos[1];
+		cursorPosChangeX = cursorPosX - prevCursorPosX;
+		cursorPosChangeY = cursorPosY - prevCursorPosY;
 		if (bCursorCaptured) {
-			SDL_WarpMouseInWindow(sdlWindowHandle, size[0]/2, size[1]/2);
-			cursorPos = {(i32)size[0]/2, (i32)size[1]/2};
+			SDL_WarpMouseInWindow(sdlWindowHandle, width/2, height/2);
+			cursorPosX = (i32)width/2;
+			cursorPosY = (i32)height/2;
 		}
 
 		if (bChangedSize) {
 			bChangedSize = false;
-			SDL_SetWindowSize(sdlWindowHandle, size[0], size[1]);
+			SDL_SetWindowSize(sdlWindowHandle, width, height);
 		}
 
 		// Events
-		SDL_GetWindowSize(sdlWindowHandle, (int*)&this->size[0], (int*)&this->size[1]);
+		SDL_GetWindowSize(sdlWindowHandle, (int*)&this->width, (int*)&this->height);
 
 		if (!isFocused() && bCursorCaptured) {
 			releaseCursor();

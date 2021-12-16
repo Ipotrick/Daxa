@@ -18,7 +18,7 @@ namespace daxa {
 	class Application {
 	public:
 		Application(u32 winWidth, u32 winHeight, std::string const& winName) 
-			: window{ winName, std::array{ winWidth, winHeight } }
+			: window{ winName, winWidth, winHeight }
 			, appstate{ .continueRunning = true, .window = &this->window }
 		{ }
 
