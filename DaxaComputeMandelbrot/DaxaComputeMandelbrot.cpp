@@ -9,8 +9,8 @@ public:
 		, queue{ this->device->createQueue() }
 		, swapchain{ this->device->createSwapchain({
 			.surface = app.window->getSurface(), 
-			.width = app.window->getSize()[0], 
-			.height = app.window->getSize()[1], 
+			.width = app.window->getWidth(), 
+			.height = app.window->getHeight(), 
 			.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR,
 			.additionalUses = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 		})}
@@ -32,7 +32,7 @@ public:
 			float mandelbrot(in vec2 c) {const float B = 256.0;
 				float l = 0.0;
 				vec2 z  = vec2(0.0);
-				for( int i=0; i<1024; i++ )
+				for( int i=0; i<256; i++ )
 				{
 					z = vec2( z.x*z.x - z.y*z.y, 2.0*z.x*z.y ) + c;
 					if( dot(z,z)>(B*B) ) break;
@@ -57,7 +57,7 @@ public:
 					vec4 colorAcc = vec4(0,0,0,0);
 
 					const int AA = 4;
-					vec2 aaStep = vec2(1,1) / vec2(cameraData.imgSize.xy) / AA * 4;
+					vec2 aaStep = vec2(1,1) / vec2(cameraData.imgSize.xy) / AA * 2;
 
 					for (int x = 0; x < AA; x++) {
 						for (int y = 0; y < AA; y++) {
@@ -91,8 +91,8 @@ public:
 		});
 
 		resultImage = device->createImage2d({
-			.width = app.window->getSize()[0],
-			.height = app.window->getSize()[1],
+			.width = app.window->getWidth(),
+			.height = app.window->getHeight(),
 			.format = VK_FORMAT_R8G8B8A8_UNORM,
 			.imageUsage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 		});
@@ -117,13 +117,13 @@ public:
 
 		cmdList->begin();
 
-		if (app.window->getSize()[0] != swapchain->getSize().width || app.window->getSize()[1] != swapchain->getSize().height) {
+		if (app.window->getWidth() != swapchain->getSize().width || app.window->getHeight() != swapchain->getSize().height) {
 			device->waitIdle();
-			swapchain->resize(VkExtent2D{ .width = app.window->getSize()[0], .height = app.window->getSize()[1] });
+			swapchain->resize(VkExtent2D{ .width = app.window->getWidth(), .height = app.window->getHeight() });
 			swapchainImage = swapchain->aquireNextImage();
 			resultImage = device->createImage2d({
-				.width = app.window->getSize()[0],
-				.height = app.window->getSize()[1],
+				.width = app.window->getWidth(),
+				.height = app.window->getHeight(),
 				.format = VK_FORMAT_R8G8B8A8_UNORM,
 				.imageUsage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 			});
@@ -135,7 +135,7 @@ public:
 
 		/// ------------ Begin Data Uploading ---------------------
 
-		std::array someBufferdata = { app.window->getSize()[0], app.window->getSize()[1] };
+		std::array someBufferdata = { app.window->getWidth(), app.window->getHeight() };
 		cmdList->copyHostToBuffer(daxa::gpu::HostToBufferCopyInfo{
 			.src = someBufferdata.data(),
 			.dst = uniformBuffer,
@@ -157,11 +157,11 @@ public:
 		set->bindImage(1, resultImage, VK_IMAGE_LAYOUT_GENERAL);
 		cmdList->bindSet(0, set);
 
-		cmdList->dispatch(app.window->getSize()[0] / 8 + 1, app.window->getSize()[1] / 8 + 1);
+		cmdList->dispatch(app.window->getWidth() / 8 + 1, app.window->getHeight() / 8 + 1);
 
 		cmdList->copyImageToImageSynced({
 			.src = resultImage,
-			.srcFinalLayout = VK_IMAGE_LAYOUT_GENERAL,
+			.srcLayoutBeforeAndAfter = VK_IMAGE_LAYOUT_GENERAL,
 			.dst = swapchainImage.getImageHandle(),
 			.dstFinalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 			.size = resultImage->getVkExtent(),

@@ -87,13 +87,13 @@ namespace daxa {
 		};
 
 		struct ImageToImageCopySyncedInfo{
-			ImageHandle src 				= {};
-			VkOffset3D srcOffset 			= {};
-			VkImageLayout srcFinalLayout 	= VK_IMAGE_LAYOUT_UNDEFINED;
-			ImageHandle dst 				= {};
-			VkOffset3D dstOffset 			= {};
-			VkImageLayout dstFinalLayout 	= VK_IMAGE_LAYOUT_UNDEFINED;
-			VkExtent3D size					= {};
+			ImageHandle src 						= {};
+			VkOffset3D srcOffset 					= {};
+			VkImageLayout srcLayoutBeforeAndAfter 	= {};
+			ImageHandle dst 						= {};
+			VkOffset3D dstOffset 					= {};
+			VkImageLayout dstFinalLayout 			= {};
+			VkExtent3D size							= {};
 		};
 
 		/**

@@ -242,7 +242,7 @@ namespace daxa {
 					.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR, 
 					.awaitedStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
 					.waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR, 
-					.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED, 
+					.layoutBefore = copySyncedInfo.srcLayoutBeforeAndAfter , 
 					.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL 
 				},
 				ImageBarrier{ 
@@ -270,7 +270,7 @@ namespace daxa {
 					.waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR, 
 					.waitingStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
 					.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 
-					.layoutAfter = copySyncedInfo.srcFinalLayout 
+					.layoutAfter = copySyncedInfo.srcLayoutBeforeAndAfter 
 				},
 				ImageBarrier{ 
 					.image = std::move(copySyncedInfo.dst), 
