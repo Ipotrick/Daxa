@@ -28,18 +28,18 @@ struct World {
     daxa::gpu::PipelineHandle graphics_pipeline;
     Texture                   atlas_texture;
 
-    std::filesystem::path vert_path{"Gabe/assets/chunk.vert"};
-    std::filesystem::path frag_path{"Gabe/assets/chunk.frag"};
+    std::filesystem::path vert_path{"DaxaMinecraft/assets/chunk.vert"};
+    std::filesystem::path frag_path{"DaxaMinecraft/assets/chunk.frag"};
 
     daxa::gpu::PipelineHandle chunk_block_pass1_compute_pipeline,
         chunk_block_pass2_compute_pipeline, chunk_mesh_pass_compute_pipeline;
 
     std::filesystem::path chunk_block_pass1_comp_path =
-        "Gabe/assets/chunk_block_pass1.comp";
+        "DaxaMinecraft/assets/chunk_block_pass1.comp";
     std::filesystem::path chunk_block_pass2_comp_path =
-        "Gabe/assets/chunk_block_pass2.comp";
-    std::filesystem::path chunk_mesh_pass_comp_path = "Gabe/assets/chunk_mesh_pass.comp";
-    // std::filesystem::path chunk_mesh_comp_path{"Gabe/assets/chunk_mesh.comp"};
+        "DaxaMinecraft/assets/chunk_block_pass2.comp";
+    std::filesystem::path chunk_mesh_pass_comp_path = "DaxaMinecraft/assets/chunk_mesh_pass.comp";
+    // std::filesystem::path chunk_mesh_comp_path{"DaxaMinecraft/assets/chunk_mesh.comp"};
 
     std::chrono::system_clock::rep last_vert_reload_time = 0, last_frag_reload_time = 0;
     std::chrono::system_clock::rep last_comp1_reload_time = 0, last_comp2_reload_time = 0,
@@ -49,7 +49,7 @@ struct World {
     static constexpr glm::ivec3 chunk_max{RENDER_DIST_XZ, 2, RENDER_DIST_XZ};
 
     World(RenderContext & render_ctx)
-        : atlas_texture(render_ctx, "Gabe/assets/atlas.png") {
+        : atlas_texture(render_ctx, "DaxaMinecraft/assets/atlas.png") {
         try_reload_shaders(render_ctx);
 
         globals_uniform_allocator = render_ctx.device->createBindingSetAllocator(
