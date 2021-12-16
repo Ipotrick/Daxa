@@ -1,0 +1,24 @@
+#version 450
+#extension GL_KHR_vulkan_glsl : enable
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+const uint Chunk_NX = 16;
+const uint Chunk_NY = 16;
+const uint Chunk_NZ = 16;
+layout (set = 0, binding = 0) buffer chunk_buffer {
+    uint blocks[16 * 16 * 16]; 
+};
+
+void main() {
+
+    uint xi = gl_LocalInvocationID.x;
+    uint yi = gl_LocalInvocationID.y;
+    uint zi = gl_WorkGroupID.z;
+    
+    if ((xi + yi + zi) % 2 == 0) {
+        uint current_block_id = blocks[xi + yi * Chunk_NX + zi * Chunk_NX * Chunk_NY];
+        if (current_block_id == 1)
+            blocks[xi + yi * Chunk_NX + zi * Chunk_NX * Chunk_NY] = 2;
+    }
+}
