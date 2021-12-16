@@ -17,6 +17,7 @@ namespace daxa {
 
 			VmaAllocationCreateInfo aci{
 				.usage = ci.memoryUsage,
+				.requiredFlags = ci.memoryProperties,
 			};
 
 			vmaCreateBuffer(allocator, (VkBufferCreateInfo*)&bci, &aci, &buffer, &allocation, nullptr);
