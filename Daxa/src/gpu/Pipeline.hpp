@@ -23,7 +23,7 @@ namespace daxa {
 
 		class Pipeline {
 		public:
-			Pipeline() 													= default;
+			Pipeline() 											= default;
 			Pipeline(Pipeline&&) noexcept						= delete;
 			Pipeline& operator=(Pipeline&&) noexcept			= delete;
 			Pipeline(Pipeline const&)							= delete;

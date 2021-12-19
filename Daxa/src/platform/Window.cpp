@@ -250,9 +250,7 @@ namespace daxa {
 			bChangedSize = false;
 			SDL_SetWindowSize(sdlWindowHandle, width, height);
 		}
-
-		// Events
-		SDL_GetWindowSize(sdlWindowHandle, (int*)&this->width, (int*)&this->height);
+		SDL_GetWindowSize(sdlWindowHandle, (i32*)&width, (i32*)&height);
 
 		if (!isFocused() && bCursorCaptured) {
 			releaseCursor();

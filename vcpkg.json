@@ -13,6 +13,7 @@
     "glslang",
     "spirv-cross",
     "vulkan-memory-allocator",
-    "glm"
+    "glm",
+    "imgui"
   ]
 }
