@@ -76,6 +76,14 @@ namespace daxa {
 			size_t size = 0;
 		};
 
+		struct HostToImageCopySyncedInfo {
+			void* src = nullptr;
+			ImageHandle dst = {};
+			std::optional<VkImageSubresourceLayers> dstImgSubressource = std::nullopt;
+			size_t size = 0;
+			VkImageLayout dstFinalLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		};
+
 		struct ImageToImageCopyInfo{
 			ImageHandle src 			= {};
 			VkImageLayout srcLayout 	= VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
@@ -195,7 +203,7 @@ namespace daxa {
 
 			void copyHostToImage(HostToImageCopyInfo copyInfo);
 
-			void copyHostToImageSynced(HostToImageCopyInfo copyInfo, VkImageLayout finalImageLayout);
+			void copyHostToImageSynced(HostToImageCopySyncedInfo copySyncedInfo);
 
 			void copyMultiBufferToBuffer(BufferToBufferMultiCopyInfo copyInfo);
 
