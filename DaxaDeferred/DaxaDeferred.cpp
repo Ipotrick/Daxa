@@ -250,10 +250,10 @@ public:
 			.size = sizeof(decltype(cubeIndices)),
 		});
 		cmdList->copyHostToImageSynced({
+			.src = textureAtlasHostData,
 			.dst = textureAtlas,
 			.size = sizeX * sizeY * numChannels * sizeof(u8),
-			.src = textureAtlasHostData,
-			.dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+			.dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 		});
 		cmdList->end();
 		queue->submitBlocking({
@@ -271,16 +271,25 @@ public:
 			.width = app.window->getWidth(),
 			.height = app.window->getHeight(),
 			.format = VK_FORMAT_D32_SFLOAT,
-			.imageAspekt = VK_IMAGE_ASPECT_DEPTH_BIT,
 			.imageUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+			.imageAspekt = VK_IMAGE_ASPECT_DEPTH_BIT,
 		});
 
 		for (int i = 0; i < 3; i++) {
 			frames.push_back(PerFrameData{ .presentSignal = device->createSignal(), .timeline = device->createTimelineSemaphore(), .timelineCounter = 0 });
 		}
+
+		ImGui::CreateContext();
+		ImGui_ImplSDL2_InitForVulkan((SDL_Window*)app.window->getWindowHandleSDL());
+		imguiRenderer.emplace(device, queue);
 	}
 
 	void update(daxa::AppState& app) {
+		ImGui_ImplSDL2_NewFrame();
+		ImGui::NewFrame();
+
+		ImGui::ShowDemoWindow();
+
 		//printf("update, dt: %f\n", app.getDeltaTimeSeconds());
 
 		if (app.window->getWidth() != swapchain->getSize().width || app.window->getHeight() != swapchain->getSize().height) {
@@ -364,8 +373,18 @@ public:
 		
 		cmdList->endRendering();
 
+		cmdList->insertMemoryBarrier({
+			.awaitedStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
+			.waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
+		});
+
+		ImGui::Render();
+
+		imguiRenderer->recordCommands(ImGui::GetDrawData(), cmdList, swapchainImage.getImageHandle());
+
 		// array because we can allways pass multiple barriers at once for driver efficiency
 		std::array imgBarrier1 = { daxa::gpu::ImageBarrier{
+			.awaitedStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
 			.image = swapchainImage.getImageHandle(),
 			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			.layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
@@ -376,6 +395,7 @@ public:
 
 		// "++currentFrame->finishCounter " is the value that will be set to the timeline when the execution is finished, basicly incrementing it 
 		// the timeline is the counter we use to see if the frame is finished executing on the gpu later.
+		auto timelineValue = currentFrame->timeline->getCounter();
 		std::array signalTimelines = { std::tuple{ currentFrame->timeline, ++currentFrame->timelineCounter } };
 
 		daxa::gpu::SubmitInfo submitInfo;
@@ -386,6 +406,7 @@ public:
 
 		queue->present(std::move(swapchainImage), currentFrame->presentSignal);
 		swapchainImage = swapchain->aquireNextImage();
+
 
 		// we get the next frame context
 		auto frameContext = std::move(frames.back());
@@ -402,6 +423,11 @@ public:
 
 	void cleanup(daxa::AppState& app) {
 		queue->waitForFlush();
+		queue->checkForFinishedSubmits();
+		imguiRenderer.reset();
+		ImGui_ImplSDL2_Shutdown();
+		ImGui::DestroyContext();
+
 		device->waitIdle();
 		frames.clear();
 	}
@@ -422,6 +448,7 @@ private:
 	daxa::gpu::BufferHandle indexBuffer;
 	daxa::gpu::BufferHandle uniformBuffer;
 	daxa::gpu::ImageHandle textureAtlas;
+	std::optional<daxa::ImGuiRenderer> imguiRenderer = std::nullopt;
 	double totalElapsedTime = 0.0f;
 	struct PerFrameData {
 		daxa::gpu::SignalHandle presentSignal;
@@ -436,7 +463,7 @@ int main()
 	daxa::initialize();
 
 	{
-		daxa::Application<MyUser> app{ 1000, 1000, "Daxa Cube Sample"};
+		daxa::Application<MyUser> app{ 1000, 1000, "Daxa Deferred Sample"};
 		app.run();
 	}
 
