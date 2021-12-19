@@ -141,26 +141,31 @@ namespace daxa {
 			copyBufferToImage(btiCopy);
 		}
 
-		void CommandList::copyHostToImageSynced(HostToImageCopyInfo copyInfo, VkImageLayout finalImageLayout) {
+		void CommandList::copyHostToImageSynced(HostToImageCopySyncedInfo copySyncedInfo) {
 			ImageBarrier firstBarrier{
 				.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
 				.awaitedStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
 				.waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR,
 				.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
 				.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				.image = copyInfo.dst,
+				.image = copySyncedInfo.dst,
 			};
 			insertBarriers({},{&firstBarrier, 1});
 
-			copyHostToImage(copyInfo);
+			copyHostToImage({
+				.src = copySyncedInfo.src,
+				.dst = copySyncedInfo.dst, 
+				.dstImgSubressource = copySyncedInfo.dstImgSubressource,
+				.size = copySyncedInfo.size,
+			});
 
 			ImageBarrier secondBarrier{
 				.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
 				.waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR,
 				.waitingStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
 				.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				.layoutAfter = finalImageLayout,
-				.image = copyInfo.dst,
+				.layoutAfter = copySyncedInfo.dstFinalLayout,
+				.image = copySyncedInfo.dst,
 			};
 			insertBarriers({},{&secondBarrier, 1});
 		}

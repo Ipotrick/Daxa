@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "../DaxaCore.hpp"
-#include "../math/Vec2.hpp"
 #include "../gpu/Instance.hpp"
 
 #include "Scancodes.hpp"
@@ -69,10 +68,10 @@ namespace daxa {
 
 		i32 getCursorPosX() const;
 		i32 getCursorPosY() const;
-		f32 getRelativeCursorPosX() const;
-		f32 getRelativeCursorPosY() const;
 		i32 getCursorPosChangeX() const;
 		i32 getCursorPosChangeY() const;
+		f32 getRelativeCursorPosX() const;
+		f32 getRelativeCursorPosY() const;
 		f32 getRelativeCursorPosChangeX() const;
 		f32 getRelativeCursorPosChangeY() const;
 		bool isCursorOverWindow() const;
