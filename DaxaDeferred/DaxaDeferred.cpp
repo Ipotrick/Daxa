@@ -290,6 +290,8 @@ public:
 
 		ImGui::ShowDemoWindow();
 
+		ImGui::Render();
+
 		//printf("update, dt: %f\n", app.getDeltaTimeSeconds());
 
 		if (app.window->getWidth() != swapchain->getSize().width || app.window->getHeight() != swapchain->getSize().height) {
@@ -377,8 +379,6 @@ public:
 			.awaitedStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
 			.waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
 		});
-
-		ImGui::Render();
 
 		imguiRenderer->recordCommands(ImGui::GetDrawData(), cmdList, swapchainImage.getImageHandle());
 

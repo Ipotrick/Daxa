@@ -41,7 +41,7 @@ namespace daxa {
             .addVertexInputAttribute(VK_FORMAT_R32G32_SFLOAT)
             .addVertexInputAttribute(VK_FORMAT_R32G32_SFLOAT)
             .addVertexInputAttribute(VK_FORMAT_R8G8B8A8_UNORM)
-            .addColorAttachment(VK_FORMAT_R8G8B8A8_SRGB, VkPipelineColorBlendAttachmentState{
+            .addColorAttachment(VK_FORMAT_R8G8B8A8_SRGB/*, VkPipelineColorBlendAttachmentState{
                 .blendEnable = VK_TRUE,
                 .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
                 .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
@@ -50,7 +50,7 @@ namespace daxa {
                 .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
                 .alphaBlendOp = VK_BLEND_OP_ADD,
                 .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-            });
+            }*/);
 
         pipeline = device->createGraphicsPipeline(pipelineDescription);
 
@@ -124,8 +124,8 @@ namespace daxa {
             auto& vertexBuffer  = perFrameData.front().vertexBuffer;
             auto& indexBuffer   = perFrameData.front().indexBuffer;
 
-            if (draw_data->TotalVtxCount * sizeof(sizeof(float) * 4 + sizeof(u8) * 4) > vertexBuffer->getSize()) {
-                auto newSize = (((sizeof(float) * 4 + sizeof(u8) * 4) * draw_data->TotalVtxCount - 1) / 1024 + 1) * 1024;
+            if (draw_data->TotalVtxCount * sizeof(ImDrawVert) > vertexBuffer->getSize()) {
+                auto newSize = draw_data->TotalVtxCount * sizeof(ImDrawVert) + 4096;
                 vertexBuffer = device->createBuffer({
                     .size = newSize,
                     .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
@@ -133,8 +133,8 @@ namespace daxa {
                 });
             }
 
-            if (draw_data->TotalIdxCount * sizeof(u32) > indexBuffer->getSize()) {
-                auto newSize = ((sizeof(u32) * draw_data->TotalIdxCount - 1) / 1024 + 1) * 1024;
+            if (draw_data->TotalIdxCount * sizeof(ImDrawIdx) > indexBuffer->getSize()) {
+                auto newSize = draw_data->TotalIdxCount * sizeof(ImDrawIdx) + 4096;
                 indexBuffer = device->createBuffer({
                     .size = newSize,
                     .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
@@ -175,7 +175,7 @@ namespace daxa {
 
             cmdList->bindVertexBuffer(0, vertexBuffer);
 
-            cmdList->bindIndexBuffer(indexBuffer);
+            cmdList->bindIndexBuffer(indexBuffer, VkIndexType::VK_INDEX_TYPE_UINT16);
 
             {
                 float scale[2];
@@ -212,7 +212,7 @@ namespace daxa {
                     if (clip_max.y > target->getVkExtent().height) { clip_max.y = (float)target->getVkExtent().height; }
                     if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
                         continue;
-
+                    
                     // Apply scissor/clipping rectangle
                     VkRect2D scissor;
                     scissor.offset.x = (int32_t)(clip_min.x);
@@ -221,9 +221,9 @@ namespace daxa {
                     scissor.extent.height = (uint32_t)(clip_max.y - clip_min.y);
 
                     cmdList->setScissor(scissor);
- 
+
                     // Draw
-                    cmdList->drawIndexed(pcmd->ElemCount, 1,0, 0, 0);
+                    cmdList->drawIndexed(pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
                 }
                 global_idx_offset += cmd_list->IdxBuffer.Size;
                 global_vtx_offset += cmd_list->VtxBuffer.Size;
