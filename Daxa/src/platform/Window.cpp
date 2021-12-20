@@ -152,8 +152,8 @@ namespace daxa {
 	}
 
 	void Window::captureCursor() {
-		SDL_SetWindowGrab(sdlWindowHandle, SDL_TRUE);
 		SDL_ShowCursor(SDL_DISABLE);
+		SDL_SetWindowGrab(sdlWindowHandle, SDL_TRUE);
 		bCursorCaptured = true;
 	}
 
@@ -233,7 +233,7 @@ namespace daxa {
 		std::swap(buttonStates, prevButtonStates);
 		const u32 buttonMask = SDL_GetMouseState(&cursorPosX, &cursorPosY);
 		for (i32 i = 0; i < 5; ++i) {
-			(*buttonStates)[i] = buttonMask & SDL_BUTTON(i);
+			(*buttonStates)[i] = buttonMask & SDL_BUTTON(i+1);
 		}
 		for (i32 i = 0; i < 5; ++i) {
 			buttonHidden[i] = false;
