@@ -31,7 +31,8 @@ namespace daxa {
 			}
 
 			vkb::Swapchain vkbSwapchain = swapchainBuilder
-				.use_default_format_selection()
+				//.use_default_format_selection()
+				.set_desired_format({ VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT })
 				.set_desired_present_mode(presentMode)
 				.set_desired_extent(ci.width, ci.height)
 				.add_image_usage_flags(additionalimageUses)

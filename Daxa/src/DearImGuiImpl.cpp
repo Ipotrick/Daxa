@@ -41,7 +41,7 @@ namespace daxa {
             .addVertexInputAttribute(VK_FORMAT_R32G32_SFLOAT)
             .addVertexInputAttribute(VK_FORMAT_R32G32_SFLOAT)
             .addVertexInputAttribute(VK_FORMAT_R8G8B8A8_UNORM)
-            .addColorAttachment(VK_FORMAT_R8G8B8A8_SRGB/*, VkPipelineColorBlendAttachmentState{
+            .addColorAttachment(VK_FORMAT_R8G8B8A8_SRGB, VkPipelineColorBlendAttachmentState{
                 .blendEnable = VK_TRUE,
                 .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
                 .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
@@ -50,7 +50,7 @@ namespace daxa {
                 .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
                 .alphaBlendOp = VK_BLEND_OP_ADD,
                 .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-            }*/);
+            });
 
         pipeline = device->createGraphicsPipeline(pipelineDescription);
 
@@ -175,7 +175,7 @@ namespace daxa {
 
             cmdList->bindVertexBuffer(0, vertexBuffer);
 
-            cmdList->bindIndexBuffer(indexBuffer, VkIndexType::VK_INDEX_TYPE_UINT16);
+            cmdList->bindIndexBuffer(indexBuffer, 0, VkIndexType::VK_INDEX_TYPE_UINT16);
 
             {
                 float scale[2];
@@ -195,11 +195,9 @@ namespace daxa {
 
             int global_vtx_offset = 0;
             int global_idx_offset = 0;
-            for (int n = 0; n < draw_data->CmdListsCount; n++)
-            {
+            for (int n = 0; n < draw_data->CmdListsCount; n++) {
                 const ImDrawList* cmd_list = draw_data->CmdLists[n];
-                for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
-                {
+                for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)  {
                     const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
                     // Project scissor/clipping rectangles into framebuffer space
                     ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);

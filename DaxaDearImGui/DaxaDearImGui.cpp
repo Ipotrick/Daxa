@@ -285,10 +285,25 @@ public:
 	}
 
 	void update(daxa::AppState& app) {
+
 		ImGui_ImplSDL2_NewFrame();
+
 		ImGui::NewFrame();
 
+		if (app.window->isCursorCaptured()) {
+			ImGui::CaptureKeyboardFromApp(false);
+			ImGui::CaptureMouseFromApp(false);
+		}
+
 		ImGui::ShowDemoWindow();
+
+		if (ImGui::GetIO().WantCaptureMouse) {
+			app.window->hideButton(daxa::MouseButton::Left);
+			app.window->hideButton(daxa::MouseButton::Right);
+			app.window->hideButton(daxa::MouseButton::Middle);
+			app.window->hideButton(daxa::MouseButton::X1);
+			app.window->hideButton(daxa::MouseButton::X2);
+		}
 
 		ImGui::Render();
 
@@ -463,7 +478,7 @@ int main()
 	daxa::initialize();
 
 	{
-		daxa::Application<MyUser> app{ 1000, 1000, "Daxa Deferred Sample"};
+		daxa::Application<MyUser> app{ 1000, 1000, "Daxa Dear ImGui Sample"};
 		app.run();
 	}
 
