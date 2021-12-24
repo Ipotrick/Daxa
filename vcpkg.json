@@ -14,6 +14,9 @@
     "spirv-cross",
     "vulkan-memory-allocator",
     "glm",
+    "fmt",
+    "glfw3",
+    "glad",
     "imgui"
   ]
 }
