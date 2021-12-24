@@ -1,9 +1,9 @@
 
 file(GLOB_RECURSE SOURCES "*.cpp" "*.c")
-add_executable(Gabe ${SOURCES})
+add_executable(DaxaMinecraft ${SOURCES})
 
 find_package(glm CONFIG REQUIRED)
-target_link_libraries(Gabe PUBLIC Daxa glm::glm)
-target_include_directories(Gabe PUBLIC "src")
+target_link_libraries(DaxaMinecraft PUBLIC Daxa glm::glm)
+target_include_directories(DaxaMinecraft PUBLIC "src")
 
-# set_project_warnings(Gabe)
+# set_project_warnings(DaxaMinecraft)
