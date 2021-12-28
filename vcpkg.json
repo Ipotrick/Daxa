@@ -16,5 +16,7 @@
     "glm",
     "imgui",
     "glfw3"
+    "fmt",
+    "glad"
   ]
 }
