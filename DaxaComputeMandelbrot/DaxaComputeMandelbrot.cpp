@@ -6,7 +6,7 @@ class MyUser {
 public:
 	MyUser(daxa::AppState& app) 
 		: device{ daxa::gpu::Device::create() }
-		, queue{ this->device->createQueue() }
+		, queue{ this->device->createQueue(/*frames in flight: */3) }
 		, swapchain{ this->device->createSwapchain({
 			.surface = app.window->getSurface(), 
 			.width = app.window->getWidth(), 
@@ -15,6 +15,7 @@ public:
 			.additionalUses = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 		})}
 		, swapchainImage{ this->swapchain->aquireNextImage() }
+		, presentSignal{ this->device->createSignal() }
 	{ 
 
 		char const* computeShaderGLSL = R"(
@@ -104,15 +105,9 @@ public:
 		queue->submitBlocking({
 			.commandLists = { cmdList }
 		});
-
-		for (int i = 0; i < 3; i++) {
-			frames.push_back(PerFrameData{ .presentSignal = device->createSignal(), .timeline = device->createTimelineSemaphore(), .timelineCounter = 0 });
-		}
 	}
 
 	void update(daxa::AppState& app) {
-		//printf("update, dt: %f\n", app.getDeltaTimeSeconds());
-
 		auto cmdList = device->getEmptyCommandList();
 
 		cmdList->begin();
@@ -129,9 +124,6 @@ public:
 			});
 			cmdList->insertImageBarrier({.image = resultImage, .layoutAfter = VK_IMAGE_LAYOUT_GENERAL, .waitingStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR});
 		}
-
-		auto* currentFrame = &frames.front();
-
 
 		/// ------------ Begin Data Uploading ---------------------
 
@@ -169,37 +161,27 @@ public:
 
 		cmdList->end();
 
-		// "++currentFrame->finishCounter " is the value that will be set to the timeline when the execution is finished, basicly incrementing it 
-		// the timeline is the counter we use to see if the frame is finished executing on the gpu later.
-		std::array signalTimelines = { std::tuple{ currentFrame->timeline, ++currentFrame->timelineCounter } };
-
 		daxa::gpu::SubmitInfo submitInfo;
 		submitInfo.commandLists.push_back(std::move(cmdList));
-		submitInfo.signalOnCompletion = { &currentFrame->presentSignal, 1 };
-		submitInfo.signalTimelines = signalTimelines;
+		submitInfo.signalOnCompletion = { &presentSignal, 1 };
 		queue->submit(submitInfo);
 
-		queue->present(std::move(swapchainImage), currentFrame->presentSignal);
+		queue->present(std::move(swapchainImage), presentSignal);
 		swapchainImage = swapchain->aquireNextImage();
 
-		// we get the next frame context
-		auto frameContext = std::move(frames.back());
-		frames.pop_back();
-		frames.push_front(std::move(frameContext));
-		currentFrame = &frames.front();
-		queue->checkForFinishedSubmits();
+		// switches to the next batch. If all available batches are still beeing executed, 
+		// this function will block until there is a batch available again.
+		// the batches are reclaimed in order.
+		queue->nextBatch();
 
-		// we wait on the gpu to finish executing the frame
-		// as we have two frame contexts we are actually waiting on the previous frame to complete. 
-		// if you only have one frame in flight you can just wait on the frame to finish here too.
-		currentFrame->timeline->wait(currentFrame->timelineCounter);
+		// reclaim ressources and free ref count handles
+		queue->checkForFinishedSubmits();
 	}
 
 	void cleanup(daxa::AppState& app) {
-		queue->waitForFlush();
+		queue->waitIdle();
 		queue->checkForFinishedSubmits();
 		device->waitIdle();
-		frames.clear();
 	}
 
 	~MyUser() {
@@ -215,12 +197,7 @@ private:
 	daxa::gpu::BindingSetAllocatorHandle bindingSetAllocator;
 	daxa::gpu::BufferHandle uniformBuffer;
 	double totalElapsedTime = 0.0f;
-	struct PerFrameData {
-		daxa::gpu::SignalHandle presentSignal;
-		daxa::gpu::TimelineSemaphoreHandle timeline;
-		u64 timelineCounter = 0;
-	};
-	std::deque<PerFrameData> frames;
+	daxa::gpu::SignalHandle presentSignal;
 };
 
 int main()

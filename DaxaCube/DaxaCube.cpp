@@ -24,11 +24,12 @@ public:
 			}
 		}
 
-		auto fov = this->fov;
 		auto cameraSwaySpeed = this->cameraSwaySpeed;
 		if (window.keyPressed(GLFW_KEY_C)) {
-			fov *= 0.25f;
 			cameraSwaySpeed *= 0.25;
+			bZoom = true;
+		} else {
+			bZoom = false;
 		}
 
 		auto yawRotaAroundUp = glm::rotate(glm::mat4(1.0f), yaw, {0.f,0.f,1.f});
@@ -65,6 +66,10 @@ public:
 	}
 
 	glm::mat4 getVP(daxa::Window& window) const {
+		auto fov = this->fov;
+		if (bZoom) {
+			fov *= 0.25f;
+		}
 		auto yawRotaAroundUp = glm::rotate(glm::mat4(1.0f), yaw, {0.f,0.f,1.f});
 		auto pitchRotation = glm::rotate(glm::mat4(1.0f), pitch, glm::vec3{1.f,0.f,0.f});
 		auto prespective = glm::perspective(fov, (f32)window.getWidth()/(f32)window.getHeight(), near, far);
@@ -74,6 +79,7 @@ public:
 		return prespective * view;
 	}
 private:
+	bool bZoom = false;
 	f32 fov = 74.0f;
 	f32 near = 0.4f;
 	f32 far = 1'000.0f;
