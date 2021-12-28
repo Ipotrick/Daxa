@@ -12,21 +12,21 @@
 
 class GimbalLockedCameraController {
 public:
-	glm::mat4 update(daxa::Window& window, f32 dt) {
-		f32 speed = window.keyPressed(daxa::Scancode::LSHIFT) ? translationSpeed * 4.0f : translationSpeed;
+	void processInput(daxa::Window& window, f32 dt) {
+		f32 speed = window.keyPressed(GLFW_KEY_LEFT_SHIFT) ? translationSpeed * 4.0f : translationSpeed;
 		if (window.isCursorCaptured()) {
-			if (window.keyJustPressed(daxa::Scancode::ESCAPE)) {
+			if (window.keyJustPressed(GLFW_KEY_ESCAPE)) {
 				window.releaseCursor();
 			}
 		} else {
-			if (window.buttonJustPressed(daxa::MouseButton::Left) && window.isCursorOverWindow()) {
+			if (window.buttonJustPressed(GLFW_MOUSE_BUTTON_LEFT) && window.isCursorOverWindow()) {
 				window.captureCursor();
 			}
 		}
 
 		auto fov = this->fov;
 		auto cameraSwaySpeed = this->cameraSwaySpeed;
-		if (window.keyPressed(daxa::Scancode::C)) {
+		if (window.keyPressed(GLFW_KEY_C)) {
 			fov *= 0.25f;
 			cameraSwaySpeed *= 0.25;
 		}
@@ -34,26 +34,26 @@ public:
 		auto yawRotaAroundUp = glm::rotate(glm::mat4(1.0f), yaw, {0.f,0.f,1.f});
 		auto pitchRotation = glm::rotate(glm::mat4(1.0f), pitch, glm::vec3{1.f,0.f,0.f});
 		glm::vec4 translation = {};
-		if (window.keyPressed(daxa::Scancode::W)) {
+		if (window.keyPressed(GLFW_KEY_W)) {
 			glm::vec4 direction = { 0.0f, 0.0f, -1.0f, 0.0f };
 			translation += yawRotaAroundUp * pitchRotation * direction * dt * speed;
 		}
-		if (window.keyPressed(daxa::Scancode::S)) {
+		if (window.keyPressed(GLFW_KEY_S)) {
 			glm::vec4 direction = { 0.0f, 0.0f, 1.0f, 0.0f };
 			translation += yawRotaAroundUp * pitchRotation * direction * dt * speed;
 		}
-		if (window.keyPressed(daxa::Scancode::A)) {
+		if (window.keyPressed(GLFW_KEY_A)) {
 			glm::vec4 direction = { 1.0f, 0.0f, 0.0f, 0.0f };
 			translation += yawRotaAroundUp * direction * dt * speed;
 		}
-		if (window.keyPressed(daxa::Scancode::D)) {
+		if (window.keyPressed(GLFW_KEY_D)) {
 			glm::vec4 direction = { -1.0f, 0.0f, 0.0f, 0.0f };
 			translation += yawRotaAroundUp * direction * dt * speed;
 		}
-		if (window.keyPressed(daxa::Scancode::SPACE)) {
+		if (window.keyPressed(GLFW_KEY_SPACE)) {
 			translation += yawRotaAroundUp * pitchRotation * glm::vec4{ 0.f,  1.f, 0.f, 0.f } * dt * speed;
 		}
-		if (window.keyPressed(daxa::Scancode::LCTRL)) {
+		if (window.keyPressed(GLFW_KEY_LEFT_CONTROL)) {
 			translation += yawRotaAroundUp * pitchRotation * glm::vec4{ 0.f, -1.f,  0.f, 0.f } * dt * speed;
 		}
 		if (window.isCursorCaptured()) {
@@ -62,7 +62,11 @@ public:
 			yaw += window.getCursorPosChangeX() * cameraSwaySpeed * dt;
 		}
 		position += translation;
+	}
 
+	glm::mat4 getVP(daxa::Window& window) const {
+		auto yawRotaAroundUp = glm::rotate(glm::mat4(1.0f), yaw, {0.f,0.f,1.f});
+		auto pitchRotation = glm::rotate(glm::mat4(1.0f), pitch, glm::vec3{1.f,0.f,0.f});
 		auto prespective = glm::perspective(fov, (f32)window.getWidth()/(f32)window.getHeight(), near, far);
 		auto rota = yawRotaAroundUp * pitchRotation;
 		auto cameraModelMat = glm::translate(glm::mat4(1.0f), {position.x, position.y, position.z}) * rota;
@@ -280,29 +284,20 @@ public:
 		}
 
 		ImGui::CreateContext();
-		ImGui_ImplSDL2_InitForVulkan((SDL_Window*)app.window->getWindowHandleSDL());
+		ImGui_ImplGlfw_InitForVulkan(app.window->getGLFWWindow(), false);
 		imguiRenderer.emplace(device, queue);
 	}
 
 	void update(daxa::AppState& app) {
 
-		ImGui_ImplSDL2_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
 
 		ImGui::NewFrame();
 
-		if (app.window->isCursorCaptured()) {
-			ImGui::CaptureKeyboardFromApp(false);
-			ImGui::CaptureMouseFromApp(false);
-		}
-
 		ImGui::ShowDemoWindow();
 
-		if (ImGui::GetIO().WantCaptureMouse) {
-			app.window->hideButton(daxa::MouseButton::Left);
-			app.window->hideButton(daxa::MouseButton::Right);
-			app.window->hideButton(daxa::MouseButton::Middle);
-			app.window->hideButton(daxa::MouseButton::X1);
-			app.window->hideButton(daxa::MouseButton::X2);
+		if (!ImGui::GetIO().WantCaptureMouse) {
+			cameraController.processInput(*app.window, app.getDeltaTimeSeconds());
 		}
 
 		ImGui::Render();
@@ -317,8 +312,8 @@ public:
 				.width = app.window->getWidth(),
 				.height = app.window->getHeight(),
 				.format = VK_FORMAT_D32_SFLOAT,
-				.imageAspekt = VK_IMAGE_ASPECT_DEPTH_BIT,
 				.imageUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+				.imageAspekt = VK_IMAGE_ASPECT_DEPTH_BIT,
 				.memoryPropertyFlags = VMA_MEMORY_USAGE_GPU_ONLY,
 			});
 		}
@@ -333,7 +328,7 @@ public:
 		/// ------------ Begin Data Uploading ---------------------
 
 
-		auto vp = cameraController.update(*app.window, app.getDeltaTimeSeconds());
+		auto vp = cameraController.getVP(*app.window);
 		cmdList->copyHostToBuffer(daxa::gpu::HostToBufferCopyInfo{
 			.src = &vp,
 			.dst = uniformBuffer,
@@ -440,7 +435,7 @@ public:
 		queue->waitForFlush();
 		queue->checkForFinishedSubmits();
 		imguiRenderer.reset();
-		ImGui_ImplSDL2_Shutdown();
+		ImGui_ImplGlfw_Shutdown();
 		ImGui::DestroyContext();
 
 		device->waitIdle();

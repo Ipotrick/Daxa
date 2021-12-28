@@ -26,9 +26,18 @@ namespace daxa {
             layout(location = 0) out vec4 fColor;
             layout(set=0, binding=0) uniform sampler2D sTexture;
             layout(location = 0) in struct { vec4 Color; vec2 UV; } In;
+            vec4 srgb_to_linear(vec4 srgb) {
+                vec3 color_srgb = srgb.rgb;
+                vec3 selector = clamp(ceil(color_srgb - 0.04045), 0.0, 1.0); // 0 if under value, 1 if over
+                vec3 under = color_srgb / 12.92;
+                vec3 over = pow((color_srgb + 0.055) / 1.055, vec3(2.4));
+                vec3 result = mix(under, over, selector);
+                return vec4(result, srgb.a);
+            }
             void main()
             {
-                fColor = In.Color * texture(sTexture, In.UV.st);
+                vec4 color = srgb_to_linear(In.Color);
+                fColor = color * texture(sTexture, In.UV.st);
             }
         )--";
         auto fragmentShaderModule = device->tryCreateShderModuleFromGLSL(fragmentGLSL, VK_SHADER_STAGE_FRAGMENT_BIT).value();
