@@ -3,7 +3,8 @@
 
 #include "framework.h"
 
-#include <SDL2/SDL.h>
+#include <vulkan/vulkan.h>
+#include <GLFW/glfw3.h>
 #include "glslang/Public/ShaderLang.h"
 
 #include "gpu/Instance.hpp"
@@ -11,8 +12,9 @@
 namespace daxa {
 
 	void initialize() {
-		if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-			printf("error initializing SDL: %s\n", SDL_GetError());
+		if (glfwInit() != GLFW_TRUE)
+		{
+			printf("error: could not initialize GLFW3!\n");
 			exit(-1);
 		}
 		gpu::instance = std::make_unique<gpu::Instance>();
@@ -22,6 +24,5 @@ namespace daxa {
 	void cleanup() {
 		glslang::FinalizeProcess();
 		gpu::instance.reset();
-		SDL_Quit();
 	}
 }
