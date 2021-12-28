@@ -117,8 +117,8 @@ namespace daxa {
 			}
 		}
 
-		QueueHandle Device::createQueue() {
-			return QueueHandle{ std::make_shared<Queue>(device, vkbDevice.get_queue(vkb::QueueType::graphics).value()) };
+		QueueHandle Device::createQueue(u32 batchCount) {
+			return QueueHandle{ std::make_shared<Queue>(device, vkbDevice.get_queue(vkb::QueueType::graphics).value(), batchCount) };
 		}
 
 		SamplerHandle Device::createSampler(SamplerCreateInfo ci) {

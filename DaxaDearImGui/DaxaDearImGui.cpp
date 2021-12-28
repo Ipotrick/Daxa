@@ -24,11 +24,12 @@ public:
 			}
 		}
 
-		auto fov = this->fov;
 		auto cameraSwaySpeed = this->cameraSwaySpeed;
 		if (window.keyPressed(GLFW_KEY_C)) {
-			fov *= 0.25f;
 			cameraSwaySpeed *= 0.25;
+			bZoom = true;
+		} else {
+			bZoom = false;
 		}
 
 		auto yawRotaAroundUp = glm::rotate(glm::mat4(1.0f), yaw, {0.f,0.f,1.f});
@@ -65,6 +66,10 @@ public:
 	}
 
 	glm::mat4 getVP(daxa::Window& window) const {
+		auto fov = this->fov;
+		if (bZoom) {
+			fov *= 0.25f;
+		}
 		auto yawRotaAroundUp = glm::rotate(glm::mat4(1.0f), yaw, {0.f,0.f,1.f});
 		auto pitchRotation = glm::rotate(glm::mat4(1.0f), pitch, glm::vec3{1.f,0.f,0.f});
 		auto prespective = glm::perspective(fov, (f32)window.getWidth()/(f32)window.getHeight(), near, far);
@@ -74,6 +79,7 @@ public:
 		return prespective * view;
 	}
 private:
+	bool bZoom = false;
 	f32 fov = 74.0f;
 	f32 near = 0.4f;
 	f32 far = 1'000.0f;
@@ -89,13 +95,14 @@ class MyUser {
 public:
 	MyUser(daxa::AppState& app) 
 		: device{ daxa::gpu::Device::create() }
-		, queue{ this->device->createQueue() }
+		, queue{ this->device->createQueue(/*amount of batches/ frames in flight:*/2) }
 		, swapchain{ this->device->createSwapchain({
 			.surface = app.window->getSurface(),
 			.width = app.window->getWidth(),
 			.height = app.window->getHeight(),
 		})}
 		, swapchainImage{ this->swapchain->aquireNextImage() }
+		, presentSignal{ this->device->createSignal() }
 	{ 
 		char const* vertexShaderGLSL = R"(
 			#version 450
@@ -279,10 +286,6 @@ public:
 			.imageAspekt = VK_IMAGE_ASPECT_DEPTH_BIT,
 		});
 
-		for (int i = 0; i < 3; i++) {
-			frames.push_back(PerFrameData{ .presentSignal = device->createSignal(), .timeline = device->createTimelineSemaphore(), .timelineCounter = 0 });
-		}
-
 		ImGui::CreateContext();
 		ImGui_ImplGlfw_InitForVulkan(app.window->getGLFWWindow(), false);
 		imguiRenderer.emplace(device, queue);
@@ -302,8 +305,6 @@ public:
 
 		ImGui::Render();
 
-		//printf("update, dt: %f\n", app.getDeltaTimeSeconds());
-
 		if (app.window->getWidth() != swapchain->getSize().width || app.window->getHeight() != swapchain->getSize().height) {
 			device->waitIdle();
 			swapchain->resize(VkExtent2D{ .width = app.window->getWidth(), .height = app.window->getHeight() });
@@ -317,8 +318,6 @@ public:
 				.memoryPropertyFlags = VMA_MEMORY_USAGE_GPU_ONLY,
 			});
 		}
-
-		auto* currentFrame = &frames.front();
 
 		auto cmdList = device->getEmptyCommandList();
 
@@ -403,43 +402,30 @@ public:
 
 		cmdList->end();
 
-		// "++currentFrame->finishCounter " is the value that will be set to the timeline when the execution is finished, basicly incrementing it 
-		// the timeline is the counter we use to see if the frame is finished executing on the gpu later.
-		auto timelineValue = currentFrame->timeline->getCounter();
-		std::array signalTimelines = { std::tuple{ currentFrame->timeline, ++currentFrame->timelineCounter } };
-
 		daxa::gpu::SubmitInfo submitInfo;
 		submitInfo.commandLists.push_back(std::move(cmdList));
-		submitInfo.signalOnCompletion = { &currentFrame->presentSignal, 1 };
-		submitInfo.signalTimelines = signalTimelines;
+		submitInfo.signalOnCompletion = { &presentSignal, 1 };
 		queue->submit(submitInfo);
 
-		queue->present(std::move(swapchainImage), currentFrame->presentSignal);
+		queue->present(std::move(swapchainImage), presentSignal);
 		swapchainImage = swapchain->aquireNextImage();
 
+		// switches to the next batch. If all available batches are still beeing executed, 
+		// this function will block until there is a batch available again.
+		// the batches are reclaimed in order.
+		queue->nextBatch();
 
-		// we get the next frame context
-		auto frameContext = std::move(frames.back());
-		frames.pop_back();
-		frames.push_front(std::move(frameContext));
-		currentFrame = &frames.front();
+		// reclaim ressources and free ref count handles
 		queue->checkForFinishedSubmits();
-
-		// we wait on the gpu to finish executing the frame
-		// as we have two frame contexts we are actually waiting on the previous frame to complete. 
-		// if you only have one frame in flight you can just wait on the frame to finish here too.
-		currentFrame->timeline->wait(currentFrame->timelineCounter);
 	}
 
 	void cleanup(daxa::AppState& app) {
-		queue->waitForFlush();
+		queue->waitIdle();
 		queue->checkForFinishedSubmits();
 		imguiRenderer.reset();
 		ImGui_ImplGlfw_Shutdown();
 		ImGui::DestroyContext();
-
 		device->waitIdle();
-		frames.clear();
 	}
 
 	~MyUser() {
@@ -460,12 +446,7 @@ private:
 	daxa::gpu::ImageHandle textureAtlas;
 	std::optional<daxa::ImGuiRenderer> imguiRenderer = std::nullopt;
 	double totalElapsedTime = 0.0f;
-	struct PerFrameData {
-		daxa::gpu::SignalHandle presentSignal;
-		daxa::gpu::TimelineSemaphoreHandle timeline;
-		u64 timelineCounter = 0;
-	};
-	std::deque<PerFrameData> frames;
+	daxa::gpu::SignalHandle presentSignal;
 };
 
 int main()

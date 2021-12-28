@@ -3,13 +3,16 @@
 namespace daxa {
 	namespace gpu {
 
-		Queue::Queue(VkDevice device, VkQueue queue)
+		Queue::Queue(VkDevice device, VkQueue queue, u32 batchCount)
 			: device{device}
 			, queue{queue}
-		{}
+			, bWaitForBatchesToComplete{ batchCount > 0 }
+		{
+			this->batches.resize(std::max(u32(1),batchCount));
+		}
 
 		Queue::~Queue() {
-			waitForFlush();
+			waitIdle();
 		}
 
 		void Queue::submit(SubmitInfo si) {
@@ -87,8 +90,7 @@ namespace daxa {
 				.timelineSema = std::move(thisSubmitTimelineSema),
 				.finishCounter = thisSubmitTimelineFinishCounter,
 			};
-			auto someMove = std::move(pendingSubmit);
-			unfinishedSubmits.push_back(std::move(someMove));
+			batches[0].push_back(std::move(pendingSubmit));
 
 			submitSemaphoreWaitOnBuffer.clear();
 			submitSemaphoreWaitOnBuffer.clear();
@@ -108,35 +110,37 @@ namespace daxa {
 
 		void Queue::submitBlocking(SubmitInfo submitInfo) {
 			submit(submitInfo);
-			unfinishedSubmits.back().timelineSema->wait(unfinishedSubmits.back().finishCounter);
+			batches[0].back().timelineSema->wait(batches[0].back().finishCounter);
 		}
 
 		void Queue::checkForFinishedSubmits() {
-			for (auto iter = unfinishedSubmits.begin(); iter != unfinishedSubmits.end();) {
-				auto counter = iter->timelineSema->getCounter();
-				if (counter >= iter->finishCounter) {
-					while (!iter->cmdLists.empty()) {
-						auto list = std::move(iter->cmdLists.back());
-						iter->cmdLists.pop_back();
-						for (auto& buffer : list->usedBuffers) {
-							buffer.buffer->usesOnGPU -= 1;
-						}
-						for (auto& set : list->usedSets) {
-							set->usesOnGPU -= 1;
+			for (auto& batch : batches) {
+				for (auto iter = batch.begin(); iter != batch.end();) {
+					auto counter = iter->timelineSema->getCounter();
+					if (counter >= iter->finishCounter) {
+						while (!iter->cmdLists.empty()) {
+							auto list = std::move(iter->cmdLists.back());
+							iter->cmdLists.pop_back();
+							for (auto& buffer : list->usedBuffers) {
+								buffer.buffer->usesOnGPU -= 1;
+							}
+							for (auto& set : list->usedSets) {
+								set->usesOnGPU -= 1;
 
-							for (auto& handle : set->handles) {
-								if (auto* buffer = std::get_if<BufferHandle>(&handle)) {
-									(**buffer).usesOnGPU -= 1;
+								for (auto& handle : set->handles) {
+									if (auto* buffer = std::get_if<BufferHandle>(&handle)) {
+										(**buffer).usesOnGPU -= 1;
+									}
 								}
 							}
+							list->usesOnGPU -= 1;
 						}
-						list->usesOnGPU -= 1;
+						unusedTimelines.push_back(std::move(iter->timelineSema));
+						iter = batch.erase(iter);
 					}
-					unusedTimelines.push_back(std::move(iter->timelineSema));
-					iter = unfinishedSubmits.erase(iter);
-				}
-				else {
-					++iter;
+					else {
+						++iter;
+					}
 				}
 			}
 		}
@@ -156,17 +160,22 @@ namespace daxa {
 			vkQueuePresentKHR(queue, &presentInfo);
 		}
 
-		void Queue::waitForFlush() {
-			for (auto& pending : unfinishedSubmits) {
-				VkSemaphoreWaitInfo semaphoreWaitInfo{
-					.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
-					.pNext = nullptr,
-					.flags = 0,
-					.semaphoreCount = 1,
-					.pSemaphores = &pending.timelineSema->timelineSema,
-					.pValues = &pending.finishCounter,
-				};
-				vkWaitSemaphores(device, &semaphoreWaitInfo, UINT64_MAX);
+		void Queue::waitIdle() {
+			for (auto& batch : batches) {
+				for (auto& pending : batch) {
+					pending.timelineSema->wait(pending.finishCounter);
+				}
+			}
+		}
+
+		void Queue::nextBatch() {
+			auto back = std::move(batches.back());
+			batches.pop_back();
+			batches.push_front(std::move(back));
+			if (bWaitForBatchesToComplete) {
+				for (auto& pending : batches[0]) {
+					pending.timelineSema->wait(pending.finishCounter);
+				}
 			}
 		}
 	}
