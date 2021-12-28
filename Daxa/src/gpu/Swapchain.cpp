@@ -26,6 +26,7 @@ namespace daxa {
 
 			vkb::SwapchainBuilder swapchainBuilder{ physicalDevice, device, surface };
 
+			auto oldSwapchain = swapchain;
 			if (swapchain != VK_NULL_HANDLE) {
 				swapchainBuilder.set_old_swapchain(swapchain);
 			}
@@ -64,6 +65,10 @@ namespace daxa {
 				img.mipmapLevels = 1;
 			}
 			this->swapchainImageFormat = vkbSwapchain.image_format;
+
+			if (oldSwapchain) {
+				vkDestroySwapchainKHR(device, oldSwapchain, nullptr);
+			}
 
 			VkFenceCreateInfo fenceCI{
 				.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
