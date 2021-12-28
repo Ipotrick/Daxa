@@ -22,6 +22,12 @@ A brief explanation for each of these goals:
 * As i said before, many abstractions make compromises on ressource lifetimes like deleting things with N render frames delay. These and other constrains constrain the user to a specific application model that i personally don't like. These things can also cause very obscure bugs that are hard to debug. So Things like queues, descriptor sets and synchronization are fully exposed in daxa::gpu.
 * automatic synchronization like barrier generation can create hughe cpu overhead, many abstractions like wgpu need to make many hash map accesses for the barrier generation. Syncrhonization may be a lot of boilderplate but usually dont make up too much trouble in my opinion. Automatic sync also causes a much more complex implementation wich i am not willing to make. Therefore semaphores and barriers are completely exposed in the api.
 
+Things that Daxa definetly does not aim to be:
+* an optimal vulkan abstraction
+* having no additional overhead
+* beeing protable/ having support for older devices and mobile
+* exposing all vulkan features/ allowing all possible programming styles possible with vulkan
+
 Daxa also includes other rendering and application specific classes and other abstractions.
 Many of them are rendering related like an ImGui backend or Camera controllers.
 
