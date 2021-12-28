@@ -52,15 +52,19 @@ struct RenderContext {
     }
 
     ~RenderContext() {
-        queue->waitForFlush();
+        queue->waitIdle();
         queue->checkForFinishedSubmits();
         device->waitIdle();
         frames.clear();
     }
 
+    static inline uint32_t resizes = 0;
+
     auto begin_frame(int32_t sx, int32_t sy) {
         if (sx != swapchain->getSize().width || sy != swapchain->getSize().height) {
             device->waitIdle();
+            resizes++;
+            printf("resize count: %i\n", resizes);
             swapchain->resize(VkExtent2D{.width = (uint32_t)sx, .height = (uint32_t)sy});
             swapchain_image = swapchain->aquireNextImage();
             depth_image     = device->createImage2d({
