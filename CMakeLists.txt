@@ -8,5 +8,7 @@ add_subdirectory("Daxa")
 add_subdirectory("DaxaCube")
 add_subdirectory("DaxaTriangle")
 add_subdirectory("DaxaComputeMandelbrot")
-add_subdirectory("DaxaMinecraft")
 add_subdirectory("DaxaDearImGui")
+
+add_subdirectory("DaxaMinecraft")
+add_subdirectory("DaxaMinecraftRaytraced")
