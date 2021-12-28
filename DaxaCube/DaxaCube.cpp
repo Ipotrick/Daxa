@@ -12,21 +12,21 @@
 
 class GimbalLockedCameraController {
 public:
-	glm::mat4 update(daxa::Window& window, f32 dt) {
-		f32 speed = window.keyPressed(daxa::Scancode::LSHIFT) ? translationSpeed * 4.0f : translationSpeed;
+	void processInput(daxa::Window& window, f32 dt) {
+		f32 speed = window.keyPressed(GLFW_KEY_LEFT_SHIFT) ? translationSpeed * 4.0f : translationSpeed;
 		if (window.isCursorCaptured()) {
-			if (window.keyJustPressed(daxa::Scancode::ESCAPE)) {
+			if (window.keyJustPressed(GLFW_KEY_ESCAPE)) {
 				window.releaseCursor();
 			}
 		} else {
-			if (window.buttonJustPressed(daxa::MouseButton::Left) && window.isCursorOverWindow()) {
+			if (window.buttonJustPressed(GLFW_MOUSE_BUTTON_LEFT) && window.isCursorOverWindow()) {
 				window.captureCursor();
 			}
 		}
 
 		auto fov = this->fov;
 		auto cameraSwaySpeed = this->cameraSwaySpeed;
-		if (window.keyPressed(daxa::Scancode::C)) {
+		if (window.keyPressed(GLFW_KEY_C)) {
 			fov *= 0.25f;
 			cameraSwaySpeed *= 0.25;
 		}
@@ -34,26 +34,26 @@ public:
 		auto yawRotaAroundUp = glm::rotate(glm::mat4(1.0f), yaw, {0.f,0.f,1.f});
 		auto pitchRotation = glm::rotate(glm::mat4(1.0f), pitch, glm::vec3{1.f,0.f,0.f});
 		glm::vec4 translation = {};
-		if (window.keyPressed(daxa::Scancode::W)) {
+		if (window.keyPressed(GLFW_KEY_W)) {
 			glm::vec4 direction = { 0.0f, 0.0f, -1.0f, 0.0f };
 			translation += yawRotaAroundUp * pitchRotation * direction * dt * speed;
 		}
-		if (window.keyPressed(daxa::Scancode::S)) {
+		if (window.keyPressed(GLFW_KEY_S)) {
 			glm::vec4 direction = { 0.0f, 0.0f, 1.0f, 0.0f };
 			translation += yawRotaAroundUp * pitchRotation * direction * dt * speed;
 		}
-		if (window.keyPressed(daxa::Scancode::A)) {
+		if (window.keyPressed(GLFW_KEY_A)) {
 			glm::vec4 direction = { 1.0f, 0.0f, 0.0f, 0.0f };
 			translation += yawRotaAroundUp * direction * dt * speed;
 		}
-		if (window.keyPressed(daxa::Scancode::D)) {
+		if (window.keyPressed(GLFW_KEY_D)) {
 			glm::vec4 direction = { -1.0f, 0.0f, 0.0f, 0.0f };
 			translation += yawRotaAroundUp * direction * dt * speed;
 		}
-		if (window.keyPressed(daxa::Scancode::SPACE)) {
+		if (window.keyPressed(GLFW_KEY_SPACE)) {
 			translation += yawRotaAroundUp * pitchRotation * glm::vec4{ 0.f,  1.f, 0.f, 0.f } * dt * speed;
 		}
-		if (window.keyPressed(daxa::Scancode::LCTRL)) {
+		if (window.keyPressed(GLFW_KEY_LEFT_CONTROL)) {
 			translation += yawRotaAroundUp * pitchRotation * glm::vec4{ 0.f, -1.f,  0.f, 0.f } * dt * speed;
 		}
 		if (window.isCursorCaptured()) {
@@ -62,7 +62,11 @@ public:
 			yaw += window.getCursorPosChangeX() * cameraSwaySpeed * dt;
 		}
 		position += translation;
+	}
 
+	glm::mat4 getVP(daxa::Window& window) const {
+		auto yawRotaAroundUp = glm::rotate(glm::mat4(1.0f), yaw, {0.f,0.f,1.f});
+		auto pitchRotation = glm::rotate(glm::mat4(1.0f), pitch, glm::vec3{1.f,0.f,0.f});
 		auto prespective = glm::perspective(fov, (f32)window.getWidth()/(f32)window.getHeight(), near, far);
 		auto rota = yawRotaAroundUp * pitchRotation;
 		auto cameraModelMat = glm::translate(glm::mat4(1.0f), {position.x, position.y, position.z}) * rota;
@@ -85,13 +89,14 @@ class MyUser {
 public:
 	MyUser(daxa::AppState& app) 
 		: device{ daxa::gpu::Device::create() }
-		, queue{ this->device->createQueue() }
+		, queue{ this->device->createQueue(/*amount of batches/ frames in flight:*/2) }
 		, swapchain{ this->device->createSwapchain({
 			.surface = app.window->getSurface(),
 			.width = app.window->getWidth(),
 			.height = app.window->getHeight(),
 		})}
 		, swapchainImage{ this->swapchain->aquireNextImage() }
+		, presentSignal{ this->device->createSignal() }
 	{ 
 		char const* vertexShaderGLSL = R"(
 			#version 450
@@ -274,15 +279,9 @@ public:
 			.imageAspekt = VK_IMAGE_ASPECT_DEPTH_BIT,
 			.imageUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 		});
-
-		for (int i = 0; i < 3; i++) {
-			frames.push_back(PerFrameData{ .presentSignal = device->createSignal(), .timeline = device->createTimelineSemaphore(), .timelineCounter = 0 });
-		}
 	}
 
 	void update(daxa::AppState& app) {
-		//printf("update, dt: %f\n", app.getDeltaTimeSeconds());
-
 		if (app.window->getWidth() != swapchain->getSize().width || app.window->getHeight() != swapchain->getSize().height) {
 			device->waitIdle();
 			swapchain->resize(VkExtent2D{ .width = app.window->getWidth(), .height = app.window->getHeight() });
@@ -297,17 +296,14 @@ public:
 			});
 		}
 
-		auto* currentFrame = &frames.front();
-
 		auto cmdList = device->getEmptyCommandList();
 
 		cmdList->begin();
 
-
 		/// ------------ Begin Data Uploading ---------------------
 
-
-		auto vp = cameraController.update(*app.window, app.getDeltaTimeSeconds());
+		cameraController.processInput(*app.window, app.getDeltaTimeSeconds());
+		auto vp = cameraController.getVP(*app.window);
 		cmdList->copyHostToBuffer(daxa::gpu::HostToBufferCopyInfo{
 			.src = &vp,
 			.dst = uniformBuffer,
@@ -374,36 +370,27 @@ public:
 
 		cmdList->end();
 
-		// "++currentFrame->finishCounter " is the value that will be set to the timeline when the execution is finished, basicly incrementing it 
-		// the timeline is the counter we use to see if the frame is finished executing on the gpu later.
-		std::array signalTimelines = { std::tuple{ currentFrame->timeline, ++currentFrame->timelineCounter } };
-
 		daxa::gpu::SubmitInfo submitInfo;
 		submitInfo.commandLists.push_back(std::move(cmdList));
-		submitInfo.signalOnCompletion = { &currentFrame->presentSignal, 1 };
-		submitInfo.signalTimelines = signalTimelines;
+		submitInfo.signalOnCompletion = { &presentSignal, 1 };
 		queue->submit(submitInfo);
 
-		queue->present(std::move(swapchainImage), currentFrame->presentSignal);
+		queue->present(std::move(swapchainImage), presentSignal);
 		swapchainImage = swapchain->aquireNextImage();
 
-		// we get the next frame context
-		auto frameContext = std::move(frames.back());
-		frames.pop_back();
-		frames.push_front(std::move(frameContext));
-		currentFrame = &frames.front();
-		queue->checkForFinishedSubmits();
+		// switches to the next batch. If all available batches are still beeing executed, 
+		// this function will block until there is a batch available again.
+		// the batches are reclaimed in order.
+		queue->nextBatch();
 
-		// we wait on the gpu to finish executing the frame
-		// as we have two frame contexts we are actually waiting on the previous frame to complete. 
-		// if you only have one frame in flight you can just wait on the frame to finish here too.
-		currentFrame->timeline->wait(currentFrame->timelineCounter);
+		// reclaim ressources and free ref count handles
+		queue->checkForFinishedSubmits();
 	}
 
 	void cleanup(daxa::AppState& app) {
-		queue->waitForFlush();
+		queue->waitIdle();
+		queue->checkForFinishedSubmits();
 		device->waitIdle();
-		frames.clear();
 	}
 
 	~MyUser() {
@@ -422,13 +409,8 @@ private:
 	daxa::gpu::BufferHandle indexBuffer;
 	daxa::gpu::BufferHandle uniformBuffer;
 	daxa::gpu::ImageHandle textureAtlas;
+	daxa::gpu::SignalHandle presentSignal;
 	double totalElapsedTime = 0.0f;
-	struct PerFrameData {
-		daxa::gpu::SignalHandle presentSignal;
-		daxa::gpu::TimelineSemaphoreHandle timeline;
-		u64 timelineCounter = 0;
-	};
-	std::deque<PerFrameData> frames;
 };
 
 int main()

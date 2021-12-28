@@ -37,7 +37,7 @@ namespace daxa {
 			Device& operator=(Device&&) noexcept	= delete;
 			~Device();
 
-			QueueHandle createQueue();
+			QueueHandle createQueue(u32 batchCount = 0);
 
 			static DeviceHandle create();
 

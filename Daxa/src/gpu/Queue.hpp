@@ -19,16 +19,16 @@ namespace daxa {
 	namespace gpu {
 		
 		struct SubmitInfo {
-			std::vector<CommandListHandle>					commandLists;		// TODO REPLACE THIS VECTOR WITH HEAPLESS VERSION
-			std::span<std::tuple<TimelineSemaphoreHandle, u64>>	waitOnTimelines;
-			std::span<std::tuple<TimelineSemaphoreHandle, u64>>	signalTimelines;
-			std::span<SignalHandle>							waitOnSignals;
-			std::span<SignalHandle>							signalOnCompletion;
+			std::vector<CommandListHandle>						commandLists 		= {};		// TODO REPLACE THIS VECTOR WITH HEAPLESS VERSION
+			std::span<std::tuple<TimelineSemaphoreHandle, u64>>	waitOnTimelines 	= {};
+			std::span<std::tuple<TimelineSemaphoreHandle, u64>>	signalTimelines 	= {};
+			std::span<SignalHandle>								waitOnSignals 		= {};
+			std::span<SignalHandle>								signalOnCompletion 	= {};
 		};
 
 		class Queue {
 		public:
-			Queue(VkDevice device, VkQueue queue);
+			Queue(VkDevice device, VkQueue queue, u32 batchCount = 0);
 			Queue() 									= default;
 			Queue(Queue const&) 						= delete;
 			Queue& operator=(Queue const&) 				= delete;
@@ -46,7 +46,6 @@ namespace daxa {
 			 * \return a fence handle that can be used to check if the execution is complete or waited upon completion.
 			 */
 			void submit(SubmitInfo submitInfo);
-
 			
 			void submitBlocking(SubmitInfo submitInfo);
 
@@ -54,7 +53,9 @@ namespace daxa {
 
 			void checkForFinishedSubmits();
 
-			void waitForFlush();
+			void nextBatch();
+
+			void waitIdle();
 		private: 
 			friend class Device;
 
@@ -68,7 +69,8 @@ namespace daxa {
 				TimelineSemaphoreHandle timelineSema;
 				u64 finishCounter = 0;
 			};
-			std::vector<PendingSubmit> unfinishedSubmits = {};
+			std::deque<std::vector<PendingSubmit>> batches;
+			bool bWaitForBatchesToComplete = false;
 
 			std::vector<TimelineSemaphoreHandle> unusedTimelines = {};
 
