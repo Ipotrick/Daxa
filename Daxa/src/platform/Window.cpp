@@ -20,7 +20,6 @@ namespace daxa {
 		} else if (action == GLFW_RELEASE) {
 			self->KeyDown[key] = false;
 		}
-		printf("key callback for key: %i, action: %i\n", key, action);
 	}
 
 	void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
@@ -42,7 +41,7 @@ namespace daxa {
 		: name{ name }
 	{
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-		if (glfwWindow = glfwCreateWindow(100,100,"glfw3 window", nullptr, nullptr)) {
+		if (glfwWindow = glfwCreateWindow(width, height,"glfw3 window", nullptr, nullptr)) {
 			printf("error could not create window!\n");
 		}
 		glfwSetWindowUserPointer(glfwWindow, windowState.get());

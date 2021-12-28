@@ -15,7 +15,7 @@
     "vulkan-memory-allocator",
     "glm",
     "imgui",
-    "glfw3"
+    "glfw3",
     "fmt",
     "glad"
   ]
