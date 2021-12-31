@@ -140,6 +140,7 @@ struct RenderContext {
         frames.push_front(std::move(frameContext));
         currentFrame = &frames.front();
         queue->checkForFinishedSubmits();
+        queue->nextBatch();
         currentFrame->timeline->wait(currentFrame->timeline_counter);
     }
 };

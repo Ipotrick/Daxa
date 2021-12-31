@@ -116,8 +116,7 @@ namespace daxa {
 		void Queue::checkForFinishedSubmits() {
 			for (auto& batch : batches) {
 				for (auto iter = batch.begin(); iter != batch.end();) {
-					auto counter = iter->timelineSema->getCounter();
-					if (counter >= iter->finishCounter) {
+					if (iter->timelineSema->getCounter() >= iter->finishCounter) {
 						while (!iter->cmdLists.empty()) {
 							auto list = std::move(iter->cmdLists.back());
 							iter->cmdLists.pop_back();

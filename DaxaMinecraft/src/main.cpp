@@ -27,6 +27,12 @@ struct Game : GraphicsWindow<Game> {
         camera.resize(get_window_sx(), get_window_sy());
     }
 
+    ~Game() {
+        // as the world also contains daxa::gpu things, we must wait before we cann destroy them
+        render_ctx.queue->waitIdle();
+        render_ctx.queue->checkForFinishedSubmits();
+    }
+
     void update(double elapsed_seconds) {
         poll_events();
         player.update(elapsed_seconds);
