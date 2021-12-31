@@ -52,7 +52,7 @@ struct RenderContext {
     }
 
     ~RenderContext() {
-        queue->waitForFlush();
+        queue->waitIdle();
         queue->checkForFinishedSubmits();
         device->waitIdle();
         frames.clear();
