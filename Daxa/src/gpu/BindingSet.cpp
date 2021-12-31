@@ -131,7 +131,7 @@ namespace daxa {
 		{ }
 
 		BindingSetHandle::~BindingSetHandle() {
-			if (set.use_count() == 1) {
+			if (set && set.use_count() == 1) {
 				size_t handlesSize = set->handles.size();
 				set->handles.clear();
 				set->handles.resize(handlesSize, std::monostate{});
@@ -204,7 +204,7 @@ namespace daxa {
 				for (auto& pool : pools) {
 					auto lock = std::unique_lock(pool->mut);
 					DAXA_ASSERT_M(pool->allocatedSets == pool->zombies.size(), "at the time of the descruction of a BindingSetAllocator, there were still living bindingsets left");
-					vkResetDescriptorPool(device, pool->pool, 0 /*TODO COULD BE WRONG*/);
+					vkResetDescriptorPool(device, pool->pool, 0);
 					vkDestroyDescriptorPool(device, pool->pool, nullptr);
 				}
 			}
