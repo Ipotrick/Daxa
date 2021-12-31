@@ -17,6 +17,7 @@
     "imgui",
     "glfw3",
     "fmt",
-    "glad"
+    "glad",
+    "tinygltf"
   ]
 }
