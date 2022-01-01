@@ -11,7 +11,7 @@ find_package(glm CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
 find_path(STB_INCLUDE_DIRS "stb.h")
-find_path(TINYGLTF_INCLUDE_DIRS "tiny_gltf.h")
+find_path(CGLTF_INCLUDE_DIRS "cgltf.h")
 
 target_link_libraries(Daxa PUBLIC
 	HLSL SPIRV glslang OGLCompiler
@@ -29,7 +29,7 @@ target_compile_features(Daxa PUBLIC cxx_std_20)
 
 target_include_directories(Daxa
 	PUBLIC
-		${TINYGLTF_INCLUDE_DIRS}
+		${CGLTF_INCLUDE_DIRS}
 		${STB_INCLUDE_DIRS}
 		"dependencies"
 		"include"

@@ -8,6 +8,7 @@
 #include "glslang/Public/ShaderLang.h"
 
 #include "gpu/Instance.hpp"
+#include "rendering/Cameras.hpp"
 
 namespace daxa {
 
