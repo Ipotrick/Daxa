@@ -203,7 +203,7 @@ namespace daxa {
 			if (device) {
 				for (auto& pool : pools) {
 					auto lock = std::unique_lock(pool->mut);
-					DAXA_ASSERT_M(pool->allocatedSets == pool->zombies.size(), "at the time of the descruction of a BindingSetAllocator, there were still living bindingsets left");
+					DAXA_ASSERT_M(pool->allocatedSets == pool->zombies.size(), "At the time of the descruction of a BindingSetAllocator, there were still living bindingsets left. It is very likely that this bug is caused by not calling waitIdle on the queue before destroying a BindingSetAllocator!");
 					vkResetDescriptorPool(device, pool->pool, 0);
 					vkDestroyDescriptorPool(device, pool->pool, nullptr);
 				}
