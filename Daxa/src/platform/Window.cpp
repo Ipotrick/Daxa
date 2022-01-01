@@ -41,14 +41,13 @@ namespace daxa {
 		: name{ name }
 	{
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-		if (glfwWindow = glfwCreateWindow(width, height,"glfw3 window", nullptr, nullptr)) {
+		if (glfwWindow = glfwCreateWindow(width, height,"glfw3 window", nullptr, nullptr); !glfwWindow) {
 			printf("error could not create window!\n");
 		}
 		glfwSetWindowUserPointer(glfwWindow, windowState.get());
 
 		VkResult err = glfwCreateWindowSurface(gpu::instance->getVkInstance(), glfwWindow, nullptr, &surface);
 		DAXA_ASSERT_M(err == VK_SUCCESS, "could not create surface for window");
-		//glfwSetInputMode(glfwWindow, GLFW_STICKY_KEYS, GLFW_TRUE);
 		glfwSetWindowCloseCallback(glfwWindow, closeCallback);
 		glfwSetKeyCallback(glfwWindow, KeyCallback);
 		glfwSetMouseButtonCallback(glfwWindow, mouseButtonCallback);
