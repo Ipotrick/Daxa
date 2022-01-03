@@ -26,6 +26,11 @@ namespace daxa {
             for (int i = 0; i < data->buffers_count; i++) {
                 printf("buffer %i has a size of %i bytes: \n", i, data->buffers[i].size);
             }
+            printf("scenes_count: %i\n", data->scenes_count); 
+            for (int i = 0; i < data->scenes_count; i++) {
+                printf("scene %i has the name: %s\n",i,data->scenes[i].name);
+                
+            }
             
             /* TODO make awesome stuff */
             cgltf_free(data);
