@@ -4,6 +4,10 @@
 
 #include "Daxa.hpp"
 
+struct Transform{
+	glm::mat4 translation = {};
+};
+
 class MyUser {
 public:
 	MyUser(daxa::AppState& app) 
@@ -18,6 +22,19 @@ public:
 		, presentSignal{ this->device->createSignal() }
 	{ 
 		auto mesh = daxa::Mesh::tryLoadFromGLTF2("DaxaMeshview/frog/scene.gltf").value();
+
+		std::vector<daxa::EntityVersion> versions;
+		versions.resize(100, 0);
+		daxa::ComponentStorageSparseSet<Transform> transforms;
+		transforms.add(0, Transform{.translation= {}});
+		transforms.add(4, Transform{.translation= {}});
+		transforms.add(64, Transform{.translation= {}});
+
+		daxa::EntityComponentView<Transform> view{ &versions, &transforms };
+
+		for (auto [entity, transform] : view) {
+			printf("entity with index: %i and version: %i has a transform\n", entity.index, entity.version);
+		}
 
 
 		char const* vertexShaderGLSL = R"(
