@@ -1,8 +1,3 @@
-// Daxa.cpp : Defines the functions for the static library.
-//
-
-#include "framework.h"
-
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
 #include "glslang/Public/ShaderLang.h"

@@ -25,6 +25,10 @@ namespace daxa {
 			float                   maxLod = 0.0f;
 			VkBorderColor           borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 			VkBool32                unnormalizedCoordinates = VK_FALSE;
+
+			bool operator == (SamplerCreateInfo const& other) const {
+				return std::memcmp(this, &other, sizeof(decltype(this))) == 0;
+			}
 		};
 
 		class Sampler {

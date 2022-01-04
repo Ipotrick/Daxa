@@ -30,7 +30,6 @@ namespace daxa {
 
 		void CommandList::begin() {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-			operationsInProgress += 1;
 			VkCommandBufferBeginInfo cbbi{
 				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 				.pNext = nullptr,
@@ -41,7 +40,6 @@ namespace daxa {
 
 		void CommandList::end() {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-			operationsInProgress -= 1;
 			vkEndCommandBuffer(cmd);
 		}
 
