@@ -1,3 +1,5 @@
+#pragma once
+
 #include "ComponentStorage.hpp"
 
 #include <tuple>
