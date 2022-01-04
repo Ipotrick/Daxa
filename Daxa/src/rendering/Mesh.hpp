@@ -1,3 +1,5 @@
+#pragma once
+
 #include "../DaxaCore.hpp"
 
 #include "../gpu/Device.hpp"

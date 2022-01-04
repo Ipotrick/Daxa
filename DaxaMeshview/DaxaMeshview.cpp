@@ -4,38 +4,33 @@
 
 #include "Daxa.hpp"
 
-struct Transform{
-	glm::mat4 translation = {};
+#include "World.hpp"
+#include "RenderContext.hpp"
+#include "MeshRenderer.hpp"
+
+struct UIState {
+	char loadFileTextBuf[256] = {};
 };
 
 class MyUser {
 public:
 	MyUser(daxa::AppState& app) 
-		: device{ daxa::gpu::Device::create() }
-		, queue{ this->device->createQueue(/*amount of batches/ frames in flight:*/2) }
-		, swapchain{ this->device->createSwapchain({
-			.surface = app.window->getSurface(),
-			.width = app.window->getWidth(),
-			.height = app.window->getHeight(),
-		})}
-		, swapchainImage{ this->swapchain->aquireNextImage() }
-		, presentSignal{ this->device->createSignal() }
+		: renderCTX{ *app.window }
+		, imageCache{ renderCTX->device }
 	{ 
 		auto mesh = daxa::Mesh::tryLoadFromGLTF2("DaxaMeshview/frog/scene.gltf").value();
-
-		std::vector<daxa::EntityVersion> versions;
-		versions.resize(100, 0);
-		daxa::ComponentStorageSparseSet<Transform> transforms;
-		transforms.add(0, Transform{.translation= {}});
-		transforms.add(4, Transform{.translation= {}});
-		transforms.add(64, Transform{.translation= {}});
-
-		daxa::EntityComponentView<Transform> view{ &versions, &transforms };
-
+		
+		auto ecm = daxa::EntityComponentManager{};
+		auto ent0 = ecm.createEntity();
+		auto ent1 = ecm.createEntity();
+		auto ent2 = ecm.createEntity();
+		auto view = ecm.view<daxa::TransformComp>();
+		view.addComp(ent0, daxa::TransformComp{.translation= {}});
+		view.addComp(ent1, daxa::TransformComp{.translation= {}});
+		view.addComp(ent2, daxa::TransformComp{.translation= {}});
 		for (auto [entity, transform] : view) {
 			printf("entity with index: %i and version: %i has a transform\n", entity.index, entity.version);
 		}
-
 
 		char const* vertexShaderGLSL = R"(
 			#version 450
@@ -74,12 +69,12 @@ public:
 			}
 		)";
 
-		daxa::gpu::ShaderModuleHandle vertexShader = device->tryCreateShderModuleFromGLSL(
+		daxa::gpu::ShaderModuleHandle vertexShader = renderCTX->device->tryCreateShderModuleFromGLSL(
 			vertexShaderGLSL,
 			VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT
 		).value();
 
-		daxa::gpu::ShaderModuleHandle fragmenstShader = device->tryCreateShderModuleFromGLSL(
+		daxa::gpu::ShaderModuleHandle fragmenstShader = renderCTX->device->tryCreateShderModuleFromGLSL(
 			fragmentShaderGLSL,
 			VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT
 		).value();
@@ -95,37 +90,20 @@ public:
 			.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)			// positions
 			.addVertexInputAttribute(VK_FORMAT_R32G32_SFLOAT)				// uvs
 			// location of attachments in a shader are implied by the order they are added in the pipeline builder:
-			.addColorAttachment(swapchain->getVkFormat());
+			.addColorAttachment(renderCTX->swapchain->getVkFormat());
 
-		this->pipeline = device->createGraphicsPipeline(pipelineBuilder);
+		this->pipeline = renderCTX->device->createGraphicsPipeline(pipelineBuilder);
 
-		this->bindingSetAllocator = device->createBindingSetAllocator(pipeline->getSetDescription(0));
+		this->bindingSetAllocator = renderCTX->device->createBindingSetAllocator(pipeline->getSetDescription(0));
 
-		// Begin texture creation
-
-		stbi_set_flip_vertically_on_load(true);
-		i32 sizeX, sizeY, numChannels;
-		char const* const filepath = "DaxaCube/atlas.png";
-		std::uint8_t * textureAtlasHostData = stbi_load(filepath, &sizeX, &sizeY, &numChannels, 0);
-		VkFormat dataFormat;
-		switch (numChannels) {
-			case 1: dataFormat = VK_FORMAT_R8_SRGB; break;
-			case 3: dataFormat = VK_FORMAT_R8G8B8_SRGB; break;
-			case 4:
-			default: dataFormat = VK_FORMAT_R8G8B8A8_SRGB; break;
-		}
-
-		textureAtlas = device->createImage2d({
-			.width = (u32)sizeX,
-			.height = (u32)sizeY,
-			.format = dataFormat,
-			.imageAspekt = VK_IMAGE_ASPECT_COLOR_BIT,
-			.imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-			.sampler = device->createSampler({
+		textureAtlas = imageCache.get({
+			.path = "DaxaCube/atlas.png", 
+			.samplerInfo = daxa::gpu::SamplerCreateInfo{
 				.minFilter = VK_FILTER_NEAREST,
 				.magFilter = VK_FILTER_NEAREST,
-			}),
+			}
 		});
+		renderCTX->queue->submitBlocking({.commandLists = {imageCache.getUploadCommands()}});
 
 		// end texture creation
 
@@ -161,7 +139,7 @@ public:
 			0.5f,  0.5f, -0.5f,    0.0f, 1.0f,
 			0.5f,  0.5f,  0.5f,    1.0f, 1.0f,
 		};
-		this->vertexBuffer = device->createBuffer({
+		this->vertexBuffer = renderCTX->device->createBuffer({
 			.size = sizeof(decltype(cubeVertecies)),
 			.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
@@ -175,13 +153,13 @@ public:
 			16, 17, 18, 17, 18, 19,
 			20, 21, 22, 21, 22, 23,
 		};
-		this->indexBuffer = device->createBuffer({
+		this->indexBuffer = renderCTX->device->createBuffer({
 			.size = sizeof(decltype(cubeIndices)), 
 			.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
 			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 
-		auto cmdList = device->getEmptyCommandList();
+		auto cmdList = renderCTX->device->getEmptyCommandList();
 		cmdList->begin();
 		cmdList->copyHostToBuffer({
 			.src = cubeVertecies.data(),
@@ -193,25 +171,19 @@ public:
 			.dst = indexBuffer,
 			.size = sizeof(decltype(cubeIndices)),
 		});
-		cmdList->copyHostToImageSynced({
-			.src = textureAtlasHostData,
-			.dst = textureAtlas,
-			.size = sizeX * sizeY * numChannels * sizeof(u8),
-			.dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-		});
 		cmdList->end();
-		queue->submitBlocking({
+		renderCTX->queue->submitBlocking({
 			.commandLists = {cmdList},
 		});
-		queue->checkForFinishedSubmits();
+		renderCTX->queue->checkForFinishedSubmits();
 
-		this->uniformBuffer = device->createBuffer({
+		this->uniformBuffer = renderCTX->device->createBuffer({
 			.size = sizeof(glm::mat4),
 			.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 
-		depthImage = device->createImage2d({
+		renderCTX->depthImage = renderCTX->device->createImage2d({
 			.width = app.window->getWidth(),
 			.height = app.window->getHeight(),
 			.format = VK_FORMAT_D32_SFLOAT,
@@ -220,8 +192,8 @@ public:
 		});
 
 		ImGui::CreateContext();
-		ImGui_ImplGlfw_InitForVulkan(app.window->getGLFWWindow(), false);
-		imguiRenderer.emplace(device, queue);
+		ImGui_ImplGlfw_InitForVulkan(app.window->getGLFWWindow(), true);
+		imguiRenderer.emplace(renderCTX->device, renderCTX->queue);
 	}
 
 	void update(daxa::AppState& app) {
@@ -230,7 +202,13 @@ public:
 
 		ImGui::NewFrame();
 
-		ImGui::ShowDemoWindow();
+		ImGui::Begin("file import");
+		ImGui::InputText("file path", uiState.loadFileTextBuf, sizeof(uiState.loadFileTextBuf));
+		if (ImGui::Button("load")) {
+			printf("try to load model with path: %s\n", uiState.loadFileTextBuf);
+			std::memset(uiState.loadFileTextBuf, '\0', sizeof(uiState.loadFileTextBuf));
+		}
+		ImGui::End();
 
 		if (!ImGui::GetIO().WantCaptureMouse) {
 			cameraController.processInput(*app.window, app.getDeltaTimeSeconds());
@@ -238,21 +216,11 @@ public:
 
 		ImGui::Render();
 
-		if (app.window->getWidth() != swapchain->getSize().width || app.window->getHeight() != swapchain->getSize().height) {
-			device->waitIdle();
-			swapchain->resize(VkExtent2D{ .width = app.window->getWidth(), .height = app.window->getHeight() });
-			swapchainImage = swapchain->aquireNextImage();
-			depthImage = device->createImage2d({
-				.width = app.window->getWidth(),
-				.height = app.window->getHeight(),
-				.format = VK_FORMAT_D32_SFLOAT,
-				.imageUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-				.imageAspekt = VK_IMAGE_ASPECT_DEPTH_BIT,
-				.memoryPropertyFlags = VMA_MEMORY_USAGE_GPU_ONLY,
-			});
+		if (app.window->getWidth() != renderCTX->swapchain->getSize().width || app.window->getHeight() != renderCTX->swapchain->getSize().height) {
+			renderCTX->resize(app.window->getWidth(),app.window->getHeight());
 		}
 
-		auto cmdList = device->getEmptyCommandList();
+		auto cmdList = renderCTX->device->getEmptyCommandList();
 
 		cmdList->begin();
 
@@ -270,7 +238,7 @@ public:
 		// array because we can allways pass multiple barriers at once for driver efficiency
 		std::array imgBarrier0 = { daxa::gpu::ImageBarrier{
 			.waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,	// as we write to the image in the frag shader we need to make sure its finished transitioning the layout
-			.image = swapchainImage.getImageHandle(),
+			.image = renderCTX->swapchainImage.getImageHandle(),
 			.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,						// dont care about previous layout
 			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,		// set new layout to color attachment optimal
 		} };
@@ -286,12 +254,12 @@ public:
 
 		std::array framebuffer{
 			daxa::gpu::RenderAttachmentInfo{
-				.image = swapchainImage.getImageHandle(),
+				.image = renderCTX->swapchainImage.getImageHandle(),
 				.clearValue = { .color = VkClearColorValue{.float32 = { 1.f, 1.f, 1.f, 1.f } } },
 			}
 		};
 		daxa::gpu::RenderAttachmentInfo depthAttachment{
-			.image = depthImage,
+			.image = renderCTX->depthImage,
 			.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 			.clearValue = { .depthStencil = VkClearDepthStencilValue{ .depth = 1.0f } },
 			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
@@ -322,12 +290,12 @@ public:
 			.waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
 		});
 
-		imguiRenderer->recordCommands(ImGui::GetDrawData(), cmdList, swapchainImage.getImageHandle());
+		imguiRenderer->recordCommands(ImGui::GetDrawData(), cmdList, renderCTX->swapchainImage.getImageHandle());
 
 		// array because we can allways pass multiple barriers at once for driver efficiency
 		std::array imgBarrier1 = { daxa::gpu::ImageBarrier{
 			.awaitedStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
-			.image = swapchainImage.getImageHandle(),
+			.image = renderCTX->swapchainImage.getImageHandle(),
 			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			.layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 		} };
@@ -337,49 +305,35 @@ public:
 
 		daxa::gpu::SubmitInfo submitInfo;
 		submitInfo.commandLists.push_back(std::move(cmdList));
-		submitInfo.signalOnCompletion = { &presentSignal, 1 };
-		queue->submit(submitInfo);
+		submitInfo.signalOnCompletion = { &renderCTX->presentSignal, 1 };
+		renderCTX->queue->submit(submitInfo);
 
-		queue->present(std::move(swapchainImage), presentSignal);
-		swapchainImage = swapchain->aquireNextImage();
-
-		// switches to the next batch. If all available batches are still beeing executed, 
-		// this function will block until there is a batch available again.
-		// the batches are reclaimed in order.
-		queue->nextBatch();
-
-		// reclaim ressources and free ref count handles
-		queue->checkForFinishedSubmits();
+		renderCTX->present();
 	}
 
 	void cleanup(daxa::AppState& app) {
-		queue->waitIdle();
-		queue->checkForFinishedSubmits();
+		renderCTX->waitIdle();
 		imguiRenderer.reset();
 		ImGui_ImplGlfw_Shutdown();
 		ImGui::DestroyContext();
-		device->waitIdle();
 	}
 
 	~MyUser() {
 
 	}
 private:
+	std::optional<RenderContext> renderCTX;
 	daxa::GimbalLockedCameraController cameraController{};
-	daxa::gpu::DeviceHandle device;
-	daxa::gpu::QueueHandle queue;
-	daxa::gpu::SwapchainHandle swapchain;
-	daxa::gpu::SwapchainImage swapchainImage;
-	daxa::gpu::ImageHandle depthImage;
 	daxa::gpu::PipelineHandle pipeline;
 	daxa::gpu::BindingSetAllocatorHandle bindingSetAllocator;
 	daxa::gpu::BufferHandle vertexBuffer;
 	daxa::gpu::BufferHandle indexBuffer;
 	daxa::gpu::BufferHandle uniformBuffer;
 	daxa::gpu::ImageHandle textureAtlas;
+	daxa::ImageCache imageCache;
 	std::optional<daxa::ImGuiRenderer> imguiRenderer = std::nullopt;
 	double totalElapsedTime = 0.0f;
-	daxa::gpu::SignalHandle presentSignal;
+	UIState uiState;
 };
 
 int main()
