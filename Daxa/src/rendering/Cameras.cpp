@@ -24,29 +24,29 @@ namespace daxa {
 		auto yawRotaAroundUp = glm::rotate(glm::mat4(1.0f), yaw, {0.f,0.f,1.f});
 		auto pitchRotation = glm::rotate(glm::mat4(1.0f), pitch, glm::vec3{1.f,0.f,0.f});
 		glm::vec4 translation = {};
-		if (window.keyPressed(GLFW_KEY_W)) {
-			glm::vec4 direction = { 0.0f, 0.0f, -1.0f, 0.0f };
-			translation += yawRotaAroundUp * pitchRotation * direction * dt * speed;
-		}
-		if (window.keyPressed(GLFW_KEY_S)) {
-			glm::vec4 direction = { 0.0f, 0.0f, 1.0f, 0.0f };
-			translation += yawRotaAroundUp * pitchRotation * direction * dt * speed;
-		}
-		if (window.keyPressed(GLFW_KEY_A)) {
-			glm::vec4 direction = { 1.0f, 0.0f, 0.0f, 0.0f };
-			translation += yawRotaAroundUp * direction * dt * speed;
-		}
-		if (window.keyPressed(GLFW_KEY_D)) {
-			glm::vec4 direction = { -1.0f, 0.0f, 0.0f, 0.0f };
-			translation += yawRotaAroundUp * direction * dt * speed;
-		}
-		if (window.keyPressed(GLFW_KEY_SPACE)) {
-			translation += yawRotaAroundUp * pitchRotation * glm::vec4{ 0.f,  1.f, 0.f, 0.f } * dt * speed;
-		}
-		if (window.keyPressed(GLFW_KEY_LEFT_CONTROL)) {
-			translation += yawRotaAroundUp * pitchRotation * glm::vec4{ 0.f, -1.f,  0.f, 0.f } * dt * speed;
-		}
 		if (window.isCursorCaptured()) {
+			if (window.keyPressed(GLFW_KEY_W)) {
+				glm::vec4 direction = { 0.0f, 0.0f, -1.0f, 0.0f };
+				translation += yawRotaAroundUp * pitchRotation * direction * dt * speed;
+			}
+			if (window.keyPressed(GLFW_KEY_S)) {
+				glm::vec4 direction = { 0.0f, 0.0f, 1.0f, 0.0f };
+				translation += yawRotaAroundUp * pitchRotation * direction * dt * speed;
+			}
+			if (window.keyPressed(GLFW_KEY_A)) {
+				glm::vec4 direction = { 1.0f, 0.0f, 0.0f, 0.0f };
+				translation += yawRotaAroundUp * direction * dt * speed;
+			}
+			if (window.keyPressed(GLFW_KEY_D)) {
+				glm::vec4 direction = { -1.0f, 0.0f, 0.0f, 0.0f };
+				translation += yawRotaAroundUp * direction * dt * speed;
+			}
+			if (window.keyPressed(GLFW_KEY_SPACE)) {
+				translation += yawRotaAroundUp * pitchRotation * glm::vec4{ 0.f,  1.f, 0.f, 0.f } * dt * speed;
+			}
+			if (window.keyPressed(GLFW_KEY_LEFT_CONTROL)) {
+				translation += yawRotaAroundUp * pitchRotation * glm::vec4{ 0.f, -1.f,  0.f, 0.f } * dt * speed;
+			}
 			pitch -= window.getCursorPosChangeY() * cameraSwaySpeed * dt;
 			pitch = std::clamp(pitch, 0.0f, glm::pi<f32>());
 			yaw += window.getCursorPosChangeX() * cameraSwaySpeed * dt;

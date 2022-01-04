@@ -15,9 +15,9 @@
 namespace daxa {
 	namespace gpu {
 		struct Image2dCreateInfo {
-			u32 width;
-			u32 height;
-			VkFormat format;
+			u32 width = 1;
+			u32 height = 1;
+			VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
 			VkImageUsageFlags imageUsage = VkImageUsageFlagBits::VK_IMAGE_USAGE_SAMPLED_BIT | VkImageUsageFlagBits::VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 			VkImageAspectFlags imageAspekt = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
 			VmaMemoryUsage memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY;
