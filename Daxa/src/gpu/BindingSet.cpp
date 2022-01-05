@@ -143,7 +143,6 @@ namespace daxa {
 		}
 
 		BindingSetHandle::~BindingSetHandle() {
-			printf("set ref count is %i\n", set.use_count());
 			if (set && set.use_count() == 1) {
 				size_t handlesSize = set->handles.size();
 				set->handles.clear();

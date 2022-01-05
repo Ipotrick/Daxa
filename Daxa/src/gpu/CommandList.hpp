@@ -329,9 +329,9 @@ namespace daxa {
 		public:
 			CommandListHandle() = default;
 			CommandListHandle(CommandListHandle&& other) noexcept 				= default;
-			CommandListHandle(CommandListHandle const& other) 					= delete;
+			CommandListHandle(CommandListHandle const& other) 					= default;
 			CommandListHandle& operator=(CommandListHandle&& other) noexcept;
-			CommandListHandle& operator=(CommandListHandle const& other) 		= delete;
+			CommandListHandle& operator=(CommandListHandle const& other);
 			~CommandListHandle();
 
 			CommandList& operator*() { return *list; }
