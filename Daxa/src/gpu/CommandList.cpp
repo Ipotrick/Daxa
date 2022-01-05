@@ -568,6 +568,12 @@ namespace daxa {
 			list = std::move(other.list);
 			return *this;
 		}
+
+		CommandListHandle& CommandListHandle::operator=(CommandListHandle const& other) {
+			CommandListHandle::~CommandListHandle();
+			list = other.list;
+			return *this;
+		}
 		
 		CommandListHandle::CommandListHandle(std::shared_ptr<CommandList> list)
 			: list{ list }
