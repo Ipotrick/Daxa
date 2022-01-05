@@ -243,7 +243,7 @@ namespace daxa {
 			void setScissor(VkRect2D const& scissor);
 
 			template<typename T>
-			void pushConstant(VkShaderStageFlagBits shaderStage, T& constant, size_t offset = 0) {
+			void pushConstant(VkShaderStageFlagBits shaderStage, T const& constant, size_t offset = 0) {
 				vkCmdPushConstants(cmd, boundPipeline.value().layout, shaderStage, offset, sizeof(T), &constant);
 			}
 
@@ -328,6 +328,10 @@ namespace daxa {
 		class CommandListHandle {
 		public:
 			CommandListHandle() = default;
+			CommandListHandle(CommandListHandle&& other) noexcept 				= default;
+			CommandListHandle(CommandListHandle const& other) 					= delete;
+			CommandListHandle& operator=(CommandListHandle&& other) noexcept;
+			CommandListHandle& operator=(CommandListHandle const& other) 		= delete;
 			~CommandListHandle();
 
 			CommandList& operator*() { return *list; }

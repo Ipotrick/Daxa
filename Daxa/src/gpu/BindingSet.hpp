@@ -133,6 +133,10 @@ namespace daxa {
 		class BindingSetHandle {
 		public:
 			BindingSetHandle() = default;
+			BindingSetHandle(BindingSetHandle&& other) noexcept = default;
+			BindingSetHandle(BindingSetHandle const& other) = default;
+			BindingSetHandle& operator=(BindingSetHandle&& other) noexcept;
+			BindingSetHandle& operator=(BindingSetHandle const& other);
 			~BindingSetHandle();
 
 			BindingSet const& operator*() const { return *set; }
@@ -150,7 +154,7 @@ namespace daxa {
 			friend class BindingSetAllocator;
 			friend class GeneralDescriptorSetAllocator;
 
-			BindingSetHandle(std::shared_ptr<BindingSet>&&);
+			BindingSetHandle(std::shared_ptr<BindingSet>&&) noexcept;
 
 			std::shared_ptr<BindingSet> set;
 		};
@@ -177,10 +181,10 @@ namespace daxa {
 
 			std::shared_ptr<BindingSetAllocatorBindingiSetPool> getNewPool();
 
-			size_t	setsPerPool = 0;
+			size_t setsPerPool = 0;
 
 			std::vector<VkDescriptorPoolSize> poolSizes = {};
-			VkDevice device = VK_NULL_HANDLE;
+			VkDevice device 							= VK_NULL_HANDLE;
 			BindingSetDescription const* setDescription = nullptr;
 
 			std::vector<std::shared_ptr<BindingSetAllocatorBindingiSetPool>> pools;
