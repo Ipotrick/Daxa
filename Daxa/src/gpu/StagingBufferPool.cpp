@@ -8,6 +8,14 @@ namespace daxa {
 			, sharedData{ std::move(pool) }
 		{ }
 
+		StagingBuffer& StagingBuffer::operator=(StagingBuffer&& other) noexcept {
+			StagingBuffer::~StagingBuffer();
+			this->buffer = std::move(other.buffer);
+			this->sharedData = std::move(other.sharedData);
+			this->usedUpSize = std::move(other.usedUpSize);
+			return *this;
+		}
+
 		StagingBuffer::~StagingBuffer() {
 			if (buffer) {
 				auto data = sharedData.lock();
@@ -15,6 +23,7 @@ namespace daxa {
 					auto lock = std::unique_lock(data->mut);
 					data->pool.push_back(std::move(buffer));
 				}
+				buffer = {};
 			}
 		}
 

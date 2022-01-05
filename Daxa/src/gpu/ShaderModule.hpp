@@ -23,6 +23,8 @@ namespace daxa {
 			ShaderModule()						 					= default;
 			ShaderModule(ShaderModule&& other) noexcept				= delete;
 			ShaderModule& operator=(ShaderModule&& other) noexcept	= delete;
+			ShaderModule(ShaderModule const& other)					= delete;
+			ShaderModule& operator=(ShaderModule const& other)		= delete;
 			~ShaderModule();
 
 			std::vector<u32> const& getSPIRV() const { return spirv; }

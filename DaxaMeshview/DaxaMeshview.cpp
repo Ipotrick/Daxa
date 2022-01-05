@@ -194,6 +194,8 @@ public:
 		ImGui::CreateContext();
 		ImGui_ImplGlfw_InitForVulkan(app.window->getGLFWWindow(), true);
 		imguiRenderer.emplace(renderCTX->device, renderCTX->queue);
+
+		meshRender.init(*renderCTX);
 	}
 
 	void update(daxa::AppState& app) {
@@ -324,6 +326,7 @@ public:
 private:
 	std::optional<RenderContext> renderCTX;
 	daxa::GimbalLockedCameraController cameraController{};
+	MeshRenderer meshRender = {};
 	daxa::gpu::PipelineHandle pipeline;
 	daxa::gpu::BindingSetAllocatorHandle bindingSetAllocator;
 	daxa::gpu::BufferHandle vertexBuffer;

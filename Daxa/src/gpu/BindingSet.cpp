@@ -126,11 +126,24 @@ namespace daxa {
 			bindImages(binding, { &imgAndLayout, 1 }, dstArrayElement);
 		}
 
-		BindingSetHandle::BindingSetHandle(std::shared_ptr<BindingSet>&& set) 
+		BindingSetHandle::BindingSetHandle(std::shared_ptr<BindingSet>&& set) noexcept
 			: set { std::move(set) }
 		{ }
 
+		BindingSetHandle& BindingSetHandle::operator=(BindingSetHandle const& other) {
+			BindingSetHandle::~BindingSetHandle();
+			this->set = other.set;
+			return *this;
+		}
+
+		BindingSetHandle& BindingSetHandle::operator=(BindingSetHandle&& other) noexcept {
+			BindingSetHandle::~BindingSetHandle();
+			this->set = std::move(other.set);
+			return *this;
+		}
+
 		BindingSetHandle::~BindingSetHandle() {
+			printf("set ref count is %i\n", set.use_count());
 			if (set && set.use_count() == 1) {
 				size_t handlesSize = set->handles.size();
 				set->handles.clear();
@@ -138,6 +151,7 @@ namespace daxa {
 				auto pool = set->pool.lock();
 				auto lock = std::unique_lock(pool->mut);
 				pool->zombies.push_back(std::move(set));
+				set.reset();
 			}
 		}
 

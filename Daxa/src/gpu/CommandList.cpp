@@ -562,6 +562,12 @@ namespace daxa {
 				}
 			}
 		}
+
+		CommandListHandle& CommandListHandle::operator=(CommandListHandle&& other) noexcept {
+			CommandListHandle::~CommandListHandle();
+			list = std::move(other.list);
+			return *this;
+		}
 		
 		CommandListHandle::CommandListHandle(std::shared_ptr<CommandList> list)
 			: list{ list }

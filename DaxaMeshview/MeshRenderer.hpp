@@ -20,11 +20,19 @@ public:
 			layout(set = 0, binding = 0) uniform Globals {
 				mat4 vp;
 			} globals;
+
+			layout(std140, set = 0, binding = 1) buffer ModelData {
+				mat4 transforms[];
+			} modelData;
+
+			layout(push_constant) uniform PushConstants {
+				uint modelIndex;
+			} pushConstants;
 			
 			void main()
 			{
 				vtf_uv = uv;
-				gl_Position = globals.vp * vec4(position, 1.0f);
+				gl_Position = globals.vp * modelData.transforms[pushConstants.modelIndex] * vec4(position, 1.0f);
 			}
 		)";
 
@@ -80,8 +88,16 @@ public:
             .memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
         });
 
+		this->transformsBuffer = renderCTX.device->createBuffer({
+            .size = sizeof(glm::mat4) * 128,
+            .memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            .memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
+		});
+
         this->globalSet = globalSetAlloc->getSet();
         globalSet->bindBuffer(0, this->globalDataBufffer);
+		globalSet->bindBuffer(1, this->transformsBuffer);
     }
 
     struct DrawMesh {
@@ -92,26 +108,45 @@ public:
         daxa::gpu::BufferHandle vertices = {};
     };
 
+	void setCameraVP(daxa::gpu::CommandListHandle& cmd, glm::mat4 const& vp) {
+		cmd->copyHostToBuffer({
+			.src = (void*)&vp,
+			.size = sizeof(decltype(vp)),
+			.dst = globalDataBufffer,
+		});
+	}
+
     void render(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawMesh>& draws) {
         cmd->bindSet(0, globalSet);
 
+		if (draws.size() * sizeof(glm::mat4) > transformsBuffer->getSize()) {
+			size_t newSize = std::pow(2, std::ceil(std::log(draws.size() * sizeof(glm::mat4))/std::log(2)));
+			this->transformsBuffer = renderCTX.device->createBuffer({
+				.size = newSize,
+				.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+				.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
+			});
+		}
+
+		auto mm = cmd->mapMemoryStaged(transformsBuffer, draws.size() * sizeof(glm::mat4), 0);
+		for (int i = 0; i < draws.size(); i++) {
+			((glm::mat4*)mm.hostPtr)[i] = draws[i].transform;
+		}
+		cmd->unmapMemoryStaged(mm);
+
         cmd->bindPipeline(pipeline);
+		u32 index = 0;
         for (auto& draw : draws) {
             auto thisDrawSet = perDrawSetAlloc->getSet();
             thisDrawSet->bindImage(0, draw.albedo, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
             cmd->bindSet(1, thisDrawSet);
             cmd->bindIndexBuffer(draw.indices);
             cmd->bindVertexBuffer(0, draw.vertices);
+			cmd->pushConstant(VK_SHADER_STAGE_VERTEX_BIT, index);
             cmd->drawIndexed(draw.indexCount, 1, 0, 0, 0);
+			index += 1;
         }
-    }
-
-    void cleanup() {
-        perDrawSetAlloc = {};
-        globalDataBufffer = {};
-        globalSet = {};
-        globalSetAlloc = {};
-        pipeline = {};
     }
 
 private:
@@ -120,5 +155,6 @@ private:
     daxa::gpu::BindingSetAllocatorHandle globalSetAlloc = {};
     daxa::gpu::BindingSetHandle globalSet = {};
     daxa::gpu::BufferHandle globalDataBufffer = {};
+	daxa::gpu::BufferHandle transformsBuffer = {};
     daxa::gpu::BindingSetAllocatorHandle perDrawSetAlloc = {};
 };

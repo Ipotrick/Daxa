@@ -26,8 +26,8 @@ namespace daxa {
 		public:
 			StagingBuffer(BufferHandle& handle, std::weak_ptr<StagingBufferPoolSharedData> pool);
 			StagingBuffer(StagingBuffer&&) noexcept													= default;
-			StagingBuffer& operator=(StagingBuffer&&) noexcept										= default;
 			StagingBuffer(StagingBuffer const&) 													= delete;
+			StagingBuffer& operator=(StagingBuffer&&) noexcept;
 			StagingBuffer& operator=(StagingBuffer const&) 											= delete;
 			~StagingBuffer();
 
