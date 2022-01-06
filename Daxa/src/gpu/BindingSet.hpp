@@ -95,6 +95,7 @@ namespace daxa {
 			void bindImage(u32 binding, ImageHandle image, VkImageLayout imgLayout, u32 dstArrayElement = 0);
 
 			VkDescriptorSet getVkDescriptorSet() const { return set; }
+			VkDescriptorSetLayout getVkDescriptorSetLayout() const { return description->layout; }
 		private:
 			friend class Device;
 			friend class CommandList;

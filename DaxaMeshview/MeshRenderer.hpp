@@ -117,8 +117,6 @@ public:
 	}
 
     void render(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawMesh>& draws) {
-        cmd->bindSet(0, globalSet);
-
 		if (draws.size() * sizeof(glm::mat4) > transformsBuffer->getSize()) {
 			size_t newSize = std::pow(2, std::ceil(std::log(draws.size() * sizeof(glm::mat4))/std::log(2)));
 			this->transformsBuffer = renderCTX.device->createBuffer({
@@ -135,6 +133,28 @@ public:
 		}
 		cmd->unmapMemoryStaged(mm);
 
+		cmd->bindPipeline(pipeline);
+
+        cmd->bindSet(0, globalSet);
+		
+		std::array framebuffer{
+			daxa::gpu::RenderAttachmentInfo{
+				.image = renderCTX.swapchainImage.getImageHandle(),
+				.clearValue = { .color = VkClearColorValue{.float32 = { 1.f, 1.f, 1.f, 1.f } } },
+			}
+		};
+		daxa::gpu::RenderAttachmentInfo depthAttachment{
+			.image = renderCTX.depthImage,
+			.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+			.clearValue = { .depthStencil = VkClearDepthStencilValue{ .depth = 1.0f } },
+			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+			.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+		};
+		cmd->beginRendering(daxa::gpu::BeginRenderingInfo{
+			.colorAttachments = framebuffer,
+			.depthAttachment = &depthAttachment,
+		});
+
         cmd->bindPipeline(pipeline);
 		u32 index = 0;
         for (auto& draw : draws) {
@@ -147,6 +167,8 @@ public:
             cmd->drawIndexed(draw.indexCount, 1, 0, 0, 0);
 			index += 1;
         }
+
+		cmd->endRendering();
     }
 
 private:
