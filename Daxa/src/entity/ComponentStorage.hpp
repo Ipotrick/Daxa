@@ -9,6 +9,9 @@
 namespace daxa {
 
     class IGenericComponentStorage {
+    public:
+        virtual ~IGenericComponentStorage() { }
+
         virtual void remove(EntityIndex index) = 0;
         virtual bool has(EntityIndex index) = 0;
     };
@@ -18,20 +21,10 @@ namespace daxa {
     template<typename ComponentT>
     class ComponentStorageSparseSet : public IGenericComponentStorage {
     public:
-        bool has(EntityIndex index) {
+        virtual ~ComponentStorageSparseSet() { }
+
+        virtual bool has(EntityIndex index) override final {
             return index <= sparseIndices.size() && sparseIndices[index] != INVALID_ENTITY_INDEX;
-        }
-
-        void add(EntityIndex index, ComponentT const& value) {
-            if (sparseIndices.size() <= index) {
-                sparseIndices.resize(index + 128, INVALID_ENTITY_INDEX);
-            }
-
-            DAXA_ASSERT_M(sparseIndices[index] == INVALID_ENTITY_INDEX, "tried to add component to entity that allready posesses the to be added component!");
-            EntityIndex denseIndex = denseIndices.size();
-            sparseIndices[index] = denseIndex;
-            denseIndices.push_back(index);
-            values.push_back(std::move(value));
         }
 
         virtual void remove(EntityIndex index) override final {
@@ -46,6 +39,18 @@ namespace daxa {
             values[denseIndex] = std::move(values.back());
             denseIndices.pop_back();
             values.pop_back();
+        }
+
+        void add(EntityIndex index, ComponentT const& value) {
+            if (sparseIndices.size() <= index) {
+                sparseIndices.resize(index + 128, INVALID_ENTITY_INDEX);
+            }
+
+            DAXA_ASSERT_M(sparseIndices[index] == INVALID_ENTITY_INDEX, "tried to add component to entity that allready posesses the to be added component!");
+            EntityIndex denseIndex = denseIndices.size();
+            sparseIndices[index] = denseIndex;
+            denseIndices.push_back(index);
+            values.push_back(std::move(value));
         }
 
         ComponentT& get(EntityIndex index) {

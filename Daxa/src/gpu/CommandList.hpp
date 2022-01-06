@@ -251,7 +251,24 @@ namespace daxa {
 
 			void bindIndexBuffer(BufferHandle buffer, size_t bufferOffset = 0, VkIndexType indexType = VK_INDEX_TYPE_UINT32);
 
+			/**
+			 * @brief 	Binds a binding set to the currently bound pipeline.
+			 * 			the pipeline layout and binding point are infered by the currently bound pipeline.
+			 * 
+			 * @param setBinding set slot, the set should be bound to.
+			 * @param set set that should be bound.
+			 */
 			void bindSet(u32 setBinding, BindingSetHandle set);
+
+			/**
+			 * @brief 	Binds a binding set to independantyl of the currently bound pipeline.
+			 * 
+			 * @param setBinding set slot, the set should be bound to.
+			 * @param set set that should be bound.
+			 * @param bindPoint bindPoint the set will be bound to.
+			 * @param layout layout of the compatible pipelines.
+			 */
+			void bindSetPipelineIndependant(u32 setBinding, BindingSetHandle set, VkPipelineBindPoint bindPoint, VkPipelineLayout layout);
 
 			void draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance);
 
