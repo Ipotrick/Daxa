@@ -568,6 +568,7 @@ namespace daxa {
 					auto lock = std::unique_lock(recyclingSharedData->mut);
 					recyclingSharedData->zombies.push_back(std::move(list));
 				}
+				list = {};
 			}
 		}
 

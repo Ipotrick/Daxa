@@ -106,7 +106,6 @@ namespace daxa {
 				.inputRate = currentVertexAttributeBindingInputRate,
 			});
 			currentVertexAttributeBindingOffset = 0;
-			currentVertexAttributeLocation = 0;
 			return *this;
 		}
 
