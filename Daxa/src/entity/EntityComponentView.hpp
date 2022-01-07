@@ -22,37 +22,46 @@ namespace daxa {
         }
 
         template<typename SpecificType>
+        SpecificType& getComp(EntityHandle handle) {
+            DAXA_ASSERT_M(handleValid(handle), "invalid entity handle!");
+            ComponentStorageSparseSet<SpecificType>* storage = std::get<ComponentStorageSparseSet<SpecificType>*>(storages);
+            return storage->get(handle.index);
+        }
+
+        template<typename SpecificType>
+        SpecificType* getCompIf(EntityHandle handle) {
+            DAXA_ASSERT_M(handleValid(handle), "invalid entity handle!");
+            ComponentStorageSparseSet<SpecificType>* storage = std::get<ComponentStorageSparseSet<SpecificType>*>(storages);
+            if (storage->has(handle.index)) {
+                return &storage->get(handle.index);
+            }
+            return nullptr;
+        }
+
+        template<typename SpecificType>
         void addComp(EntityHandle handle, SpecificType&& value) {
             DAXA_ASSERT_M(handleValid(handle), "invalid entity handle!");
             ComponentStorageSparseSet<SpecificType>* storage = std::get<ComponentStorageSparseSet<SpecificType>*>(storages);
             storage->add(handle.index, std::move(value));
         }
 
+        template<typename SpecificType>
         void remComp(EntityHandle handle) {
             DAXA_ASSERT_M(handleValid(handle), "invalid entity handle!");
             ComponentStorageSparseSet<SpecificType>* storage = std::get<ComponentStorageSparseSet<SpecificType>*>(storages);
             storage->remove(handle.index);
         }
 
+        template<typename SpecificType>
         bool hasComp(EntityHandle handle) {
             DAXA_ASSERT_M(handleValid(handle), "invalid entity handle!");
             ComponentStorageSparseSet<SpecificType>* storage = std::get<ComponentStorageSparseSet<SpecificType>*>(storages);
             return storage->has(handle.index);
         }
 
-        template<typename FirstSpecificType, typename ... RestSpecificTypes>
-        void addComps(EntityHandle handle) {
-            (addComp<FirstSpecificType>(handle), ...);
-        }
-
-        template<typename FirstSpecificType, typename ... RestSpecificTypes>
-        void remComps(EntityHandle handle) {
-            (remComp<FirstSpecificType>(handle), ...);
-        }
-
-        template<typename FirstSpecificType, typename ... RestSpecificTypes>
+        template<typename ... Types>
         bool hasComps(EntityHandle handle) {
-            return (hasComp<FirstSpecificType>(handle) && ...);
+            return (hasComp<Types>(handle) && ...);
         }
         
         class EntityComponentIterator {

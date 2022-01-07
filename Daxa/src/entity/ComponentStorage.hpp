@@ -24,7 +24,7 @@ namespace daxa {
         virtual ~ComponentStorageSparseSet() { }
 
         virtual bool has(EntityIndex index) override final {
-            return index <= sparseIndices.size() && sparseIndices[index] != INVALID_ENTITY_INDEX;
+            return index < sparseIndices.size() && sparseIndices[index] != INVALID_ENTITY_INDEX;
         }
 
         virtual void remove(EntityIndex index) override final {

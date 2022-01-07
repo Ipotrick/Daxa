@@ -65,14 +65,15 @@ namespace daxa {
 
         gpu::CommandListHandle getUploadCommands() {
             cmdList->end();
-            return cmdList;
+            auto retval =  std::move(cmdList);
             cmdList = device->getEmptyCommandList();
             cmdList->begin();
+            return retval;
         }
 
     private:
         gpu::ImageHandle loadImage(std::filesystem::path const& path, std::optional<gpu::SamplerCreateInfo> sampler) {
-            stbi_set_flip_vertically_on_load(1);
+            //stbi_set_flip_vertically_on_load(1);
             int width, height, channels;
             u8* data = stbi_load((char const*)path.string().c_str(), &width, &height, &channels, 4);
 
@@ -89,7 +90,7 @@ namespace daxa {
                     ci.sampler = samplers[sampler_v];
                 }
                 auto image = device->createImage2d(ci);
-                cmdList->copyHostToImageSynced({.dst = image, .dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, .src = data, .size = (u32)(width*height*channels)});
+                cmdList->copyHostToImageSynced({.dst = image, .dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, .src = data, .size = (u32)(width*height*4)});
                 std::free(data);
                 return image;
             }
