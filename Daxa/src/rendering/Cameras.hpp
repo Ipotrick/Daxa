@@ -19,7 +19,7 @@ namespace daxa {
 	private:
 		bool bZoom = false; 
 		f32 fov = 74.0f;
-		f32 near = 0.4f;
+		f32 near = 0.01f;
 		f32 far = 1'000.0f;
 		f32 cameraSwaySpeed = 0.1f;
 		f32 translationSpeed = 5.0f;

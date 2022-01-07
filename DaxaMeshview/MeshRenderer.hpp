@@ -72,6 +72,7 @@ public:
 			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
 			// all added vertex input attributes are added to the previously added vertex input attribute binding
 			.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)			// positions
+			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
 			.addVertexInputAttribute(VK_FORMAT_R32G32_SFLOAT)				// uvs
 			// location of attachments in a shader are implied by the order they are added in the pipeline builder:
 			.addColorAttachment(renderCTX.swapchain->getVkFormat());
@@ -105,7 +106,8 @@ public:
         daxa::gpu::ImageHandle albedo = {};
         daxa::gpu::BufferHandle indices = {};
         u32 indexCount = {};
-        daxa::gpu::BufferHandle vertices = {};
+        daxa::gpu::BufferHandle positions = {};
+        daxa::gpu::BufferHandle uvs = {};
     };
 
 	void setCameraVP(daxa::gpu::CommandListHandle& cmd, glm::mat4 const& vp) {
@@ -117,6 +119,7 @@ public:
 	}
 
     void render(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawMesh>& draws) {
+		if (draws.empty()) return;
 		if (draws.size() * sizeof(glm::mat4) > transformsBuffer->getSize()) {
 			size_t newSize = std::pow(2, std::ceil(std::log(draws.size() * sizeof(glm::mat4))/std::log(2)));
 			this->transformsBuffer = renderCTX.device->createBuffer({
@@ -162,7 +165,8 @@ public:
             thisDrawSet->bindImage(0, draw.albedo, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
             cmd->bindSet(1, thisDrawSet);
             cmd->bindIndexBuffer(draw.indices);
-            cmd->bindVertexBuffer(0, draw.vertices);
+            cmd->bindVertexBuffer(0, draw.positions);
+            cmd->bindVertexBuffer(1, draw.uvs);
 			cmd->pushConstant(VK_SHADER_STAGE_VERTEX_BIT, index);
             cmd->drawIndexed(draw.indexCount, 1, 0, 0, 0);
 			index += 1;
