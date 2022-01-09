@@ -7,39 +7,47 @@
 #include "World.hpp"
 #include "RenderContext.hpp"
 #include "MeshRenderer.hpp"
+#include "MeshLoading.hpp"
 #include "cgltf.h"
+#include "Components.hpp"
 
 struct UIState {
 	char loadFileTextBuf[256] = {};
-};
-
-struct ModelComp {
-	daxa::gpu::BufferHandle indiexBuffer = {};
-	daxa::gpu::BufferHandle vertexPositions = {};
-	daxa::gpu::BufferHandle vertexUVs = {};
-	daxa::gpu::ImageHandle image = {};
-	u32 indexCount = 0;
-};
-
-struct ChildComp {
-	daxa::EntityHandle parent = {};
 };
 
 class MyUser {
 public:
 	MyUser(daxa::AppState& app) 
 		: renderCTX{ *app.window }
-		, imageCache{ renderCTX->device }
+		, imageCache{ std::make_shared<daxa::ImageCache>(renderCTX->device) }
+		, sceneLoader{ renderCTX->device, std::vector<std::filesystem::path>{"./", "./DaxaMeshview/"}, this->imageCache }
 	{ 
+		auto possiblePaths = std::vector<std::filesystem::path>{
+			"./",
+			"./DaxaMeshview/"
+		};
 
-		auto textureAtlas = imageCache.get({
-			.path = "DaxaCube/atlas.png", 
-			.samplerInfo = daxa::gpu::SamplerCreateInfo{
-				.minFilter = VK_FILTER_NEAREST,
-				.magFilter = VK_FILTER_NEAREST,
-			}
-		});
-		renderCTX->queue->submitBlocking({.commandLists = {imageCache.getUploadCommands()}});
+		auto cmdList = renderCTX->device->getEmptyCommandList();
+		cmdList->begin();
+
+		imageCache->initDefaultTexture(cmdList);
+
+		auto ret = sceneLoader.loadScene(cmdList, "frog/", ecm);
+
+		if (ret.isErr()) {
+			std::cout << "loading error with message: " << ret.message() << std::endl;
+		}
+
+		auto textureAtlas = imageCache->get(
+			{
+				.path = "DaxaCube/atlas.png", 
+				.samplerInfo = daxa::gpu::SamplerCreateInfo{
+					.minFilter = VK_FILTER_NEAREST,
+					.magFilter = VK_FILTER_NEAREST,
+				}
+			},
+			cmdList
+		);
 
 		// end texture creation
 
@@ -119,7 +127,6 @@ public:
 			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 
-
 		std::array cubeIndices{
 			0, 1, 2, 1, 2, 3,
 			4, 5, 6, 5, 6, 7,
@@ -134,8 +141,6 @@ public:
 			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 
-		auto cmdList = renderCTX->device->getEmptyCommandList();
-		cmdList->begin();
 		cmdList->copyHostToBuffer({
 			.src = cuveVertexPositions.data(),
 			.dst = positionVertexBuffer,
@@ -190,10 +195,15 @@ public:
 		if (!(fixedModelPath.back() == '/' || fixedModelPath.back() == '\\')) {
 			fixedModelPath.push_back('/');
 		}
+		
+		auto cmdList = renderCTX->device->getEmptyCommandList();
+		cmdList->begin();
+
 		std::string scenePath = fixedModelPath + "scene.gltf";
 		cgltf_options options = {};
 		cgltf_data* data = NULL;
 		cgltf_result result = cgltf_parse_file(&options, scenePath.c_str(), &data);
+
 		if (result == cgltf_result_success)
 		{
 			printf("loading success\n");
@@ -208,13 +218,16 @@ public:
 			for (int i = 0; i < data->textures_count; i++) {
 				texPath = fixedModelPath + data->textures[i].image->uri;
 				printf("texture path %s\n",texPath.c_str());
-				textures.push_back(imageCache.get({
-					.path = texPath.c_str(), 
-					.samplerInfo = daxa::gpu::SamplerCreateInfo{
-						.minFilter = VK_FILTER_LINEAR,
-						.magFilter = VK_FILTER_LINEAR,
-					}
-				}));
+				textures.push_back(imageCache->get(
+					{
+						.path = texPath.c_str(), 
+						.samplerInfo = daxa::gpu::SamplerCreateInfo{
+							.minFilter = VK_FILTER_LINEAR,
+							.magFilter = VK_FILTER_LINEAR,
+						}
+					},
+					cmdList
+				));
 			}
 
 			std::string bufferPath = fixedModelPath + data->buffers[0].uri;
@@ -226,9 +239,6 @@ public:
 			daxa::gpu::BufferHandle indices;
 			daxa::gpu::BufferHandle positions;
 			daxa::gpu::BufferHandle uvs;
-
-			auto cmd = renderCTX->device->getEmptyCommandList();
-			cmd->begin();
 
 			auto* prim = data->meshes[0].primitives;
 			auto count = data->meshes[0].primitives->indices->count;
@@ -242,7 +252,7 @@ public:
 				.size = size,
 			});
 
-			cmd->copyHostToBuffer({
+			cmdList->copyHostToBuffer({
 				.dst = indices,
 				.size = size,
 				.src = indicesPtr,
@@ -261,14 +271,14 @@ public:
 						.size = size,
 					});
 
-					auto mm = cmd->mapMemoryStaged(positions, size, 0);
+					auto mm = cmdList->mapMemoryStaged(positions, size, 0);
 					u8* dataPtr = (u8*)prim->attributes[i].data->buffer_view->buffer->data;
 					dataPtr += prim->attributes[i].data->buffer_view->offset;
 					dataPtr += prim->attributes[i].data->offset;
 					
 					std::memcpy(mm.hostPtr, dataPtr, size);
 					
-					cmd->unmapMemoryStaged(mm);
+					cmdList->unmapMemoryStaged(mm);
 				}
 				if (strcmp("TEXCOORD_0", prim->attributes[i].name) == 0) {
 					printf("found texture coord vertex attribute\n");
@@ -282,26 +292,21 @@ public:
 						.size = size,
 					});
 
-					auto mm = cmd->mapMemoryStaged(uvs, size, 0);
+					auto mm = cmdList->mapMemoryStaged(uvs, size, 0);
 					u8* dataPtr = (u8*)prim->attributes[i].data->buffer_view->buffer->data;
 					dataPtr += prim->attributes[i].data->buffer_view->offset;
 					dataPtr += prim->attributes[i].data->offset;
 					
 					std::memcpy(mm.hostPtr, dataPtr, size);
 					
-					cmd->unmapMemoryStaged(mm);
+					cmdList->unmapMemoryStaged(mm);
 				}
 			}
 			
-			cmd->end();
+			cmdList->end();
 			renderCTX->queue->submitBlocking({
-				.commandLists = {cmd}
+				.commandLists = {cmdList}
 			});
-
-			if (textures.size() > 0) {
-				auto cmd = imageCache.getUploadCommands();
-				renderCTX->queue->submitBlocking({.commandLists = {cmd}});
-			}
 
 			auto ent = ecm.createEntity();
 
@@ -344,6 +349,15 @@ public:
 
 			auto entity = createEntityFromModel(uiState.loadFileTextBuf);
 			std::memset(uiState.loadFileTextBuf, '\0', sizeof(uiState.loadFileTextBuf));
+		}
+		ImGui::End();
+
+		ImGui::Begin("texture view");
+		for (auto tex : sceneLoader.textures) {
+			auto id = imguiRenderer->getImGuiTextureId(tex);
+			ImGui::Text("pointer = %i", id);
+			ImGui::Text("size = %d x %d", tex->getVkExtent().width, tex->getVkExtent().height);
+			ImGui::Image((void*)id, ImVec2(tex->getVkExtent().width, tex->getVkExtent().height));
 		}
 		ImGui::End();
 
@@ -458,7 +472,8 @@ private:
 	std::optional<RenderContext> renderCTX;
 	daxa::GimbalLockedCameraController cameraController{};
 	MeshRenderer meshRender = {};
-	daxa::ImageCache imageCache;
+	std::shared_ptr<daxa::ImageCache> imageCache;
+	SceneLoader sceneLoader;
 	std::optional<daxa::ImGuiRenderer> imguiRenderer = std::nullopt;
 	double totalElapsedTime = 0.0f;
 	UIState uiState;
