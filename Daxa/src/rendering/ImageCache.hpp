@@ -76,6 +76,7 @@ namespace daxa {
             } else {
                 data = stbi_load((char const*)info.path.string().c_str(), &width, &height, &channels, 4);
             }
+            printf("loaded image from path: %s\n", (char const*)info.path.string().c_str());
 
             if (!data) {
                 return dummyImage;
