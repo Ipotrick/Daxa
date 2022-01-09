@@ -365,6 +365,8 @@ namespace daxa {
 			friend class Device;
 			friend class Queue;
 
+			void cleanup();
+
 			CommandListHandle(std::shared_ptr<CommandList> list);
 
 			std::shared_ptr<CommandList> list = {};
