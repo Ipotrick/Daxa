@@ -2,12 +2,16 @@
 
 #include "Daxa.hpp"
 
-struct ModelComp {
+struct Primitive {
+	u32 indexCount = 0;
 	daxa::gpu::BufferHandle indiexBuffer = {};
 	daxa::gpu::BufferHandle vertexPositions = {};
 	daxa::gpu::BufferHandle vertexUVs = {};
 	daxa::gpu::ImageHandle image = {};
-	u32 indexCount = 0;
+};
+
+struct ModelComp {
+	std::vector<Primitive> meshes;
 };
 
 struct ChildComp {

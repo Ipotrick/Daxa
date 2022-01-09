@@ -190,153 +190,11 @@ public:
 		//view.addComp(ent2, ChildComp{ .parent = ent });
 	}
 
-	daxa::EntityHandle createEntityFromModel(char const* const modelPath) {
-		std::string fixedModelPath = modelPath;
-		if (!(fixedModelPath.back() == '/' || fixedModelPath.back() == '\\')) {
-			fixedModelPath.push_back('/');
-		}
-		
-		auto cmdList = renderCTX->device->getEmptyCommandList();
-		cmdList->begin();
-
-		std::string scenePath = fixedModelPath + "scene.gltf";
-		cgltf_options options = {};
-		cgltf_data* data = NULL;
-		cgltf_result result = cgltf_parse_file(&options, scenePath.c_str(), &data);
-
-		if (result == cgltf_result_success)
-		{
-			printf("loading success\n");
-			for (int i = 0; i < data->textures_count; i++) {
-				printf("texture nr %i\n", i);
-				printf("texture uri: %s\n", data->textures[i].image->uri);
-			}
-
-			std::string texPath;
-			std::vector<daxa::gpu::ImageHandle> textures;
-
-			for (int i = 0; i < data->textures_count; i++) {
-				texPath = fixedModelPath + data->textures[i].image->uri;
-				printf("texture path %s\n",texPath.c_str());
-				textures.push_back(imageCache->get(
-					{
-						.path = texPath.c_str(), 
-						.samplerInfo = daxa::gpu::SamplerCreateInfo{
-							.minFilter = VK_FILTER_LINEAR,
-							.magFilter = VK_FILTER_LINEAR,
-						}
-					},
-					cmdList
-				));
-			}
-
-			std::string bufferPath = fixedModelPath + data->buffers[0].uri;
-			printf("buffer data path: %s\n", bufferPath.c_str());
-
-			cgltf_options buffer_load_options = {};
-			cgltf_load_buffers(&buffer_load_options, data, scenePath.c_str());
-
-			daxa::gpu::BufferHandle indices;
-			daxa::gpu::BufferHandle positions;
-			daxa::gpu::BufferHandle uvs;
-
-			auto* prim = data->meshes[0].primitives;
-			auto count = data->meshes[0].primitives->indices->count;
-			auto size = count * sizeof(u32);
-			u8* indicesPtr = (u8*)data->meshes[0].primitives->indices->buffer_view->buffer->data;
-			indicesPtr += data->meshes[0].primitives->indices->buffer_view->offset;
-			indicesPtr += data->meshes[0].primitives->indices->offset;
-
-			indices = renderCTX->device->createBuffer({
-				.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-				.size = size,
-			});
-
-			cmdList->copyHostToBuffer({
-				.dst = indices,
-				.size = size,
-				.src = indicesPtr,
-			});
-
-			for (auto i = 0; i < prim->attributes_count; i++) {
-				if (strcmp("POSITION", prim->attributes[i].name) == 0) {
-					printf("found position vertex attribute\n");
-
-					auto count = prim->attributes[i].data->count;
-					auto size = prim->attributes[i].data->count * sizeof(glm::vec3);
-					auto stride = prim->attributes[i].data->stride;
-
-					positions = renderCTX->device->createBuffer({
-						.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-						.size = size,
-					});
-
-					auto mm = cmdList->mapMemoryStaged(positions, size, 0);
-					u8* dataPtr = (u8*)prim->attributes[i].data->buffer_view->buffer->data;
-					dataPtr += prim->attributes[i].data->buffer_view->offset;
-					dataPtr += prim->attributes[i].data->offset;
-					
-					std::memcpy(mm.hostPtr, dataPtr, size);
-					
-					cmdList->unmapMemoryStaged(mm);
-				}
-				if (strcmp("TEXCOORD_0", prim->attributes[i].name) == 0) {
-					printf("found texture coord vertex attribute\n");
-
-					auto count = prim->attributes[i].data->count;
-					auto size = prim->attributes[i].data->count * sizeof(glm::vec2);
-					auto stride = prim->attributes[i].data->stride;
-
-					uvs = renderCTX->device->createBuffer({
-						.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-						.size = size,
-					});
-
-					auto mm = cmdList->mapMemoryStaged(uvs, size, 0);
-					u8* dataPtr = (u8*)prim->attributes[i].data->buffer_view->buffer->data;
-					dataPtr += prim->attributes[i].data->buffer_view->offset;
-					dataPtr += prim->attributes[i].data->offset;
-					
-					std::memcpy(mm.hostPtr, dataPtr, size);
-					
-					cmdList->unmapMemoryStaged(mm);
-				}
-			}
-			
-			cmdList->end();
-			renderCTX->queue->submitBlocking({
-				.commandLists = {cmdList}
-			});
-
-			auto ent = ecm.createEntity();
-
-			auto view = ecm.view<daxa::TransformComp, ModelComp>();
-
-			printf("count: %i\n", count);
-
-			auto trans = glm::mat4{1.0f};
-			trans = glm::rotate(trans, glm::radians(90.0f), glm::vec3{1,0,0});
-
-			view.addComp(ent, daxa::TransformComp{.translation = trans});
-			view.addComp(ent, ModelComp{
-				.image = textures[0],
-				.indexCount = (u32)count,
-				.indiexBuffer = indices,
-				.vertexPositions = positions,
-				.vertexUVs = uvs,
-			});
-
-			return ent;
-
-			cgltf_free(data);
-		}
-		else {
-			printf("loading failed\n");
-		}
-		return {};
-	}
-
 	void update(daxa::AppState& app) {
+
+		auto cmdList = renderCTX->device->getEmptyCommandList();
+
+		cmdList->begin();
 
 		ImGui_ImplGlfw_NewFrame();
 
@@ -347,7 +205,7 @@ public:
 		if (ImGui::Button("load")) {
 			printf("try to load model with path: %s\n", uiState.loadFileTextBuf);
 
-			auto entity = createEntityFromModel(uiState.loadFileTextBuf);
+			sceneLoader.loadScene(cmdList, "frog/", ecm);
 			std::memset(uiState.loadFileTextBuf, '\0', sizeof(uiState.loadFileTextBuf));
 		}
 		ImGui::End();
@@ -357,7 +215,7 @@ public:
 			auto id = imguiRenderer->getImGuiTextureId(tex);
 			ImGui::Text("pointer = %i", id);
 			ImGui::Text("size = %d x %d", tex->getVkExtent().width, tex->getVkExtent().height);
-			ImGui::Image((void*)id, ImVec2(tex->getVkExtent().width, tex->getVkExtent().height));
+			ImGui::Image((void*)id, ImVec2(400,400));
 		}
 		ImGui::End();
 
@@ -370,10 +228,6 @@ public:
 		if (app.window->getWidth() != renderCTX->swapchain->getSize().width || app.window->getHeight() != renderCTX->swapchain->getSize().height) {
 			renderCTX->resize(app.window->getWidth(),app.window->getHeight());
 		}
-
-		auto cmdList = renderCTX->device->getEmptyCommandList();
-
-		cmdList->begin();
 
 		/// ------------ Begin Data Uploading ---------------------
 
@@ -403,10 +257,10 @@ public:
 
 			for (auto [ent, trans, model] : view) {
 				transformBuffer.clear();
-				transformBuffer.push_back(trans.translation);
+				transformBuffer.push_back(trans.mat);
 				auto iterEnt = ent;
 				while (ChildComp* childComp = childComps.getCompIf<ChildComp>(iterEnt)) {
-					transformBuffer.push_back(view.getComp<daxa::TransformComp>(childComp->parent).translation);
+					transformBuffer.push_back(view.getComp<daxa::TransformComp>(childComp->parent).mat);
 					iterEnt = childComp->parent;
 				}
 
@@ -418,14 +272,16 @@ public:
 				//if (!childComps.hasComp<ChildComp>(ent)) {
 				//	trans.translation = glm::rotate(trans.translation, 1.f * (f32)app.getDeltaTimeSeconds(), glm::vec3{1,1,1});
 				//}
-				draws.push_back(MeshRenderer::DrawMesh{
-					.albedo = model.image,
-					.indexCount = model.indexCount,
-					.indices = model.indiexBuffer,
-					.positions = model.vertexPositions,
-					.uvs = model.vertexUVs,
-					.transform = translation,
-				});
+				for (auto& prim : model.meshes) {
+					draws.push_back(MeshRenderer::DrawMesh{
+						.albedo = prim.image,
+						.indexCount = prim.indexCount,
+						.indices = prim.indiexBuffer,
+						.positions = prim.vertexPositions,
+						.uvs = prim.vertexUVs,
+						.transform = translation,
+					});
+				}
 			}
 			meshRender.render(*renderCTX, cmdList, draws);
 		}

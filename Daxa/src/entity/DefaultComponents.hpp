@@ -4,7 +4,7 @@
 
 namespace daxa {
     struct TransformComp {
-        glm::mat4 translation = {};
+        glm::mat4 mat = {};
     };
 
     struct ChildComp {
