@@ -84,6 +84,8 @@ namespace daxa {
 			bool valid() const { return *this; }
 
 			size_t getRefCount() const { return image.use_count(); }
+			Image* get() { return image.get(); }
+			Image const* get() const { return image.get(); }
 		private:
 			friend class Device;
 			friend class Swapchain;

@@ -14,13 +14,13 @@ namespace daxa {
     public:
         ImGuiRenderer(gpu::DeviceHandle device, gpu::QueueHandle queue);
 
+        u64 getImGuiTextureId(gpu::ImageHandle img);
+
         void recordCommands(ImDrawData* draw_data, daxa::gpu::CommandListHandle& cmdList, gpu::ImageHandle& target);
     private:
         daxa::gpu::DeviceHandle device                  = {};
         daxa::gpu::PipelineHandle pipeline              = {};
         daxa::gpu::BindingSetAllocatorHandle setAlloc   = {};
-        daxa::gpu::ImageHandle fontSheet                = {};
-        daxa::gpu::BindingSetHandle fontSheetBinding    = {};
 
         struct PerFrameData{
             daxa::gpu::BufferHandle vertexBuffer        = {};
@@ -29,5 +29,8 @@ namespace daxa {
         std::deque<PerFrameData> perFrameData           = {};
 
         void recreatePerFrameData(size_t newMinSizeVertex, size_t newMinSizeIndices);
+
+        std::unordered_map<void*, size_t> texHandlePtrToReferencedImageIndex;
+        std::vector<gpu::ImageHandle> referencedImages;
     };
 }

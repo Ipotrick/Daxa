@@ -36,6 +36,7 @@ namespace daxa {
 			size_t usedUpSize = {};
 			BufferHandle buffer = {};
 		private:
+			void cleanup();
 			std::weak_ptr<StagingBufferPoolSharedData> sharedData = {};
 		};
 

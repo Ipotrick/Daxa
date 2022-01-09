@@ -561,7 +561,7 @@ namespace daxa {
 			insertBarriers({&barrier,1}, {});
 		}
 
-		CommandListHandle::~CommandListHandle() {
+		void CommandListHandle::cleanup() {
 			if (list && list.use_count() == 1) {
 				if (auto recyclingSharedData = list->recyclingData.lock()) {
 					list->reset();
@@ -572,14 +572,18 @@ namespace daxa {
 			}
 		}
 
+		CommandListHandle::~CommandListHandle() {
+			cleanup();
+		}
+
 		CommandListHandle& CommandListHandle::operator=(CommandListHandle&& other) noexcept {
-			CommandListHandle::~CommandListHandle();
+			cleanup();
 			list = std::move(other.list);
 			return *this;
 		}
 
 		CommandListHandle& CommandListHandle::operator=(CommandListHandle const& other) {
-			CommandListHandle::~CommandListHandle();
+			cleanup();
 			list = other.list;
 			return *this;
 		}

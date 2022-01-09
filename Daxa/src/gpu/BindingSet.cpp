@@ -130,19 +130,7 @@ namespace daxa {
 			: set { std::move(set) }
 		{ }
 
-		BindingSetHandle& BindingSetHandle::operator=(BindingSetHandle const& other) {
-			BindingSetHandle::~BindingSetHandle();
-			this->set = other.set;
-			return *this;
-		}
-
-		BindingSetHandle& BindingSetHandle::operator=(BindingSetHandle&& other) noexcept {
-			BindingSetHandle::~BindingSetHandle();
-			this->set = std::move(other.set);
-			return *this;
-		}
-
-		BindingSetHandle::~BindingSetHandle() {
+		void BindingSetHandle::cleanup() {
 			if (set && set.use_count() == 1) {
 				size_t handlesSize = set->handles.size();
 				set->handles.clear();
@@ -152,6 +140,22 @@ namespace daxa {
 				pool->zombies.push_back(std::move(set));
 				set.reset();
 			}
+		}
+
+		BindingSetHandle& BindingSetHandle::operator=(BindingSetHandle const& other) {
+			cleanup();
+			this->set = other.set;
+			return *this;
+		}
+
+		BindingSetHandle& BindingSetHandle::operator=(BindingSetHandle&& other) noexcept {
+			cleanup();
+			this->set = std::move(other.set);
+			return *this;
+		}
+
+		BindingSetHandle::~BindingSetHandle() {
+			cleanup();
 		}
 
 		BindingSetDescriptionCache::~BindingSetDescriptionCache() {

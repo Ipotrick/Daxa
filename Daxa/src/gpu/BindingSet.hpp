@@ -155,6 +155,8 @@ namespace daxa {
 			friend class BindingSetAllocator;
 			friend class GeneralDescriptorSetAllocator;
 
+			void cleanup();
+
 			BindingSetHandle(std::shared_ptr<BindingSet>&&) noexcept;
 
 			std::shared_ptr<BindingSet> set;
