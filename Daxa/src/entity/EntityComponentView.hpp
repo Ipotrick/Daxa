@@ -39,10 +39,11 @@ namespace daxa {
         }
 
         template<typename SpecificType>
-        void addComp(EntityHandle handle, SpecificType&& value) {
+        SpecificType& addComp(EntityHandle handle, SpecificType&& value) {
             DAXA_ASSERT_M(handleValid(handle), "invalid entity handle!");
             ComponentStorageSparseSet<SpecificType>* storage = std::get<ComponentStorageSparseSet<SpecificType>*>(storages);
             storage->add(handle.index, std::move(value));
+            return storage->get(handle.index);
         }
 
         template<typename SpecificType>
@@ -76,7 +77,18 @@ namespace daxa {
                 : denseIndex{ denseIndex }
                 , versions{ versions }
                 , storages{ storages }
-            {}
+            {
+                if (this->denseIndex >= std::get<0>(*storages)->denseIndices.size()) return;
+                auto sparseIndex = std::get<0>(*storages)->denseIndices[this->denseIndex];
+                while(!(std::get<ComponentStorageSparseSet<RestComponentTypes>*>(*storages)->has(sparseIndex) && ...)) {
+                    this->denseIndex += 1;
+                    if (this->denseIndex >= std::get<0>(*storages)->denseIndices.size()) {
+                        break;
+                    }
+
+                    sparseIndex = std::get<0>(*storages)->denseIndices[this->denseIndex];
+                }
+            }
 
             value_type operator*() const { 
                 auto sparseIndex = std::get<0>(*storages)->denseIndices[denseIndex];
@@ -92,11 +104,11 @@ namespace daxa {
                 do {
                     denseIndex += 1;
                     if (denseIndex >= std::get<0>(*storages)->denseIndices.size()) {
-                        return *this;
+                        break;
                     }
                     sparseIndex = std::get<0>(*storages)->denseIndices[denseIndex];
+                    printf("before check\n");
                 } while(!(std::get<ComponentStorageSparseSet<RestComponentTypes>*>(*storages)->has(sparseIndex) && ...));
-
                 return *this;
             }
 
