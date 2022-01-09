@@ -218,8 +218,6 @@ namespace daxa {
                 for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)  {
                     const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
 
-                    printf("texture id: %i\n", pcmd->TextureId);
-
                     set = setAlloc->getSet();
                     set->bindImage(0, referencedImages[(size_t)pcmd->TextureId], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
                     cmdList->bindSet(0, set);
