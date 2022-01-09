@@ -13,6 +13,8 @@
 namespace daxa {
     struct ImageCacheFetchInfo {
         std::filesystem::path path = {};
+        u8* preload = nullptr;
+        size_t preloadSize = 0;
 
         std::optional<gpu::SamplerCreateInfo> samplerInfo = std::nullopt;
         
@@ -43,9 +45,9 @@ namespace daxa {
     public:
         ImageCache(gpu::DeviceHandle device) 
             : device{ std::move(device) }
-            , cmdList{ device->getEmptyCommandList() }
-        {
-            cmdList->begin();
+        { }
+
+        void initDefaultTexture(gpu::CommandListHandle& cmdList) {
             dummyImage = this->device->createImage2d({.sampler = this->device->createSampler({})});
             u32 dummyColor = 0x8B008BFF;    // purple
             cmdList->copyHostToImageSynced({
@@ -56,34 +58,32 @@ namespace daxa {
             });
         }
 
-        gpu::ImageHandle get(ImageCacheFetchInfo const& info) {
+        gpu::ImageHandle get(ImageCacheFetchInfo const& info, gpu::CommandListHandle& cmdList) {
             if (!cache.contains(info)) {
-                cache[info] = loadImage(info.path, info.samplerInfo);
+                cache[info] = loadImage(info, cmdList);
             }
             return cache[info];
         }
 
-        gpu::CommandListHandle getUploadCommands() {
-            cmdList->end();
-            auto retval =  std::move(cmdList);
-            cmdList = device->getEmptyCommandList();
-            cmdList->begin();
-            return retval;
-        }
-
     private:
-        gpu::ImageHandle loadImage(std::filesystem::path const& path, std::optional<gpu::SamplerCreateInfo> sampler) {
+        gpu::ImageHandle loadImage(ImageCacheFetchInfo const& info, gpu::CommandListHandle& cmdList) {
             //stbi_set_flip_vertically_on_load(1);
             int width, height, channels;
-            u8* data = stbi_load((char const*)path.string().c_str(), &width, &height, &channels, 4);
+            u8* data;
+            if (info.preload) {
+                printf("try load from mem\n");
+                data = stbi_load_from_memory(info.preload, info.preloadSize, &width, &height, &channels, 4);
+            } else {
+                data = stbi_load((char const*)info.path.string().c_str(), &width, &height, &channels, 4);
+            }
 
             if (!data) {
                 return dummyImage;
             } else {
                 auto ci = gpu::Image2dCreateInfo{.width = (u32)width, .height = (u32)height, .imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT};
-                if (sampler.has_value()) {
+                if (info.samplerInfo.has_value()) {
                     printf("create with sampler\n");
-                    auto& sampler_v = sampler.value();
+                    auto& sampler_v = info.samplerInfo.value();
                     if (!samplers.contains(sampler_v)) {
                         samplers[sampler_v] = device->createSampler(sampler_v);
                     }
@@ -95,8 +95,6 @@ namespace daxa {
                 return image;
             }
         }
-
-        gpu::CommandListHandle cmdList = {};
 
         gpu::DeviceHandle device = {};
 

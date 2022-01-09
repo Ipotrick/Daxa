@@ -74,7 +74,7 @@ namespace daxa {
         io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
         size_t upload_size = width * height * 4 * sizeof(char);
 
-        fontSheet = device->createImage2d({
+        auto fontSheet = device->createImage2d({
             .width = (u32)width,
             .height = (u32)height,
             .format = VK_FORMAT_R8G8B8A8_UNORM,
@@ -95,10 +95,9 @@ namespace daxa {
             .commandLists = { cmdList }
         });
 
-        fontSheetBinding = setAlloc->getSet();
-        fontSheetBinding->bindImage(0, fontSheet, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        referencedImages.push_back(fontSheet);
 
-        io.Fonts->SetTexID(fontSheet->getVkImage());
+        io.Fonts->SetTexID(0);
     }
 
     void ImGuiRenderer::recreatePerFrameData(size_t newMinSizeVertex, size_t newMinSizeIndices) {
@@ -117,6 +116,14 @@ namespace daxa {
                 }),
             });
         }
+    }
+    
+    u64 ImGuiRenderer::getImGuiTextureId(gpu::ImageHandle img) {
+        if (!texHandlePtrToReferencedImageIndex.contains(img.get())) {
+            referencedImages.push_back(img);
+            texHandlePtrToReferencedImageIndex[img.get()] = referencedImages.size() - 1;
+        }
+        return texHandlePtrToReferencedImageIndex[img.get()];
     }
 
     void ImGuiRenderer::recordCommands(ImDrawData* draw_data, daxa::gpu::CommandListHandle& cmdList, gpu::ImageHandle& target) {
@@ -197,8 +204,6 @@ namespace daxa {
                 cmdList->pushConstant(VK_SHADER_STAGE_VERTEX_BIT, translate, sizeof(scale));
             }
 
-            cmdList->bindSet(0, fontSheetBinding);
-
             ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
             ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
@@ -206,8 +211,19 @@ namespace daxa {
             int global_idx_offset = 0;
             for (int n = 0; n < draw_data->CmdListsCount; n++) {
                 const ImDrawList* cmd_list = draw_data->CmdLists[n];
+                size_t lastTexId = 0;
+                auto set = setAlloc->getSet();
+                set->bindImage(0, referencedImages[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+                cmdList->bindSet(0, set);
                 for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)  {
                     const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+
+                    printf("texture id: %i\n", pcmd->TextureId);
+
+                    set = setAlloc->getSet();
+                    set->bindImage(0, referencedImages[(size_t)pcmd->TextureId], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+                    cmdList->bindSet(0, set);
+
                     // Project scissor/clipping rectangles into framebuffer space
                     ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
                     ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x, (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
@@ -237,6 +253,8 @@ namespace daxa {
             }
 
             cmdList->endRendering();
+            referencedImages.resize(1);
+            texHandlePtrToReferencedImageIndex.clear();
         }
     }
 }

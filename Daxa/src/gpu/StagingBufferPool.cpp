@@ -7,16 +7,8 @@ namespace daxa {
 			: buffer{ handle }
 			, sharedData{ std::move(pool) }
 		{ }
-
-		StagingBuffer& StagingBuffer::operator=(StagingBuffer&& other) noexcept {
-			StagingBuffer::~StagingBuffer();
-			this->buffer = std::move(other.buffer);
-			this->sharedData = std::move(other.sharedData);
-			this->usedUpSize = std::move(other.usedUpSize);
-			return *this;
-		}
-
-		StagingBuffer::~StagingBuffer() {
+		
+		void StagingBuffer::cleanup() {
 			if (buffer) {
 				auto data = sharedData.lock();
 				if (data) {
@@ -25,6 +17,18 @@ namespace daxa {
 				}
 				buffer = {};
 			}
+		}
+
+		StagingBuffer& StagingBuffer::operator=(StagingBuffer&& other) noexcept {
+			cleanup();
+			this->buffer = std::move(other.buffer);
+			this->sharedData = std::move(other.sharedData);
+			this->usedUpSize = std::move(other.usedUpSize);
+			return *this;
+		}
+
+		StagingBuffer::~StagingBuffer() {
+			cleanup();
 		}
 
 		StagingBufferPool::StagingBufferPool(VkDevice device, u32 queueFamilyIndex, VmaAllocator allocator)
