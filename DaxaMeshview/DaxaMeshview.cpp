@@ -5,14 +5,14 @@
 #include "Daxa.hpp"
 
 #include "World.hpp"
-#include "RenderContext.hpp"
-#include "MeshRenderer.hpp"
+#include "renderer/MeshRenderer.hpp"
 #include "MeshLoading.hpp"
 #include "cgltf.h"
 #include "Components.hpp"
 
 struct UIState {
 	char loadFileTextBuf[256] = {};
+	bool convertYtoZup = false;
 };
 
 class MyUser {
@@ -20,174 +20,13 @@ public:
 	MyUser(daxa::AppState& app) 
 		: renderCTX{ *app.window }
 		, imageCache{ std::make_shared<daxa::ImageCache>(renderCTX->device) }
-		, sceneLoader{ renderCTX->device, std::vector<std::filesystem::path>{"./", "./DaxaMeshview/"}, this->imageCache }
+		, sceneLoader{ renderCTX->device, std::vector<std::filesystem::path>{"./", "./DaxaMeshview/assets/", "./assets/"}, this->imageCache }
 	{ 
-		auto possiblePaths = std::vector<std::filesystem::path>{
-			"./",
-			"./DaxaMeshview/"
-		};
-
-		auto cmdList = renderCTX->device->getEmptyCommandList();
-		cmdList->begin();
-
-		imageCache->initDefaultTexture(cmdList);
-
-		auto ret = sceneLoader.loadScene(cmdList, "deccerCube/SM_Deccer_Cubes_Textured.gltf", ecm);
-
-		if (ret.isErr()) {
-			std::cout << "loading error with message: " << ret.message() << std::endl;
-		}
-
-		auto textureAtlas = imageCache->get(
-			{
-				.path = "DaxaCube/atlas.png", 
-				.samplerInfo = daxa::gpu::SamplerCreateInfo{
-					.minFilter = VK_FILTER_NEAREST,
-					.magFilter = VK_FILTER_NEAREST,
-				}
-			},
-			cmdList
-		);
-
-		// end texture creation
-
-		std::array cuveVertexPositions {
-			/*positions*/		
-			0.5f, -0.5f, -0.5f, 
-			-0.5f, -0.5f, -0.5f,
-			0.5f,  0.5f, -0.5f, 
-			-0.5f,  0.5f, -0.5f,
-
-			-0.5f, -0.5f,  0.5f,
-			0.5f, -0.5f,  0.5f, 
-			-0.5f,  0.5f,  0.5f,
-			0.5f,  0.5f,  0.5f, 
-
-			-0.5f, -0.5f, -0.5f,
-			-0.5f, -0.5f,  0.5f,
-			-0.5f,  0.5f, -0.5f,
-			-0.5f,  0.5f,  0.5f,
-
-			0.5f, -0.5f,  0.5f, 
-			0.5f, -0.5f, -0.5f, 
-			0.5f,  0.5f,  0.5f, 
-			0.5f,  0.5f, -0.5f, 
-
-			-0.5f, -0.5f, -0.5f,
-			0.5f, -0.5f, -0.5f, 
-			-0.5f, -0.5f,  0.5f,
-			0.5f, -0.5f,  0.5f, 
-
-			-0.5f,  0.5f, -0.5f,
-			-0.5f,  0.5f,  0.5f,
-			0.5f,  0.5f, -0.5f, 
-			0.5f,  0.5f,  0.5f, 
-		};
-		auto positionVertexBuffer = renderCTX->device->createBuffer({
-			.size = sizeof(decltype(cuveVertexPositions)),
-			.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
-		});
-
-		std::array cubeVertexUVs {
-			/*tex uv*/ 
-			  0.0f, 0.0f,
-			   1.0f, 0.0f,
-			  0.0f, 1.0f,
-			   1.0f, 1.0f,
-
-			   0.0f, 0.0f,
-			  1.0f, 0.0f,
-			   0.0f, 1.0f,
-			  1.0f, 1.0f,
-
-			   0.0f, 0.0f,
-			   1.0f, 0.0f,
-			   0.0f, 1.0f,
-			   1.0f, 1.0f,
-
-			  0.0f, 0.0f,
-			  1.0f, 0.0f,
-			  0.0f, 1.0f,
-			  1.0f, 1.0f,
-
-			   0.0f, 0.0f,
-			  0.0f, 1.0f,
-			   1.0f, 0.0f,
-			  1.0f, 1.0f,
-
-			   0.0f, 0.0f,
-			   1.0f, 0.0f,
-			  0.0f, 1.0f,
-			  1.0f, 1.0f,
-		};
-		auto uvVertexBuffer = renderCTX->device->createBuffer({
-			.size = sizeof(decltype(cubeVertexUVs)),
-			.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
-		});
-
-		std::array cubeIndices{
-			0, 1, 2, 1, 2, 3,
-			4, 5, 6, 5, 6, 7,
-			8, 9, 10, 9, 10, 11,
-			12, 13, 14, 13, 14, 15,
-			16, 17, 18, 17, 18, 19,
-			20, 21, 22, 21, 22, 23,
-		};
-		auto indexBuffer = renderCTX->device->createBuffer({
-			.size = sizeof(decltype(cubeIndices)), 
-			.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
-		});
-
-		cmdList->copyHostToBuffer({
-			.src = cuveVertexPositions.data(),
-			.dst = positionVertexBuffer,
-			.size = sizeof(decltype(cuveVertexPositions)),
-		});
-		cmdList->copyHostToBuffer({
-			.src = cubeVertexUVs.data(),
-			.dst = uvVertexBuffer,
-			.size = sizeof(decltype(cubeVertexUVs)),
-		});
-		cmdList->copyHostToBuffer({
-			.src = cubeIndices.data(),
-			.dst = indexBuffer,
-			.size = sizeof(decltype(cubeIndices)),
-		});
-		cmdList->end();
-		renderCTX->queue->submitBlocking({
-			.commandLists = {cmdList},
-		});
-		renderCTX->queue->checkForFinishedSubmits();
-
-		auto uniformBuffer = renderCTX->device->createBuffer({
-			.size = sizeof(glm::mat4),
-			.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
-		});
-
 		ImGui::CreateContext();
 		ImGui_ImplGlfw_InitForVulkan(app.window->getGLFWWindow(), true);
 		imguiRenderer.emplace(renderCTX->device, renderCTX->queue);
 
 		meshRender.init(*renderCTX);
-
-		//auto ent = ecm.createEntity();
-		//auto ent2 = ecm.createEntity();
-//
-		//auto modelMat = glm::mat4{1.0f};
-		//modelMat = glm::translate(modelMat, glm::vec3{0,0,1});
-		//modelMat = glm::rotate(modelMat, 45.f, glm::vec3{1,1,1});
-//
-		//auto view = ecm.view<daxa::TransformComp, ModelComp, ChildComp>();
-		//view.addComp(ent, daxa::TransformComp{.translation = modelMat});
-		//view.addComp(ent, ModelComp{ .image = textureAtlas, .vertexPositions = positionVertexBuffer, .vertexUVs = uvVertexBuffer, .indiexBuffer = indexBuffer, .indexCount = cubeIndices.size()});
-//
-		//view.addComp(ent2, daxa::TransformComp{.translation = modelMat});
-		//view.addComp(ent2, ModelComp{ .image = textureAtlas, .vertexPositions = positionVertexBuffer, .vertexUVs = uvVertexBuffer, .indiexBuffer = indexBuffer, .indexCount = cubeIndices.size()});
-		//view.addComp(ent2, ChildComp{ .parent = ent });
 	}
 
 	void update(daxa::AppState& app) {
@@ -202,10 +41,14 @@ public:
 
 		ImGui::Begin("file import");
 		ImGui::InputText("file path", uiState.loadFileTextBuf, sizeof(uiState.loadFileTextBuf));
+		ImGui::Checkbox("convert y-up to z-up", &uiState.convertYtoZup);
 		if (ImGui::Button("load")) {
 			printf("try to load model with path: %s\n", uiState.loadFileTextBuf);
 
-			sceneLoader.loadScene(cmdList, "frog/", ecm);
+			auto ret = sceneLoader.loadScene(cmdList, uiState.loadFileTextBuf, ecm, uiState.convertYtoZup);
+			if (ret.isErr()) {
+				printf("failed to load scene, due to error: %s\n", ret.message());
+			}
 			std::memset(uiState.loadFileTextBuf, '\0', sizeof(uiState.loadFileTextBuf));
 		}
 		ImGui::End();

@@ -166,7 +166,7 @@ public:
         return gpuBuffer;
     }
 
-    void nodeToEntity(
+    daxa::EntityHandle nodeToEntity(
         daxa::gpu::CommandListHandle& cmdList,
         daxa::EntityHandle* parentEnt, 
         cgltf_node* node, 
@@ -257,12 +257,15 @@ public:
         for (int childI = 0; childI < node->children_count; childI++) {
             nodeToEntity(cmdList, &ent, node->children[childI], ecm, view, data, buffers, textures);
         }
-    };
+
+        return ent;
+    }
 
     daxa::Result<std::vector<daxa::EntityHandle>> loadScene(
         daxa::gpu::CommandListHandle& cmdList,
         std::filesystem::path path,
-        daxa::EntityComponentManager& ecm
+        daxa::EntityComponentManager& ecm,
+        bool convertYtoZup
     ) {
         if (!std::filesystem::exists(path)) {
             auto pathRes = completePath(rootPaths, path);
@@ -363,12 +366,23 @@ public:
 
         auto view = ecm.view<daxa::TransformComp, ModelComp, ChildComp>();
 
+        std::vector<daxa::EntityHandle> ret;
+
         for (int scene_i = 0; scene_i < data->scenes_count; scene_i++) {
             auto& scene = data->scenes[scene_i];
             for (int rootNodeI = 0; rootNodeI < scene.nodes_count; rootNodeI++) {
                 auto* rootNode = scene.nodes[rootNodeI];
 
-                nodeToEntity(cmdList, nullptr, rootNode, ecm, view, data, buffers, textures);
+                auto ent = nodeToEntity(cmdList, nullptr, rootNode, ecm, view, data, buffers, textures);
+                ret.push_back(ent);
+            }
+        }
+
+        if (convertYtoZup) {
+            for (auto ent: ret) {
+                if (daxa::TransformComp* trans = view.getCompIf<daxa::TransformComp>(ent)) {
+                    trans->mat = glm::rotate(trans->mat, glm::radians(90.0f), glm::vec3(1,0,0)); 
+                }
             }
         }
 

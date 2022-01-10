@@ -11,6 +11,7 @@ public:
 			.surface = window.getSurface(),
 			.width = window.getWidth(),
 			.height = window.getHeight(),
+			.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR,
 		})}
 		, swapchainImage{ this->swapchain->aquireNextImage() }
 		, presentSignal{ this->device->createSignal() }

@@ -8,65 +8,26 @@ class MeshRenderer {
 public:
 
     void init(RenderContext& renderCTX) {
-		char const* vertexShaderGLSL = R"(
-			#version 450
-			#extension GL_KHR_vulkan_glsl : enable
-
-			layout(location = 0) in vec3 position;
-			layout(location = 1) in vec2 uv;
-
-			layout(location = 10) out vec2 vtf_uv;
-
-			layout(set = 0, binding = 0) uniform Globals {
-				mat4 vp;
-			} globals;
-
-			layout(std140, set = 0, binding = 1) buffer ModelData {
-				mat4 transforms[];
-			} modelData;
-
-			layout(push_constant) uniform PushConstants {
-				uint modelIndex;
-			} pushConstants;
-			
-			void main()
-			{
-				vtf_uv = uv;
-				gl_Position = globals.vp * modelData.transforms[pushConstants.modelIndex] * vec4(position, 1.0f);
-			}
-		)";
-
-		char const* fragmentShaderGLSL = R"(
-			#version 450
-			#extension GL_KHR_vulkan_glsl : enable
-
-			layout(location = 10) in vec2 vtf_uv;
-
-			layout (location = 0) out vec4 outFragColor;
-
-			layout(set = 1, binding = 0) uniform sampler2D albedo;
-
-			void main()
-			{
-				vec4 color = texture(albedo, vtf_uv);
-				outFragColor = color;
-			}
-		)";
-
-		daxa::gpu::ShaderModuleHandle vertexShader = renderCTX.device->tryCreateShderModuleFromGLSL(
-			vertexShaderGLSL,
+		auto vertexShader = renderCTX.device->tryCreateShderModuleFromFile(
+			"./DaxaMeshview/renderer/albedo.vert",
 			VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT
-		).value();
+		);
+		if (vertexShader.isErr()) {
+			std::cout << "could not load vertex shader due to: " << vertexShader.message() << std::endl;
+		}
 
-		daxa::gpu::ShaderModuleHandle fragmenstShader = renderCTX.device->tryCreateShderModuleFromGLSL(
-			fragmentShaderGLSL,
+		auto fragmenstShader = renderCTX.device->tryCreateShderModuleFromFile(
+			"./DaxaMeshview/renderer/albedo.frag",
 			VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT
-		).value();
+		);
+		if (vertexShader.isErr()) {
+			std::cout << "could not load fragment shader due to: " << vertexShader.message() << std::endl;
+		}
 
 		daxa::gpu::GraphicsPipelineBuilder pipelineBuilder;
 		pipelineBuilder
-			.addShaderStage(vertexShader)
-			.addShaderStage(fragmenstShader)
+			.addShaderStage(vertexShader.value())
+			.addShaderStage(fragmenstShader.value())
 			.configurateDepthTest({.enableDepthTest = true, .enableDepthWrite = true, .depthAttachmentFormat = VK_FORMAT_D32_SFLOAT})
 			// adding a vertex input attribute binding:
 			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
@@ -137,22 +98,23 @@ public:
 			});
 		}
 
-		if (draws.empty()) return;
-		if (draws.size() * sizeof(glm::mat4) > transformsBuffer->getSize()) {
-			size_t newSize = std::pow(2, std::ceil(std::log(draws.size() * sizeof(glm::mat4))/std::log(2)));
-			this->transformsBuffer = renderCTX.device->createBuffer({
-				.size = newSize,
-				.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-				.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
-			});
-		}
+		if (!draws.empty()) {
+			if (draws.size() * sizeof(glm::mat4) > transformsBuffer->getSize()) {
+				size_t newSize = std::pow(2, std::ceil(std::log(draws.size() * sizeof(glm::mat4))/std::log(2)));
+				this->transformsBuffer = renderCTX.device->createBuffer({
+					.size = newSize,
+					.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+					.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+					.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
+				});
+			}
 
-		auto mm = cmd->mapMemoryStaged(transformsBuffer, draws.size() * sizeof(glm::mat4), 0);
-		for (int i = 0; i < draws.size(); i++) {
-			((glm::mat4*)mm.hostPtr)[i] = draws[i].transform;
+			auto mm = cmd->mapMemoryStaged(transformsBuffer, draws.size() * sizeof(glm::mat4), 0);
+			for (int i = 0; i < draws.size(); i++) {
+				((glm::mat4*)mm.hostPtr)[i] = draws[i].transform;
+			}
+			cmd->unmapMemoryStaged(mm);
 		}
-		cmd->unmapMemoryStaged(mm);
 
 		cmd->bindPipeline(pipeline);
 
@@ -161,7 +123,7 @@ public:
 		std::array framebuffer{
 			daxa::gpu::RenderAttachmentInfo{
 				.image = renderCTX.swapchainImage.getImageHandle(),
-				.clearValue = { .color = VkClearColorValue{.float32 = { 1.f, 1.f, 1.f, 1.f } } },
+				.clearValue = { .color = VkClearColorValue{.float32 = { 0.02f, 0.02f, 0.02f, 1.f } } },
 			}
 		};
 		daxa::gpu::RenderAttachmentInfo depthAttachment{
