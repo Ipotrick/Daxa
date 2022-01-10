@@ -107,7 +107,6 @@ namespace daxa {
                         break;
                     }
                     sparseIndex = std::get<0>(*storages)->denseIndices[denseIndex];
-                    printf("before check\n");
                 } while(!(std::get<ComponentStorageSparseSet<RestComponentTypes>*>(*storages)->has(sparseIndex) && ...));
                 return *this;
             }
