@@ -119,6 +119,24 @@ public:
 	}
 
     void render(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawMesh>& draws) {
+		if (!dummyTexture) {
+			dummyTexture = renderCTX.device->createImage2d({
+				.width = 1,
+				.height = 1,
+				.imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+				.sampler = renderCTX.device->createSampler({}),
+			});
+
+			u32 pink = 0xFFFF00FF;
+
+			cmd->copyHostToImageSynced({
+				.dst = dummyTexture,
+				.dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				.size = sizeof(u32),
+				.src = &pink,
+			});
+		}
+
 		if (draws.empty()) return;
 		if (draws.size() * sizeof(glm::mat4) > transformsBuffer->getSize()) {
 			size_t newSize = std::pow(2, std::ceil(std::log(draws.size() * sizeof(glm::mat4))/std::log(2)));
@@ -162,7 +180,12 @@ public:
 		u32 index = 0;
         for (auto& draw : draws) {
             auto thisDrawSet = perDrawSetAlloc->getSet();
-            thisDrawSet->bindImage(0, draw.albedo, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			if (draw.albedo) {
+            	thisDrawSet->bindImage(0, draw.albedo, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			}
+			else {
+				thisDrawSet->bindImage(0, dummyTexture, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			}
             cmd->bindSet(1, thisDrawSet);
             cmd->bindIndexBuffer(draw.indices);
             cmd->bindVertexBuffer(0, draw.positions);
@@ -183,4 +206,5 @@ private:
     daxa::gpu::BufferHandle globalDataBufffer = {};
 	daxa::gpu::BufferHandle transformsBuffer = {};
     daxa::gpu::BindingSetAllocatorHandle perDrawSetAlloc = {};
+	daxa::gpu::ImageHandle dummyTexture = {};
 };

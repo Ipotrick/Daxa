@@ -32,7 +32,7 @@ public:
 
 		imageCache->initDefaultTexture(cmdList);
 
-		auto ret = sceneLoader.loadScene(cmdList, "frog/", ecm);
+		auto ret = sceneLoader.loadScene(cmdList, "deccerCube/SM_Deccer_Cubes_Textured.gltf", ecm);
 
 		if (ret.isErr()) {
 			std::cout << "loading error with message: " << ret.message() << std::endl;
