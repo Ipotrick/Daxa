@@ -47,9 +47,9 @@ namespace daxa {
 			if (window.keyPressed(GLFW_KEY_LEFT_CONTROL)) {
 				translation += yawRotaAroundUp * pitchRotation * glm::vec4{ 0.f, -1.f,  0.f, 0.f } * dt * speed;
 			}
-			pitch -= window.getCursorPosChangeY() * cameraSwaySpeed * dt;
+			pitch -= window.getCursorPosChangeY() * cameraSwaySpeed;
 			pitch = std::clamp(pitch, 0.0f, glm::pi<f32>());
-			yaw += window.getCursorPosChangeX() * cameraSwaySpeed * dt;
+			yaw += window.getCursorPosChangeX() * cameraSwaySpeed;
 		}
 		position += translation;
 	}

@@ -44,7 +44,7 @@ if (!(x)) {\
 
 namespace daxa {
 	struct ResultErr {
-		std::string_view message = "\0";
+		std::string_view message = "";
 	};	
 
 	template<typename T>
@@ -62,18 +62,18 @@ namespace daxa {
 
 		Result(std::optional<T>&& opt) 
 			: v{ std::move(opt) }
-			, m{ opt.has_value() ? "\0" : "default error message" }
+			, m{ opt.has_value() ? "" : "default error message" }
 		{ }
 
 		Result(std::optional<T> const& opt) 
 			: v{ opt }
-			, m{ opt.has_value() ? "\0" : "default error message" }
+			, m{ opt.has_value() ? "" : "default error message" }
 		{ }
 
 		Result(ResultErr const& err) 
 			: v{ std::nullopt }
 			, m{ err.message }
-		{}
+		{ }
 
 		Result(std::string_view message)
 			: v{ std::nullopt }

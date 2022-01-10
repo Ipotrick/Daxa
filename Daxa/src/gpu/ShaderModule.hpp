@@ -14,9 +14,9 @@
 namespace daxa {
 	namespace gpu {
 
-		std::optional<std::string> tryLoadGLSLShaderFromFile(std::filesystem::path const& path);
+		Result<std::string> tryLoadGLSLShaderFromFile(std::filesystem::path const& path);
 
-		std::optional<std::vector<u32>> tryGenSPIRVFromGLSL(std::string const& src, VkShaderStageFlagBits shaderStage);
+		Result<std::vector<u32>> tryGenSPIRVFromGLSL(std::string const& src, VkShaderStageFlagBits shaderStage);
 
 		class ShaderModule {
 		public:
@@ -51,8 +51,8 @@ namespace daxa {
 			{}
 			ShaderModuleHandle() = default;
 			
-			static std::optional<ShaderModuleHandle> tryCreateDAXAShaderModule(VkDevice device, std::filesystem::path const& path, std::string const& entryPoint, VkShaderStageFlagBits shaderStage);
-			static std::optional<ShaderModuleHandle> tryCreateDAXAShaderModule(VkDevice device, std::string const& glsl, std::string const& entryPoint, VkShaderStageFlagBits shaderStage);
+			static Result<ShaderModuleHandle> tryCreateDAXAShaderModule(VkDevice device, std::filesystem::path const& path, std::string const& entryPoint, VkShaderStageFlagBits shaderStage);
+			static Result<ShaderModuleHandle> tryCreateDAXAShaderModule(VkDevice device, std::string const& glsl, std::string const& entryPoint, VkShaderStageFlagBits shaderStage);
 
 			ShaderModule const& operator*() const { return *shaderModule; }
 			ShaderModule& operator*() { return *shaderModule; }
