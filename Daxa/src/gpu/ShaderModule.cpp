@@ -124,10 +124,10 @@ namespace daxa {
 			},
 		};
 
-		std::optional<std::string> tryLoadGLSLShaderFromFile(std::filesystem::path const& path) {
+		Result<std::string> tryLoadGLSLShaderFromFile(std::filesystem::path const& path) {
 			std::ifstream ifs(path);
 			if (!ifs) {
-				return std::nullopt;
+				return ResultErr{ "could not find or open file" };
 			}
 
 			std::string ret;
@@ -139,14 +139,14 @@ namespace daxa {
 					std::istreambuf_iterator<char>(ifs),
 					std::istreambuf_iterator<char>());
 				ifs.close();
-				return ret;
+				return { ret };
 			}
 			catch (...) {
-				return std::nullopt;
+				return ResultErr{ "could not read in file after opening" };
 			}
 		}
 
-		std::optional<std::vector<u32>> tryGenSPIRVFromGLSL(std::string const& src, VkShaderStageFlagBits shaderStage) {
+		Result<std::vector<u32>> tryGenSPIRVFromGLSL(std::string const& src, VkShaderStageFlagBits shaderStage) {
 			auto translateShaderStage = [](VkShaderStageFlagBits stage) -> EShLanguage {
 				switch (stage) {
 				case VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT: return EShLangVertex;
@@ -165,7 +165,7 @@ namespace daxa {
 				case VkShaderStageFlagBits::VK_SHADER_STAGE_MESH_BIT_NV: return EShLangMeshNV;
 				default:
 					std::cerr << "error: glslToSPIRV: UNKNOWN SHADER STAGE!\n";
-					return {};
+					std::abort();
 				}
 			};
 			const auto stage = translateShaderStage(shaderStage);
@@ -176,20 +176,20 @@ namespace daxa {
 			TBuiltInResource resource = DAXA_DEFAULT_SHADER_RESSOURCE_SIZES;
 			if (!shader.parse(&resource, 100, false, messages)) {
 				std::cerr << shader.getInfoLog() << '\n' << shader.getInfoDebugLog() << std::endl;
-				return {};
+				return ResultErr{"could not read ressource file"};
 			}
 			glslang::TProgram program;
 			program.addShader(&shader);
 			if (!program.link(messages)) {
 				std::cerr << shader.getInfoLog() << '\n' << shader.getInfoDebugLog() << std::endl;
-				return {};
+				return ResultErr{"could not compile shader"};
 			}
 			std::vector<std::uint32_t> ret;
 			glslang::GlslangToSpv(*program.getIntermediate(stage), ret);
-			return ret;
+			return {ret};
 		}
 
-		std::optional<VkShaderModule> tryCreateVkShaderModule(VkDevice device, std::vector<u32> const& spirv) {
+		Result<VkShaderModule> tryCreateVkShaderModule(VkDevice device, std::vector<u32> const& spirv) {
 
 			VkShaderModuleCreateInfo shaderModuleCI{
 				.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
@@ -198,45 +198,58 @@ namespace daxa {
 				.pCode = spirv.data(),
 			};
 			VkShaderModule shaderModule;
-			auto err = vkCreateShaderModule(device, (VkShaderModuleCreateInfo*)&shaderModuleCI, nullptr, &shaderModule);
-
-			return err == VK_SUCCESS ? std::optional{ shaderModule } : std::nullopt;
-		}
-
-		std::optional<VkShaderModule> tryCreateVkShaderModule(VkDevice device, std::filesystem::path const& path, VkShaderStageFlagBits shaderStage) {
-			auto src = tryLoadGLSLShaderFromFile(path);
-			if (src.has_value()) {
-				auto spirv = tryGenSPIRVFromGLSL(src.value(), shaderStage);
-				if (spirv.has_value()) {
-					return tryCreateVkShaderModule(device, spirv.value());
-				}
+			if (vkCreateShaderModule(device, (VkShaderModuleCreateInfo*)&shaderModuleCI, nullptr, &shaderModule) == VK_SUCCESS) {
+				return { shaderModule };
 			}
-			return std::nullopt;
-		}
-
-		std::optional<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(VkDevice device, std::filesystem::path const& path, std::string const& entryPoint, VkShaderStageFlagBits shaderStage) {
-			auto src = tryLoadGLSLShaderFromFile(path);
-			if (src.has_value()) {
-				return tryCreateDAXAShaderModule(device, src.value(), entryPoint, shaderStage);
+			else {
+				return ResultErr{ "could not create shader module from spriv source" };
 			}
-			return std::nullopt;
 		}
 
-		std::optional<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(VkDevice device, std::string const& glsl, std::string const& entryPoint, VkShaderStageFlagBits shaderStage) {
+		Result<VkShaderModule> tryCreateVkShaderModule(VkDevice device, std::filesystem::path const& path, VkShaderStageFlagBits shaderStage) {
+			auto src = tryLoadGLSLShaderFromFile(path);
+			if (src.isErr()) {
+				return ResultErr{ src.message() };
+			}
+			auto spirv = tryGenSPIRVFromGLSL(src.value(), shaderStage);
+			if (spirv.isErr()) {
+				return ResultErr{ src.message() };
+			}
+			auto shadMod = tryCreateVkShaderModule(device, spirv.value());
+			if (!shadMod.isErr()) {
+				return ResultErr{ shadMod.message() };
+			}
+			return { shadMod.value() };
+		}
+
+		Result<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(VkDevice device, std::filesystem::path const& path, std::string const& entryPoint, VkShaderStageFlagBits shaderStage) {
+			auto src = tryLoadGLSLShaderFromFile(path);
+			if (src.isErr()) {
+				return ResultErr{ src.message() };
+			}
+			auto shadMod = tryCreateDAXAShaderModule(device, src.value(), entryPoint, shaderStage);
+			if (shadMod.isErr()) {
+				return ResultErr{ shadMod.message() };
+			}
+			return { shadMod.value() };
+		}
+
+		Result<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(VkDevice device, std::string const& glsl, std::string const& entryPoint, VkShaderStageFlagBits shaderStage) {
 			auto spirv = tryGenSPIRVFromGLSL(glsl, shaderStage);
-			if (spirv.has_value()) {
-				auto shaderModuleOpt = tryCreateVkShaderModule(device, spirv.value());
-				if (shaderModuleOpt.has_value()) {
-					auto shaderMod = std::make_shared<ShaderModule>();
-					shaderMod->entryPoint = entryPoint;
-					shaderMod->shaderModule = std::move(shaderModuleOpt.value());
-					shaderMod->spirv = spirv.value();
-					shaderMod->shaderStage = shaderStage;
-					shaderMod->device = device;
-					return ShaderModuleHandle{ std::move(shaderMod) };
-				}
+			if (spirv.isErr()) {
+				return ResultErr{ spirv.message() };
 			}
-			return std::nullopt;
+			auto shaderModule = tryCreateVkShaderModule(device, spirv.value());
+			if (shaderModule.isErr()) {
+				return ResultErr{ shaderModule.message() };
+			}
+			auto shaderMod = std::make_shared<ShaderModule>();
+			shaderMod->entryPoint = entryPoint;
+			shaderMod->shaderModule = std::move(shaderModule.value());
+			shaderMod->spirv = spirv.value();
+			shaderMod->shaderStage = shaderStage;
+			shaderMod->device = device;
+			return { ShaderModuleHandle{ std::move(shaderMod) } };
 		}
 	}
 }

@@ -47,17 +47,6 @@ namespace daxa {
             : device{ std::move(device) }
         { }
 
-        void initDefaultTexture(gpu::CommandListHandle& cmdList) {
-            dummyImage = this->device->createImage2d({.sampler = this->device->createSampler({})});
-            u32 dummyColor = 0x8B008BFF;    // purple
-            cmdList->copyHostToImageSynced({
-                .size = sizeof(u32), 
-                .dst = dummyImage, 
-                .dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 
-                .src = &dummyColor,
-            });
-        }
-
         gpu::ImageHandle get(ImageCacheFetchInfo const& info, gpu::CommandListHandle& cmdList) {
             if (!cache.contains(info)) {
                 cache[info] = loadImage(info, cmdList);
@@ -79,7 +68,7 @@ namespace daxa {
             printf("loaded image from path: %s\n", (char const*)info.path.string().c_str());
 
             if (!data) {
-                return dummyImage;
+                return {};
             } else {
                 auto ci = gpu::Image2dCreateInfo{.width = (u32)width, .height = (u32)height, .imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT};
                 if (info.samplerInfo.has_value()) {
@@ -99,7 +88,6 @@ namespace daxa {
 
         gpu::DeviceHandle device = {};
 
-        gpu::ImageHandle dummyImage = {};
         std::unordered_map<ImageCacheFetchInfo, gpu::ImageHandle, ImageCacheFetchInfoHasher> cache = {};
         std::unordered_map<gpu::SamplerCreateInfo, gpu::SamplerHandle, GPUSamplerCreateInfoHasher> samplers = {};
     };
