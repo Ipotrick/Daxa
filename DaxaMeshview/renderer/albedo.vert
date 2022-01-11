@@ -4,8 +4,10 @@
 
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec2 uv;
+layout(location = 2) in vec3 normal;
 
 layout(location = 10) out vec2 vtf_uv;
+layout(location = 11) out vec3 vtf_normal;
 
 layout(set = 0, binding = 0) uniform Globals {
     mat4 vp;
@@ -22,5 +24,6 @@ layout(push_constant) uniform PushConstants {
 void main()
 {
     vtf_uv = uv;
+    vtf_normal = normal;
     gl_Position = globals.vp * modelData.transforms[pushConstants.modelIndex] * vec4(position, 1.0f);
 }

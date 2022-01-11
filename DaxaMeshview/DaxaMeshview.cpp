@@ -117,12 +117,8 @@ public:
 				//}
 				for (auto& prim : model.meshes) {
 					draws.push_back(MeshRenderer::DrawMesh{
-						.albedo = prim.image,
-						.indexCount = prim.indexCount,
-						.indices = prim.indiexBuffer,
-						.positions = prim.vertexPositions,
-						.uvs = prim.vertexUVs,
 						.transform = translation,
+						.prim = &prim,
 					});
 				}
 			}

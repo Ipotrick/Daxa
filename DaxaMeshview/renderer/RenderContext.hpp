@@ -23,6 +23,14 @@ public:
 			.imageUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 			.imageAspekt = VK_IMAGE_ASPECT_DEPTH_BIT,
 		});
+
+		this->normalsBuffer = device->createImage2d({
+			.width = window.getWidth(),
+			.height = window.getHeight(),
+			.format = VK_FORMAT_R16G16_SNORM,
+			.imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+			.imageAspekt = VK_IMAGE_ASPECT_COLOR_BIT,
+		});
     }
 
     ~RenderContext() {
@@ -60,5 +68,6 @@ public:
 	daxa::gpu::SwapchainHandle swapchain = {};
 	daxa::gpu::SwapchainImage swapchainImage = {};
 	daxa::gpu::ImageHandle depthImage = {};
+	daxa::gpu::ImageHandle normalsBuffer = {};
 	daxa::gpu::SignalHandle presentSignal = {};
 };
