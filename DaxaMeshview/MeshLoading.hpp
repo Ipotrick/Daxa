@@ -107,10 +107,6 @@ public:
     }
 
     daxa::gpu::BufferHandle loadBuffer(daxa::gpu::CommandListHandle& cmdList, cgltf_accessor& accessor, VkBufferUsageFlagBits usage) {
-        printf(">>buffer count: %li\n", accessor.count);
-        printf(">>buffer stride: %li\n", accessor.stride);
-        printf(">>buffer size: %li\n", accessor.stride * accessor.count);
-        printf(">>buffer type: %i\n", accessor.type);
 
         VkBufferUsageFlags usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | usage;
 
@@ -126,14 +122,8 @@ public:
                 .size = accessor.stride * accessor.count,
                 .usage = usageFlags,
             });
-        } else {
-            DAXA_ASSERT_M(false, "UPSI DASIE");
         }
 
-        printf(">>>loading buffer via accessor\n");
-        printf(">>>data: %p\n", accessor.buffer_view->buffer->data);
-        printf(">>>buffer_view offset: %i\n", accessor.buffer_view->offset);
-        printf(">>>accessor offset: %i\n", accessor.offset);
         void* cpuSideBuffPtr = (void*)((u8*)(accessor.buffer_view->buffer->data) + accessor.buffer_view->offset + accessor.offset);
 
         if ((usage & VK_BUFFER_USAGE_INDEX_BUFFER_BIT) && accessor.stride != 4) {
@@ -182,19 +172,15 @@ public:
     ) {
         glm::mat4 transform{1.0f};
         if (node->has_matrix) {
-            printf("has transform matrix\n");
             transform = *(glm::mat4*)&node->matrix;
         } else {
             if (node->has_translation) {
-                printf("has_translation\n");
                 transform *= glm::translate(glm::mat4{ 1.0f }, *(glm::vec3*)&node->translation);
             }
             if (node->has_rotation) {
-                printf("has_rotation\n");
                 transform *= glm::toMat4(*(glm::f32quat*)&node->rotation);
             }
             if (node->has_scale) {
-                printf("has_scale\n");
                 transform *= glm::scale(glm::mat4{1.0f}, *(glm::vec3*)&node->scale);
             }
         }
@@ -222,7 +208,6 @@ public:
                     buffers[bufferIndex] = loadBuffer(cmdList, *prim.indices, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
                 }
                 meshPrim.indiexBuffer = buffers[bufferIndex];
-                printf("attribute buffer stride: %i\n", prim.indices->buffer_view->stride);
 
                 for (int attrI = 0; attrI < prim.attributes_count; attrI++) {
                     auto& attribute = prim.attributes[attrI];

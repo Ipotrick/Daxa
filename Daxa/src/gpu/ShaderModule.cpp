@@ -176,7 +176,7 @@ namespace daxa {
 			TBuiltInResource resource = DAXA_DEFAULT_SHADER_RESSOURCE_SIZES;
 			if (!shader.parse(&resource, 100, false, messages)) {
 				std::cerr << shader.getInfoLog() << '\n' << shader.getInfoDebugLog() << std::endl;
-				return ResultErr{"could not read ressource file"};
+				return ResultErr{"could not parse shader source code"};
 			}
 			glslang::TProgram program;
 			program.addShader(&shader);
@@ -213,7 +213,7 @@ namespace daxa {
 			}
 			auto spirv = tryGenSPIRVFromGLSL(src.value(), shaderStage);
 			if (spirv.isErr()) {
-				return ResultErr{ src.message() };
+				return ResultErr{ spirv.message() };
 			}
 			auto shadMod = tryCreateVkShaderModule(device, spirv.value());
 			if (!shadMod.isErr()) {

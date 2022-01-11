@@ -54,17 +54,19 @@ namespace daxa {
 		position += translation;
 	}
 
-	glm::mat4 GimbalLockedCameraController::getVP(daxa::Window& window) const {
+	void GimbalLockedCameraController::updateMatrices(daxa::Window& window) {
 		auto fov = this->fov;
 		if (bZoom) {
 			fov *= 0.25f;
 		}
 		auto yawRotaAroundUp = glm::rotate(glm::mat4(1.0f), yaw, {0.f,0.f,1.f});
 		auto pitchRotation = glm::rotate(glm::mat4(1.0f), pitch, glm::vec3{1.f,0.f,0.f});
-		auto prespective = glm::perspective(fov, (f32)window.getWidth()/(f32)window.getHeight(), near, far);
+		glm::mat4 prespective = glm::perspective(fov, (f32)window.getWidth()/(f32)window.getHeight(), near, far);
 		auto rota = yawRotaAroundUp * pitchRotation;
 		auto cameraModelMat = glm::translate(glm::mat4(1.0f), {position.x, position.y, position.z}) * rota;
-		auto view = glm::inverse(cameraModelMat);
-		return prespective * view;
+		glm::mat4 view = glm::inverse(cameraModelMat);
+		this->proj = prespective;
+		this->view = view;
+		this->vp = this->proj * this->view;
 	}
 }
