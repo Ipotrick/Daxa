@@ -215,6 +215,10 @@ namespace daxa {
 		void CommandList::copyImageToImage(ImageToImageCopyInfo copyInfo) {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 
+			if (copyInfo.size.width == 0 || copyInfo.size.height == 0 || copyInfo.size.depth == 0) {
+				copyInfo.size = copyInfo.dst->getVkExtent();
+			}
+
 			VkImageCopy copy{
 				.dstOffset = copyInfo.dstOffset,
 				.extent = copyInfo.size,
