@@ -64,7 +64,7 @@ namespace daxa {
 			}
 		}
 
-		GraphicsPipelineBuilder& GraphicsPipelineBuilder::configurateDepthTest(DepthTestSettings depthTestSettings2) {
+		GraphicsPipelineBuilder& GraphicsPipelineBuilder::configurateDepthTest(DepthTestSettings const& depthTestSettings2) {
 			depthTestSettings = depthTestSettings2;
 			return *this;
 		}
@@ -114,8 +114,8 @@ namespace daxa {
 			return *this;
 		}
 
-		GraphicsPipelineBuilder& GraphicsPipelineBuilder::setRasterization(const VkPipelineRasterizationStateCreateInfo& rasterization) {
-			this->rasterization = rasterization;
+		GraphicsPipelineBuilder& GraphicsPipelineBuilder::setRasterization(RasterSettings const& rasterization) {
+			this->rasterSettings = rasterization;
 			return *this;
 		}
 
@@ -265,7 +265,7 @@ namespace daxa {
 			.pNext = nullptr,
 			.polygonMode = VkPolygonMode::VK_POLYGON_MODE_FILL,
 			.cullMode = VkCullModeFlagBits::VK_CULL_MODE_NONE,
-			.frontFace = VkFrontFace::VK_FRONT_FACE_COUNTER_CLOCKWISE,
+			.frontFace = VkFrontFace::VK_FRONT_FACE_CLOCKWISE,
 			.lineWidth = 1.0f,
 		};
 
@@ -345,7 +345,20 @@ namespace daxa {
 				.pVertexAttributeDescriptions = (VkVertexInputAttributeDescription*)vertexInputAttributeDescriptions.data(),
 			};
 			VkPipelineInputAssemblyStateCreateInfo pinputAssemlyStateCI = inputAssembly.value_or(DEFAULT_INPUT_ASSEMBLY_STATE_CI);
-			VkPipelineRasterizationStateCreateInfo prasterizationStateCI = rasterization.value_or(DEFAULT_RASTER_STATE_CI);
+			VkPipelineRasterizationStateCreateInfo prasterizationStateCI{
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+				.pNext = nullptr,
+				.depthClampEnable = (VkBool32)rasterSettings.depthBiasClamp,
+				.rasterizerDiscardEnable = rasterSettings.rasterizerDiscardEnable,
+				.polygonMode = rasterSettings.polygonMode,
+				.cullMode = (VkBool32)rasterSettings.cullMode,
+				.frontFace = rasterSettings.frontFace,
+				.depthBiasEnable = rasterSettings.depthBiasEnable,
+				.depthBiasConstantFactor = rasterSettings.depthBiasConstantFactor,
+				.depthBiasClamp = rasterSettings.depthBiasClamp,
+				.depthBiasSlopeFactor = rasterSettings.depthBiasSlopeFactor,
+				.lineWidth = rasterSettings.lineWidth,
+			};
 			VkPipelineMultisampleStateCreateInfo pmultisamplerStateCI = multisampling.value_or(DEFAULT_MULTISAMPLE_STATE_CI);
 
 			VkPipelineDepthStencilStateCreateInfo pDepthStencilStateCI{

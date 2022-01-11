@@ -62,6 +62,15 @@ public:
 		}
 		ImGui::End();
 
+		ImGui::Begin("frame buffer inspector");
+		ImGui::Text("normals");
+		auto id = imguiRenderer->getImGuiTextureId(renderCTX->normalsBufferCopy);
+		ImGui::Image((void*)id, ImVec2(400,400));
+		id = imguiRenderer->getImGuiTextureId(renderCTX->depthImageCopy);
+		ImGui::Text("depth");
+		ImGui::Image((void*)id, ImVec2(400,400));
+		ImGui::End();
+
 		if (!ImGui::GetIO().WantCaptureMouse) {
 			cameraController.processInput(*app.window, app.getDeltaTimeSeconds());
 		}
@@ -69,13 +78,13 @@ public:
 		ImGui::Render();
 
 		if (app.window->getWidth() != renderCTX->swapchain->getSize().width || app.window->getHeight() != renderCTX->swapchain->getSize().height) {
-			renderCTX->resize(app.window->getWidth(),app.window->getHeight());
+			renderCTX->resize(cmdList, app.window->getWidth(), app.window->getHeight());
 		}
 
 		/// ------------ Begin Data Uploading ---------------------
 
-		auto vp = cameraController.getVP(*app.window);
-		meshRender.setCameraVP(cmdList, vp);
+		cameraController.updateMatrices(*app.window);
+		meshRender.setCamera(cmdList, cameraController.vp, cameraController.view);
 
 		// array because we can allways pass multiple barriers at once for driver efficiency
 		std::array imgBarrier0 = { daxa::gpu::ImageBarrier{
@@ -92,7 +101,7 @@ public:
 		cmdList->insertBarriers(memBarrier0, imgBarrier0);
 		
 		/// ------------ End Data Uploading ---------------------
-
+		
 		{
 			auto draws = std::vector<MeshRenderer::DrawMesh>();
 			auto view = ecm.view<daxa::TransformComp, ModelComp>();

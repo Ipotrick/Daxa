@@ -81,6 +81,19 @@ namespace daxa {
 			f32 maxDepthBounds = 1.0f;
 		};
 
+		struct RasterSettings {
+			VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL;
+			VkCullModeFlagBits cullMode = VK_CULL_MODE_NONE;
+			VkFrontFace frontFace = VK_FRONT_FACE_CLOCKWISE;
+			bool depthClampEnable = false;
+			bool rasterizerDiscardEnable = false;
+			bool depthBiasEnable = false;
+			float depthBiasConstantFactor = 0.0f;
+			float depthBiasClamp = 0.0f;
+			float depthBiasSlopeFactor = 0.0f;
+			f32 lineWidth = 1.0f;
+		};
+
 		class GraphicsPipelineBuilder {
 		public:
 			GraphicsPipelineBuilder() = default;
@@ -88,13 +101,13 @@ namespace daxa {
 			GraphicsPipelineBuilder& addVertexInputAttribute(VkFormat format);
 			GraphicsPipelineBuilder& addVertexInputAttributeSpacer(u32 spacing);
 			GraphicsPipelineBuilder& endVertexInputAttributeBinding();
-			GraphicsPipelineBuilder& configurateDepthTest(DepthTestSettings depthTestSettings2);
-			GraphicsPipelineBuilder& setInputAssembly(const VkPipelineInputAssemblyStateCreateInfo& inputassembly);
-			GraphicsPipelineBuilder& setRasterization(const VkPipelineRasterizationStateCreateInfo& rasterization);
-			GraphicsPipelineBuilder& setMultisampling(const VkPipelineMultisampleStateCreateInfo& multisampling);
-			GraphicsPipelineBuilder& addShaderStage(const ShaderModuleHandle& shaderModule);
-			GraphicsPipelineBuilder& addColorAttachment(const VkFormat& attachmentFormat);
-			GraphicsPipelineBuilder& addColorAttachment(const VkFormat& attachmentFormat, const VkPipelineColorBlendAttachmentState&);
+			GraphicsPipelineBuilder& configurateDepthTest(DepthTestSettings const& depthTestSettings2);
+			GraphicsPipelineBuilder& setInputAssembly(VkPipelineInputAssemblyStateCreateInfo const& inputassembly);
+			GraphicsPipelineBuilder& setRasterization(RasterSettings const& rasterization);
+			GraphicsPipelineBuilder& setMultisampling(VkPipelineMultisampleStateCreateInfo const& multisampling);
+			GraphicsPipelineBuilder& addShaderStage(ShaderModuleHandle const& shaderModule);
+			GraphicsPipelineBuilder& addColorAttachment(VkFormat const& attachmentFormat);
+			GraphicsPipelineBuilder& addColorAttachment(VkFormat const& attachmentFormat, const VkPipelineColorBlendAttachmentState&);
 		private:
 			friend class Device;
 			PipelineHandle build(VkDevice, BindingSetDescriptionCache& bindingSetCache);
@@ -108,10 +121,10 @@ namespace daxa {
 			std::vector<VkVertexInputAttributeDescription> vertexInputAttributeDescriptions;
 
 			VkPipelineCache pipelineCache;
-			std::optional<VkPipelineInputAssemblyStateCreateInfo> inputAssembly;
-			std::optional<VkPipelineRasterizationStateCreateInfo> rasterization;
-			std::optional<VkPipelineMultisampleStateCreateInfo> multisampling;
 			DepthTestSettings depthTestSettings = {};
+			RasterSettings rasterSettings = {};
+			std::optional<VkPipelineInputAssemblyStateCreateInfo> inputAssembly;
+			std::optional<VkPipelineMultisampleStateCreateInfo> multisampling;
 			std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 			std::vector<VkDynamicState> dynamicStateEnable;
 			std::vector<VkPushConstantRange> pushConstants;

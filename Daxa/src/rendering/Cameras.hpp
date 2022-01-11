@@ -15,7 +15,10 @@ namespace daxa {
 	public:
 		void processInput(daxa::Window& window, f32 dt);
 
-		glm::mat4 getVP(daxa::Window& window) const;
+		void updateMatrices(daxa::Window& window);
+		glm::mat4 view;
+		glm::mat4 proj;
+		glm::mat4 vp;
 	private:
 		bool bZoom = false; 
 		f32 fov = 74.0f;

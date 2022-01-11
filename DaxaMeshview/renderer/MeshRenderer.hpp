@@ -5,12 +5,17 @@
 #include "RenderContext.hpp"
 #include "../Components.hpp"
 
+struct GlobalData {
+	glm::mat4 vp;
+	glm::mat4 view;
+};
+
 class MeshRenderer {
 public:
 
     void init(RenderContext& renderCTX) {
 		auto vertexShader = renderCTX.device->tryCreateShderModuleFromFile(
-			"./DaxaMeshview/renderer/albedo.vert",
+			"./DaxaMeshview/renderer/g_pass.vert",
 			VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT
 		);
 		if (vertexShader.isErr()) {
@@ -18,7 +23,7 @@ public:
 		}
 
 		auto fragmenstShader = renderCTX.device->tryCreateShderModuleFromFile(
-			"./DaxaMeshview/renderer/albedo.frag",
+			"./DaxaMeshview/renderer/g_pass.frag",
 			VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT
 		);
 		if (vertexShader.isErr()) {
@@ -39,10 +44,11 @@ public:
 			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
 			.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)
 			// location of attachments in a shader are implied by the order they are added in the pipeline builder:
-			.addColorAttachment(renderCTX.swapchain->getVkFormat());
-			//.setRasterization({
-			//	.polygonMode = VK_POLYGON_MODE_LINE,
-			//});
+			.addColorAttachment(renderCTX.swapchain->getVkFormat())
+			.addColorAttachment(renderCTX.normalsBuffer->getVkViewFormat())
+			.setRasterization({
+				.cullMode = VK_CULL_MODE_BACK_BIT,
+			});
 
 		this->pipeline = renderCTX.device->createGraphicsPipeline(pipelineBuilder);
 
@@ -50,7 +56,7 @@ public:
 		this->perDrawSetAlloc = renderCTX.device->createBindingSetAllocator(pipeline->getSetDescription(1));
 
         this->globalDataBufffer = renderCTX.device->createBuffer({
-            .size = sizeof(glm::mat4),
+            .size = sizeof(GlobalData),
             .memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
             .memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
@@ -73,12 +79,9 @@ public:
 		Primitive* prim = {};
     };
 
-	void setCameraVP(daxa::gpu::CommandListHandle& cmd, glm::mat4 const& vp) {
-		cmd->copyHostToBuffer({
-			.src = (void*)&vp,
-			.size = sizeof(decltype(vp)),
-			.dst = globalDataBufffer,
-		});
+	void setCamera(daxa::gpu::CommandListHandle& cmd, glm::mat4 const& vp, glm::mat4 const& view) {
+		globData.vp = vp;
+		globData.view = view;
 	}
 
     void render(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawMesh>& draws) {
@@ -101,6 +104,13 @@ public:
 		}
 
 		if (!draws.empty()) {
+			cmd->copyHostToBuffer({
+				.src = (void*)&globData,
+				.size = sizeof(decltype(globData)),
+				.dst = globalDataBufffer,
+			});
+
+
 			if (draws.size() * sizeof(glm::mat4) > transformsBuffer->getSize()) {
 				size_t newSize = std::pow(2, std::ceil(std::log(draws.size() * sizeof(glm::mat4))/std::log(2)));
 				this->transformsBuffer = renderCTX.device->createBuffer({
@@ -126,6 +136,10 @@ public:
 			daxa::gpu::RenderAttachmentInfo{
 				.image = renderCTX.swapchainImage.getImageHandle(),
 				.clearValue = { .color = VkClearColorValue{.float32 = { 0.02f, 0.02f, 0.02f, 1.f } } },
+			},
+			daxa::gpu::RenderAttachmentInfo{
+				.image = renderCTX.normalsBuffer,
+				.clearValue = { .color = VkClearColorValue{.float32 = { 0.0f,0.0f,0.0f,0.0f } } },
 			}
 		};
 		daxa::gpu::RenderAttachmentInfo depthAttachment{
@@ -161,10 +175,75 @@ public:
         }
 
 		cmd->endRendering();
+
+		cmd->insertImageBarriers(std::array{
+			daxa::gpu::ImageBarrier{
+				.image = renderCTX.depthImage, 
+				.layoutBefore = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, 
+				.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 
+				.awaitedStages =  VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
+				.waitingStages = VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
+				.waitingAccess = VK_ACCESS_2_TRANSFER_READ_BIT_KHR,
+			},
+			daxa::gpu::ImageBarrier{
+				.image = renderCTX.depthImageCopy, 
+				.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
+				.awaitedStages =  VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
+				.waitingStages = VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
+				.waitingAccess = VK_ACCESS_2_TRANSFER_READ_BIT_KHR,
+			},
+			daxa::gpu::ImageBarrier{
+				.image = renderCTX.normalsBuffer, 
+				.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 
+				.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				.awaitedStages =  VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
+				.waitingStages = VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
+				.waitingAccess = VK_ACCESS_2_TRANSFER_READ_BIT_KHR,
+			},
+			daxa::gpu::ImageBarrier{
+				.image = renderCTX.normalsBufferCopy, 
+				.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.awaitedStages =  VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
+				.waitingStages = VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
+				.waitingAccess = VK_ACCESS_2_TRANSFER_READ_BIT_KHR
+			},
+		});
+
+		cmd->copyImageToImage({ .src = renderCTX.depthImage, .dst = renderCTX.depthImageCopy, });
+		cmd->copyImageToImage({ .src = renderCTX.normalsBuffer, .dst = renderCTX.normalsBufferCopy, });
+
+		cmd->insertImageBarriers(std::array{
+			daxa::gpu::ImageBarrier{
+				.image = renderCTX.depthImage, 
+				.layoutAfter = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, 
+				.awaitedStages = VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
+				.awaitedAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR,
+			},
+			daxa::gpu::ImageBarrier{
+				.image = renderCTX.depthImageCopy, 
+				.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
+				.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 
+				.awaitedStages = VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
+				.awaitedAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR,
+			},
+			daxa::gpu::ImageBarrier{
+				.image = renderCTX.normalsBuffer, 
+				.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 
+				.awaitedStages = VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
+				.awaitedAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR,
+			},
+			daxa::gpu::ImageBarrier{
+				.image = renderCTX.normalsBufferCopy, 
+				.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 
+				.awaitedStages = VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
+				.awaitedAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR,
+			},
+		});
     }
 
 private:
-    glm::mat4 vp = {};
+	GlobalData globData = {};
     daxa::gpu::PipelineHandle pipeline = {};
     daxa::gpu::BindingSetAllocatorHandle globalSetAlloc = {};
     daxa::gpu::BindingSetHandle globalSet = {};
