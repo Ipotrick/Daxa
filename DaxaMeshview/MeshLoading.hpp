@@ -107,10 +107,10 @@ public:
     }
 
     daxa::gpu::BufferHandle loadBuffer(daxa::gpu::CommandListHandle& cmdList, cgltf_accessor& accessor, VkBufferUsageFlagBits usage) {
-        printf("buffer count: %li\n", accessor.count);
-        printf("buffer stride: %li\n", accessor.stride);
-        printf("buffer size: %li\n", accessor.stride * accessor.count);
-        printf("buffer type: %i\n", accessor.type);
+        printf(">>buffer count: %li\n", accessor.count);
+        printf(">>buffer stride: %li\n", accessor.stride);
+        printf(">>buffer size: %li\n", accessor.stride * accessor.count);
+        printf(">>buffer type: %i\n", accessor.type);
 
         VkBufferUsageFlags usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | usage;
 
@@ -130,7 +130,11 @@ public:
             DAXA_ASSERT_M(false, "UPSI DASIE");
         }
 
-        void* cpuSideBuffPtr = (void*)((u8*)(accessor.buffer_view->buffer->data) + accessor.buffer_view->offset);
+        printf(">>>loading buffer via accessor\n");
+        printf(">>>data: %p\n", accessor.buffer_view->buffer->data);
+        printf(">>>buffer_view offset: %i\n", accessor.buffer_view->offset);
+        printf(">>>accessor offset: %i\n", accessor.offset);
+        void* cpuSideBuffPtr = (void*)((u8*)(accessor.buffer_view->buffer->data) + accessor.buffer_view->offset + accessor.offset);
 
         if ((usage & VK_BUFFER_USAGE_INDEX_BUFFER_BIT) && accessor.stride != 4) {
             auto mm = cmdList->mapMemoryStaged(gpuBuffer, sizeof(u32) * accessor.count, 0);
@@ -212,7 +216,7 @@ public:
                 Primitive meshPrim;
 
                 meshPrim.indexCount = prim.indices->count;
-                size_t bufferIndex = prim.indices->buffer_view - data->buffer_views;
+                size_t bufferIndex = prim.indices - data->accessors;
                 printf("use buffer with index %i as index buffer\n", bufferIndex);
                 if (!buffers[bufferIndex]) {
                     buffers[bufferIndex] = loadBuffer(cmdList, *prim.indices, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
@@ -222,7 +226,7 @@ public:
 
                 for (int attrI = 0; attrI < prim.attributes_count; attrI++) {
                     auto& attribute = prim.attributes[attrI];
-                    size_t bufferIndexOfAttrib = attribute.data->buffer_view - data->buffer_views;
+                    size_t bufferIndexOfAttrib = attribute.data - data->accessors;
                     
                     if (!buffers[bufferIndexOfAttrib]) {
                         buffers[bufferIndexOfAttrib] = loadBuffer(cmdList, *attribute.data, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
@@ -240,12 +244,21 @@ public:
                             printf("use buffer with index %i as tex coord vertex buffer\n", bufferIndexOfAttrib);
                             meshPrim.vertexUVs = buffers[bufferIndexOfAttrib];
                             break;
+                        case cgltf_attribute_type_normal:
+                            printf("use buffer with index %i as normals vertex buffer\n", bufferIndexOfAttrib);
+                            meshPrim.vertexNormals = buffers[bufferIndexOfAttrib];
+                            break;
                     }
                 }
 
                 if (prim.material->pbr_metallic_roughness.base_color_texture.texture) {
                     size_t textureIndex = prim.material->pbr_metallic_roughness.base_color_texture.texture - data->textures;
-                    meshPrim.image = textures[textureIndex];
+                    meshPrim.albedoTexture = textures[textureIndex];
+                }
+
+                if (prim.material->normal_texture.texture) {
+                    size_t textureIndex = prim.material->normal_texture.texture - data->textures;
+                    meshPrim.normalTexture = textures[textureIndex];
                 }
 
                 model.meshes.push_back(std::move(meshPrim));

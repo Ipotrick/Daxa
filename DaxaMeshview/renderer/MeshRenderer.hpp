@@ -3,6 +3,7 @@
 #include "Daxa.hpp"
 
 #include "RenderContext.hpp"
+#include "../Components.hpp"
 
 class MeshRenderer {
 public:
@@ -35,8 +36,13 @@ public:
 			.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)			// positions
 			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
 			.addVertexInputAttribute(VK_FORMAT_R32G32_SFLOAT)				// uvs
+			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
+			.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)
 			// location of attachments in a shader are implied by the order they are added in the pipeline builder:
 			.addColorAttachment(renderCTX.swapchain->getVkFormat());
+			//.setRasterization({
+			//	.polygonMode = VK_POLYGON_MODE_LINE,
+			//});
 
 		this->pipeline = renderCTX.device->createGraphicsPipeline(pipelineBuilder);
 
@@ -64,11 +70,7 @@ public:
 
     struct DrawMesh {
         glm::mat4 transform = {};
-        daxa::gpu::ImageHandle albedo = {};
-        daxa::gpu::BufferHandle indices = {};
-        u32 indexCount = {};
-        daxa::gpu::BufferHandle positions = {};
-        daxa::gpu::BufferHandle uvs = {};
+		Primitive* prim = {};
     };
 
 	void setCameraVP(daxa::gpu::CommandListHandle& cmd, glm::mat4 const& vp) {
@@ -142,18 +144,19 @@ public:
 		u32 index = 0;
         for (auto& draw : draws) {
             auto thisDrawSet = perDrawSetAlloc->getSet();
-			if (draw.albedo) {
-            	thisDrawSet->bindImage(0, draw.albedo, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			if (draw.prim->albedoTexture) {
+            	thisDrawSet->bindImage(0, draw.prim->albedoTexture, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			}
 			else {
 				thisDrawSet->bindImage(0, dummyTexture, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			}
             cmd->bindSet(1, thisDrawSet);
-            cmd->bindIndexBuffer(draw.indices);
-            cmd->bindVertexBuffer(0, draw.positions);
-            cmd->bindVertexBuffer(1, draw.uvs);
+            cmd->bindIndexBuffer(draw.prim->indiexBuffer);
+            cmd->bindVertexBuffer(0, draw.prim->vertexPositions);
+            cmd->bindVertexBuffer(1, draw.prim->vertexUVs);
+			cmd->bindVertexBuffer(2, draw.prim->vertexNormals);
 			cmd->pushConstant(VK_SHADER_STAGE_VERTEX_BIT, index);
-            cmd->drawIndexed(draw.indexCount, 1, 0, 0, 0);
+            cmd->drawIndexed(draw.prim->indexCount, 1, 0, 0, 0);
 			index += 1;
         }
 

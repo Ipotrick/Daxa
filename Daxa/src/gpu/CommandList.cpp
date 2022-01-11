@@ -294,6 +294,7 @@ namespace daxa {
 
 		void CommandList::bindVertexBuffer(u32 binding, BufferHandle buffer, size_t bufferOffset) {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			DAXA_ASSERT_M(buffer, "invalid buffer handle");
 			auto vkBuffer = buffer->getVkBuffer();
 			vkCmdBindVertexBuffers(cmd, binding, 1, &vkBuffer, &bufferOffset);
 			usedBuffers.push_back(buffer);
@@ -301,6 +302,7 @@ namespace daxa {
 
 		void CommandList::bindIndexBuffer(BufferHandle buffer, size_t bufferOffset, VkIndexType indexType) {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			DAXA_ASSERT_M(buffer, "invalid buffer handle");
 			auto vkBuffer = buffer->getVkBuffer();
 			vkCmdBindIndexBuffer(cmd, vkBuffer, bufferOffset, indexType);
 			usedBuffers.push_back(buffer);
