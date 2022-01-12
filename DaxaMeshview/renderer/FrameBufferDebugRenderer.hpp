@@ -26,7 +26,7 @@ public:
 
 		this->pipeline = renderCTX.device->createComputePipeline(shader.value());
 
-		this->setAlloc = renderCTX.device->createBindingSetAllocator(pipeline->getSetDescription(1), 4);
+		this->setAlloc = renderCTX.device->createBindingSetAllocator(pipeline->getSetDescription(0), 4);
 
         this->buffer = renderCTX.device->createBuffer({
             .size = sizeof(UploadData),
