@@ -128,7 +128,7 @@ namespace daxa {
 			std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 			std::vector<VkDynamicState> dynamicStateEnable;
 			std::vector<VkPushConstantRange> pushConstants;
-			std::unordered_map<u32, std::unordered_map<u32, VkDescriptorSetLayoutBinding>> descriptorSets;
+			std::vector<std::unordered_map<u32, VkDescriptorSetLayoutBinding>> descriptorSets;	// maybe make 'std::unordered_map<u32, VkDescriptorSetLayoutBinding>' optional 
 			std::vector<VkPipelineShaderStageCreateInfo> shaderStageCreateInfo;
 			std::vector<VkPipelineColorBlendAttachmentState> colorAttachmentBlends;
 			std::vector<VkFormat> colorAttachmentFormats;
