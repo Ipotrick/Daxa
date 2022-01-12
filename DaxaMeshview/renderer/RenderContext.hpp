@@ -21,6 +21,7 @@ public:
 		recreateFramebuffer(cmd, window.getWidth(), window.getHeight());
 		cmd->end();
 		queue->submitBlocking({.commandLists = {cmd}});
+		defaultSampler = device->createSampler({});
     }
 
     ~RenderContext() {
@@ -110,4 +111,5 @@ public:
 	daxa::gpu::ImageHandle depthImageCopy = {};
 	daxa::gpu::ImageHandle normalsBuffer = {};
 	daxa::gpu::ImageHandle normalsBufferCopy = {};
+	daxa::gpu::SamplerHandle defaultSampler = {};
 };

@@ -6,6 +6,7 @@
 
 #include "World.hpp"
 #include "renderer/MeshRenderer.hpp"
+#include "renderer/FrameBufferDebugRenderer.hpp"
 #include "MeshLoading.hpp"
 #include "cgltf.h"
 #include "Components.hpp"
@@ -19,19 +20,20 @@ class MyUser {
 public:
 	MyUser(daxa::AppState& app) 
 		: renderCTX{ *app.window }
-		, imageCache{ std::make_shared<daxa::ImageCache>(renderCTX->device) }
-		, sceneLoader{ renderCTX->device, std::vector<std::filesystem::path>{"./", "./DaxaMeshview/assets/", "./assets/"}, this->imageCache }
+		, imageCache{ std::make_shared<daxa::ImageCache>(renderCTX.device) }
+		, sceneLoader{ renderCTX.device, std::vector<std::filesystem::path>{"./", "./DaxaMeshview/assets/", "./assets/"}, this->imageCache }
 	{ 
 		ImGui::CreateContext();
 		ImGui_ImplGlfw_InitForVulkan(app.window->getGLFWWindow(), true);
-		imguiRenderer.emplace(renderCTX->device, renderCTX->queue);
+		imguiRenderer.emplace(renderCTX.device, renderCTX.queue);
 
-		meshRender.init(*renderCTX);
+		meshRender.init(renderCTX);
+		frameBufferDebugRenderer.init(renderCTX, app.window->getWidth(), app.window->getHeight());
 	}
 
 	void update(daxa::AppState& app) {
 
-		auto cmdList = renderCTX->device->getEmptyCommandList();
+		auto cmdList = renderCTX.device->getEmptyCommandList();
 
 		cmdList->begin();
 
@@ -64,9 +66,9 @@ public:
 
 		ImGui::Begin("frame buffer inspector");
 		ImGui::Text("normals");
-		auto id = imguiRenderer->getImGuiTextureId(renderCTX->normalsBufferCopy);
+		auto id = imguiRenderer->getImGuiTextureId(renderCTX.normalsBufferCopy);
 		ImGui::Image((void*)id, ImVec2(400,400));
-		id = imguiRenderer->getImGuiTextureId(renderCTX->depthImageCopy);
+		id = imguiRenderer->getImGuiTextureId(renderCTX.depthImageCopy);
 		ImGui::Text("depth");
 		ImGui::Image((void*)id, ImVec2(400,400));
 		ImGui::End();
@@ -77,8 +79,8 @@ public:
 
 		ImGui::Render();
 
-		if (app.window->getWidth() != renderCTX->swapchain->getSize().width || app.window->getHeight() != renderCTX->swapchain->getSize().height) {
-			renderCTX->resize(cmdList, app.window->getWidth(), app.window->getHeight());
+		if (app.window->getWidth() != renderCTX.swapchain->getSize().width || app.window->getHeight() != renderCTX.swapchain->getSize().height) {
+			renderCTX.resize(cmdList, app.window->getWidth(), app.window->getHeight());
 		}
 
 		/// ------------ Begin Data Uploading ---------------------
@@ -89,7 +91,7 @@ public:
 		// array because we can allways pass multiple barriers at once for driver efficiency
 		std::array imgBarrier0 = { daxa::gpu::ImageBarrier{
 			.waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,	// as we write to the image in the frag shader we need to make sure its finished transitioning the layout
-			.image = renderCTX->swapchainImage.getImageHandle(),
+			.image = renderCTX.swapchainImage.getImageHandle(),
 			.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,						// dont care about previous layout
 			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,		// set new layout to color attachment optimal
 		} };
@@ -131,7 +133,7 @@ public:
 					});
 				}
 			}
-			meshRender.render(*renderCTX, cmdList, draws);
+			meshRender.render(renderCTX, cmdList, draws);
 		}
 
 		cmdList->insertMemoryBarrier({
@@ -139,12 +141,12 @@ public:
 			.waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
 		});
 
-		imguiRenderer->recordCommands(ImGui::GetDrawData(), cmdList, renderCTX->swapchainImage.getImageHandle());
+		imguiRenderer->recordCommands(ImGui::GetDrawData(), cmdList, renderCTX.swapchainImage.getImageHandle());
 
 		// array because we can allways pass multiple barriers at once for driver efficiency
 		std::array imgBarrier1 = { daxa::gpu::ImageBarrier{
 			.awaitedStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
-			.image = renderCTX->swapchainImage.getImageHandle(),
+			.image = renderCTX.swapchainImage.getImageHandle(),
 			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			.layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 		} };
@@ -154,14 +156,14 @@ public:
 
 		daxa::gpu::SubmitInfo submitInfo;
 		submitInfo.commandLists.push_back(std::move(cmdList));
-		submitInfo.signalOnCompletion = { &renderCTX->presentSignal, 1 };
-		renderCTX->queue->submit(submitInfo);
+		submitInfo.signalOnCompletion = { &renderCTX.presentSignal, 1 };
+		renderCTX.queue->submit(submitInfo);
 
-		renderCTX->present();
+		renderCTX.present();
 	}
 
 	void cleanup(daxa::AppState& app) {
-		renderCTX->waitIdle();
+		renderCTX.waitIdle();
 		imguiRenderer.reset();
 		ImGui_ImplGlfw_Shutdown();
 		ImGui::DestroyContext();
@@ -173,9 +175,10 @@ public:
 
 private:
 	std::vector<glm::mat4> transformBuffer;
-	std::optional<RenderContext> renderCTX;
-	daxa::GimbalLockedCameraController cameraController{};
+	RenderContext renderCTX;
 	MeshRenderer meshRender = {};
+	FrameBufferDebugRenderer frameBufferDebugRenderer = {};
+	daxa::GimbalLockedCameraController cameraController{};
 	std::shared_ptr<daxa::ImageCache> imageCache;
 	SceneLoader sceneLoader;
 	std::optional<daxa::ImGuiRenderer> imguiRenderer = std::nullopt;
