@@ -6,6 +6,10 @@
 
 namespace daxa {
 	namespace gpu {
+		void reflectShaderForPipeline(std::vector<std::unordered_map<u32, VkDescriptorSetLayoutBinding>>& descriptorSets) {
+
+		}
+
 		std::size_t sizeofFormat(VkFormat format) {
 			if (format == VkFormat::VK_FORMAT_UNDEFINED)
 				return -1;
@@ -218,8 +222,8 @@ namespace daxa {
 			// reflect spirv descriptor sets:
 			auto reflDesc = reflectSetBindings(shaderModule->spirv, shaderModule->shaderStage);
 			for (auto& r : reflDesc) {
-				if (!descriptorSets.contains(r.first)) {
-					descriptorSets[r.first] = std::unordered_map<u32, VkDescriptorSetLayoutBinding>{};
+				if (r.first >= descriptorSets.size()) {
+					descriptorSets.resize(r.first+1, {});
 				}
 
 				for (auto& binding : r.second) {
@@ -249,16 +253,6 @@ namespace daxa {
 			this->colorAttachmentBlends.push_back(blend);
 			return *this;
 		}
-
-		//GraphicsPipelineBuilder& GraphicsPipelineBuilder::addDepthAttachment(const VkFormat& attachmentFormat) {
-		//	this->depthAttachmentFormat = attachmentFormat;
-		//	return *this;
-		//}
-
-		//GraphicsPipelineBuilder& GraphicsPipelineBuilder::addStencilAttachment(const VkFormat& attachmentFormat) {
-		//	this->stencilAttachmentFormat = attachmentFormat;
-		//	return *this;
-		//}
 
 		constexpr VkPipelineRasterizationStateCreateInfo DEFAULT_RASTER_STATE_CI{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
@@ -313,7 +307,9 @@ namespace daxa {
 			std::vector<VkDescriptorSetLayout> descLayouts;
 			{
 				std::vector<VkDescriptorSetLayoutBinding> tempBindings;
-				for (auto& [index, bindings] : this->descriptorSets) {
+				for (i32 index = 0; index < this->descriptorSets.size(); index++) {
+					auto& bindings = descriptorSets[index];
+					DAXA_ASSERT_M(!bindings.empty(), "binding sets indices must be used in ascending order starting with 0");
 					tempBindings.clear();
 					for (auto& [index, binding] : bindings) {
 						tempBindings.push_back(binding);
