@@ -6,8 +6,25 @@
 
 namespace daxa {
 	namespace gpu {
-		void reflectShaderForPipeline(std::vector<std::unordered_map<u32, VkDescriptorSetLayoutBinding>>& descriptorSets) {
-
+		std::vector<VkDescriptorSetLayout> processReflectedDescriptorData(
+			std::vector<std::unordered_map<u32, VkDescriptorSetLayoutBinding>>& descriptorSets,
+			BindingSetDescriptionCache& descCache,
+			std::array<BindingSetDescription const*, MAX_SETS_PER_PIPELINE>& bindingSetDescriptions
+		) {
+			std::vector<VkDescriptorSetLayout> descLayouts;
+			std::vector<VkDescriptorSetLayoutBinding> tempBindings;
+			for (i32 index = 0; index < descriptorSets.size(); index++) {
+				auto& bindings = descriptorSets[index];
+				DAXA_ASSERT_M(!bindings.empty(), "binding sets indices must be used in ascending order starting with 0");
+				tempBindings.clear();
+				for (auto& [index, binding] : bindings) {
+					tempBindings.push_back(binding);
+				}
+				auto description = descCache.getSetDescription(tempBindings);
+				descLayouts.push_back(description->getVkDescriptorSetLayout());
+				bindingSetDescriptions[index] = description;
+			}
+			return std::move(descLayouts);
 		}
 
 		std::size_t sizeofFormat(VkFormat format) {
@@ -128,11 +145,6 @@ namespace daxa {
 			return *this;
 		}
 
-		//GraphicsPipelineBuilder& GraphicsPipelineBuilder::setDepthStencil(const VkPipelineDepthStencilStateCreateInfo& depthStencil) {
-		//	this->depthStencil = depthStencil;
-		//	return *this;
-		//}
-
 		std::vector<VkPushConstantRange> reflectPushConstants(const std::vector<uint32_t>& spv, VkShaderStageFlagBits shaderStage) {
 			SpvReflectShaderModule module = {};
 			SpvReflectResult result = spvReflectCreateShaderModule(spv.size() * sizeof(uint32_t), spv.data(), &module);
@@ -190,18 +202,12 @@ namespace daxa {
 			return std::move(setMap);
 		}
 
-		GraphicsPipelineBuilder& GraphicsPipelineBuilder::addShaderStage(const ShaderModuleHandle& shaderModule) {
-			VkPipelineShaderStageCreateInfo pipelineShaderStageCI{
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-				.pNext = nullptr,
-				.stage = shaderModule->shaderStage,
-				.module = shaderModule->shaderModule,
-				.pName = shaderModule->entryPoint.c_str(),
-			};
-			this->shaderStageCreateInfo.push_back(pipelineShaderStageCI);
-
-			// reflect spirv push constants:
-			auto falserefl = reflectPushConstants(shaderModule->spirv, shaderModule->shaderStage);
+		void reflectShader(
+			ShaderModuleHandle const& shaderModule, 
+			std::vector<VkPushConstantRange>& pushConstants, 
+			std::vector<std::unordered_map<u32, VkDescriptorSetLayoutBinding>>& descriptorSets
+		) {
+			auto falserefl = reflectPushConstants(shaderModule->getSPIRV(), shaderModule->getVkShaderStage());
 			auto refl2 = reinterpret_cast<std::vector<VkPushConstantRange>*>(&falserefl);
 			auto& refl = *refl2;
 			for (auto& r : refl) {
@@ -212,7 +218,7 @@ namespace daxa {
 
 				if (iter != pushConstants.end()) {
 					// if the same push constant is present in multiple stages we combine them to one
-					iter->stageFlags |= (VkShaderStageFlagBits)shaderModule->shaderStage;
+					iter->stageFlags |= (VkShaderStageFlagBits)shaderModule->getVkShaderStage();
 				}
 				else {
 					pushConstants.push_back(r);
@@ -220,7 +226,7 @@ namespace daxa {
 			}
 
 			// reflect spirv descriptor sets:
-			auto reflDesc = reflectSetBindings(shaderModule->spirv, shaderModule->shaderStage);
+			auto reflDesc = reflectSetBindings(shaderModule->getSPIRV(), shaderModule->getVkShaderStage());
 			for (auto& r : reflDesc) {
 				if (r.first >= descriptorSets.size()) {
 					descriptorSets.resize(r.first+1, {});
@@ -230,9 +236,22 @@ namespace daxa {
 					if (!descriptorSets[r.first].contains(binding.first)) {
 						descriptorSets[r.first][binding.first] = binding.second;
 					}
-					descriptorSets[r.first][binding.first].stageFlags |= (VkShaderStageFlagBits)shaderModule->shaderStage;
+					descriptorSets[r.first][binding.first].stageFlags |= (VkShaderStageFlagBits)shaderModule->getVkShaderStage();
 				}
 			}
+		}
+
+		GraphicsPipelineBuilder& GraphicsPipelineBuilder::addShaderStage(ShaderModuleHandle const& shaderModule) {
+			VkPipelineShaderStageCreateInfo pipelineShaderStageCI{
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+				.pNext = nullptr,
+				.stage = shaderModule->shaderStage,
+				.module = shaderModule->shaderModule,
+				.pName = shaderModule->entryPoint.c_str(),
+			};
+			this->shaderStageCreateInfo.push_back(pipelineShaderStageCI);
+
+			reflectShader(shaderModule, pushConstants, descriptorSets);
 
 			return *this;
 		}
@@ -304,21 +323,7 @@ namespace daxa {
 			ret.device = device;
 			ret.bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
-			std::vector<VkDescriptorSetLayout> descLayouts;
-			{
-				std::vector<VkDescriptorSetLayoutBinding> tempBindings;
-				for (i32 index = 0; index < this->descriptorSets.size(); index++) {
-					auto& bindings = descriptorSets[index];
-					DAXA_ASSERT_M(!bindings.empty(), "binding sets indices must be used in ascending order starting with 0");
-					tempBindings.clear();
-					for (auto& [index, binding] : bindings) {
-						tempBindings.push_back(binding);
-					}
-					auto description = bindingSetCache.getSetDescription(tempBindings);
-					descLayouts.push_back(description->layout);
-					ret.bindingSetDescriptions[index] = description;
-				}
-			}
+			std::vector<VkDescriptorSetLayout> descLayouts = processReflectedDescriptorData(this->descriptorSets, bindingSetCache, ret.bindingSetDescriptions);
 
 			// create pipeline layout:
 			VkPipelineLayoutCreateInfo pipelineLayoutCI{
@@ -449,56 +454,11 @@ namespace daxa {
 			};
 
 			std::vector<VkPushConstantRange> pushConstants;
+			std::vector<std::unordered_map<u32, VkDescriptorSetLayoutBinding>> descriptorSets;
 
-			// reflect spirv push constants:
-			auto falserefl = reflectPushConstants(shaderModule->getSPIRV(), shaderModule->getVkShaderStage());
-			auto refl2 = reinterpret_cast<std::vector<VkPushConstantRange>*>(&falserefl);
-			auto& refl = *refl2;
-			for (auto& r : refl) {
-				auto iter = pushConstants.begin();
-				for (; iter != pushConstants.end(); iter++) {
-					if (iter->offset == r.offset && iter->size == r.size && iter->stageFlags == r.stageFlags) break;
-				}
+			reflectShader(shaderModule, pushConstants, descriptorSets);
 
-				if (iter != pushConstants.end()) {
-					// if the same push constant is present in multiple stages we combine them to one
-					iter->stageFlags |= (VkShaderStageFlagBits)shaderModule->getVkShaderStage();
-				}
-				else {
-					pushConstants.push_back(r);
-				}
-			}
-
-			std::unordered_map<u32, std::unordered_map<u32, VkDescriptorSetLayoutBinding>> descriptorSets;
-
-			// reflect spirv descriptor sets:
-			auto reflDesc = reflectSetBindings(shaderModule->getSPIRV(), shaderModule->getVkShaderStage());
-			for (auto& r : reflDesc) {
-				if (!descriptorSets.contains(r.first)) {
-					descriptorSets[r.first] = std::unordered_map<u32, VkDescriptorSetLayoutBinding>{};
-				}
-
-				for (auto& binding : r.second) {
-					if (!descriptorSets[r.first].contains(binding.first)) {
-						descriptorSets[r.first][binding.first] = binding.second;
-					}
-					descriptorSets[r.first][binding.first].stageFlags |= (VkShaderStageFlagBits)shaderModule->getVkShaderStage();
-				}
-			}
-
-			std::vector<VkDescriptorSetLayout> descLayouts;
-			{
-				std::vector<VkDescriptorSetLayoutBinding> tempBindings;
-				for (auto& [index, bindings] : descriptorSets) {
-					tempBindings.clear();
-					for (auto& [index, binding] : bindings) {
-						tempBindings.push_back(binding);
-					}
-					auto description = bindingSetCache.getSetDescription(tempBindings);
-					descLayouts.push_back(description->getVkDescriptorSetLayout());
-					ret.bindingSetDescriptions[index] = description;
-				}
-			}
+			std::vector<VkDescriptorSetLayout> descLayouts = processReflectedDescriptorData(descriptorSets, bindingSetCache, ret.bindingSetDescriptions);
 
 			// create pipeline layout:
 			VkPipelineLayoutCreateInfo pipelineLayoutCI{
