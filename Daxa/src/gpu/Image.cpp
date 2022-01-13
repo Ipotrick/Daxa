@@ -56,10 +56,7 @@ namespace daxa {
 					(uint64_t)ret.image,                                // objectHandle
 					ci.debugName,                            			// pObjectName
 				};
-
 				instance->pfnSetDebugUtilsObjectNameEXT(device, &imageNameInfo);
-
-				printf("just set image name to %s\n", ci.debugName);
 			}
 
 
