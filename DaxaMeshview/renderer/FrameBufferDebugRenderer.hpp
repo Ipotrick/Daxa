@@ -50,8 +50,11 @@ public:
             .imageUsage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
             .sampler = renderCTX.defaultSampler,
         };
+        ci.debugName = "debugScreenSpaceNormalImage";
         debugScreenSpaceNormalImage = renderCTX.device->createImage2d(ci);
+        ci.debugName = "debugWorldSpaceNormalImage";
         debugWorldSpaceNormalImage = renderCTX.device->createImage2d(ci);
+        ci.debugName = "debugLinearDepthImage";
         debugLinearDepthImage = renderCTX.device->createImage2d(ci);
 
         cmdList->insertImageBarriers(std::array{

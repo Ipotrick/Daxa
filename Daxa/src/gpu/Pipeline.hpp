@@ -41,7 +41,7 @@ namespace daxa {
 			VkPipelineLayout const& getVkPipelineLayout() const { return layout; }
 		private:
 			friend class GraphicsPipelineBuilder;
-			friend PipelineHandle createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ShaderModuleHandle const& shaderModule);
+			friend PipelineHandle createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ShaderModuleHandle const& shaderModule, char const* debugName);
 
 			std::array<BindingSetDescription const*, MAX_SETS_PER_PIPELINE> bindingSetDescriptions = {};
 
@@ -97,6 +97,7 @@ namespace daxa {
 		class GraphicsPipelineBuilder {
 		public:
 			GraphicsPipelineBuilder() = default;
+			GraphicsPipelineBuilder& setDebugName(char const* name);
 			GraphicsPipelineBuilder& beginVertexInputAttributeBinding(VkVertexInputRate rate);
 			GraphicsPipelineBuilder& addVertexInputAttribute(VkFormat format);
 			GraphicsPipelineBuilder& addVertexInputAttributeSpacer(u32 spacing);
@@ -111,6 +112,8 @@ namespace daxa {
 		private:
 			friend class Device;
 			PipelineHandle build(VkDevice, BindingSetDescriptionCache& bindingSetCache);
+
+			char const* debugName = {};
 
 			// Vertex Input Attribute building:
 			bool bVertexAtrributeBindingBuildingOpen = false;
@@ -134,6 +137,6 @@ namespace daxa {
 			std::vector<VkFormat> colorAttachmentFormats;
 		};
 
-		PipelineHandle createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ShaderModuleHandle const& shaderModule);
+		PipelineHandle createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ShaderModuleHandle const& shaderModule, char const* debugName = nullptr);
 	}
 }
