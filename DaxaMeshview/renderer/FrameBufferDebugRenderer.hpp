@@ -35,10 +35,9 @@ public:
             .memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
         });
 
-        auto cmdList = renderCTX.device->getEmptyCommandList();
-        cmdList->begin();
+        auto cmdList = renderCTX.device->getCommandList();
         recreateImages(renderCTX, cmdList, width, height);
-        cmdList->end();
+        cmdList->finalize();
         renderCTX.queue->submitBlocking({.commandLists = {cmdList}});
     }
 

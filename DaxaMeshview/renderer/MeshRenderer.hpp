@@ -117,7 +117,6 @@ public:
 				.dst = globalDataBufffer,
 			});
 
-
 			if (draws.size() * sizeof(glm::mat4) > transformsBuffer->getSize()) {
 				size_t newSize = std::pow(2, std::ceil(std::log(draws.size() * sizeof(glm::mat4))/std::log(2)));
 				this->transformsBuffer = renderCTX.device->createBuffer({
@@ -133,6 +132,11 @@ public:
 				((glm::mat4*)mm.hostPtr)[i] = draws[i].transform;
 			}
 			cmd->unmapMemoryStaged(mm);
+
+			cmd->insertMemoryBarrier({
+				.awaitedStages = VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
+				.waitingStages = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT_KHR,
+			});
 		}
 
 		cmd->bindPipeline(pipeline);

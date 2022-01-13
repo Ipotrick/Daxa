@@ -17,10 +17,9 @@ public:
 		, presentSignal{ this->device->createSignal() }
     {
 		defaultSampler = device->createSampler({});
-		auto cmd = device->getEmptyCommandList();
-		cmd->begin();
+		auto cmd = device->getCommandList();
 		recreateFramebuffer(cmd, window.getWidth(), window.getHeight());
-		cmd->end();
+		cmd->finalize();
 		queue->submitBlocking({.commandLists = {cmd}});
     }
 

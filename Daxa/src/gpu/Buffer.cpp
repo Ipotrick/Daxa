@@ -1,4 +1,5 @@
 #include "Buffer.hpp"
+#include "Instance.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -21,6 +22,17 @@ namespace daxa {
 			};
 
 			vmaCreateBuffer(allocator, (VkBufferCreateInfo*)&bci, &aci, &buffer, &allocation, nullptr);
+
+			if (ci.debugName) {
+				VkDebugUtilsObjectNameInfoEXT nameInfo {
+					VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, // sType
+					NULL,                                               // pNext
+					VK_OBJECT_TYPE_IMAGE,                               // objectType
+					(uint64_t)this->buffer,                                // objectHandle
+					ci.debugName,                            			// pObjectName
+				};
+				instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
+			}
 
 			this->allocator = allocator;
 			this->size = ci.size;
