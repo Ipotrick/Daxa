@@ -4,6 +4,8 @@
 
 #include <spirv_reflect.h>
 
+#include "Instance.hpp"
+
 namespace daxa {
 	namespace gpu {
 		std::vector<VkDescriptorSetLayout> processReflectedDescriptorData(
@@ -87,6 +89,11 @@ namespace daxa {
 
 		GraphicsPipelineBuilder& GraphicsPipelineBuilder::configurateDepthTest(DepthTestSettings const& depthTestSettings2) {
 			depthTestSettings = depthTestSettings2;
+			return *this;
+		}
+		
+		GraphicsPipelineBuilder& GraphicsPipelineBuilder::setDebugName(char const* name) {
+			debugName = name;
 			return *this;
 		}
 
@@ -436,10 +443,22 @@ namespace daxa {
 			auto err = vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline);
 			DAXA_ASSERT_M(err == VK_SUCCESS, "could not create graphics pipeline");
 
+			if (debugName) {
+				const VkDebugUtilsObjectNameInfoEXT nameInfo =
+				{
+					VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+					NULL,
+					VK_OBJECT_TYPE_PIPELINE,
+					(uint64_t)pipelineHandle->pipeline,
+					debugName,
+				};
+				instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
+			}
+
 			return pipelineHandle;
 		}
 
-		PipelineHandle createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ShaderModuleHandle const& shaderModule) {
+		PipelineHandle createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ShaderModuleHandle const& shaderModule, char const* debugName) {
 			auto pipelineHandle = PipelineHandle{ std::make_shared<Pipeline>() };
 			Pipeline& ret = *pipelineHandle;
 			ret.device = device;
@@ -481,6 +500,18 @@ namespace daxa {
 				.basePipelineIndex = 0,
 			};
 			vkCreateComputePipelines(device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline);
+
+			if (debugName) {
+				const VkDebugUtilsObjectNameInfoEXT nameInfo =
+				{
+					VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+					NULL,
+					VK_OBJECT_TYPE_PIPELINE,
+					(uint64_t)pipelineHandle->pipeline,
+					debugName,
+				};
+				instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
+			}
 
 			return pipelineHandle;
 		}
