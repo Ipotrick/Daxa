@@ -1,5 +1,6 @@
 #include "Image.hpp"
 #include <cassert>
+#include "Instance.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -25,7 +26,7 @@ namespace daxa {
 				.pNext = nullptr,
 				.imageType = VkImageType::VK_IMAGE_TYPE_2D,
 				.format = ci.format,
-				.extent = VkExtent3D{ ci.width, ci.height,1 },
+				.extent = VkExtent3D{ ci.width, ci.height, 1 },
 				.mipLevels = 1,
 				.arrayLayers = 1,
 				.samples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT,
@@ -46,6 +47,22 @@ namespace daxa {
 			auto err = vmaCreateImage(allocator, (VkImageCreateInfo*)&ici, &aci, (VkImage*)&ret.image, &ret.allocation, nullptr);
 			DAXA_ASSERT_M(err == VK_SUCCESS, "could not create image");
 
+			if (ci.debugName) {
+				const VkDebugUtilsObjectNameInfoEXT imageNameInfo =
+				{
+					VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, // sType
+					NULL,                                               // pNext
+					VK_OBJECT_TYPE_IMAGE,                               // objectType
+					(uint64_t)ret.image,                                // objectHandle
+					ci.debugName,                            			// pObjectName
+				};
+
+				instance->pfnSetDebugUtilsObjectNameEXT(device, &imageNameInfo);
+
+				printf("just set image name to %s\n", ci.debugName);
+			}
+
+
 			VkImageViewCreateInfo ivci{
 				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 				.pNext = nullptr,
@@ -62,6 +79,18 @@ namespace daxa {
 			};
 
 			vkCreateImageView(device, &ivci, nullptr, &ret.view);
+
+			if (ci.debugName) {
+				const VkDebugUtilsObjectNameInfoEXT imageNameInfo =
+				{
+					VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, // sType
+					NULL,                                               // pNext
+					VK_OBJECT_TYPE_IMAGE_VIEW,                               // objectType
+					(uint64_t)ret.view,                                // objectHandle
+					ci.debugName,                            			// pObjectName
+				};
+				instance->pfnSetDebugUtilsObjectNameEXT(device, &imageNameInfo);
+			}
 
 			ret.allocator = allocator;
 			ret.tiling = (VkImageTiling)ici.tiling;

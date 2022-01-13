@@ -19,6 +19,8 @@ namespace daxa {
 
 			VkInstance getVkInstance() const { return instance.instance; }
 			vkb::Instance& getVKBInstance() { return instance; }
+
+			PFN_vkSetDebugUtilsObjectNameEXT pfnSetDebugUtilsObjectNameEXT;
 		private:
 			vkb::Instance instance;
 		};
