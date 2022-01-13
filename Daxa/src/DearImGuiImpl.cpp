@@ -167,15 +167,13 @@ namespace daxa {
             .sampler = device->createSampler({})
         });
 
-        auto cmdList = device->getEmptyCommandList();
-        cmdList->begin();
+        auto cmdList = device->getCommandList();
         cmdList->copyHostToImageSynced({
             .src = pixels,
             .dst = fontSheet,
             .size = width * height * sizeof(u8) * 4,
             .dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         });
-        cmdList->end();
         queue->submitBlocking({
             .commandLists = { cmdList }
         });

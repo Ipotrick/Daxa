@@ -16,6 +16,7 @@ namespace daxa {
 			VkBufferUsageFlags usage				= {};
 			VmaMemoryUsage memoryUsage				= {};
 			VkMemoryPropertyFlags memoryProperties 	= {};
+			char const* debugName 					= {};
 		};
 
 		class BufferHandle;

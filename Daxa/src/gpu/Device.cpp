@@ -151,7 +151,7 @@ namespace daxa {
 			return bindingSetDescriptionCache->getSetDescription(bindings);
 		}
 
-		CommandListHandle Device::getEmptyCommandList() {
+		CommandListHandle Device::getCommandList() {
 			return std::move(getNextCommandList());
 		}
 
@@ -194,6 +194,7 @@ namespace daxa {
 					.commandBufferCount = 1,
 				};
 				vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &list.cmd);
+				list.begin();
 			} 
 			auto ret = std::move(unusedCommandLists.back());
 			unusedCommandLists.pop_back();
