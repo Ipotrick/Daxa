@@ -173,9 +173,7 @@ namespace daxa {
 			CommandList& operator=(CommandList const& rhs) 		= delete;
 			~CommandList();
 
-			void begin();
-
-			void end();
+			void finalize();
 
 			// Ressource management:
 
@@ -308,6 +306,7 @@ namespace daxa {
 			friend class CommandListHandle;
 
 			void reset();
+			void begin();
 
 			// binding set management:
 			std::vector<VkDescriptorBufferInfo> bufferInfoBuffer;
@@ -328,6 +327,7 @@ namespace daxa {
 			u32	operationsInProgress = 0;
 			u32 usesOnGPU = 0;				// counts in how many pending submits the command list is currently used
 			bool empty = true;
+			bool finalized = false;
 
 			std::vector<BindingSetHandle> usedSets;
 			std::vector<ImageHandle> usedImages;

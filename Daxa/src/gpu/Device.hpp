@@ -94,7 +94,7 @@ namespace daxa {
 			/**
 			 * \return returns an empty CommandList.
 			 */
-			CommandListHandle getEmptyCommandList();
+			CommandListHandle getCommandList();
 
 			/**
 			 * Waits for the device to complete all submitted operations and the gpu to idle.

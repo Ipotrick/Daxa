@@ -33,9 +33,7 @@ public:
 
 	void update(daxa::AppState& app) {
 
-		auto cmdList = renderCTX.device->getEmptyCommandList();
-
-		cmdList->begin();
+		auto cmdList = renderCTX.device->getCommandList();
 
 		ImGui_ImplGlfw_NewFrame();
 
@@ -168,7 +166,7 @@ public:
 		} };
 		cmdList->insertBarriers({}, imgBarrier1);
 
-		cmdList->end();
+		cmdList->finalize();
 
 		daxa::gpu::SubmitInfo submitInfo;
 		submitInfo.commandLists.push_back(std::move(cmdList));
@@ -177,7 +175,6 @@ public:
 
 		renderCTX.present();
 		printf("frame\n");
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 
 	void cleanup(daxa::AppState& app) {

@@ -28,22 +28,14 @@ namespace daxa {
 			}
 		}
 
-		void CommandList::begin() {
-			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-			VkCommandBufferBeginInfo cbbi{
-				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-				.pNext = nullptr,
-				.flags = VkCommandBufferUsageFlagBits::VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-			};
-			vkBeginCommandBuffer(cmd, &cbbi);
-		}
-
-		void CommandList::end() {
-			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+		void CommandList::finalize() {
+			DAXA_ASSERT_M(finalized == false, "can not finalize a command list twice");
 			vkEndCommandBuffer(cmd);
+			finalized = true;
 		}
 
 		MappedStagingMemory CommandList::mapMemoryStaged(BufferHandle copyDst, size_t size, size_t dstOffset) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(size <= STAGING_BUFFER_POOL_BUFFER_SIZE, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
 			if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < size) {
@@ -78,6 +70,7 @@ namespace daxa {
 		}
 		
 		void CommandList::unmapMemoryStaged(MappedStagingMemory& mappedstagingMemory) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(mappedstagingMemory.buffer->isMemoryMapped(), "the given mappedStagingMemory has allready been unmapped.");
 			operationsInProgress -= 1;
@@ -85,6 +78,7 @@ namespace daxa {
 		}
 
 		void CommandList::copyHostToBuffer(HostToBufferCopyInfo copyInfo) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(copyInfo.size <= STAGING_BUFFER_POOL_BUFFER_SIZE, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
 			if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < copyInfo.size) {
@@ -114,6 +108,7 @@ namespace daxa {
 		}
 
 		void CommandList::copyHostToImage(HostToImageCopyInfo copyInfo) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(copyInfo.size <= STAGING_BUFFER_POOL_BUFFER_SIZE, "Currently uploads over a size of 67.108.864 bytes are not supported by the copyHostToImage function. Please use a staging buffer.");
 			if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < copyInfo.size) {
@@ -140,6 +135,7 @@ namespace daxa {
 		}
 
 		void CommandList::copyHostToImageSynced(HostToImageCopySyncedInfo copySyncedInfo) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			ImageBarrier firstBarrier{
 				.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
 				.awaitedStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
@@ -169,6 +165,7 @@ namespace daxa {
 		}
 
 		void CommandList::copyMultiBufferToBuffer(BufferToBufferMultiCopyInfo copyInfo) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu.");
 			DAXA_ASSERT_M(copyInfo.regions.size() > 0, "amount of copy regions must be greater than 0.");
 			for (int i = 0; i < copyInfo.regions.size(); i++) {
@@ -181,6 +178,7 @@ namespace daxa {
 		}
 
 		void CommandList::copyBufferToBuffer(BufferToBufferCopyInfo copyInfo) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			BufferToBufferMultiCopyInfo btbMultiCopy{
 				.src = copyInfo.src,
 				.dst = copyInfo.dst,
@@ -190,6 +188,7 @@ namespace daxa {
 		}
 
 		void CommandList::copyBufferToImage(BufferToImageCopyInfo copyInfo) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			usedBuffers.push_back(copyInfo.src);
 			usedImages.push_back(copyInfo.dst);
 
@@ -213,6 +212,7 @@ namespace daxa {
 		}
 
 		void CommandList::copyImageToImage(ImageToImageCopyInfo copyInfo) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 
 			if (copyInfo.size.width == 0 || copyInfo.size.height == 0 || copyInfo.size.depth == 0) {
@@ -243,6 +243,7 @@ namespace daxa {
 		}
 
 		void CommandList::copyImageToImageSynced(ImageToImageCopySyncedInfo copySyncedInfo) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			insertImageBarriers(std::array{
 				ImageBarrier{ 
 					.image = copySyncedInfo.src, 
@@ -291,12 +292,14 @@ namespace daxa {
 		}
 
 		void CommandList::dispatch(u32 groupCountX, u32 groupCountY, u32 grpupCountZ) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(boundPipeline.value().bindPoint == VK_PIPELINE_BIND_POINT_COMPUTE, "can not dispatch compute commands with out a bound compute pipeline.");
 			vkCmdDispatch(cmd, groupCountX, groupCountY, grpupCountZ);
 		}
 
 		void CommandList::bindVertexBuffer(u32 binding, BufferHandle buffer, size_t bufferOffset) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(buffer, "invalid buffer handle");
 			auto vkBuffer = buffer->getVkBuffer();
@@ -305,6 +308,7 @@ namespace daxa {
 		}
 
 		void CommandList::bindIndexBuffer(BufferHandle buffer, size_t bufferOffset, VkIndexType indexType) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(buffer, "invalid buffer handle");
 			auto vkBuffer = buffer->getVkBuffer();
@@ -313,6 +317,7 @@ namespace daxa {
 		}
 
 		void CommandList::beginRendering(BeginRenderingInfo ri) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			operationsInProgress += 1;
 			for (int i = 0; i < ri.colorAttachments.size(); i++) {
@@ -398,6 +403,7 @@ namespace daxa {
 			});
 		}
 		void CommandList::endRendering() {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			operationsInProgress -= 1;
 			this->vkCmdEndRenderingKHR(cmd);
@@ -405,6 +411,7 @@ namespace daxa {
 		}
 
 		void CommandList::bindPipeline(PipelineHandle& pipeline) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			vkCmdBindPipeline(cmd, pipeline->getVkBindPoint(), pipeline->getVkPipeline());
 			usedGraphicsPipelines.push_back(pipeline);
@@ -415,7 +422,17 @@ namespace daxa {
 			};
 		}
 
+		void CommandList::begin() {
+			VkCommandBufferBeginInfo cbbi{
+				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+				.pNext = nullptr,
+				.flags = VkCommandBufferUsageFlagBits::VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+			};
+			vkBeginCommandBuffer(cmd, &cbbi);
+		}
+
 		void CommandList::reset() {
+			DAXA_ASSERT_M(finalized || empty, "can not reset non empty command list that is not finalized");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(operationsInProgress == 0, "can not reset command list with recordings in progress");
 			empty = true;
@@ -426,9 +443,12 @@ namespace daxa {
 			usedSets.clear();
 			boundPipeline.reset();
 			usedStagingBuffers.clear();
+			finalized = false;
+			begin();
 		}
 
 		void CommandList::setViewport(VkViewport const& viewport) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			vkCmdSetViewport(cmd, 0, 1, &viewport); 
 			VkRect2D scissor{
@@ -439,23 +459,27 @@ namespace daxa {
 		}
 
 		void CommandList::setScissor(VkRect2D const& scissor) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			vkCmdSetScissor(cmd, 0, 1, &scissor);
 		}
 		
 		void CommandList::draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(boundPipeline.has_value(), "can not draw sets if there is no pipeline bound");
 			vkCmdDraw(cmd, vertexCount, instanceCount, firstVertex, firstInstance);
 		}
 
 		void CommandList::drawIndexed(u32 indexCount, u32 instanceCount, u32 firstIndex, i32 vertexOffset, u32 firstIntance) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(boundPipeline.has_value(), "can not draw sets if there is no pipeline bound");
 			vkCmdDrawIndexed(cmd, indexCount, instanceCount, firstIndex, vertexOffset, firstIntance);
 		}
 
 		void CommandList::bindSet(u32 setBinding, BindingSetHandle set) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(boundPipeline.has_value(), "can not bind sets if there is no pipeline bound");
 			vkCmdBindDescriptorSets(cmd, boundPipeline->bindPoint, boundPipeline->layout, setBinding, 1, &set->set, 0, nullptr);
@@ -463,12 +487,14 @@ namespace daxa {
 		}
 
 		void CommandList::bindSetPipelineIndependant(u32 setBinding, BindingSetHandle set, VkPipelineBindPoint bindPoint, VkPipelineLayout layout) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			vkCmdBindDescriptorSets(cmd, bindPoint, layout, setBinding, 1, &set->set, 0, nullptr);
 			usedSets.push_back(std::move(set));
 		}
 
 		void CommandList::insertBarriers(std::span<MemoryBarrier> memBarriers, std::span<ImageBarrier> imgBarriers) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			std::array<VkMemoryBarrier2KHR, 32> memBarrierBuffer;
 			u32 memBarrierBufferSize = 0;
@@ -558,6 +584,7 @@ namespace daxa {
 		}
 
 		void CommandList::insertFullMemoryBarrier() {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			MemoryBarrier barrier{
 				.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
 				.awaitedStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
