@@ -109,9 +109,9 @@ namespace daxa {
 		*/
 		struct MemoryBarrier {
 			VkPipelineStageFlags2KHR awaitedStages = 0;
-			VkAccessFlags2KHR awaitedAccess = 0;
+			VkAccessFlags2KHR awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR;
 			VkPipelineStageFlags2KHR waitingStages = 0;
-			VkAccessFlags2KHR waitingAccess = 0;
+			VkAccessFlags2KHR waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR;
 		};
 
 		/**
@@ -119,9 +119,9 @@ namespace daxa {
 		*/
 		struct BufferBarrier {
 			VkPipelineStageFlags2KHR awaitedStages = 0;
-			VkAccessFlags2KHR awaitedAccess = 0;
+			VkAccessFlags2KHR awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR;
 			VkPipelineStageFlags2KHR waitingStages = 0;
-			VkAccessFlags2KHR waitingAccess = 0;
+			VkAccessFlags2KHR waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR;
 			BufferHandle buffer = {};
 			size_t offset = 0;
 			std::optional<u32> size = {};
@@ -132,9 +132,9 @@ namespace daxa {
 		*/
 		struct ImageBarrier {
 			VkPipelineStageFlags2KHR awaitedStages = 0;
-			VkAccessFlags2KHR awaitedAccess = 0;
+			VkAccessFlags2KHR awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR;
 			VkPipelineStageFlags2KHR waitingStages = 0;
-			VkAccessFlags2KHR waitingAccess = 0;
+			VkAccessFlags2KHR waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR;
 			ImageHandle image = {};
 			VkImageLayout layoutBefore;
 			VkImageLayout layoutAfter;

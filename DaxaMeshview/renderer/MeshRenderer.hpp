@@ -45,7 +45,7 @@ public:
 			.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)
 			// location of attachments in a shader are implied by the order they are added in the pipeline builder:
 			.addColorAttachment(renderCTX.swapchain->getVkFormat())
-			.addColorAttachment(renderCTX.normalsBuffer->getVkViewFormat())
+			.addColorAttachment(renderCTX.normalsImage->getVkViewFormat())
 			.setRasterization({
 				.cullMode = VK_CULL_MODE_BACK_BIT,
 			});
@@ -85,6 +85,13 @@ public:
 	}
 
     void render(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawMesh>& draws) {
+
+		cmd->insertImageBarrier({
+			.image = renderCTX.normalsImage,
+			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			.waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
+		});
+
 		if (!dummyTexture) {
 			dummyTexture = renderCTX.device->createImage2d({
 				.width = 1,
@@ -138,7 +145,7 @@ public:
 				.clearValue = { .color = VkClearColorValue{.float32 = { 0.02f, 0.02f, 0.02f, 1.f } } },
 			},
 			daxa::gpu::RenderAttachmentInfo{
-				.image = renderCTX.normalsBuffer,
+				.image = renderCTX.normalsImage,
 				.clearValue = { .color = VkClearColorValue{.float32 = { 0.0f,0.0f,0.0f,0.0f } } },
 			}
 		};
@@ -176,69 +183,11 @@ public:
 
 		cmd->endRendering();
 
-		cmd->insertImageBarriers(std::array{
-			daxa::gpu::ImageBarrier{
-				.image = renderCTX.depthImage, 
-				.layoutBefore = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, 
-				.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 
-				.awaitedStages =  VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-				.waitingStages = VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
-				.waitingAccess = VK_ACCESS_2_TRANSFER_READ_BIT_KHR,
-			},
-			daxa::gpu::ImageBarrier{
-				.image = renderCTX.depthImageCopy, 
-				.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
-				.awaitedStages =  VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-				.waitingStages = VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
-				.waitingAccess = VK_ACCESS_2_TRANSFER_READ_BIT_KHR,
-			},
-			daxa::gpu::ImageBarrier{
-				.image = renderCTX.normalsBuffer, 
-				.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 
-				.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				.awaitedStages =  VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-				.waitingStages = VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
-				.waitingAccess = VK_ACCESS_2_TRANSFER_READ_BIT_KHR,
-			},
-			daxa::gpu::ImageBarrier{
-				.image = renderCTX.normalsBufferCopy, 
-				.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				.awaitedStages =  VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-				.waitingStages = VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
-				.waitingAccess = VK_ACCESS_2_TRANSFER_READ_BIT_KHR
-			},
-		});
-
-		cmd->copyImageToImage({ .src = renderCTX.depthImage, .dst = renderCTX.depthImageCopy, });
-		cmd->copyImageToImage({ .src = renderCTX.normalsBuffer, .dst = renderCTX.normalsBufferCopy, });
-
-		cmd->insertImageBarriers(std::array{
-			daxa::gpu::ImageBarrier{
-				.image = renderCTX.depthImage, 
-				.layoutAfter = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, 
-				.awaitedStages = VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
-				.awaitedAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR,
-			},
-			daxa::gpu::ImageBarrier{
-				.image = renderCTX.depthImageCopy, 
-				.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
-				.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 
-				.awaitedStages = VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
-				.awaitedAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR,
-			},
-			daxa::gpu::ImageBarrier{
-				.image = renderCTX.normalsBuffer, 
-				.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 
-				.awaitedStages = VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
-				.awaitedAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR,
-			},
-			daxa::gpu::ImageBarrier{
-				.image = renderCTX.normalsBufferCopy, 
-				.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 
-				.awaitedStages = VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
-				.awaitedAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR,
-			},
+		cmd->insertImageBarrier({
+			.image = renderCTX.normalsImage,
+			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			.awaitedStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
 		});
     }
 

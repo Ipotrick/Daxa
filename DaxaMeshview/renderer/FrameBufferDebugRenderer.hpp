@@ -58,29 +58,117 @@ public:
             daxa::gpu::ImageBarrier{
                 .image = debugScreenSpaceNormalImage,
                 .awaitedStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-                .waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
+                .waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
                 .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             },
             daxa::gpu::ImageBarrier{
                 .image = debugWorldSpaceNormalImage,
                 .awaitedStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-                .waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
+                .waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
                 .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             },
             daxa::gpu::ImageBarrier{
                 .image = debugLinearDepthImage,
                 .awaitedStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-                .waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
+                .waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
                 .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             }
         });
     }
+    
+    void renderDebugViews(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmdList, UploadData uploadData) {
+        cmdList->copyHostToBuffer({
+            .src = (void*)&uploadData,
+            .size = sizeof(decltype(uploadData)),
+            .dst = buffer,
+        });
 
+        auto membar = std::array{ 
+            daxa::gpu::MemoryBarrier{.awaitedStages = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT_KHR, .waitingStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR },
+        };
+        auto imgbar = std::array{
+            daxa::gpu::ImageBarrier{
+                .image = debugScreenSpaceNormalImage,
+                .awaitedStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
+                .waitingStages =  VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+                .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
+            },
+            daxa::gpu::ImageBarrier{
+                .image = debugWorldSpaceNormalImage,
+                .awaitedStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
+                .waitingStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+                .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
+            },
+            daxa::gpu::ImageBarrier{
+                .image = debugLinearDepthImage,
+                .awaitedStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
+                .waitingStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+                .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
+            },
+            daxa::gpu::ImageBarrier{
+                .image = renderCTX.depthImage,
+                .awaitedStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
+                .waitingStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+                .layoutBefore = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            }
+        };
+        cmdList->insertBarriers(
+            membar,
+            imgbar
+        );
+
+        cmdList->bindPipeline(pipeline);
+
+        auto set = setAlloc->getSet();
+        set->bindBuffer(0, buffer);
+        set->bindImage(1, renderCTX.depthImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        set->bindImage(2, renderCTX.normalsImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        set->bindImage(3, debugLinearDepthImage, VK_IMAGE_LAYOUT_GENERAL);
+        set->bindImage(4, debugScreenSpaceNormalImage, VK_IMAGE_LAYOUT_GENERAL);
+        set->bindImage(5, debugWorldSpaceNormalImage, VK_IMAGE_LAYOUT_GENERAL);
+
+        cmdList->bindSet(0, set);
+
+        cmdList->dispatch((uploadData.imageWidth + 1) / 8, (uploadData.imageHeight + 1) / 8);
+
+        // TODO dispatch compute shader
+
+        cmdList->insertImageBarriers(std::array{
+            daxa::gpu::ImageBarrier{
+                .image = debugScreenSpaceNormalImage,
+                .awaitedStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+                .waitingStages =  VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
+                .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
+                .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            },
+            daxa::gpu::ImageBarrier{
+                .image = debugWorldSpaceNormalImage,
+                .awaitedStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+                .waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
+                .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
+                .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            },
+            daxa::gpu::ImageBarrier{
+                .image = debugLinearDepthImage,
+                .awaitedStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+                .waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
+                .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
+                .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            },
+            daxa::gpu::ImageBarrier{
+                .image = renderCTX.depthImage,
+                .awaitedStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+                .waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
+                .layoutAfter = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            },
+        });
+    }
+
+    daxa::gpu::ImageHandle debugLinearDepthImage = {};
     daxa::gpu::ImageHandle debugScreenSpaceNormalImage = {};
     daxa::gpu::ImageHandle debugWorldSpaceNormalImage = {};
-    daxa::gpu::ImageHandle debugLinearDepthImage = {};
 private:
-    UploadData data;
     daxa::gpu::PipelineHandle pipeline = {};
     daxa::gpu::BindingSetAllocatorHandle setAlloc = {};
     daxa::gpu::BufferHandle buffer = {};

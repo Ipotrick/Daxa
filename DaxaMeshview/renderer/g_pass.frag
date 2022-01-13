@@ -25,8 +25,8 @@ void main()
     vec3 screen_space_normal = vec3(vtl_screen_space_normal.xy, screen_space_normal_z_component);
     vec3 reconstructed_world_space_normal = (iview * vec4(screen_space_normal, 0.f)).xyz;
     
-    //vec4 color = texture(albedo, vtf_uv);
-    vec4 color = vec4(((vtf_world_space_normal + vec3(1,1,1)) * 0.5f),1);
+    vec4 color = texture(albedo, vtf_uv);
+    //vec4 color = vec4(((vtf_world_space_normal + vec3(1,1,1)) * 0.5f),1);
     //vec4 color = vec4((vtl_screen_space_normal + vec2(1,1))*0.5f, 1, 1);
     outFragColor = color;
 }
