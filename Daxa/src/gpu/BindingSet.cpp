@@ -90,9 +90,11 @@ namespace daxa {
 			VkDescriptorType imageDescriptorType = description->layoutBindings.bindings[binding].descriptorType;
 			
 			for (auto& [image, layout] : images) {
-				VkSampler sampler = imageDescriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER 
-					? image->getSampler()->getVkSampler() 
-					: VK_NULL_HANDLE;
+				VkSampler sampler = VK_NULL_HANDLE;
+				if (imageDescriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+					DAXA_ASSERT_M(image->getSampler().valid(), "can not bind image without sampler to a combined image sampler binding");
+					sampler = image->getSampler()->getVkSampler();
+				}
 
 				descImageInfoBuffer.push_back(VkDescriptorImageInfo{
 					.sampler = sampler,

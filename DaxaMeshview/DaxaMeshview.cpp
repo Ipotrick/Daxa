@@ -65,12 +65,18 @@ public:
 		ImGui::End();
 
 		ImGui::Begin("frame buffer inspector");
-		ImGui::Text("normals");
-		auto id = imguiRenderer->getImGuiTextureId(renderCTX.normalsBufferCopy);
-		ImGui::Image((void*)id, ImVec2(400,400));
-		id = imguiRenderer->getImGuiTextureId(renderCTX.depthImageCopy);
+		ImGui::Text("screenspace normals");
+		f32 w = ImGui::GetWindowWidth() - 10;
+		f32 aspect = (f32)app.window->getHeight() / (f32)app.window->getWidth();
+		f32 h = w * aspect;
+		auto id = imguiRenderer->getImGuiTextureId(frameBufferDebugRenderer.debugScreenSpaceNormalImage);
+		ImGui::Image((void*)id, ImVec2(w, h));
+		ImGui::Text("worldspace normals");
+		id = imguiRenderer->getImGuiTextureId(frameBufferDebugRenderer.debugWorldSpaceNormalImage);
+		ImGui::Image((void*)id, ImVec2(w, h));
 		ImGui::Text("depth");
-		ImGui::Image((void*)id, ImVec2(400,400));
+		id = imguiRenderer->getImGuiTextureId(frameBufferDebugRenderer.debugLinearDepthImage);
+		ImGui::Image((void*)id, ImVec2(w, h));
 		ImGui::End();
 
 		if (!ImGui::GetIO().WantCaptureMouse) {
@@ -81,6 +87,7 @@ public:
 
 		if (app.window->getWidth() != renderCTX.swapchain->getSize().width || app.window->getHeight() != renderCTX.swapchain->getSize().height) {
 			renderCTX.resize(cmdList, app.window->getWidth(), app.window->getHeight());
+			frameBufferDebugRenderer.recreateImages(renderCTX, cmdList, app.window->getWidth(), app.window->getHeight());
 		}
 
 		/// ------------ Begin Data Uploading ---------------------
@@ -136,6 +143,15 @@ public:
 			meshRender.render(renderCTX, cmdList, draws);
 		}
 
+		auto upload = FrameBufferDebugRenderer::UploadData{
+			.far = cameraController.far,
+			.near = cameraController.near,
+			.imageWidth = (i32)app.window->getWidth(),
+			.imageHeight = (i32)app.window->getHeight(),
+			.inverseView = glm::inverse(cameraController.view),
+		};
+		frameBufferDebugRenderer.renderDebugViews(renderCTX, cmdList, upload);
+
 		cmdList->insertMemoryBarrier({
 			.awaitedStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
 			.waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
@@ -160,6 +176,7 @@ public:
 		renderCTX.queue->submit(submitInfo);
 
 		renderCTX.present();
+		printf("frame\n");
 	}
 
 	void cleanup(daxa::AppState& app) {

@@ -16,12 +16,12 @@ public:
 		, swapchainImage{ this->swapchain->aquireNextImage() }
 		, presentSignal{ this->device->createSignal() }
     {
+		defaultSampler = device->createSampler({});
 		auto cmd = device->getEmptyCommandList();
 		cmd->begin();
 		recreateFramebuffer(cmd, window.getWidth(), window.getHeight());
 		cmd->end();
 		queue->submitBlocking({.commandLists = {cmd}});
-		defaultSampler = device->createSampler({});
     }
 
     ~RenderContext() {
@@ -39,34 +39,18 @@ public:
 			.width = width,
 			.height = height,
 			.format = VK_FORMAT_D32_SFLOAT,
-			.imageUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+			.imageUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 			.imageAspekt = VK_IMAGE_ASPECT_DEPTH_BIT,
+			.sampler = defaultSampler,
 		});
 
-		this->depthImageCopy = device->createImage2d({
-			.width = width,
-			.height = height,
-			.format = VK_FORMAT_D32_SFLOAT,
-			.imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-			.imageAspekt = VK_IMAGE_ASPECT_DEPTH_BIT,
-			.sampler = device->createSampler({}),
-		});
-
-		this->normalsBuffer = device->createImage2d({
+		this->normalsImage = device->createImage2d({
 			.width = width,
 			.height = height,
 			.format = VK_FORMAT_R16G16_SFLOAT,
-			.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+			.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 			.imageAspekt = VK_IMAGE_ASPECT_COLOR_BIT,
-		});
-
-		this->normalsBufferCopy = device->createImage2d({
-			.width = width,
-			.height = height,
-			.format = VK_FORMAT_R16G16_SFLOAT,
-			.imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-			.imageAspekt = VK_IMAGE_ASPECT_COLOR_BIT,
-			.sampler = device->createSampler({}),
+			.sampler = defaultSampler,
 		});
 
 		cmd->insertImageBarriers(std::array{
@@ -75,16 +59,8 @@ public:
 				.layoutAfter = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 			},
 			daxa::gpu::ImageBarrier{
-				.image = depthImageCopy,
-				.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			},
-			daxa::gpu::ImageBarrier{
-				.image = normalsBuffer,
+				.image = normalsImage,
 				.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			},
-			daxa::gpu::ImageBarrier{
-				.image = normalsBufferCopy,
-				.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 			},
 		});
 	}
@@ -108,8 +84,6 @@ public:
 	daxa::gpu::SwapchainImage swapchainImage = {};
 	daxa::gpu::SignalHandle presentSignal = {};
 	daxa::gpu::ImageHandle depthImage = {};
-	daxa::gpu::ImageHandle depthImageCopy = {};
-	daxa::gpu::ImageHandle normalsBuffer = {};
-	daxa::gpu::ImageHandle normalsBufferCopy = {};
+	daxa::gpu::ImageHandle normalsImage = {};
 	daxa::gpu::SamplerHandle defaultSampler = {};
 };
