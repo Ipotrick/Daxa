@@ -23,6 +23,7 @@ namespace daxa {
 			VmaMemoryUsage memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY;
 			VkMemoryPropertyFlags memoryPropertyFlags = VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 			std::optional<SamplerHandle> sampler = {};		// optional sampler
+			char const* debugName = {};
 		};
 
 		class Image {

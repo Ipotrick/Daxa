@@ -87,7 +87,7 @@ namespace daxa {
 			 */
 			PipelineHandle createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder);
 
-			PipelineHandle createComputePipeline(ShaderModuleHandle& shader);
+			PipelineHandle createComputePipeline(ShaderModuleHandle& shader, char const* debugName = nullptr);
 
 			BindingSetAllocatorHandle createBindingSetAllocator(BindingSetDescription const* setDescription, size_t setPerPool = 64);
 
