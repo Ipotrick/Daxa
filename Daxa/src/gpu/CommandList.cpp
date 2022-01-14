@@ -33,6 +33,10 @@ namespace daxa {
 			DAXA_ASSERT_M(finalized == false, "can not finalize a command list twice");
 			vkEndCommandBuffer(cmd);
 			finalized = true;
+
+			for (auto& buf : this->usedBuffers) {
+				DAXA_ASSERT_M(buf->getMemeoryMapCount() == 0, "all buffers used in a command list must be unmapped when the list is finalized");
+			}
 		}
 
 		MappedStagingMemory CommandList::mapMemoryStaged(BufferHandle copyDst, size_t size, size_t dstOffset) {
