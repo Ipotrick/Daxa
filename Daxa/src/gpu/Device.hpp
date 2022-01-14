@@ -63,7 +63,7 @@ namespace daxa {
 
 			BindingSetDescription const* createBindingSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings);
 
-			Result<ShaderModuleHandle> createShderModule(ShaderModuleCreateInfo const& ci);
+			Result<ShaderModuleHandle> createShaderModule(ShaderModuleCreateInfo const& ci);
 
 			/**
 			 * Creates a graphics pipeline, wich is specified by the pipeline builder.
