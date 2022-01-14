@@ -443,7 +443,7 @@ namespace daxa {
 			auto err = vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline);
 			DAXA_ASSERT_M(err == VK_SUCCESS, "could not create graphics pipeline");
 
-			if (debugName) {
+			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && debugName != nullptr) {
 				const VkDebugUtilsObjectNameInfoEXT nameInfo =
 				{
 					VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -501,7 +501,7 @@ namespace daxa {
 			};
 			vkCreateComputePipelines(device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline);
 
-			if (debugName) {
+			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && debugName != nullptr) {
 				const VkDebugUtilsObjectNameInfoEXT nameInfo =
 				{
 					VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,

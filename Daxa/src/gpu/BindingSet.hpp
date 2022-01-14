@@ -179,7 +179,7 @@ namespace daxa {
 			BindingSetAllocator& operator=(BindingSetAllocator const&) 		= delete;
 			~BindingSetAllocator();
 
-			BindingSetHandle getSet(const char* debugName = "");
+			BindingSetHandle getSet(const char* debugName = {});
 
 			std::string const& getDebugName() const { return debugName; }
 		private:
