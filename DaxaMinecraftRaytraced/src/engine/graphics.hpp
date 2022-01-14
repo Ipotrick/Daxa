@@ -2,7 +2,7 @@
 
 #include <Daxa.hpp>
 
-#define STB_IMAGE_IMPLEMENTATION
+// #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
 #include <string>
@@ -72,8 +72,7 @@ struct RenderContext {
             });
         }
         auto * currentFrame = &frames.front();
-        auto   cmd_list     = device->getEmptyCommandList();
-        cmd_list->begin();
+        auto   cmd_list     = device->getCommandList();
 
         std::array imgBarrier0 = {daxa::gpu::ImageBarrier{
             .waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
@@ -120,7 +119,7 @@ struct RenderContext {
             .layoutAfter  = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
         }};
         cmd_list->insertBarriers({}, imgBarrier1);
-        cmd_list->end();
+        cmd_list->finalize();
         std::array signalTimelines = {
             std::tuple{currentFrame->timeline, ++currentFrame->timeline_counter},
         };
@@ -167,15 +166,14 @@ struct Texture {
             }),
         });
 
-        auto cmd_list = render_ctx.device->getEmptyCommandList();
-        cmd_list->begin();
+        auto cmd_list = render_ctx.device->getCommandList();
         cmd_list->copyHostToImageSynced({
             .src            = data,
             .dst            = image,
             .size           = size_x * size_y * num_channels * sizeof(uint8_t),
             .dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         });
-        cmd_list->end();
+        cmd_list->finalize();
         render_ctx.queue->submitBlocking({
             .commandLists = {cmd_list},
         });
