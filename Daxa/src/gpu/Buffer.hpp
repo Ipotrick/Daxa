@@ -110,7 +110,7 @@ namespace daxa {
 			template<typename ValueT = u8>
 			MappedMemoryPointer<ValueT> mapMemory() {
 				auto ret = mapMemoryVoid();
-				return {static_cast<ValueT*>(ret.hostPtr), ret.size, ret.owningBuffer};
+				return {static_cast<ValueT*>(ret.hostPtr), ret.size, std::move(ret.owningBuffer)};
 			}
 		private:
 			friend class Device;
