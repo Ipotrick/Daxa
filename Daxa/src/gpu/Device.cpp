@@ -116,7 +116,7 @@ namespace daxa {
 		}
 
 		QueueHandle Device::createQueue(QueueCreateInfo const& ci) {
-			return QueueHandle{ std::make_shared<Queue>(device, vkbDevice.get_queue(vkb::QueueType::graphics).value(), ci.batchCount, ci.debugName) };
+			return QueueHandle{ std::make_shared<Queue>(device, vkbDevice.get_queue(vkb::QueueType::graphics).value(), ci) };
 		}
 
 		SamplerHandle Device::createSampler(SamplerCreateInfo ci) {
@@ -133,12 +133,12 @@ namespace daxa {
 			return BufferHandle{ std::make_shared<Buffer>(device, graphicsQFamilyIndex, allocator, ci) };
 		}
 
-		TimelineSemaphoreHandle Device::createTimelineSemaphore() {
-			return TimelineSemaphoreHandle{ std::make_shared<TimelineSemaphore>(device) };
+		TimelineSemaphoreHandle Device::createTimelineSemaphore(TimelineSemaphoreCreateInfo const& ci) {
+			return TimelineSemaphoreHandle{ std::make_shared<TimelineSemaphore>(device, ci) };
 		}
 
-		SignalHandle Device::createSignal() {
-			return SignalHandle{ std::make_shared<Signal>(device) };
+		SignalHandle Device::createSignal(SignalCreateInfo const& ci) {
+			return SignalHandle{ std::make_shared<Signal>(device, ci) };
 		}
 
 		SwapchainHandle Device::createSwapchain(SwapchainCreateInfo ci) {
@@ -151,8 +151,10 @@ namespace daxa {
 			return bindingSetDescriptionCache->getSetDescription(bindings);
 		}
 
-		CommandListHandle Device::getCommandList() {
-			return std::move(getNextCommandList());
+		CommandListHandle Device::getCommandList(char const* debugName) {
+			auto list = std::move(getNextCommandList());
+			list->setDebugName(debugName);
+			return std::move(list);
 		}
 
 		void Device::waitIdle() {
@@ -201,14 +203,6 @@ namespace daxa {
 			return std::move(ret);
 		}
 
-		Result<ShaderModuleHandle> Device::tryCreateShderModuleFromGLSL(std::string const& glslSource, VkShaderStageFlagBits stage, std::string const& entrypoint) {
-			return ShaderModuleHandle::tryCreateDAXAShaderModule(device, glslSource, entrypoint, stage);
-		}
-
-		Result<ShaderModuleHandle> Device::tryCreateShderModuleFromFile(std::filesystem::path const& pathToGlsl, VkShaderStageFlagBits stage, std::string const& entrypoint) {
-			return ShaderModuleHandle::tryCreateDAXAShaderModule(device, pathToGlsl, entrypoint, stage);
-		}
-
 		PipelineHandle Device::createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder) {
 			return pipelineBuilder.build(device, *bindingSetDescriptionCache);
 		}
@@ -218,7 +212,11 @@ namespace daxa {
 		}
 
 		BindingSetAllocatorHandle Device::createBindingSetAllocator(BindingSetAllocatorCreateInfo const& ci) {
-			return BindingSetAllocatorHandle{ std::make_shared<BindingSetAllocator>(device, ci.setDescription, ci.setPerPool, ci.debugName) };
+			return BindingSetAllocatorHandle{ std::make_shared<BindingSetAllocator>(device, ci) };
+		}
+
+		Result<ShaderModuleHandle> Device::createShderModule(ShaderModuleCreateInfo const& ci) {
+			return ShaderModuleHandle::tryCreateDAXAShaderModule(device, ci);
 		}
 	}
 }

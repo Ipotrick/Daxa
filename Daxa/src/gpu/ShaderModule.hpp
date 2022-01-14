@@ -4,6 +4,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include <variant>
 #include <memory>
 #include <vector>
 #include <string>
@@ -22,7 +23,7 @@ namespace daxa {
 		public:
 			ShaderModule()						 					= default;
 			ShaderModule(ShaderModule&& other) noexcept				= delete;
-			ShaderModule& operator=(ShaderModule&& other) noexcept	= delete;
+			ShaderModule& operator=(ShaderModule&& other) noexcept	= delete; 
 			ShaderModule(ShaderModule const& other)					= delete;
 			ShaderModule& operator=(ShaderModule const& other)		= delete;
 			~ShaderModule();
@@ -31,17 +32,28 @@ namespace daxa {
 			VkShaderStageFlagBits getVkShaderStage() const { return shaderStage; }
 			std::string const& getVkEntryPoint() const { return entryPoint; }
 			VkShaderModule getVkShaderModule() const { return shaderModule; }
+
+			std::string const& getDebugName() const { return debugName; }
 		private:
 			friend class GraphicsPipelineBuilder;
 			friend class ShaderModuleHandle;
 			friend class Device;
 			friend class CommandList;
 
-			VkDevice device;
-			std::vector<u32> spirv;
-			VkShaderStageFlagBits shaderStage;
-			std::string entryPoint;
-			VkShaderModule shaderModule;
+			VkDevice 				device 			= {};
+			std::vector<u32> 		spirv 			= {};
+			VkShaderStageFlagBits 	shaderStage 	= {};
+			std::string 			entryPoint 		= {};
+			VkShaderModule 			shaderModule 	= {};
+			std::string 			debugName 		= {};
+		};
+
+		struct ShaderModuleCreateInfo {
+			const char* 			glslSource		= {};
+			const char*				pathToSource 	= {};
+			char const* 			entryPoint 		= "main";
+			VkShaderStageFlagBits 	stage 			= {};
+			char const* 			debugName 		= {};
 		};
 
 		class ShaderModuleHandle {
@@ -50,9 +62,6 @@ namespace daxa {
 				: shaderModule{ std::move(shaderModule) }
 			{}
 			ShaderModuleHandle() = default;
-			
-			static Result<ShaderModuleHandle> tryCreateDAXAShaderModule(VkDevice device, std::filesystem::path const& path, std::string const& entryPoint, VkShaderStageFlagBits shaderStage);
-			static Result<ShaderModuleHandle> tryCreateDAXAShaderModule(VkDevice device, std::string const& glsl, std::string const& entryPoint, VkShaderStageFlagBits shaderStage);
 
 			ShaderModule const& operator*() const { return *shaderModule; }
 			ShaderModule& operator*() { return *shaderModule; }
@@ -65,6 +74,12 @@ namespace daxa {
 			bool operator!() const { return !shaderModule; }
 			bool valid() const { return *this; }
 		private:
+			friend class Device;
+
+			static Result<ShaderModuleHandle> tryCreateDAXAShaderModule(VkDevice device, std::filesystem::path const& path, std::string const& entryPoint, VkShaderStageFlagBits shaderStage);
+			static Result<ShaderModuleHandle> tryCreateDAXAShaderModule(VkDevice device, std::string const& glsl, std::string const& entryPoint, VkShaderStageFlagBits shaderStage);
+			static Result<ShaderModuleHandle> tryCreateDAXAShaderModule(VkDevice device, ShaderModuleCreateInfo const& ci);
+
 			std::shared_ptr<ShaderModule> shaderModule = {};
 		};
 	}

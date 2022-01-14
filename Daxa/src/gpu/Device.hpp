@@ -28,17 +28,6 @@ namespace daxa {
 
 		class DeviceHandle;
 
-		struct BindingSetAllocatorCreateInfo {
-			BindingSetDescription const* setDescription = {};
-			size_t setPerPool 							= 64;
-			char const* debugName 						= {};
-		};
-
-		struct QueueCreateInfo {
-			u32 batchCount = 0;
-			char const* debugName = {};
-		};
-
 		class Device {
 		public:
 			Device(vkb::Instance&);
@@ -66,29 +55,15 @@ namespace daxa {
 			 */
 			BufferHandle createBuffer(BufferCreateInfo ci);
 
-			TimelineSemaphoreHandle createTimelineSemaphore();
+			TimelineSemaphoreHandle createTimelineSemaphore(TimelineSemaphoreCreateInfo const& ci);
 
-			SignalHandle createSignal();
+			SignalHandle createSignal(SignalCreateInfo const& ci);
 
 			SwapchainHandle createSwapchain(SwapchainCreateInfo swapchainCI);
 
 			BindingSetDescription const* createBindingSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings);
 
-			/**
-			 * \param glslSource a string with valid glsl source code.
-			 * \param stage the shader stage, can be any of the VkShaderStageFlagBits.
-			 * \param name a name for the shader stage, only used for debugging.
-			 * \return newly created ShaderModule from the given source IF source is valid, or a nullopt if the source or path is invalid.
-			 */
-			Result<ShaderModuleHandle> tryCreateShderModuleFromGLSL(std::string const& glslSource, VkShaderStageFlagBits stage, std::string const& entryPoint = "main");
-
-			/**
-			 * \param pathToGlsl a path to a file that contains valid glsl source code.
-			 * \param stage the shader stage, can be any of the VkShaderStageFlagBits.
-			 * \param name a name for the shader stage, only used for debugging.
-			 * \return newly created ShaderModule from the given source IF source path is valid, or a nullopt if the source or path is invalid.
-			 */
-			Result<ShaderModuleHandle> tryCreateShderModuleFromFile(std::filesystem::path const& pathToGlsl, VkShaderStageFlagBits stage, std::string const& entryPoint = "main");
+			Result<ShaderModuleHandle> createShderModule(ShaderModuleCreateInfo const& ci);
 
 			/**
 			 * Creates a graphics pipeline, wich is specified by the pipeline builder.
@@ -105,7 +80,7 @@ namespace daxa {
 			/**
 			 * \return returns an empty CommandList.
 			 */
-			CommandListHandle getCommandList();
+			CommandListHandle getCommandList(char const* debugName = {});
 
 			/**
 			 * Waits for the device to complete all submitted operations and the gpu to idle.

@@ -1,9 +1,10 @@
 #include "TimelineSemaphore.hpp"
+#include "Instance.hpp"
 
 namespace daxa {
 	namespace gpu {
 
-		TimelineSemaphore::TimelineSemaphore(VkDevice device) 
+		TimelineSemaphore::TimelineSemaphore(VkDevice device, TimelineSemaphoreCreateInfo const& ci) 
 			: device{ device }
 		{
 
@@ -11,7 +12,7 @@ namespace daxa {
 				.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
 				.pNext = nullptr,
 				.semaphoreType = VkSemaphoreType::VK_SEMAPHORE_TYPE_TIMELINE,
-				.initialValue = 0,
+				.initialValue = ci.initialValue,
 			};
 
 			VkSemaphoreCreateInfo timelineSemaphoreCI{
@@ -21,6 +22,19 @@ namespace daxa {
 			};
 
 			vkCreateSemaphore(this->device, &timelineSemaphoreCI, nullptr, &this->timelineSema);
+
+			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
+				this->debugName = ci.debugName;
+
+				VkDebugUtilsObjectNameInfoEXT imageNameInfo{
+					.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+					.pNext = NULL,
+					.objectType = VK_OBJECT_TYPE_SEMAPHORE,
+					.objectHandle = (uint64_t)timelineSema,
+					.pObjectName = ci.debugName,
+				};
+				instance->pfnSetDebugUtilsObjectNameEXT(device, &imageNameInfo);
+			}
 		}
 
 		TimelineSemaphore::~TimelineSemaphore() {
