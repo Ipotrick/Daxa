@@ -17,6 +17,11 @@
 
 namespace daxa {
 	namespace gpu {
+
+		struct QueueCreateInfo {
+			u32 batchCount = 0;
+			char const* debugName = {};
+		};
 		
 		struct SubmitInfo {
 			std::vector<CommandListHandle>						commandLists 		= {};		// TODO REPLACE THIS VECTOR WITH HEAPLESS VERSION
@@ -28,7 +33,7 @@ namespace daxa {
 
 		class Queue {
 		public:
-			Queue(VkDevice device, VkQueue queue, u32 batchCount, char const* debugName);
+			Queue(VkDevice device, VkQueue queue, QueueCreateInfo const& ci);
 			Queue() 									= default;
 			Queue(Queue const&) 						= delete;
 			Queue& operator=(Queue const&) 				= delete;

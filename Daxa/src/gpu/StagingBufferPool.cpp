@@ -1,4 +1,5 @@
 #include "StagingBufferPool.hpp"
+#include "Instance.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -47,6 +48,10 @@ namespace daxa {
 					.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 					.memoryUsage = VMA_MEMORY_USAGE_CPU_TO_GPU,
 				};
+
+				if (instance->pfnSetDebugUtilsObjectNameEXT) {
+					bufferCI.debugName = "staging buffer";
+				}
 
 				sharedData->pool.push_back(BufferHandle{ std::make_shared<Buffer>(device, queueFamilyIndex, allocator, bufferCI) });
 			}

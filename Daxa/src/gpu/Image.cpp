@@ -47,18 +47,18 @@ namespace daxa {
 			auto err = vmaCreateImage(allocator, (VkImageCreateInfo*)&ici, &aci, (VkImage*)&ret.image, &ret.allocation, nullptr);
 			DAXA_ASSERT_M(err == VK_SUCCESS, "could not create image");
 
-			if (ci.debugName) {
-				const VkDebugUtilsObjectNameInfoEXT imageNameInfo =
-				{
-					VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, // sType
-					NULL,                                               // pNext
-					VK_OBJECT_TYPE_IMAGE,                               // objectType
-					(uint64_t)ret.image,                                // objectHandle
-					ci.debugName,                            			// pObjectName
+			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
+				ret.debugName = ci.debugName;
+
+				VkDebugUtilsObjectNameInfoEXT imageNameInfo{
+					.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+					.pNext = NULL,
+					.objectType = VK_OBJECT_TYPE_IMAGE,
+					.objectHandle = (uint64_t)ret.image,
+					.pObjectName = ci.debugName,
 				};
 				instance->pfnSetDebugUtilsObjectNameEXT(device, &imageNameInfo);
 			}
-
 
 			VkImageViewCreateInfo ivci{
 				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
