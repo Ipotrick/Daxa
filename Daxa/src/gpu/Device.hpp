@@ -28,6 +28,17 @@ namespace daxa {
 
 		class DeviceHandle;
 
+		struct BindingSetAllocatorCreateInfo {
+			BindingSetDescription const* setDescription = {};
+			size_t setPerPool 							= 64;
+			char const* debugName 						= {};
+		};
+
+		struct QueueCreateInfo {
+			u32 batchCount = 0;
+			char const* debugName = {};
+		};
+
 		class Device {
 		public:
 			Device(vkb::Instance&);
@@ -37,7 +48,7 @@ namespace daxa {
 			Device& operator=(Device&&) noexcept	= delete;
 			~Device();
 
-			QueueHandle createQueue(u32 batchCount = 0);
+			QueueHandle createQueue(QueueCreateInfo const& ci);
 
 			static DeviceHandle create();
 
@@ -87,9 +98,9 @@ namespace daxa {
 			 */
 			PipelineHandle createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder);
 
-			PipelineHandle createComputePipeline(ShaderModuleHandle& shader, char const* debugName = nullptr);
+			PipelineHandle createComputePipeline(ShaderModuleHandle& shader, char const* debugName = {});
 
-			BindingSetAllocatorHandle createBindingSetAllocator(BindingSetDescription const* setDescription, size_t setPerPool = 64);
+			BindingSetAllocatorHandle createBindingSetAllocator(BindingSetAllocatorCreateInfo const& ci);
 
 			/**
 			 * \return returns an empty CommandList.

@@ -1,6 +1,9 @@
 # Created by https://www.toptal.com/developers/gitignore/api/linux,windows,visualstudio,c++
 # Edit at https://www.toptal.com/developers/gitignore?templates=linux,windows,visualstudio,c++
 
+# imgui
+*.ini
+
 # shader bytecode
 *.fspv
 *.vspv
