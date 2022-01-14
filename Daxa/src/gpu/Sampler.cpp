@@ -49,7 +49,7 @@ namespace daxa {
 			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
 				this->debugName = ci.debugName;
 
-				auto nameInfo = VkDebugUtilsObjectNameInfoEXT{
+				VkDebugUtilsObjectNameInfoEXT nameInfo {
 					.sType =  VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
 					.pNext = NULL,
 					.objectType = VK_OBJECT_TYPE_SAMPLER,

@@ -12,11 +12,11 @@
 namespace daxa {
 	namespace gpu {
 		struct BufferCreateInfo {
-			uz size									= {};
-			VkBufferUsageFlags usage				= {};
-			VmaMemoryUsage memoryUsage				= {};
-			VkMemoryPropertyFlags memoryProperties 	= {};
-			char const* debugName 					= {};
+			uz 						size				= {};
+			VkBufferUsageFlags 		usage				= {};
+			VmaMemoryUsage 			memoryUsage			= {};
+			VkMemoryPropertyFlags 	memoryProperties 	= {};
+			char const* 			debugName 			= {};
 		};
 
 		class BufferHandle;
@@ -52,20 +52,22 @@ namespace daxa {
 
 			VmaMemoryUsage getVmaMemoryUsage() const { return memoryUsage; }
 
+			std::string const& getDebugName() const { return debugName; }
 		private:
 			friend class Device;
 			friend class BufferHandle;
 			friend class StagingBufferPool;
 			friend class Queue;
 
-			VkBuffer buffer = VK_NULL_HANDLE;
-			size_t size = {};
-			VkBufferUsageFlags usage = {};
-			VmaMemoryUsage memoryUsage = {};
-			VmaAllocation allocation = {};
-			VmaAllocator allocator = {};
-			u32 usesOnGPU = {};
-			u32 memoryMapCount = 0;
+			VkBuffer 			buffer 			= VK_NULL_HANDLE;
+			size_t 				size 			= {};
+			VkBufferUsageFlags 	usage 			= {};
+			VmaMemoryUsage 		memoryUsage 	= {};
+			VmaAllocation 		allocation 		= {};
+			VmaAllocator 		allocator 		= {};
+			u32 				usesOnGPU 		= {};
+			u32 				memoryMapCount 	= {};
+			std::string 		debugName 		= {};
 		};
 
 		class BufferHandle {
