@@ -16,15 +16,18 @@ public:
     };
 
     void init(RenderContext& renderCTX, u32 width, u32 height) {
-        auto shader = renderCTX.device->tryCreateShderModuleFromFile(
-			"./DaxaMeshview/renderer/fb_debug.comp",
-			VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT
-		);
+        auto shader = renderCTX.device->createShaderModule({
+            .pathToSource = "./DaxaMeshview/renderer/fb_debug.comp",
+            .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+        });
 		if (shader.isErr()) {
 			std::cout << "could not load vertex shader due to: " << shader.message() << std::endl;
 		}
 
-		this->pipeline = renderCTX.device->createComputePipeline(shader.value(), "frame buffer debug pipeline");
+		this->pipeline = renderCTX.device->createComputePipeline({
+            .shaderModule = shader.value(), 
+            .debugName = "frame buffer debug pipeline",
+        });
 
 		this->setAlloc = renderCTX.device->createBindingSetAllocator({
             .setDescription = pipeline->getSetDescription(0),

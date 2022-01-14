@@ -1,4 +1,5 @@
 #include "CommandList.hpp"
+#include "Instance.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -419,6 +420,28 @@ namespace daxa {
 				.flags = VkCommandBufferUsageFlagBits::VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
 			};
 			vkBeginCommandBuffer(cmd, &cbbi);
+		}
+
+		void CommandList::setDebugName(char const* debugName) {
+			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && debugName != nullptr) {
+				this->debugName = debugName;
+				VkDebugUtilsObjectNameInfoEXT nameInfo {
+					.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+					.pNext = NULL,
+					.objectType = VK_OBJECT_TYPE_COMMAND_BUFFER,
+					.objectHandle = (uint64_t)this->cmd,
+					.pObjectName = debugName,
+				};
+				instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
+				nameInfo = VkDebugUtilsObjectNameInfoEXT {
+					.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+					.pNext = NULL,
+					.objectType = VK_OBJECT_TYPE_COMMAND_POOL,
+					.objectHandle = (uint64_t)this->cmdPool,
+					.pObjectName = debugName,
+				};
+				instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
+			}
 		}
 
 		void CommandList::reset() {

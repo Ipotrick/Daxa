@@ -10,24 +10,25 @@ namespace daxa {
 	namespace gpu {
 
 		struct SamplerCreateInfo {
-			VkFilter                magFilter = VK_FILTER_LINEAR;
-			VkFilter                minFilter = VK_FILTER_LINEAR;
-			VkSamplerMipmapMode     mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-			VkSamplerAddressMode    addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			VkSamplerAddressMode    addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			VkSamplerAddressMode    addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			float                   mipLodBias = 0.0f;
-			VkBool32                anisotropyEnable = VK_FALSE;
-			float                   maxAnisotropy = 0.0f;
-			VkBool32                compareEnable = VK_FALSE;
-			VkCompareOp             compareOp = VK_COMPARE_OP_MAX_ENUM;
-			float                   minLod = 0.0f;
-			float                   maxLod = 0.0f;
-			VkBorderColor           borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+			VkFilter                magFilter 				= VK_FILTER_LINEAR;
+			VkFilter                minFilter 				= VK_FILTER_LINEAR;
+			VkSamplerMipmapMode     mipmapMode 				= VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			VkSamplerAddressMode    addressModeU 			= VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			VkSamplerAddressMode    addressModeV 			= VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			VkSamplerAddressMode    addressModeW 			= VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			float                   mipLodBias 				= 0.0f;
+			VkBool32                anisotropyEnable 		= VK_FALSE;
+			float                   maxAnisotropy 			= 0.0f;
+			VkBool32                compareEnable 			= VK_FALSE;
+			VkCompareOp             compareOp 				= VK_COMPARE_OP_MAX_ENUM;
+			float                   minLod 					= 0.0f;
+			float                   maxLod 					= 0.0f;
+			VkBorderColor           borderColor 			= VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 			VkBool32                unnormalizedCoordinates = VK_FALSE;
+			char const* 			debugName 				= {};
 
 			bool operator == (SamplerCreateInfo const& other) const {
-				return std::memcmp(this, &other, sizeof(decltype(this))) == 0;
+				return std::memcmp(this, &other, sizeof(SamplerCreateInfo)) == 0;
 			}
 		};
 
@@ -56,6 +57,8 @@ namespace daxa {
 			float getVkMasLod () const { return maxLod; }
 			VkBorderColor getVkBorderColor () const { return borderColor; }
 			VkBool32 getVkNormalizedCoodinatesEnable () const { return unnormalizedCoordinates; }
+
+			std::string const& getDebugName() const { return debugName; }
 		private:
 			VkDevice				device = VK_NULL_HANDLE;
 			VkSampler				sampler = VK_NULL_HANDLE;
@@ -75,6 +78,7 @@ namespace daxa {
 			float                   maxLod;
 			VkBorderColor           borderColor;
 			VkBool32                unnormalizedCoordinates;
+			std::string				debugName = {};
 		};
 
 		class SamplerHandle {

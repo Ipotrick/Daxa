@@ -210,12 +210,15 @@ namespace daxa {
 			return description;
 		}
 
-		BindingSetAllocator::BindingSetAllocator(VkDevice device, BindingSetDescription const* setDescription, size_t setsPerPool, char const* debugName)
+		BindingSetAllocator::BindingSetAllocator(VkDevice device, BindingSetAllocatorCreateInfo const& ci)
 			: device{ device }
-			, setDescription{ setDescription }
-			, setsPerPool{ setsPerPool }
-			, debugName{ debugName }
+			, setDescription{ ci.setDescription }
+			, setsPerPool{ ci.setPerPool }
 		{
+			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
+				this->debugName = ci.debugName;
+			}
+
 			DAXA_ASSERT_M(setDescription, "setDescription was nullptr");
 			initPoolSizes();
 		}
@@ -232,17 +235,18 @@ namespace daxa {
 		}
 		
 		void BindingSet::setDebugName(char const* debugName) {
-			this->debugName = debugName;
+			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && debugName != nullptr) {
+				this->debugName = debugName;
 
-			const VkDebugUtilsObjectNameInfoEXT imageNameInfo =
-			{
-				VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-				NULL,
-				VK_OBJECT_TYPE_DESCRIPTOR_SET,
-				(uint64_t)this->set,
-				debugName,
-			};
-			instance->pfnSetDebugUtilsObjectNameEXT(this->device, &imageNameInfo);
+				VkDebugUtilsObjectNameInfoEXT imageNameInfo {
+					.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+					.pNext = NULL,
+					.objectType = VK_OBJECT_TYPE_DESCRIPTOR_SET,
+					.objectHandle = (uint64_t)this->set,
+					.pObjectName = debugName,
+				};
+				instance->pfnSetDebugUtilsObjectNameEXT(this->device, &imageNameInfo);
+			}
 		}
 
 		BindingSetHandle BindingSetAllocator::getSet(char const* debugName) {
@@ -265,10 +269,12 @@ namespace daxa {
 				handleOpt = getNewSet(pools.back());
 			}
 
-			if (instance->pfnSetDebugUtilsObjectNameEXT) {
-				if (handleOpt.value()->getDebugName() != debugName) {
-					handleOpt.value()->setDebugName(debugName);
-				}
+			if (
+				instance->pfnSetDebugUtilsObjectNameEXT && 
+				debugName != nullptr && 
+				handleOpt.value()->getDebugName() != debugName
+			) {
+				handleOpt.value()->setDebugName(debugName);
 			}
 
 			return std::move(handleOpt.value());
@@ -315,7 +321,7 @@ namespace daxa {
 			ret->allocatedSets = 0;
 			ret->zombies = {};
 
-			if (instance->pfnSetDebugUtilsObjectNameEXT) {
+			if (instance->pfnSetDebugUtilsObjectNameEXT && !debugName.empty()) {
 				poolNameBuffer.clear();
 				poolNameBuffer = debugName;
 				poolNameBuffer += " pool nr ";

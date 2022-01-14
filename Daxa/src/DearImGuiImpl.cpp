@@ -89,7 +89,7 @@ namespace daxa {
     {
         embraceTheDarkness();
 
-        char const* const vertexGLSL = R"--(
+        char const* vertexGLSL = R"--(
             #version 450 core
             layout(location = 0) in vec2 aPos;
             layout(location = 1) in vec2 aUV;
@@ -104,9 +104,9 @@ namespace daxa {
                 gl_Position = vec4(aPos * pc.uScale + pc.uTranslate, 0, 1);
             }
         )--";
-        auto vertexShaderModule = device->tryCreateShderModuleFromGLSL(vertexGLSL, VK_SHADER_STAGE_VERTEX_BIT).value();
+        auto vertexShaderModule = device->createShaderModule({.glslSource = vertexGLSL, .stage = VK_SHADER_STAGE_VERTEX_BIT}).value();
 
-        char const* const fragmentGLSL = R"--(
+        char const* fragmentGLSL = R"--(
             #version 450 core
             layout(location = 0) out vec4 fColor;
             layout(set=0, binding=0) uniform sampler2D sTexture;
@@ -125,7 +125,7 @@ namespace daxa {
                 fColor = color * texture(sTexture, In.UV.st);
             }
         )--";
-        auto fragmentShaderModule = device->tryCreateShderModuleFromGLSL(fragmentGLSL, VK_SHADER_STAGE_FRAGMENT_BIT).value();
+        auto fragmentShaderModule = device->createShaderModule({.glslSource = fragmentGLSL, .stage = VK_SHADER_STAGE_FRAGMENT_BIT}).value();
 
         daxa::gpu::GraphicsPipelineBuilder pipelineBuilder;
         auto pipelineDescription = pipelineBuilder
@@ -263,9 +263,9 @@ namespace daxa {
             auto colorAttachments = std::array{
                 gpu::RenderAttachmentInfo{
                     .image = target,
+                    .layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR,
                     .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
                     .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-                    .layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR,
                 }
             };
             cmdList->beginRendering({

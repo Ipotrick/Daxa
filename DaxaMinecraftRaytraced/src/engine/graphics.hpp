@@ -44,8 +44,8 @@ struct RenderContext {
           })) {
         for (int i = 0; i < 3; i++) {
             frames.push_back(PerFrameData{
-                .present_signal   = device->createSignal(),
-                .timeline         = device->createTimelineSemaphore(),
+                .present_signal   = device->createSignal({}),
+                .timeline         = device->createTimelineSemaphore({}),
                 .timeline_counter = 0,
             });
         }

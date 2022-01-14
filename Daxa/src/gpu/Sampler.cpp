@@ -1,28 +1,29 @@
 #include "Sampler.hpp"
+#include "Instance.hpp"
 
 namespace daxa {
 	namespace gpu {
 
-		Sampler::Sampler(VkDevice device, SamplerCreateInfo const& createInfo) 
+		Sampler::Sampler(VkDevice device, SamplerCreateInfo const& ci) 
 			: device{ device }
 			, flags{ 0 }
-			, magFilter{ createInfo.magFilter }
-			, minFilter{ createInfo.minFilter }
-			, mipmapMode{ createInfo.mipmapMode }
-			, addressModeU{ createInfo.addressModeU }
-			, addressModeV{ createInfo.addressModeV }
-			, addressModeW{ createInfo.addressModeW }
-			, mipLodBias{ createInfo.mipLodBias }
-			, anisotropyEnable{ createInfo.anisotropyEnable }
-			, maxAnisotropy{ createInfo.maxAnisotropy }
-			, compareEnable{ createInfo.compareEnable }
-			, compareOp{ createInfo.compareOp }
-			, minLod{ createInfo.minLod }
-			, maxLod{ createInfo.maxLod }
-			, borderColor{ createInfo.borderColor }
-			, unnormalizedCoordinates{ createInfo.unnormalizedCoordinates }
+			, magFilter{ ci.magFilter }
+			, minFilter{ ci.minFilter }
+			, mipmapMode{ ci.mipmapMode }
+			, addressModeU{ ci.addressModeU }
+			, addressModeV{ ci.addressModeV }
+			, addressModeW{ ci.addressModeW }
+			, mipLodBias{ ci.mipLodBias }
+			, anisotropyEnable{ ci.anisotropyEnable }
+			, maxAnisotropy{ ci.maxAnisotropy }
+			, compareEnable{ ci.compareEnable }
+			, compareOp{ ci.compareOp }
+			, minLod{ ci.minLod }
+			, maxLod{ ci.maxLod }
+			, borderColor{ ci.borderColor }
+			, unnormalizedCoordinates{ ci.unnormalizedCoordinates }
 		{
-			VkSamplerCreateInfo samplerCI{
+			VkSamplerCreateInfo samplerCI {
 				.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 				.pNext = nullptr,
 				.flags = 0,
@@ -44,6 +45,19 @@ namespace daxa {
 			};
 
 			vkCreateSampler(device, &samplerCI, nullptr, &sampler);
+
+			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
+				this->debugName = ci.debugName;
+
+				VkDebugUtilsObjectNameInfoEXT nameInfo {
+					.sType =  VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+					.pNext = NULL,
+					.objectType = VK_OBJECT_TYPE_SAMPLER,
+					.objectHandle = (uint64_t)sampler,
+					.pObjectName = ci.debugName,
+				};
+				daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
+			}
 		}
 
 		Sampler::~Sampler() {
