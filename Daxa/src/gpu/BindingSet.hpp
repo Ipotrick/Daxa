@@ -94,6 +94,8 @@ namespace daxa {
 			void bindImages(u32 binding, std::span<std::pair<ImageHandle, VkImageLayout>> images, u32 descriptorArrayOffset = 0);
 			void bindImage(u32 binding, ImageHandle image, VkImageLayout imgLayout, u32 dstArrayElement = 0);
 
+			std::string const& getDebugName() const { return debugName; }
+
 			VkDescriptorSet getVkDescriptorSet() const { return set; }
 			VkDescriptorSetLayout getVkDescriptorSetLayout() const { return description->layout; }
 		private:
@@ -103,15 +105,17 @@ namespace daxa {
 			friend class BindingSetHandle;
 			friend class Queue;
 
+			void setDebugName(char const* debugName);
+
 			VkDevice device = VK_NULL_HANDLE;
 			VkDescriptorSet set = VK_NULL_HANDLE;
 			BindingSetDescription const* description = {};
 			std::weak_ptr<BindingSetAllocatorBindingiSetPool> pool = {};
 			u32 usesOnGPU = 0;
 
-
 			using HandleVariants = std::variant<ImageHandle, BufferHandle, SamplerHandle, std::monostate>;
 			std::vector<HandleVariants> handles = {};
+			std::string debugName;
 		};
 
 		class BindingSetDescriptionCache {
@@ -167,7 +171,7 @@ namespace daxa {
 		*/
 		class BindingSetAllocator {
 		public:
-			BindingSetAllocator(VkDevice device, BindingSetDescription const* setDescription, size_t setsPerPool = 64);
+			BindingSetAllocator(VkDevice device, BindingSetDescription const* setDescription, size_t setsPerPool, char const* debugName);
 			BindingSetAllocator() 											= default;
 			BindingSetAllocator(BindingSetAllocator&&) noexcept 			= delete;
 			BindingSetAllocator& operator=(BindingSetAllocator&&) noexcept 	= delete;
@@ -175,7 +179,9 @@ namespace daxa {
 			BindingSetAllocator& operator=(BindingSetAllocator const&) 		= delete;
 			~BindingSetAllocator();
 
-			BindingSetHandle getSet();
+			BindingSetHandle getSet(const char* debugName = "");
+
+			std::string const& getDebugName() const { return debugName; }
 		private:
 
 			void initPoolSizes();
@@ -191,6 +197,8 @@ namespace daxa {
 			BindingSetDescription const* setDescription = nullptr;
 
 			std::vector<std::shared_ptr<BindingSetAllocatorBindingiSetPool>> pools;
+			std::string debugName;
+			std::string poolNameBuffer;
 		};
 
 		class BindingSetAllocatorHandle {

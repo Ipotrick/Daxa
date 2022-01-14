@@ -28,7 +28,7 @@ namespace daxa {
 
 		class Queue {
 		public:
-			Queue(VkDevice device, VkQueue queue, u32 batchCount = 0);
+			Queue(VkDevice device, VkQueue queue, u32 batchCount, char const* debugName);
 			Queue() 									= default;
 			Queue(Queue const&) 						= delete;
 			Queue& operator=(Queue const&) 				= delete;
@@ -56,6 +56,8 @@ namespace daxa {
 			void nextBatch();
 
 			void waitIdle();
+
+			std::string const& getDebugName() const { return debugName; }
 		private: 
 			friend class Device;
 
@@ -80,6 +82,7 @@ namespace daxa {
 			std::vector<VkSemaphore> submitSemaphoreSignalBuffer = {};
 			std::vector<u64> submitSemaphoreWaitOnValueBuffer = {};
 			std::vector<u64> submitSemaphoreSignalValueBuffer = {};
+			std::string debugName = {};
 		};
 
 		class QueueHandle {
