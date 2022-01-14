@@ -207,8 +207,8 @@ namespace daxa {
 			return pipelineBuilder.build(device, *bindingSetDescriptionCache);
 		}
 
-		PipelineHandle Device::createComputePipeline(ShaderModuleHandle& shader, char const* debugName) {
-			return gpu::createComputePipeline(device, *bindingSetDescriptionCache, shader, debugName);
+		PipelineHandle Device::createComputePipeline(ComputePipelineCreateInfo const& ci) {
+			return gpu::createComputePipeline(device, *bindingSetDescriptionCache, ci);
 		}
 
 		BindingSetAllocatorHandle Device::createBindingSetAllocator(BindingSetAllocatorCreateInfo const& ci) {
