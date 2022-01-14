@@ -214,8 +214,11 @@ namespace daxa {
 			: device{ device }
 			, setDescription{ setDescription }
 			, setsPerPool{ setsPerPool }
-			, debugName{ debugName }
 		{
+			if (debugName) {
+				this->debugName = debugName;
+			}
+
 			DAXA_ASSERT_M(setDescription, "setDescription was nullptr");
 			initPoolSizes();
 		}
@@ -265,10 +268,12 @@ namespace daxa {
 				handleOpt = getNewSet(pools.back());
 			}
 
-			if (instance->pfnSetDebugUtilsObjectNameEXT) {
-				if (handleOpt.value()->getDebugName() != debugName) {
-					handleOpt.value()->setDebugName(debugName);
-				}
+			if (
+				instance->pfnSetDebugUtilsObjectNameEXT && 
+				debugName != nullptr && 
+				handleOpt.value()->getDebugName() != debugName
+			) {
+				handleOpt.value()->setDebugName(debugName);
 			}
 
 			return std::move(handleOpt.value());
@@ -315,7 +320,7 @@ namespace daxa {
 			ret->allocatedSets = 0;
 			ret->zombies = {};
 
-			if (instance->pfnSetDebugUtilsObjectNameEXT) {
+			if (instance->pfnSetDebugUtilsObjectNameEXT && !debugName.empty()) {
 				poolNameBuffer.clear();
 				poolNameBuffer = debugName;
 				poolNameBuffer += " pool nr ";
