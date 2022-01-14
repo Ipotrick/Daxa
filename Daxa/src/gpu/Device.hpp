@@ -73,7 +73,7 @@ namespace daxa {
 			 */
 			PipelineHandle createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder);
 
-			PipelineHandle createComputePipeline(ShaderModuleHandle& shader, char const* debugName = {});
+			PipelineHandle createComputePipeline(ComputePipelineCreateInfo const& ci);
 
 			BindingSetAllocatorHandle createBindingSetAllocator(BindingSetAllocatorCreateInfo const& ci);
 

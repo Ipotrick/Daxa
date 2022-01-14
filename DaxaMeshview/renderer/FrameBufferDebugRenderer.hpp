@@ -24,7 +24,10 @@ public:
 			std::cout << "could not load vertex shader due to: " << shader.message() << std::endl;
 		}
 
-		this->pipeline = renderCTX.device->createComputePipeline(shader.value(), "frame buffer debug pipeline");
+		this->pipeline = renderCTX.device->createComputePipeline({
+            .shaderModule = shader.value(), 
+            .debugName = "frame buffer debug pipeline",
+        });
 
 		this->setAlloc = renderCTX.device->createBindingSetAllocator({
             .setDescription = pipeline->getSetDescription(0),
