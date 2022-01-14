@@ -14,18 +14,18 @@ class MeshRenderer {
 public:
 
     void init(RenderContext& renderCTX) {
-		auto vertexShader = renderCTX.device->tryCreateShderModuleFromFile(
-			"./DaxaMeshview/renderer/g_pass.vert",
-			VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT
-		);
+		auto vertexShader = renderCTX.device->createShderModule({
+			.pathToSource = "./DaxaMeshview/renderer/g_pass.vert",
+			.stage = VK_SHADER_STAGE_VERTEX_BIT
+		});
 		if (vertexShader.isErr()) {
 			std::cout << "could not load vertex shader due to: " << vertexShader.message() << std::endl;
 		}
 
-		auto fragmenstShader = renderCTX.device->tryCreateShderModuleFromFile(
-			"./DaxaMeshview/renderer/g_pass.frag",
-			VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT
-		);
+		auto fragmenstShader = renderCTX.device->createShderModule({
+			.pathToSource = "./DaxaMeshview/renderer/g_pass.frag",
+			.stage = VK_SHADER_STAGE_FRAGMENT_BIT
+		});
 		if (vertexShader.isErr()) {
 			std::cout << "could not load fragment shader due to: " << vertexShader.message() << std::endl;
 		}

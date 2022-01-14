@@ -123,6 +123,8 @@ namespace daxa {
 						.pObjectName = nameBuffer.c_str(),
 					};
 					daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
+
+					(*this->swapchainImages[i]).debugName = nameBuffer;
 				}
 			}
 		}

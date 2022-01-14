@@ -444,13 +444,12 @@ namespace daxa {
 			DAXA_ASSERT_M(err == VK_SUCCESS, "could not create graphics pipeline");
 
 			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && debugName != nullptr) {
-				const VkDebugUtilsObjectNameInfoEXT nameInfo =
-				{
-					VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-					NULL,
-					VK_OBJECT_TYPE_PIPELINE,
-					(uint64_t)pipelineHandle->pipeline,
-					debugName,
+				VkDebugUtilsObjectNameInfoEXT nameInfo {
+					.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+					.pNext = NULL,
+					.objectType = VK_OBJECT_TYPE_PIPELINE,
+					.objectHandle = (uint64_t)pipelineHandle->pipeline,
+					.pObjectName = debugName,
 				};
 				instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
 			}

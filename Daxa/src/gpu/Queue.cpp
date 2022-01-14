@@ -4,15 +4,15 @@
 namespace daxa {
 	namespace gpu {
 
-		Queue::Queue(VkDevice device, VkQueue queue, u32 batchCount, char const* debugName)
+		Queue::Queue(VkDevice device, VkQueue queue, QueueCreateInfo const& ci)
 			: device{ device }
 			, queue{ queue }
-			, bWaitForBatchesToComplete{ batchCount > 0 }
+			, bWaitForBatchesToComplete{ ci.batchCount > 0 }
 		{
-			this->batches.resize(std::max(u32(1),batchCount));
+			this->batches.resize(std::max(u32(1), ci.batchCount));
 
-			if (debugName) {
-				this->debugName = debugName;
+			if (ci.debugName) {
+				this->debugName = ci.debugName;
 				if (instance->pfnSetDebugUtilsObjectNameEXT) {
 					VkDebugUtilsObjectNameInfoEXT imageNameInfo{
 						.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -116,7 +116,7 @@ namespace daxa {
 
 		TimelineSemaphoreHandle Queue::getNextTimeline() {
 			if (unusedTimelines.empty()) {
-				unusedTimelines.push_back(TimelineSemaphoreHandle{ std::make_shared<TimelineSemaphore>(device) });
+				unusedTimelines.push_back(TimelineSemaphoreHandle{ std::make_shared<TimelineSemaphore>(device, TimelineSemaphoreCreateInfo{.debugName = "queue timline"}) });
 			}
 			auto timeline = std::move(unusedTimelines.back());
 			unusedTimelines.pop_back();

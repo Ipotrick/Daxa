@@ -26,16 +26,17 @@ namespace daxa {
 
 		namespace {
 			struct BindingSetAllocatorBindingiSetPool {
-				VkDescriptorPool pool = VK_NULL_HANDLE;
-				size_t allocatedSets = 0;
-				std::vector<std::shared_ptr<BindingSet>> zombies = {};
-				std::mutex mut = {};
+				VkDescriptorPool 							pool 			= VK_NULL_HANDLE;
+				size_t 										allocatedSets 	= 0;
+				std::vector<std::shared_ptr<BindingSet>> 	zombies 		= {};
+				std::mutex 									mut 			= {};
 			};
 		}
 
 		struct BindingsArray {
-			std::array<VkDescriptorSetLayoutBinding, MAX_BINDINGS_PER_SET> bindings = {};
-			size_t size = 0;
+			std::array<VkDescriptorSetLayoutBinding, MAX_BINDINGS_PER_SET> 	bindings 	= {};
+			size_t 															size 		= 0;
+
 			bool operator==(BindingsArray const& other) const {	
 				auto equal = std::memcmp(this, &other, sizeof(BindingsArray)) == 0;
 				return equal;
@@ -71,10 +72,11 @@ namespace daxa {
 			friend class BindingSetDescriptionCache;
 			friend class GraphicsPipelineBuilder;
 
-			VkDescriptorSetLayout layout = {};
-			BindingsArray layoutBindings = {};
-			std::array<u32, MAX_BINDINGS_PER_SET> bindingToHandleVectorIndex = {};	// used to index the vector for storing the handles of the descriptor sets
-			size_t descriptorCount = {};
+			VkDescriptorSetLayout 					layout 						= {};
+			BindingsArray 							layoutBindings 				= {};
+			// used to index the vector for storing the handles of the descriptor sets:
+			std::array<u32, MAX_BINDINGS_PER_SET> 	bindingToHandleVectorIndex 	= {};
+			size_t 									descriptorCount 			= {};
 		};
 
 		class BindingSet {
@@ -94,10 +96,10 @@ namespace daxa {
 			void bindImages(u32 binding, std::span<std::pair<ImageHandle, VkImageLayout>> images, u32 descriptorArrayOffset = 0);
 			void bindImage(u32 binding, ImageHandle image, VkImageLayout imgLayout, u32 dstArrayElement = 0);
 
-			std::string const& getDebugName() const { return debugName; }
-
 			VkDescriptorSet getVkDescriptorSet() const { return set; }
 			VkDescriptorSetLayout getVkDescriptorSetLayout() const { return description->layout; }
+
+			std::string const& getDebugName() const { return debugName; }
 		private:
 			friend class Device;
 			friend class CommandList;
@@ -107,15 +109,15 @@ namespace daxa {
 
 			void setDebugName(char const* debugName);
 
-			VkDevice device = VK_NULL_HANDLE;
-			VkDescriptorSet set = VK_NULL_HANDLE;
-			BindingSetDescription const* description = {};
-			std::weak_ptr<BindingSetAllocatorBindingiSetPool> pool = {};
-			u32 usesOnGPU = 0;
-
 			using HandleVariants = std::variant<ImageHandle, BufferHandle, SamplerHandle, std::monostate>;
-			std::vector<HandleVariants> handles = {};
-			std::string debugName;
+
+			VkDevice											device 		= VK_NULL_HANDLE;
+			VkDescriptorSet 									set 		= VK_NULL_HANDLE;
+			BindingSetDescription const* 						description = {};
+			std::weak_ptr<BindingSetAllocatorBindingiSetPool> 	pool 		= {};
+			u32 												usesOnGPU 	= 0;
+			std::vector<HandleVariants> 						handles 	= {};
+			std::string 										debugName	= {};
 		};
 
 		class BindingSetDescriptionCache {
@@ -131,8 +133,8 @@ namespace daxa {
 		private:
 			BindingSetDescription makeNewDescription(BindingsArray& bindingArray);
 
-			VkDevice device = VK_NULL_HANDLE;
-			std::unordered_map<BindingsArray, std::unique_ptr<BindingSetDescription>, BindingsArrayHasher> descriptions;
+			VkDevice 																						device 			= VK_NULL_HANDLE;
+			std::unordered_map<BindingsArray, std::unique_ptr<BindingSetDescription>, BindingsArrayHasher> 	descriptions 	= {};
 		};
 
 		class BindingSetHandle {
@@ -166,12 +168,18 @@ namespace daxa {
 			std::shared_ptr<BindingSet> set;
 		};
 
+		struct BindingSetAllocatorCreateInfo {
+			BindingSetDescription const* 	setDescription 	= {};
+			size_t 							setPerPool 		= 64;
+			char const* 					debugName 		= {};
+		};
+
 		/**
 		* Must be externally Synchronized. given out BindingSets must not be externally synchorized.
 		*/
 		class BindingSetAllocator {
 		public:
-			BindingSetAllocator(VkDevice device, BindingSetDescription const* setDescription, size_t setsPerPool, char const* debugName);
+			BindingSetAllocator(VkDevice device, BindingSetAllocatorCreateInfo const& ci);
 			BindingSetAllocator() 											= default;
 			BindingSetAllocator(BindingSetAllocator&&) noexcept 			= delete;
 			BindingSetAllocator& operator=(BindingSetAllocator&&) noexcept 	= delete;
@@ -196,9 +204,9 @@ namespace daxa {
 			VkDevice device 							= VK_NULL_HANDLE;
 			BindingSetDescription const* setDescription = nullptr;
 
-			std::vector<std::shared_ptr<BindingSetAllocatorBindingiSetPool>> pools;
-			std::string debugName;
-			std::string poolNameBuffer;
+			std::vector<std::shared_ptr<BindingSetAllocatorBindingiSetPool>> 	pools 			= {};
+			std::string 														debugName 		= {};
+			std::string 														poolNameBuffer	= {};
 		};
 
 		class BindingSetAllocatorHandle {

@@ -47,6 +47,8 @@ namespace daxa {
 			u32 getVkArrayLayers() const { return arrayLayers; }
 			bool hasSampler() const { return sampler.valid(); }
 			SamplerHandle getSampler() const { return sampler; }
+
+			std::string const& getDebugName() const { return debugName; }
 		private:
 			friend class Device;
 			friend class ImageHandle;
@@ -68,6 +70,7 @@ namespace daxa {
 			u32 mipmapLevels;
 			u32 arrayLayers;
 			SamplerHandle sampler = {};	// this is an optional field
+			std::string debugName = {};
 		};
 
 		class ImageHandle {
