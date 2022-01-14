@@ -398,8 +398,7 @@ struct World {
     }
 
     void generate_chunk(RenderContext & render_ctx) {
-        auto cmd_list = render_ctx.device->getEmptyCommandList();
-        cmd_list->begin();
+        auto cmd_list = render_ctx.device->getCommandList();
         cmd_list->bindPipeline(chunk_block_pass1_compute_pipeline);
 
         auto set = compute_binding_set_allocator->getSet();
@@ -417,7 +416,7 @@ struct World {
         cmd_list->bindPipeline(chunk_block_pass2_compute_pipeline);
         cmd_list->dispatch(1, 1, Chunk::NZ);
 
-        cmd_list->end();
+        cmd_list->finalize();
 
         daxa::gpu::SubmitInfo submit_info;
         submit_info.commandLists.push_back(std::move(cmd_list));
