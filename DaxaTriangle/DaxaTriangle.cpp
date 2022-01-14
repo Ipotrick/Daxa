@@ -6,7 +6,7 @@ class MyUser {
 public:
 	MyUser(daxa::AppState& app) 
 		: device{ daxa::gpu::Device::create() }
-		, queue{ this->device->createQueue(/* amount of batches/ frames in flight: */2) }
+		, queue{ this->device->createQueue({/* amount of batches/ frames in flight: */2}) }
 		, swapchain{ this->device->createSwapchain({
 			.surface = app.window->getSurface(),
 			.width = app.window->getWidth(),
@@ -77,7 +77,7 @@ public:
 
 		this->pipeline = device->createGraphicsPipeline(pipelineBuilder);
 
-		this->bindingSetAllocator = device->createBindingSetAllocator(pipeline->getSetDescription(0));
+		this->bindingSetAllocator = device->createBindingSetAllocator({pipeline->getSetDescription(0)});
 
 		// use the explicit create info structs:
 		daxa::gpu::BufferCreateInfo bufferCI{

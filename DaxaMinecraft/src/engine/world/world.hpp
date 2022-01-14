@@ -53,7 +53,7 @@ struct World {
         try_reload_shaders(render_ctx);
 
         globals_uniform_allocator = render_ctx.device->createBindingSetAllocator(
-            graphics_pipeline->getSetDescription(0));
+            {graphics_pipeline->getSetDescription(0)});
         globals_uniform_buffer = render_ctx.device->createBuffer({
             .size = sizeof(Globals),
             .usage =
@@ -62,7 +62,7 @@ struct World {
         });
 
         compute_binding_set_allocator = render_ctx.device->createBindingSetAllocator(
-            chunk_block_pass1_compute_pipeline->getSetDescription(0));
+            {chunk_block_pass1_compute_pipeline->getSetDescription(0)});
 
         chunk_buffer = render_ctx.device->createBuffer({
             .size = sizeof(Chunk::BlockBuffer),
@@ -423,10 +423,9 @@ struct World {
         render_ctx.queue->submitBlocking(submit_info);
         render_ctx.queue->checkForFinishedSubmits();
 
-        const auto & generated_data =
-            *reinterpret_cast<Chunk::BlockBuffer *>(chunk_buffer->mapMemory());
+        auto generated_data = chunk_buffer.mapMemory<const Chunk::BlockBuffer>();
 
-        for (const auto & layer : generated_data) {
+        for (const auto & layer : *generated_data.hostPtr) {
             for (const auto & strip : layer) {
                 for (const auto & tile : strip) {
                     switch (tile.id) {
@@ -439,7 +438,5 @@ struct World {
             }
             std::cout << "\n-----\n";
         }
-
-        chunk_buffer->unmapMemory();
     }
 };
