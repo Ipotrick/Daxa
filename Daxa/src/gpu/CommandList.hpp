@@ -20,21 +20,21 @@
 namespace daxa {
 	namespace gpu {
 
-		class MappedStagingMemory{
-		public:
-			MappedStagingMemory(void* hostPtr, size_t size, BufferHandle buffer)
-				: hostPtr{ hostPtr }
-				, size{ size }
-				, buffer{ std::move(buffer) }
-			{}
-			void* const hostPtr;
-			size_t const size;
-		private:
-			friend class CommandList;
-			friend class Queue;
-
-			BufferHandle buffer = {};
-		};
+        // template<typename ValueT>
+		// class MappedStagingMemory{
+		// public:
+		// 	MappedStagingMemory(void* hostPtr, size_t size, BufferHandle buffer)
+		// 		: hostPtr{ hostPtr }
+		// 		, size{ size }
+		// 		, buffer{ std::move(buffer) }
+		// 	{}
+		// 	ValueT * const hostPtr;
+		// 	size_t const size;
+		// private:
+		// 	friend class CommandList;
+		// 	friend class Queue;
+		// 	BufferHandle buffer = {};
+		// };
 
 		struct BufferCopyRegion {
 			size_t srcOffset = 0;
@@ -188,14 +188,11 @@ namespace daxa {
 			 * @param dstOffset offset into the buffer.
 			 * @return MappedStagingMemory mapped memory.
 			 */
-			MappedStagingMemory mapMemoryStaged(BufferHandle copyDst, size_t size, size_t dstOffset);
-
-			/**
-			 * @brief Unmaps staging buffer memory.
-			 * 
-			 * @param mappedStagingMem mapped staging memory to unmap.
-			 */
-			void unmapMemoryStaged(MappedStagingMemory& mappedStagingMem);
+            template<typename ValueT = u32>
+			MappedMemoryPointer<ValueT> mapMemoryStaged(BufferHandle copyDst, size_t size, size_t dstOffset) {
+				auto ret = mapMemoryStagedVoid(copyDst, size, dstOffset);
+				return {static_cast<ValueT*>(ret.hostPtr), ret.size, ret.owningBuffer};
+            }
 
 			void copyHostToBuffer(HostToBufferCopyInfo copyInfo);
 
@@ -309,6 +306,7 @@ namespace daxa {
 
 			void reset();
 			void begin();
+			MappedMemoryPointer<void> mapMemoryStagedVoid(BufferHandle copyDst, size_t size, size_t dstOffset);
 			void setDebugName(char const* debugName);
 
 			// binding set management:
