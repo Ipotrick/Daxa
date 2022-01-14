@@ -297,6 +297,8 @@ namespace daxa {
 
 			VkCommandBuffer getVkCommandBuffer() { return cmd; }
 			VkCommandPool getVkCommandPool() { return cmdPool; }
+
+			std::string const& getDebugName() const { return debugName; }
 		private:
 			friend class Device;
 			friend class Queue;
@@ -305,6 +307,7 @@ namespace daxa {
 			void reset();
 			void begin();
 			MappedMemoryPointer<void> mapMemoryStagedVoid(BufferHandle copyDst, size_t size, size_t dstOffset);
+			void setDebugName(char const* debugName);
 
 			// binding set management:
 			std::vector<VkDescriptorBufferInfo> bufferInfoBuffer;
@@ -338,6 +341,8 @@ namespace daxa {
 			std::weak_ptr<CommandListRecyclingSharedData> recyclingData = {};
 			std::weak_ptr<StagingBufferPool> stagingBufferPool = {};
 			std::vector<StagingBuffer> usedStagingBuffers;
+
+			std::string debugName = {};
 		};
 
 		class CommandListHandle {

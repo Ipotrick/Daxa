@@ -14,7 +14,7 @@ public:
 			.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR,
 		})}
 		, swapchainImage{ this->swapchain->aquireNextImage() }
-		, presentSignal{ this->device->createSignal() }
+		, presentSignal{ this->device->createSignal({}) }
     {
 		defaultSampler = device->createSampler({});
 		auto cmd = device->getCommandList();

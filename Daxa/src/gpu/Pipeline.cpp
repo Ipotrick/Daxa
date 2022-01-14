@@ -8,6 +8,19 @@
 
 namespace daxa {
 	namespace gpu {
+		void setPipelineDebugName(VkDevice device, char const* debugName, VkPipeline pipeline) {
+			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && debugName != nullptr) {
+				VkDebugUtilsObjectNameInfoEXT nameInfo {
+					.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+					.pNext = NULL,
+					.objectType = VK_OBJECT_TYPE_PIPELINE,
+					.objectHandle = (uint64_t)pipeline,
+					.pObjectName = debugName,
+				};
+				instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
+			}
+		}
+
 		std::vector<VkDescriptorSetLayout> processReflectedDescriptorData(
 			std::vector<std::unordered_map<u32, VkDescriptorSetLayoutBinding>>& descriptorSets,
 			BindingSetDescriptionCache& descCache,
@@ -443,22 +456,12 @@ namespace daxa {
 			auto err = vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline);
 			DAXA_ASSERT_M(err == VK_SUCCESS, "could not create graphics pipeline");
 
-			if (debugName) {
-				const VkDebugUtilsObjectNameInfoEXT nameInfo =
-				{
-					VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-					NULL,
-					VK_OBJECT_TYPE_PIPELINE,
-					(uint64_t)pipelineHandle->pipeline,
-					debugName,
-				};
-				instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
-			}
+			setPipelineDebugName(device, debugName, ret.pipeline);
 
 			return pipelineHandle;
 		}
 
-		PipelineHandle createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ShaderModuleHandle const& shaderModule, char const* debugName) {
+		PipelineHandle createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ComputePipelineCreateInfo const& ci) {
 			auto pipelineHandle = PipelineHandle{ std::make_shared<Pipeline>() };
 			Pipeline& ret = *pipelineHandle;
 			ret.device = device;
@@ -467,15 +470,15 @@ namespace daxa {
 			VkPipelineShaderStageCreateInfo pipelineShaderStageCI{
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 				.pNext = nullptr,
-				.stage = shaderModule->getVkShaderStage(),
-				.module = shaderModule->getVkShaderModule(),
-				.pName = shaderModule->getVkEntryPoint().c_str(),
+				.stage = ci.shaderModule->getVkShaderStage(),
+				.module = ci.shaderModule->getVkShaderModule(),
+				.pName = ci.shaderModule->getVkEntryPoint().c_str(),
 			};
 
 			std::vector<VkPushConstantRange> pushConstants;
 			std::vector<std::unordered_map<u32, VkDescriptorSetLayoutBinding>> descriptorSets;
 
-			reflectShader(shaderModule, pushConstants, descriptorSets);
+			reflectShader(ci.shaderModule, pushConstants, descriptorSets);
 
 			std::vector<VkDescriptorSetLayout> descLayouts = processReflectedDescriptorData(descriptorSets, bindingSetCache, ret.bindingSetDescriptions);
 
@@ -501,17 +504,7 @@ namespace daxa {
 			};
 			vkCreateComputePipelines(device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline);
 
-			if (debugName) {
-				const VkDebugUtilsObjectNameInfoEXT nameInfo =
-				{
-					VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-					NULL,
-					VK_OBJECT_TYPE_PIPELINE,
-					(uint64_t)pipelineHandle->pipeline,
-					debugName,
-				};
-				instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
-			}
+			setPipelineDebugName(device, ci.debugName, ret.pipeline);
 
 			return pipelineHandle;
 		}
