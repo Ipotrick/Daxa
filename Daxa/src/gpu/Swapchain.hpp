@@ -26,6 +26,7 @@ namespace daxa {
 			u32 height			 				= 256;
 			VkPresentModeKHR presentMode 		= VK_PRESENT_MODE_FIFO_KHR;
 			VkImageUsageFlags additionalUses 	= {};
+			char const* debugName 				= {};
 		};
 
 		class Swapchain {
@@ -46,6 +47,8 @@ namespace daxa {
 			VkExtent2D getSize() const { return size; }
 
 			VkFormat getVkFormat() const { return swapchainImageFormat; }
+
+			std::string const& getDebugName() const { return debugName; }
 		private:
 			friend class Device;
 
@@ -62,6 +65,7 @@ namespace daxa {
 			std::vector<ImageHandle> swapchainImages	= {}; // TODO REPLACE WITH STACK ALLOCATED VECTOR TYPE
 			VkExtent2D size 							= {}; 
 			VkImageUsageFlags additionalimageUses		= {};
+			std::string debugName 						= {};
 		};
 
 		class SwapchainHandle {

@@ -137,6 +137,6 @@ namespace daxa {
 			std::vector<VkFormat> colorAttachmentFormats;
 		};
 
-		PipelineHandle createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ShaderModuleHandle const& shaderModule, char const* debugName = nullptr);
+		PipelineHandle createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ShaderModuleHandle const& shaderModule, char const* debugName = {});
 	}
 }

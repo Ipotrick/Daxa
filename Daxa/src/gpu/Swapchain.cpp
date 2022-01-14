@@ -7,6 +7,8 @@
 #include <SDL2/SDL_vulkan.h>
 #include <VkBootstrap.h>
 
+#include "Instance.hpp"
+
 namespace daxa {
 	namespace gpu {
 		VkSurfaceKHR createSurface(void* sdlWindowHandle, VkInstance instance) {
@@ -64,6 +66,8 @@ namespace daxa {
 				img.arrayLayers = 1;
 				img.mipmapLevels = 1;
 			}
+
+
 			this->swapchainImageFormat = vkbSwapchain.image_format;
 
 			if (oldSwapchain) {
@@ -78,6 +82,48 @@ namespace daxa {
 
 			if (aquireFence == VK_NULL_HANDLE) {
 				vkCreateFence(device, &fenceCI, nullptr, &this->aquireFence);
+			}
+
+			if (daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
+				this->debugName = debugName;
+
+				auto nameInfo = VkDebugUtilsObjectNameInfoEXT{
+					.sType =  VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+					.pNext = NULL,
+					.objectType = VK_OBJECT_TYPE_SWAPCHAIN_KHR,
+					.objectHandle = (uint64_t)this->swapchain,
+					.pObjectName = ci.debugName,
+				};
+				daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
+
+				std::string nameBuffer = ci.debugName;
+				nameBuffer += " fence";
+
+				nameInfo = VkDebugUtilsObjectNameInfoEXT{
+					.sType =  VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+					.pNext = NULL,
+					.objectType = VK_OBJECT_TYPE_FENCE,
+					.objectHandle = (uint64_t)this->aquireFence,
+					.pObjectName = nameBuffer.c_str(),
+				};
+				daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
+				
+				for (int i = 0; i < vkImages.size(); i++) {
+					nameBuffer.clear();
+					nameBuffer = ci.debugName;
+					nameBuffer += " image view nr ";
+					nameBuffer += std::to_string(i);
+					auto view = this->swapchainImages[i]->getVkView();
+
+					nameInfo = VkDebugUtilsObjectNameInfoEXT{
+						.sType =  VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+						.pNext = NULL,
+						.objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
+						.objectHandle = (uint64_t)view,
+						.pObjectName = nameBuffer.c_str(),
+					};
+					daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
+				}
 			}
 		}
 
@@ -107,12 +153,12 @@ namespace daxa {
 
 		void Swapchain::resize(VkExtent2D newSize) {
 			swapchainImages.clear();
-			construct(device, physicalDevice, instance, {surface, newSize.width, newSize.height, presentMode, additionalimageUses});
+			construct(device, physicalDevice, instance, {surface, newSize.width, newSize.height, presentMode, additionalimageUses, .debugName = debugName.c_str()});
 		}
 
 		void Swapchain::setPresentMode(VkPresentModeKHR newPresentMode) {
 			swapchainImages.clear();
-			construct(device, physicalDevice, instance, {surface, size.width, size.height, newPresentMode, additionalimageUses});
+			construct(device, physicalDevice, instance, {surface, size.width, size.height, newPresentMode, additionalimageUses, .debugName = debugName.c_str()});
 		}
 	}
 }
