@@ -127,28 +127,25 @@ public:
         void* cpuSideBuffPtr = (void*)((u8*)(accessor.buffer_view->buffer->data) + accessor.buffer_view->offset + accessor.offset);
 
         if ((usage & VK_BUFFER_USAGE_INDEX_BUFFER_BIT) && accessor.stride != 4) {
-            auto mm = cmdList->mapMemoryStaged(gpuBuffer, sizeof(u32) * accessor.count, 0);
-            u32* u32BufPtr = (u32*)mm.hostPtr;
+            auto mm = cmdList->mapMemoryStaged<u32>(gpuBuffer, sizeof(u32) * accessor.count, 0);
 
             switch (accessor.stride) {
                 case 1:
                 for (int i = 0; i < accessor.count; i++) {
-                    u32BufPtr[i] = ((u8*)cpuSideBuffPtr)[i];
+                    mm.hostPtr[i] = ((u8*)cpuSideBuffPtr)[i];
                 }
                 break;
                 case 2:
                 for (int i = 0; i < accessor.count; i++) {
-                    u32BufPtr[i] = ((u16*)cpuSideBuffPtr)[i];
+                    mm.hostPtr[i] = ((u16*)cpuSideBuffPtr)[i];
                 }
                 break;
                 case 8:
                 for (int i = 0; i < accessor.count; i++) {
-                    u32BufPtr[i] = ((u64*)cpuSideBuffPtr)[i];
+                    mm.hostPtr[i] = ((u64*)cpuSideBuffPtr)[i];
                 }
                 break;
             }
-
-            cmdList->unmapMemoryStaged(mm);
         } else {
             cmdList->copyHostToBuffer({
                 .dst = gpuBuffer,

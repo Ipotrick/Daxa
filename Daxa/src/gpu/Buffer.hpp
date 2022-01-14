@@ -19,8 +19,6 @@ namespace daxa {
 			char const* 			debugName 			= {};
 		};
 
-		class BufferHandle;
-
 		class Buffer {
 		public:
 			Buffer(VkDevice device, u32 queueFamilyIndex, VmaAllocator allocator, BufferCreateInfo& ci);
@@ -38,10 +36,6 @@ namespace daxa {
 
 			void upload(void const* src, size_t size, size_t dstOffset = 0);
 			
-			void* mapMemory();
-
-			void unmapMemory();
-
 			bool isMemoryMapped() const { return memoryMapCount > 0; }
 
 			VkBuffer getVkBuffer() const { return buffer; }
@@ -60,6 +54,10 @@ namespace daxa {
 			friend class BufferHandle;
 			friend class StagingBufferPool;
 			friend class Queue;
+			template<typename ValueT>
+			friend struct MappedMemoryPointer;
+			
+			void unmapMemory();
 
 			VkBuffer 			buffer 			= VK_NULL_HANDLE;
 			size_t 				size 			= {};
@@ -70,6 +68,29 @@ namespace daxa {
 			u32 				usesOnGPU 		= {};
 			u32 				memoryMapCount 	= {};
 			std::string 		debugName 		= {};
+		};
+
+		template<typename ValueT>
+		class MappedMemoryPointer {
+		public:
+			ValueT *hostPtr;
+			size_t size;
+		private:
+			friend class BufferHandle;
+			friend class CommandList;
+			std::shared_ptr<Buffer> owningBuffer;
+
+		public:
+			MappedMemoryPointer(ValueT* hostPtr, size_t size, std::shared_ptr<Buffer> buffer)
+				: hostPtr{ hostPtr }
+				, size{size}
+				, owningBuffer{ std::move(buffer) }
+			{}
+			MappedMemoryPointer(const MappedMemoryPointer &) = delete;
+			MappedMemoryPointer & operator=(const MappedMemoryPointer &) = delete;
+			MappedMemoryPointer(MappedMemoryPointer &&) = default;
+			MappedMemoryPointer & operator=(MappedMemoryPointer &&) = default;
+			~MappedMemoryPointer();
 		};
 
 		class BufferHandle {
@@ -87,12 +108,26 @@ namespace daxa {
 			operator bool() const { return buffer.operator bool(); }
 
 			size_t getRefCount() const { return buffer.use_count(); }
+		
+			template<typename ValueT = u8>
+			MappedMemoryPointer<ValueT> mapMemory() {
+				auto ret = mapMemoryVoid();
+				return {static_cast<ValueT*>(ret.hostPtr), ret.size, std::move(ret.owningBuffer)};
+			}
 		private:
 			friend class Device;
 			friend class StagingBufferPool;
 			friend class Queue;
 
+			MappedMemoryPointer<void> mapMemoryVoid();
+
 			std::shared_ptr<Buffer> buffer = {};
 		};
+	
+		template<typename ValueT>
+		MappedMemoryPointer<ValueT>::~MappedMemoryPointer() {
+			if (owningBuffer)
+				owningBuffer->unmapMemory();
+		}
 	}
 }

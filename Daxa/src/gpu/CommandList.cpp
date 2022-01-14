@@ -39,7 +39,7 @@ namespace daxa {
 			}
 		}
 
-		MappedStagingMemory CommandList::mapMemoryStaged(BufferHandle copyDst, size_t size, size_t dstOffset) {
+		MappedMemoryPointer<void> CommandList::mapMemoryStagedVoid(BufferHandle copyDst, size_t size, size_t dstOffset) {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(size <= STAGING_BUFFER_POOL_BUFFER_SIZE, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
@@ -47,15 +47,13 @@ namespace daxa {
 				usedStagingBuffers.push_back(stagingBufferPool.lock()->getStagingBuffer());
 			}
 
-			operationsInProgress += 1;
-
 			auto& stagingBuffer = usedStagingBuffers.back();
 
 			auto srcOffset = stagingBuffer.usedUpSize;
 
-			u8* bufferHostPtr = (u8*)stagingBuffer.buffer->mapMemory();
-
-			auto ret = MappedStagingMemory{ (void*)(bufferHostPtr + srcOffset), size, stagingBuffer.buffer };
+			auto bufferHost = stagingBuffer.buffer.mapMemory<void>();
+            bufferHost.hostPtr = static_cast<u8*>(bufferHost.hostPtr) + srcOffset;
+            bufferHost.size = size;
 
 			stagingBuffer.usedUpSize += size;
 			stagingBuffer.usedUpSize = roundUpToMultipleOf128(stagingBuffer.usedUpSize);
@@ -71,15 +69,7 @@ namespace daxa {
 			};
 			copyBufferToBuffer(btbCopyInfo);
 
-			return ret;
-		}
-		
-		void CommandList::unmapMemoryStaged(MappedStagingMemory& mappedstagingMemory) {
-			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
-			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-			DAXA_ASSERT_M(mappedstagingMemory.buffer->isMemoryMapped(), "the given mappedStagingMemory has allready been unmapped.");
-			operationsInProgress -= 1;
-			mappedstagingMemory.buffer->unmapMemory();
+			return bufferHost;
 		}
 
 		void CommandList::copyHostToBuffer(HostToBufferCopyInfo copyInfo) {
