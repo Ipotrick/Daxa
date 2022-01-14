@@ -27,7 +27,7 @@ struct RenderContext {
     std::deque<PerFrameData> frames;
 
     RenderContext(VkSurfaceKHR surface, int32_t sx, int32_t sy)
-        : device(daxa::gpu::Device::create()), queue(device->createQueue()),
+        : device(daxa::gpu::Device::create()), queue(device->createQueue({})),
           swapchain(device->createSwapchain({
               .surface     = surface,
               .width       = (uint32_t)sx,
