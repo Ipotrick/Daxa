@@ -390,28 +390,8 @@ struct World {
         render_ctx.queue->submitBlocking(submit_info);
         render_ctx.queue->checkForFinishedSubmits();
 
-        const auto & generated_data =
-            *reinterpret_cast<Chunk::BlockBuffer *>(chunk_buffer->mapMemory());
-
-        // for (const auto & layer : generated_data) {
-        //     for (const auto & strip : layer) {
-        //         for (const auto & tile : strip) {
-        //             switch (tile.id) {
-        //             case BlockID::Grass: std::cout << "."; break;
-        //             case BlockID::Dirt: std::cout << "#"; break;
-        //             case BlockID::Air: std::cout << " "; break;
-        //             }
-        //         }
-        //         std::cout << "\n";
-        //     }
-        //     std::cout << "\n-----\n";
-        // }
-
-        chunk_buffer->unmapMemory();
-
-        auto & upload_data =
-            *reinterpret_cast<Chunk::BlockBuffer *>(chunk_upload_buffer->mapMemory());
-        for (auto & layer : upload_data) {
+        auto upload_data = chunk_upload_buffer.mapMemory<Chunk::BlockBuffer>();
+        for (auto & layer : *upload_data.hostPtr) {
             for (auto & strip : layer) {
                 for (auto & tile : strip) {
                     u32 id = rand() % 5 + 1;
@@ -419,6 +399,5 @@ struct World {
                 }
             }
         }
-        chunk_upload_buffer->unmapMemory();
     }
 };

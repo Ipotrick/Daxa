@@ -430,10 +430,9 @@ struct World {
         render_ctx.queue->submitBlocking(submit_info);
         render_ctx.queue->checkForFinishedSubmits();
 
-        const auto & generated_data =
-            *reinterpret_cast<Chunk::BlockBuffer *>(chunk_buffer->mapMemory());
+        auto generated_data = chunk_buffer.mapMemory<const Chunk::BlockBuffer>();
 
-        for (const auto & layer : generated_data) {
+        for (const auto & layer : *generated_data.hostPtr) {
             for (const auto & strip : layer) {
                 for (const auto & tile : strip) {
                     switch (tile.id) {
@@ -446,7 +445,5 @@ struct World {
             }
             std::cout << "\n-----\n";
         }
-
-        chunk_buffer->unmapMemory();
     }
 };
