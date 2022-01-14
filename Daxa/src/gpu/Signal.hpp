@@ -8,9 +8,14 @@
 
 namespace daxa {
 	namespace gpu {
+
+		struct SignalCreateInfo {
+			char const* debugName = {};
+		};
+
 		class Signal {
 		public:
-			Signal(VkDevice device);
+			Signal(VkDevice device, SignalCreateInfo const& ci);
 			Signal(Signal&&) noexcept				= delete;
 			Signal& operator=(Signal&&) noexcept	= delete;
 			Signal(Signal const&) 					= delete;
@@ -18,11 +23,14 @@ namespace daxa {
 			~Signal();
 
 			VkSemaphore getVkSemaphore() const { return semaphore; }
+
+			std::string const& getDebugName() const { return debugName; }
 		private:
 			friend class Device;
 
-			VkDevice device = {};
-			VkSemaphore semaphore = {};
+			VkDevice 	device 		= {};
+			VkSemaphore semaphore 	= {};
+			std::string debugName 	= {};
 		};
 
 		class SignalHandle {

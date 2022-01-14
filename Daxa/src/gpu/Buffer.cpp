@@ -22,13 +22,14 @@ namespace daxa {
 
 			vmaCreateBuffer(allocator, (VkBufferCreateInfo*)&bci, &aci, &buffer, &allocation, nullptr);
 
-			if (ci.debugName) {
+			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
+				this->debugName = ci.debugName;
 				VkDebugUtilsObjectNameInfoEXT nameInfo {
-					VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, // sType
-					NULL,                                               // pNext
-					VK_OBJECT_TYPE_IMAGE,                               // objectType
-					(uint64_t)this->buffer,                                // objectHandle
-					ci.debugName,                            			// pObjectName
+					.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+					.pNext = NULL,
+					.objectType = VK_OBJECT_TYPE_IMAGE,
+					.objectHandle = (uint64_t)this->buffer,
+					.pObjectName = ci.debugName,
 				};
 				instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
 			}

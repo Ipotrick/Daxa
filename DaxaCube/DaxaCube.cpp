@@ -95,14 +95,14 @@ class MyUser {
 public:
 	MyUser(daxa::AppState& app) 
 		: device{ daxa::gpu::Device::create() }
-		, queue{ this->device->createQueue({/*amount of batches/ frames in flight:*/2}) }
+		, queue{ this->device->createQueue({.batchCount = 2 })}
 		, swapchain{ this->device->createSwapchain({
 			.surface = app.window->getSurface(),
 			.width = app.window->getWidth(),
 			.height = app.window->getHeight(),
 		})}
 		, swapchainImage{ this->swapchain->aquireNextImage() }
-		, presentSignal{ this->device->createSignal() }
+		, presentSignal{ this->device->createSignal({}) }
 	{ 
 		char const* vertexShaderGLSL = R"(
 			#version 450
@@ -141,15 +141,15 @@ public:
 			}
 		)";
 
-		daxa::gpu::ShaderModuleHandle vertexShader = device->tryCreateShderModuleFromGLSL(
-			vertexShaderGLSL,
-			VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT
-		).value();
+		daxa::gpu::ShaderModuleHandle vertexShader = device->createShaderModule({
+			.glslSource = vertexShaderGLSL,
+			.stage = VK_SHADER_STAGE_VERTEX_BIT
+		}).value();
 
-		daxa::gpu::ShaderModuleHandle fragmenstShader = device->tryCreateShderModuleFromGLSL(
-			fragmentShaderGLSL,
-			VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT
-		).value();
+		daxa::gpu::ShaderModuleHandle fragmenstShader = device->createShaderModule({
+			.glslSource = fragmentShaderGLSL,
+			.stage = VK_SHADER_STAGE_FRAGMENT_BIT
+		}).value();
 
 		daxa::gpu::GraphicsPipelineBuilder pipelineBuilder;
 		pipelineBuilder
@@ -166,7 +166,7 @@ public:
 
 		this->pipeline = device->createGraphicsPipeline(pipelineBuilder);
 
-		this->bindingSetAllocator = device->createBindingSetAllocator({pipeline->getSetDescription(0)});
+		this->bindingSetAllocator = device->createBindingSetAllocator({ .setDescription = pipeline->getSetDescription(0) });
 
 		// Begin texture creation
 
