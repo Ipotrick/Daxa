@@ -134,11 +134,12 @@ public:
 				});
 			}
 
-			auto mm = cmd->mapMemoryStaged(transformsBuffer, draws.size() * sizeof(glm::mat4), 0);
-			for (int i = 0; i < draws.size(); i++) {
-				((glm::mat4*)mm.hostPtr)[i] = draws[i].transform;
+			{
+				auto mm = cmd->mapMemoryStaged(transformsBuffer, draws.size() * sizeof(glm::mat4), 0);
+				for (int i = 0; i < draws.size(); i++) {
+					((glm::mat4*)mm.hostPtr)[i] = draws[i].transform;
+				}
 			}
-			cmd->unmapMemoryStaged(mm);
 
 			cmd->insertMemoryBarrier({
 				.awaitedStages = VK_PIPELINE_STAGE_2_COPY_BIT_KHR,

@@ -6,7 +6,7 @@ class MyUser {
 public:
 	MyUser(daxa::AppState& app) 
 		: device{ daxa::gpu::Device::create() }
-		, queue{ this->device->createQueue(/*frames in flight: */3) }
+		, queue{ this->device->createQueue({/*frames in flight: */3}) }
 		, swapchain{ this->device->createSwapchain({
 			.surface = app.window->getSurface(), 
 			.width = app.window->getWidth(), 
@@ -82,7 +82,7 @@ public:
 
 		this->pipeline = device->createComputePipeline(computeShader);
 
-		this->bindingSetAllocator = device->createBindingSetAllocator(pipeline->getSetDescription(0));
+		this->bindingSetAllocator = device->createBindingSetAllocator({pipeline->getSetDescription(0)});
 
 		// or use them embedded, like a named parameter list:
 		this->uniformBuffer = device->createBuffer({
