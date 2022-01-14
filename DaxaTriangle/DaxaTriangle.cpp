@@ -102,10 +102,7 @@ public:
 			swapchainImage = swapchain->aquireNextImage();
 		}
 
-		auto cmdList = device->getEmptyCommandList();
-
-		cmdList->begin();
-
+		auto cmdList = device->getCommandList();
 
 		/// ------------ Begin Data Uploading ---------------------
 
@@ -182,7 +179,7 @@ public:
 			.layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 		});
 
-		cmdList->end();
+		cmdList->finalize();
 
 		daxa::gpu::SubmitInfo submitInfo;
 		submitInfo.commandLists.push_back(std::move(cmdList));

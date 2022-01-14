@@ -1,6 +1,6 @@
 #include <iostream>
 
-#define STB_IMAGE_IMPLEMENTATION
+// #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
 #define GLM_DEPTH_ZERO_TO_ONE
@@ -248,8 +248,7 @@ public:
 			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 
-		auto cmdList = device->getEmptyCommandList();
-		cmdList->begin();
+		auto cmdList = device->getCommandList();
 		cmdList->copyHostToBuffer({
 			.src = cubeVertecies.data(),
 			.dst = vertexBuffer,
@@ -266,7 +265,7 @@ public:
 			.size = sizeX * sizeY * numChannels * sizeof(u8),
 			.dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 		});
-		cmdList->end();
+		cmdList->finalize();
 		queue->submitBlocking({
 			.commandLists = {cmdList},
 		});
@@ -319,10 +318,7 @@ public:
 			});
 		}
 
-		auto cmdList = device->getEmptyCommandList();
-
-		cmdList->begin();
-
+		auto cmdList = device->getCommandList();
 
 		/// ------------ Begin Data Uploading ---------------------
 
@@ -400,7 +396,7 @@ public:
 		} };
 		cmdList->insertBarriers({}, imgBarrier1);
 
-		cmdList->end();
+		cmdList->finalize();
 
 		daxa::gpu::SubmitInfo submitInfo;
 		submitInfo.commandLists.push_back(std::move(cmdList));

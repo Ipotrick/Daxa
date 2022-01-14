@@ -98,19 +98,16 @@ public:
 			.imageUsage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 		});
 
-		auto cmdList = device->getEmptyCommandList();
-		cmdList->begin();
+		auto cmdList = device->getCommandList();
 		cmdList->insertImageBarrier({.image = resultImage, .layoutAfter = VK_IMAGE_LAYOUT_GENERAL});
-		cmdList->end();
+		cmdList->finalize();
 		queue->submitBlocking({
 			.commandLists = { cmdList }
 		});
 	}
 
 	void update(daxa::AppState& app) {
-		auto cmdList = device->getEmptyCommandList();
-
-		cmdList->begin();
+		auto cmdList = device->getCommandList();
 
 		if (app.window->getWidth() != swapchain->getSize().width || app.window->getHeight() != swapchain->getSize().height) {
 			device->waitIdle();
@@ -159,7 +156,7 @@ public:
 			.size = resultImage->getVkExtent(),
 		});
 
-		cmdList->end();
+		cmdList->finalize();
 
 		daxa::gpu::SubmitInfo submitInfo;
 		submitInfo.commandLists.push_back(std::move(cmdList));
