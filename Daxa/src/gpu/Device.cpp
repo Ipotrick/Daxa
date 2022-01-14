@@ -115,8 +115,8 @@ namespace daxa {
 			}
 		}
 
-		QueueHandle Device::createQueue(u32 batchCount) {
-			return QueueHandle{ std::make_shared<Queue>(device, vkbDevice.get_queue(vkb::QueueType::graphics).value(), batchCount) };
+		QueueHandle Device::createQueue(QueueCreateInfo const& ci) {
+			return QueueHandle{ std::make_shared<Queue>(device, vkbDevice.get_queue(vkb::QueueType::graphics).value(), ci.batchCount, ci.debugName) };
 		}
 
 		SamplerHandle Device::createSampler(SamplerCreateInfo ci) {
@@ -217,8 +217,8 @@ namespace daxa {
 			return gpu::createComputePipeline(device, *bindingSetDescriptionCache, shader, debugName);
 		}
 
-		BindingSetAllocatorHandle Device::createBindingSetAllocator(BindingSetDescription const* setDescription, size_t setPerPool) {
-			return BindingSetAllocatorHandle{ std::make_shared<BindingSetAllocator>(device, setDescription, setPerPool) };
+		BindingSetAllocatorHandle Device::createBindingSetAllocator(BindingSetAllocatorCreateInfo const& ci) {
+			return BindingSetAllocatorHandle{ std::make_shared<BindingSetAllocator>(device, ci.setDescription, ci.setPerPool, ci.debugName) };
 		}
 	}
 }

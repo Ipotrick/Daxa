@@ -1,14 +1,29 @@
 #include "Queue.hpp"
+#include "Instance.hpp"
 
 namespace daxa {
 	namespace gpu {
 
-		Queue::Queue(VkDevice device, VkQueue queue, u32 batchCount)
-			: device{device}
-			, queue{queue}
+		Queue::Queue(VkDevice device, VkQueue queue, u32 batchCount, char const* debugName)
+			: device{ device }
+			, queue{ queue }
 			, bWaitForBatchesToComplete{ batchCount > 0 }
 		{
 			this->batches.resize(std::max(u32(1),batchCount));
+
+			if (debugName) {
+				this->debugName = debugName;
+				if (instance->pfnSetDebugUtilsObjectNameEXT) {
+					VkDebugUtilsObjectNameInfoEXT imageNameInfo{
+						.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+						.pNext = NULL,
+						.objectType = VK_OBJECT_TYPE_QUEUE,
+						.objectHandle = (uint64_t)queue,
+						.pObjectName = this->debugName.c_str(),
+					};
+					instance->pfnSetDebugUtilsObjectNameEXT(this->device, &imageNameInfo);
+				}
+			}
 		}
 
 		Queue::~Queue() {

@@ -1,4 +1,5 @@
 #include "BindingSet.hpp"
+#include "Instance.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -209,10 +210,11 @@ namespace daxa {
 			return description;
 		}
 
-		BindingSetAllocator::BindingSetAllocator(VkDevice device, BindingSetDescription const* setDescription, size_t setsPerPool)
+		BindingSetAllocator::BindingSetAllocator(VkDevice device, BindingSetDescription const* setDescription, size_t setsPerPool, char const* debugName)
 			: device{ device }
 			, setDescription{ setDescription }
 			, setsPerPool{ setsPerPool }
+			, debugName{ debugName }
 		{
 			DAXA_ASSERT_M(setDescription, "setDescription was nullptr");
 			initPoolSizes();
@@ -228,8 +230,22 @@ namespace daxa {
 				}
 			}
 		}
+		
+		void BindingSet::setDebugName(char const* debugName) {
+			this->debugName = debugName;
 
-		BindingSetHandle BindingSetAllocator::getSet() {
+			const VkDebugUtilsObjectNameInfoEXT imageNameInfo =
+			{
+				VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+				NULL,
+				VK_OBJECT_TYPE_DESCRIPTOR_SET,
+				(uint64_t)this->set,
+				debugName,
+			};
+			instance->pfnSetDebugUtilsObjectNameEXT(this->device, &imageNameInfo);
+		}
+
+		BindingSetHandle BindingSetAllocator::getSet(char const* debugName) {
 			std::optional<BindingSetHandle> handleOpt = std::nullopt;
 			for (auto& pool : pools) {
 				auto lock = std::unique_lock(pool->mut);
@@ -243,14 +259,19 @@ namespace daxa {
 				}
 			}
 
-			if (handleOpt.has_value()) {
-				return std::move(handleOpt.value());
-			}
-			else {
+			if (!handleOpt.has_value()) {
 				pools.push_back(std::move(getNewPool()));
 				// dont need mutex lock, as we are the only ones that have a ptr to the pool:
-				return getNewSet(pools.back());
+				handleOpt = getNewSet(pools.back());
 			}
+
+			if (instance->pfnSetDebugUtilsObjectNameEXT) {
+				if (handleOpt.value()->getDebugName() != debugName) {
+					handleOpt.value()->setDebugName(debugName);
+				}
+			}
+
+			return std::move(handleOpt.value());
 		}
 
 		void BindingSetAllocator::initPoolSizes() {
@@ -293,6 +314,23 @@ namespace daxa {
 			ret->pool = pool;
 			ret->allocatedSets = 0;
 			ret->zombies = {};
+
+			if (instance->pfnSetDebugUtilsObjectNameEXT) {
+				poolNameBuffer.clear();
+				poolNameBuffer = debugName;
+				poolNameBuffer += " pool nr ";
+				poolNameBuffer += std::to_string(pools.size());
+				
+				VkDebugUtilsObjectNameInfoEXT imageNameInfo{
+					.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+					.pNext = NULL,
+					.objectType = VK_OBJECT_TYPE_DESCRIPTOR_POOL,
+					.objectHandle = (uint64_t)pool,
+					.pObjectName = poolNameBuffer.c_str(),
+				};
+				instance->pfnSetDebugUtilsObjectNameEXT(this->device, &imageNameInfo);
+			}
+
 			return std::move(ret);
 		}
 	}

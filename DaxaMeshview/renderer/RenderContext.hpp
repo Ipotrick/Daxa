@@ -6,7 +6,7 @@ class RenderContext {
 public:
     RenderContext(daxa::Window& window) 
 		: device{ daxa::gpu::Device::create() }
-		, queue{ this->device->createQueue() }
+		, queue{ this->device->createQueue({}) }
 		, swapchain{ this->device->createSwapchain({
 			.surface = window.getSurface(),
 			.width = window.getWidth(),
