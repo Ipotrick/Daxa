@@ -62,13 +62,13 @@ namespace daxa {
 			vmaUnmapMemory(allocator, allocation);
 		}
 
-		MappedMemoryPointer<void> BufferHandle::mapMemoryVoid() {
-			DAXA_ASSERT_M(buffer->getVmaMemoryUsage() & (VMA_MEMORY_USAGE_CPU_TO_GPU | VMA_MEMORY_USAGE_GPU_TO_CPU), "can only upload to buffers with the memory usage flag: VMA_MEMORY_USAGE_CPU_TO_GPU");
-			DAXA_ASSERT_M(buffer->usesOnGPU == 0, "can not upload to buffer that is currently in use on the gpu directly from host. to indirectly upload to this buffer, use the command list upload.");
-			buffer->memoryMapCount += 1;
+		void* Buffer::mapMemory() {
+			DAXA_ASSERT_M(getVmaMemoryUsage() & (VMA_MEMORY_USAGE_CPU_TO_GPU | VMA_MEMORY_USAGE_GPU_TO_CPU), "can only upload to buffers with the memory usage flag: VMA_MEMORY_USAGE_CPU_TO_GPU");
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not upload to buffer that is currently in use on the gpu directly from host. to indirectly upload to this buffer, use the command list upload.");
+			memoryMapCount += 1;
 			void* ret;
-			vmaMapMemory(buffer->allocator, buffer->allocation, &ret);
-			return MappedMemoryPointer<void>(ret, 0, buffer);
+			vmaMapMemory(allocator, allocation, &ret);
+			return ret;
 		}
 
 		void Buffer::unmapMemory() {

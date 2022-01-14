@@ -32,11 +32,11 @@ namespace daxa {
 
 		void Queue::submit(SubmitInfo si) {
 			for (auto& cmdList : si.commandLists) {
+				DAXA_ASSERT_M(cmdList->finalized, "can only submit finalized command lists");
 				for (auto& sbuffer : cmdList->usedStagingBuffers) {
 					DAXA_ASSERT_M(!sbuffer.buffer->isMemoryMapped(), "can not submit command list. Some Buffers used in the command list have mapped memory, all memory to used buffers need to be unmapped before a submit.");
 				}
 
-				DAXA_ASSERT_M(cmdList->operationsInProgress == 0, "can not submit command list with recording in progress.");
 				submitCommandBufferBuffer.push_back(cmdList->cmd);
 				cmdList->usesOnGPU += 1;
 			

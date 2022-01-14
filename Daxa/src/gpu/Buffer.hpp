@@ -57,6 +57,7 @@ namespace daxa {
 			template<typename ValueT>
 			friend struct MappedMemoryPointer;
 			
+			void* mapMemory();
 			void unmapMemory();
 
 			VkBuffer 			buffer 			= VK_NULL_HANDLE;
@@ -70,27 +71,40 @@ namespace daxa {
 			std::string 		debugName 		= {};
 		};
 
-		template<typename ValueT>
+		template<typename ValueT = u8>
 		class MappedMemoryPointer {
-		public:
-			ValueT *hostPtr;
-			size_t size;
-		private:
-			friend class BufferHandle;
-			friend class CommandList;
-			std::shared_ptr<Buffer> owningBuffer;
-
 		public:
 			MappedMemoryPointer(ValueT* hostPtr, size_t size, std::shared_ptr<Buffer> buffer)
 				: hostPtr{ hostPtr }
-				, size{size}
+				, size{ size }
 				, owningBuffer{ std::move(buffer) }
 			{}
-			MappedMemoryPointer(const MappedMemoryPointer &) = delete;
-			MappedMemoryPointer & operator=(const MappedMemoryPointer &) = delete;
-			MappedMemoryPointer(MappedMemoryPointer &&) = default;
-			MappedMemoryPointer & operator=(MappedMemoryPointer &&) = default;
-			~MappedMemoryPointer();
+			MappedMemoryPointer(MappedMemoryPointer const&) 			= delete;
+			MappedMemoryPointer& operator=(MappedMemoryPointer const&) 	= delete;
+			MappedMemoryPointer(MappedMemoryPointer&&) 					= default;
+			MappedMemoryPointer& operator=(MappedMemoryPointer&&) 		= default;
+			~MappedMemoryPointer() {
+				if (owningBuffer) {
+					unmap();
+				}
+			}
+
+			void unmap() {
+				DAXA_ASSERT_M(owningBuffer, "can only unmap a valid memory mapped ptr");
+				owningBuffer->unmapMemory();
+				owningBuffer = {};
+				hostPtr = std::numeric_limits<ValueT*>::max();
+				size 	= std::numeric_limits<size_t>::max();
+			}
+
+			ValueT* hostPtr = std::numeric_limits<ValueT*>::max();
+			size_t 	size 	= std::numeric_limits<size_t>::max();
+		private:
+
+			friend class BufferHandle;
+			friend class CommandList;
+
+			std::shared_ptr<Buffer> owningBuffer = {};
 		};
 
 		class BufferHandle {
@@ -109,25 +123,17 @@ namespace daxa {
 
 			size_t getRefCount() const { return buffer.use_count(); }
 		
-			template<typename ValueT = u8>
-			MappedMemoryPointer<ValueT> mapMemory() {
-				auto ret = mapMemoryVoid();
-				return {static_cast<ValueT*>(ret.hostPtr), ret.size, std::move(ret.owningBuffer)};
+			template<typename T = u8>
+			MappedMemoryPointer<T> mapMemory() {
+				void* ptr = buffer->mapMemory();
+				return std::move(MappedMemoryPointer<T>{ static_cast<T*>(ptr), buffer->getSize(), buffer });
 			}
 		private:
 			friend class Device;
 			friend class StagingBufferPool;
 			friend class Queue;
 
-			MappedMemoryPointer<void> mapMemoryVoid();
-
 			std::shared_ptr<Buffer> buffer = {};
 		};
-	
-		template<typename ValueT>
-		MappedMemoryPointer<ValueT>::~MappedMemoryPointer() {
-			if (owningBuffer)
-				owningBuffer->unmapMemory();
-		}
 	}
 }
