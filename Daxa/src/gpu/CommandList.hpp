@@ -188,10 +188,10 @@ namespace daxa {
 			 * @param dstOffset offset into the buffer.
 			 * @return MappedStagingMemory mapped memory.
 			 */
-            template<typename ValueT = u32>
+            template<typename ValueT = u8>
 			MappedMemoryPointer<ValueT> mapMemoryStaged(BufferHandle copyDst, size_t size, size_t dstOffset) {
 				auto ret = mapMemoryStagedVoid(copyDst, size, dstOffset);
-				return {static_cast<ValueT*>(ret.hostPtr), ret.size, ret.owningBuffer};
+				return { reinterpret_cast<ValueT*>(ret.hostPtr), ret.size, std::move(ret.owningBuffer) };
             }
 
 			void copyHostToBuffer(HostToBufferCopyInfo copyInfo);
@@ -306,7 +306,7 @@ namespace daxa {
 
 			void reset();
 			void begin();
-			MappedMemoryPointer<void> mapMemoryStagedVoid(BufferHandle copyDst, size_t size, size_t dstOffset);
+			MappedMemoryPointer<u8> mapMemoryStagedVoid(BufferHandle copyDst, size_t size, size_t dstOffset);
 			void setDebugName(char const* debugName);
 
 			// binding set management:

@@ -133,7 +133,6 @@ public:
 					.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
 				});
 			}
-
 			{
 				auto mm = cmd->mapMemoryStaged(transformsBuffer, draws.size() * sizeof(glm::mat4), 0);
 				for (int i = 0; i < draws.size(); i++) {
