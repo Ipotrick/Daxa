@@ -8,6 +8,8 @@
 #include <glslang/Public/ShaderLang.h>
 #include <glslang/SPIRV/GlslangToSpv.h>
 
+#include "Instance.hpp"
+
 namespace daxa {
 	namespace gpu {
 
@@ -137,7 +139,8 @@ namespace daxa {
 				ifs.seekg(0, std::ios::beg);
 				ret.assign(
 					std::istreambuf_iterator<char>(ifs),
-					std::istreambuf_iterator<char>());
+					std::istreambuf_iterator<char>()
+				);
 				ifs.close();
 				return { ret };
 			}
@@ -250,6 +253,43 @@ namespace daxa {
 			shaderMod->shaderStage = shaderStage;
 			shaderMod->device = device;
 			return { ShaderModuleHandle{ std::move(shaderMod) } };
+		}
+		
+		Result<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(VkDevice device, ShaderModuleCreateInfo const& ci) {
+			std::string glslSource = {};
+			if (ci.pathToSource) {
+				auto src = tryLoadGLSLShaderFromFile(ci.pathToSource);
+				if (src.isErr()) {
+					return ResultErr{ src.message() };
+				}
+				glslSource = src.value();
+			}
+			else if (ci.glslSource) {
+				glslSource = ci.glslSource;
+			}
+			else {
+				return ResultErr{"no path given"};
+			}
+
+			auto shadMod = tryCreateDAXAShaderModule(device, glslSource, ci.entryPoint, ci.stage);
+			if (shadMod.isErr()) {
+				return ResultErr{ shadMod.message() };
+			}
+
+			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
+				shadMod.value()->debugName = ci.debugName;
+
+				VkDebugUtilsObjectNameInfoEXT imageNameInfo {
+					.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+					.pNext = NULL,
+					.objectType = VK_OBJECT_TYPE_SHADER_MODULE,
+					.objectHandle = (uint64_t)shadMod.value()->shaderModule,
+					.pObjectName = ci.debugName,
+				};
+				instance->pfnSetDebugUtilsObjectNameEXT(device, &imageNameInfo);
+			}
+
+			return { shadMod.value() };
 		}
 	}
 }

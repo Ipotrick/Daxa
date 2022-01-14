@@ -28,7 +28,7 @@ namespace daxa {
 			char const* 			debugName 				= {};
 
 			bool operator == (SamplerCreateInfo const& other) const {
-				return std::memcmp(this, &other, sizeof(decltype(this))) == 0;
+				return std::memcmp(this, &other, sizeof(SamplerCreateInfo)) == 0;
 			}
 		};
 
