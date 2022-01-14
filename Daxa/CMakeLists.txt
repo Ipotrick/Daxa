@@ -35,4 +35,4 @@ target_include_directories(Daxa
 		"include"
 )
 
-set_project_warnings(Daxa)
+# set_project_warnings(Daxa)
