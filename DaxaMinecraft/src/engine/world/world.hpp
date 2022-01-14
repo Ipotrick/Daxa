@@ -52,8 +52,9 @@ struct World {
         : atlas_texture(render_ctx, "DaxaMinecraft/assets/atlas.png") {
         try_reload_shaders(render_ctx);
 
-        globals_uniform_allocator = render_ctx.device->createBindingSetAllocator(
-            graphics_pipeline->getSetDescription(0));
+        globals_uniform_allocator = render_ctx.device->createBindingSetAllocator({
+            .setDescription = graphics_pipeline->getSetDescription(0)
+        });
         globals_uniform_buffer = render_ctx.device->createBuffer({
             .size = sizeof(Globals),
             .usage =
@@ -61,8 +62,9 @@ struct World {
             .memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
         });
 
-        compute_binding_set_allocator = render_ctx.device->createBindingSetAllocator(
-            chunk_block_pass1_compute_pipeline->getSetDescription(0));
+        compute_binding_set_allocator = render_ctx.device->createBindingSetAllocator({
+            .setDescription = chunk_block_pass1_compute_pipeline->getSetDescription(0)
+        });
 
         chunk_buffer = render_ctx.device->createBuffer({
             .size = sizeof(Chunk::BlockBuffer),
@@ -136,25 +138,28 @@ struct World {
 
             auto comp1_shader =
                 render_ctx.device
-                    ->tryCreateShderModuleFromGLSL(
-                        comp1_str, VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT)
-                    .value();
+                    ->createShaderModule({
+                        .glslSource = comp1_str.c_str(),
+                        .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+                    }).value();
             auto comp2_shader =
                 render_ctx.device
-                    ->tryCreateShderModuleFromGLSL(
-                        comp2_str, VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT)
-                    .value();
+                    ->createShaderModule({
+                        .glslSource = comp2_str.c_str(),
+                        .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+                    }).value();
             auto comp3_shader =
                 render_ctx.device
-                    ->tryCreateShderModuleFromGLSL(
-                        comp3_str, VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT)
-                    .value();
+                    ->createShaderModule({
+                        .glslSource = comp3_str.c_str(),
+                        .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+                    }).value();
 
-            auto new_pipeline1 = render_ctx.device->createComputePipeline(comp1_shader);
+            auto new_pipeline1 = render_ctx.device->createComputePipeline({comp1_shader});
             if (!new_pipeline1) throw;
-            auto new_pipeline2 = render_ctx.device->createComputePipeline(comp2_shader);
+            auto new_pipeline2 = render_ctx.device->createComputePipeline({comp2_shader});
             if (!new_pipeline2) throw;
-            auto new_pipeline3 = render_ctx.device->createComputePipeline(comp3_shader);
+            auto new_pipeline3 = render_ctx.device->createComputePipeline({comp3_shader});
             if (!new_pipeline3) throw;
 
             chunk_block_pass1_compute_pipeline = new_pipeline1;
@@ -186,14 +191,16 @@ struct World {
 
             auto vert_shader =
                 render_ctx.device
-                    ->tryCreateShderModuleFromGLSL(
-                        vert_str, VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT)
-                    .value();
+                    ->createShaderModule({
+                        .glslSource = vert_str.c_str(),
+                        .stage = VK_SHADER_STAGE_VERTEX_BIT,
+                    }).value();
             auto frag_shader =
                 render_ctx.device
-                    ->tryCreateShderModuleFromGLSL(
-                        frag_str, VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT)
-                    .value();
+                    ->createShaderModule({
+                        .glslSource = frag_str.c_str(),
+                        .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+                    }).value();
 
             daxa::gpu::GraphicsPipelineBuilder pipeline_builder;
             pipeline_builder.addShaderStage(vert_shader)

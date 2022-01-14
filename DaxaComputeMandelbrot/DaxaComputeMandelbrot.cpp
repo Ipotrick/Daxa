@@ -6,7 +6,7 @@ class MyUser {
 public:
 	MyUser(daxa::AppState& app) 
 		: device{ daxa::gpu::Device::create() }
-		, queue{ this->device->createQueue(/*frames in flight: */3) }
+		, queue{ this->device->createQueue({.batchCount = 2 })}
 		, swapchain{ this->device->createSwapchain({
 			.surface = app.window->getSurface(), 
 			.width = app.window->getWidth(), 
@@ -15,7 +15,7 @@ public:
 			.additionalUses = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 		})}
 		, swapchainImage{ this->swapchain->aquireNextImage() }
-		, presentSignal{ this->device->createSignal() }
+		, presentSignal{ this->device->createSignal({}) }
 	{ 
 
 		char const* computeShaderGLSL = R"(
@@ -75,14 +75,14 @@ public:
 			}
 		)";
 
-		daxa::gpu::ShaderModuleHandle computeShader = device->tryCreateShderModuleFromGLSL(
-			computeShaderGLSL,
-			VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT
-		).value();
+		daxa::gpu::ShaderModuleHandle computeShader = device->createShaderModule({
+			.glslSource = computeShaderGLSL,
+			.stage = VK_SHADER_STAGE_COMPUTE_BIT
+		}).value();
 
-		this->pipeline = device->createComputePipeline(computeShader);
+		this->pipeline = device->createComputePipeline({ .shaderModule = computeShader });
 
-		this->bindingSetAllocator = device->createBindingSetAllocator(pipeline->getSetDescription(0));
+		this->bindingSetAllocator = device->createBindingSetAllocator({ .setDescription = pipeline->getSetDescription(0) });
 
 		// or use them embedded, like a named parameter list:
 		this->uniformBuffer = device->createBuffer({
