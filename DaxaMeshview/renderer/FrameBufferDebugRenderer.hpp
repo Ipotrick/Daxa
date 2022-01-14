@@ -16,7 +16,7 @@ public:
     };
 
     void init(RenderContext& renderCTX, u32 width, u32 height) {
-        auto shader = renderCTX.device->createShderModule({
+        auto shader = renderCTX.device->createShaderModule({
             .pathToSource = "./DaxaMeshview/renderer/fb_debug.comp",
             .stage = VK_SHADER_STAGE_COMPUTE_BIT,
         });

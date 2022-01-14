@@ -14,7 +14,7 @@ class MeshRenderer {
 public:
 
     void init(RenderContext& renderCTX) {
-		auto vertexShader = renderCTX.device->createShderModule({
+		auto vertexShader = renderCTX.device->createShaderModule({
 			.pathToSource = "./DaxaMeshview/renderer/g_pass.vert",
 			.stage = VK_SHADER_STAGE_VERTEX_BIT
 		});
@@ -22,7 +22,7 @@ public:
 			std::cout << "could not load vertex shader due to: " << vertexShader.message() << std::endl;
 		}
 
-		auto fragmenstShader = renderCTX.device->createShderModule({
+		auto fragmenstShader = renderCTX.device->createShaderModule({
 			.pathToSource = "./DaxaMeshview/renderer/g_pass.frag",
 			.stage = VK_SHADER_STAGE_FRAGMENT_BIT
 		});
