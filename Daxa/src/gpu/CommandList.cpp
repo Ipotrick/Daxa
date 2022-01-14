@@ -31,6 +31,7 @@ namespace daxa {
 
 		void CommandList::finalize() {
 			DAXA_ASSERT_M(finalized == false, "can not finalize a command list twice");
+			DAXA_ASSERT_M(operationsInProgress == 0, "can only finalize a command list that has no operations in progress");
 			vkEndCommandBuffer(cmd);
 			finalized = true;
 
@@ -39,7 +40,7 @@ namespace daxa {
 			}
 		}
 
-		MappedMemoryPointer<void> CommandList::mapMemoryStagedVoid(BufferHandle copyDst, size_t size, size_t dstOffset) {
+		MappedMemoryPointer<u8> CommandList::mapMemoryStagedVoid(BufferHandle copyDst, size_t size, size_t dstOffset) {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(size <= STAGING_BUFFER_POOL_BUFFER_SIZE, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
@@ -51,9 +52,10 @@ namespace daxa {
 
 			auto srcOffset = stagingBuffer.usedUpSize;
 
-			auto bufferHost = stagingBuffer.buffer.mapMemory<void>();
-            bufferHost.hostPtr = static_cast<u8*>(bufferHost.hostPtr) + srcOffset;
-            bufferHost.size = size;
+			auto mm = stagingBuffer.buffer.mapMemory();
+
+			mm.hostPtr += srcOffset;
+			mm.size = size;
 
 			stagingBuffer.usedUpSize += size;
 			stagingBuffer.usedUpSize = roundUpToMultipleOf128(stagingBuffer.usedUpSize);
@@ -69,7 +71,7 @@ namespace daxa {
 			};
 			copyBufferToBuffer(btbCopyInfo);
 
-			return bufferHost;
+			return mm;
 		}
 
 		void CommandList::copyHostToBuffer(HostToBufferCopyInfo copyInfo) {
