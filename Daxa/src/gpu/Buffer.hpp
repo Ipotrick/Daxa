@@ -52,6 +52,8 @@ namespace daxa {
 
 			VmaMemoryUsage getVmaMemoryUsage() const { return memoryUsage; }
 
+			u32 getMemeoryMapCount() const { return memoryMapCount; }
+
 			std::string const& getDebugName() const { return debugName; }
 		private:
 			friend class Device;
