@@ -148,7 +148,11 @@ namespace daxa {
 
         pipeline = device->createGraphicsPipeline(pipelineDescription);
 
-        setAlloc = device->createBindingSetAllocator(pipeline->getSetDescription(0));
+        setAlloc = device->createBindingSetAllocator({
+            .setDescription = pipeline->getSetDescription(0),
+            .setPerPool = 128,
+            .debugName = "dear imgui set allocator"
+        });
 
         recreatePerFrameData(4096, 4096);
 
@@ -174,6 +178,7 @@ namespace daxa {
             .size = width * height * sizeof(u8) * 4,
             .dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         });
+        cmdList->finalize();
         queue->submitBlocking({
             .commandLists = { cmdList }
         });

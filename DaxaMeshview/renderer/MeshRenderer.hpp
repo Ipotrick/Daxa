@@ -34,6 +34,7 @@ public:
 		pipelineBuilder
 			.addShaderStage(vertexShader.value())
 			.addShaderStage(fragmenstShader.value())
+			.setDebugName("mesh render pipeline")
 			.configurateDepthTest({.enableDepthTest = true, .enableDepthWrite = true, .depthAttachmentFormat = VK_FORMAT_D32_SFLOAT})
 			// adding a vertex input attribute binding:
 			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
@@ -52,8 +53,14 @@ public:
 
 		this->pipeline = renderCTX.device->createGraphicsPipeline(pipelineBuilder);
 
-		this->globalSetAlloc = renderCTX.device->createBindingSetAllocator(pipeline->getSetDescription(0));
-		this->perDrawSetAlloc = renderCTX.device->createBindingSetAllocator(pipeline->getSetDescription(1));
+		this->globalSetAlloc = renderCTX.device->createBindingSetAllocator({
+			.setDescription = pipeline->getSetDescription(0),
+			.debugName = "mesh renderer global set allocator",
+		});
+		this->perDrawSetAlloc = renderCTX.device->createBindingSetAllocator({
+			.setDescription = pipeline->getSetDescription(1),
+			.debugName = "mesh renderer per draw set allocator",
+		});
 
         this->globalDataBufffer = renderCTX.device->createBuffer({
             .size = sizeof(GlobalData),
