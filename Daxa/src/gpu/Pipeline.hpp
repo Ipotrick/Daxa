@@ -19,6 +19,11 @@ namespace daxa {
 
 		constexpr inline size_t MAX_SETS_PER_PIPELINE = 4;
 
+		struct ComputePipelineCreateInfo {
+			ShaderModuleHandle 	shaderModule 	= {};
+			char const* 		debugName 		= {};
+		};
+
 		class PipelineHandle;
 
 		class Pipeline {
@@ -41,7 +46,7 @@ namespace daxa {
 			VkPipelineLayout const& getVkPipelineLayout() const { return layout; }
 		private:
 			friend class GraphicsPipelineBuilder;
-			friend PipelineHandle createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ShaderModuleHandle const& shaderModule, char const* debugName);
+			friend PipelineHandle createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ComputePipelineCreateInfo const& ci);
 
 			std::array<BindingSetDescription const*, MAX_SETS_PER_PIPELINE> bindingSetDescriptions = {};
 
@@ -137,6 +142,6 @@ namespace daxa {
 			std::vector<VkFormat> colorAttachmentFormats;
 		};
 
-		PipelineHandle createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ShaderModuleHandle const& shaderModule, char const* debugName = {});
+		PipelineHandle createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ComputePipelineCreateInfo const& ci);
 	}
 }
