@@ -62,20 +62,7 @@ public:
 		}
 		ImGui::End();
 
-		ImGui::Begin("frame buffer inspector");
-		ImGui::Text("screenspace normals");
-		f32 w = ImGui::GetWindowWidth() - 10;
-		f32 aspect = (f32)app.window->getHeight() / (f32)app.window->getWidth();
-		f32 h = w * aspect;
-		auto id = imguiRenderer->getImGuiTextureId(frameBufferDebugRenderer.debugScreenSpaceNormalImage);
-		ImGui::Image((void*)id, ImVec2(w, h));
-		ImGui::Text("worldspace normals");
-		id = imguiRenderer->getImGuiTextureId(frameBufferDebugRenderer.debugWorldSpaceNormalImage);
-		ImGui::Image((void*)id, ImVec2(w, h));
-		ImGui::Text("depth");
-		id = imguiRenderer->getImGuiTextureId(frameBufferDebugRenderer.debugLinearDepthImage);
-		ImGui::Image((void*)id, ImVec2(w, h));
-		ImGui::End();
+		frameBufferDebugRenderer.doGui(*imguiRenderer);
 
 		if (!ImGui::GetIO().WantCaptureMouse) {
 			cameraController.processInput(*app.window, app.getDeltaTimeSeconds());
@@ -93,8 +80,8 @@ public:
 		
 		cmdList->insertImageBarrier({
 			.barrier = {
-				.waitingStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-				.waitingAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR,
+				.dstStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
+				.dstAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR,
 			},
 			.image = renderCTX.swapchainImage.getImageHandle(),
 			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -132,18 +119,16 @@ public:
 			meshRender.render(renderCTX, cmdList, draws);
 		}
 
-		auto upload = FrameBufferDebugRenderer::UploadData{
+		auto upload = FrameBufferDebugRenderer::CameraData{
 			.far = cameraController.far,
 			.near = cameraController.near,
-			.imageWidth = (i32)app.window->getWidth(),
-			.imageHeight = (i32)app.window->getHeight(),
 			.inverseView = glm::inverse(cameraController.view),
 		};
 		frameBufferDebugRenderer.renderDebugViews(renderCTX, cmdList, upload);
 
 		cmdList->insertMemoryBarrier({
-			.awaitedStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
-			.waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
+			.srcStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
+			.dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
 		});
 
 		imguiRenderer->recordCommands(ImGui::GetDrawData(), cmdList, renderCTX.swapchainImage.getImageHandle());
@@ -151,8 +136,8 @@ public:
 		// array because we can allways pass multiple barriers at once for driver efficiency
 		std::array imgBarrier1 = { daxa::gpu::ImageBarrier{
 			.barrier = {
-				.awaitedStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-				.awaitedAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR,
+				.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
+				.srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR,
 			},
 			.image = renderCTX.swapchainImage.getImageHandle(),
 			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -168,6 +153,7 @@ public:
 		renderCTX.queue->submit(submitInfo);
 
 		renderCTX.present();
+		printf("frame\n");
 	}
 
 	void cleanup(daxa::AppState& app) {

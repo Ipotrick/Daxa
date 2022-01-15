@@ -5,9 +5,11 @@ layout(local_size_x = 8, local_size_y = 8) in;
 
 layout(set = 0, binding = 0) uniform Globals {
     mat4 inverse_view;
-    ivec2 size;
     float near;
     float far;
+    ivec2 size;
+    float zMin;
+    float zMax;
 } globals;
 
 layout (set = 0, binding = 1) uniform sampler2D in_depth;
@@ -22,7 +24,8 @@ void main() {
         vec2 coord = vec2(gl_GlobalInvocationID.xy) / vec2(globals.size);
         float depth = texture(in_depth, coord).x;
         float z = 2.0 * globals.near * globals.far / (globals.far + globals.near - depth * (globals.far - globals.near));
-        float normalized_z = z / (globals.far - globals.near);
+        z = clamp(z, globals.zMin, globals.zMax);
+        float normalized_z = (z - globals.zMin) / (globals.zMax - globals.zMin);
         imageStore(out_depth, icoord, vec4(normalized_z,normalized_z,normalized_z,1));
 
         vec2 screen_space_normal_xy = texture(in_normal, coord).xy;

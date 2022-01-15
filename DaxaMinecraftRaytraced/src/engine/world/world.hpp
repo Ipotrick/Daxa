@@ -376,8 +376,8 @@ struct World {
         cmd_list->pushConstant(VK_SHADER_STAGE_COMPUTE_BIT, chunk_pos);
         cmd_list->dispatch(1, 1, Chunk::NZ);
         cmd_list->insertMemoryBarrier(daxa::gpu::MemoryBarrier{
-            .awaitedStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
-            .waitingStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+            .srcStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+            .dstStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
         });
 
         // cmd_list->bindPipeline(chunk_block_pass2_compute_pipeline);
