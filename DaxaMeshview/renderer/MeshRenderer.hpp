@@ -96,7 +96,6 @@ public:
 		cmd->insertImageBarrier({
 			.image = renderCTX.normalsImage,
 			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			.waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
 		});
 
 		if (!dummyTexture) {
@@ -133,6 +132,7 @@ public:
 					.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
 				});
 			}
+
 			{
 				auto mm = cmd->mapMemoryStaged(transformsBuffer, draws.size() * sizeof(glm::mat4), 0);
 				for (int i = 0; i < draws.size(); i++) {
@@ -195,10 +195,15 @@ public:
 		cmd->endRendering();
 
 		cmd->insertImageBarrier({
+			.barrier = {
+				.awaitedStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
+				.awaitedAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR,
+				.waitingStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+				.waitingAccess = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR | VK_ACCESS_2_SHADER_STORAGE_READ_BIT_KHR,
+			},
 			.image = renderCTX.normalsImage,
 			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			.awaitedStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
 		});
     }
 

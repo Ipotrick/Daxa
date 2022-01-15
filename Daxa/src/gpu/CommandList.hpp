@@ -108,20 +108,27 @@ namespace daxa {
 		 * use this for all sync inside a queue:
 		*/
 		struct MemoryBarrier {
-			VkPipelineStageFlags2KHR awaitedStages = 0;
-			VkAccessFlags2KHR awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR;
-			VkPipelineStageFlags2KHR waitingStages = 0;
+			VkPipelineStageFlags2KHR awaitedStages = VK_PIPELINE_STAGE_2_NONE_KHR;
+			VkAccessFlags2KHR awaitedAccess = VK_ACCESS_2_NONE_KHR;
+			VkPipelineStageFlags2KHR waitingStages = VK_PIPELINE_STAGE_2_NONE_KHR;
 			VkAccessFlags2KHR waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR;
+		};
+
+		static inline constexpr MemoryBarrier FULL_MEMORY_BARRIER = {
+			.awaitedStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
+			.awaitedAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR | VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
+			.waitingStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
+			.waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR | VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
 		};
 
 		/**
 		 * no real use case apparently:
 		*/
 		struct BufferBarrier {
-			VkPipelineStageFlags2KHR awaitedStages = 0;
-			VkAccessFlags2KHR awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR;
-			VkPipelineStageFlags2KHR waitingStages = 0;
-			VkAccessFlags2KHR waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR;
+			VkPipelineStageFlags2KHR awaitedStages = VK_PIPELINE_STAGE_2_NONE_KHR;
+			VkAccessFlags2KHR awaitedAccess = VK_ACCESS_2_NONE_KHR;
+			VkPipelineStageFlags2KHR waitingStages = VK_PIPELINE_STAGE_2_NONE_KHR;
+			VkAccessFlags2KHR waitingAccess = VK_ACCESS_2_NONE_KHR;
 			BufferHandle buffer = {};
 			size_t offset = 0;
 			std::optional<u32> size = {};
@@ -131,13 +138,10 @@ namespace daxa {
 		 * used for layout changes
 		*/
 		struct ImageBarrier {
-			VkPipelineStageFlags2KHR awaitedStages = 0;
-			VkAccessFlags2KHR awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR;
-			VkPipelineStageFlags2KHR waitingStages = 0;
-			VkAccessFlags2KHR waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR;
+			MemoryBarrier barrier = {};
 			ImageHandle image = {};
 			VkImageLayout layoutBefore;
-			VkImageLayout layoutAfter;
+			VkImageLayout layoutAfter; 
 			std::optional<VkImageSubresourceRange> subRange = {};
 		};
 

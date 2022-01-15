@@ -171,6 +171,7 @@ namespace daxa {
             .sampler = device->createSampler({})
         });
 
+        printf("pre here maybe?\n");
         auto cmdList = device->getCommandList();
         cmdList->copyHostToImageSynced({
             .src = pixels,
@@ -182,6 +183,7 @@ namespace daxa {
         queue->submitBlocking({
             .commandLists = { cmdList }
         });
+        printf("here maybe?\n");
 
         referencedImages.push_back(fontSheet);
 

@@ -40,6 +40,7 @@ public:
             .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
             .memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             .memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
+            .debugName = "frame buffer debug renderer global buffer"
         });
 
         auto cmdList = renderCTX.device->getCommandList();
@@ -63,23 +64,25 @@ public:
         ci.debugName = "debugLinearDepthImage";
         debugLinearDepthImage = renderCTX.device->createImage2d(ci);
 
+        daxa::gpu::MemoryBarrier postMemBar = {
+            .waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+            .waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR | VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
+        };
+
         cmdList->insertImageBarriers(std::array{
             daxa::gpu::ImageBarrier{
+                .barrier = postMemBar,
                 .image = debugScreenSpaceNormalImage,
-                .awaitedStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-                .waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
                 .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             },
             daxa::gpu::ImageBarrier{
+                .barrier = postMemBar,
                 .image = debugWorldSpaceNormalImage,
-                .awaitedStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-                .waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
                 .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             },
             daxa::gpu::ImageBarrier{
+                .barrier = postMemBar,
                 .image = debugLinearDepthImage,
-                .awaitedStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-                .waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
                 .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             }
         });
@@ -92,38 +95,47 @@ public:
             .dst = buffer,
         });
 
-        auto membar = std::array{ 
-            daxa::gpu::MemoryBarrier{.awaitedStages = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT_KHR, .waitingStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR },
+        auto copyMemBarr = std::array{ 
+            daxa::gpu::MemoryBarrier{
+                .awaitedStages = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT_KHR, 
+                .awaitedAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR,
+                .waitingStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+                .waitingAccess = VK_ACCESS_2_SHADER_READ_BIT_KHR,
+            },
         };
+
+        daxa::gpu::MemoryBarrier preMemBarr{
+            .awaitedStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
+            .awaitedAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR,
+            .waitingStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+            .waitingAccess = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT_KHR | VK_ACCESS_2_SHADER_STORAGE_READ_BIT_KHR | VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR,
+        };
+
         auto imgbar = std::array{
             daxa::gpu::ImageBarrier{
+                .barrier = preMemBarr,
                 .image = debugScreenSpaceNormalImage,
-                .awaitedStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-                .waitingStages =  VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
                 .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
             },
             daxa::gpu::ImageBarrier{
+                .barrier = preMemBarr,
                 .image = debugWorldSpaceNormalImage,
-                .awaitedStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-                .waitingStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
                 .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
             },
             daxa::gpu::ImageBarrier{
+                .barrier = preMemBarr,
                 .image = debugLinearDepthImage,
-                .awaitedStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-                .waitingStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
                 .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
             },
             daxa::gpu::ImageBarrier{
+                .barrier = preMemBarr,
                 .image = renderCTX.depthImage,
-                .awaitedStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-                .waitingStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
                 .layoutBefore = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
                 .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            }
+            },
         };
         cmdList->insertBarriers(
-            membar,
+            copyMemBarr,
             imgbar
         );
 
@@ -143,32 +155,35 @@ public:
 
         // TODO dispatch compute shader
 
+        daxa::gpu::MemoryBarrier postMemBarr {
+            .awaitedStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+            .awaitedAccess = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT_KHR,
+            .waitingStages =  VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
+            .waitingAccess = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR,
+        };
+
         cmdList->insertImageBarriers(std::array{
             daxa::gpu::ImageBarrier{
+                .barrier = postMemBarr,
                 .image = debugScreenSpaceNormalImage,
-                .awaitedStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
-                .waitingStages =  VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
                 .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
                 .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             },
             daxa::gpu::ImageBarrier{
+                .barrier = postMemBarr,
                 .image = debugWorldSpaceNormalImage,
-                .awaitedStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
-                .waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
                 .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
                 .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             },
             daxa::gpu::ImageBarrier{
+                .barrier = postMemBarr,
                 .image = debugLinearDepthImage,
-                .awaitedStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
-                .waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
                 .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
                 .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             },
             daxa::gpu::ImageBarrier{
+                .barrier = postMemBarr,
                 .image = renderCTX.depthImage,
-                .awaitedStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
-                .waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
                 .layoutAfter = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
             },
         });

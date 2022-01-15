@@ -77,14 +77,13 @@ namespace daxa {
 
 			vkCreateImageView(device, &ivci, nullptr, &ret.view);
 
-			if (ci.debugName) {
-				const VkDebugUtilsObjectNameInfoEXT imageNameInfo =
-				{
-					VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, // sType
-					NULL,                                               // pNext
-					VK_OBJECT_TYPE_IMAGE_VIEW,                               // objectType
-					(uint64_t)ret.view,                                // objectHandle
-					ci.debugName,                            			// pObjectName
+			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
+				VkDebugUtilsObjectNameInfoEXT imageNameInfo {
+					.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+					.pNext = NULL,
+					.objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
+					.objectHandle = (uint64_t)ret.view,
+					.pObjectName = ci.debugName,
 				};
 				instance->pfnSetDebugUtilsObjectNameEXT(device, &imageNameInfo);
 			}

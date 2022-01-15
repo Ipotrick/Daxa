@@ -87,11 +87,11 @@ constexpr int GL_CONSTANT_REPEAT = 10497;
 
 daxa::Result<VkSamplerAddressMode> glSamplerAdressModeToVk(int glCode) {
     switch (glCode) {
-        case GL_CONSTANT_CLAMP_TO_EDGE:         return daxa::Result<VkSamplerAddressMode>::ok(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
-        case GL_CONSTANT_CLAMP_TO_BORDER:       return daxa::Result<VkSamplerAddressMode>::ok(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
-    	case GL_CONSTANT_MIRRORED_REPEAT:       return daxa::Result<VkSamplerAddressMode>::ok(VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT);
-    	case GL_CONSTANT_MIRROR_CLAMP_TO_EDGE:  return daxa::Result<VkSamplerAddressMode>::ok(VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE);
-        case GL_CONSTANT_REPEAT:                return daxa::Result<VkSamplerAddressMode>::ok(VK_SAMPLER_ADDRESS_MODE_REPEAT);
+        case GL_CONSTANT_CLAMP_TO_EDGE:         return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        case GL_CONSTANT_CLAMP_TO_BORDER:       return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    	case GL_CONSTANT_MIRRORED_REPEAT:       return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+    	case GL_CONSTANT_MIRROR_CLAMP_TO_EDGE:  return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+        case GL_CONSTANT_REPEAT:                return VK_SAMPLER_ADDRESS_MODE_REPEAT;
         default: return daxa::ResultErr{"invalid opengl sampler clamp code"};
     }
 }
