@@ -27,7 +27,7 @@ namespace daxa {
 				VkDebugUtilsObjectNameInfoEXT nameInfo {
 					.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
 					.pNext = NULL,
-					.objectType = VK_OBJECT_TYPE_IMAGE,
+					.objectType = VK_OBJECT_TYPE_BUFFER,
 					.objectHandle = (uint64_t)this->buffer,
 					.pObjectName = ci.debugName,
 				};

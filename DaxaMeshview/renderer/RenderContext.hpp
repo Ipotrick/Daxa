@@ -41,6 +41,7 @@ public:
 			.imageUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 			.imageAspekt = VK_IMAGE_ASPECT_DEPTH_BIT,
 			.sampler = defaultSampler,
+			.debugName = "depth image",
 		});
 
 		this->normalsImage = device->createImage2d({
@@ -50,6 +51,7 @@ public:
 			.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 			.imageAspekt = VK_IMAGE_ASPECT_COLOR_BIT,
 			.sampler = defaultSampler,
+			.debugName = "normals image",
 		});
 
 		cmd->insertImageBarriers(std::array{

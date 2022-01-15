@@ -134,9 +134,7 @@ namespace daxa {
 		void CommandList::copyHostToImageSynced(HostToImageCopySyncedInfo copySyncedInfo) {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			ImageBarrier firstBarrier{
-				.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
-				.awaitedStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
-				.waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR,
+				.barrier = FULL_MEMORY_BARRIER,
 				.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
 				.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				.image = copySyncedInfo.dst,
@@ -151,9 +149,7 @@ namespace daxa {
 			});
 
 			ImageBarrier secondBarrier{
-				.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
-				.waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR,
-				.waitingStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
+				.barrier = FULL_MEMORY_BARRIER,
 				.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				.layoutAfter = copySyncedInfo.dstFinalLayout,
 				.image = copySyncedInfo.dst,
@@ -243,18 +239,14 @@ namespace daxa {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			insertImageBarriers(std::array{
 				ImageBarrier{ 
+					.barrier = FULL_MEMORY_BARRIER,
 					.image = copySyncedInfo.src, 
-					.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR, 
-					.awaitedStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
-					.waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR, 
 					.layoutBefore = copySyncedInfo.srcLayoutBeforeAndAfter , 
 					.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL 
 				},
 				ImageBarrier{ 
+					.barrier = FULL_MEMORY_BARRIER,
 					.image = copySyncedInfo.dst, 
-					.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR, 
-					.awaitedStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
-					.waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR, 
 					.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED, 
 					.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL 
 				},
@@ -270,18 +262,14 @@ namespace daxa {
 			});
 			insertImageBarriers(std::array{
 				ImageBarrier{ 
+					.barrier = FULL_MEMORY_BARRIER,
 					.image = std::move(copySyncedInfo.src), 
-					.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR, 
-					.waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR, 
-					.waitingStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
 					.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 
 					.layoutAfter = copySyncedInfo.srcLayoutBeforeAndAfter 
 				},
 				ImageBarrier{ 
+					.barrier = FULL_MEMORY_BARRIER,
 					.image = std::move(copySyncedInfo.dst), 
-					.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
-					.waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR, 
-					.waitingStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
 					.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
 					.layoutAfter = copySyncedInfo.dstFinalLayout
 				},
@@ -559,31 +547,31 @@ namespace daxa {
 			//	bufBarrierBufferSize++;
 			//}
 
-			for (auto& barrier : imgBarriers) {
+			for (auto& imgBarrier : imgBarriers) {
 				DAXA_ASSERT_M(bufBarrierBufferSize < 32, "can only insert 32 barriers of one kind in a single insertBarriers call");
 
 				imgBarrierBuffer[imgBarrierBufferSize] = VkImageMemoryBarrier2KHR{
 					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR,
 					.pNext = nullptr,
-					.srcStageMask = barrier.awaitedStages,
-					.srcAccessMask = barrier.awaitedAccess,
-					.dstStageMask = barrier.waitingStages,
-					.dstAccessMask = barrier.waitingAccess,
-					.oldLayout = barrier.layoutBefore,
-					.newLayout = barrier.layoutAfter,
+					.srcStageMask = imgBarrier.barrier.awaitedStages,
+					.srcAccessMask = imgBarrier.barrier.awaitedAccess,
+					.dstStageMask = imgBarrier.barrier.waitingStages,
+					.dstAccessMask = imgBarrier.barrier.waitingAccess,
+					.oldLayout = imgBarrier.layoutBefore,
+					.newLayout = imgBarrier.layoutAfter,
 					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.image = barrier.image->getVkImage(),
-					.subresourceRange = barrier.subRange.value_or(VkImageSubresourceRange{
-						.aspectMask = barrier.image->getVkAspect(),
+					.image = imgBarrier.image->getVkImage(),
+					.subresourceRange = imgBarrier.subRange.value_or(VkImageSubresourceRange{
+						.aspectMask = imgBarrier.image->getVkAspect(),
 						.baseMipLevel = 0,
-						.levelCount = barrier.image->getVkMipmapLevels(),
+						.levelCount = imgBarrier.image->getVkMipmapLevels(),
 						.baseArrayLayer = 0,
-						.layerCount = barrier.image->getVkArrayLayers(),
+						.layerCount = imgBarrier.image->getVkArrayLayers(),
 					})
 				};
 
-				usedImages.push_back(barrier.image);
+				usedImages.push_back(imgBarrier.image);
 
 				imgBarrierBufferSize++;
 			}
