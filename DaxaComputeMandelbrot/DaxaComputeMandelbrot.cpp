@@ -119,7 +119,7 @@ public:
 				.format = VK_FORMAT_R8G8B8A8_UNORM,
 				.imageUsage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 			});
-			cmdList->insertImageBarrier({.image = resultImage, .layoutAfter = VK_IMAGE_LAYOUT_GENERAL, .waitingStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR});
+			cmdList->insertImageBarrier({.image = resultImage, .layoutAfter = VK_IMAGE_LAYOUT_GENERAL, .dstStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR});
 		}
 
 		/// ------------ Begin Data Uploading ---------------------
@@ -133,8 +133,8 @@ public:
 
 		// array because we can allways pass multiple barriers at once for driver efficiency
 		cmdList->insertMemoryBarrier(daxa::gpu::MemoryBarrier{
-			.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,				// wait for writing the vertex buffer
-			.waitingStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,	// the compute shader must wait
+			.srcAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,				// wait for writing the vertex buffer
+			.dstStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,	// the compute shader must wait
 		});
 		
 		/// ------------ End Data Uploading ---------------------

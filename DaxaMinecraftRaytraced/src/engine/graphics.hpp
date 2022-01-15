@@ -75,14 +75,14 @@ struct RenderContext {
         auto   cmd_list     = device->getCommandList();
 
         std::array imgBarrier0 = {daxa::gpu::ImageBarrier{
-            .waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
+            .dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
             .image         = swapchain_image.getImageHandle(),
             .layoutBefore  = VK_IMAGE_LAYOUT_UNDEFINED,
             .layoutAfter   = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         }};
         std::array memBarrier0 = {daxa::gpu::MemoryBarrier{
-            .awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
-            .waitingStages = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT_KHR,
+            .srcAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
+            .dstStages = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT_KHR,
         }};
         cmd_list->insertBarriers(memBarrier0, imgBarrier0);
 
