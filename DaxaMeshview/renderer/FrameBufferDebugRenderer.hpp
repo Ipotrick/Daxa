@@ -7,12 +7,17 @@
 
 class FrameBufferDebugRenderer {
 public:
-    struct UploadData {
+    struct CameraData {
         glm::mat4 inverseView;
+        f32 near;
+        f32 far;
+    };
+    struct UploadData {
+        CameraData cameraData;
         i32 imageWidth;
         i32 imageHeight;
-        float near;
-        float far;
+        f32 zMin;
+        f32 zMax;
     };
 
     void init(RenderContext& renderCTX, u32 width, u32 height) {
@@ -27,7 +32,7 @@ public:
 		this->pipeline = renderCTX.device->createComputePipeline({
             .shaderModule = shader.value(), 
             .debugName = "frame buffer debug pipeline",
-        });
+        }); 
 
 		this->setAlloc = renderCTX.device->createBindingSetAllocator({
             .setDescription = pipeline->getSetDescription(0),
@@ -65,8 +70,8 @@ public:
         debugLinearDepthImage = renderCTX.device->createImage2d(ci);
 
         daxa::gpu::MemoryBarrier postMemBar = {
-            .waitingStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
-            .waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR | VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
+            .dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+            .dstAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR | VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
         };
 
         cmdList->insertImageBarriers(std::array{
@@ -88,7 +93,12 @@ public:
         });
     }
     
-    void renderDebugViews(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmdList, UploadData uploadData) {
+    void renderDebugViews(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmdList, CameraData cameraData) {
+        uploadData.cameraData = cameraData;
+        uploadData.imageWidth = debugLinearDepthImage->getVkExtent().width;
+        uploadData.imageHeight = debugLinearDepthImage->getVkExtent().height;
+        uploadData.zMin = std::min(std::max(cameraData.near, uploadData.zMin), cameraData.far);
+        uploadData.zMax = std::min(std::max(cameraData.near, uploadData.zMax), cameraData.far);
         cmdList->copyHostToBuffer({
             .src = (void*)&uploadData,
             .size = sizeof(decltype(uploadData)),
@@ -97,18 +107,18 @@ public:
 
         auto copyMemBarr = std::array{ 
             daxa::gpu::MemoryBarrier{
-                .awaitedStages = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT_KHR, 
-                .awaitedAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR,
-                .waitingStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
-                .waitingAccess = VK_ACCESS_2_SHADER_READ_BIT_KHR,
+                .srcStages = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT_KHR, 
+                .srcAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR,
+                .dstStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+                .dstAccess = VK_ACCESS_2_SHADER_READ_BIT_KHR,
             },
         };
 
         daxa::gpu::MemoryBarrier preMemBarr{
-            .awaitedStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-            .awaitedAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR,
-            .waitingStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
-            .waitingAccess = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT_KHR | VK_ACCESS_2_SHADER_STORAGE_READ_BIT_KHR | VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR,
+            .srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
+            .srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR,
+            .dstStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+            .dstAccess = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT_KHR | VK_ACCESS_2_SHADER_STORAGE_READ_BIT_KHR | VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR,
         };
 
         auto imgbar = std::array{
@@ -156,10 +166,10 @@ public:
         // TODO dispatch compute shader
 
         daxa::gpu::MemoryBarrier postMemBarr {
-            .awaitedStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
-            .awaitedAccess = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT_KHR,
-            .waitingStages =  VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
-            .waitingAccess = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR,
+            .srcStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+            .srcAccess = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT_KHR,
+            .dstStages =  VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
+            .dstAccess = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR,
         };
 
         cmdList->insertImageBarriers(std::array{
@@ -189,10 +199,32 @@ public:
         });
     }
 
+	void doGui(daxa::ImGuiRenderer& imguiRenderer) {
+		ImGui::Begin("frame buffer inspector");
+		ImGui::Text("screenspace normals");
+        f32 frameBufferWidth = debugLinearDepthImage->getVkExtent().width;
+        f32 frameBufferHeight = debugLinearDepthImage->getVkExtent().height;
+		f32 w = ImGui::GetWindowWidth() - 10;
+		f32 aspect = (f32)frameBufferHeight / (f32)frameBufferWidth;
+		f32 h = w * aspect;
+		auto id = imguiRenderer.getImGuiTextureId(debugScreenSpaceNormalImage);
+		ImGui::Image((void*)id, ImVec2(w, h));
+		ImGui::Text("worldspace normals");
+		id = imguiRenderer.getImGuiTextureId(debugWorldSpaceNormalImage);
+		ImGui::Image((void*)id, ImVec2(w, h));
+		ImGui::Text("depth");
+        ImGui::SliderFloat("z min", &uploadData.zMin, uploadData.cameraData.near, uploadData.cameraData.far);
+        ImGui::SliderFloat("z max", &uploadData.zMax, uploadData.cameraData.near, uploadData.cameraData.far);
+		id = imguiRenderer.getImGuiTextureId(debugLinearDepthImage);
+		ImGui::Image((void*)id, ImVec2(w, h));
+		ImGui::End();
+	}
+
     daxa::gpu::ImageHandle debugLinearDepthImage = {};
     daxa::gpu::ImageHandle debugScreenSpaceNormalImage = {};
     daxa::gpu::ImageHandle debugWorldSpaceNormalImage = {};
 private:
+    UploadData uploadData;
     daxa::gpu::PipelineHandle pipeline = {};
     daxa::gpu::BindingSetAllocatorHandle setAlloc = {};
     daxa::gpu::BufferHandle buffer = {};

@@ -92,7 +92,6 @@ public:
 	}
 
     void render(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawMesh>& draws) {
-
 		cmd->insertImageBarrier({
 			.image = renderCTX.normalsImage,
 			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -132,7 +131,6 @@ public:
 					.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
 				});
 			}
-
 			{
 				auto mm = cmd->mapMemoryStaged(transformsBuffer, draws.size() * sizeof(glm::mat4), 0);
 				for (int i = 0; i < draws.size(); i++) {
@@ -141,8 +139,10 @@ public:
 			}
 
 			cmd->insertMemoryBarrier({
-				.awaitedStages = VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
-				.waitingStages = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT_KHR,
+				.srcStages = VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
+				.srcAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
+				.dstStages = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT_KHR,
+				.dstAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR,
 			});
 		}
 
@@ -157,7 +157,7 @@ public:
 			},
 			daxa::gpu::RenderAttachmentInfo{
 				.image = renderCTX.normalsImage,
-				.clearValue = { .color = VkClearColorValue{.float32 = { 0.0f,0.0f,0.0f,0.0f } } },
+				.clearValue = { .color = VkClearColorValue{.float32 = { 0.0f, 0.0f, 0.0f, 0.0f } } },
 			}
 		};
 		daxa::gpu::RenderAttachmentInfo depthAttachment{
@@ -196,10 +196,10 @@ public:
 
 		cmd->insertImageBarrier({
 			.barrier = {
-				.awaitedStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-				.awaitedAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR,
-				.waitingStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
-				.waitingAccess = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR | VK_ACCESS_2_SHADER_STORAGE_READ_BIT_KHR,
+				.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
+				.srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR,
+				.dstStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+				.dstAccess = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR | VK_ACCESS_2_SHADER_STORAGE_READ_BIT_KHR,
 			},
 			.image = renderCTX.normalsImage,
 			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,

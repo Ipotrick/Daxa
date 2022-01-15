@@ -108,27 +108,27 @@ namespace daxa {
 		 * use this for all sync inside a queue:
 		*/
 		struct MemoryBarrier {
-			VkPipelineStageFlags2KHR awaitedStages = VK_PIPELINE_STAGE_2_NONE_KHR;
-			VkAccessFlags2KHR awaitedAccess = VK_ACCESS_2_NONE_KHR;
-			VkPipelineStageFlags2KHR waitingStages = VK_PIPELINE_STAGE_2_NONE_KHR;
-			VkAccessFlags2KHR waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR;
+			VkPipelineStageFlags2KHR srcStages = VK_PIPELINE_STAGE_2_NONE_KHR;
+			VkAccessFlags2KHR srcAccess = VK_ACCESS_2_NONE_KHR;
+			VkPipelineStageFlags2KHR dstStages = VK_PIPELINE_STAGE_2_NONE_KHR;
+			VkAccessFlags2KHR dstAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR;
 		};
 
 		static inline constexpr MemoryBarrier FULL_MEMORY_BARRIER = {
-			.awaitedStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
-			.awaitedAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR | VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
-			.waitingStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
-			.waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR | VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
+			.srcStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
+			.srcAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR | VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
+			.dstStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
+			.dstAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR | VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
 		};
 
 		/**
 		 * no real use case apparently:
 		*/
 		struct BufferBarrier {
-			VkPipelineStageFlags2KHR awaitedStages = VK_PIPELINE_STAGE_2_NONE_KHR;
-			VkAccessFlags2KHR awaitedAccess = VK_ACCESS_2_NONE_KHR;
-			VkPipelineStageFlags2KHR waitingStages = VK_PIPELINE_STAGE_2_NONE_KHR;
-			VkAccessFlags2KHR waitingAccess = VK_ACCESS_2_NONE_KHR;
+			VkPipelineStageFlags2KHR srcStages = VK_PIPELINE_STAGE_2_NONE_KHR;
+			VkAccessFlags2KHR srcAccess = VK_ACCESS_2_NONE_KHR;
+			VkPipelineStageFlags2KHR dstStages = VK_PIPELINE_STAGE_2_NONE_KHR;
+			VkAccessFlags2KHR dstAccess = VK_ACCESS_2_NONE_KHR;
 			BufferHandle buffer = {};
 			size_t offset = 0;
 			std::optional<u32> size = {};
