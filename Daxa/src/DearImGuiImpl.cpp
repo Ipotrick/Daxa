@@ -171,19 +171,27 @@ namespace daxa {
             .sampler = device->createSampler({})
         });
 
-        printf("pre here maybe?\n");
         auto cmdList = device->getCommandList();
-        cmdList->copyHostToImageSynced({
+        cmdList->insertImageBarrier({
+            .barrier = gpu::FULL_MEMORY_BARRIER,
+            .image = fontSheet,
+            .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        });
+        cmdList->copyHostToImage({
             .src = pixels,
             .dst = fontSheet,
             .size = width * height * sizeof(u8) * 4,
-            .dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+        });
+        cmdList->insertImageBarrier({
+            .barrier = gpu::FULL_MEMORY_BARRIER,
+            .image = fontSheet,
+            .layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         });
         cmdList->finalize();
         queue->submitBlocking({
             .commandLists = { cmdList }
         });
-        printf("here maybe?\n");
 
         referencedImages.push_back(fontSheet);
 

@@ -515,10 +515,10 @@ namespace daxa {
 				memBarrierBuffer[memBarrierBufferSize++] = VkMemoryBarrier2KHR{
 					.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2_KHR,
 					.pNext = nullptr,
-					.srcStageMask = barrier.awaitedStages,
-					.srcAccessMask = barrier.awaitedAccess,
-					.dstStageMask = barrier.waitingStages,
-					.dstAccessMask = barrier.waitingAccess,
+					.srcStageMask = barrier.srcStages,
+					.srcAccessMask = barrier.srcAccess,
+					.dstStageMask = barrier.dstStages,
+					.dstAccessMask = barrier.dstAccess,
 				};
 			}
 
@@ -527,10 +527,10 @@ namespace daxa {
 			//	bufBarrierBuffer[bufBarrierBufferSize] = VkBufferMemoryBarrier2KHR{
 			//		.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR,
 			//		.pNext = nullptr,
-			//		.srcStageMask = barrier.awaitedStages,
-			//		.srcAccessMask = barrier.awaitedAccess,
-			//		.dstStageMask = barrier.waitingStages,
-			//		.dstAccessMask = barrier.waitingAccess,
+			//		.srcStageMask = barrier.srcStages,
+			//		.srcAccessMask = barrier.srcAccess,
+			//		.dstStageMask = barrier.dstStages,
+			//		.dstAccessMask = barrier.dstAccess,
 			//		.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 			//		.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 			//		.buffer = barrier.buffer->getVkBuffer(),
@@ -553,10 +553,10 @@ namespace daxa {
 				imgBarrierBuffer[imgBarrierBufferSize] = VkImageMemoryBarrier2KHR{
 					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR,
 					.pNext = nullptr,
-					.srcStageMask = imgBarrier.barrier.awaitedStages,
-					.srcAccessMask = imgBarrier.barrier.awaitedAccess,
-					.dstStageMask = imgBarrier.barrier.waitingStages,
-					.dstAccessMask = imgBarrier.barrier.waitingAccess,
+					.srcStageMask = imgBarrier.barrier.srcStages,
+					.srcAccessMask = imgBarrier.barrier.srcAccess,
+					.dstStageMask = imgBarrier.barrier.dstStages,
+					.dstAccessMask = imgBarrier.barrier.dstAccess,
 					.oldLayout = imgBarrier.layoutBefore,
 					.newLayout = imgBarrier.layoutAfter,
 					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -593,10 +593,10 @@ namespace daxa {
 		void CommandList::insertFullMemoryBarrier() {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			MemoryBarrier barrier{
-				.awaitedAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
-				.awaitedStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
-				.waitingAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR,
-				.waitingStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
+				.srcAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
+				.srcStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
+				.dstAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR,
+				.dstStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
 			};
 			insertBarriers({&barrier,1}, {});
 		}
