@@ -1,11 +1,10 @@
 #version 450
 #extension GL_KHR_vulkan_glsl : enable
 
-layout(location = 10) in vec2 vtf_uv;
-layout(location = 11) in vec3 vtf_world_space_normal;
-layout(location = 12) in vec2 vtl_screen_space_normal;
+layout(location = 0) in vec3 position;
+layout(location = 1) in vec2 uv;
 
-layout (location = 0) out vec2 out_screen_space_normals;
+layout(location = 10) out vec2 vtf_uv;
 
 layout(set = 0, binding = 0) uniform GlobalBuffer {
     mat4 vp;
@@ -25,7 +24,15 @@ layout(std140, set = 0, binding = 2) buffer LightBuffer {
     Light lights[];
 } lightBuffer;
 
-void main()
-{
-    out_screen_space_normals = vtl_screen_space_normal;
+
+layout(push_constant) uniform PushConstants {
+    uint modelIndex;
+} pushConstants;
+
+void main() {
+    vtf_uv = uv;
+
+    mat4 m = transformBuffer.transforms[pushConstants.modelIndex];
+    mat4 mvp = globalBuffer.vp * m;
+    gl_Position =  mvp * vec4(position, 1.0f);
 }

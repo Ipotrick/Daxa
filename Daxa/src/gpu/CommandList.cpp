@@ -398,6 +398,7 @@ namespace daxa {
 		void CommandList::bindPipeline(PipelineHandle& pipeline) {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			DAXA_ASSERT_M(pipeline, "invalid pipeline handle");
 			vkCmdBindPipeline(cmd, pipeline->getVkBindPoint(), pipeline->getVkPipeline());
 			usedGraphicsPipelines.push_back(pipeline);
 

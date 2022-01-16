@@ -19,3 +19,8 @@ struct ModelComp {
 struct ChildComp {
 	daxa::EntityHandle parent = {};
 };
+
+struct Light {
+	f32 strength;
+	glm::vec4 color;
+};
