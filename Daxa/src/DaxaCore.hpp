@@ -101,6 +101,7 @@ namespace daxa {
 		}
 
 		T& value() {
+			DAXA_ASSERT_M(v.has_value(), (m != "" ? m : "tried getting value of empty Result"));
 			return v.value();
 		}
 
