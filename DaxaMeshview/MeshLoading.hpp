@@ -381,6 +381,8 @@ public:
             }
         }
 
+        cmdList->insertMemoryBarrier(daxa::gpu::FULL_MEMORY_BARRIER);
+
         this->textures = textures;
         return daxa::Result(std::vector<daxa::EntityHandle>());
     }

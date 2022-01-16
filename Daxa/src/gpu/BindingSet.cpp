@@ -55,6 +55,7 @@ namespace daxa {
 		void BindingSet::bindBuffers(u32 binding, std::span<BufferHandle> buffers, u32 descriptorArrayOffset) {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not update binding set, that is still in use on the gpu");
 			for (auto& buffer : buffers) {
+				DAXA_ASSERT_M(buffer, "invalid buffer handle");
 				descBufferInfoBuffer.push_back(VkDescriptorBufferInfo{
 					.buffer = buffer->getVkBuffer(),
 					.offset = 0,									// TODO Unsure what to put here
@@ -82,8 +83,8 @@ namespace daxa {
 			descBufferInfoBuffer.clear();
 		}
 
-		void BindingSet::bindBuffer(u32 binding, BufferHandle image, u32 dstArrayElement) {
-			bindBuffers(binding, { &image, 1 }, dstArrayElement);
+		void BindingSet::bindBuffer(u32 binding, BufferHandle buffer, u32 dstArrayElement) {
+			bindBuffers(binding, { &buffer, 1 }, dstArrayElement);
 		}
 
 		void BindingSet::bindImages(u32 binding, std::span<std::pair<ImageHandle, VkImageLayout>> images, u32 descriptorArrayOffset) {
