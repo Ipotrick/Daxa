@@ -295,8 +295,6 @@ namespace daxa {
 				insertBarriers({}, { &barrier, 1});
 			}
 
-			void insertFullMemoryBarrier();
-
 			// Accessors:
 
 			VkCommandBuffer getVkCommandBuffer() { return cmd; }

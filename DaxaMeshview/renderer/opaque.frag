@@ -28,5 +28,5 @@ layout(set = 1, binding = 0) uniform sampler2D albedo;
 void main()
 {
     vec4 color = texture(albedo, vtf_uv);
-    outFragColor = color;
+    outFragColor = vec4(1,1,1,1);
 }
