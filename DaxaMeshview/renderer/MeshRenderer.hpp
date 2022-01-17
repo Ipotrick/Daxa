@@ -217,15 +217,17 @@ public:
 
 		for (u32 i = 0; i < draws.size(); i++) {
 			auto& draw = draws[i];
+			cmd->pushConstant(VK_SHADER_STAGE_VERTEX_BIT, i);
 			cmd->bindIndexBuffer(draw.prim->indiexBuffer);
 			cmd->bindVertexBuffer(0, draw.prim->vertexPositions);
 			cmd->bindVertexBuffer(1, draw.prim->vertexUVs);
 			cmd->bindVertexBuffer(2, draw.prim->vertexNormals);
-			cmd->pushConstant(VK_SHADER_STAGE_VERTEX_BIT, i);
 			cmd->drawIndexed(draw.prim->indexCount, 1, 0, 0, 0);
 		}
 
 		cmd->endRendering();
+
+		cmd->insertMemoryBarrier(daxa::gpu::FULL_MEMORY_BARRIER);
 
 		cmd->insertImageBarrier({
 			.barrier = {
@@ -271,11 +273,12 @@ public:
 				set->bindImage(0, dummyTexture, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			}
 			cmd->bindSet(1, set);
-			cmd->pushConstant(VK_SHADER_STAGE_VERTEX_BIT, i);
 			cmd->bindIndexBuffer(draw.prim->indiexBuffer);
 			cmd->bindVertexBuffer(0, draw.prim->vertexPositions);
 			cmd->bindVertexBuffer(1, draw.prim->vertexUVs);
 			cmd->bindVertexBuffer(2, draw.prim->vertexNormals);
+			cmd->pushConstant(VK_SHADER_STAGE_VERTEX_BIT, i);
+			cmd->pushConstant(VK_SHADER_STAGE_VERTEX_BIT, globData.vp, sizeof(glm::vec4));
 			cmd->drawIndexed(draw.prim->indexCount, 1, 0, 0, 0);
 		}
 

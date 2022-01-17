@@ -27,9 +27,8 @@ layout(std140, set = 0, binding = 2) readonly buffer LightBuffer {
     Light lights[];
 } lightBuffer;
 
-layout(push_constant) uniform PushConstants {
+layout(std140, push_constant) uniform PushConstants {
     uint modelIndex;
-    vec3 _pad0;
     mat4 vp;
 } pushConstants;
 
