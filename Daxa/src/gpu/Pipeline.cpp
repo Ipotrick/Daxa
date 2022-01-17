@@ -32,6 +32,7 @@ namespace daxa {
 				auto& bindings = descriptorSets[index];
 				DAXA_ASSERT_M(!bindings.empty(), "binding sets indices must be used in ascending order starting with 0");
 				tempBindings.clear();
+				//tempBindings.resize(bindings.size(),{});
 				for (auto& [index, binding] : bindings) {
 					tempBindings.push_back(binding);
 				}
@@ -189,7 +190,7 @@ namespace daxa {
 		}
 
 		std::unordered_map<uint32_t, std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding>>
-			reflectSetBindings(const std::vector<uint32_t>& spv, VkShaderStageFlagBits shaderStage) {
+		reflectSetBindings(const std::vector<uint32_t>& spv, VkShaderStageFlagBits shaderStage) {
 			SpvReflectShaderModule module = {};
 			SpvReflectResult result = spvReflectCreateShaderModule(spv.size() * sizeof(uint32_t), spv.data(), &module);
 			assert(result == SPV_REFLECT_RESULT_SUCCESS);
