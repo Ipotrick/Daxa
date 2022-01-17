@@ -5,11 +5,11 @@ layout(location = 10) in vec2 vtf_uv;
 
 layout (location = 0) out vec4 outFragColor;
 
-layout(set = 0, binding = 0) uniform GlobalBuffer {
+layout(set = 0, binding = 0) readonly uniform GlobalBuffer {
     mat4 vp;
     mat4 view;
 } globalBuffer;
-layout(std140, set = 0, binding = 1) buffer TransformBuffer {
+layout(std140, set = 0, binding = 1) readonly buffer TransformBuffer {
     mat4 transforms[];
 } transformBuffer;
 struct Light {
@@ -17,7 +17,7 @@ struct Light {
     float strength;
     vec4 color;
 };
-layout(std140, set = 0, binding = 2) buffer LightBuffer {
+layout(std140, set = 0, binding = 2) readonly buffer LightBuffer {
     uint lightCount;
     vec3 _pad0;
     Light lights[];

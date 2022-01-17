@@ -21,6 +21,7 @@ namespace daxa {
 	namespace gpu {
 
 		constexpr inline size_t MAX_BINDINGS_PER_SET = 16;
+		char const* const MORE_THAN_MAX_BINDINGS_MESSAGE = "a binding set can only have up to 16 bindings";
 
 		class BindingSet;
 

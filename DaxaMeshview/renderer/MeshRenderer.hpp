@@ -63,15 +63,8 @@ public:
             .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
             .memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
             .memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				.debugName = "mesh render globals buffer",
         });
-
-		this->transformsBuffer = renderCTX.device->createBuffer({
-            .size = sizeof(glm::mat4) * 128,
-            .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            .memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
-            .memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		});
-
 
 		auto vertexOpaqueShader = renderCTX.device->createShaderModule({
 			.pathToSource = "./DaxaMeshview/renderer/opaque.vert",
@@ -84,10 +77,9 @@ public:
 		}).value();
 
 		daxa::gpu::GraphicsPipelineBuilder opaquePipelineBuilder;
-		opaquePipelineBuilder
-			.addShaderStage(vertexOpaqueShader)
-			.addShaderStage(fragmenstOpaqueShader)
-			.setDebugName("mesh render opaque pass pipeline")
+		opaquePipelineBuilder.addShaderStage(vertexOpaqueShader);
+		opaquePipelineBuilder.addShaderStage(fragmenstOpaqueShader);
+			opaquePipelineBuilder.setDebugName("mesh render opaque pass pipeline")
 			.configurateDepthTest({.enableDepthTest = true, .enableDepthWrite = true, .depthAttachmentFormat = VK_FORMAT_D32_SFLOAT})
 			// adding a vertex input attribute binding:
 			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
@@ -154,6 +146,7 @@ public:
 				.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 				.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
+				.debugName = "mesh render transform buffer",
 			});
 		}
 		if (!draws.empty()) {
@@ -170,6 +163,7 @@ public:
 				.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 				.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
+				.debugName = "mesh render lights buffer",
 			});
 		}
 		{
@@ -276,8 +270,8 @@ public:
 			} else {
 				set->bindImage(0, dummyTexture, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			}
-			cmd->pushConstant(VK_SHADER_STAGE_VERTEX_BIT, i);
 			cmd->bindSet(1, set);
+			cmd->pushConstant(VK_SHADER_STAGE_VERTEX_BIT, i);
 			cmd->bindIndexBuffer(draw.prim->indiexBuffer);
 			cmd->bindVertexBuffer(0, draw.prim->vertexPositions);
 			cmd->bindVertexBuffer(1, draw.prim->vertexUVs);
