@@ -90,6 +90,10 @@ namespace daxa {
 		void BindingSet::bindImages(u32 binding, std::span<std::pair<ImageHandle, VkImageLayout>> images, u32 descriptorArrayOffset) {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not update binding set while it is used on gpu");
 			VkDescriptorType imageDescriptorType = description->layoutBindings.bindings[binding].descriptorType;
+			bool bIsImage = imageDescriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER || 
+				imageDescriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || 
+				imageDescriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+			DAXA_ASSERT_M(bIsImage, "tried binding image to non image binding index");
 			
 			for (auto& [image, layout] : images) {
 				VkSampler sampler = VK_NULL_HANDLE;
@@ -170,11 +174,13 @@ namespace daxa {
 		
 		BindingSetDescription const* BindingSetDescriptionCache::getSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings) {
 			DAXA_ASSERT_M(device, "BindingSetDescriptionCache was not initialized");
-			DAXA_ASSERT_M(bindings.size() < MAX_BINDINGS_PER_SET, "a binding set can only have up to 16 bindings");
+			DAXA_ASSERT_M(bindings.size() < MAX_BINDINGS_PER_SET, MORE_THAN_MAX_BINDINGS_MESSAGE);
 			BindingsArray bindingArray = {};
 			bindingArray.size = bindings.size();
 			for (int i = 0; i < bindings.size(); i++) {
-				bindingArray.bindings[i] = bindings[i];
+				auto actualBindingIndex = bindings[i].binding;
+				DAXA_ASSERT_M(actualBindingIndex < MAX_BINDINGS_PER_SET, MORE_THAN_MAX_BINDINGS_MESSAGE);
+				bindingArray.bindings[actualBindingIndex] = bindings[i];
 			}
 			if (!descriptions.contains(bindingArray)) {
 				descriptions[bindingArray] = std::make_unique<BindingSetDescription>(makeNewDescription(bindingArray));
