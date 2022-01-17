@@ -19,7 +19,6 @@ struct Light {
 };
 layout(std140, set = 0, binding = 2) readonly buffer LightBuffer {
     uint lightCount;
-    vec3 _pad0;
     Light lights[];
 } lightBuffer;
 
@@ -28,5 +27,5 @@ layout(set = 1, binding = 0) uniform sampler2D albedo;
 void main()
 {
     vec4 color = texture(albedo, vtf_uv);
-    outFragColor = vec4(1,1,1,1);
+    outFragColor = color;
 }

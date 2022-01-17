@@ -21,7 +21,6 @@ struct Light {
 };
 layout(std140, set = 0, binding = 2) readonly buffer LightBuffer {
     uint lightCount;
-    vec3 _pad0;
     Light lights[];
 } lightBuffer;
 

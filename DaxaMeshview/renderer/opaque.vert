@@ -20,20 +20,18 @@ struct Light {
 };
 layout(std140, set = 0, binding = 2) readonly buffer LightBuffer {
     uint lightCount;
-    vec3 _pad0;
     Light lights[];
 } lightBuffer;
 
 
 layout(std140, push_constant) uniform PushConstants {
     uint modelIndex;
-    mat4 vp;
 } pushConstants;
 
 void main() {
     vtf_uv = uv;
 
     mat4 m = transformBuffer.transforms[pushConstants.modelIndex];
-    mat4 mvp = pushConstants.vp * m;
+    mat4 mvp = globalBuffer.vp * m;
     gl_Position = mvp * vec4(position, 1.0f);
 }
