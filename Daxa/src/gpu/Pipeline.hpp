@@ -81,7 +81,7 @@ namespace daxa {
 			VkFormat depthAttachmentFormat = VK_FORMAT_UNDEFINED;
 			bool enableDepthTest = false;
 			bool enableDepthWrite = false;
-			VkCompareOp depthTestCompareOp = VK_COMPARE_OP_LESS;
+			VkCompareOp depthTestCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
 			f32 minDepthBounds = 0.0f;
 			f32 maxDepthBounds = 1.0f;
 		};
