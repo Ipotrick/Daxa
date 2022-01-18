@@ -131,11 +131,12 @@ namespace daxa {
         auto pipelineDescription = pipelineBuilder
             .addShaderStage(vertexShaderModule)
             .addShaderStage(fragmentShaderModule)
+            .setDebugName("ImGui render pipeline")
             .beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
             .addVertexInputAttribute(VK_FORMAT_R32G32_SFLOAT)
             .addVertexInputAttribute(VK_FORMAT_R32G32_SFLOAT)
             .addVertexInputAttribute(VK_FORMAT_R8G8B8A8_UNORM)
-            .addColorAttachment(VK_FORMAT_R8G8B8A8_SRGB, VkPipelineColorBlendAttachmentState{
+            .addColorAttachment(VK_FORMAT_B8G8R8A8_SRGB, VkPipelineColorBlendAttachmentState{
                 .blendEnable = VK_TRUE,
                 .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
                 .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
@@ -346,6 +347,7 @@ namespace daxa {
             }
 
             cmdList->endRendering();
+            cmdList->unbindPipeline();
             referencedImages.resize(1);
             texHandlePtrToReferencedImageIndex.clear();
         }

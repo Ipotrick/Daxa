@@ -44,16 +44,27 @@ namespace daxa {
 			VkPipelineBindPoint getVkBindPoint() const { return bindPoint; }
 			VkPipeline const& getVkPipeline() const { return pipeline; }
 			VkPipelineLayout const& getVkPipelineLayout() const { return layout; }
+
+			std::vector<VkFormat> const& getColorAttachemntFormats() const { return colorAttachmentFormats; }
+			VkFormat getDepthAttachmentFormat() const { return depthAttachment; }
+			VkFormat getStencilAttachmentFormat() const { return stencilAttachment; }
+
+			std::string const& getDebugName() const { return debugName; }
 		private:
 			friend class GraphicsPipelineBuilder;
 			friend PipelineHandle createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ComputePipelineCreateInfo const& ci);
+			friend void setPipelineDebugName(VkDevice device, char const* debugName, Pipeline& pipeline);
 
 			std::array<BindingSetDescription const*, MAX_SETS_PER_PIPELINE> bindingSetDescriptions = {};
+			std::vector<VkFormat> colorAttachmentFormats = {};
+			VkFormat depthAttachment = VK_FORMAT_UNDEFINED;
+			VkFormat stencilAttachment = VK_FORMAT_UNDEFINED;
 
 			VkPipelineBindPoint bindPoint 	= {};
 			VkDevice device					= {};
 			VkPipeline pipeline				= {};
 			VkPipelineLayout layout			= {};
+			std::string debugName 			= {};
 		};
 
 		class PipelineHandle {
