@@ -1,16 +1,16 @@
 #pragma once
 
+#include "../DaxaCore.hpp"
+
 #include <memory>
 #include <vector>
 #include <deque>
 #include <span>
 
 #include <vulkan/vulkan.h>
-
 #include <vk_mem_alloc.h>
 
-#include "../DaxaCore.hpp"
-
+#include "Handle.hpp"
 #include "Image.hpp"
 #include "SwapchainImage.hpp"
 #include "Signal.hpp"
@@ -68,25 +68,6 @@ namespace daxa {
 			std::string debugName 						= {};
 		};
 
-		class SwapchainHandle {
-		public:
-			SwapchainHandle(std::shared_ptr<Swapchain> swapchain) 
-				: swapchain{ std::move(swapchain) }
-			{}
-			SwapchainHandle() = default;
-
-			Swapchain const& operator*() const { return *swapchain; }
-			Swapchain& operator*() { return *swapchain; }
-			Swapchain const* operator->() const { return swapchain.get(); }
-			Swapchain* operator->() { return swapchain.get(); }
-
-			size_t getRefCount() const { return swapchain.use_count(); }
-
-			operator bool() const { return swapchain.operator bool(); }
-			bool operator!() const { return !swapchain; }
-			bool valid() const { return *this; }
-		private:
-			std::shared_ptr<Swapchain> swapchain = {};
-		};
+		class SwapchainHandle : public SharedHandle<Swapchain>{};
 	}
 }

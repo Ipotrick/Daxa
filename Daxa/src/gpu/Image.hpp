@@ -10,6 +10,7 @@
 
 #include <vk_mem_alloc.h>
 
+#include "Handle.hpp"
 #include "Sampler.hpp"
 
 namespace daxa {
@@ -73,28 +74,6 @@ namespace daxa {
 			std::string debugName = {};
 		};
 
-		class ImageHandle {
-		public:
-			ImageHandle() = default;
-			ImageHandle(std::shared_ptr<Image> image);
-
-			Image const& operator*() const { return *image; }
-			Image& operator*() { return *image; }
-			Image const* operator->() const { return image.get(); }
-			Image* operator->() { return image.get(); }
-
-			operator bool() const { return image.operator bool(); }
-			bool operator!() const { return !image; }
-			bool valid() const { return *this; }
-
-			size_t getRefCount() const { return image.use_count(); }
-			Image* get() { return image.get(); }
-			Image const* get() const { return image.get(); }
-		private:
-			friend class Device;
-			friend class Swapchain;
-
-			std::shared_ptr<Image> image = {};
-		};
+		class ImageHandle : public SharedHandle<Image>{};
 	}
 }

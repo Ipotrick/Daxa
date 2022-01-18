@@ -134,38 +134,6 @@ namespace daxa {
 			bindImages(binding, { &imgAndLayout, 1 }, dstArrayElement);
 		}
 
-		BindingSetHandle::BindingSetHandle(std::shared_ptr<BindingSet>&& set) noexcept
-			: set { std::move(set) }
-		{ }
-
-		void BindingSetHandle::cleanup() {
-			if (set && set.use_count() == 1) {
-				size_t handlesSize = set->handles.size();
-				set->handles.clear();
-				set->handles.resize(handlesSize, std::monostate{});
-				auto pool = set->pool.lock();
-				auto lock = std::unique_lock(pool->mut);
-				pool->zombies.push_back(std::move(set));
-				set.reset();
-			}
-		}
-
-		BindingSetHandle& BindingSetHandle::operator=(BindingSetHandle const& other) {
-			cleanup();
-			this->set = other.set;
-			return *this;
-		}
-
-		BindingSetHandle& BindingSetHandle::operator=(BindingSetHandle&& other) noexcept {
-			cleanup();
-			this->set = std::move(other.set);
-			return *this;
-		}
-
-		BindingSetHandle::~BindingSetHandle() {
-			cleanup();
-		}
-
 		BindingSetDescriptionCache::~BindingSetDescriptionCache() {
 			for (auto& [_, description] : descriptions) {
 				vkDestroyDescriptorSetLayout(device, description->layout, nullptr);
