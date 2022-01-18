@@ -42,9 +42,19 @@ if (!(x)) {\
 #define DAXA_ASSERT_M(x, message) ((void)0)
 #endif
 
+#ifdef _DEBUG
+#define DAXA_ASSERT_WARN_M(x, message) \
+if (!(x)) {\
+	std::cerr << "[[DAXA ASSERTION WARNING]] " << message << std::endl;\
+}\
+((void)0)
+#else
+#define DAXA_ASSERT_WARN_M(x, message) ((void)0)
+#endif
+
 namespace daxa {
 	struct ResultErr {
-		std::string_view message = "";
+		std::string message = "";
 	};	
 
 	template<typename T>
@@ -105,7 +115,7 @@ namespace daxa {
 			return v.value();
 		}
 
-		std::string_view message() const {
+		std::string const& message() const {
 			return m;
 		}
 
@@ -118,6 +128,6 @@ namespace daxa {
 		}
 	private:
 		std::optional<T> v;
-		std::string_view m;
+		std::string m;
 	};
 }

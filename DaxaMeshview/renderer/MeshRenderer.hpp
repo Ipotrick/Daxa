@@ -13,40 +13,31 @@ struct GlobalData {
 class MeshRenderer {
 public:
 
+	struct GPUPrimitiveInfo {
+		glm::mat4 transform;
+		glm::mat4 inverseTransposeTransform;
+	};
+
     void init(RenderContext& renderCTX) {
 		auto vertexShader = renderCTX.device->createShaderModule({
-			.pathToSource = "./DaxaMeshview/renderer/g_pass.vert",
+			.pathToSource = "./DaxaMeshview/renderer/prePass.vert",
 			.stage = VK_SHADER_STAGE_VERTEX_BIT
-		});
-		if (vertexShader.isErr()) {
-			std::cout << "could not load vertex shader due to: " << vertexShader.message() << std::endl;
-		}
+		}).value();
 
 		auto fragmenstShader = renderCTX.device->createShaderModule({
-			.pathToSource = "./DaxaMeshview/renderer/g_pass.frag",
+			.pathToSource = "./DaxaMeshview/renderer/prePass.frag",
 			.stage = VK_SHADER_STAGE_FRAGMENT_BIT
-		});
-		if (vertexShader.isErr()) {
-			std::cout << "could not load fragment shader due to: " << vertexShader.message() << std::endl;
-		}
+		}).value();
 
 		daxa::gpu::GraphicsPipelineBuilder prePassPipelineBuilder;
 		prePassPipelineBuilder
-			.addShaderStage(vertexShader.value())
-			.addShaderStage(fragmenstShader.value())
+			.addShaderStage(vertexShader)
+			.addShaderStage(fragmenstShader)
 			.setDebugName("mesh render prePassPipeline")
 			.configurateDepthTest({.enableDepthTest = true, .enableDepthWrite = true, .depthAttachmentFormat = VK_FORMAT_D32_SFLOAT})
-			// adding a vertex input attribute binding:
 			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
-			// all added vertex input attributes are added to the previously added vertex input attribute binding
 			.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)			// positions
-			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
-			.addVertexInputAttribute(VK_FORMAT_R32G32_SFLOAT)				// uvs
-			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
-			.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)
 			// location of attachments in a shader are implied by the order they are added in the prePassPipeline builder:
-			.addColorAttachment(renderCTX.swapchain->getVkFormat())
-			.addColorAttachment(renderCTX.normalsImage->getVkViewFormat())
 			.setRasterization({
 				.cullMode = VK_CULL_MODE_BACK_BIT,
 			});
@@ -87,8 +78,11 @@ public:
 			.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)			// positions
 			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
 			.addVertexInputAttribute(VK_FORMAT_R32G32_SFLOAT)				// uvs
+			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
+			.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)
 			// location of attachments in a shader are implied by the order they are added in the prePassPipeline builder:
 			.addColorAttachment(renderCTX.swapchain->getVkFormat())
+			.addColorAttachment(renderCTX.normalsImage->getVkViewFormat())
 			.setRasterization({
 				.cullMode = VK_CULL_MODE_BACK_BIT,
 			});
@@ -139,9 +133,9 @@ public:
 			.dst = globalDataBufffer,
 		});
 
-		if (!transformsBuffer || draws.size() * sizeof(glm::mat4) > transformsBuffer->getSize()) {
-			size_t newSize = (draws.size() + 64) * sizeof(glm::mat4);
-			this->transformsBuffer = renderCTX.device->createBuffer({
+		if (!primitiveInfoBuffer || draws.size() * sizeof(GPUPrimitiveInfo) > primitiveInfoBuffer->getSize()) {
+			size_t newSize = (draws.size() + 64) * sizeof(GPUPrimitiveInfo);
+			this->primitiveInfoBuffer = renderCTX.device->createBuffer({
 				.size = newSize,
 				.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -150,9 +144,10 @@ public:
 			});
 		}
 		if (!draws.empty()) {
-			auto mm = cmd->mapMemoryStaged<glm::mat4>(transformsBuffer, draws.size() * sizeof(glm::mat4), 0);
+			auto mm = cmd->mapMemoryStaged<GPUPrimitiveInfo>(primitiveInfoBuffer, draws.size() * sizeof(GPUPrimitiveInfo), 0);
 			for (int i = 0; i < draws.size(); i++) {
-				mm.hostPtr[i] = draws[i].transform;
+				mm.hostPtr[i].transform 				= draws[i].transform;
+				mm.hostPtr[i].inverseTransposeTransform = glm::inverse(glm::transpose(draws[i].transform));
 			}
 		}
 		
@@ -184,7 +179,7 @@ public:
 
         this->globalSet = globalSetAlloc->getSet();
         globalSet->bindBuffer(0, this->globalDataBufffer);
-		globalSet->bindBuffer(1, this->transformsBuffer);
+		globalSet->bindBuffer(1, this->primitiveInfoBuffer);
 		globalSet->bindBuffer(2, this->lightsBuffer);
 	}
 
@@ -197,12 +192,6 @@ public:
 		cmd->bindPipeline(prePassPipeline);
 		cmd->bindSet(0, globalSet);
 		
-		std::array framebuffer{
-			daxa::gpu::RenderAttachmentInfo{
-				.image = renderCTX.normalsImage,
-				.clearValue = { .color = VkClearColorValue{.float32 = { 0.0f, 0.0f, 0.0f, 0.0f } } },
-			}
-		};
 		daxa::gpu::RenderAttachmentInfo depthAttachment{
 			.image = renderCTX.depthImage,
 			.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
@@ -211,7 +200,7 @@ public:
 			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 		};
 		cmd->beginRendering(daxa::gpu::BeginRenderingInfo{
-			.colorAttachments = framebuffer,
+			.colorAttachments = {},
 			.depthAttachment = &depthAttachment,
 		});
 
@@ -220,24 +209,31 @@ public:
 			cmd->pushConstant(VK_SHADER_STAGE_VERTEX_BIT, i);
 			cmd->bindIndexBuffer(draw.prim->indiexBuffer);
 			cmd->bindVertexBuffer(0, draw.prim->vertexPositions);
-			cmd->bindVertexBuffer(1, draw.prim->vertexUVs);
-			cmd->bindVertexBuffer(2, draw.prim->vertexNormals);
 			cmd->drawIndexed(draw.prim->indexCount, 1, 0, 0, 0);
 		}
 
 		cmd->endRendering();
 
-		cmd->insertImageBarrier({
-			.barrier = {
-				.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
-				.srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT_KHR,
-				.dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
-				.dstAccess = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT_KHR | VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR | VK_ACCESS_2_SHADER_STORAGE_READ_BIT_KHR,
-			},
-			.image = renderCTX.normalsImage,
-			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		cmd->insertMemoryBarrier({
+			.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
+			.srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT_KHR,
+			.dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
+			.dstAccess = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT_KHR,
 		});
+
+		cmd->unbindPipeline();
+
+		//cmd->insertImageBarrier({
+		//	.barrier = {
+		//		.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
+		//		.srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT_KHR,
+		//		.dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+		//		.dstAccess = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT_KHR | VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR | VK_ACCESS_2_SHADER_STORAGE_READ_BIT_KHR,
+		//	},
+		//	.image = renderCTX.normalsImage,
+		//	.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		//	.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		//});
 	}
 
 	void opaquePass(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawMesh>& draws) {
@@ -249,7 +245,12 @@ public:
 			daxa::gpu::RenderAttachmentInfo{
 				.image = renderCTX.swapchainImage.getImageHandle(),
 				.clearValue = { .color = VkClearColorValue{.float32 = { 0.01f, 0.01f, 0.01f, 1.0f } } },
-			}
+			},
+			daxa::gpu::RenderAttachmentInfo{
+				.image = renderCTX.normalsImage,
+				.clearValue = { .color = VkClearColorValue{.float32 = { 0.0f, 0.0f, 0.0f, 0.0f } } },
+				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+			},
 		};
 		daxa::gpu::RenderAttachmentInfo depthAttachment{
 			.image = renderCTX.depthImage,
@@ -280,6 +281,19 @@ public:
 		}
 
 		cmd->endRendering();
+		cmd->unbindPipeline();
+
+		cmd->insertImageBarrier({
+			.barrier = {
+				.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
+				.srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT_KHR,
+				.dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+				.dstAccess = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT_KHR | VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR | VK_ACCESS_2_SHADER_STORAGE_READ_BIT_KHR,
+			},
+			.image = renderCTX.normalsImage,
+			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		});
 	}
 
 	void render(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawMesh>& draws) {
@@ -295,7 +309,7 @@ private:
     daxa::gpu::BindingSetAllocatorHandle globalSetAlloc = {};
     daxa::gpu::BindingSetHandle globalSet = {};
     daxa::gpu::BufferHandle globalDataBufffer = {};
-	daxa::gpu::BufferHandle transformsBuffer = {};
+	daxa::gpu::BufferHandle primitiveInfoBuffer = {};
 	daxa::gpu::ImageHandle dummyTexture = {};
 
 	daxa::gpu::PipelineHandle opaquePassPipeline = {};

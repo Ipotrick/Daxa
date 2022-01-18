@@ -162,6 +162,7 @@ public:
         cmdList->bindSet(0, set);
 
         cmdList->dispatch((uploadData.imageWidth + 1) / 8, (uploadData.imageHeight + 1) / 8);
+        cmdList->unbindPipeline();
 
         // TODO dispatch compute shader
 

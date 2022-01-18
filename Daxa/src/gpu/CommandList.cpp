@@ -279,7 +279,7 @@ namespace daxa {
 		void CommandList::dispatch(u32 groupCountX, u32 groupCountY, u32 grpupCountZ) {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-			DAXA_ASSERT_M(boundPipeline.value().bindPoint == VK_PIPELINE_BIND_POINT_COMPUTE, "can not dispatch compute commands with out a bound compute pipeline.");
+			DAXA_ASSERT_M(currentPipeline->getVkBindPoint() == VK_PIPELINE_BIND_POINT_COMPUTE, "can not dispatch compute commands with out a bound compute pipeline.");
 			vkCmdDispatch(cmd, groupCountX, groupCountY, grpupCountZ);
 		}
 
@@ -304,6 +304,17 @@ namespace daxa {
 		void CommandList::beginRendering(BeginRenderingInfo ri) {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			DAXA_ASSERT_M(!currentRenderPass.has_value(), "can not begin renderpass while recording a render pass");
+			std::vector<RenderAttachmentInfo> colorAttachments;
+			colorAttachments.reserve(ri.colorAttachments.size());
+			for (auto& a : ri.colorAttachments) {
+				colorAttachments.push_back(a);
+			}
+			currentRenderPass = CurrentRenderPass{
+				.colorAttachments = std::move(colorAttachments),
+				.depthAttachment = ri.depthAttachment,
+				.stencilAttachment = ri.stencilAttachment,
+			};
 			operationsInProgress += 1;
 			for (int i = 0; i < ri.colorAttachments.size(); i++) {
 				usedImages.push_back(ri.colorAttachments[i].image);
@@ -386,10 +397,14 @@ namespace daxa {
 				.minDepth = 0,
 				.maxDepth = 1,
 			});
+
+			checkIfPipelineAndRenderPassFit();
 		}
 		void CommandList::endRendering() {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			DAXA_ASSERT_M(currentRenderPass.has_value(), "can only end render pass when there is one in progress");
+			currentRenderPass = {};
 			operationsInProgress -= 1;
 			this->vkCmdEndRenderingKHR(cmd);
 		}
@@ -401,10 +416,14 @@ namespace daxa {
 			vkCmdBindPipeline(cmd, pipeline->getVkBindPoint(), pipeline->getVkPipeline());
 			usedGraphicsPipelines.push_back(pipeline);
 
-			boundPipeline = BoundPipeline{
-				.bindPoint = pipeline->getVkBindPoint(),
-				.layout = pipeline->getVkPipelineLayout(),
-			};
+			currentPipeline = pipeline;
+
+			checkIfPipelineAndRenderPassFit();
+		}
+
+		void CommandList::unbindPipeline() {
+			DAXA_ASSERT_M(currentPipeline, "can only unbind pipeline, when there is a pipeline bound");
+			currentPipeline = {};
 		}
 
 		void CommandList::begin() {
@@ -414,6 +433,40 @@ namespace daxa {
 				.flags = VkCommandBufferUsageFlagBits::VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
 			};
 			vkBeginCommandBuffer(cmd, &cbbi);
+		}
+
+		void CommandList::checkIfPipelineAndRenderPassFit() {
+			if (currentRenderPass.has_value() && currentPipeline) {
+				std::string nameMessage = "; pipeline name: ";
+				nameMessage += currentPipeline->getDebugName();
+
+				auto& currentPipeCAFs = currentPipeline->getColorAttachemntFormats();
+				auto& currentRendPassCAIs = currentRenderPass.value().colorAttachments;
+
+				DAXA_ASSERT_M(currentRendPassCAIs.size() >= currentPipeCAFs.size(), std::string("renderpass must have at least as many attachments as the bound pipeline") + nameMessage);
+
+				for (size_t i = 0; i < currentPipeCAFs.size(); i++) {
+					auto pipeformat = currentPipeCAFs[i];
+					auto rpformat = currentRendPassCAIs[i].image->getVkViewFormat();
+					std::string formatMessage = "; pipeline attachment format [";
+					formatMessage += std::to_string(i);
+					formatMessage += "]: " ;
+					formatMessage += std::to_string((int)pipeformat);
+					formatMessage += "; renderpass attachment format [";
+					formatMessage += std::to_string(i);
+					formatMessage += "]: " ;
+					formatMessage += std::to_string((int)rpformat);
+					DAXA_ASSERT_M(pipeformat == rpformat, std::string("renderpass color attachment formats must match the ones off the bound pipeline") + nameMessage + formatMessage);
+				}
+				if (currentPipeline->getDepthAttachmentFormat() != VK_FORMAT_UNDEFINED) {
+					DAXA_ASSERT_M(currentRenderPass->depthAttachment, std::string("if the pipeline uses a depth attachment the renderpass must have a depth attachemnt too") + nameMessage);
+					DAXA_ASSERT_M(currentRenderPass->depthAttachment->image->getVkViewFormat() == currentPipeline->getDepthAttachmentFormat(), std::string("the depth attachment format of the pipeline and renderpass must be the same") + nameMessage);
+				}
+				if (currentPipeline->getStencilAttachmentFormat() != VK_FORMAT_UNDEFINED) {
+					DAXA_ASSERT_M(currentRenderPass->stencilAttachment, std::string("if the pipeline uses a stencil attachment the renderpass must have a stencil attachemnt too") + nameMessage);
+					DAXA_ASSERT_M(currentRenderPass->stencilAttachment->image->getVkViewFormat() == currentPipeline->getStencilAttachmentFormat(), std::string("the stencil attachment format of the pipeline and renderpass must be the same") + nameMessage);
+				}
+			}
 		}
 
 		void CommandList::setDebugName(char const* debugName) {
@@ -448,7 +501,8 @@ namespace daxa {
 			usedGraphicsPipelines.clear();
 			usedImages.clear();
 			usedSets.clear();
-			boundPipeline.reset();
+			currentPipeline = {};
+			currentRenderPass = {};
 			usedStagingBuffers.clear();
 			finalized = false;
 			begin();
@@ -474,22 +528,22 @@ namespace daxa {
 		void CommandList::draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance) {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-			DAXA_ASSERT_M(boundPipeline.has_value(), "can not draw sets if there is no pipeline bound");
+			DAXA_ASSERT_M(currentPipeline, "can not draw sets if there is no pipeline bound");
 			vkCmdDraw(cmd, vertexCount, instanceCount, firstVertex, firstInstance);
 		}
 
 		void CommandList::drawIndexed(u32 indexCount, u32 instanceCount, u32 firstIndex, i32 vertexOffset, u32 firstIntance) {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-			DAXA_ASSERT_M(boundPipeline.has_value(), "can not draw sets if there is no pipeline bound");
+			DAXA_ASSERT_M(currentPipeline, "can not draw sets if there is no pipeline bound");
 			vkCmdDrawIndexed(cmd, indexCount, instanceCount, firstIndex, vertexOffset, firstIntance);
 		}
 
 		void CommandList::bindSet(u32 setBinding, BindingSetHandle set) {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-			DAXA_ASSERT_M(boundPipeline.has_value(), "can not bind sets if there is no pipeline bound");
-			vkCmdBindDescriptorSets(cmd, boundPipeline->bindPoint, boundPipeline->layout, setBinding, 1, &set->set, 0, nullptr);
+			DAXA_ASSERT_M(currentPipeline, "can not bind sets if there is no pipeline bound");
+			vkCmdBindDescriptorSets(cmd, currentPipeline->getVkBindPoint(), currentPipeline->getVkPipelineLayout(), setBinding, 1, &set->set, 0, nullptr);
 			usedSets.push_back(std::move(set));
 		}
 

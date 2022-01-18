@@ -47,7 +47,7 @@ public:
 
 			auto ret = sceneLoader.loadScene(cmdList, uiState.loadFileTextBuf, ecm, uiState.convertYtoZup);
 			if (ret.isErr()) {
-				printf("failed to load scene, due to error: %s\n", ret.message());
+				printf("failed to load scene, due to error: %s\n", ret.message().c_str());
 			}
 			std::memset(uiState.loadFileTextBuf, '\0', sizeof(uiState.loadFileTextBuf));
 		}

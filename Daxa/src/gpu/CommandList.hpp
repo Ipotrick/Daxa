@@ -236,6 +236,7 @@ namespace daxa {
 			 * \param specify all render pass related information like render attachments.
 			*/
 			void bindPipeline(PipelineHandle& pipeline);
+			void unbindPipeline();
 
 			void setViewport(VkViewport const& viewport);
 
@@ -243,7 +244,7 @@ namespace daxa {
 
 			template<typename T>
 			void pushConstant(VkShaderStageFlagBits shaderStage, T const& constant, size_t offset = 0) {
-				vkCmdPushConstants(cmd, boundPipeline.value().layout, shaderStage, offset, sizeof(T), &constant);
+				vkCmdPushConstants(cmd, currentPipeline->getVkPipelineLayout(), shaderStage, offset, sizeof(T), &constant);
 			}
 
 			void bindVertexBuffer(u32 binding, BufferHandle buffer, size_t bufferOffset = 0);
@@ -317,12 +318,21 @@ namespace daxa {
 			// begin rendering temporaries:
 			std::vector<VkRenderingAttachmentInfoKHR> renderAttachmentBuffer;
 
-			struct BoundPipeline {
-				VkPipelineBindPoint bindPoint;
-				VkPipelineLayout layout;
-			};
+			PipelineHandle currentPipeline;
 
-			std::optional<BoundPipeline> boundPipeline;
+			struct CurrentRenderPass{
+				std::vector<RenderAttachmentInfo> colorAttachments;
+				RenderAttachmentInfo* depthAttachment = nullptr;
+				RenderAttachmentInfo* stencilAttachment = nullptr;
+			};
+			std::optional<CurrentRenderPass> currentRenderPass = {};
+
+			/**
+			 * @brief 	Checks if currently bound pipeline and render pass 'fit'
+			 * 			A pipeline fits a renderpass, when all its needed attachemnts are present in the renderpass.
+			 * 
+			 */
+			void checkIfPipelineAndRenderPassFit();
 
 			void (*vkCmdBeginRenderingKHR)(VkCommandBuffer, const VkRenderingInfoKHR*);
 			void (*vkCmdEndRenderingKHR)(VkCommandBuffer);
