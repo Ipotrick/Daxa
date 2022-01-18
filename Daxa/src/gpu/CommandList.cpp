@@ -52,7 +52,7 @@ namespace daxa {
 
 			auto srcOffset = stagingBuffer.usedUpSize;
 
-			auto mm = stagingBuffer.buffer.mapMemory();
+			auto mm = stagingBuffer.buffer->mapMemory();
 
 			mm.hostPtr += srcOffset;
 			mm.size = size;
@@ -61,7 +61,7 @@ namespace daxa {
 			stagingBuffer.usedUpSize = roundUpToMultipleOf128(stagingBuffer.usedUpSize);
 
 			BufferToBufferCopyInfo btbCopyInfo{
-				.src = stagingBuffer.buffer,
+				.src = *stagingBuffer.buffer,
 				.dst = copyDst,
 				.region = BufferCopyRegion{
 					.srcOffset = srcOffset,
@@ -87,13 +87,13 @@ namespace daxa {
 			auto offset = stagingBuffer.usedUpSize;
 
 			// memory is currently automaticly unmapped in Queue::submit
-			stagingBuffer.buffer->upload(copyInfo.src, copyInfo.size, offset);
+			(**stagingBuffer.buffer).upload(copyInfo.src, copyInfo.size, offset);
 
 			stagingBuffer.usedUpSize += copyInfo.size;
 			stagingBuffer.usedUpSize = roundUpToMultipleOf128(stagingBuffer.usedUpSize);
 
 			BufferToBufferCopyInfo btbCopyInfo{
-				.src = stagingBuffer.buffer,
+				.src = *stagingBuffer.buffer,
 				.dst = copyInfo.dst,
 				.region = BufferCopyRegion{
 					.srcOffset = offset,
@@ -116,13 +116,13 @@ namespace daxa {
 
 			auto offset = stagingBuffer.usedUpSize;
 
-			stagingBuffer.buffer->upload(copyInfo.src, copyInfo.size, offset);
+			(**stagingBuffer.buffer).upload(copyInfo.src, copyInfo.size, offset);
 
 			stagingBuffer.usedUpSize += copyInfo.size;
 			stagingBuffer.usedUpSize = roundUpToMultipleOf128(stagingBuffer.usedUpSize);
 
 			BufferToImageCopyInfo btiCopy{
-				.src = stagingBuffer.buffer,
+				.src = *stagingBuffer.buffer,
 				.dst = copyInfo.dst,
 				.srcOffset = offset,
 				.subRessourceLayers = copyInfo.dstImgSubressource,
@@ -279,7 +279,7 @@ namespace daxa {
 		void CommandList::dispatch(u32 groupCountX, u32 groupCountY, u32 grpupCountZ) {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-			DAXA_ASSERT_M(currentPipeline->getVkBindPoint() == VK_PIPELINE_BIND_POINT_COMPUTE, "can not dispatch compute commands with out a bound compute pipeline.");
+			DAXA_ASSERT_M((**currentPipeline).getVkBindPoint() == VK_PIPELINE_BIND_POINT_COMPUTE, "can not dispatch compute commands with out a bound compute pipeline.");
 			vkCmdDispatch(cmd, groupCountX, groupCountY, grpupCountZ);
 		}
 
@@ -438,9 +438,9 @@ namespace daxa {
 		void CommandList::checkIfPipelineAndRenderPassFit() {
 			if (currentRenderPass.has_value() && currentPipeline) {
 				std::string nameMessage = "; pipeline name: ";
-				nameMessage += currentPipeline->getDebugName();
+				nameMessage += (**currentPipeline).getDebugName();
 
-				auto& currentPipeCAFs = currentPipeline->getColorAttachemntFormats();
+				auto& currentPipeCAFs = (**currentPipeline).getColorAttachemntFormats();
 				auto& currentRendPassCAIs = currentRenderPass.value().colorAttachments;
 
 				DAXA_ASSERT_M(currentRendPassCAIs.size() >= currentPipeCAFs.size(), std::string("renderpass must have at least as many attachments as the bound pipeline") + nameMessage);
@@ -458,13 +458,13 @@ namespace daxa {
 					formatMessage += std::to_string((int)rpformat);
 					DAXA_ASSERT_M(pipeformat == rpformat, std::string("renderpass color attachment formats must match the ones off the bound pipeline") + nameMessage + formatMessage);
 				}
-				if (currentPipeline->getDepthAttachmentFormat() != VK_FORMAT_UNDEFINED) {
+				if ((**currentPipeline).getDepthAttachmentFormat() != VK_FORMAT_UNDEFINED) {
 					DAXA_ASSERT_M(currentRenderPass->depthAttachment, std::string("if the pipeline uses a depth attachment the renderpass must have a depth attachemnt too") + nameMessage);
-					DAXA_ASSERT_M(currentRenderPass->depthAttachment->image->getVkViewFormat() == currentPipeline->getDepthAttachmentFormat(), std::string("the depth attachment format of the pipeline and renderpass must be the same") + nameMessage);
+					DAXA_ASSERT_M(currentRenderPass->depthAttachment->image->getVkViewFormat() == (**currentPipeline).getDepthAttachmentFormat(), std::string("the depth attachment format of the pipeline and renderpass must be the same") + nameMessage);
 				}
-				if (currentPipeline->getStencilAttachmentFormat() != VK_FORMAT_UNDEFINED) {
+				if ((**currentPipeline).getStencilAttachmentFormat() != VK_FORMAT_UNDEFINED) {
 					DAXA_ASSERT_M(currentRenderPass->stencilAttachment, std::string("if the pipeline uses a stencil attachment the renderpass must have a stencil attachemnt too") + nameMessage);
-					DAXA_ASSERT_M(currentRenderPass->stencilAttachment->image->getVkViewFormat() == currentPipeline->getStencilAttachmentFormat(), std::string("the stencil attachment format of the pipeline and renderpass must be the same") + nameMessage);
+					DAXA_ASSERT_M(currentRenderPass->stencilAttachment->image->getVkViewFormat() == (**currentPipeline).getStencilAttachmentFormat(), std::string("the stencil attachment format of the pipeline and renderpass must be the same") + nameMessage);
 				}
 			}
 		}
@@ -543,7 +543,7 @@ namespace daxa {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(currentPipeline, "can not bind sets if there is no pipeline bound");
-			vkCmdBindDescriptorSets(cmd, currentPipeline->getVkBindPoint(), currentPipeline->getVkPipelineLayout(), setBinding, 1, &set->set, 0, nullptr);
+			vkCmdBindDescriptorSets(cmd, (**currentPipeline).getVkBindPoint(), (**currentPipeline).getVkPipelineLayout(), setBinding, 1, &set->set, 0, nullptr);
 			usedSets.push_back(std::move(set));
 		}
 

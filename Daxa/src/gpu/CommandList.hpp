@@ -245,7 +245,7 @@ namespace daxa {
 
 			template<typename T>
 			void pushConstant(VkShaderStageFlagBits shaderStage, T const& constant, size_t offset = 0) {
-				vkCmdPushConstants(cmd, currentPipeline->getVkPipelineLayout(), shaderStage, offset, sizeof(T), &constant);
+				vkCmdPushConstants(cmd, (**currentPipeline).getVkPipelineLayout(), shaderStage, offset, sizeof(T), &constant);
 			}
 
 			void bindVertexBuffer(u32 binding, BufferHandle buffer, size_t bufferOffset = 0);
@@ -314,19 +314,19 @@ namespace daxa {
 			void setDebugName(char const* debugName);
 
 			// binding set management:
-			std::vector<VkDescriptorBufferInfo> bufferInfoBuffer;
-			std::vector<VkDescriptorImageInfo> imageInfoBuffer;
+			std::vector<VkDescriptorBufferInfo> bufferInfoBuffer = {};
+			std::vector<VkDescriptorImageInfo> imageInfoBuffer = {};
 			// begin rendering temporaries:
-			std::vector<VkRenderingAttachmentInfoKHR> renderAttachmentBuffer;
+			std::vector<VkRenderingAttachmentInfoKHR> renderAttachmentBuffer = {};
 
-			PipelineHandle currentPipeline;
+			std::optional<PipelineHandle> currentPipeline = {};
 
 			struct CurrentRenderPass{
-				std::vector<RenderAttachmentInfo> colorAttachments;
-				RenderAttachmentInfo* depthAttachment = nullptr;
-				RenderAttachmentInfo* stencilAttachment = nullptr;
+				std::vector<RenderAttachmentInfo> colorAttachments 	= {};
+				RenderAttachmentInfo* depthAttachment 				= nullptr;
+				RenderAttachmentInfo* stencilAttachment 			= nullptr;
 			};
-			std::optional<CurrentRenderPass> currentRenderPass = {};
+			std::optional<CurrentRenderPass> currentRenderPass 		= {};
 
 			/**
 			 * @brief 	Checks if currently bound pipeline and render pass 'fit'
@@ -343,17 +343,17 @@ namespace daxa {
 			bool empty = true;
 			bool finalized = false;
 
-			std::vector<BindingSetHandle> usedSets;
-			std::vector<ImageHandle> usedImages;
-			std::vector<BufferHandle> usedBuffers;
-			std::vector<PipelineHandle> usedGraphicsPipelines;
-			VkDevice device;
-			VkCommandBuffer cmd;
-			VkCommandPool cmdPool;
+			std::vector<BindingSetHandle> usedSets = {};
+			std::vector<ImageHandle> usedImages = {};
+			std::vector<BufferHandle> usedBuffers = {};
+			std::vector<PipelineHandle> usedGraphicsPipelines = {};
+			VkDevice device = {};
+			VkCommandBuffer cmd = {};
+			VkCommandPool cmdPool = {};
 
 			std::weak_ptr<CommandListRecyclingSharedData> recyclingData = {};
 			std::weak_ptr<StagingBufferPool> stagingBufferPool = {};
-			std::vector<StagingBuffer> usedStagingBuffers;
+			std::vector<StagingBuffer> usedStagingBuffers = {};
 
 			std::string debugName = {};
 		};
