@@ -165,7 +165,7 @@ namespace daxa {
 			if (unusedCommandLists.empty()) {
 				auto lock = std::unique_lock(cmdListRecyclingSharedData->mut);
 				while (!cmdListRecyclingSharedData->zombies.empty()) {
-					unusedCommandLists.push_back(std::move(cmdListRecyclingSharedData->zombies.back()));
+					unusedCommandLists.push_back(CommandListHandle{std::move(cmdListRecyclingSharedData->zombies.back())});
 					cmdListRecyclingSharedData->zombies.pop_back();
 				}
 			}

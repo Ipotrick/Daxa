@@ -643,36 +643,5 @@ namespace daxa {
 
 			this->vkCmdPipelineBarrier2KHR(cmd, &dependencyInfo);
 		}
-
-		void CommandListHandle::cleanup() {
-			if (list && list.use_count() == 1) {
-				if (auto recyclingSharedData = list->recyclingData.lock()) {
-					list->reset();
-					auto lock = std::unique_lock(recyclingSharedData->mut);
-					recyclingSharedData->zombies.push_back(std::move(list));
-				}
-				list = {};
-			}
-		}
-
-		CommandListHandle::~CommandListHandle() {
-			cleanup();
-		}
-
-		CommandListHandle& CommandListHandle::operator=(CommandListHandle&& other) noexcept {
-			cleanup();
-			list = std::move(other.list);
-			return *this;
-		}
-
-		CommandListHandle& CommandListHandle::operator=(CommandListHandle const& other) {
-			cleanup();
-			list = other.list;
-			return *this;
-		}
-		
-		CommandListHandle::CommandListHandle(std::shared_ptr<CommandList> list)
-			: list{ list }
-		{}
 	}
 }

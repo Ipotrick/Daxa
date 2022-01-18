@@ -9,6 +9,8 @@
 
 #include <vk_mem_alloc.h>
 
+#include "Handle.hpp"
+
 namespace daxa {
 	namespace gpu {
 		struct BufferCreateInfo {
@@ -107,33 +109,13 @@ namespace daxa {
 			std::shared_ptr<Buffer> owningBuffer = {};
 		};
 
-		class BufferHandle {
+		class BufferHandle : public SharedHandle<Buffer> {
 		public:
-			BufferHandle(std::shared_ptr<Buffer> buffer)
-				:buffer{ std::move(buffer) }
-			{}
-			BufferHandle() = default;
-
-			Buffer& operator*() { return *buffer; }
-			Buffer const& operator*() const { return *buffer; }
-			Buffer* operator->() { return buffer.get(); }
-			Buffer const* operator->() const { return buffer.get(); }
-
-			operator bool() const { return buffer.operator bool(); }
-
-			size_t getRefCount() const { return buffer.use_count(); }
-		
 			template<typename T = u8>
 			MappedMemoryPointer<T> mapMemory() {
-				void* ptr = buffer->mapMemory();
-				return std::move(MappedMemoryPointer<T>{ static_cast<T*>(ptr), buffer->getSize(), buffer });
+				void* ptr = value->mapMemory();
+				return std::move(MappedMemoryPointer<T>{ static_cast<T*>(ptr), value->getSize(), value });
 			}
-		private:
-			friend class Device;
-			friend class StagingBufferPool;
-			friend class Queue;
-
-			std::shared_ptr<Buffer> buffer = {};
 		};
 	}
 }

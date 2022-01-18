@@ -103,9 +103,5 @@ namespace daxa {
 				ret.sampler = *ci.sampler;
 			}
 		}
-
-		ImageHandle::ImageHandle(std::shared_ptr<Image> other)
-			:image{ std::move(other) }
-		{ }
 	}
 }

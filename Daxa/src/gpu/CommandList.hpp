@@ -10,6 +10,7 @@
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 
+#include "Handle.hpp"
 #include "Image.hpp"
 #include "Buffer.hpp"
 #include "SwapchainImage.hpp"
@@ -305,7 +306,7 @@ namespace daxa {
 		private:
 			friend class Device;
 			friend class Queue;
-			friend class CommandListHandle;
+			friend struct CommandListHandleStaticFunctionOverride;
 
 			void reset();
 			void begin();
@@ -357,34 +358,19 @@ namespace daxa {
 			std::string debugName = {};
 		};
 
-		class CommandListHandle {
-		public:
-			CommandListHandle() = default;
-			CommandListHandle(CommandListHandle&& other) noexcept 				= default;
-			CommandListHandle(CommandListHandle const& other) 					= default;
-			CommandListHandle& operator=(CommandListHandle&& other) noexcept;
-			CommandListHandle& operator=(CommandListHandle const& other);
-			~CommandListHandle();
-
-			CommandList& operator*() { return *list; }
-			CommandList const& operator*() const { return *list; }
-			CommandList* operator->() { return list.get(); }
-			CommandList const* operator->() const { return list.get(); }
-
-			operator bool() const { return list.operator bool(); }
-			bool operator!() const { return !(list.operator bool()); }
-
-			bool valid() const { return list.operator bool(); }
-			
-		private:
-			friend class Device;
-			friend class Queue;
-
-			void cleanup();
-
-			CommandListHandle(std::shared_ptr<CommandList> list);
-
-			std::shared_ptr<CommandList> list = {};
+		struct CommandListHandleStaticFunctionOverride{
+			static void cleanup(std::shared_ptr<CommandList>& value) {
+				if (value && value.use_count() == 1) {
+					if (auto recyclingSharedData = value->recyclingData.lock()) {
+						value->reset();
+						auto lock = std::unique_lock(recyclingSharedData->mut);
+						recyclingSharedData->zombies.push_back(std::move(value));
+					}
+					value = {};
+				}
+			}
 		};
+
+		class CommandListHandle : public SharedHandle<CommandList, CommandListHandleStaticFunctionOverride>{};
 	}
 }
