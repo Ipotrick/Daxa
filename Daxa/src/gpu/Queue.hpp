@@ -10,6 +10,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include "Handle.hpp"
 #include "CommandList.hpp"
 #include "TimelineSemaphore.hpp"
 #include "Swapchain.hpp"
@@ -90,25 +91,6 @@ namespace daxa {
 			std::string debugName = {};
 		};
 
-		class QueueHandle {
-		public:
-			QueueHandle(std::shared_ptr<Queue> queue) 
-				: queue{ std::move(queue) }
-			{}
-			QueueHandle() = default;
-
-			Queue const& operator*() const { return *queue; }
-			Queue& operator*() { return *queue; }
-			Queue const* operator->() const { return queue.get(); }
-			Queue* operator->() { return queue.get(); }
-
-			size_t getRefCount() const { return queue.use_count(); }
-
-			operator bool() const { return queue.operator bool(); }
-			bool operator!() const { return !queue; }
-			bool valid() const { return *this; }
-		private:
-			std::shared_ptr<Queue> queue = {};
-		};
+		class QueueHandle : public SharedHandle<Queue>{};
 	}
 }

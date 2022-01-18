@@ -11,6 +11,7 @@
 #include <vk_mem_alloc.h>
 #include <VkBootstrap.h>
 
+#include "Handle.hpp"
 #include "CommandList.hpp"
 #include "Image.hpp"
 #include "Buffer.hpp"
@@ -112,25 +113,6 @@ namespace daxa {
 			std::unique_ptr<BindingSetDescriptionCache> bindingSetDescriptionCache 			= {};
 		};
 
-		class DeviceHandle{
-		public:
-			DeviceHandle(std::shared_ptr<Device> device) 
-				: device{ std::move(device) }
-			{}
-			DeviceHandle() = default;
-
-			Device const& operator*() const { return *device; }
-			Device& operator*() { return *device; }
-			Device const* operator->() const { return device.get(); }
-			Device* operator->() { return device.get(); }
-
-			size_t getRefCount() const { return device.use_count(); }
-
-			operator bool() const { return device.operator bool(); }
-			bool operator!() const { return !device; }
-			bool valid() const { return *this; }
-		private:
-			std::shared_ptr<Device> device = {};
-		};
+		class DeviceHandle : public SharedHandle<Device>{};
 	}
 }

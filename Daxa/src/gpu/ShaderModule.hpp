@@ -2,15 +2,16 @@
 
 #include "../DaxaCore.hpp"
 
-#include <vulkan/vulkan.h>
-
 #include <variant>
 #include <memory>
 #include <vector>
 #include <string>
 #include <filesystem>
 
+#include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
+
+#include "Handle.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -56,31 +57,12 @@ namespace daxa {
 			char const* 			debugName 		= {};
 		};
 
-		class ShaderModuleHandle {
-		public:
-			ShaderModuleHandle(std::shared_ptr<ShaderModule> shaderModule) 
-				: shaderModule{ std::move(shaderModule) }
-			{}
-			ShaderModuleHandle() = default;
-
-			ShaderModule const& operator*() const { return *shaderModule; }
-			ShaderModule& operator*() { return *shaderModule; }
-			ShaderModule const* operator->() const { return shaderModule.get(); }
-			ShaderModule* operator->() { return shaderModule.get(); }
-
-			size_t getRefCount() const { return shaderModule.use_count(); }
-
-			operator bool() const { return shaderModule.operator bool(); }
-			bool operator!() const { return !shaderModule; }
-			bool valid() const { return *this; }
+		class ShaderModuleHandle : public SharedHandle<ShaderModule>{
 		private:
 			friend class Device;
-
 			static Result<ShaderModuleHandle> tryCreateDAXAShaderModule(VkDevice device, std::filesystem::path const& path, std::string const& entryPoint, VkShaderStageFlagBits shaderStage);
 			static Result<ShaderModuleHandle> tryCreateDAXAShaderModule(VkDevice device, std::string const& glsl, std::string const& entryPoint, VkShaderStageFlagBits shaderStage);
 			static Result<ShaderModuleHandle> tryCreateDAXAShaderModule(VkDevice device, ShaderModuleCreateInfo const& ci);
-
-			std::shared_ptr<ShaderModule> shaderModule = {};
 		};
 	}
 }

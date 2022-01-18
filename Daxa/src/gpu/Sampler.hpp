@@ -6,6 +6,8 @@
 
 #include <vulkan/vulkan.h>
 
+#include "Handle.hpp"
+
 namespace daxa {
 	namespace gpu {
 
@@ -81,26 +83,6 @@ namespace daxa {
 			std::string				debugName = {};
 		};
 
-		class SamplerHandle {
-		public:
-			SamplerHandle() = default;
-			SamplerHandle(std::shared_ptr<Sampler> sampler)
-				: sampler{ std::move(sampler) }
-			{}
-
-			size_t getRefCount() const { return sampler.use_count(); }
-
-			operator bool() const { return sampler.operator bool(); }
-			bool operator!() const { return !sampler; }
-			bool valid() const { return *this; }
-
-			Sampler const& operator*() const { return *sampler; }
-			Sampler& operator*() { return *sampler; }
-			Sampler const* operator->() const { return sampler.get(); }
-			Sampler* operator->() { return sampler.get(); }
-		private:
-
-			std::shared_ptr<Sampler> sampler = {};
-		};
+		class SamplerHandle : public SharedHandle<Sampler>{};
 	}
 }

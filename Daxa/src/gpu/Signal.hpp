@@ -4,6 +4,7 @@
 
 #include <memory>
 
+#include "Handle.hpp"
 #include <vulkan/vulkan.h>
 
 namespace daxa {
@@ -33,25 +34,6 @@ namespace daxa {
 			std::string debugName 	= {};
 		};
 
-		class SignalHandle {
-		public:
-			SignalHandle(std::shared_ptr<Signal> signal) 
-				: signal{ std::move(signal) }
-			{}
-			SignalHandle() = default;
-
-			Signal const& operator*() const { return *signal; }
-			Signal& operator*() { return *signal; }
-			Signal const* operator->() const { return signal.get(); }
-			Signal* operator->() { return signal.get(); }
-
-			size_t getRefCount() const { return signal.use_count(); }
-
-			operator bool() const { return signal.operator bool(); }
-			bool operator!() const { return !signal; }
-			bool valid() const { return *this; }
-		private:
-			std::shared_ptr<Signal> signal = {};
-		};
+		class SignalHandle : public SharedHandle<Signal>{};
 	}
 }
