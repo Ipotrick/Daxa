@@ -8,16 +8,17 @@
 
 namespace daxa {
 	namespace gpu {
-		void setPipelineDebugName(VkDevice device, char const* debugName, VkPipeline pipeline) {
+		void setPipelineDebugName(VkDevice device, char const* debugName, Pipeline& pipeline) {
 			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && debugName != nullptr) {
 				VkDebugUtilsObjectNameInfoEXT nameInfo {
 					.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
 					.pNext = NULL,
 					.objectType = VK_OBJECT_TYPE_PIPELINE,
-					.objectHandle = (uint64_t)pipeline,
+					.objectHandle = (uint64_t)pipeline.pipeline,
 					.pObjectName = debugName,
 				};
 				instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
+				pipeline.debugName = debugName;
 			}
 		}
 
@@ -343,6 +344,9 @@ namespace daxa {
 			Pipeline& ret = *pipelineHandle;
 			ret.device = device;
 			ret.bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+			ret.colorAttachmentFormats = colorAttachmentFormats;
+			ret.depthAttachment = depthTestSettings.depthAttachmentFormat;
+			ret.stencilAttachment = VK_FORMAT_UNDEFINED;
 
 			std::vector<VkDescriptorSetLayout> descLayouts = processReflectedDescriptorData(this->descriptorSets, bindingSetCache, ret.bindingSetDescriptions);
 
@@ -457,7 +461,7 @@ namespace daxa {
 			auto err = vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline);
 			DAXA_ASSERT_M(err == VK_SUCCESS, "could not create graphics pipeline");
 
-			setPipelineDebugName(device, debugName, ret.pipeline);
+			setPipelineDebugName(device, debugName, ret);
 
 			return pipelineHandle;
 		}
@@ -505,7 +509,7 @@ namespace daxa {
 			};
 			vkCreateComputePipelines(device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline);
 
-			setPipelineDebugName(device, ci.debugName, ret.pipeline);
+			setPipelineDebugName(device, ci.debugName, ret);
 
 			return pipelineHandle;
 		}
