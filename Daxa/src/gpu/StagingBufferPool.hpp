@@ -1,10 +1,10 @@
 #pragma once
 
-#include <mutex>
-
 #include "../DaxaCore.hpp"
 
+#include <mutex>
 #include <vector>
+#include <optional>
 
 #include <vulkan/vulkan.h>
 
@@ -34,7 +34,7 @@ namespace daxa {
 			size_t getLeftOverSize() const { return STAGING_BUFFER_POOL_BUFFER_SIZE - usedUpSize; }
 
 			size_t usedUpSize = {};
-			BufferHandle buffer = {};
+			std::optional<BufferHandle> buffer = {};
 		private:
 			void cleanup();
 			std::weak_ptr<StagingBufferPoolSharedData> sharedData = {};

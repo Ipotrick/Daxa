@@ -14,7 +14,7 @@ namespace daxa {
 				auto data = sharedData.lock();
 				if (data) {
 					auto lock = std::unique_lock(data->mut);
-					data->pool.push_back(std::move(buffer));
+					data->pool.push_back(std::move(*buffer));
 				}
 				buffer = {};
 			}

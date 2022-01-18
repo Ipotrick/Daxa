@@ -355,7 +355,7 @@ public:
         printf("\n");
 
         std::vector<daxa::gpu::BufferHandle> buffers;
-        buffers.resize(data->accessors_count, {});
+        buffers.resize(data->accessors_count);
 
         printf("\n");
 
