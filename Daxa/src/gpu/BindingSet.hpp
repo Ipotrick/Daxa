@@ -13,6 +13,7 @@
 
 #include "vulkan/vulkan.h"
 
+#include "Handle.hpp"
 #include "Image.hpp"
 #include "Buffer.hpp"
 #include "Sampler.hpp"
@@ -105,7 +106,7 @@ namespace daxa {
 			friend class Device;
 			friend class CommandList;
 			friend class BindingSetAllocator;
-			friend class BindingSetHandle;
+			friend struct BindingSetHandleStaticFunctionOverride;
 			friend class Queue;
 
 			void setDebugName(char const* debugName);
@@ -138,36 +139,20 @@ namespace daxa {
 			std::unordered_map<BindingsArray, std::unique_ptr<BindingSetDescription>, BindingsArrayHasher> 	descriptions 	= {};
 		};
 
-		class BindingSetHandle {
-		public:
-			BindingSetHandle() = default;
-			BindingSetHandle(BindingSetHandle&& other) noexcept = default;
-			BindingSetHandle(BindingSetHandle const& other) = default;
-			BindingSetHandle& operator=(BindingSetHandle&& other) noexcept;
-			BindingSetHandle& operator=(BindingSetHandle const& other);
-			~BindingSetHandle();
-
-			BindingSet const& operator*() const { return *set; }
-			BindingSet& operator*() { return *set; }
-			BindingSet const* operator->() const { return &*set; }
-			BindingSet* operator->() { return &*set; }
-
-			operator bool() const { return set.operator bool(); }
-			bool operator!() const { return !set.operator bool(); }
-
-			bool valid() const { return set.operator bool(); }
-
-			size_t getRefCount() const { return set.use_count(); }
-		private:
-			friend class BindingSetAllocator;
-			friend class GeneralDescriptorSetAllocator;
-
-			void cleanup();
-
-			BindingSetHandle(std::shared_ptr<BindingSet>&&) noexcept;
-
-			std::shared_ptr<BindingSet> set;
+		struct BindingSetHandleStaticFunctionOverride {
+			static void cleanup(std::shared_ptr<BindingSet>& value) {
+				if (value && value.use_count() == 1) {
+					size_t handlesSize = value->handles.size();
+					value->handles.clear();
+					value->handles.resize(handlesSize, std::monostate{});
+					auto pool = value->pool.lock();
+					auto lock = std::unique_lock(pool->mut);
+					pool->zombies.push_back(std::move(value));
+				}
+			}
 		};
+
+		class BindingSetHandle : public SharedHandle<BindingSet, BindingSetHandleStaticFunctionOverride>{};
 
 		struct BindingSetAllocatorCreateInfo {
 			BindingSetDescription const* 	setDescription 	= {};

@@ -136,7 +136,7 @@ namespace daxa {
 							auto list = std::move(iter->cmdLists.back());
 							iter->cmdLists.pop_back();
 							for (auto& buffer : list->usedBuffers) {
-								buffer.buffer->usesOnGPU -= 1;
+								buffer.value->usesOnGPU -= 1;
 							}
 							for (auto& set : list->usedSets) {
 								set->usesOnGPU -= 1;

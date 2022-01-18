@@ -11,6 +11,7 @@
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 
+#include "Handle.hpp"
 #include "ShaderModule.hpp"
 #include "BindingSet.hpp"
 
@@ -67,26 +68,7 @@ namespace daxa {
 			std::string debugName 			= {};
 		};
 
-		class PipelineHandle {
-		public:
-			PipelineHandle(std::shared_ptr<Pipeline> pipeline) 
-				: pipeline{ std::move(pipeline) }
-			{}
-			PipelineHandle() = default;
-
-			Pipeline const& operator*() const { return *pipeline; }
-			Pipeline& operator*() { return *pipeline; }
-			Pipeline const* operator->() const { return pipeline.get(); }
-			Pipeline* operator->() { return pipeline.get(); }
-
-			size_t getRefCount() const { return pipeline.use_count(); }
-
-			operator bool() const { return pipeline.operator bool(); }
-			bool operator!() const { return !pipeline; }
-			bool valid() const { return *this; }
-		private:
-			std::shared_ptr<Pipeline> pipeline = {};
-		};
+		class PipelineHandle : public SharedHandle<Pipeline>{};
 
 		struct DepthTestSettings {
 			VkFormat depthAttachmentFormat = VK_FORMAT_UNDEFINED;

@@ -1,0 +1,68 @@
+#pragma once
+
+#include <memory>
+
+#include "../DaxaCore.hpp"
+
+namespace daxa {
+    namespace gpu {
+        template<typename T>
+        struct DummyStaticFunctionOverride {
+            static void cleanup(std::shared_ptr<T>& value) { }
+        };
+
+        template<typename T, typename StaticFunctionOverrideT = DummyStaticFunctionOverride<T>>
+        class SharedHandle {
+        public:
+            using SelfT = SharedHandle<T, StaticFunctionOverrideT>;
+
+			SharedHandle() = default;
+            SharedHandle(std::shared_ptr<T> const& other)
+                : value{ other }
+            { }
+            SharedHandle(std::shared_ptr<T>&& other)
+                : value{ std::move(other) }
+            {  }
+			SharedHandle(SelfT&& other) noexcept 
+                : value{ std::move(other.value) }
+            { }
+			SharedHandle(SharedHandle<T, StaticFunctionOverrideT> const& other) 
+                : value{ other.value }
+            { }
+			SelfT& operator=(SharedHandle<T, StaticFunctionOverrideT>&& other) noexcept {
+                StaticFunctionOverrideT::cleanup(value);
+                value = std::move(other.value);
+                return *this;
+            }
+			SelfT& operator=(SelfT const& other) {
+                StaticFunctionOverrideT::cleanup(value);
+                value = other.value;
+                return *this;
+            }
+			~SharedHandle() {
+                StaticFunctionOverrideT::cleanup(value);
+            }
+
+			T& operator*() { return *value; }
+			T const& operator*() const { return *value; }
+			T* operator->() { return value.get(); }
+			T const* operator->() const { return value.get(); }
+
+			operator bool() const { return value.operator bool(); }
+			bool operator!() const { return !(value.operator bool()); }
+
+            T* get() { return value.get(); }
+            T const* get() const { return value.get(); }
+
+			bool valid() const { return value.operator bool(); }
+
+            size_t getRefCount() const { return value.use_count(); }
+		protected:
+			friend class Device;
+			friend class Queue;
+            friend class BindingSetAllocator;
+
+			std::shared_ptr<T> value = {};
+        };
+    }
+}
