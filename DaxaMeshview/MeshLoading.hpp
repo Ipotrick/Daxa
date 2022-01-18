@@ -274,7 +274,7 @@ public:
         cgltf_data* data = NULL;
         cgltf_result resultParsing = cgltf_parse_file(&options, path.string().c_str(), &data);
         if (resultParsing != cgltf_result_success) {
-            return daxa::ResultErr{std::string_view("failed to parse gltf file")};
+            return daxa::ResultErr{"failed to parse gltf file"};
         }
 
         auto resultBinLoading = cgltf_load_buffers(&options, data, path.string().c_str());

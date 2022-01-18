@@ -216,7 +216,7 @@ namespace daxa {
 			}
 			auto spirv = tryGenSPIRVFromGLSL(src.value(), shaderStage);
 			if (spirv.isErr()) {
-				return ResultErr{ spirv.message() };
+				return ResultErr{ spirv.message() + "; with path: " + path.string() };
 			}
 			auto shadMod = tryCreateVkShaderModule(device, spirv.value());
 			if (!shadMod.isErr()) {
@@ -273,7 +273,12 @@ namespace daxa {
 
 			auto shadMod = tryCreateDAXAShaderModule(device, glslSource, ci.entryPoint, ci.stage);
 			if (shadMod.isErr()) {
-				return ResultErr{ shadMod.message() };
+				auto errMess = shadMod.message();
+				if (ci.pathToSource) {
+					errMess += "; shader from path: ";
+					errMess += ci.pathToSource;
+				}
+				return ResultErr{ errMess };
 			}
 
 			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
