@@ -53,14 +53,14 @@ namespace daxa {
 			std::string const& getDebugName() const { return debugName; }
 		private:
 			friend class GraphicsPipelineBuilder;
-			friend PipelineHandle createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ComputePipelineCreateInfo const& ci);
+			friend daxa::Result<PipelineHandle> createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ComputePipelineCreateInfo const& ci);
 			friend void setPipelineDebugName(VkDevice device, char const* debugName, Pipeline& pipeline);
 
 			std::array<BindingSetDescription const*, MAX_SETS_PER_PIPELINE> bindingSetDescriptions = {};
 			std::vector<VkFormat> colorAttachmentFormats = {};
-			VkFormat depthAttachment = VK_FORMAT_UNDEFINED;
-			VkFormat stencilAttachment = VK_FORMAT_UNDEFINED;
 
+			VkFormat depthAttachment 		= VK_FORMAT_UNDEFINED;
+			VkFormat stencilAttachment 		= VK_FORMAT_UNDEFINED;
 			VkPipelineBindPoint bindPoint 	= {};
 			VkDevice device					= {};
 			VkPipeline pipeline				= {};
@@ -109,7 +109,7 @@ namespace daxa {
 			GraphicsPipelineBuilder& addColorAttachment(VkFormat const& attachmentFormat, const VkPipelineColorBlendAttachmentState&);
 		private:
 			friend class Device;
-			PipelineHandle build(VkDevice, BindingSetDescriptionCache& bindingSetCache);
+			daxa::Result<PipelineHandle> build(VkDevice, BindingSetDescriptionCache& bindingSetCache);
 
 			char const* debugName = {};
 
@@ -126,15 +126,17 @@ namespace daxa {
 			RasterSettings rasterSettings = {};
 			std::optional<VkPipelineInputAssemblyStateCreateInfo> inputAssembly;
 			std::optional<VkPipelineMultisampleStateCreateInfo> multisampling;
-			std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 			std::vector<VkDynamicState> dynamicStateEnable;
+			std::vector<ShaderModuleHandle> shaderModules;
+			std::vector<VkPipelineColorBlendAttachmentState> colorAttachmentBlends;
+			std::vector<VkFormat> colorAttachmentFormats;
+
+			// temporaries:
 			std::vector<VkPushConstantRange> pushConstants;
 			std::vector<std::unordered_map<u32, VkDescriptorSetLayoutBinding>> descriptorSets;
 			std::vector<VkPipelineShaderStageCreateInfo> shaderStageCreateInfo;
-			std::vector<VkPipelineColorBlendAttachmentState> colorAttachmentBlends;
-			std::vector<VkFormat> colorAttachmentFormats;
 		};
 
-		PipelineHandle createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ComputePipelineCreateInfo const& ci);
+		daxa::Result<PipelineHandle> createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ComputePipelineCreateInfo const& ci);
 	}
 }

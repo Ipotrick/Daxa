@@ -203,11 +203,11 @@ namespace daxa {
 			return std::move(ret);
 		}
 
-		PipelineHandle Device::createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder) {
+		daxa::Result<PipelineHandle> Device::createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder) {
 			return pipelineBuilder.build(device, *bindingSetDescriptionCache);
 		}
 
-		PipelineHandle Device::createComputePipeline(ComputePipelineCreateInfo const& ci) {
+		daxa::Result<PipelineHandle> Device::createComputePipeline(ComputePipelineCreateInfo const& ci) {
 			return gpu::createComputePipeline(device, *bindingSetDescriptionCache, ci);
 		}
 

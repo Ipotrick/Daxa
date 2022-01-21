@@ -264,16 +264,15 @@ namespace daxa {
 		}
 
 		GraphicsPipelineBuilder& GraphicsPipelineBuilder::addShaderStage(ShaderModuleHandle const& shaderModule) {
-			VkPipelineShaderStageCreateInfo pipelineShaderStageCI{
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-				.pNext = nullptr,
-				.stage = shaderModule->shaderStage,
-				.module = shaderModule->shaderModule,
-				.pName = shaderModule->entryPoint.c_str(),
+			auto pred = [=](ShaderModuleHandle const& a){
+				return a->getVkShaderStage() == shaderModule->getVkShaderStage();
 			};
-			this->shaderStageCreateInfo.push_back(pipelineShaderStageCI);
 
-			reflectShader(shaderModule, pushConstants, descriptorSets);
+			if (auto place = std::find_if(this->shaderModules.begin(), this->shaderModules.end(), pred); place != this->shaderModules.end()) {
+				*place = shaderModule;
+			} else {
+				this->shaderModules.push_back(shaderModule);
+			}
 
 			return *this;
 		}
@@ -335,9 +334,22 @@ namespace daxa {
 			.pVertexAttributeDescriptions = nullptr,
 		};
 
-		PipelineHandle GraphicsPipelineBuilder::build(VkDevice device, BindingSetDescriptionCache& bindingSetCache) {
+		daxa::Result<PipelineHandle> GraphicsPipelineBuilder::build(VkDevice device, BindingSetDescriptionCache& bindingSetCache) {
 			if (bVertexAtrributeBindingBuildingOpen) {
 				endVertexInputAttributeBinding();
+			}
+
+			for (auto& shaderModule : this->shaderModules) {
+				VkPipelineShaderStageCreateInfo pipelineShaderStageCI{
+					.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+					.pNext = nullptr,
+					.stage = shaderModule->shaderStage,
+					.module = shaderModule->shaderModule,
+					.pName = shaderModule->entryPoint.c_str(),
+				};
+				this->shaderStageCreateInfo.push_back(pipelineShaderStageCI);
+
+				reflectShader(shaderModule, pushConstants, descriptorSets);
 			}
 
 			auto pipelineHandle = PipelineHandle{ std::make_shared<Pipeline>() };
@@ -463,10 +475,14 @@ namespace daxa {
 
 			setPipelineDebugName(device, debugName, ret);
 
+			this->pushConstants.clear();
+			this->descriptorSets.clear();
+			this->shaderStageCreateInfo.clear();
+
 			return pipelineHandle;
 		}
 
-		PipelineHandle createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ComputePipelineCreateInfo const& ci) {
+		daxa::Result<PipelineHandle> createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ComputePipelineCreateInfo const& ci) {
 			auto pipelineHandle = PipelineHandle{ std::make_shared<Pipeline>() };
 			Pipeline& ret = *pipelineHandle;
 			ret.device = device;
