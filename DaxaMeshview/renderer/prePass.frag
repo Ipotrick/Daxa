@@ -4,6 +4,8 @@
 layout(set = 0, binding = 0) readonly uniform GlobalBuffer {
     mat4 vp;
     mat4 view;
+    mat4 itvp;
+    mat4 itview;
 } globalBuffer;
 struct PrimitiveInfo {
     mat4 transform;

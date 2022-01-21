@@ -8,6 +8,7 @@ struct Primitive {
 	daxa::gpu::BufferHandle vertexPositions = {};
 	daxa::gpu::BufferHandle vertexUVs = {};
 	daxa::gpu::BufferHandle vertexNormals = {};
+	daxa::gpu::BufferHandle vertexTangents = {};
 	daxa::gpu::ImageHandle albedoTexture = {};
 	daxa::gpu::ImageHandle normalTexture = {};
 };
@@ -20,7 +21,7 @@ struct ChildComp {
 	daxa::EntityHandle parent = {};
 };
 
-struct Light {
+struct LightComp {
 	f32 strength;
 	glm::vec4 color;
 };

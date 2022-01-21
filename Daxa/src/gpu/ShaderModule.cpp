@@ -2,6 +2,8 @@
 
 #include <fstream>
 #include <iostream>
+#include <streambuf>
+#include <thread>
 
 #include <vulkan/vulkan.h>
 
@@ -126,27 +128,37 @@ namespace daxa {
 			},
 		};
 
+		/**
+		 * @brief 	Because VSCode is dumb it sometimes touches files twice, where the first touch just clears the file
+		 * 			so we just assume that empty files are the vs code bug and try to get the correct file for 100 milliseconds.
+		 * 
+		 * @param path 
+		 * @return Result<std::string> 
+		 */
 		Result<std::string> tryLoadGLSLShaderFromFile(std::filesystem::path const& path) {
-			std::ifstream ifs(path);
-			if (!ifs) {
-				return ResultErr{ "could not find or open file" };
+			auto startTime = std::chrono::steady_clock::now();
+			while ((std::chrono::steady_clock::now() - startTime).count() < 100'000'000) {
+				std::ifstream ifs(path);
+				if (!ifs.good()) {
+					return ResultErr{ "could not find or open file" };
+				}
+				std::string str;
+
+				ifs.seekg(0, std::ios::end);   
+				str.reserve(ifs.tellg());
+				ifs.seekg(0, std::ios::beg);
+
+				str.assign(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
+
+				if (str.size() < 1) {
+					std::this_thread::sleep_for(std::chrono::milliseconds(1));
+					continue;
+				}
+						
+				return str;
 			}
 
-			std::string ret;
-			try {
-				ifs.seekg(0, std::ios::end);
-				ret.reserve(ifs.tellg());
-				ifs.seekg(0, std::ios::beg);
-				ret.assign(
-					std::istreambuf_iterator<char>(ifs),
-					std::istreambuf_iterator<char>()
-				);
-				ifs.close();
-				return { ret };
-			}
-			catch (...) {
-				return ResultErr{ "could not read in file after opening" };
-			}
+			return ResultErr{ "timeout while trying to read file" };
 		}
 
 		Result<std::vector<u32>> tryGenSPIRVFromGLSL(std::string const& src, VkShaderStageFlagBits shaderStage) {
@@ -178,14 +190,20 @@ namespace daxa {
 			auto messages = static_cast<EShMessages>(EShMsgSpvRules | EShMsgVulkanRules);
 			TBuiltInResource resource = DAXA_DEFAULT_SHADER_RESSOURCE_SIZES;
 			if (!shader.parse(&resource, 100, false, messages)) {
-				std::cerr << shader.getInfoLog() << '\n' << shader.getInfoDebugLog() << std::endl;
-				return ResultErr{"could not parse shader source code"};
+				std::string s;
+				s += "failed to compile shader due to:\n";
+				s += shader.getInfoLog();
+				s += shader.getInfoDebugLog();
+				return ResultErr{s};
 			}
 			glslang::TProgram program;
 			program.addShader(&shader);
 			if (!program.link(messages)) {
-				std::cerr << shader.getInfoLog() << '\n' << shader.getInfoDebugLog() << std::endl;
-				return ResultErr{"could not compile shader"};
+				std::string s;
+				s += "failed to compile shader due to:\n";
+				s += shader.getInfoLog();
+				s += shader.getInfoDebugLog();
+				return ResultErr{s};
 			}
 			std::vector<std::uint32_t> ret;
 			glslang::GlslangToSpv(*program.getIntermediate(stage), ret);

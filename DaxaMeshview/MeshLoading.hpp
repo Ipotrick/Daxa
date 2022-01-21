@@ -164,8 +164,7 @@ public:
         daxa::EntityComponentManager& ecm, 
         daxa::EntityComponentView<daxa::TransformComp, ModelComp, ChildComp>& view,
         cgltf_data* data,
-        std::vector<daxa::gpu::BufferHandle>& buffers,
-        std::vector<daxa::gpu::ImageHandle>& textures
+        std::vector<daxa::gpu::BufferHandle>& buffers
     ) {
         glm::mat4 transform{1.0f};
         if (node->has_matrix) {
@@ -200,7 +199,7 @@ public:
 
                 meshPrim.indexCount = prim.indices->count;
                 size_t bufferIndex = prim.indices - data->accessors;
-                printf("use buffer with index %i as index buffer\n", bufferIndex);
+                //printf("use buffer with index %i as index buffer\n", bufferIndex);
                 if (!buffers[bufferIndex]) {
                     buffers[bufferIndex] = loadBuffer(cmdList, *prim.indices, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
                 }
@@ -216,41 +215,60 @@ public:
 
                     switch (attribute.type) {
                         case cgltf_attribute_type_color: 
-                            printf("models dont support vertex colors\n");
+                            //printf("models dont support vertex colors\n");
                             break;
                         case cgltf_attribute_type_position:
-                            printf("use buffer with index %i as position vertex buffer\n", bufferIndexOfAttrib);
+                            //printf("use buffer with index %i as position vertex buffer\n", bufferIndexOfAttrib);
                             meshPrim.vertexPositions = buffers[bufferIndexOfAttrib];
                             break;
                         case cgltf_attribute_type_texcoord:
-                            printf("use buffer with index %i as tex coord vertex buffer\n", bufferIndexOfAttrib);
+                            //printf("use buffer with index %i as tex coord vertex buffer\n", bufferIndexOfAttrib);
                             meshPrim.vertexUVs = buffers[bufferIndexOfAttrib];
                             break;
                         case cgltf_attribute_type_normal:
-                            printf("use buffer with index %i as normals vertex buffer\n", bufferIndexOfAttrib);
+                            //printf("use buffer with index %i as normals vertex buffer\n", bufferIndexOfAttrib);
                             meshPrim.vertexNormals = buffers[bufferIndexOfAttrib];
+                            break;
+                        case cgltf_attribute_type_tangent:
+                            printf("use buffer with index: %i as tantents vertex buffer\n", bufferIndexOfAttrib);
+                            meshPrim.vertexTangents = buffers[bufferIndexOfAttrib];
                             break;
                     }
                 }
 
                 if (prim.material->pbr_metallic_roughness.base_color_texture.texture) {
                     size_t textureIndex = prim.material->pbr_metallic_roughness.base_color_texture.texture - data->textures;
-                    meshPrim.albedoTexture = textures[textureIndex];
+                    meshPrim.albedoTexture = imgCache->get(
+                        {
+                            .path = texturePaths[textureIndex],
+                            .samplerInfo = textureSamplerInfos[textureIndex],
+                            .viewFormat = VK_FORMAT_R8G8B8A8_SRGB,
+                        },
+                        cmdList
+                    );
                 }
 
                 if (prim.material->normal_texture.texture) {
+                    printf("normals\n");
                     size_t textureIndex = prim.material->normal_texture.texture - data->textures;
-                    meshPrim.normalTexture = textures[textureIndex];
+                    meshPrim.normalTexture = imgCache->get(
+                        {
+                            .path = texturePaths[textureIndex],
+                            .samplerInfo = textureSamplerInfos[textureIndex],
+                            .viewFormat = VK_FORMAT_R8G8B8A8_UNORM,
+                        },
+                        cmdList
+                    );
                 }
 
                 model.meshes.push_back(std::move(meshPrim));
             }
         } else {
-            printf("node has no mesh\n");
+            //printf("node has no mesh\n");
         }
 
         for (int childI = 0; childI < node->children_count; childI++) {
-            nodeToEntity(cmdList, &ent, node->children[childI], ecm, view, data, buffers, textures);
+            nodeToEntity(cmdList, &ent, node->children[childI], ecm, view, data, buffers);
         }
 
         return ent;
@@ -285,19 +303,18 @@ public:
         // path now is the relative path to the folder of the gltf file, this is used to load other data now
         path.remove_filename(); 
 
-        std::vector<daxa::gpu::ImageHandle> textures;
         for (int i = 0; i < data->textures_count; i++) {
             auto& texture = data->textures[i];
 
             // TODO make it possible to read images, wich are embedded inside the .bin
 
-            printf("texture nr %i\n", i);
-            printf("texture embedded in .bin: %s\n", texture.image->buffer_view != nullptr ? "true" : "false");
-            printf("texture uri: %s\n", data->textures[i].image->uri);
-            printf("texture min filter: %i\n", texture.sampler->min_filter);
-            printf("texture mag filter: %i\n", texture.sampler->mag_filter);
-            printf("texture wrap s: %i\n", texture.sampler->wrap_s);
-            printf("texture wrap t: %i\n", texture.sampler->wrap_t);
+            // printf("texture nr %i\n", i);
+            // printf("texture embedded in .bin: %s\n", texture.image->buffer_view != nullptr ? "true" : "false");
+            // printf("texture uri: %s\n", data->textures[i].image->uri);
+            // printf("texture min filter: %i\n", texture.sampler->min_filter);
+            // printf("texture mag filter: %i\n", texture.sampler->mag_filter);
+            // printf("texture wrap s: %i\n", texture.sampler->wrap_s);
+            // printf("texture wrap t: %i\n", texture.sampler->wrap_t);
 
             daxa::gpu::SamplerCreateInfo samplerInfo = {};
             {
@@ -338,26 +355,17 @@ public:
             std::filesystem::path texPath;
 
             texPath = path / data->textures[i].image->uri;
-            printf("texture path %s\n",texPath.c_str());
 
-            daxa::ImageCacheFetchInfo fetchI{
-                .path = texPath.c_str(), 
-                .samplerInfo = samplerInfo,
-            };
-            if (texture.image->buffer_view) {
-                fetchI.preload = (u8*)texture.image->buffer_view->data;
-                fetchI.preloadSize = texture.image->buffer_view->size;
-            }
-
-            textures.push_back(imgCache->get(fetchI, cmdList));
+            textureSamplerInfos.push_back(samplerInfo);
+            texturePaths.push_back(texPath);
         }
 
-        printf("\n");
+        // printf("\n");
 
         std::vector<daxa::gpu::BufferHandle> buffers;
         buffers.resize(data->accessors_count);
 
-        printf("\n");
+        // printf("\n");
 
         auto view = ecm.view<daxa::TransformComp, ModelComp, ChildComp>();
 
@@ -368,7 +376,7 @@ public:
             for (int rootNodeI = 0; rootNodeI < scene.nodes_count; rootNodeI++) {
                 auto* rootNode = scene.nodes[rootNodeI];
 
-                auto ent = nodeToEntity(cmdList, nullptr, rootNode, ecm, view, data, buffers, textures);
+                auto ent = nodeToEntity(cmdList, nullptr, rootNode, ecm, view, data, buffers);
                 ret.push_back(ent);
             }
         }
@@ -382,13 +390,14 @@ public:
         }
 
         cmdList->insertMemoryBarrier(daxa::gpu::FULL_MEMORY_BARRIER);
-
-        this->textures = textures;
+        
+        textureSamplerInfos.clear();
+        texturePaths.clear();
         return daxa::Result(std::vector<daxa::EntityHandle>());
     }
-
-    std::vector<daxa::gpu::ImageHandle> textures;
 private:
+    std::vector<daxa::gpu::SamplerCreateInfo> textureSamplerInfos;
+    std::vector<std::filesystem::path> texturePaths;
     daxa::gpu::DeviceHandle device = {};
     std::vector<std::filesystem::path> rootPaths = {};
     std::shared_ptr<daxa::ImageCache> imgCache = {};

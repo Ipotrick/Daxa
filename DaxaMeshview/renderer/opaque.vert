@@ -6,13 +6,14 @@ layout(location = 1) in vec2 uv;
 layout(location = 2) in vec3 normal;
 
 layout(location = 10) out vec2 vtf_uv;
-layout(location = 11) out vec3 vtf_normal;
-layout(location = 12) out vec2 vtf_screen_space_normal;
 layout(location = 13) out vec3 vtf_world_space_normal;
+layout(location = 14) out vec3 vtf_world_space_position;
 
 layout(set = 0, binding = 0) readonly uniform GlobalBuffer {
     mat4 vp;
     mat4 view;
+    mat4 itvp;
+    mat4 itview;
 } globalBuffer;
 struct PrimitiveInfo {
     mat4 transform;
@@ -44,8 +45,8 @@ void main() {
     vtf_world_space_normal = (itm * vec4(normal,0.0f)).xyz;      // mul inverse transpose model matrix with the normal vector
     vtf_world_space_normal = normalize(vtf_world_space_normal);         // as the scaling can change the vector length, we re-normalize the vector's length
 
-    vtf_screen_space_normal = (globalBuffer.view * vec4(vtf_world_space_normal,0.0f)).xy;
+    vtf_world_space_position = (m * vec4(position, 1.0f)).xyz;
 
     mat4 mvp = globalBuffer.vp * m;
-    gl_Position =  mvp * vec4(position, 1.0f);
+    gl_Position = mvp * vec4(position, 1.0f);
 }
