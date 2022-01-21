@@ -20,31 +20,31 @@ namespace daxa {
             SharedHandle(std::shared_ptr<T> const& other)
                 : value{ other }
             { 
-                DAXA_ASSERT_M(value, "can not assign invalid handle");
+                //DAXA_ASSERT_M(value, "can not assign invalid handle");
             }
             SharedHandle(std::shared_ptr<T>&& other)
                 : value{ std::move(other) }
             {  
-                DAXA_ASSERT_M(value, "can not assign invalid handle");
+                //DAXA_ASSERT_M(value, "can not assign invalid handle");
             }
 			SharedHandle(SelfT&& other) noexcept 
                 : value{ std::move(other.value) }
             { 
-                DAXA_ASSERT_M(value, "can not assign invalid handle");
+                //DAXA_ASSERT_M(value, "can not assign invalid handle");
             }
 			SharedHandle(SharedHandle<T, StaticFunctionOverrideT> const& other) 
                 : value{ other.value }
             { 
-                DAXA_ASSERT_M(value, "can not assign invalid handle");
+                //DAXA_ASSERT_M(value, "can not assign invalid handle");
             }
 			SelfT& operator=(SharedHandle<T, StaticFunctionOverrideT>&& other) noexcept {
-                DAXA_ASSERT_M(other, "can not assign invalid handle");
+                //DAXA_ASSERT_M(other, "can not assign invalid handle");
                 StaticFunctionOverrideT::cleanup(value);
                 value = std::move(other.value);
                 return *this;
             }
 			SelfT& operator=(SelfT const& other) {
-                DAXA_ASSERT_M(other, "can not assign invalid handle");
+                //DAXA_ASSERT_M(other, "can not assign invalid handle");
                 StaticFunctionOverrideT::cleanup(value);
                 value = other.value;
                 return *this;
