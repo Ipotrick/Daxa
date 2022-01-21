@@ -19,6 +19,7 @@ namespace daxa {
 			descImageInfoBuffer.reserve(samplers.size());
 
 			for (auto& sampler : samplers) {
+				DAXA_ASSERT_M(sampler, "invalid sampler handle");
 				descImageInfoBuffer.push_back(VkDescriptorImageInfo{
 					.sampler = sampler->getVkSampler(),
 					.imageView = VK_NULL_HANDLE,
@@ -96,6 +97,7 @@ namespace daxa {
 			DAXA_ASSERT_M(bIsImage, "tried binding image to non image binding index");
 			
 			for (auto& [image, layout] : images) {
+				DAXA_ASSERT_M(image, "invalid image handle");
 				VkSampler sampler = VK_NULL_HANDLE;
 				if (imageDescriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
 					DAXA_ASSERT_M(image->getSampler().valid(), "can not bind image without sampler to a combined image sampler binding");

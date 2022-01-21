@@ -47,7 +47,7 @@ public:
 		this->normalsImage = device->createImage2d({
 			.width = width,
 			.height = height,
-			.format = VK_FORMAT_R16G16_SFLOAT,
+			.format = VK_FORMAT_A2B10G10R10_UNORM_PACK32,
 			.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 			.imageAspekt = VK_IMAGE_ASPECT_COLOR_BIT,
 			.sampler = defaultSampler,

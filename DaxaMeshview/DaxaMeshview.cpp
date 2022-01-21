@@ -3,6 +3,7 @@
 #include <stb_image.h>
 
 #include "Daxa.hpp"
+#include <glm/gtx/matrix_decompose.hpp>
 
 #include "World.hpp"
 #include "renderer/MeshRenderer.hpp"
@@ -29,13 +30,17 @@ public:
 
 		meshRender.init(renderCTX);
 		frameBufferDebugRenderer.init(renderCTX, app.window->getWidth(), app.window->getHeight());
+
+		auto lightEnt = ecm.createEntity();
+		auto view = ecm.view<daxa::TransformComp, LightComp>();
+		view.addComp(lightEnt, LightComp{ .color = { 0.8f, 0.8, 0.8f, 1.0f }, .strength = 6.25 });
+		view.addComp(lightEnt, daxa::TransformComp{ .mat = glm::translate(glm::mat4{1.0f}, glm::vec3(0,0,3)) });
 	}
 
 	void update(daxa::AppState& app) {
-
 		auto cmdList = renderCTX.device->getCommandList();
 
-		ImGui_ImplGlfw_NewFrame();
+		ImGui_ImplGlfw_NewFrame(); 
 
 		ImGui::NewFrame();
 
@@ -54,7 +59,7 @@ public:
 		ImGui::End();
 
 		ImGui::Begin("texture view");
-		for (auto tex : sceneLoader.textures) {
+		for (auto [key, tex] : imageCache->cache) {
 			auto id = imguiRenderer->getImGuiTextureId(tex);
 			ImGui::Text("pointer = %i", id);
 			ImGui::Text("size = %d x %d", tex->getVkExtent().width, tex->getVkExtent().height);
@@ -86,6 +91,26 @@ public:
 			.image = renderCTX.swapchainImage.getImageHandle(),
 			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 		});
+
+		{
+			auto lightDraws = std::vector<MeshRenderer::DrawLight>();
+			auto view = ecm.view<LightComp, daxa::TransformComp>();
+
+			for (auto [ent, light, trans] : view) {
+				glm::vec3 scale;
+				glm::quat rotation;
+				glm::vec3 translation;
+				glm::vec3 skew;
+				glm::vec4 perspective;
+				glm::decompose(trans.mat, scale, rotation, translation, skew, perspective);
+				lightDraws.push_back(MeshRenderer::DrawLight{
+					.position = translation,
+					.strength = light.strength,
+					.color = light.color,
+				});
+			}
+			meshRender.setLights(lightDraws);
+		}
 		
 		{
 			auto draws = std::vector<MeshRenderer::DrawMesh>();
@@ -123,6 +148,7 @@ public:
 			.far = cameraController.far,
 			.near = cameraController.near,
 			.inverseView = glm::inverse(cameraController.view),
+			.inverseTransposeVP = glm::inverse(glm::transpose(cameraController.view)),
 		};
 		frameBufferDebugRenderer.renderDebugViews(renderCTX, cmdList, upload);
 
@@ -153,7 +179,7 @@ public:
 		renderCTX.queue->submit(submitInfo);
 
 		renderCTX.present();
-		printf("frame\n");
+		//printf("frame\n");
 	}
 
 	void cleanup(daxa::AppState& app) {

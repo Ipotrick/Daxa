@@ -9,6 +9,7 @@ class FrameBufferDebugRenderer {
 public:
     struct CameraData {
         glm::mat4 inverseView;
+        glm::mat4 inverseTransposeVP;
         f32 near;
         f32 far;
     };
@@ -16,8 +17,8 @@ public:
         CameraData cameraData;
         i32 imageWidth;
         i32 imageHeight;
-        f32 zMin;
-        f32 zMax;
+        f32 zMin = 0.1f;
+        f32 zMax = 10.0f;
     };
 
     void init(RenderContext& renderCTX, u32 width, u32 height) {
@@ -32,7 +33,7 @@ public:
 		this->pipeline = renderCTX.device->createComputePipeline({
             .shaderModule = shader.value(), 
             .debugName = "frame buffer debug pipeline",
-        }); 
+        }).value(); 
 
 		this->setAlloc = renderCTX.device->createBindingSetAllocator({
             .setDescription = pipeline->getSetDescription(0),

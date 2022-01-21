@@ -13,19 +13,19 @@
 namespace daxa {
     struct ImageCacheFetchInfo {
         std::filesystem::path path = {};
+        VkFormat viewFormat = VK_FORMAT_R8G8B8A8_SRGB;
         u8* preload = nullptr;
         size_t preloadSize = 0;
 
         std::optional<gpu::SamplerCreateInfo> samplerInfo = std::nullopt;
         
         bool operator == (ImageCacheFetchInfo const& other) const {
-            return this->path == other.path && this->samplerInfo == other.samplerInfo;
-        }
-    };
-
-    struct ImageCacheFetchInfoHasher {
-        std::size_t operator()(ImageCacheFetchInfo const& info) const {
-            return std::filesystem::hash_value(info.path);
+            return 
+                this->path == other.path && 
+                this->preload == other.preload &&
+                this->preloadSize == other.preloadSize &&
+                this->viewFormat == other.viewFormat &&
+                this->samplerInfo == other.samplerInfo;
         }
     };
 
@@ -41,6 +41,23 @@ namespace daxa {
         }
     };
 
+    struct ImageCacheFetchInfoHasher {
+        std::size_t operator()(ImageCacheFetchInfo const& info) const {
+            size_t hash = std::filesystem::hash_value(info.path);
+            hash << 3;
+            hash ^= (size_t)info.preload;
+            hash ^= info.preloadSize;
+            hash << 3;
+            hash ^= (size_t)info.viewFormat;
+            hash << 1;
+            if (info.samplerInfo.has_value()) {
+                hash ^= GPUSamplerCreateInfoHasher{}(info.samplerInfo.value());
+            }
+            hash << 2;
+            return hash;
+        }
+    };
+
     class ImageCache {
     public:
         ImageCache(gpu::DeviceHandle device) 
@@ -49,11 +66,15 @@ namespace daxa {
 
         gpu::ImageHandle get(ImageCacheFetchInfo const& info, gpu::CommandListHandle& cmdList) {
             if (!cache.contains(info)) {
+                printf("image cache miss\n");
                 cache[info] = loadImage(info, cmdList);
+            } else {
+                printf("image cache hit\n");
             }
             return cache[info];
         }
 
+        std::unordered_map<ImageCacheFetchInfo, gpu::ImageHandle, ImageCacheFetchInfoHasher> cache = {};
     private:
         gpu::ImageHandle loadImage(ImageCacheFetchInfo const& info, gpu::CommandListHandle& cmdList) {
             //stbi_set_flip_vertically_on_load(1);
@@ -70,7 +91,12 @@ namespace daxa {
             if (!data) {
                 return {};
             } else {
-                auto ci = gpu::Image2dCreateInfo{.width = (u32)width, .height = (u32)height, .imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT};
+                auto ci = gpu::Image2dCreateInfo{
+                    .width = (u32)width, 
+                    .height = (u32)height, 
+                    .format = info.viewFormat, 
+                    .imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT
+                };
                 if (info.samplerInfo.has_value()) {
                     printf("create with sampler\n");
                     auto& sampler_v = info.samplerInfo.value();
@@ -88,7 +114,6 @@ namespace daxa {
 
         gpu::DeviceHandle device = {};
 
-        std::unordered_map<ImageCacheFetchInfo, gpu::ImageHandle, ImageCacheFetchInfoHasher> cache = {};
         std::unordered_map<gpu::SamplerCreateInfo, gpu::SamplerHandle, GPUSamplerCreateInfoHasher> samplers = {};
     };
 }

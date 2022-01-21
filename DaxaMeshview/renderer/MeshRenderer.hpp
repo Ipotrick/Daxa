@@ -8,7 +8,7 @@
 struct GlobalData {
 	glm::mat4 vp;
 	glm::mat4 view;
-};
+}; 
 
 class MeshRenderer {
 public:
@@ -36,13 +36,12 @@ public:
 			.setDebugName("mesh render prePassPipeline")
 			.configurateDepthTest({.enableDepthTest = true, .enableDepthWrite = true, .depthAttachmentFormat = VK_FORMAT_D32_SFLOAT})
 			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
-			.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)			// positions
-			// location of attachments in a shader are implied by the order they are added in the prePassPipeline builder:
+			.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT) // positions
 			.setRasterization({
 				.cullMode = VK_CULL_MODE_BACK_BIT,
 			});
 
-		this->prePassPipeline = renderCTX.device->createGraphicsPipeline(prePassPipelineBuilder);
+		this->prePassPipeline = renderCTX.device->createGraphicsPipeline(prePassPipelineBuilder).value();
 
 		this->globalSetAlloc = renderCTX.device->createBindingSetAllocator({
 			.setDescription = prePassPipeline->getSetDescription(0),
@@ -57,19 +56,18 @@ public:
 				.debugName = "mesh render globals buffer",
         });
 
-		auto vertexOpaqueShader = renderCTX.device->createShaderModule({
+		auto vertexShaderOpaqueCI = daxa::gpu::ShaderModuleCreateInfo{
 			.pathToSource = "./DaxaMeshview/renderer/opaque.vert",
 			.stage = VK_SHADER_STAGE_VERTEX_BIT
-		}).value();
-
-		auto fragmenstOpaqueShader = renderCTX.device->createShaderModule({
+		};
+		auto fragmentShaderOpaqueCI = daxa::gpu::ShaderModuleCreateInfo{
 			.pathToSource = "./DaxaMeshview/renderer/opaque.frag",
 			.stage = VK_SHADER_STAGE_FRAGMENT_BIT
-		}).value();
+		};
 
-		daxa::gpu::GraphicsPipelineBuilder opaquePipelineBuilder;
-		opaquePipelineBuilder.addShaderStage(vertexOpaqueShader);
-		opaquePipelineBuilder.addShaderStage(fragmenstOpaqueShader);
+		daxa::gpu::GraphicsPipelineBuilder opaquePipelineBuilder = {};
+		opaquePipelineBuilder.addShaderStage(renderCTX.device->createShaderModule(vertexShaderOpaqueCI).value());
+		opaquePipelineBuilder.addShaderStage(renderCTX.device->createShaderModule(fragmentShaderOpaqueCI).value());
 			opaquePipelineBuilder.setDebugName("mesh render opaque pass pipeline")
 			.configurateDepthTest({.enableDepthTest = true, .enableDepthWrite = true, .depthAttachmentFormat = VK_FORMAT_D32_SFLOAT })
 			// adding a vertex input attribute binding:
@@ -87,9 +85,15 @@ public:
 				.cullMode = VK_CULL_MODE_BACK_BIT,
 			});
 
-		this->opaquePassPipeline = renderCTX.device->createGraphicsPipeline(opaquePipelineBuilder);
+		this->opaquePassPipeline = renderCTX.device->createGraphicsPipeline(opaquePipelineBuilder).value();
 
 		this->perDrawOpaquePassSetAlloc = renderCTX.device->createBindingSetAllocator({ .setDescription = this->opaquePassPipeline->getSetDescription(1) });
+
+		this->opaqueFragHotloader = daxa::GraphicsPipelineHotLoader(
+			renderCTX.device,
+			opaquePipelineBuilder,
+			std::array{ vertexShaderOpaqueCI, fragmentShaderOpaqueCI }
+		);
     }
 
     struct DrawMesh {
@@ -113,8 +117,10 @@ public:
 			dummyTexture = renderCTX.device->createImage2d({
 				.width = 1,
 				.height = 1,
+				.format = VK_FORMAT_R8G8B8A8_SRGB,
 				.imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 				.sampler = renderCTX.device->createSampler({}),
+				.debugName = "dummyTexture",
 			});
 
 			u32 pink = 0xFFFF00FF;
@@ -124,6 +130,27 @@ public:
 				.dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				.size = sizeof(u32),
 				.src = &pink,
+			});
+		}
+
+		if (!dummyNormalsTexture) {
+			dummyNormalsTexture = renderCTX.device->createImage2d({
+				.width = 1,
+				.height = 1,
+				.imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+				.format = VK_FORMAT_R8G8B8A8_UNORM,
+				.sampler = renderCTX.device->createSampler({}),
+				.debugName = "dummyNormalsTexture",
+			});
+			
+			// 0xFF (alpha = 1.0f) FF (blue/z = 1.0f) 7F (green/y = 0.5f/0.0f) 7F (red/x = 0.5f/0.0f)  
+			u32 up = 0xFFFF7F7F;
+
+			cmd->copyHostToImageSynced({
+				.dst = dummyNormalsTexture,
+				.dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				.size = sizeof(u32),
+				.src = &up,
 			});
 		}
 
@@ -162,11 +189,11 @@ public:
 			});
 		}
 		{
-			auto mm = cmd->mapMemoryStaged(lightsBuffer, lights.size() * sizeof(glm::mat4) + sizeof(glm::vec4), 0);
+			auto mm = cmd->mapMemoryStaged(lightsBuffer, lights.size() * sizeof(DrawLight) + sizeof(glm::vec4), 0);
 			*((u32*)mm.hostPtr) = (u32)lights.size();
 			mm.hostPtr += sizeof(glm::vec4);
 			for (int i = 0; i < lights.size(); i++) {
-				((glm::mat4*)mm.hostPtr)[i] = draws[i].transform;
+				((DrawLight*)mm.hostPtr)[i] = lights[i];
 			}
 		}
 
@@ -222,21 +249,12 @@ public:
 		});
 
 		cmd->unbindPipeline();
-
-		//cmd->insertImageBarrier({
-		//	.barrier = {
-		//		.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
-		//		.srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT_KHR,
-		//		.dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
-		//		.dstAccess = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT_KHR | VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR | VK_ACCESS_2_SHADER_STORAGE_READ_BIT_KHR,
-		//	},
-		//	.image = renderCTX.normalsImage,
-		//	.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-		//	.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-		//});
 	}
 
 	void opaquePass(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawMesh>& draws) {
+		if (auto newOpaque = opaqueFragHotloader.getNewIfChanged(); newOpaque.has_value()) {
+			this->opaquePassPipeline = newOpaque.value();
+		}
 
 		cmd->bindPipeline(opaquePassPipeline);
 		//cmd->bindSet(0, globalSet);
@@ -271,6 +289,11 @@ public:
 			} else {
 				set->bindImage(0, dummyTexture, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			}
+			if (draw.prim->normalTexture) {
+				set->bindImage(1, draw.prim->normalTexture, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			} else {
+				set->bindImage(1, dummyNormalsTexture, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			}
 			cmd->bindSet(1, set);
 			cmd->bindIndexBuffer(draw.prim->indiexBuffer);
 			cmd->bindVertexBuffer(0, draw.prim->vertexPositions);
@@ -296,21 +319,27 @@ public:
 		});
 	}
 
+	void setLights(std::vector<DrawLight>& lights) {
+		drawLights = lights;
+	}
+
 	void render(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawMesh>& draws) {
-		std::vector<DrawLight> drawLights;
 		uploadBuffers(renderCTX, cmd, draws, drawLights);
 		prePass(renderCTX, cmd, draws);
 		opaquePass(renderCTX, cmd, draws);
 	}
 
 private:
+	daxa::GraphicsPipelineHotLoader opaqueFragHotloader;
 	GlobalData globData = {};
+	std::vector<DrawLight> drawLights;
     daxa::gpu::PipelineHandle prePassPipeline = {};
     daxa::gpu::BindingSetAllocatorHandle globalSetAlloc = {};
     daxa::gpu::BindingSetHandle globalSet = {};
     daxa::gpu::BufferHandle globalDataBufffer = {};
 	daxa::gpu::BufferHandle primitiveInfoBuffer = {};
 	daxa::gpu::ImageHandle dummyTexture = {};
+	daxa::gpu::ImageHandle dummyNormalsTexture = {};
 
 	daxa::gpu::PipelineHandle opaquePassPipeline = {};
 	daxa::gpu::BufferHandle lightsBuffer = {};
