@@ -64,7 +64,6 @@ namespace daxa {
 		public:
 			VkDescriptorSetLayout getVkDescriptorSetLayout() const { return layout; }
 			BindingsArray const& getBindingsArray() const { return layoutBindings; }
-			//std::array<u32, MAX_BINDINGS_PER_SET> const& getBindingToHandleVectorIndex() const { return bindingToHandleVectorIndex; }
 			size_t getTotalDescriptorCount() const { return descriptorCount; }
 		private:
 			friend class BindingSet;
@@ -76,8 +75,6 @@ namespace daxa {
 
 			VkDescriptorSetLayout 					layout 						= {};
 			BindingsArray 							layoutBindings 				= {};
-			// used to index the vector for storing the handles of the descriptor sets:
-			//std::array<u32, MAX_BINDINGS_PER_SET> 	bindingToHandleVectorIndex 	= {};
 			size_t 									descriptorCount 			= {};
 		};
 
@@ -111,14 +108,11 @@ namespace daxa {
 
 			void setDebugName(char const* debugName);
 
-			//using HandleVariants = std::variant<ImageHandle, BufferHandle, SamplerHandle, std::monostate>;
-
 			VkDevice											device 		= VK_NULL_HANDLE;
 			VkDescriptorSet 									set 		= VK_NULL_HANDLE;
 			BindingSetDescription const* 						description = {};
 			std::weak_ptr<BindingSetAllocatorBindingiSetPool> 	pool 		= {};
 			u32 												usesOnGPU 	= 0;
-			//std::vector<HandleVariants> 						handles 	= {};
 			std::string 										debugName	= {};
 		};
 
@@ -142,9 +136,6 @@ namespace daxa {
 		struct BindingSetHandleStaticFunctionOverride {
 			static void cleanup(std::shared_ptr<BindingSet>& value) {
 				if (value && value.use_count() == 1) {
-					//size_t handlesSize = value->handles.size();
-					//value->handles.clear();
-					//value->handles.resize(handlesSize, std::monostate{});
 					auto pool = value->pool.lock();
 					auto lock = std::unique_lock(pool->mut);
 					pool->zombies.push_back(std::move(value));
