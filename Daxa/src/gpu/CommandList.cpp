@@ -135,9 +135,9 @@ namespace daxa {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			ImageBarrier firstBarrier{
 				.barrier = FULL_MEMORY_BARRIER,
+				.image = copySyncedInfo.dst,
 				.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
 				.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				.image = copySyncedInfo.dst,
 			};
 			insertBarriers({},{&firstBarrier, 1});
 
@@ -150,9 +150,9 @@ namespace daxa {
 
 			ImageBarrier secondBarrier{
 				.barrier = FULL_MEMORY_BARRIER,
+				.image = copySyncedInfo.dst,
 				.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				.layoutAfter = copySyncedInfo.dstFinalLayout,
-				.image = copySyncedInfo.dst,
 			};
 			insertBarriers({},{&secondBarrier, 1});
 		}
@@ -197,7 +197,6 @@ namespace daxa {
 				.bufferRowLength = 0,
 				.bufferImageHeight = 0,
 				.imageSubresource = imgSubRessource,
-				.imageOffset = 0,
 				.imageExtent = copyInfo.dst->getVkExtent(),
 			};
 
@@ -215,19 +214,19 @@ namespace daxa {
 			VkImageCopy copy{
 				.dstOffset = copyInfo.dstOffset,
 				.extent = copyInfo.size,
-				.srcOffset = copyInfo.srcOffset,
 				.srcSubresource = {
 					.aspectMask = copyInfo.src->getVkAspect(),
 					.baseArrayLayer = 0,
-					.layerCount = 1,
 					.mipLevel = 0,
+					.layerCount = 1,
 				},
 				.dstSubresource = {
 					.aspectMask = copyInfo.dst->getVkAspect(),
 					.baseArrayLayer = 0,
-					.layerCount = 1,
 					.mipLevel = 0,
-				}
+					.layerCount = 1,
+				},
+				.srcOffset = copyInfo.srcOffset,
 			};
 
 			vkCmdCopyImage(cmd, copyInfo.src->getVkImage(), copyInfo.srcLayout, copyInfo.dst->getVkImage(), copyInfo.dstLayout, 1, &copy);

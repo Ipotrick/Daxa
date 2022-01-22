@@ -44,16 +44,16 @@ namespace daxa {
     struct ImageCacheFetchInfoHasher {
         std::size_t operator()(ImageCacheFetchInfo const& info) const {
             size_t hash = std::filesystem::hash_value(info.path);
-            hash << 3;
+            hash <<= 3;
             hash ^= (size_t)info.preload;
             hash ^= info.preloadSize;
-            hash << 3;
+            hash <<= 3;
             hash ^= (size_t)info.viewFormat;
-            hash << 1;
+            hash <<= 1;
             if (info.samplerInfo.has_value()) {
                 hash ^= GPUSamplerCreateInfoHasher{}(info.samplerInfo.value());
             }
-            hash << 2;
+            hash <<= 2;
             return hash;
         }
     };

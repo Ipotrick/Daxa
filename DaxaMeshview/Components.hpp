@@ -24,5 +24,4 @@ struct ChildComp {
 struct LightComp {
 	f32 strength;
 	glm::vec4 color;
-	std::array<daxa::gpu::ImageHandle, 6> shadowMaps;
 };

@@ -33,7 +33,7 @@ public:
 
 		auto lightEnt = ecm.createEntity();
 		auto view = ecm.view<daxa::TransformComp, LightComp>();
-		view.addComp(lightEnt, LightComp{ .color = { 0.8f, 0.8, 0.8f, 1.0f }, .strength = 6.25 });
+		view.addComp(lightEnt, LightComp{ .strength = 6.25, .color = { 0.8f, 0.8, 0.8f, 1.0f } });
 		view.addComp(lightEnt, daxa::TransformComp{ .mat = glm::translate(glm::mat4{1.0f}, glm::vec3(0,0,3)) });
 	}
 

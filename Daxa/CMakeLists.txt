@@ -26,7 +26,6 @@ target_link_libraries(Daxa PUBLIC
 
 target_compile_features(Daxa PUBLIC cxx_std_20)
 
-
 target_include_directories(Daxa
 	PUBLIC
 		${CGLTF_INCLUDE_DIRS}

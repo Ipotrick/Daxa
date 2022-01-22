@@ -44,8 +44,8 @@ public:
         this->buffer = renderCTX.device->createBuffer({
             .size = sizeof(UploadData),
             .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            .memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             .memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
+            .memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             .debugName = "frame buffer debug renderer global buffer"
         });
 
@@ -119,8 +119,8 @@ public:
         uploadData.zMax = std::min(std::max(cameraData.near, uploadData.zMax), cameraData.far);
         cmdList->copyHostToBuffer({
             .src = (void*)&uploadData,
-            .size = sizeof(decltype(uploadData)),
             .dst = buffer,
+            .size = sizeof(decltype(uploadData)),
         });
 
         auto copyMemBarr = std::array{ 
