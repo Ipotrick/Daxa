@@ -53,6 +53,18 @@ public:
         recreateImages(renderCTX, cmdList, width, height);
         cmdList->finalize();
         renderCTX.queue->submitBlocking({.commandLists = {cmdList}});
+
+        hotLoader = daxa::ComputePipelineHotLoader{
+            renderCTX.device,
+            {
+                .shaderModule = shader.value(), 
+                .debugName = "frame buffer debug pipeline",
+            },
+            {
+                .pathToSource = "./DaxaMeshview/renderer/fb_debug.comp",
+                .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+            }
+        };
     }
 
     void recreateImages(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmdList, u32 width, u32 height) {
@@ -95,6 +107,11 @@ public:
     }
     
     void renderDebugViews(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmdList, CameraData cameraData) {
+        if (auto newPipeline = hotLoader.getNewIfChanged(); newPipeline.has_value()) {
+            printf("hot laoded\n");
+            this->pipeline = newPipeline.value();
+        }
+
         uploadData.cameraData = cameraData;
         uploadData.imageWidth = debugLinearDepthImage->getVkExtent().width;
         uploadData.imageHeight = debugLinearDepthImage->getVkExtent().height;
@@ -227,6 +244,7 @@ public:
     daxa::gpu::ImageHandle debugWorldSpaceNormalImage = {};
 private:
     UploadData uploadData;
+    daxa::ComputePipelineHotLoader hotLoader;
     daxa::gpu::PipelineHandle pipeline = {};
     daxa::gpu::BindingSetAllocatorHandle setAlloc = {};
     daxa::gpu::BufferHandle buffer = {};

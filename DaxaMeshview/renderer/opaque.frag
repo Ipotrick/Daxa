@@ -68,5 +68,5 @@ void main() {
     }
     outFragColor = texture(albedo, vtf_uv) * lightAcc;
 
-    outNormal = normal * 0.15f + vec3(0.5f);
+    outNormal = normal * 0.5f + vec3(0.5f);
 }

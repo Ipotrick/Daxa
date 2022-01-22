@@ -17,25 +17,10 @@
 #include "Pipeline.hpp"
 #include "BindingSet.hpp"
 #include "StagingBufferPool.hpp"
+#include "Graveyard.hpp"
 
 namespace daxa {
 	namespace gpu {
-
-        // template<typename ValueT>
-		// class MappedStagingMemory{
-		// public:
-		// 	MappedStagingMemory(void* hostPtr, size_t size, BufferHandle buffer)
-		// 		: hostPtr{ hostPtr }
-		// 		, size{ size }
-		// 		, buffer{ std::move(buffer) }
-		// 	{}
-		// 	ValueT * const hostPtr;
-		// 	size_t const size;
-		// private:
-		// 	friend class CommandList;
-		// 	friend class Queue;
-		// 	BufferHandle buffer = {};
-		// };
 
 		struct BufferCopyRegion {
 			size_t srcOffset = 0;
@@ -344,8 +329,8 @@ namespace daxa {
 			bool finalized = false;
 
 			std::vector<BindingSetHandle> usedSets = {};
-			std::vector<ImageHandle> usedImages = {};
-			std::vector<BufferHandle> usedBuffers = {};
+			//std::vector<ImageHandle> usedImages = {};
+			//std::vector<BufferHandle> usedBuffers = {};
 			std::vector<PipelineHandle> usedGraphicsPipelines = {};
 			VkDevice device = {};
 			VkCommandBuffer cmd = {};
@@ -354,6 +339,9 @@ namespace daxa {
 			std::weak_ptr<CommandListRecyclingSharedData> recyclingData = {};
 			std::weak_ptr<StagingBufferPool> stagingBufferPool = {};
 			std::vector<StagingBuffer> usedStagingBuffers = {};
+
+			Graveyard* graveyard = {};
+			std::shared_ptr<ZombieList> zombies = std::make_shared<ZombieList>();
 
 			std::string debugName = {};
 		};
