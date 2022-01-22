@@ -68,7 +68,6 @@ namespace daxa {
 				img.graveyard = graveyard;
 			}
 
-
 			this->swapchainImageFormat = vkbSwapchain.image_format;
 
 			if (oldSwapchain) {
@@ -86,7 +85,7 @@ namespace daxa {
 			}
 
 			if (daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
-				this->debugName = debugName;
+				this->debugName = ci.debugName;
 
 				auto nameInfo = VkDebugUtilsObjectNameInfoEXT{
 					.sType =  VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -156,12 +155,12 @@ namespace daxa {
 
 		void Swapchain::resize(VkExtent2D newSize) {
 			swapchainImages.clear();
-			construct(device, graveyard, physicalDevice, instance, {surface, newSize.width, newSize.height, presentMode, additionalimageUses, .debugName = debugName.c_str()});
+			construct(device, graveyard, physicalDevice, instance, {surface, newSize.width, newSize.height, presentMode, additionalimageUses, debugName.c_str()});
 		}
 
 		void Swapchain::setPresentMode(VkPresentModeKHR newPresentMode) {
 			swapchainImages.clear();
-			construct(device, graveyard, physicalDevice, instance, {surface, size.width, size.height, newPresentMode, additionalimageUses, .debugName = debugName.c_str()});
+			construct(device, graveyard, physicalDevice, instance, {surface, size.width, size.height, newPresentMode, additionalimageUses, debugName.c_str()});
 		}
 	}
 }
