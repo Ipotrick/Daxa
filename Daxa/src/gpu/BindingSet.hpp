@@ -65,7 +65,7 @@ namespace daxa {
 			VkDescriptorSetLayout getVkDescriptorSetLayout() const { return layout; }
 			BindingsArray const& getBindingsArray() const { return layoutBindings; }
 			//std::array<u32, MAX_BINDINGS_PER_SET> const& getBindingToHandleVectorIndex() const { return bindingToHandleVectorIndex; }
-			size_t getTotalDescriptorCount() const { descriptorCount; }
+			size_t getTotalDescriptorCount() const { return descriptorCount; }
 		private:
 			friend class BindingSet;
 			friend class BindingSetAllocator;
