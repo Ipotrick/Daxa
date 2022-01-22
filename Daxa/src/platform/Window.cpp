@@ -148,7 +148,7 @@ namespace daxa {
 		windowState->cursorChangeY = {};
 		glfwPollEvents();
 		if (isCursorCaptured()) {
-			glfwSetCursorPos(glfwWindow, -1, -1);
+			glfwSetCursorPos(glfwWindow, -10000, -10000);
 		}
 		return windowState->bCloseRequested;
 	}
