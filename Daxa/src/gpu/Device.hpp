@@ -12,6 +12,7 @@
 #include <VkBootstrap.h>
 
 #include "Handle.hpp"
+#include "Graveyard.hpp"
 #include "CommandList.hpp"
 #include "Image.hpp"
 #include "Buffer.hpp"
@@ -111,6 +112,7 @@ namespace daxa {
 			void (*vkCmdPipelineBarrier2KHR)(VkCommandBuffer, VkDependencyInfoKHR const*) 	= nullptr;
 			std::shared_ptr<StagingBufferPool> stagingBufferPool 							= {};
 			std::unique_ptr<BindingSetDescriptionCache> bindingSetDescriptionCache 			= {};
+			Graveyard graveyard																= {};
 		};
 
 		class DeviceHandle : public SharedHandle<Device>{};

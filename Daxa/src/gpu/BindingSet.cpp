@@ -9,7 +9,7 @@ namespace daxa {
 			, pool{ pool }
 			, description{ description }
 		{
-			handles.resize(description->descriptorCount, std::monostate{});
+			//handles.resize(description->descriptorCount, std::monostate{});
 		}
 
 		thread_local std::vector<VkDescriptorImageInfo> descImageInfoBuffer = {};
@@ -27,8 +27,8 @@ namespace daxa {
 				});
 
 				// update the handles inside the set
-				u32 bindingSetIndex = this->description->bindingToHandleVectorIndex[binding];
-				handles[bindingSetIndex] = sampler;
+				//u32 bindingSetIndex = this->description->bindingToHandleVectorIndex[binding];
+				//handles[bindingSetIndex] = sampler;
 			}
 
 			VkWriteDescriptorSet write{
@@ -64,8 +64,8 @@ namespace daxa {
 				});
 
 				// update the handles inside the set
-				u32 bindingSetIndex = description->bindingToHandleVectorIndex[binding];
-				handles[bindingSetIndex] = buffer;
+				//u32 bindingSetIndex = description->bindingToHandleVectorIndex[binding];
+				//handles[bindingSetIndex] = buffer;
 			}
 
 			VkWriteDescriptorSet write{
@@ -111,8 +111,8 @@ namespace daxa {
 				});
 
 				// update the handles inside the set
-				u32 bindingSetIndex = description->bindingToHandleVectorIndex[binding];
-				handles[bindingSetIndex] = image;
+				//u32 bindingSetIndex = description->bindingToHandleVectorIndex[binding];
+				//handles[bindingSetIndex] = image;
 			}
 
 			VkWriteDescriptorSet write{
@@ -179,7 +179,7 @@ namespace daxa {
 			size_t nextHandleVectorIndex = 0;
 			for (int i = 0; i < bindingArray.size; i++) {
 				DAXA_ASSERT_M(bindingArray.bindings[i].binding < MAX_BINDINGS_PER_SET, "all bindings of a binding set must be smaller than 16");
-				description.bindingToHandleVectorIndex[bindingArray.bindings[i].binding] = nextHandleVectorIndex;
+				//description.bindingToHandleVectorIndex[bindingArray.bindings[i].binding] = nextHandleVectorIndex;
 				nextHandleVectorIndex += bindingArray.bindings[i].descriptorCount;
 			}
 			description.descriptorCount = nextHandleVectorIndex;

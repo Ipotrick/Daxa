@@ -12,6 +12,7 @@
 
 #include "Handle.hpp"
 #include "Sampler.hpp"
+#include "Graveyard.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -27,14 +28,14 @@ namespace daxa {
 			char const* debugName = {};
 		};
 
-		class Image {
+		class Image : public GraveyardRessource {
 		public:
 			Image() 							= default;
 			Image(Image const&) 				= delete;
 			Image& operator=(Image const&) 		= delete;
 			Image(Image&&) noexcept 			= delete;
 			Image& operator=(Image&&) noexcept 	= delete;
-			~Image();
+			virtual ~Image();
 
 			VkImage getVkImage() const { return image; }
 			VkImageView getVkView() const { return view; }
@@ -54,8 +55,9 @@ namespace daxa {
 			friend class Device;
 			friend class ImageHandle;
 			friend class Swapchain;
+			friend struct ImageStaticFunctionOverride;
 
-			static void construct2dImage(VkDevice device, VmaAllocator allocator, u32 queueFamilyIndex, Image2dCreateInfo const& ci, Image& dst);
+			static void construct2dImage(VkDevice device, Graveyard* graveyard, VmaAllocator allocator, u32 queueFamilyIndex, Image2dCreateInfo const& ci, Image& dst);
 
 			VkDevice device = VK_NULL_HANDLE;
 			VmaAllocator allocator = VK_NULL_HANDLE;
@@ -72,8 +74,20 @@ namespace daxa {
 			u32 arrayLayers;
 			SamplerHandle sampler = {};	// this is an optional field
 			std::string debugName = {};
+			Graveyard* graveyard = {};
 		};
 
-		class ImageHandle : public SharedHandle<Image>{};
+        struct ImageStaticFunctionOverride {
+            static void cleanup(std::shared_ptr<Image>& value) {
+				if (value && value.use_count() == 1) {
+					std::unique_lock lock(value->graveyard->mtx);
+					for (auto& zombieList : value->graveyard->activeZombieLists) {
+						zombieList->zombies.push_back(value);
+					}
+				}
+			}
+        };
+
+		class ImageHandle : public SharedHandle<Image, ImageStaticFunctionOverride>{};
 	}
 }

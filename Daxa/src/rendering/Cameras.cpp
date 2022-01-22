@@ -4,7 +4,9 @@ namespace daxa {
     void GimbalLockedCameraController::processInput(daxa::Window& window, f32 dt) {
 		f32 speed = window.keyPressed(GLFW_KEY_LEFT_SHIFT) ? translationSpeed * 4.0f : translationSpeed;
 		if (window.isCursorCaptured()) {
+				printf("captured\n");
 			if (window.keyJustPressed(GLFW_KEY_ESCAPE)) {
+				printf("escape\n");
 				window.releaseCursor();
 			}
 		} else {
