@@ -69,7 +69,7 @@ public:
 		opaquePipelineBuilder.addShaderStage(renderCTX.device->createShaderModule(vertexShaderOpaqueCI).value());
 		opaquePipelineBuilder.addShaderStage(renderCTX.device->createShaderModule(fragmentShaderOpaqueCI).value());
 			opaquePipelineBuilder.setDebugName("mesh render opaque pass pipeline")
-			.configurateDepthTest({.enableDepthTest = true, .enableDepthWrite = true, .depthAttachmentFormat = VK_FORMAT_D32_SFLOAT })
+			.configurateDepthTest({.enableDepthTest = true, .depthAttachmentFormat = VK_FORMAT_D32_SFLOAT, .enableDepthWrite = true })
 			// adding a vertex input attribute binding:
 			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
 			// all added vertex input attributes are added to the previously added vertex input attribute binding
