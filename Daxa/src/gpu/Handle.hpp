@@ -66,6 +66,10 @@ namespace daxa {
 
 			bool valid() const { return value.operator bool(); }
 
+            std::weak_ptr<T> getWeak() const {
+                return { value };
+            }
+
             size_t getRefCount() const { return value.use_count(); }
 		protected:
 			friend class Device;
