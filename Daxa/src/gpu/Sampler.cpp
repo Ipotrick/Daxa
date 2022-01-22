@@ -4,7 +4,7 @@
 namespace daxa {
 	namespace gpu {
 
-		Sampler::Sampler(VkDevice device, SamplerCreateInfo const& ci) 
+		Sampler::Sampler(VkDevice device, Graveyard* graveyard, SamplerCreateInfo const& ci) 
 			: device{ device }
 			, flags{ 0 }
 			, magFilter{ ci.magFilter }
@@ -22,6 +22,7 @@ namespace daxa {
 			, maxLod{ ci.maxLod }
 			, borderColor{ ci.borderColor }
 			, unnormalizedCoordinates{ ci.unnormalizedCoordinates }
+			, graveyard{ graveyard }
 		{
 			VkSamplerCreateInfo samplerCI {
 				.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,

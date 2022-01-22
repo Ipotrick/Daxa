@@ -43,16 +43,16 @@ namespace daxa {
 				for (auto& set : cmdList->usedSets) {
 					set->usesOnGPU += 1;
 
-					for (auto& handle : set->handles) {
-						if (auto* buffer = std::get_if<BufferHandle>(&handle)) {
-							(**buffer).usesOnGPU += 1;
-						}
-					}
+					//for (auto& handle : set->handles) {
+					//	if (auto* buffer = std::get_if<BufferHandle>(&handle)) {
+					//		(**buffer).usesOnGPU += 1;
+					//	}
+					//}
 				}
-				for (auto& buffer : cmdList->usedBuffers) {
-					DAXA_ASSERT_M(!buffer->isMemoryMapped(), "can not submit command list. Some Buffers used in the command list have mapped memory, all memory to used buffers need to be unmapped before a submit.");
-					buffer->usesOnGPU += 1;
-				}
+				//for (auto& buffer : cmdList->usedBuffers) {
+				//	DAXA_ASSERT_M(!buffer->isMemoryMapped(), "can not submit command list. Some Buffers used in the command list have mapped memory, all memory to used buffers need to be unmapped before a submit.");
+				//	buffer->usesOnGPU += 1;
+				//}
 			}
 
 			for (auto& signal : si.waitOnSignals) {
@@ -135,17 +135,17 @@ namespace daxa {
 						while (!iter->cmdLists.empty()) {
 							auto list = std::move(iter->cmdLists.back());
 							iter->cmdLists.pop_back();
-							for (auto& buffer : list->usedBuffers) {
-								buffer.value->usesOnGPU -= 1;
-							}
+							//for (auto& buffer : list->usedBuffers) {
+							//	buffer.value->usesOnGPU -= 1;
+							//}
 							for (auto& set : list->usedSets) {
 								set->usesOnGPU -= 1;
 
-								for (auto& handle : set->handles) {
-									if (auto* buffer = std::get_if<BufferHandle>(&handle)) {
-										(**buffer).usesOnGPU -= 1;
-									}
-								}
+								//for (auto& handle : set->handles) {
+								//	if (auto* buffer = std::get_if<BufferHandle>(&handle)) {
+								//		(**buffer).usesOnGPU -= 1;
+								//	}
+								//}
 							}
 							list->usesOnGPU -= 1;
 						}

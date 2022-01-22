@@ -12,8 +12,8 @@ namespace daxa {
 
 		CommandList::CommandList() {
 			this->renderAttachmentBuffer.reserve(5);
-			usedImages.reserve(10);
-			usedBuffers.reserve(10);
+			//usedImages.reserve(10);
+			//usedBuffers.reserve(10);
 			usedSets.reserve(10);
 			usedGraphicsPipelines.reserve(3);
 			usedStagingBuffers.reserve(1);
@@ -35,9 +35,9 @@ namespace daxa {
 			vkEndCommandBuffer(cmd);
 			finalized = true;
 
-			for (auto& buf : this->usedBuffers) {
-				DAXA_ASSERT_M(buf->getMemeoryMapCount() == 0, "all buffers used in a command list must be unmapped when the list is finalized");
-			}
+			//for (auto& buf : this->usedBuffers) {
+			//	DAXA_ASSERT_M(buf->getMemeoryMapCount() == 0, "all buffers used in a command list must be unmapped when the list is finalized");
+			//}
 		}
 
 		MappedMemoryPointer<u8> CommandList::mapMemoryStagedVoid(BufferHandle copyDst, size_t size, size_t dstOffset) {
@@ -165,8 +165,8 @@ namespace daxa {
 				DAXA_ASSERT_M(copyInfo.src->getSize() >= copyInfo.regions[i].size + copyInfo.regions[i].srcOffset, "ERROR: src buffer is smaller than the region that shouly be copied!");
 				DAXA_ASSERT_M(copyInfo.dst->getSize() >= copyInfo.regions[i].size + copyInfo.regions[i].dstOffset, "ERROR: dst buffer is smaller than the region that shouly be copied!");
 			}
-			usedBuffers.push_back(copyInfo.src);
-			usedBuffers.push_back(copyInfo.dst);
+			//usedBuffers.push_back(copyInfo.src);
+			//usedBuffers.push_back(copyInfo.dst);
 			vkCmdCopyBuffer(cmd, copyInfo.src->getVkBuffer(), copyInfo.dst->getVkBuffer(), copyInfo.regions.size(), (VkBufferCopy*)copyInfo.regions.data());	// THIS COULD BREAK ON ABI CHANGE
 		}
 
@@ -182,8 +182,8 @@ namespace daxa {
 
 		void CommandList::copyBufferToImage(BufferToImageCopyInfo copyInfo) {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
-			usedBuffers.push_back(copyInfo.src);
-			usedImages.push_back(copyInfo.dst);
+			//usedBuffers.push_back(copyInfo.src);
+			//usedImages.push_back(copyInfo.dst);
 
 			VkImageSubresourceLayers imgSubRessource = copyInfo.subRessourceLayers.value_or(VkImageSubresourceLayers{
 				.aspectMask = copyInfo.dst->getVkAspect(),
@@ -231,8 +231,8 @@ namespace daxa {
 			};
 
 			vkCmdCopyImage(cmd, copyInfo.src->getVkImage(), copyInfo.srcLayout, copyInfo.dst->getVkImage(), copyInfo.dstLayout, 1, &copy);
-			usedImages.push_back(std::move(copyInfo.src));
-			usedImages.push_back(std::move(copyInfo.dst));
+			//usedImages.push_back(std::move(copyInfo.src));
+			//usedImages.push_back(std::move(copyInfo.dst));
 		}
 
 		void CommandList::copyImageToImageSynced(ImageToImageCopySyncedInfo copySyncedInfo) {
@@ -289,7 +289,7 @@ namespace daxa {
 			DAXA_ASSERT_M(buffer, "invalid buffer handle");
 			auto vkBuffer = buffer->getVkBuffer();
 			vkCmdBindVertexBuffers(cmd, binding, 1, &vkBuffer, &bufferOffset);
-			usedBuffers.push_back(buffer);
+			//usedBuffers.push_back(buffer);
 		}
 
 		void CommandList::bindIndexBuffer(BufferHandle buffer, size_t bufferOffset, VkIndexType indexType) {
@@ -298,7 +298,7 @@ namespace daxa {
 			DAXA_ASSERT_M(buffer, "invalid buffer handle");
 			auto vkBuffer = buffer->getVkBuffer();
 			vkCmdBindIndexBuffer(cmd, vkBuffer, bufferOffset, indexType);
-			usedBuffers.push_back(buffer);
+			//usedBuffers.push_back(buffer);
 		}
 
 		void CommandList::beginRendering(BeginRenderingInfo ri) {
@@ -317,7 +317,7 @@ namespace daxa {
 			};
 			operationsInProgress += 1;
 			for (int i = 0; i < ri.colorAttachments.size(); i++) {
-				usedImages.push_back(ri.colorAttachments[i].image);
+				//usedImages.push_back(ri.colorAttachments[i].image);
 
 				renderAttachmentBuffer.push_back(VkRenderingAttachmentInfoKHR{
 					.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
@@ -497,14 +497,20 @@ namespace daxa {
 			DAXA_ASSERT_M(operationsInProgress == 0, "can not reset command list with recordings in progress");
 			empty = true;
 			vkResetCommandPool(device, cmdPool, VkCommandPoolResetFlagBits::VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
-			usedBuffers.clear();
+			//usedBuffers.clear();
 			usedGraphicsPipelines.clear();
-			usedImages.clear();
+			//usedImages.clear();
 			usedSets.clear();
 			currentPipeline = {};
 			currentRenderPass = {};
 			usedStagingBuffers.clear();
 			finalized = false;
+			{
+				std::unique_lock lock(graveyard->mtx);
+				auto iter = std::find_if(graveyard->activeZombieLists.begin(), graveyard->activeZombieLists.end(), [&](std::shared_ptr<ZombieList>& other){ return other.get() == zombies.get(); });
+				graveyard->activeZombieLists.erase(iter);
+			}
+			zombies->zombies.clear();
 			begin();
 		}
 
@@ -625,7 +631,7 @@ namespace daxa {
 					})
 				};
 
-				usedImages.push_back(imgBarrier.image);
+				//usedImages.push_back(imgBarrier.image);
 
 				imgBarrierBufferSize++;
 			}

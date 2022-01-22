@@ -14,6 +14,7 @@
 #include "Image.hpp"
 #include "SwapchainImage.hpp"
 #include "Signal.hpp"
+#include "Graveyard.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -52,7 +53,7 @@ namespace daxa {
 		private:
 			friend class Device;
 
-			void construct(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance, SwapchainCreateInfo ci);
+			void construct(VkDevice device, Graveyard* graveyard, VkPhysicalDevice physicalDevice, VkInstance instance, SwapchainCreateInfo ci);
 
 			VkDevice device 							= VK_NULL_HANDLE;
 			VkPhysicalDevice physicalDevice 			= VK_NULL_HANDLE;
@@ -66,6 +67,7 @@ namespace daxa {
 			VkExtent2D size 							= {}; 
 			VkImageUsageFlags additionalimageUses		= {};
 			std::string debugName 						= {};
+			Graveyard* graveyard						= {};
 		};
 
 		class SwapchainHandle : public SharedHandle<Swapchain>{};

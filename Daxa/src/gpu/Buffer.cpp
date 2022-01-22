@@ -3,7 +3,7 @@
 
 namespace daxa {
 	namespace gpu {
-		Buffer::Buffer(VkDevice device, u32 queueFamilyIndex, VmaAllocator allocator, BufferCreateInfo& ci) {
+		Buffer::Buffer(VkDevice device, Graveyard* graveyard, u32 queueFamilyIndex, VmaAllocator allocator, BufferCreateInfo& ci) {
 
 			VkBufferCreateInfo bci{
 				.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -38,6 +38,7 @@ namespace daxa {
 			this->size = ci.size;
 			this->usage = ci.usage;
 			this->memoryUsage = ci.memoryUsage;
+			this->graveyard = graveyard;
 		}
 
 		bool Buffer::isUsedByGPU() const {

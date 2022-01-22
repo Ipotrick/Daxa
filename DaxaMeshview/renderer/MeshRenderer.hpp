@@ -8,7 +8,7 @@
 struct GlobalData {
 	glm::mat4 vp;
 	glm::mat4 view;
-}; 
+};
 
 class MeshRenderer {
 public:
@@ -254,6 +254,7 @@ public:
 	void opaquePass(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawMesh>& draws) {
 		if (auto newOpaque = opaqueFragHotloader.getNewIfChanged(); newOpaque.has_value()) {
 			this->opaquePassPipeline = newOpaque.value();
+            printf("hot laoded\n");
 		}
 
 		cmd->bindPipeline(opaquePassPipeline);

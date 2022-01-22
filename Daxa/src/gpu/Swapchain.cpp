@@ -17,7 +17,7 @@ namespace daxa {
 			return surface;
 		}
 
-		void Swapchain::construct(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance, SwapchainCreateInfo ci) {
+		void Swapchain::construct(VkDevice device, Graveyard* graveyard, VkPhysicalDevice physicalDevice, VkInstance instance, SwapchainCreateInfo ci) {
 			this->device = device;
 			this->physicalDevice = physicalDevice;
 			this->instance = instance;
@@ -25,6 +25,7 @@ namespace daxa {
 			this->surface = ci.surface;
 			this->presentMode = ci.presentMode;
 			this->additionalimageUses = ci.additionalUses;
+			this->graveyard = graveyard;
 
 			vkb::SwapchainBuilder swapchainBuilder{ physicalDevice, device, surface };
 
@@ -64,6 +65,7 @@ namespace daxa {
 				img.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 				img.arrayLayers = 1;
 				img.mipmapLevels = 1;
+				img.graveyard = graveyard;
 			}
 
 
@@ -154,12 +156,12 @@ namespace daxa {
 
 		void Swapchain::resize(VkExtent2D newSize) {
 			swapchainImages.clear();
-			construct(device, physicalDevice, instance, {surface, newSize.width, newSize.height, presentMode, additionalimageUses, .debugName = debugName.c_str()});
+			construct(device, graveyard, physicalDevice, instance, {surface, newSize.width, newSize.height, presentMode, additionalimageUses, .debugName = debugName.c_str()});
 		}
 
 		void Swapchain::setPresentMode(VkPresentModeKHR newPresentMode) {
 			swapchainImages.clear();
-			construct(device, physicalDevice, instance, {surface, size.width, size.height, newPresentMode, additionalimageUses, .debugName = debugName.c_str()});
+			construct(device, graveyard, physicalDevice, instance, {surface, size.width, size.height, newPresentMode, additionalimageUses, .debugName = debugName.c_str()});
 		}
 	}
 }

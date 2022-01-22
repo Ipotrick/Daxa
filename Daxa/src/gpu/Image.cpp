@@ -19,7 +19,8 @@ namespace daxa {
 			}
 		}
 
-		void Image::construct2dImage(VkDevice device, VmaAllocator allocator, u32 queueFamilyIndex, Image2dCreateInfo const& ci, Image& ret) {
+		void Image::construct2dImage(VkDevice device, Graveyard* graveyard, VmaAllocator allocator, u32 queueFamilyIndex, Image2dCreateInfo const& ci, Image& ret) {
+			DAXA_ASSERT_M(graveyard, "invalid graveyard pointer");
 
 			VkImageCreateInfo ici{
 				.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -98,6 +99,7 @@ namespace daxa {
 			ret.aspect = (VkImageAspectFlags)ci.imageAspekt;
 			ret.arrayLayers = 1;
 			ret.mipmapLevels = 1;
+			ret.graveyard = graveyard;
 
 			if (ci.sampler.has_value()) {
 				ret.sampler = *ci.sampler;

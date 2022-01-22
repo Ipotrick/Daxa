@@ -7,6 +7,7 @@
 #include <vulkan/vulkan.h>
 
 #include "Handle.hpp"
+#include "Graveyard.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -34,14 +35,14 @@ namespace daxa {
 			}
 		};
 
-		class Sampler {
+		class Sampler : public GraveyardRessource {
 		public:
-			Sampler(VkDevice device, SamplerCreateInfo const& createInfo);
+			Sampler(VkDevice device, Graveyard* graveyard, SamplerCreateInfo const& createInfo);
 			Sampler(Sampler&&) noexcept										= delete;
 			Sampler& operator=(Sampler&&) noexcept							= delete;
 			Sampler(Sampler const&) 										= delete;
 			Sampler& operator=(Sampler const&) 								= delete;
-			~Sampler();
+			virtual ~Sampler();
 
 			VkSampler getVkSampler() const { return sampler; }
 			VkFilter getVkMagFilter() const { return magFilter; }
@@ -62,6 +63,8 @@ namespace daxa {
 
 			std::string const& getDebugName() const { return debugName; }
 		private:
+			friend struct SamplerStaticFunctionOverride;
+
 			VkDevice				device = VK_NULL_HANDLE;
 			VkSampler				sampler = VK_NULL_HANDLE;
 			VkSamplerCreateFlags    flags;
@@ -81,8 +84,20 @@ namespace daxa {
 			VkBorderColor           borderColor;
 			VkBool32                unnormalizedCoordinates;
 			std::string				debugName = {};
+			Graveyard*				graveyard = {};
 		};
 
-		class SamplerHandle : public SharedHandle<Sampler>{};
+        struct SamplerStaticFunctionOverride {
+            static void cleanup(std::shared_ptr<Sampler>& value) {
+				if (value && value.use_count() == 1) {
+					std::unique_lock lock(value->graveyard->mtx);
+					for (auto& zombieList : value->graveyard->activeZombieLists) {
+						zombieList->zombies.push_back(value);
+					}
+				}
+			}
+        };
+
+		class SamplerHandle : public SharedHandle<Sampler, SamplerStaticFunctionOverride>{};
 	}
 }

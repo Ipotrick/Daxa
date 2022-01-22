@@ -97,7 +97,7 @@ namespace daxa {
 			this->vkCmdBeginRenderingKHR = fnPtrvkCmdBeginRenderingKHR;
 			this->vkCmdEndRenderingKHR = fnPtrvkCmdEndRenderingKHR;
 			this->vkCmdPipelineBarrier2KHR = fnPtrvkCmdPipelineBarrier2KHR;
-			this->stagingBufferPool = std::make_shared<StagingBufferPool>(StagingBufferPool{ device, mainQueueFamilyIndex, allocator });
+			this->stagingBufferPool = std::make_shared<StagingBufferPool>(StagingBufferPool{ device, &graveyard, mainQueueFamilyIndex, allocator });
 			this->vkbDevice = vkbDevice;
 			this->cmdListRecyclingSharedData = std::make_shared<CommandListRecyclingSharedData>();
 		}
@@ -120,17 +120,17 @@ namespace daxa {
 		}
 
 		SamplerHandle Device::createSampler(SamplerCreateInfo ci) {
-			return SamplerHandle{ std::make_shared<Sampler>(device, ci) };
+			return SamplerHandle{ std::make_shared<Sampler>(device, &graveyard, ci) };
 		}
 
 		ImageHandle Device::createImage2d(Image2dCreateInfo ci) { 
 			auto handle = ImageHandle{ std::make_shared<Image>() };
-			Image::construct2dImage(device, allocator,graphicsQFamilyIndex, ci, *handle);
+			Image::construct2dImage(device, &graveyard, allocator, graphicsQFamilyIndex, ci, *handle);
 			return std::move(handle);
 		}
 
 		BufferHandle Device::createBuffer(BufferCreateInfo ci) {
-			return BufferHandle{ std::make_shared<Buffer>(device, graphicsQFamilyIndex, allocator, ci) };
+			return BufferHandle{ std::make_shared<Buffer>(device, &graveyard, graphicsQFamilyIndex, allocator, ci) };
 		}
 
 		TimelineSemaphoreHandle Device::createTimelineSemaphore(TimelineSemaphoreCreateInfo const& ci) {
@@ -143,7 +143,7 @@ namespace daxa {
 
 		SwapchainHandle Device::createSwapchain(SwapchainCreateInfo ci) {
 			auto handle = SwapchainHandle{ std::make_shared<Swapchain>() };
-			handle->construct(device, physicalDevice, gpu::instance->getVkInstance(), ci);
+			handle->construct(device, &graveyard, physicalDevice, gpu::instance->getVkInstance(), ci);
 			return std::move(handle);
 		}
 
@@ -154,6 +154,10 @@ namespace daxa {
 		CommandListHandle Device::getCommandList(char const* debugName) {
 			auto list = std::move(getNextCommandList());
 			list->setDebugName(debugName);
+			{
+				std::unique_lock lock(graveyard.mtx);
+				graveyard.activeZombieLists.push_back(list->zombies);
+			}
 			return std::move(list);
 		}
 
@@ -180,6 +184,7 @@ namespace daxa {
 				list.vkCmdPipelineBarrier2KHR = this->vkCmdPipelineBarrier2KHR;
 				list.stagingBufferPool = stagingBufferPool;
 				list.recyclingData = cmdListRecyclingSharedData;
+				list.graveyard = &graveyard;
 
 				VkCommandPoolCreateInfo commandPoolCI{
 					.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,

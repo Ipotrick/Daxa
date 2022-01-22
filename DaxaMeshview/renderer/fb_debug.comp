@@ -29,14 +29,22 @@ void main() {
         float normalized_z = (z - globals.zMin) / (globals.zMax - globals.zMin);
         imageStore(out_depth, icoord, vec4(normalized_z,normalized_z,normalized_z,1));
 
-        vec3 normalFetch = texture(in_normal, coord).xyz;
+        vec3 normalFetch = texture(in_normal, coord).rgb;
         if (normalFetch != vec3(0)) {
             vec3 world_space_normal = normalFetch * 2.0f - 1.0f;
-            vec4 world_space_normal_color = vec4((world_space_normal + vec3(1,1,1)) * 0.5f,1);
+            vec4 world_space_normal_color = vec4((world_space_normal + vec3(1,1,1)) * 0.5f, 1.0f);
+            world_space_normal_color.x = pow(world_space_normal_color.x, 2.2);
+            world_space_normal_color.y = pow(world_space_normal_color.y, 2.2);
+            world_space_normal_color.z = pow(world_space_normal_color.z, 2.2);
             imageStore(out_world_space_normal, icoord, world_space_normal_color);
 
             vec3 screenSpaceNormal = (globals.inverseTransposeVP * vec4(world_space_normal,0.0f)).xyz;
-            imageStore(outScreenSpaceNormal, icoord, vec4(screenSpaceNormal.xyz, 1.0f));
+            vec4 screenSpaceNormalColor = vec4((screenSpaceNormal + vec3(1,1,1)) * 0.5f, 1.0f);
+
+            screenSpaceNormalColor.x = pow(screenSpaceNormalColor.x, 2.2);
+            screenSpaceNormalColor.y = pow(screenSpaceNormalColor.y, 2.2);
+            screenSpaceNormalColor.z = pow(screenSpaceNormalColor.z, 2.2);
+            imageStore(outScreenSpaceNormal, icoord, screenSpaceNormalColor);
         } else {
             imageStore(out_world_space_normal, icoord, vec4(0));
             imageStore(outScreenSpaceNormal, icoord, vec4(0));
