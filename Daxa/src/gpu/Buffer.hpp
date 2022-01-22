@@ -10,6 +10,7 @@
 #include <vk_mem_alloc.h>
 
 #include "Handle.hpp"
+#include "Graveyard.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -21,15 +22,15 @@ namespace daxa {
 			char const* 			debugName 			= {};
 		};
 
-		class Buffer {
+		class Buffer : public GraveyardRessource {
 		public:
-			Buffer(VkDevice device, u32 queueFamilyIndex, VmaAllocator allocator, BufferCreateInfo& ci);
+			Buffer(VkDevice device, Graveyard* graveyard, u32 queueFamilyIndex, VmaAllocator allocator, BufferCreateInfo& ci);
 			Buffer()								= default;
 			Buffer(Buffer const&) 					= delete;
 			Buffer& operator=(Buffer const&) 		= delete;
 			Buffer(Buffer&&) noexcept 				= delete;
 			Buffer& operator=(Buffer&&) noexcept 	= delete;
-			~Buffer();
+			virtual ~Buffer();
 
 			/**
 			 * \return False when the buffer is safe to be written to from CPU. True when it might be used by the GPU.
@@ -58,6 +59,7 @@ namespace daxa {
 			friend class Queue;
 			template<typename ValueT>
 			friend struct MappedMemoryPointer;
+			friend struct BufferStaticFunctionOverride;
 			
 			void* mapMemory();
 			void unmapMemory();
@@ -71,6 +73,7 @@ namespace daxa {
 			u32 				usesOnGPU 		= {};
 			u32 				memoryMapCount 	= {};
 			std::string 		debugName 		= {};
+			Graveyard* 			graveyard		= {};
 		};
 
 		template<typename ValueT = u8>
@@ -102,14 +105,24 @@ namespace daxa {
 			ValueT* hostPtr = std::numeric_limits<ValueT*>::max();
 			size_t 	size 	= std::numeric_limits<size_t>::max();
 		private:
-
 			friend class BufferHandle;
 			friend class CommandList;
 
 			std::shared_ptr<Buffer> owningBuffer = {};
 		};
 
-		class BufferHandle : public SharedHandle<Buffer> {
+        struct BufferStaticFunctionOverride {
+            static void cleanup(std::shared_ptr<Buffer>& value) {
+				if (value && value.use_count() == 1) {
+					std::unique_lock lock(value->graveyard->mtx);
+					for (auto& zombieList : value->graveyard->activeZombieLists) {
+						zombieList->zombies.push_back(value);
+					}
+				}
+			}
+        };
+
+		class BufferHandle : public SharedHandle<Buffer, BufferStaticFunctionOverride> {
 		public:
 			template<typename T = u8>
 			MappedMemoryPointer<T> mapMemory() {
