@@ -34,8 +34,8 @@ namespace daxa {
 				.tiling = VkImageTiling::VK_IMAGE_TILING_OPTIMAL,
 				.usage = ci.imageUsage,
 				.sharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
-				.queueFamilyIndexCount = 1,
-				.pQueueFamilyIndices = &queueFamilyIndex,
+				.queueFamilyIndexCount = 0,
+				.pQueueFamilyIndices = nullptr,
 				.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 			};
 

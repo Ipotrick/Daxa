@@ -11,6 +11,7 @@
 
 #include "Handle.hpp"
 #include "Graveyard.hpp"
+#include "DeviceBackend.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -24,7 +25,7 @@ namespace daxa {
 
 		class Buffer : public GraveyardRessource {
 		public:
-			Buffer(VkDevice device, Graveyard* graveyard, u32 queueFamilyIndex, VmaAllocator allocator, BufferCreateInfo& ci);
+			Buffer(VkDevice device, Graveyard* graveyard, VmaAllocator allocator, std::span<u32> queueFamilies, BufferCreateInfo& ci);
 			Buffer()								= default;
 			Buffer(Buffer const&) 					= delete;
 			Buffer& operator=(Buffer const&) 		= delete;
