@@ -32,12 +32,13 @@ namespace daxa {
 			cleanup();
 		}
 
-		StagingBufferPool::StagingBufferPool(VkDevice device, Graveyard* graveyard, u32 queueFamilyIndex, VmaAllocator allocator)
+		StagingBufferPool::StagingBufferPool(VkDevice device, Graveyard* graveyard, std::span<u32> allQueueFamilyIndices, VmaAllocator allocator)
 			: device{ device }
 			, queueFamilyIndex{ queueFamilyIndex }
 			, allocator{ allocator }
 			, sharedData{ std::make_shared<StagingBufferPoolSharedData>() }
 			, graveyard{ graveyard }
+			, allQueueFamilyIndices{ allQueueFamilyIndices }
 		{ }
 
 		StagingBuffer StagingBufferPool::getStagingBuffer() {
@@ -54,7 +55,7 @@ namespace daxa {
 					bufferCI.debugName = "staging buffer";
 				}
 
-				sharedData->pool.push_back(BufferHandle{ std::make_shared<Buffer>(device, graveyard, queueFamilyIndex, allocator, bufferCI) });
+				sharedData->pool.push_back(BufferHandle{ std::make_shared<Buffer>(device, graveyard, allocator, allQueueFamilyIndices, bufferCI) });
 			}
 
 			auto stagingBuffer = StagingBuffer{ sharedData->pool.back(), sharedData };

@@ -11,6 +11,7 @@
 #include <vk_mem_alloc.h>
 #include <VkBootstrap.h>
 
+#include "DeviceBackend.hpp"
 #include "Handle.hpp"
 #include "Graveyard.hpp"
 #include "CommandList.hpp"
@@ -99,12 +100,17 @@ namespace daxa {
 
 			CommandListHandle getNextCommandList();
 
+			std::shared_ptr<DeviceBackend> backend = {};
+
 			VkInstance instance 															= VK_NULL_HANDLE;
 			VkDevice device		 															= VK_NULL_HANDLE;
 			vkb::Device vkbDevice 															= {};
 			VkPhysicalDevice physicalDevice 												= VK_NULL_HANDLE;
 			VmaAllocator allocator 															= VK_NULL_HANDLE;
-			u32 graphicsQFamilyIndex 														= 0;
+			u32 graphicsQFamilyIndex 														= -1;
+			u32 transferQFamilyIndex														= -1;
+			u32 computeQFamilyIndex															= -1;
+			std::vector<u32> allQFamilyIndices 												= {};
 			std::shared_ptr<CommandListRecyclingSharedData> cmdListRecyclingSharedData 		= std::make_shared<CommandListRecyclingSharedData>();
 			std::vector<CommandListHandle> unusedCommandLists								= {};
 			void (*vkCmdBeginRenderingKHR)(VkCommandBuffer, const VkRenderingInfoKHR*) 		= nullptr;

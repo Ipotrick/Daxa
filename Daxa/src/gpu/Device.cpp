@@ -93,11 +93,28 @@ namespace daxa {
 			this->bindingSetDescriptionCache = std::make_unique<BindingSetDescriptionCache>(device);
 			this->physicalDevice = physicalDevice.physical_device;
 			this->graphicsQFamilyIndex = mainQueueFamilyIndex;
+			auto transferIndexOpt = vkbDevice.get_queue_index(vkb::QueueType::transfer);
+			if (transferIndexOpt.has_value()) {
+				this->transferQFamilyIndex = transferIndexOpt.value();
+			}
+			auto computeIndexOpt = vkbDevice.get_queue_index(vkb::QueueType::compute);
+			if (computeIndexOpt.has_value()) {
+				this->computeQFamilyIndex = computeIndexOpt.value();
+			}
+			if (graphicsQFamilyIndex != -1) {
+				allQFamilyIndices.push_back(graphicsQFamilyIndex);
+			}
+			if (transferQFamilyIndex != -1) {
+				allQFamilyIndices.push_back(transferQFamilyIndex);
+			}
+			if (computeQFamilyIndex != -1) {
+				allQFamilyIndices.push_back(computeQFamilyIndex);
+			}
 			this->allocator = allocator;
 			this->vkCmdBeginRenderingKHR = fnPtrvkCmdBeginRenderingKHR;
 			this->vkCmdEndRenderingKHR = fnPtrvkCmdEndRenderingKHR;
 			this->vkCmdPipelineBarrier2KHR = fnPtrvkCmdPipelineBarrier2KHR;
-			this->stagingBufferPool = std::make_shared<StagingBufferPool>(StagingBufferPool{ device, &graveyard, mainQueueFamilyIndex, allocator });
+			this->stagingBufferPool = std::make_shared<StagingBufferPool>(StagingBufferPool{ device, &graveyard, std::span<u32>{ allQFamilyIndices.data(), allQFamilyIndices.size() }, allocator });
 			this->vkbDevice = vkbDevice;
 			this->cmdListRecyclingSharedData = std::make_shared<CommandListRecyclingSharedData>();
 		}
@@ -130,7 +147,7 @@ namespace daxa {
 		}
 
 		BufferHandle Device::createBuffer(BufferCreateInfo ci) {
-			return BufferHandle{ std::make_shared<Buffer>(device, &graveyard, graphicsQFamilyIndex, allocator, ci) };
+			return BufferHandle{ std::make_shared<Buffer>(device, &graveyard, allocator, std::span<u32>{ allQFamilyIndices.data(), allQFamilyIndices.size() }, ci) };
 		}
 
 		TimelineSemaphoreHandle Device::createTimelineSemaphore(TimelineSemaphoreCreateInfo const& ci) {
