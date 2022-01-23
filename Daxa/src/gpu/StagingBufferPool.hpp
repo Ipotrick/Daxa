@@ -42,15 +42,16 @@ namespace daxa {
 
 		class StagingBufferPool {
 		public:
-			StagingBufferPool(VkDevice device, Graveyard* graveyard, u32 queueFamilyIndex, VmaAllocator allocator);
+			StagingBufferPool(VkDevice device, Graveyard* graveyard, std::span<u32> allQueueFamilyIndices, VmaAllocator allocator);
 
 			StagingBuffer getStagingBuffer();
 		private:
 			VmaAllocator allocator = {};
 			VkDevice device = {};
 			u32 queueFamilyIndex = {};
-			std::shared_ptr<StagingBufferPoolSharedData> sharedData;
+			std::shared_ptr<StagingBufferPoolSharedData> sharedData = {};
 			Graveyard* graveyard = {};
+			std::span<u32> allQueueFamilyIndices = {};
 		};
 
 	}

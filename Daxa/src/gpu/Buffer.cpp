@@ -3,16 +3,16 @@
 
 namespace daxa {
 	namespace gpu {
-		Buffer::Buffer(VkDevice device, Graveyard* graveyard, u32 queueFamilyIndex, VmaAllocator allocator, BufferCreateInfo& ci) {
+		Buffer::Buffer(VkDevice device, Graveyard* graveyard, VmaAllocator allocator, std::span<u32> queueFamilies, BufferCreateInfo& ci) {
 
 			VkBufferCreateInfo bci{
 				.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 				.pNext = nullptr,
 				.size = ci.size,
 				.usage = ci.usage,
-				.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-				.queueFamilyIndexCount = 1,
-				.pQueueFamilyIndices = &queueFamilyIndex,
+				.sharingMode = VK_SHARING_MODE_CONCURRENT,
+				.queueFamilyIndexCount = (u32)queueFamilies.size(),
+				.pQueueFamilyIndices = queueFamilies.data(),
 			};
 
 			VmaAllocationCreateInfo aci{
