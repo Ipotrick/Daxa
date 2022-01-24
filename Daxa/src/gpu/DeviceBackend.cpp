@@ -101,7 +101,7 @@ namespace daxa {
 
 		DeviceBackend::~DeviceBackend() {
 			if (device) {
-			    vkDeviceWaitIdle(device);
+			    vkDeviceWaitIdle(device.device);
 				vmaDestroyAllocator(allocator);
                 vkb::destroy_device(device);
 			}

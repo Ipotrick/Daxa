@@ -17,7 +17,6 @@ namespace daxa {
 			~DeviceBackend();
 
             vkb::Device device                                                              = {};
-            Graveyard graveyard                                                             = {};
 			void (*vkCmdBeginRenderingKHR)(VkCommandBuffer, const VkRenderingInfoKHR*) 		= nullptr;
 			void (*vkCmdEndRenderingKHR)(VkCommandBuffer) 									= nullptr;
 			void (*vkCmdPipelineBarrier2KHR)(VkCommandBuffer, VkDependencyInfoKHR const*) 	= nullptr;
@@ -26,6 +25,7 @@ namespace daxa {
 			u32 transferQFamilyIndex														= -1;
 			u32 computeQFamilyIndex															= -1;
 			std::vector<u32> allQFamilyIndices 												= {};
+            Graveyard graveyard                                                             = {};
         };
     }
 }
