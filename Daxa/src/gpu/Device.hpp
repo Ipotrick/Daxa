@@ -63,9 +63,9 @@ namespace daxa {
 
 			SwapchainHandle createSwapchain(SwapchainCreateInfo swapchainCI);
 
-			BindingSetInfo const& getBindingSetInfo(BindingSetDescription const& description);
+			BindingSetLayout const& getBindingSetLayout(BindingSetDescription const& description);
 			
-			std::shared_ptr<BindingSetInfo const> getBindingSetInfoShared(BindingSetDescription const& description);
+			std::shared_ptr<BindingSetLayout const> getBindingSetLayoutShared(BindingSetDescription const& description);
 
 			Result<ShaderModuleHandle> createShaderModule(ShaderModuleCreateInfo const& ci);
 
@@ -97,7 +97,7 @@ namespace daxa {
 
 			std::shared_ptr<DeviceBackend> 					backend 					= {};
 			std::shared_ptr<StagingBufferPool> 				stagingBufferPool 			= {};
-			std::unique_ptr<BindingSetDescriptionCache>		bindingSetDescriptionCache 	= {};
+			std::unique_ptr<BindingSetLayoutCache>		bindingSetDescriptionCache 	= {};
 		};
 
 		class DeviceHandle : public SharedHandle<Device>{};
