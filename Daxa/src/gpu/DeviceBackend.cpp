@@ -20,6 +20,7 @@ namespace daxa {
 				.descriptorBindingPartiallyBound = VK_TRUE,
 				.descriptorBindingVariableDescriptorCount = VK_TRUE,
 				.runtimeDescriptorArray = VK_TRUE,
+				.runtimeDescriptorArray = VK_TRUE,
 			};
 
 			VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeature{
