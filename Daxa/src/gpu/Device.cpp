@@ -57,7 +57,7 @@ namespace daxa {
 			return bindingSetDescriptionCache->getLayout(description);
 		}
 		std::shared_ptr<BindingSetLayout const> Device::getBindingSetLayoutShared(BindingSetDescription const& description) {
-			return std::move(bindingSetDescriptionCache->getInfoShared(description));
+			return std::move(bindingSetDescriptionCache->getLayoutShared(description));
 		}
 
 		void Device::waitIdle() {
