@@ -37,10 +37,10 @@ namespace daxa {
 			Pipeline const& operator=(Pipeline const&) noexcept	= delete;
 			~Pipeline();
 
-			std::shared_ptr<BindingSetInfo const> getSetInfo(u32 set) const { 
-				auto setInfo = bindingSetDescriptions.at(set);
-				DAXA_ASSERT_M(setInfo, "tried querring non existant binding set description from pipeline");
-				return std::move(setInfo);
+			std::shared_ptr<BindingSetLayout const> getSetLayout(u32 set) const { 
+				auto setLayout = bindingSetLayouts.at(set);
+				DAXA_ASSERT_M(setLayout, "tried querring non existant binding set description from pipeline");
+				return std::move(setLayout);
 			}
 
 			VkPipelineBindPoint getVkBindPoint() const { return bindPoint; }
@@ -54,11 +54,11 @@ namespace daxa {
 			std::string const& getDebugName() const { return debugName; }
 		private:
 			friend class GraphicsPipelineBuilder;
-			friend daxa::Result<PipelineHandle> createComputePipeline(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetDescriptionCache& bindingSetCache, ComputePipelineCreateInfo const& ci);
+			friend daxa::Result<PipelineHandle> createComputePipeline(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetLayoutCache& bindingSetCache, ComputePipelineCreateInfo const& ci);
 			friend void setPipelineDebugName(VkDevice device, char const* debugName, Pipeline& pipeline);
 
 			std::shared_ptr<DeviceBackend>												deviceBackend			= {};
-			std::array<std::shared_ptr<BindingSetInfo const>, MAX_SETS_PER_PIPELINE> 	bindingSetDescriptions 	= {};
+			std::array<std::shared_ptr<BindingSetLayout const>, MAX_SETS_PER_PIPELINE> 	bindingSetLayouts 	= {};
 			std::vector<VkFormat> 														colorAttachmentFormats 	= {};
 			VkFormat 																	depthAttachment 		= VK_FORMAT_UNDEFINED;
 			VkFormat 																	stencilAttachment 		= VK_FORMAT_UNDEFINED;
@@ -109,7 +109,7 @@ namespace daxa {
 			GraphicsPipelineBuilder& addColorAttachment(VkFormat const& attachmentFormat, const VkPipelineColorBlendAttachmentState&);
 		private:
 			friend class Device;
-			daxa::Result<PipelineHandle> build(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetDescriptionCache& bindingSetCache);
+			daxa::Result<PipelineHandle> build(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetLayoutCache& bindingSetCache);
 
 			char const* debugName = {};
 
@@ -137,6 +137,6 @@ namespace daxa {
 			std::vector<VkPipelineShaderStageCreateInfo> shaderStageCreateInfo;
 		};
 
-		daxa::Result<PipelineHandle> createComputePipeline(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetDescriptionCache& bindingSetCache, ComputePipelineCreateInfo const& ci);
+		daxa::Result<PipelineHandle> createComputePipeline(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetLayoutCache& bindingSetCache, ComputePipelineCreateInfo const& ci);
 	}
 }
