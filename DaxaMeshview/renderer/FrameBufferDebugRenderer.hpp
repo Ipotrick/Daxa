@@ -36,7 +36,7 @@ public:
         }).value(); 
 
 		this->setAlloc = renderCTX.device->createBindingSetAllocator({
-            .setDescription = pipeline->getSetDescription(0),
+            .setInfo = pipeline->getSetInfo(0),
             .debugName = "frame buffer debug shader set allocator",
             .setPerPool = 4,
         });

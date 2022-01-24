@@ -44,7 +44,7 @@ public:
 		this->prePassPipeline = renderCTX.device->createGraphicsPipeline(prePassPipelineBuilder).value();
 
 		this->globalSetAlloc = renderCTX.device->createBindingSetAllocator({
-			.setDescription = prePassPipeline->getSetDescription(0),
+			.setInfo = prePassPipeline->getSetInfo(0),
 			.debugName = "mesh renderer global set allocator",
 		});
 
@@ -87,7 +87,7 @@ public:
 
 		this->opaquePassPipeline = renderCTX.device->createGraphicsPipeline(opaquePipelineBuilder).value();
 
-		this->perDrawOpaquePassSetAlloc = renderCTX.device->createBindingSetAllocator({ .setDescription = this->opaquePassPipeline->getSetDescription(1) });
+		this->perDrawOpaquePassSetAlloc = renderCTX.device->createBindingSetAllocator({ .setInfo = this->opaquePassPipeline->getSetInfo(1) });
 
 		this->opaqueFragHotloader = daxa::GraphicsPipelineHotLoader(
 			renderCTX.device,

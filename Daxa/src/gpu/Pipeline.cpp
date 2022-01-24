@@ -25,21 +25,20 @@ namespace daxa {
 		std::vector<VkDescriptorSetLayout> processReflectedDescriptorData(
 			std::vector<std::unordered_map<u32, VkDescriptorSetLayoutBinding>>& descriptorSets,
 			BindingSetDescriptionCache& descCache,
-			std::array<BindingSetDescription const*, MAX_SETS_PER_PIPELINE>& bindingSetDescriptions
+			std::array<std::shared_ptr<BindingSetInfo const>, MAX_SETS_PER_PIPELINE>& bindingSetDescriptions
 		) {
 			std::vector<VkDescriptorSetLayout> descLayouts;
-			std::vector<VkDescriptorSetLayoutBinding> tempBindings;
+			BindingSetDescription description;
 			for (i32 index = 0; index < descriptorSets.size(); index++) {
 				auto& bindings = descriptorSets[index];
 				DAXA_ASSERT_M(!bindings.empty(), "binding sets indices must be used in ascending order starting with 0");
-				tempBindings.clear();
-				//tempBindings.resize(bindings.size(),{});
+				description.bindingsCount = 0;
 				for (auto& [index, binding] : bindings) {
-					tempBindings.push_back(binding);
+					description.bindings[description.bindingsCount++] = binding;
 				}
-				auto description = descCache.getSetDescription(tempBindings);
-				descLayouts.push_back(description->getVkDescriptorSetLayout());
-				bindingSetDescriptions[index] = description;
+				auto info = descCache.getInfoShared(description);
+				descLayouts.push_back(info->getVkDescriptorSetLayout());
+				bindingSetDescriptions[index] = info;
 			}
 			return std::move(descLayouts);
 		}
