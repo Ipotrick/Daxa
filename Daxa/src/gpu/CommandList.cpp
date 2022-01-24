@@ -507,7 +507,9 @@ namespace daxa {
 			{
 				std::unique_lock lock(graveyard->mtx);
 				auto iter = std::find_if(graveyard->activeZombieLists.begin(), graveyard->activeZombieLists.end(), [&](std::shared_ptr<ZombieList>& other){ return other.get() == zombies.get(); });
-				graveyard->activeZombieLists.erase(iter);
+				if (iter != graveyard->activeZombieLists.end()) {
+					graveyard->activeZombieLists.erase(iter);
+				}
 			}
 			zombies->zombies.clear();
 			begin();
