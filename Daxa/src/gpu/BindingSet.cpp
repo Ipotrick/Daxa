@@ -65,7 +65,7 @@ namespace daxa {
 				.dstBinding = binding,
 				.dstArrayElement = descriptorArrayOffset,
 				.descriptorCount = (u32)descBufferInfoBuffer.size(),
-				.descriptorType = this->layout->getDescription().bindings[binding].descriptorType,
+				.descriptorType = this->layout->getDescription().layouts[binding].descriptorType,
 				.pBufferInfo = descBufferInfoBuffer.data(),
 			};
 
@@ -80,7 +80,7 @@ namespace daxa {
 
 		void BindingSet::bindImages(u32 binding, std::span<std::pair<ImageHandle, VkImageLayout>> images, u32 descriptorArrayOffset) {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not update binding set while it is used on gpu");
-			VkDescriptorType imageDescriptorType = layout->getDescription().bindings[binding].descriptorType;
+			VkDescriptorType imageDescriptorType = layout->getDescription().layouts[binding].descriptorType;
 			bool bIsImage = imageDescriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER || 
 				imageDescriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || 
 				imageDescriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -126,18 +126,36 @@ namespace daxa {
 			: deviceBackend{ std::move(deviceBackend) }
 			, description{ description }
 		{
+			for (u32 binding = 0; binding < MAX_BINDINGS_PER_SET; binding++) {
+				auto& layout = description.layouts[binding];
+				if (layout.descriptorCount != 0) {
+					vkImmutableSamplers.push_back({});
+					auto& immutableSamplers = vkImmutableSamplers.back();
+					immutableSamplers.reserve(layout.descriptorCount);
+					for (auto& sampler : layout.immutableSamplers) {
+						immutableSamplers.push_back(sampler->getVkSampler());
+					}
+
+					descriptorSetBindingLayouts[descriptorSetBindingLayoutsCount++] = VkDescriptorSetLayoutBinding{
+						.binding = binding,
+						.descriptorCount = layout.descriptorCount,
+						.descriptorType = layout.descriptorType,
+						.stageFlags = layout.stageFlags,
+						.pImmutableSamplers = immutableSamplers.empty() ? nullptr : immutableSamplers.data(),
+					};
+
+					this->descriptorCount += layout.descriptorCount;
+				}
+			}
+
 			VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI{
 				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 				.pNext = nullptr,
 				.flags = 0,
-				.bindingCount = (u32)description.bindingsCount,
-				.pBindings = description.bindings.data(),
+				.bindingCount = (u32)descriptorSetBindingLayoutsCount,
+				.pBindings = descriptorSetBindingLayouts.data(),
 			};
 			vkCreateDescriptorSetLayout(this->deviceBackend->device.device, &descriptorSetLayoutCI, nullptr, &layout);
-
-			for (auto& binding : this->description.getBIndingsSpan()) {
-				this->descriptorCount += binding.descriptorCount;
-			}
 		}
 		void BindingSetLayout::cleanup() {
 			if (deviceBackend) {
@@ -167,10 +185,7 @@ namespace daxa {
 			: deviceBackend{ std::move(deviceBackend) }
 		{ }
 		
-		std::shared_ptr<BindingSetLayout const> BindingSetLayoutCache::getInfoShared(BindingSetDescription const& description) {
-			for (int i = 0; i < description.bindingsCount-1; i++) {	
-				DAXA_ASSERT_M(description.bindings[i].binding < description.bindings[i+1].binding, "bindings in a description must be listed in ascending order");
-			}
+		std::shared_ptr<BindingSetLayout const> BindingSetLayoutCache::getLayoutShared(BindingSetDescription const& description) {
 			if (!map.contains(description)) {
 				map[description] = std::make_shared<BindingSetLayout>(deviceBackend, description);
 			}
@@ -178,9 +193,6 @@ namespace daxa {
 		}
 		
 		BindingSetLayout const& BindingSetLayoutCache::getLayout(BindingSetDescription const& description) {
-			for (int i = 0; i < description.bindingsCount-1; i++) {	
-				DAXA_ASSERT_M(description.bindings[i].binding < description.bindings[i+1].binding, "bindings in a description must be listed in ascending order");
-			}
 			if (!map.contains(description)) {
 				map[description] = std::make_shared<BindingSetLayout>(deviceBackend, description);
 			}
@@ -257,7 +269,7 @@ namespace daxa {
 		}
 
 		void BindingSetAllocator::initPoolSizes() {
-			for (auto const& binding : setLayout->getDescription().getBIndingsSpan()) {
+			for (auto const& binding : setLayout->getVkDescriptorBindingLayouts()) {
 				poolSizes.push_back(VkDescriptorPoolSize{
 					.type = binding.descriptorType,
 					.descriptorCount = (u32)(setsPerPool * binding.descriptorCount),

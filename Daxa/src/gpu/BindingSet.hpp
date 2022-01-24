@@ -22,7 +22,7 @@
 namespace daxa {
 	namespace gpu {
 
-		constexpr inline size_t MAX_BINDINGS_PER_SET = 16;
+		constexpr inline size_t MAX_BINDINGS_PER_SET = 32;
 		char const* const MORE_THAN_MAX_BINDINGS_MESSAGE = "a binding set can only have up to 16 bindings";
 
 		class BindingSet;
@@ -36,31 +36,42 @@ namespace daxa {
 			};
 		}
 
-		struct BindingSetDescription {
-			std::span<VkDescriptorSetLayoutBinding> getBIndingsSpan() { return std::span<VkDescriptorSetLayoutBinding>(bindings.data(), bindingsCount); }
-			std::span<VkDescriptorSetLayoutBinding const> getBIndingsSpan() const { return std::span<VkDescriptorSetLayoutBinding const>(bindings.data(), bindingsCount); }
-
-			bool operator==(BindingSetDescription const& other) const {
-				return std::memcmp(this, &other, sizeof(BindingSetDescription)) == 0;
+		struct BindingLayout {
+			bool operator==(BindingLayout const& other) const {
+				return 	descriptorType == other.descriptorType && 
+						descriptorCount == other.descriptorCount && 
+						stageFlags == other.stageFlags &&
+						immutableSamplers == other.immutableSamplers;
 			}
 
-			std::array<VkDescriptorSetLayoutBinding, MAX_BINDINGS_PER_SET> 	bindings 		= {};
-			size_t 															bindingsCount 	= 0;
+			VkDescriptorType      		descriptorType 		= {};
+			u32              			descriptorCount 	= {};
+			VkShaderStageFlags    		stageFlags 			= {};
+			std::vector<SamplerHandle>	immutableSamplers 	= {};
+		};
+
+		struct BindingSetDescription {
+			bool operator==(BindingSetDescription const& other) const {
+				for (size_t i = 0; i < MAX_BINDINGS_PER_SET; i++) {
+					if (layouts[i] != other.layouts[i]) {
+						return false;
+					}
+				}
+				return true;
+			}
+
+			std::array<BindingLayout, MAX_BINDINGS_PER_SET> layouts = {};
 		};
 
 		struct BindingSetDesciptionHasher {
 			size_t operator()(BindingSetDescription const& description) const
 			{
-				size_t hash = description.bindingsCount;
+				size_t hash = 0x44fe7234f2;
 				for (int i = 0; i < MAX_BINDINGS_PER_SET; i++) {
-					hash ^= description.bindings[i].binding;
-					hash <<= 3;
-					hash ^= description.bindings[i].descriptorCount;
-					hash <<= 3;
-					hash ^= description.bindings[i].descriptorType;
-					hash <<= 3;
-					hash ^= description.bindings[i].stageFlags;
-					hash <<= 3;
+					hash ^= description.layouts[i].descriptorCount;
+					hash ^= description.layouts[i].descriptorType;
+					hash ^= description.layouts[i].stageFlags;
+					hash <<= 1;
 				}
 				return hash;
 			}
@@ -77,13 +88,19 @@ namespace daxa {
 
 			BindingSetDescription const& getDescription() const { return description; }
 			VkDescriptorSetLayout const& getVkDescriptorSetLayout() const { return layout; }
+			std::span<VkDescriptorSetLayoutBinding const> getVkDescriptorBindingLayouts() const { 
+				return std::span<VkDescriptorSetLayoutBinding const>{ descriptorSetBindingLayouts.data(), descriptorSetBindingLayoutsCount }; 
+			}
 		private:
 			void cleanup();
 
-			std::shared_ptr<DeviceBackend> 	deviceBackend 	= {};
-			BindingSetDescription 			description 	= {};
-			VkDescriptorSetLayout 			layout			= {};
-			size_t 							descriptorCount = {};
+			std::shared_ptr<DeviceBackend> 									deviceBackend 						= {};
+			BindingSetDescription 											description 						= {};
+			std::array<VkDescriptorSetLayoutBinding, MAX_BINDINGS_PER_SET> 	descriptorSetBindingLayouts 		= {};
+			size_t 															descriptorSetBindingLayoutsCount 	= {};
+			std::vector<std::vector<VkSampler>>								vkImmutableSamplers					= {};
+			VkDescriptorSetLayout 											layout								= {};
+			size_t 															descriptorCount 					= {};
 		};
 
 		class BindingSet {
@@ -134,7 +151,7 @@ namespace daxa {
 			BindingSetLayoutCache& operator=(BindingSetLayoutCache&&) noexcept 	= delete;
 
 			BindingSetLayout const& getLayout(BindingSetDescription const& description);
-			std::shared_ptr<BindingSetLayout const> getInfoShared(BindingSetDescription const& description);
+			std::shared_ptr<BindingSetLayout const> getLayoutShared(BindingSetDescription const& description);
 		private:
 			using MapT = std::unordered_map<BindingSetDescription, std::shared_ptr<BindingSetLayout>, BindingSetDesciptionHasher>;
 
