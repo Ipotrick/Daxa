@@ -17,46 +17,41 @@ namespace daxa {
 
 		Device::Device(vkb::Instance& instance) {
 			this->backend = std::make_shared<DeviceBackend>(instance);
-			this->bindingSetDescriptionCache = std::make_unique<BindingSetDescriptionCache>(backend->device.device);
+			this->bindingSetDescriptionCache = std::make_unique<BindingSetDescriptionCache>(backend);
 			
-			this->stagingBufferPool = std::make_shared<StagingBufferPool>(StagingBufferPool{ 
-				backend->device.device, 
-				&backend->graveyard, 
-				std::span<u32>{ backend->allQFamilyIndices.data(), backend->allQFamilyIndices.size() }, 
-				backend->allocator
-			});
+			this->stagingBufferPool = std::make_shared<StagingBufferPool>(backend);
 			this->cmdListRecyclingSharedData = std::make_shared<CommandListRecyclingSharedData>();
 		}
 
 		QueueHandle Device::createQueue(QueueCreateInfo const& ci) {
-			return QueueHandle{ std::make_shared<Queue>(backend->device.device, backend->device.get_queue(vkb::QueueType::graphics).value(), ci) };
+			return QueueHandle{ std::make_shared<Queue>(backend, backend->device.get_queue(vkb::QueueType::graphics).value(), ci) };
 		}
 
 		SamplerHandle Device::createSampler(SamplerCreateInfo ci) {
-			return SamplerHandle{ std::make_shared<Sampler>(backend->device.device, &backend->graveyard, ci) };
+			return SamplerHandle{ std::make_shared<Sampler>(backend, ci) };
 		}
 
 		ImageHandle Device::createImage2d(Image2dCreateInfo ci) { 
 			auto handle = ImageHandle{ std::make_shared<Image>() };
-			Image::construct2dImage(backend->device.device, &backend->graveyard, backend->allocator, backend->graphicsQFamilyIndex, ci, *handle);
+			Image::construct2dImage(backend, ci, *handle);
 			return std::move(handle);
 		}
 
 		BufferHandle Device::createBuffer(BufferCreateInfo ci) {
-			return BufferHandle{ std::make_shared<Buffer>(backend->device.device, &backend->graveyard, backend->allocator, std::span<u32>{ backend->allQFamilyIndices.data(), backend->allQFamilyIndices.size() }, ci) };
+			return BufferHandle{ std::make_shared<Buffer>(backend, ci) };
 		}
 
 		TimelineSemaphoreHandle Device::createTimelineSemaphore(TimelineSemaphoreCreateInfo const& ci) {
-			return TimelineSemaphoreHandle{ std::make_shared<TimelineSemaphore>(backend->device.device, ci) };
+			return TimelineSemaphoreHandle{ std::make_shared<TimelineSemaphore>(backend, ci) };
 		}
 
 		SignalHandle Device::createSignal(SignalCreateInfo const& ci) {
-			return SignalHandle{ std::make_shared<Signal>(backend->device.device, ci) };
+			return SignalHandle{ std::make_shared<Signal>(backend, ci) };
 		}
 
 		SwapchainHandle Device::createSwapchain(SwapchainCreateInfo ci) {
 			auto handle = SwapchainHandle{ std::make_shared<Swapchain>() };
-			handle->construct(backend->device.device, &backend->graveyard, backend->device.physical_device, gpu::instance->getVkInstance(), ci);
+			handle->construct(backend, ci);
 			return std::move(handle);
 		}
 
@@ -91,13 +86,9 @@ namespace daxa {
 				// we have no command lists left, we need to create new ones:
 				unusedCommandLists.push_back(CommandListHandle{ std::make_shared<CommandList>() });
 				CommandList& list = *unusedCommandLists.back();
-				list.device = backend->device.device;
-				list.vkCmdBeginRenderingKHR = backend->vkCmdBeginRenderingKHR;
-				list.vkCmdEndRenderingKHR = backend->vkCmdEndRenderingKHR;
-				list.vkCmdPipelineBarrier2KHR = backend->vkCmdPipelineBarrier2KHR;
+				list.deviceBackend = backend;
 				list.stagingBufferPool = stagingBufferPool;
 				list.recyclingData = cmdListRecyclingSharedData;
-				list.graveyard = &backend->graveyard;
 
 				VkCommandPoolCreateInfo commandPoolCI{
 					.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -122,19 +113,19 @@ namespace daxa {
 		}
 
 		daxa::Result<PipelineHandle> Device::createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder) {
-			return pipelineBuilder.build(backend->device.device, *bindingSetDescriptionCache);
+			return pipelineBuilder.build(backend, *bindingSetDescriptionCache);
 		}
 
 		daxa::Result<PipelineHandle> Device::createComputePipeline(ComputePipelineCreateInfo const& ci) {
-			return gpu::createComputePipeline(backend->device.device, *bindingSetDescriptionCache, ci);
+			return gpu::createComputePipeline(backend, *bindingSetDescriptionCache, ci);
 		}
 
 		BindingSetAllocatorHandle Device::createBindingSetAllocator(BindingSetAllocatorCreateInfo const& ci) {
-			return BindingSetAllocatorHandle{ std::make_shared<BindingSetAllocator>(backend->device.device, ci) };
+			return BindingSetAllocatorHandle{ std::make_shared<BindingSetAllocator>(backend, ci) };
 		}
 
 		Result<ShaderModuleHandle> Device::createShaderModule(ShaderModuleCreateInfo const& ci) {
-			return ShaderModuleHandle::tryCreateDAXAShaderModule(backend->device.device, ci);
+			return ShaderModuleHandle::tryCreateDAXAShaderModule(backend, ci);
 		}
 	}
 }

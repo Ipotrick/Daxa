@@ -17,17 +17,14 @@ namespace daxa {
 			return surface;
 		}
 
-		void Swapchain::construct(VkDevice device, Graveyard* graveyard, VkPhysicalDevice physicalDevice, VkInstance instance, SwapchainCreateInfo ci) {
-			this->device = device;
-			this->physicalDevice = physicalDevice;
-			this->instance = instance;
+		void Swapchain::construct(std::shared_ptr<DeviceBackend> deviceBackend, SwapchainCreateInfo ci) {
+			this->deviceBackend = deviceBackend;
 			this->size = { .width = ci.width, .height = ci.height };
 			this->surface = ci.surface;
 			this->presentMode = ci.presentMode;
 			this->additionalimageUses = ci.additionalUses;
-			this->graveyard = graveyard;
 
-			vkb::SwapchainBuilder swapchainBuilder{ physicalDevice, device, surface };
+			vkb::SwapchainBuilder swapchainBuilder{ deviceBackend->device, surface };
 
 			auto oldSwapchain = swapchain;
 			if (swapchain != VK_NULL_HANDLE) {
@@ -54,10 +51,8 @@ namespace daxa {
 				img.extent.height = ci.height;
 				img.extent.depth = 1;
 				img.allocation = nullptr;
-				img.allocator = nullptr;
 				img.image = vkImages[i];
 				img.view = vkImageViews[i];
-				img.device = device;
 				img.type = VK_IMAGE_TYPE_2D;
 				img.viewFormat = vkbSwapchain.image_format;
 				img.tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -65,13 +60,13 @@ namespace daxa {
 				img.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 				img.arrayLayers = 1;
 				img.mipmapLevels = 1;
-				img.graveyard = graveyard;
+				img.deviceBackend = deviceBackend;
 			}
 
 			this->swapchainImageFormat = vkbSwapchain.image_format;
 
 			if (oldSwapchain) {
-				vkDestroySwapchainKHR(device, oldSwapchain, nullptr);
+				vkDestroySwapchainKHR(deviceBackend->device.device, oldSwapchain, nullptr);
 			}
 
 			VkFenceCreateInfo fenceCI{
@@ -81,7 +76,7 @@ namespace daxa {
 			};
 
 			if (aquireFence == VK_NULL_HANDLE) {
-				vkCreateFence(device, &fenceCI, nullptr, &this->aquireFence);
+				vkCreateFence(deviceBackend->device.device, &fenceCI, nullptr, &this->aquireFence);
 			}
 
 			if (daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
@@ -94,7 +89,7 @@ namespace daxa {
 					.objectHandle = (uint64_t)this->swapchain,
 					.pObjectName = ci.debugName,
 				};
-				daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
+				daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT(deviceBackend->device.device, &nameInfo);
 
 				std::string nameBuffer = ci.debugName;
 				nameBuffer += " fence";
@@ -106,7 +101,7 @@ namespace daxa {
 					.objectHandle = (uint64_t)this->aquireFence,
 					.pObjectName = nameBuffer.c_str(),
 				};
-				daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
+				daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT(deviceBackend->device.device, &nameInfo);
 				
 				for (int i = 0; i < vkImages.size(); i++) {
 					nameBuffer.clear();
@@ -122,7 +117,7 @@ namespace daxa {
 						.objectHandle = (uint64_t)view,
 						.pObjectName = nameBuffer.c_str(),
 					};
-					daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
+					daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT(deviceBackend->device.device, &nameInfo);
 
 					(*this->swapchainImages[i]).debugName = nameBuffer;
 				}
@@ -131,36 +126,36 @@ namespace daxa {
 
 		Swapchain::~Swapchain() {
 			swapchainImages.clear();
-			if (device) {
-				vkDestroySwapchainKHR(device, swapchain, nullptr);
-				vkDestroyFence(device, aquireFence, nullptr);
-				device = VK_NULL_HANDLE;
+			if (deviceBackend->device.device) {
+				vkDestroySwapchainKHR(deviceBackend->device.device, swapchain, nullptr);
+				vkDestroyFence(deviceBackend->device.device, aquireFence, nullptr);
+				deviceBackend = {};
 			}
 		}
 
 		SwapchainImage Swapchain::aquireNextImage() {
 			u32 index{ 0 };
-			auto err = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, nullptr, aquireFence, &index);
+			auto err = vkAcquireNextImageKHR(deviceBackend->device.device, swapchain, UINT64_MAX, nullptr, aquireFence, &index);
 			DAXA_ASSERT_M(err == VK_SUCCESS, "could not aquire next image from swapchain");
 			SwapchainImage si{};
 			si.swapchain = swapchain;
 			si.imageIndex = index;
 			si.image = swapchainImages[index];
 
-			vkWaitForFences(device, 1, &aquireFence, VK_TRUE, UINT64_MAX);
-			vkResetFences(device, 1, &aquireFence);
+			vkWaitForFences(deviceBackend->device.device, 1, &aquireFence, VK_TRUE, UINT64_MAX);
+			vkResetFences(deviceBackend->device.device, 1, &aquireFence);
 
 			return si;
 		}
 
 		void Swapchain::resize(VkExtent2D newSize) {
 			swapchainImages.clear();
-			construct(device, graveyard, physicalDevice, instance, {surface, newSize.width, newSize.height, presentMode, additionalimageUses, debugName.c_str()});
+			construct(deviceBackend, {surface, newSize.width, newSize.height, presentMode, additionalimageUses, debugName.c_str()});
 		}
 
 		void Swapchain::setPresentMode(VkPresentModeKHR newPresentMode) {
 			swapchainImages.clear();
-			construct(device, graveyard, physicalDevice, instance, {surface, size.width, size.height, newPresentMode, additionalimageUses, debugName.c_str()});
+			construct(deviceBackend, {surface, size.width, size.height, newPresentMode, additionalimageUses, debugName.c_str()});
 		}
 	}
 }

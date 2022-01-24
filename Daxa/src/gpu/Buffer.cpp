@@ -3,16 +3,20 @@
 
 namespace daxa {
 	namespace gpu {
-		Buffer::Buffer(VkDevice device, Graveyard* graveyard, VmaAllocator allocator, std::span<u32> queueFamilies, BufferCreateInfo& ci) {
-
+		Buffer::Buffer(std::shared_ptr<DeviceBackend> deviceBackend, BufferCreateInfo& ci) 
+			: deviceBackend{ std::move(deviceBackend) }
+			, size{ ci.size }
+			, usage{ ci.usage }
+			, memoryUsage{ ci.memoryUsage }
+		{
 			VkBufferCreateInfo bci{
 				.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 				.pNext = nullptr,
 				.size = ci.size,
 				.usage = ci.usage,
 				.sharingMode = VK_SHARING_MODE_CONCURRENT,
-				.queueFamilyIndexCount = (u32)queueFamilies.size(),
-				.pQueueFamilyIndices = queueFamilies.data(),
+				.queueFamilyIndexCount = (u32)this->deviceBackend->allQFamilyIndices.size(),
+				.pQueueFamilyIndices = this->deviceBackend->allQFamilyIndices.data(),
 			};
 
 			VmaAllocationCreateInfo aci{
@@ -20,7 +24,7 @@ namespace daxa {
 				.requiredFlags = ci.memoryProperties,
 			};
 
-			vmaCreateBuffer(allocator, (VkBufferCreateInfo*)&bci, &aci, &buffer, &allocation, nullptr);
+			vmaCreateBuffer(this->deviceBackend->allocator, (VkBufferCreateInfo*)&bci, &aci, &buffer, &allocation, nullptr);
 
 			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
 				this->debugName = ci.debugName;
@@ -31,14 +35,8 @@ namespace daxa {
 					.objectHandle = (uint64_t)this->buffer,
 					.pObjectName = ci.debugName,
 				};
-				instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
+				instance->pfnSetDebugUtilsObjectNameEXT(this->deviceBackend->device.device, &nameInfo);
 			}
-
-			this->allocator = allocator;
-			this->size = ci.size;
-			this->usage = ci.usage;
-			this->memoryUsage = ci.memoryUsage;
-			this->graveyard = graveyard;
 		}
 
 		bool Buffer::isUsedByGPU() const {
@@ -46,9 +44,8 @@ namespace daxa {
 		}
 
 		Buffer::~Buffer() {
-			if (allocator) {
-				vmaDestroyBuffer(allocator, buffer, allocation);
-				allocator = VK_NULL_HANDLE;
+			if (this->deviceBackend) {
+				vmaDestroyBuffer(this->deviceBackend->allocator, buffer, allocation);
 			}
 		}
 
@@ -58,9 +55,9 @@ namespace daxa {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not upload to buffer that is currently in use on the gpu directly from host. to indirectly upload to this buffer, use the command list upload.");
 
 			u8* bufferMemPtr{ nullptr };
-			vmaMapMemory(allocator, allocation, (void**)&bufferMemPtr);
+			vmaMapMemory(this->deviceBackend->allocator, allocation, (void**)&bufferMemPtr);
 			std::memcpy(bufferMemPtr + dstOffset, src, size);
-			vmaUnmapMemory(allocator, allocation);
+			vmaUnmapMemory(this->deviceBackend->allocator, allocation);
 		}
 
 		void* Buffer::mapMemory() {
@@ -68,14 +65,14 @@ namespace daxa {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not upload to buffer that is currently in use on the gpu directly from host. to indirectly upload to this buffer, use the command list upload.");
 			memoryMapCount += 1;
 			void* ret;
-			vmaMapMemory(allocator, allocation, &ret);
+			vmaMapMemory(this->deviceBackend->allocator, allocation, &ret);
 			return ret;
 		}
 
 		void Buffer::unmapMemory() {
 			DAXA_ASSERT_M(memoryMapCount > 0, "can not unmap memory of buffer that has no mapped memory.");
 			memoryMapCount -= 1;
-			vmaUnmapMemory(allocator, allocation);
+			vmaUnmapMemory(this->deviceBackend->allocator, allocation);
 		}
 	}
 }

@@ -12,6 +12,7 @@
 #include <vk_mem_alloc.h>
 
 #include "Handle.hpp"
+#include "DeviceBackend.hpp"
 #include "ShaderModule.hpp"
 #include "BindingSet.hpp"
 
@@ -53,43 +54,42 @@ namespace daxa {
 			std::string const& getDebugName() const { return debugName; }
 		private:
 			friend class GraphicsPipelineBuilder;
-			friend daxa::Result<PipelineHandle> createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ComputePipelineCreateInfo const& ci);
+			friend daxa::Result<PipelineHandle> createComputePipeline(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetDescriptionCache& bindingSetCache, ComputePipelineCreateInfo const& ci);
 			friend void setPipelineDebugName(VkDevice device, char const* debugName, Pipeline& pipeline);
 
-			std::array<BindingSetDescription const*, MAX_SETS_PER_PIPELINE> bindingSetDescriptions = {};
-			std::vector<VkFormat> colorAttachmentFormats = {};
-
-			VkFormat depthAttachment 		= VK_FORMAT_UNDEFINED;
-			VkFormat stencilAttachment 		= VK_FORMAT_UNDEFINED;
-			VkPipelineBindPoint bindPoint 	= {};
-			VkDevice device					= {};
-			VkPipeline pipeline				= {};
-			VkPipelineLayout layout			= {};
-			std::string debugName 			= {};
+			std::shared_ptr<DeviceBackend>									deviceBackend			= {};
+			std::array<BindingSetDescription const*, MAX_SETS_PER_PIPELINE> bindingSetDescriptions 	= {};
+			std::vector<VkFormat> 											colorAttachmentFormats 	= {};
+			VkFormat 														depthAttachment 		= VK_FORMAT_UNDEFINED;
+			VkFormat 														stencilAttachment 		= VK_FORMAT_UNDEFINED;
+			VkPipelineBindPoint 											bindPoint 				= {};
+			VkPipeline 														pipeline				= {};
+			VkPipelineLayout 												layout					= {};
+			std::string 													debugName 				= {};
 		};
 
 		class PipelineHandle : public SharedHandle<Pipeline>{};
 
 		struct DepthTestSettings {
-			VkFormat depthAttachmentFormat = VK_FORMAT_UNDEFINED;
-			bool enableDepthTest = false;
-			bool enableDepthWrite = false;
-			VkCompareOp depthTestCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-			f32 minDepthBounds = 0.0f;
-			f32 maxDepthBounds = 1.0f;
+			VkFormat 	depthAttachmentFormat 	= VK_FORMAT_UNDEFINED;
+			bool 		enableDepthTest 		= false;
+			bool 		enableDepthWrite 		= false;
+			VkCompareOp depthTestCompareOp 		= VK_COMPARE_OP_LESS_OR_EQUAL;
+			f32 		minDepthBounds 			= 0.0f;
+			f32 		maxDepthBounds 			= 1.0f;
 		};
 
 		struct RasterSettings {
-			VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL;
-			VkCullModeFlagBits cullMode = VK_CULL_MODE_NONE;
-			VkFrontFace frontFace = VK_FRONT_FACE_CLOCKWISE;
-			bool depthClampEnable = false;
-			bool rasterizerDiscardEnable = false;
-			bool depthBiasEnable = false;
-			float depthBiasConstantFactor = 0.0f;
-			float depthBiasClamp = 0.0f;
-			float depthBiasSlopeFactor = 0.0f;
-			f32 lineWidth = 1.0f;
+			VkPolygonMode 		polygonMode 			= VK_POLYGON_MODE_FILL;
+			VkCullModeFlagBits 	cullMode 				= VK_CULL_MODE_NONE;
+			VkFrontFace 		frontFace 				= VK_FRONT_FACE_CLOCKWISE;
+			bool 				depthClampEnable 		= false;
+			bool 				rasterizerDiscardEnable = false;
+			bool 				depthBiasEnable 		= false;
+			float 				depthBiasConstantFactor = 0.0f;
+			float 				depthBiasClamp 			= 0.0f;
+			float 				depthBiasSlopeFactor 	= 0.0f;
+			f32 				lineWidth 				= 1.0f;
 		};
 
 		class GraphicsPipelineBuilder {
@@ -109,7 +109,7 @@ namespace daxa {
 			GraphicsPipelineBuilder& addColorAttachment(VkFormat const& attachmentFormat, const VkPipelineColorBlendAttachmentState&);
 		private:
 			friend class Device;
-			daxa::Result<PipelineHandle> build(VkDevice, BindingSetDescriptionCache& bindingSetCache);
+			daxa::Result<PipelineHandle> build(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetDescriptionCache& bindingSetCache);
 
 			char const* debugName = {};
 
@@ -137,6 +137,6 @@ namespace daxa {
 			std::vector<VkPipelineShaderStageCreateInfo> shaderStageCreateInfo;
 		};
 
-		daxa::Result<PipelineHandle> createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ComputePipelineCreateInfo const& ci);
+		daxa::Result<PipelineHandle> createComputePipeline(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetDescriptionCache& bindingSetCache, ComputePipelineCreateInfo const& ci);
 	}
 }

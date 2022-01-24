@@ -16,9 +16,9 @@ namespace daxa {
 	namespace gpu {
 
 		ShaderModule::~ShaderModule() {
-			if (device) {
-				vkDestroyShaderModule(device, shaderModule, nullptr);
-				device = VK_NULL_HANDLE;
+			if (deviceBackend->device.device) {
+				vkDestroyShaderModule(deviceBackend->device.device, shaderModule, nullptr);
+				deviceBackend = {};
 			}
 		}
 
@@ -210,7 +210,7 @@ namespace daxa {
 			return {ret};
 		}
 
-		Result<VkShaderModule> tryCreateVkShaderModule(VkDevice device, std::vector<u32> const& spirv) {
+		Result<VkShaderModule> tryCreateVkShaderModule(std::shared_ptr<DeviceBackend>& deviceBackend, std::vector<u32> const& spirv) {
 
 			VkShaderModuleCreateInfo shaderModuleCI{
 				.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
@@ -219,7 +219,7 @@ namespace daxa {
 				.pCode = spirv.data(),
 			};
 			VkShaderModule shaderModule;
-			if (vkCreateShaderModule(device, (VkShaderModuleCreateInfo*)&shaderModuleCI, nullptr, &shaderModule) == VK_SUCCESS) {
+			if (vkCreateShaderModule(deviceBackend->device.device, (VkShaderModuleCreateInfo*)&shaderModuleCI, nullptr, &shaderModule) == VK_SUCCESS) {
 				return { shaderModule };
 			}
 			else {
@@ -227,7 +227,7 @@ namespace daxa {
 			}
 		}
 
-		Result<VkShaderModule> tryCreateVkShaderModule(VkDevice device, std::filesystem::path const& path, VkShaderStageFlagBits shaderStage) {
+		Result<VkShaderModule> tryCreateVkShaderModule(std::shared_ptr<DeviceBackend>& deviceBackend, std::filesystem::path const& path, VkShaderStageFlagBits shaderStage) {
 			auto src = tryLoadGLSLShaderFromFile(path);
 			if (src.isErr()) {
 				return ResultErr{ src.message() };
@@ -236,31 +236,31 @@ namespace daxa {
 			if (spirv.isErr()) {
 				return ResultErr{ spirv.message() + "; with path: " + path.string() };
 			}
-			auto shadMod = tryCreateVkShaderModule(device, spirv.value());
+			auto shadMod = tryCreateVkShaderModule(deviceBackend, spirv.value());
 			if (!shadMod.isErr()) {
 				return ResultErr{ shadMod.message() };
 			}
 			return { shadMod.value() };
 		}
 
-		Result<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(VkDevice device, std::filesystem::path const& path, std::string const& entryPoint, VkShaderStageFlagBits shaderStage) {
+		Result<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(std::shared_ptr<DeviceBackend>& deviceBackend, std::filesystem::path const& path, std::string const& entryPoint, VkShaderStageFlagBits shaderStage) {
 			auto src = tryLoadGLSLShaderFromFile(path);
 			if (src.isErr()) {
 				return ResultErr{ src.message() };
 			}
-			auto shadMod = tryCreateDAXAShaderModule(device, src.value(), entryPoint, shaderStage);
+			auto shadMod = tryCreateDAXAShaderModule(deviceBackend, src.value(), entryPoint, shaderStage);
 			if (shadMod.isErr()) {
 				return ResultErr{ shadMod.message() };
 			}
 			return { shadMod.value() };
 		}
 
-		Result<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(VkDevice device, std::string const& glsl, std::string const& entryPoint, VkShaderStageFlagBits shaderStage) {
+		Result<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(std::shared_ptr<DeviceBackend>& deviceBackend, std::string const& glsl, std::string const& entryPoint, VkShaderStageFlagBits shaderStage) {
 			auto spirv = tryGenSPIRVFromGLSL(glsl, shaderStage);
 			if (spirv.isErr()) {
 				return ResultErr{ spirv.message() };
 			}
-			auto shaderModule = tryCreateVkShaderModule(device, spirv.value());
+			auto shaderModule = tryCreateVkShaderModule(deviceBackend, spirv.value());
 			if (shaderModule.isErr()) {
 				return ResultErr{ shaderModule.message() };
 			}
@@ -269,11 +269,11 @@ namespace daxa {
 			shaderMod->shaderModule = std::move(shaderModule.value());
 			shaderMod->spirv = spirv.value();
 			shaderMod->shaderStage = shaderStage;
-			shaderMod->device = device;
+			shaderMod->deviceBackend = deviceBackend;
 			return { ShaderModuleHandle{ std::move(shaderMod) } };
 		}
 		
-		Result<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(VkDevice device, ShaderModuleCreateInfo const& ci) {
+		Result<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(std::shared_ptr<DeviceBackend>& deviceBackend, ShaderModuleCreateInfo const& ci) {
 			std::string glslSource = {};
 			if (ci.pathToSource) {
 				auto src = tryLoadGLSLShaderFromFile(ci.pathToSource);
@@ -289,7 +289,7 @@ namespace daxa {
 				return ResultErr{"no path given"};
 			}
 
-			auto shadMod = tryCreateDAXAShaderModule(device, glslSource, ci.entryPoint, ci.stage);
+			auto shadMod = tryCreateDAXAShaderModule(deviceBackend, glslSource, ci.entryPoint, ci.stage);
 			if (shadMod.isErr()) {
 				auto errMess = shadMod.message();
 				if (ci.pathToSource) {
@@ -309,7 +309,7 @@ namespace daxa {
 					.objectHandle = (uint64_t)shadMod.value()->shaderModule,
 					.pObjectName = ci.debugName,
 				};
-				instance->pfnSetDebugUtilsObjectNameEXT(device, &imageNameInfo);
+				instance->pfnSetDebugUtilsObjectNameEXT(deviceBackend->device.device, &imageNameInfo);
 			}
 
 			return { shadMod.value() };

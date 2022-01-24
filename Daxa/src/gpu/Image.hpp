@@ -12,7 +12,7 @@
 
 #include "Handle.hpp"
 #include "Sampler.hpp"
-#include "Graveyard.hpp"
+#include "DeviceBackend.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -57,31 +57,29 @@ namespace daxa {
 			friend class Swapchain;
 			friend struct ImageStaticFunctionOverride;
 
-			static void construct2dImage(VkDevice device, Graveyard* graveyard, VmaAllocator allocator, u32 queueFamilyIndex, Image2dCreateInfo const& ci, Image& dst);
+			static void construct2dImage(std::shared_ptr<DeviceBackend> deviceBackend, Image2dCreateInfo const& ci, Image& dst);
 
-			VkDevice device = VK_NULL_HANDLE;
-			VmaAllocator allocator = VK_NULL_HANDLE;
-			VmaAllocation allocation = VK_NULL_HANDLE;
-			VkImage image;
-			VkImageView view;
-			VkImageTiling tiling;
-			VkImageUsageFlags usageFlags;
-			VkFormat viewFormat;
-			VkImageType type;
-			VkExtent3D extent;
-			VkImageAspectFlags aspect;
-			u32 mipmapLevels;
-			u32 arrayLayers;
-			SamplerHandle sampler = {};	// this is an optional field
-			std::string debugName = {};
-			Graveyard* graveyard = {};
+			std::shared_ptr<DeviceBackend> 	deviceBackend 	= {};
+			VmaAllocation 					allocation 		= {};
+			VkImage 						image 			= {};
+			VkImageView 					view			= {};
+			VkImageTiling 					tiling			= {};
+			VkImageUsageFlags 				usageFlags		= {};
+			VkFormat 						viewFormat		= {};
+			VkImageType 					type			= {};
+			VkExtent3D 						extent			= {};
+			VkImageAspectFlags 				aspect			= {};
+			u32 							mipmapLevels	= {};
+			u32 							arrayLayers		= {};
+			SamplerHandle 					sampler 		= {};	// this is an optional field
+			std::string 					debugName 		= {};
 		};
 
         struct ImageStaticFunctionOverride {
             static void cleanup(std::shared_ptr<Image>& value) {
 				if (value && value.use_count() == 1) {
-					std::unique_lock lock(value->graveyard->mtx);
-					for (auto& zombieList : value->graveyard->activeZombieLists) {
+					std::unique_lock lock(value->deviceBackend->graveyard.mtx);
+					for (auto& zombieList : value->deviceBackend->graveyard.activeZombieLists) {
 						zombieList->zombies.push_back(value);
 					}
 				}

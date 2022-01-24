@@ -11,6 +11,7 @@
 #include <vk_mem_alloc.h>
 
 #include "Handle.hpp"
+#include "DeviceBackend.hpp"
 #include "Image.hpp"
 #include "Buffer.hpp"
 #include "SwapchainImage.hpp"
@@ -295,55 +296,35 @@ namespace daxa {
 
 			void reset();
 			void begin();
-			MappedMemoryPointer<u8> mapMemoryStagedVoid(BufferHandle copyDst, size_t size, size_t dstOffset);
 			void setDebugName(char const* debugName);
-
-			// binding set management:
-			std::vector<VkDescriptorBufferInfo> bufferInfoBuffer = {};
-			std::vector<VkDescriptorImageInfo> imageInfoBuffer = {};
-			// begin rendering temporaries:
-			std::vector<VkRenderingAttachmentInfoKHR> renderAttachmentBuffer = {};
-
-			std::optional<PipelineHandle> currentPipeline = {};
+			void checkIfPipelineAndRenderPassFit();
+			MappedMemoryPointer<u8> mapMemoryStagedVoid(BufferHandle copyDst, size_t size, size_t dstOffset);
 
 			struct CurrentRenderPass{
-				std::vector<RenderAttachmentInfo> colorAttachments 	= {};
-				RenderAttachmentInfo* depthAttachment 				= nullptr;
-				RenderAttachmentInfo* stencilAttachment 			= nullptr;
+				std::vector<RenderAttachmentInfo> 	colorAttachments 	= {};
+				RenderAttachmentInfo* 				depthAttachment 	= nullptr;
+				RenderAttachmentInfo* 				stencilAttachment 	= nullptr;
 			};
-			std::optional<CurrentRenderPass> currentRenderPass 		= {};
 
-			/**
-			 * @brief 	Checks if currently bound pipeline and render pass 'fit'
-			 * 			A pipeline fits a renderpass, when all its needed attachemnts are present in the renderpass.
-			 * 
-			 */
-			void checkIfPipelineAndRenderPassFit();
-
-			void (*vkCmdBeginRenderingKHR)(VkCommandBuffer, const VkRenderingInfoKHR*);
-			void (*vkCmdEndRenderingKHR)(VkCommandBuffer);
-			void (*vkCmdPipelineBarrier2KHR)(VkCommandBuffer, VkDependencyInfoKHR const*);
-			u32	operationsInProgress = 0;
-			u32 usesOnGPU = 0;				// counts in how many pending submits the command list is currently used
-			bool empty = true;
-			bool finalized = false;
-
-			std::vector<BindingSetHandle> usedSets = {};
-			//std::vector<ImageHandle> usedImages = {};
-			//std::vector<BufferHandle> usedBuffers = {};
-			std::vector<PipelineHandle> usedGraphicsPipelines = {};
-			VkDevice device = {};
-			VkCommandBuffer cmd = {};
-			VkCommandPool cmdPool = {};
-
-			std::weak_ptr<CommandListRecyclingSharedData> recyclingData = {};
-			std::weak_ptr<StagingBufferPool> stagingBufferPool = {};
-			std::vector<StagingBuffer> usedStagingBuffers = {};
-
-			Graveyard* graveyard = {};
-			std::shared_ptr<ZombieList> zombies = std::make_shared<ZombieList>();
-
-			std::string debugName = {};
+			std::shared_ptr<DeviceBackend> 					deviceBackend			= {};
+			VkCommandBuffer 								cmd 					= {};
+			VkCommandPool 									cmdPool 				= {};
+			std::vector<VkDescriptorBufferInfo> 			bufferInfoBuffer 		= {};
+			std::vector<VkDescriptorImageInfo> 				imageInfoBuffer 		= {};
+			std::vector<VkRenderingAttachmentInfoKHR> 		renderAttachmentBuffer 	= {};
+			std::optional<PipelineHandle> 					currentPipeline 		= {};
+			std::optional<CurrentRenderPass> 				currentRenderPass 		= {};
+			u32												operationsInProgress 	= 0;
+			u32 											usesOnGPU 				= 0;				// counts in how many pending submits the command list is currently used
+			bool 											empty 					= true;
+			bool 											finalized 				= false;
+			std::vector<BindingSetHandle> 					usedSets 				= {};
+			std::vector<PipelineHandle> 					usedGraphicsPipelines 	= {};
+			std::weak_ptr<CommandListRecyclingSharedData> 	recyclingData 			= {};
+			std::weak_ptr<StagingBufferPool> 				stagingBufferPool 		= {};
+			std::vector<StagingBuffer> 						usedStagingBuffers 		= {};
+			std::shared_ptr<ZombieList> 					zombies 				= std::make_shared<ZombieList>();
+			std::string 									debugName 				= {};
 		};
 
 		struct CommandListHandleStaticFunctionOverride{
