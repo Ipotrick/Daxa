@@ -13,7 +13,7 @@ namespace daxa {
 		thread_local std::vector<VkDescriptorImageInfo> descImageInfoBuffer = {};
 
 		void BindingSet::bindSamplers(u32 binding, std::span<SamplerHandle> samplers, u32 descriptorArrayOffset) {
-			DAXA_ASSERT_M(usesOnGPU == 0, "can not update binding set while it is used on gpu");
+			DAXA_ASSERT_M(usesOnGPU == 0 || (layout->getDescription().flags & VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT), "can not update binding set while it is used on gpu without VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT");
 			descImageInfoBuffer.reserve(samplers.size());
 
 			for (auto& sampler : samplers) {
@@ -48,7 +48,7 @@ namespace daxa {
 		thread_local std::vector<VkDescriptorBufferInfo> descBufferInfoBuffer = {};
 
 		void BindingSet::bindBuffers(u32 binding, std::span<BufferHandle> buffers, u32 descriptorArrayOffset) {
-			DAXA_ASSERT_M(usesOnGPU == 0, "can not update binding set, that is still in use on the gpu");
+			DAXA_ASSERT_M(usesOnGPU == 0 || (layout->getDescription().flags & VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT), "can not update binding set while it is used on gpu without VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT");
 			for (auto& buffer : buffers) {
 				DAXA_ASSERT_M(buffer, "invalid buffer handle");
 				descBufferInfoBuffer.push_back(VkDescriptorBufferInfo{
@@ -79,7 +79,7 @@ namespace daxa {
 		}
 
 		void BindingSet::bindImages(u32 binding, std::span<std::pair<ImageHandle, VkImageLayout>> images, u32 descriptorArrayOffset) {
-			DAXA_ASSERT_M(usesOnGPU == 0, "can not update binding set while it is used on gpu");
+			DAXA_ASSERT_M(usesOnGPU == 0 || (layout->getDescription().flags & VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT), "can not update binding set while it is used on gpu without VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT");
 			VkDescriptorType imageDescriptorType = layout->getDescription().layouts[binding].descriptorType;
 			bool bIsImage = imageDescriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER || 
 				imageDescriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || 
@@ -296,7 +296,7 @@ namespace daxa {
 			VkDescriptorPoolCreateInfo descriptorPoolCI{
 				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 				.pNext = nullptr,
-				.flags = 0,
+				.flags = setLayout->getDescription().flags,
 				.maxSets = (u32)setsPerPool,
 				.poolSizeCount = (u32)poolSizes.size(),
 				.pPoolSizes = poolSizes.data(),
