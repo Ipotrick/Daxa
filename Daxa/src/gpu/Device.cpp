@@ -53,8 +53,11 @@ namespace daxa {
 			return std::move(handle);
 		}
 
-		BindingSetDescription const* Device::createBindingSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings) {
-			return bindingSetDescriptionCache->getSetDescription(bindings);
+		BindingSetInfo const& Device::getBindingSetInfo(BindingSetDescription const& description) {
+			return bindingSetDescriptionCache->getInfo(description);
+		}
+		std::shared_ptr<BindingSetInfo const> Device::getBindingSetInfoShared(BindingSetDescription const& description) {
+			return std::move(bindingSetDescriptionCache->getInfoShared(description));
 		}
 
 		void Device::waitIdle() {

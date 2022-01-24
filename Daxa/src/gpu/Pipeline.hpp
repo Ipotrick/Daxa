@@ -37,10 +37,10 @@ namespace daxa {
 			Pipeline const& operator=(Pipeline const&) noexcept	= delete;
 			~Pipeline();
 
-			BindingSetDescription const* getSetDescription(u32 set) const { 
-				auto setDescr = bindingSetDescriptions.at(set);
-				DAXA_ASSERT_M(setDescr, "tried querring non existant binding set description from pipeline");
-				return setDescr;
+			std::shared_ptr<BindingSetInfo const> getSetInfo(u32 set) const { 
+				auto setInfo = bindingSetDescriptions.at(set);
+				DAXA_ASSERT_M(setInfo, "tried querring non existant binding set description from pipeline");
+				return std::move(setInfo);
 			}
 
 			VkPipelineBindPoint getVkBindPoint() const { return bindPoint; }
@@ -57,15 +57,15 @@ namespace daxa {
 			friend daxa::Result<PipelineHandle> createComputePipeline(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetDescriptionCache& bindingSetCache, ComputePipelineCreateInfo const& ci);
 			friend void setPipelineDebugName(VkDevice device, char const* debugName, Pipeline& pipeline);
 
-			std::shared_ptr<DeviceBackend>									deviceBackend			= {};
-			std::array<BindingSetDescription const*, MAX_SETS_PER_PIPELINE> bindingSetDescriptions 	= {};
-			std::vector<VkFormat> 											colorAttachmentFormats 	= {};
-			VkFormat 														depthAttachment 		= VK_FORMAT_UNDEFINED;
-			VkFormat 														stencilAttachment 		= VK_FORMAT_UNDEFINED;
-			VkPipelineBindPoint 											bindPoint 				= {};
-			VkPipeline 														pipeline				= {};
-			VkPipelineLayout 												layout					= {};
-			std::string 													debugName 				= {};
+			std::shared_ptr<DeviceBackend>												deviceBackend			= {};
+			std::array<std::shared_ptr<BindingSetInfo const>, MAX_SETS_PER_PIPELINE> 	bindingSetDescriptions 	= {};
+			std::vector<VkFormat> 														colorAttachmentFormats 	= {};
+			VkFormat 																	depthAttachment 		= VK_FORMAT_UNDEFINED;
+			VkFormat 																	stencilAttachment 		= VK_FORMAT_UNDEFINED;
+			VkPipelineBindPoint 														bindPoint 				= {};
+			VkPipeline 																	pipeline				= {};
+			VkPipelineLayout 															layout					= {};
+			std::string 																debugName 				= {};
 		};
 
 		class PipelineHandle : public SharedHandle<Pipeline>{};
