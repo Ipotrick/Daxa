@@ -3,8 +3,8 @@
 
 namespace daxa {
 	namespace gpu {
-		BindingSet::BindingSet(VkDevice device, VkDescriptorSet set, std::weak_ptr<BindingSetAllocatorBindingiSetPool> pool, BindingSetDescription const* description)
-			: device{ device }
+		BindingSet::BindingSet(std::shared_ptr<DeviceBackend> deviceBackend, VkDescriptorSet set, std::weak_ptr<BindingSetAllocatorBindingiSetPool> pool, BindingSetDescription const* description)
+			: deviceBackend{ std::move(deviceBackend) }
 			, set { set }
 			, pool{ pool }
 			, description{ description }
@@ -37,7 +37,7 @@ namespace daxa {
 				.pImageInfo = descImageInfoBuffer.data()
 			};
 
-			vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+			vkUpdateDescriptorSets(deviceBackend->device.device, 1, &write, 0, nullptr);
 
 			descImageInfoBuffer.clear();
 		}
@@ -70,7 +70,7 @@ namespace daxa {
 				.pBufferInfo = descBufferInfoBuffer.data(),
 			};
 
-			vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+			vkUpdateDescriptorSets(deviceBackend->device.device, 1, &write, 0, nullptr);
 
 			descBufferInfoBuffer.clear();
 		}
@@ -113,7 +113,7 @@ namespace daxa {
 				.pImageInfo = descImageInfoBuffer.data()
 			};
 
-			vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+			vkUpdateDescriptorSets(deviceBackend->device.device, 1, &write, 0, nullptr);
 
 			descImageInfoBuffer.clear();
 		}
@@ -125,12 +125,12 @@ namespace daxa {
 
 		BindingSetDescriptionCache::~BindingSetDescriptionCache() {
 			for (auto& [_, description] : descriptions) {
-				vkDestroyDescriptorSetLayout(device, description->layout, nullptr);
+				vkDestroyDescriptorSetLayout(deviceBackend->device.device, description->layout, nullptr);
 			}
 		}
 		
 		BindingSetDescription const* BindingSetDescriptionCache::getSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings) {
-			DAXA_ASSERT_M(device, "BindingSetDescriptionCache was not initialized");
+			DAXA_ASSERT_M(deviceBackend->device.device, "BindingSetDescriptionCache was not initialized");
 			DAXA_ASSERT_M(bindings.size() < MAX_BINDINGS_PER_SET, MORE_THAN_MAX_BINDINGS_MESSAGE);
 			BindingsArray bindingArray = {};
 			bindingArray.size = bindings.size();
@@ -145,9 +145,9 @@ namespace daxa {
 			return descriptions[bindingArray].get();
 		}
 
-		BindingSetDescriptionCache::BindingSetDescriptionCache(VkDevice device)
-			:device{device}
-		{}
+		BindingSetDescriptionCache::BindingSetDescriptionCache(std::shared_ptr<DeviceBackend> deviceBackend)
+			: deviceBackend{ std::move(deviceBackend) }
+		{ }
 
 		BindingSetDescription BindingSetDescriptionCache::makeNewDescription(BindingsArray& bindingArray) {
 			BindingSetDescription description = {};
@@ -161,7 +161,7 @@ namespace daxa {
 				.bindingCount = (u32)bindingArray.size,
 				.pBindings = bindingArray.bindings.data(),
 			};
-			vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCI, nullptr, &description.layout);
+			vkCreateDescriptorSetLayout(deviceBackend->device.device, &descriptorSetLayoutCI, nullptr, &description.layout);
 
 			size_t nextHandleVectorIndex = 0;
 			for (int i = 0; i < bindingArray.size; i++) {
@@ -173,8 +173,8 @@ namespace daxa {
 			return description;
 		}
 
-		BindingSetAllocator::BindingSetAllocator(VkDevice device, BindingSetAllocatorCreateInfo const& ci)
-			: device{ device }
+		BindingSetAllocator::BindingSetAllocator(std::shared_ptr<DeviceBackend> deviceBackend, BindingSetAllocatorCreateInfo const& ci)
+			: deviceBackend{ std::move(deviceBackend) }
 			, setDescription{ ci.setDescription }
 			, setsPerPool{ ci.setPerPool }
 		{
@@ -187,12 +187,12 @@ namespace daxa {
 		}
 
 		BindingSetAllocator::~BindingSetAllocator() {
-			if (device) {
+			if (deviceBackend->device.device) {
 				for (auto& pool : pools) {
 					auto lock = std::unique_lock(pool->mut);
 					DAXA_ASSERT_M(pool->allocatedSets == pool->zombies.size(), "At the time of the descruction of a BindingSetAllocator, there were still living bindingsets left. It is very likely that this bug is caused by not calling waitIdle on the queue before destroying a BindingSetAllocator!");
-					vkResetDescriptorPool(device, pool->pool, 0);
-					vkDestroyDescriptorPool(device, pool->pool, nullptr);
+					vkResetDescriptorPool(deviceBackend->device.device, pool->pool, 0);
+					vkDestroyDescriptorPool(deviceBackend->device.device, pool->pool, nullptr);
 				}
 			}
 		}
@@ -208,7 +208,7 @@ namespace daxa {
 					.objectHandle = (uint64_t)this->set,
 					.pObjectName = debugName,
 				};
-				instance->pfnSetDebugUtilsObjectNameEXT(this->device, &imageNameInfo);
+				instance->pfnSetDebugUtilsObjectNameEXT(deviceBackend->device.device, &imageNameInfo);
 			}
 		}
 
@@ -262,9 +262,9 @@ namespace daxa {
 			};
 			pool->allocatedSets += 1;
 			VkDescriptorSet set;
-			vkAllocateDescriptorSets(device, &descriptorSetAI, &set);
+			vkAllocateDescriptorSets(deviceBackend->device.device, &descriptorSetAI, &set);
 
-			return BindingSetHandle{ std::make_shared<BindingSet>(device, set, pool, setDescription) };
+			return BindingSetHandle{ std::make_shared<BindingSet>(deviceBackend, set, pool, setDescription) };
 		}
 
 		std::shared_ptr<BindingSetAllocatorBindingiSetPool> BindingSetAllocator::getNewPool() {
@@ -278,7 +278,7 @@ namespace daxa {
 			};
 
 			VkDescriptorPool pool = VK_NULL_HANDLE;
-			vkCreateDescriptorPool(device, &descriptorPoolCI, nullptr, &pool);
+			vkCreateDescriptorPool(deviceBackend->device.device, &descriptorPoolCI, nullptr, &pool);
 			auto ret = std::make_shared<BindingSetAllocatorBindingiSetPool>();
 			ret->pool = pool;
 			ret->allocatedSets = 0;
@@ -297,7 +297,7 @@ namespace daxa {
 					.objectHandle = (uint64_t)pool,
 					.pObjectName = poolNameBuffer.c_str(),
 				};
-				instance->pfnSetDebugUtilsObjectNameEXT(this->device, &imageNameInfo);
+				instance->pfnSetDebugUtilsObjectNameEXT(deviceBackend->device.device, &imageNameInfo);
 			}
 
 			return std::move(ret);

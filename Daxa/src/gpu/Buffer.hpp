@@ -10,7 +10,7 @@
 #include <vk_mem_alloc.h>
 
 #include "Handle.hpp"
-#include "Graveyard.hpp"
+#include "DeviceBackend.hpp"
 #include "DeviceBackend.hpp"
 
 namespace daxa {
@@ -25,7 +25,7 @@ namespace daxa {
 
 		class Buffer : public GraveyardRessource {
 		public:
-			Buffer(VkDevice device, Graveyard* graveyard, VmaAllocator allocator, std::span<u32> queueFamilies, BufferCreateInfo& ci);
+			Buffer(std::shared_ptr<DeviceBackend> deviceBackend, BufferCreateInfo& ci);
 			Buffer()								= default;
 			Buffer(Buffer const&) 					= delete;
 			Buffer& operator=(Buffer const&) 		= delete;
@@ -65,16 +65,15 @@ namespace daxa {
 			void* mapMemory();
 			void unmapMemory();
 
-			VkBuffer 			buffer 			= VK_NULL_HANDLE;
-			size_t 				size 			= {};
-			VkBufferUsageFlags 	usage 			= {};
-			VmaMemoryUsage 		memoryUsage 	= {};
-			VmaAllocation 		allocation 		= {};
-			VmaAllocator 		allocator 		= {};
-			u32 				usesOnGPU 		= {};
-			u32 				memoryMapCount 	= {};
-			std::string 		debugName 		= {};
-			Graveyard* 			graveyard		= {};
+			std::shared_ptr<DeviceBackend> 	deviceBackend 	= {};
+			VkBuffer 						buffer 			= {};
+			size_t 							size 			= {};
+			VkBufferUsageFlags 				usage 			= {};
+			VmaMemoryUsage 					memoryUsage 	= {};
+			VmaAllocation 					allocation 		= {};
+			u32 							usesOnGPU 		= {};
+			u32 							memoryMapCount 	= {};
+			std::string 					debugName 		= {};
 		};
 
 		template<typename ValueT = u8>
@@ -115,8 +114,8 @@ namespace daxa {
         struct BufferStaticFunctionOverride {
             static void cleanup(std::shared_ptr<Buffer>& value) {
 				if (value && value.use_count() == 1) {
-					std::unique_lock lock(value->graveyard->mtx);
-					for (auto& zombieList : value->graveyard->activeZombieLists) {
+					std::unique_lock lock(value->deviceBackend->graveyard.mtx);
+					for (auto& zombieList : value->deviceBackend->graveyard.activeZombieLists) {
 						zombieList->zombies.push_back(value);
 					}
 				}
