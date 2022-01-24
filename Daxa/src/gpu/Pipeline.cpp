@@ -24,8 +24,8 @@ namespace daxa {
 
 		std::vector<VkDescriptorSetLayout> processReflectedDescriptorData(
 			std::vector<std::unordered_map<u32, VkDescriptorSetLayoutBinding>>& descriptorSets,
-			BindingSetDescriptionCache& descCache,
-			std::array<std::shared_ptr<BindingSetInfo const>, MAX_SETS_PER_PIPELINE>& bindingSetDescriptions
+			BindingSetLayoutCache& descCache,
+			std::array<std::shared_ptr<BindingSetLayout const>, MAX_SETS_PER_PIPELINE>& bindingSetDescriptions
 		) {
 			std::vector<VkDescriptorSetLayout> descLayouts;
 			BindingSetDescription description;
@@ -333,7 +333,7 @@ namespace daxa {
 			.pVertexAttributeDescriptions = nullptr,
 		};
 
-		daxa::Result<PipelineHandle> GraphicsPipelineBuilder::build(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetDescriptionCache& bindingSetCache) {
+		daxa::Result<PipelineHandle> GraphicsPipelineBuilder::build(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetLayoutCache& bindingSetCache) {
 			if (bVertexAtrributeBindingBuildingOpen) {
 				endVertexInputAttributeBinding();
 			}
@@ -359,7 +359,7 @@ namespace daxa {
 			ret.depthAttachment = depthTestSettings.depthAttachmentFormat;
 			ret.stencilAttachment = VK_FORMAT_UNDEFINED;
 
-			std::vector<VkDescriptorSetLayout> descLayouts = processReflectedDescriptorData(this->descriptorSets, bindingSetCache, ret.bindingSetDescriptions);
+			std::vector<VkDescriptorSetLayout> descLayouts = processReflectedDescriptorData(this->descriptorSets, bindingSetCache, ret.bindingSetLayouts);
 
 			// create pipeline layout:
 			VkPipelineLayoutCreateInfo pipelineLayoutCI{
@@ -481,7 +481,7 @@ namespace daxa {
 			return pipelineHandle;
 		}
 
-		daxa::Result<PipelineHandle> createComputePipeline(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetDescriptionCache& bindingSetCache, ComputePipelineCreateInfo const& ci) {
+		daxa::Result<PipelineHandle> createComputePipeline(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetLayoutCache& bindingSetCache, ComputePipelineCreateInfo const& ci) {
 			auto pipelineHandle = PipelineHandle{ std::make_shared<Pipeline>() };
 			Pipeline& ret = *pipelineHandle;
 			ret.deviceBackend = deviceBackend;
@@ -500,7 +500,7 @@ namespace daxa {
 
 			reflectShader(ci.shaderModule, pushConstants, descriptorSets);
 
-			std::vector<VkDescriptorSetLayout> descLayouts = processReflectedDescriptorData(descriptorSets, bindingSetCache, ret.bindingSetDescriptions);
+			std::vector<VkDescriptorSetLayout> descLayouts = processReflectedDescriptorData(descriptorSets, bindingSetCache, ret.bindingSetLayouts);
 
 			// create pipeline layout:
 			VkPipelineLayoutCreateInfo pipelineLayoutCI{

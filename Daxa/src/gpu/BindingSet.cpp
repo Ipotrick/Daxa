@@ -3,11 +3,11 @@
 
 namespace daxa {
 	namespace gpu {
-		BindingSet::BindingSet(std::shared_ptr<DeviceBackend> deviceBackend, VkDescriptorSet set, std::weak_ptr<BindingSetAllocatorBindingiSetPool> pool, std::shared_ptr<BindingSetInfo const> info)
+		BindingSet::BindingSet(std::shared_ptr<DeviceBackend> deviceBackend, VkDescriptorSet set, std::weak_ptr<BindingSetAllocatorBindingiSetPool> pool, std::shared_ptr<BindingSetLayout const> layout)
 			: deviceBackend{ std::move(deviceBackend) }
 			, set { set }
 			, pool{ pool }
-			, info{ std::move(info) }
+			, layout{ std::move(layout) }
 		{ }
 
 		thread_local std::vector<VkDescriptorImageInfo> descImageInfoBuffer = {};
@@ -65,7 +65,7 @@ namespace daxa {
 				.dstBinding = binding,
 				.dstArrayElement = descriptorArrayOffset,
 				.descriptorCount = (u32)descBufferInfoBuffer.size(),
-				.descriptorType = this->info->getDescription().bindings[binding].descriptorType,
+				.descriptorType = this->layout->getDescription().bindings[binding].descriptorType,
 				.pBufferInfo = descBufferInfoBuffer.data(),
 			};
 
@@ -80,7 +80,7 @@ namespace daxa {
 
 		void BindingSet::bindImages(u32 binding, std::span<std::pair<ImageHandle, VkImageLayout>> images, u32 descriptorArrayOffset) {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not update binding set while it is used on gpu");
-			VkDescriptorType imageDescriptorType = info->getDescription().bindings[binding].descriptorType;
+			VkDescriptorType imageDescriptorType = layout->getDescription().bindings[binding].descriptorType;
 			bool bIsImage = imageDescriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER || 
 				imageDescriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || 
 				imageDescriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -122,7 +122,7 @@ namespace daxa {
 			bindImages(binding, { &imgAndLayout, 1 }, dstArrayElement);
 		}
 		
-		BindingSetInfo::BindingSetInfo(std::shared_ptr<DeviceBackend> deviceBackend, BindingSetDescription const& description) 
+		BindingSetLayout::BindingSetLayout(std::shared_ptr<DeviceBackend> deviceBackend, BindingSetDescription const& description) 
 			: deviceBackend{ std::move(deviceBackend) }
 			, description{ description }
 		{
@@ -139,22 +139,22 @@ namespace daxa {
 				this->descriptorCount += binding.descriptorCount;
 			}
 		}
-		void BindingSetInfo::cleanup() {
+		void BindingSetLayout::cleanup() {
 			if (deviceBackend) {
 				vkDestroyDescriptorSetLayout(deviceBackend->device.device, layout, nullptr);
 				deviceBackend = {};
 			}
 		}
-		BindingSetInfo::~BindingSetInfo() {
+		BindingSetLayout::~BindingSetLayout() {
 			cleanup();
 		}
-		BindingSetInfo::BindingSetInfo(BindingSetInfo&& other) noexcept {
+		BindingSetLayout::BindingSetLayout(BindingSetLayout&& other) noexcept {
 			this->deviceBackend = std::move(other.deviceBackend);
 			this->description = std::move(other.description);
 			this->layout = std::move(other.layout);
 			this->descriptorCount = std::move(other.descriptorCount);
 		}
-		BindingSetInfo& BindingSetInfo::operator=(BindingSetInfo&& other) noexcept {
+		BindingSetLayout& BindingSetLayout::operator=(BindingSetLayout&& other) noexcept {
 			cleanup();
 			this->deviceBackend = std::move(other.deviceBackend);
 			this->description = std::move(other.description);
@@ -163,33 +163,33 @@ namespace daxa {
 			return *this;
 		}
 		
-		BindingSetDescriptionCache::BindingSetDescriptionCache(std::shared_ptr<DeviceBackend> deviceBackend) 
+		BindingSetLayoutCache::BindingSetLayoutCache(std::shared_ptr<DeviceBackend> deviceBackend) 
 			: deviceBackend{ std::move(deviceBackend) }
 		{ }
 		
-		std::shared_ptr<BindingSetInfo const> BindingSetDescriptionCache::getInfoShared(BindingSetDescription const& description) {
+		std::shared_ptr<BindingSetLayout const> BindingSetLayoutCache::getInfoShared(BindingSetDescription const& description) {
 			for (int i = 0; i < description.bindingsCount-1; i++) {	
 				DAXA_ASSERT_M(description.bindings[i].binding < description.bindings[i+1].binding, "bindings in a description must be listed in ascending order");
 			}
 			if (!map.contains(description)) {
-				map[description] = std::make_shared<BindingSetInfo>(deviceBackend, description);
+				map[description] = std::make_shared<BindingSetLayout>(deviceBackend, description);
 			}
 			return map[description];
 		}
 		
-		BindingSetInfo const& BindingSetDescriptionCache::getInfo(BindingSetDescription const& description) {
+		BindingSetLayout const& BindingSetLayoutCache::getLayout(BindingSetDescription const& description) {
 			for (int i = 0; i < description.bindingsCount-1; i++) {	
 				DAXA_ASSERT_M(description.bindings[i].binding < description.bindings[i+1].binding, "bindings in a description must be listed in ascending order");
 			}
 			if (!map.contains(description)) {
-				map[description] = std::make_shared<BindingSetInfo>(deviceBackend, description);
+				map[description] = std::make_shared<BindingSetLayout>(deviceBackend, description);
 			}
 			return *map[description];
 		}
 
 		BindingSetAllocator::BindingSetAllocator(std::shared_ptr<DeviceBackend> deviceBackend, BindingSetAllocatorCreateInfo const& ci)
 			: deviceBackend{ std::move(deviceBackend) }
-			, setInfo{ std::move(ci.setInfo) }
+			, setLayout{ std::move(ci.setLayout) }
 			, setsPerPool{ ci.setPerPool }
 		{
 			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
@@ -257,7 +257,7 @@ namespace daxa {
 		}
 
 		void BindingSetAllocator::initPoolSizes() {
-			for (auto const& binding : setInfo->getDescription().getBIndingsSpan()) {
+			for (auto const& binding : setLayout->getDescription().getBIndingsSpan()) {
 				poolSizes.push_back(VkDescriptorPoolSize{
 					.type = binding.descriptorType,
 					.descriptorCount = (u32)(setsPerPool * binding.descriptorCount),
@@ -271,13 +271,13 @@ namespace daxa {
 				.pNext = nullptr,
 				.descriptorPool = pool->pool,
 				.descriptorSetCount = 1,
-				.pSetLayouts = &setInfo->getVkDescriptorSetLayout(),
+				.pSetLayouts = &setLayout->getVkDescriptorSetLayout(),
 			};
 			pool->allocatedSets += 1;
 			VkDescriptorSet set;
 			vkAllocateDescriptorSets(deviceBackend->device.device, &descriptorSetAI, &set);
 
-			return BindingSetHandle{ std::make_shared<BindingSet>(deviceBackend, set, pool, setInfo) };
+			return BindingSetHandle{ std::make_shared<BindingSet>(deviceBackend, set, pool, setLayout) };
 		}
 
 		std::shared_ptr<BindingSetAllocatorBindingiSetPool> BindingSetAllocator::getNewPool() {
