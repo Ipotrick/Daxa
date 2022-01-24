@@ -22,8 +22,9 @@ namespace daxa {
 		constexpr inline size_t MAX_SETS_PER_PIPELINE = 4;
 
 		struct ComputePipelineCreateInfo {
-			ShaderModuleHandle 	shaderModule 	= {};
-			char const* 		debugName 		= {};
+			ShaderModuleHandle 														shaderModule 	= {};
+			std::array<std::optional<BindingSetDescription>, MAX_SETS_PER_PIPELINE> overwriteSets 	= {};
+			char const* 															debugName 		= {};
 		};
 
 		class PipelineHandle;
@@ -107,6 +108,7 @@ namespace daxa {
 			GraphicsPipelineBuilder& addShaderStage(ShaderModuleHandle const& shaderModule);
 			GraphicsPipelineBuilder& addColorAttachment(VkFormat const& attachmentFormat);
 			GraphicsPipelineBuilder& addColorAttachment(VkFormat const& attachmentFormat, const VkPipelineColorBlendAttachmentState&);
+			GraphicsPipelineBuilder& overwriteSet(u32 set, BindingSetDescription const& descr);
 		private:
 			friend class Device;
 			daxa::Result<PipelineHandle> build(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetLayoutCache& bindingSetCache);
@@ -130,6 +132,7 @@ namespace daxa {
 			std::vector<ShaderModuleHandle> shaderModules;
 			std::vector<VkPipelineColorBlendAttachmentState> colorAttachmentBlends;
 			std::vector<VkFormat> colorAttachmentFormats;
+			std::vector<std::pair<u32, BindingSetDescription>> setDescriptionOverwrites;
 
 			// temporaries:
 			std::vector<VkPushConstantRange> pushConstants;
