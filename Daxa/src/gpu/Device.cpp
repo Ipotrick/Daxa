@@ -17,7 +17,7 @@ namespace daxa {
 
 		Device::Device(vkb::Instance& instance) 
 			: backend{ std::make_shared<DeviceBackend>(instance) }
-			, bindingSetDescriptionCache{ std::make_unique<BindingSetDescriptionCache>(backend) }
+			, bindingSetDescriptionCache{ std::make_unique<BindingSetLayoutCache>(backend) }
 			, stagingBufferPool{ std::make_shared<StagingBufferPool>(backend) }
 		{ }
 
@@ -53,10 +53,10 @@ namespace daxa {
 			return std::move(handle);
 		}
 
-		BindingSetInfo const& Device::getBindingSetInfo(BindingSetDescription const& description) {
-			return bindingSetDescriptionCache->getInfo(description);
+		BindingSetLayout const& Device::getBindingSetLayout(BindingSetDescription const& description) {
+			return bindingSetDescriptionCache->getLayout(description);
 		}
-		std::shared_ptr<BindingSetInfo const> Device::getBindingSetInfoShared(BindingSetDescription const& description) {
+		std::shared_ptr<BindingSetLayout const> Device::getBindingSetLayoutShared(BindingSetDescription const& description) {
 			return std::move(bindingSetDescriptionCache->getInfoShared(description));
 		}
 
