@@ -79,6 +79,9 @@ namespace daxa {
             static void cleanup(std::shared_ptr<Image>& value) {
 				if (value && value.use_count() == 1) {
 					std::unique_lock lock(value->deviceBackend->graveyard.mtx);
+					if (value->deviceBackend->graveyard.activeZombieLists.size() == 0) {
+						printf("NO ZOMBIE LIST ACTIVE\n\n");
+					}
 					for (auto& zombieList : value->deviceBackend->graveyard.activeZombieLists) {
 						zombieList->zombies.push_back(value);
 					}

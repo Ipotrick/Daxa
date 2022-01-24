@@ -63,7 +63,9 @@ namespace daxa {
 
 			SwapchainHandle createSwapchain(SwapchainCreateInfo swapchainCI);
 
-			BindingSetDescription const* createBindingSetDescription(std::span<VkDescriptorSetLayoutBinding> bindings);
+			BindingSetInfo const& getBindingSetInfo(BindingSetDescription const& description);
+			
+			std::shared_ptr<BindingSetInfo const> getBindingSetInfoShared(BindingSetDescription const& description);
 
 			Result<ShaderModuleHandle> createShaderModule(ShaderModuleCreateInfo const& ci);
 
