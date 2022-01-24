@@ -95,10 +95,10 @@ namespace daxa {
 		}
 
 		Pipeline::~Pipeline() {
-			if (device) {
-				vkDestroyPipelineLayout(device, layout, nullptr);
-				vkDestroyPipeline(device, pipeline, nullptr);
-				device = VK_NULL_HANDLE;
+			if (deviceBackend) {
+				vkDestroyPipelineLayout(deviceBackend->device.device, layout, nullptr);
+				vkDestroyPipeline(deviceBackend->device.device, pipeline, nullptr);
+				deviceBackend = {};
 			}
 		}
 
@@ -334,7 +334,7 @@ namespace daxa {
 			.pVertexAttributeDescriptions = nullptr,
 		};
 
-		daxa::Result<PipelineHandle> GraphicsPipelineBuilder::build(VkDevice device, BindingSetDescriptionCache& bindingSetCache) {
+		daxa::Result<PipelineHandle> GraphicsPipelineBuilder::build(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetDescriptionCache& bindingSetCache) {
 			if (bVertexAtrributeBindingBuildingOpen) {
 				endVertexInputAttributeBinding();
 			}
@@ -354,7 +354,7 @@ namespace daxa {
 
 			auto pipelineHandle = PipelineHandle{ std::make_shared<Pipeline>() };
 			Pipeline& ret = *pipelineHandle;
-			ret.device = device;
+			ret.deviceBackend = deviceBackend;
 			ret.bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 			ret.colorAttachmentFormats = colorAttachmentFormats;
 			ret.depthAttachment = depthTestSettings.depthAttachmentFormat;
@@ -371,7 +371,7 @@ namespace daxa {
 				.pushConstantRangeCount = static_cast<u32>(pushConstants.size()),
 				.pPushConstantRanges = pushConstants.data(),
 			};
-			vkCreatePipelineLayout(device, &pipelineLayoutCI, nullptr, &ret.layout);
+			vkCreatePipelineLayout(deviceBackend->device.device, &pipelineLayoutCI, nullptr, &ret.layout);
 
 			// create pipeline:
 			VkPipelineVertexInputStateCreateInfo pVertexInput = VkPipelineVertexInputStateCreateInfo{
@@ -470,10 +470,10 @@ namespace daxa {
 				.subpass = 0,
 			};
 
-			auto err = vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline);
+			auto err = vkCreateGraphicsPipelines(deviceBackend->device.device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline);
 			DAXA_ASSERT_M(err == VK_SUCCESS, "could not create graphics pipeline");
 
-			setPipelineDebugName(device, debugName, ret);
+			setPipelineDebugName(deviceBackend->device.device, debugName, ret);
 
 			this->pushConstants.clear();
 			this->descriptorSets.clear();
@@ -482,10 +482,10 @@ namespace daxa {
 			return pipelineHandle;
 		}
 
-		daxa::Result<PipelineHandle> createComputePipeline(VkDevice device, BindingSetDescriptionCache& bindingSetCache, ComputePipelineCreateInfo const& ci) {
+		daxa::Result<PipelineHandle> createComputePipeline(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetDescriptionCache& bindingSetCache, ComputePipelineCreateInfo const& ci) {
 			auto pipelineHandle = PipelineHandle{ std::make_shared<Pipeline>() };
 			Pipeline& ret = *pipelineHandle;
-			ret.device = device;
+			ret.deviceBackend = deviceBackend;
 			ret.bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
 
 			VkPipelineShaderStageCreateInfo pipelineShaderStageCI{
@@ -512,7 +512,7 @@ namespace daxa {
 				.pushConstantRangeCount = static_cast<u32>(pushConstants.size()),
 				.pPushConstantRanges = pushConstants.data(),
 			};
-			vkCreatePipelineLayout(device, &pipelineLayoutCI, nullptr, &ret.layout);
+			vkCreatePipelineLayout(deviceBackend->device.device, &pipelineLayoutCI, nullptr, &ret.layout);
 
 			VkComputePipelineCreateInfo pipelineCI{
 				.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
@@ -523,9 +523,9 @@ namespace daxa {
 				.basePipelineHandle  = VK_NULL_HANDLE,
 				.basePipelineIndex = 0,
 			};
-			vkCreateComputePipelines(device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline);
+			vkCreateComputePipelines(deviceBackend->device.device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline);
 
-			setPipelineDebugName(device, ci.debugName, ret);
+			setPipelineDebugName(deviceBackend->device.device, ci.debugName, ret);
 
 			return pipelineHandle;
 		}

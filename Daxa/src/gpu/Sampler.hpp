@@ -7,7 +7,7 @@
 #include <vulkan/vulkan.h>
 
 #include "Handle.hpp"
-#include "Graveyard.hpp"
+#include "DeviceBackend.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -37,7 +37,7 @@ namespace daxa {
 
 		class Sampler : public GraveyardRessource {
 		public:
-			Sampler(VkDevice device, Graveyard* graveyard, SamplerCreateInfo const& createInfo);
+			Sampler(std::shared_ptr<DeviceBackend> deviceBackend, SamplerCreateInfo const& createInfo);
 			Sampler(Sampler&&) noexcept										= delete;
 			Sampler& operator=(Sampler&&) noexcept							= delete;
 			Sampler(Sampler const&) 										= delete;
@@ -65,33 +65,32 @@ namespace daxa {
 		private:
 			friend struct SamplerStaticFunctionOverride;
 
-			VkDevice				device = VK_NULL_HANDLE;
-			VkSampler				sampler = VK_NULL_HANDLE;
-			VkSamplerCreateFlags    flags;
-			VkFilter                magFilter;
-			VkFilter                minFilter;
-			VkSamplerMipmapMode     mipmapMode;
-			VkSamplerAddressMode    addressModeU;
-			VkSamplerAddressMode    addressModeV;
-			VkSamplerAddressMode    addressModeW;
-			float                   mipLodBias;
-			VkBool32                anisotropyEnable;
-			float                   maxAnisotropy;
-			VkBool32                compareEnable;
-			VkCompareOp             compareOp;
-			float                   minLod;
-			float                   maxLod;
-			VkBorderColor           borderColor;
-			VkBool32                unnormalizedCoordinates;
-			std::string				debugName = {};
-			Graveyard*				graveyard = {};
+			std::shared_ptr<DeviceBackend> 	deviceBackend 			= {};
+			VkSampler						sampler 				= {};
+			VkSamplerCreateFlags    		flags					= {};
+			VkFilter                		magFilter				= {};
+			VkFilter                		minFilter				= {};
+			VkSamplerMipmapMode     		mipmapMode				= {};
+			VkSamplerAddressMode    		addressModeU			= {};
+			VkSamplerAddressMode    		addressModeV			= {};
+			VkSamplerAddressMode    		addressModeW			= {};
+			float                   		mipLodBias				= {};
+			VkBool32                		anisotropyEnable		= {};
+			float                   		maxAnisotropy			= {};
+			VkBool32                		compareEnable			= {};
+			VkCompareOp             		compareOp				= {};
+			float                   		minLod					= {};
+			float                   		maxLod					= {};
+			VkBorderColor           		borderColor				= {};
+			VkBool32                		unnormalizedCoordinates	= {};
+			std::string						debugName 				= {};
 		};
 
         struct SamplerStaticFunctionOverride {
             static void cleanup(std::shared_ptr<Sampler>& value) {
 				if (value && value.use_count() == 1) {
-					std::unique_lock lock(value->graveyard->mtx);
-					for (auto& zombieList : value->graveyard->activeZombieLists) {
+					std::unique_lock lock(value->deviceBackend->graveyard.mtx);
+					for (auto& zombieList : value->deviceBackend->graveyard.activeZombieLists) {
 						zombieList->zombies.push_back(value);
 					}
 				}

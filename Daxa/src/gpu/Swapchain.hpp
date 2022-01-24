@@ -14,7 +14,7 @@
 #include "Image.hpp"
 #include "SwapchainImage.hpp"
 #include "Signal.hpp"
-#include "Graveyard.hpp"
+#include "DeviceBackend.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -53,21 +53,18 @@ namespace daxa {
 		private:
 			friend class Device;
 
-			void construct(VkDevice device, Graveyard* graveyard, VkPhysicalDevice physicalDevice, VkInstance instance, SwapchainCreateInfo ci);
+			void construct(std::shared_ptr<DeviceBackend> deviceBackend, SwapchainCreateInfo ci);
 
-			VkDevice device 							= VK_NULL_HANDLE;
-			VkPhysicalDevice physicalDevice 			= VK_NULL_HANDLE;
-			VkInstance instance 						= VK_NULL_HANDLE;
-			VkFence aquireFence 						= VK_NULL_HANDLE;
-			VkPresentModeKHR presentMode 				= VK_PRESENT_MODE_FIFO_KHR;
-			VkSurfaceKHR surface 						= VK_NULL_HANDLE;
-			VkSwapchainKHR swapchain 					= VK_NULL_HANDLE; 
-			VkFormat swapchainImageFormat 				= {};
-			std::vector<ImageHandle> swapchainImages	= {}; // TODO REPLACE WITH STACK ALLOCATED VECTOR TYPE
-			VkExtent2D size 							= {}; 
-			VkImageUsageFlags additionalimageUses		= {};
-			std::string debugName 						= {};
-			Graveyard* graveyard						= {};
+			std::shared_ptr<DeviceBackend> deviceBackend 	= {};
+			VkFence aquireFence 							= VK_NULL_HANDLE;
+			VkPresentModeKHR presentMode 					= VK_PRESENT_MODE_FIFO_KHR;
+			VkSurfaceKHR surface 							= VK_NULL_HANDLE;
+			VkSwapchainKHR swapchain 						= VK_NULL_HANDLE; 
+			VkFormat swapchainImageFormat 					= {};
+			std::vector<ImageHandle> swapchainImages		= {};
+			VkExtent2D size 								= {}; 
+			VkImageUsageFlags additionalimageUses			= {};
+			std::string debugName 							= {};
 		};
 
 		class SwapchainHandle : public SharedHandle<Swapchain>{};

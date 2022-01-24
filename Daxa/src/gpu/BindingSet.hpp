@@ -13,6 +13,7 @@
 
 #include "vulkan/vulkan.h"
 
+#include "DeviceBackend.hpp"
 #include "Handle.hpp"
 #include "Image.hpp"
 #include "Buffer.hpp"
@@ -80,7 +81,7 @@ namespace daxa {
 
 		class BindingSet {
 		public:
-			BindingSet(VkDevice device, VkDescriptorSet set, std::weak_ptr<BindingSetAllocatorBindingiSetPool> pool, BindingSetDescription const* description);
+			BindingSet(std::shared_ptr<DeviceBackend> deviceBackend, VkDescriptorSet set, std::weak_ptr<BindingSetAllocatorBindingiSetPool> pool, BindingSetDescription const* description);
 			BindingSet(BindingSet const&)					= delete;
 			BindingSet& operator=(BindingSet const&)		= delete;
 			BindingSet(BindingSet&&) noexcept				= delete;
@@ -108,17 +109,17 @@ namespace daxa {
 
 			void setDebugName(char const* debugName);
 
-			VkDevice											device 		= VK_NULL_HANDLE;
-			VkDescriptorSet 									set 		= VK_NULL_HANDLE;
-			BindingSetDescription const* 						description = {};
-			std::weak_ptr<BindingSetAllocatorBindingiSetPool> 	pool 		= {};
-			u32 												usesOnGPU 	= 0;
-			std::string 										debugName	= {};
+			std::shared_ptr<DeviceBackend> 						deviceBackend 	= {};
+			VkDescriptorSet 									set 			= VK_NULL_HANDLE;
+			BindingSetDescription const* 						description 	= {};
+			std::weak_ptr<BindingSetAllocatorBindingiSetPool> 	pool 			= {};
+			u32 												usesOnGPU 		= 0;
+			std::string 										debugName		= {};
 		};
 
 		class BindingSetDescriptionCache {
 		public:
-			BindingSetDescriptionCache(VkDevice device);
+			BindingSetDescriptionCache(std::shared_ptr<DeviceBackend> deviceBackend);
 			BindingSetDescriptionCache(BindingSetDescriptionCache const&) 					= delete;
 			BindingSetDescriptionCache& operator=(BindingSetDescriptionCache const&) 		= delete;
 			BindingSetDescriptionCache(BindingSetDescriptionCache&&) noexcept 				= delete;
@@ -129,7 +130,7 @@ namespace daxa {
 		private:
 			BindingSetDescription makeNewDescription(BindingsArray& bindingArray);
 
-			VkDevice 																						device 			= VK_NULL_HANDLE;
+			std::shared_ptr<DeviceBackend> deviceBackend = {};
 			std::unordered_map<BindingsArray, std::unique_ptr<BindingSetDescription>, BindingsArrayHasher> 	descriptions 	= {};
 		};
 
@@ -156,7 +157,7 @@ namespace daxa {
 		*/
 		class BindingSetAllocator {
 		public:
-			BindingSetAllocator(VkDevice device, BindingSetAllocatorCreateInfo const& ci);
+			BindingSetAllocator(std::shared_ptr<DeviceBackend> deviceBackend, BindingSetAllocatorCreateInfo const& ci);
 			BindingSetAllocator() 											= default;
 			BindingSetAllocator(BindingSetAllocator&&) noexcept 			= delete;
 			BindingSetAllocator& operator=(BindingSetAllocator&&) noexcept 	= delete;
@@ -175,10 +176,9 @@ namespace daxa {
 
 			std::shared_ptr<BindingSetAllocatorBindingiSetPool> getNewPool();
 
+			std::shared_ptr<DeviceBackend> deviceBackend = {};
 			size_t setsPerPool = 0;
-
 			std::vector<VkDescriptorPoolSize> poolSizes = {};
-			VkDevice device 							= VK_NULL_HANDLE;
 			BindingSetDescription const* setDescription = nullptr;
 
 			std::vector<std::shared_ptr<BindingSetAllocatorBindingiSetPool>> 	pools 			= {};
@@ -186,26 +186,6 @@ namespace daxa {
 			std::string 														poolNameBuffer	= {};
 		};
 
-		class BindingSetAllocatorHandle {
-		public:
-			BindingSetAllocatorHandle(std::shared_ptr<BindingSetAllocator> alloc) 
-				: allocator{ alloc }
-			{}
-			BindingSetAllocatorHandle() = default;
-
-			BindingSetAllocator const& operator*() const { return *allocator; }
-			BindingSetAllocator& operator*() { return *allocator; }
-			BindingSetAllocator const* operator->() const { return allocator.get(); }
-			BindingSetAllocator* operator->() { return allocator.get(); }
-
-			size_t getRefCount() const { return allocator.use_count(); }
-
-			operator bool() const { return allocator.operator bool(); }
-			bool operator!() const { return !allocator; }
-			bool valid() const { return *this; }
-		private:
-
-			std::shared_ptr<BindingSetAllocator> allocator = {};
-		};
+		class BindingSetAllocatorHandle : public SharedHandle<BindingSetAllocator>{};
 	}
 }

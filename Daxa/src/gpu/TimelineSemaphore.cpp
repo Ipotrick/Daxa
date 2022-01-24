@@ -4,8 +4,8 @@
 namespace daxa {
 	namespace gpu {
 
-		TimelineSemaphore::TimelineSemaphore(VkDevice device, TimelineSemaphoreCreateInfo const& ci) 
-			: device{ device }
+		TimelineSemaphore::TimelineSemaphore(std::shared_ptr<DeviceBackend> deviceBackend, TimelineSemaphoreCreateInfo const& ci) 
+			: deviceBackend{ std::move(deviceBackend) }
 		{
 
 			VkSemaphoreTypeCreateInfo semaphoreTypeCI{
@@ -21,7 +21,7 @@ namespace daxa {
 				.flags = 0,
 			};
 
-			vkCreateSemaphore(this->device, &timelineSemaphoreCI, nullptr, &this->timelineSema);
+			vkCreateSemaphore(this->deviceBackend->device.device, &timelineSemaphoreCI, nullptr, &this->timelineSema);
 
 			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
 				this->debugName = ci.debugName;
@@ -33,20 +33,20 @@ namespace daxa {
 					.objectHandle = (uint64_t)timelineSema,
 					.pObjectName = ci.debugName,
 				};
-				instance->pfnSetDebugUtilsObjectNameEXT(device, &imageNameInfo);
+				instance->pfnSetDebugUtilsObjectNameEXT(this->deviceBackend->device.device, &imageNameInfo);
 			}
 		}
 
 		TimelineSemaphore::~TimelineSemaphore() {
-			if (device && timelineSema) {
-				vkDestroySemaphore(device, timelineSema, nullptr);
-				device = VK_NULL_HANDLE;
+			if (this->deviceBackend->device.device && timelineSema) {
+				vkDestroySemaphore(this->deviceBackend->device.device, timelineSema, nullptr);
+				this->deviceBackend = {};
 			}
 		}
 
 		u64 TimelineSemaphore::getCounter() const {
 			u64 counter = 0;
-			vkGetSemaphoreCounterValue(device, timelineSema, &counter);
+			vkGetSemaphoreCounterValue(this->deviceBackend->device.device, timelineSema, &counter);
 			return counter;
 		}
 
@@ -58,7 +58,7 @@ namespace daxa {
 				.value = newCounterValue,
 			};
 
-			vkSignalSemaphore(device, &semaphoreSI);
+			vkSignalSemaphore(this->deviceBackend->device.device, &semaphoreSI);
 		}
 
 		VkResult TimelineSemaphore::wait(u64 counter, u64 timeout) {
@@ -71,7 +71,7 @@ namespace daxa {
 				.pValues = &counter,
 			};
 
-			return vkWaitSemaphores(device, &semaphoreWI, timeout);
+			return vkWaitSemaphores(this->deviceBackend->device.device, &semaphoreWI, timeout);
 		}
 	}
 }

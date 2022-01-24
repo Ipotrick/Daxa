@@ -6,22 +6,19 @@ namespace daxa {
 	namespace gpu {
 
 		Image::~Image() {
-			if (device && view) {
-				vkDestroyImageView(device, view, nullptr);
-				device = VK_NULL_HANDLE;
+			if (deviceBackend->device.device && view) {
+				vkDestroyImageView(deviceBackend->device.device, view, nullptr);
 				view = VK_NULL_HANDLE;
 			}
-			if (allocator && image && allocation) {
-				vmaDestroyImage(allocator, image, allocation);
-				allocator = VK_NULL_HANDLE;
+			if (deviceBackend->allocator && image && allocation) {
+				vmaDestroyImage(deviceBackend->allocator, image, allocation);
 				image = VK_NULL_HANDLE;
 				allocation = VK_NULL_HANDLE;
 			}
+			deviceBackend = {};
 		}
 
-		void Image::construct2dImage(VkDevice device, Graveyard* graveyard, VmaAllocator allocator, u32 queueFamilyIndex, Image2dCreateInfo const& ci, Image& ret) {
-			DAXA_ASSERT_M(graveyard, "invalid graveyard pointer");
-
+		void Image::construct2dImage(std::shared_ptr<DeviceBackend> deviceBackend, Image2dCreateInfo const& ci, Image& ret) {
 			VkImageCreateInfo ici{
 				.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 				.pNext = nullptr,
@@ -45,7 +42,7 @@ namespace daxa {
 			};
 			
 
-			auto err = vmaCreateImage(allocator, (VkImageCreateInfo*)&ici, &aci, (VkImage*)&ret.image, &ret.allocation, nullptr);
+			auto err = vmaCreateImage(deviceBackend->allocator, (VkImageCreateInfo*)&ici, &aci, (VkImage*)&ret.image, &ret.allocation, nullptr);
 			DAXA_ASSERT_M(err == VK_SUCCESS, "could not create image");
 
 			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
@@ -58,7 +55,7 @@ namespace daxa {
 					.objectHandle = (uint64_t)ret.image,
 					.pObjectName = ci.debugName,
 				};
-				instance->pfnSetDebugUtilsObjectNameEXT(device, &imageNameInfo);
+				instance->pfnSetDebugUtilsObjectNameEXT(deviceBackend->device.device, &imageNameInfo);
 			}
 
 			VkImageViewCreateInfo ivci{
@@ -76,7 +73,7 @@ namespace daxa {
 				}
 			};
 
-			vkCreateImageView(device, &ivci, nullptr, &ret.view);
+			vkCreateImageView(deviceBackend->device.device, &ivci, nullptr, &ret.view);
 
 			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
 				VkDebugUtilsObjectNameInfoEXT imageNameInfo {
@@ -86,20 +83,18 @@ namespace daxa {
 					.objectHandle = (uint64_t)ret.view,
 					.pObjectName = ci.debugName,
 				};
-				instance->pfnSetDebugUtilsObjectNameEXT(device, &imageNameInfo);
+				instance->pfnSetDebugUtilsObjectNameEXT(deviceBackend->device.device, &imageNameInfo);
 			}
 
-			ret.allocator = allocator;
+			ret.deviceBackend = std::move(deviceBackend);
 			ret.tiling = (VkImageTiling)ici.tiling;
 			ret.usageFlags = (VkImageUsageFlags)ici.usage;
 			ret.viewFormat = (VkFormat)ivci.format;
 			ret.type = VK_IMAGE_TYPE_2D;
 			ret.extent = ici.extent;
-			ret.device = device;
 			ret.aspect = (VkImageAspectFlags)ci.imageAspekt;
 			ret.arrayLayers = 1;
 			ret.mipmapLevels = 1;
-			ret.graveyard = graveyard;
 
 			if (ci.sampler.has_value()) {
 				ret.sampler = *ci.sampler;
