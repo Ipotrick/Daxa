@@ -24,7 +24,7 @@
 #include "Swapchain.hpp"
 #include "Signal.hpp"
 #include "StagingBufferPool.hpp"
-#include "Queue.hpp"
+#include "CommandQueue.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -39,7 +39,7 @@ namespace daxa {
 			Device(Device&&) noexcept				= delete;
 			Device& operator=(Device&&) noexcept	= delete;
 
-			QueueHandle createQueue(QueueCreateInfo const& ci);
+			CommandQueueHandle createCommandQueue(CommandQueueCreateInfo const& ci);
 
 			static DeviceHandle create();
 
@@ -80,11 +80,6 @@ namespace daxa {
 			BindingSetAllocatorHandle createBindingSetAllocator(BindingSetAllocatorCreateInfo const& ci);
 
 			/**
-			 * \return returns an empty CommandList.
-			 */
-			CommandListHandle getCommandList(char const* debugName = {});
-
-			/**
 			 * Waits for the device to complete all submitted operations and the gpu to idle.
 			 */
 			void waitIdle();
@@ -98,12 +93,9 @@ namespace daxa {
 
 			CommandListHandle getNextCommandList();
 
-			std::shared_ptr<DeviceBackend> backend = {};
-
-			std::shared_ptr<CommandListRecyclingSharedData> cmdListRecyclingSharedData 		= std::make_shared<CommandListRecyclingSharedData>();
-			std::vector<CommandListHandle> unusedCommandLists								= {};
-			std::shared_ptr<StagingBufferPool> stagingBufferPool 							= {};
-			std::unique_ptr<BindingSetDescriptionCache> bindingSetDescriptionCache 			= {};
+			std::shared_ptr<DeviceBackend> 					backend 					= {};
+			std::shared_ptr<StagingBufferPool> 				stagingBufferPool 			= {};
+			std::unique_ptr<BindingSetDescriptionCache>		bindingSetDescriptionCache 	= {};
 		};
 
 		class DeviceHandle : public SharedHandle<Device>{};

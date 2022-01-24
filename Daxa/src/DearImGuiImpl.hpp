@@ -12,7 +12,7 @@ namespace daxa {
 
     class ImGuiRenderer{
     public:
-        ImGuiRenderer(gpu::DeviceHandle device, gpu::QueueHandle queue);
+        ImGuiRenderer(gpu::DeviceHandle device, gpu::CommandQueueHandle queue);
 
         u64 getImGuiTextureId(gpu::ImageHandle img);
 

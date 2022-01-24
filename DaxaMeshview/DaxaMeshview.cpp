@@ -38,7 +38,7 @@ public:
 	}
 
 	void update(daxa::AppState& app) {
-		auto cmdList = renderCTX.device->getCommandList();
+		auto cmdList = renderCTX.queue->getCommandList({});
 
 		ImGui_ImplGlfw_NewFrame(); 
 

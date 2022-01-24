@@ -6,7 +6,7 @@ class RenderContext {
 public:
     RenderContext(daxa::Window& window) 
 		: device{ daxa::gpu::Device::create() }
-		, queue{ this->device->createQueue({}) }
+		, queue{ this->device->createCommandQueue({}) }
 		, swapchain{ this->device->createSwapchain({
 			.surface = window.getSurface(),
 			.width = window.getWidth(),
@@ -17,7 +17,7 @@ public:
 		, presentSignal{ this->device->createSignal({}) }
     {
 		defaultSampler = device->createSampler({});
-		auto cmd = device->getCommandList();
+		auto cmd = queue->getCommandList({});
 		recreateFramebuffer(cmd, window.getWidth(), window.getHeight());
 		cmd->finalize();
 		queue->submitBlocking({.commandLists = {cmd}});
@@ -80,7 +80,7 @@ public:
 	}
 
     daxa::gpu::DeviceHandle device = {};
-	daxa::gpu::QueueHandle queue = {};
+	daxa::gpu::CommandQueueHandle queue = {};
 	daxa::gpu::SwapchainHandle swapchain = {};
 	daxa::gpu::SwapchainImage swapchainImage = {};
 	daxa::gpu::SignalHandle presentSignal = {};

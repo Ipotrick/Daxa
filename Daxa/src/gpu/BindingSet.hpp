@@ -104,8 +104,8 @@ namespace daxa {
 			friend class Device;
 			friend class CommandList;
 			friend class BindingSetAllocator;
+			friend class CommandQueue;
 			friend struct BindingSetHandleStaticFunctionOverride;
-			friend class Queue;
 
 			void setDebugName(char const* debugName);
 

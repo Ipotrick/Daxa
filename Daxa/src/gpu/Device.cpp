@@ -15,16 +15,14 @@ namespace daxa {
 			return DeviceHandle{ std::make_shared<Device>(gpu::instance->getVKBInstance()) };
 		}
 
-		Device::Device(vkb::Instance& instance) {
-			this->backend = std::make_shared<DeviceBackend>(instance);
-			this->bindingSetDescriptionCache = std::make_unique<BindingSetDescriptionCache>(backend);
-			
-			this->stagingBufferPool = std::make_shared<StagingBufferPool>(backend);
-			this->cmdListRecyclingSharedData = std::make_shared<CommandListRecyclingSharedData>();
-		}
+		Device::Device(vkb::Instance& instance) 
+			: backend{ std::make_shared<DeviceBackend>(instance) }
+			, bindingSetDescriptionCache{ std::make_unique<BindingSetDescriptionCache>(backend) }
+			, stagingBufferPool{ std::make_shared<StagingBufferPool>(backend) }
+		{ }
 
-		QueueHandle Device::createQueue(QueueCreateInfo const& ci) {
-			return QueueHandle{ std::make_shared<Queue>(backend, backend->device.get_queue(vkb::QueueType::graphics).value(), ci) };
+		CommandQueueHandle Device::createCommandQueue(CommandQueueCreateInfo const& ci) {
+			return CommandQueueHandle{ std::make_shared<CommandQueue>(backend, backend->device.get_queue(vkb::QueueType::graphics).value(), backend->graphicsQFamilyIndex, stagingBufferPool, ci) };
 		}
 
 		SamplerHandle Device::createSampler(SamplerCreateInfo ci) {
@@ -59,57 +57,8 @@ namespace daxa {
 			return bindingSetDescriptionCache->getSetDescription(bindings);
 		}
 
-		CommandListHandle Device::getCommandList(char const* debugName) {
-			auto list = std::move(getNextCommandList());
-			list->setDebugName(debugName);
-			{
-				std::unique_lock lock(backend->graveyard.mtx);
-				backend->graveyard.activeZombieLists.push_back(list->zombies);
-			}
-			return std::move(list);
-		}
-
 		void Device::waitIdle() {
 			vkDeviceWaitIdle(backend->device.device);
-		}
-
-		CommandListHandle Device::getNextCommandList() {
-			if (unusedCommandLists.empty()) {
-				auto lock = std::unique_lock(cmdListRecyclingSharedData->mut);
-				while (!cmdListRecyclingSharedData->zombies.empty()) {
-					unusedCommandLists.push_back(CommandListHandle{std::move(cmdListRecyclingSharedData->zombies.back())});
-					cmdListRecyclingSharedData->zombies.pop_back();
-				}
-			}
-
-			if (unusedCommandLists.empty()) {
-				// we have no command lists left, we need to create new ones:
-				unusedCommandLists.push_back(CommandListHandle{ std::make_shared<CommandList>() });
-				CommandList& list = *unusedCommandLists.back();
-				list.deviceBackend = backend;
-				list.stagingBufferPool = stagingBufferPool;
-				list.recyclingData = cmdListRecyclingSharedData;
-
-				VkCommandPoolCreateInfo commandPoolCI{
-					.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-					.pNext = nullptr,
-					.queueFamilyIndex = backend->graphicsQFamilyIndex,
-				};
-				vkCreateCommandPool(backend->device.device, &commandPoolCI, nullptr, &list.cmdPool);
-
-				VkCommandBufferAllocateInfo commandBufferAllocateInfo{
-					.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-					.pNext = nullptr,
-					.commandPool = list.cmdPool,
-					.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-					.commandBufferCount = 1,
-				};
-				vkAllocateCommandBuffers(backend->device.device, &commandBufferAllocateInfo, &list.cmd);
-				list.begin();
-			} 
-			auto ret = std::move(unusedCommandLists.back());
-			unusedCommandLists.pop_back();
-			return std::move(ret);
 		}
 
 		daxa::Result<PipelineHandle> Device::createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder) {
