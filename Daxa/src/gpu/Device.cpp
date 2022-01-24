@@ -16,151 +16,47 @@ namespace daxa {
 		}
 
 		Device::Device(vkb::Instance& instance) {
-			vkb::PhysicalDeviceSelector selector{ instance };
-			vkb::PhysicalDevice physicalDevice = selector
-				.set_minimum_version(1, 2)
-				.defer_surface_initialization()
-				.add_desired_extension(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)
-				.add_desired_extension(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME)
-				.select()
-				.value();
-
-			auto physicslDevice = physicalDevice.physical_device;
-
-			VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeature{
-				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
-				.pNext = nullptr,
-				.shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
-				.descriptorBindingPartiallyBound = VK_TRUE,
-				.descriptorBindingVariableDescriptorCount = VK_TRUE,
-				.runtimeDescriptorArray = VK_TRUE,
-			};
-
-			VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeature{
-				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
-				.pNext = nullptr,
-				.dynamicRendering = VK_TRUE,
-			};
-
-			VkPhysicalDeviceTimelineSemaphoreFeatures timelineSemaphoreFeatures{
-				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES,
-				.pNext = nullptr,
-				.timelineSemaphore = VK_TRUE,
-			};
-
-			VkPhysicalDeviceSynchronization2FeaturesKHR synchronization2Features{
-				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR,
-				.pNext = nullptr,
-				.synchronization2 = VK_TRUE,
-			};
-			VkPhysicalDeviceShaderAtomicInt64Features atomicI64Features{
-				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES,
-				.pNext = nullptr,
-				.shaderBufferInt64Atomics = VK_TRUE,
-				.shaderSharedInt64Atomics = VK_TRUE,
-			};
-
-			vkb::DeviceBuilder deviceBuilder{ physicalDevice };
-			deviceBuilder.add_pNext(&descriptorIndexingFeature);
-			deviceBuilder.add_pNext(&dynamicRenderingFeature);
-			deviceBuilder.add_pNext(&timelineSemaphoreFeatures);
-			deviceBuilder.add_pNext(&synchronization2Features);
-			deviceBuilder.add_pNext(&atomicI64Features);
-
-			vkb::Device vkbDevice = deviceBuilder.build().value();
-
-			auto device = vkbDevice.device;
-
-			auto mainQueueFamilyIndex = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
-
-			VmaAllocatorCreateInfo allocatorInfo = {
-				.physicalDevice = physicslDevice,
-				.device = device,
-				.instance = instance.instance,
-			};
-			VmaAllocator allocator;
-			vmaCreateAllocator(&allocatorInfo, &allocator);
-
-			auto fnPtrvkCmdBeginRenderingKHR = (void(*)(VkCommandBuffer, const VkRenderingInfoKHR*))vkGetDeviceProcAddr(device, "vkCmdBeginRenderingKHR");
-			auto fnPtrvkCmdEndRenderingKHR = (void(*)(VkCommandBuffer))vkGetDeviceProcAddr(device, "vkCmdEndRenderingKHR");
-			DAXA_ASSERT_M(fnPtrvkCmdBeginRenderingKHR != nullptr && fnPtrvkCmdEndRenderingKHR != nullptr, "could not load VK_KHR_DYNAMIC_RENDERING_EXTENSION");
-
-			auto fnPtrvkCmdPipelineBarrier2KHR = (void(*)(VkCommandBuffer, VkDependencyInfoKHR const*))vkGetDeviceProcAddr(device, "vkCmdPipelineBarrier2KHR");
-			DAXA_ASSERT_M(fnPtrvkCmdPipelineBarrier2KHR != nullptr, "could not load VK_KHR_SYNCHRONIZATION_2_EXTENSION");
-
-			this->instance = instance.instance;
-			this->device = device;
-			this->bindingSetDescriptionCache = std::make_unique<BindingSetDescriptionCache>(device);
-			this->physicalDevice = physicalDevice.physical_device;
-			this->graphicsQFamilyIndex = mainQueueFamilyIndex;
-			auto transferIndexOpt = vkbDevice.get_queue_index(vkb::QueueType::transfer);
-			if (transferIndexOpt.has_value()) {
-				this->transferQFamilyIndex = transferIndexOpt.value();
-			}
-			auto computeIndexOpt = vkbDevice.get_queue_index(vkb::QueueType::compute);
-			if (computeIndexOpt.has_value()) {
-				this->computeQFamilyIndex = computeIndexOpt.value();
-			}
-			if (graphicsQFamilyIndex != -1) {
-				allQFamilyIndices.push_back(graphicsQFamilyIndex);
-			}
-			if (transferQFamilyIndex != -1) {
-				allQFamilyIndices.push_back(transferQFamilyIndex);
-			}
-			if (computeQFamilyIndex != -1) {
-				allQFamilyIndices.push_back(computeQFamilyIndex);
-			}
-			this->allocator = allocator;
-			this->vkCmdBeginRenderingKHR = fnPtrvkCmdBeginRenderingKHR;
-			this->vkCmdEndRenderingKHR = fnPtrvkCmdEndRenderingKHR;
-			this->vkCmdPipelineBarrier2KHR = fnPtrvkCmdPipelineBarrier2KHR;
-			this->stagingBufferPool = std::make_shared<StagingBufferPool>(StagingBufferPool{ device, &graveyard, std::span<u32>{ allQFamilyIndices.data(), allQFamilyIndices.size() }, allocator });
-			this->vkbDevice = vkbDevice;
+			this->backend = std::make_shared<DeviceBackend>(instance);
+			this->bindingSetDescriptionCache = std::make_unique<BindingSetDescriptionCache>(backend->device.device);
+			
+			this->stagingBufferPool = std::make_shared<StagingBufferPool>(StagingBufferPool{ 
+				backend->device.device, 
+				&backend->graveyard, 
+				std::span<u32>{ backend->allQFamilyIndices.data(), backend->allQFamilyIndices.size() }, 
+				backend->allocator
+			});
 			this->cmdListRecyclingSharedData = std::make_shared<CommandListRecyclingSharedData>();
 		}
 
-		Device::~Device() {
-			if (device) {
-				waitIdle();
-				cmdListRecyclingSharedData.reset();
-				unusedCommandLists.clear();
-				stagingBufferPool.reset();
-				bindingSetDescriptionCache.reset();
-				vmaDestroyAllocator(allocator);
-				vkDestroyDevice(device, nullptr);
-				device = VK_NULL_HANDLE;
-			}
-		}
-
 		QueueHandle Device::createQueue(QueueCreateInfo const& ci) {
-			return QueueHandle{ std::make_shared<Queue>(device, vkbDevice.get_queue(vkb::QueueType::graphics).value(), ci) };
+			return QueueHandle{ std::make_shared<Queue>(backend->device.device, backend->device.get_queue(vkb::QueueType::graphics).value(), ci) };
 		}
 
 		SamplerHandle Device::createSampler(SamplerCreateInfo ci) {
-			return SamplerHandle{ std::make_shared<Sampler>(device, &graveyard, ci) };
+			return SamplerHandle{ std::make_shared<Sampler>(backend->device.device, &backend->graveyard, ci) };
 		}
 
 		ImageHandle Device::createImage2d(Image2dCreateInfo ci) { 
 			auto handle = ImageHandle{ std::make_shared<Image>() };
-			Image::construct2dImage(device, &graveyard, allocator, graphicsQFamilyIndex, ci, *handle);
+			Image::construct2dImage(backend->device.device, &backend->graveyard, backend->allocator, backend->graphicsQFamilyIndex, ci, *handle);
 			return std::move(handle);
 		}
 
 		BufferHandle Device::createBuffer(BufferCreateInfo ci) {
-			return BufferHandle{ std::make_shared<Buffer>(device, &graveyard, allocator, std::span<u32>{ allQFamilyIndices.data(), allQFamilyIndices.size() }, ci) };
+			return BufferHandle{ std::make_shared<Buffer>(backend->device.device, &backend->graveyard, backend->allocator, std::span<u32>{ backend->allQFamilyIndices.data(), backend->allQFamilyIndices.size() }, ci) };
 		}
 
 		TimelineSemaphoreHandle Device::createTimelineSemaphore(TimelineSemaphoreCreateInfo const& ci) {
-			return TimelineSemaphoreHandle{ std::make_shared<TimelineSemaphore>(device, ci) };
+			return TimelineSemaphoreHandle{ std::make_shared<TimelineSemaphore>(backend->device.device, ci) };
 		}
 
 		SignalHandle Device::createSignal(SignalCreateInfo const& ci) {
-			return SignalHandle{ std::make_shared<Signal>(device, ci) };
+			return SignalHandle{ std::make_shared<Signal>(backend->device.device, ci) };
 		}
 
 		SwapchainHandle Device::createSwapchain(SwapchainCreateInfo ci) {
 			auto handle = SwapchainHandle{ std::make_shared<Swapchain>() };
-			handle->construct(device, &graveyard, physicalDevice, gpu::instance->getVkInstance(), ci);
+			handle->construct(backend->device.device, &backend->graveyard, backend->device.physical_device, gpu::instance->getVkInstance(), ci);
 			return std::move(handle);
 		}
 
@@ -172,14 +68,14 @@ namespace daxa {
 			auto list = std::move(getNextCommandList());
 			list->setDebugName(debugName);
 			{
-				std::unique_lock lock(graveyard.mtx);
-				graveyard.activeZombieLists.push_back(list->zombies);
+				std::unique_lock lock(backend->graveyard.mtx);
+				backend->graveyard.activeZombieLists.push_back(list->zombies);
 			}
 			return std::move(list);
 		}
 
 		void Device::waitIdle() {
-			vkDeviceWaitIdle(device);
+			vkDeviceWaitIdle(backend->device.device);
 		}
 
 		CommandListHandle Device::getNextCommandList() {
@@ -195,20 +91,20 @@ namespace daxa {
 				// we have no command lists left, we need to create new ones:
 				unusedCommandLists.push_back(CommandListHandle{ std::make_shared<CommandList>() });
 				CommandList& list = *unusedCommandLists.back();
-				list.device = device;
-				list.vkCmdBeginRenderingKHR = this->vkCmdBeginRenderingKHR;
-				list.vkCmdEndRenderingKHR = this->vkCmdEndRenderingKHR;
-				list.vkCmdPipelineBarrier2KHR = this->vkCmdPipelineBarrier2KHR;
+				list.device = backend->device.device;
+				list.vkCmdBeginRenderingKHR = backend->vkCmdBeginRenderingKHR;
+				list.vkCmdEndRenderingKHR = backend->vkCmdEndRenderingKHR;
+				list.vkCmdPipelineBarrier2KHR = backend->vkCmdPipelineBarrier2KHR;
 				list.stagingBufferPool = stagingBufferPool;
 				list.recyclingData = cmdListRecyclingSharedData;
-				list.graveyard = &graveyard;
+				list.graveyard = &backend->graveyard;
 
 				VkCommandPoolCreateInfo commandPoolCI{
 					.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
 					.pNext = nullptr,
-					.queueFamilyIndex = graphicsQFamilyIndex,
+					.queueFamilyIndex = backend->graphicsQFamilyIndex,
 				};
-				vkCreateCommandPool(device, &commandPoolCI, nullptr, &list.cmdPool);
+				vkCreateCommandPool(backend->device.device, &commandPoolCI, nullptr, &list.cmdPool);
 
 				VkCommandBufferAllocateInfo commandBufferAllocateInfo{
 					.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -217,7 +113,7 @@ namespace daxa {
 					.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
 					.commandBufferCount = 1,
 				};
-				vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &list.cmd);
+				vkAllocateCommandBuffers(backend->device.device, &commandBufferAllocateInfo, &list.cmd);
 				list.begin();
 			} 
 			auto ret = std::move(unusedCommandLists.back());
@@ -226,19 +122,19 @@ namespace daxa {
 		}
 
 		daxa::Result<PipelineHandle> Device::createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder) {
-			return pipelineBuilder.build(device, *bindingSetDescriptionCache);
+			return pipelineBuilder.build(backend->device.device, *bindingSetDescriptionCache);
 		}
 
 		daxa::Result<PipelineHandle> Device::createComputePipeline(ComputePipelineCreateInfo const& ci) {
-			return gpu::createComputePipeline(device, *bindingSetDescriptionCache, ci);
+			return gpu::createComputePipeline(backend->device.device, *bindingSetDescriptionCache, ci);
 		}
 
 		BindingSetAllocatorHandle Device::createBindingSetAllocator(BindingSetAllocatorCreateInfo const& ci) {
-			return BindingSetAllocatorHandle{ std::make_shared<BindingSetAllocator>(device, ci) };
+			return BindingSetAllocatorHandle{ std::make_shared<BindingSetAllocator>(backend->device.device, ci) };
 		}
 
 		Result<ShaderModuleHandle> Device::createShaderModule(ShaderModuleCreateInfo const& ci) {
-			return ShaderModuleHandle::tryCreateDAXAShaderModule(device, ci);
+			return ShaderModuleHandle::tryCreateDAXAShaderModule(backend->device.device, ci);
 		}
 	}
 }

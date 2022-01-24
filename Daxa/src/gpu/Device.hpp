@@ -38,7 +38,6 @@ namespace daxa {
 			Device& operator=(Device const&)		= delete;
 			Device(Device&&) noexcept				= delete;
 			Device& operator=(Device&&) noexcept	= delete;
-			~Device();
 
 			QueueHandle createQueue(QueueCreateInfo const& ci);
 
@@ -90,11 +89,10 @@ namespace daxa {
 			 */
 			void waitIdle();
 
-			const VkPhysicalDevice& getVkPhysicalDevice() const { return physicalDevice; }
-			const VkDevice& getVkDevice() const { return device; }
-			const VmaAllocator& getVma() const { return allocator; }
-			//const VkQueue& getVkGraphicsQueue() const { return graphicsQ; }
-			const u32& getVkGraphicsQueueFamilyIndex() const { return graphicsQFamilyIndex; }
+			const VkPhysicalDevice& getVkPhysicalDevice() const { return backend->device.physical_device; }
+			const VkDevice& getVkDevice() const { return backend->device.device; }
+			const VmaAllocator& getVma() const { return backend->allocator; }
+			const u32& getVkGraphicsQueueFamilyIndex() const { return backend->graphicsQFamilyIndex; }
 		private:
 			friend class Instance;
 
@@ -102,23 +100,10 @@ namespace daxa {
 
 			std::shared_ptr<DeviceBackend> backend = {};
 
-			VkInstance instance 															= VK_NULL_HANDLE;
-			VkDevice device		 															= VK_NULL_HANDLE;
-			vkb::Device vkbDevice 															= {};
-			VkPhysicalDevice physicalDevice 												= VK_NULL_HANDLE;
-			VmaAllocator allocator 															= VK_NULL_HANDLE;
-			u32 graphicsQFamilyIndex 														= -1;
-			u32 transferQFamilyIndex														= -1;
-			u32 computeQFamilyIndex															= -1;
-			std::vector<u32> allQFamilyIndices 												= {};
 			std::shared_ptr<CommandListRecyclingSharedData> cmdListRecyclingSharedData 		= std::make_shared<CommandListRecyclingSharedData>();
 			std::vector<CommandListHandle> unusedCommandLists								= {};
-			void (*vkCmdBeginRenderingKHR)(VkCommandBuffer, const VkRenderingInfoKHR*) 		= nullptr;
-			void (*vkCmdEndRenderingKHR)(VkCommandBuffer) 									= nullptr;
-			void (*vkCmdPipelineBarrier2KHR)(VkCommandBuffer, VkDependencyInfoKHR const*) 	= nullptr;
 			std::shared_ptr<StagingBufferPool> stagingBufferPool 							= {};
 			std::unique_ptr<BindingSetDescriptionCache> bindingSetDescriptionCache 			= {};
-			Graveyard graveyard																= {};
 		};
 
 		class DeviceHandle : public SharedHandle<Device>{};
