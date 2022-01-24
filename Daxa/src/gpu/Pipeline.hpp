@@ -134,6 +134,7 @@ namespace daxa {
 			// temporaries:
 			std::vector<VkPushConstantRange> pushConstants;
 			std::vector<std::unordered_map<u32, VkDescriptorSetLayoutBinding>> descriptorSets;
+			std::vector<BindingSetDescription> bindingSetDescriptions;
 			std::vector<VkPipelineShaderStageCreateInfo> shaderStageCreateInfo;
 		};
 
