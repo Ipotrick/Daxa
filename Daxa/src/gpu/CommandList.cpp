@@ -569,8 +569,13 @@ namespace daxa {
 				};
 			}
 
-			for (auto& imgBarrier : imgBarriers) {
+			for (auto imgBarrier : imgBarriers) {
 				DAXA_ASSERT_M(bufBarrierBufferSize < 32, "can only insert 32 barriers of one kind in a single insertBarriers call");
+
+				if (imgBarrier.srcQueueIndex == imgBarrier.dstQueueIndex) {
+					imgBarrier.srcQueueIndex = VK_QUEUE_FAMILY_IGNORED;
+					imgBarrier.dstQueueIndex = VK_QUEUE_FAMILY_IGNORED;
+				}
 
 				imgBarrierBuffer[imgBarrierBufferSize] = VkImageMemoryBarrier2KHR{
 					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR,
@@ -581,8 +586,8 @@ namespace daxa {
 					.dstAccessMask = imgBarrier.barrier.dstAccess,
 					.oldLayout = imgBarrier.layoutBefore,
 					.newLayout = imgBarrier.layoutAfter,
-					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.srcQueueFamilyIndex = imgBarrier.srcQueueIndex,
+					.dstQueueFamilyIndex = imgBarrier.dstQueueIndex,
 					.image = imgBarrier.image->getVkImage(),
 					.subresourceRange = imgBarrier.subRange.value_or(VkImageSubresourceRange{
 						.aspectMask = imgBarrier.image->getVkAspect(),

@@ -23,11 +23,11 @@ namespace daxa {
 			ImageHandle const& getImageHandle() const { return image; }
 		private:
 			friend class Swapchain;
-			friend class Queue;
+			friend class CommandQueue;
 
-			ImageHandle image = {};
-			u32 imageIndex = {};
-			VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+			ImageHandle 	image 		= {};
+			u32 			imageIndex 	= {};
+			VkSwapchainKHR 	swapchain 	= {};
 		};
 
 	}

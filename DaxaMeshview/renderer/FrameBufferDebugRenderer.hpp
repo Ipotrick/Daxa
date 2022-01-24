@@ -49,7 +49,7 @@ public:
             .debugName = "frame buffer debug renderer global buffer"
         });
 
-        auto cmdList = renderCTX.device->getCommandList();
+        auto cmdList = renderCTX.queue->getCommandList({});
         recreateImages(renderCTX, cmdList, width, height);
         cmdList->finalize();
         renderCTX.queue->submitBlocking({.commandLists = {cmdList}});
