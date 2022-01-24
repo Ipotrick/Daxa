@@ -75,6 +75,7 @@ namespace daxa {
 			friend class Device;
 
 			TimelineSemaphoreHandle getNextTimeline();
+			CommandListHandle getNextCommandList();
 
 			struct PendingSubmit {
 				std::vector<CommandListHandle> 	cmdLists		= {};

@@ -150,7 +150,7 @@ namespace daxa {
         pipeline = device->createGraphicsPipeline(pipelineDescription).value();
 
         setAlloc = device->createBindingSetAllocator({
-            .setDescription = pipeline->getSetDescription(0),
+            .setInfo = pipeline->getSetInfo(0),
             .setPerPool = 128,
             .debugName = "dear imgui set allocator"
         });

@@ -178,6 +178,16 @@ namespace daxa {
 		}
 
 		CommandListHandle CommandQueue::getCommandList(CommandListFetchInfo const& fi) {
+			auto list = std::move(getNextCommandList());
+			list->setDebugName(fi.debugName);
+			{
+				std::unique_lock lock(deviceBackend->graveyard.mtx);
+				deviceBackend->graveyard.activeZombieLists.push_back(list->zombies);
+			}
+			return std::move(list);
+		}
+
+		CommandListHandle CommandQueue::getNextCommandList() {
 			if (unusedCommandLists.empty()) {
 				auto lock = std::unique_lock(cmdListRecyclingSharedData->mut);
 				while (!cmdListRecyclingSharedData->zombies.empty()) {
