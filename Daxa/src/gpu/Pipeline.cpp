@@ -289,6 +289,11 @@ namespace daxa {
 			this->colorAttachmentBlends.push_back(blend);
 			return *this;
 		}
+		
+		GraphicsPipelineBuilder& GraphicsPipelineBuilder::overwriteSet(u32 set, BindingSetDescription const& descr) {
+			setDescriptionOverwrites.push_back({set, descr});
+			return *this;
+		}
 
 		constexpr VkPipelineRasterizationStateCreateInfo DEFAULT_RASTER_STATE_CI{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
@@ -346,6 +351,10 @@ namespace daxa {
 				this->shaderStageCreateInfo.push_back(pipelineShaderStageCI);
 
 				reflectShader(shaderModule, pushConstants, bindingSetDescriptions);
+			}
+
+			for (auto& [set, descr] : setDescriptionOverwrites) {
+				bindingSetDescriptions[set] = descr;
 			}
 
 			auto pipelineHandle = PipelineHandle{ std::make_shared<Pipeline>() };
@@ -496,6 +505,12 @@ namespace daxa {
 			std::vector<BindingSetDescription> bindingSetDescriptions;
 
 			reflectShader(ci.shaderModule, pushConstants, bindingSetDescriptions);
+
+			for (size_t i = 0; i < MAX_SETS_PER_PIPELINE; i++) {
+				if (ci.overwriteSets[i].has_value()) {
+					bindingSetDescriptions[i] = ci.overwriteSets[i].value();
+				}
+			}
 
 			std::vector<VkDescriptorSetLayout> descLayouts = processReflectedDescriptorData(bindingSetDescriptions, bindingSetCache, ret.bindingSetLayouts);
 

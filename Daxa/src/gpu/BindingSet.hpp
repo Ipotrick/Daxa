@@ -57,10 +57,11 @@ namespace daxa {
 						return false;
 					}
 				}
-				return true;
+				return flags == other.flags;
 			}
 
 			std::array<BindingLayout, MAX_BINDINGS_PER_SET> layouts = {};
+			VkDescriptorPoolCreateFlags						flags 	= {};
 		};
 
 		struct BindingSetDesciptionHasher {
@@ -73,6 +74,7 @@ namespace daxa {
 					hash ^= description.layouts[i].stageFlags;
 					hash <<= 1;
 				}
+				hash ^= description.flags;
 				return hash;
 			}
 		};
