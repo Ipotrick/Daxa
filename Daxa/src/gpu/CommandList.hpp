@@ -109,27 +109,16 @@ namespace daxa {
 		};
 
 		/**
-		 * no real use case apparently:
-		*/
-		struct BufferBarrier {
-			VkPipelineStageFlags2KHR srcStages = VK_PIPELINE_STAGE_2_NONE_KHR;
-			VkAccessFlags2KHR srcAccess = VK_ACCESS_2_NONE_KHR;
-			VkPipelineStageFlags2KHR dstStages = VK_PIPELINE_STAGE_2_NONE_KHR;
-			VkAccessFlags2KHR dstAccess = VK_ACCESS_2_NONE_KHR;
-			BufferHandle buffer = {};
-			size_t offset = 0;
-			std::optional<u32> size = {};
-		};
-
-		/**
 		 * used for layout changes
 		*/
 		struct ImageBarrier {
-			MemoryBarrier barrier = {};
-			ImageHandle image = {};
-			VkImageLayout layoutBefore;
-			VkImageLayout layoutAfter; 
-			std::optional<VkImageSubresourceRange> subRange = {};
+			MemoryBarrier 							barrier 		= {};
+			ImageHandle 							image 			= {};
+			VkImageLayout 							layoutBefore	= {};
+			VkImageLayout 							layoutAfter		= {}; 
+			u32 									srcQueueIndex 	= VK_QUEUE_FAMILY_IGNORED;
+			u32 									dstQueueIndex 	= VK_QUEUE_FAMILY_IGNORED;
+			std::optional<VkImageSubresourceRange> 	subRange 		= {};
 		};
 
 		struct RenderAttachmentInfo {
@@ -291,7 +280,7 @@ namespace daxa {
 			std::string const& getDebugName() const { return debugName; }
 		private:
 			friend class Device;
-			friend class Queue;
+			friend class CommandQueue;
 			friend struct CommandListHandleStaticFunctionOverride;
 
 			void reset();

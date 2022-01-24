@@ -20,7 +20,7 @@
 namespace daxa {
 	namespace gpu {
 
-		struct QueueCreateInfo {
+		struct CommandQueueCreateInfo {
 			u32 		batchCount	= 0;
 			char const* debugName 	= {};
 		};
@@ -33,15 +33,19 @@ namespace daxa {
 			std::span<SignalHandle>								signalOnCompletion 	= {};
 		};
 
-		class Queue {
+		struct CommandListFetchInfo {
+			char const* debugName = {};
+		};
+
+		class CommandQueue {
 		public:
-			Queue(std::shared_ptr<DeviceBackend> deviceBackend, VkQueue queue, QueueCreateInfo const& ci);
-			Queue() 							= default;
-			Queue(Queue const&) 				= delete;
-			Queue& operator=(Queue const&) 		= delete;
-			Queue(Queue&&) noexcept				= delete;
-			Queue& operator=(Queue&&) noexcept	= delete;
-			~Queue();
+			CommandQueue(std::shared_ptr<DeviceBackend> deviceBackend, VkQueue queue, u32 queueFamilyIndex, std::shared_ptr<StagingBufferPool> stagingBufferPool, CommandQueueCreateInfo const& ci);
+			CommandQueue() 										= default;
+			CommandQueue(CommandQueue const&) 					= delete;
+			CommandQueue& operator=(CommandQueue const&) 		= delete;
+			CommandQueue(CommandQueue&&) noexcept				= delete;
+			CommandQueue& operator=(CommandQueue&&) noexcept	= delete;
+			~CommandQueue();
 
 			/**
 			 * Submit CommandLists to be executed on the GPU.
@@ -64,6 +68,8 @@ namespace daxa {
 
 			void waitIdle();
 
+			CommandListHandle getCommandList(CommandListFetchInfo const& fi);
+
 			std::string const& getDebugName() const { return debugName; }
 		private: 
 			friend class Device;
@@ -73,23 +79,27 @@ namespace daxa {
 			struct PendingSubmit {
 				std::vector<CommandListHandle> 	cmdLists		= {};
 				TimelineSemaphoreHandle 		timelineSema	= {};
-			u64 								finishCounter 	= 0;
+				u64 							finishCounter 	= 0;
 			};
 
-			std::shared_ptr<DeviceBackend> 			deviceBackend 						= {};
-			VkQueue 								queue 								= {};
-			std::deque<std::vector<PendingSubmit>> 	batches								= {};
-			bool 									bWaitForBatchesToComplete 			= false;
-			std::vector<TimelineSemaphoreHandle> 	unusedTimelines 					= {};
-			// reused temporary buffers:
-			std::vector<VkCommandBuffer> 			submitCommandBufferBuffer 			= {};
-			std::vector<VkSemaphore> 				submitSemaphoreWaitOnBuffer 		= {};
-			std::vector<VkSemaphore> 				submitSemaphoreSignalBuffer 		= {};
-			std::vector<u64> 						submitSemaphoreWaitOnValueBuffer 	= {};
-			std::vector<u64> 						submitSemaphoreSignalValueBuffer 	= {};
-			std::string 							debugName 							= {};
+			std::shared_ptr<DeviceBackend> 					deviceBackend 						= {};
+			VkQueue 										queue 								= {};
+			u32												queueFamilyIndex					= {};
+			std::deque<std::vector<PendingSubmit>> 			batches								= {};
+			bool 											bWaitForBatchesToComplete 			= false;
+			std::vector<TimelineSemaphoreHandle> 			unusedTimelines 					= {};
+			std::shared_ptr<CommandListRecyclingSharedData> cmdListRecyclingSharedData 			= std::make_shared<CommandListRecyclingSharedData>();
+			std::shared_ptr<StagingBufferPool> 				stagingBufferPool 					= {};
+			std::vector<CommandListHandle> 					unusedCommandLists					= {};
+			std::string 									debugName 							= {};
+			// reused temporary buffers:		
+			std::vector<VkCommandBuffer> 					submitCommandBufferBuffer 			= {};
+			std::vector<VkSemaphore> 						submitSemaphoreWaitOnBuffer 		= {};
+			std::vector<VkSemaphore> 						submitSemaphoreSignalBuffer 		= {};
+			std::vector<u64> 								submitSemaphoreWaitOnValueBuffer 	= {};
+			std::vector<u64> 								submitSemaphoreSignalValueBuffer 	= {};
 		};
 
-		class QueueHandle : public SharedHandle<Queue>{};
+		class CommandQueueHandle : public SharedHandle<CommandQueue>{};
 	}
 }

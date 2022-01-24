@@ -1,13 +1,16 @@
-#include "Queue.hpp"
+#include "CommandQueue.hpp"
 #include "Instance.hpp"
 
 namespace daxa {
 	namespace gpu {
 
-		Queue::Queue(std::shared_ptr<DeviceBackend> deviceBackend, VkQueue queue, QueueCreateInfo const& ci)
+		CommandQueue::CommandQueue(std::shared_ptr<DeviceBackend> deviceBackend, VkQueue queue, u32 queueFamilyIndex, std::shared_ptr<StagingBufferPool> stagingBufferPool, CommandQueueCreateInfo const& ci)
 			: deviceBackend{ std::move(deviceBackend) }
 			, queue{ queue }
+			, queueFamilyIndex{ queueFamilyIndex }
 			, bWaitForBatchesToComplete{ ci.batchCount > 0 }
+			, cmdListRecyclingSharedData{ std::make_shared<CommandListRecyclingSharedData>() }
+			, stagingBufferPool{ std::move(stagingBufferPool) }
 		{
 			this->batches.resize(std::max(u32(1), ci.batchCount));
 
@@ -26,11 +29,11 @@ namespace daxa {
 			}
 		}
 
-		Queue::~Queue() {
+		CommandQueue::~CommandQueue() {
 			waitIdle();
 		}
 
-		void Queue::submit(SubmitInfo si) {
+		void CommandQueue::submit(SubmitInfo si) {
 			for (auto& cmdList : si.commandLists) {
 				DAXA_ASSERT_M(cmdList->finalized, "can only submit finalized command lists");
 				for (auto& sbuffer : cmdList->usedStagingBuffers) {
@@ -42,17 +45,7 @@ namespace daxa {
 			
 				for (auto& set : cmdList->usedSets) {
 					set->usesOnGPU += 1;
-
-					//for (auto& handle : set->handles) {
-					//	if (auto* buffer = std::get_if<BufferHandle>(&handle)) {
-					//		(**buffer).usesOnGPU += 1;
-					//	}
-					//}
 				}
-				//for (auto& buffer : cmdList->usedBuffers) {
-				//	DAXA_ASSERT_M(!buffer->isMemoryMapped(), "can not submit command list. Some Buffers used in the command list have mapped memory, all memory to used buffers need to be unmapped before a submit.");
-				//	buffer->usesOnGPU += 1;
-				//}
 			}
 
 			for (auto& signal : si.waitOnSignals) {
@@ -114,7 +107,7 @@ namespace daxa {
 			submitCommandBufferBuffer.clear();
 		}
 
-		TimelineSemaphoreHandle Queue::getNextTimeline() {
+		TimelineSemaphoreHandle CommandQueue::getNextTimeline() {
 			if (unusedTimelines.empty()) {
 				unusedTimelines.push_back(TimelineSemaphoreHandle{ std::make_shared<TimelineSemaphore>(deviceBackend, TimelineSemaphoreCreateInfo{.debugName = "queue timline"}) });
 			}
@@ -123,29 +116,20 @@ namespace daxa {
 			return timeline;
 		}
 
-		void Queue::submitBlocking(SubmitInfo submitInfo) {
+		void CommandQueue::submitBlocking(SubmitInfo submitInfo) {
 			submit(submitInfo);
 			batches[0].back().timelineSema->wait(batches[0].back().finishCounter);
 		}
 
-		void Queue::checkForFinishedSubmits() {
+		void CommandQueue::checkForFinishedSubmits() {
 			for (auto& batch : batches) {
 				for (auto iter = batch.begin(); iter != batch.end();) {
 					if (iter->timelineSema->getCounter() >= iter->finishCounter) {
 						while (!iter->cmdLists.empty()) {
 							auto list = std::move(iter->cmdLists.back());
 							iter->cmdLists.pop_back();
-							//for (auto& buffer : list->usedBuffers) {
-							//	buffer.value->usesOnGPU -= 1;
-							//}
 							for (auto& set : list->usedSets) {
 								set->usesOnGPU -= 1;
-
-								//for (auto& handle : set->handles) {
-								//	if (auto* buffer = std::get_if<BufferHandle>(&handle)) {
-								//		(**buffer).usesOnGPU -= 1;
-								//	}
-								//}
 							}
 							list->usesOnGPU -= 1;
 						}
@@ -159,7 +143,7 @@ namespace daxa {
 			}
 		}
 
-		void Queue::present(SwapchainImage&& img, SignalHandle& waitOnSignal) {
+		void CommandQueue::present(SwapchainImage&& img, SignalHandle& waitOnSignal) {
 			auto image = std::move(img);
 			auto sema = waitOnSignal->getVkSemaphore();
 			VkPresentInfoKHR presentInfo{
@@ -174,7 +158,7 @@ namespace daxa {
 			vkQueuePresentKHR(queue, &presentInfo);
 		}
 
-		void Queue::waitIdle() {
+		void CommandQueue::waitIdle() {
 			for (auto& batch : batches) {
 				for (auto& pending : batch) {
 					pending.timelineSema->wait(pending.finishCounter);
@@ -182,7 +166,7 @@ namespace daxa {
 			}
 		}
 
-		void Queue::nextBatch() {
+		void CommandQueue::nextBatch() {
 			auto back = std::move(batches.back());
 			batches.pop_back();
 			batches.push_front(std::move(back));
@@ -191,6 +175,45 @@ namespace daxa {
 					pending.timelineSema->wait(pending.finishCounter);
 				}
 			}
+		}
+
+		CommandListHandle CommandQueue::getCommandList(CommandListFetchInfo const& fi) {
+			if (unusedCommandLists.empty()) {
+				auto lock = std::unique_lock(cmdListRecyclingSharedData->mut);
+				while (!cmdListRecyclingSharedData->zombies.empty()) {
+					unusedCommandLists.push_back(CommandListHandle{std::move(cmdListRecyclingSharedData->zombies.back())});
+					cmdListRecyclingSharedData->zombies.pop_back();
+				}
+			}
+
+			if (unusedCommandLists.empty()) {
+				// we have no command lists left, we need to create new ones:
+				unusedCommandLists.push_back(CommandListHandle{ std::make_shared<CommandList>() });
+				CommandList& list = *unusedCommandLists.back();
+				list.deviceBackend = deviceBackend;
+				list.stagingBufferPool = stagingBufferPool;
+				list.recyclingData = cmdListRecyclingSharedData;
+
+				VkCommandPoolCreateInfo commandPoolCI{
+					.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+					.pNext = nullptr,
+					.queueFamilyIndex = queueFamilyIndex,
+				};
+				vkCreateCommandPool(deviceBackend->device.device, &commandPoolCI, nullptr, &list.cmdPool);
+
+				VkCommandBufferAllocateInfo commandBufferAllocateInfo{
+					.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+					.pNext = nullptr,
+					.commandPool = list.cmdPool,
+					.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+					.commandBufferCount = 1,
+				};
+				vkAllocateCommandBuffers(deviceBackend->device.device, &commandBufferAllocateInfo, &list.cmd);
+				list.begin();
+			} 
+			auto ret = std::move(unusedCommandLists.back());
+			unusedCommandLists.pop_back();
+			return std::move(ret);
 		}
 	}
 }

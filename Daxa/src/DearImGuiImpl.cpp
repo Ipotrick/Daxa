@@ -84,7 +84,7 @@ void embraceTheDarkness() {
 }
 
 namespace daxa {
-    ImGuiRenderer::ImGuiRenderer(gpu::DeviceHandle device, gpu::QueueHandle queue) 
+    ImGuiRenderer::ImGuiRenderer(gpu::DeviceHandle device, gpu::CommandQueueHandle queue) 
         : device{ device }
     {
         embraceTheDarkness();
@@ -172,7 +172,7 @@ namespace daxa {
             .sampler = device->createSampler({})
         });
 
-        auto cmdList = device->getCommandList();
+        auto cmdList = queue->getCommandList({});
         cmdList->insertImageBarrier({
             .barrier = gpu::FULL_MEMORY_BARRIER,
             .image = fontSheet,
