@@ -12,6 +12,7 @@
 #include <vk_mem_alloc.h>
 
 #include "Handle.hpp"
+#include "DeviceBackend.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -41,12 +42,12 @@ namespace daxa {
 			friend class Device;
 			friend class CommandList;
 
-			VkDevice 				device 			= {};
-			std::vector<u32> 		spirv 			= {};
-			VkShaderStageFlagBits 	shaderStage 	= {};
-			std::string 			entryPoint 		= {};
-			VkShaderModule 			shaderModule 	= {};
-			std::string 			debugName 		= {};
+			std::shared_ptr<DeviceBackend>	deviceBackend	= {};
+			std::vector<u32> 				spirv 			= {};
+			VkShaderStageFlagBits 			shaderStage 	= {};
+			std::string 					entryPoint 		= {};
+			VkShaderModule 					shaderModule 	= {};
+			std::string 					debugName 		= {};
 		};
 
 		struct ShaderModuleCreateInfo {
@@ -60,9 +61,9 @@ namespace daxa {
 		class ShaderModuleHandle : public SharedHandle<ShaderModule>{
 		private:
 			friend class Device;
-			static Result<ShaderModuleHandle> tryCreateDAXAShaderModule(VkDevice device, std::filesystem::path const& path, std::string const& entryPoint, VkShaderStageFlagBits shaderStage);
-			static Result<ShaderModuleHandle> tryCreateDAXAShaderModule(VkDevice device, std::string const& glsl, std::string const& entryPoint, VkShaderStageFlagBits shaderStage);
-			static Result<ShaderModuleHandle> tryCreateDAXAShaderModule(VkDevice device, ShaderModuleCreateInfo const& ci);
+			static Result<ShaderModuleHandle> tryCreateDAXAShaderModule(std::shared_ptr<DeviceBackend>& device, std::filesystem::path const& path, std::string const& entryPoint, VkShaderStageFlagBits shaderStage);
+			static Result<ShaderModuleHandle> tryCreateDAXAShaderModule(std::shared_ptr<DeviceBackend>& device, std::string const& glsl, std::string const& entryPoint, VkShaderStageFlagBits shaderStage);
+			static Result<ShaderModuleHandle> tryCreateDAXAShaderModule(std::shared_ptr<DeviceBackend>& device, ShaderModuleCreateInfo const& ci);
 		};
 	}
 }

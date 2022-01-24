@@ -12,20 +12,18 @@ namespace daxa {
 
 		CommandList::CommandList() {
 			this->renderAttachmentBuffer.reserve(5);
-			//usedImages.reserve(10);
-			//usedBuffers.reserve(10);
 			usedSets.reserve(10);
 			usedGraphicsPipelines.reserve(3);
 			usedStagingBuffers.reserve(1);
 		}
 
 		CommandList::~CommandList() {
-			if (device) {
+			if (deviceBackend) {
 				DAXA_ASSERT_M(operationsInProgress == 0, "a command list can not be descroyed when there are still commands recorded");
 				DAXA_ASSERT_M(empty, "a command list can not be destroyed when not empty");
-				vkFreeCommandBuffers(device, cmdPool, 1, &cmd);
-				vkDestroyCommandPool(device, cmdPool, nullptr);
-				device = VK_NULL_HANDLE;
+				vkFreeCommandBuffers(deviceBackend->device.device, cmdPool, 1, &cmd);
+				vkDestroyCommandPool(deviceBackend->device.device, cmdPool, nullptr);
+				deviceBackend = VK_NULL_HANDLE;
 			}
 		}
 
@@ -34,10 +32,6 @@ namespace daxa {
 			DAXA_ASSERT_M(operationsInProgress == 0, "can only finalize a command list that has no operations in progress");
 			vkEndCommandBuffer(cmd);
 			finalized = true;
-
-			//for (auto& buf : this->usedBuffers) {
-			//	DAXA_ASSERT_M(buf->getMemeoryMapCount() == 0, "all buffers used in a command list must be unmapped when the list is finalized");
-			//}
 		}
 
 		MappedMemoryPointer<u8> CommandList::mapMemoryStagedVoid(BufferHandle copyDst, size_t size, size_t dstOffset) {
@@ -165,8 +159,6 @@ namespace daxa {
 				DAXA_ASSERT_M(copyInfo.src->getSize() >= copyInfo.regions[i].size + copyInfo.regions[i].srcOffset, "ERROR: src buffer is smaller than the region that shouly be copied!");
 				DAXA_ASSERT_M(copyInfo.dst->getSize() >= copyInfo.regions[i].size + copyInfo.regions[i].dstOffset, "ERROR: dst buffer is smaller than the region that shouly be copied!");
 			}
-			//usedBuffers.push_back(copyInfo.src);
-			//usedBuffers.push_back(copyInfo.dst);
 			vkCmdCopyBuffer(cmd, copyInfo.src->getVkBuffer(), copyInfo.dst->getVkBuffer(), copyInfo.regions.size(), (VkBufferCopy*)copyInfo.regions.data());	// THIS COULD BREAK ON ABI CHANGE
 		}
 
@@ -182,8 +174,6 @@ namespace daxa {
 
 		void CommandList::copyBufferToImage(BufferToImageCopyInfo copyInfo) {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
-			//usedBuffers.push_back(copyInfo.src);
-			//usedImages.push_back(copyInfo.dst);
 
 			VkImageSubresourceLayers imgSubRessource = copyInfo.subRessourceLayers.value_or(VkImageSubresourceLayers{
 				.aspectMask = copyInfo.dst->getVkAspect(),
@@ -230,8 +220,6 @@ namespace daxa {
 			};
 
 			vkCmdCopyImage(cmd, copyInfo.src->getVkImage(), copyInfo.srcLayout, copyInfo.dst->getVkImage(), copyInfo.dstLayout, 1, &copy);
-			//usedImages.push_back(std::move(copyInfo.src));
-			//usedImages.push_back(std::move(copyInfo.dst));
 		}
 
 		void CommandList::copyImageToImageSynced(ImageToImageCopySyncedInfo copySyncedInfo) {
@@ -384,7 +372,7 @@ namespace daxa {
 			renderInfo.pDepthAttachment = depthAttachmentInfo.has_value() ? &depthAttachmentInfo.value() : nullptr;
 			renderInfo.pStencilAttachment = stencilAttachmentInfo.has_value() ? &stencilAttachmentInfo.value() : nullptr;
 
-			this->vkCmdBeginRenderingKHR(cmd, (VkRenderingInfoKHR*)&renderInfo);
+			deviceBackend->vkCmdBeginRenderingKHR(cmd, (VkRenderingInfoKHR*)&renderInfo);
 
 			renderAttachmentBuffer.clear();
 
@@ -405,7 +393,7 @@ namespace daxa {
 			DAXA_ASSERT_M(currentRenderPass.has_value(), "can only end render pass when there is one in progress");
 			currentRenderPass = {};
 			operationsInProgress -= 1;
-			this->vkCmdEndRenderingKHR(cmd);
+			deviceBackend->vkCmdEndRenderingKHR(cmd);
 		}
 
 		void CommandList::bindPipeline(PipelineHandle& pipeline) {
@@ -478,7 +466,7 @@ namespace daxa {
 					.objectHandle = (uint64_t)this->cmd,
 					.pObjectName = debugName,
 				};
-				instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
+				instance->pfnSetDebugUtilsObjectNameEXT(deviceBackend->device.device, &nameInfo);
 				nameInfo = VkDebugUtilsObjectNameInfoEXT {
 					.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
 					.pNext = NULL,
@@ -486,7 +474,7 @@ namespace daxa {
 					.objectHandle = (uint64_t)this->cmdPool,
 					.pObjectName = debugName,
 				};
-				instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
+				instance->pfnSetDebugUtilsObjectNameEXT(deviceBackend->device.device, &nameInfo);
 			}
 		}
 
@@ -495,20 +483,18 @@ namespace daxa {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(operationsInProgress == 0, "can not reset command list with recordings in progress");
 			empty = true;
-			vkResetCommandPool(device, cmdPool, VkCommandPoolResetFlagBits::VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
-			//usedBuffers.clear();
+			vkResetCommandPool(deviceBackend->device.device, cmdPool, VkCommandPoolResetFlagBits::VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
 			usedGraphicsPipelines.clear();
-			//usedImages.clear();
 			usedSets.clear();
 			currentPipeline = {};
 			currentRenderPass = {};
 			usedStagingBuffers.clear();
 			finalized = false;
 			{
-				std::unique_lock lock(graveyard->mtx);
-				auto iter = std::find_if(graveyard->activeZombieLists.begin(), graveyard->activeZombieLists.end(), [&](std::shared_ptr<ZombieList>& other){ return other.get() == zombies.get(); });
-				if (iter != graveyard->activeZombieLists.end()) {
-					graveyard->activeZombieLists.erase(iter);
+				std::unique_lock lock(deviceBackend->graveyard.mtx);
+				auto iter = std::find_if(deviceBackend->graveyard.activeZombieLists.begin(), deviceBackend->graveyard.activeZombieLists.end(), [&](std::shared_ptr<ZombieList>& other){ return other.get() == zombies.get(); });
+				if (iter != deviceBackend->graveyard.activeZombieLists.end()) {
+					deviceBackend->graveyard.activeZombieLists.erase(iter);
 				}
 			}
 			zombies->zombies.clear();
@@ -583,31 +569,6 @@ namespace daxa {
 				};
 			}
 
-			//for (auto& barrier : bufBarriers) {
-			//	DAXA_ASSERT_M(bufBarrierBufferSize < 32, "can only insert 32 barriers of one kind in a single insertBarriers call");
-			//	bufBarrierBuffer[bufBarrierBufferSize] = VkBufferMemoryBarrier2KHR{
-			//		.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR,
-			//		.pNext = nullptr,
-			//		.srcStageMask = barrier.srcStages,
-			//		.srcAccessMask = barrier.srcAccess,
-			//		.dstStageMask = barrier.dstStages,
-			//		.dstAccessMask = barrier.dstAccess,
-			//		.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			//		.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			//		.buffer = barrier.buffer->getVkBuffer(),
-			//		.offset = barrier.offset,
-			//		.size = barrier.buffer->getSize(),
-			//	};
-//
-			//	usedBuffers.push_back(barrier.buffer);
-//
-			//	if (barrier.size.has_value()) {
-			//		bufBarrierBuffer[bufBarrierBufferSize].size = *barrier.size;
-			//	}
-//
-			//	bufBarrierBufferSize++;
-			//}
-
 			for (auto& imgBarrier : imgBarriers) {
 				DAXA_ASSERT_M(bufBarrierBufferSize < 32, "can only insert 32 barriers of one kind in a single insertBarriers call");
 
@@ -632,8 +593,6 @@ namespace daxa {
 					})
 				};
 
-				//usedImages.push_back(imgBarrier.image);
-
 				imgBarrierBufferSize++;
 			}
 
@@ -648,7 +607,7 @@ namespace daxa {
 				.pImageMemoryBarriers = imgBarrierBuffer.data(),
 			};
 
-			this->vkCmdPipelineBarrier2KHR(cmd, &dependencyInfo);
+			deviceBackend->vkCmdPipelineBarrier2KHR(cmd, &dependencyInfo);
 		}
 	}
 }

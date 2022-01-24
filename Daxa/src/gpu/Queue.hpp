@@ -11,6 +11,7 @@
 #include <vulkan/vulkan.h>
 
 #include "Handle.hpp"
+#include "DeviceBackend.hpp"
 #include "CommandList.hpp"
 #include "TimelineSemaphore.hpp"
 #include "Swapchain.hpp"
@@ -20,8 +21,8 @@ namespace daxa {
 	namespace gpu {
 
 		struct QueueCreateInfo {
-			u32 batchCount = 0;
-			char const* debugName = {};
+			u32 		batchCount	= 0;
+			char const* debugName 	= {};
 		};
 		
 		struct SubmitInfo {
@@ -34,12 +35,12 @@ namespace daxa {
 
 		class Queue {
 		public:
-			Queue(VkDevice device, VkQueue queue, QueueCreateInfo const& ci);
-			Queue() 									= default;
-			Queue(Queue const&) 						= delete;
-			Queue& operator=(Queue const&) 				= delete;
-			Queue(Queue&&) noexcept						= delete;
-			Queue& operator=(Queue&&) noexcept			= delete;
+			Queue(std::shared_ptr<DeviceBackend> deviceBackend, VkQueue queue, QueueCreateInfo const& ci);
+			Queue() 							= default;
+			Queue(Queue const&) 				= delete;
+			Queue& operator=(Queue const&) 		= delete;
+			Queue(Queue&&) noexcept				= delete;
+			Queue& operator=(Queue&&) noexcept	= delete;
 			~Queue();
 
 			/**
@@ -67,28 +68,26 @@ namespace daxa {
 		private: 
 			friend class Device;
 
-			VkDevice device = {};
-			VkQueue queue = {};
-
 			TimelineSemaphoreHandle getNextTimeline();
 
 			struct PendingSubmit {
-				std::vector<CommandListHandle> cmdLists;
-				TimelineSemaphoreHandle timelineSema;
-				u64 finishCounter = 0;
+				std::vector<CommandListHandle> 	cmdLists		= {};
+				TimelineSemaphoreHandle 		timelineSema	= {};
+			u64 								finishCounter 	= 0;
 			};
-			std::deque<std::vector<PendingSubmit>> batches;
-			bool bWaitForBatchesToComplete = false;
 
-			std::vector<TimelineSemaphoreHandle> unusedTimelines = {};
-
+			std::shared_ptr<DeviceBackend> 			deviceBackend 						= {};
+			VkQueue 								queue 								= {};
+			std::deque<std::vector<PendingSubmit>> 	batches								= {};
+			bool 									bWaitForBatchesToComplete 			= false;
+			std::vector<TimelineSemaphoreHandle> 	unusedTimelines 					= {};
 			// reused temporary buffers:
-			std::vector<VkCommandBuffer> submitCommandBufferBuffer = {};
-			std::vector<VkSemaphore> submitSemaphoreWaitOnBuffer = {};
-			std::vector<VkSemaphore> submitSemaphoreSignalBuffer = {};
-			std::vector<u64> submitSemaphoreWaitOnValueBuffer = {};
-			std::vector<u64> submitSemaphoreSignalValueBuffer = {};
-			std::string debugName = {};
+			std::vector<VkCommandBuffer> 			submitCommandBufferBuffer 			= {};
+			std::vector<VkSemaphore> 				submitSemaphoreWaitOnBuffer 		= {};
+			std::vector<VkSemaphore> 				submitSemaphoreSignalBuffer 		= {};
+			std::vector<u64> 						submitSemaphoreWaitOnValueBuffer 	= {};
+			std::vector<u64> 						submitSemaphoreSignalValueBuffer 	= {};
+			std::string 							debugName 							= {};
 		};
 
 		class QueueHandle : public SharedHandle<Queue>{};

@@ -8,6 +8,7 @@
 #include <vulkan/vulkan.h>
 
 #include "Handle.hpp"
+#include "DeviceBackend.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -23,7 +24,7 @@ namespace daxa {
 		*/
 		class TimelineSemaphore {
 		public:
-			TimelineSemaphore(VkDevice device, TimelineSemaphoreCreateInfo const& ci);
+			TimelineSemaphore(std::shared_ptr<DeviceBackend> deviceBackend, TimelineSemaphoreCreateInfo const& ci);
 			TimelineSemaphore(TimelineSemaphore&&) noexcept				= delete;
 			TimelineSemaphore& operator=(TimelineSemaphore&&) noexcept	= delete;
 			TimelineSemaphore(TimelineSemaphore const&)					= delete;
@@ -40,9 +41,9 @@ namespace daxa {
 			friend class Device;
 			friend class Queue;
 
-			VkDevice 	device 			= VK_NULL_HANDLE;
-			VkSemaphore timelineSema 	= VK_NULL_HANDLE;
-			std::string debugName 		= {};
+			std::shared_ptr<DeviceBackend> deviceBackend	= VK_NULL_HANDLE;
+			VkSemaphore timelineSema 						= VK_NULL_HANDLE;
+			std::string debugName 							= {};
 		};
 
 		class TimelineSemaphoreHandle : public SharedHandle<TimelineSemaphore>{};

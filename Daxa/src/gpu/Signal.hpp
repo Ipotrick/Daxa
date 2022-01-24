@@ -4,8 +4,10 @@
 
 #include <memory>
 
-#include "Handle.hpp"
 #include <vulkan/vulkan.h>
+
+#include "Handle.hpp"
+#include "DeviceBackend.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -16,7 +18,7 @@ namespace daxa {
 
 		class Signal {
 		public:
-			Signal(VkDevice device, SignalCreateInfo const& ci);
+			Signal(std::shared_ptr<DeviceBackend> deviceBackend, SignalCreateInfo const& ci);
 			Signal(Signal&&) noexcept				= delete;
 			Signal& operator=(Signal&&) noexcept	= delete;
 			Signal(Signal const&) 					= delete;
@@ -29,9 +31,9 @@ namespace daxa {
 		private:
 			friend class Device;
 
-			VkDevice 	device 		= {};
-			VkSemaphore semaphore 	= {};
-			std::string debugName 	= {};
+			std::shared_ptr<DeviceBackend> 	deviceBackend 	= {};
+			VkSemaphore 					semaphore 		= {};
+			std::string 					debugName 		= {};
 		};
 
 		class SignalHandle : public SharedHandle<Signal>{};

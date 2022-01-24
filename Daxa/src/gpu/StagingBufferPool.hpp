@@ -8,6 +8,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include "DeviceBackend.hpp"
 #include "Buffer.hpp"
 
 namespace daxa {
@@ -42,16 +43,12 @@ namespace daxa {
 
 		class StagingBufferPool {
 		public:
-			StagingBufferPool(VkDevice device, Graveyard* graveyard, std::span<u32> allQueueFamilyIndices, VmaAllocator allocator);
+			StagingBufferPool(std::shared_ptr<DeviceBackend> deviceBackend);
 
 			StagingBuffer getStagingBuffer();
 		private:
-			VmaAllocator allocator = {};
-			VkDevice device = {};
-			u32 queueFamilyIndex = {};
+			std::shared_ptr<DeviceBackend> deviceBackend = {};
 			std::shared_ptr<StagingBufferPoolSharedData> sharedData = {};
-			Graveyard* graveyard = {};
-			std::span<u32> allQueueFamilyIndices = {};
 		};
 
 	}

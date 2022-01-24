@@ -4,8 +4,8 @@
 namespace daxa {
 	namespace gpu {
 
-		Sampler::Sampler(VkDevice device, Graveyard* graveyard, SamplerCreateInfo const& ci) 
-			: device{ device }
+		Sampler::Sampler(std::shared_ptr<DeviceBackend> deviceBackend, SamplerCreateInfo const& ci) 
+			: deviceBackend{ std::move(deviceBackend) }
 			, flags{ 0 }
 			, magFilter{ ci.magFilter }
 			, minFilter{ ci.minFilter }
@@ -22,7 +22,6 @@ namespace daxa {
 			, maxLod{ ci.maxLod }
 			, borderColor{ ci.borderColor }
 			, unnormalizedCoordinates{ ci.unnormalizedCoordinates }
-			, graveyard{ graveyard }
 		{
 			VkSamplerCreateInfo samplerCI {
 				.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -45,7 +44,7 @@ namespace daxa {
 				.unnormalizedCoordinates = unnormalizedCoordinates,
 			};
 
-			vkCreateSampler(device, &samplerCI, nullptr, &sampler);
+			vkCreateSampler(this->deviceBackend->device.device, &samplerCI, nullptr, &sampler);
 
 			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
 				this->debugName = ci.debugName;
@@ -57,14 +56,14 @@ namespace daxa {
 					.objectHandle = (uint64_t)sampler,
 					.pObjectName = ci.debugName,
 				};
-				daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
+				daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT(this->deviceBackend->device.device, &nameInfo);
 			}
 		}
 
 		Sampler::~Sampler() {
-			if (device) {
-				vkDestroySampler(device, sampler, nullptr);
-				device = VK_NULL_HANDLE;
+			if (this->deviceBackend->device.device) {
+				vkDestroySampler(this->deviceBackend->device.device, sampler, nullptr);
+				this->deviceBackend = {};
 			}
 		}
 	}

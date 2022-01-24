@@ -3,15 +3,15 @@
 
 namespace daxa {
 	namespace gpu {
-		Signal::Signal(VkDevice device, SignalCreateInfo const& ci) 
-			: device{ device }
+		Signal::Signal(std::shared_ptr<DeviceBackend> deviceBackend, SignalCreateInfo const& ci) 
+			: deviceBackend{ std::move(deviceBackend) }
 		{
 			VkSemaphoreCreateInfo semaphoreCI{
 				.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
 				.pNext = nullptr,
 				.flags = 0,
 			};
-			vkCreateSemaphore(device, &semaphoreCI, nullptr, &semaphore);
+			vkCreateSemaphore(this->deviceBackend->device.device, &semaphoreCI, nullptr, &semaphore);
 
 			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
 				this->debugName = ci.debugName;
@@ -23,14 +23,14 @@ namespace daxa {
 					.objectHandle = (uint64_t)semaphore,
 					.pObjectName = ci.debugName,
 				};
-				instance->pfnSetDebugUtilsObjectNameEXT(device, &imageNameInfo);
+				instance->pfnSetDebugUtilsObjectNameEXT(this->deviceBackend->device.device, &imageNameInfo);
 			}
 		}
 
 		Signal::~Signal() {
-			if (device) {
-				vkDestroySemaphore(device, semaphore, nullptr);
-				device = VK_NULL_HANDLE;
+			if (deviceBackend->device.device) {
+				vkDestroySemaphore(deviceBackend->device.device, semaphore, nullptr);
+				deviceBackend = {};
 			}
 		}
 	}
