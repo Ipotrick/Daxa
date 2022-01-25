@@ -42,8 +42,7 @@ namespace daxa {
 			};
 			
 
-			auto err = vmaCreateImage(deviceBackend->allocator, (VkImageCreateInfo*)&ici, &aci, (VkImage*)&ret.image, &ret.allocation, nullptr);
-			DAXA_ASSERT_M(err == VK_SUCCESS, "could not create image");
+			DAXA_CHECK_VK_RESULT(vmaCreateImage(deviceBackend->allocator, (VkImageCreateInfo*)&ici, &aci, (VkImage*)&ret.image, &ret.allocation, nullptr));
 
 			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
 				ret.debugName = ci.debugName;
@@ -73,7 +72,7 @@ namespace daxa {
 				}
 			};
 
-			vkCreateImageView(deviceBackend->device.device, &ivci, nullptr, &ret.view);
+			DAXA_CHECK_VK_RESULT(vkCreateImageView(deviceBackend->device.device, &ivci, nullptr, &ret.view));
 
 			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
 				VkDebugUtilsObjectNameInfoEXT imageNameInfo {

@@ -86,10 +86,10 @@ namespace daxa {
 			 */
 			void waitIdle();
 
-			const VkPhysicalDevice& getVkPhysicalDevice() const { return backend->device.physical_device; }
-			const VkDevice& getVkDevice() const { return backend->device.device; }
-			const VmaAllocator& getVma() const { return backend->allocator; }
-			const u32& getVkGraphicsQueueFamilyIndex() const { return backend->graphicsQFamilyIndex; }
+			const VkPhysicalDevice getVkPhysicalDevice() const { return backend->device.physical_device; }
+			const VkDevice getVkDevice() const { return backend->device.device; }
+			const VmaAllocator getVma() const { return backend->allocator; }
+			const u32 getVkGraphicsQueueFamilyIndex() const { return backend->graphicsQFamilyIndex; }
 		private:
 			friend class Instance;
 
@@ -97,7 +97,7 @@ namespace daxa {
 
 			std::shared_ptr<DeviceBackend> 					backend 					= {};
 			std::shared_ptr<StagingBufferPool> 				stagingBufferPool 			= {};
-			std::unique_ptr<BindingSetLayoutCache>		bindingSetDescriptionCache 	= {};
+			std::unique_ptr<BindingSetLayoutCache>			bindingSetDescriptionCache 	= {};
 		};
 
 		class DeviceHandle : public SharedHandle<Device>{};

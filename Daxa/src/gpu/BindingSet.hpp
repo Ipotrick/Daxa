@@ -41,12 +41,14 @@ namespace daxa {
 				return 	descriptorType == other.descriptorType && 
 						descriptorCount == other.descriptorCount && 
 						stageFlags == other.stageFlags &&
+						bindingFlag == other.bindingFlag &&
 						immutableSamplers == other.immutableSamplers;
 			}
 
 			VkDescriptorType      		descriptorType 		= {};
 			u32              			descriptorCount 	= {};
 			VkShaderStageFlags    		stageFlags 			= {};
+			VkDescriptorBindingFlags  	bindingFlag			= {};
 			std::vector<SamplerHandle>	immutableSamplers 	= {};
 		};
 
@@ -69,9 +71,10 @@ namespace daxa {
 			{
 				size_t hash = 0x44fe7234f2;
 				for (int i = 0; i < MAX_BINDINGS_PER_SET; i++) {
-					hash ^= description.layouts[i].descriptorCount;
-					hash ^= description.layouts[i].descriptorType;
-					hash ^= description.layouts[i].stageFlags;
+					hash ^= description.layouts[i].descriptorCount << 1;
+					hash ^= description.layouts[i].descriptorType << 2;
+					hash ^= description.layouts[i].stageFlags << 3;
+					hash ^= description.layouts[i].bindingFlag << 4;
 					hash <<= 1;
 				}
 				hash ^= description.flags;
@@ -81,6 +84,7 @@ namespace daxa {
 
 		class BindingSetLayout {
 		public:
+			BindingSetLayout() = default;
 			BindingSetLayout(std::shared_ptr<DeviceBackend> deviceBackend, BindingSetDescription const& description);
 			BindingSetLayout(BindingSetLayout const&) 			= delete;
 			BindingSetLayout operator=(BindingSetLayout const&) = delete;
@@ -94,15 +98,19 @@ namespace daxa {
 				return std::span<VkDescriptorSetLayoutBinding const>{ descriptorSetBindingLayouts.data(), descriptorSetBindingLayoutsCount }; 
 			}
 		private:
+			friend class BindingSetLayoutCache;
+
 			void cleanup();
 
-			std::shared_ptr<DeviceBackend> 									deviceBackend 						= {};
-			BindingSetDescription 											description 						= {};
-			std::array<VkDescriptorSetLayoutBinding, MAX_BINDINGS_PER_SET> 	descriptorSetBindingLayouts 		= {};
-			size_t 															descriptorSetBindingLayoutsCount 	= {};
-			std::vector<std::vector<VkSampler>>								vkImmutableSamplers					= {};
-			VkDescriptorSetLayout 											layout								= {};
-			size_t 															descriptorCount 					= {};
+			std::shared_ptr<DeviceBackend> 									deviceBackend 							= {};
+			BindingSetDescription 											description 							= {};
+			std::array<VkDescriptorSetLayoutBinding, MAX_BINDINGS_PER_SET> 	descriptorSetBindingLayouts 			= {};
+			size_t 															descriptorSetBindingLayoutsCount 		= {};
+			std::array<VkDescriptorBindingFlags, MAX_BINDINGS_PER_SET> 		descriptorSetBindingLayoutFlags 		= {};
+			size_t 															descriptorSetBindingLayoutFlagCounts 	= {};
+			std::vector<std::vector<VkSampler>>								vkImmutableSamplers						= {};
+			VkDescriptorSetLayout 											layout									= {};
+			size_t 															descriptorCount 						= {};
 		};
 
 		class BindingSet {
@@ -209,5 +217,36 @@ namespace daxa {
 		};
 
 		class BindingSetAllocatorHandle : public SharedHandle<BindingSetAllocator>{};
+
+		inline static const BindingSetDescription BIND_ALL_SET_DESCRIPTION {
+			.layouts = {
+				BindingLayout{
+					.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
+					.descriptorCount = BIND_ALL_SAMPLER_POOL_SIZE.descriptorCount,
+					.stageFlags = VK_SHADER_STAGE_ALL,
+				},
+				BindingLayout{
+					.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+					.descriptorCount = BIND_ALL_COMBINED_IMAGE_SAMPLER_POOL_SIZE.descriptorCount,
+					.stageFlags = VK_SHADER_STAGE_ALL,
+				},
+				BindingLayout{
+					.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+					.descriptorCount = BIND_ALL_SAMPLED_IMAGE_POOL_SIZE.descriptorCount,
+					.stageFlags = VK_SHADER_STAGE_ALL,
+				},
+				BindingLayout{
+					.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+					.descriptorCount = BIND_ALL_STORAGE_IMAGE_POOL_SIZE.descriptorCount,
+					.stageFlags = VK_SHADER_STAGE_ALL,
+				},
+				BindingLayout{
+					.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+					.descriptorCount = BIND_ALL_STORAGE_BUFFER_POOL_SIZE.descriptorCount,
+					.stageFlags = VK_SHADER_STAGE_ALL,
+				},
+			},
+			.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
+		};
 	}
 }

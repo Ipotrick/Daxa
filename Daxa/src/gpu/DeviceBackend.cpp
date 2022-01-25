@@ -1,4 +1,5 @@
 #include "DeviceBackend.hpp"
+#include <array>
 
 namespace daxa {
     namespace gpu {
@@ -16,10 +17,25 @@ namespace daxa {
 			VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeature{
 				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
 				.pNext = nullptr,
+				.shaderInputAttachmentArrayDynamicIndexing = VK_TRUE,
+				.shaderUniformTexelBufferArrayDynamicIndexing = VK_TRUE,
+				.shaderStorageTexelBufferArrayDynamicIndexing = VK_TRUE,
+				.shaderUniformBufferArrayNonUniformIndexing = VK_TRUE,
 				.shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
+				.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE,
+				.shaderStorageImageArrayNonUniformIndexing = VK_TRUE,
+				.shaderInputAttachmentArrayNonUniformIndexing = VK_TRUE,
+				.shaderUniformTexelBufferArrayNonUniformIndexing = VK_TRUE,
+				.shaderStorageTexelBufferArrayNonUniformIndexing = VK_TRUE,
+				//.descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE,	// uniform buffers are specially optimized on nvidia hw
+				.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE,
+				.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE,
+				.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE,
+				.descriptorBindingUniformTexelBufferUpdateAfterBind = VK_TRUE,
+				.descriptorBindingStorageTexelBufferUpdateAfterBind = VK_TRUE,
+				.descriptorBindingUpdateUnusedWhilePending = VK_TRUE,
 				.descriptorBindingPartiallyBound = VK_TRUE,
 				.descriptorBindingVariableDescriptorCount = VK_TRUE,
-				.runtimeDescriptorArray = VK_TRUE,
 				.runtimeDescriptorArray = VK_TRUE,
 			};
 
@@ -46,13 +62,22 @@ namespace daxa {
 				.shaderBufferInt64Atomics = VK_TRUE,
 				.shaderSharedInt64Atomics = VK_TRUE,
 			};
+			VkPhysicalDevice16BitStorageFeatures device16BitFeatures{
+				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES,
+				.pNext = nullptr,
+				.storageBuffer16BitAccess = VK_FALSE,
+				.uniformAndStorageBuffer16BitAccess = VK_TRUE,
+				.storagePushConstant16 = VK_FALSE,
+				.storageInputOutput16 = VK_FALSE,
+			};
 
 			vkb::DeviceBuilder deviceBuilder{ physicalDevice };
 			deviceBuilder.add_pNext(&descriptorIndexingFeature);
 			deviceBuilder.add_pNext(&dynamicRenderingFeature);
 			deviceBuilder.add_pNext(&timelineSemaphoreFeatures);
 			deviceBuilder.add_pNext(&synchronization2Features);
-			deviceBuilder.add_pNext(&atomicI64Features);
+			//deviceBuilder.add_pNext(&atomicI64Features);
+			deviceBuilder.add_pNext(&device16BitFeatures);
 
 			vkb::Device vkbDevice = deviceBuilder.build().value();
 
@@ -98,10 +123,66 @@ namespace daxa {
 			this->vkCmdBeginRenderingKHR = fnPtrvkCmdBeginRenderingKHR;
 			this->vkCmdEndRenderingKHR = fnPtrvkCmdEndRenderingKHR;
 			this->vkCmdPipelineBarrier2KHR = fnPtrvkCmdPipelineBarrier2KHR;
+
+			auto bindAllPoolSizes = std::array{
+				BIND_ALL_SAMPLER_POOL_SIZE,
+				BIND_ALL_COMBINED_IMAGE_SAMPLER_POOL_SIZE,
+				BIND_ALL_SAMPLED_IMAGE_POOL_SIZE,
+				BIND_ALL_STORAGE_IMAGE_POOL_SIZE,
+				BIND_ALL_STORAGE_BUFFER_POOL_SIZE,
+			};
+			VkDescriptorPoolCreateInfo poolCI {
+				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+				.pNext = nullptr,
+				.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
+				.maxSets = 1,
+				.poolSizeCount = (u32)bindAllPoolSizes.size(),
+				.pPoolSizes = bindAllPoolSizes.data(),
+			};
+			DAXA_CHECK_VK_RESULT(vkCreateDescriptorPool(vkbDevice.device, &poolCI, nullptr, &bindAllSetPool));
+			auto bindAllSetDescriptorSetLayoutBindings = std::array {
+				BIND_ALL_SAMPLER_SET_LAYOUT_BINDING,
+				BIND_ALL_COMBINED_IMAGE_SAMPLER_SET_LAYOUT_BINDING,
+				BIND_ALL_SAMPLED_IMAGE_SET_LAYOUT_BINDING,
+				BIND_ALL_STORAGE_IMAGE_SET_LAYOUT_BINDING,
+				BIND_ALL_STORAGE_BUFFER_SET_LAYOUT_BINDING,
+			};
+			auto bindAllSetLayoutBindingFlags = std::array<VkDescriptorBindingFlags, 5>{
+				VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+				VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+				VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+				VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+				VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+			};
+			VkDescriptorSetLayoutBindingFlagsCreateInfo bindAllSetLayoutBindingFlagsCI {
+				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
+				.pNext = nullptr,
+				.bindingCount = (u32)bindAllSetLayoutBindingFlags.size(),
+				.pBindingFlags = bindAllSetLayoutBindingFlags.data(),
+			};
+			VkDescriptorSetLayoutCreateInfo bindAllSetLayoutCI {
+				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+				.pNext = &bindAllSetLayoutBindingFlagsCI,
+				.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT,
+				.bindingCount = (u32)bindAllSetDescriptorSetLayoutBindings.size(),
+				.pBindings = bindAllSetDescriptorSetLayoutBindings.data()
+			};
+			DAXA_CHECK_VK_RESULT(vkCreateDescriptorSetLayout(vkbDevice.device, &bindAllSetLayoutCI, nullptr, &bindAllSetLayout));
+			VkDescriptorSetAllocateInfo bindAllSetAI {
+				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+				.pNext = nullptr,
+				.descriptorPool = bindAllSetPool,
+				.descriptorSetCount = 1,
+				.pSetLayouts = &bindAllSetLayout,
+			};
+			DAXA_CHECK_VK_RESULT(vkAllocateDescriptorSets(vkbDevice.device, &bindAllSetAI, &bindAllSet));
         }
 
 		DeviceBackend::~DeviceBackend() {
 			if (device) {
+				vkResetDescriptorPool(device.device, bindAllSetPool, 0);
+				vkDestroyDescriptorPool(device.device, bindAllSetPool, nullptr);
+				vkDestroyDescriptorSetLayout(device.device, bindAllSetLayout, nullptr);
 			    vkDeviceWaitIdle(device.device);
 				vmaDestroyAllocator(allocator);
                 vkb::destroy_device(device);
