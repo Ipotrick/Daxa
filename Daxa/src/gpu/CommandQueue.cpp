@@ -92,7 +92,7 @@ namespace daxa {
 				.signalSemaphoreCount = (u32)submitSemaphoreSignalBuffer.size(),
 				.pSignalSemaphores = submitSemaphoreSignalBuffer.data(),
 			};
-			vkQueueSubmit(queue, 1, &submitInfo, nullptr);
+			DAXA_CHECK_VK_RESULT(vkQueueSubmit(queue, 1, &submitInfo, nullptr));
 
 			PendingSubmit pendingSubmit{
 				.cmdLists = { si.commandLists },
@@ -156,7 +156,7 @@ namespace daxa {
 				.pSwapchains = &image.swapchain,
 				.pImageIndices = &image.imageIndex,
 			};
-			vkQueuePresentKHR(queue, &presentInfo);
+			DAXA_CHECK_VK_RESULT(vkQueuePresentKHR(queue, &presentInfo));
 		}
 
 		void CommandQueue::waitIdle() {
@@ -210,7 +210,7 @@ namespace daxa {
 					.pNext = nullptr,
 					.queueFamilyIndex = queueFamilyIndex,
 				};
-				vkCreateCommandPool(deviceBackend->device.device, &commandPoolCI, nullptr, &list.cmdPool);
+				DAXA_CHECK_VK_RESULT(vkCreateCommandPool(deviceBackend->device.device, &commandPoolCI, nullptr, &list.cmdPool));
 
 				VkCommandBufferAllocateInfo commandBufferAllocateInfo{
 					.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -219,7 +219,7 @@ namespace daxa {
 					.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
 					.commandBufferCount = 1,
 				};
-				vkAllocateCommandBuffers(deviceBackend->device.device, &commandBufferAllocateInfo, &list.cmd);
+				DAXA_CHECK_VK_RESULT(vkAllocateCommandBuffers(deviceBackend->device.device, &commandBufferAllocateInfo, &list.cmd));
 				list.begin();
 			} 
 			auto ret = std::move(unusedCommandLists.back());

@@ -35,7 +35,7 @@ using uz = size_t;
 #define DAXA_ASSERT_M(x, message) \
 if (!(x)) {\
 	std::cerr << "[[DAXA ASSERTION FALIURE]] " << message << std::endl;\
-	assert(false);\
+	abort();\
 }\
 ((void)0)
 #else

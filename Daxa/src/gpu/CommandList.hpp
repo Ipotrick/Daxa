@@ -272,6 +272,8 @@ namespace daxa {
 				insertBarriers({}, { &barrier, 1});
 			}
 
+			void bindAll(u32 set = 0);
+
 			// Accessors:
 
 			VkCommandBuffer getVkCommandBuffer() { return cmd; }

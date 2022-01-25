@@ -28,9 +28,10 @@ namespace daxa {
 
 			if (enableValidationLayer) {
 				pfnSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(instance, "vkSetDebugUtilsObjectNameEXT");
+				DAXA_ASSERT_M(pfnSetDebugUtilsObjectNameEXT != nullptr, "could not load function ptr for PFN_vkSetDebugUtilsObjectNameEXT");
+			} else {
+				pfnSetDebugUtilsObjectNameEXT = nullptr;
 			}
-			DAXA_ASSERT_M(pfnSetDebugUtilsObjectNameEXT != nullptr, "could not load function ptr for PFN_vkSetDebugUtilsObjectNameEXT");
-
 		}
 
 		Instance::~Instance() {

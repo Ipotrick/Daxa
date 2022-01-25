@@ -21,7 +21,7 @@ namespace daxa {
 				.flags = 0,
 			};
 
-			vkCreateSemaphore(this->deviceBackend->device.device, &timelineSemaphoreCI, nullptr, &this->timelineSema);
+			DAXA_ASSERT_M(vkCreateSemaphore(this->deviceBackend->device.device, &timelineSemaphoreCI, nullptr, &this->timelineSema) == VK_SUCCESS, "could not create timeline semaphore");
 
 			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
 				this->debugName = ci.debugName;
@@ -46,7 +46,7 @@ namespace daxa {
 
 		u64 TimelineSemaphore::getCounter() const {
 			u64 counter = 0;
-			vkGetSemaphoreCounterValue(this->deviceBackend->device.device, timelineSema, &counter);
+			DAXA_ASSERT_M(vkGetSemaphoreCounterValue(this->deviceBackend->device.device, timelineSema, &counter) == VK_SUCCESS, "could not aquire timeline semaphore counter");
 			return counter;
 		}
 
@@ -58,7 +58,7 @@ namespace daxa {
 				.value = newCounterValue,
 			};
 
-			vkSignalSemaphore(this->deviceBackend->device.device, &semaphoreSI);
+			DAXA_ASSERT_M(vkSignalSemaphore(this->deviceBackend->device.device, &semaphoreSI) == VK_SUCCESS, "could not signal timeline semaphore");
 		}
 
 		VkResult TimelineSemaphore::wait(u64 counter, u64 timeout) {

@@ -52,6 +52,8 @@ namespace daxa {
 
 			u32 getMemeoryMapCount() const { return memoryMapCount; }
 
+			u16 const* getStorageIndex() const { return storageIndex == std::numeric_limits<u16>::max() ? nullptr : &storageIndex; }
+
 			std::string const& getDebugName() const { return debugName; }
 		private:
 			friend class Device;
@@ -74,6 +76,7 @@ namespace daxa {
 			u32 							usesOnGPU 		= {};
 			u32 							memoryMapCount 	= {};
 			std::string 					debugName 		= {};
+			u16 							storageIndex 	= std::numeric_limits<u16>::max();
 		};
 
 		template<typename ValueT = u8>
