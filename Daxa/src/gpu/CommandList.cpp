@@ -30,7 +30,7 @@ namespace daxa {
 		void CommandList::finalize() {
 			DAXA_ASSERT_M(finalized == false, "can not finalize a command list twice");
 			DAXA_ASSERT_M(operationsInProgress == 0, "can only finalize a command list that has no operations in progress");
-			vkEndCommandBuffer(cmd);
+			DAXA_CHECK_VK_RESULT(vkEndCommandBuffer(cmd));
 			finalized = true;
 		}
 
@@ -419,7 +419,7 @@ namespace daxa {
 				.pNext = nullptr,
 				.flags = VkCommandBufferUsageFlagBits::VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
 			};
-			vkBeginCommandBuffer(cmd, &cbbi);
+			DAXA_CHECK_VK_RESULT(vkBeginCommandBuffer(cmd, &cbbi));
 		}
 
 		void CommandList::checkIfPipelineAndRenderPassFit() {
@@ -483,7 +483,7 @@ namespace daxa {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(operationsInProgress == 0, "can not reset command list with recordings in progress");
 			empty = true;
-			vkResetCommandPool(deviceBackend->device.device, cmdPool, VkCommandPoolResetFlagBits::VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
+			DAXA_CHECK_VK_RESULT(vkResetCommandPool(deviceBackend->device.device, cmdPool, VkCommandPoolResetFlagBits::VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT));
 			usedGraphicsPipelines.clear();
 			usedSets.clear();
 			currentPipeline = {};
@@ -613,6 +613,10 @@ namespace daxa {
 			};
 
 			deviceBackend->vkCmdPipelineBarrier2KHR(cmd, &dependencyInfo);
+		}
+
+		void CommandList::bindAll(u32 set) {
+			vkCmdBindDescriptorSets(cmd, (**currentPipeline).getVkBindPoint(), (**currentPipeline).getVkPipelineLayout(), set, 1, &deviceBackend->bindAllSet, 0, nullptr);
 		}
 	}
 }

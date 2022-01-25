@@ -376,7 +376,7 @@ namespace daxa {
 				.pushConstantRangeCount = static_cast<u32>(pushConstants.size()),
 				.pPushConstantRanges = pushConstants.data(),
 			};
-			vkCreatePipelineLayout(deviceBackend->device.device, &pipelineLayoutCI, nullptr, &ret.layout);
+			DAXA_CHECK_VK_RESULT(vkCreatePipelineLayout(deviceBackend->device.device, &pipelineLayoutCI, nullptr, &ret.layout));
 
 			// create pipeline:
 			VkPipelineVertexInputStateCreateInfo pVertexInput = VkPipelineVertexInputStateCreateInfo{
@@ -475,8 +475,7 @@ namespace daxa {
 				.subpass = 0,
 			};
 
-			auto err = vkCreateGraphicsPipelines(deviceBackend->device.device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline);
-			DAXA_ASSERT_M(err == VK_SUCCESS, "could not create graphics pipeline");
+			DAXA_ASSERT_M(vkCreateGraphicsPipelines(deviceBackend->device.device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline) == VK_SUCCESS, "failed to create graphics pipeline");
 
 			setPipelineDebugName(deviceBackend->device.device, debugName, ret);
 
@@ -523,7 +522,7 @@ namespace daxa {
 				.pushConstantRangeCount = static_cast<u32>(pushConstants.size()),
 				.pPushConstantRanges = pushConstants.data(),
 			};
-			vkCreatePipelineLayout(deviceBackend->device.device, &pipelineLayoutCI, nullptr, &ret.layout);
+			DAXA_ASSERT_M(vkCreatePipelineLayout(deviceBackend->device.device, &pipelineLayoutCI, nullptr, &ret.layout) == VK_SUCCESS, "failed to create compute pipeline layout");
 
 			VkComputePipelineCreateInfo pipelineCI{
 				.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
@@ -534,7 +533,7 @@ namespace daxa {
 				.basePipelineHandle  = VK_NULL_HANDLE,
 				.basePipelineIndex = 0,
 			};
-			vkCreateComputePipelines(deviceBackend->device.device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline);
+			DAXA_ASSERT_M(vkCreateComputePipelines(deviceBackend->device.device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline) == VK_SUCCESS, "failed to create compute pipeline");
 
 			setPipelineDebugName(deviceBackend->device.device, ci.debugName, ret);
 
