@@ -24,7 +24,7 @@ namespace daxa {
 				.requiredFlags = ci.memoryProperties,
 			};
 
-			vmaCreateBuffer(this->deviceBackend->allocator, (VkBufferCreateInfo*)&bci, &aci, &buffer, &allocation, nullptr);
+			DAXA_CHECK_VK_RESULT(vmaCreateBuffer(this->deviceBackend->allocator, (VkBufferCreateInfo*)&bci, &aci, &buffer, &allocation, nullptr));
 
 			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
 				this->debugName = ci.debugName;
@@ -37,6 +37,32 @@ namespace daxa {
 				};
 				instance->pfnSetDebugUtilsObjectNameEXT(this->deviceBackend->device.device, &nameInfo);
 			}
+
+			if (ci.usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) {
+				u16 index;
+				if (this->deviceBackend->storageBufferIndexFreeList.empty()) {
+					index = this->deviceBackend->nextStorageBufferIndex++;
+				} else {
+					index = this->deviceBackend->storageBufferIndexFreeList.back();
+					this->deviceBackend->storageBufferIndexFreeList.pop_back();
+				}
+				VkDescriptorBufferInfo bufferInfo{
+					.buffer = buffer,
+					.range = size,
+				};
+				VkWriteDescriptorSet write {
+					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+					.pNext = nullptr,
+					.dstSet = this->deviceBackend->bindAllSet,
+					.dstBinding = BIND_ALL_STORAGE_BUFFER_SET_LAYOUT_BINDING.binding,
+					.dstArrayElement = index,
+					.descriptorCount = 1,
+					.descriptorType = BIND_ALL_STORAGE_BUFFER_SET_LAYOUT_BINDING.descriptorType,
+					.pBufferInfo = &bufferInfo,
+				};
+				vkUpdateDescriptorSets(this->deviceBackend->device.device, 1, &write, 0, nullptr);
+				storageIndex = index;
+			}
 		}
 
 		bool Buffer::isUsedByGPU() const {
@@ -45,6 +71,9 @@ namespace daxa {
 
 		Buffer::~Buffer() {
 			if (this->deviceBackend) {
+				if (storageIndex != std::numeric_limits<u16>::max()) {
+					this->deviceBackend->storageBufferIndexFreeList.push_back(storageIndex);
+				}
 				vmaDestroyBuffer(this->deviceBackend->allocator, buffer, allocation);
 			}
 		}
@@ -55,7 +84,7 @@ namespace daxa {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not upload to buffer that is currently in use on the gpu directly from host. to indirectly upload to this buffer, use the command list upload.");
 
 			u8* bufferMemPtr{ nullptr };
-			vmaMapMemory(this->deviceBackend->allocator, allocation, (void**)&bufferMemPtr);
+			DAXA_CHECK_VK_RESULT(vmaMapMemory(this->deviceBackend->allocator, allocation, (void**)&bufferMemPtr));
 			std::memcpy(bufferMemPtr + dstOffset, src, size);
 			vmaUnmapMemory(this->deviceBackend->allocator, allocation);
 		}
@@ -65,7 +94,7 @@ namespace daxa {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not upload to buffer that is currently in use on the gpu directly from host. to indirectly upload to this buffer, use the command list upload.");
 			memoryMapCount += 1;
 			void* ret;
-			vmaMapMemory(this->deviceBackend->allocator, allocation, &ret);
+			DAXA_CHECK_VK_RESULT(vmaMapMemory(this->deviceBackend->allocator, allocation, &ret));
 			return ret;
 		}
 

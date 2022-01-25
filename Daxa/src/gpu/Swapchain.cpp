@@ -76,7 +76,7 @@ namespace daxa {
 			};
 
 			if (aquireFence == VK_NULL_HANDLE) {
-				vkCreateFence(deviceBackend->device.device, &fenceCI, nullptr, &this->aquireFence);
+				DAXA_ASSERT_M(vkCreateFence(deviceBackend->device.device, &fenceCI, nullptr, &this->aquireFence) == VK_SUCCESS, "failed to create swaichain fence");
 			}
 
 			if (daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
@@ -135,15 +135,14 @@ namespace daxa {
 
 		SwapchainImage Swapchain::aquireNextImage() {
 			u32 index{ 0 };
-			auto err = vkAcquireNextImageKHR(deviceBackend->device.device, swapchain, UINT64_MAX, nullptr, aquireFence, &index);
-			DAXA_ASSERT_M(err == VK_SUCCESS, "could not aquire next image from swapchain");
+			DAXA_ASSERT_M(vkAcquireNextImageKHR(deviceBackend->device.device, swapchain, UINT64_MAX, nullptr, aquireFence, &index) == VK_SUCCESS, "could not aquire next image from swapchain");
 			SwapchainImage si{};
 			si.swapchain = swapchain;
 			si.imageIndex = index;
 			si.image = swapchainImages[index];
 
-			vkWaitForFences(deviceBackend->device.device, 1, &aquireFence, VK_TRUE, UINT64_MAX);
-			vkResetFences(deviceBackend->device.device, 1, &aquireFence);
+			DAXA_ASSERT_M(vkWaitForFences(deviceBackend->device.device, 1, &aquireFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS, "failed to wait on swapchain fence");
+			DAXA_ASSERT_M(vkResetFences(deviceBackend->device.device, 1, &aquireFence) == VK_SUCCESS, "failed to reset swapchain fence");
 
 			return si;
 		}

@@ -1,9 +1,11 @@
 #version 450
 #extension GL_KHR_vulkan_glsl : enable
+#extension GL_EXT_shader_16bit_storage : enable
+#extension GL_EXT_nonuniform_qualifier : enable
 
 layout(local_size_x = 8, local_size_y = 8) in;
 
-layout(set = 0, binding = 0) uniform Globals {
+struct Globals {
     mat4 inverse_view;
     mat4 inverseTransposeVP;
     float near;
@@ -11,15 +13,33 @@ layout(set = 0, binding = 0) uniform Globals {
     ivec2 size;
     float zMin;
     float zMax;
-} globals;
+};
 
-layout (set = 0, binding = 1) uniform sampler2D in_depth;
-layout (set = 0, binding = 2) uniform sampler2D in_normal;
-layout (set = 0, binding = 3, rgba8) uniform writeonly image2D out_depth;
-layout (set = 0, binding = 4, rgba8) uniform writeonly image2D outScreenSpaceNormal;
-layout (set = 0, binding = 5, rgba8) uniform writeonly image2D out_world_space_normal;
+layout (set = 0, binding = 4, std140) readonly buffer StorageBuffers {
+    Globals globals;
+} storageBuffers[65535];
+
+//layout(set = 1, binding = 0) uniform Globals {
+//    mat4 inverse_view;
+//    mat4 inverseTransposeVP;
+//    float near;
+//    float far;
+//    ivec2 size;
+//    float zMin;
+//    float zMax;
+//} globals;
+layout (set = 1, binding = 1) uniform sampler2D in_depth;
+layout (set = 1, binding = 2) uniform sampler2D in_normal;
+layout (set = 1, binding = 3, rgba8) uniform writeonly image2D out_depth;
+layout (set = 1, binding = 4, rgba8) uniform writeonly image2D outScreenSpaceNormal;
+layout (set = 1, binding = 5, rgba8) uniform writeonly image2D out_world_space_normal;
+
+layout(std140, push_constant) uniform PushConstants {
+    uint bufferIndex;
+} pushConstants;
 
 void main() {
+    Globals globals = storageBuffers[nonuniformEXT(pushConstants.bufferIndex)].globals;
 	if (gl_GlobalInvocationID.x < globals.size.x && gl_GlobalInvocationID.y < globals.size.y) {
         ivec2 icoord = ivec2(gl_GlobalInvocationID.xy);
         vec2 coord = vec2(gl_GlobalInvocationID.xy) / vec2(globals.size);

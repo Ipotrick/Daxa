@@ -138,24 +138,34 @@ namespace daxa {
 
 					descriptorSetBindingLayouts[descriptorSetBindingLayoutsCount++] = VkDescriptorSetLayoutBinding{
 						.binding = binding,
-						.descriptorCount = layout.descriptorCount,
 						.descriptorType = layout.descriptorType,
+						.descriptorCount = layout.descriptorCount,
 						.stageFlags = layout.stageFlags,
 						.pImmutableSamplers = immutableSamplers.empty() ? nullptr : immutableSamplers.data(),
 					};
 
 					this->descriptorCount += layout.descriptorCount;
+
+					descriptorSetBindingLayoutFlags[descriptorSetBindingLayoutFlagCounts++] = layout.bindingFlag;
 				}
 			}
-
+			VkDescriptorSetLayoutBindingFlagsCreateInfo bindAllSetLayoutBindingFlagsCI {
+				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
+				.pNext = nullptr,
+				.bindingCount = (u32)descriptorSetBindingLayoutFlagCounts,
+				.pBindingFlags = descriptorSetBindingLayoutFlags.data(),
+			};
 			VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI{
 				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-				.pNext = nullptr,
+				.pNext = &bindAllSetLayoutBindingFlagsCI,
 				.flags = 0,
 				.bindingCount = (u32)descriptorSetBindingLayoutsCount,
 				.pBindings = descriptorSetBindingLayouts.data(),
 			};
-			vkCreateDescriptorSetLayout(this->deviceBackend->device.device, &descriptorSetLayoutCI, nullptr, &layout);
+			if (description.flags & VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT) {
+				descriptorSetLayoutCI.flags |= VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+			}
+			DAXA_CHECK_VK_RESULT(vkCreateDescriptorSetLayout(this->deviceBackend->device.device, &descriptorSetLayoutCI, nullptr, &layout));
 		}
 		void BindingSetLayout::cleanup() {
 			if (deviceBackend) {
@@ -183,7 +193,26 @@ namespace daxa {
 		
 		BindingSetLayoutCache::BindingSetLayoutCache(std::shared_ptr<DeviceBackend> deviceBackend) 
 			: deviceBackend{ std::move(deviceBackend) }
-		{ }
+		{ 
+			map[BIND_ALL_SET_DESCRIPTION] = std::make_shared<BindingSetLayout>();
+			auto& layout = map[BIND_ALL_SET_DESCRIPTION];
+			layout->description = BIND_ALL_SET_DESCRIPTION,
+			layout->descriptorCount = 
+				BIND_ALL_SAMPLER_SET_LAYOUT_BINDING.descriptorCount + 
+				BIND_ALL_COMBINED_IMAGE_SAMPLER_SET_LAYOUT_BINDING.descriptorCount + 
+				BIND_ALL_SAMPLED_IMAGE_SET_LAYOUT_BINDING.descriptorCount + 
+				BIND_ALL_STORAGE_IMAGE_SET_LAYOUT_BINDING.descriptorCount + 
+				BIND_ALL_STORAGE_BUFFER_SET_LAYOUT_BINDING.descriptorCount;
+			layout->descriptorSetBindingLayouts = std::array<VkDescriptorSetLayoutBinding, 32>{
+				BIND_ALL_SAMPLER_SET_LAYOUT_BINDING,
+				BIND_ALL_COMBINED_IMAGE_SAMPLER_SET_LAYOUT_BINDING,
+				BIND_ALL_SAMPLED_IMAGE_SET_LAYOUT_BINDING,
+				BIND_ALL_STORAGE_IMAGE_SET_LAYOUT_BINDING,
+				BIND_ALL_STORAGE_BUFFER_SET_LAYOUT_BINDING,
+			};
+			layout->descriptorSetBindingLayoutsCount = (u32)layout->descriptorSetBindingLayouts.size();
+			layout->layout = this->deviceBackend->bindAllSetLayout;
+		}
 		
 		std::shared_ptr<BindingSetLayout const> BindingSetLayoutCache::getLayoutShared(BindingSetDescription const& description) {
 			if (!map.contains(description)) {
@@ -287,7 +316,7 @@ namespace daxa {
 			};
 			pool->allocatedSets += 1;
 			VkDescriptorSet set;
-			vkAllocateDescriptorSets(deviceBackend->device.device, &descriptorSetAI, &set);
+			DAXA_CHECK_VK_RESULT(vkAllocateDescriptorSets(deviceBackend->device.device, &descriptorSetAI, &set));
 
 			return BindingSetHandle{ std::make_shared<BindingSet>(deviceBackend, set, pool, setLayout) };
 		}
@@ -303,7 +332,7 @@ namespace daxa {
 			};
 
 			VkDescriptorPool pool = VK_NULL_HANDLE;
-			vkCreateDescriptorPool(deviceBackend->device.device, &descriptorPoolCI, nullptr, &pool);
+			DAXA_CHECK_VK_RESULT(vkCreateDescriptorPool(deviceBackend->device.device, &descriptorPoolCI, nullptr, &pool));
 			auto ret = std::make_shared<BindingSetAllocatorBindingiSetPool>();
 			ret->pool = pool;
 			ret->allocatedSets = 0;
