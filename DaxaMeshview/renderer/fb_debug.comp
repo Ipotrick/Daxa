@@ -15,9 +15,9 @@ struct Globals {
     float zMax;
 };
 
-layout (set = 0, binding = 4, std140) readonly buffer StorageBuffers {
+layout (set = 0, binding = 4) readonly buffer StorageBuffers {
     Globals globals;
-} storageBuffers[65535];
+} storageBuffers[];
 
 //layout(set = 1, binding = 0) uniform Globals {
 //    mat4 inverse_view;
@@ -39,7 +39,7 @@ layout(std140, push_constant) uniform PushConstants {
 } pushConstants;
 
 void main() {
-    Globals globals = storageBuffers[nonuniformEXT(pushConstants.bufferIndex)].globals;
+    Globals globals = storageBuffers[pushConstants.bufferIndex].globals;
 	if (gl_GlobalInvocationID.x < globals.size.x && gl_GlobalInvocationID.y < globals.size.y) {
         ivec2 icoord = ivec2(gl_GlobalInvocationID.xy);
         vec2 coord = vec2(gl_GlobalInvocationID.xy) / vec2(globals.size);

@@ -43,46 +43,46 @@ namespace daxa {
 			u16 nextStorageBufferIndex														= {};
         };
 
-		inline const VkDescriptorPoolSize BIND_ALL_SAMPLER_POOL_SIZE {
+		inline static const VkDescriptorPoolSize BIND_ALL_SAMPLER_POOL_SIZE {
 			.type = VK_DESCRIPTOR_TYPE_SAMPLER,
-			.descriptorCount = (1<<16)-1,
+			.descriptorCount = (1<<16) - 1,
 		};
-		inline const VkDescriptorPoolSize BIND_ALL_COMBINED_IMAGE_SAMPLER_POOL_SIZE {
+		inline static const VkDescriptorPoolSize BIND_ALL_COMBINED_IMAGE_SAMPLER_POOL_SIZE {
 			.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			.descriptorCount = (1<<12) - 1,
+			.descriptorCount = (1<<16) - 1,
 		};
-		inline const VkDescriptorPoolSize BIND_ALL_SAMPLED_IMAGE_POOL_SIZE {
+		inline static const VkDescriptorPoolSize BIND_ALL_SAMPLED_IMAGE_POOL_SIZE {
 			.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-			.descriptorCount = (1<<16)-1,
-		};
-		inline const VkDescriptorPoolSize BIND_ALL_STORAGE_IMAGE_POOL_SIZE {
+			.descriptorCount = (1<<16) - 1,
+		}; 
+		inline static const VkDescriptorPoolSize BIND_ALL_STORAGE_IMAGE_POOL_SIZE {
 			.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-			.descriptorCount = (1<<16)-1,
+			.descriptorCount = (1<<16) - 1,
 		};
-		inline const VkDescriptorPoolSize BIND_ALL_STORAGE_BUFFER_POOL_SIZE {
+		inline static const VkDescriptorPoolSize BIND_ALL_STORAGE_BUFFER_POOL_SIZE {
 			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			.descriptorCount = (1<<11) - 1,
+			.descriptorCount = (1<<16) - 1,
 		};
-
-		inline const VkDescriptorSetLayoutBinding BIND_ALL_SAMPLER_SET_LAYOUT_BINDING {
+ 
+		inline static const VkDescriptorSetLayoutBinding BIND_ALL_SAMPLER_SET_LAYOUT_BINDING {
 			.binding = 0,
 			.descriptorType = BIND_ALL_SAMPLER_POOL_SIZE.type,
 			.descriptorCount = BIND_ALL_SAMPLER_POOL_SIZE.descriptorCount,
 			.stageFlags = VK_SHADER_STAGE_ALL,
 		};
-		inline const VkDescriptorSetLayoutBinding BIND_ALL_COMBINED_IMAGE_SAMPLER_SET_LAYOUT_BINDING {
+		inline static const VkDescriptorSetLayoutBinding BIND_ALL_COMBINED_IMAGE_SAMPLER_SET_LAYOUT_BINDING {
 			.binding = 1,
 			.descriptorType = BIND_ALL_COMBINED_IMAGE_SAMPLER_POOL_SIZE.type,
 			.descriptorCount = BIND_ALL_COMBINED_IMAGE_SAMPLER_POOL_SIZE.descriptorCount,
 			.stageFlags = VK_SHADER_STAGE_ALL,
 		};
-		inline const VkDescriptorSetLayoutBinding BIND_ALL_SAMPLED_IMAGE_SET_LAYOUT_BINDING {
+		inline static const VkDescriptorSetLayoutBinding BIND_ALL_SAMPLED_IMAGE_SET_LAYOUT_BINDING {
 			.binding = 2,
 			.descriptorType = BIND_ALL_SAMPLED_IMAGE_POOL_SIZE.type,
 			.descriptorCount = BIND_ALL_SAMPLED_IMAGE_POOL_SIZE.descriptorCount,
 			.stageFlags = VK_SHADER_STAGE_ALL,
 		};
-		inline const VkDescriptorSetLayoutBinding BIND_ALL_STORAGE_IMAGE_SET_LAYOUT_BINDING {
+		inline static const VkDescriptorSetLayoutBinding BIND_ALL_STORAGE_IMAGE_SET_LAYOUT_BINDING {
 			.binding = 3,
 			.descriptorType = BIND_ALL_STORAGE_IMAGE_POOL_SIZE.type,
 			.descriptorCount = BIND_ALL_STORAGE_IMAGE_POOL_SIZE.descriptorCount,
@@ -94,20 +94,33 @@ namespace daxa {
 			.descriptorCount = BIND_ALL_STORAGE_BUFFER_POOL_SIZE.descriptorCount,
 			.stageFlags = VK_SHADER_STAGE_ALL,
 		};
+
+		const char* getVkResultString(VkResult result);
     }
 }
 
 #ifdef _DEBUG
-#define DAXA_CHECK_VK_RESULT(x)                                                 \
-	do                                                              			\
-	{                                                              				\
-		VkResult err = x;                                           			\
-		if (err)                                                    			\
-		{                                                           			\
-			std::cerr << "[[DAXA VULKAN RESULT ERROR]] " << err << std::endl; 	\
-			abort();                                                			\
-		}                                                           			\
+#define DAXA_CHECK_VK_RESULT_M(x, message)                                      					\
+	do {                                                              								\
+		VkResult err = x;                                           								\
+		if (err)                                                    								\
+		{                                                           								\
+			char const* errStr = getVkResultString(err);											\
+			std::cerr << "[[DAXA VULKAN RESULT ERROR]] " << message << "; error: " << errStr << std::endl; \
+			abort();                                                								\
+		}                                                           								\
+	} while (0)																						
+#define DAXA_CHECK_VK_RESULT(x)                                      								\
+	do {                                                              								\
+		VkResult err = x;                                           								\
+		if (err)                                                    								\
+		{                                                           								\
+			char const* errStr = getVkResultString(err);											\
+			std::cerr << "[[DAXA VULKAN RESULT ERROR]] " << errStr << std::endl; 					\
+			abort();                                                								\
+		}                                                           								\
 	} while (0)
 #else
+#define DAXA_CHECK_VK_RESULT_M(x, m) x
 #define DAXA_CHECK_VK_RESULT(x) x
 #endif

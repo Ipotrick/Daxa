@@ -194,7 +194,7 @@ public:
 
         u32 index = *buffer->getStorageIndex();
         printf("index: %i\n", index);
-        cmdList->pushConstant(VK_SHADER_STAGE_COMPUTE_BIT, &index);
+        cmdList->pushConstant(VK_SHADER_STAGE_COMPUTE_BIT, index);
 
         cmdList->dispatch((uploadData.imageWidth + 1) / 8, (uploadData.imageHeight + 1) / 8);
         cmdList->unbindPipeline();
