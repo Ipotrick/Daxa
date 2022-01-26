@@ -24,7 +24,7 @@ namespace daxa {
 				.requiredFlags = ci.memoryProperties,
 			};
 
-			DAXA_CHECK_VK_RESULT(vmaCreateBuffer(this->deviceBackend->allocator, (VkBufferCreateInfo*)&bci, &aci, &buffer, &allocation, nullptr));
+			DAXA_CHECK_VK_RESULT_M(vmaCreateBuffer(this->deviceBackend->allocator, (VkBufferCreateInfo*)&bci, &aci, &buffer, &allocation, nullptr), "failed to create buffer");
 
 			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
 				this->debugName = ci.debugName;
@@ -84,7 +84,7 @@ namespace daxa {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not upload to buffer that is currently in use on the gpu directly from host. to indirectly upload to this buffer, use the command list upload.");
 
 			u8* bufferMemPtr{ nullptr };
-			DAXA_CHECK_VK_RESULT(vmaMapMemory(this->deviceBackend->allocator, allocation, (void**)&bufferMemPtr));
+			DAXA_CHECK_VK_RESULT_M(vmaMapMemory(this->deviceBackend->allocator, allocation, (void**)&bufferMemPtr), "failed to map buffer memory");
 			std::memcpy(bufferMemPtr + dstOffset, src, size);
 			vmaUnmapMemory(this->deviceBackend->allocator, allocation);
 		}
@@ -94,7 +94,7 @@ namespace daxa {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not upload to buffer that is currently in use on the gpu directly from host. to indirectly upload to this buffer, use the command list upload.");
 			memoryMapCount += 1;
 			void* ret;
-			DAXA_CHECK_VK_RESULT(vmaMapMemory(this->deviceBackend->allocator, allocation, &ret));
+			DAXA_CHECK_VK_RESULT_M(vmaMapMemory(this->deviceBackend->allocator, allocation, &ret), "failed to map buffer memory");
 			return ret;
 		}
 
