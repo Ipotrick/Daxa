@@ -44,7 +44,7 @@ namespace daxa {
 				.unnormalizedCoordinates = unnormalizedCoordinates,
 			};
 
-			DAXA_ASSERT_M(vkCreateSampler(this->deviceBackend->device.device, &samplerCI, nullptr, &sampler) == VK_SUCCESS, "failed to create sampler");
+			DAXA_CHECK_VK_RESULT_M(vkCreateSampler(this->deviceBackend->device.device, &samplerCI, nullptr, &sampler), "failed to create sampler");
 
 			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
 				this->debugName = ci.debugName;

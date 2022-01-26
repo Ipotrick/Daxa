@@ -11,7 +11,7 @@ namespace daxa {
 				.pNext = nullptr,
 				.flags = 0,
 			};
-			DAXA_ASSERT_M(vkCreateSemaphore(this->deviceBackend->device.device, &semaphoreCI, nullptr, &semaphore) == VK_SUCCESS, "failed to create signal");
+			DAXA_CHECK_VK_RESULT_M(vkCreateSemaphore(this->deviceBackend->device.device, &semaphoreCI, nullptr, &semaphore), "failed to create signal");
 
 			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
 				this->debugName = ci.debugName;

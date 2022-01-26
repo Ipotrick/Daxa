@@ -42,7 +42,7 @@ namespace daxa {
 			};
 			
 
-			DAXA_CHECK_VK_RESULT(vmaCreateImage(deviceBackend->allocator, (VkImageCreateInfo*)&ici, &aci, (VkImage*)&ret.image, &ret.allocation, nullptr));
+			DAXA_CHECK_VK_RESULT_M(vmaCreateImage(deviceBackend->allocator, (VkImageCreateInfo*)&ici, &aci, (VkImage*)&ret.image, &ret.allocation, nullptr), "failed to create image");
 
 			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
 				ret.debugName = ci.debugName;
@@ -72,7 +72,7 @@ namespace daxa {
 				}
 			};
 
-			DAXA_CHECK_VK_RESULT(vkCreateImageView(deviceBackend->device.device, &ivci, nullptr, &ret.view));
+			DAXA_CHECK_VK_RESULT_M(vkCreateImageView(deviceBackend->device.device, &ivci, nullptr, &ret.view), "failed to create image view");
 
 			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
 				VkDebugUtilsObjectNameInfoEXT imageNameInfo {
@@ -97,6 +97,49 @@ namespace daxa {
 
 			if (ci.sampler.has_value()) {
 				ret.sampler = *ci.sampler;
+			}
+		}
+
+		
+		ImageView::ImageView(std::shared_ptr<DeviceBackend> deviceBackend, ImageViewCreateInfo const& ci) 
+			: deviceBackend{ deviceBackend }
+			, flags{ ci.flags }
+			, image{ ci.image }
+			, viewType{ ci.viewType }
+			, format{ ci.format }
+			, components{ ci.components }
+			, subresourceRange{ ci.subresourceRange }
+		{
+			VkImageViewCreateInfo ivci{
+				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+				.pNext = nullptr,
+    			.flags = ci.flags,
+				.image = ci.image->getVkImage(),
+    			.viewType = ci.viewType,
+    			.format = ci.format,
+    			.components = ci.components,
+    			.subresourceRange = ci.subresourceRange,
+			};
+
+			DAXA_CHECK_VK_RESULT_M(vkCreateImageView(deviceBackend->device.device, &ivci, nullptr, &view), "failed to create image view");
+
+			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
+				VkDebugUtilsObjectNameInfoEXT imageNameInfo {
+					.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+					.pNext = NULL,
+					.objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
+					.objectHandle = (uint64_t)view,
+					.pObjectName = ci.debugName,
+				};
+				instance->pfnSetDebugUtilsObjectNameEXT(deviceBackend->device.device, &imageNameInfo);
+				debugName = ci.debugName;
+			}
+		}
+
+		ImageView::~ImageView() {
+			if (deviceBackend->device.device && view) {
+				vkDestroyImageView(deviceBackend->device.device, view, nullptr);
+				view = VK_NULL_HANDLE;
 			}
 		}
 	}

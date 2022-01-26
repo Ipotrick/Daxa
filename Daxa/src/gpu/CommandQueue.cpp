@@ -92,7 +92,7 @@ namespace daxa {
 				.signalSemaphoreCount = (u32)submitSemaphoreSignalBuffer.size(),
 				.pSignalSemaphores = submitSemaphoreSignalBuffer.data(),
 			};
-			DAXA_CHECK_VK_RESULT(vkQueueSubmit(queue, 1, &submitInfo, nullptr));
+			DAXA_CHECK_VK_RESULT_M(vkQueueSubmit(queue, 1, &submitInfo, nullptr), "vkQueueSubmit failed");
 
 			PendingSubmit pendingSubmit{
 				.cmdLists = { si.commandLists },
@@ -156,7 +156,7 @@ namespace daxa {
 				.pSwapchains = &image.swapchain,
 				.pImageIndices = &image.imageIndex,
 			};
-			DAXA_CHECK_VK_RESULT(vkQueuePresentKHR(queue, &presentInfo));
+			DAXA_CHECK_VK_RESULT_M(vkQueuePresentKHR(queue, &presentInfo), "failed vkQueuePresentKHR");
 		}
 
 		void CommandQueue::waitIdle() {
