@@ -28,6 +28,19 @@ namespace daxa {
 			char const* debugName = {};
 		};
 
+		struct ImageCreateInfo {
+			VkImageCreateFlags      flags 		= {};
+			VkImageType             imageType 	= {};
+			VkFormat                format 		= {};
+			VkExtent3D              extent 		= {};
+			uint32_t                mipLevels 	= {};
+			uint32_t                arrayLayers = {};
+			VkSampleCountFlagBits   samples 	= {};
+			VkImageTiling           tiling 		= {};
+			VkImageUsageFlags       usage 		= {};
+			char const*  			debugName 	= {};
+		};
+
 		class Image : public GraveyardRessource {
 		public:
 			Image() 							= default;
@@ -87,5 +100,62 @@ namespace daxa {
         };
 
 		class ImageHandle : public SharedHandle<Image, ImageStaticFunctionOverride>{};
+
+		struct ImageViewCreateInfo {
+			VkImageViewCreateFlags     	flags				= {};
+			ImageHandle					image		 		= {};
+			VkImageViewType            	viewType			= {};
+			VkFormat                   	format				= {};
+			VkComponentMapping         	components			= {};
+			VkImageSubresourceRange    	subresourceRange	= {};
+			char const* 				debugName			= {};
+		};
+
+		class ImageView : public GraveyardRessource {
+		public:
+			ImageView(std::shared_ptr<DeviceBackend> deviceBackend, ImageViewCreateInfo const& ci);
+			ImageView() 								= default;
+			ImageView(ImageView const&) 				= delete;
+			ImageView& operator=(ImageView const&) 		= delete;
+			ImageView(ImageView&&) noexcept 			= delete;
+			ImageView& operator=(ImageView&&) noexcept 	= delete;
+			virtual ~ImageView();
+
+			VkImageViewCreateFlags getVkImageViewCreateFlags() const { return flags; }
+			ImageHandle const& getImageHandle() const { return image; }
+			VkImageViewType getVkImageViewType() const { return viewType; }
+			VkFormat getVkFormat() const { return format; }
+			VkComponentMapping getVkComponentMapping() const { return components; }
+			VkImageSubresourceRange getVkImageSubresourceRange() const { return subresourceRange; }
+			std::string const& getDebugName() const { return debugName; }
+			VkImageView getVkImageView() const { return view; }
+		private:
+			friend class Device;
+			friend class Swapchain;
+			friend struct ImageViewStaticFunctionOverride;
+
+			std::shared_ptr<DeviceBackend> 	deviceBackend 		= {};
+			VkImageViewCreateFlags     		flags				= {};
+			ImageHandle						image		 		= {};
+			VkImageViewType            		viewType			= {};
+			VkFormat                   		format				= {};
+			VkComponentMapping         		components			= {};
+			VkImageSubresourceRange    		subresourceRange	= {};
+			std::string 					debugName			= {};
+			VkImageView						view				= {};
+		};
+
+        struct ImageViewStaticFunctionOverride {
+            static void cleanup(std::shared_ptr<ImageView>& value) {
+				if (value && value.use_count() == 1) {
+					std::unique_lock lock(value->deviceBackend->graveyard.mtx);
+					for (auto& zombieList : value->deviceBackend->graveyard.activeZombieLists) {
+						zombieList->zombies.push_back(value);
+					}
+				}
+			}
+        };
+
+		class ImageViewHandle : public SharedHandle<ImageView, ImageViewStaticFunctionOverride>{};
 	}
 }
