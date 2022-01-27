@@ -33,11 +33,6 @@ namespace daxa {
 			Buffer& operator=(Buffer&&) noexcept 	= delete;
 			virtual ~Buffer();
 
-			/**
-			 * \return False when the buffer is safe to be written to from CPU. True when it might be used by the GPU.
-			*/
-			bool isUsedByGPU() const;
-
 			void upload(void const* src, size_t size, size_t dstOffset = 0);
 			
 			bool isMemoryMapped() const { return memoryMapCount > 0; }
@@ -52,7 +47,13 @@ namespace daxa {
 
 			u32 getMemeoryMapCount() const { return memoryMapCount; }
 
-			u16 const* getStorageIndex() const { return storageIndex == std::numeric_limits<u16>::max() ? nullptr : &storageIndex; }
+			std::optional<u16> getStorageBufferDescriptorIndex() const { 
+				if(storageIndex == std::numeric_limits<u16>::max()) {
+					return std::nullopt;
+				} else {
+					return storageIndex;
+				}
+			}
 
 			std::string const& getDebugName() const { return debugName; }
 		private:
@@ -73,7 +74,7 @@ namespace daxa {
 			VkBufferUsageFlags 				usage 			= {};
 			VmaMemoryUsage 					memoryUsage 	= {};
 			VmaAllocation 					allocation 		= {};
-			u32 							usesOnGPU 		= {};
+			//u32 							usesOnGPU 		= {};
 			u32 							memoryMapCount 	= {};
 			std::string 					debugName 		= {};
 			u16 							storageIndex 	= std::numeric_limits<u16>::max();

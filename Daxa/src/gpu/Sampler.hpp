@@ -60,7 +60,7 @@ namespace daxa {
 			float getVkMasLod () const { return maxLod; }
 			VkBorderColor getVkBorderColor () const { return borderColor; }
 			VkBool32 getVkNormalizedCoodinatesEnable () const { return unnormalizedCoordinates; }
-
+			u16 getDescriptorIndex() const { return samplerIndex; }
 			std::string const& getDebugName() const { return debugName; }
 		private:
 			friend struct SamplerStaticFunctionOverride;
@@ -83,6 +83,7 @@ namespace daxa {
 			float                   		maxLod					= {};
 			VkBorderColor           		borderColor				= {};
 			VkBool32                		unnormalizedCoordinates	= {};
+			u16 							samplerIndex 			= std::numeric_limits<u16>::max();
 			std::string						debugName 				= {};
 		};
 

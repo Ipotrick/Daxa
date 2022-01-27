@@ -3,6 +3,7 @@
 #include "../DaxaCore.hpp"
 
 #include <vector>
+#include <mutex>
 
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
@@ -26,6 +27,7 @@ namespace daxa {
 			u32 computeQFamilyIndex															= -1;
 			std::vector<u32> allQFamilyIndices 												= {};
             Graveyard graveyard                                                             = {};
+			std::mutex bindAllMtx 															= {};
 			VkDescriptorPool bindAllSetPool 												= {};
 			VkDescriptorSetLayout bindAllSetLayout 											= {};
 			VkDescriptorSet bindAllSet 														= {};

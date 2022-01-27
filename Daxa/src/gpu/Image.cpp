@@ -84,6 +84,90 @@ namespace daxa {
 
 			DAXA_CHECK_VK_RESULT_M(vkCreateImageView(this->deviceBackend->device.device, &ivci, nullptr, &view), "failed to create image view");
 
+			if (image->getVkImageUsageFlags() & VK_IMAGE_USAGE_SAMPLED_BIT || 
+				image->getVkImageUsageFlags() & VK_IMAGE_USAGE_STORAGE_BIT
+			) {
+				std::unique_lock bindAllLock(this->deviceBackend->bindAllMtx);
+				if (image->getVkImageUsageFlags() & VK_IMAGE_USAGE_SAMPLED_BIT) {
+					if (defaultSampler.valid()) {
+						u16 index;
+						if (this->deviceBackend->combinedImageSamplerIndexFreeList.empty()) {
+							index = this->deviceBackend->nextCombinedImageSamplerIndex++;
+						} else {
+							index = this->deviceBackend->combinedImageSamplerIndexFreeList.back();
+							this->deviceBackend->combinedImageSamplerIndexFreeList.pop_back();
+						}
+						VkDescriptorImageInfo imageInfo{
+							.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+							.imageView = view,
+							.sampler = defaultSampler->getVkSampler(),
+						};
+						VkWriteDescriptorSet write {
+							.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+							.pNext = nullptr,
+							.dstSet = this->deviceBackend->bindAllSet,
+							.dstBinding = BIND_ALL_COMBINED_IMAGE_SAMPLER_SET_LAYOUT_BINDING.binding,
+							.dstArrayElement = index,
+							.descriptorCount = 1,
+							.descriptorType = BIND_ALL_COMBINED_IMAGE_SAMPLER_SET_LAYOUT_BINDING.descriptorType,
+							.pImageInfo = &imageInfo,
+						};
+						vkUpdateDescriptorSets(this->deviceBackend->device.device, 1, &write, 0, nullptr);
+						imageSamplerIndex = index;
+					}
+					u16 index;
+					if (this->deviceBackend->sampledImageIndexFreeList.empty()) {
+						index = this->deviceBackend->nextSampledImageIndex++;
+					} else {
+						index = this->deviceBackend->sampledImageIndexFreeList.back();
+						this->deviceBackend->sampledImageIndexFreeList.pop_back();
+					}
+					VkDescriptorImageInfo imageInfo{
+						.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+						.imageView = view,
+						.sampler = nullptr,
+					};
+					VkWriteDescriptorSet write {
+						.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+						.pNext = nullptr,
+						.dstSet = this->deviceBackend->bindAllSet,
+						.dstBinding = BIND_ALL_SAMPLED_IMAGE_SET_LAYOUT_BINDING.binding,
+						.dstArrayElement = index,
+						.descriptorCount = 1,
+						.descriptorType = BIND_ALL_SAMPLED_IMAGE_SET_LAYOUT_BINDING.descriptorType,
+						.pImageInfo = &imageInfo,
+					};
+					vkUpdateDescriptorSets(this->deviceBackend->device.device, 1, &write, 0, nullptr);
+					sampledImageIndex = index;
+				}
+				if (image->getVkImageUsageFlags() & VK_IMAGE_USAGE_STORAGE_BIT) {
+					u16 index;
+					if (this->deviceBackend->storageImageIndexFreeList.empty()) {
+						index = this->deviceBackend->nextStorageImageIndex++;
+					} else {
+						index = this->deviceBackend->storageImageIndexFreeList.back();
+						this->deviceBackend->storageImageIndexFreeList.pop_back();
+					}
+					VkDescriptorImageInfo imageInfo{
+						.imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+						.imageView = view,
+						.sampler = nullptr,
+					};
+					VkWriteDescriptorSet write {
+						.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+						.pNext = nullptr,
+						.dstSet = this->deviceBackend->bindAllSet,
+						.dstBinding = BIND_ALL_STORAGE_IMAGE_SET_LAYOUT_BINDING.binding,
+						.dstArrayElement = index,
+						.descriptorCount = 1,
+						.descriptorType = BIND_ALL_STORAGE_IMAGE_SET_LAYOUT_BINDING.descriptorType,
+						.pImageInfo = &imageInfo,
+					};
+					vkUpdateDescriptorSets(this->deviceBackend->device.device, 1, &write, 0, nullptr);
+					storageImageIndex = index;
+				}
+			}
+
 			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
 				VkDebugUtilsObjectNameInfoEXT imageNameInfo {
 					.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -99,6 +183,21 @@ namespace daxa {
 
 		ImageView::~ImageView() {
 			if (deviceBackend && view) {
+				if (imageSamplerIndex != std::numeric_limits<u16>::max() || 
+					sampledImageIndex != std::numeric_limits<u16>::max() ||
+					storageImageIndex != std::numeric_limits<u16>::max()
+				){
+					std::unique_lock bindAllLock(deviceBackend->bindAllMtx);
+					if (imageSamplerIndex != std::numeric_limits<u16>::max()) {
+						this->deviceBackend->combinedImageSamplerIndexFreeList.push_back(imageSamplerIndex);
+					}
+					if (sampledImageIndex != std::numeric_limits<u16>::max()) {
+						this->deviceBackend->sampledImageIndexFreeList.push_back(sampledImageIndex);
+					}
+					if (storageImageIndex != std::numeric_limits<u16>::max()) {
+						this->deviceBackend->storageImageIndexFreeList.push_back(storageImageIndex);
+					}
+				}
 				vkDestroyImageView(deviceBackend->device.device, view, nullptr);
 				view = VK_NULL_HANDLE;
 			}
