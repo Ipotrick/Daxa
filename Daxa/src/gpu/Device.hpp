@@ -45,11 +45,9 @@ namespace daxa {
 
 			SamplerHandle createSampler(SamplerCreateInfo ci);
 
-			/**
-			 * \param ci all information defining the 2d image
-			 * \return a reference counted image handle of the created image ressource.
-			 */
-			ImageHandle createImage2d(Image2dCreateInfo ci);
+			ImageHandle createImage(ImageCreateInfo const& ci);
+
+			ImageViewHandle createImageView(ImageViewCreateInfo const& ci);
 
 			/**
 			 * \param ci all information defining the buffer

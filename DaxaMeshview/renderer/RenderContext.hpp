@@ -34,23 +34,32 @@ public:
     }
 
 	void recreateFramebuffer(daxa::gpu::CommandListHandle& cmd, u32 width, u32 height) {
-		this->depthImage = device->createImage2d({
-			.width = width,
-			.height = height,
+		this->depthImage = device->createImageView({
+			.image = device->createImage({
+				.format = VK_FORMAT_D32_SFLOAT,
+				.extent = { width, height, 1},
+				.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+			}),
 			.format = VK_FORMAT_D32_SFLOAT,
-			.imageUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-			.imageAspekt = VK_IMAGE_ASPECT_DEPTH_BIT,
-			.sampler = defaultSampler,
+			.subresourceRange = {
+				.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+				.baseMipLevel = 0,
+				.levelCount = 1,
+				.baseArrayLayer = 0,
+				.layerCount = 1,
+			},
+			.defaultSampler = defaultSampler,
 			.debugName = "depth image",
 		});
 
-		this->normalsImage = device->createImage2d({
-			.width = width,
-			.height = height,
+		this->normalsImage = device->createImageView({
+			.image = device->createImage({
+				.format = VK_FORMAT_A2B10G10R10_UNORM_PACK32,
+				.extent = { width, height, 1},
+				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+			}),
 			.format = VK_FORMAT_A2B10G10R10_UNORM_PACK32,
-			.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-			.imageAspekt = VK_IMAGE_ASPECT_COLOR_BIT,
-			.sampler = defaultSampler,
+			.defaultSampler = defaultSampler,
 			.debugName = "normals image",
 		});
 
@@ -84,7 +93,7 @@ public:
 	daxa::gpu::SwapchainHandle swapchain = {};
 	daxa::gpu::SwapchainImage swapchainImage = {};
 	daxa::gpu::SignalHandle presentSignal = {};
-	daxa::gpu::ImageHandle depthImage = {};
-	daxa::gpu::ImageHandle normalsImage = {};
+	daxa::gpu::ImageViewHandle depthImage = {};
+	daxa::gpu::ImageViewHandle normalsImage = {};
 	daxa::gpu::SamplerHandle defaultSampler = {};
 };

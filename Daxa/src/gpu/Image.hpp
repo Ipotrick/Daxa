@@ -16,98 +16,80 @@
 
 namespace daxa {
 	namespace gpu {
-		struct Image2dCreateInfo {
-			u32 width = 1;
-			u32 height = 1;
-			VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
-			VkImageUsageFlags imageUsage = VkImageUsageFlagBits::VK_IMAGE_USAGE_SAMPLED_BIT | VkImageUsageFlagBits::VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-			VkImageAspectFlags imageAspekt = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
-			VmaMemoryUsage memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY;
-			VkMemoryPropertyFlags memoryPropertyFlags = VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-			std::optional<SamplerHandle> sampler = {};		// optional sampler
-			char const* debugName = {};
-		};
-
 		struct ImageCreateInfo {
 			VkImageCreateFlags      flags 		= {};
-			VkImageType             imageType 	= {};
-			VkFormat                format 		= {};
+			VkImageType             imageType 	= VK_IMAGE_TYPE_2D;
+			VkFormat                format 		= VK_FORMAT_R8G8B8A8_SRGB;
 			VkExtent3D              extent 		= {};
-			uint32_t                mipLevels 	= {};
-			uint32_t                arrayLayers = {};
-			VkSampleCountFlagBits   samples 	= {};
-			VkImageTiling           tiling 		= {};
+			uint32_t                mipLevels 	= 1;
+			uint32_t                arrayLayers = 1;
+			VkSampleCountFlagBits   samples 	= VK_SAMPLE_COUNT_1_BIT;
+			VkImageTiling           tiling 		= VK_IMAGE_TILING_OPTIMAL;
 			VkImageUsageFlags       usage 		= {};
+			VmaMemoryUsage 			memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY;
 			char const*  			debugName 	= {};
 		};
 
-		class Image : public GraveyardRessource {
+		class Image {
 		public:
+			Image(std::shared_ptr<DeviceBackend> deviceBackend, ImageCreateInfo const& ci);
 			Image() 							= default;
 			Image(Image const&) 				= delete;
 			Image& operator=(Image const&) 		= delete;
 			Image(Image&&) noexcept 			= delete;
 			Image& operator=(Image&&) noexcept 	= delete;
-			virtual ~Image();
+			~Image();
 
+			VkImageCreateFlags getVkImageCreateFlags() const { return flags; }
+			VkImageType getVkImageType() const { return imageType; }
+			VkFormat getVkFormat() const { return format; }
+			VkExtent3D getVkExtent3D() const { return extent; }
+			u32 getMipLevels() const { return mipLevels; }
+			u32 getArrayLayers() const { return arrayLayers; }
+			VkSampleCountFlagBits getVkSampleCountFlagBits() const { return samples; }
+			VkImageTiling getVkImageTiling() const { return tiling; }
+			VkImageUsageFlags getVkImageUsageFlags() const { return usage; }
+			VmaMemoryUsage getVmaMemoryUsage() const { return memoryUsage; }
 			VkImage getVkImage() const { return image; }
-			VkImageView getVkView() const { return view; }
-			VkImageTiling getVkTiling() const { return tiling; };
-			VkImageUsageFlags getVkUsageFlags() const { return usageFlags; };
-			VkFormat getVkViewFormat() const { return viewFormat; }
-			VkImageType getVkImageType() const { return type; }
-			VkExtent3D getVkExtent() const { return extent; }
-			VkImageAspectFlags getVkAspect() const { return aspect; }
-			u32 getVkMipmapLevels() const { return mipmapLevels; }
-			u32 getVkArrayLayers() const { return arrayLayers; }
-			bool hasSampler() const { return sampler.valid(); }
-			SamplerHandle getSampler() const { return sampler; }
-
+			VmaAllocation getVmaAllocation() const { return allocation; }
 			std::string const& getDebugName() const { return debugName; }
 		private:
 			friend class Device;
-			friend class ImageHandle;
 			friend class Swapchain;
 			friend struct ImageStaticFunctionOverride;
 
-			static void construct2dImage(std::shared_ptr<DeviceBackend> deviceBackend, Image2dCreateInfo const& ci, Image& dst);
-
 			std::shared_ptr<DeviceBackend> 	deviceBackend 	= {};
-			VmaAllocation 					allocation 		= {};
+			VkImageCreateFlags      		flags 			= {};
+			VkImageType             		imageType 		= {};
+			VkFormat                		format 			= {};
+			VkExtent3D              		extent 			= {};
+			uint32_t                		mipLevels 		= {};
+			uint32_t                		arrayLayers 	= {};
+			VkSampleCountFlagBits   		samples 		= {};
+			VkImageTiling           		tiling 			= {};
+			VkImageUsageFlags       		usage 			= {};
+			VmaMemoryUsage 					memoryUsage 	= {};
 			VkImage 						image 			= {};
-			VkImageView 					view			= {};
-			VkImageTiling 					tiling			= {};
-			VkImageUsageFlags 				usageFlags		= {};
-			VkFormat 						viewFormat		= {};
-			VkImageType 					type			= {};
-			VkExtent3D 						extent			= {};
-			VkImageAspectFlags 				aspect			= {};
-			u32 							mipmapLevels	= {};
-			u32 							arrayLayers		= {};
-			SamplerHandle 					sampler 		= {};	// this is an optional field
-			std::string 					debugName 		= {};
+			VmaAllocation 					allocation 		= {};
+			std::string  					debugName 		= {};
 		};
 
-        struct ImageStaticFunctionOverride {
-            static void cleanup(std::shared_ptr<Image>& value) {
-				if (value && value.use_count() == 1) {
-					std::unique_lock lock(value->deviceBackend->graveyard.mtx);
-					for (auto& zombieList : value->deviceBackend->graveyard.activeZombieLists) {
-						zombieList->zombies.push_back(value);
-					}
-				}
-			}
-        };
-
-		class ImageHandle : public SharedHandle<Image, ImageStaticFunctionOverride>{};
+		class ImageHandle : public SharedHandle<Image>{};
 
 		struct ImageViewCreateInfo {
 			VkImageViewCreateFlags     	flags				= {};
 			ImageHandle					image		 		= {};
-			VkImageViewType            	viewType			= {};
+			VkImageViewType            	viewType			= VK_IMAGE_VIEW_TYPE_2D;
 			VkFormat                   	format				= {};
 			VkComponentMapping         	components			= {};
-			VkImageSubresourceRange    	subresourceRange	= {};
+			VkImageSubresourceRange    	subresourceRange	= {
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.baseMipLevel = 0,
+				.levelCount = 1,
+				.baseArrayLayer = 0,
+				.layerCount = 1,
+			};
+			SamplerHandle				defaultSampler		= {};
 			char const* 				debugName			= {};
 		};
 
@@ -129,6 +111,8 @@ namespace daxa {
 			VkImageSubresourceRange getVkImageSubresourceRange() const { return subresourceRange; }
 			std::string const& getDebugName() const { return debugName; }
 			VkImageView getVkImageView() const { return view; }
+			SamplerHandle const& getSampler() const { return defaultSampler; }
+			//VkImage getVkImage() const { return  }
 		private:
 			friend class Device;
 			friend class Swapchain;
@@ -143,11 +127,12 @@ namespace daxa {
 			VkImageSubresourceRange    		subresourceRange	= {};
 			std::string 					debugName			= {};
 			VkImageView						view				= {};
+			SamplerHandle 					defaultSampler 		= {};
 		};
 
         struct ImageViewStaticFunctionOverride {
             static void cleanup(std::shared_ptr<ImageView>& value) {
-				if (value && value.use_count() == 1) {
+				if (value && value->deviceBackend && value.use_count() == 1) {
 					std::unique_lock lock(value->deviceBackend->graveyard.mtx);
 					for (auto& zombieList : value->deviceBackend->graveyard.activeZombieLists) {
 						zombieList->zombies.push_back(value);
