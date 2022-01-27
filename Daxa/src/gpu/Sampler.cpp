@@ -58,10 +58,38 @@ namespace daxa {
 				};
 				daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT(this->deviceBackend->device.device, &nameInfo);
 			}
+
+			std::unique_lock bindAllLock(this->deviceBackend->bindAllMtx);
+			u16 index;
+			if (this->deviceBackend->samplerIndexFreeList.empty()) {
+				index = this->deviceBackend->nextSamplerIndex++;
+			} else {
+				index = this->deviceBackend->samplerIndexFreeList.back();
+				this->deviceBackend->samplerIndexFreeList.pop_back();
+			}
+			VkDescriptorImageInfo imageInfo{
+				.sampler = sampler,
+			};
+			VkWriteDescriptorSet write {
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.pNext = nullptr,
+				.dstSet = this->deviceBackend->bindAllSet,
+				.dstBinding = BIND_ALL_SAMPLER_SET_LAYOUT_BINDING.binding,
+				.dstArrayElement = index,
+				.descriptorCount = 1,
+				.descriptorType = BIND_ALL_SAMPLER_SET_LAYOUT_BINDING.descriptorType,
+				.pImageInfo = &imageInfo,
+			};
+			vkUpdateDescriptorSets(this->deviceBackend->device.device, 1, &write, 0, nullptr);
+			samplerIndex = index;
 		}
 
 		Sampler::~Sampler() {
 			if (this->deviceBackend->device.device) {
+				{
+					std::unique_lock bindAllLock(this->deviceBackend->bindAllMtx);
+					this->deviceBackend->combinedImageSamplerIndexFreeList.push_back(samplerIndex);
+				}
 				vkDestroySampler(this->deviceBackend->device.device, sampler, nullptr);
 				this->deviceBackend = {};
 			}
