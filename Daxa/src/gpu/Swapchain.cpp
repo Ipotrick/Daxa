@@ -44,23 +44,34 @@ namespace daxa {
 			auto vkImages = vkbSwapchain.get_images().value();
 			auto vkImageViews = vkbSwapchain.get_image_views().value();
 			for (int i = 0; i < vkImages.size(); i++) {
-				auto handle = ImageHandle{ std::make_shared<Image>() };
-				this->swapchainImages.push_back(std::move(handle));
-				auto& img = *this->swapchainImages.back();
+				auto image = ImageHandle{ std::make_shared<Image>() };
+				auto& img = *image;
 				img.extent.width = ci.width;
 				img.extent.height = ci.height;
 				img.extent.depth = 1;
 				img.allocation = nullptr;
 				img.image = vkImages[i];
-				img.view = vkImageViews[i];
-				img.type = VK_IMAGE_TYPE_2D;
-				img.viewFormat = vkbSwapchain.image_format;
+				img.imageType = VK_IMAGE_TYPE_2D;
 				img.tiling = VK_IMAGE_TILING_OPTIMAL;
-				img.usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-				img.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+				img.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 				img.arrayLayers = 1;
-				img.mipmapLevels = 1;
-				img.deviceBackend = deviceBackend;
+				img.mipLevels = 1;
+				
+				auto view = ImageViewHandle{ std::make_shared<ImageView>() };
+				auto& imgView = *view;
+				imgView.image = std::move(image);
+				imgView.view = vkImageViews[i];
+				imgView.viewType = VK_IMAGE_VIEW_TYPE_2D;
+				imgView.format = vkbSwapchain.image_format;
+				imgView.subresourceRange = VkImageSubresourceRange{
+					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+					.baseMipLevel = 0,
+					.levelCount = 1,
+					.baseArrayLayer = 0,
+					.layerCount = 1,
+				};
+				imgView.deviceBackend = deviceBackend;
+				this->swapchainImages.push_back(std::move(view));
 			}
 
 			this->swapchainImageFormat = vkbSwapchain.image_format;
@@ -108,7 +119,7 @@ namespace daxa {
 					nameBuffer = ci.debugName;
 					nameBuffer += " image view nr ";
 					nameBuffer += std::to_string(i);
-					auto view = this->swapchainImages[i]->getVkView();
+					auto view = this->swapchainImages[i]->getVkImageView();
 
 					nameInfo = VkDebugUtilsObjectNameInfoEXT{
 						.sType =  VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,

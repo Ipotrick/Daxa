@@ -29,10 +29,12 @@ namespace daxa {
 			return SamplerHandle{ std::make_shared<Sampler>(backend, ci) };
 		}
 
-		ImageHandle Device::createImage2d(Image2dCreateInfo ci) { 
-			auto handle = ImageHandle{ std::make_shared<Image>() };
-			Image::construct2dImage(backend, ci, *handle);
-			return std::move(handle);
+		ImageHandle Device::createImage(ImageCreateInfo const& ci) {
+			return ImageHandle{ std::make_shared<Image>(backend, ci) };
+		}
+
+		ImageViewHandle Device::createImageView(ImageViewCreateInfo const& ci) {
+			return ImageViewHandle{ std::make_shared<ImageView>(backend, ci) };
 		}
 
 		BufferHandle Device::createBuffer(BufferCreateInfo ci) {

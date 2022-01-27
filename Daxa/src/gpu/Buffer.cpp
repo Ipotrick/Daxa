@@ -21,7 +21,7 @@ namespace daxa {
 
 			VmaAllocationCreateInfo aci{
 				.usage = ci.memoryUsage,
-				.requiredFlags = ci.memoryProperties,
+				//.requiredFlags = ci.memoryProperties,
 			};
 
 			DAXA_CHECK_VK_RESULT_M(vmaCreateBuffer(this->deviceBackend->allocator, (VkBufferCreateInfo*)&bci, &aci, &buffer, &allocation, nullptr), "failed to create buffer");

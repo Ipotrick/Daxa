@@ -127,8 +127,8 @@ namespace daxa {
 			void bindBuffers(u32 binding, std::span<BufferHandle> buffers, u32 descriptorArrayOffset = 0);
 			void bindBuffer(u32 binding, BufferHandle, u32 dstArrayElement = 0);
 
-			void bindImages(u32 binding, std::span<std::pair<ImageHandle, VkImageLayout>> images, u32 descriptorArrayOffset = 0);
-			void bindImage(u32 binding, ImageHandle image, VkImageLayout imgLayout, u32 dstArrayElement = 0);
+			void bindImages(u32 binding, std::span<std::pair<ImageViewHandle, VkImageLayout>> images, u32 descriptorArrayOffset = 0);
+			void bindImage(u32 binding, ImageViewHandle image, VkImageLayout imgLayout, u32 dstArrayElement = 0);
 
 			VkDescriptorSet getVkDescriptorSet() const { return set; }
 			BindingSetLayout const& getLayout() { return *layout; }

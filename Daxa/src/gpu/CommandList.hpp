@@ -50,7 +50,7 @@ namespace daxa {
 
 		struct BufferToImageCopyInfo {
 			BufferHandle src = {};
-			ImageHandle dst = {};
+			ImageViewHandle dst = {};
 			size_t srcOffset = 0;
 			std::optional<VkImageSubresourceLayers> subRessourceLayers = std::nullopt;
 			size_t size = 0;
@@ -58,34 +58,34 @@ namespace daxa {
 
 		struct HostToImageCopyInfo {
 			void* src = nullptr;
-			ImageHandle dst = {};
+			ImageViewHandle dst = {};
 			std::optional<VkImageSubresourceLayers> dstImgSubressource = std::nullopt;
 			size_t size = 0;
 		};
 
 		struct HostToImageCopySyncedInfo {
 			void* src = nullptr;
-			ImageHandle dst = {};
+			ImageViewHandle dst = {};
 			std::optional<VkImageSubresourceLayers> dstImgSubressource = std::nullopt;
 			size_t size = 0;
 			VkImageLayout dstFinalLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		};
 
 		struct ImageToImageCopyInfo{
-			ImageHandle src 			= {};
+			ImageViewHandle src 			= {};
 			VkImageLayout srcLayout 	= VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 			VkOffset3D srcOffset 		= {};
-			ImageHandle dst 			= {};
+			ImageViewHandle dst 			= {};
 			VkImageLayout dstLayout 	= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 			VkOffset3D dstOffset 		= {};
 			VkExtent3D size				= {};
 		};
 
 		struct ImageToImageCopySyncedInfo{
-			ImageHandle src 						= {};
+			ImageViewHandle src 						= {};
 			VkOffset3D srcOffset 					= {};
 			VkImageLayout srcLayoutBeforeAndAfter 	= {};
-			ImageHandle dst 						= {};
+			ImageViewHandle dst 						= {};
 			VkOffset3D dstOffset 					= {};
 			VkImageLayout dstFinalLayout 			= {};
 			VkExtent3D size							= {};
@@ -113,7 +113,7 @@ namespace daxa {
 		*/
 		struct ImageBarrier {
 			MemoryBarrier 							barrier 		= {};
-			ImageHandle 							image 			= {};
+			ImageViewHandle 							image 			= {};
 			VkImageLayout 							layoutBefore	= {};
 			VkImageLayout 							layoutAfter		= {}; 
 			u32 									srcQueueIndex 	= VK_QUEUE_FAMILY_IGNORED;
@@ -122,7 +122,7 @@ namespace daxa {
 		};
 
 		struct RenderAttachmentInfo {
-			ImageHandle image = {};
+			ImageViewHandle image = {};
 			VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 			VkResolveModeFlagBits resolveMode = VK_RESOLVE_MODE_NONE;
 			VkAttachmentLoadOp loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -173,6 +173,8 @@ namespace daxa {
 				auto ret = mapMemoryStagedVoid(copyDst, size, dstOffset);
 				return { reinterpret_cast<ValueT*>(ret.hostPtr), ret.size, std::move(ret.owningBuffer) };
             }
+
+			void copyHostToBuffer2(BufferHandle& srcBuffer, ImageViewHandle& dstImage, std::span<VkBufferImageCopy> regions = {});
 
 			void copyHostToBuffer(HostToBufferCopyInfo copyInfo);
 
@@ -302,6 +304,7 @@ namespace daxa {
 			VkCommandPool 									cmdPool 				= {};
 			std::vector<VkDescriptorBufferInfo> 			bufferInfoBuffer 		= {};
 			std::vector<VkDescriptorImageInfo> 				imageInfoBuffer 		= {};
+			std::vector<VkBufferImageCopy>					bufferImageCopyBuffer 	= {};
 			std::vector<VkRenderingAttachmentInfoKHR> 		renderAttachmentBuffer 	= {};
 			std::optional<PipelineHandle> 					currentPipeline 		= {};
 			std::optional<CurrentRenderPass> 				currentRenderPass 		= {};
