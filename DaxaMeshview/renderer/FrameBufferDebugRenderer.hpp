@@ -80,19 +80,39 @@ public:
     }
 
     void recreateImages(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmdList, u32 width, u32 height) {
-        auto ci = daxa::gpu::Image2dCreateInfo{
-            .width = width,
-            .height = height,
+        auto ci0 = daxa::gpu::ImageViewCreateInfo{
+            .image = renderCTX.device->createImage({
+                .format = VK_FORMAT_R8G8B8A8_UNORM,
+                .extent = { 1,1,1 },
+                .usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            }),
             .format = VK_FORMAT_R8G8B8A8_UNORM,
-            .imageUsage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-            .sampler = renderCTX.defaultSampler,
+            .defaultSampler = renderCTX.defaultSampler,
+            .debugName = "debugScreenSpaceNormalImage",
         };
-        ci.debugName = "debugScreenSpaceNormalImage";
-        debugScreenSpaceNormalImage = renderCTX.device->createImage2d(ci);
-        ci.debugName = "debugWorldSpaceNormalImage";
-        debugWorldSpaceNormalImage = renderCTX.device->createImage2d(ci);
-        ci.debugName = "debugLinearDepthImage";
-        debugLinearDepthImage = renderCTX.device->createImage2d(ci);
+        debugScreenSpaceNormalImage = renderCTX.device->createImageView(ci0);
+        auto ci1 = daxa::gpu::ImageViewCreateInfo{
+            .image = renderCTX.device->createImage({
+                .format = VK_FORMAT_R8G8B8A8_UNORM,
+                .extent = { 1,1,1 },
+                .usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            }),
+            .format = VK_FORMAT_R8G8B8A8_UNORM,
+            .defaultSampler = renderCTX.defaultSampler,
+            .debugName = "debugWorldSpaceNormalImage",
+        };
+        debugWorldSpaceNormalImage = renderCTX.device->createImageView(ci1);
+        auto ci2 = daxa::gpu::ImageViewCreateInfo{
+            .image = renderCTX.device->createImage({
+                .format = VK_FORMAT_R8G8B8A8_UNORM,
+                .extent = { 1,1,1 },
+                .usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            }),
+            .format = VK_FORMAT_R8G8B8A8_UNORM,
+            .defaultSampler = renderCTX.defaultSampler,
+            .debugName = "debugLinearDepthImage",
+        };
+        debugLinearDepthImage = renderCTX.device->createImageView(ci2);
 
         daxa::gpu::MemoryBarrier postMemBar = {
             .dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
@@ -125,8 +145,8 @@ public:
         }
 
         uploadData.cameraData = cameraData;
-        uploadData.imageWidth = debugLinearDepthImage->getVkExtent().width;
-        uploadData.imageHeight = debugLinearDepthImage->getVkExtent().height;
+        uploadData.imageWidth = debugLinearDepthImage->getImageHandle()->getVkExtent3D().width;
+        uploadData.imageHeight = debugLinearDepthImage->getImageHandle()->getVkExtent3D().height;
         uploadData.zMin = std::min(std::max(cameraData.near, uploadData.zMin), cameraData.far);
         uploadData.zMax = std::min(std::max(cameraData.near, uploadData.zMax), cameraData.far);
         cmdList->copyHostToBuffer({
@@ -180,11 +200,9 @@ public:
         );
 
         cmdList->bindPipeline(pipeline);
-
-        cmdList->bindAll(0);
+        cmdList->bindAll();
 
         auto set = setAlloc->getSet();
-        //set->bindBuffer(0, buffer);
         set->bindImage(1, renderCTX.depthImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         set->bindImage(2, renderCTX.normalsImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         set->bindImage(3, debugLinearDepthImage, VK_IMAGE_LAYOUT_GENERAL);
@@ -193,7 +211,6 @@ public:
         cmdList->bindSet(1, set);
 
         u32 index = *buffer->getStorageIndex();
-        printf("index: %i\n", index);
         cmdList->pushConstant(VK_SHADER_STAGE_COMPUTE_BIT, index);
 
         cmdList->dispatch((uploadData.imageWidth + 1) / 8, (uploadData.imageHeight + 1) / 8);
@@ -238,8 +255,8 @@ public:
 	void doGui(daxa::ImGuiRenderer& imguiRenderer) {
 		ImGui::Begin("frame buffer inspector");
 		ImGui::Text("screenspace normals");
-        f32 frameBufferWidth = debugLinearDepthImage->getVkExtent().width;
-        f32 frameBufferHeight = debugLinearDepthImage->getVkExtent().height;
+        f32 frameBufferWidth = debugLinearDepthImage->getImageHandle()->getVkExtent3D().width;
+        f32 frameBufferHeight = debugLinearDepthImage->getImageHandle()->getVkExtent3D().height;
 		f32 w = ImGui::GetWindowWidth() - 10;
 		f32 aspect = (f32)frameBufferHeight / (f32)frameBufferWidth;
 		f32 h = w * aspect;
@@ -256,9 +273,9 @@ public:
 		ImGui::End();
 	}
 
-    daxa::gpu::ImageHandle debugLinearDepthImage = {};
-    daxa::gpu::ImageHandle debugScreenSpaceNormalImage = {};
-    daxa::gpu::ImageHandle debugWorldSpaceNormalImage = {};
+    daxa::gpu::ImageViewHandle debugLinearDepthImage = {};
+    daxa::gpu::ImageViewHandle debugScreenSpaceNormalImage = {};
+    daxa::gpu::ImageViewHandle debugWorldSpaceNormalImage = {};
 private:
     UploadData uploadData;
     daxa::ComputePipelineHotLoader hotLoader;

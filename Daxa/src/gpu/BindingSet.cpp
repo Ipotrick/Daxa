@@ -78,7 +78,7 @@ namespace daxa {
 			bindBuffers(binding, { &buffer, 1 }, dstArrayElement);
 		}
 
-		void BindingSet::bindImages(u32 binding, std::span<std::pair<ImageHandle, VkImageLayout>> images, u32 descriptorArrayOffset) {
+		void BindingSet::bindImages(u32 binding, std::span<std::pair<ImageViewHandle, VkImageLayout>> images, u32 descriptorArrayOffset) {
 			DAXA_ASSERT_M(usesOnGPU == 0 || (layout->getDescription().flags & VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT), "can not update binding set while it is used on gpu without VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT");
 			VkDescriptorType imageDescriptorType = layout->getDescription().layouts[binding].descriptorType;
 			bool bIsImage = imageDescriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER || 
@@ -96,7 +96,7 @@ namespace daxa {
 
 				descImageInfoBuffer.push_back(VkDescriptorImageInfo{
 					.sampler = sampler,
-					.imageView = image->getVkView(),
+					.imageView = image->getVkImageView(),
 					.imageLayout = layout,
 				});
 			}
@@ -117,7 +117,7 @@ namespace daxa {
 			descImageInfoBuffer.clear();
 		}
 
-		void BindingSet::bindImage(u32 binding, ImageHandle image, VkImageLayout imgLayout, u32 dstArrayElement) {
+		void BindingSet::bindImage(u32 binding, ImageViewHandle image, VkImageLayout imgLayout, u32 dstArrayElement) {
 			std::pair imgAndLayout = { image, imgLayout };
 			bindImages(binding, { &imgAndLayout, 1 }, dstArrayElement);
 		}

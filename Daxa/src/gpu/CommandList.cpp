@@ -176,21 +176,21 @@ namespace daxa {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 
 			VkImageSubresourceLayers imgSubRessource = copyInfo.subRessourceLayers.value_or(VkImageSubresourceLayers{
-				.aspectMask = copyInfo.dst->getVkAspect(),
+				.aspectMask = copyInfo.dst->getVkImageSubresourceRange().aspectMask,
 				.mipLevel = 0,
 				.baseArrayLayer = 0,
-				.layerCount = copyInfo.dst->getVkArrayLayers(),
-				});
+				.layerCount = 1,
+			});
 
 			VkBufferImageCopy bufferImageCopy{
 				.bufferOffset = copyInfo.srcOffset,
 				.bufferRowLength = 0,
 				.bufferImageHeight = 0,
 				.imageSubresource = imgSubRessource,
-				.imageExtent = copyInfo.dst->getVkExtent(),
+				.imageExtent = copyInfo.dst->getImageHandle()->getVkExtent3D(),
 			};
 
-			vkCmdCopyBufferToImage(cmd, copyInfo.src->getVkBuffer(), copyInfo.dst->getVkImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bufferImageCopy);
+			vkCmdCopyBufferToImage(cmd, copyInfo.src->getVkBuffer(), copyInfo.dst->getImageHandle()->getVkImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bufferImageCopy);
 		}
 
 		void CommandList::copyImageToImage(ImageToImageCopyInfo copyInfo) {
@@ -198,20 +198,20 @@ namespace daxa {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 
 			if (copyInfo.size.width == 0 || copyInfo.size.height == 0 || copyInfo.size.depth == 0) {
-				copyInfo.size = copyInfo.dst->getVkExtent();
+				copyInfo.size = copyInfo.dst->getImageHandle()->getVkExtent3D();
 			}
 
 			VkImageCopy copy{
 				.dstOffset = copyInfo.dstOffset,
 				.extent = copyInfo.size,
 				.srcSubresource = {
-					.aspectMask = copyInfo.src->getVkAspect(),
+					.aspectMask = copyInfo.src->getVkImageSubresourceRange().aspectMask,
 					.baseArrayLayer = 0,
 					.mipLevel = 0,
 					.layerCount = 1,
 				},
 				.dstSubresource = {
-					.aspectMask = copyInfo.dst->getVkAspect(),
+					.aspectMask = copyInfo.dst->getVkImageSubresourceRange().aspectMask,
 					.baseArrayLayer = 0,
 					.mipLevel = 0,
 					.layerCount = 1,
@@ -219,7 +219,7 @@ namespace daxa {
 				.srcOffset = copyInfo.srcOffset,
 			};
 
-			vkCmdCopyImage(cmd, copyInfo.src->getVkImage(), copyInfo.srcLayout, copyInfo.dst->getVkImage(), copyInfo.dstLayout, 1, &copy);
+			vkCmdCopyImage(cmd, copyInfo.src->getImageHandle()->getVkImage(), copyInfo.srcLayout, copyInfo.dst->getImageHandle()->getVkImage(), copyInfo.dstLayout, 1, &copy);
 		}
 
 		void CommandList::copyImageToImageSynced(ImageToImageCopySyncedInfo copySyncedInfo) {
@@ -309,7 +309,7 @@ namespace daxa {
 				renderAttachmentBuffer.push_back(VkRenderingAttachmentInfoKHR{
 					.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
 					.pNext = nullptr,
-					.imageView = ri.colorAttachments[i].image->getVkView(),
+					.imageView = ri.colorAttachments[i].image->getVkImageView(),
 					.imageLayout = ri.colorAttachments[i].layout,
 					.resolveMode = VK_RESOLVE_MODE_NONE,// ri.colorAttachments[i].resolveMode,
 					.loadOp = ri.colorAttachments[i].loadOp,
@@ -323,7 +323,7 @@ namespace daxa {
 					VkRenderingAttachmentInfoKHR{
 						.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
 						.pNext = nullptr,
-						.imageView = ri.depthAttachment->image->getVkView(),
+						.imageView = ri.depthAttachment->image->getVkImageView(),
 						.imageLayout = ri.depthAttachment->layout,
 						.resolveMode = ri.depthAttachment->resolveMode,
 						.loadOp = ri.depthAttachment->loadOp,
@@ -337,7 +337,7 @@ namespace daxa {
 					VkRenderingAttachmentInfoKHR{
 						.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
 						.pNext = nullptr,
-						.imageView = ri.stencilAttachment->image->getVkView(),
+						.imageView = ri.stencilAttachment->image->getVkImageView(),
 						.imageLayout = ri.stencilAttachment->layout,
 						.resolveMode = ri.stencilAttachment->resolveMode,
 						.loadOp = ri.stencilAttachment->loadOp,
@@ -353,16 +353,16 @@ namespace daxa {
 				renderInfo.renderArea = *ri.renderArea;
 			}
 			else if (ri.colorAttachments.size() > 0) {
-				renderInfo.renderArea.extent.width = ri.colorAttachments[0].image->getVkExtent().width;
-				renderInfo.renderArea.extent.height = ri.colorAttachments[0].image->getVkExtent().height;
+				renderInfo.renderArea.extent.width = ri.colorAttachments[0].image->getImageHandle()->getVkExtent3D().width;
+				renderInfo.renderArea.extent.height = ri.colorAttachments[0].image->getImageHandle()->getVkExtent3D().height;
 			}
 			else if (ri.depthAttachment != nullptr) {
-				renderInfo.renderArea.extent.width = ri.depthAttachment->image->getVkExtent().width;
-				renderInfo.renderArea.extent.height = ri.depthAttachment->image->getVkExtent().height;
+				renderInfo.renderArea.extent.width = ri.depthAttachment->image->getImageHandle()->getVkExtent3D().width;
+				renderInfo.renderArea.extent.height = ri.depthAttachment->image->getImageHandle()->getVkExtent3D().height;
 			}
 			else if (ri.stencilAttachment != nullptr) {
-				renderInfo.renderArea.extent.width = ri.stencilAttachment->image->getVkExtent().width;
-				renderInfo.renderArea.extent.height = ri.stencilAttachment->image->getVkExtent().height;
+				renderInfo.renderArea.extent.width = ri.stencilAttachment->image->getImageHandle()->getVkExtent3D().width;
+				renderInfo.renderArea.extent.height = ri.stencilAttachment->image->getImageHandle()->getVkExtent3D().height;
 			}	// otherwise let it be zero, as we dont render anything anyways
 
 			renderInfo.layerCount = 1;	// Not sure what this does
@@ -434,7 +434,7 @@ namespace daxa {
 
 				for (size_t i = 0; i < currentPipeCAFs.size(); i++) {
 					auto pipeformat = currentPipeCAFs[i];
-					auto rpformat = currentRendPassCAIs[i].image->getVkViewFormat();
+					auto rpformat = currentRendPassCAIs[i].image->getVkFormat();
 					std::string formatMessage = "; pipeline attachment format [";
 					formatMessage += std::to_string(i);
 					formatMessage += "]: " ;
@@ -447,11 +447,11 @@ namespace daxa {
 				}
 				if ((**currentPipeline).getDepthAttachmentFormat() != VK_FORMAT_UNDEFINED) {
 					DAXA_ASSERT_M(currentRenderPass->depthAttachment, std::string("if the pipeline uses a depth attachment the renderpass must have a depth attachemnt too") + nameMessage);
-					DAXA_ASSERT_M(currentRenderPass->depthAttachment->image->getVkViewFormat() == (**currentPipeline).getDepthAttachmentFormat(), std::string("the depth attachment format of the pipeline and renderpass must be the same") + nameMessage);
+					DAXA_ASSERT_M(currentRenderPass->depthAttachment->image->getVkFormat() == (**currentPipeline).getDepthAttachmentFormat(), std::string("the depth attachment format of the pipeline and renderpass must be the same") + nameMessage);
 				}
 				if ((**currentPipeline).getStencilAttachmentFormat() != VK_FORMAT_UNDEFINED) {
 					DAXA_ASSERT_M(currentRenderPass->stencilAttachment, std::string("if the pipeline uses a stencil attachment the renderpass must have a stencil attachemnt too") + nameMessage);
-					DAXA_ASSERT_M(currentRenderPass->stencilAttachment->image->getVkViewFormat() == (**currentPipeline).getStencilAttachmentFormat(), std::string("the stencil attachment format of the pipeline and renderpass must be the same") + nameMessage);
+					DAXA_ASSERT_M(currentRenderPass->stencilAttachment->image->getVkFormat() == (**currentPipeline).getStencilAttachmentFormat(), std::string("the stencil attachment format of the pipeline and renderpass must be the same") + nameMessage);
 				}
 			}
 		}
@@ -588,14 +588,8 @@ namespace daxa {
 					.newLayout = imgBarrier.layoutAfter,
 					.srcQueueFamilyIndex = imgBarrier.srcQueueIndex,
 					.dstQueueFamilyIndex = imgBarrier.dstQueueIndex,
-					.image = imgBarrier.image->getVkImage(),
-					.subresourceRange = imgBarrier.subRange.value_or(VkImageSubresourceRange{
-						.aspectMask = imgBarrier.image->getVkAspect(),
-						.baseMipLevel = 0,
-						.levelCount = imgBarrier.image->getVkMipmapLevels(),
-						.baseArrayLayer = 0,
-						.layerCount = imgBarrier.image->getVkArrayLayers(),
-					})
+					.image = imgBarrier.image->getImageHandle()->getVkImage(),
+					.subresourceRange = imgBarrier.subRange.value_or(imgBarrier.image->getVkImageSubresourceRange())
 				};
 
 				imgBarrierBufferSize++;

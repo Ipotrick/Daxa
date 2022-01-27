@@ -80,7 +80,7 @@ public:
 			.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)
 			// location of attachments in a shader are implied by the order they are added in the prePassPipeline builder:
 			.addColorAttachment(renderCTX.swapchain->getVkFormat())
-			.addColorAttachment(renderCTX.normalsImage->getVkViewFormat())
+			.addColorAttachment(renderCTX.normalsImage->getVkFormat())
 			.setRasterization({
 				.cullMode = VK_CULL_MODE_BACK_BIT,
 			});
@@ -114,12 +114,14 @@ public:
 
 	void uploadBuffers(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawMesh>& draws, std::vector<DrawLight>& lights) {
 		if (!dummyTexture) {
-			dummyTexture = renderCTX.device->createImage2d({
-				.width = 1,
-				.height = 1,
+			dummyTexture = renderCTX.device->createImageView({
+				.image = renderCTX.device->createImage({
+					.format = VK_FORMAT_R8G8B8A8_SRGB,
+					.extent = { 1,1,1 },
+					.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+				}),
 				.format = VK_FORMAT_R8G8B8A8_SRGB,
-				.imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-				.sampler = renderCTX.device->createSampler({}),
+				.defaultSampler = renderCTX.device->createSampler({}),
 				.debugName = "dummyTexture",
 			});
 
@@ -134,12 +136,14 @@ public:
 		}
 
 		if (!dummyNormalsTexture) {
-			dummyNormalsTexture = renderCTX.device->createImage2d({
-				.width = 1,
-				.height = 1,
-				.imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+			dummyNormalsTexture = renderCTX.device->createImageView({
+				.image = renderCTX.device->createImage({
+					.format = VK_FORMAT_R8G8B8A8_UNORM,
+					.extent = { 1,1,1 },
+					.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+				}),
 				.format = VK_FORMAT_R8G8B8A8_UNORM,
-				.sampler = renderCTX.device->createSampler({}),
+				.defaultSampler = renderCTX.device->createSampler({}),
 				.debugName = "dummyNormalsTexture",
 			});
 			
@@ -262,7 +266,7 @@ public:
 
 		std::array framebuffer{
 			daxa::gpu::RenderAttachmentInfo{
-				.image = renderCTX.swapchainImage.getImageHandle(),
+				.image = renderCTX.swapchainImage.getImageViewHandle(),
 				.clearValue = { .color = VkClearColorValue{.float32 = { 0.01f, 0.01f, 0.01f, 1.0f } } },
 			},
 			daxa::gpu::RenderAttachmentInfo{
@@ -339,8 +343,8 @@ private:
     daxa::gpu::BindingSetHandle globalSet = {};
     daxa::gpu::BufferHandle globalDataBufffer = {};
 	daxa::gpu::BufferHandle primitiveInfoBuffer = {};
-	daxa::gpu::ImageHandle dummyTexture = {};
-	daxa::gpu::ImageHandle dummyNormalsTexture = {};
+	daxa::gpu::ImageViewHandle dummyTexture = {};
+	daxa::gpu::ImageViewHandle dummyNormalsTexture = {};
 
 	daxa::gpu::PipelineHandle opaquePassPipeline = {};
 	daxa::gpu::BufferHandle lightsBuffer = {};

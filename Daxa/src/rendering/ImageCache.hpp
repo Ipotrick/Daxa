@@ -64,7 +64,7 @@ namespace daxa {
             : device{ std::move(device) }
         { }
 
-        gpu::ImageHandle get(ImageCacheFetchInfo const& info, gpu::CommandListHandle& cmdList) {
+        gpu::ImageViewHandle get(ImageCacheFetchInfo const& info, gpu::CommandListHandle& cmdList) {
             if (!cache.contains(info)) {
                 printf("image cache miss\n");
                 cache[info] = loadImage(info, cmdList);
@@ -74,9 +74,9 @@ namespace daxa {
             return cache[info];
         }
 
-        std::unordered_map<ImageCacheFetchInfo, gpu::ImageHandle, ImageCacheFetchInfoHasher> cache = {};
+        std::unordered_map<ImageCacheFetchInfo, gpu::ImageViewHandle, ImageCacheFetchInfoHasher> cache = {};
     private:
-        gpu::ImageHandle loadImage(ImageCacheFetchInfo const& info, gpu::CommandListHandle& cmdList) {
+        gpu::ImageViewHandle loadImage(ImageCacheFetchInfo const& info, gpu::CommandListHandle& cmdList) {
             //stbi_set_flip_vertically_on_load(1);
             int width, height, channels;
             u8* data;
@@ -91,11 +91,13 @@ namespace daxa {
             if (!data) {
                 return {};
             } else {
-                auto ci = gpu::Image2dCreateInfo{
-                    .width = (u32)width, 
-                    .height = (u32)height, 
+                auto ci = gpu::ImageViewCreateInfo{
+                    .image = device->createImage({
+                        .format = info.viewFormat,
+                        .extent = { (u32)width, (u32)height, 1 },
+                        .usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT
+                    }),
                     .format = info.viewFormat, 
-                    .imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT
                 };
                 if (info.samplerInfo.has_value()) {
                     printf("create with sampler\n");
@@ -103,9 +105,9 @@ namespace daxa {
                     if (!samplers.contains(sampler_v)) {
                         samplers[sampler_v] = device->createSampler(sampler_v);
                     }
-                    ci.sampler = samplers[sampler_v];
+                    ci.defaultSampler = samplers[sampler_v];
                 }
-                auto image = device->createImage2d(ci);
+                auto image = device->createImageView(ci);
                 cmdList->copyHostToImageSynced({.dst = image, .dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, .src = data, .size = (u32)(width*height*4)});
                 std::free(data);
                 return image;

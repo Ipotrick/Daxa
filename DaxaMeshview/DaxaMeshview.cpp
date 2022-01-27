@@ -62,7 +62,7 @@ public:
 		for (auto [key, tex] : imageCache->cache) {
 			auto id = imguiRenderer->getImGuiTextureId(tex);
 			ImGui::Text("pointer = %i", id);
-			ImGui::Text("size = %d x %d", tex->getVkExtent().width, tex->getVkExtent().height);
+			ImGui::Text("size = %d x %d", tex->getImageHandle()->getVkExtent3D().width, tex->getImageHandle()->getVkExtent3D().height);
 			ImGui::Image((void*)id, ImVec2(400,400));
 		}
 		ImGui::End();
@@ -88,7 +88,7 @@ public:
 				.dstStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
 				.dstAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR,
 			},
-			.image = renderCTX.swapchainImage.getImageHandle(),
+			.image = renderCTX.swapchainImage.getImageViewHandle(),
 			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 		});
 
@@ -157,7 +157,7 @@ public:
 			.dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
 		});
 
-		imguiRenderer->recordCommands(ImGui::GetDrawData(), cmdList, renderCTX.swapchainImage.getImageHandle());
+		imguiRenderer->recordCommands(ImGui::GetDrawData(), cmdList, renderCTX.swapchainImage.getImageViewHandle());
 
 		// array because we can allways pass multiple barriers at once for driver efficiency
 		std::array imgBarrier1 = { daxa::gpu::ImageBarrier{
@@ -165,7 +165,7 @@ public:
 				.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
 				.srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR,
 			},
-			.image = renderCTX.swapchainImage.getImageHandle(),
+			.image = renderCTX.swapchainImage.getImageViewHandle(),
 			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			.layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 		} };

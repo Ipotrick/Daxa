@@ -9,8 +9,8 @@ struct Primitive {
 	daxa::gpu::BufferHandle vertexUVs = {};
 	daxa::gpu::BufferHandle vertexNormals = {};
 	daxa::gpu::BufferHandle vertexTangents = {};
-	daxa::gpu::ImageHandle albedoTexture = {};
-	daxa::gpu::ImageHandle normalTexture = {};
+	daxa::gpu::ImageViewHandle albedoTexture = {};
+	daxa::gpu::ImageViewHandle normalTexture = {};
 };
 
 struct ModelComp {

@@ -19,13 +19,13 @@ namespace daxa {
 		public:
 			u32 getImageIndex() const { return imageIndex; }
 			VkSwapchainKHR getVkSwapchain() const { return swapchain; }
-			ImageHandle& getImageHandle() { return image; }
-			ImageHandle const& getImageHandle() const { return image; }
+			ImageViewHandle& getImageViewHandle() { return image; }
+			ImageViewHandle const& getImageViewHandle() const { return image; }
 		private:
 			friend class Swapchain;
 			friend class CommandQueue;
 
-			ImageHandle 	image 		= {};
+			ImageViewHandle image 		= {};
 			u32 			imageIndex 	= {};
 			VkSwapchainKHR 	swapchain 	= {};
 		};
