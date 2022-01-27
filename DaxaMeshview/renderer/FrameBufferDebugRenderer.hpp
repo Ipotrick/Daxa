@@ -210,7 +210,7 @@ public:
         set->bindImage(5, debugWorldSpaceNormalImage, VK_IMAGE_LAYOUT_GENERAL);
         cmdList->bindSet(1, set);
 
-        u32 index = *buffer->getStorageIndex();
+        u32 index = buffer->getStorageBufferDescriptorIndex().value();
         cmdList->pushConstant(VK_SHADER_STAGE_COMPUTE_BIT, index);
 
         cmdList->dispatch((uploadData.imageWidth + 1) / 8, (uploadData.imageHeight + 1) / 8);
@@ -221,7 +221,7 @@ public:
         daxa::gpu::MemoryBarrier postMemBarr {
             .srcStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
             .srcAccess = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT_KHR,
-            .dstStages =  VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
+            .dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
             .dstAccess = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR,
         };
 

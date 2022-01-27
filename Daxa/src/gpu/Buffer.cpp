@@ -39,6 +39,7 @@ namespace daxa {
 			}
 
 			if (ci.usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) {
+				std::unique_lock bindAllLock(this->deviceBackend->bindAllMtx);
 				u16 index;
 				if (this->deviceBackend->storageBufferIndexFreeList.empty()) {
 					index = this->deviceBackend->nextStorageBufferIndex++;
@@ -65,13 +66,14 @@ namespace daxa {
 			}
 		}
 
-		bool Buffer::isUsedByGPU() const {
-			return usesOnGPU == 0;
-		}
+		//bool Buffer::isUsedByGPU() const {
+		//	return usesOnGPU > 0;
+		//}
 
 		Buffer::~Buffer() {
 			if (this->deviceBackend) {
 				if (storageIndex != std::numeric_limits<u16>::max()) {
+					std::unique_lock bindAllLock(deviceBackend->bindAllMtx);
 					this->deviceBackend->storageBufferIndexFreeList.push_back(storageIndex);
 				}
 				vmaDestroyBuffer(this->deviceBackend->allocator, buffer, allocation);
@@ -81,7 +83,7 @@ namespace daxa {
 		void Buffer::upload(void const* src, size_t size, size_t dstOffset) {
 			DAXA_ASSERT_M(getVmaMemoryUsage() & (VMA_MEMORY_USAGE_CPU_TO_GPU | VMA_MEMORY_USAGE_GPU_TO_CPU), "can only upload to buffers with the memory usage flag: VMA_MEMORY_USAGE_CPU_TO_GPU");
 			DAXA_ASSERT_M(getSize() + dstOffset >= size, "uploaded memory overruns the buffer size");
-			DAXA_ASSERT_M(usesOnGPU == 0, "can not upload to buffer that is currently in use on the gpu directly from host. to indirectly upload to this buffer, use the command list upload.");
+			//DAXA_ASSERT_M(usesOnGPU == 0, "can not upload to buffer that is currently in use on the gpu directly from host. to indirectly upload to this buffer, use the command list upload.");
 
 			u8* bufferMemPtr{ nullptr };
 			DAXA_CHECK_VK_RESULT_M(vmaMapMemory(this->deviceBackend->allocator, allocation, (void**)&bufferMemPtr), "failed to map buffer memory");
@@ -91,7 +93,7 @@ namespace daxa {
 
 		void* Buffer::mapMemory() {
 			DAXA_ASSERT_M(getVmaMemoryUsage() & (VMA_MEMORY_USAGE_CPU_TO_GPU | VMA_MEMORY_USAGE_GPU_TO_CPU), "can only upload to buffers with the memory usage flag: VMA_MEMORY_USAGE_CPU_TO_GPU");
-			DAXA_ASSERT_M(usesOnGPU == 0, "can not upload to buffer that is currently in use on the gpu directly from host. to indirectly upload to this buffer, use the command list upload.");
+			//DAXA_ASSERT_M(usesOnGPU == 0, "can not upload to buffer that is currently in use on the gpu directly from host. to indirectly upload to this buffer, use the command list upload.");
 			memoryMapCount += 1;
 			void* ret;
 			DAXA_CHECK_VK_RESULT_M(vmaMapMemory(this->deviceBackend->allocator, allocation, &ret), "failed to map buffer memory");

@@ -3,7 +3,8 @@
 
 namespace daxa {
     namespace gpu {
-		DeviceBackend::DeviceBackend(vkb::Instance& instance) {vkb::PhysicalDeviceSelector selector{ instance };
+		DeviceBackend::DeviceBackend(vkb::Instance& instance) {
+			vkb::PhysicalDeviceSelector selector{ instance };
 			vkb::PhysicalDevice physicalDevice = selector
 				.set_minimum_version(1, 2)
 				.defer_surface_initialization()

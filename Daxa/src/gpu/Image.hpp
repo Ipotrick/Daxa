@@ -109,10 +109,12 @@ namespace daxa {
 			VkFormat getVkFormat() const { return format; }
 			VkComponentMapping getVkComponentMapping() const { return components; }
 			VkImageSubresourceRange getVkImageSubresourceRange() const { return subresourceRange; }
-			std::string const& getDebugName() const { return debugName; }
 			VkImageView getVkImageView() const { return view; }
 			SamplerHandle const& getSampler() const { return defaultSampler; }
-			//VkImage getVkImage() const { return  }
+			u16 getSampledImageDescriptorIndex() const { return sampledImageIndex; }
+			u16 getCombinedImageSamplerDescriptorIndex() const { return imageSamplerIndex; }
+			u16 getStorageImageDescriptorIndex() const { return storageImageIndex; }
+			std::string const& getDebugName() const { return debugName; }
 		private:
 			friend class Device;
 			friend class Swapchain;
@@ -125,9 +127,12 @@ namespace daxa {
 			VkFormat                   		format				= {};
 			VkComponentMapping         		components			= {};
 			VkImageSubresourceRange    		subresourceRange	= {};
-			std::string 					debugName			= {};
 			VkImageView						view				= {};
 			SamplerHandle 					defaultSampler 		= {};
+			u16 							sampledImageIndex 	= std::numeric_limits<u16>::max();
+			u16 							imageSamplerIndex 	= std::numeric_limits<u16>::max();
+			u16 							storageImageIndex 	= std::numeric_limits<u16>::max();
+			std::string 					debugName 			= {};
 		};
 
         struct ImageViewStaticFunctionOverride {
