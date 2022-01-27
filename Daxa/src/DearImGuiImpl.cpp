@@ -164,12 +164,14 @@ namespace daxa {
         io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
         size_t upload_size = width * height * 4 * sizeof(char);
 
-        auto fontSheet = device->createImage2d({
-            .width = (u32)width,
-            .height = (u32)height,
+        auto fontSheet = device->createImageView({
+            .image = device->createImage({
+                .format = VK_FORMAT_R8G8B8A8_UNORM,
+                .extent = {.width = (u32)width, .height = (u32)height, .depth = 1},
+                .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            }),
             .format = VK_FORMAT_R8G8B8A8_UNORM,
-            .imageUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-            .sampler = device->createSampler({})
+            .defaultSampler = device->createSampler({}),
         });
 
         auto cmdList = queue->getCommandList({});
@@ -217,7 +219,7 @@ namespace daxa {
         }
     }
     
-    u64 ImGuiRenderer::getImGuiTextureId(gpu::ImageHandle img) {
+    u64 ImGuiRenderer::getImGuiTextureId(gpu::ImageViewHandle img) {
         if (!texHandlePtrToReferencedImageIndex.contains(img.get())) {
             referencedImages.push_back(img);
             texHandlePtrToReferencedImageIndex[img.get()] = referencedImages.size() - 1;
@@ -225,7 +227,7 @@ namespace daxa {
         return texHandlePtrToReferencedImageIndex[img.get()];
     }
 
-    void ImGuiRenderer::recordCommands(ImDrawData* draw_data, daxa::gpu::CommandListHandle& cmdList, gpu::ImageHandle& target) {
+    void ImGuiRenderer::recordCommands(ImDrawData* draw_data, daxa::gpu::CommandListHandle& cmdList, gpu::ImageViewHandle& target) {
 
         if (draw_data && draw_data->TotalIdxCount > 0) {
             //--        data upload        --//
@@ -325,8 +327,8 @@ namespace daxa {
                     // Clamp to viewport as vkCmdSetScissor() won't accept values that are off bounds
                     if (clip_min.x < 0.0f) { clip_min.x = 0.0f; }
                     if (clip_min.y < 0.0f) { clip_min.y = 0.0f; }
-                    if (clip_max.x > target->getVkExtent().width) { clip_max.x = (float)target->getVkExtent().width; }
-                    if (clip_max.y > target->getVkExtent().height) { clip_max.y = (float)target->getVkExtent().height; }
+                    if (clip_max.x > target->getImageHandle()->getVkExtent3D().width) { clip_max.x = (float)target->getImageHandle()->getVkExtent3D().width; }
+                    if (clip_max.y > target->getImageHandle()->getVkExtent3D().height) { clip_max.y = (float)target->getImageHandle()->getVkExtent3D().height; }
                     if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
                         continue;
                     

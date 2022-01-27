@@ -55,16 +55,16 @@ namespace daxa {
 
 			void construct(std::shared_ptr<DeviceBackend> deviceBackend, SwapchainCreateInfo ci);
 
-			std::shared_ptr<DeviceBackend> deviceBackend 	= {};
-			VkFence aquireFence 							= VK_NULL_HANDLE;
-			VkPresentModeKHR presentMode 					= VK_PRESENT_MODE_FIFO_KHR;
-			VkSurfaceKHR surface 							= VK_NULL_HANDLE;
-			VkSwapchainKHR swapchain 						= VK_NULL_HANDLE; 
-			VkFormat swapchainImageFormat 					= {};
-			std::vector<ImageHandle> swapchainImages		= {};
-			VkExtent2D size 								= {}; 
-			VkImageUsageFlags additionalimageUses			= {};
-			std::string debugName 							= {};
+			std::shared_ptr<DeviceBackend> 	deviceBackend 			= {};
+			VkFence 						aquireFence 			= VK_NULL_HANDLE;
+			VkPresentModeKHR 				presentMode 			= VK_PRESENT_MODE_FIFO_KHR;
+			VkSurfaceKHR 					surface 				= VK_NULL_HANDLE;
+			VkSwapchainKHR 					swapchain 				= VK_NULL_HANDLE; 
+			VkFormat 						swapchainImageFormat 	= {};
+			std::vector<ImageViewHandle> 	swapchainImages			= {};
+			VkExtent2D 						size 					= {}; 
+			VkImageUsageFlags 				additionalimageUses		= {};
+			std::string 					debugName 				= {};
 		};
 
 		class SwapchainHandle : public SharedHandle<Swapchain>{};

@@ -14,9 +14,9 @@ namespace daxa {
     public:
         ImGuiRenderer(gpu::DeviceHandle device, gpu::CommandQueueHandle queue);
 
-        u64 getImGuiTextureId(gpu::ImageHandle img);
+        u64 getImGuiTextureId(gpu::ImageViewHandle img);
 
-        void recordCommands(ImDrawData* draw_data, daxa::gpu::CommandListHandle& cmdList, gpu::ImageHandle& target);
+        void recordCommands(ImDrawData* draw_data, daxa::gpu::CommandListHandle& cmdList, gpu::ImageViewHandle& target);
     private:
         daxa::gpu::DeviceHandle device                  = {};
         daxa::gpu::PipelineHandle pipeline              = {};
@@ -31,6 +31,6 @@ namespace daxa {
         void recreatePerFrameData(size_t newMinSizeVertex, size_t newMinSizeIndices);
 
         std::unordered_map<void*, size_t> texHandlePtrToReferencedImageIndex;
-        std::vector<gpu::ImageHandle> referencedImages;
+        std::vector<gpu::ImageViewHandle> referencedImages;
     };
 }
