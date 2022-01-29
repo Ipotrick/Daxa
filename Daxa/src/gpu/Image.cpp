@@ -97,6 +97,7 @@ namespace daxa {
 							index = this->deviceBackend->combinedImageSamplerIndexFreeList.back();
 							this->deviceBackend->combinedImageSamplerIndexFreeList.pop_back();
 						}
+						DAXA_ASSERT_M(index > 0 && index < BIND_ALL_COMBINED_IMAGE_SAMPLER_SET_LAYOUT_BINDING.descriptorCount, "failed to create image view: exausted indices for bind all set");
 						VkDescriptorImageInfo imageInfo{
 							.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 							.imageView = view,
@@ -122,6 +123,7 @@ namespace daxa {
 						index = this->deviceBackend->sampledImageIndexFreeList.back();
 						this->deviceBackend->sampledImageIndexFreeList.pop_back();
 					}
+					DAXA_ASSERT_M(index > 0 && index < BIND_ALL_SAMPLED_IMAGE_SET_LAYOUT_BINDING.descriptorCount, "failed to create image view: exausted indices for bind all set");
 					VkDescriptorImageInfo imageInfo{
 						.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 						.imageView = view,
@@ -148,6 +150,7 @@ namespace daxa {
 						index = this->deviceBackend->storageImageIndexFreeList.back();
 						this->deviceBackend->storageImageIndexFreeList.pop_back();
 					}
+					DAXA_ASSERT_M(index > 0 && index < BIND_ALL_STORAGE_IMAGE_SET_LAYOUT_BINDING.descriptorCount, "failed to create image view: exausted indices for bind all set");
 					VkDescriptorImageInfo imageInfo{
 						.imageLayout = VK_IMAGE_LAYOUT_GENERAL,
 						.imageView = view,

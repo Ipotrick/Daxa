@@ -26,9 +26,9 @@ namespace daxa {
 		f32 far = 2000.0f;
 		f32 cameraSwaySpeed = 0.0005f;
 		f32 translationSpeed = 5.0f;
-		glm::vec4 up = { 0.f, 0.f, 1.0f, 0.f };
-		glm::vec4 position = { 0.f, -2.f, 0.f, 1.f };
+		glm::vec4 up = { 0.f, 1.f, 0.0f, 0.f };
+		glm::vec4 position = { 0.f, 1.f, 2.f, 1.f };
 		f32 yaw = 0.0f;
-		f32 pitch = glm::pi<f32>() * 0.5f;
+		f32 pitch = 0;
 	};
 }

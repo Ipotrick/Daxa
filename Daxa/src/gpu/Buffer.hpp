@@ -48,7 +48,7 @@ namespace daxa {
 			u32 getMemeoryMapCount() const { return memoryMapCount; }
 
 			std::optional<u16> getStorageBufferDescriptorIndex() const { 
-				if(storageIndex == std::numeric_limits<u16>::max()) {
+				if(storageIndex == 0) {
 					return std::nullopt;
 				} else {
 					return storageIndex;
@@ -74,10 +74,9 @@ namespace daxa {
 			VkBufferUsageFlags 				usage 			= {};
 			VmaMemoryUsage 					memoryUsage 	= {};
 			VmaAllocation 					allocation 		= {};
-			//u32 							usesOnGPU 		= {};
 			u32 							memoryMapCount 	= {};
 			std::string 					debugName 		= {};
-			u16 							storageIndex 	= std::numeric_limits<u16>::max();
+			u16 							storageIndex 	= {};
 		};
 
 		template<typename ValueT = u8>

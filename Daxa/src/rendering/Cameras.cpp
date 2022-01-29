@@ -25,7 +25,7 @@ namespace daxa {
 			bZoom = false;
 		}
 
-		auto yawRotaAroundUp = glm::rotate(glm::mat4(1.0f), yaw, {0.f,0.f,1.f});
+		auto yawRotaAroundUp = glm::rotate(glm::mat4(1.0f), yaw, {0.f,1.f,0.f});
 		auto pitchRotation = glm::rotate(glm::mat4(1.0f), pitch, glm::vec3{1.f,0.f,0.f});
 		glm::vec4 translation = {};
 		if (window.isCursorCaptured()) {
@@ -52,7 +52,7 @@ namespace daxa {
 				translation += yawRotaAroundUp * pitchRotation * glm::vec4{ 0.f, -1.f,  0.f, 0.f } * dt * speed;
 			}
 			pitch -= window.getCursorPosChangeY() * cameraSwaySpeed;
-			pitch = std::clamp(pitch, 0.0f, glm::pi<f32>());
+			pitch = std::clamp(pitch, -0.5f * glm::pi<f32>(), 0.5f * glm::pi<f32>());
 			yaw += window.getCursorPosChangeX() * cameraSwaySpeed;
 		}
 		position += translation;
@@ -63,7 +63,7 @@ namespace daxa {
 		if (bZoom) {
 			fov *= 0.25f;
 		}
-		auto yawRotaAroundUp = glm::rotate(glm::mat4(1.0f), yaw, {0.f,0.f,1.f});
+		auto yawRotaAroundUp = glm::rotate(glm::mat4(1.0f), yaw, {0.f,1.f,0.f});
 		auto pitchRotation = glm::rotate(glm::mat4(1.0f), pitch, glm::vec3{1.f,0.f,0.f});
 		glm::mat4 prespective = glm::perspective(fov, (f32)window.getWidth()/(f32)window.getHeight(), near, far);
 		auto rota = yawRotaAroundUp * pitchRotation;
