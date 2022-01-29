@@ -1,5 +1,7 @@
 #version 450
 #extension GL_KHR_vulkan_glsl : enable
+#extension GL_EXT_shader_16bit_storage : enable
+#extension GL_EXT_nonuniform_qualifier : enable
 
 layout(location = 0) in vec3 position;
 
@@ -27,11 +29,11 @@ layout(std140, set = 0, binding = 2) readonly buffer LightBuffer {
 } lightBuffer;
 
 layout(std140, push_constant) uniform PushConstants {
-    uint modelIndex;
+    uint primitiveIndex;
 } pushConstants;
 
 void main() {
-    mat4 m = primitivesBuffer.primitiveInfos[pushConstants.modelIndex].transform;
+    mat4 m = primitivesBuffer.primitiveInfos[pushConstants.primitiveIndex].transform;
     mat4 mvp = globalBuffer.vp * m;
     gl_Position =  mvp * vec4(position, 1.0f);
 }

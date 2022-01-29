@@ -14,32 +14,17 @@ struct Globals {
     float zMin;
     float zMax;
 };
-
-layout (set = 0, binding = 4) readonly buffer StorageBuffers {
+layout(set = 0, binding = 0) uniform GlobalsBuffer {
     Globals globals;
-} storageBuffers[];
-
-//layout(set = 1, binding = 0) uniform Globals {
-//    mat4 inverse_view;
-//    mat4 inverseTransposeVP;
-//    float near;
-//    float far;
-//    ivec2 size;
-//    float zMin;
-//    float zMax;
-//} globals;
-layout (set = 1, binding = 1) uniform sampler2D in_depth;
-layout (set = 1, binding = 2) uniform sampler2D in_normal;
-layout (set = 1, binding = 3, rgba8) uniform writeonly image2D out_depth;
-layout (set = 1, binding = 4, rgba8) uniform writeonly image2D outScreenSpaceNormal;
-layout (set = 1, binding = 5, rgba8) uniform writeonly image2D out_world_space_normal;
-
-layout(std140, push_constant) uniform PushConstants {
-    uint bufferIndex;
-} pushConstants;
+} globalsBuffer;
+layout (set = 0, binding = 1) uniform sampler2D in_depth;
+layout (set = 0, binding = 2) uniform sampler2D in_normal;
+layout (set = 0, binding = 3, rgba8) uniform writeonly image2D out_depth;
+layout (set = 0, binding = 4, rgba8) uniform writeonly image2D outScreenSpaceNormal;
+layout (set = 0, binding = 5, rgba8) uniform writeonly image2D out_world_space_normal;
 
 void main() {
-    Globals globals = storageBuffers[pushConstants.bufferIndex].globals;
+    Globals globals = globalsBuffer.globals;
 	if (gl_GlobalInvocationID.x < globals.size.x && gl_GlobalInvocationID.y < globals.size.y) {
         ivec2 icoord = ivec2(gl_GlobalInvocationID.xy);
         vec2 coord = vec2(gl_GlobalInvocationID.xy) / vec2(globals.size);

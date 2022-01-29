@@ -8,13 +8,13 @@
 #include "World.hpp"
 #include "renderer/MeshRenderer.hpp"
 #include "renderer/FrameBufferDebugRenderer.hpp"
-#include "MeshLoading.hpp"
+#include "AssetServer.hpp"
 #include "cgltf.h"
 #include "Components.hpp"
+#include "AssetServer.hpp"
 
 struct UIState {
-	char loadFileTextBuf[256] = {};
-	bool convertYtoZup = false;
+	char loadFileTextBuf[256] = {'f','r','o','g','/','\0'};
 };
 
 class MyUser {
@@ -46,11 +46,10 @@ public:
 
 		ImGui::Begin("file import");
 		ImGui::InputText("file path", uiState.loadFileTextBuf, sizeof(uiState.loadFileTextBuf));
-		ImGui::Checkbox("convert y-up to z-up", &uiState.convertYtoZup);
 		if (ImGui::Button("load")) {
 			printf("try to load model with path: %s\n", uiState.loadFileTextBuf);
 
-			auto ret = sceneLoader.loadScene(cmdList, uiState.loadFileTextBuf, ecm, uiState.convertYtoZup);
+			auto ret = sceneLoader.loadScene(cmdList, uiState.loadFileTextBuf, ecm);
 			if (ret.isErr()) {
 				printf("failed to load scene, due to error: %s\n", ret.message().c_str());
 			}
@@ -200,7 +199,7 @@ private:
 	FrameBufferDebugRenderer frameBufferDebugRenderer = {};
 	daxa::GimbalLockedCameraController cameraController{};
 	std::shared_ptr<daxa::ImageCache> imageCache;
-	SceneLoader sceneLoader;
+	AssetCache sceneLoader;
 	std::optional<daxa::ImGuiRenderer> imguiRenderer = std::nullopt;
 	double totalElapsedTime = 0.0f;
 	UIState uiState;

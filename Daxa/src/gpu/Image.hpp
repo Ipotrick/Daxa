@@ -111,9 +111,27 @@ namespace daxa {
 			VkImageSubresourceRange getVkImageSubresourceRange() const { return subresourceRange; }
 			VkImageView getVkImageView() const { return view; }
 			SamplerHandle const& getSampler() const { return defaultSampler; }
-			u16 getSampledImageDescriptorIndex() const { return sampledImageIndex; }
-			u16 getCombinedImageSamplerDescriptorIndex() const { return imageSamplerIndex; }
-			u16 getStorageImageDescriptorIndex() const { return storageImageIndex; }
+			std::optional<u16> getSampledImageDescriptorIndex() const { 
+				if (sampledImageIndex == 0) {
+					return std::nullopt;
+				} else {
+					return sampledImageIndex;
+				}
+			}
+			std::optional<u16> getCombinedImageSamplerDescriptorIndex() const { 
+				if (imageSamplerIndex == 0) {
+					return std::nullopt;
+				} else {
+					return imageSamplerIndex;
+				} 
+			}
+			std::optional<u16> getStorageImageDescriptorIndex() const { 
+				if (storageImageIndex == 0) {
+					return std::nullopt;
+				} else {
+					return storageImageIndex;
+				} 
+			}
 			std::string const& getDebugName() const { return debugName; }
 		private:
 			friend class Device;
@@ -129,9 +147,9 @@ namespace daxa {
 			VkImageSubresourceRange    		subresourceRange	= {};
 			VkImageView						view				= {};
 			SamplerHandle 					defaultSampler 		= {};
-			u16 							sampledImageIndex 	= std::numeric_limits<u16>::max();
-			u16 							imageSamplerIndex 	= std::numeric_limits<u16>::max();
-			u16 							storageImageIndex 	= std::numeric_limits<u16>::max();
+			u16 							sampledImageIndex 	= {};
+			u16 							imageSamplerIndex 	= {};
+			u16 							storageImageIndex 	= {};
 			std::string 					debugName 			= {};
 		};
 

@@ -51,6 +51,7 @@ namespace daxa {
 					.buffer = buffer,
 					.range = size,
 				};
+				DAXA_ASSERT_M(index > 0 && index < BIND_ALL_STORAGE_BUFFER_SET_LAYOUT_BINDING.descriptorCount, "failed to create buffer: exausted indices for bind all set");
 				VkWriteDescriptorSet write {
 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					.pNext = nullptr,
@@ -65,10 +66,6 @@ namespace daxa {
 				storageIndex = index;
 			}
 		}
-
-		//bool Buffer::isUsedByGPU() const {
-		//	return usesOnGPU > 0;
-		//}
 
 		Buffer::~Buffer() {
 			if (this->deviceBackend) {

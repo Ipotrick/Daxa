@@ -21,6 +21,10 @@ struct ChildComp {
 	daxa::EntityHandle parent = {};
 };
 
+struct ParentComp {
+	std::vector<daxa::EntityHandle> children = {};
+};
+
 struct LightComp {
 	f32 strength;
 	glm::vec4 color;

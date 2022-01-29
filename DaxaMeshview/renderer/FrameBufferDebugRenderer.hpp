@@ -33,23 +33,17 @@ public:
 		this->pipeline = renderCTX.device->createComputePipeline({
             .shaderModule = shader.value(), 
             .debugName = "frame buffer debug pipeline",
-            .overwriteSets = {
-                daxa::gpu::BIND_ALL_SET_DESCRIPTION,
-                {},
-                {},
-                {}
-            }
         }).value(); 
 
 		this->setAlloc = renderCTX.device->createBindingSetAllocator({
-            .setLayout = pipeline->getSetLayout(1),
+            .setLayout = pipeline->getSetLayout(0),
             .debugName = "frame buffer debug shader set allocator",
             .setPerPool = 4,
         });
 
         this->buffer = renderCTX.device->createBuffer({
             .size = sizeof(UploadData),
-            .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
             .memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
             .memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             .debugName = "frame buffer debug renderer global buffer"
@@ -65,12 +59,6 @@ public:
             {
                 .shaderModule = shader.value(), 
                 .debugName = "frame buffer debug pipeline",
-                .overwriteSets = {
-                    daxa::gpu::BIND_ALL_SET_DESCRIPTION,
-                    {},
-                    {},
-                    {}
-                }
             },
             {
                 .pathToSource = "./DaxaMeshview/renderer/fb_debug.comp",
@@ -80,39 +68,36 @@ public:
     }
 
     void recreateImages(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmdList, u32 width, u32 height) {
-        auto ci0 = daxa::gpu::ImageViewCreateInfo{
+        debugScreenSpaceNormalImage = renderCTX.device->createImageView(daxa::gpu::ImageViewCreateInfo{
             .image = renderCTX.device->createImage({
                 .format = VK_FORMAT_R8G8B8A8_UNORM,
-                .extent = { 1,1,1 },
+                .extent = { width, height, 1 },
                 .usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
             }),
             .format = VK_FORMAT_R8G8B8A8_UNORM,
             .defaultSampler = renderCTX.defaultSampler,
             .debugName = "debugScreenSpaceNormalImage",
-        };
-        debugScreenSpaceNormalImage = renderCTX.device->createImageView(ci0);
-        auto ci1 = daxa::gpu::ImageViewCreateInfo{
+        });
+        debugWorldSpaceNormalImage = renderCTX.device->createImageView(daxa::gpu::ImageViewCreateInfo{
             .image = renderCTX.device->createImage({
                 .format = VK_FORMAT_R8G8B8A8_UNORM,
-                .extent = { 1,1,1 },
+                .extent = { width, height, 1 },
                 .usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
             }),
             .format = VK_FORMAT_R8G8B8A8_UNORM,
             .defaultSampler = renderCTX.defaultSampler,
             .debugName = "debugWorldSpaceNormalImage",
-        };
-        debugWorldSpaceNormalImage = renderCTX.device->createImageView(ci1);
-        auto ci2 = daxa::gpu::ImageViewCreateInfo{
+        });
+        debugLinearDepthImage = renderCTX.device->createImageView(daxa::gpu::ImageViewCreateInfo{
             .image = renderCTX.device->createImage({
                 .format = VK_FORMAT_R8G8B8A8_UNORM,
-                .extent = { 1,1,1 },
+                .extent = { width, height, 1 },
                 .usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
             }),
             .format = VK_FORMAT_R8G8B8A8_UNORM,
             .defaultSampler = renderCTX.defaultSampler,
             .debugName = "debugLinearDepthImage",
-        };
-        debugLinearDepthImage = renderCTX.device->createImageView(ci2);
+        });
 
         daxa::gpu::MemoryBarrier postMemBar = {
             .dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
@@ -200,18 +185,15 @@ public:
         );
 
         cmdList->bindPipeline(pipeline);
-        cmdList->bindAll();
 
         auto set = setAlloc->getSet();
+        set->bindBuffer(0, buffer);
         set->bindImage(1, renderCTX.depthImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         set->bindImage(2, renderCTX.normalsImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         set->bindImage(3, debugLinearDepthImage, VK_IMAGE_LAYOUT_GENERAL);
         set->bindImage(4, debugScreenSpaceNormalImage, VK_IMAGE_LAYOUT_GENERAL);
         set->bindImage(5, debugWorldSpaceNormalImage, VK_IMAGE_LAYOUT_GENERAL);
-        cmdList->bindSet(1, set);
-
-        u32 index = buffer->getStorageBufferDescriptorIndex().value();
-        cmdList->pushConstant(VK_SHADER_STAGE_COMPUTE_BIT, index);
+        cmdList->bindSet(0, set);
 
         cmdList->dispatch((uploadData.imageWidth + 1) / 8, (uploadData.imageHeight + 1) / 8);
         cmdList->unbindPipeline();
