@@ -68,7 +68,7 @@ namespace daxa {
 				.pNext = nullptr,
 				.storageBuffer16BitAccess = VK_FALSE,
 				.uniformAndStorageBuffer16BitAccess = VK_TRUE,
-				.storagePushConstant16 = VK_FALSE,
+				.storagePushConstant16 = VK_TRUE,
 				.storageInputOutput16 = VK_FALSE,
 			};
 
@@ -77,7 +77,7 @@ namespace daxa {
 			deviceBuilder.add_pNext(&dynamicRenderingFeature);
 			deviceBuilder.add_pNext(&timelineSemaphoreFeatures);
 			deviceBuilder.add_pNext(&synchronization2Features);
-			//deviceBuilder.add_pNext(&atomicI64Features);
+			deviceBuilder.add_pNext(&atomicI64Features);
 			deviceBuilder.add_pNext(&device16BitFeatures);
 
 			vkb::Device vkbDevice = deviceBuilder.build().value();
