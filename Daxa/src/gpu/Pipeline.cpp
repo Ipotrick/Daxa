@@ -475,7 +475,7 @@ namespace daxa {
 				.subpass = 0,
 			};
 
-			DAXA_ASSERT_M(vkCreateGraphicsPipelines(deviceBackend->device.device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline) == VK_SUCCESS, "failed to create graphics pipeline");
+			DAXA_CHECK_VK_RESULT_M(vkCreateGraphicsPipelines(deviceBackend->device.device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline), "failed to create graphics pipeline");
 
 			setPipelineDebugName(deviceBackend->device.device, debugName, ret);
 
