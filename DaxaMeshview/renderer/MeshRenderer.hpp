@@ -43,11 +43,6 @@ public:
 
 		this->prePassPipeline = renderCTX.device->createGraphicsPipeline(prePassPipelineBuilder).value();
 
-		this->globalSetAlloc = renderCTX.device->createBindingSetAllocator({
-			.setLayout = prePassPipeline->getSetLayout(0),
-			.debugName = "mesh renderer global set allocator",
-		});
-
         this->globalDataBufffer = renderCTX.device->createBuffer({
             .size = sizeof(GlobalData),
             .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -69,7 +64,7 @@ public:
 		opaquePipelineBuilder.addShaderStage(renderCTX.device->createShaderModule(vertexShaderOpaqueCI).value());
 		opaquePipelineBuilder.addShaderStage(renderCTX.device->createShaderModule(fragmentShaderOpaqueCI).value());
 			opaquePipelineBuilder.setDebugName("mesh render opaque pass pipeline")
-			.configurateDepthTest({.enableDepthTest = true, .depthAttachmentFormat = VK_FORMAT_D32_SFLOAT, .enableDepthWrite = true })
+			.configurateDepthTest({.enableDepthTest = true, .depthAttachmentFormat = VK_FORMAT_D32_SFLOAT, .enableDepthWrite = true, .depthTestCompareOp = VK_COMPARE_OP_EQUAL })
 			// adding a vertex input attribute binding:
 			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
 			// all added vertex input attributes are added to the previously added vertex input attribute binding
@@ -86,6 +81,11 @@ public:
 			});
 
 		this->opaquePassPipeline = renderCTX.device->createGraphicsPipeline(opaquePipelineBuilder).value();
+
+		this->globalSetAlloc = renderCTX.device->createBindingSetAllocator({
+			.setLayout = opaquePassPipeline->getSetLayout(0),
+			.debugName = "mesh renderer global set allocator",
+		});
 
 		this->perDrawOpaquePassSetAlloc = renderCTX.device->createBindingSetAllocator({ .setLayout = this->opaquePassPipeline->getSetLayout(1) });
 
@@ -262,7 +262,7 @@ public:
 		}
 
 		cmd->bindPipeline(opaquePassPipeline);
-		//cmd->bindSet(0, globalSet);
+		cmd->bindSet(0, globalSet);
 
 		std::array framebuffer{
 			daxa::gpu::RenderAttachmentInfo{

@@ -11,7 +11,7 @@
 
 namespace daxa {
 	namespace gpu {
-
+		
 		struct SamplerCreateInfo {
 			VkFilter                magFilter 				= VK_FILTER_LINEAR;
 			VkFilter                minFilter 				= VK_FILTER_LINEAR;
@@ -83,7 +83,7 @@ namespace daxa {
 			float                   		maxLod					= {};
 			VkBorderColor           		borderColor				= {};
 			VkBool32                		unnormalizedCoordinates	= {};
-			u16 							samplerIndex 			= std::numeric_limits<u16>::max();
+			u16 							samplerIndex 			= {};
 			std::string						debugName 				= {};
 		};
 

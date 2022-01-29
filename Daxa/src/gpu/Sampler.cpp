@@ -67,6 +67,7 @@ namespace daxa {
 				index = this->deviceBackend->samplerIndexFreeList.back();
 				this->deviceBackend->samplerIndexFreeList.pop_back();
 			}
+			DAXA_ASSERT_M(index > 0 && index < BIND_ALL_SAMPLER_SET_LAYOUT_BINDING.descriptorCount, "failed to create sampler: exausted indices for bind all set");
 			VkDescriptorImageInfo imageInfo{
 				.sampler = sampler,
 			};

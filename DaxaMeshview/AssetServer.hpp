@@ -96,9 +96,9 @@ daxa::Result<VkSamplerAddressMode> glSamplerAdressModeToVk(int glCode) {
     }
 }
 
-class SceneLoader {
+class AssetCache {
 public:
-    SceneLoader(daxa::gpu::DeviceHandle& d, std::vector<std::filesystem::path> const& rp, std::shared_ptr<daxa::ImageCache>& ic)
+    AssetCache(daxa::gpu::DeviceHandle& d, std::vector<std::filesystem::path> const& rp, std::shared_ptr<daxa::ImageCache>& ic)
         : device{ d }
         , rootPaths{ rp }
         , imgCache{ ic }
@@ -277,8 +277,7 @@ public:
     daxa::Result<std::vector<daxa::EntityHandle>> loadScene(
         daxa::gpu::CommandListHandle& cmdList,
         std::filesystem::path path,
-        daxa::EntityComponentManager& ecm,
-        bool convertYtoZup
+        daxa::EntityComponentManager& ecm
     ) {
         if (!std::filesystem::exists(path)) {
             auto pathRes = completePath(rootPaths, path);
@@ -381,14 +380,6 @@ public:
             }
         }
 
-        if (convertYtoZup) {
-            for (auto ent: ret) {
-                if (daxa::TransformComp* trans = view.getCompIf<daxa::TransformComp>(ent)) {
-                    trans->mat = glm::rotate(trans->mat, glm::radians(90.0f), glm::vec3(1,0,0)); 
-                }
-            }
-        }
-
         cmdList->insertMemoryBarrier(daxa::gpu::FULL_MEMORY_BARRIER);
         
         textureSamplerInfos.clear();
@@ -402,4 +393,3 @@ private:
     std::vector<std::filesystem::path> rootPaths = {};
     std::shared_ptr<daxa::ImageCache> imgCache = {};
 };
-
