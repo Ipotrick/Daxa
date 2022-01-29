@@ -39,10 +39,10 @@ namespace daxa {
         }
 
         template<typename SpecificType>
-        SpecificType& addComp(EntityHandle handle, SpecificType&& value) {
+        SpecificType& addComp(EntityHandle handle, SpecificType const& value) {
             DAXA_ASSERT_M(handleValid(handle), "invalid entity handle!");
             ComponentStorageSparseSet<SpecificType>* storage = std::get<ComponentStorageSparseSet<SpecificType>*>(storages);
-            storage->add(handle.index, std::move(value));
+            storage->add(handle.index, value);
             return storage->get(handle.index);
         }
 

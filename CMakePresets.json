@@ -22,6 +22,14 @@
       }
     },
     {
+      "name": "RelWithDebInfo",
+      "displayName": "RelWithDebInfo",
+      "inherits": "defaults",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+    {
       "name": "Debug",
       "displayName": "Debug",
       "inherits": "defaults",

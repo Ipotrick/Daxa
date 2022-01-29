@@ -186,9 +186,9 @@ namespace daxa {
 
 		ImageView::~ImageView() {
 			if (deviceBackend && view) {
-				if (imageSamplerIndex != std::numeric_limits<u16>::max() || 
-					sampledImageIndex != std::numeric_limits<u16>::max() ||
-					storageImageIndex != std::numeric_limits<u16>::max()
+				if (imageSamplerIndex != 0 || 
+					sampledImageIndex != 0 ||
+					storageImageIndex != 0
 				){
 					std::unique_lock bindAllLock(deviceBackend->bindAllMtx);
 					if (imageSamplerIndex != std::numeric_limits<u16>::max()) {

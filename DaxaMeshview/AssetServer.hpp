@@ -162,7 +162,7 @@ public:
         daxa::EntityHandle* parentEnt, 
         cgltf_node* node, 
         daxa::EntityComponentManager& ecm, 
-        daxa::EntityComponentView<daxa::TransformComp, ModelComp, ChildComp>& view,
+        daxa::EntityComponentView<daxa::TransformComp, ModelComp, ChildComp, ParentComp>& view,
         cgltf_data* data,
         std::vector<daxa::gpu::BufferHandle>& buffers
     ) {
@@ -186,6 +186,10 @@ public:
 
         if (parentEnt) {
             view.addComp(ent, ChildComp{ .parent = *parentEnt });
+            if (!view.hasComp<ParentComp>(*parentEnt)) {
+                view.addComp<ParentComp>(*parentEnt, {});
+            }
+            view.getComp<ParentComp>(*parentEnt).children.push_back(ent);
         }
         
         if (node->mesh) {
@@ -274,10 +278,9 @@ public:
         return ent;
     }
 
-    daxa::Result<std::vector<daxa::EntityHandle>> loadScene(
+    daxa::Result<daxa::EntityHandle> loadScene(
         daxa::gpu::CommandListHandle& cmdList,
-        std::filesystem::path path,
-        daxa::EntityComponentManager& ecm
+        std::filesystem::path path
     ) {
         if (!std::filesystem::exists(path)) {
             auto pathRes = completePath(rootPaths, path);
@@ -286,16 +289,17 @@ public:
             }
             path = pathRes.value();
         }
-
         cgltf_options options = {};
         cgltf_data* data = NULL;
         cgltf_result resultParsing = cgltf_parse_file(&options, path.string().c_str(), &data);
         if (resultParsing != cgltf_result_success) {
+            cgltf_free(data);
             return daxa::ResultErr{"failed to parse gltf file"};
         }
 
         auto resultBinLoading = cgltf_load_buffers(&options, data, path.string().c_str());
         if (resultBinLoading != cgltf_result_success) {
+            cgltf_free(data);
             return daxa::ResultErr{ "failed to load .bin of gltf file" };
         }
 
@@ -305,20 +309,11 @@ public:
         for (int i = 0; i < data->textures_count; i++) {
             auto& texture = data->textures[i];
 
-            // TODO make it possible to read images, wich are embedded inside the .bin
-
-            // printf("texture nr %i\n", i);
-            // printf("texture embedded in .bin: %s\n", texture.image->buffer_view != nullptr ? "true" : "false");
-            // printf("texture uri: %s\n", data->textures[i].image->uri);
-            // printf("texture min filter: %i\n", texture.sampler->min_filter);
-            // printf("texture mag filter: %i\n", texture.sampler->mag_filter);
-            // printf("texture wrap s: %i\n", texture.sampler->wrap_s);
-            // printf("texture wrap t: %i\n", texture.sampler->wrap_t);
-
             daxa::gpu::SamplerCreateInfo samplerInfo = {};
             {
                 auto ret = glSamplingToVkSampling(texture.sampler->min_filter);
                 if (ret.isErr()) {
+                    cgltf_free(data);
                     return daxa::ResultErr{ret.message()};
                 }
                 samplerInfo.minFilter = ret.value().first;
@@ -329,6 +324,7 @@ public:
             {
                 auto ret = glSamplingToVkSampling(texture.sampler->mag_filter);
                 if (ret.isErr()) {
+                    cgltf_free(data);
                     return daxa::ResultErr{ ret.message() };
                 }
                 samplerInfo.magFilter = ret.value().first;
@@ -339,6 +335,7 @@ public:
             {
                 auto ret = glSamplerAdressModeToVk(texture.sampler->wrap_s);
                 if (!ret) {
+                    cgltf_free(data);
                     return daxa::ResultErr{ ret.message() };
                 }
                 samplerInfo.addressModeU = ret.value();
@@ -346,6 +343,7 @@ public:
             {
                 auto ret = glSamplerAdressModeToVk(texture.sampler->wrap_t);
                 if (!ret) {
+                    cgltf_free(data);
                     return daxa::ResultErr{ ret.message() };
                 }
                 samplerInfo.addressModeV = ret.value();
@@ -359,24 +357,20 @@ public:
             texturePaths.push_back(texPath);
         }
 
-        // printf("\n");
-
         std::vector<daxa::gpu::BufferHandle> buffers;
         buffers.resize(data->accessors_count);
 
-        // printf("\n");
-
-        auto view = ecm.view<daxa::TransformComp, ModelComp, ChildComp>();
-
-        std::vector<daxa::EntityHandle> ret;
+        auto view = entityCache.view<daxa::TransformComp, ModelComp, ChildComp, ParentComp>();
+        auto ret = entityCache.createEntity();
+        view.addComp(ret, daxa::TransformComp{ .mat = glm::mat4{1.0f} });
+        view.addComp(ret, ParentComp{});
 
         for (int scene_i = 0; scene_i < data->scenes_count; scene_i++) {
             auto& scene = data->scenes[scene_i];
             for (int rootNodeI = 0; rootNodeI < scene.nodes_count; rootNodeI++) {
                 auto* rootNode = scene.nodes[rootNodeI];
 
-                auto ent = nodeToEntity(cmdList, nullptr, rootNode, ecm, view, data, buffers);
-                ret.push_back(ent);
+                nodeToEntity(cmdList, &ret, rootNode, entityCache, view, data, buffers);
             }
         }
 
@@ -384,12 +378,57 @@ public:
         
         textureSamplerInfos.clear();
         texturePaths.clear();
-        return daxa::Result(std::vector<daxa::EntityHandle>());
+        
+        cgltf_free(data);
+        return ret;
     }
+
+    void copyEntitiesFromCache(
+        daxa::EntityHandle from, 
+        daxa::EntityHandle to, 
+        daxa::EntityComponentView<daxa::TransformComp, ModelComp, ChildComp, ParentComp>& cacheView,
+        daxa::EntityComponentView<daxa::TransformComp, ModelComp, ChildComp, ParentComp>& outView,
+        daxa::EntityComponentManager& out
+    ) {
+        outView.addComp<daxa::TransformComp>(to, cacheView.getComp<daxa::TransformComp>(from));
+        if (cacheView.hasComp<ModelComp>(from)) {
+            outView.addComp(to, cacheView.getComp<ModelComp>(from));
+        }
+        if (cacheView.hasComp<ParentComp>(from)) {
+            outView.addComp(to, ParentComp{});
+            outView.getComp<ParentComp>(to).children.reserve(cacheView.getComp<ParentComp>(from).children.size());
+            for (auto& fromChild : cacheView.getComp<ParentComp>(from).children) {
+                auto toChild = out.createEntity();
+                outView.addComp(toChild, ChildComp{ .parent = to });
+                copyEntitiesFromCache(fromChild, toChild, cacheView, outView, out);
+                outView.getComp<ParentComp>(to).children.push_back(toChild);
+            }
+        }
+    }
+
+    daxa::Result<daxa::EntityHandle> getScene(daxa::gpu::CommandListHandle& cmdList, std::filesystem::path const& path, daxa::EntityComponentManager& out) {
+        if (!cache.contains(path.string())) {
+            auto rootEnt = loadScene(cmdList, path);
+            if (rootEnt.isErr()) {
+                return daxa::ResultErr{ rootEnt.message() };
+            }
+            cache[path.string()] = rootEnt.value();
+        }
+
+        auto from = cache[path.string()];
+        auto to = out.createEntity();
+        auto cacheView = entityCache.view<daxa::TransformComp, ModelComp, ChildComp, ParentComp>();
+        auto outView = out.view<daxa::TransformComp, ModelComp, ChildComp, ParentComp>();
+        copyEntitiesFromCache(from, to, cacheView, outView, out);
+        return to;
+    }
+
 private:
     std::vector<daxa::gpu::SamplerCreateInfo> textureSamplerInfos;
     std::vector<std::filesystem::path> texturePaths;
     daxa::gpu::DeviceHandle device = {};
     std::vector<std::filesystem::path> rootPaths = {};
     std::shared_ptr<daxa::ImageCache> imgCache = {};
+    daxa::EntityComponentManager entityCache = {};
+    std::unordered_map<std::string, daxa::EntityHandle> cache;
 };

@@ -15,6 +15,8 @@
 
 struct UIState {
 	char loadFileTextBuf[256] = {'f','r','o','g','/','\0'};
+	int xAmount = 1;
+	int yAmount = 1;
 };
 
 class MyUser {
@@ -46,13 +48,23 @@ public:
 
 		ImGui::Begin("file import");
 		ImGui::InputText("file path", uiState.loadFileTextBuf, sizeof(uiState.loadFileTextBuf));
+		ImGui::SliderInt("x copy", &uiState.xAmount, 1, 100);
+		ImGui::SliderInt("y copy", &uiState.yAmount, 1, 100);
 		if (ImGui::Button("load")) {
 			printf("try to load model with path: %s\n", uiState.loadFileTextBuf);
-
-			auto ret = sceneLoader.loadScene(cmdList, uiState.loadFileTextBuf, ecm);
-			if (ret.isErr()) {
-				printf("failed to load scene, due to error: %s\n", ret.message().c_str());
+			for (int x = 0; x < uiState.xAmount; x++) {
+				for (int y = 0; y < uiState.yAmount; y++) {
+					auto ret = sceneLoader.getScene(cmdList, uiState.loadFileTextBuf, ecm);
+					printf("x: %i, y: %i\n",x,y);
+					if (ret.isErr()) {
+						printf("failed to load scene, due to error: %s\n", ret.message().c_str());
+						break;
+					}
+					auto view = ecm.view<daxa::TransformComp>();
+					view.getComp<daxa::TransformComp>(ret.value()).mat = glm::translate(glm::mat4{1.0f}, glm::vec3{x,0,y});
+				}
 			}
+
 			std::memset(uiState.loadFileTextBuf, '\0', sizeof(uiState.loadFileTextBuf));
 		}
 		ImGui::End();
