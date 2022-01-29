@@ -69,7 +69,7 @@ namespace daxa {
 
 		Buffer::~Buffer() {
 			if (this->deviceBackend) {
-				if (storageIndex != std::numeric_limits<u16>::max()) {
+				if (storageIndex != 0) {
 					std::unique_lock bindAllLock(deviceBackend->bindAllMtx);
 					this->deviceBackend->storageBufferIndexFreeList.push_back(storageIndex);
 				}
