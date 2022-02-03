@@ -1,7 +1,7 @@
 #version 450
 #extension GL_KHR_vulkan_glsl : enable
 
-layout(set = 0, binding = 0) readonly uniform GlobalBuffer {
+layout(set = 0, binding = 0) uniform GlobalBuffer {
     mat4 vp;
     mat4 view;
     mat4 itvp;

@@ -1,17 +1,7 @@
 #pragma once
 
 #include "Daxa.hpp"
-
-struct Primitive {
-	u32 indexCount = 0;
-	daxa::gpu::BufferHandle indiexBuffer = {};
-	daxa::gpu::BufferHandle vertexPositions = {};
-	daxa::gpu::BufferHandle vertexUVs = {};
-	daxa::gpu::BufferHandle vertexNormals = {};
-	daxa::gpu::BufferHandle vertexTangents = {};
-	daxa::gpu::ImageViewHandle albedoTexture = {};
-	daxa::gpu::ImageViewHandle normalTexture = {};
-};
+#include "renderer/RenderContext.hpp"
 
 struct ModelComp {
 	std::vector<Primitive> meshes;

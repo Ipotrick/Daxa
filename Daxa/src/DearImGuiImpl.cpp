@@ -209,11 +209,13 @@ namespace daxa {
                     .size = newMinSizeVertex,
                     .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                     .memoryUsage = VMA_MEMORY_USAGE_CPU_TO_GPU,
+                    .debugName = "dear ImGui vertex buffer"
                 }),
                 .indexBuffer = device->createBuffer({
                     .size = newMinSizeIndices,
                     .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
                     .memoryUsage = VMA_MEMORY_USAGE_CPU_TO_GPU,
+                    .debugName = "dear ImGui index buffer"
                 }),
             });
         }
@@ -247,6 +249,7 @@ namespace daxa {
                     .size = newSize,
                     .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                     .memoryUsage = VMA_MEMORY_USAGE_CPU_TO_GPU,
+                    .debugName = "dear ImGui vertex buffer",
                 });
             }
 
@@ -256,6 +259,7 @@ namespace daxa {
                     .size = newSize,
                     .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
                     .memoryUsage = VMA_MEMORY_USAGE_CPU_TO_GPU,
+                    .debugName = "dear ImGui index buffer",
                 });
             }
             {

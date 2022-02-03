@@ -14,9 +14,11 @@
 #include "AssetServer.hpp"
 
 struct UIState {
-	char loadFileTextBuf[256] = {'f','r','o','g','/','\0'};
-	int xAmount = 1;
-	int yAmount = 1;
+	char loadFileTextBuf[256] = "sponza/Sponza.gltf";
+	int xAmount = 5;
+	int yAmount = 5;
+	int xDistance = 30;
+	int yDistance = 20;
 };
 
 class MyUser {
@@ -33,14 +35,22 @@ public:
 		meshRender.init(renderCTX);
 		frameBufferDebugRenderer.init(renderCTX, app.window->getWidth(), app.window->getHeight());
 
-		auto lightEnt = ecm.createEntity();
-		auto view = ecm.view<daxa::TransformComp, LightComp>();
-		view.addComp(lightEnt, LightComp{ .strength = 6.25, .color = { 0.8f, 0.8, 0.8f, 1.0f } });
-		view.addComp(lightEnt, daxa::TransformComp{ .mat = glm::translate(glm::mat4{1.0f}, glm::vec3(0,0,3)) });
+		f32 step = 20.0f;
+		for (int x = 0; x < 0; x++) {
+			for (int y = 0; y < 1; y++) {
+				auto lightEnt = ecm.createEntity();
+				auto view = ecm.view<daxa::TransformComp, LightComp>();
+				view.addComp(lightEnt, LightComp{ .strength = 6.25, .color = { 0.8f, 0.8, 0.8f, 1.0f } });
+				view.addComp(lightEnt, daxa::TransformComp{ .mat = glm::translate(glm::mat4{1.0f}, glm::vec3(step*x,1,step*y)) });
+			}
+		}
 	}
 
 	void update(daxa::AppState& app) {
-		auto cmdList = renderCTX.queue->getCommandList({});
+		std::string cmdName = "cmd list nr. ";
+		cmdName += std::to_string(frame);
+		auto cmdList = renderCTX.queue->getCommandList({.debugName = cmdName.c_str()});
+		frame++;
 
 		ImGui_ImplGlfw_NewFrame(); 
 
@@ -50,6 +60,8 @@ public:
 		ImGui::InputText("file path", uiState.loadFileTextBuf, sizeof(uiState.loadFileTextBuf));
 		ImGui::SliderInt("x copy", &uiState.xAmount, 1, 100);
 		ImGui::SliderInt("y copy", &uiState.yAmount, 1, 100);
+		ImGui::SliderInt("x distance", &uiState.xDistance, 1, 100);
+		ImGui::SliderInt("y distance", &uiState.yDistance, 1, 100);
 		if (ImGui::Button("load")) {
 			printf("try to load model with path: %s\n", uiState.loadFileTextBuf);
 			for (int x = 0; x < uiState.xAmount; x++) {
@@ -61,7 +73,7 @@ public:
 						break;
 					}
 					auto view = ecm.view<daxa::TransformComp>();
-					view.getComp<daxa::TransformComp>(ret.value()).mat = glm::translate(glm::mat4{1.0f}, glm::vec3{x,0,y});
+					view.getComp<daxa::TransformComp>(ret.value()).mat = glm::translate(glm::mat4{1.0f}, glm::vec3{x*uiState.xDistance,0,y*uiState.yDistance});
 				}
 			}
 
@@ -124,7 +136,7 @@ public:
 		}
 		
 		{
-			auto draws = std::vector<MeshRenderer::DrawMesh>();
+			meshDrawCommands.clear();
 			auto view = ecm.view<daxa::TransformComp, ModelComp>();
 			auto childComps = ecm.view<ChildComp>();
 
@@ -146,20 +158,20 @@ public:
 				//	trans.translation = glm::rotate(trans.translation, 1.f * (f32)app.getDeltaTimeSeconds(), glm::vec3{1,1,1});
 				//}
 				for (auto& prim : model.meshes) {
-					draws.push_back(MeshRenderer::DrawMesh{
+					meshDrawCommands.push_back(DrawPrimCmd{
 						.transform = translation,
 						.prim = &prim,
 					});
 				}
 			}
-			meshRender.render(renderCTX, cmdList, draws);
+			meshRender.render(renderCTX, cmdList, meshDrawCommands);
 		}
 
 		auto upload = FrameBufferDebugRenderer::CameraData{
-			.far = cameraController.far,
-			.near = cameraController.near,
 			.inverseView = glm::inverse(cameraController.view),
 			.inverseTransposeVP = glm::inverse(glm::transpose(cameraController.view)),
+			.near = cameraController.near,
+			.far = cameraController.far,
 		};
 		frameBufferDebugRenderer.renderDebugViews(renderCTX, cmdList, upload);
 
@@ -205,6 +217,7 @@ public:
 	}
 
 private:
+	size_t frame = 0;	
 	std::vector<glm::mat4> transformBuffer;
 	RenderContext renderCTX;
 	MeshRenderer meshRender = {};
@@ -216,6 +229,7 @@ private:
 	double totalElapsedTime = 0.0f;
 	UIState uiState;
 	daxa::EntityComponentManager ecm;
+	std::vector<DrawPrimCmd> meshDrawCommands;
 };
 
 int main()

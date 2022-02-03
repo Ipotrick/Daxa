@@ -108,7 +108,7 @@ public:
 
     daxa::gpu::BufferHandle loadBuffer(daxa::gpu::CommandListHandle& cmdList, cgltf_accessor& accessor, VkBufferUsageFlagBits usage) {
 
-        VkBufferUsageFlags usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | usage;
+        VkBufferUsageFlags usageFlags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | usage;
 
         daxa::gpu::BufferHandle gpuBuffer;
 
@@ -116,11 +116,13 @@ public:
             gpuBuffer = device->createBuffer({
                 .size = sizeof(u32) * accessor.count,
                 .usage = usageFlags,
+                .debugName = "an index buffer",
             });
         } else if (usage & VK_BUFFER_USAGE_VERTEX_BUFFER_BIT) {
             gpuBuffer = device->createBuffer({
                 .size = accessor.stride * accessor.count,
                 .usage = usageFlags,
+                .debugName = "a vertex buffer",
             });
         }
 
@@ -148,9 +150,9 @@ public:
             }
         } else {
             cmdList->copyHostToBuffer({
+                .src = cpuSideBuffPtr,
                 .dst = gpuBuffer,
                 .size = accessor.stride * accessor.count,
-                .src = cpuSideBuffPtr,
             });
         }
 
@@ -245,8 +247,8 @@ public:
                     meshPrim.albedoTexture = imgCache->get(
                         {
                             .path = texturePaths[textureIndex],
-                            .samplerInfo = textureSamplerInfos[textureIndex],
                             .viewFormat = VK_FORMAT_R8G8B8A8_SRGB,
+                            .samplerInfo = textureSamplerInfos[textureIndex],
                         },
                         cmdList
                     );
@@ -258,8 +260,8 @@ public:
                     meshPrim.normalTexture = imgCache->get(
                         {
                             .path = texturePaths[textureIndex],
-                            .samplerInfo = textureSamplerInfos[textureIndex],
                             .viewFormat = VK_FORMAT_R8G8B8A8_UNORM,
+                            .samplerInfo = textureSamplerInfos[textureIndex],
                         },
                         cmdList
                     );
