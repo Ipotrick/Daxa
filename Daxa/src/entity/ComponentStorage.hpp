@@ -58,13 +58,13 @@ namespace daxa {
             return values[sparseIndices[index]];
         }
 
-        ComponentT const& get(EntityIndex) const {
+        ComponentT const& get(EntityIndex index) const {
             DAXA_ASSERT_M(has(index), "tried to get a component of an entity that does NOT posess this component!");
             return values[sparseIndices[index]];
         }
     private:
         template<typename FirstComponentType, typename ... RestComponentTypes> friend class EntityComponentView;
-        template<typename FirstComponentType, typename ... RestComponentTypes> friend class EntityComponentView<FirstComponentType, RestComponentTypes...>::EntityComponentIterator;
+        //template<typename FirstComponentType, typename ... RestComponentTypes> friend class EntityComponentView<FirstComponentType, RestComponentTypes...>::EntityComponentIterator;
 
         std::vector<EntityIndex> sparseIndices = {};
         std::vector<EntityIndex> denseIndices = {};
