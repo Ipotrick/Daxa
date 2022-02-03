@@ -202,21 +202,21 @@ namespace daxa {
 			}
 
 			VkImageCopy copy{
-				.dstOffset = copyInfo.dstOffset,
-				.extent = copyInfo.size,
 				.srcSubresource = {
 					.aspectMask = copyInfo.src->getVkImageSubresourceRange().aspectMask,
-					.baseArrayLayer = 0,
 					.mipLevel = 0,
-					.layerCount = 1,
-				},
-				.dstSubresource = {
-					.aspectMask = copyInfo.dst->getVkImageSubresourceRange().aspectMask,
 					.baseArrayLayer = 0,
-					.mipLevel = 0,
 					.layerCount = 1,
 				},
 				.srcOffset = copyInfo.srcOffset,
+				.dstSubresource = {
+					.aspectMask = copyInfo.dst->getVkImageSubresourceRange().aspectMask,
+					.mipLevel = 0,
+					.baseArrayLayer = 0,
+					.layerCount = 1,
+				},
+				.dstOffset = copyInfo.dstOffset,
+				.extent = copyInfo.size,
 			};
 
 			vkCmdCopyImage(cmd, copyInfo.src->getImageHandle()->getVkImage(), copyInfo.srcLayout, copyInfo.dst->getImageHandle()->getVkImage(), copyInfo.dstLayout, 1, &copy);
@@ -270,7 +270,7 @@ namespace daxa {
 			vkCmdDispatch(cmd, groupCountX, groupCountY, grpupCountZ);
 		}
 
-		void CommandList::bindVertexBuffer(u32 binding, BufferHandle buffer, size_t bufferOffset) {
+		void CommandList::bindVertexBuffer(u32 binding, BufferHandle& buffer, size_t bufferOffset) {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(buffer, "invalid buffer handle");
@@ -279,7 +279,7 @@ namespace daxa {
 			//usedBuffers.push_back(buffer);
 		}
 
-		void CommandList::bindIndexBuffer(BufferHandle buffer, size_t bufferOffset, VkIndexType indexType) {
+		void CommandList::bindIndexBuffer(BufferHandle& buffer, size_t bufferOffset, VkIndexType indexType) {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(buffer, "invalid buffer handle");
@@ -482,6 +482,7 @@ namespace daxa {
 			DAXA_ASSERT_M(finalized || empty, "can not reset non empty command list that is not finalized");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(operationsInProgress == 0, "can not reset command list with recordings in progress");
+			//printf("reset command buffer: %s\n", debugName.c_str());
 			empty = true;
 			DAXA_CHECK_VK_RESULT(vkResetCommandPool(deviceBackend->device.device, cmdPool, VkCommandPoolResetFlagBits::VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT));
 			usedGraphicsPipelines.clear();
@@ -490,6 +491,7 @@ namespace daxa {
 			currentRenderPass = {};
 			usedStagingBuffers.clear();
 			finalized = false;
+			zombies->zombies.clear();
 			{
 				std::unique_lock lock(deviceBackend->graveyard.mtx);
 				auto iter = std::find_if(deviceBackend->graveyard.activeZombieLists.begin(), deviceBackend->graveyard.activeZombieLists.end(), [&](std::shared_ptr<ZombieList>& other){ return other.get() == zombies.get(); });
@@ -497,8 +499,6 @@ namespace daxa {
 					deviceBackend->graveyard.activeZombieLists.erase(iter);
 				}
 			}
-			zombies->zombies.clear();
-			begin();
 		}
 
 		void CommandList::setViewport(VkViewport const& viewport) {

@@ -113,7 +113,7 @@ namespace daxa {
 		*/
 		struct ImageBarrier {
 			MemoryBarrier 							barrier 		= {};
-			ImageViewHandle 							image 			= {};
+			ImageViewHandle 							image 		= {};
 			VkImageLayout 							layoutBefore	= {};
 			VkImageLayout 							layoutAfter		= {}; 
 			u32 									srcQueueIndex 	= VK_QUEUE_FAMILY_IGNORED;
@@ -221,13 +221,13 @@ namespace daxa {
 			void setScissor(VkRect2D const& scissor);
 
 			template<typename T>
-			void pushConstant(VkShaderStageFlagBits shaderStage, T const& constant, size_t offset = 0) {
+			void pushConstant(VkShaderStageFlags shaderStage, T const& constant, size_t offset = 0) {
 				vkCmdPushConstants(cmd, (**currentPipeline).getVkPipelineLayout(), shaderStage, offset, sizeof(T), &constant);
 			}
 
-			void bindVertexBuffer(u32 binding, BufferHandle buffer, size_t bufferOffset = 0);
+			void bindVertexBuffer(u32 binding, BufferHandle& buffer, size_t bufferOffset = 0);
 
-			void bindIndexBuffer(BufferHandle buffer, size_t bufferOffset = 0, VkIndexType indexType = VK_INDEX_TYPE_UINT32);
+			void bindIndexBuffer(BufferHandle& buffer, size_t bufferOffset = 0, VkIndexType indexType = VK_INDEX_TYPE_UINT32);
 
 			/**
 			 * @brief 	Binds a binding set to the currently bound pipeline.
@@ -255,6 +255,22 @@ namespace daxa {
 			// sync:
 
 			void insertBarriers(std::span<MemoryBarrier> memBarriers, std::span<ImageBarrier> imgBarriers);
+
+			template<size_t N>
+			void insertBarriersCompact(std::array<std::variant<MemoryBarrier, ImageBarrier>, N> const& barriers) {
+				std::array<MemoryBarrier, N> memBarrs;
+				size_t memBarrCount = 0;
+				std::array<ImageBarrier, N> imgBarrs;
+				size_t imgBarrCount = 0;
+				for (auto& bar : barriers) {
+					if (auto* memBar = std::get_if<MemoryBarrier*>(&bar)) {
+						memBarrs[memBarrCount++] = *memBar;
+					} else {
+						imgBarrs[imgBarrCount++] = std::get<ImageBarrier>(bar);
+					}
+				}
+				insertBarriers({ membars.data(), membars.size() }, { imgbars.data(), imgbars.size() });
+			}
 
 			template<size_t N>
 			void insertMemoryBarriers(std::array<MemoryBarrier, N> barriers) {
@@ -327,7 +343,9 @@ namespace daxa {
 					if (auto recyclingSharedData = value->recyclingData.lock()) {
 						value->reset();
 						auto lock = std::unique_lock(recyclingSharedData->mut);
-						recyclingSharedData->zombies.push_back(std::move(value));
+						std::shared_ptr<CommandList> dummy{};
+						std::swap(dummy, value);
+						recyclingSharedData->zombies.push_back(std::move(dummy));
 					}
 					value = {};
 				}

@@ -108,7 +108,7 @@ namespace daxa {
                     ci.defaultSampler = samplers[sampler_v];
                 }
                 auto image = device->createImageView(ci);
-                cmdList->copyHostToImageSynced({.dst = image, .dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, .src = data, .size = (u32)(width*height*4)});
+                cmdList->copyHostToImageSynced({ .src = data, .dst = image, .size = (u32)(width*height*4), .dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
                 std::free(data);
                 return image;
             }

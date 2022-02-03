@@ -185,6 +185,8 @@ namespace daxa {
 				std::unique_lock lock(deviceBackend->graveyard.mtx);
 				deviceBackend->graveyard.activeZombieLists.push_back(list->zombies);
 			}
+			//printf("begin command buffer: %s\n", list->debugName.c_str());
+			list->begin();
 			return std::move(list);
 		}
 
@@ -220,7 +222,6 @@ namespace daxa {
 					.commandBufferCount = 1,
 				};
 				DAXA_CHECK_VK_RESULT(vkAllocateCommandBuffers(deviceBackend->device.device, &commandBufferAllocateInfo, &list.cmd));
-				list.begin();
 			} 
 			auto ret = std::move(unusedCommandLists.back());
 			unusedCommandLists.pop_back();
