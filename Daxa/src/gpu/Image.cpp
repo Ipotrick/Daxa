@@ -99,9 +99,9 @@ namespace daxa {
 						}
 						DAXA_ASSERT_M(index > 0 && index < BIND_ALL_COMBINED_IMAGE_SAMPLER_SET_LAYOUT_BINDING.descriptorCount, "failed to create image view: exausted indices for bind all set");
 						VkDescriptorImageInfo imageInfo{
-							.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-							.imageView = view,
 							.sampler = defaultSampler->getVkSampler(),
+							.imageView = view,
+							.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 						};
 						VkWriteDescriptorSet write {
 							.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -125,9 +125,9 @@ namespace daxa {
 					}
 					DAXA_ASSERT_M(index > 0 && index < BIND_ALL_SAMPLED_IMAGE_SET_LAYOUT_BINDING.descriptorCount, "failed to create image view: exausted indices for bind all set");
 					VkDescriptorImageInfo imageInfo{
-						.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-						.imageView = view,
 						.sampler = nullptr,
+						.imageView = view,
+						.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 					};
 					VkWriteDescriptorSet write {
 						.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -152,9 +152,9 @@ namespace daxa {
 					}
 					DAXA_ASSERT_M(index > 0 && index < BIND_ALL_STORAGE_IMAGE_SET_LAYOUT_BINDING.descriptorCount, "failed to create image view: exausted indices for bind all set");
 					VkDescriptorImageInfo imageInfo{
-						.imageLayout = VK_IMAGE_LAYOUT_GENERAL,
-						.imageView = view,
 						.sampler = nullptr,
+						.imageView = view,
+						.imageLayout = VK_IMAGE_LAYOUT_GENERAL,
 					};
 					VkWriteDescriptorSet write {
 						.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,

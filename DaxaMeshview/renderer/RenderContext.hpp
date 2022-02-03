@@ -6,7 +6,7 @@ class RenderContext {
 public:
     RenderContext(daxa::Window& window) 
 		: device{ daxa::gpu::Device::create() }
-		, queue{ this->device->createCommandQueue({}) }
+		, queue{ this->device->createCommandQueue({.batchCount = 2}) }
 		, swapchain{ this->device->createSwapchain({
 			.surface = window.getSurface(),
 			.width = window.getWidth(),
@@ -96,4 +96,20 @@ public:
 	daxa::gpu::ImageViewHandle depthImage = {};
 	daxa::gpu::ImageViewHandle normalsImage = {};
 	daxa::gpu::SamplerHandle defaultSampler = {};
+};
+
+struct Primitive {
+	u32 indexCount = 0;
+	daxa::gpu::BufferHandle indiexBuffer = {};
+	daxa::gpu::BufferHandle vertexPositions = {};
+	daxa::gpu::BufferHandle vertexUVs = {};
+	daxa::gpu::BufferHandle vertexNormals = {};
+	daxa::gpu::BufferHandle vertexTangents = {};
+	daxa::gpu::ImageViewHandle albedoTexture = {};
+	daxa::gpu::ImageViewHandle normalTexture = {};
+};
+
+struct DrawPrimCmd {
+	glm::mat4 transform = {};
+	Primitive* prim = {};
 };

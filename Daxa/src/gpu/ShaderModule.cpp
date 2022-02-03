@@ -115,15 +115,18 @@ namespace daxa {
 			.maxTaskWorkGroupSizeY_NV = 1,
 			.maxTaskWorkGroupSizeZ_NV = 1,
 			.maxMeshViewCountNV = 4,
-			.limits.nonInductiveForLoops = 1,
-			.limits.whileLoops = 1,
-			.limits.doWhileLoops = 1,
-			.limits.generalUniformIndexing = 1,
-			.limits.generalAttributeMatrixVectorIndexing = 1,
-			.limits.generalVaryingIndexing = 1,
-			.limits.generalSamplerIndexing = 1,
-			.limits.generalVariableIndexing = 1,
-			.limits.generalConstantMatrixVectorIndexing = 1,
+			.limits = {
+				.nonInductiveForLoops = 1,
+				.whileLoops = 1,
+				.doWhileLoops = 1,
+				.generalUniformIndexing = 1,
+				.generalAttributeMatrixVectorIndexing = 1,
+				.generalVaryingIndexing = 1,
+				.generalSamplerIndexing = 1,
+				.generalVariableIndexing = 1,
+				.generalConstantMatrixVectorIndexing = 1,
+
+			},
 		};
 
 		/**

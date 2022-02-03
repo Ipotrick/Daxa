@@ -5,6 +5,8 @@
 #include "RenderContext.hpp"
 #include "../Components.hpp"
 
+#include "OrthLightSource.hpp"
+
 struct GlobalData {
 	glm::mat4 vp;
 	glm::mat4 view;
@@ -34,7 +36,11 @@ public:
 			.addShaderStage(vertexShader)
 			.addShaderStage(fragmenstShader)
 			.setDebugName("mesh render prePassPipeline")
-			.configurateDepthTest({.enableDepthTest = true, .enableDepthWrite = true, .depthAttachmentFormat = VK_FORMAT_D32_SFLOAT})
+			.configurateDepthTest({
+				.depthAttachmentFormat = VK_FORMAT_D32_SFLOAT,
+				.enableDepthTest = true, 
+				.enableDepthWrite = true, 
+			})
 			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
 			.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT) // positions
 			.setRasterization({
@@ -45,7 +51,7 @@ public:
 
         this->globalDataBufffer = renderCTX.device->createBuffer({
             .size = sizeof(GlobalData),
-            .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
             .memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
             .memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				.debugName = "mesh render globals buffer",
@@ -64,7 +70,12 @@ public:
 		opaquePipelineBuilder.addShaderStage(renderCTX.device->createShaderModule(vertexShaderOpaqueCI).value());
 		opaquePipelineBuilder.addShaderStage(renderCTX.device->createShaderModule(fragmentShaderOpaqueCI).value());
 			opaquePipelineBuilder.setDebugName("mesh render opaque pass pipeline")
-			.configurateDepthTest({.enableDepthTest = true, .depthAttachmentFormat = VK_FORMAT_D32_SFLOAT, .enableDepthWrite = true, .depthTestCompareOp = VK_COMPARE_OP_EQUAL })
+			.configurateDepthTest({
+				.depthAttachmentFormat = VK_FORMAT_D32_SFLOAT,
+				.enableDepthTest = true, 
+				.enableDepthWrite = true, 
+				.depthTestCompareOp = VK_COMPARE_OP_EQUAL
+			})
 			// adding a vertex input attribute binding:
 			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
 			// all added vertex input attributes are added to the previously added vertex input attribute binding
@@ -87,19 +98,18 @@ public:
 			.debugName = "mesh renderer global set allocator",
 		});
 
-		this->perDrawOpaquePassSetAlloc = renderCTX.device->createBindingSetAllocator({ .setLayout = this->opaquePassPipeline->getSetLayout(1) });
+		this->perDrawOpaquePassSetAlloc = renderCTX.device->createBindingSetAllocator({ .setLayout = this->opaquePassPipeline->getSetLayout(1), .setPerPool = 32'000 });
 
 		this->opaqueFragHotloader = daxa::GraphicsPipelineHotLoader(
 			renderCTX.device,
 			opaquePipelineBuilder,
 			std::array{ vertexShaderOpaqueCI, fragmentShaderOpaqueCI }
 		);
-    }
 
-    struct DrawMesh {
-        glm::mat4 transform = {};
-		Primitive* prim = {};
-    };
+		initOpaque2(renderCTX);
+
+		orthLightPass.init(renderCTX);
+    }
 
 	struct DrawLight{
 		glm::vec3 position;
@@ -107,12 +117,47 @@ public:
 		glm::vec4 color;
 	};
 
+	void initOpaque2(RenderContext& renderCTX) {
+		auto vertexShaderOpaqueCI = daxa::gpu::ShaderModuleCreateInfo{
+			.pathToSource = "./DaxaMeshview/renderer/opaque2.vert",
+			.stage = VK_SHADER_STAGE_VERTEX_BIT
+		};
+		auto fragmentShaderOpaqueCI = daxa::gpu::ShaderModuleCreateInfo{
+			.pathToSource = "./DaxaMeshview/renderer/opaque2.frag",
+			.stage = VK_SHADER_STAGE_FRAGMENT_BIT
+		};
+
+		daxa::gpu::GraphicsPipelineBuilder opaque2PipelineBuilder = {};
+		opaque2PipelineBuilder
+			.addShaderStage(renderCTX.device->createShaderModule(vertexShaderOpaqueCI).value())
+			.addShaderStage(renderCTX.device->createShaderModule(fragmentShaderOpaqueCI).value())
+			.overwriteSet(0, daxa::gpu::BIND_ALL_SET_DESCRIPTION)
+			.setDebugName("mesh render opaque2 pass pipeline")
+			.configurateDepthTest({
+				.depthAttachmentFormat = VK_FORMAT_D32_SFLOAT,
+				.enableDepthTest = true, 
+				.enableDepthWrite = true, 
+				.depthTestCompareOp = VK_COMPARE_OP_EQUAL
+			})
+			.addColorAttachment(renderCTX.swapchain->getVkFormat())
+			.addColorAttachment(renderCTX.normalsImage->getVkFormat())
+			.setRasterization({
+				.cullMode = VK_CULL_MODE_BACK_BIT,
+		});
+
+		opaquePass2Pipeline = renderCTX.device->createGraphicsPipeline(opaque2PipelineBuilder).value();
+
+		opaqueFragHotloader2 = daxa::GraphicsPipelineHotLoader{
+			renderCTX.device, opaque2PipelineBuilder, std::array{ vertexShaderOpaqueCI, fragmentShaderOpaqueCI }
+		};
+	}
+
 	void setCamera(daxa::gpu::CommandListHandle& cmd, glm::mat4 const& vp, glm::mat4 const& view) {
 		globData.vp = vp;
 		globData.view = view;
 	}
 
-	void uploadBuffers(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawMesh>& draws, std::vector<DrawLight>& lights) {
+	void uploadBuffers(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws, std::vector<DrawLight>& lights) {
 		if (!dummyTexture) {
 			dummyTexture = renderCTX.device->createImageView({
 				.image = renderCTX.device->createImage({
@@ -128,10 +173,10 @@ public:
 			u32 pink = 0xFFFF00FF;
 
 			cmd->copyHostToImageSynced({
-				.dst = dummyTexture,
-				.dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				.size = sizeof(u32),
 				.src = &pink,
+				.dst = dummyTexture,
+				.size = sizeof(u32),
+				.dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 			});
 		}
 
@@ -151,26 +196,26 @@ public:
 			u32 up = 0xFFFF7F7F;
 
 			cmd->copyHostToImageSynced({
-				.dst = dummyNormalsTexture,
-				.dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				.size = sizeof(u32),
 				.src = &up,
+				.dst = dummyNormalsTexture,
+				.size = sizeof(u32),
+				.dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 			});
 		}
 
 		cmd->copyHostToBuffer({
 			.src = (void*)&globData,
-			.size = sizeof(decltype(globData)),
 			.dst = globalDataBufffer,
+			.size = sizeof(decltype(globData)),
 		});
 
 		if (!primitiveInfoBuffer || draws.size() * sizeof(GPUPrimitiveInfo) > primitiveInfoBuffer->getSize()) {
 			size_t newSize = (draws.size() + 64) * sizeof(GPUPrimitiveInfo);
 			this->primitiveInfoBuffer = renderCTX.device->createBuffer({
 				.size = newSize,
-				.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 				.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
+				.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				.debugName = "mesh render transform buffer",
 			});
 		}
@@ -186,9 +231,9 @@ public:
 			size_t newSize = (lights.size() + 64) * sizeof(DrawLight) + sizeof(glm::vec4);
 			this->lightsBuffer = renderCTX.device->createBuffer({
 				.size = newSize,
-				.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 				.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
+				.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				.debugName = "mesh render lights buffer",
 			});
 		}
@@ -200,22 +245,14 @@ public:
 				((DrawLight*)mm.hostPtr)[i] = lights[i];
 			}
 		}
-
-		cmd->insertMemoryBarrier({
-			.srcStages = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR | VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
-			.srcAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
-			.dstStages = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
-			.dstAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR,
-		});
-
-        this->globalSet = globalSetAlloc->getSet();
-        globalSet->bindBuffer(0, this->globalDataBufffer);
-		globalSet->bindBuffer(1, this->primitiveInfoBuffer);
-		globalSet->bindBuffer(2, this->lightsBuffer);
 	}
 
-	void prePass(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawMesh>& draws) {
+	void prePass(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws) {
 		cmd->insertImageBarrier({
+			.barrier = {
+				.dstStages = VK_PIPELINE_STAGE_2_CLEAR_BIT_KHR | VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+				.dstAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR | VK_ACCESS_2_MEMORY_READ_BIT_KHR,
+			},
 			.image = renderCTX.normalsImage,
 			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 		});
@@ -226,9 +263,9 @@ public:
 		daxa::gpu::RenderAttachmentInfo depthAttachment{
 			.image = renderCTX.depthImage,
 			.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-			.clearValue = { .depthStencil = VkClearDepthStencilValue{ .depth = 1.0f } },
 			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+			.clearValue = {.depthStencil = VkClearDepthStencilValue{.depth = 1.0f } },
 		};
 		cmd->beginRendering(daxa::gpu::BeginRenderingInfo{
 			.colorAttachments = {},
@@ -255,7 +292,7 @@ public:
 		cmd->unbindPipeline();
 	}
 
-	void opaquePass(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawMesh>& draws) {
+	void opaquePass(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws) {
 		if (auto newOpaque = opaqueFragHotloader.getNewIfChanged(); newOpaque.has_value()) {
 			this->opaquePassPipeline = newOpaque.value();
             printf("hot laoded\n");
@@ -271,8 +308,8 @@ public:
 			},
 			daxa::gpu::RenderAttachmentInfo{
 				.image = renderCTX.normalsImage,
-				.clearValue = { .color = VkClearColorValue{.float32 = { 0.0f, 0.0f, 0.0f, 0.0f } } },
 				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+				.clearValue = { .color = VkClearColorValue{.float32 = { 0.0f, 0.0f, 0.0f, 0.0f } } },
 			},
 		};
 		daxa::gpu::RenderAttachmentInfo depthAttachment{
@@ -328,14 +365,119 @@ public:
 		drawLights = lights;
 	}
 
-	void render(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawMesh>& draws) {
+	void opaquePass2(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws) {
+		if (auto newOpaque = opaqueFragHotloader2.getNewIfChanged(); newOpaque.has_value()) {
+			this->opaquePass2Pipeline = newOpaque.value();
+			printf("hot loaded\n");
+		}
+		cmd->bindPipeline(opaquePass2Pipeline);
+		cmd->bindAll(0);
+
+		std::array framebuffer{
+			daxa::gpu::RenderAttachmentInfo{
+				.image = renderCTX.swapchainImage.getImageViewHandle(),
+				.clearValue = {.color = VkClearColorValue{.float32 = { 0.01f, 0.01f, 0.01f, 1.0f } } },
+			},
+			daxa::gpu::RenderAttachmentInfo{
+				.image = renderCTX.normalsImage,
+				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+				.clearValue = {.color = VkClearColorValue{.float32 = { 0.0f, 0.0f, 0.0f, 0.0f } } },
+			},
+		};
+		daxa::gpu::RenderAttachmentInfo depthAttachment{
+			.image = renderCTX.depthImage,
+			.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+			.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+		};
+		cmd->beginRendering(daxa::gpu::BeginRenderingInfo{
+			.colorAttachments = framebuffer,
+			.depthAttachment = &depthAttachment,
+			});
+
+		primitivesDrawn = 0;
+		for (u32 i = 0; i < draws.size(); i++) {
+			auto& draw = draws[i];
+			primitivesDrawn += draw.prim->indexCount / 3;
+			struct {
+				u16 albedoMap;
+				u16 normalMap;
+				u16 globals;
+				u16 primitives;
+				u16 lights;
+				u16 vertexBufId;
+				u16 vertexUVBufId;
+				u16 vertexNormalBufId;
+				u32 drawIndex;
+			} push{
+				dummyTexture->getSampledImageDescriptorIndex().value(),
+				dummyNormalsTexture->getSampledImageDescriptorIndex().value(),
+				globalDataBufffer->getStorageBufferDescriptorIndex().value(),
+				primitiveInfoBuffer->getStorageBufferDescriptorIndex().value(),
+				lightsBuffer->getStorageBufferDescriptorIndex().value(),
+				draw.prim->vertexPositions->getStorageBufferDescriptorIndex().value(),
+				draw.prim->vertexUVs->getStorageBufferDescriptorIndex().value(),
+				draw.prim->vertexNormals->getStorageBufferDescriptorIndex().value(),
+				i
+			};
+			if (draw.prim->albedoTexture.valid()) {
+				push.albedoMap = draw.prim->albedoTexture->getCombinedImageSamplerDescriptorIndex().value();
+			}
+			if (draw.prim->normalTexture.valid()) {
+				push.normalMap = draw.prim->normalTexture->getCombinedImageSamplerDescriptorIndex().value();
+			}
+			cmd->pushConstant(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, push);
+			cmd->bindIndexBuffer(draw.prim->indiexBuffer);
+			cmd->drawIndexed(draw.prim->indexCount, 1, 0, 0, 0);
+		}
+		//printf("%i triangles drawn\n", primitivesDrawn);
+
+		cmd->endRendering();
+		cmd->unbindPipeline();
+
+		cmd->insertImageBarrier({
+			.barrier = {
+				.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
+				.srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT_KHR,
+				.dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+				.dstAccess = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT_KHR | VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR | VK_ACCESS_2_SHADER_STORAGE_READ_BIT_KHR,
+			},
+			.image = renderCTX.normalsImage,
+			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		});
+	}
+
+	void render(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws) {
 		uploadBuffers(renderCTX, cmd, draws, drawLights);
+		cmd->insertMemoryBarrier({
+			.srcStages = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR | VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
+			.srcAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
+			.dstStages = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
+			.dstAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR,
+			});
+		//orthLightPass.render(
+		//	renderCTX,
+		//	cmd,
+		//	draws,
+		//	primitiveInfoBuffer,
+		//	glm::vec3(0,-1,0),
+		//	1000.0f,
+		//	glm::vec4(1,1,1,1)
+		//);
+
+		this->globalSet = globalSetAlloc->getSet();
+		globalSet->bindBuffer(0, this->globalDataBufffer);
+		globalSet->bindBuffer(1, this->primitiveInfoBuffer);
+		globalSet->bindBuffer(2, this->lightsBuffer);
 		prePass(renderCTX, cmd, draws);
-		opaquePass(renderCTX, cmd, draws);
+		opaquePass2(renderCTX, cmd, draws);
 	}
 
 private:
-	daxa::GraphicsPipelineHotLoader opaqueFragHotloader;
+	size_t primitivesDrawn = 0;
+	bool first = true;
+	daxa::GraphicsPipelineHotLoader opaqueFragHotloader = {};
 	GlobalData globData = {};
 	std::vector<DrawLight> drawLights;
     daxa::gpu::PipelineHandle prePassPipeline = {};
@@ -349,4 +491,9 @@ private:
 	daxa::gpu::PipelineHandle opaquePassPipeline = {};
 	daxa::gpu::BufferHandle lightsBuffer = {};
     daxa::gpu::BindingSetAllocatorHandle perDrawOpaquePassSetAlloc = {};
+
+	daxa::gpu::PipelineHandle opaquePass2Pipeline = {};
+	daxa::GraphicsPipelineHotLoader opaqueFragHotloader2 = {};
+public:
+	OrthLightSourcePass orthLightPass = {};
 };

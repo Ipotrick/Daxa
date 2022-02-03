@@ -37,8 +37,8 @@ public:
 
 		this->setAlloc = renderCTX.device->createBindingSetAllocator({
             .setLayout = pipeline->getSetLayout(0),
-            .debugName = "frame buffer debug shader set allocator",
             .setPerPool = 4,
+            .debugName = "frame buffer debug shader set allocator",
         });
 
         this->buffer = renderCTX.device->createBuffer({

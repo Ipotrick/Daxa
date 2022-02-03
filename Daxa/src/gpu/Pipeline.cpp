@@ -527,9 +527,9 @@ namespace daxa {
 			VkComputePipelineCreateInfo pipelineCI{
 				.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 				.pNext = nullptr,
-				.layout = ret.layout,
-				.stage = pipelineShaderStageCI,
 				.flags = 0,
+				.stage = pipelineShaderStageCI,
+				.layout = ret.layout,
 				.basePipelineHandle  = VK_NULL_HANDLE,
 				.basePipelineIndex = 0,
 			};
