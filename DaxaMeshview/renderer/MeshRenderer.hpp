@@ -137,7 +137,7 @@ public:
 				.depthAttachmentFormat = VK_FORMAT_D32_SFLOAT,
 				.enableDepthTest = true, 
 				.enableDepthWrite = true, 
-				.depthTestCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL
+				//.depthTestCompareOp = VK_COMPARE_OP_EQUAL
 			})
 			.addColorAttachment(renderCTX.swapchain->getVkFormat())
 			.addColorAttachment(renderCTX.normalsImage->getVkFormat())
@@ -275,8 +275,14 @@ public:
 		}
 
 		cmd->endRendering();
-
 		cmd->unbindPipeline();
+
+		cmd->insertMemoryBarrier({
+			.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
+			.srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT_KHR,
+			.dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
+			.dstAccess = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT_KHR,
+		});
 	}
 
 	void opaquePass(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws) {
@@ -468,12 +474,6 @@ public:
 			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 		});
 		//prePass(renderCTX, cmd, draws);
-		//cmd->insertMemoryBarrier({
-		//	.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
-		//	.srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT_KHR,
-		//	.dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
-		//	.dstAccess = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT_KHR,
-		//});
 		opaquePass2(renderCTX, cmd, draws);
 	}
 
