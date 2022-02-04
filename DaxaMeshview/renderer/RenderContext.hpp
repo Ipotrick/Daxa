@@ -6,7 +6,7 @@ class RenderContext {
 public:
     RenderContext(daxa::Window& window) 
 		: device{ daxa::gpu::Device::create() }
-		, queue{ this->device->createCommandQueue({.batchCount = 2}) }
+		, queue{ this->device->createCommandQueue({.batchCount = 1}) }
 		, swapchain{ this->device->createSwapchain({
 			.surface = window.getSurface(),
 			.width = window.getWidth(),
@@ -34,6 +34,8 @@ public:
     }
 
 	void recreateFramebuffer(daxa::gpu::CommandListHandle& cmd, u32 width, u32 height) {
+		std::string depthMapName = "depth image";
+		depthMapName += std::to_string(resizeI);
 		this->depthImage = device->createImageView({
 			.image = device->createImage({
 				.format = VK_FORMAT_D32_SFLOAT,
@@ -49,7 +51,7 @@ public:
 				.layerCount = 1,
 			},
 			.defaultSampler = defaultSampler,
-			.debugName = "depth image",
+			.debugName = depthMapName.c_str(),//"depth image",
 		});
 
 		this->normalsImage = device->createImageView({
@@ -73,6 +75,7 @@ public:
 				.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			},
 		});
+		resizeI++;
 	}
 
 	void present() {
@@ -96,6 +99,7 @@ public:
 	daxa::gpu::ImageViewHandle depthImage = {};
 	daxa::gpu::ImageViewHandle normalsImage = {};
 	daxa::gpu::SamplerHandle defaultSampler = {};
+	size_t resizeI = 0;
 };
 
 struct Primitive {

@@ -209,6 +209,8 @@ public:
 			.size = sizeof(decltype(globData)),
 		});
 
+
+
 		if (!primitiveInfoBuffer || draws.size() * sizeof(GPUPrimitiveInfo) > primitiveInfoBuffer->getSize()) {
 			size_t newSize = (draws.size() + 64) * sizeof(GPUPrimitiveInfo);
 			this->primitiveInfoBuffer = renderCTX.device->createBuffer({
@@ -216,7 +218,7 @@ public:
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 				.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
 				.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-				.debugName = "mesh render transform buffer",
+				.debugName = "primitiveInfoBuffer",
 			});
 		}
 		if (!draws.empty()) {
@@ -234,7 +236,7 @@ public:
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 				.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
 				.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-				.debugName = "mesh render lights buffer",
+				.debugName = "lightsBuffer",
 			});
 		}
 		{

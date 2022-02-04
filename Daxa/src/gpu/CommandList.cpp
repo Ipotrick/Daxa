@@ -482,7 +482,6 @@ namespace daxa {
 			DAXA_ASSERT_M(finalized || empty, "can not reset non empty command list that is not finalized");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(operationsInProgress == 0, "can not reset command list with recordings in progress");
-			//printf("reset command buffer: %s\n", debugName.c_str());
 			empty = true;
 			DAXA_CHECK_VK_RESULT(vkResetCommandPool(deviceBackend->device.device, cmdPool, VkCommandPoolResetFlagBits::VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT));
 			usedGraphicsPipelines.clear();
