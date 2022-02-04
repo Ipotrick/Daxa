@@ -137,7 +137,7 @@ public:
 				.depthAttachmentFormat = VK_FORMAT_D32_SFLOAT,
 				.enableDepthTest = true, 
 				.enableDepthWrite = true, 
-				.depthTestCompareOp = VK_COMPARE_OP_EQUAL
+				.depthTestCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL
 			})
 			.addColorAttachment(renderCTX.swapchain->getVkFormat())
 			.addColorAttachment(renderCTX.normalsImage->getVkFormat())
@@ -250,14 +250,6 @@ public:
 	}
 
 	void prePass(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws) {
-		cmd->insertImageBarrier({
-			.barrier = {
-				.dstStages = VK_PIPELINE_STAGE_2_CLEAR_BIT_KHR | VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-				.dstAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR | VK_ACCESS_2_MEMORY_READ_BIT_KHR,
-			},
-			.image = renderCTX.normalsImage,
-			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-		});
 
 		cmd->bindPipeline(prePassPipeline);
 		cmd->bindSet(0, globalSet);
@@ -283,13 +275,6 @@ public:
 		}
 
 		cmd->endRendering();
-
-		cmd->insertMemoryBarrier({
-			.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
-			.srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT_KHR,
-			.dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
-			.dstAccess = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT_KHR,
-		});
 
 		cmd->unbindPipeline();
 	}
@@ -389,8 +374,10 @@ public:
 		daxa::gpu::RenderAttachmentInfo depthAttachment{
 			.image = renderCTX.depthImage,
 			.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-			.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+			//.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+			.clearValue = {.depthStencil = VkClearDepthStencilValue{.depth = 1.0f } },
 		};
 		cmd->beginRendering(daxa::gpu::BeginRenderingInfo{
 			.colorAttachments = framebuffer,
@@ -472,7 +459,21 @@ public:
 		globalSet->bindBuffer(0, this->globalDataBufffer);
 		globalSet->bindBuffer(1, this->primitiveInfoBuffer);
 		globalSet->bindBuffer(2, this->lightsBuffer);
-		prePass(renderCTX, cmd, draws);
+		cmd->insertImageBarrier({
+			.barrier = {
+				.dstStages = VK_PIPELINE_STAGE_2_CLEAR_BIT_KHR | VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+				.dstAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR | VK_ACCESS_2_MEMORY_READ_BIT_KHR,
+			},
+			.image = renderCTX.normalsImage,
+			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		});
+		//prePass(renderCTX, cmd, draws);
+		//cmd->insertMemoryBarrier({
+		//	.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
+		//	.srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT_KHR,
+		//	.dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
+		//	.dstAccess = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT_KHR,
+		//});
 		opaquePass2(renderCTX, cmd, draws);
 	}
 

@@ -67,7 +67,6 @@ public:
 			for (int x = 0; x < uiState.xAmount; x++) {
 				for (int y = 0; y < uiState.yAmount; y++) {
 					auto ret = sceneLoader.getScene(cmdList, uiState.loadFileTextBuf, ecm);
-					//printf("x: %i, y: %i\n",x,y);
 					if (ret.isErr()) {
 						printf("failed to load scene, due to error: %s\n", ret.message().c_str());
 						break;
