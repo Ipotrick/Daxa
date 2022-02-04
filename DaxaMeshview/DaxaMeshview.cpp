@@ -67,7 +67,7 @@ public:
 			for (int x = 0; x < uiState.xAmount; x++) {
 				for (int y = 0; y < uiState.yAmount; y++) {
 					auto ret = sceneLoader.getScene(cmdList, uiState.loadFileTextBuf, ecm);
-					printf("x: %i, y: %i\n",x,y);
+					//printf("x: %i, y: %i\n",x,y);
 					if (ret.isErr()) {
 						printf("failed to load scene, due to error: %s\n", ret.message().c_str());
 						break;
@@ -154,7 +154,7 @@ public:
 					translation =  transformBuffer[i] * translation;
 				}
 
-				//if (!childComps.hasComp<ChildComp>(ent)) {
+				//if (!childComps.hasComp<ChildComp>(ent)) {F
 				//	trans.translation = glm::rotate(trans.translation, 1.f * (f32)app.getDeltaTimeSeconds(), glm::vec3{1,1,1});
 				//}
 				for (auto& prim : model.meshes) {
