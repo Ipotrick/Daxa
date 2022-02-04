@@ -14,7 +14,7 @@ namespace daxa {
 
 		class Instance {
 		public:
-			Instance(char const* AppName = "Daxa Application", char const* EngineName = "Daxa", bool enableValidationLayer = true);
+			Instance(char const* AppName = "Daxa Application", char const* EngineName = "Daxa", bool enableValidationLayer = false);
 			~Instance();
 
 			VkInstance getVkInstance() const { return instance.instance; }
