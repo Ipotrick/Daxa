@@ -49,7 +49,8 @@ namespace daxa {
 				}
 				VkDescriptorBufferInfo bufferInfo{
 					.buffer = buffer,
-					.range = size,
+					.offset = 0,
+					.range = VK_WHOLE_SIZE,
 				};
 				DAXA_ASSERT_M(index > 0 && index < BIND_ALL_STORAGE_BUFFER_SET_LAYOUT_BINDING.descriptorCount, "failed to create buffer: exausted indices for bind all set");
 				VkWriteDescriptorSet write {
@@ -72,6 +73,23 @@ namespace daxa {
 				if (storageIndex != 0) {
 					std::unique_lock bindAllLock(deviceBackend->bindAllMtx);
 					this->deviceBackend->storageBufferIndexFreeList.push_back(storageIndex);
+					
+					VkDescriptorBufferInfo bufferInfo{
+						.buffer = VK_NULL_HANDLE,
+						.offset = 0,
+						.range = VK_WHOLE_SIZE,
+					};
+					VkWriteDescriptorSet write {
+						.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+						.pNext = nullptr,
+						.dstSet = this->deviceBackend->bindAllSet,
+						.dstBinding = BIND_ALL_STORAGE_BUFFER_SET_LAYOUT_BINDING.binding,
+						.dstArrayElement = storageIndex,
+						.descriptorCount = 1,
+						.descriptorType = BIND_ALL_STORAGE_BUFFER_SET_LAYOUT_BINDING.descriptorType,
+						.pBufferInfo = &bufferInfo,
+					};
+					vkUpdateDescriptorSets(this->deviceBackend->device.device, 1, &write, 0, nullptr);
 				}
 				vmaDestroyBuffer(this->deviceBackend->allocator, buffer, allocation);
 			}

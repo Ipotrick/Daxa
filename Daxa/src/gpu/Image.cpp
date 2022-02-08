@@ -191,14 +191,66 @@ namespace daxa {
 					storageImageIndex != 0
 				){
 					std::unique_lock bindAllLock(deviceBackend->bindAllMtx);
+
 					if (imageSamplerIndex != std::numeric_limits<u16>::max()) {
 						this->deviceBackend->combinedImageSamplerIndexFreeList.push_back(imageSamplerIndex);
+					
+						VkDescriptorImageInfo imageInfo{
+							.sampler = deviceBackend->dummySampler,
+							.imageView = VK_NULL_HANDLE,
+							.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+						};
+						VkWriteDescriptorSet write {
+							.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+							.pNext = nullptr,
+							.dstSet = this->deviceBackend->bindAllSet,
+							.dstBinding = BIND_ALL_COMBINED_IMAGE_SAMPLER_SET_LAYOUT_BINDING.binding,
+							.dstArrayElement = imageSamplerIndex,
+							.descriptorCount = 1,
+							.descriptorType = BIND_ALL_COMBINED_IMAGE_SAMPLER_SET_LAYOUT_BINDING.descriptorType,
+							.pImageInfo = &imageInfo,
+						};
+						vkUpdateDescriptorSets(this->deviceBackend->device.device, 1, &write, 0, nullptr);
 					}
 					if (sampledImageIndex != std::numeric_limits<u16>::max()) {
 						this->deviceBackend->sampledImageIndexFreeList.push_back(sampledImageIndex);
+					
+						VkDescriptorImageInfo imageInfo{
+							.sampler = VK_NULL_HANDLE,
+							.imageView = VK_NULL_HANDLE,
+							.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+						};
+						VkWriteDescriptorSet write {
+							.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+							.pNext = nullptr,
+							.dstSet = this->deviceBackend->bindAllSet,
+							.dstBinding = BIND_ALL_SAMPLED_IMAGE_SET_LAYOUT_BINDING.binding,
+							.dstArrayElement = sampledImageIndex,
+							.descriptorCount = 1,
+							.descriptorType = BIND_ALL_SAMPLED_IMAGE_SET_LAYOUT_BINDING.descriptorType,
+							.pImageInfo = &imageInfo,
+						};
+						vkUpdateDescriptorSets(this->deviceBackend->device.device, 1, &write, 0, nullptr);
 					}
 					if (storageImageIndex != std::numeric_limits<u16>::max()) {
 						this->deviceBackend->storageImageIndexFreeList.push_back(storageImageIndex);
+					
+						VkDescriptorImageInfo imageInfo{
+							.sampler = VK_NULL_HANDLE,
+							.imageView = VK_NULL_HANDLE,
+							.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+						};
+						VkWriteDescriptorSet write {
+							.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+							.pNext = nullptr,
+							.dstSet = this->deviceBackend->bindAllSet,
+							.dstBinding = BIND_ALL_STORAGE_IMAGE_SET_LAYOUT_BINDING.binding,
+							.dstArrayElement = storageImageIndex,
+							.descriptorCount = 1,
+							.descriptorType = BIND_ALL_STORAGE_IMAGE_SET_LAYOUT_BINDING.descriptorType,
+							.pImageInfo = &imageInfo,
+						};
+						vkUpdateDescriptorSets(this->deviceBackend->device.device, 1, &write, 0, nullptr);
 					}
 				}
 				vkDestroyImageView(deviceBackend->device.device, view, nullptr);

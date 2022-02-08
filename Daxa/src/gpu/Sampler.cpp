@@ -90,6 +90,23 @@ namespace daxa {
 				{
 					std::unique_lock bindAllLock(this->deviceBackend->bindAllMtx);
 					this->deviceBackend->combinedImageSamplerIndexFreeList.push_back(samplerIndex);
+					
+					VkDescriptorImageInfo imageInfo{
+						.sampler = deviceBackend->dummySampler,
+						.imageView = VK_NULL_HANDLE,
+						.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+					};
+					VkWriteDescriptorSet write {
+						.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+						.pNext = nullptr,
+						.dstSet = this->deviceBackend->bindAllSet,
+						.dstBinding = BIND_ALL_SAMPLER_SET_LAYOUT_BINDING.binding,
+						.dstArrayElement = samplerIndex,
+						.descriptorCount = 1,
+						.descriptorType = BIND_ALL_SAMPLER_SET_LAYOUT_BINDING.descriptorType,
+						.pImageInfo = &imageInfo,
+					};
+					vkUpdateDescriptorSets(this->deviceBackend->device.device, 1, &write, 0, nullptr);
 				}
 				vkDestroySampler(this->deviceBackend->device.device, sampler, nullptr);
 				this->deviceBackend = {};

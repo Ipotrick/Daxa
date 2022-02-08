@@ -41,6 +41,11 @@ namespace daxa {
 			u16 nextStorageImageIndex														= 1;
 			std::vector<u16> storageBufferIndexFreeList 									= {};
 			u16 nextStorageBufferIndex														= 1;
+			VkSampler dummySampler 															= {};
+
+		private:
+			void createDummies();
+			void destroyDummies();
         };
 
 		inline static const VkDescriptorPoolSize BIND_ALL_SAMPLER_POOL_SIZE {
