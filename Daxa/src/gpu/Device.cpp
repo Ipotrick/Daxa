@@ -12,11 +12,11 @@ namespace daxa {
 	namespace gpu {
 
 		DeviceHandle Device::create() {
-			return DeviceHandle{ std::make_shared<Device>(gpu::instance->getVKBInstance()) };
+			return DeviceHandle{ std::make_shared<Device>(*gpu::instance) };
 		}
 
-		Device::Device(vkb::Instance& instance) 
-			: backend{ std::make_shared<DeviceBackend>(instance) }
+		Device::Device(gpu::Instance& instance) 
+			: backend{ std::make_shared<DeviceBackend>(instance.getVKBInstance(), instance.pfnSetDebugUtilsObjectNameEXT) }
 			, bindingSetDescriptionCache{ std::make_unique<BindingSetLayoutCache>(backend) }
 			, stagingBufferPool{ std::make_shared<StagingBufferPool>(backend) }
 		{ }

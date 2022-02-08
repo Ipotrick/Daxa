@@ -3,7 +3,7 @@
 
 namespace daxa {
     namespace gpu {
-		DeviceBackend::DeviceBackend(vkb::Instance& instance) {
+		DeviceBackend::DeviceBackend(vkb::Instance& instance, PFN_vkSetDebugUtilsObjectNameEXT pfnSetDebugUtilsObjectNameEXT) {
 			vkb::PhysicalDeviceSelector selector{ instance };
 			vkb::PhysicalDevice physicalDevice = selector
 				.set_minimum_version(1, 2)
@@ -141,7 +141,7 @@ namespace daxa {
 			VkDescriptorPoolCreateInfo poolCI {
 				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 				.pNext = nullptr,
-				.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
+				//.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
 				.maxSets = 1,
 				.poolSizeCount = (u32)bindAllPoolSizes.size(),
 				.pPoolSizes = bindAllPoolSizes.data(),
@@ -155,11 +155,11 @@ namespace daxa {
 				BIND_ALL_STORAGE_BUFFER_SET_LAYOUT_BINDING,
 			};
 			auto bindAllSetLayoutBindingFlags = std::array<VkDescriptorBindingFlags, 5>{
-				VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
-				VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
-				VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
-				VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
-				VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+				VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT,
+				VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT,
+				VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT,
+				VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT,
+				VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT,
 			};
 			VkDescriptorSetLayoutBindingFlagsCreateInfo bindAllSetLayoutBindingFlagsCI {
 				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
@@ -184,6 +184,17 @@ namespace daxa {
 			};
 			DAXA_CHECK_VK_RESULT_M(vkAllocateDescriptorSets(vkbDevice.device, &bindAllSetAI, &bindAllSet), "failed to create bind all set");
 			createDummies();
+			
+			if (pfnSetDebugUtilsObjectNameEXT) {
+				VkDebugUtilsObjectNameInfoEXT nameInfo {
+					.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+					.pNext = NULL,
+					.objectType = VK_OBJECT_TYPE_DESCRIPTOR_SET,
+					.objectHandle = (uint64_t)bindAllSet,
+					.pObjectName = "Bind all set",
+				};
+				pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
+			}
         }
 
 		DeviceBackend::~DeviceBackend() {
