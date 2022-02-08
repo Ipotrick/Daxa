@@ -71,6 +71,11 @@ namespace daxa {
 				.storagePushConstant16 = VK_TRUE,
 				.storageInputOutput16 = VK_FALSE,
 			};
+			VkPhysicalDeviceRobustness2FeaturesEXT robustness2Features{
+				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT,
+				.pNext = nullptr,
+				.nullDescriptor = VK_TRUE,
+			};
 
 			vkb::DeviceBuilder deviceBuilder{ physicalDevice };
 			deviceBuilder.add_pNext(&descriptorIndexingFeature);
@@ -79,6 +84,7 @@ namespace daxa {
 			deviceBuilder.add_pNext(&synchronization2Features);
 			deviceBuilder.add_pNext(&atomicI64Features);
 			deviceBuilder.add_pNext(&device16BitFeatures);
+			deviceBuilder.add_pNext(&robustness2Features);
 
 			vkb::Device vkbDevice = deviceBuilder.build().value();
 
@@ -177,10 +183,12 @@ namespace daxa {
 				.pSetLayouts = &bindAllSetLayout,
 			};
 			DAXA_CHECK_VK_RESULT_M(vkAllocateDescriptorSets(vkbDevice.device, &bindAllSetAI, &bindAllSet), "failed to create bind all set");
+			createDummies();
         }
 
 		DeviceBackend::~DeviceBackend() {
 			if (device) {
+				destroyDummies();
 				vkResetDescriptorPool(device.device, bindAllSetPool, 0);
 				vkDestroyDescriptorPool(device.device, bindAllSetPool, nullptr);
 				vkDestroyDescriptorSetLayout(device.device, bindAllSetLayout, nullptr);
@@ -189,6 +197,34 @@ namespace daxa {
                 vkb::destroy_device(device);
 			}
         }
+		
+		void DeviceBackend::createDummies() {
+			VkSamplerCreateInfo samplerCI {
+				.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+				.pNext = nullptr,
+				.flags = 0,
+				.magFilter = VK_FILTER_NEAREST,
+				.minFilter = VK_FILTER_NEAREST,
+				.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
+				.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+				.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+				.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+				.mipLodBias = 0.0f,
+				.anisotropyEnable = VK_FALSE,
+				.maxAnisotropy = 1,
+				.compareEnable = VK_FALSE,
+				.compareOp = VK_COMPARE_OP_ALWAYS,
+				.minLod = 0,
+				.maxLod = 0,
+				.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+				.unnormalizedCoordinates = VK_FALSE,
+			};
+			vkCreateSampler(device.device, &samplerCI, nullptr, &dummySampler);
+		}
+
+		void DeviceBackend::destroyDummies() {
+			vkDestroySampler(device.device, dummySampler, nullptr);
+		}
 
         const char* getVkResultString(VkResult result) {
 			switch (result) {
