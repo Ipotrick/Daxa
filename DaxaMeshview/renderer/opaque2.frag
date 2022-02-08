@@ -31,7 +31,10 @@ layout(std430, set = 0, binding = 4) buffer LightsBufferView{
     uint lightCount;
     Light lights[];
 } lightsBufferView[];
-
+layout(std140, set = 0, binding = 4) buffer OrthLightBufferView{
+    vec3 direction;
+    uint16_t shadowMap;
+};
 layout(set = 0, binding = 1) uniform sampler2D imageSampler2DViews[];
 
 layout(std140, push_constant) uniform PushConstants {

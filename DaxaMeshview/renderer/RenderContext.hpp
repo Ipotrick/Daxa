@@ -67,10 +67,12 @@ public:
 
 		cmd->insertImageBarriers(std::array{
 			daxa::gpu::ImageBarrier{
+				.barrier = daxa::gpu::FULL_MEMORY_BARRIER,
 				.image = depthImage,
 				.layoutAfter = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 			},
 			daxa::gpu::ImageBarrier{
+				.barrier = daxa::gpu::FULL_MEMORY_BARRIER,
 				.image = normalsImage,
 				.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			},
