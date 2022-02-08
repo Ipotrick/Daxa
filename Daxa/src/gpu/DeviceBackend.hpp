@@ -14,7 +14,7 @@
 namespace daxa {
     namespace gpu {
         struct DeviceBackend {
-			DeviceBackend(vkb::Instance& instance);
+			DeviceBackend(vkb::Instance& instance, PFN_vkSetDebugUtilsObjectNameEXT pfnSetDebugUtilsObjectNameEXT);
 			~DeviceBackend();
 
             vkb::Device device                                                              = {};

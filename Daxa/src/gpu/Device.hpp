@@ -29,11 +29,13 @@
 namespace daxa {
 	namespace gpu {
 
+		class Instance;
+
 		class DeviceHandle;
 
 		class Device {
 		public:
-			Device(vkb::Instance&);
+			Device(Instance& instance);
 			Device(Device const& other)				= delete;
 			Device& operator=(Device const&)		= delete;
 			Device(Device&&) noexcept				= delete;
