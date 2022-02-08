@@ -421,6 +421,18 @@ public:
 			if (draw.prim->normalTexture.valid()) {
 				push.normalMap = draw.prim->normalTexture->getCombinedImageSamplerDescriptorIndex().value();
 			}
+			if (
+				push.albedoMap == 0 ||
+				push.normalMap == 0 ||
+				push.globals == 0 ||
+				push.primitives == 0 ||
+				push.lights == 0 ||
+				push.vertexBufId == 0 ||
+				push.vertexUVBufId == 0 ||
+				push.vertexNormalBufId == 0
+			) {
+				printf("dumdum\n");
+			}
 			cmd->pushConstant(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, push);
 			cmd->bindIndexBuffer(draw.prim->indiexBuffer);
 			cmd->drawIndexed(draw.prim->indexCount, 1, 0, 0, 0);
@@ -444,6 +456,7 @@ public:
 	}
 
 	void render(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws) {
+		printf("begin frame\n");
 		uploadBuffers(renderCTX, cmd, draws, drawLights);
 		cmd->insertMemoryBarrier({
 			.srcStages = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR | VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
