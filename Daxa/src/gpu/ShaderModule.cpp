@@ -12,11 +12,13 @@
 
 #include "Instance.hpp"
 
+#include "shaderc/shaderc.hpp"
+
 namespace daxa {
 	namespace gpu {
 
 		ShaderModule::~ShaderModule() {
-			if (deviceBackend->device.device) {
+			if (deviceBackend) {
 				vkDestroyShaderModule(deviceBackend->device.device, shaderModule, nullptr);
 				deviceBackend = {};
 			}
@@ -129,19 +131,15 @@ namespace daxa {
 			},
 		};
 
-		/**
-		 * @brief 	Because VSCode is dumb it sometimes touches files twice, where the first touch just clears the file
-		 * 			so we just assume that empty files are the vs code bug and try to get the correct file for 100 milliseconds.
-		 * 
-		 * @param path 
-		 * @return Result<std::string> 
-		 */
-		Result<std::string> tryLoadGLSLShaderFromFile(std::filesystem::path const& path) {
+		Result<std::string> tryLoadShaderSourceFromFile(std::filesystem::path const& path) {
 			auto startTime = std::chrono::steady_clock::now();
 			while ((std::chrono::steady_clock::now() - startTime).count() < 100'000'000) {
 				std::ifstream ifs(path);
 				if (!ifs.good()) {
-					return ResultErr{ "could not find or open file" };
+					std::string err = "could not find or open file: \"";
+					err += path.string();
+					err += '\"';
+					return ResultErr{ err.c_str() };
 				}
 				std::string str;
 
@@ -159,56 +157,53 @@ namespace daxa {
 				return str;
 			}
 
-			return ResultErr{ "timeout while trying to read file" };
+			std::string err = "time out while trying to read file: \"";
+			err += path.string();
+			err += '\"';
+			return ResultErr{ err.c_str() };
 		}
 
-		Result<std::vector<u32>> tryGenSPIRVFromGLSL(std::string const& src, VkShaderStageFlagBits shaderStage) {
-			auto translateShaderStage = [](VkShaderStageFlagBits stage) -> EShLanguage {
+		Result<std::vector<u32>> tryGenSPIRVFromShaderc(std::string const& src, VkShaderStageFlagBits shaderStage, ShaderLang lang) {
+			auto translateShaderStage = [](VkShaderStageFlagBits stage) -> shaderc_shader_kind {
 				switch (stage) {
-				case VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT: return EShLangVertex;
-				case VkShaderStageFlagBits::VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT: return EShLangTessControl;
-				case VkShaderStageFlagBits::VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT: return EShLangTessEvaluation;
-				case VkShaderStageFlagBits::VK_SHADER_STAGE_GEOMETRY_BIT: return EShLangGeometry;
-				case VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT: return EShLangFragment;
-				case VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT: return EShLangCompute;
-				case VkShaderStageFlagBits::VK_SHADER_STAGE_RAYGEN_BIT_KHR: return EShLangRayGenNV;
-				case VkShaderStageFlagBits::VK_SHADER_STAGE_ANY_HIT_BIT_KHR: return EShLangAnyHitNV;
-				case VkShaderStageFlagBits::VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR: return EShLangClosestHitNV;
-				case VkShaderStageFlagBits::VK_SHADER_STAGE_MISS_BIT_KHR: return EShLangMissNV;
-				case VkShaderStageFlagBits::VK_SHADER_STAGE_INTERSECTION_BIT_KHR: return EShLangIntersectNV;
-				case VkShaderStageFlagBits::VK_SHADER_STAGE_CALLABLE_BIT_KHR: return EShLangCallableNV;
-				case VkShaderStageFlagBits::VK_SHADER_STAGE_TASK_BIT_NV: return EShLangTaskNV;
-				case VkShaderStageFlagBits::VK_SHADER_STAGE_MESH_BIT_NV: return EShLangMeshNV;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT: return shaderc_shader_kind::shaderc_vertex_shader;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT: return shaderc_shader_kind::shaderc_tess_control_shader;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT: return shaderc_shader_kind::shaderc_tess_evaluation_shader;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_GEOMETRY_BIT: return shaderc_shader_kind::shaderc_geometry_shader;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT: return shaderc_shader_kind::shaderc_fragment_shader;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT: return shaderc_shader_kind::shaderc_compute_shader;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_RAYGEN_BIT_KHR: return shaderc_shader_kind::shaderc_raygen_shader;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_ANY_HIT_BIT_KHR: return shaderc_shader_kind::shaderc_anyhit_shader;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR: return shaderc_shader_kind::shaderc_closesthit_shader;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_MISS_BIT_KHR: return shaderc_shader_kind::shaderc_miss_shader;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_INTERSECTION_BIT_KHR: return shaderc_shader_kind::shaderc_intersection_shader;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_CALLABLE_BIT_KHR: return shaderc_shader_kind::shaderc_callable_shader;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_TASK_BIT_NV: return shaderc_shader_kind::shaderc_task_shader;
+				case VkShaderStageFlagBits::VK_SHADER_STAGE_MESH_BIT_NV: return shaderc_shader_kind::shaderc_mesh_shader;
 				default:
-					std::cerr << "error: glslToSPIRV: UNKNOWN SHADER STAGE!\n";
+					std::cerr << "error: unknown shader stage!\n";
 					std::abort();
 				}
 			};
-			const auto stage = translateShaderStage(shaderStage);
-			const char* shaderStrings[] = { src.c_str() };
-			glslang::TShader shader(stage);
-			shader.setStrings(shaderStrings, 1);
-			auto messages = static_cast<EShMessages>(EShMsgSpvRules | EShMsgVulkanRules);
-			TBuiltInResource resource = DAXA_DEFAULT_SHADER_RESSOURCE_SIZES;
-			if (!shader.parse(&resource, 100, false, messages)) {
-				std::string s;
-				s += "failed to compile shader due to:\n";
-				s += shader.getInfoLog();
-				s += shader.getInfoDebugLog();
-				return ResultErr{s};
+			auto stage = translateShaderStage(shaderStage);
+			shaderc_source_language langType;
+			switch (lang) {
+				case ShaderLang::GLSL: langType = shaderc_source_language_glsl; break;
+				case ShaderLang::HLSL: langType = shaderc_source_language_hlsl; break;
 			}
-			glslang::TProgram program;
-			program.addShader(&shader);
-			if (!program.link(messages)) {
-				std::string s;
-				s += "failed to compile shader due to:\n";
-				s += shader.getInfoLog();
-				s += shader.getInfoDebugLog();
-				return ResultErr{s};
+
+			shaderc::Compiler compiler;
+  			shaderc::CompileOptions options;
+  			options.SetOptimizationLevel(shaderc_optimization_level_size);
+			options.SetSourceLanguage(langType);
+			
+			shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(src, stage, "name", options);
+
+			if (module.GetCompilationStatus() != shaderc_compilation_status_success) {
+				return daxa::ResultErr{.message = module.GetErrorMessage().c_str()};
 			}
-			std::vector<std::uint32_t> ret;
-			glslang::GlslangToSpv(*program.getIntermediate(stage), ret);
-			return {ret};
+
+			return { std::vector<u32>{ module.begin(), module.end()} };
 		}
 
 		Result<VkShaderModule> tryCreateVkShaderModule(std::shared_ptr<DeviceBackend>& deviceBackend, std::vector<u32> const& spirv) {
@@ -228,12 +223,12 @@ namespace daxa {
 			}
 		}
 
-		Result<VkShaderModule> tryCreateVkShaderModule(std::shared_ptr<DeviceBackend>& deviceBackend, std::filesystem::path const& path, VkShaderStageFlagBits shaderStage) {
-			auto src = tryLoadGLSLShaderFromFile(path);
+		Result<VkShaderModule> tryCreateVkShaderModule(std::shared_ptr<DeviceBackend>& deviceBackend, std::filesystem::path const& path, VkShaderStageFlagBits shaderStage, ShaderLang lang) {
+			auto src = tryLoadShaderSourceFromFile(path);
 			if (src.isErr()) {
 				return ResultErr{ src.message() };
 			}
-			auto spirv = tryGenSPIRVFromGLSL(src.value(), shaderStage);
+			auto spirv = tryGenSPIRVFromShaderc(src.value(), shaderStage, lang);
 			if (spirv.isErr()) {
 				return ResultErr{ spirv.message() + "; with path: " + path.string() };
 			}
@@ -244,20 +239,8 @@ namespace daxa {
 			return { shadMod.value() };
 		}
 
-		Result<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(std::shared_ptr<DeviceBackend>& deviceBackend, std::filesystem::path const& path, std::string const& entryPoint, VkShaderStageFlagBits shaderStage) {
-			auto src = tryLoadGLSLShaderFromFile(path);
-			if (src.isErr()) {
-				return ResultErr{ src.message() };
-			}
-			auto shadMod = tryCreateDAXAShaderModule(deviceBackend, src.value(), entryPoint, shaderStage);
-			if (shadMod.isErr()) {
-				return ResultErr{ shadMod.message() };
-			}
-			return { shadMod.value() };
-		}
-
-		Result<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(std::shared_ptr<DeviceBackend>& deviceBackend, std::string const& glsl, std::string const& entryPoint, VkShaderStageFlagBits shaderStage) {
-			auto spirv = tryGenSPIRVFromGLSL(glsl, shaderStage);
+		Result<ShaderModuleHandle> ShaderModuleHandle::tryCompileShader(std::shared_ptr<DeviceBackend>& deviceBackend, std::string const& glsl, std::string const& entryPoint, VkShaderStageFlagBits shaderStage, ShaderLang lang) {
+			auto spirv = tryGenSPIRVFromShaderc(glsl, shaderStage, lang);
 			if (spirv.isErr()) {
 				return ResultErr{ spirv.message() };
 			}
@@ -275,22 +258,22 @@ namespace daxa {
 		}
 		
 		Result<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(std::shared_ptr<DeviceBackend>& deviceBackend, ShaderModuleCreateInfo const& ci) {
-			std::string glslSource = {};
+			std::string sourceCode = {};
 			if (ci.pathToSource) {
-				auto src = tryLoadGLSLShaderFromFile(ci.pathToSource);
+				auto src = tryLoadShaderSourceFromFile(ci.pathToSource);
 				if (src.isErr()) {
 					return ResultErr{ src.message() };
 				}
-				glslSource = src.value();
+				sourceCode = src.value();
 			}
-			else if (ci.glslSource) {
-				glslSource = ci.glslSource;
+			else if (ci.source) {
+				sourceCode = ci.source;
 			}
 			else {
 				return ResultErr{"no path given"};
 			}
 
-			auto shadMod = tryCreateDAXAShaderModule(deviceBackend, glslSource, ci.entryPoint, ci.stage);
+			auto shadMod = tryCompileShader(deviceBackend, sourceCode, ci.entryPoint, ci.stage, ci.shaderLang);
 			if (shadMod.isErr()) {
 				auto errMess = shadMod.message();
 				if (ci.pathToSource) {
@@ -314,6 +297,38 @@ namespace daxa {
 			}
 
 			return { shadMod.value() };
+		}
+
+		void ShaderCache::init(std::shared_ptr<DeviceBackend>& device, std::vector<std::filesystem::path> possibleRootPaths) { 
+			this->device = device;
+			this->possibleRootPaths = possibleRootPaths;
+		}
+			
+		Result<std::filesystem::path> ShaderCache::findCompletePath(std::filesystem::path sourcePath) {
+			std::string err = "could not find path to: \"";
+			err += sourcePath.string();
+			err += "\"";
+			daxa::Result<std::filesystem::path> ret = ResultErr{err};
+			for (auto& root: possibleRootPaths) {
+				auto potentialPath = root / sourcePath;
+				if (std::ifstream(potentialPath).good()) {
+					if (ret.isOk()) {
+						// we found the file more than once, this is illegal
+						std::string err = "the file: \"";
+						err += sourcePath.string();
+						err += "\" was found multiple times in the given root paths";
+						daxa::Result<std::filesystem::path> ret = ResultErr{err};
+						break;
+					} else {
+						ret = Result{ potentialPath };
+					}
+				}
+			}
+			return ret;
+		}
+
+		Result<ShaderModuleHandle> ShaderCache::tryGetShaderModule(std::filesystem::path path, VkShaderStageFlagBits flags, char const* debugName = nullptr) {
+
 		}
 	}
 }
