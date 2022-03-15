@@ -3,19 +3,12 @@
 #include <iostream>
 #include <chrono>
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_vulkan.h>
 #include <VkBootstrap.h>
 
 #include "Instance.hpp"
 
 namespace daxa {
 	namespace gpu {
-		VkSurfaceKHR createSurface(void* sdlWindowHandle, VkInstance instance) {
-			VkSurfaceKHR surface;
-			SDL_Vulkan_CreateSurface((SDL_Window*)sdlWindowHandle, instance, &surface);
-			return surface;
-		}
 
 		void Swapchain::construct(std::shared_ptr<DeviceBackend> deviceBackend, SwapchainCreateInfo ci) {
 			this->deviceBackend = deviceBackend;
