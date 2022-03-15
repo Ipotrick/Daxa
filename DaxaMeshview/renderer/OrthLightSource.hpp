@@ -41,6 +41,7 @@ public:
 
 		ShaderModuleCreateInfo fsci{
 			.pathToSource = "./DaxaMeshview/renderer/depthPass.frag",
+			.shaderLang = daxa::gpu::ShaderLang::GLSL,
 			.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
 		};
 

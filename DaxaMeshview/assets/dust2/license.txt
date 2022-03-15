@@ -1,0 +1,11 @@
+Model Information:
+* title:	CS - Dust 2
+* source:	https://sketchfab.com/3d-models/cs-dust-2-fc32133a6a334e038104134da9130bf7
+* author:	TheJagStudio (https://sketchfab.com/thejagstudio)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "CS - Dust 2" (https://sketchfab.com/3d-models/cs-dust-2-fc32133a6a334e038104134da9130bf7) by TheJagStudio (https://sketchfab.com/thejagstudio) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

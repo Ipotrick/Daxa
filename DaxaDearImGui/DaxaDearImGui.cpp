@@ -142,12 +142,12 @@ public:
 		)";
 
 		daxa::gpu::ShaderModuleHandle vertexShader = device->createShaderModule({
-			.glslSource = vertexShaderGLSL,
+			.sourceToGLSL = vertexShaderGLSL,
 			.stage = VK_SHADER_STAGE_VERTEX_BIT
 		}).value();
 
 		daxa::gpu::ShaderModuleHandle fragmenstShader = device->createShaderModule({
-			.glslSource = fragmentShaderGLSL,
+			.sourceToGLSL = fragmentShaderGLSL,
 			.stage = VK_SHADER_STAGE_FRAGMENT_BIT
 		}).value();
 

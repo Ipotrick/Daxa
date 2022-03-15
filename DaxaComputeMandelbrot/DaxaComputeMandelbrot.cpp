@@ -76,7 +76,7 @@ public:
 		)";
 
 		daxa::gpu::ShaderModuleHandle computeShader = device->createShaderModule({
-			.glslSource = computeShaderGLSL,
+			.sourceToGLSL = computeShaderGLSL,
 			.stage = VK_SHADER_STAGE_COMPUTE_BIT
 		}).value();
 
