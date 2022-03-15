@@ -170,7 +170,7 @@ namespace daxa {
 			VkDescriptorSetLayoutCreateInfo bindAllSetLayoutCI {
 				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 				.pNext = &bindAllSetLayoutBindingFlagsCI,
-				.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT,
+				//.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT,
 				.bindingCount = (u32)bindAllSetDescriptorSetLayoutBindings.size(),
 				.pBindings = bindAllSetDescriptorSetLayoutBindings.data()
 			};

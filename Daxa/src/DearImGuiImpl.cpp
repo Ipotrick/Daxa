@@ -104,7 +104,7 @@ namespace daxa {
                 gl_Position = vec4(aPos * pc.uScale + pc.uTranslate, 0, 1);
             }
         )--";
-        auto vertexShaderModule = device->createShaderModule({.glslSource = vertexGLSL, .stage = VK_SHADER_STAGE_VERTEX_BIT}).value();
+        auto vertexShaderModule = device->createShaderModule({.source = vertexGLSL, .stage = VK_SHADER_STAGE_VERTEX_BIT}).value();
 
         char const* fragmentGLSL = R"--(
             #version 450 core
@@ -125,7 +125,7 @@ namespace daxa {
                 fColor = color * texture(sTexture, In.UV.st);
             }
         )--";
-        auto fragmentShaderModule = device->createShaderModule({.glslSource = fragmentGLSL, .stage = VK_SHADER_STAGE_FRAGMENT_BIT}).value();
+        auto fragmentShaderModule = device->createShaderModule({.source = fragmentGLSL, .stage = VK_SHADER_STAGE_FRAGMENT_BIT}).value();
 
         daxa::gpu::GraphicsPipelineBuilder pipelineBuilder;
         auto pipelineDescription = pipelineBuilder

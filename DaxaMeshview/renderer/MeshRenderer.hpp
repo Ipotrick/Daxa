@@ -23,7 +23,7 @@ public:
     void init(RenderContext& renderCTX) {
 		auto vertexShader = renderCTX.device->createShaderModule({
 			.pathToSource = "./DaxaMeshview/renderer/prePass.vert",
-			.stage = VK_SHADER_STAGE_VERTEX_BIT
+			.stage = VK_SHADER_STAGE_VERTEX_BIT,
 		}).value();
 
 		auto fragmenstShader = renderCTX.device->createShaderModule({
@@ -456,7 +456,6 @@ public:
 	}
 
 	void render(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws) {
-		printf("begin frame\n");
 		uploadBuffers(renderCTX, cmd, draws, drawLights);
 		cmd->insertMemoryBarrier({
 			.srcStages = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR | VK_PIPELINE_STAGE_2_COPY_BIT_KHR,

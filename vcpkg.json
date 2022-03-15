@@ -3,12 +3,6 @@
   "version": "0.1.0",
   "dependencies": [
     "stb",
-    {
-      "name": "sdl2",
-      "features": [
-        "vulkan"
-      ]
-    },
     "vulkan",
     "glslang",
     "spirv-cross",
@@ -18,6 +12,7 @@
     "glfw3",
     "fmt",
     "glad",
-    "cgltf"
+    "cgltf",
+    "shaderc"
   ]
 }

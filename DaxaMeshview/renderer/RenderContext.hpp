@@ -2,6 +2,9 @@
 
 #include "Daxa.hpp"
 
+// R11G11b10 emissive
+// R8G8B8A8 rgb albedo  a open
+
 class RenderContext {
 public:
     RenderContext(daxa::Window& window) 
@@ -35,7 +38,6 @@ public:
 
 	void recreateFramebuffer(daxa::gpu::CommandListHandle& cmd, u32 width, u32 height) {
 		std::string depthMapName = "depth image";
-		depthMapName += std::to_string(resizeI);
 		this->depthImage = device->createImageView({
 			.image = device->createImage({
 				.format = VK_FORMAT_D32_SFLOAT,
@@ -65,6 +67,16 @@ public:
 			.debugName = "normals image",
 		});
 
+		this->hdrImage = device->createImageView({
+			.image = device->createImage({
+				.format = VK_FORMAT_R16G16B16A16_SFLOAT,
+				.extent = { width, height, 1 },
+				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+			}),
+			.format = VK_FORMAT_R16G16B16A16_SFLOAT,
+			.debugName = "main hdr color image",
+		});
+
 		cmd->insertImageBarriers(std::array{
 			daxa::gpu::ImageBarrier{
 				.barrier = daxa::gpu::FULL_MEMORY_BARRIER,
@@ -76,8 +88,12 @@ public:
 				.image = normalsImage,
 				.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			},
+			daxa::gpu::ImageBarrier{
+				.barrier = daxa::gpu::FULL_MEMORY_BARRIER,
+				.image = hdrImage,
+				.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			},
 		});
-		resizeI++;
 	}
 
 	void present() {
@@ -100,8 +116,8 @@ public:
 	daxa::gpu::SignalHandle presentSignal = {};
 	daxa::gpu::ImageViewHandle depthImage = {};
 	daxa::gpu::ImageViewHandle normalsImage = {};
+	daxa::gpu::ImageViewHandle hdrImage = {};
 	daxa::gpu::SamplerHandle defaultSampler = {};
-	size_t resizeI = 0;
 };
 
 struct Primitive {

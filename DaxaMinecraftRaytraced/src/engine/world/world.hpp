@@ -125,7 +125,7 @@ struct World {
             auto comp1_shader =
                 render_ctx.device
                     ->createShaderModule({
-                        .glslSource = comp1_str.c_str(),
+                        .sourceToGLSL = comp1_str.c_str(),
                         .stage = VK_SHADER_STAGE_COMPUTE_BIT
                     }).value();
 
@@ -160,13 +160,13 @@ struct World {
             auto vert_shader =
                 render_ctx.device
                     ->createShaderModule({
-                        .glslSource = vert_str.c_str(),
+                        .sourceToGLSL = vert_str.c_str(),
                         .stage = VK_SHADER_STAGE_VERTEX_BIT
                     }).value();
             auto frag_shader =
                 render_ctx.device
                     ->createShaderModule({
-                        .glslSource = frag_str.c_str(),
+                        .sourceToGLSL = frag_str.c_str(),
                         .stage = VK_SHADER_STAGE_FRAGMENT_BIT
                     }).value();
 
