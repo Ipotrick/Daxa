@@ -37,8 +37,8 @@ struct RenderContext {
           swapchain_image(swapchain->aquireNextImage()),
           depth_image(device->createImageView({
               .image  = device->createImage({
-                   .extent = {(uint32_t)sx, (uint32_t)sy, 1},
                    .format = VK_FORMAT_D32_SFLOAT,
+                   .extent = {(uint32_t)sx, (uint32_t)sy, 1},
                    .usage  = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
               }),
               .format = VK_FORMAT_D32_SFLOAT,
@@ -74,8 +74,8 @@ struct RenderContext {
             swapchain_image = swapchain->aquireNextImage();
             device->createImageView({
                 .image  = device->createImage({
-                     .extent = {(uint32_t)sx, (uint32_t)sy, 1},
                      .format = VK_FORMAT_D32_SFLOAT,
+                     .extent = {(uint32_t)sx, (uint32_t)sy, 1},
                      .usage  = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
                 }),
                 .format = VK_FORMAT_D32_SFLOAT,
@@ -172,8 +172,8 @@ struct Texture {
 
         image = render_ctx.device->createImageView({
             .image  = render_ctx.device->createImage({
-                 .extent = {(uint32_t)size_x, (uint32_t)size_y, 1},
                  .format = data_format,
+                 .extent = {(uint32_t)size_x, (uint32_t)size_y, 1},
                  .usage  = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
             }),
             .format = VK_FORMAT_D32_SFLOAT,
