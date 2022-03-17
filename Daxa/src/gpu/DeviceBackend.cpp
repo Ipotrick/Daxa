@@ -6,7 +6,7 @@ namespace daxa {
 		DeviceBackend::DeviceBackend(vkb::Instance& instance, PFN_vkSetDebugUtilsObjectNameEXT pfnSetDebugUtilsObjectNameEXT) {
 			vkb::PhysicalDeviceSelector selector{ instance };
 			vkb::PhysicalDevice physicalDevice = selector
-				.set_minimum_version(1, 2)
+				.set_minimum_version(1, 3)
 				.defer_surface_initialization()
 				.add_desired_extension(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)
 				.add_desired_extension(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME)
@@ -18,17 +18,17 @@ namespace daxa {
 			VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeature{
 				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
 				.pNext = nullptr,
-				.shaderInputAttachmentArrayDynamicIndexing = VK_TRUE,
+				.shaderInputAttachmentArrayDynamicIndexing = VK_FALSE,	// amd has limited support
 				.shaderUniformTexelBufferArrayDynamicIndexing = VK_TRUE,
 				.shaderStorageTexelBufferArrayDynamicIndexing = VK_TRUE,
 				.shaderUniformBufferArrayNonUniformIndexing = VK_TRUE,
 				.shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
 				.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE,
 				.shaderStorageImageArrayNonUniformIndexing = VK_TRUE,
-				.shaderInputAttachmentArrayNonUniformIndexing = VK_TRUE,
+				.shaderInputAttachmentArrayNonUniformIndexing = VK_FALSE,	// amd has limited support
 				.shaderUniformTexelBufferArrayNonUniformIndexing = VK_TRUE,
 				.shaderStorageTexelBufferArrayNonUniformIndexing = VK_TRUE,
-				//.descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE,	// uniform buffers are specially optimized on nvidia hw
+				.descriptorBindingUniformBufferUpdateAfterBind = VK_FALSE,	// uniform buffers are specially optimized on nvidia hw
 				.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE,
 				.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE,
 				.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE,
@@ -68,7 +68,7 @@ namespace daxa {
 				.pNext = nullptr,
 				.storageBuffer16BitAccess = VK_FALSE,
 				.uniformAndStorageBuffer16BitAccess = VK_TRUE,
-				.storagePushConstant16 = VK_TRUE,
+				.storagePushConstant16 = VK_FALSE,	// AMD YOU BOZO WHY NO SUPPORT
 				.storageInputOutput16 = VK_FALSE,
 			};
 			VkPhysicalDeviceRobustness2FeaturesEXT robustness2Features{
