@@ -395,14 +395,14 @@ public:
 			auto& draw = draws[i];
 			primitivesDrawn += draw.prim->indexCount / 3;
 			struct {
-				u16 albedoMap;
-				u16 normalMap;
-				u16 globals;
-				u16 primitives;
-				u16 lights;
-				u16 vertexBufId;
-				u16 vertexUVBufId;
-				u16 vertexNormalBufId;
+				u32 albedoMap;
+				u32 normalMap;
+				u32 globals;
+				u32 primitives;
+				u32 lights;
+				u32 vertexBufId;
+				u32 vertexUVBufId;
+				u32 vertexNormalBufId;
 				u32 drawIndex;
 			} push{
 				dummyTexture->getSampledImageDescriptorIndex().value(),
