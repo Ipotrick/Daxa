@@ -17,8 +17,8 @@ struct PackedVec3{
 layout(std140, set = 1, binding = 4) readonly buffer PackedVec3BufferView{ PackedVec3 packedVec3s[]; } packedVec3BufferView[]; 
 
 layout(std140, push_constant) uniform PushConstants {
-    uint16_t vertexPositionBufferId;
-    uint16_t _pad0;
+    uint vertexPositionBufferId;
+    uint _pad0;
     uint primitiveIndex;
 } pushConstants;
 
