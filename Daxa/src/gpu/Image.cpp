@@ -192,7 +192,7 @@ namespace daxa {
 				){
 					std::unique_lock bindAllLock(deviceBackend->bindAllMtx);
 
-					if (imageSamplerIndex != std::numeric_limits<u16>::max()) {
+					if (imageSamplerIndex != 0) {
 						this->deviceBackend->combinedImageSamplerIndexFreeList.push_back(imageSamplerIndex);
 					
 						VkDescriptorImageInfo imageInfo{
@@ -212,7 +212,7 @@ namespace daxa {
 						};
 						vkUpdateDescriptorSets(this->deviceBackend->device.device, 1, &write, 0, nullptr);
 					}
-					if (sampledImageIndex != std::numeric_limits<u16>::max()) {
+					if (sampledImageIndex != 0) {
 						this->deviceBackend->sampledImageIndexFreeList.push_back(sampledImageIndex);
 					
 						VkDescriptorImageInfo imageInfo{
@@ -232,7 +232,7 @@ namespace daxa {
 						};
 						vkUpdateDescriptorSets(this->deviceBackend->device.device, 1, &write, 0, nullptr);
 					}
-					if (storageImageIndex != std::numeric_limits<u16>::max()) {
+					if (storageImageIndex != 0) {
 						this->deviceBackend->storageImageIndexFreeList.push_back(storageImageIndex);
 					
 						VkDescriptorImageInfo imageInfo{
