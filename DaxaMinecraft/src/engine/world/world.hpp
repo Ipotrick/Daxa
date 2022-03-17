@@ -53,7 +53,7 @@ struct World {
         try_reload_shaders(render_ctx);
 
         globals_uniform_allocator = render_ctx.device->createBindingSetAllocator({
-            .setDescription = graphics_pipeline->getSetDescription(0)
+            .setLayout = graphics_pipeline->getSetLayout(0),
         });
         globals_uniform_buffer = render_ctx.device->createBuffer({
             .size = sizeof(Globals),
@@ -63,7 +63,7 @@ struct World {
         });
 
         compute_binding_set_allocator = render_ctx.device->createBindingSetAllocator({
-            .setDescription = chunk_block_pass1_compute_pipeline->getSetDescription(0)
+            .setLayout = chunk_block_pass1_compute_pipeline->getSetLayout(0)
         });
 
         chunk_buffer = render_ctx.device->createBuffer({
@@ -139,19 +139,19 @@ struct World {
             auto comp1_shader =
                 render_ctx.device
                     ->createShaderModule({
-                        .sourceToGLSL = comp1_str.c_str(),
+                        .source = comp1_str.c_str(),
                         .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                     }).value();
             auto comp2_shader =
                 render_ctx.device
                     ->createShaderModule({
-                        .sourceToGLSL = comp2_str.c_str(),
+                        .source = comp2_str.c_str(),
                         .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                     }).value();
             auto comp3_shader =
                 render_ctx.device
                     ->createShaderModule({
-                        .sourceToGLSL = comp3_str.c_str(),
+                        .source = comp3_str.c_str(),
                         .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                     }).value();
 
@@ -162,9 +162,9 @@ struct World {
             auto new_pipeline3 = render_ctx.device->createComputePipeline({comp3_shader});
             if (!new_pipeline3) throw;
 
-            chunk_block_pass1_compute_pipeline = new_pipeline1;
-            chunk_block_pass2_compute_pipeline = new_pipeline2;
-            chunk_mesh_pass_compute_pipeline   = new_pipeline3;
+            chunk_block_pass1_compute_pipeline = new_pipeline1.value();
+            chunk_block_pass2_compute_pipeline = new_pipeline2.value();
+            chunk_mesh_pass_compute_pipeline   = new_pipeline3.value();
         } catch (...) {
             std::cout << "Failed to re-compile the compute pipeline's shaders, using "
                          "the previous pipeline\n";
@@ -192,13 +192,13 @@ struct World {
             auto vert_shader =
                 render_ctx.device
                     ->createShaderModule({
-                        .sourceToGLSL = vert_str.c_str(),
+                        .source = vert_str.c_str(),
                         .stage = VK_SHADER_STAGE_VERTEX_BIT,
                     }).value();
             auto frag_shader =
                 render_ctx.device
                     ->createShaderModule({
-                        .sourceToGLSL = frag_str.c_str(),
+                        .source = frag_str.c_str(),
                         .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
                     }).value();
 
@@ -225,7 +225,7 @@ struct World {
             // render_ctx.queue->checkForFinishedSubmits();
             // render_ctx.device->waitIdle();
 
-            graphics_pipeline = new_pipeline;
+            graphics_pipeline = new_pipeline.value();
         } catch (...) {
             std::cout << "Failed to re-compile the graphics pipeline's shaders, using "
                          "the previous pipeline\n";
@@ -405,7 +405,7 @@ struct World {
     }
 
     void generate_chunk(RenderContext & render_ctx) {
-        auto cmd_list = render_ctx.device->getCommandList();
+        auto cmd_list = render_ctx.queue->getCommandList({});
         cmd_list->bindPipeline(chunk_block_pass1_compute_pipeline);
 
         auto set = compute_binding_set_allocator->getSet();

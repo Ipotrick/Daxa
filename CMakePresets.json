@@ -1,59 +1,33 @@
 {
-  "version": 3,
-  "cmakeMinimumRequired": {
-    "major": 3,
-    "minor": 21,
-    "patch": 0
-  },
-  "configurePresets": [
-    {
-      "name": "defaults",
-      "hidden": true,
-      "binaryDir": "${sourceDir}/build",
-      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-      "generator": "Ninja"
+    "version": 3,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 21,
+        "patch": 0
     },
-    {
-      "name": "Release",
-      "displayName": "Release",
-      "inherits": "defaults",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
-      }
-    },
-    {
-      "name": "RelWithDebInfo",
-      "displayName": "RelWithDebInfo",
-      "inherits": "defaults",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
-      }
-    },
-    {
-      "name": "Debug",
-      "displayName": "Debug",
-      "inherits": "defaults",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
-      }
-    },
-    {
-      "name": "Debug (hot reload)",
-      "displayName": "Debug (hot reload)",
-      "inherits": "defaults",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "DAXA_DEBUG_BUILD_HOT_RELOAD": true
-      }
-    },
-    {
-      "name": "Debug (asan)",
-      "displayName": "Debug (asan)",
-      "inherits": "defaults",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "DAXA_DEBUG_BUILD_ASAN":  true
-      }
-    }
-  ]
+    "configurePresets": [
+        {
+            "name": "Default",
+            "binaryDir": "${sourceDir}/build",
+            "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+            "generator": "Ninja Multi-Config"
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "Default Release",
+            "configuration": "Release",
+            "configurePreset": "Default"
+        },
+        {
+            "name": "Default RelWithDebInfo",
+            "configuration": "RelWithDebInfo",
+            "configurePreset": "Default"
+        },
+        {
+            "name": "Default Debug",
+            "configuration": "Debug",
+            "configurePreset": "Default"
+        }
+    ]
 }
