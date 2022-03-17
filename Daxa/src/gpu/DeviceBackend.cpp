@@ -6,7 +6,7 @@ namespace daxa {
 		DeviceBackend::DeviceBackend(vkb::Instance& instance, PFN_vkSetDebugUtilsObjectNameEXT pfnSetDebugUtilsObjectNameEXT) {
 			vkb::PhysicalDeviceSelector selector{ instance };
 			vkb::PhysicalDevice physicalDevice = selector
-				.set_minimum_version(1, 3)
+				.set_minimum_version(1, 2)
 				.defer_surface_initialization()
 				.add_desired_extension(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)
 				.add_desired_extension(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME)
