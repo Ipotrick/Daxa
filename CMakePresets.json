@@ -7,27 +7,31 @@
     },
     "configurePresets": [
         {
-            "name": "Default",
-            "binaryDir": "${sourceDir}/build",
+            "name": "Release",
+            "binaryDir": "${sourceDir}/build/${presetName}",
             "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-            "generator": "Ninja Multi-Config"
-        }
-    ],
-    "buildPresets": [
-        {
-            "name": "Default Release",
-            "configuration": "Release",
-            "configurePreset": "Default"
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
         },
         {
-            "name": "Default RelWithDebInfo",
-            "configuration": "RelWithDebInfo",
-            "configurePreset": "Default"
+            "name": "Debug",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
         },
         {
-            "name": "Default Debug",
-            "configuration": "Debug",
-            "configurePreset": "Default"
+            "name": "RelWithDebInfo",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
         }
     ]
 }
