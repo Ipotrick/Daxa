@@ -12,12 +12,12 @@
 #include <array>
 
 struct RenderContext {
-    daxa::gpu::DeviceHandle device;
-    daxa::gpu::QueueHandle  queue;
+    daxa::gpu::DeviceHandle       device;
+    daxa::gpu::CommandQueueHandle queue;
 
     daxa::gpu::SwapchainHandle swapchain;
     daxa::gpu::SwapchainImage  swapchain_image;
-    daxa::gpu::ImageHandle     depth_image;
+    daxa::gpu::ImageViewHandle depth_image;
 
     struct PerFrameData {
         daxa::gpu::SignalHandle            present_signal;
@@ -27,7 +27,7 @@ struct RenderContext {
     std::deque<PerFrameData> frames;
 
     RenderContext(VkSurfaceKHR surface, int32_t sx, int32_t sy)
-        : device(daxa::gpu::Device::create()), queue(device->createQueue({})),
+        : device(daxa::gpu::Device::create()), queue(device->createCommandQueue({})),
           swapchain(device->createSwapchain({
               .surface     = surface,
               .width       = (uint32_t)sx,
@@ -35,12 +35,17 @@ struct RenderContext {
               .presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR,
           })),
           swapchain_image(swapchain->aquireNextImage()),
-          depth_image(device->createImage2d({
-              .width       = (uint32_t)sx,
-              .height      = (uint32_t)sy,
-              .format      = VK_FORMAT_D32_SFLOAT,
-              .imageUsage  = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-              .imageAspekt = VK_IMAGE_ASPECT_DEPTH_BIT,
+          depth_image(device->createImageView({
+              .image  = device->createImage({
+                   .format = VK_FORMAT_D32_SFLOAT,
+                   .extent = {(uint32_t)sx, (uint32_t)sy, 1},
+                   .usage  = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+              }),
+              .format = VK_FORMAT_D32_SFLOAT,
+              .subresourceRange =
+                  {
+                      .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+                  },
           })) {
         for (int i = 0; i < 3; i++) {
             frames.push_back(PerFrameData{
@@ -67,35 +72,40 @@ struct RenderContext {
             printf("resize count: %i\n", resizes);
             swapchain->resize(VkExtent2D{.width = (uint32_t)sx, .height = (uint32_t)sy});
             swapchain_image = swapchain->aquireNextImage();
-            depth_image     = device->createImage2d({
-                    .width       = (uint32_t)sx,
-                    .height      = (uint32_t)sy,
-                    .format      = VK_FORMAT_D32_SFLOAT,
-                    .imageUsage  = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                    .imageAspekt = VK_IMAGE_ASPECT_DEPTH_BIT,
+            device->createImageView({
+                .image  = device->createImage({
+                     .format = VK_FORMAT_D32_SFLOAT,
+                     .extent = {(uint32_t)sx, (uint32_t)sy, 1},
+                     .usage  = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                }),
+                .format = VK_FORMAT_D32_SFLOAT,
+                .subresourceRange =
+                    {
+                        .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+                    },
             });
         }
         auto * currentFrame = &frames.front();
-        auto   cmd_list     = device->getCommandList();
+        auto   cmd_list     = queue->getCommandList({});
 
-        std::array imgBarrier0 = {daxa::gpu::ImageBarrier{
-            .dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
-            .image         = swapchain_image.getImageHandle(),
-            .layoutBefore  = VK_IMAGE_LAYOUT_UNDEFINED,
-            .layoutAfter   = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        }};
-        std::array memBarrier0 = {daxa::gpu::MemoryBarrier{
-            .srcAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
-            .dstStages = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT_KHR,
-        }};
-        cmd_list->insertBarriers(memBarrier0, imgBarrier0);
+        // std::array imgBarrier0 = {daxa::gpu::ImageBarrier{
+        //     .dstStages    = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
+        //     .image        = swapchain_image.getImageViewHandle(),
+        //     .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
+        //     .layoutAfter  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        // }};
+        // std::array memBarrier0 = {daxa::gpu::MemoryBarrier{
+        //     .srcAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
+        //     .dstStages = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT_KHR,
+        // }};
+        // cmd_list->insertBarriers(memBarrier0, imgBarrier0);
 
         return cmd_list;
     }
 
     void begin_rendering(daxa::gpu::CommandListHandle cmd_list) {
         std::array framebuffer{daxa::gpu::RenderAttachmentInfo{
-            .image      = swapchain_image.getImageHandle(),
+            .image      = swapchain_image.getImageViewHandle(),
             .clearValue = {.color = {.float32 = {0.0f, 0.0f, 0.0f, 1.0f}}},
         }};
 
@@ -118,7 +128,7 @@ struct RenderContext {
         auto * currentFrame = &frames.front();
 
         std::array imgBarrier1 = {daxa::gpu::ImageBarrier{
-            .image        = swapchain_image.getImageHandle(),
+            .image        = swapchain_image.getImageViewHandle(),
             .layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             .layoutAfter  = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
         }};
@@ -145,7 +155,7 @@ struct RenderContext {
 };
 
 struct Texture {
-    daxa::gpu::ImageHandle image;
+    daxa::gpu::ImageViewHandle image;
 
     int size_x, size_y, num_channels;
 
@@ -160,18 +170,23 @@ struct Texture {
         default: data_format = VK_FORMAT_R8G8B8A8_SRGB; break;
         }
 
-        image = render_ctx.device->createImage2d({
-            .width       = (uint32_t)size_x,
-            .height      = (uint32_t)size_y,
-            .format      = data_format,
-            .imageUsage  = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-            .imageAspekt = VK_IMAGE_ASPECT_COLOR_BIT,
-            .sampler     = render_ctx.device->createSampler({
-                    .magFilter = VK_FILTER_NEAREST,
+        image = render_ctx.device->createImageView({
+            .image  = render_ctx.device->createImage({
+                 .format = data_format,
+                 .extent = {(uint32_t)size_x, (uint32_t)size_y, 1},
+                 .usage  = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+            }),
+            .format = VK_FORMAT_D32_SFLOAT,
+            .subresourceRange =
+                {
+                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                },
+            .defaultSampler = render_ctx.device->createSampler({
+                .magFilter = VK_FILTER_NEAREST,
             }),
         });
 
-        auto cmd_list = render_ctx.device->getCommandList();
+        auto cmd_list = render_ctx.queue->getCommandList({});
         cmd_list->copyHostToImageSynced({
             .src            = data,
             .dst            = image,

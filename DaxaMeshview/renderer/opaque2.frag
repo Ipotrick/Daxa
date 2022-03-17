@@ -66,7 +66,7 @@ mat3 genTBN(vec3 n, vec3 p, vec2 uv) {
 
 void main() {
     vec3 interpVertexNormal = normalize(vtf_world_space_normal);
-    vec4 ambient = vec4(0.01,0.01,0.02,1.0);
+    vec4 ambient = vec4(1.0,1.0,1.00,1.0);
 
     vec3 normalMapValue = (texture(imageSampler2DViews[uint(pushConstants.normalMap)], vtf_uv).xyz * 2.0f) - vec3(1.0f);
     vec3 normal = genTBN(interpVertexNormal, vtf_world_space_position, vtf_uv) * normalMapValue;
