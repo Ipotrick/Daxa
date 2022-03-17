@@ -269,7 +269,7 @@ namespace daxa {
 						imgBarrs[imgBarrCount++] = std::get<ImageBarrier>(bar);
 					}
 				}
-				insertBarriers({ membars.data(), membars.size() }, { imgbars.data(), imgbars.size() });
+				insertBarriers({ memBarrs.data(), memBarrs.size() }, { imgBarrs.data(), imgBarrs.size() });
 			}
 
 			template<size_t N>
