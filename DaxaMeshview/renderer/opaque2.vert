@@ -28,14 +28,14 @@ layout(std430, set = 0, binding = 4) buffer PackedVec3BufferView{ PackedVec3 pac
 layout(std430, set = 0, binding = 4) buffer Vec2BufferView{ vec2 vecs[]; } vec2BufferView[]; 
 
 layout(std140, push_constant) uniform PushConstants {
-    uint16_t albedoMap;
-    uint16_t normalMap;
-    uint16_t globals;
-    uint16_t primitives;
-    uint16_t lights;
-    uint16_t vertexPosBufferId;
-    uint16_t vertexUVBufferId;
-    uint16_t vertexNormalBufferId;
+    uint albedoMap;
+    uint normalMap;
+    uint globals;
+    uint primitives;
+    uint lights;
+    uint vertexPosBufferId;
+    uint vertexUVBufferId;
+    uint vertexNormalBufferId;
     uint modelIndex;
 } pushConstants;
 

@@ -9,7 +9,7 @@ namespace daxa {
 			instanceBuilder
 				.set_app_name(AppName)
 				.set_engine_name(EngineName)
-				.require_api_version(1, 2, 0);
+				.require_api_version(1, 3, 0);
 
 			if (enableValidationLayer) {
 				instanceBuilder
