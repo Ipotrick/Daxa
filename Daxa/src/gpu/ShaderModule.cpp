@@ -326,9 +326,5 @@ namespace daxa {
 			}
 			return ret;
 		}
-
-		Result<ShaderModuleHandle> ShaderCache::tryGetShaderModule(std::filesystem::path path, VkShaderStageFlagBits flags, char const* debugName) {
-
-		}
 	}
 }
