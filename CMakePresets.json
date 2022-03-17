@@ -1,37 +1,59 @@
 {
     "version": 3,
     "cmakeMinimumRequired": {
-        "major": 3,
-        "minor": 21,
-        "patch": 0
+      "major": 3,
+      "minor": 21,
+      "patch": 0
     },
     "configurePresets": [
-        {
-            "name": "Release",
-            "binaryDir": "${sourceDir}/build/${presetName}",
-            "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-            "generator": "Ninja",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release"
-            }
-        },
-        {
-            "name": "Debug",
-            "binaryDir": "${sourceDir}/build/${presetName}",
-            "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-            "generator": "Ninja",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug"
-            }
-        },
-        {
-            "name": "RelWithDebInfo",
-            "binaryDir": "${sourceDir}/build/${presetName}",
-            "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-            "generator": "Ninja",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
-            }
+      {
+        "name": "defaults",
+        "hidden": true,
+        "binaryDir": "${sourceDir}/build/${presetName}",
+        "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "generator": "Ninja"
+      },
+      {
+        "name": "Release",
+        "displayName": "Release",
+        "inherits": "defaults",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Release"
         }
+      },
+      {
+        "name": "RelWithDebInfo",
+        "displayName": "RelWithDebInfo",
+        "inherits": "defaults",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+        }
+      },
+      {
+        "name": "Debug",
+        "displayName": "Debug",
+        "inherits": "defaults",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Debug"
+        }
+      },
+      {
+        "name": "Debug (hot reload)",
+        "displayName": "Debug (hot reload)",
+        "inherits": "defaults",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Debug",
+          "DAXA_DEBUG_BUILD_HOT_RELOAD": true
+        }
+      },
+      {
+        "name": "Debug (asan)",
+        "displayName": "Debug (asan)",
+        "inherits": "defaults",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Debug",
+          "DAXA_DEBUG_BUILD_ASAN":  true
+        }
+      }
     ]
-}
+  }
