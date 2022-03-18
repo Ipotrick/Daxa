@@ -18,7 +18,6 @@ layout(std140, set = 1, binding = 4) readonly buffer PackedVec3BufferView{ Packe
 
 layout(std140, push_constant) uniform PushConstants {
     uint vertexPositionBufferId;
-    uint _pad0;
     uint primitiveIndex;
 } pushConstants;
 

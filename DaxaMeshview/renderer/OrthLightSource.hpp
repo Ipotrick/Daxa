@@ -118,12 +118,10 @@ public:
 			auto& draw = draws[i];
 
 			struct {
-				u16 vertexBufferId;
-				u16 _pad0;
+				u32 vertexBufferId;
 				u32 drawId;
 			} push {
 				draw.prim->vertexPositions->getStorageBufferDescriptorIndex().value(),
-				0,
 				i
 			};
 			cmd->pushConstant(VK_SHADER_STAGE_VERTEX_BIT, push);
