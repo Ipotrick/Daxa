@@ -231,6 +231,7 @@ namespace daxa {
                     sampler_v.anisotropyEnable = VK_TRUE;
                     sampler_v.maxAnisotropy = 16.0f;
                     sampler_v.mipmapMode = VkSamplerMipmapMode::VK_SAMPLER_MIPMAP_MODE_LINEAR;
+                    sampler_v.maxLod = mipmaplevels - 1.0f;
                     if (!samplers.contains(sampler_v)) {
                         samplers[sampler_v] = device->createSampler(sampler_v);
                     }
