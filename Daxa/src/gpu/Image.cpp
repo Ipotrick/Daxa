@@ -68,7 +68,7 @@ namespace daxa {
 			, viewType{ ci.viewType }
 			, format{ ci.format }
 			, components{ ci.components }
-			, subresourceRange{ ci.subresourceRange }
+			, subresourceRange{ ci.subresourceRange } 
 			, defaultSampler{ ci.defaultSampler }
 		{
 			VkImageViewCreateInfo ivci{

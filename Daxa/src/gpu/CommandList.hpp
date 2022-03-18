@@ -22,6 +22,52 @@
 
 namespace daxa {
 	namespace gpu {
+		static const VkPipelineStageFlagBits2KHR STAGE_NONE = 0ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_TOP_OF_PIPE = 0x00000001ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_DRAW_INDIRECT = 0x00000002ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_VERTEX_INPUT = 0x00000004ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_VERTEX_SHADER = 0x00000008ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_TESSELLATION_CONTROL_SHADER = 0x00000010ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_TESSELLATION_EVALUATION_SHADER = 0x00000020ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_GEOMETRY_SHADER = 0x00000040ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_FRAGMENT_SHADER = 0x00000080ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_EARLY_FRAGMENT_TESTS = 0x00000100ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_LATE_FRAGMENT_TESTS = 0x00000200ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_COLOR_ATTACHMENT_OUTPUT = 0x00000400ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_COMPUTE_SHADER = 0x00000800ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_ALL_TRANSFER = 0x00001000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_TRANSFER = 0x00001000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_BOTTOM_OF_PIPE = 0x00002000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_HOST = 0x00004000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_ALL_GRAPHICS = 0x00008000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_ALL_COMMANDS = 0x00010000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_COPY = 0x100000000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_RESOLVE = 0x200000000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_BLIT = 0x400000000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_CLEAR = 0x800000000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_INDEX_INPUT = 0x1000000000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_VERTEX_ATTRIBUTE_INPUT = 0x2000000000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_PRE_RASTERIZATION_SHADERS = 0x4000000000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_TRANSFORM_FEEDBACK_BIT_EXT = 0x01000000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_CONDITIONAL_RENDERING_BIT_EXT = 0x00040000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_COMMAND_PREPROCESS_BIT_NV = 0x00020000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT = 0x00400000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_SHADING_RATE_IMAGE_BIT_NV = 0x00400000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_ACCELERATION_STRUCTURE_BUILD = 0x02000000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_RAY_TRACING_SHADER = 0x00200000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_RAY_TRACING_SHADER_BIT_NV = 0x00200000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_NV = 0x02000000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_FRAGMENT_DENSITY_PROCESS_BIT_EXT = 0x00800000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_TASK_SHADER_BIT_NV = 0x00080000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_MESH_SHADER_BIT_NV = 0x00100000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_SUBPASS_SHADING_BIT_HUAWEI = 0x8000000000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_INVOCATION_MASK_BIT_HUAWEI = 0x10000000000ULL;
+
+		static const VkAccessFlagBits2KHR ACCESS_NONE = 0x00000000ULL;
+		static const VkAccessFlagBits2KHR ACCESS_HOST_READ = 0x00002000ULL;
+		static const VkAccessFlagBits2KHR ACCESS_HOST_WRITE = 0x00004000ULL;
+		static const VkAccessFlagBits2KHR ACCESS_MEMORY_READ = 0x00008000ULL;
+		static const VkAccessFlagBits2KHR ACCESS_MEMORY_WRITE = 0x00010000ULL;
 
 		struct BufferCopyRegion {
 			size_t srcOffset = 0;
@@ -95,17 +141,17 @@ namespace daxa {
 		 * use this for all sync inside a queue:
 		*/
 		struct MemoryBarrier {
-			VkPipelineStageFlags2KHR srcStages = VK_PIPELINE_STAGE_2_NONE_KHR;
-			VkAccessFlags2KHR srcAccess = VK_ACCESS_2_NONE_KHR;
-			VkPipelineStageFlags2KHR dstStages = VK_PIPELINE_STAGE_2_NONE_KHR;
-			VkAccessFlags2KHR dstAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR;
+			VkPipelineStageFlags2KHR srcStages = STAGE_NONE;
+			VkAccessFlags2KHR srcAccess = ACCESS_NONE;
+			VkPipelineStageFlags2KHR dstStages = STAGE_NONE;
+			VkAccessFlags2KHR dstAccess = ACCESS_MEMORY_READ;
 		};
 
 		static inline constexpr MemoryBarrier FULL_MEMORY_BARRIER = {
-			.srcStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
-			.srcAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR | VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
-			.dstStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
-			.dstAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR | VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
+			.srcStages = STAGE_ALL_COMMANDS,
+			.srcAccess = ACCESS_MEMORY_READ | ACCESS_MEMORY_WRITE,
+			.dstStages = STAGE_ALL_COMMANDS,
+			.dstAccess = ACCESS_MEMORY_READ | ACCESS_MEMORY_WRITE,
 		};
 
 		/**
@@ -113,7 +159,7 @@ namespace daxa {
 		*/
 		struct ImageBarrier {
 			MemoryBarrier 							barrier 		= {};
-			ImageViewHandle 							image 		= {};
+			ImageViewHandle 						image 			= {};
 			VkImageLayout 							layoutBefore	= {};
 			VkImageLayout 							layoutAfter		= {}; 
 			u32 									srcQueueIndex 	= VK_QUEUE_FAMILY_IGNORED;
