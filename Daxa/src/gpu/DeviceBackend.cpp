@@ -66,7 +66,7 @@ namespace daxa {
 			VkPhysicalDevice16BitStorageFeatures device16BitFeatures{
 				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES,
 				.pNext = nullptr,
-				.storageBuffer16BitAccess = VK_FALSE,
+				.storageBuffer16BitAccess = VK_TRUE,
 				.uniformAndStorageBuffer16BitAccess = VK_TRUE,
 				.storagePushConstant16 = VK_FALSE,	// AMD YOU BOZO WHY NO SUPPORT
 				.storageInputOutput16 = VK_FALSE,
