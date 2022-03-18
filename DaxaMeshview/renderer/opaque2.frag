@@ -37,18 +37,6 @@ layout(std140, set = 0, binding = 4) buffer OrthLightBufferView{
 };
 layout(set = 0, binding = 1) uniform sampler2D imageSampler2DViews[];
 
-layout(std140, push_constant) uniform PushConstants {
-    uint albedoMap;
-    uint normalMap;
-    uint globals;
-    uint primitives;
-    uint lights;
-    uint vertexPosBufferId;
-    uint vertexUVBufferId;
-    uint vertexNormalBufferId;
-    uint modelIndex;
-} pushConstants;
-
 mat3 genTBN(vec3 n, vec3 p, vec2 uv) {
     vec3 dp1 = dFdx(p);
     vec3 dp2 = dFdy(p);
@@ -63,6 +51,18 @@ mat3 genTBN(vec3 n, vec3 p, vec2 uv) {
     float invmax = inversesqrt(max(dot(t, t), dot(b, b)));
     return mat3(t * invmax, b * invmax, n);
 }
+
+layout(std140, push_constant) uniform PushConstants {
+    uint albedoMap;
+    uint normalMap;
+    uint globals;
+    uint primitives;
+    uint lights;
+    uint vertexPosBufferId;
+    uint vertexUVBufferId;
+    uint vertexNormalBufferId;
+    uint modelIndex;
+} pushConstants;
 
 void main() {
     vec3 interpVertexNormal = normalize(vtf_world_space_normal);

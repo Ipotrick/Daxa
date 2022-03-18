@@ -245,10 +245,13 @@ namespace daxa {
 						}
 						// found the same push contant range:
 						iter->stageFlags |= r.stageFlags;
+						break;
 					}
 				}
-				// did not find same push constant. make new one:
-				pushConstants.push_back(r);
+				if (iter == pushConstants.end()) {
+					// did not find same push constant. make new one:
+					pushConstants.push_back(r);
+				}
 			}
 
 			// reflect spirv descriptor sets:
@@ -348,7 +351,7 @@ namespace daxa {
 				endVertexInputAttributeBinding();
 			}
 
-			if (std::strcmp(debugName, "mesh render opaque2 pass pipeline")==0) {
+			if (debugName != nullptr && std::strcmp(debugName, "mesh render opaque2 pass pipeline")==0) {
 				printf("bing\n");
 			}
 
