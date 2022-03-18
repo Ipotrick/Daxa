@@ -299,8 +299,8 @@ namespace daxa {
 			}
 			currentRenderPass = CurrentRenderPass{
 				.colorAttachments = std::move(colorAttachments),
-				.depthAttachment = ri.depthAttachment,
-				.stencilAttachment = ri.stencilAttachment,
+				.depthAttachment = ri.depthAttachment == nullptr ? std::optional<gpu::RenderAttachmentInfo>{} : *ri.depthAttachment,
+				.stencilAttachment = ri.stencilAttachment == nullptr ? std::optional<gpu::RenderAttachmentInfo>{} : *ri.stencilAttachment,
 			};
 			operationsInProgress += 1;
 			for (int i = 0; i < ri.colorAttachments.size(); i++) {
@@ -446,12 +446,12 @@ namespace daxa {
 					DAXA_ASSERT_M(pipeformat == rpformat, std::string("renderpass color attachment formats must match the ones off the bound pipeline") + nameMessage + formatMessage);
 				}
 				if ((**currentPipeline).getDepthAttachmentFormat() != VK_FORMAT_UNDEFINED) {
-					DAXA_ASSERT_M(currentRenderPass->depthAttachment, std::string("if the pipeline uses a depth attachment the renderpass must have a depth attachemnt too") + nameMessage);
-					DAXA_ASSERT_M(currentRenderPass->depthAttachment->image->getVkFormat() == (**currentPipeline).getDepthAttachmentFormat(), std::string("the depth attachment format of the pipeline and renderpass must be the same") + nameMessage);
+					DAXA_ASSERT_M(currentRenderPass->depthAttachment.has_value(), std::string("if the pipeline uses a depth attachment the renderpass must have a depth attachemnt too") + nameMessage);
+					DAXA_ASSERT_M(currentRenderPass->depthAttachment.value().image->getVkFormat() == (**currentPipeline).getDepthAttachmentFormat(), std::string("the depth attachment format of the pipeline and renderpass must be the same") + nameMessage);
 				}
 				if ((**currentPipeline).getStencilAttachmentFormat() != VK_FORMAT_UNDEFINED) {
-					DAXA_ASSERT_M(currentRenderPass->stencilAttachment, std::string("if the pipeline uses a stencil attachment the renderpass must have a stencil attachemnt too") + nameMessage);
-					DAXA_ASSERT_M(currentRenderPass->stencilAttachment->image->getVkFormat() == (**currentPipeline).getStencilAttachmentFormat(), std::string("the stencil attachment format of the pipeline and renderpass must be the same") + nameMessage);
+					DAXA_ASSERT_M(currentRenderPass->stencilAttachment.has_value(), std::string("if the pipeline uses a stencil attachment the renderpass must have a stencil attachemnt too") + nameMessage);
+					DAXA_ASSERT_M(currentRenderPass->stencilAttachment.value().image->getVkFormat() == (**currentPipeline).getStencilAttachmentFormat(), std::string("the stencil attachment format of the pipeline and renderpass must be the same") + nameMessage);
 				}
 			}
 		}
