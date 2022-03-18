@@ -112,46 +112,46 @@ struct World {
 
     void reload_compute_pipeline(RenderContext & render_ctx) {
         try {
-            std::ifstream comp1_file(chunk_block_pass1_comp_path);
-            if (!comp1_file.is_open())
-                throw std::runtime_error("failed to open comp1 shader file");
-            std::stringstream comp1_sstr;
-            comp1_sstr << comp1_file.rdbuf();
-            comp1_file.close();
-            const auto & comp1_str = comp1_sstr.str();
+            // std::ifstream comp1_file(chunk_block_pass1_comp_path);
+            // if (!comp1_file.is_open())
+            //     throw std::runtime_error("failed to open comp1 shader file");
+            // std::stringstream comp1_sstr;
+            // comp1_sstr << comp1_file.rdbuf();
+            // comp1_file.close();
+            // const auto & comp1_str = comp1_sstr.str();
 
-            std::ifstream comp2_file(chunk_block_pass2_comp_path);
-            if (!comp2_file.is_open())
-                throw std::runtime_error("failed to open comp2 shader file");
-            std::stringstream comp2_sstr;
-            comp2_sstr << comp2_file.rdbuf();
-            comp2_file.close();
-            const auto & comp2_str = comp2_sstr.str();
+            // std::ifstream comp2_file(chunk_block_pass2_comp_path);
+            // if (!comp2_file.is_open())
+            //     throw std::runtime_error("failed to open comp2 shader file");
+            // std::stringstream comp2_sstr;
+            // comp2_sstr << comp2_file.rdbuf();
+            // comp2_file.close();
+            // const auto & comp2_str = comp2_sstr.str();
 
-            std::ifstream comp3_file(chunk_mesh_pass_comp_path);
-            if (!comp3_file.is_open())
-                throw std::runtime_error("failed to open comp3 shader file");
-            std::stringstream comp3_sstr;
-            comp3_sstr << comp3_file.rdbuf();
-            comp3_file.close();
-            const auto & comp3_str = comp3_sstr.str();
+            // std::ifstream comp3_file(chunk_mesh_pass_comp_path);
+            // if (!comp3_file.is_open())
+            //     throw std::runtime_error("failed to open comp3 shader file");
+            // std::stringstream comp3_sstr;
+            // comp3_sstr << comp3_file.rdbuf();
+            // comp3_file.close();
+            // const auto & comp3_str = comp3_sstr.str();
 
             auto comp1_shader =
                 render_ctx.device
                     ->createShaderModule({
-                        .source = comp1_str.c_str(),
+                        .pathToSource = chunk_block_pass1_comp_path.string().c_str(),
                         .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                     }).value();
             auto comp2_shader =
                 render_ctx.device
                     ->createShaderModule({
-                        .source = comp2_str.c_str(),
+                        .pathToSource = chunk_block_pass2_comp_path.string().c_str(),
                         .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                     }).value();
             auto comp3_shader =
                 render_ctx.device
                     ->createShaderModule({
-                        .source = comp3_str.c_str(),
+                        .pathToSource = chunk_mesh_pass_comp_path.string().c_str(),
                         .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                     }).value();
 
@@ -173,32 +173,32 @@ struct World {
 
     void reload_graphics_pipeline(RenderContext & render_ctx) {
         try {
-            std::ifstream vert_file(vert_path);
-            if (!vert_file.is_open())
-                throw std::runtime_error("failed to open vert shader file");
-            std::stringstream vert_sstr;
-            vert_sstr << vert_file.rdbuf();
-            vert_file.close();
-            const auto & vert_str = vert_sstr.str();
+            // std::ifstream vert_file(vert_path);
+            // if (!vert_file.is_open())
+            //     throw std::runtime_error("failed to open vert shader file");
+            // std::stringstream vert_sstr;
+            // vert_sstr << vert_file.rdbuf();
+            // vert_file.close();
+            // const auto & vert_str = vert_sstr.str();
 
-            std::ifstream frag_file(frag_path);
-            if (!frag_file.is_open())
-                throw std::runtime_error("failed to open frag shader file");
-            std::stringstream frag_sstr;
-            frag_sstr << frag_file.rdbuf();
-            frag_file.close();
-            const auto & frag_str = frag_sstr.str();
+            // std::ifstream frag_file(frag_path);
+            // if (!frag_file.is_open())
+            //     throw std::runtime_error("failed to open frag shader file");
+            // std::stringstream frag_sstr;
+            // frag_sstr << frag_file.rdbuf();
+            // frag_file.close();
+            // const auto & frag_str = frag_sstr.str();
 
             auto vert_shader =
                 render_ctx.device
                     ->createShaderModule({
-                        .source = vert_str.c_str(),
+                        .pathToSource = vert_path.string().c_str(),
                         .stage = VK_SHADER_STAGE_VERTEX_BIT,
                     }).value();
             auto frag_shader =
                 render_ctx.device
                     ->createShaderModule({
-                        .source = frag_str.c_str(),
+                        .pathToSource = frag_path.string().c_str(),
                         .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
                     }).value();
 

@@ -35,14 +35,14 @@ struct Player {
     }
     void on_key(int key, int action) {
         switch (key) {
-        case input::keybinds::MOVE_PZ: move.pz = action; break;
-        case input::keybinds::MOVE_NZ: move.nz = action; break;
+        case input::keybinds::MOVE_PZ: move.pz = action != 0; break;
+        case input::keybinds::MOVE_NZ: move.nz = action != 0; break;
 
-        case input::keybinds::MOVE_PX: move.px = action; break;
-        case input::keybinds::MOVE_NX: move.nx = action; break;
+        case input::keybinds::MOVE_PX: move.px = action != 0; break;
+        case input::keybinds::MOVE_NX: move.nx = action != 0; break;
 
-        case input::keybinds::MOVE_PY: move.py = action; break;
-        case input::keybinds::MOVE_NY: move.ny = action; break;
+        case input::keybinds::MOVE_PY: move.py = action != 0; break;
+        case input::keybinds::MOVE_NY: move.ny = action != 0; break;
         }
     }
     void on_mouse_move(double delta_x, double delta_y) {

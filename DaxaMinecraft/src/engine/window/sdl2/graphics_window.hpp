@@ -100,18 +100,17 @@ template <typename UserT> struct GraphicsWindow {
                     window_ptr->size_y = y;
                     user_ptr->on_window_resize(x, y);
                 });
-            glfwSetKeyCallback(glfw_window_ptr, [](GLFWwindow * glfw_window_ptr, int key,
-                                                   int action, int scancode, int mods) {
+            glfwSetKeyCallback(glfw_window_ptr, [](GLFWwindow * glfw_window_ptr, int key, int scancode, int action, int mods) {
                 auto * userdata   = glfwGetWindowUserPointer(glfw_window_ptr);
                 auto   user_ptr   = (UserT *)userdata;
-                auto   window_ptr = (GraphicsWindow *)userdata;
+                // auto   window_ptr = (GraphicsWindow *)userdata;
                 user_ptr->on_key(key, action);
             });
             glfwSetCursorPosCallback(
                 glfw_window_ptr, [](GLFWwindow * glfw_window_ptr, double x, double y) {
                     auto * userdata   = glfwGetWindowUserPointer(glfw_window_ptr);
                     auto   user_ptr   = (UserT *)userdata;
-                    auto   window_ptr = (GraphicsWindow *)userdata;
+                    // auto   window_ptr = (GraphicsWindow *)userdata;
                     user_ptr->on_mouse_move(x, y);
                 });
         }
@@ -131,15 +130,13 @@ template <typename UserT> struct GraphicsWindow {
 
         void poll_events() { glfwPollEvents(); }
 
-        void set_mouse_pos(i32 x, i32 y) {
-            //
-        }
+        void set_mouse_pos(i32 x, i32 y) { glfwSetCursorPos(glfw_window_ptr, x, y); }
     };
 #endif
 
+    WindowImpl   impl;
     DaxaContext  daxa_ctx{};
     VkSurfaceKHR vulkan_surface;
-    WindowImpl   impl;
     bool         _should_close = false;
     int32_t      size_x, size_y;
 
@@ -170,6 +167,9 @@ template <typename UserT> struct GraphicsWindow {
     void toggle_pause() {
         paused = !paused;
         std::cout << "Setting Paused to " << paused << "\n";
+
+        glfwSetInputMode(impl.glfw_window_ptr, GLFW_CURSOR,
+                         paused ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
 
         // SDL_CaptureMouse(paused ? SDL_FALSE : SDL_TRUE);
         // SDL_SetRelativeMouseMode(paused ? SDL_FALSE : SDL_TRUE);
