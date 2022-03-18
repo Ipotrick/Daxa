@@ -25,7 +25,7 @@ namespace daxa {
 			VkBool32                compareEnable 			= VK_FALSE;
 			VkCompareOp             compareOp 				= VK_COMPARE_OP_MAX_ENUM;
 			float                   minLod 					= 0.0f;
-			float                   maxLod 					= 1'000'000.0f;
+			float                   maxLod 					= 0.0f;
 			VkBorderColor           borderColor 			= VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 			VkBool32                unnormalizedCoordinates = VK_FALSE;
 			char const* 			debugName 				= {};
