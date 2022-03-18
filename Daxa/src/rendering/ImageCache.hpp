@@ -40,43 +40,17 @@ namespace daxa {
             return hash;
         }
     };
-
-    struct ImageCacheFetchInfoHasher {
-        std::size_t operator()(ImageCacheFetchInfo const& info) const {
-            size_t hash = std::filesystem::hash_value(info.path);
-            hash <<= 3;
-            hash ^= (size_t)info.preload;
-            hash ^= info.preloadSize;
-            hash <<= 3;
-            hash ^= (size_t)info.viewFormat;
-            hash <<= 1;
-            if (info.samplerInfo.has_value()) {
-                hash ^= GPUSamplerCreateInfoHasher{}(info.samplerInfo.value());
-            }
-            hash <<= 2;
-            return hash;
-        }
-    };
-
-    class ImageCache {
-    public:
-        ImageCache(gpu::DeviceHandle device) 
-            : device{ std::move(device) }
-        { }
-
-        gpu::ImageViewHandle get(ImageCacheFetchInfo const& info, gpu::CommandListHandle& cmdList) {
-            if (!cache.contains(info)) {
-                printf("image cache miss\n");
-                cache[info] = loadImage(info, cmdList);
-            } else {
-                printf("image cache hit\n");
-            }
-            return cache[info];
-        }
-
-        std::unordered_map<ImageCacheFetchInfo, gpu::ImageViewHandle, ImageCacheFetchInfoHasher> cache = {};
-    private:
-        void generateMipLevels(gpu::CommandListHandle& cmdList, gpu::ImageViewHandle& img) {
+    
+    /**
+     * @brief generated mipmaps for a 2d texture for layer 0. 
+     * The incoming image layout at level 0 must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL.
+     * All image level layouts will be set to dstImageLayoutsAllLevels in the function.
+     * 
+     * @param cmdList command list the mip generation commands are recorded to.
+     * @param img to generate mipmaps  for. The layout of level 0 must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL.
+     * @param dstImageLayoutsAllLevels the layout of all image levels after the mip generation.
+     */
+    void generateMipLevels(gpu::CommandListHandle& cmdList, gpu::ImageViewHandle& img, VkImageLayout dstImageLayoutsAllLevels) {
             i32 mipwidth = img->getImageHandle()->getVkExtent3D().width;
             i32 mipheight = img->getImageHandle()->getVkExtent3D().height;
             for (u32 i = 0; i < img->getImageHandle()->getMipLevels() - 1; i++) {
@@ -116,25 +90,25 @@ namespace daxa {
                     },
                 });
                 VkImageBlit blit{
-                    .srcOffsets = {
-                        VkOffset3D{ 0, 0, 0 },
-                        VkOffset3D{ mipwidth, mipheight, 1},
-                    },
                     .srcSubresource = VkImageSubresourceLayers{
                         .aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT,
                         .mipLevel = i,
                         .baseArrayLayer = 0,
                         .layerCount = 1,
                     },
-                    .dstOffsets = {
+                    .srcOffsets = {
                         VkOffset3D{ 0, 0, 0 },
-                        VkOffset3D{ std::max(1, mipwidth / 2), std::max(1, mipheight / 2), 1},
+                        VkOffset3D{ mipwidth, mipheight, 1},
                     },
                     .dstSubresource = VkImageSubresourceLayers{
                         .aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT,
                         .mipLevel = i+1,
                         .baseArrayLayer = 0,
                         .layerCount = 1,
+                    },
+                    .dstOffsets = {
+                        VkOffset3D{ 0, 0, 0 },
+                        VkOffset3D{ std::max(1, mipwidth / 2), std::max(1, mipheight / 2), 1},
                     },
                 };
 
@@ -199,6 +173,41 @@ namespace daxa {
             cmdList->insertBarriers({}, {buff.data(), buffSize});
         }
 
+    struct ImageCacheFetchInfoHasher {
+        std::size_t operator()(ImageCacheFetchInfo const& info) const {
+            size_t hash = std::filesystem::hash_value(info.path);
+            hash <<= 3;
+            hash ^= (size_t)info.preload;
+            hash ^= info.preloadSize;
+            hash <<= 3;
+            hash ^= (size_t)info.viewFormat;
+            hash <<= 1;
+            if (info.samplerInfo.has_value()) {
+                hash ^= GPUSamplerCreateInfoHasher{}(info.samplerInfo.value());
+            }
+            hash <<= 2;
+            return hash;
+        }
+    };
+
+    class ImageCache {
+    public:
+        ImageCache(gpu::DeviceHandle device) 
+            : device{ std::move(device) }
+        { }
+
+        gpu::ImageViewHandle get(ImageCacheFetchInfo const& info, gpu::CommandListHandle& cmdList) {
+            if (!cache.contains(info)) {
+                printf("image cache miss\n");
+                cache[info] = loadImage(info, cmdList);
+            } else {
+                printf("image cache hit\n");
+            }
+            return cache[info];
+        }
+
+        std::unordered_map<ImageCacheFetchInfo, gpu::ImageViewHandle, ImageCacheFetchInfoHasher> cache = {};
+    private:
         gpu::ImageViewHandle loadImage(ImageCacheFetchInfo const& info, gpu::CommandListHandle& cmdList) {
             //stbi_set_flip_vertically_on_load(1);
             int width, height, channels;
@@ -220,8 +229,8 @@ namespace daxa {
                     .image = device->createImage({
                         .format = info.viewFormat,
                         .extent = { (u32)width, (u32)height, 1 },
-                        .usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
                         .mipLevels = mipmaplevels,
+                        .usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
                     }),
                     .format = info.viewFormat, 
                 };
@@ -245,8 +254,8 @@ namespace daxa {
                 auto image = device->createImageView(ci);
 
                 cmdList->insertImageBarrier({
-                    .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                     .image = image,
+                    .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 });
                 cmdList->copyHostToImage({
                     .src = data,
@@ -257,17 +266,17 @@ namespace daxa {
                     cmdList->insertImageBarrier({
                         .barrier = {
                             .srcStages = gpu::STAGE_TRANSFER,
-                            .srcAccess = gpu::ACCESS_MEMORY_WRITE,
-                            .dstStages = gpu::STAGE_ALL_COMMANDS,
                             .srcAccess = gpu::ACCESS_MEMORY_READ,
+                            .dstStages = gpu::STAGE_ALL_COMMANDS,
+                            .dstAccess = gpu::ACCESS_MEMORY_WRITE,
                         },
+                        .image = image,
                         .layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                         .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                        .image = image,
                     });
                 }
                 else {
-                    generateMipLevels(cmdList, image);
+                    generateMipLevels(cmdList, image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
                 }
 
                 std::free(data);
