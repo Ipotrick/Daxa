@@ -9,6 +9,9 @@ const uint Chunk_NZ = 16;
 layout (set = 0, binding = 0) buffer chunk_buffer {
     uint blocks[16 * 16 * 16]; 
 };
+layout(push_constant) uniform Push {
+    vec3 pos;
+} p;
 
 void main() {
 
