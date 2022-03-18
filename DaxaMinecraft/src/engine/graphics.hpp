@@ -33,19 +33,26 @@ struct RenderContext {
               .width       = (uint32_t)sx,
               .height      = (uint32_t)sy,
               .presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR,
+              .debugName   = "Swapchain",
           })),
           swapchain_image(swapchain->aquireNextImage()),
           depth_image(device->createImageView({
               .image  = device->createImage({
-                   .format = VK_FORMAT_D32_SFLOAT,
-                   .extent = {(uint32_t)sx, (uint32_t)sy, 1},
-                   .usage  = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                   .format    = VK_FORMAT_D32_SFLOAT,
+                   .extent    = {(uint32_t)sx, (uint32_t)sy, 1},
+                   .usage     = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                   .debugName = "Depth Image",
               }),
               .format = VK_FORMAT_D32_SFLOAT,
               .subresourceRange =
                   {
-                      .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+                      .aspectMask     = VK_IMAGE_ASPECT_DEPTH_BIT,
+                      .baseMipLevel   = 0,
+                      .levelCount     = 1,
+                      .baseArrayLayer = 0,
+                      .layerCount     = 1,
                   },
+              .debugName = "Depth Image View",
           })) {
         for (int i = 0; i < 3; i++) {
             frames.push_back(PerFrameData{
@@ -74,31 +81,37 @@ struct RenderContext {
             swapchain_image = swapchain->aquireNextImage();
             device->createImageView({
                 .image  = device->createImage({
-                     .format = VK_FORMAT_D32_SFLOAT,
-                     .extent = {(uint32_t)sx, (uint32_t)sy, 1},
-                     .usage  = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                     .format    = VK_FORMAT_D32_SFLOAT,
+                     .extent    = {(uint32_t)sx, (uint32_t)sy, 1},
+                     .usage     = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                     .debugName = "Depth Image (resize)",
                 }),
                 .format = VK_FORMAT_D32_SFLOAT,
                 .subresourceRange =
                     {
-                        .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+                        .aspectMask     = VK_IMAGE_ASPECT_DEPTH_BIT,
+                        .baseMipLevel   = 0,
+                        .levelCount     = 1,
+                        .baseArrayLayer = 0,
+                        .layerCount     = 1,
                     },
+                .debugName = "Depth Image View (resize)",
             });
         }
         auto * currentFrame = &frames.front();
         auto   cmd_list     = queue->getCommandList({});
 
-        // std::array imgBarrier0 = {daxa::gpu::ImageBarrier{
-        //     .dstStages    = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
-        //     .image        = swapchain_image.getImageViewHandle(),
-        //     .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
-        //     .layoutAfter  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        // }};
-        // std::array memBarrier0 = {daxa::gpu::MemoryBarrier{
-        //     .srcAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
-        //     .dstStages = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT_KHR,
-        // }};
-        // cmd_list->insertBarriers(memBarrier0, imgBarrier0);
+        std::array imgBarrier0 = {daxa::gpu::ImageBarrier{
+            .barrier      = daxa::gpu::FULL_MEMORY_BARRIER,
+            .image        = swapchain_image.getImageViewHandle(),
+            .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
+            .layoutAfter  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        }};
+        std::array memBarrier0 = {daxa::gpu::MemoryBarrier{
+            .srcAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
+            .dstStages = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT_KHR,
+        }};
+        cmd_list->insertBarriers(memBarrier0, imgBarrier0);
 
         return cmd_list;
     }
@@ -172,18 +185,25 @@ struct Texture {
 
         image = render_ctx.device->createImageView({
             .image  = render_ctx.device->createImage({
-                 .format = data_format,
-                 .extent = {(uint32_t)size_x, (uint32_t)size_y, 1},
-                 .usage  = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+                 .format    = data_format,
+                 .extent    = {(uint32_t)size_x, (uint32_t)size_y, 1},
+                 .usage     = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+                 .debugName = "Texture Image",
             }),
-            .format = VK_FORMAT_D32_SFLOAT,
+            .format = data_format,
             .subresourceRange =
                 {
-                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                    .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+                    .baseMipLevel   = 0,
+                    .levelCount     = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount     = 1,
                 },
             .defaultSampler = render_ctx.device->createSampler({
                 .magFilter = VK_FILTER_NEAREST,
+                .debugName = "Texture Sampler",
             }),
+            .debugName      = "Texture Image View",
         });
 
         auto cmd_list = render_ctx.queue->getCommandList({});
