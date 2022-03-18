@@ -194,6 +194,12 @@ namespace daxa {
 
 			shaderc::Compiler compiler;
   			shaderc::CompileOptions options;
+			/*
+				DO NOT ENABLE OPTIMIZATIONS!
+				The driver will optimize it anyways AND
+				the optimizations can shrink push constants wich will definetly lead to bugs in reflected pipeline layouts!
+			*/
+  			// options.SetOptimizationLevel(shaderc_optimization_level_size); 
 			options.SetSourceLanguage(langType);
 			
 			shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(src, stage, "name", options);
