@@ -59,4 +59,6 @@ void main() {
     mat4 mvp = globalDataBufferView[uint(pushConstants.globals)].globalData.vp * m;
     vtf_uv = pulledUV;
     gl_Position = mvp * vec4(pulledPosition, 1.0f);
+
+    gl_Position = vec4(1.0,1.0,1.0,1.0);
 }

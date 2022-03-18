@@ -215,7 +215,8 @@ namespace daxa {
 				.pCode = spirv.data(),
 			};
 			VkShaderModule shaderModule;
-			if (vkCreateShaderModule(deviceBackend->device.device, (VkShaderModuleCreateInfo*)&shaderModuleCI, nullptr, &shaderModule) == VK_SUCCESS) {
+			VkResult res;
+			if ((res = vkCreateShaderModule(deviceBackend->device.device, (VkShaderModuleCreateInfo*)&shaderModuleCI, nullptr, &shaderModule)) == VK_SUCCESS) {
 				return { shaderModule };
 			}
 			else {

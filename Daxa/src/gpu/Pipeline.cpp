@@ -19,6 +19,14 @@ namespace daxa {
 					.pObjectName = debugName,
 				};
 				instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
+				VkDebugUtilsObjectNameInfoEXT nameInfoLayout {
+					.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+					.pNext = NULL,
+					.objectType = VK_OBJECT_TYPE_PIPELINE_LAYOUT,
+					.objectHandle = (uint64_t)pipeline.layout,
+					.pObjectName = debugName,
+				};
+				instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfoLayout);
 				pipeline.debugName = debugName;
 			}
 		}
@@ -231,16 +239,16 @@ namespace daxa {
 			for (auto& r : refl) {
 				auto iter = pushConstants.begin();
 				for (; iter != pushConstants.end(); iter++) {
-					if (iter->offset == r.offset && iter->size == r.size && iter->stageFlags == r.stageFlags) break;
+					if (iter->offset == r.offset) {
+						if (iter->size != r.size) {
+							DAXA_ASSERT_M(false, "push constant ranges of the same offset must have the same size");
+						}
+						// found the same push contant range:
+						iter->stageFlags |= r.stageFlags;
+					}
 				}
-
-				if (iter != pushConstants.end()) {
-					// if the same push constant is present in multiple stages we combine them to one
-					iter->stageFlags |= (VkShaderStageFlagBits)shaderModule->getVkShaderStage();
-				}
-				else {
-					pushConstants.push_back(r);
-				}
+				// did not find same push constant. make new one:
+				pushConstants.push_back(r);
 			}
 
 			// reflect spirv descriptor sets:
@@ -340,6 +348,10 @@ namespace daxa {
 				endVertexInputAttributeBinding();
 			}
 
+			if (std::strcmp(debugName, "mesh render opaque2 pass pipeline")==0) {
+				printf("bing\n");
+			}
+
 			for (auto& shaderModule : this->shaderModules) {
 				VkPipelineShaderStageCreateInfo pipelineShaderStageCI{
 					.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -349,7 +361,6 @@ namespace daxa {
 					.pName = shaderModule->entryPoint.c_str(),
 				};
 				this->shaderStageCreateInfo.push_back(pipelineShaderStageCI);
-
 				reflectShader(shaderModule, pushConstants, bindingSetDescriptions);
 			}
 
