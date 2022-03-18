@@ -76,8 +76,16 @@ namespace daxa {
 				.pNext = nullptr,
 				.nullDescriptor = VK_TRUE,
 			};
+			VkPhysicalDeviceFeatures2 deviceFeatures{
+				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+				.pNext = nullptr,
+				.features = {
+					.samplerAnisotropy = VK_TRUE,
+				}
+			};
 
 			vkb::DeviceBuilder deviceBuilder{ physicalDevice };
+			deviceBuilder.add_pNext(&deviceFeatures);
 			deviceBuilder.add_pNext(&descriptorIndexingFeature);
 			deviceBuilder.add_pNext(&dynamicRenderingFeature);
 			deviceBuilder.add_pNext(&timelineSemaphoreFeatures);
