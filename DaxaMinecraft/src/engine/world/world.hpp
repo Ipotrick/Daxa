@@ -421,6 +421,7 @@ struct World {
         });
 
         cmd_list->bindPipeline(chunk_block_pass2_compute_pipeline);
+        cmd_list->pushConstant(VK_SHADER_STAGE_COMPUTE_BIT, chunk_pos);
         cmd_list->dispatch(1, 1, Chunk::NZ);
 
         cmd_list->finalize();
