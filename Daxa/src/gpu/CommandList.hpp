@@ -310,9 +310,9 @@ namespace daxa {
 			MappedMemoryPointer<u8> mapMemoryStagedVoid(BufferHandle copyDst, size_t size, size_t dstOffset);
 
 			struct CurrentRenderPass{
-				std::vector<RenderAttachmentInfo> 	colorAttachments 	= {};
-				RenderAttachmentInfo* 				depthAttachment 	= nullptr;
-				RenderAttachmentInfo* 				stencilAttachment 	= nullptr;
+				std::vector<RenderAttachmentInfo> 		colorAttachments 	= {};
+				std::optional<RenderAttachmentInfo> 	depthAttachment 	= {};
+				std::optional<RenderAttachmentInfo> 	stencilAttachment 	= {};
 			};
 
 			std::shared_ptr<DeviceBackend> 					deviceBackend			= {};
