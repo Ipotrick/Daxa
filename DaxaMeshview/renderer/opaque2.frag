@@ -38,14 +38,14 @@ layout(std140, set = 0, binding = 4) buffer OrthLightBufferView{
 layout(set = 0, binding = 1) uniform sampler2D imageSampler2DViews[];
 
 layout(std140, push_constant) uniform PushConstants {
-    uint16_t albedoMap;
-    uint16_t normalMap;
-    uint16_t globals;
-    uint16_t primitives;
-    uint16_t lights;
-    uint16_t vertexPosBufferId;
-    uint16_t vertexUVBufferId;
-    uint16_t vertexNormalBufferId;
+    uint albedoMap;
+    uint normalMap;
+    uint globals;
+    uint primitives;
+    uint lights;
+    uint vertexPosBufferId;
+    uint vertexUVBufferId;
+    uint vertexNormalBufferId;
     uint modelIndex;
 } pushConstants;
 

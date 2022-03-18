@@ -120,11 +120,13 @@ public:
 	void initOpaque2(RenderContext& renderCTX) {
 		auto vertexShaderOpaqueCI = daxa::gpu::ShaderModuleCreateInfo{
 			.pathToSource = "./DaxaMeshview/renderer/opaque2.vert",
-			.stage = VK_SHADER_STAGE_VERTEX_BIT
+			.stage = VK_SHADER_STAGE_VERTEX_BIT,
+			.debugName = "opaque2 vertex",
 		};
 		auto fragmentShaderOpaqueCI = daxa::gpu::ShaderModuleCreateInfo{
 			.pathToSource = "./DaxaMeshview/renderer/opaque2.frag",
-			.stage = VK_SHADER_STAGE_FRAGMENT_BIT
+			.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+			.debugName = "opaque2 fragment",
 		};
 
 		daxa::gpu::GraphicsPipelineBuilder opaque2PipelineBuilder = {};
