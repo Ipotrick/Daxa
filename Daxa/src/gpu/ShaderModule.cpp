@@ -194,7 +194,6 @@ namespace daxa {
 
 			shaderc::Compiler compiler;
   			shaderc::CompileOptions options;
-  			options.SetOptimizationLevel(shaderc_optimization_level_size);
 			options.SetSourceLanguage(langType);
 			
 			shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(src, stage, "name", options);
