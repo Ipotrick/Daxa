@@ -301,7 +301,12 @@ namespace daxa {
 			// sync:
 
 			void queueMemoryBarrier(MemoryBarrier const& memoryBarrier);
-			void queueImageBarrier(MemoryBarrier const& memoryBarrier);
+			void queueImageBarrier(ImageBarrier const& memoryBarrier);
+
+			/**
+			 * 
+			*/
+			void insertQueuedBarriers();
 
 			void insertBarriers(std::span<MemoryBarrier> memBarriers, std::span<ImageBarrier> imgBarriers);
 
@@ -365,6 +370,9 @@ namespace daxa {
 			};
 
 			bool 											bBarriersQueued 		= {};
+			std::vector<VkMemoryBarrier2>					queuedMemoryBarriers	= {};
+			std::vector<VkBufferMemoryBarrier2>				queuedBufferBarriers	= {};
+			std::vector<VkImageMemoryBarrier2>				queuedImageBarriers		= {};
 			std::shared_ptr<DeviceBackend> 					deviceBackend			= {};
 			VkCommandBuffer 								cmd 					= {};
 			VkCommandPool 									cmdPool 				= {};

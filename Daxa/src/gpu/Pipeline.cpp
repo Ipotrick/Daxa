@@ -351,10 +351,6 @@ namespace daxa {
 				endVertexInputAttributeBinding();
 			}
 
-			if (debugName != nullptr && std::strcmp(debugName, "mesh render opaque2 pass pipeline")==0) {
-				printf("bing\n");
-			}
-
 			for (auto& shaderModule : this->shaderModules) {
 				VkPipelineShaderStageCreateInfo pipelineShaderStageCI{
 					.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
