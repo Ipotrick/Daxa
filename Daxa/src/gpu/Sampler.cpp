@@ -89,7 +89,7 @@ namespace daxa {
 			if (this->deviceBackend->device.device) {
 				{
 					std::unique_lock bindAllLock(this->deviceBackend->bindAllMtx);
-					this->deviceBackend->combinedImageSamplerIndexFreeList.push_back(samplerIndex);
+					this->deviceBackend->samplerIndexFreeList.push_back(samplerIndex);
 					
 					VkDescriptorImageInfo imageInfo{
 						.sampler = deviceBackend->dummySampler,

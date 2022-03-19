@@ -31,14 +31,10 @@ namespace daxa {
 			VkDescriptorPool bindAllSetPool 												= {};
 			VkDescriptorSetLayout bindAllSetLayout 											= {};
 			VkDescriptorSet bindAllSet 														= {};
+			std::vector<u16> imageViewIndexFreeList											= {};
+			u16 nextImageViewIndex 															= 1;
 			std::vector<u16> samplerIndexFreeList 											= {};
 			u16 nextSamplerIndex															= 1;
-			std::vector<u16> combinedImageSamplerIndexFreeList 								= {};
-			u16 nextCombinedImageSamplerIndex												= 1;
-			std::vector<u16> sampledImageIndexFreeList 										= {};
-			u16 nextSampledImageIndex														= 1;
-			std::vector<u16> storageImageIndexFreeList 										= {};
-			u16 nextStorageImageIndex														= 1;
 			std::vector<u16> storageBufferIndexFreeList 									= {};
 			u16 nextStorageBufferIndex														= 1;
 			VkSampler dummySampler 															= {};
