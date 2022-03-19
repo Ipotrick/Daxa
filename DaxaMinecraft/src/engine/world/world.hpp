@@ -9,7 +9,7 @@
 #include <thread>
 
 struct World {
-    static constexpr int        RENDER_DIST_XZ = 8;
+    static constexpr int RENDER_DIST_XZ = 8;
     static constexpr glm::ivec3 CHUNK_MAX{RENDER_DIST_XZ * 2, 4, RENDER_DIST_XZ * 2};
 
     std::array<std::array<std::array<RenderableChunk *, CHUNK_MAX.x>, CHUNK_MAX.y>,
@@ -20,13 +20,13 @@ struct World {
         glm::mat4 viewproj_mat;
     };
     daxa::gpu::BindingSetAllocatorHandle globals_uniform_allocator;
-    daxa::gpu::BufferHandle              globals_uniform_buffer;
+    daxa::gpu::BufferHandle globals_uniform_buffer;
 
     daxa::gpu::BindingSetAllocatorHandle compute_binding_set_allocator;
-    daxa::gpu::BufferHandle              chunk_buffer;
+    daxa::gpu::BufferHandle chunk_buffer;
 
     daxa::gpu::PipelineHandle graphics_pipeline;
-    Texture                   atlas_texture;
+    Texture atlas_texture;
 
     std::filesystem::path vert_path{"DaxaMinecraft/assets/chunk.vert"};
     std::filesystem::path frag_path{"DaxaMinecraft/assets/chunk.frag"};
@@ -38,7 +38,8 @@ struct World {
         "DaxaMinecraft/assets/chunk_block_pass1.comp";
     std::filesystem::path chunk_block_pass2_comp_path =
         "DaxaMinecraft/assets/chunk_block_pass2.comp";
-    std::filesystem::path chunk_mesh_pass_comp_path = "DaxaMinecraft/assets/chunk_mesh_pass.comp";
+    std::filesystem::path chunk_mesh_pass_comp_path =
+        "DaxaMinecraft/assets/chunk_mesh_pass.comp";
     // std::filesystem::path chunk_mesh_comp_path{"DaxaMinecraft/assets/chunk_mesh.comp"};
 
     std::chrono::system_clock::rep last_vert_reload_time = 0, last_frag_reload_time = 0;
@@ -48,7 +49,7 @@ struct World {
     static constexpr glm::ivec3 chunk_min{-RENDER_DIST_XZ, -2, -RENDER_DIST_XZ};
     static constexpr glm::ivec3 chunk_max{RENDER_DIST_XZ, 2, RENDER_DIST_XZ};
 
-    World(RenderContext & render_ctx)
+    World(RenderContext &render_ctx)
         : atlas_texture(render_ctx, "DaxaMinecraft/assets/atlas.png") {
         try_reload_shaders(render_ctx);
 
@@ -63,14 +64,14 @@ struct World {
         });
 
         compute_binding_set_allocator = render_ctx.device->createBindingSetAllocator({
-            .setLayout = chunk_block_pass1_compute_pipeline->getSetLayout(0)
+            .setLayout = chunk_block_pass1_compute_pipeline->getSetLayout(0),
         });
 
         chunk_buffer = render_ctx.device->createBuffer({
             .size = sizeof(Chunk::BlockBuffer),
             .usage =
                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            .memoryUsage      = VmaMemoryUsage(VMA_MEMORY_USAGE_GPU_TO_CPU),
+            .memoryUsage = VmaMemoryUsage(VMA_MEMORY_USAGE_GPU_TO_CPU),
             .memoryProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
         });
 
@@ -79,20 +80,33 @@ struct World {
         for (int zi = chunk_min.z; zi < chunk_max.z; ++zi) {
             for (int yi = chunk_min.y; yi < chunk_max.y; ++yi) {
                 for (int xi = chunk_min.x; xi < chunk_max.x; ++xi) {
-                    auto & current_chunk_ptr =
+                    auto &current_chunk_ptr =
                         chunks[xi - chunk_min.x][yi - chunk_min.y][zi - chunk_min.z];
                     current_chunk_ptr = new RenderableChunk(render_ctx, {xi, yi, zi});
                 }
             }
         }
+
         update_neighbors();
+
+        std::vector<Structure> structures;
 
         for (int zi = chunk_min.z; zi < chunk_max.z; ++zi) {
             for (int yi = chunk_min.y; yi < chunk_max.y; ++yi) {
                 for (int xi = chunk_min.x; xi < chunk_max.x; ++xi) {
-                    auto & current_chunk_ptr =
+                    auto &current_chunk_ptr =
                         chunks[xi - chunk_min.x][yi - chunk_min.y][zi - chunk_min.z];
-                    current_chunk_ptr->chunk.generate_block_data_pass2();
+                    current_chunk_ptr->chunk.generate_block_data_pass2(structures);
+                }
+            }
+        }
+
+        for (int zi = chunk_min.z; zi < chunk_max.z; ++zi) {
+            for (int yi = chunk_min.y; yi < chunk_max.y; ++yi) {
+                for (int xi = chunk_min.x; xi < chunk_max.x; ++xi) {
+                    auto &current_chunk_ptr =
+                        chunks[xi - chunk_min.x][yi - chunk_min.y][zi - chunk_min.z];
+                    current_chunk_ptr->chunk.generate_block_data_structures(structures);
                 }
             }
         }
@@ -102,7 +116,7 @@ struct World {
         for (int zi = chunk_min.z; zi < chunk_max.z; ++zi) {
             for (int yi = chunk_min.y; yi < chunk_max.y; ++yi) {
                 for (int xi = chunk_min.x; xi < chunk_max.x; ++xi) {
-                    auto & current_chunk_ptr =
+                    auto &current_chunk_ptr =
                         chunks[xi - chunk_min.x][yi - chunk_min.y][zi - chunk_min.z];
                     delete current_chunk_ptr;
                 }
@@ -110,7 +124,7 @@ struct World {
         }
     }
 
-    void reload_compute_pipeline(RenderContext & render_ctx) {
+    void reload_compute_pipeline(RenderContext &render_ctx) {
         try {
             // std::ifstream comp1_file(chunk_block_pass1_comp_path);
             // if (!comp1_file.is_open())
@@ -141,37 +155,43 @@ struct World {
                     ->createShaderModule({
                         .pathToSource = chunk_block_pass1_comp_path.string().c_str(),
                         .stage = VK_SHADER_STAGE_COMPUTE_BIT,
-                    }).value();
+                    })
+                    .value();
             auto comp2_shader =
                 render_ctx.device
                     ->createShaderModule({
                         .pathToSource = chunk_block_pass2_comp_path.string().c_str(),
                         .stage = VK_SHADER_STAGE_COMPUTE_BIT,
-                    }).value();
+                    })
+                    .value();
             auto comp3_shader =
                 render_ctx.device
                     ->createShaderModule({
                         .pathToSource = chunk_mesh_pass_comp_path.string().c_str(),
                         .stage = VK_SHADER_STAGE_COMPUTE_BIT,
-                    }).value();
+                    })
+                    .value();
 
             auto new_pipeline1 = render_ctx.device->createComputePipeline({comp1_shader});
-            if (!new_pipeline1) throw;
+            if (!new_pipeline1)
+                throw;
             auto new_pipeline2 = render_ctx.device->createComputePipeline({comp2_shader});
-            if (!new_pipeline2) throw;
+            if (!new_pipeline2)
+                throw;
             auto new_pipeline3 = render_ctx.device->createComputePipeline({comp3_shader});
-            if (!new_pipeline3) throw;
+            if (!new_pipeline3)
+                throw;
 
             chunk_block_pass1_compute_pipeline = new_pipeline1.value();
             chunk_block_pass2_compute_pipeline = new_pipeline2.value();
-            chunk_mesh_pass_compute_pipeline   = new_pipeline3.value();
+            chunk_mesh_pass_compute_pipeline = new_pipeline3.value();
         } catch (...) {
             std::cout << "Failed to re-compile the compute pipeline's shaders, using "
                          "the previous pipeline\n";
         }
     }
 
-    void reload_graphics_pipeline(RenderContext & render_ctx) {
+    void reload_graphics_pipeline(RenderContext &render_ctx) {
         try {
             // std::ifstream vert_file(vert_path);
             // if (!vert_file.is_open())
@@ -189,18 +209,18 @@ struct World {
             // frag_file.close();
             // const auto & frag_str = frag_sstr.str();
 
-            auto vert_shader =
-                render_ctx.device
-                    ->createShaderModule({
-                        .pathToSource = vert_path.string().c_str(),
-                        .stage = VK_SHADER_STAGE_VERTEX_BIT,
-                    }).value();
-            auto frag_shader =
-                render_ctx.device
-                    ->createShaderModule({
-                        .pathToSource = frag_path.string().c_str(),
-                        .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-                    }).value();
+            auto vert_shader = render_ctx.device
+                                   ->createShaderModule({
+                                       .pathToSource = vert_path.string().c_str(),
+                                       .stage = VK_SHADER_STAGE_VERTEX_BIT,
+                                   })
+                                   .value();
+            auto frag_shader = render_ctx.device
+                                   ->createShaderModule({
+                                       .pathToSource = frag_path.string().c_str(),
+                                       .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+                                   })
+                                   .value();
 
             daxa::gpu::GraphicsPipelineBuilder pipeline_builder;
             pipeline_builder.addShaderStage(vert_shader)
@@ -210,16 +230,20 @@ struct World {
                 .addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)
                 .addVertexInputAttribute(VK_FORMAT_R32G32_SFLOAT)
                 .addColorAttachment(render_ctx.swapchain->getVkFormat())
+                .setRasterization({
+                    .cullMode = VK_CULL_MODE_FRONT_BIT,
+                })
                 .configurateDepthTest({
                     .depthAttachmentFormat = VK_FORMAT_D32_SFLOAT,
-                    .enableDepthTest       = VK_TRUE,
-                    .enableDepthWrite      = VK_TRUE,
-                    .depthTestCompareOp    = VK_COMPARE_OP_LESS_OR_EQUAL,
+                    .enableDepthTest = VK_TRUE,
+                    .enableDepthWrite = VK_TRUE,
+                    .depthTestCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
                 });
 
             auto new_pipeline =
                 render_ctx.device->createGraphicsPipeline(pipeline_builder);
-            if (!new_pipeline) throw;
+            if (!new_pipeline)
+                throw;
 
             // render_ctx.queue->waitForFlush();
             // render_ctx.queue->checkForFinishedSubmits();
@@ -232,7 +256,7 @@ struct World {
         }
     }
 
-    void try_reload_shaders(RenderContext & render_ctx) {
+    void try_reload_shaders(RenderContext &render_ctx) {
         // reload graphics
         auto last_vert_write_time =
             std::filesystem::last_write_time(vert_path).time_since_epoch().count();
@@ -281,72 +305,78 @@ struct World {
 
                     if (xi != chunk_min.x) {
                         auto neighbor_chunk_ptr = chunks[index.x - 1][index.y][index.z];
-                        current_chunk_ptr->chunk.neighbors.nx =
+                        current_chunk_ptr->chunk.neighbors[0] =
                             &(neighbor_chunk_ptr->chunk);
                     } else {
-                        current_chunk_ptr->chunk.neighbors.nx = nullptr;
+                        current_chunk_ptr->chunk.neighbors[0] = nullptr;
                     }
                     if (xi != chunk_max.x - 1) {
                         auto neighbor_chunk_ptr = chunks[index.x + 1][index.y][index.z];
-                        current_chunk_ptr->chunk.neighbors.px =
+                        current_chunk_ptr->chunk.neighbors[1] =
                             &(neighbor_chunk_ptr->chunk);
                     } else {
-                        current_chunk_ptr->chunk.neighbors.px = nullptr;
+                        current_chunk_ptr->chunk.neighbors[1] = nullptr;
                     }
 
                     if (yi != chunk_min.y) {
                         auto neighbor_chunk_ptr = chunks[index.x][index.y - 1][index.z];
-                        current_chunk_ptr->chunk.neighbors.ny =
+                        current_chunk_ptr->chunk.neighbors[2] =
                             &(neighbor_chunk_ptr->chunk);
                     } else {
-                        current_chunk_ptr->chunk.neighbors.ny = nullptr;
+                        current_chunk_ptr->chunk.neighbors[2] = nullptr;
                     }
                     if (yi != chunk_max.y - 1) {
                         auto neighbor_chunk_ptr = chunks[index.x][index.y + 1][index.z];
-                        current_chunk_ptr->chunk.neighbors.py =
+                        current_chunk_ptr->chunk.neighbors[3] =
                             &(neighbor_chunk_ptr->chunk);
                     } else {
-                        current_chunk_ptr->chunk.neighbors.py = nullptr;
+                        current_chunk_ptr->chunk.neighbors[3] = nullptr;
                     }
 
                     if (zi != chunk_min.z) {
                         auto neighbor_chunk_ptr = chunks[index.x][index.y][index.z - 1];
-                        current_chunk_ptr->chunk.neighbors.nz =
+                        current_chunk_ptr->chunk.neighbors[4] =
                             &(neighbor_chunk_ptr->chunk);
                     } else {
-                        current_chunk_ptr->chunk.neighbors.nz = nullptr;
+                        current_chunk_ptr->chunk.neighbors[4] = nullptr;
                     }
                     if (zi != chunk_max.z - 1) {
                         auto neighbor_chunk_ptr = chunks[index.x][index.y][index.z + 1];
-                        current_chunk_ptr->chunk.neighbors.pz =
+                        current_chunk_ptr->chunk.neighbors[5] =
                             &(neighbor_chunk_ptr->chunk);
                     } else {
-                        current_chunk_ptr->chunk.neighbors.pz = nullptr;
+                        current_chunk_ptr->chunk.neighbors[5] = nullptr;
                     }
                 }
             }
         }
     }
 
-    void update(daxa::gpu::CommandListHandle cmd_list, glm::mat4 & viewproj_mat) {
+    void update(daxa::gpu::CommandListHandle cmd_list, glm::mat4 &viewproj_mat) {
         cmd_list->copyHostToBuffer(daxa::gpu::HostToBufferCopyInfo{
-            .src  = &viewproj_mat,
-            .dst  = globals_uniform_buffer,
+            .src = &viewproj_mat,
+            .dst = globals_uniform_buffer,
             .size = sizeof(glm::mat4),
         });
 
-        // uint64_t TOTAL_VERTS = 0;
+        // size_t vert_n = 0;
+        // size_t chunk_n = 0;
+
         for (int zi = chunk_min.z; zi < chunk_max.z; ++zi) {
             for (int yi = chunk_min.y; yi < chunk_max.y; ++yi) {
                 for (int xi = chunk_min.x; xi < chunk_max.x; ++xi) {
-                    auto & current_chunk_ptr =
+                    auto &current_chunk_ptr =
                         chunks[xi - chunk_min.x][yi - chunk_min.y][zi - chunk_min.z];
                     current_chunk_ptr->update(cmd_list);
-                    // TOTAL_VERTS += current_chunk_ptr->chunk.vert_n;
+
+                    // chunk_n++;
+                    // vert_n += current_chunk_ptr->chunk.vert_n;
                 }
             }
         }
-        // std::cout << "Tris: " << TOTAL_VERTS / 3 << "\n";
+
+        // std::cout << "vert_n = " << vert_n << "\n";
+        // std::cout << "chunk_n = " << chunk_n << "\n";
     }
 
     void draw(daxa::gpu::CommandListHandle cmd_list) {
@@ -360,7 +390,7 @@ struct World {
         for (int zi = chunk_min.z; zi < chunk_max.z; ++zi) {
             for (int yi = chunk_min.y; yi < chunk_max.y; ++yi) {
                 for (int xi = chunk_min.x; xi < chunk_max.x; ++xi) {
-                    auto & current_chunk_ptr =
+                    auto &current_chunk_ptr =
                         chunks[xi - chunk_min.x][yi - chunk_min.y][zi - chunk_min.z];
                     current_chunk_ptr->draw(cmd_list);
                 }
@@ -368,24 +398,25 @@ struct World {
         }
     }
 
-    Chunk * get_containing_chunk_impl(const glm::vec3 & pos, Chunk * current_chunk) {
-        if (current_chunk == nullptr) return nullptr;
+    Chunk *get_containing_chunk_impl(const glm::vec3 &pos, Chunk *current_chunk) {
+        if (current_chunk == nullptr)
+            return nullptr;
         glm::vec3 current_chunk_pos = glm::vec3(current_chunk->pos) * Chunk::FLOAT_DIM;
 
         if (pos.x < current_chunk_pos.x) {
-            return get_containing_chunk_impl(pos, current_chunk->neighbors.nx);
+            return get_containing_chunk_impl(pos, current_chunk->neighbors[0]);
         } else if (pos.x >= current_chunk_pos.x + Chunk::FLOAT_DIM.x) {
-            return get_containing_chunk_impl(pos, current_chunk->neighbors.px);
+            return get_containing_chunk_impl(pos, current_chunk->neighbors[1]);
         } else {
             if (pos.y < current_chunk_pos.y) {
-                return get_containing_chunk_impl(pos, current_chunk->neighbors.ny);
+                return get_containing_chunk_impl(pos, current_chunk->neighbors[2]);
             } else if (pos.y >= current_chunk_pos.y + Chunk::FLOAT_DIM.y) {
-                return get_containing_chunk_impl(pos, current_chunk->neighbors.py);
+                return get_containing_chunk_impl(pos, current_chunk->neighbors[3]);
             } else {
                 if (pos.z < current_chunk_pos.z) {
-                    return get_containing_chunk_impl(pos, current_chunk->neighbors.nz);
+                    return get_containing_chunk_impl(pos, current_chunk->neighbors[4]);
                 } else if (pos.z >= current_chunk_pos.z + Chunk::FLOAT_DIM.z) {
-                    return get_containing_chunk_impl(pos, current_chunk->neighbors.pz);
+                    return get_containing_chunk_impl(pos, current_chunk->neighbors[5]);
                 } else {
                     return current_chunk;
                 }
@@ -393,18 +424,19 @@ struct World {
         }
     }
 
-    Chunk * get_containing_chunk(glm::vec3 pos) {
+    Chunk *get_containing_chunk(glm::vec3 pos) {
         return get_containing_chunk_impl(
             pos, &chunks[CHUNK_MAX.x / 2][CHUNK_MAX.y / 2][CHUNK_MAX.z / 2]->chunk);
     }
 
-    Block * get_containing_block(glm::vec3 pos) {
+    Block *get_containing_block(glm::vec3 pos) {
         auto containing_chunk = get_containing_chunk(pos);
-        if (containing_chunk) return containing_chunk->get_containing_block(pos);
+        if (containing_chunk)
+            return containing_chunk->get_containing_block(pos);
         return nullptr;
     }
 
-    void generate_chunk(RenderContext & render_ctx) {
+    void generate_chunk(RenderContext &render_ctx) {
         auto cmd_list = render_ctx.queue->getCommandList({});
         cmd_list->bindPipeline(chunk_block_pass1_compute_pipeline);
 
@@ -433,18 +465,18 @@ struct World {
 
         auto generated_data = chunk_buffer.mapMemory<const Chunk::BlockBuffer>();
 
-        for (const auto & layer : *generated_data.hostPtr) {
-            for (const auto & strip : layer) {
-                for (const auto & tile : strip) {
-                    switch (tile.id) {
-                    case BlockID::Grass: std::cout << "."; break;
-                    case BlockID::Dirt: std::cout << "#"; break;
-                    case BlockID::Air: std::cout << " "; break;
-                    }
-                }
-                std::cout << "\n";
-            }
-            std::cout << "\n-----\n";
-        }
+        // for (const auto & layer : *generated_data.hostPtr) {
+        //     for (const auto & strip : layer) {
+        //         for (const auto & tile : strip) {
+        //             switch (tile.id) {
+        //             case BlockID::Grass: std::cout << "."; break;
+        //             case BlockID::Dirt: std::cout << "#"; break;
+        //             case BlockID::Air: std::cout << " "; break;
+        //             }
+        //         }
+        //         std::cout << "\n";
+        //     }
+        //     std::cout << "\n-----\n";
+        // }
     }
 };
