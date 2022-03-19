@@ -145,7 +145,17 @@ namespace daxa {
                     });
                 }
                 else {
-                    generateMipLevels(cmdList, image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+                    generateMipLevels(
+                        cmdList, 
+                        image, 
+                        VkImageSubresourceLayers{
+                            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                            .mipLevel = 0,
+                            .baseArrayLayer = 0,
+                            .layerCount = 1,
+                        },
+                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                    );
                 }
 
                 std::free(data);
