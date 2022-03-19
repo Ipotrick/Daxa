@@ -119,7 +119,7 @@ struct RenderContext {
     void begin_rendering(daxa::gpu::CommandListHandle cmd_list) {
         std::array framebuffer{daxa::gpu::RenderAttachmentInfo{
             .image      = swapchain_image.getImageViewHandle(),
-            .clearValue = {.color = {.float32 = {0.0f, 0.0f, 0.0f, 1.0f}}},
+            .clearValue = {.color = {.float32 = {0.3f, 0.4f, 1.0f, 1.0f}}},
         }};
 
         daxa::gpu::RenderAttachmentInfo depth_attachment{
@@ -187,7 +187,9 @@ struct Texture {
             .image  = render_ctx.device->createImage({
                  .format    = data_format,
                  .extent    = {(uint32_t)size_x, (uint32_t)size_y, 1},
-                 .usage     = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+                 .mipLevels = 6,
+                 .usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+                         VK_IMAGE_USAGE_TRANSFER_DST_BIT,
                  .debugName = "Texture Image",
             }),
             .format = data_format,
@@ -201,18 +203,31 @@ struct Texture {
                 },
             .defaultSampler = render_ctx.device->createSampler({
                 .magFilter = VK_FILTER_NEAREST,
+                .minFilter = VK_FILTER_LINEAR,
+                .maxLod    = 5,
                 .debugName = "Texture Sampler",
             }),
             .debugName      = "Texture Image View",
         });
 
         auto cmd_list = render_ctx.queue->getCommandList({});
-        cmd_list->copyHostToImageSynced({
-            .src            = data,
-            .dst            = image,
-            .size           = size_x * size_y * num_channels * sizeof(uint8_t),
-            .dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        cmd_list->insertImageBarrier({
+            .image       = image,
+            .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         });
+        cmd_list->copyHostToImage({
+            .src  = data,
+            .dst  = image,
+            .size = size_x * size_y * num_channels * sizeof(uint8_t),
+        });
+        daxa::generateMipLevels(cmd_list, image,
+                                {
+                                    .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+                                    .baseArrayLayer = 0,
+                                    .layerCount     = 1,
+                                    .mipLevel       = 0,
+                                },
+                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         cmd_list->finalize();
         render_ctx.queue->submitBlocking({
             .commandLists = {cmd_list},

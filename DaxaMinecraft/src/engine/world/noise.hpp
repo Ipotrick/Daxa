@@ -315,5 +315,5 @@ float terrain_noise(glm::vec3 pos) {
         .lacunarity  = 2,
         .octaves     = 4,
     };
-    return fractal_noise(pos, noise_conf) - pos.y * 0.02;
+    return fractal_noise(pos, noise_conf) * 1.5f - pos.y * 0.02f;
 }
