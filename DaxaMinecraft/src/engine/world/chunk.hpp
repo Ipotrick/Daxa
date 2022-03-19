@@ -3,6 +3,7 @@
 #include <engine/world/vertex.hpp>
 #include <engine/world/block.hpp>
 #include <engine/world/noise.hpp>
+#include <engine/world/structure.hpp>
 
 #include <cstdint>
 #include <vector>
@@ -18,10 +19,7 @@ struct Chunk {
 
     using BlockBuffer = std::array<std::array<std::array<Block, NX>, NX>, NX>;
 
-    struct NeighborChunks {
-        Chunk *nx, *ny, *nz;
-        Chunk *px, *py, *pz;
-    };
+    using NeighborChunks = std::array<Chunk *, 6>;
     NeighborChunks neighbors;
 
     BlockBuffer blocks;
@@ -31,25 +29,25 @@ struct Chunk {
 
     auto get_block(int x, int y, int z) -> Block & {
         if (x < 0) {
-            if (!neighbors.nx) return null_block;
-            return neighbors.nx->blocks[x + NX][y][z];
+            if (!neighbors[0]) return null_block;
+            return neighbors[0]->blocks[x + NX][y][z];
         } else if (x > NX - 1) {
-            if (!neighbors.px) return null_block;
-            return neighbors.px->blocks[x - NX][y][z];
+            if (!neighbors[1]) return null_block;
+            return neighbors[1]->blocks[x - NX][y][z];
         }
         if (y < 0) {
-            if (!neighbors.ny) return null_block;
-            return neighbors.ny->blocks[x][y + NY][z];
+            if (!neighbors[2]) return null_block;
+            return neighbors[2]->blocks[x][y + NY][z];
         } else if (y > NY - 1) {
-            if (!neighbors.py) return null_block;
-            return neighbors.py->blocks[x][y - NY][z];
+            if (!neighbors[3]) return null_block;
+            return neighbors[3]->blocks[x][y - NY][z];
         }
         if (z < 0) {
-            if (!neighbors.nz) return null_block;
-            return neighbors.nz->blocks[x][y][z + NZ];
+            if (!neighbors[4]) return null_block;
+            return neighbors[4]->blocks[x][y][z + NZ];
         } else if (z > NZ - 1) {
-            if (!neighbors.pz) return null_block;
-            return neighbors.pz->blocks[x][y][z - NZ];
+            if (!neighbors[5]) return null_block;
+            return neighbors[5]->blocks[x][y][z - NZ];
         }
         return blocks[x][y][z];
     }
@@ -67,7 +65,7 @@ struct Chunk {
                     float val = terrain_noise(b_pos);
 
                     if (val > 0.0f) {
-                        current_block.id = BlockID::Dirt;
+                        current_block.id = BlockID::Stone;
                         // } else if (b_pos.y < -1) {
                         //     current_block.id = BlockID::Log;
                     } else {
@@ -78,23 +76,72 @@ struct Chunk {
         }
     }
 
-    void generate_block_data_pass2() {
+    void generate_block_data_pass2(std::vector<Structure> & structures) {
         for (int zi = 0; zi < NZ; ++zi) {
             for (int yi = 0; yi < NY; ++yi) {
                 for (int xi = 0; xi < NX; ++xi) {
-                    auto & current_block = get_block(xi, yi, zi);
-                    auto & above         = get_block(xi, yi + 1, zi);
-                    if (current_block.id == BlockID::Dirt && above.is_transparent()) {
-                        current_block.id = BlockID::Grass;
-                        auto random_int  = rand() % 100;
-                        if (random_int < 10) {
-                            above.id = BlockID::TallGrass;
-                        } else if (random_int == 11) {
-                            above.id = BlockID::Rose;
+                    auto &                 current_block = get_block(xi, yi, zi);
+                    std::array<Block *, 5> above{
+                        &get_block(xi, yi + 1, zi), &get_block(xi, yi + 2, zi),
+                        &get_block(xi, yi + 3, zi), &get_block(xi, yi + 4, zi),
+                        &get_block(xi, yi + 5, zi),
+                    };
+                    if (current_block.id == BlockID::Stone) {
+                        auto random_int = rand() % 100;
+                        if (above[0]->is_transparent()) {
+                            current_block.id = BlockID::Grass;
+                            if (random_int < 20) {
+                                above[0]->id = BlockID::TallGrass;
+                            } else if (random_int == 21) {
+                                above[0]->id = BlockID::Rose;
+                            } else if (random_int == 22) {
+                                structures.push_back(Structure{
+                                    .id         = StructureID::Tree,
+                                    .pos        = {xi, yi + 1, zi},
+                                    .home_chunk = this,
+                                });
+                            }
+                            null_block.id = BlockID::Air;
+                        } else {
+                            bool above_transparent = false;
+                            for (int i = 0; i < 3 + random_int % 3; ++i) {
+                                if (above[i]->is_transparent()) { //
+                                    above_transparent = true;
+                                }
+                            }
+                            if (above_transparent) { //
+                                current_block.id = BlockID::Dirt;
+                            }
                         }
-                        null_block.id = BlockID::Air;
                     }
                 }
+            }
+        }
+    }
+
+    void generate_block_data_structures(const std::vector<Structure> & structures) {
+        for (auto & structure : structures) {
+            switch (structure.id) {
+            case StructureID::Tree: {
+                glm::ivec3 min = structure.pos + glm::ivec3{-2, 0, -2};
+                min += (structure.home_chunk->pos - pos) * 16;
+                glm::ivec3 max = structure.pos + glm::ivec3{2, 7, 2};
+                max += (structure.home_chunk->pos - pos) * 16;
+                glm::ivec3 offset = min;
+                min    = {std::max(0, min.x), std::max(0, min.y), std::max(0, min.z)};
+                max    = {std::min(15, max.x), std::min(15, max.y), std::min(15, max.z)};
+                offset = min - offset;
+
+                for (int zi = min.z; zi <= max.z; ++zi) {
+                    for (int yi = min.y; yi <= max.y; ++yi) {
+                        for (int xi = min.x; xi <= max.x; ++xi) {
+                            auto & current_block = get_block(xi, yi, zi);
+                            current_block.id =
+                                Tree::get_tile(glm::ivec3{xi + 2, yi, zi + 2} + offset);
+                        }
+                    }
+                }
+            } break;
             }
         }
     }
