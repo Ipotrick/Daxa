@@ -28,6 +28,7 @@ namespace daxa {
 		}
 
 		void CommandList::finalize() {
+			if (bBarriersQueued) { insertQueuedBarriers(); }
 			DAXA_ASSERT_M(finalized == false, "can not finalize a command list twice");
 			DAXA_ASSERT_M(operationsInProgress == 0, "can only finalize a command list that has no operations in progress");
 			DAXA_CHECK_VK_RESULT(vkEndCommandBuffer(cmd));
@@ -38,6 +39,7 @@ namespace daxa {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(size <= STAGING_BUFFER_POOL_BUFFER_SIZE, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
+			if (bBarriersQueued) { insertQueuedBarriers(); }
 			if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < size) {
 				usedStagingBuffers.push_back(stagingBufferPool.lock()->getStagingBuffer());
 			}
@@ -72,6 +74,7 @@ namespace daxa {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(copyInfo.size <= STAGING_BUFFER_POOL_BUFFER_SIZE, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
+			if (bBarriersQueued) { insertQueuedBarriers(); }
 			if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < copyInfo.size) {
 				usedStagingBuffers.push_back(stagingBufferPool.lock()->getStagingBuffer());
 			}
@@ -102,6 +105,7 @@ namespace daxa {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(copyInfo.size <= STAGING_BUFFER_POOL_BUFFER_SIZE, "Currently uploads over a size of 67.108.864 bytes are not supported by the copyHostToImage function. Please use a staging buffer.");
+			if (bBarriersQueued) { insertQueuedBarriers(); }
 			if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < copyInfo.size) {
 				usedStagingBuffers.push_back(stagingBufferPool.lock()->getStagingBuffer());
 			}
@@ -127,6 +131,7 @@ namespace daxa {
 
 		void CommandList::copyHostToImageSynced(HostToImageCopySyncedInfo copySyncedInfo) {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
+			if (bBarriersQueued) { insertQueuedBarriers(); }
 			ImageBarrier firstBarrier{
 				.barrier = FULL_MEMORY_BARRIER,
 				.image = copySyncedInfo.dst,
@@ -155,6 +160,7 @@ namespace daxa {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu.");
 			DAXA_ASSERT_M(copyInfo.regions.size() > 0, "amount of copy regions must be greater than 0.");
+			if (bBarriersQueued) { insertQueuedBarriers(); }
 			for (int i = 0; i < copyInfo.regions.size(); i++) {
 				DAXA_ASSERT_M(copyInfo.src->getSize() >= copyInfo.regions[i].size + copyInfo.regions[i].srcOffset, "ERROR: src buffer is smaller than the region that shouly be copied!");
 				DAXA_ASSERT_M(copyInfo.dst->getSize() >= copyInfo.regions[i].size + copyInfo.regions[i].dstOffset, "ERROR: dst buffer is smaller than the region that shouly be copied!");
@@ -174,6 +180,7 @@ namespace daxa {
 
 		void CommandList::copyBufferToImage(BufferToImageCopyInfo copyInfo) {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
+			if (bBarriersQueued) { insertQueuedBarriers(); }
 
 			VkImageSubresourceLayers imgSubRessource = copyInfo.subRessourceLayers.value_or(VkImageSubresourceLayers{
 				.aspectMask = copyInfo.dst->getVkImageSubresourceRange().aspectMask,
@@ -196,6 +203,7 @@ namespace daxa {
 		void CommandList::copyImageToImage(ImageToImageCopyInfo copyInfo) {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			if (bBarriersQueued) { insertQueuedBarriers(); }
 
 			if (copyInfo.size.width == 0 || copyInfo.size.height == 0 || copyInfo.size.depth == 0) {
 				copyInfo.size = copyInfo.dst->getImageHandle()->getVkExtent3D();
@@ -267,6 +275,7 @@ namespace daxa {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M((**currentPipeline).getVkBindPoint() == VK_PIPELINE_BIND_POINT_COMPUTE, "can not dispatch compute commands with out a bound compute pipeline.");
+			if (bBarriersQueued) { insertQueuedBarriers(); }
 			vkCmdDispatch(cmd, groupCountX, groupCountY, grpupCountZ);
 		}
 
@@ -292,6 +301,7 @@ namespace daxa {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(!currentRenderPass.has_value(), "can not begin renderpass while recording a render pass");
+			if (bBarriersQueued) { insertQueuedBarriers(); }
 			std::vector<RenderAttachmentInfo> colorAttachments;
 			colorAttachments.reserve(ri.colorAttachments.size());
 			for (auto& a : ri.colorAttachments) {
@@ -549,6 +559,7 @@ namespace daxa {
 		void CommandList::insertBarriers(std::span<MemoryBarrier> memBarriers, std::span<ImageBarrier> imgBarriers) {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			DAXA_ASSERT_M(!currentRenderPass.has_value(), "can not insert memory barriers in renderpass");
 			std::array<VkMemoryBarrier2KHR, 32> memBarrierBuffer;
 			u32 memBarrierBufferSize = 0;
 			std::array<VkBufferMemoryBarrier2KHR, 32> bufBarrierBuffer;
@@ -612,12 +623,66 @@ namespace daxa {
 			vkCmdBindDescriptorSets(cmd, (**currentPipeline).getVkBindPoint(), (**currentPipeline).getVkPipelineLayout(), set, 1, &deviceBackend->bindAllSet, 0, nullptr);
 		}
 
-		void CommandList::queueMemoryBarrier(MemoryBarrier const& memoryBarrier) {
-			
+		void CommandList::insertQueuedBarriers() {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			DAXA_ASSERT_M(!currentRenderPass.has_value(), "can not insert memory barriers in renderpass");
+
+			if (bBarriersQueued) {
+				VkDependencyInfoKHR dependencyInfo{
+					.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
+					.pNext = nullptr,
+					.memoryBarrierCount = (u32)queuedMemoryBarriers.size(),
+					.pMemoryBarriers = queuedMemoryBarriers.data(),
+					.bufferMemoryBarrierCount = 0,
+					.pBufferMemoryBarriers = nullptr,
+					.imageMemoryBarrierCount = (u32)queuedImageBarriers.size(),
+					.pImageMemoryBarriers = queuedImageBarriers.data(),
+				};
+
+				queuedMemoryBarriers.clear();
+				queuedBufferBarriers.clear();
+				queuedImageBarriers.clear();
+
+				deviceBackend->vkCmdPipelineBarrier2KHR(cmd, &dependencyInfo);
+				this->bBarriersQueued = false;
+			}
 		}
 
-		void CommandList::queueImageBarrier(MemoryBarrier const& memoryBarrier) {
+		void CommandList::queueMemoryBarrier(MemoryBarrier const& barrier) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			DAXA_ASSERT_M(!currentRenderPass.has_value(), "can not insert memory barriers in renderpass");
+			queuedMemoryBarriers.push_back(VkMemoryBarrier2KHR{
+				.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2_KHR,
+				.pNext = nullptr,
+				.srcStageMask = barrier.srcStages,
+				.srcAccessMask = barrier.srcAccess,
+				.dstStageMask = barrier.dstStages,
+				.dstAccessMask = barrier.dstAccess,
+			});
+			bBarriersQueued = true;
+		}
 
+		void CommandList::queueImageBarrier(ImageBarrier const& imgBarrier) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			DAXA_ASSERT_M(!currentRenderPass.has_value(), "can not insert memory barriers in renderpass");
+			queuedImageBarriers.push_back(VkImageMemoryBarrier2KHR{
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR,
+				.pNext = nullptr,
+				.srcStageMask = imgBarrier.barrier.srcStages,
+				.srcAccessMask = imgBarrier.barrier.srcAccess,
+				.dstStageMask = imgBarrier.barrier.dstStages,
+				.dstAccessMask = imgBarrier.barrier.dstAccess,
+				.oldLayout = imgBarrier.layoutBefore,
+				.newLayout = imgBarrier.layoutAfter,
+				.srcQueueFamilyIndex = imgBarrier.srcQueueIndex,
+				.dstQueueFamilyIndex = imgBarrier.dstQueueIndex,
+				.image = imgBarrier.image->getImageHandle()->getVkImage(),
+				.subresourceRange = imgBarrier.subRange.value_or(imgBarrier.image->getVkImageSubresourceRange())
+			});
+			bBarriersQueued = true;
 		}
 	}
 }
