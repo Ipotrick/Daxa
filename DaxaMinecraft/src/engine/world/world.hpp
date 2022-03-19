@@ -31,26 +31,25 @@ struct World {
     std::filesystem::path vert_path{"DaxaMinecraft/assets/chunk.vert"};
     std::filesystem::path frag_path{"DaxaMinecraft/assets/chunk.frag"};
 
-    daxa::gpu::PipelineHandle chunk_block_pass1_compute_pipeline,
-        chunk_block_pass2_compute_pipeline, chunk_mesh_pass_compute_pipeline;
-
-    std::filesystem::path chunk_block_pass1_comp_path =
-        "DaxaMinecraft/assets/chunk_block_pass1.comp";
-    std::filesystem::path chunk_block_pass2_comp_path =
-        "DaxaMinecraft/assets/chunk_block_pass2.comp";
-    std::filesystem::path chunk_mesh_pass_comp_path =
-        "DaxaMinecraft/assets/chunk_mesh_pass.comp";
+    // daxa::gpu::PipelineHandle chunk_block_pass1_compute_pipeline,
+    //     chunk_block_pass2_compute_pipeline, chunk_mesh_pass_compute_pipeline;
+    // std::filesystem::path chunk_block_pass1_comp_path =
+    //     "DaxaMinecraft/assets/chunk_block_pass1.comp";
+    // std::filesystem::path chunk_block_pass2_comp_path =
+    //     "DaxaMinecraft/assets/chunk_block_pass2.comp";
+    // std::filesystem::path chunk_mesh_pass_comp_path =
+    //     "DaxaMinecraft/assets/chunk_mesh_pass.comp";
     // std::filesystem::path chunk_mesh_comp_path{"DaxaMinecraft/assets/chunk_mesh.comp"};
 
     std::chrono::system_clock::rep last_vert_reload_time = 0, last_frag_reload_time = 0;
-    std::chrono::system_clock::rep last_comp1_reload_time = 0, last_comp2_reload_time = 0,
-                                   last_comp3_reload_time = 0;
+    // std::chrono::system_clock::rep last_comp1_reload_time = 0, last_comp2_reload_time = 0,
+    //                                last_comp3_reload_time = 0;
 
     static constexpr glm::ivec3 chunk_min{-RENDER_DIST_XZ, -2, -RENDER_DIST_XZ};
     static constexpr glm::ivec3 chunk_max{RENDER_DIST_XZ, 2, RENDER_DIST_XZ};
 
     World(RenderContext &render_ctx)
-        : atlas_texture(render_ctx, "DaxaMinecraft/assets/atlas.png") {
+        : atlas_texture(render_ctx, "DaxaMinecraft/assets/textures") {
         try_reload_shaders(render_ctx);
 
         globals_uniform_allocator = render_ctx.device->createBindingSetAllocator({
@@ -63,9 +62,9 @@ struct World {
             .memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
         });
 
-        compute_binding_set_allocator = render_ctx.device->createBindingSetAllocator({
-            .setLayout = chunk_block_pass1_compute_pipeline->getSetLayout(0),
-        });
+        // compute_binding_set_allocator = render_ctx.device->createBindingSetAllocator({
+        //     .setLayout = chunk_block_pass1_compute_pipeline->getSetLayout(0),
+        // });
 
         chunk_buffer = render_ctx.device->createBuffer({
             .size = sizeof(Chunk::BlockBuffer),
@@ -150,41 +149,39 @@ struct World {
             // comp3_file.close();
             // const auto & comp3_str = comp3_sstr.str();
 
-            auto comp1_shader =
-                render_ctx.device
-                    ->createShaderModule({
-                        .pathToSource = chunk_block_pass1_comp_path.string().c_str(),
-                        .stage = VK_SHADER_STAGE_COMPUTE_BIT,
-                    })
-                    .value();
-            auto comp2_shader =
-                render_ctx.device
-                    ->createShaderModule({
-                        .pathToSource = chunk_block_pass2_comp_path.string().c_str(),
-                        .stage = VK_SHADER_STAGE_COMPUTE_BIT,
-                    })
-                    .value();
-            auto comp3_shader =
-                render_ctx.device
-                    ->createShaderModule({
-                        .pathToSource = chunk_mesh_pass_comp_path.string().c_str(),
-                        .stage = VK_SHADER_STAGE_COMPUTE_BIT,
-                    })
-                    .value();
-
-            auto new_pipeline1 = render_ctx.device->createComputePipeline({comp1_shader});
-            if (!new_pipeline1)
-                throw;
-            auto new_pipeline2 = render_ctx.device->createComputePipeline({comp2_shader});
-            if (!new_pipeline2)
-                throw;
-            auto new_pipeline3 = render_ctx.device->createComputePipeline({comp3_shader});
-            if (!new_pipeline3)
-                throw;
-
-            chunk_block_pass1_compute_pipeline = new_pipeline1.value();
-            chunk_block_pass2_compute_pipeline = new_pipeline2.value();
-            chunk_mesh_pass_compute_pipeline = new_pipeline3.value();
+            // auto comp1_shader =
+            //     render_ctx.device
+            //         ->createShaderModule({
+            //             .pathToSource = chunk_block_pass1_comp_path.string().c_str(),
+            //             .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+            //         })
+            //         .value();
+            // auto comp2_shader =
+            //     render_ctx.device
+            //         ->createShaderModule({
+            //             .pathToSource = chunk_block_pass2_comp_path.string().c_str(),
+            //             .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+            //         })
+            //         .value();
+            // auto comp3_shader =
+            //     render_ctx.device
+            //         ->createShaderModule({
+            //             .pathToSource = chunk_mesh_pass_comp_path.string().c_str(),
+            //             .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+            //         })
+            //         .value();
+            // auto new_pipeline1 = render_ctx.device->createComputePipeline({comp1_shader});
+            // if (!new_pipeline1)
+            //     throw;
+            // auto new_pipeline2 = render_ctx.device->createComputePipeline({comp2_shader});
+            // if (!new_pipeline2)
+            //     throw;
+            // auto new_pipeline3 = render_ctx.device->createComputePipeline({comp3_shader});
+            // if (!new_pipeline3)
+            //     throw;
+            // chunk_block_pass1_compute_pipeline = new_pipeline1.value();
+            // chunk_block_pass2_compute_pipeline = new_pipeline2.value();
+            // chunk_mesh_pass_compute_pipeline = new_pipeline3.value();
         } catch (...) {
             std::cout << "Failed to re-compile the compute pipeline's shaders, using "
                          "the previous pipeline\n";
@@ -228,7 +225,7 @@ struct World {
                 .beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
                 .addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)
                 .addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)
-                .addVertexInputAttribute(VK_FORMAT_R32G32_SFLOAT)
+                .addVertexInputAttribute(VK_FORMAT_R32_SINT)
                 .addColorAttachment(render_ctx.swapchain->getVkFormat())
                 .setRasterization({
                     .cullMode = VK_CULL_MODE_FRONT_BIT,
@@ -271,27 +268,26 @@ struct World {
         }
 
         // reload compute
-        auto last_comp1_write_time =
-            std::filesystem::last_write_time(chunk_block_pass1_comp_path)
-                .time_since_epoch()
-                .count();
-        auto last_comp2_write_time =
-            std::filesystem::last_write_time(chunk_block_pass2_comp_path)
-                .time_since_epoch()
-                .count();
-        auto last_comp3_write_time =
-            std::filesystem::last_write_time(chunk_mesh_pass_comp_path)
-                .time_since_epoch()
-                .count();
-
-        if (last_comp1_write_time > last_comp1_reload_time ||
-            last_comp2_write_time > last_comp2_reload_time ||
-            last_comp3_write_time > last_comp3_reload_time) {
-            reload_compute_pipeline(render_ctx);
-            last_comp1_reload_time = last_comp1_write_time;
-            last_comp2_reload_time = last_comp2_write_time;
-            last_comp3_reload_time = last_comp3_write_time;
-        }
+        // auto last_comp1_write_time =
+        //     std::filesystem::last_write_time(chunk_block_pass1_comp_path)
+        //         .time_since_epoch()
+        //         .count();
+        // auto last_comp2_write_time =
+        //     std::filesystem::last_write_time(chunk_block_pass2_comp_path)
+        //         .time_since_epoch()
+        //         .count();
+        // auto last_comp3_write_time =
+        //     std::filesystem::last_write_time(chunk_mesh_pass_comp_path)
+        //         .time_since_epoch()
+        //         .count();
+        // if (last_comp1_write_time > last_comp1_reload_time ||
+        //     last_comp2_write_time > last_comp2_reload_time ||
+        //     last_comp3_write_time > last_comp3_reload_time) {
+        //     reload_compute_pipeline(render_ctx);
+        //     last_comp1_reload_time = last_comp1_write_time;
+        //     last_comp2_reload_time = last_comp2_write_time;
+        //     last_comp3_reload_time = last_comp3_write_time;
+        // }
     }
 
     void update_neighbors() {
@@ -376,6 +372,7 @@ struct World {
         }
 
         // std::cout << "vert_n = " << vert_n << "\n";
+        // std::cout << "bytes = " << vert_n * sizeof(Vertex) << "\n";
         // std::cout << "chunk_n = " << chunk_n << "\n";
     }
 
@@ -437,33 +434,27 @@ struct World {
     }
 
     void generate_chunk(RenderContext &render_ctx) {
-        auto cmd_list = render_ctx.queue->getCommandList({});
-        cmd_list->bindPipeline(chunk_block_pass1_compute_pipeline);
-
-        auto set = compute_binding_set_allocator->getSet();
-        set->bindBuffer(0, chunk_buffer);
-        cmd_list->bindSet(0, set);
-
-        auto chunk_pos = glm::vec3{0, 0, 0};
-        cmd_list->pushConstant(VK_SHADER_STAGE_COMPUTE_BIT, chunk_pos);
-        cmd_list->dispatch(1, 1, Chunk::NZ);
-        cmd_list->insertMemoryBarrier(daxa::gpu::MemoryBarrier{
-            .srcStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
-            .dstStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
-        });
-
-        cmd_list->bindPipeline(chunk_block_pass2_compute_pipeline);
-        cmd_list->pushConstant(VK_SHADER_STAGE_COMPUTE_BIT, chunk_pos);
-        cmd_list->dispatch(1, 1, Chunk::NZ);
-
-        cmd_list->finalize();
-
-        daxa::gpu::SubmitInfo submit_info;
-        submit_info.commandLists.push_back(std::move(cmd_list));
-        render_ctx.queue->submitBlocking(submit_info);
-        render_ctx.queue->checkForFinishedSubmits();
-
-        auto generated_data = chunk_buffer.mapMemory<const Chunk::BlockBuffer>();
+        // auto cmd_list = render_ctx.queue->getCommandList({});
+        // cmd_list->bindPipeline(chunk_block_pass1_compute_pipeline);
+        // auto set = compute_binding_set_allocator->getSet();
+        // set->bindBuffer(0, chunk_buffer);
+        // cmd_list->bindSet(0, set);
+        // auto chunk_pos = glm::vec3{0, 0, 0};
+        // cmd_list->pushConstant(VK_SHADER_STAGE_COMPUTE_BIT, chunk_pos);
+        // cmd_list->dispatch(1, 1, Chunk::NZ);
+        // cmd_list->insertMemoryBarrier(daxa::gpu::MemoryBarrier{
+        //     .srcStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+        //     .dstStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+        // });
+        // cmd_list->bindPipeline(chunk_block_pass2_compute_pipeline);
+        // cmd_list->pushConstant(VK_SHADER_STAGE_COMPUTE_BIT, chunk_pos);
+        // cmd_list->dispatch(1, 1, Chunk::NZ);
+        // cmd_list->finalize();
+        // daxa::gpu::SubmitInfo submit_info;
+        // submit_info.commandLists.push_back(std::move(cmd_list));
+        // render_ctx.queue->submitBlocking(submit_info);
+        // render_ctx.queue->checkForFinishedSubmits();
+        // auto generated_data = chunk_buffer.mapMemory<const Chunk::BlockBuffer>();
 
         // for (const auto & layer : *generated_data.hostPtr) {
         //     for (const auto & strip : layer) {

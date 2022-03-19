@@ -5,20 +5,24 @@
 
 enum class BlockID : uint32_t {
     Air,
-    Dirt,
-    Grass,
-    TallGrass,
-    Rose,
-    Log,
-    Leaves,
-    Sand,
-    Gravel,
-    Planks,
-    Bricks,
-    Stone,
-    DiamondOre,
-    Water,
+
+    Brick,
     Cactus,
+    Cobblestone,
+    DiamondOre,
+    Dirt,
+    DriedShrub,
+    Grass,
+    Gravel,
+    Leaves,
+    Log,
+    Planks,
+    Rose,
+    Sand,
+    Sandstone,
+    Stone,
+    TallGrass,
+    Water,
 };
 
 enum class BlockFace : uint32_t {
@@ -36,9 +40,11 @@ struct Block {
     bool is_transparent() const {
         switch (id) {
         case BlockID::Air:
+        case BlockID::DriedShrub:
         case BlockID::Leaves:
+        case BlockID::Rose:
         case BlockID::TallGrass:
-        case BlockID::Rose: return true;
+            return true;
         default: return false;
         }
     }
@@ -46,185 +52,71 @@ struct Block {
     bool is_solid() const {
         switch (id) {
         case BlockID::Air:
+        case BlockID::DriedShrub:
         case BlockID::Leaves:
+        case BlockID::Rose:
         case BlockID::TallGrass:
-        case BlockID::Rose: return false;
+            return false;
         default: return true;
         }
     }
 
     bool is_not_drawn() const {
         switch (id) {
-        case BlockID::Air: return true;
+        case BlockID::Air:
+            return true;
         default: return false;
         }
     }
 
     bool is_cube() const {
         switch (id) {
+        case BlockID::DriedShrub:
+        case BlockID::Rose:
         case BlockID::TallGrass:
-        case BlockID::Rose: return false;
+            return false;
         default: return true;
         }
     }
 
-    glm::vec2 texture_face_offset(BlockFace face) const {
+    int texture_index(BlockFace face) const {
         switch (id) {
-        case BlockID::Dirt:
-            switch (face) {
-            case BlockFace::Back:
-            case BlockFace::Front:
-            case BlockFace::Left:
-            case BlockFace::Right:
-            case BlockFace::Bottom:
-            case BlockFace::Top:
-            default: return glm::vec2{0, 0};
-            }
-            break;
+        case BlockID::Brick: return 0;
+        case BlockID::Cactus: return 1;
+        case BlockID::Cobblestone: return 2;
+        case BlockID::DiamondOre: return 3;
+        case BlockID::Dirt: return 4;
+        case BlockID::DriedShrub: return 5;
         case BlockID::Grass:
             switch (face) {
             case BlockFace::Back:
             case BlockFace::Front:
             case BlockFace::Left:
-            case BlockFace::Right: return glm::vec2{1, 0};
-            case BlockFace::Bottom: return glm::vec2{0, 0};
-            case BlockFace::Top: return glm::vec2{2, 0};
-            default: return glm::vec2{0, 0};
+            case BlockFace::Right: return 6;
+            case BlockFace::Bottom: return 4;
+            case BlockFace::Top: return 7;
+            default: return 0;
             }
-            break;
-        case BlockID::TallGrass:
-            switch (face) {
-            case BlockFace::Back:
-            case BlockFace::Front:
-            case BlockFace::Left:
-            case BlockFace::Right:
-            case BlockFace::Bottom:
-            case BlockFace::Top:
-            default: return glm::vec2{3, 0};
-            }
-            break;
-        case BlockID::Rose:
-            switch (face) {
-            case BlockFace::Back:
-            case BlockFace::Front:
-            case BlockFace::Left:
-            case BlockFace::Right:
-            case BlockFace::Bottom:
-            case BlockFace::Top:
-            default: return glm::vec2{3, 1};
-            }
-            break;
+        case BlockID::Gravel: return 8;
+        case BlockID::Leaves: return 9;
         case BlockID::Log:
             switch (face) {
             case BlockFace::Back:
             case BlockFace::Front:
             case BlockFace::Left:
-            case BlockFace::Right: return glm::vec2{0, 1};
+            case BlockFace::Right: return 10;
             case BlockFace::Bottom:
-            case BlockFace::Top: return glm::vec2{1, 1};
-            default: return glm::vec2{1, 1};
+            case BlockFace::Top: return 11;
+            default: return 0;
             }
-            break;
-        case BlockID::Leaves:
-            switch (face) {
-            case BlockFace::Back:
-            case BlockFace::Front:
-            case BlockFace::Left:
-            case BlockFace::Right:
-            case BlockFace::Bottom:
-            case BlockFace::Top:
-            default: return glm::vec2{2, 1};
-            }
-            break;
-        case BlockID::Sand:
-            switch (face) {
-            case BlockFace::Back:
-            case BlockFace::Front:
-            case BlockFace::Left:
-            case BlockFace::Right:
-            case BlockFace::Bottom:
-            case BlockFace::Top:
-            default: return glm::vec2{0, 2};
-            }
-            break;
-        case BlockID::Gravel:
-            switch (face) {
-            case BlockFace::Back:
-            case BlockFace::Front:
-            case BlockFace::Left:
-            case BlockFace::Right:
-            case BlockFace::Bottom:
-            case BlockFace::Top:
-            default: return glm::vec2{1, 2};
-            }
-            break;
-        case BlockID::Planks:
-            switch (face) {
-            case BlockFace::Back:
-            case BlockFace::Front:
-            case BlockFace::Left:
-            case BlockFace::Right:
-            case BlockFace::Bottom:
-            case BlockFace::Top:
-            default: return glm::vec2{2, 2};
-            }
-            break;
-        case BlockID::Bricks:
-            switch (face) {
-            case BlockFace::Back:
-            case BlockFace::Front:
-            case BlockFace::Left:
-            case BlockFace::Right:
-            case BlockFace::Bottom:
-            case BlockFace::Top:
-            default: return glm::vec2{3, 2};
-            }
-            break;
-        case BlockID::Stone:
-            switch (face) {
-            case BlockFace::Back:
-            case BlockFace::Front:
-            case BlockFace::Left:
-            case BlockFace::Right:
-            case BlockFace::Bottom:
-            case BlockFace::Top:
-            default: return glm::vec2{0, 3};
-            }
-            break;
-        case BlockID::DiamondOre:
-            switch (face) {
-            case BlockFace::Back:
-            case BlockFace::Front:
-            case BlockFace::Left:
-            case BlockFace::Right:
-            case BlockFace::Bottom:
-            case BlockFace::Top:
-            default: return glm::vec2{1, 3};
-            }
-            break;
-        case BlockID::Water:
-            switch (face) {
-            case BlockFace::Back:
-            case BlockFace::Front:
-            case BlockFace::Left:
-            case BlockFace::Right:
-            case BlockFace::Bottom:
-            case BlockFace::Top:
-            default: return glm::vec2{2, 3};
-            }
-            break;
-        case BlockID::Cactus:
-            switch (face) {
-            case BlockFace::Back:
-            case BlockFace::Front:
-            case BlockFace::Left:
-            case BlockFace::Right:
-            case BlockFace::Bottom:
-            case BlockFace::Top:
-            default: return glm::vec2{3, 3};
-            }
-            break;
-        default: return glm::vec2{0, 0};
+        case BlockID::Planks: return 12;
+        case BlockID::Rose: return 13;
+        case BlockID::Sand: return 14;
+        case BlockID::Sandstone: return 15;
+        case BlockID::Stone: return 16;
+        case BlockID::TallGrass: return 17;
+        case BlockID::Water: return 18;
+        default: return 0;
         }
     }
 };
@@ -272,7 +164,7 @@ struct Village {
     static void transform_tile(glm::ivec3 i, BlockID &out_id) {
         auto cutout = abs(i.x) + abs(i.z);
         if (i.y == 0) {
-            out_id = BlockID::Stone;
+            out_id = BlockID::Cobblestone;
         } else if (abs(i.x) == 2 && abs(i.z) == 2) {
             out_id = BlockID::Log;
         } else if (abs(i.x) == 2 || abs(i.z) == 2) {
@@ -298,7 +190,7 @@ struct TileInfo {
         switch (biome) {
         case BiomeID::Plains:
         case BiomeID::Forest: return BlockID::Dirt;
-        case BiomeID::Desert: return BlockID::Gravel;
+        case BiomeID::Desert: return BlockID::Sandstone;
         }
     }
     BlockID biome_surface() {
@@ -318,7 +210,7 @@ struct TileInfo {
                 above[0]->id = BlockID::TallGrass;
             } else if (random_int < 41000) {
                 above[0]->id = BlockID::Rose;
-            } else if (random_int < 41030) {
+            } else if (random_int < 41100) {
                 structures.push_back(Structure{
                     .id = StructureID::VillageSpawn,
                     .pos = pos + glm::ivec3{0, 1, 0},
@@ -342,6 +234,8 @@ struct TileInfo {
                 for (int i = 0; i < 2 + random_int % 4; ++i) {
                     above[i]->id = BlockID::Cactus;
                 }
+            } else if (random_int < 5000) {
+                above[0]->id = BlockID::DriedShrub;
             }
         } break;
         }

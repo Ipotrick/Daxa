@@ -202,11 +202,12 @@ struct Chunk {
     }
 
     void generate_mesh_data(Vertex *vertex_buffer_ptr) {
-        auto fix_uv = [](const auto &block, BlockFace face, glm::vec2 &tex) {
-            tex.y = 1.0f - tex.y;
-            tex += block.texture_face_offset(face);
-            tex *= 0.25f;
-            tex.y = 1.0f - tex.y;
+        auto fix_uv = [](const auto &block, BlockFace face, int &tex_id) {
+            // tex.y = 1.0f - tex.y;
+            // tex += block.texture_face_offset(face);
+            // tex *= 0.125f;
+            // tex.y = 1.0f - tex.y;
+            tex_id = block.texture_index(face);
         };
 
         auto *vertex_buffer_head = vertex_buffer_ptr;
@@ -228,7 +229,7 @@ struct Chunk {
                             for (auto v : back_vertices) {
                                 v.pos += inchunk_tile_offset;
                                 v.nrm = glm::vec3(0, 0, -1);
-                                fix_uv(current_block, BlockFace::Back, v.tex);
+                                fix_uv(current_block, BlockFace::Back, v.tex_id);
                                 push_back(v);
                             }
                         }
@@ -236,7 +237,7 @@ struct Chunk {
                             for (auto v : front_vertices) {
                                 v.pos += inchunk_tile_offset;
                                 v.nrm = glm::vec3(0, 0, 1);
-                                fix_uv(current_block, BlockFace::Front, v.tex);
+                                fix_uv(current_block, BlockFace::Front, v.tex_id);
                                 push_back(v);
                             }
                         }
@@ -245,7 +246,7 @@ struct Chunk {
                             for (auto v : left_vertices) {
                                 v.pos += inchunk_tile_offset;
                                 v.nrm = glm::vec3(-1, 0, 0);
-                                fix_uv(current_block, BlockFace::Left, v.tex);
+                                fix_uv(current_block, BlockFace::Left, v.tex_id);
                                 push_back(v);
                             }
                         }
@@ -253,7 +254,7 @@ struct Chunk {
                             for (auto v : right_vertices) {
                                 v.pos += inchunk_tile_offset;
                                 v.nrm = glm::vec3(1, 0, 0);
-                                fix_uv(current_block, BlockFace::Right, v.tex);
+                                fix_uv(current_block, BlockFace::Right, v.tex_id);
                                 push_back(v);
                             }
                         }
@@ -262,7 +263,7 @@ struct Chunk {
                             for (auto v : bottom_vertices) {
                                 v.pos += inchunk_tile_offset;
                                 v.nrm = glm::vec3(0, -1, 0);
-                                fix_uv(current_block, BlockFace::Bottom, v.tex);
+                                fix_uv(current_block, BlockFace::Bottom, v.tex_id);
                                 push_back(v);
                             }
                         }
@@ -270,7 +271,7 @@ struct Chunk {
                             for (auto v : top_vertices) {
                                 v.pos += inchunk_tile_offset;
                                 v.nrm = glm::vec3(0, 1, 0);
-                                fix_uv(current_block, BlockFace::Top, v.tex);
+                                fix_uv(current_block, BlockFace::Top, v.tex_id);
                                 push_back(v);
                             }
                         }
@@ -278,7 +279,7 @@ struct Chunk {
                         for (auto v : cross_vertices) {
                             v.pos += inchunk_tile_offset;
                             v.nrm = glm::vec3(0, 1, 0);
-                            fix_uv(current_block, BlockFace::Back, v.tex);
+                            fix_uv(current_block, BlockFace::Back, v.tex_id);
                             push_back(v);
                         }
                     }
