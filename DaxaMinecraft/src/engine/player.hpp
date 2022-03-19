@@ -13,25 +13,33 @@ struct Player {
         uint8_t raw = 0;
     } move;
     glm::vec3 pos{0, 0, 0}, vel{0, 0, 0}, rot{0, 0, 0};
-    float     sin_rot_x = 0, cos_rot_x = 1;
-    float     speed = 45.0f, mouse_sens = 0.001f;
-    float     fov         = 70.0f;
-    float     elapsed     = 0.0f;
-    bool      is_grounded = false;
+    float sin_rot_x = 0, cos_rot_x = 1;
+    float speed = 45.0f, mouse_sens = 0.001f;
+    float fov = 70.0f;
+    float elapsed = 0.0f;
+    bool is_grounded = false;
 
     void update(float delta_time) {
         elapsed += delta_time;
         auto delta_pos = speed * delta_time;
-        if (move.px) pos.z += sin_rot_x * delta_pos, pos.x += cos_rot_x * delta_pos;
-        if (move.nx) pos.z -= sin_rot_x * delta_pos, pos.x -= cos_rot_x * delta_pos;
-        if (move.pz) pos.x -= sin_rot_x * delta_pos, pos.z += cos_rot_x * delta_pos;
-        if (move.nz) pos.x += sin_rot_x * delta_pos, pos.z -= cos_rot_x * delta_pos;
-        if (move.py) pos.y -= delta_pos;
-        if (move.ny) pos.y += delta_pos;
+        if (move.px)
+            pos.z += sin_rot_x * delta_pos, pos.x += cos_rot_x * delta_pos;
+        if (move.nx)
+            pos.z -= sin_rot_x * delta_pos, pos.x -= cos_rot_x * delta_pos;
+        if (move.pz)
+            pos.x -= sin_rot_x * delta_pos, pos.z += cos_rot_x * delta_pos;
+        if (move.nz)
+            pos.x += sin_rot_x * delta_pos, pos.z -= cos_rot_x * delta_pos;
+        if (move.py)
+            pos.y -= delta_pos;
+        if (move.ny)
+            pos.y += delta_pos;
 
         constexpr auto MAX_ROT = 1.54f;
-        if (rot.y > MAX_ROT) rot.y = MAX_ROT;
-        if (rot.y < -MAX_ROT) rot.y = -MAX_ROT;
+        if (rot.y > MAX_ROT)
+            rot.y = MAX_ROT;
+        if (rot.y < -MAX_ROT)
+            rot.y = -MAX_ROT;
     }
     void on_key(int key, int action) {
         switch (key) {

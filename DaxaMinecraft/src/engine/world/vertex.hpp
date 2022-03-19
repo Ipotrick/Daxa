@@ -175,7 +175,8 @@ static constexpr std::array<Vertex, 6> top_vertices{
     },
 };
 
-static constexpr std::array<Vertex, 12> cross_vertices{
+static constexpr std::array<Vertex, 24> cross_vertices{
+    // a
     Vertex{
         .pos = {0.414, -0.5, 0.414},
         .tex = {0, 0},
@@ -202,6 +203,34 @@ static constexpr std::array<Vertex, 12> cross_vertices{
         .tex = {1, 1},
     },
 
+    // a-flipped
+    Vertex{
+        .pos = {0.414, -0.5, 0.414},
+        .tex = {0, 0},
+    },
+    Vertex{
+        .pos = {0.414, 0.5, 0.414},
+        .tex = {0, 1},
+    },
+    Vertex{
+        .pos = {-0.414, -0.5, -0.414},
+        .tex = {1, 0},
+    },
+
+    Vertex{
+        .pos = {0.414, 0.5, 0.414},
+        .tex = {0, 1},
+    },
+    Vertex{
+        .pos = {-0.414, 0.5, -0.414},
+        .tex = {1, 1},
+    },
+    Vertex{
+        .pos = {-0.414, -0.5, -0.414},
+        .tex = {1, 0},
+    },
+
+    // b
     Vertex{
         .pos = {0.414, -0.5, -0.414},
         .tex = {0, 0},
@@ -226,5 +255,32 @@ static constexpr std::array<Vertex, 12> cross_vertices{
     Vertex{
         .pos = {-0.414, 0.5, 0.414},
         .tex = {1, 1},
+    },
+
+    // b-flipped
+    Vertex{
+        .pos = {0.414, -0.5, -0.414},
+        .tex = {0, 0},
+    },
+    Vertex{
+        .pos = {0.414, 0.5, -0.414},
+        .tex = {0, 1},
+    },
+    Vertex{
+        .pos = {-0.414, -0.5, 0.414},
+        .tex = {1, 0},
+    },
+
+    Vertex{
+        .pos = {0.414, 0.5, -0.414},
+        .tex = {0, 1},
+    },
+    Vertex{
+        .pos = {-0.414, 0.5, 0.414},
+        .tex = {1, 1},
+    },
+    Vertex{
+        .pos = {-0.414, -0.5, 0.414},
+        .tex = {1, 0},
     },
 };

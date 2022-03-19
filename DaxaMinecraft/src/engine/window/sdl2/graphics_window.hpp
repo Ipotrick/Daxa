@@ -12,7 +12,8 @@
 #include <GLFW/glfw3native.h>
 #endif
 
-template <typename UserT> struct GraphicsWindow {
+template <typename UserT>
+struct GraphicsWindow {
   private:
     struct DaxaContext {
         DaxaContext() { daxa::initialize(); }
@@ -20,11 +21,12 @@ template <typename UserT> struct GraphicsWindow {
     };
 
 #if defined(USING_SDL2)
-    template <typename UserT> struct WindowImpl {
-        SDL_Window * sdl_window_ptr;
-        int          sdl_window_id;
+    template <typename UserT>
+    struct WindowImpl {
+        SDL_Window *sdl_window_ptr;
+        int sdl_window_id;
 
-        void create(int32_t sx, int32_t sy, const char * title) {
+        void create(int32_t sx, int32_t sy, const char *title) {
             SDL_SetHint(SDL_HINT_MOUSE_RELATIVE_MODE_WARP, "1");
             sdl_window_ptr = SDL_CreateWindow(
                 // clang-format off
@@ -37,8 +39,8 @@ template <typename UserT> struct GraphicsWindow {
             );
             sdl_window_id = SDL_GetWindowID(sdl_window_ptr);
             SDL_AddEventWatch(
-                [](void * userdata, SDL_Event * event) -> int {
-                    auto user_ptr   = (UserT *)userdata;
+                [](void *userdata, SDL_Event *event) -> int {
+                    auto user_ptr = (UserT *)userdata;
                     auto window_ptr = (GraphicsWindow *)userdata;
                     switch (event->type) {
                     case SDL_QUIT: window_ptr->_should_close = true; break;
@@ -69,47 +71,48 @@ template <typename UserT> struct GraphicsWindow {
         auto vulkan_surface() {
             using namespace daxa;
             VkSurfaceKHR vulkan_surface;
-            auto         ret = SDL_Vulkan_CreateSurface(
-                        sdl_window_ptr, gpu::instance->getVkInstance(), &vulkan_surface);
+            auto ret = SDL_Vulkan_CreateSurface(
+                sdl_window_ptr, gpu::instance->getVkInstance(), &vulkan_surface);
             DAXA_ASSERT_M(ret == SDL_TRUE, "could not create window surface");
             return vulkan_surface;
         }
 
         void poll_events() {
             SDL_Event event;
-            while (SDL_PollEvent(&event)) {}
+            while (SDL_PollEvent(&event)) {
+            }
         }
 
         void set_mouse_pos(i32 x, i32 y) { SDL_WarpMouseInWindow(sdl_window_ptr, x, y); }
     };
 #elif defined(USING_GLFW)
     struct WindowImpl {
-        GLFWwindow * glfw_window_ptr;
+        GLFWwindow *glfw_window_ptr;
 
-        void create(int32_t sx, int32_t sy, const char * title) {
+        void create(int32_t sx, int32_t sy, const char *title) {
             glfwInit();
             glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
             glfw_window_ptr = glfwCreateWindow(sx, sy, title, nullptr, nullptr);
             glfwSetWindowUserPointer(glfw_window_ptr, this);
             glfwSetWindowSizeCallback(
-                glfw_window_ptr, [](GLFWwindow * glfw_window_ptr, int x, int y) {
-                    auto * userdata    = glfwGetWindowUserPointer(glfw_window_ptr);
-                    auto   user_ptr    = (UserT *)userdata;
-                    auto   window_ptr  = (GraphicsWindow *)userdata;
+                glfw_window_ptr, [](GLFWwindow *glfw_window_ptr, int x, int y) {
+                    auto *userdata = glfwGetWindowUserPointer(glfw_window_ptr);
+                    auto user_ptr = (UserT *)userdata;
+                    auto window_ptr = (GraphicsWindow *)userdata;
                     window_ptr->size_x = x;
                     window_ptr->size_y = y;
                     user_ptr->on_window_resize(x, y);
                 });
-            glfwSetKeyCallback(glfw_window_ptr, [](GLFWwindow * glfw_window_ptr, int key, int scancode, int action, int mods) {
-                auto * userdata   = glfwGetWindowUserPointer(glfw_window_ptr);
-                auto   user_ptr   = (UserT *)userdata;
+            glfwSetKeyCallback(glfw_window_ptr, [](GLFWwindow *glfw_window_ptr, int key, int scancode, int action, int mods) {
+                auto *userdata = glfwGetWindowUserPointer(glfw_window_ptr);
+                auto user_ptr = (UserT *)userdata;
                 // auto   window_ptr = (GraphicsWindow *)userdata;
                 user_ptr->on_key(key, action);
             });
             glfwSetCursorPosCallback(
-                glfw_window_ptr, [](GLFWwindow * glfw_window_ptr, double x, double y) {
-                    auto * userdata   = glfwGetWindowUserPointer(glfw_window_ptr);
-                    auto   user_ptr   = (UserT *)userdata;
+                glfw_window_ptr, [](GLFWwindow *glfw_window_ptr, double x, double y) {
+                    auto *userdata = glfwGetWindowUserPointer(glfw_window_ptr);
+                    auto user_ptr = (UserT *)userdata;
                     // auto   window_ptr = (GraphicsWindow *)userdata;
                     user_ptr->on_mouse_move(x, y);
                 });
@@ -122,8 +125,8 @@ template <typename UserT> struct GraphicsWindow {
         auto vulkan_surface() {
             using namespace daxa;
             VkSurfaceKHR vulkan_surface;
-            VkResult     err = glfwCreateWindowSurface(
-                    gpu::instance->getVkInstance(), glfw_window_ptr, NULL, &vulkan_surface);
+            VkResult err = glfwCreateWindowSurface(
+                gpu::instance->getVkInstance(), glfw_window_ptr, NULL, &vulkan_surface);
             DAXA_ASSERT_M(err == VK_SUCCESS, "could not create window surface");
             return vulkan_surface;
         }
@@ -134,11 +137,11 @@ template <typename UserT> struct GraphicsWindow {
     };
 #endif
 
-    WindowImpl   impl;
-    DaxaContext  daxa_ctx{};
+    WindowImpl impl;
+    DaxaContext daxa_ctx{};
     VkSurfaceKHR vulkan_surface;
-    bool         _should_close = false;
-    int32_t      size_x, size_y;
+    bool _should_close = false;
+    int32_t size_x, size_y;
 
   public:
     bool paused = true;
@@ -159,7 +162,8 @@ template <typename UserT> struct GraphicsWindow {
 
     void poll_events() {
         impl.poll_events();
-        if (glfwWindowShouldClose(impl.glfw_window_ptr)) _should_close = true;
+        if (glfwWindowShouldClose(impl.glfw_window_ptr))
+            _should_close = true;
     }
 
     bool should_close() const { return _should_close; }

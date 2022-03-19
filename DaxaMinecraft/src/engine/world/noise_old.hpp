@@ -23,15 +23,16 @@ uint hash(uint i) {
 }
 
 float grad(uint hashValue, float x) {
-    const uint h    = hashValue & 0x0F; // Convert low 4 bits of hash code
-    float      grad = 1.0f + (h & 7);   // Gradient value 1.0, 2.0, ..., 8.0
-    if ((h & 8) != 0) grad = -grad;     // Set a random sign for the gradient
-    return (grad * x);                  // Multiply the gradient with the distance
+    const uint h = hashValue & 0x0F; // Convert low 4 bits of hash code
+    float grad = 1.0f + (h & 7);     // Gradient value 1.0, 2.0, ..., 8.0
+    if ((h & 8) != 0)
+        grad = -grad;  // Set a random sign for the gradient
+    return (grad * x); // Multiply the gradient with the distance
 }
 
 float grad(uint hashValue, float x, float y) {
-    const uint  h = hashValue & 0x3F; // Convert low 3 bits of hash code
-    const float u = h < 4 ? x : y;    // into 8 simple gradient directions,
+    const uint h = hashValue & 0x3F; // Convert low 3 bits of hash code
+    const float u = h < 4 ? x : y;   // into 8 simple gradient directions,
     const float v = h < 4 ? y : x;
     return ((h & 1) != 0 ? -u : u) +
            ((h & 2) != 0 ? -2.0f * v
@@ -39,9 +40,10 @@ float grad(uint hashValue, float x, float y) {
 }
 
 float grad(uint hashValue, float x, float y, float z) {
-    uint  h = hashValue & 15; // Convert low 4 bits of hash code into 12 simple
-    float u = h < 8 ? x : y;  // gradient directions, and compute dot product.
-    float v = h < 4 ? y : h == 12 || h == 14 ? x : z; // Fix repeats at h = 12 to 15
+    uint h = hashValue & 15; // Convert low 4 bits of hash code into 12 simple
+    float u = h < 8 ? x : y; // gradient directions, and compute dot product.
+    float v = h < 4 ? y : h == 12 || h == 14 ? x
+                                             : z; // Fix repeats at h = 12 to 15
     return ((h & 1) != 0 ? -u : u) + ((h & 2) != 0 ? -v : v);
 }
 
@@ -58,11 +60,11 @@ float noise(float x, float y, float z) {
     const float G3 = 1.0f / 6.0f;
 
     // Skew the input space to determine which simplex cell we're in
-    float s  = (x + y + z) * F3; // Very nice and simple skew factor for 3D
-    uint  i  = fastfloor(x + s);
-    uint  j  = fastfloor(y + s);
-    uint  k  = fastfloor(z + s);
-    float t  = (i + j + k) * G3;
+    float s = (x + y + z) * F3; // Very nice and simple skew factor for 3D
+    uint i = fastfloor(x + s);
+    uint j = fastfloor(y + s);
+    uint k = fastfloor(z + s);
+    float t = (i + j + k) * G3;
     float X0 = i - t; // Unskew the cell origin back to (x,y,z) space
     float Y0 = j - t;
     float Z0 = k - t;
@@ -181,7 +183,7 @@ struct FractalNoiseConfig {
     float persistance;
     float scale;
     float lacunarity;
-    uint  octaves;
+    uint octaves;
 };
 
 float fractalNoise(glm::vec3 pos, FractalNoiseConfig config) {
