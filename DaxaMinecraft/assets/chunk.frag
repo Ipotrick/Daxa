@@ -1,12 +1,13 @@
 #version 450
 #extension GL_KHR_vulkan_glsl : enable
+#extension GL_EXT_texture_array : enable
 
 layout(location = 10) in vec3 v_pos;
 layout(location = 11) in vec3 v_nrm;
-layout(location = 12) in vec2 v_tex;
+layout(location = 12) in vec3 v_tex;
 
 layout (location = 0) out vec4 o_col;
-layout(set = 0, binding = 1) uniform sampler2D tex;
+layout(set = 0, binding = 1) uniform sampler2DArray tex;
 
 float calc_light_point(vec3 light_pos) {
     vec3 light_del = light_pos - v_pos;

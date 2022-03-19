@@ -172,38 +172,32 @@ struct Texture {
 
     int size_x, size_y, num_channels;
 
-    Texture(RenderContext &render_ctx, const char *const filepath) {
-        stbi_set_flip_vertically_on_load(true);
-        std::uint8_t *data = stbi_load(filepath, &size_x, &size_y, &num_channels, 0);
-        VkFormat data_format;
-        switch (num_channels) {
-        case 1: data_format = VK_FORMAT_R8_SRGB; break;
-        case 3: data_format = VK_FORMAT_R8G8B8_SRGB; break;
-        case 4:
-        default: data_format = VK_FORMAT_R8G8B8A8_SRGB; break;
-        }
-
+    Texture(RenderContext &render_ctx, const std::filesystem::path &filepath) {
         image = render_ctx.device->createImageView({
             .image = render_ctx.device->createImage({
-                .format = data_format,
-                .extent = {(uint32_t)size_x, (uint32_t)size_y, 1},
-                .mipLevels = 6,
+                .format = VK_FORMAT_R8G8B8A8_SRGB,
+                .extent = {16, 16, 1},
+                .mipLevels = 4,
+                .arrayLayers = 19,
                 .usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
                 .debugName = "Texture Image",
             }),
-            .format = data_format,
+            .format = VK_FORMAT_R8G8B8A8_SRGB,
+            .viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY,
             .subresourceRange =
                 {
                     .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                     .baseMipLevel = 0,
-                    .levelCount = 1,
+                    .levelCount = 4,
                     .baseArrayLayer = 0,
-                    .layerCount = 1,
+                    .layerCount = 19,
                 },
             .defaultSampler = render_ctx.device->createSampler({
                 .magFilter = VK_FILTER_NEAREST,
                 .minFilter = VK_FILTER_LINEAR,
-                .maxLod = 5,
+                .anisotropyEnable = true,
+                .maxAnisotropy = 16.0f,
+                .maxLod = 3,
                 .debugName = "Texture Sampler",
             }),
             .debugName = "Texture Image View",
@@ -213,18 +207,60 @@ struct Texture {
         cmd_list->insertImageBarrier({
             .image = image,
             .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .subRange = {VkImageSubresourceRange{
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 19,
+            }},
         });
-        cmd_list->copyHostToImage({
-            .src = data,
-            .dst = image,
-            .size = size_x * size_y * num_channels * sizeof(uint8_t),
-        });
+
+        std::array<std::filesystem::path, 19> texture_names{
+            "brick.png",
+            "cactus.png",
+            "cobblestone.png",
+            "diamond_ore.png",
+            "dirt.png",
+            "dried_shrub.png",
+            "grass-side.png",
+            "grass-top.png",
+            "gravel.png",
+            "leaves.png",
+            "log-side.png",
+            "log-top.png",
+            "planks.png",
+            "rose.png",
+            "sand.png",
+            "sandstone.png",
+            "stone.png",
+            "tallgrass.png",
+            "water.png",
+        };
+
+        for (size_t i = 0; i < 19; ++i) {
+            stbi_set_flip_vertically_on_load(true);
+            auto path = filepath / texture_names[i];
+            std::uint8_t *data = stbi_load(path.string().c_str(), &size_x, &size_y, &num_channels, 0);
+
+            cmd_list->copyHostToImage({
+                .src = data,
+                .dst = image,
+                .size = size_x * size_y * num_channels * sizeof(uint8_t),
+                .dstImgSubressource = {VkImageSubresourceLayers{
+                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                    .baseArrayLayer = static_cast<uint32_t>(i),
+                    .layerCount = 1,
+                    .mipLevel = 0,
+                }},
+            });
+        }
         daxa::generateMipLevels(
             cmd_list, image,
             {
                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                 .baseArrayLayer = 0,
-                .layerCount = 1,
+                .layerCount = 19,
                 .mipLevel = 0,
             },
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
