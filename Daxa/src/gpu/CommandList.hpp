@@ -300,6 +300,9 @@ namespace daxa {
 
 			// sync:
 
+			void queueMemoryBarrier(MemoryBarrier const& memoryBarrier);
+			void queueImageBarrier(MemoryBarrier const& memoryBarrier);
+
 			void insertBarriers(std::span<MemoryBarrier> memBarriers, std::span<ImageBarrier> imgBarriers);
 
 			template<size_t N>
@@ -361,6 +364,7 @@ namespace daxa {
 				std::optional<RenderAttachmentInfo> 	stencilAttachment 	= {};
 			};
 
+			bool 											bBarriersQueued 		= {};
 			std::shared_ptr<DeviceBackend> 					deviceBackend			= {};
 			VkCommandBuffer 								cmd 					= {};
 			VkCommandPool 									cmdPool 				= {};

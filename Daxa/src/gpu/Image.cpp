@@ -88,16 +88,17 @@ namespace daxa {
 				image->getVkImageUsageFlags() & VK_IMAGE_USAGE_STORAGE_BIT
 			) {
 				std::unique_lock bindAllLock(this->deviceBackend->bindAllMtx);
+
+				if (!this->deviceBackend->imageViewIndexFreeList.empty()) {
+					this->descriptorIndex = this->deviceBackend->imageViewIndexFreeList.back();
+					this->deviceBackend->imageViewIndexFreeList.pop_back();
+				}
+				else {
+					this->descriptorIndex = this->deviceBackend->nextImageViewIndex++;
+				}
+
 				if (image->getVkImageUsageFlags() & VK_IMAGE_USAGE_SAMPLED_BIT) {
 					if (defaultSampler.valid()) {
-						u16 index;
-						if (this->deviceBackend->combinedImageSamplerIndexFreeList.empty()) {
-							index = this->deviceBackend->nextCombinedImageSamplerIndex++;
-						} else {
-							index = this->deviceBackend->combinedImageSamplerIndexFreeList.back();
-							this->deviceBackend->combinedImageSamplerIndexFreeList.pop_back();
-						}
-						DAXA_ASSERT_M(index > 0 && index < BIND_ALL_COMBINED_IMAGE_SAMPLER_SET_LAYOUT_BINDING.descriptorCount, "failed to create image view: exausted indices for bind all set");
 						VkDescriptorImageInfo imageInfo{
 							.sampler = defaultSampler->getVkSampler(),
 							.imageView = view,
@@ -108,22 +109,13 @@ namespace daxa {
 							.pNext = nullptr,
 							.dstSet = this->deviceBackend->bindAllSet,
 							.dstBinding = BIND_ALL_COMBINED_IMAGE_SAMPLER_SET_LAYOUT_BINDING.binding,
-							.dstArrayElement = index,
+							.dstArrayElement = this->descriptorIndex,
 							.descriptorCount = 1,
 							.descriptorType = BIND_ALL_COMBINED_IMAGE_SAMPLER_SET_LAYOUT_BINDING.descriptorType,
 							.pImageInfo = &imageInfo,
 						};
 						vkUpdateDescriptorSets(this->deviceBackend->device.device, 1, &write, 0, nullptr);
-						imageSamplerIndex = index;
 					}
-					u16 index;
-					if (this->deviceBackend->sampledImageIndexFreeList.empty()) {
-						index = this->deviceBackend->nextSampledImageIndex++;
-					} else {
-						index = this->deviceBackend->sampledImageIndexFreeList.back();
-						this->deviceBackend->sampledImageIndexFreeList.pop_back();
-					}
-					DAXA_ASSERT_M(index > 0 && index < BIND_ALL_SAMPLED_IMAGE_SET_LAYOUT_BINDING.descriptorCount, "failed to create image view: exausted indices for bind all set");
 					VkDescriptorImageInfo imageInfo{
 						.sampler = nullptr,
 						.imageView = view,
@@ -134,23 +126,14 @@ namespace daxa {
 						.pNext = nullptr,
 						.dstSet = this->deviceBackend->bindAllSet,
 						.dstBinding = BIND_ALL_SAMPLED_IMAGE_SET_LAYOUT_BINDING.binding,
-						.dstArrayElement = index,
+						.dstArrayElement = this->descriptorIndex,
 						.descriptorCount = 1,
 						.descriptorType = BIND_ALL_SAMPLED_IMAGE_SET_LAYOUT_BINDING.descriptorType,
 						.pImageInfo = &imageInfo,
 					};
 					vkUpdateDescriptorSets(this->deviceBackend->device.device, 1, &write, 0, nullptr);
-					sampledImageIndex = index;
 				}
 				if (image->getVkImageUsageFlags() & VK_IMAGE_USAGE_STORAGE_BIT) {
-					u16 index;
-					if (this->deviceBackend->storageImageIndexFreeList.empty()) {
-						index = this->deviceBackend->nextStorageImageIndex++;
-					} else {
-						index = this->deviceBackend->storageImageIndexFreeList.back();
-						this->deviceBackend->storageImageIndexFreeList.pop_back();
-					}
-					DAXA_ASSERT_M(index > 0 && index < BIND_ALL_STORAGE_IMAGE_SET_LAYOUT_BINDING.descriptorCount, "failed to create image view: exausted indices for bind all set");
 					VkDescriptorImageInfo imageInfo{
 						.sampler = nullptr,
 						.imageView = view,
@@ -161,13 +144,12 @@ namespace daxa {
 						.pNext = nullptr,
 						.dstSet = this->deviceBackend->bindAllSet,
 						.dstBinding = BIND_ALL_STORAGE_IMAGE_SET_LAYOUT_BINDING.binding,
-						.dstArrayElement = index,
+						.dstArrayElement = this->descriptorIndex,
 						.descriptorCount = 1,
 						.descriptorType = BIND_ALL_STORAGE_IMAGE_SET_LAYOUT_BINDING.descriptorType,
 						.pImageInfo = &imageInfo,
 					};
 					vkUpdateDescriptorSets(this->deviceBackend->device.device, 1, &write, 0, nullptr);
-					storageImageIndex = index;
 				}
 			}
 
@@ -186,35 +168,12 @@ namespace daxa {
 
 		ImageView::~ImageView() {
 			if (deviceBackend && view) {
-				if (imageSamplerIndex != 0 || 
-					sampledImageIndex != 0 ||
-					storageImageIndex != 0
-				){
+				if (descriptorIndex != 0){
 					std::unique_lock bindAllLock(deviceBackend->bindAllMtx);
 
-					if (imageSamplerIndex != 0) {
-						this->deviceBackend->combinedImageSamplerIndexFreeList.push_back(imageSamplerIndex);
-					
-						VkDescriptorImageInfo imageInfo{
-							.sampler = deviceBackend->dummySampler,
-							.imageView = VK_NULL_HANDLE,
-							.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-						};
-						VkWriteDescriptorSet write {
-							.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-							.pNext = nullptr,
-							.dstSet = this->deviceBackend->bindAllSet,
-							.dstBinding = BIND_ALL_COMBINED_IMAGE_SAMPLER_SET_LAYOUT_BINDING.binding,
-							.dstArrayElement = imageSamplerIndex,
-							.descriptorCount = 1,
-							.descriptorType = BIND_ALL_COMBINED_IMAGE_SAMPLER_SET_LAYOUT_BINDING.descriptorType,
-							.pImageInfo = &imageInfo,
-						};
-						vkUpdateDescriptorSets(this->deviceBackend->device.device, 1, &write, 0, nullptr);
-					}
-					if (sampledImageIndex != 0) {
-						this->deviceBackend->sampledImageIndexFreeList.push_back(sampledImageIndex);
-					
+					this->deviceBackend->imageViewIndexFreeList.push_back(descriptorIndex);
+
+					if (image->getVkImageUsageFlags() & VK_IMAGE_USAGE_SAMPLED_BIT) {
 						VkDescriptorImageInfo imageInfo{
 							.sampler = VK_NULL_HANDLE,
 							.imageView = VK_NULL_HANDLE,
@@ -225,16 +184,33 @@ namespace daxa {
 							.pNext = nullptr,
 							.dstSet = this->deviceBackend->bindAllSet,
 							.dstBinding = BIND_ALL_SAMPLED_IMAGE_SET_LAYOUT_BINDING.binding,
-							.dstArrayElement = sampledImageIndex,
+							.dstArrayElement = descriptorIndex,
 							.descriptorCount = 1,
 							.descriptorType = BIND_ALL_SAMPLED_IMAGE_SET_LAYOUT_BINDING.descriptorType,
 							.pImageInfo = &imageInfo,
 						};
 						vkUpdateDescriptorSets(this->deviceBackend->device.device, 1, &write, 0, nullptr);
+
+						if (defaultSampler.valid()) {
+							VkDescriptorImageInfo imageInfo{
+								.sampler = deviceBackend->dummySampler,
+								.imageView = VK_NULL_HANDLE,
+								.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+							};
+							VkWriteDescriptorSet write {
+								.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+								.pNext = nullptr,
+								.dstSet = this->deviceBackend->bindAllSet,
+								.dstBinding = BIND_ALL_COMBINED_IMAGE_SAMPLER_SET_LAYOUT_BINDING.binding,
+								.dstArrayElement = descriptorIndex,
+								.descriptorCount = 1,
+								.descriptorType = BIND_ALL_COMBINED_IMAGE_SAMPLER_SET_LAYOUT_BINDING.descriptorType,
+								.pImageInfo = &imageInfo,
+							};
+							vkUpdateDescriptorSets(this->deviceBackend->device.device, 1, &write, 0, nullptr);
+						}
 					}
-					if (storageImageIndex != 0) {
-						this->deviceBackend->storageImageIndexFreeList.push_back(storageImageIndex);
-					
+					if (image->getVkImageUsageFlags() & VK_IMAGE_USAGE_STORAGE_BIT) {
 						VkDescriptorImageInfo imageInfo{
 							.sampler = VK_NULL_HANDLE,
 							.imageView = VK_NULL_HANDLE,
@@ -245,7 +221,7 @@ namespace daxa {
 							.pNext = nullptr,
 							.dstSet = this->deviceBackend->bindAllSet,
 							.dstBinding = BIND_ALL_STORAGE_IMAGE_SET_LAYOUT_BINDING.binding,
-							.dstArrayElement = storageImageIndex,
+							.dstArrayElement = descriptorIndex,
 							.descriptorCount = 1,
 							.descriptorType = BIND_ALL_STORAGE_IMAGE_SET_LAYOUT_BINDING.descriptorType,
 							.pImageInfo = &imageInfo,
