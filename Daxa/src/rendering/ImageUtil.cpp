@@ -2,10 +2,11 @@
 
 namespace daxa {
 
-    void generateMipLevels(gpu::CommandListHandle& cmdList, gpu::ImageViewHandle& img, VkImageLayout dstImageLayoutsAllLevels) {
+    void generateMipLevels(gpu::CommandListHandle& cmdList, gpu::ImageViewHandle& img, VkImageSubresourceLayers layers, VkImageLayout postImageLayerLayouts) {
         i32 mipwidth = img->getImageHandle()->getVkExtent3D().width;
         i32 mipheight = img->getImageHandle()->getVkExtent3D().height;
-        for (u32 i = 0; i < img->getImageHandle()->getMipLevels() - 1; i++) {
+        i32 mipdepth = img->getImageHandle()->getVkExtent3D().depth;
+        for (u32 i = layers.mipLevel; i < img->getImageHandle()->getMipLevels() - 1; i++) {
             cmdList->insertImageBarriers(std::array{
                 gpu::ImageBarrier{
                     .barrier = {
@@ -18,11 +19,11 @@ namespace daxa {
                     .layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                     .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                     .subRange = {VkImageSubresourceRange{
-                        .aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT,
+                        .aspectMask = layers.aspectMask,
                         .baseMipLevel = i,
                         .levelCount = 1,
-                        .baseArrayLayer = 0,
-                        .layerCount = 1,
+                        .baseArrayLayer = layers.baseArrayLayer,
+                        .layerCount = layers.layerCount,
                     }}
                 },
                 gpu::ImageBarrier{
@@ -33,11 +34,11 @@ namespace daxa {
                     .image = img,
                     .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                     .subRange = {VkImageSubresourceRange{
-                        .aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT,
+                        .aspectMask = layers.aspectMask,
                         .baseMipLevel = i+1,
                         .levelCount = 1,
-                        .baseArrayLayer = 0,
-                        .layerCount = 1,
+                        .baseArrayLayer = layers.baseArrayLayer,
+                        .layerCount = layers.layerCount,
                     }}
                 },
             });
@@ -45,22 +46,22 @@ namespace daxa {
                 .srcSubresource = VkImageSubresourceLayers{
                     .aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT,
                     .mipLevel = i,
-                    .baseArrayLayer = 0,
-                    .layerCount = 1,
+                    .baseArrayLayer = layers.baseArrayLayer,
+                    .layerCount = layers.layerCount,
                 },
                 .srcOffsets = {
                     VkOffset3D{ 0, 0, 0 },
-                    VkOffset3D{ mipwidth, mipheight, 1},
+                    VkOffset3D{ mipwidth, mipheight, mipdepth },
                 },
                 .dstSubresource = VkImageSubresourceLayers{
                     .aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT,
                     .mipLevel = i+1,
-                    .baseArrayLayer = 0,
-                    .layerCount = 1,
+                    .baseArrayLayer = layers.baseArrayLayer,
+                    .layerCount = layers.layerCount,
                 },
                 .dstOffsets = {
                     VkOffset3D{ 0, 0, 0 },
-                    VkOffset3D{ std::max(1, mipwidth / 2), std::max(1, mipheight / 2), 1},
+                    VkOffset3D{ std::max(1, mipwidth / 2), std::max(1, mipheight / 2), std::max(1, mipdepth / 2) },
                 },
             };
 
@@ -77,6 +78,7 @@ namespace daxa {
 
             mipwidth = std::max(1, mipwidth / 2);
             mipheight = std::max(1, mipheight / 2);
+            mipdepth = std::max(1, mipdepth / 2);
         }
 
         std::array<gpu::ImageBarrier, 32> buff;
@@ -97,8 +99,8 @@ namespace daxa {
                     .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                     .baseMipLevel = i,
                     .levelCount = 1,
-                    .baseArrayLayer = 0,
-                    .layerCount = 1,
+                    .baseArrayLayer = layers.baseArrayLayer,
+                    .layerCount = layers.layerCount,
                 }},
             };
         }
@@ -117,8 +119,8 @@ namespace daxa {
                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                 .baseMipLevel = img->getImageHandle()->getMipLevels() - 1,
                 .levelCount = 1,
-                .baseArrayLayer = 0,
-                .layerCount = 1,
+                .baseArrayLayer = layers.baseArrayLayer,
+                .layerCount = layers.layerCount,
             }},
         };
 
