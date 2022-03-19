@@ -81,6 +81,8 @@ namespace daxa {
 				.pNext = nullptr,
 				.features = {
 					.samplerAnisotropy = VK_TRUE,
+					.shaderSampledImageArrayDynamicIndexing = VK_TRUE,
+					.shaderStorageImageArrayDynamicIndexing = VK_TRUE,
 				}
 			};
 

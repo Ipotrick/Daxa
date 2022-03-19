@@ -611,5 +611,13 @@ namespace daxa {
 		void CommandList::bindAll(u32 set) {
 			vkCmdBindDescriptorSets(cmd, (**currentPipeline).getVkBindPoint(), (**currentPipeline).getVkPipelineLayout(), set, 1, &deviceBackend->bindAllSet, 0, nullptr);
 		}
+
+		void CommandList::queueMemoryBarrier(MemoryBarrier const& memoryBarrier) {
+			
+		}
+
+		void CommandList::queueImageBarrier(MemoryBarrier const& memoryBarrier) {
+
+		}
 	}
 }
