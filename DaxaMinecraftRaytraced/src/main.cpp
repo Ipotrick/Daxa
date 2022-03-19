@@ -56,8 +56,8 @@ struct Game : GraphicsWindow<Game> {
     }
     void on_mouse_move(double x, double y) {
         if (!paused) {
-            double center_x = static_cast<double>(get_window_sx()) / 2;
-            double center_y = static_cast<double>(get_window_sy()) / 2;
+            double center_x = static_cast<double>(get_window_sx() / 2);
+            double center_y = static_cast<double>(get_window_sy() / 2);
             auto   offset   = glm::dvec2{x - center_x, center_y - y};
             player.on_mouse_move(offset.x, offset.y);
             set_mouse_pos(center_x, center_y);
