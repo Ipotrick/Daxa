@@ -3,114 +3,152 @@
 #include <engine/world/vertex.hpp>
 #include <engine/world/block.hpp>
 #include <engine/world/noise.hpp>
-#include <engine/world/structure.hpp>
 
 #include <cstdint>
 #include <vector>
+#include <random>
 
 struct Chunk {
-    static constexpr size_t    NX = 16, NY = 16, NZ = 16;
-    static constexpr size_t    BLOCK_N   = NX * NY * NZ;
-    static constexpr size_t    VERT_N    = BLOCK_N * 36;
-    static constexpr size_t    MAX_SIZE  = VERT_N * sizeof(Vertex);
+    static constexpr size_t NX = 16, NY = 16, NZ = 16;
+    static constexpr size_t BLOCK_N = NX * NY * NZ;
+    static constexpr size_t VERT_N = BLOCK_N * 36;
+    static constexpr size_t MAX_SIZE = VERT_N * sizeof(Vertex);
     static constexpr glm::vec3 FLOAT_DIM = glm::vec3(NX, NY, NZ);
+    static constexpr glm::ivec3 INT_DIM = glm::ivec3(NX, NY, NZ);
 
     static inline Block null_block{.id = BlockID::Air};
+    static inline TileInfo null_tile{};
 
     using BlockBuffer = std::array<std::array<std::array<Block, NX>, NX>, NX>;
+    using TileBuffer = std::array<std::array<std::array<TileInfo, NX>, NX>, NX>;
 
     using NeighborChunks = std::array<Chunk *, 6>;
     NeighborChunks neighbors;
 
     BlockBuffer blocks;
-    glm::ivec3  pos;
-    bool        needs_remesh = true;
+    TileBuffer tiles;
+    glm::ivec3 pos;
+    bool needs_remesh = true;
     std::size_t vert_n;
 
-    auto get_block(int x, int y, int z) -> Block & {
-        if (x < 0) {
-            if (!neighbors[0]) return null_block;
-            return neighbors[0]->blocks[x + NX][y][z];
-        } else if (x > NX - 1) {
-            if (!neighbors[1]) return null_block;
-            return neighbors[1]->blocks[x - NX][y][z];
-        }
-        if (y < 0) {
-            if (!neighbors[2]) return null_block;
-            return neighbors[2]->blocks[x][y + NY][z];
-        } else if (y > NY - 1) {
-            if (!neighbors[3]) return null_block;
-            return neighbors[3]->blocks[x][y - NY][z];
-        }
-        if (z < 0) {
-            if (!neighbors[4]) return null_block;
-            return neighbors[4]->blocks[x][y][z + NZ];
-        } else if (z > NZ - 1) {
-            if (!neighbors[5]) return null_block;
-            return neighbors[5]->blocks[x][y][z - NZ];
-        }
-        return blocks[x][y][z];
-    }
+#define SAMPLE_BUFFER(buf, nul)                 \
+    if (x < 0) {                                \
+        if (!neighbors[0])                      \
+            return nul;                         \
+        return neighbors[0]->buf[x + NX][y][z]; \
+    } else if (x > NX - 1) {                    \
+        if (!neighbors[1])                      \
+            return nul;                         \
+        return neighbors[1]->buf[x - NX][y][z]; \
+    }                                           \
+    if (y < 0) {                                \
+        if (!neighbors[2])                      \
+            return nul;                         \
+        return neighbors[2]->buf[x][y + NY][z]; \
+    } else if (y > NY - 1) {                    \
+        if (!neighbors[3])                      \
+            return nul;                         \
+        return neighbors[3]->buf[x][y - NY][z]; \
+    }                                           \
+    if (z < 0) {                                \
+        if (!neighbors[4])                      \
+            return nul;                         \
+        return neighbors[4]->buf[x][y][z + NZ]; \
+    } else if (z > NZ - 1) {                    \
+        if (!neighbors[5])                      \
+            return nul;                         \
+        return neighbors[5]->buf[x][y][z - NZ]; \
+    }                                           \
+    return buf[x][y][z]
+
+    auto get_block(int x, int y, int z) -> Block & { SAMPLE_BUFFER(blocks, null_block); }
+    auto get_tile(int x, int y, int z) -> TileInfo & { SAMPLE_BUFFER(tiles, null_tile); }
+#undef SAMPLE_BUFFER
 
     void generate_block_data() {
         for (int zi = 0; zi < NZ; ++zi) {
             for (int yi = 0; yi < NY; ++yi) {
                 for (int xi = 0; xi < NX; ++xi) {
-                    auto & current_block = blocks[xi][yi][zi];
-                    auto   b_pos     = glm::vec3(xi, yi, zi) + FLOAT_DIM * glm::vec3(pos);
+                    auto &current_block = blocks[xi][yi][zi];
+                    auto &current_tile = tiles[xi][yi][zi];
+                    auto b_pos = glm::vec3(xi, yi, zi) + FLOAT_DIM * glm::vec3(pos);
                     current_block.id = BlockID::Dirt;
                     // float val = sin(b_pos.x / 50 + cos(b_pos.z / 8)) * 2 - 10;
                     // val += cos(b_pos.z / 50 + val * 4) * 1;
                     // val *= sin(b_pos.x / 500 * (val + 1) + val / 5) * 0.2;
                     float val = terrain_noise(b_pos);
+                    float bval = biome_noise(glm::ivec3(b_pos.x, 0, b_pos.z));
+
+                    if (bval > 0.1f) {
+                        current_tile.biome = BiomeID::Desert;
+                    } else if (bval > 0.02f) {
+                        current_tile.biome = BiomeID::Plains;
+                    } else {
+                        current_tile.biome = BiomeID::Forest;
+                    }
 
                     if (val > 0.0f) {
                         current_block.id = BlockID::Stone;
-                        // } else if (b_pos.y < -1) {
-                        //     current_block.id = BlockID::Log;
                     } else {
-                        current_block.id = BlockID::Air;
+                        if (b_pos.y < 0) {
+                            current_block.id = BlockID::Water;
+                        } else {
+                            current_block.id = BlockID::Air;
+                        }
                     }
                 }
             }
         }
     }
 
-    void generate_block_data_pass2(std::vector<Structure> & structures) {
+    void generate_block_data_pass2(std::vector<Structure> &structures) {
+        std::default_random_engine rng;
+        std::uniform_int_distribution dist(0, 100'000);
+
         for (int zi = 0; zi < NZ; ++zi) {
             for (int yi = 0; yi < NY; ++yi) {
                 for (int xi = 0; xi < NX; ++xi) {
-                    auto &                 current_block = get_block(xi, yi, zi);
+                    auto b_pos = glm::vec3(xi, yi, zi) + FLOAT_DIM * glm::vec3(pos);
+                    auto &current_block = get_block(xi, yi, zi);
+                    auto &current_tile = get_tile(xi, yi, zi);
                     std::array<Block *, 5> above{
-                        &get_block(xi, yi + 1, zi), &get_block(xi, yi + 2, zi),
-                        &get_block(xi, yi + 3, zi), &get_block(xi, yi + 4, zi),
+                        &get_block(xi, yi + 1, zi),
+                        &get_block(xi, yi + 2, zi),
+                        &get_block(xi, yi + 3, zi),
+                        &get_block(xi, yi + 4, zi),
                         &get_block(xi, yi + 5, zi),
                     };
                     if (current_block.id == BlockID::Stone) {
-                        auto random_int = rand() % 100;
+                        auto random_int = dist(rng);
                         if (above[0]->is_transparent()) {
-                            current_block.id = BlockID::Grass;
-                            if (random_int < 20) {
-                                above[0]->id = BlockID::TallGrass;
-                            } else if (random_int == 21) {
-                                above[0]->id = BlockID::Rose;
-                            } else if (random_int == 22) {
-                                structures.push_back(Structure{
-                                    .id         = StructureID::Tree,
-                                    .pos        = {xi, yi + 1, zi},
-                                    .home_chunk = this,
-                                });
+                            if (b_pos.y < 2 && b_pos.y > -2) { // beach
+                                current_block.id = BlockID::Sand;
+                            } else {
+                                current_block.id = current_tile.biome_surface();
+                                current_tile.biome_structures(random_int,
+                                                              glm::ivec3(xi, yi, zi),
+                                                              above, structures, *this);
+                                null_block.id = BlockID::Air;
                             }
-                            null_block.id = BlockID::Air;
                         } else {
                             bool above_transparent = false;
+                            bool under_water = false;
                             for (int i = 0; i < 3 + random_int % 3; ++i) {
-                                if (above[i]->is_transparent()) { //
+                                if (above[i]->is_transparent()) {
                                     above_transparent = true;
+                                    break;
+                                } else if (above[i]->id == BlockID::Water) {
+                                    under_water = true;
                                 }
                             }
-                            if (above_transparent) { //
-                                current_block.id = BlockID::Dirt;
+                            if (above_transparent) {
+                                if (b_pos.y < 2 && b_pos.y > -2) { // beach
+                                    current_block.id = BlockID::Sand;
+                                } else {
+                                    current_block.id = current_tile.biome_ground();
+                                }
+                            } else if (under_water) {
+                                current_block.id = BlockID::Gravel;
                             }
                         }
                     }
@@ -119,43 +157,60 @@ struct Chunk {
         }
     }
 
-    void generate_block_data_structures(const std::vector<Structure> & structures) {
-        for (auto & structure : structures) {
+    void generate_block_data_structures(const std::vector<Structure> &structures) {
+        for (auto &structure : structures) {
+            StructureTypes s;
             switch (structure.id) {
             case StructureID::Tree: {
-                glm::ivec3 min = structure.pos + glm::ivec3{-2, 0, -2};
-                min += (structure.home_chunk->pos - pos) * 16;
-                glm::ivec3 max = structure.pos + glm::ivec3{2, 7, 2};
-                max += (structure.home_chunk->pos - pos) * 16;
-                glm::ivec3 offset = min;
-                min    = {std::max(0, min.x), std::max(0, min.y), std::max(0, min.z)};
-                max    = {std::min(15, max.x), std::min(15, max.y), std::min(15, max.z)};
-                offset = min - offset;
-
-                for (int zi = min.z; zi <= max.z; ++zi) {
-                    for (int yi = min.y; yi <= max.y; ++yi) {
-                        for (int xi = min.x; xi <= max.x; ++xi) {
-                            auto & current_block = get_block(xi, yi, zi);
-                            current_block.id =
-                                Tree::get_tile(glm::ivec3{xi + 2, yi, zi + 2} + offset);
-                        }
-                    }
-                }
+                s = Tree{};
+            } break;
+            case StructureID::VillageSpawn: {
+                s = Village{};
+            } break;
+            default: {
+                s = InvalidStructure{};
             } break;
             }
+            std::visit(
+                [&](const auto &s) {
+                    using SType = std::decay_t<decltype(s)>;
+                    glm::ivec3 min = structure.pos + SType::MIN;
+                    min += (structure.home_chunk->pos - pos) * INT_DIM;
+                    glm::ivec3 max = structure.pos + SType::MAX;
+                    max += (structure.home_chunk->pos - pos) * INT_DIM;
+                    glm::ivec3 offset = min;
+                    min = {std::max(0, min.x), std::max(0, min.y), std::max(0, min.z)};
+                    max = {std::min(INT_DIM.x - 1, max.x), std::min(INT_DIM.y - 1, max.y),
+                           std::min(INT_DIM.z - 1, max.z)};
+                    offset = min - offset;
+                    for (int zi = min.z; zi <= max.z; ++zi) {
+                        for (int yi = min.y; yi <= max.y; ++yi) {
+                            for (int xi = min.x; xi <= max.x; ++xi) {
+                                auto b_pos = glm::ivec3(xi, yi, zi) + INT_DIM * pos;
+                                auto &current_block = get_block(xi, yi, zi);
+                                auto structure_block_pos =
+                                    b_pos -
+                                    (structure.pos + structure.home_chunk->pos * INT_DIM);
+                                SType::transform_tile(structure_block_pos,
+                                                      current_block.id);
+                            }
+                        }
+                    }
+                },
+                s);
         }
     }
 
-    void generate_mesh_data(Vertex * vertex_buffer_ptr) {
-        auto fix_uv = [](const auto & block, BlockFace face, glm::vec2 & tex) {
+    void generate_mesh_data(Vertex *vertex_buffer_ptr) {
+        auto fix_uv = [](const auto &block, BlockFace face, glm::vec2 &tex) {
             tex.y = 1.0f - tex.y;
             tex += block.texture_face_offset(face);
             tex *= 0.25f;
             tex.y = 1.0f - tex.y;
         };
 
-        auto * vertex_buffer_head = vertex_buffer_ptr;
-        auto   push_back          = [&vertex_buffer_head](const auto & v) {
+        auto *vertex_buffer_head = vertex_buffer_ptr;
+        auto push_back = [&vertex_buffer_head](const auto &v) {
             *vertex_buffer_head = v;
             ++vertex_buffer_head;
         };
@@ -163,10 +218,11 @@ struct Chunk {
         for (int zi = 0; zi < NZ; ++zi) {
             for (int yi = 0; yi < NY; ++yi) {
                 for (int xi = 0; xi < NX; ++xi) {
-                    auto   inchunk_tile_offset = glm::vec3(xi, yi, zi);
-                    float  x = xi, y = yi, z = zi;
-                    auto & current_block = blocks[x][y][z];
-                    if (current_block.is_not_drawn()) continue;
+                    auto inchunk_tile_offset = glm::vec3(xi, yi, zi);
+                    float x = xi, y = yi, z = zi;
+                    auto &current_block = blocks[x][y][z];
+                    if (current_block.is_not_drawn())
+                        continue;
                     if (current_block.is_cube()) {
                         if (get_block(x, y, z - 1).is_transparent()) {
                             for (auto v : back_vertices) {
@@ -230,11 +286,11 @@ struct Chunk {
             }
         }
 
-        vert_n       = vertex_buffer_head - vertex_buffer_ptr;
+        vert_n = vertex_buffer_head - vertex_buffer_ptr;
         needs_remesh = false;
     }
 
-    Block * get_containing_block(glm::vec3 p) {
+    Block *get_containing_block(glm::vec3 p) {
         if (p.x >= pos.x && p.x < pos.x + FLOAT_DIM.x && //
             p.y >= pos.y && p.y < pos.y + FLOAT_DIM.y && //
             p.z >= pos.z && p.z < pos.z + FLOAT_DIM.z) {
