@@ -79,7 +79,7 @@ struct RenderContext {
             printf("resize count: %i\n", resizes);
             swapchain->resize(VkExtent2D{.width = (uint32_t)sx, .height = (uint32_t)sy});
             swapchain_image = swapchain->aquireNextImage();
-            device->createImageView({
+            depth_image = device->createImageView({
                 .image = device->createImage({
                     .format = VK_FORMAT_D32_SFLOAT,
                     .extent = {(uint32_t)sx, (uint32_t)sy, 1},
