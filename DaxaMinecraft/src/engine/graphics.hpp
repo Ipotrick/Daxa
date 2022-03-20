@@ -119,7 +119,7 @@ struct RenderContext {
     void begin_rendering(daxa::gpu::CommandListHandle cmd_list) {
         std::array framebuffer{daxa::gpu::RenderAttachmentInfo{
             .image = swapchain_image.getImageViewHandle(),
-            .clearValue = {.color = {.float32 = {0.3f, 0.4f, 1.0f, 1.0f}}},
+            .clearValue = {.color = {.float32 = {0.3f, 0.6f, 1.0f, 1.0f}}},
         }};
 
         daxa::gpu::RenderAttachmentInfo depth_attachment{
