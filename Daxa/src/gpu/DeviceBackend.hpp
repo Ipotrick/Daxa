@@ -62,7 +62,7 @@ namespace daxa {
 		};
 		inline static const VkDescriptorPoolSize BIND_ALL_STORAGE_BUFFER_POOL_SIZE {
 			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			.descriptorCount = (1<<10),
+			.descriptorCount = (1<<16),
 		};
  
 		inline static const VkDescriptorSetLayoutBinding BIND_ALL_SAMPLER_SET_LAYOUT_BINDING {
