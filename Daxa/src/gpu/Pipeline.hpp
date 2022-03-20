@@ -29,6 +29,8 @@ namespace daxa {
 
 		class PipelineHandle;
 
+		std::size_t sizeofFormat(VkFormat format);
+
 		class Pipeline {
 		public:
 			Pipeline() 											= default;
