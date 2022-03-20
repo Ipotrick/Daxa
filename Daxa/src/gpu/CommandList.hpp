@@ -48,20 +48,20 @@ namespace daxa {
 		static const VkPipelineStageFlagBits2KHR STAGE_INDEX_INPUT = 0x1000000000ULL;
 		static const VkPipelineStageFlagBits2KHR STAGE_VERTEX_ATTRIBUTE_INPUT = 0x2000000000ULL;
 		static const VkPipelineStageFlagBits2KHR STAGE_PRE_RASTERIZATION_SHADERS = 0x4000000000ULL;
-		static const VkPipelineStageFlagBits2KHR STAGE_TRANSFORM_FEEDBACK_BIT_EXT = 0x01000000ULL;
-		static const VkPipelineStageFlagBits2KHR STAGE_CONDITIONAL_RENDERING_BIT_EXT = 0x00040000ULL;
-		static const VkPipelineStageFlagBits2KHR STAGE_COMMAND_PREPROCESS_BIT_NV = 0x00020000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_TRANSFORM_FEEDBACK_EXT = 0x01000000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_CONDITIONAL_RENDERING_EXT = 0x00040000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_COMMAND_PREPROCESS_NV = 0x00020000ULL;
 		static const VkPipelineStageFlagBits2KHR STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT = 0x00400000ULL;
-		static const VkPipelineStageFlagBits2KHR STAGE_SHADING_RATE_IMAGE_BIT_NV = 0x00400000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_SHADING_RATE_IMAGE_NV = 0x00400000ULL;
 		static const VkPipelineStageFlagBits2KHR STAGE_ACCELERATION_STRUCTURE_BUILD = 0x02000000ULL;
 		static const VkPipelineStageFlagBits2KHR STAGE_RAY_TRACING_SHADER = 0x00200000ULL;
-		static const VkPipelineStageFlagBits2KHR STAGE_RAY_TRACING_SHADER_BIT_NV = 0x00200000ULL;
-		static const VkPipelineStageFlagBits2KHR STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_NV = 0x02000000ULL;
-		static const VkPipelineStageFlagBits2KHR STAGE_FRAGMENT_DENSITY_PROCESS_BIT_EXT = 0x00800000ULL;
-		static const VkPipelineStageFlagBits2KHR STAGE_TASK_SHADER_BIT_NV = 0x00080000ULL;
-		static const VkPipelineStageFlagBits2KHR STAGE_MESH_SHADER_BIT_NV = 0x00100000ULL;
-		static const VkPipelineStageFlagBits2KHR STAGE_SUBPASS_SHADING_BIT_HUAWEI = 0x8000000000ULL;
-		static const VkPipelineStageFlagBits2KHR STAGE_INVOCATION_MASK_BIT_HUAWEI = 0x10000000000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_RAY_TRACING_SHADER_NV = 0x00200000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_ACCELERATION_STRUCTURE_BUILD_NV = 0x02000000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_FRAGMENT_DENSITY_PROCESS_EXT = 0x00800000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_TASK_SHADER_NV = 0x00080000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_MESH_SHADER_NV = 0x00100000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_SUBPASS_SHADING_HUAWEI = 0x8000000000ULL;
+		static const VkPipelineStageFlagBits2KHR STAGE_INVOCATION_MASK_HUAWEI = 0x10000000000ULL;
 
 		static const VkAccessFlagBits2KHR ACCESS_NONE = 0x00000000ULL;
 		static const VkAccessFlagBits2KHR ACCESS_HOST_READ = 0x00002000ULL;
@@ -118,23 +118,41 @@ namespace daxa {
 		};
 
 		struct ImageToImageCopyInfo{
-			ImageViewHandle src 			= {};
+			ImageViewHandle src 		= {};
 			VkImageLayout srcLayout 	= VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 			VkOffset3D srcOffset 		= {};
-			ImageViewHandle dst 			= {};
+			ImageViewHandle dst 		= {};
 			VkImageLayout dstLayout 	= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 			VkOffset3D dstOffset 		= {};
 			VkExtent3D size				= {};
 		};
 
 		struct ImageToImageCopySyncedInfo{
-			ImageViewHandle src 						= {};
+			ImageViewHandle src 					= {};
 			VkOffset3D srcOffset 					= {};
 			VkImageLayout srcLayoutBeforeAndAfter 	= {};
-			ImageViewHandle dst 						= {};
+			ImageViewHandle dst 					= {};
 			VkOffset3D dstOffset 					= {};
 			VkImageLayout dstFinalLayout 			= {};
 			VkExtent3D size							= {};
+		};
+
+		struct BufferToImageCopyInfo2{
+			BufferHandle src = {};
+			// defaulted to use no offset
+			u64 bufferOffset = 0;
+			ImageViewHandle dst = {};
+			// defaulted to use layer 0 mip 0 color aspect
+			VkImageSubresourceLayers subRessource = {
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.baseArrayLayer = 0,
+				.layerCount = 1,
+				.mipLevel = 0,
+			};
+			// defaulted to use no offset
+			VkOffset3D imageOffset = { 0, 0, 0 };
+			// defaulted to use the full image extent
+			VkOffset3D imageExtent = { -1, -1, -1 };
 		};
 
 		/**
@@ -237,6 +255,23 @@ namespace daxa {
 			void copyImageToImage(ImageToImageCopyInfo copyInfo);
 
 			void copyImageToImageSynced(ImageToImageCopySyncedInfo copySyncedInfo);
+
+			// transfer2:
+
+			void multiCopyHostToBuffer();
+			void singleCopyHostToBuffer();
+
+			void multiCopyHostToImage();
+			void singleCopyHostToImage();
+
+			void multicopyBufferToBuffer();
+			void singleCopyBufferToBuffer();
+
+			void multiCopyBufferToImage(BufferHandle const& src, ImageViewHandle const& dst, std::span<BufferToImageCopyInfo2>);
+			void singleCopyBufferToImage(BufferHandle const& src, ImageViewHandle const& dst, BufferToImageCopyInfo2);
+
+			void multiCopyImageToImage();
+			void singleCopyImageToImage();
 
 			// Compute:
 
