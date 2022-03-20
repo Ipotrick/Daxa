@@ -36,7 +36,28 @@ struct Game : GraphicsWindow<Game> {
 
     void update(double elapsed_seconds) {
         poll_events();
+
+        if (world.chunks_invalidated)
+            world.generate_chunks(render_ctx);
+
+        auto ppos = player.pos;
         player.update(elapsed_seconds);
+        auto pos_diff = player.pos - ppos;
+
+        auto *containing_chunk = world.get_containing_chunk(player.pos);
+        if (containing_chunk) {
+            auto *containing_block = containing_chunk->get_containing_block(player.pos);
+            if (containing_block) {
+                if (!containing_block->is_not_drawn()) {
+                    player.pos -= pos_diff;
+                }
+            } else {
+                // std::cout << "No bloqe player(" << player.pos.x << ", " << player.pos.y << ", " << player.pos.z << "), chunk(" << containing_chunk->pos.x << ", " << containing_chunk->pos.y << ", " << containing_chunk->pos.z << ")\n";
+            }
+        } else {
+            // std::cout << "No chunk ";
+        }
+
         camera.set_pos(player.pos);
         camera.set_rot(player.rot.x, player.rot.y);
     }

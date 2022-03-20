@@ -37,12 +37,12 @@ void main() {
     // if (i == MAX_ITER) i = 0;
     
     vec4 tex_col = texture(tex, v_tex);
-    if (tex_col.a < 0.5f) discard;
+    if (tex_col.a < 0.4f) discard;
     vec3 albedo = tex_col.rgb;
     // vec3 albedo = vec3(vec2(i)/vec2(100), 1);
     vec3 diffuse = vec3(0.0);
-    diffuse += vec3(0.3, 0.4, 1.0) * (calc_light_directional(vec3(0, 1, 0)) + 2.0) * 0.2;
+    diffuse += vec3(0.3, 0.4, 1.0) * (calc_light_directional(vec3(0, 1, 0)) + 2.0) * 0.5;
     // diffuse += vec3(0, 1, 20) * calc_light_point(vec3(3, 12, 1)) * 100;
-    diffuse += vec3(1, 0.8, 0.6) * calc_light_directional(vec3(2, 3, 1)) * 1.0;
+    diffuse += vec3(1, 0.8, 0.6) * calc_light_directional(vec3(-2, 3, 1)) * 1.0;
     o_col = vec4(diffuse * albedo, 1);
 }

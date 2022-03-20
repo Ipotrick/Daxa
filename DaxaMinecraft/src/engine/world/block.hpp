@@ -158,12 +158,12 @@ struct Tree {
 };
 
 struct Village {
-    static inline glm::ivec3 MIN = glm::ivec3{-2, 0, -2};
+    static inline glm::ivec3 MIN = glm::ivec3{-2, -1, -2};
     static inline glm::ivec3 MAX = glm::ivec3{2, 5, 2};
 
     static void transform_tile(glm::ivec3 i, BlockID &out_id) {
         auto cutout = abs(i.x) + abs(i.z);
-        if (i.y == 0) {
+        if (i.y <= 0) {
             out_id = BlockID::Cobblestone;
         } else if (abs(i.x) == 2 && abs(i.z) == 2) {
             out_id = BlockID::Log;
@@ -186,14 +186,42 @@ enum class BiomeID : uint32_t {
 struct TileInfo {
     BiomeID biome;
 
-    BlockID biome_ground() {
+    void biome_ground(int random_int, glm::ivec3 pos, const std::array<Block *, 16> &above, BlockID &out_id) {
+        int depth;
+        bool under_water = false;
+        for (depth = 0; depth < above.size(); ++depth) {
+            if (above[depth]->is_transparent()) {
+                break;
+            } else if (above[depth]->id == BlockID::Water) {
+                under_water = true;
+                break;
+            }
+        }
         switch (biome) {
         case BiomeID::Plains:
-        case BiomeID::Forest: return BlockID::Dirt;
-        case BiomeID::Desert: return BlockID::Sandstone;
+        case BiomeID::Forest: {
+            if (depth < 3 + random_int % 3) {
+                if (under_water) {
+                    out_id = BlockID::Gravel;
+                } else {
+                    out_id = BlockID::Dirt;
+                }
+            }
+        } break;
+        case BiomeID::Desert: {
+            if (depth < 3 + random_int % 3) {
+                out_id = BlockID::Sand;
+            } else if (depth < 6 + random_int % 2) {
+                if (under_water) {
+                    out_id = BlockID::Gravel;
+                } else {
+                    out_id = BlockID::Sandstone;
+                }
+            }
+        } break;
         }
     }
-    BlockID biome_surface() {
+    BlockID biome_surface(int random_int, glm::ivec3 pos) {
         switch (biome) {
         case BiomeID::Plains:
         case BiomeID::Forest: return BlockID::Grass;
@@ -201,9 +229,7 @@ struct TileInfo {
         }
     }
 
-    void biome_structures(int random_int, glm::ivec3 pos,
-                          const std::array<Block *, 5> &above,
-                          std::vector<Structure> &structures, Chunk &chunk) {
+    void biome_structures(int random_int, glm::ivec3 pos, const std::array<Block *, 16> &above, std::vector<Structure> &structures, Chunk &chunk) {
         switch (biome) {
         case BiomeID::Plains: {
             if (random_int < 40000) {

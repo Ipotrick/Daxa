@@ -570,3 +570,14 @@ float biome_noise(glm::vec3 pos) {
     };
     return fractal_noise(pos - glm::vec3(1000), noise_conf);
 }
+
+float cave_noise(glm::vec3 pos) {
+    auto noise_conf = FractalNoiseConfig{
+        .amplitude = 0.2f,
+        .persistance = 0.5f,
+        .scale = 0.05f,
+        .lacunarity = 2.0f,
+        .octaves = 1,
+    };
+    return fractal_noise(pos + glm::vec3(1000), noise_conf);
+}
