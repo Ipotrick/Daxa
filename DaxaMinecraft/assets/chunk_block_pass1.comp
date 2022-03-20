@@ -1,17 +1,39 @@
 #version 450
 #extension GL_KHR_vulkan_glsl : enable
 
+// clang-format off
+const uint Air         = 0;
+const uint Brick       = 1;
+const uint Cactus      = 2;
+const uint Cobblestone = 3;
+const uint DiamondOre  = 4;
+const uint Dirt        = 5;
+const uint DriedShrub  = 6;
+const uint Grass       = 7;
+const uint Gravel      = 8;
+const uint Leaves      = 9;
+const uint Log         = 10;
+const uint Planks      = 11;
+const uint Rose        = 12;
+const uint Sand        = 13;
+const uint Sandstone   = 14;
+const uint Stone       = 15;
+const uint TallGrass   = 16;
+const uint Water       = 17;
+// clang-format on
+
 layout(local_size_x = 16, local_size_y = 16) in;
 
 const uint Chunk_NX = 16;
 const uint Chunk_NY = 16;
 const uint Chunk_NZ = 16;
-layout (set = 0, binding = 0) buffer chunk_buffer {
+layout(set = 0, binding = 0) buffer chunk_buffer {
     uint blocks[16 * 16 * 16];
 };
 layout(push_constant) uniform Push {
     vec3 pos;
-} p;
+}
+p;
 
 int fastfloor(float fp) {
     int i = int(fp);
@@ -19,6 +41,7 @@ int fastfloor(float fp) {
 }
 
 const uint perm[256] = {
+    // clang-format off
     151, 160, 137, 91,  90,  15,  131, 13,  201, 95,  96,  53,  194, 233, 7,   225,
     140, 36,  103, 30,  69,  142, 8,   99,  37,  240, 21,  10,  23,  190, 6,   148,
     247, 120, 234, 75,  0,   26,  197, 62,  94,  252, 219, 203, 117, 35,  11,  32,
@@ -35,26 +58,29 @@ const uint perm[256] = {
     81,  51,  145, 235, 249, 14,  239, 107, 49,  192, 214, 31,  181, 199, 106, 157,
     184, 84,  204, 176, 115, 121, 50,  45,  127, 4,   150, 254, 138, 236, 205, 93,
     222, 114, 67,  29,  24,  72,  243, 141, 128, 195, 78,  66,  215, 61,  156, 180,
+    // clang-format on
 };
 
 int hash(int i) { return int(perm[uint(i)]); }
 
 float grad(int hash, float x) {
-    const int h    = hash & 0x0F;
-    float         grad = 1.0f + (h & 7);
-    if ((h & 8) != 0) grad = -grad;
+    const int h = hash & 0x0F;
+    float grad = 1.0f + (h & 7);
+    if ((h & 8) != 0)
+        grad = -grad;
     return (grad * x);
 }
 float grad(int hash, float x, float y) {
     const int h = hash & 0x3F;
-    const float   u = h < 4 ? x : y;
-    const float   v = h < 4 ? y : x;
+    const float u = h < 4 ? x : y;
+    const float v = h < 4 ? y : x;
     return ((h & 1) == 1 ? -u : u) + ((h & 2) == 1 ? -2.0f * v : 2.0f * v);
 }
 float grad(int hash, float x, float y, float z) {
-    int   h = hash & 15;
+    int h = hash & 15;
     float u = h < 8 ? x : y;
-    float v = h < 4 ? y : h == 12 || h == 14 ? x : z;
+    float v = h < 4 ? y : h == 12 || h == 14 ? x
+                                             : z;
     return ((h & 1) == 1 ? -u : u) + ((h & 2) == 1 ? -v : v);
 }
 float noise(float x) {
@@ -75,35 +101,27 @@ float noise(float x) {
     return 0.395f * (n0 + n1);
 }
 float noise(float x, float y) {
-    float       n0, n1, n2;
+    float n0, n1, n2;
     const float F2 = 0.366025403f;
     const float G2 = 0.211324865f;
 
-    const float s  = (x + y) * F2;
-    const float xs = x + s;
-    const float ys = y + s;
-    const int i  = fastfloor(xs);
-    const int j  = fastfloor(ys);
+    const float s = (x + y) * F2;
+    const float xs = x + s, ys = y + s;
+    const int i = fastfloor(xs), j = fastfloor(ys);
 
-    const float t  = float(i + j) * G2;
-    const float X0 = i - t;
-    const float Y0 = j - t;
-    const float x0 = x - X0;
-    const float y0 = y - Y0;
+    const float t = float(i + j) * G2;
+    const float X0 = i - t, Y0 = j - t;
+    const float x0 = x - X0, y0 = y - Y0;
 
     int i1, j1;
     if (x0 > y0) {
-        i1 = 1;
-        j1 = 0;
+        i1 = 1, j1 = 0;
     } else {
-        i1 = 0;
-        j1 = 1;
+        i1 = 0, j1 = 1;
     }
 
-    const float x1 = x0 - i1 + G2;
-    const float y1 = y0 - j1 + G2;
-    const float x2 = x0 - 1.0f + 2.0f * G2;
-    const float y2 = y0 - 1.0f + 2.0f * G2;
+    const float x1 = x0 - i1 + G2, y1 = y0 - j1 + G2;
+    const float x2 = x0 - 1.0f + 2.0f * G2, y2 = y0 - 1.0f + 2.0f * G2;
 
     const int gi0 = hash(i + hash(j));
     const int gi1 = hash(i + i1 + hash(j + j1));
@@ -141,77 +159,41 @@ float noise(float x, float y, float z) {
     const float F3 = 1.0f / 3.0f;
     const float G3 = 1.0f / 6.0f;
 
-    float s  = (x + y + z) * F3;
-    int   i  = fastfloor(x + s);
-    int   j  = fastfloor(y + s);
-    int   k  = fastfloor(z + s);
-    float t  = (i + j + k) * G3;
-    float X0 = i - t;
-    float Y0 = j - t;
-    float Z0 = k - t;
-    float x0 = x - X0;
-    float y0 = y - Y0;
-    float z0 = z - Z0;
+    float s = (x + y + z) * F3;
+    int i = fastfloor(x + s), j = fastfloor(y + s), k = fastfloor(z + s);
+    float t = (i + j + k) * G3;
+    float X0 = i - t, Y0 = j - t, Z0 = k - t;
+    float x0 = x - X0, y0 = y - Y0, z0 = z - Z0;
 
     int i1, j1, k1;
     int i2, j2, k2;
     if (x0 >= y0) {
         if (y0 >= z0) {
-            i1 = 1;
-            j1 = 0;
-            k1 = 0;
-            i2 = 1;
-            j2 = 1;
-            k2 = 0;
+            i1 = 1, j1 = 0, k1 = 0;
+            i2 = 1, j2 = 1, k2 = 0;
         } else if (x0 >= z0) {
-            i1 = 1;
-            j1 = 0;
-            k1 = 0;
-            i2 = 1;
-            j2 = 0;
-            k2 = 1;
+            i1 = 1, j1 = 0, k1 = 0;
+            i2 = 1, j2 = 0, k2 = 1;
         } else {
-            i1 = 0;
-            j1 = 0;
-            k1 = 1;
-            i2 = 1;
-            j2 = 0;
-            k2 = 1;
+            i1 = 0, j1 = 0, k1 = 1;
+            i2 = 1, j2 = 0, k2 = 1;
         }
     } else {
         if (y0 < z0) {
-            i1 = 0;
-            j1 = 0;
-            k1 = 1;
-            i2 = 0;
-            j2 = 1;
-            k2 = 1;
+            i1 = 0, j1 = 0, k1 = 1;
+            i2 = 0, j2 = 1, k2 = 1;
         } else if (x0 < z0) {
-            i1 = 0;
-            j1 = 1;
-            k1 = 0;
-            i2 = 0;
-            j2 = 1;
-            k2 = 1;
+            i1 = 0, j1 = 1, k1 = 0;
+            i2 = 0, j2 = 1, k2 = 1;
         } else {
-            i1 = 0;
-            j1 = 1;
-            k1 = 0;
-            i2 = 1;
-            j2 = 1;
-            k2 = 0;
+            i1 = 0, j1 = 1, k1 = 0;
+            i2 = 1, j2 = 1, k2 = 0;
         }
     }
 
-    float x1 = x0 - i1 + G3;
-    float y1 = y0 - j1 + G3;
-    float z1 = z0 - k1 + G3;
-    float x2 = x0 - i2 + 2.0f * G3;
-    float y2 = y0 - j2 + 2.0f * G3;
-    float z2 = z0 - k2 + 2.0f * G3;
-    float x3 = x0 - 1.0f + 3.0f * G3;
-    float y3 = y0 - 1.0f + 3.0f * G3;
-    float z3 = z0 - 1.0f + 3.0f * G3;
+    float x1 = x0 - i1 + G3, y1 = y0 - j1 + G3, z1 = z0 - k1 + G3;
+    float x2 = x0 - i2 + 2.0f * G3, y2 = y0 - j2 + 2.0f * G3, z2 = z0 - k2 + 2.0f * G3;
+    float x3 = x0 - 1.0f + 3.0f * G3, y3 = y0 - 1.0f + 3.0f * G3, z3 = z0 - 1.0f + 3.0f * G3;
 
     int gi0 = hash(i + hash(j + hash(k)));
     int gi1 = hash(i + i1 + hash(j + j1 + hash(k + k1)));
@@ -270,18 +252,25 @@ float fractal_noise(vec3 pos, FractalNoiseConfig config) {
 
 float terrain_noise(vec3 pos) {
     FractalNoiseConfig noise_conf = FractalNoiseConfig(
-        /* .amplitude   = */ 0.2f,
-        /* .persistance = */ 0.2f,
-        /* .scale       = */ 0.02f,
+        /* .amplitude   = */ 0.1f,
+        /* .persistance = */ 0.9f,
+        /* .scale       = */ 0.003f,
         /* .lacunarity  = */ 2,
-        /* .octaves     = */ 4
-    );
-    return fractal_noise(pos, noise_conf) - pos.y * 0.02;
+        /* .octaves     = */ 4);
+    return fractal_noise(pos, noise_conf) * 2.0f - pos.y * 0.020f + 0.01f;
 }
 
-uint gen_block(in vec3 pos) {
-    float val = terrain_noise(pos);
-    if (val > 0.0f) return 1;
+uint gen_block(in vec3 b_pos) {
+    float val = terrain_noise(b_pos);
+    if (val > 0.0f) {
+        return Stone;
+    } else {
+        if (b_pos.y < 0) {
+            return Water;
+        } else {
+            return Air;
+        }
+    }
     return 0;
 }
 
@@ -290,5 +279,8 @@ void main() {
     uint yi = gl_LocalInvocationID.y;
     uint zi = gl_WorkGroupID.z;
 
-    blocks[xi + yi * Chunk_NX + zi * Chunk_NX * Chunk_NY] = gen_block(vec3(xi, yi, zi));
+    uint block_index = zi + yi * Chunk_NX + xi * Chunk_NX * Chunk_NY;
+    vec3 block_pos = vec3(xi, yi, zi) + p.pos * vec3(Chunk_NX, Chunk_NY, Chunk_NZ);
+
+    blocks[block_index] = gen_block(block_pos);
 }
