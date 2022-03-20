@@ -27,12 +27,12 @@ struct RenderContext {
     std::deque<PerFrameData> frames;
 
     RenderContext(VkSurfaceKHR surface, int32_t sx, int32_t sy)
-        : device(daxa::gpu::Device::create()), queue(device->createCommandQueue({})),
+        : device(daxa::gpu::Device::create()), queue(device->createCommandQueue({.batchCount = 2})),
           swapchain(device->createSwapchain({
               .surface = surface,
               .width = (uint32_t)sx,
               .height = (uint32_t)sy,
-              .presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR,
+              .presentMode = VK_PRESENT_MODE_FIFO_KHR,
               .debugName = "Swapchain",
           })),
           swapchain_image(swapchain->aquireNextImage()),
