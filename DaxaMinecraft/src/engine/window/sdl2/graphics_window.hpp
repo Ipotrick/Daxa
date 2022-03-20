@@ -178,8 +178,8 @@ struct GraphicsWindow {
         // SDL_CaptureMouse(paused ? SDL_FALSE : SDL_TRUE);
         // SDL_SetRelativeMouseMode(paused ? SDL_FALSE : SDL_TRUE);
 
-        double center_x = static_cast<double>(size_x) / 2;
-        double center_y = static_cast<double>(size_y) / 2;
+        double center_x = static_cast<double>(size_x / 2);
+        double center_y = static_cast<double>(size_y / 2);
 
         set_mouse_pos(center_x, center_y);
     }
