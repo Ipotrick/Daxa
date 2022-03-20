@@ -407,8 +407,8 @@ public:
 				u32 vertexNormalBufId;
 				u32 drawIndex;
 			} push{
-				dummyTexture->getSampledImageDescriptorIndex().value(),
-				dummyNormalsTexture->getSampledImageDescriptorIndex().value(),
+				dummyTexture->getDescriptorIndex(),
+				dummyNormalsTexture->getDescriptorIndex(),
 				globalDataBufffer->getStorageBufferDescriptorIndex().value(),
 				primitiveInfoBuffer->getStorageBufferDescriptorIndex().value(),
 				lightsBuffer->getStorageBufferDescriptorIndex().value(),
@@ -418,10 +418,10 @@ public:
 				i
 			};
 			if (draw.prim->albedoTexture.valid()) {
-				push.albedoMap = draw.prim->albedoTexture->getCombinedImageSamplerDescriptorIndex().value();
+				push.albedoMap = draw.prim->albedoTexture->getDescriptorIndex();
 			}
 			if (draw.prim->normalTexture.valid()) {
-				push.normalMap = draw.prim->normalTexture->getCombinedImageSamplerDescriptorIndex().value();
+				push.normalMap = draw.prim->normalTexture->getDescriptorIndex();
 			}
 			if (
 				push.albedoMap == 0 ||

@@ -3,6 +3,14 @@
 
 namespace daxa {
 	namespace gpu {
+		size_t byteSizeOfImageRange(ImageHandle const& image, VkImageSubresourceLayers subRessource, VkOffset3D offset, VkExtent3D extent) {
+			return sizeofFormat(image->getVkFormat())
+				* subRessource.layerCount
+				* (extent.width - offset.x)
+				* (extent.height - offset.y)
+				* (extent.depth - offset.z);
+		}
+
 		size_t roundUpToMultipleOf128(size_t n) {
 			size_t remainder = n % 128;
 			n -= remainder;
@@ -40,6 +48,7 @@ namespace daxa {
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(size <= STAGING_BUFFER_POOL_BUFFER_SIZE, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
 			if (bBarriersQueued) { insertQueuedBarriers(); }
+			
 			if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < size) {
 				usedStagingBuffers.push_back(stagingBufferPool.lock()->getStagingBuffer());
 			}
@@ -56,77 +65,139 @@ namespace daxa {
 			stagingBuffer.usedUpSize += size;
 			stagingBuffer.usedUpSize = roundUpToMultipleOf128(stagingBuffer.usedUpSize);
 
-			BufferToBufferCopyInfo btbCopyInfo{
-				.src = *stagingBuffer.buffer,
-				.dst = copyDst,
-				.region = BufferCopyRegion{
-					.srcOffset = srcOffset,
-					.dstOffset = dstOffset,
-					.size = size,
-				}
+			//BufferToBufferCopyInfo btbCopyInfo{
+			//	.src = *stagingBuffer.buffer,
+			//	.dst = copyDst,
+			//	.region = BufferCopyRegion{
+			//		.srcOffset = srcOffset,
+			//		.dstOffset = dstOffset,
+			//		.size = size,
+			//	}
+			//};
+			//copyBufferToBuffer(btbCopyInfo);
+			BufferToBufferCopyInfo2 copyInfo{
+				.srcOffset = srcOffset,
+				.dstOffset = dstOffset,
+				.size = size,
 			};
-			copyBufferToBuffer(btbCopyInfo);
+			singleCopyBufferToBuffer(*stagingBuffer.buffer, copyDst, copyInfo);
+			
+			return mm;
+		}
+
+		MappedMemoryPointer<u8> CommandList::mapMemoryStagedImageVoid(ImageHandle copyDst, VkImageSubresourceLayers subRessource, VkOffset3D dstOffset, VkExtent3D dstExtent) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			if (bBarriersQueued) { insertQueuedBarriers(); }
+			if (dstExtent.width == 0) {
+				dstExtent.width = copyDst->getVkExtent3D().width;
+			}
+			if (dstExtent.height == 0) {
+				dstExtent.height = copyDst->getVkExtent3D().height;
+			}
+			if (dstExtent.depth == 0) {
+				dstExtent.depth = copyDst->getVkExtent3D().depth;
+			}
+			auto size = byteSizeOfImageRange(copyDst, subRessource, dstOffset, dstExtent);
+			DAXA_ASSERT_M(size <= STAGING_BUFFER_POOL_BUFFER_SIZE, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
+			
+			if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < size) {
+				usedStagingBuffers.push_back(stagingBufferPool.lock()->getStagingBuffer());
+			}
+
+			auto& stagingBuffer = usedStagingBuffers.back();
+			
+			auto srcOffset = stagingBuffer.usedUpSize;
+
+			auto mm = stagingBuffer.buffer->mapMemory();
+
+			mm.hostPtr += srcOffset;
+			mm.size = size;
+
+			stagingBuffer.usedUpSize += size;
+			stagingBuffer.usedUpSize = roundUpToMultipleOf128(stagingBuffer.usedUpSize);
+
+			BufferToImageCopyInfo2 copyInfo {
+				.bufferOffset = srcOffset,
+				.subRessource = subRessource,
+				.imageOffset = dstOffset,
+				.imageExtent = dstExtent,
+			};
+			singleCopyBufferToImage(stagingBuffer.buffer.value(), copyDst, copyInfo);
 
 			return mm;
 		}
 
 		void CommandList::copyHostToBuffer(HostToBufferCopyInfo copyInfo) {
-			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
-			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-			DAXA_ASSERT_M(copyInfo.size <= STAGING_BUFFER_POOL_BUFFER_SIZE, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
-			if (bBarriersQueued) { insertQueuedBarriers(); }
-			if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < copyInfo.size) {
-				usedStagingBuffers.push_back(stagingBufferPool.lock()->getStagingBuffer());
-			}
+			//DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
+			//DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			//DAXA_ASSERT_M(copyInfo.size <= STAGING_BUFFER_POOL_BUFFER_SIZE, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
+			//if (bBarriersQueued) { insertQueuedBarriers(); }
+			//if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < copyInfo.size) {
+			//	usedStagingBuffers.push_back(stagingBufferPool.lock()->getStagingBuffer());
+			//}
+//
+			//auto& stagingBuffer = usedStagingBuffers.back();
+//
+			//auto offset = stagingBuffer.usedUpSize;
+//
+			//// memory is currently automaticly unmapped in Queue::submit
+			//(**stagingBuffer.buffer).upload(copyInfo.src, copyInfo.size, offset);
+//
+			//stagingBuffer.usedUpSize += copyInfo.size;
+			//stagingBuffer.usedUpSize = roundUpToMultipleOf128(stagingBuffer.usedUpSize);
+//
+			//BufferToBufferCopyInfo btbCopyInfo{
+			//	.src = *stagingBuffer.buffer,
+			//	.dst = copyInfo.dst,
+			//	.region = BufferCopyRegion{
+			//		.srcOffset = offset,
+			//		.dstOffset = copyInfo.dstOffset,
+			//		.size = copyInfo.size,
+			//	}
+			//};
+			//copyBufferToBuffer(btbCopyInfo);
 
-			auto& stagingBuffer = usedStagingBuffers.back();
-
-			auto offset = stagingBuffer.usedUpSize;
-
-			// memory is currently automaticly unmapped in Queue::submit
-			(**stagingBuffer.buffer).upload(copyInfo.src, copyInfo.size, offset);
-
-			stagingBuffer.usedUpSize += copyInfo.size;
-			stagingBuffer.usedUpSize = roundUpToMultipleOf128(stagingBuffer.usedUpSize);
-
-			BufferToBufferCopyInfo btbCopyInfo{
-				.src = *stagingBuffer.buffer,
-				.dst = copyInfo.dst,
-				.region = BufferCopyRegion{
-					.srcOffset = offset,
-					.dstOffset = copyInfo.dstOffset,
-					.size = copyInfo.size,
-				}
+			HostToBufferCopyInfo2 forwardCopyInfo{
+				.srcOffset = 0,
+				.dstOffset = copyInfo.dstOffset,
+				.size = copyInfo.size,
 			};
-			copyBufferToBuffer(btbCopyInfo);
+			singleCopyHostToBuffer(reinterpret_cast<u8*>(copyInfo.src), copyInfo.dst, forwardCopyInfo);
 		}
 
 		void CommandList::copyHostToImage(HostToImageCopyInfo copyInfo) {
-			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
-			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-			DAXA_ASSERT_M(copyInfo.size <= STAGING_BUFFER_POOL_BUFFER_SIZE, "Currently uploads over a size of 67.108.864 bytes are not supported by the copyHostToImage function. Please use a staging buffer.");
-			if (bBarriersQueued) { insertQueuedBarriers(); }
-			if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < copyInfo.size) {
-				usedStagingBuffers.push_back(stagingBufferPool.lock()->getStagingBuffer());
+			//DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
+			//DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			//DAXA_ASSERT_M(copyInfo.size <= STAGING_BUFFER_POOL_BUFFER_SIZE, "Currently uploads over a size of 67.108.864 bytes are not supported by the copyHostToImage function. Please use a staging buffer.");
+			//if (bBarriersQueued) { insertQueuedBarriers(); }
+			//if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < copyInfo.size) {
+			//	usedStagingBuffers.push_back(stagingBufferPool.lock()->getStagingBuffer());
+			//}
+//
+			//auto& stagingBuffer = usedStagingBuffers.back();
+//
+			//auto offset = stagingBuffer.usedUpSize;
+//
+			//(**stagingBuffer.buffer).upload(copyInfo.src, copyInfo.size, offset);
+//
+			//stagingBuffer.usedUpSize += copyInfo.size;
+			//stagingBuffer.usedUpSize = roundUpToMultipleOf128(stagingBuffer.usedUpSize);
+//
+			//BufferToImageCopyInfo btiCopy{
+			//	.src = *stagingBuffer.buffer,
+			//	.dst = copyInfo.dst,
+			//	.srcOffset = offset,
+			//	.subRessourceLayers = copyInfo.dstImgSubressource,
+			//	.size = copyInfo.size,
+			//};
+			//copyBufferToImage(btiCopy);
+			
+			HostToImageCopyInfo2 forwardCopyInfo = {};
+			if (copyInfo.dstImgSubressource.has_value()) {
+				forwardCopyInfo.subRessource = *copyInfo.dstImgSubressource;
 			}
-
-			auto& stagingBuffer = usedStagingBuffers.back();
-
-			auto offset = stagingBuffer.usedUpSize;
-
-			(**stagingBuffer.buffer).upload(copyInfo.src, copyInfo.size, offset);
-
-			stagingBuffer.usedUpSize += copyInfo.size;
-			stagingBuffer.usedUpSize = roundUpToMultipleOf128(stagingBuffer.usedUpSize);
-
-			BufferToImageCopyInfo btiCopy{
-				.src = *stagingBuffer.buffer,
-				.dst = copyInfo.dst,
-				.srcOffset = offset,
-				.subRessourceLayers = copyInfo.dstImgSubressource,
-				.size = copyInfo.size,
-			};
-			copyBufferToImage(btiCopy);
+			singleCopyHostToImage(reinterpret_cast<u8*>(copyInfo.src), copyInfo.dst->getImageHandle(), forwardCopyInfo);
 		}
 
 		void CommandList::copyHostToImageSynced(HostToImageCopySyncedInfo copySyncedInfo) {
@@ -271,6 +342,136 @@ namespace daxa {
 			});
 		}
 
+
+		///
+		/// 	TRANSFER 2 BEGIN
+		///
+
+
+		void CommandList::multiCopyHostToBuffer(u8 const* src, BufferHandle const& dst, std::span<HostToBufferCopyInfo2 const> infos) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			DAXA_ASSERT_M(!currentRenderPass.has_value(), "can not record copy commands in a render pass");
+			if (bBarriersQueued) { insertQueuedBarriers(); }
+
+			for (size_t i = 0; i < infos.size(); i++) {
+				auto const& info = infos[i];
+				auto mappedmem = this->mapMemoryStaged<u8 const*>(dst, info.size, info.dstOffset);
+				std::memcpy(mappedmem.hostPtr, src + info.srcOffset, info.size);
+			}
+		}
+		void CommandList::singleCopyHostToBuffer(u8 const* src, BufferHandle const& dst, HostToBufferCopyInfo2 const& info) {
+			this->multiCopyHostToBuffer(src, dst, std::span{&info,1});
+		}
+
+		void CommandList::multiCopyHostToImage(u8 const* src, ImageHandle const& dst, std::span<HostToImageCopyInfo2 const> infos) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			DAXA_ASSERT_M(!currentRenderPass.has_value(), "can not record copy commands in a render pass");
+			if (bBarriersQueued) { insertQueuedBarriers(); }
+
+			for (size_t i = 0; i < infos.size(); i++) {
+				auto const& info = infos[i];
+				auto mappedmem = this->mapMemoryStagedImage<u8 const*>(dst,info.subRessource,info.imageOffset, info.imageExtent);
+				std::memcpy(mappedmem.hostPtr, src + info.srcOffset, mappedmem.size);
+			}
+		}
+		void CommandList::singleCopyHostToImage(u8 const* src, ImageHandle const& dst, HostToImageCopyInfo2 const& info) {
+			this->multiCopyHostToImage(src, dst, std::span{&info,1});
+		}
+
+		void CommandList::multiCopyBufferToBuffer(BufferHandle const& src, BufferHandle const& dst, std::span<BufferToBufferCopyInfo2 const> infos) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			DAXA_ASSERT_M(!currentRenderPass.has_value(), "can not record copy commands in a render pass");
+			if (bBarriersQueued) { insertQueuedBarriers(); }
+
+#if defined(_DEBUG)
+			for (size_t i = 0; i < infos.size(); i++) {
+				auto const& info = infos.data()[i];
+				DAXA_ASSERT_M(info.srcOffset + info.size <= src->getSize(), "copy overruns buffer");
+				DAXA_ASSERT_M(info.dstOffset + info.size <= dst->getSize(), "copy overruns buffer");
+			}
+#endif
+
+			vkCmdCopyBuffer(cmd, src->getVkBuffer(), dst->getVkBuffer(), static_cast<u32>(infos.size()), reinterpret_cast<VkBufferCopy const*>(infos.data()));
+		}
+		void CommandList::singleCopyBufferToBuffer(BufferHandle const& src, BufferHandle const& dst, BufferToBufferCopyInfo2 const& info) {
+			this->multiCopyBufferToBuffer(src, dst, std::span{&info,1});
+		}
+
+		thread_local std::vector<VkBufferImageCopy> bufferToImageCopyBuffer = {};
+		void CommandList::multiCopyBufferToImage(BufferHandle const& src, ImageHandle const& dst, std::span<BufferToImageCopyInfo2 const> infos) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			DAXA_ASSERT_M(!currentRenderPass.has_value(), "can not record copy commands in a render pass");
+			if (bBarriersQueued) { insertQueuedBarriers(); }
+
+			bufferToImageCopyBuffer.reserve(infos.size());
+
+			for (auto& info: infos) {
+				VkBufferImageCopy outinfo = *reinterpret_cast<VkBufferImageCopy const*>(&info);
+				if (outinfo.imageExtent.width == 0) {
+					outinfo.imageExtent.width = dst->getVkExtent3D().width;
+				}
+				if (outinfo.imageExtent.height == 0) {
+					outinfo.imageExtent.height = dst->getVkExtent3D().height;
+				}
+				if (outinfo.imageExtent.depth == 0) {
+					outinfo.imageExtent.depth = dst->getVkExtent3D().depth;
+				}
+				auto minNeededBufferSize = byteSizeOfImageRange(dst, outinfo.imageSubresource, outinfo.imageOffset, outinfo.imageExtent);
+				DAXA_ASSERT_M(minNeededBufferSize <= src->getSize(), "copy size overruns src size");
+				bufferToImageCopyBuffer.push_back(outinfo);
+			}
+
+			vkCmdCopyBufferToImage(cmd, src->getVkBuffer(), dst->getVkImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, bufferToImageCopyBuffer.size(), bufferToImageCopyBuffer.data());
+			bufferToImageCopyBuffer.clear();
+		}
+		void CommandList::singleCopyBufferToImage(BufferHandle const& src, ImageHandle const& dst, BufferToImageCopyInfo2 const& info) {
+			this->multiCopyBufferToImage(src, dst, std::span{&info,1});
+		}
+
+		thread_local std::vector<VkImageCopy> imagetoImageCopyBuffer = {};
+		void CommandList::multiCopyImageToImage(ImageHandle const& src, ImageHandle const& dst, std::span<ImageToImageCopyInfo2 const> infos) {
+			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
+			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			DAXA_ASSERT_M(!currentRenderPass.has_value(), "can not record copy commands in a render pass");
+			if (bBarriersQueued) { insertQueuedBarriers(); }
+
+			imagetoImageCopyBuffer.reserve(infos.size());
+			for (auto& info : infos) {
+				VkImageCopy infoout;
+				infoout.srcOffset = info.srcOffset;
+				infoout.srcSubresource = info.srcSubresource;
+				infoout.dstOffset = info.dstOffset;
+				infoout.dstSubresource = info.dstSubresource;
+				infoout.extent = info.extent;
+				if (infoout.extent.width == 0) {
+					infoout.extent.width = src->getVkExtent3D().width;
+				}
+				if (infoout.extent.height == 0) {
+					infoout.extent.height = src->getVkExtent3D().height;
+				}
+				if (infoout.extent.depth == 0) {
+					infoout.extent.depth = src->getVkExtent3D().depth;
+				}
+				imagetoImageCopyBuffer.push_back(infoout);
+			}
+
+			vkCmdCopyImage(cmd, src->getVkImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst->getVkImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, imagetoImageCopyBuffer.size(), imagetoImageCopyBuffer.data());
+			imagetoImageCopyBuffer.clear();
+		}
+		void CommandList::singleCopyImageToImage(ImageHandle const& src, ImageHandle const& dst, ImageToImageCopyInfo2 const& info) {
+			this->multiCopyImageToImage(src, dst, std::span{&info,1});
+		}
+
+
+		///
+		/// 	TRANSFER 2 END
+		///
+
+
 		void CommandList::dispatch(u32 groupCountX, u32 groupCountY, u32 grpupCountZ) {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
@@ -285,7 +486,6 @@ namespace daxa {
 			DAXA_ASSERT_M(buffer, "invalid buffer handle");
 			auto vkBuffer = buffer->getVkBuffer();
 			vkCmdBindVertexBuffers(cmd, binding, 1, &vkBuffer, &bufferOffset);
-			//usedBuffers.push_back(buffer);
 		}
 
 		void CommandList::bindIndexBuffer(BufferHandle& buffer, size_t bufferOffset, VkIndexType indexType) {
@@ -294,7 +494,6 @@ namespace daxa {
 			DAXA_ASSERT_M(buffer, "invalid buffer handle");
 			auto vkBuffer = buffer->getVkBuffer();
 			vkCmdBindIndexBuffer(cmd, vkBuffer, bufferOffset, indexType);
-			//usedBuffers.push_back(buffer);
 		}
 
 		void CommandList::beginRendering(BeginRenderingInfo ri) {
@@ -314,8 +513,6 @@ namespace daxa {
 			};
 			operationsInProgress += 1;
 			for (int i = 0; i < ri.colorAttachments.size(); i++) {
-				//usedImages.push_back(ri.colorAttachments[i].image);
-
 				renderAttachmentBuffer.push_back(VkRenderingAttachmentInfoKHR{
 					.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
 					.pNext = nullptr,

@@ -137,22 +137,72 @@ namespace daxa {
 			VkExtent3D size							= {};
 		};
 
-		struct BufferToImageCopyInfo2{
-			BufferHandle src = {};
-			// defaulted to use no offset
-			u64 bufferOffset = 0;
-			ImageViewHandle dst = {};
+		struct HostToBufferCopyInfo2{
+			u64 srcOffset = 0;
+			u64 dstOffset = 0;
+			u64 size = 0;
+		};
+
+		struct HostToImageCopyInfo2{
+			u64 srcOffset = 0;
 			// defaulted to use layer 0 mip 0 color aspect
 			VkImageSubresourceLayers subRessource = {
 				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.mipLevel = 0,
 				.baseArrayLayer = 0,
 				.layerCount = 1,
-				.mipLevel = 0,
 			};
 			// defaulted to use no offset
-			VkOffset3D imageOffset = { 0, 0, 0 };
+			VkOffset3D imageOffset = {  0,  0,  0 };
 			// defaulted to use the full image extent
-			VkOffset3D imageExtent = { -1, -1, -1 };
+			VkExtent3D imageExtent = { 0, 0, 0 };
+		};
+
+		/// MUST BE ABI COMPATIBLE TO VkBufferCopy
+		struct BufferToBufferCopyInfo2{
+			u64 srcOffset = 0;
+			u64 dstOffset = 0;
+			u64 size = 0;
+		};
+
+		/// MUST BE ABI COMPATIBLE TO VkBufferImageCopy
+		struct BufferToImageCopyInfo2{
+			u64 bufferOffset = 0;
+			u32 bufferRowLength = 0;
+			u32 bufferImageHeight = 0;
+			// defaulted to use layer 0 mip 0 color aspect
+			VkImageSubresourceLayers subRessource = {
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.mipLevel = 0,
+				.baseArrayLayer = 0,
+				.layerCount = 1,
+			};
+			// defaulted to use no offset
+			VkOffset3D imageOffset = {  0,  0,  0 };
+			// defaulted to use the full image extent
+			VkExtent3D imageExtent = { 0, 0, 0 };
+		};
+
+		struct ImageToBufferCopyInfo2 {
+
+		};
+
+		struct ImageToImageCopyInfo2{
+			VkImageSubresourceLayers    srcSubresource = {
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.mipLevel = 0,
+				.baseArrayLayer = 0,
+				.layerCount = 1,
+			};
+			VkOffset3D                  srcOffset 		= { 0, 0, 0, };
+			VkImageSubresourceLayers    dstSubresource 	= {
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.mipLevel = 0,
+				.baseArrayLayer = 0,
+				.layerCount = 1,
+			};
+			VkOffset3D                  dstOffset 		= { 0, 0, 0, };
+			VkExtent3D                  extent 			= { 0, 0, 0, };
 		};
 
 		/**
@@ -237,6 +287,17 @@ namespace daxa {
 				auto ret = mapMemoryStagedVoid(copyDst, size, dstOffset);
 				return { reinterpret_cast<ValueT*>(ret.hostPtr), ret.size, std::move(ret.owningBuffer) };
             }
+			
+            template<typename ValueT = u8>
+			MappedMemoryPointer<ValueT> mapMemoryStagedImage(
+				ImageHandle copyDst, 
+				VkImageSubresourceLayers subressource = { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1 }, 
+				VkOffset3D dstOffset = { 0, 0, 0 }, 
+				VkExtent3D dstExtent = { 0, 0, 0 }
+			) {
+				auto ret = mapMemoryStagedImageVoid(copyDst, subressource, dstOffset, dstExtent);
+				return { reinterpret_cast<ValueT*>(ret.hostPtr), ret.size, std::move(ret.owningBuffer) };
+            }
 
 			void copyHostToBuffer2(BufferHandle& srcBuffer, ImageViewHandle& dstImage, std::span<VkBufferImageCopy> regions = {});
 
@@ -258,20 +319,23 @@ namespace daxa {
 
 			// transfer2:
 
-			void multiCopyHostToBuffer();
-			void singleCopyHostToBuffer();
+			void multiCopyHostToBuffer(u8 const* src, BufferHandle const& dst, std::span<HostToBufferCopyInfo2 const> infos);
+			void singleCopyHostToBuffer(u8 const* src, BufferHandle const& dst, HostToBufferCopyInfo2 const& info);
 
-			void multiCopyHostToImage();
-			void singleCopyHostToImage();
+			void multiCopyHostToImage(u8 const* src, ImageHandle const& dst, std::span<HostToImageCopyInfo2 const> infos);
+			void singleCopyHostToImage(u8 const* src, ImageHandle const& dst, HostToImageCopyInfo2 const& info);
 
-			void multicopyBufferToBuffer();
-			void singleCopyBufferToBuffer();
+			void multiCopyBufferToBuffer(BufferHandle const& src, BufferHandle const& dst, std::span<BufferToBufferCopyInfo2 const> infos);
+			void singleCopyBufferToBuffer(BufferHandle const& src, BufferHandle const& dst, BufferToBufferCopyInfo2 const& info);
 
-			void multiCopyBufferToImage(BufferHandle const& src, ImageViewHandle const& dst, std::span<BufferToImageCopyInfo2>);
-			void singleCopyBufferToImage(BufferHandle const& src, ImageViewHandle const& dst, BufferToImageCopyInfo2);
+			void multiCopyBufferToImage(BufferHandle const& src, ImageHandle const& dst, std::span<BufferToImageCopyInfo2 const> infos);
+			void singleCopyBufferToImage(BufferHandle const& src, ImageHandle const& dst, BufferToImageCopyInfo2 const& info);
 
-			void multiCopyImageToImage();
-			void singleCopyImageToImage();
+			void multiCopyImageToBuffer(ImageHandle const& src, BufferHandle const& dst, std::span<ImageToBufferCopyInfo2 const> infos);
+			void singleCopyImageToBuffer(ImageHandle const& src, BufferHandle const& dst, ImageToBufferCopyInfo2 const& info);
+
+			void multiCopyImageToImage(ImageHandle const& src, ImageHandle const& dst, std::span<ImageToImageCopyInfo2 const> infos);
+			void singleCopyImageToImage(ImageHandle const& src, ImageHandle const& dst, ImageToImageCopyInfo2 const& info);
 
 			// Compute:
 
@@ -397,6 +461,7 @@ namespace daxa {
 			void setDebugName(char const* debugName);
 			void checkIfPipelineAndRenderPassFit();
 			MappedMemoryPointer<u8> mapMemoryStagedVoid(BufferHandle copyDst, size_t size, size_t dstOffset);
+			MappedMemoryPointer<u8> mapMemoryStagedImageVoid(ImageHandle copyDst, VkImageSubresourceLayers subRessource, VkOffset3D dstOffset, VkExtent3D dstExtent);
 
 			struct CurrentRenderPass{
 				std::vector<RenderAttachmentInfo> 		colorAttachments 	= {};
@@ -405,9 +470,9 @@ namespace daxa {
 			};
 
 			bool 											bBarriersQueued 		= {};
-			std::vector<VkMemoryBarrier2>					queuedMemoryBarriers	= {};
-			std::vector<VkBufferMemoryBarrier2>				queuedBufferBarriers	= {};
-			std::vector<VkImageMemoryBarrier2>				queuedImageBarriers		= {};
+			std::vector<VkMemoryBarrier2KHR>				queuedMemoryBarriers	= {};
+			std::vector<VkBufferMemoryBarrier2KHR>			queuedBufferBarriers	= {};
+			std::vector<VkImageMemoryBarrier2KHR>			queuedImageBarriers		= {};
 			std::shared_ptr<DeviceBackend> 					deviceBackend			= {};
 			VkCommandBuffer 								cmd 					= {};
 			VkCommandPool 									cmdPool 				= {};
