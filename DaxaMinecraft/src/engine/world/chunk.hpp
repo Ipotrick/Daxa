@@ -65,6 +65,31 @@ struct Chunk {
     auto get_tile(int x, int y, int z) -> TileInfo & { SAMPLE_BUFFER(tiles, null_tile); }
 #undef SAMPLE_BUFFER
 
+    void copy_block_data(const Chunk::BlockBuffer &src_blocks) {
+        for (int zi = 0; zi < NZ; ++zi) {
+            for (int yi = 0; yi < NY; ++yi) {
+                for (int xi = 0; xi < NX; ++xi) {
+                    auto &current_block = blocks[xi][yi][zi];
+                    auto &current_src_block = src_blocks[xi][yi][zi];
+
+                    auto &current_tile = tiles[xi][yi][zi];
+                    auto b_pos = glm::vec3(xi, yi, zi) + FLOAT_DIM * glm::vec3(pos);
+                    
+                    current_block = current_src_block;
+
+                    float bval = biome_noise(glm::ivec3(b_pos.x, 0, b_pos.z));
+                    if (bval > 0.1f) {
+                        current_tile.biome = BiomeID::Desert;
+                    } else if (bval > 0.02f) {
+                        current_tile.biome = BiomeID::Plains;
+                    } else {
+                        current_tile.biome = BiomeID::Forest;
+                    }
+                }
+            }
+        }
+    }
+
     void generate_block_data() {
         for (int zi = 0; zi < NZ; ++zi) {
             for (int yi = 0; yi < NY; ++yi) {
@@ -111,45 +136,34 @@ struct Chunk {
                     auto b_pos = glm::vec3(xi, yi, zi) + FLOAT_DIM * glm::vec3(pos);
                     auto &current_block = get_block(xi, yi, zi);
                     auto &current_tile = get_tile(xi, yi, zi);
-                    std::array<Block *, 5> above{
-                        &get_block(xi, yi + 1, zi),
-                        &get_block(xi, yi + 2, zi),
-                        &get_block(xi, yi + 3, zi),
-                        &get_block(xi, yi + 4, zi),
-                        &get_block(xi, yi + 5, zi),
-                    };
+                    std::array<Block *, 16> above{};
+                    for (size_t i = 0; i < above.size(); ++i)
+                        above[i] = &get_block(xi, yi + 1 + i, zi);
+
                     if (current_block.id == BlockID::Stone) {
                         auto random_int = dist(rng);
-                        if (above[0]->is_transparent()) {
-                            if (b_pos.y < 2 && b_pos.y > -2) { // beach
-                                current_block.id = BlockID::Sand;
-                            } else {
-                                current_block.id = current_tile.biome_surface();
-                                current_tile.biome_structures(random_int,
-                                                              glm::ivec3(xi, yi, zi),
-                                                              above, structures, *this);
-                                null_block.id = BlockID::Air;
+                        if (b_pos.y < -20 && b_pos.y > -60) {
+                            auto c_val = cave_noise(b_pos) + (b_pos.y + 44) * 0.01f;
+                            if (c_val < -0.01) {
+                                current_block.id = BlockID::Air;
                             }
                         } else {
-                            bool above_transparent = false;
-                            bool under_water = false;
-                            for (int i = 0; i < 3 + random_int % 3; ++i) {
-                                if (above[i]->is_transparent()) {
-                                    above_transparent = true;
-                                    break;
-                                } else if (above[i]->id == BlockID::Water) {
-                                    under_water = true;
-                                }
-                            }
-                            if (above_transparent) {
+                            // add surface decorations
+                            if (above[0]->is_transparent()) {
                                 if (b_pos.y < 2 && b_pos.y > -2) { // beach
                                     current_block.id = BlockID::Sand;
                                 } else {
-                                    current_block.id = current_tile.biome_ground();
+                                    current_block.id = current_tile.biome_surface(random_int, glm::ivec3(xi, yi, zi));
+                                    current_tile.biome_structures(random_int, glm::ivec3(xi, yi, zi), above, structures, *this);
                                 }
-                            } else if (under_water) {
-                                current_block.id = BlockID::Gravel;
+                            } else {
+                                if (b_pos.y < 2 && b_pos.y > -2) { // beach
+                                    current_block.id = BlockID::Sand;
+                                } else {
+                                    current_tile.biome_ground(random_int, glm::ivec3(xi, yi, zi), above, current_block.id);
+                                }
                             }
+                            null_block.id = BlockID::Air;
                         }
                     }
                 }
