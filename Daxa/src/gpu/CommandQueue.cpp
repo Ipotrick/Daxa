@@ -185,7 +185,6 @@ namespace daxa {
 				std::unique_lock lock(deviceBackend->graveyard.mtx);
 				deviceBackend->graveyard.activeZombieLists.push_back(list->zombies);
 			}
-			//printf("begin command buffer: %s\n", list->debugName.c_str());
 			list->begin();
 			return std::move(list);
 		}
