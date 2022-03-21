@@ -10,7 +10,7 @@
 
 struct World {
     static constexpr int RENDER_DIST_XZ = 4;
-    static constexpr glm::ivec3 CHUNK_MAX{16, 6, 16};
+    static constexpr glm::ivec3 CHUNK_MAX{4, 6, 4};
 
     template <typename T>
     using WorldArray = std::array<std::array<std::array<T, CHUNK_MAX.x>, CHUNK_MAX.y>, CHUNK_MAX.z>;
@@ -47,7 +47,7 @@ struct World {
 
     std::chrono::system_clock::rep last_vert_reload_time = 0, last_frag_reload_time = 0;
 
-    static constexpr glm::ivec3 chunk_min{-8, -2, -8};
+    static constexpr glm::ivec3 chunk_min{-2, -2, -2};
     static constexpr glm::ivec3 chunk_max = CHUNK_MAX + chunk_min;
 
     bool chunks_invalidated = true;
@@ -367,24 +367,6 @@ struct World {
         render_ctx.queue->checkForFinishedSubmits();
 
         auto generated_data = chunkgen_buffer.mapMemory<const u32>();
-
-        Chunk::BlockBuffer default_chunk_data;
-        for (auto &plane : default_chunk_data) {
-            for (auto &line : plane) {
-                for (auto &tile : line) {
-                    tile.id = BlockID::Dirt;
-                }
-            }
-        }
-        for (int zi = chunk_min.z; zi < chunk_max.z; ++zi) {
-            for (int yi = chunk_min.y; yi < chunk_max.y; ++yi) {
-                for (int xi = chunk_min.x; xi < chunk_max.x; ++xi) {
-                    glm::ivec3 index{xi - chunk_min.x, yi - chunk_min.y, zi - chunk_min.z};
-                    auto &current_chunk_ptr = chunks[index.z][index.y][index.x];
-                    current_chunk_ptr->chunk.copy_block_data(default_chunk_data);
-                }
-            }
-        }
 
         if (generated_data.hostPtr) {
             for (int zi = chunk_min.z; zi < chunk_max.z; ++zi) {

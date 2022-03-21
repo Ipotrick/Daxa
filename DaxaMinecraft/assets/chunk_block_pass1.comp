@@ -20,13 +20,18 @@ const uint Sandstone   = 14;
 const uint Stone       = 15;
 const uint TallGrass   = 16;
 const uint Water       = 17;
+
+const uint Plains = 0;
+const uint Forest = 1;
+const uint Desert = 2;
+const uint Beach = 3;
 // clang-format on
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 const uvec3 CHUNK_SIZE = uvec3(16);
 const uint RENDER_DIST_XZ = 4;
-const uvec3 CHUNK_MAX = uvec3(16, 6, 16);
+const uvec3 CHUNK_MAX = uvec3(4, 6, 4);
 
 struct ChunkgenBuffer {
     uint blocks[CHUNK_SIZE.x * CHUNK_SIZE.y * CHUNK_SIZE.z];
@@ -280,13 +285,13 @@ uint gen_block(in vec3 b_pos) {
     float b_val = biome_noise(b_pos);
     float val = terrain_noise(b_pos);
 
-    uint biome_id = 0;
+    uint biome_id = Plains;
     if (b_val < -0.2)
-        biome_id = 1;
+        biome_id = Forest;
     else if (b_val > 0)
-        biome_id = 2;
+        biome_id = Desert;
     if (b_pos.y > -4 && b_pos.y < 4 && val < 0.05 && val > -0.05)
-        biome_id = 3;
+        biome_id = Beach;
 
     biome_id = biome_id << 16;
 
