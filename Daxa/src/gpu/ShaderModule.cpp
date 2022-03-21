@@ -56,7 +56,7 @@ namespace daxa {
 			return ResultErr{ err.c_str() };
 		}
 
-		Result<std::vector<u32>> tryGenSPIRVFromShaderc(std::string const& src, VkShaderStageFlagBits shaderStage, ShaderLang lang) {
+		Result<std::vector<u32>> tryGenSPIRVFromShaderc(std::string const& src, VkShaderStageFlagBits shaderStage, ShaderLang lang, shaderc::Compiler& compiler, shaderc::CompileOptions& options) {
 			auto translateShaderStage = [](VkShaderStageFlagBits stage) -> shaderc_shader_kind {
 				switch (stage) {
 				case VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT: return shaderc_shader_kind::shaderc_vertex_shader;
@@ -85,8 +85,9 @@ namespace daxa {
 				case ShaderLang::HLSL: langType = shaderc_source_language_hlsl; break;
 			}
 
-			shaderc::Compiler compiler;
-  			shaderc::CompileOptions options;
+			//shaderc::Compiler compiler;
+  			//shaderc::CompileOptions options;
+			//options.SetIncluder();
 			/*
 				DO NOT ENABLE OPTIMIZATIONS!
 				The driver will optimize it anyways AND
@@ -122,12 +123,12 @@ namespace daxa {
 			}
 		}
 
-		Result<VkShaderModule> tryCreateVkShaderModule(std::shared_ptr<DeviceBackend>& deviceBackend, std::filesystem::path const& path, VkShaderStageFlagBits shaderStage, ShaderLang lang) {
+		Result<VkShaderModule> tryCreateVkShaderModule(std::shared_ptr<DeviceBackend>& deviceBackend, std::filesystem::path const& path, VkShaderStageFlagBits shaderStage, ShaderLang lang, shaderc::Compiler& compiler, shaderc::CompileOptions& options) {
 			auto src = tryLoadShaderSourceFromFile(path);
 			if (src.isErr()) {
 				return ResultErr{ src.message() };
 			}
-			auto spirv = tryGenSPIRVFromShaderc(src.value(), shaderStage, lang);
+			auto spirv = tryGenSPIRVFromShaderc(src.value(), shaderStage, lang, compiler, options);
 			if (spirv.isErr()) {
 				return ResultErr{ spirv.message() + "; with path: " + path.string() };
 			}
@@ -138,8 +139,8 @@ namespace daxa {
 			return { shadMod.value() };
 		}
 
-		Result<ShaderModuleHandle> ShaderModuleHandle::tryCompileShader(std::shared_ptr<DeviceBackend>& deviceBackend, std::string const& glsl, std::string const& entryPoint, VkShaderStageFlagBits shaderStage, ShaderLang lang) {
-			auto spirv = tryGenSPIRVFromShaderc(glsl, shaderStage, lang);
+		Result<ShaderModuleHandle> ShaderModuleHandle::tryCompileShader(std::shared_ptr<DeviceBackend>& deviceBackend, std::string const& glsl, std::string const& entryPoint, VkShaderStageFlagBits shaderStage, ShaderLang lang, shaderc::Compiler& compiler, shaderc::CompileOptions& options) {
+			auto spirv = tryGenSPIRVFromShaderc(glsl, shaderStage, lang, compiler, options);
 			if (spirv.isErr()) {
 				return ResultErr{ spirv.message() };
 			}
@@ -156,7 +157,7 @@ namespace daxa {
 			return { ShaderModuleHandle{ std::move(shaderMod) } };
 		}
 		
-		Result<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(std::shared_ptr<DeviceBackend>& deviceBackend, ShaderModuleCreateInfo const& ci) {
+		Result<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(std::shared_ptr<DeviceBackend>& deviceBackend, ShaderModuleCreateInfo const& ci, shaderc::Compiler& compiler, shaderc::CompileOptions& options) {
 			std::string sourceCode = {};
 			if (!ci.pathToSource.empty()) {
 				auto src = tryLoadShaderSourceFromFile(ci.pathToSource);
@@ -172,7 +173,7 @@ namespace daxa {
 				return ResultErr{"no path given"};
 			}
 
-			auto shadMod = tryCompileShader(deviceBackend, sourceCode, ci.entryPoint, ci.stage, ci.shaderLang);
+			auto shadMod = tryCompileShader(deviceBackend, sourceCode, ci.entryPoint, ci.stage, ci.shaderLang, compiler, options);
 			if (shadMod.isErr()) {
 				auto errMess = shadMod.message();
 				if (!ci.pathToSource.empty()) {

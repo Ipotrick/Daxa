@@ -1,6 +1,11 @@
 #include "Pipeline.hpp"
 
 namespace daxa {
+    struct PipelineCompilerShadedData {
+    public:
+    private:
+    };
+
     class PipelineCompiler {
     public:
         PipelineCompiler(std::shared_ptr<gpu::DeviceBackend> deviceBackend, std::shared_ptr<gpu::BindingSetLayoutCache> bindSetLayoutCache);
@@ -15,6 +20,9 @@ namespace daxa {
         std::shared_ptr<gpu::DeviceBackend> deviceBackend = {};
         std::shared_ptr<gpu::BindingSetLayoutCache> bindSetLayoutCache = {};
         std::vector<std::filesystem::path> rootPaths = { "." };
+        std::shared_ptr<PipelineCompilerShadedData> sharedData = {};
+        shaderc::Compiler compiler = {};
+        shaderc::CompileOptions options = {};
     };
 
 	class PipelineCompilerHandle : public daxa::gpu::SharedHandle<PipelineCompiler>{};
