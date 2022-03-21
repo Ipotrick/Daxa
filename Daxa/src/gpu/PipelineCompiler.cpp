@@ -30,6 +30,11 @@ namespace daxa {
             size_t include_depth
 		) override {
 			shaderc_include_result* res = new shaderc_include_result{};
+			res->content = requesting_source;
+			res->content_length = strlen(requesting_source);
+
+			res->source_name = "";
+			res->source_name_length = 0;
 
 			return res;
 		}
