@@ -9,14 +9,16 @@
 #include <thread>
 
 struct World {
-    static constexpr int RENDER_DIST_XZ = 6;
-    static constexpr glm::ivec3 CHUNK_MAX{RENDER_DIST_XZ * 2, 6, RENDER_DIST_XZ * 2};
+    static constexpr int RENDER_DIST_XZ = 4;
+    static constexpr glm::ivec3 CHUNK_MAX{4, 6, 4};
 
     template <typename T>
     using WorldArray = std::array<std::array<std::array<T, CHUNK_MAX.x>, CHUNK_MAX.y>, CHUNK_MAX.z>;
 
     WorldArray<RenderableChunk *> chunks{};
-    WorldArray<daxa::gpu::BufferHandle> chunkgen_buffers{};
+
+    using ChunkgenBuffer = WorldArray<Chunk::Buffer<u32>>;
+    daxa::gpu::BufferHandle chunkgen_buffer;
 
     struct Globals {
         glm::mat4 viewproj_mat;
@@ -43,14 +45,10 @@ struct World {
         ChunkGenComputeState{.path = "DaxaMinecraft/assets/chunk_block_pass2.comp"},
     };
 
-    // daxa::gpu::PipelineHandle chunk_block_pass2_compute_pipeline;
-    // std::filesystem::path chunk_block_pass2_comp_path = "DaxaMinecraft/assets/chunk_block_pass2.comp";
-    // std::chrono::system_clock::rep last_comp2_reload_time = 0;
-
     std::chrono::system_clock::rep last_vert_reload_time = 0, last_frag_reload_time = 0;
 
-    static constexpr glm::ivec3 chunk_min{-RENDER_DIST_XZ, -2, -RENDER_DIST_XZ};
-    static constexpr glm::ivec3 chunk_max{RENDER_DIST_XZ, 4, RENDER_DIST_XZ};
+    static constexpr glm::ivec3 chunk_min{-2, -2, -2};
+    static constexpr glm::ivec3 chunk_max = CHUNK_MAX + chunk_min;
 
     bool chunks_invalidated = true;
 
@@ -60,7 +58,6 @@ struct World {
 
         globals_uniform_allocator = render_ctx.device->createBindingSetAllocator({
             .setLayout = graphics_pipeline->getSetLayout(0),
-            .setPerPool = 16 * 16 * 8,
         });
         globals_uniform_buffer = render_ctx.device->createBuffer({
             .size = sizeof(Globals),
@@ -73,20 +70,12 @@ struct World {
             .setLayout = chunkgen_passes[0].pipeline->getSetLayout(0),
         });
 
-        for (int zi = chunk_min.z; zi < chunk_max.z; ++zi) {
-            for (int yi = chunk_min.y; yi < chunk_max.y; ++yi) {
-                for (int xi = chunk_min.x; xi < chunk_max.x; ++xi) {
-                    auto &chunkgen_buffer = chunkgen_buffers[zi - chunk_min.z][yi - chunk_min.y][xi - chunk_min.x];
-                    chunkgen_buffer = render_ctx.device->createBuffer({
-                        .size = sizeof(Chunk::BlockBuffer),
-                        .usage =
-                            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                        .memoryUsage = VmaMemoryUsage(VMA_MEMORY_USAGE_GPU_TO_CPU),
-                        .memoryProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-                    });
-                }
-            }
-        }
+        chunkgen_buffer = render_ctx.device->createBuffer({
+            .size = sizeof(ChunkgenBuffer),
+            .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            .memoryUsage = VmaMemoryUsage(VMA_MEMORY_USAGE_GPU_TO_CPU),
+            .memoryProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+        });
     }
 
     ~World() {
@@ -109,7 +98,8 @@ struct World {
                         .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                     });
             if (!shader) {
-                std::cout << "Failed to re-compile shader!\n" << shader.message() << "\n";
+                std::cout << "Failed to re-compile shader!\n"
+                          << shader.message() << "\n";
                 continue;
             }
             auto new_pipeline1 = render_ctx.device->createComputePipeline({shader.value()});
@@ -117,26 +107,6 @@ struct World {
                 continue;
             chunkgen_pass.pipeline = new_pipeline1.value();
         }
-
-        // std::ifstream comp3_file(chunk_mesh_pass_comp_path);
-        // if (!comp3_file.is_open())
-        //     throw std::runtime_error("failed to open comp3 shader file");
-        // std::stringstream comp3_sstr;
-        // comp3_sstr << comp3_file.rdbuf();
-        // comp3_file.close();
-        // const auto & comp3_str = comp3_sstr.str();
-
-        // auto comp3_shader =
-        //     render_ctx.device
-        //         ->createShaderModule({
-        //             .pathToSource = chunk_mesh_pass_comp_path.string().c_str(),
-        //             .stage = VK_SHADER_STAGE_COMPUTE_BIT,
-        //         })
-        //         .value();
-        // auto new_pipeline3 = render_ctx.device->createComputePipeline({comp3_shader});
-        // if (!new_pipeline3)
-        //     throw;
-        // chunk_mesh_pass_compute_pipeline = new_pipeline3.value();
     }
 
     void reload_graphics_pipeline(RenderContext &render_ctx) {
@@ -344,7 +314,7 @@ struct World {
 
     Chunk *get_containing_chunk(glm::vec3 pos) {
         return get_containing_chunk_impl(
-            pos, &chunks[CHUNK_MAX.x / 2][CHUNK_MAX.y / 2][CHUNK_MAX.z / 2]->chunk);
+            pos, &chunks[CHUNK_MAX.z / 2][CHUNK_MAX.y / 2][CHUNK_MAX.x / 2]->chunk);
     }
 
     Block *get_containing_block(glm::vec3 pos) {
@@ -356,29 +326,30 @@ struct World {
 
     void generate_chunks(RenderContext &render_ctx) {
         chunks_invalidated = false;
+        auto chunk_pos = glm::vec3(chunk_min);
+
+        for (int zi = chunk_min.z; zi < chunk_max.z; ++zi) {
+            for (int yi = chunk_min.y; yi < chunk_max.y; ++yi) {
+                for (int xi = chunk_min.x; xi < chunk_max.x; ++xi) {
+                    auto &current_chunk_ptr = chunks[zi - chunk_min.z][yi - chunk_min.y][xi - chunk_min.x];
+                    if (current_chunk_ptr)
+                        delete current_chunk_ptr;
+                    current_chunk_ptr = new RenderableChunk(render_ctx, {xi, yi, zi});
+                }
+            }
+        }
+
         using Clock = std::chrono::high_resolution_clock;
         auto start = Clock::now();
 
         auto cmd_list = render_ctx.queue->getCommandList({});
 
+        auto set = compute_binding_set_allocator->getSet();
         cmd_list->bindPipeline(chunkgen_passes[0].pipeline);
-        for (int zi = chunk_min.z; zi < chunk_max.z; ++zi) {
-            for (int yi = chunk_min.y; yi < chunk_max.y; ++yi) {
-                for (int xi = chunk_min.x; xi < chunk_max.x; ++xi) {
-                    auto &current_chunk_ptr = chunks[zi - chunk_min.z][yi - chunk_min.y][xi - chunk_min.x];
-                    auto &chunkgen_buffer = chunkgen_buffers[zi - chunk_min.z][yi - chunk_min.y][xi - chunk_min.x];
-                    if (current_chunk_ptr)
-                        delete current_chunk_ptr;
-                    current_chunk_ptr = new RenderableChunk(render_ctx, {xi, yi, zi});
-                    auto set = compute_binding_set_allocator->getSet();
-                    set->bindBuffer(0, chunkgen_buffer);
-                    cmd_list->bindSet(0, set);
-                    auto chunk_pos = glm::vec3(current_chunk_ptr->chunk.pos);
-                    cmd_list->pushConstant(VK_SHADER_STAGE_COMPUTE_BIT, chunk_pos);
-                    cmd_list->dispatch(1, 1, Chunk::NZ);
-                }
-            }
-        }
+        set->bindBuffer(0, chunkgen_buffer);
+        cmd_list->bindSet(0, set);
+        cmd_list->pushConstant(VK_SHADER_STAGE_COMPUTE_BIT, chunk_pos);
+        cmd_list->dispatch(CHUNK_MAX.x, CHUNK_MAX.y, CHUNK_MAX.z * Chunk::NZ);
 
         cmd_list->insertMemoryBarrier(daxa::gpu::MemoryBarrier{
             .srcStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
@@ -386,20 +357,8 @@ struct World {
         });
 
         cmd_list->bindPipeline(chunkgen_passes[1].pipeline);
-        for (int zi = chunk_min.z; zi < chunk_max.z; ++zi) {
-            for (int yi = chunk_min.y; yi < chunk_max.y; ++yi) {
-                for (int xi = chunk_min.x; xi < chunk_max.x; ++xi) {
-                    auto &current_chunk_ptr = chunks[zi - chunk_min.z][yi - chunk_min.y][xi - chunk_min.x];
-                    auto &chunkgen_buffer = chunkgen_buffers[zi - chunk_min.z][yi - chunk_min.y][xi - chunk_min.x];
-                    auto set = compute_binding_set_allocator->getSet();
-                    set->bindBuffer(0, chunkgen_buffer);
-                    cmd_list->bindSet(0, set);
-                    auto chunk_pos = glm::vec3(current_chunk_ptr->chunk.pos);
-                    cmd_list->pushConstant(VK_SHADER_STAGE_COMPUTE_BIT, chunk_pos);
-                    cmd_list->dispatch(1, 1, Chunk::NZ);
-                }
-            }
-        }
+        cmd_list->pushConstant(VK_SHADER_STAGE_COMPUTE_BIT, chunk_pos);
+        cmd_list->dispatch(CHUNK_MAX.x, CHUNK_MAX.y, CHUNK_MAX.z * Chunk::NZ);
 
         cmd_list->finalize();
         daxa::gpu::SubmitInfo submit_info;
@@ -408,14 +367,20 @@ struct World {
         render_ctx.queue->submitBlocking(submit_info);
         render_ctx.queue->checkForFinishedSubmits();
 
-        for (int zi = chunk_min.z; zi < chunk_max.z; ++zi) {
-            for (int yi = chunk_min.y; yi < chunk_max.y; ++yi) {
-                for (int xi = chunk_min.x; xi < chunk_max.x; ++xi) {
-                    auto &current_chunk_ptr = chunks[zi - chunk_min.z][yi - chunk_min.y][xi - chunk_min.x];
-                    auto &chunkgen_buffer = chunkgen_buffers[zi - chunk_min.z][yi - chunk_min.y][xi - chunk_min.x];
-                    auto generated_data = chunkgen_buffer.mapMemory<const Chunk::BlockBuffer>();
-                    if (generated_data.hostPtr)
-                        current_chunk_ptr->chunk.copy_block_data(*generated_data.hostPtr);
+        auto generated_data = chunkgen_buffer.mapMemory<const u32>();
+
+        if (generated_data.hostPtr) {
+            for (int zi = chunk_min.z; zi < chunk_max.z; ++zi) {
+                for (int yi = chunk_min.y; yi < chunk_max.y; ++yi) {
+                    for (int xi = chunk_min.x; xi < chunk_max.x; ++xi) {
+                        glm::ivec3 index{xi - chunk_min.x, yi - chunk_min.y, zi - chunk_min.z};
+                        auto &current_chunk_ptr = chunks[index.z][index.y][index.x];
+                        size_t chunk_i = index.x + index.y * CHUNK_MAX.x + index.z * CHUNK_MAX.x * CHUNK_MAX.y;
+                        size_t offset = sizeof(Chunk::Buffer<u32>) / sizeof(u32) * chunk_i;
+                        current_chunk_ptr->chunk.copy_block_data(
+                            *reinterpret_cast<const Chunk::BlockBuffer *>(
+                                generated_data.hostPtr + offset));
+                    }
                 }
             }
         }
