@@ -62,8 +62,8 @@ namespace daxa {
 		};
 
 		struct ShaderModuleCreateInfo {
-			const char* 			source			= {};
-			const char*				pathToSource 	= {};
+			std::string 			source			= {};
+			std::filesystem::path	pathToSource 	= {};
 			ShaderLang 				shaderLang 		= ShaderLang::GLSL;
 			char const* 			entryPoint 		= "main";
 			VkShaderStageFlagBits 	stage 			= {};
