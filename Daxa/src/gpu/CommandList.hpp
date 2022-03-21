@@ -137,13 +137,13 @@ namespace daxa {
 			VkExtent3D size							= {};
 		};
 
-		struct HostToBufferCopyInfo2{
+		struct HostToBufferCopyRegion{
 			u64 srcOffset = 0;
 			u64 dstOffset = 0;
 			u64 size = 0;
 		};
 
-		struct HostToImageCopyInfo2{
+		struct HostToImageCopyRegion{
 			u64 srcOffset = 0;
 			// defaulted to use layer 0 mip 0 color aspect
 			VkImageSubresourceLayers subRessource = {
@@ -159,14 +159,14 @@ namespace daxa {
 		};
 
 		/// MUST BE ABI COMPATIBLE TO VkBufferCopy
-		struct BufferToBufferCopyInfo2{
+		struct BufferToBufferCopyRegion{
 			u64 srcOffset = 0;
 			u64 dstOffset = 0;
 			u64 size = 0;
 		};
 
 		/// MUST BE ABI COMPATIBLE TO VkBufferImageCopy
-		struct BufferToImageCopyInfo2{
+		struct BufferToImageCopyRegion{
 			u64 bufferOffset = 0;
 			u32 bufferRowLength = 0;
 			u32 bufferImageHeight = 0;
@@ -183,11 +183,7 @@ namespace daxa {
 			VkExtent3D imageExtent = { 0, 0, 0 };
 		};
 
-		struct ImageToBufferCopyInfo2 {
-
-		};
-
-		struct ImageToImageCopyInfo2{
+		struct ImageToImageCopyRegion{
 			VkImageSubresourceLayers    srcSubresource = {
 				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
 				.mipLevel = 0,
@@ -283,8 +279,8 @@ namespace daxa {
 			 * @return MappedStagingMemory mapped memory.
 			 */
             template<typename ValueT = u8>
-			MappedMemoryPointer<ValueT> mapMemoryStaged(BufferHandle copyDst, size_t size, size_t dstOffset) {
-				auto ret = mapMemoryStagedVoid(copyDst, size, dstOffset);
+			MappedMemoryPointer<ValueT> mapMemoryStagedBuffer(BufferHandle copyDst, size_t size, size_t dstOffset) {
+				auto ret = mapMemoryStagedBufferVoid(copyDst, size, dstOffset);
 				return { reinterpret_cast<ValueT*>(ret.hostPtr), ret.size, std::move(ret.owningBuffer) };
             }
 			
@@ -319,23 +315,91 @@ namespace daxa {
 
 			// transfer2:
 
-			void multiCopyHostToBuffer(u8 const* src, BufferHandle const& dst, std::span<HostToBufferCopyInfo2 const> infos);
-			void singleCopyHostToBuffer(u8 const* src, BufferHandle const& dst, HostToBufferCopyInfo2 const& info);
+			struct MultiHostToBufferCopyInfo{
+				u8 const* src; 
+				BufferHandle const& dst;
+				std::span<HostToBufferCopyRegion const> regions;
+			};
+			void multiCopyHostToBuffer(MultiHostToBufferCopyInfo const& ci);
 
-			void multiCopyHostToImage(u8 const* src, ImageHandle const& dst, std::span<HostToImageCopyInfo2 const> infos);
-			void singleCopyHostToImage(u8 const* src, ImageHandle const& dst, HostToImageCopyInfo2 const& info);
+			struct SingleCopyHostToBufferInfo{
+				u8 const* src; 
+				BufferHandle const& dst;
+				HostToBufferCopyRegion const& region;
+			};
+			void singleCopyHostToBuffer(SingleCopyHostToBufferInfo const& info);
 
-			void multiCopyBufferToBuffer(BufferHandle const& src, BufferHandle const& dst, std::span<BufferToBufferCopyInfo2 const> infos);
-			void singleCopyBufferToBuffer(BufferHandle const& src, BufferHandle const& dst, BufferToBufferCopyInfo2 const& info);
 
-			void multiCopyBufferToImage(BufferHandle const& src, ImageHandle const& dst, std::span<BufferToImageCopyInfo2 const> infos);
-			void singleCopyBufferToImage(BufferHandle const& src, ImageHandle const& dst, BufferToImageCopyInfo2 const& info);
 
-			void multiCopyImageToBuffer(ImageHandle const& src, BufferHandle const& dst, std::span<ImageToBufferCopyInfo2 const> infos);
-			void singleCopyImageToBuffer(ImageHandle const& src, BufferHandle const& dst, ImageToBufferCopyInfo2 const& info);
+			struct MultiHostToImageCopyInfo{
+				u8 const* src;
+				ImageHandle const& dst;
+				VkImageLayout dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				std::span<HostToImageCopyRegion const> regions;
+			};
+			void multiCopyHostToImage(MultiHostToImageCopyInfo const& ci);
 
-			void multiCopyImageToImage(ImageHandle const& src, ImageHandle const& dst, std::span<ImageToImageCopyInfo2 const> infos);
-			void singleCopyImageToImage(ImageHandle const& src, ImageHandle const& dst, ImageToImageCopyInfo2 const& info);
+			struct SingleHostToImageCopyInfo{
+				u8 const* src;
+				ImageHandle const& dst;
+				VkImageLayout dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				HostToImageCopyRegion const& region;
+			};
+			void singleCopyHostToImage(SingleHostToImageCopyInfo const& ci);
+
+
+
+			struct MultiBufferToBufferCopyInfo{
+				BufferHandle const& src;
+				BufferHandle const& dst;
+				std::span<BufferToBufferCopyRegion const> regions;
+			};
+			void multiCopyBufferToBuffer(MultiBufferToBufferCopyInfo const& ci);
+
+			struct SingleBufferToBufferCopyInfo{
+				BufferHandle const& src;
+				BufferHandle const& dst;
+				BufferToBufferCopyRegion const& region;
+			};
+			void singleCopyBufferToBuffer(SingleBufferToBufferCopyInfo const& ci);
+
+
+
+			struct MultiBufferToImageCopyInfo{
+				BufferHandle const& src;
+				ImageHandle const& dst;
+				VkImageLayout dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				std::span<BufferToImageCopyRegion const> regions;
+			};
+			void multiCopyBufferToImage(MultiBufferToImageCopyInfo const& ci);
+
+			struct SingleBufferToImageCopyInfo{
+				BufferHandle const& src;
+				ImageHandle const& dst;
+				VkImageLayout dstLayout;
+				BufferToImageCopyRegion const& region;
+			};
+			void singleCopyBufferToImage(SingleBufferToImageCopyInfo const& ci);
+
+
+
+			struct MultiImageToImageCopyInfo{
+				ImageHandle const& src;
+				VkImageLayout srcLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+				ImageHandle const& dst;
+				VkImageLayout dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				std::span<ImageToImageCopyRegion const> regions;
+			};
+			void multiCopyImageToImage(MultiImageToImageCopyInfo const& regions);
+
+			struct SingleImageToImageCopyInfo{
+				ImageHandle const& src;
+				VkImageLayout srcLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+				ImageHandle const& dst;
+				VkImageLayout dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				ImageToImageCopyRegion const& region;
+			};
+			void singleCopyImageToImage(SingleImageToImageCopyInfo const& ci);
 
 			// Compute:
 
@@ -460,7 +524,7 @@ namespace daxa {
 			void begin();
 			void setDebugName(char const* debugName);
 			void checkIfPipelineAndRenderPassFit();
-			MappedMemoryPointer<u8> mapMemoryStagedVoid(BufferHandle copyDst, size_t size, size_t dstOffset);
+			MappedMemoryPointer<u8> mapMemoryStagedBufferVoid(BufferHandle copyDst, size_t size, size_t dstOffset);
 			MappedMemoryPointer<u8> mapMemoryStagedImageVoid(ImageHandle copyDst, VkImageSubresourceLayers subRessource, VkOffset3D dstOffset, VkExtent3D dstExtent);
 
 			struct CurrentRenderPass{
