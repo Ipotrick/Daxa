@@ -6,11 +6,50 @@ using Path = std::filesystem::path;
 
 using namespace daxa::gpu;
 
+//  class IncluderInterface {
+//   public:
+//    // Handles shaderc_include_resolver_fn callbacks.
+//    virtual shaderc_include_result* GetInclude(const char* requested_source,
+//                                               shaderc_include_type type,
+//                                               const char* requesting_source,
+//                                               size_t include_depth) = 0;
+//
+//    // Handles shaderc_include_result_release_fn callbacks.
+//    virtual void ReleaseInclude(shaderc_include_result* data) = 0;
+//
+//    virtual ~IncluderInterface() = default;
+//  };
+
 namespace daxa {
+	class FileIncluder : public shaderc::CompileOptions::IncluderInterface {
+	public:
+		virtual shaderc_include_result* GetInclude(
+			const char* requested_source,
+            shaderc_include_type type,
+            const char* requesting_source,
+            size_t include_depth
+		) override {
+			shaderc_include_result* res = new shaderc_include_result{};
+
+			return res;
+		}
+
+    	virtual void ReleaseInclude(shaderc_include_result* data) override {
+			delete data;
+		};
+
+		std::shared_ptr<PipelineCompilerShadedData> sharedData = {};
+	};
+
     PipelineCompiler::PipelineCompiler(std::shared_ptr<gpu::DeviceBackend> deviceBackend, std::shared_ptr<gpu::BindingSetLayoutCache> bindSetLayoutCache) 
 		: deviceBackend{ deviceBackend }
 		, bindSetLayoutCache{ bindSetLayoutCache }
-	{ }
+		, sharedData{ std::make_shared<PipelineCompilerShadedData>() }
+	{
+		auto includer = std::make_unique<FileIncluder>();
+		includer->sharedData = sharedData;
+		options.SetIncluder(std::move(includer));
+	}
 
     void PipelineCompiler::addShaderSourceRootPath(Path const& root) {
         this->rootPaths.push_back(root); 
@@ -44,7 +83,7 @@ namespace daxa {
 		shaderModules.reserve(builder.shaderModuleCIs.size());
 
 		for (auto& shaderCI : builder.shaderModuleCIs) {
-			auto result = gpu::ShaderModuleHandle::tryCreateDAXAShaderModule(deviceBackend, shaderCI);
+			auto result = gpu::ShaderModuleHandle::tryCreateDAXAShaderModule(deviceBackend, shaderCI, compiler, options);
 			if (result.isOk()) {
 				shaderModules.push_back(result.value());
 			} else {

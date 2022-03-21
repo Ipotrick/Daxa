@@ -79,7 +79,7 @@ namespace daxa {
 		}
 
 		Result<ShaderModuleHandle> Device::createShaderModule(ShaderModuleCreateInfo const& ci) {
-			return ShaderModuleHandle::tryCreateDAXAShaderModule(backend, ci);
+			return ShaderModuleHandle::tryCreateDAXAShaderModule(backend, ci, shaderCompiler, shaderCompileOptions);
 		}
 	}
 }
