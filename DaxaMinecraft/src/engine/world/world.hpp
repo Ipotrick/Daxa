@@ -144,7 +144,7 @@ struct World {
                 });
 
             auto new_pipeline =
-                render_ctx.device->createGraphicsPipeline(pipeline_builder);
+                render_ctx.pipelineCompiler->createGraphicsPipeline(pipeline_builder);
             if (!new_pipeline)
                 throw;
 

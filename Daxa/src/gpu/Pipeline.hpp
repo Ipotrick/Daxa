@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <map>
 #include <vector>
 #include <array>
 #include <string>
@@ -17,7 +18,49 @@
 #include "BindingSet.hpp"
 
 namespace daxa {
+	class PipelineCompiler;
+
 	namespace gpu {
+
+		constexpr VkPipelineRasterizationStateCreateInfo DEFAULT_RASTER_STATE_CI{
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+			.pNext = nullptr,
+			.polygonMode = VkPolygonMode::VK_POLYGON_MODE_FILL,
+			.cullMode = VkCullModeFlagBits::VK_CULL_MODE_NONE,
+			.frontFace = VkFrontFace::VK_FRONT_FACE_CLOCKWISE,
+			.lineWidth = 1.0f,
+		};
+
+		constexpr VkPipelineInputAssemblyStateCreateInfo DEFAULT_INPUT_ASSEMBLY_STATE_CI{
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+			.pNext = nullptr,
+			.topology = VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+		};
+
+		constexpr VkPipelineMultisampleStateCreateInfo DEFAULT_MULTISAMPLE_STATE_CI{
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+			.pNext = nullptr,
+			.rasterizationSamples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT,
+			.minSampleShading = 1.0f,
+		};
+
+		constexpr VkViewport DEFAULT_VIEWPORT{
+			.width = 1,
+			.height = 1
+		};
+
+		constexpr VkRect2D DEFAULT_SCISSOR{
+			.extent = {1,1},
+		};
+
+		constexpr VkPipelineVertexInputStateCreateInfo DEFAULT_VERTEX_INPUT_STATE_CI{
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+			.pNext = nullptr,
+			.vertexBindingDescriptionCount = 0,
+			.pVertexBindingDescriptions = nullptr,
+			.vertexAttributeDescriptionCount = 0,
+			.pVertexAttributeDescriptions = nullptr,
+		};
 
 		constexpr inline size_t MAX_SETS_PER_PIPELINE = 4;
 
@@ -57,6 +100,7 @@ namespace daxa {
 			std::string const& getDebugName() const { return debugName; }
 		private:
 			friend class GraphicsPipelineBuilder;
+        	friend class PipelineCompiler;
 			friend daxa::Result<PipelineHandle> createComputePipeline(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetLayoutCache& bindingSetCache, ComputePipelineCreateInfo const& ci);
 			friend void setPipelineDebugName(VkDevice device, char const* debugName, Pipeline& pipeline);
 
@@ -113,10 +157,9 @@ namespace daxa {
 			GraphicsPipelineBuilder& overwriteSet(u32 set, BindingSetDescription const& descr);
 		private:
 			friend class Device;
-			friend class PipelineCompiler;
-			daxa::Result<PipelineHandle> build(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetLayoutCache& bindingSetCache) const;
+			friend class daxa::PipelineCompiler;
 
-			char const* debugName = {};
+			std::string debugName = {};
 
 			// Vertex Input Attribute building:
 			bool bVertexAtrributeBindingBuildingOpen = false;
@@ -136,14 +179,27 @@ namespace daxa {
 			std::vector<VkPipelineColorBlendAttachmentState> colorAttachmentBlends;
 			std::vector<VkFormat> colorAttachmentFormats;
 			std::vector<std::pair<u32, BindingSetDescription>> setDescriptionOverwrites;
-
-			// temporaries:
-			//std::vector<VkPushConstantRange> pushConstants;
-			////std::vector<std::unordered_map<u32, VkDescriptorSetLayoutBinding>> descriptorSets;
-			//std::vector<BindingSetDescription> bindingSetDescriptions;
-			//std::vector<VkPipelineShaderStageCreateInfo> shaderStageCreateInfo;
 		};
 
 		daxa::Result<PipelineHandle> createComputePipeline(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetLayoutCache& bindingSetCache, ComputePipelineCreateInfo const& ci);
+
+		void setPipelineDebugName(VkDevice device, char const* debugName, Pipeline& pipeline);
+
+		std::map<uint32_t, std::map<uint32_t, VkDescriptorSetLayoutBinding>>
+		reflectSetBindings(const std::vector<uint32_t>& spv, VkShaderStageFlagBits shaderStage);
+
+		void reflectShader(
+			ShaderModuleHandle const& shaderModule, 
+			std::vector<VkPushConstantRange>& pushConstants, 
+			std::vector<BindingSetDescription>& bindingSetDescriptions
+		);
+
+		std::vector<VkDescriptorSetLayout> processReflectedDescriptorData(
+			std::vector<BindingSetDescription>& setDescriptions,
+			BindingSetLayoutCache& descCache,
+			std::array<std::shared_ptr<BindingSetLayout const>, MAX_SETS_PER_PIPELINE>& setLayouts
+		);
+
+		std::vector<VkPushConstantRange> reflectPushConstants(const std::vector<uint32_t>& spv, VkShaderStageFlagBits shaderStage);
 	}
 }

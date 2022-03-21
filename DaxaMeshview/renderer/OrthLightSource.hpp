@@ -51,7 +51,7 @@ public:
 			.addShaderStage(renderCTX.device->createShaderModule(fsci).value())
 			.overwriteSet(1, BIND_ALL_SET_DESCRIPTION)
 			;
-		pipeline = renderCTX.device->createGraphicsPipeline(pipeBuilder).value();
+		pipeline = renderCTX.pipelineCompiler->createGraphicsPipeline(pipeBuilder).value();
 
 		persistentSetAlloc = renderCTX.device->createBindingSetAllocator({ .setLayout = pipeline->getSetLayout(0), .setPerPool = 3 });
 

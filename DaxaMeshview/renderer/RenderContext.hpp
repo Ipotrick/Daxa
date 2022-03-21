@@ -18,6 +18,7 @@ public:
 		})}
 		, swapchainImage{ this->swapchain->aquireNextImage() }
 		, presentSignal{ this->device->createSignal({.debugName = "present signal"}) }
+		, pipelineCompiler{ this->device->createPipelineCompiler() }
     {
 		defaultSampler = device->createSampler({});
 		auto cmd = queue->getCommandList({});
@@ -110,6 +111,7 @@ public:
 	}
 
     daxa::gpu::DeviceHandle device = {};
+	daxa::PipelineCompilerHandle pipelineCompiler;
 	daxa::gpu::CommandQueueHandle queue = {};
 	daxa::gpu::SwapchainHandle swapchain = {};
 	daxa::gpu::SwapchainImage swapchainImage = {};

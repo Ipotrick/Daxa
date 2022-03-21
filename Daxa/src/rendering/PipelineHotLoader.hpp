@@ -12,10 +12,12 @@ namespace daxa {
         template<size_t SIZE>
         GraphicsPipelineHotLoader(
             gpu::DeviceHandle device, 
+            PipelineCompilerHandle pipelineCompiler,
             gpu::GraphicsPipelineBuilder builder, 
             std::array<daxa::gpu::ShaderModuleCreateInfo, SIZE> const& cis
         )
             : device{ std::move(device) }
+            , pipelineCompiler{ std::move(pipelineCompiler) }
             , builder{ std::move(builder) }
         {
             shaderCIs.reserve(SIZE);
@@ -45,7 +47,7 @@ namespace daxa {
                 }
             }
             if (changedShaders > 0) {
-                auto ret = device->createGraphicsPipeline(builder);
+                auto ret = pipelineCompiler->createGraphicsPipeline(builder);
                 if (ret.isErr()) {
                     std::cout << ret.message() << std::endl;
                 } else {
@@ -56,6 +58,7 @@ namespace daxa {
         }
     private:
         gpu::DeviceHandle device;
+        PipelineCompilerHandle pipelineCompiler;
         gpu::GraphicsPipelineBuilder builder;
         std::vector<gpu::ShaderModuleCreateInfo> shaderCIs;
         std::vector<std::filesystem::file_time_type> shaderWriteTimes;

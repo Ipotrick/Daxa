@@ -17,7 +17,7 @@ namespace daxa {
 
 		Device::Device(gpu::Instance& instance) 
 			: backend{ std::make_shared<DeviceBackend>(instance.getVKBInstance(), instance.pfnSetDebugUtilsObjectNameEXT) }
-			, bindingSetDescriptionCache{ std::make_unique<BindingSetLayoutCache>(backend) }
+			, bindingSetDescriptionCache{ std::make_shared<BindingSetLayoutCache>(backend) }
 			, stagingBufferPool{ std::make_shared<StagingBufferPool>(backend) }
 		{ }
 
@@ -66,12 +66,12 @@ namespace daxa {
 			vkDeviceWaitIdle(backend->device.device);
 		}
 
-		daxa::Result<PipelineHandle> Device::createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder) {
-			return pipelineBuilder.build(backend, *bindingSetDescriptionCache);
-		}
-
 		daxa::Result<PipelineHandle> Device::createComputePipeline(ComputePipelineCreateInfo const& ci) {
 			return gpu::createComputePipeline(backend, *bindingSetDescriptionCache, ci);
+		}
+
+		PipelineCompilerHandle Device::createPipelineCompiler() {
+			return PipelineCompilerHandle{ std::make_shared<PipelineCompiler>(backend, bindingSetDescriptionCache) };
 		}
 
 		BindingSetAllocatorHandle Device::createBindingSetAllocator(BindingSetAllocatorCreateInfo const& ci) {
