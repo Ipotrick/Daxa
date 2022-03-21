@@ -37,13 +37,8 @@ namespace daxa {
                 auto latestWriteTime = std::filesystem::last_write_time(shaderCI.pathToSource);
                 if (lastWriteTime < latestWriteTime) {
                     lastWriteTime = latestWriteTime;
-                    auto fragmenstOpaqueShader = device->createShaderModule(shaderCI);
-                    if (fragmenstOpaqueShader.isErr()) {
-                        std::cout << fragmenstOpaqueShader.message() << std::endl;
-                    }else {
-                        builder.addShaderStage(fragmenstOpaqueShader.value()); 
-                        changedShaders += 1;
-                    }
+                    builder.addShaderStage(shaderCI); 
+                    changedShaders += 1;
                 }
             }
             if (changedShaders > 0) {

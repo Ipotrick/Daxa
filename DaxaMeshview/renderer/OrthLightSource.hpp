@@ -34,23 +34,12 @@ public:
 	void init(RenderContext& renderCTX) {
 		using namespace daxa::gpu;
 		recreateShadowMap(renderCTX, 4096, 4096);
-		ShaderModuleCreateInfo vsci {
-			.pathToSource = "./DaxaMeshview/renderer/depthPass.vert",
-			.stage = VK_SHADER_STAGE_VERTEX_BIT,
-		};
-
-		ShaderModuleCreateInfo fsci{
-			.pathToSource = "./DaxaMeshview/renderer/depthPass.frag",
-			.shaderLang = daxa::gpu::ShaderLang::GLSL,
-			.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-		};
 
 		auto pipeBuilder = GraphicsPipelineBuilder{};
 		pipeBuilder
-			.addShaderStage(renderCTX.device->createShaderModule(vsci).value())
-			.addShaderStage(renderCTX.device->createShaderModule(fsci).value())
-			.overwriteSet(1, BIND_ALL_SET_DESCRIPTION)
-			;
+			.addShaderStage({ .pathToSource = "./DaxaMeshview/renderer/depthPass.vert", .stage = VK_SHADER_STAGE_VERTEX_BIT, })
+			.addShaderStage({ .pathToSource = "./DaxaMeshview/renderer/depthPass.frag", .stage = VK_SHADER_STAGE_FRAGMENT_BIT, })
+			.overwriteSet(1, BIND_ALL_SET_DESCRIPTION);
 		pipeline = renderCTX.pipelineCompiler->createGraphicsPipeline(pipeBuilder).value();
 
 		persistentSetAlloc = renderCTX.device->createBindingSetAllocator({ .setLayout = pipeline->getSetLayout(0), .setPerPool = 3 });

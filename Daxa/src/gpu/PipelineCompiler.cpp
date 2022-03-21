@@ -40,8 +40,19 @@ namespace daxa {
 		std::vector<VkPushConstantRange> pushConstants;
 		std::vector<gpu::BindingSetDescription> bindingSetDescriptions;
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStageCreateInfo;
+		std::vector<gpu::ShaderModuleHandle> shaderModules;
+		shaderModules.reserve(builder.shaderModuleCIs.size());
 
-		for (auto& shaderModule : builder.shaderModules) {
+		for (auto& shaderCI : builder.shaderModuleCIs) {
+			auto result = gpu::ShaderModuleHandle::tryCreateDAXAShaderModule(deviceBackend, shaderCI);
+			if (result.isOk()) {
+				shaderModules.push_back(result.value());
+			} else {
+				return ResultErr{ .message = result.message() };
+			}
+		}
+
+		for (auto& shaderModule : shaderModules) {
 			VkPipelineShaderStageCreateInfo pipelineShaderStageCI{
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 				.pNext = nullptr,
