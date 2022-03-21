@@ -19,8 +19,10 @@ struct Chunk {
     static inline Block null_block{.id = BlockID::Air};
     static inline TileInfo null_tile{};
 
-    using BlockBuffer = std::array<std::array<std::array<Block, NX>, NX>, NX>;
-    using TileBuffer = std::array<std::array<std::array<TileInfo, NX>, NX>, NX>;
+    template <typename T>
+    using Buffer = std::array<std::array<std::array<T, NX>, NY>, NZ>;
+    using BlockBuffer = Buffer<Block>;
+    using TileBuffer = Buffer<TileInfo>;
 
     using NeighborChunks = std::array<Chunk *, 6>;
     NeighborChunks neighbors;
@@ -35,31 +37,31 @@ struct Chunk {
     if (x < 0) {                                \
         if (!neighbors[0])                      \
             return nul;                         \
-        return neighbors[0]->buf[x + NX][y][z]; \
+        return neighbors[0]->buf[z][y][x + NX]; \
     } else if (x > NX - 1) {                    \
         if (!neighbors[1])                      \
             return nul;                         \
-        return neighbors[1]->buf[x - NX][y][z]; \
+        return neighbors[1]->buf[z][y][x - NX]; \
     }                                           \
     if (y < 0) {                                \
         if (!neighbors[2])                      \
             return nul;                         \
-        return neighbors[2]->buf[x][y + NY][z]; \
+        return neighbors[2]->buf[z][y + NY][x]; \
     } else if (y > NY - 1) {                    \
         if (!neighbors[3])                      \
             return nul;                         \
-        return neighbors[3]->buf[x][y - NY][z]; \
+        return neighbors[3]->buf[z][y - NY][x]; \
     }                                           \
     if (z < 0) {                                \
         if (!neighbors[4])                      \
             return nul;                         \
-        return neighbors[4]->buf[x][y][z + NZ]; \
+        return neighbors[4]->buf[z + NZ][y][x]; \
     } else if (z > NZ - 1) {                    \
         if (!neighbors[5])                      \
             return nul;                         \
-        return neighbors[5]->buf[x][y][z - NZ]; \
+        return neighbors[5]->buf[z - NZ][y][x]; \
     }                                           \
-    return buf[x][y][z]
+    return buf[z][y][x]
 
     auto get_block(int x, int y, int z) -> Block & { SAMPLE_BUFFER(blocks, null_block); }
     auto get_tile(int x, int y, int z) -> TileInfo & { SAMPLE_BUFFER(tiles, null_tile); }
@@ -69,12 +71,12 @@ struct Chunk {
         for (int zi = 0; zi < NZ; ++zi) {
             for (int yi = 0; yi < NY; ++yi) {
                 for (int xi = 0; xi < NX; ++xi) {
-                    auto &current_block = blocks[xi][yi][zi];
-                    auto &current_src_block = src_blocks[xi][yi][zi];
+                    auto &current_block = blocks[zi][yi][xi];
+                    auto &current_src_block = src_blocks[zi][yi][xi];
 
-                    auto &current_tile = tiles[xi][yi][zi];
+                    auto &current_tile = tiles[zi][yi][xi];
                     auto b_pos = glm::vec3(xi, yi, zi) + FLOAT_DIM * glm::vec3(pos);
-                    
+
                     current_block = current_src_block;
 
                     float bval = biome_noise(glm::ivec3(b_pos.x, 0, b_pos.z));
@@ -94,8 +96,8 @@ struct Chunk {
         for (int zi = 0; zi < NZ; ++zi) {
             for (int yi = 0; yi < NY; ++yi) {
                 for (int xi = 0; xi < NX; ++xi) {
-                    auto &current_block = blocks[xi][yi][zi];
-                    auto &current_tile = tiles[xi][yi][zi];
+                    auto &current_block = blocks[zi][yi][xi];
+                    auto &current_tile = tiles[zi][yi][xi];
                     auto b_pos = glm::vec3(xi, yi, zi) + FLOAT_DIM * glm::vec3(pos);
                     current_block.id = BlockID::Dirt;
                     // float val = sin(b_pos.x / 50 + cos(b_pos.z / 8)) * 2 - 10;
@@ -235,7 +237,7 @@ struct Chunk {
                 for (int xi = 0; xi < NX; ++xi) {
                     auto inchunk_tile_offset = glm::vec3(xi, yi, zi);
                     float x = xi, y = yi, z = zi;
-                    auto &current_block = blocks[x][y][z];
+                    auto &current_block = blocks[z][y][x];
                     if (current_block.is_not_drawn())
                         continue;
                     if (current_block.is_cube()) {
@@ -310,7 +312,7 @@ struct Chunk {
             p.y >= pos.y && p.y < pos.y + FLOAT_DIM.y && //
             p.z >= pos.z && p.z < pos.z + FLOAT_DIM.z) {
             glm::ivec3 p_index = glm::ivec3(p - glm::vec3(pos) * FLOAT_DIM);
-            return &blocks[p_index.x][p_index.y][p_index.z];
+            return &blocks[p_index.z][p_index.y][p_index.x];
         }
         return nullptr;
     }

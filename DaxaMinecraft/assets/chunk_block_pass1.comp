@@ -22,14 +22,20 @@ const uint TallGrass   = 16;
 const uint Water       = 17;
 // clang-format on
 
-layout(local_size_x = 16, local_size_y = 16) in;
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
-const uint Chunk_NX = 16;
-const uint Chunk_NY = 16;
-const uint Chunk_NZ = 16;
-layout(set = 0, binding = 0) buffer chunk_buffer {
-    uint blocks[16 * 16 * 16];
+const uvec3 CHUNK_SIZE = uvec3(16);
+const uint RENDER_DIST_XZ = 4;
+const uvec3 CHUNK_MAX = uvec3(16, 6, 16);
+
+struct ChunkgenBuffer {
+    uint blocks[CHUNK_SIZE.x * CHUNK_SIZE.y * CHUNK_SIZE.z];
 };
+
+layout(set = 0, binding = 0) buffer chunk_buffer {
+    ChunkgenBuffer chunks[CHUNK_MAX.x * CHUNK_MAX.y * CHUNK_MAX.z];
+};
+
 layout(push_constant) uniform Push {
     vec3 pos;
 }
@@ -253,34 +259,56 @@ float fractal_noise(vec3 pos, FractalNoiseConfig config) {
 float terrain_noise(vec3 pos) {
     FractalNoiseConfig noise_conf = FractalNoiseConfig(
         /* .amplitude   = */ 0.1f,
-        /* .persistance = */ 0.9f,
-        /* .scale       = */ 0.003f,
+        /* .persistance = */ 0.6f,
+        /* .scale       = */ 0.005f,
         /* .lacunarity  = */ 2,
         /* .octaves     = */ 4);
-    return fractal_noise(pos, noise_conf) * 2.0f - pos.y * 0.020f + 0.01f;
+    return fractal_noise(pos, noise_conf) * 3.0f - pos.y * 0.010f + 0.01f;
+}
+
+float biome_noise(vec3 pos) {
+    FractalNoiseConfig noise_conf = FractalNoiseConfig(
+        /* .amplitude   = */ 0.1f,
+        /* .persistance = */ 0.4f,
+        /* .scale       = */ 0.005f,
+        /* .lacunarity  = */ 8,
+        /* .octaves     = */ 4);
+    return fractal_noise(pos + 1000, noise_conf) * 3.0f;
 }
 
 uint gen_block(in vec3 b_pos) {
+    float b_val = biome_noise(b_pos);
     float val = terrain_noise(b_pos);
+
+    uint biome_id = 0;
+    if (b_val < -0.2)
+        biome_id = 1;
+    else if (b_val > 0)
+        biome_id = 2;
+    if (b_pos.y > -4 && b_pos.y < 4 && val < 0.05 && val > -0.05)
+        biome_id = 3;
+
+    biome_id = biome_id << 16;
+
     if (val > 0.0f) {
-        return Stone;
+        return Stone | biome_id;
     } else {
         if (b_pos.y < 0) {
-            return Water;
-        } else {
-            return Air;
+            return Water | biome_id;
         }
     }
-    return 0;
+    return Air | biome_id;
 }
 
 void main() {
-    uint xi = gl_LocalInvocationID.x;
-    uint yi = gl_LocalInvocationID.y;
-    uint zi = gl_WorkGroupID.z;
+    uvec3 global_i = gl_GlobalInvocationID.xyz;
 
-    uint block_index = zi + yi * Chunk_NX + xi * Chunk_NX * Chunk_NY;
-    vec3 block_pos = vec3(xi, yi, zi) + p.pos * vec3(Chunk_NX, Chunk_NY, Chunk_NZ);
+    uvec3 chunk_i = global_i / CHUNK_SIZE.xyz;
+    uvec3 block_i = global_i % CHUNK_SIZE.xyz;
 
-    blocks[block_index] = gen_block(block_pos);
+    uint block_index = block_i.x + block_i.y * CHUNK_SIZE.x + block_i.z * CHUNK_SIZE.x * CHUNK_SIZE.y;
+    uint chunk_index = chunk_i.x + chunk_i.y * CHUNK_MAX.x + chunk_i.z * CHUNK_MAX.x * CHUNK_MAX.y;
+    vec3 block_pos = vec3(global_i) + p.pos * CHUNK_SIZE;
+
+    chunks[chunk_index].blocks[block_index] = gen_block(block_pos);
 }
