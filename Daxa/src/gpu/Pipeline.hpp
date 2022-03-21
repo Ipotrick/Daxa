@@ -113,7 +113,8 @@ namespace daxa {
 			GraphicsPipelineBuilder& overwriteSet(u32 set, BindingSetDescription const& descr);
 		private:
 			friend class Device;
-			daxa::Result<PipelineHandle> build(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetLayoutCache& bindingSetCache);
+			friend class PipelineCompiler;
+			daxa::Result<PipelineHandle> build(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetLayoutCache& bindingSetCache) const;
 
 			char const* debugName = {};
 
@@ -137,10 +138,10 @@ namespace daxa {
 			std::vector<std::pair<u32, BindingSetDescription>> setDescriptionOverwrites;
 
 			// temporaries:
-			std::vector<VkPushConstantRange> pushConstants;
-			//std::vector<std::unordered_map<u32, VkDescriptorSetLayoutBinding>> descriptorSets;
-			std::vector<BindingSetDescription> bindingSetDescriptions;
-			std::vector<VkPipelineShaderStageCreateInfo> shaderStageCreateInfo;
+			//std::vector<VkPushConstantRange> pushConstants;
+			////std::vector<std::unordered_map<u32, VkDescriptorSetLayoutBinding>> descriptorSets;
+			//std::vector<BindingSetDescription> bindingSetDescriptions;
+			//std::vector<VkPipelineShaderStageCreateInfo> shaderStageCreateInfo;
 		};
 
 		daxa::Result<PipelineHandle> createComputePipeline(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetLayoutCache& bindingSetCache, ComputePipelineCreateInfo const& ci);

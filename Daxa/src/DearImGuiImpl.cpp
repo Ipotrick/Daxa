@@ -136,6 +136,7 @@ namespace daxa {
             .addVertexInputAttribute(VK_FORMAT_R32G32_SFLOAT)
             .addVertexInputAttribute(VK_FORMAT_R32G32_SFLOAT)
             .addVertexInputAttribute(VK_FORMAT_R8G8B8A8_UNORM)
+            .endVertexInputAttributeBinding()
             .addColorAttachment(VK_FORMAT_B8G8R8A8_SRGB, VkPipelineColorBlendAttachmentState{
                 .blendEnable = VK_TRUE,
                 .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,

@@ -346,10 +346,15 @@ namespace daxa {
 			.pVertexAttributeDescriptions = nullptr,
 		};
 
-		daxa::Result<PipelineHandle> GraphicsPipelineBuilder::build(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetLayoutCache& bindingSetCache) {
-			if (bVertexAtrributeBindingBuildingOpen) {
-				endVertexInputAttributeBinding();
-			}
+		daxa::Result<PipelineHandle> GraphicsPipelineBuilder::build(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetLayoutCache& bindingSetCache) const {
+			//if (bVertexAtrributeBindingBuildingOpen) {
+			//	endVertexInputAttributeBinding();
+			//}
+			DAXA_ASSERT_M(!bVertexAtrributeBindingBuildingOpen, "vertex attribute bindings must be completed before creating a pipeline");
+
+			std::vector<VkPushConstantRange> pushConstants;
+			std::vector<BindingSetDescription> bindingSetDescriptions;
+			std::vector<VkPipelineShaderStageCreateInfo> shaderStageCreateInfo;
 
 			for (auto& shaderModule : this->shaderModules) {
 				VkPipelineShaderStageCreateInfo pipelineShaderStageCI{
@@ -359,7 +364,7 @@ namespace daxa {
 					.module = shaderModule->shaderModule,
 					.pName = shaderModule->entryPoint.c_str(),
 				};
-				this->shaderStageCreateInfo.push_back(pipelineShaderStageCI);
+				shaderStageCreateInfo.push_back(pipelineShaderStageCI);
 				reflectShader(shaderModule, pushConstants, bindingSetDescriptions);
 			}
 
@@ -470,7 +475,7 @@ namespace daxa {
 			VkGraphicsPipelineCreateInfo pipelineCI{
 				.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
 				.pNext = &pipelineRenderingCIKHR,
-				.stageCount = static_cast<u32>(this->shaderStageCreateInfo.size()),
+				.stageCount = static_cast<u32>(shaderStageCreateInfo.size()),
 				.pStages = shaderStageCreateInfo.data(),
 				.pVertexInputState = &pVertexInput,
 				.pInputAssemblyState = &pinputAssemlyStateCI,
@@ -490,9 +495,9 @@ namespace daxa {
 
 			setPipelineDebugName(deviceBackend->device.device, debugName, ret);
 
-			this->pushConstants.clear();
-			this->bindingSetDescriptions.clear();
-			this->shaderStageCreateInfo.clear();
+			//this->pushConstants.clear();
+			//this->bindingSetDescriptions.clear();
+			//this->shaderStageCreateInfo.clear();
 
 			return pipelineHandle;
 		}
