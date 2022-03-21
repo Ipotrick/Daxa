@@ -25,6 +25,7 @@
 #include "Signal.hpp"
 #include "StagingBufferPool.hpp"
 #include "CommandQueue.hpp"
+#include "PipelineCompiler.hpp"
 
 namespace daxa {
 	namespace gpu {
@@ -69,17 +70,11 @@ namespace daxa {
 
 			Result<ShaderModuleHandle> createShaderModule(ShaderModuleCreateInfo const& ci);
 
-			/**
-			 * Creates a graphics pipeline, wich is specified by the pipeline builder.
-			 *
-			 * \param pipelineBuilder specifies how the pipeline is layed out.
-			 * \return a handle to a new graphics pipeline created from the pipeline builder.
-			 */
-			daxa::Result<PipelineHandle> createGraphicsPipeline(GraphicsPipelineBuilder& pipelineBuilder);
-
 			daxa::Result<PipelineHandle> createComputePipeline(ComputePipelineCreateInfo const& ci);
 
 			BindingSetAllocatorHandle createBindingSetAllocator(BindingSetAllocatorCreateInfo const& ci);
+
+			PipelineCompilerHandle createPipelineCompiler();
 
 			/**
 			 * Waits for the device to complete all submitted operations and the gpu to idle.
@@ -95,9 +90,9 @@ namespace daxa {
 
 			CommandListHandle getNextCommandList();
 
-			std::shared_ptr<DeviceBackend> 					backend 					= {};
-			std::shared_ptr<StagingBufferPool> 				stagingBufferPool 			= {};
-			std::unique_ptr<BindingSetLayoutCache>			bindingSetDescriptionCache 	= {};
+			std::shared_ptr<DeviceBackend> 			backend 					= {};
+			std::shared_ptr<StagingBufferPool> 		stagingBufferPool 			= {};
+			std::shared_ptr<BindingSetLayoutCache>	bindingSetDescriptionCache 	= {};
 		};
 
 		class DeviceHandle : public SharedHandle<Device>{};
