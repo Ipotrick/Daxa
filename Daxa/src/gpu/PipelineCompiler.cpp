@@ -30,16 +30,37 @@ namespace daxa {
             size_t include_depth
 		) override {
 			shaderc_include_result* res = new shaderc_include_result{};
-			res->content = requesting_source;
-			res->content_length = strlen(requesting_source);
+			if (include_depth > 10) {
+				res->content = "current include depth of 10 was exceeded";
+				res->content_length = strlen(res->content);
 
-			res->source_name = "";
-			res->source_name_length = 0;
+				res->source_name = "";
+				res->source_name_length = 0;
+			}
+			else {
+				auto result = sharedData->findFullPathOfFile(requested_source);
+				if (result.isOk()) {
+					std::filesystem::path path = std::move(result.value());
+					res->source_name = requesting_source;
+					res->source_name_length = strlen(requesting_source);
+					res->content_length = 0; /* length of file name */
+					res->content = nullptr; /* contents of file  you need to new it btw*/
+				} else {
+					res->content = "could not find file";
+					res->content_length = strlen(res->content);
 
+					res->source_name = "";
+					res->source_name_length = 0;
+				}
+			}
 			return res;
 		}
 
     	virtual void ReleaseInclude(shaderc_include_result* data) override {
+			if (data->source_name_length > 0) {
+				delete data->source_name;
+			}
+
 			delete data;
 		};
 
@@ -57,10 +78,10 @@ namespace daxa {
 	}
 
     void PipelineCompiler::addShaderSourceRootPath(Path const& root) {
-        this->rootPaths.push_back(root); 
+        this->sharedData->rootPaths.push_back(root); 
     }
 
-    Result<Path> PipelineCompiler::findFullPathOfFile(Path const& file) {
+    Result<Path> PipelineCompilerShadedData::findFullPathOfFile(Path const& file) {
         Path potentialPath;
         for (auto& root : this->rootPaths) {
             potentialPath.clear();

@@ -25,6 +25,8 @@ public:
 		recreateFramebuffer(cmd, window.getWidth(), window.getHeight());
 		cmd->finalize();
 		queue->submitBlocking({.commandLists = {cmd}});
+
+		pipelineCompiler->addShaderSourceRootPath("DaxaMeshview/shaders/");
     }
 
     ~RenderContext() {
