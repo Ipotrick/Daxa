@@ -7,8 +7,8 @@ Daxa is a small library, that can be used to render 3d worlds and make games.
 The core part of this library is the gpu abstraction. The initial purpose of this project was to learn the vulkan api, but i quickly realized that vulkan can not be used as easily as opengl. Coming from OpenGL, many things like ressource lifetimes or initialization suddenly become much more complicatied in vulkan. So decided to write an abstraction layer for vulkan called daxa::gpu.
 
 The main goals and features of daxa::gpu are:
-* estensive debug checks.
-* full bindless per default.
+* debug checks.
+* fully bindless images/buffers and samplers.
 * automatic lifetime management via ref counting.
 * easy initialization of ressources like the device, instance, images and buffers.
 * automatic pooling and reuse of ressources.
