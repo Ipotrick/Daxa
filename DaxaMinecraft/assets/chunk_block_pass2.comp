@@ -31,7 +31,7 @@ layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 const uvec3 CHUNK_SIZE = uvec3(16);
 const uint RENDER_DIST_XZ = 4;
-const uvec3 CHUNK_MAX = uvec3(4, 6, 4);
+const uvec3 CHUNK_MAX = uvec3(16, 6, 16);
 
 const uint BLOCK_ID_MASK = 0x0000ffff;
 const uint BIOME_ID_MASK = 0xffff0000;
@@ -40,8 +40,11 @@ struct ChunkgenBuffer {
     uint blocks[CHUNK_SIZE.x * CHUNK_SIZE.y * CHUNK_SIZE.z];
 };
 
-layout(set = 0, binding = 0) buffer chunk_buffer {
-    ChunkgenBuffer chunks[CHUNK_MAX.x * CHUNK_MAX.y * CHUNK_MAX.z];
+layout(set = 0, binding = 0) buffer chunk_buffer_0 {
+    ChunkgenBuffer chunks_0[CHUNK_MAX.x * CHUNK_MAX.y * CHUNK_MAX.z];
+};
+layout(set = 0, binding = 1) buffer chunk_buffer_1 {
+    ChunkgenBuffer chunks_1[CHUNK_MAX.x * CHUNK_MAX.y * CHUNK_MAX.z];
 };
 
 layout(push_constant) uniform Push {
@@ -97,8 +100,8 @@ void main() {
     uint chunk_index = chunk_i.x + chunk_i.y * CHUNK_MAX.x + chunk_i.z * CHUNK_MAX.x * CHUNK_MAX.y;
     vec3 block_pos = vec3(global_i) + p.pos * CHUNK_SIZE;
 
-    uint current_block_id = chunks[chunk_index].blocks[block_index] & BLOCK_ID_MASK;
-    uint current_biome_id = (chunks[chunk_index].blocks[block_index] & BIOME_ID_MASK) >> 16;
+    uint current_block_id = chunks_0[chunk_index].blocks[block_index] & BLOCK_ID_MASK;
+    uint current_biome_id = (chunks_0[chunk_index].blocks[block_index] & BIOME_ID_MASK) >> 16;
     uint above_ids[16] = uint[16](0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     uint below_ids[16] = uint[16](0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
@@ -113,21 +116,21 @@ void main() {
 
     for (uint i = 1; i < above_n; ++i) {
         uint block_index_a = block_i.x + (block_i.y + i) * CHUNK_SIZE.x + block_i.z * CHUNK_SIZE.x * CHUNK_SIZE.y;
-        uint id = chunks[chunk_index].blocks[block_index_a] & BLOCK_ID_MASK;
+        uint id = chunks_0[chunk_index].blocks[block_index_a] & BLOCK_ID_MASK;
         above_ids[i] = id;
     }
     if (chunk_i.y < CHUNK_MAX.y - 1) {
         uint chunk_index_a = chunk_i.x + (chunk_i.y + 1) * CHUNK_MAX.x + chunk_i.z * CHUNK_MAX.x * CHUNK_MAX.y;
         for (uint i = above_n; i < 16; ++i) {
             uint block_index_a = block_i.x + (i - above_n) * CHUNK_SIZE.x + block_i.z * CHUNK_SIZE.x * CHUNK_SIZE.y;
-            uint id = chunks[chunk_index_a].blocks[block_index_a] & BLOCK_ID_MASK;
+            uint id = chunks_0[chunk_index_a].blocks[block_index_a] & BLOCK_ID_MASK;
             above_ids[i] = id;
         }
     }
 
     for (uint i = 1; i < below_n; ++i) {
         uint block_index_a = block_i.x + (block_i.y - i) * CHUNK_SIZE.x + block_i.z * CHUNK_SIZE.x * CHUNK_SIZE.y;
-        uint id = chunks[chunk_index].blocks[block_index_a] & BLOCK_ID_MASK;
+        uint id = chunks_0[chunk_index].blocks[block_index_a] & BLOCK_ID_MASK;
         below_ids[i] = id;
     }
 
@@ -135,7 +138,7 @@ void main() {
         uint chunk_index_a = chunk_i.x + (chunk_i.y - 1) * CHUNK_MAX.x + chunk_i.z * CHUNK_MAX.x * CHUNK_MAX.y;
         for (uint i = below_n; i < 2; ++i) {
             uint block_index_a = block_i.x + (15 - (i - below_n)) * CHUNK_SIZE.x + block_i.z * CHUNK_SIZE.x * CHUNK_SIZE.y;
-            uint id = chunks[chunk_index_a].blocks[block_index_a] & BLOCK_ID_MASK;
+            uint id = chunks_0[chunk_index_a].blocks[block_index_a] & BLOCK_ID_MASK;
             below_ids[i] = id;
         }
     }
@@ -169,35 +172,35 @@ void main() {
 
     float r = rand(global_i);
 
-    chunks[chunk_index].blocks[block_index] = current_block_id;
+    chunks_1[chunk_index].blocks[block_index] = current_block_id;
 
     if (current_block_id == Stone) {
         switch (current_biome_id) {
         case Plains:
         case Forest: {
             if (above_depth == 1 && !underwater) {
-                chunks[chunk_index].blocks[block_index] = Grass;
+                chunks_1[chunk_index].blocks[block_index] = Grass;
             } else if (above_depth < 3 + r * 3) {
                 if (underwater) {
-                    chunks[chunk_index].blocks[block_index] = Gravel;
+                    chunks_1[chunk_index].blocks[block_index] = Gravel;
                 } else {
-                    chunks[chunk_index].blocks[block_index] = Dirt;
+                    chunks_1[chunk_index].blocks[block_index] = Dirt;
                 }
             }
         } break;
         case Desert: {
             if (above_depth < 3 + r * 3) {
                 if (underwater) {
-                    chunks[chunk_index].blocks[block_index] = Gravel;
+                    chunks_1[chunk_index].blocks[block_index] = Gravel;
                 } else {
-                    chunks[chunk_index].blocks[block_index] = Sand;
+                    chunks_1[chunk_index].blocks[block_index] = Sand;
                 }
             } else if (above_depth < 6 + r * 2 && !underwater) {
-                chunks[chunk_index].blocks[block_index] = Sandstone;
+                chunks_1[chunk_index].blocks[block_index] = Sandstone;
             }
         } break;
         case Beach: {
-            chunks[chunk_index].blocks[block_index] = Sand;
+            chunks_1[chunk_index].blocks[block_index] = Sand;
         } break;
         }
     } else if (current_block_id == Air) {
@@ -205,29 +208,29 @@ void main() {
         case Plains: {
             if (below_inv_depth == 1) {
                 if (r < 0.4) {
-                    chunks[chunk_index].blocks[block_index] = TallGrass;
+                    chunks_1[chunk_index].blocks[block_index] = TallGrass;
                 } else if (r < 0.43) {
-                    chunks[chunk_index].blocks[block_index] = Rose;
+                    chunks_1[chunk_index].blocks[block_index] = Rose;
                 } else if (r < 0.45) {
-                    chunks[chunk_index].blocks[block_index] = Leaves;
+                    chunks_1[chunk_index].blocks[block_index] = Leaves;
                 }
             }
         } break;
         case Forest: {
             if (below_inv_depth == 1) {
                 if (r < 0.2) {
-                    chunks[chunk_index].blocks[block_index] = TallGrass;
-                } else if (r < 0.85) {
-                    chunks[chunk_index].blocks[block_index] = Leaves;
+                    chunks_1[chunk_index].blocks[block_index] = TallGrass;
+                } else if (r < 0.65) {
+                    chunks_1[chunk_index].blocks[block_index] = Leaves;
                 }
             }
         } break;
         case Desert: {
             if (below_inv_depth == 1) {
                 if (r < 0.1) {
-                    chunks[chunk_index].blocks[block_index] = DriedShrub;
+                    chunks_1[chunk_index].blocks[block_index] = DriedShrub;
                 } else if (r < 0.11) {
-                    chunks[chunk_index].blocks[block_index] = Cactus;
+                    chunks_1[chunk_index].blocks[block_index] = Cactus;
                 }
             }
         } break;
