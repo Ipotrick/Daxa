@@ -43,6 +43,7 @@ public:
 			})
 			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
 			.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT) // positions
+			.endVertexInputAttributeBinding()
 			.setRasterization({
 				.cullMode = VK_CULL_MODE_BACK_BIT,
 			});
@@ -84,6 +85,7 @@ public:
 			.addVertexInputAttribute(VK_FORMAT_R32G32_SFLOAT)				// uvs
 			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
 			.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)
+			.endVertexInputAttributeBinding()
 			// location of attachments in a shader are implied by the order they are added in the prePassPipeline builder:
 			.addColorAttachment(renderCTX.swapchain->getVkFormat())
 			.addColorAttachment(renderCTX.normalsImage->getVkFormat())

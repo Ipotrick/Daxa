@@ -161,6 +161,7 @@ struct World {
                 .addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)
                 .addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)
                 .addVertexInputAttribute(VK_FORMAT_R32_SINT)
+                .endVertexInputAttributeBinding()
                 .addColorAttachment(render_ctx.swapchain->getVkFormat())
                 .setRasterization({
                     .cullMode = VK_CULL_MODE_FRONT_BIT,
