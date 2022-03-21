@@ -151,7 +151,8 @@ namespace daxa {
 			GraphicsPipelineBuilder& setInputAssembly(VkPipelineInputAssemblyStateCreateInfo const& inputassembly);
 			GraphicsPipelineBuilder& setRasterization(RasterSettings const& rasterization);
 			GraphicsPipelineBuilder& setMultisampling(VkPipelineMultisampleStateCreateInfo const& multisampling);
-			GraphicsPipelineBuilder& addShaderStage(ShaderModuleHandle const& shaderModule);
+			//GraphicsPipelineBuilder& addShaderStage(ShaderModuleHandle const& shaderModule);
+			GraphicsPipelineBuilder& addShaderStage(ShaderModuleCreateInfo const& ci);
 			GraphicsPipelineBuilder& addColorAttachment(VkFormat const& attachmentFormat);
 			GraphicsPipelineBuilder& addColorAttachment(VkFormat const& attachmentFormat, const VkPipelineColorBlendAttachmentState&);
 			GraphicsPipelineBuilder& overwriteSet(u32 set, BindingSetDescription const& descr);
@@ -175,7 +176,8 @@ namespace daxa {
 			std::optional<VkPipelineInputAssemblyStateCreateInfo> inputAssembly;
 			std::optional<VkPipelineMultisampleStateCreateInfo> multisampling;
 			std::vector<VkDynamicState> dynamicStateEnable;
-			std::vector<ShaderModuleHandle> shaderModules;
+			//std::vector<ShaderModuleHandle> shaderModules;
+			std::vector<ShaderModuleCreateInfo> shaderModuleCIs;
 			std::vector<VkPipelineColorBlendAttachmentState> colorAttachmentBlends;
 			std::vector<VkFormat> colorAttachmentFormats;
 			std::vector<std::pair<u32, BindingSetDescription>> setDescriptionOverwrites;

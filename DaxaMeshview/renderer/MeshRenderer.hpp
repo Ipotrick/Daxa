@@ -21,20 +21,10 @@ public:
 	};
 
     void init(RenderContext& renderCTX) {
-		auto vertexShader = renderCTX.device->createShaderModule({
-			.pathToSource = "./DaxaMeshview/renderer/prePass.vert",
-			.stage = VK_SHADER_STAGE_VERTEX_BIT,
-		}).value();
-
-		auto fragmenstShader = renderCTX.device->createShaderModule({
-			.pathToSource = "./DaxaMeshview/renderer/prePass.frag",
-			.stage = VK_SHADER_STAGE_FRAGMENT_BIT
-		}).value();
-
 		daxa::gpu::GraphicsPipelineBuilder prePassPipelineBuilder;
 		prePassPipelineBuilder
-			.addShaderStage(vertexShader)
-			.addShaderStage(fragmenstShader)
+			.addShaderStage({ .pathToSource = "./DaxaMeshview/renderer/prePass.vert", .stage = VK_SHADER_STAGE_VERTEX_BIT, })
+			.addShaderStage({ .pathToSource = "./DaxaMeshview/renderer/prePass.frag", .stage = VK_SHADER_STAGE_FRAGMENT_BIT })
 			.setDebugName("mesh render prePassPipeline")
 			.configurateDepthTest({
 				.depthAttachmentFormat = VK_FORMAT_D32_SFLOAT,
@@ -68,8 +58,8 @@ public:
 		};
 
 		daxa::gpu::GraphicsPipelineBuilder opaquePipelineBuilder = {};
-		opaquePipelineBuilder.addShaderStage(renderCTX.device->createShaderModule(vertexShaderOpaqueCI).value());
-		opaquePipelineBuilder.addShaderStage(renderCTX.device->createShaderModule(fragmentShaderOpaqueCI).value());
+		opaquePipelineBuilder.addShaderStage({ .pathToSource = "./DaxaMeshview/renderer/opaque.vert", .stage = VK_SHADER_STAGE_VERTEX_BIT });
+		opaquePipelineBuilder.addShaderStage({ .pathToSource = "./DaxaMeshview/renderer/opaque.frag", .stage = VK_SHADER_STAGE_FRAGMENT_BIT });
 			opaquePipelineBuilder.setDebugName("mesh render opaque pass pipeline")
 			.configurateDepthTest({
 				.depthAttachmentFormat = VK_FORMAT_D32_SFLOAT,
@@ -134,8 +124,8 @@ public:
 
 		daxa::gpu::GraphicsPipelineBuilder opaque2PipelineBuilder = {};
 		opaque2PipelineBuilder
-			.addShaderStage(renderCTX.device->createShaderModule(vertexShaderOpaqueCI).value())
-			.addShaderStage(renderCTX.device->createShaderModule(fragmentShaderOpaqueCI).value())
+			.addShaderStage(vertexShaderOpaqueCI)
+			.addShaderStage(fragmentShaderOpaqueCI)
 			.overwriteSet(0, daxa::gpu::BIND_ALL_SET_DESCRIPTION)
 			.setDebugName("mesh render opaque2 pass pipeline")
 			.configurateDepthTest({
