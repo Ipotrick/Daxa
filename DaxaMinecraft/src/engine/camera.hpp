@@ -2,7 +2,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 struct Camera {
-    float fov = 20.0f, aspect = 1.0f;
+    float fov = 70.0f, aspect = 1.0f;
     float near = 0.01f, far = 1000.0f;
     glm::mat4 proj_mat{};
     glm::mat4 vtrn_mat{};

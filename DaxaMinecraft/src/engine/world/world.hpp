@@ -10,7 +10,7 @@
 
 struct World {
     static constexpr int RENDER_DIST_XZ = 4;
-    static constexpr glm::ivec3 CHUNK_MAX{4, 6, 4};
+    static constexpr glm::ivec3 CHUNK_MAX{16, 6, 16};
 
     template <typename T>
     using WorldArray = std::array<std::array<std::array<T, CHUNK_MAX.x>, CHUNK_MAX.y>, CHUNK_MAX.z>;
@@ -18,7 +18,7 @@ struct World {
     WorldArray<RenderableChunk *> chunks{};
 
     using ChunkgenBuffer = WorldArray<Chunk::Buffer<u32>>;
-    daxa::gpu::BufferHandle chunkgen_buffer;
+    daxa::gpu::BufferHandle chunkgen_buffers[2];
 
     struct Globals {
         glm::mat4 viewproj_mat;
@@ -47,7 +47,7 @@ struct World {
 
     std::chrono::system_clock::rep last_vert_reload_time = 0, last_frag_reload_time = 0;
 
-    static constexpr glm::ivec3 chunk_min{-2, -2, -2};
+    static constexpr glm::ivec3 chunk_min{-8, -2, -8};
     static constexpr glm::ivec3 chunk_max = CHUNK_MAX + chunk_min;
 
     bool chunks_invalidated = true;
@@ -70,12 +70,14 @@ struct World {
             .setLayout = chunkgen_passes[0].pipeline->getSetLayout(0),
         });
 
-        chunkgen_buffer = render_ctx.device->createBuffer({
-            .size = sizeof(ChunkgenBuffer),
-            .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            .memoryUsage = VmaMemoryUsage(VMA_MEMORY_USAGE_GPU_TO_CPU),
-            .memoryProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-        });
+        for (auto &chunkgen_buffer : chunkgen_buffers) {
+            chunkgen_buffer = render_ctx.device->createBuffer({
+                .size = sizeof(ChunkgenBuffer),
+                .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                .memoryUsage = VmaMemoryUsage(VMA_MEMORY_USAGE_GPU_TO_CPU),
+                .memoryProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+            });
+        }
     }
 
     ~World() {
@@ -346,7 +348,8 @@ struct World {
 
         auto set = compute_binding_set_allocator->getSet();
         cmd_list->bindPipeline(chunkgen_passes[0].pipeline);
-        set->bindBuffer(0, chunkgen_buffer);
+        set->bindBuffer(0, chunkgen_buffers[0]);
+        set->bindBuffer(1, chunkgen_buffers[1]);
         cmd_list->bindSet(0, set);
         cmd_list->pushConstant(VK_SHADER_STAGE_COMPUTE_BIT, chunk_pos);
         cmd_list->dispatch(CHUNK_MAX.x, CHUNK_MAX.y, CHUNK_MAX.z * Chunk::NZ);
@@ -367,7 +370,7 @@ struct World {
         render_ctx.queue->submitBlocking(submit_info);
         render_ctx.queue->checkForFinishedSubmits();
 
-        auto generated_data = chunkgen_buffer.mapMemory<const u32>();
+        auto generated_data = chunkgen_buffers[1].mapMemory<const u32>();
 
         if (generated_data.hostPtr) {
             for (int zi = chunk_min.z; zi < chunk_max.z; ++zi) {
