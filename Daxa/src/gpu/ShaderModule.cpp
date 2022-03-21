@@ -158,14 +158,14 @@ namespace daxa {
 		
 		Result<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(std::shared_ptr<DeviceBackend>& deviceBackend, ShaderModuleCreateInfo const& ci) {
 			std::string sourceCode = {};
-			if (ci.pathToSource) {
+			if (!ci.pathToSource.empty()) {
 				auto src = tryLoadShaderSourceFromFile(ci.pathToSource);
 				if (src.isErr()) {
 					return ResultErr{ src.message() };
 				}
 				sourceCode = src.value();
 			}
-			else if (ci.source) {
+			else if (!ci.source.empty()) {
 				sourceCode = ci.source;
 			}
 			else {
@@ -175,9 +175,9 @@ namespace daxa {
 			auto shadMod = tryCompileShader(deviceBackend, sourceCode, ci.entryPoint, ci.stage, ci.shaderLang);
 			if (shadMod.isErr()) {
 				auto errMess = shadMod.message();
-				if (ci.pathToSource) {
+				if (!ci.pathToSource.empty()) {
 					errMess += "; shader from path: ";
-					errMess += ci.pathToSource;
+					errMess += ci.pathToSource.string();
 				}
 				return ResultErr{ errMess };
 			}

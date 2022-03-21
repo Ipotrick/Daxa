@@ -113,22 +113,17 @@ struct World {
 
     void reload_graphics_pipeline(RenderContext &render_ctx) {
         try {
-            auto vert_shader = render_ctx.device
-                                   ->createShaderModule({
-                                       .pathToSource = vert_path.string().c_str(),
-                                       .stage = VK_SHADER_STAGE_VERTEX_BIT,
-                                   })
-                                   .value();
-            auto frag_shader = render_ctx.device
-                                   ->createShaderModule({
-                                       .pathToSource = frag_path.string().c_str(),
-                                       .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-                                   })
-                                   .value();
-
+ 
             daxa::gpu::GraphicsPipelineBuilder pipeline_builder;
-            pipeline_builder.addShaderStage(vert_shader)
-                .addShaderStage(frag_shader)
+            pipeline_builder
+                .addShaderStage({
+                    .pathToSource = vert_path,
+                    .stage = VK_SHADER_STAGE_VERTEX_BIT,
+                })
+                .addShaderStage({
+                    .pathToSource = frag_path,
+                    .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+                })
                 .beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
                 .addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)
                 .addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)
@@ -147,8 +142,10 @@ struct World {
 
             auto new_pipeline =
                 render_ctx.pipelineCompiler->createGraphicsPipeline(pipeline_builder);
-            if (!new_pipeline)
+            if (!new_pipeline) {
+                std::cout << new_pipeline.message() << std::endl;
                 throw;
+            }
 
             // render_ctx.queue->waitForFlush();
             // render_ctx.queue->checkForFinishedSubmits();
