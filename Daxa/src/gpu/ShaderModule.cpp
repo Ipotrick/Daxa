@@ -197,33 +197,5 @@ namespace daxa {
 
 			return { shadMod.value() };
 		}
-
-		void ShaderCache::init(std::shared_ptr<DeviceBackend>& device, std::vector<std::filesystem::path> possibleRootPaths) { 
-			this->device = device;
-			this->possibleRootPaths = possibleRootPaths;
-		}
-			
-		Result<std::filesystem::path> ShaderCache::findCompletePath(std::filesystem::path sourcePath) {
-			std::string err = "could not find path to: \"";
-			err += sourcePath.string();
-			err += "\"";
-			daxa::Result<std::filesystem::path> ret = ResultErr{err};
-			for (auto& root: possibleRootPaths) {
-				auto potentialPath = root / sourcePath;
-				if (std::ifstream(potentialPath).good()) {
-					if (ret.isOk()) {
-						// we found the file more than once, this is illegal
-						std::string err = "the file: \"";
-						err += sourcePath.string();
-						err += "\" was found multiple times in the given root paths";
-						daxa::Result<std::filesystem::path> ret = ResultErr{err};
-						break;
-					} else {
-						ret = Result{ potentialPath };
-					}
-				}
-			}
-			return ret;
-		}
 	}
 }
