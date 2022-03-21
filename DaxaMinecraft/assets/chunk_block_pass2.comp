@@ -22,21 +22,30 @@ const uint TallGrass   = 16;
 const uint Water       = 17;
 // clang-format on
 
-layout(local_size_x = 16, local_size_y = 16) in;
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
-const uint Chunk_NX = 16;
-const uint Chunk_NY = 16;
-const uint Chunk_NZ = 16;
-layout(set = 0, binding = 0) buffer chunk_buffer {
-    uint blocks[16 * 16 * 16];
+const uvec3 CHUNK_SIZE = uvec3(16);
+const uint RENDER_DIST_XZ = 4;
+const uvec3 CHUNK_MAX = uvec3(16, 6, 16);
+
+const uint BLOCK_ID_MASK = 0x0000ffff;
+const uint BIOME_ID_MASK = 0xffff0000;
+
+struct ChunkgenBuffer {
+    uint blocks[CHUNK_SIZE.x * CHUNK_SIZE.y * CHUNK_SIZE.z];
 };
+
+layout(set = 0, binding = 0) buffer chunk_buffer {
+    ChunkgenBuffer chunks[CHUNK_MAX.x * CHUNK_MAX.y * CHUNK_MAX.z];
+};
+
 layout(push_constant) uniform Push {
     vec3 pos;
 }
 p;
 
 bool is_transparent(uint id) {
-    switch (id) {
+    switch (id & BLOCK_ID_MASK) {
     case Air:
     case DriedShrub:
     case Leaves:
@@ -47,57 +56,179 @@ bool is_transparent(uint id) {
     }
 }
 
+// A single iteration of Bob Jenkins' One-At-A-Time hashing algorithm.
+uint hash(uint x) {
+    x += (x << 10u);
+    x ^= (x >> 6u);
+    x += (x << 3u);
+    x ^= (x >> 11u);
+    x += (x << 15u);
+    return x;
+}
+uint hash(uvec2 v) { return hash(v.x ^ hash(v.y)); }
+uint hash(uvec3 v) { return hash(v.x ^ hash(v.y) ^ hash(v.z)); }
+uint hash(uvec4 v) { return hash(v.x ^ hash(v.y) ^ hash(v.z) ^ hash(v.w)); }
+float floatConstruct(uint m) {
+    const uint ieeeMantissa = 0x007FFFFFu; // binary32 mantissa bitmask
+    const uint ieeeOne = 0x3F800000u;      // 1.0 in IEEE binary32
+    m &= ieeeMantissa;                     // Keep only mantissa bits (fractional part)
+    m |= ieeeOne;                          // Add fractional part to 1.0
+    float f = uintBitsToFloat(m);          // Range [1:2]
+    return f - 1.0;                        // Range [0:1]
+}
+// Pseudo-random value in half-open range [0:1].
+float rand(float x) { return floatConstruct(hash(floatBitsToUint(x))); }
+float rand(vec2 v) { return floatConstruct(hash(floatBitsToUint(v))); }
+float rand(vec3 v) { return floatConstruct(hash(floatBitsToUint(v))); }
+float rand(vec4 v) { return floatConstruct(hash(floatBitsToUint(v))); }
+
 void main() {
-    uint xi = gl_LocalInvocationID.x;
-    uint yi = gl_LocalInvocationID.y;
-    uint zi = gl_WorkGroupID.z;
-    
-    uint block_index = zi + yi * Chunk_NX + xi * Chunk_NX * Chunk_NY;
-    vec3 block_pos = vec3(xi, yi, zi) + p.pos * vec3(Chunk_NX, Chunk_NY, Chunk_NZ);
+    uvec3 global_i = gl_GlobalInvocationID.xyz;
 
-    uint current_block_id = blocks[block_index];
+    uvec3 chunk_i = global_i / CHUNK_SIZE.xyz;
+    uvec3 block_i = global_i % CHUNK_SIZE.xyz;
 
+    uint block_index = block_i.x + block_i.y * CHUNK_SIZE.x + block_i.z * CHUNK_SIZE.x * CHUNK_SIZE.y;
+    uint chunk_index = chunk_i.x + chunk_i.y * CHUNK_MAX.x + chunk_i.z * CHUNK_MAX.x * CHUNK_MAX.y;
+    vec3 block_pos = vec3(global_i) + p.pos * CHUNK_SIZE;
+
+    uint current_block_id = chunks[chunk_index].blocks[block_index] & BLOCK_ID_MASK;
+    uint current_biome_id = (chunks[chunk_index].blocks[block_index] & BIOME_ID_MASK) >> 16;
     uint above_ids[16] = uint[16](0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     uint below_ids[16] = uint[16](0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    uint above_n = min(16, 16 - yi);
-    uint below_n = min(16, yi);
+
+    uint above_n = min(16, 16 - block_i.y);
+    uint below_n = min(16, block_i.y + 1);
+
     uint above_depth = 16;
     uint below_depth = 16;
 
+    bool underwater = false;
+    uint below_inv_depth = 16;
+
     for (uint i = 1; i < above_n; ++i) {
-        uint id = blocks[zi + (yi + i) * Chunk_NX + xi * Chunk_NX * Chunk_NY];
+        uint block_index_a = block_i.x + (block_i.y + i) * CHUNK_SIZE.x + block_i.z * CHUNK_SIZE.x * CHUNK_SIZE.y;
+        uint id = chunks[chunk_index].blocks[block_index_a] & BLOCK_ID_MASK;
         above_ids[i] = id;
     }
+    if (chunk_i.y < CHUNK_MAX.y - 1) {
+        uint chunk_index_a = chunk_i.x + (chunk_i.y + 1) * CHUNK_MAX.x + chunk_i.z * CHUNK_MAX.x * CHUNK_MAX.y;
+        for (uint i = above_n; i < 16; ++i) {
+            uint block_index_a = block_i.x + (i - above_n) * CHUNK_SIZE.x + block_i.z * CHUNK_SIZE.x * CHUNK_SIZE.y;
+            uint id = chunks[chunk_index_a].blocks[block_index_a] & BLOCK_ID_MASK;
+            above_ids[i] = id;
+        }
+    }
+
     for (uint i = 1; i < below_n; ++i) {
-        uint id = blocks[zi + (yi + i) * Chunk_NX + xi * Chunk_NX * Chunk_NY];
+        uint block_index_a = block_i.x + (block_i.y - i) * CHUNK_SIZE.x + block_i.z * CHUNK_SIZE.x * CHUNK_SIZE.y;
+        uint id = chunks[chunk_index].blocks[block_index_a] & BLOCK_ID_MASK;
         below_ids[i] = id;
     }
 
-    for (uint i = 1; i < above_n; ++i) {
-        uint above_id = above_ids[i];
-        if (is_transparent(above_id)) {
+    if (chunk_i.y > 0) {
+        uint chunk_index_a = chunk_i.x + (chunk_i.y - 1) * CHUNK_MAX.x + chunk_i.z * CHUNK_MAX.x * CHUNK_MAX.y;
+        for (uint i = below_n; i < 2; ++i) {
+            uint block_index_a = block_i.x + (15 - (i - below_n)) * CHUNK_SIZE.x + block_i.z * CHUNK_SIZE.x * CHUNK_SIZE.y;
+            uint id = chunks[chunk_index_a].blocks[block_index_a] & BLOCK_ID_MASK;
+            below_ids[i] = id;
+        }
+    }
+
+    for (uint i = 1; i < 16; ++i) {
+        uint id = above_ids[i];
+        if (is_transparent(id)) {
             above_depth = i;
+            break;
+        } else if (id == Water) {
+            above_depth = i;
+            underwater = true;
             break;
         }
     }
-    
     for (uint i = 1; i < below_n; ++i) {
-        uint below_id = below_ids[i];
-        if (is_transparent(below_id)) {
+        uint id = below_ids[i];
+        if (is_transparent(id)) {
             below_depth = i;
             break;
         }
     }
 
+    for (uint i = 1; i < 16; ++i) {
+        uint id = below_ids[i];
+        if (id == Stone) {
+            below_inv_depth = i;
+            break;
+        }
+    }
+
+    float r = rand(global_i);
+
+    chunks[chunk_index].blocks[block_index] = current_block_id;
+
     if (current_block_id == Stone) {
-        if (above_depth == 1) {
-            blocks[block_index] = Grass;
-        } else if (above_depth < 4) {
-            blocks[block_index] = Dirt;
+        switch (current_biome_id) {
+        case 0:
+        case 1: {
+            if (above_depth == 1 && !underwater) {
+                chunks[chunk_index].blocks[block_index] = Grass;
+            } else if (above_depth < 3 + r * 3) {
+                if (underwater) {
+                    chunks[chunk_index].blocks[block_index] = Gravel;
+                } else {
+                    chunks[chunk_index].blocks[block_index] = Dirt;
+                }
+            }
+        } break;
+        case 2: {
+            if (above_depth < 3 + r * 3) {
+                if (underwater) {
+                    chunks[chunk_index].blocks[block_index] = Gravel;
+                } else {
+                    chunks[chunk_index].blocks[block_index] = Sand;
+                }
+            } else if (above_depth < 6 + r * 2 && !underwater) {
+                chunks[chunk_index].blocks[block_index] = Sandstone;
+            }
+        } break;
+        case 3: {
+            chunks[chunk_index].blocks[block_index] = Sand;
+        } break;
         }
     } else if (current_block_id == Air) {
-        // if (below_n > 1) {
-        //     blocks[block_index] = TallGrass;
-        // }
+        switch (current_biome_id) {
+        case 0: {
+            if (below_inv_depth == 1) {
+                if (r < 0.4) {
+                    chunks[chunk_index].blocks[block_index] = TallGrass;
+                } else if (r < 0.43) {
+                    chunks[chunk_index].blocks[block_index] = Rose;
+                } else if (r < 0.45) {
+                    chunks[chunk_index].blocks[block_index] = Leaves;
+                }
+            }
+        } break;
+        case 1: {
+            if (below_inv_depth == 1) {
+                if (r < 0.2) {
+                    chunks[chunk_index].blocks[block_index] = TallGrass;
+                } else if (r < 0.85) {
+                    chunks[chunk_index].blocks[block_index] = Leaves;
+                }
+            }
+        } break;
+        case 2: {
+            if (below_inv_depth == 1) {
+                if (r < 0.1) {
+                    chunks[chunk_index].blocks[block_index] = DriedShrub;
+                } else if (r < 0.11) {
+                    chunks[chunk_index].blocks[block_index] = Cactus;
+                }
+            }
+        } break;
+        case 3: {
+            // beach
+        } break;
+        }
     }
 }
