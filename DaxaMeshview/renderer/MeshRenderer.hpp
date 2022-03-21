@@ -224,7 +224,7 @@ public:
 			});
 		}
 		if (!draws.empty()) {
-			auto mm = cmd->mapMemoryStaged<GPUPrimitiveInfo>(primitiveInfoBuffer, draws.size() * sizeof(GPUPrimitiveInfo), 0);
+			auto mm = cmd->mapMemoryStagedBuffer<GPUPrimitiveInfo>(primitiveInfoBuffer, draws.size() * sizeof(GPUPrimitiveInfo), 0);
 			for (int i = 0; i < draws.size(); i++) {
 				mm.hostPtr[i].transform 				= draws[i].transform;
 				mm.hostPtr[i].inverseTransposeTransform = glm::inverse(glm::transpose(draws[i].transform));
@@ -242,7 +242,7 @@ public:
 			});
 		}
 		{
-			auto mm = cmd->mapMemoryStaged(lightsBuffer, lights.size() * sizeof(DrawLight) + sizeof(glm::vec4), 0);
+			auto mm = cmd->mapMemoryStagedBuffer(lightsBuffer, lights.size() * sizeof(DrawLight) + sizeof(glm::vec4), 0);
 			*((u32*)mm.hostPtr) = (u32)lights.size();
 			mm.hostPtr += sizeof(glm::vec4);
 			for (int i = 0; i < lights.size(); i++) {

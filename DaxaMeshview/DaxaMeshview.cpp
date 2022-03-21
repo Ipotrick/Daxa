@@ -231,8 +231,19 @@ private:
 	std::vector<DrawPrimCmd> meshDrawCommands;
 };
 
+struct Test{
+	int i = 3;
+	int j = 0;
+};
+
 int main()
 {
+	Test t = {
+		.j = 2,
+	};
+
+	printf("T.i: %i, T.j: %i\n", t.i, t.j);
+
 	daxa::initialize();
 
 	{

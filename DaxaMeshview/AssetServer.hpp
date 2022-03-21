@@ -129,7 +129,7 @@ public:
         void* cpuSideBuffPtr = (void*)((u8*)(accessor.buffer_view->buffer->data) + accessor.buffer_view->offset + accessor.offset);
 
         if ((usage & VK_BUFFER_USAGE_INDEX_BUFFER_BIT) && accessor.stride != 4) {
-            auto mm = cmdList->mapMemoryStaged<u32>(gpuBuffer, sizeof(u32) * accessor.count, 0);
+            auto mm = cmdList->mapMemoryStagedBuffer<u32>(gpuBuffer, sizeof(u32) * accessor.count, 0);
 
             switch (accessor.stride) {
                 case 1:
