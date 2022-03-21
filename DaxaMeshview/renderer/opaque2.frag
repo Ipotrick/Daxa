@@ -3,6 +3,8 @@
 #extension GL_EXT_shader_16bit_storage : enable
 #extension GL_EXT_nonuniform_qualifier : enable
 
+#include "bin"
+
 layout(location = 10) in vec2 vtf_uv;
 layout(location = 13) in vec3 vtf_world_space_normal;
 layout(location = 14) in vec3 vtf_world_space_position;
