@@ -268,20 +268,6 @@ namespace daxa {
 			}
 		}
 
-		//GraphicsPipelineBuilder& GraphicsPipelineBuilder::addShaderStage(ShaderModuleHandle const& shaderModule) {
-		//	auto pred = [=](ShaderModuleHandle const& a){
-		//		return a->getVkShaderStage() == shaderModule->getVkShaderStage();
-		//	};
-//
-		//	if (auto place = std::find_if(this->shaderModules.begin(), this->shaderModules.end(), pred); place != this->shaderModules.end()) {
-		//		*place = shaderModule;
-		//	} else {
-		//		this->shaderModules.push_back(shaderModule);
-		//	}
-//
-		//	return *this;
-		//}
-
 		GraphicsPipelineBuilder& GraphicsPipelineBuilder::addShaderStage(ShaderModuleCreateInfo const& createInfo) {
 			auto pred = [=](ShaderModuleCreateInfo const& a){
 				return a.stage == createInfo.stage;

@@ -176,7 +176,6 @@ namespace daxa {
 			std::optional<VkPipelineInputAssemblyStateCreateInfo> inputAssembly;
 			std::optional<VkPipelineMultisampleStateCreateInfo> multisampling;
 			std::vector<VkDynamicState> dynamicStateEnable;
-			//std::vector<ShaderModuleHandle> shaderModules;
 			std::vector<ShaderModuleCreateInfo> shaderModuleCIs;
 			std::vector<VkPipelineColorBlendAttachmentState> colorAttachmentBlends;
 			std::vector<VkFormat> colorAttachmentFormats;

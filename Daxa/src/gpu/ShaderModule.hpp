@@ -16,6 +16,8 @@
 #include "Handle.hpp"
 #include "DeviceBackend.hpp"
 
+#include "shaderc/shaderc.hpp"
+
 namespace daxa {
 	class PipelineCompiler;
 	namespace gpu {
@@ -74,8 +76,8 @@ namespace daxa {
 		private:
 			friend class Device;
         	friend class daxa::PipelineCompiler;
-			static Result<ShaderModuleHandle> tryCompileShader(std::shared_ptr<DeviceBackend>& device, std::string const& glsl, std::string const& entryPoint, VkShaderStageFlagBits shaderStage, ShaderLang lang);
-			static Result<ShaderModuleHandle> tryCreateDAXAShaderModule(std::shared_ptr<DeviceBackend>& device, ShaderModuleCreateInfo const& ci);
+			static Result<ShaderModuleHandle> tryCompileShader(std::shared_ptr<DeviceBackend>& device, std::string const& glsl, std::string const& entryPoint, VkShaderStageFlagBits shaderStage, ShaderLang lang, shaderc::Compiler& compiler, shaderc::CompileOptions& options);
+			static Result<ShaderModuleHandle> tryCreateDAXAShaderModule(std::shared_ptr<DeviceBackend>& device, ShaderModuleCreateInfo const& ci, shaderc::Compiler& compiler, shaderc::CompileOptions& options);
 		};
 	}
 }
