@@ -48,7 +48,7 @@ public:
 				.cullMode = VK_CULL_MODE_BACK_BIT,
 			});
 
-		this->prePassPipeline = renderCTX.device->createGraphicsPipeline(prePassPipelineBuilder).value();
+		this->prePassPipeline = renderCTX.pipelineCompiler->createGraphicsPipeline(prePassPipelineBuilder).value();
 
         this->globalDataBufffer = renderCTX.device->createBuffer({
             .size = sizeof(GlobalData),
@@ -93,7 +93,7 @@ public:
 				.cullMode = VK_CULL_MODE_BACK_BIT,
 			});
 
-		this->opaquePassPipeline = renderCTX.device->createGraphicsPipeline(opaquePipelineBuilder).value();
+		this->opaquePassPipeline = renderCTX.pipelineCompiler->createGraphicsPipeline(opaquePipelineBuilder).value();
 
 		this->globalSetAlloc = renderCTX.device->createBindingSetAllocator({
 			.setLayout = opaquePassPipeline->getSetLayout(0),
@@ -104,6 +104,7 @@ public:
 
 		this->opaqueFragHotloader = daxa::GraphicsPipelineHotLoader(
 			renderCTX.device,
+			renderCTX.pipelineCompiler,
 			opaquePipelineBuilder,
 			std::array{ vertexShaderOpaqueCI, fragmentShaderOpaqueCI }
 		);
@@ -149,10 +150,10 @@ public:
 				.cullMode = VK_CULL_MODE_BACK_BIT,
 		});
 
-		opaquePass2Pipeline = renderCTX.device->createGraphicsPipeline(opaque2PipelineBuilder).value();
+		opaquePass2Pipeline = renderCTX.pipelineCompiler->createGraphicsPipeline(opaque2PipelineBuilder).value();
 
 		opaqueFragHotloader2 = daxa::GraphicsPipelineHotLoader{
-			renderCTX.device, opaque2PipelineBuilder, std::array{ vertexShaderOpaqueCI, fragmentShaderOpaqueCI }
+			renderCTX.device, renderCTX.pipelineCompiler, opaque2PipelineBuilder, std::array{ vertexShaderOpaqueCI, fragmentShaderOpaqueCI }
 		};
 	}
 

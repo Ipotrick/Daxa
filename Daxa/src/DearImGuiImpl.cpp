@@ -84,7 +84,7 @@ void embraceTheDarkness() {
 }
 
 namespace daxa {
-    ImGuiRenderer::ImGuiRenderer(gpu::DeviceHandle device, gpu::CommandQueueHandle queue) 
+    ImGuiRenderer::ImGuiRenderer(gpu::DeviceHandle device, gpu::CommandQueueHandle queue, PipelineCompilerHandle& compiler) 
         : device{ device }
     {
         embraceTheDarkness();
@@ -148,7 +148,7 @@ namespace daxa {
                 .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
             });
 
-        pipeline = device->createGraphicsPipeline(pipelineDescription).value();
+        pipeline = compiler->createGraphicsPipeline(pipelineDescription).value();
 
         setAlloc = device->createBindingSetAllocator({
             .setLayout = pipeline->getSetLayout(0),

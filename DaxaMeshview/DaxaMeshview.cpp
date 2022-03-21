@@ -30,7 +30,7 @@ public:
 	{ 
 		ImGui::CreateContext();
 		ImGui_ImplGlfw_InitForVulkan(app.window->getGLFWWindow(), true);
-		imguiRenderer.emplace(renderCTX.device, renderCTX.queue);
+		imguiRenderer.emplace(renderCTX.device, renderCTX.queue, renderCTX.pipelineCompiler);
 
 		meshRender.init(renderCTX);
 		frameBufferDebugRenderer.init(renderCTX, app.window->getWidth(), app.window->getHeight());

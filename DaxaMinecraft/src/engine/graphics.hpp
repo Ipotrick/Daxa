@@ -13,6 +13,7 @@
 
 struct RenderContext {
     daxa::gpu::DeviceHandle device;
+    daxa::PipelineCompilerHandle pipelineCompiler;
     daxa::gpu::CommandQueueHandle queue;
 
     daxa::gpu::SwapchainHandle swapchain;
@@ -35,6 +36,7 @@ struct RenderContext {
               .presentMode = VK_PRESENT_MODE_FIFO_KHR,
               .debugName = "Swapchain",
           })),
+          pipelineCompiler{ this->device->createPipelineCompiler() },
           swapchain_image(swapchain->aquireNextImage()),
           depth_image(device->createImageView({
               .image = device->createImage({
