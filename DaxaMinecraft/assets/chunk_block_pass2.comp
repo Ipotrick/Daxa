@@ -20,13 +20,18 @@ const uint Sandstone   = 14;
 const uint Stone       = 15;
 const uint TallGrass   = 16;
 const uint Water       = 17;
+
+const uint Plains = 0;
+const uint Forest = 1;
+const uint Desert = 2;
+const uint Beach = 3;
 // clang-format on
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 const uvec3 CHUNK_SIZE = uvec3(16);
 const uint RENDER_DIST_XZ = 4;
-const uvec3 CHUNK_MAX = uvec3(16, 6, 16);
+const uvec3 CHUNK_MAX = uvec3(4, 6, 4);
 
 const uint BLOCK_ID_MASK = 0x0000ffff;
 const uint BIOME_ID_MASK = 0xffff0000;
@@ -168,8 +173,8 @@ void main() {
 
     if (current_block_id == Stone) {
         switch (current_biome_id) {
-        case 0:
-        case 1: {
+        case Plains:
+        case Forest: {
             if (above_depth == 1 && !underwater) {
                 chunks[chunk_index].blocks[block_index] = Grass;
             } else if (above_depth < 3 + r * 3) {
@@ -180,7 +185,7 @@ void main() {
                 }
             }
         } break;
-        case 2: {
+        case Desert: {
             if (above_depth < 3 + r * 3) {
                 if (underwater) {
                     chunks[chunk_index].blocks[block_index] = Gravel;
@@ -191,13 +196,13 @@ void main() {
                 chunks[chunk_index].blocks[block_index] = Sandstone;
             }
         } break;
-        case 3: {
+        case Beach: {
             chunks[chunk_index].blocks[block_index] = Sand;
         } break;
         }
     } else if (current_block_id == Air) {
         switch (current_biome_id) {
-        case 0: {
+        case Plains: {
             if (below_inv_depth == 1) {
                 if (r < 0.4) {
                     chunks[chunk_index].blocks[block_index] = TallGrass;
@@ -208,7 +213,7 @@ void main() {
                 }
             }
         } break;
-        case 1: {
+        case Forest: {
             if (below_inv_depth == 1) {
                 if (r < 0.2) {
                     chunks[chunk_index].blocks[block_index] = TallGrass;
@@ -217,7 +222,7 @@ void main() {
                 }
             }
         } break;
-        case 2: {
+        case Desert: {
             if (below_inv_depth == 1) {
                 if (r < 0.1) {
                     chunks[chunk_index].blocks[block_index] = DriedShrub;
@@ -226,8 +231,7 @@ void main() {
                 }
             }
         } break;
-        case 3: {
-            // beach
+        case Beach: {
         } break;
         }
     }
