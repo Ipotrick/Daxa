@@ -281,16 +281,43 @@ float biome_noise(vec3 pos) {
     return fractal_noise(pos + 1000, noise_conf) * 3.0f;
 }
 
+// A single iteration of Bob Jenkins' One-At-A-Time hashing algorithm.
+uint rand_hash(uint x) {
+    x += (x << 10u);
+    x ^= (x >> 6u);
+    x += (x << 3u);
+    x ^= (x >> 11u);
+    x += (x << 15u);
+    return x;
+}
+uint rand_hash(uvec2 v) { return rand_hash(v.x ^ rand_hash(v.y)); }
+uint rand_hash(uvec3 v) { return rand_hash(v.x ^ rand_hash(v.y) ^ rand_hash(v.z)); }
+uint rand_hash(uvec4 v) { return rand_hash(v.x ^ rand_hash(v.y) ^ rand_hash(v.z) ^ rand_hash(v.w)); }
+float floatConstruct(uint m) {
+    const uint ieeeMantissa = 0x007FFFFFu; // binary32 mantissa bitgmask
+    const uint ieeeOne = 0x3F800000u;      // 1.0 in IEEE binary32
+    m &= ieeeMantissa;                     // Keep only mantissa bits (fractional part)
+    m |= ieeeOne;                          // Add fractional part to 1.0
+    float f = uintBitsToFloat(m);          // Range [1:2]
+    return f - 1.0;                        // Range [0:1]
+}
+// Pseudo-random value in half-open range [0:1].
+float rand(float x) { return floatConstruct(rand_hash(floatBitsToUint(x))); }
+float rand(vec2 v) { return floatConstruct(rand_hash(floatBitsToUint(v))); }
+float rand(vec3 v) { return floatConstruct(rand_hash(floatBitsToUint(v))); }
+float rand(vec4 v) { return floatConstruct(rand_hash(floatBitsToUint(v))); }
+
 uint gen_block(in vec3 b_pos) {
     float b_val = biome_noise(b_pos);
     float val = terrain_noise(b_pos);
+    float r = rand(b_pos);
 
     uint biome_id = Plains;
     if (b_val < -0.2)
         biome_id = Forest;
-    else if (b_val > 0)
+    else if (b_val > 0.4)
         biome_id = Desert;
-    if (b_pos.y > -4 && b_pos.y < 4 && val < 0.05 && val > -0.05)
+    if (b_pos.y > -4 + r * 3 && b_pos.y < 4 + r * 3 && val < 0.05 + r * 0.1 && val > -0.05 - r * 0.1)
         biome_id = Beach;
 
     biome_id = biome_id << 16;
