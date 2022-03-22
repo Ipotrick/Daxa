@@ -713,6 +713,11 @@ namespace daxa {
 					imgBarrier.dstQueueIndex = VK_QUEUE_FAMILY_IGNORED;
 				}
 
+				VkImageSubresourceRange range = imgBarrier.subRange;
+				if (range.aspectMask == VK_IMAGE_ASPECT_FLAG_BITS_MAX_ENUM) {
+					range = imgBarrier.image->getVkImageSubresourceRange();
+				}
+
 				imgBarrierBuffer[imgBarrierBufferSize] = VkImageMemoryBarrier2KHR{
 					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR,
 					.pNext = nullptr,
@@ -725,7 +730,7 @@ namespace daxa {
 					.srcQueueFamilyIndex = imgBarrier.srcQueueIndex,
 					.dstQueueFamilyIndex = imgBarrier.dstQueueIndex,
 					.image = imgBarrier.image->getImageHandle()->getVkImage(),
-					.subresourceRange = imgBarrier.subRange.value_or(imgBarrier.image->getVkImageSubresourceRange())
+					.subresourceRange = range,
 				};
 
 				imgBarrierBufferSize++;
@@ -794,6 +799,12 @@ namespace daxa {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 			DAXA_ASSERT_M(!currentRenderPass.has_value(), "can not insert memory barriers in renderpass");
+
+			VkImageSubresourceRange range = imgBarrier.subRange;
+			if (range.aspectMask == VK_IMAGE_ASPECT_FLAG_BITS_MAX_ENUM) {
+				range = imgBarrier.image->getVkImageSubresourceRange();
+			}
+
 			queuedImageBarriers.push_back(VkImageMemoryBarrier2KHR{
 				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR,
 				.pNext = nullptr,
@@ -806,7 +817,7 @@ namespace daxa {
 				.srcQueueFamilyIndex = imgBarrier.srcQueueIndex,
 				.dstQueueFamilyIndex = imgBarrier.dstQueueIndex,
 				.image = imgBarrier.image->getImageHandle()->getVkImage(),
-				.subresourceRange = imgBarrier.subRange.value_or(imgBarrier.image->getVkImageSubresourceRange())
+				.subresourceRange = range,
 			});
 			bBarriersQueued = true;
 		}

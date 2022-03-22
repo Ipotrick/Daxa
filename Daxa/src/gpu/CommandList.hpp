@@ -222,13 +222,14 @@ namespace daxa {
 		 * used for layout changes
 		*/
 		struct ImageBarrier {
-			MemoryBarrier 							barrier 		= {};
+			MemoryBarrier 							barrier 		= FULL_MEMORY_BARRIER;
 			ImageViewHandle 						image 			= {};
 			VkImageLayout 							layoutBefore	= {};
 			VkImageLayout 							layoutAfter		= {}; 
 			u32 									srcQueueIndex 	= VK_QUEUE_FAMILY_IGNORED;
 			u32 									dstQueueIndex 	= VK_QUEUE_FAMILY_IGNORED;
-			std::optional<VkImageSubresourceRange> 	subRange 		= {};
+			// this default is invalid and will be replaced by the full range of the view if not overwritten
+			VkImageSubresourceRange 				subRange 		= { .aspectMask = VK_IMAGE_ASPECT_FLAG_BITS_MAX_ENUM, };
 		};
 
 		struct RenderAttachmentInfo {
