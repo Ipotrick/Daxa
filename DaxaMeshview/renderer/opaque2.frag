@@ -3,41 +3,14 @@
 #extension GL_EXT_shader_16bit_storage : enable
 #extension GL_EXT_nonuniform_qualifier : enable
 
-#include "test.glsl"
+#include "common.glsl"
 
 layout(location = 10) in vec2 vtf_uv;
 layout(location = 13) in vec3 vtf_world_space_normal;
 layout(location = 14) in vec3 vtf_world_space_position;
-
 layout (location = 0) out vec4 outFragColor;
 layout (location = 1) out vec3 outNormal;
 
-struct GlobalData {
-    mat4 vp;
-    mat4 view;
-    mat4 itvp;
-    mat4 itview;
-};
-layout(std430, set = 0, binding = 4) buffer GlobalDataBufferView{ GlobalData globalData; } globalDataBufferView[];
-struct PrimitiveInfo {
-    mat4 transform;
-    mat4 inverseTransposeTransform;
-};
-layout(std430, set = 0, binding = 4) buffer PrimitiveDatasBufferView{ PrimitiveInfo primitiveInfos[]; } primitiveDataBufferView[]; 
-struct Light {
-    vec3 position;
-    float strength;
-    vec4 color;
-};
-layout(std430, set = 0, binding = 4) buffer LightsBufferView{
-    uint lightCount;
-    Light lights[];
-} lightsBufferView[];
-layout(std140, set = 0, binding = 4) buffer OrthLightBufferView{
-    vec3 direction;
-    uint16_t shadowMap;
-};
-layout(set = 0, binding = 1) uniform sampler2D imageSampler2DViews[];
 
 mat3 genTBN(vec3 n, vec3 p, vec2 uv) {
     vec3 dp1 = dFdx(p);

@@ -6,7 +6,8 @@ class MyUser {
 public:
 	MyUser(daxa::AppState& app) 
 		: device{ daxa::gpu::Device::create() }
-		, queue{ this->device->createQueue({.batchCount = 2 })}
+		, pipelineCompiler{ this->device->createPipelineCompiler() }
+		, queue{ this->device->createCommandQueue({.batchCount = 2 })}
 		, swapchain{ this->device->createSwapchain({
 			.surface = app.window->getSurface(), 
 			.width = app.window->getWidth(), 
@@ -75,14 +76,14 @@ public:
 			}
 		)";
 
-		daxa::gpu::ShaderModuleHandle computeShader = device->createShaderModule({
-			.sourceToGLSL = computeShaderGLSL,
-			.stage = VK_SHADER_STAGE_COMPUTE_BIT
+		this->pipeline = pipelineCompiler->createComputePipeline({ 
+			.shaderCI = {
+				.source = computeShaderGLSL,
+				.stage = VK_SHADER_STAGE_COMPUTE_BIT
+			} 
 		}).value();
 
-		this->pipeline = device->createComputePipeline({ .shaderModule = computeShader });
-
-		this->bindingSetAllocator = device->createBindingSetAllocator({ .setDescription = pipeline->getSetDescription(0) });
+		this->bindingSetAllocator = device->createBindingSetAllocator({ .setLayout = pipeline->getSetLayout(0) });
 
 		// or use them embedded, like a named parameter list:
 		this->uniformBuffer = device->createBuffer({
@@ -91,14 +92,19 @@ public:
 			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 
-		resultImage = device->createImage2d({
-			.width = app.window->getWidth(),
-			.height = app.window->getHeight(),
+		resultImage = device->createImageView({
+			.image = device->createImage({
+				.extent = { app.window->getWidth(), app.window->getHeight(), 1},
+				.format = VK_FORMAT_R8G8B8A8_UNORM,
+				.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+				.debugName = "resultImage",
+			}),
+			.defaultSampler = device->createSampler({}),
 			.format = VK_FORMAT_R8G8B8A8_UNORM,
-			.imageUsage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+			.debugName = "resultImageView",
 		});
 
-		auto cmdList = device->getCommandList();
+		auto cmdList = queue->getCommandList({});
 		cmdList->insertImageBarrier({.image = resultImage, .layoutAfter = VK_IMAGE_LAYOUT_GENERAL});
 		cmdList->finalize();
 		queue->submitBlocking({
@@ -107,19 +113,28 @@ public:
 	}
 
 	void update(daxa::AppState& app) {
-		auto cmdList = device->getCommandList();
+		auto cmdList = queue->getCommandList({});
 
 		if (app.window->getWidth() != swapchain->getSize().width || app.window->getHeight() != swapchain->getSize().height) {
 			device->waitIdle();
 			swapchain->resize(VkExtent2D{ .width = app.window->getWidth(), .height = app.window->getHeight() });
 			swapchainImage = swapchain->aquireNextImage();
-			resultImage = device->createImage2d({
-				.width = app.window->getWidth(),
-				.height = app.window->getHeight(),
+			resultImage = device->createImageView({
+				.image = device->createImage({
+					.format = VK_FORMAT_R8G8B8A8_UNORM,
+					.extent = { app.window->getWidth(), app.window->getHeight(), 1},
+					.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+					.debugName = "resultImage",
+				}),
 				.format = VK_FORMAT_R8G8B8A8_UNORM,
-				.imageUsage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+				.defaultSampler = device->createSampler({}),
+				.debugName = "resultImageView",
 			});
-			cmdList->insertImageBarrier({.image = resultImage, .layoutAfter = VK_IMAGE_LAYOUT_GENERAL, .dstStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR});
+			cmdList->queueImageBarrier({
+				.image = resultImage,
+				.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
+				.layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
+			});
 		}
 
 		/// ------------ Begin Data Uploading ---------------------
@@ -148,12 +163,29 @@ public:
 
 		cmdList->dispatch(app.window->getWidth() / 8 + 1, app.window->getHeight() / 8 + 1);
 
-		cmdList->copyImageToImageSynced({
-			.src = resultImage,
-			.srcLayoutBeforeAndAfter = VK_IMAGE_LAYOUT_GENERAL,
-			.dst = swapchainImage.getImageHandle(),
-			.dstFinalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-			.size = resultImage->getVkExtent(),
+		cmdList->queueImageBarrier({
+			.image = swapchainImage.getImageViewHandle(),
+			.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
+			.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		});
+		cmdList->queueImageBarrier({
+			.image = resultImage,
+			.layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
+			.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		});
+		cmdList->singleCopyImageToImage({
+			.src = resultImage->getImageHandle(),
+			.dst = swapchainImage.getImageViewHandle()->getImageHandle(),
+		});
+		cmdList->queueImageBarrier({
+			.image = swapchainImage.getImageViewHandle(),
+			.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			.layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+		});
+		cmdList->queueImageBarrier({
+			.image = resultImage,
+			.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			.layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
 		});
 
 		cmdList->finalize();
@@ -186,10 +218,11 @@ public:
 	}
 private:
 	daxa::gpu::DeviceHandle device;
-	daxa::gpu::QueueHandle queue;
+	daxa::PipelineCompilerHandle pipelineCompiler;
+	daxa::gpu::CommandQueueHandle queue;
 	daxa::gpu::SwapchainHandle swapchain;
 	daxa::gpu::SwapchainImage swapchainImage;
-	daxa::gpu::ImageHandle resultImage;
+	daxa::gpu::ImageViewHandle resultImage;
 	daxa::gpu::PipelineHandle pipeline;
 	daxa::gpu::BindingSetAllocatorHandle bindingSetAllocator;
 	daxa::gpu::BufferHandle uniformBuffer;

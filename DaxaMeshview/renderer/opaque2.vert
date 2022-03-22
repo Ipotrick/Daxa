@@ -7,18 +7,8 @@ layout(location = 10) out vec2 vtf_uv;
 layout(location = 13) out vec3 vtf_world_space_normal;
 layout(location = 14) out vec3 vtf_world_space_position;
 
-struct GlobalData {
-    mat4 vp;
-    mat4 view;
-    mat4 itvp;
-    mat4 itview;
-};
-layout(std430, set = 0, binding = 4) buffer GlobalDataBufferView{ GlobalData globalData; } globalDataBufferView[];
-struct PrimitiveInfo {
-    mat4 transform;
-    mat4 inverseTransposeTransform;
-};
-layout(std430, set = 0, binding = 4) buffer PrimitiveInfosBufferView{ PrimitiveInfo primitiveInfos[]; } primitiveInfoBufferView[]; 
+#include "common.glsl"
+
 struct PackedVec3 {
     float x;
     float y;
@@ -40,8 +30,8 @@ layout(std140, push_constant) uniform PushConstants {
 } pushConstants;
 
 void main() {
-    mat4 m = primitiveInfoBufferView[uint(pushConstants.primitives)].primitiveInfos[pushConstants.modelIndex].transform;
-    mat4 itm = primitiveInfoBufferView[uint(pushConstants.primitives)].primitiveInfos[pushConstants.modelIndex].inverseTransposeTransform;
+    mat4 m = primitiveDataBufferView[uint(pushConstants.primitives)].primitiveInfos[pushConstants.modelIndex].transform;
+    mat4 itm = primitiveDataBufferView[uint(pushConstants.primitives)].primitiveInfos[pushConstants.modelIndex].inverseTransposeTransform;
 
     PackedVec3 packedPos = packedVec3BufferView[uint(pushConstants.vertexPosBufferId)].packedVec3s[gl_VertexIndex];
     vec3 pulledPosition = vec3(packedPos.x,packedPos.y,packedPos.z);

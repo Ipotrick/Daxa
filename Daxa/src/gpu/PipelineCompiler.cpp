@@ -132,9 +132,8 @@ namespace daxa {
 		std::vector<gpu::ShaderModuleHandle> shaderModules;
 		shaderModules.reserve(builder.shaderModuleCIs.size());
 
-		sharedData->seenFiles.clear();
-
 		for (auto& shaderCI : builder.shaderModuleCIs) {
+			sharedData->seenFiles.clear();
 			auto result = gpu::ShaderModuleHandle::tryCreateDAXAShaderModule(deviceBackend, shaderCI, compiler, options);
 			if (result.isOk()) {
 				shaderModules.push_back(result.value());
