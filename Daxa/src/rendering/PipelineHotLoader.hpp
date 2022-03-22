@@ -65,11 +65,13 @@ namespace daxa {
 
         ComputePipelineHotLoader(
             gpu::DeviceHandle device, 
+            PipelineCompilerHandle pipelineCompiler,
             gpu::ComputePipelineCreateInfo const& pipelineCI,
             daxa::gpu::ShaderModuleCreateInfo const& shaderCI
         )
             : device{ std::move(device) }
             , pipelineCI{ pipelineCI }
+            , pipelineCompiler{ pipelineCompiler }
             , shaderCI{ shaderCI }
         { }
 
@@ -77,23 +79,19 @@ namespace daxa {
             auto latestWriteTime = std::filesystem::last_write_time(shaderCI.pathToSource);
             if (lastWriteTime < latestWriteTime) {
                 lastWriteTime = latestWriteTime;
-                auto fragmenstOpaqueShader = device->createShaderModule(shaderCI);
-                if (fragmenstOpaqueShader.isErr()) {
-                    std::cout << fragmenstOpaqueShader.message() << std::endl;
-                }else {
-                    pipelineCI.shaderModule = fragmenstOpaqueShader.value(); 
-                    auto ret = device->createComputePipeline(pipelineCI);
-                    if (ret.isErr()) {
-                        std::cout << ret.message() << std::endl;
-                    } else {
-                        return ret.value();
-                    }
+                pipelineCI.shaderCI = shaderCI;
+                auto ret = pipelineCompiler->createComputePipeline(pipelineCI);
+                if (ret.isErr()) {
+                    std::cout << ret.message() << std::endl;
+                } else {
+                    return ret.value();
                 }
             }
             return {};
         }
     private:
         gpu::DeviceHandle device;
+        PipelineCompilerHandle pipelineCompiler;
         gpu::ComputePipelineCreateInfo pipelineCI;
         gpu::ShaderModuleCreateInfo shaderCI;
         std::filesystem::file_time_type lastWriteTime;

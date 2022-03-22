@@ -303,59 +303,5 @@ namespace daxa {
 			setDescriptionOverwrites.push_back({set, descr});
 			return *this;
 		}
-
-		daxa::Result<PipelineHandle> createComputePipeline(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetLayoutCache& bindingSetCache, ComputePipelineCreateInfo const& ci) {
-			auto pipelineHandle = PipelineHandle{ std::make_shared<Pipeline>() };
-			Pipeline& ret = *pipelineHandle;
-			ret.deviceBackend = deviceBackend;
-			ret.bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
-
-			VkPipelineShaderStageCreateInfo pipelineShaderStageCI{
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-				.pNext = nullptr,
-				.stage = ci.shaderModule->getVkShaderStage(),
-				.module = ci.shaderModule->getVkShaderModule(),
-				.pName = ci.shaderModule->getVkEntryPoint().c_str(),
-			};
-
-			std::vector<VkPushConstantRange> pushConstants;
-			std::vector<BindingSetDescription> bindingSetDescriptions;
-
-			reflectShader(ci.shaderModule, pushConstants, bindingSetDescriptions);
-
-			for (size_t i = 0; i < MAX_SETS_PER_PIPELINE; i++) {
-				if (ci.overwriteSets[i].has_value()) {
-					bindingSetDescriptions[i] = ci.overwriteSets[i].value();
-				}
-			}
-
-			std::vector<VkDescriptorSetLayout> descLayouts = processReflectedDescriptorData(bindingSetDescriptions, bindingSetCache, ret.bindingSetLayouts);
-
-			// create pipeline layout:
-			VkPipelineLayoutCreateInfo pipelineLayoutCI{
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-				.pNext = nullptr,
-				.setLayoutCount = static_cast<u32>(descLayouts.size()),
-				.pSetLayouts = descLayouts.data(),
-				.pushConstantRangeCount = static_cast<u32>(pushConstants.size()),
-				.pPushConstantRanges = pushConstants.data(),
-			};
-			DAXA_CHECK_VK_RESULT_M(vkCreatePipelineLayout(deviceBackend->device.device, &pipelineLayoutCI, nullptr, &ret.layout), "failed to create compute pipeline layout");
-
-			VkComputePipelineCreateInfo pipelineCI{
-				.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-				.pNext = nullptr,
-				.flags = 0,
-				.stage = pipelineShaderStageCI,
-				.layout = ret.layout,
-				.basePipelineHandle  = VK_NULL_HANDLE,
-				.basePipelineIndex = 0,
-			};
-			DAXA_CHECK_VK_RESULT_M(vkCreateComputePipelines(deviceBackend->device.device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline), "failed to create compute pipeline");
-
-			setPipelineDebugName(deviceBackend->device.device, ci.debugName, ret);
-
-			return pipelineHandle;
-		}
 	}
 }
