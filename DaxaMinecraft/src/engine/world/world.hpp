@@ -93,18 +93,12 @@ struct World {
 
     void reload_compute_pipeline(RenderContext &render_ctx) {
         for (auto &chunkgen_pass : chunkgen_passes) {
-            auto shader =
-                render_ctx.device
-                    ->createShaderModule({
-                        .pathToSource = chunkgen_pass.path.string().c_str(),
-                        .stage = VK_SHADER_STAGE_COMPUTE_BIT,
-                    });
-            if (!shader) {
-                std::cout << "Failed to re-compile shader!\n"
-                          << shader.message() << "\n";
-                continue;
-            }
-            auto new_pipeline1 = render_ctx.device->createComputePipeline({shader.value()});
+            auto new_pipeline1 = render_ctx.pipelineCompiler->createComputePipeline({
+                .shaderCI = {
+                    .pathToSource = chunkgen_pass.path.string().c_str(),
+                    .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+                }
+            });
             if (!new_pipeline1)
                 continue;
             chunkgen_pass.pipeline = new_pipeline1.value();
