@@ -31,8 +31,8 @@ struct World {
     daxa::gpu::PipelineHandle graphics_pipeline;
     Texture atlas_texture;
 
-    std::filesystem::path vert_path{"DaxaMinecraft/assets/chunk.vert"};
-    std::filesystem::path frag_path{"DaxaMinecraft/assets/chunk.frag"};
+    std::filesystem::path vert_path{"DaxaMinecraft/assets/shaders/drawing/chunk.vert"};
+    std::filesystem::path frag_path{"DaxaMinecraft/assets/shaders/drawing/chunk.frag"};
 
     struct ChunkGenComputeState {
         daxa::gpu::PipelineHandle pipeline{};
@@ -41,8 +41,8 @@ struct World {
     };
 
     std::array<ChunkGenComputeState, 2> chunkgen_passes{
-        ChunkGenComputeState{.path = "DaxaMinecraft/assets/chunk_block_pass1.comp"},
-        ChunkGenComputeState{.path = "DaxaMinecraft/assets/chunk_block_pass2.comp"},
+        ChunkGenComputeState{.path = "DaxaMinecraft/assets/shaders/chunkgen/pass1.comp"},
+        ChunkGenComputeState{.path = "DaxaMinecraft/assets/shaders/chunkgen/pass2.comp"},
     };
 
     std::chrono::system_clock::rep last_vert_reload_time = 0, last_frag_reload_time = 0;
@@ -93,14 +93,16 @@ struct World {
 
     void reload_compute_pipeline(RenderContext &render_ctx) {
         for (auto &chunkgen_pass : chunkgen_passes) {
-            auto new_pipeline1 = render_ctx.pipelineCompiler->createComputePipeline({
+            auto new_pipeline1 = render_ctx.pipeline_compiler->createComputePipeline({
                 .shaderCI = {
                     .pathToSource = chunkgen_pass.path.string().c_str(),
                     .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                 }
             });
-            if (!new_pipeline1)
+            if (!new_pipeline1) {
+                std::cout << new_pipeline1.message() << std::endl;
                 continue;
+            }
             chunkgen_pass.pipeline = new_pipeline1.value();
         }
     }
@@ -135,7 +137,7 @@ struct World {
                 });
 
             auto new_pipeline =
-                render_ctx.pipelineCompiler->createGraphicsPipeline(pipeline_builder);
+                render_ctx.pipeline_compiler->createGraphicsPipeline(pipeline_builder);
             if (!new_pipeline) {
                 std::cout << new_pipeline.message() << std::endl;
                 throw;
