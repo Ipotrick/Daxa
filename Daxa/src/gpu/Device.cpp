@@ -66,10 +66,6 @@ namespace daxa {
 			vkDeviceWaitIdle(backend->device.device);
 		}
 
-		daxa::Result<PipelineHandle> Device::createComputePipeline(ComputePipelineCreateInfo const& ci) {
-			return gpu::createComputePipeline(backend, *bindingSetDescriptionCache, ci);
-		}
-
 		PipelineCompilerHandle Device::createPipelineCompiler() {
 			return PipelineCompilerHandle{ std::make_shared<PipelineCompiler>(backend, bindingSetDescriptionCache) };
 		}

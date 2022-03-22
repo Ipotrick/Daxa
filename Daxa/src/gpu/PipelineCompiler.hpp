@@ -12,7 +12,7 @@ namespace daxa {
         PipelineCompiler(std::shared_ptr<gpu::DeviceBackend> deviceBackend, std::shared_ptr<gpu::BindingSetLayoutCache> bindSetLayoutCache);
         void addShaderSourceRootPath(std::filesystem::path const& path);
         Result<gpu::PipelineHandle> createGraphicsPipeline(gpu::GraphicsPipelineBuilder const& builder);
-        Result<gpu::PipelineHandle> createComputePipeline();
+        Result<gpu::PipelineHandle> createComputePipeline(gpu::ComputePipelineCreateInfo const& ci);
         Result<bool> recreatePipelineOnSourceChange(gpu::PipelineHandle const& pipeline);
     private:
 		daxa::Result<gpu::PipelineHandle> build(gpu::GraphicsPipelineBuilder const& builder);

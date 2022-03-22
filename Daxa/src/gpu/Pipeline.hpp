@@ -65,7 +65,7 @@ namespace daxa {
 		constexpr inline size_t MAX_SETS_PER_PIPELINE = 4;
 
 		struct ComputePipelineCreateInfo {
-			ShaderModuleHandle 														shaderModule 	= {};
+			ShaderModuleCreateInfo 													shaderCI 	= {};
 			std::array<std::optional<BindingSetDescription>, MAX_SETS_PER_PIPELINE> overwriteSets 	= {};
 			char const* 															debugName 		= {};
 		};
@@ -181,8 +181,6 @@ namespace daxa {
 			std::vector<VkFormat> colorAttachmentFormats;
 			std::vector<std::pair<u32, BindingSetDescription>> setDescriptionOverwrites;
 		};
-
-		daxa::Result<PipelineHandle> createComputePipeline(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetLayoutCache& bindingSetCache, ComputePipelineCreateInfo const& ci);
 
 		void setPipelineDebugName(VkDevice device, char const* debugName, Pipeline& pipeline);
 
