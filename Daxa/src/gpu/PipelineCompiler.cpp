@@ -41,10 +41,25 @@ namespace daxa {
 				auto result = sharedData->findFullPathOfFile(requested_source);
 				if (result.isOk()) {
 					std::filesystem::path path = std::move(result.value());
-					res->source_name = requesting_source;
-					res->source_name_length = strlen(requesting_source);
-					res->content_length = 0; /* length of file name */
-					res->content = nullptr; /* contents of file  you need to new it btw*/
+					res->source_name = requested_source;
+					res->source_name_length = strlen(requested_source);
+
+					std::ifstream ifs{path};
+					
+					std::string str;
+
+					ifs.seekg(0, std::ios::end);   
+					str.reserve(ifs.tellg());
+					ifs.seekg(0, std::ios::beg);
+
+					str.assign(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
+
+					char* data = new char[str.size()+1];
+					for (size_t i = 0; i < str.size()+1; i++) {
+						data[i] = str[i];
+					}
+					res->content_length = str.size();
+					res->content = data;
 				} else {
 					res->content = "could not find file";
 					res->content_length = strlen(res->content);
@@ -58,7 +73,7 @@ namespace daxa {
 
     	virtual void ReleaseInclude(shaderc_include_result* data) override {
 			if (data->source_name_length > 0) {
-				delete data->source_name;
+				delete data->content;
 			}
 
 			delete data;
