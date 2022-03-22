@@ -2,9 +2,6 @@
 
 #include "Daxa.hpp"
 
-// R11G11b10 emissive
-// R8G8B8A8 rgb albedo  a open
-
 class RenderContext {
 public:
     RenderContext(daxa::Window& window) 
