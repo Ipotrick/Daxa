@@ -56,7 +56,7 @@ namespace daxa {
 			return ResultErr{ err.c_str() };
 		}
 
-		Result<std::vector<u32>> tryGenSPIRVFromShaderc(std::string const& src, VkShaderStageFlagBits shaderStage, ShaderLang lang, shaderc::Compiler& compiler, shaderc::CompileOptions& options) {
+		Result<std::vector<u32>> tryGenSPIRVFromShaderc(std::string const& src, VkShaderStageFlagBits shaderStage, ShaderLang lang, shaderc::Compiler& compiler, shaderc::CompileOptions& options, char const* sourceFileName = "inline source") {
 			auto translateShaderStage = [](VkShaderStageFlagBits stage) -> shaderc_shader_kind {
 				switch (stage) {
 				case VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT: return shaderc_shader_kind::shaderc_vertex_shader;
@@ -84,77 +84,15 @@ namespace daxa {
 				case ShaderLang::GLSL: langType = shaderc_source_language_glsl; break;
 				case ShaderLang::HLSL: langType = shaderc_source_language_hlsl; break;
 			}
-
-			//shaderc::Compiler compiler;
-  			//shaderc::CompileOptions options;
-			//options.SetIncluder();
-			/*
-				DO NOT ENABLE OPTIMIZATIONS!
-				The driver will optimize it anyways AND
-				the optimizations can shrink push constants wich will definetly lead to bugs in reflected pipeline layouts!
-			*/
-  			// options.SetOptimizationLevel(shaderc_optimization_level_size); 
 			options.SetSourceLanguage(langType);
 			
-			shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(src, stage, "name", options);
+			shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(src, stage, sourceFileName, options);
 
 			if (module.GetCompilationStatus() != shaderc_compilation_status_success) {
-				return daxa::ResultErr{.message = module.GetErrorMessage().c_str()};
+				return daxa::ResultErr{.message = std::move(module.GetErrorMessage())};
 			}
 
 			return { std::vector<u32>{ module.begin(), module.end()} };
-		}
-
-		Result<VkShaderModule> tryCreateVkShaderModule(std::shared_ptr<DeviceBackend>& deviceBackend, std::vector<u32> const& spirv) {
-
-			VkShaderModuleCreateInfo shaderModuleCI{
-				.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-				.pNext = nullptr,
-				.codeSize = (u32)(spirv.size() * sizeof(u32)),
-				.pCode = spirv.data(),
-			};
-			VkShaderModule shaderModule;
-			VkResult res;
-			if ((res = vkCreateShaderModule(deviceBackend->device.device, (VkShaderModuleCreateInfo*)&shaderModuleCI, nullptr, &shaderModule)) == VK_SUCCESS) {
-				return { shaderModule };
-			}
-			else {
-				return ResultErr{ "could not create shader module from spriv source" };
-			}
-		}
-
-		Result<VkShaderModule> tryCreateVkShaderModule(std::shared_ptr<DeviceBackend>& deviceBackend, std::filesystem::path const& path, VkShaderStageFlagBits shaderStage, ShaderLang lang, shaderc::Compiler& compiler, shaderc::CompileOptions& options) {
-			auto src = tryLoadShaderSourceFromFile(path);
-			if (src.isErr()) {
-				return ResultErr{ src.message() };
-			}
-			auto spirv = tryGenSPIRVFromShaderc(src.value(), shaderStage, lang, compiler, options);
-			if (spirv.isErr()) {
-				return ResultErr{ spirv.message() + "; with path: " + path.string() };
-			}
-			auto shadMod = tryCreateVkShaderModule(deviceBackend, spirv.value());
-			if (!shadMod.isErr()) {
-				return ResultErr{ shadMod.message() };
-			}
-			return { shadMod.value() };
-		}
-
-		Result<ShaderModuleHandle> ShaderModuleHandle::tryCompileShader(std::shared_ptr<DeviceBackend>& deviceBackend, std::string const& glsl, std::string const& entryPoint, VkShaderStageFlagBits shaderStage, ShaderLang lang, shaderc::Compiler& compiler, shaderc::CompileOptions& options) {
-			auto spirv = tryGenSPIRVFromShaderc(glsl, shaderStage, lang, compiler, options);
-			if (spirv.isErr()) {
-				return ResultErr{ spirv.message() };
-			}
-			auto shaderModule = tryCreateVkShaderModule(deviceBackend, spirv.value());
-			if (shaderModule.isErr()) {
-				return ResultErr{ shaderModule.message() };
-			}
-			auto shaderMod = std::make_shared<ShaderModule>();
-			shaderMod->entryPoint = entryPoint;
-			shaderMod->shaderModule = std::move(shaderModule.value());
-			shaderMod->spirv = spirv.value();
-			shaderMod->shaderStage = shaderStage;
-			shaderMod->deviceBackend = deviceBackend;
-			return { ShaderModuleHandle{ std::move(shaderMod) } };
 		}
 		
 		Result<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(std::shared_ptr<DeviceBackend>& deviceBackend, ShaderModuleCreateInfo const& ci, shaderc::Compiler& compiler, shaderc::CompileOptions& options) {
@@ -173,9 +111,21 @@ namespace daxa {
 				return ResultErr{"no path given"};
 			}
 
-			auto shadMod = tryCompileShader(deviceBackend, sourceCode, ci.entryPoint, ci.stage, ci.shaderLang, compiler, options);
-			if (shadMod.isErr()) {
-				auto errMess = shadMod.message();
+			auto spirv = tryGenSPIRVFromShaderc(sourceCode, ci.stage, ci.shaderLang, compiler, options, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()));
+			if (spirv.isErr()) {
+				return ResultErr{ spirv.message() };
+			}
+
+			VkShaderModuleCreateInfo shaderModuleCI{
+				.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+				.pNext = nullptr,
+				.codeSize = (u32)(spirv.value().size() * sizeof(u32)),
+				.pCode = spirv.value().data(),
+			};
+			VkShaderModule shaderModule;
+			VkResult res;
+			if ((res = vkCreateShaderModule(deviceBackend->device.device, (VkShaderModuleCreateInfo*)&shaderModuleCI, nullptr, &shaderModule)) != VK_SUCCESS) {
+				std::string errMess{ "could not create shader module from spriv source" };
 				if (!ci.pathToSource.empty()) {
 					errMess += "; shader from path: ";
 					errMess += ci.pathToSource.string();
@@ -183,20 +133,27 @@ namespace daxa {
 				return ResultErr{ errMess };
 			}
 
+			auto shadMod = std::make_shared<ShaderModule>();
+			shadMod->entryPoint = ci.entryPoint;
+			shadMod->shaderModule = shaderModule;
+			shadMod->spirv = spirv.value();
+			shadMod->shaderStage = ci.stage;
+			shadMod->deviceBackend = deviceBackend;
+
 			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
-				shadMod.value()->debugName = ci.debugName;
+				shadMod->debugName = ci.debugName;
 
 				VkDebugUtilsObjectNameInfoEXT imageNameInfo {
 					.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
 					.pNext = NULL,
 					.objectType = VK_OBJECT_TYPE_SHADER_MODULE,
-					.objectHandle = (uint64_t)shadMod.value()->shaderModule,
+					.objectHandle = (uint64_t)shadMod->shaderModule,
 					.pObjectName = ci.debugName,
 				};
 				instance->pfnSetDebugUtilsObjectNameEXT(deviceBackend->device.device, &imageNameInfo);
 			}
 
-			return { shadMod.value() };
+			return { ShaderModuleHandle{ shadMod } };
 		}
 	}
 }
