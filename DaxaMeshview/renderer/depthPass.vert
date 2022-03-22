@@ -22,9 +22,9 @@ layout(std140, push_constant) uniform PushConstants {
 } pushConstants;
 
 void main() {
-    PackedVec3 packedPosition = packedVec3BufferView[uint(pushConstants.vertexPositionBufferId)].packedVec3s[gl_VertexIndex];
+    PackedVec3 packedPosition = packedVec3BufferView[pushConstants.vertexPositionBufferId].packedVec3s[gl_VertexIndex];
     vec3 position = vec3(packedPosition.x, packedPosition.y, packedPosition.z);
-    mat4 m = primitivesBufferView[uint(pushConstants.vertexPositionBufferId)].primitiveInfos[pushConstants.primitiveIndex].transform;
+    mat4 m = primitivesBufferView[pushConstants.vertexPositionBufferId].primitiveInfos[pushConstants.primitiveIndex].transform;
 
     mat4 mvp = cameraInfoBufferView.vp * m;
     gl_Position =  mvp * vec4(position, 1.0f);

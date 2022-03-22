@@ -326,7 +326,7 @@ namespace daxa {
 			struct SingleCopyHostToBufferInfo{
 				u8 const* src; 
 				BufferHandle const& dst;
-				HostToBufferCopyRegion const& region;
+				HostToBufferCopyRegion region = {};
 			};
 			void singleCopyHostToBuffer(SingleCopyHostToBufferInfo const& info);
 
@@ -344,7 +344,7 @@ namespace daxa {
 				u8 const* src;
 				ImageHandle const& dst;
 				VkImageLayout dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-				HostToImageCopyRegion const& region;
+				HostToImageCopyRegion region = {};
 			};
 			void singleCopyHostToImage(SingleHostToImageCopyInfo const& ci);
 
@@ -360,7 +360,7 @@ namespace daxa {
 			struct SingleBufferToBufferCopyInfo{
 				BufferHandle const& src;
 				BufferHandle const& dst;
-				BufferToBufferCopyRegion const& region;
+				BufferToBufferCopyRegion region = {};
 			};
 			void singleCopyBufferToBuffer(SingleBufferToBufferCopyInfo const& ci);
 
@@ -378,7 +378,7 @@ namespace daxa {
 				BufferHandle const& src;
 				ImageHandle const& dst;
 				VkImageLayout dstLayout;
-				BufferToImageCopyRegion const& region;
+				BufferToImageCopyRegion region = {};
 			};
 			void singleCopyBufferToImage(SingleBufferToImageCopyInfo const& ci);
 
@@ -398,7 +398,7 @@ namespace daxa {
 				VkImageLayout srcLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 				ImageHandle const& dst;
 				VkImageLayout dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-				ImageToImageCopyRegion const& region;
+				ImageToImageCopyRegion region = {};
 			};
 			void singleCopyImageToImage(SingleImageToImageCopyInfo const& ci);
 

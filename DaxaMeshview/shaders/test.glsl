@@ -1,3 +1,0 @@
-struct Test{
-    uint i;
-};
