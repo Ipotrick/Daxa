@@ -1,94 +1,15 @@
 #version 450
 #extension GL_KHR_vulkan_glsl : enable
 
-// clang-format off
-const uint Air         = 0;
-const uint Brick       = 1;
-const uint Cactus      = 2;
-const uint Cobblestone = 3;
-const uint DiamondOre  = 4;
-const uint Dirt        = 5;
-const uint DriedShrub  = 6;
-const uint Grass       = 7;
-const uint Gravel      = 8;
-const uint Leaves      = 9;
-const uint Log         = 10;
-const uint Planks      = 11;
-const uint Rose        = 12;
-const uint Sand        = 13;
-const uint Sandstone   = 14;
-const uint Stone       = 15;
-const uint TallGrass   = 16;
-const uint Water       = 17;
-
-const uint Plains = 0;
-const uint Forest = 1;
-const uint Desert = 2;
-const uint Beach = 3;
-// clang-format on
-
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
-const uvec3 CHUNK_SIZE = uvec3(16);
-const uint RENDER_DIST_XZ = 4;
-const uvec3 CHUNK_MAX = uvec3(16, 6, 16);
-
-const uint BLOCK_ID_MASK = 0x0000ffff;
-const uint BIOME_ID_MASK = 0xffff0000;
-
-struct ChunkgenBuffer {
-    uint blocks[CHUNK_SIZE.x * CHUNK_SIZE.y * CHUNK_SIZE.z];
-};
-
-layout(set = 0, binding = 0) buffer chunk_buffer_0 {
-    ChunkgenBuffer chunks_0[CHUNK_MAX.x * CHUNK_MAX.y * CHUNK_MAX.z];
-};
-layout(set = 0, binding = 1) buffer chunk_buffer_1 {
-    ChunkgenBuffer chunks_1[CHUNK_MAX.x * CHUNK_MAX.y * CHUNK_MAX.z];
-};
+#include "chunkgen/buffers.glsl"
+#include "chunkgen/noise.glsl"
 
 layout(push_constant) uniform Push {
     vec3 pos;
 }
 p;
-
-bool is_transparent(uint id) {
-    switch (id & BLOCK_ID_MASK) {
-    case Air:
-    case DriedShrub:
-    case Leaves:
-    case Rose:
-    case TallGrass:
-        return true;
-    default: return false;
-    }
-}
-
-// A single iteration of Bob Jenkins' One-At-A-Time hashing algorithm.
-uint hash(uint x) {
-    x += (x << 10u);
-    x ^= (x >> 6u);
-    x += (x << 3u);
-    x ^= (x >> 11u);
-    x += (x << 15u);
-    return x;
-}
-uint hash(uvec2 v) { return hash(v.x ^ hash(v.y)); }
-uint hash(uvec3 v) { return hash(v.x ^ hash(v.y) ^ hash(v.z)); }
-uint hash(uvec4 v) { return hash(v.x ^ hash(v.y) ^ hash(v.z) ^ hash(v.w)); }
-float floatConstruct(uint m) {
-    const uint ieeeMantissa = 0x007FFFFFu; // binary32 mantissa bitmask
-    const uint ieeeOne = 0x3F800000u;      // 1.0 in IEEE binary32
-    m &= ieeeMantissa;                     // Keep only mantissa bits (fractional part)
-    m |= ieeeOne;                          // Add fractional part to 1.0
-    float f = uintBitsToFloat(m);          // Range [1:2]
-    return f - 1.0;                        // Range [0:1]
-}
-// Pseudo-random value in half-open range [0:1].
-float rand(float x) { return floatConstruct(hash(floatBitsToUint(x))); }
-float rand(vec2 v) { return floatConstruct(hash(floatBitsToUint(v))); }
-float rand(vec3 v) { return floatConstruct(hash(floatBitsToUint(v))); }
-float rand(vec4 v) { return floatConstruct(hash(floatBitsToUint(v))); }
 
 void main() {
     uvec3 global_i = gl_GlobalInvocationID.xyz;
@@ -133,7 +54,6 @@ void main() {
         uint id = chunks_0[chunk_index].blocks[block_index_a] & BLOCK_ID_MASK;
         below_ids[i] = id;
     }
-
     if (chunk_i.y > 0) {
         uint chunk_index_a = chunk_i.x + (chunk_i.y - 1) * CHUNK_MAX.x + chunk_i.z * CHUNK_MAX.x * CHUNK_MAX.y;
         for (uint i = below_n; i < 2; ++i) {

@@ -1,53 +1,3 @@
-#version 450
-#extension GL_KHR_vulkan_glsl : enable
-
-// clang-format off
-const uint Air         = 0;
-const uint Brick       = 1;
-const uint Cactus      = 2;
-const uint Cobblestone = 3;
-const uint DiamondOre  = 4;
-const uint Dirt        = 5;
-const uint DriedShrub  = 6;
-const uint Grass       = 7;
-const uint Gravel      = 8;
-const uint Leaves      = 9;
-const uint Log         = 10;
-const uint Planks      = 11;
-const uint Rose        = 12;
-const uint Sand        = 13;
-const uint Sandstone   = 14;
-const uint Stone       = 15;
-const uint TallGrass   = 16;
-const uint Water       = 17;
-
-const uint Plains = 0;
-const uint Forest = 1;
-const uint Desert = 2;
-const uint Beach = 3;
-// clang-format on
-
-layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
-
-const uvec3 CHUNK_SIZE = uvec3(16);
-const uint RENDER_DIST_XZ = 4;
-const uvec3 CHUNK_MAX = uvec3(16, 6, 16);
-
-struct ChunkgenBuffer {
-    uint blocks[CHUNK_SIZE.x * CHUNK_SIZE.y * CHUNK_SIZE.z];
-};
-
-layout(set = 0, binding = 0) buffer chunk_buffer_0 {
-    ChunkgenBuffer chunks_0[CHUNK_MAX.x * CHUNK_MAX.y * CHUNK_MAX.z];
-};
-layout(set = 0, binding = 1) buffer chunk_buffer_1 {
-    ChunkgenBuffer chunks_1[CHUNK_MAX.x * CHUNK_MAX.y * CHUNK_MAX.z];
-};
-
-layout(push_constant) uniform Push {
-    vec3 pos;
-}
-p;
 
 int fastfloor(float fp) {
     int i = int(fp);
@@ -264,26 +214,6 @@ float fractal_noise(vec3 pos, FractalNoiseConfig config) {
     return value;
 }
 
-float terrain_noise(vec3 pos) {
-    FractalNoiseConfig noise_conf = FractalNoiseConfig(
-        /* .amplitude   = */ 0.1f,
-        /* .persistance = */ 0.6f,
-        /* .scale       = */ 0.005f,
-        /* .lacunarity  = */ 2,
-        /* .octaves     = */ 4);
-    return fractal_noise(pos, noise_conf) * 3.0f - pos.y * 0.010f + 0.01f;
-}
-
-float biome_noise(vec3 pos) {
-    FractalNoiseConfig noise_conf = FractalNoiseConfig(
-        /* .amplitude   = */ 0.1f,
-        /* .persistance = */ 0.4f,
-        /* .scale       = */ 0.005f,
-        /* .lacunarity  = */ 4,
-        /* .octaves     = */ 4);
-    return fractal_noise(pos + 1000, noise_conf) * 3.0f;
-}
-
 // A single iteration of Bob Jenkins' One-At-A-Time hashing algorithm.
 uint rand_hash(uint x) {
     x += (x << 10u);
@@ -309,41 +239,3 @@ float rand(float x) { return floatConstruct(rand_hash(floatBitsToUint(x))); }
 float rand(vec2 v) { return floatConstruct(rand_hash(floatBitsToUint(v))); }
 float rand(vec3 v) { return floatConstruct(rand_hash(floatBitsToUint(v))); }
 float rand(vec4 v) { return floatConstruct(rand_hash(floatBitsToUint(v))); }
-
-uint gen_block(in vec3 b_pos) {
-    float b_val = biome_noise(b_pos);
-    float val = terrain_noise(b_pos);
-    float r = rand(b_pos);
-
-    uint biome_id = Plains;
-    if (b_val < -0.2)
-        biome_id = Forest;
-    else if (b_val > 0.12)
-        biome_id = Desert; 
-    if (b_pos.y > -4 + r * 3 && b_pos.y < 4 + r * 3 && val < 0.05 + r * 0.1 && val > -0.05 - r * 0.1)
-        biome_id = Beach;
-
-    biome_id = biome_id << 16;
-
-    if (val > 0.0f) {
-        return Stone | biome_id;
-    } else {
-        if (b_pos.y < 0) {
-            return Water | biome_id;
-        }
-    }
-    return Air | biome_id;
-}
-
-void main() {
-    uvec3 global_i = gl_GlobalInvocationID.xyz;
-
-    uvec3 chunk_i = global_i / CHUNK_SIZE.xyz;
-    uvec3 block_i = global_i % CHUNK_SIZE.xyz;
-
-    uint block_index = block_i.x + block_i.y * CHUNK_SIZE.x + block_i.z * CHUNK_SIZE.x * CHUNK_SIZE.y;
-    uint chunk_index = chunk_i.x + chunk_i.y * CHUNK_MAX.x + chunk_i.z * CHUNK_MAX.x * CHUNK_MAX.y;
-    vec3 block_pos = vec3(global_i) + p.pos * CHUNK_SIZE;
-
-    chunks_0[chunk_index].blocks[block_index] = gen_block(block_pos);
-}
