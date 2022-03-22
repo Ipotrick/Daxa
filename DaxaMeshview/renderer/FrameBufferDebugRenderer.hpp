@@ -22,16 +22,12 @@ public:
     };
 
     void init(RenderContext& renderCTX, u32 width, u32 height) {
-        auto shader = renderCTX.device->createShaderModule({
-            .pathToSource = "./DaxaMeshview/renderer/fb_debug.comp",
-            .stage = VK_SHADER_STAGE_COMPUTE_BIT,
-        });
-		if (shader.isErr()) {
-			std::cout << "could not load vertex shader due to: " << shader.message() << std::endl;
-		}
+        daxa::gpu::ShaderModuleCreateInfo shaderCI{
+            .pathToSource = "./DaxaMeshview/renderer/fb_debug.comp", .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+        };
 
-		this->pipeline = renderCTX.device->createComputePipeline({
-            .shaderModule = shader.value(), 
+		this->pipeline = renderCTX.pipelineCompiler->createComputePipeline({
+            .shaderCI = shaderCI, 
             .debugName = "frame buffer debug pipeline",
         }).value(); 
 
@@ -56,8 +52,9 @@ public:
 
         hotLoader = daxa::ComputePipelineHotLoader{
             renderCTX.device,
+            renderCTX.pipelineCompiler,
             {
-                .shaderModule = shader.value(), 
+                .shaderCI = shaderCI, 
                 .debugName = "frame buffer debug pipeline",
             },
             {

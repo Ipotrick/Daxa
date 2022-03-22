@@ -70,8 +70,6 @@ namespace daxa {
 
 			Result<ShaderModuleHandle> createShaderModule(ShaderModuleCreateInfo const& ci);
 
-			daxa::Result<PipelineHandle> createComputePipeline(ComputePipelineCreateInfo const& ci);
-
 			BindingSetAllocatorHandle createBindingSetAllocator(BindingSetAllocatorCreateInfo const& ci);
 
 			PipelineCompilerHandle createPipelineCompiler();
