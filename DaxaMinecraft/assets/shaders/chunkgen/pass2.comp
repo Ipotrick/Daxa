@@ -1,8 +1,15 @@
 #version 450
 #extension GL_KHR_vulkan_glsl : enable
 
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
 #include "chunkgen/buffers.glsl"
 #include "chunkgen/noise.glsl"
+
+layout(push_constant) uniform Push {
+    vec3 pos;
+}
+p;
 
 void main() {
     uvec3 global_i = gl_GlobalInvocationID.xyz;
@@ -47,7 +54,6 @@ void main() {
         uint id = chunks_0[chunk_index].blocks[block_index_a] & BLOCK_ID_MASK;
         below_ids[i] = id;
     }
-
     if (chunk_i.y > 0) {
         uint chunk_index_a = chunk_i.x + (chunk_i.y - 1) * CHUNK_MAX.x + chunk_i.z * CHUNK_MAX.x * CHUNK_MAX.y;
         for (uint i = below_n; i < 2; ++i) {
