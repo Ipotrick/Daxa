@@ -38,11 +38,18 @@ namespace daxa {
 				res->source_name_length = 0;
 			}
 			else {
+				res->source_name = requested_source;
+				res->source_name_length = strlen(requested_source);
+
 				auto result = sharedData->findFullPathOfFile(requested_source);
-				if (result.isOk()) {
+				auto searchPred = [&](std::string const& str){ return strcmp(str.c_str(), requested_source) == 0; };
+				// only ever include a file once, practiacally automatic include guards, #pragma once
+				if (std::find_if(sharedData->seenFiles.begin(), sharedData->seenFiles.end(), searchPred) != sharedData->seenFiles.end()) {
+					res->content = "";
+					res->content_length = 0;
+				}
+				else if (result.isOk()) {
 					std::filesystem::path path = std::move(result.value());
-					res->source_name = requested_source;
-					res->source_name_length = strlen(requested_source);
 
 					std::ifstream ifs{path};
 					
@@ -60,6 +67,8 @@ namespace daxa {
 					}
 					res->content_length = str.size();
 					res->content = data;
+
+					sharedData->seenFiles.push_back(requested_source);
 				} else {
 					res->content = "could not find file";
 					res->content_length = strlen(res->content);
@@ -72,7 +81,7 @@ namespace daxa {
 		}
 
     	virtual void ReleaseInclude(shaderc_include_result* data) override {
-			if (data->source_name_length > 0) {
+			if (data->source_name_length > 0 && data->content != "") {
 				delete data->content;
 			}
 
@@ -122,6 +131,8 @@ namespace daxa {
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStageCreateInfo;
 		std::vector<gpu::ShaderModuleHandle> shaderModules;
 		shaderModules.reserve(builder.shaderModuleCIs.size());
+
+		sharedData->seenFiles.clear();
 
 		for (auto& shaderCI : builder.shaderModuleCIs) {
 			auto result = gpu::ShaderModuleHandle::tryCreateDAXAShaderModule(deviceBackend, shaderCI, compiler, options);

@@ -4,6 +4,7 @@ namespace daxa {
     struct PipelineCompilerShadedData {
         Result<std::filesystem::path> findFullPathOfFile(std::filesystem::path const& file);
         std::vector<std::filesystem::path> rootPaths = { "." };
+        std::vector<std::string> seenFiles = {};
     };
 
     class PipelineCompiler {
