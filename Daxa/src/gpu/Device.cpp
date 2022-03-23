@@ -73,9 +73,5 @@ namespace daxa {
 		BindingSetAllocatorHandle Device::createBindingSetAllocator(BindingSetAllocatorCreateInfo const& ci) {
 			return BindingSetAllocatorHandle{ std::make_shared<BindingSetAllocator>(backend, ci) };
 		}
-
-		Result<ShaderModuleHandle> Device::createShaderModule(ShaderModuleCreateInfo const& ci) {
-			return ShaderModuleHandle::tryCreateDAXAShaderModule(backend, ci, shaderCompiler, shaderCompileOptions);
-		}
 	}
 }
