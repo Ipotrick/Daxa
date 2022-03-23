@@ -2,11 +2,269 @@
 
 #include <fstream>
 
+#include <spirv_reflect.h>
+
+#include "Instance.hpp"
+#include "util.hpp"
+
 using Path = std::filesystem::path;
 
 using namespace daxa::gpu;
 
 namespace daxa {
+	std::vector<VkDescriptorSetLayout> processReflectedDescriptorData(
+		std::vector<BindingSetDescription>& setDescriptions,
+		BindingSetLayoutCache& descCache,
+		std::array<std::shared_ptr<BindingSetLayout const>, MAX_SETS_PER_PIPELINE>& setLayouts
+	) {
+		std::vector<VkDescriptorSetLayout> descLayouts;
+		BindingSetDescription description;
+		for (size_t set = 0; set < setDescriptions.size(); set++) {
+			auto layout = descCache.getLayoutShared(setDescriptions[set]);
+			setLayouts[set] = layout;
+			descLayouts.push_back(layout->getVkDescriptorSetLayout());
+		}
+		return std::move(descLayouts);
+	}
+	
+	Result<std::string> PipelineCompiler::tryLoadShaderSourceFromFile(std::filesystem::path const& path) {
+		auto result = sharedData->findFullPathOfFile(path);
+		if (result.isErr()) {
+			return ResultErr{ .message = result.message() };
+		}
+
+		auto startTime = std::chrono::steady_clock::now();
+		while ((std::chrono::steady_clock::now() - startTime).count() < 100'000'000) {
+			std::ifstream ifs(result.value());
+			if (!ifs.good()) {
+				std::string err = "could not find or open file: \"";
+				err += result.value().string();
+				err += '\"';
+				return ResultErr{ err.c_str() };
+			}
+			sharedData->observedHotLoadFiles->insert({result.value(), std::filesystem::last_write_time(result.value())});
+			std::string str;
+
+			ifs.seekg(0, std::ios::end);   
+			str.reserve(ifs.tellg());
+			ifs.seekg(0, std::ios::beg);
+
+			str.assign(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
+
+			if (str.size() < 1) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				continue;
+			}
+					
+			return str;
+		}
+
+		std::string err = "time out while trying to read file: \"";
+		err += result.value().string();
+		err += '\"';
+		return ResultErr{ err.c_str() };
+	}
+
+	Result<std::vector<u32>> PipelineCompiler::tryGenSPIRVFromShaderc(std::string const& src, VkShaderStageFlagBits shaderStage, gpu::ShaderLang lang, char const* sourceFileName) {
+		auto translateShaderStage = [](VkShaderStageFlagBits stage) -> shaderc_shader_kind {
+			switch (stage) {
+			case VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT: return shaderc_shader_kind::shaderc_vertex_shader;
+			case VkShaderStageFlagBits::VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT: return shaderc_shader_kind::shaderc_tess_control_shader;
+			case VkShaderStageFlagBits::VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT: return shaderc_shader_kind::shaderc_tess_evaluation_shader;
+			case VkShaderStageFlagBits::VK_SHADER_STAGE_GEOMETRY_BIT: return shaderc_shader_kind::shaderc_geometry_shader;
+			case VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT: return shaderc_shader_kind::shaderc_fragment_shader;
+			case VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT: return shaderc_shader_kind::shaderc_compute_shader;
+			case VkShaderStageFlagBits::VK_SHADER_STAGE_RAYGEN_BIT_KHR: return shaderc_shader_kind::shaderc_raygen_shader;
+			case VkShaderStageFlagBits::VK_SHADER_STAGE_ANY_HIT_BIT_KHR: return shaderc_shader_kind::shaderc_anyhit_shader;
+			case VkShaderStageFlagBits::VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR: return shaderc_shader_kind::shaderc_closesthit_shader;
+			case VkShaderStageFlagBits::VK_SHADER_STAGE_MISS_BIT_KHR: return shaderc_shader_kind::shaderc_miss_shader;
+			case VkShaderStageFlagBits::VK_SHADER_STAGE_INTERSECTION_BIT_KHR: return shaderc_shader_kind::shaderc_intersection_shader;
+			case VkShaderStageFlagBits::VK_SHADER_STAGE_CALLABLE_BIT_KHR: return shaderc_shader_kind::shaderc_callable_shader;
+			case VkShaderStageFlagBits::VK_SHADER_STAGE_TASK_BIT_NV: return shaderc_shader_kind::shaderc_task_shader;
+			case VkShaderStageFlagBits::VK_SHADER_STAGE_MESH_BIT_NV: return shaderc_shader_kind::shaderc_mesh_shader;
+			default:
+				std::cerr << "error: unknown shader stage!\n";
+				std::abort();
+			}
+		};
+		auto stage = translateShaderStage(shaderStage);
+		shaderc_source_language langType;
+		switch (lang) {
+			case ShaderLang::GLSL: langType = shaderc_source_language_glsl; break;
+			case ShaderLang::HLSL: langType = shaderc_source_language_hlsl; break;
+		}
+		options.SetSourceLanguage(langType);
+		
+		shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(src, stage, sourceFileName, options);
+
+		if (module.GetCompilationStatus() != shaderc_compilation_status_success) {
+			return daxa::ResultErr{.message = std::move(module.GetErrorMessage())};
+		}
+
+		return { std::vector<u32>{ module.begin(), module.end()} };
+	}
+
+	std::vector<VkPushConstantRange> reflectPushConstants(const std::vector<uint32_t>& spv, VkShaderStageFlagBits shaderStage) {
+		SpvReflectShaderModule module = {};
+		SpvReflectResult result = spvReflectCreateShaderModule(spv.size() * sizeof(uint32_t), spv.data(), &module);
+		assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+		uint32_t count = 0;
+		result = spvReflectEnumeratePushConstantBlocks(&module, &count, NULL);
+
+		std::vector<SpvReflectBlockVariable*> blocks(count);
+		result = spvReflectEnumeratePushConstantBlocks(&module, &count, blocks.data());
+		assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+		std::vector<VkPushConstantRange> ret;
+		for (auto* block : blocks) {
+			ret.push_back(VkPushConstantRange{
+				.stageFlags = (VkShaderStageFlags)shaderStage,
+				.offset = block->offset,
+				.size = block->size,
+				});
+		}
+		return std::move(ret);
+	}
+
+	std::map<uint32_t, std::map<uint32_t, VkDescriptorSetLayoutBinding>>
+	reflectSetBindings(const std::vector<uint32_t>& spv, VkShaderStageFlagBits shaderStage) {
+		SpvReflectShaderModule module = {};
+		SpvReflectResult result = spvReflectCreateShaderModule(spv.size() * sizeof(uint32_t), spv.data(), &module);
+		assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+		uint32_t count = 0;
+		result = spvReflectEnumerateDescriptorSets(&module, &count, NULL);
+		assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+		std::vector<SpvReflectDescriptorSet*> sets(count);
+		result = spvReflectEnumerateDescriptorSets(&module, &count, sets.data());
+		assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+		std::map<uint32_t, std::map<uint32_t, VkDescriptorSetLayoutBinding>> setMap;
+		for (auto* set : sets) {
+			std::vector<VkDescriptorSetLayoutBinding> bindings;
+			for (uint32_t i = 0; i < set->binding_count; i++) {
+				auto* reflBinding = set->bindings[i];
+
+				VkDescriptorSetLayoutBinding binding{
+					.binding = reflBinding->binding,
+					.descriptorType = static_cast<VkDescriptorType>(reflBinding->descriptor_type),
+					.descriptorCount = reflBinding->count,
+					.stageFlags = (VkShaderStageFlags)shaderStage
+				};
+				setMap[set->set][binding.binding] = binding;
+			}
+		}
+
+		spvReflectDestroyShaderModule(&module);
+		return std::move(setMap);
+	}
+
+	void reflectShader(
+		ShaderModuleHandle const& shaderModule, 
+		std::vector<VkPushConstantRange>& pushConstants, 
+		std::vector<BindingSetDescription>& bindingSetDescriptions
+	) {
+		auto falserefl = reflectPushConstants(shaderModule->getSPIRV(), shaderModule->getVkShaderStage());
+		auto refl2 = reinterpret_cast<std::vector<VkPushConstantRange>*>(&falserefl);
+		auto& refl = *refl2;
+		for (auto& r : refl) {
+			auto iter = pushConstants.begin();
+			for (; iter != pushConstants.end(); iter++) {
+				if (iter->offset == r.offset) {
+					if (iter->size != r.size) {
+						DAXA_ASSERT_M(false, "push constant ranges of the same offset must have the same size");
+					}
+					// found the same push contant range:
+					iter->stageFlags |= r.stageFlags;
+					break;
+				}
+			}
+			if (iter == pushConstants.end()) {
+				// did not find same push constant. make new one:
+				pushConstants.push_back(r);
+			}
+		}
+
+		// reflect spirv descriptor sets:
+		auto reflDesc = reflectSetBindings(shaderModule->getSPIRV(), shaderModule->getVkShaderStage());
+		//}
+		for (auto& [set, bindingLayouts] : reflDesc) {
+			if (set >= bindingSetDescriptions.size()) {
+				bindingSetDescriptions.resize(set+1, {});
+			}
+
+			for (auto& [binding, layout] : bindingLayouts) {
+				bindingSetDescriptions[set].layouts[binding].descriptorType = layout.descriptorType;
+				bindingSetDescriptions[set].layouts[binding].descriptorCount = layout.descriptorCount;
+				bindingSetDescriptions[set].layouts[binding].stageFlags |= layout.stageFlags;
+			}
+		}
+	}
+
+	
+	Result<gpu::ShaderModuleHandle> PipelineCompiler::tryCreateShaderModule(gpu::ShaderModuleCreateInfo const& ci) {
+		std::string sourceCode = {};
+		if (!ci.pathToSource.empty()) {
+			auto src = tryLoadShaderSourceFromFile(ci.pathToSource);
+			if (src.isErr()) {
+				return ResultErr{ src.message() };
+			}
+			sourceCode = src.value();
+		}
+		else if (!ci.source.empty()) {
+			sourceCode = ci.source;
+		}
+		else {
+			return ResultErr{"no path given"};
+		}
+
+		auto spirv = tryGenSPIRVFromShaderc(sourceCode, ci.stage, ci.shaderLang, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()));
+		if (spirv.isErr()) {
+			return ResultErr{ spirv.message() };
+		}
+
+		VkShaderModuleCreateInfo shaderModuleCI{
+			.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+			.pNext = nullptr,
+			.codeSize = (u32)(spirv.value().size() * sizeof(u32)),
+			.pCode = spirv.value().data(),
+		};
+		VkShaderModule shaderModule;
+		VkResult res;
+		if ((res = vkCreateShaderModule(deviceBackend->device.device, (VkShaderModuleCreateInfo*)&shaderModuleCI, nullptr, &shaderModule)) != VK_SUCCESS) {
+			std::string errMess{ "could not create shader module from spriv source" };
+			if (!ci.pathToSource.empty()) {
+				errMess += "; shader from path: ";
+				errMess += ci.pathToSource.string();
+			}
+			return ResultErr{ errMess };
+		}
+
+		auto shadMod = std::make_shared<ShaderModule>();
+		shadMod->entryPoint = ci.entryPoint;
+		shadMod->shaderModule = shaderModule;
+		shadMod->spirv = spirv.value();
+		shadMod->shaderStage = ci.stage;
+		shadMod->deviceBackend = deviceBackend;
+
+		if (daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
+			shadMod->debugName = ci.debugName;
+
+			VkDebugUtilsObjectNameInfoEXT imageNameInfo {
+				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+				.pNext = NULL,
+				.objectType = VK_OBJECT_TYPE_SHADER_MODULE,
+				.objectHandle = (uint64_t)shadMod->shaderModule,
+				.pObjectName = ci.debugName,
+			};
+			daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT(deviceBackend->device.device, &imageNameInfo);
+		}
+
+		return { ShaderModuleHandle{ shadMod } };
+	}
+
 	class FileIncluder : public shaderc::CompileOptions::IncluderInterface {
 	public:
 		virtual shaderc_include_result* GetInclude(
@@ -103,6 +361,14 @@ namespace daxa {
 				}
 			}
 		}
+		if (reload) {
+			for (auto& pair : pipeline->observedHotLoadFiles) {
+				auto ifs = std::ifstream(pair.first);
+				if (ifs.good()) {
+					*(std::chrono::file_clock::time_point*)(&pair.second) = std::filesystem::last_write_time(pair.first);
+				}
+			}
+		}
 		return reload;
 	}
 
@@ -172,17 +438,12 @@ namespace daxa {
 
 		for (auto& shaderCI : builder.shaderModuleCIs) {
 			sharedData->currentShaderSeenFiles.clear();
-			auto result = gpu::ShaderModuleHandle::tryCreateDAXAShaderModule(deviceBackend, shaderCI, compiler, options, ret.observedHotLoadFiles);
+			auto result = tryCreateShaderModule(shaderCI);
 			if (result.isOk()) {
 				shaderModules.push_back(result.value());
 			} else {
 				return ResultErr{ .message = result.message() };
 			}
-		}
-
-		std::cout << "compiled pipeline with the following observed files for hot reloading:" << std::endl;
-		for (auto& [path, lastWriteTime] : ret.observedHotLoadFiles) {
-			std::cout << "  path: " << path << std::endl;
 		}
 
 		for (auto& shaderModule : shaderModules) {
@@ -314,7 +575,7 @@ namespace daxa {
 		auto d = vkCreateGraphicsPipelines(deviceBackend->device.device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline);
 		DAXA_CHECK_VK_RESULT_M(d, "failed to create graphics pipeline");
 
-		setPipelineDebugName(deviceBackend->device.device, builder.debugName.c_str(), ret);
+		ret.setPipelineDebugName(deviceBackend->device.device, builder.debugName.c_str());
 
 		return pipelineHandle;
     }
@@ -330,17 +591,12 @@ namespace daxa {
 
 		sharedData->observedHotLoadFiles = &ret.observedHotLoadFiles;
 
-		auto result = gpu::ShaderModuleHandle::tryCreateDAXAShaderModule(deviceBackend, ci.shaderCI, compiler, options, ret.observedHotLoadFiles);
+		auto result = tryCreateShaderModule(ci.shaderCI);
 		gpu::ShaderModuleHandle shader;
 		if (result.isOk()) {
 			shader = result.value();
 		} else {
 			return ResultErr{ .message = result.message() };
-		}
-
-		std::cout << "compiled pipeline with the following observed files for hot reloading:" << std::endl;
-		for (auto& [path, lastWriteTime] : ret.observedHotLoadFiles) {
-			std::cout << "  path: " << path << std::endl;
 		}
 
 		VkPipelineShaderStageCreateInfo pipelineShaderStageCI{
@@ -386,7 +642,7 @@ namespace daxa {
 		};
 		DAXA_CHECK_VK_RESULT_M(vkCreateComputePipelines(deviceBackend->device.device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline), "failed to create compute pipeline");
 
-		setPipelineDebugName(deviceBackend->device.device, ci.debugName, ret);
+		ret.setPipelineDebugName(deviceBackend->device.device, ci.debugName);
 
 		return pipelineHandle;
 	}

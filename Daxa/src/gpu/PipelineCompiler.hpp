@@ -1,5 +1,7 @@
 #include "Pipeline.hpp"
 
+#include "shaderc/shaderc.h"
+
 #include <set>
 
 namespace daxa {
@@ -21,7 +23,10 @@ namespace daxa {
         Result<gpu::PipelineHandle> createComputePipeline(gpu::ComputePipelineCreateInfo const& ci);
         Result<gpu::PipelineHandle> recreatePipeline(gpu::PipelineHandle const& pipeline);
     private:
-		daxa::Result<gpu::PipelineHandle> build(gpu::GraphicsPipelineBuilder const& builder);
+        Result<gpu::ShaderModuleHandle> tryCreateShaderModule(gpu::ShaderModuleCreateInfo const& ci);
+		Result<std::vector<u32>> tryGenSPIRVFromShaderc(std::string const& src, VkShaderStageFlagBits shaderStage, gpu::ShaderLang lang, char const* sourceFileName = "inline source");
+        Result<std::string> tryLoadShaderSourceFromFile(std::filesystem::path const& path);
+        daxa::Result<gpu::PipelineHandle> build(gpu::GraphicsPipelineBuilder const& builder);
 
         std::shared_ptr<gpu::DeviceBackend> deviceBackend = {};
         std::shared_ptr<gpu::BindingSetLayoutCache> bindSetLayoutCache = {};
