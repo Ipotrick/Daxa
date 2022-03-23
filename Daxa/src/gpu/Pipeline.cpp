@@ -1,21 +1,19 @@
 #include "Pipeline.hpp"
 
 #include <iostream>
-#include <map>
-
-#include <spirv_reflect.h>
 
 #include "Instance.hpp"
+#include "util.hpp"
 
 namespace daxa {
 	namespace gpu {
-		void setPipelineDebugName(VkDevice device, char const* debugName, Pipeline& pipeline) {
+		void Pipeline::setPipelineDebugName(VkDevice device, char const* debugName) {
 			if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && debugName != nullptr) {
 				VkDebugUtilsObjectNameInfoEXT nameInfo {
 					.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
 					.pNext = NULL,
 					.objectType = VK_OBJECT_TYPE_PIPELINE,
-					.objectHandle = (uint64_t)pipeline.pipeline,
+					.objectHandle = (uint64_t)pipeline,
 					.pObjectName = debugName,
 				};
 				instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
@@ -23,79 +21,13 @@ namespace daxa {
 					.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
 					.pNext = NULL,
 					.objectType = VK_OBJECT_TYPE_PIPELINE_LAYOUT,
-					.objectHandle = (uint64_t)pipeline.layout,
+					.objectHandle = (uint64_t)layout,
 					.pObjectName = debugName,
 				};
 				instance->pfnSetDebugUtilsObjectNameEXT(device, &nameInfoLayout);
-				pipeline.debugName = debugName;
+				debugName = debugName;
 			}
 		}
-
-		std::vector<VkDescriptorSetLayout> processReflectedDescriptorData(
-			std::vector<BindingSetDescription>& setDescriptions,
-			BindingSetLayoutCache& descCache,
-			std::array<std::shared_ptr<BindingSetLayout const>, MAX_SETS_PER_PIPELINE>& setLayouts
-		) {
-			std::vector<VkDescriptorSetLayout> descLayouts;
-			BindingSetDescription description;
-			for (size_t set = 0; set < setDescriptions.size(); set++) {
-				auto layout = descCache.getLayoutShared(setDescriptions[set]);
-				setLayouts[set] = layout;
-				descLayouts.push_back(layout->getVkDescriptorSetLayout());
-			}
-			return std::move(descLayouts);
-		}
-
-		std::size_t sizeofFormat(VkFormat format) {
-			if (format == VkFormat::VK_FORMAT_UNDEFINED)
-				return -1;
-			if (format == VkFormat::VK_FORMAT_R4G4_UNORM_PACK8)
-				return 1;
-			if (format >= VkFormat::VK_FORMAT_R4G4B4A4_UNORM_PACK16 && format <= VkFormat::VK_FORMAT_A1R5G5B5_UNORM_PACK16)
-				return 2;
-			if (format >= VkFormat::VK_FORMAT_R8_UNORM && format <= VkFormat::VK_FORMAT_R8_SRGB)
-				return 1;
-			if (format >= VkFormat::VK_FORMAT_R8G8_UNORM && format <= VkFormat::VK_FORMAT_R8G8_SRGB)
-				return 2;
-			if (format >= VkFormat::VK_FORMAT_R8G8B8_UNORM && format <= VkFormat::VK_FORMAT_R8G8B8_SRGB)
-				return 3;
-			if (format >= VkFormat::VK_FORMAT_R8G8B8_UNORM && format <= VkFormat::VK_FORMAT_A2B10G10R10_SINT_PACK32)
-				return 4;
-			if (format >= VkFormat::VK_FORMAT_R16_UNORM && format <= VkFormat::VK_FORMAT_R16_SFLOAT)
-				return 2;
-			if (format >= VkFormat::VK_FORMAT_R16G16_UNORM && format <= VkFormat::VK_FORMAT_R16G16_SFLOAT)
-				return 4;
-			if (format >= VkFormat::VK_FORMAT_R16G16B16_UNORM && format <= VkFormat::VK_FORMAT_R16G16B16_SFLOAT)
-				return 6;
-			if (format >= VkFormat::VK_FORMAT_R16G16B16A16_UNORM && format <= VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT)
-				return 8;
-			if (format >= VkFormat::VK_FORMAT_R32_UINT && format <= VkFormat::VK_FORMAT_R32_SFLOAT)
-				return 4;
-			if (format >= VkFormat::VK_FORMAT_R32G32_UINT && format <= VkFormat::VK_FORMAT_R32G32_SFLOAT)
-				return 8;
-			if (format >= VkFormat::VK_FORMAT_R32G32B32_UINT && format <= VkFormat::VK_FORMAT_R32G32B32_SFLOAT)
-				return 12;
-			if (format >= VkFormat::VK_FORMAT_R32G32B32A32_UINT && format <= VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT)
-				return 16;
-			if (format >= VkFormat::VK_FORMAT_R64_UINT && format <= VkFormat::VK_FORMAT_R64_SFLOAT)
-				return 8;
-			if (format >= VkFormat::VK_FORMAT_R64G64_UINT && format <= VkFormat::VK_FORMAT_R64G64_SFLOAT)
-				return 16;
-			if (format >= VkFormat::VK_FORMAT_R64G64B64_UINT && format <= VkFormat::VK_FORMAT_R64G64B64_SFLOAT)
-				return 24;
-			if (format >= VkFormat::VK_FORMAT_R64G64B64A64_UINT && format <= VkFormat::VK_FORMAT_R64G64B64A64_SFLOAT)
-				return 32;
-			if (format == VkFormat::VK_FORMAT_B10G11R11_UFLOAT_PACK32 || format == VkFormat::VK_FORMAT_E5B9G9R9_UFLOAT_PACK32)
-				return 32;
-			if (format == VkFormat::VK_FORMAT_D16_UNORM)
-				return 16;
-			if (format == VkFormat::VK_FORMAT_X8_D24_UNORM_PACK32 || format == VkFormat::VK_FORMAT_D32_SFLOAT)
-				return 32;
-			if (format == VkFormat::VK_FORMAT_S8_UINT)
-				return 8;
-			return -1;
-		}
-
 		Pipeline::~Pipeline() {
 			if (deviceBackend) {
 				vkDestroyPipelineLayout(deviceBackend->device.device, layout, nullptr);
@@ -167,105 +99,6 @@ namespace daxa {
 		GraphicsPipelineBuilder& GraphicsPipelineBuilder::setMultisampling(const VkPipelineMultisampleStateCreateInfo& multisampling) {
 			this->multisampling = multisampling;
 			return *this;
-		}
-
-		std::vector<VkPushConstantRange> reflectPushConstants(const std::vector<uint32_t>& spv, VkShaderStageFlagBits shaderStage) {
-			SpvReflectShaderModule module = {};
-			SpvReflectResult result = spvReflectCreateShaderModule(spv.size() * sizeof(uint32_t), spv.data(), &module);
-			assert(result == SPV_REFLECT_RESULT_SUCCESS);
-
-			uint32_t count = 0;
-			result = spvReflectEnumeratePushConstantBlocks(&module, &count, NULL);
-
-			std::vector<SpvReflectBlockVariable*> blocks(count);
-			result = spvReflectEnumeratePushConstantBlocks(&module, &count, blocks.data());
-			assert(result == SPV_REFLECT_RESULT_SUCCESS);
-
-			std::vector<VkPushConstantRange> ret;
-			for (auto* block : blocks) {
-				ret.push_back(VkPushConstantRange{
-					.stageFlags = (VkShaderStageFlags)shaderStage,
-					.offset = block->offset,
-					.size = block->size,
-					});
-			}
-			return std::move(ret);
-		}
-
-		std::map<uint32_t, std::map<uint32_t, VkDescriptorSetLayoutBinding>>
-		reflectSetBindings(const std::vector<uint32_t>& spv, VkShaderStageFlagBits shaderStage) {
-			SpvReflectShaderModule module = {};
-			SpvReflectResult result = spvReflectCreateShaderModule(spv.size() * sizeof(uint32_t), spv.data(), &module);
-			assert(result == SPV_REFLECT_RESULT_SUCCESS);
-
-			uint32_t count = 0;
-			result = spvReflectEnumerateDescriptorSets(&module, &count, NULL);
-			assert(result == SPV_REFLECT_RESULT_SUCCESS);
-
-			std::vector<SpvReflectDescriptorSet*> sets(count);
-			result = spvReflectEnumerateDescriptorSets(&module, &count, sets.data());
-			assert(result == SPV_REFLECT_RESULT_SUCCESS);
-
-			std::map<uint32_t, std::map<uint32_t, VkDescriptorSetLayoutBinding>> setMap;
-			for (auto* set : sets) {
-				std::vector<VkDescriptorSetLayoutBinding> bindings;
-				for (uint32_t i = 0; i < set->binding_count; i++) {
-					auto* reflBinding = set->bindings[i];
-
-					VkDescriptorSetLayoutBinding binding{
-						.binding = reflBinding->binding,
-						.descriptorType = static_cast<VkDescriptorType>(reflBinding->descriptor_type),
-						.descriptorCount = reflBinding->count,
-						.stageFlags = (VkShaderStageFlags)shaderStage
-					};
-					setMap[set->set][binding.binding] = binding;
-				}
-			}
-
-			spvReflectDestroyShaderModule(&module);
-			return std::move(setMap);
-		}
-
-		void reflectShader(
-			ShaderModuleHandle const& shaderModule, 
-			std::vector<VkPushConstantRange>& pushConstants, 
-			std::vector<BindingSetDescription>& bindingSetDescriptions
-		) {
-			auto falserefl = reflectPushConstants(shaderModule->getSPIRV(), shaderModule->getVkShaderStage());
-			auto refl2 = reinterpret_cast<std::vector<VkPushConstantRange>*>(&falserefl);
-			auto& refl = *refl2;
-			for (auto& r : refl) {
-				auto iter = pushConstants.begin();
-				for (; iter != pushConstants.end(); iter++) {
-					if (iter->offset == r.offset) {
-						if (iter->size != r.size) {
-							DAXA_ASSERT_M(false, "push constant ranges of the same offset must have the same size");
-						}
-						// found the same push contant range:
-						iter->stageFlags |= r.stageFlags;
-						break;
-					}
-				}
-				if (iter == pushConstants.end()) {
-					// did not find same push constant. make new one:
-					pushConstants.push_back(r);
-				}
-			}
-
-			// reflect spirv descriptor sets:
-			auto reflDesc = reflectSetBindings(shaderModule->getSPIRV(), shaderModule->getVkShaderStage());
-			//}
-			for (auto& [set, bindingLayouts] : reflDesc) {
-				if (set >= bindingSetDescriptions.size()) {
-					bindingSetDescriptions.resize(set+1, {});
-				}
-
-				for (auto& [binding, layout] : bindingLayouts) {
-					bindingSetDescriptions[set].layouts[binding].descriptorType = layout.descriptorType;
-					bindingSetDescriptions[set].layouts[binding].descriptorCount = layout.descriptorCount;
-					bindingSetDescriptions[set].layouts[binding].stageFlags |= layout.stageFlags;
-				}
-			}
 		}
 
 		GraphicsPipelineBuilder& GraphicsPipelineBuilder::addShaderStage(ShaderModuleCreateInfo const& createInfo) {

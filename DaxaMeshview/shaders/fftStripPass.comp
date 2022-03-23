@@ -1,0 +1,30 @@
+#version 450
+
+#include "fftutil.glsl"
+
+layout(local_size_x = 1024, local_size_y = 1) in;
+
+layout(set = 0, binding = 3, rg16) uniform image2D images[];
+
+layout(push_constant) uniform Push{
+    uint imageId;
+    uint width;
+    uint height;
+    uint horizontalOrVertical;
+    uint logN;
+} push;
+
+void main() {
+    if (push.horizontalOrVertical == 0) {
+        for (int n = 0; n < push.logN; n++) {
+
+            barrier();
+        }
+    }
+    else {
+        for (int n = 0; n < push.logN; n++) {
+
+            barrier();
+        }
+    }
+}

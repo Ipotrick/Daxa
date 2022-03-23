@@ -12,6 +12,7 @@
 #include "cgltf.h"
 #include "Components.hpp"
 #include "AssetServer.hpp"
+#include "renderer/fft.hpp"
 
 struct UIState {
 	char loadFileTextBuf[256] = "sponza/Sponza.gltf";
@@ -44,6 +45,8 @@ public:
 				view.addComp(lightEnt, daxa::TransformComp{ .mat = glm::translate(glm::mat4{1.0f}, glm::vec3(step*x,1,step*y)) });
 			}
 		}
+
+		fft.init(renderCTX, app.window->getWidth(), app.window->getHeight());
 	}
 
 	void update(daxa::AppState& app) {
@@ -51,7 +54,6 @@ public:
 		cmdName += std::to_string(frame);
 		auto cmdList = renderCTX.queue->getCommandList({.debugName = cmdName.c_str()});
 		frame++;
-
 		ImGui_ImplGlfw_NewFrame(); 
 
 		ImGui::NewFrame();
@@ -100,6 +102,7 @@ public:
 		if (app.window->getWidth() != renderCTX.swapchain->getSize().width || app.window->getHeight() != renderCTX.swapchain->getSize().height) {
 			renderCTX.resize(cmdList, app.window->getWidth(), app.window->getHeight());
 			frameBufferDebugRenderer.recreateImages(renderCTX, cmdList, app.window->getWidth(), app.window->getHeight());
+			fft.recreateImages(renderCTX, cmdList, app.window->getWidth(), app.window->getHeight());
 		}
 
 		cameraController.updateMatrices(*app.window);
@@ -173,6 +176,8 @@ public:
 			.far = cameraController.far,
 		};
 		frameBufferDebugRenderer.renderDebugViews(renderCTX, cmdList, upload);
+		
+		fft.update(renderCTX);
 
 		cmdList->insertMemoryBarrier({
 			.srcStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
@@ -229,6 +234,7 @@ private:
 	UIState uiState;
 	daxa::EntityComponentManager ecm;
 	std::vector<DrawPrimCmd> meshDrawCommands;
+	FFT fft = {};
 };
 
 struct Test{
