@@ -130,4 +130,14 @@ namespace daxa {
 		std::optional<T> v;
 		std::string m;
 	};
+
+	template<typename T>
+	std::ostream& operator<<(std::ostream& os, Result<T> const& result) {
+		if (result.isOk()) {
+			os << "[ResultOK]";
+		} else {
+			os << "[ResultErr] message: \"" << result.message() << "\"";
+		}
+		return os;
+	}
 }
