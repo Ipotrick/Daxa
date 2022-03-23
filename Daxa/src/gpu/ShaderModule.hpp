@@ -9,6 +9,8 @@
 #include <filesystem>
 #include <unordered_map>
 #include <chrono>
+#include <filesystem>
+#include <set>
 
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
@@ -76,8 +78,7 @@ namespace daxa {
 		private:
 			friend class Device;
         	friend class daxa::PipelineCompiler;
-			static Result<ShaderModuleHandle> tryCompileShader(std::shared_ptr<DeviceBackend>& device, std::string const& glsl, std::string const& entryPoint, VkShaderStageFlagBits shaderStage, ShaderLang lang, shaderc::Compiler& compiler, shaderc::CompileOptions& options);
-			static Result<ShaderModuleHandle> tryCreateDAXAShaderModule(std::shared_ptr<DeviceBackend>& device, ShaderModuleCreateInfo const& ci, shaderc::Compiler& compiler, shaderc::CompileOptions& options);
+			static Result<ShaderModuleHandle> tryCreateDAXAShaderModule(std::shared_ptr<DeviceBackend>& device, ShaderModuleCreateInfo const& ci, shaderc::Compiler& compiler, shaderc::CompileOptions& options, std::set<std::pair<std::filesystem::path, std::chrono::file_clock::time_point>>& observedHotloadFilePaths);
 		};
 	}
 }

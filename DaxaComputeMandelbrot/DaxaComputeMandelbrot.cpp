@@ -140,17 +140,16 @@ public:
 		/// ------------ Begin Data Uploading ---------------------
 
 		std::array someBufferdata = { app.window->getWidth(), app.window->getHeight() };
-		cmdList->copyHostToBuffer(daxa::gpu::HostToBufferCopyInfo{
-			.src = someBufferdata.data(),
+		cmdList->singleCopyHostToBuffer({
+			.src = (u8*)someBufferdata.data(),
 			.dst = uniformBuffer,
-			.size = sizeof(decltype(someBufferdata)),
+			.region = {
+				.size = sizeof(decltype(someBufferdata)),
+			},
 		});
 
 		// array because we can allways pass multiple barriers at once for driver efficiency
-		cmdList->insertMemoryBarrier(daxa::gpu::MemoryBarrier{
-			.srcAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,				// wait for writing the vertex buffer
-			.dstStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,	// the compute shader must wait
-		});
+		cmdList->queueMemoryBarrier(daxa::gpu::FULL_MEMORY_BARRIER);
 		
 		/// ------------ End Data Uploading ---------------------
 

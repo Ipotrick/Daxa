@@ -68,8 +68,6 @@ namespace daxa {
 			
 			std::shared_ptr<BindingSetLayout const> getBindingSetLayoutShared(BindingSetDescription const& description);
 
-			Result<ShaderModuleHandle> createShaderModule(ShaderModuleCreateInfo const& ci);
-
 			BindingSetAllocatorHandle createBindingSetAllocator(BindingSetAllocatorCreateInfo const& ci);
 
 			PipelineCompilerHandle createPipelineCompiler();

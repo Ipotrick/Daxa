@@ -23,7 +23,7 @@ public:
 		cmd->finalize();
 		queue->submitBlocking({.commandLists = {cmd}});
 
-		pipelineCompiler->addShaderSourceRootPath("DaxaMeshview/shaders/");
+		pipelineCompiler->addShaderSourceRootPath("./DaxaMeshview/shaders/");
     }
 
     ~RenderContext() {
