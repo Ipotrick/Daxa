@@ -6,20 +6,6 @@ using Path = std::filesystem::path;
 
 using namespace daxa::gpu;
 
-//  class IncluderInterface {
-//   public:
-//    // Handles shaderc_include_resolver_fn callbacks.
-//    virtual shaderc_include_result* GetInclude(const char* requested_source,
-//                                               shaderc_include_type type,
-//                                               const char* requesting_source,
-//                                               size_t include_depth) = 0;
-//
-//    // Handles shaderc_include_result_release_fn callbacks.
-//    virtual void ReleaseInclude(shaderc_include_result* data) = 0;
-//
-//    virtual ~IncluderInterface() = default;
-//  };
-
 namespace daxa {
 	class FileIncluder : public shaderc::CompileOptions::IncluderInterface {
 	public:
@@ -30,52 +16,56 @@ namespace daxa {
             size_t include_depth
 		) override {
 			shaderc_include_result* res = new shaderc_include_result{};
-			if (include_depth > 10) {
-				res->content = "current include depth of 10 was exceeded";
-				res->content_length = strlen(res->content);
-
-				res->source_name = "";
-				res->source_name_length = 0;
-			}
-			else {
+			if (include_depth <= 10) {
 				res->source_name = requested_source;
 				res->source_name_length = strlen(requested_source);
 
 				auto result = sharedData->findFullPathOfFile(requested_source);
-				auto searchPred = [&](std::string const& str){ return strcmp(str.c_str(), requested_source) == 0; };
-				// only ever include a file once, practiacally automatic include guards, #pragma once
-				if (std::find_if(sharedData->seenFiles.begin(), sharedData->seenFiles.end(), searchPred) != sharedData->seenFiles.end()) {
-					res->content = "";
-					res->content_length = 0;
-				}
-				else if (result.isOk()) {
-					std::filesystem::path path = std::move(result.value());
+				if (result.isOk()) {
+					std::filesystem::path requested_source_path = std::move(result.value());
+					auto searchPred = [&](std::filesystem::path const& p){ return p == requested_source_path; };
 
-					std::ifstream ifs{path};
-					
-					std::string str;
+					if (std::find_if(sharedData->currentShaderSeenFiles.begin(), sharedData->currentShaderSeenFiles.end(), searchPred) == sharedData->currentShaderSeenFiles.end()) {
+						std::ifstream ifs{requested_source_path};
+						
+						std::string str;
 
-					ifs.seekg(0, std::ios::end);   
-					str.reserve(ifs.tellg());
-					ifs.seekg(0, std::ios::beg);
+						ifs.seekg(0, std::ios::end);   
+						str.reserve(ifs.tellg());
+						ifs.seekg(0, std::ios::beg);
 
-					str.assign(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
+						str.assign(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
 
-					char* data = new char[str.size()+1];
-					for (size_t i = 0; i < str.size()+1; i++) {
-						data[i] = str[i];
+						char* data = new char[str.size()+1];
+						for (size_t i = 0; i < str.size()+1; i++) {
+							data[i] = str[i];
+						}
+						res->content_length = str.size();
+						res->content = data;
+
+						sharedData->currentShaderSeenFiles.push_back(requested_source);
+						sharedData->observedHotLoadFiles->insert({requested_source_path,std::filesystem::last_write_time(requested_source_path)});
+					} else {
+						// double includes are ignored
+						res->content = "";
+						res->content_length = 0;
 					}
-					res->content_length = str.size();
-					res->content = data;
-
-					sharedData->seenFiles.push_back(requested_source);
 				} else {
+					// file path could not be resolved
 					res->content = "could not find file";
 					res->content_length = strlen(res->content);
 
 					res->source_name = "";
 					res->source_name_length = 0;
 				}
+			}
+			else {
+				// max include depth exceeded
+				res->content = "current include depth of 10 was exceeded";
+				res->content_length = strlen(res->content);
+
+				res->source_name = "";
+				res->source_name_length = 0;
 			}
 			return res;
 		}
@@ -99,6 +89,43 @@ namespace daxa {
 		auto includer = std::make_unique<FileIncluder>();
 		includer->sharedData = sharedData;
 		options.SetIncluder(std::move(includer));
+	}
+
+    bool PipelineCompiler::checkIfSourcesChanged(gpu::PipelineHandle& pipeline) {
+		bool reload = false;
+		for (auto& [path, recordedWriteTime] : pipeline->observedHotLoadFiles) {
+			auto ifs = std::ifstream(path);
+			if (ifs.good()) {
+				auto latestWriteTime = std::filesystem::last_write_time(path);
+
+				if (latestWriteTime > recordedWriteTime) {
+					reload = true;
+				}
+			}
+		}
+		return reload;
+	}
+
+	Result<gpu::PipelineHandle> PipelineCompiler::recreatePipeline(gpu::PipelineHandle const& pipeline) {
+		auto handleResult = [&](Result<gpu::PipelineHandle> const& result) -> Result<gpu::PipelineHandle> {
+			if (result.isOk()) {
+				return {std::move(result.value())};
+			}
+			else {
+				return ResultErr{ .message = result.message() };
+			}
+		};
+		if (auto graphicsCreator = std::get_if<GraphicsPipelineBuilder>(&pipeline->creator)) {
+			auto result = createGraphicsPipeline(*graphicsCreator);
+			return std::move(handleResult(result));
+		}
+		else if (auto computeCreator = std::get_if<ComputePipelineCreateInfo>(&pipeline->creator)) {
+			auto result = createComputePipeline(*computeCreator);
+			return std::move(handleResult(result));
+		}
+		else {
+			DAXA_ASSERT_M(false, "unreachable. missing arm for potential new variant type");
+		}
 	}
 
     void PipelineCompiler::addShaderSourceRootPath(Path const& root) {
@@ -126,6 +153,17 @@ namespace daxa {
     Result<gpu::PipelineHandle> PipelineCompiler::createGraphicsPipeline(gpu::GraphicsPipelineBuilder const& builder) {
         DAXA_ASSERT_M(!builder.bVertexAtrributeBindingBuildingOpen, "vertex attribute bindings must be completed before creating a pipeline");
 
+		auto pipelineHandle = gpu::PipelineHandle{ std::make_shared<gpu::Pipeline>() };
+		gpu::Pipeline& ret = *pipelineHandle;
+		ret.deviceBackend = deviceBackend;
+		ret.bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		ret.colorAttachmentFormats = builder.colorAttachmentFormats;
+		ret.depthAttachment = builder.depthTestSettings.depthAttachmentFormat;
+		ret.stencilAttachment = VK_FORMAT_UNDEFINED;
+		ret.creator = builder;
+
+		sharedData->observedHotLoadFiles = &ret.observedHotLoadFiles;
+
 		std::vector<VkPushConstantRange> pushConstants;
 		std::vector<gpu::BindingSetDescription> bindingSetDescriptions;
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStageCreateInfo;
@@ -133,13 +171,18 @@ namespace daxa {
 		shaderModules.reserve(builder.shaderModuleCIs.size());
 
 		for (auto& shaderCI : builder.shaderModuleCIs) {
-			sharedData->seenFiles.clear();
-			auto result = gpu::ShaderModuleHandle::tryCreateDAXAShaderModule(deviceBackend, shaderCI, compiler, options);
+			sharedData->currentShaderSeenFiles.clear();
+			auto result = gpu::ShaderModuleHandle::tryCreateDAXAShaderModule(deviceBackend, shaderCI, compiler, options, ret.observedHotLoadFiles);
 			if (result.isOk()) {
 				shaderModules.push_back(result.value());
 			} else {
 				return ResultErr{ .message = result.message() };
 			}
+		}
+
+		std::cout << "compiled pipeline with the following observed files for hot reloading:" << std::endl;
+		for (auto& [path, lastWriteTime] : ret.observedHotLoadFiles) {
+			std::cout << "  path: " << path << std::endl;
 		}
 
 		for (auto& shaderModule : shaderModules) {
@@ -157,14 +200,6 @@ namespace daxa {
 		for (auto& [set, descr] : builder.setDescriptionOverwrites) {
 			bindingSetDescriptions[set] = descr;
 		}
-
-		auto pipelineHandle = gpu::PipelineHandle{ std::make_shared<gpu::Pipeline>() };
-		gpu::Pipeline& ret = *pipelineHandle;
-		ret.deviceBackend = deviceBackend;
-		ret.bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		ret.colorAttachmentFormats = builder.colorAttachmentFormats;
-		ret.depthAttachment = builder.depthTestSettings.depthAttachmentFormat;
-		ret.stencilAttachment = VK_FORMAT_UNDEFINED;
 
 		auto descLayouts = processReflectedDescriptorData(bindingSetDescriptions, *bindSetLayoutCache, ret.bindingSetLayouts);
 
@@ -285,9 +320,17 @@ namespace daxa {
     }
 
 	Result<gpu::PipelineHandle> PipelineCompiler::createComputePipeline(gpu::ComputePipelineCreateInfo const& ci) {
-		sharedData->seenFiles.clear();
+		sharedData->currentShaderSeenFiles.clear();
 
-		auto result = gpu::ShaderModuleHandle::tryCreateDAXAShaderModule(deviceBackend, ci.shaderCI, compiler, options);
+		auto pipelineHandle = PipelineHandle{ std::make_shared<Pipeline>() };
+		Pipeline& ret = *pipelineHandle;
+		ret.deviceBackend = deviceBackend;
+		ret.bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
+		ret.creator = ci;
+
+		sharedData->observedHotLoadFiles = &ret.observedHotLoadFiles;
+
+		auto result = gpu::ShaderModuleHandle::tryCreateDAXAShaderModule(deviceBackend, ci.shaderCI, compiler, options, ret.observedHotLoadFiles);
 		gpu::ShaderModuleHandle shader;
 		if (result.isOk()) {
 			shader = result.value();
@@ -295,10 +338,10 @@ namespace daxa {
 			return ResultErr{ .message = result.message() };
 		}
 
-		auto pipelineHandle = PipelineHandle{ std::make_shared<Pipeline>() };
-		Pipeline& ret = *pipelineHandle;
-		ret.deviceBackend = deviceBackend;
-		ret.bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
+		std::cout << "compiled pipeline with the following observed files for hot reloading:" << std::endl;
+		for (auto& [path, lastWriteTime] : ret.observedHotLoadFiles) {
+			std::cout << "  path: " << path << std::endl;
+		}
 
 		VkPipelineShaderStageCreateInfo pipelineShaderStageCI{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,

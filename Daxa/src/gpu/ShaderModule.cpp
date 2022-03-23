@@ -24,7 +24,7 @@ namespace daxa {
 			}
 		}
 
-		Result<std::string> tryLoadShaderSourceFromFile(std::filesystem::path const& path) {
+		Result<std::string> tryLoadShaderSourceFromFile(std::filesystem::path const& path, std::set<std::pair<std::filesystem::path, std::chrono::file_clock::time_point>>& observedHotloadFilePaths) {
 			auto startTime = std::chrono::steady_clock::now();
 			while ((std::chrono::steady_clock::now() - startTime).count() < 100'000'000) {
 				std::ifstream ifs(path);
@@ -34,6 +34,7 @@ namespace daxa {
 					err += '\"';
 					return ResultErr{ err.c_str() };
 				}
+				observedHotloadFilePaths.insert({path, std::filesystem::last_write_time(path)});
 				std::string str;
 
 				ifs.seekg(0, std::ios::end);   
@@ -95,10 +96,10 @@ namespace daxa {
 			return { std::vector<u32>{ module.begin(), module.end()} };
 		}
 		
-		Result<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(std::shared_ptr<DeviceBackend>& deviceBackend, ShaderModuleCreateInfo const& ci, shaderc::Compiler& compiler, shaderc::CompileOptions& options) {
+		Result<ShaderModuleHandle> ShaderModuleHandle::tryCreateDAXAShaderModule(std::shared_ptr<DeviceBackend>& deviceBackend, ShaderModuleCreateInfo const& ci, shaderc::Compiler& compiler, shaderc::CompileOptions& options, std::set<std::pair<std::filesystem::path, std::chrono::file_clock::time_point>>& observedHotloadFilePaths) {
 			std::string sourceCode = {};
 			if (!ci.pathToSource.empty()) {
-				auto src = tryLoadShaderSourceFromFile(ci.pathToSource);
+				auto src = tryLoadShaderSourceFromFile(ci.pathToSource, observedHotloadFilePaths);
 				if (src.isErr()) {
 					return ResultErr{ src.message() };
 				}
