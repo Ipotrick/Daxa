@@ -87,23 +87,6 @@ namespace daxa {
 			f32 				lineWidth 				= 1.0f;
 		};
 
-		std::map<uint32_t, std::map<uint32_t, VkDescriptorSetLayoutBinding>>
-		reflectSetBindings(const std::vector<uint32_t>& spv, VkShaderStageFlagBits shaderStage);
-
-		void reflectShader(
-			ShaderModuleHandle const& shaderModule, 
-			std::vector<VkPushConstantRange>& pushConstants, 
-			std::vector<BindingSetDescription>& bindingSetDescriptions
-		);
-
-		std::vector<VkDescriptorSetLayout> processReflectedDescriptorData(
-			std::vector<BindingSetDescription>& setDescriptions,
-			BindingSetLayoutCache& descCache,
-			std::array<std::shared_ptr<BindingSetLayout const>, MAX_SETS_PER_PIPELINE>& setLayouts
-		);
-
-		std::vector<VkPushConstantRange> reflectPushConstants(const std::vector<uint32_t>& spv, VkShaderStageFlagBits shaderStage);
-
 		struct ComputePipelineCreateInfo {
 			ShaderModuleCreateInfo 													shaderCI 	= {};
 			std::array<std::optional<BindingSetDescription>, MAX_SETS_PER_PIPELINE> overwriteSets 	= {};
@@ -151,7 +134,7 @@ namespace daxa {
 			std::vector<std::pair<u32, BindingSetDescription>> setDescriptionOverwrites;
 		};
 
-		std::size_t sizeofFormat(VkFormat format);
+		//std::size_t sizeofFormat(VkFormat format);
 
 		class Pipeline {
 		public:
@@ -181,7 +164,7 @@ namespace daxa {
 			friend class GraphicsPipelineBuilder;
         	friend class PipelineCompiler;
 			friend daxa::Result<PipelineHandle> createComputePipeline(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetLayoutCache& bindingSetCache, ComputePipelineCreateInfo const& ci);
-			friend void setPipelineDebugName(VkDevice device, char const* debugName, Pipeline& pipeline);
+			void setPipelineDebugName(VkDevice device, char const* debugName);
 
 			std::shared_ptr<DeviceBackend>														deviceBackend			= {};
 			std::array<std::shared_ptr<BindingSetLayout const>, MAX_SETS_PER_PIPELINE> 			bindingSetLayouts 		= {};
@@ -198,6 +181,6 @@ namespace daxa {
 
 		class PipelineHandle : public SharedHandle<Pipeline>{};
 
-		void setPipelineDebugName(VkDevice device, char const* debugName, Pipeline& pipeline);
+		//void setPipelineDebugName(VkDevice device, char const* debugName, Pipeline& pipeline);
 	}
 }

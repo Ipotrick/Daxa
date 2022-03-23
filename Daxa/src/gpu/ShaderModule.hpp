@@ -78,7 +78,6 @@ namespace daxa {
 		private:
 			friend class Device;
         	friend class daxa::PipelineCompiler;
-			static Result<ShaderModuleHandle> tryCreateDAXAShaderModule(std::shared_ptr<DeviceBackend>& device, ShaderModuleCreateInfo const& ci, shaderc::Compiler& compiler, shaderc::CompileOptions& options, std::set<std::pair<std::filesystem::path, std::chrono::file_clock::time_point>>& observedHotloadFilePaths);
 		};
 	}
 }
