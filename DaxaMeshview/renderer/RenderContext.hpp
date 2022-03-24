@@ -11,6 +11,7 @@ public:
 			.surface = window.getSurface(),
 			.width = window.getWidth(),
 			.height = window.getHeight(),
+			.additionalUses = VK_IMAGE_USAGE_SAMPLED_BIT,
 			.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR,
 		})}
 		, swapchainImage{ this->swapchain->aquireNextImage() }

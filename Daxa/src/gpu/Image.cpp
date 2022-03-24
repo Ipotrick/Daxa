@@ -61,7 +61,7 @@ namespace daxa {
 			}
 		}
 		
-		ImageView::ImageView(std::shared_ptr<DeviceBackend> deviceBackend, ImageViewCreateInfo const& ci) 
+		ImageView::ImageView(std::shared_ptr<DeviceBackend> deviceBackend, ImageViewCreateInfo const& ci, VkImageView givenView) 
 			: deviceBackend{ std::move(deviceBackend) }
 			, flags{ ci.flags }
 			, image{ ci.image }
@@ -71,18 +71,22 @@ namespace daxa {
 			, subresourceRange{ ci.subresourceRange } 
 			, defaultSampler{ ci.defaultSampler }
 		{
-			VkImageViewCreateInfo ivci{
-				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-				.pNext = nullptr,
-    			.flags = ci.flags,
-				.image = ci.image->getVkImage(),
-    			.viewType = ci.viewType,
-    			.format = ci.format,
-    			.components = ci.components,
-    			.subresourceRange = ci.subresourceRange,
-			};
+			if (givenView == VK_NULL_HANDLE) {
+				VkImageViewCreateInfo ivci{
+					.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+					.pNext = nullptr,
+					.flags = ci.flags,
+					.image = ci.image->getVkImage(),
+					.viewType = ci.viewType,
+					.format = ci.format,
+					.components = ci.components,
+					.subresourceRange = ci.subresourceRange,
+				};
 
-			DAXA_CHECK_VK_RESULT_M(vkCreateImageView(this->deviceBackend->device.device, &ivci, nullptr, &view), "failed to create image view");
+				DAXA_CHECK_VK_RESULT_M(vkCreateImageView(this->deviceBackend->device.device, &ivci, nullptr, &view), "failed to create image view");
+			} else {
+				view = givenView;
+			}
 
 			if (image->getVkImageUsageFlags() & VK_IMAGE_USAGE_SAMPLED_BIT || 
 				image->getVkImageUsageFlags() & VK_IMAGE_USAGE_STORAGE_BIT
