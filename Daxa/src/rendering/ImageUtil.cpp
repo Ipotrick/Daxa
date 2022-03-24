@@ -42,6 +42,7 @@ namespace daxa {
                     }}
                 },
             });
+            cmdList->insertQueuedBarriers();
             VkImageBlit blit{
                 .srcSubresource = VkImageSubresourceLayers{
                     .aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT,

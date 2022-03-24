@@ -167,11 +167,21 @@ public:
 
 			u32 pink = 0xFFFF00FF;
 
-			cmd->copyHostToImageSynced({
-				.src = &pink,
-				.dst = dummyTexture,
-				.size = sizeof(u32),
-				.dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			cmd->queueImageBarrier({
+				.image = dummyTexture,
+				.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
+				.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			});
+			cmd->singleCopyHostToImage({
+				.src = (u8*)&pink,
+				.dst = dummyTexture->getImageHandle(),
+				.dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.region = {},
+			});
+			cmd->queueImageBarrier({
+				.image = dummyTexture,
+				.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 			});
 		}
 
@@ -190,11 +200,21 @@ public:
 			// 0xFF (alpha = 1.0f) FF (blue/z = 1.0f) 7F (green/y = 0.5f/0.0f) 7F (red/x = 0.5f/0.0f)  
 			u32 up = 0xFFFF7F7F;
 
-			cmd->copyHostToImageSynced({
-				.src = &up,
-				.dst = dummyNormalsTexture,
-				.size = sizeof(u32),
-				.dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			cmd->queueImageBarrier({
+				.image = dummyNormalsTexture,
+				.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
+				.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			});
+			cmd->singleCopyHostToImage({
+				.src = (u8*)&up,
+				.dst = dummyNormalsTexture->getImageHandle(),
+				.dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.region = {},
+			});
+			cmd->queueImageBarrier({
+				.image = dummyNormalsTexture,
+				.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 			});
 		}
 

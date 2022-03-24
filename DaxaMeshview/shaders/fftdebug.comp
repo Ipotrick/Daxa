@@ -18,9 +18,9 @@ layout(std140, push_constant) uniform Push{
 void main() {
     ivec2 index = ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y);
     if (index.x < push.width && index.y < push.height) {
-        float r = imageLoad(rg16ImageView[push.rImageId], index).r;
-        float g = imageLoad(rg16ImageView[push.rImageId], index).r;
-        float b = imageLoad(rg16ImageView[push.rImageId], index).r;
+        float r = length(imageLoad(rg16ImageView[push.rImageId], index).rg);
+        float g = length(imageLoad(rg16ImageView[push.gImageId], index).rg);
+        float b = length(imageLoad(rg16ImageView[push.bImageId], index).rg);
         float logAverage = (r+g+b) * 0.333;//log((r+g+b) * 0.333) * 0.1f;
         imageStore(rgba8ImageView[push.outImageId], index, vec4(logAverage,logAverage,logAverage,1));
     }

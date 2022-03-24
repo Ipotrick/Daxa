@@ -224,6 +224,7 @@ struct RenderContext {
                 },
             },
         };
+        cmd_list->insertQueuedBarriers();
 
         vkCmdBlitImage(
             cmd_list->getVkCommandBuffer(),
