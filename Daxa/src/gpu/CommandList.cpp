@@ -628,14 +628,17 @@ namespace daxa {
 			currentRenderPass = {};
 			usedStagingBuffers.clear();
 			finalized = false;
-			zombies->zombies.clear();
 			{
+				// remove zombie list from active zombie list
+				// this prevents image views to append sampler zombies into the zombie list while its beeing cleared
+				// this also removes the cmd lists zombie list for any other handle destructor
 				std::unique_lock lock(deviceBackend->graveyard.mtx);
 				auto iter = std::find_if(deviceBackend->graveyard.activeZombieLists.begin(), deviceBackend->graveyard.activeZombieLists.end(), [&](std::shared_ptr<ZombieList>& other){ return other.get() == zombies.get(); });
 				if (iter != deviceBackend->graveyard.activeZombieLists.end()) {
 					deviceBackend->graveyard.activeZombieLists.erase(iter);
 				}
 			}
+			zombies->zombies.clear();
 		}
 
 		void CommandList::setViewport(VkViewport const& viewport) {
