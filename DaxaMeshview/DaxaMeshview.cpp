@@ -90,6 +90,12 @@ public:
 			ImGui::Image((void*)id, ImVec2(400,400));
 		}
 		ImGui::End();
+		ImGui::Begin("fft debug");
+		{
+			auto id = imguiRenderer->getImGuiTextureId(fft.fftDebugImage);
+			ImGui::Image((void*)id, ImVec2(400,400));
+		}
+		ImGui::End();
 
 		frameBufferDebugRenderer.doGui(*imguiRenderer);
 
@@ -168,6 +174,8 @@ public:
 			}
 			meshRender.render(renderCTX, cmdList, meshDrawCommands);
 		}
+		
+		fft.update(renderCTX, cmdList);
 
 		auto upload = FrameBufferDebugRenderer::CameraData{
 			.inverseView = glm::inverse(cameraController.view),
@@ -176,8 +184,6 @@ public:
 			.far = cameraController.far,
 		};
 		frameBufferDebugRenderer.renderDebugViews(renderCTX, cmdList, upload);
-		
-		fft.update(renderCTX);
 
 		cmdList->insertMemoryBarrier({
 			.srcStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
@@ -253,7 +259,7 @@ int main()
 	daxa::initialize();
 
 	{
-		daxa::Application<MyUser> app{ 1000, 1000, "Daxa Dear ImGui Sample"};
+		daxa::Application<MyUser> app{ 1024, 1024, "Daxa Meshview"};
 		app.run();
 	}
 
