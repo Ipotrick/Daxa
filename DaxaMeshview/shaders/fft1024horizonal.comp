@@ -1,7 +1,7 @@
 #version 450
 #extension GL_EXT_nonuniform_qualifier : enable
 
-layout(local_size_x = 1024, local_size_y = 1) in;
+layout(local_size_x = 512, local_size_y = 1) in;
 
 #include "fftutil.glsl"
 
@@ -15,14 +15,17 @@ layout(push_constant) uniform Push{
     uint height;
     // pass 0 is red channel, pass 1 is green, pass 2 blue
     uint pass;
-    uint logN;
+    uint log2N;
 } push;
 
-shared float real[1024];
-shared float imag[1024];
+shared uint packedValues[1024][2];
 
 void main() {
-    ivec2 index = ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y);
+    ivec2 coord = ivec2(gl_GlobalInvocationID.x * 2, gl_GlobalInvocationID.y);
+    uint N = uint(1) << push.log2N;
+    // threads skip every second pixel as we do the butterly battern
+    uint n = coord.x;   
+
     vec3 inImageMask;
     switch (push.pass) {
     case 0: 
@@ -38,13 +41,22 @@ void main() {
         break;
     }
 
-    vec3 readInPixel = texelFetch(sampledImages[push.inImageId], index, 0).rgb;
+    // each thread executes two paths, in the beginning we load two pixel values
+    vec3 readInPixel = texelFetch(sampledImages[push.inImageId], coord, 0).rgb;
     readInPixel *= inImageMask;
     float channelValue = readInPixel.r + readInPixel.g + readInPixel.b;
-    imageStore(images[push.outImageId], index, vec4(channelValue, 0, 0, 0));
+    packedValues[n][0] = packHalf2x16(vec2(channelValue,0));
+    readInPixel = texelFetch(sampledImages[push.inImageId], coord + ivec2(1,0), 0).rgb;
+    readInPixel *= inImageMask;
+    channelValue = readInPixel.r + readInPixel.g + readInPixel.b;
+    packedValues[n+1][0] = packHalf2x16(vec2(channelValue,0));
 
-    for (int n = 0; n < push.logN; n++) {
-        
+    for (uint iter = 1; iter < push.log2N; iter++) {
         barrier();
+
     }
+
+    // debug write real part
+    imageStore(images[push.outImageId], coord, vec4(unpackHalf2x16(packedValues[n][0]).x, 0, 0, 0));
+    imageStore(images[push.outImageId], coord + ivec2(1,0), vec4(unpackHalf2x16(packedValues[n + 1][0]).x, 0, 0, 0));
 }

@@ -152,33 +152,6 @@ namespace daxa {
 			});
 		}
 
-		void CommandList::copyHostToImageSynced(HostToImageCopySyncedInfo copySyncedInfo) {
-			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
-			if (bBarriersQueued) { insertQueuedBarriers(); }
-			ImageBarrier firstBarrier{
-				.barrier = FULL_MEMORY_BARRIER,
-				.image = copySyncedInfo.dst,
-				.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
-				.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			};
-			insertBarriers({},{&firstBarrier, 1});
-
-			copyHostToImage({
-				.src = copySyncedInfo.src,
-				.dst = copySyncedInfo.dst, 
-				.dstImgSubressource = copySyncedInfo.dstImgSubressource,
-				.size = copySyncedInfo.size,
-			});
-
-			ImageBarrier secondBarrier{
-				.barrier = FULL_MEMORY_BARRIER,
-				.image = copySyncedInfo.dst,
-				.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				.layoutAfter = copySyncedInfo.dstFinalLayout,
-			};
-			insertBarriers({},{&secondBarrier, 1});
-		}
-
 		void CommandList::copyMultiBufferToBuffer(BufferToBufferMultiCopyInfo copyInfo) {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu.");
@@ -231,48 +204,7 @@ namespace daxa {
 				.region = forwardCopyInfo,
 			});
 		}
-
-		void CommandList::copyImageToImageSynced(ImageToImageCopySyncedInfo copySyncedInfo) {
-			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
-			insertImageBarriers(std::array{
-				ImageBarrier{ 
-					.barrier = FULL_MEMORY_BARRIER,
-					.image = copySyncedInfo.src, 
-					.layoutBefore = copySyncedInfo.srcLayoutBeforeAndAfter , 
-					.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL 
-				},
-				ImageBarrier{ 
-					.barrier = FULL_MEMORY_BARRIER,
-					.image = copySyncedInfo.dst, 
-					.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED, 
-					.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL 
-				},
-			});
-			copyImageToImage({ 
-				.src = copySyncedInfo.src, 
-				.srcLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				.srcOffset = copySyncedInfo.srcOffset,
-				.dst = copySyncedInfo.dst,
-				.dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				.dstOffset = copySyncedInfo.dstOffset,
-				.size = copySyncedInfo.size,
-			});
-			insertImageBarriers(std::array{
-				ImageBarrier{ 
-					.barrier = FULL_MEMORY_BARRIER,
-					.image = std::move(copySyncedInfo.src), 
-					.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 
-					.layoutAfter = copySyncedInfo.srcLayoutBeforeAndAfter 
-				},
-				ImageBarrier{ 
-					.barrier = FULL_MEMORY_BARRIER,
-					.image = std::move(copySyncedInfo.dst), 
-					.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
-					.layoutAfter = copySyncedInfo.dstFinalLayout
-				},
-			});
-		}
-
+		
 
 		///
 		/// 	TRANSFER 2 BEGIN
@@ -629,21 +561,26 @@ namespace daxa {
 			usedStagingBuffers.clear();
 			finalized = false;
 			{
-				// remove zombie list from active zombie list
-				// this prevents image views to append sampler zombies into the zombie list while its beeing cleared
-				// this also removes the cmd lists zombie list for any other handle destructor
+				// remove zombie list from active zombie lists.
+				// this prevents any handle to queue their zombie into this list.
+				// this is important as an image view can own a sampler,
+				// if the sampler becomes a zombie while the zombie queue is beein cleared, the zombie will be enqueued in all active queues,
+				// including this one. This causes a memory corruption as its illegal to append to a vector that is currently running its clear function.
 				std::unique_lock lock(deviceBackend->graveyard.mtx);
 				auto iter = std::find_if(deviceBackend->graveyard.activeZombieLists.begin(), deviceBackend->graveyard.activeZombieLists.end(), [&](std::shared_ptr<ZombieList>& other){ return other.get() == zombies.get(); });
 				if (iter != deviceBackend->graveyard.activeZombieLists.end()) {
 					deviceBackend->graveyard.activeZombieLists.erase(iter);
 				}
 			}
+			// zombie list is cleared after it is removed from the pool of active zombie lists.
+			// this prevents image views to enqueue sampler zombies while the queue is cleared.
 			zombies->zombies.clear();
 		}
 
 		void CommandList::setViewport(VkViewport const& viewport) {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			DAXA_ASSERT_M(currentRenderPass.has_value(), "can only set viewports inside a renderpass");
 			vkCmdSetViewport(cmd, 0, 1, &viewport); 
 			VkRect2D scissor{
 				.offset = { 0, 0 },
@@ -655,6 +592,7 @@ namespace daxa {
 		void CommandList::setScissor(VkRect2D const& scissor) {
 			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+			DAXA_ASSERT_M(currentRenderPass.has_value(), "can only set scissor inside a renderpass");
 			vkCmdSetScissor(cmd, 0, 1, &scissor);
 		}
 		
@@ -688,71 +626,12 @@ namespace daxa {
 		}
 
 		void CommandList::insertBarriers(std::span<MemoryBarrier> memBarriers, std::span<ImageBarrier> imgBarriers) {
-			DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
-			DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-			DAXA_ASSERT_M(!currentRenderPass.has_value(), "can not insert memory barriers in renderpass");
-			std::array<VkMemoryBarrier2KHR, 32> memBarrierBuffer;
-			u32 memBarrierBufferSize = 0;
-			std::array<VkBufferMemoryBarrier2KHR, 32> bufBarrierBuffer;
-			u32 bufBarrierBufferSize = 0;
-			std::array<VkImageMemoryBarrier2KHR, 32> imgBarrierBuffer;
-			u32 imgBarrierBufferSize = 0;
-
-			for (auto& barrier : memBarriers) {
-				DAXA_ASSERT_M(memBarrierBufferSize < 32, "can only insert 32 barriers of one kind in a single insertBarriers call");
-				memBarrierBuffer[memBarrierBufferSize++] = VkMemoryBarrier2KHR{
-					.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2_KHR,
-					.pNext = nullptr,
-					.srcStageMask = barrier.srcStages,
-					.srcAccessMask = barrier.srcAccess,
-					.dstStageMask = barrier.dstStages,
-					.dstAccessMask = barrier.dstAccess,
-				};
+			for (auto barr: memBarriers) {
+				queueMemoryBarrier(barr);
 			}
-
-			for (auto imgBarrier : imgBarriers) {
-				DAXA_ASSERT_M(bufBarrierBufferSize < 32, "can only insert 32 barriers of one kind in a single insertBarriers call");
-
-				if (imgBarrier.srcQueueIndex == imgBarrier.dstQueueIndex) {
-					imgBarrier.srcQueueIndex = VK_QUEUE_FAMILY_IGNORED;
-					imgBarrier.dstQueueIndex = VK_QUEUE_FAMILY_IGNORED;
-				}
-
-				VkImageSubresourceRange range = imgBarrier.subRange;
-				if (range.aspectMask == VK_IMAGE_ASPECT_FLAG_BITS_MAX_ENUM) {
-					range = imgBarrier.image->getVkImageSubresourceRange();
-				}
-
-				imgBarrierBuffer[imgBarrierBufferSize] = VkImageMemoryBarrier2KHR{
-					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR,
-					.pNext = nullptr,
-					.srcStageMask = imgBarrier.barrier.srcStages,
-					.srcAccessMask = imgBarrier.barrier.srcAccess,
-					.dstStageMask = imgBarrier.barrier.dstStages,
-					.dstAccessMask = imgBarrier.barrier.dstAccess,
-					.oldLayout = imgBarrier.layoutBefore,
-					.newLayout = imgBarrier.layoutAfter,
-					.srcQueueFamilyIndex = imgBarrier.srcQueueIndex,
-					.dstQueueFamilyIndex = imgBarrier.dstQueueIndex,
-					.image = imgBarrier.image->getImageHandle()->getVkImage(),
-					.subresourceRange = range,
-				};
-
-				imgBarrierBufferSize++;
+			for (auto barr: imgBarriers) {
+				queueImageBarrier(barr);
 			}
-
-			VkDependencyInfoKHR dependencyInfo{
-				.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
-				.pNext = nullptr,
-				.memoryBarrierCount = memBarrierBufferSize,
-				.pMemoryBarriers = memBarrierBuffer.data(),
-				.bufferMemoryBarrierCount = 0,
-				.pBufferMemoryBarriers = nullptr,
-				.imageMemoryBarrierCount = imgBarrierBufferSize,
-				.pImageMemoryBarriers = imgBarrierBuffer.data(),
-			};
-
-			deviceBackend->vkCmdPipelineBarrier2KHR(cmd, &dependencyInfo);
 		}
 
 		void CommandList::bindAll(u32 set) {

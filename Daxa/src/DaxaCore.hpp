@@ -112,6 +112,9 @@ namespace daxa {
 
 		T& value() {
 			DAXA_ASSERT_M(v.has_value(), (m != "" ? m : "tried getting value of empty Result"));
+			if (!v.has_value()) {
+				std::cout << "message: " << m << std::endl;
+			}
 			return v.value();
 		}
 
