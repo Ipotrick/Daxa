@@ -42,29 +42,24 @@ namespace daxa {
 				img.extent.width = ci.width;
 				img.extent.height = ci.height;
 				img.extent.depth = 1;
+				img.format = vkbSwapchain.image_format;
 				img.allocation = nullptr;
 				img.image = vkImages[i];
 				img.imageType = VK_IMAGE_TYPE_2D;
 				img.tiling = VK_IMAGE_TILING_OPTIMAL;
-				img.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+				img.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | additionalimageUses;
 				img.arrayLayers = 1;
 				img.mipLevels = 1;
 				
-				auto view = ImageViewHandle{ std::make_shared<ImageView>() };
-				auto& imgView = *view;
-				imgView.image = std::move(image);
-				imgView.view = vkImageViews[i];
-				imgView.viewType = VK_IMAGE_VIEW_TYPE_2D;
-				imgView.format = vkbSwapchain.image_format;
-				imgView.subresourceRange = VkImageSubresourceRange{
-					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-					.baseMipLevel = 0,
-					.levelCount = 1,
-					.baseArrayLayer = 0,
-					.layerCount = 1,
+				auto sampler = std::move(SamplerHandle{ std::make_shared<Sampler>(deviceBackend, SamplerCreateInfo{})});
+				ImageViewCreateInfo ci{
+					.image = std::move(image),
+					.format = vkbSwapchain.image_format,
+					.debugName = "swapchain image view",
+					.defaultSampler = sampler,
 				};
-				imgView.deviceBackend = deviceBackend;
-				this->swapchainImages.push_back(std::move(view));
+				auto view = ImageViewHandle{ std::make_shared<ImageView>(deviceBackend, ci, vkImageViews[i]) };
+				this->swapchainImageViews.push_back(std::move(view));
 			}
 
 			this->swapchainImageFormat = vkbSwapchain.image_format;
@@ -106,30 +101,11 @@ namespace daxa {
 					.pObjectName = nameBuffer.c_str(),
 				};
 				daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT(deviceBackend->device.device, &nameInfo);
-				
-				for (int i = 0; i < vkImages.size(); i++) {
-					nameBuffer.clear();
-					nameBuffer = ci.debugName;
-					nameBuffer += " image view nr ";
-					nameBuffer += std::to_string(i);
-					auto view = this->swapchainImages[i]->getVkImageView();
-
-					nameInfo = VkDebugUtilsObjectNameInfoEXT{
-						.sType =  VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-						.pNext = NULL,
-						.objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
-						.objectHandle = (uint64_t)view,
-						.pObjectName = nameBuffer.c_str(),
-					};
-					daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT(deviceBackend->device.device, &nameInfo);
-
-					(*this->swapchainImages[i]).debugName = nameBuffer;
-				}
 			}
 		}
 
 		Swapchain::~Swapchain() {
-			swapchainImages.clear();
+			swapchainImageViews.clear();
 			if (deviceBackend->device.device) {
 				vkDestroySwapchainKHR(deviceBackend->device.device, swapchain, nullptr);
 				vkDestroyFence(deviceBackend->device.device, aquireFence, nullptr);
@@ -143,7 +119,7 @@ namespace daxa {
 			SwapchainImage si{};
 			si.swapchain = swapchain;
 			si.imageIndex = index;
-			si.image = swapchainImages[index];
+			si.image = swapchainImageViews[index];
 
 			DAXA_CHECK_VK_RESULT_M(vkWaitForFences(deviceBackend->device.device, 1, &aquireFence, VK_TRUE, UINT64_MAX), "failed to wait on swapchain fence");
 			DAXA_CHECK_VK_RESULT_M(vkResetFences(deviceBackend->device.device, 1, &aquireFence), "failed to reset swapchain fence");
@@ -152,12 +128,12 @@ namespace daxa {
 		}
 
 		void Swapchain::resize(VkExtent2D newSize) {
-			swapchainImages.clear();
+			swapchainImageViews.clear();
 			construct(deviceBackend, {surface, newSize.width, newSize.height, presentMode, additionalimageUses, debugName.c_str()});
 		}
 
 		void Swapchain::setPresentMode(VkPresentModeKHR newPresentMode) {
-			swapchainImages.clear();
+			swapchainImageViews.clear();
 			construct(deviceBackend, {surface, size.width, size.height, newPresentMode, additionalimageUses, debugName.c_str()});
 		}
 	}

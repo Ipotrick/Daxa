@@ -61,7 +61,7 @@ namespace daxa {
 			VkSurfaceKHR 					surface 				= VK_NULL_HANDLE;
 			VkSwapchainKHR 					swapchain 				= VK_NULL_HANDLE; 
 			VkFormat 						swapchainImageFormat 	= {};
-			std::vector<ImageViewHandle> 	swapchainImages			= {};
+			std::vector<ImageViewHandle> 	swapchainImageViews			= {};
 			VkExtent2D 						size 					= {}; 
 			VkImageUsageFlags 				additionalimageUses		= {};
 			std::string 					debugName 				= {};

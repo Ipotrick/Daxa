@@ -95,7 +95,7 @@ namespace daxa {
 
 		class ImageView : public GraveyardRessource {
 		public:
-			ImageView(std::shared_ptr<DeviceBackend> deviceBackend, ImageViewCreateInfo const& ci);
+			ImageView(std::shared_ptr<DeviceBackend> deviceBackend, ImageViewCreateInfo const& ci, VkImageView view = VK_NULL_HANDLE);
 			ImageView() 								= default;
 			ImageView(ImageView const&) 				= delete;
 			ImageView& operator=(ImageView const&) 		= delete;
