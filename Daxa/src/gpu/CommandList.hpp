@@ -109,14 +109,6 @@ namespace daxa {
 			size_t size = 0;
 		};
 
-		struct HostToImageCopySyncedInfo {
-			void* src = nullptr;
-			ImageViewHandle dst = {};
-			std::optional<VkImageSubresourceLayers> dstImgSubressource = std::nullopt;
-			size_t size = 0;
-			VkImageLayout dstFinalLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		};
-
 		struct ImageToImageCopyInfo{
 			ImageViewHandle src 		= {};
 			VkImageLayout srcLayout 	= VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
@@ -125,16 +117,6 @@ namespace daxa {
 			VkImageLayout dstLayout 	= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 			VkOffset3D dstOffset 		= {};
 			VkExtent3D size				= {};
-		};
-
-		struct ImageToImageCopySyncedInfo{
-			ImageViewHandle src 					= {};
-			VkOffset3D srcOffset 					= {};
-			VkImageLayout srcLayoutBeforeAndAfter 	= {};
-			ImageViewHandle dst 					= {};
-			VkOffset3D dstOffset 					= {};
-			VkImageLayout dstFinalLayout 			= {};
-			VkExtent3D size							= {};
 		};
 
 		struct HostToBufferCopyRegion{
@@ -302,8 +284,6 @@ namespace daxa {
 
 			void copyHostToImage(HostToImageCopyInfo copyInfo);
 
-			void copyHostToImageSynced(HostToImageCopySyncedInfo copySyncedInfo);
-
 			void copyMultiBufferToBuffer(BufferToBufferMultiCopyInfo copyInfo);
 
 			void copyBufferToBuffer(BufferToBufferCopyInfo copyInfo);
@@ -311,8 +291,6 @@ namespace daxa {
 			void copyBufferToImage(BufferToImageCopyInfo copyInfo);
 
 			void copyImageToImage(ImageToImageCopyInfo copyInfo);
-
-			void copyImageToImageSynced(ImageToImageCopySyncedInfo copySyncedInfo);
 
 			// transfer2:
 
