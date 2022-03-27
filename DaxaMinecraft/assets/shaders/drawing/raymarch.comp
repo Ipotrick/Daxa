@@ -87,7 +87,9 @@ void main() {
                 vec3 light = val * sun_col + sample_sky(ray_chunk_intersection.nrm) * 0.2;
                 // vec3 light = sun_col + sample_sky(ray_chunk_intersection.nrm) * 0.2;
                 vec3 b_uv = vec3(ivec3(intersection_pos) % 16) / 16;
-                vec3 albedo = texture(get_texture[globals.texture_index], vec3(b_uv.xz, 10)).rgb;
+                vec2 tex_uv = fract(intersection_pos.xy);
+                // vec2 tex_uv = b_uv.xz;
+                vec3 albedo = texture(get_texture[globals.texture_index], vec3(tex_uv, 0)).rgb;
                 color += albedo * light;
             } else {
                 color += sample_sky(cam_ray.nrm);
@@ -97,5 +99,5 @@ void main() {
 
     color *= inv_subsamples.x * inv_subsamples.y;
 
-    imageStore(output_image, i_uv, vec4(color, 1));
+    imageStore(output_image, i_uv, vec4(pow(color, vec3(1)), 1));
 }
