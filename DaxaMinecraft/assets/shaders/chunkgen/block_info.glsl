@@ -25,16 +25,12 @@ const uint Desert = 2;
 const uint Beach  = 3;
 // clang-format on
 
-const uvec3 CHUNK_SIZE = uvec3(16);
+const uvec3 CHUNK_SIZE = uvec3(64);
 const uint RENDER_DIST_XZ = 4;
 const uvec3 CHUNK_MAX = uvec3(16, 6, 16);
 
 const uint BLOCK_ID_MASK = 0x0000ffff;
 const uint BIOME_ID_MASK = 0xffff0000;
-
-struct ChunkgenBuffer {
-    uint blocks[CHUNK_SIZE.x * CHUNK_SIZE.y * CHUNK_SIZE.z];
-};
 
 bool is_transparent(uint id) {
     switch (id & BLOCK_ID_MASK) {
