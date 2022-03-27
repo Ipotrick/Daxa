@@ -251,10 +251,8 @@ struct World {
 
     daxa::gpu::BufferHandle compute_pipeline_globals;
 
-    // daxa::gpu::BindingSetAllocatorHandle raymarch_bindset_allocator;
     daxa::gpu::PipelineHandle raymarch_compute_pipeline;
 
-    // daxa::gpu::BindingSetAllocatorHandle chunkgen_bindset_allocator;
     daxa::gpu::PipelineHandle chunkgen_compute_pipeline;
     daxa::gpu::ImageViewHandle chunkgen_images[2];
 
@@ -264,7 +262,7 @@ struct World {
         glm::ivec2 frame_dim;
         float time;
 
-        // u32 chunk_image_0, chunk_image_1;
+        u32 chunk_image_0, chunk_image_1;
     };
 
     struct ChunkgenPush {
@@ -276,9 +274,6 @@ struct World {
     struct ChunkRaymarchPush {
         u32 globals_sb;
         u32 output_image_i;
-
-        u32 chunk_image_0;
-        u32 chunk_image_1;
     };
 
     RenderContext &render_ctx;
@@ -370,9 +365,9 @@ struct World {
             .pos = glm::vec4(player.pos, 0),
             .frame_dim = {extent.width, extent.height},
             .time = elapsed,
-
-            // .chunk_image_0 = chunkgen_images[0]->getDescriptorIndex(),
-            // .chunk_image_1 = chunkgen_images[1]->getDescriptorIndex(),
+                    
+            .chunk_image_0 = chunkgen_images[0]->getDescriptorIndex(),
+            .chunk_image_1 = chunkgen_images[1]->getDescriptorIndex(),
         };
         auto compute_globals_i = compute_pipeline_globals->getStorageBufferDescriptorIndex().value();
 
@@ -385,10 +380,6 @@ struct World {
 
         cmd_list->bindPipeline(chunkgen_compute_pipeline);
         {
-            // auto chunkgen_set = chunkgen_bindset_allocator->getSet();
-            // chunkgen_set->bindBuffer(0, compute_pipeline_globals);
-            // chunkgen_set->bindImage(1, chunkgen_images[0], VK_IMAGE_LAYOUT_GENERAL);
-            // cmd_list->bindSet(0, chunkgen_set);
             cmd_list->bindAll();
             cmd_list->pushConstant(
                 VK_SHADER_STAGE_COMPUTE_BIT,
@@ -400,10 +391,6 @@ struct World {
             cmd_list->dispatch(8, 8, 8);
         }
         {
-            // auto chunkgen_set = chunkgen_bindset_allocator->getSet();
-            // chunkgen_set->bindBuffer(0, compute_pipeline_globals);
-            // chunkgen_set->bindImage(1, chunkgen_images[1], VK_IMAGE_LAYOUT_GENERAL);
-            // cmd_list->bindSet(0, chunkgen_set);
             cmd_list->bindAll();
             cmd_list->pushConstant(
                 VK_SHADER_STAGE_COMPUTE_BIT,
@@ -418,21 +405,12 @@ struct World {
         cmd_list->queueMemoryBarrier(daxa::gpu::FULL_MEMORY_BARRIER);
 
         cmd_list->bindPipeline(raymarch_compute_pipeline);
-        // auto raymarch_set = raymarch_bindset_allocator->getSet();
-        // raymarch_set->bindBuffer(0, compute_pipeline_globals);
-        // raymarch_set->bindImage(1, render_image, VK_IMAGE_LAYOUT_GENERAL);
-        // raymarch_set->bindImage(2, chunkgen_images[0], VK_IMAGE_LAYOUT_GENERAL);
-        // raymarch_set->bindImage(3, chunkgen_images[1], VK_IMAGE_LAYOUT_GENERAL);
-        // cmd_list->bindSet(0, raymarch_set);
         cmd_list->bindAll();
         cmd_list->pushConstant(
             VK_SHADER_STAGE_COMPUTE_BIT,
             ChunkRaymarchPush{
                 .globals_sb = compute_globals_i,
                 .output_image_i = render_image->getDescriptorIndex(),
-                    
-                .chunk_image_0 = chunkgen_images[0]->getDescriptorIndex(),
-                .chunk_image_1 = chunkgen_images[1]->getDescriptorIndex(),
             });
         cmd_list->dispatch((extent.width + 7) / 8, (extent.height + 7) / 8);
     }
@@ -447,9 +425,6 @@ struct World {
                 .overwriteSets = {daxa::gpu::BIND_ALL_SET_DESCRIPTION},
             });
             raymarch_compute_pipeline = result.value();
-            // raymarch_bindset_allocator = render_ctx.device->createBindingSetAllocator({
-            //     .setLayout = raymarch_compute_pipeline->getSetLayout(0),
-            // });
         }
         {
             auto result = render_ctx.pipeline_compiler->createComputePipeline({
@@ -460,9 +435,6 @@ struct World {
                 .overwriteSets = {daxa::gpu::BIND_ALL_SET_DESCRIPTION},
             });
             chunkgen_compute_pipeline = result.value();
-            // chunkgen_bindset_allocator = render_ctx.device->createBindingSetAllocator({
-            //     .setLayout = chunkgen_compute_pipeline->getSetLayout(0),
-            // });
         }
     }
 
