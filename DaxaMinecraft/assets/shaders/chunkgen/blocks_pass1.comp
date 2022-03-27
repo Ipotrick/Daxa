@@ -22,10 +22,10 @@ uint gen_block(in vec3 b_pos) {
 
     biome_id = biome_id << 16;
 
-    if (val > 0.0f + sin(globals.time) * 0.1) {
+    if (val > 0.0f + sin(globals.time) * 0.2) {
         return Stone | biome_id;
     } else {
-        if (b_pos.y > 56) {
+        if (b_pos.y < 0) {
             return Water | biome_id;
         }
     }

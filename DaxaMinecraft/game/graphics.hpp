@@ -238,10 +238,11 @@ struct RenderContext {
 };
 
 struct RenderableChunk {
+    daxa::gpu::ImageViewHandle chunkgen_image;
 };
 
 struct World {
-    static constexpr glm::ivec3 DIM{1, 1, 1};
+    static constexpr glm::ivec3 DIM{8, 1, 8};
 
     template <typename T>
     using ChunkArray = std::array<std::array<std::array<T, DIM.x>, DIM.y>, DIM.z>;
@@ -254,7 +255,6 @@ struct World {
     daxa::gpu::PipelineHandle raymarch_compute_pipeline;
 
     daxa::gpu::PipelineHandle chunkgen_compute_pipeline;
-    daxa::gpu::ImageViewHandle chunkgen_images[2];
 
     struct ComputeGlobals {
         glm::mat4 viewproj_mat;
@@ -262,7 +262,7 @@ struct World {
         glm::ivec2 frame_dim;
         float time;
 
-        u32 chunk_image_0, chunk_image_1;
+        ChunkArray<u32> chunk_ids;
     };
 
     struct ChunkgenPush {
@@ -287,37 +287,47 @@ struct World {
 
         start = Clock::now();
 
-        for (auto &chunkgen_image : chunkgen_images) {
-            chunkgen_image = render_ctx.device->createImageView({
-                .image = render_ctx.device->createImage({
-                    .imageType = VK_IMAGE_TYPE_3D,
-                    .format = VK_FORMAT_R32_UINT,
-                    .extent = {64, 64, 64},
-                    .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-                    .debugName = "Chunkgen Image",
-                }),
-                .viewType = VK_IMAGE_VIEW_TYPE_3D,
-                .format = VK_FORMAT_R32_UINT,
-                .subresourceRange =
-                    {
-                        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                        .baseMipLevel = 0,
-                        .levelCount = 1,
-                        .baseArrayLayer = 0,
-                        .layerCount = 1,
-                    },
-                .debugName = "Chunkgen Image View",
-            });
+        for (auto &chunk_layer : chunks) {
+            for (auto &chunk_strip : chunk_layer) {
+                for (auto &chunk : chunk_strip) {
+                    chunk = std::make_unique<RenderableChunk>();
+                    chunk->chunkgen_image = render_ctx.device->createImageView({
+                        .image = render_ctx.device->createImage({
+                            .imageType = VK_IMAGE_TYPE_3D,
+                            .format = VK_FORMAT_R32_UINT,
+                            .extent = {64, 64, 64},
+                            .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                            .debugName = "Chunkgen Image",
+                        }),
+                        .viewType = VK_IMAGE_VIEW_TYPE_3D,
+                        .format = VK_FORMAT_R32_UINT,
+                        .subresourceRange =
+                            {
+                                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                                .baseMipLevel = 0,
+                                .levelCount = 1,
+                                .baseArrayLayer = 0,
+                                .layerCount = 1,
+                            },
+                        .debugName = "Chunkgen Image View",
+                    });
+                }
+            }
         }
 
         auto cmd_list = render_ctx.queue->getCommandList({});
-        for (auto &chunkgen_image : chunkgen_images) {
-            cmd_list->queueImageBarrier(daxa::gpu::ImageBarrier{
-                .barrier = daxa::gpu::FULL_MEMORY_BARRIER,
-                .image = chunkgen_image,
-                .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
-                .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
-            });
+
+        for (auto &chunk_layer : chunks) {
+            for (auto &chunk_strip : chunk_layer) {
+                for (auto &chunk : chunk_strip) {
+                    cmd_list->queueImageBarrier(daxa::gpu::ImageBarrier{
+                        .barrier = daxa::gpu::FULL_MEMORY_BARRIER,
+                        .image = chunk->chunkgen_image,
+                        .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
+                        .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
+                    });
+                }
+            }
         }
         cmd_list->finalize();
         daxa::gpu::SubmitInfo submitInfo;
@@ -365,10 +375,16 @@ struct World {
             .pos = glm::vec4(player.pos, 0),
             .frame_dim = {extent.width, extent.height},
             .time = elapsed,
-                    
-            .chunk_image_0 = chunkgen_images[0]->getDescriptorIndex(),
-            .chunk_image_1 = chunkgen_images[1]->getDescriptorIndex(),
         };
+
+        for (size_t zi = 0; zi < DIM.z; ++zi) {
+            for (size_t yi = 0; yi < DIM.y; ++yi) {
+                for (size_t xi = 0; xi < DIM.x; ++xi) {
+                    compute_globals.chunk_ids[zi][yi][xi] = chunks[zi][yi][xi]->chunkgen_image->getDescriptorIndex();
+                }
+            }
+        }
+
         auto compute_globals_i = compute_pipeline_globals->getStorageBufferDescriptorIndex().value();
 
         cmd_list->singleCopyHostToBuffer({
@@ -379,27 +395,21 @@ struct World {
         cmd_list->queueMemoryBarrier(daxa::gpu::FULL_MEMORY_BARRIER);
 
         cmd_list->bindPipeline(chunkgen_compute_pipeline);
-        {
-            cmd_list->bindAll();
-            cmd_list->pushConstant(
-                VK_SHADER_STAGE_COMPUTE_BIT,
-                ChunkgenPush{
-                    .pos = {0, 0, 0, 0},
-                    .globals_sb = compute_globals_i,
-                    .output_image_i = chunkgen_images[0]->getDescriptorIndex(),
-                });
-            cmd_list->dispatch(8, 8, 8);
-        }
-        {
-            cmd_list->bindAll();
-            cmd_list->pushConstant(
-                VK_SHADER_STAGE_COMPUTE_BIT,
-                ChunkgenPush{
-                    .pos = {64, 0, 0, 0},
-                    .globals_sb = compute_globals_i,
-                    .output_image_i = chunkgen_images[1]->getDescriptorIndex(),
-                });
-            cmd_list->dispatch(8, 8, 8);
+        cmd_list->bindAll();
+
+        for (size_t zi = 0; zi < DIM.z; ++zi) {
+            for (size_t yi = 0; yi < DIM.y; ++yi) {
+                for (size_t xi = 0; xi < DIM.x; ++xi) {
+                    cmd_list->pushConstant(
+                        VK_SHADER_STAGE_COMPUTE_BIT,
+                        ChunkgenPush{
+                            .pos = {64.0f * xi, 64.0f * yi, 64.0f * zi, 0},
+                            .globals_sb = compute_globals_i,
+                            .output_image_i = compute_globals.chunk_ids[zi][yi][xi],
+                        });
+                    cmd_list->dispatch(8, 8, 8);
+                }
+            }
         }
 
         cmd_list->queueMemoryBarrier(daxa::gpu::FULL_MEMORY_BARRIER);
