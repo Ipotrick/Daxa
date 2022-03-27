@@ -63,7 +63,7 @@ void main() {
     vec3 right = (globals.viewproj_mat * vec4(1, 0, 0, 0)).xyz;
     vec3 up = (globals.viewproj_mat * vec4(0, 1, 0, 0)).xyz;
 
-    float sun_angle = globals.time * 0.04;
+    float sun_angle = 0.5;
     sun_ray.nrm = normalize(vec3(sin(sun_angle) * 3, -cos(sun_angle) * 3, 1));
     sun_ray.inv_nrm = 1 / sun_ray.nrm;
 
@@ -86,7 +86,8 @@ void main() {
                 val = max(val * dot(ray_chunk_intersection.nrm, sun_ray.nrm), 0.01);
                 vec3 light = val * sun_col + sample_sky(ray_chunk_intersection.nrm) * 0.2;
                 // vec3 light = sun_col + sample_sky(ray_chunk_intersection.nrm) * 0.2;
-                vec3 albedo = vec3(ivec3(intersection_pos) % 16) / 16;
+                vec3 b_uv = vec3(ivec3(intersection_pos) % 16) / 16;
+                vec3 albedo = texture(get_texture[globals.texture_index], vec3(b_uv.xz, 10)).rgb;
                 color += albedo * light;
             } else {
                 color += sample_sky(cam_ray.nrm);

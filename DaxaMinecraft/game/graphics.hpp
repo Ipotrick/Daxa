@@ -262,6 +262,7 @@ struct World {
         glm::ivec2 frame_dim;
         float time;
 
+        u32 texture_index;
         ChunkArray<u32> chunk_ids;
     };
 
@@ -329,6 +330,7 @@ struct World {
                 }
             }
         }
+        
         cmd_list->finalize();
         daxa::gpu::SubmitInfo submitInfo;
         submitInfo.commandLists.push_back(std::move(cmd_list));
@@ -375,6 +377,7 @@ struct World {
             .pos = glm::vec4(player.pos, 0),
             .frame_dim = {extent.width, extent.height},
             .time = elapsed,
+            .texture_index = atlas_texture_array->getDescriptorIndex(),
         };
 
         for (size_t zi = 0; zi < DIM.z; ++zi) {
