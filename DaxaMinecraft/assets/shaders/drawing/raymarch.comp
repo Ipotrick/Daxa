@@ -56,7 +56,7 @@ void main() {
     ivec2 i_uv = ivec2(gl_GlobalInvocationID.xy);
     vec2 uv = vec2(i_uv) * inv_frame_dim * 2 - 1;
     vec3 color = vec3(0);
-    const vec2 subsamples = vec2(2);
+    const vec2 subsamples = vec2(1);
     const vec2 inv_subsamples = 1 / subsamples;
 
     vec3 front = (globals.viewproj_mat * vec4(0, 0, 1, 0)).xyz;
