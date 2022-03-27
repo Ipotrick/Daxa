@@ -1,13 +1,16 @@
 #version 450
 #extension GL_KHR_vulkan_glsl : enable
+#extension GL_EXT_nonuniform_qualifier : enable
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 #include "chunkgen/buffers.glsl"
 #include "chunkgen/noise.glsl"
 
-layout(push_constant) uniform Push {
-    vec3 pos;
+layout(std140, push_constant) uniform Push {
+    vec4 pos;
+    uint buf0;
+    uint buf1;
 }
 p;
 
@@ -19,10 +22,10 @@ void main() {
 
     uint block_index = block_i.x + block_i.y * CHUNK_SIZE.x + block_i.z * CHUNK_SIZE.x * CHUNK_SIZE.y;
     uint chunk_index = chunk_i.x + chunk_i.y * CHUNK_MAX.x + chunk_i.z * CHUNK_MAX.x * CHUNK_MAX.y;
-    vec3 block_pos = vec3(global_i) + p.pos * CHUNK_SIZE;
+    vec3 block_pos = vec3(global_i) + p.pos.xyz * CHUNK_SIZE;
 
-    uint current_block_id = chunks_0[chunk_index].blocks[block_index] & BLOCK_ID_MASK;
-    uint current_biome_id = (chunks_0[chunk_index].blocks[block_index] & BIOME_ID_MASK) >> 16;
+    uint current_block_id = chunk_buffer_views[p.buf0].chunks[chunk_index].blocks[block_index] & BLOCK_ID_MASK;
+    uint current_biome_id = (chunk_buffer_views[p.buf0].chunks[chunk_index].blocks[block_index] & BIOME_ID_MASK) >> 16;
     uint above_ids[16] = uint[16](0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     uint below_ids[16] = uint[16](0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
@@ -37,28 +40,28 @@ void main() {
 
     for (uint i = 1; i < above_n; ++i) {
         uint block_index_a = block_i.x + (block_i.y + i) * CHUNK_SIZE.x + block_i.z * CHUNK_SIZE.x * CHUNK_SIZE.y;
-        uint id = chunks_0[chunk_index].blocks[block_index_a] & BLOCK_ID_MASK;
+        uint id = chunk_buffer_views[p.buf0].chunks[chunk_index].blocks[block_index_a] & BLOCK_ID_MASK;
         above_ids[i] = id;
     }
     if (chunk_i.y < CHUNK_MAX.y - 1) {
         uint chunk_index_a = chunk_i.x + (chunk_i.y + 1) * CHUNK_MAX.x + chunk_i.z * CHUNK_MAX.x * CHUNK_MAX.y;
         for (uint i = above_n; i < 16; ++i) {
             uint block_index_a = block_i.x + (i - above_n) * CHUNK_SIZE.x + block_i.z * CHUNK_SIZE.x * CHUNK_SIZE.y;
-            uint id = chunks_0[chunk_index_a].blocks[block_index_a] & BLOCK_ID_MASK;
+            uint id = chunk_buffer_views[p.buf0].chunks[chunk_index_a].blocks[block_index_a] & BLOCK_ID_MASK;
             above_ids[i] = id;
         }
     }
 
     for (uint i = 1; i < below_n; ++i) {
         uint block_index_a = block_i.x + (block_i.y - i) * CHUNK_SIZE.x + block_i.z * CHUNK_SIZE.x * CHUNK_SIZE.y;
-        uint id = chunks_0[chunk_index].blocks[block_index_a] & BLOCK_ID_MASK;
+        uint id = chunk_buffer_views[p.buf0].chunks[chunk_index].blocks[block_index_a] & BLOCK_ID_MASK;
         below_ids[i] = id;
     }
     if (chunk_i.y > 0) {
         uint chunk_index_a = chunk_i.x + (chunk_i.y - 1) * CHUNK_MAX.x + chunk_i.z * CHUNK_MAX.x * CHUNK_MAX.y;
         for (uint i = below_n; i < 2; ++i) {
             uint block_index_a = block_i.x + (15 - (i - below_n)) * CHUNK_SIZE.x + block_i.z * CHUNK_SIZE.x * CHUNK_SIZE.y;
-            uint id = chunks_0[chunk_index_a].blocks[block_index_a] & BLOCK_ID_MASK;
+            uint id = chunk_buffer_views[p.buf0].chunks[chunk_index_a].blocks[block_index_a] & BLOCK_ID_MASK;
             below_ids[i] = id;
         }
     }
@@ -92,35 +95,35 @@ void main() {
 
     float r = rand(global_i);
 
-    chunks_1[chunk_index].blocks[block_index] = current_block_id;
+    chunk_buffer_views[p.buf1].chunks[chunk_index].blocks[block_index] = current_block_id;
 
     if (current_block_id == Stone) {
         switch (current_biome_id) {
         case Plains:
         case Forest: {
             if (above_depth == 1 && !underwater) {
-                chunks_1[chunk_index].blocks[block_index] = Grass;
+                chunk_buffer_views[p.buf1].chunks[chunk_index].blocks[block_index] = Grass;
             } else if (above_depth < 3 + r * 3) {
                 if (underwater) {
-                    chunks_1[chunk_index].blocks[block_index] = Gravel;
+                    chunk_buffer_views[p.buf1].chunks[chunk_index].blocks[block_index] = Gravel;
                 } else {
-                    chunks_1[chunk_index].blocks[block_index] = Dirt;
+                    chunk_buffer_views[p.buf1].chunks[chunk_index].blocks[block_index] = Dirt;
                 }
             }
         } break;
         case Desert: {
             if (above_depth < 3 + r * 3) {
                 if (underwater) {
-                    chunks_1[chunk_index].blocks[block_index] = Gravel;
+                    chunk_buffer_views[p.buf1].chunks[chunk_index].blocks[block_index] = Gravel;
                 } else {
-                    chunks_1[chunk_index].blocks[block_index] = Sand;
+                    chunk_buffer_views[p.buf1].chunks[chunk_index].blocks[block_index] = Sand;
                 }
             } else if (above_depth < 6 + r * 2 && !underwater) {
-                chunks_1[chunk_index].blocks[block_index] = Sandstone;
+                chunk_buffer_views[p.buf1].chunks[chunk_index].blocks[block_index] = Sandstone;
             }
         } break;
         case Beach: {
-            chunks_1[chunk_index].blocks[block_index] = Sand;
+            chunk_buffer_views[p.buf1].chunks[chunk_index].blocks[block_index] = Sand;
         } break;
         }
     } else if (current_block_id == Air) {
@@ -128,29 +131,29 @@ void main() {
         case Plains: {
             if (below_inv_depth == 1) {
                 if (r < 0.4) {
-                    chunks_1[chunk_index].blocks[block_index] = TallGrass;
+                    chunk_buffer_views[p.buf1].chunks[chunk_index].blocks[block_index] = TallGrass;
                 } else if (r < 0.43) {
-                    chunks_1[chunk_index].blocks[block_index] = Rose;
+                    chunk_buffer_views[p.buf1].chunks[chunk_index].blocks[block_index] = Rose;
                 } else if (r < 0.45) {
-                    chunks_1[chunk_index].blocks[block_index] = Leaves;
+                    chunk_buffer_views[p.buf1].chunks[chunk_index].blocks[block_index] = Leaves;
                 }
             }
         } break;
         case Forest: {
             if (below_inv_depth == 1) {
                 if (r < 0.2) {
-                    chunks_1[chunk_index].blocks[block_index] = TallGrass;
+                    chunk_buffer_views[p.buf1].chunks[chunk_index].blocks[block_index] = TallGrass;
                 } else if (r < 0.65) {
-                    chunks_1[chunk_index].blocks[block_index] = Leaves;
+                    chunk_buffer_views[p.buf1].chunks[chunk_index].blocks[block_index] = Leaves;
                 }
             }
         } break;
         case Desert: {
             if (below_inv_depth == 1) {
                 if (r < 0.1) {
-                    chunks_1[chunk_index].blocks[block_index] = DriedShrub;
+                    chunk_buffer_views[p.buf1].chunks[chunk_index].blocks[block_index] = DriedShrub;
                 } else if (r < 0.11) {
-                    chunks_1[chunk_index].blocks[block_index] = Cactus;
+                    chunk_buffer_views[p.buf1].chunks[chunk_index].blocks[block_index] = Cactus;
                 }
             }
         } break;
