@@ -8,6 +8,7 @@ layout(set = 0, binding = 4) buffer Globals {
     ivec2 frame_dim;
     float time;
 
+    uint texture_index;
     uint chunk_images[CHUNK_N.z][CHUNK_N.y][CHUNK_N.x];
 }
 globals_sb_view[];
