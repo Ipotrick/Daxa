@@ -77,7 +77,7 @@ public:
 			.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)
 			.endVertexInputAttributeBinding()
 			// location of attachments in a shader are implied by the order they are added in the prePassPipeline builder:
-			.addColorAttachment(renderCTX.swapchain->getVkFormat())
+			.addColorAttachment(renderCTX.hdrImage->getVkFormat())
 			.addColorAttachment(renderCTX.normalsImage->getVkFormat())
 			.setRasterization({
 				.cullMode = VK_CULL_MODE_BACK_BIT,
@@ -134,7 +134,7 @@ public:
 				.enableDepthWrite = true, 
 				//.depthTestCompareOp = VK_COMPARE_OP_EQUAL
 			})
-			.addColorAttachment(renderCTX.swapchain->getVkFormat())
+			.addColorAttachment(renderCTX.hdrImage->getVkFormat())
 			.addColorAttachment(renderCTX.normalsImage->getVkFormat())
 			.setRasterization({
 				.cullMode = VK_CULL_MODE_BACK_BIT,
@@ -311,7 +311,7 @@ public:
 
 		std::array framebuffer{
 			daxa::gpu::RenderAttachmentInfo{
-				.image = renderCTX.swapchainImage.getImageViewHandle(),
+				.image = renderCTX.hdrImage,
 				.clearValue = { .color = VkClearColorValue{.float32 = { 0.01f, 0.01f, 0.01f, 1.0f } } },
 			},
 			daxa::gpu::RenderAttachmentInfo{
@@ -383,11 +383,13 @@ public:
 
 		std::array framebuffer{
 			daxa::gpu::RenderAttachmentInfo{
-				.image = renderCTX.swapchainImage.getImageViewHandle(),
-				.clearValue = {.color = VkClearColorValue{.float32 = { 0.01f, 0.01f, 0.01f, 1.0f } } },
+				.image = renderCTX.hdrImage,
+				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+				.clearValue = {.color = VkClearColorValue{.float32 = { 0.00f, 0.00f, 0.00f, 1.0f } } },
 			},
 			daxa::gpu::RenderAttachmentInfo{
 				.image = renderCTX.normalsImage,
+				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 				.clearValue = {.color = VkClearColorValue{.float32 = { 0.0f, 0.0f, 0.0f, 0.0f } } },
 			},

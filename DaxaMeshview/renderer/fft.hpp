@@ -105,15 +105,15 @@ public:
                 fft1024Horizontal = std::move(result.value());
             }
         }
-        u32 width = renderCTX.swapchainImage.getImageViewHandle()->getImageHandle()->getVkExtent3D().width;
-        u32 height = renderCTX.swapchainImage.getImageViewHandle()->getImageHandle()->getVkExtent3D().height;
+        u32 width = renderCTX.hdrImage->getImageHandle()->getVkExtent3D().width;
+        u32 height = renderCTX.hdrImage->getImageHandle()->getVkExtent3D().height;
         u32 log2Width = std::log2(width);
         u32 log2Height = std::log2(height);
         // horizontal pass
         cmd->bindPipeline(fft1024Horizontal);
         cmd->bindAll();
         StripPush spush{
-            renderCTX.swapchainImage.getImageViewHandle()->getDescriptorIndex(),
+            renderCTX.hdrImage->getDescriptorIndex(),
             horResultR->getDescriptorIndex(),
             width,
             height,
@@ -123,7 +123,7 @@ public:
         cmd->pushConstant(VK_SHADER_STAGE_COMPUTE_BIT, spush);
         cmd->dispatch(1, height, 1);
         spush = {
-            renderCTX.swapchainImage.getImageViewHandle()->getDescriptorIndex(),
+            renderCTX.hdrImage->getDescriptorIndex(),
             horResultG->getDescriptorIndex(),
             width,
             height,
@@ -133,7 +133,7 @@ public:
         cmd->pushConstant(VK_SHADER_STAGE_COMPUTE_BIT, spush);
         cmd->dispatch(1, height, 1);
         spush = {
-            renderCTX.swapchainImage.getImageViewHandle()->getDescriptorIndex(),
+            renderCTX.hdrImage->getDescriptorIndex(),
             horResultB->getDescriptorIndex(),
             width,
             height,
@@ -153,15 +153,15 @@ public:
                 fft1024Vertical = std::move(result.value());
             }
         }
-        u32 width = renderCTX.swapchainImage.getImageViewHandle()->getImageHandle()->getVkExtent3D().width;
-        u32 height = renderCTX.swapchainImage.getImageViewHandle()->getImageHandle()->getVkExtent3D().height;
+        u32 width = renderCTX.hdrImage->getImageHandle()->getVkExtent3D().width;
+        u32 height = renderCTX.hdrImage->getImageHandle()->getVkExtent3D().height;
         u32 log2Width = std::log2(width);
         u32 log2Height = std::log2(height);
         // horizontal pass
         cmd->bindPipeline(fft1024Vertical);
         cmd->bindAll();
         StripPush spush{
-            renderCTX.swapchainImage.getImageViewHandle()->getDescriptorIndex(),
+            renderCTX.hdrImage->getDescriptorIndex(),
             verResultR->getDescriptorIndex(),
             width,
             height,
@@ -171,7 +171,7 @@ public:
         cmd->pushConstant(VK_SHADER_STAGE_COMPUTE_BIT, spush);
         cmd->dispatch(width, 1, 1);
         spush = {
-            renderCTX.swapchainImage.getImageViewHandle()->getDescriptorIndex(),
+            renderCTX.hdrImage->getDescriptorIndex(),
             verResultG->getDescriptorIndex(),
             width,
             height,
@@ -181,7 +181,7 @@ public:
         cmd->pushConstant(VK_SHADER_STAGE_COMPUTE_BIT, spush);
         cmd->dispatch(width, 1, 1);
         spush = {
-            renderCTX.swapchainImage.getImageViewHandle()->getDescriptorIndex(),
+            renderCTX.hdrImage->getDescriptorIndex(),
             verResultB->getDescriptorIndex(),
             width,
             height,
@@ -201,8 +201,8 @@ public:
                 fftCombine = std::move(result.value());
             }
         }
-        u32 width = renderCTX.swapchainImage.getImageViewHandle()->getImageHandle()->getVkExtent3D().width;
-        u32 height = renderCTX.swapchainImage.getImageViewHandle()->getImageHandle()->getVkExtent3D().height;
+        u32 width = renderCTX.hdrImage->getImageHandle()->getVkExtent3D().width;
+        u32 height = renderCTX.hdrImage->getImageHandle()->getVkExtent3D().height;
         cmd->queueMemoryBarrier(daxa::gpu::FULL_MEMORY_BARRIER);
         cmd->bindPipeline(fftCombine);
         cmd->bindAll();
@@ -251,8 +251,8 @@ public:
                 fftDebug = std::move(result.value());
             }
         }
-        u32 width = renderCTX.swapchainImage.getImageViewHandle()->getImageHandle()->getVkExtent3D().width;
-        u32 height = renderCTX.swapchainImage.getImageViewHandle()->getImageHandle()->getVkExtent3D().height;
+        u32 width = renderCTX.hdrImage->getImageHandle()->getVkExtent3D().width;
+        u32 height = renderCTX.hdrImage->getImageHandle()->getVkExtent3D().height;
         cmd->queueImageBarrier({
             .image = fftDebugImage,
             .layoutBefore = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -288,14 +288,14 @@ public:
 
     void update(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd) {
         cmd->queueImageBarrier({
-            .image = renderCTX.swapchainImage.getImageViewHandle(),
+            .image = renderCTX.hdrImage,
             .layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         });
         horizontalPass(renderCTX, cmd);
         verticalPass(renderCTX, cmd);
         cmd->queueImageBarrier({
-            .image = renderCTX.swapchainImage.getImageViewHandle(),
+            .image = renderCTX.hdrImage,
             .layoutBefore = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             .layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         });
