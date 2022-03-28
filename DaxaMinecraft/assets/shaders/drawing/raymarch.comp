@@ -3,21 +3,8 @@
 
 layout(local_size_x = 8, local_size_y = 8) in;
 
-#include "drawing/common.glsl"
-
-uvec4 get_tile(vec3 pos) {
-    ivec3 chunk_i = ivec3(pos / 64);
-    return imageLoad(chunk_images(chunk_i), ivec3(pos.x, pos.y, pos.z) - chunk_i * 64);
-}
-
-uint get_block_id(vec3 p) {
-    return uint(get_tile(p).r);
-}
-
-bool is_voxel_occluding(vec3 p) {
-    return (get_block_id(p) & 0xffff) != 0;
-}
-
+#include <drawing/common.glsl>
+#include <chunkgen/block_info.glsl>
 #include <utils/ray.glsl>
 
 Ray sun_ray;
@@ -27,23 +14,6 @@ vec3 sample_sky(vec3 nrm) {
     float sun_val = clamp((dot(nrm, sun_ray.nrm) - 0.9995) * 5000, 0, 1);
     float sky_val = (dot(nrm, vec3(0, 1, 0))) / 2 + clamp((dot(nrm, sun_ray.nrm) + 1) * 0.1, 0, 1);
     return sun_col * sun_val + mix(vec3(0.5, 0.6, 2), vec3(0.1, 0.2, 0.5), sky_val);
-}
-
-RayIntersection trace_chunks(in Ray ray) {
-    RayIntersection result;
-    result.hit = false;
-
-    for (uint zi = 0; zi < CHUNK_N.z; ++zi) {
-        for (uint yi = 0; yi < CHUNK_N.y; ++yi) {
-            for (uint xi = 0; xi < CHUNK_N.x; ++xi) {
-                RayIntersection ri = ray_step_voxels(ray, vec3(64) * vec3(xi, yi, zi));
-                if (ri.hit && (ri.dist < result.dist || !result.hit))
-                    result = ri;
-            }
-        }
-    }
-
-    return result;
 }
 
 void main() {
@@ -77,19 +47,53 @@ void main() {
             cam_ray.inv_nrm = 1 / cam_ray.nrm;
 
             RayIntersection ray_chunk_intersection = trace_chunks(cam_ray);
+            // color.r += float(ray_chunk_intersection.steps) * 1.0 / MAX_STEPS;
 
             if (ray_chunk_intersection.hit) {
                 vec3 intersection_pos = get_intersection_pos(cam_ray, ray_chunk_intersection);
                 sun_ray.o = intersection_pos + ray_chunk_intersection.nrm * 0.01;
                 RayIntersection sun_ray_chunk_intersection = trace_chunks(sun_ray);
+                // color.g += float(ray_chunk_intersection.steps) * 1.0 / MAX_STEPS;
                 float val = float(!sun_ray_chunk_intersection.hit);
                 val = max(val * dot(ray_chunk_intersection.nrm, sun_ray.nrm), 0.01);
                 vec3 light = val * sun_col + sample_sky(ray_chunk_intersection.nrm) * 0.2;
                 // vec3 light = sun_col + sample_sky(ray_chunk_intersection.nrm) * 0.2;
                 vec3 b_uv = vec3(ivec3(intersection_pos) % 16) / 16;
-                vec2 tex_uv = fract(intersection_pos.xy);
+
+                uint face_id = 0;
+                vec2 tex_uv = vec2(0);
+
+                if (ray_chunk_intersection.nrm.x > 0.5) {
+                    face_id = BlockFace_Left;
+                    tex_uv = fract(intersection_pos.zy);
+                    tex_uv.y = 1 - tex_uv.y;
+                } else if (ray_chunk_intersection.nrm.x < -0.5) {
+                    face_id = BlockFace_Right;
+                    tex_uv = fract(intersection_pos.zy);
+                    tex_uv.y = 1 - tex_uv.y;
+                }
+                if (ray_chunk_intersection.nrm.y > 0.5) {
+                    face_id = BlockFace_Bottom;
+                    tex_uv = fract(intersection_pos.zx);
+                } else if (ray_chunk_intersection.nrm.y < -0.5) {
+                    face_id = BlockFace_Top;
+                    tex_uv = fract(intersection_pos.zx);
+                }
+                if (ray_chunk_intersection.nrm.z > 0.5) {
+                    face_id = BlockFace_Front;
+                    tex_uv = fract(intersection_pos.xy);
+                    tex_uv.y = 1 - tex_uv.y;
+                } else if (ray_chunk_intersection.nrm.z < -0.5) {
+                    face_id = BlockFace_Back;
+                    tex_uv = fract(intersection_pos.xy);
+                    tex_uv.y = 1 - tex_uv.y;
+                }
+
+                uint block_id = get_block_id(intersection_pos);
+                uint tex_id = tile_texture_index(block_id, face_id);
                 // vec2 tex_uv = b_uv.xz;
-                vec3 albedo = texture(get_texture[globals.texture_index], vec3(tex_uv, 0)).rgb;
+                vec3 albedo = texture(get_texture[globals.texture_index], vec3(tex_uv, tex_id)).rgb;
+                // vec3 albedo = vec3(0);
                 color += albedo * light;
             } else {
                 color += sample_sky(cam_ray.nrm);

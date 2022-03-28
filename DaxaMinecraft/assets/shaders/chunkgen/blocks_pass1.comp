@@ -8,36 +8,34 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 #include "chunkgen/common.glsl"
 
 uint gen_block(in vec3 b_pos) {
-    float b_val = biome_noise(b_pos);
     float val = terrain_noise(b_pos);
+    float b_val = biome_noise(b_pos);
     float r = rand(b_pos);
 
-    uint biome_id = Plains;
+    float water_level = WATER_LEVEL + sin(globals.time) * 20 - 20;
+
+    uint biome_id = BiomeID_Plains;
     if (b_val < -0.2)
-        biome_id = Forest;
+        biome_id = BiomeID_Forest;
     else if (b_val > 0.12)
-        biome_id = Desert;
-    if (b_pos.y > -4 + r * 3 && b_pos.y < 4 + r * 3 && val < 0.05 + r * 0.1 && val > -0.05 - r * 0.1)
-        biome_id = Beach;
+        biome_id = BiomeID_Desert;
+    if (b_pos.y - water_level > -4 + r * 3 && b_pos.y - water_level < 4 + r * 3 && val < 0.05 + r * 0.1 && val > -0.05 - r * 0.1)
+        biome_id = BiomeID_Beach;
 
     biome_id = biome_id << 16;
 
-    if (val > 0.0f + sin(globals.time) * 0.2) {
-        return Stone | biome_id;
+    if (val > 0.1f) {
+        return BlockID_Stone | biome_id;
     } else {
-        if (b_pos.y < 0) {
-            return Water | biome_id;
+        if (b_pos.y > water_level) {
+            return BlockID_Water | biome_id;
         }
     }
-    return Air | biome_id;
+    return BlockID_Air | biome_id;
 }
 
 void main() {
     uvec3 global_i = gl_GlobalInvocationID.xyz;
-    uvec3 chunk_i = global_i / CHUNK_SIZE.xyz;
-    uvec3 block_i = global_i % CHUNK_SIZE.xyz;
-    uint block_index = block_i.x + block_i.y * CHUNK_SIZE.x + block_i.z * CHUNK_SIZE.x * CHUNK_SIZE.y;
-    uint chunk_index = chunk_i.x + chunk_i.y * CHUNK_MAX.x + chunk_i.z * CHUNK_MAX.x * CHUNK_MAX.y;
     vec3 block_pos = vec3(global_i) + p.pos.xyz;
     imageStore(output_image, ivec3(global_i), uvec4(gen_block(block_pos)));
 }
