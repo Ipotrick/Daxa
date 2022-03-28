@@ -7,6 +7,7 @@ struct Ray {
 struct RayIntersection {
     bool hit;
     float dist;
+    uint steps;
 
     vec3 nrm;
 };
@@ -18,6 +19,13 @@ bool point_box_contains(vec3 p, vec3 b_min, vec3 b_max) {
 }
 
 RayIntersection ray_box_intersect(in Ray ray, vec3 b_min, vec3 b_max) {
+    RayIntersection result;
+    // if (point_box_contains(ray.o, b_min, b_max)) {
+    //     result.hit = true;
+    //     result.dist = 0;
+    //     result.steps = 0;
+    //     return result;
+    // }
     float tx1 = (b_min.x - ray.o.x) * ray.inv_nrm.x;
     float tx2 = (b_max.x - ray.o.x) * ray.inv_nrm.x;
     float tmin = min(tx1, tx2);
@@ -31,9 +39,9 @@ RayIntersection ray_box_intersect(in Ray ray, vec3 b_min, vec3 b_max) {
     tmin = max(tmin, min(tz1, tz2));
     tmax = min(tmax, max(tz1, tz2));
 
-    RayIntersection result;
     result.hit = (tmax >= tmin && tmin > 0);
     result.dist = tmin;
+    result.steps = 0;
 
     bool is_x = tmin == tx1 || tmin == tx2;
     bool is_y = tmin == ty1 || tmin == ty2;
@@ -66,13 +74,12 @@ vec3 get_intersection_pos(in Ray ray, in RayIntersection intersection) {
     return ray.o + intersection.dist * ray.nrm;
 }
 
-RayIntersection ray_step_voxels(in Ray ray, in vec3 b_min) {
+RayIntersection ray_step_voxels(in Ray ray, in vec3 b_min, in vec3 b_max) {
     RayIntersection result;
     result.hit = false;
     result.dist = 0;
     result.nrm = vec3(0);
-
-    vec3 b_max = b_min + vec3(64);
+    result.steps = 0;
 
     if (point_box_contains(ray.o, b_min, b_max)) {
         result.dist = 0;
@@ -91,9 +98,6 @@ RayIntersection ray_step_voxels(in Ray ray, in vec3 b_min) {
             return result;
         }
     }
-
-    // result.hit = true;
-    // return result;
 
     ivec3 tile_i = ivec3(ray.o);
 
@@ -140,7 +144,7 @@ RayIntersection ray_step_voxels(in Ray ray, in vec3 b_min) {
 
     bool outside_bounds = false, is_y = false, is_z = false;
     uint total_steps;
-    for (total_steps = 0; total_steps < 64 + 64 + 64; ++total_steps) {
+    for (total_steps = 0; total_steps < MAX_STEPS; ++total_steps) {
         if (is_voxel_occluding(tile_i)) {
             result.hit = true;
             break;
@@ -206,5 +210,11 @@ RayIntersection ray_step_voxels(in Ray ray, in vec3 b_min) {
         }
     }
 
+    result.steps = total_steps;
+
     return result;
+}
+
+RayIntersection trace_chunks(in Ray ray) {
+    return ray_step_voxels(ray, vec3(0), vec3(64) * CHUNK_N);
 }

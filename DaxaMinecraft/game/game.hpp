@@ -24,6 +24,7 @@ struct Game {
     Game() {
         window.set_user_pointer<Game>(this);
         player.pos = glm::vec3(World::DIM) * 64.0f / 2.0f;
+        player.pos.y = 0;
     }
 
     void update() {

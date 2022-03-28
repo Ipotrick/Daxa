@@ -238,11 +238,12 @@ struct RenderContext {
 };
 
 struct RenderableChunk {
-    daxa::gpu::ImageViewHandle chunkgen_image;
+    daxa::gpu::ImageViewHandle chunkgen_image_a;
+    daxa::gpu::ImageViewHandle chunkgen_image_b;
 };
 
 struct World {
-    static constexpr glm::ivec3 DIM{8, 1, 8};
+    static constexpr glm::ivec3 DIM{8, 2, 8};
 
     template <typename T>
     using ChunkArray = std::array<std::array<std::array<T, DIM.x>, DIM.y>, DIM.z>;
@@ -254,7 +255,8 @@ struct World {
 
     daxa::gpu::PipelineHandle raymarch_compute_pipeline;
 
-    daxa::gpu::PipelineHandle chunkgen_compute_pipeline;
+    daxa::gpu::PipelineHandle chunkgen_compute_pipeline_pass0;
+    daxa::gpu::PipelineHandle chunkgen_compute_pipeline_pass1;
 
     struct ComputeGlobals {
         glm::mat4 viewproj_mat;
@@ -263,18 +265,20 @@ struct World {
         float time;
 
         u32 texture_index;
-        ChunkArray<u32> chunk_ids;
+        ChunkArray<u32> chunk_ids[2];
     };
 
     struct ChunkgenPush {
         glm::vec4 pos;
         u32 globals_sb;
         u32 output_image_i;
+        u32 chunk_buffer_i;
     };
 
     struct ChunkRaymarchPush {
         u32 globals_sb;
         u32 output_image_i;
+        u32 chunk_buffer_i;
     };
 
     RenderContext &render_ctx;
@@ -292,7 +296,27 @@ struct World {
             for (auto &chunk_strip : chunk_layer) {
                 for (auto &chunk : chunk_strip) {
                     chunk = std::make_unique<RenderableChunk>();
-                    chunk->chunkgen_image = render_ctx.device->createImageView({
+                    chunk->chunkgen_image_a = render_ctx.device->createImageView({
+                        .image = render_ctx.device->createImage({
+                            .imageType = VK_IMAGE_TYPE_3D,
+                            .format = VK_FORMAT_R32_UINT,
+                            .extent = {64, 64, 64},
+                            .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                            .debugName = "Chunkgen Image",
+                        }),
+                        .viewType = VK_IMAGE_VIEW_TYPE_3D,
+                        .format = VK_FORMAT_R32_UINT,
+                        .subresourceRange =
+                            {
+                                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                                .baseMipLevel = 0,
+                                .levelCount = 1,
+                                .baseArrayLayer = 0,
+                                .layerCount = 1,
+                            },
+                        .debugName = "Chunkgen Image View",
+                    });
+                    chunk->chunkgen_image_b = render_ctx.device->createImageView({
                         .image = render_ctx.device->createImage({
                             .imageType = VK_IMAGE_TYPE_3D,
                             .format = VK_FORMAT_R32_UINT,
@@ -323,14 +347,20 @@ struct World {
                 for (auto &chunk : chunk_strip) {
                     cmd_list->queueImageBarrier(daxa::gpu::ImageBarrier{
                         .barrier = daxa::gpu::FULL_MEMORY_BARRIER,
-                        .image = chunk->chunkgen_image,
+                        .image = chunk->chunkgen_image_a,
+                        .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
+                        .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
+                    });
+                    cmd_list->queueImageBarrier(daxa::gpu::ImageBarrier{
+                        .barrier = daxa::gpu::FULL_MEMORY_BARRIER,
+                        .image = chunk->chunkgen_image_b,
                         .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
                         .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
                     });
                 }
             }
         }
-        
+
         cmd_list->finalize();
         daxa::gpu::SubmitInfo submitInfo;
         submitInfo.commandLists.push_back(std::move(cmd_list));
@@ -355,11 +385,17 @@ struct World {
             if (result)
                 raymarch_compute_pipeline = result.value();
         }
-        if (render_ctx.pipeline_compiler->checkIfSourcesChanged(chunkgen_compute_pipeline)) {
-            auto result = render_ctx.pipeline_compiler->recreatePipeline(chunkgen_compute_pipeline);
+        if (render_ctx.pipeline_compiler->checkIfSourcesChanged(chunkgen_compute_pipeline_pass0)) {
+            auto result = render_ctx.pipeline_compiler->recreatePipeline(chunkgen_compute_pipeline_pass0);
             std::cout << result << std::endl;
             if (result)
-                chunkgen_compute_pipeline = result.value();
+                chunkgen_compute_pipeline_pass0 = result.value();
+        }
+        if (render_ctx.pipeline_compiler->checkIfSourcesChanged(chunkgen_compute_pipeline_pass1)) {
+            auto result = render_ctx.pipeline_compiler->recreatePipeline(chunkgen_compute_pipeline_pass1);
+            std::cout << result << std::endl;
+            if (result)
+                chunkgen_compute_pipeline_pass1 = result.value();
         }
     }
 
@@ -383,7 +419,8 @@ struct World {
         for (size_t zi = 0; zi < DIM.z; ++zi) {
             for (size_t yi = 0; yi < DIM.y; ++yi) {
                 for (size_t xi = 0; xi < DIM.x; ++xi) {
-                    compute_globals.chunk_ids[zi][yi][xi] = chunks[zi][yi][xi]->chunkgen_image->getDescriptorIndex();
+                    compute_globals.chunk_ids[0][zi][yi][xi] = chunks[zi][yi][xi]->chunkgen_image_a->getDescriptorIndex();
+                    compute_globals.chunk_ids[1][zi][yi][xi] = chunks[zi][yi][xi]->chunkgen_image_b->getDescriptorIndex();
                 }
             }
         }
@@ -397,9 +434,8 @@ struct World {
         });
         cmd_list->queueMemoryBarrier(daxa::gpu::FULL_MEMORY_BARRIER);
 
-        cmd_list->bindPipeline(chunkgen_compute_pipeline);
+        cmd_list->bindPipeline(chunkgen_compute_pipeline_pass0);
         cmd_list->bindAll();
-
         for (size_t zi = 0; zi < DIM.z; ++zi) {
             for (size_t yi = 0; yi < DIM.y; ++yi) {
                 for (size_t xi = 0; xi < DIM.x; ++xi) {
@@ -408,7 +444,28 @@ struct World {
                         ChunkgenPush{
                             .pos = {64.0f * xi, 64.0f * yi, 64.0f * zi, 0},
                             .globals_sb = compute_globals_i,
-                            .output_image_i = compute_globals.chunk_ids[zi][yi][xi],
+                            .output_image_i = compute_globals.chunk_ids[0][zi][yi][xi],
+                            .chunk_buffer_i = 1,
+                        });
+                    cmd_list->dispatch(8, 8, 8);
+                }
+            }
+        }
+
+        cmd_list->queueMemoryBarrier(daxa::gpu::FULL_MEMORY_BARRIER);
+
+        cmd_list->bindPipeline(chunkgen_compute_pipeline_pass1);
+        cmd_list->bindAll();
+        for (size_t zi = 0; zi < DIM.z; ++zi) {
+            for (size_t yi = 0; yi < DIM.y; ++yi) {
+                for (size_t xi = 0; xi < DIM.x; ++xi) {
+                    cmd_list->pushConstant(
+                        VK_SHADER_STAGE_COMPUTE_BIT,
+                        ChunkgenPush{
+                            .pos = {64.0f * xi, 64.0f * yi, 64.0f * zi, 0},
+                            .globals_sb = compute_globals_i,
+                            .output_image_i = compute_globals.chunk_ids[1][zi][yi][xi],
+                            .chunk_buffer_i = 0,
                         });
                     cmd_list->dispatch(8, 8, 8);
                 }
@@ -424,6 +481,7 @@ struct World {
             ChunkRaymarchPush{
                 .globals_sb = compute_globals_i,
                 .output_image_i = render_image->getDescriptorIndex(),
+                .chunk_buffer_i = 1,
             });
         cmd_list->dispatch((extent.width + 7) / 8, (extent.height + 7) / 8);
     }
@@ -447,7 +505,17 @@ struct World {
                 },
                 .overwriteSets = {daxa::gpu::BIND_ALL_SET_DESCRIPTION},
             });
-            chunkgen_compute_pipeline = result.value();
+            chunkgen_compute_pipeline_pass0 = result.value();
+        }
+        {
+            auto result = render_ctx.pipeline_compiler->createComputePipeline({
+                .shaderCI = {
+                    .pathToSource = "DaxaMinecraft/assets/shaders/chunkgen/blocks_pass2.comp",
+                    .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+                },
+                .overwriteSets = {daxa::gpu::BIND_ALL_SET_DESCRIPTION},
+            });
+            chunkgen_compute_pipeline_pass1 = result.value();
         }
     }
 

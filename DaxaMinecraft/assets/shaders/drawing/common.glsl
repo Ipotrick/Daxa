@@ -2,6 +2,7 @@
 layout(push_constant) uniform Push {
     uint globals_sb;
     uint output_image_i;
+    uint chunk_buffer_i;
 } p;
 
 layout(set = 0, binding = 3, r32ui) uniform readonly uimage3D input_images[];
