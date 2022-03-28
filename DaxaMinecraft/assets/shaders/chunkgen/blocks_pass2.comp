@@ -1,0 +1,132 @@
+#version 450
+#extension GL_KHR_vulkan_glsl : enable
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+
+#include "chunkgen/block_info.glsl"
+#include "chunkgen/noise.glsl"
+#include "chunkgen/common.glsl"
+
+void main() {
+    uvec3 global_i = gl_GlobalInvocationID.xyz;
+    vec3 block_pos = vec3(global_i) + p.pos.xyz;
+
+    uint tile = get_tile(block_pos);
+    uint block_id = tile & BLOCK_ID_MASK;
+    uint biome_id = (tile & BIOME_ID_MASK) >> 0x10;
+
+    uint above_ids[16] = uint[16](0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    uint below_ids[16] = uint[16](0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+    uint above_depth = 16;
+    uint below_depth = 16;
+    uint below_inv_depth = 16;
+    bool underwater = false;
+
+    for (uint i = 1; i < 16; ++i) {
+        uint id = get_block_id(vec3(block_pos.x, block_pos.y - i, block_pos.z));
+        above_ids[i] = id;
+    }
+    for (uint i = 1; i < 16; ++i) {
+        uint id = get_block_id(vec3(block_pos.x, block_pos.y + i, block_pos.z));
+        below_ids[i] = id;
+    }
+
+    for (uint i = 1; i < 16; ++i) {
+        uint id = above_ids[i];
+        if (is_transparent(id)) {
+            above_depth = i;
+            break;
+        } else if (id == BlockID_Water) {
+            above_depth = i;
+            underwater = true;
+            break;
+        }
+    }
+    for (uint i = 1; i < 16; ++i) {
+        uint id = below_ids[i];
+        if (is_transparent(id)) {
+            below_depth = i;
+            break;
+        }
+    }
+    for (uint i = 1; i < 16; ++i) {
+        uint id = below_ids[i];
+        if (id == BlockID_Stone) {
+            below_inv_depth = i;
+            break;
+        }
+    }
+
+    float r = rand(block_pos);
+    float height_independent_r = rand(vec3(block_pos.x, 0, block_pos.z));
+
+    uint new_id = block_id;
+
+    if (block_id == BlockID_Stone) {
+        switch (biome_id) {
+        case BiomeID_Plains:
+        case BiomeID_Forest: {
+            if (above_depth == 1 && !underwater) {
+                new_id = BlockID_Grass;
+            } else if (above_depth < 3 + r * 3) {
+                if (underwater) {
+                    new_id = BlockID_Gravel;
+                } else {
+                    new_id = BlockID_Dirt;
+                }
+            }
+        } break;
+        case BiomeID_Desert: {
+            if (above_depth < 3 + r * 3) {
+                if (underwater) {
+                    new_id = BlockID_Gravel;
+                } else {
+                    new_id = BlockID_Sand;
+                }
+            } else if (above_depth < 6 + r * 2 && !underwater) {
+                new_id = BlockID_Sandstone;
+            }
+        } break;
+        case BiomeID_Beach: {
+            new_id = BlockID_Sand;
+        } break;
+        }
+    } else if (block_id == BlockID_Air) {
+        switch (biome_id) {
+        case BiomeID_Plains: {
+            if (below_inv_depth == 1) {
+                if (r < 0.4) {
+                    // new_id = BlockID_TallGrass;
+                } else if (r < 0.43) {
+                    // new_id = BlockID_Rose;
+                } else if (r < 0.45) {
+                    // new_id = BlockID_Leaves;
+                }
+            }
+        } break;
+        case BiomeID_Forest: {
+            if (below_inv_depth == 1) {
+                if (r < 0.2) {
+                    // new_id = BlockID_TallGrass;
+                } else if (r < 0.65) {
+                    // new_id = BlockID_Leaves;
+                }
+            }
+        } break;
+        case BiomeID_Desert: {
+            if (below_inv_depth == 1) {
+                if (height_independent_r < 0.1) {
+                    // new_id = BlockID_DriedShrub;
+                } else if (height_independent_r < 0.11) {
+                    new_id = BlockID_Cactus;
+                }
+            }
+        } break;
+        case BiomeID_Beach: {
+        } break;
+        }
+    }
+
+    imageStore(output_image, ivec3(global_i), uvec4(new_id));
+}
