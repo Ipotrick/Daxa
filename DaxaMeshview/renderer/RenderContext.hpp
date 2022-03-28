@@ -14,7 +14,7 @@ public:
 			.additionalUses = VK_IMAGE_USAGE_SAMPLED_BIT,
 			.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR,
 		})}
-		, swapchainImage{ this->swapchain->aquireNextImage() }
+		, swapchainImage{ this->swapchain->aquireNextImage(), }
 		, presentSignal{ this->device->createSignal({.debugName = "present signal"}) }
 		, pipelineCompiler{ this->device->createPipelineCompiler() }
     {
@@ -74,6 +74,7 @@ public:
 				.extent = { width, height, 1 },
 				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 			}),
+			.defaultSampler = defaultSampler,
 			.format = VK_FORMAT_R16G16B16A16_SFLOAT,
 			.debugName = "main hdr color image",
 		});

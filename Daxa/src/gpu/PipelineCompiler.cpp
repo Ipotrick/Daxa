@@ -612,6 +612,8 @@ namespace daxa {
 
 		reflectShader(shader, pushConstants, bindingSetDescriptions);
 
+		bindingSetDescriptions.resize(ci.overwriteSets.size(), {});
+
 		for (size_t i = 0; i < MAX_SETS_PER_PIPELINE; i++) {
 			if (ci.overwriteSets[i].has_value()) {
 				bindingSetDescriptions[i] = ci.overwriteSets[i].value();
