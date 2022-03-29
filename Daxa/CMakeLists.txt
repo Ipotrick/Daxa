@@ -11,9 +11,6 @@ find_library(SHADERC_SPIRV_TOOLS_REDUCE_LIB "SPIRV-Tools-reduce.lib")
 find_library(SHADERC_SPIRV_TOOLS_SHARED_LIB "SPIRV-Tools-shared.lib")
 find_path(SHADERC_INCLUDE_DIRS "shaderc/shaderc.h")
 
-message("shaderc: " ${SHADERC_LIBRARY_DIRS})
-message("shaderc_util: " ${SHADERC_UTIL_LIBRARY_DIRS})
-
 find_package(glslang CONFIG REQUIRED)
 find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)

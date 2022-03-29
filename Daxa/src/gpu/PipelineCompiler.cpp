@@ -327,7 +327,7 @@ namespace daxa {
 		}
 
     	virtual void ReleaseInclude(shaderc_include_result* data) override {
-			if (data->source_name_length > 0 && data->content != "") {
+			if (data->source_name_length > 0 && !std::string(data->content).empty()) {
 				delete data->content;
 			}
 
@@ -389,6 +389,7 @@ namespace daxa {
 		}
 		else {
 			DAXA_ASSERT_M(false, "unreachable. missing arm for potential new variant type");
+            return Result<PipelineHandle>{nullptr};
 		}
 	}
 
