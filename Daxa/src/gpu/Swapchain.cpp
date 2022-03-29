@@ -53,8 +53,8 @@ namespace daxa {
 			ImageViewCreateInfo ci{
 				.image = std::move(image),
 				.format = vkbSwapchain.image_format,
-				.debugName = "swapchain image view",
 				.defaultSampler = sampler,
+				.debugName = "swapchain image view",
 			};
 			auto view = ImageViewHandle{ std::make_shared<ImageView>(deviceBackend, ci, vkImageViews[i]) };
 			this->swapchainImageViews.push_back(std::move(view));

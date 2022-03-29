@@ -236,9 +236,10 @@ public:
                             meshPrim.vertexNormals = buffers[bufferIndexOfAttrib];
                             break;
                         case cgltf_attribute_type_tangent:
-                            printf("use buffer with index: %i as tantents vertex buffer\n", bufferIndexOfAttrib);
+                            printf("use buffer with index: %llu as tantents vertex buffer\n", bufferIndexOfAttrib);
                             meshPrim.vertexTangents = buffers[bufferIndexOfAttrib];
                             break;
+                        default: break;
                     }
                 }
 
