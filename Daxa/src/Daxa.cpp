@@ -13,12 +13,12 @@ namespace daxa {
 			printf("error: could not initialize GLFW3!\n");
 			exit(-1);
 		}
-		gpu::instance = std::make_unique<gpu::Instance>();
+		instance = std::make_unique<Instance>();
 		glslang::InitializeProcess();
 	}
 
 	void cleanup() {
 		glslang::FinalizeProcess();
-		gpu::instance.reset();
+		instance.reset();
 	}
 }

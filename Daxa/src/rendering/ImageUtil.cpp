@@ -2,13 +2,13 @@
 
 namespace daxa {
 
-    void generateMipLevels(gpu::CommandListHandle& cmdList, gpu::ImageViewHandle& img, VkImageSubresourceLayers layers, VkImageLayout postImageLayerLayouts) {
+    void generateMipLevels(CommandListHandle& cmdList, ImageViewHandle& img, VkImageSubresourceLayers layers, VkImageLayout postImageLayerLayouts) {
         i32 mipwidth = img->getImageHandle()->getVkExtent3D().width;
         i32 mipheight = img->getImageHandle()->getVkExtent3D().height;
         i32 mipdepth = img->getImageHandle()->getVkExtent3D().depth;
         for (u32 i = layers.mipLevel; i < img->getImageHandle()->getMipLevels() - 1; i++) {
             cmdList->insertImageBarriers(std::array{
-                gpu::ImageBarrier{
+                ImageBarrier{
                     .barrier = {
                         .srcStages = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR,
                         .srcAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR,
@@ -26,7 +26,7 @@ namespace daxa {
                         .layerCount = layers.layerCount,
                     }}
                 },
-                gpu::ImageBarrier{
+                ImageBarrier{
                     .barrier = {
                         .dstStages = VK_PIPELINE_STAGE_2_BLIT_BIT_KHR,
                         .dstAccess = VK_ACCESS_2_TRANSFER_READ_BIT_KHR,
@@ -82,12 +82,12 @@ namespace daxa {
             mipdepth = std::max(1, mipdepth / 2);
         }
 
-        std::array<gpu::ImageBarrier, 32> buff;
+        std::array<ImageBarrier, 32> buff;
         size_t buffSize = 0;
 
         for (u32 i = 0; i < img->getImageHandle()->getMipLevels() - 1; i++) {
-            buff[buffSize++] = gpu::ImageBarrier{
-                .barrier = gpu::MemoryBarrier{
+            buff[buffSize++] = ImageBarrier{
+                .barrier = MemoryBarrier{
                     .srcStages = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR,
                     .srcAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR | VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
                     .dstStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
@@ -106,7 +106,7 @@ namespace daxa {
             };
         }
 
-        buff[buffSize++] = gpu::ImageBarrier{
+        buff[buffSize++] = ImageBarrier{
             .barrier = {
                 .srcStages = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR,
                 .srcAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR | VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,

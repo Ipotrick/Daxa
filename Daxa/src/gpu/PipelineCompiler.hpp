@@ -16,24 +16,24 @@ namespace daxa {
 
     class PipelineCompiler {
     public:
-        PipelineCompiler(std::shared_ptr<gpu::DeviceBackend> deviceBackend, std::shared_ptr<gpu::BindingSetLayoutCache> bindSetLayoutCache);
+        PipelineCompiler(std::shared_ptr<DeviceBackend> deviceBackend, std::shared_ptr<BindingSetLayoutCache> bindSetLayoutCache);
         void addShaderSourceRootPath(std::filesystem::path const& path);
-        bool checkIfSourcesChanged(gpu::PipelineHandle& pipeline);
-        Result<gpu::PipelineHandle> createGraphicsPipeline(gpu::GraphicsPipelineBuilder const& builder);
-        Result<gpu::PipelineHandle> createComputePipeline(gpu::ComputePipelineCreateInfo const& ci);
-        Result<gpu::PipelineHandle> recreatePipeline(gpu::PipelineHandle const& pipeline);
+        bool checkIfSourcesChanged(PipelineHandle& pipeline);
+        Result<PipelineHandle> createGraphicsPipeline(GraphicsPipelineBuilder const& builder);
+        Result<PipelineHandle> createComputePipeline(ComputePipelineCreateInfo const& ci);
+        Result<PipelineHandle> recreatePipeline(PipelineHandle const& pipeline);
     private:
-        Result<gpu::ShaderModuleHandle> tryCreateShaderModule(gpu::ShaderModuleCreateInfo const& ci);
-		Result<std::vector<u32>> tryGenSPIRVFromShaderc(std::string const& src, VkShaderStageFlagBits shaderStage, gpu::ShaderLang lang, char const* sourceFileName = "inline source");
+        Result<ShaderModuleHandle> tryCreateShaderModule(ShaderModuleCreateInfo const& ci);
+		Result<std::vector<u32>> tryGenSPIRVFromShaderc(std::string const& src, VkShaderStageFlagBits shaderStage, ShaderLang lang, char const* sourceFileName = "inline source");
         Result<std::string> tryLoadShaderSourceFromFile(std::filesystem::path const& path);
-        daxa::Result<gpu::PipelineHandle> build(gpu::GraphicsPipelineBuilder const& builder);
+        daxa::Result<PipelineHandle> build(GraphicsPipelineBuilder const& builder);
 
-        std::shared_ptr<gpu::DeviceBackend> deviceBackend = {};
-        std::shared_ptr<gpu::BindingSetLayoutCache> bindSetLayoutCache = {};
+        std::shared_ptr<DeviceBackend> deviceBackend = {};
+        std::shared_ptr<BindingSetLayoutCache> bindSetLayoutCache = {};
         std::shared_ptr<PipelineCompilerShadedData> sharedData = {};
         shaderc::Compiler compiler = {};
         shaderc::CompileOptions options = {};
     };
 
-	class PipelineCompilerHandle : public daxa::gpu::SharedHandle<PipelineCompiler>{};
+	class PipelineCompilerHandle : public daxa::SharedHandle<PipelineCompiler>{};
 }

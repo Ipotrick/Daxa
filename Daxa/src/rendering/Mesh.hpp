@@ -19,9 +19,9 @@ namespace daxa {
         static std::optional<Mesh> tryLoadFromGLTF2(std::filesystem::path path);
     private:
         glm::mat4 transform = {};
-        gpu::BufferHandle indices = {};
-        gpu::BufferHandle vertecies = {};
-        std::vector<gpu::ImageHandle> textures = {};
+        BufferHandle indices = {};
+        BufferHandle vertecies = {};
+        std::vector<ImageHandle> textures = {};
     };
 
 }

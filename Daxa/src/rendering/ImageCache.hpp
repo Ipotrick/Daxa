@@ -18,7 +18,7 @@ namespace daxa {
         u8* preload = nullptr;
         size_t preloadSize = 0;
 
-        std::optional<gpu::SamplerCreateInfo> samplerInfo = std::nullopt;
+        std::optional<SamplerCreateInfo> samplerInfo = std::nullopt;
         
         bool operator == (ImageCacheFetchInfo const& other) const {
             return 
@@ -31,10 +31,10 @@ namespace daxa {
     };
 
     struct GPUSamplerCreateInfoHasher {
-        std::size_t operator()(gpu::SamplerCreateInfo const& info) const {
+        std::size_t operator()(SamplerCreateInfo const& info) const {
             size_t hash = 0x43fb87da;
             u32 const* data = (u32 const*)(&info);
-            for (int i = 0; i < sizeof(gpu::SamplerCreateInfo) / 4; i++) {
+            for (int i = 0; i < sizeof(SamplerCreateInfo) / 4; i++) {
                 hash ^= data[i];
                 hash <<= 1;
             }
@@ -61,11 +61,11 @@ namespace daxa {
 
     class ImageCache {
     public:
-        ImageCache(gpu::DeviceHandle device) 
+        ImageCache(DeviceHandle device) 
             : device{ std::move(device) }
         { }
 
-        gpu::ImageViewHandle get(ImageCacheFetchInfo const& info, gpu::CommandListHandle& cmdList) {
+        ImageViewHandle get(ImageCacheFetchInfo const& info, CommandListHandle& cmdList) {
             if (!cache.contains(info)) {
                 printf("image cache miss\n");
                 cache[info] = loadImage(info, cmdList);
@@ -75,9 +75,9 @@ namespace daxa {
             return cache[info];
         }
 
-        std::unordered_map<ImageCacheFetchInfo, gpu::ImageViewHandle, ImageCacheFetchInfoHasher> cache = {};
+        std::unordered_map<ImageCacheFetchInfo, ImageViewHandle, ImageCacheFetchInfoHasher> cache = {};
     private:
-        gpu::ImageViewHandle loadImage(ImageCacheFetchInfo const& info, gpu::CommandListHandle& cmdList) {
+        ImageViewHandle loadImage(ImageCacheFetchInfo const& info, CommandListHandle& cmdList) {
             //stbi_set_flip_vertically_on_load(1);
             int width, height, channels;
             u8* data;
@@ -94,7 +94,7 @@ namespace daxa {
             if (!data) {
                 return {};
             } else {
-                auto ci = gpu::ImageViewCreateInfo{
+                auto ci = ImageViewCreateInfo{
                     .image = device->createImage({
                         .format = info.viewFormat,
                         .extent = { (u32)width, (u32)height, 1 },
@@ -134,10 +134,10 @@ namespace daxa {
                 if (false) {
                     cmdList->insertImageBarrier({
                         .barrier = {
-                            .srcStages = gpu::STAGE_TRANSFER,
-                            .srcAccess = gpu::ACCESS_MEMORY_READ,
-                            .dstStages = gpu::STAGE_ALL_COMMANDS,
-                            .dstAccess = gpu::ACCESS_MEMORY_WRITE,
+                            .srcStages = STAGE_TRANSFER,
+                            .srcAccess = ACCESS_MEMORY_READ,
+                            .dstStages = STAGE_ALL_COMMANDS,
+                            .dstAccess = ACCESS_MEMORY_WRITE,
                         },
                         .image = image,
                         .layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -163,8 +163,8 @@ namespace daxa {
             }
         }
 
-        gpu::DeviceHandle device = {};
+        DeviceHandle device = {};
 
-        std::unordered_map<gpu::SamplerCreateInfo, gpu::SamplerHandle, GPUSamplerCreateInfoHasher> samplers = {};
+        std::unordered_map<SamplerCreateInfo, SamplerHandle, GPUSamplerCreateInfoHasher> samplers = {};
     };
 }
