@@ -86,7 +86,7 @@ public:
 		ImGui::Begin("texture view");
 		for (auto [key, tex] : imageCache->cache) {
 			auto id = imguiRenderer->getImGuiTextureId(tex);
-			ImGui::Text("pointer = %i", id);
+			ImGui::Text("pointer = %llu", id);
 			ImGui::Text("size = %d x %d", tex->getImageHandle()->getVkExtent3D().width, tex->getImageHandle()->getVkExtent3D().height);
 			ImGui::Image((void*)id, ImVec2(400,400));
 		}

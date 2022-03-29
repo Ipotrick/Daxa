@@ -111,8 +111,8 @@ namespace daxa {
                 return *this;
             }
 
-            bool operator == (const EntityComponentIterator& b) { return denseIndex == b.denseIndex; };
-            bool operator != (const EntityComponentIterator& b) { return denseIndex != b.denseIndex; };  
+            bool operator == (const EntityComponentIterator& b) const { return denseIndex == b.denseIndex; };
+            bool operator != (const EntityComponentIterator& b) const { return denseIndex != b.denseIndex; };  
 
         private:
             EntityIndex denseIndex = {};

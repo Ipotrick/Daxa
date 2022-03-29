@@ -120,6 +120,6 @@ namespace daxa {
 		}                                                           								\
 	} while (0)
 #else
-#define DAXA_CHECK_VK_RESULT_M(x, m) x
-#define DAXA_CHECK_VK_RESULT(x) x
+#define DAXA_CHECK_VK_RESULT_M(x, m) (void)x
+#define DAXA_CHECK_VK_RESULT(x) (void)x
 #endif
