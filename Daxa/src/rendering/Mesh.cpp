@@ -22,11 +22,11 @@ namespace daxa {
         cgltf_result result = cgltf_parse(&options, buffer.data(), buffer.size(), &data);
         if (result == cgltf_result_success)
         {
-            printf("buffer_count: %i\n",data->buffers_count);
+            printf("buffer_count: %llu\n",data->buffers_count);
             for (int i = 0; i < data->buffers_count; i++) {
-                printf("buffer %i has a size of %i bytes: \n", i, data->buffers[i].size);
+                printf("buffer %i has a size of %llu bytes: \n", i, data->buffers[i].size);
             }
-            printf("scenes_count: %i\n", data->scenes_count); 
+            printf("scenes_count: %llu\n", data->scenes_count); 
             for (int i = 0; i < data->scenes_count; i++) {
                 printf("scene %i has the name: %s\n",i,data->scenes[i].name);
                 
