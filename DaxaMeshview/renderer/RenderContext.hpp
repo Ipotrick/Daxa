@@ -11,8 +11,8 @@ public:
 			.surface = window.getSurface(),
 			.width = window.getWidth(),
 			.height = window.getHeight(),
-			.additionalUses = VK_IMAGE_USAGE_SAMPLED_BIT,
 			.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR,
+			.additionalUses = VK_IMAGE_USAGE_SAMPLED_BIT,
 		})}
 		, swapchainImage{ this->swapchain->aquireNextImage(), }
 		, presentSignal{ this->device->createSignal({.debugName = "present signal"}) }
@@ -74,8 +74,8 @@ public:
 				.extent = { width, height, 1 },
 				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 			}),
-			.defaultSampler = defaultSampler,
 			.format = VK_FORMAT_R16G16B16A16_SFLOAT,
+			.defaultSampler = defaultSampler,
 			.debugName = "main hdr color image",
 		});
 
