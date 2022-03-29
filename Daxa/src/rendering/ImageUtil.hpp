@@ -20,5 +20,5 @@ namespace daxa {
      * @param img to generate mipmaps  for. The layout of level 0 must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL.
      * @param dstImageLayoutsAllLevels the layout of all image levels after the mip generation.
      */
-    void generateMipLevels(gpu::CommandListHandle& cmdList, gpu::ImageViewHandle& img, VkImageSubresourceLayers layers, VkImageLayout postImageLayerLayouts);
+    void generateMipLevels(CommandListHandle& cmdList, ImageViewHandle& img, VkImageSubresourceLayers layers, VkImageLayout postImageLayerLayouts);
 }

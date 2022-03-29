@@ -13,22 +13,18 @@
 #include "Image.hpp"
 
 namespace daxa {
-	namespace gpu {
+	class SwapchainImage {
+	public:
+		u32 getImageIndex() const { return imageIndex; }
+		VkSwapchainKHR getVkSwapchain() const { return swapchain; }
+		ImageViewHandle& getImageViewHandle() { return image; }
+		ImageViewHandle const& getImageViewHandle() const { return image; }
+	private:
+		friend class Swapchain;
+		friend class CommandQueue;
 
-		class SwapchainImage {
-		public:
-			u32 getImageIndex() const { return imageIndex; }
-			VkSwapchainKHR getVkSwapchain() const { return swapchain; }
-			ImageViewHandle& getImageViewHandle() { return image; }
-			ImageViewHandle const& getImageViewHandle() const { return image; }
-		private:
-			friend class Swapchain;
-			friend class CommandQueue;
-
-			ImageViewHandle image 		= {};
-			u32 			imageIndex 	= {};
-			VkSwapchainKHR 	swapchain 	= {};
-		};
-
-	}
+		ImageViewHandle image 		= {};
+		u32 			imageIndex 	= {};
+		VkSwapchainKHR 	swapchain 	= {};
+	};
 }

@@ -84,7 +84,7 @@ void embraceTheDarkness() {
 }
 
 namespace daxa {
-    ImGuiRenderer::ImGuiRenderer(gpu::DeviceHandle device, gpu::CommandQueueHandle queue, PipelineCompilerHandle& compiler) 
+    ImGuiRenderer::ImGuiRenderer(DeviceHandle device, CommandQueueHandle queue, PipelineCompilerHandle& compiler) 
         : device{ device }
     {
         embraceTheDarkness();
@@ -125,7 +125,7 @@ namespace daxa {
             }
         )--";
 
-        daxa::gpu::GraphicsPipelineBuilder pipelineBuilder;
+        daxa::GraphicsPipelineBuilder pipelineBuilder;
         auto pipelineDescription = pipelineBuilder
             .addShaderStage({.source = vertexGLSL, .stage = VK_SHADER_STAGE_VERTEX_BIT})
             .addShaderStage({.source = fragmentGLSL, .stage = VK_SHADER_STAGE_FRAGMENT_BIT})
@@ -175,7 +175,7 @@ namespace daxa {
 
         auto cmdList = queue->getCommandList({});
         cmdList->insertImageBarrier({
-            .barrier = gpu::FULL_MEMORY_BARRIER,
+            .barrier = FULL_MEMORY_BARRIER,
             .image = fontSheet,
             .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         });
@@ -185,7 +185,7 @@ namespace daxa {
             .size = width * height * sizeof(u8) * 4,
         });
         cmdList->insertImageBarrier({
-            .barrier = gpu::FULL_MEMORY_BARRIER,
+            .barrier = FULL_MEMORY_BARRIER,
             .image = fontSheet,
             .layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -220,7 +220,7 @@ namespace daxa {
         }
     }
     
-    u64 ImGuiRenderer::getImGuiTextureId(gpu::ImageViewHandle img) {
+    u64 ImGuiRenderer::getImGuiTextureId(ImageViewHandle img) {
         if (!texHandlePtrToReferencedImageIndex.contains(img.get())) {
             referencedImages.push_back(img);
             texHandlePtrToReferencedImageIndex[img.get()] = referencedImages.size() - 1;
@@ -228,7 +228,7 @@ namespace daxa {
         return texHandlePtrToReferencedImageIndex[img.get()];
     }
 
-    void ImGuiRenderer::recordCommands(ImDrawData* draw_data, daxa::gpu::CommandListHandle& cmdList, gpu::ImageViewHandle& target) {
+    void ImGuiRenderer::recordCommands(ImDrawData* draw_data, daxa::CommandListHandle& cmdList, ImageViewHandle& target) {
 
         if (draw_data && draw_data->TotalIdxCount > 0) {
             //--        data upload        --//
@@ -277,7 +277,7 @@ namespace daxa {
             //--  render command recording --//
 
             auto colorAttachments = std::array{
-                gpu::RenderAttachmentInfo{
+                RenderAttachmentInfo{
                     .image = target,
                     .layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR,
                     .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,

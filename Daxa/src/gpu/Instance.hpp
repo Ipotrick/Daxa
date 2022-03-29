@@ -10,22 +10,18 @@
 
 
 namespace daxa {
-	namespace gpu {
+	class Instance {
+	public:
+		Instance(char const* AppName = "Daxa Application", char const* EngineName = "Daxa");
+		~Instance();
 
-		class Instance {
-		public:
-			Instance(char const* AppName = "Daxa Application", char const* EngineName = "Daxa");
-			~Instance();
+		VkInstance getVkInstance() const { return instance.instance; }
+		vkb::Instance& getVKBInstance() { return instance; }
 
-			VkInstance getVkInstance() const { return instance.instance; }
-			vkb::Instance& getVKBInstance() { return instance; }
+		PFN_vkSetDebugUtilsObjectNameEXT pfnSetDebugUtilsObjectNameEXT;
+	private:
+		vkb::Instance instance;
+	};
 
-			PFN_vkSetDebugUtilsObjectNameEXT pfnSetDebugUtilsObjectNameEXT;
-		private:
-			vkb::Instance instance;
-		};
-
-		extern std::unique_ptr<Instance> instance;
-
-	}
+	extern std::unique_ptr<Instance> instance;
 }
