@@ -5,6 +5,8 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
+#include <numbers>
+
 struct Camera3D {
     float fov = 70.0f, aspect = 1.0f;
     float near = 0.01f, far = 1000.0f;
@@ -35,7 +37,7 @@ namespace input::keybinds {
 
 struct Player3D {
     glm::vec3 pos{}, vel{}, rot{};
-    float speed = 25.0f, mouse_sens = 0.005f;
+    float speed = 128.0f, mouse_sens = 0.005f;
     float sin_rot_x = 0, cos_rot_x = 1;
 
     union MoveFlags {
@@ -60,7 +62,7 @@ struct Player3D {
         if (move.ny)
             pos.y += delta_pos;
 
-        constexpr auto MAX_ROT = 1.54f;
+        constexpr auto MAX_ROT = std::numbers::pi_v<float> / 2;
         if (rot.y > MAX_ROT)
             rot.y = MAX_ROT;
         if (rot.y < -MAX_ROT)

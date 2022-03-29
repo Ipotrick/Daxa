@@ -20,12 +20,6 @@ bool point_box_contains(vec3 p, vec3 b_min, vec3 b_max) {
 
 RayIntersection ray_box_intersect(in Ray ray, vec3 b_min, vec3 b_max) {
     RayIntersection result;
-    // if (point_box_contains(ray.o, b_min, b_max)) {
-    //     result.hit = true;
-    //     result.dist = 0;
-    //     result.steps = 0;
-    //     return result;
-    // }
     float tx1 = (b_min.x - ray.o.x) * ray.inv_nrm.x;
     float tx2 = (b_max.x - ray.o.x) * ray.inv_nrm.x;
     float tmin = min(tx1, tx2);
@@ -82,6 +76,10 @@ RayIntersection ray_step_voxels(in Ray ray, in vec3 b_min, in vec3 b_max) {
     result.steps = 0;
 
     if (point_box_contains(ray.o, b_min, b_max)) {
+        if (is_voxel_occluding(ray.o)) {
+            result.hit = true;
+            return result;
+        }
         result.dist = 0;
     } else {
         RayIntersection bounds_intersection = ray_box_intersect(ray, b_min, b_max);

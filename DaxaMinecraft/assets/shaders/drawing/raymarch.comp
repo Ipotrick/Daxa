@@ -26,23 +26,24 @@ void main() {
     ivec2 i_uv = ivec2(gl_GlobalInvocationID.xy);
     vec2 uv = vec2(i_uv) * inv_frame_dim * 2 - 1;
     vec3 color = vec3(0);
-    const vec2 subsamples = vec2(1);
+    const vec2 subsamples = vec2(2);
     const vec2 inv_subsamples = 1 / subsamples;
 
     vec3 front = (globals.viewproj_mat * vec4(0, 0, 1, 0)).xyz;
     vec3 right = (globals.viewproj_mat * vec4(1, 0, 0, 0)).xyz;
     vec3 up = (globals.viewproj_mat * vec4(0, 1, 0, 0)).xyz;
+    
+    Ray cam_ray;
+    cam_ray.o = globals.pos.xyz;
 
-    float sun_angle = 0.5;
-    sun_ray.nrm = normalize(vec3(sin(sun_angle) * 3, -cos(sun_angle) * 3, 1));
+    float sun_angle = 0.1;
+    sun_ray.nrm = normalize(vec3(sin(sun_angle) * 3, -cos(sun_angle) * 2, 0));
     sun_ray.inv_nrm = 1 / sun_ray.nrm;
 
     for (uint yi = 0; yi < subsamples.y; ++yi) {
         for (uint xi = 0; xi < subsamples.x; ++xi) {
-            vec2 view_uv = uv * 1 * vec2(aspect, 1) + inv_frame_dim * vec2(xi, yi) * inv_subsamples;
+            vec2 view_uv = (uv + inv_frame_dim * vec2(xi, yi) * inv_subsamples) * 1 * vec2(aspect, 1);
 
-            Ray cam_ray;
-            cam_ray.o = globals.pos.xyz;
             cam_ray.nrm = normalize(front + view_uv.x * right + view_uv.y * up);
             cam_ray.inv_nrm = 1 / cam_ray.nrm;
 
@@ -53,12 +54,14 @@ void main() {
                 vec3 intersection_pos = get_intersection_pos(cam_ray, ray_chunk_intersection);
                 sun_ray.o = intersection_pos + ray_chunk_intersection.nrm * 0.01;
                 RayIntersection sun_ray_chunk_intersection = trace_chunks(sun_ray);
-                // color.g += float(ray_chunk_intersection.steps) * 1.0 / MAX_STEPS;
                 float val = float(!sun_ray_chunk_intersection.hit);
                 val = max(val * dot(ray_chunk_intersection.nrm, sun_ray.nrm), 0.01);
                 vec3 light = val * sun_col + sample_sky(ray_chunk_intersection.nrm) * 0.2;
                 // vec3 light = sun_col + sample_sky(ray_chunk_intersection.nrm) * 0.2;
                 vec3 b_uv = vec3(ivec3(intersection_pos) % 16) / 16;
+
+                // color.g += float(ray_chunk_intersection.steps) * 1.0 / MAX_STEPS;
+                // color.r += float(ray_chunk_intersection.dist) / (4 * 64);
 
                 uint face_id = 0;
                 vec2 tex_uv = vec2(0);
@@ -91,7 +94,6 @@ void main() {
 
                 uint block_id = get_block_id(intersection_pos);
                 uint tex_id = tile_texture_index(block_id, face_id);
-                // vec2 tex_uv = b_uv.xz;
                 vec3 albedo = texture(get_texture[globals.texture_index], vec3(tex_uv, tex_id)).rgb;
                 // vec3 albedo = vec3(0);
                 color += albedo * light;
