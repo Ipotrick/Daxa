@@ -5,17 +5,17 @@
 #include <deque>
 
 struct RenderContext {
-    daxa::gpu::DeviceHandle device;
+    daxa::DeviceHandle device;
     daxa::PipelineCompilerHandle pipeline_compiler;
-    daxa::gpu::CommandQueueHandle queue;
+    daxa::CommandQueueHandle queue;
 
-    daxa::gpu::SwapchainHandle swapchain;
-    daxa::gpu::SwapchainImage swapchain_image;
-    daxa::gpu::ImageViewHandle render_color_image, render_depth_image;
+    daxa::SwapchainHandle swapchain;
+    daxa::SwapchainImage swapchain_image;
+    daxa::ImageViewHandle render_color_image, render_depth_image;
 
     struct PerFrameData {
-        daxa::gpu::SignalHandle present_signal;
-        daxa::gpu::TimelineSemaphoreHandle timeline;
+        daxa::SignalHandle present_signal;
+        daxa::TimelineSemaphoreHandle timeline;
         u64 timeline_counter = 0;
     };
     std::deque<PerFrameData> frames;
@@ -65,7 +65,7 @@ struct RenderContext {
     }
 
     RenderContext(VkSurfaceKHR surface, glm::ivec2 dim)
-        : device(daxa::gpu::Device::create()), queue(device->createCommandQueue({.batchCount = 2})),
+        : device(daxa::Device::create()), queue(device->createCommandQueue({.batchCount = 2})),
           swapchain(device->createSwapchain({
               .surface = surface,
               .width = (uint32_t)dim.x,
@@ -99,14 +99,14 @@ struct RenderContext {
         resize(dim);
         auto *currentFrame = &frames.front();
         auto cmd_list = queue->getCommandList({});
-        cmd_list->queueImageBarrier(daxa::gpu::ImageBarrier{
-            .barrier = daxa::gpu::FULL_MEMORY_BARRIER,
+        cmd_list->queueImageBarrier(daxa::ImageBarrier{
+            .barrier = daxa::FULL_MEMORY_BARRIER,
             .image = render_color_image,
             .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
             .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
         });
-        cmd_list->queueImageBarrier(daxa::gpu::ImageBarrier{
-            .barrier = daxa::gpu::FULL_MEMORY_BARRIER,
+        cmd_list->queueImageBarrier(daxa::ImageBarrier{
+            .barrier = daxa::FULL_MEMORY_BARRIER,
             .image = render_depth_image,
             .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
             .layoutAfter = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
@@ -114,33 +114,33 @@ struct RenderContext {
         return cmd_list;
     }
 
-    void begin_rendering(daxa::gpu::CommandListHandle cmd_list) {
-        std::array framebuffer{daxa::gpu::RenderAttachmentInfo{
+    void begin_rendering(daxa::CommandListHandle cmd_list) {
+        std::array framebuffer{daxa::RenderAttachmentInfo{
             .image = swapchain_image.getImageViewHandle(),
             .clearValue = {.color = {.float32 = {1.0f, 0.0f, 1.0f, 1.0f}}},
         }};
-        daxa::gpu::RenderAttachmentInfo depth_attachment{
+        daxa::RenderAttachmentInfo depth_attachment{
             .image = render_depth_image,
             .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
             .clearValue = {.depthStencil = {.depth = 1.0f}},
         };
-        cmd_list->beginRendering(daxa::gpu::BeginRenderingInfo{
+        cmd_list->beginRendering(daxa::BeginRenderingInfo{
             .colorAttachments = framebuffer,
             .depthAttachment = &depth_attachment,
         });
     }
 
-    void end_rendering(daxa::gpu::CommandListHandle cmd_list) {
+    void end_rendering(daxa::CommandListHandle cmd_list) {
         cmd_list->endRendering();
     }
 
-    void end_frame(daxa::gpu::CommandListHandle cmd_list) {
+    void end_frame(daxa::CommandListHandle cmd_list) {
         auto *current_frame = &frames.front();
         cmd_list->finalize();
         // std::array signalTimelines = {
         //     std::tuple{current_frame->timeline, ++current_frame->timeline_counter},
         // };
-        daxa::gpu::SubmitInfo submitInfo;
+        daxa::SubmitInfo submitInfo;
         submitInfo.commandLists.push_back(std::move(cmd_list));
         submitInfo.signalOnCompletion = {&current_frame->present_signal, 1};
         // submitInfo.signalTimelines = signalTimelines;
@@ -166,7 +166,7 @@ struct RenderContext {
         }
     }
 
-    void blit_to_swapchain(daxa::gpu::CommandListHandle cmd_list) {
+    void blit_to_swapchain(daxa::CommandListHandle cmd_list) {
 
         cmd_list->queueImageBarrier({
             .image = swapchain_image.getImageViewHandle(),
@@ -238,8 +238,8 @@ struct RenderContext {
 };
 
 struct RenderableChunk {
-    daxa::gpu::ImageViewHandle chunkgen_image_a;
-    daxa::gpu::ImageViewHandle chunkgen_image_b;
+    daxa::ImageViewHandle chunkgen_image_a;
+    daxa::ImageViewHandle chunkgen_image_b;
 };
 
 struct World {
@@ -249,14 +249,14 @@ struct World {
     using ChunkArray = std::array<std::array<std::array<T, DIM.x>, DIM.y>, DIM.z>;
     ChunkArray<std::unique_ptr<RenderableChunk>> chunks{};
 
-    daxa::gpu::ImageViewHandle atlas_texture_array;
+    daxa::ImageViewHandle atlas_texture_array;
 
-    daxa::gpu::BufferHandle compute_pipeline_globals;
+    daxa::BufferHandle compute_pipeline_globals;
 
-    daxa::gpu::PipelineHandle raymarch_compute_pipeline;
+    daxa::PipelineHandle raymarch_compute_pipeline;
 
-    daxa::gpu::PipelineHandle chunkgen_compute_pipeline_pass0;
-    daxa::gpu::PipelineHandle chunkgen_compute_pipeline_pass1;
+    daxa::PipelineHandle chunkgen_compute_pipeline_pass0;
+    daxa::PipelineHandle chunkgen_compute_pipeline_pass1;
 
     struct ComputeGlobals {
         glm::mat4 viewproj_mat;
@@ -345,14 +345,14 @@ struct World {
         for (auto &chunk_layer : chunks) {
             for (auto &chunk_strip : chunk_layer) {
                 for (auto &chunk : chunk_strip) {
-                    cmd_list->queueImageBarrier(daxa::gpu::ImageBarrier{
-                        .barrier = daxa::gpu::FULL_MEMORY_BARRIER,
+                    cmd_list->queueImageBarrier(daxa::ImageBarrier{
+                        .barrier = daxa::FULL_MEMORY_BARRIER,
                         .image = chunk->chunkgen_image_a,
                         .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
                         .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
                     });
-                    cmd_list->queueImageBarrier(daxa::gpu::ImageBarrier{
-                        .barrier = daxa::gpu::FULL_MEMORY_BARRIER,
+                    cmd_list->queueImageBarrier(daxa::ImageBarrier{
+                        .barrier = daxa::FULL_MEMORY_BARRIER,
                         .image = chunk->chunkgen_image_b,
                         .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
                         .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
@@ -362,7 +362,7 @@ struct World {
         }
 
         cmd_list->finalize();
-        daxa::gpu::SubmitInfo submitInfo;
+        daxa::SubmitInfo submitInfo;
         submitInfo.commandLists.push_back(std::move(cmd_list));
         render_ctx.queue->submit(submitInfo);
 
@@ -403,7 +403,7 @@ struct World {
         reload_shaders();
     }
 
-    void draw(const glm::mat4 &vp_mat, const Player3D &player, daxa::gpu::CommandListHandle cmd_list, daxa::gpu::ImageViewHandle &render_image) {
+    void draw(const glm::mat4 &vp_mat, const Player3D &player, daxa::CommandListHandle cmd_list, daxa::ImageViewHandle &render_image) {
         auto extent = render_image->getImageHandle()->getVkExtent3D();
 
         auto elapsed = std::chrono::duration<float>(Clock::now() - start).count();
@@ -425,14 +425,14 @@ struct World {
             }
         }
 
-        auto compute_globals_i = compute_pipeline_globals->getStorageBufferDescriptorIndex().value();
+        auto compute_globals_i = compute_pipeline_globals->getDescriptorIndex();
 
         cmd_list->singleCopyHostToBuffer({
             .src = reinterpret_cast<u8 *>(&compute_globals),
             .dst = compute_pipeline_globals,
             .region = {.size = sizeof(decltype(compute_globals))},
         });
-        cmd_list->queueMemoryBarrier(daxa::gpu::FULL_MEMORY_BARRIER);
+        cmd_list->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 
         cmd_list->bindPipeline(chunkgen_compute_pipeline_pass0);
         cmd_list->bindAll();
@@ -452,7 +452,7 @@ struct World {
             }
         }
 
-        cmd_list->queueMemoryBarrier(daxa::gpu::FULL_MEMORY_BARRIER);
+        cmd_list->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 
         cmd_list->bindPipeline(chunkgen_compute_pipeline_pass1);
         cmd_list->bindAll();
@@ -472,7 +472,7 @@ struct World {
             }
         }
 
-        cmd_list->queueMemoryBarrier(daxa::gpu::FULL_MEMORY_BARRIER);
+        cmd_list->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 
         cmd_list->bindPipeline(raymarch_compute_pipeline);
         cmd_list->bindAll();
@@ -493,7 +493,7 @@ struct World {
                     .pathToSource = "DaxaMinecraft/assets/shaders/drawing/raymarch.comp",
                     .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                 },
-                .overwriteSets = {daxa::gpu::BIND_ALL_SET_DESCRIPTION},
+                .overwriteSets = {daxa::BIND_ALL_SET_DESCRIPTION},
             });
             raymarch_compute_pipeline = result.value();
         }
@@ -503,7 +503,7 @@ struct World {
                     .pathToSource = "DaxaMinecraft/assets/shaders/chunkgen/blocks_pass1.comp",
                     .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                 },
-                .overwriteSets = {daxa::gpu::BIND_ALL_SET_DESCRIPTION},
+                .overwriteSets = {daxa::BIND_ALL_SET_DESCRIPTION},
             });
             chunkgen_compute_pipeline_pass0 = result.value();
         }
@@ -513,7 +513,7 @@ struct World {
                     .pathToSource = "DaxaMinecraft/assets/shaders/chunkgen/blocks_pass2.comp",
                     .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                 },
-                .overwriteSets = {daxa::gpu::BIND_ALL_SET_DESCRIPTION},
+                .overwriteSets = {daxa::BIND_ALL_SET_DESCRIPTION},
             });
             chunkgen_compute_pipeline_pass1 = result.value();
         }

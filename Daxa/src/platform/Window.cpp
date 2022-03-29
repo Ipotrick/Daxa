@@ -46,7 +46,7 @@ namespace daxa {
 		}
 		glfwSetWindowUserPointer(glfwWindow, windowState.get());
 
-		VkResult err = glfwCreateWindowSurface(gpu::instance->getVkInstance(), glfwWindow, nullptr, &surface);
+		VkResult err = glfwCreateWindowSurface(instance->getVkInstance(), glfwWindow, nullptr, &surface);
 		DAXA_ASSERT_M(err == VK_SUCCESS, "could not create surface for window");
 		glfwSetWindowCloseCallback(glfwWindow, closeCallback);
 		glfwSetKeyCallback(glfwWindow, KeyCallback);
@@ -55,7 +55,7 @@ namespace daxa {
 	}
 
 	Window::~Window() 	{
-		vkDestroySurfaceKHR(gpu::instance->getVkInstance(), surface, nullptr);
+		vkDestroySurfaceKHR(instance->getVkInstance(), surface, nullptr);
 		glfwDestroyWindow(glfwWindow);
 		glfwWindow = nullptr;
 		surface = nullptr;

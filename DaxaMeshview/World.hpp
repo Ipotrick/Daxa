@@ -3,7 +3,7 @@
 #include "Daxa.hpp"
 
 struct World {
-    World(daxa::gpu::DeviceHandle const& device)
+    World(daxa::DeviceHandle const& device)
         : imageCache{ device }
     {
 

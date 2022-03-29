@@ -94,7 +94,7 @@ private:
 class MyUser {
 public:
 	MyUser(daxa::AppState& app) 
-		: device{ daxa::gpu::Device::create() }
+		: device{ daxa::Device::create() }
 		, queue{ this->device->createQueue({.batchCount = 2 })}
 		, swapchain{ this->device->createSwapchain({
 			.surface = app.window->getSurface(),
@@ -141,17 +141,17 @@ public:
 			}
 		)";
 
-		daxa::gpu::ShaderModuleHandle vertexShader = device->createShaderModule({
+		daxa::ShaderModuleHandle vertexShader = device->createShaderModule({
 			.sourceToGLSL = vertexShaderGLSL,
 			.stage = VK_SHADER_STAGE_VERTEX_BIT
 		}).value();
 
-		daxa::gpu::ShaderModuleHandle fragmenstShader = device->createShaderModule({
+		daxa::ShaderModuleHandle fragmenstShader = device->createShaderModule({
 			.sourceToGLSL = fragmentShaderGLSL,
 			.stage = VK_SHADER_STAGE_FRAGMENT_BIT
 		}).value();
 
-		daxa::gpu::GraphicsPipelineBuilder pipelineBuilder;
+		daxa::GraphicsPipelineBuilder pipelineBuilder;
 		pipelineBuilder
 			.addShaderStage(vertexShader)
 			.addShaderStage(fragmenstShader)
@@ -324,21 +324,21 @@ public:
 
 
 		auto vp = cameraController.getVP(*app.window);
-		cmdList->copyHostToBuffer(daxa::gpu::HostToBufferCopyInfo{
+		cmdList->copyHostToBuffer(daxa::HostToBufferCopyInfo{
 			.src = &vp,
 			.dst = uniformBuffer,
 			.size = sizeof(decltype(vp)),
 		});
 
 		// array because we can allways pass multiple barriers at once for driver efficiency
-		std::array imgBarrier0 = { daxa::gpu::ImageBarrier{
+		std::array imgBarrier0 = { daxa::ImageBarrier{
 			.dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,	// as we write to the image in the frag shader we need to make sure its finished transitioning the layout
 			.image = swapchainImage.getImageHandle(),
 			.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,						// dont care about previous layout
 			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,		// set new layout to color attachment optimal
 		} };
 		// array because we can allways pass multiple barriers at once for driver efficiency
-		std::array memBarrier0 = { daxa::gpu::MemoryBarrier{
+		std::array memBarrier0 = { daxa::MemoryBarrier{
 			.srcAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,				// wait for writing the uniform buffer
 			.dstStages = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT_KHR,		// the vertex shader must wait until uniform is written
 		} };
@@ -348,19 +348,19 @@ public:
 		/// ------------ End Data Uploading ---------------------
 
 		std::array framebuffer{
-			daxa::gpu::RenderAttachmentInfo{
+			daxa::RenderAttachmentInfo{
 				.image = swapchainImage.getImageHandle(),
 				.clearValue = { .color = VkClearColorValue{.float32 = { 1.f, 1.f, 1.f, 1.f } } },
 			}
 		};
-		daxa::gpu::RenderAttachmentInfo depthAttachment{
+		daxa::RenderAttachmentInfo depthAttachment{
 			.image = depthImage,
 			.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 			.clearValue = { .depthStencil = VkClearDepthStencilValue{ .depth = 1.0f } },
 			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 			.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 		};
-		cmdList->beginRendering(daxa::gpu::BeginRenderingInfo{
+		cmdList->beginRendering(daxa::BeginRenderingInfo{
 			.colorAttachments = framebuffer,
 			.depthAttachment = &depthAttachment,
 		});
@@ -388,7 +388,7 @@ public:
 		imguiRenderer->recordCommands(ImGui::GetDrawData(), cmdList, swapchainImage.getImageHandle());
 
 		// array because we can allways pass multiple barriers at once for driver efficiency
-		std::array imgBarrier1 = { daxa::gpu::ImageBarrier{
+		std::array imgBarrier1 = { daxa::ImageBarrier{
 			.srcStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
 			.image = swapchainImage.getImageHandle(),
 			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -398,7 +398,7 @@ public:
 
 		cmdList->finalize();
 
-		daxa::gpu::SubmitInfo submitInfo;
+		daxa::SubmitInfo submitInfo;
 		submitInfo.commandLists.push_back(std::move(cmdList));
 		submitInfo.signalOnCompletion = { &presentSignal, 1 };
 		queue->submit(submitInfo);
@@ -429,20 +429,20 @@ public:
 	}
 private:
 	GimbalLockedCameraController cameraController{};
-	daxa::gpu::DeviceHandle device;
-	daxa::gpu::QueueHandle queue;
-	daxa::gpu::SwapchainHandle swapchain;
-	daxa::gpu::SwapchainImage swapchainImage;
-	daxa::gpu::ImageHandle depthImage;
-	daxa::gpu::PipelineHandle pipeline;
-	daxa::gpu::BindingSetAllocatorHandle bindingSetAllocator;
-	daxa::gpu::BufferHandle vertexBuffer;
-	daxa::gpu::BufferHandle indexBuffer;
-	daxa::gpu::BufferHandle uniformBuffer;
-	daxa::gpu::ImageHandle textureAtlas;
+	daxa::DeviceHandle device;
+	daxa::QueueHandle queue;
+	daxa::SwapchainHandle swapchain;
+	daxa::SwapchainImage swapchainImage;
+	daxa::ImageHandle depthImage;
+	daxa::PipelineHandle pipeline;
+	daxa::BindingSetAllocatorHandle bindingSetAllocator;
+	daxa::BufferHandle vertexBuffer;
+	daxa::BufferHandle indexBuffer;
+	daxa::BufferHandle uniformBuffer;
+	daxa::ImageHandle textureAtlas;
 	std::optional<daxa::ImGuiRenderer> imguiRenderer = std::nullopt;
 	double totalElapsedTime = 0.0f;
-	daxa::gpu::SignalHandle presentSignal;
+	daxa::SignalHandle presentSignal;
 };
 
 int main()

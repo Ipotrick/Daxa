@@ -10,7 +10,7 @@ public:
 	};
 
 	void recreateShadowMap(RenderContext& renderCTX, u32 width, u32 height) {
-		using namespace daxa::gpu;
+		using namespace daxa;
 
 		shadowMap = renderCTX.device->createImageView({
 			.image = renderCTX.device->createImage({
@@ -32,7 +32,7 @@ public:
 	}
 
 	void init(RenderContext& renderCTX) {
-		using namespace daxa::gpu;
+		using namespace daxa;
 		recreateShadowMap(renderCTX, 4096, 4096);
 
 		auto pipeBuilder = GraphicsPipelineBuilder{};
@@ -53,14 +53,14 @@ public:
 
 	void render(
 		RenderContext& renderCTX, 
-		daxa::gpu::CommandListHandle& cmd, 
+		daxa::CommandListHandle& cmd, 
 		std::vector<DrawPrimCmd>& draws, 
-		daxa::gpu::BufferHandle& primitiveInfosBuffer,
+		daxa::BufferHandle& primitiveInfosBuffer,
 		glm::vec3 const& direction, 
 		f32 distance, 
 		glm::vec4 color
 	) {
-		using namespace daxa::gpu;
+		using namespace daxa;
 
 		glm::mat4 vp{ 1.0f };
 		cmd->copyHostToBuffer({
@@ -110,7 +110,7 @@ public:
 				u32 vertexBufferId;
 				u32 drawId;
 			} push {
-				draw.prim->vertexPositions->getStorageBufferDescriptorIndex().value(),
+				draw.prim->vertexPositions->getDescriptorIndex(),
 				i
 			};
 			cmd->pushConstant(VK_SHADER_STAGE_VERTEX_BIT, push);
@@ -133,9 +133,9 @@ public:
 			.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 		});
 	}
-	daxa::gpu::ImageViewHandle shadowMap = {};
+	daxa::ImageViewHandle shadowMap = {};
 private:
-	daxa::gpu::PipelineHandle pipeline = {};
-	daxa::gpu::BindingSetAllocatorHandle persistentSetAlloc = {};
-	daxa::gpu::BufferHandle infoBuffer = {};
+	daxa::PipelineHandle pipeline = {};
+	daxa::BindingSetAllocatorHandle persistentSetAlloc = {};
+	daxa::BufferHandle infoBuffer = {};
 };

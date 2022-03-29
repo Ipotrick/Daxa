@@ -98,7 +98,7 @@ daxa::Result<VkSamplerAddressMode> glSamplerAdressModeToVk(int glCode) {
 
 class AssetCache {
 public:
-    AssetCache(daxa::gpu::DeviceHandle& d, std::vector<std::filesystem::path> const& rp, std::shared_ptr<daxa::ImageCache>& ic)
+    AssetCache(daxa::DeviceHandle& d, std::vector<std::filesystem::path> const& rp, std::shared_ptr<daxa::ImageCache>& ic)
         : device{ d }
         , rootPaths{ rp }
         , imgCache{ ic }
@@ -106,11 +106,11 @@ public:
 
     }
 
-    daxa::gpu::BufferHandle loadBuffer(daxa::gpu::CommandListHandle& cmdList, cgltf_accessor& accessor, VkBufferUsageFlagBits usage) {
+    daxa::BufferHandle loadBuffer(daxa::CommandListHandle& cmdList, cgltf_accessor& accessor, VkBufferUsageFlagBits usage) {
 
         VkBufferUsageFlags usageFlags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | usage;
 
-        daxa::gpu::BufferHandle gpuBuffer;
+        daxa::BufferHandle gpuBuffer;
 
         if (usage & VK_BUFFER_USAGE_INDEX_BUFFER_BIT) {
             gpuBuffer = device->createBuffer({
@@ -160,13 +160,13 @@ public:
     }
 
     daxa::EntityHandle nodeToEntity(
-        daxa::gpu::CommandListHandle& cmdList,
+        daxa::CommandListHandle& cmdList,
         daxa::EntityHandle* parentEnt, 
         cgltf_node* node, 
         daxa::EntityComponentManager& ecm, 
         daxa::EntityComponentView<daxa::TransformComp, ModelComp, ChildComp, ParentComp>& view,
         cgltf_data* data,
-        std::vector<daxa::gpu::BufferHandle>& buffers
+        std::vector<daxa::BufferHandle>& buffers
     ) {
         glm::mat4 transform{1.0f};
         if (node->has_matrix) {
@@ -244,7 +244,7 @@ public:
 
                 if (prim.material->pbr_metallic_roughness.base_color_texture.texture) {
                     size_t textureIndex = prim.material->pbr_metallic_roughness.base_color_texture.texture - data->textures;
-                    meshPrim.albedoTexture = imgCache->get(
+                    meshPrim.albedoMap = imgCache->get(
                         {
                             .path = texturePaths[textureIndex],
                             .viewFormat = VK_FORMAT_R8G8B8A8_SRGB,
@@ -257,7 +257,7 @@ public:
                 if (prim.material->normal_texture.texture) {
                     printf("normals\n");
                     size_t textureIndex = prim.material->normal_texture.texture - data->textures;
-                    meshPrim.normalTexture = imgCache->get(
+                    meshPrim.normalMap = imgCache->get(
                         {
                             .path = texturePaths[textureIndex],
                             .viewFormat = VK_FORMAT_R8G8B8A8_UNORM,
@@ -281,7 +281,7 @@ public:
     }
 
     daxa::Result<daxa::EntityHandle> loadScene(
-        daxa::gpu::CommandListHandle& cmdList,
+        daxa::CommandListHandle& cmdList,
         std::filesystem::path path
     ) {
         if (!std::filesystem::exists(path)) {
@@ -311,7 +311,7 @@ public:
         for (int i = 0; i < data->textures_count; i++) {
             auto& texture = data->textures[i];
 
-            daxa::gpu::SamplerCreateInfo samplerInfo = {};
+            daxa::SamplerCreateInfo samplerInfo = {};
             {
                 auto ret = glSamplingToVkSampling(texture.sampler->min_filter);
                 if (ret.isErr()) {
@@ -359,7 +359,7 @@ public:
             texturePaths.push_back(texPath);
         }
 
-        std::vector<daxa::gpu::BufferHandle> buffers;
+        std::vector<daxa::BufferHandle> buffers;
         buffers.resize(data->accessors_count);
 
         auto view = entityCache.view<daxa::TransformComp, ModelComp, ChildComp, ParentComp>();
@@ -376,7 +376,7 @@ public:
             }
         }
 
-        cmdList->insertMemoryBarrier(daxa::gpu::FULL_MEMORY_BARRIER);
+        cmdList->insertMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
         
         textureSamplerInfos.clear();
         texturePaths.clear();
@@ -408,7 +408,7 @@ public:
         }
     }
 
-    daxa::Result<daxa::EntityHandle> getScene(daxa::gpu::CommandListHandle& cmdList, std::filesystem::path const& path, daxa::EntityComponentManager& out) {
+    daxa::Result<daxa::EntityHandle> getScene(daxa::CommandListHandle& cmdList, std::filesystem::path const& path, daxa::EntityComponentManager& out) {
         if (!cache.contains(path.string())) {
             auto rootEnt = loadScene(cmdList, path);
             if (rootEnt.isErr()) {
@@ -426,9 +426,9 @@ public:
     }
 
 private:
-    std::vector<daxa::gpu::SamplerCreateInfo> textureSamplerInfos;
+    std::vector<daxa::SamplerCreateInfo> textureSamplerInfos;
     std::vector<std::filesystem::path> texturePaths;
-    daxa::gpu::DeviceHandle device = {};
+    daxa::DeviceHandle device = {};
     std::vector<std::filesystem::path> rootPaths = {};
     std::shared_ptr<daxa::ImageCache> imgCache = {};
     daxa::EntityComponentManager entityCache = {};

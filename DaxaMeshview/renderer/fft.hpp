@@ -26,7 +26,7 @@ public:
                 .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                 .debugName = "fft1024horizonal",
             },
-            .overwriteSets = {daxa::gpu::BIND_ALL_SET_DESCRIPTION},
+            .overwriteSets = {daxa::BIND_ALL_SET_DESCRIPTION},
             .debugName = "fft1024horizonal",
         }).value();
         fft1024Vertical = renderCTX.pipelineCompiler->createComputePipeline({
@@ -35,7 +35,7 @@ public:
                 .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                 .debugName = "fft1024vertical",
             },
-            .overwriteSets = {daxa::gpu::BIND_ALL_SET_DESCRIPTION},
+            .overwriteSets = {daxa::BIND_ALL_SET_DESCRIPTION},
             .debugName = "fft1024vertical",
         }).value();
         fftCombine = renderCTX.pipelineCompiler->createComputePipeline({
@@ -44,7 +44,7 @@ public:
                 .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                 .debugName = "fftCombine",
             },
-            .overwriteSets = {daxa::gpu::BIND_ALL_SET_DESCRIPTION},
+            .overwriteSets = {daxa::BIND_ALL_SET_DESCRIPTION},
             .debugName = "fftCombine",
         }).value();
         fftDebug = renderCTX.pipelineCompiler->createComputePipeline({
@@ -53,13 +53,13 @@ public:
                 .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                 .debugName = "fftDebug",
             },
-            .overwriteSets = {daxa::gpu::BIND_ALL_SET_DESCRIPTION},
+            .overwriteSets = {daxa::BIND_ALL_SET_DESCRIPTION},
             .debugName = "fftDebug",
         }).value();
     }
 
-    void recreateImages(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, u32 width, u32 height) {
-        std::array<daxa::gpu::ImageViewHandle*, 9> images = { &verResultR, &verResultG, &verResultB, &horResultR, &horResultG, &horResultB, &freqImageR, &freqImageG, &freqImageB };
+    void recreateImages(RenderContext& renderCTX, daxa::CommandListHandle& cmd, u32 width, u32 height) {
+        std::array<daxa::ImageViewHandle*, 9> images = { &verResultR, &verResultG, &verResultB, &horResultR, &horResultG, &horResultB, &freqImageR, &freqImageG, &freqImageB };
         std::array<char const*, 9> imageNames = { "verResultR", "verResultG", "verResultB", "horResultR", "horResultG", "horResultB", "freqImageR", "freqImageG", "freqImageB" };
         for (int i = 0; i < 9; i++) {
             *images[i] = renderCTX.device->createImageView({
@@ -97,7 +97,7 @@ public:
         });
     }
 
-    void horizontalPass(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd) {
+    void horizontalPass(RenderContext& renderCTX, daxa::CommandListHandle& cmd) {
 		if (renderCTX.pipelineCompiler->checkIfSourcesChanged(fft1024Horizontal)) {
             auto result = renderCTX.pipelineCompiler->recreatePipeline(fft1024Horizontal);
             std::cout << result << std::endl;
@@ -145,7 +145,7 @@ public:
         cmd->unbindPipeline();
     }
 
-    void verticalPass(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd) {
+    void verticalPass(RenderContext& renderCTX, daxa::CommandListHandle& cmd) {
 		if (renderCTX.pipelineCompiler->checkIfSourcesChanged(fft1024Vertical)) {
             auto result = renderCTX.pipelineCompiler->recreatePipeline(fft1024Vertical);
             std::cout << result << std::endl;
@@ -193,7 +193,7 @@ public:
         cmd->unbindPipeline();
     }
 
-    void combinePass(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd) {
+    void combinePass(RenderContext& renderCTX, daxa::CommandListHandle& cmd) {
 		if (renderCTX.pipelineCompiler->checkIfSourcesChanged(fftCombine)) {
             auto result = renderCTX.pipelineCompiler->recreatePipeline(fftCombine);
             std::cout << result << std::endl;
@@ -203,7 +203,7 @@ public:
         }
         u32 width = renderCTX.hdrImage->getImageHandle()->getVkExtent3D().width;
         u32 height = renderCTX.hdrImage->getImageHandle()->getVkExtent3D().height;
-        cmd->queueMemoryBarrier(daxa::gpu::FULL_MEMORY_BARRIER);
+        cmd->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
         cmd->bindPipeline(fftCombine);
         cmd->bindAll();
         struct Push{
@@ -243,7 +243,7 @@ public:
         cmd->unbindPipeline();
     }
 
-    void debugPass(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd) {
+    void debugPass(RenderContext& renderCTX, daxa::CommandListHandle& cmd) {
 		if (renderCTX.pipelineCompiler->checkIfSourcesChanged(fftDebug)) {
             auto result = renderCTX.pipelineCompiler->recreatePipeline(fftDebug);
             std::cout << result << std::endl;
@@ -286,7 +286,7 @@ public:
         });
     }
 
-    void update(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd) {
+    void update(RenderContext& renderCTX, daxa::CommandListHandle& cmd) {
         cmd->queueImageBarrier({
             .image = renderCTX.hdrImage,
             .layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -303,20 +303,20 @@ public:
         debugPass(renderCTX, cmd);
     }
     
-    daxa::gpu::ImageViewHandle fftDebugImage = {};
+    daxa::ImageViewHandle fftDebugImage = {};
 private:
-    daxa::gpu::ImageViewHandle horResultR = {};
-    daxa::gpu::ImageViewHandle horResultG = {};
-    daxa::gpu::ImageViewHandle horResultB = {};
-    daxa::gpu::ImageViewHandle verResultR = {};
-    daxa::gpu::ImageViewHandle verResultG = {};
-    daxa::gpu::ImageViewHandle verResultB = {};
-    daxa::gpu::ImageViewHandle freqImageR = {};
-    daxa::gpu::ImageViewHandle freqImageG = {};
-    daxa::gpu::ImageViewHandle freqImageB = {};
+    daxa::ImageViewHandle horResultR = {};
+    daxa::ImageViewHandle horResultG = {};
+    daxa::ImageViewHandle horResultB = {};
+    daxa::ImageViewHandle verResultR = {};
+    daxa::ImageViewHandle verResultG = {};
+    daxa::ImageViewHandle verResultB = {};
+    daxa::ImageViewHandle freqImageR = {};
+    daxa::ImageViewHandle freqImageG = {};
+    daxa::ImageViewHandle freqImageB = {};
 
-    daxa::gpu::PipelineHandle fft1024Horizontal = {};
-    daxa::gpu::PipelineHandle fft1024Vertical = {};
-    daxa::gpu::PipelineHandle fftCombine = {};
-    daxa::gpu::PipelineHandle fftDebug = {};
+    daxa::PipelineHandle fft1024Horizontal = {};
+    daxa::PipelineHandle fft1024Vertical = {};
+    daxa::PipelineHandle fftCombine = {};
+    daxa::PipelineHandle fftDebug = {};
 };

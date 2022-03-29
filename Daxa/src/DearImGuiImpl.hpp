@@ -12,25 +12,25 @@ namespace daxa {
 
     class ImGuiRenderer{
     public:
-        ImGuiRenderer(gpu::DeviceHandle device, gpu::CommandQueueHandle queue, PipelineCompilerHandle& compiler);
+        ImGuiRenderer(DeviceHandle device, CommandQueueHandle queue, PipelineCompilerHandle& compiler);
 
-        u64 getImGuiTextureId(gpu::ImageViewHandle img);
+        u64 getImGuiTextureId(ImageViewHandle img);
 
-        void recordCommands(ImDrawData* draw_data, daxa::gpu::CommandListHandle& cmdList, gpu::ImageViewHandle& target);
+        void recordCommands(ImDrawData* draw_data, daxa::CommandListHandle& cmdList, ImageViewHandle& target);
     private:
-        daxa::gpu::DeviceHandle device                  = {};
-        daxa::gpu::PipelineHandle pipeline              = {};
-        daxa::gpu::BindingSetAllocatorHandle setAlloc   = {};
+        daxa::DeviceHandle device                  = {};
+        daxa::PipelineHandle pipeline              = {};
+        daxa::BindingSetAllocatorHandle setAlloc   = {};
 
         struct PerFrameData{
-            daxa::gpu::BufferHandle vertexBuffer        = {};
-            daxa::gpu::BufferHandle indexBuffer         = {};
+            daxa::BufferHandle vertexBuffer        = {};
+            daxa::BufferHandle indexBuffer         = {};
         };
         std::deque<PerFrameData> perFrameData           = {};
 
         void recreatePerFrameData(size_t newMinSizeVertex, size_t newMinSizeIndices);
 
         std::unordered_map<void*, size_t> texHandlePtrToReferencedImageIndex;
-        std::vector<gpu::ImageViewHandle> referencedImages;
+        std::vector<ImageViewHandle> referencedImages;
     };
 }
