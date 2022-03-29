@@ -105,7 +105,7 @@ namespace daxa {
 		if (err)                                                    								\
 		{                                                           								\
 			char const* errStr = getVkResultString(err);											\
-			std::cerr << "[[DAXA VULKAN RESULT ERROR]] " << message << "; error: " << errStr << std::endl; \
+			std::cerr << "[[DAXA_CHECK_VK_RESULT_M ERROR]] " << message << "; error: " << errStr << std::endl; \
 			abort();                                                								\
 		}                                                           								\
 	} while (0)																						
@@ -115,7 +115,7 @@ namespace daxa {
 		if (err)                                                    								\
 		{                                                           								\
 			char const* errStr = getVkResultString(err);											\
-			std::cerr << "[[DAXA VULKAN RESULT ERROR]] " << errStr << std::endl; 					\
+			std::cerr << "[[DAXA_CHECK_VK_RESULT ERROR]] " << errStr << std::endl; 					\
 			abort();                                                								\
 		}                                                           								\
 	} while (0)
