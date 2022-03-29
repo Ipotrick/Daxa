@@ -94,13 +94,13 @@ public:
 
 		resultImage = device->createImageView({
 			.image = device->createImage({
-				.extent = { app.window->getWidth(), app.window->getHeight(), 1},
 				.format = VK_FORMAT_R8G8B8A8_UNORM,
+				.extent = { app.window->getWidth(), app.window->getHeight(), 1},
 				.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 				.debugName = "resultImage",
 			}),
-			.defaultSampler = device->createSampler({}),
 			.format = VK_FORMAT_R8G8B8A8_UNORM,
+			.defaultSampler = device->createSampler({}),
 			.debugName = "resultImageView",
 		});
 
