@@ -112,9 +112,9 @@ public:
 
 		skyBox = renderCTX.device->createImageView({
 			.image = renderCTX.device->createImage({
+				.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
 				.imageType = VK_IMAGE_TYPE_2D,
 				.format = VK_FORMAT_R16G16B16A16_SFLOAT,
-				.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
 				.extent = { 1, 1, 1 },
 				.mipLevels = 1,
 				.arrayLayers = 6,
@@ -131,8 +131,8 @@ public:
 
 	void initTonemapPass(RenderContext& renderCTX) {
 		auto toneMapBuilder = daxa::GraphicsPipelineBuilder();
-		toneMapBuilder.addShaderStage({.debugName = "tonemap", .pathToSource = "tonemap.frag", .stage = VK_SHADER_STAGE_FRAGMENT_BIT});
-		toneMapBuilder.addShaderStage({.debugName = "tonemap", .pathToSource = "tonemap.vert", .stage = VK_SHADER_STAGE_VERTEX_BIT});
+		toneMapBuilder.addShaderStage({.pathToSource = "tonemap.frag", .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .debugName = "tonemap"});
+		toneMapBuilder.addShaderStage({.pathToSource = "tonemap.vert", .stage = VK_SHADER_STAGE_VERTEX_BIT, .debugName = "tonemap"});
 		toneMapBuilder.addColorAttachment(renderCTX.swapchainImage.getImageViewHandle()->getVkFormat());
 		toneMapBuilder.overwriteSet(0, daxa::BIND_ALL_SET_DESCRIPTION);
 		toneMapBuilder.setDebugName("tonemapPipeline");

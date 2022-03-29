@@ -73,10 +73,10 @@ namespace daxa {
 		if (this->subresourceRange.aspectMask == VK_IMAGE_ASPECT_FLAG_BITS_MAX_ENUM) {
 			this->subresourceRange = {
 				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-				.baseArrayLayer = 0,
-				.layerCount = image->getArrayLayers(),
 				.baseMipLevel = 0,
 				.levelCount = image->getMipLevels(),
+				.baseArrayLayer = 0,
+				.layerCount = image->getArrayLayers(),
 			};
 		}
 
