@@ -48,13 +48,6 @@ public:
 
 		fft.init(renderCTX, app.window->getWidth(), app.window->getHeight());
 
-		auto toneMapBuilder = daxa::gpu::GraphicsPipelineBuilder();
-		toneMapBuilder.addShaderStage({.debugName = "tonemap", .pathToSource = "tonemap.frag", .stage = VK_SHADER_STAGE_FRAGMENT_BIT});
-		toneMapBuilder.addShaderStage({.debugName = "tonemap", .pathToSource = "tonemap.vert", .stage = VK_SHADER_STAGE_VERTEX_BIT});
-		toneMapBuilder.addColorAttachment(renderCTX.swapchainImage.getImageViewHandle()->getVkFormat());
-		toneMapBuilder.overwriteSet(0, daxa::gpu::BIND_ALL_SET_DESCRIPTION);
-		toneMapBuilder.setDebugName("tonemapPipeline");
-		tonemapPipeline = renderCTX.pipelineCompiler->createGraphicsPipeline(toneMapBuilder).value();
 	}
 
 	void update(daxa::AppState& app) {
@@ -183,52 +176,7 @@ public:
 			meshRender.render(renderCTX, cmdList, meshDrawCommands);
 		}
 		
-		fft.update(renderCTX, cmdList);
-
-		{
-			if (renderCTX.pipelineCompiler->checkIfSourcesChanged(tonemapPipeline)) {
-				auto result = renderCTX.pipelineCompiler->recreatePipeline(tonemapPipeline);
-				std::cout << result << std::endl;
-				if (result) {
-					tonemapPipeline = result.value();
-				}
-			}
-			cmdList->queueImageBarrier({
-				.image = renderCTX.hdrImage,
-				.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			});
-
-			std::array colorAttachments {
-				daxa::gpu::RenderAttachmentInfo{
-					.image = renderCTX.swapchainImage.getImageViewHandle(),
-				},
-			};
-			cmdList->beginRendering({
-				.colorAttachments = colorAttachments,
-			});
-			cmdList->bindPipeline(tonemapPipeline);
-			cmdList->bindAll();
-			struct Push {
-				u32 src;
-				u32 width;
-				u32 height;
-			} p {
-				renderCTX.hdrImage->getDescriptorIndex(),
-				renderCTX.swapchainImage.getImageViewHandle()->getImageHandle()->getVkExtent3D().width,
-				renderCTX.swapchainImage.getImageViewHandle()->getImageHandle()->getVkExtent3D().height,
-			};
-			cmdList->pushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, p);
-			cmdList->draw(3, 1, 0, 0);
-			cmdList->unbindPipeline();
-			cmdList->endRendering();
-			
-			cmdList->queueImageBarrier({
-				.image = renderCTX.hdrImage,
-				.layoutBefore = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			});
-		}
+		//fft.update(renderCTX, cmdList);
 
 		auto upload = FrameBufferDebugRenderer::CameraData{
 			.inverseView = glm::inverse(cameraController.view),
@@ -246,7 +194,7 @@ public:
 		imguiRenderer->recordCommands(ImGui::GetDrawData(), cmdList, renderCTX.swapchainImage.getImageViewHandle());
 
 		// array because we can allways pass multiple barriers at once for driver efficiency
-		std::array imgBarrier1 = { daxa::gpu::ImageBarrier{
+		std::array imgBarrier1 = { daxa::ImageBarrier{
 			.barrier = {
 				.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
 				.srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR,
@@ -259,7 +207,7 @@ public:
 
 		cmdList->finalize();
 
-		daxa::gpu::SubmitInfo submitInfo;
+		daxa::SubmitInfo submitInfo;
 		submitInfo.commandLists.push_back(std::move(cmdList));
 		submitInfo.signalOnCompletion = { &renderCTX.presentSignal, 1 };
 		renderCTX.queue->submit(submitInfo);
@@ -293,7 +241,6 @@ private:
 	daxa::EntityComponentManager ecm;
 	std::vector<DrawPrimCmd> meshDrawCommands;
 	FFT fft = {};
-	daxa::gpu::PipelineHandle tonemapPipeline = {};
 };
 
 int main() {

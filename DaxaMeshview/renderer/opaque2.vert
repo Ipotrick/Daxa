@@ -18,35 +18,29 @@ layout(std430, set = 0, binding = 4) buffer PackedVec3BufferView{ PackedVec3 pac
 layout(std430, set = 0, binding = 4) buffer Vec2BufferView{ vec2 vecs[]; } vec2BufferView[]; 
 
 layout(std140, push_constant) uniform PushConstants {
-    uint albedoMap;
-    uint normalMap;
     uint globals;
     uint primitives;
     uint lights;
-    uint vertexPosBufferId;
-    uint vertexUVBufferId;
-    uint vertexNormalBufferId;
     uint modelIndex;
-} pushConstants;
+} push;
 
 void main() {
-    mat4 m = primitiveDataBufferView[uint(pushConstants.primitives)].primitiveInfos[pushConstants.modelIndex].transform;
-    mat4 itm = primitiveDataBufferView[uint(pushConstants.primitives)].primitiveInfos[pushConstants.modelIndex].inverseTransposeTransform;
+    PrimitiveInfo prim = primitiveDataBufferView[push.primitives].primitiveInfos[push.modelIndex];
 
-    PackedVec3 packedPos = packedVec3BufferView[uint(pushConstants.vertexPosBufferId)].packedVec3s[gl_VertexIndex];
+    PackedVec3 packedPos = packedVec3BufferView[uint(prim.vertexPositionsId)].packedVec3s[gl_VertexIndex];
     vec3 pulledPosition = vec3(packedPos.x,packedPos.y,packedPos.z);
 
-    vec2 pulledUV = vec2BufferView[uint(pushConstants.vertexUVBufferId)].vecs[gl_VertexIndex];
+    vec2 pulledUV = vec2BufferView[uint(prim.vertexUVsId)].vecs[gl_VertexIndex];
 
-    PackedVec3 packedNormal = packedVec3BufferView[uint(pushConstants.vertexNormalBufferId)].packedVec3s[gl_VertexIndex];
+    PackedVec3 packedNormal = packedVec3BufferView[uint(prim.vertexNormalsId)].packedVec3s[gl_VertexIndex];
     vec3 pulledNormal = vec3(packedNormal.x,packedNormal.y,packedNormal.z);
 
-    vtf_world_space_normal = (itm * vec4(pulledNormal,0.0f)).xyz;      // mul inverse transpose model matrix with the normal vector
+    vtf_world_space_normal = (prim.ttTransform * vec4(pulledNormal,0.0f)).xyz;      // mul inverse transpose model matrix with the normal vector
     vtf_world_space_normal = normalize(vtf_world_space_normal);         // as the scaling can change the vector length, we re-normalize the vector's length
 
-    vtf_world_space_position = (m * vec4(pulledPosition, 1.0f)).xyz;
+    vtf_world_space_position = (prim.transform * vec4(pulledPosition, 1.0f)).xyz;
 
-    mat4 mvp = globalDataBufferView[uint(pushConstants.globals)].globalData.vp * m;
+    mat4 mvp = globalDataBufferView[uint(push.globals)].globalData.vp * prim.transform;
     vtf_uv = pulledUV;
     gl_Position = mvp * vec4(pulledPosition, 1.0f);
 }

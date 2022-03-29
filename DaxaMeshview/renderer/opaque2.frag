@@ -11,7 +11,6 @@ layout(location = 14) in vec3 vtf_world_space_position;
 layout (location = 0) out vec4 outFragColor;
 layout (location = 1) out vec3 outNormal;
 
-
 mat3 genTBN(vec3 n, vec3 p, vec2 uv) {
     vec3 dp1 = dFdx(p);
     vec3 dp2 = dFdy(p);
@@ -28,27 +27,23 @@ mat3 genTBN(vec3 n, vec3 p, vec2 uv) {
 }
 
 layout(std140, push_constant) uniform PushConstants {
-    uint albedoMap;
-    uint normalMap;
     uint globals;
     uint primitives;
     uint lights;
-    uint vertexPosBufferId;
-    uint vertexUVBufferId;
-    uint vertexNormalBufferId;
     uint modelIndex;
-} pushConstants;
+} push;
 
 void main() {
     vec3 interpVertexNormal = normalize(vtf_world_space_normal);
     vec4 ambient = vec4(1.0,1.0,1.00,1.0);
+    PrimitiveInfo prim = primitiveDataBufferView[push.primitives].primitiveInfos[push.modelIndex];
 
-    vec3 normalMapValue = (texture(imageSampler2DViews[uint(pushConstants.normalMap)], vtf_uv).xyz * 2.0f) - vec3(1.0f);
+    vec3 normalMapValue = (texture(imageSampler2DViews[prim.normalMapId], vtf_uv).xyz * 2.0f) - vec3(1.0f);
     vec3 normal = genTBN(interpVertexNormal, vtf_world_space_position, vtf_uv) * normalMapValue;
 
     vec4 lightAcc = ambient;
-    for (int i = 0; i < lightsBufferView[uint(pushConstants.lights)].lightCount; i++) {
-        Light light = lightsBufferView[uint(pushConstants.lights)].lights[i];
+    for (int i = 0; i < lightsBufferView[uint(push.lights)].lightCount; i++) {
+        Light light = lightsBufferView[uint(push.lights)].lights[i];
         float dist = length(vtf_world_space_position - light.position);
         vec3 direction = vtf_world_space_position - light.position;
 
@@ -56,7 +51,7 @@ void main() {
         strength = strength * max(dot(normal, -direction), 0.0f);
         lightAcc += light.color * strength;
     }
-    outFragColor = texture(imageSampler2DViews[uint(pushConstants.albedoMap)], vtf_uv) * lightAcc;
+    outFragColor = texture(imageSampler2DViews[uint(prim.albedoMapId)], vtf_uv) * lightAcc;
 
     outNormal = normal * 0.5f + vec3(0.5f);
 }

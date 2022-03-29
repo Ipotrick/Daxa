@@ -5,7 +5,7 @@
 class RenderContext {
 public:
     RenderContext(daxa::Window& window) 
-		: device{ daxa::gpu::Device::create() }
+		: device{ daxa::Device::create() }
 		, queue{ this->device->createCommandQueue({.batchCount = 3}) }
 		, swapchain{ this->device->createSwapchain({
 			.surface = window.getSurface(),
@@ -31,13 +31,13 @@ public:
 		waitIdle();
     }
 
-    void resize(daxa::gpu::CommandListHandle& cmdList, u32 width, u32 height) {
+    void resize(daxa::CommandListHandle& cmdList, u32 width, u32 height) {
         swapchain->resize(VkExtent2D{ .width = width, .height = height });
         swapchainImage = swapchain->aquireNextImage();
         recreateFramebuffer(cmdList, width, height);
     }
 
-	void recreateFramebuffer(daxa::gpu::CommandListHandle& cmd, u32 width, u32 height) {
+	void recreateFramebuffer(daxa::CommandListHandle& cmd, u32 width, u32 height) {
 		std::string depthMapName = "depth image";
 		this->depthImage = device->createImageView({
 			.image = device->createImage({
@@ -80,18 +80,18 @@ public:
 		});
 
 		cmd->insertImageBarriers(std::array{
-			daxa::gpu::ImageBarrier{
-				.barrier = daxa::gpu::FULL_MEMORY_BARRIER,
+			daxa::ImageBarrier{
+				.barrier = daxa::FULL_MEMORY_BARRIER,
 				.image = depthImage,
 				.layoutAfter = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 			},
-			daxa::gpu::ImageBarrier{
-				.barrier = daxa::gpu::FULL_MEMORY_BARRIER,
+			daxa::ImageBarrier{
+				.barrier = daxa::FULL_MEMORY_BARRIER,
 				.image = normalsImage,
 				.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			},
-			daxa::gpu::ImageBarrier{
-				.barrier = daxa::gpu::FULL_MEMORY_BARRIER,
+			daxa::ImageBarrier{
+				.barrier = daxa::FULL_MEMORY_BARRIER,
 				.image = hdrImage,
 				.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			},
@@ -111,27 +111,27 @@ public:
 		device->waitIdle();
 	}
 
-    daxa::gpu::DeviceHandle device = {};
+    daxa::DeviceHandle device = {};
 	daxa::PipelineCompilerHandle pipelineCompiler;
-	daxa::gpu::CommandQueueHandle queue = {};
-	daxa::gpu::SwapchainHandle swapchain = {};
-	daxa::gpu::SwapchainImage swapchainImage = {};
-	daxa::gpu::SignalHandle presentSignal = {};
-	daxa::gpu::ImageViewHandle depthImage = {};
-	daxa::gpu::ImageViewHandle normalsImage = {};
-	daxa::gpu::ImageViewHandle hdrImage = {};
-	daxa::gpu::SamplerHandle defaultSampler = {};
+	daxa::CommandQueueHandle queue = {};
+	daxa::SwapchainHandle swapchain = {};
+	daxa::SwapchainImage swapchainImage = {};
+	daxa::SignalHandle presentSignal = {};
+	daxa::ImageViewHandle depthImage = {};
+	daxa::ImageViewHandle normalsImage = {};
+	daxa::ImageViewHandle hdrImage = {};
+	daxa::SamplerHandle defaultSampler = {};
 };
 
 struct Primitive {
 	u32 indexCount = 0;
-	daxa::gpu::BufferHandle indiexBuffer = {};
-	daxa::gpu::BufferHandle vertexPositions = {};
-	daxa::gpu::BufferHandle vertexUVs = {};
-	daxa::gpu::BufferHandle vertexNormals = {};
-	daxa::gpu::BufferHandle vertexTangents = {};
-	daxa::gpu::ImageViewHandle albedoTexture = {};
-	daxa::gpu::ImageViewHandle normalTexture = {};
+	daxa::BufferHandle indiexBuffer = {};
+	daxa::BufferHandle vertexPositions = {};
+	daxa::BufferHandle vertexUVs = {};
+	daxa::BufferHandle vertexNormals = {};
+	daxa::BufferHandle vertexTangents = {};
+	daxa::ImageViewHandle albedoMap = {};
+	daxa::ImageViewHandle normalMap = {};
 };
 
 struct DrawPrimCmd {

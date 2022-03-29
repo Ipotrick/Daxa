@@ -22,7 +22,7 @@ public:
     };
 
     void init(RenderContext& renderCTX, u32 width, u32 height) {
-        daxa::gpu::ShaderModuleCreateInfo shaderCI{
+        daxa::ShaderModuleCreateInfo shaderCI{
             .pathToSource = "./DaxaMeshview/renderer/fb_debug.comp", .stage = VK_SHADER_STAGE_COMPUTE_BIT,
         };
 
@@ -49,23 +49,10 @@ public:
         recreateImages(renderCTX, cmdList, width, height);
         cmdList->finalize();
         renderCTX.queue->submitBlocking({.commandLists = {cmdList}});
-
-        hotLoader = daxa::ComputePipelineHotLoader{
-            renderCTX.device,
-            renderCTX.pipelineCompiler,
-            {
-                .shaderCI = shaderCI, 
-                .debugName = "frame buffer debug pipeline",
-            },
-            {
-                .pathToSource = "./DaxaMeshview/renderer/fb_debug.comp",
-                .stage = VK_SHADER_STAGE_COMPUTE_BIT,
-            }
-        };
     }
 
-    void recreateImages(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmdList, u32 width, u32 height) {
-        debugScreenSpaceNormalImage = renderCTX.device->createImageView(daxa::gpu::ImageViewCreateInfo{
+    void recreateImages(RenderContext& renderCTX, daxa::CommandListHandle& cmdList, u32 width, u32 height) {
+        debugScreenSpaceNormalImage = renderCTX.device->createImageView(daxa::ImageViewCreateInfo{
             .image = renderCTX.device->createImage({
                 .format = VK_FORMAT_R8G8B8A8_UNORM,
                 .extent = { width, height, 1 },
@@ -75,7 +62,7 @@ public:
             .defaultSampler = renderCTX.defaultSampler,
             .debugName = "debugScreenSpaceNormalImage",
         });
-        debugWorldSpaceNormalImage = renderCTX.device->createImageView(daxa::gpu::ImageViewCreateInfo{
+        debugWorldSpaceNormalImage = renderCTX.device->createImageView(daxa::ImageViewCreateInfo{
             .image = renderCTX.device->createImage({
                 .format = VK_FORMAT_R8G8B8A8_UNORM,
                 .extent = { width, height, 1 },
@@ -85,7 +72,7 @@ public:
             .defaultSampler = renderCTX.defaultSampler,
             .debugName = "debugWorldSpaceNormalImage",
         });
-        debugLinearDepthImage = renderCTX.device->createImageView(daxa::gpu::ImageViewCreateInfo{
+        debugLinearDepthImage = renderCTX.device->createImageView(daxa::ImageViewCreateInfo{
             .image = renderCTX.device->createImage({
                 .format = VK_FORMAT_R8G8B8A8_UNORM,
                 .extent = { width, height, 1 },
@@ -96,23 +83,23 @@ public:
             .debugName = "debugLinearDepthImage",
         });
 
-        daxa::gpu::MemoryBarrier postMemBar = {
+        daxa::MemoryBarrier postMemBar = {
             .dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
             .dstAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR | VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
         };
 
         cmdList->insertImageBarriers(std::array{
-            daxa::gpu::ImageBarrier{
+            daxa::ImageBarrier{
                 .barrier = postMemBar,
                 .image = debugScreenSpaceNormalImage,
                 .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             },
-            daxa::gpu::ImageBarrier{
+            daxa::ImageBarrier{
                 .barrier = postMemBar,
                 .image = debugWorldSpaceNormalImage,
                 .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             },
-            daxa::gpu::ImageBarrier{
+            daxa::ImageBarrier{
                 .barrier = postMemBar,
                 .image = debugLinearDepthImage,
                 .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -120,12 +107,7 @@ public:
         });
     }
     
-    void renderDebugViews(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmdList, CameraData cameraData) {
-        if (auto newPipeline = hotLoader.getNewIfChanged(); newPipeline.has_value()) {
-            printf("hot laoded\n");
-            this->pipeline = newPipeline.value();
-        }
-
+    void renderDebugViews(RenderContext& renderCTX, daxa::CommandListHandle& cmdList, CameraData cameraData) {
         uploadData.cameraData = cameraData;
         uploadData.imageWidth = debugLinearDepthImage->getImageHandle()->getVkExtent3D().width;
         uploadData.imageHeight = debugLinearDepthImage->getImageHandle()->getVkExtent3D().height;
@@ -138,7 +120,7 @@ public:
         });
 
         auto copyMemBarr = std::array{ 
-            daxa::gpu::MemoryBarrier{
+            daxa::MemoryBarrier{
                 .srcStages = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT_KHR, 
                 .srcAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR,
                 .dstStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
@@ -146,7 +128,7 @@ public:
             },
         };
 
-        daxa::gpu::MemoryBarrier preMemBarr{
+        daxa::MemoryBarrier preMemBarr{
             .srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
             .srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR,
             .dstStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
@@ -154,22 +136,22 @@ public:
         };
 
         auto imgbar = std::array{
-            daxa::gpu::ImageBarrier{
+            daxa::ImageBarrier{
                 .barrier = preMemBarr,
                 .image = debugScreenSpaceNormalImage,
                 .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
             },
-            daxa::gpu::ImageBarrier{
+            daxa::ImageBarrier{
                 .barrier = preMemBarr,
                 .image = debugWorldSpaceNormalImage,
                 .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
             },
-            daxa::gpu::ImageBarrier{
+            daxa::ImageBarrier{
                 .barrier = preMemBarr,
                 .image = debugLinearDepthImage,
                 .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
             },
-            daxa::gpu::ImageBarrier{
+            daxa::ImageBarrier{
                 .barrier = preMemBarr,
                 .image = renderCTX.depthImage,
                 .layoutBefore = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
@@ -197,7 +179,7 @@ public:
 
         // TODO dispatch compute shader
 
-        daxa::gpu::MemoryBarrier postMemBarr {
+        daxa::MemoryBarrier postMemBarr {
             .srcStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
             .srcAccess = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT_KHR,
             .dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
@@ -205,25 +187,25 @@ public:
         };
 
         cmdList->insertImageBarriers(std::array{
-            daxa::gpu::ImageBarrier{
+            daxa::ImageBarrier{
                 .barrier = postMemBarr,
                 .image = debugScreenSpaceNormalImage,
                 .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
                 .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             },
-            daxa::gpu::ImageBarrier{
+            daxa::ImageBarrier{
                 .barrier = postMemBarr,
                 .image = debugWorldSpaceNormalImage,
                 .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
                 .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             },
-            daxa::gpu::ImageBarrier{
+            daxa::ImageBarrier{
                 .barrier = postMemBarr,
                 .image = debugLinearDepthImage,
                 .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
                 .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             },
-            daxa::gpu::ImageBarrier{
+            daxa::ImageBarrier{
                 .barrier = postMemBarr,
                 .image = renderCTX.depthImage,
                 .layoutAfter = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
@@ -252,13 +234,12 @@ public:
 		ImGui::End();
 	}
 
-    daxa::gpu::ImageViewHandle debugLinearDepthImage = {};
-    daxa::gpu::ImageViewHandle debugScreenSpaceNormalImage = {};
-    daxa::gpu::ImageViewHandle debugWorldSpaceNormalImage = {};
+    daxa::ImageViewHandle debugLinearDepthImage = {};
+    daxa::ImageViewHandle debugScreenSpaceNormalImage = {};
+    daxa::ImageViewHandle debugWorldSpaceNormalImage = {};
 private:
     UploadData uploadData;
-    daxa::ComputePipelineHotLoader hotLoader;
-    daxa::gpu::PipelineHandle pipeline = {};
-    daxa::gpu::BindingSetAllocatorHandle setAlloc = {};
-    daxa::gpu::BufferHandle buffer = {};
+    daxa::PipelineHandle pipeline = {};
+    daxa::BindingSetAllocatorHandle setAlloc = {};
+    daxa::BufferHandle buffer = {};
 };

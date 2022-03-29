@@ -9,8 +9,6 @@
 
 using Path = std::filesystem::path;
 
-using namespace daxa::gpu;
-
 namespace daxa {
 	std::vector<VkDescriptorSetLayout> processReflectedDescriptorData(
 		std::vector<BindingSetDescription>& setDescriptions,
@@ -65,7 +63,7 @@ namespace daxa {
 		return ResultErr{ err.c_str() };
 	}
 
-	Result<std::vector<u32>> PipelineCompiler::tryGenSPIRVFromShaderc(std::string const& src, VkShaderStageFlagBits shaderStage, gpu::ShaderLang lang, char const* sourceFileName) {
+	Result<std::vector<u32>> PipelineCompiler::tryGenSPIRVFromShaderc(std::string const& src, VkShaderStageFlagBits shaderStage, ShaderLang lang, char const* sourceFileName) {
 		auto translateShaderStage = [](VkShaderStageFlagBits stage) -> shaderc_shader_kind {
 			switch (stage) {
 			case VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT: return shaderc_shader_kind::shaderc_vertex_shader;
@@ -204,7 +202,7 @@ namespace daxa {
 	}
 
 	
-	Result<gpu::ShaderModuleHandle> PipelineCompiler::tryCreateShaderModule(gpu::ShaderModuleCreateInfo const& ci) {
+	Result<ShaderModuleHandle> PipelineCompiler::tryCreateShaderModule(ShaderModuleCreateInfo const& ci) {
 		std::string sourceCode = {};
 		if (!ci.pathToSource.empty()) {
 			auto src = tryLoadShaderSourceFromFile(ci.pathToSource);
@@ -249,7 +247,7 @@ namespace daxa {
 		shadMod->shaderStage = ci.stage;
 		shadMod->deviceBackend = deviceBackend;
 
-		if (daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
+		if (daxa::instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
 			shadMod->debugName = ci.debugName;
 
 			VkDebugUtilsObjectNameInfoEXT imageNameInfo {
@@ -259,7 +257,7 @@ namespace daxa {
 				.objectHandle = (uint64_t)shadMod->shaderModule,
 				.pObjectName = ci.debugName,
 			};
-			daxa::gpu::instance->pfnSetDebugUtilsObjectNameEXT(deviceBackend->device.device, &imageNameInfo);
+			daxa::instance->pfnSetDebugUtilsObjectNameEXT(deviceBackend->device.device, &imageNameInfo);
 		}
 
 		return { ShaderModuleHandle{ shadMod } };
@@ -339,7 +337,7 @@ namespace daxa {
 		std::shared_ptr<PipelineCompilerShadedData> sharedData = {};
 	};
 
-    PipelineCompiler::PipelineCompiler(std::shared_ptr<gpu::DeviceBackend> deviceBackend, std::shared_ptr<gpu::BindingSetLayoutCache> bindSetLayoutCache) 
+    PipelineCompiler::PipelineCompiler(std::shared_ptr<DeviceBackend> deviceBackend, std::shared_ptr<BindingSetLayoutCache> bindSetLayoutCache) 
 		: deviceBackend{ deviceBackend }
 		, bindSetLayoutCache{ bindSetLayoutCache }
 		, sharedData{ std::make_shared<PipelineCompilerShadedData>() }
@@ -349,7 +347,7 @@ namespace daxa {
 		options.SetIncluder(std::move(includer));
 	}
 
-    bool PipelineCompiler::checkIfSourcesChanged(gpu::PipelineHandle& pipeline) {
+    bool PipelineCompiler::checkIfSourcesChanged(PipelineHandle& pipeline) {
 		bool reload = false;
 		for (auto& [path, recordedWriteTime] : pipeline->observedHotLoadFiles) {
 			auto ifs = std::ifstream(path);
@@ -372,8 +370,8 @@ namespace daxa {
 		return reload;
 	}
 
-	Result<gpu::PipelineHandle> PipelineCompiler::recreatePipeline(gpu::PipelineHandle const& pipeline) {
-		auto handleResult = [&](Result<gpu::PipelineHandle> const& result) -> Result<gpu::PipelineHandle> {
+	Result<PipelineHandle> PipelineCompiler::recreatePipeline(PipelineHandle const& pipeline) {
+		auto handleResult = [&](Result<PipelineHandle> const& result) -> Result<PipelineHandle> {
 			if (result.isOk()) {
 				return {std::move(result.value())};
 			}
@@ -416,11 +414,11 @@ namespace daxa {
         return ResultErr{ .message = std::move(errorMessage) };
     }
 
-    Result<gpu::PipelineHandle> PipelineCompiler::createGraphicsPipeline(gpu::GraphicsPipelineBuilder const& builder) {
+    Result<PipelineHandle> PipelineCompiler::createGraphicsPipeline(GraphicsPipelineBuilder const& builder) {
         DAXA_ASSERT_M(!builder.bVertexAtrributeBindingBuildingOpen, "vertex attribute bindings must be completed before creating a pipeline");
 
-		auto pipelineHandle = gpu::PipelineHandle{ std::make_shared<gpu::Pipeline>() };
-		gpu::Pipeline& ret = *pipelineHandle;
+		auto pipelineHandle = PipelineHandle{ std::make_shared<Pipeline>() };
+		Pipeline& ret = *pipelineHandle;
 		ret.deviceBackend = deviceBackend;
 		ret.bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 		ret.colorAttachmentFormats = builder.colorAttachmentFormats;
@@ -431,9 +429,9 @@ namespace daxa {
 		sharedData->observedHotLoadFiles = &ret.observedHotLoadFiles;
 
 		std::vector<VkPushConstantRange> pushConstants;
-		std::vector<gpu::BindingSetDescription> bindingSetDescriptions;
+		std::vector<BindingSetDescription> bindingSetDescriptions;
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStageCreateInfo;
-		std::vector<gpu::ShaderModuleHandle> shaderModules;
+		std::vector<ShaderModuleHandle> shaderModules;
 		shaderModules.reserve(builder.shaderModuleCIs.size());
 
 		for (auto& shaderCI : builder.shaderModuleCIs) {
@@ -580,7 +578,7 @@ namespace daxa {
 		return pipelineHandle;
     }
 
-	Result<gpu::PipelineHandle> PipelineCompiler::createComputePipeline(gpu::ComputePipelineCreateInfo const& ci) {
+	Result<PipelineHandle> PipelineCompiler::createComputePipeline(ComputePipelineCreateInfo const& ci) {
 		sharedData->currentShaderSeenFiles.clear();
 
 		auto pipelineHandle = PipelineHandle{ std::make_shared<Pipeline>() };
@@ -592,7 +590,7 @@ namespace daxa {
 		sharedData->observedHotLoadFiles = &ret.observedHotLoadFiles;
 
 		auto result = tryCreateShaderModule(ci.shaderCI);
-		gpu::ShaderModuleHandle shader;
+		ShaderModuleHandle shader;
 		if (result.isOk()) {
 			shader = result.value();
 		} else {

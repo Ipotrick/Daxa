@@ -10,6 +10,7 @@
 struct GlobalData {
 	glm::mat4 vp;
 	glm::mat4 view;
+	u32 generalSampler;
 };
 
 class MeshRenderer {
@@ -18,10 +19,22 @@ public:
 	struct GPUPrimitiveInfo {
 		glm::mat4 transform;
 		glm::mat4 inverseTransposeTransform;
+		u32 albedoMapId;
+		u32 normalMapId;
+		u32 vertexPositionsId;
+		u32 vertexUVsId;
+		u32 vertexNormalsId;
+		u32 _pad[3];
+	};
+
+	struct DrawLight{
+		glm::vec3 position;
+		f32 strength;
+		glm::vec4 color;
 	};
 
     void init(RenderContext& renderCTX) {
-		daxa::gpu::GraphicsPipelineBuilder prePassPipelineBuilder;
+		daxa::GraphicsPipelineBuilder prePassPipelineBuilder;
 		prePassPipelineBuilder
 			.addShaderStage({ .pathToSource = "./DaxaMeshview/renderer/prePass.vert", .stage = VK_SHADER_STAGE_VERTEX_BIT, })
 			.addShaderStage({ .pathToSource = "./DaxaMeshview/renderer/prePass.frag", .stage = VK_SHADER_STAGE_FRAGMENT_BIT })
@@ -48,16 +61,16 @@ public:
 				.debugName = "mesh render globals buffer",
         });
 
-		auto vertexShaderOpaqueCI = daxa::gpu::ShaderModuleCreateInfo{
+		auto vertexShaderOpaqueCI = daxa::ShaderModuleCreateInfo{
 			.pathToSource = "./DaxaMeshview/renderer/opaque.vert",
 			.stage = VK_SHADER_STAGE_VERTEX_BIT
 		};
-		auto fragmentShaderOpaqueCI = daxa::gpu::ShaderModuleCreateInfo{
+		auto fragmentShaderOpaqueCI = daxa::ShaderModuleCreateInfo{
 			.pathToSource = "./DaxaMeshview/renderer/opaque.frag",
 			.stage = VK_SHADER_STAGE_FRAGMENT_BIT
 		};
 
-		daxa::gpu::GraphicsPipelineBuilder opaquePipelineBuilder = {};
+		daxa::GraphicsPipelineBuilder opaquePipelineBuilder = {};
 		opaquePipelineBuilder.addShaderStage({ .pathToSource = "./DaxaMeshview/renderer/opaque.vert", .stage = VK_SHADER_STAGE_VERTEX_BIT });
 		opaquePipelineBuilder.addShaderStage({ .pathToSource = "./DaxaMeshview/renderer/opaque.frag", .stage = VK_SHADER_STAGE_FRAGMENT_BIT });
 			opaquePipelineBuilder.setDebugName("mesh render opaque pass pipeline")
@@ -92,41 +105,102 @@ public:
 
 		this->perDrawOpaquePassSetAlloc = renderCTX.device->createBindingSetAllocator({ .setLayout = this->opaquePassPipeline->getSetLayout(1), .setPerPool = 32'000 });
 
-		this->opaqueFragHotloader = daxa::GraphicsPipelineHotLoader(
-			renderCTX.device,
-			renderCTX.pipelineCompiler,
-			opaquePipelineBuilder,
-			std::array{ vertexShaderOpaqueCI, fragmentShaderOpaqueCI }
-		);
-
 		initOpaque2(renderCTX);
+		initTonemapPass(renderCTX);
 
 		orthLightPass.init(renderCTX);
+
+		skyBox = renderCTX.device->createImageView({
+			.image = renderCTX.device->createImage({
+				.imageType = VK_IMAGE_TYPE_2D,
+				.format = VK_FORMAT_R16G16B16A16_SFLOAT,
+				.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
+				.extent = { 1, 1, 1 },
+				.mipLevels = 1,
+				.arrayLayers = 6,
+				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+				.debugName = "skybox",
+			}),
+			.viewType = VK_IMAGE_VIEW_TYPE_CUBE,
+			.format = VK_FORMAT_R16G16B16A16_SFLOAT,
+			.debugName = "skybox",
+		});
+
+		generalSampler = renderCTX.defaultSampler;
     }
 
-	struct DrawLight{
-		glm::vec3 position;
-		f32 strength;
-		glm::vec4 color;
-	};
+	void initTonemapPass(RenderContext& renderCTX) {
+		auto toneMapBuilder = daxa::GraphicsPipelineBuilder();
+		toneMapBuilder.addShaderStage({.debugName = "tonemap", .pathToSource = "tonemap.frag", .stage = VK_SHADER_STAGE_FRAGMENT_BIT});
+		toneMapBuilder.addShaderStage({.debugName = "tonemap", .pathToSource = "tonemap.vert", .stage = VK_SHADER_STAGE_VERTEX_BIT});
+		toneMapBuilder.addColorAttachment(renderCTX.swapchainImage.getImageViewHandle()->getVkFormat());
+		toneMapBuilder.overwriteSet(0, daxa::BIND_ALL_SET_DESCRIPTION);
+		toneMapBuilder.setDebugName("tonemapPipeline");
+		tonemapPipeline = renderCTX.pipelineCompiler->createGraphicsPipeline(toneMapBuilder).value();
+	}
+
+	void tonemapPass(RenderContext& renderCTX, daxa::CommandListHandle& cmdList) {
+		if (renderCTX.pipelineCompiler->checkIfSourcesChanged(tonemapPipeline)) {
+			auto result = renderCTX.pipelineCompiler->recreatePipeline(tonemapPipeline);
+			std::cout << result << std::endl;
+			if (result) {
+				tonemapPipeline = result.value();
+			}
+		}
+		cmdList->queueImageBarrier({
+			.image = renderCTX.hdrImage,
+			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		});
+
+		std::array colorAttachments {
+			daxa::RenderAttachmentInfo{
+				.image = renderCTX.swapchainImage.getImageViewHandle(),
+			},
+		};
+		cmdList->beginRendering({
+			.colorAttachments = colorAttachments,
+		});
+		cmdList->bindPipeline(tonemapPipeline);
+		cmdList->bindAll();
+		struct Push {
+			u32 src;
+			u32 width;
+			u32 height;
+		} p {
+			renderCTX.hdrImage->getDescriptorIndex(),
+			renderCTX.swapchainImage.getImageViewHandle()->getImageHandle()->getVkExtent3D().width,
+			renderCTX.swapchainImage.getImageViewHandle()->getImageHandle()->getVkExtent3D().height,
+		};
+		cmdList->pushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, p);
+		cmdList->draw(3, 1, 0, 0);
+		cmdList->unbindPipeline();
+		cmdList->endRendering();
+		
+		cmdList->queueImageBarrier({
+			.image = renderCTX.hdrImage,
+			.layoutBefore = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		});
+	}
 
 	void initOpaque2(RenderContext& renderCTX) {
-		auto vertexShaderOpaqueCI = daxa::gpu::ShaderModuleCreateInfo{
+		auto vertexShaderOpaqueCI = daxa::ShaderModuleCreateInfo{
 			.pathToSource = "./DaxaMeshview/renderer/opaque2.vert",
 			.stage = VK_SHADER_STAGE_VERTEX_BIT,
 			.debugName = "opaque2 vertex",
 		};
-		auto fragmentShaderOpaqueCI = daxa::gpu::ShaderModuleCreateInfo{
+		auto fragmentShaderOpaqueCI = daxa::ShaderModuleCreateInfo{
 			.pathToSource = "./DaxaMeshview/renderer/opaque2.frag",
 			.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
 			.debugName = "opaque2 fragment",
 		};
 
-		daxa::gpu::GraphicsPipelineBuilder opaque2PipelineBuilder = {};
+		daxa::GraphicsPipelineBuilder opaque2PipelineBuilder = {};
 		opaque2PipelineBuilder
 			.addShaderStage(vertexShaderOpaqueCI)
 			.addShaderStage(fragmentShaderOpaqueCI)
-			.overwriteSet(0, daxa::gpu::BIND_ALL_SET_DESCRIPTION)
+			.overwriteSet(0, daxa::BIND_ALL_SET_DESCRIPTION)
 			.setDebugName("mesh render opaque2 pass pipeline")
 			.configurateDepthTest({
 				.depthAttachmentFormat = VK_FORMAT_D32_SFLOAT,
@@ -141,18 +215,14 @@ public:
 		});
 
 		opaquePass2Pipeline = renderCTX.pipelineCompiler->createGraphicsPipeline(opaque2PipelineBuilder).value();
-
-		opaqueFragHotloader2 = daxa::GraphicsPipelineHotLoader{
-			renderCTX.device, renderCTX.pipelineCompiler, opaque2PipelineBuilder, std::array{ vertexShaderOpaqueCI, fragmentShaderOpaqueCI }
-		};
 	}
 
-	void setCamera(daxa::gpu::CommandListHandle& cmd, glm::mat4 const& vp, glm::mat4 const& view) {
+	void setCamera(daxa::CommandListHandle& cmd, glm::mat4 const& vp, glm::mat4 const& view) {
 		globData.vp = vp;
 		globData.view = view;
 	}
 
-	void uploadBuffers(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws, std::vector<DrawLight>& lights) {
+	void uploadBuffers(RenderContext& renderCTX, daxa::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws, std::vector<DrawLight>& lights) {
 		if (!dummyTexture) {
 			dummyTexture = renderCTX.device->createImageView({
 				.image = renderCTX.device->createImage({
@@ -218,13 +288,12 @@ public:
 			});
 		}
 
+		globData.generalSampler = generalSampler->getDescriptorIndex();
 		cmd->copyHostToBuffer({
 			.src = (void*)&globData,
 			.dst = globalDataBufffer,
 			.size = sizeof(decltype(globData)),
 		});
-
-
 
 		if (!primitiveInfoBuffer || draws.size() * sizeof(GPUPrimitiveInfo) > primitiveInfoBuffer->getSize()) {
 			size_t newSize = (draws.size() + 64) * sizeof(GPUPrimitiveInfo);
@@ -239,8 +308,22 @@ public:
 		if (!draws.empty()) {
 			auto mm = cmd->mapMemoryStagedBuffer<GPUPrimitiveInfo>(primitiveInfoBuffer, draws.size() * sizeof(GPUPrimitiveInfo), 0);
 			for (int i = 0; i < draws.size(); i++) {
-				mm.hostPtr[i].transform 				= draws[i].transform;
-				mm.hostPtr[i].inverseTransposeTransform = glm::inverse(glm::transpose(draws[i].transform));
+				auto& prim = mm.hostPtr[i];
+				prim.transform = draws[i].transform;
+				prim.inverseTransposeTransform = glm::inverse(glm::transpose(draws[i].transform));
+				if (draws[i].prim->albedoMap.valid()) {
+					prim.albedoMapId = draws[i].prim->albedoMap->getDescriptorIndex();
+				} else {
+					prim.albedoMapId = dummyTexture->getDescriptorIndex();
+				}
+				if (draws[i].prim->normalMap.valid()) {
+					prim.normalMapId = draws[i].prim->normalMap->getDescriptorIndex();
+				} else {
+					prim.normalMapId = dummyNormalsTexture->getDescriptorIndex();
+				}
+				prim.vertexPositionsId = draws[i].prim->vertexPositions->getDescriptorIndex();
+				prim.vertexUVsId = draws[i].prim->vertexUVs->getDescriptorIndex();
+				prim.vertexNormalsId = draws[i].prim->vertexNormals->getDescriptorIndex();
 			}
 		}
 		
@@ -264,19 +347,18 @@ public:
 		}
 	}
 
-	void prePass(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws) {
-
+	void prePass(RenderContext& renderCTX, daxa::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws) {
 		cmd->bindPipeline(prePassPipeline);
 		cmd->bindSet(0, globalSet);
 		
-		daxa::gpu::RenderAttachmentInfo depthAttachment{
+		daxa::RenderAttachmentInfo depthAttachment{
 			.image = renderCTX.depthImage,
 			.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 			.clearValue = {.depthStencil = VkClearDepthStencilValue{.depth = 1.0f } },
 		};
-		cmd->beginRendering(daxa::gpu::BeginRenderingInfo{
+		cmd->beginRendering(daxa::BeginRenderingInfo{
 			.colorAttachments = {},
 			.depthAttachment = &depthAttachment,
 		});
@@ -300,101 +382,28 @@ public:
 		});
 	}
 
-	void opaquePass(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws) {
-		if (auto newOpaque = opaqueFragHotloader.getNewIfChanged(); newOpaque.has_value()) {
-			this->opaquePassPipeline = newOpaque.value();
-            printf("hot laoded\n");
-		}
-
-		cmd->bindPipeline(opaquePassPipeline);
-		cmd->bindSet(0, globalSet);
-
-		std::array framebuffer{
-			daxa::gpu::RenderAttachmentInfo{
-				.image = renderCTX.hdrImage,
-				.clearValue = { .color = VkClearColorValue{.float32 = { 0.01f, 0.01f, 0.01f, 1.0f } } },
-			},
-			daxa::gpu::RenderAttachmentInfo{
-				.image = renderCTX.normalsImage,
-				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-				.clearValue = { .color = VkClearColorValue{.float32 = { 0.0f, 0.0f, 0.0f, 0.0f } } },
-			},
-		};
-		daxa::gpu::RenderAttachmentInfo depthAttachment{
-			.image = renderCTX.depthImage,
-			.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-			.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
-			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-		};
-		cmd->beginRendering(daxa::gpu::BeginRenderingInfo{
-			.colorAttachments = framebuffer,
-			.depthAttachment = &depthAttachment,
-		});
-
-		for (u32 i = 0; i < draws.size(); i++) {
-			auto& draw = draws[i];
-			auto set = perDrawOpaquePassSetAlloc->getSet();
-			if (draw.prim->albedoTexture) {
-				set->bindImage(0, draw.prim->albedoTexture, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			} else {
-				set->bindImage(0, dummyTexture, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			}
-			if (draw.prim->normalTexture) {
-				set->bindImage(1, draw.prim->normalTexture, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			} else {
-				set->bindImage(1, dummyNormalsTexture, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			}
-			cmd->bindSet(1, set);
-			cmd->bindIndexBuffer(draw.prim->indiexBuffer);
-			cmd->bindVertexBuffer(0, draw.prim->vertexPositions);
-			cmd->bindVertexBuffer(1, draw.prim->vertexUVs);
-			cmd->bindVertexBuffer(2, draw.prim->vertexNormals);
-			cmd->pushConstant(VK_SHADER_STAGE_VERTEX_BIT, i);
-			cmd->drawIndexed(draw.prim->indexCount, 1, 0, 0, 0);
-		}
-
-		cmd->endRendering();
-		cmd->unbindPipeline();
-
-		cmd->insertImageBarrier({
-			.barrier = {
-				.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
-				.srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT_KHR,
-				.dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
-				.dstAccess = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT_KHR | VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR | VK_ACCESS_2_SHADER_STORAGE_READ_BIT_KHR,
-			},
-			.image = renderCTX.normalsImage,
-			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-		});
-	}
-
 	void setLights(std::vector<DrawLight>& lights) {
 		drawLights = lights;
 	}
 
-	void opaquePass2(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws) {
-		if (auto newOpaque = opaqueFragHotloader2.getNewIfChanged(); newOpaque.has_value()) {
-			this->opaquePass2Pipeline = newOpaque.value();
-			printf("hot loaded\n");
-		}
+	void opaquePass2(RenderContext& renderCTX, daxa::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws) {
 		cmd->bindPipeline(opaquePass2Pipeline);
 		cmd->bindAll(0);
 
 		std::array framebuffer{
-			daxa::gpu::RenderAttachmentInfo{
+			daxa::RenderAttachmentInfo{
 				.image = renderCTX.hdrImage,
 				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 				.clearValue = {.color = VkClearColorValue{.float32 = { 0.00f, 0.00f, 0.00f, 1.0f } } },
 			},
-			daxa::gpu::RenderAttachmentInfo{
+			daxa::RenderAttachmentInfo{
 				.image = renderCTX.normalsImage,
 				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 				.clearValue = {.color = VkClearColorValue{.float32 = { 0.0f, 0.0f, 0.0f, 0.0f } } },
 			},
 		};
-		daxa::gpu::RenderAttachmentInfo depthAttachment{
+		daxa::RenderAttachmentInfo depthAttachment{
 			.image = renderCTX.depthImage,
 			.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 			//.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
@@ -402,7 +411,7 @@ public:
 			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 			.clearValue = {.depthStencil = VkClearDepthStencilValue{.depth = 1.0f } },
 		};
-		cmd->beginRendering(daxa::gpu::BeginRenderingInfo{
+		cmd->beginRendering(daxa::BeginRenderingInfo{
 			.colorAttachments = framebuffer,
 			.depthAttachment = &depthAttachment,
 			});
@@ -412,44 +421,16 @@ public:
 			auto& draw = draws[i];
 			primitivesDrawn += draw.prim->indexCount / 3;
 			struct {
-				u32 albedoMap;
-				u32 normalMap;
 				u32 globals;
 				u32 primitives;
 				u32 lights;
-				u32 vertexBufId;
-				u32 vertexUVBufId;
-				u32 vertexNormalBufId;
 				u32 drawIndex;
 			} push{
-				dummyTexture->getDescriptorIndex(),
-				dummyNormalsTexture->getDescriptorIndex(),
-				globalDataBufffer->getStorageBufferDescriptorIndex().value(),
-				primitiveInfoBuffer->getStorageBufferDescriptorIndex().value(),
-				lightsBuffer->getStorageBufferDescriptorIndex().value(),
-				draw.prim->vertexPositions->getStorageBufferDescriptorIndex().value(),
-				draw.prim->vertexUVs->getStorageBufferDescriptorIndex().value(),
-				draw.prim->vertexNormals->getStorageBufferDescriptorIndex().value(),
+				globalDataBufffer->getDescriptorIndex(),
+				primitiveInfoBuffer->getDescriptorIndex(),
+				lightsBuffer->getDescriptorIndex(),
 				i
 			};
-			if (draw.prim->albedoTexture.valid()) {
-				push.albedoMap = draw.prim->albedoTexture->getDescriptorIndex();
-			}
-			if (draw.prim->normalTexture.valid()) {
-				push.normalMap = draw.prim->normalTexture->getDescriptorIndex();
-			}
-			if (
-				push.albedoMap == 0 ||
-				push.normalMap == 0 ||
-				push.globals == 0 ||
-				push.primitives == 0 ||
-				push.lights == 0 ||
-				push.vertexBufId == 0 ||
-				push.vertexUVBufId == 0 ||
-				push.vertexNormalBufId == 0
-			) {
-				printf("dumdum\n");
-			}
 			cmd->pushConstant(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, push);
 			cmd->bindIndexBuffer(draw.prim->indiexBuffer);
 			cmd->drawIndexed(draw.prim->indexCount, 1, 0, 0, 0);
@@ -472,7 +453,7 @@ public:
 		});
 	}
 
-	void render(RenderContext& renderCTX, daxa::gpu::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws) {
+	void render(RenderContext& renderCTX, daxa::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws) {
 		uploadBuffers(renderCTX, cmd, draws, drawLights);
 		cmd->insertMemoryBarrier({
 			.srcStages = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR | VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
@@ -504,28 +485,31 @@ public:
 		});
 		//prePass(renderCTX, cmd, draws);
 		opaquePass2(renderCTX, cmd, draws);
+		tonemapPass(renderCTX, cmd);
 	}
 
 private:
 	size_t primitivesDrawn = 0;
 	bool first = true;
-	daxa::GraphicsPipelineHotLoader opaqueFragHotloader = {};
 	GlobalData globData = {};
 	std::vector<DrawLight> drawLights;
-    daxa::gpu::PipelineHandle prePassPipeline = {};
-    daxa::gpu::BindingSetAllocatorHandle globalSetAlloc = {};
-    daxa::gpu::BindingSetHandle globalSet = {};
-    daxa::gpu::BufferHandle globalDataBufffer = {};
-	daxa::gpu::BufferHandle primitiveInfoBuffer = {};
-	daxa::gpu::ImageViewHandle dummyTexture = {};
-	daxa::gpu::ImageViewHandle dummyNormalsTexture = {};
+    daxa::PipelineHandle prePassPipeline = {};
+    daxa::BindingSetAllocatorHandle globalSetAlloc = {};
+    daxa::BindingSetHandle globalSet = {};
+    daxa::BufferHandle globalDataBufffer = {};
+	daxa::BufferHandle primitiveInfoBuffer = {};
+	daxa::ImageViewHandle dummyTexture = {};
+	daxa::ImageViewHandle dummyNormalsTexture = {};
+	daxa::ImageViewHandle skyBox = {};
+	daxa::SamplerHandle generalSampler = {};
 
-	daxa::gpu::PipelineHandle opaquePassPipeline = {};
-	daxa::gpu::BufferHandle lightsBuffer = {};
-    daxa::gpu::BindingSetAllocatorHandle perDrawOpaquePassSetAlloc = {};
+	daxa::PipelineHandle opaquePassPipeline = {};
+	daxa::BufferHandle lightsBuffer = {};
+    daxa::BindingSetAllocatorHandle perDrawOpaquePassSetAlloc = {};
 
-	daxa::gpu::PipelineHandle opaquePass2Pipeline = {};
-	daxa::GraphicsPipelineHotLoader opaqueFragHotloader2 = {};
+	daxa::PipelineHandle opaquePass2Pipeline = {};
+
+	daxa::PipelineHandle tonemapPipeline = {};
 public:
 	OrthLightSourcePass orthLightPass = {};
 };

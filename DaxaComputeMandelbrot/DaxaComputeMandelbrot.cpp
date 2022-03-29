@@ -5,7 +5,7 @@
 class MyUser {
 public:
 	MyUser(daxa::AppState& app) 
-		: device{ daxa::gpu::Device::create() }
+		: device{ daxa::Device::create() }
 		, pipelineCompiler{ this->device->createPipelineCompiler() }
 		, queue{ this->device->createCommandQueue({.batchCount = 2 })}
 		, swapchain{ this->device->createSwapchain({
@@ -149,7 +149,7 @@ public:
 		});
 
 		// array because we can allways pass multiple barriers at once for driver efficiency
-		cmdList->queueMemoryBarrier(daxa::gpu::FULL_MEMORY_BARRIER);
+		cmdList->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 		
 		/// ------------ End Data Uploading ---------------------
 
@@ -189,7 +189,7 @@ public:
 
 		cmdList->finalize();
 
-		daxa::gpu::SubmitInfo submitInfo;
+		daxa::SubmitInfo submitInfo;
 		submitInfo.commandLists.push_back(std::move(cmdList));
 		submitInfo.signalOnCompletion = { &presentSignal, 1 };
 		queue->submit(submitInfo);
@@ -216,17 +216,17 @@ public:
 
 	}
 private:
-	daxa::gpu::DeviceHandle device;
+	daxa::DeviceHandle device;
 	daxa::PipelineCompilerHandle pipelineCompiler;
-	daxa::gpu::CommandQueueHandle queue;
-	daxa::gpu::SwapchainHandle swapchain;
-	daxa::gpu::SwapchainImage swapchainImage;
-	daxa::gpu::ImageViewHandle resultImage;
-	daxa::gpu::PipelineHandle pipeline;
-	daxa::gpu::BindingSetAllocatorHandle bindingSetAllocator;
-	daxa::gpu::BufferHandle uniformBuffer;
+	daxa::CommandQueueHandle queue;
+	daxa::SwapchainHandle swapchain;
+	daxa::SwapchainImage swapchainImage;
+	daxa::ImageViewHandle resultImage;
+	daxa::PipelineHandle pipeline;
+	daxa::BindingSetAllocatorHandle bindingSetAllocator;
+	daxa::BufferHandle uniformBuffer;
 	double totalElapsedTime = 0.0f;
-	daxa::gpu::SignalHandle presentSignal;
+	daxa::SignalHandle presentSignal;
 };
 
 int main()

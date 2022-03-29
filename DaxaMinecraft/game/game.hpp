@@ -12,7 +12,7 @@ struct Game {
 
     Window window;
 
-    VkSurfaceKHR vulkan_surface = window.get_vksurface(daxa::gpu::instance->getVkInstance());
+    VkSurfaceKHR vulkan_surface = window.get_vksurface(daxa::instance->getVkInstance());
     RenderContext render_context{vulkan_surface, window.frame_dim};
 
     World world{render_context};
