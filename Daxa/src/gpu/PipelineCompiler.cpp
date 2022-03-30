@@ -265,6 +265,9 @@ namespace daxa {
 
 	class FileIncluder : public shaderc::CompileOptions::IncluderInterface {
 	public:
+		constexpr static inline size_t DELETE_SOURCE_NAME = 0x1;
+		constexpr static inline size_t DELETE_CONTENT = 0x2;
+
 		virtual shaderc_include_result* GetInclude(
 			const char* requested_source,
             shaderc_include_type type,
@@ -275,6 +278,7 @@ namespace daxa {
 			if (include_depth <= 10) {
 				res->source_name = requested_source;
 				res->source_name_length = strlen(requested_source);
+				res->user_data = 0;
 
 				auto result = sharedData->findFullPathOfFile(requested_source);
 				if (result.isOk()) {
@@ -292,6 +296,7 @@ namespace daxa {
 
 						str.assign(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
 
+						res->user_data = reinterpret_cast<void*>(reinterpret_cast<size_t>(res->user_data) | DELETE_CONTENT);
 						char* data = new char[str.size()+1];
 						for (size_t i = 0; i < str.size()+1; i++) {
 							data[i] = str[i];
@@ -303,7 +308,7 @@ namespace daxa {
 						sharedData->observedHotLoadFiles->insert({requested_source_path,std::filesystem::last_write_time(requested_source_path)});
 					} else {
 						// double includes are ignored
-						res->content = "";
+						res->content = nullptr;
 						res->content_length = 0;
 					}
 				} else {
@@ -311,27 +316,31 @@ namespace daxa {
 					res->content = "could not find file";
 					res->content_length = strlen(res->content);
 
-					res->source_name = "";
+					res->source_name = nullptr;
 					res->source_name_length = 0;
 				}
 			}
 			else {
 				// max include depth exceeded
 				res->content = "current include depth of 10 was exceeded";
-				res->content_length = strlen(res->content);
+				res->content_length = std::strlen(res->content);
 
-				res->source_name = "";
+				res->source_name = nullptr;
 				res->source_name_length = 0;
 			}
 			return res;
 		}
 
     	virtual void ReleaseInclude(shaderc_include_result* data) override {
-			if (data->source_name_length > 0 && !std::string(data->content).empty()) {
-				delete data->content;
+			if (data) {
+				if (reinterpret_cast<size_t>(data->user_data) & DELETE_CONTENT) {
+					delete data->content;
+				}
+				if (reinterpret_cast<size_t>(data->source_name) & DELETE_SOURCE_NAME) {
+					delete data->source_name;
+				}
+				delete data;
 			}
-
-			delete data;
 		};
 
 		std::shared_ptr<PipelineCompilerShadedData> sharedData = {};
