@@ -24,7 +24,7 @@ struct RenderContext {
         auto result = device->createImageView({
             .image = device->createImage({
                 .format = VK_FORMAT_R8G8B8A8_UNORM,
-                .extent = {(uint32_t)dim.x, (uint32_t)dim.y, 1},
+                .extent = {static_cast<u32>(dim.x), static_cast<u32>(dim.y), 1},
                 .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
                 .debugName = "Render Image",
             }),
@@ -46,7 +46,7 @@ struct RenderContext {
         auto result = device->createImageView({
             .image = device->createImage({
                 .format = VK_FORMAT_D32_SFLOAT,
-                .extent = {(uint32_t)dim.x, (uint32_t)dim.y, 1},
+                .extent = {static_cast<u32>(dim.x), static_cast<u32>(dim.y), 1},
                 .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
                 .debugName = "Depth Image",
             }),
@@ -65,16 +65,17 @@ struct RenderContext {
     }
 
     RenderContext(VkSurfaceKHR surface, glm::ivec2 dim)
-        : device(daxa::Device::create()), queue(device->createCommandQueue({.batchCount = 2})),
+        : device(daxa::Device::create()),
+          pipeline_compiler{this->device->createPipelineCompiler()},
+          queue(device->createCommandQueue({.batchCount = 2})),
           swapchain(device->createSwapchain({
               .surface = surface,
-              .width = (uint32_t)dim.x,
-              .height = (uint32_t)dim.y,
+              .width = static_cast<u32>(dim.x),
+              .height = static_cast<u32>(dim.y),
               .presentMode = VK_PRESENT_MODE_FIFO_KHR,
               .additionalUses = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
               .debugName = "Swapchain",
           })),
-          pipeline_compiler{this->device->createPipelineCompiler()},
           swapchain_image(swapchain->aquireNextImage()),
           render_color_image(create_color_image(dim)),
           render_depth_image(create_depth_image(dim)) {
@@ -97,7 +98,7 @@ struct RenderContext {
 
     auto begin_frame(glm::ivec2 dim) {
         resize(dim);
-        auto *currentFrame = &frames.front();
+        // auto *currentFrame = &frames.front();
         auto cmd_list = queue->getCommandList({});
         cmd_list->queueImageBarrier(daxa::ImageBarrier{
             .barrier = daxa::FULL_MEMORY_BARRIER,
@@ -157,9 +158,9 @@ struct RenderContext {
     }
 
     void resize(glm::ivec2 dim) {
-        if (dim.x != swapchain->getSize().width || dim.y != swapchain->getSize().height) {
+        if (dim.x != static_cast<i32>(swapchain->getSize().width) || dim.y != static_cast<i32>(swapchain->getSize().height)) {
             device->waitIdle();
-            swapchain->resize(VkExtent2D{.width = (uint32_t)dim.x, .height = (uint32_t)dim.y});
+            swapchain->resize(VkExtent2D{.width = static_cast<u32>(dim.x), .height = static_cast<u32>(dim.y)});
             swapchain_image = swapchain->aquireNextImage();
             render_color_image = create_color_image(dim);
             render_depth_image = create_depth_image(dim);
@@ -257,6 +258,7 @@ struct World {
 
     daxa::PipelineHandle chunkgen_compute_pipeline_pass0;
     daxa::PipelineHandle chunkgen_compute_pipeline_pass1;
+    daxa::PipelineHandle sdf_compute_pipeline_passes[3];
 
     struct ComputeGlobals {
         glm::mat4 viewproj_mat;
@@ -397,9 +399,17 @@ struct World {
             if (result)
                 chunkgen_compute_pipeline_pass1 = result.value();
         }
+        for (auto &sdf_pipe : sdf_compute_pipeline_passes) {
+            if (render_ctx.pipeline_compiler->checkIfSourcesChanged(sdf_pipe)) {
+                auto result = render_ctx.pipeline_compiler->recreatePipeline(sdf_pipe);
+                std::cout << result << std::endl;
+                if (result)
+                    sdf_pipe = result.value();
+            }
+        }
     }
 
-    void update(float dt) {
+    void update(float) {
         reload_shaders();
     }
 
@@ -472,6 +482,27 @@ struct World {
             }
         }
 
+        for (auto &sdf_pass_pipe : sdf_compute_pipeline_passes) {
+            cmd_list->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+            cmd_list->bindPipeline(sdf_pass_pipe);
+            cmd_list->bindAll();
+            for (size_t zi = 0; zi < DIM.z; ++zi) {
+                for (size_t yi = 0; yi < DIM.y; ++yi) {
+                    for (size_t xi = 0; xi < DIM.x; ++xi) {
+                        cmd_list->pushConstant(
+                            VK_SHADER_STAGE_COMPUTE_BIT,
+                            ChunkgenPush{
+                                .pos = {64.0f * xi, 64.0f * yi, 64.0f * zi, 0},
+                                .globals_sb = compute_globals_i,
+                                .output_image_i = compute_globals.chunk_ids[1][zi][yi][xi],
+                                .chunk_buffer_i = 1,
+                            });
+                        cmd_list->dispatch(8, 8, 8);
+                    }
+                }
+            }
+        }
+
         cmd_list->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 
         cmd_list->bindPipeline(raymarch_compute_pipeline);
@@ -516,6 +547,23 @@ struct World {
                 .overwriteSets = {daxa::BIND_ALL_SET_DESCRIPTION},
             });
             chunkgen_compute_pipeline_pass1 = result.value();
+        }
+
+        std::filesystem::path sdf_pass_paths[3] = {
+            "DaxaMinecraft/assets/shaders/chunkgen/sdf_pass0.comp",
+            "DaxaMinecraft/assets/shaders/chunkgen/sdf_pass1.comp",
+            "DaxaMinecraft/assets/shaders/chunkgen/sdf_pass2.comp",
+        };
+
+        for (size_t i = 0; i < 3; ++i) {
+            auto result = render_ctx.pipeline_compiler->createComputePipeline({
+                .shaderCI = {
+                    .pathToSource = sdf_pass_paths[i],
+                    .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+                },
+                .overwriteSets = {daxa::BIND_ALL_SET_DESCRIPTION},
+            });
+            sdf_compute_pipeline_passes[i] = result.value();
         }
     }
 
@@ -599,7 +647,7 @@ struct World {
                     .baseArrayLayer = static_cast<uint32_t>(i),
                     .layerCount = 1,
                 }},
-                .size = size_x * size_y * num_channels * sizeof(uint8_t),
+                .size = static_cast<u32>(size_x * size_y * num_channels) * sizeof(uint8_t),
             });
         }
         daxa::generateMipLevels(

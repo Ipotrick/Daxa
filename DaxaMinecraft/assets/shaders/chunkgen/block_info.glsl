@@ -33,7 +33,8 @@ const uint BlockFace_Top    = 5;
 // clang-format on
 
 const uint BLOCK_ID_MASK = 0x0000ffff;
-const uint BIOME_ID_MASK = 0xffff0000;
+const uint BIOME_ID_MASK = 0x00ff0000;
+const uint SDF_DIST_MASK = 0xff000000;
 
 const uint WATER_LEVEL = 64;
 

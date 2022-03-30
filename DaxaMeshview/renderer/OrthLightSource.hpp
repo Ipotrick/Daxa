@@ -52,13 +52,13 @@ public:
 	}
 
 	void render(
-		RenderContext& renderCTX, 
+		RenderContext&, 
 		daxa::CommandListHandle& cmd, 
 		std::vector<DrawPrimCmd>& draws, 
 		daxa::BufferHandle& primitiveInfosBuffer,
-		glm::vec3 const& direction, 
-		f32 distance, 
-		glm::vec4 color
+		glm::vec3 const&, 
+		f32, 
+		glm::vec4
 	) {
 		using namespace daxa;
 

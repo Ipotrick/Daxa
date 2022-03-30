@@ -37,3 +37,7 @@ uint get_block_id(vec3 p) {
 bool is_voxel_occluding(vec3 p) {
     return get_block_id(p) != 0;
 }
+
+bool is_tile_occluding(uint tile) {
+    return (tile & 0xffff) != 0;
+}

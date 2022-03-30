@@ -57,7 +57,7 @@ namespace daxa {
 		friend class StagingBufferPool;
 		friend class Queue;
 		template<typename ValueT>
-		friend struct MappedMemoryPointer;
+		friend class MappedMemoryPointer;
 		friend struct BufferStaticFunctionOverride;
 		
 		void* mapMemory();

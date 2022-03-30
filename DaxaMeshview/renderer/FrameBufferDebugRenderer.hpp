@@ -109,12 +109,12 @@ public:
     
     void renderDebugViews(RenderContext& renderCTX, daxa::CommandListHandle& cmdList, CameraData cameraData) {
         uploadData.cameraData = cameraData;
-        uploadData.imageWidth = debugLinearDepthImage->getImageHandle()->getVkExtent3D().width;
-        uploadData.imageHeight = debugLinearDepthImage->getImageHandle()->getVkExtent3D().height;
+        uploadData.imageWidth = static_cast<i32>(debugLinearDepthImage->getImageHandle()->getVkExtent3D().width);
+        uploadData.imageHeight = static_cast<i32>(debugLinearDepthImage->getImageHandle()->getVkExtent3D().height);
         uploadData.zMin = std::min(std::max(cameraData.near, uploadData.zMin), cameraData.far);
         uploadData.zMax = std::min(std::max(cameraData.near, uploadData.zMax), cameraData.far);
         cmdList->copyHostToBuffer({
-            .src = (void*)&uploadData,
+            .src = reinterpret_cast<void*>(&uploadData),
             .dst = buffer,
             .size = sizeof(decltype(uploadData)),
         });
@@ -174,7 +174,7 @@ public:
         set->bindImage(5, debugWorldSpaceNormalImage, VK_IMAGE_LAYOUT_GENERAL);
         cmdList->bindSet(0, set);
 
-        cmdList->dispatch((uploadData.imageWidth + 1) / 8, (uploadData.imageHeight + 1) / 8);
+        cmdList->dispatch(static_cast<u32>(uploadData.imageWidth + 1) / 8, static_cast<u32>(uploadData.imageHeight + 1) / 8);
         cmdList->unbindPipeline();
 
         // TODO dispatch compute shader
@@ -216,21 +216,21 @@ public:
 	void doGui(daxa::ImGuiRenderer& imguiRenderer) {
 		ImGui::Begin("frame buffer inspector");
 		ImGui::Text("screenspace normals");
-        f32 frameBufferWidth = debugLinearDepthImage->getImageHandle()->getVkExtent3D().width;
-        f32 frameBufferHeight = debugLinearDepthImage->getImageHandle()->getVkExtent3D().height;
+        f32 frameBufferWidth = static_cast<f32>(debugLinearDepthImage->getImageHandle()->getVkExtent3D().width);
+        f32 frameBufferHeight = static_cast<f32>(debugLinearDepthImage->getImageHandle()->getVkExtent3D().height);
 		f32 w = ImGui::GetWindowWidth() - 10;
-		f32 aspect = (f32)frameBufferHeight / (f32)frameBufferWidth;
+		f32 aspect = frameBufferHeight / frameBufferWidth;
 		f32 h = w * aspect;
 		auto id = imguiRenderer.getImGuiTextureId(debugScreenSpaceNormalImage);
-		ImGui::Image((void*)id, ImVec2(w, h));
+		ImGui::Image(reinterpret_cast<void*>(id), ImVec2(w, h));
 		ImGui::Text("worldspace normals");
 		id = imguiRenderer.getImGuiTextureId(debugWorldSpaceNormalImage);
-		ImGui::Image((void*)id, ImVec2(w, h));
+		ImGui::Image(reinterpret_cast<void*>(id), ImVec2(w, h));
 		ImGui::Text("depth");
         ImGui::SliderFloat("z min", &uploadData.zMin, uploadData.cameraData.near, uploadData.cameraData.far);
         ImGui::SliderFloat("z max", &uploadData.zMax, uploadData.cameraData.near, uploadData.cameraData.far);
 		id = imguiRenderer.getImGuiTextureId(debugLinearDepthImage);
-		ImGui::Image((void*)id, ImVec2(w, h));
+		ImGui::Image(reinterpret_cast<void*>(id), ImVec2(w, h));
 		ImGui::End();
 	}
 

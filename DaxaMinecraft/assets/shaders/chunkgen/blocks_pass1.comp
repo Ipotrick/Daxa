@@ -12,7 +12,7 @@ uint gen_block(in vec3 b_pos) {
     float b_val = biome_noise(b_pos);
     float r = rand(b_pos);
 
-    float water_level = WATER_LEVEL + sin(globals.time) * 20 - 20;
+    float water_level = WATER_LEVEL + sin(globals.time) * 0 + 20;
 
     uint biome_id = BiomeID_Plains;
     if (b_val < -0.2)
@@ -24,7 +24,7 @@ uint gen_block(in vec3 b_pos) {
 
     biome_id = biome_id << 16;
 
-    if (val > 0.1f) {
+    if (val > 0.1f + sin(globals.time * 1.312) * 0.00) {
         return BlockID_Stone | biome_id;
     } else {
         if (b_pos.y > water_level) {

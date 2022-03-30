@@ -125,7 +125,7 @@ namespace daxa {
         }
 
         auto end() {
-            return EntityComponentIterator{ (EntityIndex)storage<FirstComponentType>().denseIndices.size(), versions, &storages };
+            return EntityComponentIterator{ static_cast<EntityIndex>(storage<FirstComponentType>().denseIndices.size()), versions, &storages };
         }
 
         template<typename SpecificType>

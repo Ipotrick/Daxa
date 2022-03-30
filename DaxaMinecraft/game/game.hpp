@@ -67,7 +67,7 @@ struct Game {
     }
     void on_mouse_scroll(const glm::dvec2) {
     }
-    void on_mouse_button(int button, int action) {
+    void on_mouse_button(int, int) {
     }
     void on_key(int key, int action) {
         if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)

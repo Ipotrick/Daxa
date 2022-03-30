@@ -6,6 +6,7 @@ class RenderContext {
 public:
     RenderContext(daxa::Window& window) 
 		: device{ daxa::Device::create() }
+		, pipelineCompiler{ this->device->createPipelineCompiler() }
 		, queue{ this->device->createCommandQueue({.batchCount = 3}) }
 		, swapchain{ this->device->createSwapchain({
 			.surface = window.getSurface(),
@@ -16,7 +17,6 @@ public:
 		})}
 		, swapchainImage{ this->swapchain->aquireNextImage(), }
 		, presentSignal{ this->device->createSignal({.debugName = "present signal"}) }
-		, pipelineCompiler{ this->device->createPipelineCompiler() }
     {
 		defaultSampler = device->createSampler({});
 		auto cmd = queue->getCommandList({});

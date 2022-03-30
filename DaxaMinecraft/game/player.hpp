@@ -40,11 +40,8 @@ struct Player3D {
     float speed = 128.0f, mouse_sens = 0.005f;
     float sin_rot_x = 0, cos_rot_x = 1;
 
-    union MoveFlags {
-        struct {
-            uint8_t px : 1, py : 1, pz : 1, nx : 1, ny : 1, nz : 1;
-        };
-        uint8_t raw = 0;
+    struct MoveFlags {
+        uint8_t px : 1, py : 1, pz : 1, nx : 1, ny : 1, nz : 1;
     } move;
 
     void update(float dt) {

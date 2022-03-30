@@ -61,7 +61,7 @@ public:
     void recreateImages(RenderContext& renderCTX, daxa::CommandListHandle& cmd, u32 width, u32 height) {
         std::array<daxa::ImageViewHandle*, 9> images = { &verResultR, &verResultG, &verResultB, &horResultR, &horResultG, &horResultB, &freqImageR, &freqImageG, &freqImageB };
         std::array<char const*, 9> imageNames = { "verResultR", "verResultG", "verResultB", "horResultR", "horResultG", "horResultB", "freqImageR", "freqImageG", "freqImageB" };
-        for (int i = 0; i < 9; i++) {
+        for (size_t i = 0; i < 9; i++) {
             *images[i] = renderCTX.device->createImageView({
                 .image = renderCTX.device->createImage({
                     .format = VK_FORMAT_R16G16_SFLOAT,
@@ -107,8 +107,8 @@ public:
         }
         u32 width = renderCTX.hdrImage->getImageHandle()->getVkExtent3D().width;
         u32 height = renderCTX.hdrImage->getImageHandle()->getVkExtent3D().height;
-        u32 log2Width = std::log2(width);
-        u32 log2Height = std::log2(height);
+        u32 log2Width = static_cast<u32>(std::log2(width));
+        // u32 log2Height = static_cast<u32>(std::log2(height));
         // horizontal pass
         cmd->bindPipeline(fft1024Horizontal);
         cmd->bindAll();
@@ -155,8 +155,8 @@ public:
         }
         u32 width = renderCTX.hdrImage->getImageHandle()->getVkExtent3D().width;
         u32 height = renderCTX.hdrImage->getImageHandle()->getVkExtent3D().height;
-        u32 log2Width = std::log2(width);
-        u32 log2Height = std::log2(height);
+        // u32 log2Width = static_cast<u32>(std::log2(width));
+        u32 log2Height = static_cast<u32>(std::log2(height));
         // horizontal pass
         cmd->bindPipeline(fft1024Vertical);
         cmd->bindAll();
