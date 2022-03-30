@@ -61,14 +61,14 @@ namespace daxa {
 		VkExtent2D 						size 					= {}; 
 		VkImageUsageFlags 				additionalimageUses		= {};
 		std::string 					debugName 				= {};
-	};
-
+	}; 
 	class SwapchainHandle : public SharedHandle<Swapchain>{};
 
 	class Swapchain2 {
 	public:
 		Swapchain2() = default;
-		Swapchain2(std::shared_ptr<DeviceBackend>& deviceBackend, SwapchainCreateInfo const& ci, Swapchain2* old);
+
+		static Result<Swapchain2> construct(std::shared_ptr<DeviceBackend>& deviceBackend, SwapchainCreateInfo const& ci, Swapchain2* old = {});
 
 		Result<std::pair<u32, ImageViewHandle>> aquireNextImage();
 

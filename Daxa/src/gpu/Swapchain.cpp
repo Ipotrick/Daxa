@@ -135,10 +135,30 @@ namespace daxa {
 		construct(deviceBackend, {surface, size.width, size.height, newPresentMode, additionalimageUses, debugName.c_str()});
 	}
 	
-	Swapchain2::Swapchain2(std::shared_ptr<DeviceBackend>& deviceBackend, SwapchainCreateInfo const& ci, Swapchain2* old)
-		: deviceBackend{ deviceBackend }
-		, ci{ ci }
-	{
+	Result<Swapchain2> Swapchain2::construct(std::shared_ptr<DeviceBackend>& deviceBackend, SwapchainCreateInfo const& ci, Swapchain2* old) {
+		Swapchain2 res = {};
+		res.deviceBackend = deviceBackend;
+		res.ci = ci;
 
+		VkSwapchainCreateInfoKHR scci = {};
+		scci.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+		scci.pNext = nullptr;
+		scci.surface = ci.surface;
+		scci.presentMode = ci.presentMode;
+		scci.oldSwapchain = VK_NULL_HANDLE;
+		if (old != nullptr) {
+			DAXA_ASSERT_M(old->swapchain != VK_NULL_HANDLE, "invalid old swapchain");
+			scci.oldSwapchain = old->swapchain;
+			old->swapchain = VK_NULL_HANDLE;
+		}
+		scci.minImageCount = 2; 
+		scci.imageFormat = VK_FORMAT_B8G8R8A8_SRGB;
+		scci.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+		scci.imageArrayLayers = 1;
+		scci.imageExtent = { .width = ci.width, .height = ci.height };
+		scci.imageUsage = ci.additionalUses;
+		scci.pQueueFamilyIndices = &deviceBackend->graphicsQFamilyIndex;
+		scci.queueFamilyIndexCount = 1;
+		scci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	}
 }
