@@ -17,8 +17,6 @@
 #include "DeviceBackend.hpp"
 
 namespace daxa {
-	VkSurfaceKHR createSurface(void* sdlWindowHandle, VkInstance instance);
-
 	struct SwapchainCreateInfo{
 		VkSurfaceKHR surface 				= VK_NULL_HANDLE;
 		u32 width 							= 256;
@@ -57,13 +55,31 @@ namespace daxa {
 		VkFence 						aquireFence 			= VK_NULL_HANDLE;
 		VkPresentModeKHR 				presentMode 			= VK_PRESENT_MODE_FIFO_KHR;
 		VkSurfaceKHR 					surface 				= VK_NULL_HANDLE;
-		VkSwapchainKHR 					swapchain 				= VK_NULL_HANDLE; 
+		VkSwapchainKHR 					swapchain 				= VK_NULL_HANDLE;
 		VkFormat 						swapchainImageFormat 	= {};
-		std::vector<ImageViewHandle> 	swapchainImageViews			= {};
+		std::vector<ImageViewHandle> 	swapchainImageViews		= {};
 		VkExtent2D 						size 					= {}; 
 		VkImageUsageFlags 				additionalimageUses		= {};
 		std::string 					debugName 				= {};
 	};
 
 	class SwapchainHandle : public SharedHandle<Swapchain>{};
+
+	class Swapchain2 {
+	public:
+		Swapchain2() = default;
+		Swapchain2(std::shared_ptr<DeviceBackend>& deviceBackend, SwapchainCreateInfo const& ci, Swapchain2* old);
+
+		Result<std::pair<u32, ImageViewHandle>> aquireNextImage();
+
+		std::string const& getDebugName() const { return debugName; }
+	private:
+		std::shared_ptr<DeviceBackend> 	deviceBackend 	= {};
+		SwapchainCreateInfo 			ci 				= {};
+		VkFence 						aquireFence 	= VK_NULL_HANDLE;
+		VkSwapchainKHR 					swapchain 		= VK_NULL_HANDLE;
+		VkFormat 						format 			= {};
+		std::vector<ImageViewHandle>	imageViews 		= {};
+		std::string 					debugName 		= {};
+	};
 }
