@@ -409,7 +409,7 @@ namespace daxa {
 
 		template<typename T>
 		void pushConstant(VkShaderStageFlags shaderStage, T const& constant, size_t offset = 0) {
-			vkCmdPushConstants(cmd, (**currentPipeline).getVkPipelineLayout(), shaderStage, offset, sizeof(T), &constant);
+			vkCmdPushConstants(cmd, (**currentPipeline).getVkPipelineLayout(), shaderStage, static_cast<u32>(offset), static_cast<u32>(sizeof(T)), &constant);
 		}
 
 		void bindVertexBuffer(u32 binding, BufferHandle& buffer, size_t bufferOffset = 0);

@@ -145,7 +145,7 @@ namespace daxa {
 		std::shared_ptr<BindingSetLayout const> getSetLayout(u32 set) const { 
 			auto setLayout = bindingSetLayouts.at(set);
 			DAXA_ASSERT_M(setLayout, "tried querring non existant binding set description from pipeline");
-			return std::move(setLayout);
+			return setLayout;
 		}
 
 		VkPipelineBindPoint getVkBindPoint() const { return bindPoint; }

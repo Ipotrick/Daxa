@@ -68,9 +68,9 @@ namespace daxa {
 		size_t operator()(BindingSetDescription const& description) const
 		{
 			size_t hash = 0x44fe7234f2;
-			for (int i = 0; i < MAX_BINDINGS_PER_SET; i++) {
+			for (size_t i = 0; i < MAX_BINDINGS_PER_SET; i++) {
 				hash ^= description.layouts[i].descriptorCount << 1;
-				hash ^= description.layouts[i].descriptorType << 2;
+				hash ^= static_cast<u32>(description.layouts[i].descriptorType) << 2;
 				hash ^= description.layouts[i].stageFlags << 3;
 				hash ^= description.layouts[i].bindingFlag << 4;
 				hash <<= 1;
