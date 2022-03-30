@@ -24,12 +24,7 @@ vec3 uncharted2Tonemap(vec3 x)
 }
 
 void main() {
-
-    vec2 coord = vec2(
-        gl_FragCoord.x / (push.width-1),
-        gl_FragCoord.y / (push.height-1)
-    );
-    vec3 color = texture(images[push.hdrImgId],coord).rgb;
-    vec3 mappedColor = uncharted2Tonemap(color);
+    vec3 color = texelFetch(images[push.hdrImgId], ivec2(gl_FragCoord.x, gl_FragCoord.y), 0).rgb;
+    vec3 mappedColor = uncharted2Tonemap(c);
     o_color = vec4(mappedColor,1); 
 }
