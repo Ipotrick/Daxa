@@ -3,7 +3,7 @@
 #include "window.hpp"
 #include "player.hpp"
 #include "graphics.hpp"
-#include "../../../fps_printer.hpp"
+#include "fps_printer.hpp"
 
 #include <chrono>
 
