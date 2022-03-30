@@ -37,7 +37,7 @@ namespace daxa {
 		std::vector<u16> storageBufferIndexFreeList 									= {};
 		u16 nextStorageBufferIndex														= 1;
 		VkSampler dummySampler 															= {};
-
+		VkPhysicalDeviceProperties2 properties 											= {};
 	private:
 		void createDummies();
 		void destroyDummies();
