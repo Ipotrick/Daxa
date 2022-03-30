@@ -75,10 +75,10 @@ namespace daxa {
 		 */
 		void waitIdle();
 
-		const VkPhysicalDevice getVkPhysicalDevice() const { return backend->device.physical_device; }
-		const VkDevice getVkDevice() const { return backend->device.device; }
-		const VmaAllocator getVma() const { return backend->allocator; }
-		const u32 getVkGraphicsQueueFamilyIndex() const { return backend->graphicsQFamilyIndex; }
+		VkPhysicalDevice getVkPhysicalDevice() const { return backend->device.physical_device; }
+		VkDevice getVkDevice() const { return backend->device.device; }
+		VmaAllocator getVma() const { return backend->allocator; }
+		u32 getVkGraphicsQueueFamilyIndex() const { return backend->graphicsQFamilyIndex; }
 	private:
 		friend class Instance;
 

@@ -13,7 +13,7 @@ namespace daxa {
 		std::chrono::microseconds deltaTimeLastFrame = {};
 		Window* window = nullptr;
 
-		float getDeltaTimeSeconds() const { return deltaTimeLastFrame.count() * 0.00'0001f; }
+		float getDeltaTimeSeconds() const { return std::chrono::duration<float>(deltaTimeLastFrame).count(); }
 	};
 
 	template<typename TUser>
@@ -44,8 +44,8 @@ namespace daxa {
 		}
 	private:
 
-		AppState appstate;
 		Window window;
+		AppState appstate;
 		std::unique_ptr<TUser> user;
 	};
 

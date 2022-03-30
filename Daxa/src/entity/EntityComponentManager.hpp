@@ -29,7 +29,7 @@ namespace daxa {
                 ret.version = versions->at(ret.index);
             } else {
                 versions->push_back(0);
-                ret.index = versions->size() - 1;
+                ret.index = static_cast<EntityIndex>(versions->size() - 1);
                 ret.version = 0;
             }
             return ret;

@@ -21,9 +21,9 @@ namespace daxa {
 		void (*vkCmdEndRenderingKHR)(VkCommandBuffer) 									= nullptr;
 		void (*vkCmdPipelineBarrier2KHR)(VkCommandBuffer, VkDependencyInfoKHR const*) 	= nullptr;
 		VmaAllocator allocator 															= {};
-		u32 graphicsQFamilyIndex 														= -1;
-		u32 transferQFamilyIndex														= -1;
-		u32 computeQFamilyIndex															= -1;
+		u32 graphicsQFamilyIndex 														= 0xffffffff;
+		u32 transferQFamilyIndex														= 0xffffffff;
+		u32 computeQFamilyIndex															= 0xffffffff;
 		std::vector<u32> allQFamilyIndices 												= {};
 		Graveyard graveyard                                                             = {};
 		std::mutex bindAllMtx 															= {};

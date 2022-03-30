@@ -141,7 +141,7 @@ public:
 
 		std::array someBufferdata = { app.window->getWidth(), app.window->getHeight() };
 		cmdList->singleCopyHostToBuffer({
-			.src = (u8*)someBufferdata.data(),
+			.src = reinterpret_cast<u8*>(someBufferdata.data()),
 			.dst = uniformBuffer,
 			.region = {
 				.size = sizeof(decltype(someBufferdata)),
@@ -206,7 +206,7 @@ public:
 		queue->checkForFinishedSubmits();
 	}
 
-	void cleanup(daxa::AppState& app) {
+	void cleanup(daxa::AppState&) {
 		queue->waitIdle();
 		queue->checkForFinishedSubmits();
 		device->waitIdle();
@@ -225,7 +225,6 @@ private:
 	daxa::PipelineHandle pipeline;
 	daxa::BindingSetAllocatorHandle bindingSetAllocator;
 	daxa::BufferHandle uniformBuffer;
-	double totalElapsedTime = 0.0f;
 	daxa::SignalHandle presentSignal;
 };
 
