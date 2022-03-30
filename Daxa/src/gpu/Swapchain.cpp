@@ -134,4 +134,11 @@ namespace daxa {
 		swapchainImageViews.clear();
 		construct(deviceBackend, {surface, size.width, size.height, newPresentMode, additionalimageUses, debugName.c_str()});
 	}
+	
+	Swapchain2::Swapchain2(std::shared_ptr<DeviceBackend>& deviceBackend, SwapchainCreateInfo const& ci, Swapchain2* old)
+		: deviceBackend{ deviceBackend }
+		, ci{ ci }
+	{
+
+	}
 }
