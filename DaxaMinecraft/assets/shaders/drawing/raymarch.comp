@@ -8,7 +8,7 @@ layout(local_size_x = 8, local_size_y = 8) in;
 #include <utils/ray.glsl>
 
 Ray sun_ray;
-const vec3 sun_col = vec3(2, 1.8, 1) * 2;
+const vec3 sun_col = vec3(2, 1.8, 1);
 
 vec3 sample_sky(vec3 nrm) {
     float sun_val = clamp((dot(nrm, sun_ray.nrm) - 0.9995) * 5000, 0, 1);
@@ -48,7 +48,7 @@ void main() {
             cam_ray.inv_nrm = 1 / cam_ray.nrm;
 
             RayIntersection ray_chunk_intersection = trace_chunks(cam_ray);
-            color.r += float(ray_chunk_intersection.steps) * 1.0 / MAX_STEPS;
+            // color.r += float(ray_chunk_intersection.steps) * 1.0 / MAX_STEPS;
 
             if (ray_chunk_intersection.hit) {
                 vec3 intersection_pos = get_intersection_pos(cam_ray, ray_chunk_intersection);
@@ -56,7 +56,7 @@ void main() {
                 RayIntersection sun_ray_chunk_intersection = trace_chunks(sun_ray);
                 float val = float(!sun_ray_chunk_intersection.hit);
                 val = max(val * dot(ray_chunk_intersection.nrm, sun_ray.nrm), 0.01);
-                vec3 light = val * sun_col + sample_sky(ray_chunk_intersection.nrm) * 0.5;
+                vec3 light = val * sun_col + sample_sky(ray_chunk_intersection.nrm) * 0.2;
                 // vec3 light = sun_col + sample_sky(ray_chunk_intersection.nrm) * 0.2;
                 vec3 b_uv = vec3(ivec3(intersection_pos) % 16) / 16;
 
