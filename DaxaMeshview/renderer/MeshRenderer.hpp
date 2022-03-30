@@ -217,7 +217,7 @@ public:
 		opaquePass2Pipeline = renderCTX.pipelineCompiler->createGraphicsPipeline(opaque2PipelineBuilder).value();
 	}
 
-	void setCamera(daxa::CommandListHandle& cmd, glm::mat4 const& vp, glm::mat4 const& view) {
+	void setCamera(daxa::CommandListHandle&, glm::mat4 const& vp, glm::mat4 const& view) {
 		globData.vp = vp;
 		globData.view = view;
 	}
@@ -243,7 +243,7 @@ public:
 				.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			});
 			cmd->singleCopyHostToImage({
-				.src = (u8*)&pink,
+				.src = reinterpret_cast<u8*>(&pink),
 				.dst = dummyTexture->getImageHandle(),
 				.dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				.region = {},
@@ -276,7 +276,7 @@ public:
 				.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			});
 			cmd->singleCopyHostToImage({
-				.src = (u8*)&up,
+				.src = reinterpret_cast<u8*>(&up),
 				.dst = dummyNormalsTexture->getImageHandle(),
 				.dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				.region = {},
@@ -290,7 +290,7 @@ public:
 
 		globData.generalSampler = generalSampler->getDescriptorIndex();
 		cmd->copyHostToBuffer({
-			.src = (void*)&globData,
+			.src = reinterpret_cast<void*>(&globData),
 			.dst = globalDataBufffer,
 			.size = sizeof(decltype(globData)),
 		});
@@ -307,7 +307,7 @@ public:
 		}
 		if (!draws.empty()) {
 			auto mm = cmd->mapMemoryStagedBuffer<GPUPrimitiveInfo>(primitiveInfoBuffer, draws.size() * sizeof(GPUPrimitiveInfo), 0);
-			for (int i = 0; i < draws.size(); i++) {
+			for (size_t i = 0; i < draws.size(); i++) {
 				auto& prim = mm.hostPtr[i];
 				prim.transform = draws[i].transform;
 				prim.inverseTransposeTransform = glm::inverse(glm::transpose(draws[i].transform));
@@ -339,10 +339,10 @@ public:
 		}
 		{
 			auto mm = cmd->mapMemoryStagedBuffer(lightsBuffer, lights.size() * sizeof(DrawLight) + sizeof(glm::vec4), 0);
-			*((u32*)mm.hostPtr) = (u32)lights.size();
+			*(reinterpret_cast<u32*>(mm.hostPtr)) = static_cast<u32>(lights.size());
 			mm.hostPtr += sizeof(glm::vec4);
-			for (int i = 0; i < lights.size(); i++) {
-				((DrawLight*)mm.hostPtr)[i] = lights[i];
+			for (size_t i = 0; i < lights.size(); i++) {
+				(reinterpret_cast<DrawLight*>(mm.hostPtr))[i] = lights[i];
 			}
 		}
 	}
@@ -490,7 +490,6 @@ public:
 
 private:
 	size_t primitivesDrawn = 0;
-	bool first = true;
 	GlobalData globData = {};
 	std::vector<DrawLight> drawLights;
     daxa::PipelineHandle prePassPipeline = {};

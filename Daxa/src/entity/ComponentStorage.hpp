@@ -30,7 +30,7 @@ namespace daxa {
         virtual void remove(EntityIndex index) override final {
             DAXA_ASSERT_M(has(index), "tried to remove a component of an entity that does NOT posess to to be removed component!");
             EntityIndex denseIndex = sparseIndices[index];
-            EntityIndex denseLastIndex = denseIndices.size() - 1;
+            EntityIndex denseLastIndex = static_cast<EntityIndex>(denseIndices.size() - 1);
             EntityIndex sparseLastIndex = denseIndices[denseLastIndex];
 
             sparseIndices[index] = INVALID_ENTITY_INDEX;
@@ -47,7 +47,7 @@ namespace daxa {
             }
 
             DAXA_ASSERT_M(sparseIndices[index] == INVALID_ENTITY_INDEX, "tried to add component to entity that allready posesses the to be added component!");
-            EntityIndex denseIndex = denseIndices.size();
+            EntityIndex denseIndex = static_cast<EntityIndex>(denseIndices.size());
             sparseIndices[index] = denseIndex;
             denseIndices.push_back(index);
             values.push_back(std::move(value));

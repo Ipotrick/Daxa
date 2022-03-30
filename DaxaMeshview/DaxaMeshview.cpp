@@ -88,13 +88,13 @@ public:
 			auto id = imguiRenderer->getImGuiTextureId(tex);
 			ImGui::Text("pointer = %llu", id);
 			ImGui::Text("size = %d x %d", tex->getImageHandle()->getVkExtent3D().width, tex->getImageHandle()->getVkExtent3D().height);
-			ImGui::Image((void*)id, ImVec2(400,400));
+			ImGui::Image(reinterpret_cast<void*>(id), ImVec2(400,400));
 		}
 		ImGui::End();
 		ImGui::Begin("fft debug");
 		{
 			auto id = imguiRenderer->getImGuiTextureId(fft.fftDebugImage);
-			ImGui::Image((void*)id, ImVec2(400,400));
+			ImGui::Image(reinterpret_cast<void*>(id), ImVec2(400,400));
 		}
 		ImGui::End();
 
@@ -159,7 +159,7 @@ public:
 				}
 
 				auto translation = glm::mat4{1.0f};
-				for (int i = 0; i < transformBuffer.size(); i++) {
+				for (size_t i = 0; i < transformBuffer.size(); i++) {
 					translation =  transformBuffer[i] * translation;
 				}
 
@@ -215,7 +215,7 @@ public:
 		renderCTX.present();
 	}
 
-	void cleanup(daxa::AppState& app) {
+	void cleanup(daxa::AppState&) {
 		renderCTX.waitIdle();
 		imguiRenderer.reset();
 		ImGui_ImplGlfw_Shutdown();
@@ -236,7 +236,6 @@ private:
 	std::shared_ptr<daxa::ImageCache> imageCache;
 	AssetCache sceneLoader;
 	std::optional<daxa::ImGuiRenderer> imguiRenderer = std::nullopt;
-	double totalElapsedTime = 0.0f;
 	UIState uiState;
 	daxa::EntityComponentManager ecm;
 	std::vector<DrawPrimCmd> meshDrawCommands;

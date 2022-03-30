@@ -126,25 +126,25 @@ public:
             });
         }
 
-        void* cpuSideBuffPtr = (void*)((u8*)(accessor.buffer_view->buffer->data) + accessor.buffer_view->offset + accessor.offset);
+        void* cpuSideBuffPtr = reinterpret_cast<void*>(reinterpret_cast<u8*>(accessor.buffer_view->buffer->data) + accessor.buffer_view->offset + accessor.offset);
 
         if ((usage & VK_BUFFER_USAGE_INDEX_BUFFER_BIT) && accessor.stride != 4) {
             auto mm = cmdList->mapMemoryStagedBuffer<u32>(gpuBuffer, sizeof(u32) * accessor.count, 0);
 
             switch (accessor.stride) {
                 case 1:
-                for (int i = 0; i < accessor.count; i++) {
-                    mm.hostPtr[i] = ((u8*)cpuSideBuffPtr)[i];
+                for (size_t i = 0; i < accessor.count; i++) {
+                    mm.hostPtr[i] = (reinterpret_cast<u8*>(cpuSideBuffPtr))[i];
                 }
                 break;
                 case 2:
-                for (int i = 0; i < accessor.count; i++) {
-                    mm.hostPtr[i] = ((u16*)cpuSideBuffPtr)[i];
+                for (size_t i = 0; i < accessor.count; i++) {
+                    mm.hostPtr[i] = (reinterpret_cast<u16*>(cpuSideBuffPtr))[i];
                 }
                 break;
                 case 8:
-                for (int i = 0; i < accessor.count; i++) {
-                    mm.hostPtr[i] = ((u64*)cpuSideBuffPtr)[i];
+                for (size_t i = 0; i < accessor.count; i++) {
+                    mm.hostPtr[i] = static_cast<u32>(reinterpret_cast<u64*>(cpuSideBuffPtr)[i]);
                 }
                 break;
             }
@@ -170,16 +170,16 @@ public:
     ) {
         glm::mat4 transform{1.0f};
         if (node->has_matrix) {
-            transform = *(glm::mat4*)&node->matrix;
+            transform = *reinterpret_cast<glm::mat4*>(&node->matrix);
         } else {
             if (node->has_translation) {
-                transform *= glm::translate(glm::mat4{ 1.0f }, *(glm::vec3*)&node->translation);
+                transform *= glm::translate(glm::mat4{ 1.0f }, *reinterpret_cast<glm::vec3*>(&node->translation));
             }
             if (node->has_rotation) {
-                transform *= glm::toMat4(*(glm::f32quat*)&node->rotation);
+                transform *= glm::toMat4(*reinterpret_cast<glm::f32quat*>(&node->rotation));
             }
             if (node->has_scale) {
-                transform *= glm::scale(glm::mat4{1.0f}, *(glm::vec3*)&node->scale);
+                transform *= glm::scale(glm::mat4{1.0f}, *reinterpret_cast<glm::vec3*>(&node->scale));
             }
         }
 
@@ -199,21 +199,21 @@ public:
             
             ModelComp& model = view.addComp(ent, ModelComp{});
 
-            for (auto primI = 0; primI < rootMesh.primitives_count; primI++) {
+            for (size_t primI = 0; primI < rootMesh.primitives_count; primI++) {
                 auto& prim = rootMesh.primitives[primI];
                 Primitive meshPrim;
 
-                meshPrim.indexCount = prim.indices->count;
-                size_t bufferIndex = prim.indices - data->accessors;
+                meshPrim.indexCount = static_cast<u32>(prim.indices->count);
+                size_t bufferIndex = static_cast<size_t>(std::distance(data->accessors, prim.indices));
                 //printf("use buffer with index %i as index buffer\n", bufferIndex);
                 if (!buffers[bufferIndex]) {
                     buffers[bufferIndex] = loadBuffer(cmdList, *prim.indices, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
                 }
                 meshPrim.indiexBuffer = buffers[bufferIndex];
 
-                for (int attrI = 0; attrI < prim.attributes_count; attrI++) {
+                for (size_t attrI = 0; attrI < prim.attributes_count; attrI++) {
                     auto& attribute = prim.attributes[attrI];
-                    size_t bufferIndexOfAttrib = attribute.data - data->accessors;
+                    size_t bufferIndexOfAttrib = static_cast<size_t>(std::distance(data->accessors, attribute.data));
                     
                     if (!buffers[bufferIndexOfAttrib]) {
                         buffers[bufferIndexOfAttrib] = loadBuffer(cmdList, *attribute.data, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
@@ -244,7 +244,7 @@ public:
                 }
 
                 if (prim.material->pbr_metallic_roughness.base_color_texture.texture) {
-                    size_t textureIndex = prim.material->pbr_metallic_roughness.base_color_texture.texture - data->textures;
+                    size_t textureIndex = static_cast<size_t>(std::distance(data->textures, prim.material->pbr_metallic_roughness.base_color_texture.texture));
                     meshPrim.albedoMap = imgCache->get(
                         {
                             .path = texturePaths[textureIndex],
@@ -257,7 +257,7 @@ public:
 
                 if (prim.material->normal_texture.texture) {
                     printf("normals\n");
-                    size_t textureIndex = prim.material->normal_texture.texture - data->textures;
+                    size_t textureIndex = static_cast<size_t>(std::distance(data->textures, prim.material->normal_texture.texture));
                     meshPrim.normalMap = imgCache->get(
                         {
                             .path = texturePaths[textureIndex],
@@ -274,7 +274,7 @@ public:
             //printf("node has no mesh\n");
         }
 
-        for (int childI = 0; childI < node->children_count; childI++) {
+        for (size_t childI = 0; childI < node->children_count; childI++) {
             nodeToEntity(cmdList, &ent, node->children[childI], ecm, view, data, buffers);
         }
 
@@ -309,7 +309,7 @@ public:
         // path now is the relative path to the folder of the gltf file, this is used to load other data now
         path.remove_filename(); 
 
-        for (int i = 0; i < data->textures_count; i++) {
+        for (size_t i = 0; i < data->textures_count; i++) {
             auto& texture = data->textures[i];
 
             daxa::SamplerCreateInfo samplerInfo = {};
@@ -368,9 +368,9 @@ public:
         view.addComp(ret, daxa::TransformComp{ .mat = glm::mat4{1.0f} });
         view.addComp(ret, ParentComp{});
 
-        for (int scene_i = 0; scene_i < data->scenes_count; scene_i++) {
+        for (size_t scene_i = 0; scene_i < data->scenes_count; scene_i++) {
             auto& scene = data->scenes[scene_i];
-            for (int rootNodeI = 0; rootNodeI < scene.nodes_count; rootNodeI++) {
+            for (size_t rootNodeI = 0; rootNodeI < scene.nodes_count; rootNodeI++) {
                 auto* rootNode = scene.nodes[rootNodeI];
 
                 nodeToEntity(cmdList, &ret, rootNode, entityCache, view, data, buffers);

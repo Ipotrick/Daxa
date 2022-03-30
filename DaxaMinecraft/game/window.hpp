@@ -32,7 +32,7 @@ struct Window {
     }
     VkSurfaceKHR get_vksurface(VkInstance vk_instance) {
         VkSurfaceKHR vulkan_surface;
-        VkResult err = glfwCreateWindowSurface(vk_instance, window_ptr, nullptr, &vulkan_surface);
+        glfwCreateWindowSurface(vk_instance, window_ptr, nullptr, &vulkan_surface);
         return vulkan_surface;
     }
 
@@ -58,13 +58,13 @@ struct Window {
                 user_ptr->on_mouse_move(glm::dvec2{offset_x, offset_y});
             }
         });
-        glfwSetMouseButtonCallback(window_ptr, [](GLFWwindow *glfw_window_ptr, int button, int action, int mods) -> void {
+        glfwSetMouseButtonCallback(window_ptr, [](GLFWwindow *glfw_window_ptr, int button, int action, int) -> void {
             auto user_ptr = static_cast<T *>(glfwGetWindowUserPointer(glfw_window_ptr));
             if (user_ptr) {
                 user_ptr->on_mouse_button(button, action);
             }
         });
-        glfwSetKeyCallback(window_ptr, [](GLFWwindow *glfw_window_ptr, int key, int scancode, int action, int mods) -> void {
+        glfwSetKeyCallback(window_ptr, [](GLFWwindow *glfw_window_ptr, int key, int, int action, int) -> void {
             auto user_ptr = static_cast<T *>(glfwGetWindowUserPointer(glfw_window_ptr));
             if (user_ptr) {
                 user_ptr->on_key(key, action);
@@ -77,6 +77,6 @@ struct Window {
         glfwSetInputMode(window_ptr, GLFW_CURSOR, should_capture ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
     }
     inline void set_mouse_pos(const glm::vec2 p) {
-        glfwSetCursorPos(window_ptr, p.x, p.y);
+        glfwSetCursorPos(window_ptr, static_cast<f64>(p.x), static_cast<f64>(p.y));
     }
 };
