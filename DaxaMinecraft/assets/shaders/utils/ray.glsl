@@ -214,65 +214,58 @@ RayIntersection ray_step_voxels(in Ray ray, in vec3 b_min, in vec3 b_max) {
 }
 
 RayIntersection trace_chunks(in Ray ray) {
-    //return ray_step_voxels(ray, vec3(0), vec3(64) * CHUNK_N);
+    return ray_step_voxels(ray, vec3(0), vec3(64) * CHUNK_N);
 
-    vec3 b_min = vec3(0), b_max = vec3(64) * CHUNK_N;
-
-    RayIntersection result;
-    result.hit = false;
-    result.dist = 0;
-    result.nrm = vec3(0);
-    result.steps = 0;
-
-    if (point_box_contains(ray.o, b_min, b_max)) {
-        if (is_voxel_occluding(ray.o)) {
-            result.hit = true;
-            return result;
-        }
-        result.dist = 0;
-    } else {
-        RayIntersection bounds_intersection = ray_box_intersect(ray, b_min, b_max);
-        if (!bounds_intersection.hit)
-            return bounds_intersection;
-        ray.o = get_intersection_pos(ray, bounds_intersection);
-        result.dist = bounds_intersection.dist + 0.001;
-        if (!point_box_contains(ray.o, b_min, b_max)) {
-            ray.o += ray.nrm * 0.001;
-        }
-        if (is_voxel_occluding(ray.o)) {
-            result.hit = true;
-            result.nrm = bounds_intersection.nrm;
-            return result;
-        }
-    }
-
-    float total_sdf_dist = 0;
-    bool outside_bounds = false;
-
-    float dst_factor = 0.5 * 1.4142;
-
-    for (uint i = 0; i < 100; ++i) {
-        vec3 sample_pos = ray.o + total_sdf_dist * ray.nrm;
-        uint tile = get_tile(sample_pos);
-        uint sdf = (tile & SDF_DIST_MASK) >> 0x18;
-        total_sdf_dist += float(sdf) * dst_factor;
-        if (sdf < 2) {
-            result.hit = true;
-            break;
-        }
-        if (!point_box_contains(sample_pos, b_min, b_max)) {
-            outside_bounds = true;
-            break;
-        }
-        ++result.steps;
-    }
-
-    if (result.hit) {
-        result.dist += total_sdf_dist;
-        RayIntersection dda_result = ray_step_voxels(ray, vec3(0), vec3(64) * CHUNK_N);
-        dda_result.steps += result.steps;
-        return dda_result;
-    }
-
-    return result;
+    // vec3 b_min = vec3(0), b_max = vec3(64) * CHUNK_N;
+    // RayIntersection result;
+    // result.hit = false;
+    // result.dist = 0;
+    // result.nrm = vec3(0);
+    // result.steps = 0;
+    // if (point_box_contains(ray.o, b_min, b_max)) {
+    //     if (is_voxel_occluding(ray.o)) {
+    //         result.hit = true;
+    //         return result;
+    //     }
+    //     result.dist = 0;
+    // } else {
+    //     RayIntersection bounds_intersection = ray_box_intersect(ray, b_min, b_max);
+    //     if (!bounds_intersection.hit)
+    //         return bounds_intersection;
+    //     ray.o = get_intersection_pos(ray, bounds_intersection);
+    //     result.dist = bounds_intersection.dist + 0.001;
+    //     if (!point_box_contains(ray.o, b_min, b_max)) {
+    //         ray.o += ray.nrm * 0.001;
+    //     }
+    //     if (is_voxel_occluding(ray.o)) {
+    //         result.hit = true;
+    //         result.nrm = bounds_intersection.nrm;
+    //         return result;
+    //     }
+    // }
+    // float total_sdf_dist = 0;
+    // bool outside_bounds = false;
+    // float dst_factor = 0.5 * 1.4142;
+    // for (uint i = 0; i < 100; ++i) {
+    //     vec3 sample_pos = ray.o + total_sdf_dist * ray.nrm;
+    //     uint tile = get_tile(sample_pos);
+    //     uint sdf = (tile & SDF_DIST_MASK) >> 0x18;
+    //     total_sdf_dist += float(sdf) * dst_factor;
+    //     if (sdf < 2) {
+    //         result.hit = true;
+    //         break;
+    //     }
+    //     if (!point_box_contains(sample_pos, b_min, b_max)) {
+    //         outside_bounds = true;
+    //         break;
+    //     }
+    //     ++result.steps;
+    // }
+    // if (result.hit) {
+    //     result.dist += total_sdf_dist;
+    //     RayIntersection dda_result = ray_step_voxels(ray, vec3(0), vec3(64) * CHUNK_N);
+    //     dda_result.steps += result.steps;
+    //     return dda_result;
+    // }
+    // return result;
 }

@@ -3,12 +3,14 @@
 #include "window.hpp"
 #include "player.hpp"
 #include "graphics.hpp"
+#include "../../../fps_printer.hpp"
 
 #include <chrono>
 
 struct Game {
     using Clock = std::chrono::high_resolution_clock;
     Clock::time_point prev_frame_time;
+    FpsPrinter<Clock> fps_printer;
 
     Window window;
 
@@ -31,6 +33,7 @@ struct Game {
         auto now = Clock::now();
         float dt = std::chrono::duration<float>(now - prev_frame_time).count();
         prev_frame_time = now;
+        fps_printer.update(now);
         window.update();
         player.update(dt);
         world.update(dt);
@@ -38,8 +41,6 @@ struct Game {
     }
 
     void redraw() {
-        using namespace std::literals;
-        std::this_thread::sleep_for(1ms);
         auto cmd_list = render_context.begin_frame(window.frame_dim);
         camera.resize(window.frame_dim.x, window.frame_dim.y);
         camera.set_pos(player.pos);
