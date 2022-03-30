@@ -14,6 +14,8 @@ namespace daxa {
 
 		auto physicslDevice = physicalDevice.physical_device;
 
+		vkGetPhysicalDeviceProperties2(physicslDevice, &this->properties);
+
 		VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeature{
 			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
 			.pNext = nullptr,
