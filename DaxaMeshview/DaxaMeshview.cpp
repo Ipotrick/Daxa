@@ -246,7 +246,7 @@ int main() {
 	daxa::initialize();
 
 	{
-		daxa::Application<MyUser> app{ 100, 100, "Daxa Meshview"};
+		daxa::Application<MyUser> app{ 1024, 1024, "Daxa Meshview"};
 		app.run();
 	}
 
