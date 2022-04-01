@@ -51,6 +51,10 @@ public:
 	}
 
 	void update(daxa::AppState& app) {
+
+		if (app.window->getWidth() == 0 || app.window->getHeight() == 0) {
+			return;
+		}
 		std::string cmdName = "cmd list nr. ";
 		cmdName += std::to_string(frame);
 		auto cmdList = renderCTX.queue->getCommandList({.debugName = cmdName.c_str()});
@@ -113,7 +117,7 @@ public:
 		}
 
 		cameraController.updateMatrices(*app.window);
-		meshRender.setCamera(cmdList, cameraController.vp, cameraController.view);
+		meshRender.setCamera(cmdList, cameraController.vp, cameraController.view, cameraController.fov);
 		
 		cmdList->insertImageBarrier({
 			.barrier = {

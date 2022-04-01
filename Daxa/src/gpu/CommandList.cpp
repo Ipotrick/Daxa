@@ -226,6 +226,8 @@ namespace daxa {
 		this->multiCopyHostToBuffer({ .src = ci.src, .dst = ci.dst, .regions = std::span{&ci.region, 1} });
 	}
 
+	//thread_local std::vector<
+
 	void CommandList::multiCopyHostToImage(MultiHostToImageCopyInfo const& ci) {
 		DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 		DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");

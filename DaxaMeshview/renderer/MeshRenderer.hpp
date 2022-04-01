@@ -7,10 +7,17 @@
 
 #include "OrthLightSource.hpp"
 
+#include "tinyexr.h"
+
 struct GlobalData {
 	glm::mat4 vp;
 	glm::mat4 view;
+	glm::mat4 iView;
+	float verticalFOV;
+	u32 renderTargetWidth;
+	u32 renderTargetHeight;
 	u32 generalSampler;
+	u32 skyboxId;
 };
 
 class MeshRenderer {
@@ -110,24 +117,152 @@ public:
 
 		orthLightPass.init(renderCTX);
 
-		skyBox = renderCTX.device->createImageView({
+		generalSampler = renderCTX.device->createSampler({
+			.debugName = "general sampler",
+		});
+
+		initSkyBox(renderCTX);
+	}
+
+	void initSkyBox(RenderContext& renderCTX) {	
+		u32 hardcodedDim = 2048;
+
+		size_t faceMemorySize = hardcodedDim * hardcodedDim * 4 * 4;
+
+		u32 mips = std::log2(hardcodedDim);
+
+		skybox = renderCTX.device->createImageView({
 			.image = renderCTX.device->createImage({
 				.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
 				.imageType = VK_IMAGE_TYPE_2D,
-				.format = VK_FORMAT_R16G16B16A16_SFLOAT,
-				.extent = { 1, 1, 1 },
-				.mipLevels = 1,
+				.format = VK_FORMAT_R32G32B32A32_SFLOAT,
+				.extent = { hardcodedDim, hardcodedDim, 1 },
+				.mipLevels = mips,
 				.arrayLayers = 6,
 				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 				.debugName = "skybox",
 			}),
 			.viewType = VK_IMAGE_VIEW_TYPE_CUBE,
-			.format = VK_FORMAT_R16G16B16A16_SFLOAT,
+			.format = VK_FORMAT_R32G32B32A32_SFLOAT,
 			.debugName = "skybox",
 		});
 
-		generalSampler = renderCTX.defaultSampler;
-    }
+		auto cmd = renderCTX.queue->getCommandList({"skybox loading cmdlist"});
+
+		cmd->queueImageBarrier({
+			.barrier = {
+				.srcStages = 0,
+				.srcAccess = 0,
+				.dstStages = daxa::STAGE_TRANSFER,
+				.dstAccess = daxa::ACCESS_MEMORY_WRITE,
+			},
+			.image = skybox,
+			.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
+			.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		});
+
+		std::array<char const*, 6> hardcodedSkyBoxFileNames = {
+			"C:/Users/Patrick/Desktop/skyboxRight.exr",
+			"C:/Users/Patrick/Desktop/skyboxLeft.exr",
+			"C:/Users/Patrick/Desktop/skyboxTop.exr",
+			"C:/Users/Patrick/Desktop/skyboxBottom.exr",
+			"C:/Users/Patrick/Desktop/skyboxFront.exr",
+			"C:/Users/Patrick/Desktop/skyboxBack.exr",
+		};
+
+		for (u32 i = 0; i < 6; i++) { 
+			i32 width = -1;
+			i32 height = -1;
+			const char* layer_name = "diffuse";
+			auto deleter = [](float* image){ free(image); };
+
+			float* data = nullptr;
+			char const* err = nullptr;
+			i32 ret = LoadEXR(&data, &width, &height, hardcodedSkyBoxFileNames[i], &err);
+			if (err != nullptr) {
+				std::cout << err << std::endl;
+				FreeEXRErrorMessage(err);
+			}
+			if (data) {
+
+				cmd->singleCopyHostToImage({
+					.src = reinterpret_cast<u8*>(data),
+					.dst = skybox->getImageHandle(),
+					.dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					.region = {
+						.srcOffset = 0,
+						.subRessource = { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseArrayLayer = i, .layerCount = 1, .mipLevel = 0 },
+						.imageOffset = { 0, 0, 0 },
+						.imageExtent = { hardcodedDim, hardcodedDim, 1 },
+					}
+				});
+				delete data;
+			}else {
+				printf("could not load skybox image: %s\n", hardcodedSkyBoxFileNames[i]);
+			}
+			if (!data) {
+				continue;
+			}
+		}
+
+		cmd->queueImageBarrier({
+			.barrier = {
+				.srcStages = daxa::STAGE_TRANSFER,
+				.srcAccess = daxa::ACCESS_MEMORY_WRITE,
+				.dstStages = daxa::STAGE_FRAGMENT_SHADER,
+				.dstAccess = daxa::ACCESS_MEMORY_READ,
+			},
+			.image = skybox,
+			.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		});
+
+		cmd->finalize();
+		renderCTX.queue->submit({.commandLists = {cmd}});
+
+		auto skyboxPipelineBuilder = daxa::GraphicsPipelineBuilder();
+		skyboxPipelineBuilder.addShaderStage({.pathToSource = "skybox.frag", .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .debugName = "skybox"});
+		skyboxPipelineBuilder.addShaderStage({.pathToSource = "skybox.vert", .stage = VK_SHADER_STAGE_VERTEX_BIT, .debugName = "skybox"});
+		skyboxPipelineBuilder.addColorAttachment(renderCTX.hdrImage->getVkFormat());
+		skyboxPipelineBuilder.overwriteSet(0, daxa::BIND_ALL_SET_DESCRIPTION);
+		skyboxPipelineBuilder.setDebugName("skybox");
+		skyboxPipeline = renderCTX.pipelineCompiler->createGraphicsPipeline(skyboxPipelineBuilder).value();
+	}
+
+	void skyboxPass(RenderContext& renderCTX, daxa::CommandListHandle& cmdList) {
+		if (renderCTX.pipelineCompiler->checkIfSourcesChanged(skyboxPipeline)) {
+			auto result = renderCTX.pipelineCompiler->recreatePipeline(skyboxPipeline);
+			std::cout << result << std::endl;
+			if (result) {
+				skyboxPipeline = result.value();
+			}
+		}
+		std::array<daxa::RenderAttachmentInfo, 1> colorAttachments{
+			daxa::RenderAttachmentInfo{
+				.image = renderCTX.hdrImage,
+				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+				.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+				.clearValue = {.color = VkClearColorValue{.float32 = { 0.00f, 0.00f, 0.00f, 1.0f } } },
+			},
+		};
+		cmdList->beginRendering({
+			.colorAttachments = colorAttachments,
+		});
+		cmdList->bindPipeline(skyboxPipeline);
+		cmdList->bindAll();
+		cmdList->pushConstant(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, u32(globalDataBufffer->getDescriptorIndex()));
+		cmdList->draw(3 * 2 * 6, 1, 0, 0);
+		cmdList->unbindPipeline();
+		cmdList->endRendering();
+
+		cmdList->queueMemoryBarrier({
+			.srcStages = daxa::STAGE_COLOR_ATTACHMENT_OUTPUT,
+			.srcAccess = daxa::ACCESS_MEMORY_WRITE,
+			.dstStages = daxa::STAGE_COLOR_ATTACHMENT_OUTPUT,
+			.dstAccess = daxa::ACCESS_MEMORY_WRITE,
+		});
+	}
 
 	void initTonemapPass(RenderContext& renderCTX) {
 		auto toneMapBuilder = daxa::GraphicsPipelineBuilder();
@@ -217,9 +352,11 @@ public:
 		opaquePass2Pipeline = renderCTX.pipelineCompiler->createGraphicsPipeline(opaque2PipelineBuilder).value();
 	}
 
-	void setCamera(daxa::CommandListHandle&, glm::mat4 const& vp, glm::mat4 const& view) {
+	void setCamera(daxa::CommandListHandle&, glm::mat4 const& vp, glm::mat4 const& view, float verticalFOV) {
 		globData.vp = vp;
 		globData.view = view;
+		globData.iView = glm::inverse(glm::transpose(view));
+		globData.verticalFOV = verticalFOV;
 	}
 
 	void uploadBuffers(RenderContext& renderCTX, daxa::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws, std::vector<DrawLight>& lights) {
@@ -289,6 +426,9 @@ public:
 		}
 
 		globData.generalSampler = generalSampler->getDescriptorIndex();
+		globData.skyboxId = skybox->getDescriptorIndex();
+		globData.renderTargetWidth = renderCTX.hdrImage->getImageHandle()->getVkExtent3D().width;
+		globData.renderTargetHeight = renderCTX.hdrImage->getImageHandle()->getVkExtent3D().height;
 		cmd->copyHostToBuffer({
 			.src = reinterpret_cast<void*>(&globData),
 			.dst = globalDataBufffer,
@@ -393,8 +533,8 @@ public:
 		std::array framebuffer{
 			daxa::RenderAttachmentInfo{
 				.image = renderCTX.hdrImage,
-				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-				.clearValue = {.color = VkClearColorValue{.float32 = { 0.00f, 0.00f, 0.00f, 1.0f } } },
+				.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+				//.clearValue = {.color = VkClearColorValue{.float32 = { 0.00f, 0.00f, 0.00f, 1.0f } } },
 			},
 			daxa::RenderAttachmentInfo{
 				.image = renderCTX.normalsImage,
@@ -484,11 +624,14 @@ public:
 			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 		});
 		//prePass(renderCTX, cmd, draws);
+		skyboxPass(renderCTX, cmd);
 		opaquePass2(renderCTX, cmd, draws);
 		tonemapPass(renderCTX, cmd);
 	}
 
 private:
+	daxa::PipelineHandle skyboxPipeline = {};
+
 	size_t primitivesDrawn = 0;
 	GlobalData globData = {};
 	std::vector<DrawLight> drawLights;
@@ -499,7 +642,7 @@ private:
 	daxa::BufferHandle primitiveInfoBuffer = {};
 	daxa::ImageViewHandle dummyTexture = {};
 	daxa::ImageViewHandle dummyNormalsTexture = {};
-	daxa::ImageViewHandle skyBox = {};
+	daxa::ImageViewHandle skybox = {};
 	daxa::SamplerHandle generalSampler = {};
 
 	daxa::PipelineHandle opaquePassPipeline = {};
