@@ -38,7 +38,7 @@ namespace input::keybinds {
 
 struct Player3D {
     glm::vec3 pos{}, vel{}, rot{};
-    float speed = 16.0f, mouse_sens = 0.005f;
+    float speed = 20.0f, mouse_sens = 0.005f;
     float sin_rot_x = 0, cos_rot_x = 1;
 
     struct MoveFlags {

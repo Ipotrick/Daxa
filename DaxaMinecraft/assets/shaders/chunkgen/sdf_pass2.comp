@@ -19,7 +19,7 @@ void main() {
             if (is_tile_occluding(sampled_tile))
                 break;
         }
-        {
+        if (bp.z - dist >= 0) {
             uint sampled_tile = get_tile(vec3(bp.x, bp.y, bp.z - dist));
             uint sampled_tile_dist = (sampled_tile & SDF_DIST_MASK) >> 0x18;
             min_i = min(dist + sampled_tile_dist, min_i);
