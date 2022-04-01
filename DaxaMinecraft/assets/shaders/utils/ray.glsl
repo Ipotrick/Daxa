@@ -1,3 +1,4 @@
+const uint SDF_MIN = 4;
 
 struct Ray {
     vec3 o;
@@ -160,8 +161,10 @@ RayIntersection ray_step_voxels(in Ray ray, in vec3 b_min, in vec3 b_max, in uin
         }
     }
 
-    if (outside_bounds)
+    if (outside_bounds) {
+        result.dist += 1.0f;
         result.hit = false;
+    }
 
     float x = to_side_dist_xy;
     float y = to_side_dist_yx;
@@ -229,7 +232,7 @@ RayIntersection trace_chunks(in Ray ray) {
         }
     }
 
-    for (uint i = 0; i < 200; ++i) {
+    for (uint i = 0; i < 1000; ++i) {
         vec3 sample_pos = ray.o + ray.nrm * sdf_dist_total;
         
         if (!point_box_contains(sample_pos, b_min, b_max)) {
@@ -238,10 +241,10 @@ RayIntersection trace_chunks(in Ray ray) {
         }
         uint tile = get_tile(sample_pos);
         uint sd_u = (tile & SDF_DIST_MASK) >> 0x18;
-        if (sd_u < 6) {
+        if (sd_u < SDF_MIN) {
             Ray dda_ray = ray;
             dda_ray.o = sample_pos;
-            RayIntersection dda_result = ray_step_voxels(dda_ray, vec3(0), vec3(64) * CHUNK_N, 7);
+            RayIntersection dda_result = ray_step_voxels(dda_ray, vec3(0), vec3(64) * CHUNK_N, SDF_MIN + 2);
             sdf_dist_total += dda_result.dist;
             sdf_step_total += dda_result.steps;
             if (dda_result.hit) {

@@ -18,9 +18,9 @@ uint gen_block(in vec3 b_pos) {
     uint biome_id = BiomeID_Plains;
     uint block_id = BlockID_Air;
 
-    if (b_val < -0.2)
+    if (b_val < 0.07)
         biome_id = BiomeID_Forest;
-    else if (b_val > 0.12)
+    else if (b_val > 0.22)
         biome_id = BiomeID_Desert;
     if (b_pos.y - water_level > -4 + r * 3 && b_pos.y - water_level < 4 + r * 3 && val < 0.05 + r * 0.1 && val > -0.05 - r * 0.1)
         biome_id = BiomeID_Beach;

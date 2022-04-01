@@ -30,7 +30,7 @@ void main() {
     cam_ray.o = globals.pos.xyz;
 
     float sun_angle = 0.6;
-    sun_ray.nrm = normalize(vec3(sin(sun_angle) * 3, -cos(sun_angle) * 2, 1));
+    sun_ray.nrm = normalize(vec3(sin(sun_angle) * 3, -abs(cos(sun_angle)) * 2, 1));
     sun_ray.inv_nrm = 1 / sun_ray.nrm;
 
     const vec2 subsamples = vec2(1);
@@ -42,17 +42,17 @@ void main() {
     vec3 color = vec3(0);
 
     vec2 uv_offset = vec2(rand(vec2(i_uv + uv_rand_offset + 10)), rand(vec2(i_uv + uv_rand_offset)));
-    vec2 uv = (vec2(i_uv) + uv_offset * 0) * inv_frame_dim * 2 - 1;
+    vec2 uv = (vec2(i_uv) + uv_offset * 1) * inv_frame_dim * 2 - 1;
 
     for (uint yi = 0; yi < subsamples.y; ++yi) {
         for (uint xi = 0; xi < subsamples.x; ++xi) {
-            vec2 view_uv = (uv + inv_frame_dim * vec2(xi, yi) * inv_subsamples) * 1 * vec2(aspect, 1);
+            vec2 view_uv = (uv + inv_frame_dim * vec2(xi, yi) * inv_subsamples) * 0.9 * vec2(aspect, 1);
 
             cam_ray.nrm = normalize(front + view_uv.x * right + view_uv.y * up);
             cam_ray.inv_nrm = 1 / cam_ray.nrm;
 
             RayIntersection ray_chunk_intersection = trace_chunks(cam_ray);
-            // color.r += float(ray_chunk_intersection.steps) * 1.0 / MAX_STEPS;
+            // color.r += float(ray_chunk_intersection.steps) * 0.5 / MAX_STEPS;
 
             vec3 intersection_pos = get_intersection_pos_corrected(cam_ray, ray_chunk_intersection);
             uint block_id = get_block_id(intersection_pos);
@@ -67,7 +67,7 @@ void main() {
             // }
             // if (ray_chunk_intersection.hit && block_id == BlockID_Air) {
             //     uint tile = get_tile(intersection_pos);
-            //     float sdf_value = float((tile & SDF_DIST_MASK) >> 0x18) / 64;
+            //     float sdf_value = float((tile & SDF_DIST_MASK) >> 0x18) / 128;
             //     color += vec3(sdf_value);
             // } else 
             if (ray_chunk_intersection.hit) {
