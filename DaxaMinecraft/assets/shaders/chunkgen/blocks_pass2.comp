@@ -92,33 +92,40 @@ void main() {
             new_id = BlockID_Sand;
         } break;
         }
+    } else if (block_id == BlockID_CompressedStone) {
+        float lava_dif = abs(601 - block_pos.y);
+        if (above_depth == 1 && lava_dif < 10 && r > lava_dif * 0.11) {
+            new_id = BlockID_MoltenRock;
+        } else if (above_depth < 3 + r * 3) {
+            new_id = BlockID_Bedrock;
+        }
     } else if (block_id == BlockID_Air) {
         switch (biome_id) {
         case BiomeID_Plains: {
             if (below_inv_depth == 1) {
                 if (r < 0.4) {
-                    // new_id = BlockID_TallGrass;
+                    new_id = BlockID_TallGrass;
                 } else if (r < 0.43) {
-                    // new_id = BlockID_Rose;
+                    new_id = BlockID_Rose;
                 } else if (r < 0.45) {
-                    // new_id = BlockID_Leaves;
+                    new_id = BlockID_Leaves;
                 }
             }
         } break;
         case BiomeID_Forest: {
-            if (below_inv_depth == 1) {
+            if (below_inv_depth <= 8 + height_independent_r * 500 && height_independent_r < 0.01) {
+                new_id = BlockID_Log;
+            } else if (below_inv_depth == 1) {
                 if (r < 0.2) {
-                    // new_id = BlockID_TallGrass;
+                    new_id = BlockID_TallGrass;
                 } else if (r < 0.65) {
-                    // new_id = BlockID_Leaves;
+                    new_id = BlockID_Leaves;
                 }
             }
         } break;
         case BiomeID_Desert: {
-            if (below_inv_depth == 1) {
-                if (height_independent_r < 0.1) {
-                    // new_id = BlockID_DriedShrub;
-                } else if (height_independent_r < 0.11) {
+            if (below_inv_depth <= 2 + height_independent_r * 500) {
+                if (height_independent_r < 0.01) {
                     new_id = BlockID_Cactus;
                 }
             }
@@ -127,6 +134,8 @@ void main() {
         } break;
         }
     }
+
+    new_id = new_id & (BIOME_ID_MASK | BLOCK_ID_MASK);
 
     imageStore(output_image, ivec3(global_i), uvec4(new_id));
 }

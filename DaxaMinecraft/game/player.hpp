@@ -33,19 +33,22 @@ namespace input::keybinds {
     static constexpr auto MOVE_PY = GLFW_KEY_SPACE;
     static constexpr auto MOVE_NY = GLFW_KEY_LEFT_SHIFT;
     static constexpr auto TOGGLE_PAUSE = GLFW_KEY_ESCAPE;
+    static constexpr auto TOGGLE_SPRINT = GLFW_KEY_LEFT_CONTROL;
 } // namespace input::keybinds
 
 struct Player3D {
     glm::vec3 pos{}, vel{}, rot{};
-    float speed = 128.0f, mouse_sens = 0.005f;
+    float speed = 16.0f, mouse_sens = 0.005f;
     float sin_rot_x = 0, cos_rot_x = 1;
 
     struct MoveFlags {
-        uint8_t px : 1, py : 1, pz : 1, nx : 1, ny : 1, nz : 1;
-    } move;
+        uint8_t px : 1, py : 1, pz : 1, nx : 1, ny : 1, nz : 1, sprint : 1;
+    } move{};
 
     void update(float dt) {
         auto delta_pos = speed * dt;
+        if (move.sprint)
+            delta_pos *= 32.0f;
         if (move.px)
             pos.z += sin_rot_x * delta_pos, pos.x -= cos_rot_x * delta_pos;
         if (move.nx)
@@ -73,6 +76,7 @@ struct Player3D {
         case input::keybinds::MOVE_NX: move.nx = action != 0; break;
         case input::keybinds::MOVE_PY: move.py = action != 0; break;
         case input::keybinds::MOVE_NY: move.ny = action != 0; break;
+        case input::keybinds::TOGGLE_SPRINT: move.sprint = action != 0; break;
         }
     }
     void on_mouse_move(double delta_x, double delta_y) {

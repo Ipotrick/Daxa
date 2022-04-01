@@ -45,23 +45,23 @@ namespace daxa {
 
 	inline static const VkDescriptorPoolSize BIND_ALL_SAMPLER_POOL_SIZE {
 		.type = VK_DESCRIPTOR_TYPE_SAMPLER,
-		.descriptorCount = (1<<10),
+		.descriptorCount = (1<<16),
 	};
 	inline static const VkDescriptorPoolSize BIND_ALL_COMBINED_IMAGE_SAMPLER_POOL_SIZE {
 		.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-		.descriptorCount = (1<<10),
+		.descriptorCount = (1<<16),
 	};
 	inline static const VkDescriptorPoolSize BIND_ALL_SAMPLED_IMAGE_POOL_SIZE {
 		.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-		.descriptorCount = (1<<10),
+		.descriptorCount = (1<<16),
 	}; 
 	inline static const VkDescriptorPoolSize BIND_ALL_STORAGE_IMAGE_POOL_SIZE {
 		.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-		.descriptorCount = (1<<10),
+		.descriptorCount = (1<<16),
 	};
 	inline static const VkDescriptorPoolSize BIND_ALL_STORAGE_BUFFER_POOL_SIZE {
 		.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-		.descriptorCount = (1<<10),
+		.descriptorCount = (1<<16),
 	};
 
 	inline static const VkDescriptorSetLayoutBinding BIND_ALL_SAMPLER_SET_LAYOUT_BINDING {

@@ -244,7 +244,7 @@ struct RenderableChunk {
 };
 
 struct World {
-    static constexpr glm::ivec3 DIM{8, 2, 8};
+    static constexpr glm::ivec3 DIM{12, 12, 12};
 
     template <typename T>
     using ChunkArray = std::array<std::array<std::array<T, DIM.x>, DIM.y>, DIM.z>;
@@ -258,7 +258,7 @@ struct World {
 
     daxa::PipelineHandle chunkgen_compute_pipeline_pass0;
     daxa::PipelineHandle chunkgen_compute_pipeline_pass1;
-    // daxa::PipelineHandle sdf_compute_pipeline_passes[3];
+    daxa::PipelineHandle sdf_compute_pipeline_passes[3];
 
     struct ComputeGlobals {
         glm::mat4 viewproj_mat;
@@ -393,21 +393,24 @@ struct World {
             std::cout << result << std::endl;
             if (result)
                 chunkgen_compute_pipeline_pass0 = result.value();
+            initialized = false;
         }
         if (render_ctx.pipeline_compiler->checkIfSourcesChanged(chunkgen_compute_pipeline_pass1)) {
             auto result = render_ctx.pipeline_compiler->recreatePipeline(chunkgen_compute_pipeline_pass1);
             std::cout << result << std::endl;
             if (result)
                 chunkgen_compute_pipeline_pass1 = result.value();
+            initialized = false;
         }
-        // for (auto &sdf_pipe : sdf_compute_pipeline_passes) {
-        //     if (render_ctx.pipeline_compiler->checkIfSourcesChanged(sdf_pipe)) {
-        //         auto result = render_ctx.pipeline_compiler->recreatePipeline(sdf_pipe);
-        //         std::cout << result << std::endl;
-        //         if (result)
-        //             sdf_pipe = result.value();
-        //     }
-        // }
+        for (auto &sdf_pipe : sdf_compute_pipeline_passes) {
+            if (render_ctx.pipeline_compiler->checkIfSourcesChanged(sdf_pipe)) {
+                auto result = render_ctx.pipeline_compiler->recreatePipeline(sdf_pipe);
+                std::cout << result << std::endl;
+                if (result)
+                    sdf_pipe = result.value();
+                initialized = false;
+            }
+        }
     }
 
     void update(float) {
@@ -485,30 +488,34 @@ struct World {
                 }
             }
 
-            // for (auto &sdf_pass_pipe : sdf_compute_pipeline_passes) {
-            //     cmd_list->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
-            //     cmd_list->bindPipeline(sdf_pass_pipe);
-            //     cmd_list->bindAll();
-            //     for (size_t zi = 0; zi < DIM.z; ++zi) {
-            //         for (size_t yi = 0; yi < DIM.y; ++yi) {
-            //             for (size_t xi = 0; xi < DIM.x; ++xi) {
-            //                 cmd_list->pushConstant(
-            //                     VK_SHADER_STAGE_COMPUTE_BIT,
-            //                     ChunkgenPush{
-            //                         .pos = {64.0f * xi, 64.0f * yi, 64.0f * zi, 0},
-            //                         .globals_sb = compute_globals_i,
-            //                         .output_image_i = compute_globals.chunk_ids[1][zi][yi][xi],
-            //                         .chunk_buffer_i = 1,
-            //                     });
-            //                 cmd_list->dispatch(8, 8, 8);
-            //             }
-            //         }
-            //     }
-            // }
+            size_t pipe_i = 0;
+            for (auto &sdf_pass_pipe : sdf_compute_pipeline_passes) {
+                cmd_list->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+                cmd_list->bindPipeline(sdf_pass_pipe);
+                cmd_list->bindAll();
+                for (size_t zi = 0; zi < DIM.z; ++zi) {
+                    for (size_t yi = 0; yi < DIM.y; ++yi) {
+                        for (size_t xi = 0; xi < DIM.x; ++xi) {
+                            cmd_list->pushConstant(
+                                VK_SHADER_STAGE_COMPUTE_BIT,
+                                ChunkgenPush{
+                                    .pos = {64.0f * xi, 64.0f * yi, 64.0f * zi, 0},
+                                    .globals_sb = compute_globals_i,
+                                    .output_image_i = compute_globals.chunk_ids[(pipe_i) % 2][zi][yi][xi],
+                                    .chunk_buffer_i = static_cast<u32>(pipe_i + 1) % 2,
+                                });
+                            cmd_list->dispatch(8, 8, 8);
+                        }
+                    }
+                }
+                ++pipe_i;
+            }
 
             cmd_list->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
-        }
 
+
+        }
+ 
         cmd_list->bindPipeline(raymarch_compute_pipeline);
         cmd_list->bindAll();
         cmd_list->pushConstant(
@@ -516,7 +523,7 @@ struct World {
             ChunkRaymarchPush{
                 .globals_sb = compute_globals_i,
                 .output_image_i = render_image->getDescriptorIndex(),
-                .chunk_buffer_i = 1,
+                .chunk_buffer_i = 0,
             });
         cmd_list->dispatch((extent.width + 7) / 8, (extent.height + 7) / 8);
     }
@@ -553,31 +560,56 @@ struct World {
             chunkgen_compute_pipeline_pass1 = result.value();
         }
 
-        // std::filesystem::path sdf_pass_paths[3] = {
-        //     "DaxaMinecraft/assets/shaders/chunkgen/sdf_pass0.comp",
-        //     "DaxaMinecraft/assets/shaders/chunkgen/sdf_pass1.comp",
-        //     "DaxaMinecraft/assets/shaders/chunkgen/sdf_pass2.comp",
-        // };
-
-        // for (size_t i = 0; i < 3; ++i) {
-        //     auto result = render_ctx.pipeline_compiler->createComputePipeline({
-        //         .shaderCI = {
-        //             .pathToSource = sdf_pass_paths[i],
-        //             .stage = VK_SHADER_STAGE_COMPUTE_BIT,
-        //         },
-        //         .overwriteSets = {daxa::BIND_ALL_SET_DESCRIPTION},
-        //     });
-        //     sdf_compute_pipeline_passes[i] = result.value();
-        // }
+        std::filesystem::path sdf_pass_paths[3] = {
+            "DaxaMinecraft/assets/shaders/chunkgen/sdf_pass0.comp",
+            "DaxaMinecraft/assets/shaders/chunkgen/sdf_pass1.comp",
+            "DaxaMinecraft/assets/shaders/chunkgen/sdf_pass2.comp",
+        };
+        for (size_t i = 0; i < 3; ++i) {
+            auto result = render_ctx.pipeline_compiler->createComputePipeline({
+                .shaderCI = {
+                    .pathToSource = sdf_pass_paths[i],
+                    .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+                },
+                .overwriteSets = {daxa::BIND_ALL_SET_DESCRIPTION},
+            });
+            sdf_compute_pipeline_passes[i] = result.value();
+        }
     }
 
     void load_textures(const std::filesystem::path &filepath) {
+        std::array<std::filesystem::path, 23> texture_names{
+            "bedrock.png",
+            "brick.png",
+            "cactus.png",
+            "cobblestone.png",
+            "compressed_stone.png",
+            "diamond_ore.png",
+            "dirt.png",
+            "dried_shrub.png",
+            "grass-side.png",
+            "grass-top.png",
+            "gravel.png",
+            "lava.png",
+            "leaves.png",
+            "log-side.png",
+            "log-top.png",
+            "molten_rock.png",
+            "planks.png",
+            "rose.png",
+            "sand.png",
+            "sandstone.png",
+            "stone.png",
+            "tallgrass.png",
+            "water.png",
+        };
+
         atlas_texture_array = render_ctx.device->createImageView({
             .image = render_ctx.device->createImage({
                 .format = VK_FORMAT_R8G8B8A8_SRGB,
                 .extent = {16, 16, 1},
                 .mipLevels = 4,
-                .arrayLayers = 19,
+                .arrayLayers = static_cast<u32>(texture_names.size()),
                 .usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
                 .debugName = "Texture Image",
             }),
@@ -589,7 +621,7 @@ struct World {
                     .baseMipLevel = 0,
                     .levelCount = 4,
                     .baseArrayLayer = 0,
-                    .layerCount = 19,
+                    .layerCount = static_cast<u32>(texture_names.size()),
                 },
             .defaultSampler = render_ctx.device->createSampler({
                 .magFilter = VK_FILTER_NEAREST,
@@ -611,33 +643,11 @@ struct World {
                 .baseMipLevel = 0,
                 .levelCount = 1,
                 .baseArrayLayer = 0,
-                .layerCount = 19,
+                .layerCount = static_cast<u32>(texture_names.size()),
             }},
         });
 
-        std::array<std::filesystem::path, 19> texture_names{
-            "brick.png",
-            "cactus.png",
-            "cobblestone.png",
-            "diamond_ore.png",
-            "dirt.png",
-            "dried_shrub.png",
-            "grass-side.png",
-            "grass-top.png",
-            "gravel.png",
-            "leaves.png",
-            "log-side.png",
-            "log-top.png",
-            "planks.png",
-            "rose.png",
-            "sand.png",
-            "sandstone.png",
-            "stone.png",
-            "tallgrass.png",
-            "water.png",
-        };
-
-        for (size_t i = 0; i < 19; ++i) {
+        for (size_t i = 0; i < texture_names.size(); ++i) {
             stbi_set_flip_vertically_on_load(true);
             auto path = filepath / texture_names[i];
             int size_x, size_y, num_channels;
@@ -660,7 +670,7 @@ struct World {
                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                 .mipLevel = 0,
                 .baseArrayLayer = 0,
-                .layerCount = 19,
+                .layerCount = static_cast<u32>(texture_names.size()),
             },
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         cmd_list->finalize();

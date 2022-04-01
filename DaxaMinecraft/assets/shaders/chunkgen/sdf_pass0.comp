@@ -11,9 +11,10 @@ void main() {
     uint tile = get_tile(bp);
     uint dist = 0;
     for (; dist < MAX_DIST; ++dist) {
-        if (is_voxel_occluding(vec3(bp.x + dist, bp.y, bp.z)))
+        if (is_voxel_occluding(vec3(bp.x + dist, bp.y, bp.z)) ||
+            is_voxel_occluding(vec3(bp.x - dist, bp.y, bp.z)))
             break;
     }
-    tile = tile | (dist << 0x18);
+    tile = (tile & ~SDF_DIST_MASK) | (dist << 0x18);
     imageStore(output_image, ivec3(global_i), uvec4(tile));
 }
