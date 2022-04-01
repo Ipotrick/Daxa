@@ -10,11 +10,14 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 uint gen_block(in vec3 b_pos) {
     float val = terrain_noise(b_pos);
     float b_val = biome_noise(b_pos);
+    float u_val = underworld_noise(b_pos);
     float r = rand(b_pos);
 
-    float water_level = WATER_LEVEL + sin(globals.time) * 0 + 20;
+    float water_level = WATER_LEVEL;
 
     uint biome_id = BiomeID_Plains;
+    uint block_id = BlockID_Air;
+
     if (b_val < -0.2)
         biome_id = BiomeID_Forest;
     else if (b_val > 0.12)
@@ -22,16 +25,25 @@ uint gen_block(in vec3 b_pos) {
     if (b_pos.y - water_level > -4 + r * 3 && b_pos.y - water_level < 4 + r * 3 && val < 0.05 + r * 0.1 && val > -0.05 - r * 0.1)
         biome_id = BiomeID_Beach;
 
-    biome_id = biome_id << 16;
-
-    if (val > 0.1f + sin(globals.time * 1.312) * 0.00) {
-        return BlockID_Stone | biome_id;
+    if (val > 0.1f) {
+        if (b_pos.y > water_level + val * 20 + r * 60) {
+            biome_id = BiomeID_Underworld;
+            if (u_val > 0) {
+                block_id = BlockID_CompressedStone;
+            } else if (b_pos.y > 600) {
+                block_id = BlockID_Lava;
+            }
+        } else {
+            block_id = BlockID_Stone;
+        }
     } else {
         if (b_pos.y > water_level) {
-            return BlockID_Water | biome_id;
+            block_id = BlockID_Water;
         }
     }
-    return BlockID_Air | biome_id;
+
+    biome_id = (biome_id << 16) & BIOME_ID_MASK;
+    return block_id | biome_id;
 }
 
 void main() {

@@ -10,13 +10,23 @@ void main() {
     vec3 bp = vec3(global_i) + p.pos.xyz;
     uint tile = get_tile(bp);
     uint min_i = (tile & SDF_DIST_MASK) >> 0x18;
-    for (uint dist = 0; dist < min_i; ++dist) {
-        uint sampled_tile = get_tile(vec3(bp.x, bp.y + dist, bp.z));
-        uint sampled_tile_dist = (sampled_tile & SDF_DIST_MASK) >> 0x18;
-        min_i = min(dist + sampled_tile_dist, min_i);
-        if (is_tile_occluding(sampled_tile))
-            break;
+    uint dist = 0;
+    for (; dist < min_i; ++dist) {
+        {
+            uint sampled_tile = get_tile(vec3(bp.x, bp.y + dist, bp.z));
+            uint sampled_tile_dist = (sampled_tile & SDF_DIST_MASK) >> 0x18;
+            min_i = min(dist + sampled_tile_dist, min_i);
+            if (is_tile_occluding(sampled_tile))
+                break;
+        }
+        {
+            uint sampled_tile = get_tile(vec3(bp.x, bp.y - dist, bp.z));
+            uint sampled_tile_dist = (sampled_tile & SDF_DIST_MASK) >> 0x18;
+            min_i = min(dist + sampled_tile_dist, min_i);
+            if (is_tile_occluding(sampled_tile))
+                break;
+        }
     }
-    tile = tile | (min_i << 0x18);
+    tile = (tile & ~SDF_DIST_MASK) | (dist << 0x18);
     imageStore(output_image, ivec3(global_i), uvec4(tile));
 }
