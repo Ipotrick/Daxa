@@ -33,3 +33,14 @@ float underworld_noise(vec3 pos) {
     };
     return fractal_noise(pos, noise_conf) * 10.0f + abs(600 - pos.y) * 0.015 - 1.0;
 }
+
+float cave_noise(vec3 pos) {
+    FractalNoiseConfig noise_conf = {
+        /* .amplitude   = */ 0.1f,
+        /* .persistance = */ 0.4f,
+        /* .scale       = */ 0.02f,
+        /* .lacunarity  = */ 2,
+        /* .octaves     = */ 4,
+    };
+    return fractal_noise(pos, noise_conf) * 10.0f + abs(260 - pos.y) * 0.02 - 0.5;
+}
