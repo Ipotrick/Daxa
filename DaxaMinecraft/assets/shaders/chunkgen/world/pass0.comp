@@ -25,7 +25,7 @@ uint gen_block(in vec3 b_pos) {
         biome_id = BiomeID_Beach;
 
     if (val > 0.1f) {
-        if (b_pos.y > water_level + val * 40 + r * 60) {
+        if (b_pos.y > water_level + 150 + val * 20 + r * 60) {
             biome_id = BiomeID_Underworld;
             if (u_val > 0) {
                 if (b_pos.y > 760 + r * 6) {
