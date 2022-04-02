@@ -129,7 +129,7 @@ void main() {
                 // vec3 albedo = ray_chunk_intersection.nrm * 0.5 + 0.5;
 
                 if (length(intersection_block_pos - view_intersection_block_pos) <= 8) {
-                    albedo *= vec3(5.0);
+                    albedo *= vec3(2.0);
                     // if (tex_uv.x < 0.05 || tex_uv.x > 0.95 || tex_uv.y < 0.05 || tex_uv.y > 0.95)
                     //     albedo = 1 - albedo;
                 }

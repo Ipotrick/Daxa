@@ -34,7 +34,7 @@ uint tile_texture_index(uint block_id, uint face) {
         default:                  return 0;
         }
     case BlockID_Gravel:          return 10;
-    case BlockID_Lava:            return 11 + int(globals.time * 10) % 8;
+    case BlockID_Lava:            return 11 + int(globals.time * 6) % 8;
     case BlockID_Leaves:          return 19;
     case BlockID_Log:
         switch (face) {
