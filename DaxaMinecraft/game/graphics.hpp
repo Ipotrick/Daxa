@@ -512,10 +512,8 @@ struct World {
             }
 
             cmd_list->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
-
-
         }
- 
+
         cmd_list->bindPipeline(raymarch_compute_pipeline);
         cmd_list->bindAll();
         cmd_list->pushConstant(
@@ -542,7 +540,7 @@ struct World {
         {
             auto result = render_ctx.pipeline_compiler->createComputePipeline({
                 .shaderCI = {
-                    .pathToSource = "DaxaMinecraft/assets/shaders/chunkgen/blocks_pass1.comp",
+                    .pathToSource = "DaxaMinecraft/assets/shaders/chunkgen/world/pass0.comp",
                     .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                 },
                 .overwriteSets = {daxa::BIND_ALL_SET_DESCRIPTION},
@@ -552,7 +550,7 @@ struct World {
         {
             auto result = render_ctx.pipeline_compiler->createComputePipeline({
                 .shaderCI = {
-                    .pathToSource = "DaxaMinecraft/assets/shaders/chunkgen/blocks_pass2.comp",
+                    .pathToSource = "DaxaMinecraft/assets/shaders/chunkgen/world/pass1.comp",
                     .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                 },
                 .overwriteSets = {daxa::BIND_ALL_SET_DESCRIPTION},
@@ -561,9 +559,9 @@ struct World {
         }
 
         std::filesystem::path sdf_pass_paths[3] = {
-            "DaxaMinecraft/assets/shaders/chunkgen/sdf_pass0.comp",
-            "DaxaMinecraft/assets/shaders/chunkgen/sdf_pass1.comp",
-            "DaxaMinecraft/assets/shaders/chunkgen/sdf_pass2.comp",
+            "DaxaMinecraft/assets/shaders/chunkgen/sdf/pass0.comp",
+            "DaxaMinecraft/assets/shaders/chunkgen/sdf/pass1.comp",
+            "DaxaMinecraft/assets/shaders/chunkgen/sdf/pass2.comp",
         };
         for (size_t i = 0; i < 3; ++i) {
             auto result = render_ctx.pipeline_compiler->createComputePipeline({
@@ -578,7 +576,7 @@ struct World {
     }
 
     void load_textures(const std::filesystem::path &filepath) {
-        std::array<std::filesystem::path, 23> texture_names{
+        std::array<std::filesystem::path, 30> texture_names{
             "bedrock.png",
             "brick.png",
             "cactus.png",
@@ -590,7 +588,14 @@ struct World {
             "grass-side.png",
             "grass-top.png",
             "gravel.png",
-            "lava.png",
+            "lava_0.png",
+            "lava_1.png",
+            "lava_2.png",
+            "lava_3.png",
+            "lava_4.png",
+            "lava_5.png",
+            "lava_6.png",
+            "lava_7.png",
             "leaves.png",
             "log-side.png",
             "log-top.png",
