@@ -3,15 +3,14 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
-#include "chunkgen/block_info.glsl"
-#include "chunkgen/noise.glsl"
-#include "chunkgen/common.glsl"
+#include <chunkgen/common.glsl>
+#include <chunkgen/world/noise.glsl>
 
 void main() {
     uvec3 global_i = gl_GlobalInvocationID.xyz;
     vec3 block_pos = vec3(global_i) + p.pos.xyz;
 
-    uint tile = get_tile(block_pos);
+    uint tile = load_tile(block_pos);
     uint block_id = tile & BLOCK_ID_MASK;
     uint biome_id = (tile & BIOME_ID_MASK) >> 0x10;
 
@@ -24,11 +23,11 @@ void main() {
     bool underwater = false;
 
     for (uint i = 1; i < 16; ++i) {
-        uint id = get_block_id(vec3(block_pos.x, block_pos.y - i, block_pos.z));
+        uint id = load_block_id(vec3(block_pos.x, block_pos.y - i, block_pos.z));
         above_ids[i] = id;
     }
     for (uint i = 1; i < 16; ++i) {
-        uint id = get_block_id(vec3(block_pos.x, block_pos.y + i, block_pos.z));
+        uint id = load_block_id(vec3(block_pos.x, block_pos.y + i, block_pos.z));
         below_ids[i] = id;
     }
 
@@ -93,7 +92,7 @@ void main() {
         } break;
         }
     } else if (block_id == BlockID_CompressedStone) {
-        float lava_dif = abs(601 - block_pos.y);
+        float lava_dif = abs(651 - block_pos.y);
         if (above_depth == 1 && lava_dif < 10 && r > lava_dif * 0.11) {
             new_id = BlockID_MoltenRock;
         } else if (above_depth < 3 + r * 3) {
@@ -104,9 +103,9 @@ void main() {
         case BiomeID_Plains: {
             if (below_inv_depth == 1) {
                 if (r < 0.4) {
-                    new_id = BlockID_TallGrass;
+                    // new_id = BlockID_TallGrass;
                 } else if (r < 0.43) {
-                    new_id = BlockID_Rose;
+                    // new_id = BlockID_Rose;
                 } else if (r < 0.45) {
                     new_id = BlockID_Leaves;
                 }

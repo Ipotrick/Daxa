@@ -3,16 +3,16 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
-#include <chunkgen/sdf_pass_common.glsl>
+#include <chunkgen/sdf/common.glsl>
 
 void main() {
     uvec3 global_i = gl_GlobalInvocationID.xyz;
     vec3 bp = vec3(global_i) + p.pos.xyz;
-    uint tile = get_tile(bp);
+    uint tile = load_tile(bp);
     uint dist = 0;
     for (; dist < MAX_DIST; ++dist) {
-        if (is_voxel_occluding(vec3(bp.x + dist, bp.y, bp.z)) ||
-            is_voxel_occluding(vec3(bp.x - dist, bp.y, bp.z)))
+        if (is_block_occluding(load_block_id(vec3(bp.x + dist, bp.y, bp.z))) ||
+            is_block_occluding(load_block_id(vec3(bp.x - dist, bp.y, bp.z))))
             break;
     }
     tile = (tile & ~SDF_DIST_MASK) | (dist << 0x18);

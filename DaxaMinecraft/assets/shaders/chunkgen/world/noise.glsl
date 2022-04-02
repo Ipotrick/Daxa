@@ -1,4 +1,5 @@
-#include "utils/noise.glsl"
+
+#include <utils/noise.glsl>
 
 float terrain_noise(vec3 pos) {
     FractalNoiseConfig noise_conf = {
@@ -30,5 +31,5 @@ float underworld_noise(vec3 pos) {
         /* .lacunarity  = */ 2,
         /* .octaves     = */ 6,
     };
-    return fractal_noise(pos - vec3(0, 0, -1000), noise_conf) * 10.0f + abs(500 - pos.y) * 0.006 - 0.2;
+    return fractal_noise(pos, noise_conf) * 10.0f + abs(600 - pos.y) * 0.015 - 1.0;
 }
