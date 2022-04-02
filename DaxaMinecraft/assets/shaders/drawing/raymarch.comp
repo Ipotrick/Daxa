@@ -16,6 +16,14 @@ vec3 sample_sky(vec3 nrm) {
     return sun_col * sun_val + mix(vec3(0.5, 0.6, 2), vec3(0.1, 0.2, 0.5), sky_val);
 }
 
+void draw_rect(inout vec3 color, int px, int py, int sx, int sy) {
+    if (gl_GlobalInvocationID.x >= px &&
+        gl_GlobalInvocationID.x < px + sx &&
+        gl_GlobalInvocationID.y >= py &&
+        gl_GlobalInvocationID.y < py + sy)
+        color = vec3(1);
+}
+
 void main() {
     if (gl_GlobalInvocationID.x >= globals.frame_dim.x ||
         gl_GlobalInvocationID.y >= globals.frame_dim.y)
@@ -25,15 +33,9 @@ void main() {
     vec3 right = (globals.viewproj_mat * vec4(1, 0, 0, 0)).xyz;
     vec3 up = (globals.viewproj_mat * vec4(0, 1, 0, 0)).xyz;
 
-    Ray view_ray;
-    view_ray.o = globals.pos.xyz;
-    view_ray.nrm = front;
-    view_ray.inv_nrm = 1 / view_ray.nrm;
-    RayIntersection view_chunk_intersection = trace_chunks(view_ray);
-    vec3 view_intersection_pos = get_intersection_pos_corrected(view_ray, view_chunk_intersection);
-
+    vec3 view_intersection_pos = globals.pick_pos.xyz;
     Ray cam_ray;
-    cam_ray.o = view_ray.o;
+    cam_ray.o = globals.pos.xyz;
 
     float sun_angle = 0.3;
     float sun_yz = -abs(cos(sun_angle)) * 2;
@@ -142,6 +144,9 @@ void main() {
     }
 
     color *= inv_subsamples.x * inv_subsamples.y;
+
+    draw_rect(color, globals.frame_dim.x / 2, globals.frame_dim.y / 2 - 4, 1, 9);
+    draw_rect(color, globals.frame_dim.x / 2 - 4, globals.frame_dim.y / 2, 9, 1);
 
     imageStore(output_image, i_uv, vec4(pow(color, vec3(1)), 1));
 }

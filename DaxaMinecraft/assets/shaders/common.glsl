@@ -5,6 +5,7 @@
 layout(set = 0, binding = 4) buffer Globals {
     mat4 viewproj_mat;
     vec4 pos;
+    vec4 pick_pos;
     ivec2 frame_dim;
     float time;
     uint texture_index;

@@ -255,6 +255,7 @@ struct World {
     daxa::BufferHandle compute_pipeline_globals;
 
     daxa::PipelineHandle raymarch_compute_pipeline;
+    daxa::PipelineHandle pickblock_compute_pipeline;
 
     daxa::PipelineHandle chunkgen_compute_pipeline_pass0;
     daxa::PipelineHandle chunkgen_compute_pipeline_pass1;
@@ -263,6 +264,7 @@ struct World {
     struct ComputeGlobals {
         glm::mat4 viewproj_mat;
         glm::vec4 pos;
+        glm::vec4 pick_pos;
         glm::ivec2 frame_dim;
         float time;
 
@@ -388,6 +390,12 @@ struct World {
             if (result)
                 raymarch_compute_pipeline = result.value();
         }
+        if (render_ctx.pipeline_compiler->checkIfSourcesChanged(pickblock_compute_pipeline)) {
+            auto result = render_ctx.pipeline_compiler->recreatePipeline(pickblock_compute_pipeline);
+            std::cout << result << std::endl;
+            if (result)
+                pickblock_compute_pipeline = result.value();
+        }
         if (render_ctx.pipeline_compiler->checkIfSourcesChanged(chunkgen_compute_pipeline_pass0)) {
             auto result = render_ctx.pipeline_compiler->recreatePipeline(chunkgen_compute_pipeline_pass0);
             std::cout << result << std::endl;
@@ -415,6 +423,9 @@ struct World {
 
     void update(float) {
         reload_shaders();
+    }
+
+    void readback() {
     }
 
     void draw(const glm::mat4 &vp_mat, const Player3D &player, daxa::CommandListHandle cmd_list, daxa::ImageViewHandle &render_image) {
@@ -514,6 +525,17 @@ struct World {
             cmd_list->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
         }
 
+        cmd_list->bindPipeline(pickblock_compute_pipeline);
+        cmd_list->bindAll();
+        cmd_list->pushConstant(
+            VK_SHADER_STAGE_COMPUTE_BIT,
+            ChunkRaymarchPush{
+                .globals_sb = compute_globals_i,
+            });
+        cmd_list->dispatch(1, 1, 1);
+
+        cmd_list->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+
         cmd_list->bindPipeline(raymarch_compute_pipeline);
         cmd_list->bindAll();
         cmd_list->pushConstant(
@@ -536,6 +558,16 @@ struct World {
                 .overwriteSets = {daxa::BIND_ALL_SET_DESCRIPTION},
             });
             raymarch_compute_pipeline = result.value();
+        }
+        {
+            auto result = render_ctx.pipeline_compiler->createComputePipeline({
+                .shaderCI = {
+                    .pathToSource = "DaxaMinecraft/assets/shaders/utils/pickblock.comp",
+                    .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+                },
+                .overwriteSets = {daxa::BIND_ALL_SET_DESCRIPTION},
+            });
+            pickblock_compute_pipeline = result.value();
         }
         {
             auto result = render_ctx.pipeline_compiler->createComputePipeline({
