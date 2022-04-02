@@ -109,7 +109,7 @@ void main() {
         } else if (above_depth < 3 + r * 3) {
             new_id = BlockID_Bedrock;
         }
-        
+
         if (new_id == block_id) {
             if (r < 0.2)
                 new_id = BlockID_Gravel;
@@ -117,7 +117,7 @@ void main() {
                 new_id = BlockID_Cobblestone;
         } else {
             if (r < 0.12)
-            new_id = BlockID_Cobblestone;
+                new_id = BlockID_Cobblestone;
         }
     } else if (block_id == BlockID_Air) {
         switch (biome_id) {
