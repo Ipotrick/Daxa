@@ -117,7 +117,7 @@ public:
 		}
 
 		cameraController.updateMatrices(*app.window);
-		meshRender.setCamera(cmdList, cameraController.vp, cameraController.view, cameraController.fov);
+		meshRender.setCamera(cmdList, cameraController.proj, cameraController.view, cameraController.fov, cameraController.position);
 		
 		cmdList->insertImageBarrier({
 			.barrier = {

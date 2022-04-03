@@ -1,7 +1,9 @@
 struct GlobalData {
-    mat4 vp;
+    mat4 perspective;
     mat4 view;
+    mat4 vp;
     mat4 iView;
+    vec4 cameraPosition;
 	float verticalFOV;
 	uint renderTargetWidth;
 	uint renderTargetHeight;

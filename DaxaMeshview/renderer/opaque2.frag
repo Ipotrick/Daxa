@@ -4,6 +4,8 @@
 #extension GL_EXT_nonuniform_qualifier : enable
 
 #include "common.glsl"
+layout(set = 0, binding = 0) uniform sampler samplers[];
+layout(set = 0, binding = 2) uniform textureCube cubeTextures[];
 
 layout(location = 10) in vec2 vtf_uv;
 layout(location = 13) in vec3 vtf_world_space_normal;
@@ -27,13 +29,14 @@ mat3 genTBN(vec3 n, vec3 p, vec2 uv) {
 }
 
 layout(std140, push_constant) uniform PushConstants {
-    uint globals;
+    uint globalBufferId;
     uint primitives;
     uint lights;
     uint modelIndex;
 } push;
 
 void main() {
+    GlobalData globals = globalDataBufferView[push.globalBufferId].globalData;
     vec3 interpVertexNormal = normalize(vtf_world_space_normal);
     vec4 ambient = vec4(1.0,1.0,1.00,1.0);
     PrimitiveInfo prim = primitiveDataBufferView[push.primitives].primitiveInfos[push.modelIndex];
@@ -51,7 +54,20 @@ void main() {
         strength = strength * max(dot(normal, -direction), 0.0f);
         lightAcc += light.color * strength;
     }
-    outFragColor = texture(imageSampler2DViews[uint(prim.albedoMapId)], vtf_uv) * lightAcc;
+
+    vec3 world_space_direction = normalize(vtf_world_space_position - globals.cameraPosition.xyz);
+    vec3 reflected = reflect(world_space_direction, normal);
+    vec4 skyBoxSample = texture(
+        samplerCube(
+            cubeTextures[globals.skyboxImageId],
+            samplers[globals.generalSamplerId]
+        ),
+        reflected
+    );
+
+    outFragColor = 
+        skyBoxSample +
+        texture(imageSampler2DViews[uint(prim.albedoMapId)], vtf_uv) * lightAcc;
 
     outNormal = normal * 0.5f + vec3(0.5f);
 }

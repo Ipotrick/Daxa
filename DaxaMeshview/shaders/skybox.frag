@@ -23,5 +23,5 @@ void main() {
         ), 
         normalize(vertexPos)
     );
-    o_color = vec4(vertexPos,1);//vec4(-dir.xy, 1, 1);
+    o_color = tex;
 }

@@ -37,7 +37,14 @@ namespace daxa {
 
 	class CommandQueue {
 	public:
-		CommandQueue(std::shared_ptr<DeviceBackend> deviceBackend, VkQueue queue, u32 queueFamilyIndex, std::shared_ptr<StagingBufferPool> stagingBufferPool, CommandQueueCreateInfo const& ci);
+		CommandQueue(
+			std::shared_ptr<DeviceBackend> deviceBackend, 
+			VkQueue queue, 
+			u32 queueFamilyIndex, 
+			std::shared_ptr<StagingBufferPool> uploadStagingBufferPool, 
+			std::shared_ptr<StagingBufferPool> downloadStagingBufferPool, 
+			CommandQueueCreateInfo const& ci
+		);
 		CommandQueue() 										= default;
 		CommandQueue(CommandQueue const&) 					= delete;
 		CommandQueue& operator=(CommandQueue const&) 		= delete;
@@ -88,7 +95,7 @@ namespace daxa {
 		bool 											bWaitForBatchesToComplete 			= false;
 		std::vector<TimelineSemaphoreHandle> 			unusedTimelines 					= {};
 		std::shared_ptr<CommandListRecyclingSharedData> cmdListRecyclingSharedData 			= std::make_shared<CommandListRecyclingSharedData>();
-		std::shared_ptr<StagingBufferPool> 				stagingBufferPool 					= {};
+		std::shared_ptr<StagingBufferPool> 				uploadStagingBufferPool 			= {};
 		std::vector<CommandListHandle> 					unusedCommandLists					= {};
 		std::string 									debugName 							= {};
 		// reused temporary buffers:		
