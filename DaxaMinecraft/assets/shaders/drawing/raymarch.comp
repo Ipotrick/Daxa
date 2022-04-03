@@ -4,17 +4,24 @@
 layout(local_size_x = 8, local_size_y = 8) in;
 
 #include <drawing/common.glsl>
-#include <chunkgen/block_info.glsl>
-#include <utils/ray.glsl>
+#include <utils/intersect.glsl>
 #include <utils/noise.glsl>
 
 Ray sun_ray;
-const vec3 sun_col = vec3(2, 1.8, 1);
+const vec3 sun_col = vec3(2, 1.3, 1) * 1;
 
 vec3 sample_sky(vec3 nrm) {
-    float sun_val = clamp((dot(nrm, sun_ray.nrm) - 0.9995) * 5000, 0, 1);
+    float sun_val = clamp((dot(nrm, sun_ray.nrm) - 0.9999) * 10000, 0, 1);
     float sky_val = (dot(nrm, vec3(0, 1, 0))) / 2 + clamp((dot(nrm, sun_ray.nrm) + 1) * 0.1, 0, 1);
     return sun_col * sun_val + mix(vec3(0.5, 0.6, 2), vec3(0.1, 0.2, 0.5), sky_val);
+}
+
+void draw_rect(inout vec3 color, int px, int py, int sx, int sy) {
+    if (gl_GlobalInvocationID.x >= px &&
+        gl_GlobalInvocationID.x < px + sx &&
+        gl_GlobalInvocationID.y >= py &&
+        gl_GlobalInvocationID.y < py + sy)
+        color = vec3(1);
 }
 
 void main() {
@@ -26,11 +33,13 @@ void main() {
     vec3 right = (globals.viewproj_mat * vec4(1, 0, 0, 0)).xyz;
     vec3 up = (globals.viewproj_mat * vec4(0, 1, 0, 0)).xyz;
 
+    vec3 view_intersection_pos = globals.pick_pos.xyz;
     Ray cam_ray;
     cam_ray.o = globals.pos.xyz;
 
-    float sun_angle = 0.6;
-    sun_ray.nrm = normalize(vec3(sin(sun_angle) * 3, -abs(cos(sun_angle)) * 2, 1));
+    float sun_angle = 0.3;
+    float sun_yz = -abs(cos(sun_angle)) * 2;
+    sun_ray.nrm = normalize(vec3(sin(sun_angle) * 3, sun_yz, -sun_yz));
     sun_ray.inv_nrm = 1 / sun_ray.nrm;
 
     const vec2 subsamples = vec2(1);
@@ -55,7 +64,10 @@ void main() {
             // color.r += float(ray_chunk_intersection.steps) * 0.5 / MAX_STEPS;
 
             vec3 intersection_pos = get_intersection_pos_corrected(cam_ray, ray_chunk_intersection);
-            uint block_id = get_block_id(intersection_pos);
+            uint block_id = load_block_id(intersection_pos);
+            // color.r += 1 / length(intersection_pos - view_intersection_pos);
+            ivec3 intersection_block_pos = ivec3(intersection_pos);
+            ivec3 view_intersection_block_pos = ivec3(view_intersection_pos);
 
             // if (ray_chunk_intersection.hit && block_id == BlockID_Water) {
             //     cam_ray.o = intersection_pos + ray_chunk_intersection.nrm * 0.01;
@@ -66,10 +78,10 @@ void main() {
             //     block_id = get_block_id(intersection_pos);
             // }
             // if (ray_chunk_intersection.hit && block_id == BlockID_Air) {
-            //     uint tile = get_tile(intersection_pos);
+            //     uint tile = load_tile(intersection_pos);
             //     float sdf_value = float((tile & SDF_DIST_MASK) >> 0x18) / 128;
             //     color += vec3(sdf_value);
-            // } else 
+            // } else
             if (ray_chunk_intersection.hit) {
                 sun_ray.o = intersection_pos + ray_chunk_intersection.nrm * 0.002;
                 RayIntersection sun_ray_chunk_intersection = trace_chunks(sun_ray);
@@ -114,9 +126,16 @@ void main() {
 
                 uint tex_id = tile_texture_index(block_id, face_id);
                 vec3 albedo = texture(get_texture[globals.texture_index], vec3(tex_uv, tex_id)).rgb;
-                // vec3 albedo = vec3(0);
+                // vec3 albedo = vec3(0.01);
                 // vec3 albedo = b_uv;
                 // vec3 albedo = ray_chunk_intersection.nrm * 0.5 + 0.5;
+
+                if (length(intersection_block_pos - view_intersection_block_pos) <= 8) {
+                    albedo *= vec3(2.0);
+                    // if (tex_uv.x < 0.05 || tex_uv.x > 0.95 || tex_uv.y < 0.05 || tex_uv.y > 0.95)
+                    //     albedo = 1 - albedo;
+                }
+
                 color += albedo * light;
             } else {
                 color += sample_sky(cam_ray.nrm);
@@ -125,6 +144,9 @@ void main() {
     }
 
     color *= inv_subsamples.x * inv_subsamples.y;
+
+    draw_rect(color, globals.frame_dim.x / 2, globals.frame_dim.y / 2 - 4, 1, 9);
+    draw_rect(color, globals.frame_dim.x / 2 - 4, globals.frame_dim.y / 2, 9, 1);
 
     imageStore(output_image, i_uv, vec4(pow(color, vec3(1)), 1));
 }

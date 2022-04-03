@@ -3,15 +3,14 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
-#include "chunkgen/block_info.glsl"
-#include "chunkgen/noise.glsl"
-#include "chunkgen/common.glsl"
+#include <chunkgen/common.glsl>
+#include <chunkgen/world/noise.glsl>
 
 void main() {
     uvec3 global_i = gl_GlobalInvocationID.xyz;
     vec3 block_pos = vec3(global_i) + p.pos.xyz;
 
-    uint tile = get_tile(block_pos);
+    uint tile = load_tile(block_pos);
     uint block_id = tile & BLOCK_ID_MASK;
     uint biome_id = (tile & BIOME_ID_MASK) >> 0x10;
 
@@ -24,11 +23,11 @@ void main() {
     bool underwater = false;
 
     for (uint i = 1; i < 16; ++i) {
-        uint id = get_block_id(vec3(block_pos.x, block_pos.y - i, block_pos.z));
+        uint id = load_block_id(vec3(block_pos.x, block_pos.y - i, block_pos.z));
         above_ids[i] = id;
     }
     for (uint i = 1; i < 16; ++i) {
-        uint id = get_block_id(vec3(block_pos.x, block_pos.y + i, block_pos.z));
+        uint id = load_block_id(vec3(block_pos.x, block_pos.y + i, block_pos.z));
         below_ids[i] = id;
     }
 
@@ -60,6 +59,7 @@ void main() {
 
     float r = rand(block_pos);
     float height_independent_r = rand(vec3(block_pos.x, 0, block_pos.z));
+    float c_val = cave_noise(block_pos);
 
     uint new_id = block_id;
 
@@ -92,21 +92,41 @@ void main() {
             new_id = BlockID_Sand;
         } break;
         }
+        if (new_id == block_id) {
+            if (c_val < 0)
+                new_id = BlockID_Air;
+            else if (r + c_val * 0.1 < 0.4)
+                new_id = BlockID_Gravel;
+            else if (r < 0.42)
+                new_id = BlockID_Cobblestone;
+            else if (r - (block_pos.y - 300) * 0.001 < 0.44 && c_val > 0.1)
+                new_id = BlockID_DiamondOre;
+        }
     } else if (block_id == BlockID_CompressedStone) {
-        float lava_dif = abs(601 - block_pos.y);
+        float lava_dif = abs(651 - block_pos.y);
         if (above_depth == 1 && lava_dif < 10 && r > lava_dif * 0.11) {
             new_id = BlockID_MoltenRock;
         } else if (above_depth < 3 + r * 3) {
             new_id = BlockID_Bedrock;
+        }
+
+        if (new_id == block_id) {
+            if (r < 0.2)
+                new_id = BlockID_Gravel;
+            else if (r < 0.42)
+                new_id = BlockID_Cobblestone;
+        } else {
+            if (r < 0.12)
+                new_id = BlockID_Cobblestone;
         }
     } else if (block_id == BlockID_Air) {
         switch (biome_id) {
         case BiomeID_Plains: {
             if (below_inv_depth == 1) {
                 if (r < 0.4) {
-                    new_id = BlockID_TallGrass;
+                    // new_id = BlockID_TallGrass;
                 } else if (r < 0.43) {
-                    new_id = BlockID_Rose;
+                    // new_id = BlockID_Rose;
                 } else if (r < 0.45) {
                     new_id = BlockID_Leaves;
                 }
