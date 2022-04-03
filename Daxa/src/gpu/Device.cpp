@@ -16,11 +16,19 @@ namespace daxa {
 	Device::Device(Instance& instance) 
 		: backend{ std::make_shared<DeviceBackend>(instance.getVKBInstance(), instance.pfnSetDebugUtilsObjectNameEXT) }
 		, bindingSetDescriptionCache{ std::make_shared<BindingSetLayoutCache>(backend) }
-		, stagingBufferPool{ std::make_shared<StagingBufferPool>(backend) }
+		, uploadStagingBufferPool{ std::make_shared<StagingBufferPool>(backend) }
+		, downloadStagingBufferPool{ std::make_shared<StagingBufferPool>(backend, 1 << 14, VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_TO_CPU) }
 	{ }
 
 	CommandQueueHandle Device::createCommandQueue(CommandQueueCreateInfo const& ci) {
-		return CommandQueueHandle{ std::make_shared<CommandQueue>(backend, backend->device.get_queue(vkb::QueueType::graphics).value(), backend->graphicsQFamilyIndex, stagingBufferPool, ci) };
+		return CommandQueueHandle{ std::make_shared<CommandQueue>(
+			backend, 
+			backend->device.get_queue(vkb::QueueType::graphics).value(), 
+			backend->graphicsQFamilyIndex, 
+			uploadStagingBufferPool, 
+			downloadStagingBufferPool, 
+			ci
+		)};
 	}
 
 	SamplerHandle Device::createSampler(SamplerCreateInfo ci) {

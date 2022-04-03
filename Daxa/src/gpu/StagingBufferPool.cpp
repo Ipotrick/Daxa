@@ -30,9 +30,12 @@ namespace daxa {
 		cleanup();
 	}
 
-	StagingBufferPool::StagingBufferPool(std::shared_ptr<DeviceBackend> deviceBackend)
+	StagingBufferPool::StagingBufferPool(std::shared_ptr<DeviceBackend> deviceBackend, size_t size, VkBufferUsageFlags usages, VmaMemoryUsage memoryUsages)
 		: deviceBackend{ std::move(deviceBackend) }
 		, sharedData{ std::make_shared<StagingBufferPoolSharedData>() }
+		, usages{ usages }
+		, memoryUsages{ memoryUsages }
+		, size{ size }
 	{ }
 
 	StagingBuffer StagingBufferPool::getStagingBuffer() {
@@ -40,9 +43,9 @@ namespace daxa {
 
 		if (sharedData->pool.empty()) {
 			BufferCreateInfo bufferCI{
-				.size = STAGING_BUFFER_POOL_BUFFER_SIZE,
-				.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-				.memoryUsage = VMA_MEMORY_USAGE_CPU_TO_GPU,
+				.size = size,
+				.usage = usages,
+				.memoryUsage = memoryUsages,
 			};
 
 			if (instance->pfnSetDebugUtilsObjectNameEXT) {
