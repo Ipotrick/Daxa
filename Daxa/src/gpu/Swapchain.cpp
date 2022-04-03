@@ -160,5 +160,7 @@ namespace daxa {
 		scci.pQueueFamilyIndices = &deviceBackend->graphicsQFamilyIndex;
 		scci.queueFamilyIndexCount = 1;
 		scci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        return res;
 	}
 }

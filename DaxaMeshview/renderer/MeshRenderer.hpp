@@ -129,9 +129,9 @@ public:
 	void initSkyBox(RenderContext& renderCTX) {	
 		u32 hardcodedDim = 2048;
 
-		size_t faceMemorySize = hardcodedDim * hardcodedDim * 4 * 4;
+		// size_t faceMemorySize = hardcodedDim * hardcodedDim * 4 * 4;
 
-		u32 mips = std::log2(hardcodedDim);
+		u32 mips = static_cast<u32>(std::log2(hardcodedDim));
 
 		skybox = renderCTX.device->createImageView({
 			.image = renderCTX.device->createImage({
@@ -175,12 +175,12 @@ public:
 		for (u32 i = 0; i < 6; i++) { 
 			i32 width = -1;
 			i32 height = -1;
-			const char* layer_name = "diffuse";
-			auto deleter = [](float* image){ free(image); };
+			// const char* layer_name = "diffuse";
+			// auto deleter = [](float* image){ free(image); };
 
 			float* data = nullptr;
 			char const* err = nullptr;
-			i32 ret = LoadEXR(&data, &width, &height, hardcodedSkyBoxFileNames[i], &err);
+			/* i32 ret = */ LoadEXR(&data, &width, &height, hardcodedSkyBoxFileNames[i], &err);
 			if (err != nullptr) {
 				std::cout << err << std::endl;
 				FreeEXRErrorMessage(err);
