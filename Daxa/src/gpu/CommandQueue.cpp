@@ -2,13 +2,19 @@
 #include "Instance.hpp"
 
 namespace daxa {
-	CommandQueue::CommandQueue(std::shared_ptr<DeviceBackend> deviceBackend, VkQueue queue, u32 queueFamilyIndex, std::shared_ptr<StagingBufferPool> stagingBufferPool, CommandQueueCreateInfo const& ci)
+	CommandQueue::CommandQueue(
+		std::shared_ptr<DeviceBackend> deviceBackend, 
+		VkQueue queue, 
+		u32 queueFamilyIndex, 
+		std::shared_ptr<StagingBufferPool> uploadStagingBufferPool, 
+		std::shared_ptr<StagingBufferPool> downloadStagingBufferPool, 
+		CommandQueueCreateInfo const& ci)
 		: deviceBackend{ std::move(deviceBackend) }
 		, queue{ queue }
 		, queueFamilyIndex{ queueFamilyIndex }
 		, bWaitForBatchesToComplete{ ci.batchCount > 0 }
 		, cmdListRecyclingSharedData{ std::make_shared<CommandListRecyclingSharedData>() }
-		, stagingBufferPool{ std::move(stagingBufferPool) }
+		, uploadStagingBufferPool{ std::move(uploadStagingBufferPool) }
 	{
 		this->batches.resize(std::max(u32(1), ci.batchCount));
 
@@ -35,7 +41,7 @@ namespace daxa {
 		for (auto& cmdList : si.commandLists) {
 			DAXA_ASSERT_M(cmdList->finalized, "can only submit finalized command lists");
 			DAXA_ASSERT_M(cmdList->recyclingData.lock().get() == cmdListRecyclingSharedData.get(), "comand lists can only be submitted to the queue they were created from");
-			for (auto& sbuffer : cmdList->usedStagingBuffers) {
+			for (auto& sbuffer : cmdList->usedUploadStagingBuffers) {
 				DAXA_ASSERT_M(!(**sbuffer.buffer).isMemoryMapped(), "can not submit command list. Some Buffers used in the command list have mapped memory, all memory to used buffers need to be unmapped before a submit.");
 			}
 
@@ -45,21 +51,26 @@ namespace daxa {
 			for (auto& set : cmdList->usedSets) {
 				set->usesOnGPU += 1;
 			}
+			
+			for (auto& [timelineSema, signalValue] : cmdList->usedTimelines) {
+				this->submitSemaphoreSignalBuffer.push_back(timelineSema->getVkSemaphore());
+				this->submitSemaphoreSignalValueBuffer.push_back(signalValue);
+			}
 		}
 
 		for (auto& signal : si.waitOnSignals) {
 			this->submitSemaphoreWaitOnBuffer.push_back(signal->getVkSemaphore());
 			this->submitSemaphoreWaitOnValueBuffer.push_back(0);
 		}
-		for (auto [timelineSema, waitValue] : si.waitOnTimelines) {
+		for (auto& [timelineSema, waitValue] : si.waitOnTimelines) {
 			this->submitSemaphoreWaitOnBuffer.push_back(timelineSema->getVkSemaphore());
 			this->submitSemaphoreWaitOnValueBuffer.push_back(waitValue);
 		}
-		for (auto signal : si.signalOnCompletion) {
+		for (auto& signal : si.signalOnCompletion) {
 			this->submitSemaphoreSignalBuffer.push_back(signal->getVkSemaphore());
 			this->submitSemaphoreSignalValueBuffer.push_back(0);
 		}
-		for (auto [timelineSema, signalValue] : si.signalTimelines) {
+		for (auto& [timelineSema, signalValue] : si.signalTimelines) {
 			this->submitSemaphoreSignalBuffer.push_back(timelineSema->getVkSemaphore());
 			this->submitSemaphoreSignalValueBuffer.push_back(signalValue);
 		}
@@ -201,7 +212,7 @@ namespace daxa {
 			unusedCommandLists.push_back(CommandListHandle{ std::make_shared<CommandList>() });
 			CommandList& list = *unusedCommandLists.back();
 			list.deviceBackend = deviceBackend;
-			list.stagingBufferPool = stagingBufferPool;
+			list.uploadStagingBufferPool = uploadStagingBufferPool;
 			list.recyclingData = cmdListRecyclingSharedData;
 
 			VkCommandPoolCreateInfo commandPoolCI{

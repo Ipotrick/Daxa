@@ -87,7 +87,8 @@ namespace daxa {
 		shaderc::Compiler 						shaderCompiler 				= {};
 		shaderc::CompileOptions 				shaderCompileOptions 		= {};
 		std::shared_ptr<DeviceBackend> 			backend 					= {};
-		std::shared_ptr<StagingBufferPool> 		stagingBufferPool 			= {};
+		std::shared_ptr<StagingBufferPool> 		uploadStagingBufferPool 	= {};
+		std::shared_ptr<StagingBufferPool> 		downloadStagingBufferPool 	= {};
 		std::shared_ptr<BindingSetLayoutCache>	bindingSetDescriptionCache 	= {};
 	};
 
