@@ -3,9 +3,8 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
-#include "chunkgen/block_info.glsl"
-#include "chunkgen/noise.glsl"
-#include "chunkgen/common.glsl"
+#include <chunkgen/common.glsl>
+#include <chunkgen/world/noise.glsl>
 
 uint gen_block(in vec3 b_pos) {
     float val = terrain_noise(b_pos);
@@ -26,11 +25,15 @@ uint gen_block(in vec3 b_pos) {
         biome_id = BiomeID_Beach;
 
     if (val > 0.1f) {
-        if (b_pos.y > water_level + val * 20 + r * 60) {
+        if (b_pos.y > water_level + 150 + val * 20 + r * 60) {
             biome_id = BiomeID_Underworld;
             if (u_val > 0) {
-                block_id = BlockID_CompressedStone;
-            } else if (b_pos.y > 600) {
+                if (b_pos.y > 760 + r * 6) {
+                    block_id = BlockID_Bedrock;
+                } else {
+                    block_id = BlockID_CompressedStone;
+                }
+            } else if (b_pos.y > 650) {
                 block_id = BlockID_Lava;
             }
         } else {
