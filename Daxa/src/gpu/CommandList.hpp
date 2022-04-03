@@ -19,6 +19,7 @@
 #include "BindingSet.hpp"
 #include "StagingBufferPool.hpp"
 #include "Graveyard.hpp"
+#include "TimelineSemaphore.hpp"
 
 namespace daxa {
 	static const VkPipelineStageFlagBits2KHR STAGE_NONE = 0ULL;
@@ -121,6 +122,11 @@ namespace daxa {
 	struct HostToBufferCopyRegion{
 		u64 srcOffset = 0;
 		u64 dstOffset = 0;
+		u64 size = 0;
+	};
+
+	struct BufferToHostCopyRegion{
+		u64 srcOffset = 0;
 		u64 size = 0;
 	};
 
@@ -306,6 +312,56 @@ namespace daxa {
 			HostToBufferCopyRegion region = {};
 		};
 		void singleCopyHostToBuffer(SingleCopyHostToBufferInfo const& info);
+
+		
+
+		struct ToHostCopyFuture{
+		public:
+			bool ready() const {
+				return timelineHandle->getCounter() == timelineReadyValue;
+			}
+
+			operator bool() const { 
+				return ready();
+			}
+
+			bool operator !() const { 
+				return !ready();
+			}
+			
+			template<typename T = u8>
+			std::optional<MappedMemoryPointer<T>> getPtr() const {
+				if (ready()) {
+					MappedMemoryPointer<T> mem = readBackStagingBuffer.buffer->mapMemory<T>();
+					mem.hostPtr = static_cast<T*>(static_cast<u8*>(mem.hostPtr) + readBackBufferOffset);
+					return { mem };
+				}
+				return std::nullopt{};
+			}
+		private:
+			friend class CommandList;
+			ToHostCopyFuture(
+				StagingBuffer&& readBackStagingBuffer,
+				TimelineSemaphoreHandle timelineHandle,
+				u64 timelineReadyValue,
+				u64 readBackBufferOffset
+			)
+				: readBackStagingBuffer{ std::move(readBackStagingBuffer) }
+				, timelineHandle{ timelineHandle }
+				, timelineReadyValue{ timelineReadyValue }
+				, readBackBufferOffset{ readBackBufferOffset }
+			{}
+
+			StagingBuffer readBackStagingBuffer;
+			TimelineSemaphoreHandle timelineHandle = {};
+			u64 timelineReadyValue = {};
+			u64 readBackBufferOffset = {};
+		};
+		struct SingleBufferToHostCopyInfo{
+			BufferHandle const& src;
+			BufferToHostCopyRegion region = {};
+		};
+		ToHostCopyFuture singleCopyBufferToHost(SingleBufferToHostCopyInfo const& info);
 
 
 
@@ -511,30 +567,34 @@ namespace daxa {
 			std::optional<RenderAttachmentInfo> 	stencilAttachment 	= {};
 		};
 
-		bool 											bBarriersQueued 		= {};
-		std::vector<VkMemoryBarrier2KHR>				queuedMemoryBarriers	= {};
-		std::vector<VkBufferMemoryBarrier2KHR>			queuedBufferBarriers	= {};
-		std::vector<VkImageMemoryBarrier2KHR>			queuedImageBarriers		= {};
-		std::shared_ptr<DeviceBackend> 					deviceBackend			= {};
-		VkCommandBuffer 								cmd 					= {};
-		VkCommandPool 									cmdPool 				= {};
-		std::vector<VkDescriptorBufferInfo> 			bufferInfoBuffer 		= {};
-		std::vector<VkDescriptorImageInfo> 				imageInfoBuffer 		= {};
-		std::vector<VkBufferImageCopy>					bufferImageCopyBuffer 	= {};
-		std::vector<VkRenderingAttachmentInfoKHR> 		renderAttachmentBuffer 	= {};
-		std::optional<PipelineHandle> 					currentPipeline 		= {};
-		std::optional<CurrentRenderPass> 				currentRenderPass 		= {};
-		u32												operationsInProgress 	= 0;
-		u32 											usesOnGPU 				= 0;				// counts in how many pending submits the command list is currently used
-		bool 											empty 					= true;
-		bool 											finalized 				= false;
-		std::vector<BindingSetHandle> 					usedSets 				= {};
-		std::vector<PipelineHandle> 					usedGraphicsPipelines 	= {};
-		std::weak_ptr<CommandListRecyclingSharedData> 	recyclingData 			= {};
-		std::weak_ptr<StagingBufferPool> 				stagingBufferPool 		= {};
-		std::vector<StagingBuffer> 						usedStagingBuffers 		= {};
-		std::shared_ptr<ZombieList> 					zombies 				= std::make_shared<ZombieList>();
-		std::string 									debugName 				= {};
+		bool 											bBarriersQueued 			= {};
+		std::vector<VkMemoryBarrier2KHR>				queuedMemoryBarriers		= {};
+		std::vector<VkBufferMemoryBarrier2KHR>			queuedBufferBarriers		= {};
+		std::vector<VkImageMemoryBarrier2KHR>			queuedImageBarriers			= {};
+		std::shared_ptr<DeviceBackend> 					deviceBackend				= {};
+		VkCommandBuffer 								cmd 						= {};
+		VkCommandPool 									cmdPool 					= {};
+		std::vector<VkDescriptorBufferInfo> 			bufferInfoBuffer 			= {};
+		std::vector<VkDescriptorImageInfo> 				imageInfoBuffer 			= {};
+		std::vector<VkBufferImageCopy>					bufferImageCopyBuffer 		= {};
+		std::vector<VkRenderingAttachmentInfoKHR> 		renderAttachmentBuffer 		= {};
+		std::optional<PipelineHandle> 					currentPipeline 			= {};
+		std::optional<CurrentRenderPass> 				currentRenderPass 			= {};
+		u32												operationsInProgress 		= 0;
+		u32 											usesOnGPU 					= 0;				// counts in how many pending submits the command list is currently used
+		bool 											empty 						= true;
+		bool 											finalized 					= false;
+		std::vector<BindingSetHandle> 					usedSets 					= {};
+		std::vector<PipelineHandle> 					usedGraphicsPipelines 		= {};
+		std::weak_ptr<CommandListRecyclingSharedData> 	recyclingData 				= {};
+		std::weak_ptr<StagingBufferPool> 				uploadStagingBufferPool 	= {};
+		std::vector<StagingBuffer> 						usedUploadStagingBuffers 	= {};
+		std::weak_ptr<StagingBufferPool>				downloadStagingBufferPool 	= {};
+		std::vector<StagingBuffer> 						usedDownloadStagingBuffers 	= {};
+		std::vector<std::pair<TimelineSemaphoreHandle,u64>>			
+														usedTimelines 				= {};
+		std::shared_ptr<ZombieList> 					zombies 					= std::make_shared<ZombieList>();
+		std::string 									debugName 					= {};
 	};
 
 	struct CommandListHandleStaticFunctionOverride{

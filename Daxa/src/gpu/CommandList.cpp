@@ -23,7 +23,7 @@ namespace daxa {
 		this->renderAttachmentBuffer.reserve(5);
 		usedSets.reserve(10);
 		usedGraphicsPipelines.reserve(3);
-		usedStagingBuffers.reserve(1);
+		usedUploadStagingBuffers.reserve(1);
 	}
 
 	CommandList::~CommandList() {
@@ -50,11 +50,11 @@ namespace daxa {
 		DAXA_ASSERT_M(size <= STAGING_BUFFER_POOL_BUFFER_SIZE, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
 		if (bBarriersQueued) { insertQueuedBarriers(); }
 		
-		if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < size) {
-			usedStagingBuffers.push_back(stagingBufferPool.lock()->getStagingBuffer());
+		if (usedUploadStagingBuffers.empty() || usedUploadStagingBuffers.back().getLeftOverSize() < size) {
+			usedUploadStagingBuffers.push_back(uploadStagingBufferPool.lock()->getStagingBuffer());
 		}
 
-		auto& stagingBuffer = usedStagingBuffers.back();
+		auto& stagingBuffer = usedUploadStagingBuffers.back();
 
 		auto srcOffset = stagingBuffer.usedUpSize;
 
@@ -95,11 +95,11 @@ namespace daxa {
 		auto size = byteSizeOfImageRange(copyDst, subRessource, dstOffset, dstExtent);
 		DAXA_ASSERT_M(size <= STAGING_BUFFER_POOL_BUFFER_SIZE, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
 		
-		if (usedStagingBuffers.empty() || usedStagingBuffers.back().getLeftOverSize() < size) {
-			usedStagingBuffers.push_back(stagingBufferPool.lock()->getStagingBuffer());
+		if (usedUploadStagingBuffers.empty() || usedUploadStagingBuffers.back().getLeftOverSize() < size) {
+			usedUploadStagingBuffers.push_back(uploadStagingBufferPool.lock()->getStagingBuffer());
 		}
 
-		auto& stagingBuffer = usedStagingBuffers.back();
+		auto& stagingBuffer = usedUploadStagingBuffers.back();
 		
 		auto srcOffset = stagingBuffer.usedUpSize;
 
@@ -224,6 +224,60 @@ namespace daxa {
 	}
 	void CommandList::singleCopyHostToBuffer(SingleCopyHostToBufferInfo const& ci) {
 		this->multiCopyHostToBuffer({ .src = ci.src, .dst = ci.dst, .regions = std::span{&ci.region, 1} });
+	}
+
+
+	
+	CommandList::ToHostCopyFuture CommandList::singleCopyBufferToHost(SingleBufferToHostCopyInfo const& info) {
+		DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
+		DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
+		DAXA_ASSERT_M(!currentRenderPass.has_value(), "can not record copy commands in a render pass");
+		if (bBarriersQueued) { insertQueuedBarriers(); }
+
+		if (usedDownloadStagingBuffers.empty() || usedDownloadStagingBuffers.back().getLeftOverSize() < info.region.size) {
+			usedDownloadStagingBuffers.push_back(uploadStagingBufferPool.lock()->getStagingBuffer());
+		}
+
+		auto& stagingBuffer = usedUploadStagingBuffers.back();
+		
+		auto srcOffset = stagingBuffer.usedUpSize;
+
+		auto timeline = TimelineSemaphoreHandle{ 
+			std::make_shared<TimelineSemaphore>(
+				deviceBackend, 
+				TimelineSemaphoreCreateInfo{
+					.initialValue = 0,
+					.debugName = "read back timeline semaphore",
+				}
+			)
+		};
+		u64 readyValue = 1;
+
+		this->usedTimelines.push_back({timeline, readyValue});
+
+		stagingBuffer.usedUpSize += info.region.size;
+		stagingBuffer.usedUpSize = roundUpToMultipleOf128(stagingBuffer.usedUpSize);
+
+		u64 readBackOffset = stagingBuffer.usedUpSize;
+
+		ToHostCopyFuture future{
+			std::move(stagingBuffer),
+			timeline,
+			readyValue,
+			/* readback offset: */ readBackOffset,
+		};
+
+		singleCopyBufferToBuffer({
+			.src = info.src,
+			.dst = *stagingBuffer.buffer,
+			.region = {
+				.srcOffset = info.region.srcOffset,
+				.dstOffset = 0,
+				.size = info.region.size,
+			}
+		});
+
+		return std::move(future);
 	}
 
 	//thread_local std::vector<
@@ -559,7 +613,9 @@ namespace daxa {
 		usedSets.clear();
 		currentPipeline = {};
 		currentRenderPass = {};
-		usedStagingBuffers.clear();
+		usedUploadStagingBuffers.clear();
+		usedDownloadStagingBuffers.clear();
+		usedTimelines.clear();
 		finalized = false;
 		{
 			// remove zombie list from active zombie lists.

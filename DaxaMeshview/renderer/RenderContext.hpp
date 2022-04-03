@@ -18,7 +18,10 @@ public:
 		, swapchainImage{ this->swapchain->aquireNextImage(), }
 		, presentSignal{ this->device->createSignal({.debugName = "present signal"}) }
     {
-		defaultSampler = device->createSampler({.debugName = "default sampler"});
+		defaultSampler = device->createSampler({
+			.maxLod = 14,
+			.debugName = "default sampler",
+		});
 		auto cmd = queue->getCommandList({});
 		recreateFramebuffer(cmd, window.getWidth(), window.getHeight());
 		cmd->finalize();

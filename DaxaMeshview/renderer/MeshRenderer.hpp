@@ -10,9 +10,11 @@
 #include "tinyexr.h"
 
 struct GlobalData {
-	glm::mat4 vp;
+	glm::mat4 perspective;
 	glm::mat4 view;
+	glm::mat4 vp;
 	glm::mat4 iView;
+	glm::vec4 cameraPosition;
 	float verticalFOV;
 	u32 renderTargetWidth;
 	u32 renderTargetHeight;
@@ -191,7 +193,7 @@ public:
 					.dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					.region = {
 						.srcOffset = 0,
-						.subRessource = { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseArrayLayer = i, .layerCount = 1, .mipLevel = 0 },
+						.subRessource = { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = i, .layerCount = 1 },
 						.imageOffset = { 0, 0, 0 },
 						.imageExtent = { hardcodedDim, hardcodedDim, 1 },
 					}
@@ -204,18 +206,19 @@ public:
 				continue;
 			}
 		}
+		daxa::generateMipLevels(cmd, skybox, VkImageSubresourceLayers{ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 6 }, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-		cmd->queueImageBarrier({
-			.barrier = {
-				.srcStages = daxa::STAGE_TRANSFER,
-				.srcAccess = daxa::ACCESS_MEMORY_WRITE,
-				.dstStages = daxa::STAGE_FRAGMENT_SHADER,
-				.dstAccess = daxa::ACCESS_MEMORY_READ,
-			},
-			.image = skybox,
-			.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-		});
+		//cmd->queueImageBarrier({
+		//	.barrier = {
+		//		.srcStages = daxa::STAGE_TRANSFER,
+		//		.srcAccess = daxa::ACCESS_MEMORY_WRITE,
+		//		.dstStages = daxa::STAGE_FRAGMENT_SHADER,
+		//		.dstAccess = daxa::ACCESS_MEMORY_READ,
+		//	},
+		//	.image = skybox,
+		//	.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		//	.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		//});
 
 		cmd->finalize();
 		renderCTX.queue->submit({.commandLists = {cmd}});
@@ -240,9 +243,9 @@ public:
 		std::array<daxa::RenderAttachmentInfo, 1> colorAttachments{
 			daxa::RenderAttachmentInfo{
 				.image = renderCTX.hdrImage,
-				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 				.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 				.clearValue = {.color = VkClearColorValue{.float32 = { 0.00f, 0.00f, 0.00f, 1.0f } } },
 			},
 		};
@@ -252,7 +255,7 @@ public:
 		cmdList->bindPipeline(skyboxPipeline);
 		cmdList->bindAll();
 		cmdList->pushConstant(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, u32(globalDataBufffer->getDescriptorIndex()));
-		cmdList->draw(3 * 2 * 6, 1, 0, 0);
+		cmdList->draw(3*2*6, 1, 0, 0);
 		cmdList->unbindPipeline();
 		cmdList->endRendering();
 
@@ -352,10 +355,12 @@ public:
 		opaquePass2Pipeline = renderCTX.pipelineCompiler->createGraphicsPipeline(opaque2PipelineBuilder).value();
 	}
 
-	void setCamera(daxa::CommandListHandle&, glm::mat4 const& vp, glm::mat4 const& view, float verticalFOV) {
-		globData.vp = vp;
+	void setCamera(daxa::CommandListHandle&, glm::mat4 const& perspective, glm::mat4 const& view, float verticalFOV, glm::vec4 cameraPosition) {
+		globData.perspective = perspective;
 		globData.view = view;
+		globData.vp = perspective * view;
 		globData.iView = glm::inverse(glm::transpose(view));
+		globData.cameraPosition = cameraPosition;
 		globData.verticalFOV = verticalFOV;
 	}
 
@@ -527,6 +532,13 @@ public:
 	}
 
 	void opaquePass2(RenderContext& renderCTX, daxa::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws) {
+		if (renderCTX.pipelineCompiler->checkIfSourcesChanged(opaquePass2Pipeline)) {
+			auto result = renderCTX.pipelineCompiler->recreatePipeline(opaquePass2Pipeline);
+			std::cout << result << std::endl;
+			if (result) {
+				opaquePass2Pipeline = result.value();
+			}
+		}
 		cmd->bindPipeline(opaquePass2Pipeline);
 		cmd->bindAll(0);
 
