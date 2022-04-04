@@ -40,6 +40,16 @@ uint load_sdf_dist(vec3 p) { return get_sdf_dist(load_tile(p)); }
 
 #define PACKED_X4_INDICES
 
+///
+/// first 2 x bits are for masking, 4x4x2 area (one uint)
+/// last 2 x bits are for array indexing
+/// frist 2 y bits are for masking, 4x4x2 area (one uint)
+/// last 2 y bits are for array indexing
+/// first 1 z bit is for masking in the 4x4x2 area (one uint)
+/// second z bit is the first indexer into the array
+/// last 2 z bits are for array indexing
+///
+
 uint x4_uint_bit_mask(uvec3 x4_i) {
 #ifdef PACKED_X4_INDICES
     return 1 << ((x4_i.x & 0x3) + 4 * (x4_i.y & 0x3) + 16 * (x4_i.z & 0x1));
@@ -50,7 +60,11 @@ uint x4_uint_bit_mask(uvec3 x4_i) {
 
 uint x4_uint_array_index(uvec3 x4_i) {
 #ifdef PACKED_X4_INDICES
-    return (x4_i.x >> 2) + 4 * (x4_i.y >> 2) + 16 * (x4_i.z >> 1);
+    return 
+        ((x4_i.z) >> 2) * 2 * 16 +
+        ((x4_i.z >> 1) & 0x1) + // the first z bit is for the mask, the second for the uint
+        (x4_i.x >> 2) * 2 +     // mul x by two as two uints make one block
+        (x4_i.y >> 2) * 2 * 4;
 #else
     return (x4_i.y >> 1) + x4_i.z * 8;
 #endif
@@ -85,8 +99,6 @@ bool load_block_presence_4x(vec3 pos) {
         chunk_i.z < 0 || chunk_i.z > CHUNK_N.z - 1) {
         return false;
     }
-
-    const uint XY_LAYER_UINT_SIZE = 8; // 16 * 16 = 8 * 32 (sizeof uint)
 
     ivec3 in_chunk_p = ivec3(pos) - chunk_i * ivec3(CHUNK_SIZE);
     ivec3 x4_pos = in_chunk_p / 4;
