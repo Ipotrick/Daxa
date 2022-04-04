@@ -244,7 +244,7 @@ struct RenderableChunk {
 };
 
 struct World {
-    static constexpr glm::ivec3 DIM = glm::ivec3{2048, 256, 2048} / Chunk::DIM;
+    static constexpr glm::ivec3 DIM = glm::ivec3{1024, 256, 1024} / Chunk::DIM;
 
     template <typename T>
     using ChunkArray = std::array<std::array<std::array<T, DIM.x>, DIM.y>, DIM.z>;
@@ -725,6 +725,10 @@ struct World {
             auto path = filepath / texture_names[i];
             int size_x, size_y, num_channels;
             std::uint8_t *data = stbi_load(path.string().c_str(), &size_x, &size_y, &num_channels, 0);
+            if (!data) {
+                std::cout << "could not find file: \"" << path << "\"" << std::endl;
+                continue;
+            }
             cmd_list->copyHostToImage({
                 .src = data,
                 .dst = atlas_texture_array,
