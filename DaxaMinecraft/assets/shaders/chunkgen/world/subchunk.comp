@@ -5,31 +5,15 @@
 #extension GL_KHR_shader_subgroup_basic : enable
 #extension GL_EXT_debug_printf : enable
 
-layout(local_size_x = 16, local_size_y = 16, local_size_z = 4) in;
+layout(local_size_x = 1024, local_size_y = 1, local_size_z = 1) in;
 
 #include <chunkgen/common.glsl>
-
-uint get_uint_bit_index(uvec3 pos) {
-    /*
-        ->  every two rows are in one uint,
-            so the mod 2 or pos.y denoted wich half they are in the uint
-    */
-    return pos.x + 16 * (pos.y % 2);
-}
-
-uint get_uint_array_index(uvec3 pos) {
-    /*
-        ->  every second y is still on the same uint, skip them
-        ->  the size of one xy layer is 16x16 bits wich is 8 uints
-    */
-    return pos.y / 2 + pos.z * 8;
-}
 
 shared uint local_result_copy[32];
 
 void main() {
-    uvec3 global_i = gl_GlobalInvocationID.xyz;
-    uvec3 world_i = uvec3(p.pos) + global_i * 4;
+    uvec3 x4_i = linear_index_to_x4_packed_index(gl_GlobalInvocationID.x);
+    uvec3 world_i = uvec3(p.pos) + x4_i * 4;
     uvec3 chunk_i = uvec3(p.pos) / CHUNK_SIZE;
     bool at_least_one_occluding = false;
     for (int x = 0; x < 4; x++) {
@@ -46,16 +30,15 @@ void main() {
     }
     uint result = 0x00000000;
     if (at_least_one_occluding) {
-        result = 0x00000001;
+        result = x4_uint_bit_mask(x4_i);
     }
-    result = result << get_uint_bit_index(global_i);
     subgroupBarrier();
     uint leader_thread_result = subgroupOr(result);
     subgroupBarrier();
     if (subgroupElect()) {
-        uint block_array_index = get_uint_array_index(global_i);
+        uint block_array_index = x4_uint_array_index(x4_i);
         chunk_block_presence(chunk_i).x4[block_array_index] = leader_thread_result;
-        local_result_copy[global_i.z * 8 + global_i.y / 2] = leader_thread_result;
+        local_result_copy[x4_i.z * 8 + x4_i.y / 2] = leader_thread_result;
     }
 
     barrier();

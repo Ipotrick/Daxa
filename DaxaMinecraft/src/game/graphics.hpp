@@ -568,7 +568,7 @@ struct World {
                                 .globals_sb = compute_globals_i,
                                 .chunk_buffer_i = 0,
                             });
-                        cmd_list->dispatch(1, 1, 4);
+                        cmd_list->dispatch(4, 1, 1);
                     }
                 }
             }
