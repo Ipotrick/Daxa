@@ -92,6 +92,7 @@ namespace daxa {
 			case ShaderLang::HLSL: langType = shaderc_source_language_hlsl; break;
 		}
 		options.SetSourceLanguage(langType);
+		options.SetTargetSpirv(shaderc_spirv_version::shaderc_spirv_version_1_3);
 		
 		shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(src, stage, sourceFileName, options);
 
