@@ -25,19 +25,30 @@ struct Camera3D {
     glm::mat4 get_vp() { return proj_mat * vrot_mat * vtrn_mat; }
 };
 
-namespace input::keybinds {
-    static constexpr auto MOVE_PZ = GLFW_KEY_W;
-    static constexpr auto MOVE_NZ = GLFW_KEY_S;
-    static constexpr auto MOVE_PX = GLFW_KEY_A;
-    static constexpr auto MOVE_NX = GLFW_KEY_D;
-    static constexpr auto MOVE_PY = GLFW_KEY_SPACE;
-    static constexpr auto MOVE_NY = GLFW_KEY_LEFT_SHIFT;
-    static constexpr auto TOGGLE_PAUSE = GLFW_KEY_ESCAPE;
-    static constexpr auto TOGGLE_SPRINT = GLFW_KEY_LEFT_CONTROL;
-} // namespace input::keybinds
+namespace input {
+    struct Keybinds {
+        i32 move_pz, move_nz;
+        i32 move_px, move_nx;
+        i32 move_py, move_ny;
+        i32 toggle_pause;
+        i32 toggle_sprint;
+    };
+
+    static constexpr Keybinds DEFAULT_KEYBINDS{
+        .move_pz = GLFW_KEY_W,
+        .move_nz = GLFW_KEY_S,
+        .move_px = GLFW_KEY_A,
+        .move_nx = GLFW_KEY_D,
+        .move_py = GLFW_KEY_SPACE,
+        .move_ny = GLFW_KEY_LEFT_SHIFT,
+        .toggle_pause = GLFW_KEY_ESCAPE,
+        .toggle_sprint = GLFW_KEY_LEFT_CONTROL,
+    };
+} // namespace input
 
 struct Player3D {
     Camera3D camera;
+    input::Keybinds keybinds;
     glm::vec3 pos{}, vel{}, rot{};
     float speed = 20.0f, mouse_sens = 1.0f;
     float sin_rot_x = 0, cos_rot_x = 1;
@@ -70,15 +81,20 @@ struct Player3D {
             rot.y = -MAX_ROT;
     }
     void on_key(int key, int action) {
-        switch (key) {
-        case input::keybinds::MOVE_PZ: move.pz = action != 0; break;
-        case input::keybinds::MOVE_NZ: move.nz = action != 0; break;
-        case input::keybinds::MOVE_PX: move.px = action != 0; break;
-        case input::keybinds::MOVE_NX: move.nx = action != 0; break;
-        case input::keybinds::MOVE_PY: move.py = action != 0; break;
-        case input::keybinds::MOVE_NY: move.ny = action != 0; break;
-        case input::keybinds::TOGGLE_SPRINT: move.sprint = action != 0; break;
-        }
+        if (key == keybinds.move_pz)
+            move.pz = action != 0;
+        if (key == keybinds.move_nz)
+            move.nz = action != 0;
+        if (key == keybinds.move_px)
+            move.px = action != 0;
+        if (key == keybinds.move_nx)
+            move.nx = action != 0;
+        if (key == keybinds.move_py)
+            move.py = action != 0;
+        if (key == keybinds.move_ny)
+            move.ny = action != 0;
+        if (key == keybinds.toggle_sprint)
+            move.sprint = action != 0;
     }
     void on_mouse_move(double delta_x, double delta_y) {
         rot.x += static_cast<float>(delta_x) * mouse_sens * 0.0001f * camera.fov;
