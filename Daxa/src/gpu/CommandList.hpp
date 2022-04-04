@@ -336,7 +336,7 @@ namespace daxa {
 					mem.hostPtr = static_cast<T*>(static_cast<u8*>(mem.hostPtr) + readBackBufferOffset);
 					return { mem };
 				}
-				return std::nullopt{};
+				return std::nullopt;
 			}
 		private:
 			friend class CommandList;
