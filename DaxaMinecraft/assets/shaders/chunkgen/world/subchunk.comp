@@ -9,8 +9,6 @@ layout(local_size_x = 1024, local_size_y = 1, local_size_z = 1) in;
 
 #include <chunkgen/common.glsl>
 
-shared uint local_result_copy[32];
-
 void main() {
     uvec3 x4_i = linear_index_to_x4_packed_index(gl_GlobalInvocationID.x);
     uvec3 world_i = uvec3(p.pos) + x4_i * 4;
@@ -33,51 +31,63 @@ void main() {
         result = x4_uint_bit_mask(x4_i);
     }
     subgroupBarrier();
-    uint leader_thread_result = subgroupOr(result);
+    uint subgroup32_result_packed = subgroupOr(result);
     subgroupBarrier();
     if (subgroupElect()) {
         uint block_array_index = x4_uint_array_index(x4_i);
-        chunk_block_presence(chunk_i).x4[block_array_index] = leader_thread_result;
-        local_result_copy[x4_i.z * 8 + x4_i.y / 2] = leader_thread_result;
+        chunk_block_presence(chunk_i).x4[block_array_index] = subgroup32_result_packed;
     }
 
-    barrier();
+    memoryBarrier();
     // end all warps in the workgroup after they completed their work
     // keep two warps alive to write the x16 occlusion data
     // keep two warps, so 64 = 4*4*4 threads alive
-    if (gl_SubgroupID > 1)
+    if (gl_SubgroupID > 1) {
         return;
+    }
 
-    uvec3 x16_out_index = uvec3(
-        gl_SubgroupInvocationID & 0x00000003,
-        (gl_SubgroupInvocationID >> 2) & 0x00000003,
-        /*
-            there are 32 sub invocations, so we need to use the
-            subgroup id to get the biggest difference or the "sixth" bit
-        */
-        (gl_SubgroupInvocationID >> 4) & 0x00000003 + gl_SubgroupID << 1);
+    uvec3 x16_i = uvec3(
+        gl_GlobalInvocationID.x & 0x3,
+        (gl_GlobalInvocationID.x >> 2) & 0x3,
+        (gl_GlobalInvocationID.x >> 4) & 0x3
+    );
+    
+#ifdef PACKED_X4_INDICES
 
+    uvec3 x16_i_4 = uvec3(
+        x16_i.x * 4,
+        x16_i.y * 4,
+        x16_i.z * 4
+    );
+
+    uint x4_array_index0 = x4_uint_array_index(x16_i_4);
+
+    at_least_one_occluding = (
+        chunk_block_presence(chunk_i).x4[x4_array_index0] | 
+        chunk_block_presence(chunk_i).x4[x4_array_index0+1]) != 0;
+#else
     at_least_one_occluding = false;
     for (int x = 0; x < 4; x++) {
         for (int y = 0; y < 4; y++) {
             for (int z = 0; z < 4; z++) {
-                uint x4_local_array_index = (x16_out_index.z * 4 + z) * 8 + (x16_out_index.y * 4 + y) / 2;
-                uint x4_local_uint_mask = 1 << ((x16_out_index.x * 4 + x) + (x16_out_index.y * 4 + y) % 2);
-                bool is_x16_occluded = (local_result_copy[x4_local_array_index] & x4_local_uint_mask) != 0;
-                at_least_one_occluding = at_least_one_occluding || is_x16_occluded;
+                uvec3 x4_i = x16_i * 4 + uvec3(x,y,z);
+                uint index = x4_uint_array_index(x4_i);
+                uint mask = x4_uint_bit_mask(x4_i);
+                at_least_one_occluding = 
+                    at_least_one_occluding || (chunk_block_presence(chunk_i).x4[index] & mask) != 0;
             }
         }
     }
-    result = 0x00000000;
+#endif
+    result = 0;
     if (at_least_one_occluding) {
-        result = 0x00000001;
+        result = x16_uint_bit_mask(x16_i);
     }
-
     subgroupBarrier();
-    leader_thread_result = subgroupOr(result);
+    subgroup32_result_packed = subgroupOr(result);
     subgroupBarrier();
-
     if (subgroupElect()) {
-        chunk_block_presence(chunk_i).x16[gl_SubgroupID] = leader_thread_result;
+        uint uint_index_x16 = x16_uint_array_index(x16_i);
+        chunk_block_presence(chunk_i).x16[uint_index_x16] = subgroup32_result_packed;
     }
 }
