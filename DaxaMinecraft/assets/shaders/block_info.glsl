@@ -65,7 +65,7 @@ const uint BIOME_ID_MASK = 0x00ff0000;
 const uint SDF_DIST_MASK = 0xff000000;
 
 const uvec3 CHUNK_SIZE = uvec3(64);
-const uvec3 BLOCK_N = uvec3(2048, 256, 2048);
+const uvec3 BLOCK_N = uvec3(1024, 256, 1024);
 const uvec3 CHUNK_N = BLOCK_N / CHUNK_SIZE;
 
 const uint MAX_STEPS = CHUNK_N.x * CHUNK_SIZE.x + CHUNK_N.y * CHUNK_SIZE.y + CHUNK_N.z * CHUNK_SIZE.z;

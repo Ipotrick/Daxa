@@ -141,8 +141,8 @@ RayIntersection trace_chunks(in Ray ray) {
             sdf_dist_total += 0.0001 / abs(dot(ray.nrm, bounds_intersection.nrm));
             sample_pos = ray.o + ray.nrm * sdf_dist_total;
         }
-        if (is_block_occluding(load_block_id(sample_pos))) {
-            // if (load_block_presence_4x(sample_pos)) {
+        //if (is_block_occluding(load_block_id(sample_pos))) {
+        if (load_block_presence_4x(sample_pos)) {
             // if (load_block_presence_16x(sample_pos)) {
             result.hit = true;
             result.nrm = bounds_intersection.nrm;

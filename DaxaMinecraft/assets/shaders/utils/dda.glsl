@@ -14,7 +14,7 @@ struct DDA_RunState {
     bool hit, outside_bounds, is_y, is_z;
 };
 
-const float SCL = 1;
+const float SCL = 4;
 
 DDA_StartResult run_dda_start(in Ray ray, in out DDA_RunState run_state) {
     DDA_StartResult result;
@@ -59,8 +59,8 @@ void run_dda_main(in DDA_StartResult dda_start, in out DDA_RunState run_state, i
     run_state.hit = false;
     for (run_state.total_steps = 0; run_state.total_steps < max_steps; ++run_state.total_steps) {
         uint tile = load_tile(run_state.tile_i);
-        if (is_block_occluding(get_block_id(tile))) {
-            // if (load_block_presence_4x(run_state.tile_i)) {
+        //if (is_block_occluding(get_block_id(tile))) {
+        if (load_block_presence_4x(run_state.tile_i)) {
             // if (load_block_presence_16x(run_state.tile_i)) {
             run_state.hit = true;
             break;
