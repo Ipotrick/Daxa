@@ -133,7 +133,6 @@ struct Game {
         }
         ImGui::End();
 
-        ImGui::ShowDemoWindow();
         ImGui::Render();
 
         window.update();
