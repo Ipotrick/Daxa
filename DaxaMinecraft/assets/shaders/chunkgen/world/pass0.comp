@@ -6,42 +6,92 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 #include <chunkgen/common.glsl>
 #include <chunkgen/world/noise.glsl>
 
+uint block_pass0(in vec3 b_pos) {
+    uint block_id = BlockID_Air;
+
+    float t_noise = terrain_noise(b_pos);
+
+    if (t_noise > 0) {
+        block_id = BlockID_Stone;
+    }
+
+    return block_id;
+}
+
+struct SurroundingInfo {
+    uint self_id;
+    uint above_ids[15];
+    uint below_ids[15];
+    uint depth_above;
+    uint depth_below;
+};
+
+SurroundingInfo get_surrounding(in vec3 b_pos) {
+    SurroundingInfo result;
+    result.self_id = block_pass0(b_pos);
+
+    for (int i = 0; i < 16; ++i) {
+        result.below_ids[i] = block_pass0(b_pos + vec3(0, i, 0));
+        result.above_ids[i] = block_pass0(b_pos + vec3(0, -i, 0));
+    }
+
+    result.depth_above = 0;
+    result.depth_below = 0;
+
+    if (result.self_id == BlockID_Air) {
+        for (; result.depth_above < 15; ++result.depth_above) {
+            if (result.above_ids[result.depth_above] != BlockID_Air)
+                break;
+        }
+        for (; result.depth_below < 15; ++result.depth_below) {
+            if (result.below_ids[result.depth_below] != BlockID_Air)
+                break;
+        }
+    } else {
+        for (; result.depth_above < 15; ++result.depth_above) {
+            if (result.above_ids[result.depth_above] == BlockID_Air)
+                break;
+        }
+        for (; result.depth_below < 15; ++result.depth_below) {
+            if (result.below_ids[result.depth_below] == BlockID_Air)
+                break;
+        }
+    }
+
+    return result;
+}
+
 uint gen_block(in vec3 b_pos) {
-    float val = terrain_noise(b_pos);
-    float b_val = biome_noise(b_pos);
-    float u_val = underworld_noise(b_pos);
-    float r = rand(b_pos);
-
-    float water_level = WATER_LEVEL;
-
     uint biome_id = BiomeID_Plains;
     uint block_id = BlockID_Air;
 
-    if (b_val < 0.07)
-        biome_id = BiomeID_Forest;
-    else if (b_val > 0.22)
-        biome_id = BiomeID_Desert;
-    if (b_pos.y - water_level > -4 + r * 3 && b_pos.y - water_level < 4 + r * 3 && val < 0.05 + r * 0.1 && val > -0.05 - r * 0.1)
-        biome_id = BiomeID_Beach;
+    float r = rand(b_pos);
+    float height_independent_r = rand(vec3(b_pos.x, 0, b_pos.z));
 
-    if (val > 0.1f) {
-        if (b_pos.y > water_level + 150 + val * 20 + r * 60) {
-            biome_id = BiomeID_Underworld;
-            if (u_val > 0) {
-                if (b_pos.y > 760 + r * 6) {
-                    block_id = BlockID_Bedrock;
-                } else {
-                    block_id = BlockID_CompressedStone;
-                }
-            } else if (b_pos.y > 650) {
-                block_id = BlockID_Lava;
-            }
-        } else {
-            block_id = BlockID_Stone;
+    SurroundingInfo surroundings = get_surrounding(b_pos);
+    block_id = surroundings.self_id;
+
+    if (surroundings.self_id == BlockID_Stone) {
+        if (surroundings.depth_above == 1) {
+            block_id = BlockID_Grass;
+        } else if (surroundings.depth_below < r * 2) {
+            block_id = BlockID_Cobblestone;
+        } else if (surroundings.depth_above < 4 + r * 6) {
+            block_id = BlockID_Dirt;
+        } else if (surroundings.depth_above < 15) {
+            if (r < 0.1)
+                block_id = BlockID_Dirt;
+            else if (r < 0.2)
+                block_id = BlockID_Gravel;
         }
-    } else {
-        if (b_pos.y > water_level) {
-            block_id = BlockID_Water;
+    } else if (surroundings.self_id == BlockID_Air) {
+        if (height_independent_r < 0.01) {
+            int trunk_height = int(5 + height_independent_r * 400);
+            if (surroundings.depth_below < trunk_height) {
+                block_id = BlockID_Log;
+            }
+        } else if (r < 0.6 && surroundings.depth_below == 1) {
+            block_id = BlockID_Leaves;
         }
     }
 
@@ -51,6 +101,6 @@ uint gen_block(in vec3 b_pos) {
 
 void main() {
     uvec3 global_i = gl_GlobalInvocationID.xyz;
-    vec3 block_pos = vec3(global_i) + p.pos.xyz;
+    vec3 block_pos = vec3(global_i) + p.pos.xyz - BLOCK_N / 2;
     imageStore(output_image, ivec3(global_i), uvec4(gen_block(block_pos)));
 }

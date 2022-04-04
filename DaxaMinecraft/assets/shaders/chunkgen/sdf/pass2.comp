@@ -12,7 +12,7 @@ void main() {
     uint min_i = (tile & SDF_DIST_MASK) >> 0x18;
     uint dist = 0;
     for (; dist < min_i; ++dist) {
-        {
+        if (bp.z + dist < CHUNK_N.z * CHUNK_SIZE.z) {
             uint sampled_tile = load_tile(vec3(bp.x, bp.y, bp.z + dist));
             uint sampled_tile_dist = (sampled_tile & SDF_DIST_MASK) >> 0x18;
             min_i = min(dist + sampled_tile_dist, min_i);

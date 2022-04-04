@@ -27,7 +27,8 @@ const uint BiomeID_Plains     = 0;
 const uint BiomeID_Forest     = 1;
 const uint BiomeID_Desert     = 2;
 const uint BiomeID_Beach      = 3;
-const uint BiomeID_Underworld = 4;
+const uint BiomeID_Caves      = 4;
+const uint BiomeID_Underworld = 5;
 
 const uint BlockFace_Back   = 0;
 const uint BlockFace_Front  = 1;
@@ -63,8 +64,9 @@ const uint BLOCK_ID_MASK = 0x0000ffff;
 const uint BIOME_ID_MASK = 0x00ff0000;
 const uint SDF_DIST_MASK = 0xff000000;
 
-const uvec3 CHUNK_N = uvec3(12, 12, 12);
 const uvec3 CHUNK_SIZE = uvec3(64);
+const uvec3 BLOCK_N = uvec3(1024, 256, 1024);
+const uvec3 CHUNK_N = BLOCK_N / CHUNK_SIZE;
 
 const uint MAX_STEPS = CHUNK_N.x * CHUNK_SIZE.x + CHUNK_N.y * CHUNK_SIZE.y + CHUNK_N.z * CHUNK_SIZE.z;
 const uint WATER_LEVEL = 160;
