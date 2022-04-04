@@ -42,7 +42,7 @@ void main() {
     sun_ray.nrm = normalize(vec3(sin(sun_angle) * 3, sun_yz, -sun_yz));
     sun_ray.inv_nrm = 1 / sun_ray.nrm;
 
-    const vec2 subsamples = vec2(4);
+    const vec2 subsamples = vec2(1);
     const vec2 inv_subsamples = 1 / subsamples;
     vec2 inv_frame_dim = 1 / vec2(globals.frame_dim);
     float aspect = float(globals.frame_dim.x) * inv_frame_dim.y;
