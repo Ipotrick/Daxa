@@ -1,6 +1,7 @@
 
-file(GLOB_RECURSE SOURCES "*.cpp" "*.c")
-add_executable(DaxaMinecraft ${SOURCES})
+add_executable(DaxaMinecraft
+    "src/main.cpp"
+)
 
 find_package(glm CONFIG REQUIRED)
 target_link_libraries(DaxaMinecraft PUBLIC Daxa glm::glm)

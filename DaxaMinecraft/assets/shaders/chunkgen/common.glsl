@@ -10,4 +10,6 @@ p;
 layout(set = 0, binding = 3, r32ui) uniform readonly uimage3D input_images[];
 layout(set = 0, binding = 3, r32ui) uniform writeonly uimage3D output_images[];
 
+#define DO_SECOND_PASS 0
+
 #include <common.glsl>

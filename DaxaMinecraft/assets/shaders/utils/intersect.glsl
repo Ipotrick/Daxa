@@ -1,4 +1,4 @@
-const uint SDF_MIN = 4;
+const uint SDF_MIN = 1000;
 
 #include <utils/dda.glsl>
 
@@ -116,7 +116,7 @@ RayIntersection ray_step_voxels(in Ray ray, in vec3 b_min, in vec3 b_max, in uin
 }
 
 RayIntersection trace_chunks(in Ray ray) {
-    vec3 b_min = vec3(0), b_max = vec3(64) * CHUNK_N;
+    vec3 b_min = vec3(0), b_max = CHUNK_SIZE * CHUNK_N;
     RayIntersection result;
     result.hit = false;
     result.dist = 0;
@@ -138,10 +138,12 @@ RayIntersection trace_chunks(in Ray ray) {
         sdf_dist_total = bounds_intersection.dist;
         vec3 sample_pos = ray.o + ray.nrm * sdf_dist_total;
         if (!point_box_contains(sample_pos, b_min, b_max)) {
-            sdf_dist_total += 0.001;
+            sdf_dist_total += 0.0001 / abs(dot(ray.nrm, bounds_intersection.nrm));
             sample_pos = ray.o + ray.nrm * sdf_dist_total;
         }
         if (is_block_occluding(load_block_id(sample_pos))) {
+            // if (load_block_presence_4x(sample_pos)) {
+            // if (load_block_presence_16x(sample_pos)) {
             result.hit = true;
             result.nrm = bounds_intersection.nrm;
             result.dist = sdf_dist_total;
@@ -149,32 +151,41 @@ RayIntersection trace_chunks(in Ray ray) {
         }
     }
 
-    for (uint i = 0; i < 1000; ++i) {
-        vec3 sample_pos = ray.o + ray.nrm * sdf_dist_total;
-
-        if (!point_box_contains(sample_pos, b_min, b_max)) {
-            result.hit = false;
-            break;
-        }
-        uint tile = load_tile(sample_pos);
-        uint sd_u = (tile & SDF_DIST_MASK) >> 0x18;
-        if (sd_u < SDF_MIN) {
-            Ray dda_ray = ray;
-            dda_ray.o = sample_pos;
-            RayIntersection dda_result = ray_step_voxels(dda_ray, vec3(0), vec3(64) * CHUNK_N, SDF_MIN + 2);
-            sdf_dist_total += dda_result.dist;
-            sdf_step_total += dda_result.steps;
-            if (dda_result.hit) {
-                result = dda_result;
-                break;
-            }
-            sdf_dist_total -= 0.001;
-        } else {
-            float sd = float(sd_u - 3) * 0.57735;
-            sdf_dist_total += sd;
-        }
-        ++sdf_step_total;
+    vec3 sample_pos = ray.o + ray.nrm * sdf_dist_total;
+    Ray dda_ray = ray;
+    dda_ray.o = sample_pos;
+    RayIntersection dda_result = ray_step_voxels(dda_ray, vec3(0), CHUNK_SIZE * CHUNK_N, MAX_STEPS);
+    sdf_dist_total += dda_result.dist;
+    sdf_step_total += dda_result.steps;
+    if (dda_result.hit) {
+        result = dda_result;
     }
+
+    // for (uint i = 0; i < 1000; ++i) {
+    //     vec3 sample_pos = ray.o + ray.nrm * sdf_dist_total;
+    //     if (!point_box_contains(sample_pos, b_min, b_max)) {
+    //         result.hit = false;
+    //         break;
+    //     }
+    //     uint tile = load_tile(sample_pos);
+    //     uint sd_u = (tile & SDF_DIST_MASK) >> 0x18;
+    //     if (sd_u < SDF_MIN) {
+    //         Ray dda_ray = ray;
+    //         dda_ray.o = sample_pos;
+    //         RayIntersection dda_result = ray_step_voxels(dda_ray, vec3(0), CHUNK_SIZE * CHUNK_N, SDF_MIN + 4);
+    //         sdf_dist_total += dda_result.dist;
+    //         sdf_step_total += dda_result.steps;
+    //         if (dda_result.hit) {
+    //             result = dda_result;
+    //             break;
+    //         }
+    //         sdf_dist_total -= 0.001;
+    //     } else {
+    //         float sd = float(sd_u - 3) * 0.57735;
+    //         sdf_dist_total += sd;
+    //     }
+    //     ++sdf_step_total;
+    // }
 
     result.dist = sdf_dist_total;
     result.steps = sdf_step_total;

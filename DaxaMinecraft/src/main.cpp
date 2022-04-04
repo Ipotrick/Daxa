@@ -1,6 +1,6 @@
 #define GLM_DEPTH_ZERO_TO_ONE
 
-#include "game/game.hpp"
+#include <game/game.hpp>
 
 int main() {
     daxa::initialize();

@@ -58,3 +58,15 @@ uint tile_texture_index(uint block_id, uint face) {
     }
     // clang-format on
 }
+
+#define VISUALIZE_STEP_COMPLEXITY 0
+#define ENABLE_SHADOWS 1
+#define SHOW_PICK_POS 0
+#define JITTER_VIEW 1
+
+#define ALBEDO_TEXTURE 0
+#define ALBEDO_DEBUG_POS 1
+#define ALBEDO_DEBUG_NRM 2
+#define ALBEDO_DEBUG_DIST 4
+#define ALBEDO_DEBUG_RANDOM 5
+#define ALBEDO ALBEDO_TEXTURE

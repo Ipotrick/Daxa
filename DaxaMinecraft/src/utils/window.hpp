@@ -3,7 +3,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include "math.hpp"
+#include <utils/math.hpp>
 #include <Daxa.hpp>
 
 struct Window {
@@ -52,11 +52,11 @@ struct Window {
                 user_ptr->on_mouse_move(glm::dvec2{mouse_x, mouse_y});
             }
         });
-        glfwSetScrollCallback(window_ptr, [](GLFWwindow *, double, double) -> void {
-            // auto user_ptr = static_cast<T *>(glfwGetWindowUserPointer(glfw_window_ptr));
-            // if (user_ptr) {
-            //     user_ptr->on_mouse_move(glm::dvec2{offset_x, offset_y});
-            // }
+        glfwSetScrollCallback(window_ptr, [](GLFWwindow *glfw_window_ptr, double offset_x, double offset_y) -> void {
+            auto user_ptr = static_cast<T *>(glfwGetWindowUserPointer(glfw_window_ptr));
+            if (user_ptr) {
+                user_ptr->on_mouse_scroll(glm::dvec2{offset_x, offset_y});
+            }
         });
         glfwSetMouseButtonCallback(window_ptr, [](GLFWwindow *glfw_window_ptr, int button, int action, int) -> void {
             auto user_ptr = static_cast<T *>(glfwGetWindowUserPointer(glfw_window_ptr));

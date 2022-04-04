@@ -1,6 +1,6 @@
 #pragma once
 
-#include "math.hpp"
+#include <utils/math.hpp>
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -37,8 +37,9 @@ namespace input::keybinds {
 } // namespace input::keybinds
 
 struct Player3D {
+    Camera3D camera;
     glm::vec3 pos{}, vel{}, rot{};
-    float speed = 20.0f, mouse_sens = 0.005f;
+    float speed = 20.0f, mouse_sens = 1.0f;
     float sin_rot_x = 0, cos_rot_x = 1;
 
     struct MoveFlags {
@@ -80,8 +81,8 @@ struct Player3D {
         }
     }
     void on_mouse_move(double delta_x, double delta_y) {
-        rot.x += static_cast<float>(delta_x) * mouse_sens;
-        rot.y += static_cast<float>(delta_y) * mouse_sens;
+        rot.x += static_cast<float>(delta_x) * mouse_sens * 0.0001f * camera.fov;
+        rot.y += static_cast<float>(delta_y) * mouse_sens * 0.0001f * camera.fov;
         sin_rot_x = std::sin(rot.x);
         cos_rot_x = std::cos(rot.x);
     }
