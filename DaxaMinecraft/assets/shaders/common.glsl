@@ -38,6 +38,46 @@ uint load_block_id(vec3 p) { return get_block_id(load_tile(p)); }
 uint load_biome_id(vec3 p) { return get_biome_id(load_tile(p)); }
 uint load_sdf_dist(vec3 p) { return get_sdf_dist(load_tile(p)); }
 
+#define PACKED_X4_INDICES
+
+uint x4_uint_bit_mask(uvec3 x4_i) {
+#ifdef PACKED_X4_INDICES
+    return 1 << ((x4_i.x & 0x3) + 4 * (x4_i.y & 0x3) + 16 * (x4_i.z & 0x1));
+#else
+    return 1 << ((x4_i.x) + 16 * (x4_i.y & 0x1));
+#endif
+}
+
+uint x4_uint_array_index(uvec3 x4_i) {
+#ifdef PACKED_X4_INDICES
+    return (x4_i.x >> 2) + 4 * (x4_i.y >> 2) + 16 * (x4_i.z >> 1);
+#else
+    return (x4_i.y >> 1) + x4_i.z * 8;
+#endif
+}
+
+uvec3 linear_index_to_x4_packed_index(uint linear) {
+    uvec3 x4_i = uvec3(0);
+#ifdef PACKED_X4_INDICES
+    x4_i.x = (linear & 0x3) | (((linear >> 6) & 0x3) << 2);
+    x4_i.y = ((linear >> 2) & 0x3) | (((linear >> 8) & 0x3) << 2);
+    x4_i.z = ((linear >> 4) & 0x3) | (((linear >> 10) & 0x3) << 2);
+#else
+    x4_i.x = (linear & 0xF);
+    x4_i.y = ((linear >> 4) & 0xF);
+    x4_i.z = ((linear >> 8) & 0xF);
+#endif
+    return x4_i;
+}
+
+uint x16_uint_bit_mask(uvec3 x16_i) {
+    return 1 << (x16_i.x + 4 * x16_i.y + 16 * (x16_i.z & 0x1));
+}
+
+uint x16_uint_array_index(uvec3 x16_i) {
+    return x16_i.z >> 1;
+}
+
 bool load_block_presence_4x(vec3 pos) {
     ivec3 chunk_i = ivec3(pos / CHUNK_SIZE);
     if (chunk_i.x < 0 || chunk_i.x > CHUNK_N.x - 1 ||
@@ -50,10 +90,10 @@ bool load_block_presence_4x(vec3 pos) {
 
     ivec3 in_chunk_p = ivec3(pos) - chunk_i * ivec3(CHUNK_SIZE);
     ivec3 x4_pos = in_chunk_p / 4;
-    uint access_mask = 1 << x4_pos.x;
-    access_mask = access_mask << (16 * (x4_pos.y & 0x1));
+    uint access_mask = x4_uint_bit_mask(x4_pos);
+    uint uint_array_index = x4_uint_array_index(x4_pos);
 
-    return (chunk_block_presence(chunk_i).x4[XY_LAYER_UINT_SIZE * x4_pos.z + x4_pos.y / 2] & access_mask) != 0;
+    return (chunk_block_presence(chunk_i).x4[uint_array_index] & access_mask) != 0;
 }
 
 bool load_block_presence_16x(vec3 pos) {
@@ -66,8 +106,8 @@ bool load_block_presence_16x(vec3 pos) {
 
     ivec3 in_chunk_p = ivec3(pos) - chunk_i * ivec3(CHUNK_SIZE);
     ivec3 x16_pos = in_chunk_p / 16;
-    uint access_mask = 1 << (x16_pos.x + 4 * x16_pos.y + (x16_pos.z & 0x00000007) * 16);
-    uint array_index = (x16_pos.z & 0x000000008) >> 3;
+    uint access_mask = x16_uint_bit_mask(x16_pos);
+    uint array_index = x16_uint_array_index(x16_pos);
 
     return (chunk_block_presence(chunk_i).x16[array_index] & access_mask) != 0;
 }
