@@ -3,6 +3,7 @@
 #include "shaderc/shaderc.h"
 
 #include <set>
+#include <chrono>
 
 namespace daxa {
     struct PipelineCompilerShadedData {
@@ -33,6 +34,7 @@ namespace daxa {
         std::shared_ptr<PipelineCompilerShadedData> sharedData = {};
         shaderc::Compiler compiler = {};
         shaderc::CompileOptions options = {};
+        std::chrono::milliseconds recreationCooldown = {};
     };
 
 	class PipelineCompilerHandle : public daxa::SharedHandle<PipelineCompiler>{};

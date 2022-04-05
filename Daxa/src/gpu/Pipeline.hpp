@@ -160,7 +160,6 @@ namespace daxa {
 	private:
 		friend class GraphicsPipelineBuilder;
 		friend class PipelineCompiler;
-		friend daxa::Result<PipelineHandle> createComputePipeline(std::shared_ptr<DeviceBackend>& deviceBackend, BindingSetLayoutCache& bindingSetCache, ComputePipelineCreateInfo const& ci);
 		void setPipelineDebugName(VkDevice device, char const* debugName);
 
 		std::shared_ptr<DeviceBackend>														deviceBackend			= {};
@@ -174,6 +173,7 @@ namespace daxa {
 		std::string 																		debugName 				= {};
 		std::variant<GraphicsPipelineBuilder, ComputePipelineCreateInfo, std::monostate> 	creator 				= {};
 		std::set<std::pair<std::filesystem::path, std::chrono::file_clock::time_point>>		observedHotLoadFiles	= {};
+		std::chrono::time_point<std::chrono::file_clock>									lastRecreationCheckTimePoint 		= {};
 	};
 
 	class PipelineHandle : public SharedHandle<Pipeline>{};

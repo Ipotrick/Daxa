@@ -353,6 +353,7 @@ namespace daxa {
 		: deviceBackend{ deviceBackend }
 		, bindSetLayoutCache{ bindSetLayoutCache }
 		, sharedData{ std::make_shared<PipelineCompilerShadedData>() }
+		, recreationCooldown{ 250 }
 	{
 		auto includer = std::make_unique<FileIncluder>();
 		includer->sharedData = sharedData;
@@ -360,6 +361,11 @@ namespace daxa {
 	}
 
     bool PipelineCompiler::checkIfSourcesChanged(PipelineHandle& pipeline) {
+		std::chrono::time_point<std::chrono::file_clock> now = std::chrono::file_clock::now();
+		if (std::chrono::duration_cast<std::chrono::milliseconds>(now - pipeline->lastRecreationCheckTimePoint) < recreationCooldown) {
+			return false;
+		}
+		pipeline->lastRecreationCheckTimePoint = now;
 		bool reload = false;
 		for (auto& [path, recordedWriteTime] : pipeline->observedHotLoadFiles) {
 			auto ifs = std::ifstream(path);
@@ -587,6 +593,7 @@ namespace daxa {
 		DAXA_CHECK_VK_RESULT_M(d, "failed to create graphics pipeline");
 
 		ret.setPipelineDebugName(deviceBackend->device.device, builder.debugName.c_str());
+		ret.lastRecreationCheckTimePoint = std::chrono::file_clock::now();
 
 		return pipelineHandle;
     }
@@ -656,6 +663,7 @@ namespace daxa {
 		DAXA_CHECK_VK_RESULT_M(vkCreateComputePipelines(deviceBackend->device.device, nullptr, 1, &pipelineCI, nullptr, &ret.pipeline), "failed to create compute pipeline");
 
 		ret.setPipelineDebugName(deviceBackend->device.device, ci.debugName);
+		ret.lastRecreationCheckTimePoint = std::chrono::file_clock::now();
 
 		return pipelineHandle;
 	}
