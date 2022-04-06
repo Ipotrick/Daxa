@@ -1,9 +1,11 @@
 #extension GL_EXT_nonuniform_qualifier : enable
+#extension GL_EXT_shader_16bit_storage : enable
 
 #include <block_info.glsl>
 
 struct ChunkBlockPresence {
     uint x4[128];
+    uint16_t x4_16bit[256];
     uint x16[2];
 };
 
@@ -38,7 +40,8 @@ uint load_block_id(vec3 p) { return get_block_id(load_tile(p)); }
 uint load_biome_id(vec3 p) { return get_biome_id(load_tile(p)); }
 uint load_sdf_dist(vec3 p) { return get_sdf_dist(load_tile(p)); }
 
-#define PACKED_X4_INDICES
+//#define X4_444_PACKING
+//#define X4_16BIT_PACKING
 
 ///
 /// first 2 x bits are for masking, 4x4x2 area (one uint)
@@ -51,27 +54,35 @@ uint load_sdf_dist(vec3 p) { return get_sdf_dist(load_tile(p)); }
 ///
 
 uint x4_uint_bit_mask(uvec3 x4_i) {
-#ifdef PACKED_X4_INDICES
+#ifdef X4_444_PACKING
     return 1 << ((x4_i.x & 0x3) + 4 * (x4_i.y & 0x3) + 16 * (x4_i.z & 0x1));
-#else
-    return 1 << ((x4_i.x) + 16 * (x4_i.y & 0x1));
+#else 
+    #ifdef X4_16BIT_PACKING
+        return 1 << x4_i.x;
+    #else
+        return 1 << ((x4_i.x) + 16 * (x4_i.y & 0x1));
+    #endif
 #endif
 }
 
 uint x4_uint_array_index(uvec3 x4_i) {
-#ifdef PACKED_X4_INDICES
+#ifdef X4_444_PACKING
     return ((x4_i.z) >> 2) * 2 * 16 +
            ((x4_i.z >> 1) & 0x1) + // the first z bit is for the mask, the second for the uint
            (x4_i.x >> 2) * 2 +     // mul x by two as two uints make one block
            (x4_i.y >> 2) * 2 * 4;
 #else
-    return (x4_i.y >> 1) + x4_i.z * 8;
+    #ifdef X4_16BIT_PACKING
+        return x4_i.y + x4_i.z * 16;
+    #else
+        return (x4_i.y >> 1) + x4_i.z * 8;
+    #endif
 #endif
 }
 
 uvec3 linear_index_to_x4_packed_index(uint linear) {
     uvec3 x4_i = uvec3(0);
-#ifdef PACKED_X4_INDICES
+#ifdef X4_444_PACKING
     x4_i.x = (linear & 0x3) | (((linear >> 6) & 0x3) << 2);
     x4_i.y = ((linear >> 2) & 0x3) | (((linear >> 8) & 0x3) << 2);
     x4_i.z = ((linear >> 4) & 0x3) | (((linear >> 10) & 0x3) << 2);
@@ -103,8 +114,11 @@ bool load_block_presence_4x(vec3 pos) {
     ivec3 x4_pos = in_chunk_p / 4;
     uint access_mask = x4_uint_bit_mask(x4_pos);
     uint uint_array_index = x4_uint_array_index(x4_pos);
-
+#ifdef X4_16BIT_PACKING
+    return (uint(chunk_block_presence(chunk_i).x4_16bit[uint_array_index]) & access_mask) != 0;
+#else
     return (chunk_block_presence(chunk_i).x4[uint_array_index] & access_mask) != 0;
+#endif
 }
 
 bool load_block_presence_16x(vec3 pos) {

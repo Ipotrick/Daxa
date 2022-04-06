@@ -263,6 +263,7 @@ struct World {
 
     struct ChunkBlockPresence {
         u32 x4[128];
+        u16 x4_16bit[256];
         u32 x16[2];
     };
 

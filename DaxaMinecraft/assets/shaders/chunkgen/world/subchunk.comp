@@ -28,14 +28,23 @@ void main() {
     }
     uint result = 0x00000000;
     if (at_least_one_occluding) {
+#ifdef X4_16BIT_PACKING
+        result = x4_uint_bit_mask(x4_i) | (x4_uint_bit_mask(x4_i + uvec3(0,1,0)) << 16);
+#else
         result = x4_uint_bit_mask(x4_i);
+#endif
     }
     subgroupBarrier();
     uint subgroup32_result_packed = subgroupOr(result);
     subgroupBarrier();
     if (subgroupElect()) {
         uint block_array_index = x4_uint_array_index(x4_i);
+#ifdef X4_16BIT_PACKING
+        chunk_block_presence(chunk_i).x4_16bit[block_array_index] = uint16_t(subgroup32_result_packed & 0x0000FFFF);
+        chunk_block_presence(chunk_i).x4_16bit[block_array_index+1] = uint16_t((subgroup32_result_packed >> 16) & 0x0000FFFF);
+#else
         chunk_block_presence(chunk_i).x4[block_array_index] = subgroup32_result_packed;
+#endif
     }
 
     memoryBarrier();
