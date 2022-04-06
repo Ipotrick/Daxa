@@ -51,7 +51,7 @@ void main() {
     // end all warps in the workgroup after they completed their work
     // keep two warps alive to write the x16 occlusion data
     // keep two warps, so 64 = 4*4*4 threads alive
-    if (gl_SubgroupID > 1) {
+    if (gl_GlobalInvocationID.x > 64) {
         return;
     }
 
@@ -60,7 +60,7 @@ void main() {
         (gl_GlobalInvocationID.x >> 2) & 0x3,
         (gl_GlobalInvocationID.x >> 4) & 0x3);
 
-#ifdef PACKED_X4_INDICES
+#ifdef X4_444_PACKING
 
     uvec3 x16_i_4 = uvec3(
         x16_i.x * 4,
