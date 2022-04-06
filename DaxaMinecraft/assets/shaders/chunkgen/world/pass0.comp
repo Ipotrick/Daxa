@@ -113,6 +113,9 @@ SurroundingInfo get_surrounding(in out WorldgenState worldgen_state, in vec3 b_p
 void block_pass1(in out WorldgenState worldgen_state, in vec3 b_pos, in SurroundingInfo surroundings) {
     if (!is_transparent(worldgen_state.block_id)) {
         switch (worldgen_state.biome_id) {
+        case BiomeID_Beach:
+            worldgen_state.block_id = BlockID_Sand;
+            break;
         case BiomeID_Caves:
             break;
         case BiomeID_Underworld:
