@@ -244,7 +244,7 @@ struct RenderableChunk {
 };
 
 struct World {
-    static constexpr glm::ivec3 DIM = glm::ivec3{512, 512, 512} / Chunk::DIM;
+    static constexpr glm::ivec3 DIM = glm::ivec3{1024, 256, 1024} / Chunk::DIM;
 
     template <typename T>
     using ChunkArray = std::array<std::array<std::array<T, DIM.x>, DIM.y>, DIM.z>;

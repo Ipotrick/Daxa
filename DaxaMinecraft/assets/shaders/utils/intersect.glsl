@@ -57,8 +57,7 @@ RayIntersection ray_step_voxels(in Ray ray, in vec3 b_min, in vec3 b_max, in uin
 
     DDA_RunState dda_run_state;
     dda_run_state.outside_bounds = false;
-    dda_run_state.side.is_y = false;
-    dda_run_state.side.is_z = false;
+    dda_run_state.side = 0;
 
     ivec3 tile_i = ivec3(ray.o);
     DDA_StartResult dda_start = run_dda_start(ray, dda_run_state);
@@ -85,27 +84,10 @@ RayIntersection ray_step_voxels(in Ray ray, in vec3 b_min, in vec3 b_max, in uin
     float dz = dda_start.delta_dist.z * VISUALIZE_SUBGRID;
 #endif
 
-    if (dda_run_state.side.is_z) {
-        result.dist += z - dz;
-        if (ray.nrm.z < 0) {
-            result.nrm = vec3(0, 0, 1);
-        } else {
-            result.nrm = vec3(0, 0, -1);
-        }
-    } else if (dda_run_state.side.is_y) {
-        result.dist += y - dy;
-        if (ray.nrm.y < 0) {
-            result.nrm = vec3(0, 1, 0);
-        } else {
-            result.nrm = vec3(0, -1, 0);
-        }
-    } else {
-        result.dist += x - dx;
-        if (ray.nrm.x < 0) {
-            result.nrm = vec3(1, 0, 0);
-        } else {
-            result.nrm = vec3(-1, 0, 0);
-        }
+    switch (dda_run_state.side) {
+    case 0: result.dist += x - dx, result.nrm = vec3(-dda_start.ray_step.x, 0, 0); break;
+    case 1: result.dist += y - dy, result.nrm = vec3(0, -dda_start.ray_step.y, 0); break;
+    case 2: result.dist += z - dz, result.nrm = vec3(0, 0, -dda_start.ray_step.z); break;
     }
 
     result.steps = dda_run_state.total_steps;
@@ -136,7 +118,7 @@ RayIntersection trace_chunks(in Ray ray) {
         sdf_dist_total = bounds_intersection.dist;
         vec3 sample_pos = ray.o + ray.nrm * sdf_dist_total;
         if (!point_box_contains(sample_pos, b_min, b_max)) {
-            sdf_dist_total += 0.001; // 0.0001 / abs(dot(ray.nrm, bounds_intersection.nrm));
+            sdf_dist_total += 0.001;
             sample_pos = ray.o + ray.nrm * sdf_dist_total;
         }
 #if VISUALIZE_SUBGRID == 1
@@ -164,32 +146,6 @@ RayIntersection trace_chunks(in Ray ray) {
     if (dda_result.hit) {
         result = dda_result;
     }
-
-    // for (uint i = 0; i < 1000; ++i) {
-    //     vec3 sample_pos = ray.o + ray.nrm * sdf_dist_total;
-    //     if (!point_box_contains(sample_pos, b_min, b_max)) {
-    //         result.hit = false;
-    //         break;
-    //     }
-    //     uint tile = load_tile(sample_pos);
-    //     uint sd_u = (tile & SDF_DIST_MASK) >> 0x18;
-    //     if (sd_u < SDF_MIN) {
-    //         Ray dda_ray = ray;
-    //         dda_ray.o = sample_pos;
-    //         RayIntersection dda_result = ray_step_voxels(dda_ray, vec3(0), CHUNK_SIZE * CHUNK_N, SDF_MIN + 4);
-    //         sdf_dist_total += dda_result.dist;
-    //         sdf_step_total += dda_result.steps;
-    //         if (dda_result.hit) {
-    //             result = dda_result;
-    //             break;
-    //         }
-    //         sdf_dist_total -= 0.001;
-    //     } else {
-    //         float sd = float(sd_u - 3) * 0.57735;
-    //         sdf_dist_total += sd;
-    //     }
-    //     ++sdf_step_total;
-    // }
 
     result.dist = sdf_dist_total;
     result.steps = sdf_step_total;
