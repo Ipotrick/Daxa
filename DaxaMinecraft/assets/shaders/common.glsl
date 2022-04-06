@@ -40,8 +40,8 @@ uint load_block_id(vec3 p) { return get_block_id(load_tile(p)); }
 uint load_biome_id(vec3 p) { return get_biome_id(load_tile(p)); }
 uint load_sdf_dist(vec3 p) { return get_sdf_dist(load_tile(p)); }
 
-//#define X4_444_PACKING
-//#define X4_16BIT_PACKING
+// #define X4_444_PACKING
+// #define X4_16BIT_PACKING
 
 ///
 /// first 2 x bits are for masking, 4x4x2 area (one uint)

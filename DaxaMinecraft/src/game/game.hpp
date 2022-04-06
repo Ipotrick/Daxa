@@ -30,8 +30,10 @@ struct Game {
 
     World world{render_context};
     Player3D player;
+    std::string fps_string = "";
 
     bool paused = true;
+    bool perf_menu = true;
 
     Game() {
         window.set_user_pointer<Game>(this);
@@ -58,80 +60,89 @@ struct Game {
         auto now = Clock::now();
         float dt = std::chrono::duration<float>(now - prev_frame_time).count();
         prev_frame_time = now;
-        fps_printer.update(now);
+        fps_printer.update(now, [&](u64 frames_n) { fps_string = std::format("FPS: {}", frames_n); });
 
         ImGuiIO &io = ImGui::GetIO();
 
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-        ImGui::Begin("debug");
-        if (ImGui::Button("Reset player"))
-            reset_player();
-        ImGui::SliderFloat("Speed", &player.speed, 0.1f, 40.0f);
-        HelpMarker("Speed to move (Blocks/s)");
-        ImGui::SliderFloat("FOV", &player.camera.fov, 0.1f, 170.0f);
-        HelpMarker("Vertical field of view (Degrees)");
-        ImGui::SliderFloat("Sensitivity", &player.mouse_sens, 0.01f, 10.0f);
-        HelpMarker("Mouse rotation speed (Radians/Pixels_moved/200)");
-        if (ImGui::TreeNode("Keybinds")) {
-            if (ImGui::Button("Reset"))
-                reset_keybinds();
-            static i32 *selected_keyitem = nullptr;
-            if (ImGui::BeginTable("table1", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable)) {
-                ImGui::TableSetupColumn("Control", ImGuiTableColumnFlags_WidthFixed);
-                ImGui::TableSetupColumn("Keybind", ImGuiTableColumnFlags_WidthStretch);
-                ImGui::TableHeadersRow();
 
-                auto keycode_to_str = [](i32 key) -> const char * {
-                    static char s[32] = {};
-                    for (auto &c : s)
-                        c = '\0';
-                    if ((key >= 'a' && key <= 'z') || (key >= 'A' && key <= 'Z') || (key >= 'A' && key <= 'Z')) {
-                        s[0] = static_cast<char>(key);
-                    } else if (key == GLFW_KEY_LEFT_SHIFT || key == GLFW_KEY_RIGHT_SHIFT) {
-                        s[0] = 'S', s[1] = 'h', s[2] = 'i', s[3] = 'f', s[4] = 't';
-                    } else if (key == GLFW_KEY_LEFT_CONTROL || key == GLFW_KEY_RIGHT_CONTROL) {
-                        s[0] = 'C', s[1] = 't', s[2] = 'r', s[3] = 'l';
-                    } else if (key == GLFW_KEY_SPACE) {
-                        s[0] = 'S', s[1] = 'p', s[2] = 'a', s[3] = 'c', s[4] = 'e';
-                    } else {
-                        s[0] = '?';
-                    }
-                    return s;
-                };
+        if (perf_menu) {
+            ImGui::Begin("Debug", &perf_menu, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration);
+            ImGui::Text("%s", fps_string.c_str());
+            ImGui::End();
+        }
 
-                auto keybind_row = [&](const char *label, i32 &key) {
-                    ImGui::TableNextRow();
-                    ImGui::TableSetColumnIndex(0);
-                    if (ImGui::Selectable(label, selected_keyitem == &key))
-                        selected_keyitem = &key;
-                    ImGui::TableSetColumnIndex(1);
-                    ImGui::Text("%s", keycode_to_str(key));
-                };
+        if (paused) {
+            ImGui::Begin("Settings");
+            if (ImGui::Button("Reset player"))
+                reset_player();
+            ImGui::SliderFloat("Speed", &player.speed, 0.1f, 40.0f);
+            HelpMarker("Speed to move (Blocks/s)");
+            ImGui::SliderFloat("FOV", &player.camera.fov, 0.1f, 170.0f);
+            HelpMarker("Vertical field of view (Degrees)");
+            ImGui::SliderFloat("Sensitivity", &player.mouse_sens, 0.01f, 10.0f);
+            HelpMarker("Mouse rotation speed (Radians/Pixels_moved/200)");
+            if (ImGui::TreeNode("Keybinds")) {
+                if (ImGui::Button("Reset"))
+                    reset_keybinds();
+                static i32 *selected_keyitem = nullptr;
+                if (ImGui::BeginTable("table1", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable)) {
+                    ImGui::TableSetupColumn("Control", ImGuiTableColumnFlags_WidthFixed);
+                    ImGui::TableSetupColumn("Keybind", ImGuiTableColumnFlags_WidthStretch);
+                    ImGui::TableHeadersRow();
 
-                keybind_row("Move forwards", player.keybinds.move_pz);
-                keybind_row("Move backwards", player.keybinds.move_nz);
-                keybind_row("Move left", player.keybinds.move_px);
-                keybind_row("Move right", player.keybinds.move_nx);
-                keybind_row("Ascend", player.keybinds.move_py);
-                keybind_row("Descend", player.keybinds.move_ny);
-                keybind_row("Sprint", player.keybinds.toggle_sprint);
+                    auto keycode_to_str = [](i32 key) -> const char * {
+                        static char s[32] = {};
+                        for (auto &c : s)
+                            c = '\0';
+                        if ((key >= 'a' && key <= 'z') || (key >= 'A' && key <= 'Z') || (key >= 'A' && key <= 'Z')) {
+                            s[0] = static_cast<char>(key);
+                        } else if (key == GLFW_KEY_LEFT_SHIFT || key == GLFW_KEY_RIGHT_SHIFT) {
+                            s[0] = 'S', s[1] = 'h', s[2] = 'i', s[3] = 'f', s[4] = 't';
+                        } else if (key == GLFW_KEY_LEFT_CONTROL || key == GLFW_KEY_RIGHT_CONTROL) {
+                            s[0] = 'C', s[1] = 't', s[2] = 'r', s[3] = 'l';
+                        } else if (key == GLFW_KEY_SPACE) {
+                            s[0] = 'S', s[1] = 'p', s[2] = 'a', s[3] = 'c', s[4] = 'e';
+                        } else {
+                            s[0] = '?';
+                        }
+                        return s;
+                    };
 
-                ImGui::EndTable();
-            }
+                    auto keybind_row = [&](const char *label, i32 &key) {
+                        ImGui::TableNextRow();
+                        ImGui::TableSetColumnIndex(0);
+                        if (ImGui::Selectable(label, selected_keyitem == &key))
+                            selected_keyitem = &key;
+                        ImGui::TableSetColumnIndex(1);
+                        ImGui::Text("%s", keycode_to_str(key));
+                    };
 
-            ImGui::TreePop();
-            if (selected_keyitem != nullptr) {
-                for (int i = 0; i < IM_ARRAYSIZE(io.KeysDown); i++) {
-                    if (ImGui::IsKeyPressed(i)) {
-                        *selected_keyitem = i;
-                        selected_keyitem = nullptr;
-                        break;
+                    keybind_row("Move forwards", player.keybinds.move_pz);
+                    keybind_row("Move backwards", player.keybinds.move_nz);
+                    keybind_row("Move left", player.keybinds.move_px);
+                    keybind_row("Move right", player.keybinds.move_nx);
+                    keybind_row("Ascend", player.keybinds.move_py);
+                    keybind_row("Descend", player.keybinds.move_ny);
+                    keybind_row("Sprint", player.keybinds.toggle_sprint);
+
+                    ImGui::EndTable();
+                }
+
+                ImGui::TreePop();
+                if (selected_keyitem != nullptr) {
+                    for (int i = 0; i < IM_ARRAYSIZE(io.KeysDown); i++) {
+                        if (ImGui::IsKeyPressed(i)) {
+                            *selected_keyitem = i;
+                            selected_keyitem = nullptr;
+                            break;
+                        }
                     }
                 }
             }
+            ImGui::End();
         }
-        ImGui::End();
 
         ImGui::Render();
 
@@ -149,8 +160,7 @@ struct Game {
         auto vp_mat = player.camera.vrot_mat;
         world.draw(vp_mat, player, cmd_list, render_context.render_color_image);
         render_context.blit_to_swapchain(cmd_list);
-        if (paused)
-            imgui_renderer->recordCommands(ImGui::GetDrawData(), cmd_list, render_context.swapchain_image.getImageViewHandle());
+        imgui_renderer->recordCommands(ImGui::GetDrawData(), cmd_list, render_context.swapchain_image.getImageViewHandle());
         render_context.end_frame(cmd_list);
     }
 
@@ -192,6 +202,8 @@ struct Game {
     void on_key(int key, int action) {
         if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
             toggle_pause();
+        if (key == GLFW_KEY_F3 && action == GLFW_PRESS)
+            perf_menu = !perf_menu;
         if (!paused) {
             player.on_key(key, action);
         }
