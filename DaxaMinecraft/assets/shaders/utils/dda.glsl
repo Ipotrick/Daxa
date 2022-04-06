@@ -113,14 +113,14 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
     uint x1_steps = 0;
 
     // TODO: figure out why this is necessary
-    for (uint j = 0; j < 12; ++j) {
+    for (uint j = 0; j < 48; ++j) {
         uint tile = load_tile(run_state.tile_i);
         if (is_block_occluding(get_block_id(tile))) {
             run_state.hit = true;
             break;
         }
         run_dda_step(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start, 1);
-        if (run_state.tile_i / 4 == run_state.tile_i_x4)
+        if (run_state.tile_i / 16 == run_state.tile_i_x16)
             break;
         x1_steps++;
         if (!point_box_contains(run_state.tile_i, b_min, b_max)) {
@@ -128,27 +128,28 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
             break;
         }
     }
-    // Do this ^ for 16 as well
+    // Do this ^ for 16 separately, only if necessary, instead
+    // of always stepping all the way to an x16 boundary
 
     for (run_state.total_steps = 0; run_state.total_steps < max_steps; ++run_state.total_steps) {
         if (run_state.hit)
             break;
 #if VISUALIZE_SUBGRID == 0
-        // run_dda_step(run_state.to_side_dist_x16, run_state.tile_i_x16, run_state.side, dda_start, 16);
-        // if (load_block_presence_16x(run_state.tile_i_x16)) {
-        //     RayIntersection x16_intersection;
-        //     x16_intersection.nrm = vec3(dda_start.ray_step * -1);
-        //     if (run_state.side.is_z) {
-        //         x16_intersection.dist = run_state.to_side_dist_x16.z - dda_start.delta_dist.z * 16;
-        //     } else if (run_state.side.is_y) {
-        //         x16_intersection.dist = run_state.to_side_dist_x16.y - dda_start.delta_dist.y * 16;
-        //     } else {
-        //         x16_intersection.dist = run_state.to_side_dist_x16.x - dda_start.delta_dist.x * 16;
-        //     }
-        //     run_state.tile_i_x4 = ivec3(get_intersection_pos_corrected(ray, x16_intersection));
-        //     run_state.tile_i_x4 = (run_state.tile_i_x4 / 4) * 4;
-        //     run_state.to_side_dist_x4 = abs(vec3(ivec3(ray.o / 4) - run_state.tile_i_x4 / 4)) * dda_start.delta_dist * 4 + dda_start.initial_to_side_dist_x4;
-        //     for (uint i = 0; i < 12; ++i) {
+        run_dda_step(run_state.to_side_dist_x16, run_state.tile_i_x16, run_state.side, dda_start, 16);
+        if (load_block_presence_16x(run_state.tile_i_x16)) {
+            RayIntersection x16_intersection;
+            x16_intersection.nrm = vec3(dda_start.ray_step * -1);
+            if (run_state.side.is_z) {
+                x16_intersection.dist = run_state.to_side_dist_x16.z - dda_start.delta_dist.z * 16;
+            } else if (run_state.side.is_y) {
+                x16_intersection.dist = run_state.to_side_dist_x16.y - dda_start.delta_dist.y * 16;
+            } else {
+                x16_intersection.dist = run_state.to_side_dist_x16.x - dda_start.delta_dist.x * 16;
+            }
+            run_state.tile_i_x4 = ivec3(get_intersection_pos_corrected(ray, x16_intersection));
+            run_state.tile_i_x4 = (run_state.tile_i_x4 / 4) * 4;
+            run_state.to_side_dist_x4 = abs(vec3(ivec3(ray.o / 4) - run_state.tile_i_x4 / 4)) * dda_start.delta_dist * 4 + dda_start.initial_to_side_dist_x4;
+            for (uint i = 0; i < 12; ++i) {
                 run_dda_step(run_state.to_side_dist_x4, run_state.tile_i_x4, run_state.side, dda_start, 4);
                 if (load_block_presence_4x(run_state.tile_i_x4)) {
                     RayIntersection x4_intersection;
@@ -162,7 +163,6 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
                     }
                     run_state.tile_i = ivec3(get_intersection_pos_corrected(ray, x4_intersection));
                     run_state.to_side_dist = abs(vec3(ivec3(ray.o) - run_state.tile_i)) * dda_start.delta_dist + dda_start.initial_to_side_dist;
-
                     for (uint j = 0; j < 12; ++j) {
                         uint tile = load_tile(run_state.tile_i);
                         if (is_block_occluding(get_block_id(tile))) {
@@ -180,11 +180,15 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
                         }
                     }
                 }
-        //         if (run_state.hit || run_state.tile_i_x4 / 4 == run_state.tile_i_x16)
-        //             break;
-        //     }
-        // }
-        if (!point_box_contains(run_state.tile_i_x4, b_min, b_max)) {
+                if (run_state.hit || run_state.tile_i_x4 / 4 == run_state.tile_i_x16)
+                    break;
+                if (!point_box_contains(run_state.tile_i_x4, b_min, b_max)) {
+                    run_state.outside_bounds = true;
+                    break;
+                }
+            }
+        }
+        if (!point_box_contains(run_state.tile_i_x16, b_min, b_max)) {
             run_state.outside_bounds = true;
             break;
         }
