@@ -60,7 +60,7 @@ struct Game {
         auto now = Clock::now();
         float dt = std::chrono::duration<float>(now - prev_frame_time).count();
         prev_frame_time = now;
-        fps_printer.update(now, [&](u64 frames_n) { fps_string = std::format("FPS: {}", frames_n); });
+        fps_printer.update(now, [&](u64 frames_n) { fps_string = std::string("FPS: ") + std::to_string(frames_n); });
 
         ImGuiIO &io = ImGui::GetIO();
 
