@@ -36,8 +36,6 @@ struct DDA_RunState {
     bool hit, outside_bounds;
 };
 
-// #define SCL VISUALIZE_SUBGRID
-
 DDA_StartResult run_dda_start(in Ray ray, in out DDA_RunState run_state) {
     DDA_StartResult result;
     result.delta_dist = vec3(
@@ -125,6 +123,10 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
         if (run_state.tile_i / 4 == run_state.tile_i_x4)
             break;
         x1_steps++;
+        if (!point_box_contains(run_state.tile_i, b_min, b_max)) {
+            run_state.outside_bounds = true;
+            break;
+        }
     }
     // Do this ^ for 16 as well
 
@@ -185,6 +187,11 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
                         if (run_state.tile_i / 4 == run_state.tile_i_x4)
                             break;
                         x1_steps++;
+
+                        if (!point_box_contains(run_state.tile_i, b_min, b_max)) {
+                            run_state.outside_bounds = true;
+                            break;
+                        }
                     }
                 }
         //         if (run_state.hit || run_state.tile_i_x4 / 4 == run_state.tile_i_x16)
