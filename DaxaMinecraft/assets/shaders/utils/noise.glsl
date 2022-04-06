@@ -12,7 +12,7 @@ float noise(vec3 x) {
                   mix(mix(rand(n + dot(st, vec3(0, 0, 1))), rand(n + dot(st, vec3(1, 0, 1))), u.x),
                       mix(rand(n + dot(st, vec3(0, 1, 1))), rand(n + dot(st, vec3(1, 1, 1))), u.x), u.y),
                   u.z);
-    return r * 2 - 1;
+    return r * 2 - 0.5;
 }
 
 struct FractalNoiseConfig {
