@@ -8,7 +8,7 @@ layout(local_size_x = 8, local_size_y = 8) in;
 #include <utils/noise.glsl>
 
 Ray sun_ray;
-const vec3 sun_col = vec3(2, 1.3, 1) * 1;
+const vec3 sun_col = vec3(2, 1.7, 1) * 1;
 
 vec3 sample_sky(vec3 nrm) {
     float sun_val = clamp((dot(nrm, sun_ray.nrm) - 0.9999) * 10000, 0, 1);
@@ -42,7 +42,7 @@ void main() {
     sun_ray.nrm = normalize(vec3(sin(sun_angle) * 3, sun_yz, -sun_yz));
     sun_ray.inv_nrm = 1 / sun_ray.nrm;
 
-    const vec2 subsamples = vec2(1);
+    const vec2 subsamples = vec2(SUBSAMPLE_N);
     const vec2 inv_subsamples = 1 / subsamples;
     vec2 inv_frame_dim = 1 / vec2(globals.frame_dim);
     float aspect = float(globals.frame_dim.x) * inv_frame_dim.y;
@@ -110,19 +110,20 @@ void main() {
                 } else if (ray_chunk_intersection.nrm.x < -0.5) {
                     face_id = BlockFace_Right;
                     tex_uv = fract(intersection_pos.zy);
-                    tex_uv.y = 1 - tex_uv.y;
+                    tex_uv = 1 - tex_uv;
                 }
                 if (ray_chunk_intersection.nrm.y > 0.5) {
                     face_id = BlockFace_Bottom;
-                    tex_uv = fract(intersection_pos.zx);
+                    tex_uv = fract(intersection_pos.xz);
+                    tex_uv.x = 1 - tex_uv.x;
                 } else if (ray_chunk_intersection.nrm.y < -0.5) {
                     face_id = BlockFace_Top;
-                    tex_uv = fract(intersection_pos.zx);
+                    tex_uv = fract(intersection_pos.xz);
                 }
                 if (ray_chunk_intersection.nrm.z > 0.5) {
                     face_id = BlockFace_Front;
                     tex_uv = fract(intersection_pos.xy);
-                    tex_uv.y = 1 - tex_uv.y;
+                    tex_uv = 1 - tex_uv;
                 } else if (ray_chunk_intersection.nrm.z < -0.5) {
                     face_id = BlockFace_Back;
                     tex_uv = fract(intersection_pos.xy);
@@ -139,7 +140,10 @@ void main() {
 #elif ALBEDO == ALBEDO_DEBUG_DIST
                 vec3 albedo = vec3(ray_chunk_intersection.dist / 100);
 #elif ALBEDO == ALBEDO_DEBUG_RANDOM
-                vec3 albedo = vec3(rand(ivec3(intersection_pos)), rand(ivec3(intersection_pos + 10)), rand(ivec3(intersection_pos + 20)));
+                // vec3 albedo = vec3(rand(ivec3(intersection_pos)), rand(ivec3(intersection_pos + 10)), rand(ivec3(intersection_pos + 20)));
+                vec3 albedo = vec3(block_id) / 32;
+                // if (block_id == BlockID_Air)
+                //     albedo = vec3(1, 0, 1);
 #endif
 #if SHOW_PICK_POS
                 if (length(intersection_block_pos - view_intersection_block_pos) <= 0.5 + 0) {

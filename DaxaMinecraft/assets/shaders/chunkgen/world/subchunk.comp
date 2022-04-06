@@ -49,31 +49,28 @@ void main() {
     uvec3 x16_i = uvec3(
         gl_GlobalInvocationID.x & 0x3,
         (gl_GlobalInvocationID.x >> 2) & 0x3,
-        (gl_GlobalInvocationID.x >> 4) & 0x3
-    );
-    
+        (gl_GlobalInvocationID.x >> 4) & 0x3);
+
 #ifdef PACKED_X4_INDICES
 
     uvec3 x16_i_4 = uvec3(
         x16_i.x * 4,
         x16_i.y * 4,
-        x16_i.z * 4
-    );
+        x16_i.z * 4);
 
     uint x4_array_index0 = x4_uint_array_index(x16_i_4);
 
-    at_least_one_occluding = (
-        chunk_block_presence(chunk_i).x4[x4_array_index0] | 
-        chunk_block_presence(chunk_i).x4[x4_array_index0+1]) != 0;
+    at_least_one_occluding = (chunk_block_presence(chunk_i).x4[x4_array_index0] |
+                              chunk_block_presence(chunk_i).x4[x4_array_index0 + 1]) != 0;
 #else
     at_least_one_occluding = false;
     for (int x = 0; x < 4; x++) {
         for (int y = 0; y < 4; y++) {
             for (int z = 0; z < 4; z++) {
-                uvec3 x4_i = x16_i * 4 + uvec3(x,y,z);
+                uvec3 x4_i = x16_i * 4 + uvec3(x, y, z);
                 uint index = x4_uint_array_index(x4_i);
                 uint mask = x4_uint_bit_mask(x4_i);
-                at_least_one_occluding = 
+                at_least_one_occluding =
                     at_least_one_occluding || (chunk_block_presence(chunk_i).x4[index] & mask) != 0;
             }
         }

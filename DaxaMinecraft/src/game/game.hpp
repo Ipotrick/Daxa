@@ -50,7 +50,7 @@ struct Game {
     void reset_player() {
         player = Player3D{};
         player.pos = glm::vec3(World::DIM * Chunk::DIM) / 2.0f;
-        player.pos.y = -100.0f;
+        player.pos.y = -10.0f;
         player.rot = {0.0f, -0.6f, 0.0f};
     }
 

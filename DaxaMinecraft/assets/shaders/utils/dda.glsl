@@ -1,20 +1,42 @@
 #include <utils/ray.glsl>
 
+vec3 get_intersection_pos(in Ray ray, in RayIntersection intersection) {
+    return ray.o + (intersection.dist) * ray.nrm;
+}
+
+vec3 get_intersection_pos_corrected(in Ray ray, in RayIntersection intersection) {
+    return get_intersection_pos(ray, intersection) - intersection.nrm * 0.001;
+}
+
+// struct ToSideDist {
+//     float xy, xz;
+//     float yx, yz;
+//     float zx, zy;
+// };
 struct DDA_StartResult {
     vec3 delta_dist;
     ivec3 ray_step;
+    vec3 initial_to_side_dist;
+    vec3 initial_to_side_dist_x4;
+    vec3 initial_to_side_dist_x16;
+};
+struct Side {
+    bool is_y, is_z;
 };
 
 struct DDA_RunState {
-    float to_side_dist_xy, to_side_dist_xz;
-    float to_side_dist_yx, to_side_dist_yz;
-    float to_side_dist_zx, to_side_dist_zy;
+    vec3 to_side_dist;
+    vec3 to_side_dist_x4;
+    vec3 to_side_dist_x16;
     ivec3 tile_i;
+    ivec3 tile_i_x4;
+    ivec3 tile_i_x16;
+    Side side;
     uint total_steps;
-    bool hit, outside_bounds, is_y, is_z;
+    bool hit, outside_bounds;
 };
 
-const float SCL = 16;
+// #define SCL VISUALIZE_SUBGRID
 
 DDA_StartResult run_dda_start(in Ray ray, in out DDA_RunState run_state) {
     DDA_StartResult result;
@@ -22,77 +44,193 @@ DDA_StartResult run_dda_start(in Ray ray, in out DDA_RunState run_state) {
         ray.nrm.x == 0 ? 1 : abs(ray.inv_nrm.x),
         ray.nrm.y == 0 ? 1 : abs(ray.inv_nrm.y),
         ray.nrm.z == 0 ? 1 : abs(ray.inv_nrm.z));
-    run_state.tile_i = ivec3(ray.o / SCL) * ivec3(SCL);
+    run_state.tile_i = ivec3(ray.o / 1) * 1;
+    run_state.tile_i_x4 = ivec3(ray.o / 4) * 4;
+    run_state.tile_i_x16 = ivec3(ray.o / 16) * 16;
     if (ray.nrm.x < 0) {
         result.ray_step.x = -1;
-        run_state.to_side_dist_xy = (ray.o.x - run_state.tile_i.x) * result.delta_dist.x;
-        run_state.to_side_dist_xz = (ray.o.x - run_state.tile_i.x) * result.delta_dist.x;
+        run_state.to_side_dist.x = (ray.o.x - run_state.tile_i.x) * result.delta_dist.x;
+        run_state.to_side_dist_x4.x = (ray.o.x - run_state.tile_i_x4.x) * result.delta_dist.x;
+        run_state.to_side_dist_x16.x = (ray.o.x - run_state.tile_i_x16.x) * result.delta_dist.x;
     } else {
         result.ray_step.x = 1;
-        run_state.to_side_dist_xy = (run_state.tile_i.x + SCL - ray.o.x) * result.delta_dist.x;
-        run_state.to_side_dist_xz = (run_state.tile_i.x + SCL - ray.o.x) * result.delta_dist.x;
+        run_state.to_side_dist.x = (run_state.tile_i.x + 1 - ray.o.x) * result.delta_dist.x;
+        run_state.to_side_dist_x4.x = (run_state.tile_i_x4.x + 4 - ray.o.x) * result.delta_dist.x;
+        run_state.to_side_dist_x16.x = (run_state.tile_i_x16.x + 16 - ray.o.x) * result.delta_dist.x;
     }
     if (ray.nrm.y < 0) {
         result.ray_step.y = -1;
-        run_state.to_side_dist_yx = (ray.o.y - run_state.tile_i.y) * result.delta_dist.y;
-        run_state.to_side_dist_yz = (ray.o.y - run_state.tile_i.y) * result.delta_dist.y;
+        run_state.to_side_dist.y = (ray.o.y - run_state.tile_i.y) * result.delta_dist.y;
+        run_state.to_side_dist_x4.y = (ray.o.y - run_state.tile_i_x4.y) * result.delta_dist.y;
+        run_state.to_side_dist_x16.y = (ray.o.y - run_state.tile_i_x16.y) * result.delta_dist.y;
     } else {
         result.ray_step.y = 1;
-        run_state.to_side_dist_yx = (run_state.tile_i.y + SCL - ray.o.y) * result.delta_dist.y;
-        run_state.to_side_dist_yz = (run_state.tile_i.y + SCL - ray.o.y) * result.delta_dist.y;
+        run_state.to_side_dist.y = (run_state.tile_i.y + 1 - ray.o.y) * result.delta_dist.y;
+        run_state.to_side_dist_x4.y = (run_state.tile_i_x4.y + 4 - ray.o.y) * result.delta_dist.y;
+        run_state.to_side_dist_x16.y = (run_state.tile_i_x16.y + 16 - ray.o.y) * result.delta_dist.y;
     }
     if (ray.nrm.z < 0) {
         result.ray_step.z = -1;
-        run_state.to_side_dist_zx = (ray.o.z - run_state.tile_i.z) * result.delta_dist.z;
-        run_state.to_side_dist_zy = (ray.o.z - run_state.tile_i.z) * result.delta_dist.z;
+        run_state.to_side_dist.z = (ray.o.z - run_state.tile_i.z) * result.delta_dist.z;
+        run_state.to_side_dist_x4.z = (ray.o.z - run_state.tile_i_x4.z) * result.delta_dist.z;
+        run_state.to_side_dist_x16.z = (ray.o.z - run_state.tile_i_x16.z) * result.delta_dist.z;
     } else {
         result.ray_step.z = 1;
-        run_state.to_side_dist_zx = (run_state.tile_i.z + SCL - ray.o.z) * result.delta_dist.z;
-        run_state.to_side_dist_zy = (run_state.tile_i.z + SCL - ray.o.z) * result.delta_dist.z;
+        run_state.to_side_dist.z = (run_state.tile_i.z + 1 - ray.o.z) * result.delta_dist.z;
+        run_state.to_side_dist_x4.z = (run_state.tile_i_x4.z + 4 - ray.o.z) * result.delta_dist.z;
+        run_state.to_side_dist_x16.z = (run_state.tile_i_x16.z + 16 - ray.o.z) * result.delta_dist.z;
     }
-    result.delta_dist *= SCL;
-    result.ray_step *= int(SCL);
+    result.initial_to_side_dist = run_state.to_side_dist;
+    result.initial_to_side_dist_x4 = run_state.to_side_dist_x4;
+    result.initial_to_side_dist_x16 = run_state.to_side_dist_x16;
     return result;
 }
 
-void run_dda_main(in DDA_StartResult dda_start, in out DDA_RunState run_state, in vec3 b_min, in vec3 b_max, in uint max_steps) {
+void run_dda_step(in out vec3 to_side_dist, in out ivec3 tile_i, in out Side side, in DDA_StartResult dda_start, in int scl) {
+    if (to_side_dist.x < to_side_dist.y) {
+        if (to_side_dist.x < to_side_dist.z) {
+            to_side_dist.x += dda_start.delta_dist.x * scl;
+            tile_i.x += dda_start.ray_step.x * scl;
+            side.is_y = false, side.is_z = false;
+        } else {
+            to_side_dist.z += dda_start.delta_dist.z * scl;
+            tile_i.z += dda_start.ray_step.z * scl;
+            side.is_y = false, side.is_z = true;
+        }
+    } else {
+        if (to_side_dist.y < to_side_dist.z) {
+            to_side_dist.y += dda_start.delta_dist.y * scl;
+            tile_i.y += dda_start.ray_step.y * scl;
+            side.is_y = true, side.is_z = false;
+        } else {
+            to_side_dist.z += dda_start.delta_dist.z * scl;
+            tile_i.z += dda_start.ray_step.z * scl;
+            side.is_y = false, side.is_z = true;
+        }
+    }
+}
+
+void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState run_state, in vec3 b_min, in vec3 b_max, in uint max_steps) {
     run_state.hit = false;
-    for (run_state.total_steps = 0; run_state.total_steps < max_steps; ++run_state.total_steps) {
+    uint x1_steps = 0;
+
+    // TODO: figure out why this is necessary
+    for (uint j = 0; j < 12; ++j) {
         uint tile = load_tile(run_state.tile_i);
-        //if (is_block_occluding(get_block_id(tile))) {
-        //if (load_block_presence_4x(run_state.tile_i)) {
-        if (load_block_presence_16x(run_state.tile_i)) {
+        if (is_block_occluding(get_block_id(tile))) {
             run_state.hit = true;
             break;
         }
-        if (run_state.to_side_dist_xy < run_state.to_side_dist_yx) {
-            if (run_state.to_side_dist_xz < run_state.to_side_dist_zx) {
-                run_state.to_side_dist_xy += dda_start.delta_dist.x;
-                run_state.to_side_dist_xz += dda_start.delta_dist.x;
-                run_state.tile_i.x += dda_start.ray_step.x;
-                run_state.is_y = false, run_state.is_z = false;
-            } else {
-                run_state.to_side_dist_zx += dda_start.delta_dist.z;
-                run_state.to_side_dist_zy += dda_start.delta_dist.z;
-                run_state.tile_i.z += dda_start.ray_step.z;
-                run_state.is_y = false, run_state.is_z = true;
-            }
-        } else {
-            if (run_state.to_side_dist_yz < run_state.to_side_dist_zy) {
-                run_state.to_side_dist_yx += dda_start.delta_dist.y;
-                run_state.to_side_dist_yz += dda_start.delta_dist.y;
-                run_state.tile_i.y += dda_start.ray_step.y;
-                run_state.is_y = true, run_state.is_z = false;
-            } else {
-                run_state.to_side_dist_zx += dda_start.delta_dist.z;
-                run_state.to_side_dist_zy += dda_start.delta_dist.z;
-                run_state.tile_i.z += dda_start.ray_step.z;
-                run_state.is_y = false, run_state.is_z = true;
-            }
-        }
-        if (!point_box_contains(run_state.tile_i, b_min, b_max)) {
+        run_dda_step(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start, 1);
+        if (run_state.tile_i / 4 == run_state.tile_i_x4)
+            break;
+        x1_steps++;
+    }
+    // Do this ^ for 16 as well
+
+    for (run_state.total_steps = 0; run_state.total_steps < max_steps; ++run_state.total_steps) {
+        if (run_state.hit)
+            break;
+#if VISUALIZE_SUBGRID == 0
+        // run_dda_step(run_state.to_side_dist_x16, run_state.tile_i_x16, run_state.side, dda_start, 16);
+        // if (load_block_presence_16x(run_state.tile_i_x16)) {
+        //     if (run_state.side.is_z) {
+        //         RayIntersection x16_intersection;
+        //         x16_intersection.dist = run_state.to_side_dist_x16.z - dda_start.delta_dist.z * 16;
+        //         x16_intersection.nrm = vec3(dda_start.ray_step * -1);
+        //         run_state.tile_i_x4 = ivec3(get_intersection_pos_corrected(ray, x16_intersection));
+        //     } else if (run_state.side.is_y) {
+        //         RayIntersection x16_intersection;
+        //         x16_intersection.dist = run_state.to_side_dist_x16.y - dda_start.delta_dist.y * 16;
+        //         x16_intersection.nrm = vec3(dda_start.ray_step * -1);
+        //         run_state.tile_i_x4 = ivec3(get_intersection_pos_corrected(ray, x16_intersection));
+        //     } else {
+        //         RayIntersection x16_intersection;
+        //         x16_intersection.dist = run_state.to_side_dist_x16.x - dda_start.delta_dist.x * 16;
+        //         x16_intersection.nrm = vec3(dda_start.ray_step * -1);
+        //         run_state.tile_i_x4 = ivec3(get_intersection_pos_corrected(ray, x16_intersection));
+        //     }
+        //     run_state.tile_i_x4 = (run_state.tile_i_x4 / 4) * 4;
+        //     run_state.to_side_dist_x4 = abs(vec3((ivec3(ray.o / 4) * 4 - run_state.tile_i_x4) / 4)) * dda_start.delta_dist * 4 + dda_start.initial_to_side_dist_x4;
+        //     run_state.to_side_dist_x4 = run_state.to_side_dist_x16;
+        //     for (uint i = 0; i < 12; ++i) {
+                run_dda_step(run_state.to_side_dist_x4, run_state.tile_i_x4, run_state.side, dda_start, 4);
+                if (load_block_presence_4x(run_state.tile_i_x4)) {
+                    if (run_state.side.is_z) {
+                        RayIntersection x4_intersection;
+                        x4_intersection.dist = run_state.to_side_dist_x4.z - dda_start.delta_dist.z * 4;
+                        x4_intersection.nrm = vec3(dda_start.ray_step * -1);
+                        run_state.tile_i = ivec3(get_intersection_pos_corrected(ray, x4_intersection));
+                    } else if (run_state.side.is_y) {
+                        RayIntersection x4_intersection;
+                        x4_intersection.dist = run_state.to_side_dist_x4.y - dda_start.delta_dist.y * 4;
+                        x4_intersection.nrm = vec3(dda_start.ray_step * -1);
+                        run_state.tile_i = ivec3(get_intersection_pos_corrected(ray, x4_intersection));
+                    } else {
+                        RayIntersection x4_intersection;
+                        x4_intersection.dist = run_state.to_side_dist_x4.x - dda_start.delta_dist.x * 4;
+                        x4_intersection.nrm = vec3(dda_start.ray_step * -1);
+                        run_state.tile_i = ivec3(get_intersection_pos_corrected(ray, x4_intersection));
+                    }
+
+                    run_state.to_side_dist = abs(vec3(ivec3(ray.o) - run_state.tile_i)) * dda_start.delta_dist + dda_start.initial_to_side_dist;
+
+                    for (uint j = 0; j < 12; ++j) {
+                        uint tile = load_tile(run_state.tile_i);
+                        if (is_block_occluding(get_block_id(tile))) {
+                            run_state.hit = true;
+                            break;
+                        }
+                        run_dda_step(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start, 1);
+                        if (run_state.tile_i / 4 == run_state.tile_i_x4)
+                            break;
+                        x1_steps++;
+                    }
+                }
+        //         if (run_state.hit || run_state.tile_i_x4 / 4 == run_state.tile_i_x16)
+        //             break;
+        //     }
+        // }
+        if (!point_box_contains(run_state.tile_i_x4, b_min, b_max)) {
             run_state.outside_bounds = true;
             break;
         }
+#else
+        uint tile = load_tile(run_state.tile_i);
+#if VISUALIZE_SUBGRID == 1
+        if (is_block_occluding(get_block_id(tile))) {
+#elif VISUALIZE_SUBGRID == 4
+        if (load_block_presence_4x(run_state.tile_i_x4)) {
+            run_state.to_side_dist = run_state.to_side_dist_x4;
+#elif VISUALIZE_SUBGRID == 16
+        if (load_block_presence_16x(run_state.tile_i_x16)) {
+            run_state.to_side_dist = run_state.to_side_dist_x16;
+#endif
+            run_state.hit = true;
+            break;
+        }
+
+#if VISUALIZE_SUBGRID == 1
+        run_dda_step(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start, 1);
+#elif VISUALIZE_SUBGRID == 4
+        run_dda_step(run_state.to_side_dist_x4, run_state.tile_i_x4, run_state.side, dda_start, 4);
+#elif VISUALIZE_SUBGRID == 16
+        run_dda_step(run_state.to_side_dist_x16, run_state.tile_i_x16, run_state.side, dda_start, 16);
+#endif
+
+#if VISUALIZE_SUBGRID == 1
+        if (!point_box_contains(run_state.tile_i, b_min, b_max)) {
+#elif VISUALIZE_SUBGRID == 4
+        if (!point_box_contains(run_state.tile_i_x4, b_min, b_max)) {
+#elif VISUALIZE_SUBGRID == 16
+        if (!point_box_contains(run_state.tile_i_x16, b_min, b_max)) {
+#endif
+            run_state.outside_bounds = true;
+            break;
+        }
+#endif
     }
+#if VISUALIZE_SUBGRID == 0
+    run_state.total_steps += x1_steps;
+#endif
 }
