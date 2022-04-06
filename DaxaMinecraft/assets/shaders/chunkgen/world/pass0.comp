@@ -91,7 +91,7 @@ uint gen_block(in vec3 b_pos) {
                 block_id = BlockID_Log;
             }
         } else if (r < 0.6 && surroundings.depth_below == 1) {
-            block_id = BlockID_Leaves;
+            // block_id = BlockID_Leaves;
         }
     }
 

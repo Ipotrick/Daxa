@@ -9,7 +9,7 @@ float terrain_noise(vec3 pos) {
         /* .lacunarity  = */ 2,
         /* .octaves     = */ 4,
     };
-    return fractal_noise(pos, noise_conf);
+    return fractal_noise(pos, noise_conf) + pos.y * 0.01;
 }
 
 float biome_noise(vec3 pos) {

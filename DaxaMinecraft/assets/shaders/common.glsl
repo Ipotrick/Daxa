@@ -60,11 +60,10 @@ uint x4_uint_bit_mask(uvec3 x4_i) {
 
 uint x4_uint_array_index(uvec3 x4_i) {
 #ifdef PACKED_X4_INDICES
-    return 
-        ((x4_i.z) >> 2) * 2 * 16 +
-        ((x4_i.z >> 1) & 0x1) + // the first z bit is for the mask, the second for the uint
-        (x4_i.x >> 2) * 2 +     // mul x by two as two uints make one block
-        (x4_i.y >> 2) * 2 * 4;
+    return ((x4_i.z) >> 2) * 2 * 16 +
+           ((x4_i.z >> 1) & 0x1) + // the first z bit is for the mask, the second for the uint
+           (x4_i.x >> 2) * 2 +     // mul x by two as two uints make one block
+           (x4_i.y >> 2) * 2 * 4;
 #else
     return (x4_i.y >> 1) + x4_i.z * 8;
 #endif
