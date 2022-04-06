@@ -13,6 +13,8 @@ uint block_pass0(in vec3 b_pos) {
 
     if (t_noise > 0) {
         block_id = BlockID_Stone;
+    } else if (b_pos.y > 80) {
+        block_id = BlockID_Water;
     }
 
     return block_id;
@@ -24,6 +26,7 @@ struct SurroundingInfo {
     uint below_ids[15];
     uint depth_above;
     uint depth_below;
+    bool above_water;
 };
 
 SurroundingInfo get_surrounding(in vec3 b_pos) {
@@ -37,23 +40,28 @@ SurroundingInfo get_surrounding(in vec3 b_pos) {
 
     result.depth_above = 0;
     result.depth_below = 0;
+    result.above_water = false;
 
     if (result.self_id == BlockID_Air) {
         for (; result.depth_above < 15; ++result.depth_above) {
-            if (result.above_ids[result.depth_above] != BlockID_Air)
+            if (!is_transparent(result.above_ids[result.depth_above]))
                 break;
         }
         for (; result.depth_below < 15; ++result.depth_below) {
-            if (result.below_ids[result.depth_below] != BlockID_Air)
+            if (result.below_ids[result.depth_below] == BlockID_Water)
+                result.above_water = true;
+            if (!is_transparent(result.below_ids[result.depth_below]))
                 break;
         }
     } else {
         for (; result.depth_above < 15; ++result.depth_above) {
-            if (result.above_ids[result.depth_above] == BlockID_Air)
+            if (is_transparent(result.above_ids[result.depth_above]))
                 break;
         }
         for (; result.depth_below < 15; ++result.depth_below) {
-            if (result.below_ids[result.depth_below] == BlockID_Air)
+            if (result.below_ids[result.depth_below] == BlockID_Water)
+                result.above_water = true;
+            if (is_transparent(result.below_ids[result.depth_below]))
                 break;
         }
     }
@@ -68,35 +76,81 @@ uint gen_block(in vec3 b_pos) {
     float r = rand(b_pos);
     float height_independent_r = rand(vec3(b_pos.x, 0, b_pos.z));
 
+    float b_val = biome_noise(b_pos) + (height_independent_r * 2 - 1) * 0.01;
+
+    if (b_val > 0.1)
+        biome_id = BiomeID_Forest;
+    else if (b_val < -0.1)
+        biome_id = BiomeID_Desert;
+
     SurroundingInfo surroundings = get_surrounding(b_pos);
     block_id = surroundings.self_id;
 
     if (surroundings.self_id == BlockID_Stone) {
-        if (surroundings.depth_above == 1) {
-            block_id = BlockID_Grass;
-        } else if (surroundings.depth_below < r * 2) {
-            block_id = BlockID_Cobblestone;
-        } else if (surroundings.depth_above < 4 + r * 6) {
-            block_id = BlockID_Dirt;
-        } else if (surroundings.depth_above < 15) {
-            if (r < 0.1)
+        switch (biome_id) {
+        case BiomeID_Plains:
+        case BiomeID_Forest:
+            if (surroundings.depth_above == 1) {
+                block_id = BlockID_Grass;
+            } else if (surroundings.depth_below < r * 2) {
+                block_id = BlockID_Cobblestone;
+            } else if (surroundings.depth_above < 4 + r * 6) {
                 block_id = BlockID_Dirt;
-            else if (r < 0.2)
-                block_id = BlockID_Gravel;
-        }
-    } else if (surroundings.self_id == BlockID_Air) {
-        if (height_independent_r < 0.01) {
-            int trunk_height = int(5 + height_independent_r * 400);
-            if (surroundings.depth_below < trunk_height) {
-                block_id = BlockID_Log;
+            } else if (surroundings.depth_above < 15) {
+                if (r < 0.1)
+                    block_id = BlockID_Dirt;
+                else if (r < 0.2)
+                    block_id = BlockID_Gravel;
             }
-        } else if (r < 0.6 && surroundings.depth_below == 1) {
-            // block_id = BlockID_Leaves;
+            break;
+        case BiomeID_Desert:
+            if (surroundings.depth_above < 2 + r * 2) {
+                block_id = BlockID_Sand;
+            } else if (surroundings.depth_above < 4 + r * 6) {
+                block_id = BlockID_Sandstone;
+            } else if (surroundings.depth_above < 15) {
+                if (r < 0.1)
+                    block_id = BlockID_Sand;
+                else if (r < 0.2)
+                    block_id = BlockID_Gravel;
+            }
+            break;
+        }
+    } else if (surroundings.self_id == BlockID_Air && !surroundings.above_water) {
+        switch (biome_id) {
+        case BiomeID_Plains:
+            if (surroundings.depth_below == 1) {
+                if (r < 0.10) {
+                    block_id = BlockID_TallGrass;
+                } else if (r < 0.11) {
+                    block_id = BlockID_Leaves;
+                }
+            }
+            break;
+        case BiomeID_Forest:
+            if (height_independent_r < 0.01) {
+                int trunk_height = int(5 + height_independent_r * 400);
+                if (surroundings.depth_below < trunk_height) {
+                    block_id = BlockID_Log;
+                }
+            } else if (r < 0.6 && surroundings.depth_below == 1) {
+                block_id = BlockID_Leaves;
+            }
+            break;
+        case BiomeID_Desert:
+            if (height_independent_r < 0.001) {
+                int trunk_height = int(5 + height_independent_r * 400);
+                if (surroundings.depth_below < trunk_height) {
+                    block_id = BlockID_Cactus;
+                }
+            } else if (r < 0.02 && surroundings.depth_below == 1) {
+                block_id = BlockID_DriedShrub;
+            }
+            break;
         }
     }
 
-    biome_id = (biome_id << 16) & BIOME_ID_MASK;
-    return block_id | biome_id;
+    return block_id;
 }
 
 void main() {
