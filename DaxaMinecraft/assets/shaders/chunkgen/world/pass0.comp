@@ -15,10 +15,10 @@ void biome_pass0(in out WorldgenState worldgen_state, in vec3 b_pos) {
         worldgen_state.biome_id = BiomeID_Forest;
     else if (worldgen_state.b_noise > 0.22)
         worldgen_state.biome_id = BiomeID_Desert;
-    else if (b_pos.y - water_level > -4 + worldgen_state.r * 3 &&
-             b_pos.y - water_level < 4 + worldgen_state.r * 3 &&
-             worldgen_state.t_noise < 0.05 + worldgen_state.r * 0.1 &&
-             worldgen_state.t_noise > -0.05 - worldgen_state.r * 0.1) {
+    if (b_pos.y - water_level > -4 + worldgen_state.r * 3 &&
+        b_pos.y - water_level < 4 + worldgen_state.r * 3 &&
+        worldgen_state.t_noise < 0.05 + worldgen_state.r * 0.1 &&
+        worldgen_state.t_noise > -0.05 - worldgen_state.r * 0.1) {
         worldgen_state.biome_id = BiomeID_Beach;
     }
 }
@@ -26,23 +26,23 @@ void biome_pass0(in out WorldgenState worldgen_state, in vec3 b_pos) {
 void block_pass0(in out WorldgenState worldgen_state, in vec3 b_pos) {
     worldgen_state.block_id = BlockID_Air;
     if (worldgen_state.t_noise > 0) {
-        if (b_pos.y > water_level + 80 + worldgen_state.t_noise * 20 + worldgen_state.r * 60) {
-            worldgen_state.block_id = BlockID_CompressedStone;
-        } else {
+        // if (b_pos.y > water_level + 80 + worldgen_state.t_noise * 20 + worldgen_state.r * 60) {
+        //     worldgen_state.block_id = BlockID_CompressedStone;
+        // } else {
             worldgen_state.block_id = BlockID_Stone;
-        }
-        if (worldgen_state.t_noise > 3) {
-            worldgen_state.biome_id = BiomeID_Underworld;
-            if (worldgen_state.u_noise < 0) {
-                worldgen_state.block_id = BlockID_Air;
-                if (b_pos.y > lava_level)
-                    worldgen_state.block_id = BlockID_Lava;
-            }
-        } else if (worldgen_state.t_noise > 0.5) {
-            worldgen_state.biome_id = BiomeID_Caves;
-            if (worldgen_state.c_noise < 0)
-                worldgen_state.block_id = BlockID_Air;
-        }
+        // }
+        // if (worldgen_state.t_noise > 3) {
+        //     worldgen_state.biome_id = BiomeID_Underworld;
+        //     if (worldgen_state.u_noise < 0) {
+        //         worldgen_state.block_id = BlockID_Air;
+        //         if (b_pos.y > lava_level)
+        //             worldgen_state.block_id = BlockID_Lava;
+        //     }
+        // } else if (worldgen_state.t_noise > 0.5) {
+        //     worldgen_state.biome_id = BiomeID_Caves;
+        //     if (worldgen_state.c_noise < 0)
+        //         worldgen_state.block_id = BlockID_Air;
+        // }
     } else if (b_pos.y > water_level) {
         worldgen_state.block_id = BlockID_Water;
     }
@@ -207,6 +207,6 @@ uint gen_block(in vec3 b_pos) {
 
 void main() {
     uvec3 global_i = gl_GlobalInvocationID.xyz;
-    vec3 block_pos = vec3(global_i) + p.pos.xyz;
+    vec3 block_pos = vec3(global_i) + p.pos.xyz - BLOCK_N / 2;
     imageStore(output_image, ivec3(global_i), uvec4(gen_block(block_pos)));
 }

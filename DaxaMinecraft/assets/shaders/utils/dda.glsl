@@ -104,6 +104,7 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
     run_state.hit = false;
     uint x1_steps = 0;
 
+#if VISUALIZE_SUBGRID == 0
     // TODO: figure out why this is necessary
     for (uint j = 0; j < 48; ++j) {
         uint tile = load_tile(run_state.tile_i);
@@ -122,11 +123,13 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
     }
     // Do this ^ for 16 separately, only if necessary, instead
     // of always stepping all the way to an x16 boundary
+#endif
 
     for (run_state.total_steps = 0; run_state.total_steps < max_steps; ++run_state.total_steps) {
         if (run_state.hit)
             break;
 #if VISUALIZE_SUBGRID == 0
+#if ENABLE_X16
         run_dda_step(run_state.to_side_dist_x16, run_state.tile_i_x16, run_state.side, dda_start, 16);
         if (load_block_presence_16x(run_state.tile_i_x16)) {
             RayIntersection x16_intersection;
@@ -140,6 +143,7 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
             run_state.tile_i_x4 = (run_state.tile_i_x4 / 4) * 4;
             run_state.to_side_dist_x4 = abs(vec3(ivec3(ray.o / 4) - run_state.tile_i_x4 / 4)) * dda_start.delta_dist * 4 + dda_start.initial_to_side_dist_x4;
             for (uint i = 0; i < 12; ++i) {
+#endif
                 run_dda_step(run_state.to_side_dist_x4, run_state.tile_i_x4, run_state.side, dda_start, 4);
                 if (load_block_presence_4x(run_state.tile_i_x4)) {
                     RayIntersection x4_intersection;
@@ -173,12 +177,16 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
                     run_state.outside_bounds = true;
                     break;
                 }
+                x1_steps++;
+#if ENABLE_X16
             }
         }
         if (!point_box_contains(run_state.tile_i_x16, b_min, b_max)) {
             run_state.outside_bounds = true;
             break;
         }
+        x1_steps++;
+#endif
 #else
         uint tile = load_tile(run_state.tile_i);
 #if VISUALIZE_SUBGRID == 1
@@ -215,6 +223,6 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
 #endif
     }
 #if VISUALIZE_SUBGRID == 0
-    run_state.total_steps += x1_steps;
+    run_state.total_steps = x1_steps;
 #endif
 }
