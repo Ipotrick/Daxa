@@ -8,20 +8,12 @@ vec3 get_intersection_pos_corrected(in Ray ray, in RayIntersection intersection)
     return get_intersection_pos(ray, intersection) - intersection.nrm * 0.001;
 }
 
-// struct ToSideDist {
-//     float xy, xz;
-//     float yx, yz;
-//     float zx, zy;
-// };
 struct DDA_StartResult {
     vec3 delta_dist;
     ivec3 ray_step;
     vec3 initial_to_side_dist;
     vec3 initial_to_side_dist_x4;
     vec3 initial_to_side_dist_x16;
-};
-struct Side {
-    bool is_y, is_z;
 };
 
 struct DDA_RunState {
@@ -31,7 +23,7 @@ struct DDA_RunState {
     ivec3 tile_i;
     ivec3 tile_i_x4;
     ivec3 tile_i_x16;
-    Side side;
+    uint side;
     uint total_steps;
     bool hit, outside_bounds;
 };
@@ -84,26 +76,26 @@ DDA_StartResult run_dda_start(in Ray ray, in out DDA_RunState run_state) {
     return result;
 }
 
-void run_dda_step(in out vec3 to_side_dist, in out ivec3 tile_i, in out Side side, in DDA_StartResult dda_start, in int scl) {
+void run_dda_step(in out vec3 to_side_dist, in out ivec3 tile_i, in out uint side, in DDA_StartResult dda_start, in int scl) {
     if (to_side_dist.x < to_side_dist.y) {
         if (to_side_dist.x < to_side_dist.z) {
             to_side_dist.x += dda_start.delta_dist.x * scl;
             tile_i.x += dda_start.ray_step.x * scl;
-            side.is_y = false, side.is_z = false;
+            side = 0; // x
         } else {
             to_side_dist.z += dda_start.delta_dist.z * scl;
             tile_i.z += dda_start.ray_step.z * scl;
-            side.is_y = false, side.is_z = true;
+            side = 2; // z
         }
     } else {
         if (to_side_dist.y < to_side_dist.z) {
             to_side_dist.y += dda_start.delta_dist.y * scl;
             tile_i.y += dda_start.ray_step.y * scl;
-            side.is_y = true, side.is_z = false;
+            side = 1; // y
         } else {
             to_side_dist.z += dda_start.delta_dist.z * scl;
             tile_i.z += dda_start.ray_step.z * scl;
-            side.is_y = false, side.is_z = true;
+            side = 2; // z
         }
     }
 }
@@ -139,12 +131,10 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
         if (load_block_presence_16x(run_state.tile_i_x16)) {
             RayIntersection x16_intersection;
             x16_intersection.nrm = vec3(dda_start.ray_step * -1);
-            if (run_state.side.is_z) {
-                x16_intersection.dist = run_state.to_side_dist_x16.z - dda_start.delta_dist.z * 16;
-            } else if (run_state.side.is_y) {
-                x16_intersection.dist = run_state.to_side_dist_x16.y - dda_start.delta_dist.y * 16;
-            } else {
-                x16_intersection.dist = run_state.to_side_dist_x16.x - dda_start.delta_dist.x * 16;
+            switch (run_state.side) {
+            case 0: x16_intersection.dist = run_state.to_side_dist_x16.x - dda_start.delta_dist.x * 16; break;
+            case 1: x16_intersection.dist = run_state.to_side_dist_x16.y - dda_start.delta_dist.y * 16; break;
+            case 2: x16_intersection.dist = run_state.to_side_dist_x16.z - dda_start.delta_dist.z * 16; break;
             }
             run_state.tile_i_x4 = ivec3(get_intersection_pos_corrected(ray, x16_intersection));
             run_state.tile_i_x4 = (run_state.tile_i_x4 / 4) * 4;
@@ -154,12 +144,10 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
                 if (load_block_presence_4x(run_state.tile_i_x4)) {
                     RayIntersection x4_intersection;
                     x4_intersection.nrm = vec3(dda_start.ray_step * -1);
-                    if (run_state.side.is_z) {
-                        x4_intersection.dist = run_state.to_side_dist_x4.z - dda_start.delta_dist.z * 4;
-                    } else if (run_state.side.is_y) {
-                        x4_intersection.dist = run_state.to_side_dist_x4.y - dda_start.delta_dist.y * 4;
-                    } else {
-                        x4_intersection.dist = run_state.to_side_dist_x4.x - dda_start.delta_dist.x * 4;
+                    switch (run_state.side) {
+                    case 0: x4_intersection.dist = run_state.to_side_dist_x4.x - dda_start.delta_dist.x * 4; break;
+                    case 1: x4_intersection.dist = run_state.to_side_dist_x4.y - dda_start.delta_dist.y * 4; break;
+                    case 2: x4_intersection.dist = run_state.to_side_dist_x4.z - dda_start.delta_dist.z * 4; break;
                     }
                     run_state.tile_i = ivec3(get_intersection_pos_corrected(ray, x4_intersection));
                     run_state.to_side_dist = abs(vec3(ivec3(ray.o) - run_state.tile_i)) * dda_start.delta_dist + dda_start.initial_to_side_dist;
@@ -173,7 +161,6 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
                         if (run_state.tile_i / 4 == run_state.tile_i_x4)
                             break;
                         x1_steps++;
-
                         if (!point_box_contains(run_state.tile_i, b_min, b_max)) {
                             run_state.outside_bounds = true;
                             break;
