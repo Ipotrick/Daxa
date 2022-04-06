@@ -1,4 +1,3 @@
-
 #include <utils/noise.glsl>
 
 float terrain_noise(vec3 pos) {
@@ -7,9 +6,9 @@ float terrain_noise(vec3 pos) {
         /* .persistance = */ 0.4f,
         /* .scale       = */ 0.01f,
         /* .lacunarity  = */ 2,
-        /* .octaves     = */ 4,
+        /* .octaves     = */ 6,
     };
-    return fractal_noise(pos, noise_conf) + (pos.y - 100) * 0.015;
+    return fractal_noise(pos, noise_conf) + (pos.y - 120) * 0.015;
 }
 
 float biome_noise(vec3 pos) {
@@ -31,7 +30,7 @@ float underworld_noise(vec3 pos) {
         /* .lacunarity  = */ 2,
         /* .octaves     = */ 6,
     };
-    return fractal_noise(pos, noise_conf) + abs(340 - pos.y) * 0.015 - 1.0;
+    return fractal_noise(pos, noise_conf) + abs(400 - pos.y) * 0.015 - 1.0;
 }
 
 float cave_noise(vec3 pos) {
@@ -42,5 +41,28 @@ float cave_noise(vec3 pos) {
         /* .lacunarity  = */ 2,
         /* .octaves     = */ 4,
     };
-    return fractal_noise(pos, noise_conf) + abs(200 - pos.y) * 0.02 - 0.5;
+    return fractal_noise(pos, noise_conf) + abs(220 - pos.y) * 0.01 - 0.5;
+}
+
+struct WorldgenState {
+    float t_noise;
+    float b_noise;
+    float u_noise;
+    float c_noise;
+
+    float r;
+    float r_xz;
+
+    uint block_id, biome_id;
+};
+
+WorldgenState get_worldgen_state(vec3 pos) {
+    WorldgenState result;
+    result.t_noise = terrain_noise(pos);
+    result.b_noise = biome_noise(pos);
+    result.u_noise = underworld_noise(pos);
+    result.c_noise = cave_noise(pos);
+    result.r = rand(pos);
+    result.r_xz = rand(vec3(pos.x, 0, pos.z));
+    return result;
 }

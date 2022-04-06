@@ -8,11 +8,12 @@ struct FpsPrinter {
     typename ClockT::time_point fps_prev_time;
     u64 frames_since_last = 0;
 
-    void update(const typename ClockT::time_point &now) {
+    void update(const typename ClockT::time_point &now, auto print_fn) {
         using namespace std::literals;
         ++frames_since_last;
         if (now - fps_prev_time > 1s) {
-            std::cout << "fps: " << frames_since_last << std::endl;
+            print_fn(frames_since_last);
+            // std::cout << "fps: " << frames_since_last << std::endl;
             frames_since_last = 0;
             fps_prev_time = now;
         }
