@@ -513,7 +513,7 @@ struct World {
                                 .pos = {1.0f * xi * Chunk::DIM.x, 1.0f * yi * Chunk::DIM.y, 1.0f * zi * Chunk::DIM.z, 0},
                                 .globals_sb = compute_globals_i,
                             });
-                        cmd_list->dispatch(4, 1, 1);
+                        cmd_list->dispatch(1, 1, 1);
                     }
                 }
             }
