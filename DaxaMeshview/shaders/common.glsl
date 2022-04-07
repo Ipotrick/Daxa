@@ -14,6 +14,7 @@ layout(std430, set = 0, binding = 4) buffer GlobalDataBufferView{
     GlobalData globalData;
 } globalDataBufferView[];
 
+#define globals globalDataBufferView[push.globalsId].globalData
 
 struct PrimitiveInfo {
     mat4 transform;

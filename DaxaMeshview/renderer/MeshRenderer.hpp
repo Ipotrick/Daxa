@@ -79,42 +79,13 @@ public:
 			.stage = VK_SHADER_STAGE_FRAGMENT_BIT
 		};
 
-		daxa::GraphicsPipelineBuilder opaquePipelineBuilder = {};
-		opaquePipelineBuilder.addShaderStage({ .pathToSource = "./DaxaMeshview/renderer/opaque.vert", .stage = VK_SHADER_STAGE_VERTEX_BIT });
-		opaquePipelineBuilder.addShaderStage({ .pathToSource = "./DaxaMeshview/renderer/opaque.frag", .stage = VK_SHADER_STAGE_FRAGMENT_BIT });
-			opaquePipelineBuilder.setDebugName("mesh render opaque pass pipeline")
-			.configurateDepthTest({
-				.depthAttachmentFormat = VK_FORMAT_D32_SFLOAT,
-				.enableDepthTest = true, 
-				.enableDepthWrite = true, 
-				.depthTestCompareOp = VK_COMPARE_OP_EQUAL
-			})
-			// adding a vertex input attribute binding:
-			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
-			// all added vertex input attributes are added to the previously added vertex input attribute binding
-			.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)			// positions
-			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
-			.addVertexInputAttribute(VK_FORMAT_R32G32_SFLOAT)				// uvs
-			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
-			.addVertexInputAttribute(VK_FORMAT_R32G32B32_SFLOAT)
-			.endVertexInputAttributeBinding()
-			// location of attachments in a shader are implied by the order they are added in the prePassPipeline builder:
-			.addColorAttachment(renderCTX.hdrImage->getVkFormat())
-			.addColorAttachment(renderCTX.normalsImage->getVkFormat())
-			.setRasterization({
-				.cullMode = VK_CULL_MODE_BACK_BIT,
-			});
-
-		this->opaquePassPipeline = renderCTX.pipelineCompiler->createGraphicsPipeline(opaquePipelineBuilder).value();
-
-		this->globalSetAlloc = renderCTX.device->createBindingSetAllocator({
-			.setLayout = opaquePassPipeline->getSetLayout(0),
-			.debugName = "mesh renderer global set allocator",
-		});
-
-		this->perDrawOpaquePassSetAlloc = renderCTX.device->createBindingSetAllocator({ .setLayout = this->opaquePassPipeline->getSetLayout(1), .setPerPool = 32'000 });
-
 		initOpaque2(renderCTX);
+
+		//this->globalSetAlloc = renderCTX.device->createBindingSetAllocator({
+		//	.setLayout = opaquePass2Pipeline->getSetLayout(0),
+		//	.debugName = "mesh renderer global set allocator",
+		//});
+
 		initTonemapPass(renderCTX);
 
 		orthLightPass.init(renderCTX);
@@ -623,10 +594,10 @@ public:
 		//	glm::vec4(1,1,1,1)
 		//);
 
-		this->globalSet = globalSetAlloc->getSet();
-		globalSet->bindBuffer(0, this->globalDataBufffer);
-		globalSet->bindBuffer(1, this->primitiveInfoBuffer);
-		globalSet->bindBuffer(2, this->lightsBuffer);
+		//this->globalSet = globalSetAlloc->getSet();
+		//globalSet->bindBuffer(0, this->globalDataBufffer);
+		//globalSet->bindBuffer(1, this->primitiveInfoBuffer);
+		//globalSet->bindBuffer(2, this->lightsBuffer);
 		cmd->insertImageBarrier({
 			.barrier = {
 				.dstStages = VK_PIPELINE_STAGE_2_CLEAR_BIT_KHR | VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
@@ -648,7 +619,7 @@ private:
 	GlobalData globData = {};
 	std::vector<DrawLight> drawLights;
     daxa::PipelineHandle prePassPipeline = {};
-    daxa::BindingSetAllocatorHandle globalSetAlloc = {};
+    //daxa::BindingSetAllocatorHandle globalSetAlloc = {};
     daxa::BindingSetHandle globalSet = {};
     daxa::BufferHandle globalDataBufffer = {};
 	daxa::BufferHandle primitiveInfoBuffer = {};
@@ -657,9 +628,7 @@ private:
 	daxa::ImageViewHandle skybox = {};
 	daxa::SamplerHandle generalSampler = {};
 
-	daxa::PipelineHandle opaquePassPipeline = {};
 	daxa::BufferHandle lightsBuffer = {};
-    daxa::BindingSetAllocatorHandle perDrawOpaquePassSetAlloc = {};
 
 	daxa::PipelineHandle opaquePass2Pipeline = {};
 
