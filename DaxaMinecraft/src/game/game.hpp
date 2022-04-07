@@ -91,12 +91,19 @@ struct Game {
             ImGui::End();
         }
 
+        auto fire_ray = [&]() {
+            world.single_ray_pos = player.pos;
+            world.single_ray_nrm = player.camera.vrot_mat * glm::vec4(0, 0, 1, 0);
+        };
+
+        if (io.KeysDown[GLFW_KEY_E])
+            fire_ray();
+
         if (paused) {
             ImGui::Begin("Settings");
-            if (ImGui::Button("Fire ray")) {
-                world.single_ray_pos = player.pos;
-                world.single_ray_nrm = player.camera.vrot_mat * glm::vec4(0, 0, 1, 0);
-            }
+            if (ImGui::Button("Fire ray"))
+                fire_ray();
+            ImGui::SliderInt("Ray steps", &world.single_ray_steps, 0, 100);
             if (ImGui::Button("Reset player"))
                 reset_player();
             ImGui::SliderFloat("Speed", &player.speed, 0.1f, 40.0f);

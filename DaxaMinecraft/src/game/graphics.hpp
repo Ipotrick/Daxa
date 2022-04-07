@@ -277,6 +277,7 @@ struct World {
         float time, fov;
 
         u32 texture_index;
+        u32 single_ray_steps;
         ChunkArray<u32> chunk_ids;
         // ChunkArray<ChunkBlockPresence> chunk_block_presence;
     };
@@ -304,6 +305,7 @@ struct World {
     bool should_place = false;
 
     glm::vec3 single_ray_pos{0}, single_ray_nrm{1};
+    i32 single_ray_steps = 10;
 
     World(RenderContext &render_ctx) : render_ctx(render_ctx) {
         load_textures("DaxaMinecraft/assets/textures");
@@ -465,6 +467,7 @@ struct World {
             .time = elapsed,
             .fov = std::tanf(player.camera.fov * std::numbers::pi_v<f32> / 360.0f),
             .texture_index = atlas_texture_array->getDescriptorIndex(),
+            .single_ray_steps = static_cast<u32>(single_ray_steps),
         };
 
         for (size_t zi = 0; zi < DIM.z; ++zi) {

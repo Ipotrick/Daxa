@@ -32,7 +32,7 @@ void draw(inout vec3 color, inout float depth, in vec3 new_color, in float new_d
 }
 
 vec3 shaded(in vec3 col, in vec3 nrm) {
-    vec3 light = sun_col * max(dot(nrm, sun_ray.nrm), 0) + sample_sky(nrm) * 0.4;
+    vec3 light = sun_col * max(dot(nrm, sun_ray.nrm) + 1, 0) + sample_sky(nrm) * 0.2;
     return col * light;
 }
 
@@ -204,7 +204,7 @@ void main() {
         result.nrm = vec3(0);
         result.steps = 0;
 
-        uint max_steps = 0;
+        uint max_steps = globals.single_ray_steps;
 
         DDA_RunState run_state;
         run_state.outside_bounds = false;
@@ -275,8 +275,8 @@ void main() {
             if (x1_steps >= max_steps)
                 break;
             // #if ENABLE_X16
-            temp_inter = ray_wirebox_intersect(cam_ray, vec3(run_state.tile_i_x16), vec3(run_state.tile_i_x16 + 16), 0.2);
-            draw(color, depth, shaded(side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit);
+            // temp_inter = ray_wirebox_intersect(cam_ray, vec3(run_state.tile_i_x16), vec3(run_state.tile_i_x16 + 16), 0.2);
+            // draw(color, depth, shaded(side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit);
             temp_inter = ray_box_intersect(cam_ray, vec3(run_state.tile_i_x16), vec3(run_state.tile_i_x16 + 16));
             overlay(color, depth, shaded(side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit, 0.1);
 
@@ -306,8 +306,8 @@ void main() {
                     if (x1_steps >= max_steps)
                         break;
                     
-                    temp_inter = ray_wirebox_intersect(cam_ray, vec3(run_state.tile_i_x4), vec3(run_state.tile_i_x4 + 4), 0.1);
-                    draw(color, depth, shaded(side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit);
+                    // temp_inter = ray_wirebox_intersect(cam_ray, vec3(run_state.tile_i_x4), vec3(run_state.tile_i_x4 + 4), 0.1);
+                    // draw(color, depth, shaded(side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit);
                     temp_inter = ray_box_intersect(cam_ray, vec3(run_state.tile_i_x4), vec3(run_state.tile_i_x4 + 4));
                     overlay(color, depth, shaded(side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit, 0.2);
                     // #endif
@@ -336,8 +336,8 @@ void main() {
                             if (x1_steps >= max_steps)
                                 break;
                             
-                            temp_inter = ray_wirebox_intersect(cam_ray, vec3(run_state.tile_i), vec3(run_state.tile_i + 1), 0.05);
-                            draw(color, depth, shaded(side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit);
+                            // temp_inter = ray_wirebox_intersect(cam_ray, vec3(run_state.tile_i), vec3(run_state.tile_i + 1), 0.05);
+                            // draw(color, depth, shaded(side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit);
                             temp_inter = ray_box_intersect(cam_ray, vec3(run_state.tile_i), vec3(run_state.tile_i + 1));
                             overlay(color, depth, shaded(side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit, 0.4);
 
