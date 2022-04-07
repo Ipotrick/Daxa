@@ -262,7 +262,9 @@ struct World {
     daxa::PipelineHandle subgrid_compute_pipeline;
 
     struct ChunkBlockPresence {
+        u32 x2[1024];
         u32 x4[128];
+        u32 x8[16];
         u32 x16[2];
         u32 x32[8]; 
     };

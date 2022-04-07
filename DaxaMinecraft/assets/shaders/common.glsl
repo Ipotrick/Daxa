@@ -4,7 +4,9 @@
 #include <block_info.glsl>
 
 struct ChunkBlockPresence {
+    uint x2[1024];
     uint x4[128];
+    uint x8[16];
     uint x16[2];
     bool x32[8]; 
 };
