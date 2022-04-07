@@ -3,9 +3,9 @@
 #include <utils/window.hpp>
 #include <game/player.hpp>
 #include <game/graphics.hpp>
-#include <utils/fps_printer.hpp>
 
 #include <chrono>
+#include <fmt/format.h>
 
 static void HelpMarker(const char *desc) {
     if (ImGui::IsItemHovered()) {
@@ -20,7 +20,6 @@ static void HelpMarker(const char *desc) {
 struct Game {
     using Clock = std::chrono::high_resolution_clock;
     Clock::time_point prev_frame_time;
-    FpsPrinter<Clock> fps_printer;
 
     Window window;
 
@@ -30,10 +29,13 @@ struct Game {
 
     World world{render_context};
     Player3D player;
-    std::string fps_string = "";
 
     bool paused = true;
     bool perf_menu = true;
+
+    std::array<float, 400> frametimes = {};
+    u64 frametime_rotation_index = 0;
+    std::string fmt_str;
 
     Game() {
         window.set_user_pointer<Game>(this);
@@ -60,7 +62,8 @@ struct Game {
         auto now = Clock::now();
         float dt = std::chrono::duration<float>(now - prev_frame_time).count();
         prev_frame_time = now;
-        fps_printer.update(now, [&](u64 frames_n) { fps_string = std::string("FPS: ") + std::to_string(frames_n); });
+        frametimes[frametime_rotation_index] = dt;
+        frametime_rotation_index = (frametime_rotation_index + 1) % frametimes.size();
 
         ImGuiIO &io = ImGui::GetIO();
 
@@ -69,12 +72,31 @@ struct Game {
 
         if (perf_menu) {
             ImGui::Begin("Debug", &perf_menu, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration);
-            ImGui::Text("%s", fps_string.c_str());
+
+            {
+                float average = 0.0f;
+                for (auto frametime : frametimes)
+                    average += frametime;
+                average /= static_cast<float>(frametimes.size());
+
+                fmt_str.clear();
+                fmt::format_to(std::back_inserter(fmt_str), "avg {:.2f} ms ({:.2f} fps)", average * 1000, 1.0f / average);
+                ImGui::PlotLines("", frametimes.data(), static_cast<int>(frametimes.size()), static_cast<int>(frametime_rotation_index), fmt_str.c_str(), 0, 0.02f, ImVec2(0, 120.0f));
+
+                fmt_str.clear();
+                fmt::format_to(std::back_inserter(fmt_str), "{:.2f} {:.2f} {:.2f}", player.pos.x, player.pos.y, player.pos.z);
+                ImGui::Text("%s", fmt_str.c_str());
+            }
+
             ImGui::End();
         }
 
         if (paused) {
             ImGui::Begin("Settings");
+            if (ImGui::Button("Fire ray")) {
+                world.single_ray_pos = player.pos;
+                world.single_ray_nrm = player.camera.vrot_mat * glm::vec4(0, 0, 1, 0);
+            }
             if (ImGui::Button("Reset player"))
                 reset_player();
             ImGui::SliderFloat("Speed", &player.speed, 0.1f, 40.0f);

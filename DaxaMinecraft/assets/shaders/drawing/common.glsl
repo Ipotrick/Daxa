@@ -76,10 +76,11 @@ uint tile_texture_index(uint block_id, uint face) {
 #define ENABLE_SHADOWS 1
 // Whether to visualize the position that the view ray intersects
 #define SHOW_PICK_POS 1
+#define SHOW_SINGLE_RAY 1
 // Whether to variate the sample-space coordinates based on time
 #define JITTER_VIEW 0
 // Number of samples per axis (so a value of 4 means 16 samples)
 #define SUBSAMPLE_N 1
 
 // Visualize x_n grid (n can be 1, 4, or 16)
-#define VISUALIZE_SUBGRID 0
+#define VISUALIZE_SUBGRID 1
