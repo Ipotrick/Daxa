@@ -5,8 +5,8 @@
 
 struct ChunkBlockPresence {
     uint x4[128];
-    uint16_t x4_16bit[256];
     uint x16[2];
+    uint x32[8]; 
 };
 
 layout(set = 0, binding = 4) buffer Globals {
@@ -124,4 +124,15 @@ bool load_block_presence_16x(vec3 pos) {
     uint array_index = x16_uint_array_index(x16_pos);
 
     return (chunk_block_presence(chunk_i).x16[array_index] & access_mask) != 0;
+}
+
+bool load_block_presence_64x(vec3 pos) {
+    ivec3 chunk_i = ivec3(pos / CHUNK_SIZE);
+    if (chunk_i.x < 0 || chunk_i.x > CHUNK_N.x - 1 ||
+        chunk_i.y < 0 || chunk_i.y > CHUNK_N.y - 1 ||
+        chunk_i.z < 0 || chunk_i.z > CHUNK_N.z - 1) {
+        return false;
+    }
+
+    return (chunk_block_presence(chunk_i).x16[0] | chunk_block_presence(chunk_i).x16[1]) != 0;
 }
