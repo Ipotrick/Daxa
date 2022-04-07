@@ -20,6 +20,7 @@ layout(set = 0, binding = 4) buffer Globals {
     ivec2 frame_dim;
     float time, fov;
     uint texture_index;
+    uint single_ray_steps;
     uint chunk_images[CHUNK_N.z][CHUNK_N.y][CHUNK_N.x];
     ChunkBlockPresence chunk_block_presence[CHUNK_N.z][CHUNK_N.y][CHUNK_N.x];
 }
