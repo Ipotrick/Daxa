@@ -20,14 +20,14 @@ layout(std140, push_constant) uniform Push{
     uint outWidth;
     uint outHeight;
     float minBrightness;
-    float padWidth;     // 0..1
-    float padHeight;    // 0..1
+    float scaleWdith;
+    float scaleHeight;
 } push;
 
 void main() {
     ivec2 index = ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y);
-    uint subWidth = push.outWidth - push.padWidth;
-    uint subHeight = push.outHeight - push.padHeight;
+    uint subWidth = push.outWidth * scaleWdith;
+    uint subHeight = push.outHeight * scaleHeight;
     if (index.x < subWidth && index.y < subHeight) {
         vec2 coord = vec2(
             float(index.x) / float(subWidth),
