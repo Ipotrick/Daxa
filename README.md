@@ -34,6 +34,7 @@ Daxa also includes other rendering and application specific classes and other ab
 * (TODO) an asset server
 * (TODO) a generalized TAA implementation
 * (TODO) a generalized fft bloom implementation
+
 Note that these are not meant to compete with existing libraries but to be a good placeholder if nothing fancy is recuired or just to get going.
 
 # Examples
