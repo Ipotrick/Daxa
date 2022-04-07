@@ -48,6 +48,119 @@ RayIntersection ray_box_intersect(in Ray ray, vec3 b_min, vec3 b_max) {
     return result;
 }
 
+RayIntersection ray_wirebox_intersect(in Ray ray, vec3 b_min, vec3 b_max, float t) {
+    RayIntersection result;
+    result.hit = false;
+    bool hit = false;
+    float dist = 100000;
+    vec3 nrm;
+
+    result = ray_box_intersect(ray, b_min, vec3(b_min.x + t, b_min.y + t, b_max.z));
+    if (result.hit && result.dist < dist)
+        hit = true, dist = result.dist, nrm = result.nrm;
+    result = ray_box_intersect(ray, b_min, vec3(b_min.x + t, b_max.y, b_min.z + t));
+    if (result.hit && result.dist < dist)
+        hit = true, dist = result.dist, nrm = result.nrm;
+    result = ray_box_intersect(ray, b_min, vec3(b_max.x, b_min.y + t, b_min.z + t));
+    if (result.hit && result.dist < dist)
+        hit = true, dist = result.dist, nrm = result.nrm;
+
+    result = ray_box_intersect(ray, vec3(b_max.x - t, b_min.y, b_min.z), vec3(b_max.x, b_min.y + t, b_max.z));
+    if (result.hit && result.dist < dist)
+        hit = true, dist = result.dist, nrm = result.nrm;
+    result = ray_box_intersect(ray, vec3(b_min.x, b_min.y, b_max.z - t), vec3(b_min.x + t, b_max.y, b_max.z));
+    if (result.hit && result.dist < dist)
+        hit = true, dist = result.dist, nrm = result.nrm;
+    result = ray_box_intersect(ray, vec3(b_min.x, b_max.y - t, b_min.z), vec3(b_max.x, b_max.y, b_min.z + t));
+    if (result.hit && result.dist < dist)
+        hit = true, dist = result.dist, nrm = result.nrm;
+
+    result = ray_box_intersect(ray, b_max, vec3(b_max.x - t, b_max.y - t, b_min.z));
+    if (result.hit && result.dist < dist)
+        hit = true, dist = result.dist, nrm = result.nrm;
+    result = ray_box_intersect(ray, b_max, vec3(b_max.x - t, b_min.y, b_max.z - t));
+    if (result.hit && result.dist < dist)
+        hit = true, dist = result.dist, nrm = result.nrm;
+    result = ray_box_intersect(ray, b_max, vec3(b_min.x, b_max.y - t, b_max.z - t));
+    if (result.hit && result.dist < dist)
+        hit = true, dist = result.dist, nrm = result.nrm;
+
+    result = ray_box_intersect(ray, vec3(b_min.x + t, b_max.y, b_max.z), vec3(b_min.x, b_max.y - t, b_min.z));
+    if (result.hit && result.dist < dist)
+        hit = true, dist = result.dist, nrm = result.nrm;
+    result = ray_box_intersect(ray, vec3(b_max.x, b_max.y, b_min.z + t), vec3(b_max.x - t, b_min.y, b_min.z));
+    if (result.hit && result.dist < dist)
+        hit = true, dist = result.dist, nrm = result.nrm;
+    result = ray_box_intersect(ray, vec3(b_max.x, b_min.y + t, b_max.z), vec3(b_min.x, b_min.y, b_max.z - t));
+    if (result.hit && result.dist < dist)
+        hit = true, dist = result.dist, nrm = result.nrm;
+
+    result.hit = hit;
+    result.dist = dist;
+    result.nrm = nrm;
+
+    return result;
+}
+
+RayIntersection ray_sphere_intersect(in Ray ray, vec3 s0, float sr) {
+    RayIntersection result;
+    result.hit = false;
+
+    float a = dot(ray.nrm, ray.nrm);
+    vec3 s0_r0 = ray.o - s0;
+    float b = 2.0 * dot(ray.nrm, s0_r0);
+    float c = dot(s0_r0, s0_r0) - (sr * sr);
+    if (b * b - 4.0 * a * c < 0.0)
+        return result;
+    result.dist = (-b - sqrt((b * b) - 4.0 * a * c)) / (2.0 * a);
+    result.hit = result.dist > 0;
+    result.nrm = normalize(get_intersection_pos(ray, result) - s0);
+    return result;
+}
+
+RayIntersection ray_cylinder_intersect(in Ray ray, in vec3 pa, in vec3 pb, float ra) {
+    RayIntersection result;
+    result.hit = false;
+
+    vec3 ba = pb - pa;
+
+    vec3 oc = ray.o - pa;
+
+    float baba = dot(ba, ba);
+    float bard = dot(ba, ray.nrm);
+    float baoc = dot(ba, oc);
+
+    float k2 = baba - bard * bard;
+    float k1 = baba * dot(oc, ray.nrm) - baoc * bard;
+    float k0 = baba * dot(oc, oc) - baoc * baoc - ra * ra * baba;
+
+    float h = k1 * k1 - k2 * k0;
+    if (h < 0.0)
+        return result;
+    h = sqrt(h);
+    float t = (-k1 - h) / k2;
+
+    // body
+    float y = baoc + t * bard;
+    if (y > 0.0 && y < baba) {
+
+        result.dist = t;
+        result.hit = t > 0;
+        result.nrm = (oc + t * ray.nrm - ba * y / baba) / ra;
+        return result;
+    }
+
+    // caps
+    t = (((y < 0.0) ? 0.0 : baba) - baoc) / bard;
+    if (abs(k1 + k2 * t) < h) {
+        result.dist = t;
+        result.hit = t > 0;
+        result.nrm = ba * sign(y) / baba;
+    }
+
+    return result;
+}
+
 RayIntersection ray_step_voxels(in Ray ray, in vec3 b_min, in vec3 b_max, in uint max_steps) {
     RayIntersection result;
     result.hit = false;

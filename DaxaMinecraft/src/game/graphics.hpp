@@ -270,6 +270,8 @@ struct World {
     struct ComputeGlobals {
         glm::mat4 viewproj_mat;
         glm::vec4 pos;
+        glm::vec4 single_ray_pos;
+        glm::vec4 single_ray_nrm;
         glm::vec4 pick_pos;
         glm::ivec2 frame_dim;
         float time, fov;
@@ -300,6 +302,8 @@ struct World {
 
     bool should_break = false;
     bool should_place = false;
+
+    glm::vec3 single_ray_pos{0}, single_ray_nrm{1};
 
     World(RenderContext &render_ctx) : render_ctx(render_ctx) {
         load_textures("DaxaMinecraft/assets/textures");
@@ -455,6 +459,8 @@ struct World {
         auto compute_globals = ComputeGlobals{
             .viewproj_mat = vp_mat,
             .pos = glm::vec4(player.pos, 0),
+            .single_ray_pos = glm::vec4(single_ray_pos, 0),
+            .single_ray_nrm = glm::vec4(single_ray_nrm, 0),
             .frame_dim = {extent.width, extent.height},
             .time = elapsed,
             .fov = std::tanf(player.camera.fov * std::numbers::pi_v<f32> / 360.0f),

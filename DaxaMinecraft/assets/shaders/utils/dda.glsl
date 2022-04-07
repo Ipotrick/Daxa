@@ -1,13 +1,5 @@
 #include <utils/ray.glsl>
 
-vec3 get_intersection_pos(in Ray ray, in RayIntersection intersection) {
-    return ray.o + (intersection.dist) * ray.nrm;
-}
-
-vec3 get_intersection_pos_corrected(in Ray ray, in RayIntersection intersection) {
-    return get_intersection_pos(ray, intersection) - intersection.nrm * 0.001;
-}
-
 struct DDA_StartResult {
     vec3 delta_dist;
     ivec3 ray_step;
@@ -106,21 +98,21 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
 
 #if VISUALIZE_SUBGRID == 0
     // TODO: figure out why this is necessary
-    for (uint j = 0; j < 48; ++j) {
-        uint tile = load_tile(run_state.tile_i);
-        if (is_block_occluding(get_block_id(tile))) {
-            run_state.hit = true;
-            break;
-        }
-        run_dda_step(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start, 1);
-        if (run_state.tile_i / 16 == run_state.tile_i_x16)
-            break;
-        x1_steps++;
-        if (!point_box_contains(run_state.tile_i, b_min, b_max)) {
-            run_state.outside_bounds = true;
-            break;
-        }
-    }
+    // for (uint j = 0; j < 12; ++j) {
+    //     uint tile = load_tile(run_state.tile_i);
+    //     if (is_block_occluding(get_block_id(tile))) {
+    //         run_state.hit = true;
+    //         break;
+    //     }
+    //     run_dda_step(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start, 1);
+    //     if (run_state.tile_i / 4 == run_state.tile_i_x4)
+    //         break;
+    //     x1_steps++;
+    //     if (!point_box_contains(run_state.tile_i, b_min, b_max)) {
+    //         run_state.outside_bounds = true;
+    //         break;
+    //     }
+    // }
     // Do this ^ for 16 separately, only if necessary, instead
     // of always stepping all the way to an x16 boundary
 #endif
@@ -130,6 +122,8 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
             break;
 #if VISUALIZE_SUBGRID == 0
 #if ENABLE_X16
+        x1_steps++;
+        // ivec3 prev_tile_i_x16 = run_state.tile_i_x16;
         run_dda_step(run_state.to_side_dist_x16, run_state.tile_i_x16, run_state.side, dda_start, 16);
         if (load_block_presence_16x(run_state.tile_i_x16)) {
             RayIntersection x16_intersection;
@@ -144,6 +138,7 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
             run_state.to_side_dist_x4 = abs(vec3(ivec3(ray.o / 4) - run_state.tile_i_x4 / 4)) * dda_start.delta_dist * 4 + dda_start.initial_to_side_dist_x4;
             for (uint i = 0; i < 12; ++i) {
 #endif
+                x1_steps++;
                 run_dda_step(run_state.to_side_dist_x4, run_state.tile_i_x4, run_state.side, dda_start, 4);
                 if (load_block_presence_4x(run_state.tile_i_x4)) {
                     RayIntersection x4_intersection;
@@ -161,10 +156,10 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
                             run_state.hit = true;
                             break;
                         }
+                        x1_steps++;
                         run_dda_step(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start, 1);
                         if (run_state.tile_i / 4 == run_state.tile_i_x4)
                             break;
-                        x1_steps++;
                         if (!point_box_contains(run_state.tile_i, b_min, b_max)) {
                             run_state.outside_bounds = true;
                             break;
@@ -177,7 +172,6 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
                     run_state.outside_bounds = true;
                     break;
                 }
-                x1_steps++;
 #if ENABLE_X16
             }
         }
@@ -185,7 +179,6 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
             run_state.outside_bounds = true;
             break;
         }
-        x1_steps++;
 #endif
 #else
         uint tile = load_tile(run_state.tile_i);

@@ -12,6 +12,8 @@ struct ChunkBlockPresence {
 layout(set = 0, binding = 4) buffer Globals {
     mat4 viewproj_mat;
     vec4 pos;
+    vec4 single_ray_pos;
+    vec4 single_ray_nrm;
     vec4 pick_pos;
     ivec2 frame_dim;
     float time, fov;

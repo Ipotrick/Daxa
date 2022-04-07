@@ -16,3 +16,11 @@ bool point_box_contains(vec3 p, vec3 b_min, vec3 b_max) {
             p.y >= b_min.y && p.y < b_max.y &&
             p.z >= b_min.z && p.z < b_max.z);
 }
+
+vec3 get_intersection_pos(in Ray ray, in RayIntersection intersection) {
+    return ray.o + (intersection.dist) * ray.nrm;
+}
+
+vec3 get_intersection_pos_corrected(in Ray ray, in RayIntersection intersection) {
+    return get_intersection_pos(ray, intersection) - intersection.nrm * 0.001;
+}
