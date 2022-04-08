@@ -2,7 +2,16 @@
 
 #include <fstream>
 
-#include <spirv_reflect.h>
+#include "spirv_reflect.h"
+#include "shaderc/shaderc.h"
+#define NOMINMAX
+#ifdef _WIN32
+	#include "Windows.h"
+	#include "wrl/client.h"
+	using namespace Microsoft::WRL;
+#else
+#endif
+#include "dxcapi.h"
 
 #include "Instance.hpp"
 #include "util.hpp"
@@ -10,6 +19,20 @@
 using Path = std::filesystem::path;
 
 namespace daxa {
+	#define BACKEND (*static_cast<Backend*>(this->backend.get()))
+
+	struct Backend{
+        shaderc::Compiler compiler = {};
+        shaderc::CompileOptions options = {};
+		ComPtr<IDxcUtils> dxcUtils = {};
+		ComPtr<IDxcCompiler3> dxcCompiler = {};
+		ComPtr<IDxcIncludeHandler> dxcIncludeHandler = {};
+	};
+
+	void backendDeletor(void* backend) {
+		delete static_cast<Backend*>(backend);
+	}
+
 	std::vector<VkDescriptorSetLayout> processReflectedDescriptorData(
 		std::vector<BindingSetDescription>& setDescriptions,
 		BindingSetLayoutCache& descCache,
@@ -91,12 +114,12 @@ namespace daxa {
 			case ShaderLang::GLSL: langType = shaderc_source_language_glsl; break;
 			case ShaderLang::HLSL: langType = shaderc_source_language_hlsl; break;
 		}
-		options.SetSourceLanguage(langType);
-		options.SetTargetEnvironment(shaderc_target_env_vulkan, VK_API_VERSION_1_2);
-		options.SetTargetSpirv(shaderc_spirv_version::shaderc_spirv_version_1_3);
+		BACKEND.options.SetSourceLanguage(langType);
+		BACKEND.options.SetTargetEnvironment(shaderc_target_env_vulkan, VK_API_VERSION_1_2);
+		BACKEND.options.SetTargetSpirv(shaderc_spirv_version::shaderc_spirv_version_1_3);
 		//options.SetOptimizationLevel(shaderc_optimization_level_performance);
 		
-		shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(src, stage, sourceFileName, options);
+		shaderc::SpvCompilationResult module = BACKEND.compiler.CompileGlslToSpv(src, stage, sourceFileName, BACKEND.options);
 
 		if (module.GetCompilationStatus() != shaderc_compilation_status_success) {
 			return daxa::ResultErr{.message = std::move(module.GetErrorMessage())};
@@ -266,7 +289,7 @@ namespace daxa {
 		return { ShaderModuleHandle{ shadMod } };
 	}
 
-	class FileIncluder : public shaderc::CompileOptions::IncluderInterface {
+	class ShadercFileIncluder : public shaderc::CompileOptions::IncluderInterface {
 	public:
 		constexpr static inline size_t DELETE_SOURCE_NAME = 0x1;
 		constexpr static inline size_t DELETE_CONTENT = 0x2;
@@ -354,10 +377,12 @@ namespace daxa {
 		, bindSetLayoutCache{ bindSetLayoutCache }
 		, sharedData{ std::make_shared<PipelineCompilerShadedData>() }
 		, recreationCooldown{ 250 }
+		, backend{ std::unique_ptr<void, void(*)(void*)>(new Backend(), backendDeletor) }
 	{
-		auto includer = std::make_unique<FileIncluder>();
+		auto includer = std::make_unique<ShadercFileIncluder>();
 		includer->sharedData = sharedData;
-		options.SetIncluder(std::move(includer));
+		BACKEND.options.SetIncluder(std::move(includer));
+		auto hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(BACKEND.dxcUtils.ReleaseAndGetAddressOf()));
 	}
 
     bool PipelineCompiler::checkIfSourcesChanged(PipelineHandle& pipeline) {
