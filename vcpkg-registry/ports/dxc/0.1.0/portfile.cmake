@@ -68,39 +68,30 @@ project(dxc VERSION 0.1.0)
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 
-add_library(dxc INTERFACE)
-target_include_directories(dxc INTERFACE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/inc>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-)
-target_link_directories(dxc INTERFACE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/lib>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_LIBDIR}>
-)
-target_link_libraries(dxc INTERFACE dxcompiler)
-add_library(dxc::dxc ALIAS dxc)
+file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/dxc-config.cmake [=[
+get_filename_component(_IMPORT_PREFIX "${CMAKE_CURRENT_LIST_FILE}" PATH)
+get_filename_component(_IMPORT_PREFIX "${_IMPORT_PREFIX}" PATH)
+get_filename_component(_IMPORT_PREFIX "${_IMPORT_PREFIX}" PATH)
+if(_IMPORT_PREFIX STREQUAL "/")
+  set(_IMPORT_PREFIX "")
+endif()
 
-file(WRITE ${CMAKE_BINARY_DIR}/config.cmake.in [=[
-@PACKAGE_INIT@
-include(${CMAKE_CURRENT_LIST_DIR}/dxc-targets.cmake)
-check_required_components(dxc)
+add_library(dxc::dxc SHARED IMPORTED)
+set_target_properties(dxc::dxc PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include"
+    INTERFACE_LINK_DIRECTORIES "${_IMPORT_PREFIX}/lib"
+    
+    IMPORTED_LOCATION ${_IMPORT_PREFIX}/bin/dxcompiler.dll
+    IMPORTED_IMPLIB   ${_IMPORT_PREFIX}/lib/dxcompiler.lib
+)
 ]=])
-configure_package_config_file(${CMAKE_BINARY_DIR}/config.cmake.in
-    ${CMAKE_CURRENT_BINARY_DIR}/dxc-config.cmake
-    INSTALL_DESTINATION ${CMAKE_INSTALL_DATADIR}/dxc
-    NO_SET_AND_CHECK_MACRO)
-write_basic_package_version_file(
-    ${CMAKE_CURRENT_BINARY_DIR}/dxc-config-version.cmake
-    VERSION ${PROJECT_VERSION}
-    COMPATIBILITY SameMajorVersion)
+
 install(
     FILES
         ${CMAKE_CURRENT_BINARY_DIR}/dxc-config.cmake
-        ${CMAKE_CURRENT_BINARY_DIR}/dxc-config-version.cmake
     DESTINATION
         ${CMAKE_INSTALL_DATADIR}/dxc)
-install(TARGETS dxc EXPORT dxc-targets)
-install(EXPORT dxc-targets DESTINATION ${CMAKE_INSTALL_DATADIR}/dxc NAMESPACE dxc::)
+
 install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/inc/ TYPE INCLUDE)
 install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/bin/x64/ TYPE BIN PATTERN "*.exe" EXCLUDE)
 install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/lib/x64/ TYPE LIB)
