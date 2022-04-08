@@ -285,7 +285,7 @@ void main() {
 
             if (load_block_presence_16x(run_state.tile_i_x16)) {
                 RayIntersection x16_intersection;
-                x16_intersection.nrm = vec3(dda_start.ray_step * -1);
+                x16_intersection.nrm = vec3(dda_start.ray_step * 1);
                 switch (run_state.side) {
                 case 0: x16_intersection.dist = run_state.to_side_dist_x16.x - dda_start.delta_dist.x * 16; break;
                 case 1: x16_intersection.dist = run_state.to_side_dist_x16.y - dda_start.delta_dist.y * 16; break;
@@ -316,7 +316,7 @@ void main() {
 
                     if (load_block_presence_4x(run_state.tile_i_x4)) {
                         RayIntersection x4_intersection;
-                        x4_intersection.nrm = vec3(dda_start.ray_step * -1);
+                        x4_intersection.nrm = vec3(dda_start.ray_step * 1);
                         switch (run_state.side) {
                         case 0: x4_intersection.dist = run_state.to_side_dist_x4.x - dda_start.delta_dist.x * 4; break;
                         case 1: x4_intersection.dist = run_state.to_side_dist_x4.y - dda_start.delta_dist.y * 4; break;
