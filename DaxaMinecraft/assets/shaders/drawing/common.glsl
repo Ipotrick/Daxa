@@ -72,6 +72,7 @@ uint tile_texture_index(uint block_id, uint face) {
 // Whether to disable everything else and draw just the complexity
 #define VISUALIZE_STEP_COMPLEXITY 0
 #define ENABLE_X16 1
+#define ENABLE_X64 0
 // Whether to cast shadow rays
 #define ENABLE_SHADOWS 1
 // Whether to visualize the position that the view ray intersects
