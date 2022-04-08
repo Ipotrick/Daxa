@@ -127,9 +127,9 @@ namespace daxa {
 		}
 
 		DxcBuffer srcBuffer{
-			.Encoding = static_cast<u32>(0),
 			.Ptr = src.c_str(),
-			.Size = static_cast<u32>(src.size())
+			.Size = static_cast<u32>(src.size()),
+			.Encoding = static_cast<u32>(0),
 		};
 
 		ComPtr<IDxcResult> result;
