@@ -134,6 +134,16 @@ uint x32_uint_array_index(uvec3 x32_i) {
     return x32_i.x + x32_i.y * 2 + x32_i.z * 4;
 }
 
+bool load_block_presence_2x(vec3 pos) {
+    ivec3 chunk_i = ivec3(pos / CHUNK_SIZE);
+
+    ivec3 in_chunk_p = ivec3(pos) - chunk_i * ivec3(CHUNK_SIZE);
+    ivec3 x2_pos = in_chunk_p / 2;
+    uint access_mask = x2_uint_bit_mask(x2_pos);
+    uint uint_array_index = x2_uint_array_index(x2_pos);
+    return (chunk_block_presence(chunk_i).x2[uint_array_index] & access_mask) != 0;
+}
+
 bool load_block_presence_4x(vec3 pos) {
     ivec3 chunk_i = ivec3(pos / CHUNK_SIZE);
 
