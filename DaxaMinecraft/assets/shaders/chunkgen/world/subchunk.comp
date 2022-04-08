@@ -16,6 +16,8 @@ shared uint local_copy_x16[2];
 
 #define X4_GENERATION_USE_X2_LOCAL_COPY
 
+#define X16_GENERATION_USE_X8_LOCAL_COPY
+
 void generate_x2(in uvec3 chunk_i) {
     for (int n = 0; n < 32; n++) {
         uvec3 x2_i = linear_index_to_x2_packed_index(gl_GlobalInvocationID.x + 1024 * n);
@@ -89,6 +91,36 @@ void generate_x4(in uvec3 chunk_i) {
     }
 }
 
+void generate_x8(in uvec3 chunk_i) {
+    uvec3 x8_i = linear_index_to_x8_packed_index(gl_GlobalInvocationID.x);
+
+    uvec3 world_i = uvec3(p.pos) + x8_i * 8;
+    bool at_least_one_occluding = false;
+    for (int x = 0; x < 2; x++) {
+        for (int y = 0; y < 2; y++) {
+            for (int z = 0; z < 2; z++) {
+                uvec3 x4_i = x8_i * 2 + uvec3(x,y,z);
+                uint index = x4_uint_array_index(x4_i);
+                uint mask = x4_uint_bit_mask(x4_i);
+                bool present = (local_copy_x4[index] & mask) != 0;
+                at_least_one_occluding = at_least_one_occluding || present;
+            }
+        }
+    }
+    uint result = 0x00000000;
+    if (at_least_one_occluding) {
+        result = x8_uint_bit_mask(x8_i);
+    }
+    subgroupBarrier();
+    uint subgroup32_result_packed = subgroupOr(result);
+    subgroupBarrier();
+    if (subgroupElect()) {
+        uint index = x8_uint_array_index(x8_i);
+        chunk_block_presence(chunk_i).x8[index] = subgroup32_result_packed;
+        local_copy_x8[index] = subgroup32_result_packed;
+    }
+}
+
 void generate_x16(in uvec3 chunk_i) {
     uvec3 x16_i = uvec3(
         gl_GlobalInvocationID.x & 0x3,
@@ -100,26 +132,39 @@ void generate_x16(in uvec3 chunk_i) {
         x16_i.y * 4,
         x16_i.z * 4
     );
-
-#ifdef X4_444_PACKING
-
-    uint x4_array_index0 = x4_uint_array_index(x16_i_4);
-
-    bool at_least_one_occluding = (local_copy_x4[x4_array_index0] |
-                              local_copy_x4[x4_array_index0 + 1]) != 0;
-#else
     bool at_least_one_occluding = false;
-    for (int x = 0; x < 4; x++) {
-        for (int y = 0; y < 4; y++) {
-            for (int z = 0; z < 4; z++) {
-                uvec3 x4_i = x16_i_4 + uvec3(x, y, z);
-                uint index = x4_uint_array_index(x4_i);
-                uint mask = x4_uint_bit_mask(x4_i);
+#ifdef X16_GENERATION_USE_X8_LOCAL_COPY
+    for (int x = 0; x < 2; x++) {
+        for (int y = 0; y < 2; y++) {
+            for (int z = 0; z < 2; z++) {
+                uvec3 x8_i = x16_i * 2 + uvec3(x, y, z);
+                uint index = x8_uint_array_index(x8_i);
+                uint mask = x8_uint_bit_mask(x8_i);
                 at_least_one_occluding =
-                    at_least_one_occluding || (local_copy_x4[index] & mask) != 0;
+                    at_least_one_occluding || (local_copy_x8[index] & mask) != 0;
             }
         }
     }
+#else
+    #ifdef X4_444_PACKING
+
+        uint x4_array_index0 = x4_uint_array_index(x16_i_4);
+
+        at_least_one_occluding = (local_copy_x4[x4_array_index0] |
+                                local_copy_x4[x4_array_index0 + 1]) != 0;
+    #else
+        for (int x = 0; x < 4; x++) {
+            for (int y = 0; y < 4; y++) {
+                for (int z = 0; z < 4; z++) {
+                    uvec3 x4_i = x16_i_4 + uvec3(x, y, z);
+                    uint index = x4_uint_array_index(x4_i);
+                    uint mask = x4_uint_bit_mask(x4_i);
+                    at_least_one_occluding =
+                        at_least_one_occluding || (local_copy_x4[index] & mask) != 0;
+                }
+            }
+        }
+    #endif
 #endif
     uint result = 0;
     if (at_least_one_occluding) {
@@ -173,11 +218,19 @@ void main() {
 
     generate_x4(chunk_i);
     memoryBarrierShared();
-    
+
+    // as only 512 threads are needed for x8,
+    // all other threads will be terminated so that the SM
+    // can execute other warps in the meantime
+    if (gl_GlobalInvocationID.x >= 512) {
+        return;
+    }
+    generate_x8(chunk_i);
+    memoryBarrierShared();
+
     // As the x16 and higher only need 64 threads, 
-    // all subgroups are ended except for two
-    // two workgroups are made up of 32 threads each so 64 total
-    if (gl_SubgroupID > 1) {
+    // all threads with an id higher than 63 are terminated
+    if (gl_GlobalInvocationID.x >= 64) {
         return;
     }
     generate_x16(chunk_i);

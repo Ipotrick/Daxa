@@ -106,6 +106,22 @@ uvec3 linear_index_to_x4_packed_index(uint linear) {
     return x4_i;
 }
 
+uint x8_uint_bit_mask(uvec3 x8_i) {
+    return 1 << (x8_i.x + (x8_i.y & 0x3) * 8);
+}
+
+uint x8_uint_array_index(uvec3 x8_i) {
+    return ((x8_i.y & 0x4) >> 2) + x8_i.z * 2;
+}
+
+uvec3 linear_index_to_x8_packed_index(uint linear) {
+    return uvec3(
+        linear & 0x7,
+        (linear >> 3) & 0x7,
+        (linear >> 6) & 0x7
+    );
+}
+
 uint x16_uint_bit_mask(uvec3 x16_i) {
     return 1 << (x16_i.x + 4 * x16_i.y + 16 * (x16_i.z & 0x1));
 }
@@ -126,6 +142,16 @@ bool load_block_presence_4x(vec3 pos) {
     uint access_mask = x4_uint_bit_mask(x4_pos);
     uint uint_array_index = x4_uint_array_index(x4_pos);
     return (chunk_block_presence(chunk_i).x4[uint_array_index] & access_mask) != 0;
+}
+
+bool load_block_presence_8x(vec3 pos) {
+    ivec3 chunk_i = ivec3(pos / CHUNK_SIZE);
+
+    ivec3 in_chunk_p = ivec3(pos) - chunk_i * ivec3(CHUNK_SIZE);
+    ivec3 x8_pos = in_chunk_p / 8;
+    uint access_mask = x8_uint_bit_mask(x8_pos);
+    uint uint_array_index = x8_uint_array_index(x8_pos);
+    return (chunk_block_presence(chunk_i).x8[uint_array_index] & access_mask) != 0;
 }
 
 bool load_block_presence_16x(vec3 pos) {
