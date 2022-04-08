@@ -86,6 +86,78 @@ namespace daxa {
 		return ResultErr{ err.c_str() };
 	}
 
+	Result<std::vector<u32>> PipelineCompiler::tryGenSPIRVFromDxc(std::string const& src, VkShaderStageFlagBits shaderStage, char const* sourceFileName) {
+		std::vector<LPCWSTR> args;
+
+		// setting target
+		args.push_back(L"-spirv");
+		args.push_back(L"-fspv-target-env=vulkan1.1");
+
+		// set optimization setting
+		args.push_back(L"-O3");
+
+		// setting entry point
+		args.push_back(L"-E");
+		args.push_back(L"main");
+		
+		// set shader model
+		args.push_back(L"-T");
+		std::wstring profile;
+		switch (shaderStage) {
+			case VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT: profile = L"vs_6_0"; break;
+			case VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT: profile = L"ps_6_0"; break;
+			case VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT: profile = L"cs_6_0"; break;
+			default: return daxa::ResultErr{ .message = "tried to compile with dxc and an unsupported shader stage" };
+		}
+		args.push_back(profile.data());
+
+		// set hlsl version to 2021
+		args.push_back(L"-HV");
+		args.push_back(L"2021");
+
+
+		for (auto const& includePath : this->sharedData->rootPaths) {
+			args.push_back(L"-I");
+			std::wstring wstr(includePath);
+			args.push_back(wstr.data());
+		}
+
+		DxcBuffer srcBuffer{
+			.Encoding = static_cast<u32>(0),
+			.Ptr = src.c_str(),
+			.Size = static_cast<u32>(src.size())
+		};
+
+		ComPtr<IDxcResult> result;
+		BACKEND.dxcCompiler->Compile(&srcBuffer, args.data(), static_cast<u32>(args.size()), BACKEND.dxcIncludeHandler.Get(), IID_PPV_ARGS(&result));
+
+		ComPtr<IDxcBlobUtf8> errorMessage;
+		result->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errorMessage), nullptr);
+
+		if (errorMessage && errorMessage->GetStringLength() > 0) {
+			auto str = std::string();
+			str.resize(errorMessage->GetBufferSize());
+			for (size_t i = 0; i < str.size(); i++) {
+				str[i] = static_cast<char const*>(errorMessage->GetBufferPointer())[i];
+			}
+			str = std::string(str.c_str() + 4);	// cut of the first 4 letters
+			str = std::string(sourceFileName) + str;
+			
+			return daxa::ResultErr{.message = str };
+		}
+
+		ComPtr<IDxcBlob> shaderobj;
+		result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderobj), nullptr);
+
+		std::vector<u32> spv;
+		spv.resize(shaderobj->GetBufferSize()/4);
+		for (size_t i = 0; i < spv.size(); i++) {
+			spv[i] = static_cast<u32*>(shaderobj->GetBufferPointer())[i];
+		}
+
+		return {spv};
+	}
+
 	Result<std::vector<u32>> PipelineCompiler::tryGenSPIRVFromShaderc(std::string const& src, VkShaderStageFlagBits shaderStage, ShaderLang lang, char const* sourceFileName) {
 		auto translateShaderStage = [](VkShaderStageFlagBits stage) -> shaderc_shader_kind {
 			switch (stage) {
@@ -244,7 +316,13 @@ namespace daxa {
 			return ResultErr{"no path given"};
 		}
 
-		auto spirv = tryGenSPIRVFromShaderc(sourceCode, ci.stage, ci.shaderLang, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()));
+		daxa::Result<std::vector<u32>> spirv = daxa::ResultErr{};
+		if (ci.shaderLang == ShaderLang::GLSL) {
+			spirv = tryGenSPIRVFromShaderc(sourceCode, ci.stage, ci.shaderLang, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()));
+		} 
+		else {
+			spirv = tryGenSPIRVFromDxc(sourceCode, ci.stage, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()));
+		}
 		if (spirv.isErr()) {
 			return ResultErr{ spirv.message() };
 		}
@@ -382,7 +460,15 @@ namespace daxa {
 		auto includer = std::make_unique<ShadercFileIncluder>();
 		includer->sharedData = sharedData;
 		BACKEND.options.SetIncluder(std::move(includer));
-		auto hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(BACKEND.dxcUtils.ReleaseAndGetAddressOf()));
+		if (!SUCCEEDED(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(BACKEND.dxcUtils.ReleaseAndGetAddressOf())))) {
+			std::cout << "[[DXA ERROR]] could not create DXC Instance" << std::endl;
+		};
+
+		BACKEND.dxcUtils->CreateDefaultIncludeHandler(BACKEND.dxcIncludeHandler.ReleaseAndGetAddressOf());
+
+		if (!SUCCEEDED(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&BACKEND.dxcCompiler)))) {
+			std::cout << "[[DXA ERROR]] could not create DXC Compiler" << std::endl;
+		}
 	}
 
     bool PipelineCompiler::checkIfSourcesChanged(PipelineHandle& pipeline) {
