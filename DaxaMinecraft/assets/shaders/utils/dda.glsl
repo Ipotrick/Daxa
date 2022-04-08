@@ -186,9 +186,26 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
         if (run_state.hit)
             break;
 #if VISUALIZE_SUBGRID == 0
-#if ENABLE_X16
+
+#if ENABLE_X64
         x1_steps++;
-        // ivec3 prev_tile_i_x16 = run_state.tile_i_x16;
+        run_dda_step(run_state.to_side_dist_x64, run_state.tile_i_x64, run_state.side, dda_start, 64);
+        if (load_block_presence_64x(run_state.tile_i_x64)) {
+            RayIntersection x64_intersection;
+            x64_intersection.nrm = vec3(dda_start.ray_step * 1);
+            switch (run_state.side) {
+            case 0: x64_intersection.dist = run_state.to_side_dist_x64.x - dda_start.delta_dist.x * 64; break;
+            case 1: x64_intersection.dist = run_state.to_side_dist_x64.y - dda_start.delta_dist.y * 64; break;
+            case 2: x64_intersection.dist = run_state.to_side_dist_x64.z - dda_start.delta_dist.z * 64; break;
+            }
+            run_state.tile_i_x16 = ivec3(get_intersection_pos_corrected(ray, x64_intersection));
+            run_state.tile_i_x16 = (run_state.tile_i_x16 / 16) * 16;
+            run_state.to_side_dist_x16 = abs(vec3(ivec3(ray.o / 16) - run_state.tile_i_x16 / 16)) * dda_start.delta_dist * 16 + dda_start.initial_to_side_dist_x16;
+            for (uint i = 0; i < 12; ++i) {
+#endif
+
+#if ENABLE_X16 || ENABLE_X64
+        x1_steps++;
         run_dda_step(run_state.to_side_dist_x16, run_state.tile_i_x16, run_state.side, dda_start, 16);
         if (load_block_presence_16x(run_state.tile_i_x16)) {
             RayIntersection x16_intersection;
@@ -203,19 +220,21 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
             run_state.to_side_dist_x4 = abs(vec3(ivec3(ray.o / 4) - run_state.tile_i_x4 / 4)) * dda_start.delta_dist * 4 + dda_start.initial_to_side_dist_x4;
             for (uint i = 0; i < 12; ++i) {
 #endif
-                x1_steps++;
-                run_dda_step(run_state.to_side_dist_x4, run_state.tile_i_x4, run_state.side, dda_start, 4);
-                if (load_block_presence_4x(run_state.tile_i_x4)) {
-                    RayIntersection x4_intersection;
-                    x4_intersection.nrm = vec3(dda_start.ray_step * 1);
-                    switch (run_state.side) {
-                    case 0: x4_intersection.dist = run_state.to_side_dist_x4.x - dda_start.delta_dist.x * 4; break;
-                    case 1: x4_intersection.dist = run_state.to_side_dist_x4.y - dda_start.delta_dist.y * 4; break;
-                    case 2: x4_intersection.dist = run_state.to_side_dist_x4.z - dda_start.delta_dist.z * 4; break;
-                    }
-                    run_state.tile_i = ivec3(get_intersection_pos_corrected(ray, x4_intersection));
-                    run_state.to_side_dist = abs(vec3(ivec3(ray.o) - run_state.tile_i)) * dda_start.delta_dist + dda_start.initial_to_side_dist;
-                    for (uint j = 0; j < 12; ++j) {
+        x1_steps++;
+        run_dda_step(run_state.to_side_dist_x4, run_state.tile_i_x4, run_state.side, dda_start, 4);
+        if (load_block_presence_4x(run_state.tile_i_x4)) {
+            RayIntersection x4_intersection;
+            x4_intersection.nrm = vec3(dda_start.ray_step * 1);
+            switch (run_state.side) {
+            case 0: x4_intersection.dist = run_state.to_side_dist_x4.x - dda_start.delta_dist.x * 4; break;
+            case 1: x4_intersection.dist = run_state.to_side_dist_x4.y - dda_start.delta_dist.y * 4; break;
+            case 2: x4_intersection.dist = run_state.to_side_dist_x4.z - dda_start.delta_dist.z * 4; break;
+            }
+            run_state.tile_i = ivec3(get_intersection_pos_corrected(ray, x4_intersection));
+            run_state.tile_i = (run_state.tile_i / 1) * 1;
+            run_state.to_side_dist = abs(vec3(ivec3(ray.o) - run_state.tile_i)) * dda_start.delta_dist + dda_start.initial_to_side_dist;
+            for (uint j = 0; j < 12; ++j) {
+
                         uint tile = load_tile(run_state.tile_i);
                         if (is_block_occluding(get_block_id(tile))) {
                             run_state.hit = true;
@@ -237,10 +256,19 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
                     run_state.outside_bounds = true;
                     break;
                 }
-#if ENABLE_X16
+#if ENABLE_X16 || ENABLE_X64
             }
         }
         if (!point_box_contains(run_state.tile_i_x16, b_min, b_max)) {
+            run_state.outside_bounds = true;
+            break;
+        }
+#endif
+
+#if ENABLE_X64
+            }
+        }
+        if (!point_box_contains(run_state.tile_i_x64, b_min, b_max)) {
             run_state.outside_bounds = true;
             break;
         }

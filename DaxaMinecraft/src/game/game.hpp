@@ -33,7 +33,7 @@ struct Game {
     bool paused = true;
     bool perf_menu = true;
 
-    std::array<float, 400> frametimes = {};
+    std::array<float, 40> frametimes = {};
     u64 frametime_rotation_index = 0;
     std::string fmt_str;
 
@@ -81,7 +81,7 @@ struct Game {
 
                 fmt_str.clear();
                 fmt::format_to(std::back_inserter(fmt_str), "avg {:.2f} ms ({:.2f} fps)", average * 1000, 1.0f / average);
-                ImGui::PlotLines("", frametimes.data(), static_cast<int>(frametimes.size()), static_cast<int>(frametime_rotation_index), fmt_str.c_str(), 0, 0.02f, ImVec2(0, 120.0f));
+                ImGui::PlotLines("", frametimes.data(), static_cast<int>(frametimes.size()), static_cast<int>(frametime_rotation_index), fmt_str.c_str(), 0, 0.05f, ImVec2(0, 120.0f));
 
                 fmt_str.clear();
                 fmt::format_to(std::back_inserter(fmt_str), "{:.2f} {:.2f} {:.2f}", player.pos.x, player.pos.y, player.pos.z);
