@@ -78,8 +78,8 @@ public:
 		this->pipeline = pipelineCompiler->createComputePipeline({ 
 			.shaderCI = {
 				.source = computeShaderHLSL,
-				.stage = VK_SHADER_STAGE_COMPUTE_BIT,
 				.shaderLang = daxa::ShaderLang::HLSL,
+				.stage = VK_SHADER_STAGE_COMPUTE_BIT,
 			} 
 		}).value();
 
