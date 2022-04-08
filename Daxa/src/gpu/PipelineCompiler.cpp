@@ -371,6 +371,61 @@ namespace daxa {
 		return { ShaderModuleHandle{ shadMod } };
 	}
 
+	class DxcFileIncluder : public IDxcIncludeHandler {
+	public:
+		std::shared_ptr<PipelineCompilerShadedData> sharedData = {};
+		ComPtr<IDxcUtils> pUtils;
+		ComPtr<IDxcIncludeHandler> pDefaultIncludeHandler;
+		HRESULT LoadSource(LPCWSTR pFilename, IDxcBlob** ppIncludeSource) override
+		{
+			auto result = sharedData->findFullPathOfFile(pFilename);
+			if (result.isErr()) {
+				*ppIncludeSource = nullptr;
+				//return SCARD_E_FILE_NOT_FOUND;
+			}
+			auto fullPath = result.value();
+			auto searchPred = [&](std::filesystem::path const& p){ return p == fullPath; };
+
+			ComPtr<IDxcBlobEncoding> pEncoding;
+			if (std::find_if(sharedData->currentShaderSeenFiles.begin(), sharedData->currentShaderSeenFiles.end(), searchPred) != sharedData->currentShaderSeenFiles.end()) {
+				// Return empty string blob if this file has been included before
+				static const char nullStr[] = " ";
+				pUtils->CreateBlob(nullStr, ARRAYSIZE(nullStr), CP_UTF8, pEncoding.GetAddressOf());
+				*ppIncludeSource = pEncoding.Detach();
+				return S_OK;
+			}
+			else {
+				sharedData->observedHotLoadFiles->insert({ fullPath, std::chrono::file_clock::now() });
+			}
+
+			std::ifstream ifs{fullPath};
+			std::string str;
+			ifs.seekg(0, std::ios::end);   
+			str.reserve(ifs.tellg());
+			ifs.seekg(0, std::ios::beg);
+			str.assign(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
+			
+			auto hr = pUtils->CreateBlob(str.data(), static_cast<u32>(str.size()), CP_UTF8, pEncoding.GetAddressOf());
+
+			if (SUCCEEDED(hr)) {
+				*ppIncludeSource = pEncoding.Detach();
+			}
+			else {
+				*ppIncludeSource = nullptr;
+			}
+			return hr;
+		}
+
+		HRESULT QueryInterface(REFIID riid, void * * ppvObject) override
+		{
+			return pDefaultIncludeHandler->QueryInterface(riid, ppvObject);
+		}
+
+		ULONG STDMETHODCALLTYPE AddRef(void) override {	return 0; }
+		ULONG STDMETHODCALLTYPE Release(void) override { return 0; }
+
+	};
+
 	class ShadercFileIncluder : public shaderc::CompileOptions::IncluderInterface {
 	public:
 		constexpr static inline size_t DELETE_SOURCE_NAME = 0x1;
@@ -395,13 +450,10 @@ namespace daxa {
 
 					if (std::find_if(sharedData->currentShaderSeenFiles.begin(), sharedData->currentShaderSeenFiles.end(), searchPred) == sharedData->currentShaderSeenFiles.end()) {
 						std::ifstream ifs{requested_source_path};
-						
 						std::string str;
-
 						ifs.seekg(0, std::ios::end);   
 						str.reserve(ifs.tellg());
 						ifs.seekg(0, std::ios::beg);
-
 						str.assign(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
 
 						res->user_data = reinterpret_cast<void*>(reinterpret_cast<size_t>(res->user_data) | DELETE_CONTENT);
@@ -482,6 +534,10 @@ namespace daxa {
 		if (!SUCCEEDED(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&BACKEND.dxcCompiler)))) {
 			std::cout << "[[DXA ERROR]] could not create DXC Compiler" << std::endl;
 		}
+
+		auto dxcIncluder = std::make_unique<DxcFileIncluder>();
+		dxcIncluder->sharedData = sharedData;
+		dxcIncluder->pUtils = BACKEND.dxcUtils;
 	}
 
     bool PipelineCompiler::checkIfSourcesChanged(PipelineHandle& pipeline) {
