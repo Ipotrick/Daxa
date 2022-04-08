@@ -47,6 +47,30 @@ uint load_sdf_dist(vec3 p) { return get_sdf_dist(load_tile(p)); }
 
 // #define X4_444_PACKING
 
+uint x2_uint_bit_mask(uvec3 x2_i) {
+    return 1 << x2_i.x;
+}
+
+uint x2_uint_array_index(uvec3 x2_i) {
+    return x2_i.y + x2_i.z * 32;
+}
+
+uvec3 linear_index_to_x2_packed_index(uint linear) {
+    uvec3 x2_i = uvec3(0);
+    x2_i.x = (linear & 0x1F);
+    x2_i.y = ((linear >> 5) & 0x1F);
+    x2_i.z = ((linear >> 10) & 0x1F);
+    return x2_i;
+}
+
+uint x4_uint_bit_mask(uvec3 x4_i) {
+#ifdef X4_444_PACKING
+    return 1 << ((x4_i.x & 0x3) + 4 * (x4_i.y & 0x3) + 16 * (x4_i.z & 0x1));
+#else 
+    return 1 << ((x4_i.x) + 16 * (x4_i.y & 0x1));
+#endif
+}
+
 ///
 /// first 2 x bits are for masking, 4x4x2 area (one uint)
 /// last 2 x bits are for array indexing
@@ -56,14 +80,6 @@ uint load_sdf_dist(vec3 p) { return get_sdf_dist(load_tile(p)); }
 /// second z bit is the first indexer into the array
 /// last 2 z bits are for array indexing
 ///
-
-uint x4_uint_bit_mask(uvec3 x4_i) {
-#ifdef X4_444_PACKING
-    return 1 << ((x4_i.x & 0x3) + 4 * (x4_i.y & 0x3) + 16 * (x4_i.z & 0x1));
-#else 
-    return 1 << ((x4_i.x) + 16 * (x4_i.y & 0x1));
-#endif
-}
 
 uint x4_uint_array_index(uvec3 x4_i) {
 #ifdef X4_444_PACKING
