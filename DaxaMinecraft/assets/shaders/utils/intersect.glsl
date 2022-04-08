@@ -236,10 +236,18 @@ RayIntersection trace_chunks(in Ray ray) {
         }
 #if VISUALIZE_SUBGRID == 1
         if (is_block_occluding(load_block_id(sample_pos))) {
+#elif VISUALIZE_SUBGRID == 2
+        if (load_block_presence_2x(sample_pos)) {
 #elif VISUALIZE_SUBGRID == 4
         if (load_block_presence_4x(sample_pos)) {
+#elif VISUALIZE_SUBGRID == 8
+        if (load_block_presence_8x(sample_pos)) {
 #elif VISUALIZE_SUBGRID == 16
         if (load_block_presence_16x(sample_pos)) {
+#elif VISUALIZE_SUBGRID == 32
+        if (load_block_presence_32x(sample_pos)) {
+#elif VISUALIZE_SUBGRID == 64
+        if (load_block_presence_64x(sample_pos)) {
 #else
         if (is_block_occluding(load_block_id(sample_pos))) {
 #endif

@@ -198,7 +198,6 @@ uint gen_block(in vec3 b_pos) {
 
     biome_pass0(worldgen_state, b_pos);
     block_pass0(worldgen_state, b_pos);
-
     SurroundingInfo surroundings = get_surrounding(worldgen_state, b_pos);
     block_pass1(worldgen_state, b_pos, surroundings);
 
