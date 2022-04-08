@@ -16,9 +16,7 @@ shared uint local_copy_x16[2];
 
 #define X4_GENERATION_USE_X2_LOCAL_COPY
 
-void main() {
-    uvec3 chunk_i = uvec3(p.pos) / CHUNK_SIZE;
-
+void generate_x2(in uvec3 chunk_i) {
     for (int n = 0; n < 32; n++) {
         uvec3 x2_i = linear_index_to_x2_packed_index(gl_GlobalInvocationID.x + 1024 * n);
         uvec3 world_i = uvec3(p.pos) + x2_i * 2;
@@ -45,9 +43,9 @@ void main() {
             local_copy_x2[index] = subgroup32_result_packed;
         }
     }
+}
 
-    memoryBarrierShared();
-
+void generate_x4(in uvec3 chunk_i) {
     for (int n = 0; n < 4; n++) {
         uint virtual_invocation = gl_GlobalInvocationID.x + n * 1024;
         uvec3 x4_i = linear_index_to_x4_packed_index(virtual_invocation);
@@ -89,15 +87,9 @@ void main() {
             local_copy_x4[block_array_index] = subgroup32_result_packed;
         }
     }
+}
 
-    memoryBarrierShared();
-    // end all warps in the workgroup after they completed their work
-    // keep two warps alive to write the x16 occlusion data
-    // keep two warps, so 64 = 4*4*4 threads alive
-    if (gl_SubgroupID > 1) {
-        return;
-    }
-
+void generate_x16(in uvec3 chunk_i) {
     uvec3 x16_i = uvec3(
         gl_GlobalInvocationID.x & 0x3,
         (gl_GlobalInvocationID.x >> 2) & 0x3,
@@ -141,14 +133,9 @@ void main() {
         chunk_block_presence(chunk_i).x16[uint_index_x16] = subgroup32_result_packed;
         local_copy_x16[uint_index_x16] = subgroup32_result_packed;
     }
+}
 
-    // x32:
-    memoryBarrierShared();
-    // end all warps/threads except one that does the x32
-    if (gl_GlobalInvocationID.x >= 8) {
-        return;
-    }
-
+void generate_x32(in uvec3 chunk_i) {
     uvec3 x32_i = uvec3(
         gl_GlobalInvocationID.x & 0x1,
         (gl_GlobalInvocationID.x >> 1) & 0x1,
@@ -156,13 +143,13 @@ void main() {
     );
 
     uvec3 x32_i_2 = uvec3(
-        x16_i.x * 2,
-        x16_i.y * 2,
-        x16_i.z * 2
+        x32_i.x * 2,
+        x32_i.y * 2,
+        x32_i.z * 2
     );
     uint x32_index = x32_uint_array_index(x32_i);
 
-    at_least_one_occluding = false;
+    bool at_least_one_occluding = false;
     for (int x = 0; x < 2; x++) {
         for (int y = 0; y < 2; y++) {
             for (int z = 0; z < 2; z++) {
@@ -176,4 +163,30 @@ void main() {
     }
 
     chunk_block_presence(chunk_i).x32[x32_index] = at_least_one_occluding;
+}
+
+void main() {
+    uvec3 chunk_i = uvec3(p.pos) / CHUNK_SIZE;
+
+    generate_x2(chunk_i);
+    memoryBarrierShared();
+
+    generate_x4(chunk_i);
+    memoryBarrierShared();
+    
+    // As the x16 and higher only need 64 threads, 
+    // all subgroups are ended except for two
+    // two workgroups are made up of 32 threads each so 64 total
+    if (gl_SubgroupID > 1) {
+        return;
+    }
+    generate_x16(chunk_i);
+    memoryBarrierShared();
+    
+    // end all threads except for 8, 
+    // as x32 only requires 8 threads
+    if (gl_GlobalInvocationID.x >= 8) {
+        return;
+    }
+    generate_x32(chunk_i);
 }
