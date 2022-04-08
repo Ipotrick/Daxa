@@ -12,6 +12,7 @@ find_library(SHADERC_SPIRV_TOOLS_SHARED_LIB "SPIRV-Tools-shared.lib")
 find_path(SHADERC_INCLUDE_DIRS "shaderc/shaderc.h")
 
 find_package(glslang CONFIG REQUIRED)
+find_package(dxc CONFIG REQUIRED)
 find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(glm CONFIG REQUIRED)
@@ -25,6 +26,7 @@ target_link_libraries(Daxa PUBLIC
 	unofficial::vulkan-memory-allocator::vulkan-memory-allocator
 	Vulkan::Vulkan
 	glm::glm
+    dxc::dxc
 	imgui::imgui
 	glfw
 	${SHADERC_LIBRARY_DIRS}
