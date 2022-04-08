@@ -540,6 +540,10 @@ namespace daxa {
     }
 
     Result<Path> PipelineCompilerShadedData::findFullPathOfFile(Path const& file) {
+		std::ifstream ifs{file};
+		if (ifs.good()) {
+			return { file };
+		}
         Path potentialPath;
         for (auto& root : this->rootPaths) {
             potentialPath.clear();

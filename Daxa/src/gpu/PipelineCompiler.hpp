@@ -6,7 +6,7 @@
 namespace daxa {
     struct PipelineCompilerShadedData {
         Result<std::filesystem::path> findFullPathOfFile(std::filesystem::path const& file);
-        std::vector<std::filesystem::path> rootPaths = { };
+        std::vector<std::filesystem::path> rootPaths = { "./" };
         // stores all seen files in the shader that is currently compiled.
         std::vector<std::filesystem::path> currentShaderSeenFiles = {};
         // stored all include file names of all shaders and the shader source code path itself.
