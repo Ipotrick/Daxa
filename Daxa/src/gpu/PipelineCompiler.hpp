@@ -6,7 +6,7 @@
 namespace daxa {
     struct PipelineCompilerShadedData {
         Result<std::filesystem::path> findFullPathOfFile(std::filesystem::path const& file);
-        std::vector<std::filesystem::path> rootPaths = { "./" };
+        std::vector<std::filesystem::path> rootPaths = { };
         // stores all seen files in the shader that is currently compiled.
         std::vector<std::filesystem::path> currentShaderSeenFiles = {};
         // stored all include file names of all shaders and the shader source code path itself.
@@ -24,7 +24,7 @@ namespace daxa {
     private:
         Result<ShaderModuleHandle> tryCreateShaderModule(ShaderModuleCreateInfo const& ci);
 		Result<std::vector<u32>> tryGenSPIRVFromShaderc(std::string const& src, VkShaderStageFlagBits shaderStage, ShaderLang lang, char const* sourceFileName = "[[inline source]]");
-        Result<std::vector<u32>> tryGenSPIRVFromDxc(std::string const& src, VkShaderStageFlagBits shaderStage, char const* sourceFileName = "[[inline source]]");
+        Result<std::vector<u32>> tryGenSPIRVFromDxc(std::string const& src, VkShaderStageFlagBits shaderStage, char const* entryPoint, char const* sourceFileName = "[[inline source]]");
         Result<std::string> tryLoadShaderSourceFromFile(std::filesystem::path const& path);
         daxa::Result<PipelineHandle> build(GraphicsPipelineBuilder const& builder);
 
