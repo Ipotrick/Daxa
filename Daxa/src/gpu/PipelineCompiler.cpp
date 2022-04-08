@@ -86,8 +86,11 @@ namespace daxa {
 		return ResultErr{ err.c_str() };
 	}
 
-	Result<std::vector<u32>> PipelineCompiler::tryGenSPIRVFromDxc(std::string const& src, VkShaderStageFlagBits shaderStage, char const* sourceFileName) {
+	Result<std::vector<u32>> PipelineCompiler::tryGenSPIRVFromDxc(std::string const& src, VkShaderStageFlagBits shaderStage, char const* entryPoint, char const* sourceFileName) {
 		std::vector<LPCWSTR> args;
+
+		// set matrix packing to column major
+		args.push_back(L"-Zpc");
 
 		// setting target
 		args.push_back(L"-spirv");
@@ -98,7 +101,8 @@ namespace daxa {
 
 		// setting entry point
 		args.push_back(L"-E");
-		args.push_back(L"main");
+		std::wstring entryAsWideString = std::wstring(std::filesystem::path(entryPoint));
+		args.push_back(entryAsWideString.data());
 		
 		// set shader model
 		args.push_back(L"-T");
@@ -321,7 +325,7 @@ namespace daxa {
 			spirv = tryGenSPIRVFromShaderc(sourceCode, ci.stage, ci.shaderLang, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()));
 		} 
 		else {
-			spirv = tryGenSPIRVFromDxc(sourceCode, ci.stage, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()));
+			spirv = tryGenSPIRVFromDxc(sourceCode, ci.stage, ci.entryPoint, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()));
 		}
 		if (spirv.isErr()) {
 			return ResultErr{ spirv.message() };
@@ -408,6 +412,15 @@ namespace daxa {
 						res->content_length = str.size();
 						res->content = data;
 
+						std::string requestedSourcePathAsString = requested_source_path.string();
+
+						char* includerPath = new char[requestedSourcePathAsString.size()+1];
+						for (size_t i = 0; i < requestedSourcePathAsString.size()+1; i++) {
+							includerPath[i] = requestedSourcePathAsString[i];
+						}
+
+						res->source_name = const_cast<const char*>(includerPath);
+						res->user_data = reinterpret_cast<void*>(reinterpret_cast<size_t>(res->user_data) | DELETE_SOURCE_NAME);;
 						sharedData->currentShaderSeenFiles.push_back(requested_source);
 						sharedData->observedHotLoadFiles->insert({requested_source_path,std::filesystem::last_write_time(requested_source_path)});
 					} else {
