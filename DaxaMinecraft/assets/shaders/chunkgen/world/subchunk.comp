@@ -14,6 +14,8 @@ shared uint local_copy_x4[128];
 shared uint local_copy_x8[16];
 shared uint local_copy_x16[2];
 
+// 2 4
+
 #define X4_GENERATION_USE_X2_LOCAL_COPY
 
 #define X16_GENERATION_USE_X8_LOCAL_COPY
