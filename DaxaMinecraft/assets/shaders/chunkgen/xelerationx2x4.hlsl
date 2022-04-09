@@ -107,6 +107,14 @@ uint x2_uint_array_index(uint3 x2_i) {
     return x2_i.x + x2_i.y * 32;
 }
 
+uint x4_uint_bit_mask(uint3 x4_i) {
+    return 1u << ((x4_i.z & 0xF) + 16 * (x4_i.x & 0x1));
+}
+
+uint x4_uint_array_index(uint3 x4_i) {
+    return (x4_i.x >> 1 /* / 2 */) + x4_i.y * 8 /* 16 / 2 */;
+}
+
 enum INTEGER_CONSTANTS {
     CHUNK_SIZE = 64,
     BLOCK_NX = 1024,
@@ -150,6 +158,11 @@ struct Push {
 
 groupshared uint local_x2_copy[4][4];
 
+/*
+    x: in workgroup index
+    y: in chunk index
+    z: chunk index
+*/
 [numthreads(512,1,1)]
 void main(
     uint3 group_local_ID : SV_GroupThreadID,
@@ -186,5 +199,26 @@ void main(
 
     if (group_local_ID.x >= 64) {
         return;
+    }
+
+    uint3 x4_i = uint3(
+        (group_local_ID.x >> 4) & 0x1, 
+        (group_local_ID.x >> 5) & 0x1, 
+        group_local_ID.x & 0xF
+    );
+    x2_i = x4_i * 2;
+
+    at_least_one_occluding = false;
+    for (int x = 0; x < 2; ++x) 
+    for (int y = 0; y < 2; ++y) 
+    for (int z = 0; z < 2; ++z) {
+        int3 local_i = x2_i + int3(x,y,z);
+        uint mask = x2_uint_bit_mask(local_i);
+        //int2 local_x2_copy_index = int3(
+        //    //local_i & 0x
+        //);
+
+
+        at_least_one_occluding = at_least_one_occluding || is_block_occluding((BlockID)chunk[local_i]);
     }
 }
