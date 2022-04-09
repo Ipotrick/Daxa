@@ -1,86 +1,82 @@
-#version 450
-#extension GL_KHR_vulkan_glsl : enable
 
-layout(local_size_x = 8, local_size_y = 8) in;
-
-#include <drawing/common.glsl>
-#include <utils/intersect.glsl>
-#include <utils/noise.glsl>
+#include "drawing/common.glsl"
+#include "utils/intersect.glsl"
+#include "utils/noise.glsl"
 
 Ray sun_ray;
-const vec3 sun_col = vec3(2, 1.7, 1) * 1;
+#define sun_col float3(2, 1.7, 1)
 
-vec3 sample_sky(vec3 nrm) {
+float3 sample_sky(float3 nrm) {
     float sun_val = clamp((dot(nrm, sun_ray.nrm) - 0.9999) * 10000, 0, 1);
-    float sky_val = (dot(nrm, vec3(0, 1, 0))) / 2 + clamp((dot(nrm, sun_ray.nrm) + 1) * 0.1, 0, 1);
-    return sun_col * sun_val + mix(vec3(0.5, 0.6, 2), vec3(0.1, 0.2, 0.5), sky_val);
+    float sky_val = (dot(nrm, float3(0, 1, 0))) / 2 + clamp((dot(nrm, sun_ray.nrm) + 1) * 0.1, 0, 1);
+    return sun_col * sun_val + lerp(float3(0.5, 0.6, 2), float3(0.1, 0.2, 0.5), sky_val);
 }
 
-void draw_rect(inout vec3 color, int px, int py, int sx, int sy) {
+void draw_rect(inout float3 color, int px, int py, int sx, int sy) {
     if (gl_GlobalInvocationID.x >= px &&
         gl_GlobalInvocationID.x < px + sx &&
         gl_GlobalInvocationID.y >= py &&
         gl_GlobalInvocationID.y < py + sy)
-        color = vec3(1);
+        color = float3(1);
 }
 
-void draw(inout vec3 color, inout float depth, in vec3 new_color, in float new_depth, bool should) {
+void draw(inout float3 color, inout float depth, in float3 new_color, in float new_depth, bool should) {
     if (should && new_depth < depth) {
         color = new_color;
         depth = new_depth;
     }
 }
 
-vec3 shaded(in vec3 col, in vec3 nrm) {
-    vec3 light = sun_col * max(dot(nrm, sun_ray.nrm) + 1, 0) + sample_sky(nrm) * 0.2;
+float3 shaded(in float3 col, in float3 nrm) {
+    float3 light = sun_col * max(dot(nrm, sun_ray.nrm) + 1, 0) + sample_sky(nrm) * 0.2;
     return col * light;
 }
 
-void overlay(inout vec3 color, inout float depth, in vec3 new_color, in float new_depth, bool should, float fac) {
+void overlay(inout float3 color, inout float depth, in float3 new_color, in float new_depth, bool should, float fac) {
     if (should) {
         color = color * (1 - fac) + new_color * fac;
     }
 }
 
-void main() {
+[numthreads(8, 8, 1)] void main() {
     if (gl_GlobalInvocationID.x >= globals.frame_dim.x ||
         gl_GlobalInvocationID.y >= globals.frame_dim.y)
         return;
 
-    vec3 front = (globals.viewproj_mat * vec4(0, 0, 1, 0)).xyz;
-    vec3 right = (globals.viewproj_mat * vec4(1, 0, 0, 0)).xyz;
-    vec3 up = (globals.viewproj_mat * vec4(0, 1, 0, 0)).xyz;
+    float3 front = (globals.viewproj_mat * float4(0, 0, 1, 0)).xyz;
+    float3 right = (globals.viewproj_mat * float4(1, 0, 0, 0)).xyz;
+    float3 up = (globals.viewproj_mat * float4(0, 1, 0, 0)).xyz;
 
-    vec3 view_intersection_pos = globals.pick_pos.xyz;
+    float3 view_intersection_pos = globals.pick_pos.xyz;
     Ray cam_ray;
     cam_ray.o = globals.pos.xyz;
 
     float sun_angle = 0.3;
     float sun_yz = -abs(cos(sun_angle)) * 2;
-    sun_ray.nrm = normalize(vec3(sin(sun_angle) * 3, sun_yz, -0.2 * sun_yz));
+    sun_ray.nrm = normalize(float3(sin(sun_angle) * 3, sun_yz, -0.2 * sun_yz));
     sun_ray.inv_nrm = 1 / sun_ray.nrm;
 
-    const vec2 subsamples = vec2(SUBSAMPLE_N);
-    const vec2 inv_subsamples = 1 / subsamples;
-    vec2 inv_frame_dim = 1 / vec2(globals.frame_dim);
+    const float2 subsamples = float2(SUBSAMPLE_N);
+    const float2 inv_subsamples = 1 / subsamples;
+    float2 inv_frame_dim = 1 / float2(globals.frame_dim);
     float aspect = float(globals.frame_dim.x) * inv_frame_dim.y;
-    ivec2 i_uv = ivec2(gl_GlobalInvocationID.xy);
+    int2 i_uv = int2(gl_GlobalInvocationID.xy);
     float uv_rand_offset = globals.time;
-    vec3 color = vec3(0);
+    float3 color = float3(0);
     float depth = 100000;
 
-    vec2 uv_offset =
+    float2 uv_offset =
 #if JITTER_VIEW
-        vec2(rand(vec2(i_uv + uv_rand_offset + 10)),
-             rand(vec2(i_uv + uv_rand_offset)));
+        float2(rand(float2(i_uv + uv_rand_offset + 10)),
+             rand(float2(i_uv + uv_rand_offset)));
 #else
-        vec2(0);
+        float2(0);
 #endif
-    vec2 uv = (vec2(i_uv) + uv_offset * inv_subsamples) * inv_frame_dim * 2 - 1;
+    float2 uv = (float2(i_uv) + uv_offset * inv_subsamples) * inv_frame_dim * 2 - 1;
 
     for (uint yi = 0; yi < subsamples.y; ++yi) {
         for (uint xi = 0; xi < subsamples.x; ++xi) {
-            vec2 view_uv = (uv + inv_frame_dim * vec2(xi, yi) * inv_subsamples) * globals.fov * vec2(aspect, 1);
+            float2 view_uv = (uv + inv_frame_dim * float2(xi, yi) * inv_subsamples) * globals.fov * float2(aspect, 1);
 
             cam_ray.nrm = normalize(front + view_uv.x * right + view_uv.y * up);
             cam_ray.inv_nrm = 1 / cam_ray.nrm;
@@ -89,10 +85,10 @@ void main() {
 #if VISUALIZE_STEP_COMPLEXITY
             color.r += log(float(ray_chunk_intersection.steps) * 1 / MAX_STEPS + 1);
 #else
-            vec3 intersection_pos = get_intersection_pos_corrected(cam_ray, ray_chunk_intersection);
+            float3 intersection_pos = get_intersection_pos_corrected(cam_ray, ray_chunk_intersection);
             uint block_id = load_block_id(intersection_pos);
-            ivec3 intersection_block_pos = ivec3(intersection_pos);
-            ivec3 view_intersection_block_pos = ivec3(view_intersection_pos);
+            int3 intersection_block_pos = int3(intersection_pos);
+            int3 view_intersection_block_pos = int3(view_intersection_pos);
 
             // if (ray_chunk_intersection.hit && block_id == BlockID_Water) {
             //     cam_ray.o = intersection_pos + ray_chunk_intersection.nrm * 0.01;
@@ -105,7 +101,7 @@ void main() {
             // if (ray_chunk_intersection.hit && block_id == BlockID_Air) {
             //     uint tile = load_tile(intersection_pos);
             //     float sdf_value = float((tile & SDF_DIST_MASK) >> 0x18) / 128;
-            //     color += vec3(sdf_value);
+            //     color += float3(sdf_value);
             // } else
             if (ray_chunk_intersection.hit) {
 #if ENABLE_SHADOWS
@@ -113,65 +109,65 @@ void main() {
                 RayIntersection sun_ray_chunk_intersection = trace_chunks(sun_ray);
                 float val = float(!sun_ray_chunk_intersection.hit);
                 val = max(val * dot(ray_chunk_intersection.nrm, sun_ray.nrm), 0.01);
-                vec3 light = val * sun_col + sample_sky(ray_chunk_intersection.nrm) * 0.2;
+                float3 light = val * sun_col + sample_sky(ray_chunk_intersection.nrm) * 0.2;
 #else
-                // vec3 light = sun_col * max(dot(ray_chunk_intersection.nrm, sun_ray.nrm), 0) + sample_sky(ray_chunk_intersection.nrm) * 0.4;
-                vec3 light = vec3(1);
+                // float3 light = sun_col * max(dot(ray_chunk_intersection.nrm, sun_ray.nrm), 0) + sample_sky(ray_chunk_intersection.nrm) * 0.4;
+                float3 light = float3(1);
 #endif
-                vec3 b_uv = vec3(ivec3(intersection_pos) % 16) / 16;
+                float3 b_uv = float3(int3(intersection_pos) % 16) / 16;
                 uint face_id = 0;
-                vec2 tex_uv = vec2(0);
+                float2 tex_uv = float2(0);
                 depth = ray_chunk_intersection.dist;
 
                 if (ray_chunk_intersection.nrm.x > 0.5) {
                     face_id = BlockFace_Left;
-                    tex_uv = fract(intersection_pos.zy);
+                    tex_uv = frac(intersection_pos.zy);
                     tex_uv.y = 1 - tex_uv.y;
                 } else if (ray_chunk_intersection.nrm.x < -0.5) {
                     face_id = BlockFace_Right;
-                    tex_uv = fract(intersection_pos.zy);
+                    tex_uv = frac(intersection_pos.zy);
                     tex_uv = 1 - tex_uv;
                 }
                 if (ray_chunk_intersection.nrm.y > 0.5) {
                     face_id = BlockFace_Bottom;
-                    tex_uv = fract(intersection_pos.xz);
+                    tex_uv = frac(intersection_pos.xz);
                     tex_uv.x = 1 - tex_uv.x;
                 } else if (ray_chunk_intersection.nrm.y < -0.5) {
                     face_id = BlockFace_Top;
-                    tex_uv = fract(intersection_pos.xz);
+                    tex_uv = frac(intersection_pos.xz);
                 }
                 if (ray_chunk_intersection.nrm.z > 0.5) {
                     face_id = BlockFace_Front;
-                    tex_uv = fract(intersection_pos.xy);
+                    tex_uv = frac(intersection_pos.xy);
                     tex_uv = 1 - tex_uv;
                 } else if (ray_chunk_intersection.nrm.z < -0.5) {
                     face_id = BlockFace_Back;
-                    tex_uv = fract(intersection_pos.xy);
+                    tex_uv = frac(intersection_pos.xy);
                     tex_uv.y = 1 - tex_uv.y;
                 }
 
                 uint tex_id = tile_texture_index(block_id, face_id);
 #if ALBEDO == ALBEDO_TEXTURE
-                vec3 albedo = texture(get_texture[globals.texture_index], vec3(tex_uv, tex_id)).rgb;
+                float3 albedo = texture(get_texture[globals.texture_index], float3(tex_uv, tex_id)).rgb;
 #elif ALBEDO == ALBEDO_DEBUG_POS
-                vec3 albedo = b_uv;
+                float3 albedo = b_uv;
 #elif ALBEDO == ALBEDO_DEBUG_NRM
-                vec3 albedo = ray_chunk_intersection.nrm * 0.5 + 0.5;
+                float3 albedo = ray_chunk_intersection.nrm * 0.5 + 0.5;
 #elif ALBEDO == ALBEDO_DEBUG_DIST
-                vec3 albedo = vec3(ray_chunk_intersection.dist / 100);
+                float3 albedo = float3(ray_chunk_intersection.dist / 100);
 #elif ALBEDO == ALBEDO_DEBUG_RANDOM
-                // vec3 albedo = vec3(rand(ivec3(intersection_pos)), rand(ivec3(intersection_pos + 10)), rand(ivec3(intersection_pos + 20)));
-                vec3 albedo = vec3(block_id) / 32;
+                // float3 albedo = float3(rand(int3(intersection_pos)), rand(int3(intersection_pos + 10)), rand(int3(intersection_pos + 20)));
+                float3 albedo = float3(block_id) / 32;
                 // if (block_id == BlockID_Air)
-                //     albedo = vec3(1, 0, 1);
+                //     albedo = float3(1, 0, 1);
 #endif
 #if SHOW_PICK_POS
                 if (length(intersection_block_pos - view_intersection_block_pos) <= 0.5 + 0) {
                     float luminance = (albedo.r * 0.2126 + albedo.g * 0.7152 + albedo.b * 0.0722);
                     const float block_outline = 1.0 / 16;
-                    albedo = vec3(0.2, 0.5, 0.9) * 0.2 + luminance;
+                    albedo = float3(0.2, 0.5, 0.9) * 0.2 + luminance;
                     if (tex_uv.x < block_outline || tex_uv.x > 1 - block_outline || tex_uv.y < block_outline || tex_uv.y > 1 - block_outline)
-                        albedo = vec3(0.1, 0.4, 1.0) * 0.2 + luminance * 2;
+                        albedo = float3(0.1, 0.4, 1.0) * 0.2 + luminance * 2;
                 }
 #endif
                 color += albedo * light;
@@ -190,18 +186,18 @@ void main() {
 
     RayIntersection temp_inter;
 
-    vec3 side_cols[3] = {
-        vec3(1, 0, 0),
-        vec3(0, 1, 0),
-        vec3(0, 0, 1)};
+    float3 side_cols[3] = {
+        float3(1, 0, 0),
+        float3(0, 1, 0),
+        float3(0, 0, 1)};
 
     {
-        vec3 b_min = vec3(0), b_max = CHUNK_SIZE * CHUNK_N;
+        float3 b_min = float3(0), b_max = CHUNK_SIZE * CHUNK_N;
 
         RayIntersection result;
         result.hit = false;
         result.dist = 0;
-        result.nrm = vec3(0);
+        result.nrm = float3(0);
         result.steps = 0;
 
         uint max_steps = globals.single_ray_steps;
@@ -210,21 +206,21 @@ void main() {
         run_state.outside_bounds = false;
         run_state.side = 0;
 
-        ivec3 tile_i = ivec3(ray.o);
+        int3 tile_i = int3(ray.o);
 
-        // temp_inter = ray_wirebox_intersect(cam_ray, vec3(tile_i), vec3(tile_i + 1));
-        // draw(color, depth, shaded(vec3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
+        // temp_inter = ray_wirebox_intersect(cam_ray, float3(tile_i), float3(tile_i + 1));
+        // draw(color, depth, shaded(float3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
 
         // dda_start
         DDA_StartResult dda_start;
 
-        dda_start.delta_dist = vec3(
+        dda_start.delta_dist = float3(
             ray.nrm.x == 0 ? 1 : abs(ray.inv_nrm.x),
             ray.nrm.y == 0 ? 1 : abs(ray.inv_nrm.y),
             ray.nrm.z == 0 ? 1 : abs(ray.inv_nrm.z));
-        run_state.tile_i = ivec3(ray.o / 1) * 1;
-        run_state.tile_i_x4 = ivec3(ray.o / 4) * 4;
-        run_state.tile_i_x16 = ivec3(ray.o / 16) * 16;
+        run_state.tile_i = int3(ray.o / 1) * 1;
+        run_state.tile_i_x4 = int3(ray.o / 4) * 4;
+        run_state.tile_i_x16 = int3(ray.o / 16) * 16;
         if (ray.nrm.x < 0) {
             dda_start.ray_step.x = -1;
             run_state.to_side_dist.x = (ray.o.x - run_state.tile_i.x) * dda_start.delta_dist.x;
@@ -275,9 +271,9 @@ void main() {
             if (x1_steps >= max_steps)
                 break;
             // #if ENABLE_X16
-            // temp_inter = ray_wirebox_intersect(cam_ray, vec3(run_state.tile_i_x16), vec3(run_state.tile_i_x16 + 16), 0.2);
+            // temp_inter = ray_wirebox_intersect(cam_ray, float3(run_state.tile_i_x16), float3(run_state.tile_i_x16 + 16), 0.2);
             // draw(color, depth, shaded(side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit);
-            temp_inter = ray_box_intersect(cam_ray, vec3(run_state.tile_i_x16), vec3(run_state.tile_i_x16 + 16));
+            temp_inter = ray_box_intersect(cam_ray, float3(run_state.tile_i_x16), float3(run_state.tile_i_x16 + 16));
             overlay(color, depth, shaded(side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit, 0.1);
 
             x1_steps++;
@@ -285,7 +281,7 @@ void main() {
 
             if (load_block_presence_16x(run_state.tile_i_x16)) {
                 RayIntersection x16_intersection;
-                x16_intersection.nrm = vec3(dda_start.ray_step * 1);
+                x16_intersection.nrm = float3(dda_start.ray_step * 1);
                 switch (run_state.side) {
                 case 0: x16_intersection.dist = run_state.to_side_dist_x16.x - dda_start.delta_dist.x * 16; break;
                 case 1: x16_intersection.dist = run_state.to_side_dist_x16.y - dda_start.delta_dist.y * 16; break;
@@ -293,22 +289,22 @@ void main() {
                 }
 
                 // temp_inter = ray_sphere_intersect(cam_ray, get_intersection_pos(ray, x16_intersection), 0.1);
-                // draw(color, depth, shaded(vec3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
+                // draw(color, depth, shaded(float3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
 
-                run_state.tile_i_x4 = ivec3(get_intersection_pos_corrected(ray, x16_intersection));
+                run_state.tile_i_x4 = int3(get_intersection_pos_corrected(ray, x16_intersection));
                 run_state.tile_i_x4 = (run_state.tile_i_x4 / 4) * 4;
-                run_state.to_side_dist_x4 = abs(vec3(ivec3(ray.o / 4) - run_state.tile_i_x4 / 4)) * dda_start.delta_dist * 4 + dda_start.initial_to_side_dist_x4;
+                run_state.to_side_dist_x4 = abs(float3(int3(ray.o / 4) - run_state.tile_i_x4 / 4)) * dda_start.delta_dist * 4 + dda_start.initial_to_side_dist_x4;
 
-                // temp_inter = ray_wirebox_intersect(cam_ray, vec3(run_state.tile_i_x4), vec3(run_state.tile_i_x4 + 4), 0.1);
-                // draw(color, depth, shaded(vec3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
+                // temp_inter = ray_wirebox_intersect(cam_ray, float3(run_state.tile_i_x4), float3(run_state.tile_i_x4 + 4), 0.1);
+                // draw(color, depth, shaded(float3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
 
                 for (uint i = 0; i < 12; ++i) {
                     if (x1_steps >= max_steps)
                         break;
 
-                    // temp_inter = ray_wirebox_intersect(cam_ray, vec3(run_state.tile_i_x4), vec3(run_state.tile_i_x4 + 4), 0.1);
+                    // temp_inter = ray_wirebox_intersect(cam_ray, float3(run_state.tile_i_x4), float3(run_state.tile_i_x4 + 4), 0.1);
                     // draw(color, depth, shaded(side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit);
-                    temp_inter = ray_box_intersect(cam_ray, vec3(run_state.tile_i_x4), vec3(run_state.tile_i_x4 + 4));
+                    temp_inter = ray_box_intersect(cam_ray, float3(run_state.tile_i_x4), float3(run_state.tile_i_x4 + 4));
                     overlay(color, depth, shaded(side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit, 0.2);
                     // #endif
                     x1_steps++;
@@ -316,7 +312,7 @@ void main() {
 
                     if (load_block_presence_4x(run_state.tile_i_x4)) {
                         RayIntersection x4_intersection;
-                        x4_intersection.nrm = vec3(dda_start.ray_step * 1);
+                        x4_intersection.nrm = float3(dda_start.ray_step * 1);
                         switch (run_state.side) {
                         case 0: x4_intersection.dist = run_state.to_side_dist_x4.x - dda_start.delta_dist.x * 4; break;
                         case 1: x4_intersection.dist = run_state.to_side_dist_x4.y - dda_start.delta_dist.y * 4; break;
@@ -324,21 +320,21 @@ void main() {
                         }
 
                         // temp_inter = ray_sphere_intersect(cam_ray, get_intersection_pos(ray, x4_intersection), 0.1);
-                        // draw(color, depth, shaded(vec3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
+                        // draw(color, depth, shaded(float3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
 
-                        run_state.tile_i = ivec3(get_intersection_pos_corrected(ray, x4_intersection));
-                        run_state.to_side_dist = abs(vec3(ivec3(ray.o) - run_state.tile_i)) * dda_start.delta_dist + dda_start.initial_to_side_dist;
+                        run_state.tile_i = int3(get_intersection_pos_corrected(ray, x4_intersection));
+                        run_state.to_side_dist = abs(float3(int3(ray.o) - run_state.tile_i)) * dda_start.delta_dist + dda_start.initial_to_side_dist;
 
-                        // temp_inter = ray_wirebox_intersect(cam_ray, vec3(run_state.tile_i), vec3(run_state.tile_i + 1), 0.1);
-                        // draw(color, depth, shaded(vec3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
+                        // temp_inter = ray_wirebox_intersect(cam_ray, float3(run_state.tile_i), float3(run_state.tile_i + 1), 0.1);
+                        // draw(color, depth, shaded(float3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
 
                         for (uint j = 0; j < 12; ++j) {
                             if (x1_steps >= max_steps)
                                 break;
 
-                            // temp_inter = ray_wirebox_intersect(cam_ray, vec3(run_state.tile_i), vec3(run_state.tile_i + 1), 0.05);
+                            // temp_inter = ray_wirebox_intersect(cam_ray, float3(run_state.tile_i), float3(run_state.tile_i + 1), 0.05);
                             // draw(color, depth, shaded(side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit);
-                            temp_inter = ray_box_intersect(cam_ray, vec3(run_state.tile_i), vec3(run_state.tile_i + 1));
+                            temp_inter = ray_box_intersect(cam_ray, float3(run_state.tile_i), float3(run_state.tile_i + 1));
                             overlay(color, depth, shaded(side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit, 0.4);
 
                             uint tile = load_tile(run_state.tile_i);
@@ -393,9 +389,9 @@ void main() {
         }
 
         switch (run_state.side) {
-        case 0: result.dist += x - dx, result.nrm = vec3(-dda_start.ray_step.x, 0, 0); break;
-        case 1: result.dist += y - dy, result.nrm = vec3(0, -dda_start.ray_step.y, 0); break;
-        case 2: result.dist += z - dz, result.nrm = vec3(0, 0, -dda_start.ray_step.z); break;
+        case 0: result.dist += x - dx, result.nrm = float3(-dda_start.ray_step.x, 0, 0); break;
+        case 1: result.dist += y - dy, result.nrm = float3(0, -dda_start.ray_step.y, 0); break;
+        case 2: result.dist += z - dz, result.nrm = float3(0, 0, -dda_start.ray_step.z); break;
         }
 
         if (result.hit) {
@@ -404,10 +400,10 @@ void main() {
         }
 
         temp_inter = ray_sphere_intersect(cam_ray, ray.o, 0.05);
-        draw(color, depth, shaded(vec3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
+        draw(color, depth, shaded(float3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
 
         temp_inter = ray_sphere_intersect(cam_ray, ray.o + ray.nrm * result.dist, 0.05);
-        draw(color, depth, shaded(vec3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
+        draw(color, depth, shaded(float3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
     }
 
 #endif
@@ -417,5 +413,5 @@ void main() {
     draw_rect(color, globals.frame_dim.x / 2 - 0, globals.frame_dim.y / 2 - 4, 1, 9);
     draw_rect(color, globals.frame_dim.x / 2 - 4, globals.frame_dim.y / 2 - 0, 9, 1);
 
-    imageStore(output_image, i_uv, vec4(pow(color, vec3(1)), 1));
+    imageStore(output_image, i_uv, float4(pow(color, float3(1)), 1));
 }
