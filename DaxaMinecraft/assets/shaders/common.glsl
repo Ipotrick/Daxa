@@ -8,7 +8,7 @@ struct ChunkBlockPresence {
     uint x4[128];
     uint x8[16];
     uint x16[2];
-    bool x32[8]; 
+    bool x32[8];
 };
 
 layout(set = 0, binding = 4) buffer Globals {
@@ -66,7 +66,7 @@ uvec3 linear_index_to_x2_packed_index(uint linear) {
 uint x4_uint_bit_mask(uvec3 x4_i) {
 #ifdef X4_444_PACKING
     return 1 << ((x4_i.x & 0x3) + 4 * (x4_i.y & 0x3) + 16 * (x4_i.z & 0x1));
-#else 
+#else
     return 1 << ((x4_i.x) + 16 * (x4_i.y & 0x1));
 #endif
 }
@@ -118,8 +118,7 @@ uvec3 linear_index_to_x8_packed_index(uint linear) {
     return uvec3(
         linear & 0x7,
         (linear >> 3) & 0x7,
-        (linear >> 6) & 0x7
-    );
+        (linear >> 6) & 0x7);
 }
 
 uint x16_uint_bit_mask(uvec3 x16_i) {
