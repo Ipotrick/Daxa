@@ -1,6 +1,7 @@
 #include "PipelineCompiler.hpp"
 
 #include <fstream>
+#include <thread>
 
 #include "spirv_reflect.h"
 #include "shaderc/shaderc.h"
