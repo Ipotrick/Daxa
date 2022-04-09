@@ -257,7 +257,8 @@ struct World {
     daxa::PipelineHandle raymarch_compute_pipeline;
     daxa::PipelineHandle pickblock_compute_pipeline;
     daxa::PipelineHandle blockedit_compute_pipeline;
-    daxa::PipelineHandle xelerationx2x4_pipeline;
+    daxa::PipelineHandle subchunk_x2x4_pipeline;
+    daxa::PipelineHandle subchunk_x8p_pipeline;
 
     std::array<daxa::PipelineHandle, 1> chunkgen_compute_pipeline_passes;
     daxa::PipelineHandle subgrid_compute_pipeline;
@@ -418,7 +419,8 @@ struct World {
         try_recreate_pipeline(raymarch_compute_pipeline);
         try_recreate_pipeline(blockedit_compute_pipeline);
         try_recreate_pipeline(pickblock_compute_pipeline);
-        try_recreate_pipeline(xelerationx2x4_pipeline);
+        try_recreate_pipeline(subchunk_x2x4_pipeline);
+        try_recreate_pipeline(subchunk_x8p_pipeline);
         bool should_reinit0 = false;
         for (auto &pipe : chunkgen_compute_pipeline_passes) {
             if (try_recreate_pipeline(pipe))
@@ -579,7 +581,26 @@ struct World {
         create_pipeline(raymarch_compute_pipeline, "drawing/raymarch.comp");
         create_pipeline(pickblock_compute_pipeline, "utils/pickblock.comp");
         create_pipeline(blockedit_compute_pipeline, "utils/blockedit.comp");
-        create_pipeline(xelerationx2x4_pipeline, "chunkgen/xelerationx2x4.hlsl", daxa::ShaderLang::HLSL);
+        auto result = render_ctx.pipeline_compiler->createComputePipeline({
+            .shaderCI = {
+                .pathToSource = std::filesystem::path("DaxaMinecraft/assets/shaders") / "chunkgen/subchunk_x2x4.hlsl",
+                .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+                .shaderLang = daxa::ShaderLang::HLSL,
+                .entryPoint = "Main"
+            },
+            .overwriteSets = {daxa::BIND_ALL_SET_DESCRIPTION},
+        });
+        subchunk_x2x4_pipeline = result.value();
+        result = render_ctx.pipeline_compiler->createComputePipeline({
+            .shaderCI = {
+                .pathToSource = std::filesystem::path("DaxaMinecraft/assets/shaders") / "chunkgen/subchunk_x8p.hlsl",
+                .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+                .shaderLang = daxa::ShaderLang::HLSL,
+                .entryPoint = "Main"
+            },
+            .overwriteSets = {daxa::BIND_ALL_SET_DESCRIPTION},
+        });
+        subchunk_x8p_pipeline = result.value();
 
         std::array<std::filesystem::path, 1> chunkgen_pass_paths = {
             "chunkgen/world/pass0.comp",
