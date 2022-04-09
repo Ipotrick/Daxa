@@ -28,7 +28,7 @@ Texture3D<Type> getTexture3D<Type>(uint id) {\
 
 DAXA_DEFINE_BA_TEXTURE3D(uint)
 
-#include "chunkgen/include.hlsl"
+#include <chunkgen/include.hlsl>
 
 // clang-format off
 enum class BlockID : uint {
