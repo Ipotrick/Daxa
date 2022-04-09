@@ -1,5 +1,7 @@
 template<typename T>
 StructuredBuffer<T> getBuffer(uint id);
+template<typename T>
+Texture3D<T> getTexture3D(uint id);
 
 #define DAXA_DEFINE_BA_BUFFER(Type)\
 [[vk::binding(4,0)]] StructuredBuffer<Type> BufferView##Type[];\
@@ -7,6 +9,15 @@ template<>\
 StructuredBuffer<Type> getBuffer(uint id) {\
     return BufferView##Type[id];\
 }\
+
+#define DAXA_DEFINE_BA_TEXTURE3D(Type)\
+[[vk::binding(1,0)]] Texture3D<Type> Texture3DView##Type[];\
+template<>\
+Texture3D<Type> getTexture3D<Type>(uint id) {\
+    return Texture3DView##Type[id];\
+}\
+
+DAXA_DEFINE_BA_TEXTURE3D(uint)
 
 // clang-format off
 enum class BlockID : uint {
@@ -77,6 +88,14 @@ bool is_transparent(BlockID block_id) {
     }
 }
 
+uint x2_uint_bit_mask(uint3 x2_i) {
+    return 1u << x2_i.x;
+}
+
+uint x2_uint_array_index(uint3 x2_i) {
+    return x2_i.y + x2_i.z * 32;
+}
+
 enum INTEGER_CONSTANTS {
     CHUNK_SIZE = 64,
     BLOCK_NX = 1024,
@@ -107,8 +126,8 @@ struct Globals {
     float time, fov;
     uint texture_index;
     uint single_ray_steps;
-    uint chunk_images[CHUNK_NZ][CHUNK_NY][CHUNK_NX];
-    ChunkBlockPresence chunk_block_presence[CHUNK_NZ][CHUNK_NY][CHUNK_NX];
+    uint chunk_images[CHUNK_NX][CHUNK_NY][CHUNK_NZ];
+    ChunkBlockPresence chunk_block_presence[CHUNK_NX][CHUNK_NY][CHUNK_NZ];
 };
 DAXA_DEFINE_BA_BUFFER(Globals)
 
@@ -124,8 +143,11 @@ void main(
 ) {
     float4 pos = getBuffer<Globals>(p.globalsID).Load(0).pos;
 
+    StructuredBuffer<Globals> globalsBuffer = getBuffer<Globals>(p.globalsID);
+
     uint3 chunk_i = p.chunk_i.xyz;
-    uint chunk_texture_id = getBuffer<Globals>(p.globalsID).Load(0).chunk_images[chunk_i.x][chunk_i.y][chunk_i.z];
+    uint chunk_texture_id = getBuffer<Globals>(p.globalsID).Load(0).chunk_images[chunk_i.x][chunk_i.y][chunk_i.x];
+    Texture3D<uint> chunk = getTexture3D<uint>(chunk_texture_id);
 
     uint3 x2_i = uint3(
         invocationID.x & 0x7,
@@ -146,6 +168,6 @@ void main(
     for (int y = 0; y < 2; ++y) 
     for (int z = 0; z < 2; ++z) {
         float3 world_i = float3(p.chunk_i.xyz) * 64.0 +  float3(in_chunk_i.xyz) + float3(x,y,z);
-
+        //at_least_one_occluding ||= is_block_occluding()
     }
 }
