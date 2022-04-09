@@ -119,13 +119,6 @@ namespace daxa {
 		args.push_back(L"-HV");
 		args.push_back(L"2021");
 
-
-		for (auto const& includePath : this->sharedData->rootPaths) {
-			args.push_back(L"-I");
-			std::wstring wstr(includePath);
-			args.push_back(wstr.data());
-		}
-
 		DxcBuffer srcBuffer{
 			.Ptr = src.c_str(),
 			.Size = static_cast<u32>(src.size()),
@@ -133,7 +126,12 @@ namespace daxa {
 		};
 
 		ComPtr<IDxcResult> result;
-		BACKEND.dxcCompiler->Compile(&srcBuffer, args.data(), static_cast<u32>(args.size()), BACKEND.dxcIncludeHandler.Get(), IID_PPV_ARGS(&result));
+		try {
+			BACKEND.dxcCompiler->Compile(&srcBuffer, args.data(), static_cast<u32>(args.size()), BACKEND.dxcIncludeHandler.Get(), IID_PPV_ARGS(&result));
+		}
+		catch (...) {
+			return daxa::ResultErr{ .message = "dxc internal compiler error" };
+		}
 
 		ComPtr<IDxcBlobUtf8> errorMessage;
 		result->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errorMessage), nullptr);
