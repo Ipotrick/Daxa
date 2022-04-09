@@ -11,6 +11,7 @@ namespace daxa {
         std::vector<std::filesystem::path> currentShaderSeenFiles = {};
         // stored all include file names of all shaders and the shader source code path itself.
         std::set<std::pair<std::filesystem::path, std::chrono::file_clock::time_point>>* observedHotLoadFiles = {};
+        size_t recursion = 0;
     };
 
     class PipelineCompiler {
