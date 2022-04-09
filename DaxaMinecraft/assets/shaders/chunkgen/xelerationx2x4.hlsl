@@ -1,23 +1,34 @@
+#define DAXA_BA_SAMPLER_BINDING 0
+#define DAXA_BA_COMBINED_IMAGE_SAMPLER_BINDING 1
+#define DAXA_BA_SAMPLED_IMAGE_BINDING 2
+#define DAXA_BA_STORAGE_IMAGE_BINDING 3
+#define DAXA_BA_STORAGE_BUFFER_BINDING 4
+
+#define DaxaStorageBuffer StructuredBuffer
+#define DaxaSampledImage3D Texture3D
+
 template<typename T>
 StructuredBuffer<T> getBuffer(uint id);
 template<typename T>
 Texture3D<T> getTexture3D(uint id);
 
 #define DAXA_DEFINE_BA_BUFFER(Type)\
-[[vk::binding(4,0)]] StructuredBuffer<Type> BufferView##Type[];\
+[[vk::binding(DAXA_BA_STORAGE_BUFFER_BINDING,0)]] StructuredBuffer<Type> BufferView##Type[];\
 template<>\
 StructuredBuffer<Type> getBuffer(uint id) {\
     return BufferView##Type[id];\
 }\
 
 #define DAXA_DEFINE_BA_TEXTURE3D(Type)\
-[[vk::binding(1,0)]] Texture3D<Type> Texture3DView##Type[];\
+[[vk::binding(DAXA_BA_SAMPLED_IMAGE_BINDING,0)]] Texture3D<Type> Texture3DView##Type[];\
 template<>\
 Texture3D<Type> getTexture3D<Type>(uint id) {\
     return Texture3DView##Type[id];\
 }\
 
 DAXA_DEFINE_BA_TEXTURE3D(uint)
+
+#include "chunkgen/include.hlsl"
 
 // clang-format off
 enum class BlockID : uint {
@@ -89,11 +100,11 @@ bool is_transparent(BlockID block_id) {
 }
 
 uint x2_uint_bit_mask(uint3 x2_i) {
-    return 1u << x2_i.x;
+    return 1u << x2_i.z;
 }
 
 uint x2_uint_array_index(uint3 x2_i) {
-    return x2_i.y + x2_i.z * 32;
+    return x2_i.x + x2_i.y * 32;
 }
 
 enum INTEGER_CONSTANTS {
@@ -137,37 +148,43 @@ struct Push {
 };
 [[vk::push_constant]] const Push p;
 
+groupshared uint local_x2_copy[4][4];
+
 [numthreads(512,1,1)]
 void main(
-    uint3 invocationID : SV_DispatchThreadID
+    uint3 group_local_ID : SV_GroupThreadID,
+    uint3 group_ID : SV_GroupID
 ) {
-    float4 pos = getBuffer<Globals>(p.globalsID).Load(0).pos;
-
-    StructuredBuffer<Globals> globalsBuffer = getBuffer<Globals>(p.globalsID);
-
-    uint3 chunk_i = p.chunk_i.xyz;
-    uint chunk_texture_id = getBuffer<Globals>(p.globalsID).Load(0).chunk_images[chunk_i.x][chunk_i.y][chunk_i.x];
-    Texture3D<uint> chunk = getTexture3D<uint>(chunk_texture_id);
-
     uint3 x2_i = uint3(
-        invocationID.x & 0x7,
-        (invocationID.x & 0x7) >> 3,
-        (invocationID.x & 0x7) >> 6
-    );
-
-    x2_i += 8 * uint3(
-        invocationID.x & 0x3,
-        (invocationID.x & 0x3) >> 2,
-        (invocationID.x & 0x3) >> 4
-    );
-
+        (group_local_ID.x >> 5) & 0x3, 
+        (group_local_ID.x >> 7) & 0x3, 
+        (group_local_ID.x & 0x1F)
+    ) + 4 * group_ID;
+    uint3 chunk_i = p.chunk_i.xyz;
+    StructuredBuffer<Globals> globals = getBuffer<Globals>(p.globalsID);
+    Texture3D<uint> chunk = getTexture3D<uint>(globals[0].chunk_images[chunk_i.x][chunk_i.y][chunk_i.z]);
     uint3 in_chunk_i = x2_i * 2;
 
     bool at_least_one_occluding = false;
     for (int x = 0; x < 2; ++x) 
     for (int y = 0; y < 2; ++y) 
     for (int z = 0; z < 2; ++z) {
-        float3 world_i = float3(p.chunk_i.xyz) * 64.0 +  float3(in_chunk_i.xyz) + float3(x,y,z);
-        //at_least_one_occluding ||= is_block_occluding()
+        int3 local_i = in_chunk_i + int3(x,y,z);
+        at_least_one_occluding = at_least_one_occluding || is_block_occluding((BlockID)chunk[local_i]);
+    }
+
+    uint result = 0;
+    if (at_least_one_occluding) {
+        result = x2_uint_bit_mask(x2_i);
+    }
+    result = WaveActiveBitOr(result);
+    if (WaveIsFirstLane()) {
+        uint index = x2_uint_array_index(x2_i);
+        globals[0].chunk_block_presence[chunk_i.x][chunk_i.y][chunk_i.z].x2[index] = result;
+        local_x2_copy[x2_i.x][x2_i.y] = result;
+    }
+
+    if (group_local_ID.x >= 64) {
+        return;
     }
 }
