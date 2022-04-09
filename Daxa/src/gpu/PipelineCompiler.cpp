@@ -376,6 +376,10 @@ namespace daxa {
 		ComPtr<IDxcIncludeHandler> pDefaultIncludeHandler;
 		HRESULT LoadSource(LPCWSTR pFilename, IDxcBlob** ppIncludeSource) override
 		{
+			if (pFilename[0] == '.') {
+				pFilename += 2;
+			}
+
 			auto result = sharedData->findFullPathOfFile(pFilename);
 			if (result.isErr()) {
 				*ppIncludeSource = nullptr;
@@ -403,15 +407,9 @@ namespace daxa {
 			ifs.seekg(0, std::ios::beg);
 			str.assign(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
 			
-			auto hr = pUtils->CreateBlob(str.data(), static_cast<u32>(str.size()), CP_UTF8, pEncoding.GetAddressOf());
-
-			if (SUCCEEDED(hr)) {
-				*ppIncludeSource = pEncoding.Detach();
-			}
-			else {
-				*ppIncludeSource = nullptr;
-			}
-			return hr;
+			pUtils->CreateBlob(str.data(), static_cast<u32>(str.size()), CP_UTF8, pEncoding.GetAddressOf());
+			*ppIncludeSource = pEncoding.Detach();
+			return S_OK;
 		}
 
 		HRESULT QueryInterface(REFIID riid, void * * ppvObject) override
@@ -527,15 +525,17 @@ namespace daxa {
 			std::cout << "[[DXA ERROR]] could not create DXC Instance" << std::endl;
 		};
 
-		BACKEND.dxcUtils->CreateDefaultIncludeHandler(BACKEND.dxcIncludeHandler.ReleaseAndGetAddressOf());
+		
 
 		if (!SUCCEEDED(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&BACKEND.dxcCompiler)))) {
 			std::cout << "[[DXA ERROR]] could not create DXC Compiler" << std::endl;
 		}
 
-		auto dxcIncluder = std::make_unique<DxcFileIncluder>();
+		ComPtr<DxcFileIncluder> dxcIncluder = new DxcFileIncluder();
 		dxcIncluder->sharedData = sharedData;
 		dxcIncluder->pUtils = BACKEND.dxcUtils;
+		BACKEND.dxcUtils->CreateDefaultIncludeHandler(dxcIncluder->pDefaultIncludeHandler.ReleaseAndGetAddressOf());
+		BACKEND.dxcIncludeHandler = dxcIncluder;
 	}
 
     bool PipelineCompiler::checkIfSourcesChanged(PipelineHandle& pipeline) {
