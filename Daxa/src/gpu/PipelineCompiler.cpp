@@ -89,6 +89,13 @@ namespace daxa {
 
 	Result<std::vector<u32>> PipelineCompiler::tryGenSPIRVFromDxc(std::string const& src, VkShaderStageFlagBits shaderStage, char const* entryPoint, char const* sourceFileName) {
 		std::vector<LPCWSTR> args;
+		std::vector<std::wstring> stringBuff;
+
+		for (auto& root : sharedData->rootPaths) {
+			args.push_back(L"-I");
+			stringBuff.push_back(root.wstring());
+			args.push_back(stringBuff.back().data());
+		}
 
 		// set matrix packing to column major
 		args.push_back(L"-Zpc");
