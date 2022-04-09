@@ -150,6 +150,9 @@ namespace daxa {
 			}
 			str = std::string(str.c_str() + 4);	// cut of the first 4 letters
 			str = std::string(sourceFileName) + str;
+			if (sharedData->additionalMessages.size() > 0) {
+				str += std::string("\n [[Daxa Message]] ") + sharedData->additionalMessages;
+			}
 			
 			return daxa::ResultErr{.message = str };
 		}
@@ -332,6 +335,7 @@ namespace daxa {
 			spirv = tryGenSPIRVFromDxc(sourceCode, ci.stage, ci.entryPoint, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()));
 		}
 		sharedData->recursion = 0;
+		sharedData->additionalMessages.clear();
 		if (spirv.isErr()) {
 			return ResultErr{ spirv.message() };
 		}
@@ -384,6 +388,7 @@ namespace daxa {
 		HRESULT LoadSource(LPCWSTR pFilename, IDxcBlob** ppIncludeSource) override
 		{
 			if (sharedData->recursion++ > 10) {
+				sharedData->additionalMessages = sharedData->additionalMessages + "maximum include depth exceeded ";
 				*ppIncludeSource = nullptr;
 				return SCARD_E_FILE_NOT_FOUND;
 			}
