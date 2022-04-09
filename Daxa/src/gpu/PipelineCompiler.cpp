@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <thread>
+#include <locale>
 
 #include "spirv_reflect.h"
 #include "shaderc/shaderc.h"
@@ -112,7 +113,10 @@ namespace daxa {
 
 		// setting entry point
 		args.push_back(L"-E");
-		std::wstring entryAsWideString = std::wstring(std::filesystem::path(entryPoint));
+		std::wstring entryAsWideString;
+		for (int i = 0; i < std::strlen(entryPoint)+1 && entryPoint != nullptr; i++) {
+			entryAsWideString.push_back(entryPoint[i]);
+		}
 		args.push_back(entryAsWideString.data());
 		
 		// set shader model
@@ -148,11 +152,8 @@ namespace daxa {
 			for (size_t i = 0; i < str.size(); i++) {
 				str[i] = static_cast<char const*>(errorMessage->GetBufferPointer())[i];
 			}
-			str = std::string(str.c_str() + 4);	// cut of the first 4 letters
+			str = str + ": ";
 			str = std::string(sourceFileName) + str;
-			if (sharedData->additionalMessages.size() > 0) {
-				str += std::string("\n [[Daxa Message]] ") + sharedData->additionalMessages;
-			}
 			
 			return daxa::ResultErr{.message = str };
 		}
@@ -334,8 +335,6 @@ namespace daxa {
 		else {
 			spirv = tryGenSPIRVFromDxc(sourceCode, ci.stage, ci.entryPoint, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()));
 		}
-		sharedData->recursion = 0;
-		sharedData->additionalMessages.clear();
 		if (spirv.isErr()) {
 			return ResultErr{ spirv.message() };
 		}
@@ -387,11 +386,6 @@ namespace daxa {
 		ComPtr<IDxcIncludeHandler> pDefaultIncludeHandler;
 		HRESULT LoadSource(LPCWSTR pFilename, IDxcBlob** ppIncludeSource) override
 		{
-			if (sharedData->recursion++ > 10) {
-				sharedData->additionalMessages = sharedData->additionalMessages + "maximum include depth exceeded ";
-				*ppIncludeSource = nullptr;
-				return SCARD_E_FILE_NOT_FOUND;
-			}
 			if (pFilename[0] == '.') {
 				pFilename += 2;
 			}
