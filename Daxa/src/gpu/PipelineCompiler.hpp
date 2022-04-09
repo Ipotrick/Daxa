@@ -1,7 +1,5 @@
 #include "Pipeline.hpp"
 
-#include "shaderc/shaderc.h"
-
 #include <set>
 #include <chrono>
 
@@ -25,16 +23,16 @@ namespace daxa {
         Result<PipelineHandle> recreatePipeline(PipelineHandle const& pipeline);
     private:
         Result<ShaderModuleHandle> tryCreateShaderModule(ShaderModuleCreateInfo const& ci);
-		Result<std::vector<u32>> tryGenSPIRVFromShaderc(std::string const& src, VkShaderStageFlagBits shaderStage, ShaderLang lang, char const* sourceFileName = "inline source");
+		Result<std::vector<u32>> tryGenSPIRVFromShaderc(std::string const& src, VkShaderStageFlagBits shaderStage, ShaderLang lang, char const* sourceFileName = "[[inline source]]");
+        Result<std::vector<u32>> tryGenSPIRVFromDxc(std::string const& src, VkShaderStageFlagBits shaderStage, char const* entryPoint, char const* sourceFileName = "[[inline source]]");
         Result<std::string> tryLoadShaderSourceFromFile(std::filesystem::path const& path);
         daxa::Result<PipelineHandle> build(GraphicsPipelineBuilder const& builder);
 
         std::shared_ptr<DeviceBackend> deviceBackend = {};
         std::shared_ptr<BindingSetLayoutCache> bindSetLayoutCache = {};
         std::shared_ptr<PipelineCompilerShadedData> sharedData = {};
-        shaderc::Compiler compiler = {};
-        shaderc::CompileOptions options = {};
         std::chrono::milliseconds recreationCooldown = {};
+        std::unique_ptr<void, void(*)(void*)> backend;
     };
 
 	class PipelineCompilerHandle : public daxa::SharedHandle<PipelineCompiler>{};
