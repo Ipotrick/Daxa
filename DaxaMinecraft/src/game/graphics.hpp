@@ -467,7 +467,7 @@ struct World {
             .single_ray_nrm = glm::vec4(single_ray_nrm, 0),
             .frame_dim = {extent.width, extent.height},
             .time = elapsed,
-            .fov = std::tanf(player.camera.fov * std::numbers::pi_v<f32> / 360.0f),
+            .fov = tanf(player.camera.fov * std::numbers::pi_v<f32> / 360.0f),
             .texture_index = atlas_texture_array->getDescriptorIndex(),
             .single_ray_steps = static_cast<u32>(single_ray_steps),
         };
