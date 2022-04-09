@@ -89,12 +89,12 @@ namespace daxa {
 
 	Result<std::vector<u32>> PipelineCompiler::tryGenSPIRVFromDxc(std::string const& src, VkShaderStageFlagBits shaderStage, char const* entryPoint, char const* sourceFileName) {
 		std::vector<LPCWSTR> args;
-		std::vector<std::wstring> stringBuff;
 
+		// Bugfix: 	Do not make a vector of strings and get the data ptr to them.
+		//			The data ptr will be invalidated on push_back when the path is short enough to be short string optimized.
 		for (auto& root : sharedData->rootPaths) {
 			args.push_back(L"-I");
-			stringBuff.push_back(root.wstring());
-			args.push_back(stringBuff.back().data());
+			args.push_back(root.c_str());
 		}
 
 		// set matrix packing to column major
@@ -331,6 +331,7 @@ namespace daxa {
 		else {
 			spirv = tryGenSPIRVFromDxc(sourceCode, ci.stage, ci.entryPoint, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()));
 		}
+		sharedData->recursion = 0;
 		if (spirv.isErr()) {
 			return ResultErr{ spirv.message() };
 		}
@@ -382,6 +383,10 @@ namespace daxa {
 		ComPtr<IDxcIncludeHandler> pDefaultIncludeHandler;
 		HRESULT LoadSource(LPCWSTR pFilename, IDxcBlob** ppIncludeSource) override
 		{
+			if (sharedData->recursion++ > 10) {
+				*ppIncludeSource = nullptr;
+				return SCARD_E_FILE_NOT_FOUND;
+			}
 			if (pFilename[0] == '.') {
 				pFilename += 2;
 			}
@@ -389,7 +394,7 @@ namespace daxa {
 			auto result = sharedData->findFullPathOfFile(pFilename);
 			if (result.isErr()) {
 				*ppIncludeSource = nullptr;
-				//return SCARD_E_FILE_NOT_FOUND;
+				return SCARD_E_FILE_NOT_FOUND;
 			}
 			auto fullPath = result.value();
 			auto searchPred = [&](std::filesystem::path const& p){ return p == fullPath; };
