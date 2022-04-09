@@ -157,7 +157,6 @@ public:
 				FreeEXRErrorMessage(err);
 			}
 			if (data) {
-
 				cmd->singleCopyHostToImage({
 					.src = reinterpret_cast<u8*>(data),
 					.dst = skybox->getImageHandle(),
@@ -172,9 +171,6 @@ public:
 				delete data;
 			}else {
 				printf("could not load skybox image: %s\n", hardcodedSkyBoxFileNames[i]);
-			}
-			if (!data) {
-				continue;
 			}
 		}
 		daxa::generateMipLevels(cmd, skybox, VkImageSubresourceLayers{ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 6 }, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);

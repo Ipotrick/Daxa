@@ -64,6 +64,7 @@ namespace daxa {
 		.descriptorCount = (1<<16),
 	};
 
+
 	inline static const VkDescriptorSetLayoutBinding BIND_ALL_SAMPLER_SET_LAYOUT_BINDING {
 		.binding = 0,
 		.descriptorType = BIND_ALL_SAMPLER_POOL_SIZE.type,

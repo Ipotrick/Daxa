@@ -18,25 +18,22 @@ public:
 		, swapchainImage{ this->swapchain->aquireNextImage() }
 		, presentSignal{ this->device->createSignal({}) }
 	{ 
+		char const* computeShaderHLSL = R"(
+			struct CameraData {
+				int2 imgSize;
+			};
+			[[vk::binding(0, 0)]]
+			ConstantBuffer<CameraData> cameraData;
 
-		char const* computeShaderGLSL = R"(
-			#version 450
-			#extension GL_KHR_vulkan_glsl : enable
+			[[vk::binding(1,0)]]
+			RWTexture2D<float4> resultImage;
 
-			layout(local_size_x = 8, local_size_y = 8) in;
-
-			layout(set = 0, binding = 0) uniform CameraData {
-				ivec2 imgSize;
-			} cameraData;
-
-			layout (set = 0, binding = 1, rgba8) uniform writeonly image2D resultImage;
-
-			float mandelbrot(in vec2 c) {const float B = 256.0;
+			float mandelbrot(float2 c) {const float B = 256.0;
 				float l = 0.0;
-				vec2 z  = vec2(0.0);
+				float2 z  = float2(0.0, 0.0);
 				for( int i=0; i<256; i++ )
 				{
-					z = vec2( z.x*z.x - z.y*z.y, 2.0*z.x*z.y ) + c;
+					z = float2( z.x*z.x - z.y*z.y, 2.0*z.x*z.y ) + c;
 					if( dot(z,z)>(B*B) ) break;
 					l += 1.0;
 				}
@@ -45,41 +42,44 @@ public:
 
 				float sl = l - log2(log2(dot(z,z))) + 4.0;
 
-				l = mix( l, sl, 1.0f );
+				l = lerp( l, sl, 1.0f );
 
 				return l;
 			}
 
-			void main()
+			[numthreads(8,8,8)]
+			void main(uint3 threadId : SV_DispatchThreadID)
 			{
-				if (gl_GlobalInvocationID.x < cameraData.imgSize.x && gl_GlobalInvocationID.y < cameraData.imgSize.y) {
-					vec2 smoothCoord = vec2(gl_GlobalInvocationID.xy) / vec2(cameraData.imgSize.xy) * 2.0f - vec2(1,1);
+				if (threadId.x < cameraData.imgSize.x && threadId.y < cameraData.imgSize.y) {
+					float2 smoothCoord = float2(threadId.xy) / float2(cameraData.imgSize.xy) * 2.0f - float2(1,1);
 					smoothCoord *= 2.0f;
 
-					vec4 colorAcc = vec4(0,0,0,0);
+					float4 colorAcc = float4(0,0,0,0);
 
 					const int AA = 4;
-					vec2 aaStep = vec2(1,1) / vec2(cameraData.imgSize.xy) / AA * 2;
+					float2 aaStep = float2(1,1) / float2(cameraData.imgSize.xy) / AA * 2;
 
 					for (int x = 0; x < AA; x++) {
 						for (int y = 0; y < AA; y++) {
-							vec2 subCoord = smoothCoord + aaStep * vec2(x,y);
+							float2 subCoord = smoothCoord + aaStep * float2(x,y);
 
-							colorAcc += vec4(1.0f,0.8f,0.8f,1.0f) * mandelbrot(subCoord)*(1.0f/80.0f);
+							colorAcc += float4(1.0f,0.8f,0.8f,1.0f) * mandelbrot(subCoord)*(1.0f/80.0f);
 						}
 					}
 					colorAcc *= 1.0f / (AA*AA);
 
-					ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
-					imageStore(resultImage, coord, colorAcc);
+					int2 coord = int2(threadId.xy);
+					resultImage[coord] = colorAcc;
+					//imageStore(resultImage, coord, colorAcc);
 				}
 			}
 		)";
 
 		this->pipeline = pipelineCompiler->createComputePipeline({ 
 			.shaderCI = {
-				.source = computeShaderGLSL,
-				.stage = VK_SHADER_STAGE_COMPUTE_BIT
+				.source = computeShaderHLSL,
+				.shaderLang = daxa::ShaderLang::HLSL,
+				.stage = VK_SHADER_STAGE_COMPUTE_BIT,
 			} 
 		}).value();
 

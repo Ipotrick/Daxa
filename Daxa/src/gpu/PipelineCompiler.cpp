@@ -3,7 +3,16 @@
 #include <fstream>
 #include <thread>
 
-#include <spirv_reflect.h>
+#include "spirv_reflect.h"
+#include "shaderc/shaderc.h"
+#define NOMINMAX
+#ifdef _WIN32
+	#include "Windows.h"
+	#include "wrl/client.h"
+	using namespace Microsoft::WRL;
+#else
+#endif
+#include "dxcapi.h"
 
 #include "Instance.hpp"
 #include "util.hpp"
@@ -11,6 +20,20 @@
 using Path = std::filesystem::path;
 
 namespace daxa {
+	#define BACKEND (*static_cast<Backend*>(this->backend.get()))
+
+	struct Backend{
+        shaderc::Compiler compiler = {};
+        shaderc::CompileOptions options = {};
+		ComPtr<IDxcUtils> dxcUtils = {};
+		ComPtr<IDxcCompiler3> dxcCompiler = {};
+		ComPtr<IDxcIncludeHandler> dxcIncludeHandler = {};
+	};
+
+	void backendDeletor(void* backend) {
+		delete static_cast<Backend*>(backend);
+	}
+
 	std::vector<VkDescriptorSetLayout> processReflectedDescriptorData(
 		std::vector<BindingSetDescription>& setDescriptions,
 		BindingSetLayoutCache& descCache,
@@ -64,6 +87,80 @@ namespace daxa {
 		return ResultErr{ err.c_str() };
 	}
 
+	Result<std::vector<u32>> PipelineCompiler::tryGenSPIRVFromDxc(std::string const& src, VkShaderStageFlagBits shaderStage, char const* entryPoint, char const* sourceFileName) {
+		std::vector<LPCWSTR> args;
+
+		// set matrix packing to column major
+		args.push_back(L"-Zpc");
+
+		// setting target
+		args.push_back(L"-spirv");
+		args.push_back(L"-fspv-target-env=vulkan1.1");
+
+		// set optimization setting
+		args.push_back(L"-O3");
+
+		// setting entry point
+		args.push_back(L"-E");
+		std::wstring entryAsWideString = std::wstring(std::filesystem::path(entryPoint));
+		args.push_back(entryAsWideString.data());
+		
+		// set shader model
+		args.push_back(L"-T");
+		std::wstring profile;
+		switch (shaderStage) {
+			case VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT: profile = L"vs_6_0"; break;
+			case VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT: profile = L"ps_6_0"; break;
+			case VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT: profile = L"cs_6_0"; break;
+			default: return daxa::ResultErr{ .message = "tried to compile with dxc and an unsupported shader stage" };
+		}
+		args.push_back(profile.data());
+
+		// set hlsl version to 2021
+		args.push_back(L"-HV");
+		args.push_back(L"2021");
+
+		DxcBuffer srcBuffer{
+			.Ptr = src.c_str(),
+			.Size = static_cast<u32>(src.size()),
+			.Encoding = static_cast<u32>(0),
+		};
+
+		ComPtr<IDxcResult> result;
+		try {
+			BACKEND.dxcCompiler->Compile(&srcBuffer, args.data(), static_cast<u32>(args.size()), BACKEND.dxcIncludeHandler.Get(), IID_PPV_ARGS(&result));
+		}
+		catch (...) {
+			return daxa::ResultErr{ .message = "dxc internal compiler error" };
+		}
+
+		ComPtr<IDxcBlobUtf8> errorMessage;
+		result->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errorMessage), nullptr);
+
+		if (errorMessage && errorMessage->GetStringLength() > 0) {
+			auto str = std::string();
+			str.resize(errorMessage->GetBufferSize());
+			for (size_t i = 0; i < str.size(); i++) {
+				str[i] = static_cast<char const*>(errorMessage->GetBufferPointer())[i];
+			}
+			str = std::string(str.c_str() + 4);	// cut of the first 4 letters
+			str = std::string(sourceFileName) + str;
+			
+			return daxa::ResultErr{.message = str };
+		}
+
+		ComPtr<IDxcBlob> shaderobj;
+		result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderobj), nullptr);
+
+		std::vector<u32> spv;
+		spv.resize(shaderobj->GetBufferSize()/4);
+		for (size_t i = 0; i < spv.size(); i++) {
+			spv[i] = static_cast<u32*>(shaderobj->GetBufferPointer())[i];
+		}
+
+		return {spv};
+	}
+
 	Result<std::vector<u32>> PipelineCompiler::tryGenSPIRVFromShaderc(std::string const& src, VkShaderStageFlagBits shaderStage, ShaderLang lang, char const* sourceFileName) {
 		auto translateShaderStage = [](VkShaderStageFlagBits stage) -> shaderc_shader_kind {
 			switch (stage) {
@@ -92,12 +189,12 @@ namespace daxa {
 			case ShaderLang::GLSL: langType = shaderc_source_language_glsl; break;
 			case ShaderLang::HLSL: langType = shaderc_source_language_hlsl; break;
 		}
-		options.SetSourceLanguage(langType);
-		options.SetTargetEnvironment(shaderc_target_env_vulkan, VK_API_VERSION_1_2);
-		options.SetTargetSpirv(shaderc_spirv_version::shaderc_spirv_version_1_3);
+		BACKEND.options.SetSourceLanguage(langType);
+		BACKEND.options.SetTargetEnvironment(shaderc_target_env_vulkan, VK_API_VERSION_1_2);
+		BACKEND.options.SetTargetSpirv(shaderc_spirv_version::shaderc_spirv_version_1_3);
 		//options.SetOptimizationLevel(shaderc_optimization_level_performance);
 		
-		shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(src, stage, sourceFileName, options);
+		shaderc::SpvCompilationResult module = BACKEND.compiler.CompileGlslToSpv(src, stage, sourceFileName, BACKEND.options);
 
 		if (module.GetCompilationStatus() != shaderc_compilation_status_success) {
 			return daxa::ResultErr{.message = std::move(module.GetErrorMessage())};
@@ -222,7 +319,13 @@ namespace daxa {
 			return ResultErr{"no path given"};
 		}
 
-		auto spirv = tryGenSPIRVFromShaderc(sourceCode, ci.stage, ci.shaderLang, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()));
+		daxa::Result<std::vector<u32>> spirv = daxa::ResultErr{};
+		if (ci.shaderLang == ShaderLang::GLSL) {
+			spirv = tryGenSPIRVFromShaderc(sourceCode, ci.stage, ci.shaderLang, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()));
+		} 
+		else {
+			spirv = tryGenSPIRVFromDxc(sourceCode, ci.stage, ci.entryPoint, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()));
+		}
 		if (spirv.isErr()) {
 			return ResultErr{ spirv.message() };
 		}
@@ -267,7 +370,60 @@ namespace daxa {
 		return { ShaderModuleHandle{ shadMod } };
 	}
 
-	class FileIncluder : public shaderc::CompileOptions::IncluderInterface {
+	class DxcFileIncluder : public IDxcIncludeHandler {
+	public:
+		std::shared_ptr<PipelineCompilerShadedData> sharedData = {};
+		ComPtr<IDxcUtils> pUtils;
+		ComPtr<IDxcIncludeHandler> pDefaultIncludeHandler;
+		HRESULT LoadSource(LPCWSTR pFilename, IDxcBlob** ppIncludeSource) override
+		{
+			if (pFilename[0] == '.') {
+				pFilename += 2;
+			}
+
+			auto result = sharedData->findFullPathOfFile(pFilename);
+			if (result.isErr()) {
+				*ppIncludeSource = nullptr;
+				//return SCARD_E_FILE_NOT_FOUND;
+			}
+			auto fullPath = result.value();
+			auto searchPred = [&](std::filesystem::path const& p){ return p == fullPath; };
+
+			ComPtr<IDxcBlobEncoding> pEncoding;
+			if (std::find_if(sharedData->currentShaderSeenFiles.begin(), sharedData->currentShaderSeenFiles.end(), searchPred) != sharedData->currentShaderSeenFiles.end()) {
+				// Return empty string blob if this file has been included before
+				static const char nullStr[] = " ";
+				pUtils->CreateBlob(nullStr, ARRAYSIZE(nullStr), CP_UTF8, pEncoding.GetAddressOf());
+				*ppIncludeSource = pEncoding.Detach();
+				return S_OK;
+			}
+			else {
+				sharedData->observedHotLoadFiles->insert({ fullPath, std::chrono::file_clock::now() });
+			}
+
+			std::ifstream ifs{fullPath};
+			std::string str;
+			ifs.seekg(0, std::ios::end);   
+			str.reserve(ifs.tellg());
+			ifs.seekg(0, std::ios::beg);
+			str.assign(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
+			
+			pUtils->CreateBlob(str.data(), static_cast<u32>(str.size()), CP_UTF8, pEncoding.GetAddressOf());
+			*ppIncludeSource = pEncoding.Detach();
+			return S_OK;
+		}
+
+		HRESULT QueryInterface(REFIID riid, void * * ppvObject) override
+		{
+			return pDefaultIncludeHandler->QueryInterface(riid, ppvObject);
+		}
+
+		ULONG STDMETHODCALLTYPE AddRef(void) override {	return 0; }
+		ULONG STDMETHODCALLTYPE Release(void) override { return 0; }
+
+	};
+
+	class ShadercFileIncluder : public shaderc::CompileOptions::IncluderInterface {
 	public:
 		constexpr static inline size_t DELETE_SOURCE_NAME = 0x1;
 		constexpr static inline size_t DELETE_CONTENT = 0x2;
@@ -291,13 +447,10 @@ namespace daxa {
 
 					if (std::find_if(sharedData->currentShaderSeenFiles.begin(), sharedData->currentShaderSeenFiles.end(), searchPred) == sharedData->currentShaderSeenFiles.end()) {
 						std::ifstream ifs{requested_source_path};
-						
 						std::string str;
-
 						ifs.seekg(0, std::ios::end);   
 						str.reserve(ifs.tellg());
 						ifs.seekg(0, std::ios::beg);
-
 						str.assign(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
 
 						res->user_data = reinterpret_cast<void*>(reinterpret_cast<size_t>(res->user_data) | DELETE_CONTENT);
@@ -308,6 +461,15 @@ namespace daxa {
 						res->content_length = str.size();
 						res->content = data;
 
+						std::string requestedSourcePathAsString = requested_source_path.string();
+
+						char* includerPath = new char[requestedSourcePathAsString.size()+1];
+						for (size_t i = 0; i < requestedSourcePathAsString.size()+1; i++) {
+							includerPath[i] = requestedSourcePathAsString[i];
+						}
+
+						res->source_name = const_cast<const char*>(includerPath);
+						res->user_data = reinterpret_cast<void*>(reinterpret_cast<size_t>(res->user_data) | DELETE_SOURCE_NAME);;
 						sharedData->currentShaderSeenFiles.push_back(requested_source);
 						sharedData->observedHotLoadFiles->insert({requested_source_path,std::filesystem::last_write_time(requested_source_path)});
 					} else {
@@ -355,10 +517,26 @@ namespace daxa {
 		, bindSetLayoutCache{ bindSetLayoutCache }
 		, sharedData{ std::make_shared<PipelineCompilerShadedData>() }
 		, recreationCooldown{ 250 }
+		, backend{ std::unique_ptr<void, void(*)(void*)>(new Backend(), backendDeletor) }
 	{
-		auto includer = std::make_unique<FileIncluder>();
+		auto includer = std::make_unique<ShadercFileIncluder>();
 		includer->sharedData = sharedData;
-		options.SetIncluder(std::move(includer));
+		BACKEND.options.SetIncluder(std::move(includer));
+		if (!SUCCEEDED(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(BACKEND.dxcUtils.ReleaseAndGetAddressOf())))) {
+			std::cout << "[[DXA ERROR]] could not create DXC Instance" << std::endl;
+		};
+
+		
+
+		if (!SUCCEEDED(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&BACKEND.dxcCompiler)))) {
+			std::cout << "[[DXA ERROR]] could not create DXC Compiler" << std::endl;
+		}
+
+		ComPtr<DxcFileIncluder> dxcIncluder = new DxcFileIncluder();
+		dxcIncluder->sharedData = sharedData;
+		dxcIncluder->pUtils = BACKEND.dxcUtils;
+		BACKEND.dxcUtils->CreateDefaultIncludeHandler(dxcIncluder->pDefaultIncludeHandler.ReleaseAndGetAddressOf());
+		BACKEND.dxcIncludeHandler = dxcIncluder;
 	}
 
     bool PipelineCompiler::checkIfSourcesChanged(PipelineHandle& pipeline) {
@@ -417,6 +595,10 @@ namespace daxa {
     }
 
     Result<Path> PipelineCompilerShadedData::findFullPathOfFile(Path const& file) {
+		std::ifstream ifs{file};
+		if (ifs.good()) {
+			return { file };
+		}
         Path potentialPath;
         for (auto& root : this->rootPaths) {
             potentialPath.clear();
