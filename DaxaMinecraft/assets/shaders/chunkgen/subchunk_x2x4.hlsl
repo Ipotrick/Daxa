@@ -29,6 +29,7 @@ Texture3D<Type> getTexture3D<Type>(uint id) {\
 DAXA_DEFINE_BA_TEXTURE3D(uint)
 
 #include <chunkgen/include.hlsl>
+#include <chunk.hlsl>
 
 // clang-format off
 enum class BlockID : uint {
@@ -99,22 +100,6 @@ bool is_transparent(BlockID block_id) {
     }
 }
 
-uint x2_uint_bit_mask(uint3 x2_i) {
-    return 1u << x2_i.z;
-}
-
-uint x2_uint_array_index(uint3 x2_i) {
-    return x2_i.x + x2_i.y * 32;
-}
-
-uint x4_uint_bit_mask(uint3 x4_i) {
-    return 1u << ((x4_i.z & 0xF) + 16 * (x4_i.x & 0x1));
-}
-
-uint x4_uint_array_index(uint3 x4_i) {
-    return (x4_i.x >> 1 /* / 2 */) + x4_i.y * 8 /* 16 / 2 */;
-}
-
 enum INTEGER_CONSTANTS {
     CHUNK_SIZE = 64,
     BLOCK_NX = 1024,
@@ -125,14 +110,6 @@ enum INTEGER_CONSTANTS {
     CHUNK_NZ = BLOCK_NZ / CHUNK_SIZE,
     MAX_STEPS = CHUNK_NX * CHUNK_SIZE + CHUNK_NY * CHUNK_SIZE + CHUNK_NZ * CHUNK_SIZE,
     WATER_LEVEL = 160,
-};
-
-struct ChunkBlockPresence {
-    uint x2[1024];
-    uint x4[128];
-    uint x8[16];
-    uint x16[2];
-    bool x32[8]; 
 };
 
 struct Globals {
@@ -164,7 +141,7 @@ groupshared uint local_x2_copy[4][4];
     z: chunk index
 */
 [numthreads(512,1,1)]
-void main(
+void Main(
     uint3 group_local_ID : SV_GroupThreadID,
     uint3 group_ID : SV_GroupID
 ) {
@@ -197,6 +174,8 @@ void main(
         local_x2_copy[x2_i.x][x2_i.y] = result;
     }
 
+    GroupMemoryBarrier();
+
     if (group_local_ID.x >= 64) {
         return;
     }
@@ -214,11 +193,12 @@ void main(
     for (int z = 0; z < 2; ++z) {
         int3 local_i = x2_i + int3(x,y,z);
         uint mask = x2_uint_bit_mask(local_i);
-        //int2 local_x2_copy_index = int3(
-        //    //local_i & 0x
-        //);
+        int2 local_x2_copy_index = int2(
+            local_i.x & 0x3,
+            local_i.y & 0x3
+        );
+        bool is_occluding = (local_x2_copy[local_x2_copy_index.x][local_x2_copy_index.y] & mask) != 0;
 
-
-        at_least_one_occluding = at_least_one_occluding || is_block_occluding((BlockID)chunk[local_i]);
+        at_least_one_occluding = at_least_one_occluding || is_occluding;
     }
 }
