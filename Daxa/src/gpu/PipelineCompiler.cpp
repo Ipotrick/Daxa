@@ -92,6 +92,9 @@ namespace daxa {
 		// set matrix packing to column major
 		args.push_back(L"-Zpc");
 
+		// set warnings as errors
+		args.push_back(DXC_ARG_WARNINGS_ARE_ERRORS); //-WX
+
 		// setting target
 		args.push_back(L"-spirv");
 		args.push_back(L"-fspv-target-env=vulkan1.1");
