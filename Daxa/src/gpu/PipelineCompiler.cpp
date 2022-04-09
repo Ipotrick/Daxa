@@ -137,12 +137,7 @@ namespace daxa {
 		};
 
 		ComPtr<IDxcResult> result;
-		try {
-			BACKEND.dxcCompiler->Compile(&srcBuffer, args.data(), static_cast<u32>(args.size()), BACKEND.dxcIncludeHandler.Get(), IID_PPV_ARGS(&result));
-		}
-		catch (...) {
-			return daxa::ResultErr{ .message = "dxc internal compiler error" };
-		}
+		BACKEND.dxcCompiler->Compile(&srcBuffer, args.data(), static_cast<u32>(args.size()), BACKEND.dxcIncludeHandler.Get(), IID_PPV_ARGS(&result));
 
 		ComPtr<IDxcBlobUtf8> errorMessage;
 		result->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errorMessage), nullptr);
@@ -535,8 +530,6 @@ namespace daxa {
 		if (!SUCCEEDED(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(BACKEND.dxcUtils.ReleaseAndGetAddressOf())))) {
 			std::cout << "[[DXA ERROR]] could not create DXC Instance" << std::endl;
 		};
-
-		
 
 		if (!SUCCEEDED(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&BACKEND.dxcCompiler)))) {
 			std::cout << "[[DXA ERROR]] could not create DXC Compiler" << std::endl;
