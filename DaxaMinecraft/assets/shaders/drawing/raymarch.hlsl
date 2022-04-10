@@ -210,7 +210,7 @@ float3 rand_pt(float3 n, float2 rnd) {
                 //     bounce_ray.o = intersection_pos + ray_chunk_intersection.nrm * 0.002;
                 //     bounce_ray.nrm = nrm;
                 //     bounce_ray.inv_nrm = 1 / bounce_ray.nrm;
-                //     RayIntersection bounce_ray_intersection = ray_step_voxels(bounce_ray, bounce_ray.o - float3(2, 2, 2), bounce_ray.o + float3(2, 2, 2), 6);
+                //     RayIntersection bounce_ray_intersection = ray_step_voxels(GLOBALS_ARG bounce_ray, bounce_ray.o - float3(20, 20, 20), bounce_ray.o + float3(20, 20, 20), 10);
                 //     if (bounce_ray_intersection.hit)
                 //         occlusion += 0.0625;
                 // }

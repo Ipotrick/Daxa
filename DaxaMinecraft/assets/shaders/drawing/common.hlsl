@@ -72,11 +72,11 @@ uint tile_texture_index(GLOBALS_PARAM BlockID block_id, BlockFace face) {
 // Which information to show as the albedo
 #define ALBEDO ALBEDO_TEXTURE
 // Whether to disable everything else and draw just the complexity
-#define VISUALIZE_STEP_COMPLEXITY 1
-#define ENABLE_X16 0
+#define VISUALIZE_STEP_COMPLEXITY 0
+#define ENABLE_X16 1
 #define ENABLE_X64 0
 // Whether to cast shadow rays
-#define ENABLE_SHADOWS 1
+#define ENABLE_SHADOWS 0
 // Whether to visualize the position that the view ray intersects
 #define SHOW_PICK_POS 0
 #define SHOW_SINGLE_RAY 0
