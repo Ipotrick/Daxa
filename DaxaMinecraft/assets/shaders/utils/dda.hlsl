@@ -115,7 +115,7 @@ DDA_StartResult run_dda_start(in Ray ray, in out DDA_RunState run_state) {
     return result;
 }
 
-template<int SCL>
+template <int SCL>
 void run_dda_step(in out float3 to_side_dist, in out int3 tile_i, in out uint side, in DDA_StartResult dda_start) {
     if (to_side_dist.x < to_side_dist.y) {
         if (to_side_dist.x < to_side_dist.z) {
@@ -149,13 +149,16 @@ void run_dda_main(GLOBALS_PARAM in Ray ray, in DDA_StartResult dda_start, in out
     // 10% perf hit with shadows (worst case)
     // if (x_load_presence<16>(globals, run_state.tile_i_x16)) {
     //     for (uint j = 0; j < 12; ++j) {
-    //         uint tile = load_tile(run_state.tile_i);
-    //         if (is_block_occluding(get_block_id(tile))) {
+    //         BlockID block_id = load_block_id(GLOBALS_ARG run_state.tile_i);
+    //         if (is_block_occluding(block_id)) {
     //             run_state.hit = true;
     //             break;
     //         }
-    //         run_dda_step(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start, 1);
-    //         if (run_state.tile_i / 4 == run_state.tile_i_x4)
+    //         run_dda_step<1>(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start);
+    //         int3 tile_i_o4 = run_state.tile_i / 4;
+    //         if (tile_i_o4.x == run_state.tile_i_x4.x &&
+    //             tile_i_o4.y == run_state.tile_i_x4.y &&
+    //             tile_i_o4.z == run_state.tile_i_x4.z)
     //             break;
     //         x1_steps++;
     //         if (!point_box_contains(run_state.tile_i, b_min, b_max)) {
@@ -166,13 +169,16 @@ void run_dda_main(GLOBALS_PARAM in Ray ray, in DDA_StartResult dda_start, in out
 
     //     if (x_load_presence<16>(globals, run_state.tile_i / 16 * 16)) {
     //         for (uint j = 0; j < 36; ++j) {
-    //             uint tile = load_tile(run_state.tile_i);
-    //             if (is_block_occluding(get_block_id(tile))) {
+    //             BlockID block_id = load_block_id(GLOBALS_ARG run_state.tile_i);
+    //             if (is_block_occluding(block_id)) {
     //                 run_state.hit = true;
     //                 break;
     //             }
-    //             run_dda_step(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start, 1);
-    //             if (run_state.tile_i / 4 == run_state.tile_i_x4)
+    //             run_dda_step<1>(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start);
+    //             int3 tile_i_o4 = run_state.tile_i / 4;
+    //             if (tile_i_o4.x == run_state.tile_i_x4.x &&
+    //                 tile_i_o4.y == run_state.tile_i_x4.y &&
+    //                 tile_i_o4.z == run_state.tile_i_x4.z)
     //                 break;
     //             x1_steps++;
     //             if (!point_box_contains(run_state.tile_i, b_min, b_max)) {
@@ -259,8 +265,9 @@ void run_dda_main(GLOBALS_PARAM in Ray ray, in DDA_StartResult dda_start, in out
                         }
                         int3 tile_i_x4_o4 = run_state.tile_i_x4 / 4;
                         if ((tile_i_x4_o4.x == run_state.tile_i_x16.x &&
-                            tile_i_x4_o4.y == run_state.tile_i_x16.y &&
-                            tile_i_x4_o4.z == run_state.tile_i_x16.z) || run_state.hit)
+                             tile_i_x4_o4.y == run_state.tile_i_x16.y &&
+                             tile_i_x4_o4.z == run_state.tile_i_x16.z) ||
+                            run_state.hit)
                             break;
                         if (!point_box_contains(run_state.tile_i_x4, b_min, b_max)) {
                             run_state.outside_bounds = true;
