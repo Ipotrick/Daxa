@@ -3,6 +3,8 @@
 #include <fstream>
 #include <thread>
 #include <locale>
+#include <regex>
+#include <sstream>
 
 #include "spirv_reflect.h"
 #include "shaderc/shaderc.h"
@@ -19,6 +21,38 @@
 #include "util.hpp"
 
 using Path = std::filesystem::path;
+
+static const std::regex PRAGMA_ONCE_REGEX = std::regex(R"reg(#\s*pragma\s*once\s*)reg");
+static const std::regex REPLACE_REGEX = std::regex(R"reg(\W)reg");
+
+static void shaderPreprocess(std::string& fileStr, std::filesystem::path const& path) {
+    std::smatch matches;
+    std::string line;
+    std::stringstream fileSS{fileStr};
+    std::stringstream resultSS;
+
+    bool has_pragma_once = false;
+    auto abspathStr = std::filesystem::absolute(path).string();
+
+    for (std::size_t line_num = 0; std::getline(fileSS, line); ++line_num) {
+        if (std::regex_match(line, matches, PRAGMA_ONCE_REGEX)) {
+            resultSS << "#if !defined(";
+            std::regex_replace(std::ostreambuf_iterator<char>(resultSS), abspathStr.begin(), abspathStr.end(), REPLACE_REGEX, "_");
+            resultSS << ")\n";
+            has_pragma_once = true;
+        } else {
+            resultSS << line << "\n";
+        }
+    }
+
+    if (has_pragma_once) {
+        resultSS << "\n#define ";
+        std::regex_replace(std::ostreambuf_iterator<char>(resultSS), abspathStr.begin(), abspathStr.end(), REPLACE_REGEX, "_");
+        resultSS << "\n#endif";
+    }
+
+    fileStr = resultSS.str();
+}
 
 namespace daxa {
 	#define BACKEND (*static_cast<Backend*>(this->backend.get()))
@@ -50,8 +84,8 @@ namespace daxa {
 		return std::move(descLayouts);
 	}
 	
-	Result<std::string> PipelineCompiler::tryLoadShaderSourceFromFile(std::filesystem::path const& path) {
-		auto result = sharedData->findFullPathOfFile(path);
+	Result<std::string> PipelineCompilerShadedData::tryLoadShaderSourceFromFile(std::filesystem::path const& path) {
+		auto result = findFullPathOfFile(path);
 		if (result.isErr()) {
 			return ResultErr{ .message = result.message() };
 		}
@@ -65,7 +99,7 @@ namespace daxa {
 				err += '\"';
 				return ResultErr{ err.c_str() };
 			}
-			sharedData->observedHotLoadFiles->insert({result.value(), std::filesystem::last_write_time(result.value())});
+			observedHotLoadFiles->insert({result.value(), std::filesystem::last_write_time(result.value())});
 			std::string str;
 
 			ifs.seekg(0, std::ios::end);   
@@ -78,7 +112,9 @@ namespace daxa {
 				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				continue;
 			}
-					
+
+            shaderPreprocess(str, path);
+
 			return str;
 		}
 
@@ -315,7 +351,7 @@ namespace daxa {
 	Result<ShaderModuleHandle> PipelineCompiler::tryCreateShaderModule(ShaderModuleCreateInfo const& ci) {
 		std::string sourceCode = {};
 		if (!ci.pathToSource.empty()) {
-			auto src = tryLoadShaderSourceFromFile(ci.pathToSource);
+			auto src = sharedData->tryLoadShaderSourceFromFile(ci.pathToSource);
 			if (src.isErr()) {
 				return ResultErr{ src.message() };
 			}
@@ -410,13 +446,13 @@ namespace daxa {
 				sharedData->observedHotLoadFiles->insert({ fullPath, std::chrono::file_clock::now() });
 			}
 
-			std::ifstream ifs{fullPath};
-			std::string str;
-			ifs.seekg(0, std::ios::end);   
-			str.reserve(ifs.tellg());
-			ifs.seekg(0, std::ios::beg);
-			str.assign(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
-			
+            auto str_result = sharedData->tryLoadShaderSourceFromFile(fullPath);
+            if (str_result.isErr()) {
+				*ppIncludeSource = nullptr;
+				return SCARD_E_INVALID_PARAMETER;
+			}
+            std::string str = str_result.value();
+
 			pUtils->CreateBlob(str.data(), static_cast<u32>(str.size()), CP_UTF8, pEncoding.GetAddressOf());
 			*ppIncludeSource = pEncoding.Detach();
 			return S_OK;
