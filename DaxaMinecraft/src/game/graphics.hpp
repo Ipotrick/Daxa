@@ -251,6 +251,7 @@ struct World {
     ChunkArray<std::unique_ptr<RenderableChunk>> chunks{};
 
     daxa::ImageViewHandle atlas_texture_array;
+    daxa::SamplerHandle atlas_texture_sampler;
 
     daxa::BufferHandle compute_pipeline_globals;
 
@@ -281,6 +282,7 @@ struct World {
         float time, fov;
 
         u32 texture_index;
+        u32 sampler_index;
         u32 single_ray_steps;
         ChunkArray<u32> chunk_ids;
         // ChunkArray<ChunkBlockPresence> chunk_block_presence;
@@ -474,6 +476,7 @@ struct World {
             .time = elapsed,
             .fov = tanf(player.camera.fov * std::numbers::pi_v<f32> / 360.0f),
             .texture_index = atlas_texture_array->getDescriptorIndex(),
+            .sampler_index = atlas_texture_sampler->getDescriptorIndex(),
             .single_ray_steps = static_cast<u32>(single_ray_steps),
         };
 
@@ -604,12 +607,13 @@ struct World {
         cmd_list->dispatch((extent.width + 7) / 8, (extent.height + 7) / 8);
     }
 
-    void create_pipeline(daxa::PipelineHandle &pipe, const std::filesystem::path &path, daxa::ShaderLang lang = daxa::ShaderLang::GLSL) {
+    void create_pipeline(daxa::PipelineHandle &pipe, const std::filesystem::path &path, daxa::ShaderLang lang = daxa::ShaderLang::GLSL, const char *entry = "main") {
         auto result = render_ctx.pipeline_compiler->createComputePipeline({
             .shaderCI = {
                 .pathToSource = std::filesystem::path("DaxaMinecraft/assets/shaders") / path,
-                .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                 .shaderLang = lang,
+                .entryPoint = entry,
+                .stage = VK_SHADER_STAGE_COMPUTE_BIT,
             },
             .overwriteSets = {daxa::BIND_ALL_SET_DESCRIPTION},
         });
@@ -617,35 +621,17 @@ struct World {
     }
 
     void load_shaders() {
-        create_pipeline(raymarch_compute_pipeline, "drawing/raymarch.comp");
+        create_pipeline(raymarch_compute_pipeline, "drawing/raymarch.hlsl", daxa::ShaderLang::HLSL);
         create_pipeline(pickblock_compute_pipeline, "utils/pickblock.comp");
         create_pipeline(blockedit_compute_pipeline, "utils/blockedit.comp");
-        auto result = render_ctx.pipeline_compiler->createComputePipeline({
-            .shaderCI = {
-                .pathToSource = std::filesystem::path("DaxaMinecraft/assets/shaders") / "chunkgen/subchunk_x2x4.hlsl",
-                .stage = VK_SHADER_STAGE_COMPUTE_BIT,
-                .shaderLang = daxa::ShaderLang::HLSL,
-                .entryPoint = "Main"
-            },
-            .overwriteSets = {daxa::BIND_ALL_SET_DESCRIPTION},
-        });
-        subchunk_x2x4_pipeline = result.value();
-        result = render_ctx.pipeline_compiler->createComputePipeline({
-            .shaderCI = {
-                .pathToSource = std::filesystem::path("DaxaMinecraft/assets/shaders") / "chunkgen/subchunk_x8p.hlsl",
-                .stage = VK_SHADER_STAGE_COMPUTE_BIT,
-                .shaderLang = daxa::ShaderLang::HLSL,
-                .entryPoint = "Main"
-            },
-            .overwriteSets = {daxa::BIND_ALL_SET_DESCRIPTION},
-        });
-        subchunk_x8p_pipeline = result.value();
+        create_pipeline(subchunk_x2x4_pipeline, "chunkgen/subchunk_x2x4.hlsl", daxa::ShaderLang::HLSL, "Main");
+        create_pipeline(subchunk_x8p_pipeline, "chunkgen/subchunk_x8p.hlsl", daxa::ShaderLang::HLSL, "Main");
 
         std::array<std::filesystem::path, 1> chunkgen_pass_paths = {
-            "chunkgen/world/pass0.comp",
+            "chunkgen/world/pass0.hlsl",
         };
         for (size_t i = 0; i < chunkgen_pass_paths.size(); ++i)
-            create_pipeline(chunkgen_compute_pipeline_passes[i], chunkgen_pass_paths[i]);
+            create_pipeline(chunkgen_compute_pipeline_passes[i], chunkgen_pass_paths[i], daxa::ShaderLang::HLSL);
 
         //create_pipeline(subgrid_compute_pipeline, "chunkgen/world/subchunk.comp");
     }
@@ -686,6 +672,15 @@ struct World {
             "water.png",
         };
 
+        atlas_texture_sampler = render_ctx.device->createSampler({
+            .magFilter = VK_FILTER_NEAREST,
+            .minFilter = VK_FILTER_LINEAR,
+            .anisotropyEnable = true,
+            .maxAnisotropy = 16.0f,
+            .maxLod = 3,
+            .debugName = "Texture Sampler",
+        });
+
         atlas_texture_array = render_ctx.device->createImageView({
             .image = render_ctx.device->createImage({
                 .format = VK_FORMAT_R8G8B8A8_SRGB,
@@ -705,14 +700,7 @@ struct World {
                     .baseArrayLayer = 0,
                     .layerCount = static_cast<u32>(texture_names.size()),
                 },
-            .defaultSampler = render_ctx.device->createSampler({
-                .magFilter = VK_FILTER_NEAREST,
-                .minFilter = VK_FILTER_LINEAR,
-                .anisotropyEnable = true,
-                .maxAnisotropy = 16.0f,
-                .maxLod = 3,
-                .debugName = "Texture Sampler",
-            }),
+            .defaultSampler = atlas_texture_sampler,
             .debugName = "Texture Image View",
         });
 

@@ -238,7 +238,7 @@ struct Game {
         }
     }
     void on_resize() {
-        redraw();
+        update();
     }
 
     void toggle_pause() {

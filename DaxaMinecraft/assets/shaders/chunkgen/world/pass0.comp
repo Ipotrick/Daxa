@@ -29,7 +29,7 @@ void block_pass0(in out WorldgenState worldgen_state, in vec3 b_pos) {
         // if (b_pos.y > water_level + 80 + worldgen_state.t_noise * 20 + worldgen_state.r * 60) {
         //     worldgen_state.block_id = BlockID_CompressedStone;
         // } else {
-            worldgen_state.block_id = BlockID_Stone;
+        worldgen_state.block_id = BlockID_Stone;
         // }
         // if (worldgen_state.t_noise > 3) {
         //     worldgen_state.biome_id = BiomeID_Underworld;

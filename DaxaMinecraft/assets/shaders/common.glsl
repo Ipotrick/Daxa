@@ -122,8 +122,7 @@ uvec3 linear_index_to_x8_packed_index(uint linear) {
     return uvec3(
         linear & 0x7,
         (linear >> 3) & 0x7,
-        (linear >> 6) & 0x7
-    );
+        (linear >> 6) & 0x7);
 }
 
 uint x16_uint_bit_mask(uvec3 x16_i) {
