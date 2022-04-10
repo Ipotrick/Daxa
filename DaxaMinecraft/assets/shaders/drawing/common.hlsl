@@ -1,5 +1,4 @@
-#if !defined(DRAWING_COMMON_HLSL)
-#define DRAWING_COMMON_HLSL
+#pragma once
 
 struct Push {
     uint globals_sb;
@@ -14,7 +13,7 @@ struct Push {
 
 #include "core.hlsl"
 
-uint tile_texture_index(BlockID block_id, BlockFace face) {
+uint tile_texture_index(inout StructuredBuffer<Globals> globals, BlockID block_id, BlockFace face) {
     // clang-format off
     switch (block_id) {
     case BlockID::Debug:           return 0;
@@ -38,7 +37,7 @@ uint tile_texture_index(BlockID block_id, BlockFace face) {
         default:                   return 0;
         }
     case BlockID::Gravel:          return 12;
-    case BlockID::Lava:            return 13 + int(globals.time * 6) % 8;
+    case BlockID::Lava:            return 13 + int(globals[0].time * 6) % 8;
     case BlockID::Leaves:          return 21;
     case BlockID::Log:
         switch (face) {
@@ -89,4 +88,4 @@ uint tile_texture_index(BlockID block_id, BlockFace face) {
 // Visualize x_n grid (n can be 1, 4, or 16)
 #define VISUALIZE_SUBGRID 2
 
-#endif
+#define MAX_STEPS (BLOCK_NX + BLOCK_NY + BLOCK_NZ)

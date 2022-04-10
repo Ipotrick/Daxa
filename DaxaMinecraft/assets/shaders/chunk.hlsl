@@ -1,3 +1,5 @@
+#pragma once
+
 #include "core.hlsl"
 
 // Log2_N = 1 : x2, 2 : x4, 3: x8 ...

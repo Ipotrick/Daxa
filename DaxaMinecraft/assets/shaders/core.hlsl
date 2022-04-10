@@ -1,5 +1,4 @@
-#if !defined(CORE_HLSL)
-#define CORE_HLSL
+#pragma once
 
 #include "block_info.hlsl"
 
@@ -82,20 +81,13 @@ struct Globals {
 };
 
 DAXA_DEFINE_BA_BUFFER(Globals)
-#define globals getBuffer<Globals>(p.globals_sb)[0]
-#define chunk_block_presence(_ci) globals.chunk_block_presence[_ci.z][_ci.y][_ci.x]
 
-BlockID load_block_id(float3 pos) {
+BlockID load_block_id(inout StructuredBuffer<Globals> globals, float3 pos) {
     int3 chunk_i = int3(pos / CHUNK_SIZE);
     if (chunk_i.x < 0 || chunk_i.x > CHUNK_NX - 1 || chunk_i.y < 0 ||
         chunk_i.y > CHUNK_NY - 1 || chunk_i.z < 0 || chunk_i.z > CHUNK_NZ - 1) {
         return BlockID::Air;
     }
-    return (BlockID)getRWTexture3D<uint>(
-        getBuffer<Globals>(p.globals_sb)
-            .Load(0)
-            .chunk_images[chunk_i.z][chunk_i.y][chunk_i.x])
+    return (BlockID)getRWTexture3D<uint>(globals[0].chunk_images[chunk_i.z][chunk_i.y][chunk_i.x])
         [int3(pos) - chunk_i * int3(CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE)];
 }
-
-#endif

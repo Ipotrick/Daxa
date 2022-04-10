@@ -8,7 +8,7 @@
 #include <numbers>
 
 struct Camera3D {
-    float fov = 70.0f, aspect = 1.0f;
+    float fov = 98.6f, aspect = 1.0f;
     float near = 0.01f, far = 1000.0f;
     glm::mat4 proj_mat{};
     glm::mat4 vtrn_mat{};
@@ -51,6 +51,7 @@ struct Player3D {
     input::Keybinds keybinds;
     glm::vec3 pos{}, vel{}, rot{};
     float speed = 20.0f, mouse_sens = 1.0f;
+    float sprint_speed = 32.0f;
     float sin_rot_x = 0, cos_rot_x = 1;
 
     struct MoveFlags {
@@ -60,7 +61,7 @@ struct Player3D {
     void update(float dt) {
         auto delta_pos = speed * dt;
         if (move.sprint)
-            delta_pos *= 32.0f;
+            delta_pos *= sprint_speed;
         if (move.px)
             pos.z += sin_rot_x * delta_pos, pos.x -= cos_rot_x * delta_pos;
         if (move.nx)

@@ -2,6 +2,7 @@
 #include "drawing/common.hlsl"
 #include "utils/intersect.hlsl"
 #include "utils/noise.hlsl"
+#include "chunk.hlsl"
 
 DAXA_DEFINE_BA_TEXTURE2DARRAY(float4)
 DAXA_DEFINE_BA_SAMPLER(void)
@@ -40,19 +41,41 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
     }
 }
 
+float3 ortho(float3 v) {
+    return lerp(float3(-v.y, v.x, 0.0), float3(0.0, -v.z, v.y), step(abs(v.x), abs(v.z)));
+}
+
+float3 around(float3 v, float3 z) {
+    float3 t = ortho(z), b = cross(z, t);
+    return mad(t, float3(v.x, v.x, v.x), mad(b, float3(v.y, v.y, v.y), z * v.z));
+}
+
+float3 isotropic(float rp, float c) {
+    // sin(a) = sqrt(1.0 - cos(a)^2) , in the interval [0, PI/2] relevant for us
+    float p = 2 * 3.14159 * rp, s = sqrt(1.0 - c * c);
+    return float3(cos(p) * s, sin(p) * s, c);
+}
+
+float3 rand_pt(float3 n, float2 rnd) {
+    float c = sqrt(rnd.y);
+    return around(isotropic(rnd.x, c), n);
+}
+
 [numthreads(8, 8, 1)] void main(uint3 pixel_i
                                 : SV_DispatchThreadID) {
-    if (pixel_i.x >= globals.frame_dim.x ||
-        pixel_i.y >= globals.frame_dim.y)
+    StructuredBuffer<Globals> globals = getBuffer<Globals>(p.globals_sb);
+
+    if (pixel_i.x >= globals[0].frame_dim.x ||
+        pixel_i.y >= globals[0].frame_dim.y)
         return;
 
-    float3 front = mul(globals.viewproj_mat, float4(0, 0, 1, 0)).xyz;
-    float3 right = mul(globals.viewproj_mat, float4(1, 0, 0, 0)).xyz;
-    float3 up = mul(globals.viewproj_mat, float4(0, 1, 0, 0)).xyz;
+    float3 front = mul(globals[0].viewproj_mat, float4(0, 0, 1, 0)).xyz;
+    float3 right = mul(globals[0].viewproj_mat, float4(1, 0, 0, 0)).xyz;
+    float3 up = mul(globals[0].viewproj_mat, float4(0, 1, 0, 0)).xyz;
 
-    float3 view_intersection_pos = globals.pick_pos.xyz;
+    float3 view_intersection_pos = globals[0].pick_pos.xyz;
     Ray cam_ray;
-    cam_ray.o = globals.pos.xyz;
+    cam_ray.o = globals[0].pos.xyz;
 
     Ray sun_ray;
     float sun_angle = 0.3;
@@ -62,10 +85,10 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
 
     const float2 subsamples = float2(SUBSAMPLE_N, SUBSAMPLE_N);
     const float2 inv_subsamples = 1 / subsamples;
-    float2 inv_frame_dim = 1 / float2(globals.frame_dim);
-    float aspect = float(globals.frame_dim.x) * inv_frame_dim.y;
+    float2 inv_frame_dim = 1 / float2(globals[0].frame_dim);
+    float aspect = float(globals[0].frame_dim.x) * inv_frame_dim.y;
     int2 i_uv = int2(pixel_i.xy);
-    float uv_rand_offset = globals.time;
+    float uv_rand_offset = globals[0].time;
     float3 color = float3(0, 0, 0);
     float depth = 100000;
 
@@ -80,17 +103,17 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
 
     for (uint yi = 0; yi < subsamples.y; ++yi) {
         for (uint xi = 0; xi < subsamples.x; ++xi) {
-            float2 view_uv = (uv + inv_frame_dim * float2(xi, yi) * inv_subsamples) * globals.fov * float2(aspect, 1);
+            float2 view_uv = (uv + inv_frame_dim * float2(xi, yi) * inv_subsamples) * globals[0].fov * float2(aspect, 1);
 
             cam_ray.nrm = normalize(front + view_uv.x * right + view_uv.y * up);
             cam_ray.inv_nrm = 1 / cam_ray.nrm;
 
-            RayIntersection ray_chunk_intersection = trace_chunks(cam_ray);
+            RayIntersection ray_chunk_intersection = trace_chunks(globals, cam_ray);
 #if VISUALIZE_STEP_COMPLEXITY
             color.r += log(float(ray_chunk_intersection.steps) * 1 / MAX_STEPS + 1);
 #else
             float3 intersection_pos = get_intersection_pos_corrected(cam_ray, ray_chunk_intersection);
-            BlockID block_id = load_block_id(intersection_pos);
+            BlockID block_id = load_block_id(globals, intersection_pos);
             int3 intersection_block_pos = int3(intersection_pos);
             int3 view_intersection_block_pos = int3(view_intersection_pos);
 
@@ -110,13 +133,13 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
             if (ray_chunk_intersection.hit) {
 #if ENABLE_SHADOWS
                 sun_ray.o = intersection_pos + ray_chunk_intersection.nrm * 0.002;
-                RayIntersection sun_ray_chunk_intersection = trace_chunks(sun_ray);
+                RayIntersection sun_ray_chunk_intersection = trace_chunks(globals, sun_ray);
                 float val = float(!sun_ray_chunk_intersection.hit);
                 val = max(val * dot(ray_chunk_intersection.nrm, sun_ray.nrm), 0.01);
                 float3 light = val * sun_col + sample_sky(sun_ray, ray_chunk_intersection.nrm) * 0.2;
 #else
-                // float3 light = sun_col * max(dot(ray_chunk_intersection.nrm, sun_ray.nrm), 0) + sample_sky(sun_ray, ray_chunk_intersection.nrm) * 0.4;
-                float3 light = float3(1);
+                // float3 light = shaded(sun_ray, float3(1, 1, 1), ray_chunk_intersection.nrm);
+                float3 light = float3(1, 1, 1);
 #endif
                 float3 b_uv = float3(int3(intersection_pos) % 16) / 16;
                 BlockFace face_id;
@@ -150,15 +173,51 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
                     tex_uv.y = 1 - tex_uv.y;
                 }
 
-                uint tex_id = tile_texture_index(block_id, face_id);
+                uint tex_id = tile_texture_index(globals, block_id, face_id);
+
+                if (tex_id == 8 || tex_id == 11) {
+                    float r = rand(int3(intersection_pos));
+                    switch (int(r * 4) % 4) {
+                    case 0:
+                        tex_uv = 1 - tex_uv;
+                    case 1:
+                        tex_uv = float2(tex_uv.y, tex_uv.x);
+                        break;
+                    case 2:
+                        tex_uv = 1 - tex_uv;
+                    case 3:
+                        tex_uv = float2(tex_uv.x, tex_uv.y);
+                        break;
+                    default:
+                        break;
+                    }
+                }
+
 #if ALBEDO == ALBEDO_TEXTURE
                 // WTF!!!
-                // float3 albedo = getTexture2DArray<float4>(globals.texture_index).Sample(
-                //     getSampler<void>(globals.sampler_index), 
-                //     float3(tex_uv.x, tex_uv.y, float(tex_id)), 
+                // float3 albedo = getTexture2DArray<float4>(globals[0].texture_index).Sample(
+                //     getSampler<void>(globals[0].sampler_index),
+                //     float3(tex_uv.x, tex_uv.y, float(tex_id)),
                 //     int2(0, 0),
                 //     1.0f).rgb;
-                float3 albedo = getTexture2DArray<float4>(globals.texture_index).Load(int4(tex_uv.x * 16, tex_uv.y * 16, tex_id, 0)).rgb;
+                float3 albedo = getTexture2DArray<float4>(globals[0].texture_index).Load(int4(tex_uv.x * 16, tex_uv.y * 16, tex_id, 0)).rgb;
+
+                // float occlusion = 0;
+                // float3 nrm;
+                // for (uint i = 0; i < 16; ++i) {
+                //     nrm = normalize(rand_pt(ray_chunk_intersection.nrm, rand_vec2(tex_uv.xy + pixel_i.xy + i + globals[0].time)));
+                //     Ray bounce_ray;
+                //     bounce_ray.o = intersection_pos + ray_chunk_intersection.nrm * 0.002;
+                //     bounce_ray.nrm = nrm;
+                //     bounce_ray.inv_nrm = 1 / bounce_ray.nrm;
+                //     RayIntersection bounce_ray_intersection = ray_step_voxels(bounce_ray, bounce_ray.o - float3(2, 2, 2), bounce_ray.o + float3(2, 2, 2), 6);
+                //     if (bounce_ray_intersection.hit)
+                //         occlusion += 0.0625;
+                // }
+                // occlusion = 1 - occlusion;
+                // light *= occlusion * occlusion;
+
+                // float3 albedo = (nrm);
 #elif ALBEDO == ALBEDO_DEBUG_POS
                 float3 albedo = b_uv;
 #elif ALBEDO == ALBEDO_DEBUG_NRM
@@ -190,8 +249,8 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
 
 #if SHOW_SINGLE_RAY
     Ray ray;
-    ray.o = globals.single_ray_pos.xyz;
-    ray.nrm = globals.single_ray_nrm.xyz;
+    ray.o = globals[0].single_ray_pos.xyz;
+    ray.nrm = globals[0].single_ray_nrm.xyz;
     ray.inv_nrm = 1 / ray.nrm;
 
     RayIntersection temp_inter;
@@ -210,7 +269,7 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
         result.nrm = float3(0, 0, 0);
         result.steps = 0;
 
-        uint max_steps = globals.single_ray_steps;
+        uint max_steps = globals[0].single_ray_steps;
 
         DDA_RunState run_state;
         run_state.outside_bounds = false;
@@ -287,9 +346,9 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
             overlay(color, depth, shaded(sun_ray, side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit, 0.1);
 
             x1_steps++;
-            run_dda_step(run_state.to_side_dist_x16, run_state.tile_i_x16, run_state.side, dda_start, 16);
+            run_dda_step<16>(run_state.to_side_dist_x16, run_state.tile_i_x16, run_state.side, dda_start);
 
-            if (load_block_presence_16x(run_state.tile_i_x16)) {
+            if (x_load_presence<16>(globals, run_state.tile_i_x16)) {
                 RayIntersection x16_intersection;
                 x16_intersection.nrm = float3(dda_start.ray_step * 1);
                 switch (run_state.side) {
@@ -318,9 +377,9 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
                     overlay(color, depth, shaded(sun_ray, side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit, 0.2);
                     // #endif
                     x1_steps++;
-                    run_dda_step(run_state.to_side_dist_x4, run_state.tile_i_x4, run_state.side, dda_start, 4);
+                    run_dda_step<4>(run_state.to_side_dist_x4, run_state.tile_i_x4, run_state.side, dda_start);
 
-                    if (load_block_presence_4x(run_state.tile_i_x4)) {
+                    if (x_load_presence<4>(globals, run_state.tile_i_x4)) {
                         RayIntersection x4_intersection;
                         x4_intersection.nrm = float3(dda_start.ray_step * 1);
                         switch (run_state.side) {
@@ -354,7 +413,7 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
                             }
 
                             x1_steps++;
-                            run_dda_step(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start, 1);
+                            run_dda_step<1>(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start);
 
                             if (run_state.tile_i / 4 == run_state.tile_i_x4)
                                 break;
@@ -420,14 +479,14 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
 
     color *= inv_subsamples.x * inv_subsamples.y;
 
-    draw_rect(pixel_i.xy, color, globals.frame_dim.x / 2 - 0, globals.frame_dim.y / 2 - 4, 1, 9);
-    draw_rect(pixel_i.xy, color, globals.frame_dim.x / 2 - 4, globals.frame_dim.y / 2 - 0, 9, 1);
-    
+    draw_rect(pixel_i.xy, color, globals[0].frame_dim.x / 2 - 0, globals[0].frame_dim.y / 2 - 4, 1, 9);
+    draw_rect(pixel_i.xy, color, globals[0].frame_dim.x / 2 - 4, globals[0].frame_dim.y / 2 - 0, 9, 1);
+
     // RayIntersection temp_inter;
     // for (int yi = 0; yi < 10; ++yi)
     //     for (int xi = 0; xi < 10; ++xi) {
     //         temp_inter = ray_sphere_intersect(cam_ray, float3(512 + xi * 2, 0, 512 + yi * 2), 1);
-    //         draw(color, depth, getTexture2DArray<float4>(globals.texture_index).Load(int4((temp_inter.nrm.x * 0.5 + 0.5) * 16, (temp_inter.nrm.z * 0.5 + 0.5) * 16, int(globals.time * 5) % 30, 0)).rgb, temp_inter.dist, temp_inter.hit);
+    //         draw(color, depth, getTexture2DArray<float4>(globals[0].texture_index).Load(int4((temp_inter.nrm.x * 0.5 + 0.5) * 16, (temp_inter.nrm.z * 0.5 + 0.5) * 16, int(globals[0].time * 5) % 30, 0)).rgb, temp_inter.dist, temp_inter.hit);
     //     }
 
     RWTexture2D<float4> output_image = getRWTexture2D<float4>(p.output_image_i);

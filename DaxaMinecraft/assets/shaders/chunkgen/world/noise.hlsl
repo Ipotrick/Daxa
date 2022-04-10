@@ -1,18 +1,28 @@
-#if !defined(WORLD_NOISE_HLSL)
-#define WORLD_NOISE_HLSL
+#pragma once
 
 #include "utils/noise.hlsl"
 #include "block_info.hlsl"
 
 float terrain_noise(float3 pos) {
-    FractalNoiseConfig noise_conf = {
+    FractalNoiseConfig noise_conf1 = {
         /* .amplitude   = */ 1.0f,
         /* .persistance = */ 0.4f,
+        /* .scale       = */ 0.008f,
+        /* .lacunarity  = */ 2,
+        /* .octaves     = */ 3,
+    };
+    FractalNoiseConfig noise_conf2 = {
+        /* .amplitude   = */ 1.0f,
+        /* .persistance = */ 0.5f,
         /* .scale       = */ 0.01f,
         /* .lacunarity  = */ 2,
-        /* .octaves     = */ 6,
+        /* .octaves     = */ 5,
     };
-    return fractal_noise(pos, noise_conf) - 1.5; // + (pos.y - 120) * 0.015;
+    float val1 = fractal_noise(pos, noise_conf1);
+    return val1 - 0.5;
+    // float val2 = fractal_noise(float3(pos.x, 0, pos.z), noise_conf2);
+    // float riv = (abs(val2 - 0.7)) * 2;
+    // return ((pos.y - 65) * 0.2 + riv + (val1 - 0.5) * 6.4) * riv - 0.5;
 }
 
 float biome_noise(float3 pos) {
@@ -71,5 +81,3 @@ WorldgenState get_worldgen_state(float3 pos) {
     result.r_xz = rand(float3(pos.x, 0, pos.z));
     return result;
 }
-
-#endif

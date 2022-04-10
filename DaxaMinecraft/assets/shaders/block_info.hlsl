@@ -1,5 +1,4 @@
-#if !defined(BLOCK_INFO_HLSL)
-#define BLOCK_INFO_HLSL
+#pragma once
 
 enum class BlockID : uint {
     Debug,
@@ -73,10 +72,7 @@ bool is_transparent(BlockID block_id) {
 #define BLOCK_NX 1024
 #define BLOCK_NY 256
 #define BLOCK_NZ 1024
-#define CHUNK_NX 16
-#define CHUNK_NY 4
-#define CHUNK_NZ 16
-#define MAX_STEPS 10000
+#define CHUNK_NX (BLOCK_NX / CHUNK_SIZE)
+#define CHUNK_NY (BLOCK_NY / CHUNK_SIZE)
+#define CHUNK_NZ (BLOCK_NZ / CHUNK_SIZE)
 #define WATER_LEVEL 160
-
-#endif

@@ -1,5 +1,4 @@
-#if !defined(RAND_HLSL)
-#define RAND_HLSL
+#pragma once
 
 uint rand_hash(uint x) {
     x += (x << 10u);
@@ -33,5 +32,3 @@ float3 rand_vec3(float3 v) { return float3(rand(v.x), rand(v.y), rand(v.z)); }
 float4 rand_vec4(float4 v) {
     return float4(rand(v.x), rand(v.y), rand(v.z), rand(v.w));
 }
-
-#endif

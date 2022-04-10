@@ -1,5 +1,4 @@
-#if !defined(NOISE_HLSL)
-#define NOISE_HLSL
+#pragma once
 
 #include "utils/rand.hlsl"
 
@@ -44,5 +43,3 @@ float fractal_noise(float3 pos, FractalNoiseConfig config) {
     }
     return value;
 }
-
-#endif
