@@ -69,17 +69,14 @@ bool is_transparent(BlockID block_id) {
     }
 }
 
-enum INTEGER_CONSTANTS {
-    CHUNK_SIZE = 64,
-    BLOCK_NX = 1024,
-    BLOCK_NY = 256,
-    BLOCK_NZ = 1024,
-    CHUNK_NX = BLOCK_NX / CHUNK_SIZE,
-    CHUNK_NY = BLOCK_NY / CHUNK_SIZE,
-    CHUNK_NZ = BLOCK_NZ / CHUNK_SIZE,
-    MAX_STEPS =
-        CHUNK_NX * CHUNK_SIZE + CHUNK_NY * CHUNK_SIZE + CHUNK_NZ * CHUNK_SIZE,
-    WATER_LEVEL = 160,
-};
+#define CHUNK_SIZE 64
+#define BLOCK_NX 1024
+#define BLOCK_NY 256
+#define BLOCK_NZ 1024
+#define CHUNK_NX 16
+#define CHUNK_NY 4
+#define CHUNK_NZ 16
+#define MAX_STEPS 10000
+#define WATER_LEVEL 160
 
 #endif

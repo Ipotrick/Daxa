@@ -1,9 +1,7 @@
 #if !defined(INTERSECT_HLSL)
 #define INTERSECT_HLSL
 
-const uint SDF_MIN = 1000;
-
-#include <utils/dda.glsl>
+#include "utils/dda.hlsl"
 
 RayIntersection ray_box_intersect(in Ray ray, float3 b_min, float3 b_max) {
     RayIntersection result;
@@ -168,7 +166,7 @@ RayIntersection ray_step_voxels(in Ray ray, in float3 b_min, in float3 b_max, in
     RayIntersection result;
     result.hit = false;
     result.dist = 0;
-    result.nrm = float3(0);
+    result.nrm = float3(0, 0, 0);
     result.steps = 0;
 
     DDA_RunState dda_run_state;
@@ -212,11 +210,11 @@ RayIntersection ray_step_voxels(in Ray ray, in float3 b_min, in float3 b_max, in
 }
 
 RayIntersection trace_chunks(in Ray ray) {
-    float3 b_min = float3(0), b_max = CHUNK_SIZE * CHUNK_N;
+    float3 b_min = float3(0, 0, 0), b_max = float3(int(CHUNK_NX), int(CHUNK_NY), int(CHUNK_NZ)) * int(CHUNK_SIZE);
     RayIntersection result;
     result.hit = false;
     result.dist = 0;
-    result.nrm = float3(0);
+    result.nrm = float3(0, 0, 0);
     result.steps = 0;
 
     float sdf_dist_total = 0;
@@ -264,7 +262,7 @@ RayIntersection trace_chunks(in Ray ray) {
     float3 sample_pos = ray.o + ray.nrm * sdf_dist_total;
     Ray dda_ray = ray;
     dda_ray.o = sample_pos;
-    RayIntersection dda_result = ray_step_voxels(dda_ray, float3(0), CHUNK_SIZE * CHUNK_N, MAX_STEPS);
+    RayIntersection dda_result = ray_step_voxels(dda_ray, b_min, b_max, int(MAX_STEPS));
     sdf_dist_total += dda_result.dist;
     sdf_step_total += dda_result.steps;
     if (dda_result.hit) {
@@ -276,3 +274,5 @@ RayIntersection trace_chunks(in Ray ray) {
 
     return result;
 }
+
+#endif

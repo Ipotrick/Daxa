@@ -1,5 +1,5 @@
-#include "drawing/common.glsl"
-#include "utils/intersect.glsl"
+#include "drawing/common.hlsl"
+#include "utils/intersect.hlsl"
 
 [numthreads(1, 1, 1)] void main() {
     float3 front = (globals.viewproj_mat * float4(0, 0, 1, 0)).xyz;

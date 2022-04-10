@@ -1,23 +1,25 @@
 
-#include "drawing/common.glsl"
-#include "utils/intersect.glsl"
-#include "utils/noise.glsl"
+#include "drawing/common.hlsl"
+#include "utils/intersect.hlsl"
+#include "utils/noise.hlsl"
 
-Ray sun_ray;
+DAXA_DEFINE_BA_TEXTURE2DARRAY(float4)
+DAXA_DEFINE_BA_SAMPLER(void)
+
 #define sun_col float3(2, 1.7, 1)
 
-float3 sample_sky(float3 nrm) {
+float3 sample_sky(in Ray sun_ray, float3 nrm) {
     float sun_val = clamp((dot(nrm, sun_ray.nrm) - 0.9999) * 10000, 0, 1);
     float sky_val = (dot(nrm, float3(0, 1, 0))) / 2 + clamp((dot(nrm, sun_ray.nrm) + 1) * 0.1, 0, 1);
     return sun_col * sun_val + lerp(float3(0.5, 0.6, 2), float3(0.1, 0.2, 0.5), sky_val);
 }
 
-void draw_rect(inout float3 color, int px, int py, int sx, int sy) {
-    if (gl_GlobalInvocationID.x >= px &&
-        gl_GlobalInvocationID.x < px + sx &&
-        gl_GlobalInvocationID.y >= py &&
-        gl_GlobalInvocationID.y < py + sy)
-        color = float3(1);
+void draw_rect(in uint2 pixel_i, inout float3 color, int px, int py, int sx, int sy) {
+    if (pixel_i.x >= px &&
+        pixel_i.x < px + sx &&
+        pixel_i.y >= py &&
+        pixel_i.y < py + sy)
+        color = float3(1, 1, 1);
 }
 
 void draw(inout float3 color, inout float depth, in float3 new_color, in float new_depth, bool should) {
@@ -27,8 +29,8 @@ void draw(inout float3 color, inout float depth, in float3 new_color, in float n
     }
 }
 
-float3 shaded(in float3 col, in float3 nrm) {
-    float3 light = sun_col * max(dot(nrm, sun_ray.nrm) + 1, 0) + sample_sky(nrm) * 0.2;
+float3 shaded(in Ray sun_ray, in float3 col, in float3 nrm) {
+    float3 light = sun_col * max(dot(nrm, sun_ray.nrm), 0) + sample_sky(sun_ray, nrm) * 0.6;
     return col * light;
 }
 
@@ -38,39 +40,41 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
     }
 }
 
-[numthreads(8, 8, 1)] void main() {
-    if (gl_GlobalInvocationID.x >= globals.frame_dim.x ||
-        gl_GlobalInvocationID.y >= globals.frame_dim.y)
+[numthreads(8, 8, 1)] void main(uint3 pixel_i
+                                : SV_DispatchThreadID) {
+    if (pixel_i.x >= globals.frame_dim.x ||
+        pixel_i.y >= globals.frame_dim.y)
         return;
 
-    float3 front = (globals.viewproj_mat * float4(0, 0, 1, 0)).xyz;
-    float3 right = (globals.viewproj_mat * float4(1, 0, 0, 0)).xyz;
-    float3 up = (globals.viewproj_mat * float4(0, 1, 0, 0)).xyz;
+    float3 front = mul(globals.viewproj_mat, float4(0, 0, 1, 0)).xyz;
+    float3 right = mul(globals.viewproj_mat, float4(1, 0, 0, 0)).xyz;
+    float3 up = mul(globals.viewproj_mat, float4(0, 1, 0, 0)).xyz;
 
     float3 view_intersection_pos = globals.pick_pos.xyz;
     Ray cam_ray;
     cam_ray.o = globals.pos.xyz;
 
+    Ray sun_ray;
     float sun_angle = 0.3;
     float sun_yz = -abs(cos(sun_angle)) * 2;
     sun_ray.nrm = normalize(float3(sin(sun_angle) * 3, sun_yz, -0.2 * sun_yz));
     sun_ray.inv_nrm = 1 / sun_ray.nrm;
 
-    const float2 subsamples = float2(SUBSAMPLE_N);
+    const float2 subsamples = float2(SUBSAMPLE_N, SUBSAMPLE_N);
     const float2 inv_subsamples = 1 / subsamples;
     float2 inv_frame_dim = 1 / float2(globals.frame_dim);
     float aspect = float(globals.frame_dim.x) * inv_frame_dim.y;
-    int2 i_uv = int2(gl_GlobalInvocationID.xy);
+    int2 i_uv = int2(pixel_i.xy);
     float uv_rand_offset = globals.time;
-    float3 color = float3(0);
+    float3 color = float3(0, 0, 0);
     float depth = 100000;
 
     float2 uv_offset =
 #if JITTER_VIEW
         float2(rand(float2(i_uv + uv_rand_offset + 10)),
-             rand(float2(i_uv + uv_rand_offset)));
+               rand(float2(i_uv + uv_rand_offset)));
 #else
-        float2(0);
+        float2(0, 0);
 #endif
     float2 uv = (float2(i_uv) + uv_offset * inv_subsamples) * inv_frame_dim * 2 - 1;
 
@@ -86,11 +90,11 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
             color.r += log(float(ray_chunk_intersection.steps) * 1 / MAX_STEPS + 1);
 #else
             float3 intersection_pos = get_intersection_pos_corrected(cam_ray, ray_chunk_intersection);
-            uint block_id = load_block_id(intersection_pos);
+            BlockID block_id = load_block_id(intersection_pos);
             int3 intersection_block_pos = int3(intersection_pos);
             int3 view_intersection_block_pos = int3(view_intersection_pos);
 
-            // if (ray_chunk_intersection.hit && block_id == BlockID_Water) {
+            // if (ray_chunk_intersection.hit && block_id == BlockID::Water) {
             //     cam_ray.o = intersection_pos + ray_chunk_intersection.nrm * 0.01;
             //     cam_ray.nrm = normalize(reflect(cam_ray.nrm, ray_chunk_intersection.nrm));
             //     cam_ray.inv_nrm = 1 / cam_ray.nrm;
@@ -98,7 +102,7 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
             //     intersection_pos = get_intersection_pos(cam_ray, ray_chunk_intersection);
             //     block_id = get_block_id(intersection_pos);
             // }
-            // if (ray_chunk_intersection.hit && block_id == BlockID_Air) {
+            // if (ray_chunk_intersection.hit && block_id == BlockID::Air) {
             //     uint tile = load_tile(intersection_pos);
             //     float sdf_value = float((tile & SDF_DIST_MASK) >> 0x18) / 128;
             //     color += float3(sdf_value);
@@ -109,46 +113,52 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
                 RayIntersection sun_ray_chunk_intersection = trace_chunks(sun_ray);
                 float val = float(!sun_ray_chunk_intersection.hit);
                 val = max(val * dot(ray_chunk_intersection.nrm, sun_ray.nrm), 0.01);
-                float3 light = val * sun_col + sample_sky(ray_chunk_intersection.nrm) * 0.2;
+                float3 light = val * sun_col + sample_sky(sun_ray, ray_chunk_intersection.nrm) * 0.2;
 #else
-                // float3 light = sun_col * max(dot(ray_chunk_intersection.nrm, sun_ray.nrm), 0) + sample_sky(ray_chunk_intersection.nrm) * 0.4;
+                // float3 light = sun_col * max(dot(ray_chunk_intersection.nrm, sun_ray.nrm), 0) + sample_sky(sun_ray, ray_chunk_intersection.nrm) * 0.4;
                 float3 light = float3(1);
 #endif
                 float3 b_uv = float3(int3(intersection_pos) % 16) / 16;
-                uint face_id = 0;
-                float2 tex_uv = float2(0);
+                BlockFace face_id;
+                float2 tex_uv = float2(0, 0);
                 depth = ray_chunk_intersection.dist;
 
                 if (ray_chunk_intersection.nrm.x > 0.5) {
-                    face_id = BlockFace_Left;
+                    face_id = BlockFace::Left;
                     tex_uv = frac(intersection_pos.zy);
                     tex_uv.y = 1 - tex_uv.y;
                 } else if (ray_chunk_intersection.nrm.x < -0.5) {
-                    face_id = BlockFace_Right;
+                    face_id = BlockFace::Right;
                     tex_uv = frac(intersection_pos.zy);
                     tex_uv = 1 - tex_uv;
                 }
                 if (ray_chunk_intersection.nrm.y > 0.5) {
-                    face_id = BlockFace_Bottom;
+                    face_id = BlockFace::Bottom;
                     tex_uv = frac(intersection_pos.xz);
                     tex_uv.x = 1 - tex_uv.x;
                 } else if (ray_chunk_intersection.nrm.y < -0.5) {
-                    face_id = BlockFace_Top;
+                    face_id = BlockFace::Top;
                     tex_uv = frac(intersection_pos.xz);
                 }
                 if (ray_chunk_intersection.nrm.z > 0.5) {
-                    face_id = BlockFace_Front;
+                    face_id = BlockFace::Front;
                     tex_uv = frac(intersection_pos.xy);
                     tex_uv = 1 - tex_uv;
                 } else if (ray_chunk_intersection.nrm.z < -0.5) {
-                    face_id = BlockFace_Back;
+                    face_id = BlockFace::Back;
                     tex_uv = frac(intersection_pos.xy);
                     tex_uv.y = 1 - tex_uv.y;
                 }
 
                 uint tex_id = tile_texture_index(block_id, face_id);
 #if ALBEDO == ALBEDO_TEXTURE
-                float3 albedo = texture(get_texture[globals.texture_index], float3(tex_uv, tex_id)).rgb;
+                // WTF!!!
+                // float3 albedo = getTexture2DArray<float4>(globals.texture_index).Sample(
+                //     getSampler<void>(globals.sampler_index), 
+                //     float3(tex_uv.x, tex_uv.y, float(tex_id)), 
+                //     int2(0, 0),
+                //     1.0f).rgb;
+                float3 albedo = getTexture2DArray<float4>(globals.texture_index).Load(int4(tex_uv.x * 16, tex_uv.y * 16, tex_id, 0)).rgb;
 #elif ALBEDO == ALBEDO_DEBUG_POS
                 float3 albedo = b_uv;
 #elif ALBEDO == ALBEDO_DEBUG_NRM
@@ -156,9 +166,9 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
 #elif ALBEDO == ALBEDO_DEBUG_DIST
                 float3 albedo = float3(ray_chunk_intersection.dist / 100);
 #elif ALBEDO == ALBEDO_DEBUG_RANDOM
-                // float3 albedo = float3(rand(int3(intersection_pos)), rand(int3(intersection_pos + 10)), rand(int3(intersection_pos + 20)));
-                float3 albedo = float3(block_id) / 32;
-                // if (block_id == BlockID_Air)
+                float3 albedo = float3(rand(int3(intersection_pos)), rand(int3(intersection_pos + 10)), rand(int3(intersection_pos + 20)));
+                // float3 albedo = float3(block_id) / 32;
+                // if (block_id == BlockID::Air)
                 //     albedo = float3(1, 0, 1);
 #endif
 #if SHOW_PICK_POS
@@ -172,7 +182,7 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
 #endif
                 color += albedo * light;
             } else {
-                color += sample_sky(cam_ray.nrm);
+                color += sample_sky(sun_ray, cam_ray.nrm);
             }
 #endif
         }
@@ -192,12 +202,12 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
         float3(0, 0, 1)};
 
     {
-        float3 b_min = float3(0), b_max = CHUNK_SIZE * CHUNK_N;
+        float3 b_min = float3(0, 0, 0), b_max = float3(CHUNK_NX, CHUNK_NY, CHUNK_NZ) * CHUNK_SIZE;
 
         RayIntersection result;
         result.hit = false;
         result.dist = 0;
-        result.nrm = float3(0);
+        result.nrm = float3(0, 0, 0);
         result.steps = 0;
 
         uint max_steps = globals.single_ray_steps;
@@ -209,7 +219,7 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
         int3 tile_i = int3(ray.o);
 
         // temp_inter = ray_wirebox_intersect(cam_ray, float3(tile_i), float3(tile_i + 1));
-        // draw(color, depth, shaded(float3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
+        // draw(color, depth, shaded(sun_ray, float3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
 
         // dda_start
         DDA_StartResult dda_start;
@@ -272,9 +282,9 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
                 break;
             // #if ENABLE_X16
             // temp_inter = ray_wirebox_intersect(cam_ray, float3(run_state.tile_i_x16), float3(run_state.tile_i_x16 + 16), 0.2);
-            // draw(color, depth, shaded(side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit);
+            // draw(color, depth, shaded(sun_ray, side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit);
             temp_inter = ray_box_intersect(cam_ray, float3(run_state.tile_i_x16), float3(run_state.tile_i_x16 + 16));
-            overlay(color, depth, shaded(side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit, 0.1);
+            overlay(color, depth, shaded(sun_ray, side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit, 0.1);
 
             x1_steps++;
             run_dda_step(run_state.to_side_dist_x16, run_state.tile_i_x16, run_state.side, dda_start, 16);
@@ -289,23 +299,23 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
                 }
 
                 // temp_inter = ray_sphere_intersect(cam_ray, get_intersection_pos(ray, x16_intersection), 0.1);
-                // draw(color, depth, shaded(float3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
+                // draw(color, depth, shaded(sun_ray, float3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
 
                 run_state.tile_i_x4 = int3(get_intersection_pos_corrected(ray, x16_intersection));
                 run_state.tile_i_x4 = (run_state.tile_i_x4 / 4) * 4;
                 run_state.to_side_dist_x4 = abs(float3(int3(ray.o / 4) - run_state.tile_i_x4 / 4)) * dda_start.delta_dist * 4 + dda_start.initial_to_side_dist_x4;
 
                 // temp_inter = ray_wirebox_intersect(cam_ray, float3(run_state.tile_i_x4), float3(run_state.tile_i_x4 + 4), 0.1);
-                // draw(color, depth, shaded(float3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
+                // draw(color, depth, shaded(sun_ray, float3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
 
                 for (uint i = 0; i < 12; ++i) {
                     if (x1_steps >= max_steps)
                         break;
 
                     // temp_inter = ray_wirebox_intersect(cam_ray, float3(run_state.tile_i_x4), float3(run_state.tile_i_x4 + 4), 0.1);
-                    // draw(color, depth, shaded(side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit);
+                    // draw(color, depth, shaded(sun_ray, side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit);
                     temp_inter = ray_box_intersect(cam_ray, float3(run_state.tile_i_x4), float3(run_state.tile_i_x4 + 4));
-                    overlay(color, depth, shaded(side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit, 0.2);
+                    overlay(color, depth, shaded(sun_ray, side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit, 0.2);
                     // #endif
                     x1_steps++;
                     run_dda_step(run_state.to_side_dist_x4, run_state.tile_i_x4, run_state.side, dda_start, 4);
@@ -320,22 +330,22 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
                         }
 
                         // temp_inter = ray_sphere_intersect(cam_ray, get_intersection_pos(ray, x4_intersection), 0.1);
-                        // draw(color, depth, shaded(float3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
+                        // draw(color, depth, shaded(sun_ray, float3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
 
                         run_state.tile_i = int3(get_intersection_pos_corrected(ray, x4_intersection));
                         run_state.to_side_dist = abs(float3(int3(ray.o) - run_state.tile_i)) * dda_start.delta_dist + dda_start.initial_to_side_dist;
 
                         // temp_inter = ray_wirebox_intersect(cam_ray, float3(run_state.tile_i), float3(run_state.tile_i + 1), 0.1);
-                        // draw(color, depth, shaded(float3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
+                        // draw(color, depth, shaded(sun_ray, float3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
 
                         for (uint j = 0; j < 12; ++j) {
                             if (x1_steps >= max_steps)
                                 break;
 
                             // temp_inter = ray_wirebox_intersect(cam_ray, float3(run_state.tile_i), float3(run_state.tile_i + 1), 0.05);
-                            // draw(color, depth, shaded(side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit);
+                            // draw(color, depth, shaded(sun_ray, side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit);
                             temp_inter = ray_box_intersect(cam_ray, float3(run_state.tile_i), float3(run_state.tile_i + 1));
-                            overlay(color, depth, shaded(side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit, 0.4);
+                            overlay(color, depth, shaded(sun_ray, side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit, 0.4);
 
                             uint tile = load_tile(run_state.tile_i);
                             if (is_block_occluding(get_block_id(tile))) {
@@ -396,22 +406,30 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
 
         if (result.hit) {
             temp_inter = ray_cylinder_intersect(cam_ray, ray.o, ray.o + ray.nrm * result.dist, 0.04);
-            draw(color, depth, shaded(side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit);
+            draw(color, depth, shaded(sun_ray, side_cols[run_state.side], temp_inter.nrm), temp_inter.dist, temp_inter.hit);
         }
 
         temp_inter = ray_sphere_intersect(cam_ray, ray.o, 0.05);
-        draw(color, depth, shaded(float3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
+        draw(color, depth, shaded(sun_ray, float3(1, 1, 1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
 
         temp_inter = ray_sphere_intersect(cam_ray, ray.o + ray.nrm * result.dist, 0.05);
-        draw(color, depth, shaded(float3(1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
+        draw(color, depth, shaded(sun_ray, float3(1, 1, 1), temp_inter.nrm), temp_inter.dist, temp_inter.hit);
     }
 
 #endif
 
     color *= inv_subsamples.x * inv_subsamples.y;
 
-    draw_rect(color, globals.frame_dim.x / 2 - 0, globals.frame_dim.y / 2 - 4, 1, 9);
-    draw_rect(color, globals.frame_dim.x / 2 - 4, globals.frame_dim.y / 2 - 0, 9, 1);
+    draw_rect(pixel_i.xy, color, globals.frame_dim.x / 2 - 0, globals.frame_dim.y / 2 - 4, 1, 9);
+    draw_rect(pixel_i.xy, color, globals.frame_dim.x / 2 - 4, globals.frame_dim.y / 2 - 0, 9, 1);
+    
+    // RayIntersection temp_inter;
+    // for (int yi = 0; yi < 10; ++yi)
+    //     for (int xi = 0; xi < 10; ++xi) {
+    //         temp_inter = ray_sphere_intersect(cam_ray, float3(512 + xi * 2, 0, 512 + yi * 2), 1);
+    //         draw(color, depth, getTexture2DArray<float4>(globals.texture_index).Load(int4((temp_inter.nrm.x * 0.5 + 0.5) * 16, (temp_inter.nrm.z * 0.5 + 0.5) * 16, int(globals.time * 5) % 30, 0)).rgb, temp_inter.dist, temp_inter.hit);
+    //     }
 
-    imageStore(output_image, i_uv, float4(pow(color, float3(1)), 1));
+    RWTexture2D<float4> output_image = getRWTexture2D<float4>(p.output_image_i);
+    output_image[pixel_i.xy] = float4(pow(color, float3(1, 1, 1)), 1);
 }
