@@ -38,15 +38,15 @@ void Main(
     for (int y = 0; y < 2; ++y) 
     for (int z = 0; z < 2; ++z) {
         int3 local_i = x4_i + int3(x,y,z);
-        uint index = x_array_index<Log2_x4>(local_i);
-        uint mask = x_bit_mask<Log2_x4>(local_i);
+        uint index = x_index<4>(local_i);
+        uint mask = x_mask(local_i);
         bool occluding = (globals[0].chunk_block_presence[chunk_i.z][chunk_i.y][chunk_i.x].x4[index] & mask) != 0;
         at_least_one_occluding = at_least_one_occluding || occluding;
     }
 
     uint result = 0;
     if (at_least_one_occluding) {
-        result = x_bit_mask<Log2_x8>(x8_i);
+        result = x_mask(x8_i);
     }
     for (int i = 0; i < 4; i++) {
         if ((WaveGetLaneIndex() >> 3) == i) {
@@ -54,7 +54,7 @@ void Main(
         }
     }
     if ((WaveGetLaneIndex() & 0x7 /* == % 8*/) == 0) {
-        uint index = x_array_index<Log2_x8>(x8_i);
+        uint index = x_index<8>(x8_i);
         globals[0].chunk_block_presence[chunk_i.z][chunk_i.y][chunk_i.x].x8[index] = result;
         local_x8_copy[index] = result;
     }
@@ -77,15 +77,15 @@ void Main(
     for (int y = 0; y < 2; ++y) 
     for (int z = 0; z < 2; ++z) {
         int3 local_i = x8_i + int3(x,y,z);
-        uint mask = x_bit_mask<Log2_x8>(local_i);
-        uint index = x_array_index<Log2_x8>(local_i);
+        uint mask = x_mask(local_i);
+        uint index = x_index<8>(local_i);
         bool is_occluding = (local_x8_copy[index] & mask) != 0;
         at_least_one_occluding = at_least_one_occluding || is_occluding;
     }
 
     result = 0;
     if (at_least_one_occluding) {
-        result = x_bit_mask<Log2_x16>(x16_i);
+        result = x_mask(x16_i);
     }
     for (int i = 0; i < 8; i++) {
         if ((WaveGetLaneIndex() >> 2) == i) {
@@ -93,7 +93,7 @@ void Main(
         }
     }
     if ((WaveGetLaneIndex() & 0x3) == 0) {
-        uint index = x_array_index<Log2_x16>(x16_i);
+        uint index = x_index<16>(x16_i);
         globals[0].chunk_block_presence[chunk_i.z][chunk_i.y][chunk_i.x].x16[index] = result;
         local_x16_copy[index] = result;
     }
@@ -116,15 +116,15 @@ void Main(
     for (int y = 0; y < 2; ++y) 
     for (int z = 0; z < 2; ++z) {
         int3 local_i = x16_i + int3(x,y,z);
-        uint mask = x_bit_mask<Log2_x16>(local_i);
-        uint index = x_array_index<Log2_x16>(local_i);
+        uint mask = x_mask(local_i);
+        uint index = x_index<16>(local_i);
         bool is_occluding = (local_x16_copy[index] & mask) != 0;
         at_least_one_occluding = at_least_one_occluding || is_occluding;
     }
 
     result = 0;
     if (at_least_one_occluding) {
-        result = x_bit_mask<Log2_x32>(x32_i);
+        result = x_mask(x32_i);
     }
     for (int i = 0; i < 16; i++) {
         if ((WaveGetLaneIndex() >> 1) == i) {
@@ -132,7 +132,7 @@ void Main(
         }
     }
     if ((WaveGetLaneIndex() & 0x1) == 0) {
-        uint index = x_array_index<Log2_x32>(x32_i);
+        uint index = x_index<32>(x32_i);
         globals[0].chunk_block_presence[chunk_i.z][chunk_i.y][chunk_i.x].x32[index] = result;
     }
 }
