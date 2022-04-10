@@ -1,131 +1,4 @@
-#define DAXA_BA_SAMPLER_BINDING 0
-#define DAXA_BA_COMBINED_IMAGE_SAMPLER_BINDING 1
-#define DAXA_BA_SAMPLED_IMAGE_BINDING 2
-#define DAXA_BA_STORAGE_IMAGE_BINDING 3
-#define DAXA_BA_STORAGE_BUFFER_BINDING 4
-
-#define DaxaStorageBuffer StructuredBuffer
-#define DaxaSampledImage3D Texture3D
-
-template<typename T>
-StructuredBuffer<T> getBuffer(uint id);
-template<typename T>
-Texture3D<T> getTexture3D(uint id);
-
-#define DAXA_DEFINE_BA_BUFFER(Type)\
-[[vk::binding(DAXA_BA_STORAGE_BUFFER_BINDING,0)]] StructuredBuffer<Type> BufferView##Type[];\
-template<>\
-StructuredBuffer<Type> getBuffer(uint id) {\
-    return BufferView##Type[id];\
-}\
-
-#define DAXA_DEFINE_BA_TEXTURE3D(Type)\
-[[vk::binding(DAXA_BA_SAMPLED_IMAGE_BINDING,0)]] Texture3D<Type> Texture3DView##Type[];\
-template<>\
-Texture3D<Type> getTexture3D<Type>(uint id) {\
-    return Texture3DView##Type[id];\
-}\
-
-DAXA_DEFINE_BA_TEXTURE3D(uint)
-
-#include <chunkgen/include.hlsl>
-#include <chunk.hlsl>
-
-// clang-format off
-enum class BlockID : uint {
-    Debug           = 0,
-    Air             = 1,
-    Bedrock         = 2,
-    Brick           = 3,
-    Cactus          = 4,
-    Cobblestone     = 5,
-    CompressedStone = 6,
-    DiamondOre      = 7,
-    Dirt            = 8,
-    DriedShrub      = 9,
-    Grass           = 10,
-    Gravel          = 11,
-    Lava            = 12,
-    Leaves          = 13,
-    Log             = 14,
-    MoltenRock      = 15,
-    Planks          = 16,
-    Rose            = 17,
-    Sand            = 18,
-    Sandstone       = 19,
-    Stone           = 20,
-    TallGrass       = 21,
-    Water           = 22,
-};
-
-enum class BiomeID : uint {
-    Plains     = 0,
-    Forest     = 1,
-    Desert     = 2,
-    Beach      = 3,
-    Caves      = 4,
-    Underworld = 5,
-};
-
-enum class BlockFace : uint {
-    Back   = 0,
-    Front  = 1,
-    Left   = 2,
-    Right  = 3,
-    Bottom = 4,
-    Top    = 5,
-};
-
-// clang-format on
-
-bool is_block_occluding(BlockID block_id) {
-    switch (block_id) {
-    case BlockID::Air:
-        return false;
-    default: return true;
-    }
-}
-
-bool is_transparent(BlockID block_id) {
-    switch (block_id) {
-    case BlockID::Air:
-    case BlockID::DriedShrub:
-    case BlockID::Lava:
-    case BlockID::Leaves:
-    case BlockID::Rose:
-    case BlockID::TallGrass:
-    case BlockID::Water:
-        return true;
-    default: return false;
-    }
-}
-
-enum INTEGER_CONSTANTS {
-    CHUNK_SIZE = 64,
-    BLOCK_NX = 1024,
-    BLOCK_NY = 256,
-    BLOCK_NZ = 1024,
-    CHUNK_NX = BLOCK_NX / CHUNK_SIZE,
-    CHUNK_NY = BLOCK_NY / CHUNK_SIZE,
-    CHUNK_NZ = BLOCK_NZ / CHUNK_SIZE,
-    MAX_STEPS = CHUNK_NX * CHUNK_SIZE + CHUNK_NY * CHUNK_SIZE + CHUNK_NZ * CHUNK_SIZE,
-    WATER_LEVEL = 160,
-};
-
-struct Globals {
-    float4x4 viewproj_mat;
-    float4 pos;
-    float4 single_ray_pos;
-    float4 single_ray_nrm;
-    float4 pick_pos;
-    int2 frame_dim;
-    float time, fov;
-    uint texture_index;
-    uint single_ray_steps;
-    uint chunk_images[CHUNK_NX][CHUNK_NY][CHUNK_NZ];
-    ChunkBlockPresence chunk_block_presence[CHUNK_NX][CHUNK_NY][CHUNK_NZ];
-};
-DAXA_DEFINE_BA_BUFFER(Globals)
+#include "chunk.hlsl"
 
 struct Push {
     uint4 chunk_i;
@@ -134,6 +7,9 @@ struct Push {
 [[vk::push_constant]] const Push p;
 
 groupshared uint local_x2_copy[4][4];
+
+#define Log2_x2 1
+#define Log2_x4 2
 
 /*
     x: in workgroup index
@@ -145,14 +21,23 @@ void Main(
     uint3 group_local_ID : SV_GroupThreadID,
     uint3 group_ID : SV_GroupID
 ) {
+    uint2 x2_in_group_location = uint2(
+        (group_local_ID.x >> 5) & 0x3, 
+        (group_local_ID.x >> 7) & 0x3
+    );
     uint3 x2_i = uint3(
         (group_local_ID.x >> 5) & 0x3, 
         (group_local_ID.x >> 7) & 0x3, 
         (group_local_ID.x & 0x1F)
-    ) + 4 * group_ID;
+    );
+    x2_i += 4 * uint3(
+        group_ID.y & 0x7,
+        (group_ID.y >> 3) & 0x7,
+        0
+    );
     uint3 chunk_i = p.chunk_i.xyz;
     StructuredBuffer<Globals> globals = getBuffer<Globals>(p.globalsID);
-    Texture3D<uint> chunk = getTexture3D<uint>(globals[0].chunk_images[chunk_i.x][chunk_i.y][chunk_i.z]);
+    RWTexture3D<uint> chunk = getRWTexture3D<uint>(globals[0].chunk_images[chunk_i.z][chunk_i.y][chunk_i.x]);
     uint3 in_chunk_i = x2_i * 2;
 
     bool at_least_one_occluding = false;
@@ -165,16 +50,16 @@ void Main(
 
     uint result = 0;
     if (at_least_one_occluding) {
-        result = x2_uint_bit_mask(x2_i);
+        result = x_bit_mask<Log2_x2>(x2_i);
     }
-    result = WaveActiveBitOr(result);
+    uint or_result = WaveActiveBitOr(result);
     if (WaveIsFirstLane()) {
-        uint index = x2_uint_array_index(x2_i);
-        globals[0].chunk_block_presence[chunk_i.x][chunk_i.y][chunk_i.z].x2[index] = result;
-        local_x2_copy[x2_i.x][x2_i.y] = result;
+        uint index = x_array_index<Log2_x2>(x2_i);
+        globals[0].chunk_block_presence[chunk_i.z][chunk_i.y][chunk_i.x].x2[index] = or_result;
+        local_x2_copy[x2_in_group_location.x][x2_in_group_location.y] = or_result;
     }
 
-    GroupMemoryBarrier();
+    GroupMemoryBarrierWithGroupSync();
 
     if (group_local_ID.x >= 64) {
         return;
@@ -185,20 +70,36 @@ void Main(
         (group_local_ID.x >> 5) & 0x1, 
         group_local_ID.x & 0xF
     );
+    x4_i += 2 * uint3(
+        group_ID.y & 0x7,
+        (group_ID.y >> 3) & 0x7,
+        0
+    );
     x2_i = x4_i * 2;
-
     at_least_one_occluding = false;
     for (int x = 0; x < 2; ++x) 
     for (int y = 0; y < 2; ++y) 
     for (int z = 0; z < 2; ++z) {
         int3 local_i = x2_i + int3(x,y,z);
-        uint mask = x2_uint_bit_mask(local_i);
-        int2 local_x2_copy_index = int2(
+        uint mask = x_bit_mask<Log2_x2>(local_i);
+        uint2 x2_in_group_index = uint2(
             local_i.x & 0x3,
             local_i.y & 0x3
         );
-        bool is_occluding = (local_x2_copy[local_x2_copy_index.x][local_x2_copy_index.y] & mask) != 0;
-
+        bool is_occluding = (local_x2_copy[x2_in_group_index.x][x2_in_group_index.y] & mask) != 0;
         at_least_one_occluding = at_least_one_occluding || is_occluding;
+    }
+    result = 0;
+    if (at_least_one_occluding) {
+        result = x_bit_mask<Log2_x4>(x4_i);
+    }
+    for (int i = 0; i < 2; i++) {
+        if ((WaveGetLaneIndex() >> 4) == i) {
+            result = WaveActiveBitOr(result);
+        }
+    }
+    if ((WaveGetLaneIndex() & 0xF /* = %16 */) == 0) {
+        uint index = x_array_index<Log2_x4>(x4_i);
+        globals[0].chunk_block_presence[chunk_i.z][chunk_i.y][chunk_i.x].x4[index] = result;
     }
 }
