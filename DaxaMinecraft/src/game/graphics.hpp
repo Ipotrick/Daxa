@@ -261,14 +261,14 @@ struct World {
     daxa::PipelineHandle subchunk_x8p_pipeline;
 
     std::array<daxa::PipelineHandle, 1> chunkgen_compute_pipeline_passes;
-    daxa::PipelineHandle subgrid_compute_pipeline;
+    //daxa::PipelineHandle subgrid_compute_pipeline;
 
     struct ChunkBlockPresence {
         u32 x2[1024];
-        u32 x4[128];
-        u32 x8[16];
-        u32 x16[2];
-        u32 x32[8]; 
+        u32 x4[256];
+        u32 x8[64];
+        u32 x16[16];
+        u32 x32[4]; 
     };
 
     struct ComputeGlobals {
@@ -419,14 +419,15 @@ struct World {
         try_recreate_pipeline(raymarch_compute_pipeline);
         try_recreate_pipeline(blockedit_compute_pipeline);
         try_recreate_pipeline(pickblock_compute_pipeline);
-        try_recreate_pipeline(subchunk_x2x4_pipeline);
-        try_recreate_pipeline(subchunk_x8p_pipeline);
         bool should_reinit0 = false;
         for (auto &pipe : chunkgen_compute_pipeline_passes) {
             if (try_recreate_pipeline(pipe))
                 should_reinit0 = true;
         }
-        bool should_reinit1 = try_recreate_pipeline(subgrid_compute_pipeline);
+        bool should_reinit1 = 
+            try_recreate_pipeline(subchunk_x2x4_pipeline) ||
+            try_recreate_pipeline(subchunk_x8p_pipeline);
+        //try_recreate_pipeline(subgrid_compute_pipeline);
         if (should_reinit0 || should_reinit1)
             initialized = false;
     }
@@ -517,21 +518,59 @@ struct World {
                 cmd_list->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
             }
 
-            cmd_list->bindPipeline(subgrid_compute_pipeline);
+            struct SubChunkPush{
+                u32 chunk_i[4];
+                u32 globalsID;
+            };
+
+            cmd_list->bindPipeline(subchunk_x2x4_pipeline);
             cmd_list->bindAll();
-            for (size_t zi = 0; zi < DIM.z; ++zi) {
-                for (size_t yi = 0; yi < DIM.y; ++yi) {
-                    for (size_t xi = 0; xi < DIM.x; ++xi) {
+            for (u32 zi = 0; zi < DIM.z; ++zi) {
+                for (u32 yi = 0; yi < DIM.y; ++yi) {
+                    for (u32 xi = 0; xi < DIM.x; ++xi) {
                         cmd_list->pushConstant(
                             VK_SHADER_STAGE_COMPUTE_BIT,
-                            ChunkgenPush{
-                                .pos = {1.0f * xi * Chunk::DIM.x, 1.0f * yi * Chunk::DIM.y, 1.0f * zi * Chunk::DIM.z, 0},
-                                .globals_sb = compute_globals_i,
+                            SubChunkPush{
+                                .chunk_i = {xi, yi, zi, 0},
+                                .globalsID = compute_globals_i,
+                            });
+                        cmd_list->dispatch(1, 64, 1);
+                    }
+                }
+            }
+            cmd_list->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+
+            cmd_list->bindPipeline(subchunk_x8p_pipeline);
+            cmd_list->bindAll();
+            for (u32 zi = 0; zi < DIM.z; ++zi) {
+                for (u32 yi = 0; yi < DIM.y; ++yi) {
+                    for (u32 xi = 0; xi < DIM.x; ++xi) {
+                        cmd_list->pushConstant(
+                            VK_SHADER_STAGE_COMPUTE_BIT,
+                            SubChunkPush{
+                                .chunk_i = {xi, yi, zi, 0},
+                                .globalsID = compute_globals_i,
                             });
                         cmd_list->dispatch(1, 1, 1);
                     }
                 }
             }
+
+            //cmd_list->bindPipeline(subgrid_compute_pipeline);
+            //cmd_list->bindAll();
+            //for (size_t zi = 0; zi < DIM.z; ++zi) {
+            //    for (size_t yi = 0; yi < DIM.y; ++yi) {
+            //        for (size_t xi = 0; xi < DIM.x; ++xi) {
+            //            cmd_list->pushConstant(
+            //                VK_SHADER_STAGE_COMPUTE_BIT,
+            //                ChunkgenPush{
+            //                    .pos = {1.0f * xi * Chunk::DIM.x, 1.0f * yi * Chunk::DIM.y, 1.0f * zi * Chunk::DIM.z, 0},
+            //                    .globals_sb = compute_globals_i,
+            //                });
+            //            cmd_list->dispatch(1, 1, 1);
+            //        }
+            //    }
+            //}
         }
 
         if (should_place) {
@@ -608,7 +647,7 @@ struct World {
         for (size_t i = 0; i < chunkgen_pass_paths.size(); ++i)
             create_pipeline(chunkgen_compute_pipeline_passes[i], chunkgen_pass_paths[i]);
 
-        create_pipeline(subgrid_compute_pipeline, "chunkgen/world/subchunk.comp");
+        //create_pipeline(subgrid_compute_pipeline, "chunkgen/world/subchunk.comp");
     }
 
     void load_textures(const std::filesystem::path &filepath) {

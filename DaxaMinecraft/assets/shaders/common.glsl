@@ -5,10 +5,10 @@
 
 struct ChunkBlockPresence {
     uint x2[1024];
-    uint x4[128];
-    uint x8[16];
-    uint x16[2];
-    bool x32[8]; 
+    uint x4[256];
+    uint x8[64];
+    uint x16[16];
+    uint x32[4]; 
 };
 
 layout(set = 0, binding = 4) buffer Globals {
@@ -48,26 +48,27 @@ uint load_sdf_dist(vec3 p) { return get_sdf_dist(load_tile(p)); }
 // #define X4_444_PACKING
 
 uint x2_uint_bit_mask(uvec3 x2_i) {
-    return 1 << x2_i.x;
+    return 1 << x2_i.z;
 }
 
 uint x2_uint_array_index(uvec3 x2_i) {
-    return x2_i.y + x2_i.z * 32;
+    return x2_i.x + x2_i.y * 32;
 }
 
-uvec3 linear_index_to_x2_packed_index(uint linear) {
-    uvec3 x2_i = uvec3(0);
-    x2_i.x = (linear & 0x1F);
-    x2_i.y = ((linear >> 5) & 0x1F);
-    x2_i.z = ((linear >> 10) & 0x1F);
-    return x2_i;
-}
+//uvec3 linear_index_to_x2_packed_index(uint linear) {
+//    uvec3 x2_i = uvec3(0);
+//    x2_i.x = (linear & 0x1F);
+//    x2_i.y = ((linear >> 5) & 0x1F);
+//    x2_i.z = ((linear >> 10) & 0x1F);
+//    return x2_i;
+//}
 
 uint x4_uint_bit_mask(uvec3 x4_i) {
 #ifdef X4_444_PACKING
     return 1 << ((x4_i.x & 0x3) + 4 * (x4_i.y & 0x3) + 16 * (x4_i.z & 0x1));
 #else 
-    return 1 << ((x4_i.x) + 16 * (x4_i.y & 0x1));
+    //return 1 << ((x4_i.z) + 16 * (x4_i.x & 0x1));
+    return 1 << x4_i.z;
 #endif
 }
 
@@ -88,7 +89,8 @@ uint x4_uint_array_index(uvec3 x4_i) {
            (x4_i.x >> 2) * 2 +     // mul x by two as two uints make one block
            (x4_i.y >> 2) * 2 * 4;
 #else
-    return (x4_i.y >> 1) + x4_i.z * 8;
+    //return (x4_i.x >> 1) + x4_i.y * 8;
+    return x4_i.x + x4_i.y * 16;
 #endif
 }
 
@@ -107,11 +109,13 @@ uvec3 linear_index_to_x4_packed_index(uint linear) {
 }
 
 uint x8_uint_bit_mask(uvec3 x8_i) {
-    return 1 << (x8_i.x + (x8_i.y & 0x3) * 8);
+    //return 1 << (x8_i.x + (x8_i.y & 0x3) * 8);
+    return 1 << x8_i.z;
 }
 
 uint x8_uint_array_index(uvec3 x8_i) {
-    return ((x8_i.y & 0x4) >> 2) + x8_i.z * 2;
+    //return ((x8_i.y & 0x4) >> 2) + x8_i.z * 2;
+    return x8_i.x + x8_i.y * 8;
 }
 
 uvec3 linear_index_to_x8_packed_index(uint linear) {
@@ -123,15 +127,23 @@ uvec3 linear_index_to_x8_packed_index(uint linear) {
 }
 
 uint x16_uint_bit_mask(uvec3 x16_i) {
-    return 1 << (x16_i.x + 4 * x16_i.y + 16 * (x16_i.z & 0x1));
+    //return 1 << (x16_i.x + 4 * x16_i.y + 16 * (x16_i.z & 0x1));
+    return 1 << x16_i.z;
 }
 
 uint x16_uint_array_index(uvec3 x16_i) {
-    return x16_i.z >> 1;
+    //return x16_i.z >> 1;
+    return x16_i.x + x16_i.y * 4;
+}
+
+uint x32_uint_bit_mask(uvec3 x32_i) {
+    //return 1;
+    return 1 << (x32_i.z);
 }
 
 uint x32_uint_array_index(uvec3 x32_i) {
-    return x32_i.x + x32_i.y * 2 + x32_i.z * 4;
+    //return x32_i.x + x32_i.y * 2 + x32_i.z * 4;
+    return x32_i.x + x32_i.y * 2;
 }
 
 bool load_block_presence_2x(vec3 pos) {
@@ -180,13 +192,19 @@ bool load_block_presence_32x(vec3 pos) {
 
     ivec3 in_chunk_p = ivec3(pos) - chunk_i * ivec3(CHUNK_SIZE);
     ivec3 x32_pos = in_chunk_p / 32;
+    uint access_mask = x32_uint_bit_mask(x32_pos);
     uint array_index = x32_uint_array_index(x32_pos);
 
-    return chunk_block_presence(chunk_i).x32[array_index];
+    return (chunk_block_presence(chunk_i).x32[array_index] & access_mask) != 0;
 }
 
 bool load_block_presence_64x(vec3 pos) {
     ivec3 chunk_i = ivec3(pos / CHUNK_SIZE);
 
-    return (chunk_block_presence(chunk_i).x16[0] | chunk_block_presence(chunk_i).x16[1]) != 0;
+    return (
+        chunk_block_presence(chunk_i).x32[0] | 
+        chunk_block_presence(chunk_i).x32[1] | 
+        chunk_block_presence(chunk_i).x32[2] | 
+        chunk_block_presence(chunk_i).x32[3]
+    ) != 0;
 }

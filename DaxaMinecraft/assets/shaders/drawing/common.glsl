@@ -84,4 +84,4 @@ uint tile_texture_index(uint block_id, uint face) {
 #define SUBSAMPLE_N 1
 
 // Visualize x_n grid (n can be 1, 4, or 16)
-#define VISUALIZE_SUBGRID 0
+#define VISUALIZE_SUBGRID 64
