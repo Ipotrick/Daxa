@@ -251,6 +251,7 @@ struct World {
     ChunkArray<std::unique_ptr<RenderableChunk>> chunks{};
 
     daxa::ImageViewHandle atlas_texture_array;
+    daxa::SamplerHandle atlas_texture_sampler;
 
     daxa::BufferHandle compute_pipeline_globals;
 
@@ -268,7 +269,7 @@ struct World {
         u32 x4[128];
         u32 x8[16];
         u32 x16[2];
-        u32 x32[8]; 
+        u32 x32[8];
     };
 
     struct ComputeGlobals {
@@ -281,6 +282,7 @@ struct World {
         float time, fov;
 
         u32 texture_index;
+        u32 sampler_index;
         u32 single_ray_steps;
         ChunkArray<u32> chunk_ids;
         // ChunkArray<ChunkBlockPresence> chunk_block_presence;
@@ -473,6 +475,7 @@ struct World {
             .time = elapsed,
             .fov = tanf(player.camera.fov * std::numbers::pi_v<f32> / 360.0f),
             .texture_index = atlas_texture_array->getDescriptorIndex(),
+            .sampler_index = atlas_texture_sampler->getDescriptorIndex(),
             .single_ray_steps = static_cast<u32>(single_ray_steps),
         };
 
@@ -579,7 +582,7 @@ struct World {
     }
 
     void load_shaders() {
-        create_pipeline(raymarch_compute_pipeline, "drawing/raymarch.comp");
+        create_pipeline(raymarch_compute_pipeline, "drawing/raymarch.hlsl", daxa::ShaderLang::HLSL);
         create_pipeline(pickblock_compute_pipeline, "utils/pickblock.comp");
         create_pipeline(blockedit_compute_pipeline, "utils/blockedit.comp");
         create_pipeline(subchunk_x2x4_pipeline, "chunkgen/subchunk_x2x4.hlsl", daxa::ShaderLang::HLSL, "Main");
@@ -630,6 +633,15 @@ struct World {
             "water.png",
         };
 
+        atlas_texture_sampler = render_ctx.device->createSampler({
+            .magFilter = VK_FILTER_NEAREST,
+            .minFilter = VK_FILTER_LINEAR,
+            .anisotropyEnable = true,
+            .maxAnisotropy = 16.0f,
+            .maxLod = 3,
+            .debugName = "Texture Sampler",
+        });
+
         atlas_texture_array = render_ctx.device->createImageView({
             .image = render_ctx.device->createImage({
                 .format = VK_FORMAT_R8G8B8A8_SRGB,
@@ -649,14 +661,7 @@ struct World {
                     .baseArrayLayer = 0,
                     .layerCount = static_cast<u32>(texture_names.size()),
                 },
-            .defaultSampler = render_ctx.device->createSampler({
-                .magFilter = VK_FILTER_NEAREST,
-                .minFilter = VK_FILTER_LINEAR,
-                .anisotropyEnable = true,
-                .maxAnisotropy = 16.0f,
-                .maxLod = 3,
-                .debugName = "Texture Sampler",
-            }),
+            .defaultSampler = atlas_texture_sampler,
             .debugName = "Texture Image View",
         });
 

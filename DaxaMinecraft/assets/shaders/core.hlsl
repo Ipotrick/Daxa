@@ -6,6 +6,14 @@
 template <typename T>
 StructuredBuffer<T> getBuffer(uint id);
 template <typename T>
+SamplerState getSampler(uint id);
+template <typename T>
+Texture2D<T> getTexture2D(uint id);
+template <typename T>
+RWTexture2D<T> getRWTexture2D(uint id);
+template <typename T>
+Texture2DArray<T> getTexture2DArray(uint id);
+template <typename T>
 Texture3D<T> getTexture3D(uint id);
 template <typename T>
 RWTexture3D<T> getRWTexture3D(uint id);
@@ -15,6 +23,24 @@ RWTexture3D<T> getRWTexture3D(uint id);
     template <>                                                      \
     StructuredBuffer<Type> getBuffer(uint id) {                      \
         return BufferView##Type[id];                                 \
+    }
+#define DAXA_DEFINE_BA_SAMPLER(Type)                             \
+    [[vk::binding(1, 0)]] SamplerState SamplerStateView##Type[]; \
+    template <>                                                  \
+    SamplerState getSampler<Type>(uint id) {                     \
+        return SamplerStateView##Type[id];                       \
+    }
+#define DAXA_DEFINE_BA_RWTEXTURE2D(Type)                             \
+    [[vk::binding(3, 0)]] RWTexture2D<Type> RWTexture2DView##Type[]; \
+    template <>                                                      \
+    RWTexture2D<Type> getRWTexture2D<Type>(uint id) {                \
+        return RWTexture2DView##Type[id];                            \
+    }
+#define DAXA_DEFINE_BA_TEXTURE2DARRAY(Type)                                \
+    [[vk::binding(1, 0)]] Texture2DArray<Type> Texture2DArrayView##Type[]; \
+    template <>                                                            \
+    Texture2DArray<Type> getTexture2DArray<Type>(uint id) {                \
+        return Texture2DArrayView##Type[id];                               \
     }
 #define DAXA_DEFINE_BA_TEXTURE3D(Type)                           \
     [[vk::binding(1, 0)]] Texture3D<Type> Texture3DView##Type[]; \
@@ -29,6 +55,7 @@ RWTexture3D<T> getRWTexture3D(uint id);
         return RWTexture3DView##Type[id];                            \
     }
 
+DAXA_DEFINE_BA_RWTEXTURE2D(float4)
 DAXA_DEFINE_BA_RWTEXTURE3D(uint)
 
 struct ChunkBlockPresence {
@@ -48,12 +75,15 @@ struct Globals {
     int2 frame_dim;
     float time, fov;
     uint texture_index;
+    uint sampler_index;
     uint single_ray_steps;
     uint chunk_images[CHUNK_NX][CHUNK_NY][CHUNK_NZ];
     ChunkBlockPresence chunk_block_presence[CHUNK_NX][CHUNK_NY][CHUNK_NZ];
 };
 
 DAXA_DEFINE_BA_BUFFER(Globals)
+#define globals getBuffer<Globals>(p.globals_sb)[0]
+#define chunk_block_presence(_ci) globals.chunk_block_presence[_ci.z][_ci.y][_ci.x]
 
 BlockID load_block_id(float3 pos) {
     int3 chunk_i = int3(pos / CHUNK_SIZE);
@@ -64,7 +94,7 @@ BlockID load_block_id(float3 pos) {
     return (BlockID)getRWTexture3D<uint>(
         getBuffer<Globals>(p.globals_sb)
             .Load(0)
-            .chunk_images[chunk_i.x][chunk_i.y][chunk_i.z])
+            .chunk_images[chunk_i.z][chunk_i.y][chunk_i.x])
         [int3(pos) - chunk_i * int3(CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE)];
 }
 
@@ -148,53 +178,53 @@ uint x32_uint_array_index(uint3 x32_i) {
     return x32_i.x + x32_i.y * 2 + x32_i.z * 4;
 }
 
-// bool load_block_presence_2x(float3 pos) {
-//     int3 chunk_i = int3(pos / CHUNK_SIZE);
-//     int3 in_chunk_p = int3(pos) - chunk_i * int3(CHUNK_SIZE);
-//     int3 x2_pos = in_chunk_p / 2;
-//     uint access_mask = x2_uint_bit_mask(x2_pos);
-//     uint uint_array_index = x2_uint_array_index(x2_pos);
-//     return (chunk_block_presence(chunk_i).x2[uint_array_index] & access_mask) != 0;
-// }
+bool load_block_presence_2x(float3 pos) {
+    int3 chunk_i = int3(pos / CHUNK_SIZE);
+    int3 in_chunk_p = int3(pos) - chunk_i * CHUNK_SIZE;
+    int3 x2_pos = in_chunk_p / 2;
+    uint access_mask = x2_uint_bit_mask(x2_pos);
+    uint uint_array_index = x2_uint_array_index(x2_pos);
+    return (chunk_block_presence(chunk_i).x2[uint_array_index] & access_mask) != 0;
+}
 
-// bool load_block_presence_4x(float3 pos) {
-//     int3 chunk_i = int3(pos / CHUNK_SIZE);
-//     int3 in_chunk_p = int3(pos) - chunk_i * int3(CHUNK_SIZE);
-//     int3 x4_pos = in_chunk_p / 4;
-//     uint access_mask = x4_uint_bit_mask(x4_pos);
-//     uint uint_array_index = x4_uint_array_index(x4_pos);
-//     return (chunk_block_presence(chunk_i).x4[uint_array_index] & access_mask) != 0;
-// }
+bool load_block_presence_4x(float3 pos) {
+    int3 chunk_i = int3(pos / CHUNK_SIZE);
+    int3 in_chunk_p = int3(pos) - chunk_i * CHUNK_SIZE;
+    int3 x4_pos = in_chunk_p / 4;
+    uint access_mask = x4_uint_bit_mask(x4_pos);
+    uint uint_array_index = x4_uint_array_index(x4_pos);
+    return (chunk_block_presence(chunk_i).x4[uint_array_index] & access_mask) != 0;
+}
 
-// bool load_block_presence_8x(float3 pos) {
-//     int3 chunk_i = int3(pos / CHUNK_SIZE);
-//     int3 in_chunk_p = int3(pos) - chunk_i * int3(CHUNK_SIZE);
-//     int3 x8_pos = in_chunk_p / 8;
-//     uint access_mask = x8_uint_bit_mask(x8_pos);
-//     uint uint_array_index = x8_uint_array_index(x8_pos);
-//     return (chunk_block_presence(chunk_i).x8[uint_array_index] & access_mask) != 0;
-// }
+bool load_block_presence_8x(float3 pos) {
+    int3 chunk_i = int3(pos / CHUNK_SIZE);
+    int3 in_chunk_p = int3(pos) - chunk_i * CHUNK_SIZE;
+    int3 x8_pos = in_chunk_p / 8;
+    uint access_mask = x8_uint_bit_mask(x8_pos);
+    uint uint_array_index = x8_uint_array_index(x8_pos);
+    return (chunk_block_presence(chunk_i).x8[uint_array_index] & access_mask) != 0;
+}
 
-// bool load_block_presence_16x(float3 pos) {
-//     int3 chunk_i = int3(pos / CHUNK_SIZE);
-//     int3 in_chunk_p = int3(pos) - chunk_i * int3(CHUNK_SIZE);
-//     int3 x16_pos = in_chunk_p / 16;
-//     uint access_mask = x16_uint_bit_mask(x16_pos);
-//     uint array_index = x16_uint_array_index(x16_pos);
-//     return (chunk_block_presence(chunk_i).x16[array_index] & access_mask) != 0;
-// }
+bool load_block_presence_16x(float3 pos) {
+    int3 chunk_i = int3(pos / CHUNK_SIZE);
+    int3 in_chunk_p = int3(pos) - chunk_i * CHUNK_SIZE;
+    int3 x16_pos = in_chunk_p / 16;
+    uint access_mask = x16_uint_bit_mask(x16_pos);
+    uint array_index = x16_uint_array_index(x16_pos);
+    return (chunk_block_presence(chunk_i).x16[array_index] & access_mask) != 0;
+}
 
-// bool load_block_presence_32x(float3 pos) {
-//     int3 chunk_i = int3(pos / CHUNK_SIZE);
-//     int3 in_chunk_p = int3(pos) - chunk_i * int3(CHUNK_SIZE);
-//     int3 x32_pos = in_chunk_p / 32;
-//     uint array_index = x32_uint_array_index(x32_pos);
-//     return chunk_block_presence(chunk_i).x32[array_index];
-// }
+bool load_block_presence_32x(float3 pos) {
+    int3 chunk_i = int3(pos / CHUNK_SIZE);
+    int3 in_chunk_p = int3(pos) - chunk_i * CHUNK_SIZE;
+    int3 x32_pos = in_chunk_p / 32;
+    uint array_index = x32_uint_array_index(x32_pos);
+    return chunk_block_presence(chunk_i).x32[array_index];
+}
 
-// bool load_block_presence_64x(float3 pos) {
-//     int3 chunk_i = int3(pos / CHUNK_SIZE);
-//     return (chunk_block_presence(chunk_i).x16[0] | chunk_block_presence(chunk_i).x16[1]) != 0;
-// }
+bool load_block_presence_64x(float3 pos) {
+    int3 chunk_i = int3(pos / CHUNK_SIZE);
+    return (chunk_block_presence(chunk_i).x16[0] | chunk_block_presence(chunk_i).x16[1]) != 0;
+}
 
 #endif

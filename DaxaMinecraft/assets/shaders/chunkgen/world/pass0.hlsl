@@ -219,9 +219,6 @@ BlockID gen_block(in float3 b_pos) {
     float3 block_pos =
         float3(global_i) + p.pos.xyz - float3(BLOCK_NX, BLOCK_NY, BLOCK_NY) / 2;
 
-    StructuredBuffer<Globals> globals = getBuffer<Globals>(p.globals_sb);
-
-    uint3 chunk_i = p.pos.xyz;
     uint chunk_texture_id = p.output_image_i;
     RWTexture3D<uint> chunk = getRWTexture3D<uint>(chunk_texture_id);
 

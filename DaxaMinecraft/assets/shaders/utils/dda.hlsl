@@ -1,7 +1,7 @@
 #if !defined(DDA_HLSL)
 #define DDA_HLSL
 
-#include <utils/ray.glsl>
+#include "utils/ray.hlsl"
 
 struct DDA_StartResult {
     float3 delta_dist;
@@ -238,8 +238,8 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
                             run_state.to_side_dist = abs(float3(int3(ray.o) - run_state.tile_i)) * dda_start.delta_dist + dda_start.initial_to_side_dist;
                             for (uint j = 0; j < 12; ++j) {
 
-                                uint tile = load_tile(run_state.tile_i);
-                                if (is_block_occluding(get_block_id(tile))) {
+                                BlockID block_id = load_block_id(run_state.tile_i);
+                                if (is_block_occluding(block_id)) {
                                     run_state.hit = true;
                                     break;
                                 }
@@ -277,9 +277,9 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
         }
 #endif
 #else
-        uint tile = load_tile(run_state.tile_i);
+        BlockID block_id = load_block_id(run_state.tile_i);
 #if VISUALIZE_SUBGRID == 1
-        if (is_block_occluding(get_block_id(tile))) {
+        if (is_block_occluding(block_id)) {
 #elif VISUALIZE_SUBGRID == 2
         if (load_block_presence_2x(run_state.tile_i_x2)) {
             run_state.to_side_dist = run_state.to_side_dist_x2;
@@ -343,3 +343,5 @@ void run_dda_main(in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState 
     run_state.total_steps = x1_steps;
 #endif
 }
+
+#endif
