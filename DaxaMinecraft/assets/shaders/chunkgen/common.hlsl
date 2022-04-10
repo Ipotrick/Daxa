@@ -1,5 +1,4 @@
-#if !defined(CHUNKGEN_COMMON_HLSL)
-#define CHUNKGEN_COMMON_HLSL
+#pragma once
 
 struct Push {
     float4 pos;
@@ -10,5 +9,3 @@ struct Push {
 [[vk::push_constant]] const Push p;
 
 #include "core.hlsl"
-
-#endif

@@ -1,17 +1,17 @@
 #include "chunkgen/common.hlsl"
 #include "chunkgen/world/noise.hlsl"
 
-#define water_level 100
+#define water_level 64
 #define lava_level 458
 
 void biome_pass0(in out WorldgenState worldgen_state, in float3 b_pos) {
     worldgen_state.biome_id = BiomeID::Plains;
-    if (worldgen_state.b_noise < -0.07)
+    if (worldgen_state.b_noise < -0.07) {
         worldgen_state.biome_id = BiomeID::Forest;
-    else if (worldgen_state.b_noise > 0.22)
+    } else if (worldgen_state.b_noise > 0.42) {
         worldgen_state.biome_id = BiomeID::Desert;
-    if (b_pos.y - water_level > -4 + worldgen_state.r * 3 &&
-        b_pos.y - water_level < 4 + worldgen_state.r * 3 &&
+    } if (b_pos.y - water_level > -0.2 + worldgen_state.r * 1.5 &&
+        b_pos.y - water_level < 1 + worldgen_state.r * 2 &&
         worldgen_state.t_noise < 0.05 + worldgen_state.r * 0.1 &&
         worldgen_state.t_noise > -0.05 - worldgen_state.r * 0.1) {
         worldgen_state.biome_id = BiomeID::Beach;
@@ -163,15 +163,15 @@ void block_pass2(in out WorldgenState worldgen_state, in float3 b_pos,
     } else if (worldgen_state.block_id == BlockID::Air &&
                !surroundings.above_water) {
         switch (worldgen_state.biome_id) {
-        case BiomeID::Plains:
-            if (surroundings.depth_below == 0) {
-                if (worldgen_state.r < 0.10) {
-                    worldgen_state.block_id = BlockID::TallGrass;
-                } else if (worldgen_state.r < 0.11) {
-                    worldgen_state.block_id = BlockID::Leaves;
-                }
-            }
-            break;
+        // case BiomeID::Plains:
+        //     if (surroundings.depth_below == 0) {
+        //         if (worldgen_state.r < 0.10) {
+        //             worldgen_state.block_id = BlockID::TallGrass;
+        //         } else if (worldgen_state.r < 0.11) {
+        //             worldgen_state.block_id = BlockID::Leaves;
+        //         }
+        //     }
+        //     break;
         case BiomeID::Forest:
             if (worldgen_state.r_xz < 0.01) {
                 int trunk_height = int(5 + worldgen_state.r_xz * 400);
@@ -182,16 +182,16 @@ void block_pass2(in out WorldgenState worldgen_state, in float3 b_pos,
                 worldgen_state.block_id = BlockID::Leaves;
             }
             break;
-        case BiomeID::Desert:
-            if (worldgen_state.r_xz < 0.001) {
-                int trunk_height = int(5 + worldgen_state.r_xz * 400);
-                if (surroundings.depth_below < trunk_height) {
-                    worldgen_state.block_id = BlockID::Cactus;
-                }
-            } else if (worldgen_state.r < 0.02 && surroundings.depth_below == 0) {
-                worldgen_state.block_id = BlockID::DriedShrub;
-            }
-            break;
+        // case BiomeID::Desert:
+        //     if (worldgen_state.r_xz < 0.001) {
+        //         int trunk_height = int(5 + worldgen_state.r_xz * 400);
+        //         if (surroundings.depth_below < trunk_height) {
+        //             worldgen_state.block_id = BlockID::Cactus;
+        //         }
+        //     } else if (worldgen_state.r < 0.02 && surroundings.depth_below == 0) {
+        //         worldgen_state.block_id = BlockID::DriedShrub;
+        //     }
+        //     break;
         default:
             break;
         }
@@ -201,13 +201,13 @@ void block_pass2(in out WorldgenState worldgen_state, in float3 b_pos,
 BlockID gen_block(in float3 b_pos) {
     WorldgenState worldgen_state = get_worldgen_state(b_pos);
 
-    //   worldgen_state.block_id = BlockID::Air;
-    //   if (worldgen_state.r > 0.5)
+    // worldgen_state.block_id = BlockID::Air;
+    // if (worldgen_state.r > 0.5)
     //     worldgen_state.block_id = BlockID::Stone;
 
     biome_pass0(worldgen_state, b_pos);
     block_pass0(worldgen_state, b_pos);
-    //   block_pass1(worldgen_state, b_pos);
+    // block_pass1(worldgen_state, b_pos);
     SurroundingInfo surroundings = get_surrounding(worldgen_state, b_pos);
     block_pass2(worldgen_state, b_pos, surroundings);
 

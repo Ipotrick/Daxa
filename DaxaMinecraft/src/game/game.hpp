@@ -108,6 +108,8 @@ struct Game {
                 reset_player();
             ImGui::SliderFloat("Speed", &player.speed, 0.1f, 40.0f);
             HelpMarker("Speed to move (Blocks/s)");
+            ImGui::SliderFloat("Sprint Speed", &player.sprint_speed, 1.1f, 50.0f);
+            HelpMarker("Sprint Multiplier");
             ImGui::SliderFloat("FOV", &player.camera.fov, 0.1f, 170.0f);
             HelpMarker("Vertical field of view (Degrees)");
             ImGui::SliderFloat("Sensitivity", &player.mouse_sens, 0.01f, 10.0f);
