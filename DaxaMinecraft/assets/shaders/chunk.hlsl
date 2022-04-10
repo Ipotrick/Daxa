@@ -154,30 +154,6 @@ struct ChunkBlockPresence {
     uint x32[4]; 
 };
 
-uint x2_uint_bit_mask(uint3 x2_i) {
-    return 1u << x2_i.z;
-}
-
-uint x2_uint_array_index(uint3 x2_i) {
-    return x2_i.x + x2_i.y * 32;
-}
-
-uint x4_uint_bit_mask(uint3 x4_i) {
-    return 1u << (x4_i.z + 16 * (x4_i.x & 0x1));
-}
-
-uint x4_uint_array_index(uint3 x4_i) {
-    return (x4_i.x >> 1 /* / 2 */) + x4_i.y * 8 /* 16 / 2 */;
-}
-
-uint x8_uint_bit_mask(uint3 x8_i) {
-    return 1u << (x8_i.z + 8 * (x8_i.x & 0x3));
-}
-
-uint x8_uint_array_index(uint3 x8_i) {
-    return (x8_i.x >> 2) + x8_i.y * 4 /* 8 / 2 */;
-}
-
 struct Globals {
     float4x4 viewproj_mat;
     float4 pos;
@@ -195,71 +171,56 @@ struct Globals {
 DAXA_DEFINE_BA_BUFFER(Globals)
 
 // Log2_N = 1 : x2, 2 : x4, 3: x8 ...
-template<uint log2_N>
-uint x_bit_mask(uint3 x_i) {
+template<uint N>
+uint x_index(uint3 x_i) {
     enum CONSTANTS : uint {
-        z_mask = 0x1Fu >> (log2_N-1u),
-        x_mask = 0xFFFFFFFFu >> (32u - (log2_N-1)),
+        STRIDE = 64 / N,
     };
-    return 1u << ((x_i.z & z_mask) + (32u >> log2_N) * (x_i.x & x_mask));
+    return x_i.x + x_i.y * STRIDE;
 }
 
-// Log2_N = 1 : x2, 2 : x4, 3: x8 ...
-template<uint log2_N>
-uint x_array_index(uint3 x_i) {
-    enum CONSTANTS : uint {
-        log2_N_sub_one = log2_N-1u,
-        y_factor = 32u >> (log2_N-1u),
-    };
-    return (x_i.x >> log2_N_sub_one) + x_i.y * y_factor;
-}
-
-template<>
-uint x_bit_mask<1>(uint3 x_i) {
+uint x_mask(uint3 x_i) {
     return 1u << x_i.z;
 }
 
+template<uint N>
+bool x_presence_in_chunk(inout ChunkBlockPresence chunk_presence, uint index, uint mask);
+
 template<>
-uint x_array_index<1>(uint3 x_i) {
-    return x_i.x + x_i.y * 32;
+bool x_presence_in_chunk<2>(inout ChunkBlockPresence chunk_presence, uint index, uint mask) {
+    return (chunk_presence.x2[index] & mask) != 0;
 }
 
 template<>
-uint x_bit_mask<2>(uint3 x_i) {
-    return 1u << x_i.z;
+bool x_presence_in_chunk<4>(inout ChunkBlockPresence chunk_presence, uint index, uint mask) {
+    return (chunk_presence.x4[index] & mask) != 0;
 }
 
 template<>
-uint x_array_index<2>(uint3 x_i) {
-    return x_i.x + x_i.y * 16;
+bool x_presence_in_chunk<8>(inout ChunkBlockPresence chunk_presence, uint index, uint mask) {
+    return (chunk_presence.x8[index] & mask) != 0;
 }
 
 template<>
-uint x_bit_mask<3>(uint3 x_i) {
-    return 1u << x_i.z;
+bool x_presence_in_chunk<16>(inout ChunkBlockPresence chunk_presence, uint index, uint mask) {
+    return (chunk_presence.x16[index] & mask) != 0;
 }
 
 template<>
-uint x_array_index<3>(uint3 x_i) {
-    return x_i.x + x_i.y * 8;
+bool x_presence_in_chunk<32>(inout ChunkBlockPresence chunk_presence, uint index, uint mask) {
+    return (chunk_presence.x16[index] & mask) != 0;
 }
 
-template<>
-uint x_bit_mask<4>(uint3 x_i) {
-    return 1u << x_i.z;
-}
-
-template<>
-uint x_array_index<4>(uint3 x_i) {
-    return x_i.x + x_i.y * 4;
-}
-
-template<>
-uint x_bit_mask<5>(uint3 x_i) {
-    return 1u << x_i.z;
-}
-
-template<>
-uint x_array_index<5>(uint3 x_i) {
-    return x_i.x + x_i.y * 2;
+template<uint N>
+bool x_load_presence(inout StructuredBuffer<Globals> globals, float3 world_pos) {
+    uint3 chunk_i = int3(world_pos / CHUNK_SIZE);
+    uint3 in_chunk_p = int3(world_pos) - chunk_i * CHUNK_SIZE;
+    uint3 x_i = in_chunk_p / N;
+    uint index = x_index<N>(x_i);
+    uint mask = x_mask(x_i);
+    return x_presence_in_chunk<N>(
+        globals[0].chunk_block_presence[chunk_i.z][chunk_i.y][chunk_i.x],
+        index,
+        mask
+    );
 }

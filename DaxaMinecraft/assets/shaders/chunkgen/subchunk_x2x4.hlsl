@@ -50,11 +50,11 @@ void Main(
 
     uint result = 0;
     if (at_least_one_occluding) {
-        result = x_bit_mask<Log2_x2>(x2_i);
+        result = x_mask(x2_i);
     }
     uint or_result = WaveActiveBitOr(result);
     if (WaveIsFirstLane()) {
-        uint index = x_array_index<Log2_x2>(x2_i);
+        uint index = x_index<2>(x2_i);
         globals[0].chunk_block_presence[chunk_i.z][chunk_i.y][chunk_i.x].x2[index] = or_result;
         local_x2_copy[x2_in_group_location.x][x2_in_group_location.y] = or_result;
     }
@@ -81,7 +81,7 @@ void Main(
     for (int y = 0; y < 2; ++y) 
     for (int z = 0; z < 2; ++z) {
         int3 local_i = x2_i + int3(x,y,z);
-        uint mask = x_bit_mask<Log2_x2>(local_i);
+        uint mask = x_mask(local_i);
         uint2 x2_in_group_index = uint2(
             local_i.x & 0x3,
             local_i.y & 0x3
@@ -91,7 +91,7 @@ void Main(
     }
     result = 0;
     if (at_least_one_occluding) {
-        result = x_bit_mask<Log2_x4>(x4_i);
+        result = x_mask(x4_i);
     }
     for (int i = 0; i < 2; i++) {
         if ((WaveGetLaneIndex() >> 4) == i) {
@@ -99,7 +99,7 @@ void Main(
         }
     }
     if ((WaveGetLaneIndex() & 0xF /* = %16 */) == 0) {
-        uint index = x_array_index<Log2_x4>(x4_i);
+        uint index = x_index<4>(x4_i);
         globals[0].chunk_block_presence[chunk_i.z][chunk_i.y][chunk_i.x].x4[index] = result;
     }
 }
