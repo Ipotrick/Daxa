@@ -1,3 +1,4 @@
+#define USE_GLOBALS_DEFINE 0
 #include "chunk.hlsl"
 
 struct Push {

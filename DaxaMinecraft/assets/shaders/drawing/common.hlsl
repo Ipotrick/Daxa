@@ -13,7 +13,7 @@ struct Push {
 
 #include "core.hlsl"
 
-uint tile_texture_index(inout StructuredBuffer<Globals> globals, BlockID block_id, BlockFace face) {
+uint tile_texture_index(GLOBALS_PARAM BlockID block_id, BlockFace face) {
     // clang-format off
     switch (block_id) {
     case BlockID::Debug:           return 0;
@@ -37,7 +37,7 @@ uint tile_texture_index(inout StructuredBuffer<Globals> globals, BlockID block_i
         default:                   return 0;
         }
     case BlockID::Gravel:          return 12;
-    case BlockID::Lava:            return 13 + int(globals[0].time * 6) % 8;
+    case BlockID::Lava:            return 13 + int(GLOBALS_DEFINE.time * 6) % 8;
     case BlockID::Leaves:          return 21;
     case BlockID::Log:
         switch (face) {
@@ -73,10 +73,10 @@ uint tile_texture_index(inout StructuredBuffer<Globals> globals, BlockID block_i
 #define ALBEDO ALBEDO_TEXTURE
 // Whether to disable everything else and draw just the complexity
 #define VISUALIZE_STEP_COMPLEXITY 0
-#define ENABLE_X16 0
+#define ENABLE_X16 1
 #define ENABLE_X64 0
 // Whether to cast shadow rays
-#define ENABLE_SHADOWS 1
+#define ENABLE_SHADOWS 0
 // Whether to visualize the position that the view ray intersects
 #define SHOW_PICK_POS 0
 #define SHOW_SINGLE_RAY 0
@@ -85,7 +85,7 @@ uint tile_texture_index(inout StructuredBuffer<Globals> globals, BlockID block_i
 // Number of samples per axis (so a value of 4 means 16 samples)
 #define SUBSAMPLE_N 1
 
-// Visualize x_n grid (n can be 1, 4, or 16)
-#define VISUALIZE_SUBGRID 2
+// Visualize x_n grid (n can be 1, 2, 4, 8, 16, 32, or 64)
+#define VISUALIZE_SUBGRID 0
 
 #define MAX_STEPS (BLOCK_NX + BLOCK_NY + BLOCK_NZ)
