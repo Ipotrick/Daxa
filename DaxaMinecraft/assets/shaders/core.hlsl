@@ -83,12 +83,26 @@ struct Globals {
 DAXA_DEFINE_BA_BUFFER(Globals)
 DAXA_DEFINE_BA_BUFFER(uint)
 
-BlockID load_block_id(inout StructuredBuffer<Globals> globals, float3 pos) {
+#if !defined(USE_GLOBALS_DEFINE)
+#define USE_GLOBALS_DEFINE 0
+#endif
+
+#if USE_GLOBALS_DEFINE
+#define GLOBALS_DEFINE getBuffer<Globals>(p.globals_sb)[0]
+#define GLOBALS_ARG
+#define GLOBALS_PARAM
+#else
+#define GLOBALS_DEFINE globals[0]
+#define GLOBALS_ARG globals,
+#define GLOBALS_PARAM StructuredBuffer<Globals> globals,
+#endif
+
+BlockID load_block_id(GLOBALS_PARAM float3 pos) {
     int3 chunk_i = int3(pos / CHUNK_SIZE);
     if (chunk_i.x < 0 || chunk_i.x > CHUNK_NX - 1 || chunk_i.y < 0 ||
         chunk_i.y > CHUNK_NY - 1 || chunk_i.z < 0 || chunk_i.z > CHUNK_NZ - 1) {
         return BlockID::Air;
     }
-    return (BlockID)getRWTexture3D<uint>(globals[0].chunk_images[chunk_i.z][chunk_i.y][chunk_i.x])
+    return (BlockID)getRWTexture3D<uint>(GLOBALS_DEFINE.chunk_images[chunk_i.z][chunk_i.y][chunk_i.x])
         [int3(pos) - chunk_i * int3(CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE)];
 }

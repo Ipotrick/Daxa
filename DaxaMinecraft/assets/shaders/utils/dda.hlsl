@@ -115,7 +115,7 @@ DDA_StartResult run_dda_start(in Ray ray, in out DDA_RunState run_state) {
     return result;
 }
 
-template<int SCL>
+template <int SCL>
 void run_dda_step(in out float3 to_side_dist, in out int3 tile_i, in out uint side, in DDA_StartResult dda_start) {
     if (to_side_dist.x < to_side_dist.y) {
         if (to_side_dist.x < to_side_dist.z) {
@@ -140,7 +140,7 @@ void run_dda_step(in out float3 to_side_dist, in out int3 tile_i, in out uint si
     }
 }
 
-void run_dda_main(inout StructuredBuffer<Globals> globals, in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState run_state, in float3 b_min, in float3 b_max, in uint max_steps) {
+void run_dda_main(GLOBALS_PARAM in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState run_state, in float3 b_min, in float3 b_max, in uint max_steps) {
     run_state.hit = false;
     uint x1_steps = 0;
 
@@ -149,13 +149,16 @@ void run_dda_main(inout StructuredBuffer<Globals> globals, in Ray ray, in DDA_St
     // 10% perf hit with shadows (worst case)
     // if (x_load_presence<16>(globals, run_state.tile_i_x16)) {
     //     for (uint j = 0; j < 12; ++j) {
-    //         uint tile = load_tile(run_state.tile_i);
-    //         if (is_block_occluding(get_block_id(tile))) {
+    //         BlockID block_id = load_block_id(GLOBALS_ARG run_state.tile_i);
+    //         if (is_block_occluding(block_id)) {
     //             run_state.hit = true;
     //             break;
     //         }
-    //         run_dda_step(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start, 1);
-    //         if (run_state.tile_i / 4 == run_state.tile_i_x4)
+    //         run_dda_step<1>(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start);
+    //         int3 tile_i_o4 = run_state.tile_i / 4;
+    //         if (tile_i_o4.x == run_state.tile_i_x4.x &&
+    //             tile_i_o4.y == run_state.tile_i_x4.y &&
+    //             tile_i_o4.z == run_state.tile_i_x4.z)
     //             break;
     //         x1_steps++;
     //         if (!point_box_contains(run_state.tile_i, b_min, b_max)) {
@@ -166,13 +169,16 @@ void run_dda_main(inout StructuredBuffer<Globals> globals, in Ray ray, in DDA_St
 
     //     if (x_load_presence<16>(globals, run_state.tile_i / 16 * 16)) {
     //         for (uint j = 0; j < 36; ++j) {
-    //             uint tile = load_tile(run_state.tile_i);
-    //             if (is_block_occluding(get_block_id(tile))) {
+    //             BlockID block_id = load_block_id(GLOBALS_ARG run_state.tile_i);
+    //             if (is_block_occluding(block_id)) {
     //                 run_state.hit = true;
     //                 break;
     //             }
-    //             run_dda_step(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start, 1);
-    //             if (run_state.tile_i / 4 == run_state.tile_i_x4)
+    //             run_dda_step<1>(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start);
+    //             int3 tile_i_o4 = run_state.tile_i / 4;
+    //             if (tile_i_o4.x == run_state.tile_i_x4.x &&
+    //                 tile_i_o4.y == run_state.tile_i_x4.y &&
+    //                 tile_i_o4.z == run_state.tile_i_x4.z)
     //                 break;
     //             x1_steps++;
     //             if (!point_box_contains(run_state.tile_i, b_min, b_max)) {
@@ -194,7 +200,7 @@ void run_dda_main(inout StructuredBuffer<Globals> globals, in Ray ray, in DDA_St
 #if ENABLE_X64
         x1_steps++;
         run_dda_step<64>(run_state.to_side_dist_x64, run_state.tile_i_x64, run_state.side, dda_start);
-        if (x_load_presence<64>(globals, run_state.tile_i_x64)) {
+        if (x_load_presence<64>(GLOBALS_ARG run_state.tile_i_x64)) {
             RayIntersection x64_intersection;
             x64_intersection.nrm = float3(dda_start.ray_step * 1);
             switch (run_state.side) {
@@ -211,7 +217,7 @@ void run_dda_main(inout StructuredBuffer<Globals> globals, in Ray ray, in DDA_St
 #if ENABLE_X16 || ENABLE_X64
                 x1_steps++;
                 run_dda_step<16>(run_state.to_side_dist_x16, run_state.tile_i_x16, run_state.side, dda_start);
-                if (x_load_presence<16>(globals, run_state.tile_i_x16)) {
+                if (x_load_presence<16>(GLOBALS_ARG run_state.tile_i_x16)) {
                     RayIntersection x16_intersection;
                     x16_intersection.nrm = float3(dda_start.ray_step * 1);
                     switch (run_state.side) {
@@ -226,7 +232,7 @@ void run_dda_main(inout StructuredBuffer<Globals> globals, in Ray ray, in DDA_St
 #endif
                         x1_steps++;
                         run_dda_step<4>(run_state.to_side_dist_x4, run_state.tile_i_x4, run_state.side, dda_start);
-                        if (x_load_presence<4>(globals, run_state.tile_i_x4)) {
+                        if (x_load_presence<4>(GLOBALS_ARG run_state.tile_i_x4)) {
                             RayIntersection x4_intersection;
                             x4_intersection.nrm = float3(dda_start.ray_step * 1);
                             switch (run_state.side) {
@@ -239,14 +245,17 @@ void run_dda_main(inout StructuredBuffer<Globals> globals, in Ray ray, in DDA_St
                             run_state.to_side_dist = abs(float3(int3(ray.o) - run_state.tile_i)) * dda_start.delta_dist + dda_start.initial_to_side_dist;
                             for (uint j = 0; j < 12; ++j) {
 
-                                BlockID block_id = load_block_id(globals, run_state.tile_i);
+                                BlockID block_id = load_block_id(GLOBALS_ARG run_state.tile_i);
                                 if (is_block_occluding(block_id)) {
                                     run_state.hit = true;
                                     break;
                                 }
                                 x1_steps++;
                                 run_dda_step<1>(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start);
-                                if (run_state.tile_i / 4 == run_state.tile_i_x4)
+                                int3 tile_i_o4 = run_state.tile_i / 4;
+                                if (tile_i_o4.x == run_state.tile_i_x4.x &&
+                                    tile_i_o4.y == run_state.tile_i_x4.y &&
+                                    tile_i_o4.z == run_state.tile_i_x4.z)
                                     break;
                                 if (!point_box_contains(run_state.tile_i, b_min, b_max)) {
                                     run_state.outside_bounds = true;
@@ -254,7 +263,11 @@ void run_dda_main(inout StructuredBuffer<Globals> globals, in Ray ray, in DDA_St
                                 }
                             }
                         }
-                        if (run_state.hit || run_state.tile_i_x4 / 4 == run_state.tile_i_x16)
+                        int3 tile_i_x4_o4 = run_state.tile_i_x4 / 4;
+                        if ((tile_i_x4_o4.x == run_state.tile_i_x16.x &&
+                             tile_i_x4_o4.y == run_state.tile_i_x16.y &&
+                             tile_i_x4_o4.z == run_state.tile_i_x16.z) ||
+                            run_state.hit)
                             break;
                         if (!point_box_contains(run_state.tile_i_x4, b_min, b_max)) {
                             run_state.outside_bounds = true;
@@ -278,33 +291,47 @@ void run_dda_main(inout StructuredBuffer<Globals> globals, in Ray ray, in DDA_St
         }
 #endif
 #else
-        BlockID block_id = load_block_id(globals, run_state.tile_i);
+        BlockID block_id = load_block_id(GLOBALS_ARG run_state.tile_i);
 #if VISUALIZE_SUBGRID == 1
         if (is_block_occluding(block_id)) {
 #elif VISUALIZE_SUBGRID == 2
-        if (x_load_presence<2>(globals, run_state.tile_i_x2)) {
+        if (x_load_presence<2>(GLOBALS_ARG run_state.tile_i_x2)) {
             run_state.to_side_dist = run_state.to_side_dist_x2;
 #elif VISUALIZE_SUBGRID == 4
-        if (x_load_presence<4>(globals, run_state.tile_i_x4)) {
+        if (x_load_presence<4>(GLOBALS_ARG run_state.tile_i_x4)) {
             run_state.to_side_dist = run_state.to_side_dist_x4;
 #elif VISUALIZE_SUBGRID == 8
-        if (x_load_presence<8>(globals, run_state.tile_i_x8)) {
+        if (x_load_presence<8>(GLOBALS_ARG run_state.tile_i_x8)) {
             run_state.to_side_dist = run_state.to_side_dist_x8;
 #elif VISUALIZE_SUBGRID == 16
-        if (x_load_presence<16>(globals, run_state.tile_i_x16)) {
+        if (x_load_presence<16>(GLOBALS_ARG run_state.tile_i_x16)) {
             run_state.to_side_dist = run_state.to_side_dist_x16;
 #elif VISUALIZE_SUBGRID == 32
-        if (x_load_presence<32>(globals, run_state.tile_i_x32)) {
+        if (x_load_presence<32>(GLOBALS_ARG run_state.tile_i_x32)) {
             run_state.to_side_dist = run_state.to_side_dist_x32;
 #elif VISUALIZE_SUBGRID == 64
-        if (x_load_presence<64>(globals, run_state.tile_i_x64)) {
+        if (x_load_presence<64>(GLOBALS_ARG run_state.tile_i_x64)) {
             run_state.to_side_dist = run_state.to_side_dist_x64;
 #endif
             run_state.hit = true;
             break;
         }
 
-        run_dda_step<VISUALIZE_SUBGRID>(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start);
+#if VISUALIZE_SUBGRID == 1
+        run_dda_step<1>(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start);
+#elif VISUALIZE_SUBGRID == 2
+        run_dda_step<2>(run_state.to_side_dist_x2, run_state.tile_i_x2, run_state.side, dda_start);
+#elif VISUALIZE_SUBGRID == 4
+        run_dda_step<4>(run_state.to_side_dist_x4, run_state.tile_i_x4, run_state.side, dda_start);
+#elif VISUALIZE_SUBGRID == 8
+        run_dda_step<8>(run_state.to_side_dist_x8, run_state.tile_i_x8, run_state.side, dda_start);
+#elif VISUALIZE_SUBGRID == 16
+        run_dda_step<16>(run_state.to_side_dist_x16, run_state.tile_i_x16, run_state.side, dda_start);
+#elif VISUALIZE_SUBGRID == 32
+        run_dda_step<32>(run_state.to_side_dist_x32, run_state.tile_i_x32, run_state.side, dda_start);
+#elif VISUALIZE_SUBGRID == 64
+        run_dda_step<64>(run_state.to_side_dist_x64, run_state.tile_i_x64, run_state.side, dda_start);
+#endif
 
 #if VISUALIZE_SUBGRID == 1
         if (!point_box_contains(run_state.tile_i, b_min, b_max)) {

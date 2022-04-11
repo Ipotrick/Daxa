@@ -3,7 +3,7 @@
 #include "core.hlsl"
 
 // Log2_N = 1 : x2, 2 : x4, 3: x8 ...
-template<uint N>
+template <uint N>
 uint x_index(uint3 x_i) {
     enum CONSTANTS : uint {
         STRIDE = 64 / N,
@@ -42,8 +42,7 @@ bool x_load_presence(StructuredBuffer<Globals> globals, float3 world_pos) {
     return x_presence_in_chunk<N>(
         globals[0].chunk_block_presence[chunk_i.z][chunk_i.y][chunk_i.x],
         index,
-        mask
-    );
+        mask);
 }
 
 template<>
