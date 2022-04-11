@@ -81,6 +81,7 @@ struct Globals {
 };
 
 DAXA_DEFINE_BA_BUFFER(Globals)
+DAXA_DEFINE_BA_BUFFER(uint)
 
 BlockID load_block_id(inout StructuredBuffer<Globals> globals, float3 pos) {
     int3 chunk_i = int3(pos / CHUNK_SIZE);

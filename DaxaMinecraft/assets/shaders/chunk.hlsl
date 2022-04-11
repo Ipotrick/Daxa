@@ -16,11 +16,13 @@ uint x_mask(uint3 x_i) {
 }
 
 template<uint N>
-bool x_presence_in_chunk(inout ChunkBlockPresence chunk_presence, uint index, uint mask);
+bool x_presence_in_chunk(ChunkBlockPresence chunk_presence, uint index, uint mask) {
+    return true;
+}
 
 #define DAXA_IMPLEMENT_X_PRESENCE_IN_CHUNK(N)\
 template<>\
-bool x_presence_in_chunk<N>(inout ChunkBlockPresence chunk_presence, uint index, uint mask) {\
+bool x_presence_in_chunk<N>(ChunkBlockPresence chunk_presence, uint index, uint mask) {\
     return (chunk_presence.x##N[index] & mask) != 0;\
 }
 
@@ -31,7 +33,7 @@ DAXA_IMPLEMENT_X_PRESENCE_IN_CHUNK(16)
 DAXA_IMPLEMENT_X_PRESENCE_IN_CHUNK(32)
 
 template<uint N>
-bool x_load_presence(inout StructuredBuffer<Globals> globals, float3 world_pos) {
+bool x_load_presence(StructuredBuffer<Globals> globals, float3 world_pos) {
     uint3 chunk_i = int3(world_pos / CHUNK_SIZE);
     uint3 in_chunk_p = int3(world_pos) - chunk_i * CHUNK_SIZE;
     uint3 x_i = in_chunk_p / N;
@@ -45,7 +47,7 @@ bool x_load_presence(inout StructuredBuffer<Globals> globals, float3 world_pos) 
 }
 
 template<>
-bool x_load_presence<64>(inout StructuredBuffer<Globals> globals, float3 world_pos) {
+bool x_load_presence<64>(StructuredBuffer<Globals> globals, float3 world_pos) {
     uint3 chunk_i = int3(world_pos / CHUNK_SIZE);
     uint3 in_chunk_p = int3(world_pos) - chunk_i * CHUNK_SIZE;
     uint3 x_i = in_chunk_p / 64;
