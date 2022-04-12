@@ -1,4 +1,13 @@
 
+int2 get_tile_i(float2 p) {
+    int2 tile_i = int2(p / 1) * 1;
+    if (p.x < 0)
+        tile_i.x -= 1;
+    if (p.y < 0)
+        tile_i.y -= 1;
+    return tile_i;
+}
+
 float2 pixelspace_to_worldspace(StructuredBuffer<Globals> globals, float2 p) {
     float2 uv = p / float2(globals[0].frame_dim) * 2 - 1;
     uv.x *= float(globals[0].frame_dim.x) / globals[0].frame_dim.y;
@@ -30,6 +39,10 @@ float line_segment_dist(float2 p, float2 a, float2 b, float r) {
     float2 pa = p - a;
     float h = clamp(dot(pa, ba) / dot(ba, ba), 0., 1.);
     return length(pa - h * ba) - r;
+}
+
+int manhattan_dist(int2 a, int2 b) {
+    return abs(a.x - b.x) + abs(a.y - b.y);  //
 }
 
 void color_set(inout float3 color, float3 new_color, bool should) {
@@ -66,11 +79,8 @@ void dda(StructuredBuffer<Globals> globals, float2 pixel_pos, inout float3 color
         ray.nrm.x == 0 ? 1 : abs(ray.inv_nrm.x),  //
         ray.nrm.y == 0 ? 1 : abs(ray.inv_nrm.y));
 
-    int2 tile_i = int2(ray.o / 1) * 1;
-    if (ray.o.x < 0)
-        tile_i.x -= 1;
-    if (ray.o.y < 0)
-        tile_i.y -= 1;
+    int2 tile_i = get_tile_i(ray.o);
+
     float2 initial_dist;
     int2 tile_step;
 
@@ -81,6 +91,7 @@ void dda(StructuredBuffer<Globals> globals, float2 pixel_pos, inout float3 color
     int axis = 0;
 
     color_add(color, float3(0.1, 0.1, 0.1), square_dist(pixel_pos, tile_i, 0.875) < 0);
+    color_add(color, float3(0.1, 0.1, 0.1), manhattan_dist(tile_i, get_tile_i(pixel_pos)) < max_steps);
 
     for (int i = 0; i < max_steps; ++i) {
         float2 total_dist = initial_dist + delta_dist * total_steps;
@@ -119,7 +130,7 @@ SHADERTOY_NUMTHREADS void main(uint3 pixel_i : SV_DispatchThreadID) {
     color_set(color, float3(0.50, 0.20, 0.50), circle_dist(pixel_pos, ray.o, 0.1) < 0);
     color_set(color, float3(0.25, 0.25, 0.25), circle_dist(pixel_pos, rmb_pos, 0.1) < 0);
 
-    dda(globals, pixel_pos, color, ray, 10);
+    dda(globals, pixel_pos, color, ray, 6);
 
     output_image[pixel_i.xy] = float4(color, 1);
 }
