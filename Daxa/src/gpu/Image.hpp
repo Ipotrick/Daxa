@@ -12,7 +12,7 @@
 
 #include "Handle.hpp"
 #include "Sampler.hpp"
-#include "DeviceBackend.hpp"
+#include "Graveyard.hpp"
 
 namespace daxa {
 	struct ImageCreateInfo {
@@ -133,14 +133,7 @@ namespace daxa {
 	};
 
 	struct ImageViewStaticFunctionOverride {
-		static void cleanup(std::shared_ptr<ImageView>& value) {
-			if (value && value->deviceBackend && value.use_count() == 1) {
-				std::unique_lock lock(value->deviceBackend->graveyard.mtx);
-				for (auto& zombieList : value->deviceBackend->graveyard.activeZombieLists) {
-					zombieList->zombies.push_back(value);
-				}
-			}
-		}
+		static void cleanup(std::shared_ptr<ImageView>& value);
 	};
 
 	class ImageViewHandle : public SharedHandle<ImageView, ImageViewStaticFunctionOverride>{};

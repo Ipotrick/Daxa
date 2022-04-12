@@ -1,5 +1,6 @@
 #include "Signal.hpp"
 #include "Instance.hpp"
+#include "backend/DeviceBackend.hpp"
 
 namespace daxa {
 	Signal::Signal(std::shared_ptr<DeviceBackend> deviceBackend, SignalCreateInfo const& ci) 

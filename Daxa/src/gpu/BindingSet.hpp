@@ -13,7 +13,6 @@
 
 #include "vulkan/vulkan.h"
 
-#include "DeviceBackend.hpp"
 #include "Handle.hpp"
 #include "Image.hpp"
 #include "Buffer.hpp"
@@ -220,27 +219,27 @@ namespace daxa {
 		.layouts = {
 			BindingLayout{
 				.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
-				.descriptorCount = BIND_ALL_SAMPLER_POOL_SIZE.descriptorCount,
+				.descriptorCount = (1<<16),
 				.stageFlags = VK_SHADER_STAGE_ALL,
 			},
 			BindingLayout{
 				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				.descriptorCount = BIND_ALL_COMBINED_IMAGE_SAMPLER_POOL_SIZE.descriptorCount,
+				.descriptorCount = (1<<16),
 				.stageFlags = VK_SHADER_STAGE_ALL,
 			},
 			BindingLayout{
 				.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-				.descriptorCount = BIND_ALL_SAMPLED_IMAGE_POOL_SIZE.descriptorCount,
+				.descriptorCount = (1<<16),
 				.stageFlags = VK_SHADER_STAGE_ALL,
 			},
 			BindingLayout{
 				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-				.descriptorCount = BIND_ALL_STORAGE_IMAGE_POOL_SIZE.descriptorCount,
+				.descriptorCount = (1<<16),
 				.stageFlags = VK_SHADER_STAGE_ALL,
 			},
 			BindingLayout{
 				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.descriptorCount = BIND_ALL_STORAGE_BUFFER_POOL_SIZE.descriptorCount,
+				.descriptorCount = (1<<16),
 				.stageFlags = VK_SHADER_STAGE_ALL,
 			},
 		},

@@ -1,5 +1,7 @@
 #include "StagingBufferPool.hpp"
 #include "Instance.hpp"
+#include "backend/DeviceBackend.hpp"
+#include "backend/BufferBackend.hpp"
 
 namespace daxa {
 	StagingBuffer::StagingBuffer(BufferHandle& handle, std::weak_ptr<StagingBufferPoolSharedData> pool)
@@ -30,11 +32,17 @@ namespace daxa {
 		cleanup();
 	}
 
-	StagingBufferPool::StagingBufferPool(std::shared_ptr<DeviceBackend> deviceBackend, size_t size, VkBufferUsageFlags usages, VmaMemoryUsage memoryUsages)
+	StagingBufferPool::StagingBufferPool(
+		std::shared_ptr<DeviceBackend> deviceBackend, 
+		size_t size, 
+		//VkBufferUsageFlags usages, 
+		MemoryType memoryType
+	)
 		: deviceBackend{ std::move(deviceBackend) }
 		, sharedData{ std::make_shared<StagingBufferPoolSharedData>() }
-		, usages{ usages }
-		, memoryUsages{ memoryUsages }
+		//, usages{ usages }
+		//, memoryUsages{ memoryUsages }
+		, memoryType{ memoryType }
 		, size{ size }
 	{ }
 
@@ -44,15 +52,16 @@ namespace daxa {
 		if (sharedData->pool.empty()) {
 			BufferCreateInfo bufferCI{
 				.size = size,
-				.usage = usages,
-				.memoryUsage = memoryUsages,
+				.memoryType = memoryType
+				//.usage = usages,
+				//.memoryUsage = memoryUsages,
 			};
 
 			if (instance->pfnSetDebugUtilsObjectNameEXT) {
 				bufferCI.debugName = "staging buffer";
 			}
 
-			sharedData->pool.push_back(BufferHandle{ std::make_shared<Buffer>(deviceBackend, bufferCI)});
+			sharedData->pool.push_back(BufferHandle{ std::make_shared<BufferBackend>(deviceBackend, bufferCI)});
 		}
 
 		auto stagingBuffer = StagingBuffer{ sharedData->pool.back(), sharedData };

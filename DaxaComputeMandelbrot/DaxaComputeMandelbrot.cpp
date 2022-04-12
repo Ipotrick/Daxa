@@ -88,8 +88,8 @@ public:
 		// or use them embedded, like a named parameter list:
 		this->uniformBuffer = device->createBuffer({
 			.size = sizeof(u32) * 2,
-			.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-			.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
+			//.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			//.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 
 		resultImage = device->createImageView({

@@ -19,6 +19,7 @@
 
 #include "Instance.hpp"
 #include "util.hpp"
+#include "backend/DeviceBackend.hpp"
 
 using Path = std::filesystem::path;
 

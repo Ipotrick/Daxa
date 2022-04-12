@@ -1,5 +1,6 @@
 #include "CommandQueue.hpp"
 #include "Instance.hpp"
+#include "backend/DeviceBackend.hpp"
 
 namespace daxa {
 	CommandQueue::CommandQueue(
@@ -42,7 +43,7 @@ namespace daxa {
 			DAXA_ASSERT_M(cmdList->finalized, "can only submit finalized command lists");
 			DAXA_ASSERT_M(cmdList->recyclingData.lock().get() == cmdListRecyclingSharedData.get(), "comand lists can only be submitted to the queue they were created from");
 			for (auto& sbuffer : cmdList->usedUploadStagingBuffers) {
-				DAXA_ASSERT_M(!(**sbuffer.buffer).isMemoryMapped(), "can not submit command list. Some Buffers used in the command list have mapped memory, all memory to used buffers need to be unmapped before a submit.");
+				DAXA_ASSERT_M(!(*sbuffer.buffer).isMemoryMapped(), "can not submit command list. Some Buffers used in the command list have mapped memory, all memory to used buffers need to be unmapped before a submit.");
 			}
 
 			submitCommandBufferBuffer.push_back(cmdList->cmd);
