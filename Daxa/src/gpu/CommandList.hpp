@@ -280,19 +280,19 @@ namespace daxa {
 			return { reinterpret_cast<u8*>(ret.hostPtr), ret.size, std::move(ret.owningBuffer) };
 		}
 
-		void copyHostToBuffer2(BufferHandle& srcBuffer, ImageViewHandle& dstImage, std::span<VkBufferImageCopy> regions = {});
-
-		void copyHostToBuffer(HostToBufferCopyInfo copyInfo);
-
-		void copyHostToImage(HostToImageCopyInfo copyInfo);
-
-		void copyMultiBufferToBuffer(BufferToBufferMultiCopyInfo copyInfo);
-
-		void copyBufferToBuffer(BufferToBufferCopyInfo copyInfo);
-
-		void copyBufferToImage(BufferToImageCopyInfo copyInfo);
-
-		void copyImageToImage(ImageToImageCopyInfo copyInfo);
+		//void copyHostToBuffer2(BufferHandle& srcBuffer, ImageViewHandle& dstImage, std::span<VkBufferImageCopy> regions = {});
+//
+		//void copyHostToBuffer(HostToBufferCopyInfo copyInfo);
+//
+		//void copyHostToImage(HostToImageCopyInfo copyInfo);
+//
+		//void copyMultiBufferToBuffer(BufferToBufferMultiCopyInfo copyInfo);
+//
+		//void copyBufferToBuffer(BufferToBufferCopyInfo copyInfo);
+//
+		//void copyBufferToImage(BufferToImageCopyInfo copyInfo);
+//
+		//void copyImageToImage(ImageToImageCopyInfo copyInfo);
 
 		// transfer2:
 
@@ -495,47 +495,9 @@ namespace daxa {
 
 		void queueMemoryBarrier(MemoryBarrier const& memoryBarrier);
 		void queueImageBarrier(ImageBarrier const& memoryBarrier);
-
-		/**
-		 * 
-		*/
 		void insertQueuedBarriers();
 
-		void insertBarriers(std::span<MemoryBarrier> memBarriers, std::span<ImageBarrier> imgBarriers);
-
-		template<size_t N>
-		void insertBarriersCompact(std::array<std::variant<MemoryBarrier, ImageBarrier>, N> const& barriers) {
-			std::array<MemoryBarrier, N> memBarrs;
-			size_t memBarrCount = 0;
-			std::array<ImageBarrier, N> imgBarrs;
-			size_t imgBarrCount = 0;
-			for (auto& bar : barriers) {
-				if (auto* memBar = std::get_if<MemoryBarrier*>(&bar)) {
-					memBarrs[memBarrCount++] = *memBar;
-				} else {
-					imgBarrs[imgBarrCount++] = std::get<ImageBarrier>(bar);
-				}
-			}
-			insertBarriers({ memBarrs.data(), memBarrs.size() }, { imgBarrs.data(), imgBarrs.size() });
-		}
-
-		template<size_t N>
-		void insertMemoryBarriers(std::array<MemoryBarrier, N> barriers) {
-			insertBarriers({ barriers.data(), barriers.size()}, {});
-		}
-
-		void insertMemoryBarrier(MemoryBarrier barrier) {
-			insertBarriers({ &barrier, 1}, {});
-		}
-
-		template<size_t N>
-		void insertImageBarriers(std::array<ImageBarrier, N> barriers) {
-			insertBarriers({}, { barriers.data(), barriers.size()});
-		}
-
-		void insertImageBarrier(ImageBarrier barrier) {
-			insertBarriers({}, { &barrier, 1});
-		}
+		// Bindless Descriptors:
 
 		void bindAll(u32 set = 0);
 
