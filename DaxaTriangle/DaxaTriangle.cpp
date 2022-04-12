@@ -112,14 +112,14 @@ public:
 			-1.f, 1.f, 0.0f,	0.f, 1.f, 0.f, 1.f,
 			 0.f,-1.f, 0.0f,	0.f, 0.f, 1.f, 1.f,
 		};
-		cmdList->copyHostToBuffer(daxa::HostToBufferCopyInfo{
+		cmdList.copyHostToBuffer(daxa::HostToBufferCopyInfo{
 			.src = vertecies.data(),
 			.dst = vertexBuffer,
 			.size = sizeof(decltype(vertecies))
 		});
 
 		std::array someBufferdata = { 1.0f , 1.0f , 1.0f ,1.0f };
-		cmdList->copyHostToBuffer(daxa::HostToBufferCopyInfo{
+		cmdList.copyHostToBuffer(daxa::HostToBufferCopyInfo{
 			.src = someBufferdata.data(),
 			.dst = uniformBuffer,
 			.size = someBufferdata.size() * sizeof(float)
@@ -137,7 +137,7 @@ public:
 			.srcAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,				// wait for writing the vertex buffer
 			.dstStages = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT_KHR,		// the vertex creating must wait
 		} };
-		cmdList->insertBarriers(memBarrier0, imgBarrier0);
+		cmdList.insertBarriers(memBarrier0, imgBarrier0);
 		
 		
 		/// ------------ End Data Uploading ---------------------
@@ -156,30 +156,30 @@ public:
 				.clearValue = clear,
 			}
 		};
-		cmdList->beginRendering(daxa::BeginRenderingInfo{
+		cmdList.beginRendering(daxa::BeginRenderingInfo{
 			.colorAttachments = framebuffer,
 		});
 		
-		cmdList->bindPipeline(pipeline);
+		cmdList.bindPipeline(pipeline);
 		
 		auto set = bindingSetAllocator->getSet();
 		set->bindBuffer(0, uniformBuffer);
-		cmdList->bindSet(0, set);
+		cmdList.bindSet(0, set);
 		
-		cmdList->bindVertexBuffer(0, vertexBuffer);
+		cmdList.bindVertexBuffer(0, vertexBuffer);
 		
-		cmdList->draw(3, 1, 0, 0);
+		cmdList.draw(3, 1, 0, 0);
 		
-		cmdList->endRendering();
+		cmdList.endRendering();
 
 		// array because we can allways pass multiple barriers at once for driver efficiency
-		cmdList->insertImageBarrier(daxa::ImageBarrier{
+		cmdList.insertImageBarrier(daxa::ImageBarrier{
 			.image = swapchainImage.getImageHandle(),
 			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			.layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 		});
 
-		cmdList->finalize();
+		cmdList.finalize();
 
 		daxa::SubmitInfo submitInfo;
 		submitInfo.commandLists.push_back(std::move(cmdList));

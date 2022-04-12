@@ -100,13 +100,13 @@ struct RenderContext {
         resize(dim);
         // auto *currentFrame = &frames.front();
         auto cmd_list = queue->getCommandList({});
-        cmd_list->queueImageBarrier(daxa::ImageBarrier{
+        cmd_list.queueImageBarrier(daxa::ImageBarrier{
             .barrier = daxa::FULL_MEMORY_BARRIER,
             .image = render_color_image,
             .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
             .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
         });
-        cmd_list->queueImageBarrier(daxa::ImageBarrier{
+        cmd_list.queueImageBarrier(daxa::ImageBarrier{
             .barrier = daxa::FULL_MEMORY_BARRIER,
             .image = render_depth_image,
             .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
@@ -125,19 +125,19 @@ struct RenderContext {
             .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
             .clearValue = {.depthStencil = {.depth = 1.0f}},
         };
-        cmd_list->beginRendering(daxa::BeginRenderingInfo{
+        cmd_list.beginRendering(daxa::BeginRenderingInfo{
             .colorAttachments = framebuffer,
             .depthAttachment = &depth_attachment,
         });
     }
 
     void end_rendering(daxa::CommandListHandle cmd_list) {
-        cmd_list->endRendering();
+        cmd_list.endRendering();
     }
 
     void end_frame(daxa::CommandListHandle cmd_list) {
         auto *current_frame = &frames.front();
-        cmd_list->finalize();
+        cmd_list.finalize();
         // std::array signalTimelines = {
         //     std::tuple{current_frame->timeline, ++current_frame->timeline_counter},
         // };
@@ -169,18 +169,18 @@ struct RenderContext {
 
     void blit_to_swapchain(daxa::CommandListHandle cmd_list) {
 
-        cmd_list->queueImageBarrier({
+        cmd_list.queueImageBarrier({
             .image = swapchain_image.getImageViewHandle(),
             .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
             .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         });
-        cmd_list->queueImageBarrier({
+        cmd_list.queueImageBarrier({
             .image = render_color_image,
             .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
             .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
         });
 
-        // cmd_list->singleCopyImageToImage({
+        // cmd_list.singleCopyImageToImage({
         //     .src = render_color_image->getImageHandle(),
         //     .dst = swapchain_image.getImageViewHandle()->getImageHandle(),
         // });
@@ -217,20 +217,20 @@ struct RenderContext {
                 },
             },
         };
-        cmd_list->insertQueuedBarriers();
+        cmd_list.insertQueuedBarriers();
         vkCmdBlitImage(
-            cmd_list->getVkCommandBuffer(),
+            cmd_list.getVkCommandBuffer(),
             render_color_image->getImageHandle()->getVkImage(),
             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
             swapchain_image.getImageViewHandle()->getImageHandle()->getVkImage(),
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
 
-        cmd_list->queueImageBarrier({
+        cmd_list.queueImageBarrier({
             .image = swapchain_image.getImageViewHandle(),
             .layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             .layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
         });
-        cmd_list->queueImageBarrier({
+        cmd_list.queueImageBarrier({
             .image = render_color_image,
             .layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
             .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
@@ -373,13 +373,13 @@ struct World {
         for (auto &chunk_layer : chunks) {
             for (auto &chunk_strip : chunk_layer) {
                 for (auto &chunk : chunk_strip) {
-                    cmd_list->queueImageBarrier(daxa::ImageBarrier{
+                    cmd_list.queueImageBarrier(daxa::ImageBarrier{
                         .barrier = daxa::FULL_MEMORY_BARRIER,
                         .image = chunk->chunkgen_image_a,
                         .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
                         .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
                     });
-                    // cmd_list->queueImageBarrier(daxa::ImageBarrier{
+                    // cmd_list.queueImageBarrier(daxa::ImageBarrier{
                     //     .barrier = daxa::FULL_MEMORY_BARRIER,
                     //     .image = chunk->chunkgen_image_b,
                     //     .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
@@ -389,7 +389,7 @@ struct World {
             }
         }
 
-        cmd_list->finalize();
+        cmd_list.finalize();
         daxa::SubmitInfo submitInfo;
         submitInfo.commandLists.push_back(std::move(cmd_list));
         render_ctx.queue->submit(submitInfo);
@@ -440,24 +440,24 @@ struct World {
     }
 
     void do_break(daxa::CommandListHandle cmd_list, u32 compute_globals_i, const ComputeGlobals &compute_globals) {
-        cmd_list->bindPipeline(blockedit_compute_pipeline);
-        cmd_list->bindAll();
+        cmd_list.bindPipeline(blockedit_compute_pipeline);
+        cmd_list.bindAll();
         for (size_t zi = 0; zi < DIM.z; ++zi) {
             for (size_t yi = 0; yi < DIM.y; ++yi) {
                 for (size_t xi = 0; xi < DIM.x; ++xi) {
-                    cmd_list->pushConstant(
+                    cmd_list.pushConstant(
                         VK_SHADER_STAGE_COMPUTE_BIT,
                         ChunkgenPush{
                             .pos = {1.0f * xi * Chunk::DIM.x, 1.0f * yi * Chunk::DIM.y, 1.0f * zi * Chunk::DIM.z, 0},
                             .globals_sb = compute_globals_i,
                             .output_image_i = compute_globals.chunk_ids[zi][yi][xi],
                         });
-                    cmd_list->dispatch(8, 8, 8);
+                    cmd_list.dispatch(8, 8, 8);
                 }
             }
         }
 
-        cmd_list->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+        cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
     }
 
     void do_place(daxa::CommandListHandle) {
@@ -492,34 +492,34 @@ struct World {
 
         auto compute_globals_i = compute_pipeline_globals.getDescriptorIndex();
 
-        cmd_list->singleCopyHostToBuffer({
+        cmd_list.singleCopyHostToBuffer({
             .src = reinterpret_cast<u8 *>(&compute_globals),
             .dst = compute_pipeline_globals,
             .region = {.size = sizeof(decltype(compute_globals))}, // - sizeof(decltype(compute_globals.chunk_block_presence))
         });
-        cmd_list->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+        cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 
         if (!initialized) {
             initialized = true;
             for (auto &pipe : chunkgen_compute_pipeline_passes) {
-                cmd_list->bindPipeline(pipe);
-                cmd_list->bindAll();
+                cmd_list.bindPipeline(pipe);
+                cmd_list.bindAll();
                 for (size_t zi = 0; zi < DIM.z; ++zi) {
                     for (size_t yi = 0; yi < DIM.y; ++yi) {
                         for (size_t xi = 0; xi < DIM.x; ++xi) {
-                            cmd_list->pushConstant(
+                            cmd_list.pushConstant(
                                 VK_SHADER_STAGE_COMPUTE_BIT,
                                 ChunkgenPush{
                                     .pos = {1.0f * xi * Chunk::DIM.x, 1.0f * yi * Chunk::DIM.y, 1.0f * zi * Chunk::DIM.z, 0},
                                     .globals_sb = compute_globals_i,
                                     .output_image_i = compute_globals.chunk_ids[zi][yi][xi],
                                 });
-                            cmd_list->dispatch(8, 8, 8);
+                            cmd_list.dispatch(8, 8, 8);
                         }
                     }
                 }
 
-                cmd_list->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+                cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
             }
 
             struct SubChunkPush{
@@ -527,51 +527,51 @@ struct World {
                 u32 globalsID;
             };
 
-            cmd_list->bindPipeline(subchunk_x2x4_pipeline);
-            cmd_list->bindAll();
+            cmd_list.bindPipeline(subchunk_x2x4_pipeline);
+            cmd_list.bindAll();
             for (u32 zi = 0; zi < DIM.z; ++zi) {
                 for (u32 yi = 0; yi < DIM.y; ++yi) {
                     for (u32 xi = 0; xi < DIM.x; ++xi) {
-                        cmd_list->pushConstant(
+                        cmd_list.pushConstant(
                             VK_SHADER_STAGE_COMPUTE_BIT,
                             SubChunkPush{
                                 .chunk_i = {xi, yi, zi, 0},
                                 .globalsID = compute_globals_i,
                             });
-                        cmd_list->dispatch(1, 64, 1);
+                        cmd_list.dispatch(1, 64, 1);
                     }
                 }
             }
-            cmd_list->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+            cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 
-            cmd_list->bindPipeline(subchunk_x8p_pipeline);
-            cmd_list->bindAll();
+            cmd_list.bindPipeline(subchunk_x8p_pipeline);
+            cmd_list.bindAll();
             for (u32 zi = 0; zi < DIM.z; ++zi) {
                 for (u32 yi = 0; yi < DIM.y; ++yi) {
                     for (u32 xi = 0; xi < DIM.x; ++xi) {
-                        cmd_list->pushConstant(
+                        cmd_list.pushConstant(
                             VK_SHADER_STAGE_COMPUTE_BIT,
                             SubChunkPush{
                                 .chunk_i = {xi, yi, zi, 0},
                                 .globalsID = compute_globals_i,
                             });
-                        cmd_list->dispatch(1, 1, 1);
+                        cmd_list.dispatch(1, 1, 1);
                     }
                 }
             }
 
-            //cmd_list->bindPipeline(subgrid_compute_pipeline);
-            //cmd_list->bindAll();
+            //cmd_list.bindPipeline(subgrid_compute_pipeline);
+            //cmd_list.bindAll();
             //for (size_t zi = 0; zi < DIM.z; ++zi) {
             //    for (size_t yi = 0; yi < DIM.y; ++yi) {
             //        for (size_t xi = 0; xi < DIM.x; ++xi) {
-            //            cmd_list->pushConstant(
+            //            cmd_list.pushConstant(
             //                VK_SHADER_STAGE_COMPUTE_BIT,
             //                ChunkgenPush{
             //                    .pos = {1.0f * xi * Chunk::DIM.x, 1.0f * yi * Chunk::DIM.y, 1.0f * zi * Chunk::DIM.z, 0},
             //                    .globals_sb = compute_globals_i,
             //                });
-            //            cmd_list->dispatch(1, 1, 1);
+            //            cmd_list.dispatch(1, 1, 1);
             //        }
             //    }
             //}
@@ -586,26 +586,26 @@ struct World {
             do_break(cmd_list, compute_globals_i, compute_globals);
         }
 
-        cmd_list->bindPipeline(pickblock_compute_pipeline);
-        cmd_list->bindAll();
-        cmd_list->pushConstant(
+        cmd_list.bindPipeline(pickblock_compute_pipeline);
+        cmd_list.bindAll();
+        cmd_list.pushConstant(
             VK_SHADER_STAGE_COMPUTE_BIT,
             ChunkRaymarchPush{
                 .globals_sb = compute_globals_i,
             });
-        cmd_list->dispatch(1, 1, 1);
+        cmd_list.dispatch(1, 1, 1);
 
-        cmd_list->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+        cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 
-        cmd_list->bindPipeline(raymarch_compute_pipeline);
-        cmd_list->bindAll();
-        cmd_list->pushConstant(
+        cmd_list.bindPipeline(raymarch_compute_pipeline);
+        cmd_list.bindAll();
+        cmd_list.pushConstant(
             VK_SHADER_STAGE_COMPUTE_BIT,
             ChunkRaymarchPush{
                 .globals_sb = compute_globals_i,
                 .output_image_i = render_image->getDescriptorIndex(),
             });
-        cmd_list->dispatch((extent.width + 7) / 8, (extent.height + 7) / 8);
+        cmd_list.dispatch((extent.width + 7) / 8, (extent.height + 7) / 8);
     }
 
     void create_pipeline(daxa::PipelineHandle &pipe, const std::filesystem::path &path, daxa::ShaderLang lang = daxa::ShaderLang::GLSL, const char *entry = "main") {
@@ -706,7 +706,7 @@ struct World {
         });
 
         auto cmd_list = render_ctx.queue->getCommandList({});
-        cmd_list->queueImageBarrier({
+        cmd_list.queueImageBarrier({
             .image = atlas_texture_array,
             .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             .subRange = {VkImageSubresourceRange{
@@ -727,7 +727,7 @@ struct World {
                 std::cout << "could not find file: \"" << path << "\"" << std::endl;
                 continue;
             }
-            cmd_list->singleCopyHostToImage({
+            cmd_list.singleCopyHostToImage({
                 .src = data,
                 .dst = atlas_texture_array->getImageHandle(),
                 .region = { 
@@ -750,7 +750,7 @@ struct World {
                 .layerCount = static_cast<u32>(texture_names.size()),
             },
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-        cmd_list->finalize();
+        cmd_list.finalize();
         render_ctx.queue->submitBlocking({
             .commandLists = {cmd_list},
         });

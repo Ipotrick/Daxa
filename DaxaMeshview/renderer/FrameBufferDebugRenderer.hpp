@@ -47,7 +47,7 @@ public:
 
         auto cmdList = renderCTX.queue->getCommandList({});
         recreateImages(renderCTX, cmdList, width, height);
-        cmdList->finalize();
+        cmdList.finalize();
         renderCTX.queue->submitBlocking({.commandLists = {cmdList}});
     }
 
@@ -88,17 +88,17 @@ public:
             .dstAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR | VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
         };
 
-        cmdList->queueImageBarrier({
+        cmdList.queueImageBarrier({
             .barrier = postMemBar,
             .image = debugScreenSpaceNormalImage,
             .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         });
-        cmdList->queueImageBarrier({
+        cmdList.queueImageBarrier({
                 .barrier = postMemBar,
                 .image = debugWorldSpaceNormalImage,
                 .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         });
-        cmdList->queueImageBarrier({
+        cmdList.queueImageBarrier({
                 .barrier = postMemBar,
                 .image = debugLinearDepthImage,
                 .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -111,13 +111,13 @@ public:
         uploadData.imageHeight = static_cast<i32>(debugLinearDepthImage->getImageHandle()->getVkExtent3D().height);
         uploadData.zMin = std::min(std::max(cameraData.near, uploadData.zMin), cameraData.far);
         uploadData.zMax = std::min(std::max(cameraData.near, uploadData.zMax), cameraData.far);
-        cmdList->singleCopyHostToBuffer({
+        cmdList.singleCopyHostToBuffer({
             .src = reinterpret_cast<u8*>(&uploadData),
             .dst = buffer,
             .region = {.size = sizeof(decltype(uploadData)) }
         });
 
-        cmdList->queueMemoryBarrier({
+        cmdList.queueMemoryBarrier({
             .srcStages = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT_KHR, 
             .srcAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR,
             .dstStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
@@ -131,29 +131,29 @@ public:
             .dstAccess = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT_KHR | VK_ACCESS_2_SHADER_STORAGE_READ_BIT_KHR | VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR,
         };
 
-        cmdList->queueImageBarrier({
+        cmdList.queueImageBarrier({
             .barrier = preMemBarr,
             .image = debugScreenSpaceNormalImage,
             .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
         });
-        cmdList->queueImageBarrier({
+        cmdList.queueImageBarrier({
                 .barrier = preMemBarr,
                 .image = debugWorldSpaceNormalImage,
                 .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
         });
-        cmdList->queueImageBarrier({
+        cmdList.queueImageBarrier({
                 .barrier = preMemBarr,
                 .image = debugLinearDepthImage,
                 .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
         });
-        cmdList->queueImageBarrier({
+        cmdList.queueImageBarrier({
                 .barrier = preMemBarr,
                 .image = renderCTX.depthImage,
                 .layoutBefore = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
                 .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         });
 
-        cmdList->bindPipeline(pipeline);
+        cmdList.bindPipeline(pipeline);
 
         auto set = setAlloc->getSet();
         set->bindBuffer(0, buffer);
@@ -162,10 +162,10 @@ public:
         set->bindImage(3, debugLinearDepthImage, VK_IMAGE_LAYOUT_GENERAL);
         set->bindImage(4, debugScreenSpaceNormalImage, VK_IMAGE_LAYOUT_GENERAL);
         set->bindImage(5, debugWorldSpaceNormalImage, VK_IMAGE_LAYOUT_GENERAL);
-        cmdList->bindSet(0, set);
+        cmdList.bindSet(0, set);
 
-        cmdList->dispatch(static_cast<u32>(uploadData.imageWidth + 1) / 8, static_cast<u32>(uploadData.imageHeight + 1) / 8);
-        cmdList->unbindPipeline();
+        cmdList.dispatch(static_cast<u32>(uploadData.imageWidth + 1) / 8, static_cast<u32>(uploadData.imageHeight + 1) / 8);
+        cmdList.unbindPipeline();
 
         // TODO dispatch compute shader
 
@@ -176,25 +176,25 @@ public:
             .dstAccess = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR,
         };
 
-        cmdList->queueImageBarrier({
+        cmdList.queueImageBarrier({
             .barrier = postMemBarr,
             .image = debugScreenSpaceNormalImage,
             .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
             .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         });
-        cmdList->queueImageBarrier({
+        cmdList.queueImageBarrier({
             .barrier = postMemBarr,
             .image = debugWorldSpaceNormalImage,
             .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
             .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         });
-        cmdList->queueImageBarrier({
+        cmdList.queueImageBarrier({
             .barrier = postMemBarr,
             .image = debugLinearDepthImage,
             .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
             .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         });
-        cmdList->queueImageBarrier({
+        cmdList.queueImageBarrier({
             .barrier = postMemBarr,
             .image = renderCTX.depthImage,
             .layoutAfter = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,

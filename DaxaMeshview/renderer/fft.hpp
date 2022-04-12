@@ -44,12 +44,12 @@ public:
         horFreqImageG = {};
         horFreqImageB = {};
 
-        cmd->queueImageBarrier({
+        cmd.queueImageBarrier({
             .image = fftImage,
             .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
             .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         });
-        cmd->insertQueuedBarriers();
+        cmd.insertQueuedBarriers();
 
         fftExtract = renderCTX.pipelineCompiler->createComputePipeline({
             .shaderCI = {
@@ -81,16 +81,16 @@ public:
     }
 
     void update(RenderContext& renderCTX, daxa::CommandListHandle& cmd) {
-        cmd->queueImageBarrier({
+        cmd.queueImageBarrier({
             .image = fftImage,
             .layoutBefore = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
         });
-        cmd->insertQueuedBarriers();
+        cmd.insertQueuedBarriers();
 
         extractPass(renderCTX, cmd);
         
-        cmd->queueImageBarrier({
+        cmd.queueImageBarrier({
             .image = fftImage,
             .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
             .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
