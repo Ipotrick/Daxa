@@ -1,6 +1,7 @@
 #include "CommandList.hpp"
 
 #include "Instance.hpp"
+#include "backend/DeviceBackend.hpp"
 #include "util.hpp"
 
 namespace daxa {
@@ -44,7 +45,7 @@ namespace daxa {
 		finalized = true;
 	}
 
-	MappedMemoryPointer<u8> CommandList::mapMemoryStagedBufferVoid(BufferHandle copyDst, size_t size, size_t dstOffset) {
+	MappedMemoryPointer CommandList::mapMemoryStagedBufferVoid(BufferHandle copyDst, size_t size, size_t dstOffset) {
 		DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 		DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 		DAXA_ASSERT_M(size <= STAGING_BUFFER_POOL_BUFFER_SIZE, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
@@ -79,7 +80,7 @@ namespace daxa {
 		return mm;
 	}
 
-	MappedMemoryPointer<u8> CommandList::mapMemoryStagedImageVoid(ImageHandle copyDst, VkImageSubresourceLayers subRessource, VkOffset3D dstOffset, VkExtent3D dstExtent) {
+	MappedMemoryPointer CommandList::mapMemoryStagedImageVoid(ImageHandle copyDst, VkImageSubresourceLayers subRessource, VkOffset3D dstOffset, VkExtent3D dstExtent) {
 		DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 		DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 		if (bBarriersQueued) { insertQueuedBarriers(); }
@@ -157,10 +158,10 @@ namespace daxa {
 		DAXA_ASSERT_M(copyInfo.regions.size() > 0, "amount of copy regions must be greater than 0.");
 		if (bBarriersQueued) { insertQueuedBarriers(); }
 		for (int i = 0; i < copyInfo.regions.size(); i++) {
-			DAXA_ASSERT_M(copyInfo.src->getSize() >= copyInfo.regions[i].size + copyInfo.regions[i].srcOffset, "ERROR: src buffer is smaller than the region that shouly be copied!");
-			DAXA_ASSERT_M(copyInfo.dst->getSize() >= copyInfo.regions[i].size + copyInfo.regions[i].dstOffset, "ERROR: dst buffer is smaller than the region that shouly be copied!");
+			DAXA_ASSERT_M(copyInfo.src.getSize() >= copyInfo.regions[i].size + copyInfo.regions[i].srcOffset, "ERROR: src buffer is smaller than the region that shouly be copied!");
+			DAXA_ASSERT_M(copyInfo.dst.getSize() >= copyInfo.regions[i].size + copyInfo.regions[i].dstOffset, "ERROR: dst buffer is smaller than the region that shouly be copied!");
 		}
-		vkCmdCopyBuffer(cmd, copyInfo.src->getVkBuffer(), copyInfo.dst->getVkBuffer(), copyInfo.regions.size(), (VkBufferCopy*)copyInfo.regions.data());	// THIS COULD BREAK ON ABI CHANGE
+		vkCmdCopyBuffer(cmd, copyInfo.src.getVkBuffer(), copyInfo.dst.getVkBuffer(), copyInfo.regions.size(), (VkBufferCopy*)copyInfo.regions.data());	// THIS COULD BREAK ON ABI CHANGE
 	}
 
 	void CommandList::copyBufferToBuffer(BufferToBufferCopyInfo copyInfo) {
@@ -218,7 +219,7 @@ namespace daxa {
 
 		for (size_t i = 0; i < ci.regions.size(); i++) {
 			auto const& info = ci.regions[i];
-			auto mappedmem = this->mapMemoryStagedBuffer<u8 const*>(ci.dst, info.size, info.dstOffset);
+			auto mappedmem = this->mapMemoryStagedBuffer(ci.dst, info.size, info.dstOffset);
 			std::memcpy(mappedmem.hostPtr, ci.src + info.srcOffset, info.size);
 		}
 	}
@@ -290,7 +291,7 @@ namespace daxa {
 
 		for (size_t i = 0; i < ci.regions.size(); i++) {
 			auto const& region = ci.regions[i];
-			auto mappedmem = this->mapMemoryStagedImage<u8 const*>(ci.dst,region.subRessource, region.imageOffset, region.imageExtent);
+			auto mappedmem = this->mapMemoryStagedImage(ci.dst,region.subRessource, region.imageOffset, region.imageExtent);
 			std::memcpy(mappedmem.hostPtr, ci.src + region.srcOffset, mappedmem.size);
 		}
 	}
@@ -307,12 +308,12 @@ namespace daxa {
 #if defined(_DEBUG)
 		for (size_t i = 0; i < ci.regions.size(); i++) {
 			auto const& region = ci.regions.data()[i];
-			DAXA_ASSERT_M(region.srcOffset + region.size <= ci.src->getSize(), "copy overruns buffer");
-			DAXA_ASSERT_M(region.dstOffset + region.size <= ci.dst->getSize(), "copy overruns buffer");
+			DAXA_ASSERT_M(region.srcOffset + region.size <= ci.src.getSize(), "copy overruns buffer");
+			DAXA_ASSERT_M(region.dstOffset + region.size <= ci.dst.getSize(), "copy overruns buffer");
 		}
 #endif
 
-		vkCmdCopyBuffer(cmd, ci.src->getVkBuffer(), ci.dst->getVkBuffer(), static_cast<u32>(ci.regions.size()), reinterpret_cast<VkBufferCopy const*>(ci.regions.data()));
+		vkCmdCopyBuffer(cmd, ci.src.getVkBuffer(), ci.dst.getVkBuffer(), static_cast<u32>(ci.regions.size()), reinterpret_cast<VkBufferCopy const*>(ci.regions.data()));
 	}
 	void CommandList::singleCopyBufferToBuffer(SingleBufferToBufferCopyInfo const& ci) {
 		this->multiCopyBufferToBuffer({ .src = ci.src, .dst = ci.dst, .regions = std::span{&ci.region,1}});
@@ -339,11 +340,11 @@ namespace daxa {
 				outinfo.imageExtent.depth = ci.dst->getVkExtent3D().depth;
 			}
 			auto minNeededBufferSize = byteSizeOfImageRange(ci.dst, outinfo.imageSubresource, outinfo.imageOffset, outinfo.imageExtent);
-			DAXA_ASSERT_M(minNeededBufferSize <= ci.src->getSize(), "copy size overruns src size");
+			DAXA_ASSERT_M(minNeededBufferSize <= ci.src.getSize(), "copy size overruns src size");
 			bufferToImageCopyBuffer.push_back(outinfo);
 		}
 
-		vkCmdCopyBufferToImage(cmd, ci.src->getVkBuffer(), ci.dst->getVkImage(), ci.dstLayout, bufferToImageCopyBuffer.size(), bufferToImageCopyBuffer.data());
+		vkCmdCopyBufferToImage(cmd, ci.src.getVkBuffer(), ci.dst->getVkImage(), ci.dstLayout, bufferToImageCopyBuffer.size(), bufferToImageCopyBuffer.data());
 		bufferToImageCopyBuffer.clear();
 	}
 	void CommandList::singleCopyBufferToImage(SingleBufferToImageCopyInfo const& ci) {
@@ -402,7 +403,7 @@ namespace daxa {
 		DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 		DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 		DAXA_ASSERT_M(buffer, "invalid buffer handle");
-		auto vkBuffer = buffer->getVkBuffer();
+		auto vkBuffer = buffer.getVkBuffer();
 		vkCmdBindVertexBuffers(cmd, binding, 1, &vkBuffer, &bufferOffset);
 	}
 
@@ -410,7 +411,7 @@ namespace daxa {
 		DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 		DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 		DAXA_ASSERT_M(buffer, "invalid buffer handle");
-		auto vkBuffer = buffer->getVkBuffer();
+		auto vkBuffer = buffer.getVkBuffer();
 		vkCmdBindIndexBuffer(cmd, vkBuffer, bufferOffset, indexType);
 	}
 

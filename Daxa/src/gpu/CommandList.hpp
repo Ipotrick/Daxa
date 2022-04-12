@@ -11,7 +11,6 @@
 #include <vk_mem_alloc.h>
 
 #include "Handle.hpp"
-#include "DeviceBackend.hpp"
 #include "Image.hpp"
 #include "Buffer.hpp"
 #include "SwapchainImage.hpp"
@@ -266,21 +265,19 @@ namespace daxa {
 		 * @param dstOffset offset into the buffer.
 		 * @return MappedStagingMemory mapped memory.
 		 */
-		template<typename ValueT = u8>
-		MappedMemoryPointer<ValueT> mapMemoryStagedBuffer(BufferHandle copyDst, size_t size, size_t dstOffset) {
+		MappedMemoryPointer mapMemoryStagedBuffer(BufferHandle copyDst, size_t size, size_t dstOffset) {
 			auto ret = mapMemoryStagedBufferVoid(copyDst, size, dstOffset);
-			return { reinterpret_cast<ValueT*>(ret.hostPtr), ret.size, std::move(ret.owningBuffer) };
+			return { reinterpret_cast<u8*>(ret.hostPtr), ret.size, std::move(ret.owningBuffer) };
 		}
 		
-		template<typename ValueT = u8>
-		MappedMemoryPointer<ValueT> mapMemoryStagedImage(
+		MappedMemoryPointer mapMemoryStagedImage(
 			ImageHandle copyDst, 
 			VkImageSubresourceLayers subressource = { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1 }, 
 			VkOffset3D dstOffset = { 0, 0, 0 }, 
 			VkExtent3D dstExtent = { 0, 0, 0 }
 		) {
 			auto ret = mapMemoryStagedImageVoid(copyDst, subressource, dstOffset, dstExtent);
-			return { reinterpret_cast<ValueT*>(ret.hostPtr), ret.size, std::move(ret.owningBuffer) };
+			return { reinterpret_cast<u8*>(ret.hostPtr), ret.size, std::move(ret.owningBuffer) };
 		}
 
 		void copyHostToBuffer2(BufferHandle& srcBuffer, ImageViewHandle& dstImage, std::span<VkBufferImageCopy> regions = {});
@@ -329,12 +326,11 @@ namespace daxa {
 				return !ready();
 			}
 			
-			template<typename T = u8>
-			std::optional<MappedMemoryPointer<T>> getPtr() const {
+			std::optional<MappedMemoryPointer> getPtr() {
 				if (ready()) {
-					MappedMemoryPointer<T> mem = readBackStagingBuffer.buffer->mapMemory<T>();
-					mem.hostPtr = static_cast<T*>(static_cast<u8*>(mem.hostPtr) + readBackBufferOffset);
-					return { mem };
+					MappedMemoryPointer mem = readBackStagingBuffer.buffer->mapMemory();
+					mem.hostPtr = static_cast<u8*>(mem.hostPtr) + readBackBufferOffset;
+					return std::optional<MappedMemoryPointer>{ std::move(mem) };
 				}
 				return std::nullopt;
 			}
@@ -558,8 +554,8 @@ namespace daxa {
 		void begin();
 		void setDebugName(char const* debugName);
 		void checkIfPipelineAndRenderPassFit();
-		MappedMemoryPointer<u8> mapMemoryStagedBufferVoid(BufferHandle copyDst, size_t size, size_t dstOffset);
-		MappedMemoryPointer<u8> mapMemoryStagedImageVoid(ImageHandle copyDst, VkImageSubresourceLayers subRessource, VkOffset3D dstOffset, VkExtent3D dstExtent);
+		MappedMemoryPointer mapMemoryStagedBufferVoid(BufferHandle copyDst, size_t size, size_t dstOffset);
+		MappedMemoryPointer mapMemoryStagedImageVoid(ImageHandle copyDst, VkImageSubresourceLayers subRessource, VkOffset3D dstOffset, VkExtent3D dstExtent);
 
 		struct CurrentRenderPass{
 			std::vector<RenderAttachmentInfo> 		colorAttachments 	= {};

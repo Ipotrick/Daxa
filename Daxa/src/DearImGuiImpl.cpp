@@ -206,14 +206,16 @@ namespace daxa {
             perFrameData.push_back(PerFrameData{
                 .vertexBuffer = device->createBuffer({
                     .size = newMinSizeVertex,
-                    .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                    .memoryUsage = VMA_MEMORY_USAGE_CPU_TO_GPU,
+                    //.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                    //.memoryUsage = VMA_MEMORY_USAGE_CPU_TO_GPU,
+                    .memoryType = MemoryType::CPU_TO_GPU,
                     .debugName = "dear ImGui vertex buffer"
                 }),
                 .indexBuffer = device->createBuffer({
                     .size = newMinSizeIndices,
-                    .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                    .memoryUsage = VMA_MEMORY_USAGE_CPU_TO_GPU,
+                    //.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                    //.memoryUsage = VMA_MEMORY_USAGE_CPU_TO_GPU,
+                    .memoryType = MemoryType::CPU_TO_GPU,
                     .debugName = "dear ImGui index buffer"
                 }),
             });
@@ -242,36 +244,38 @@ namespace daxa {
             auto& vertexBuffer  = perFrameData.front().vertexBuffer;
             auto& indexBuffer   = perFrameData.front().indexBuffer;
 
-            if (draw_data->TotalVtxCount * sizeof(ImDrawVert) > vertexBuffer->getSize()) {
+            if (draw_data->TotalVtxCount * sizeof(ImDrawVert) > vertexBuffer.getSize()) {
                 auto newSize = draw_data->TotalVtxCount * sizeof(ImDrawVert) + 4096;
                 vertexBuffer = device->createBuffer({
                     .size = newSize,
-                    .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                    .memoryUsage = VMA_MEMORY_USAGE_CPU_TO_GPU,
+                    //.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                    //.memoryUsage = VMA_MEMORY_USAGE_CPU_TO_GPU,
+                    .memoryType = MemoryType::CPU_TO_GPU,
                     .debugName = "dear ImGui vertex buffer",
                 });
             }
 
-            if (draw_data->TotalIdxCount * sizeof(ImDrawIdx) > indexBuffer->getSize()) {
+            if (draw_data->TotalIdxCount * sizeof(ImDrawIdx) > indexBuffer.getSize()) {
                 auto newSize = draw_data->TotalIdxCount * sizeof(ImDrawIdx) + 4096;
                 indexBuffer = device->createBuffer({
                     .size = newSize,
-                    .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                    .memoryUsage = VMA_MEMORY_USAGE_CPU_TO_GPU,
+                    //.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                    //.memoryUsage = VMA_MEMORY_USAGE_CPU_TO_GPU,
+                    .memoryType = MemoryType::CPU_TO_GPU,
                     .debugName = "dear ImGui index buffer",
                 });
             }
             {
-                auto vtx_dst = vertexBuffer.mapMemory<ImDrawVert>();
-                auto idx_dst = indexBuffer.mapMemory<ImDrawIdx>();
+                auto vtx_dst = vertexBuffer.mapMemory();
+                auto idx_dst = indexBuffer.mapMemory();
 
                 for (int n = 0; n < draw_data->CmdListsCount; n++)
                 {
                     const ImDrawList* cmd_list = draw_data->CmdLists[n];
                     std::memcpy(vtx_dst.hostPtr, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
                     std::memcpy(idx_dst.hostPtr, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
-                    vtx_dst.hostPtr += cmd_list->VtxBuffer.Size;
-                    idx_dst.hostPtr += cmd_list->IdxBuffer.Size;
+                    vtx_dst.hostPtr += cmd_list->VtxBuffer.Size * sizeof(ImDrawVert);
+                    idx_dst.hostPtr += cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx);
                 }
             }
             //--  render command recording --//

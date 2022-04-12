@@ -1,6 +1,7 @@
 #include "Image.hpp"
 #include <cassert>
 #include "Instance.hpp"
+#include "backend/DeviceBackend.hpp"
 
 namespace daxa {
 	Image::Image(std::shared_ptr<DeviceBackend> deviceBackend, ImageCreateInfo const& ci)
@@ -244,6 +245,15 @@ namespace daxa {
 			}
 			vkDestroyImageView(deviceBackend->device.device, view, nullptr);
 			view = VK_NULL_HANDLE;
+		}
+	}
+
+	void ImageViewStaticFunctionOverride::cleanup(std::shared_ptr<ImageView>& value) {
+		if (value && value->deviceBackend && value.use_count() == 1) {
+			std::unique_lock lock(value->deviceBackend->graveyard.mtx);
+			for (auto& zombieList : value->deviceBackend->graveyard.activeZombieLists) {
+				zombieList->zombies.push_back(value);
+			}
 		}
 	}
 }
