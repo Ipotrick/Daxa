@@ -12,7 +12,7 @@
 
 struct Window {
     GLFWwindow *window_ptr;
-    glm::ivec2 frame_dim{800, 800};
+    glm::ivec2 frame_dim{1024, 1024};
 
     Window() {
         glfwInit();
@@ -165,6 +165,7 @@ struct RenderContext {
             });
         }
         pipeline_compiler->addShaderSourceRootPath("Samples/Shadertoy/shaders");
+        pipeline_compiler->addShaderSourceRootPath("DaxaMinecraft/assets/shaders");
     }
 
     ~RenderContext() {
@@ -345,25 +346,46 @@ struct App {
     daxa::PipelineHandle compute_pipeline;
     daxa::BufferHandle compute_pipeline_globals;
 
+    daxa::PipelineHandle compute_buf0_pipeline;
+    daxa::BufferHandle compute_buf0;
+
     ComputePipelineGlobals compute_globals_data{};
 
-    App() {
-        window.set_user_pointer<App>(this);
-
-        auto compute_pipeline_result = render_context.pipeline_compiler->createComputePipeline({
+    void create_pipeline(daxa::PipelineHandle &pipe, const std::filesystem::path &path, const char *const entry) {
+        auto result = render_context.pipeline_compiler->createComputePipeline({
             .shaderCI =
                 {
-                    .pathToSource = "Samples/Shadertoy/shaders/main.hlsl",
+                    .pathToSource = path,
                     .shaderLang = daxa::ShaderLang::HLSL,
-                    .entryPoint = "main",
+                    .entryPoint = entry,
                     .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                 },
             .overwriteSets = {daxa::BIND_ALL_SET_DESCRIPTION},
         });
-        compute_pipeline = compute_pipeline_result.value();
+        pipe = result.value();
+    }
+
+    void try_recompile(daxa::PipelineHandle &pipe) {
+        if (render_context.pipeline_compiler->checkIfSourcesChanged(pipe)) {
+            auto result = render_context.pipeline_compiler->recreatePipeline(pipe);
+            std::cout << result << std::endl;
+            if (result)
+                pipe = result.value();
+        }
+    }
+
+    App() {
+        window.set_user_pointer<App>(this);
+
+        create_pipeline(compute_pipeline, "Samples/Shadertoy/shaders/main.hlsl", "main");
+        create_pipeline(compute_buf0_pipeline, "Samples/Shadertoy/shaders/main.hlsl", "buf0_main");
 
         compute_pipeline_globals = render_context.device->createBuffer({
             .size = sizeof(ComputePipelineGlobals),
+            .memoryType = daxa::MemoryType::GPU_ONLY,
+        });
+        compute_buf0 = render_context.device->createBuffer({
+            .size = sizeof(u32) * 128 * 256,
             .memoryType = daxa::MemoryType::GPU_ONLY,
         });
 
@@ -385,12 +407,8 @@ struct App {
 
         window.update();
 
-        if (render_context.pipeline_compiler->checkIfSourcesChanged(compute_pipeline)) {
-            auto result = render_context.pipeline_compiler->recreatePipeline(compute_pipeline);
-            std::cout << result << std::endl;
-            if (result)
-                compute_pipeline = result.value();
-        }
+        try_recompile(compute_pipeline);
+        try_recompile(compute_buf0_pipeline);
 
         auto extent = render_context.render_color_image->getImageHandle()->getVkExtent3D();
 
@@ -407,17 +425,77 @@ struct App {
             .region = {.size = sizeof(decltype(compute_globals_data))},
         });
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
-
-        cmd_list.bindPipeline(compute_pipeline);
-        cmd_list.bindAll();
+        
         struct Push {
             u32 globals_id;
+            u32 buf0_id;
             u32 output_image_id;
         };
+
+        cmd_list.bindPipeline(compute_buf0_pipeline);
+        cmd_list.bindAll();
         cmd_list.pushConstant(
             VK_SHADER_STAGE_COMPUTE_BIT,
             Push{
                 .globals_id = compute_globals_id,
+                .buf0_id = compute_buf0.getDescriptorIndex(),
+                .output_image_id = 0,
+            });
+        cmd_list.dispatch(16, 16);
+        cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+        cmd_list.pushConstant(
+            VK_SHADER_STAGE_COMPUTE_BIT,
+            Push{
+                .globals_id = compute_globals_id,
+                .buf0_id = compute_buf0.getDescriptorIndex(),
+                .output_image_id = 1,
+            });
+        cmd_list.dispatch(16, 16);
+        cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+        cmd_list.pushConstant(
+            VK_SHADER_STAGE_COMPUTE_BIT,
+            Push{
+                .globals_id = compute_globals_id,
+                .buf0_id = compute_buf0.getDescriptorIndex(),
+                .output_image_id = 2,
+            });
+        cmd_list.dispatch(16, 16);
+        cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+        cmd_list.pushConstant(
+            VK_SHADER_STAGE_COMPUTE_BIT,
+            Push{
+                .globals_id = compute_globals_id,
+                .buf0_id = compute_buf0.getDescriptorIndex(),
+                .output_image_id = 3,
+            });
+        cmd_list.dispatch(16, 16);
+        cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+        cmd_list.pushConstant(
+            VK_SHADER_STAGE_COMPUTE_BIT,
+            Push{
+                .globals_id = compute_globals_id,
+                .buf0_id = compute_buf0.getDescriptorIndex(),
+                .output_image_id = 4,
+            });
+        cmd_list.dispatch(16, 16);
+        cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+        cmd_list.pushConstant(
+            VK_SHADER_STAGE_COMPUTE_BIT,
+            Push{
+                .globals_id = compute_globals_id,
+                .buf0_id = compute_buf0.getDescriptorIndex(),
+                .output_image_id = 5,
+            });
+        cmd_list.dispatch(16, 16);
+        cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+
+        cmd_list.bindPipeline(compute_pipeline);
+        cmd_list.bindAll();
+        cmd_list.pushConstant(
+            VK_SHADER_STAGE_COMPUTE_BIT,
+            Push{
+                .globals_id = compute_globals_id,
+                .buf0_id = compute_buf0.getDescriptorIndex(),
                 .output_image_id = render_context.render_color_image->getDescriptorIndex(),
             });
         cmd_list.dispatch((extent.width + 7) / 8, (extent.height + 7) / 8);
