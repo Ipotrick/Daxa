@@ -25,15 +25,9 @@ struct Window {
         glfwTerminate();
     }
 
-    bool should_close() {
-        return glfwWindowShouldClose(window_ptr);
-    }
-    void update() {
-        glfwPollEvents();
-    }
-    void swap_buffers() {
-        glfwSwapBuffers(window_ptr);
-    }
+    bool should_close() { return glfwWindowShouldClose(window_ptr); }
+    void update() { glfwPollEvents(); }
+    void swap_buffers() { glfwSwapBuffers(window_ptr); }
     VkSurfaceKHR get_vksurface(VkInstance vk_instance) {
         VkSurfaceKHR vulkan_surface;
         glfwCreateWindowSurface(vk_instance, window_ptr, nullptr, &vulkan_surface);
@@ -102,24 +96,27 @@ struct RenderContext {
     std::deque<PerFrameData> frames;
 
     auto create_color_image(glm::ivec2 dim) {
-        auto result = device->createImageView({
-            .image = device->createImage({
-                .format = VK_FORMAT_R8G8B8A8_UNORM,
-                .extent = {static_cast<u32>(dim.x), static_cast<u32>(dim.y), 1},
-                .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-                .debugName = "Render Image",
-            }),
-            .format = VK_FORMAT_R8G8B8A8_UNORM,
-            .subresourceRange =
-                {
-                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                    .baseMipLevel = 0,
-                    .levelCount = 1,
-                    .baseArrayLayer = 0,
-                    .layerCount = 1,
-                },
-            .debugName = "Render Image View",
-        });
+        auto result = device
+                          ->createImageView(
+                              {
+                                  .image = device->createImage({
+                                      .format = VK_FORMAT_R8G8B8A8_UNORM,
+                                      .extent = {static_cast<u32>(dim.x), static_cast<u32>(dim.y), 1},
+                                      .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT |
+                                               VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                                      .debugName = "Render Image",
+                                  }),
+                                  .format = VK_FORMAT_R8G8B8A8_UNORM,
+                                  .subresourceRange =
+                                      {
+                                          .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                                          .baseMipLevel = 0,
+                                          .levelCount = 1,
+                                          .baseArrayLayer = 0,
+                                          .layerCount = 1,
+                                      },
+                                  .debugName = "Render Image View",
+                              });
         return result;
     }
 
@@ -233,7 +230,8 @@ struct RenderContext {
     }
 
     void resize(glm::ivec2 dim) {
-        if (dim.x != static_cast<i32>(swapchain->getSize().width) || dim.y != static_cast<i32>(swapchain->getSize().height)) {
+        if (dim.x != static_cast<i32>(swapchain->getSize().width) ||
+            dim.y != static_cast<i32>(swapchain->getSize().height)) {
             device->waitIdle();
             swapchain->resize(VkExtent2D{.width = static_cast<u32>(dim.x), .height = static_cast<u32>(dim.y)});
             swapchain_image = swapchain->aquireNextImage();
@@ -257,34 +255,38 @@ struct RenderContext {
         auto render_extent = swapchain_image.getImageViewHandle()->getImageHandle()->getVkExtent3D();
         auto swap_extent = swapchain_image.getImageViewHandle()->getImageHandle()->getVkExtent3D();
         VkImageBlit blit{
-            .srcSubresource = VkImageSubresourceLayers{
-                .aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT,
-                .mipLevel = 0,
-                .baseArrayLayer = 0,
-                .layerCount = 1,
-            },
-            .srcOffsets = {
-                VkOffset3D{0, 0, 0},
-                VkOffset3D{
-                    static_cast<int32_t>(render_extent.width),
-                    static_cast<int32_t>(render_extent.height),
-                    static_cast<int32_t>(render_extent.depth),
+            .srcSubresource =
+                VkImageSubresourceLayers{
+                    .aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT,
+                    .mipLevel = 0,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1,
                 },
-            },
-            .dstSubresource = VkImageSubresourceLayers{
-                .aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT,
-                .mipLevel = 0,
-                .baseArrayLayer = 0,
-                .layerCount = 1,
-            },
-            .dstOffsets = {
-                VkOffset3D{0, 0, 0},
-                VkOffset3D{
-                    static_cast<int32_t>(swap_extent.width),
-                    static_cast<int32_t>(swap_extent.height),
-                    static_cast<int32_t>(swap_extent.depth),
+            .srcOffsets =
+                {
+                    VkOffset3D{0, 0, 0},
+                    VkOffset3D{
+                        static_cast<int32_t>(render_extent.width),
+                        static_cast<int32_t>(render_extent.height),
+                        static_cast<int32_t>(render_extent.depth),
+                    },
                 },
-            },
+            .dstSubresource =
+                VkImageSubresourceLayers{
+                    .aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT,
+                    .mipLevel = 0,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1,
+                },
+            .dstOffsets =
+                {
+                    VkOffset3D{0, 0, 0},
+                    VkOffset3D{
+                        static_cast<int32_t>(swap_extent.width),
+                        static_cast<int32_t>(swap_extent.height),
+                        static_cast<int32_t>(swap_extent.depth),
+                    },
+                },
         };
         cmd_list.insertQueuedBarriers();
         vkCmdBlitImage(
@@ -321,30 +323,48 @@ struct App {
     u64 frametime_rotation_index = 0;
 
     struct ComputePipelineGlobals {
-        glm::ivec2 frame_dim;
-        float time;
+        glm::vec2 mouse_pos = {0, 0};
+        glm::vec2 lmb_pos = {0, 0};
+        glm::vec2 rmb_pos = {0, 0};
+        glm::vec2 mmb_pos = {0, 0};
+        glm::ivec2 frame_dim = {1, 1};
+        float time = 0;
+        bool lmb_pressed = false;
+        bool rmb_pressed = false;
+        bool mmb_pressed = false;
+
+        void update_mb_positions() {
+            if (lmb_pressed)
+                lmb_pos = mouse_pos;
+            if (rmb_pressed)
+                rmb_pos = mouse_pos;
+            if (mmb_pressed)
+                mmb_pos = mouse_pos;
+        }
     };
     daxa::PipelineHandle compute_pipeline;
     daxa::BufferHandle compute_pipeline_globals;
+
+    ComputePipelineGlobals compute_globals_data{};
 
     App() {
         window.set_user_pointer<App>(this);
 
         auto compute_pipeline_result = render_context.pipeline_compiler->createComputePipeline({
-            .shaderCI = {
-                .pathToSource = "Samples/Shadertoy/shaders/main.hlsl",
-                .shaderLang = daxa::ShaderLang::HLSL,
-                .entryPoint = "main",
-                .stage = VK_SHADER_STAGE_COMPUTE_BIT,
-            },
+            .shaderCI =
+                {
+                    .pathToSource = "Samples/Shadertoy/shaders/main.hlsl",
+                    .shaderLang = daxa::ShaderLang::HLSL,
+                    .entryPoint = "main",
+                    .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+                },
             .overwriteSets = {daxa::BIND_ALL_SET_DESCRIPTION},
         });
         compute_pipeline = compute_pipeline_result.value();
 
         compute_pipeline_globals = render_context.device->createBuffer({
             .size = sizeof(ComputePipelineGlobals),
-            .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            .memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
+            .memoryType = daxa::MemoryType::GPU_ONLY,
         });
 
         start_time = Clock::now();
@@ -365,21 +385,26 @@ struct App {
 
         window.update();
 
+        if (render_context.pipeline_compiler->checkIfSourcesChanged(compute_pipeline)) {
+            auto result = render_context.pipeline_compiler->recreatePipeline(compute_pipeline);
+            std::cout << result << std::endl;
+            if (result)
+                compute_pipeline = result.value();
+        }
+
         auto extent = render_context.render_color_image->getImageHandle()->getVkExtent3D();
 
         auto cmd_list = render_context.begin_frame(window.frame_dim);
 
-        auto compute_globals = ComputePipelineGlobals{
-            .frame_dim = {extent.width, extent.height},
-            .time = total_time_elapsed,
-        };
+        compute_globals_data.frame_dim = {extent.width, extent.height};
+        compute_globals_data.time = total_time_elapsed;
 
-        auto compute_globals_id = compute_pipeline_globals->getDescriptorIndex();
+        auto compute_globals_id = compute_pipeline_globals.getDescriptorIndex();
 
         cmd_list.singleCopyHostToBuffer({
-            .src = reinterpret_cast<u8 *>(&compute_globals),
+            .src = reinterpret_cast<u8 *>(&compute_globals_data),
             .dst = compute_pipeline_globals,
-            .region = {.size = sizeof(decltype(compute_globals))},
+            .region = {.size = sizeof(decltype(compute_globals_data))},
         });
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 
@@ -401,20 +426,22 @@ struct App {
         render_context.end_frame(cmd_list);
     }
 
-    Window &get_window() {
-        return window;
-    }
+    Window &get_window() { return window; }
     void on_mouse_move(const glm::dvec2 m) {
+        compute_globals_data.mouse_pos = m;
+        compute_globals_data.update_mb_positions();
     }
-    void on_mouse_scroll(const glm::dvec2 offset) {
-    }
+    void on_mouse_scroll(const glm::dvec2 /* offset */) {}
     void on_mouse_button(int button, int action) {
+        switch (button) {
+        case GLFW_MOUSE_BUTTON_1: compute_globals_data.lmb_pressed = action != GLFW_RELEASE; break;
+        case GLFW_MOUSE_BUTTON_2: compute_globals_data.rmb_pressed = action != GLFW_RELEASE; break;
+        case GLFW_MOUSE_BUTTON_3: compute_globals_data.mmb_pressed = action != GLFW_RELEASE; break;
+        }
+        compute_globals_data.update_mb_positions();
     }
-    void on_key(int key, int action) {
-    }
-    void on_resize() {
-        update();
-    }
+    void on_key(int /* key */, int /* action */) {}
+    void on_resize() { update(); }
 };
 
 int main() {
