@@ -8,7 +8,6 @@
 
 #include <vulkan/vulkan.h>
 
-#include "DeviceBackend.hpp"
 #include "Buffer.hpp"
 
 namespace daxa {
@@ -41,14 +40,21 @@ namespace daxa {
 
 	class StagingBufferPool {
 	public:
-		StagingBufferPool(std::shared_ptr<DeviceBackend> deviceBackend, size_t size = STAGING_BUFFER_POOL_BUFFER_SIZE, VkBufferUsageFlags usages = VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VmaMemoryUsage memoryUsages = VMA_MEMORY_USAGE_CPU_TO_GPU);
+		StagingBufferPool(
+			std::shared_ptr<DeviceBackend> deviceBackend, 
+			size_t size = STAGING_BUFFER_POOL_BUFFER_SIZE, 
+			//VkBufferUsageFlags usages = VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+			//memoryType = VMA_MEMORY_USAGE_CPU_TO_GPU
+			MemoryType memoryType = MemoryType::CPU_TO_GPU
+		);
 
 		StagingBuffer getStagingBuffer();
 	private:
 		std::shared_ptr<DeviceBackend> deviceBackend = {};
 		std::shared_ptr<StagingBufferPoolSharedData> sharedData = {};
 		size_t size;
-		VkBufferUsageFlags usages; 
-		VmaMemoryUsage memoryUsages;
+		//VkBufferUsageFlags usages; 
+		//VmaMemoryUsage memoryUsages;
+		MemoryType memoryType;
 	};
 }

@@ -14,7 +14,6 @@
 #include <vk_mem_alloc.h>
 
 #include "Handle.hpp"
-#include "DeviceBackend.hpp"
 #include "ShaderModule.hpp"
 #include "BindingSet.hpp"
 

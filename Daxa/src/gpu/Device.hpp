@@ -8,10 +8,8 @@
 
 #include <vulkan/vulkan.h>
 
-#include <vk_mem_alloc.h>
 #include <VkBootstrap.h>
 
-#include "DeviceBackend.hpp"
 #include "Handle.hpp"
 #include "Graveyard.hpp"
 #include "CommandList.hpp"
@@ -29,7 +27,6 @@
 
 namespace daxa {
 	class Instance;
-
 	class DeviceHandle;
 
 	class Device {
@@ -75,10 +72,9 @@ namespace daxa {
 		 */
 		void waitIdle();
 
-		VkPhysicalDevice getVkPhysicalDevice() const { return backend->device.physical_device; }
-		VkDevice getVkDevice() const { return backend->device.device; }
-		VmaAllocator getVma() const { return backend->allocator; }
-		u32 getVkGraphicsQueueFamilyIndex() const { return backend->graphicsQFamilyIndex; }
+		VkPhysicalDevice getVkPhysicalDevice() const;
+		VkDevice getVkDevice() const;
+		u32 getVkGraphicsQueueFamilyIndex() const;
 	private:
 		friend class Instance;
 

@@ -40,9 +40,9 @@ namespace input {
         .move_px = GLFW_KEY_A,
         .move_nx = GLFW_KEY_D,
         .move_py = GLFW_KEY_SPACE,
-        .move_ny = GLFW_KEY_LEFT_SHIFT,
+        .move_ny = GLFW_KEY_LEFT_CONTROL,
         .toggle_pause = GLFW_KEY_ESCAPE,
-        .toggle_sprint = GLFW_KEY_LEFT_CONTROL,
+        .toggle_sprint = GLFW_KEY_LEFT_SHIFT,
     };
 } // namespace input
 
@@ -50,8 +50,8 @@ struct Player3D {
     Camera3D camera;
     input::Keybinds keybinds;
     glm::vec3 pos{}, vel{}, rot{};
-    float speed = 20.0f, mouse_sens = 1.0f;
-    float sprint_speed = 32.0f;
+    float speed = 30.0f, mouse_sens = 0.1f;
+    float sprint_speed = 8.0f;
     float sin_rot_x = 0, cos_rot_x = 1;
 
     struct MoveFlags {

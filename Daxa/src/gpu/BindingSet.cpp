@@ -1,5 +1,7 @@
 #include "BindingSet.hpp"
 #include "Instance.hpp"
+#include "backend/DeviceBackend.hpp"
+#include "backend/BufferBackend.hpp"
 
 namespace daxa {
 	BindingSet::BindingSet(std::shared_ptr<DeviceBackend> deviceBackend, VkDescriptorSet set, std::weak_ptr<BindingSetAllocatorBindingiSetPool> pool, std::shared_ptr<BindingSetLayout const> layout)
@@ -51,9 +53,9 @@ namespace daxa {
 		for (auto& buffer : buffers) {
 			DAXA_ASSERT_M(buffer, "invalid buffer handle");
 			descBufferInfoBuffer.push_back(VkDescriptorBufferInfo{
-				.buffer = buffer->getVkBuffer(),
+				.buffer = buffer.getVkBuffer(),
 				.offset = 0,									// TODO Unsure what to put here
-				.range = buffer->getSize(),
+				.range = buffer.getSize(),
 			});
 		}
 

@@ -39,9 +39,9 @@ public:
 
         this->buffer = renderCTX.device->createBuffer({
             .size = sizeof(UploadData),
-            .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            .memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
-            .memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            //.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            //.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
+            //.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             .debugName = "frame buffer debug renderer global buffer"
         });
 

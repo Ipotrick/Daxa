@@ -376,7 +376,7 @@ public:
 
 		cmdList->bindVertexBuffer(0, vertexBuffer);
 		
-		cmdList->drawIndexed(indexBuffer->getSize() / sizeof(u32), 1, 0, 0, 0);
+		cmdList->drawIndexed(indexBuffer.getSize() / sizeof(u32), 1, 0, 0, 0);
 		
 		cmdList->endRendering();
 

@@ -64,10 +64,10 @@ public:
 
         this->globalDataBufffer = renderCTX.device->createBuffer({
             .size = sizeof(GlobalData),
-            .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            .memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
-            .memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-				.debugName = "mesh render globals buffer",
+            //.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            //.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
+            //.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			.debugName = "mesh render globals buffer",
         });
 
 		auto vertexShaderOpaqueCI = daxa::ShaderModuleCreateInfo{
@@ -221,7 +221,7 @@ public:
 		});
 		cmdList->bindPipeline(skyboxPipeline);
 		cmdList->bindAll();
-		cmdList->pushConstant(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, u32(globalDataBufffer->getDescriptorIndex()));
+		cmdList->pushConstant(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, u32(globalDataBufffer.getDescriptorIndex()));
 		cmdList->draw(3*2*6, 1, 0, 0);
 		cmdList->unbindPipeline();
 		cmdList->endRendering();
@@ -407,20 +407,20 @@ public:
 			.size = sizeof(decltype(globData)),
 		});
 
-		if (!primitiveInfoBuffer || draws.size() * sizeof(GPUPrimitiveInfo) > primitiveInfoBuffer->getSize()) {
+		if (!primitiveInfoBuffer || draws.size() * sizeof(GPUPrimitiveInfo) > primitiveInfoBuffer.getSize()) {
 			size_t newSize = (draws.size() + 64) * sizeof(GPUPrimitiveInfo);
 			this->primitiveInfoBuffer = renderCTX.device->createBuffer({
 				.size = newSize,
-				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-				.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
-				.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				//.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+				//.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
+				//.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				.debugName = "primitiveInfoBuffer",
 			});
 		}
 		if (!draws.empty()) {
-			auto mm = cmd->mapMemoryStagedBuffer<GPUPrimitiveInfo>(primitiveInfoBuffer, draws.size() * sizeof(GPUPrimitiveInfo), 0);
+			auto mm = cmd->mapMemoryStagedBuffer(primitiveInfoBuffer, draws.size() * sizeof(GPUPrimitiveInfo), 0);
 			for (size_t i = 0; i < draws.size(); i++) {
-				auto& prim = mm.hostPtr[i];
+				auto& prim = (reinterpret_cast<GPUPrimitiveInfo*>(mm.hostPtr))[i];
 				prim.transform = draws[i].transform;
 				prim.inverseTransposeTransform = glm::inverse(glm::transpose(draws[i].transform));
 				if (draws[i].prim->albedoMap.valid()) {
@@ -433,19 +433,19 @@ public:
 				} else {
 					prim.normalMapId = dummyNormalsTexture->getDescriptorIndex();
 				}
-				prim.vertexPositionsId = draws[i].prim->vertexPositions->getDescriptorIndex();
-				prim.vertexUVsId = draws[i].prim->vertexUVs->getDescriptorIndex();
-				prim.vertexNormalsId = draws[i].prim->vertexNormals->getDescriptorIndex();
+				prim.vertexPositionsId = draws[i].prim->vertexPositions.getDescriptorIndex();
+				prim.vertexUVsId = draws[i].prim->vertexUVs.getDescriptorIndex();
+				prim.vertexNormalsId = draws[i].prim->vertexNormals.getDescriptorIndex();
 			}
 		}
 		
-		if (!lightsBuffer || (lights.size() * sizeof(DrawLight) + sizeof(glm::vec4)) > lightsBuffer->getSize()) {
+		if (!lightsBuffer || (lights.size() * sizeof(DrawLight) + sizeof(glm::vec4)) > lightsBuffer.getSize()) {
 			size_t newSize = (lights.size() + 64) * sizeof(DrawLight) + sizeof(glm::vec4);
 			this->lightsBuffer = renderCTX.device->createBuffer({
 				.size = newSize,
-				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-				.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
-				.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				//.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+				//.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
+				//.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				.debugName = "lightsBuffer",
 			});
 		}
@@ -545,9 +545,9 @@ public:
 				u32 lights;
 				u32 drawIndex;
 			} push{
-				globalDataBufffer->getDescriptorIndex(),
-				primitiveInfoBuffer->getDescriptorIndex(),
-				lightsBuffer->getDescriptorIndex(),
+				globalDataBufffer.getDescriptorIndex(),
+				primitiveInfoBuffer.getDescriptorIndex(),
+				lightsBuffer.getDescriptorIndex(),
 				i
 			};
 			cmd->pushConstant(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, push);

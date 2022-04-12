@@ -396,8 +396,9 @@ struct World {
 
         compute_pipeline_globals = render_ctx.device->createBuffer({
             .size = sizeof(ComputeGlobals) + sizeof(ChunkArray<ChunkBlockPresence>),
-            .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            .memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
+            //.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            //.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
+            .memoryType = daxa::MemoryType::GPU_ONLY,
         });
     }
 
@@ -489,7 +490,7 @@ struct World {
             }
         }
 
-        auto compute_globals_i = compute_pipeline_globals->getDescriptorIndex();
+        auto compute_globals_i = compute_pipeline_globals.getDescriptorIndex();
 
         cmd_list->singleCopyHostToBuffer({
             .src = reinterpret_cast<u8 *>(&compute_globals),

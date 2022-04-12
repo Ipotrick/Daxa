@@ -115,13 +115,13 @@ public:
         if (usage & VK_BUFFER_USAGE_INDEX_BUFFER_BIT) {
             gpuBuffer = device->createBuffer({
                 .size = sizeof(u32) * accessor.count,
-                .usage = usageFlags,
+                //.usage = usageFlags,
                 .debugName = "an index buffer",
             });
         } else if (usage & VK_BUFFER_USAGE_VERTEX_BUFFER_BIT) {
             gpuBuffer = device->createBuffer({
                 .size = accessor.stride * accessor.count,
-                .usage = usageFlags,
+                //.usage = usageFlags,
                 .debugName = "a vertex buffer",
             });
         }
@@ -129,22 +129,22 @@ public:
         void* cpuSideBuffPtr = reinterpret_cast<void*>(reinterpret_cast<u8*>(accessor.buffer_view->buffer->data) + accessor.buffer_view->offset + accessor.offset);
 
         if ((usage & VK_BUFFER_USAGE_INDEX_BUFFER_BIT) && accessor.stride != 4) {
-            auto mm = cmdList->mapMemoryStagedBuffer<u32>(gpuBuffer, sizeof(u32) * accessor.count, 0);
+            auto mm = cmdList->mapMemoryStagedBuffer(gpuBuffer, sizeof(u32) * accessor.count, 0);
 
             switch (accessor.stride) {
                 case 1:
                 for (size_t i = 0; i < accessor.count; i++) {
-                    mm.hostPtr[i] = (reinterpret_cast<u8*>(cpuSideBuffPtr))[i];
+                    reinterpret_cast<u32*>(mm.hostPtr)[i] = (reinterpret_cast<u8*>(cpuSideBuffPtr))[i];
                 }
                 break;
                 case 2:
                 for (size_t i = 0; i < accessor.count; i++) {
-                    mm.hostPtr[i] = (reinterpret_cast<u16*>(cpuSideBuffPtr))[i];
+                    reinterpret_cast<u32*>(mm.hostPtr)[i] = (reinterpret_cast<u16*>(cpuSideBuffPtr))[i];
                 }
                 break;
                 case 8:
                 for (size_t i = 0; i < accessor.count; i++) {
-                    mm.hostPtr[i] = static_cast<u32>(reinterpret_cast<u64*>(cpuSideBuffPtr)[i]);
+                    reinterpret_cast<u32*>(mm.hostPtr)[i] = static_cast<u32>(reinterpret_cast<u64*>(cpuSideBuffPtr)[i]);
                 }
                 break;
             }

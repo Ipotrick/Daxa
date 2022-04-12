@@ -7,8 +7,23 @@
 #include <VkBootstrap.h>
 
 #include "Instance.hpp"
+#include "backend/DeviceBackend.hpp"
+#include "backend/BufferBackend.hpp"
 
 namespace daxa {
+
+	VkPhysicalDevice Device::getVkPhysicalDevice() const { 
+		return backend->device.physical_device; 
+	}
+
+	VkDevice Device::getVkDevice() const { 
+		return backend->device.device;
+	}
+
+	u32 Device::getVkGraphicsQueueFamilyIndex() const { 
+		return backend->graphicsQFamilyIndex;
+	}
+
 	DeviceHandle Device::create() {
 		return DeviceHandle{ std::make_shared<Device>(*instance) };
 	}
@@ -17,7 +32,7 @@ namespace daxa {
 		: backend{ std::make_shared<DeviceBackend>(instance.getVKBInstance(), instance.pfnSetDebugUtilsObjectNameEXT) }
 		, bindingSetDescriptionCache{ std::make_shared<BindingSetLayoutCache>(backend) }
 		, uploadStagingBufferPool{ std::make_shared<StagingBufferPool>(backend) }
-		, downloadStagingBufferPool{ std::make_shared<StagingBufferPool>(backend, 1 << 14, VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_TO_CPU) }
+		, downloadStagingBufferPool{ std::make_shared<StagingBufferPool>(backend, 1 << 14/*, VK_BUFFER_USAGE_TRANSFER_DST_BIT*/, MemoryType::GPU_TO_CPU) }
 	{ }
 
 	CommandQueueHandle Device::createCommandQueue(CommandQueueCreateInfo const& ci) {
@@ -44,7 +59,7 @@ namespace daxa {
 	}
 
 	BufferHandle Device::createBuffer(BufferCreateInfo ci) {
-		return BufferHandle{ std::make_shared<Buffer>(backend, ci) };
+		return BufferHandle{ std::make_shared<BufferBackend>(backend, ci) };
 	}
 
 	TimelineSemaphoreHandle Device::createTimelineSemaphore(TimelineSemaphoreCreateInfo const& ci) {

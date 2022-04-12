@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "Instance.hpp"
+#include "backend/DeviceBackend.hpp"
 #include "util.hpp"
 
 namespace daxa {
