@@ -23,6 +23,7 @@ namespace daxa {
         Result<PipelineHandle> createGraphicsPipeline(GraphicsPipelineBuilder const& builder);
         Result<PipelineHandle> createComputePipeline(ComputePipelineCreateInfo const& ci);
         Result<PipelineHandle> recreatePipeline(PipelineHandle const& pipeline);
+        void recreateIfChanged(PipelineHandle& pipeline);
     private:
         Result<ShaderModuleHandle> tryCreateShaderModule(ShaderModuleCreateInfo const& ci);
 		Result<std::vector<u32>> tryGenSPIRVFromShaderc(std::string const& src, VkShaderStageFlagBits shaderStage, ShaderLang lang, char const* sourceFileName = "[[inline source]]");
