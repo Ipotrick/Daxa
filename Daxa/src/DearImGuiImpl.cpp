@@ -174,18 +174,15 @@ namespace daxa {
         });
 
         auto cmdList = queue->getCommandList({});
-        cmdList->insertImageBarrier({
-            .barrier = FULL_MEMORY_BARRIER,
+        cmdList->queueImageBarrier({
             .image = fontSheet,
             .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         });
-        cmdList->copyHostToImage({
+        cmdList->singleCopyHostToImage({
             .src = pixels,
-            .dst = fontSheet,
-            .size = width * height * sizeof(u8) * 4,
+            .dst = fontSheet->getImageHandle(),
         });
-        cmdList->insertImageBarrier({
-            .barrier = FULL_MEMORY_BARRIER,
+        cmdList->queueImageBarrier({
             .image = fontSheet,
             .layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,

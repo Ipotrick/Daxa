@@ -706,7 +706,7 @@ struct World {
         });
 
         auto cmd_list = render_ctx.queue->getCommandList({});
-        cmd_list->insertImageBarrier({
+        cmd_list->queueImageBarrier({
             .image = atlas_texture_array,
             .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             .subRange = {VkImageSubresourceRange{
@@ -727,16 +727,18 @@ struct World {
                 std::cout << "could not find file: \"" << path << "\"" << std::endl;
                 continue;
             }
-            cmd_list->copyHostToImage({
+            cmd_list->singleCopyHostToImage({
                 .src = data,
-                .dst = atlas_texture_array,
-                .dstImgSubressource = {VkImageSubresourceLayers{
-                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                    .mipLevel = 0,
-                    .baseArrayLayer = static_cast<uint32_t>(i),
-                    .layerCount = 1,
-                }},
-                .size = static_cast<u32>(size_x * size_y * num_channels) * sizeof(uint8_t),
+                .dst = atlas_texture_array->getImageHandle(),
+                .region = { 
+                    .subRessource = {
+                        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                        .mipLevel = 0,
+                        .baseArrayLayer = static_cast<uint32_t>(i),
+                        .layerCount = 1,
+                    },
+                    .imageExtent = { static_cast<u32>(16), static_cast<u32>(16), 1 }
+                }
             });
         }
         daxa::generateMipLevels(

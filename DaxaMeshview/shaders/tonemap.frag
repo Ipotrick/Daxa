@@ -11,12 +11,12 @@ layout(set = 0, binding = 1) uniform sampler2D images[];
 
 layout(location = 0) out vec4 o_color;
 
-float A = 0.15;
+float A = 0.35;
 float B = 0.50;
 float C = 0.10;
 float D = 0.20;
 float E = 0.02;
-float F = 0.30;
+float F = 0.70;
 float W = 11.2;
 vec3 uncharted2Tonemap(vec3 x)
 {

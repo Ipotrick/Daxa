@@ -63,30 +63,25 @@ public:
 		using namespace daxa;
 
 		glm::mat4 vp{ 1.0f };
-		cmd->copyHostToBuffer({
-			.src = &vp,
+		cmd->singleCopyHostToBuffer({
+			.src = reinterpret_cast<u8*>(&vp),
 			.dst = infoBuffer,
-			.size = sizeof(GPUInfo),
+			.region = {.size = sizeof(GPUInfo) },
 		});
-		auto memBarrs = std::array{
-			MemoryBarrier {
-				.srcStages = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR,
-				.srcAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR,
+		cmd->queueMemoryBarrier({
+			.srcStages = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR,
+			.srcAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR,
+			.dstStages = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT_KHR,
+			.dstAccess = VK_ACCESS_2_SHADER_STORAGE_READ_BIT_KHR,
+		});
+		cmd->queueImageBarrier({
+			.barrier = {
 				.dstStages = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT_KHR,
-				.dstAccess = VK_ACCESS_2_SHADER_STORAGE_READ_BIT_KHR,
+				.dstAccess = VK_ACCESS_2_SHADER_READ_BIT_KHR,
 			},
-		};
-		auto imgBarrs = std::array{
-			ImageBarrier{
-				.barrier = {
-					.dstStages = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT_KHR,
-					.dstAccess = VK_ACCESS_2_SHADER_READ_BIT_KHR,
-				},
-				.image = shadowMap,
-				.layoutAfter = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-			}
-		};
-		cmd->insertBarriers( memBarrs, imgBarrs);
+			.image = shadowMap,
+			.layoutAfter = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+		});
 
 		RenderAttachmentInfo depthAttach{
 			.image = shadowMap,
@@ -121,7 +116,7 @@ public:
 		cmd->unbindPipeline();
 		cmd->endRendering();
 
-		cmd->insertImageBarrier({
+		cmd->queueImageBarrier({
 			.barrier = {
 				.srcStages = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
 				.srcAccess = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT_KHR,

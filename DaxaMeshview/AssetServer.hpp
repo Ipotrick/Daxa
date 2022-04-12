@@ -149,10 +149,13 @@ public:
                 break;
             }
         } else {
-            cmdList->copyHostToBuffer({
-                .src = cpuSideBuffPtr,
+            cmdList->singleCopyHostToBuffer({
+                .src = reinterpret_cast<u8*>(cpuSideBuffPtr),
                 .dst = gpuBuffer,
-                .size = accessor.stride * accessor.count,
+                .region = {
+                    .size = accessor.stride * accessor.count
+                }
+                //.size = accessor.stride * accessor.count,
             });
         }
 
@@ -377,7 +380,8 @@ public:
             }
         }
 
-        cmdList->insertMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+        cmdList->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+        cmdList->insertQueuedBarriers();
         
         textureSamplerInfos.clear();
         texturePaths.clear();

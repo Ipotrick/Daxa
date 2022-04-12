@@ -66,8 +66,8 @@ void main() {
     );
 
     outFragColor = 
-        skyBoxSample +
-        texture(imageSampler2DViews[uint(prim.albedoMapId)], vtf_uv) * lightAcc;
+        max(vec4(0), (skyBoxSample +
+        texture(imageSampler2DViews[uint(prim.albedoMapId)], vtf_uv) * lightAcc));
 
     outNormal = normal * 0.5f + vec3(0.5f);
 }

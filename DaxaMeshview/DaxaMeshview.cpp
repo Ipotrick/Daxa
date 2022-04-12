@@ -46,8 +46,10 @@ public:
 			}
 		}
 
-		fft.init(renderCTX, app.window->getWidth(), app.window->getHeight());
-
+		auto cmd = renderCTX.queue->getCommandList({});
+		fft.init(renderCTX, cmd, app.window->getWidth(), app.window->getHeight());
+		cmd->finalize();
+		renderCTX.queue->submit({.commandLists = { cmd }});
 	}
 
 	void update(daxa::AppState& app) {
@@ -97,7 +99,7 @@ public:
 		ImGui::End();
 		ImGui::Begin("fft debug");
 		{
-			auto id = imguiRenderer->getImGuiTextureId(fft.fftDebugImage);
+			auto id = imguiRenderer->getImGuiTextureId(fft.fftImage);
 			ImGui::Image(reinterpret_cast<void*>(id), ImVec2(400,400));
 		}
 		ImGui::End();
@@ -119,7 +121,15 @@ public:
 		cameraController.updateMatrices(*app.window);
 		meshRender.setCamera(cmdList, cameraController.proj, cameraController.view, cameraController.fov, cameraController.position);
 		
-		cmdList->insertImageBarrier({
+		//cmdList->insertImageBarrier({
+		//	.barrier = {
+		//		.dstStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
+		//		.dstAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR,
+		//	},
+		//	.image = renderCTX.swapchainImage.getImageViewHandle(),
+		//	.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		//});
+		cmdList->queueImageBarrier({
 			.barrier = {
 				.dstStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
 				.dstAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR,
@@ -180,7 +190,7 @@ public:
 			meshRender.render(renderCTX, cmdList, meshDrawCommands);
 		}
 		
-		//fft.update(renderCTX, cmdList);
+		fft.update(renderCTX, cmdList);
 
 		auto upload = FrameBufferDebugRenderer::CameraData{
 			.inverseView = glm::inverse(cameraController.view),
@@ -190,7 +200,11 @@ public:
 		};
 		frameBufferDebugRenderer.renderDebugViews(renderCTX, cmdList, upload);
 
-		cmdList->insertMemoryBarrier({
+		//cmdList->insertMemoryBarrier({
+		//	.srcStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
+		//	.dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
+		//});
+		cmdList->queueMemoryBarrier({
 			.srcStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
 			.dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
 		});
@@ -198,7 +212,17 @@ public:
 		imguiRenderer->recordCommands(ImGui::GetDrawData(), cmdList, renderCTX.swapchainImage.getImageViewHandle());
 
 		// array because we can allways pass multiple barriers at once for driver efficiency
-		std::array imgBarrier1 = { daxa::ImageBarrier{
+		//std::array imgBarrier1 = { daxa::ImageBarrier{
+		//	.barrier = {
+		//		.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
+		//		.srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR,
+		//	},
+		//	.image = renderCTX.swapchainImage.getImageViewHandle(),
+		//	.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		//	.layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+		//} };
+		//cmdList->insertBarriers({}, imgBarrier1);
+		cmdList->queueImageBarrier({
 			.barrier = {
 				.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
 				.srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR,
@@ -206,8 +230,7 @@ public:
 			.image = renderCTX.swapchainImage.getImageViewHandle(),
 			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			.layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-		} };
-		cmdList->insertBarriers({}, imgBarrier1);
+		});
 
 		cmdList->finalize();
 
