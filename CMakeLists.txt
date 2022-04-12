@@ -12,3 +12,5 @@ add_subdirectory("DaxaComputeMandelbrot")
 add_subdirectory("DaxaMeshview")
 
 add_subdirectory("DaxaMinecraft")
+
+add_subdirectory("Samples")
