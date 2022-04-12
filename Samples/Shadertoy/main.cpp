@@ -73,6 +73,7 @@ struct Window {
     inline void set_mouse_capture(bool should_capture) {
         glfwSetCursorPos(window_ptr, static_cast<double>(frame_dim.x / 2), static_cast<double>(frame_dim.y / 2));
         glfwSetInputMode(window_ptr, GLFW_CURSOR, should_capture ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+        glfwSetInputMode(window_ptr, GLFW_RAW_MOUSE_MOTION, should_capture);
     }
     inline void set_mouse_pos(const glm::vec2 p) {
         glfwSetCursorPos(window_ptr, static_cast<f64>(p.x), static_cast<f64>(p.y));
