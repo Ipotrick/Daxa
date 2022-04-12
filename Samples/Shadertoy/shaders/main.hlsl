@@ -19,8 +19,17 @@ StructuredBuffer<T> getBuffer(uint id);
 DAXA_DEFINE_BA_RWTEXTURE2D(float4)
 
 struct Globals {
+    float2 mouse_pos;
+    float2 lmb_pos;
+    float2 rmb_pos;
+    float2 mmb_pos;
+
     int2 frame_dim;
     float time;
+
+    bool lmb_pressed;
+    bool rmb_pressed;
+    bool mmb_pressed;
 };
 DAXA_DEFINE_BA_BUFFER(Globals)
 
