@@ -174,20 +174,20 @@ namespace daxa {
         });
 
         auto cmdList = queue->getCommandList({});
-        cmdList->queueImageBarrier({
+        cmdList.queueImageBarrier({
             .image = fontSheet,
             .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         });
-        cmdList->singleCopyHostToImage({
+        cmdList.singleCopyHostToImage({
             .src = pixels,
             .dst = fontSheet->getImageHandle(),
         });
-        cmdList->queueImageBarrier({
+        cmdList.queueImageBarrier({
             .image = fontSheet,
             .layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         });
-        cmdList->finalize();
+        cmdList.finalize();
         queue->submitBlocking({
             .commandLists = { cmdList }
         });
@@ -268,11 +268,11 @@ namespace daxa {
 
                 for (int n = 0; n < draw_data->CmdListsCount; n++)
                 {
-                    const ImDrawList* cmd_list = draw_data->CmdLists[n];
-                    std::memcpy(vtx_dst.hostPtr, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
-                    std::memcpy(idx_dst.hostPtr, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
-                    vtx_dst.hostPtr += cmd_list->VtxBuffer.Size * sizeof(ImDrawVert);
-                    idx_dst.hostPtr += cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx);
+                    const ImDrawList* draws = draw_data->CmdLists[n];
+                    std::memcpy(vtx_dst.hostPtr, draws->VtxBuffer.Data, draws->VtxBuffer.Size * sizeof(ImDrawVert));
+                    std::memcpy(idx_dst.hostPtr, draws->IdxBuffer.Data, draws->IdxBuffer.Size * sizeof(ImDrawIdx));
+                    vtx_dst.hostPtr += draws->VtxBuffer.Size * sizeof(ImDrawVert);
+                    idx_dst.hostPtr += draws->IdxBuffer.Size * sizeof(ImDrawIdx);
                 }
             }
             //--  render command recording --//
@@ -285,15 +285,15 @@ namespace daxa {
                     .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
                 }
             };
-            cmdList->beginRendering({
+            cmdList.beginRendering({
                 .colorAttachments = colorAttachments,
             });
 
-            cmdList->bindPipeline(pipeline);
+            cmdList.bindPipeline(pipeline);
 
-            cmdList->bindVertexBuffer(0, vertexBuffer);
+            cmdList.bindVertexBuffer(0, vertexBuffer);
 
-            cmdList->bindIndexBuffer(indexBuffer, 0, VkIndexType::VK_INDEX_TYPE_UINT16);
+            cmdList.bindIndexBuffer(indexBuffer, 0, VkIndexType::VK_INDEX_TYPE_UINT16);
 
             {
                 float scale[2];
@@ -302,8 +302,8 @@ namespace daxa {
                 float translate[2];
                 translate[0] = -1.0f - draw_data->DisplayPos.x * scale[0];
                 translate[1] = -1.0f - draw_data->DisplayPos.y * scale[1];
-                cmdList->pushConstant(VK_SHADER_STAGE_VERTEX_BIT, scale);
-                cmdList->pushConstant(VK_SHADER_STAGE_VERTEX_BIT, translate, sizeof(scale));
+                cmdList.pushConstant(VK_SHADER_STAGE_VERTEX_BIT, scale);
+                cmdList.pushConstant(VK_SHADER_STAGE_VERTEX_BIT, translate, sizeof(scale));
             }
 
             ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
@@ -312,17 +312,17 @@ namespace daxa {
             int global_vtx_offset = 0;
             int global_idx_offset = 0;
             for (int n = 0; n < draw_data->CmdListsCount; n++) {
-                const ImDrawList* cmd_list = draw_data->CmdLists[n];
+                const ImDrawList* draws = draw_data->CmdLists[n];
                 size_t lastTexId = 0;
                 auto set = setAlloc->getSet();
                 set->bindImage(0, referencedImages[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-                cmdList->bindSet(0, set);
-                for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)  {
-                    const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+                cmdList.bindSet(0, set);
+                for (int cmd_i = 0; cmd_i < draws->CmdBuffer.Size; cmd_i++)  {
+                    const ImDrawCmd* pcmd = &draws->CmdBuffer[cmd_i];
 
                     set = setAlloc->getSet();
                     set->bindImage(0, referencedImages[(size_t)pcmd->TextureId], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-                    cmdList->bindSet(0, set);
+                    cmdList.bindSet(0, set);
 
                     // Project scissor/clipping rectangles into framebuffer space
                     ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
@@ -343,17 +343,17 @@ namespace daxa {
                     scissor.extent.width = (uint32_t)(clip_max.x - clip_min.x);
                     scissor.extent.height = (uint32_t)(clip_max.y - clip_min.y);
 
-                    cmdList->setScissor(scissor);
+                    cmdList.setScissor(scissor);
 
                     // Draw
-                    cmdList->drawIndexed(pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
+                    cmdList.drawIndexed(pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
                 }
-                global_idx_offset += cmd_list->IdxBuffer.Size;
-                global_vtx_offset += cmd_list->VtxBuffer.Size;
+                global_idx_offset += draws->IdxBuffer.Size;
+                global_vtx_offset += draws->VtxBuffer.Size;
             }
 
-            cmdList->endRendering();
-            cmdList->unbindPipeline();
+            cmdList.endRendering();
+            cmdList.unbindPipeline();
             referencedImages.resize(1);
             texHandlePtrToReferencedImageIndex.clear();
         }

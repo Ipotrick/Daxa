@@ -24,7 +24,7 @@ public:
 		});
 		auto cmd = queue->getCommandList({});
 		recreateFramebuffer(cmd, window.getWidth(), window.getHeight());
-		cmd->finalize();
+		cmd.finalize();
 		queue->submitBlocking({.commandLists = {cmd}});
 
 		pipelineCompiler->addShaderSourceRootPath("./DaxaMeshview/shaders/");
@@ -118,32 +118,32 @@ public:
 			.debugName = "prior frame hdr color image",
 		});
 
-		cmd->queueImageBarrier({
+		cmd.queueImageBarrier({
 			.barrier = daxa::FULL_MEMORY_BARRIER,
 			.image = depthImage,
 			.layoutAfter = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 		});
-		cmd->queueImageBarrier({
+		cmd.queueImageBarrier({
 			.barrier = daxa::FULL_MEMORY_BARRIER,
 			.image = priorFrameDepthImage,
 			.layoutAfter = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 		});
-		cmd->queueImageBarrier({
+		cmd.queueImageBarrier({
 			.barrier = daxa::FULL_MEMORY_BARRIER,
 			.image = normalsImage,
 			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 		});
-		cmd->queueImageBarrier({
+		cmd.queueImageBarrier({
 			.barrier = daxa::FULL_MEMORY_BARRIER,
 			.image = hdrImage,
 			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 		});
-		cmd->queueImageBarrier({
+		cmd.queueImageBarrier({
 			.barrier = daxa::FULL_MEMORY_BARRIER,
 			.image = priorFrameHdrImage,
 			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 		});
-		cmd->queueImageBarrier({
+		cmd.queueImageBarrier({
 			.barrier = daxa::FULL_MEMORY_BARRIER,
 			.image = motionImage,
 			.layoutAfter = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,

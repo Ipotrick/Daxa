@@ -48,7 +48,7 @@ public:
 
 		auto cmd = renderCTX.queue->getCommandList({});
 		fft.init(renderCTX, cmd, app.window->getWidth(), app.window->getHeight());
-		cmd->finalize();
+		cmd.finalize();
 		renderCTX.queue->submit({.commandLists = { cmd }});
 	}
 
@@ -121,15 +121,7 @@ public:
 		cameraController.updateMatrices(*app.window);
 		meshRender.setCamera(cmdList, cameraController.proj, cameraController.view, cameraController.fov, cameraController.position);
 		
-		//cmdList->insertImageBarrier({
-		//	.barrier = {
-		//		.dstStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-		//		.dstAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR,
-		//	},
-		//	.image = renderCTX.swapchainImage.getImageViewHandle(),
-		//	.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-		//});
-		cmdList->queueImageBarrier({
+		cmdList.queueImageBarrier({
 			.barrier = {
 				.dstStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
 				.dstAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR,
@@ -199,12 +191,7 @@ public:
 			.far = cameraController.far,
 		};
 		frameBufferDebugRenderer.renderDebugViews(renderCTX, cmdList, upload);
-
-		//cmdList->insertMemoryBarrier({
-		//	.srcStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
-		//	.dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
-		//});
-		cmdList->queueMemoryBarrier({
+		cmdList.queueMemoryBarrier({
 			.srcStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
 			.dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
 		});
@@ -221,8 +208,8 @@ public:
 		//	.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 		//	.layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 		//} };
-		//cmdList->insertBarriers({}, imgBarrier1);
-		cmdList->queueImageBarrier({
+		//cmdList.insertBarriers({}, imgBarrier1);
+		cmdList.queueImageBarrier({
 			.barrier = {
 				.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
 				.srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR,
@@ -232,7 +219,7 @@ public:
 			.layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 		});
 
-		cmdList->finalize();
+		cmdList.finalize();
 
 		daxa::SubmitInfo submitInfo;
 		submitInfo.commandLists.push_back(std::move(cmdList));

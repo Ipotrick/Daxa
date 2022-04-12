@@ -51,7 +51,7 @@ namespace daxa {
 		friend class GraphicsPipelineBuilder;
 		friend class ShaderModuleHandle;
 		friend class Device;
-		friend class CommandList;
+		friend class CommandListBackend;
 		friend class ShaderCache;
 		friend class daxa::PipelineCompiler;
 

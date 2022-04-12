@@ -129,7 +129,7 @@ public:
         void* cpuSideBuffPtr = reinterpret_cast<void*>(reinterpret_cast<u8*>(accessor.buffer_view->buffer->data) + accessor.buffer_view->offset + accessor.offset);
 
         if ((usage & VK_BUFFER_USAGE_INDEX_BUFFER_BIT) && accessor.stride != 4) {
-            auto mm = cmdList->mapMemoryStagedBuffer(gpuBuffer, sizeof(u32) * accessor.count, 0);
+            auto mm = cmdList.mapMemoryStagedBuffer(gpuBuffer, sizeof(u32) * accessor.count, 0);
 
             switch (accessor.stride) {
                 case 1:
@@ -149,7 +149,7 @@ public:
                 break;
             }
         } else {
-            cmdList->singleCopyHostToBuffer({
+            cmdList.singleCopyHostToBuffer({
                 .src = reinterpret_cast<u8*>(cpuSideBuffPtr),
                 .dst = gpuBuffer,
                 .region = {
@@ -380,8 +380,8 @@ public:
             }
         }
 
-        cmdList->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
-        cmdList->insertQueuedBarriers();
+        cmdList.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+        cmdList.insertQueuedBarriers();
         
         textureSamplerInfos.clear();
         texturePaths.clear();

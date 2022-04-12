@@ -113,7 +113,7 @@ public:
 
 		auto cmd = renderCTX.queue->getCommandList({"skybox loading cmdlist"});
 
-		cmd->queueImageBarrier({
+		cmd.queueImageBarrier({
 			.barrier = {
 				.srcStages = 0,
 				.srcAccess = 0,
@@ -148,7 +148,7 @@ public:
 				FreeEXRErrorMessage(err);
 			}
 			if (data) {
-				cmd->singleCopyHostToImage({
+				cmd.singleCopyHostToImage({
 					.src = reinterpret_cast<u8*>(data),
 					.dst = skybox->getImageHandle(),
 					.dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -166,7 +166,7 @@ public:
 		}
 		daxa::generateMipLevels(cmd, skybox, VkImageSubresourceLayers{ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 6 }, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-		cmd->finalize();
+		cmd.finalize();
 		renderCTX.queue->submit({.commandLists = {cmd}});
 
 		auto skyboxPipelineBuilder = daxa::GraphicsPipelineBuilder();
@@ -195,17 +195,17 @@ public:
 				.clearValue = {.color = VkClearColorValue{.float32 = { 0.00f, 0.00f, 0.00f, 1.0f } } },
 			},
 		};
-		cmdList->beginRendering({
+		cmdList.beginRendering({
 			.colorAttachments = colorAttachments,
 		});
-		cmdList->bindPipeline(skyboxPipeline);
-		cmdList->bindAll();
-		cmdList->pushConstant(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, u32(globalDataBufffer.getDescriptorIndex()));
-		cmdList->draw(3*2*6, 1, 0, 0);
-		cmdList->unbindPipeline();
-		cmdList->endRendering();
+		cmdList.bindPipeline(skyboxPipeline);
+		cmdList.bindAll();
+		cmdList.pushConstant(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, u32(globalDataBufffer.getDescriptorIndex()));
+		cmdList.draw(3*2*6, 1, 0, 0);
+		cmdList.unbindPipeline();
+		cmdList.endRendering();
 
-		cmdList->queueMemoryBarrier({
+		cmdList.queueMemoryBarrier({
 			.srcStages = daxa::STAGE_COLOR_ATTACHMENT_OUTPUT,
 			.srcAccess = daxa::ACCESS_MEMORY_WRITE,
 			.dstStages = daxa::STAGE_COLOR_ATTACHMENT_OUTPUT,
@@ -231,7 +231,7 @@ public:
 				tonemapPipeline = result.value();
 			}
 		}
-		cmdList->queueImageBarrier({
+		cmdList.queueImageBarrier({
 			.image = renderCTX.hdrImage,
 			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -242,11 +242,11 @@ public:
 				.image = renderCTX.swapchainImage.getImageViewHandle(),
 			},
 		};
-		cmdList->beginRendering({
+		cmdList.beginRendering({
 			.colorAttachments = colorAttachments,
 		});
-		cmdList->bindPipeline(tonemapPipeline);
-		cmdList->bindAll();
+		cmdList.bindPipeline(tonemapPipeline);
+		cmdList.bindAll();
 		struct Push {
 			u32 src;
 			u32 width;
@@ -256,12 +256,12 @@ public:
 			renderCTX.swapchainImage.getImageViewHandle()->getImageHandle()->getVkExtent3D().width,
 			renderCTX.swapchainImage.getImageViewHandle()->getImageHandle()->getVkExtent3D().height,
 		};
-		cmdList->pushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, p);
-		cmdList->draw(3, 1, 0, 0);
-		cmdList->unbindPipeline();
-		cmdList->endRendering();
+		cmdList.pushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, p);
+		cmdList.draw(3, 1, 0, 0);
+		cmdList.unbindPipeline();
+		cmdList.endRendering();
 		
-		cmdList->queueImageBarrier({
+		cmdList.queueImageBarrier({
 			.image = renderCTX.hdrImage,
 			.layoutBefore = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -325,18 +325,18 @@ public:
 
 			u32 pink = 0xFFFF00FF;
 
-			cmd->queueImageBarrier({
+			cmd.queueImageBarrier({
 				.image = dummyTexture,
 				.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
 				.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			});
-			cmd->singleCopyHostToImage({
+			cmd.singleCopyHostToImage({
 				.src = reinterpret_cast<u8*>(&pink),
 				.dst = dummyTexture->getImageHandle(),
 				.dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				.region = {},
 			});
-			cmd->queueImageBarrier({
+			cmd.queueImageBarrier({
 				.image = dummyTexture,
 				.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -358,18 +358,18 @@ public:
 			// 0xFF (alpha = 1.0f) FF (blue/z = 1.0f) 7F (green/y = 0.5f/0.0f) 7F (red/x = 0.5f/0.0f)  
 			u32 up = 0xFFFF7F7F;
 
-			cmd->queueImageBarrier({
+			cmd.queueImageBarrier({
 				.image = dummyNormalsTexture,
 				.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
 				.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			});
-			cmd->singleCopyHostToImage({
+			cmd.singleCopyHostToImage({
 				.src = reinterpret_cast<u8*>(&up),
 				.dst = dummyNormalsTexture->getImageHandle(),
 				.dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				.region = {},
 			});
-			cmd->queueImageBarrier({
+			cmd.queueImageBarrier({
 				.image = dummyNormalsTexture,
 				.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -380,7 +380,7 @@ public:
 		globData.skyboxId = skybox->getDescriptorIndex();
 		globData.renderTargetWidth = renderCTX.hdrImage->getImageHandle()->getVkExtent3D().width;
 		globData.renderTargetHeight = renderCTX.hdrImage->getImageHandle()->getVkExtent3D().height;
-		cmd->singleCopyHostToBuffer({
+		cmd.singleCopyHostToBuffer({
 			.src = reinterpret_cast<u8*>(&globData),
 			.dst = globalDataBufffer,
 			.region= {.size = sizeof(decltype(globData))}
@@ -394,7 +394,7 @@ public:
 			});
 		}
 		if (!draws.empty()) {
-			auto mm = cmd->mapMemoryStagedBuffer(primitiveInfoBuffer, draws.size() * sizeof(GPUPrimitiveInfo), 0);
+			auto mm = cmd.mapMemoryStagedBuffer(primitiveInfoBuffer, draws.size() * sizeof(GPUPrimitiveInfo), 0);
 			for (size_t i = 0; i < draws.size(); i++) {
 				auto& prim = (reinterpret_cast<GPUPrimitiveInfo*>(mm.hostPtr))[i];
 				prim.transform = draws[i].transform;
@@ -423,7 +423,7 @@ public:
 			});
 		}
 		{
-			auto mm = cmd->mapMemoryStagedBuffer(lightsBuffer, lights.size() * sizeof(DrawLight) + sizeof(glm::vec4), 0);
+			auto mm = cmd.mapMemoryStagedBuffer(lightsBuffer, lights.size() * sizeof(DrawLight) + sizeof(glm::vec4), 0);
 			*(reinterpret_cast<u32*>(mm.hostPtr)) = static_cast<u32>(lights.size());
 			mm.hostPtr += sizeof(glm::vec4);
 			for (size_t i = 0; i < lights.size(); i++) {
@@ -433,8 +433,8 @@ public:
 	}
 
 	void prePass(RenderContext& renderCTX, daxa::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws) {
-		cmd->bindPipeline(prePassPipeline);
-		cmd->bindSet(0, globalSet);
+		cmd.bindPipeline(prePassPipeline);
+		cmd.bindSet(0, globalSet);
 		
 		daxa::RenderAttachmentInfo depthAttachment{
 			.image = renderCTX.depthImage,
@@ -443,23 +443,23 @@ public:
 			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 			.clearValue = {.depthStencil = VkClearDepthStencilValue{.depth = 1.0f } },
 		};
-		cmd->beginRendering(daxa::BeginRenderingInfo{
+		cmd.beginRendering(daxa::BeginRenderingInfo{
 			.colorAttachments = {},
 			.depthAttachment = &depthAttachment,
 		});
 
 		for (u32 i = 0; i < draws.size(); i++) {
 			auto& draw = draws[i];
-			cmd->pushConstant(VK_SHADER_STAGE_VERTEX_BIT, i);
-			cmd->bindIndexBuffer(draw.prim->indiexBuffer);
-			cmd->bindVertexBuffer(0, draw.prim->vertexPositions);
-			cmd->drawIndexed(draw.prim->indexCount, 1, 0, 0, 0);
+			cmd.pushConstant(VK_SHADER_STAGE_VERTEX_BIT, i);
+			cmd.bindIndexBuffer(draw.prim->indiexBuffer);
+			cmd.bindVertexBuffer(0, draw.prim->vertexPositions);
+			cmd.drawIndexed(draw.prim->indexCount, 1, 0, 0, 0);
 		}
 
-		cmd->endRendering();
-		cmd->unbindPipeline();
+		cmd.endRendering();
+		cmd.unbindPipeline();
 
-		cmd->queueMemoryBarrier({
+		cmd.queueMemoryBarrier({
 			.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
 			.srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT_KHR,
 			.dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
@@ -479,8 +479,8 @@ public:
 				opaquePass2Pipeline = result.value();
 			}
 		}
-		cmd->bindPipeline(opaquePass2Pipeline);
-		cmd->bindAll(0);
+		cmd.bindPipeline(opaquePass2Pipeline);
+		cmd.bindAll(0);
 
 		std::array framebuffer{
 			daxa::RenderAttachmentInfo{
@@ -503,7 +503,7 @@ public:
 			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 			.clearValue = {.depthStencil = VkClearDepthStencilValue{.depth = 1.0f } },
 		};
-		cmd->beginRendering(daxa::BeginRenderingInfo{
+		cmd.beginRendering(daxa::BeginRenderingInfo{
 			.colorAttachments = framebuffer,
 			.depthAttachment = &depthAttachment,
 			});
@@ -523,16 +523,16 @@ public:
 				lightsBuffer.getDescriptorIndex(),
 				i
 			};
-			cmd->pushConstant(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, push);
-			cmd->bindIndexBuffer(draw.prim->indiexBuffer);
-			cmd->drawIndexed(draw.prim->indexCount, 1, 0, 0, 0);
+			cmd.pushConstant(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, push);
+			cmd.bindIndexBuffer(draw.prim->indiexBuffer);
+			cmd.drawIndexed(draw.prim->indexCount, 1, 0, 0, 0);
 		}
 		//printf("%i triangles drawn\n", primitivesDrawn);
 
-		cmd->endRendering();
-		cmd->unbindPipeline();
+		cmd.endRendering();
+		cmd.unbindPipeline();
 
-		cmd->queueImageBarrier({
+		cmd.queueImageBarrier({
 			.barrier = {
 				.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
 				.srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT_KHR,
@@ -547,15 +547,15 @@ public:
 
 	void render(RenderContext& renderCTX, daxa::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws) {
 		uploadBuffers(renderCTX, cmd, draws, drawLights);
-		cmd->queueMemoryBarrier({
+		cmd.queueMemoryBarrier({
 			.srcStages = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR | VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
 			.srcAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
 			.dstStages = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
 			.dstAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR,
 		});
-		cmd->insertQueuedBarriers();
+		cmd.insertQueuedBarriers();
 
-		cmd->queueImageBarrier({
+		cmd.queueImageBarrier({
 			.barrier = {
 				.dstStages = VK_PIPELINE_STAGE_2_CLEAR_BIT_KHR | VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
 				.dstAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR | VK_ACCESS_2_MEMORY_READ_BIT_KHR,
@@ -563,7 +563,7 @@ public:
 			.image = renderCTX.normalsImage,
 			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 		});
-		cmd->insertQueuedBarriers();
+		cmd.insertQueuedBarriers();
 		skyboxPass(renderCTX, cmd);
 		opaquePass2(renderCTX, cmd, draws);
 		tonemapPass(renderCTX, cmd);

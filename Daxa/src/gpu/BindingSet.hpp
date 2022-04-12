@@ -134,7 +134,7 @@ namespace daxa {
 		std::string const& getDebugName() const { return debugName; }
 	private:
 		friend class Device;
-		friend class CommandList;
+		friend class CommandListBackend;
 		friend class BindingSetAllocator;
 		friend class CommandQueue;
 		friend struct BindingSetHandleStaticFunctionOverride;

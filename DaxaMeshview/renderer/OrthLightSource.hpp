@@ -63,18 +63,18 @@ public:
 		using namespace daxa;
 
 		glm::mat4 vp{ 1.0f };
-		cmd->singleCopyHostToBuffer({
+		cmd.singleCopyHostToBuffer({
 			.src = reinterpret_cast<u8*>(&vp),
 			.dst = infoBuffer,
 			.region = {.size = sizeof(GPUInfo) },
 		});
-		cmd->queueMemoryBarrier({
+		cmd.queueMemoryBarrier({
 			.srcStages = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR,
 			.srcAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR,
 			.dstStages = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT_KHR,
 			.dstAccess = VK_ACCESS_2_SHADER_STORAGE_READ_BIT_KHR,
 		});
-		cmd->queueImageBarrier({
+		cmd.queueImageBarrier({
 			.barrier = {
 				.dstStages = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT_KHR,
 				.dstAccess = VK_ACCESS_2_SHADER_READ_BIT_KHR,
@@ -90,13 +90,13 @@ public:
 			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 			.clearValue = VkClearValue{.depthStencil = {.depth = 1.0f}},
 		};
-		cmd->beginRendering({ .depthAttachment = &depthAttach, });
-		cmd->bindPipeline(pipeline);
+		cmd.beginRendering({ .depthAttachment = &depthAttach, });
+		cmd.bindPipeline(pipeline);
 		auto persistentSet = persistentSetAlloc->getSet("orth light persistent set");
 		persistentSet->bindBuffer(0, infoBuffer);
 		persistentSet->bindBuffer(1, primitiveInfosBuffer);
-		cmd->bindSet(0, persistentSet);
-		cmd->bindAll(1);
+		cmd.bindSet(0, persistentSet);
+		cmd.bindAll(1);
 
 		for (u32 i = 0; i < draws.size(); i++) {
 			auto& draw = draws[i];
@@ -108,15 +108,15 @@ public:
 				draw.prim->vertexPositions.getDescriptorIndex(),
 				i
 			};
-			cmd->pushConstant(VK_SHADER_STAGE_VERTEX_BIT, push);
-			cmd->bindIndexBuffer(draw.prim->indiexBuffer);
-			cmd->drawIndexed(draw.prim->indexCount, 1, 0, 0, 0);
+			cmd.pushConstant(VK_SHADER_STAGE_VERTEX_BIT, push);
+			cmd.bindIndexBuffer(draw.prim->indiexBuffer);
+			cmd.drawIndexed(draw.prim->indexCount, 1, 0, 0, 0);
 		}
 
-		cmd->unbindPipeline();
-		cmd->endRendering();
+		cmd.unbindPipeline();
+		cmd.endRendering();
 
-		cmd->queueImageBarrier({
+		cmd.queueImageBarrier({
 			.barrier = {
 				.srcStages = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
 				.srcAccess = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT_KHR,

@@ -105,8 +105,8 @@ public:
 		});
 
 		auto cmdList = queue->getCommandList({});
-		cmdList->insertImageBarrier({.image = resultImage, .layoutAfter = VK_IMAGE_LAYOUT_GENERAL});
-		cmdList->finalize();
+		cmdList.insertImageBarrier({.image = resultImage, .layoutAfter = VK_IMAGE_LAYOUT_GENERAL});
+		cmdList.finalize();
 		queue->submitBlocking({
 			.commandLists = { cmdList }
 		});
@@ -130,7 +130,7 @@ public:
 				.defaultSampler = device->createSampler({}),
 				.debugName = "resultImageView",
 			});
-			cmdList->queueImageBarrier({
+			cmdList.queueImageBarrier({
 				.image = resultImage,
 				.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
 				.layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
@@ -140,7 +140,7 @@ public:
 		/// ------------ Begin Data Uploading ---------------------
 
 		std::array someBufferdata = { app.window->getWidth(), app.window->getHeight() };
-		cmdList->singleCopyHostToBuffer({
+		cmdList.singleCopyHostToBuffer({
 			.src = reinterpret_cast<u8*>(someBufferdata.data()),
 			.dst = uniformBuffer,
 			.region = {
@@ -149,45 +149,45 @@ public:
 		});
 
 		// array because we can allways pass multiple barriers at once for driver efficiency
-		cmdList->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+		cmdList.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 		
 		/// ------------ End Data Uploading ---------------------
 
-		cmdList->bindPipeline(pipeline);
+		cmdList.bindPipeline(pipeline);
 		
 		auto set = bindingSetAllocator->getSet();
 		set->bindBuffer(0, uniformBuffer);
 		set->bindImage(1, resultImage, VK_IMAGE_LAYOUT_GENERAL);
-		cmdList->bindSet(0, set);
+		cmdList.bindSet(0, set);
 
-		cmdList->dispatch(app.window->getWidth() / 8 + 1, app.window->getHeight() / 8 + 1);
+		cmdList.dispatch(app.window->getWidth() / 8 + 1, app.window->getHeight() / 8 + 1);
 
-		cmdList->queueImageBarrier({
+		cmdList.queueImageBarrier({
 			.image = swapchainImage.getImageViewHandle(),
 			.layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
 			.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 		});
-		cmdList->queueImageBarrier({
+		cmdList.queueImageBarrier({
 			.image = resultImage,
 			.layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
 			.layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 		});
-		cmdList->singleCopyImageToImage({
+		cmdList.singleCopyImageToImage({
 			.src = resultImage->getImageHandle(),
 			.dst = swapchainImage.getImageViewHandle()->getImageHandle(),
 		});
-		cmdList->queueImageBarrier({
+		cmdList.queueImageBarrier({
 			.image = swapchainImage.getImageViewHandle(),
 			.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			.layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 		});
-		cmdList->queueImageBarrier({
+		cmdList.queueImageBarrier({
 			.image = resultImage,
 			.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 			.layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
 		});
 
-		cmdList->finalize();
+		cmdList.finalize();
 
 		daxa::SubmitInfo submitInfo;
 		submitInfo.commandLists.push_back(std::move(cmdList));
