@@ -249,23 +249,23 @@ public:
 		});
 
 		auto cmdList = device->getCommandList();
-		cmdList->copyHostToBuffer({
+		cmdList.copyHostToBuffer({
 			.src = cubeVertecies.data(),
 			.dst = vertexBuffer,
 			.size = sizeof(decltype(cubeVertecies)),
 		});
-		cmdList->copyHostToBuffer({
+		cmdList.copyHostToBuffer({
 			.src = cubeIndices.data(),
 			.dst = indexBuffer,
 			.size = sizeof(decltype(cubeIndices)),
 		});
-		cmdList->copyHostToImageSynced({
+		cmdList.copyHostToImageSynced({
 			.src = textureAtlasHostData,
 			.dst = textureAtlas,
 			.size = sizeX * sizeY * numChannels * sizeof(u8),
 			.dstFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 		});
-		cmdList->finalize();
+		cmdList.finalize();
 		queue->submitBlocking({
 			.commandLists = {cmdList},
 		});
@@ -324,7 +324,7 @@ public:
 
 
 		auto vp = cameraController.getVP(*app.window);
-		cmdList->copyHostToBuffer(daxa::HostToBufferCopyInfo{
+		cmdList.copyHostToBuffer(daxa::HostToBufferCopyInfo{
 			.src = &vp,
 			.dst = uniformBuffer,
 			.size = sizeof(decltype(vp)),
@@ -342,7 +342,7 @@ public:
 			.srcAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,				// wait for writing the uniform buffer
 			.dstStages = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT_KHR,		// the vertex shader must wait until uniform is written
 		} };
-		cmdList->insertBarriers(memBarrier0, imgBarrier0);
+		cmdList.insertBarriers(memBarrier0, imgBarrier0);
 		
 		
 		/// ------------ End Data Uploading ---------------------
@@ -360,27 +360,27 @@ public:
 			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 			.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 		};
-		cmdList->beginRendering(daxa::BeginRenderingInfo{
+		cmdList.beginRendering(daxa::BeginRenderingInfo{
 			.colorAttachments = framebuffer,
 			.depthAttachment = &depthAttachment,
 		});
 		
-		cmdList->bindPipeline(pipeline);
+		cmdList.bindPipeline(pipeline);
 		
 		auto set = bindingSetAllocator->getSet();
 		set->bindBuffer(0, uniformBuffer);
 		set->bindImage(1, textureAtlas, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		cmdList->bindSet(0, set);
+		cmdList.bindSet(0, set);
 		
-		cmdList->bindIndexBuffer(indexBuffer);
+		cmdList.bindIndexBuffer(indexBuffer);
 
-		cmdList->bindVertexBuffer(0, vertexBuffer);
+		cmdList.bindVertexBuffer(0, vertexBuffer);
 		
-		cmdList->drawIndexed(indexBuffer.getSize() / sizeof(u32), 1, 0, 0, 0);
+		cmdList.drawIndexed(indexBuffer.getSize() / sizeof(u32), 1, 0, 0, 0);
 		
-		cmdList->endRendering();
+		cmdList.endRendering();
 
-		cmdList->insertMemoryBarrier({
+		cmdList.insertMemoryBarrier({
 			.srcStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
 			.dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
 		});
@@ -394,9 +394,9 @@ public:
 			.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			.layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 		} };
-		cmdList->insertBarriers({}, imgBarrier1);
+		cmdList.insertBarriers({}, imgBarrier1);
 
-		cmdList->finalize();
+		cmdList.finalize();
 
 		daxa::SubmitInfo submitInfo;
 		submitInfo.commandLists.push_back(std::move(cmdList));

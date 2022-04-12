@@ -7,7 +7,7 @@ namespace daxa {
         i32 mipheight = img->getImageHandle()->getVkExtent3D().height;
         i32 mipdepth = img->getImageHandle()->getVkExtent3D().depth;
         for (u32 i = layers.mipLevel; i < img->getImageHandle()->getMipLevels() - 1; i++) {
-            cmdList->queueImageBarrier({
+            cmdList.queueImageBarrier({
                 .barrier = {
                     .srcStages = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR,
                     .srcAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR,
@@ -25,7 +25,7 @@ namespace daxa {
                     .layerCount = layers.layerCount,
                 }}
             });
-            cmdList->queueImageBarrier({
+            cmdList.queueImageBarrier({
                     .barrier = {
                         .dstStages = VK_PIPELINE_STAGE_2_BLIT_BIT_KHR,
                         .dstAccess = VK_ACCESS_2_TRANSFER_READ_BIT_KHR,
@@ -40,7 +40,7 @@ namespace daxa {
                         .layerCount = layers.layerCount,
                     }}
             });
-            cmdList->insertQueuedBarriers();
+            cmdList.insertQueuedBarriers();
             VkImageBlit blit{
                 .srcSubresource = VkImageSubresourceLayers{
                     .aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT,
@@ -65,7 +65,7 @@ namespace daxa {
             };
 
             vkCmdBlitImage(
-                cmdList->getVkCommandBuffer(), 
+                cmdList.getVkCommandBuffer(), 
                 img->getImageHandle()->getVkImage(),
                 VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                 img->getImageHandle()->getVkImage(),
@@ -84,7 +84,7 @@ namespace daxa {
         size_t buffSize = 0;
 
         for (u32 i = 0; i < img->getImageHandle()->getMipLevels() - 1; i++) {
-            cmdList->queueImageBarrier({
+            cmdList.queueImageBarrier({
                 .barrier = MemoryBarrier{
                     .srcStages = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR,
                     .srcAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR | VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
@@ -103,7 +103,7 @@ namespace daxa {
                 }},
             });
         }
-        cmdList->queueImageBarrier({
+        cmdList.queueImageBarrier({
             .barrier = {
                 .srcStages = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR,
                 .srcAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR | VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
@@ -121,6 +121,6 @@ namespace daxa {
                 .layerCount = layers.layerCount,
             }},
         });
-        cmdList->insertQueuedBarriers();
+        cmdList.insertQueuedBarriers();
     }
 }

@@ -51,7 +51,7 @@ namespace daxa {
 		size_t 	size 	= {};
 	private:
 		friend class BufferHandle;
-		friend class CommandList;
+		friend class CommandListBackend;
 
 		std::shared_ptr<BufferBackend> owningBuffer = {};
 	};
