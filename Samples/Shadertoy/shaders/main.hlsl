@@ -33,13 +33,27 @@ struct Globals {
 };
 DAXA_DEFINE_BA_BUFFER(Globals)
 
+struct Buf0 {
+    uint data[128 * 128];
+    uint data_1[64 * 64];
+    uint data_2[32 * 32];
+    uint data_3[16 * 16];
+    uint data_4[8 * 8];
+    uint data_5[4 * 4];
+    uint data_6[2 * 2];
+    uint data_7[1 * 1];
+};
+DAXA_DEFINE_BA_BUFFER(Buf0)
+
 struct Push {
     uint globals_id;
+    uint buf0_id;
     uint output_image_id;
 };
 
 [[vk::push_constant]] const Push p;
 
-#define SHADERTOY_NUMTHREADS [numthreads(8, 8, 1)]
+#define SHADERTOY_NUMTHREADS_MAIN [numthreads(8, 8, 1)]
+#define SHADERTOY_NUMTHREADS_BUF0 [numthreads(8, 8, 1)]
 
 #include "user.hlsl"
