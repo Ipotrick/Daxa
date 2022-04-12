@@ -81,7 +81,6 @@ struct Globals {
 };
 
 DAXA_DEFINE_BA_BUFFER(Globals)
-DAXA_DEFINE_BA_BUFFER(uint)
 
 #if !defined(USE_GLOBALS_DEFINE)
 #define USE_GLOBALS_DEFINE 0

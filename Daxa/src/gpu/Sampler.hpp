@@ -7,7 +7,7 @@
 #include <vulkan/vulkan.h>
 
 #include "Handle.hpp"
-#include "DeviceBackend.hpp"
+#include "Graveyard.hpp"
 
 namespace daxa {
 	struct SamplerCreateInfo {
@@ -86,14 +86,7 @@ namespace daxa {
 	};
 
 	struct SamplerStaticFunctionOverride {
-		static void cleanup(std::shared_ptr<Sampler>& value) {
-			if (value && value.use_count() == 1) {
-				std::unique_lock lock(value->deviceBackend->graveyard.mtx);
-				for (auto& zombieList : value->deviceBackend->graveyard.activeZombieLists) {
-					zombieList->zombies.push_back(value);
-				}
-			}
-		}
+		static void cleanup(std::shared_ptr<Sampler>& value);
 	};
 
 	class SamplerHandle : public SharedHandle<Sampler, SamplerStaticFunctionOverride>{};

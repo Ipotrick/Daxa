@@ -1,5 +1,6 @@
 #include "Sampler.hpp"
 #include "Instance.hpp"
+#include "backend/DeviceBackend.hpp"
 
 namespace daxa {
 	Sampler::Sampler(std::shared_ptr<DeviceBackend> deviceBackend, SamplerCreateInfo const& ci) 
@@ -108,6 +109,15 @@ namespace daxa {
 			}
 			vkDestroySampler(this->deviceBackend->device.device, sampler, nullptr);
 			this->deviceBackend = {};
+		}
+	}
+	
+	void SamplerStaticFunctionOverride::cleanup(std::shared_ptr<Sampler>& value) {
+		if (value && value.use_count() == 1) {
+			std::unique_lock lock(value->deviceBackend->graveyard.mtx);
+			for (auto& zombieList : value->deviceBackend->graveyard.activeZombieLists) {
+				zombieList->zombies.push_back(value);
+			}
 		}
 	}
 }

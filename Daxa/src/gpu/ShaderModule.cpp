@@ -5,6 +5,8 @@
 #include <streambuf>
 #include <thread>
 
+#include "backend/DeviceBackend.hpp"
+
 namespace daxa {
 	ShaderModule::~ShaderModule() {
 		if (deviceBackend) {

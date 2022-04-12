@@ -145,4 +145,6 @@ namespace daxa {
 		}
 		return os;
 	}
+
+	struct DeviceBackend;
 }

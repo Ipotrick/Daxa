@@ -46,7 +46,7 @@ public:
 
 		infoBuffer = renderCTX.device->createBuffer({
 			.size = sizeof(GPUInfo),
-			.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			//.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			.debugName = "orth shadow pass info buffer",
 		});
 	}
@@ -110,7 +110,7 @@ public:
 				u32 vertexBufferId;
 				u32 drawId;
 			} push {
-				draw.prim->vertexPositions->getDescriptorIndex(),
+				draw.prim->vertexPositions.getDescriptorIndex(),
 				i
 			};
 			cmd->pushConstant(VK_SHADER_STAGE_VERTEX_BIT, push);
