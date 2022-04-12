@@ -88,22 +88,20 @@ public:
             .dstAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR | VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
         };
 
-        cmdList->insertImageBarriers(std::array{
-            daxa::ImageBarrier{
-                .barrier = postMemBar,
-                .image = debugScreenSpaceNormalImage,
-                .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            },
-            daxa::ImageBarrier{
+        cmdList->queueImageBarrier({
+            .barrier = postMemBar,
+            .image = debugScreenSpaceNormalImage,
+            .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        });
+        cmdList->queueImageBarrier({
                 .barrier = postMemBar,
                 .image = debugWorldSpaceNormalImage,
                 .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            },
-            daxa::ImageBarrier{
+        });
+        cmdList->queueImageBarrier({
                 .barrier = postMemBar,
                 .image = debugLinearDepthImage,
                 .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            }
         });
     }
     
@@ -113,20 +111,18 @@ public:
         uploadData.imageHeight = static_cast<i32>(debugLinearDepthImage->getImageHandle()->getVkExtent3D().height);
         uploadData.zMin = std::min(std::max(cameraData.near, uploadData.zMin), cameraData.far);
         uploadData.zMax = std::min(std::max(cameraData.near, uploadData.zMax), cameraData.far);
-        cmdList->copyHostToBuffer({
-            .src = reinterpret_cast<void*>(&uploadData),
+        cmdList->singleCopyHostToBuffer({
+            .src = reinterpret_cast<u8*>(&uploadData),
             .dst = buffer,
-            .size = sizeof(decltype(uploadData)),
+            .region = {.size = sizeof(decltype(uploadData)) }
         });
 
-        auto copyMemBarr = std::array{ 
-            daxa::MemoryBarrier{
-                .srcStages = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT_KHR, 
-                .srcAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR,
-                .dstStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
-                .dstAccess = VK_ACCESS_2_SHADER_READ_BIT_KHR,
-            },
-        };
+        cmdList->queueMemoryBarrier({
+            .srcStages = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT_KHR, 
+            .srcAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR,
+            .dstStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+            .dstAccess = VK_ACCESS_2_SHADER_READ_BIT_KHR,
+        });
 
         daxa::MemoryBarrier preMemBarr{
             .srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
@@ -135,33 +131,27 @@ public:
             .dstAccess = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT_KHR | VK_ACCESS_2_SHADER_STORAGE_READ_BIT_KHR | VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR,
         };
 
-        auto imgbar = std::array{
-            daxa::ImageBarrier{
-                .barrier = preMemBarr,
-                .image = debugScreenSpaceNormalImage,
-                .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
-            },
-            daxa::ImageBarrier{
+        cmdList->queueImageBarrier({
+            .barrier = preMemBarr,
+            .image = debugScreenSpaceNormalImage,
+            .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
+        });
+        cmdList->queueImageBarrier({
                 .barrier = preMemBarr,
                 .image = debugWorldSpaceNormalImage,
                 .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
-            },
-            daxa::ImageBarrier{
+        });
+        cmdList->queueImageBarrier({
                 .barrier = preMemBarr,
                 .image = debugLinearDepthImage,
                 .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
-            },
-            daxa::ImageBarrier{
+        });
+        cmdList->queueImageBarrier({
                 .barrier = preMemBarr,
                 .image = renderCTX.depthImage,
                 .layoutBefore = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
                 .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            },
-        };
-        cmdList->insertBarriers(
-            copyMemBarr,
-            imgbar
-        );
+        });
 
         cmdList->bindPipeline(pipeline);
 
@@ -186,30 +176,28 @@ public:
             .dstAccess = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR,
         };
 
-        cmdList->insertImageBarriers(std::array{
-            daxa::ImageBarrier{
-                .barrier = postMemBarr,
-                .image = debugScreenSpaceNormalImage,
-                .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
-                .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            },
-            daxa::ImageBarrier{
-                .barrier = postMemBarr,
-                .image = debugWorldSpaceNormalImage,
-                .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
-                .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            },
-            daxa::ImageBarrier{
-                .barrier = postMemBarr,
-                .image = debugLinearDepthImage,
-                .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
-                .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            },
-            daxa::ImageBarrier{
-                .barrier = postMemBarr,
-                .image = renderCTX.depthImage,
-                .layoutAfter = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-            },
+        cmdList->queueImageBarrier({
+            .barrier = postMemBarr,
+            .image = debugScreenSpaceNormalImage,
+            .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
+            .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        });
+        cmdList->queueImageBarrier({
+            .barrier = postMemBarr,
+            .image = debugWorldSpaceNormalImage,
+            .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
+            .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        });
+        cmdList->queueImageBarrier({
+            .barrier = postMemBarr,
+            .image = debugLinearDepthImage,
+            .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
+            .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        });
+        cmdList->queueImageBarrier({
+            .barrier = postMemBarr,
+            .image = renderCTX.depthImage,
+            .layoutAfter = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         });
     }
 

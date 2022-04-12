@@ -122,41 +122,26 @@ namespace daxa {
                 }
                 auto image = device->createImageView(ci);
 
-                cmdList->insertImageBarrier({
+                cmdList->queueImageBarrier({
                     .image = image,
                     .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 });
-                cmdList->copyHostToImage({
+                cmdList->singleCopyHostToImage({
                     .src = data,
-                    .dst = image,
-                    .size = static_cast<u32>(width*height*4),
+                    .dst = image->getImageHandle(),
+                    //.size = static_cast<u32>(width*height*4),
                 });
-                if (false) {
-                    cmdList->insertImageBarrier({
-                        .barrier = {
-                            .srcStages = STAGE_TRANSFER,
-                            .srcAccess = ACCESS_MEMORY_READ,
-                            .dstStages = STAGE_ALL_COMMANDS,
-                            .dstAccess = ACCESS_MEMORY_WRITE,
-                        },
-                        .image = image,
-                        .layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                        .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    });
-                }
-                else {
-                    generateMipLevels(
-                        cmdList, 
-                        image, 
-                        VkImageSubresourceLayers{
-                            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                            .mipLevel = 0,
-                            .baseArrayLayer = 0,
-                            .layerCount = 1,
-                        },
-                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                    );
-                }
+                generateMipLevels(
+                    cmdList, 
+                    image, 
+                    VkImageSubresourceLayers{
+                        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                        .mipLevel = 0,
+                        .baseArrayLayer = 0,
+                        .layerCount = 1,
+                    },
+                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                );
 
                 std::free(data);
                 return image;

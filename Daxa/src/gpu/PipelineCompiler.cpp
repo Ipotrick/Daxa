@@ -58,6 +58,13 @@ static void shaderPreprocess(std::string& fileStr, std::filesystem::path const& 
 namespace daxa {
 	#define BACKEND (*static_cast<Backend*>(this->backend.get()))
 
+	char const* DAXA_HEADER_NAME = "daxa.hlsl";
+	std::filesystem::path DAXA_HEADER_PATH = {"daxa.hlsl"};
+
+	char const* DAXA_HEADER_CONTENT = R"(
+		
+	)";
+
 	struct Backend{
         shaderc::Compiler compiler = {};
         shaderc::CompileOptions options = {};
@@ -86,6 +93,9 @@ namespace daxa {
 	}
 	
 	Result<std::string> PipelineCompilerShadedData::tryLoadShaderSourceFromFile(std::filesystem::path const& path) {
+		if (path == DAXA_HEADER_PATH) {
+			return { std::string( DAXA_HEADER_CONTENT ) };
+		}
 		auto result = findFullPathOfFile(path);
 		if (result.isErr()) {
 			return ResultErr{ .message = result.message() };
@@ -125,8 +135,19 @@ namespace daxa {
 		return ResultErr{ err.c_str() };
 	}
 
+	std::wstring u8_ascii_to_wstring(char const* str) {
+		std::wstring ret;
+		for (int i = 0; i < std::strlen(str)+1 && str != nullptr; i++) {
+			ret.push_back(str[i]);
+		}
+		return ret;
+	}
+
 	Result<std::vector<u32>> PipelineCompiler::tryGenSPIRVFromDxc(std::string const& src, VkShaderStageFlagBits shaderStage, char const* entryPoint, char const* sourceFileName) {
 		std::vector<LPCWSTR> args;
+
+		auto sourceFileNameWString = u8_ascii_to_wstring(sourceFileName);
+		args.push_back(sourceFileNameWString.c_str());
 
 		// Bugfix: 	Do not make a vector of strings and get the data ptr to them.
 		//			The data ptr will be invalidated on push_back when the path is short enough to be short string optimized.
@@ -163,7 +184,7 @@ namespace daxa {
 			case VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT: profile = L"vs_6_0"; break;
 			case VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT: profile = L"ps_6_0"; break;
 			case VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT: profile = L"cs_6_0"; break;
-			default: return daxa::ResultErr{ .message = "tried to compile with dxc and an unsupported shader stage" };
+			default: return daxa::ResultErr{ .message = "shader compilation error: the given shader stage is either missing or not supported by dxc" };
 		}
 		args.push_back(profile.data());
 
@@ -189,8 +210,8 @@ namespace daxa {
 			for (size_t i = 0; i < str.size(); i++) {
 				str[i] = static_cast<char const*>(errorMessage->GetBufferPointer())[i];
 			}
-			str = str + ": ";
-			str = std::string(sourceFileName) + str;
+			//str = str + ": ";
+			//str = std::string(sourceFileName) + str;
 			
 			return daxa::ResultErr{.message = str };
 		}
@@ -634,11 +655,25 @@ namespace daxa {
 		}
 	}
 
+	
+    void PipelineCompiler::recreateIfChanged(PipelineHandle& pipeline) {
+		if (checkIfSourcesChanged(pipeline)) {
+			auto result = recreatePipeline(pipeline);
+			std::cout << result << std::endl;
+			if (result.isOk()) {
+				pipeline = result.value();
+			}
+		}
+	}
+
     void PipelineCompiler::addShaderSourceRootPath(Path const& root) {
         this->sharedData->rootPaths.push_back(root); 
     }
 
     Result<Path> PipelineCompilerShadedData::findFullPathOfFile(Path const& file) {
+		if (file == DAXA_HEADER_PATH) {
+			return { file };
+		}
 		std::ifstream ifs{file};
 		if (ifs.good()) {
 			return { file };

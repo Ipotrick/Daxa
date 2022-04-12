@@ -127,83 +127,83 @@ namespace daxa {
 		return mm;
 	}
 
-	void CommandList::copyHostToBuffer(HostToBufferCopyInfo copyInfo) {
-		singleCopyHostToBuffer({
-			.src = reinterpret_cast<u8*>(copyInfo.src),
-			.dst = copyInfo.dst,
-			.region = {
-				.srcOffset = 0,
-				.dstOffset = copyInfo.dstOffset,
-				.size = copyInfo.size,
-			}
-		});
-	}
-
-	void CommandList::copyHostToImage(HostToImageCopyInfo copyInfo) {
-		HostToImageCopyRegion forwardCopyInfo = {};
-		if (copyInfo.dstImgSubressource.has_value()) {
-			forwardCopyInfo.subRessource = *copyInfo.dstImgSubressource;
-		}
-		singleCopyHostToImage({
-			.src = reinterpret_cast<u8*>(copyInfo.src),
-			.dst = copyInfo.dst->getImageHandle(),
-			.dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			.region = forwardCopyInfo,
-		});
-	}
-
-	void CommandList::copyMultiBufferToBuffer(BufferToBufferMultiCopyInfo copyInfo) {
-		DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
-		DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu.");
-		DAXA_ASSERT_M(copyInfo.regions.size() > 0, "amount of copy regions must be greater than 0.");
-		if (bBarriersQueued) { insertQueuedBarriers(); }
-		for (int i = 0; i < copyInfo.regions.size(); i++) {
-			DAXA_ASSERT_M(copyInfo.src.getSize() >= copyInfo.regions[i].size + copyInfo.regions[i].srcOffset, "ERROR: src buffer is smaller than the region that shouly be copied!");
-			DAXA_ASSERT_M(copyInfo.dst.getSize() >= copyInfo.regions[i].size + copyInfo.regions[i].dstOffset, "ERROR: dst buffer is smaller than the region that shouly be copied!");
-		}
-		vkCmdCopyBuffer(cmd, copyInfo.src.getVkBuffer(), copyInfo.dst.getVkBuffer(), copyInfo.regions.size(), (VkBufferCopy*)copyInfo.regions.data());	// THIS COULD BREAK ON ABI CHANGE
-	}
-
-	void CommandList::copyBufferToBuffer(BufferToBufferCopyInfo copyInfo) {
-		singleCopyBufferToBuffer({
-			.src = copyInfo.src,
-			.dst = copyInfo.dst,
-			.region = {
-				.srcOffset = copyInfo.region.srcOffset,
-				.dstOffset = copyInfo.region.dstOffset,
-				.size = copyInfo.region.size,
-			},
-		});
-	}
-
-	void CommandList::copyBufferToImage(BufferToImageCopyInfo copyInfo) {
-		BufferToImageCopyRegion forwardCopyInfo = {};
-		forwardCopyInfo.bufferOffset = copyInfo.srcOffset;
-		if (copyInfo.subRessourceLayers.has_value()) {
-			forwardCopyInfo.subRessource = copyInfo.subRessourceLayers.value();
-		}
-		singleCopyBufferToImage({
-			.src = copyInfo.src,
-			.dst = copyInfo.dst->getImageHandle(),
-			.dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			.region = forwardCopyInfo,
-		});
-	}
-
-	void CommandList::copyImageToImage(ImageToImageCopyInfo copyInfo) {
-
-		ImageToImageCopyRegion forwardCopyInfo = {};
-		forwardCopyInfo.srcOffset = copyInfo.srcOffset;
-		forwardCopyInfo.dstOffset = copyInfo.dstOffset;
-		forwardCopyInfo.extent = copyInfo.size;
-		singleCopyImageToImage({
-			.src = copyInfo.src->getImageHandle(),
-			.srcLayout = copyInfo.srcLayout,
-			.dst = copyInfo.dst->getImageHandle(),
-			.dstLayout = copyInfo.dstLayout,
-			.region = forwardCopyInfo,
-		});
-	}
+	//void CommandList::copyHostToBuffer(HostToBufferCopyInfo copyInfo) {
+	//	singleCopyHostToBuffer({
+	//		.src = reinterpret_cast<u8*>(copyInfo.src),
+	//		.dst = copyInfo.dst,
+	//		.region = {
+	//			.srcOffset = 0,
+	//			.dstOffset = copyInfo.dstOffset,
+	//			.size = copyInfo.size,
+	//		}
+	//	});
+	//}
+//
+	//void CommandList::copyHostToImage(HostToImageCopyInfo copyInfo) {
+	//	HostToImageCopyRegion forwardCopyInfo = {};
+	//	if (copyInfo.dstImgSubressource.has_value()) {
+	//		forwardCopyInfo.subRessource = *copyInfo.dstImgSubressource;
+	//	}
+	//	singleCopyHostToImage({
+	//		.src = reinterpret_cast<u8*>(copyInfo.src),
+	//		.dst = copyInfo.dst->getImageHandle(),
+	//		.dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+	//		.region = forwardCopyInfo,
+	//	});
+	//}
+//
+	//void CommandList::copyMultiBufferToBuffer(BufferToBufferMultiCopyInfo copyInfo) {
+	//	DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
+	//	DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu.");
+	//	DAXA_ASSERT_M(copyInfo.regions.size() > 0, "amount of copy regions must be greater than 0.");
+	//	if (bBarriersQueued) { insertQueuedBarriers(); }
+	//	for (int i = 0; i < copyInfo.regions.size(); i++) {
+	//		DAXA_ASSERT_M(copyInfo.src.getSize() >= copyInfo.regions[i].size + copyInfo.regions[i].srcOffset, "ERROR: src buffer is smaller than the region that shouly be copied!");
+	//		DAXA_ASSERT_M(copyInfo.dst.getSize() >= copyInfo.regions[i].size + copyInfo.regions[i].dstOffset, "ERROR: dst buffer is smaller than the region that shouly be copied!");
+	//	}
+	//	vkCmdCopyBuffer(cmd, copyInfo.src.getVkBuffer(), copyInfo.dst.getVkBuffer(), copyInfo.regions.size(), (VkBufferCopy*)copyInfo.regions.data());	// THIS COULD BREAK ON ABI CHANGE
+	//}
+//
+	//void CommandList::copyBufferToBuffer(BufferToBufferCopyInfo copyInfo) {
+	//	singleCopyBufferToBuffer({
+	//		.src = copyInfo.src,
+	//		.dst = copyInfo.dst,
+	//		.region = {
+	//			.srcOffset = copyInfo.region.srcOffset,
+	//			.dstOffset = copyInfo.region.dstOffset,
+	//			.size = copyInfo.region.size,
+	//		},
+	//	});
+	//}
+//
+	//void CommandList::copyBufferToImage(BufferToImageCopyInfo copyInfo) {
+	//	BufferToImageCopyRegion forwardCopyInfo = {};
+	//	forwardCopyInfo.bufferOffset = copyInfo.srcOffset;
+	//	if (copyInfo.subRessourceLayers.has_value()) {
+	//		forwardCopyInfo.subRessource = copyInfo.subRessourceLayers.value();
+	//	}
+	//	singleCopyBufferToImage({
+	//		.src = copyInfo.src,
+	//		.dst = copyInfo.dst->getImageHandle(),
+	//		.dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+	//		.region = forwardCopyInfo,
+	//	});
+	//}
+//
+	//void CommandList::copyImageToImage(ImageToImageCopyInfo copyInfo) {
+//
+	//	ImageToImageCopyRegion forwardCopyInfo = {};
+	//	forwardCopyInfo.srcOffset = copyInfo.srcOffset;
+	//	forwardCopyInfo.dstOffset = copyInfo.dstOffset;
+	//	forwardCopyInfo.extent = copyInfo.size;
+	//	singleCopyImageToImage({
+	//		.src = copyInfo.src->getImageHandle(),
+	//		.srcLayout = copyInfo.srcLayout,
+	//		.dst = copyInfo.dst->getImageHandle(),
+	//		.dstLayout = copyInfo.dstLayout,
+	//		.region = forwardCopyInfo,
+	//	});
+	//}
 	
 
 	///
@@ -681,15 +681,6 @@ namespace daxa {
 		DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 		vkCmdBindDescriptorSets(cmd, bindPoint, layout, setBinding, 1, &set->set, 0, nullptr);
 		usedSets.push_back(std::move(set));
-	}
-
-	void CommandList::insertBarriers(std::span<MemoryBarrier> memBarriers, std::span<ImageBarrier> imgBarriers) {
-		for (auto barr: memBarriers) {
-			queueMemoryBarrier(barr);
-		}
-		for (auto barr: imgBarriers) {
-			queueImageBarrier(barr);
-		}
 	}
 
 	void CommandList::bindAll(u32 set) {

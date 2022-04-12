@@ -23,5 +23,5 @@ void main() {
         ), 
         normalize(vertexPos)
     );
-    o_color = tex;
+    o_color = max(vec4(0),tex - vec4(vec3(0),0));
 }

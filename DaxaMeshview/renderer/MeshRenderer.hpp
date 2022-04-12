@@ -64,9 +64,6 @@ public:
 
         this->globalDataBufffer = renderCTX.device->createBuffer({
             .size = sizeof(GlobalData),
-            //.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            //.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
-            //.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 			.debugName = "mesh render globals buffer",
         });
 
@@ -80,12 +77,6 @@ public:
 		};
 
 		initOpaque2(renderCTX);
-
-		//this->globalSetAlloc = renderCTX.device->createBindingSetAllocator({
-		//	.setLayout = opaquePass2Pipeline->getSetLayout(0),
-		//	.debugName = "mesh renderer global set allocator",
-		//});
-
 		initTonemapPass(renderCTX);
 
 		orthLightPass.init(renderCTX);
@@ -112,7 +103,7 @@ public:
 				.extent = { hardcodedDim, hardcodedDim, 1 },
 				.mipLevels = mips,
 				.arrayLayers = 6,
-				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 				.debugName = "skybox",
 			}),
 			.viewType = VK_IMAGE_VIEW_TYPE_CUBE,
@@ -174,18 +165,6 @@ public:
 			}
 		}
 		daxa::generateMipLevels(cmd, skybox, VkImageSubresourceLayers{ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 6 }, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-		//cmd->queueImageBarrier({
-		//	.barrier = {
-		//		.srcStages = daxa::STAGE_TRANSFER,
-		//		.srcAccess = daxa::ACCESS_MEMORY_WRITE,
-		//		.dstStages = daxa::STAGE_FRAGMENT_SHADER,
-		//		.dstAccess = daxa::ACCESS_MEMORY_READ,
-		//	},
-		//	.image = skybox,
-		//	.layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		//	.layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-		//});
 
 		cmd->finalize();
 		renderCTX.queue->submit({.commandLists = {cmd}});
@@ -401,19 +380,16 @@ public:
 		globData.skyboxId = skybox->getDescriptorIndex();
 		globData.renderTargetWidth = renderCTX.hdrImage->getImageHandle()->getVkExtent3D().width;
 		globData.renderTargetHeight = renderCTX.hdrImage->getImageHandle()->getVkExtent3D().height;
-		cmd->copyHostToBuffer({
-			.src = reinterpret_cast<void*>(&globData),
+		cmd->singleCopyHostToBuffer({
+			.src = reinterpret_cast<u8*>(&globData),
 			.dst = globalDataBufffer,
-			.size = sizeof(decltype(globData)),
+			.region= {.size = sizeof(decltype(globData))}
 		});
 
 		if (!primitiveInfoBuffer || draws.size() * sizeof(GPUPrimitiveInfo) > primitiveInfoBuffer.getSize()) {
 			size_t newSize = (draws.size() + 64) * sizeof(GPUPrimitiveInfo);
 			this->primitiveInfoBuffer = renderCTX.device->createBuffer({
 				.size = newSize,
-				//.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-				//.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
-				//.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				.debugName = "primitiveInfoBuffer",
 			});
 		}
@@ -443,9 +419,6 @@ public:
 			size_t newSize = (lights.size() + 64) * sizeof(DrawLight) + sizeof(glm::vec4);
 			this->lightsBuffer = renderCTX.device->createBuffer({
 				.size = newSize,
-				//.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-				//.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
-				//.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				.debugName = "lightsBuffer",
 			});
 		}
@@ -486,7 +459,7 @@ public:
 		cmd->endRendering();
 		cmd->unbindPipeline();
 
-		cmd->insertMemoryBarrier({
+		cmd->queueMemoryBarrier({
 			.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
 			.srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT_KHR,
 			.dstStages = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
@@ -559,7 +532,7 @@ public:
 		cmd->endRendering();
 		cmd->unbindPipeline();
 
-		cmd->insertImageBarrier({
+		cmd->queueImageBarrier({
 			.barrier = {
 				.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR,
 				.srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT_KHR,
@@ -574,27 +547,15 @@ public:
 
 	void render(RenderContext& renderCTX, daxa::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws) {
 		uploadBuffers(renderCTX, cmd, draws, drawLights);
-		cmd->insertMemoryBarrier({
+		cmd->queueMemoryBarrier({
 			.srcStages = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR | VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
 			.srcAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
 			.dstStages = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR,
 			.dstAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR,
-			});
-		//orthLightPass.render(
-		//	renderCTX,
-		//	cmd,
-		//	draws,
-		//	primitiveInfoBuffer,
-		//	glm::vec3(0,-1,0),
-		//	1000.0f,
-		//	glm::vec4(1,1,1,1)
-		//);
+		});
+		cmd->insertQueuedBarriers();
 
-		//this->globalSet = globalSetAlloc->getSet();
-		//globalSet->bindBuffer(0, this->globalDataBufffer);
-		//globalSet->bindBuffer(1, this->primitiveInfoBuffer);
-		//globalSet->bindBuffer(2, this->lightsBuffer);
-		cmd->insertImageBarrier({
+		cmd->queueImageBarrier({
 			.barrier = {
 				.dstStages = VK_PIPELINE_STAGE_2_CLEAR_BIT_KHR | VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
 				.dstAccess = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR | VK_ACCESS_2_MEMORY_READ_BIT_KHR,
@@ -602,7 +563,7 @@ public:
 			.image = renderCTX.normalsImage,
 			.layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 		});
-		//prePass(renderCTX, cmd, draws);
+		cmd->insertQueuedBarriers();
 		skyboxPass(renderCTX, cmd);
 		opaquePass2(renderCTX, cmd, draws);
 		tonemapPass(renderCTX, cmd);
@@ -615,7 +576,6 @@ private:
 	GlobalData globData = {};
 	std::vector<DrawLight> drawLights;
     daxa::PipelineHandle prePassPipeline = {};
-    //daxa::BindingSetAllocatorHandle globalSetAlloc = {};
     daxa::BindingSetHandle globalSet = {};
     daxa::BufferHandle globalDataBufffer = {};
 	daxa::BufferHandle primitiveInfoBuffer = {};
