@@ -234,341 +234,185 @@ namespace daxa {
 		VkRect2D* renderArea = nullptr;
 	};
 	
-	class CommandList;
+	struct ToHostCopyFuture{
+	public:
+		bool ready() const {
+			return timelineHandle->getCounter() == timelineReadyValue;
+		}
+
+		operator bool() const { 
+			return ready();
+		}
+
+		bool operator !() const { 
+			return !ready();
+		}
+		
+		std::optional<MappedMemoryPointer> getPtr() {
+			if (ready()) {
+				MappedMemoryPointer mem = readBackStagingBuffer.buffer->mapMemory();
+				mem.hostPtr = static_cast<u8*>(mem.hostPtr) + readBackBufferOffset;
+				return std::optional<MappedMemoryPointer>{ std::move(mem) };
+			}
+			return std::nullopt;
+		}
+	private:
+		friend class CommandListBackend;
+		ToHostCopyFuture(
+			StagingBuffer&& readBackStagingBuffer,
+			TimelineSemaphoreHandle timelineHandle,
+			u64 timelineReadyValue,
+			u64 readBackBufferOffset
+		)
+			: readBackStagingBuffer{ std::move(readBackStagingBuffer) }
+			, timelineHandle{ timelineHandle }
+			, timelineReadyValue{ timelineReadyValue }
+			, readBackBufferOffset{ readBackBufferOffset }
+		{}
+
+		StagingBuffer readBackStagingBuffer;
+		TimelineSemaphoreHandle timelineHandle = {};
+		u64 timelineReadyValue = {};
+		u64 readBackBufferOffset = {};
+	};
+	struct SingleBufferToHostCopyInfo{
+		BufferHandle const& src;
+		BufferToHostCopyRegion region = {};
+	};
+	
+	class CommandListBackend;
 
 	struct CommandListRecyclingSharedData {
 		std::mutex mut = {};
-		std::vector<std::shared_ptr<CommandList>> zombies;
+		std::vector<std::shared_ptr<CommandListBackend>> zombies;
 	};
 
-	class CommandList {
+	struct MultiHostToBufferCopyInfo{
+		u8 const* src; 
+		BufferHandle const& dst;
+		std::span<HostToBufferCopyRegion const> regions;
+	};
+
+	struct SingleCopyHostToBufferInfo{
+		u8 const* src; 
+		BufferHandle const& dst;
+		HostToBufferCopyRegion region = {};
+	};
+
+	struct MultiHostToImageCopyInfo{
+		u8 const* src;
+		ImageHandle const& dst;
+		VkImageLayout dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		std::span<HostToImageCopyRegion const> regions;
+	};
+
+	struct SingleHostToImageCopyInfo{
+		u8 const* src;
+		ImageHandle const& dst;
+		VkImageLayout dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		HostToImageCopyRegion region = {};
+	};
+
+	struct MultiBufferToBufferCopyInfo{
+		BufferHandle const& src;
+		BufferHandle const& dst;
+		std::span<BufferToBufferCopyRegion const> regions;
+	};
+
+	struct SingleBufferToBufferCopyInfo{
+		BufferHandle const& src;
+		BufferHandle const& dst;
+		BufferToBufferCopyRegion region = {};
+	};
+
+	struct MultiBufferToImageCopyInfo{
+		BufferHandle const& src;
+		ImageHandle const& dst;
+		VkImageLayout dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		std::span<BufferToImageCopyRegion const> regions;
+	};
+
+	struct SingleBufferToImageCopyInfo{
+		BufferHandle const& src;
+		ImageHandle const& dst;
+		VkImageLayout dstLayout;
+		BufferToImageCopyRegion region = {};
+	};
+
+	struct MultiImageToImageCopyInfo{
+		ImageHandle const& src;
+		VkImageLayout srcLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		ImageHandle const& dst;
+		VkImageLayout dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		std::span<ImageToImageCopyRegion const> regions;
+	};
+
+	struct SingleImageToImageCopyInfo{
+		ImageHandle const& src;
+		VkImageLayout srcLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		ImageHandle const& dst;
+		VkImageLayout dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		ImageToImageCopyRegion region = {};
+	};
+
+	struct CommandListHandleStaticFunctionOverride{
+		static void cleanup(std::shared_ptr<CommandListBackend>& value);
+	};
+
+	struct CommandListDeadEnd {
+
+	};
+
+	class CommandListHandle : public SharedHandle<CommandListBackend, CommandListHandleStaticFunctionOverride>{
 	public:
-		CommandList();
-		CommandList(CommandList&& rhs) noexcept				= delete;
-		CommandList& operator=(CommandList&& rhs) noexcept	= delete;
-		CommandList(CommandList const& rhs) 				= delete;
-		CommandList& operator=(CommandList const& rhs) 		= delete;
-		~CommandList();
+		CommandListDeadEnd operator*() const { return CommandListDeadEnd{}; }
+		CommandListDeadEnd operator*() { return CommandListDeadEnd{}; }
+		CommandListDeadEnd operator->() const { return CommandListDeadEnd{}; }
+		CommandListDeadEnd operator->() { return CommandListDeadEnd{}; }
 
 		void finalize();
-
-		// Ressource management:
-
-		/**
-		 * @brief 	Maps memory to a section of a staging buffer.
-		 * 			The mapped memory will be copied to the specified buffer when the command list is executed.
-		 * 			This means that this function can be used to virtually map memory of GPU_ONLY buffers.
-		 * 			All mapped memory must be unmapped before submitting the command list to a queue.
-		 * 
-		 * @param copyDst is the buffer wich the mapped memory will be copied to.
-		 * @param size size of the mapped memory.
-		 * @param dstOffset offset into the buffer.
-		 * @return MappedStagingMemory mapped memory.
-		 */
-		MappedMemoryPointer mapMemoryStagedBuffer(BufferHandle copyDst, size_t size, size_t dstOffset) {
-			auto ret = mapMemoryStagedBufferVoid(copyDst, size, dstOffset);
-			return { reinterpret_cast<u8*>(ret.hostPtr), ret.size, std::move(ret.owningBuffer) };
-		}
-		
+		MappedMemoryPointer mapMemoryStagedBuffer(BufferHandle copyDst, size_t size, size_t dstOffset);
 		MappedMemoryPointer mapMemoryStagedImage(
 			ImageHandle copyDst, 
 			VkImageSubresourceLayers subressource = { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1 }, 
 			VkOffset3D dstOffset = { 0, 0, 0 }, 
 			VkExtent3D dstExtent = { 0, 0, 0 }
-		) {
-			auto ret = mapMemoryStagedImageVoid(copyDst, subressource, dstOffset, dstExtent);
-			return { reinterpret_cast<u8*>(ret.hostPtr), ret.size, std::move(ret.owningBuffer) };
-		}
-
-		//void copyHostToBuffer2(BufferHandle& srcBuffer, ImageViewHandle& dstImage, std::span<VkBufferImageCopy> regions = {});
-//
-		//void copyHostToBuffer(HostToBufferCopyInfo copyInfo);
-//
-		//void copyHostToImage(HostToImageCopyInfo copyInfo);
-//
-		//void copyMultiBufferToBuffer(BufferToBufferMultiCopyInfo copyInfo);
-//
-		//void copyBufferToBuffer(BufferToBufferCopyInfo copyInfo);
-//
-		//void copyBufferToImage(BufferToImageCopyInfo copyInfo);
-//
-		//void copyImageToImage(ImageToImageCopyInfo copyInfo);
-
-		// transfer2:
-
-		struct MultiHostToBufferCopyInfo{
-			u8 const* src; 
-			BufferHandle const& dst;
-			std::span<HostToBufferCopyRegion const> regions;
-		};
+		);
 		void multiCopyHostToBuffer(MultiHostToBufferCopyInfo const& ci);
-
-		struct SingleCopyHostToBufferInfo{
-			u8 const* src; 
-			BufferHandle const& dst;
-			HostToBufferCopyRegion region = {};
-		};
 		void singleCopyHostToBuffer(SingleCopyHostToBufferInfo const& info);
-
-		
-
-		struct ToHostCopyFuture{
-		public:
-			bool ready() const {
-				return timelineHandle->getCounter() == timelineReadyValue;
-			}
-
-			operator bool() const { 
-				return ready();
-			}
-
-			bool operator !() const { 
-				return !ready();
-			}
-			
-			std::optional<MappedMemoryPointer> getPtr() {
-				if (ready()) {
-					MappedMemoryPointer mem = readBackStagingBuffer.buffer->mapMemory();
-					mem.hostPtr = static_cast<u8*>(mem.hostPtr) + readBackBufferOffset;
-					return std::optional<MappedMemoryPointer>{ std::move(mem) };
-				}
-				return std::nullopt;
-			}
-		private:
-			friend class CommandList;
-			ToHostCopyFuture(
-				StagingBuffer&& readBackStagingBuffer,
-				TimelineSemaphoreHandle timelineHandle,
-				u64 timelineReadyValue,
-				u64 readBackBufferOffset
-			)
-				: readBackStagingBuffer{ std::move(readBackStagingBuffer) }
-				, timelineHandle{ timelineHandle }
-				, timelineReadyValue{ timelineReadyValue }
-				, readBackBufferOffset{ readBackBufferOffset }
-			{}
-
-			StagingBuffer readBackStagingBuffer;
-			TimelineSemaphoreHandle timelineHandle = {};
-			u64 timelineReadyValue = {};
-			u64 readBackBufferOffset = {};
-		};
-		struct SingleBufferToHostCopyInfo{
-			BufferHandle const& src;
-			BufferToHostCopyRegion region = {};
-		};
-		ToHostCopyFuture singleCopyBufferToHost(SingleBufferToHostCopyInfo const& info);
-
-
-
-		struct MultiHostToImageCopyInfo{
-			u8 const* src;
-			ImageHandle const& dst;
-			VkImageLayout dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-			std::span<HostToImageCopyRegion const> regions;
-		};
+		ToHostCopyFuture singleCopyBufferToHost(SingleBufferToHostCopyInfo const& ci);
 		void multiCopyHostToImage(MultiHostToImageCopyInfo const& ci);
-
-		struct SingleHostToImageCopyInfo{
-			u8 const* src;
-			ImageHandle const& dst;
-			VkImageLayout dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-			HostToImageCopyRegion region = {};
-		};
 		void singleCopyHostToImage(SingleHostToImageCopyInfo const& ci);
-
-
-
-		struct MultiBufferToBufferCopyInfo{
-			BufferHandle const& src;
-			BufferHandle const& dst;
-			std::span<BufferToBufferCopyRegion const> regions;
-		};
 		void multiCopyBufferToBuffer(MultiBufferToBufferCopyInfo const& ci);
-
-		struct SingleBufferToBufferCopyInfo{
-			BufferHandle const& src;
-			BufferHandle const& dst;
-			BufferToBufferCopyRegion region = {};
-		};
 		void singleCopyBufferToBuffer(SingleBufferToBufferCopyInfo const& ci);
-
-
-
-		struct MultiBufferToImageCopyInfo{
-			BufferHandle const& src;
-			ImageHandle const& dst;
-			VkImageLayout dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-			std::span<BufferToImageCopyRegion const> regions;
-		};
 		void multiCopyBufferToImage(MultiBufferToImageCopyInfo const& ci);
-
-		struct SingleBufferToImageCopyInfo{
-			BufferHandle const& src;
-			ImageHandle const& dst;
-			VkImageLayout dstLayout;
-			BufferToImageCopyRegion region = {};
-		};
 		void singleCopyBufferToImage(SingleBufferToImageCopyInfo const& ci);
-
-
-
-		struct MultiImageToImageCopyInfo{
-			ImageHandle const& src;
-			VkImageLayout srcLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-			ImageHandle const& dst;
-			VkImageLayout dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-			std::span<ImageToImageCopyRegion const> regions;
-		};
-		void multiCopyImageToImage(MultiImageToImageCopyInfo const& regions);
-
-		struct SingleImageToImageCopyInfo{
-			ImageHandle const& src;
-			VkImageLayout srcLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-			ImageHandle const& dst;
-			VkImageLayout dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-			ImageToImageCopyRegion region = {};
-		};
+		void multiCopyImageToImage(MultiImageToImageCopyInfo const& ci);
 		void singleCopyImageToImage(SingleImageToImageCopyInfo const& ci);
-
-		// Compute:
-
 		void dispatch(u32 groupCountX, u32 groupCountY = 1, u32 grpupCountZ = 1);
-
-		// Rendering:
-
-		/**
-		 * Starts a render pass.
-		*/
 		void beginRendering(BeginRenderingInfo ri);
-
-		/**
-		 * Ends a render pass.
-		*/
 		void endRendering();
-
-		/**
-		 * Binds a pipeline to be used in the current render pass.
-		 * 
-		 * \param specify all render pass related information like render attachments.
-		*/
 		void bindPipeline(PipelineHandle& pipeline);
 		void unbindPipeline();
-
 		void setViewport(VkViewport const& viewport);
-
 		void setScissor(VkRect2D const& scissor);
-
 		template<typename T>
 		void pushConstant(VkShaderStageFlags shaderStage, T const& constant, size_t offset = 0) {
-			vkCmdPushConstants(cmd, (**currentPipeline).getVkPipelineLayout(), shaderStage, static_cast<u32>(offset), static_cast<u32>(sizeof(T)), &constant);
+			pushConstant(shaderStage, &constant, static_cast<u32>(sizeof(T)), offset);
 		}
-
+		void pushConstant(VkShaderStageFlags shaderStage, void const* data, u32 size, u32 offset = 0);
 		void bindVertexBuffer(u32 binding, BufferHandle& buffer, size_t bufferOffset = 0);
-
 		void bindIndexBuffer(BufferHandle& buffer, size_t bufferOffset = 0, VkIndexType indexType = VK_INDEX_TYPE_UINT32);
-
-		/**
-		 * @brief 	Binds a binding set to the currently bound pipeline.
-		 * 			the pipeline layout and binding point are infered by the currently bound pipeline.
-		 * 
-		 * @param setBinding set slot, the set should be bound to.
-		 * @param set set that should be bound.
-		 */
 		void bindSet(u32 setBinding, BindingSetHandle set);
-
-		/**
-		 * @brief 	Binds a binding set to independantyl of the currently bound pipeline.
-		 * 
-		 * @param setBinding set slot, the set should be bound to.
-		 * @param set set that should be bound.
-		 * @param bindPoint bindPoint the set will be bound to.
-		 * @param layout layout of the compatible pipelines.
-		 */
 		void bindSetPipelineIndependant(u32 setBinding, BindingSetHandle set, VkPipelineBindPoint bindPoint, VkPipelineLayout layout);
-
 		void draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance);
-
 		void drawIndexed(u32 indexCount, u32 instanceCount, u32 firstIndex, i32 vertexOffset, u32 firstIntance);
-
-		// sync:
-
 		void queueMemoryBarrier(MemoryBarrier const& memoryBarrier);
 		void queueImageBarrier(ImageBarrier const& memoryBarrier);
 		void insertQueuedBarriers();
-
-		// Bindless Descriptors:
-
 		void bindAll(u32 set = 0);
-
-		// Accessors:
-
-		VkCommandBuffer getVkCommandBuffer() { return cmd; }
-		VkCommandPool getVkCommandPool() { return cmdPool; }
-
-		std::string const& getDebugName() const { return debugName; }
-	private:
-		friend class Device;
-		friend class CommandQueue;
-		friend struct CommandListHandleStaticFunctionOverride;
-
-		void reset();
-		void begin();
-		void setDebugName(char const* debugName);
-		void checkIfPipelineAndRenderPassFit();
-		MappedMemoryPointer mapMemoryStagedBufferVoid(BufferHandle copyDst, size_t size, size_t dstOffset);
-		MappedMemoryPointer mapMemoryStagedImageVoid(ImageHandle copyDst, VkImageSubresourceLayers subRessource, VkOffset3D dstOffset, VkExtent3D dstExtent);
-
-		struct CurrentRenderPass{
-			std::vector<RenderAttachmentInfo> 		colorAttachments 	= {};
-			std::optional<RenderAttachmentInfo> 	depthAttachment 	= {};
-			std::optional<RenderAttachmentInfo> 	stencilAttachment 	= {};
-		};
-
-		bool 											bBarriersQueued 			= {};
-		std::vector<VkMemoryBarrier2KHR>				queuedMemoryBarriers		= {};
-		std::vector<VkBufferMemoryBarrier2KHR>			queuedBufferBarriers		= {};
-		std::vector<VkImageMemoryBarrier2KHR>			queuedImageBarriers			= {};
-		std::shared_ptr<DeviceBackend> 					deviceBackend				= {};
-		VkCommandBuffer 								cmd 						= {};
-		VkCommandPool 									cmdPool 					= {};
-		std::vector<VkDescriptorBufferInfo> 			bufferInfoBuffer 			= {};
-		std::vector<VkDescriptorImageInfo> 				imageInfoBuffer 			= {};
-		std::vector<VkBufferImageCopy>					bufferImageCopyBuffer 		= {};
-		std::vector<VkRenderingAttachmentInfoKHR> 		renderAttachmentBuffer 		= {};
-		std::optional<PipelineHandle> 					currentPipeline 			= {};
-		std::optional<CurrentRenderPass> 				currentRenderPass 			= {};
-		u32												operationsInProgress 		= 0;
-		u32 											usesOnGPU 					= 0;				// counts in how many pending submits the command list is currently used
-		bool 											empty 						= true;
-		bool 											finalized 					= false;
-		std::vector<BindingSetHandle> 					usedSets 					= {};
-		std::vector<PipelineHandle> 					usedGraphicsPipelines 		= {};
-		std::weak_ptr<CommandListRecyclingSharedData> 	recyclingData 				= {};
-		std::weak_ptr<StagingBufferPool> 				uploadStagingBufferPool 	= {};
-		std::vector<StagingBuffer> 						usedUploadStagingBuffers 	= {};
-		std::weak_ptr<StagingBufferPool>				downloadStagingBufferPool 	= {};
-		std::vector<StagingBuffer> 						usedDownloadStagingBuffers 	= {};
-		std::vector<std::pair<TimelineSemaphoreHandle,u64>>			
-														usedTimelines 				= {};
-		std::shared_ptr<ZombieList> 					zombies 					= std::make_shared<ZombieList>();
-		std::string 									debugName 					= {};
+		VkCommandBuffer getVkCommandBuffer();
+		VkCommandPool getVkCommandPool();
+		std::string const& getDebugName() const;
 	};
-
-	struct CommandListHandleStaticFunctionOverride{
-		static void cleanup(std::shared_ptr<CommandList>& value) {
-			if (value && value.use_count() == 1) {
-				if (auto recyclingSharedData = value->recyclingData.lock()) {
-					value->reset();
-					auto lock = std::unique_lock(recyclingSharedData->mut);
-					std::shared_ptr<CommandList> dummy{};
-					std::swap(dummy, value);
-					recyclingSharedData->zombies.push_back(std::move(dummy));
-				}
-				value = {};
-			}
-		}
-	};
-
-	class CommandListHandle : public SharedHandle<CommandList, CommandListHandleStaticFunctionOverride>{};
 }

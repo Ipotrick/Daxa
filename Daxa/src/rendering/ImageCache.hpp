@@ -122,11 +122,11 @@ namespace daxa {
                 }
                 auto image = device->createImageView(ci);
 
-                cmdList->queueImageBarrier({
+                cmdList.queueImageBarrier({
                     .image = image,
                     .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 });
-                cmdList->singleCopyHostToImage({
+                cmdList.singleCopyHostToImage({
                     .src = data,
                     .dst = image->getImageHandle(),
                     //.size = static_cast<u32>(width*height*4),

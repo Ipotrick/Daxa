@@ -180,13 +180,13 @@ struct RenderContext {
     auto begin_frame(glm::ivec2 dim) {
         resize(dim);
         auto cmd_list = queue->getCommandList({});
-        cmd_list->queueImageBarrier(daxa::ImageBarrier{
+        cmd_list.queueImageBarrier(daxa::ImageBarrier{
             .barrier = daxa::FULL_MEMORY_BARRIER,
             .image = render_color_image,
             .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
             .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
         });
-        cmd_list->queueImageBarrier(daxa::ImageBarrier{
+        cmd_list.queueImageBarrier(daxa::ImageBarrier{
             .barrier = daxa::FULL_MEMORY_BARRIER,
             .image = render_depth_image,
             .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
@@ -205,19 +205,19 @@ struct RenderContext {
             .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
             .clearValue = {.depthStencil = {.depth = 1.0f}},
         };
-        cmd_list->beginRendering(daxa::BeginRenderingInfo{
+        cmd_list.beginRendering(daxa::BeginRenderingInfo{
             .colorAttachments = framebuffer,
             .depthAttachment = &depth_attachment,
         });
     }
 
     void end_rendering(daxa::CommandListHandle cmd_list) {
-        cmd_list->endRendering();
+        cmd_list.endRendering();
     }
 
     void end_frame(daxa::CommandListHandle cmd_list) {
         auto *current_frame = &frames.front();
-        cmd_list->finalize();
+        cmd_list.finalize();
         daxa::SubmitInfo submitInfo;
         submitInfo.commandLists.push_back(std::move(cmd_list));
         submitInfo.signalOnCompletion = {&current_frame->present_signal, 1};
@@ -243,12 +243,12 @@ struct RenderContext {
     }
 
     void blit_to_swapchain(daxa::CommandListHandle cmd_list) {
-        cmd_list->queueImageBarrier({
+        cmd_list.queueImageBarrier({
             .image = swapchain_image.getImageViewHandle(),
             .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
             .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         });
-        cmd_list->queueImageBarrier({
+        cmd_list.queueImageBarrier({
             .image = render_color_image,
             .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
             .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
@@ -286,20 +286,20 @@ struct RenderContext {
                 },
             },
         };
-        cmd_list->insertQueuedBarriers();
+        cmd_list.insertQueuedBarriers();
         vkCmdBlitImage(
-            cmd_list->getVkCommandBuffer(),
+            cmd_list.getVkCommandBuffer(),
             render_color_image->getImageHandle()->getVkImage(),
             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
             swapchain_image.getImageViewHandle()->getImageHandle()->getVkImage(),
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
 
-        cmd_list->queueImageBarrier({
+        cmd_list.queueImageBarrier({
             .image = swapchain_image.getImageViewHandle(),
             .layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             .layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
         });
-        cmd_list->queueImageBarrier({
+        cmd_list.queueImageBarrier({
             .image = render_color_image,
             .layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
             .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
@@ -376,26 +376,26 @@ struct App {
 
         auto compute_globals_id = compute_pipeline_globals->getDescriptorIndex();
 
-        cmd_list->singleCopyHostToBuffer({
+        cmd_list.singleCopyHostToBuffer({
             .src = reinterpret_cast<u8 *>(&compute_globals),
             .dst = compute_pipeline_globals,
             .region = {.size = sizeof(decltype(compute_globals))},
         });
-        cmd_list->queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+        cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 
-        cmd_list->bindPipeline(compute_pipeline);
-        cmd_list->bindAll();
+        cmd_list.bindPipeline(compute_pipeline);
+        cmd_list.bindAll();
         struct Push {
             u32 globals_id;
             u32 output_image_id;
         };
-        cmd_list->pushConstant(
+        cmd_list.pushConstant(
             VK_SHADER_STAGE_COMPUTE_BIT,
             Push{
                 .globals_id = compute_globals_id,
                 .output_image_id = render_context.render_color_image->getDescriptorIndex(),
             });
-        cmd_list->dispatch((extent.width + 7) / 8, (extent.height + 7) / 8);
+        cmd_list.dispatch((extent.width + 7) / 8, (extent.height + 7) / 8);
 
         render_context.blit_to_swapchain(cmd_list);
         render_context.end_frame(cmd_list);
