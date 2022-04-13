@@ -5,6 +5,9 @@
 #include <game/graphics.hpp>
 
 #include <chrono>
+#include <thread>
+using namespace std::literals;
+
 #include <fmt/format.h>
 
 static void HelpMarker(const char *desc) {
@@ -184,6 +187,11 @@ struct Game {
     }
 
     void redraw() {
+        if (window.frame_dim.x < 1 || window.frame_dim.y < 1) {
+            std::this_thread::sleep_for(1ms);
+            return;
+        }
+
         auto cmd_list = render_context.begin_frame(window.frame_dim);
         player.camera.resize(window.frame_dim.x, window.frame_dim.y);
         player.camera.set_pos(player.pos);

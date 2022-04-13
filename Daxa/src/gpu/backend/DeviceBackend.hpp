@@ -11,6 +11,15 @@
 
 #include "../Graveyard.hpp"
 
+#if USE_NSIGHT_AFTERMATH
+#if VK_HEADER_VERSION < 135
+#error Minimum requirement for the Aftermath application integration is the Vulkan 1.2.135 SDK
+#endif
+#include "NsightAftermathHelpers.h"
+#include "NsightAftermathGpuCrashTracker.h"
+#include "NsightAftermathShaderDatabase.h"
+#endif
+
 namespace daxa {
 	struct DeviceBackend {
 		DeviceBackend(vkb::Instance& instance, PFN_vkSetDebugUtilsObjectNameEXT pfnSetDebugUtilsObjectNameEXT);
@@ -39,6 +48,12 @@ namespace daxa {
 		u16 nextStorageBufferIndex														= 1;
 		VkSampler dummySampler 															= {};
 		VkPhysicalDeviceProperties2 properties 											= {};
+
+#if USE_NSIGHT_AFTERMATH
+	// GPU crash dump tracker using Nsight Aftermath instrumentation
+	GpuCrashTracker gpuCrashTracker;
+#endif
+
 	private:
 		void createDummies();
 		void destroyDummies();
@@ -102,26 +117,22 @@ namespace daxa {
 
 #ifdef _DEBUG
 #define DAXA_CHECK_VK_RESULT_M(x, message)                                      					\
-	do {                                                              								\
+	[&]() {                                                            								\
 		VkResult err = x;                                           								\
-		if (err)                                                    								\
+		if (err)                                                        							\
 		{                                                           								\
 			char const* errStr = getVkResultString(err);											\
 			std::cerr << "[[DAXA_CHECK_VK_RESULT_M ERROR]] " << message << "; error: " << errStr << std::endl; \
+			if (err == VK_ERROR_DEVICE_LOST)                                                        \
+			{                                                                                       \
+				using namespace std::chrono_literals;                                               \
+				std::this_thread::sleep_for(3s);                                                    \
+			}                                                                                       \
 			abort();                                                								\
 		}                                                           								\
-	} while (0)																						
-#define DAXA_CHECK_VK_RESULT(x)                                      								\
-	do {                                                              								\
-		VkResult err = x;                                           								\
-		if (err)                                                    								\
-		{                                                           								\
-			char const* errStr = getVkResultString(err);											\
-			std::cerr << "[[DAXA_CHECK_VK_RESULT ERROR]] " << errStr << std::endl; 					\
-			abort();                                                								\
-		}                                                           								\
-	} while (0)
+	}()
 #else
-#define DAXA_CHECK_VK_RESULT_M(x, m) (void)x
-#define DAXA_CHECK_VK_RESULT(x) (void)x
+#define DAXA_CHECK_VK_RESULT_M(x, m) [&]() { x; }()
 #endif
+
+#define DAXA_CHECK_VK_RESULT(x) DAXA_CHECK_VK_RESULT_M(x, "")
