@@ -3,6 +3,7 @@
 #include "../DaxaCore.hpp"
 
 #include <memory>
+#include <cstring>
 
 #include <vulkan/vulkan.h>
 
