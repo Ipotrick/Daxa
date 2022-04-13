@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <mutex>
+#include <vector>
 
 namespace daxa {
 	class GraveyardRessource {
