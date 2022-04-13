@@ -380,7 +380,7 @@ namespace daxa {
 		);
 		void multiCopyHostToBuffer(MultiHostToBufferCopyInfo const& ci);
 		void singleCopyHostToBuffer(SingleCopyHostToBufferInfo const& info);
-		ToHostCopyFuture singleCopyBufferToHost(SingleBufferToHostCopyInfo const& ci);
+		void singleCopyBufferToHost(SingleBufferToHostCopyInfo const& ci);
 		void multiCopyHostToImage(MultiHostToImageCopyInfo const& ci);
 		void singleCopyHostToImage(SingleHostToImageCopyInfo const& ci);
 		void multiCopyBufferToBuffer(MultiBufferToBufferCopyInfo const& ci);
@@ -398,7 +398,7 @@ namespace daxa {
 		void setScissor(VkRect2D const& scissor);
 		template<typename T>
 		void pushConstant(VkShaderStageFlags shaderStage, T const& constant, size_t offset = 0) {
-			pushConstant(shaderStage, &constant, static_cast<u32>(sizeof(T)), offset);
+			pushConstant(shaderStage, &constant, static_cast<u32>(sizeof(T)), static_cast<u32>(offset));
 		}
 		void pushConstant(VkShaderStageFlags shaderStage, void const* data, u32 size, u32 offset = 0);
 		void bindVertexBuffer(u32 binding, BufferHandle& buffer, size_t bufferOffset = 0);
