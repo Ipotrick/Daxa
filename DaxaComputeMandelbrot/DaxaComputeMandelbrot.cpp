@@ -105,7 +105,7 @@ public:
 		});
 
 		auto cmdList = queue->getCommandList({});
-		cmdList.insertImageBarrier({.image = resultImage, .layoutAfter = VK_IMAGE_LAYOUT_GENERAL});
+		cmdList.queueImageBarrier({.image = resultImage, .layoutAfter = VK_IMAGE_LAYOUT_GENERAL});
 		cmdList.finalize();
 		queue->submitBlocking({
 			.commandLists = { cmdList }

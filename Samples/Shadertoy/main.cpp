@@ -9,6 +9,8 @@
 #include <Daxa.hpp>
 
 #include <chrono>
+#include <thread>
+using namespace std::literals;
 
 struct Window {
     GLFWwindow *window_ptr;
@@ -352,6 +354,8 @@ struct App {
 
     ComputePipelineGlobals compute_globals_data{};
 
+    // PFN_vkCmdSetCheckpointNV fnPtr_vkCmdSetCheckpointNV;
+
     void create_pipeline(daxa::PipelineHandle &pipe, const std::filesystem::path &path, const char *const entry) {
         auto result = render_context.pipeline_compiler->createComputePipeline({
             .shaderCI =
@@ -391,6 +395,8 @@ struct App {
         });
 
         start_time = Clock::now();
+
+        // fnPtr_vkCmdSetCheckpointNV = (PFN_vkCmdSetCheckpointNV)vkGetDeviceProcAddr(render_context.device->getVkDevice(), "vkCmdSetCheckpointNV");
     }
 
     ~App() {
@@ -407,6 +413,11 @@ struct App {
         float total_time_elapsed = std::chrono::duration<float>(now - start_time).count();
 
         window.update();
+
+        if (window.frame_dim.x < 1 || window.frame_dim.y < 1) {
+            std::this_thread::sleep_for(1ms);
+            return;
+        }
 
         try_recompile(compute_pipeline);
         try_recompile(compute_buf0_pipeline);
@@ -499,6 +510,8 @@ struct App {
                 .buf0_id = compute_buf0.getDescriptorIndex(),
                 .output_image_id = render_context.render_color_image->getDescriptorIndex(),
             });
+            
+        // fnPtr_vkCmdSetCheckpointNV(cmd_list.getVkCommandBuffer(), "drawing compute dispatch");
         cmd_list.dispatch((extent.width + 7) / 8, (extent.height + 7) / 8);
 
         render_context.blit_to_swapchain(cmd_list);
