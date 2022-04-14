@@ -9,6 +9,7 @@ namespace daxa {
 			.defer_surface_initialization()
 			.add_desired_extension(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)
 			.add_desired_extension(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME)
+			.add_required_extension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME)
 			.select()
 			.value();
 
@@ -93,6 +94,9 @@ namespace daxa {
 				.shaderStorageImageArrayDynamicIndexing = VK_TRUE,
 			}
 		};
+		//VK_KHR_shader_non_semantic_info 
+		
+
 
 		vkb::DeviceBuilder deviceBuilder{ physicalDevice };
 		deviceBuilder.add_pNext(&deviceFeatures);

@@ -49,7 +49,7 @@ namespace daxa {
 		return value->memoryMapCount;
 	}
 
-	VkBuffer BufferHandle::getVkBuffer() const {
+	void* BufferHandle::getVkBuffer() const {
 		return value->buffer;
 	}
 

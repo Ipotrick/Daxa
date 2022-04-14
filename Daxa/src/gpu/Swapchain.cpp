@@ -137,6 +137,12 @@ namespace daxa {
 	}
 	
 	Result<Swapchain2> Swapchain2::construct(std::shared_ptr<DeviceBackend>& deviceBackend, SwapchainCreateInfo const& ci, Swapchain2* old) {
+		struct {
+			VkSurfaceCapabilitiesKHR capabilities;
+			std::vector<VkSurfaceFormatKHR> formats;
+			std::vector<VkPresentModeKHR> presentModes;
+		} SwapchainCapabilities;
+
 		Swapchain2 res = {};
 		res.deviceBackend = deviceBackend;
 		res.ci = ci;
@@ -161,6 +167,8 @@ namespace daxa {
 		scci.pQueueFamilyIndices = &deviceBackend->graphicsQFamilyIndex;
 		scci.queueFamilyIndexCount = 1;
 		scci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		vkCreateSwapchainKHR(deviceBackend->device.device, &scci, nullptr, &res.swapchain);
 
         return res;
 	}

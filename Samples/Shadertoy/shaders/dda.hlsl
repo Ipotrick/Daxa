@@ -159,6 +159,10 @@ void dda(StructuredBuffer<Globals> globals, float2 pixel_pos, inout float3 color
 }
 
 SHADERTOY_NUMTHREADS_MAIN void main(uint3 pixel_i : SV_DispatchThreadID) {
+    if (pixel_i.x == 0 && pixel_i.y == 0) {
+        printf("get rekt");
+    }
+
     StructuredBuffer<Globals> globals = getBuffer<Globals>(p.globals_id);
     StructuredBuffer<Buf0> buf0 = getBuffer<Buf0>(p.buf0_id);
     RWTexture2D<float4> output_image = getRWTexture2D<float4>(p.output_image_id);

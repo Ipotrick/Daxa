@@ -58,13 +58,6 @@ static void shaderPreprocess(std::string& fileStr, std::filesystem::path const& 
 namespace daxa {
 	#define BACKEND (*static_cast<Backend*>(this->backend.get()))
 
-	char const* DAXA_HEADER_NAME = "daxa.hlsl";
-	std::filesystem::path DAXA_HEADER_PATH = {"daxa.hlsl"};
-
-	char const* DAXA_HEADER_CONTENT = R"(
-		
-	)";
-
 	struct Backend{
         shaderc::Compiler compiler = {};
         shaderc::CompileOptions options = {};
@@ -93,9 +86,6 @@ namespace daxa {
 	}
 	
 	Result<std::string> PipelineCompilerShadedData::tryLoadShaderSourceFromFile(std::filesystem::path const& path) {
-		if (path == DAXA_HEADER_PATH) {
-			return { std::string( DAXA_HEADER_CONTENT ) };
-		}
 		auto result = findFullPathOfFile(path);
 		if (result.isErr()) {
 			return ResultErr{ .message = result.message() };
@@ -164,7 +154,7 @@ namespace daxa {
 
 		// setting target
 		args.push_back(L"-spirv");
-		args.push_back(L"-fspv-target-env=vulkan1.1");
+		args.push_back(L"-fspv-target-env=vulkan1.2");
 
 		// set optimization setting
 		args.push_back(L"-O3");
@@ -210,7 +200,7 @@ namespace daxa {
 			for (size_t i = 0; i < str.size(); i++) {
 				str[i] = static_cast<char const*>(errorMessage->GetBufferPointer())[i];
 			}
-			//str = str + ": ";
+			str = std::string("DXC: ") + str;
 			//str = std::string(sourceFileName) + str;
 			
 			return daxa::ResultErr{.message = str };
@@ -671,9 +661,6 @@ namespace daxa {
     }
 
     Result<Path> PipelineCompilerShadedData::findFullPathOfFile(Path const& file) {
-		if (file == DAXA_HEADER_PATH) {
-			return { file };
-		}
 		std::ifstream ifs{file};
 		if (ifs.good()) {
 			return { file };
@@ -901,6 +888,15 @@ namespace daxa {
 		}
 
 		std::vector<VkDescriptorSetLayout> descLayouts = processReflectedDescriptorData(bindingSetDescriptions, *bindSetLayoutCache, ret.bindingSetLayouts);
+
+		if (ci.pushConstantSize > 0) {
+			pushConstants.clear();
+			pushConstants.push_back(VkPushConstantRange{
+    			.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+				.offset = 0,
+    			.size = static_cast<u32>(ci.pushConstantSize),
+			});
+		}
 
 		// create pipeline layout:
 		VkPipelineLayoutCreateInfo pipelineLayoutCI{
