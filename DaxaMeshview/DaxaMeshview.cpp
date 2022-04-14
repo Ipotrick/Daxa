@@ -47,7 +47,6 @@ public:
 		}
 
 		auto cmd = renderCTX.queue->getCommandList({});
-		fft.init(renderCTX, cmd, app.window->getWidth(), app.window->getHeight());
 		cmd.finalize();
 		renderCTX.queue->submit({.commandLists = { cmd }});
 	}
@@ -99,7 +98,9 @@ public:
 		ImGui::End();
 		ImGui::Begin("fft debug");
 		{
-			auto id = imguiRenderer->getImGuiTextureId(fft.fftImage);
+			auto id = imguiRenderer->getImGuiTextureId(meshRender.fft.fftImage);
+			ImGui::Image(reinterpret_cast<void*>(id), ImVec2(400,400));
+			id = imguiRenderer->getImGuiTextureId(meshRender.fft.horFreqImageR);
 			ImGui::Image(reinterpret_cast<void*>(id), ImVec2(400,400));
 		}
 		ImGui::End();
@@ -115,7 +116,6 @@ public:
 		if (app.window->getWidth() != renderCTX.swapchain->getSize().width || app.window->getHeight() != renderCTX.swapchain->getSize().height) {
 			renderCTX.resize(cmdList, app.window->getWidth(), app.window->getHeight());
 			frameBufferDebugRenderer.recreateImages(renderCTX, cmdList, app.window->getWidth(), app.window->getHeight());
-			fft.recreateImages(renderCTX, cmdList, app.window->getWidth(), app.window->getHeight());
 		}
 
 		cameraController.updateMatrices(*app.window);
@@ -181,8 +181,6 @@ public:
 			}
 			meshRender.render(renderCTX, cmdList, meshDrawCommands);
 		}
-		
-		fft.update(renderCTX, cmdList);
 
 		auto upload = FrameBufferDebugRenderer::CameraData{
 			.inverseView = glm::inverse(cameraController.view),
@@ -197,18 +195,6 @@ public:
 		});
 
 		imguiRenderer->recordCommands(ImGui::GetDrawData(), cmdList, renderCTX.swapchainImage.getImageViewHandle());
-
-		// array because we can allways pass multiple barriers at once for driver efficiency
-		//std::array imgBarrier1 = { daxa::ImageBarrier{
-		//	.barrier = {
-		//		.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-		//		.srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR,
-		//	},
-		//	.image = renderCTX.swapchainImage.getImageViewHandle(),
-		//	.layoutBefore = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-		//	.layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-		//} };
-		//cmdList.insertBarriers({}, imgBarrier1);
 		cmdList.queueImageBarrier({
 			.barrier = {
 				.srcStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
@@ -253,7 +239,6 @@ private:
 	UIState uiState;
 	daxa::EntityComponentManager ecm;
 	std::vector<DrawPrimCmd> meshDrawCommands;
-	FFT fft = {};
 };
 
 int main() {

@@ -21,101 +21,83 @@
 #include "TimelineSemaphore.hpp"
 
 namespace daxa {
-	static const VkPipelineStageFlagBits2KHR STAGE_NONE = 0ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_TOP_OF_PIPE = 0x00000001ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_DRAW_INDIRECT = 0x00000002ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_VERTEX_INPUT = 0x00000004ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_VERTEX_SHADER = 0x00000008ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_TESSELLATION_CONTROL_SHADER = 0x00000010ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_TESSELLATION_EVALUATION_SHADER = 0x00000020ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_GEOMETRY_SHADER = 0x00000040ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_FRAGMENT_SHADER = 0x00000080ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_EARLY_FRAGMENT_TESTS = 0x00000100ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_LATE_FRAGMENT_TESTS = 0x00000200ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_COLOR_ATTACHMENT_OUTPUT = 0x00000400ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_COMPUTE_SHADER = 0x00000800ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_ALL_TRANSFER = 0x00001000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_TRANSFER = 0x00001000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_BOTTOM_OF_PIPE = 0x00002000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_HOST = 0x00004000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_ALL_GRAPHICS = 0x00008000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_ALL_COMMANDS = 0x00010000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_COPY = 0x100000000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_RESOLVE = 0x200000000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_BLIT = 0x400000000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_CLEAR = 0x800000000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_INDEX_INPUT = 0x1000000000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_VERTEX_ATTRIBUTE_INPUT = 0x2000000000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_PRE_RASTERIZATION_SHADERS = 0x4000000000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_TRANSFORM_FEEDBACK_EXT = 0x01000000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_CONDITIONAL_RENDERING_EXT = 0x00040000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_COMMAND_PREPROCESS_NV = 0x00020000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT = 0x00400000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_SHADING_RATE_IMAGE_NV = 0x00400000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_ACCELERATION_STRUCTURE_BUILD = 0x02000000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_RAY_TRACING_SHADER = 0x00200000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_RAY_TRACING_SHADER_NV = 0x00200000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_ACCELERATION_STRUCTURE_BUILD_NV = 0x02000000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_FRAGMENT_DENSITY_PROCESS_EXT = 0x00800000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_TASK_SHADER_NV = 0x00080000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_MESH_SHADER_NV = 0x00100000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_SUBPASS_SHADING_HUAWEI = 0x8000000000ULL;
-	static const VkPipelineStageFlagBits2KHR STAGE_INVOCATION_MASK_HUAWEI = 0x10000000000ULL;
+	static const u64 STAGE_NONE = 0ULL;
+	static const u64 STAGE_TOP_OF_PIPE = 0x00000001ULL;
+	static const u64 STAGE_DRAW_INDIRECT = 0x00000002ULL;
+	static const u64 STAGE_VERTEX_INPUT = 0x00000004ULL;
+	static const u64 STAGE_VERTEX_SHADER = 0x00000008ULL;
+	static const u64 STAGE_TESSELLATION_CONTROL_SHADER = 0x00000010ULL;
+	static const u64 STAGE_TESSELLATION_EVALUATION_SHADER = 0x00000020ULL;
+	static const u64 STAGE_GEOMETRY_SHADER = 0x00000040ULL;
+	static const u64 STAGE_FRAGMENT_SHADER = 0x00000080ULL;
+	static const u64 STAGE_EARLY_FRAGMENT_TESTS = 0x00000100ULL;
+	static const u64 STAGE_LATE_FRAGMENT_TESTS = 0x00000200ULL;
+	static const u64 STAGE_COLOR_ATTACHMENT_OUTPUT = 0x00000400ULL;
+	static const u64 STAGE_COMPUTE_SHADER = 0x00000800ULL;
+	static const u64 STAGE_ALL_TRANSFER = 0x00001000ULL;
+	static const u64 STAGE_TRANSFER = 0x00001000ULL;
+	static const u64 STAGE_BOTTOM_OF_PIPE = 0x00002000ULL;
+	static const u64 STAGE_HOST = 0x00004000ULL;
+	static const u64 STAGE_ALL_GRAPHICS = 0x00008000ULL;
+	static const u64 STAGE_ALL_COMMANDS = 0x00010000ULL;
+	static const u64 STAGE_COPY = 0x100000000ULL;
+	static const u64 STAGE_RESOLVE = 0x200000000ULL;
+	static const u64 STAGE_BLIT = 0x400000000ULL;
+	static const u64 STAGE_CLEAR = 0x800000000ULL;
+	static const u64 STAGE_INDEX_INPUT = 0x1000000000ULL;
+	static const u64 STAGE_VERTEX_ATTRIBUTE_INPUT = 0x2000000000ULL;
+	static const u64 STAGE_PRE_RASTERIZATION_SHADERS = 0x4000000000ULL;
+	static const u64 STAGE_TRANSFORM_FEEDBACK_EXT = 0x01000000ULL;
+	static const u64 STAGE_CONDITIONAL_RENDERING_EXT = 0x00040000ULL;
+	static const u64 STAGE_COMMAND_PREPROCESS_NV = 0x00020000ULL;
+	static const u64 STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT = 0x00400000ULL;
+	static const u64 STAGE_SHADING_RATE_IMAGE_NV = 0x00400000ULL;
+	static const u64 STAGE_ACCELERATION_STRUCTURE_BUILD = 0x02000000ULL;
+	static const u64 STAGE_RAY_TRACING_SHADER = 0x00200000ULL;
+	static const u64 STAGE_RAY_TRACING_SHADER_NV = 0x00200000ULL;
+	static const u64 STAGE_ACCELERATION_STRUCTURE_BUILD_NV = 0x02000000ULL;
+	static const u64 STAGE_FRAGMENT_DENSITY_PROCESS_EXT = 0x00800000ULL;
+	static const u64 STAGE_TASK_SHADER_NV = 0x00080000ULL;
+	static const u64 STAGE_MESH_SHADER_NV = 0x00100000ULL;
+	static const u64 STAGE_SUBPASS_SHADING_HUAWEI = 0x8000000000ULL;
+	static const u64 STAGE_INVOCATION_MASK_HUAWEI = 0x10000000000ULL;
 
-	static const VkAccessFlagBits2KHR ACCESS_NONE = 0x00000000ULL;
-	static const VkAccessFlagBits2KHR ACCESS_HOST_READ = 0x00002000ULL;
-	static const VkAccessFlagBits2KHR ACCESS_HOST_WRITE = 0x00004000ULL;
-	static const VkAccessFlagBits2KHR ACCESS_MEMORY_READ = 0x00008000ULL;
-	static const VkAccessFlagBits2KHR ACCESS_MEMORY_WRITE = 0x00010000ULL;
+	static const u64 ACCESS_NONE = 0x00000000ULL;
+	static const u64 ACCESS_HOST_READ = 0x00002000ULL;
+	static const u64 ACCESS_HOST_WRITE = 0x00004000ULL;
+	static const u64 ACCESS_MEMORY_READ = 0x00008000ULL;
+	static const u64 ACCESS_MEMORY_WRITE = 0x00010000ULL;
 
-	struct BufferCopyRegion {
-		size_t srcOffset = 0;
-		size_t dstOffset = 0;
-		size_t size = 0;
+	enum class ImageAspect : u64{
+		COLOR_BIT = 0x00000001,
+		DEPTH_BIT = 0x00000002,
+		STENCIL_BIT = 0x00000004,
+		METADATA_BIT = 0x00000008,
+		PLANE_0_BIT = 0x00000010,
+		PLANE_1_BIT = 0x00000020,
+		PLANE_2_BIT = 0x00000040,
+		MEMORY_PLANE_0_BIT_EXT = 0x00000080,
+		MEMORY_PLANE_1_BIT_EXT = 0x00000100,
+		MEMORY_PLANE_2_BIT_EXT = 0x00000200,
+		MEMORY_PLANE_3_BIT_EXT = 0x00000400,
+		PLANE_0_BIT_KHR = VK_IMAGE_ASPECT_PLANE_0_BIT,
+		PLANE_1_BIT_KHR = VK_IMAGE_ASPECT_PLANE_1_BIT,
+		PLANE_2_BIT_KHR = VK_IMAGE_ASPECT_PLANE_2_BIT,
 	};
 
-	struct HostToBufferCopyInfo {
-		void* src = nullptr;
-		BufferHandle dst = {};
-		size_t dstOffset = 0;
-		size_t size = 0;
+	struct ImageLayers {
+		ImageAspect	aspectMask;
+		u32	 		mipLevel;
+		u32 		baseArrayLayer;
+		u32 		layerCount;
 	};
 
-	struct BufferToBufferMultiCopyInfo {
-		BufferHandle src = {};
-		BufferHandle dst = {};
-		std::span<BufferCopyRegion> regions;
-	};
-
-	struct BufferToBufferCopyInfo {
-		BufferHandle src = {};
-		BufferHandle dst = {};
-		BufferCopyRegion region = {};
-	};
-
-	struct BufferToImageCopyInfo {
-		BufferHandle src = {};
-		ImageViewHandle dst = {};
-		size_t srcOffset = 0;
-		std::optional<VkImageSubresourceLayers> subRessourceLayers = std::nullopt;
-		size_t size = 0;
-	};
-
-	struct HostToImageCopyInfo {
-		void* src = nullptr;
-		ImageViewHandle dst = {};
-		std::optional<VkImageSubresourceLayers> dstImgSubressource = std::nullopt;
-		size_t size = 0;
-	};
-
-	struct ImageToImageCopyInfo{
-		ImageViewHandle src 		= {};
-		VkImageLayout srcLayout 	= VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		VkOffset3D srcOffset 		= {};
-		ImageViewHandle dst 		= {};
-		VkImageLayout dstLayout 	= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		VkOffset3D dstOffset 		= {};
-		VkExtent3D size				= {};
+	struct ImageMipLayers {
+		ImageAspect aspectMask;
+		u32 		mipLevel;
+		u32 		levelCount;
+		u32 		baseArrayLayer;
+		u32 		layerCount;
 	};
 
 	struct HostToBufferCopyRegion{

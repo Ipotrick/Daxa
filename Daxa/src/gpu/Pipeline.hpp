@@ -84,8 +84,9 @@ namespace daxa {
 	};
 
 	struct ComputePipelineCreateInfo {
-		ShaderModuleCreateInfo 													shaderCI 	= {};
+		ShaderModuleCreateInfo 													shaderCI 		= {};
 		std::array<std::optional<BindingSetDescription>, MAX_SETS_PER_PIPELINE> overwriteSets 	= {};
+		size_t 																	pushConstantSize = 0;
 		char const* 															debugName 		= {};
 	};
 
