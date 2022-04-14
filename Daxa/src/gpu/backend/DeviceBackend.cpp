@@ -3,13 +3,19 @@
 
 namespace daxa {
 	DeviceBackend::DeviceBackend(vkb::Instance& instance, PFN_vkSetDebugUtilsObjectNameEXT pfnSetDebugUtilsObjectNameEXT) {
+#if USE_NSIGHT_AFTERMATH
+		gpuCrashTracker.Initialize();
+#endif
 		vkb::PhysicalDeviceSelector selector{ instance };
 		vkb::PhysicalDevice physicalDevice = selector
 			.set_minimum_version(1, 2)
 			.defer_surface_initialization()
 			.add_desired_extension(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)
 			.add_desired_extension(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME)
-			.add_required_extension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME)
+#if USE_NSIGHT_AFTERMATH
+			.add_required_extension(VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME)
+			.add_required_extension(VK_NV_DEVICE_DIAGNOSTICS_CONFIG_EXTENSION_NAME)
+#endif
 			.select()
 			.value();
 
@@ -107,6 +113,23 @@ namespace daxa {
 		deviceBuilder.add_pNext(&atomicI64Features);
 		deviceBuilder.add_pNext(&device16BitFeatures);
 		deviceBuilder.add_pNext(&robustness2Features);
+
+#if USE_NSIGHT_AFTERMATH
+		VkPhysicalDeviceDiagnosticsConfigFeaturesNV aftermathFeatures{
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DIAGNOSTICS_CONFIG_FEATURES_NV,
+			.pNext = nullptr,
+			.diagnosticsConfig = VK_TRUE,
+		};
+		VkDeviceDiagnosticsConfigCreateInfoNV aftermathCI{
+			.sType = VK_STRUCTURE_TYPE_DEVICE_DIAGNOSTICS_CONFIG_CREATE_INFO_NV,
+			.pNext = nullptr,
+			.flags = VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_RESOURCE_TRACKING_BIT_NV |
+				VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_AUTOMATIC_CHECKPOINTS_BIT_NV |
+				VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_SHADER_DEBUG_INFO_BIT_NV,
+		};
+		deviceBuilder.add_pNext(&aftermathFeatures);
+		deviceBuilder.add_pNext(&aftermathCI);
+#endif
 
 		vkb::Device vkbDevice = deviceBuilder.build().value();
 

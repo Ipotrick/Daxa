@@ -39,7 +39,7 @@ namespace daxa {
 	void CommandListHandle::singleCopyHostToBuffer(SingleCopyHostToBufferInfo const& ci) {
 		value->singleCopyHostToBuffer(ci);
 	}
-	ToHostCopyFuture CommandListHandle::singleCopyBufferToHost(SingleBufferToHostCopyInfo const& ci) {
+	void CommandListHandle::singleCopyBufferToHost(SingleBufferToHostCopyInfo const& ci) {
 		value->singleCopyBufferToHost(ci);
 	}
 	void CommandListHandle::multiCopyHostToImage(MultiHostToImageCopyInfo const& ci) {
