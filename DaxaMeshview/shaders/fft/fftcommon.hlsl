@@ -5,9 +5,10 @@
 struct Globals{
     uint hdrImageID;
     uint fftImageID;
-    uint horFreqImageRID;
-    uint horFreqImageGID;
-    uint horFreqImageBID;
+    uint horFreqImageRGID;
+    uint horFreqImageBAID;
+    uint fullFreqRGID;
+    uint fullFreqBAID;
     uint width;
     uint height;
     uint padWidth;

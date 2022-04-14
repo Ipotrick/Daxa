@@ -99,9 +99,15 @@ public:
 		ImGui::Begin("fft debug");
 		{
 			auto id = imguiRenderer->getImGuiTextureId(meshRender.fft.fftImage);
-			ImGui::Image(reinterpret_cast<void*>(id), ImVec2(400,400));
-			id = imguiRenderer->getImGuiTextureId(meshRender.fft.horFreqImageR);
-			ImGui::Image(reinterpret_cast<void*>(id), ImVec2(400,400));
+			ImGui::Image(reinterpret_cast<void*>(id), ImVec2(512,512));
+			id = imguiRenderer->getImGuiTextureId(meshRender.fft.horFreqImageRG);
+			ImGui::Image(reinterpret_cast<void*>(id), ImVec2(512,512));
+			id = imguiRenderer->getImGuiTextureId(meshRender.fft.horFreqImageBA);
+			ImGui::Image(reinterpret_cast<void*>(id), ImVec2(512,512));
+			id = imguiRenderer->getImGuiTextureId(meshRender.fft.fullFreqImageRG);
+			ImGui::Image(reinterpret_cast<void*>(id), ImVec2(512,512));
+			id = imguiRenderer->getImGuiTextureId(meshRender.fft.fullFreqImageBA);
+			ImGui::Image(reinterpret_cast<void*>(id), ImVec2(512,512));
 		}
 		ImGui::End();
 

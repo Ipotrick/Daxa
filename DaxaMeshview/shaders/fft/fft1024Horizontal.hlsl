@@ -2,6 +2,7 @@
 
 struct Push {
     uint globalsID;
+    uint backward;
 };
 [[vk::push_constant]] Push p;
 
@@ -19,22 +20,28 @@ void Main(
     }
 
     RWTexture2D<float4> extractedImage = daxa::getRWTexture2D<float4>(globals[0].fftImageID);
-    RWTexture2D<float2> RGFreqImage = daxa::getRWTexture2D<float2>(globals[0].horFreqImageRID);
-    RWTexture2D<float2> BAFreqImage = daxa::getRWTexture2D<float2>(globals[0].horFreqImageGID);
+    RWTexture2D<float2> RGFreqImage = daxa::getRWTexture2D<float2>(globals[0].horFreqImageRGID);
+    RWTexture2D<float2> BAFreqImage = daxa::getRWTexture2D<float2>(globals[0].horFreqImageBAID);
+    RWTexture2D<float2> fullRG = daxa::getRWTexture2D<float2>(globals[0].fullFreqRGID);
+    RWTexture2D<float2> fullBA = daxa::getRWTexture2D<float2>(globals[0].fullFreqBAID);
 
-    fft_horizontal_shared_mem_1024_forward(
-        extractedImage,
-        RGFreqImage,
-        BAFreqImage,
-        dispatchThreadID.x,
-        dispatchThreadID.y
-    );
-	AllMemoryBarrierWithGroupSync();
-    fft_horizontal_shared_mem_1024_backward(
-        extractedImage,
-        RGFreqImage,
-        BAFreqImage,
-        dispatchThreadID.x,
-        dispatchThreadID.y
-    );
+    if (p.backward) {
+        fft_horizontal_1024_backward(
+            extractedImage,
+            fullRG,
+            fullBA,
+            RGFreqImage,
+            BAFreqImage,
+            dispatchThreadID.x,
+            dispatchThreadID.y
+        );
+    } else {
+        fft_horizontal_1024_forward(
+            extractedImage,
+            RGFreqImage,
+            BAFreqImage,
+            dispatchThreadID.x,
+            dispatchThreadID.y
+        );
+    }
 }

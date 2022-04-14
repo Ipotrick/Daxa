@@ -5,7 +5,7 @@ struct Push {
 };
 [[vk::push_constant]] Push p;
 
-[numthreads(T,1,1)]
+[numthreads(1,T,1)]
 void Main(
     int3 dispatchThreadID : SV_DispatchThreadID 
 ) {
@@ -19,19 +19,18 @@ void Main(
     }
 
     RWTexture2D<float4> extractedImage = daxa::getRWTexture2D<float4>(globals[0].fftImageID);
-    RWTexture2D<float2> rFreqImage = daxa::getRWTexture2D<float2>(globals[0].horFreqImageRID);
+    RWTexture2D<float2> RGFreqImage = daxa::getRWTexture2D<float2>(globals[0].horFreqImageRGID);
+    RWTexture2D<float2> BAFreqImage = daxa::getRWTexture2D<float2>(globals[0].horFreqImageBAID);
+    RWTexture2D<float2> fullRG = daxa::getRWTexture2D<float2>(globals[0].fullFreqRGID);
+    RWTexture2D<float2> fullBA = daxa::getRWTexture2D<float2>(globals[0].fullFreqBAID);
 
-    //fft_horizontal_r_shared_mem_1024_forward(
-    //    extractedImage,
-    //    rFreqImage,
-    //    dispatchThreadID.x,
-    //    dispatchThreadID.y
-    //);
-	//AllMemoryBarrierWithGroupSync();
-    //fft_horizontal_r_shared_mem_1024_backward(
-    //    extractedImage,
-    //    rFreqImage,
-    //    dispatchThreadID.x,
-    //    dispatchThreadID.y
-    //);
+    fft_vertical_apply_1024(
+        fullRG,
+        fullBA,
+        extractedImage,
+        RGFreqImage, 
+        BAFreqImage,
+        dispatchThreadID.x,
+        dispatchThreadID.y
+    );
 }
