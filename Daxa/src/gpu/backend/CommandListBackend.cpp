@@ -249,7 +249,7 @@ namespace daxa {
 		}
 #endif
 
-		vkCmdCopyBuffer(cmd, ci.src.getVkBuffer(), ci.dst.getVkBuffer(), static_cast<u32>(ci.regions.size()), reinterpret_cast<VkBufferCopy const*>(ci.regions.data()));
+		vkCmdCopyBuffer(cmd, (VkBuffer)ci.src.getVkBuffer(), (VkBuffer)ci.dst.getVkBuffer(), static_cast<u32>(ci.regions.size()), reinterpret_cast<VkBufferCopy const*>(ci.regions.data()));
 	}
 	void CommandListBackend::singleCopyBufferToBuffer(SingleBufferToBufferCopyInfo const& ci) {
 		this->multiCopyBufferToBuffer({ .src = ci.src, .dst = ci.dst, .regions = std::span{&ci.region,1}});
@@ -280,7 +280,7 @@ namespace daxa {
 			bufferToImageCopyBuffer.push_back(outinfo);
 		}
 
-		vkCmdCopyBufferToImage(cmd, ci.src.getVkBuffer(), ci.dst->getVkImage(), ci.dstLayout, bufferToImageCopyBuffer.size(), bufferToImageCopyBuffer.data());
+		vkCmdCopyBufferToImage(cmd, (VkBuffer)ci.src.getVkBuffer(), ci.dst->getVkImage(), ci.dstLayout, bufferToImageCopyBuffer.size(), bufferToImageCopyBuffer.data());
 		bufferToImageCopyBuffer.clear();
 	}
 	void CommandListBackend::singleCopyBufferToImage(SingleBufferToImageCopyInfo const& ci) {
@@ -344,7 +344,7 @@ namespace daxa {
 		DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 		DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 		DAXA_ASSERT_M(buffer, "invalid buffer handle");
-		auto vkBuffer = buffer.getVkBuffer();
+		auto vkBuffer = (VkBuffer)buffer.getVkBuffer();
 		vkCmdBindVertexBuffers(cmd, binding, 1, &vkBuffer, &bufferOffset);
 	}
 
@@ -352,7 +352,7 @@ namespace daxa {
 		DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 		DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 		DAXA_ASSERT_M(buffer, "invalid buffer handle");
-		auto vkBuffer = buffer.getVkBuffer();
+		auto vkBuffer = (VkBuffer)buffer.getVkBuffer();
 		vkCmdBindIndexBuffer(cmd, vkBuffer, bufferOffset, indexType);
 	}
 

@@ -5,10 +5,7 @@
 #include <memory>
 #include <span>
 
-#include <vulkan/vulkan.h>
-
-#include <vk_mem_alloc.h>
-
+#include "Bindless.hpp"
 #include "Handle.hpp"
 #include "Graveyard.hpp"
 
@@ -60,6 +57,8 @@ namespace daxa {
 		static void cleanup(std::shared_ptr<BufferBackend>& value);
 	};
 
+
+
 	class BufferHandle : public SharedHandle<BufferBackend, BufferStaticFunctionOverride> {
 	public:
 		MappedMemoryPointer mapMemory();
@@ -77,13 +76,13 @@ namespace daxa {
 
 		size_t getSize() const;
 
-		VkBuffer getVkBuffer() const;
+		void* getVkBuffer() const;
 
 		MemoryType getMemoryType() const;
 
 		u32 getMemeoryMapCount() const;
 
-		u32 getDescriptorIndex() const;
+		DescriptorIndex getDescriptorIndex() const;
 
 		std::string const& getDebugName() const;
 	};
