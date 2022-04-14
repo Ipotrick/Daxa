@@ -38,6 +38,15 @@
         }
       },
       {
+        "name": "Debug (NSightAftermath)",
+        "displayName": "Debug (NSightAftermath)",
+        "inherits": "defaults",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Debug",
+          "DAXA_USE_NSIGHT_AFTERMATH": true
+        }
+      },
+      {
         "name": "Debug (hot reload)",
         "displayName": "Debug (hot reload)",
         "inherits": "defaults",
