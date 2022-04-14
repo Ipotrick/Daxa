@@ -7,7 +7,7 @@ public:
     RenderContext(daxa::Window& window) 
 		: device{ daxa::Device::create() }
 		, pipelineCompiler{ this->device->createPipelineCompiler() }
-		, queue{ this->device->createCommandQueue({.batchCount = 3}) }
+		, queue{ this->device->createCommandQueue({.batchCount = 2}) }
 		, swapchain{ this->device->createSwapchain({
 			.surface = window.getSurface(),
 			.width = window.getWidth(),
@@ -28,6 +28,7 @@ public:
 		queue->submitBlocking({.commandLists = {cmd}});
 
 		pipelineCompiler->addShaderSourceRootPath("./DaxaMeshview/shaders/");
+		pipelineCompiler->addShaderSourceRootPath("./Daxa/shaders/");
     }
 
     ~RenderContext() {
@@ -81,6 +82,7 @@ public:
 				.format = VK_FORMAT_A2B10G10R10_UNORM_PACK32,
 				.extent = { width, height, 1},
 				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+				.debugName = "normals image",
 			}),
 			.format = VK_FORMAT_A2B10G10R10_UNORM_PACK32,
 			.defaultSampler = defaultSampler,
@@ -92,6 +94,7 @@ public:
 				.format = VK_FORMAT_R16G16B16A16_SFLOAT,
 				.extent = { width, height, 1 },
 				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+				.debugName = "main hdr color image",
 			}),
 			.format = VK_FORMAT_R16G16B16A16_SFLOAT,
 			.defaultSampler = defaultSampler,
@@ -102,6 +105,7 @@ public:
 				.format = VK_FORMAT_R16G16B16A16_SFLOAT,
 				.extent = { width, height, 1 },
 				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+				.debugName = "prior frame hdr color image",
 			}),
 			.format = VK_FORMAT_R16G16B16A16_SFLOAT,
 			.defaultSampler = defaultSampler,
@@ -112,8 +116,9 @@ public:
 				.format = VK_FORMAT_R16G16_SFLOAT,
 				.extent = { width, height, 1 },
 				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+				.debugName = "prior frame hdr color image",
 			}),
-			.format = VK_FORMAT_R16G16B16A16_SFLOAT,
+			.format = VK_FORMAT_R16G16_SFLOAT,
 			.defaultSampler = defaultSampler,
 			.debugName = "prior frame hdr color image",
 		});

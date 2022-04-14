@@ -53,7 +53,7 @@ namespace daxa {
 		for (auto& buffer : buffers) {
 			DAXA_ASSERT_M(buffer, "invalid buffer handle");
 			descBufferInfoBuffer.push_back(VkDescriptorBufferInfo{
-				.buffer = buffer.getVkBuffer(),
+				.buffer = (VkBuffer)buffer.getVkBuffer(),
 				.offset = 0,									// TODO Unsure what to put here
 				.range = buffer.getSize(),
 			});

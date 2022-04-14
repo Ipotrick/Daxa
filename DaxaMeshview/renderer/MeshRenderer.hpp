@@ -6,6 +6,7 @@
 #include "../Components.hpp"
 
 #include "OrthLightSource.hpp"
+#include "fft.hpp"
 
 #include "tinyexr.h"
 
@@ -86,6 +87,10 @@ public:
 		});
 
 		initSkyBox(renderCTX);
+		auto cmd = renderCTX.queue->getCommandList({});
+		fft.init(renderCTX, cmd, renderCTX.hdrImage->getImageHandle()->getVkExtent3D().width, renderCTX.hdrImage->getImageHandle()->getVkExtent3D().height);
+		cmd.finalize();
+		renderCTX.queue->submit({.commandLists={cmd}});
 	}
 
 	void initSkyBox(RenderContext& renderCTX) {	
@@ -430,6 +435,8 @@ public:
 				(reinterpret_cast<DrawLight*>(mm.hostPtr))[i] = lights[i];
 			}
 		}
+
+		fft.uploadData(renderCTX, cmd);
 	}
 
 	void prePass(RenderContext& renderCTX, daxa::CommandListHandle& cmd, std::vector<DrawPrimCmd>& draws) {
@@ -566,10 +573,10 @@ public:
 		cmd.insertQueuedBarriers();
 		skyboxPass(renderCTX, cmd);
 		opaquePass2(renderCTX, cmd, draws);
+		fft.update(renderCTX, cmd);
 		tonemapPass(renderCTX, cmd);
 	}
 
-private:
 	daxa::PipelineHandle skyboxPipeline = {};
 
 	size_t primitivesDrawn = 0;
@@ -583,12 +590,10 @@ private:
 	daxa::ImageViewHandle dummyNormalsTexture = {};
 	daxa::ImageViewHandle skybox = {};
 	daxa::SamplerHandle generalSampler = {};
-
 	daxa::BufferHandle lightsBuffer = {};
-
 	daxa::PipelineHandle opaquePass2Pipeline = {};
-
 	daxa::PipelineHandle tonemapPipeline = {};
+	FFT fft = {};
 public:
 	OrthLightSourcePass orthLightPass = {};
 };

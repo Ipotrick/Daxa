@@ -11,7 +11,7 @@ layout(set = 0, binding = 1) uniform sampler2D images[];
 
 layout(location = 0) out vec4 o_color;
 
-float A = 0.35;
+float A = 0.95;
 float B = 0.50;
 float C = 0.10;
 float D = 0.20;
