@@ -10,9 +10,10 @@ public:
     struct FFTGlobals {
         daxa::DescriptorIndex hdrImage;
         daxa::DescriptorIndex fftImage;
-        daxa::DescriptorIndex horFreqImageR;
-        daxa::DescriptorIndex horFreqImageG;
-        daxa::DescriptorIndex horFreqImageB;
+        daxa::DescriptorIndex horFreqImageRG;
+        daxa::DescriptorIndex horFreqImageBA;
+        daxa::DescriptorIndex fullFreqImageRG;
+        daxa::DescriptorIndex fullFreqImageBA;
         u32 width = 1024;
         u32 height = 1024;
         u32 padWidth = 128;
@@ -29,18 +30,20 @@ public:
 
     struct HorPush{
         daxa::DescriptorIndex globalsID;
+        u32 backwards;
     };
 
     struct VertApplyPush{
-
+        daxa::DescriptorIndex globalsID;
     };
 
     void uploadData(RenderContext& renderCTX, daxa::CommandListHandle& cmd) {
         globals.fftImage = fftImage->getDescriptorIndex();
         globals.hdrImage = renderCTX.hdrImage->getDescriptorIndex();
-        globals.horFreqImageR = horFreqImageR->getDescriptorIndex();
-        globals.horFreqImageG = horFreqImageG->getDescriptorIndex();
-        globals.horFreqImageB = horFreqImageB->getDescriptorIndex();
+        globals.horFreqImageRG = horFreqImageRG->getDescriptorIndex();
+        globals.horFreqImageBA = horFreqImageBA->getDescriptorIndex();
+        globals.fullFreqImageRG = fullFreqImageRG->getDescriptorIndex();
+        globals.fullFreqImageBA = fullFreqImageBA->getDescriptorIndex();
         cmd.singleCopyHostToBuffer({
             .src = reinterpret_cast<u8*>(&globals),
             .dst = globalsBuffer,
@@ -67,41 +70,53 @@ public:
             .defaultSampler = renderCTX.defaultSampler,
             .debugName = "fftImage",
         });
-        horFreqImageR = renderCTX.device->createImageView({
+        horFreqImageRG = renderCTX.device->createImageView({
             .image = renderCTX.device->createImage({
                 .format = IMAGE_FORMAT_FREQ,
                 .extent = { width, height, 1 },
                 .usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                 .imageType = VK_IMAGE_TYPE_2D,
-                .debugName = "horFreqImageR",
+                .debugName = "horFreqImageRG",
             }),
             .format = IMAGE_FORMAT_FREQ,
             .defaultSampler = renderCTX.defaultSampler,
-            .debugName = "horFreqImageR",
+            .debugName = "horFreqImageRG",
         });
-        horFreqImageG = renderCTX.device->createImageView({
+        horFreqImageBA = renderCTX.device->createImageView({
             .image = renderCTX.device->createImage({
                 .format = IMAGE_FORMAT_FREQ,
                 .extent = { width, height, 1 },
                 .usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                 .imageType = VK_IMAGE_TYPE_2D,
-                .debugName = "horFreqImageG",
+                .debugName = "horFreqImageBA",
             }),
             .format = IMAGE_FORMAT_FREQ,
             .defaultSampler = renderCTX.defaultSampler,
-            .debugName = "horFreqImageG",
+            .debugName = "horFreqImageBA",
         });
-        horFreqImageB = renderCTX.device->createImageView({
+        fullFreqImageRG = renderCTX.device->createImageView({
             .image = renderCTX.device->createImage({
                 .format = IMAGE_FORMAT_FREQ,
                 .extent = { width, height, 1 },
                 .usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                 .imageType = VK_IMAGE_TYPE_2D,
-                .debugName = "horFreqImageB",
+                .debugName = "fullFreqImageRG",
             }),
             .format = IMAGE_FORMAT_FREQ,
             .defaultSampler = renderCTX.defaultSampler,
-            .debugName = "horFreqImageB",
+            .debugName = "fullFreqImageRG",
+        });
+        fullFreqImageBA = renderCTX.device->createImageView({
+            .image = renderCTX.device->createImage({
+                .format = IMAGE_FORMAT_FREQ,
+                .extent = { width, height, 1 },
+                .usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                .imageType = VK_IMAGE_TYPE_2D,
+                .debugName = "fullFreqImageBA",
+            }),
+            .format = IMAGE_FORMAT_FREQ,
+            .defaultSampler = renderCTX.defaultSampler,
+            .debugName = "fullFreqImageBA",
         });
 
         cmd.queueImageBarrier({
@@ -169,18 +184,24 @@ public:
         cmd.unbindPipeline();
     }
 
-    void horizontalPass(RenderContext& renderCTX, daxa::CommandListHandle& cmd) {
+    void horizontalPass(RenderContext& renderCTX, daxa::CommandListHandle& cmd, u32 backwards = 0) {
         renderCTX.pipelineCompiler->recreateIfChanged(fft1024Horizontal);
 
         cmd.bindPipeline(fft1024Horizontal);
         cmd.bindAll();
-        cmd.pushConstant(VK_SHADER_STAGE_COMPUTE_BIT, HorPush{ .globalsID = globalsBuffer.getDescriptorIndex() });
+        cmd.pushConstant(VK_SHADER_STAGE_COMPUTE_BIT, HorPush{ .globalsID = globalsBuffer.getDescriptorIndex(), .backwards = backwards });
         cmd.dispatch(1, 1024, 1);
         cmd.unbindPipeline();
     }
 
     void verticalApplyPass(RenderContext& renderCTX, daxa::CommandListHandle& cmd) {
+        renderCTX.pipelineCompiler->recreateIfChanged(fft1024VerticalApply);
 
+        cmd.bindPipeline(fft1024VerticalApply);
+        cmd.bindAll();
+        cmd.pushConstant(VK_SHADER_STAGE_COMPUTE_BIT, VertApplyPush{ .globalsID = globalsBuffer.getDescriptorIndex() });
+        cmd.dispatch(1024, 1, 1);
+        cmd.unbindPipeline();
     }
 
     void combinePass(RenderContext& renderCTX, daxa::CommandListHandle& cmd) {
@@ -194,17 +215,22 @@ public:
             .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
         });
         cmd.queueImageBarrier({
-            .image = horFreqImageR,
+            .image = horFreqImageRG,
             .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
             .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
         });
         cmd.queueImageBarrier({
-            .image = horFreqImageG,
+            .image = horFreqImageBA,
             .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
             .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
         });
         cmd.queueImageBarrier({
-            .image = horFreqImageB,
+            .image = fullFreqImageRG,
+            .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
+            .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
+        });
+        cmd.queueImageBarrier({
+            .image = fullFreqImageBA,
             .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
             .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
         });
@@ -217,7 +243,11 @@ public:
 
         extractPass(renderCTX, cmd);
         cmd.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
-        horizontalPass(renderCTX, cmd);
+        horizontalPass(renderCTX, cmd, 0);
+        cmd.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+        verticalApplyPass(renderCTX, cmd);
+        cmd.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+        horizontalPass(renderCTX, cmd, 1);
         
         cmd.queueImageBarrier({
             .image = renderCTX.hdrImage,
@@ -225,17 +255,22 @@ public:
             .layoutAfter = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         });
         cmd.queueImageBarrier({
-            .image = horFreqImageB,
+            .image = fullFreqImageBA,
             .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
             .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         });
         cmd.queueImageBarrier({
-            .image = horFreqImageG,
+            .image = fullFreqImageRG,
             .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
             .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         });
         cmd.queueImageBarrier({
-            .image = horFreqImageR,
+            .image = horFreqImageBA,
+            .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
+            .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        });
+        cmd.queueImageBarrier({
+            .image = horFreqImageRG,
             .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
             .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         });
@@ -250,9 +285,10 @@ public:
     daxa::BufferHandle globalsBuffer = {};
 
     daxa::ImageViewHandle fftImage = {};
-    daxa::ImageViewHandle horFreqImageR = {};
-    daxa::ImageViewHandle horFreqImageG = {};
-    daxa::ImageViewHandle horFreqImageB = {};
+    daxa::ImageViewHandle horFreqImageRG = {};
+    daxa::ImageViewHandle horFreqImageBA = {};
+    daxa::ImageViewHandle fullFreqImageRG = {};
+    daxa::ImageViewHandle fullFreqImageBA = {};
 
     daxa::PipelineHandle fftExtract = {};
     daxa::PipelineHandle fft1024Horizontal = {};

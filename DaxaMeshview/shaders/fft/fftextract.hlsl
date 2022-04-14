@@ -5,6 +5,8 @@ struct Push {
 };
 [[vk::push_constant]] Push p;
 
+#define MAX_CHANNEL_VALUE 1
+
 [numthreads(8,8,1)]
 void Main(
     int3 dispatchThreadID : SV_DispatchThreadID 
@@ -33,7 +35,12 @@ void Main(
     } else {
         float4 color = hdrImage[int2(uv * int2(hdrWidth, hdrHeight))].rgba;
         if (length(color) > 2.0 || true) {
-            fftImage[dispatchThreadID.xy] = color;
+            fftImage[dispatchThreadID.xy] = float4(
+                min(MAX_CHANNEL_VALUE, color.r),
+                min(MAX_CHANNEL_VALUE, color.g),
+                min(MAX_CHANNEL_VALUE, color.b),
+                min(MAX_CHANNEL_VALUE, color.a)
+            );
         } else {
             fftImage[dispatchThreadID.xy] = float4(0,0,0,1);
         }
