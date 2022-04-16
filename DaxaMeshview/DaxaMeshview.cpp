@@ -98,15 +98,29 @@ public:
 		ImGui::End();
 		ImGui::Begin("fft debug");
 		{
+			ImGui::Text("fftImage");
 			auto id = imguiRenderer->getImGuiTextureId(meshRender.fft.fftImage);
 			ImGui::Image(reinterpret_cast<void*>(id), ImVec2(512,512));
+			ImGui::Text("horFreqImageRG");
 			id = imguiRenderer->getImGuiTextureId(meshRender.fft.horFreqImageRG);
 			ImGui::Image(reinterpret_cast<void*>(id), ImVec2(512,512));
+			ImGui::Text("horFreqImageBA");
 			id = imguiRenderer->getImGuiTextureId(meshRender.fft.horFreqImageBA);
 			ImGui::Image(reinterpret_cast<void*>(id), ImVec2(512,512));
+			ImGui::Text("fullFreqImageRG");
 			id = imguiRenderer->getImGuiTextureId(meshRender.fft.fullFreqImageRG);
 			ImGui::Image(reinterpret_cast<void*>(id), ImVec2(512,512));
+			ImGui::Text("fullFreqImageBA");
 			id = imguiRenderer->getImGuiTextureId(meshRender.fft.fullFreqImageBA);
+			ImGui::Image(reinterpret_cast<void*>(id), ImVec2(512,512));
+			ImGui::Text("aperatureImage");
+			id = imguiRenderer->getImGuiTextureId(meshRender.fft.aperatureImage);
+			ImGui::Image(reinterpret_cast<void*>(id), ImVec2(512,512));
+			ImGui::Text("kernelImage");
+			id = imguiRenderer->getImGuiTextureId(meshRender.fft.kernelImage);
+			ImGui::Image(reinterpret_cast<void*>(id), ImVec2(512,512));
+			ImGui::Text("kernel");
+			id = imguiRenderer->getImGuiTextureId(meshRender.fft.kernel);
 			ImGui::Image(reinterpret_cast<void*>(id), ImVec2(512,512));
 		}
 		ImGui::End();

@@ -5,7 +5,7 @@ struct Push {
 };
 [[vk::push_constant]] Push p;
 
-#define MAX_CHANNEL_VALUE 1
+#define MAX_CHANNEL_VALUE 10000
 
 [numthreads(8,8,1)]
 void Main(
@@ -34,13 +34,19 @@ void Main(
         fftImage[dispatchThreadID.xy] = float4(0,0,0,1);
     } else {
         float4 color = hdrImage[int2(uv * int2(hdrWidth, hdrHeight))].rgba;
-        if (length(color) > 2.0 || true) {
+
+        float minimum = 0;
+        float maximum = 0;
+
+        float4 smoothThreshhold = smoothstep(minimum, maximum, length(color));
+
+        if (length(color) > 1.3 || true) {
             fftImage[dispatchThreadID.xy] = float4(
                 min(MAX_CHANNEL_VALUE, color.r),
                 min(MAX_CHANNEL_VALUE, color.g),
                 min(MAX_CHANNEL_VALUE, color.b),
                 min(MAX_CHANNEL_VALUE, color.a)
-            );
+            ) * smoothThreshhold;
         } else {
             fftImage[dispatchThreadID.xy] = float4(0,0,0,1);
         }

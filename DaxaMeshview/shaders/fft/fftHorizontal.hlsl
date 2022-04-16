@@ -26,17 +26,17 @@ void Main(
     RWTexture2D<float2> fullBA = daxa::getRWTexture2D<float2>(globals[0].fullFreqBAID);
 
     if (p.backward) {
-        fft_horizontal_1024_backward(
+        fft_horizontal_backward(
             extractedImage,
             fullRG,
             fullBA,
             RGFreqImage,
-            BAFreqImage,
+            BAFreqImage, 
             dispatchThreadID.x,
             dispatchThreadID.y
         );
     } else {
-        fft_horizontal_1024_forward(
+        fft_horizontal_forward(
             extractedImage,
             RGFreqImage,
             BAFreqImage,
