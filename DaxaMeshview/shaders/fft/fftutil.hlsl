@@ -5,7 +5,7 @@
 #define PI 3.14159265359
 
 #if !defined(N)
-#define N 2048
+#define N 1024
 #endif
 #define T N/2
 #define rN (float(1) / float(N))
@@ -23,7 +23,7 @@ void exchange(
 	int idxS, 
 	int incS
 ){
-    //GroupMemoryBarrierWithGroupSync();
+    GroupMemoryBarrierWithGroupSync();
 	for(int r = 0; r < 2; ++r) {
 		int i = (idxD + r * incD);
 		shared_freq[i] = v[r].x;

@@ -64,12 +64,13 @@ namespace daxa {
 	};
 
 	struct ShaderModuleCreateInfo {
-		std::string 			source			= {};
-		std::filesystem::path	pathToSource 	= {};
-		ShaderLang 				shaderLang 		= ShaderLang::GLSL;
-		char const* 			entryPoint 		= "main";
-		VkShaderStageFlagBits 	stage 			= {};
-		char const* 			debugName 		= {};
+		std::string 				source			= {};
+		std::filesystem::path		pathToSource 	= {};
+		ShaderLang 					shaderLang 		= ShaderLang::GLSL;
+		char const* 				entryPoint 		= "main";
+		VkShaderStageFlagBits 		stage 			= {};
+		std::vector<std::string> 	defines			= {};
+		char const* 				debugName 		= {};
 	};
 
 	class ShaderModuleHandle : public SharedHandle<ShaderModule>{

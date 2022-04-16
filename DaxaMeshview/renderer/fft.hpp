@@ -71,6 +71,7 @@ public:
     }
 
     void init(RenderContext& renderCTX, daxa::CommandListHandle& cmd, u32 width, u32 height) {
+        std::string N_DEFINE_STRING = "N=2048";
         width = WIDTH;
         height = HEIGHT;
         fftImage = renderCTX.device->createImageView({
@@ -211,6 +212,7 @@ public:
                 .pathToSource = "fft/fftextract.hlsl",
                 .shaderLang = daxa::ShaderLang::HLSL,
                 .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+                .defines = { N_DEFINE_STRING },
                 .debugName = "fftExtract",
             },
             .overwriteSets = { daxa::BIND_ALL_SET_DESCRIPTION },
@@ -223,6 +225,7 @@ public:
                 .pathToSource = "fft/fftHorizontal.hlsl",
                 .shaderLang = daxa::ShaderLang::HLSL,
                 .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+                .defines = { N_DEFINE_STRING },
                 .debugName = "fftHorizontal",
             },
             .overwriteSets = { daxa::BIND_ALL_SET_DESCRIPTION },
@@ -235,6 +238,7 @@ public:
                 .pathToSource = "fft/fftVerticalApply.hlsl",
                 .shaderLang = daxa::ShaderLang::HLSL,
                 .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+                .defines = { N_DEFINE_STRING },
                 .debugName = "fftVerticalApply",
             },
             .overwriteSets = { daxa::BIND_ALL_SET_DESCRIPTION },
@@ -247,6 +251,7 @@ public:
                 .pathToSource = "fft/fftGenKernel.hlsl",
                 .shaderLang = daxa::ShaderLang::HLSL,
                 .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+                .defines = { N_DEFINE_STRING },
                 .debugName = "fftGenKernel",
             },
             .overwriteSets = { daxa::BIND_ALL_SET_DESCRIPTION },
@@ -259,6 +264,7 @@ public:
                 .pathToSource = "fft/fftGenKernel.hlsl",
                 .shaderLang = daxa::ShaderLang::HLSL,
                 .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+                .defines = { N_DEFINE_STRING },
                 .debugName = "fftGenKernel",
             },
             .overwriteSets = { daxa::BIND_ALL_SET_DESCRIPTION },
@@ -271,6 +277,7 @@ public:
                 .pathToSource = "fft/fftGenKernel.hlsl",
                 .shaderLang = daxa::ShaderLang::HLSL,
                 .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+                .defines = { N_DEFINE_STRING },
                 .debugName = "fftGenKernel",
             },
             .overwriteSets = { daxa::BIND_ALL_SET_DESCRIPTION },
@@ -283,6 +290,7 @@ public:
                 .pathToSource = "fft/fftGenKernel.hlsl",
                 .shaderLang = daxa::ShaderLang::HLSL,
                 .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+                .defines = { N_DEFINE_STRING },
                 .debugName = "fftGenKernel",
             },
             .overwriteSets = { daxa::BIND_ALL_SET_DESCRIPTION },

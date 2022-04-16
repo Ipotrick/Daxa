@@ -26,8 +26,20 @@ namespace daxa {
         void recreateIfChanged(PipelineHandle& pipeline);
     private:
         Result<ShaderModuleHandle> tryCreateShaderModule(ShaderModuleCreateInfo const& ci);
-		Result<std::vector<u32>> tryGenSPIRVFromShaderc(std::string const& src, VkShaderStageFlagBits shaderStage, ShaderLang lang, char const* sourceFileName = "[[inline source]]");
-        Result<std::vector<u32>> tryGenSPIRVFromDxc(std::string const& src, VkShaderStageFlagBits shaderStage, char const* entryPoint, char const* sourceFileName = "[[inline source]]");
+		Result<std::vector<u32>> tryGenSPIRVFromShaderc(
+            std::string const& src, 
+            VkShaderStageFlagBits shaderStage, 
+            ShaderLang lang, 
+            char const* sourceFileName,
+		    std::vector<std::string> const& defines
+        );
+        Result<std::vector<u32>> tryGenSPIRVFromDxc(
+            std::string const& src, 
+            VkShaderStageFlagBits shaderStage, 
+            char const* entryPoint, 
+            char const* sourceFileName,
+		    std::vector<std::string> const& defines
+        );
         daxa::Result<PipelineHandle> build(GraphicsPipelineBuilder const& builder);
 
         std::shared_ptr<DeviceBackend> deviceBackend = {};
