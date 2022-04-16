@@ -133,8 +133,22 @@ namespace daxa {
 		return ret;
 	}
 
-	Result<std::vector<u32>> PipelineCompiler::tryGenSPIRVFromDxc(std::string const& src, VkShaderStageFlagBits shaderStage, char const* entryPoint, char const* sourceFileName) {
+	Result<std::vector<u32>> PipelineCompiler::tryGenSPIRVFromDxc(
+		std::string const& src, 
+		VkShaderStageFlagBits shaderStage, 
+		char const* entryPoint, 
+		char const* sourceFileName, 
+		std::vector<std::string> const& defines
+	) {
 		std::vector<LPCWSTR> args;
+
+		std::vector<std::wstring> wstringBuffer;
+		wstringBuffer.reserve(defines.size());
+		for (auto& define : defines) {
+			wstringBuffer.push_back(u8_ascii_to_wstring(define.c_str()));
+			args.push_back(L"-D");
+			args.push_back(wstringBuffer.back().c_str());
+		}
 
 		auto sourceFileNameWString = u8_ascii_to_wstring(sourceFileName);
 		args.push_back(sourceFileNameWString.c_str());
@@ -218,7 +232,13 @@ namespace daxa {
 		return {spv};
 	}
 
-	Result<std::vector<u32>> PipelineCompiler::tryGenSPIRVFromShaderc(std::string const& src, VkShaderStageFlagBits shaderStage, ShaderLang lang, char const* sourceFileName) {
+	Result<std::vector<u32>> PipelineCompiler::tryGenSPIRVFromShaderc(
+		std::string const& src, 
+		VkShaderStageFlagBits shaderStage, 
+		ShaderLang lang, 
+		char const* sourceFileName,
+		std::vector<std::string> const& defines
+	) {
 		auto translateShaderStage = [](VkShaderStageFlagBits stage) -> shaderc_shader_kind {
 			switch (stage) {
 			case VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT: return shaderc_shader_kind::shaderc_vertex_shader;
@@ -249,6 +269,7 @@ namespace daxa {
 		BACKEND.options.SetSourceLanguage(langType);
 		BACKEND.options.SetTargetEnvironment(shaderc_target_env_vulkan, VK_API_VERSION_1_2);
 		BACKEND.options.SetTargetSpirv(shaderc_spirv_version::shaderc_spirv_version_1_3);
+		// TODO: implement defines
 		//options.SetOptimizationLevel(shaderc_optimization_level_performance);
 		
 		shaderc::SpvCompilationResult module = BACKEND.compiler.CompileGlslToSpv(src, stage, sourceFileName, BACKEND.options);
@@ -378,10 +399,10 @@ namespace daxa {
 
 		daxa::Result<std::vector<u32>> spirv = daxa::ResultErr{};
 		if (ci.shaderLang == ShaderLang::GLSL) {
-			spirv = tryGenSPIRVFromShaderc(sourceCode, ci.stage, ci.shaderLang, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()));
+			spirv = tryGenSPIRVFromShaderc(sourceCode, ci.stage, ci.shaderLang, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()), ci.defines);
 		} 
 		else {
-			spirv = tryGenSPIRVFromDxc(sourceCode, ci.stage, ci.entryPoint, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()));
+			spirv = tryGenSPIRVFromDxc(sourceCode, ci.stage, ci.entryPoint, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()), ci.defines);
 		}
 		if (spirv.isErr()) {
 			return ResultErr{ spirv.message() };

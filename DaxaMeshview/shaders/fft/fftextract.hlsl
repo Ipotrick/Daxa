@@ -35,8 +35,8 @@ void Main(
     } else {
         float4 color = hdrImage[int2(uv * int2(hdrWidth, hdrHeight))].rgba;
 
-        float minimum = 0;
-        float maximum = 0;
+        float minimum = 0.0;
+        float maximum = 0.0;
 
         float4 smoothThreshhold = smoothstep(minimum, maximum, length(color));
 

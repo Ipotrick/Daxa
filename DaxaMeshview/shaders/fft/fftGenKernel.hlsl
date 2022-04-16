@@ -51,7 +51,7 @@ void MainVertical0(
     
 	for(int r = 0; r < 2; ++r) {
         int2 index = int2((dispatchThreadID.x), (r * T + dispatchThreadID.y));
-        float value = pow(length(v[r]) * rN * rN,1.5);
+        float value = pow(length(v[r]) * rN * rN,1.4);
         if (index.x == 0 && index.y == 0) {
             value = 1;
         } 
