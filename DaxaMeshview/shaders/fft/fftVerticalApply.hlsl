@@ -23,8 +23,10 @@ void Main(
     RWTexture2D<float2> BAFreqImage = daxa::getRWTexture2D<float2>(globals[0].horFreqImageBAID);
     RWTexture2D<float2> fullRG = daxa::getRWTexture2D<float2>(globals[0].fullFreqRGID);
     RWTexture2D<float2> fullBA = daxa::getRWTexture2D<float2>(globals[0].fullFreqBAID);
+    RWTexture2D<float4> kernel = daxa::getRWTexture2D<float4>(globals[0].kernelID);
 
-    fft_vertical_apply_1024(
+    fft_vertical_apply(
+        kernel,
         fullRG,
         fullBA,
         extractedImage,

@@ -9,6 +9,8 @@ struct Globals{
     uint horFreqImageBAID;
     uint fullFreqRGID;
     uint fullFreqBAID;
+    uint kernelID;
+    uint kernelImageID;
     uint width;
     uint height;
     uint padWidth;
