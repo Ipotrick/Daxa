@@ -76,10 +76,10 @@ public:
         height = HEIGHT;
         fftImage = renderCTX.device->createImageView({
             .image = renderCTX.device->createImage({
+                .imageType = VK_IMAGE_TYPE_2D,
                 .format = IMAGE_FORMAT,
                 .extent = { width, height, 1 },
                 .usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                .imageType = VK_IMAGE_TYPE_2D,
                 .debugName = "fftImage",
             }),
             .format = IMAGE_FORMAT,
@@ -88,10 +88,10 @@ public:
         });
         horFreqImageRG = renderCTX.device->createImageView({
             .image = renderCTX.device->createImage({
+                .imageType = VK_IMAGE_TYPE_2D,
                 .format = IMAGE_FORMAT_FREQ,
                 .extent = { width, height, 1 },
                 .usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                .imageType = VK_IMAGE_TYPE_2D,
                 .debugName = "horFreqImageRG",
             }),
             .format = IMAGE_FORMAT_FREQ,
@@ -100,10 +100,10 @@ public:
         });
         horFreqImageBA = renderCTX.device->createImageView({
             .image = renderCTX.device->createImage({
+                .imageType = VK_IMAGE_TYPE_2D,
                 .format = IMAGE_FORMAT_FREQ,
                 .extent = { width, height, 1 },
                 .usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                .imageType = VK_IMAGE_TYPE_2D,
                 .debugName = "horFreqImageBA",
             }),
             .format = IMAGE_FORMAT_FREQ,
@@ -112,10 +112,10 @@ public:
         });
         fullFreqImageRG = renderCTX.device->createImageView({
             .image = renderCTX.device->createImage({
+                .imageType = VK_IMAGE_TYPE_2D,
                 .format = IMAGE_FORMAT_FREQ,
                 .extent = { width, height, 1 },
                 .usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                .imageType = VK_IMAGE_TYPE_2D,
                 .debugName = "fullFreqImageRG",
             }),
             .format = IMAGE_FORMAT_FREQ,
@@ -124,10 +124,10 @@ public:
         });
         fullFreqImageBA = renderCTX.device->createImageView({
             .image = renderCTX.device->createImage({
+                .imageType = VK_IMAGE_TYPE_2D,
                 .format = IMAGE_FORMAT_FREQ,
                 .extent = { width, height, 1 },
                 .usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                .imageType = VK_IMAGE_TYPE_2D,
                 .debugName = "fullFreqImageBA",
             }),
             .format = IMAGE_FORMAT_FREQ,
@@ -136,10 +136,10 @@ public:
         });
         kernel = renderCTX.device->createImageView({
             .image = renderCTX.device->createImage({
+                .imageType = VK_IMAGE_TYPE_2D,
                 .format = VK_FORMAT_R32G32B32A32_SFLOAT,
                 .extent = { width, height, 1 },
                 .usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                .imageType = VK_IMAGE_TYPE_2D,
                 .debugName = "kernel",
             }),
             .format = VK_FORMAT_R32G32B32A32_SFLOAT,
@@ -148,10 +148,10 @@ public:
         });
         kernelImage = renderCTX.device->createImageView({
             .image = renderCTX.device->createImage({
+                .imageType = VK_IMAGE_TYPE_2D,
                 .format = VK_FORMAT_R32G32B32A32_SFLOAT,
                 .extent = { width, height, 1 },
                 .usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                .imageType = VK_IMAGE_TYPE_2D,
                 .debugName = "kernelImage",
             }),
             .format = VK_FORMAT_R32G32B32A32_SFLOAT,
@@ -160,10 +160,10 @@ public:
         });
         aperatureImage = renderCTX.device->createImageView({
             .image = renderCTX.device->createImage({
+                .imageType = VK_IMAGE_TYPE_2D,
                 .format = VK_FORMAT_R8G8B8A8_SRGB,
                 .extent = { width, height, 1 },
                 .usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-                .imageType = VK_IMAGE_TYPE_2D,
                 .debugName = "aperatureImage",
             }),
             .format = VK_FORMAT_R8G8B8A8_SRGB,
@@ -173,10 +173,10 @@ public:
         {
             char const HARDCODED_FILE_PATH[] = "C:\\Users\\Patrick\\Desktop\\aperture2048.png";
 
-            int width = 0;
-            int height = 0;
+            int stb_width = 0;
+            int stb_height = 0;
             int dummy = 0;
-            void* data = stbi_load(HARDCODED_FILE_PATH, &width, &height, &dummy, 4);
+            void* data = stbi_load(HARDCODED_FILE_PATH, &stb_width, &stb_height, &dummy, 4);
             if (data) {
                 cmd.queueImageBarrier({.image = aperatureImage, .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED, .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL});
                 cmd.singleCopyHostToImage({
@@ -208,9 +208,9 @@ public:
 
         fftExtract = renderCTX.pipelineCompiler->createComputePipeline({
             .shaderCI = {
-                .entryPoint = "Main",
                 .pathToSource = "fft/fftextract.hlsl",
                 .shaderLang = daxa::ShaderLang::HLSL,
+                .entryPoint = "Main",
                 .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                 .defines = { N_DEFINE_STRING },
                 .debugName = "fftExtract",
@@ -221,9 +221,9 @@ public:
         }).value();
         fftHorizontal = renderCTX.pipelineCompiler->createComputePipeline({
             .shaderCI = {
-                .entryPoint = "Main",
                 .pathToSource = "fft/fftHorizontal.hlsl",
                 .shaderLang = daxa::ShaderLang::HLSL,
+                .entryPoint = "Main",
                 .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                 .defines = { N_DEFINE_STRING },
                 .debugName = "fftHorizontal",
@@ -234,9 +234,9 @@ public:
         }).value();
         fftVerticalApply = renderCTX.pipelineCompiler->createComputePipeline({
             .shaderCI = {
-                .entryPoint = "Main",
                 .pathToSource = "fft/fftVerticalApply.hlsl",
                 .shaderLang = daxa::ShaderLang::HLSL,
+                .entryPoint = "Main",
                 .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                 .defines = { N_DEFINE_STRING },
                 .debugName = "fftVerticalApply",
@@ -247,9 +247,9 @@ public:
         }).value();
         genKernelHorizontal0 = renderCTX.pipelineCompiler->createComputePipeline({
             .shaderCI = {
-                .entryPoint = "MainHorizontal0",
                 .pathToSource = "fft/fftGenKernel.hlsl",
                 .shaderLang = daxa::ShaderLang::HLSL,
+                .entryPoint = "MainHorizontal0",
                 .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                 .defines = { N_DEFINE_STRING },
                 .debugName = "fftGenKernel",
@@ -260,9 +260,9 @@ public:
         }).value();
         genKernelVertical0 = renderCTX.pipelineCompiler->createComputePipeline({
             .shaderCI = {
-                .entryPoint = "MainVertical0",
                 .pathToSource = "fft/fftGenKernel.hlsl",
                 .shaderLang = daxa::ShaderLang::HLSL,
+                .entryPoint = "MainVertical0",
                 .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                 .defines = { N_DEFINE_STRING },
                 .debugName = "fftGenKernel",
@@ -273,9 +273,9 @@ public:
         }).value();
         genKernelHorizontal1 = renderCTX.pipelineCompiler->createComputePipeline({
             .shaderCI = {
-                .entryPoint = "MainHorizontal1",
                 .pathToSource = "fft/fftGenKernel.hlsl",
                 .shaderLang = daxa::ShaderLang::HLSL,
+                .entryPoint = "MainHorizontal1",
                 .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                 .defines = { N_DEFINE_STRING },
                 .debugName = "fftGenKernel",
@@ -286,9 +286,9 @@ public:
         }).value();
         genKernelVertical1 = renderCTX.pipelineCompiler->createComputePipeline({
             .shaderCI = {
-                .entryPoint = "MainVertical1",
                 .pathToSource = "fft/fftGenKernel.hlsl",
                 .shaderLang = daxa::ShaderLang::HLSL,
+                .entryPoint = "MainVertical1",
                 .stage = VK_SHADER_STAGE_COMPUTE_BIT,
                 .defines = { N_DEFINE_STRING },
                 .debugName = "fftGenKernel",
@@ -299,8 +299,8 @@ public:
         }).value();
 
         globalsBuffer = renderCTX.device->createBuffer({
-            .memoryType = daxa::MemoryType::GPU_ONLY,
             .size = sizeof(FFTGlobals),
+            .memoryType = daxa::MemoryType::GPU_ONLY,
             .debugName = "globalsBuffer",
         });
     }
