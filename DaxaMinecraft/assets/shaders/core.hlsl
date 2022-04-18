@@ -75,12 +75,19 @@ struct Globals {
     float time, fov;
     uint texture_index;
     uint sampler_index;
+    uint model_load_index;
     uint single_ray_steps;
     uint chunk_images[CHUNK_NZ][CHUNK_NY][CHUNK_NX];
     ChunkBlockPresence chunk_block_presence[CHUNK_NZ][CHUNK_NY][CHUNK_NX];
 };
 
+struct ModelLoadBuffer {
+    float4 pos, dim;
+    uint data[128 * 128 * 128];
+};
+
 DAXA_DEFINE_BA_BUFFER(Globals)
+DAXA_DEFINE_BA_BUFFER(ModelLoadBuffer)
 
 #if !defined(USE_GLOBALS_DEFINE)
 #define USE_GLOBALS_DEFINE 0
