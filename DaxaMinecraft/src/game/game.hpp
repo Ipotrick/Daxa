@@ -109,6 +109,7 @@ struct Game {
             ImGui::SliderInt("Ray steps", &world.single_ray_steps, 0, 100);
             if (ImGui::Button("Reset player"))
                 reset_player();
+            ImGui::SliderInt("ChunkGen Updates/Frame", &world.chunk_updates_per_frame, 1, 50);
             ImGui::SliderFloat("Speed", &player.speed, 0.1f, 40.0f);
             HelpMarker("Speed to move (Blocks/s)");
             ImGui::SliderFloat("Sprint Speed", &player.sprint_speed, 1.1f, 50.0f);
