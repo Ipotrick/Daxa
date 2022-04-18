@@ -200,8 +200,7 @@ void run_dda_main(GLOBALS_PARAM in Ray ray, in DDA_StartResult dda_start, in out
     float3 t_next = t_start;
 
     for (x1_steps = 0; x1_steps < max_steps; ++x1_steps) {
-        current_pos = ray.o + ray.nrm * (t_curr + 0.01);
-        // color_set(color, float3(1, 0.25, 1), circle_dist(pixel_pos, current_pos, 0.5) < 0);
+        current_pos = ray.o + ray.nrm * t_curr;
         if (!point_box_contains(current_pos, b_min, b_max)) {
             run_state.outside_bounds = true;
             break;
@@ -222,7 +221,6 @@ void run_dda_main(GLOBALS_PARAM in Ray ray, in DDA_StartResult dda_start, in out
                     run_state.side = 2;
                 }
             }
-            // t_curr += 0.001;
             break;
         }
         cell_size = float(1l << (lod - 1));
