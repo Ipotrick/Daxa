@@ -168,7 +168,7 @@ namespace daxa {
 
 		// setting target
 		args.push_back(L"-spirv");
-		args.push_back(L"-fspv-target-env=vulkan1.2");
+		args.push_back(L"-fspv-target-env=vulkan1.1");
 
 		// set optimization setting
 		args.push_back(L"-O3");
