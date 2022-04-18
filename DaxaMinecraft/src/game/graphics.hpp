@@ -4,6 +4,9 @@
 #include <Daxa.hpp>
 #include <deque>
 
+#define OGT_VOX_IMPLEMENTATION
+#include "ogt_vox.h"
+
 struct RenderContext {
     daxa::DeviceHandle device;
     daxa::PipelineCompilerHandle pipeline_compiler;
@@ -255,10 +258,12 @@ struct World {
     daxa::SamplerHandle atlas_texture_sampler;
 
     daxa::BufferHandle compute_pipeline_globals;
+    daxa::BufferHandle model_buffer;
 
     daxa::PipelineHandle raymarch_compute_pipeline;
     daxa::PipelineHandle pickblock_compute_pipeline;
     daxa::PipelineHandle blockedit_compute_pipeline;
+    daxa::PipelineHandle modelload_compute_pipeline;
     daxa::PipelineHandle subchunk_x2x4_pipeline;
     daxa::PipelineHandle subchunk_x8p_pipeline;
 
@@ -283,6 +288,7 @@ struct World {
 
         u32 texture_index;
         u32 sampler_index;
+        u32 model_load_index;
         u32 single_ray_steps;
         ChunkArray<u32> chunk_ids;
         // ChunkArray<ChunkBlockPresence> chunk_block_presence;
@@ -301,11 +307,17 @@ struct World {
         u32 output_image_i;
     };
 
+    struct ModelLoadBuffer {
+        glm::vec4 pos, dim;
+        std::array<u32, 128 * 128 * 128> data;
+    };
+    std::unique_ptr<ModelLoadBuffer> model_load_buffer = std::make_unique<ModelLoadBuffer>();
+
     RenderContext &render_ctx;
 
     using Clock = std::chrono::high_resolution_clock;
     Clock::time_point start;
-    
+
     bool initialized = false;
     int chunk_updates_per_frame = 4;
 
@@ -410,11 +422,76 @@ struct World {
             //.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
             .memoryType = daxa::MemoryType::GPU_ONLY,
         });
+        model_buffer = render_ctx.device->createBuffer({
+            .size = sizeof(ModelLoadBuffer),
+            .memoryType = daxa::MemoryType::GPU_ONLY,
+        });
+
+        std::ifstream model_voxfile("DaxaMinecraft/assets/models/teapot.vox", std::ios::binary);
+        std::vector<u8> buffer(std::istreambuf_iterator<char>(model_voxfile), {});
+        const ogt_vox_scene *scene = ogt_vox_read_scene(buffer.data(), buffer.size());
+        auto &model = *scene->models[0];
+        model_load_buffer->pos = glm::vec4(-32, 0, -32, 0);
+        model_load_buffer->dim = glm::vec4(std::min<f32>(model.size_x, 128), std::min<f32>(model.size_z, 128), std::min<f32>(model.size_y, 128), 0);
+        for (size_t zi = 0; zi < Chunk::DIM.z * 2; ++zi) {
+            for (size_t yi = 0; yi < Chunk::DIM.y * 2; ++yi) {
+                for (size_t xi = 0; xi < Chunk::DIM.x * 2; ++xi) {
+                    if (xi < model.size_x && zi < model.size_y && yi < model.size_z) {
+                        auto v = model.voxel_data[xi + zi * model.size_x + (model.size_z - yi - 1) * model.size_x * model.size_y];
+                        if (v != 0)
+                            model_load_buffer->data[xi + yi * 128 + zi * 128 * 128] = v % 24 + 2;
+                        else
+                            model_load_buffer->data[xi + yi * 128 + zi * 128 * 128] = 1;
+                    } else {
+                        model_load_buffer->data[xi + yi * 128 + zi * 128 * 128] = 1;
+                    }
+                }
+            }
+        }
+
+        ogt_vox_destroy_scene(scene);
     }
 
     ~World() {
         render_ctx.queue->waitIdle();
         render_ctx.queue->checkForFinishedSubmits();
+    }
+
+    glm::ivec3 mvchunk_size;
+
+    void process_mvchunk(char *&buf_ptr, int i = 0) {
+        if (i > 100) {
+            buf_ptr += 10000;
+            return;
+        }
+
+        std::string_view chunkid = std::string_view(buf_ptr, buf_ptr + 4);
+        buf_ptr += 4;
+        int data_size = *reinterpret_cast<int *>(buf_ptr);
+        buf_ptr += 4;
+        int subdata_size = *reinterpret_cast<int *>(buf_ptr);
+        buf_ptr += 4;
+        char *data = buf_ptr;
+        buf_ptr += data_size;
+        // char *subdata = buf_ptr;
+        char *sub_end = buf_ptr + subdata_size;
+
+        for (int j = 0; j < i; ++j)
+            std::cout << "    ";
+
+        if (chunkid.compare("SIZE") == 0) {
+            mvchunk_size.x = *reinterpret_cast<int *>(data + 0x0);
+            mvchunk_size.y = *reinterpret_cast<int *>(data + 0x4);
+            mvchunk_size.z = *reinterpret_cast<int *>(data + 0x8);
+            std::cout << mvchunk_size.x << ", " << mvchunk_size.y << ", " << mvchunk_size.z << std::endl;
+        } else {
+            std::cout << chunkid << ": " << data_size << ", " << subdata_size << std::endl;
+        }
+
+        if (subdata_size > 0) {
+            while (buf_ptr < sub_end)
+                process_mvchunk(buf_ptr, i + 1);
+        }
     }
 
     bool try_recreate_pipeline(daxa::PipelineHandle &pipe) {
@@ -432,6 +509,7 @@ struct World {
         try_recreate_pipeline(raymarch_compute_pipeline);
         try_recreate_pipeline(blockedit_compute_pipeline);
         try_recreate_pipeline(pickblock_compute_pipeline);
+        try_recreate_pipeline(modelload_compute_pipeline);
         bool should_reinit0 = false;
         for (auto &pipe : chunkgen_compute_pipeline_passes) {
             if (try_recreate_pipeline(pipe))
@@ -516,6 +594,16 @@ struct World {
             }
         }
 
+        auto compute_modelload_i = model_buffer.getDescriptorIndex();
+        compute_globals.model_load_index = compute_modelload_i;
+
+        cmd_list.singleCopyHostToBuffer({
+            .src = reinterpret_cast<u8 *>(model_load_buffer.get()),
+            .dst = model_buffer,
+            .region = {.size = sizeof(ModelLoadBuffer)}, // - sizeof(decltype(compute_globals.chunk_block_presence))
+        });
+        cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+
         auto compute_globals_i = compute_pipeline_globals.getDescriptorIndex();
 
         cmd_list.singleCopyHostToBuffer({
@@ -555,6 +643,18 @@ struct World {
 
                     cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
                 }
+
+                cmd_list.bindPipeline(modelload_compute_pipeline);
+                cmd_list.bindAll();
+                cmd_list.pushConstant(
+                    VK_SHADER_STAGE_COMPUTE_BIT,
+                    ChunkgenPush{
+                        .pos = {1.0f * xi * Chunk::DIM.x, 1.0f * yi * Chunk::DIM.y, 1.0f * zi * Chunk::DIM.z, 0},
+                        .globals_sb = compute_globals_i,
+                        .output_image_i = compute_globals.chunk_ids[zi][yi][xi],
+                    });
+                cmd_list.dispatch(8, 8, 8);
+                cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 
                 struct SubChunkPush {
                     u32 chunk_i[4];
@@ -631,6 +731,7 @@ struct World {
         create_pipeline(raymarch_compute_pipeline, "drawing/raymarch.hlsl", daxa::ShaderLang::HLSL);
         create_pipeline(pickblock_compute_pipeline, "utils/pickblock.comp");
         create_pipeline(blockedit_compute_pipeline, "utils/blockedit.comp");
+        create_pipeline(modelload_compute_pipeline, "chunkgen/model_load.hlsl", daxa::ShaderLang::HLSL);
         create_pipeline(subchunk_x2x4_pipeline, "chunkgen/subchunk_x2x4.hlsl", daxa::ShaderLang::HLSL, "Main");
         create_pipeline(subchunk_x8p_pipeline, "chunkgen/subchunk_x8p.hlsl", daxa::ShaderLang::HLSL, "Main");
 
