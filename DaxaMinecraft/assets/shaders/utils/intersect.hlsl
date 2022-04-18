@@ -178,6 +178,15 @@ RayIntersection ray_step_voxels(GLOBALS_PARAM in Ray ray, in float3 b_min, in fl
     run_dda_main(GLOBALS_ARG ray, dda_start, dda_run_state, b_min, b_max, max_steps);
     result.hit = dda_run_state.hit;
 
+#if USE_NEW_DDA_METHOD
+    result.dist = dda_run_state.to_side_dist.x;
+    switch (dda_run_state.side) {
+    case 0: result.nrm = float3(ray.nrm.x < 0 ? 1 : -1, 0, 0); break;
+    case 1: result.nrm = float3(0, ray.nrm.y < 0 ? 1 : -1, 0); break;
+    case 2: result.nrm = float3(0, 0, ray.nrm.z < 0 ? 1 : -1); break;
+    }
+
+#else
     if (dda_run_state.outside_bounds) {
         result.dist += 1.0f;
         result.hit = false;
@@ -202,6 +211,7 @@ RayIntersection ray_step_voxels(GLOBALS_PARAM in Ray ray, in float3 b_min, in fl
     case 1: result.dist += y - dy, result.nrm = float3(0, -dda_start.ray_step.y, 0); break;
     case 2: result.dist += z - dz, result.nrm = float3(0, 0, -dda_start.ray_step.z); break;
     }
+#endif
 
     result.steps = dda_run_state.total_steps;
 

@@ -5,20 +5,32 @@
 
 float terrain_noise(float3 pos) {
     FractalNoiseConfig noise_conf = {
+        /* .amplitude   = */ 1.2f,
+        /* .persistance = */ 0.4f,
+        /* .scale       = */ 0.008f,
+        /* .lacunarity  = */ 2,
+        /* .octaves     = */ 5,
+    };
+    float val = fractal_noise(pos, noise_conf) - 0.5 + (pos.y - 54) * 0.05;
+    val -= smoothstep(-1, 1, (pos.y - 64) * 0.04) * 1.5;
+    return val;
+}
+float terrain_noise2(float3 pos) {
+    FractalNoiseConfig noise_conf = {
         /* .amplitude   = */ 1.0f,
         /* .persistance = */ 0.4f,
         /* .scale       = */ 0.008f,
         /* .lacunarity  = */ 2,
         /* .octaves     = */ 3,
     };
-    return fractal_noise(pos, noise_conf) - 1.5; // + (pos.y - 120) * 0.015;
+    return fractal_noise(float3(pos.x, 0, pos.z) - 100, noise_conf);
 }
 
 float biome_noise(float3 pos) {
     FractalNoiseConfig noise_conf = {
         /* .amplitude   = */ 1.0f,
         /* .persistance = */ 0.4f,
-        /* .scale       = */ 0.001f,
+        /* .scale       = */ 0.005f,
         /* .lacunarity  = */ 4,
         /* .octaves     = */ 4,
     };

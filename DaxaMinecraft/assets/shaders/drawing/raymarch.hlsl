@@ -223,7 +223,8 @@ float3 rand_pt(float3 n, float2 rnd) {
 #elif ALBEDO == ALBEDO_DEBUG_NRM
                 float3 albedo = ray_chunk_intersection.nrm * 0.5 + 0.5;
 #elif ALBEDO == ALBEDO_DEBUG_DIST
-                float3 albedo = float3(ray_chunk_intersection.dist / 100);
+                float d = ray_chunk_intersection.dist;
+                float3 albedo = float3(d, d, d) * 0.01;
 #elif ALBEDO == ALBEDO_DEBUG_RANDOM
                 float3 albedo = float3(rand(int3(intersection_pos)), rand(int3(intersection_pos + 10)), rand(int3(intersection_pos + 20)));
                 // float3 albedo = float3(block_id) / 32;

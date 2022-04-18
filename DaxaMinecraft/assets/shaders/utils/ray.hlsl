@@ -25,11 +25,11 @@ float3 get_intersection_pos(in Ray ray, in RayIntersection intersection) {
 float3 get_intersection_pos_corrected(in Ray ray, in RayIntersection intersection) {
     float3 p = get_intersection_pos(ray, intersection) - intersection.nrm * 0.001;
     // INEFFICIENT 1x FIX
-    // if (abs(intersection.nrm.x) > 0.5)
-    //     return float3(round(p.x) - intersection.nrm.x * 0.001, p.yz);
-    // if (abs(intersection.nrm.y) > 0.5)
-    //     return float3(p.x, round(p.y) - intersection.nrm.y * 0.001, p.z);
-    // if (abs(intersection.nrm.z) > 0.5)
-    //     return float3(p.xy, round(p.z) - intersection.nrm.z * 0.001);
+    if (abs(intersection.nrm.x) > 0.5)
+        return float3(round(p.x) - intersection.nrm.x * 0.001, p.yz);
+    if (abs(intersection.nrm.y) > 0.5)
+        return float3(p.x, round(p.y) - intersection.nrm.y * 0.001, p.z);
+    if (abs(intersection.nrm.z) > 0.5)
+        return float3(p.xy, round(p.z) - intersection.nrm.z * 0.001);
     return p;
 }

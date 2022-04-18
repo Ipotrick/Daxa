@@ -37,6 +37,8 @@ struct DDA_RunState {
 
 DDA_StartResult run_dda_start(in Ray ray, in out DDA_RunState run_state) {
     DDA_StartResult result;
+
+#if !USE_NEW_DDA_METHOD
     result.delta_dist = float3(
         ray.nrm.x == 0 ? 1 : abs(ray.inv_nrm.x),
         ray.nrm.y == 0 ? 1 : abs(ray.inv_nrm.y),
@@ -112,6 +114,8 @@ DDA_StartResult run_dda_start(in Ray ray, in out DDA_RunState run_state) {
     result.initial_to_side_dist_x16 = run_state.to_side_dist_x16;
     result.initial_to_side_dist_x32 = run_state.to_side_dist_x32;
     result.initial_to_side_dist_x64 = run_state.to_side_dist_x64;
+#endif
+
     return result;
 }
 
@@ -140,54 +144,154 @@ void run_dda_step(in out float3 to_side_dist, in out int3 tile_i, in out uint si
     }
 }
 
+uint get_lod(GLOBALS_PARAM in float3 p) {
+    BlockID block_id = load_block_id(GLOBALS_ARG int3(p));
+    if (is_block_occluding(block_id))
+        return 0;
+    if (x_load_presence<2>(GLOBALS_ARG p))
+        return 1;
+    if (x_load_presence<4>(GLOBALS_ARG p))
+        return 2;
+    if (x_load_presence<8>(GLOBALS_ARG p))
+        return 3;
+    if (x_load_presence<16>(GLOBALS_ARG p))
+        return 4;
+    if (x_load_presence<32>(GLOBALS_ARG p))
+        return 5;
+    return 6;
+}
+
 void run_dda_main(GLOBALS_PARAM in Ray ray, in DDA_StartResult dda_start, in out DDA_RunState run_state, in float3 b_min, in float3 b_max, in uint max_steps) {
     run_state.hit = false;
     uint x1_steps = 0;
 
+#if USE_NEW_DDA_METHOD
+    float3 delta = float3(
+        ray.nrm.x == 0.0 ? 3.0 * max_steps : abs(ray.inv_nrm.x),
+        ray.nrm.y == 0.0 ? 3.0 * max_steps : abs(ray.inv_nrm.y),
+        ray.nrm.z == 0.0 ? 3.0 * max_steps : abs(ray.inv_nrm.z));
+
+    uint lod = get_lod(GLOBALS_ARG ray.o);
+    if (lod == 0) {
+        run_state.hit = true;
+        return;
+    }
+    float cell_size = float(1l << (lod - 1));
+
+    float3 t_start;
+    if (ray.nrm.x < 0) {
+        t_start.x = (ray.o.x / cell_size - floor(ray.o.x / cell_size)) * cell_size * delta.x;
+    } else {
+        t_start.x = (ceil(ray.o.x / cell_size) - ray.o.x / cell_size) * cell_size * delta.x;
+    }
+    if (ray.nrm.y < 0) {
+        t_start.y = (ray.o.y / cell_size - floor(ray.o.y / cell_size)) * cell_size * delta.y;
+    } else {
+        t_start.y = (ceil(ray.o.y / cell_size) - ray.o.y / cell_size) * cell_size * delta.y;
+    }
+    if (ray.nrm.z < 0) {
+        t_start.z = (ray.o.z / cell_size - floor(ray.o.z / cell_size)) * cell_size * delta.z;
+    } else {
+        t_start.z = (ceil(ray.o.z / cell_size) - ray.o.z / cell_size) * cell_size * delta.z;
+    }
+
+    float t_curr = min(min(t_start.x, t_start.y), t_start.z);
+    float3 current_pos;
+    float3 t_next = t_start;
+
+    for (x1_steps = 0; x1_steps < max_steps; ++x1_steps) {
+        current_pos = ray.o + ray.nrm * (t_curr + 0.01);
+        // color_set(color, float3(1, 0.25, 1), circle_dist(pixel_pos, current_pos, 0.5) < 0);
+        if (!point_box_contains(current_pos, b_min, b_max)) {
+            run_state.outside_bounds = true;
+            break;
+        }
+        lod = get_lod(GLOBALS_ARG current_pos);
+        if (lod == 0) {
+            run_state.hit = true;
+            if (t_next.x < t_next.y) {
+                if (t_next.x < t_next.z) {
+                    run_state.side = 0;
+                } else {
+                    run_state.side = 2;
+                }
+            } else {
+                if (t_next.y < t_next.z) {
+                    run_state.side = 1;
+                } else {
+                    run_state.side = 2;
+                }
+            }
+            // t_curr += 0.001;
+            break;
+        }
+        cell_size = float(1l << (lod - 1));
+
+        if (ray.nrm.x < 0) {
+            t_next.x = (current_pos.x / cell_size - floor(current_pos.x / cell_size)) * cell_size * delta.x;
+        } else {
+            t_next.x = (ceil(current_pos.x / cell_size) - current_pos.x / cell_size) * cell_size * delta.x;
+        }
+        if (ray.nrm.y < 0) {
+            t_next.y = (current_pos.y / cell_size - floor(current_pos.y / cell_size)) * cell_size * delta.y;
+        } else {
+            t_next.y = (ceil(current_pos.y / cell_size) - current_pos.y / cell_size) * cell_size * delta.y;
+        }
+        if (ray.nrm.z < 0) {
+            t_next.z = (current_pos.z / cell_size - floor(current_pos.z / cell_size)) * cell_size * delta.z;
+        } else {
+            t_next.z = (ceil(current_pos.z / cell_size) - current_pos.z / cell_size) * cell_size * delta.z;
+        }
+
+        t_curr += min(min(t_next.x, t_next.y), t_next.z) + 0.001;
+    }
+
+    run_state.total_steps = x1_steps;
+    run_state.to_side_dist = float3(t_curr, t_curr, t_curr);
+#else
 #if VISUALIZE_SUBGRID == 0
     // TODO: figure out why this is necessary
     // 10% perf hit with shadows (worst case)
-    // if (x_load_presence<16>(globals, run_state.tile_i_x16)) {
-    //     for (uint j = 0; j < 12; ++j) {
-    //         BlockID block_id = load_block_id(GLOBALS_ARG run_state.tile_i);
-    //         if (is_block_occluding(block_id)) {
-    //             run_state.hit = true;
-    //             break;
-    //         }
-    //         run_dda_step<1>(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start);
-    //         int3 tile_i_o4 = run_state.tile_i / 4;
-    //         if (tile_i_o4.x == run_state.tile_i_x4.x &&
-    //             tile_i_o4.y == run_state.tile_i_x4.y &&
-    //             tile_i_o4.z == run_state.tile_i_x4.z)
-    //             break;
-    //         x1_steps++;
-    //         if (!point_box_contains(run_state.tile_i, b_min, b_max)) {
-    //             run_state.outside_bounds = true;
-    //             break;
-    //         }
-    //     }
-
-    //     if (x_load_presence<16>(globals, run_state.tile_i / 16 * 16)) {
-    //         for (uint j = 0; j < 36; ++j) {
-    //             BlockID block_id = load_block_id(GLOBALS_ARG run_state.tile_i);
-    //             if (is_block_occluding(block_id)) {
-    //                 run_state.hit = true;
-    //                 break;
-    //             }
-    //             run_dda_step<1>(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start);
-    //             int3 tile_i_o4 = run_state.tile_i / 4;
-    //             if (tile_i_o4.x == run_state.tile_i_x4.x &&
-    //                 tile_i_o4.y == run_state.tile_i_x4.y &&
-    //                 tile_i_o4.z == run_state.tile_i_x4.z)
-    //                 break;
-    //             x1_steps++;
-    //             if (!point_box_contains(run_state.tile_i, b_min, b_max)) {
-    //                 run_state.outside_bounds = true;
-    //                 break;
-    //             }
-    //         }
-    //     }
-    // }
+    if (x_load_presence<16>(globals, run_state.tile_i_x16)) {
+        for (uint j = 0; j < 12; ++j) {
+            BlockID block_id = load_block_id(GLOBALS_ARG run_state.tile_i);
+            if (is_block_occluding(block_id)) {
+                run_state.hit = true;
+                break;
+            }
+            run_dda_step<1>(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start);
+            int3 tile_i_o4 = run_state.tile_i / 4;
+            if (tile_i_o4.x == run_state.tile_i_x4.x &&
+                tile_i_o4.y == run_state.tile_i_x4.y &&
+                tile_i_o4.z == run_state.tile_i_x4.z)
+                break;
+            x1_steps++;
+            if (!point_box_contains(run_state.tile_i, b_min, b_max)) {
+                run_state.outside_bounds = true;
+                break;
+            }
+        }
+        if (x_load_presence<16>(globals, run_state.tile_i / 16 * 16)) {
+            for (uint j = 0; j < 36; ++j) {
+                BlockID block_id = load_block_id(GLOBALS_ARG run_state.tile_i);
+                if (is_block_occluding(block_id)) {
+                    run_state.hit = true;
+                    break;
+                }
+                run_dda_step<1>(run_state.to_side_dist, run_state.tile_i, run_state.side, dda_start);
+                int3 tile_i_o4 = run_state.tile_i / 4;
+                if (tile_i_o4.x == run_state.tile_i_x4.x &&
+                    tile_i_o4.y == run_state.tile_i_x4.y &&
+                    tile_i_o4.z == run_state.tile_i_x4.z)
+                    break;
+                x1_steps++;
+                if (!point_box_contains(run_state.tile_i, b_min, b_max)) {
+                    run_state.outside_bounds = true;
+                    break;
+                }
+            }
+        }
+    }
     // Do this ^ for 16 separately, only if necessary, instead
     // of always stepping all the way to an x16 boundary
 #endif
@@ -355,5 +459,6 @@ void run_dda_main(GLOBALS_PARAM in Ray ray, in DDA_StartResult dda_start, in out
     }
 #if VISUALIZE_SUBGRID == 0
     run_state.total_steps = x1_steps;
+#endif
 #endif
 }
