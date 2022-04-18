@@ -76,7 +76,7 @@ uint tile_texture_index(GLOBALS_PARAM BlockID block_id, BlockFace face) {
 #define ENABLE_X16 1
 #define ENABLE_X64 0
 // Whether to cast shadow rays
-#define ENABLE_SHADOWS 0
+#define ENABLE_SHADOWS 1
 // Whether to visualize the position that the view ray intersects
 #define SHOW_PICK_POS 0
 #define SHOW_SINGLE_RAY 0
@@ -87,5 +87,7 @@ uint tile_texture_index(GLOBALS_PARAM BlockID block_id, BlockFace face) {
 
 // Visualize x_n grid (n can be 1, 2, 4, 8, 16, 32, or 64)
 #define VISUALIZE_SUBGRID 0
+
+#define USE_NEW_DDA_METHOD 1
 
 #define MAX_STEPS (BLOCK_NX + BLOCK_NY + BLOCK_NZ)

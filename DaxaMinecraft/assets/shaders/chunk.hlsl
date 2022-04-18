@@ -8,7 +8,7 @@ uint x_index(uint3 x_i) {
     enum CONSTANTS : uint {
         STRIDE = 64 / N,
     };
-    return x_i.x + x_i.y * STRIDE;
+    return x_i.x + x_i.y * uint(64 / N);
 }
 
 uint x_mask(uint3 x_i) {

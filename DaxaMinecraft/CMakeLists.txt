@@ -10,4 +10,4 @@ target_include_directories(DaxaMinecraft PUBLIC "src")
 
 # target_link_options(DaxaMinecraft PRIVATE -Wl,/SUBSYSTEM:Windows,/ENTRY:mainCRTStartup)
 
-# set_project_warnings(DaxaMinecraft)
+set_project_warnings(DaxaMinecraft)

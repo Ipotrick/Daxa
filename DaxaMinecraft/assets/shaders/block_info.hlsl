@@ -56,11 +56,6 @@ bool is_block_occluding(BlockID block_id) {
 bool is_transparent(BlockID block_id) {
     switch (block_id) {
     case BlockID::Air:
-    case BlockID::DriedShrub:
-    case BlockID::Lava:
-    case BlockID::Leaves:
-    case BlockID::Rose:
-    case BlockID::TallGrass:
     case BlockID::Water:
         return true;
     default:
