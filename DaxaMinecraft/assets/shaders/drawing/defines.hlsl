@@ -1,5 +1,3 @@
-#pragma once
-
 // Helper defines
 #define ALBEDO_TEXTURE 0
 #define ALBEDO_DEBUG_POS 1

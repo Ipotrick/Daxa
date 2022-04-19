@@ -16,7 +16,7 @@ void main() {
     RayIntersection view_chunk_intersection = trace_chunks(view_ray);
     vec3 view_intersection_pos = get_intersection_pos_corrected(view_ray, view_chunk_intersection);
 
-    if (view_chunk_intersection.dist < 48)
+    if (view_chunk_intersection.dist < 63 - BLOCKEDIT_RADIUS)
         globals.pick_pos = vec4(view_intersection_pos, 0);
     else
         globals.pick_pos = vec4(-10000, -10000, -10000, 0);
