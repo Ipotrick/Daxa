@@ -72,6 +72,14 @@ const uvec3 CHUNK_N = BLOCK_N / CHUNK_SIZE;
 const uint MAX_STEPS = CHUNK_N.x * CHUNK_SIZE.x + CHUNK_N.y * CHUNK_SIZE.y + CHUNK_N.z * CHUNK_SIZE.z;
 const uint WATER_LEVEL = 160;
 
+#define CHUNK_SIZE 64
+#define BLOCK_NX 1024
+#define BLOCK_NY 256
+#define BLOCK_NZ 1024
+#define CHUNK_NX (BLOCK_NX / CHUNK_SIZE)
+#define CHUNK_NY (BLOCK_NY / CHUNK_SIZE)
+#define CHUNK_NZ (BLOCK_NZ / CHUNK_SIZE)
+
 uint get_block_id(uint tile) { return tile & BLOCK_ID_MASK; }
 uint get_biome_id(uint tile) { return tile & BIOME_ID_MASK; }
 uint get_sdf_dist(uint tile) { return tile & SDF_DIST_MASK; }

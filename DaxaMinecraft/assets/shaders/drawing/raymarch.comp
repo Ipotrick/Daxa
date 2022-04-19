@@ -87,7 +87,7 @@ void main() {
 
             RayIntersection ray_chunk_intersection = trace_chunks(cam_ray);
 #if VISUALIZE_STEP_COMPLEXITY
-            color.r += log(float(ray_chunk_intersection.steps) * 1 / MAX_STEPS + 1);
+            // color.r += log(float(ray_chunk_intersection.steps) * 1 / MAX_STEPS + 1);
 #else
             vec3 intersection_pos = get_intersection_pos_corrected(cam_ray, ray_chunk_intersection);
             uint block_id = load_block_id(intersection_pos);
