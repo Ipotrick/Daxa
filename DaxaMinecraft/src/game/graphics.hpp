@@ -287,73 +287,93 @@ struct World {
     }
 
     void do_break(daxa::CommandListHandle cmd_list, u32 compute_globals_i, const ComputeGlobals &compute_globals) {
+        i32 x_min = player_rough_chunk_i.x - 1;
+        i32 y_min = player_rough_chunk_i.y - 1;
+        i32 z_min = player_rough_chunk_i.z - 1;
+        i32 x_max = player_rough_chunk_i.x + 1;
+        i32 y_max = player_rough_chunk_i.y + 1;
+        i32 z_max = player_rough_chunk_i.z + 1;
         cmd_list.bindPipeline(blockedit_compute_pipeline);
         cmd_list.bindAll();
-        for (size_t zi = 0; zi < DIM.z; ++zi) {
-            for (size_t yi = 0; yi < DIM.y; ++yi) {
-                for (size_t xi = 0; xi < DIM.x; ++xi) {
-                    cmd_list.pushConstant(
-                        VK_SHADER_STAGE_COMPUTE_BIT,
-                        BlockeditPush{
-                            .pos = {1.0f * xi * Chunk::DIM.x, 1.0f * yi * Chunk::DIM.y, 1.0f * zi * Chunk::DIM.z, 0},
-                            .globals_sb = compute_globals_i,
-                            .output_image_i = compute_globals.chunk_ids[zi][yi][xi],
-                            .set_id = 1,
-                        });
-                    cmd_list.dispatch(8, 8, 8);
+        for (i32 zi = z_min; zi <= z_max; ++zi) {
+            for (i32 yi = y_min; yi <= y_max; ++yi) {
+                for (i32 xi = x_min; xi <= x_max; ++xi) {
+                    if (xi >= 0 && xi < DIM.x && yi >= 0 && yi < DIM.y && zi >= 0 && zi < DIM.z) {
+                        cmd_list.pushConstant(
+                            VK_SHADER_STAGE_COMPUTE_BIT,
+                            BlockeditPush{
+                                .pos = {1.0f * xi * Chunk::DIM.x, 1.0f * yi * Chunk::DIM.y, 1.0f * zi * Chunk::DIM.z, 0},
+                                .globals_sb = compute_globals_i,
+                                .output_image_i = compute_globals.chunk_ids[zi][yi][xi],
+                                .set_id = 1,
+                            });
+                        cmd_list.dispatch(8, 8, 8);
+                    }
                 }
             }
         }
 
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 
-        for (size_t zi = 0; zi < DIM.z; ++zi)
-            for (size_t yi = 0; yi < DIM.y; ++yi)
-                for (size_t xi = 0; xi < DIM.x; ++xi)
-                    update_subchunk_x2x4(cmd_list, {xi, yi, zi});
+        for (i32 zi = z_min; zi <= z_max; ++zi)
+            for (i32 yi = y_min; yi <= y_max; ++yi)
+                for (i32 xi = x_min; xi <= x_max; ++xi)
+                    if (xi >= 0 && xi < DIM.x && yi >= 0 && yi < DIM.y && zi >= 0 && zi < DIM.z)
+                        update_subchunk_x2x4(cmd_list, {xi, yi, zi});
 
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 
-        for (size_t zi = 0; zi < DIM.z; ++zi)
-            for (size_t yi = 0; yi < DIM.y; ++yi)
-                for (size_t xi = 0; xi < DIM.x; ++xi)
-                    update_subchunk_x8p(cmd_list, {xi, yi, zi});
+        for (i32 zi = z_min; zi <= z_max; ++zi)
+            for (i32 yi = y_min; yi <= y_max; ++yi)
+                for (i32 xi = x_min; xi <= x_max; ++xi)
+                    if (xi >= 0 && xi < DIM.x && yi >= 0 && yi < DIM.y && zi >= 0 && zi < DIM.z)
+                        update_subchunk_x8p(cmd_list, {xi, yi, zi});
 
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
     }
 
     void do_place(daxa::CommandListHandle cmd_list, u32 compute_globals_i, const ComputeGlobals &compute_globals) {
+        i32 x_min = player_rough_chunk_i.x - 1;
+        i32 y_min = player_rough_chunk_i.y - 1;
+        i32 z_min = player_rough_chunk_i.z - 1;
+        i32 x_max = player_rough_chunk_i.x + 1;
+        i32 y_max = player_rough_chunk_i.y + 1;
+        i32 z_max = player_rough_chunk_i.z + 1;
         cmd_list.bindPipeline(blockedit_compute_pipeline);
         cmd_list.bindAll();
-        for (size_t zi = 0; zi < DIM.z; ++zi) {
-            for (size_t yi = 0; yi < DIM.y; ++yi) {
-                for (size_t xi = 0; xi < DIM.x; ++xi) {
-                    cmd_list.pushConstant(
-                        VK_SHADER_STAGE_COMPUTE_BIT,
-                        BlockeditPush{
-                            .pos = {1.0f * xi * Chunk::DIM.x, 1.0f * yi * Chunk::DIM.y, 1.0f * zi * Chunk::DIM.z, 0},
-                            .globals_sb = compute_globals_i,
-                            .output_image_i = compute_globals.chunk_ids[zi][yi][xi],
-                            .set_id = 3,
-                        });
-                    cmd_list.dispatch(8, 8, 8);
+        for (i32 zi = z_min; zi <= z_max; ++zi) {
+            for (i32 yi = y_min; yi <= y_max; ++yi) {
+                for (i32 xi = x_min; xi <= x_max; ++xi) {
+                    if (xi >= 0 && xi < DIM.x && yi >= 0 && yi < DIM.y && zi >= 0 && zi < DIM.z) {
+                        cmd_list.pushConstant(
+                            VK_SHADER_STAGE_COMPUTE_BIT,
+                            BlockeditPush{
+                                .pos = {1.0f * xi * Chunk::DIM.x, 1.0f * yi * Chunk::DIM.y, 1.0f * zi * Chunk::DIM.z, 0},
+                                .globals_sb = compute_globals_i,
+                                .output_image_i = compute_globals.chunk_ids[zi][yi][xi],
+                                .set_id = 3,
+                            });
+                        cmd_list.dispatch(8, 8, 8);
+                    }
                 }
             }
         }
 
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 
-        for (size_t zi = 0; zi < DIM.z; ++zi)
-            for (size_t yi = 0; yi < DIM.y; ++yi)
-                for (size_t xi = 0; xi < DIM.x; ++xi)
-                    update_subchunk_x2x4(cmd_list, {xi, yi, zi});
+        for (i32 zi = z_min; zi <= z_max; ++zi)
+            for (i32 yi = y_min; yi <= y_max; ++yi)
+                for (i32 xi = x_min; xi <= x_max; ++xi)
+                    if (xi >= 0 && xi < DIM.x && yi >= 0 && yi < DIM.y && zi >= 0 && zi < DIM.z)
+                        update_subchunk_x2x4(cmd_list, {xi, yi, zi});
 
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 
-        for (size_t zi = 0; zi < DIM.z; ++zi)
-            for (size_t yi = 0; yi < DIM.y; ++yi)
-                for (size_t xi = 0; xi < DIM.x; ++xi)
-                    update_subchunk_x8p(cmd_list, {xi, yi, zi});
+        for (i32 zi = z_min; zi <= z_max; ++zi)
+            for (i32 yi = y_min; yi <= y_max; ++yi)
+                for (i32 xi = x_min; xi <= x_max; ++xi)
+                    if (xi >= 0 && xi < DIM.x && yi >= 0 && yi < DIM.y && zi >= 0 && zi < DIM.z)
+                        update_subchunk_x8p(cmd_list, {xi, yi, zi});
 
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
     }
@@ -508,12 +528,20 @@ struct World {
 
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 
+        // cmd_list.singleCopyBufferToHost({
+        //     .src = compute_pipeline_globals,
+        //     .region = {
+        //         .srcOffset = offsetof(ComputeGlobals, pick_pos),
+        //         .size = sizeof(ComputeGlobals::pick_pos),
+        //     },
+        // });
+
         if (should_place) {
-            should_place = false;
+            // should_place = false;
             do_place(cmd_list, compute_globals_i, compute_globals);
         }
         if (should_break) {
-            should_break = false;
+            // should_break = false;
             do_break(cmd_list, compute_globals_i, compute_globals);
         }
 

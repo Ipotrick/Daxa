@@ -28,4 +28,6 @@
 
 #define USE_NEW_DDA_METHOD 1
 
+#define BLOCKEDIT_RADIUS 2
+
 #define MAX_STEPS (BLOCK_NX + BLOCK_NY + BLOCK_NZ)
