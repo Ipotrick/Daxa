@@ -79,6 +79,7 @@ struct World {
     struct SubChunkPush {
         u32 chunk_i[4];
         u32 globalsID;
+        u32 mode;
     };
 
     struct ChunkRaymarchPush {
@@ -286,29 +287,27 @@ struct World {
         reload_shaders();
     }
 
-    void do_break(daxa::CommandListHandle cmd_list, u32 compute_globals_i, const ComputeGlobals &compute_globals) {
-        i32 x_min = player_rough_chunk_i.x - 1;
-        i32 y_min = player_rough_chunk_i.y - 1;
-        i32 z_min = player_rough_chunk_i.z - 1;
-        i32 x_max = player_rough_chunk_i.x + 1;
-        i32 y_max = player_rough_chunk_i.y + 1;
-        i32 z_max = player_rough_chunk_i.z + 1;
+    void do_blockedit(daxa::CommandListHandle cmd_list, u32 compute_globals_i, const ComputeGlobals &compute_globals, u32 block_id) {
+        i32 x_min = -1;
+        i32 y_min = -1;
+        i32 z_min = -1;
+        i32 x_max = +1;
+        i32 y_max = +1;
+        i32 z_max = +1;
         cmd_list.bindPipeline(blockedit_compute_pipeline);
         cmd_list.bindAll();
         for (i32 zi = z_min; zi <= z_max; ++zi) {
             for (i32 yi = y_min; yi <= y_max; ++yi) {
                 for (i32 xi = x_min; xi <= x_max; ++xi) {
-                    if (xi >= 0 && xi < DIM.x && yi >= 0 && yi < DIM.y && zi >= 0 && zi < DIM.z) {
-                        cmd_list.pushConstant(
-                            VK_SHADER_STAGE_COMPUTE_BIT,
-                            BlockeditPush{
-                                .pos = {1.0f * xi * Chunk::DIM.x, 1.0f * yi * Chunk::DIM.y, 1.0f * zi * Chunk::DIM.z, 0},
-                                .globals_sb = compute_globals_i,
-                                .output_image_i = compute_globals.chunk_ids[zi][yi][xi],
-                                .set_id = 1,
-                            });
-                        cmd_list.dispatch(8, 8, 8);
-                    }
+                    cmd_list.pushConstant(
+                        VK_SHADER_STAGE_COMPUTE_BIT,
+                        BlockeditPush{
+                            .pos = {1.0f * xi, 1.0f * yi, 1.0f * zi, 0},
+                            .globals_sb = compute_globals_i,
+                            // .output_image_i = compute_globals.chunk_ids[zi][yi][xi], unnecessary
+                            .set_id = block_id,
+                        });
+                    cmd_list.dispatch(8, 8, 8);
                 }
             }
         }
@@ -318,74 +317,23 @@ struct World {
         for (i32 zi = z_min; zi <= z_max; ++zi)
             for (i32 yi = y_min; yi <= y_max; ++yi)
                 for (i32 xi = x_min; xi <= x_max; ++xi)
-                    if (xi >= 0 && xi < DIM.x && yi >= 0 && yi < DIM.y && zi >= 0 && zi < DIM.z)
-                        update_subchunk_x2x4(cmd_list, {xi, yi, zi});
-
+                    update_subchunk_x2x4(cmd_list, {xi, yi, zi}, 1); // derive id mode
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
-
         for (i32 zi = z_min; zi <= z_max; ++zi)
             for (i32 yi = y_min; yi <= y_max; ++yi)
                 for (i32 xi = x_min; xi <= x_max; ++xi)
-                    if (xi >= 0 && xi < DIM.x && yi >= 0 && yi < DIM.y && zi >= 0 && zi < DIM.z)
-                        update_subchunk_x8p(cmd_list, {xi, yi, zi});
-
+                    update_subchunk_x8p(cmd_list, {xi, yi, zi}, 1); // derive id mode
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
     }
 
-    void do_place(daxa::CommandListHandle cmd_list, u32 compute_globals_i, const ComputeGlobals &compute_globals) {
-        i32 x_min = player_rough_chunk_i.x - 1;
-        i32 y_min = player_rough_chunk_i.y - 1;
-        i32 z_min = player_rough_chunk_i.z - 1;
-        i32 x_max = player_rough_chunk_i.x + 1;
-        i32 y_max = player_rough_chunk_i.y + 1;
-        i32 z_max = player_rough_chunk_i.z + 1;
-        cmd_list.bindPipeline(blockedit_compute_pipeline);
-        cmd_list.bindAll();
-        for (i32 zi = z_min; zi <= z_max; ++zi) {
-            for (i32 yi = y_min; yi <= y_max; ++yi) {
-                for (i32 xi = x_min; xi <= x_max; ++xi) {
-                    if (xi >= 0 && xi < DIM.x && yi >= 0 && yi < DIM.y && zi >= 0 && zi < DIM.z) {
-                        cmd_list.pushConstant(
-                            VK_SHADER_STAGE_COMPUTE_BIT,
-                            BlockeditPush{
-                                .pos = {1.0f * xi * Chunk::DIM.x, 1.0f * yi * Chunk::DIM.y, 1.0f * zi * Chunk::DIM.z, 0},
-                                .globals_sb = compute_globals_i,
-                                .output_image_i = compute_globals.chunk_ids[zi][yi][xi],
-                                .set_id = 3,
-                            });
-                        cmd_list.dispatch(8, 8, 8);
-                    }
-                }
-            }
-        }
-
+    void update_subchunk(daxa::CommandListHandle cmd_list, glm::uvec3 chunk_i, u32 mode = 0) {
+        update_subchunk_x2x4(cmd_list, chunk_i, mode);
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
-
-        for (i32 zi = z_min; zi <= z_max; ++zi)
-            for (i32 yi = y_min; yi <= y_max; ++yi)
-                for (i32 xi = x_min; xi <= x_max; ++xi)
-                    if (xi >= 0 && xi < DIM.x && yi >= 0 && yi < DIM.y && zi >= 0 && zi < DIM.z)
-                        update_subchunk_x2x4(cmd_list, {xi, yi, zi});
-
-        cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
-
-        for (i32 zi = z_min; zi <= z_max; ++zi)
-            for (i32 yi = y_min; yi <= y_max; ++yi)
-                for (i32 xi = x_min; xi <= x_max; ++xi)
-                    if (xi >= 0 && xi < DIM.x && yi >= 0 && yi < DIM.y && zi >= 0 && zi < DIM.z)
-                        update_subchunk_x8p(cmd_list, {xi, yi, zi});
-
+        update_subchunk_x8p(cmd_list, chunk_i, mode);
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
     }
 
-    void update_subchunk(daxa::CommandListHandle cmd_list, glm::uvec3 chunk_i) {
-        update_subchunk_x2x4(cmd_list, chunk_i);
-        cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
-        update_subchunk_x8p(cmd_list, chunk_i);
-        cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
-    }
-
-    void update_subchunk_x2x4(daxa::CommandListHandle cmd_list, glm::uvec3 chunk_i) {
+    void update_subchunk_x2x4(daxa::CommandListHandle cmd_list, glm::uvec3 chunk_i, u32 mode = 0) {
         auto compute_globals_i = compute_pipeline_globals.getDescriptorIndex();
         cmd_list.bindPipeline(subchunk_x2x4_pipeline);
         cmd_list.bindAll();
@@ -394,11 +342,12 @@ struct World {
             SubChunkPush{
                 .chunk_i = {chunk_i.x, chunk_i.y, chunk_i.z, 0},
                 .globalsID = compute_globals_i,
+                .mode = mode,
             });
         cmd_list.dispatch(1, 64, 1);
     }
 
-    void update_subchunk_x8p(daxa::CommandListHandle cmd_list, glm::uvec3 chunk_i) {
+    void update_subchunk_x8p(daxa::CommandListHandle cmd_list, glm::uvec3 chunk_i, u32 mode = 0) {
         auto compute_globals_i = compute_pipeline_globals.getDescriptorIndex();
         cmd_list.bindPipeline(subchunk_x8p_pipeline);
         cmd_list.bindAll();
@@ -407,6 +356,7 @@ struct World {
             SubChunkPush{
                 .chunk_i = {chunk_i.x, chunk_i.y, chunk_i.z, 0},
                 .globalsID = compute_globals_i,
+                .mode = mode,
             });
         cmd_list.dispatch(1, 1, 1);
     }
@@ -538,11 +488,11 @@ struct World {
 
         if (should_place) {
             // should_place = false;
-            do_place(cmd_list, compute_globals_i, compute_globals);
+            do_blockedit(cmd_list, compute_globals_i, compute_globals, 3); // brick
         }
         if (should_break) {
             // should_break = false;
-            do_break(cmd_list, compute_globals_i, compute_globals);
+            do_blockedit(cmd_list, compute_globals_i, compute_globals, 1); // air
         }
 
         cmd_list.bindPipeline(raymarch_compute_pipeline);
