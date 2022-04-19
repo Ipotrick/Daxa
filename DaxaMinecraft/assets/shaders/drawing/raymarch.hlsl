@@ -281,7 +281,7 @@ float3 rand_pt(float3 n, float2 rnd) {
                 //     albedo = float3(1, 0, 1);
 #endif
 #if SHOW_PICK_POS
-                if (length(intersection_block_pos - view_intersection_block_pos) <= 0.5 + 4) {
+                if (length(intersection_block_pos - view_intersection_block_pos) <= 0.5 + BLOCKEDIT_RADIUS) {
                     float luminance = (albedo.r * 0.2126 + albedo.g * 0.7152 + albedo.b * 0.0722);
                     const float block_outline = 1.0 / 16;
                     albedo = float3(0.2, 0.5, 0.9) * 0.2 + luminance;

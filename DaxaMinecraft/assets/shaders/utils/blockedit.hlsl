@@ -8,6 +8,7 @@ struct Push {
 [[vk::push_constant]] const Push p;
 
 #include "core.hlsl"
+#include "drawing/defines.hlsl"
 
 [numthreads(8, 8, 8)] void main(uint3 global_i
                                 : SV_DispatchThreadID) {
@@ -17,7 +18,7 @@ struct Push {
     uint chunk_texture_id = p.output_image_i;
     RWTexture3D<uint> chunk = getRWTexture3D<uint>(chunk_texture_id);
 
-    if (length(int3(bp) - int3(globals[0].pick_pos[0].xyz)) <= 0.5 + 4) {
+    if (length(int3(bp) - int3(globals[0].pick_pos[0].xyz)) <= 0.5 + BLOCKEDIT_RADIUS) {
         chunk[int3(global_i)] = p.set_id;
     }
 }

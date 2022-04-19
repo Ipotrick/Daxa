@@ -104,13 +104,13 @@ struct Game {
         }
     }
     void on_mouse_button(int button, int action) {
-        if (!paused && action == GLFW_PRESS) {
+        if (!paused) {
             switch (button) {
             case GLFW_MOUSE_BUTTON_LEFT:
-                world.should_break = true;
+                world.should_break = action != GLFW_RELEASE;
                 break;
             case GLFW_MOUSE_BUTTON_RIGHT:
-                world.should_place = true;
+                world.should_place = action != GLFW_RELEASE;
                 break;
             default: break;
             }
