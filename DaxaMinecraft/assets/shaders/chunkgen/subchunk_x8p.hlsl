@@ -4,6 +4,7 @@
 struct Push {
     uint4 chunk_i;
     uint globalsID;
+    uint mode;
 };
 [[vk::push_constant]] const Push p;
 
@@ -29,8 +30,11 @@ void Main(
         (group_local_ID.x >> 6) & 0x7,
         group_local_ID.x & 0x7
     );
-    uint3 chunk_i = p.chunk_i.xyz;
     StructuredBuffer<Globals> globals = getBuffer<Globals>(p.globalsID);
+    uint3 chunk_i = p.chunk_i.xyz;
+    if (p.mode == 1) {
+        chunk_i += int3(globals[0].pick_pos[0].xyz) / CHUNK_SIZE;
+    }
     RWTexture3D<uint> chunk = getRWTexture3D<uint>(globals[0].chunk_images[chunk_i.z][chunk_i.y][chunk_i.x]);
     uint3 x4_i = x8_i * 2;
 
