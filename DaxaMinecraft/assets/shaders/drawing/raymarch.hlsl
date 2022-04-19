@@ -4,6 +4,55 @@
 #include "utils/noise.hlsl"
 #include "chunk.hlsl"
 
+uint tile_texture_index(GLOBALS_PARAM BlockID block_id, BlockFace face) {
+    // clang-format off
+    switch (block_id) {
+    case BlockID::Debug:           return 0;
+    case BlockID::Air:             return 1;
+    case BlockID::Bedrock:         return 2;
+    case BlockID::Brick:           return 3;
+    case BlockID::Cactus:          return 4;
+    case BlockID::Cobblestone:     return 5;
+    case BlockID::CompressedStone: return 6;
+    case BlockID::DiamondOre:      return 7;
+    case BlockID::Dirt:            return 8;
+    case BlockID::DriedShrub:      return 9;
+    case BlockID::Grass:
+        switch (face) {
+        case BlockFace::Back:
+        case BlockFace::Front:
+        case BlockFace::Left:
+        case BlockFace::Right:     return 10;
+        case BlockFace::Bottom:    return 8;
+        case BlockFace::Top:       return 11;
+        default:                   return 0;
+        }
+    case BlockID::Gravel:          return 12;
+    case BlockID::Lava:            return 13 + int(GLOBALS_DEFINE.time * 6) % 8;
+    case BlockID::Leaves:          return 21;
+    case BlockID::Log:
+        switch (face) {
+        case BlockFace::Back:
+        case BlockFace::Front:
+        case BlockFace::Left:
+        case BlockFace::Right:     return 22;
+        case BlockFace::Bottom:
+        case BlockFace::Top:       return 23;
+        default:                   return 0;
+        }
+    case BlockID::MoltenRock:      return 24;
+    case BlockID::Planks:          return 25;
+    case BlockID::Rose:            return 26;
+    case BlockID::Sand:            return 27;
+    case BlockID::Sandstone:       return 28;
+    case BlockID::Stone:           return 29;
+    case BlockID::TallGrass:       return 30;
+    case BlockID::Water:           return 31;
+    default:                       return 0;
+    }
+    // clang-format on
+}
+
 DAXA_DEFINE_BA_TEXTURE2DARRAY(float4)
 DAXA_DEFINE_BA_SAMPLER(void)
 
@@ -73,7 +122,7 @@ float3 rand_pt(float3 n, float2 rnd) {
     float3 right = mul(GLOBALS_DEFINE.viewproj_mat, float4(1, 0, 0, 0)).xyz;
     float3 up = mul(GLOBALS_DEFINE.viewproj_mat, float4(0, 1, 0, 0)).xyz;
 
-    float3 view_intersection_pos = GLOBALS_DEFINE.pick_pos.xyz;
+    float3 view_intersection_pos = GLOBALS_DEFINE.pick_pos[0].xyz;
     Ray cam_ray;
     cam_ray.o = GLOBALS_DEFINE.pos.xyz;
 
@@ -232,7 +281,7 @@ float3 rand_pt(float3 n, float2 rnd) {
                 //     albedo = float3(1, 0, 1);
 #endif
 #if SHOW_PICK_POS
-                if (length(intersection_block_pos - view_intersection_block_pos) <= 0.5 + 0) {
+                if (length(intersection_block_pos - view_intersection_block_pos) <= 0.5 + 4) {
                     float luminance = (albedo.r * 0.2126 + albedo.g * 0.7152 + albedo.b * 0.0722);
                     const float block_outline = 1.0 / 16;
                     albedo = float3(0.2, 0.5, 0.9) * 0.2 + luminance;
