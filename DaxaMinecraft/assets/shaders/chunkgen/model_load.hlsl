@@ -1,4 +1,5 @@
 #include "chunkgen/common.hlsl"
+#include "core.hlsl"
 
 [numthreads(8, 8, 8)] void main(uint3 global_i
                                 : SV_DispatchThreadID) {

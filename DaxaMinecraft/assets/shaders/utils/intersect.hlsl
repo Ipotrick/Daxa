@@ -1,5 +1,6 @@
 #pragma once
 
+#include "drawing/defines.hlsl"
 #include "utils/dda.hlsl"
 
 RayIntersection ray_box_intersect(in Ray ray, float3 b_min, float3 b_max) {

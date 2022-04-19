@@ -10,16 +10,6 @@ using namespace std::literals;
 
 #include <fmt/format.h>
 
-static void HelpMarker(const char *desc) {
-    if (ImGui::IsItemHovered()) {
-        ImGui::BeginTooltip();
-        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-        ImGui::TextUnformatted(desc);
-        ImGui::PopTextWrapPos();
-        ImGui::EndTooltip();
-    }
-}
-
 struct Game {
     using Clock = std::chrono::high_resolution_clock;
     Clock::time_point prev_frame_time;
@@ -67,7 +57,84 @@ struct Game {
         prev_frame_time = now;
         frametimes[frametime_rotation_index] = dt;
         frametime_rotation_index = (frametime_rotation_index + 1) % frametimes.size();
+        ui_update();
+        window.update();
+        player.update(dt);
+        world.update(dt);
+        redraw();
+    }
 
+    void redraw() {
+        if (window.frame_dim.x < 1 || window.frame_dim.y < 1) {
+            std::this_thread::sleep_for(1ms);
+            return;
+        }
+
+        auto cmd_list = render_context.begin_frame(window.frame_dim);
+        player.camera.resize(window.frame_dim.x, window.frame_dim.y);
+        player.camera.set_pos(player.pos);
+        player.camera.set_rot(player.rot.x, player.rot.y);
+        auto vp_mat = player.camera.vrot_mat;
+        world.draw(vp_mat, player, cmd_list, render_context.render_color_image);
+        render_context.blit_to_swapchain(cmd_list);
+        imgui_renderer->recordCommands(ImGui::GetDrawData(), cmd_list, render_context.swapchain_image.getImageViewHandle());
+        render_context.end_frame(cmd_list);
+    }
+
+    Window &get_window() {
+        return window;
+    }
+
+    void on_mouse_move(const glm::dvec2 m) {
+        if (!paused) {
+            double center_x = static_cast<double>(window.frame_dim.x / 2);
+            double center_y = static_cast<double>(window.frame_dim.y / 2);
+            auto offset = glm::dvec2{m.x - center_x, center_y - m.y};
+            player.on_mouse_move(offset.x, offset.y);
+            window.set_mouse_pos(glm::vec2(center_x, center_y));
+        }
+    }
+    void on_mouse_scroll(const glm::dvec2 offset) {
+        if (!paused) {
+            player.camera.fov -= static_cast<float>(offset.y);
+            if (player.camera.fov < 10.0f)
+                player.camera.fov = 10.0f;
+            if (player.camera.fov > 170.0f)
+                player.camera.fov = 170.0f;
+        }
+    }
+    void on_mouse_button(int button, int action) {
+        if (!paused && action == GLFW_PRESS) {
+            switch (button) {
+            case GLFW_MOUSE_BUTTON_LEFT:
+                world.should_break = true;
+                break;
+            case GLFW_MOUSE_BUTTON_RIGHT:
+                world.should_place = true;
+                break;
+            default: break;
+            }
+        }
+    }
+    void on_key(int key, int action) {
+        if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+            toggle_pause();
+        if (key == GLFW_KEY_F3 && action == GLFW_PRESS)
+            perf_menu = !perf_menu;
+        if (!paused) {
+            player.on_key(key, action);
+        }
+    }
+    void on_resize() {
+        update();
+    }
+
+    void toggle_pause() {
+        window.set_mouse_capture(paused);
+        paused = !paused;
+    }
+
+    void ui_update() {
         ImGuiIO &io = ImGui::GetIO();
 
         ImGui_ImplGlfw_NewFrame();
@@ -97,6 +164,16 @@ struct Game {
         auto fire_ray = [&]() {
             world.single_ray_pos = player.pos;
             world.single_ray_nrm = player.camera.vrot_mat * glm::vec4(0, 0, 1, 0);
+        };
+
+        auto HelpMarker = [](const char *const desc) {
+            if (ImGui::IsItemHovered()) {
+                ImGui::BeginTooltip();
+                ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+                ImGui::TextUnformatted(desc);
+                ImGui::PopTextWrapPos();
+                ImGui::EndTooltip();
+            }
         };
 
         if (io.KeysDown[GLFW_KEY_E])
@@ -180,80 +257,5 @@ struct Game {
         }
 
         ImGui::Render();
-
-        window.update();
-        player.update(dt);
-        world.update(dt);
-        redraw();
-    }
-
-    void redraw() {
-        if (window.frame_dim.x < 1 || window.frame_dim.y < 1) {
-            std::this_thread::sleep_for(1ms);
-            return;
-        }
-
-        auto cmd_list = render_context.begin_frame(window.frame_dim);
-        player.camera.resize(window.frame_dim.x, window.frame_dim.y);
-        player.camera.set_pos(player.pos);
-        player.camera.set_rot(player.rot.x, player.rot.y);
-        auto vp_mat = player.camera.vrot_mat;
-        world.draw(vp_mat, player, cmd_list, render_context.render_color_image);
-        render_context.blit_to_swapchain(cmd_list);
-        imgui_renderer->recordCommands(ImGui::GetDrawData(), cmd_list, render_context.swapchain_image.getImageViewHandle());
-        render_context.end_frame(cmd_list);
-    }
-
-    Window &get_window() {
-        return window;
-    }
-
-    void on_mouse_move(const glm::dvec2 m) {
-        if (!paused) {
-            double center_x = static_cast<double>(window.frame_dim.x / 2);
-            double center_y = static_cast<double>(window.frame_dim.y / 2);
-            auto offset = glm::dvec2{m.x - center_x, center_y - m.y};
-            player.on_mouse_move(offset.x, offset.y);
-            window.set_mouse_pos(glm::vec2(center_x, center_y));
-        }
-    }
-    void on_mouse_scroll(const glm::dvec2 offset) {
-        if (!paused) {
-            player.camera.fov -= static_cast<float>(offset.y);
-            if (player.camera.fov < 10.0f)
-                player.camera.fov = 10.0f;
-            if (player.camera.fov > 170.0f)
-                player.camera.fov = 170.0f;
-        }
-    }
-    void on_mouse_button(int button, int action) {
-        if (!paused && action == GLFW_PRESS) {
-            switch (button) {
-            case GLFW_MOUSE_BUTTON_LEFT:
-                // world.should_break = true;
-                break;
-            case GLFW_MOUSE_BUTTON_RIGHT:
-                // world.should_place = true;
-                break;
-            default: break;
-            }
-        }
-    }
-    void on_key(int key, int action) {
-        if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-            toggle_pause();
-        if (key == GLFW_KEY_F3 && action == GLFW_PRESS)
-            perf_menu = !perf_menu;
-        if (!paused) {
-            player.on_key(key, action);
-        }
-    }
-    void on_resize() {
-        update();
-    }
-
-    void toggle_pause() {
-        window.set_mouse_capture(paused);
-        paused = !paused;
     }
 };

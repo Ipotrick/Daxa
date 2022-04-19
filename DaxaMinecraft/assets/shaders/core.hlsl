@@ -70,7 +70,7 @@ struct Globals {
     float4 pos;
     float4 single_ray_pos;
     float4 single_ray_nrm;
-    float4 pick_pos;
+    float4 pick_pos[1];
     int2 frame_dim;
     float time, fov;
     uint texture_index;

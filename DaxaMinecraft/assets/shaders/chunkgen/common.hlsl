@@ -7,5 +7,3 @@ struct Push {
 };
 
 [[vk::push_constant]] const Push p;
-
-#include "core.hlsl"

@@ -1,245 +1,11 @@
 #pragma once
 
 #include <game/chunk.hpp>
-#include <Daxa.hpp>
+#include <game/render_context.hpp>
 #include <deque>
 
 #define OGT_VOX_IMPLEMENTATION
-#include "ogt_vox.h"
-
-struct RenderContext {
-    daxa::DeviceHandle device;
-    daxa::PipelineCompilerHandle pipeline_compiler;
-    daxa::CommandQueueHandle queue;
-
-    daxa::SwapchainHandle swapchain;
-    daxa::SwapchainImage swapchain_image;
-    daxa::ImageViewHandle render_color_image, render_depth_image;
-
-    struct PerFrameData {
-        daxa::SignalHandle present_signal;
-        daxa::TimelineSemaphoreHandle timeline;
-        u64 timeline_counter = 0;
-    };
-    std::deque<PerFrameData> frames;
-
-    auto create_color_image(glm::ivec2 dim) {
-        auto result = device->createImageView({
-            .image = device->createImage({
-                .format = VK_FORMAT_R8G8B8A8_UNORM,
-                .extent = {static_cast<u32>(dim.x), static_cast<u32>(dim.y), 1},
-                .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-                .debugName = "Render Image",
-            }),
-            .format = VK_FORMAT_R8G8B8A8_UNORM,
-            .subresourceRange =
-                {
-                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                    .baseMipLevel = 0,
-                    .levelCount = 1,
-                    .baseArrayLayer = 0,
-                    .layerCount = 1,
-                },
-            .debugName = "Render Image View",
-        });
-        return result;
-    }
-
-    auto create_depth_image(glm::ivec2 dim) {
-        auto result = device->createImageView({
-            .image = device->createImage({
-                .format = VK_FORMAT_D32_SFLOAT,
-                .extent = {static_cast<u32>(dim.x), static_cast<u32>(dim.y), 1},
-                .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                .debugName = "Depth Image",
-            }),
-            .format = VK_FORMAT_D32_SFLOAT,
-            .subresourceRange =
-                {
-                    .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-                    .baseMipLevel = 0,
-                    .levelCount = 1,
-                    .baseArrayLayer = 0,
-                    .layerCount = 1,
-                },
-            .debugName = "Depth Image View",
-        });
-        return result;
-    }
-
-    RenderContext(VkSurfaceKHR surface, glm::ivec2 dim)
-        : device(daxa::Device::create()),
-          pipeline_compiler{this->device->createPipelineCompiler()},
-          queue(device->createCommandQueue({.batchCount = 2})),
-          swapchain(device->createSwapchain({
-              .surface = surface,
-              .width = static_cast<u32>(dim.x),
-              .height = static_cast<u32>(dim.y),
-              .presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR,
-              .additionalUses = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-              .debugName = "Swapchain",
-          })),
-          swapchain_image(swapchain->aquireNextImage()),
-          render_color_image(create_color_image(dim)),
-          render_depth_image(create_depth_image(dim)) {
-        for (int i = 0; i < 3; i++) {
-            frames.push_back(PerFrameData{
-                .present_signal = device->createSignal({}),
-                .timeline = device->createTimelineSemaphore({}),
-                .timeline_counter = 0,
-            });
-        }
-        pipeline_compiler->addShaderSourceRootPath("DaxaMinecraft/assets/shaders");
-    }
-
-    ~RenderContext() {
-        queue->waitIdle();
-        queue->checkForFinishedSubmits();
-        device->waitIdle();
-        frames.clear();
-    }
-
-    auto begin_frame(glm::ivec2 dim) {
-        resize(dim);
-        // auto *currentFrame = &frames.front();
-        auto cmd_list = queue->getCommandList({});
-        cmd_list.queueImageBarrier(daxa::ImageBarrier{
-            .barrier = daxa::FULL_MEMORY_BARRIER,
-            .image = render_color_image,
-            .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
-            .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
-        });
-        cmd_list.queueImageBarrier(daxa::ImageBarrier{
-            .barrier = daxa::FULL_MEMORY_BARRIER,
-            .image = render_depth_image,
-            .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
-            .layoutAfter = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-        });
-        return cmd_list;
-    }
-
-    void begin_rendering(daxa::CommandListHandle cmd_list) {
-        std::array framebuffer{daxa::RenderAttachmentInfo{
-            .image = swapchain_image.getImageViewHandle(),
-            .clearValue = {.color = {.float32 = {1.0f, 0.0f, 1.0f, 1.0f}}},
-        }};
-        daxa::RenderAttachmentInfo depth_attachment{
-            .image = render_depth_image,
-            .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-            .clearValue = {.depthStencil = {.depth = 1.0f}},
-        };
-        cmd_list.beginRendering(daxa::BeginRenderingInfo{
-            .colorAttachments = framebuffer,
-            .depthAttachment = &depth_attachment,
-        });
-    }
-
-    void end_rendering(daxa::CommandListHandle cmd_list) {
-        cmd_list.endRendering();
-    }
-
-    void end_frame(daxa::CommandListHandle cmd_list) {
-        auto *current_frame = &frames.front();
-        cmd_list.finalize();
-        // std::array signalTimelines = {
-        //     std::tuple{current_frame->timeline, ++current_frame->timeline_counter},
-        // };
-        daxa::SubmitInfo submitInfo;
-        submitInfo.commandLists.push_back(std::move(cmd_list));
-        submitInfo.signalOnCompletion = {&current_frame->present_signal, 1};
-        // submitInfo.signalTimelines = signalTimelines;
-        queue->submit(submitInfo);
-        queue->present(std::move(swapchain_image), current_frame->present_signal);
-        swapchain_image = swapchain->aquireNextImage();
-        auto frameContext = std::move(frames.back());
-        frames.pop_back();
-        frames.push_front(std::move(frameContext));
-        current_frame = &frames.front();
-        queue->checkForFinishedSubmits();
-        queue->nextBatch();
-        // current_frame->timeline->wait(current_frame->timeline_counter);
-    }
-
-    void resize(glm::ivec2 dim) {
-        if (dim.x != static_cast<i32>(swapchain->getSize().width) || dim.y != static_cast<i32>(swapchain->getSize().height)) {
-            device->waitIdle();
-            swapchain->resize(VkExtent2D{.width = static_cast<u32>(dim.x), .height = static_cast<u32>(dim.y)});
-            swapchain_image = swapchain->aquireNextImage();
-            render_color_image = create_color_image(dim);
-            render_depth_image = create_depth_image(dim);
-        }
-    }
-
-    void blit_to_swapchain(daxa::CommandListHandle cmd_list) {
-
-        cmd_list.queueImageBarrier({
-            .image = swapchain_image.getImageViewHandle(),
-            .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
-            .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        });
-        cmd_list.queueImageBarrier({
-            .image = render_color_image,
-            .layoutBefore = VK_IMAGE_LAYOUT_GENERAL,
-            .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-        });
-
-        // cmd_list.singleCopyImageToImage({
-        //     .src = render_color_image->getImageHandle(),
-        //     .dst = swapchain_image.getImageViewHandle()->getImageHandle(),
-        // });
-
-        auto render_extent = swapchain_image.getImageViewHandle()->getImageHandle()->getVkExtent3D();
-        auto swap_extent = swapchain_image.getImageViewHandle()->getImageHandle()->getVkExtent3D();
-        VkImageBlit blit{
-            .srcSubresource = VkImageSubresourceLayers{
-                .aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT,
-                .mipLevel = 0,
-                .baseArrayLayer = 0,
-                .layerCount = 1,
-            },
-            .srcOffsets = {
-                VkOffset3D{0, 0, 0},
-                VkOffset3D{
-                    static_cast<int32_t>(render_extent.width),
-                    static_cast<int32_t>(render_extent.height),
-                    static_cast<int32_t>(render_extent.depth),
-                },
-            },
-            .dstSubresource = VkImageSubresourceLayers{
-                .aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT,
-                .mipLevel = 0,
-                .baseArrayLayer = 0,
-                .layerCount = 1,
-            },
-            .dstOffsets = {
-                VkOffset3D{0, 0, 0},
-                VkOffset3D{
-                    static_cast<int32_t>(swap_extent.width),
-                    static_cast<int32_t>(swap_extent.height),
-                    static_cast<int32_t>(swap_extent.depth),
-                },
-            },
-        };
-        cmd_list.insertQueuedBarriers();
-        vkCmdBlitImage(
-            cmd_list.getVkCommandBuffer(),
-            render_color_image->getImageHandle()->getVkImage(),
-            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-            swapchain_image.getImageViewHandle()->getImageHandle()->getVkImage(),
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
-
-        cmd_list.queueImageBarrier({
-            .image = swapchain_image.getImageViewHandle(),
-            .layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            .layoutAfter = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-        });
-        cmd_list.queueImageBarrier({
-            .image = render_color_image,
-            .layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-            .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
-        });
-    }
-};
+#include <deps/ogt_vox.h>
 
 struct RenderableChunk {
     daxa::ImageViewHandle chunkgen_image_a;
@@ -291,6 +57,8 @@ struct World {
         u32 model_load_index;
         u32 single_ray_steps;
         ChunkArray<u32> chunk_ids;
+
+        // Too big to keep on the stack! Let's just alloc it on the GPU only.
         // ChunkArray<ChunkBlockPresence> chunk_block_presence;
     };
 
@@ -300,6 +68,17 @@ struct World {
         glm::vec4 pos;
         u32 globals_sb;
         u32 output_image_i;
+    };
+    struct BlockeditPush {
+        glm::vec4 pos;
+        u32 globals_sb;
+        u32 output_image_i;
+        u32 set_id;
+    };
+
+    struct SubChunkPush {
+        u32 chunk_i[4];
+        u32 globalsID;
     };
 
     struct ChunkRaymarchPush {
@@ -311,6 +90,8 @@ struct World {
         glm::vec4 pos, dim;
         std::array<u32, 128 * 128 * 128> data;
     };
+    // Again too big for the stack, but we need to populate it
+    // here on the CPU side, so we'll heap alloc it
     std::unique_ptr<ModelLoadBuffer> model_load_buffer = std::make_unique<ModelLoadBuffer>();
 
     RenderContext &render_ctx;
@@ -366,26 +147,6 @@ struct World {
                             },
                         .debugName = "Chunkgen Image View",
                     });
-                    // chunk->chunkgen_image_b = render_ctx.device->createImageView({
-                    //     .image = render_ctx.device->createImage({
-                    //         .imageType = VK_IMAGE_TYPE_3D,
-                    //         .format = VK_FORMAT_R32_UINT,
-                    //         .extent = {IMG_DIM.x, IMG_DIM.y, IMG_DIM.z},
-                    //         .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-                    //         .debugName = "Chunkgen Image",
-                    //     }),
-                    //     .viewType = VK_IMAGE_VIEW_TYPE_3D,
-                    //     .format = VK_FORMAT_R32_UINT,
-                    //     .subresourceRange =
-                    //         {
-                    //             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                    //             .baseMipLevel = 0,
-                    //             .levelCount = 1,
-                    //             .baseArrayLayer = 0,
-                    //             .layerCount = 1,
-                    //         },
-                    //     .debugName = "Chunkgen Image View",
-                    // });
                 }
             }
         }
@@ -401,12 +162,6 @@ struct World {
                         .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
                         .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
                     });
-                    // cmd_list.queueImageBarrier(daxa::ImageBarrier{
-                    //     .barrier = daxa::FULL_MEMORY_BARRIER,
-                    //     .image = chunk->chunkgen_image_b,
-                    //     .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
-                    //     .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
-                    // });
                 }
             }
         }
@@ -539,10 +294,11 @@ struct World {
                 for (size_t xi = 0; xi < DIM.x; ++xi) {
                     cmd_list.pushConstant(
                         VK_SHADER_STAGE_COMPUTE_BIT,
-                        ChunkgenPush{
+                        BlockeditPush{
                             .pos = {1.0f * xi * Chunk::DIM.x, 1.0f * yi * Chunk::DIM.y, 1.0f * zi * Chunk::DIM.z, 0},
                             .globals_sb = compute_globals_i,
                             .output_image_i = compute_globals.chunk_ids[zi][yi][xi],
+                            .set_id = 1,
                         });
                     cmd_list.dispatch(8, 8, 8);
                 }
@@ -550,9 +306,89 @@ struct World {
         }
 
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+
+        for (size_t zi = 0; zi < DIM.z; ++zi)
+            for (size_t yi = 0; yi < DIM.y; ++yi)
+                for (size_t xi = 0; xi < DIM.x; ++xi)
+                    update_subchunk_x2x4(cmd_list, {xi, yi, zi});
+
+        cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+
+        for (size_t zi = 0; zi < DIM.z; ++zi)
+            for (size_t yi = 0; yi < DIM.y; ++yi)
+                for (size_t xi = 0; xi < DIM.x; ++xi)
+                    update_subchunk_x8p(cmd_list, {xi, yi, zi});
+
+        cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
     }
 
-    void do_place(daxa::CommandListHandle) {
+    void do_place(daxa::CommandListHandle cmd_list, u32 compute_globals_i, const ComputeGlobals &compute_globals) {
+        cmd_list.bindPipeline(blockedit_compute_pipeline);
+        cmd_list.bindAll();
+        for (size_t zi = 0; zi < DIM.z; ++zi) {
+            for (size_t yi = 0; yi < DIM.y; ++yi) {
+                for (size_t xi = 0; xi < DIM.x; ++xi) {
+                    cmd_list.pushConstant(
+                        VK_SHADER_STAGE_COMPUTE_BIT,
+                        BlockeditPush{
+                            .pos = {1.0f * xi * Chunk::DIM.x, 1.0f * yi * Chunk::DIM.y, 1.0f * zi * Chunk::DIM.z, 0},
+                            .globals_sb = compute_globals_i,
+                            .output_image_i = compute_globals.chunk_ids[zi][yi][xi],
+                            .set_id = 3,
+                        });
+                    cmd_list.dispatch(8, 8, 8);
+                }
+            }
+        }
+
+        cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+
+        for (size_t zi = 0; zi < DIM.z; ++zi)
+            for (size_t yi = 0; yi < DIM.y; ++yi)
+                for (size_t xi = 0; xi < DIM.x; ++xi)
+                    update_subchunk_x2x4(cmd_list, {xi, yi, zi});
+
+        cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+
+        for (size_t zi = 0; zi < DIM.z; ++zi)
+            for (size_t yi = 0; yi < DIM.y; ++yi)
+                for (size_t xi = 0; xi < DIM.x; ++xi)
+                    update_subchunk_x8p(cmd_list, {xi, yi, zi});
+
+        cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+    }
+
+    void update_subchunk(daxa::CommandListHandle cmd_list, glm::uvec3 chunk_i) {
+        update_subchunk_x2x4(cmd_list, chunk_i);
+        cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+        update_subchunk_x8p(cmd_list, chunk_i);
+        cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+    }
+
+    void update_subchunk_x2x4(daxa::CommandListHandle cmd_list, glm::uvec3 chunk_i) {
+        auto compute_globals_i = compute_pipeline_globals.getDescriptorIndex();
+        cmd_list.bindPipeline(subchunk_x2x4_pipeline);
+        cmd_list.bindAll();
+        cmd_list.pushConstant(
+            VK_SHADER_STAGE_COMPUTE_BIT,
+            SubChunkPush{
+                .chunk_i = {chunk_i.x, chunk_i.y, chunk_i.z, 0},
+                .globalsID = compute_globals_i,
+            });
+        cmd_list.dispatch(1, 64, 1);
+    }
+
+    void update_subchunk_x8p(daxa::CommandListHandle cmd_list, glm::uvec3 chunk_i) {
+        auto compute_globals_i = compute_pipeline_globals.getDescriptorIndex();
+        cmd_list.bindPipeline(subchunk_x8p_pipeline);
+        cmd_list.bindAll();
+        cmd_list.pushConstant(
+            VK_SHADER_STAGE_COMPUTE_BIT,
+            SubChunkPush{
+                .chunk_i = {chunk_i.x, chunk_i.y, chunk_i.z, 0},
+                .globalsID = compute_globals_i,
+            });
+        cmd_list.dispatch(1, 1, 1);
     }
 
     void draw(const glm::mat4 &vp_mat, const Player3D &player, daxa::CommandListHandle cmd_list, daxa::ImageViewHandle &render_image) {
@@ -600,7 +436,7 @@ struct World {
         cmd_list.singleCopyHostToBuffer({
             .src = reinterpret_cast<u8 *>(model_load_buffer.get()),
             .dst = model_buffer,
-            .region = {.size = sizeof(ModelLoadBuffer)}, // - sizeof(decltype(compute_globals.chunk_block_presence))
+            .region = {.size = sizeof(ModelLoadBuffer)},
         });
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 
@@ -609,11 +445,11 @@ struct World {
         cmd_list.singleCopyHostToBuffer({
             .src = reinterpret_cast<u8 *>(&compute_globals),
             .dst = compute_pipeline_globals,
-            .region = {.size = sizeof(decltype(compute_globals))}, // - sizeof(decltype(compute_globals.chunk_block_presence))
+            .region = {.size = sizeof(decltype(compute_globals))},
         });
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 
-        if (!initialized)
+        if (!initialized) {
             for (int i = 0; i < chunk_updates_per_frame; ++i) {
                 auto chunk_iter = std::find_if(chunk_indices.begin(), chunk_indices.end(), [&](glm::uvec3 chunk_i) {
                     return !chunks[chunk_i.z][chunk_i.y][chunk_i.x]->initialized;
@@ -656,40 +492,9 @@ struct World {
                 cmd_list.dispatch(8, 8, 8);
                 cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 
-                struct SubChunkPush {
-                    u32 chunk_i[4];
-                    u32 globalsID;
-                };
-
-                cmd_list.bindPipeline(subchunk_x2x4_pipeline);
-                cmd_list.bindAll();
-                cmd_list.pushConstant(
-                    VK_SHADER_STAGE_COMPUTE_BIT,
-                    SubChunkPush{
-                        .chunk_i = {xi, yi, zi, 0},
-                        .globalsID = compute_globals_i,
-                    });
-                cmd_list.dispatch(1, 64, 1);
+                update_subchunk(cmd_list, {xi, yi, zi});
                 cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
-
-                cmd_list.bindPipeline(subchunk_x8p_pipeline);
-                cmd_list.bindAll();
-                cmd_list.pushConstant(
-                    VK_SHADER_STAGE_COMPUTE_BIT,
-                    SubChunkPush{
-                        .chunk_i = {xi, yi, zi, 0},
-                        .globalsID = compute_globals_i,
-                    });
-                cmd_list.dispatch(1, 1, 1);
             }
-
-        if (should_place) {
-            should_place = false;
-            do_place(cmd_list);
-        }
-        if (should_break) {
-            should_break = false;
-            do_break(cmd_list, compute_globals_i, compute_globals);
         }
 
         cmd_list.bindPipeline(pickblock_compute_pipeline);
@@ -702,6 +507,15 @@ struct World {
         cmd_list.dispatch(1, 1, 1);
 
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+
+        if (should_place) {
+            should_place = false;
+            do_place(cmd_list, compute_globals_i, compute_globals);
+        }
+        if (should_break) {
+            should_break = false;
+            do_break(cmd_list, compute_globals_i, compute_globals);
+        }
 
         cmd_list.bindPipeline(raymarch_compute_pipeline);
         cmd_list.bindAll();
@@ -730,7 +544,7 @@ struct World {
     void load_shaders() {
         create_pipeline(raymarch_compute_pipeline, "drawing/raymarch.hlsl", daxa::ShaderLang::HLSL);
         create_pipeline(pickblock_compute_pipeline, "utils/pickblock.comp");
-        create_pipeline(blockedit_compute_pipeline, "utils/blockedit.comp");
+        create_pipeline(blockedit_compute_pipeline, "utils/blockedit.hlsl", daxa::ShaderLang::HLSL);
         create_pipeline(modelload_compute_pipeline, "chunkgen/model_load.hlsl", daxa::ShaderLang::HLSL);
         create_pipeline(subchunk_x2x4_pipeline, "chunkgen/subchunk_x2x4.hlsl", daxa::ShaderLang::HLSL, "Main");
         create_pipeline(subchunk_x8p_pipeline, "chunkgen/subchunk_x8p.hlsl", daxa::ShaderLang::HLSL, "Main");

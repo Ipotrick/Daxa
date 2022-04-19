@@ -1,6 +1,8 @@
 #include "chunkgen/common.hlsl"
 #include "chunkgen/world/noise.hlsl"
 
+#include "core.hlsl"
+
 #define water_level 64
 #define lava_level 458
 
