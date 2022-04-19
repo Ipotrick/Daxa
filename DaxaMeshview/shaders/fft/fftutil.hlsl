@@ -24,6 +24,7 @@ void exchange(
 	int incS
 ){
     GroupMemoryBarrierWithGroupSync();
+	
 	for(int r = 0; r < 2; ++r) {
 		int i = (idxD + r * incD);
 		shared_freq[i] = v[r].x;

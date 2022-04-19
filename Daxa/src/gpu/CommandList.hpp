@@ -362,7 +362,7 @@ namespace daxa {
 		);
 		void multiCopyHostToBuffer(MultiHostToBufferCopyInfo const& ci);
 		void singleCopyHostToBuffer(SingleCopyHostToBufferInfo const& info);
-		void singleCopyBufferToHost(SingleBufferToHostCopyInfo const& ci);
+		ToHostCopyFuture singleCopyBufferToHost(SingleBufferToHostCopyInfo const& ci);
 		void multiCopyHostToImage(MultiHostToImageCopyInfo const& ci);
 		void singleCopyHostToImage(SingleHostToImageCopyInfo const& ci);
 		void multiCopyBufferToBuffer(MultiBufferToBufferCopyInfo const& ci);
