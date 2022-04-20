@@ -2,6 +2,8 @@
 
 #include <Daxa.hpp>
 
+static constexpr int RENDER_SCL = 2;
+
 struct RenderContext {
     daxa::DeviceHandle device;
     daxa::PipelineCompilerHandle pipeline_compiler;
@@ -75,8 +77,8 @@ struct RenderContext {
               .debugName = "Swapchain",
           })),
           swapchain_image(swapchain->aquireNextImage()),
-          render_color_image(create_color_image(dim)),
-          render_depth_image(create_depth_image(dim)) {
+          render_color_image(create_color_image(dim / RENDER_SCL)),
+          render_depth_image(create_depth_image(dim / RENDER_SCL)) {
         for (int i = 0; i < 3; i++) {
             frames.push_back(PerFrameData{
                 .present_signal = device->createSignal({}),
@@ -160,8 +162,8 @@ struct RenderContext {
             device->waitIdle();
             swapchain->resize(VkExtent2D{.width = static_cast<u32>(dim.x), .height = static_cast<u32>(dim.y)});
             swapchain_image = swapchain->aquireNextImage();
-            render_color_image = create_color_image(dim);
-            render_depth_image = create_depth_image(dim);
+            render_color_image = create_color_image(dim / RENDER_SCL);
+            render_depth_image = create_depth_image(dim / RENDER_SCL);
         }
     }
 
@@ -195,8 +197,8 @@ struct RenderContext {
             .srcOffsets = {
                 VkOffset3D{0, 0, 0},
                 VkOffset3D{
-                    static_cast<int32_t>(render_extent.width),
-                    static_cast<int32_t>(render_extent.height),
+                    static_cast<int32_t>(render_extent.width / RENDER_SCL),
+                    static_cast<int32_t>(render_extent.height / RENDER_SCL),
                     static_cast<int32_t>(render_extent.depth),
                 },
             },
