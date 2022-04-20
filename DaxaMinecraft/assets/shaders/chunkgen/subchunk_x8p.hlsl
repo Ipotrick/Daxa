@@ -35,6 +35,10 @@ void Main(
     if (p.mode == 1) {
         chunk_i += int3(globals[0].pick_pos[0].xyz) / CHUNK_SIZE;
     }
+    if (chunk_i.x < 0 || chunk_i.x >= CHUNK_NX ||
+        chunk_i.y < 0 || chunk_i.y >= CHUNK_NY ||
+        chunk_i.z < 0 || chunk_i.z >= CHUNK_NZ)
+        return;
     RWTexture3D<uint> chunk = getRWTexture3D<uint>(globals[0].chunk_images[chunk_i.z][chunk_i.y][chunk_i.x]);
     uint3 x4_i = x8_i * 2;
 
