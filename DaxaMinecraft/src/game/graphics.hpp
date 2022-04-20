@@ -14,9 +14,12 @@ struct RenderableChunk {
 
 struct World {
     static constexpr glm::ivec3 DIM = glm::ivec3{1024, 512, 1024} / Chunk::DIM;
+    static constexpr glm::ivec3 CHUNK_REPEAT = glm::ivec3{1, 1, 1};
 
     template <typename T>
     using ChunkArray = std::array<std::array<std::array<T, DIM.x>, DIM.y>, DIM.z>;
+    template <typename T>
+    using ChunkIndexArray = std::array<std::array<std::array<T, DIM.x * CHUNK_REPEAT.x>, DIM.y * CHUNK_REPEAT.y>, DIM.z * CHUNK_REPEAT.z>;
     ChunkArray<std::unique_ptr<RenderableChunk>> chunks{};
     std::unique_ptr<RenderableChunk> empty_chunk{};
     std::array<glm::uvec3, DIM.x * DIM.y * DIM.z> chunk_indices{};
@@ -57,7 +60,7 @@ struct World {
         u32 empty_chunk_index;
         u32 model_load_index;
         u32 single_ray_steps;
-        ChunkArray<u32> chunk_ids;
+        ChunkIndexArray<u32> chunk_ids;
 
         // Too big to keep on the stack! Let's just alloc it on the GPU only.
         // ChunkArray<ChunkBlockPresence> chunk_block_presence;
@@ -384,11 +387,11 @@ struct World {
             .single_ray_steps = static_cast<u32>(single_ray_steps),
         };
 
-        for (size_t zi = 0; zi < DIM.z; ++zi) {
-            for (size_t yi = 0; yi < DIM.y; ++yi) {
-                for (size_t xi = 0; xi < DIM.x; ++xi) {
-                    if (chunks[zi][yi][xi]->initialized)
-                        compute_globals.chunk_ids[zi][yi][xi] = chunks[zi][yi][xi]->chunkgen_image_a->getDescriptorIndex();
+        for (size_t zi = 0; zi < DIM.z * CHUNK_REPEAT.z; ++zi) {
+            for (size_t yi = 0; yi < DIM.y * CHUNK_REPEAT.y; ++yi) {
+                for (size_t xi = 0; xi < DIM.x * CHUNK_REPEAT.x; ++xi) {
+                    if (chunks[zi % DIM.z][yi][xi % DIM.x]->initialized)
+                        compute_globals.chunk_ids[zi][yi][xi] = chunks[zi % DIM.z][yi][xi % DIM.x]->chunkgen_image_a->getDescriptorIndex();
                     else
                         compute_globals.chunk_ids[zi][yi][xi] = empty_chunk->chunkgen_image_a->getDescriptorIndex();
                 }

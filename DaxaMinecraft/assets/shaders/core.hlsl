@@ -77,7 +77,7 @@ struct Globals {
     uint empty_chunk_index;
     uint model_load_index;
     uint single_ray_steps;
-    uint chunk_images[CHUNK_NZ][CHUNK_NY][CHUNK_NX];
+    uint chunk_images[CHUNK_NZ * CHUNK_INDEX_REPEAT_Z][CHUNK_NY * CHUNK_INDEX_REPEAT_Y][CHUNK_NX * CHUNK_INDEX_REPEAT_X];
     ChunkBlockPresence chunk_block_presence[CHUNK_NZ][CHUNK_NY][CHUNK_NX];
 };
 
@@ -105,8 +105,9 @@ DAXA_DEFINE_BA_BUFFER(ModelLoadBuffer)
 
 BlockID load_block_id(GLOBALS_PARAM float3 pos) {
     int3 chunk_i = int3(pos / CHUNK_SIZE);
-    if (chunk_i.x < 0 || chunk_i.x > CHUNK_NX - 1 || chunk_i.y < 0 ||
-        chunk_i.y > CHUNK_NY - 1 || chunk_i.z < 0 || chunk_i.z > CHUNK_NZ - 1) {
+    if (chunk_i.x < 0 || chunk_i.x > CHUNK_NX * CHUNK_INDEX_REPEAT_X - 1 ||
+        chunk_i.y < 0 || chunk_i.y > CHUNK_NY * CHUNK_INDEX_REPEAT_Y - 1 ||
+        chunk_i.z < 0 || chunk_i.z > CHUNK_NZ * CHUNK_INDEX_REPEAT_Z - 1) {
         return BlockID::Air;
     }
     return (BlockID)getRWTexture3D<uint>(GLOBALS_DEFINE.chunk_images[chunk_i.z][chunk_i.y][chunk_i.x])

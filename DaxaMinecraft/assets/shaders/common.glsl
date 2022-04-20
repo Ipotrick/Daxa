@@ -23,7 +23,7 @@ layout(set = 0, binding = 4) buffer Globals {
     uint sampler_index;
     uint model_load_index;
     uint single_ray_steps;
-    uint chunk_images[CHUNK_N.z][CHUNK_N.y][CHUNK_N.x];
+    uint chunk_images[CHUNK_N.z * CHUNK_INDEX_REPEAT_Z][CHUNK_N.y * CHUNK_INDEX_REPEAT_Y][CHUNK_N.x * CHUNK_INDEX_REPEAT_X];
     ChunkBlockPresence chunk_block_presence[CHUNK_N.z][CHUNK_N.y][CHUNK_N.x];
 }
 globals_sb_view[];

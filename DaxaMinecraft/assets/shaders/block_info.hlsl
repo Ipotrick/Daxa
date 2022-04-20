@@ -71,3 +71,6 @@ bool is_transparent(BlockID block_id) {
 #define CHUNK_NY (BLOCK_NY / CHUNK_SIZE)
 #define CHUNK_NZ (BLOCK_NZ / CHUNK_SIZE)
 #define WATER_LEVEL 160
+#define CHUNK_INDEX_REPEAT_X 1
+#define CHUNK_INDEX_REPEAT_Y 1
+#define CHUNK_INDEX_REPEAT_Z 1
