@@ -512,11 +512,11 @@ struct World {
         cmd_list.dispatch((extent.width + 7) / 8, (extent.height + 7) / 8);
     }
 
-    void create_pipeline(daxa::PipelineHandle &pipe, const std::filesystem::path &path, daxa::ShaderLang lang = daxa::ShaderLang::GLSL, const char *entry = "main") {
+    void create_pipeline(daxa::PipelineHandle &pipe, const std::filesystem::path &path, const char *entry = "main") {
         auto result = render_ctx.pipeline_compiler->createComputePipeline({
             .shaderCI = {
                 .pathToSource = std::filesystem::path("DaxaMinecraft/assets/shaders") / path,
-                .shaderLang = lang,
+                .shaderLang = daxa::ShaderLang::HLSL,
                 .entryPoint = entry,
                 .stage = VK_SHADER_STAGE_COMPUTE_BIT,
             },
@@ -553,19 +553,18 @@ struct World {
     }
 
     void load_shaders() {
-        create_pipeline(raymarch_compute_pipeline, "drawing/raymarch.hlsl", daxa::ShaderLang::HLSL);
-        // create_pipeline(pickblock_compute_pipeline, "utils/pickblock.comp");
-        create_pipeline(pickblock_compute_pipeline, "utils/pickblock.hlsl", daxa::ShaderLang::HLSL);
-        create_pipeline(blockedit_compute_pipeline, "utils/blockedit.hlsl", daxa::ShaderLang::HLSL);
-        create_pipeline(modelload_compute_pipeline, "chunkgen/model_load.hlsl", daxa::ShaderLang::HLSL);
-        create_pipeline(subchunk_x2x4_pipeline, "chunkgen/subchunk_x2x4.hlsl", daxa::ShaderLang::HLSL, "Main");
-        create_pipeline(subchunk_x8p_pipeline, "chunkgen/subchunk_x8p.hlsl", daxa::ShaderLang::HLSL, "Main");
+        create_pipeline(raymarch_compute_pipeline, "drawing/raymarch.hlsl");
+        create_pipeline(pickblock_compute_pipeline, "utils/pickblock.hlsl");
+        create_pipeline(blockedit_compute_pipeline, "utils/blockedit.hlsl");
+        create_pipeline(modelload_compute_pipeline, "chunkgen/model_load.hlsl");
+        create_pipeline(subchunk_x2x4_pipeline, "chunkgen/subchunk_x2x4.hlsl", "Main");
+        create_pipeline(subchunk_x8p_pipeline, "chunkgen/subchunk_x8p.hlsl", "Main");
 
         std::array<std::filesystem::path, 1> chunkgen_pass_paths = {
             "chunkgen/world/pass0.hlsl",
         };
         for (size_t i = 0; i < chunkgen_pass_paths.size(); ++i)
-            create_pipeline(chunkgen_compute_pipeline_passes[i], chunkgen_pass_paths[i], daxa::ShaderLang::HLSL);
+            create_pipeline(chunkgen_compute_pipeline_passes[i], chunkgen_pass_paths[i]);
     }
 
     void load_textures(const std::filesystem::path &filepath) {
