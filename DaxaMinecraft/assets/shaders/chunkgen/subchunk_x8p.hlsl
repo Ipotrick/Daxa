@@ -39,7 +39,10 @@ void Main(
         chunk_i.y < 0 || chunk_i.y >= CHUNK_NY ||
         chunk_i.z < 0 || chunk_i.z >= CHUNK_NZ)
         return;
-    RWTexture3D<uint> chunk = getRWTexture3D<uint>(globals[0].chunk_images[chunk_i.z][chunk_i.y][chunk_i.x]);
+    uint chunk_id = globals[0].chunk_images[chunk_i.z][chunk_i.y][chunk_i.x];
+    if (chunk_id == globals[0].empty_chunk_index)
+        return;
+    RWTexture3D<uint> chunk = getRWTexture3D<uint>(chunk_id);
     uint3 x4_i = x8_i * 2;
 
     bool at_least_one_occluding = false;
