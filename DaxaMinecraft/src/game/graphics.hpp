@@ -521,7 +521,8 @@ struct World {
 
     void load_shaders() {
         create_pipeline(raymarch_compute_pipeline, "drawing/raymarch.hlsl", daxa::ShaderLang::HLSL);
-        create_pipeline(pickblock_compute_pipeline, "utils/pickblock.comp");
+        // create_pipeline(pickblock_compute_pipeline, "utils/pickblock.comp");
+        create_pipeline(pickblock_compute_pipeline, "utils/pickblock.hlsl", daxa::ShaderLang::HLSL);
         create_pipeline(blockedit_compute_pipeline, "utils/blockedit.hlsl", daxa::ShaderLang::HLSL);
         create_pipeline(modelload_compute_pipeline, "chunkgen/model_load.hlsl", daxa::ShaderLang::HLSL);
         create_pipeline(subchunk_x2x4_pipeline, "chunkgen/subchunk_x2x4.hlsl", daxa::ShaderLang::HLSL, "Main");

@@ -65,7 +65,7 @@ struct Game {
     }
 
     void redraw() {
-        if (window.frame_dim.x < 1 || window.frame_dim.y < 1) {
+        if (window.frame_dim.x / RENDER_SCL < 1 || window.frame_dim.y / RENDER_SCL < 1) {
             std::this_thread::sleep_for(1ms);
             return;
         }
