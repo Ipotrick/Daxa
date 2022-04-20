@@ -187,6 +187,13 @@ RayIntersection ray_step_voxels(GLOBALS_PARAM in Ray ray, in float3 b_min, in fl
     case 2: result.nrm = float3(0, 0, ray.nrm.z < 0 ? 1 : -1); break;
     }
 
+    float3 intersection_pos = get_intersection_pos_corrected(ray, result);
+    BlockID block_id = load_block_id(GLOBALS_ARG intersection_pos);
+#if !SHOW_DEBUG_BLOCKS
+    if (block_id == BlockID::Debug)
+        result.hit = false;
+#endif
+
 #else
     if (dda_run_state.outside_bounds) {
         result.dist += 1.0f;
@@ -231,7 +238,12 @@ RayIntersection trace_chunks(GLOBALS_PARAM in Ray ray) {
     uint sdf_step_total = 0;
 
     if (point_box_contains(ray.o, b_min, b_max)) {
-        if (is_block_occluding(load_block_id(GLOBALS_ARG ray.o))) {
+        BlockID block_id = load_block_id(GLOBALS_ARG ray.o);
+        if (is_block_occluding(block_id)
+#if !SHOW_DEBUG_BLOCKS
+            && block_id != BlockID::Debug
+#endif
+        ) {
             result.hit = true;
             return result;
         }
@@ -243,11 +255,18 @@ RayIntersection trace_chunks(GLOBALS_PARAM in Ray ray) {
         float3 sample_pos = ray.o + ray.nrm * sdf_dist_total;
         if (!point_box_contains(sample_pos, b_min, b_max)) {
             sdf_dist_total += 0.001;
-            sample_pos = ray.o + ray.nrm * sdf_dist_total;
+            // sample_pos = ray.o + ray.nrm * sdf_dist_total;
+            sample_pos = get_intersection_pos_corrected(ray, bounds_intersection);
         }
-#if VISUALIZE_SUBGRID == 1
-        if (is_block_occluding(load_block_id(GLOBALS_ARG sample_pos))) {
-#elif VISUALIZE_SUBGRID == 2
+#if USE_NEW_DDA_METHOD
+        BlockID block_id = load_block_id(GLOBALS_ARG sample_pos);
+        if (is_block_occluding(block_id)
+#if !SHOW_DEBUG_BLOCKS
+            && block_id != BlockID::Debug
+#endif
+        ) {
+#else
+#if VISUALIZE_SUBGRID == 2
         if (x_load_presence<2>(GLOBALS_ARG sample_pos)) {
 #elif VISUALIZE_SUBGRID == 4
         if (x_load_presence<4>(GLOBALS_ARG sample_pos)) {
@@ -260,7 +279,13 @@ RayIntersection trace_chunks(GLOBALS_PARAM in Ray ray) {
 #elif VISUALIZE_SUBGRID == 64
         if (x_load_presence<64>(GLOBALS_ARG sample_pos)) {
 #else
-        if (is_block_occluding(load_block_id(GLOBALS_ARG sample_pos))) {
+        BlockID block_id = load_block_id(GLOBALS_ARG sample_pos);
+        if (is_block_occluding(block_id)
+#if !SHOW_DEBUG_BLOCKS
+            && block_id != BlockID::Debug
+#endif
+        ) {
+#endif
 #endif
             result.hit = true;
             result.nrm = bounds_intersection.nrm;

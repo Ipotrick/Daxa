@@ -74,7 +74,7 @@ struct Globals {
     int2 frame_dim;
     float time, fov;
     uint texture_index;
-    uint sampler_index;
+    uint empty_chunk_index;
     uint model_load_index;
     uint single_ray_steps;
     uint chunk_images[CHUNK_NZ][CHUNK_NY][CHUNK_NX];

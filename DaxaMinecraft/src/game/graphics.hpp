@@ -18,6 +18,7 @@ struct World {
     template <typename T>
     using ChunkArray = std::array<std::array<std::array<T, DIM.x>, DIM.y>, DIM.z>;
     ChunkArray<std::unique_ptr<RenderableChunk>> chunks{};
+    std::unique_ptr<RenderableChunk> empty_chunk{};
     std::array<glm::uvec3, DIM.x * DIM.y * DIM.z> chunk_indices{};
 
     daxa::ImageViewHandle atlas_texture_array;
@@ -53,7 +54,7 @@ struct World {
         float time, fov;
 
         u32 texture_index;
-        u32 sampler_index;
+        u32 empty_chunk_index;
         u32 model_load_index;
         u32 single_ray_steps;
         ChunkArray<u32> chunk_ids;
@@ -122,38 +123,21 @@ struct World {
                     chunk_indices[xi + yi * DIM.x + zi * DIM.x * DIM.y] = glm::uvec3(xi, yi, zi);
 
         start = Clock::now();
-        constexpr auto IMG_DIM = glm::uvec3(Chunk::DIM);
 
-        for (auto &chunk_layer : chunks) {
-            for (auto &chunk_strip : chunk_layer) {
-                for (auto &chunk : chunk_strip) {
-                    chunk = std::make_unique<RenderableChunk>();
-                    chunk->chunkgen_image_a = render_ctx.device->createImageView({
-                        .image = render_ctx.device->createImage({
-                            .imageType = VK_IMAGE_TYPE_3D,
-                            .format = VK_FORMAT_R16_UINT,
-                            .extent = {IMG_DIM.x, IMG_DIM.y, IMG_DIM.z},
-                            .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-                            .debugName = "Chunkgen Image",
-                        }),
-                        .viewType = VK_IMAGE_VIEW_TYPE_3D,
-                        .format = VK_FORMAT_R16_UINT,
-                        .subresourceRange =
-                            {
-                                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                                .baseMipLevel = 0,
-                                .levelCount = 1,
-                                .baseArrayLayer = 0,
-                                .layerCount = 1,
-                            },
-                        .debugName = "Chunkgen Image View",
-                    });
-                }
-            }
-        }
+        empty_chunk = create_chunk();
+        for (auto &chunk_layer : chunks)
+            for (auto &chunk_strip : chunk_layer)
+                for (auto &chunk : chunk_strip)
+                    chunk = create_chunk();
 
         auto cmd_list = render_ctx.queue->getCommandList({});
 
+        cmd_list.queueImageBarrier(daxa::ImageBarrier{
+            .barrier = daxa::FULL_MEMORY_BARRIER,
+            .image = empty_chunk->chunkgen_image_a,
+            .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
+            .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
+        });
         for (auto &chunk_layer : chunks) {
             for (auto &chunk_strip : chunk_layer) {
                 for (auto &chunk : chunk_strip) {
@@ -185,10 +169,14 @@ struct World {
 
         std::ifstream model_voxfile("DaxaMinecraft/assets/models/teapot.vox", std::ios::binary);
         std::vector<u8> buffer(std::istreambuf_iterator<char>(model_voxfile), {});
-        const ogt_vox_scene *scene = ogt_vox_read_scene(buffer.data(), buffer.size());
+        const ogt_vox_scene *scene = ogt_vox_read_scene(buffer.data(), static_cast<u32>(buffer.size()));
         auto &model = *scene->models[0];
         model_load_buffer->pos = glm::vec4(-32, 0, -32, 0);
-        model_load_buffer->dim = glm::vec4(std::min<f32>(model.size_x, 128), std::min<f32>(model.size_z, 128), std::min<f32>(model.size_y, 128), 0);
+        model_load_buffer->dim = glm::vec4(
+            std::min<f32>(static_cast<f32>(model.size_x), 128.0f),
+            std::min<f32>(static_cast<f32>(model.size_z), 128.0f),
+            std::min<f32>(static_cast<f32>(model.size_y), 128.0f),
+            0);
         for (size_t zi = 0; zi < Chunk::DIM.z * 2; ++zi) {
             for (size_t yi = 0; yi < Chunk::DIM.y * 2; ++yi) {
                 for (size_t xi = 0; xi < Chunk::DIM.x * 2; ++xi) {
@@ -287,7 +275,7 @@ struct World {
         reload_shaders();
     }
 
-    void do_blockedit(daxa::CommandListHandle cmd_list, u32 compute_globals_i, const ComputeGlobals &compute_globals, u32 block_id) {
+    void do_blockedit(daxa::CommandListHandle cmd_list, u32 compute_globals_i, u32 block_id) {
         i32 x_min = -1;
         i32 y_min = -1;
         i32 z_min = -1;
@@ -304,7 +292,11 @@ struct World {
                         BlockeditPush{
                             .pos = {1.0f * xi, 1.0f * yi, 1.0f * zi, 0},
                             .globals_sb = compute_globals_i,
-                            // .output_image_i = compute_globals.chunk_ids[zi][yi][xi], unnecessary
+                            // This is unnecessary, because we derive the ID in the
+                            // shader based on where the pick_pos was calculated to be.
+                            // We do that to save a read-back, and also it's more
+                            // immediate this way.
+                            // .output_image_i = compute_globals.chunk_ids[zi][yi][xi],
                             .set_id = block_id,
                         });
                     cmd_list.dispatch(8, 8, 8);
@@ -317,12 +309,12 @@ struct World {
         for (i32 zi = z_min; zi <= z_max; ++zi)
             for (i32 yi = y_min; yi <= y_max; ++yi)
                 for (i32 xi = x_min; xi <= x_max; ++xi)
-                    update_subchunk_x2x4(cmd_list, {xi, yi, zi}, 1); // derive id mode
+                    update_subchunk_x2x4(cmd_list, {xi, yi, zi}, 1); // derive id mode (1)
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
         for (i32 zi = z_min; zi <= z_max; ++zi)
             for (i32 yi = y_min; yi <= y_max; ++yi)
                 for (i32 xi = x_min; xi <= x_max; ++xi)
-                    update_subchunk_x8p(cmd_list, {xi, yi, zi}, 1); // derive id mode
+                    update_subchunk_x8p(cmd_list, {xi, yi, zi}, 1); // derive id mode (1)
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
     }
 
@@ -388,14 +380,17 @@ struct World {
             .time = elapsed,
             .fov = tanf(player.camera.fov * std::numbers::pi_v<f32> / 360.0f),
             .texture_index = atlas_texture_array->getDescriptorIndex(),
-            .sampler_index = atlas_texture_sampler->getDescriptorIndex(),
+            .empty_chunk_index = empty_chunk->chunkgen_image_a->getDescriptorIndex(),
             .single_ray_steps = static_cast<u32>(single_ray_steps),
         };
 
         for (size_t zi = 0; zi < DIM.z; ++zi) {
             for (size_t yi = 0; yi < DIM.y; ++yi) {
                 for (size_t xi = 0; xi < DIM.x; ++xi) {
-                    compute_globals.chunk_ids[zi][yi][xi] = chunks[zi][yi][xi]->chunkgen_image_a->getDescriptorIndex();
+                    if (chunks[zi][yi][xi]->initialized)
+                        compute_globals.chunk_ids[zi][yi][xi] = chunks[zi][yi][xi]->chunkgen_image_a->getDescriptorIndex();
+                    else
+                        compute_globals.chunk_ids[zi][yi][xi] = empty_chunk->chunkgen_image_a->getDescriptorIndex();
                 }
             }
         }
@@ -434,6 +429,14 @@ struct World {
                 u32 yi = chunk_i.y;
                 u32 zi = chunk_i.z;
                 chunks[zi][yi][xi]->initialized = true;
+
+                compute_globals.chunk_ids[zi][yi][xi] = chunks[zi][yi][xi]->chunkgen_image_a->getDescriptorIndex();
+                cmd_list.singleCopyHostToBuffer({
+                    .src = reinterpret_cast<u8 *>(&compute_globals),
+                    .dst = compute_pipeline_globals,
+                    .region = {.size = sizeof(decltype(compute_globals))},
+                });
+                cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 
                 for (auto &pipe : chunkgen_compute_pipeline_passes) {
                     cmd_list.bindPipeline(pipe);
@@ -488,11 +491,11 @@ struct World {
 
         if (should_place) {
             // should_place = false;
-            do_blockedit(cmd_list, compute_globals_i, compute_globals, 3); // brick
+            do_blockedit(cmd_list, compute_globals_i, 3); // brick
         }
         if (should_break) {
             // should_break = false;
-            do_blockedit(cmd_list, compute_globals_i, compute_globals, 1); // air
+            do_blockedit(cmd_list, compute_globals_i, 1); // air
         }
 
         cmd_list.bindPipeline(raymarch_compute_pipeline);
@@ -517,6 +520,33 @@ struct World {
             .overwriteSets = {daxa::BIND_ALL_SET_DESCRIPTION},
         });
         pipe = result.value();
+    }
+
+    std::unique_ptr<RenderableChunk> create_chunk() {
+        constexpr auto IMG_DIM = glm::uvec3(Chunk::DIM);
+
+        auto chunk = std::make_unique<RenderableChunk>();
+        chunk->chunkgen_image_a = render_ctx.device->createImageView({
+            .image = render_ctx.device->createImage({
+                .imageType = VK_IMAGE_TYPE_3D,
+                .format = VK_FORMAT_R16_UINT,
+                .extent = {IMG_DIM.x, IMG_DIM.y, IMG_DIM.z},
+                .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                .debugName = "Chunkgen Image",
+            }),
+            .viewType = VK_IMAGE_VIEW_TYPE_3D,
+            .format = VK_FORMAT_R16_UINT,
+            .subresourceRange =
+                {
+                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1,
+                },
+            .debugName = "Chunkgen Image View",
+        });
+        return chunk;
     }
 
     void load_shaders() {

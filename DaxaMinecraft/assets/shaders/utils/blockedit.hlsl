@@ -21,8 +21,9 @@ struct Push {
         uint chunk_id = globals[0].chunk_images[zi][yi][xi];
         float3 p_pos = float3(1.0f * xi * CHUNK_SIZE, 1.0f * yi * CHUNK_SIZE, 1.0f * zi * CHUNK_SIZE);
         float3 block_pos = float3(global_i) + p_pos;
-        uint chunk_texture_id = chunk_id;
-        RWTexture3D<uint> chunk = getRWTexture3D<uint>(chunk_texture_id);
+        if (chunk_id == globals[0].empty_chunk_index)
+            return;
+        RWTexture3D<uint> chunk = getRWTexture3D<uint>(chunk_id);
         // if (length(int3(block_pos) - int3(globals[0].pick_pos[0].xyz)) <= 0.5 + BLOCKEDIT_RADIUS) {
         //     chunk[int3(global_i)] = p.set_id;
         // }
