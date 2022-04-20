@@ -2,7 +2,7 @@
 
 #include <Daxa.hpp>
 
-static constexpr int RENDER_SCL = 2;
+static constexpr int RENDER_SCL = 1;
 
 struct RenderContext {
     daxa::DeviceHandle device;

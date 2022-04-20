@@ -66,7 +66,7 @@ const uint BIOME_ID_MASK = 0x00ff0000;
 const uint SDF_DIST_MASK = 0xff000000;
 
 const uvec3 CHUNK_SIZE = uvec3(64);
-const uvec3 BLOCK_N = uvec3(1024, 256, 1024);
+const uvec3 BLOCK_N = uvec3(1024, 512, 1024);
 const uvec3 CHUNK_N = BLOCK_N / CHUNK_SIZE;
 
 const uint MAX_STEPS = CHUNK_N.x * CHUNK_SIZE.x + CHUNK_N.y * CHUNK_SIZE.y + CHUNK_N.z * CHUNK_SIZE.z;
@@ -74,7 +74,7 @@ const uint WATER_LEVEL = 160;
 
 #define CHUNK_SIZE 64
 #define BLOCK_NX 1024
-#define BLOCK_NY 256
+#define BLOCK_NY 512
 #define BLOCK_NZ 1024
 #define CHUNK_NX (BLOCK_NX / CHUNK_SIZE)
 #define CHUNK_NY (BLOCK_NY / CHUNK_SIZE)

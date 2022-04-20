@@ -13,4 +13,6 @@
     float3 view_intersection_pos = get_intersection_pos_corrected(ray, view_chunk_intersection);
     if (view_chunk_intersection.hit)
         globals[0].pick_pos[0] = float4(view_intersection_pos, 0);
+    else
+        globals[0].pick_pos[0] = float4(-100000, -100000, -100000, 0);
 }

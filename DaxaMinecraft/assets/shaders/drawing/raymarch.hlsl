@@ -123,6 +123,7 @@ float3 rand_pt(float3 n, float2 rnd) {
     float3 up = mul(GLOBALS_DEFINE.viewproj_mat, float4(0, 1, 0, 0)).xyz;
 
     float3 view_intersection_pos = GLOBALS_DEFINE.pick_pos[0].xyz;
+    int3 view_intersection_block_pos = int3(view_intersection_pos);
     Ray cam_ray;
     cam_ray.o = GLOBALS_DEFINE.pos.xyz;
 
@@ -164,7 +165,6 @@ float3 rand_pt(float3 n, float2 rnd) {
             float3 intersection_pos = get_intersection_pos_corrected(cam_ray, ray_chunk_intersection);
             BlockID block_id = load_block_id(GLOBALS_ARG intersection_pos);
             int3 intersection_block_pos = int3(intersection_pos);
-            int3 view_intersection_block_pos = int3(view_intersection_pos);
 
             // if (ray_chunk_intersection.hit && block_id == BlockID::Water) {
             //     cam_ray.o = intersection_pos + ray_chunk_intersection.nrm * 0.01;
@@ -190,7 +190,7 @@ float3 rand_pt(float3 n, float2 rnd) {
                 // float3 light = shaded(sun_ray, float3(1, 1, 1), ray_chunk_intersection.nrm);
                 float3 light = float3(1, 1, 1);
 #endif
-                float3 b_uv = float3(int3(intersection_pos) % 16) / 16;
+                float3 b_uv = float3(int3(intersection_pos) % 64) / 64;
                 BlockFace face_id;
                 float2 tex_uv = float2(0, 0);
                 depth = ray_chunk_intersection.dist;
@@ -296,6 +296,11 @@ float3 rand_pt(float3 n, float2 rnd) {
 #endif
         }
     }
+
+    // {
+    //     RayIntersection temp_inter = ray_box_intersect(cam_ray, view_intersection_block_pos, view_intersection_block_pos + 1.0);
+    //     overlay(color, depth, shaded(sun_ray, float3(1, 1, 1) * 0.5, temp_inter.nrm), temp_inter.dist, temp_inter.hit, 0.2);
+    // }
 
 #if SHOW_SINGLE_RAY
     Ray ray;

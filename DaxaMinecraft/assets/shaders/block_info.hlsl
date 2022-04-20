@@ -65,7 +65,7 @@ bool is_transparent(BlockID block_id) {
 
 #define CHUNK_SIZE 64
 #define BLOCK_NX 1024
-#define BLOCK_NY 256
+#define BLOCK_NY 512
 #define BLOCK_NZ 1024
 #define CHUNK_NX (BLOCK_NX / CHUNK_SIZE)
 #define CHUNK_NY (BLOCK_NY / CHUNK_SIZE)
