@@ -206,6 +206,7 @@ void run_dda_main(GLOBALS_PARAM in Ray ray, in DDA_StartResult dda_start, in out
             break;
         }
         lod = get_lod(GLOBALS_ARG current_pos);
+        // if (lod < 0 + t_curr * 0.005) {
         if (lod == 0) {
             run_state.hit = true;
             if (t_next.x < t_next.y) {
