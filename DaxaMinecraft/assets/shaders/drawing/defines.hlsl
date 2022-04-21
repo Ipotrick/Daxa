@@ -18,7 +18,7 @@
 #define SHOW_SINGLE_RAY 0
 #define SHOW_DEBUG_BLOCKS 0
 // Whether to variate the sample-space coordinates based on time
-#define JITTER_VIEW 0
+#define JITTER_VIEW 1
 // Number of samples per axis (so a value of 4 means 16 samples)
 #define SUBSAMPLE_N 1
 
