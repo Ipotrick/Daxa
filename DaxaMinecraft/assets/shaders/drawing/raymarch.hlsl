@@ -149,7 +149,7 @@ float3 rand_pt(float3 n, float2 rnd) {
 #else
         float2(0, 0);
 #endif
-    float2 uv = (float2(i_uv) + uv_offset * inv_subsamples) * inv_frame_dim * 2 - 1;
+    float2 uv = (float2(i_uv) + uv_offset * (pixel_i.x > globals[0].frame_dim.x / 2) * inv_subsamples) * inv_frame_dim * 2 - 1;
 
     for (uint yi = 0; yi < subsamples.y; ++yi) {
         for (uint xi = 0; xi < subsamples.x; ++xi) {
@@ -534,7 +534,7 @@ float3 rand_pt(float3 n, float2 rnd) {
 
     color *= inv_subsamples.x * inv_subsamples.y;
 
-    draw_rect(pixel_i.xy, color, GLOBALS_DEFINE.frame_dim.x / 2 - 0, GLOBALS_DEFINE.frame_dim.y / 2 - 4, 1, 9);
+    draw_rect(pixel_i.xy, color, GLOBALS_DEFINE.frame_dim.x / 2 - 0, GLOBALS_DEFINE.frame_dim.y / 2 - 500, 1, 1000);
     draw_rect(pixel_i.xy, color, GLOBALS_DEFINE.frame_dim.x / 2 - 4, GLOBALS_DEFINE.frame_dim.y / 2 - 0, 9, 1);
 
     // RayIntersection temp_inter;
@@ -545,5 +545,11 @@ float3 rand_pt(float3 n, float2 rnd) {
     //     }
 
     RWTexture2D<float4> output_image = getRWTexture2D<float4>(p.output_image_i);
-    output_image[pixel_i.xy] = float4(pow(color, float3(1, 1, 1)), 1);
+    float4 prev_val = output_image[pixel_i.xy];
+    float4 new_val = float4(pow(color, float3(1, 1, 1)), 1);
+    if (pixel_i.x > globals[0].frame_dim.x / 2) {
+        output_image[pixel_i.xy] = prev_val * 0.99 + new_val * 0.01;
+    } else {
+        output_image[pixel_i.xy] = new_val;
+    }
 }
