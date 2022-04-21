@@ -10,6 +10,24 @@ using namespace std::literals;
 
 #include <fmt/format.h>
 
+namespace gpu {
+    struct PlayerInput {
+        glm::vec2 mouse_delta;
+        float delta_time;
+        float fov;
+        float mouse_sens;
+        float speed, sprint_speed;
+        u32 move_flags;
+    };
+    struct Camera {
+        float fov;
+    };
+    struct Player {
+        glm::vec3 pos, vel, rot;
+        Camera camera;
+    };
+} // namespace gpu
+
 struct Game {
     using Clock = std::chrono::high_resolution_clock;
     Clock::time_point prev_frame_time;
@@ -20,7 +38,7 @@ struct Game {
     RenderContext render_context{vulkan_surface, window.frame_dim};
     std::optional<daxa::ImGuiRenderer> imgui_renderer = std::nullopt;
 
-    World world{render_context};
+    RenderableWorld world{render_context};
     Player3D player;
 
     bool paused = true;
@@ -161,11 +179,6 @@ struct Game {
             ImGui::End();
         }
 
-        auto fire_ray = [&]() {
-            world.single_ray_pos = player.pos;
-            world.single_ray_nrm = player.camera.vrot_mat * glm::vec4(0, 0, 1, 0);
-        };
-
         auto HelpMarker = [](const char *const desc) {
             if (ImGui::IsItemHovered()) {
                 ImGui::BeginTooltip();
@@ -176,14 +189,11 @@ struct Game {
             }
         };
 
-        if (io.KeysDown[GLFW_KEY_E])
-            fire_ray();
+        // if (io.KeysDown[GLFW_KEY_E])
+        //     fire_ray();
 
         if (paused) {
             ImGui::Begin("Settings");
-            if (ImGui::Button("Fire ray"))
-                fire_ray();
-            ImGui::SliderInt("Ray steps", &world.single_ray_steps, 0, 100);
             if (ImGui::Button("Reset player"))
                 reset_player();
             ImGui::SliderInt("ChunkGen Updates/Frame", &world.chunk_updates_per_frame, 1, 50);

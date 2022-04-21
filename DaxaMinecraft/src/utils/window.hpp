@@ -3,12 +3,13 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include <utils/math.hpp>
+#include <glm/glm.hpp>
 #include <Daxa.hpp>
 
 struct Window {
     GLFWwindow *window_ptr;
     glm::ivec2 frame_dim{800, 800};
+    VkSurfaceKHR vulkan_surface;
 
     Window() {
         glfwInit();
@@ -17,6 +18,8 @@ struct Window {
     }
 
     ~Window() {
+        auto vk_instance = daxa::instance->getVkInstance();
+        vkDestroySurfaceKHR(vk_instance, vulkan_surface, nullptr);
         glfwDestroyWindow(window_ptr);
         glfwTerminate();
     }
@@ -31,8 +34,8 @@ struct Window {
         glfwSwapBuffers(window_ptr);
     }
     VkSurfaceKHR get_vksurface(VkInstance vk_instance) {
-        VkSurfaceKHR vulkan_surface;
-        glfwCreateWindowSurface(vk_instance, window_ptr, nullptr, &vulkan_surface);
+        if (!vulkan_surface)
+            glfwCreateWindowSurface(vk_instance, window_ptr, nullptr, &vulkan_surface);
         return vulkan_surface;
     }
 
