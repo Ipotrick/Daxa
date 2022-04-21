@@ -162,7 +162,7 @@ RayIntersection ray_cylinder_intersect(in Ray ray, in float3 pa, in float3 pb, f
     return result;
 }
 
-RayIntersection ray_step_voxels(GLOBALS_PARAM in Ray ray, in float3 b_min, in float3 b_max, in uint max_steps) {
+RayIntersection ray_step_voxels(StructuredBuffer<Globals> globals, in Ray ray, in float3 b_min, in float3 b_max, in uint max_steps) {
     RayIntersection result;
     result.hit = false;
     result.dist = 0;
@@ -173,7 +173,7 @@ RayIntersection ray_step_voxels(GLOBALS_PARAM in Ray ray, in float3 b_min, in fl
     dda_run_state.outside_bounds = false;
     dda_run_state.side = 0;
 
-    run_dda_main(GLOBALS_ARG ray, dda_run_state, b_min, b_max, max_steps);
+    run_dda_main(globals, ray, dda_run_state, b_min, b_max, max_steps);
     result.hit = dda_run_state.hit;
 
     result.dist = dda_run_state.dist;
@@ -184,7 +184,7 @@ RayIntersection ray_step_voxels(GLOBALS_PARAM in Ray ray, in float3 b_min, in fl
     }
 
     float3 intersection_pos = get_intersection_pos_corrected(ray, result);
-    BlockID block_id = load_block_id(GLOBALS_ARG intersection_pos);
+    BlockID block_id = load_block_id(globals, intersection_pos);
 #if !SHOW_DEBUG_BLOCKS
     if (block_id == BlockID::Debug)
         result.hit = false;
@@ -195,7 +195,7 @@ RayIntersection ray_step_voxels(GLOBALS_PARAM in Ray ray, in float3 b_min, in fl
     return result;
 }
 
-RayIntersection trace_chunks(GLOBALS_PARAM in Ray ray) {
+RayIntersection trace_chunks(StructuredBuffer<Globals> globals, in Ray ray) {
     float3 b_min = float3(0, 0, 0), b_max = float3(int(CHUNK_NX * CHUNK_INDEX_REPEAT_X), int(CHUNK_NY * CHUNK_INDEX_REPEAT_Y), int(CHUNK_NZ * CHUNK_INDEX_REPEAT_Z)) * int(CHUNK_SIZE);
     RayIntersection result;
     result.hit = false;
@@ -207,7 +207,7 @@ RayIntersection trace_chunks(GLOBALS_PARAM in Ray ray) {
     uint sdf_step_total = 0;
 
     if (point_box_contains(ray.o, b_min, b_max)) {
-        BlockID block_id = load_block_id(GLOBALS_ARG ray.o);
+        BlockID block_id = load_block_id(globals, ray.o);
         if (is_block_occluding(block_id)
 #if !SHOW_DEBUG_BLOCKS
             && block_id != BlockID::Debug
@@ -227,7 +227,7 @@ RayIntersection trace_chunks(GLOBALS_PARAM in Ray ray) {
             // sample_pos = ray.o + ray.nrm * sdf_dist_total;
             sample_pos = get_intersection_pos_corrected(ray, bounds_intersection);
         }
-        BlockID block_id = load_block_id(GLOBALS_ARG sample_pos);
+        BlockID block_id = load_block_id(globals, sample_pos);
         if (is_block_occluding(block_id)
 #if !SHOW_DEBUG_BLOCKS
             && block_id != BlockID::Debug
@@ -243,7 +243,7 @@ RayIntersection trace_chunks(GLOBALS_PARAM in Ray ray) {
     float3 sample_pos = ray.o + ray.nrm * sdf_dist_total;
     Ray dda_ray = ray;
     dda_ray.o = sample_pos;
-    RayIntersection dda_result = ray_step_voxels(GLOBALS_ARG dda_ray, b_min, b_max, int(MAX_STEPS));
+    RayIntersection dda_result = ray_step_voxels(globals, dda_ray, b_min, b_max, int(MAX_STEPS));
     sdf_dist_total += dda_result.dist;
     sdf_step_total += dda_result.steps;
     if (dda_result.hit) {

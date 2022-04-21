@@ -4,7 +4,7 @@
 #include "utils/noise.hlsl"
 #include "chunk.hlsl"
 
-uint tile_texture_index(GLOBALS_PARAM BlockID block_id, BlockFace face) {
+uint tile_texture_index(StructuredBuffer<Globals> globals, BlockID block_id, BlockFace face) {
     // clang-format off
     switch (block_id) {
     case BlockID::Debug:           return 0;
@@ -28,7 +28,7 @@ uint tile_texture_index(GLOBALS_PARAM BlockID block_id, BlockFace face) {
         default:                   return 0;
         }
     case BlockID::Gravel:          return 12;
-    case BlockID::Lava:            return 13 + int(GLOBALS_DEFINE.time * 6) % 8;
+    case BlockID::Lava:            return 13 + int(globals[0].time * 6) % 8;
     case BlockID::Leaves:          return 21;
     case BlockID::Log:
         switch (face) {
@@ -71,20 +71,20 @@ float3 shaded(in Ray sun_ray, in float3 col, in float3 nrm) {
 
 [numthreads(8, 8, 1)] void main(uint3 pixel_i
                                 : SV_DispatchThreadID) {
-    StructuredBuffer<Globals> globals = getBuffer<Globals>(p.globals_sb);
+    StructuredBuffer<Globals> globals = daxa::getBuffer<Globals>(p.globals_sb);
 
-    if (pixel_i.x >= GLOBALS_DEFINE.frame_dim.x ||
-        pixel_i.y >= GLOBALS_DEFINE.frame_dim.y)
+    if (pixel_i.x >= globals[0].frame_dim.x ||
+        pixel_i.y >= globals[0].frame_dim.y)
         return;
 
-    float3 front = mul(GLOBALS_DEFINE.viewproj_mat, float4(0, 0, 1, 0)).xyz;
-    float3 right = mul(GLOBALS_DEFINE.viewproj_mat, float4(1, 0, 0, 0)).xyz;
-    float3 up = mul(GLOBALS_DEFINE.viewproj_mat, float4(0, 1, 0, 0)).xyz;
+    float3 front = mul(globals[0].viewproj_mat, float4(0, 0, 1, 0)).xyz;
+    float3 right = mul(globals[0].viewproj_mat, float4(1, 0, 0, 0)).xyz;
+    float3 up = mul(globals[0].viewproj_mat, float4(0, 1, 0, 0)).xyz;
 
-    float3 view_intersection_pos = GLOBALS_DEFINE.pick_pos[0].xyz;
+    float3 view_intersection_pos = globals[0].pick_pos[0].xyz;
     int3 view_intersection_block_pos = int3(view_intersection_pos);
     Ray cam_ray;
-    cam_ray.o = GLOBALS_DEFINE.pos.xyz;
+    cam_ray.o = globals[0].pos.xyz;
 
     Ray sun_ray;
     float sun_angle = 0.3;
@@ -94,10 +94,10 @@ float3 shaded(in Ray sun_ray, in float3 col, in float3 nrm) {
 
     const float2 subsamples = float2(SUBSAMPLE_N, SUBSAMPLE_N);
     const float2 inv_subsamples = 1 / subsamples;
-    float2 inv_frame_dim = 1 / float2(GLOBALS_DEFINE.frame_dim);
-    float aspect = float(GLOBALS_DEFINE.frame_dim.x) * inv_frame_dim.y;
+    float2 inv_frame_dim = 1 / float2(globals[0].frame_dim);
+    float aspect = float(globals[0].frame_dim.x) * inv_frame_dim.y;
     int2 i_uv = int2(pixel_i.xy);
-    float uv_rand_offset = GLOBALS_DEFINE.time;
+    float uv_rand_offset = globals[0].time;
     float3 color = float3(0, 0, 0);
     float depth = 100000;
 
@@ -112,23 +112,23 @@ float3 shaded(in Ray sun_ray, in float3 col, in float3 nrm) {
 
     for (uint yi = 0; yi < subsamples.y; ++yi) {
         for (uint xi = 0; xi < subsamples.x; ++xi) {
-            float2 view_uv = (uv + inv_frame_dim * float2(xi, yi) * inv_subsamples) * GLOBALS_DEFINE.fov * float2(aspect, 1);
+            float2 view_uv = (uv + inv_frame_dim * float2(xi, yi) * inv_subsamples) * globals[0].fov * float2(aspect, 1);
 
             cam_ray.nrm = normalize(front + view_uv.x * right + view_uv.y * up);
             cam_ray.inv_nrm = 1 / cam_ray.nrm;
 
-            RayIntersection ray_chunk_intersection = trace_chunks(GLOBALS_ARG cam_ray);
+            RayIntersection ray_chunk_intersection = trace_chunks(globals, cam_ray);
 #if VISUALIZE_STEP_COMPLEXITY
             color.r += log(float(ray_chunk_intersection.steps) * 1 / MAX_STEPS + 1);
 #else
             float3 intersection_pos = get_intersection_pos_corrected(cam_ray, ray_chunk_intersection);
-            BlockID block_id = load_block_id(GLOBALS_ARG intersection_pos);
+            BlockID block_id = load_block_id(globals, intersection_pos);
             int3 intersection_block_pos = int3(intersection_pos);
 
             if (ray_chunk_intersection.hit) {
 #if ENABLE_SHADOWS
                 sun_ray.o = intersection_pos + ray_chunk_intersection.nrm * 0.002;
-                RayIntersection sun_ray_chunk_intersection = trace_chunks(GLOBALS_ARG sun_ray);
+                RayIntersection sun_ray_chunk_intersection = trace_chunks(globals, sun_ray);
                 float val = float(!sun_ray_chunk_intersection.hit);
                 val = max(val * dot(ray_chunk_intersection.nrm, sun_ray.nrm), 0.01);
                 float3 light = val * sun_col + sample_sky(sun_ray, ray_chunk_intersection.nrm) * 0.2;
@@ -168,7 +168,7 @@ float3 shaded(in Ray sun_ray, in float3 col, in float3 nrm) {
                     tex_uv.y = 1 - tex_uv.y;
                 }
 
-                uint tex_id = tile_texture_index(GLOBALS_ARG block_id, face_id);
+                uint tex_id = tile_texture_index(globals, block_id, face_id);
 
                 if (tex_id == 8 || tex_id == 11) {
                     float r = rand(int3(intersection_pos));
@@ -190,12 +190,12 @@ float3 shaded(in Ray sun_ray, in float3 col, in float3 nrm) {
 
 #if ALBEDO == ALBEDO_TEXTURE
                 // WTF!!!
-                // float3 albedo = getTexture2DArray<float4>(GLOBALS_DEFINE.texture_index).Sample(
-                //     getSampler<void>(GLOBALS_DEFINE.sampler_index),
+                // float3 albedo = daxa::getTexture2DArray<float4>(globals[0].texture_index).Sample(
+                //     daxa::getSampler<void>(globals[0].sampler_index),
                 //     float3(tex_uv.x, tex_uv.y, float(tex_id)),
                 //     int2(0, 0),
                 //     1.0f).rgb;
-                float3 albedo = getTexture2DArray<float4>(GLOBALS_DEFINE.texture_index).Load(int4(tex_uv.x * 16, tex_uv.y * 16, tex_id, 0)).rgb;
+                float3 albedo = daxa::getTexture2DArray<float4>(globals[0].texture_index).Load(int4(tex_uv.x * 16, tex_uv.y * 16, tex_id, 0)).rgb;
 #elif ALBEDO == ALBEDO_DEBUG_POS
                 float3 albedo = b_uv;
 #elif ALBEDO == ALBEDO_DEBUG_NRM
@@ -230,9 +230,9 @@ float3 shaded(in Ray sun_ray, in float3 col, in float3 nrm) {
 
     color *= inv_subsamples.x * inv_subsamples.y;
 
-    draw_rect(pixel_i.xy, color, GLOBALS_DEFINE.frame_dim.x / 2 - 0, GLOBALS_DEFINE.frame_dim.y / 2 - 4, 1, 9);
-    draw_rect(pixel_i.xy, color, GLOBALS_DEFINE.frame_dim.x / 2 - 4, GLOBALS_DEFINE.frame_dim.y / 2 - 0, 9, 1);
+    draw_rect(pixel_i.xy, color, globals[0].frame_dim.x / 2 - 0, globals[0].frame_dim.y / 2 - 4, 1, 9);
+    draw_rect(pixel_i.xy, color, globals[0].frame_dim.x / 2 - 4, globals[0].frame_dim.y / 2 - 0, 9, 1);
 
-    RWTexture2D<float4> output_image = getRWTexture2D<float4>(p.output_image_i);
+    RWTexture2D<float4> output_image = daxa::getRWTexture2D<float4>(p.output_image_i);
     output_image[pixel_i.xy] = float4(pow(color, float3(1, 1, 1)), 1);
 }

@@ -201,7 +201,7 @@ BlockID gen_block(in float3 b_pos) {
         float3(global_i) + p.pos.xyz - float3(BLOCK_NX, BLOCK_NY, BLOCK_NY) / 2;
 
     uint chunk_texture_id = p.output_image_i;
-    RWTexture3D<uint> chunk = getRWTexture3D<uint>(chunk_texture_id);
+    RWTexture3D<uint> chunk = daxa::getRWTexture3D<uint>(chunk_texture_id);
 
     chunk[int3(global_i)] = (uint)gen_block(block_pos);
 }

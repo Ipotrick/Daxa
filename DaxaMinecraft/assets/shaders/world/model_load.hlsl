@@ -7,10 +7,10 @@
         float3(global_i) + p.pos.xyz - float3(BLOCK_NX, BLOCK_NY, BLOCK_NZ) / 2;
 
     uint chunk_texture_id = p.output_image_i;
-    RWTexture3D<uint> chunk = getRWTexture3D<uint>(chunk_texture_id);
+    RWTexture3D<uint> chunk = daxa::getRWTexture3D<uint>(chunk_texture_id);
 
-    StructuredBuffer<Globals> globals = getBuffer<Globals>(p.globals_sb);
-    StructuredBuffer<ModelLoadBuffer> model = getBuffer<ModelLoadBuffer>(globals[0].model_load_index);
+    StructuredBuffer<Globals> globals = daxa::getBuffer<Globals>(p.globals_sb);
+    StructuredBuffer<ModelLoadBuffer> model = daxa::getBuffer<ModelLoadBuffer>(globals[0].model_load_index);
 
     float3 m_pos = model[0].pos.xyz;
     float3 m_dim = model[0].dim.xyz;

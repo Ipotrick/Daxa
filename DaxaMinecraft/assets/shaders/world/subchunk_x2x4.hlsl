@@ -1,4 +1,3 @@
-#define USE_GLOBALS_DEFINE 0
 #include "chunk.hlsl"
 
 struct Push {
@@ -37,7 +36,7 @@ void Main(
         (group_ID.y >> 3) & 0x7,
         0
     );
-    StructuredBuffer<Globals> globals = getBuffer<Globals>(p.globalsID);
+    StructuredBuffer<Globals> globals = daxa::getBuffer<Globals>(p.globalsID);
     uint3 chunk_i = p.chunk_i.xyz;
     if (p.mode == 1) {
         chunk_i += int3(globals[0].pick_pos[0].xyz) / CHUNK_SIZE;
@@ -49,7 +48,7 @@ void Main(
     uint chunk_id = globals[0].chunk_images[chunk_i.z][chunk_i.y][chunk_i.x];
     if (chunk_id == globals[0].empty_chunk_index)
         return;
-    RWTexture3D<uint> chunk = getRWTexture3D<uint>(chunk_id);
+    RWTexture3D<uint> chunk = daxa::getRWTexture3D<uint>(chunk_id);
     uint3 in_chunk_i = x2_i * 2;
 
     bool at_least_one_occluding = false;
