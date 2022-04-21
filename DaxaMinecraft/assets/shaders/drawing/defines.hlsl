@@ -15,7 +15,6 @@
 #define ENABLE_SHADOWS 1
 // Whether to visualize the position that the view ray intersects
 #define SHOW_PICK_POS 1
-#define SHOW_SINGLE_RAY 0
 #define SHOW_DEBUG_BLOCKS 0
 // Whether to variate the sample-space coordinates based on time
 #define JITTER_VIEW 1
@@ -24,8 +23,6 @@
 
 // Visualize x_n grid (n can be 1, 2, 4, 8, 16, 32, or 64)
 #define VISUALIZE_SUBGRID 0
-
-#define USE_NEW_DDA_METHOD 1
 
 #define BLOCKEDIT_RADIUS 0
 
