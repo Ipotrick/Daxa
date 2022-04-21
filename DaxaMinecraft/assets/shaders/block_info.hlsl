@@ -63,14 +63,5 @@ bool is_transparent(BlockID block_id) {
     }
 }
 
-#define CHUNK_SIZE 64
-#define BLOCK_NX 1024
-#define BLOCK_NY 512
-#define BLOCK_NZ 1024
-#define CHUNK_NX (BLOCK_NX / CHUNK_SIZE)
-#define CHUNK_NY (BLOCK_NY / CHUNK_SIZE)
-#define CHUNK_NZ (BLOCK_NZ / CHUNK_SIZE)
+#include "../../src/game/defines.inl"
 #define WATER_LEVEL 160
-#define CHUNK_INDEX_REPEAT_X 1
-#define CHUNK_INDEX_REPEAT_Y 1
-#define CHUNK_INDEX_REPEAT_Z 1
