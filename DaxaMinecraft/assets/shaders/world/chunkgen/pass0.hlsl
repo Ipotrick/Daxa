@@ -1,5 +1,5 @@
-#include "chunkgen/common.hlsl"
-#include "chunkgen/world/noise.hlsl"
+#include "world/common.hlsl"
+#include "world/chunkgen/noise.hlsl"
 
 #include "core.hlsl"
 
@@ -12,7 +12,8 @@ void biome_pass0(in out WorldgenState worldgen_state, in float3 b_pos) {
         worldgen_state.biome_id = BiomeID::Forest;
     } else if (worldgen_state.b_noise > 1.6) {
         worldgen_state.biome_id = BiomeID::Desert;
-    } if (b_pos.y - water_level > -0.2 + worldgen_state.r * 1.5 &&
+    }
+    if (b_pos.y - water_level > -0.2 + worldgen_state.r * 1.5 &&
         b_pos.y - water_level < 1 + worldgen_state.r * 2 &&
         worldgen_state.t_noise < 0.05 + worldgen_state.r * 0.1 &&
         worldgen_state.t_noise > -0.05 - worldgen_state.r * 0.1) {

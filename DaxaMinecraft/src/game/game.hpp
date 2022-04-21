@@ -20,7 +20,7 @@ struct Game {
     RenderContext render_context{vulkan_surface, window.frame_dim};
     std::optional<daxa::ImGuiRenderer> imgui_renderer = std::nullopt;
 
-    World world{render_context};
+    RenderableWorld world{render_context};
     Player3D player;
 
     bool paused = true;
@@ -161,11 +161,6 @@ struct Game {
             ImGui::End();
         }
 
-        auto fire_ray = [&]() {
-            world.single_ray_pos = player.pos;
-            world.single_ray_nrm = player.camera.vrot_mat * glm::vec4(0, 0, 1, 0);
-        };
-
         auto HelpMarker = [](const char *const desc) {
             if (ImGui::IsItemHovered()) {
                 ImGui::BeginTooltip();
@@ -176,14 +171,11 @@ struct Game {
             }
         };
 
-        if (io.KeysDown[GLFW_KEY_E])
-            fire_ray();
+        // if (io.KeysDown[GLFW_KEY_E])
+        //     fire_ray();
 
         if (paused) {
             ImGui::Begin("Settings");
-            if (ImGui::Button("Fire ray"))
-                fire_ray();
-            ImGui::SliderInt("Ray steps", &world.single_ray_steps, 0, 100);
             if (ImGui::Button("Reset player"))
                 reset_player();
             ImGui::SliderInt("ChunkGen Updates/Frame", &world.chunk_updates_per_frame, 1, 50);

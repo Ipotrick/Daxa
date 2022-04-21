@@ -68,16 +68,15 @@ struct ChunkBlockPresence {
 struct Globals {
     float4x4 viewproj_mat;
     float4 pos;
-    float4 single_ray_pos;
-    float4 single_ray_nrm;
-    float4 pick_pos[1];
+    float4 pick_pos[2];
     int2 frame_dim;
     float time, fov;
+
     uint texture_index;
     uint empty_chunk_index;
     uint model_load_index;
-    uint single_ray_steps;
     uint chunk_images[CHUNK_NZ * CHUNK_INDEX_REPEAT_Z][CHUNK_NY * CHUNK_INDEX_REPEAT_Y][CHUNK_NX * CHUNK_INDEX_REPEAT_X];
+
     ChunkBlockPresence chunk_block_presence[CHUNK_NZ][CHUNK_NY][CHUNK_NX];
 };
 
