@@ -10,6 +10,24 @@ using namespace std::literals;
 
 #include <fmt/format.h>
 
+namespace gpu {
+    struct PlayerInput {
+        glm::vec2 mouse_delta;
+        float delta_time;
+        float fov;
+        float mouse_sens;
+        float speed, sprint_speed;
+        u32 move_flags;
+    };
+    struct Camera {
+        float fov;
+    };
+    struct Player {
+        glm::vec3 pos, vel, rot;
+        Camera camera;
+    };
+} // namespace gpu
+
 struct Game {
     using Clock = std::chrono::high_resolution_clock;
     Clock::time_point prev_frame_time;
