@@ -24,8 +24,6 @@
 // Visualize x_n grid (n can be 1, 2, 4, 8, 16, 32, or 64)
 #define VISUALIZE_SUBGRID 0
 
-#define USE_NEW_DDA_METHOD 1
-
 #define BLOCKEDIT_RADIUS 0
 
 #define MAX_STEPS (BLOCK_NX + BLOCK_NY + BLOCK_NZ)
