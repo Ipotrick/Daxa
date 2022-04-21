@@ -12,7 +12,7 @@ struct Push {
 
 [numthreads(8, 8, 8)] void main(uint3 global_i
                                 : SV_DispatchThreadID) {
-    StructuredBuffer<Globals> globals = getBuffer<Globals>(p.globals_sb);
+    StructuredBuffer<Globals> globals = daxa::getBuffer<Globals>(p.globals_sb);
     float3 pick_pos;
     if (p.set_id == (uint)BlockID::Air)
         pick_pos = globals[0].pick_pos[0].xyz;
@@ -29,12 +29,12 @@ struct Push {
         float3 block_pos = float3(global_i) + p_pos;
         if (chunk_id == globals[0].empty_chunk_index)
             return;
-        RWTexture3D<uint> chunk = getRWTexture3D<uint>(chunk_id);
+        RWTexture3D<uint> chunk = daxa::getRWTexture3D<uint>(chunk_id);
         if (length(int3(block_pos) - pick_block_i) <= 0.5 + BLOCKEDIT_RADIUS) {
             chunk[int3(global_i)] = p.set_id;
         }
 
-        // StructuredBuffer<ModelLoadBuffer> model = getBuffer<ModelLoadBuffer>(globals[0].model_load_index);
+        // StructuredBuffer<ModelLoadBuffer> model = daxa::getBuffer<ModelLoadBuffer>(globals[0].model_load_index);
         // float3 m_dim = model[0].dim.xyz;
         // float3 m_pos = pick_pos[0] - m_dim / 2;
         // if (block_pos.x >= m_pos.x && block_pos.x < m_pos.x + m_dim.x &&

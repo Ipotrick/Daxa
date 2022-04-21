@@ -10,24 +10,24 @@ struct DDA_RunState {
     float dist;
 };
 
-uint get_lod(GLOBALS_PARAM in float3 p) {
-    BlockID block_id = load_block_id(GLOBALS_ARG int3(p));
+uint get_lod(StructuredBuffer<Globals> globals, in float3 p) {
+    BlockID block_id = load_block_id(globals, int3(p));
     if (is_block_occluding(block_id))
         return 0;
-    if (x_load_presence<2>(GLOBALS_ARG p))
+    if (x_load_presence<2>(globals, p))
         return 1;
-    if (x_load_presence<4>(GLOBALS_ARG p))
+    if (x_load_presence<4>(globals, p))
         return 2;
-    if (x_load_presence<8>(GLOBALS_ARG p))
+    if (x_load_presence<8>(globals, p))
         return 3;
-    if (x_load_presence<16>(GLOBALS_ARG p))
+    if (x_load_presence<16>(globals, p))
         return 4;
-    if (x_load_presence<32>(GLOBALS_ARG p))
+    if (x_load_presence<32>(globals, p))
         return 5;
     return 6;
 }
 
-void run_dda_main(GLOBALS_PARAM in Ray ray, in out DDA_RunState run_state, in float3 b_min, in float3 b_max, in uint max_steps) {
+void run_dda_main(StructuredBuffer<Globals> globals, in Ray ray, in out DDA_RunState run_state, in float3 b_min, in float3 b_max, in uint max_steps) {
     run_state.hit = false;
     uint x1_steps = 0;
 
@@ -36,7 +36,7 @@ void run_dda_main(GLOBALS_PARAM in Ray ray, in out DDA_RunState run_state, in fl
         ray.nrm.y == 0.0 ? 3.0 * max_steps : abs(ray.inv_nrm.y),
         ray.nrm.z == 0.0 ? 3.0 * max_steps : abs(ray.inv_nrm.z));
 
-    uint lod = get_lod(GLOBALS_ARG ray.o);
+    uint lod = get_lod(globals, ray.o);
     if (lod == 0) {
         run_state.hit = true;
         return;
@@ -70,7 +70,7 @@ void run_dda_main(GLOBALS_PARAM in Ray ray, in out DDA_RunState run_state, in fl
             run_state.outside_bounds = true;
             break;
         }
-        lod = get_lod(GLOBALS_ARG current_pos);
+        lod = get_lod(globals, current_pos);
         // if (lod < 0 + t_curr * 0.005) {
         if (lod == 0) {
             run_state.hit = true;
