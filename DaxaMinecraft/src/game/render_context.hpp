@@ -2,7 +2,7 @@
 
 #include <Daxa.hpp>
 
-static constexpr int RENDER_SCL = 2;
+static constexpr int RENDER_SCL = 1;
 
 struct RenderContext {
     daxa::DeviceHandle device;
@@ -23,12 +23,12 @@ struct RenderContext {
     auto create_color_image(glm::ivec2 dim) {
         auto result = device->createImageView({
             .image = device->createImage({
-                .format = VK_FORMAT_R8G8B8A8_UNORM,
+                .format = VK_FORMAT_R32G32B32A32_SFLOAT,
                 .extent = {static_cast<u32>(dim.x), static_cast<u32>(dim.y), 1},
                 .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
                 .debugName = "Render Image",
             }),
-            .format = VK_FORMAT_R8G8B8A8_UNORM,
+            .format = VK_FORMAT_R32G32B32A32_SFLOAT,
             .subresourceRange =
                 {
                     .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -87,6 +87,7 @@ struct RenderContext {
             });
         }
         pipeline_compiler->addShaderSourceRootPath("DaxaMinecraft/assets/shaders");
+        pipeline_compiler->addShaderSourceRootPath("Daxa/shaders");
     }
 
     ~RenderContext() {
