@@ -10,24 +10,6 @@ using namespace std::literals;
 
 #include <fmt/format.h>
 
-namespace gpu {
-    struct PlayerInput {
-        glm::vec2 mouse_delta;
-        float delta_time;
-        float fov;
-        float mouse_sens;
-        float speed, sprint_speed;
-        u32 move_flags;
-    };
-    struct Camera {
-        float fov;
-    };
-    struct Player {
-        glm::vec3 pos, vel, rot;
-        Camera camera;
-    };
-} // namespace gpu
-
 struct Game {
     using Clock = std::chrono::high_resolution_clock;
     Clock::time_point prev_frame_time;
@@ -110,6 +92,7 @@ struct Game {
             auto offset = glm::dvec2{m.x - center_x, center_y - m.y};
             player.on_mouse_move(offset.x, offset.y);
             window.set_mouse_pos(glm::vec2(center_x, center_y));
+            world.mouse_offset += glm::vec2(offset);
         }
     }
     void on_mouse_scroll(const glm::dvec2 offset) {

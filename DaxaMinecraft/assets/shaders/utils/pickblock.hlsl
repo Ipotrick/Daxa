@@ -4,6 +4,8 @@
 [numthreads(1, 1, 1)] void main() {
     StructuredBuffer<Globals> globals = daxa::getBuffer<Globals>(p.globals_sb);
 
+    globals[0].player.update(globals[0].input);
+
     float3 front = mul(globals[0].viewproj_mat, float4(0, 0, 1, 0)).xyz;
     Ray ray;
     ray.o = globals[0].pos.xyz;

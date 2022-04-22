@@ -81,10 +81,16 @@ float3 shaded(in Ray sun_ray, in float3 col, in float3 nrm) {
     float3 right = mul(globals[0].viewproj_mat, float4(1, 0, 0, 0)).xyz;
     float3 up = mul(globals[0].viewproj_mat, float4(0, 1, 0, 0)).xyz;
 
+    // float3x3 view_mat = globals[0].player.camera.view_mat;
+    // float3 front = mul(view_mat, float3(0, 0, 1));
+    // float3 right = mul(view_mat, float3(1, 0, 0));
+    // float3 up = mul(view_mat, float3(0, 1, 0));
+
     float3 view_intersection_pos = globals[0].pick_pos[0].xyz;
     int3 view_intersection_block_pos = int3(view_intersection_pos);
     Ray cam_ray;
     cam_ray.o = globals[0].pos.xyz;
+    // cam_ray.o = globals[0].player.pos;
 
     Ray sun_ray;
     float sun_angle = 0.3;
@@ -103,12 +109,13 @@ float3 shaded(in Ray sun_ray, in float3 col, in float3 nrm) {
 
     float2 uv_offset =
 #if JITTER_VIEW
+        // (pixel_i.x > globals[0].frame_dim.x / 2) *
         float2(rand(float2(i_uv + uv_rand_offset + 10)),
                rand(float2(i_uv + uv_rand_offset)));
 #else
         float2(0, 0);
 #endif
-    float2 uv = (float2(i_uv) + uv_offset * (pixel_i.x > globals[0].frame_dim.x / 2) * inv_subsamples) * inv_frame_dim * 2 - 1;
+    float2 uv = (float2(i_uv) + uv_offset * inv_subsamples) * inv_frame_dim * 2 - 1;
 
     for (uint yi = 0; yi < subsamples.y; ++yi) {
         for (uint xi = 0; xi < subsamples.x; ++xi) {
@@ -230,22 +237,22 @@ float3 shaded(in Ray sun_ray, in float3 col, in float3 nrm) {
 
     color *= inv_subsamples.x * inv_subsamples.y;
 
-    draw_rect(pixel_i.xy, color, GLOBALS_DEFINE.frame_dim.x / 2 - 0, GLOBALS_DEFINE.frame_dim.y / 2 - 500, 1, 1000);
-    draw_rect(pixel_i.xy, color, GLOBALS_DEFINE.frame_dim.x / 2 - 4, GLOBALS_DEFINE.frame_dim.y / 2 - 0, 9, 1);
+    draw_rect(pixel_i.xy, color, globals[0].frame_dim.x / 2 - 0, globals[0].frame_dim.y / 2 - 4, 1, 9);
+    draw_rect(pixel_i.xy, color, globals[0].frame_dim.x / 2 - 4, globals[0].frame_dim.y / 2 - 0, 9, 1);
 
     // RayIntersection temp_inter;
     // for (int yi = 0; yi < 10; ++yi)
     //     for (int xi = 0; xi < 10; ++xi) {
     //         temp_inter = ray_sphere_intersect(cam_ray, float3(512 + xi * 2, 0, 512 + yi * 2), 1);
-    //         draw(color, depth, getTexture2DArray<float4>(GLOBALS_DEFINE.texture_index).Load(int4((temp_inter.nrm.x * 0.5 + 0.5) * 16, (temp_inter.nrm.z * 0.5 + 0.5) * 16, int(GLOBALS_DEFINE.time * 5) % 30, 0)).rgb, temp_inter.dist, temp_inter.hit);
+    //         draw(color, depth, getTexture2DArray<float4>(globals[0].texture_index).Load(int4((temp_inter.nrm.x * 0.5 + 0.5) * 16, (temp_inter.nrm.z * 0.5 + 0.5) * 16, int(GLOBALS_DEFINE.time * 5) % 30, 0)).rgb, temp_inter.dist, temp_inter.hit);
     //     }
 
     RWTexture2D<float4> output_image = daxa::getRWTexture2D<float4>(p.output_image_i);
     float4 prev_val = output_image[pixel_i.xy];
     float4 new_val = float4(pow(color, float3(1, 1, 1)), 1);
-    if (pixel_i.x > globals[0].frame_dim.x / 2) {
-        output_image[pixel_i.xy] = prev_val * 0.99 + new_val * 0.01;
-    } else {
+    // if (pixel_i.x > globals[0].frame_dim.x / 2) {
+    //     output_image[pixel_i.xy] = prev_val * 0.99 + new_val * 0.01;
+    // } else {
         output_image[pixel_i.xy] = new_val;
-    }
+    // }
 }

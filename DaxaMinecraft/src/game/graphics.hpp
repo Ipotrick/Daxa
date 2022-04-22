@@ -13,6 +13,22 @@ struct ModelLoadBuffer {
 };
 
 namespace gpu {
+    struct PlayerInput {
+        glm::vec2 mouse_delta;
+        float delta_time;
+        float fov;
+        float mouse_sens;
+        float speed, sprint_speed;
+        u32 move_flags;
+    };
+    struct Camera {
+        float fov;
+    };
+    struct Player {
+        glm::vec3 pos, vel, rot;
+        Camera camera;
+    };
+
     struct ChunkBlockPresence {
         u32 x2[1024];
         u32 x4[256];
@@ -26,15 +42,19 @@ namespace gpu {
         glm::vec4 pos;
         glm::vec4 pick_pos[2];
         glm::ivec2 frame_dim;
-        float time, fov;
+        PlayerInput input;
+        float time;
+        float fov;
 
         u32 texture_index;
         u32 empty_chunk_index;
         u32 model_load_index;
         ChunkIndexArray<u32> chunk_ids;
+    };
 
-        // Too big to keep on the stack! Let's just alloc it on the GPU only.
-        // ChunkArray<ChunkBlockPresence> chunk_block_presence;
+    struct ComputeGlobals_GpuOnly {
+        Player player;
+        ChunkArray<ChunkBlockPresence> chunk_block_presence;
     };
 
     namespace push {
@@ -98,6 +118,9 @@ struct RenderableWorld {
     bool should_break = false;
     bool should_place = false;
 
+    float delta_time;
+    glm::vec2 mouse_offset{0, 0};
+
     RenderableWorld(RenderContext &render_ctx) : render_ctx(render_ctx) {
         load_textures("DaxaMinecraft/assets/textures");
         load_shaders();
@@ -141,7 +164,7 @@ struct RenderableWorld {
         render_ctx.queue->submit(submitInfo);
 
         compute_globals_buffer = render_ctx.device->createBuffer({
-            .size = sizeof(gpu::ComputeGlobals) + sizeof(ChunkArray<gpu::ChunkBlockPresence>),
+            .size = sizeof(gpu::ComputeGlobals) + sizeof(gpu::ComputeGlobals_GpuOnly),
             .memoryType = daxa::MemoryType::GPU_ONLY,
         });
         model_load_buffer = render_ctx.device->createBuffer({
@@ -215,7 +238,8 @@ struct RenderableWorld {
         }
     }
 
-    void update(float) {
+    void update(float dt) {
+        delta_time = dt;
         reload_shaders();
     }
 
@@ -317,7 +341,26 @@ struct RenderableWorld {
             .fov = tanf(player.camera.fov * std::numbers::pi_v<f32> / 360.0f),
             .texture_index = atlas_texture_array->getDescriptorIndex(),
             .empty_chunk_index = empty_chunk->chunkgen_image_a->getDescriptorIndex(),
+
+            .input = {
+                .mouse_delta = mouse_offset,
+                .delta_time = delta_time,
+                .fov = tanf(player.camera.fov * std::numbers::pi_v<f32> / 360.0f),
+                .mouse_sens = player.mouse_sens,
+                .speed = player.speed,
+                .sprint_speed = player.sprint_speed,
+                .move_flags = static_cast<u32>(
+                    (player.move.sprint << 0) |
+                    (player.move.pz << 1) |
+                    (player.move.nz << 2) |
+                    (player.move.py << 3) |
+                    (player.move.ny << 4) |
+                    (player.move.px << 5) |
+                    (player.move.nx << 6)),
+            },
         };
+
+        mouse_offset = {0, 0};
 
         for (size_t zi = 0; zi < World::DIM.z * World::CHUNK_REPEAT.z; ++zi) {
             size_t zi_mod_dim = zi % World::DIM.z;
