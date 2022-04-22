@@ -22,10 +22,16 @@ namespace gpu {
         u32 move_flags;
     };
     struct Camera {
+        glm::mat3 view_mat;
         float fov;
     };
     struct Player {
-        glm::vec3 pos, vel, rot;
+        glm::vec3 pos;
+        u32 _pad0;
+        glm::vec3 vel;
+        u32 _pad1;
+        glm::vec3 rot;
+        u32 _pad2;
         Camera camera;
     };
 
@@ -121,7 +127,7 @@ struct RenderableWorld {
     float delta_time;
     glm::vec2 mouse_offset{0, 0};
 
-    RenderableWorld(RenderContext &render_ctx) : render_ctx(render_ctx) {
+    RenderableWorld(RenderContext &render_ctx, const Player3D &player) : render_ctx(render_ctx) {
         load_textures("DaxaMinecraft/assets/textures");
         load_shaders();
 
@@ -131,46 +137,10 @@ struct RenderableWorld {
                     chunk_indices[xi + yi * World::DIM.x + zi * World::DIM.x * World::DIM.y] = glm::uvec3(xi, yi, zi);
         start = Clock::now();
 
-        empty_chunk = create_chunk();
-        for (auto &chunk_layer : chunks)
-            for (auto &chunk_strip : chunk_layer)
-                for (auto &chunk : chunk_strip)
-                    chunk = create_chunk();
-
-        auto cmd_list = render_ctx.queue->getCommandList({});
-
-        cmd_list.queueImageBarrier(daxa::ImageBarrier{
-            .barrier = daxa::FULL_MEMORY_BARRIER,
-            .image = empty_chunk->chunkgen_image_a,
-            .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
-            .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
-        });
-        for (auto &chunk_layer : chunks) {
-            for (auto &chunk_strip : chunk_layer) {
-                for (auto &chunk : chunk_strip) {
-                    cmd_list.queueImageBarrier(daxa::ImageBarrier{
-                        .barrier = daxa::FULL_MEMORY_BARRIER,
-                        .image = chunk->chunkgen_image_a,
-                        .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
-                        .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
-                    });
-                }
-            }
-        }
-
-        cmd_list.finalize();
-        daxa::SubmitInfo submitInfo;
-        submitInfo.commandLists.push_back(std::move(cmd_list));
-        render_ctx.queue->submit(submitInfo);
-
-        compute_globals_buffer = render_ctx.device->createBuffer({
-            .size = sizeof(gpu::ComputeGlobals) + sizeof(gpu::ComputeGlobals_GpuOnly),
-            .memoryType = daxa::MemoryType::GPU_ONLY,
-        });
-        model_load_buffer = render_ctx.device->createBuffer({
-            .size = sizeof(ModelLoadBuffer),
-            .memoryType = daxa::MemoryType::GPU_ONLY,
-        });
+        gpu::Player player_data;
+        player_data.pos = player.pos;
+        player_data.vel = player.vel;
+        player_data.rot = player.rot;
 
         std::ifstream model_voxfile("DaxaMinecraft/assets/models/teapot.vox", std::ios::binary);
         std::vector<u8> buffer(std::istreambuf_iterator<char>(model_voxfile), {});
@@ -199,6 +169,62 @@ struct RenderableWorld {
         }
 
         ogt_vox_destroy_scene(scene);
+
+        empty_chunk = create_chunk();
+        for (auto &chunk_layer : chunks)
+            for (auto &chunk_strip : chunk_layer)
+                for (auto &chunk : chunk_strip)
+                    chunk = create_chunk();
+
+        compute_globals_buffer = render_ctx.device->createBuffer({
+            .size = sizeof(gpu::ComputeGlobals) + sizeof(gpu::ComputeGlobals_GpuOnly),
+            .memoryType = daxa::MemoryType::GPU_ONLY,
+        });
+        model_load_buffer = render_ctx.device->createBuffer({
+            .size = sizeof(ModelLoadBuffer),
+            .memoryType = daxa::MemoryType::GPU_ONLY,
+        });
+
+        auto cmd_list = render_ctx.queue->getCommandList({});
+
+        cmd_list.queueImageBarrier(daxa::ImageBarrier{
+            .barrier = daxa::FULL_MEMORY_BARRIER,
+            .image = empty_chunk->chunkgen_image_a,
+            .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
+            .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
+        });
+        for (auto &chunk_layer : chunks) {
+            for (auto &chunk_strip : chunk_layer) {
+                for (auto &chunk : chunk_strip) {
+                    cmd_list.queueImageBarrier(daxa::ImageBarrier{
+                        .barrier = daxa::FULL_MEMORY_BARRIER,
+                        .image = chunk->chunkgen_image_a,
+                        .layoutBefore = VK_IMAGE_LAYOUT_UNDEFINED,
+                        .layoutAfter = VK_IMAGE_LAYOUT_GENERAL,
+                    });
+                }
+            }
+        }
+
+        cmd_list.singleCopyHostToBuffer({
+            .src = reinterpret_cast<u8 *>(model_load_data.get()),
+            .dst = model_load_buffer,
+            .region = {.size = sizeof(ModelLoadBuffer)},
+        });
+        cmd_list.singleCopyHostToBuffer({
+            .src = reinterpret_cast<u8 *>(&player_data),
+            .dst = compute_globals_buffer,
+            .region = {
+                .dstOffset = sizeof(gpu::ComputeGlobals) + offsetof(gpu::ComputeGlobals_GpuOnly, player),
+                .size = sizeof(decltype(player_data)),
+            },
+        });
+        cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
+
+        cmd_list.finalize();
+        daxa::SubmitInfo submitInfo;
+        submitInfo.commandLists.push_back(std::move(cmd_list));
+        render_ctx.queue->submit(submitInfo);
     }
 
     ~RenderableWorld() {
@@ -245,12 +271,8 @@ struct RenderableWorld {
     }
 
     void do_blockedit(daxa::CommandListHandle cmd_list, u32 compute_globals_i, u32 block_id) {
-        i32 x_min = -1;
-        i32 y_min = -1;
-        i32 z_min = -1;
-        i32 x_max = +1;
-        i32 y_max = +1;
-        i32 z_max = +1;
+        i32 x_min = -1, y_min = -1, z_min = -1;
+        i32 x_max = +1, y_max = +1, z_max = +1;
         cmd_list.bindPipeline(blockedit_compute_pipeline);
         cmd_list.bindAll();
         for (i32 zi = z_min; zi <= z_max; ++zi) {
@@ -338,27 +360,26 @@ struct RenderableWorld {
             .viewproj_mat = vp_mat,
             .pos = glm::vec4(player.pos, 0),
             .frame_dim = {extent.width, extent.height},
-            .time = elapsed,
-            .fov = tanf(player.camera.fov * std::numbers::pi_v<f32> / 360.0f),
-            .texture_index = atlas_texture_array->getDescriptorIndex(),
-            .empty_chunk_index = empty_chunk->chunkgen_image_a->getDescriptorIndex(),
-
             .input = {
                 .mouse_delta = mouse_offset,
                 .delta_time = delta_time,
-                .fov = tanf(player.camera.fov * std::numbers::pi_v<f32> / 360.0f),
+                .fov = player.camera.fov,
                 .mouse_sens = player.mouse_sens,
                 .speed = player.speed,
                 .sprint_speed = player.sprint_speed,
                 .move_flags = static_cast<u32>(
                     (player.move.sprint << 0) |
-                    (player.move.pz << 1) |
-                    (player.move.nz << 2) |
-                    (player.move.py << 3) |
-                    (player.move.ny << 4) |
-                    (player.move.px << 5) |
-                    (player.move.nx << 6)),
+                    (player.move.px << 1) |
+                    (player.move.nx << 2) |
+                    (player.move.pz << 3) |
+                    (player.move.nz << 4) |
+                    (player.move.py << 5) |
+                    (player.move.ny << 6)),
             },
+            .time = elapsed,
+            .fov = tanf(player.camera.fov * std::numbers::pi_v<f32> / 360.0f),
+            .texture_index = atlas_texture_array->getDescriptorIndex(),
+            .empty_chunk_index = empty_chunk->chunkgen_image_a->getDescriptorIndex(),
         };
 
         mouse_offset = {0, 0};
@@ -379,13 +400,6 @@ struct RenderableWorld {
 
         auto compute_modelload_i = model_load_buffer.getDescriptorIndex();
         compute_globals.model_load_index = compute_modelload_i;
-
-        cmd_list.singleCopyHostToBuffer({
-            .src = reinterpret_cast<u8 *>(model_load_data.get()),
-            .dst = model_load_buffer,
-            .region = {.size = sizeof(ModelLoadBuffer)},
-        });
-        cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 
         auto compute_globals_i = compute_globals_buffer.getDescriptorIndex();
 
