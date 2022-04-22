@@ -343,7 +343,8 @@ public:
         bool one_changed = renderCTX.pipelineCompiler->checkIfSourcesChanged(genKernelHorizontal0) ||
             renderCTX.pipelineCompiler->checkIfSourcesChanged(genKernelVertical0) || 
             renderCTX.pipelineCompiler->checkIfSourcesChanged(genKernelHorizontal1) || 
-            renderCTX.pipelineCompiler->checkIfSourcesChanged(genKernelVertical1); 
+            renderCTX.pipelineCompiler->checkIfSourcesChanged(genKernelVertical1) ||
+            regenKernel; 
 
         auto reload = [&](daxa::PipelineHandle& pipeline) {
             auto result = renderCTX.pipelineCompiler->recreatePipeline(pipeline);
@@ -354,6 +355,7 @@ public:
         };
 
         if (one_changed) {
+            regenKernel = false;
             reload(genKernelHorizontal0);
             reload(genKernelVertical0);
             reload(genKernelHorizontal1);
@@ -504,6 +506,7 @@ public:
     daxa::ImageViewHandle aperatureImage = {};
     daxa::ImageViewHandle kernel = {};
     daxa::ImageViewHandle kernelImage = {};
+    bool regenKernel = true;
     daxa::PipelineHandle genKernelVertical0 = {};
     daxa::PipelineHandle genKernelHorizontal0 = {};
     daxa::PipelineHandle genKernelVertical1 = {};

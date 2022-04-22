@@ -223,7 +223,7 @@ struct RenderContext {
             render_color_image->getImageHandle()->getVkImage(),
             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
             swapchain_image.getImageViewHandle()->getImageHandle()->getVkImage(),
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_NEAREST);
 
         cmd_list.queueImageBarrier({
             .image = swapchain_image.getImageViewHandle(),

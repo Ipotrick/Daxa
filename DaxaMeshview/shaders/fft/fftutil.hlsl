@@ -17,6 +17,7 @@ int expand(int idxL, int N1, int N2){
 }
 
 void exchange(
+	inout float shared_freq[N*2],
 	inout float2 v[2], 
 	int idxD, 
 	int incD,
@@ -53,6 +54,15 @@ float2 complex_div(float2 a, float2 b) {
 	);
 }
 
+//float2 complex_conjugate(float2 a) {
+//	return a * float2(1,-1);
+//}
+//
+//void extract_real_results(float2 z_k, float2 z_nk, out float2 X, out float2 Y) {
+//	X = (z_k + complex_conjugate(z_nk)) * 0.5;
+//	Y = complex_mul(float2(0,-1), (z_k - complex_conjugate(z_nk)) * 0.5);
+//}
+
 void do_fft(inout float2 v[2], in int t, in int sign) {
 	for(int Ns = 1; Ns < N; Ns *= 2) {
 		float angle = sign * 2 * PI * (t % Ns) / (Ns * 2);
@@ -66,12 +76,41 @@ void do_fft(inout float2 v[2], in int t, in int sign) {
 
 		int idxD = expand(t, Ns, 2);
 		int idxS = expand(t, N / 2, 2);
-		exchange(v, idxD, Ns, idxS, N / 2);
+		exchange(shared_freq, v, idxD, Ns, idxS, N / 2);
 	}
 	if (sign < 0) {
 		v[0] *= rN;
 		v[1] *= rN;
 	}
+}
+
+void do_fft2(inout float sequence[N*2], in int t, in int sign) {
+	float2 v[2] = {
+		float2(sequence[t], sequence[t + N]),
+		float2(sequence[t + T], sequence[t + T + N]),
+	};
+	for(int Ns = 1; Ns < N; Ns *= 2) {
+		float angle = sign * 2 * PI * (t % Ns) / (Ns * 2);
+		for(int r = 0; r < 2; ++r) {
+			v[r] = complex_mul(v[r], float2(cos(r * angle), sin(r * angle)));
+		}
+
+		float2 v0 = v[0];
+		v[0] = v0 + v[1];
+		v[1] = v0 - v[1];
+
+		int idxD = expand(t, Ns, 2);
+		int idxS = expand(t, N / 2, 2);
+		exchange(sequence, v, idxD, Ns, idxS, N / 2);
+	}
+	if (sign < 0) {
+		v[0] *= rN;
+		v[1] *= rN;
+	}
+	sequence[t] 		= v[0].x;
+	sequence[t + N] 	= v[0].y;
+	sequence[t + T] 	= v[1].x;
+	sequence[t + T + N] = v[1].y;
 }
 
 void fft_horizontal_forward(
@@ -175,6 +214,7 @@ void fft_vertical_apply(
 		// TODO
 		//v_rg[r] = test_filter(v_rg[r], int2(column, t));
 		v_rg[r] = complex_mul(v_rg[r], kernel[int2(column,t + r * T)].rg);
+		//v_rg[r] = v_rg[r] * kernel[int2(column,t + r * T)].rg;
 	}
 
 	// backwards transform rg
@@ -201,6 +241,7 @@ void fft_vertical_apply(
 		// TODO
 		//v_ba[r] = test_filter(v_ba[r], int2(column, t));
 		v_ba[r] = complex_mul(v_ba[r], kernel[int2(column,t + r * T)].ba);
+		//v_ba[r] = v_ba[r] * kernel[int2(column,t + r * T)].ba;
 	}
 
 	// backwards transform ba
