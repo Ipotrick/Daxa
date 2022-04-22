@@ -32,3 +32,23 @@ float3 rand_vec3(float3 v) { return float3(rand(v.x), rand(v.y), rand(v.z)); }
 float4 rand_vec4(float4 v) {
     return float4(rand(v.x), rand(v.y), rand(v.z), rand(v.w));
 }
+
+float3 ortho(float3 v) {
+    return lerp(float3(-v.y, v.x, 0.0), float3(0.0, -v.z, v.y), step(abs(v.x), abs(v.z)));
+}
+
+float3 around(float3 v, float3 z) {
+    float3 t = ortho(z), b = cross(z, t);
+    return mad(t, float3(v.x, v.x, v.x), mad(b, float3(v.y, v.y, v.y), z * v.z));
+}
+
+float3 isotropic(float rp, float c) {
+    // sin(a) = sqrt(1.0 - cos(a)^2) , in the interval [0, PI/2] relevant for us
+    float p = 2 * 3.14159 * rp, s = sqrt(1.0 - c * c);
+    return float3(cos(p) * s, sin(p) * s, c);
+}
+
+float3 rand_pt(float3 n, float2 rnd) {
+    float c = sqrt(rnd.y);
+    return around(isotropic(rnd.x, c), n);
+}
