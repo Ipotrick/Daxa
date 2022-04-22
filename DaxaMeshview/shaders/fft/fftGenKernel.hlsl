@@ -82,19 +82,36 @@ void MainHorizontal1(
 //
     // forward transform
     int sign = 1;
-    float2 v_rg[2];
-    float2 v_ba[2];
+    //float2 v_rg[2];
+    //float2 v_ba[2];
+    //for (int r = 0; r < 2; ++r) {
+    //    v_rg[r] = kernelImage[int2(r * T, 0) + dispatchThreadID.xy].rg;
+    //    v_ba[r] = kernelImage[int2(r * T, 0) + dispatchThreadID.xy].ba;
+    //}
+	//do_fft(v_rg, dispatchThreadID.x, sign);
+    //GroupMemoryBarrierWithGroupSync();
+	//do_fft(v_ba, dispatchThreadID.x, sign);
+    //for (int r = 0; r < 2; ++r) {
+    //    freqImageRG[int2(r * T, 0) + dispatchThreadID.xy] = v_rg[r];
+    //    freqImageBA[int2(r * T, 0) + dispatchThreadID.xy] = v_ba[r];
+    //}
+    int t = dispatchThreadID.x;
     for (int r = 0; r < 2; ++r) {
-        v_rg[r] = kernelImage[int2(r * T, 0) + dispatchThreadID.xy].rg;
-        v_ba[r] = kernelImage[int2(r * T, 0) + dispatchThreadID.xy].ba;
+        shared_freq[t + r * T] = kernelImage[int2(r * T, 0) + dispatchThreadID.xy].r;
+        shared_freq[t + r * T + N] = kernelImage[int2(r * T, 0) + dispatchThreadID.xy].g;
     }
-	do_fft(v_rg, dispatchThreadID.x, sign);
-    GroupMemoryBarrierWithGroupSync();
-	do_fft(v_ba, dispatchThreadID.x, sign);
-
+    do_fft2(shared_freq, dispatchThreadID.x, sign);
     for (int r = 0; r < 2; ++r) {
-        freqImageRG[int2(r * T, 0) + dispatchThreadID.xy] = v_rg[r];
-        freqImageBA[int2(r * T, 0) + dispatchThreadID.xy] = v_ba[r];
+        freqImageRG[int2(r * T, 0) + dispatchThreadID.xy] = float2(shared_freq[t + r * T], shared_freq[t + r * T + N]);
+    }
+    GroupMemoryBarrierWithGroupSync();
+    for (int r = 0; r < 2; ++r) {
+        shared_freq[t + r * T] = kernelImage[int2(r * T, 0) + dispatchThreadID.xy].b;
+        shared_freq[t + r * T + N] = kernelImage[int2(r * T, 0) + dispatchThreadID.xy].a;
+    }
+    do_fft2(shared_freq, dispatchThreadID.x, sign);
+    for (int r = 0; r < 2; ++r) {
+        freqImageBA[int2(r * T, 0) + dispatchThreadID.xy] = float2(shared_freq[t + r * T], shared_freq[t + r * T + N]);
     }
 }
 
@@ -129,8 +146,7 @@ void MainVertical1(
         kernel[int2((dispatchThreadID.x), (r * T + dispatchThreadID.y))] = float4(
             v_rg[r].x,
             0,
-            v_ba[r].x,
-            0
+            v_ba[r]
         );
         //kernel[int2((dispatchThreadID.x), (r * T + dispatchThreadID.y))] = float4(
         //    1,
