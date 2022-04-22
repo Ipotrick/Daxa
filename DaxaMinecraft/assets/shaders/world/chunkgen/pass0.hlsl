@@ -183,10 +183,6 @@ void block_pass2(in out WorldgenState worldgen_state, in float3 b_pos,
 BlockID gen_block(in float3 b_pos) {
     WorldgenState worldgen_state = get_worldgen_state(b_pos);
 
-    // worldgen_state.block_id = BlockID::Air;
-    // if (worldgen_state.r > 0.5)
-    //     worldgen_state.block_id = BlockID::Stone;
-
     biome_pass0(worldgen_state, b_pos);
     block_pass0(worldgen_state, b_pos);
     SurroundingInfo surroundings = get_surrounding(worldgen_state, b_pos);

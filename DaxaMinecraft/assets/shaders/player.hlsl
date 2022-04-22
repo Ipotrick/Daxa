@@ -6,7 +6,7 @@ struct PlayerInput {
     float fov;
     float mouse_sens;
     float speed, sprint_speed;
-    u32 move_flags;
+    uint move_flags;
 
     bool is_moving() { return move_flags != 0; }
     bool move_sprint() { return move_flags & 0x01; }
@@ -20,6 +20,7 @@ struct PlayerInput {
 
 struct Camera {
     float fov;
+    float3x3 view_mat;
 };
 
 struct Player {
@@ -31,16 +32,33 @@ struct Player {
 
         float delta_dist = input.speed * input.delta_time;
 
-        rot.x += input.mouse_delta.x * input.mouse_sens * 0.0001f * camera.fov;
-        rot.y += input.mouse_delta.y * input.mouse_sens * 0.0001f * camera.fov;
+        rot.x -= input.mouse_delta.x * input.mouse_sens * 0.0001f * camera.fov;
+        rot.y -= input.mouse_delta.y * input.mouse_sens * 0.0001f * camera.fov;
 
         const float MAX_ROT = 3.14159f / 2;
         if (rot.y > MAX_ROT)
-            rot.y = MAX_ROT)
+            rot.y = MAX_ROT;
         if (rot.y < -MAX_ROT)
-            rot.y = -MAX_ROT)
+            rot.y = -MAX_ROT;
 
-        float sin_rot = sin(rot.x), cos_rot = cos(rot.x);
+        float sin_rot_x = sin(rot.y), cos_rot_x = cos(rot.y);
+        float sin_rot_y = sin(rot.x), cos_rot_y = cos(rot.x);
+        float sin_rot_z = sin(rot.z), cos_rot_z = cos(rot.z);
+
+        // clang-format off
+        camera.view_mat = float3x3(
+             1,          0,          0,
+             0,  cos_rot_x,  sin_rot_x,
+             0, -sin_rot_x,  cos_rot_x
+        );
+        float3x3 roty_mat = float3x3(
+             cos_rot_y, 0, -sin_rot_y,
+             0,         1,          0,
+             sin_rot_y, 0,  cos_rot_y
+        );
+        // clang-format on
+
+        camera.view_mat = mul(roty_mat, camera.view_mat);
 
         if (input.move_sprint())
             delta_dist *= input.sprint_speed;
