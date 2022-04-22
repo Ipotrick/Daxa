@@ -1,5 +1,5 @@
 
-SHADERTOY_NUMTHREADS void main(uint3 pixel_i : SV_DispatchThreadID) {
+SHADERTOY_NUMTHREADS_MAIN void main(uint3 pixel_i : SV_DispatchThreadID) {
     StructuredBuffer<Globals> globals = getBuffer<Globals>(p.globals_id);
     RWTexture2D<float4> output_image = getRWTexture2D<float4>(p.output_image_id);
 

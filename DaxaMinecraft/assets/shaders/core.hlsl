@@ -21,13 +21,14 @@ struct Globals {
     float4 pos;
     float4 pick_pos[2];
     int2 frame_dim;
-    PlayerInput input;
     float time;
     float fov;
+    PlayerInput input;
 
     uint texture_index;
     uint empty_chunk_index;
     uint model_load_index;
+    uint _pad0;
     uint chunk_images[CHUNK_NZ * CHUNK_INDEX_REPEAT_Z][CHUNK_NY * CHUNK_INDEX_REPEAT_Y][CHUNK_NX * CHUNK_INDEX_REPEAT_X];
 
     // ---- GPU ONLY ----
