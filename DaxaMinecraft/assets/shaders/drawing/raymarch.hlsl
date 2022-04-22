@@ -77,20 +77,26 @@ float3 shaded(in Ray sun_ray, in float3 col, in float3 nrm) {
         pixel_i.y >= globals[0].frame_dim.y)
         return;
 
-    float3 front = mul(globals[0].viewproj_mat, float4(0, 0, 1, 0)).xyz;
-    float3 right = mul(globals[0].viewproj_mat, float4(1, 0, 0, 0)).xyz;
-    float3 up = mul(globals[0].viewproj_mat, float4(0, 1, 0, 0)).xyz;
+    float3 front;
+    float3 right;
+    float3 up;
+    Ray cam_ray;
 
-    // float3x3 view_mat = globals[0].player.camera.view_mat;
-    // float3 front = mul(view_mat, float3(0, 0, 1));
-    // float3 right = mul(view_mat, float3(1, 0, 0));
-    // float3 up = mul(view_mat, float3(0, 1, 0));
+    if (pixel_i.x < globals[0].frame_dim.x / 2) {
+        front = mul(globals[0].viewproj_mat, float4(0, 0, 1, 0)).xyz;
+        right = mul(globals[0].viewproj_mat, float4(1, 0, 0, 0)).xyz;
+        up = mul(globals[0].viewproj_mat, float4(0, 1, 0, 0)).xyz;
+        cam_ray.o = globals[0].pos.xyz;
+    } else {
+        float3x3 view_mat = globals[0].player.camera.view_mat;
+        front = mul(view_mat, float3(0, 0, 1));
+        right = mul(view_mat, float3(1, 0, 0));
+        up = mul(view_mat, float3(0, 1, 0));
+        cam_ray.o = globals[0].player.pos;
+    }
 
     float3 view_intersection_pos = globals[0].pick_pos[0].xyz;
     int3 view_intersection_block_pos = int3(view_intersection_pos);
-    Ray cam_ray;
-    cam_ray.o = globals[0].pos.xyz;
-    // cam_ray.o = globals[0].player.pos;
 
     Ray sun_ray;
     float sun_angle = 0.3;
@@ -253,6 +259,6 @@ float3 shaded(in Ray sun_ray, in float3 col, in float3 nrm) {
     // if (pixel_i.x > globals[0].frame_dim.x / 2) {
     //     output_image[pixel_i.xy] = prev_val * 0.99 + new_val * 0.01;
     // } else {
-        output_image[pixel_i.xy] = new_val;
+    output_image[pixel_i.xy] = new_val;
     // }
 }

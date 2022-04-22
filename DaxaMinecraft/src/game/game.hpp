@@ -20,8 +20,8 @@ struct Game {
     RenderContext render_context{vulkan_surface, window.frame_dim};
     std::optional<daxa::ImGuiRenderer> imgui_renderer = std::nullopt;
 
-    RenderableWorld world{render_context};
-    Player3D player;
+    Player3D player = reset_player();
+    RenderableWorld world{render_context, player};
 
     bool paused = true;
     bool perf_menu = true;
@@ -44,11 +44,12 @@ struct Game {
         player.keybinds = input::DEFAULT_KEYBINDS;
     }
 
-    void reset_player() {
-        player = Player3D{};
-        player.pos = glm::vec3(World::DIM * Chunk::DIM) / 2.0f;
-        player.pos.y = -10.0f;
-        player.rot = {0.001f, -0.6f, 0.0f};
+    static Player3D reset_player() {
+        Player3D result{};
+        result.pos = glm::vec3(World::DIM * Chunk::DIM) / 2.0f;
+        result.pos.y = -10.0f;
+        result.rot = {0.001f, -0.6f, 0.0f};
+        return result;
     }
 
     void update() {
@@ -178,7 +179,7 @@ struct Game {
         if (paused) {
             ImGui::Begin("Settings");
             if (ImGui::Button("Reset player"))
-                reset_player();
+                player = reset_player();
             ImGui::SliderInt("ChunkGen Updates/Frame", &world.chunk_updates_per_frame, 1, 50);
             ImGui::SliderFloat("Speed", &player.speed, 0.1f, 40.0f);
             HelpMarker("Speed to move (Blocks/s)");

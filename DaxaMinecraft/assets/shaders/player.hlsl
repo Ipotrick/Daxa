@@ -19,21 +19,26 @@ struct PlayerInput {
 };
 
 struct Camera {
-    float fov;
     float3x3 view_mat;
+    float fov;
 };
 
 struct Player {
-    float3 pos, vel, rot;
+    float3 pos;
+    uint _pad0;
+    float3 vel;
+    uint _pad1;
+    float3 rot;
+    uint _pad2;
     Camera camera;
 
     void update(in PlayerInput input) {
-        camera.fov = input.fov;
-
         float delta_dist = input.speed * input.delta_time;
 
-        rot.x -= input.mouse_delta.x * input.mouse_sens * 0.0001f * camera.fov;
-        rot.y -= input.mouse_delta.y * input.mouse_sens * 0.0001f * camera.fov;
+        rot.x += input.mouse_delta.x * input.mouse_sens * 0.0001f * input.fov;
+        rot.y += input.mouse_delta.y * input.mouse_sens * 0.0001f * input.fov;
+
+        camera.fov = tan(input.fov * 3.14159f / 360.0f);
 
         const float MAX_ROT = 3.14159f / 2;
         if (rot.y > MAX_ROT)
@@ -41,20 +46,20 @@ struct Player {
         if (rot.y < -MAX_ROT)
             rot.y = -MAX_ROT;
 
-        float sin_rot_x = sin(rot.y), cos_rot_x = cos(rot.y);
-        float sin_rot_y = sin(rot.x), cos_rot_y = cos(rot.x);
+        float sin_rot_x = sin(rot.x), cos_rot_x = cos(rot.x);
+        float sin_rot_y = sin(rot.y), cos_rot_y = cos(rot.y);
         float sin_rot_z = sin(rot.z), cos_rot_z = cos(rot.z);
 
         // clang-format off
         camera.view_mat = float3x3(
              1,          0,          0,
-             0,  cos_rot_x,  sin_rot_x,
-             0, -sin_rot_x,  cos_rot_x
+             0,  cos_rot_y,  sin_rot_y,
+             0, -sin_rot_y,  cos_rot_y
         );
         float3x3 roty_mat = float3x3(
-             cos_rot_y, 0, -sin_rot_y,
+             cos_rot_x, 0, -sin_rot_x,
              0,         1,          0,
-             sin_rot_y, 0,  cos_rot_y
+             sin_rot_x, 0,  cos_rot_x
         );
         // clang-format on
 
