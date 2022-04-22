@@ -1,3 +1,5 @@
+#pragma once
+
 template <typename T>
 RWTexture2D<T> getRWTexture2D(uint id);
 template <typename T>
@@ -33,15 +35,15 @@ struct Globals {
 };
 DAXA_DEFINE_BA_BUFFER(Globals)
 
+#define BUF0_SIZE 256
+
 struct Buf0 {
-    uint data[128 * 128];
-    uint data_1[64 * 64];
-    uint data_2[32 * 32];
-    uint data_3[16 * 16];
-    uint data_4[8 * 8];
-    uint data_5[4 * 4];
-    uint data_6[2 * 2];
-    uint data_7[1 * 1];
+    uint data_0[BUF0_SIZE * BUF0_SIZE / 1];
+    uint data_1[BUF0_SIZE * BUF0_SIZE / 4];
+    uint data_2[BUF0_SIZE * BUF0_SIZE / 16];
+    uint data_3[BUF0_SIZE * BUF0_SIZE / 64];
+    uint data_4[BUF0_SIZE * BUF0_SIZE / 256];
+    uint data_5[BUF0_SIZE * BUF0_SIZE / 1024];
 };
 DAXA_DEFINE_BA_BUFFER(Buf0)
 
@@ -55,5 +57,3 @@ struct Push {
 
 #define SHADERTOY_NUMTHREADS_MAIN [numthreads(8, 8, 1)]
 #define SHADERTOY_NUMTHREADS_BUF0 [numthreads(8, 8, 1)]
-
-#include "user.hlsl"

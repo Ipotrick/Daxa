@@ -1,12 +1,12 @@
 Language: Cpp
-BasedOnStyle: Google
+BasedOnStyle: LLVM
 
 UseTab: Never
 TabWidth: 4
 IndentWidth: 4
 AccessModifierOffset: -2
 IndentCaseLabels: false
-ColumnLimit: 180
+ColumnLimit: 0
 BreakBeforeBraces: Attach
 
 SortIncludes: false
@@ -18,6 +18,3 @@ CompactNamespaces: true
 AllowShortIfStatementsOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortBlocksOnASingleLine: false
-
-Language: Cpp
-ColumnLimit: 0
