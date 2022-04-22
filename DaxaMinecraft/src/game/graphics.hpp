@@ -231,6 +231,7 @@ struct RenderableWorld {
             try_recreate_pipeline(subchunk_x2x4_pipeline) ||
             try_recreate_pipeline(subchunk_x8p_pipeline);
         if (should_reinit0 || should_reinit1) {
+            initialized = false;
             for (size_t zi = 0; zi < World::DIM.z; ++zi)
                 for (size_t yi = 0; yi < World::DIM.y; ++yi)
                     for (size_t xi = 0; xi < World::DIM.x; ++xi)
