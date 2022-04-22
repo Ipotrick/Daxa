@@ -1,15 +1,14 @@
 #define GLM_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-
 #define GLFW_INCLUDE_VULKAN
+
+#include <glm/glm.hpp>
 #include <GLFW/glfw3.h>
-
 #include <fmt/format.h>
-
 #include <Daxa.hpp>
 
 #include <chrono>
 #include <thread>
+
 using namespace std::literals;
 
 struct Window {
@@ -354,8 +353,6 @@ struct App {
 
     ComputePipelineGlobals compute_globals_data{};
 
-    // PFN_vkCmdSetCheckpointNV fnPtr_vkCmdSetCheckpointNV;
-
     void create_pipeline(daxa::PipelineHandle &pipe, const std::filesystem::path &path, const char *const entry) {
         auto result = render_context.pipeline_compiler->createComputePipeline({
             .shaderCI =
@@ -382,15 +379,15 @@ struct App {
     App() {
         window.set_user_pointer<App>(this);
 
-        create_pipeline(compute_pipeline, "Samples/Shadertoy/shaders/main.hlsl", "main");
-        create_pipeline(compute_buf0_pipeline, "Samples/Shadertoy/shaders/main.hlsl", "buf0_main");
+        create_pipeline(compute_pipeline, "Samples/Shadertoy/shaders/user_main.hlsl", "main");
+        create_pipeline(compute_buf0_pipeline, "Samples/Shadertoy/shaders/user_buf0.hlsl", "buf0_main");
 
         compute_pipeline_globals = render_context.device->createBuffer({
             .size = sizeof(ComputePipelineGlobals),
             .memoryType = daxa::MemoryType::GPU_ONLY,
         });
         compute_buf0 = render_context.device->createBuffer({
-            .size = sizeof(u32) * 128 * 256,
+            .size = sizeof(u32) * 512 * 256,
             .memoryType = daxa::MemoryType::GPU_ONLY,
         });
 
@@ -430,6 +427,7 @@ struct App {
         compute_globals_data.time = total_time_elapsed;
 
         auto compute_globals_id = compute_pipeline_globals.getDescriptorIndex();
+        auto compute_buf0_id = compute_buf0.getDescriptorIndex();
 
         cmd_list.singleCopyHostToBuffer({
             .src = reinterpret_cast<u8 *>(&compute_globals_data),
@@ -437,7 +435,7 @@ struct App {
             .region = {.size = sizeof(decltype(compute_globals_data))},
         });
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
-        
+
         struct Push {
             u32 globals_id;
             u32 buf0_id;
@@ -450,16 +448,16 @@ struct App {
             VK_SHADER_STAGE_COMPUTE_BIT,
             Push{
                 .globals_id = compute_globals_id,
-                .buf0_id = compute_buf0.getDescriptorIndex(),
+                .buf0_id = compute_buf0_id,
                 .output_image_id = 0,
             });
-        cmd_list.dispatch(16, 16);
+        cmd_list.dispatch(32, 32);
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
         cmd_list.pushConstant(
             VK_SHADER_STAGE_COMPUTE_BIT,
             Push{
                 .globals_id = compute_globals_id,
-                .buf0_id = compute_buf0.getDescriptorIndex(),
+                .buf0_id = compute_buf0_id,
                 .output_image_id = 1,
             });
         cmd_list.dispatch(16, 16);
@@ -468,37 +466,37 @@ struct App {
             VK_SHADER_STAGE_COMPUTE_BIT,
             Push{
                 .globals_id = compute_globals_id,
-                .buf0_id = compute_buf0.getDescriptorIndex(),
+                .buf0_id = compute_buf0_id,
                 .output_image_id = 2,
             });
-        cmd_list.dispatch(16, 16);
+        cmd_list.dispatch(8, 8);
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
         cmd_list.pushConstant(
             VK_SHADER_STAGE_COMPUTE_BIT,
             Push{
                 .globals_id = compute_globals_id,
-                .buf0_id = compute_buf0.getDescriptorIndex(),
+                .buf0_id = compute_buf0_id,
                 .output_image_id = 3,
             });
-        cmd_list.dispatch(16, 16);
+        cmd_list.dispatch(4, 4);
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
         cmd_list.pushConstant(
             VK_SHADER_STAGE_COMPUTE_BIT,
             Push{
                 .globals_id = compute_globals_id,
-                .buf0_id = compute_buf0.getDescriptorIndex(),
+                .buf0_id = compute_buf0_id,
                 .output_image_id = 4,
             });
-        cmd_list.dispatch(16, 16);
+        cmd_list.dispatch(2, 2);
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
         cmd_list.pushConstant(
             VK_SHADER_STAGE_COMPUTE_BIT,
             Push{
                 .globals_id = compute_globals_id,
-                .buf0_id = compute_buf0.getDescriptorIndex(),
+                .buf0_id = compute_buf0_id,
                 .output_image_id = 5,
             });
-        cmd_list.dispatch(16, 16);
+        cmd_list.dispatch(1, 1);
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 
         cmd_list.bindPipeline(compute_pipeline);
@@ -507,11 +505,9 @@ struct App {
             VK_SHADER_STAGE_COMPUTE_BIT,
             Push{
                 .globals_id = compute_globals_id,
-                .buf0_id = compute_buf0.getDescriptorIndex(),
+                .buf0_id = compute_buf0_id,
                 .output_image_id = render_context.render_color_image->getDescriptorIndex(),
             });
-            
-        // fnPtr_vkCmdSetCheckpointNV(cmd_list.getVkCommandBuffer(), "drawing compute dispatch");
         cmd_list.dispatch((extent.width + 7) / 8, (extent.height + 7) / 8);
 
         render_context.blit_to_swapchain(cmd_list);

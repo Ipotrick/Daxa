@@ -22,16 +22,13 @@ namespace gpu {
         u32 move_flags;
     };
     struct Camera {
-        glm::mat3 view_mat;
+        glm::mat4 view_mat;
         float fov;
     };
     struct Player {
-        glm::vec3 pos;
-        u32 _pad0;
-        glm::vec3 vel;
-        u32 _pad1;
-        glm::vec3 rot;
-        u32 _pad2;
+        glm::vec4 pos;
+        glm::vec4 vel;
+        glm::vec4 rot;
         Camera camera;
     };
 
@@ -48,13 +45,14 @@ namespace gpu {
         glm::vec4 pos;
         glm::vec4 pick_pos[2];
         glm::ivec2 frame_dim;
-        PlayerInput input;
         float time;
         float fov;
+        PlayerInput input;
 
         u32 texture_index;
         u32 empty_chunk_index;
         u32 model_load_index;
+        u32 _pad0;
         ChunkIndexArray<u32> chunk_ids;
     };
 
@@ -138,9 +136,9 @@ struct RenderableWorld {
         start = Clock::now();
 
         gpu::Player player_data;
-        player_data.pos = player.pos;
-        player_data.vel = player.vel;
-        player_data.rot = player.rot;
+        player_data.pos = glm::vec4(player.pos, 0);
+        player_data.vel = glm::vec4(player.vel, 0);
+        player_data.rot = glm::vec4(-player.rot, 0);
 
         std::ifstream model_voxfile("DaxaMinecraft/assets/models/teapot.vox", std::ios::binary);
         std::vector<u8> buffer(std::istreambuf_iterator<char>(model_voxfile), {});

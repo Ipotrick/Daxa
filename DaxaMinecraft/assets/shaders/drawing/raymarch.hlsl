@@ -88,11 +88,11 @@ float3 shaded(in Ray sun_ray, in float3 col, in float3 nrm) {
         up = mul(globals[0].viewproj_mat, float4(0, 1, 0, 0)).xyz;
         cam_ray.o = globals[0].pos.xyz;
     } else {
-        float3x3 view_mat = globals[0].player.camera.view_mat;
-        front = mul(view_mat, float3(0, 0, 1));
-        right = mul(view_mat, float3(1, 0, 0));
-        up = mul(view_mat, float3(0, 1, 0));
-        cam_ray.o = globals[0].player.pos;
+        float4x4 view_mat = globals[0].player.camera.view_mat;
+        front = mul(view_mat, float4(0, 0, 1, 0)).xyz;
+        right = mul(view_mat, float4(1, 0, 0, 0)).xyz;
+        up = mul(view_mat, float4(0, 1, 0, 0)).xyz;
+        cam_ray.o = globals[0].player.pos.xyz;
     }
 
     float3 view_intersection_pos = globals[0].pick_pos[0].xyz;
@@ -107,8 +107,12 @@ float3 shaded(in Ray sun_ray, in float3 col, in float3 nrm) {
     const float2 subsamples = float2(SUBSAMPLE_N, SUBSAMPLE_N);
     const float2 inv_subsamples = 1 / subsamples;
     float2 inv_frame_dim = 1 / float2(globals[0].frame_dim);
-    float aspect = float(globals[0].frame_dim.x) * inv_frame_dim.y;
-    int2 i_uv = int2(pixel_i.xy);
+    float aspect = float(globals[0].frame_dim.x) * inv_frame_dim.y * 0.5;
+    int2 i_uv = int2(pixel_i.xy) * int2(2, 1);
+    if (pixel_i.x < globals[0].frame_dim.x / 2) {
+    } else {
+        i_uv.x -= globals[0].frame_dim.x;
+    }
     float uv_rand_offset = globals[0].time;
     float3 color = float3(0, 0, 0);
     float depth = 100000;
@@ -243,8 +247,11 @@ float3 shaded(in Ray sun_ray, in float3 col, in float3 nrm) {
 
     color *= inv_subsamples.x * inv_subsamples.y;
 
-    draw_rect(pixel_i.xy, color, globals[0].frame_dim.x / 2 - 0, globals[0].frame_dim.y / 2 - 4, 1, 9);
-    draw_rect(pixel_i.xy, color, globals[0].frame_dim.x / 2 - 4, globals[0].frame_dim.y / 2 - 0, 9, 1);
+    draw_rect(pixel_i.xy, color, globals[0].frame_dim.x / 4 - 0, globals[0].frame_dim.y / 2 - 4, 1, 9);
+    draw_rect(pixel_i.xy, color, globals[0].frame_dim.x / 4 - 4, globals[0].frame_dim.y / 2 - 0, 9, 1);
+
+    draw_rect(pixel_i.xy, color, globals[0].frame_dim.x / 4 + globals[0].frame_dim.x / 2 - 0, globals[0].frame_dim.y / 2 - 4, 1, 9);
+    draw_rect(pixel_i.xy, color, globals[0].frame_dim.x / 4 + globals[0].frame_dim.x / 2 - 4, globals[0].frame_dim.y / 2 - 0, 9, 1);
 
     // RayIntersection temp_inter;
     // for (int yi = 0; yi < 10; ++yi)
