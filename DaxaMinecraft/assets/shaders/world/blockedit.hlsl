@@ -2,7 +2,7 @@ struct Push {
     float4 pos;
     uint globals_sb;
     uint output_image_i;
-    uint set_id;
+    uint edit_mode;
 };
 
 [[vk::push_constant]] const Push p;
@@ -14,7 +14,7 @@ struct Push {
                                 : SV_DispatchThreadID) {
     StructuredBuffer<Globals> globals = daxa::getBuffer<Globals>(p.globals_sb);
     float3 pick_pos;
-    if (p.set_id == (uint)BlockID::Air)
+    if (p.edit_mode == 0)
         pick_pos = globals[0].pick_pos[0].xyz;
     else
         pick_pos = globals[0].pick_pos[1].xyz;
@@ -31,7 +31,7 @@ struct Push {
             return;
         RWTexture3D<uint> chunk = daxa::getRWTexture3D<uint>(chunk_id);
         if (length(int3(block_pos) - pick_block_i) <= 0.5 + BLOCKEDIT_RADIUS) {
-            chunk[int3(global_i)] = p.set_id;
+            chunk[int3(global_i)] = p.edit_mode == 0 ? 1 : (uint)inventory_palette(globals[0].inventory_index);
         }
 
         // StructuredBuffer<ModelLoadBuffer> model = daxa::getBuffer<ModelLoadBuffer>(globals[0].model_load_index);
@@ -44,7 +44,7 @@ struct Push {
         //     uint model_tile_index = model_tile_i.x + model_tile_i.y * 128 + model_tile_i.z * 128 * 128;
         //     BlockID model_tile = (BlockID)model[0].data[model_tile_index];
         //     if (model_tile != BlockID::Air)
-        //         chunk[int3(global_i)] = p.set_id; // (uint)model_tile;
+        //         chunk[int3(global_i)] = p.edit_mode; // (uint)model_tile;
         // }
     }
 }

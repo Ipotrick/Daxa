@@ -1,10 +1,12 @@
 #include "world/common.hlsl"
 #include "utils/intersect.hlsl"
+#include "player.hlsl"
 
 [numthreads(1, 1, 1)] void main() {
     StructuredBuffer<Globals> globals = daxa::getBuffer<Globals>(p.globals_sb);
+    StructuredBuffer<PlayerBuffer> player_buffer = daxa::getBuffer<PlayerBuffer>(p.player_buf_id);
 
-    globals[0].player.update(globals[0].input);
+    player_buffer[0].player.update(globals, player_buffer[0].input);
 
     float3 front = mul(globals[0].viewproj_mat, float4(0, 0, 1, 0)).xyz;
     Ray ray;

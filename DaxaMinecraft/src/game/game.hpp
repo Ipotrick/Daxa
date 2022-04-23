@@ -98,11 +98,17 @@ struct Game {
     }
     void on_mouse_scroll(const glm::dvec2 offset) {
         if (!paused) {
-            player.camera.fov -= static_cast<float>(offset.y);
-            if (player.camera.fov < 10.0f)
-                player.camera.fov = 10.0f;
-            if (player.camera.fov > 170.0f)
-                player.camera.fov = 170.0f;
+            // player.camera.fov -= static_cast<float>(offset.y);
+            // if (player.camera.fov < 10.0f)
+            //     player.camera.fov = 10.0f;
+            // if (player.camera.fov > 170.0f)
+            //     player.camera.fov = 170.0f;
+
+            world.inventory_index += (offset.y < 0 ? 1 : -1);
+            if (world.inventory_index < 0)
+                world.inventory_index += 8;
+            if (world.inventory_index >= 8)
+                world.inventory_index -= 8;
         }
     }
     void on_mouse_button(int button, int action) {
@@ -110,9 +116,13 @@ struct Game {
             switch (button) {
             case GLFW_MOUSE_BUTTON_LEFT:
                 world.should_break = action != GLFW_RELEASE;
+                if (!world.should_break)
+                    world.prev_break_time = world.start;
                 break;
             case GLFW_MOUSE_BUTTON_RIGHT:
                 world.should_place = action != GLFW_RELEASE;
+                if (!world.should_place)
+                    world.prev_place_time = world.start;
                 break;
             default: break;
             }
@@ -189,6 +199,18 @@ struct Game {
             HelpMarker("Vertical field of view (Degrees)");
             ImGui::SliderFloat("Sensitivity", &player.mouse_sens, 0.01f, 10.0f);
             HelpMarker("Mouse rotation speed (Radians/Pixels_moved/200)");
+
+            ImGui::Checkbox("Limit place speed", &world.limit_place_speed);
+            if (world.limit_place_speed) {
+                ImGui::SliderFloat("Place speed", &world.place_speed, 0.01f, 1.0f);
+                HelpMarker("Rate at which to place voxels (times/s)");
+            }
+            ImGui::Checkbox("Limit break speed", &world.limit_break_speed);
+            if (world.limit_break_speed) {
+                ImGui::SliderFloat("Break speed", &world.break_speed, 0.01f, 1.0f);
+                HelpMarker("Rate at which to break voxels (times/s)");
+            }
+
             if (ImGui::TreeNode("Keybinds")) {
                 if (ImGui::Button("Reset"))
                     reset_keybinds();
@@ -247,6 +269,10 @@ struct Game {
                     }
                 }
             }
+
+            // auto id = imgui_renderer->getImGuiTextureId(world.atlas_texture_array);
+            // ImGui::Image(reinterpret_cast<void *>(id), ImVec2(32, 32));
+
             ImGui::End();
         }
 
