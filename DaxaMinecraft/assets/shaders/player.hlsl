@@ -1,5 +1,7 @@
 #pragma once
 
+#include "utils/intersect.hlsl"
+
 struct PlayerInput {
     float2 mouse_delta;
     float delta_time;
@@ -29,7 +31,7 @@ struct Player {
     float4 rot;
     Camera camera;
 
-    void update(in PlayerInput input) {
+    void update(in StructuredBuffer<Globals> globals, in PlayerInput input) {
         float delta_dist = input.speed * input.delta_time;
 
         rot.x -= input.mouse_delta.x * input.mouse_sens * 0.0001f * input.fov;
@@ -64,19 +66,49 @@ struct Player {
 
         camera.view_mat = mul(roty_mat, camera.view_mat);
 
+        float4 motion_vec = float4(0, 0, 0, 0);
+
         if (input.move_sprint())
             delta_dist *= input.sprint_speed;
         if (input.move_forward())
-            pos.x -= sin_rot_x * delta_dist, pos.z += cos_rot_x * delta_dist;
+            motion_vec += float4(-sin_rot_x * delta_dist, 0, cos_rot_x * delta_dist, 0);
         if (input.move_backward())
-            pos.x += sin_rot_x * delta_dist, pos.z -= cos_rot_x * delta_dist;
+            motion_vec += float4(sin_rot_x * delta_dist, 0, -cos_rot_x * delta_dist, 0);
         if (input.move_left())
-            pos.z -= sin_rot_x * delta_dist, pos.x -= cos_rot_x * delta_dist;
+            motion_vec += float4(-cos_rot_x * delta_dist, 0, -sin_rot_x * delta_dist, 0);
         if (input.move_right())
-            pos.z += sin_rot_x * delta_dist, pos.x += cos_rot_x * delta_dist;
+            motion_vec += float4(cos_rot_x * delta_dist, 0, sin_rot_x * delta_dist, 0);
         if (input.move_up())
-            pos.y -= delta_dist;
+            motion_vec += float4(0, -delta_dist, 0, 0);
         if (input.move_down())
-            pos.y += delta_dist;
+            motion_vec += float4(0, delta_dist, 0, 0);
+
+        Ray ray;
+        ray.o = globals[0].pos.xyz;
+        ray.nrm = normalize(motion_vec.xyz);
+        ray.inv_nrm = 1 / ray.nrm;
+        RayIntersection view_chunk_intersection = trace_chunks(globals, ray);
+
+        // float vec_length = length(motion_vec.xyz);
+        // if (vec_length != 0) {
+        //     motion_vec /= vec_length;
+        //     if (view_chunk_intersection.hit) {
+        //         vec_length = clamp(vec_length, 0, view_chunk_intersection.dist);
+        //     }
+        //     motion_vec *= vec_length;
+        // }
+
+        pos += motion_vec;
+        pos.w = 0;
     }
 };
+
+struct PlayerBuffer {
+    PlayerInput input;
+
+    // ---- GPU ONLY ----
+
+    Player player;
+};
+
+DAXA_DEFINE_BA_BUFFER(PlayerBuffer)

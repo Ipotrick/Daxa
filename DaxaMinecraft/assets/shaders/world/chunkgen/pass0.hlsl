@@ -144,39 +144,39 @@ void block_pass2(in out WorldgenState worldgen_state, in float3 b_pos,
         }
     } else if (worldgen_state.block_id == BlockID::Air &&
                !surroundings.above_water) {
-        switch (worldgen_state.biome_id) {
-        case BiomeID::Plains:
-            if (surroundings.depth_below == 0) {
-                if (worldgen_state.r < 0.10) {
-                    worldgen_state.block_id = BlockID::TallGrass;
-                } else if (worldgen_state.r < 0.11) {
-                    worldgen_state.block_id = BlockID::Leaves;
-                }
-            }
-            break;
-        case BiomeID::Forest:
-            if (worldgen_state.r_xz < 0.01) {
-                int trunk_height = int(5 + worldgen_state.r_xz * 400);
-                if (surroundings.depth_below < trunk_height) {
-                    worldgen_state.block_id = BlockID::Log;
-                }
-            } else if (worldgen_state.r < 0.6 && surroundings.depth_below == 0) {
-                worldgen_state.block_id = BlockID::Leaves;
-            }
-            break;
-        case BiomeID::Desert:
-            if (worldgen_state.r_xz < 0.001) {
-                int trunk_height = int(5 + worldgen_state.r_xz * 400);
-                if (surroundings.depth_below < trunk_height) {
-                    worldgen_state.block_id = BlockID::Cactus;
-                }
-            } else if (worldgen_state.r < 0.02 && surroundings.depth_below == 0) {
-                worldgen_state.block_id = BlockID::DriedShrub;
-            }
-            break;
-        default:
-            break;
-        }
+        // switch (worldgen_state.biome_id) {
+        // case BiomeID::Plains:
+        //     if (surroundings.depth_below == 0) {
+        //         if (worldgen_state.r < 0.10) {
+        //             worldgen_state.block_id = BlockID::TallGrass;
+        //         } else if (worldgen_state.r < 0.11) {
+        //             worldgen_state.block_id = BlockID::Leaves;
+        //         }
+        //     }
+        //     break;
+        // case BiomeID::Forest:
+        //     if (worldgen_state.r_xz < 0.01) {
+        //         int trunk_height = int(5 + worldgen_state.r_xz * 400);
+        //         if (surroundings.depth_below < trunk_height) {
+        //             worldgen_state.block_id = BlockID::Log;
+        //         }
+        //     } else if (worldgen_state.r < 0.6 && surroundings.depth_below == 0) {
+        //         worldgen_state.block_id = BlockID::Leaves;
+        //     }
+        //     break;
+        // case BiomeID::Desert:
+        //     if (worldgen_state.r_xz < 0.001) {
+        //         int trunk_height = int(5 + worldgen_state.r_xz * 400);
+        //         if (surroundings.depth_below < trunk_height) {
+        //             worldgen_state.block_id = BlockID::Cactus;
+        //         }
+        //     } else if (worldgen_state.r < 0.02 && surroundings.depth_below == 0) {
+        //         worldgen_state.block_id = BlockID::DriedShrub;
+        //     }
+        //     break;
+        // default:
+        //     break;
+        // }
     }
 }
 
