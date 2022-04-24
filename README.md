@@ -2,20 +2,20 @@
 
 Daxa is not aimed to expose all vulkan features or even stay very close to it api wise. 
 
-It's primary goal is be easy to use, very low cpu overhead and modern gpu feature access.
+Its primary goal is be easy to use, very low cpu overhead and modern gpu feature access.
 
-Aside from the gpu abstraction, daxa also includes a few generalized helper abstractions, like an ImGui backend or a simple asset manager. Those are included mainly to get things going in a new project.
+Aside from the gpu abstraction, daxa also includes a few generalized helper abstractions, like an ImGui backend or a simple asset manager. These are included mainly to get things going in a new project.
 
 ## Features:
 
-* easiy debugability.
-* easy shader ressource model (bindless):
+* easy debugability.
+* easy shader resource model (bindless):
   * no descriptor sets
   * no binding slots
   * no ressource binding
-  * ressources are passed to and accessed in a shader via an id
+  * resources are passed to and accessed in a shader via an id
 * easy gpu driven rendering:
-  * binding model allows for very easy gpu side manipulation of ressources
+  * binding model allows for very easy gpu side manipulation of resources
   * (TODO) more
 * little boilerplace with many defaults:
   * optional automatic staging buffer usage for data up- and download
@@ -30,10 +30,10 @@ Aside from the gpu abstraction, daxa also includes a few generalized helper abst
   * full preprocessor integration
 * threadsafety:
   * all functions can be called in any context without external synchronization.
-  * this usually does not affect performance except for ressource creation wich is serialized.
-* efficient automatic lifetime management of ressources:
+  * this usually does not affect performance except for resource creation which is serialized.
+* efficient automatic lifetime management of resources:
   * reference counting to enforce shared ownership
-  * ressources are freed after all potential uses in command lists are over
+  * resources are freed after all potential uses in command lists are over
 * explicit synchronization:
   * auto sync usually comes with a high price in cpu overhead
   * allows for implementation of custom rendergraph
@@ -47,13 +47,13 @@ Aside from the gpu abstraction, daxa also includes a few generalized helper abst
 
 # Examples
 Examples are given as DaxaXYZ, besides the daxa library itself in this repository. There are also two full projects currently residing in this repository:
-DaxaMinecraft, wich is a raytraced voxel engine implemented mainly by Gabe Rundlett and also me.
-DaxaMeshview, wich is a general mesh view utility in wich i implement various rendering techniques for normal triangle meshes.
+DaxaMinecraft, which is a raytraced voxel engine implemented mainly by Gabe Rundlett and also me.
+DaxaMeshview, which is a general mesh view utility in which i implement various rendering techniques for normal triangle meshes.
 
 # DaxaMeshview and DaxaMinecraft
 
-There are two projects in this repository wich are build upon Daxa. These are used for testing the api but also toy projects of me and a friend (Gabe Rundlett).
+There are two projects in this repository which are built upon Daxa. These are used for testing the api but also toy projects of me and a friend (Gabe Rundlett).
 
 # Building
-The library and the examples can be build using cmake with vcpkg. There is an included vcpkg.json, wich should pull all the nessecary dependencies for everything in this repository.
+The library and the examples can be built using cmake with vcpkg. There is an included vcpkg.json, which should pull all the nessecary dependencies for everything in this repository.
 The library is tested using the msvc stl, with clang and the msvc compiler. I recommend building the project with cmake and ninja.
