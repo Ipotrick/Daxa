@@ -1,4 +1,4 @@
-# This repo is the home of the Daxa GPU-abstraction-library
+# This repo is the home of the Daxa GPU-library
 
 Daxa is not aimed to expose all vulkan features or even stay very close to it api wise. 
 
