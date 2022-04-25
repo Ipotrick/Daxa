@@ -115,7 +115,7 @@ void get_texture_info(in StructuredBuffer<Globals> globals, in RayIntersection r
     float depth = 100000;
 
     float2 uv_offset =
-#if JITTER_VIEW
+#if JITTER_VIEW || ENABLE_TAA
         // (pixel_i.x > globals[0].frame_dim.x / 2) *
         float2(rand(float2(i_uv + uv_rand_offset + 10)),
                rand(float2(i_uv + uv_rand_offset)));
@@ -146,9 +146,13 @@ void get_texture_info(in StructuredBuffer<Globals> globals, in RayIntersection r
     RWTexture2D<float4> output_image = daxa::getRWTexture2D<float4>(p.output_image_i);
     float4 prev_val = output_image[pixel_i.xy];
     float4 new_val = float4(pow(color, float3(1, 1, 1)), 1);
-    // if (pixel_i.x > globals[0].frame_dim.x / 2) {
+#if ENABLE_TAA
+    if (pixel_i.x > globals[0].frame_dim.x / 2) {
         output_image[pixel_i.xy] = prev_val * 0.8 + new_val * 0.2;
-    // } else {
-    // output_image[pixel_i.xy] = new_val;
-    // }
+    } else {
+#endif
+    output_image[pixel_i.xy] = new_val;
+#if ENABLE_TAA
+    }
+#endif
 }
