@@ -208,12 +208,12 @@ RayIntersection trace_chunks(StructuredBuffer<Globals> globals, in Ray ray) {
 
     if (point_box_contains(ray.o, b_min, b_max)) {
         BlockID block_id = load_block_id(globals, ray.o);
-        if (is_block_occluding(block_id)
-#if !SHOW_DEBUG_BLOCKS
-            && block_id != BlockID::Debug
-#endif
-        ) {
+        if (is_block_occluding(block_id)) {
+#if SHOW_DEBUG_BLOCKS
             result.hit = true;
+#else
+            result.hit = block_id != BlockID::Debug;
+#endif
             return result;
         }
     } else {
@@ -228,12 +228,12 @@ RayIntersection trace_chunks(StructuredBuffer<Globals> globals, in Ray ray) {
             sample_pos = get_intersection_pos_corrected(ray, bounds_intersection);
         }
         BlockID block_id = load_block_id(globals, sample_pos);
-        if (is_block_occluding(block_id)
-#if !SHOW_DEBUG_BLOCKS
-            && block_id != BlockID::Debug
-#endif
-        ) {
+        if (is_block_occluding(block_id)) {
+#if SHOW_DEBUG_BLOCKS
             result.hit = true;
+#else
+            result.hit = block_id != BlockID::Debug;
+#endif
             result.nrm = bounds_intersection.nrm;
             result.dist = sdf_dist_total;
             return result;
