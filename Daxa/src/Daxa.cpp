@@ -1,6 +1,5 @@
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
-#include "glslang/Public/ShaderLang.h"
 
 #include <Daxa/gpu/Instance.hpp>
 #include <Daxa/rendering/Cameras.hpp>
@@ -14,11 +13,9 @@ namespace daxa {
 			exit(-1);
 		}
 		instance = std::make_unique<Instance>();
-		glslang::InitializeProcess();
 	}
 
 	void cleanup() {
-		glslang::FinalizeProcess();
 		instance.reset();
 	}
 }
