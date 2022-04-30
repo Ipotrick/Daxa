@@ -46,8 +46,7 @@ struct Game {
 
     static Player3D reset_player() {
         Player3D result{};
-        result.pos = glm::vec3(World::DIM * Chunk::DIM) / 2.0f;
-        result.pos.y = -10.0f;
+        result.pos = glm::vec3(0.0f, World::DIM.y * Chunk::DIM.y - 20.0f, 0.0f);
         result.rot = {0.001f, -0.6f, 0.0f};
         return result;
     }

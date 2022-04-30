@@ -42,7 +42,7 @@ uint tile_texture_index(StructuredBuffer<Globals> globals, BlockID block_id, Blo
         case BlockFace::Left:
         case BlockFace::Right:     return 22;
         case BlockFace::Bottom:
-        case BlockFace::Top:       return 23;
+        case BlockFace::Top:       return 22;
         default:                   return 0;
         }
     case BlockID::MoltenRock:      return 24;
@@ -136,23 +136,16 @@ void get_texture_info(in StructuredBuffer<Globals> globals, in RayIntersection r
     // draw_rect(pixel_i.xy, color, globals[0].frame_dim.x / 4 + globals[0].frame_dim.x / 2 - 0, globals[0].frame_dim.y / 2 - 4, 1, 9);
     // draw_rect(pixel_i.xy, color, globals[0].frame_dim.x / 4 + globals[0].frame_dim.x / 2 - 4, globals[0].frame_dim.y / 2 - 0, 9, 1);
 
-    // RayIntersection temp_inter;
-    // for (int yi = 0; yi < 10; ++yi)
-    //     for (int xi = 0; xi < 10; ++xi) {
-    //         temp_inter = ray_sphere_intersect(cam_ray, float3(512 + xi * 2, 0, 512 + yi * 2), 1);
-    //         draw(color, depth, getTexture2DArray<float4>(globals[0].texture_index).Load(int4((temp_inter.nrm.x * 0.5 + 0.5) * 16, (temp_inter.nrm.z * 0.5 + 0.5) * 16, int(GLOBALS_DEFINE.time * 5) % 30, 0)).rgb, temp_inter.dist, temp_inter.hit);
-    //     }
-
     RWTexture2D<float4> output_image = daxa::getRWTexture2D<float4>(p.output_image_i);
     float4 prev_val = output_image[pixel_i.xy];
     float4 new_val = float4(pow(color, float3(1, 1, 1)), 1);
 #if ENABLE_TAA
-    if (pixel_i.x > globals[0].frame_dim.x / 2) {
+    // if (pixel_i.x > globals[0].frame_dim.x / 2) {
         output_image[pixel_i.xy] = prev_val * 0.8 + new_val * 0.2;
-    } else {
+    // } else {
 #endif
-    output_image[pixel_i.xy] = new_val;
+    // output_image[pixel_i.xy] = new_val;
 #if ENABLE_TAA
-    }
+    // }
 #endif
 }
