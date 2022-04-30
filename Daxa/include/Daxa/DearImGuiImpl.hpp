@@ -6,7 +6,7 @@
 #include <deque>
 
 #include <imgui.h>
-#include <imgui_impl_glfw.h>
+#include <Daxa/dependencies/imgui_impl_glfw.h>
 
 namespace daxa {
 

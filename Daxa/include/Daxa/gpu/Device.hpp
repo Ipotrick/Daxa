@@ -8,7 +8,7 @@
 
 #include <vulkan/vulkan.h>
 
-#include <VkBootstrap.h>
+#include <Daxa/dependencies/VkBootstrap.h>
 
 #include <Daxa/gpu/Handle.hpp>
 #include <Daxa/gpu/Graveyard.hpp>
