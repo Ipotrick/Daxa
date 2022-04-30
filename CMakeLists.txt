@@ -6,7 +6,7 @@ project(daxa VERSION 0.1.0)
 
 add_subdirectory("Daxa")
 
-if(CUIUI_BUILD_SAMPLES)
+if(DAXA_BUILD_SAMPLES)
     # add_subdirectory("DaxaCube")
     # add_subdirectory("DaxaTriangle")
     add_subdirectory("DaxaComputeMandelbrot")
