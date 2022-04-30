@@ -1,10 +1,10 @@
-#include "Pipeline.hpp"
+#include <Daxa/gpu/Pipeline.hpp>
 
 #include <iostream>
 
-#include "Instance.hpp"
+#include <Daxa/gpu/Instance.hpp>
 #include "backend/DeviceBackend.hpp"
-#include "util.hpp"
+#include <Daxa/gpu/util.hpp>
 
 namespace daxa {
 	void Pipeline::setPipelineDebugName(VkDevice device, char const* debugName) {

@@ -10,15 +10,15 @@
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 
-#include "Handle.hpp"
-#include "Image.hpp"
-#include "Buffer.hpp"
-#include "SwapchainImage.hpp"
-#include "Pipeline.hpp"
-#include "BindingSet.hpp"
-#include "StagingBufferPool.hpp"
-#include "Graveyard.hpp"
-#include "TimelineSemaphore.hpp"
+#include <Daxa/gpu/Handle.hpp>
+#include <Daxa/gpu/Image.hpp>
+#include <Daxa/gpu/Buffer.hpp>
+#include <Daxa/gpu/SwapchainImage.hpp>
+#include <Daxa/gpu/Pipeline.hpp>
+#include <Daxa/gpu/BindingSet.hpp>
+#include <Daxa/gpu/StagingBufferPool.hpp>
+#include <Daxa/gpu/Graveyard.hpp>
+#include <Daxa/gpu/TimelineSemaphore.hpp>
 
 namespace daxa {
 	static const u64 STAGE_NONE = 0ULL;

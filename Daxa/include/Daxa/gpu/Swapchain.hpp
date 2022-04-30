@@ -10,10 +10,10 @@
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 
-#include "Handle.hpp"
-#include "Image.hpp"
-#include "SwapchainImage.hpp"
-#include "Signal.hpp"
+#include <Daxa/gpu/Handle.hpp>
+#include <Daxa/gpu/Image.hpp>
+#include <Daxa/gpu/SwapchainImage.hpp>
+#include <Daxa/gpu/Signal.hpp>
 
 namespace daxa {
 	struct SwapchainCreateInfo{

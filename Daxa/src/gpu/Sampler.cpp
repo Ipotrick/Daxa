@@ -1,5 +1,5 @@
-#include "Sampler.hpp"
-#include "Instance.hpp"
+#include <Daxa/gpu/Sampler.hpp>
+#include <Daxa/gpu/Instance.hpp>
 #include "backend/DeviceBackend.hpp"
 
 namespace daxa {

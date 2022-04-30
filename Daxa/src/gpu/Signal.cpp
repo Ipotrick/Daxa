@@ -1,5 +1,5 @@
-#include "Signal.hpp"
-#include "Instance.hpp"
+#include <Daxa/gpu/Signal.hpp>
+#include <Daxa/gpu/Instance.hpp>
 #include "backend/DeviceBackend.hpp"
 
 namespace daxa {
