@@ -42,7 +42,7 @@
 //  2016-10-15: Misc: Added a void* user_data parameter to Clipboard function handlers.
 
 #include "imgui.h"
-#include "imgui_impl_glfw.h"
+#include <Daxa/dependencies/imgui_impl_glfw.h>
 
 // GLFW
 #include <GLFW/glfw3.h>

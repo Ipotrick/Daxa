@@ -14,7 +14,7 @@
  limitations under the License.
 */
 
-#include "spirv_reflect.h"
+#include <Daxa/dependencies/spirv_reflect.h>
 #include <assert.h>
 #include <stdbool.h>
 #include <string.h>

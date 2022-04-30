@@ -15,7 +15,7 @@
  * Copyright © 2020 Charles Giessen (charles@lunarg.com)
  */
 
-#include "VkBootstrap.h"
+#include <Daxa/dependencies/VkBootstrap.h>
 
 #include <cstring>
 
