@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "../DaxaCore.hpp"
+#include <Daxa/DaxaCore.hpp>
 
 #include <vulkan/vulkan.h>
 #define GLFW_INCLUDE_NONE

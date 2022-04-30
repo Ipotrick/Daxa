@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../DaxaCore.hpp"
+#include <Daxa/DaxaCore.hpp>
 
 #include <unordered_map>
 #include <filesystem>
@@ -8,7 +8,7 @@
 
 #include "stb_image.h"
 
-#include "../gpu/Device.hpp"
+#include <Daxa/gpu/Device.hpp>
 #include "ImageUtil.hpp"
 
 namespace daxa {

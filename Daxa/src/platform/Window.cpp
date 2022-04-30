@@ -1,10 +1,10 @@
 #include "Window.hpp"
 
-#include "../DaxaCore.hpp"
+#include <Daxa/DaxaCore.hpp>
 
 #include <iostream>
 
-#include "../gpu/Instance.hpp"
+#include <Daxa/gpu/Instance.hpp>
 
 namespace daxa {
 

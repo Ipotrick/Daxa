@@ -29,6 +29,7 @@ target_include_directories(daxa
 		$<BUILD_INTERFACE:${STB_INCLUDE_DIRS}>
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/dependencies>
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
+		$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
 set_project_warnings(daxa)
