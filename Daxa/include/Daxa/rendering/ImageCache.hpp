@@ -9,7 +9,7 @@
 #include "stb_image.h"
 
 #include <Daxa/gpu/Device.hpp>
-#include "ImageUtil.hpp"
+#include <Daxa/rendering/ImageUtil.hpp>
 
 namespace daxa {
     struct ImageCacheFetchInfo {

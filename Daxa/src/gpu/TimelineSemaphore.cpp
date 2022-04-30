@@ -1,5 +1,5 @@
-#include "TimelineSemaphore.hpp"
-#include "Instance.hpp"
+#include <Daxa/gpu/TimelineSemaphore.hpp>
+#include <Daxa/gpu/Instance.hpp>
 #include "backend/DeviceBackend.hpp"
 
 namespace daxa {

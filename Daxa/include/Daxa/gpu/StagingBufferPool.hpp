@@ -8,7 +8,7 @@
 
 #include <vulkan/vulkan.h>
 
-#include "Buffer.hpp"
+#include <Daxa/gpu/Buffer.hpp>
 
 namespace daxa {
 	constexpr inline size_t STAGING_BUFFER_POOL_BUFFER_SIZE = 1 << 26;	// 67 MB, about 4k texture size

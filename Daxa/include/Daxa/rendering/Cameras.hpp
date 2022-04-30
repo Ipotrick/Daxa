@@ -2,7 +2,7 @@
 
 #include <Daxa/DaxaCore.hpp>
 
-#include "../platform/Window.hpp"
+#include <Daxa/platform/Window.hpp>
 
 #define GLM_DEPTH_ZERO_TO_ONEW
 #include <glm/glm.hpp>

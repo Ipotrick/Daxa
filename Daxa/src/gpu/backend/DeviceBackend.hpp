@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../DaxaCore.hpp"
+#include <Daxa/DaxaCore.hpp>
 
 #include <vector>
 #include <mutex>
@@ -9,7 +9,7 @@
 #include <vk_mem_alloc.h>
 #include <VkBootstrap.h>
 
-#include "../Graveyard.hpp"
+#include <Daxa/gpu/Graveyard.hpp>
 
 #if USE_NSIGHT_AFTERMATH
 #if VK_HEADER_VERSION < 135

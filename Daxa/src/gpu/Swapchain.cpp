@@ -1,11 +1,11 @@
-#include "Swapchain.hpp"
+#include <Daxa/gpu/Swapchain.hpp>
 
 #include <iostream>
 #include <chrono>
 
 #include <VkBootstrap.h>
 
-#include "Instance.hpp"
+#include <Daxa/gpu/Instance.hpp>
 #include "backend/DeviceBackend.hpp"
 
 namespace daxa {
