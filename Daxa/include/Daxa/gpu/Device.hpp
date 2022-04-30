@@ -80,8 +80,6 @@ namespace daxa {
 
 		CommandListHandle getNextCommandList();
 
-		shaderc::Compiler 						shaderCompiler 				= {};
-		shaderc::CompileOptions 				shaderCompileOptions 		= {};
 		std::shared_ptr<DeviceBackend> 			backend 					= {};
 		std::shared_ptr<StagingBufferPool> 		uploadStagingBufferPool 	= {};
 		std::shared_ptr<StagingBufferPool> 		downloadStagingBufferPool 	= {};
