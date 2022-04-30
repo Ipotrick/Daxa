@@ -13,7 +13,7 @@
         "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
         "generator": "Ninja",
         "cacheVariables": {
-          "DAXA_BUILD_SAMPLES": "OFF"
+          "DAXA_BUILD_SAMPLES": "ON"
         }
       },
       {

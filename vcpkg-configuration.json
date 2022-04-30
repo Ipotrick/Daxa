@@ -1,8 +1,12 @@
 {
+    "default-registry": {
+        "kind": "builtin",
+        "baseline": "63e935d967a3410e26bf4a708efa39d8384d2bbb"
+    },
     "registries": [
         {
             "kind": "filesystem",
-            "path": "vcpkg-registry",
+            "path": "C:/dev/projects/vcpkg_reg_test",
             "packages": [ "dxc" ]
         }
     ]
