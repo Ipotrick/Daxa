@@ -11,7 +11,10 @@
         "hidden": true,
         "binaryDir": "${sourceDir}/build/${presetName}",
         "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-        "generator": "Ninja"
+        "generator": "Ninja",
+        "cacheVariables": {
+          "DAXA_BUILD_SAMPLES": "OFF"
+        }
       },
       {
         "name": "Release",

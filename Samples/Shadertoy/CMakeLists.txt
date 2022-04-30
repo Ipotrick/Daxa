@@ -6,6 +6,6 @@ add_executable(DaxaSamples_Shadertoy
 
 find_package(glm CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
-target_link_libraries(DaxaSamples_Shadertoy PUBLIC Daxa glm::glm fmt::fmt)
+target_link_libraries(DaxaSamples_Shadertoy PUBLIC daxa::daxa glm::glm fmt::fmt)
 
 set_project_warnings(DaxaSamples_Shadertoy)
