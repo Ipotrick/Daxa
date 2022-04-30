@@ -4,7 +4,6 @@
   "dependencies": [
     "stb",
     "vulkan",
-    "glslang",
     "spirv-cross",
     "vulkan-memory-allocator",
     "glm",
@@ -13,7 +12,6 @@
     "fmt",
     "glad",
     "cgltf",
-    "shaderc",
     "tinyexr",
     "dxc"
   ]

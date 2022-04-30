@@ -7,7 +7,6 @@
 #include <sstream>
 
 #include <Daxa/dependencies/spirv_reflect.h>
-#include <shaderc/shaderc.h>
 #define NOMINMAX
 #ifdef _WIN32
 	#include "Windows.h"
@@ -59,8 +58,6 @@ namespace daxa {
 	#define BACKEND (*static_cast<Backend*>(this->backend.get()))
 
 	struct Backend{
-        shaderc::Compiler compiler = {};
-        shaderc::CompileOptions options = {};
 		ComPtr<IDxcUtils> dxcUtils = {};
 		ComPtr<IDxcCompiler3> dxcCompiler = {};
 		ComPtr<IDxcIncludeHandler> dxcIncludeHandler = {};
@@ -232,55 +229,6 @@ namespace daxa {
 		return {spv};
 	}
 
-	Result<std::vector<u32>> PipelineCompiler::tryGenSPIRVFromShaderc(
-		std::string const& src, 
-		VkShaderStageFlagBits shaderStage, 
-		ShaderLang lang, 
-		char const* sourceFileName,
-		std::vector<std::string> const& defines
-	) {
-		auto translateShaderStage = [](VkShaderStageFlagBits stage) -> shaderc_shader_kind {
-			switch (stage) {
-			case VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT: return shaderc_shader_kind::shaderc_vertex_shader;
-			case VkShaderStageFlagBits::VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT: return shaderc_shader_kind::shaderc_tess_control_shader;
-			case VkShaderStageFlagBits::VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT: return shaderc_shader_kind::shaderc_tess_evaluation_shader;
-			case VkShaderStageFlagBits::VK_SHADER_STAGE_GEOMETRY_BIT: return shaderc_shader_kind::shaderc_geometry_shader;
-			case VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT: return shaderc_shader_kind::shaderc_fragment_shader;
-			case VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT: return shaderc_shader_kind::shaderc_compute_shader;
-			case VkShaderStageFlagBits::VK_SHADER_STAGE_RAYGEN_BIT_KHR: return shaderc_shader_kind::shaderc_raygen_shader;
-			case VkShaderStageFlagBits::VK_SHADER_STAGE_ANY_HIT_BIT_KHR: return shaderc_shader_kind::shaderc_anyhit_shader;
-			case VkShaderStageFlagBits::VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR: return shaderc_shader_kind::shaderc_closesthit_shader;
-			case VkShaderStageFlagBits::VK_SHADER_STAGE_MISS_BIT_KHR: return shaderc_shader_kind::shaderc_miss_shader;
-			case VkShaderStageFlagBits::VK_SHADER_STAGE_INTERSECTION_BIT_KHR: return shaderc_shader_kind::shaderc_intersection_shader;
-			case VkShaderStageFlagBits::VK_SHADER_STAGE_CALLABLE_BIT_KHR: return shaderc_shader_kind::shaderc_callable_shader;
-			case VkShaderStageFlagBits::VK_SHADER_STAGE_TASK_BIT_NV: return shaderc_shader_kind::shaderc_task_shader;
-			case VkShaderStageFlagBits::VK_SHADER_STAGE_MESH_BIT_NV: return shaderc_shader_kind::shaderc_mesh_shader;
-			default:
-				std::cerr << "error: unknown shader stage!\n";
-				std::abort();
-			}
-		};
-		auto stage = translateShaderStage(shaderStage);
-		shaderc_source_language langType;
-		switch (lang) {
-			case ShaderLang::GLSL: langType = shaderc_source_language_glsl; break;
-			case ShaderLang::HLSL: langType = shaderc_source_language_hlsl; break;
-		}
-		BACKEND.options.SetSourceLanguage(langType);
-		BACKEND.options.SetTargetEnvironment(shaderc_target_env_vulkan, VK_API_VERSION_1_2);
-		BACKEND.options.SetTargetSpirv(shaderc_spirv_version::shaderc_spirv_version_1_3);
-		// TODO: implement defines
-		//options.SetOptimizationLevel(shaderc_optimization_level_performance);
-		
-		shaderc::SpvCompilationResult module = BACKEND.compiler.CompileGlslToSpv(src, stage, sourceFileName, BACKEND.options);
-
-		if (module.GetCompilationStatus() != shaderc_compilation_status_success) {
-			return daxa::ResultErr{.message = std::move(module.GetErrorMessage())};
-		}
-
-		return { std::vector<u32>{ module.begin(), module.end()} };
-	}
-
 	std::vector<VkPushConstantRange> reflectPushConstants(const std::vector<uint32_t>& spv, VkShaderStageFlagBits shaderStage) {
 		SpvReflectShaderModule module = {};
 		SpvReflectResult result = spvReflectCreateShaderModule(spv.size() * sizeof(uint32_t), spv.data(), &module);
@@ -398,12 +346,7 @@ namespace daxa {
 		}
 
 		daxa::Result<std::vector<u32>> spirv = daxa::ResultErr{};
-		if (ci.shaderLang == ShaderLang::GLSL) {
-			spirv = tryGenSPIRVFromShaderc(sourceCode, ci.stage, ci.shaderLang, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()), ci.defines);
-		} 
-		else {
-			spirv = tryGenSPIRVFromDxc(sourceCode, ci.stage, ci.entryPoint, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()), ci.defines);
-		}
+        spirv = tryGenSPIRVFromDxc(sourceCode, ci.stage, ci.entryPoint, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()), ci.defines);
 		if (spirv.isErr()) {
 			return ResultErr{ spirv.message() };
 		}
@@ -501,95 +444,6 @@ namespace daxa {
 
 	};
 
-	class ShadercFileIncluder : public shaderc::CompileOptions::IncluderInterface {
-	public:
-		constexpr static inline size_t DELETE_SOURCE_NAME = 0x1;
-		constexpr static inline size_t DELETE_CONTENT = 0x2;
-
-		virtual shaderc_include_result* GetInclude(
-			const char* requested_source,
-            shaderc_include_type type,
-            const char* requesting_source,
-            size_t include_depth
-		) override {
-			shaderc_include_result* res = new shaderc_include_result{};
-			if (include_depth <= 10) {
-				res->source_name = requested_source;
-				res->source_name_length = strlen(requested_source);
-				res->user_data = 0;
-
-				auto result = sharedData->findFullPathOfFile(requested_source);
-				if (result.isOk()) {
-					std::filesystem::path requested_source_path = std::move(result.value());
-					auto searchPred = [&](std::filesystem::path const& p){ return p == requested_source_path; };
-
-					if (std::find_if(sharedData->currentShaderSeenFiles.begin(), sharedData->currentShaderSeenFiles.end(), searchPred) == sharedData->currentShaderSeenFiles.end()) {
-						std::ifstream ifs{requested_source_path};
-						std::string str;
-						ifs.seekg(0, std::ios::end);   
-						str.reserve(ifs.tellg());
-						ifs.seekg(0, std::ios::beg);
-						str.assign(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
-
-						res->user_data = reinterpret_cast<void*>(reinterpret_cast<size_t>(res->user_data) | DELETE_CONTENT);
-						char* data = new char[str.size()+1];
-						for (size_t i = 0; i < str.size()+1; i++) {
-							data[i] = str[i];
-						}
-						res->content_length = str.size();
-						res->content = data;
-
-						std::string requestedSourcePathAsString = requested_source_path.string();
-
-						char* includerPath = new char[requestedSourcePathAsString.size()+1];
-						for (size_t i = 0; i < requestedSourcePathAsString.size()+1; i++) {
-							includerPath[i] = requestedSourcePathAsString[i];
-						}
-
-						res->source_name = const_cast<const char*>(includerPath);
-						res->user_data = reinterpret_cast<void*>(reinterpret_cast<size_t>(res->user_data) | DELETE_SOURCE_NAME);;
-						sharedData->currentShaderSeenFiles.push_back(requested_source);
-						sharedData->observedHotLoadFiles->insert({requested_source_path,std::filesystem::last_write_time(requested_source_path)});
-					} else {
-						// double includes are ignored
-						res->content = nullptr;
-						res->content_length = 0;
-					}
-				} else {
-					// file path could not be resolved
-					res->content = "could not find file";
-					res->content_length = strlen(res->content);
-
-					res->source_name = nullptr;
-					res->source_name_length = 0;
-				}
-			}
-			else {
-				// max include depth exceeded
-				res->content = "current include depth of 10 was exceeded";
-				res->content_length = std::strlen(res->content);
-
-				res->source_name = nullptr;
-				res->source_name_length = 0;
-			}
-			return res;
-		}
-
-    	virtual void ReleaseInclude(shaderc_include_result* data) override {
-			if (data) {
-				if (reinterpret_cast<size_t>(data->user_data) & DELETE_CONTENT) {
-					delete data->content;
-				}
-				if (reinterpret_cast<size_t>(data->source_name) & DELETE_SOURCE_NAME) {
-					delete data->source_name;
-				}
-				delete data;
-			}
-		};
-
-		std::shared_ptr<PipelineCompilerShadedData> sharedData = {};
-	};
-
     PipelineCompiler::PipelineCompiler(std::shared_ptr<DeviceBackend> deviceBackend, std::shared_ptr<BindingSetLayoutCache> bindSetLayoutCache) 
 		: deviceBackend{ deviceBackend }
 		, bindSetLayoutCache{ bindSetLayoutCache }
@@ -597,9 +451,6 @@ namespace daxa {
 		, recreationCooldown{ 250 }
 		, backend{ std::unique_ptr<void, void(*)(void*)>(new Backend(), backendDeletor) }
 	{
-		auto includer = std::make_unique<ShadercFileIncluder>();
-		includer->sharedData = sharedData;
-		BACKEND.options.SetIncluder(std::move(includer));
 		if (!SUCCEEDED(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(BACKEND.dxcUtils.ReleaseAndGetAddressOf())))) {
 			std::cout << "[[DXA ERROR]] could not create DXC Instance" << std::endl;
 		};
