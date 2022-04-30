@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "../DaxaCore.hpp"
+#include <Daxa/DaxaCore.hpp>
 
 #include <memory>
 #include <mutex>
