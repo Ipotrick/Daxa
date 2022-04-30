@@ -17,8 +17,6 @@
 
 #include <Daxa/gpu/Handle.hpp>
 
-#include "shaderc/shaderc.hpp"
-
 namespace daxa {
 	class PipelineCompiler;
 
