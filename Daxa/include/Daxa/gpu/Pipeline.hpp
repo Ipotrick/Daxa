@@ -13,9 +13,9 @@
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 
-#include "Handle.hpp"
-#include "ShaderModule.hpp"
-#include "BindingSet.hpp"
+#include <Daxa/gpu/Handle.hpp>
+#include <Daxa/gpu/ShaderModule.hpp>
+#include <Daxa/gpu/BindingSet.hpp>
 
 namespace daxa {
 	class PipelineCompiler;

@@ -1,5 +1,5 @@
-#include "CommandQueue.hpp"
-#include "Instance.hpp"
+#include <Daxa/gpu/CommandQueue.hpp>
+#include <Daxa/gpu/Instance.hpp>
 #include "backend/DeviceBackend.hpp"
 #include "backend/CommandListBackend.hpp"
 

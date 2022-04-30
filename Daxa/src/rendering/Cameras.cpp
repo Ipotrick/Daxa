@@ -1,4 +1,4 @@
-#include "Cameras.hpp"
+#include <Daxa/rendering/Cameras.hpp>
 
 namespace daxa {
     void GimbalLockedCameraController::processInput(daxa::Window& window, f32 dt) {

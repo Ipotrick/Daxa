@@ -10,11 +10,11 @@
 
 #include <vulkan/vulkan.h>
 
-#include "Handle.hpp"
-#include "CommandList.hpp"
-#include "TimelineSemaphore.hpp"
-#include "Swapchain.hpp"
-#include "Signal.hpp"
+#include <Daxa/gpu/Handle.hpp>
+#include <Daxa/gpu/CommandList.hpp>
+#include <Daxa/gpu/TimelineSemaphore.hpp>
+#include <Daxa/gpu/Swapchain.hpp>
+#include <Daxa/gpu/Signal.hpp>
 
 namespace daxa {
 	struct CommandQueueCreateInfo {

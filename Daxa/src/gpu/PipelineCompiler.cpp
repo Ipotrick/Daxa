@@ -1,4 +1,4 @@
-#include "PipelineCompiler.hpp"
+#include <Daxa/gpu/PipelineCompiler.hpp>
 
 #include <fstream>
 #include <thread>
@@ -17,8 +17,8 @@
 #endif
 #include "dxcapi.h"
 
-#include "Instance.hpp"
-#include "util.hpp"
+#include <Daxa/gpu/Instance.hpp>
+#include <Daxa/gpu/util.hpp>
 #include "backend/DeviceBackend.hpp"
 
 using Path = std::filesystem::path;

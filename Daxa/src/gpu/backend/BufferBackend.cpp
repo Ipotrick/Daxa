@@ -1,5 +1,5 @@
 #include "BufferBackend.hpp"
-#include "../Instance.hpp"
+#include <Daxa/gpu/Instance.hpp>
 
 namespace daxa {
     BufferBackend::BufferBackend(std::shared_ptr<DeviceBackend> deviceBackend, BufferCreateInfo& ci) 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ComponentStorage.hpp"
+#include <Daxa/entity/ComponentStorage.hpp>
 
 #include <tuple>
 

@@ -10,20 +10,20 @@
 
 #include <VkBootstrap.h>
 
-#include "Handle.hpp"
-#include "Graveyard.hpp"
-#include "CommandList.hpp"
-#include "Image.hpp"
-#include "Buffer.hpp"
-#include "ShaderModule.hpp"
-#include "Pipeline.hpp"
-#include "SwapchainImage.hpp"
-#include "TimelineSemaphore.hpp"
-#include "Swapchain.hpp"
-#include "Signal.hpp"
-#include "StagingBufferPool.hpp"
-#include "CommandQueue.hpp"
-#include "PipelineCompiler.hpp"
+#include <Daxa/gpu/Handle.hpp>
+#include <Daxa/gpu/Graveyard.hpp>
+#include <Daxa/gpu/CommandList.hpp>
+#include <Daxa/gpu/Image.hpp>
+#include <Daxa/gpu/Buffer.hpp>
+#include <Daxa/gpu/ShaderModule.hpp>
+#include <Daxa/gpu/Pipeline.hpp>
+#include <Daxa/gpu/SwapchainImage.hpp>
+#include <Daxa/gpu/TimelineSemaphore.hpp>
+#include <Daxa/gpu/Swapchain.hpp>
+#include <Daxa/gpu/Signal.hpp>
+#include <Daxa/gpu/StagingBufferPool.hpp>
+#include <Daxa/gpu/CommandQueue.hpp>
+#include <Daxa/gpu/PipelineCompiler.hpp>
 
 namespace daxa {
 	class Instance;

@@ -1,7 +1,7 @@
 #include "CommandListBackend.hpp"
 
-#include "../util.hpp"
-#include "../Instance.hpp"
+#include <Daxa/gpu/util.hpp>
+#include <Daxa/gpu/Instance.hpp>
 
 namespace daxa {
     size_t byteSizeOfImageRange(ImageHandle const& image, VkImageSubresourceLayers subRessource, VkOffset3D offset, VkExtent3D extent) {

@@ -1,6 +1,6 @@
-#include "Image.hpp"
+#include <Daxa/gpu/Image.hpp>
 #include <cassert>
-#include "Instance.hpp"
+#include <Daxa/gpu/Instance.hpp>
 #include "backend/DeviceBackend.hpp"
 
 namespace daxa {

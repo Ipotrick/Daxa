@@ -10,9 +10,9 @@
 
 #include <vk_mem_alloc.h>
 
-#include "Handle.hpp"
-#include "Sampler.hpp"
-#include "Graveyard.hpp"
+#include <Daxa/gpu/Handle.hpp>
+#include <Daxa/gpu/Sampler.hpp>
+#include <Daxa/gpu/Graveyard.hpp>
 
 namespace daxa {
 	struct ImageCreateInfo {

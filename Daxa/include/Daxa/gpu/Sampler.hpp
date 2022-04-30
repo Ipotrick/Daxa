@@ -7,8 +7,8 @@
 
 #include <vulkan/vulkan.h>
 
-#include "Handle.hpp"
-#include "Graveyard.hpp"
+#include <Daxa/gpu/Handle.hpp>
+#include <Daxa/gpu/Graveyard.hpp>
 
 namespace daxa {
 	struct SamplerCreateInfo {

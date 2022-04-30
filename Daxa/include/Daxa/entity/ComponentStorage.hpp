@@ -4,7 +4,7 @@
 
 #include <vector>
 
-#include "Entity.hpp"
+#include <Daxa/entity/Entity.hpp>
 
 namespace daxa {
 
