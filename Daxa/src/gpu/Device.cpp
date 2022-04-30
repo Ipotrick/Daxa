@@ -1,4 +1,4 @@
-#include "Device.hpp"
+#include <Daxa/gpu/Device.hpp>
 
 #include <iostream>
 #include <algorithm>
@@ -6,7 +6,7 @@
 
 #include <VkBootstrap.h>
 
-#include "Instance.hpp"
+#include <Daxa/gpu/Instance.hpp>
 #include "backend/DeviceBackend.hpp"
 #include "backend/BufferBackend.hpp"
 

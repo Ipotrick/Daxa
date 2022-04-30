@@ -13,10 +13,10 @@
 
 #include "vulkan/vulkan.h"
 
-#include "Handle.hpp"
-#include "Image.hpp"
-#include "Buffer.hpp"
-#include "Sampler.hpp"
+#include <Daxa/gpu/Handle.hpp>
+#include <Daxa/gpu/Image.hpp>
+#include <Daxa/gpu/Buffer.hpp>
+#include <Daxa/gpu/Sampler.hpp>
 
 namespace daxa {
 	constexpr inline size_t MAX_BINDINGS_PER_SET = 32;

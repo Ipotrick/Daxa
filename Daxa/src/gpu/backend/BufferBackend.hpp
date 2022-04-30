@@ -1,4 +1,4 @@
-#include "../../DaxaCore.hpp"
+#include <Daxa/DaxaCore.hpp>
 
 #include <memory>
 #include <span>
@@ -7,7 +7,7 @@
 #include <vk_mem_alloc.h>
 
 #include "DeviceBackend.hpp"
-#include "../Buffer.hpp"
+#include <Daxa/gpu/Buffer.hpp>
 
 namespace daxa {
 

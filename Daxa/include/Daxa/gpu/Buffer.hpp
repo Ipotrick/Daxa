@@ -5,9 +5,9 @@
 #include <memory>
 #include <span>
 
-#include "Bindless.hpp"
-#include "Handle.hpp"
-#include "Graveyard.hpp"
+#include <Daxa/gpu/Bindless.hpp>
+#include <Daxa/gpu/Handle.hpp>
+#include <Daxa/gpu/Graveyard.hpp>
 
 namespace daxa {
 	class BufferBackend;

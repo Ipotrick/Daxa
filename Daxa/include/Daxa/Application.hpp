@@ -1,10 +1,10 @@
 #pragma once
 
-#include "DaxaCore.hpp"
+#include <Daxa/DaxaCore.hpp>
 
 #include <chrono>
 
-#include "platform/Window.hpp"
+#include <Daxa/platform/Window.hpp>
 
 namespace daxa {
 

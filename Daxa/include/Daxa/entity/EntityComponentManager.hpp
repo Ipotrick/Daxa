@@ -6,7 +6,7 @@
 #include <typeinfo>
 #include <unordered_map>
 
-#include "EntityComponentView.hpp"
+#include <Daxa/entity/EntityComponentView.hpp>
 
 namespace daxa {
     class EntityComponentManager {

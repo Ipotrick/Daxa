@@ -15,7 +15,7 @@
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 
-#include "Handle.hpp"
+#include <Daxa/gpu/Handle.hpp>
 
 #include "shaderc/shaderc.hpp"
 

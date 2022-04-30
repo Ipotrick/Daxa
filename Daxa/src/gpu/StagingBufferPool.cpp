@@ -1,5 +1,5 @@
-#include "StagingBufferPool.hpp"
-#include "Instance.hpp"
+#include <Daxa/gpu/StagingBufferPool.hpp>
+#include <Daxa/gpu/Instance.hpp>
 #include "backend/DeviceBackend.hpp"
 #include "backend/BufferBackend.hpp"
 
