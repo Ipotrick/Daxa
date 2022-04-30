@@ -607,7 +607,7 @@ struct RenderableWorld {
             "lava_6.png",
             "lava_7.png",
             "leaves.png",
-            "log-side.png",
+            "bark.png",
             "log-top.png",
             "molten_rock.png",
             "planks.png",
