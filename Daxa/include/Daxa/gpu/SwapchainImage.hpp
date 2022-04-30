@@ -8,7 +8,7 @@
 
 #include <vk_mem_alloc.h>
 
-#include "../DaxaCore.hpp"
+#include <Daxa/DaxaCore.hpp>
 
 #include "Image.hpp"
 

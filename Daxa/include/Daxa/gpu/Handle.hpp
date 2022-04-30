@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "../DaxaCore.hpp"
+#include <Daxa/DaxaCore.hpp>
 
 namespace daxa {
     template<typename T>

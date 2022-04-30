@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../DaxaCore.hpp"
+#include <Daxa/DaxaCore.hpp>
 
-#include "../gpu/Device.hpp"
+#include <Daxa/gpu/Device.hpp>
 
 #include <optional>
 #include <filesystem>

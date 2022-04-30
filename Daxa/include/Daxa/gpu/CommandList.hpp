@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../DaxaCore.hpp"
+#include <Daxa/DaxaCore.hpp>
 
 #include <variant>
 #include <span>
