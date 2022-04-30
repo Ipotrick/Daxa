@@ -7,7 +7,7 @@
 
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
-#include <VkBootstrap.h>
+#include <Daxa/dependencies/VkBootstrap.h>
 
 #include <Daxa/gpu/Graveyard.hpp>
 

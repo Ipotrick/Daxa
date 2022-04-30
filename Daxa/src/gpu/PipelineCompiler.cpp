@@ -6,8 +6,8 @@
 #include <regex>
 #include <sstream>
 
-#include "spirv_reflect.h"
-#include "shaderc/shaderc.h"
+#include <Daxa/dependencies/spirv_reflect.h>
+#include <shaderc/shaderc.h>
 #define NOMINMAX
 #ifdef _WIN32
 	#include "Windows.h"
