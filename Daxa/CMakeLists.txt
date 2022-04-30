@@ -41,6 +41,14 @@ file(WRITE ${CMAKE_BINARY_DIR}/config.cmake.in [=[
 @PACKAGE_INIT@
 include(${CMAKE_CURRENT_LIST_DIR}/daxa-targets.cmake)
 check_required_components(daxa)
+
+find_package(dxc CONFIG REQUIRED)
+find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
+find_package(Vulkan REQUIRED)
+find_package(glm CONFIG REQUIRED)
+find_package(imgui CONFIG REQUIRED)
+find_package(glfw3 CONFIG REQUIRED)
+
 ]=])
 configure_package_config_file(${CMAKE_BINARY_DIR}/config.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/daxa-config.cmake
