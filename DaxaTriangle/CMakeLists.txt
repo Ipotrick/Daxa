@@ -11,4 +11,4 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	endif()
 endif()
 
-target_link_libraries(DaxaTriangle PUBLIC Daxa)
+target_link_libraries(DaxaTriangle PUBLIC daxa::daxa)
