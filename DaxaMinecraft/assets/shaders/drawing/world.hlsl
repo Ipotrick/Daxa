@@ -1,11 +1,11 @@
 #pragma once
 
-#define sun_col float3(2, 1.7, 1)
+#define sun_col float3(2, 1.7, 1) * 0.5
 
 float3 sample_sky(in Ray sun_ray, float3 nrm) {
     float sun_val = clamp((dot(nrm, sun_ray.nrm) - 0.9999) * 10000, 0, 1);
     float sky_val = (dot(nrm, float3(0, 1, 0))) / 2 + clamp((dot(nrm, sun_ray.nrm) + 1) * 0.1, 0, 1);
-    return sun_col * sun_val + lerp(float3(0.5, 0.6, 2), float3(0.1, 0.2, 0.5), sky_val);
+    return sun_col * sun_val + lerp(float3(0.2, 0.4, 0.8), float3(0.3, 0.4, 0.1), sky_val);
 }
 
 float3 shaded(in Ray sun_ray, in float3 col, in float3 nrm) {
