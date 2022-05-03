@@ -5,7 +5,7 @@
 
 #include "core.hlsl"
 
-#define water_level 164
+#define water_level 34
 #define lava_level 458
 
 void biome_pass0(in out WorldgenState worldgen_state, in float3 b_pos) {
