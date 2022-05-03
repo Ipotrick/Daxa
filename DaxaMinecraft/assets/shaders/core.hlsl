@@ -15,6 +15,18 @@ struct ChunkBlockPresence {
     uint x32[4];
 };
 
+struct Structure {
+    float4 p;
+    uint id;
+    uint _pad[3];
+};
+
+struct ChunkgenData {
+    Structure structures[128];
+    uint structure_n;
+    uint _pad[3];
+};
+
 struct Globals {
     float4x4 viewproj_mat;
     float4 pos;
@@ -31,16 +43,17 @@ struct Globals {
 
     // ---- GPU ONLY ----
 
+    ChunkgenData chunkgen_data[CHUNK_NZ][CHUNK_NY][CHUNK_NX];
     ChunkBlockPresence chunk_block_presence[CHUNK_NZ][CHUNK_NY][CHUNK_NX];
 };
 
-struct ModelLoadBuffer {
-    float4 pos, dim;
-    uint data[128 * 128 * 128];
-};
+// struct ModelLoadBuffer {
+//     float4 pos, dim;
+//     uint data[128 * 128 * 128];
+// };
 
 DAXA_DEFINE_BA_BUFFER(Globals)
-DAXA_DEFINE_BA_BUFFER(ModelLoadBuffer)
+// DAXA_DEFINE_BA_BUFFER(ModelLoadBuffer)
 
 BlockID load_block_id(StructuredBuffer<Globals> globals, float3 pos) {
     int3 chunk_i = int3(pos / CHUNK_SIZE);

@@ -7,10 +7,10 @@
 #define OGT_VOX_IMPLEMENTATION
 #include <deps/ogt_vox.h>
 
-struct ModelLoadBuffer {
-    glm::vec4 pos, dim;
-    std::array<u32, 128 * 128 * 128> data;
-};
+// struct ModelLoadBuffer {
+//     glm::vec4 pos, dim;
+//     std::array<u32, 128 * 128 * 128> data;
+// };
 
 namespace gpu {
     struct PlayerInput {
@@ -40,6 +40,17 @@ namespace gpu {
         u32 x32[4];
     };
 
+    struct Structure {
+        glm::vec4 p;
+        u32 id;
+        u32 _pad[3];
+    };
+    struct ChunkgenData {
+        Structure structures[128];
+        u32 structure_n;
+        u32 _pad[3];
+    };
+
     struct ComputeGlobals {
         glm::mat4 viewproj_mat;
         glm::vec4 pos;
@@ -55,7 +66,7 @@ namespace gpu {
         ChunkIndexArray<u32> chunk_ids;
     };
     struct ComputeGlobals_GpuOnly {
-        Player player;
+        ChunkArray<ChunkgenData> chunkgen_data;
         ChunkArray<ChunkBlockPresence> chunk_block_presence;
     };
 
@@ -113,13 +124,12 @@ struct RenderableWorld {
     daxa::PipelineHandle raymarch_compute_pipeline;
     daxa::PipelineHandle pickblock_compute_pipeline;
     daxa::PipelineHandle blockedit_compute_pipeline;
-    daxa::PipelineHandle modelload_compute_pipeline;
     daxa::PipelineHandle subchunk_x2x4_pipeline;
     daxa::PipelineHandle subchunk_x8p_pipeline;
-    std::array<daxa::PipelineHandle, 1> chunkgen_compute_pipeline_passes;
+    std::array<daxa::PipelineHandle, 2> chunkgen_compute_pipeline_passes;
 
     daxa::BufferHandle compute_globals_buffer;
-    daxa::BufferHandle model_load_buffer;
+    // daxa::BufferHandle model_load_buffer;
     daxa::BufferHandle player_buffer;
 
     ChunkArray<std::unique_ptr<RenderableChunk>> chunks{};
@@ -128,7 +138,7 @@ struct RenderableWorld {
     daxa::ImageViewHandle atlas_texture_array;
     daxa::SamplerHandle atlas_texture_sampler;
 
-    std::unique_ptr<ModelLoadBuffer> model_load_data = std::make_unique<ModelLoadBuffer>();
+    // std::unique_ptr<ModelLoadBuffer> model_load_data = std::make_unique<ModelLoadBuffer>();
     std::array<glm::uvec3, World::DIM.x * World::DIM.y * World::DIM.z> chunk_indices{};
     glm::ivec3 player_rough_chunk_i{0};
 
@@ -155,33 +165,32 @@ struct RenderableWorld {
         player_data.vel = glm::vec4(player.vel, 0);
         player_data.rot = glm::vec4(-player.rot, 0);
 
-        std::ifstream model_voxfile("DaxaMinecraft/assets/models/teapot.vox", std::ios::binary);
-        std::vector<u8> buffer(std::istreambuf_iterator<char>(model_voxfile), {});
-        const ogt_vox_scene *scene = ogt_vox_read_scene(buffer.data(), static_cast<u32>(buffer.size()));
-        auto &model = *scene->models[0];
-        model_load_data->pos = glm::vec4(-32, 0, -32, 0);
-        model_load_data->dim = glm::vec4(
-            std::min<f32>(static_cast<f32>(model.size_x), 128.0f),
-            std::min<f32>(static_cast<f32>(model.size_z), 128.0f),
-            std::min<f32>(static_cast<f32>(model.size_y), 128.0f),
-            0);
-        for (size_t zi = 0; zi < Chunk::DIM.z * 2; ++zi) {
-            for (size_t yi = 0; yi < Chunk::DIM.y * 2; ++yi) {
-                for (size_t xi = 0; xi < Chunk::DIM.x * 2; ++xi) {
-                    if (xi < model.size_x && zi < model.size_y && yi < model.size_z) {
-                        auto v = model.voxel_data[xi + zi * model.size_x + (model.size_z - yi - 1) * model.size_x * model.size_y];
-                        if (v != 0)
-                            model_load_data->data[xi + yi * 128 + zi * 128 * 128] = v % 24 + 2;
-                        else
-                            model_load_data->data[xi + yi * 128 + zi * 128 * 128] = 1;
-                    } else {
-                        model_load_data->data[xi + yi * 128 + zi * 128 * 128] = 1;
-                    }
-                }
-            }
-        }
-
-        ogt_vox_destroy_scene(scene);
+        // std::ifstream model_voxfile("DaxaMinecraft/assets/models/teapot.vox", std::ios::binary);
+        // std::vector<u8> buffer(std::istreambuf_iterator<char>(model_voxfile), {});
+        // const ogt_vox_scene *scene = ogt_vox_read_scene(buffer.data(), static_cast<u32>(buffer.size()));
+        // auto &model = *scene->models[0];
+        // model_load_data->pos = glm::vec4(-32, 0, -32, 0);
+        // model_load_data->dim = glm::vec4(
+        //     std::min<f32>(static_cast<f32>(model.size_x), 128.0f),
+        //     std::min<f32>(static_cast<f32>(model.size_z), 128.0f),
+        //     std::min<f32>(static_cast<f32>(model.size_y), 128.0f),
+        //     0);
+        // for (size_t zi = 0; zi < Chunk::DIM.z * 2; ++zi) {
+        //     for (size_t yi = 0; yi < Chunk::DIM.y * 2; ++yi) {
+        //         for (size_t xi = 0; xi < Chunk::DIM.x * 2; ++xi) {
+        //             if (xi < model.size_x && zi < model.size_y && yi < model.size_z) {
+        //                 auto v = model.voxel_data[xi + zi * model.size_x + (model.size_z - yi - 1) * model.size_x * model.size_y];
+        //                 if (v != 0)
+        //                     model_load_data->data[xi + yi * 128 + zi * 128 * 128] = v % 24 + 2;
+        //                 else
+        //                     model_load_data->data[xi + yi * 128 + zi * 128 * 128] = 1;
+        //             } else {
+        //                 model_load_data->data[xi + yi * 128 + zi * 128 * 128] = 1;
+        //             }
+        //         }
+        //     }
+        // }
+        // ogt_vox_destroy_scene(scene);
 
         empty_chunk = create_chunk();
         for (auto &chunk_layer : chunks)
@@ -193,10 +202,10 @@ struct RenderableWorld {
             .size = sizeof(gpu::ComputeGlobals) + sizeof(gpu::ComputeGlobals_GpuOnly),
             .memoryType = daxa::MemoryType::GPU_ONLY,
         });
-        model_load_buffer = render_ctx.device->createBuffer({
-            .size = sizeof(ModelLoadBuffer),
-            .memoryType = daxa::MemoryType::GPU_ONLY,
-        });
+        // model_load_buffer = render_ctx.device->createBuffer({
+        //     .size = sizeof(ModelLoadBuffer),
+        //     .memoryType = daxa::MemoryType::GPU_ONLY,
+        // });
         player_buffer = render_ctx.device->createBuffer({
             .size = sizeof(gpu::ComputePlayer) + sizeof(gpu::ComputePlayer_GpuOnly),
             .memoryType = daxa::MemoryType::GPU_ONLY,
@@ -223,11 +232,11 @@ struct RenderableWorld {
             }
         }
 
-        cmd_list.singleCopyHostToBuffer({
-            .src = reinterpret_cast<u8 *>(model_load_data.get()),
-            .dst = model_load_buffer,
-            .region = {.size = sizeof(ModelLoadBuffer)},
-        });
+        // cmd_list.singleCopyHostToBuffer({
+        //     .src = reinterpret_cast<u8 *>(model_load_data.get()),
+        //     .dst = model_load_buffer,
+        //     .region = {.size = sizeof(ModelLoadBuffer)},
+        // });
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
         cmd_list.singleCopyHostToBuffer({
             .src = reinterpret_cast<u8 *>(&player_data),
@@ -265,7 +274,6 @@ struct RenderableWorld {
         try_recreate_pipeline(raymarch_compute_pipeline);
         try_recreate_pipeline(blockedit_compute_pipeline);
         try_recreate_pipeline(pickblock_compute_pipeline);
-        try_recreate_pipeline(modelload_compute_pipeline);
         bool should_reinit0 = false;
         for (auto &pipe : chunkgen_compute_pipeline_passes) {
             if (try_recreate_pipeline(pipe))
@@ -421,8 +429,8 @@ struct RenderableWorld {
             }
         }
 
-        auto compute_modelload_i = model_load_buffer.getDescriptorIndex();
-        compute_globals.model_load_index = compute_modelload_i;
+        // auto compute_modelload_i = model_load_buffer.getDescriptorIndex();
+        // compute_globals.model_load_index = compute_modelload_i;
 
         auto compute_globals_i = compute_globals_buffer.getDescriptorIndex();
 
@@ -473,18 +481,6 @@ struct RenderableWorld {
                     cmd_list.dispatch(8, 8, 8);
                     cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
                 }
-                cmd_list.bindPipeline(modelload_compute_pipeline);
-                cmd_list.bindAll();
-                cmd_list.pushConstant(
-                    VK_SHADER_STAGE_COMPUTE_BIT,
-                    gpu::push::Chunkgen{
-                        .pos = {1.0f * xi * Chunk::DIM.x, 1.0f * yi * Chunk::DIM.y, 1.0f * zi * Chunk::DIM.z, 0},
-                        .globals_sb = compute_globals_i,
-                        .player_buf_id = player_buffer.getDescriptorIndex(),
-                        .output_image_i = compute_globals.chunk_ids[zi][yi][xi],
-                    });
-                cmd_list.dispatch(8, 8, 8);
-                cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
                 update_subchunk(cmd_list, {xi, yi, zi});
                 cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
             }
@@ -572,12 +568,12 @@ struct RenderableWorld {
         create_pipeline(raymarch_compute_pipeline, "drawing/raymarch.hlsl");
         create_pipeline(pickblock_compute_pipeline, "utils/pickblock.hlsl");
         create_pipeline(blockedit_compute_pipeline, "world/blockedit.hlsl");
-        create_pipeline(modelload_compute_pipeline, "world/model_load.hlsl");
         create_pipeline(subchunk_x2x4_pipeline, "world/subchunk_x2x4.hlsl", "Main");
         create_pipeline(subchunk_x8p_pipeline, "world/subchunk_x8p.hlsl", "Main");
 
-        std::array<std::filesystem::path, 1> chunkgen_pass_paths = {
+        std::array<std::filesystem::path, 2> chunkgen_pass_paths = {
             "world/chunkgen/pass0.hlsl",
+            "world/chunkgen/pass1.hlsl",
         };
         for (size_t i = 0; i < chunkgen_pass_paths.size(); ++i)
             create_pipeline(chunkgen_compute_pipeline_passes[i], chunkgen_pass_paths[i]);

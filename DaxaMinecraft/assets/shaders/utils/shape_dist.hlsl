@@ -85,14 +85,14 @@ TreeSDF sd_tree_spruce(float3 b_pos, float random, float3 tree_pos) {
     result.trunk_dist = 1e9;
     result.leaves_dist = 1e9;
 
-    result.trunk_dist = sd_capsule(b_pos, tree_pos, tree_pos + float3(0, 9, 0), 1);
+    result.trunk_dist = sd_capsule(b_pos, tree_pos, tree_pos + float3(0, -9, 0), 1);
 
-    result.leaves_dist = min(result.leaves_dist, sd_cone(b_pos, tree_pos + float3(0, 1, 0), tree_pos + float3(0, 2.01, 0), 2.2, 2.2));
-    result.leaves_dist = min(result.leaves_dist, sd_cone(b_pos, tree_pos + float3(0, 3, 0), tree_pos + float3(0, 4.01, 0), 3.1, 3.1));
-    result.leaves_dist = min(result.leaves_dist, sd_torus(b_pos, tree_pos + float3(0, 3, 0), float2(3.6, 0.5 - random * 0.2)));
-    result.leaves_dist = min(result.leaves_dist, sd_cone(b_pos, tree_pos + float3(0, 5, 0), tree_pos + float3(0, 6.01, 0), 2.8, 2.8));
-    result.leaves_dist = min(result.leaves_dist, sd_cone(b_pos, tree_pos + float3(0, 7, 0), tree_pos + float3(0, 8.01, 0), 2.2, 2.2));
-    result.leaves_dist = min(result.leaves_dist, sd_cone(b_pos, tree_pos + float3(0, 9, 0), tree_pos + float3(0, 13.0, 0), 1.4, 0.0));
+    result.leaves_dist = min(result.leaves_dist, sd_cone(b_pos, tree_pos + float3(0, -1, 0), tree_pos + float3(0, -2.01, 0), 2.2, 2.2));
+    result.leaves_dist = min(result.leaves_dist, sd_cone(b_pos, tree_pos + float3(0, -3, 0), tree_pos + float3(0, -4.01, 0), 3.1, 3.1));
+    result.leaves_dist = min(result.leaves_dist, sd_torus(b_pos, tree_pos + float3(0, -3, 0), float2(3.6, 0.5 - random * 0.2)));
+    result.leaves_dist = min(result.leaves_dist, sd_cone(b_pos, tree_pos + float3(0, -5, 0), tree_pos + float3(0, -6.01, 0), 2.8, 2.8));
+    result.leaves_dist = min(result.leaves_dist, sd_cone(b_pos, tree_pos + float3(0, -7, 0), tree_pos + float3(0, -8.01, 0), 2.2, 2.2));
+    result.leaves_dist = min(result.leaves_dist, sd_cone(b_pos, tree_pos + float3(0, -9, 0), tree_pos + float3(0, -13.0, 0), 1.4, 0.0));
 
     return result;
 }
@@ -103,28 +103,38 @@ TreeSDF sd_tree_pine(float3 b_pos, float random, float3 tree_pos) {
     result.trunk_dist = 1e9;
     result.leaves_dist = 1e9;
 
-    result.leaves_dist = min(result.leaves_dist, sd_ellipsoid(b_pos, tree_pos + float3(+0, 53, -8.0), float3(4 - random * 2, 1.1 + random * 0.5, 3)));
-    result.leaves_dist = min(result.leaves_dist, sd_ellipsoid(b_pos, tree_pos + float3(+1, 52, +8.0), float3(4 - random * 2, 1.1 + random * 0.5, 3)));
-    result.leaves_dist = min(result.leaves_dist, sd_ellipsoid(b_pos, tree_pos + float3(-8, 51, -1.0), float3(4 - random * 2, 1.1 + random * 0.5, 3)));
-    result.leaves_dist = min(result.leaves_dist, sd_ellipsoid(b_pos, tree_pos + float3(+8, 52, +0.5), float3(4 - random * 2, 1.1 + random * 0.5, 3)));
+    result.leaves_dist = min(result.leaves_dist, sd_ellipsoid(b_pos, tree_pos + float3(+0, -53, -8.0), float3(4 - random * 2, 1.1 + random * 0.5, 3)));
+    result.leaves_dist = min(result.leaves_dist, sd_ellipsoid(b_pos, tree_pos + float3(+1, -52, +8.0), float3(4 - random * 2, 1.1 + random * 0.5, 3)));
+    result.leaves_dist = min(result.leaves_dist, sd_ellipsoid(b_pos, tree_pos + float3(-8, -51, -1.0), float3(4 - random * 2, 1.1 + random * 0.5, 3)));
+    result.leaves_dist = min(result.leaves_dist, sd_ellipsoid(b_pos, tree_pos + float3(+6, -52, +0.5), float3(4 - random * 2, 1.1 + random * 0.5, 3)));
+    result.leaves_dist = min(result.leaves_dist, sd_ellipsoid(b_pos, tree_pos + float3(+0, -50.5, +3.0), float3(3 - random * 2, 0.5 + random * 1.5, 2.5)));
+    result.leaves_dist = min(result.leaves_dist, sd_ellipsoid(b_pos, tree_pos + float3(+3, -50.5, +0.0), float3(3 - random * 2, 0.5 + random * 1.5, 2.5)));
+    result.leaves_dist = min(result.leaves_dist, sd_ellipsoid(b_pos, tree_pos + float3(+0, -52.0, -5.0), float3(3 - random * 2, 0.5 + random * 1.5, 2.5)));
+    result.leaves_dist = min(result.leaves_dist, sd_ellipsoid(b_pos, tree_pos + float3(-4, -51.0, +0.0), float3(3 - random * 2, 0.5 + random * 1.5, 2.5)));
 
-    result.trunk_dist = min(result.trunk_dist, sd_capsule(b_pos, tree_pos + float3(0, 2, 0), tree_pos + float3(0, 40, 0), 1.2));
-    result.trunk_dist = min(result.trunk_dist, sd_capsule(b_pos, tree_pos + float3(0.5, 40, 0.5), tree_pos + float3(0.5, 50, 0.5), 1 - random * 0.35));
-    result.trunk_dist = min(result.trunk_dist, sd_cone(b_pos, tree_pos + float3(0, 0, 0), tree_pos + float3(0, 8, 0), 2.6, 0));
+    result.leaves_dist = min(result.leaves_dist, sd_ellipsoid(b_pos, tree_pos + float3(-2, -43, -3.0), float3(2 - random * 0.5, 0.9 + random * 0.5, 1.5)));
+    result.leaves_dist = min(result.leaves_dist, sd_ellipsoid(b_pos, tree_pos + float3(+0, -43, -5.0), float3(2 - random * 0.5, 0.9 + random * 0.5, 1.5)));
+    result.leaves_dist = min(result.leaves_dist, sd_ellipsoid(b_pos, tree_pos + float3(+1, -42, +5.0), float3(2 - random * 0.5, 0.9 + random * 0.5, 2)));
+    result.leaves_dist = min(result.leaves_dist, sd_ellipsoid(b_pos, tree_pos + float3(-5, -43, +1.0), float3(2 - random * 0.5, 0.9 + random * 0.5, 2)));
+    result.leaves_dist = min(result.leaves_dist, sd_ellipsoid(b_pos, tree_pos + float3(+5, -42, +0.5), float3(2 - random * 0.5, 0.9 + random * 0.5, 2)));
 
-    result.trunk_dist = min(result.trunk_dist, sd_cylinder(b_pos, tree_pos + float3(0, 15, 0), tree_pos + float3(5, 14, 1), 0.6));
-    result.trunk_dist = min(result.trunk_dist, sd_cylinder(b_pos, tree_pos + float3(0, 25, 0), tree_pos + float3(-3, 24, -2), 0.6));
+    result.trunk_dist = min(result.trunk_dist, sd_capsule(b_pos, tree_pos + float3(0, -2, 0), tree_pos + float3(0, -40, 0), 1.2));
+    result.trunk_dist = min(result.trunk_dist, sd_capsule(b_pos, tree_pos + float3(0.5, -40, 0.5), tree_pos + float3(0.5, -50, 0.5), 1 - random * 0.35));
+    result.trunk_dist = min(result.trunk_dist, sd_cone(b_pos, tree_pos + float3(0, 0, 0), tree_pos + float3(0, -8, 0), 2.6, 0));
 
-    result.trunk_dist = min(result.trunk_dist, sd_cylinder(b_pos, tree_pos + float3(0, 40, 0), tree_pos + float3(-2, 43, -3), 0.6));
-    result.trunk_dist = min(result.trunk_dist, sd_cylinder(b_pos, tree_pos + float3(0, 40, 0), tree_pos + float3(0, 43, -5), 0.6));
-    result.trunk_dist = min(result.trunk_dist, sd_cylinder(b_pos, tree_pos + float3(0, 39, 0), tree_pos + float3(1, 42, 5), 0.6));
-    result.trunk_dist = min(result.trunk_dist, sd_cylinder(b_pos, tree_pos + float3(0, 40, 0), tree_pos + float3(-5, 43, 1), 0.6));
-    result.trunk_dist = min(result.trunk_dist, sd_cylinder(b_pos, tree_pos + float3(0, 36, 0), tree_pos + float3(5, 42, 0.5), 0.6));
+    result.trunk_dist = min(result.trunk_dist, sd_cylinder(b_pos, tree_pos + float3(0, -15, 0), tree_pos + float3(5, -14, 1), 0.6));
+    result.trunk_dist = min(result.trunk_dist, sd_cylinder(b_pos, tree_pos + float3(0, -25, 0), tree_pos + float3(-3, -24, -2), 0.6));
 
-    result.trunk_dist = min(result.trunk_dist, sd_cylinder(b_pos, tree_pos + float3(0, 50, 0), tree_pos + float3(0, 53, -8), 0.7));
-    result.trunk_dist = min(result.trunk_dist, sd_cylinder(b_pos, tree_pos + float3(0, 49, 0), tree_pos + float3(1, 52, 8), 0.7));
-    result.trunk_dist = min(result.trunk_dist, sd_cylinder(b_pos, tree_pos + float3(0, 50, 0), tree_pos + float3(-8, 51, -1), 0.7));
-    result.trunk_dist = min(result.trunk_dist, sd_cylinder(b_pos, tree_pos + float3(0, 49, 0), tree_pos + float3(8, 52, 0.5), 0.7));
+    result.trunk_dist = min(result.trunk_dist, sd_cylinder(b_pos, tree_pos + float3(0, -40, 0), tree_pos + float3(-2, -43, -3), 0.6));
+    result.trunk_dist = min(result.trunk_dist, sd_cylinder(b_pos, tree_pos + float3(0, -40, 0), tree_pos + float3(0, -43, -5), 0.6));
+    result.trunk_dist = min(result.trunk_dist, sd_cylinder(b_pos, tree_pos + float3(0, -39, 0), tree_pos + float3(1, -42, 5), 0.6));
+    result.trunk_dist = min(result.trunk_dist, sd_cylinder(b_pos, tree_pos + float3(0, -40, 0), tree_pos + float3(-5, -43, 1), 0.6));
+    result.trunk_dist = min(result.trunk_dist, sd_cylinder(b_pos, tree_pos + float3(0, -36, 0), tree_pos + float3(5, -42, 0.5), 0.6));
+
+    result.trunk_dist = min(result.trunk_dist, sd_cylinder(b_pos, tree_pos + float3(0, -50, 0), tree_pos + float3(0, -53, -8), 0.7));
+    result.trunk_dist = min(result.trunk_dist, sd_cylinder(b_pos, tree_pos + float3(0, -49, 0), tree_pos + float3(1, -52, 8), 0.7));
+    result.trunk_dist = min(result.trunk_dist, sd_cylinder(b_pos, tree_pos + float3(0, -50, 0), tree_pos + float3(-8, -51, -1), 0.7));
+    result.trunk_dist = min(result.trunk_dist, sd_cylinder(b_pos, tree_pos + float3(0, -49, 0), tree_pos + float3(8, -52, 0.5), 0.7));
 
     return result;
 }
