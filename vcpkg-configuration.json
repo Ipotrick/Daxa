@@ -5,9 +5,12 @@
     },
     "registries": [
         {
-            "kind": "filesystem",
-            "path": "C:/dev/projects/vcpkg_reg_test",
-            "packages": [ "dxc" ]
+            "kind": "git",
+            "repository": "https://github.com/GabeRundlett/vcpkg-registry",
+            "baseline": "256b2e2fadad24d3e7df777c9303d6c561a0b46c",
+            "packages": [
+                "dxc"
+            ]
         }
     ]
 }

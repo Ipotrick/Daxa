@@ -89,46 +89,56 @@ namespace daxa {
     {
         embraceTheDarkness();
 
-        char const* vertexGLSL = R"--(
-            #version 450 core
-            layout(location = 0) in vec2 aPos;
-            layout(location = 1) in vec2 aUV;
-            layout(location = 2) in vec4 aColor;
-            layout(push_constant) uniform uPushConstant { vec2 uScale; vec2 uTranslate; } pc;
-            out gl_PerVertex { vec4 gl_Position; };
-            layout(location = 0) out struct { vec4 Color; vec2 UV; } Out;
-            void main()
-            {
-                Out.Color = aColor;
-                Out.UV = aUV;
-                gl_Position = vec4(aPos * pc.uScale + pc.uTranslate, 0, 1);
+        char const* vertexHLSL = R"--(
+            struct uPushConstant {
+                float2 uScale;
+                float2 uTranslate;
+            };
+            [[vk::push_constant]] const uPushConstant pc;
+            struct VS_INPUT {
+                float2 pos : POSITION;
+                float2 uv  : TEXCOORD0;
+                float4 col : COLOR0;
+            };
+            struct PS_INPUT {
+                float4 pos : SV_POSITION;
+                float4 col : COLOR0;
+                float2 uv  : TEXCOORD0;
+            };
+            PS_INPUT main(VS_INPUT input) {
+                PS_INPUT output;
+                output.pos = float4(input.pos * pc.uScale + pc.uTranslate, 0, 1);
+                output.col = input.col;
+                output.uv  = input.uv;
+                return output;
             }
         )--";
 
-        char const* fragmentGLSL = R"--(
-            #version 450 core
-            layout(location = 0) out vec4 fColor;
-            layout(set=0, binding=0) uniform sampler2D sTexture;
-            layout(location = 0) in struct { vec4 Color; vec2 UV; } In;
-            vec4 srgb_to_linear(vec4 srgb) {
-                vec3 color_srgb = srgb.rgb;
-                vec3 selector = clamp(ceil(color_srgb - 0.04045), 0.0, 1.0); // 0 if under value, 1 if over
-                vec3 under = color_srgb / 12.92;
-                vec3 over = pow((color_srgb + 0.055) / 1.055, vec3(2.4));
-                vec3 result = mix(under, over, selector);
-                return vec4(result, srgb.a);
+        char const* fragmentHLSL = R"--(
+            struct PS_INPUT {
+                float4 pos : SV_POSITION;
+                float4 col : COLOR0;
+                float2 uv  : TEXCOORD0;
+            };
+            SamplerState sampler0 : register(s0);
+            Texture2D texture0 : register(t0);
+            float4 srgb_to_linear(float4 srgb) {
+                float3 color_srgb = srgb.rgb;
+                float3 selector = clamp(ceil(color_srgb - 0.04045), 0.0, 1.0); // 0 if under value, 1 if over
+                float3 under = color_srgb / 12.92;
+                float3 over = pow((color_srgb + 0.055) / 1.055, float3(2.4, 2.4, 2.4));
+                float3 result = lerp(under, over, selector);
+                return float4(result, srgb.a);
             }
-            void main()
-            {
-                vec4 color = srgb_to_linear(In.Color);
-                fColor = color * texture(sTexture, In.UV.st);
+            float4 main(PS_INPUT In) : SV_Target {
+                return srgb_to_linear(In.col) * texture0.Sample(sampler0, In.uv);
             }
         )--";
 
         daxa::GraphicsPipelineBuilder pipelineBuilder;
         auto pipelineDescription = pipelineBuilder
-            .addShaderStage({.source = vertexGLSL, .stage = VK_SHADER_STAGE_VERTEX_BIT})
-            .addShaderStage({.source = fragmentGLSL, .stage = VK_SHADER_STAGE_FRAGMENT_BIT})
+            .addShaderStage({.source = vertexHLSL, .shaderLang = ShaderLang::HLSL, .stage = VK_SHADER_STAGE_VERTEX_BIT})
+            .addShaderStage({.source = fragmentHLSL, .shaderLang = ShaderLang::HLSL, .stage = VK_SHADER_STAGE_FRAGMENT_BIT})
             .setDebugName("ImGui render pipeline")
             .beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
             .addVertexInputAttribute(VK_FORMAT_R32G32_SFLOAT)
