@@ -5,12 +5,12 @@
 
 #include "core.hlsl"
 
-#define water_level 64
+#define water_level 164
 #define lava_level 458
 
 void biome_pass0(in out WorldgenState worldgen_state, in float3 b_pos) {
     worldgen_state.biome_id = BiomeID::Plains;
-    if (worldgen_state.b_noise < 0.7) {
+    if (worldgen_state.b_noise < 1.2) {
         worldgen_state.biome_id = BiomeID::Forest;
     } else if (worldgen_state.b_noise > 1.6) {
         worldgen_state.biome_id = BiomeID::Desert;
@@ -97,6 +97,9 @@ SurroundingInfo get_surrounding(in out WorldgenState worldgen_state,
 
 void block_pass2(in out WorldgenState worldgen_state, in float3 b_pos,
                  in SurroundingInfo surroundings) {
+    StructuredBuffer<Globals> globals = daxa::getBuffer<Globals>(p.globals_sb);
+    uint3 chunk_i = p.pos.xyz / CHUNK_SIZE;
+
     if (!is_transparent(worldgen_state.block_id)) {
         switch (worldgen_state.biome_id) {
         case BiomeID::Beach:
@@ -146,39 +149,45 @@ void block_pass2(in out WorldgenState worldgen_state, in float3 b_pos,
         }
     } else if (worldgen_state.block_id == BlockID::Air &&
                !surroundings.above_water) {
-        // switch (worldgen_state.biome_id) {
-        // case BiomeID::Plains:
-        //     if (surroundings.depth_below == 0) {
-        //         if (worldgen_state.r < 0.10) {
-        //             worldgen_state.block_id = BlockID::TallGrass;
-        //         } else if (worldgen_state.r < 0.11) {
-        //             worldgen_state.block_id = BlockID::Leaves;
-        //         }
-        //     }
-        //     break;
-        // case BiomeID::Forest:
-        //     if (worldgen_state.r_xz < 0.01) {
-        //         int trunk_height = int(5 + worldgen_state.r_xz * 400);
-        //         if (surroundings.depth_below < trunk_height) {
-        //             worldgen_state.block_id = BlockID::Log;
-        //         }
-        //     } else if (worldgen_state.r < 0.6 && surroundings.depth_below == 0) {
-        //         worldgen_state.block_id = BlockID::Leaves;
-        //     }
-        //     break;
-        // case BiomeID::Desert:
-        //     if (worldgen_state.r_xz < 0.001) {
-        //         int trunk_height = int(5 + worldgen_state.r_xz * 400);
-        //         if (surroundings.depth_below < trunk_height) {
-        //             worldgen_state.block_id = BlockID::Cactus;
-        //         }
-        //     } else if (worldgen_state.r < 0.02 && surroundings.depth_below == 0) {
-        //         worldgen_state.block_id = BlockID::DriedShrub;
-        //     }
-        //     break;
-        // default:
-        //     break;
-        // }
+        switch (worldgen_state.biome_id) {
+        case BiomeID::Plains:
+            // if (surroundings.depth_below == 0) {
+            //     if (worldgen_state.r < 0.10) {
+            //         worldgen_state.block_id = BlockID::TallGrass;
+            //     } else if (worldgen_state.r < 0.11) {
+            //         worldgen_state.block_id = BlockID::Leaves;
+            //     }
+            // }
+            break;
+        case BiomeID::Forest:
+            if (worldgen_state.r_xz < 0.01) {
+                int trunk_height = 1; // int(5 + worldgen_state.r_xz * 400);
+                if (surroundings.depth_below < trunk_height) {
+                    if (globals[0].chunkgen_data[chunk_i.z][chunk_i.y][chunk_i.x].structure_n < 127) {
+                        int structure_n;
+                        InterlockedAdd(globals[0].chunkgen_data[chunk_i.z][chunk_i.y][chunk_i.x].structure_n, 1, structure_n);
+                        globals[0].chunkgen_data[chunk_i.z][chunk_i.y][chunk_i.x].structures[structure_n].p = float4(b_pos, 0);
+                        globals[0].chunkgen_data[chunk_i.z][chunk_i.y][chunk_i.x].structures[structure_n].id = (int(b_pos.x + 10000) % 5 == 0) ? 2 : 1;
+                    }
+                    // worldgen_state.block_id = BlockID::Log;
+                }
+            } else if (worldgen_state.r < 0.6 && surroundings.depth_below == 0) {
+                worldgen_state.block_id = BlockID::TallGrass;
+            }
+            break;
+        case BiomeID::Desert:
+            // if (worldgen_state.r_xz < 0.001) {
+            //     int trunk_height = int(5 + worldgen_state.r_xz * 400);
+            //     if (surroundings.depth_below < trunk_height) {
+            //         worldgen_state.block_id = BlockID::Cactus;
+            //     }
+            // } else if (worldgen_state.r < 0.02 && surroundings.depth_below == 0) {
+            //     worldgen_state.block_id = BlockID::DriedShrub;
+            // }
+            break;
+        default:
+            break;
+        }
     }
 }
 
@@ -252,17 +261,23 @@ void tree_pass0(in out WorldgenState worldgen_state, float3 b_pos) {
 }
 
 void tree_pass(in out WorldgenState worldgen_state, float3 b_pos) {
-
     float3 center = float3(100, 0, 100);
 
     float3 pine_trees[] = {
         float3(32, 1, 18) + center,
+        float3(41, 1, 0) + center,
+        float3(55, 1, 12) + center,
+        float3(69, 1, 3) + center,
     };
 
     float3 spruce_trees[] = {
         float3(20, 2, 20) + center,
         float3(40, 2, 25) + center,
         float3(30, 2, 30) + center,
+        float3(24, 2, 10) + center,
+        float3(38, 2, 10) + center,
+        float3(45, 2, 17) + center,
+        float3(60, 2, 10) + center,
     };
 
     for (int i = 0; i < sizeof(pine_trees) / sizeof(pine_trees[0]); ++i) {
@@ -295,15 +310,14 @@ void tree_pass(in out WorldgenState worldgen_state, float3 b_pos) {
 BlockID gen_block(in float3 b_pos) {
     WorldgenState worldgen_state = get_worldgen_state(b_pos);
 
-    floor_pass(worldgen_state, b_pos);
-
+    // floor_pass(worldgen_state, b_pos);
     // shapes_pass(worldgen_state, b_pos);
-    tree_pass(worldgen_state, b_pos);
+    // tree_pass(worldgen_state, b_pos);
 
-    // biome_pass0(worldgen_state, b_pos);
-    // block_pass0(worldgen_state, b_pos);
-    // SurroundingInfo surroundings = get_surrounding(worldgen_state, b_pos);
-    // block_pass2(worldgen_state, b_pos, surroundings);
+    biome_pass0(worldgen_state, b_pos);
+    block_pass0(worldgen_state, b_pos);
+    SurroundingInfo surroundings = get_surrounding(worldgen_state, b_pos);
+    block_pass2(worldgen_state, b_pos, surroundings);
 
     return worldgen_state.block_id;
 }
@@ -311,10 +325,10 @@ BlockID gen_block(in float3 b_pos) {
 [numthreads(8, 8, 8)] void main(uint3 global_i
                                 : SV_DispatchThreadID) {
     float3 block_pos = float3(global_i) + p.pos.xyz; // - float3(BLOCK_NX, BLOCK_NY, BLOCK_NY) / 2;
-    block_pos.y = BLOCK_NY - block_pos.y;
+    // block_pos.y = BLOCK_NY - block_pos.y;
 
     uint chunk_texture_id = p.output_image_i;
     RWTexture3D<uint> chunk = daxa::getRWTexture3D<uint>(chunk_texture_id);
 
-    chunk[int3(global_i)] = (uint)gen_block(block_pos * 1);
+    chunk[int3(global_i)] = (uint)gen_block(block_pos);
 }

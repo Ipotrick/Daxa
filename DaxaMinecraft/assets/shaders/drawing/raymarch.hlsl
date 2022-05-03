@@ -143,8 +143,10 @@ void get_texture_info(in StructuredBuffer<Globals> globals, in RayIntersection r
     // if (pixel_i.x > globals[0].frame_dim.x / 2) {
         output_image[pixel_i.xy] = prev_val * 0.8 + new_val * 0.2;
     // } else {
-#endif
     // output_image[pixel_i.xy] = new_val;
+#else
+    output_image[pixel_i.xy] = new_val;
+#endif
 #if ENABLE_TAA
     // }
 #endif

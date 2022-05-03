@@ -40,6 +40,17 @@ namespace gpu {
         u32 x32[4];
     };
 
+    struct Structure {
+        glm::vec4 p;
+        u32 id;
+        u32 _pad[3];
+    };
+    struct ChunkgenData {
+        Structure structures[128];
+        u32 structure_n;
+        u32 _pad[3];
+    };
+
     struct ComputeGlobals {
         glm::mat4 viewproj_mat;
         glm::vec4 pos;
@@ -55,7 +66,7 @@ namespace gpu {
         ChunkIndexArray<u32> chunk_ids;
     };
     struct ComputeGlobals_GpuOnly {
-        Player player;
+        ChunkArray<ChunkgenData> chunkgen_data;
         ChunkArray<ChunkBlockPresence> chunk_block_presence;
     };
 
@@ -116,7 +127,7 @@ struct RenderableWorld {
     daxa::PipelineHandle modelload_compute_pipeline;
     daxa::PipelineHandle subchunk_x2x4_pipeline;
     daxa::PipelineHandle subchunk_x8p_pipeline;
-    std::array<daxa::PipelineHandle, 1> chunkgen_compute_pipeline_passes;
+    std::array<daxa::PipelineHandle, 2> chunkgen_compute_pipeline_passes;
 
     daxa::BufferHandle compute_globals_buffer;
     daxa::BufferHandle model_load_buffer;
@@ -576,8 +587,9 @@ struct RenderableWorld {
         create_pipeline(subchunk_x2x4_pipeline, "world/subchunk_x2x4.hlsl", "Main");
         create_pipeline(subchunk_x8p_pipeline, "world/subchunk_x8p.hlsl", "Main");
 
-        std::array<std::filesystem::path, 1> chunkgen_pass_paths = {
+        std::array<std::filesystem::path, 2> chunkgen_pass_paths = {
             "world/chunkgen/pass0.hlsl",
+            "world/chunkgen/pass1.hlsl",
         };
         for (size_t i = 0; i < chunkgen_pass_paths.size(); ++i)
             create_pipeline(chunkgen_compute_pipeline_passes[i], chunkgen_pass_paths[i]);
