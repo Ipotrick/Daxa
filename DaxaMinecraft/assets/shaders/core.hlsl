@@ -1,6 +1,6 @@
 #pragma once
 
-#include "daxa.hlsl"
+#include "Daxa.hlsl"
 
 #include "block_info.hlsl"
 
