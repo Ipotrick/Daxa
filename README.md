@@ -39,6 +39,8 @@ Aside from the gpu abstraction, daxa also includes a few generalized helper abst
   * allows for implementation of custom rendergraph
   * cpu cost in recording commands is in place and not defered to submission
   * makes fun times when debugging
+* rendergraph:
+  * TODO
 ## Notable exposed vulkan features:
 * rasterization graphics pipeline
 * rasterization dynamic state
