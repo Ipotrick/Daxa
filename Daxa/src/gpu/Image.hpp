@@ -29,6 +29,11 @@ namespace daxa {
 		char const*  			debugName 	= {};
 	};
 
+	struct ImageHandle {
+		u32 index : 24;
+		u32 version : 8;
+	};
+
 	class Image {
 	public:
 		Image(std::shared_ptr<DeviceBackend> deviceBackend, ImageCreateInfo const& ci);
