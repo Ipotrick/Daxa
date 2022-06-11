@@ -1,8 +1,4 @@
 {
-    "default-registry": {
-        "kind": "builtin",
-        "baseline": "63e935d967a3410e26bf4a708efa39d8384d2bbb"
-    },
     "registries": [
         {
             "kind": "git",
