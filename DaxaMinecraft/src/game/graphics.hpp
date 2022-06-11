@@ -13,7 +13,7 @@ struct ModelLoadBuffer {
 };
 
 namespace gpu {
-    struct ChunkBlockPresence {
+    struct ChunkBlockPresence { 
         u32 x2[1024];
         u32 x4[256];
         u32 x8[64];
@@ -161,7 +161,7 @@ struct RenderableWorld {
             0);
         for (size_t zi = 0; zi < Chunk::DIM.z * 2; ++zi) {
             for (size_t yi = 0; yi < Chunk::DIM.y * 2; ++yi) {
-                for (size_t xi = 0; xi < Chunk::DIM.x * 2; ++xi) {
+                for (size_t xi = 0; xi < Chunk::DIM.x * 2; ++xi) { 
                     if (xi < model.size_x && zi < model.size_y && yi < model.size_z) {
                         auto v = model.voxel_data[xi + zi * model.size_x + (model.size_z - yi - 1) * model.size_x * model.size_y];
                         if (v != 0)
