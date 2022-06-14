@@ -93,6 +93,8 @@ namespace daxa {
             struct uPushConstant {
                 float2 uScale;
                 float2 uTranslate;
+                uint texture0_id;
+                uint sampler0_id;
             };
             [[vk::push_constant]] const uPushConstant pc;
             struct VS_INPUT {
@@ -115,13 +117,20 @@ namespace daxa {
         )--";
 
         char const* fragmentHLSL = R"--(
+            #include "Daxa.hlsl"
+            struct uPushConstant {
+                float2 uScale;
+                float2 uTranslate;
+                uint texture0_id;
+                uint sampler0_id;
+            };
+            DAXA_DEFINE_BA_SAMPLER(void)
+            [[vk::push_constant]] const uPushConstant pc;
             struct PS_INPUT {
                 float4 pos : SV_POSITION;
                 float4 col : COLOR0;
                 float2 uv  : TEXCOORD0;
             };
-            SamplerState sampler0 : register(s0);
-            Texture2D texture0 : register(t0);
             float4 srgb_to_linear(float4 srgb) {
                 float3 color_srgb = srgb.rgb;
                 float3 selector = clamp(ceil(color_srgb - 0.04045), 0.0, 1.0); // 0 if under value, 1 if over
@@ -131,12 +140,15 @@ namespace daxa {
                 return float4(result, srgb.a);
             }
             float4 main(PS_INPUT In) : SV_Target {
+                Texture2D<float4> texture0 = daxa::getTexture2D<float4>(pc.texture0_id);
+                SamplerState sampler0 = daxa::getSampler<void>(pc.sampler0_id);
                 return srgb_to_linear(In.col) * texture0.Sample(sampler0, In.uv);
             }
         )--";
 
         daxa::GraphicsPipelineBuilder pipelineBuilder;
         auto pipelineDescription = pipelineBuilder
+            .overwriteSet(0, daxa::BIND_ALL_SET_DESCRIPTION)
             .addShaderStage({.source = vertexHLSL, .shaderLang = ShaderLang::HLSL, .stage = VK_SHADER_STAGE_VERTEX_BIT})
             .addShaderStage({.source = fragmentHLSL, .shaderLang = ShaderLang::HLSL, .stage = VK_SHADER_STAGE_FRAGMENT_BIT})
             .setDebugName("ImGui render pipeline")
@@ -301,6 +313,8 @@ namespace daxa {
 
             cmdList.bindPipeline(pipeline);
 
+            cmdList.bindAll();
+
             cmdList.bindVertexBuffer(0, vertexBuffer);
 
             cmdList.bindIndexBuffer(indexBuffer, 0, VkIndexType::VK_INDEX_TYPE_UINT16);
@@ -312,8 +326,8 @@ namespace daxa {
                 float translate[2];
                 translate[0] = -1.0f - draw_data->DisplayPos.x * scale[0];
                 translate[1] = -1.0f - draw_data->DisplayPos.y * scale[1];
-                cmdList.pushConstant(VK_SHADER_STAGE_VERTEX_BIT, scale);
-                cmdList.pushConstant(VK_SHADER_STAGE_VERTEX_BIT, translate, sizeof(scale));
+                cmdList.pushConstant(VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, scale);
+                cmdList.pushConstant(VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, translate, sizeof(scale));
             }
 
             ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
@@ -324,15 +338,8 @@ namespace daxa {
             for (int n = 0; n < draw_data->CmdListsCount; n++) {
                 const ImDrawList* draws = draw_data->CmdLists[n];
                 size_t lastTexId = 0;
-                auto set = setAlloc->getSet();
-                set->bindImage(0, referencedImages[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-                cmdList.bindSet(0, set);
                 for (int cmd_i = 0; cmd_i < draws->CmdBuffer.Size; cmd_i++)  {
                     const ImDrawCmd* pcmd = &draws->CmdBuffer[cmd_i];
-
-                    set = setAlloc->getSet();
-                    set->bindImage(0, referencedImages[(size_t)pcmd->TextureId], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-                    cmdList.bindSet(0, set);
 
                     // Project scissor/clipping rectangles into framebuffer space
                     ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
@@ -356,6 +363,12 @@ namespace daxa {
                     cmdList.setScissor(scissor);
 
                     // Draw
+                    u32 texture0_id = referencedImages[(size_t)pcmd->TextureId]->getDescriptorIndex();
+                    // It seems that this just works... I have no sampler, but using
+                    // the (uninitialized?) sampler at location 0 just works for me.
+                    u32 sampler0_id = 0;
+                    cmdList.pushConstant<u32>(VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, texture0_id, sizeof(float) * 4);
+                    cmdList.pushConstant<u32>(VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, sampler0_id, sizeof(float) * 4 + sizeof(u32));
                     cmdList.drawIndexed(pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
                 }
                 global_idx_offset += draws->IdxBuffer.Size;
