@@ -637,6 +637,7 @@ namespace daxa {
 			VkDependencyInfoKHR dependencyInfo{
 				.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
 				.pNext = nullptr,
+				.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT | VK_DEPENDENCY_DEVICE_GROUP_BIT | VK_DEPENDENCY_VIEW_LOCAL_BIT,
 				.memoryBarrierCount = (u32)queuedMemoryBarriers.size(),
 				.pMemoryBarriers = queuedMemoryBarriers.data(),
 				.bufferMemoryBarrierCount = 0,
@@ -644,12 +645,11 @@ namespace daxa {
 				.imageMemoryBarrierCount = (u32)queuedImageBarriers.size(),
 				.pImageMemoryBarriers = queuedImageBarriers.data(),
 			};
+			deviceBackend->vkCmdPipelineBarrier2KHR(cmd, &dependencyInfo);
 
 			queuedMemoryBarriers.clear();
 			queuedBufferBarriers.clear();
 			queuedImageBarriers.clear();
-
-			deviceBackend->vkCmdPipelineBarrier2KHR(cmd, &dependencyInfo);
 			this->bBarriersQueued = false;
 		}
 	}
