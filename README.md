@@ -24,7 +24,8 @@ Aside from the gpu abstraction, daxa also includes a few generalized helper abst
   * hot reloading
   * full preprocessor integration
 * threadsafety:
-  * TODO 
+  * commands can be recorded on many command lists in parallel
+  * external sync is only required when accessing the same object on multiple threads
 * explicit synchronization:
   * direct control
   * no forced high-overhead auto-sync
