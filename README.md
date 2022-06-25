@@ -1,8 +1,6 @@
 # This repo is the home of the Daxa GPU-library
 
-Daxa is not aimed to expose all vulkan features or even stay very close to it api wise. 
-
-Its primary goal is be easy to use, very low cpu overhead and modern gpu feature access.
+Daxa is a gpu rendering interface library. It is meant to be modern and easy to use.
 
 Aside from the gpu abstraction, daxa also includes a few generalized helper abstractions, like an ImGui backend or a simple asset manager. These are included mainly to get things going in a new project.
 
@@ -14,38 +12,27 @@ Aside from the gpu abstraction, daxa also includes a few generalized helper abst
   * no binding slots
   * no ressource binding
   * resources are passed to and accessed in a shader via an id
-* easy gpu driven rendering:
-  * binding model allows for very easy gpu side manipulation of resources
-  * (TODO) more
-* little boilerplace with many defaults:
+  * allows for much easier access in gpu driven rendering and raytracing
+* little boilerplace and many defaults:
   * optional automatic staging buffer usage for data up- and download
   * easy ressource creation
   * no renderpasses
   * no framebuffers
-  * dynamic state with defaults
+  * dynamic state
 * simple shader build system:
   * dxc compiler integration for vulkan-hlsl
-  * shaderc compiler integration for glsl
   * hot reloading
   * full preprocessor integration
 * threadsafety:
-  * all functions can be called in any context without external synchronization.
-  * this usually does not affect performance except for resource creation which is serialized.
-* efficient automatic lifetime management of resources:
-  * reference counting to enforce shared ownership
-  * resources are freed after all potential uses in command lists are over
+  * TODO 
 * explicit synchronization:
-  * auto sync usually comes with a high price in cpu overhead
-  * allows for implementation of custom rendergraph
+  * direct control
+  * no forced high-overhead auto-sync
   * cpu cost in recording commands is in place and not defered to submission
-  * makes fun times when debugging
 * rendergraph:
   * TODO
-## Notable exposed vulkan features:
-* rasterization graphics pipeline
-* rasterization dynamic state
-* compute pipeline
-* multiqueue
+
+While this library is build on vulkan, it will not expose all vulkan features. The main goal is beeing modern, fase and still reasonably simple.
 
 # Examples
 Examples are given as DaxaXYZ, besides the daxa library itself in this repository. There are also two full projects currently residing in this repository:
