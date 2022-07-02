@@ -58,9 +58,9 @@ namespace daxa {
 	#define BACKEND (*static_cast<Backend*>(this->backend.get()))
 
 	struct Backend{
-		ComPtr<IDxcUtils> dxcUtils = {};
-		ComPtr<IDxcCompiler3> dxcCompiler = {};
-		ComPtr<IDxcIncludeHandler> dxcIncludeHandler = {};
+		IDxcUtils* dxcUtils = {};
+		IDxcCompiler3* dxcCompiler = {};
+		IDxcIncludeHandler* dxcIncludeHandler = {};
 	};
 
 	void backendDeletor(void* backend) {
@@ -137,7 +137,7 @@ namespace daxa {
 		char const* sourceFileName, 
 		std::vector<std::string> const& defines
 	) {
-		std::vector<LPCWSTR> args;
+		std::vector<const wchar_t *> args;
 
 		std::vector<std::wstring> wstringBuffer;
 		wstringBuffer.reserve(defines.size());
@@ -199,10 +199,10 @@ namespace daxa {
 			.Encoding = static_cast<u32>(0),
 		};
 
-		ComPtr<IDxcResult> result;
-		BACKEND.dxcCompiler->Compile(&srcBuffer, args.data(), static_cast<u32>(args.size()), BACKEND.dxcIncludeHandler.Get(), IID_PPV_ARGS(&result));
+		IDxcResult* result;
+		BACKEND.dxcCompiler->Compile(&srcBuffer, args.data(), static_cast<u32>(args.size()), BACKEND.dxcIncludeHandler, IID_PPV_ARGS(&result));
 
-		ComPtr<IDxcBlobUtf8> errorMessage;
+		IDxcBlobUtf8* errorMessage;
 		result->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errorMessage), nullptr);
 
 		if (errorMessage && errorMessage->GetStringLength() > 0) {
@@ -217,7 +217,7 @@ namespace daxa {
 			return daxa::ResultErr{.message = str };
 		}
 
-		ComPtr<IDxcBlob> shaderobj;
+		IDxcBlob* shaderobj;
 		result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderobj), nullptr);
 
 		std::vector<u32> spv;
@@ -394,8 +394,8 @@ namespace daxa {
 	class DxcFileIncluder : public IDxcIncludeHandler {
 	public:
 		std::shared_ptr<PipelineCompilerShadedData> sharedData = {};
-		ComPtr<IDxcUtils> pUtils;
-		ComPtr<IDxcIncludeHandler> pDefaultIncludeHandler;
+		IDxcUtils* pUtils;
+		IDxcIncludeHandler* pDefaultIncludeHandler;
 		HRESULT LoadSource(LPCWSTR pFilename, IDxcBlob** ppIncludeSource) override
 		{
 			if (pFilename[0] == '.') {
@@ -403,7 +403,7 @@ namespace daxa {
 			}
 
 			std::string sourceStr;
-			ComPtr<IDxcBlobEncoding> pEncoding;
+			IDxcBlobEncoding* pEncoding;
 			Path fullPath;
 
 			bool is_daxa_hlsl = wcscmp(pFilename, L"Daxa.hlsl") == 0;
@@ -513,12 +513,13 @@ namespace daxa {
 				auto fullPath = result.value();
 				auto searchPred = [&](std::filesystem::path const& p){ return p == fullPath; };
 
-				ComPtr<IDxcBlobEncoding> pEncoding;
+				IDxcBlobEncoding* pEncoding;
 				if (std::find_if(sharedData->currentShaderSeenFiles.begin(), sharedData->currentShaderSeenFiles.end(), searchPred) != sharedData->currentShaderSeenFiles.end()) {
 					// Return empty string blob if this file has been included before
 					static const char nullStr[] = " ";
-					pUtils->CreateBlob(nullStr, ARRAYSIZE(nullStr), CP_UTF8, pEncoding.GetAddressOf());
-					*ppIncludeSource = pEncoding.Detach();
+					pUtils->CreateBlob(nullStr, ARRAYSIZE(nullStr), CP_UTF8, &pEncoding);
+					*ppIncludeSource = pEncoding;
+					pEncoding = nullptr;
 					return S_OK;
 				}
 				else {
@@ -533,8 +534,9 @@ namespace daxa {
 				sourceStr = str_result.value();
 			}
 
-			pUtils->CreateBlob(sourceStr.data(), static_cast<u32>(sourceStr.size()), CP_UTF8, pEncoding.GetAddressOf());
-			*ppIncludeSource = pEncoding.Detach();
+			pUtils->CreateBlob(sourceStr.data(), static_cast<u32>(sourceStr.size()), CP_UTF8, &pEncoding);
+			*ppIncludeSource = pEncoding;
+			pEncoding = nullptr;
 			return S_OK;
 		}
 
@@ -543,8 +545,8 @@ namespace daxa {
 			return pDefaultIncludeHandler->QueryInterface(riid, ppvObject);
 		}
 
-		ULONG STDMETHODCALLTYPE AddRef(void) override {	return 0; }
-		ULONG STDMETHODCALLTYPE Release(void) override { return 0; }
+		unsigned long STDMETHODCALLTYPE AddRef(void) override {	return 0; }
+		unsigned long STDMETHODCALLTYPE Release(void) override { return 0; }
 
 	};
 
@@ -555,19 +557,22 @@ namespace daxa {
 		, recreationCooldown{ 250 }
 		, backend{ std::unique_ptr<void, void(*)(void*)>(new Backend(), backendDeletor) }
 	{
-		if (!SUCCEEDED(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(BACKEND.dxcUtils.ReleaseAndGetAddressOf())))) {
+        BACKEND.dxcUtils->Release();
+		if (!SUCCEEDED(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&BACKEND.dxcUtils)))) {
 			std::cout << "[[DXA ERROR]] could not create DXC Instance" << std::endl;
-		};
+		}
 
 		if (!SUCCEEDED(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&BACKEND.dxcCompiler)))) {
 			std::cout << "[[DXA ERROR]] could not create DXC Compiler" << std::endl;
 		}
 
-		ComPtr<DxcFileIncluder> dxcIncluder = new DxcFileIncluder();
+		DxcFileIncluder* dxcIncluder = new DxcFileIncluder();
 		dxcIncluder->sharedData = sharedData;
 		dxcIncluder->pUtils = BACKEND.dxcUtils;
-		BACKEND.dxcUtils->CreateDefaultIncludeHandler(dxcIncluder->pDefaultIncludeHandler.ReleaseAndGetAddressOf());
+		dxcIncluder->pDefaultIncludeHandler->Release();
+		BACKEND.dxcUtils->CreateDefaultIncludeHandler(&(dxcIncluder->pDefaultIncludeHandler));
 		BACKEND.dxcIncludeHandler = dxcIncluder;
+		delete dxcIncluder;
 	}
 
     bool PipelineCompiler::checkIfSourcesChanged(PipelineHandle& pipeline) {
