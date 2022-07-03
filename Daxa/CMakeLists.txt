@@ -10,7 +10,7 @@ find_package(glm CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
-find_path(STB_INCLUDE_DIRS "stb.h")
+# find_path(STB_INCLUDE_DIRS "stb.h")
 find_path(CGLTF_INCLUDE_DIRS "cgltf.h")
 
 target_link_libraries(daxa PUBLIC
@@ -28,7 +28,7 @@ target_compile_features(daxa PUBLIC cxx_std_20)
 target_include_directories(daxa
 	PUBLIC
 		$<BUILD_INTERFACE:${CGLTF_INCLUDE_DIRS}>
-		$<BUILD_INTERFACE:${STB_INCLUDE_DIRS}>
+		# $<BUILD_INTERFACE:${STB_INCLUDE_DIRS}>
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/dependencies>
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
 		$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
