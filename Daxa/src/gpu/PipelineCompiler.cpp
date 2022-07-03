@@ -523,7 +523,6 @@ namespace daxa {
 					static const char nullStr[] = " ";
 					pUtils->CreateBlob(nullStr, ARRAYSIZE(nullStr), CP_UTF8, &pEncoding);
 					*ppIncludeSource = pEncoding;
-					pEncoding = nullptr;
 					return S_OK;
 				}
 				else {
@@ -540,7 +539,6 @@ namespace daxa {
 
 			pUtils->CreateBlob(sourceStr.data(), static_cast<u32>(sourceStr.size()), CP_UTF8, &pEncoding);
 			*ppIncludeSource = pEncoding;
-			pEncoding = nullptr;
 			return S_OK;
 		}
 
@@ -561,7 +559,6 @@ namespace daxa {
 		, recreationCooldown{ 250 }
 		, backend{ std::unique_ptr<void, void(*)(void*)>(new Backend(), backendDeletor) }
 	{
-		BACKEND.dxcUtils->Release();
 		if (!SUCCEEDED(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&BACKEND.dxcUtils)))) {
 			std::cout << "[[DXA ERROR]] could not create DXC Instance" << std::endl;
 		}
@@ -572,17 +569,12 @@ namespace daxa {
 #if defined(__linux__)
 		CComPtr<DxcFileIncluder> dxcIncluder = new DxcFileIncluder();
 #else
-		DxcFileIncluder* dxcIncluder = new DxcFileIncluder();
+		ComPtr<DxcFileIncluder> dxcIncluder = new DxcFileIncluder();
 #endif
 		dxcIncluder->sharedData = sharedData;
 		dxcIncluder->pUtils = BACKEND.dxcUtils;
-		dxcIncluder->pDefaultIncludeHandler->Release();
 		BACKEND.dxcUtils->CreateDefaultIncludeHandler(&(dxcIncluder->pDefaultIncludeHandler));
-		BACKEND.dxcIncludeHandler = dxcIncluder;
-#if defined(__linux__)
-#else
-		delete dxcIncluder;
-#endif
+		BACKEND.dxcIncludeHandler = dxcIncluder.Get();
 	}
 
 	bool PipelineCompiler::checkIfSourcesChanged(PipelineHandle& pipeline) {
