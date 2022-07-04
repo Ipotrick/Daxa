@@ -574,7 +574,7 @@ namespace daxa {
 		dxcIncluder->sharedData = sharedData;
 		dxcIncluder->pUtils = BACKEND.dxcUtils;
 		BACKEND.dxcUtils->CreateDefaultIncludeHandler(&(dxcIncluder->pDefaultIncludeHandler));
-		BACKEND.dxcIncludeHandler = dxcIncluder.Get();
+		BACKEND.dxcIncludeHandler = dxcIncluder.Detach();
 	}
 
 	bool PipelineCompiler::checkIfSourcesChanged(PipelineHandle& pipeline) {
