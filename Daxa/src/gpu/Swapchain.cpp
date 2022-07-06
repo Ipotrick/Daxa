@@ -9,12 +9,14 @@
 #include "backend/DeviceBackend.hpp"
 
 namespace daxa {
-	void Swapchain::construct(std::shared_ptr<DeviceBackend> deviceBackend, SwapchainCreateInfo ci) {
-		this->deviceBackend = deviceBackend;
+	void Swapchain::construct(std::shared_ptr<void> backend, SwapchainCreateInfo ci) {
+		this->backend = backend;
 		this->size = { .width = ci.width, .height = ci.height };
 		this->surface = ci.surface;
 		this->presentMode = ci.presentMode;
 		this->additionalimageUses = ci.additionalUses;
+
+		std::shared_ptr<DeviceBackend> deviceBackend = std::static_pointer_cast<DeviceBackend>(this->backend);
 
 		vkb::SwapchainBuilder swapchainBuilder{ deviceBackend->device, surface };
 
@@ -50,15 +52,13 @@ namespace daxa {
 			img.arrayLayers = 1;
 			img.mipLevels = 1;
 			
-			auto sampler = std::move(SamplerHandle{ std::make_shared<Sampler>(deviceBackend, SamplerCreateInfo{})});
-			ImageViewCreateInfo ci{
+			ImageViewInfo ci{
 				.image = std::move(image),
 				.format = vkbSwapchain.image_format,
-				.defaultSampler = sampler,
 				.debugName = "swapchain image view",
 			};
-			auto view = ImageViewHandle{ std::make_shared<ImageView>(deviceBackend, ci, vkImageViews[i]) };
-			this->swapchainImageViews.push_back(std::move(view));
+			auto view = createImageViewHandleAndInsertIntoTable(deviceBackend->device.device, deviceBackend->gpuRessources, ci, vkImageViews[i]);
+			this->swapchainImageViews.push_back(view);
 		}
 
 		this->swapchainImageFormat = vkbSwapchain.image_format;
@@ -102,10 +102,19 @@ namespace daxa {
 			daxa::instance->pfnSetDebugUtilsObjectNameEXT(deviceBackend->device.device, &nameInfo);
 		}
 	}
+	
+	void Swapchain::clearSwapchainImages() {
+		std::shared_ptr<DeviceBackend> deviceBackend = std::static_pointer_cast<DeviceBackend>(this->backend);
+		for (auto& handle : swapchainImageViews) {
+			destroyImageViewAndRemoveFromTable(deviceBackend->device, deviceBackend->gpuRessources, handle);
+		}
+		swapchainImageViews.clear();
+	}
 
 	Swapchain::~Swapchain() {
-		swapchainImageViews.clear();
-		if (deviceBackend->device.device) {
+		if (backend) {
+			std::shared_ptr<DeviceBackend> deviceBackend = std::static_pointer_cast<DeviceBackend>(this->backend);
+			clearSwapchainImages();
 			vkDestroySwapchainKHR(deviceBackend->device.device, swapchain, nullptr);
 			vkDestroyFence(deviceBackend->device.device, aquireFence, nullptr);
 			deviceBackend = {};
@@ -114,6 +123,7 @@ namespace daxa {
 
 	SwapchainImage Swapchain::aquireNextImage() {
 		u32 index{ 0 };
+		std::shared_ptr<DeviceBackend> deviceBackend = std::static_pointer_cast<DeviceBackend>(this->backend);
 		DAXA_CHECK_VK_RESULT_M(vkAcquireNextImageKHR(deviceBackend->device.device, swapchain, UINT64_MAX, nullptr, aquireFence, &index), "could not aquire next image from swapchain");
 		SwapchainImage si{};
 		si.swapchain = swapchain;
@@ -127,49 +137,51 @@ namespace daxa {
 	}
 
 	void Swapchain::resize(VkExtent2D newSize) {
-		swapchainImageViews.clear();
+		clearSwapchainImages();
+		std::shared_ptr<DeviceBackend> deviceBackend = std::static_pointer_cast<DeviceBackend>(this->backend);
 		construct(deviceBackend, {surface, newSize.width, newSize.height, presentMode, additionalimageUses, debugName.c_str()});
 	}
 
 	void Swapchain::setPresentMode(VkPresentModeKHR newPresentMode) {
-		swapchainImageViews.clear();
+		clearSwapchainImages();
+		std::shared_ptr<DeviceBackend> deviceBackend = std::static_pointer_cast<DeviceBackend>(this->backend);
 		construct(deviceBackend, {surface, size.width, size.height, newPresentMode, additionalimageUses, debugName.c_str()});
 	}
 	
-	Result<Swapchain2> Swapchain2::construct(std::shared_ptr<DeviceBackend>& deviceBackend, SwapchainCreateInfo const& ci, Swapchain2* old) {
-		struct {
-			VkSurfaceCapabilitiesKHR capabilities;
-			std::vector<VkSurfaceFormatKHR> formats;
-			std::vector<VkPresentModeKHR> presentModes;
-		} SwapchainCapabilities;
-
-		Swapchain2 res = {};
-		res.deviceBackend = deviceBackend;
-		res.ci = ci;
-
-		VkSwapchainCreateInfoKHR scci = {};
-		scci.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-		scci.pNext = nullptr;
-		scci.surface = ci.surface;
-		scci.presentMode = ci.presentMode;
-		scci.oldSwapchain = VK_NULL_HANDLE;
-		if (old != nullptr) {
-			DAXA_ASSERT_M(old->swapchain != VK_NULL_HANDLE, "invalid old swapchain");
-			scci.oldSwapchain = old->swapchain;
-			old->swapchain = VK_NULL_HANDLE;
-		}
-		scci.minImageCount = 2; 
-		scci.imageFormat = VK_FORMAT_B8G8R8A8_SRGB;
-		scci.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-		scci.imageArrayLayers = 1;
-		scci.imageExtent = { .width = ci.width, .height = ci.height };
-		scci.imageUsage = ci.additionalUses;
-		scci.pQueueFamilyIndices = &deviceBackend->graphicsQFamilyIndex;
-		scci.queueFamilyIndexCount = 1;
-		scci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-		vkCreateSwapchainKHR(deviceBackend->device.device, &scci, nullptr, &res.swapchain);
-
-        return res;
-	}
+	//Result<Swapchain2> Swapchain2::construct(std::shared_ptr<void>& backend, SwapchainCreateInfo const& ci, Swapchain2* old) {
+	//	struct {
+	//		VkSurfaceCapabilitiesKHR capabilities;
+	//		std::vector<VkSurfaceFormatKHR> formats;
+	//		std::vector<VkPresentModeKHR> presentModes;
+	//	} SwapchainCapabilities;
+//
+	//	Swapchain2 res = {};
+	//	res.deviceBackend = deviceBackend;
+	//	res.ci = ci;
+//
+	//	VkSwapchainCreateInfoKHR scci = {};
+	//	scci.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+	//	scci.pNext = nullptr;
+	//	scci.surface = ci.surface;
+	//	scci.presentMode = ci.presentMode;
+	//	scci.oldSwapchain = VK_NULL_HANDLE;
+	//	if (old != nullptr) {
+	//		DAXA_ASSERT_M(old->swapchain != VK_NULL_HANDLE, "invalid old swapchain");
+	//		scci.oldSwapchain = old->swapchain;
+	//		old->swapchain = VK_NULL_HANDLE;
+	//	}
+	//	scci.minImageCount = 2; 
+	//	scci.imageFormat = VK_FORMAT_B8G8R8A8_SRGB;
+	//	scci.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+	//	scci.imageArrayLayers = 1;
+	//	scci.imageExtent = { .width = ci.width, .height = ci.height };
+	//	scci.imageUsage = ci.additionalUses;
+	//	scci.pQueueFamilyIndices = &deviceBackend->graphicsQFamilyIndex;
+	//	scci.queueFamilyIndexCount = 1;
+	//	scci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+//
+	//	vkCreateSwapchainKHR(deviceBackend->device.device, &scci, nullptr, &res.swapchain);
+//
+    //    return res;
+	//}
 }

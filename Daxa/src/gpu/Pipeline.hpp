@@ -15,10 +15,10 @@
 
 #include "Handle.hpp"
 #include "ShaderModule.hpp"
-#include "BindingSet.hpp"
 
 namespace daxa {
 	class PipelineCompiler;
+
 	constexpr VkPipelineRasterizationStateCreateInfo DEFAULT_RASTER_STATE_CI{
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
 		.pNext = nullptr,
@@ -85,8 +85,7 @@ namespace daxa {
 
 	struct ComputePipelineCreateInfo {
 		ShaderModuleCreateInfo 													shaderCI 		= {};
-		std::array<std::optional<BindingSetDescription>, MAX_SETS_PER_PIPELINE> overwriteSets 	= {};
-		size_t 																	pushConstantSize = 0;
+		u32 																	pushConstantSize = 0;
 		char const* 															debugName 		= {};
 	};
 
@@ -105,7 +104,7 @@ namespace daxa {
 		GraphicsPipelineBuilder& addShaderStage(ShaderModuleCreateInfo const& ci);
 		GraphicsPipelineBuilder& addColorAttachment(VkFormat const& attachmentFormat);
 		GraphicsPipelineBuilder& addColorAttachment(VkFormat const& attachmentFormat, const VkPipelineColorBlendAttachmentState&);
-		GraphicsPipelineBuilder& overwriteSet(u32 set, BindingSetDescription const& descr);
+		GraphicsPipelineBuilder& setPushConstantSize(size_t size);
 	private:
 		friend class Device;
 		friend class daxa::PipelineCompiler;
@@ -114,6 +113,7 @@ namespace daxa {
 
 		// Vertex Input Attribute building:
 		bool bVertexAtrributeBindingBuildingOpen = false;
+		u32 pushConstantSize = {};
 		VkVertexInputRate currentVertexAttributeBindingInputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 		u32 currentVertexAttributeBindingOffset = 0;
 		u32 currentVertexAttributeLocation = 0;
@@ -128,7 +128,6 @@ namespace daxa {
 		std::vector<ShaderModuleCreateInfo> shaderModuleCIs;
 		std::vector<VkPipelineColorBlendAttachmentState> colorAttachmentBlends;
 		std::vector<VkFormat> colorAttachmentFormats;
-		std::vector<std::pair<u32, BindingSetDescription>> setDescriptionOverwrites;
 	};
 
 	//std::size_t sizeofFormat(VkFormat format);
@@ -141,12 +140,6 @@ namespace daxa {
 		Pipeline(Pipeline const&)							= delete;
 		Pipeline const& operator=(Pipeline const&) noexcept	= delete;
 		~Pipeline();
-
-		std::shared_ptr<BindingSetLayout const> getSetLayout(u32 set) const { 
-			auto setLayout = bindingSetLayouts.at(set);
-			DAXA_ASSERT_M(setLayout, "tried querring non existant binding set description from pipeline");
-			return setLayout;
-		}
 
 		VkPipelineBindPoint getVkBindPoint() const { return bindPoint; }
 		VkPipeline const& getVkPipeline() const { return pipeline; }
@@ -162,8 +155,7 @@ namespace daxa {
 		friend class PipelineCompiler;
 		void setPipelineDebugName(VkDevice device, char const* debugName);
 
-		std::shared_ptr<DeviceBackend>														deviceBackend			= {};
-		std::array<std::shared_ptr<BindingSetLayout const>, MAX_SETS_PER_PIPELINE> 			bindingSetLayouts 		= {};
+		std::shared_ptr<void>																backend			= {};
 		std::vector<VkFormat> 																colorAttachmentFormats 	= {};
 		VkFormat 																			depthAttachment 		= VK_FORMAT_UNDEFINED;
 		VkFormat 																			stencilAttachment 		= VK_FORMAT_UNDEFINED;

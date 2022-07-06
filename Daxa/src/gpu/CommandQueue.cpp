@@ -5,7 +5,7 @@
 
 namespace daxa {
 	CommandQueue::CommandQueue(
-		std::shared_ptr<DeviceBackend> deviceBackend, 
+		std::shared_ptr<void> deviceBackend, 
 		VkQueue queue, 
 		u32 queueFamilyIndex, 
 		std::shared_ptr<StagingBufferPool> uploadStagingBufferPool, 
@@ -19,6 +19,7 @@ namespace daxa {
 		, uploadStagingBufferPool{ std::move(uploadStagingBufferPool) }
 	{
 		this->batches.resize(std::max(u32(1), ci.batchCount));
+		auto backend = std::static_pointer_cast<DeviceBackend>(this->deviceBackend);
 
 		if (ci.debugName) {
 			this->debugName = ci.debugName;
@@ -30,7 +31,7 @@ namespace daxa {
 					.objectHandle = (uint64_t)queue,
 					.pObjectName = this->debugName.c_str(),
 				};
-				instance->pfnSetDebugUtilsObjectNameEXT(this->deviceBackend->device.device, &imageNameInfo);
+				instance->pfnSetDebugUtilsObjectNameEXT(backend->device.device, &imageNameInfo);
 			}
 		}
 	}
@@ -43,16 +44,12 @@ namespace daxa {
 		for (auto& cmdList : si.commandLists) {
 			DAXA_ASSERT_M(cmdList.get()->finalized, "can only submit finalized command lists");
 			DAXA_ASSERT_M(cmdList.get()->recyclingData.lock().get() == cmdListRecyclingSharedData.get(), "comand lists can only be submitted to the queue they were created from");
-			for (auto& sbuffer : cmdList.get()->usedUploadStagingBuffers) {
-				DAXA_ASSERT_M(!(*sbuffer.buffer).isMemoryMapped(), "can not submit command list. Some Buffers used in the command list have mapped memory, all memory to used buffers need to be unmapped before a submit.");
-			}
+			//for (auto& sbuffer : cmdList.get()->usedUploadStagingBuffers) {
+			//	DAXA_ASSERT_M(!(*sbuffer.buffer).isMemoryMapped(), "can not submit command list. Some Buffers used in the command list have mapped memory, all memory to used buffers need to be unmapped before a submit.");
+			//}
 
 			submitCommandBufferBuffer.push_back(cmdList.get()->cmd);
 			cmdList.get()->usesOnGPU += 1;
-		
-			for (auto& set : cmdList.get()->usedSets) {
-				set->usesOnGPU += 1;
-			}
 			
 			for (auto& [timelineSema, signalValue] : cmdList.get()->usedTimelines) {
 				this->submitSemaphoreSignalBuffer.push_back(timelineSema->getVkSemaphore());
@@ -140,9 +137,6 @@ namespace daxa {
 					while (!iter->cmdLists.empty()) {
 						auto list = std::move(iter->cmdLists.back());
 						iter->cmdLists.pop_back();
-						for (auto& set : list.get()->usedSets) {
-							set->usesOnGPU -= 1;
-						}
 						list.get()->usesOnGPU -= 1;
 					}
 					unusedTimelines.push_back(std::move(iter->timelineSema));
@@ -191,12 +185,7 @@ namespace daxa {
 
 	CommandListHandle CommandQueue::getCommandList(CommandListFetchInfo const& fi) {
 		auto list = std::move(getNextCommandList());
-		list.get()->setDebugName(fi.debugName);
-		{
-			std::unique_lock lock(deviceBackend->graveyard.mtx);
-			deviceBackend->graveyard.activeZombieLists.push_back(list.get()->zombies);
-		}
-		list.get()->begin();
+		list.get()->begin(fi.debugName);
 		return std::move(list);
 	}
 
@@ -210,6 +199,7 @@ namespace daxa {
 		}
 
 		if (unusedCommandLists.empty()) {
+			auto deviceBackend = std::static_pointer_cast<DeviceBackend>(this->deviceBackend);
 			// we have no command lists left, we need to create new ones:
 			unusedCommandLists.push_back(CommandListHandle{ std::make_shared<CommandListBackend>() });
 			CommandListBackend& list = *unusedCommandLists.back().get();

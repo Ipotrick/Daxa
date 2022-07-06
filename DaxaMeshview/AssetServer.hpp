@@ -315,7 +315,7 @@ public:
         for (size_t i = 0; i < data->textures_count; i++) {
             auto& texture = data->textures[i];
 
-            daxa::SamplerCreateInfo samplerInfo = {};
+            daxa::SamplerInfo samplerInfo = {};
             {
                 auto ret = glSamplingToVkSampling(texture.sampler->min_filter);
                 if (ret.isErr()) {
@@ -431,7 +431,7 @@ public:
     }
 
 private:
-    std::vector<daxa::SamplerCreateInfo> textureSamplerInfos;
+    std::vector<daxa::SamplerInfo> textureSamplerInfos;
     std::vector<std::filesystem::path> texturePaths;
     daxa::DeviceHandle device = {};
     std::vector<std::filesystem::path> rootPaths = {};
