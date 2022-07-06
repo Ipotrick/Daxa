@@ -2,11 +2,11 @@
 
 namespace daxa {
 
-    void generateMipLevels(CommandListHandle& cmdList, ImageViewHandle& img, VkImageSubresourceLayers layers, VkImageLayout postImageLayerLayouts) {
-        i32 mipwidth = img->getImageHandle()->getVkExtent3D().width;
-        i32 mipheight = img->getImageHandle()->getVkExtent3D().height;
-        i32 mipdepth = img->getImageHandle()->getVkExtent3D().depth;
-        for (u32 i = layers.mipLevel; i < img->getImageHandle()->getMipLevels() - 1; i++) {
+    void generateMipLevels(DeviceHandle& device, CommandListHandle& cmdList, ImageViewHandle& img, VkImageSubresourceLayers layers, VkImageLayout postImageLayerLayouts) {
+        i32 mipwidth = device->info(img).image->getVkExtent3D().width;
+        i32 mipheight = device->info(img).image->getVkExtent3D().height;
+        i32 mipdepth = device->info(img).image->getVkExtent3D().depth;
+        for (u32 i = layers.mipLevel; i < device->info(img).image->getMipLevels() - 1; i++) {
             cmdList.queueImageBarrier({
                 .barrier = {
                     .srcStages = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR,
@@ -14,7 +14,7 @@ namespace daxa {
                     .dstStages = VK_PIPELINE_STAGE_2_BLIT_BIT_KHR,
                     .dstAccess = VK_ACCESS_2_TRANSFER_READ_BIT_KHR,
                 },
-                .image = img,
+                .image = device->info(img).image,
                 .layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                 .subRange = {VkImageSubresourceRange{
@@ -30,7 +30,7 @@ namespace daxa {
                         .dstStages = VK_PIPELINE_STAGE_2_BLIT_BIT_KHR,
                         .dstAccess = VK_ACCESS_2_TRANSFER_READ_BIT_KHR,
                     },
-                    .image = img,
+                    .image = device->info(img).image,
                     .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                     .subRange = {VkImageSubresourceRange{
                         .aspectMask = layers.aspectMask,
@@ -66,9 +66,9 @@ namespace daxa {
 
             vkCmdBlitImage(
                 cmdList.getVkCommandBuffer(), 
-                img->getImageHandle()->getVkImage(),
+                device->info(img).image->getVkImage(),
                 VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                img->getImageHandle()->getVkImage(),
+                device->info(img).image->getVkImage(),
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 1,
                 &blit,
@@ -83,7 +83,7 @@ namespace daxa {
         std::array<ImageBarrier, 32> buff;
         size_t buffSize = 0;
 
-        for (u32 i = 0; i < img->getImageHandle()->getMipLevels() - 1; i++) {
+        for (u32 i = 0; i < device->info(img).image->getMipLevels() - 1; i++) {
             cmdList.queueImageBarrier({
                 .barrier = MemoryBarrier{
                     .srcStages = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR,
@@ -91,7 +91,7 @@ namespace daxa {
                     .dstStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
                     .dstAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR | VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
                 },
-                .image = img,
+                .image = device->info(img).image,
                 .layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                 .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 .subRange = {VkImageSubresourceRange{
@@ -110,12 +110,12 @@ namespace daxa {
                 .dstStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
                 .dstAccess = VK_ACCESS_2_MEMORY_READ_BIT_KHR | VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
             },
-            .image = img,
+            .image = device->info(img).image,
             .layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             .subRange = {VkImageSubresourceRange{
                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                .baseMipLevel = img->getImageHandle()->getMipLevels() - 1,
+                .baseMipLevel = device->info(img).image->getMipLevels() - 1,
                 .levelCount = 1,
                 .baseArrayLayer = layers.baseArrayLayer,
                 .layerCount = layers.layerCount,

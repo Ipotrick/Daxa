@@ -10,7 +10,7 @@
 
 #include "../DaxaCore.hpp"
 
-#include "Image.hpp"
+#include "GPUHandles.hpp"
 
 namespace daxa {
 	class SwapchainImage {

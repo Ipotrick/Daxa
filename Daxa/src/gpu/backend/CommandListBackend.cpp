@@ -21,7 +21,6 @@ namespace daxa {
 
 	CommandListBackend::CommandListBackend() {
 		this->renderAttachmentBuffer.reserve(5);
-		usedSets.reserve(10);
 		usedGraphicsPipelines.reserve(3);
 		usedUploadStagingBuffers.reserve(1);
 	}
@@ -44,7 +43,7 @@ namespace daxa {
 		finalized = true;
 	}
 
-	MappedMemoryPointer CommandListBackend::mapMemoryStagedBufferVoid(BufferHandle copyDst, size_t size, size_t dstOffset) {
+	MappedMemory CommandListBackend::mapMemoryStagedBufferVoid(BufferHandle copyDst, size_t size, size_t dstOffset) {
 		DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 		DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 		DAXA_ASSERT_M(size <= STAGING_BUFFER_POOL_BUFFER_SIZE, "Currently uploads over a size of 67.108.864 bytes are not supported by the uploadToBuffer function. Please use a staging buffer.");
@@ -58,10 +57,7 @@ namespace daxa {
 
 		auto srcOffset = stagingBuffer.usedUpSize;
 
-		auto mm = stagingBuffer.buffer->mapMemory();
-
-		mm.hostPtr += srcOffset;
-		mm.size = size;
+		MappedMemory mm{ deviceBackend, stagingBuffer.buffer.value(), size, srcOffset };
 
 		stagingBuffer.usedUpSize += size;
 		stagingBuffer.usedUpSize = roundUpToMultipleOf128(stagingBuffer.usedUpSize);
@@ -79,7 +75,7 @@ namespace daxa {
 		return mm;
 	}
 
-	MappedMemoryPointer CommandListBackend::mapMemoryStagedImageVoid(ImageHandle copyDst, VkImageSubresourceLayers subRessource, VkOffset3D dstOffset, VkExtent3D dstExtent) {
+	MappedMemory CommandListBackend::mapMemoryStagedImageVoid(ImageHandle copyDst, VkImageSubresourceLayers subRessource, VkOffset3D dstOffset, VkExtent3D dstExtent) {
 		DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 		DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 		if (bBarriersQueued) { insertQueuedBarriers(); }
@@ -103,10 +99,7 @@ namespace daxa {
 		
 		auto srcOffset = stagingBuffer.usedUpSize;
 
-		auto mm = stagingBuffer.buffer->mapMemory();
-
-		mm.hostPtr += srcOffset;
-		mm.size = size;
+		MappedMemory mm{ deviceBackend, stagingBuffer.buffer.value(), size, srcOffset };
 
 		stagingBuffer.usedUpSize += size;
 		stagingBuffer.usedUpSize = roundUpToMultipleOf128(stagingBuffer.usedUpSize);
@@ -131,19 +124,17 @@ namespace daxa {
 	/// 	TRANSFER 2 BEGIN
 	///
 	
-	MappedMemoryPointer CommandListBackend::mapMemoryStagedImage(
+	MappedMemory CommandListBackend::mapMemoryStagedImage(
 		ImageHandle copyDst, 
 		VkImageSubresourceLayers subressource, 
 		VkOffset3D dstOffset, 
 		VkExtent3D dstExtent
 	) {
-		auto ret = mapMemoryStagedImageVoid(copyDst, subressource, dstOffset, dstExtent);
-		return { reinterpret_cast<u8*>(ret.hostPtr), ret.size, std::move(ret.owningBuffer) };
+		return mapMemoryStagedImageVoid(copyDst, subressource, dstOffset, dstExtent);
 	}
 	
-	MappedMemoryPointer CommandListBackend::mapMemoryStagedBuffer(BufferHandle copyDst, size_t size, size_t dstOffset) {
-		auto ret = mapMemoryStagedBufferVoid(copyDst, size, dstOffset);
-		return { reinterpret_cast<u8*>(ret.hostPtr), ret.size, std::move(ret.owningBuffer) };
+	MappedMemory CommandListBackend::mapMemoryStagedBuffer(BufferHandle copyDst, size_t size, size_t dstOffset) {
+		return std::move(mapMemoryStagedBufferVoid(copyDst, size, dstOffset));
 	}
 
 
@@ -198,10 +189,12 @@ namespace daxa {
 		u64 readBackOffset = stagingBuffer.usedUpSize;
 
 		ToHostCopyFuture future{
+			deviceBackend,
 			std::move(stagingBuffer),
 			timeline,
 			readyValue,
-			/* readback offset: */ readBackOffset,
+			readBackOffset,
+			info.region.size
 		};
 
 		singleCopyBufferToBuffer({
@@ -244,12 +237,12 @@ namespace daxa {
 #if defined(_DEBUG)
 		for (size_t i = 0; i < ci.regions.size(); i++) {
 			auto const& region = ci.regions.data()[i];
-			DAXA_ASSERT_M(region.srcOffset + region.size <= ci.src.getSize(), "copy overruns buffer");
-			DAXA_ASSERT_M(region.dstOffset + region.size <= ci.dst.getSize(), "copy overruns buffer");
+			DAXA_ASSERT_M(region.srcOffset + region.size <= deviceBackend->gpuRessources.buffers.get(ci.src).info.size, "copy overruns buffer");
+			DAXA_ASSERT_M(region.dstOffset + region.size <= deviceBackend->gpuRessources.buffers.get(ci.dst).info.size, "copy overruns buffer");
 		}
 #endif
 
-		vkCmdCopyBuffer(cmd, (VkBuffer)ci.src.getVkBuffer(), (VkBuffer)ci.dst.getVkBuffer(), static_cast<u32>(ci.regions.size()), reinterpret_cast<VkBufferCopy const*>(ci.regions.data()));
+		vkCmdCopyBuffer(cmd, deviceBackend->gpuRessources.buffers.get(ci.src).buffer, deviceBackend->gpuRessources.buffers.get(ci.src).buffer, static_cast<u32>(ci.regions.size()), reinterpret_cast<VkBufferCopy const*>(ci.regions.data()));
 	}
 	void CommandListBackend::singleCopyBufferToBuffer(SingleBufferToBufferCopyInfo const& ci) {
 		this->multiCopyBufferToBuffer({ .src = ci.src, .dst = ci.dst, .regions = std::span{&ci.region,1}});
@@ -276,11 +269,11 @@ namespace daxa {
 				outinfo.imageExtent.depth = ci.dst->getVkExtent3D().depth;
 			}
 			auto minNeededBufferSize = byteSizeOfImageRange(ci.dst, outinfo.imageSubresource, outinfo.imageOffset, outinfo.imageExtent);
-			DAXA_ASSERT_M(minNeededBufferSize <= ci.src.getSize(), "copy size overruns src size");
+			DAXA_ASSERT_M(minNeededBufferSize <= deviceBackend->gpuRessources.buffers.get(ci.src).info.size, "copy size overruns src size");
 			bufferToImageCopyBuffer.push_back(outinfo);
 		}
 
-		vkCmdCopyBufferToImage(cmd, (VkBuffer)ci.src.getVkBuffer(), ci.dst->getVkImage(), ci.dstLayout, bufferToImageCopyBuffer.size(), bufferToImageCopyBuffer.data());
+		vkCmdCopyBufferToImage(cmd, deviceBackend->gpuRessources.buffers.get(ci.src).buffer, ci.dst->getVkImage(), ci.dstLayout, bufferToImageCopyBuffer.size(), bufferToImageCopyBuffer.data());
 		bufferToImageCopyBuffer.clear();
 	}
 	void CommandListBackend::singleCopyBufferToImage(SingleBufferToImageCopyInfo const& ci) {
@@ -343,16 +336,16 @@ namespace daxa {
 	void CommandListBackend::bindVertexBuffer(u32 binding, BufferHandle& buffer, size_t bufferOffset) {
 		DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 		DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-		DAXA_ASSERT_M(buffer, "invalid buffer handle");
-		auto vkBuffer = (VkBuffer)buffer.getVkBuffer();
+		DAXA_ASSERT_M(buffer.isValid(), "invalid buffer handle");
+		auto vkBuffer = deviceBackend->gpuRessources.getBackend(buffer).buffer;
 		vkCmdBindVertexBuffers(cmd, binding, 1, &vkBuffer, &bufferOffset);
 	}
 
 	void CommandListBackend::bindIndexBuffer(BufferHandle& buffer, size_t bufferOffset, VkIndexType indexType) {
 		DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
 		DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-		DAXA_ASSERT_M(buffer, "invalid buffer handle");
-		auto vkBuffer = (VkBuffer)buffer.getVkBuffer();
+		DAXA_ASSERT_M(buffer.isValid(), "invalid buffer handle");
+		VkBuffer vkBuffer = deviceBackend->gpuRessources.getBackend(buffer).buffer;
 		vkCmdBindIndexBuffer(cmd, vkBuffer, bufferOffset, indexType);
 	}
 
@@ -376,7 +369,7 @@ namespace daxa {
 			renderAttachmentBuffer.push_back(VkRenderingAttachmentInfoKHR{
 				.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
 				.pNext = nullptr,
-				.imageView = ri.colorAttachments[i].image->getVkImageView(),
+				.imageView = deviceBackend->gpuRessources.imageViews.get(ri.colorAttachments[i].image).imageView,
 				.imageLayout = ri.colorAttachments[i].layout,
 				.resolveMode = VK_RESOLVE_MODE_NONE,// ri.colorAttachments[i].resolveMode,
 				.loadOp = ri.colorAttachments[i].loadOp,
@@ -390,7 +383,7 @@ namespace daxa {
 				VkRenderingAttachmentInfoKHR{
 					.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
 					.pNext = nullptr,
-					.imageView = ri.depthAttachment->image->getVkImageView(),
+					.imageView = deviceBackend->gpuRessources.imageViews.get(ri.depthAttachment->image).imageView,
 					.imageLayout = ri.depthAttachment->layout,
 					.resolveMode = ri.depthAttachment->resolveMode,
 					.loadOp = ri.depthAttachment->loadOp,
@@ -404,7 +397,7 @@ namespace daxa {
 				VkRenderingAttachmentInfoKHR{
 					.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
 					.pNext = nullptr,
-					.imageView = ri.stencilAttachment->image->getVkImageView(),
+					.imageView = deviceBackend->gpuRessources.imageViews.get(ri.stencilAttachment->image).imageView,
 					.imageLayout = ri.stencilAttachment->layout,
 					.resolveMode = ri.stencilAttachment->resolveMode,
 					.loadOp = ri.stencilAttachment->loadOp,
@@ -420,16 +413,16 @@ namespace daxa {
 			renderInfo.renderArea = *ri.renderArea;
 		}
 		else if (ri.colorAttachments.size() > 0) {
-			renderInfo.renderArea.extent.width = ri.colorAttachments[0].image->getImageHandle()->getVkExtent3D().width;
-			renderInfo.renderArea.extent.height = ri.colorAttachments[0].image->getImageHandle()->getVkExtent3D().height;
+			renderInfo.renderArea.extent.width = deviceBackend->gpuRessources.imageViews.get(ri.colorAttachments[0].image).image->getVkExtent3D().width;
+			renderInfo.renderArea.extent.height = deviceBackend->gpuRessources.imageViews.get(ri.colorAttachments[0].image).image->getVkExtent3D().height;
 		}
 		else if (ri.depthAttachment != nullptr) {
-			renderInfo.renderArea.extent.width = ri.depthAttachment->image->getImageHandle()->getVkExtent3D().width;
-			renderInfo.renderArea.extent.height = ri.depthAttachment->image->getImageHandle()->getVkExtent3D().height;
+			renderInfo.renderArea.extent.width = deviceBackend->gpuRessources.imageViews.get(ri.depthAttachment->image).image->getVkExtent3D().width;
+			renderInfo.renderArea.extent.height = deviceBackend->gpuRessources.imageViews.get(ri.depthAttachment->image).image->getVkExtent3D().height;
 		}
 		else if (ri.stencilAttachment != nullptr) {
-			renderInfo.renderArea.extent.width = ri.stencilAttachment->image->getImageHandle()->getVkExtent3D().width;
-			renderInfo.renderArea.extent.height = ri.stencilAttachment->image->getImageHandle()->getVkExtent3D().height;
+			renderInfo.renderArea.extent.width = deviceBackend->gpuRessources.imageViews.get(ri.stencilAttachment->image).image->getVkExtent3D().width;
+			renderInfo.renderArea.extent.height = deviceBackend->gpuRessources.imageViews.get(ri.stencilAttachment->image).image->getVkExtent3D().height;
 		}	// otherwise let it be zero, as we dont render anything anyways
 
 		renderInfo.layerCount = 1;	// Not sure what this does
@@ -473,6 +466,8 @@ namespace daxa {
 		currentPipeline = pipeline;
 
 		checkIfPipelineAndRenderPassFit();
+
+		vkCmdBindDescriptorSets(cmd, pipeline->getVkBindPoint(), pipeline->getVkPipelineLayout(), 0, 1, &deviceBackend->gpuRessources.bindAllSet, 0, nullptr);
 	}
 
 	void CommandListBackend::unbindPipeline() {
@@ -480,7 +475,9 @@ namespace daxa {
 		currentPipeline = {};
 	}
 
-	void CommandListBackend::begin() {
+	void CommandListBackend::begin(char const* debugName) {
+		setDebugName(debugName);
+		deviceBackend->graveyard.activateZombieList(zombies);
 		VkCommandBufferBeginInfo cbbi{
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 			.pNext = nullptr,
@@ -501,7 +498,7 @@ namespace daxa {
 
 			for (size_t i = 0; i < currentPipeCAFs.size(); i++) {
 				auto pipeformat = currentPipeCAFs[i];
-				auto rpformat = currentRendPassCAIs[i].image->getVkFormat();
+				auto rpformat = deviceBackend->gpuRessources.imageViews.get(currentRendPassCAIs[i].image).info.format;
 				std::string formatMessage = "; pipeline attachment format [";
 				formatMessage += std::to_string(i);
 				formatMessage += "]: " ;
@@ -514,11 +511,11 @@ namespace daxa {
 			}
 			if ((**currentPipeline).getDepthAttachmentFormat() != VK_FORMAT_UNDEFINED) {
 				DAXA_ASSERT_M(currentRenderPass->depthAttachment.has_value(), std::string("if the pipeline uses a depth attachment the renderpass must have a depth attachemnt too") + nameMessage);
-				DAXA_ASSERT_M(currentRenderPass->depthAttachment.value().image->getVkFormat() == (**currentPipeline).getDepthAttachmentFormat(), std::string("the depth attachment format of the pipeline and renderpass must be the same") + nameMessage);
+				DAXA_ASSERT_M(deviceBackend->gpuRessources.imageViews.get(currentRenderPass->depthAttachment.value().image).info.format == (**currentPipeline).getDepthAttachmentFormat(), std::string("the depth attachment format of the pipeline and renderpass must be the same") + nameMessage);
 			}
 			if ((**currentPipeline).getStencilAttachmentFormat() != VK_FORMAT_UNDEFINED) {
 				DAXA_ASSERT_M(currentRenderPass->stencilAttachment.has_value(), std::string("if the pipeline uses a stencil attachment the renderpass must have a stencil attachemnt too") + nameMessage);
-				DAXA_ASSERT_M(currentRenderPass->stencilAttachment.value().image->getVkFormat() == (**currentPipeline).getStencilAttachmentFormat(), std::string("the stencil attachment format of the pipeline and renderpass must be the same") + nameMessage);
+				DAXA_ASSERT_M(deviceBackend->gpuRessources.imageViews.get(currentRenderPass->stencilAttachment.value().image).info.format == (**currentPipeline).getStencilAttachmentFormat(), std::string("the stencil attachment format of the pipeline and renderpass must be the same") + nameMessage);
 			}
 		}
 	}
@@ -552,7 +549,6 @@ namespace daxa {
 		empty = true;
 		DAXA_CHECK_VK_RESULT(vkResetCommandPool(deviceBackend->device.device, cmdPool, VkCommandPoolResetFlagBits::VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT));
 		usedGraphicsPipelines.clear();
-		usedSets.clear();
 		currentPipeline = {};
 		currentRenderPass = {};
 		usedUploadStagingBuffers.clear();
@@ -565,15 +561,11 @@ namespace daxa {
 			// this is important as an image view can own a sampler,
 			// if the sampler becomes a zombie while the zombie queue is beein cleared, the zombie will be enqueued in all active queues,
 			// including this one. This causes a memory corruption as its illegal to append to a vector that is currently running its clear function.
-			std::unique_lock lock(deviceBackend->graveyard.mtx);
-			auto iter = std::find_if(deviceBackend->graveyard.activeZombieLists.begin(), deviceBackend->graveyard.activeZombieLists.end(), [&](std::shared_ptr<ZombieList>& other){ return other.get() == zombies.get(); });
-			if (iter != deviceBackend->graveyard.activeZombieLists.end()) {
-				deviceBackend->graveyard.activeZombieLists.erase(iter);
-			}
+			deviceBackend->graveyard.deactivateZombieList(zombies);
 		}
 		// zombie list is cleared after it is removed from the pool of active zombie lists.
 		// this prevents image views to enqueue sampler zombies while the queue is cleared.
-		zombies->zombies.clear();
+		zombies->clear(deviceBackend->device.device, deviceBackend->allocator, deviceBackend->gpuRessources);
 	}
 
 	void CommandListBackend::setViewport(VkViewport const& viewport) {
@@ -607,25 +599,6 @@ namespace daxa {
 		DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 		DAXA_ASSERT_M(currentPipeline, "can not draw sets if there is no pipeline bound");
 		vkCmdDrawIndexed(cmd, indexCount, instanceCount, firstIndex, vertexOffset, firstIntance);
-	}
-
-	void CommandListBackend::bindSet(u32 setBinding, BindingSetHandle set) {
-		DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
-		DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-		DAXA_ASSERT_M(currentPipeline, "can not bind sets if there is no pipeline bound");
-		vkCmdBindDescriptorSets(cmd, (**currentPipeline).getVkBindPoint(), (**currentPipeline).getVkPipelineLayout(), setBinding, 1, &set->set, 0, nullptr);
-		usedSets.push_back(std::move(set));
-	}
-
-	void CommandListBackend::bindSetPipelineIndependant(u32 setBinding, BindingSetHandle set, VkPipelineBindPoint bindPoint, VkPipelineLayout layout) {
-		DAXA_ASSERT_M(finalized == false, "can not record any commands to a finished command list");
-		DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
-		vkCmdBindDescriptorSets(cmd, bindPoint, layout, setBinding, 1, &set->set, 0, nullptr);
-		usedSets.push_back(std::move(set));
-	}
-
-	void CommandListBackend::bindAll(u32 set) {
-		vkCmdBindDescriptorSets(cmd, (**currentPipeline).getVkBindPoint(), (**currentPipeline).getVkPipelineLayout(), set, 1, &deviceBackend->bindAllSet, 0, nullptr);
 	}
 
 	void CommandListBackend::insertQueuedBarriers() {
@@ -674,10 +647,7 @@ namespace daxa {
 		DAXA_ASSERT_M(usesOnGPU == 0, "can not change command list, that is currently used on gpu");
 		DAXA_ASSERT_M(!currentRenderPass.has_value(), "can not insert memory barriers in renderpass");
 
-		VkImageSubresourceRange range = imgBarrier.subRange;
-		if (range.aspectMask == VK_IMAGE_ASPECT_FLAG_BITS_MAX_ENUM) {
-			range = imgBarrier.image->getVkImageSubresourceRange();
-		}
+		DAXA_ASSERT_M(imgBarrier.subRange.aspectMask != VK_IMAGE_ASPECT_FLAG_BITS_MAX_ENUM, "must set subressource range for memory barriers");
 
 		queuedImageBarriers.push_back(VkImageMemoryBarrier2KHR{
 			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR,
@@ -690,8 +660,8 @@ namespace daxa {
 			.newLayout = imgBarrier.layoutAfter,
 			.srcQueueFamilyIndex = imgBarrier.srcQueueIndex,
 			.dstQueueFamilyIndex = imgBarrier.dstQueueIndex,
-			.image = imgBarrier.image->getImageHandle()->getVkImage(),
-			.subresourceRange = range,
+			.image = imgBarrier.image->getVkImage(),
+			.subresourceRange = imgBarrier.subRange,
 		});
 		bBarriersQueued = true;
 	}

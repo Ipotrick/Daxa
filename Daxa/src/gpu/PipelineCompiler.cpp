@@ -69,23 +69,8 @@ namespace daxa {
 	void backendDeletor(void* backend) {
 		delete static_cast<Backend*>(backend);
 	}
-
-	std::vector<VkDescriptorSetLayout> processReflectedDescriptorData(
-		std::vector<BindingSetDescription>& setDescriptions,
-		BindingSetLayoutCache& descCache,
-		std::array<std::shared_ptr<BindingSetLayout const>, MAX_SETS_PER_PIPELINE>& setLayouts
-	) {
-		std::vector<VkDescriptorSetLayout> descLayouts;
-		BindingSetDescription description;
-		for (size_t set = 0; set < setDescriptions.size(); set++) {
-			auto layout = descCache.getLayoutShared(setDescriptions[set]);
-			setLayouts[set] = layout;
-			descLayouts.push_back(layout->getVkDescriptorSetLayout());
-		}
-		return std::move(descLayouts);
-	}
 	
-	Result<std::string> PipelineCompilerShadedData::tryLoadShaderSourceFromFile(std::filesystem::path const& path) {
+	Result<std::string> PipelineCompilerSharedData::tryLoadShaderSourceFromFile(std::filesystem::path const& path) {
 		auto result = findFullPathOfFile(path);
 		if (result.isErr()) {
 			return ResultErr{ .message = result.message() };
@@ -280,108 +265,9 @@ namespace daxa {
 
 		return { std::vector<u32>{ module.begin(), module.end()} };
 	}
-
-	std::vector<VkPushConstantRange> reflectPushConstants(const std::vector<uint32_t>& spv, VkShaderStageFlagBits shaderStage) {
-		SpvReflectShaderModule module = {};
-		SpvReflectResult result = spvReflectCreateShaderModule(spv.size() * sizeof(uint32_t), spv.data(), &module);
-		assert(result == SPV_REFLECT_RESULT_SUCCESS);
-
-		uint32_t count = 0;
-		result = spvReflectEnumeratePushConstantBlocks(&module, &count, NULL);
-
-		std::vector<SpvReflectBlockVariable*> blocks(count);
-		result = spvReflectEnumeratePushConstantBlocks(&module, &count, blocks.data());
-		assert(result == SPV_REFLECT_RESULT_SUCCESS);
-
-		std::vector<VkPushConstantRange> ret;
-		for (auto* block : blocks) {
-			ret.push_back(VkPushConstantRange{
-				.stageFlags = (VkShaderStageFlags)shaderStage,
-				.offset = block->offset,
-				.size = block->size,
-				});
-		}
-		return std::move(ret);
-	}
-
-	std::map<uint32_t, std::map<uint32_t, VkDescriptorSetLayoutBinding>>
-	reflectSetBindings(const std::vector<uint32_t>& spv, VkShaderStageFlagBits shaderStage) {
-		SpvReflectShaderModule module = {};
-		SpvReflectResult result = spvReflectCreateShaderModule(spv.size() * sizeof(uint32_t), spv.data(), &module);
-		assert(result == SPV_REFLECT_RESULT_SUCCESS);
-
-		uint32_t count = 0;
-		result = spvReflectEnumerateDescriptorSets(&module, &count, NULL);
-		assert(result == SPV_REFLECT_RESULT_SUCCESS);
-
-		std::vector<SpvReflectDescriptorSet*> sets(count);
-		result = spvReflectEnumerateDescriptorSets(&module, &count, sets.data());
-		assert(result == SPV_REFLECT_RESULT_SUCCESS);
-
-		std::map<uint32_t, std::map<uint32_t, VkDescriptorSetLayoutBinding>> setMap;
-		for (auto* set : sets) {
-			std::vector<VkDescriptorSetLayoutBinding> bindings;
-			for (uint32_t i = 0; i < set->binding_count; i++) {
-				auto* reflBinding = set->bindings[i];
-
-				VkDescriptorSetLayoutBinding binding{
-					.binding = reflBinding->binding,
-					.descriptorType = static_cast<VkDescriptorType>(reflBinding->descriptor_type),
-					.descriptorCount = reflBinding->count,
-					.stageFlags = (VkShaderStageFlags)shaderStage
-				};
-				setMap[set->set][binding.binding] = binding;
-			}
-		}
-
-		spvReflectDestroyShaderModule(&module);
-		return std::move(setMap);
-	}
-
-	void reflectShader(
-		ShaderModuleHandle const& shaderModule, 
-		std::vector<VkPushConstantRange>& pushConstants, 
-		std::vector<BindingSetDescription>& bindingSetDescriptions
-	) {
-		auto falserefl = reflectPushConstants(shaderModule->getSPIRV(), shaderModule->getVkShaderStage());
-		auto refl2 = reinterpret_cast<std::vector<VkPushConstantRange>*>(&falserefl);
-		auto& refl = *refl2;
-		for (auto& r : refl) {
-			auto iter = pushConstants.begin();
-			for (; iter != pushConstants.end(); iter++) {
-				if (iter->offset == r.offset) {
-					if (iter->size != r.size) {
-						DAXA_ASSERT_M(false, "push constant ranges of the same offset must have the same size");
-					}
-					// found the same push contant range:
-					iter->stageFlags |= r.stageFlags;
-					break;
-				}
-			}
-			if (iter == pushConstants.end()) {
-				// did not find same push constant. make new one:
-				pushConstants.push_back(r);
-			}
-		}
-
-		// reflect spirv descriptor sets:
-		auto reflDesc = reflectSetBindings(shaderModule->getSPIRV(), shaderModule->getVkShaderStage());
-		//}
-		for (auto& [set, bindingLayouts] : reflDesc) {
-			if (set >= bindingSetDescriptions.size()) {
-				bindingSetDescriptions.resize(set+1, {});
-			}
-
-			for (auto& [binding, layout] : bindingLayouts) {
-				bindingSetDescriptions[set].layouts[binding].descriptorType = layout.descriptorType;
-				bindingSetDescriptions[set].layouts[binding].descriptorCount = layout.descriptorCount;
-				bindingSetDescriptions[set].layouts[binding].stageFlags |= layout.stageFlags;
-			}
-		}
-	}
-
 	
 	Result<ShaderModuleHandle> PipelineCompiler::tryCreateShaderModule(ShaderModuleCreateInfo const& ci) {
+		std::shared_ptr<DeviceBackend> deviceBackend = std::static_pointer_cast<DeviceBackend>(this->dbackend);
 		std::string sourceCode = {};
 		if (!ci.pathToSource.empty()) {
 			auto src = sharedData->tryLoadShaderSourceFromFile(ci.pathToSource);
@@ -398,12 +284,7 @@ namespace daxa {
 		}
 
 		daxa::Result<std::vector<u32>> spirv = daxa::ResultErr{};
-		if (ci.shaderLang == ShaderLang::GLSL) {
-			spirv = tryGenSPIRVFromShaderc(sourceCode, ci.stage, ci.shaderLang, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()), ci.defines);
-		} 
-		else {
-			spirv = tryGenSPIRVFromDxc(sourceCode, ci.stage, ci.entryPoint, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()), ci.defines);
-		}
+		spirv = tryGenSPIRVFromDxc(sourceCode, ci.stage, ci.entryPoint, (ci.pathToSource.empty() ? "inline source" : ci.pathToSource.string().c_str()), ci.defines);
 		if (spirv.isErr()) {
 			return ResultErr{ spirv.message() };
 		}
@@ -450,7 +331,7 @@ namespace daxa {
 
 	class DxcFileIncluder : public IDxcIncludeHandler {
 	public:
-		std::shared_ptr<PipelineCompilerShadedData> sharedData = {};
+		std::shared_ptr<PipelineCompilerSharedData> sharedData = {};
 		ComPtr<IDxcUtils> pUtils;
 		ComPtr<IDxcIncludeHandler> pDefaultIncludeHandler;
 		HRESULT LoadSource(LPCWSTR pFilename, IDxcBlob** ppIncludeSource) override
@@ -587,13 +468,12 @@ namespace daxa {
 			}
 		};
 
-		std::shared_ptr<PipelineCompilerShadedData> sharedData = {};
+		std::shared_ptr<PipelineCompilerSharedData> sharedData = {};
 	};
 
-    PipelineCompiler::PipelineCompiler(std::shared_ptr<DeviceBackend> deviceBackend, std::shared_ptr<BindingSetLayoutCache> bindSetLayoutCache) 
-		: deviceBackend{ deviceBackend }
-		, bindSetLayoutCache{ bindSetLayoutCache }
-		, sharedData{ std::make_shared<PipelineCompilerShadedData>() }
+    PipelineCompiler::PipelineCompiler(std::shared_ptr<void> dbackend) 
+		: dbackend{ dbackend }
+		, sharedData{ std::make_shared<PipelineCompilerSharedData>() }
 		, recreationCooldown{ 250 }
 		, backend{ std::unique_ptr<void, void(*)(void*)>(new Backend(), backendDeletor) }
 	{
@@ -681,7 +561,7 @@ namespace daxa {
         this->sharedData->rootPaths.push_back(root); 
     }
 
-    Result<Path> PipelineCompilerShadedData::findFullPathOfFile(Path const& file) {
+    Result<Path> PipelineCompilerSharedData::findFullPathOfFile(Path const& file) {
 		std::ifstream ifs{file};
 		if (ifs.good()) {
 			return { file };
@@ -705,10 +585,11 @@ namespace daxa {
 
     Result<PipelineHandle> PipelineCompiler::createGraphicsPipeline(GraphicsPipelineBuilder const& builder) {
         DAXA_ASSERT_M(!builder.bVertexAtrributeBindingBuildingOpen, "vertex attribute bindings must be completed before creating a pipeline");
+		std::shared_ptr<DeviceBackend> deviceBackend = std::static_pointer_cast<DeviceBackend>(this->dbackend);
 
 		auto pipelineHandle = PipelineHandle{ std::make_shared<Pipeline>() };
 		Pipeline& ret = *pipelineHandle;
-		ret.deviceBackend = deviceBackend;
+		ret.backend = dbackend;
 		ret.bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 		ret.colorAttachmentFormats = builder.colorAttachmentFormats;
 		ret.depthAttachment = builder.depthTestSettings.depthAttachmentFormat;
@@ -717,8 +598,6 @@ namespace daxa {
 
 		sharedData->observedHotLoadFiles = &ret.observedHotLoadFiles;
 
-		std::vector<VkPushConstantRange> pushConstants;
-		std::vector<BindingSetDescription> bindingSetDescriptions;
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStageCreateInfo;
 		std::vector<ShaderModuleHandle> shaderModules;
 		shaderModules.reserve(builder.shaderModuleCIs.size());
@@ -733,32 +612,20 @@ namespace daxa {
 			}
 		}
 
-		for (auto& shaderModule : shaderModules) {
-			VkPipelineShaderStageCreateInfo pipelineShaderStageCI{
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-				.pNext = nullptr,
-				.stage = shaderModule->shaderStage,
-				.module = shaderModule->shaderModule,
-				.pName = shaderModule->entryPoint.c_str(),
-			};
-			shaderStageCreateInfo.push_back(pipelineShaderStageCI);
-			reflectShader(shaderModule, pushConstants, bindingSetDescriptions);
-		}
-
-		for (auto& [set, descr] : builder.setDescriptionOverwrites) {
-			bindingSetDescriptions[set] = descr;
-		}
-
-		auto descLayouts = processReflectedDescriptorData(bindingSetDescriptions, *bindSetLayoutCache, ret.bindingSetLayouts);
+		VkPushConstantRange pushConstantRange {
+			.stageFlags = VkShaderStageFlagBits::VK_SHADER_STAGE_ALL,
+			.offset = 0,
+			.size = builder.pushConstantSize
+		};
 
 		// create pipeline layout:
 		VkPipelineLayoutCreateInfo pipelineLayoutCI{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 			.pNext = nullptr,
-			.setLayoutCount = static_cast<u32>(descLayouts.size()),
-			.pSetLayouts = descLayouts.data(),
-			.pushConstantRangeCount = static_cast<u32>(pushConstants.size()),
-			.pPushConstantRanges = pushConstants.data(),
+			.setLayoutCount = 1,
+			.pSetLayouts = &deviceBackend->gpuRessources.bindAllSetLayout,
+			.pushConstantRangeCount = builder.pushConstantSize ? u32(1) : u32(0),
+			.pPushConstantRanges = builder.pushConstantSize ? &pushConstantRange : nullptr,
 		};
 		DAXA_CHECK_VK_RESULT_M(vkCreatePipelineLayout(deviceBackend->device.device, &pipelineLayoutCI, nullptr, &ret.layout), "failed to create graphics pipeline");
 
@@ -870,10 +737,11 @@ namespace daxa {
 
 	Result<PipelineHandle> PipelineCompiler::createComputePipeline(ComputePipelineCreateInfo const& ci) {
 		sharedData->currentShaderSeenFiles.clear();
+		std::shared_ptr<DeviceBackend> deviceBackend = std::static_pointer_cast<DeviceBackend>(this->dbackend);
 
 		auto pipelineHandle = PipelineHandle{ std::make_shared<Pipeline>() };
 		Pipeline& ret = *pipelineHandle;
-		ret.deviceBackend = deviceBackend;
+		ret.backend = dbackend;
 		ret.bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
 		ret.creator = ci;
 
@@ -895,38 +763,20 @@ namespace daxa {
 			.pName = shader->getVkEntryPoint().c_str(),
 		};
 
-		std::vector<VkPushConstantRange> pushConstants;
-		std::vector<BindingSetDescription> bindingSetDescriptions;
-
-		reflectShader(shader, pushConstants, bindingSetDescriptions);
-
-        bindingSetDescriptions.resize(std::max(bindingSetDescriptions.size(), ci.overwriteSets.size()));
-
-		for (size_t i = 0; i < MAX_SETS_PER_PIPELINE; i++) {
-			if (ci.overwriteSets[i].has_value()) {
-				bindingSetDescriptions[i] = ci.overwriteSets[i].value();
-			}
-		}
-
-		std::vector<VkDescriptorSetLayout> descLayouts = processReflectedDescriptorData(bindingSetDescriptions, *bindSetLayoutCache, ret.bindingSetLayouts);
-
-		if (ci.pushConstantSize > 0) {
-			pushConstants.clear();
-			pushConstants.push_back(VkPushConstantRange{
-    			.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
-				.offset = 0,
-    			.size = static_cast<u32>(ci.pushConstantSize),
-			});
-		}
+		VkPushConstantRange pushConstantRange {
+			.stageFlags = VkShaderStageFlagBits::VK_SHADER_STAGE_ALL,
+			.offset = 0,
+			.size = ci.pushConstantSize
+		};
 
 		// create pipeline layout:
 		VkPipelineLayoutCreateInfo pipelineLayoutCI{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 			.pNext = nullptr,
-			.setLayoutCount = static_cast<u32>(descLayouts.size()),
-			.pSetLayouts = descLayouts.data(),
-			.pushConstantRangeCount = static_cast<u32>(pushConstants.size()),
-			.pPushConstantRanges = pushConstants.data(),
+			.setLayoutCount = 1,
+			.pSetLayouts = &deviceBackend->gpuRessources.bindAllSetLayout,
+			.pushConstantRangeCount = ci.pushConstantSize > 0 ? u32(1) : u32(1),
+			.pPushConstantRanges = ci.pushConstantSize ? &pushConstantRange : nullptr,
 		};
 		DAXA_CHECK_VK_RESULT_M(vkCreatePipelineLayout(deviceBackend->device.device, &pipelineLayoutCI, nullptr, &ret.layout), "failed to create compute pipeline layout");
 

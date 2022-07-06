@@ -8,7 +8,7 @@
 
 #include <vulkan/vulkan.h>
 
-#include "Buffer.hpp"
+#include "GPUHandles.hpp"
 
 namespace daxa {
 	constexpr inline size_t STAGING_BUFFER_POOL_BUFFER_SIZE = 1 << 26;	// 67 MB, about 4k texture size
@@ -41,20 +41,17 @@ namespace daxa {
 	class StagingBufferPool {
 	public:
 		StagingBufferPool(
-			std::shared_ptr<DeviceBackend> deviceBackend, 
+			std::shared_ptr<void> deviceBackend, 
 			size_t size = STAGING_BUFFER_POOL_BUFFER_SIZE, 
-			//VkBufferUsageFlags usages = VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
-			//memoryType = VMA_MEMORY_USAGE_CPU_TO_GPU
 			MemoryType memoryType = MemoryType::CPU_TO_GPU
 		);
+		~StagingBufferPool();
 
 		StagingBuffer getStagingBuffer();
 	private:
-		std::shared_ptr<DeviceBackend> deviceBackend = {};
+		std::shared_ptr<void> deviceBackend = {};
 		std::shared_ptr<StagingBufferPoolSharedData> sharedData = {};
 		size_t size;
-		//VkBufferUsageFlags usages; 
-		//VmaMemoryUsage memoryUsages;
 		MemoryType memoryType;
 	};
 }

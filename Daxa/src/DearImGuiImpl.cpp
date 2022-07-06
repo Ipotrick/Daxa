@@ -90,43 +90,75 @@ namespace daxa {
         embraceTheDarkness();
 
         char const* vertexGLSL = R"--(
-            #version 450 core
-            layout(location = 0) in vec2 aPos;
-            layout(location = 1) in vec2 aUV;
-            layout(location = 2) in vec4 aColor;
-            layout(push_constant) uniform uPushConstant { vec2 uScale; vec2 uTranslate; } pc;
-            out gl_PerVertex { vec4 gl_Position; };
-            layout(location = 0) out struct { vec4 Color; vec2 UV; } Out;
-            void main()
+            [[push_constant]]
+            struct Push{
+                float2 uScale;
+                float2 uTranslate;
+            } p;
+
+            struct VertexIn {
+                float2 aPos;
+                float2 aUV;
+                float4 aColor;
+            };
+
+            struct VertexOut {
+                float4 pos : SV_POSITION;
+                float4 Color; 
+                float2 UV;
+            };
+
+            VertexOut main(VertexIn in)
             {
-                Out.Color = aColor;
-                Out.UV = aUV;
-                gl_Position = vec4(aPos * pc.uScale + pc.uTranslate, 0, 1);
+                VertexOut out;
+                out.Color = aColor;
+                out.UV = aUV;
+                out.pos = float4(in.aPos * p.uScale + p.uTranslate, 0, 1);
+                return out;
             }
         )--";
 
         char const* fragmentGLSL = R"--(
-            #version 450 core
-            layout(location = 0) out vec4 fColor;
-            layout(set=0, binding=0) uniform sampler2D sTexture;
-            layout(location = 0) in struct { vec4 Color; vec2 UV; } In;
-            vec4 srgb_to_linear(vec4 srgb) {
-                vec3 color_srgb = srgb.rgb;
-                vec3 selector = clamp(ceil(color_srgb - 0.04045), 0.0, 1.0); // 0 if under value, 1 if over
-                vec3 under = color_srgb / 12.92;
-                vec3 over = pow((color_srgb + 0.055) / 1.055, vec3(2.4));
-                vec3 result = mix(under, over, selector);
-                return vec4(result, srgb.a);
+            #include "daxa.hlsl"
+
+            struct FragmentIn {
+                float4 pos : SV_POSITION;
+                float4 Color; 
+                float2 UV;
+            };
+
+            struct FragmentOut {
+                float4 color : COLOR0;
+            };
+
+            [[push_constant]]
+            struct Push{
+                u32 sampler;
+                u32 texture;
+            } p;
+
+            float4 srgb_to_linear(float4 srgb) {
+                float3 color_srgb = srgb.rgb;
+                float3 selector = clamp(ceil(color_srgb - 0.04045), 0.0, 1.0); // 0 if under value, 1 if over
+                float3 under = color_srgb / 12.92;
+                float3 over = pow((color_srgb + 0.055) / 1.055, float3(2.4));
+                float3 result = mix(under, over, selector);
+                return float4(result, srgb.a);
             }
-            void main()
+
+            FragmentOut main(FragmentIn in)
             {
-                vec4 color = srgb_to_linear(In.Color);
-                fColor = color * texture(sTexture, In.UV.st);
-            }
+                SamplerState sampler = daxa::getSampler(p.sampler);
+                Texture2D<float4> texture = daxa::getTexture2D<float4>(p.texture);
+                FragmentOut out;
+                out.color = srgb_to_linear(in.Color) * texture.Sample(sampler, in.UV);
+                return out;
+            }s
         )--";
 
         daxa::GraphicsPipelineBuilder pipelineBuilder;
         auto pipelineDescription = pipelineBuilder
+            .setPushConstantSize(sizeof(u32))
             .addShaderStage({.source = vertexGLSL, .stage = VK_SHADER_STAGE_VERTEX_BIT})
             .addShaderStage({.source = fragmentGLSL, .stage = VK_SHADER_STAGE_FRAGMENT_BIT})
             .setDebugName("ImGui render pipeline")
@@ -148,12 +180,6 @@ namespace daxa {
 
         pipeline = compiler->createGraphicsPipeline(pipelineDescription).value();
 
-        setAlloc = device->createBindingSetAllocator({
-            .setLayout = pipeline->getSetLayout(0),
-            .setPerPool = 128,
-            .debugName = "dear imgui set allocator"
-        });
-
         recreatePerFrameData(4096, 4096);
 
         ImGuiIO& io = ImGui::GetIO();
@@ -163,27 +189,26 @@ namespace daxa {
         io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
         size_t upload_size = width * height * 4 * sizeof(char);
 
-        auto fontSheet = device->createImageView({
+        fontSheetId = device->createImageView({
             .image = device->createImage({
                 .format = VK_FORMAT_R8G8B8A8_UNORM,
                 .extent = {.width = (u32)width, .height = (u32)height, .depth = 1},
                 .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
             }),
             .format = VK_FORMAT_R8G8B8A8_UNORM,
-            .defaultSampler = device->createSampler({}),
         });
 
         auto cmdList = queue->getCommandList({});
         cmdList.queueImageBarrier({
-            .image = fontSheet,
+            .image = device->info(fontSheetId).image,
             .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         });
         cmdList.singleCopyHostToImage({
             .src = pixels,
-            .dst = fontSheet->getImageHandle(),
+            .dst = device->info(fontSheetId).image,
         });
         cmdList.queueImageBarrier({
-            .image = fontSheet,
+            .image = device->info(fontSheetId).image,
             .layoutBefore = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             .layoutAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         });
@@ -192,9 +217,20 @@ namespace daxa {
             .commandLists = { cmdList }
         });
 
-        referencedImages.push_back(fontSheet);
-
         io.Fonts->SetTexID(0);
+        samplerId = device->createSampler({});
+    }
+    
+    ImGuiRenderer::~ImGuiRenderer() {
+        device->destroySampler(samplerId);
+        for (auto& frame : perFrameData) {
+            if (frame.indexBuffer.isValid()) {
+                device->destroyBuffer(frame.indexBuffer);
+            }
+            if (frame.vertexBuffer.isValid()) {
+                device->destroyBuffer(frame.vertexBuffer);
+            }
+        }
     }
 
     void ImGuiRenderer::recreatePerFrameData(size_t newMinSizeVertex, size_t newMinSizeIndices) {
@@ -218,14 +254,6 @@ namespace daxa {
             });
         }
     }
-    
-    u64 ImGuiRenderer::getImGuiTextureId(ImageViewHandle img) {
-        if (!texHandlePtrToReferencedImageIndex.contains(img.get())) {
-            referencedImages.push_back(img);
-            texHandlePtrToReferencedImageIndex[img.get()] = referencedImages.size() - 1;
-        }
-        return texHandlePtrToReferencedImageIndex[img.get()];
-    }
 
     void ImGuiRenderer::recordCommands(ImDrawData* draw_data, daxa::CommandListHandle& cmdList, ImageViewHandle& target) {
 
@@ -241,7 +269,8 @@ namespace daxa {
             auto& vertexBuffer  = perFrameData.front().vertexBuffer;
             auto& indexBuffer   = perFrameData.front().indexBuffer;
 
-            if (draw_data->TotalVtxCount * sizeof(ImDrawVert) > vertexBuffer.getSize()) {
+            if (draw_data->TotalVtxCount * sizeof(ImDrawVert) > device->info(vertexBuffer).size) {
+                device->destroyBuffer(vertexBuffer);
                 auto newSize = draw_data->TotalVtxCount * sizeof(ImDrawVert) + 4096;
                 vertexBuffer = device->createBuffer({
                     .size = newSize,
@@ -252,7 +281,8 @@ namespace daxa {
                 });
             }
 
-            if (draw_data->TotalIdxCount * sizeof(ImDrawIdx) > indexBuffer.getSize()) {
+            if (draw_data->TotalIdxCount * sizeof(ImDrawIdx) > device->info(indexBuffer).size) {
+                device->destroyBuffer(indexBuffer);
                 auto newSize = draw_data->TotalIdxCount * sizeof(ImDrawIdx) + 4096;
                 indexBuffer = device->createBuffer({
                     .size = newSize,
@@ -263,8 +293,8 @@ namespace daxa {
                 });
             }
             {
-                auto vtx_dst = vertexBuffer.mapMemory();
-                auto idx_dst = indexBuffer.mapMemory();
+                auto vtx_dst = device->mapMemory(vertexBuffer);
+                auto idx_dst = device->mapMemory(indexBuffer);
 
                 for (int n = 0; n < draw_data->CmdListsCount; n++)
                 {
@@ -304,6 +334,7 @@ namespace daxa {
                 translate[1] = -1.0f - draw_data->DisplayPos.y * scale[1];
                 cmdList.pushConstant(VK_SHADER_STAGE_VERTEX_BIT, scale);
                 cmdList.pushConstant(VK_SHADER_STAGE_VERTEX_BIT, translate, sizeof(scale));
+                cmdList.pushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, samplerId);
             }
 
             ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
@@ -313,16 +344,12 @@ namespace daxa {
             int global_idx_offset = 0;
             for (int n = 0; n < draw_data->CmdListsCount; n++) {
                 const ImDrawList* draws = draw_data->CmdLists[n];
-                size_t lastTexId = 0;
-                auto set = setAlloc->getSet();
-                set->bindImage(0, referencedImages[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-                cmdList.bindSet(0, set);
+                cmdList.pushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, fontSheetId, sizeof(u32));
+
                 for (int cmd_i = 0; cmd_i < draws->CmdBuffer.Size; cmd_i++)  {
                     const ImDrawCmd* pcmd = &draws->CmdBuffer[cmd_i];
 
-                    set = setAlloc->getSet();
-                    set->bindImage(0, referencedImages[(size_t)pcmd->TextureId], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-                    cmdList.bindSet(0, set);
+                    cmdList.pushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, daxa::ImageViewHandle::fromRaw(static_cast<u32>(reinterpret_cast<u64>(pcmd->TextureId))), sizeof(u32));
 
                     // Project scissor/clipping rectangles into framebuffer space
                     ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
@@ -331,8 +358,8 @@ namespace daxa {
                     // Clamp to viewport as vkCmdSetScissor() won't accept values that are off bounds
                     if (clip_min.x < 0.0f) { clip_min.x = 0.0f; }
                     if (clip_min.y < 0.0f) { clip_min.y = 0.0f; }
-                    if (clip_max.x > target->getImageHandle()->getVkExtent3D().width) { clip_max.x = (float)target->getImageHandle()->getVkExtent3D().width; }
-                    if (clip_max.y > target->getImageHandle()->getVkExtent3D().height) { clip_max.y = (float)target->getImageHandle()->getVkExtent3D().height; }
+                    if (clip_max.x > device->info(target).image->getVkExtent3D().width) { clip_max.x = (float)device->info(target).image->getVkExtent3D().width; }
+                    if (clip_max.y > device->info(target).image->getVkExtent3D().height) { clip_max.y = (float)device->info(target).image->getVkExtent3D().height; }
                     if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
                         continue;
                     
@@ -354,7 +381,6 @@ namespace daxa {
 
             cmdList.endRendering();
             cmdList.unbindPipeline();
-            referencedImages.resize(1);
             texHandlePtrToReferencedImageIndex.clear();
         }
     }

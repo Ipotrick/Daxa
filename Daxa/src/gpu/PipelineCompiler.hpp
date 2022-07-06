@@ -1,10 +1,12 @@
+#pragma once
+
 #include "Pipeline.hpp"
 
 #include <set>
 #include <chrono>
 
 namespace daxa {
-    struct PipelineCompilerShadedData {
+    struct PipelineCompilerSharedData {
         Result<std::filesystem::path> findFullPathOfFile(std::filesystem::path const& file);
         Result<std::string> tryLoadShaderSourceFromFile(std::filesystem::path const& path);
 
@@ -17,7 +19,7 @@ namespace daxa {
 
     class PipelineCompiler {
     public:
-        PipelineCompiler(std::shared_ptr<DeviceBackend> deviceBackend, std::shared_ptr<BindingSetLayoutCache> bindSetLayoutCache);
+        PipelineCompiler(std::shared_ptr<void> dbackend);
         void addShaderSourceRootPath(std::filesystem::path const& path);
         bool checkIfSourcesChanged(PipelineHandle& pipeline);
         Result<PipelineHandle> createGraphicsPipeline(GraphicsPipelineBuilder const& builder);
@@ -42,9 +44,8 @@ namespace daxa {
         );
         daxa::Result<PipelineHandle> build(GraphicsPipelineBuilder const& builder);
 
-        std::shared_ptr<DeviceBackend> deviceBackend = {};
-        std::shared_ptr<BindingSetLayoutCache> bindSetLayoutCache = {};
-        std::shared_ptr<PipelineCompilerShadedData> sharedData = {};
+        std::shared_ptr<void> dbackend = {};
+        std::shared_ptr<PipelineCompilerSharedData> sharedData = {};
         std::chrono::milliseconds recreationCooldown = {};
         std::unique_ptr<void, void(*)(void*)> backend;
     };

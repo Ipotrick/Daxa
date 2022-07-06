@@ -18,7 +18,7 @@ namespace daxa {
         u8* preload = nullptr;
         size_t preloadSize = 0;
 
-        std::optional<SamplerCreateInfo> samplerInfo = std::nullopt;
+        std::optional<SamplerInfo> samplerInfo = std::nullopt;
         
         bool operator == (ImageCacheFetchInfo const& other) const {
             return 
@@ -31,10 +31,10 @@ namespace daxa {
     };
 
     struct GPUSamplerCreateInfoHasher {
-        std::size_t operator()(SamplerCreateInfo const& info) const {
+        std::size_t operator()(SamplerInfo const& info) const {
             size_t hash = 0x43fb87da;
             u32 const* data = reinterpret_cast<u32 const*>(&info);
-            for (size_t i = 0; i < sizeof(SamplerCreateInfo) / 4; i++) {
+            for (size_t i = 0; i < sizeof(SamplerInfo) / 4; i++) {
                 hash ^= data[i];
                 hash <<= 1;
             }
@@ -94,7 +94,7 @@ namespace daxa {
             if (!data) {
                 return {};
             } else {
-                auto ci = ImageViewCreateInfo{
+                auto ci = ImageViewInfo{
                     .image = device->createImage({
                         .format = info.viewFormat,
                         .extent = { static_cast<u32>(width), static_cast<u32>(height), 1 },
@@ -113,7 +113,7 @@ namespace daxa {
                     if (!samplers.contains(sampler_v)) {
                         samplers[sampler_v] = device->createSampler(sampler_v);
                     }
-                    ci.defaultSampler = samplers[sampler_v];
+                    // TODO(pahrens): add an output for the shaders
                     ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
                     ci.subresourceRange.baseMipLevel = 0;
                     ci.subresourceRange.levelCount = mipmaplevels;
@@ -123,15 +123,16 @@ namespace daxa {
                 auto image = device->createImageView(ci);
 
                 cmdList.queueImageBarrier({
-                    .image = image,
+                    .image = device->info(image).image,
                     .layoutAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 });
                 cmdList.singleCopyHostToImage({
                     .src = data,
-                    .dst = image->getImageHandle(),
+                    .dst = device->info(image).image,
                     //.size = static_cast<u32>(width*height*4),
                 });
                 generateMipLevels(
+                    device,
                     cmdList, 
                     image, 
                     VkImageSubresourceLayers{
@@ -150,6 +151,6 @@ namespace daxa {
 
         DeviceHandle device = {};
 
-        std::unordered_map<SamplerCreateInfo, SamplerHandle, GPUSamplerCreateInfoHasher> samplers = {};
+        std::unordered_map<SamplerInfo, SamplerHandle, GPUSamplerCreateInfoHasher> samplers = {};
     };
 }
