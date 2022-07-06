@@ -15,7 +15,7 @@ namespace daxa {
 
 	class Signal {
 	public:
-		Signal(std::shared_ptr<DeviceBackend> deviceBackend, SignalCreateInfo const& ci);
+		Signal(std::shared_ptr<void> backend, SignalCreateInfo const& ci);
 		Signal(Signal&&) noexcept				= delete;
 		Signal& operator=(Signal&&) noexcept	= delete;
 		Signal(Signal const&) 					= delete;
@@ -28,9 +28,9 @@ namespace daxa {
 	private:
 		friend class Device;
 
-		std::shared_ptr<DeviceBackend> 	deviceBackend 	= {};
-		VkSemaphore 					semaphore 		= {};
-		std::string 					debugName 		= {};
+		std::shared_ptr<void> 	backend 	= {};
+		VkSemaphore 			semaphore 		= {};
+		std::string 			debugName 		= {};
 	};
 
 	class SignalHandle : public SharedHandle<Signal>{};

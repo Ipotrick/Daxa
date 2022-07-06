@@ -11,10 +11,8 @@
 #include <VkBootstrap.h>
 
 #include "Handle.hpp"
-#include "Graveyard.hpp"
 #include "CommandList.hpp"
 #include "Image.hpp"
-#include "Buffer.hpp"
 #include "ShaderModule.hpp"
 #include "Pipeline.hpp"
 #include "SwapchainImage.hpp"
@@ -24,6 +22,7 @@
 #include "StagingBufferPool.hpp"
 #include "CommandQueue.hpp"
 #include "PipelineCompiler.hpp"
+#include "GPUHandles.hpp"
 
 namespace daxa {
 	class Instance;
@@ -37,33 +36,31 @@ namespace daxa {
 		Device(Device&&) noexcept				= delete;
 		Device& operator=(Device&&) noexcept	= delete;
 
-		CommandQueueHandle createCommandQueue(CommandQueueCreateInfo const& ci);
-
 		static DeviceHandle create();
 
-		SamplerHandle createSampler(SamplerCreateInfo ci);
+		ImageHandle createImage(ImageCreateInfo const& info);
 
-		ImageHandle createImage(ImageCreateInfo const& ci);
+		BufferHandle createBuffer(BufferInfo const& info);
+		ImageViewHandle createImageView(ImageViewInfo const& info);
+		SamplerHandle createSampler(SamplerInfo const& info);
 
-		ImageViewHandle createImageView(ImageViewCreateInfo const& ci);
+		void destroyBuffer(BufferHandle handle);
+		void destroyImageView(ImageViewHandle handle);
+		void destroySampler(SamplerHandle handle);
 
-		/**
-		 * \param ci all information defining the buffer
-		 * \return a reference counted buffer handle of the created buffer ressource.
-		 */
-		BufferHandle createBuffer(BufferCreateInfo ci);
+		BufferInfo const& info(BufferHandle handle);
+		ImageViewInfo const& info(ImageViewHandle handle);
+		SamplerInfo const& info(SamplerHandle handle);
+
+		MappedMemory mapMemory(BufferHandle handle);
+
+		CommandQueueHandle createCommandQueue(CommandQueueCreateInfo const& ci);
 
 		TimelineSemaphoreHandle createTimelineSemaphore(TimelineSemaphoreCreateInfo const& ci);
 
 		SignalHandle createSignal(SignalCreateInfo const& ci);
 
 		SwapchainHandle createSwapchain(SwapchainCreateInfo swapchainCI);
-
-		BindingSetLayout const& getBindingSetLayout(BindingSetDescription const& description);
-		
-		std::shared_ptr<BindingSetLayout const> getBindingSetLayoutShared(BindingSetDescription const& description);
-
-		BindingSetAllocatorHandle createBindingSetAllocator(BindingSetAllocatorCreateInfo const& ci);
 
 		PipelineCompilerHandle createPipelineCompiler();
 
@@ -78,14 +75,9 @@ namespace daxa {
 	private:
 		friend class Instance;
 
-		CommandListHandle getNextCommandList();
-
-		shaderc::Compiler 						shaderCompiler 				= {};
-		shaderc::CompileOptions 				shaderCompileOptions 		= {};
-		std::shared_ptr<DeviceBackend> 			backend 					= {};
-		std::shared_ptr<StagingBufferPool> 		uploadStagingBufferPool 	= {};
-		std::shared_ptr<StagingBufferPool> 		downloadStagingBufferPool 	= {};
-		std::shared_ptr<BindingSetLayoutCache>	bindingSetDescriptionCache 	= {};
+		std::shared_ptr<void> 				backend 					= {};
+		std::shared_ptr<StagingBufferPool> 	uploadStagingBufferPool 	= {};
+		std::shared_ptr<StagingBufferPool> 	downloadStagingBufferPool 	= {};
 	};
 
 	class DeviceHandle : public SharedHandle<Device>{};

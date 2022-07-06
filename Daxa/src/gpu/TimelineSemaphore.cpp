@@ -4,8 +4,8 @@
 
 namespace daxa {
 
-	TimelineSemaphore::TimelineSemaphore(std::shared_ptr<DeviceBackend> deviceBackend, TimelineSemaphoreCreateInfo const& ci) 
-		: deviceBackend{ std::move(deviceBackend) }
+	TimelineSemaphore::TimelineSemaphore(std::shared_ptr<void> backend, TimelineSemaphoreCreateInfo const& ci) 
+		: backend{ std::move(backend) }
 	{
 
 		VkSemaphoreTypeCreateInfo semaphoreTypeCI{
@@ -20,8 +20,9 @@ namespace daxa {
 			.pNext = &semaphoreTypeCI,
 			.flags = 0,
 		};
+		auto deviceBackend = std::static_pointer_cast<DeviceBackend>(this->backend);
 
-		DAXA_CHECK_VK_RESULT_M(vkCreateSemaphore(this->deviceBackend->device.device, &timelineSemaphoreCI, nullptr, &this->timelineSema), "could not create timeline semaphore");
+		DAXA_CHECK_VK_RESULT_M(vkCreateSemaphore(deviceBackend->device.device, &timelineSemaphoreCI, nullptr, &this->timelineSema), "could not create timeline semaphore");
 
 		if (instance->pfnSetDebugUtilsObjectNameEXT != nullptr && ci.debugName != nullptr) {
 			this->debugName = ci.debugName;
@@ -33,20 +34,22 @@ namespace daxa {
 				.objectHandle = (uint64_t)timelineSema,
 				.pObjectName = ci.debugName,
 			};
-			instance->pfnSetDebugUtilsObjectNameEXT(this->deviceBackend->device.device, &imageNameInfo);
+			instance->pfnSetDebugUtilsObjectNameEXT(deviceBackend->device.device, &imageNameInfo);
 		}
 	}
 
 	TimelineSemaphore::~TimelineSemaphore() {
-		if (this->deviceBackend->device.device && timelineSema) {
-			vkDestroySemaphore(this->deviceBackend->device.device, timelineSema, nullptr);
-			this->deviceBackend = {};
+		if (this->backend && timelineSema) {
+			auto deviceBackend = std::static_pointer_cast<DeviceBackend>(this->backend);
+			vkDestroySemaphore(deviceBackend->device.device, timelineSema, nullptr);
+			deviceBackend = {};
 		}
 	}
 
 	u64 TimelineSemaphore::getCounter() const {
 		u64 counter = 0;
-		DAXA_CHECK_VK_RESULT_M(vkGetSemaphoreCounterValue(this->deviceBackend->device.device, timelineSema, &counter), "could not aquire timeline semaphore counter");
+		auto deviceBackend = std::static_pointer_cast<DeviceBackend>(this->backend);
+		DAXA_CHECK_VK_RESULT_M(vkGetSemaphoreCounterValue(deviceBackend->device.device, timelineSema, &counter), "could not aquire timeline semaphore counter");
 		return counter;
 	}
 
@@ -58,7 +61,8 @@ namespace daxa {
 			.value = newCounterValue,
 		};
 
-		DAXA_CHECK_VK_RESULT_M(vkSignalSemaphore(this->deviceBackend->device.device, &semaphoreSI), "could not signal timeline semaphore");
+		auto deviceBackend = std::static_pointer_cast<DeviceBackend>(this->backend);
+		DAXA_CHECK_VK_RESULT_M(vkSignalSemaphore(deviceBackend->device.device, &semaphoreSI), "could not signal timeline semaphore");
 	}
 
 	VkResult TimelineSemaphore::wait(u64 counter, u64 timeout) {
@@ -71,6 +75,7 @@ namespace daxa {
 			.pValues = &counter,
 		};
 
-		return vkWaitSemaphores(this->deviceBackend->device.device, &semaphoreWI, timeout);
+		auto deviceBackend = std::static_pointer_cast<DeviceBackend>(this->backend);
+		return vkWaitSemaphores(deviceBackend->device.device, &semaphoreWI, timeout);
 	}
 }

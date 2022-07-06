@@ -11,10 +11,9 @@
 #include <vk_mem_alloc.h>
 
 #include "Handle.hpp"
-#include "Sampler.hpp"
-#include "Graveyard.hpp"
 
 namespace daxa {
+	
 	struct ImageCreateInfo {
 		VkImageCreateFlags      flags 		= {};
 		VkImageType             imageType 	= VK_IMAGE_TYPE_2D;
@@ -27,11 +26,6 @@ namespace daxa {
 		VkImageUsageFlags       usage 		= {};
 		VmaMemoryUsage 			memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY;
 		char const*  			debugName 	= {};
-	};
-
-	struct ImageHandle {
-		u32 index : 24;
-		u32 version : 8;
 	};
 
 	class Image {
@@ -79,67 +73,4 @@ namespace daxa {
 	};
 
 	class ImageHandle : public SharedHandle<Image>{};
-
-	struct ImageViewCreateInfo {
-		VkImageViewCreateFlags     	flags				= {};
-		ImageHandle					image		 		= {};
-		VkImageViewType            	viewType			= VK_IMAGE_VIEW_TYPE_2D;
-		VkFormat                   	format				= {};
-		VkComponentMapping         	components			= {};
-		VkImageSubresourceRange    	subresourceRange	= {
-			.aspectMask = VK_IMAGE_ASPECT_FLAG_BITS_MAX_ENUM,
-			.baseMipLevel = 0,
-			.levelCount = 0,
-			.baseArrayLayer = 0,
-			.layerCount = 0,
-		};
-		SamplerHandle				defaultSampler		= {};
-		char const* 				debugName			= {};
-	};
-
-	class ImageView : public GraveyardRessource {
-	public:
-		ImageView(std::shared_ptr<DeviceBackend> deviceBackend, ImageViewCreateInfo const& ci, VkImageView view = VK_NULL_HANDLE);
-		ImageView() 								= default;
-		ImageView(ImageView const&) 				= delete;
-		ImageView& operator=(ImageView const&) 		= delete;
-		ImageView(ImageView&&) noexcept 			= delete;
-		ImageView& operator=(ImageView&&) noexcept 	= delete;
-		virtual ~ImageView();
-
-		VkImageViewCreateFlags getVkImageViewCreateFlags() const { return flags; }
-		ImageHandle const& getImageHandle() const { return image; }
-		VkImageViewType getVkImageViewType() const { return viewType; }
-		VkFormat getVkFormat() const { return format; }
-		VkComponentMapping getVkComponentMapping() const { return components; }
-		VkImageSubresourceRange getVkImageSubresourceRange() const { return subresourceRange; }
-		VkImageView getVkImageView() const { return view; }
-		SamplerHandle const& getSampler() const { return defaultSampler; }
-		u16 getDescriptorIndex() const {
-			return descriptorIndex;
-		}
-		std::string const& getDebugName() const { return debugName; }
-	private:
-		friend class Device;
-		friend class Swapchain;
-		friend struct ImageViewStaticFunctionOverride;
-
-		std::shared_ptr<DeviceBackend> 	deviceBackend 		= {};
-		VkImageViewCreateFlags     		flags				= {};
-		ImageHandle						image		 		= {};
-		VkImageViewType            		viewType			= {};
-		VkFormat                   		format				= {};
-		VkComponentMapping         		components			= {};
-		VkImageSubresourceRange    		subresourceRange	= {};
-		VkImageView						view				= {};
-		SamplerHandle 					defaultSampler 		= {};
-		u16 							descriptorIndex 	= {};
-		std::string 					debugName 			= {};
-	};
-
-	struct ImageViewStaticFunctionOverride {
-		static void cleanup(std::shared_ptr<ImageView>& value);
-	};
-
-	class ImageViewHandle : public SharedHandle<ImageView, ImageViewStaticFunctionOverride>{};
 }

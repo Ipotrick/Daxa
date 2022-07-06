@@ -73,7 +73,6 @@ namespace daxa {
     protected:
         friend class Device;
         friend class Queue;
-        friend class BindingSetAllocator;
 
         std::shared_ptr<T> value = {};
     };

@@ -17,7 +17,7 @@ public:
 		, presentSignal{ this->device->createSignal({}) }
 	{ 
 
-		char const* vertexShaderGLSL = R"(
+		char const* vertexShader = R"(
 			#version 450
 			#extension GL_KHR_vulkan_glsl : enable
 
@@ -26,14 +26,18 @@ public:
 
 			layout(location = 10) out vec4 v_color;
 
-			void main()
+			struct Out {
+				
+			};
+
+			float4 main(float3 position : POSITION0, float4 color : COLOR0)
 			{
 				v_color = color;
 				gl_Position = vec4(position, 1.0f);
 			}
 		)";
 
-		char const* fragmentShaderGLSL = R"(
+		char const* fragmentShader = R"(
 			#version 450
 			#extension GL_KHR_vulkan_glsl : enable
 
@@ -53,20 +57,10 @@ public:
 			}
 		)";
 
-		daxa::ShaderModuleHandle vertexShader = device->createShaderModule({
-			.sourceToGLSL = vertexShaderGLSL,
-			.stage = VK_SHADER_STAGE_VERTEX_BIT
-		}).value();
-
-		daxa::ShaderModuleHandle fragmenstShader = device->createShaderModule({
-			.sourceToGLSL = fragmentShaderGLSL,
-			.stage = VK_SHADER_STAGE_FRAGMENT_BIT
-		}).value();
-
 		daxa::GraphicsPipelineBuilder pipelineBuilder;
 		pipelineBuilder
-			.addShaderStage(vertexShader)
-			.addShaderStage(fragmenstShader)
+			.addShaderStage({ .source = vertexShader, .stage = VK_SHADER_STAGE_VERTEX_BIT })
+			.addShaderStage({ .source = fragmentShader, .stage = VK_SHADER_STAGE_FRAGMENT_BIT })
 			// adding a vertex input attribute binding:
 			.beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
 			// all added vertex input attributes are added to the previously added vertex input attribute binding

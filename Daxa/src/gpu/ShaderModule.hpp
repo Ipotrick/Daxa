@@ -24,7 +24,6 @@ namespace daxa {
 
 	class PipelineHandle;
 	class GraphicsPipelineBuilder;
-	class BindingSetLayoutCache;
 
 	enum class ShaderLang {
 		GLSL,
@@ -66,7 +65,6 @@ namespace daxa {
 	struct ShaderModuleCreateInfo {
 		std::string 				source			= {};
 		std::filesystem::path		pathToSource 	= {};
-		ShaderLang 					shaderLang 		= ShaderLang::GLSL;
 		char const* 				entryPoint 		= "main";
 		VkShaderStageFlagBits 		stage 			= {};
 		std::vector<std::string> 	defines			= {};
