@@ -48,9 +48,11 @@ namespace daxa {
 	private:
 		friend class Device;
 
-		void construct(std::shared_ptr<DeviceBackend> deviceBackend, SwapchainCreateInfo ci);
+		void construct(std::shared_ptr<void> backend, SwapchainCreateInfo ci);
 
-		std::shared_ptr<DeviceBackend> 	deviceBackend 			= {};
+		void clearSwapchainImages();
+
+		std::shared_ptr<void> 			backend 				= {};
 		VkFence 						aquireFence 			= VK_NULL_HANDLE;
 		VkPresentModeKHR 				presentMode 			= VK_PRESENT_MODE_FIFO_KHR;
 		VkSurfaceKHR 					surface 				= VK_NULL_HANDLE;
@@ -63,22 +65,22 @@ namespace daxa {
 	}; 
 	class SwapchainHandle : public SharedHandle<Swapchain>{};
 
-	class Swapchain2 {
-	public:
-		Swapchain2() = default;
-
-		static Result<Swapchain2> construct(std::shared_ptr<DeviceBackend>& deviceBackend, SwapchainCreateInfo const& ci, Swapchain2* old = {});
-
-		Result<std::pair<u32, ImageViewHandle>> aquireNextImage();
-
-		std::string const& getDebugName() const { return debugName; }
-	private:
-		std::shared_ptr<DeviceBackend> 	deviceBackend 	= {};
-		SwapchainCreateInfo 			ci 				= {};
-		VkFence 						aquireFence 	= VK_NULL_HANDLE;
-		VkSwapchainKHR 					swapchain 		= VK_NULL_HANDLE;
-		VkFormat 						format 			= {};
-		std::vector<ImageViewHandle>	imageViews 		= {};
-		std::string 					debugName 		= {};
-	};
+	//class Swapchain2 {
+	//public:
+	//	Swapchain2() = default;
+//
+	//	static Result<Swapchain2> construct(std::shared_ptr<void>& backend, SwapchainCreateInfo const& ci, Swapchain2* old = {});
+//
+	//	Result<std::pair<u32, ImageViewHandle>> aquireNextImage();
+//
+	//	std::string const& getDebugName() const { return debugName; }
+	//private:
+	//	std::shared_ptr<void> 			backend 		= {};
+	//	SwapchainCreateInfo 			ci 				= {};
+	//	VkFence 						aquireFence 	= VK_NULL_HANDLE;
+	//	VkSwapchainKHR 					swapchain 		= VK_NULL_HANDLE;
+	//	VkFormat 						format 			= {};
+	//	std::vector<ImageViewHandle>	imageViews 		= {};
+	//	std::string 					debugName 		= {};
+	//};
 }

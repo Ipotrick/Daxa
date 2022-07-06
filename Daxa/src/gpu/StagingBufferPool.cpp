@@ -14,7 +14,7 @@ namespace daxa {
 			auto data = sharedData.lock();
 			if (data) {
 				auto lock = std::unique_lock(data->mut);
-				data->pool.push_back(std::move(*buffer));
+				data->pool.push_back(*buffer);
 			}
 			buffer = {};
 		}
@@ -33,15 +33,12 @@ namespace daxa {
 	}
 
 	StagingBufferPool::StagingBufferPool(
-		std::shared_ptr<DeviceBackend> deviceBackend, 
+		std::shared_ptr<void> deviceBackend, 
 		size_t size, 
-		//VkBufferUsageFlags usages, 
 		MemoryType memoryType
 	)
 		: deviceBackend{ std::move(deviceBackend) }
 		, sharedData{ std::make_shared<StagingBufferPoolSharedData>() }
-		//, usages{ usages }
-		//, memoryUsages{ memoryUsages }
 		, memoryType{ memoryType }
 		, size{ size }
 	{ }
@@ -50,22 +47,29 @@ namespace daxa {
 		auto lock = std::unique_lock(sharedData->mut);
 
 		if (sharedData->pool.empty()) {
-			BufferCreateInfo bufferCI{
+			BufferInfo bufferCI{
 				.size = size,
 				.memoryType = memoryType
-				//.usage = usages,
-				//.memoryUsage = memoryUsages,
 			};
 
 			if (instance->pfnSetDebugUtilsObjectNameEXT) {
 				bufferCI.debugName = "staging buffer";
 			}
 
-			sharedData->pool.push_back(BufferHandle{ std::make_shared<BufferBackend>(deviceBackend, bufferCI)});
+			DeviceBackend& backend = *reinterpret_cast<DeviceBackend*>(this->deviceBackend.get());
+
+			sharedData->pool.push_back( backend.createBuffer(bufferCI) );
 		}
 
 		auto stagingBuffer = StagingBuffer{ sharedData->pool.back(), sharedData };
 		sharedData->pool.pop_back();
 		return stagingBuffer;
+	}
+
+	StagingBufferPool::~StagingBufferPool() {
+		for (auto buffer: sharedData->pool) {
+			DeviceBackend& backend = *reinterpret_cast<DeviceBackend*>(this->deviceBackend.get());
+			backend.gpuHandleGraveyard.zombifyBuffer(backend.gpuRessources, buffer);
+		}
 	}
 }

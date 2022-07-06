@@ -10,14 +10,10 @@
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 
-#include "Handle.hpp"
-#include "Image.hpp"
-#include "Buffer.hpp"
+#include "GPUHandles.hpp"
 #include "SwapchainImage.hpp"
 #include "Pipeline.hpp"
-#include "BindingSet.hpp"
 #include "StagingBufferPool.hpp"
-#include "Graveyard.hpp"
 #include "TimelineSemaphore.hpp"
 
 namespace daxa {
@@ -191,7 +187,7 @@ namespace daxa {
 	*/
 	struct ImageBarrier {
 		MemoryBarrier 							barrier 		= FULL_MEMORY_BARRIER;
-		ImageViewHandle 						image 			= {};
+		ImageHandle 							image 			= {};
 		VkImageLayout 							layoutBefore	= {};
 		VkImageLayout 							layoutAfter		= {}; 
 		u32 									srcQueueIndex 	= VK_QUEUE_FAMILY_IGNORED;
@@ -215,6 +211,23 @@ namespace daxa {
 		RenderAttachmentInfo* stencilAttachment = nullptr;
 		VkRect2D* renderArea = nullptr;
 	};
+
+	class MappedMemory {
+	public:
+		MappedMemory(std::shared_ptr<void> deviceBackend, BufferHandle buffer, size_t size, size_t offset);
+		MappedMemory(MappedMemory const&) 			= delete;
+		MappedMemory& operator=(MappedMemory const&) 	= delete;
+		MappedMemory(MappedMemory&&) 					= default;
+		MappedMemory& operator=(MappedMemory&&) 		= default;
+		~MappedMemory();
+	private:
+		friend class CommandListBackend;
+		std::shared_ptr<void> deviceBackend = {};
+		BufferHandle buffer = {};
+	public:
+		size_t size = {};
+		u8* hostPtr = {};
+	};
 	
 	struct ToHostCopyFuture{
 	public:
@@ -230,33 +243,38 @@ namespace daxa {
 			return !ready();
 		}
 		
-		std::optional<MappedMemoryPointer> getPtr() {
+		std::optional<MappedMemory> getPtr() {
 			if (ready()) {
-				MappedMemoryPointer mem = readBackStagingBuffer.buffer->mapMemory();
-				mem.hostPtr = static_cast<u8*>(mem.hostPtr) + readBackBufferOffset;
-				return std::optional<MappedMemoryPointer>{ std::move(mem) };
+				return { MappedMemory{ deviceBackend, readBackStagingBuffer.buffer.value(), size, readBackBufferOffset } };
 			}
 			return std::nullopt;
 		}
 	private:
 		friend class CommandListBackend;
 		ToHostCopyFuture(
+			std::shared_ptr<void> deviceBackend,
 			StagingBuffer&& readBackStagingBuffer,
 			TimelineSemaphoreHandle timelineHandle,
 			u64 timelineReadyValue,
-			u64 readBackBufferOffset
+			u64 readBackBufferOffset,
+			u64 size
 		)
-			: readBackStagingBuffer{ std::move(readBackStagingBuffer) }
+			: deviceBackend{ std::move( deviceBackend ) }
+			, readBackStagingBuffer{ std::move(readBackStagingBuffer) }
 			, timelineHandle{ timelineHandle }
 			, timelineReadyValue{ timelineReadyValue }
 			, readBackBufferOffset{ readBackBufferOffset }
+			, size{ size }
 		{}
 
+		std::shared_ptr<void> deviceBackend = {};
 		StagingBuffer readBackStagingBuffer;
 		TimelineSemaphoreHandle timelineHandle = {};
 		u64 timelineReadyValue = {};
 		u64 readBackBufferOffset = {};
+		u64 size = {};
 	};
+
 	struct SingleBufferToHostCopyInfo{
 		BufferHandle const& src;
 		BufferToHostCopyRegion region = {};
@@ -353,8 +371,8 @@ namespace daxa {
 		CommandListDeadEnd operator->() { return CommandListDeadEnd{}; }
 
 		void finalize();
-		MappedMemoryPointer mapMemoryStagedBuffer(BufferHandle copyDst, size_t size, size_t dstOffset);
-		MappedMemoryPointer mapMemoryStagedImage(
+		MappedMemory mapMemoryStagedBuffer(BufferHandle copyDst, size_t size, size_t dstOffset);
+		MappedMemory mapMemoryStagedImage(
 			ImageHandle copyDst, 
 			VkImageSubresourceLayers subressource = { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1 }, 
 			VkOffset3D dstOffset = { 0, 0, 0 }, 
@@ -385,14 +403,11 @@ namespace daxa {
 		void pushConstant(VkShaderStageFlags shaderStage, void const* data, u32 size, u32 offset = 0);
 		void bindVertexBuffer(u32 binding, BufferHandle& buffer, size_t bufferOffset = 0);
 		void bindIndexBuffer(BufferHandle& buffer, size_t bufferOffset = 0, VkIndexType indexType = VK_INDEX_TYPE_UINT32);
-		void bindSet(u32 setBinding, BindingSetHandle set);
-		void bindSetPipelineIndependant(u32 setBinding, BindingSetHandle set, VkPipelineBindPoint bindPoint, VkPipelineLayout layout);
 		void draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance);
 		void drawIndexed(u32 indexCount, u32 instanceCount, u32 firstIndex, i32 vertexOffset, u32 firstIntance);
 		void queueMemoryBarrier(MemoryBarrier const& memoryBarrier);
 		void queueImageBarrier(ImageBarrier const& memoryBarrier);
 		void insertQueuedBarriers();
-		void bindAll(u32 set = 0);
 		VkCommandBuffer getVkCommandBuffer();
 		VkCommandPool getVkCommandPool();
 		std::string const& getDebugName() const;

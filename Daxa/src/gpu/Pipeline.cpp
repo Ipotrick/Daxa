@@ -29,6 +29,7 @@ namespace daxa {
 		}
 	}
 	Pipeline::~Pipeline() {
+		std::shared_ptr<DeviceBackend> deviceBackend = std::static_pointer_cast<DeviceBackend>(this->backend);
 		if (deviceBackend) {
 			vkDestroyPipelineLayout(deviceBackend->device.device, layout, nullptr);
 			vkDestroyPipeline(deviceBackend->device.device, pipeline, nullptr);
@@ -132,8 +133,8 @@ namespace daxa {
 		return *this;
 	}
 	
-	GraphicsPipelineBuilder& GraphicsPipelineBuilder::overwriteSet(u32 set, BindingSetDescription const& descr) {
-		setDescriptionOverwrites.push_back({set, descr});
+	GraphicsPipelineBuilder& GraphicsPipelineBuilder::setPushConstantSize(size_t size) {
+		this->pushConstantSize = size;
 		return *this;
 	}
 }

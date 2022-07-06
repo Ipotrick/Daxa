@@ -13,24 +13,23 @@ namespace daxa {
     class ImGuiRenderer{
     public:
         ImGuiRenderer(DeviceHandle device, CommandQueueHandle queue, PipelineCompilerHandle& compiler);
-
-        u64 getImGuiTextureId(ImageViewHandle img);
+        ~ImGuiRenderer();
 
         void recordCommands(ImDrawData* draw_data, daxa::CommandListHandle& cmdList, ImageViewHandle& target);
     private:
-        daxa::DeviceHandle device                  = {};
-        daxa::PipelineHandle pipeline              = {};
-        daxa::BindingSetAllocatorHandle setAlloc   = {};
+        daxa::DeviceHandle device               = {};
+        daxa::PipelineHandle pipeline           = {};
+        daxa::ImageViewHandle fontSheetId       = {};
+        daxa::SamplerHandle samplerId             = {};
 
         struct PerFrameData{
-            daxa::BufferHandle vertexBuffer        = {};
-            daxa::BufferHandle indexBuffer         = {};
+            daxa::BufferHandle vertexBuffer     = {};
+            daxa::BufferHandle indexBuffer      = {};
         };
-        std::deque<PerFrameData> perFrameData           = {};
+        std::deque<PerFrameData> perFrameData   = {};
 
         void recreatePerFrameData(size_t newMinSizeVertex, size_t newMinSizeIndices);
 
         std::unordered_map<void*, size_t> texHandlePtrToReferencedImageIndex;
-        std::vector<ImageViewHandle> referencedImages;
     };
 }

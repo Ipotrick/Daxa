@@ -1,5 +1,10 @@
+#pragma once
+
 #include "DeviceBackend.hpp"
+#include "Backend.hpp"
 #include "../CommandList.hpp"
+#include "GPURessources.hpp"
+#include "GPUHandleGraveyard.hpp"
 
 namespace daxa {
     class CommandListBackend {
@@ -7,15 +12,15 @@ namespace daxa {
 		CommandListBackend();
 		CommandListBackend(CommandListBackend&& rhs) noexcept				= delete;
 		CommandListBackend& operator=(CommandListBackend&& rhs) noexcept	= delete;
-		CommandListBackend(CommandListBackend const& rhs) 				= delete;
+		CommandListBackend(CommandListBackend const& rhs) 					= delete;
 		CommandListBackend& operator=(CommandListBackend const& rhs) 		= delete;
 		~CommandListBackend();
 
 		void finalize();
 
-		MappedMemoryPointer mapMemoryStagedBuffer(BufferHandle copyDst, size_t size, size_t dstOffset);
+		MappedMemory mapMemoryStagedBuffer(BufferHandle copyDst, size_t size, size_t dstOffset);
 		
-		MappedMemoryPointer mapMemoryStagedImage(
+		MappedMemory mapMemoryStagedImage(
 			ImageHandle copyDst, 
 			VkImageSubresourceLayers subressource = { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1 }, 
 			VkOffset3D dstOffset = { 0, 0, 0 }, 
@@ -67,10 +72,6 @@ namespace daxa {
 
 		void bindIndexBuffer(BufferHandle& buffer, size_t bufferOffset = 0, VkIndexType indexType = VK_INDEX_TYPE_UINT32);
 
-		void bindSet(u32 setBinding, BindingSetHandle set);
-
-		void bindSetPipelineIndependant(u32 setBinding, BindingSetHandle set, VkPipelineBindPoint bindPoint, VkPipelineLayout layout);
-
 		void draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance);
 
 		void drawIndexed(u32 indexCount, u32 instanceCount, u32 firstIndex, i32 vertexOffset, u32 firstIntance);
@@ -91,11 +92,11 @@ namespace daxa {
 		friend struct CommandListHandleStaticFunctionOverride;
 
 		void reset();
-		void begin();
+		void begin(char const* debugName);
 		void setDebugName(char const* debugName);
 		void checkIfPipelineAndRenderPassFit();
-		MappedMemoryPointer mapMemoryStagedBufferVoid(BufferHandle copyDst, size_t size, size_t dstOffset);
-		MappedMemoryPointer mapMemoryStagedImageVoid(ImageHandle copyDst, VkImageSubresourceLayers subRessource, VkOffset3D dstOffset, VkExtent3D dstExtent);
+		MappedMemory mapMemoryStagedBufferVoid(BufferHandle copyDst, size_t size, size_t dstOffset);
+		MappedMemory mapMemoryStagedImageVoid(ImageHandle copyDst, VkImageSubresourceLayers subRessource, VkOffset3D dstOffset, VkExtent3D dstExtent);
 
 		struct CurrentRenderPass{
 			std::vector<RenderAttachmentInfo> 		colorAttachments 	= {};
@@ -120,7 +121,6 @@ namespace daxa {
 		u32 											usesOnGPU 					= 0;				// counts in how many pending submits the command list is currently used
 		bool 											empty 						= true;
 		bool 											finalized 					= false;
-		std::vector<BindingSetHandle> 					usedSets 					= {};
 		std::vector<PipelineHandle> 					usedGraphicsPipelines 		= {};
 		std::weak_ptr<CommandListRecyclingSharedData> 	recyclingData 				= {};
 		std::weak_ptr<StagingBufferPool> 				uploadStagingBufferPool 	= {};

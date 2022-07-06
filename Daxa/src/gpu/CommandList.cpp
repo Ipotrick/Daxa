@@ -4,8 +4,29 @@
 #include "Instance.hpp"
 #include "backend/DeviceBackend.hpp"
 #include "backend/CommandListBackend.hpp"
+#include "backend/BufferBackend.hpp"
 
 namespace daxa {	
+
+	MappedMemory::MappedMemory(std::shared_ptr<void> deviceBackend, BufferHandle buffer, size_t size, size_t offset)
+		: deviceBackend{ std::move(deviceBackend) }
+		, buffer{ std::move(buffer) }
+		, size{ size }
+	{
+		DeviceBackend& backend = *reinterpret_cast<DeviceBackend*>(deviceBackend.get());
+		hostPtr = reinterpret_cast<u8*>(mapBuffer(backend.allocator, backend.gpuRessources.getBackend(buffer))) + offset;
+	}
+	MappedMemory::~MappedMemory() {
+		if (deviceBackend) {
+			DeviceBackend& backend = *reinterpret_cast<DeviceBackend*>(deviceBackend.get());
+			unmapBuffer(backend.allocator, backend.gpuRessources.getBackend(buffer));
+			deviceBackend = {};
+			hostPtr = nullptr;
+			size 	= 0;
+			buffer = {};
+		}
+	}
+
 	void CommandListHandleStaticFunctionOverride::cleanup(std::shared_ptr<CommandListBackend>& value) {
 		if (value && value.use_count() == 1) {
 			if (auto recyclingSharedData = value->recyclingData.lock()) {
@@ -22,10 +43,10 @@ namespace daxa {
 	void CommandListHandle::finalize() {
 		value->finalize();
 	}
-	MappedMemoryPointer CommandListHandle::mapMemoryStagedBuffer(BufferHandle copyDst, size_t size, size_t dstOffset) {
+	MappedMemory CommandListHandle::mapMemoryStagedBuffer(BufferHandle copyDst, size_t size, size_t dstOffset) {
 		return std::move(value->mapMemoryStagedBuffer(copyDst, size, dstOffset));
 	}
-	MappedMemoryPointer CommandListHandle::mapMemoryStagedImage(
+	MappedMemory CommandListHandle::mapMemoryStagedImage(
 		ImageHandle copyDst, 
 		VkImageSubresourceLayers subressource, 
 		VkOffset3D dstOffset, 
@@ -96,12 +117,6 @@ namespace daxa {
 	void CommandListHandle::bindIndexBuffer(BufferHandle& buffer, size_t bufferOffset, VkIndexType indexType) {
 		value->bindIndexBuffer(buffer, bufferOffset, indexType);
 	}
-	void CommandListHandle::bindSet(u32 setBinding, BindingSetHandle set) {
-		value->bindSet(setBinding, set);
-	}
-	void CommandListHandle::bindSetPipelineIndependant(u32 setBinding, BindingSetHandle set, VkPipelineBindPoint bindPoint, VkPipelineLayout layout) {
-		value->bindSetPipelineIndependant(setBinding, set, bindPoint, layout);
-	}
 	void CommandListHandle::draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance) {
 		value->draw(vertexCount, instanceCount, firstVertex, firstInstance);
 	}
@@ -116,9 +131,6 @@ namespace daxa {
 	}
 	void CommandListHandle::insertQueuedBarriers() {
 		value->insertQueuedBarriers();
-	}
-	void CommandListHandle::bindAll(u32 set) {
-		value->bindAll(set);
 	}
 	VkCommandBuffer CommandListHandle::getVkCommandBuffer() {
 		return value->getVkCommandBuffer();

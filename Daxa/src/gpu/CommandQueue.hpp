@@ -37,7 +37,7 @@ namespace daxa {
 	class CommandQueue {
 	public:
 		CommandQueue(
-			std::shared_ptr<DeviceBackend> deviceBackend, 
+			std::shared_ptr<void> deviceBackend, 
 			VkQueue queue, 
 			u32 queueFamilyIndex, 
 			std::shared_ptr<StagingBufferPool> uploadStagingBufferPool, 
@@ -87,7 +87,7 @@ namespace daxa {
 			u64 							finishCounter 	= 0;
 		};
 
-		std::shared_ptr<DeviceBackend> 					deviceBackend 						= {};
+		std::shared_ptr<void> 							deviceBackend 						= {};
 		VkQueue 										queue 								= {};
 		u32												queueFamilyIndex					= {};
 		std::deque<std::vector<PendingSubmit>> 			batches								= {};
