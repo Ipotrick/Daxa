@@ -171,7 +171,7 @@ namespace daxa {
 		args.push_back(L"-fspv-target-env=vulkan1.1");
 
 		// set optimization setting
-		args.push_back(L"-O3");
+		args.push_back(L"-O1");
 
 		// setting entry point
 		args.push_back(L"-E");
