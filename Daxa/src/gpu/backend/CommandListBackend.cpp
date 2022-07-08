@@ -197,13 +197,6 @@ namespace daxa {
 
 		u64 readBackOffset = stagingBuffer.usedUpSize;
 
-		ToHostCopyFuture future{
-			std::move(stagingBuffer),
-			timeline,
-			readyValue,
-			/* readback offset: */ readBackOffset,
-		};
-
 		singleCopyBufferToBuffer({
 			.src = info.src,
 			.dst = *stagingBuffer.buffer,
@@ -213,6 +206,13 @@ namespace daxa {
 				.size = info.region.size,
 			}
 		});
+
+		ToHostCopyFuture future{
+			std::move(stagingBuffer),
+			timeline,
+			readyValue,
+			/* readback offset: */ readBackOffset,
+		};
 
 		return std::move(future);
 	}
