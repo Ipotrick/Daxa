@@ -637,7 +637,7 @@ namespace daxa {
 			VkDependencyInfoKHR dependencyInfo{
 				.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
 				.pNext = nullptr,
-				.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT | VK_DEPENDENCY_DEVICE_GROUP_BIT | VK_DEPENDENCY_VIEW_LOCAL_BIT,
+				.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT | VK_DEPENDENCY_DEVICE_GROUP_BIT,
 				.memoryBarrierCount = (u32)queuedMemoryBarriers.size(),
 				.pMemoryBarriers = queuedMemoryBarriers.data(),
 				.bufferMemoryBarrierCount = 0,
