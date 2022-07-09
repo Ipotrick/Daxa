@@ -22,6 +22,6 @@
         uint model_tile_index = model_tile_i.x + model_tile_i.y * 128 + model_tile_i.z * 128 * 128;
         BlockID model_tile = (BlockID)model[0].data[model_tile_index];
         if (model_tile != BlockID::Air)
-            chunk[int3(global_i)] = (uint)model_tile;
+            chunk[int3(global_i)] = chunk[int3(global_i)];
     }
 }
