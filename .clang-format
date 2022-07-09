@@ -7,7 +7,7 @@ IndentWidth: 4
 AccessModifierOffset: -2
 IndentCaseLabels: false
 ColumnLimit: 0
-BreakBeforeBraces: Attach
+BreakBeforeBraces: Allman
 
 SortIncludes: false
 SortUsingDeclarations: false

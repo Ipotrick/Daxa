@@ -1,18 +1,10 @@
 {
-  "name": "daxa",
-  "version": "0.1.0",
-  "dependencies": [
-    "stb",
-    "vulkan",
-    "spirv-cross",
-    "vulkan-memory-allocator",
-    "glm",
-    "imgui",
-    "glfw3",
-    "fmt",
-    "glad",
-    "cgltf",
-    "tinyexr",
-    "dxc"
-  ]
+    "name": "daxa",
+    "version": "1.0.0",
+    "dependencies": [
+        "vulkan-memory-allocator",
+        "imgui",
+        "dxc",
+        "vulkan"
+    ]
 }
