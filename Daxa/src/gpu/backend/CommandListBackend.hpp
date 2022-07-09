@@ -61,12 +61,7 @@ namespace daxa {
 
 		void setScissor(VkRect2D const& scissor);
 
-		//template<typename T>
-		//void pushConstant(VkShaderStageFlags shaderStage, T const& constant, u32 offset = 0) {
-		//	vkCmdPushConstants(cmd, (**currentPipeline).getVkPipelineLayout(), shaderStage, static_cast<u32>(offset), static_cast<u32>(sizeof(T)), &constant);
-		//}
-
-		void pushConstant(VkShaderStageFlags shaderStage, void const* daxa, u32 size, u32 offset = 0);
+		void pushConstant(void const* daxa, u32 size, u32 offset = 0);
 
 		void bindVertexBuffer(u32 binding, BufferHandle& buffer, size_t bufferOffset = 0);
 

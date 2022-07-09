@@ -624,8 +624,8 @@ namespace daxa {
 			.pNext = nullptr,
 			.setLayoutCount = 1,
 			.pSetLayouts = &deviceBackend->gpuRessources.bindAllSetLayout,
-			.pushConstantRangeCount = builder.pushConstantSize ? u32(1) : u32(0),
-			.pPushConstantRanges = builder.pushConstantSize ? &pushConstantRange : nullptr,
+			.pushConstantRangeCount = builder.pushConstantSize > 0 ? u32(1) : u32(0),
+			.pPushConstantRanges = builder.pushConstantSize > 0 ? &pushConstantRange : nullptr,
 		};
 		DAXA_CHECK_VK_RESULT_M(vkCreatePipelineLayout(deviceBackend->device.device, &pipelineLayoutCI, nullptr, &ret.layout), "failed to create graphics pipeline");
 
@@ -775,8 +775,8 @@ namespace daxa {
 			.pNext = nullptr,
 			.setLayoutCount = 1,
 			.pSetLayouts = &deviceBackend->gpuRessources.bindAllSetLayout,
-			.pushConstantRangeCount = ci.pushConstantSize > 0 ? u32(1) : u32(1),
-			.pPushConstantRanges = ci.pushConstantSize ? &pushConstantRange : nullptr,
+			.pushConstantRangeCount = ci.pushConstantSize > 0 ? u32(1) : u32(0),
+			.pPushConstantRanges = ci.pushConstantSize > 0 ? &pushConstantRange : nullptr,
 		};
 		DAXA_CHECK_VK_RESULT_M(vkCreatePipelineLayout(deviceBackend->device.device, &pipelineLayoutCI, nullptr, &ret.layout), "failed to create compute pipeline layout");
 

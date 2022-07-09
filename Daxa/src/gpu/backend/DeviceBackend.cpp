@@ -100,9 +100,6 @@ namespace daxa {
 				.shaderStorageImageArrayDynamicIndexing = VK_TRUE,
 			}
 		};
-		//VK_KHR_shader_non_semantic_info 
-		
-
 
 		vkb::DeviceBuilder deviceBuilder{ physicalDevice };
 		deviceBuilder.add_pNext(&deviceFeatures);
@@ -188,6 +185,9 @@ namespace daxa {
 			};
 			pfnSetDebugUtilsObjectNameEXT(device, &nameInfo);
 		}
+
+		// TODO(pahrens): add dummy descriptors
+		// TODO(pahrens): set index 0 of every table to a dummy descriptors
 	}
 
 	BufferHandle DeviceBackend::createBuffer(BufferInfo const& info) {

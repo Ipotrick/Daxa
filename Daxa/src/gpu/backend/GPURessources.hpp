@@ -20,7 +20,7 @@
 
 namespace daxa {
 
-    constexpr inline size_t MAX_GPU_HANDLES = 1 << 16;
+    constexpr inline size_t MAX_GPU_HANDLES = 500;
 
     template<typename RessourceBackendT, typename HandleT, size_t MAX_N>
     struct GPURessourcePool {
@@ -70,13 +70,13 @@ namespace daxa {
                 versions.resize(handle.index + 1, 0);
             }
             versions[handle.index] += 1;
-            freeStack.push_back(handle.index);
+            freeIndexStack.push_back(handle.index);
         }
 
         RessourceBackendT& get(HandleT handle) {
             size_t page = handle.index >> PAGE_BITS;
             size_t offset = handle.index & PAGE_MASK;
-            return (*pages[page])[offset];
+            return (*(pages[page]))[offset];
         }
     };
 
@@ -158,7 +158,7 @@ namespace daxa {
 
     void destroyGPURessourceTable(VkDevice device, GPURessourceTable& table);
 
-    BufferHandle createBufferHandleAndInsertIntoTable(VkDevice device, VmaAllocator allocator, GPURessourceTable& table, u32 queueFamilyIndex, BufferInfo const& info) {
+    inline BufferHandle createBufferHandleAndInsertIntoTable(VkDevice device, VmaAllocator allocator, GPURessourceTable& table, u32 queueFamilyIndex, BufferInfo const& info) {
         auto [handle, bufferBackend] = table.buffers.getNew();
         bufferBackend.create(device, allocator, queueFamilyIndex, info);
 
@@ -183,7 +183,7 @@ namespace daxa {
         return handle;
     }
 
-    ImageViewHandle createImageViewHandleAndInsertIntoTable(VkDevice device, GPURessourceTable& table, ImageViewInfo const& info, VkImageView preCreatedView = VK_NULL_HANDLE) {
+    inline ImageViewHandle createImageViewHandleAndInsertIntoTable(VkDevice device, GPURessourceTable& table, ImageViewInfo const& info, VkImageView preCreatedView = VK_NULL_HANDLE) {
         auto [handle, imageViewBackend] = table.imageViews.getNew();
         imageViewBackend.create(device, info, preCreatedView);
         
@@ -227,7 +227,7 @@ namespace daxa {
         return handle;
     }
 
-    SamplerHandle createSamplerHandleAndInsertIntoTable(VkDevice device, GPURessourceTable& table, SamplerInfo const& info) {
+    inline SamplerHandle createSamplerHandleAndInsertIntoTable(VkDevice device, GPURessourceTable& table, SamplerInfo const& info) {
         auto [handle, samplerBackend] = table.samplers.getNew();
         samplerBackend.create(device, info);
 
@@ -250,15 +250,21 @@ namespace daxa {
         return handle;
     }
 
-    void destroyBufferAndRemoveFromTable(VkDevice device, VmaAllocator allocator, GPURessourceTable& table, BufferHandle handle) {
-
+    inline void destroyBufferAndRemoveFromTable(VkDevice device, VmaAllocator allocator, GPURessourceTable& table, BufferHandle handle) {
+        // TODO(pahrens): replace descriptor index slot with a dummy
+        table.buffers.get(handle).destroy(allocator);
+        table.buffers.putback(handle);
     }
 
-    void destroyImageViewAndRemoveFromTable(VkDevice device, GPURessourceTable& table, ImageViewHandle handle) {
-
+    inline void destroyImageViewAndRemoveFromTable(VkDevice device, GPURessourceTable& table, ImageViewHandle handle) {
+        // TODO(pahrens): replace descriptor index slot with a dummy
+        table.imageViews.get(handle).destroy(device);
+        table.imageViews.putback(handle);
     }
 
-    void destroySamplerAndRemoveFromTable(VkDevice device, GPURessourceTable& table, SamplerHandle handle) {
-
+    inline void destroySamplerAndRemoveFromTable(VkDevice device, GPURessourceTable& table, SamplerHandle handle) {
+        // TODO(pahrens): replace descriptor index slot with a dummy
+        table.samplers.get(handle).destroy(device);
+        table.samplers.putback(handle);
     }
 }

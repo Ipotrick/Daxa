@@ -321,8 +321,8 @@ namespace daxa {
 
 
 
-	void CommandListBackend::pushConstant(VkShaderStageFlags shaderStage, void const* daxa, u32 size, u32 offset) {
-		vkCmdPushConstants(cmd, (**currentPipeline).getVkPipelineLayout(), shaderStage, offset, size, daxa);
+	void CommandListBackend::pushConstant(void const* data, u32 size, u32 offset) {
+		vkCmdPushConstants(cmd, (**currentPipeline).getVkPipelineLayout(), VK_SHADER_STAGE_ALL, offset, size, data);
 	}
 
 	void CommandListBackend::dispatch(u32 groupCountX, u32 groupCountY, u32 grpupCountZ) {
@@ -413,16 +413,16 @@ namespace daxa {
 			renderInfo.renderArea = *ri.renderArea;
 		}
 		else if (ri.colorAttachments.size() > 0) {
-			renderInfo.renderArea.extent.width = deviceBackend->gpuRessources.imageViews.get(ri.colorAttachments[0].image).image->getVkExtent3D().width;
-			renderInfo.renderArea.extent.height = deviceBackend->gpuRessources.imageViews.get(ri.colorAttachments[0].image).image->getVkExtent3D().height;
+			renderInfo.renderArea.extent.width = deviceBackend->gpuRessources.imageViews.get(ri.colorAttachments[0].image).info.image->getVkExtent3D().width;
+			renderInfo.renderArea.extent.height = deviceBackend->gpuRessources.imageViews.get(ri.colorAttachments[0].image).info.image->getVkExtent3D().height;
 		}
 		else if (ri.depthAttachment != nullptr) {
-			renderInfo.renderArea.extent.width = deviceBackend->gpuRessources.imageViews.get(ri.depthAttachment->image).image->getVkExtent3D().width;
-			renderInfo.renderArea.extent.height = deviceBackend->gpuRessources.imageViews.get(ri.depthAttachment->image).image->getVkExtent3D().height;
+			renderInfo.renderArea.extent.width = deviceBackend->gpuRessources.imageViews.get(ri.depthAttachment->image).info.image->getVkExtent3D().width;
+			renderInfo.renderArea.extent.height = deviceBackend->gpuRessources.imageViews.get(ri.depthAttachment->image).info.image->getVkExtent3D().height;
 		}
 		else if (ri.stencilAttachment != nullptr) {
-			renderInfo.renderArea.extent.width = deviceBackend->gpuRessources.imageViews.get(ri.stencilAttachment->image).image->getVkExtent3D().width;
-			renderInfo.renderArea.extent.height = deviceBackend->gpuRessources.imageViews.get(ri.stencilAttachment->image).image->getVkExtent3D().height;
+			renderInfo.renderArea.extent.width = deviceBackend->gpuRessources.imageViews.get(ri.stencilAttachment->image).info.image->getVkExtent3D().width;
+			renderInfo.renderArea.extent.height = deviceBackend->gpuRessources.imageViews.get(ri.stencilAttachment->image).info.image->getVkExtent3D().height;
 		}	// otherwise let it be zero, as we dont render anything anyways
 
 		renderInfo.layerCount = 1;	// Not sure what this does
