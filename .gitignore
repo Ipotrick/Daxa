@@ -452,3 +452,8 @@ FodyWeavers.xsd
 
 .vscode
 _out
+
+# CLion IDE and build directories
+.idea
+cmake-build*
+vcpkg_installed

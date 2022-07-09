@@ -7,6 +7,7 @@
 #include <string_view>
 #include <memory>
 #include <cmath>
+#include <algorithm>
 
 using u64 = uint64_t;
 using i64 = int64_t;
