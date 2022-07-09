@@ -6,7 +6,7 @@
 #include <chrono>
 #include <thread>
     
-const char* getVkResultString(VkResult result) {
+inline const char* getVkResultString(VkResult result) {
     switch (result) {
         case VK_SUCCESS: return "VK_SUCCESS";
         case VK_NOT_READY: return "VK_NOT_READY";

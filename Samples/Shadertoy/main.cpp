@@ -447,7 +447,6 @@ struct App {
         cmd_list.bindPipeline(compute_buf0_pipeline);
         cmd_list.bindAll();
         cmd_list.pushConstant(
-            VK_SHADER_STAGE_COMPUTE_BIT,
             Push{
                 .globals_id = compute_globals_id,
                 .buf0_id = compute_buf0.getDescriptorIndex(),
@@ -456,7 +455,6 @@ struct App {
         cmd_list.dispatch(16, 16);
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
         cmd_list.pushConstant(
-            VK_SHADER_STAGE_COMPUTE_BIT,
             Push{
                 .globals_id = compute_globals_id,
                 .buf0_id = compute_buf0.getDescriptorIndex(),
@@ -465,7 +463,6 @@ struct App {
         cmd_list.dispatch(16, 16);
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
         cmd_list.pushConstant(
-            VK_SHADER_STAGE_COMPUTE_BIT,
             Push{
                 .globals_id = compute_globals_id,
                 .buf0_id = compute_buf0.getDescriptorIndex(),
@@ -474,7 +471,6 @@ struct App {
         cmd_list.dispatch(16, 16);
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
         cmd_list.pushConstant(
-            VK_SHADER_STAGE_COMPUTE_BIT,
             Push{
                 .globals_id = compute_globals_id,
                 .buf0_id = compute_buf0.getDescriptorIndex(),
@@ -483,7 +479,6 @@ struct App {
         cmd_list.dispatch(16, 16);
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
         cmd_list.pushConstant(
-            VK_SHADER_STAGE_COMPUTE_BIT,
             Push{
                 .globals_id = compute_globals_id,
                 .buf0_id = compute_buf0.getDescriptorIndex(),
@@ -492,7 +487,6 @@ struct App {
         cmd_list.dispatch(16, 16);
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
         cmd_list.pushConstant(
-            VK_SHADER_STAGE_COMPUTE_BIT,
             Push{
                 .globals_id = compute_globals_id,
                 .buf0_id = compute_buf0.getDescriptorIndex(),
@@ -502,9 +496,7 @@ struct App {
         cmd_list.queueMemoryBarrier(daxa::FULL_MEMORY_BARRIER);
 
         cmd_list.bindPipeline(compute_pipeline);
-        cmd_list.bindAll();
         cmd_list.pushConstant(
-            VK_SHADER_STAGE_COMPUTE_BIT,
             Push{
                 .globals_id = compute_globals_id,
                 .buf0_id = compute_buf0.getDescriptorIndex(),

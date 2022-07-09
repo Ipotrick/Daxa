@@ -8,19 +8,19 @@
 
 namespace daxa {	
 
-	MappedMemory::MappedMemory(std::shared_ptr<void> deviceBackend, BufferHandle buffer, size_t size, size_t offset)
-		: deviceBackend{ std::move(deviceBackend) }
+	MappedMemory::MappedMemory(std::shared_ptr<void> backend, BufferHandle buffer, size_t size, size_t offset)
+		: backend{ std::move(backend) }
 		, buffer{ std::move(buffer) }
 		, size{ size }
 	{
-		DeviceBackend& backend = *reinterpret_cast<DeviceBackend*>(deviceBackend.get());
-		hostPtr = reinterpret_cast<u8*>(mapBuffer(backend.allocator, backend.gpuRessources.getBackend(buffer))) + offset;
+		std::shared_ptr<DeviceBackend> deviceBackend = std::static_pointer_cast<DeviceBackend>(this->backend);
+		hostPtr = reinterpret_cast<u8*>(mapBuffer(deviceBackend->allocator, deviceBackend->gpuRessources.getBackend(buffer))) + offset;
 	}
 	MappedMemory::~MappedMemory() {
-		if (deviceBackend) {
-			DeviceBackend& backend = *reinterpret_cast<DeviceBackend*>(deviceBackend.get());
-			unmapBuffer(backend.allocator, backend.gpuRessources.getBackend(buffer));
-			deviceBackend = {};
+		if (backend) {
+			std::shared_ptr<DeviceBackend> deviceBackend = std::static_pointer_cast<DeviceBackend>(this->backend);
+			unmapBuffer(deviceBackend->allocator, deviceBackend->gpuRessources.getBackend(buffer));
+			backend = {};
 			hostPtr = nullptr;
 			size 	= 0;
 			buffer = {};
@@ -108,8 +108,8 @@ namespace daxa {
 	void CommandListHandle::setScissor(VkRect2D const& scissor) {
 		value->setScissor(scissor);
 	}
-	void CommandListHandle::pushConstant(VkShaderStageFlags shaderStage, void const* data, u32 size, u32 offset) {
-		value->pushConstant(shaderStage, data, size, offset);
+	void CommandListHandle::pushConstant(void const* data, u32 size, u32 offset) {
+		value->pushConstant(data, size, offset);
 	}
 	void CommandListHandle::bindVertexBuffer(u32 binding, BufferHandle& buffer, size_t bufferOffset) {
 		value->bindVertexBuffer(binding, buffer, bufferOffset);

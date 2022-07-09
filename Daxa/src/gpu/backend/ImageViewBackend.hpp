@@ -17,7 +17,7 @@ namespace daxa {
 		size_t zombieReferences = {};
 		ImageViewInfo info = {};
 		VkImageView imageView = {};
-		ImageHandle image = {};
+		bool externView = false;
 
 		void create(VkDevice device, ImageViewInfo const& info, VkImageView preCreatedView = VK_NULL_HANDLE);
 		void destroy(VkDevice device);
