@@ -23,6 +23,7 @@ void overlay(inout float3 color, inout float depth, in float3 new_color, in floa
 
 struct Push {
     uint globals_sb;
+    uint player_buf_id;
     uint output_image_i;
 };
 

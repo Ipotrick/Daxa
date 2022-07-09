@@ -1,7 +1,8 @@
 #pragma once
 
-#include "block_info.hlsl"
 #include "daxa.hlsl"
+
+#include "block_info.hlsl"
 
 DAXA_DEFINE_BA_RWTEXTURE3D(uint)
 DAXA_DEFINE_BA_TEXTURE3D(uint)
@@ -14,28 +15,45 @@ struct ChunkBlockPresence {
     uint x32[4];
 };
 
+struct Structure {
+    float4 p;
+    uint id;
+    uint _pad[3];
+};
+
+struct ChunkgenData {
+    Structure structures[128];
+    uint structure_n;
+    uint _pad[3];
+};
+
 struct Globals {
     float4x4 viewproj_mat;
     float4 pos;
     float4 pick_pos[2];
     int2 frame_dim;
-    float time, fov;
+    float time;
+    float fov;
 
     uint texture_index;
     uint empty_chunk_index;
     uint model_load_index;
+    uint inventory_index;
     uint chunk_images[CHUNK_NZ * CHUNK_INDEX_REPEAT_Z][CHUNK_NY * CHUNK_INDEX_REPEAT_Y][CHUNK_NX * CHUNK_INDEX_REPEAT_X];
 
+    // ---- GPU ONLY ----
+
+    ChunkgenData chunkgen_data[CHUNK_NZ][CHUNK_NY][CHUNK_NX];
     ChunkBlockPresence chunk_block_presence[CHUNK_NZ][CHUNK_NY][CHUNK_NX];
 };
 
-struct ModelLoadBuffer {
-    float4 pos, dim;
-    uint data[128 * 128 * 128];
-};
+// struct ModelLoadBuffer {
+//     float4 pos, dim;
+//     uint data[128 * 128 * 128];
+// };
 
 DAXA_DEFINE_BA_BUFFER(Globals)
-DAXA_DEFINE_BA_BUFFER(ModelLoadBuffer)
+// DAXA_DEFINE_BA_BUFFER(ModelLoadBuffer)
 
 BlockID load_block_id(StructuredBuffer<Globals> globals, float3 pos) {
     int3 chunk_i = int3(pos / CHUNK_SIZE);
