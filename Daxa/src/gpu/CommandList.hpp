@@ -214,7 +214,7 @@ namespace daxa {
 
 	class MappedMemory {
 	public:
-		MappedMemory(std::shared_ptr<void> deviceBackend, BufferHandle buffer, size_t size, size_t offset);
+		MappedMemory(std::shared_ptr<void> backend, BufferHandle buffer, size_t size, size_t offset);
 		MappedMemory(MappedMemory const&) 			= delete;
 		MappedMemory& operator=(MappedMemory const&) 	= delete;
 		MappedMemory(MappedMemory&&) 					= default;
@@ -222,7 +222,7 @@ namespace daxa {
 		~MappedMemory();
 	private:
 		friend class CommandListBackend;
-		std::shared_ptr<void> deviceBackend = {};
+		std::shared_ptr<void> backend = {};
 		BufferHandle buffer = {};
 	public:
 		size_t size = {};
@@ -397,10 +397,10 @@ namespace daxa {
 		void setViewport(VkViewport const& viewport);
 		void setScissor(VkRect2D const& scissor);
 		template<typename T>
-		void pushConstant(VkShaderStageFlags shaderStage, T const& constant, size_t offset = 0) {
-			pushConstant(shaderStage, &constant, static_cast<u32>(sizeof(T)), static_cast<u32>(offset));
+		void pushConstant(T const& constant, size_t offset = 0) {
+			pushConstant(&constant, static_cast<u32>(sizeof(T)), static_cast<u32>(offset));
 		}
-		void pushConstant(VkShaderStageFlags shaderStage, void const* data, u32 size, u32 offset = 0);
+		void pushConstant(void const* data, u32 size, u32 offset = 0);
 		void bindVertexBuffer(u32 binding, BufferHandle& buffer, size_t bufferOffset = 0);
 		void bindIndexBuffer(BufferHandle& buffer, size_t bufferOffset = 0, VkIndexType indexType = VK_INDEX_TYPE_UINT32);
 		void draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance);

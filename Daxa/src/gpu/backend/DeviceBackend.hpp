@@ -54,7 +54,7 @@ namespace daxa {
 
 	};
 
-	void deviceBackendDestructor(void* deviceBackend) {
+	inline void deviceBackendDestructor(void* deviceBackend) {
 		DeviceBackend* backend = reinterpret_cast<DeviceBackend*>(deviceBackend);
 		backend->~DeviceBackend();
 	}

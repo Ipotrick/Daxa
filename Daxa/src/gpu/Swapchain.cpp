@@ -52,12 +52,12 @@ namespace daxa {
 			img.arrayLayers = 1;
 			img.mipLevels = 1;
 			
-			ImageViewInfo ci{
+			ImageViewInfo viewInfo{
 				.image = std::move(image),
 				.format = vkbSwapchain.image_format,
 				.debugName = "swapchain image view",
 			};
-			auto view = createImageViewHandleAndInsertIntoTable(deviceBackend->device.device, deviceBackend->gpuRessources, ci, vkImageViews[i]);
+			auto view = createImageViewHandleAndInsertIntoTable(deviceBackend->device.device, deviceBackend->gpuRessources, viewInfo, vkImageViews[i]);
 			this->swapchainImageViews.push_back(view);
 		}
 

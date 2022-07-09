@@ -89,78 +89,67 @@ namespace daxa {
     {
         embraceTheDarkness();
 
-        char const* vertexGLSL = R"--(
-            [[push_constant]]
-            struct Push{
+        char const* vertex = R"--(
+            struct uPushConstant {
                 float2 uScale;
                 float2 uTranslate;
-            } p;
-
-            struct VertexIn {
-                float2 aPos;
-                float2 aUV;
-                float4 aColor;
+                uint texture0_id;
+                uint sampler0_id;
             };
-
-            struct VertexOut {
+            [[vk::push_constant]] const uPushConstant pc;
+            struct VS_INPUT {
+                float2 pos : POSITION;
+                float2 uv  : TEXCOORD0;
+                float4 col : COLOR0;
+            };
+            struct PS_INPUT {
                 float4 pos : SV_POSITION;
-                float4 Color; 
-                float2 UV;
+                float4 col : COLOR0;
+                float2 uv  : TEXCOORD0;
             };
-
-            VertexOut main(VertexIn in)
-            {
-                VertexOut out;
-                out.Color = aColor;
-                out.UV = aUV;
-                out.pos = float4(in.aPos * p.uScale + p.uTranslate, 0, 1);
-                return out;
+            PS_INPUT main(VS_INPUT input) {
+                PS_INPUT output;
+                output.pos = float4(input.pos * pc.uScale + pc.uTranslate, 0, 1);
+                output.col = input.col;
+                output.uv  = input.uv;
+                return output;
             }
         )--";
 
-        char const* fragmentGLSL = R"--(
+        char const* fragment = R"--(
             #include "daxa.hlsl"
-
-            struct FragmentIn {
+            struct uPushConstant {
+                float2 uScale;
+                float2 uTranslate;
+                uint texture0_id;
+                uint sampler0_id;
+            };
+            [[vk::push_constant]] const uPushConstant pc;
+            struct PS_INPUT {
                 float4 pos : SV_POSITION;
-                float4 Color; 
-                float2 UV;
+                float4 col : COLOR0;
+                float2 uv  : TEXCOORD0;
             };
-
-            struct FragmentOut {
-                float4 color : COLOR0;
-            };
-
-            [[push_constant]]
-            struct Push{
-                u32 sampler;
-                u32 texture;
-            } p;
-
             float4 srgb_to_linear(float4 srgb) {
                 float3 color_srgb = srgb.rgb;
                 float3 selector = clamp(ceil(color_srgb - 0.04045), 0.0, 1.0); // 0 if under value, 1 if over
                 float3 under = color_srgb / 12.92;
-                float3 over = pow((color_srgb + 0.055) / 1.055, float3(2.4));
-                float3 result = mix(under, over, selector);
+                float3 over = pow((color_srgb + 0.055) / 1.055, float3(2.4, 2.4, 2.4));
+                float3 result = lerp(under, over, selector);
                 return float4(result, srgb.a);
             }
-
-            FragmentOut main(FragmentIn in)
-            {
-                SamplerState sampler = daxa::getSampler(p.sampler);
-                Texture2D<float4> texture = daxa::getTexture2D<float4>(p.texture);
-                FragmentOut out;
-                out.color = srgb_to_linear(in.Color) * texture.Sample(sampler, in.UV);
-                return out;
-            }s
+            float4 main(PS_INPUT In) : SV_Target {
+                Texture2D<float4> texture0 = daxa::getTexture2D<float4>(pc.texture0_id);
+                SamplerState sampler0 = daxa::getSampler(pc.sampler0_id);
+                return srgb_to_linear(In.col) * texture0.Sample(sampler0, In.uv);
+            }
         )--";
 
         daxa::GraphicsPipelineBuilder pipelineBuilder;
         auto pipelineDescription = pipelineBuilder
             .setPushConstantSize(sizeof(u32))
-            .addShaderStage({.source = vertexGLSL, .stage = VK_SHADER_STAGE_VERTEX_BIT})
-            .addShaderStage({.source = fragmentGLSL, .stage = VK_SHADER_STAGE_FRAGMENT_BIT})
+            .addShaderStage({.source = vertex, .stage = VK_SHADER_STAGE_VERTEX_BIT})
+            .addShaderStage({.source = fragment, .stage = VK_SHADER_STAGE_FRAGMENT_BIT})
             .setDebugName("ImGui render pipeline")
             .beginVertexInputAttributeBinding(VK_VERTEX_INPUT_RATE_VERTEX)
             .addVertexInputAttribute(VK_FORMAT_R32G32_SFLOAT)
@@ -239,15 +228,11 @@ namespace daxa {
             perFrameData.push_back(PerFrameData{
                 .vertexBuffer = device->createBuffer({
                     .size = newMinSizeVertex,
-                    //.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                    //.memoryUsage = VMA_MEMORY_USAGE_CPU_TO_GPU,
                     .memoryType = MemoryType::CPU_TO_GPU,
                     .debugName = "dear ImGui vertex buffer"
                 }),
                 .indexBuffer = device->createBuffer({
                     .size = newMinSizeIndices,
-                    //.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                    //.memoryUsage = VMA_MEMORY_USAGE_CPU_TO_GPU,
                     .memoryType = MemoryType::CPU_TO_GPU,
                     .debugName = "dear ImGui index buffer"
                 }),
@@ -332,9 +317,9 @@ namespace daxa {
                 float translate[2];
                 translate[0] = -1.0f - draw_data->DisplayPos.x * scale[0];
                 translate[1] = -1.0f - draw_data->DisplayPos.y * scale[1];
-                cmdList.pushConstant(VK_SHADER_STAGE_VERTEX_BIT, scale);
-                cmdList.pushConstant(VK_SHADER_STAGE_VERTEX_BIT, translate, sizeof(scale));
-                cmdList.pushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, samplerId);
+                cmdList.pushConstant(scale);
+                cmdList.pushConstant(translate, sizeof(scale));
+                cmdList.pushConstant(samplerId, sizeof(translate) + sizeof(scale));
             }
 
             ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
@@ -344,12 +329,12 @@ namespace daxa {
             int global_idx_offset = 0;
             for (int n = 0; n < draw_data->CmdListsCount; n++) {
                 const ImDrawList* draws = draw_data->CmdLists[n];
-                cmdList.pushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, fontSheetId, sizeof(u32));
+                cmdList.pushConstant(fontSheetId, sizeof(u32) * 5);
 
                 for (int cmd_i = 0; cmd_i < draws->CmdBuffer.Size; cmd_i++)  {
                     const ImDrawCmd* pcmd = &draws->CmdBuffer[cmd_i];
 
-                    cmdList.pushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, daxa::ImageViewHandle::fromRaw(static_cast<u32>(reinterpret_cast<u64>(pcmd->TextureId))), sizeof(u32));
+                    cmdList.pushConstant(daxa::ImageViewHandle::fromRaw(static_cast<u32>(reinterpret_cast<u64>(pcmd->TextureId))), sizeof(u32) * 5);
 
                     // Project scissor/clipping rectangles into framebuffer space
                     ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
