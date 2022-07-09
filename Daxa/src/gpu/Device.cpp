@@ -66,6 +66,22 @@ namespace daxa {
 		std::shared_ptr<DeviceBackend> deviceBackend = std::static_pointer_cast<DeviceBackend>(this->backend);
 		deviceBackend->gpuHandleGraveyard.zombifySampler(deviceBackend->gpuRessources, handle);
 	}
+
+	BufferInfo const& Device::info(BufferHandle handle) {
+		std::shared_ptr<DeviceBackend> deviceBackend = std::static_pointer_cast<DeviceBackend>(this->backend);
+		return deviceBackend->gpuRessources.buffers.get(handle).info;
+	}
+
+	ImageViewInfo const& Device::info(ImageViewHandle handle) {
+		std::shared_ptr<DeviceBackend> deviceBackend = std::static_pointer_cast<DeviceBackend>(this->backend);
+		return deviceBackend->gpuRessources.imageViews.get(handle).info;
+	}
+
+	SamplerInfo const& Device::info(SamplerHandle handle) {
+		std::shared_ptr<DeviceBackend> deviceBackend = std::static_pointer_cast<DeviceBackend>(this->backend);
+		return deviceBackend->gpuRessources.samplers.get(handle).info;
+	}
+
 	
 	MappedMemory Device::mapMemory(BufferHandle handle) {
 		return std::move(MappedMemory{ backend, handle, this->info(handle).size, 0 });

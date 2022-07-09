@@ -13,9 +13,9 @@ namespace daxa {
 
 		//#if defined(_DEBUG)
 			instanceBuilder
-				.enable_validation_layers(true)
+				//.enable_validation_layers(true)
 				.enable_extension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
-				//.add_validation_feature_enable(VkValidationFeatureEnableEXT::VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT)
+				.add_validation_feature_enable(VkValidationFeatureEnableEXT::VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT)
 				//.enable_layer("VK_LAYER_LUNARG_monitor")
 				.use_default_debug_messenger();
 		//#endif

@@ -7,13 +7,15 @@ namespace daxa {
 			this->info.subresourceRange = {
 				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
 				.baseMipLevel = 0,
-				.levelCount = image->getMipLevels(),
+				.levelCount = this->info.image->getMipLevels(),
 				.baseArrayLayer = 0,
-				.layerCount = image->getArrayLayers(),
+				.layerCount = this->info.image->getArrayLayers(),
 			};
 		}
 
-		if ( preCreatedView != VK_NULL_HANDLE ) {
+		this->externView = preCreatedView != VK_NULL_HANDLE;
+
+		if ( externView ) {
 			this->imageView = preCreatedView;
 		}
 		else {
@@ -44,7 +46,10 @@ namespace daxa {
     }
 
     void ImageViewBackend::destroy(VkDevice device) {
-		vkDestroyImageView(device, this->imageView, nullptr);
-        this->image = {};
+		if ( !this->externView ) {
+			vkDestroyImageView(device, this->imageView, nullptr);
+		}
+		this->imageView = VK_NULL_HANDLE;
+        this->info = {};
     }
 }
