@@ -6,6 +6,7 @@
 #include <vector>
 #include <array>
 #include <filesystem>
+#include <functional>
 
 #include <daxa/types.hpp>
 
@@ -13,7 +14,7 @@
 #define DAXA_DEBUG
 #endif
 
-#ifdef DAXA_DEBUG
+#if defined(DAXA_DEBUG)
 #include <iostream>
 #include <cstdlib>
 
@@ -29,7 +30,10 @@
     }()
 #else
 
-#define DAXA_DBG_ASSERT_TRUE_M(x, m)
+#define DAXA_DBG_ASSERT_TRUE_M(x, m) \
+    [&] {                            \
+        x;                           \
+    }()
 
 #endif
 
@@ -38,8 +42,10 @@ namespace daxa
 
     struct Handle
     {
+        Handle(std::shared_ptr<void> impl);
+
       protected:
-        std::shared_ptr<void> backend = {};
+        std::shared_ptr<void> impl = {};
     };
 
     struct ResultErr
