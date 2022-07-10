@@ -3,8 +3,9 @@ include(cmake/warnings.cmake)
 project(daxa VERSION 1.0.0)
 
 add_library(daxa
-
-    # add sources here
+    "src/impl_device.cpp"
+    "src/impl_context.cpp"
+    "src/impl_core.cpp"
 )
 
 add_library(daxa::daxa ALIAS daxa)
@@ -17,13 +18,15 @@ endif()
 
 find_package(dxc CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
-find_package(Vulkan REQUIRED)
 find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
+find_package(Vulkan REQUIRED)
+find_package(volk CONFIG REQUIRED)
 
 target_link_libraries(daxa
     PUBLIC
     unofficial::vulkan-memory-allocator::vulkan-memory-allocator
     Vulkan::Vulkan
+    volk::volk
     imgui::imgui
     dxc::dxc
 )
@@ -34,6 +37,9 @@ target_include_directories(daxa
 )
 
 set_project_warnings(daxa)
+
+# TODO: REMOVE (TEMP)
+add_subdirectory(temp)
 
 # Packaging
 include(CMakePackageConfigHelpers)
