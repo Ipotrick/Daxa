@@ -12,12 +12,12 @@ namespace daxa
 
     struct Context : Handle
     {
-        friend auto create_context(ContextInfo const & info) -> Context;
-
-        auto create_device(DeviceInfo const & info) -> Device;
+        auto create_device(std::function<i32(DeviceInfo const & info)> const & selector) -> Device;
+        auto create_default_device() -> Device;
 
       private:
-        Context() {}
+        friend auto create_context(ContextInfo const & info) -> Context;
+        Context(std::shared_ptr<void> impl);
     };
 
     auto create_context(ContextInfo const & info) -> Context;
