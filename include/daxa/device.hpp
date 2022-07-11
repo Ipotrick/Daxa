@@ -4,6 +4,7 @@
 
 #include <daxa/gpu_resources.hpp>
 #include <daxa/pipeline.hpp>
+#include <daxa/swapchain.hpp>
 
 namespace daxa
 {
@@ -156,7 +157,7 @@ namespace daxa
         auto info_sampler(SamplerId id) const -> SamplerInfo;
 
         auto create_pipeline_compiler(PipelineCompilerInfo const & info) -> PipelineCompiler;
-        // auto create_swapchain(SwapchainInfo const & info) -> Swapchain;
+        auto create_swapchain(SwapchainInfo const & info) -> Swapchain;
         // auto create_semaphore(SemaphoreInfo const & info) -> Semaphore;
         // auto create_signal(SignalInfo const & info) -> Signal;
 
@@ -168,7 +169,7 @@ namespace daxa
         void end_command_batch();
 
       private:
-        friend class Context;
+        friend struct Context;
         Device(std::shared_ptr<void> impl);
     };
 } // namespace daxa
