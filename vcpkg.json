@@ -4,6 +4,7 @@
     "dependencies": [
         "imgui",
         "dxc",
+        "glfw3",
         "vulkan-memory-allocator",
         "volk",
         "vulkan"

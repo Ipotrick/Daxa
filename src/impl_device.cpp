@@ -1,9 +1,9 @@
 #include "impl_core.hpp"
 #include "impl_device.hpp"
+#include "impl_swapchain.hpp"
 
 namespace daxa
 {
-
     Device::Device(std::shared_ptr<void> impl) : Handle(impl) {}
 
     auto Device::info() const -> DeviceInfo const &
@@ -38,11 +38,15 @@ namespace daxa
         vkQueuePresentKHR(impl.vk_main_queue_handle, &present_info);
     }
 
-    ImplDevice::ImplDevice(std::shared_ptr<ImplContext> impl_ctx, VkPhysicalDevice physical_device)
+    auto Device::create_swapchain(SwapchainInfo const & info) -> Swapchain
     {
-        VkPhysicalDeviceProperties vk_device_properties;
-        vkGetPhysicalDeviceProperties(physical_device, &vk_device_properties);
-        this->info = *reinterpret_cast<DeviceInfo *>(&vk_device_properties);
+        return Swapchain{std::make_shared<ImplSwapchain>(std::static_pointer_cast<ImplDevice>(this->impl, info))};
+    }
+
+    ImplDevice::ImplDevice(DeviceInfo const & info, std::shared_ptr<ImplContext> impl_ctx, VkPhysicalDevice physical_device)
+        : info{info}
+    {
+        this->vk_physical_device = physical_device;
 
         // SELECT QUEUE
         u32 vk_queue_family_index = std::numeric_limits<u32>::max();
@@ -57,10 +61,10 @@ namespace daxa
         // Maybe check if device supports present for this surface?
         // this requires that the surface was already created.. which
         // is really CRINGE
-        // for (uint32_t i = 0; i < queue_family_props_count; i++)
+        // for (u32 i = 0; i < queue_family_props_count; i++)
         //     vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface, &supports_present[i]);
 
-        for (uint32_t i = 0; i < queue_family_props_count; i++)
+        for (u32 i = 0; i < queue_family_props_count; i++)
         {
             if ((queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0
                 // && supports_present[i] == VK_TRUE
@@ -70,7 +74,7 @@ namespace daxa
                 break;
             }
         }
-        DAXA_DBG_ASSERT_TRUE_M(vk_queue_family_index != std::numeric_limits<uint32_t>::max(), "found no suitable queue family");
+        DAXA_DBG_ASSERT_TRUE_M(vk_queue_family_index != std::numeric_limits<u32>::max(), "found no suitable queue family");
 
         f32 queue_priorities[1] = {0.0};
         VkDeviceQueueCreateInfo queue_ci{
@@ -98,11 +102,11 @@ namespace daxa
             .pEnabledFeatures = nullptr,
         };
         vkCreateDevice(physical_device, &device_ci, nullptr, &this->vk_device_handle);
-        volkLoadDevice(this->vk_device_handle);
+        volkLoadDeviceTable(&this->volk_device_table, this->vk_device_handle);
     }
 
     ImplDevice::~ImplDevice()
     {
-        vkDestroyDevice(this->vk_device_handle, nullptr);
+        this->volk_device_table.vkDestroyDevice(this->vk_device_handle, nullptr);
     }
 } // namespace daxa

@@ -327,8 +327,77 @@ namespace daxa
             A4B4G4R4_UNORM_PACK16_EXT = A4B4G4R4_UNORM_PACK16,
         };
 
-        struct BlendInfo
+        enum class MsgSeverity
         {
+            VERBOSE = 0x00000001,
+            INFO = 0x00000010,
+            WARNING = 0x00000100,
+            FAILURE = 0x00001000,
+        };
+
+        enum class MsgType
+        {
+            GENERAL = 0x00000001,
+            VALIDATION = 0x00000002,
+            PERFORMANCE = 0x00000004,
+        };
+
+        enum class PresentMode
+        {
+            DO_NOT_WAIT_FOR_VBLANK = 0,
+            TRIPPLE_BUFFER_WAIT_FOR_VBLANK = 1,
+            DOUBLE_BUFFER_WAIT_FOR_VBLANK = 2,
+            DOUBLE_BUFFER_WAIT_FOR_VBLANK_RELAXED = 3,
+        };
+
+        enum class PresentOp
+        {
+            IDENTITY = 0x00000001,
+            ROTATE_90 = 0x00000002,
+            ROTATE_180 = 0x00000004,
+            ROTATE_270 = 0x00000008,
+            HORIZONTAL_MIRROR = 0x00000010,
+            HORIZONTAL_MIRROR_ROTATE_90 = 0x00000020,
+            HORIZONTAL_MIRROR_ROTATE_180 = 0x00000040,
+            HORIZONTAL_MIRROR_ROTATE_270 = 0x00000080,
+            INHERIT = 0x00000100,
+        };
+
+        using ImageUsageFlags = u32;
+        struct ImageUsageFlagBits
+        {
+            static inline constexpr ImageUsageFlags TRANSFER_SRC = 0x00000001;
+            static inline constexpr ImageUsageFlags TRANSFER_DST = 0x00000002;
+            static inline constexpr ImageUsageFlags SAMPLED = 0x00000004;
+            static inline constexpr ImageUsageFlags STORAGE = 0x00000008;
+            static inline constexpr ImageUsageFlags COLOR_ATTACHMENT = 0x00000010;
+            static inline constexpr ImageUsageFlags DEPTH_STENCIL_ATTACHMENT = 0x00000020;
+            static inline constexpr ImageUsageFlags TRANSIENT_ATTACHMENT = 0x00000040;
+            static inline constexpr ImageUsageFlags FRAGMENT_DENSITY_MAP = 0x00000200;
+            static inline constexpr ImageUsageFlags FRAGMENT_SHADING_RATE_ATTACHMENT = 0x00000100;
+            static inline constexpr ImageUsageFlags SHADING_RATE_IMAGE = FRAGMENT_SHADING_RATE_ATTACHMENT;
+        };
+
+        enum class ColorSpace
+        {
+            SRGB_NONLINEAR = 0,
+            DISPLAY_P3_NONLINEAR = 1000104001,
+            EXTENDED_SRGB_LINEAR = 1000104002,
+            DISPLAY_P3_LINEAR = 1000104003,
+            DCI_P3_NONLINEAR = 1000104004,
+            BT709_LINEAR = 1000104005,
+            BT709_NONLINEAR = 1000104006,
+            BT2020_LINEAR = 1000104007,
+            HDR10_ST2084 = 1000104008,
+            DOLBYVISION = 1000104009,
+            HDR10_HLG = 1000104010,
+            ADOBERGB_LINEAR = 1000104011,
+            ADOBERGB_NONLINEAR = 1000104012,
+            PASS_THROUGH = 1000104013,
+            EXTENDED_SRGB_NONLINEAR = 1000104014,
+            DISPLAY_NATIVE = 1000213000,
+            RGB_NONLINEAR = EXTENDED_SRGB_NONLINEAR,
+            DCI_P3_LINEAR = DISPLAY_P3_LINEAR,
         };
     } // namespace types
 } // namespace daxa

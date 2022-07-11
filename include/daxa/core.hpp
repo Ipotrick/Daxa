@@ -7,10 +7,11 @@
 #include <array>
 #include <filesystem>
 #include <functional>
+#include <chrono>
 
 #include <daxa/types.hpp>
 
-#ifdef _Debug
+#if !defined(NDEBUG)
 #define DAXA_DEBUG
 #endif
 
@@ -20,21 +21,45 @@
 
 #define DAXA_DBG_ASSERT_FAIL_STRING "[[DAXA ASSERT FAILURE]]"
 
-#define DAXA_DBG_ASSERT_TRUE_M(x, m)                                            \
-    [&] {                                                                       \
-        if (!x)                                                                 \
-        {                                                                       \
-            std::cerr << DAXA_DBG_ASSERT_FAIL_STRING << ": " << m << std::endl; \
-            std::exit(-1);                                                      \
-        }                                                                       \
+#define DAXA_DBG_ASSERT_TRUE_M(x, m)                                              \
+    [&] {                                                                         \
+        if (!(x))                                                                 \
+        {                                                                         \
+            std::cerr << DAXA_DBG_ASSERT_FAIL_STRING << ": " << (m) << std::endl; \
+            std::exit(-1);                                                        \
+        }                                                                         \
     }()
 #else
 
 #define DAXA_DBG_ASSERT_TRUE_M(x, m) \
     [&] {                            \
-        x;                           \
+        (x);                         \
     }()
 
+#endif
+
+#if defined(_WIN32)
+#define VK_USE_PLATFORM_WIN32_KHR
+
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+
+namespace daxa
+{
+    using NativeWindowHandle = HWND;
+} // namespace daxa
+#endif
+
+#if defined(__linux__)
+#define VK_USE_PLATFORM_XLIB_KHR
+
+#include <X11/Xlib.h>
+
+namespace daxa
+{
+    using NativeWindowHandle = ::Window;
+} // namespace daxa
 #endif
 
 namespace daxa

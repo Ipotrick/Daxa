@@ -2,54 +2,27 @@
 #include "impl_context.hpp"
 #include "impl_device.hpp"
 
-PFN_vkCreateDebugUtilsMessengerEXT vk_create_debug_utils_messenger_ext;
-PFN_vkDestroyDebugUtilsMessengerEXT vk_destroy_debug_utils_messenger_ext;
-VkDebugUtilsMessengerEXT debug_utils_messenger;
-
-/*
-    static VKAPI_ATTR VkBool32 VKAPI_CALL debug_utils_messenger_callback(
-            VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
-            VkDebugUtilsMessageTypeFlagsEXT message_type,
-            const VkDebugUtilsMessengerCallbackDataEXT *p_callback_data,
-            void *p_user_data) {
-        std::cerr << "validation layer: " << p_callback_data->pMessage << std::endl;
-        return VK_FALSE;
-    }
-    VkResult CreateDebugUtilsMessengerEXT(
-            VkInstance instance,
-            const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo,
-            const VkAllocationCallbacks *pAllocator,
-            VkDebugUtilsMessengerEXT *pDebugMessenger) {
-        auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
-                instance,
-                "vkCreateDebugUtilsMessengerEXT");
-        if (func != nullptr) {
-            return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
-        } else {
-            return VK_ERROR_EXTENSION_NOT_PRESENT;
-        }
-    }
-    void DestroyDebugUtilsMessengerEXT(
-            VkInstance instance,
-            VkDebugUtilsMessengerEXT debugMessenger,
-            const VkAllocationCallbacks *pAllocator) {
-        auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
-                instance,
-                "vkDestroyDebugUtilsMessengerEXT");
-        if (func != nullptr) {
-            func(instance, debugMessenger, pAllocator);
-        }
-    }
-*/
-
 namespace daxa
 {
+    VKAPI_ATTR VkBool32 VKAPI_CALL debug_utils_messenger_callback(
+        VkDebugUtilsMessageSeverityFlagBitsEXT msg_severity,
+        VkDebugUtilsMessageTypeFlagsEXT msg_type,
+        const VkDebugUtilsMessengerCallbackDataEXT * p_callback_data,
+        void * p_user_data)
+    {
+        ContextInfo const & info = *reinterpret_cast<ContextInfo const *>(p_user_data);
+        std::string_view msg = p_callback_data->pMessage;
+        info.validation_callback(static_cast<MsgSeverity>(msg_severity), static_cast<MsgType>(msg_type), msg);
+        return VK_TRUE;
+    }
+
     auto create_context(ContextInfo const & info) -> Context
     {
         return Context{std::make_shared<ImplContext>(info)};
     }
 
-    ImplContext::ImplContext(ContextInfo const & info)
+    ImplContext::ImplContext(ContextInfo const & info_param)
+        : info{info_param}
     {
         volkInitialize();
 
@@ -70,6 +43,7 @@ namespace daxa
             enabled_layers.push_back("VK_LAYER_KHRONOS_validation");
         }
         extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+        extension_names.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
 #if defined(WIN32)
         extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
@@ -117,12 +91,31 @@ namespace daxa
         };
         vkCreateInstance(&instance_ci, nullptr, &vk_instance_handle);
 
-        volkLoadInstance(vk_instance_handle);
+        volkLoadInstanceOnly(vk_instance_handle);
+
+        VkDebugUtilsMessengerCreateInfoEXT createInfo = {
+            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+            .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT,
+            .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_FLAG_BITS_MAX_ENUM_EXT,
+            .pfnUserCallback = debug_utils_messenger_callback,
+            .pUserData = const_cast<ContextInfo *>(&this->info),
+        };
+
+        auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vk_instance_handle, "vkCreateDebugUtilsMessengerEXT");
+        DAXA_DBG_ASSERT_TRUE_M(func != nullptr, "failed to set up debug messenger!");
+        func(vk_instance_handle, &createInfo, nullptr, &vk_debug_utils_messenger);
     }
 
     ImplContext::~ImplContext()
     {
         vkDestroyInstance(vk_instance_handle, nullptr);
+
+        if (info.enable_validation)
+        {
+            auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vk_instance_handle, "vkDestroyDebugUtilsMessengerEXT");
+            DAXA_DBG_ASSERT_TRUE_M(func != nullptr, "failed to destroy debug messenger!");
+            func(vk_instance_handle, vk_debug_utils_messenger, nullptr);
+        }
     }
 
     Context::Context(std::shared_ptr<void> impl) : Handle(impl) {}
@@ -261,9 +254,15 @@ namespace daxa
             .features = REQUIRED_PHYSICAL_DEVICE_FEATURES,
         };
 
+        // TODO: check for every possible device if it has the required features and if not dont even consider them.
+
         auto physical_device = *best_physical_device;
 
-        return Device{std::make_shared<ImplDevice>(std::static_pointer_cast<ImplContext>(this->impl), physical_device)};
+        VkPhysicalDeviceProperties vk_device_properties;
+        vkGetPhysicalDeviceProperties(physical_device, &vk_device_properties);
+        auto & device_info = *reinterpret_cast<DeviceInfo *>(&vk_device_properties);
+
+        return Device{std::make_shared<ImplDevice>(device_info, std::static_pointer_cast<ImplContext>(this->impl), physical_device)};
     }
 
     auto Context::create_default_device() -> Device
@@ -276,6 +275,7 @@ namespace daxa
             case daxa::DeviceType::DISCRETE_GPU: score += 10000; break;
             case daxa::DeviceType::VIRTUAL_GPU: score += 1000; break;
             case daxa::DeviceType::INTEGRATED_GPU: score += 100; break;
+            default: break;
             }
             score += device_info.limits.max_memory_allocation_count;
             score += device_info.limits.max_descriptor_set_storage_buffers / 10;

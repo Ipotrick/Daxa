@@ -6,6 +6,9 @@ add_library(daxa
     "src/impl_device.cpp"
     "src/impl_context.cpp"
     "src/impl_core.cpp"
+    "src/impl_pipeline.cpp"
+    "src/impl_swapchain.cpp"
+    "src/impl_gpu_resources.cpp"
 )
 
 add_library(daxa::daxa ALIAS daxa)

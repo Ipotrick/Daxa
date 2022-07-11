@@ -13,20 +13,6 @@ namespace daxa
         std::string debug_name = {};
     };
 
-    struct GraphicsPipelineInfo
-    {
-        std::optional<ShaderInfo> vertex_shader = {};
-        std::optional<ShaderInfo> fragment_shader = {};
-        std::vector<std::pair<Format, std::optional<BlendInfo>>> color_attachments = {};
-        u32 push_constant_size = {};
-        std::string debug_name = {};
-    };
-
-    struct GraphicsPipeline : Handle
-    {
-        auto info() const -> GraphicsPipelineInfo const &;
-    };
-
     struct ComputePipelineInfo
     {
         ShaderInfo shader_info = {};
@@ -47,7 +33,6 @@ namespace daxa
 
     struct PipelineCompiler : Handle
     {
-        auto create_graphics_pipeline(GraphicsPipelineInfo const & info) -> Result<GraphicsPipeline>;
         auto create_compute_pipeline(ComputePipelineInfo const & info) -> Result<ComputePipeline>;
     };
 } // namespace daxa
