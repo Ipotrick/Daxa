@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include <mutex>
+#include <variant>
 
 #include <daxa/core.hpp>
 
