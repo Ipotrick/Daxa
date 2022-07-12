@@ -43,18 +43,119 @@ namespace daxa
         return Swapchain{std::make_shared<ImplSwapchain>(std::static_pointer_cast<ImplDevice>(this->impl), info)};
     }
 
-    ImplDevice::ImplDevice(DeviceInfo const & info, std::shared_ptr<ImplContext> impl_ctx, VkPhysicalDevice physical_device)
-        : info{info}
-    {
-        this->vk_physical_device = physical_device;
+    static const VkPhysicalDeviceFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES{
+        .robustBufferAccess = VK_FALSE,
+        .fullDrawIndexUint32 = VK_FALSE,
+        .imageCubeArray = VK_FALSE,
+        .independentBlend = VK_FALSE,
+        .geometryShader = VK_FALSE,
+        .tessellationShader = VK_FALSE,
+        .sampleRateShading = VK_FALSE,
+        .dualSrcBlend = VK_FALSE,
+        .logicOp = VK_FALSE,
+        .multiDrawIndirect = VK_FALSE,
+        .drawIndirectFirstInstance = VK_FALSE,
+        .depthClamp = VK_FALSE,
+        .depthBiasClamp = VK_FALSE,
+        .fillModeNonSolid = VK_FALSE,
+        .depthBounds = VK_FALSE,
+        .wideLines = VK_FALSE,
+        .largePoints = VK_FALSE,
+        .alphaToOne = VK_FALSE,
+        .multiViewport = VK_FALSE,
+        .samplerAnisotropy = VK_FALSE,
+        .textureCompressionETC2 = VK_FALSE,
+        .textureCompressionASTC_LDR = VK_FALSE,
+        .textureCompressionBC = VK_FALSE,
+        .occlusionQueryPrecise = VK_FALSE,
+        .pipelineStatisticsQuery = VK_FALSE,
+        .vertexPipelineStoresAndAtomics = VK_FALSE,
+        .fragmentStoresAndAtomics = VK_FALSE,
+        .shaderTessellationAndGeometryPointSize = VK_FALSE,
+        .shaderImageGatherExtended = VK_FALSE,
+        .shaderStorageImageExtendedFormats = VK_FALSE,
+        .shaderStorageImageMultisample = VK_FALSE,
+        .shaderStorageImageReadWithoutFormat = VK_FALSE,
+        .shaderStorageImageWriteWithoutFormat = VK_FALSE,
+        .shaderUniformBufferArrayDynamicIndexing = VK_FALSE,
+        .shaderSampledImageArrayDynamicIndexing = VK_FALSE,
+        .shaderStorageBufferArrayDynamicIndexing = VK_FALSE,
+        .shaderStorageImageArrayDynamicIndexing = VK_FALSE,
+        .shaderClipDistance = VK_FALSE,
+        .shaderCullDistance = VK_FALSE,
+        .shaderFloat64 = VK_FALSE,
+        .shaderInt64 = VK_FALSE,
+        .shaderInt16 = VK_FALSE,
+        .shaderResourceResidency = VK_FALSE,
+        .shaderResourceMinLod = VK_FALSE,
+        .sparseBinding = VK_FALSE,
+        .sparseResidencyBuffer = VK_FALSE,
+        .sparseResidencyImage2D = VK_FALSE,
+        .sparseResidencyImage3D = VK_FALSE,
+        .sparseResidency2Samples = VK_FALSE,
+        .sparseResidency4Samples = VK_FALSE,
+        .sparseResidency8Samples = VK_FALSE,
+        .sparseResidency16Samples = VK_FALSE,
+        .sparseResidencyAliased = VK_FALSE,
+        .variableMultisampleRate = VK_FALSE,
+        .inheritedQueries = VK_FALSE,
+    };
 
+    static const VkPhysicalDeviceDescriptorIndexingFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_DESCRIPTOR_INDEXING{
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
+        .pNext = nullptr,
+        .shaderInputAttachmentArrayDynamicIndexing = VK_FALSE, // no render passes
+        .shaderUniformTexelBufferArrayDynamicIndexing = VK_TRUE,
+        .shaderStorageTexelBufferArrayDynamicIndexing = VK_TRUE,
+        .shaderUniformBufferArrayNonUniformIndexing = VK_TRUE,
+        .shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
+        .shaderStorageBufferArrayNonUniformIndexing = VK_TRUE,
+        .shaderStorageImageArrayNonUniformIndexing = VK_TRUE,
+        .shaderInputAttachmentArrayNonUniformIndexing = VK_FALSE, // no render passes
+        .shaderUniformTexelBufferArrayNonUniformIndexing = VK_TRUE,
+        .shaderStorageTexelBufferArrayNonUniformIndexing = VK_TRUE,
+        .descriptorBindingUniformBufferUpdateAfterBind = VK_FALSE, // no uniform buffers
+        .descriptorBindingSampledImageUpdateAfterBind = VK_TRUE,
+        .descriptorBindingStorageImageUpdateAfterBind = VK_TRUE,
+        .descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE,
+        .descriptorBindingUniformTexelBufferUpdateAfterBind = VK_FALSE, // no uniform buffers
+        .descriptorBindingStorageTexelBufferUpdateAfterBind = VK_TRUE,
+        .descriptorBindingUpdateUnusedWhilePending = VK_TRUE,
+        .descriptorBindingPartiallyBound = VK_TRUE,
+        .descriptorBindingVariableDescriptorCount = VK_TRUE,
+        .runtimeDescriptorArray = VK_TRUE,
+    };
+
+    static const VkPhysicalDeviceDynamicRenderingFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_DYNAMIC_RENDERING{
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
+        .pNext = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_DESCRIPTOR_INDEXING),
+        .dynamicRendering = VK_TRUE,
+    };
+
+    static const VkPhysicalDeviceTimelineSemaphoreFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_TIMELINE_SEMAPHORE{
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES,
+        .pNext = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_DYNAMIC_RENDERING),
+        .timelineSemaphore = VK_TRUE,
+    };
+
+    static const VkPhysicalDeviceSynchronization2Features REQUIRED_PHYSICAL_DEVICE_FEATURES_SYNCHRONIZATION_2{
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR,
+        .pNext = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_TIMELINE_SEMAPHORE),
+        .synchronization2 = VK_TRUE,
+    };
+
+    static void * REQUIRED_DEVICE_FEATURE_P_CHAIN = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SYNCHRONIZATION_2);
+
+    ImplDevice::ImplDevice(DeviceInfo const & a_info, std::shared_ptr<ImplContext> a_impl_ctx, VkPhysicalDevice a_physical_device)
+        : info{a_info}, impl_ctx{a_impl_ctx}, vk_physical_device{a_physical_device}
+    {
         // SELECT QUEUE
         u32 vk_queue_family_index = std::numeric_limits<u32>::max();
         u32 queue_family_props_count = 0;
         std::vector<VkQueueFamilyProperties> queue_props;
-        vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_props_count, nullptr);
+        vkGetPhysicalDeviceQueueFamilyProperties(a_physical_device, &queue_family_props_count, nullptr);
         queue_props.resize(queue_family_props_count);
-        vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_props_count, queue_props.data());
+        vkGetPhysicalDeviceQueueFamilyProperties(a_physical_device, &queue_family_props_count, queue_props.data());
         std::vector<VkBool32> supports_present;
         supports_present.resize(queue_family_props_count);
 
@@ -86,27 +187,138 @@ namespace daxa
             .pQueuePriorities = queue_priorities,
         };
 
+        VkPhysicalDeviceFeatures2 physical_device_features_2{
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
+            .features = REQUIRED_PHYSICAL_DEVICE_FEATURES,
+        };
+
         std::vector<char const *> extension_names;
         std::vector<char const *> enabled_layers;
 
         extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
         VkDeviceCreateInfo device_ci = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-            .pNext = nullptr,
+            .pNext = &physical_device_features_2,
             .queueCreateInfoCount = static_cast<u32>(1),
             .pQueueCreateInfos = &queue_ci,
             .enabledLayerCount = static_cast<u32>(enabled_layers.size()),
             .ppEnabledLayerNames = enabled_layers.data(),
             .enabledExtensionCount = static_cast<u32>(extension_names.size()),
             .ppEnabledExtensionNames = extension_names.data(),
-            .pEnabledFeatures = nullptr,
+            .pEnabledFeatures = &REQUIRED_PHYSICAL_DEVICE_FEATURES,
         };
-        vkCreateDevice(physical_device, &device_ci, nullptr, &this->vk_device_handle);
-        volkLoadDeviceTable(&this->volk_device_table, this->vk_device_handle);
+        vkCreateDevice(a_physical_device, &device_ci, nullptr, &this->vk_device_handle);
+        volkLoadDevice(this->vk_device_handle);
+        gpu_table.init(
+            info.limits.max_descriptor_set_storage_buffers,
+            std::min(info.limits.max_descriptor_set_sampled_images, info.limits.max_descriptor_set_storage_images),
+            info.limits.max_descriptor_set_samplers,
+            vk_device_handle);
     }
 
     ImplDevice::~ImplDevice()
     {
-        this->volk_device_table.vkDestroyDevice(this->vk_device_handle, nullptr);
+        vkDestroyDevice(this->vk_device_handle, nullptr);
+    }
+
+    auto ImplDevice::new_buffer() -> BufferId
+    {
+        return BufferId{};
+    }
+
+    void ImplDevice::cleanup_buffer(BufferId id)
+    {
+    }
+
+    auto ImplDevice::info_buffer() -> BufferInfo const &
+    {
+        return BufferInfo{};
+    }
+
+    auto ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat format) -> ImageId
+    {
+        auto [id, image_slot] = gpu_table.image_slots.new_slot();
+
+        ImplImageSlot ret;
+        ret.vk_image_handle = swapchain_image;
+        VkImageViewCreateInfo view_ci{
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = 0,
+            .image = swapchain_image,
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .format = format,
+            .components = {
+                .r = VK_COMPONENT_SWIZZLE_IDENTITY,
+                .g = VK_COMPONENT_SWIZZLE_IDENTITY,
+                .b = VK_COMPONENT_SWIZZLE_IDENTITY,
+                .a = VK_COMPONENT_SWIZZLE_IDENTITY,
+            },
+            .subresourceRange = {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+        };
+        ret.swapchain_owned = true;
+        ret.info = ImageInfo{ };
+        vkCreateImageView(vk_device_handle, &view_ci, nullptr, &ret.vk_image_view_handle);
+        image_slot = ret;
+
+        return ImageId{id};
+    }
+
+    auto ImplDevice::new_image() -> ImageId
+    {
+        return ImageId{};
+    }
+
+    void ImplDevice::cleanup_image(ImageId id)
+    {
+        ImplImageSlot & image_slot = std::get<ImplImageSlot>(gpu_table.image_slots.dereference_id(id));
+
+        vkDestroyImageView(vk_device_handle, image_slot.vk_image_view_handle, nullptr);
+
+        if (!image_slot.swapchain_owned) {
+            vkDestroyImage(vk_device_handle, image_slot.vk_image_handle, nullptr);
+        }
+
+        gpu_table.image_slots.return_slot(id);
+    }
+
+    auto ImplDevice::info_image() -> ImageInfo const &
+    {
+        return ImageInfo{};
+    }
+
+    auto ImplDevice::new_image_view() -> ImageViewId
+    {
+        return ImageViewId{};
+    }
+
+    void ImplDevice::cleanup_image_view(ImageViewId id)
+    {
+    }
+
+    auto ImplDevice::info_image_view() -> ImageViewInfo const &
+    {
+        return ImageViewInfo{};
+    }
+
+    auto ImplDevice::new_sampler() -> SamplerId
+    {
+        return SamplerId{};
+    }
+
+    void ImplDevice::cleanup_sampler(SamplerId id)
+    {
+    }
+
+    auto ImplDevice::info_sampler() -> SamplerInfo const &
+    {
+        return SamplerInfo{};
     }
 } // namespace daxa
