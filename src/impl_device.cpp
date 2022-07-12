@@ -40,7 +40,7 @@ namespace daxa
 
     auto Device::create_swapchain(SwapchainInfo const & info) -> Swapchain
     {
-        return Swapchain{std::make_shared<ImplSwapchain>(std::static_pointer_cast<ImplDevice>(this->impl, info))};
+        return Swapchain{std::make_shared<ImplSwapchain>(std::static_pointer_cast<ImplDevice>(this->impl), info)};
     }
 
     ImplDevice::ImplDevice(DeviceInfo const & info, std::shared_ptr<ImplContext> impl_ctx, VkPhysicalDevice physical_device)

@@ -22,7 +22,7 @@ namespace daxa
         void resize(u32 width, u32 height);
         void change_present_mode(PresentMode new_present_mode);
     private:
-        friend class Device;
+        friend struct Device;
         Swapchain(std::shared_ptr<void> impl);
     };
 }
