@@ -10,9 +10,16 @@ int main()
 {
     auto daxa_ctx = daxa::create_context({
         .enable_validation = false,
-        .validation_callback = [](daxa::MsgSeverity, daxa::MsgType, std::string_view msg)
+        .validation_callback = [](daxa::MsgSeverity s, daxa::MsgType, std::string_view msg)
         {
-            std::cout << msg << std::endl;
+            switch (s)
+            {
+            // case daxa::MsgSeverity::VERBOSE: std::cout << "[VERBOSE]: " << msg << std::endl; break;
+            // case daxa::MsgSeverity::INFO:    std::cout << "[INFO]:    " << msg << std::endl; break;
+            case daxa::MsgSeverity::WARNING: std::cout << "[WARNING]: " << msg << std::endl; break;
+            case daxa::MsgSeverity::FAILURE: std::cout << "[FAILURE]: " << msg << std::endl; break;
+            default: break;
+            }
         },
     });
 
@@ -31,7 +38,7 @@ int main()
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     GLFWwindow * glfw_window_ptr = glfwCreateWindow(800, 600, "test1", nullptr, nullptr);
-    device.create_swapchain(glfwGetWin32Window(glfw_window_ptr));
+    device.create_swapchain({.native_window_handle = glfwGetWin32Window(glfw_window_ptr)});
 
     while (true)
     {

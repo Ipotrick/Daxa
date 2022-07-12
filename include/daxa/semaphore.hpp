@@ -27,13 +27,13 @@ namespace daxa
         std::string debug_name = {};
     };
 
-    struct Semaphore : Handle
-    {
-        auto value() const -> u64 const &;
-        void set_value(u64 new_value);
-        auto wait_for_value(u64 awaited_value, std::chrono::microseconds timeout) -> bool;
-      private:
-        friend struct Device;
-        BinarySemaphore(std::shared_ptr<void> impl);
-    };
+    // struct BinarySemaphore : Handle
+    // {
+    //     auto value() const -> u64 const &;
+    //     void set_value(u64 new_value);
+    //     auto wait_for_value(u64 awaited_value, std::chrono::microseconds timeout) -> bool;
+    //   private:
+    //     friend struct Device;
+    //     BinarySemaphore(std::shared_ptr<void> impl);
+    // };
 } // namespace daxa

@@ -4,6 +4,8 @@
 
 namespace daxa
 {
+    Swapchain::Swapchain(std::shared_ptr<void> impl) : Handle(impl) {}
+
     ImplSwapchain::ImplSwapchain(std::shared_ptr<ImplDevice> impl_device, SwapchainInfo const & info)
         : impl_device{impl_device}
     {
@@ -109,7 +111,7 @@ namespace daxa
         this->image_resources.resize(image_count);
         for (u32 i = 0; i < image_resources.size(); i++) {
             this->image_resources[i].vk_image = swapchain_images[i];
-            impl_device->volk_device_table.vkCreateImageView(impl_device->vk_device_handle, &color_image_view, nullptr, &image_resources[i].view);
+            // impl_device->volk_device_table.vkCreateImageView(impl_device->vk_device_handle, &color_image_view, nullptr, &image_resources[i].view);
         }
     }
 
@@ -117,8 +119,8 @@ namespace daxa
     {
         for (size_t i = 0; i < image_resources.size(); i++)
         {
-            vkDestroyImageView(device_handle, image_resources[i].view, nullptr);
-            image_resources[i].view = VK_NULL_HANDLE;
+            // vkDestroyImageView(device_handle, image_resources[i].view, nullptr);
+            // image_resources[i].view = VK_NULL_HANDLE;
         }
     }
 } // namespace daxa

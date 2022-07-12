@@ -31,10 +31,7 @@
     }()
 #else
 
-#define DAXA_DBG_ASSERT_TRUE_M(x, m) \
-    [&] {                            \
-        (x);                         \
-    }()
+#define DAXA_DBG_ASSERT_TRUE_M(x, m)
 
 #endif
 
