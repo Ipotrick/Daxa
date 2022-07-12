@@ -1,15 +1,16 @@
-#pragma once 
+#pragma once
 
 #include <daxa/pipeline.hpp>
 
 #include "impl_context.hpp"
 
-namespace daxa {
-    struct ImplComputePipeline {
-        VkShaderModule vk_shader_module;
-        VkPipeline vk_pipeline;
+namespace daxa
+{
+    struct ImplComputePipeline
+    {
+        VkPipeline vk_pipeline_handle = {};
 
-        ImplComputePipeline(ComputePipelineInfo const &info);
+        ImplComputePipeline(ComputePipelineInfo const & info);
         ~ImplComputePipeline();
     };
-}
+} // namespace daxa

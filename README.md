@@ -12,14 +12,14 @@ Aside from the gpu abstraction, daxa also includes a few generalized helper abst
 * easy shader resource model (bindless):
   * no descriptor sets
   * no binding slots
-  * no ressource binding
+  * no resource binding
   * resources are passed to and accessed in a shader via an id
 * easy gpu driven rendering:
   * binding model allows for very easy gpu side manipulation of resources
   * (TODO) more
 * little boilerplace with many defaults:
   * optional automatic staging buffer usage for data up- and download
-  * easy ressource creation
+  * easy resource creation
   * no renderpasses
   * no framebuffers
   * dynamic state with defaults
