@@ -6,6 +6,14 @@ namespace daxa
 {
     Swapchain::Swapchain(std::shared_ptr<void> impl) : Handle(impl) {}
 
+    void Swapchain::resize(u32 width, u32 height)
+    {
+        auto & impl = *reinterpret_cast<ImplSwapchain *>(this->impl.get());
+        impl.info.width = width;
+        impl.info.height = height;
+        impl.recreate();
+    }
+
     ImplSwapchain::ImplSwapchain(std::shared_ptr<ImplDevice> a_impl_device, SwapchainInfo const & a_info)
         : impl_device{a_impl_device}, info{a_info}
     {
@@ -63,14 +71,14 @@ namespace daxa
         auto best_format = std::max_element(surface_formats.begin(), surface_formats.end(), format_comparator);
         this->vk_surface_format = *best_format;
 
-        recreate(info);
+        recreate();
     }
 
     ImplSwapchain::~ImplSwapchain()
     {
     }
 
-    void ImplSwapchain::recreate(SwapchainInfo const & info)
+    void ImplSwapchain::recreate()
     {
         // compare this->info with new info
         // we need to pass in the old swapchain handle to create a new one

@@ -23,6 +23,10 @@ namespace daxa
     struct ComputePipeline : Handle
     {
         auto info() const -> ComputePipelineInfo const &;
+
+      private:
+        friend struct PipelineCompiler;
+        ComputePipeline(std::shared_ptr<void> impl);
     };
 
     struct PipelineCompilerInfo
@@ -33,6 +37,10 @@ namespace daxa
 
     struct PipelineCompiler : Handle
     {
-        auto create_compute_pipeline(ComputePipelineInfo const & info) -> Result<ComputePipeline>;
+        auto create_compute_pipeline(ComputePipelineInfo const & info) -> ComputePipeline;
+
+      private:
+        friend struct Device;
+        PipelineCompiler(std::shared_ptr<void> impl);
     };
 } // namespace daxa

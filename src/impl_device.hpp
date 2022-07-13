@@ -23,19 +23,19 @@ namespace daxa
 
         auto new_buffer() -> BufferId;
         void cleanup_buffer(BufferId id);
-        auto info_buffer() -> BufferInfo const &;
+        auto info_buffer(BufferId id) -> BufferInfo const &;
 
         auto new_swapchain_image(VkImage swapchain_image, VkFormat format) -> ImageId;
         auto new_image() -> ImageId;
         void cleanup_image(ImageId id);
-        auto info_image() -> ImageInfo const &;
+        auto info_image(ImageId id) -> ImageInfo const &;
 
         auto new_image_view() -> ImageViewId;
         void cleanup_image_view(ImageViewId id);
-        auto info_image_view() -> ImageViewInfo const &;
+        auto info_image_view(ImageViewId id) -> ImageViewInfo const &;
 
         auto new_sampler() -> SamplerId;
         void cleanup_sampler(SamplerId id);
-        auto info_sampler() -> SamplerInfo const &;
+        auto info_sampler(SamplerId id) -> SamplerInfo const &;
     };
 } // namespace daxa

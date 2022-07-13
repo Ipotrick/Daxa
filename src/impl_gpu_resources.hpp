@@ -8,6 +8,7 @@ namespace daxa
 {
     struct ImplBufferSlot
     {
+        BufferInfo info = {};
     };
 
     struct ImplImageSlot
@@ -20,10 +21,12 @@ namespace daxa
 
     struct ImplImageViewSlot
     {
+        ImageViewInfo info = {};
     };
 
     struct ImplSamplerSlot
     {
+        SamplerInfo info = {};
     };
 
 #define DAXA_DEBUG_GPU_VALIDATE_GPU_ID 1

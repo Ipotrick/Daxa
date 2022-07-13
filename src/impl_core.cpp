@@ -1,6 +1,6 @@
 #include "impl_core.hpp"
 
-namespace daxa 
+namespace daxa
 {
-    Handle::Handle(std::shared_ptr<void> impl) : impl{ std::move(impl) } {}
-}
+    Handle::Handle(std::shared_ptr<void> impl) : impl{std::move(impl)} {}
+} // namespace daxa
