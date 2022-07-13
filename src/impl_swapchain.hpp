@@ -18,7 +18,7 @@ namespace daxa
         ImplSwapchain(std::shared_ptr<ImplDevice> device_impl, SwapchainInfo const & info);
         ~ImplSwapchain();
 
-        void recreate(SwapchainInfo const & info);
+        void recreate();
         void cleanup();
     };
 } // namespace daxa
