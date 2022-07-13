@@ -1,5 +1,6 @@
 #include "impl_core.hpp"
 #include "impl_device.hpp"
+#include "impl_pipeline.hpp"
 #include "impl_swapchain.hpp"
 
 namespace daxa
@@ -41,6 +42,11 @@ namespace daxa
     auto Device::create_swapchain(SwapchainInfo const & info) -> Swapchain
     {
         return Swapchain{std::make_shared<ImplSwapchain>(std::static_pointer_cast<ImplDevice>(this->impl), info)};
+    }
+
+    auto Device::create_pipeline_compiler(PipelineCompilerInfo const & info) -> PipelineCompiler
+    {
+        return PipelineCompiler{std::make_shared<ImplPipelineCompiler>(info, std::static_pointer_cast<ImplDevice>(this->impl))};
     }
 
     static const VkPhysicalDeviceFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES{
@@ -231,9 +237,9 @@ namespace daxa
     {
     }
 
-    auto ImplDevice::info_buffer() -> BufferInfo const &
+    auto ImplDevice::info_buffer(BufferId id) -> BufferInfo const &
     {
-        return BufferInfo{};
+        return gpu_table.buffer_slots.dereference_id(id).info;
     }
 
     auto ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat format) -> ImageId
@@ -264,7 +270,7 @@ namespace daxa
             },
         };
         ret.swapchain_owned = true;
-        ret.info = ImageInfo{ };
+        ret.info = ImageInfo{};
         vkCreateImageView(vk_device_handle, &view_ci, nullptr, &ret.vk_image_view_handle);
         image_slot = ret;
 
@@ -282,16 +288,17 @@ namespace daxa
 
         vkDestroyImageView(vk_device_handle, image_slot.vk_image_view_handle, nullptr);
 
-        if (!image_slot.swapchain_owned) {
+        if (!image_slot.swapchain_owned)
+        {
             vkDestroyImage(vk_device_handle, image_slot.vk_image_handle, nullptr);
         }
 
         gpu_table.image_slots.return_slot(id);
     }
 
-    auto ImplDevice::info_image() -> ImageInfo const &
+    auto ImplDevice::info_image(ImageId id) -> ImageInfo const &
     {
-        return ImageInfo{};
+        return std::get<ImplImageSlot>(gpu_table.image_slots.dereference_id(id)).info;
     }
 
     auto ImplDevice::new_image_view() -> ImageViewId
@@ -303,9 +310,9 @@ namespace daxa
     {
     }
 
-    auto ImplDevice::info_image_view() -> ImageViewInfo const &
+    auto ImplDevice::info_image_view(ImageViewId id) -> ImageViewInfo const &
     {
-        return ImageViewInfo{};
+        return std::get<ImplImageViewSlot>(gpu_table.image_slots.dereference_id(id)).info;
     }
 
     auto ImplDevice::new_sampler() -> SamplerId
@@ -317,8 +324,8 @@ namespace daxa
     {
     }
 
-    auto ImplDevice::info_sampler() -> SamplerInfo const &
+    auto ImplDevice::info_sampler(SamplerId id) -> SamplerInfo const &
     {
-        return SamplerInfo{};
+        return gpu_table.sampler_slots.dereference_id(id).info;
     }
 } // namespace daxa
