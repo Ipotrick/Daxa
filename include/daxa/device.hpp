@@ -129,7 +129,7 @@ namespace daxa
         u64 non_coherent_atom_size;
     };
 
-    struct DeviceInfo
+    struct DeviceVulkanInfo
     {
         u32 vulkan_api_version;
         u32 driver_version;
@@ -141,10 +141,16 @@ namespace daxa
         DeviceLimits limits;
     };
 
+    struct DeviceInfo
+    {
+        std::function<i32(DeviceVulkanInfo const &)> selector;
+        std::string debug_name;
+    };
+
     struct CommandSubmitInfo
     {
         std::vector<CommandList> command_lists = {};
-        BinarySemaphore & signal_binary_on_completion;
+        std::vector<BinarySemaphore> signal_binary_semaphores_on_completion = {};
     };
 
     struct PresentInfo
@@ -155,6 +161,8 @@ namespace daxa
 
     struct Device : public Handle
     {
+        ~Device();
+
         auto create_buffer(BufferInfo const & info) -> BufferId;
         auto create_image(ImageInfo const & info) -> ImageId;
         auto create_image_view(ImageViewInfo const & info) -> ImageViewId;
@@ -181,7 +189,7 @@ namespace daxa
 
         void submit_commands(CommandSubmitInfo const & submit_info);
         void present_frame(PresentInfo const & info);
-        void end_command_batch();
+        void collect_garbage();
 
       private:
         friend struct Context;

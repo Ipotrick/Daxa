@@ -402,17 +402,17 @@ namespace daxa
         DCI_P3_LINEAR = DISPLAY_P3_LINEAR,
     };
 
-    using ImageAspect = u32;
-    struct ImageAspectFlags
+    using ImageAspectFlags = u32;
+    struct ImageAspectFlagBits
     {
-        static inline constexpr ImageAspect NONE = {};
-        static inline constexpr ImageAspect COLOR = 0x00000001;
-        static inline constexpr ImageAspect DEPTH = 0x00000002;
-        static inline constexpr ImageAspect STENCIL = 0x00000004;
-        static inline constexpr ImageAspect METADATA = 0x00000008;
-        static inline constexpr ImageAspect PLANE_0 = 0x00000010;
-        static inline constexpr ImageAspect PLANE_1 = 0x00000020;
-        static inline constexpr ImageAspect PLANE_2 = 0x00000040;
+        static inline constexpr ImageAspectFlags NONE = {};
+        static inline constexpr ImageAspectFlags COLOR = 0x00000001;
+        static inline constexpr ImageAspectFlags DEPTH = 0x00000002;
+        static inline constexpr ImageAspectFlags STENCIL = 0x00000004;
+        static inline constexpr ImageAspectFlags METADATA = 0x00000008;
+        static inline constexpr ImageAspectFlags PLANE_0 = 0x00000010;
+        static inline constexpr ImageAspectFlags PLANE_1 = 0x00000020;
+        static inline constexpr ImageAspectFlags PLANE_2 = 0x00000040;
     };
 
     enum class ImageLayout
@@ -442,7 +442,7 @@ namespace daxa
 
     struct ImageMipArraySlice
     {
-        ImageAspect image_aspect = {};
+        ImageAspectFlags image_aspect = {};
         u32 base_mip_level = 0;
         u32 level_count = 1;
         u32 base_array_layer = 0;
@@ -450,14 +450,14 @@ namespace daxa
     };
     struct ImageArraySlice
     {
-        ImageAspect image_aspect = {};
+        ImageAspectFlags image_aspect = {};
         u32 mip_level = 0;
         u32 base_array_layer = 0;
         u32 layer_count = 1;
     };
     struct ImageSlice
     {
-        ImageAspect image_aspect = {};
+        ImageAspectFlags image_aspect = {};
         u32 mip_level = 0;
         u32 array_layer = 0;
     };
@@ -493,5 +493,89 @@ namespace daxa
             f32 depth;
             u32 stencil;
         } depth_stencil;
+    };
+
+    using PipelineStageAccessFlags = u64;
+    struct PipelineStageAccessFlagBits
+    {
+        static inline constexpr u64 READ_ACCESS = 0x8000'0000'0000'0000;
+        static inline constexpr u64 WRITE_ACCESS = 0x4000'0000'0000'0000;
+
+        static inline constexpr PipelineStageAccessFlags NONE = 0x00000000ull;
+        static inline constexpr PipelineStageAccessFlags TOP_OF_PIPE_READ = 0x00000001ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags DRAW_INDIRECT_READ = 0x00000002ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags VERTEX_INPUT_READ = 0x00000004ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags VERTEX_SHADER_READ = 0x00000008ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags TESSELLATION_CONTROL_SHADER_READ = 0x00000010ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags TESSELLATION_EVALUATION_SHADER_READ = 0x00000020ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags GEOMETRY_SHADER_READ = 0x00000040ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags FRAGMENT_SHADER_READ = 0x00000080ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags EARLY_FRAGMENT_TESTS_READ = 0x00000100ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags LATE_FRAGMENT_TESTS_READ = 0x00000200ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags COLOR_ATTACHMENT_OUTPUT_READ = 0x00000400ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags COMPUTE_SHADER_READ = 0x00000800ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags ALL_TRANSFER_READ = 0x00001000ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags TRANSFER_READ = 0x00001000ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags BOTTOM_OF_PIPE_READ = 0x00002000ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags HOST_READ = 0x00004000ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags ALL_GRAPHICS_READ = 0x00008000ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags ALL_COMMANDS_READ = 0x00010000ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags COPY_READ = 0x100000000ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags RESOLVE_READ = 0x200000000ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags BLIT_READ = 0x400000000ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags CLEAR_READ = 0x800000000ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags INDEX_INPUT_READ = 0x1000000000ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags VERTEX_ATTRIBUTE_INPUT_READ = 0x2000000000ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags PRE_RASTERIZATION_SHADERS_READ = 0x4000000000ull | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags TOP_OF_PIPE_WRITE = 0x00000001ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags DRAW_INDIRECT_WRITE = 0x00000002ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags VERTEX_INPUT_WRITE = 0x00000004ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags VERTEX_SHADER_WRITE = 0x00000008ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags TESSELLATION_CONTROL_SHADER_WRITE = 0x00000010ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags TESSELLATION_EVALUATION_SHADER_WRITE = 0x00000020ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags GEOMETRY_SHADER_WRITE = 0x00000040ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags FRAGMENT_SHADER_WRITE = 0x00000080ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags EARLY_FRAGMENT_TESTS_WRITE = 0x00000100ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags LATE_FRAGMENT_TESTS_WRITE = 0x00000200ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags COLOR_ATTACHMENT_OUTPUT_WRITE = 0x00000400ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags COMPUTE_SHADER_WRITE = 0x00000800ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags ALL_TRANSFER_WRITE = 0x00001000ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags TRANSFER_WRITE = 0x00001000ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags BOTTOM_OF_PIPE_WRITE = 0x00002000ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags HOST_WRITE = 0x00004000ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags ALL_GRAPHICS_WRITE = 0x00008000ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags ALL_COMMANDS_WRITE = 0x00010000ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags COPY_WRITE = 0x100000000ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags RESOLVE_WRITE = 0x200000000ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags BLIT_WRITE = 0x400000000ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags CLEAR_WRITE = 0x800000000ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags INDEX_INPUT_WRITE = 0x1000000000ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags VERTEX_ATTRIBUTE_INPUT_WRITE = 0x2000000000ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags PRE_RASTERIZATION_SHADERS_WRITE = 0x4000000000ull | WRITE_ACCESS;
+        static inline constexpr PipelineStageAccessFlags TOP_OF_PIPE_READ_WRITE = 0x00000001ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags DRAW_INDIRECT_READ_WRITE = 0x00000002ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags VERTEX_INPUT_READ_WRITE = 0x00000004ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags VERTEX_SHADER_READ_WRITE = 0x00000008ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags TESSELLATION_CONTROL_SHADER_READ_WRITE = 0x00000010ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags TESSELLATION_EVALUATION_SHADER_READ_WRITE = 0x00000020ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags GEOMETRY_SHADER_READ_WRITE = 0x00000040ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags FRAGMENT_SHADER_READ_WRITE = 0x00000080ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags EARLY_FRAGMENT_TESTS_READ_WRITE = 0x00000100ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags LATE_FRAGMENT_TESTS_READ_WRITE = 0x00000200ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags COLOR_ATTACHMENT_OUTPUT_READ_WRITE = 0x00000400ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags COMPUTE_SHADER_READ_WRITE = 0x00000800ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags ALL_TRANSFER_READ_WRITE = 0x00001000ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags TRANSFER_READ_WRITE = 0x00001000ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags BOTTOM_OF_PIPE_READ_WRITE = 0x00002000ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags HOST_READ_WRITE = 0x00004000ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags ALL_GRAPHICS_READ_WRITE = 0x00008000ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags ALL_COMMANDS_READ_WRITE = 0x00010000ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags COPY_READ_WRITE = 0x100000000ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags RESOLVE_READ_WRITE = 0x200000000ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags BLIT_READ_WRITE = 0x400000000ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags CLEAR_READ_WRITE = 0x800000000ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags INDEX_INPUT_READ_WRITE = 0x1000000000ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags VERTEX_ATTRIBUTE_INPUT_READ_WRITE = 0x2000000000ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr PipelineStageAccessFlags PRE_RASTERIZATION_SHADERS_READ_WRITE = 0x4000000000ull | WRITE_ACCESS | READ_ACCESS;
     };
 } // namespace daxa

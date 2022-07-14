@@ -12,7 +12,7 @@ namespace daxa
         return ComputePipeline{std::make_shared<ImplComputePipeline>(std::static_pointer_cast<ImplPipelineCompiler>(this->impl)->impl_device, info)};
     }
 
-    ImplPipelineCompiler::ImplPipelineCompiler(std::shared_ptr<ImplDevice> impl_device, PipelineCompilerInfo const & info)
+    ImplPipelineCompiler::ImplPipelineCompiler(std::weak_ptr<ImplDevice> impl_device, PipelineCompilerInfo const & info)
         : impl_device{impl_device}, info{info}
     {
     }
@@ -21,8 +21,8 @@ namespace daxa
     {
     }
 
-    ImplComputePipeline::ImplComputePipeline(std::shared_ptr<ImplDevice> impl_device, ComputePipelineInfo const & info)
-        : info{info}
+    ImplComputePipeline::ImplComputePipeline(std::weak_ptr<ImplDevice> impl_device, ComputePipelineInfo const & info)
+        : impl_device{impl_device}, info{info}
     {
         // TODO: Create a pipeline
 
@@ -37,7 +37,7 @@ namespace daxa
             //     .objectHandle = reinterpret_cast<uint64_t>(this->vk_pipeline_handle),
             //     .pObjectName = this->info.debug_name.c_str(),
             // };
-            // vkSetDebugUtilsObjectNameEXT(impl_device->vk_device_handle, &name_info);
+            // vkSetDebugUtilsObjectNameEXT(impl_device.lock()->vk_device_handle, &name_info);
         }
     }
 
