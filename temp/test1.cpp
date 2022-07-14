@@ -79,18 +79,17 @@ int main()
         auto binary_semaphore = device.create_binary_semaphore({});
 
         auto cmd_list = device.create_command_list({});
-        cmd_list.clear_image({
-            .dst_image = img, 
-            .dst_slice = daxa::ImageMipArraySlice{
-                .image_aspect = daxa::ImageAspectFlags::COLOR,
-                .base_mip_level = 0,
-                .level_count = 1,
-                .base_array_layer = 0,
-                .layer_count = 1,
-            },
-            .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-            .clear_color = daxa::ClearColor{.f32_value={0.5f, 0.2f, 0.1f, 1.0f}}
-        });
+        cmd_list.clear_image(
+            {.dst_image = img,
+             .dst_slice = daxa::ImageMipArraySlice{
+                 .image_aspect = daxa::ImageAspectFlags::COLOR,
+                 .base_mip_level = 0,
+                 .level_count = 1,
+                 .base_array_layer = 0,
+                 .layer_count = 1,
+             },
+             .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+             .clear_color = daxa::ClearColor{.f32_value = {0.5f, 0.2f, 0.1f, 1.0f}}});
 
         cmd_list.complete();
 

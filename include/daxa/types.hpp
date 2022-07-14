@@ -483,10 +483,15 @@ namespace daxa
         u32 z = {};
     };
 
-    union ClearColor { 
-        std::array<f32,4> f32_value; 
-        std::array<i32,4> i32_value; 
-        std::array<u32,4> u32_value;
-        struct { f32 depth; u32 stencil; } depth_stencil;
+    union ClearColor
+    {
+        std::array<f32, 4> f32_value;
+        std::array<i32, 4> i32_value;
+        std::array<u32, 4> u32_value;
+        struct
+        {
+            f32 depth;
+            u32 stencil;
+        } depth_stencil;
     };
 } // namespace daxa
