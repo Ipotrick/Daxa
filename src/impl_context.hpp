@@ -11,6 +11,7 @@ namespace daxa
         ContextInfo info;
         VkInstance vk_instance_handle;
         VkDebugUtilsMessengerEXT vk_debug_utils_messenger;
+        bool enable_debug_names = true;
 
         ImplContext(ContextInfo const & info);
         ~ImplContext();

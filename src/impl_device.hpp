@@ -9,32 +9,42 @@
 namespace daxa
 {
     struct ImplCommandList;
-
-    struct ZombieCommandLists
-    {
-        std::mutex mut = {};
-        std::vector<std::shared_ptr<ImplCommandList>> zombies;
-    };
+    struct ImplBinarySemaphore;
 
     struct ImplDevice
     {
+        std::weak_ptr<ImplContext> impl_ctx = {};
         VkPhysicalDevice vk_physical_device = {};
         VkDevice vk_device_handle = {};
         VkQueue vk_main_queue_handle = {};
         u32 main_queue_family_index = {};
-        std::shared_ptr<ImplContext> impl_ctx = {};
+        DeviceVulkanInfo vk_info = {};
         DeviceInfo info = {};
         GPUResourceTable gpu_table;
-        ZombieCommandLists command_list_zombies = {};
 
-        ImplDevice(DeviceInfo const & info, std::shared_ptr<ImplContext> impl_ctx, VkPhysicalDevice physical_device);
+        std::mutex zombie_command_lists_mtx = {};
+        std::vector<std::shared_ptr<ImplCommandList>> zombie_command_lists = {};
+        std::mutex zombie_binary_semaphores_mtx = {};
+        std::vector<std::shared_ptr<ImplBinarySemaphore>> zombie_binary_semaphores = {};
+
+        struct Submit
+        {
+            VkFence vk_fence_handle = {};
+            std::vector<std::shared_ptr<ImplCommandList>> command_lists = {};
+            std::vector<std::shared_ptr<ImplBinarySemaphore>> binary_semaphores = {};
+        };
+        std::mutex submit_mtx = {};
+        std::vector<Submit> submits_pool = {};
+        std::vector<Submit> command_list_submits = {};
+
+        ImplDevice(DeviceInfo const & info, DeviceVulkanInfo const & vk_info, std::shared_ptr<ImplContext> impl_ctx, VkPhysicalDevice physical_device);
         ~ImplDevice();
 
         auto new_buffer() -> BufferId;
         void cleanup_buffer(BufferId id);
         auto slot(BufferId id) -> ImplBufferSlot const &;
 
-        auto new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index) -> ImageId;
+        auto new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, const std::string & debug_name) -> ImageId;
         auto new_image() -> ImageId;
         void cleanup_image(ImageId id);
         auto slot(ImageId id) -> ImplImageSlot const &;

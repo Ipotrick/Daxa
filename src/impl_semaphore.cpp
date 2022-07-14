@@ -4,7 +4,19 @@ namespace daxa
 {
     BinarySemaphore::BinarySemaphore(std::shared_ptr<void> a_impl) : Handle{a_impl} {}
 
-    ImplBinarySemaphore::ImplBinarySemaphore(std::shared_ptr<ImplDevice> a_impl_device, BinarySemaphoreInfo const & info)
+    BinarySemaphore::~BinarySemaphore()
+    {
+        auto & impl = *reinterpret_cast<ImplBinarySemaphore *>(this->impl.get());
+
+        if (this->impl.use_count() == 1)
+        {
+            impl.reset();
+            std::unique_lock lock{DAXA_LOCK_WEAK(impl.impl_device)->zombie_binary_semaphores_mtx};
+            DAXA_LOCK_WEAK(impl.impl_device)->zombie_binary_semaphores.push_back(std::static_pointer_cast<ImplBinarySemaphore>(this->impl));
+        }
+    }
+
+    ImplBinarySemaphore::ImplBinarySemaphore(std::weak_ptr<ImplDevice> a_impl_device)
         : impl_device{a_impl_device}
     {
         VkSemaphoreCreateInfo vk_semaphore_create_info{
@@ -13,9 +25,19 @@ namespace daxa
             .flags = {},
         };
 
-        vkCreateSemaphore(impl_device->vk_device_handle, &vk_semaphore_create_info, nullptr, &this->vk_semaphore_handle);
+        vkCreateSemaphore(DAXA_LOCK_WEAK(impl_device)->vk_device_handle, &vk_semaphore_create_info, nullptr, &this->vk_semaphore_handle);
+    }
 
-        if (this->info.debug_name.size() > 0)
+    ImplBinarySemaphore::~ImplBinarySemaphore()
+    {
+        vkDestroySemaphore(DAXA_LOCK_WEAK(impl_device)->vk_device_handle, this->vk_semaphore_handle, nullptr);
+    }
+
+    void ImplBinarySemaphore::initialize(BinarySemaphoreInfo const & info)
+    {
+        this->info = info;
+
+        if (DAXA_LOCK_WEAK(DAXA_LOCK_WEAK(this->impl_device)->impl_ctx)->enable_debug_names && this->info.debug_name.size() > 0)
         {
             VkDebugUtilsObjectNameInfoEXT name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -24,12 +46,11 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_semaphore_handle),
                 .pObjectName = this->info.debug_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(impl_device->vk_device_handle, &name_info);
+            vkSetDebugUtilsObjectNameEXT(DAXA_LOCK_WEAK(impl_device)->vk_device_handle, &name_info);
         }
     }
 
-    ImplBinarySemaphore::~ImplBinarySemaphore()
+    void ImplBinarySemaphore::reset()
     {
-        vkDestroySemaphore(impl_device->vk_device_handle, this->vk_semaphore_handle, nullptr);
     }
 } // namespace daxa
