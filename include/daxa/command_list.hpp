@@ -41,10 +41,26 @@ namespace daxa
 
     struct ImageClearInfo
     {
-        ImageId dst_image = {};
         ImageLayout dst_image_layout = {};
-        ImageMipArraySlice dst_slice = {};
         ClearColor clear_color;
+        ImageId dst_image = {};
+        ImageMipArraySlice dst_slice = {};
+    };
+
+    struct PipelineBarrierInfo
+    {
+        PipelineStageAccessFlags awaited_pipeline_access = PipelineStageAccessFlagBits::NONE;
+        PipelineStageAccessFlags waiting_pipeline_access = PipelineStageAccessFlagBits::NONE;
+    };
+
+    struct PipelineBarrierImageTransitionInfo
+    {
+        PipelineStageAccessFlags awaited_pipeline_access = PipelineStageAccessFlagBits::NONE;
+        PipelineStageAccessFlags waiting_pipeline_access = PipelineStageAccessFlagBits::NONE;
+        ImageLayout before_layout = ImageLayout::UNDEFINED;
+        ImageLayout after_layout = ImageLayout::UNDEFINED;
+        ImageId image_id = {};
+        ImageMipArraySlice image_slice = {};
     };
 
     struct CommandList : Handle
@@ -54,6 +70,9 @@ namespace daxa
         void blit_image_to_image(ImageBlitInfo & info);
         void copy_image_to_image(ImageCopyInfo & info);
         void clear_image(ImageClearInfo const & info);
+
+        void pipeline_barrier(PipelineBarrierInfo const & info);
+        void pipeline_barrier_image_transition(PipelineBarrierImageTransitionInfo const & info);
 
         void complete();
 

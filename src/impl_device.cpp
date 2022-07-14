@@ -9,6 +9,18 @@ namespace daxa
 {
     Device::Device(std::shared_ptr<void> impl) : Handle(impl) {}
 
+    Device::~Device()
+    {
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+
+        wait_idle();
+        collect_garbage();
+
+        impl.submits_pool.clear();
+        impl.zombie_binary_semaphores.clear();
+        impl.zombie_command_lists.clear();
+    }
+
     auto Device::info() const -> DeviceInfo const &
     {
         auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
@@ -26,10 +38,52 @@ namespace daxa
     void Device::submit_commands(CommandSubmitInfo const & submit_info)
     {
         auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
-        auto & impl_cmd_list = *reinterpret_cast<ImplCommandList *>(submit_info.command_lists[0].impl.get());
-        auto & binary_semaphore_impl = *reinterpret_cast<ImplBinarySemaphore *>(submit_info.signal_binary_on_completion.impl.get());
 
-        DAXA_DBG_ASSERT_TRUE_M(impl_cmd_list.recording_complete, "all submitted command lists must be completed before submission");
+        std::unique_lock lock{impl.submit_mtx};
+
+        ImplDevice::Submit submit = {};
+        if (impl.submits_pool.empty())
+        {
+            VkFenceCreateInfo vk_fence_create_info{
+                .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+                .pNext = nullptr,
+            };
+
+            vkCreateFence(impl.vk_device_handle, &vk_fence_create_info, nullptr, &submit.vk_fence_handle);
+
+            if (DAXA_LOCK_WEAK(impl.impl_ctx)->enable_debug_names)
+            {
+                VkDebugUtilsObjectNameInfoEXT fence_name_info{
+                    .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                    .pNext = nullptr,
+                    .objectType = VK_OBJECT_TYPE_FENCE,
+                    .objectHandle = reinterpret_cast<uint64_t>(submit.vk_fence_handle),
+                    .pObjectName = "[[DAXA INTERNAL]] submit fence",
+                };
+                vkSetDebugUtilsObjectNameEXT(impl.vk_device_handle, &fence_name_info);
+            }
+        }
+        else
+        {
+            submit = std::move(impl.submits_pool.back());
+            impl.submits_pool.pop_back();
+        }
+
+        std::vector<VkCommandBuffer> submit_vk_command_buffer_handles = {};
+        for (auto & command_list : submit_info.command_lists)
+        {
+            auto & impl_cmd_list = *reinterpret_cast<ImplCommandList *>(command_list.impl.get());
+            DAXA_DBG_ASSERT_TRUE_M(impl_cmd_list.recording_complete, "all submitted command lists must be completed before submission");
+            submit.binary_semaphores.push_back(std::static_pointer_cast<ImplBinarySemaphore>(command_list.impl));
+            submit_vk_command_buffer_handles.push_back(impl_cmd_list.vk_cmd_buffer_handle);
+        }
+
+        std::vector<VkSemaphore> submit_vk_semaphore_handles = {};
+        for (auto & binary_semaphore : submit_info.signal_binary_semaphores_on_completion)
+        {
+            auto & impl_binary_semaphore = *reinterpret_cast<ImplBinarySemaphore *>(binary_semaphore.impl.get());
+            submit_vk_semaphore_handles.push_back(impl_binary_semaphore.vk_semaphore_handle);
+        }
 
         VkPipelineStageFlags pipe_stage_flags;
         pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -39,12 +93,14 @@ namespace daxa
             .waitSemaphoreCount = 0,
             .pWaitSemaphores = nullptr,
             .pWaitDstStageMask = &pipe_stage_flags,
-            .commandBufferCount = static_cast<u32>(1),
-            .pCommandBuffers = &impl_cmd_list.vk_cmd_buffer_handle,
-            .signalSemaphoreCount = 1,
-            .pSignalSemaphores = &binary_semaphore_impl.vk_semaphore_handle,
+            .commandBufferCount = static_cast<u32>(submit_vk_command_buffer_handles.size()),
+            .pCommandBuffers = submit_vk_command_buffer_handles.data(),
+            .signalSemaphoreCount = static_cast<u32>(submit_vk_semaphore_handles.size()),
+            .pSignalSemaphores = submit_vk_semaphore_handles.data(),
         };
-        vkQueueSubmit(impl.vk_main_queue_handle, 1, &vk_submit_info, nullptr);
+        vkQueueSubmit(impl.vk_main_queue_handle, 1, &vk_submit_info, submit.vk_fence_handle);
+
+        impl.command_list_submits.push_back(std::move(submit));
     }
 
     void Device::present_frame(PresentInfo const & info)
@@ -67,6 +123,33 @@ namespace daxa
         vkQueuePresentKHR(impl.vk_main_queue_handle, &present_info);
     }
 
+    void Device::collect_garbage()
+    {
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+
+        std::unique_lock lock{impl.submit_mtx};
+
+        for (auto iter = impl.command_list_submits.begin(); iter != impl.command_list_submits.end();)
+        {
+            ImplDevice::Submit & submit = *iter;
+            VkResult result = vkGetFenceStatus(impl.vk_device_handle, submit.vk_fence_handle);
+
+            DAXA_DBG_ASSERT_TRUE_M(result != VK_ERROR_DEVICE_LOST, "device lost");
+
+            if (result == VK_SUCCESS)
+            {
+                // Return the fence into a pool, so they can be reused in future submits.
+                impl.submits_pool.push_back(std::move(submit));
+
+                iter = impl.command_list_submits.erase(iter);
+            }
+            else
+            {
+                ++iter;
+            }
+        }
+    }
+
     auto Device::create_swapchain(SwapchainInfo const & info) -> Swapchain
     {
         return Swapchain{std::make_shared<ImplSwapchain>(std::static_pointer_cast<ImplDevice>(this->impl), info)};
@@ -84,27 +167,47 @@ namespace daxa
         std::shared_ptr<ImplCommandList> ret = {};
 
         {
-            std::unique_lock lock{impl.command_list_zombies.mut};
-            if (!impl.command_list_zombies.zombies.empty())
+            std::unique_lock lock{impl.zombie_command_lists_mtx};
+            if (!impl.zombie_command_lists.empty())
             {
-                ret = impl.command_list_zombies.zombies.back();
-                impl.command_list_zombies.zombies.pop_back();
+                ret = impl.zombie_command_lists.back();
+                impl.zombie_command_lists.pop_back();
             }
         }
 
         if (!ret)
         {
-            ret = std::make_shared<ImplCommandList>(std::static_pointer_cast<ImplDevice>(this->impl), info);
+            ret = std::make_shared<ImplCommandList>(std::static_pointer_cast<ImplDevice>(this->impl));
         }
 
-        ret->init();
+        ret->initialize(info);
 
         return CommandList{ret};
     }
 
     auto Device::create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore
     {
-        return BinarySemaphore{std::make_shared<ImplBinarySemaphore>(std::static_pointer_cast<ImplDevice>(this->impl), info)};
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+
+        std::shared_ptr<ImplBinarySemaphore> ret = {};
+
+        {
+            std::unique_lock lock{impl.zombie_binary_semaphores_mtx};
+            if (!impl.zombie_binary_semaphores.empty())
+            {
+                ret = impl.zombie_binary_semaphores.back();
+                impl.zombie_binary_semaphores.pop_back();
+            }
+        }
+
+        if (!ret)
+        {
+            ret = std::make_shared<ImplBinarySemaphore>(std::static_pointer_cast<ImplDevice>(this->impl));
+        }
+
+        ret->initialize(info);
+
+        return BinarySemaphore{ret};
     }
 
     static const VkPhysicalDeviceFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES{
@@ -210,8 +313,8 @@ namespace daxa
 
     static void * REQUIRED_DEVICE_FEATURE_P_CHAIN = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SYNCHRONIZATION_2);
 
-    ImplDevice::ImplDevice(DeviceInfo const & a_info, std::shared_ptr<ImplContext> a_impl_ctx, VkPhysicalDevice a_physical_device)
-        : info{a_info}, impl_ctx{a_impl_ctx}, vk_physical_device{a_physical_device}
+    ImplDevice::ImplDevice(DeviceInfo const & a_info, DeviceVulkanInfo const & a_vk_info, std::shared_ptr<ImplContext> a_impl_ctx, VkPhysicalDevice a_physical_device)
+        : info{a_info}, vk_info{a_vk_info}, impl_ctx{a_impl_ctx}, vk_physical_device{a_physical_device}
     {
         // SELECT QUEUE
         this->main_queue_family_index = std::numeric_limits<u32>::max();
@@ -258,7 +361,7 @@ namespace daxa
         std::vector<char const *> extension_names;
         std::vector<char const *> enabled_layers;
 
-        if (impl_ctx->info.enable_validation)
+        if (DAXA_LOCK_WEAK(impl_ctx)->info.enable_validation)
         {
             enabled_layers.push_back("VK_LAYER_KHRONOS_validation");
         }
@@ -273,17 +376,38 @@ namespace daxa
             .ppEnabledLayerNames = enabled_layers.data(),
             .enabledExtensionCount = static_cast<u32>(extension_names.size()),
             .ppEnabledExtensionNames = extension_names.data(),
-            .pEnabledFeatures = &REQUIRED_PHYSICAL_DEVICE_FEATURES,
+            .pEnabledFeatures = nullptr,
         };
         vkCreateDevice(a_physical_device, &device_ci, nullptr, &this->vk_device_handle);
         volkLoadDevice(this->vk_device_handle);
         gpu_table.init(
-            info.limits.max_descriptor_set_storage_buffers,
-            std::min(info.limits.max_descriptor_set_sampled_images, info.limits.max_descriptor_set_storage_images),
-            info.limits.max_descriptor_set_samplers,
+            this->vk_info.limits.max_descriptor_set_storage_buffers,
+            std::min(this->vk_info.limits.max_descriptor_set_sampled_images, this->vk_info.limits.max_descriptor_set_storage_images),
+            this->vk_info.limits.max_descriptor_set_samplers,
             vk_device_handle);
 
         vkGetDeviceQueue(this->vk_device_handle, this->main_queue_family_index, 0, &this->vk_main_queue_handle);
+
+        if (DAXA_LOCK_WEAK(this->impl_ctx)->enable_debug_names && this->info.debug_name.size() > 0)
+        {
+            VkDebugUtilsObjectNameInfoEXT device_name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_DEVICE,
+                .objectHandle = reinterpret_cast<uint64_t>(this->vk_device_handle),
+                .pObjectName = this->info.debug_name.c_str(),
+            };
+            vkSetDebugUtilsObjectNameEXT(vk_device_handle, &device_name_info);
+
+            VkDebugUtilsObjectNameInfoEXT device_main_queue_name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_QUEUE,
+                .objectHandle = reinterpret_cast<uint64_t>(this->vk_main_queue_handle),
+                .pObjectName = this->info.debug_name.c_str(),
+            };
+            vkSetDebugUtilsObjectNameEXT(vk_device_handle, &device_main_queue_name_info);
+        }
     }
 
     ImplDevice::~ImplDevice()
@@ -300,7 +424,7 @@ namespace daxa
     {
     }
 
-    auto ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index) -> ImageId
+    auto ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, const std::string & debug_name) -> ImageId
     {
         auto [id, image_slot] = gpu_table.image_slots.new_slot();
 
@@ -331,6 +455,27 @@ namespace daxa
         ret.info = ImageInfo{};
         vkCreateImageView(vk_device_handle, &view_ci, nullptr, &ret.vk_image_view_handle);
         image_slot = ret;
+
+        if (DAXA_LOCK_WEAK(this->impl_ctx)->enable_debug_names && debug_name.size() > 0)
+        {
+            VkDebugUtilsObjectNameInfoEXT swapchain_image_name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_IMAGE,
+                .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image_handle),
+                .pObjectName = debug_name.c_str(),
+            };
+            vkSetDebugUtilsObjectNameEXT(vk_device_handle, &swapchain_image_name_info);
+
+            VkDebugUtilsObjectNameInfoEXT swapchain_image_view_name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
+                .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image_view_handle),
+                .pObjectName = debug_name.c_str(),
+            };
+            vkSetDebugUtilsObjectNameEXT(vk_device_handle, &swapchain_image_view_name_info);
+        }
 
         return ImageId{id};
     }

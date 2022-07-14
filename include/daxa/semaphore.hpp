@@ -11,6 +11,8 @@ namespace daxa
 
     struct BinarySemaphore : Handle
     {
+        ~BinarySemaphore();
+
       private:
         friend struct Device;
         BinarySemaphore(std::shared_ptr<void> impl);

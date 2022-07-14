@@ -27,7 +27,7 @@
         if (!(x))                                                                 \
         {                                                                         \
             std::cerr << DAXA_DBG_ASSERT_FAIL_STRING << ": " << (m) << std::endl; \
-            std::exit(-1);                                                        \
+            throw std::exception("DAXA DEBUG ASSERTION FAILURE");                 \
         }                                                                         \
     }()
 #else

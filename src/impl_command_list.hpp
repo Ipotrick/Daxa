@@ -4,20 +4,25 @@
 
 #include "impl_core.hpp"
 #include "impl_device.hpp"
+#include "impl_semaphore.hpp"
 
 namespace daxa
 {
     struct ImplCommandList
     {
-        std::shared_ptr<ImplDevice> impl_device = {};
+        std::weak_ptr<ImplDevice> impl_device = {};
         CommandListInfo info = {};
         VkCommandBuffer vk_cmd_buffer_handle = {};
         VkCommandPool vk_cmd_pool_handle = {};
+        VkFence vk_submission_complete_fence_handle = {};
         bool recording_complete = true;
 
-        ImplCommandList(std::shared_ptr<ImplDevice> device_impl, CommandListInfo const & info);
+        std::vector<std::shared_ptr<ImplBinarySemaphore>> used_binary_semaphores = {};
+
+        ImplCommandList(std::weak_ptr<ImplDevice> device_impl);
         ~ImplCommandList();
 
-        void init();
+        void initialize(CommandListInfo const & a_info);
+        void reset();
     };
 } // namespace daxa

@@ -9,9 +9,9 @@ namespace daxa
     ImageId Swapchain::acquire_next_image()
     {
         auto & impl = *reinterpret_cast<ImplSwapchain *>(this->impl.get());
-        vkAcquireNextImageKHR(impl.impl_device->vk_device_handle, impl.vk_swapchain_handle, UINT64_MAX, nullptr, impl.acquisition_fence, &impl.current_image_index);
-        vkWaitForFences(impl.impl_device->vk_device_handle, 1, &impl.acquisition_fence, VK_TRUE, UINT64_MAX);
-        vkResetFences(impl.impl_device->vk_device_handle, 1, &impl.acquisition_fence);
+        vkAcquireNextImageKHR(DAXA_LOCK_WEAK(impl.impl_device)->vk_device_handle, impl.vk_swapchain_handle, UINT64_MAX, nullptr, impl.acquisition_fence, &impl.current_image_index);
+        vkWaitForFences(DAXA_LOCK_WEAK(impl.impl_device)->vk_device_handle, 1, &impl.acquisition_fence, VK_TRUE, UINT64_MAX);
+        vkResetFences(DAXA_LOCK_WEAK(impl.impl_device)->vk_device_handle, 1, &impl.acquisition_fence);
         return impl.image_resources[impl.current_image_index];
     }
 
@@ -23,7 +23,7 @@ namespace daxa
         impl.recreate();
     }
 
-    ImplSwapchain::ImplSwapchain(std::shared_ptr<ImplDevice> a_impl_device, SwapchainInfo const & a_info)
+    ImplSwapchain::ImplSwapchain(std::weak_ptr<ImplDevice> a_impl_device, SwapchainInfo const & a_info)
         : impl_device{a_impl_device}, info{a_info}
     {
 #if defined(_WIN32)
@@ -35,8 +35,8 @@ namespace daxa
             .hwnd = info.native_window_handle,
         };
         {
-            auto func = (PFN_vkCreateWin32SurfaceKHR)vkGetInstanceProcAddr(impl_device->impl_ctx->vk_instance_handle, "vkCreateWin32SurfaceKHR");
-            func(impl_device->impl_ctx->vk_instance_handle, &surface_ci, nullptr, &this->vk_surface_handle);
+            auto func = (PFN_vkCreateWin32SurfaceKHR)vkGetInstanceProcAddr(DAXA_LOCK_WEAK(DAXA_LOCK_WEAK(impl_device)->impl_ctx)->vk_instance_handle, "vkCreateWin32SurfaceKHR");
+            func(DAXA_LOCK_WEAK(DAXA_LOCK_WEAK(impl_device)->impl_ctx)->vk_instance_handle, &surface_ci, nullptr, &this->vk_surface_handle);
         }
 #elif defined(__linux__)
         VkXlibSurfaceCreateInfoKHR surface_ci{
@@ -47,18 +47,18 @@ namespace daxa
             .window = info.native_window_handle,
         };
         {
-            auto func = (PFN_vkCreateXlibSurfaceKHR)vkGetInstanceProcAddr(impl_device->impl_ctx->vk_instance_handle, "vkCreateXlibSurfaceKHR");
-            func(impl_device->impl_ctx->vk_instance_handle, &surface_ci, nullptr, &this->vk_surface_handle);
+            auto func = (PFN_vkCreateXlibSurfaceKHR)vkGetInstanceProcAddr(DAXA_LOCK_WEAK(impl_device)->DAXA_LOCK_WEAK(impl_ctx)->vk_instance_handle, "vkCreateXlibSurfaceKHR");
+            func(DAXA_LOCK_WEAK(impl_device)->DAXA_LOCK_WEAK(impl_ctx)->vk_instance_handle, &surface_ci, nullptr, &this->vk_surface_handle);
         }
-        vkCreateXlibSurfaceKHR(impl_device->impl_ctx->vk_instance_handle, &surface_ci, nullptr, &this->vk_swapchain_handle);
+        vkCreateXlibSurfaceKHR(DAXA_LOCK_WEAK(impl_device)->DAXA_LOCK_WEAK(impl_ctx)->vk_instance_handle, &surface_ci, nullptr, &this->vk_swapchain_handle);
 #endif
 
         u32 format_count = 0;
 
-        vkGetPhysicalDeviceSurfaceFormatsKHR(impl_device->vk_physical_device, this->vk_surface_handle, &format_count, nullptr);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(DAXA_LOCK_WEAK(impl_device)->vk_physical_device, this->vk_surface_handle, &format_count, nullptr);
         std::vector<VkSurfaceFormatKHR> surface_formats;
         surface_formats.resize(format_count);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(impl_device->vk_physical_device, this->vk_surface_handle, &format_count, surface_formats.data());
+        vkGetPhysicalDeviceSurfaceFormatsKHR(DAXA_LOCK_WEAK(impl_device)->vk_physical_device, this->vk_surface_handle, &format_count, surface_formats.data());
 
         auto format_score = [&](VkSurfaceFormatKHR surface_format) -> i32
         {
@@ -85,7 +85,7 @@ namespace daxa
             .pNext = nullptr,
             .flags = 0,
         };
-        vkCreateFence(impl_device->vk_device_handle, &fence_ci, nullptr, &this->acquisition_fence);
+        vkCreateFence(DAXA_LOCK_WEAK(impl_device)->vk_device_handle, &fence_ci, nullptr, &this->acquisition_fence);
 
         recreate();
     }
@@ -117,7 +117,7 @@ namespace daxa
             .imageUsage = info.image_usage | ImageUsageFlagBits::COLOR_ATTACHMENT,
             .imageSharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
             .queueFamilyIndexCount = 1,
-            .pQueueFamilyIndices = &this->impl_device->main_queue_family_index,
+            .pQueueFamilyIndices = &DAXA_LOCK_WEAK(this->impl_device)->main_queue_family_index,
             .preTransform = static_cast<VkSurfaceTransformFlagBitsKHR>(info.present_operation),
             .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
             .presentMode = static_cast<VkPresentModeKHR>(info.present_mode),
@@ -126,37 +126,37 @@ namespace daxa
         };
 
         vkCreateSwapchainKHR(
-            impl_device->vk_device_handle,
+            DAXA_LOCK_WEAK(this->impl_device)->vk_device_handle,
             &swapchain_create_info,
             nullptr,
             &this->vk_swapchain_handle);
 
         if (old_swapchain_handle != VK_NULL_HANDLE)
         {
-            vkDestroySwapchainKHR(impl_device->vk_device_handle, old_swapchain_handle, nullptr);
+            vkDestroySwapchainKHR(DAXA_LOCK_WEAK(impl_device)->vk_device_handle, old_swapchain_handle, nullptr);
         }
 
         u32 image_count;
         std::vector<VkImage> swapchain_images;
-        vkGetSwapchainImagesKHR(impl_device->vk_device_handle, vk_swapchain_handle, &image_count, nullptr);
+        vkGetSwapchainImagesKHR(DAXA_LOCK_WEAK(impl_device)->vk_device_handle, vk_swapchain_handle, &image_count, nullptr);
         swapchain_images.resize(image_count);
-        vkGetSwapchainImagesKHR(impl_device->vk_device_handle, vk_swapchain_handle, &image_count, swapchain_images.data());
+        vkGetSwapchainImagesKHR(DAXA_LOCK_WEAK(impl_device)->vk_device_handle, vk_swapchain_handle, &image_count, swapchain_images.data());
         this->image_resources.resize(image_count);
         for (u32 i = 0; i < image_resources.size(); i++)
         {
-            this->image_resources[i] = this->impl_device->new_swapchain_image(swapchain_images[i], vk_surface_format.format, i);
+            this->image_resources[i] = DAXA_LOCK_WEAK(this->impl_device)->new_swapchain_image(swapchain_images[i], vk_surface_format.format, i, this->info.debug_name);
         }
 
-        if (this->info.debug_name.size() > 0)
+        if (DAXA_LOCK_WEAK(DAXA_LOCK_WEAK(this->impl_device)->impl_ctx)->enable_debug_names && this->info.debug_name.size() > 0)
         {
-            VkDebugUtilsObjectNameInfoEXT name_info{
+            VkDebugUtilsObjectNameInfoEXT swapchain_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_SWAPCHAIN_KHR,
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_swapchain_handle),
                 .pObjectName = this->info.debug_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(impl_device->vk_device_handle, &name_info);
+            vkSetDebugUtilsObjectNameEXT(DAXA_LOCK_WEAK(impl_device)->vk_device_handle, &swapchain_name_info);
 
             std::string fence_name = this->info.debug_name + " fence";
             VkDebugUtilsObjectNameInfoEXT fence_name_info{
@@ -166,7 +166,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(this->acquisition_fence),
                 .pObjectName = fence_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(impl_device->vk_device_handle, &fence_name_info);
+            vkSetDebugUtilsObjectNameEXT(DAXA_LOCK_WEAK(impl_device)->vk_device_handle, &fence_name_info);
         }
     }
 
@@ -174,7 +174,7 @@ namespace daxa
     {
         for (size_t i = 0; i < image_resources.size(); i++)
         {
-            this->impl_device->cleanup_image(image_resources[i]);
+            DAXA_LOCK_WEAK(this->impl_device)->cleanup_image(image_resources[i]);
         }
         image_resources.clear();
     }
