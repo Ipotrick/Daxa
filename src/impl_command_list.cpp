@@ -129,6 +129,27 @@ namespace daxa
         };
 
         vkAllocateCommandBuffers(impl_device->vk_device_handle, &vk_command_buffer_allocate_info, &this->vk_cmd_buffer_handle);
+
+        if (this->info.debug_name.size() > 0)
+        {
+            VkDebugUtilsObjectNameInfoEXT name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_COMMAND_BUFFER,
+                .objectHandle = reinterpret_cast<uint64_t>(this->vk_cmd_buffer_handle),
+                .pObjectName = this->info.debug_name.c_str(),
+            };
+            vkSetDebugUtilsObjectNameEXT(impl_device->vk_device_handle, &name_info);
+
+            VkDebugUtilsObjectNameInfoEXT cmd_pool_name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_COMMAND_POOL,
+                .objectHandle = reinterpret_cast<uint64_t>(this->vk_cmd_pool_handle),
+                .pObjectName = this->info.debug_name.c_str(),
+            };
+            vkSetDebugUtilsObjectNameEXT(impl_device->vk_device_handle, &cmd_pool_name_info);
+        }
     }
 
     ImplCommandList::~ImplCommandList()
