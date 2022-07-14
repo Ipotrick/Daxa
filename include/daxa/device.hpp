@@ -5,6 +5,8 @@
 #include <daxa/gpu_resources.hpp>
 #include <daxa/pipeline.hpp>
 #include <daxa/swapchain.hpp>
+#include <daxa/command_list.hpp>
+#include <daxa/semaphore.hpp>
 
 namespace daxa
 {
@@ -139,6 +141,18 @@ namespace daxa
         DeviceLimits limits;
     };
 
+    struct CommandSubmitInfo
+    {
+        std::vector<CommandList> command_lists = {};
+        BinarySemaphore & signal_binary_on_completion;
+    };
+
+    struct PresentInfo
+    {
+        BinarySemaphore & wait_on_binary;
+        Swapchain & swapchain;
+    };
+
     struct Device : public Handle
     {
         auto create_buffer(BufferInfo const & info) -> BufferId;
@@ -158,14 +172,15 @@ namespace daxa
 
         auto create_pipeline_compiler(PipelineCompilerInfo const & info) -> PipelineCompiler;
         auto create_swapchain(SwapchainInfo const & info) -> Swapchain;
-        // auto create_semaphore(SemaphoreInfo const & info) -> Semaphore;
+        auto create_command_list(CommandListInfo const & info) -> CommandList;
+        auto create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore;
         // auto create_signal(SignalInfo const & info) -> Signal;
 
         auto info() const -> DeviceInfo const &;
         void wait_idle();
 
-        void submit_commands();
-        void present_frame();
+        void submit_commands(CommandSubmitInfo const & submit_info);
+        void present_frame(PresentInfo const & info);
         void end_command_batch();
 
       private:
