@@ -33,7 +33,7 @@ namespace daxa
             .applicationVersion = 0,
             .pEngineName = "daxa",
             .engineVersion = 1,
-            .apiVersion = VK_API_VERSION_1_0,
+            .apiVersion = VK_API_VERSION_1_3,
         };
 
         std::vector<const char *> enabled_layers, extension_names;
@@ -109,19 +109,19 @@ namespace daxa
 
     ImplContext::~ImplContext()
     {
-        vkDestroyInstance(vk_instance_handle, nullptr);
-
         if (info.enable_validation)
         {
             auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vk_instance_handle, "vkDestroyDebugUtilsMessengerEXT");
             DAXA_DBG_ASSERT_TRUE_M(func != nullptr, "failed to destroy debug messenger!");
             func(vk_instance_handle, vk_debug_utils_messenger, nullptr);
         }
+
+        vkDestroyInstance(vk_instance_handle, nullptr);
     }
 
     Context::Context(std::shared_ptr<void> impl) : Handle(impl) {}
 
-    auto Context::create_device(std::function<i32(DeviceInfo const & info)> const & selector) -> Device
+    auto Context::create_device(DeviceInfo const &device_info) -> Device
     {
         ImplContext & impl = *reinterpret_cast<ImplContext *>(this->impl.get());
 
@@ -135,7 +135,7 @@ namespace daxa
         {
             VkPhysicalDeviceProperties vk_device_properties;
             vkGetPhysicalDeviceProperties(physical_device, &vk_device_properties);
-            return selector(*reinterpret_cast<DeviceInfo *>(&vk_device_properties));
+            return device_info.selector(*reinterpret_cast<DeviceVulkanInfo *>(&vk_device_properties));
         };
 
         auto device_comparator = [&](auto const & a, auto const & b) -> bool
@@ -152,16 +152,16 @@ namespace daxa
 
         VkPhysicalDeviceProperties vk_device_properties;
         vkGetPhysicalDeviceProperties(physical_device, &vk_device_properties);
-        auto & device_info = *reinterpret_cast<DeviceInfo *>(&vk_device_properties);
+        auto device_vulkan_info = *reinterpret_cast<DeviceVulkanInfo *>(&vk_device_properties);
 
         // std::cout << "Selected device: " << vk_device_properties.deviceName << std::endl;
 
-        return Device{std::make_shared<ImplDevice>(device_info, std::static_pointer_cast<ImplContext>(this->impl), physical_device)};
+        return Device{std::make_shared<ImplDevice>(device_info, device_vulkan_info, std::static_pointer_cast<ImplContext>(this->impl), physical_device)};
     }
 
     auto Context::create_default_device() -> Device
     {
-        auto default_selector = [](DeviceInfo const & device_info) -> i32
+        auto default_selector = [](DeviceVulkanInfo const & device_info) -> i32
         {
             i32 score = 0;
             switch (device_info.device_type)
@@ -176,6 +176,9 @@ namespace daxa
             score += device_info.limits.max_image_array_layers;
             return score;
         };
-        return create_device(default_selector);
+        return create_device({
+            .selector = default_selector,
+            .debug_name = "Daxa Default Device",
+        });
     }
 } // namespace daxa

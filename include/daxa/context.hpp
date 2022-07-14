@@ -13,7 +13,7 @@ namespace daxa
 
     struct Context : Handle
     {
-        auto create_device(std::function<i32(DeviceInfo const & info)> const & selector) -> Device;
+        auto create_device(DeviceInfo const &device_info) -> Device;
         auto create_default_device() -> Device;
 
       private:
