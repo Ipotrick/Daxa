@@ -6,6 +6,15 @@ namespace daxa
 {
     Swapchain::Swapchain(std::shared_ptr<void> impl) : Handle(impl) {}
 
+    ImageId Swapchain::acquire_next_image()
+    {
+        auto & impl = *reinterpret_cast<ImplSwapchain *>(this->impl.get());
+        vkAcquireNextImageKHR(impl.impl_device->vk_device_handle, impl.vk_swapchain_handle, UINT64_MAX, nullptr, impl.acquisition_fence, &impl.current_image_index);
+        vkWaitForFences(impl.impl_device->vk_device_handle, 1, &impl.acquisition_fence, VK_TRUE, UINT64_MAX);
+        vkResetFences(impl.impl_device->vk_device_handle, 1, &impl.acquisition_fence);
+        return impl.image_resources[impl.current_image_index];
+    }
+
     void Swapchain::resize(u32 width, u32 height)
     {
         auto & impl = *reinterpret_cast<ImplSwapchain *>(this->impl.get());
@@ -71,11 +80,19 @@ namespace daxa
         auto best_format = std::max_element(surface_formats.begin(), surface_formats.end(), format_comparator);
         this->vk_surface_format = *best_format;
 
+        VkFenceCreateInfo fence_ci = {
+            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = 0,
+        };
+        vkCreateFence(impl_device->vk_device_handle, &fence_ci, nullptr, &acquisition_fence);
+
         recreate();
     }
 
     ImplSwapchain::~ImplSwapchain()
     {
+        cleanup();
     }
 
     void ImplSwapchain::recreate()
@@ -127,7 +144,7 @@ namespace daxa
         this->image_resources.resize(image_count);
         for (u32 i = 0; i < image_resources.size(); i++)
         {
-            this->image_resources[i] = this->impl_device->new_swapchain_image(swapchain_images[i], vk_surface_format.format);
+            this->image_resources[i] = this->impl_device->new_swapchain_image(swapchain_images[i], vk_surface_format.format, i);
         }
     }
 

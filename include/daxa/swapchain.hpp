@@ -2,6 +2,8 @@
 
 #include <daxa/core.hpp>
 
+#include <daxa/gpu_resources.hpp>
+
 namespace daxa
 {
     struct SwapchainInfo
@@ -19,6 +21,7 @@ namespace daxa
     {
         auto info() const -> SwapchainInfo const &;
 
+        ImageId acquire_next_image();
         void resize(u32 width, u32 height);
         void change_present_mode(PresentMode new_present_mode);
 

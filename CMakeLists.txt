@@ -8,7 +8,9 @@ add_library(daxa
     "src/impl_core.cpp"
     "src/impl_pipeline.cpp"
     "src/impl_swapchain.cpp"
+    "src/impl_command_list.cpp"
     "src/impl_gpu_resources.cpp"
+    "src/impl_semaphore.cpp"
 )
 
 add_library(daxa::daxa ALIAS daxa)

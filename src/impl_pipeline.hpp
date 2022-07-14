@@ -8,7 +8,7 @@ namespace daxa
 {
     struct ImplPipelineCompiler
     {
-        ImplPipelineCompiler(PipelineCompilerInfo const & info, std::shared_ptr<ImplDevice> impl_device);
+        ImplPipelineCompiler(std::shared_ptr<ImplDevice> impl_device, PipelineCompilerInfo const & info);
         ~ImplPipelineCompiler();
     };
 

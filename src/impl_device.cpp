@@ -1,7 +1,9 @@
 #include "impl_core.hpp"
 #include "impl_device.hpp"
 #include "impl_pipeline.hpp"
+#include "impl_command_list.hpp"
 #include "impl_swapchain.hpp"
+#include "impl_semaphore.hpp"
 
 namespace daxa
 {
@@ -21,19 +23,45 @@ namespace daxa
         vkDeviceWaitIdle(impl.vk_device_handle);
     }
 
-    void Device::present_frame()
+    void Device::submit_commands(CommandSubmitInfo const & submit_info)
     {
         auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+        auto & impl_cmd_list = *reinterpret_cast<ImplCommandList *>(submit_info.command_lists[0].impl.get());
+        auto & binary_semaphore_impl = *reinterpret_cast<ImplBinarySemaphore *>(submit_info.signal_binary_on_completion.impl.get());
 
-        VkPresentInfoKHR present_info{
-            .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        DAXA_DBG_ASSERT_TRUE_M(impl_cmd_list.recording_complete, "all submitted command lists must be completed before submission");
+        
+        VkPipelineStageFlags pipe_stage_flags;
+        pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        VkSubmitInfo vk_submit_info{
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
             .pNext = nullptr,
             .waitSemaphoreCount = 0,
             .pWaitSemaphores = nullptr,
-            .swapchainCount = 0,
-            .pSwapchains = nullptr,
-            // .pImageIndices = ,
-            // .pResults = ,
+            .pWaitDstStageMask = &pipe_stage_flags,
+            .commandBufferCount = static_cast<u32>(1),
+            .pCommandBuffers = &impl_cmd_list.vk_cmd_buffer_handle,
+            .signalSemaphoreCount = 1,
+            .pSignalSemaphores = &binary_semaphore_impl.vk_semaphore_handle,
+        };
+        vkQueueSubmit(impl.vk_main_queue_handle, 1, &vk_submit_info, nullptr);
+    }
+
+    void Device::present_frame(PresentInfo const & info)
+    {
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+        auto & swapchain_impl = *reinterpret_cast<ImplSwapchain *>(info.swapchain.impl.get());
+        auto & binary_semaphore_impl = *reinterpret_cast<ImplBinarySemaphore *>(info.wait_on_binary.impl.get());
+
+        u32 image_index = 0;
+        VkPresentInfoKHR present_info{
+            .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+            .pNext = nullptr,
+            .waitSemaphoreCount = static_cast<u32>(1),
+            .pWaitSemaphores = &binary_semaphore_impl.vk_semaphore_handle,
+            .swapchainCount = static_cast<u32>(1),
+            .pSwapchains = &swapchain_impl.vk_swapchain_handle,
+            .pImageIndices = &swapchain_impl.current_image_index,
         };
 
         vkQueuePresentKHR(impl.vk_main_queue_handle, &present_info);
@@ -46,7 +74,37 @@ namespace daxa
 
     auto Device::create_pipeline_compiler(PipelineCompilerInfo const & info) -> PipelineCompiler
     {
-        return PipelineCompiler{std::make_shared<ImplPipelineCompiler>(info, std::static_pointer_cast<ImplDevice>(this->impl))};
+        return PipelineCompiler{std::make_shared<ImplPipelineCompiler>(std::static_pointer_cast<ImplDevice>(this->impl), info)};
+    }
+
+    auto Device::create_command_list(CommandListInfo const & info) -> CommandList
+    {
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+
+        std::shared_ptr<ImplCommandList> ret = {};
+
+        {
+            std::unique_lock lock{impl.command_list_zombies.mut};
+            if (!impl.command_list_zombies.zombies.empty())
+            {
+                ret = impl.command_list_zombies.zombies.back();
+                impl.command_list_zombies.zombies.pop_back();
+            }
+        }
+
+        if (!ret)
+        {
+            ret = std::make_shared<ImplCommandList>(std::static_pointer_cast<ImplDevice>(this->impl), info);
+        }
+
+        ret->init();
+
+        return CommandList{ret};
+    }
+    
+    auto Device::create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore
+    {
+        return BinarySemaphore{ std::make_shared<ImplBinarySemaphore>(std::static_pointer_cast<ImplDevice>(this->impl), info) };
     }
 
     static const VkPhysicalDeviceFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES{
@@ -156,7 +214,7 @@ namespace daxa
         : info{a_info}, impl_ctx{a_impl_ctx}, vk_physical_device{a_physical_device}
     {
         // SELECT QUEUE
-        u32 vk_queue_family_index = std::numeric_limits<u32>::max();
+        this->main_queue_family_index = std::numeric_limits<u32>::max();
         u32 queue_family_props_count = 0;
         std::vector<VkQueueFamilyProperties> queue_props;
         vkGetPhysicalDeviceQueueFamilyProperties(a_physical_device, &queue_family_props_count, nullptr);
@@ -173,22 +231,20 @@ namespace daxa
 
         for (u32 i = 0; i < queue_family_props_count; i++)
         {
-            if ((queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0
-                // && supports_present[i] == VK_TRUE
-            )
+            if ((queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
             {
-                vk_queue_family_index = i;
+                this->main_queue_family_index = i;
                 break;
             }
         }
-        DAXA_DBG_ASSERT_TRUE_M(vk_queue_family_index != std::numeric_limits<u32>::max(), "found no suitable queue family");
+        DAXA_DBG_ASSERT_TRUE_M(this->main_queue_family_index != std::numeric_limits<u32>::max(), "found no suitable queue family");
 
         f32 queue_priorities[1] = {0.0};
         VkDeviceQueueCreateInfo queue_ci{
             .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
             .pNext = nullptr,
             .flags = 0,
-            .queueFamilyIndex = vk_queue_family_index,
+            .queueFamilyIndex = this->main_queue_family_index,
             .queueCount = 1,
             .pQueuePriorities = queue_priorities,
         };
@@ -221,6 +277,8 @@ namespace daxa
             std::min(info.limits.max_descriptor_set_sampled_images, info.limits.max_descriptor_set_storage_images),
             info.limits.max_descriptor_set_samplers,
             vk_device_handle);
+
+        vkGetDeviceQueue(this->vk_device_handle, this->main_queue_family_index, 0, &this->vk_main_queue_handle);
     }
 
     ImplDevice::~ImplDevice()
@@ -237,12 +295,7 @@ namespace daxa
     {
     }
 
-    auto ImplDevice::info_buffer(BufferId id) -> BufferInfo const &
-    {
-        return gpu_table.buffer_slots.dereference_id(id).info;
-    }
-
-    auto ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat format) -> ImageId
+    auto ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index) -> ImageId
     {
         auto [id, image_slot] = gpu_table.image_slots.new_slot();
 
@@ -269,7 +322,7 @@ namespace daxa
                 .layerCount = 1,
             },
         };
-        ret.swapchain_owned = true;
+        ret.swapchain_image_index = static_cast<i32>(index);
         ret.info = ImageInfo{};
         vkCreateImageView(vk_device_handle, &view_ci, nullptr, &ret.vk_image_view_handle);
         image_slot = ret;
@@ -288,17 +341,12 @@ namespace daxa
 
         vkDestroyImageView(vk_device_handle, image_slot.vk_image_view_handle, nullptr);
 
-        if (!image_slot.swapchain_owned)
+        if (image_slot.swapchain_image_index == NOT_OWNED_BY_SWAPCHAIN)
         {
             vkDestroyImage(vk_device_handle, image_slot.vk_image_handle, nullptr);
         }
 
         gpu_table.image_slots.return_slot(id);
-    }
-
-    auto ImplDevice::info_image(ImageId id) -> ImageInfo const &
-    {
-        return std::get<ImplImageSlot>(gpu_table.image_slots.dereference_id(id)).info;
     }
 
     auto ImplDevice::new_image_view() -> ImageViewId
@@ -310,11 +358,6 @@ namespace daxa
     {
     }
 
-    auto ImplDevice::info_image_view(ImageViewId id) -> ImageViewInfo const &
-    {
-        return std::get<ImplImageViewSlot>(gpu_table.image_slots.dereference_id(id)).info;
-    }
-
     auto ImplDevice::new_sampler() -> SamplerId
     {
         return SamplerId{};
@@ -324,8 +367,24 @@ namespace daxa
     {
     }
 
-    auto ImplDevice::info_sampler(SamplerId id) -> SamplerInfo const &
+    auto ImplDevice::slot(BufferId id) -> ImplBufferSlot const &
     {
-        return gpu_table.sampler_slots.dereference_id(id).info;
+        return gpu_table.buffer_slots.dereference_id(id);
     }
+
+    auto ImplDevice::slot(ImageId id) -> ImplImageSlot const &
+    {
+        return std::get<ImplImageSlot>(gpu_table.image_slots.dereference_id(id));
+    }
+
+    auto ImplDevice::slot(ImageViewId id) -> ImplImageViewSlot const &
+    {
+        return std::get<ImplImageViewSlot>(gpu_table.image_slots.dereference_id(id));
+    }
+
+    auto ImplDevice::slot(SamplerId id) -> ImplSamplerSlot const &
+    {
+        return gpu_table.sampler_slots.dereference_id(id);
+    }
+
 } // namespace daxa
