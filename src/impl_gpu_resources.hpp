@@ -11,12 +11,14 @@ namespace daxa
         BufferInfo info = {};
     };
 
+    static inline constexpr i32 NOT_OWNED_BY_SWAPCHAIN = -1;
+
     struct ImplImageSlot
     {
         ImageInfo info = {};
         VkImageView vk_image_view_handle = {};
         VkImage vk_image_handle = {};
-        bool swapchain_owned = {};
+        i32 swapchain_image_index = NOT_OWNED_BY_SWAPCHAIN;
     };
 
     struct ImplImageViewSlot

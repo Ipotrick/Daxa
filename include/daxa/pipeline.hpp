@@ -10,7 +10,6 @@ namespace daxa
         std::string path_to_source = {};
         std::string entry_point = {};
         std::vector<std::string> defines = {};
-        std::string debug_name = {};
     };
 
     struct ComputePipelineInfo
