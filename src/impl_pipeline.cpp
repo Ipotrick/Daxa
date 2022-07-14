@@ -12,7 +12,7 @@ namespace daxa
         return ComputePipeline{std::make_shared<ImplComputePipeline>(info)};
     }
 
-    ImplPipelineCompiler::ImplPipelineCompiler(PipelineCompilerInfo const & info, std::shared_ptr<ImplDevice> impl_device)
+    ImplPipelineCompiler::ImplPipelineCompiler(std::shared_ptr<ImplDevice> impl_device, PipelineCompilerInfo const & info)
     {
     }
 

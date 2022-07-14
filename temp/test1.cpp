@@ -17,25 +17,15 @@ int main()
             switch (s)
             {
             // clang-format off
-            // case daxa::MsgSeverity::VERBOSE: std::cout << "[VERBOSE]: " << msg << std::endl; break;
-            // case daxa::MsgSeverity::INFO:    std::cout << "[INFO]:    " << msg << std::endl; break;
+            case daxa::MsgSeverity::VERBOSE: std::cout << "[VERBOSE]: " << msg << std::endl; break;
+            case daxa::MsgSeverity::INFO:    std::cout << "[INFO]:    " << msg << std::endl; break;
             case daxa::MsgSeverity::WARNING: std::cout << "[WARNING]: " << msg << std::endl; break;
             case daxa::MsgSeverity::FAILURE: std::cout << "[FAILURE]: " << msg << std::endl; break;
             // clang-format on
-            default: break;
+            default: std::cout << "[UNKNOWN]: " << msg << std::endl; break;
             }
         },
     });
-
-    // auto device_selector = [](daxa::DeviceInfo const & device_info) -> daxa::types::i32
-    // {
-    //     if (device_info.device_type != daxa::DeviceType::DISCRETE_GPU)
-    //     {
-    //         return -1;
-    //     }
-    //     return device_info.limits.max_memory_allocation_count;
-    // };
-    // auto device = daxa_ctx.create_device(device_selector).value();
 
     auto device = daxa_ctx.create_default_device();
 
@@ -60,6 +50,7 @@ int main()
         .native_window_handle = glfwGetWin32Window(glfw_window_ptr),
         .width = window_data.size_x,
         .height = window_data.size_y,
+        .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
     });
 
     auto pipeline_compiler = device.create_pipeline_compiler({
@@ -82,5 +73,35 @@ int main()
         {
             swapchain.resize(window_data.size_x, window_data.size_y);
         }
+
+        auto img = swapchain.acquire_next_image();
+
+        auto binary_semaphore = device.create_binary_semaphore({});
+
+        auto cmd_list = device.create_command_list({});
+        cmd_list.clear_image({
+            .dst_image = img, 
+            .dst_slice = daxa::ImageMipArraySlice{
+                .image_aspect = daxa::ImageAspectFlags::COLOR,
+                .base_mip_level = 0,
+                .level_count = 1,
+                .base_array_layer = 0,
+                .layer_count = 1,
+            },
+            .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+            .clear_color = daxa::ClearColor{.f32_value={0.5f, 0.2f, 0.1f, 1.0f}}
+        });
+
+        cmd_list.complete();
+
+        device.submit_commands({
+            .command_lists = {cmd_list},
+            .signal_binary_on_completion = binary_semaphore,
+        });
+
+        device.present_frame({
+            .wait_on_binary = binary_semaphore,
+            .swapchain = swapchain,
+        });
     }
 }
