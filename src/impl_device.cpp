@@ -30,7 +30,7 @@ namespace daxa
         auto & binary_semaphore_impl = *reinterpret_cast<ImplBinarySemaphore *>(submit_info.signal_binary_on_completion.impl.get());
 
         DAXA_DBG_ASSERT_TRUE_M(impl_cmd_list.recording_complete, "all submitted command lists must be completed before submission");
-        
+
         VkPipelineStageFlags pipe_stage_flags;
         pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         VkSubmitInfo vk_submit_info{
@@ -101,10 +101,10 @@ namespace daxa
 
         return CommandList{ret};
     }
-    
+
     auto Device::create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore
     {
-        return BinarySemaphore{ std::make_shared<ImplBinarySemaphore>(std::static_pointer_cast<ImplDevice>(this->impl), info) };
+        return BinarySemaphore{std::make_shared<ImplBinarySemaphore>(std::static_pointer_cast<ImplDevice>(this->impl), info)};
     }
 
     static const VkPhysicalDeviceFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES{

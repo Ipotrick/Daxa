@@ -96,7 +96,8 @@ namespace daxa
                 const_cast<VkImageSubresourceRange *>(reinterpret_cast<VkImageSubresourceRange const *>(&info.dst_slice)));
         }
     }
-    void CommandList::complete() 
+
+    void CommandList::complete()
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
 
@@ -149,5 +150,4 @@ namespace daxa
 
         recording_complete = false;
     }
-
 } // namespace daxa
