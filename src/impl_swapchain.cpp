@@ -85,7 +85,7 @@ namespace daxa
             .pNext = nullptr,
             .flags = 0,
         };
-        vkCreateFence(impl_device->vk_device_handle, &fence_ci, nullptr, &acquisition_fence);
+        vkCreateFence(impl_device->vk_device_handle, &fence_ci, nullptr, &this->acquisition_fence);
 
         recreate();
     }
@@ -145,6 +145,28 @@ namespace daxa
         for (u32 i = 0; i < image_resources.size(); i++)
         {
             this->image_resources[i] = this->impl_device->new_swapchain_image(swapchain_images[i], vk_surface_format.format, i);
+        }
+
+        if (this->info.debug_name.size() > 0)
+        {
+            VkDebugUtilsObjectNameInfoEXT name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_SWAPCHAIN_KHR,
+                .objectHandle = reinterpret_cast<uint64_t>(this->vk_swapchain_handle),
+                .pObjectName = this->info.debug_name.c_str(),
+            };
+            vkSetDebugUtilsObjectNameEXT(impl_device->vk_device_handle, &name_info);
+
+            std::string fence_name = this->info.debug_name + " fence";
+            VkDebugUtilsObjectNameInfoEXT fence_name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_FENCE,
+                .objectHandle = reinterpret_cast<uint64_t>(this->acquisition_fence),
+                .pObjectName = fence_name.c_str(),
+            };
+            vkSetDebugUtilsObjectNameEXT(impl_device->vk_device_handle, &fence_name_info);
         }
     }
 

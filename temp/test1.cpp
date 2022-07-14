@@ -11,7 +11,7 @@ int main()
     using namespace daxa::types;
 
     auto daxa_ctx = daxa::create_context({
-        .enable_validation = false,
+        .enable_validation = true,
         .validation_callback = [](daxa::MsgSeverity s, daxa::MsgType, std::string_view msg)
         {
             switch (s)
@@ -51,13 +51,14 @@ int main()
         .width = window_data.size_x,
         .height = window_data.size_y,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
+        .debug_name = "Test1 Swapchain",
     });
 
-    auto pipeline_compiler = device.create_pipeline_compiler({
-        .root_paths = {"temp/shaders"},
-    });
+    auto pipeline_compiler = device.create_pipeline_compiler({.root_paths = {"temp/shaders"},
+                                                              .debug_name = "Test1 Pipeline Compiler"});
     auto compute_pipeline = pipeline_compiler.create_compute_pipeline({
         .shader_info = {.path_to_source = "temp/shaders/test1_comp.hlsl"},
+        .debug_name = "Test1 Compute Pipeline",
     });
 
     while (true)
@@ -77,19 +78,22 @@ int main()
         auto img = swapchain.acquire_next_image();
 
         auto binary_semaphore = device.create_binary_semaphore({});
-
-        auto cmd_list = device.create_command_list({});
+        auto cmd_list = device.create_command_list({
+            .debug_name = "Test1 Command List",
+        });
         cmd_list.clear_image(
-            {.dst_image = img,
-             .dst_slice = daxa::ImageMipArraySlice{
-                 .image_aspect = daxa::ImageAspectFlags::COLOR,
-                 .base_mip_level = 0,
-                 .level_count = 1,
-                 .base_array_layer = 0,
-                 .layer_count = 1,
-             },
-             .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-             .clear_color = daxa::ClearColor{.f32_value = {0.5f, 0.2f, 0.1f, 1.0f}}});
+            {
+                .dst_image = img,
+                .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+                .dst_slice = daxa::ImageMipArraySlice{
+                    .image_aspect = daxa::ImageAspectFlags::COLOR,
+                    .base_mip_level = 0,
+                    .level_count = 1,
+                    .base_array_layer = 0,
+                    .layer_count = 1,
+                },
+                .clear_color = daxa::ClearColor{.f32_value = {0.30f, 0.10f, 1.00f, 1.00f}},
+            });
 
         cmd_list.complete();
 

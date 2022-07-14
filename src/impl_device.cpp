@@ -258,7 +258,12 @@ namespace daxa
         std::vector<char const *> extension_names;
         std::vector<char const *> enabled_layers;
 
+        if (impl_ctx->info.enable_validation)
+        {
+            enabled_layers.push_back("VK_LAYER_KHRONOS_validation");
+        }
         extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+
         VkDeviceCreateInfo device_ci = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
             .pNext = &physical_device_features_2,
