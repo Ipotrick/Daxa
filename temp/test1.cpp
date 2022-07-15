@@ -1,4 +1,5 @@
 #include <iostream>
+#include <thread>
 
 #include <GLFW/glfw3.h>
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -13,6 +14,7 @@ struct Window
 {
     GLFWwindow * glfw_window_ptr;
     u32 size_x = 800, size_y = 600;
+    bool minimized = false;
 
     Window()
     {
@@ -80,7 +82,15 @@ struct App : Window<App>
             return true;
         }
 
-        draw();
+        if (!minimized)
+        {
+            draw();
+        }
+        else
+        {
+            using namespace std::literals;
+            std::this_thread::sleep_for(1ms);
+        }
 
         return false;
     }
@@ -103,7 +113,7 @@ struct App : Window<App>
                 .image_aspect = daxa::ImageAspectFlagBits::COLOR,
                 .level_count = 1,
                 .layer_count = 1,
-            }
+            },
         });
 
         cmd_list.clear_image({
@@ -128,7 +138,7 @@ struct App : Window<App>
                 .image_aspect = daxa::ImageAspectFlagBits::COLOR,
                 .level_count = 1,
                 .layer_count = 1,
-            }
+            },
         });
 
         cmd_list.complete();
@@ -150,9 +160,13 @@ struct App : Window<App>
     {
         size_x = sx;
         size_y = sy;
+        minimized = (sx == 0 || sy == 0);
 
-        swapchain.resize(size_x, size_y);
-        draw();
+        if (!minimized)
+        {
+            swapchain.resize(size_x, size_y);
+            draw();
+        }
     }
 };
 
