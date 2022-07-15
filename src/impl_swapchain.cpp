@@ -47,7 +47,7 @@ namespace daxa
             .window = info.native_window_handle,
         };
         {
-            auto func = (PFN_vkCreateXlibSurfaceKHR)vkGetInstanceProcAddr(DAXA_LOCK_WEAK(impl_device)->DAXA_LOCK_WEAK(impl_ctx)->vk_instance_handle, "vkCreateXlibSurfaceKHR");
+            auto func = (PFN_vkCreateXlibSurfaceKHR)vkGetInstanceProcAddr(DAXA_LOCK_WEAK(DAXA_LOCK_WEAK(impl_device)->impl_ctx)->vk_instance_handle, "vkCreateXlibSurfaceKHR");
             func(DAXA_LOCK_WEAK(impl_device)->DAXA_LOCK_WEAK(impl_ctx)->vk_instance_handle, &surface_ci, nullptr, &this->vk_surface_handle);
         }
         vkCreateXlibSurfaceKHR(DAXA_LOCK_WEAK(impl_device)->DAXA_LOCK_WEAK(impl_ctx)->vk_instance_handle, &surface_ci, nullptr, &this->vk_swapchain_handle);
@@ -93,6 +93,10 @@ namespace daxa
     ImplSwapchain::~ImplSwapchain()
     {
         cleanup();
+        vkDestroyFence(DAXA_LOCK_WEAK(impl_device)->vk_device_handle, this->acquisition_fence, nullptr);
+
+        vkDestroySwapchainKHR(DAXA_LOCK_WEAK(this->impl_device)->vk_device_handle, this->vk_swapchain_handle, nullptr);
+        vkDestroySurfaceKHR(DAXA_LOCK_WEAK(DAXA_LOCK_WEAK(impl_device)->impl_ctx)->vk_instance_handle, this->vk_surface_handle, nullptr);
     }
 
     void ImplSwapchain::recreate()

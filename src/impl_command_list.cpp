@@ -152,7 +152,7 @@ namespace daxa
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .image = DAXA_LOCK_WEAK(impl.impl_device)->slot(info.image_id).vk_image_handle,
-            .subresourceRange = *reinterpret_cast<VkImageSubresourceRange const*>(&info.image_slice),
+            .subresourceRange = *reinterpret_cast<VkImageSubresourceRange const *>(&info.image_slice),
         };
 
         VkDependencyInfo vk_dependency_info{
@@ -191,14 +191,6 @@ namespace daxa
         };
 
         vkAllocateCommandBuffers(DAXA_LOCK_WEAK(impl_device)->vk_device_handle, &vk_command_buffer_allocate_info, &this->vk_cmd_buffer_handle);
-
-        VkFenceCreateInfo vk_fence_create_info{
-            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-            .pNext = nullptr,
-        };
-
-        vkCreateFence(DAXA_LOCK_WEAK(impl_device)->vk_device_handle, &vk_fence_create_info, nullptr, &this->vk_submission_complete_fence_handle);
-
         this->used_binary_semaphores.reserve(4);
     }
 

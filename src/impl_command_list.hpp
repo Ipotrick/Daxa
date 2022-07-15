@@ -14,7 +14,6 @@ namespace daxa
         CommandListInfo info = {};
         VkCommandBuffer vk_cmd_buffer_handle = {};
         VkCommandPool vk_cmd_pool_handle = {};
-        VkFence vk_submission_complete_fence_handle = {};
         bool recording_complete = true;
 
         std::vector<std::shared_ptr<ImplBinarySemaphore>> used_binary_semaphores = {};
