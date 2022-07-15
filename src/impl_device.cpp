@@ -16,6 +16,11 @@ namespace daxa
         wait_idle();
         collect_garbage();
 
+        for (auto & submit : impl.submits_pool)
+        {
+            vkDestroyFence(impl.vk_device_handle, submit.vk_fence_handle, nullptr);
+        }
+
         impl.submits_pool.clear();
         impl.zombie_binary_semaphores.clear();
         impl.zombie_command_lists.clear();
@@ -47,6 +52,7 @@ namespace daxa
             VkFenceCreateInfo vk_fence_create_info{
                 .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
                 .pNext = nullptr,
+                .flags = 0,
             };
 
             vkCreateFence(impl.vk_device_handle, &vk_fence_create_info, nullptr, &submit.vk_fence_handle);
@@ -140,6 +146,7 @@ namespace daxa
             {
                 // Return the fence into a pool, so they can be reused in future submits.
                 impl.submits_pool.push_back(std::move(submit));
+                vkResetFences(impl.vk_device_handle, 1, &submit.vk_fence_handle);
 
                 iter = impl.command_list_submits.erase(iter);
             }
