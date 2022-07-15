@@ -80,7 +80,7 @@ namespace daxa
         {
             auto & impl_cmd_list = *reinterpret_cast<ImplCommandList *>(command_list.impl.get());
             DAXA_DBG_ASSERT_TRUE_M(impl_cmd_list.recording_complete, "all submitted command lists must be completed before submission");
-            submit.binary_semaphores.push_back(std::static_pointer_cast<ImplBinarySemaphore>(command_list.impl));
+            submit.command_lists.push_back(std::static_pointer_cast<ImplCommandList>(command_list.impl));
             submit_vk_command_buffer_handles.push_back(impl_cmd_list.vk_cmd_buffer_handle);
         }
 
@@ -145,6 +145,7 @@ namespace daxa
             if (result == VK_SUCCESS)
             {
                 // Return the fence into a pool, so they can be reused in future submits.
+                submit.command_lists.clear();
                 impl.submits_pool.push_back(std::move(submit));
                 vkResetFences(impl.vk_device_handle, 1, &submit.vk_fence_handle);
 
@@ -543,5 +544,4 @@ namespace daxa
     {
         return gpu_table.sampler_slots.dereference_id(id);
     }
-
 } // namespace daxa
