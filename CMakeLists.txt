@@ -2,6 +2,24 @@ cmake_minimum_required(VERSION 3.12)
 include(cmake/warnings.cmake)
 project(daxa VERSION 1.0.0)
 
+if(DAXA_ENABLE_STATIC_ANALYSIS)
+    set(CPPCHECK_TEMPLATE "gcc")
+    find_program(CPPCHECK cppcheck)
+    find_program(CLANG_TIDY clang-tidy)
+    set(CMAKE_CXX_CPPCHECK
+        ${CPPCHECK}
+        --template=${CPPCHECK_TEMPLATE}
+        --enable=style,performance,warning,portability
+        --inline-suppr
+        --suppress=internalAstError
+        --suppress=unmatchedSuppression
+        --inconclusive)
+    set(CMAKE_CXX_CPPCHECK
+        ${CPPCHECK}
+        --template=${CPPCHECK_TEMPLATE}
+        ${CPPCHECK_OPTIONS})
+endif()
+
 add_library(daxa
     "src/impl_device.cpp"
     "src/impl_context.cpp"
