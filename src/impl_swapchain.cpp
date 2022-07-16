@@ -49,9 +49,8 @@ namespace daxa
         };
         {
             auto func = (PFN_vkCreateXlibSurfaceKHR)vkGetInstanceProcAddr(DAXA_LOCK_WEAK(DAXA_LOCK_WEAK(impl_device)->impl_ctx)->vk_instance_handle, "vkCreateXlibSurfaceKHR");
-            func(DAXA_LOCK_WEAK(impl_device)->DAXA_LOCK_WEAK(impl_ctx)->vk_instance_handle, &surface_ci, nullptr, &this->vk_surface_handle);
+            func(DAXA_LOCK_WEAK(DAXA_LOCK_WEAK(impl_device)->impl_ctx)->vk_instance_handle, &surface_ci, nullptr, &this->vk_surface_handle);
         }
-        vkCreateXlibSurfaceKHR(DAXA_LOCK_WEAK(impl_device)->DAXA_LOCK_WEAK(impl_ctx)->vk_instance_handle, &surface_ci, nullptr, &this->vk_swapchain_handle);
 #endif
 
         u32 format_count = 0;

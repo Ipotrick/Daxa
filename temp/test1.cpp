@@ -2,7 +2,11 @@
 #include <thread>
 
 #include <GLFW/glfw3.h>
+#if defined(_WIN32)
 #define GLFW_EXPOSE_NATIVE_WIN32
+#elif defined(__linux__)
+#define GLFW_EXPOSE_NATIVE_X11
+#endif
 #include <GLFW/glfw3native.h>
 
 #include <daxa/daxa.hpp>
@@ -10,13 +14,13 @@
 using namespace daxa::types;
 
 template <typename App>
-struct Window
+struct AppWindow
 {
     GLFWwindow * glfw_window_ptr;
     u32 size_x = 800, size_y = 600;
     bool minimized = false;
 
-    Window()
+    AppWindow()
     {
         glfwInit();
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -32,7 +36,7 @@ struct Window
     }
 };
 
-struct App : Window<App>
+struct App : AppWindow<App>
 {
     daxa::Context daxa_ctx = daxa::create_context({
         .enable_validation = true,
@@ -54,7 +58,11 @@ struct App : Window<App>
     daxa::Device device = daxa_ctx.create_default_device();
 
     daxa::Swapchain swapchain = device.create_swapchain({
+#if defined(_WIN32)
         .native_window_handle = glfwGetWin32Window(glfw_window_ptr),
+#elif defined(__linux__)
+        .native_window_handle = glfwGetX11Window(glfw_window_ptr),
+#endif
         .width = size_x,
         .height = size_y,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
