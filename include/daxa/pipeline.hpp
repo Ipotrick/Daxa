@@ -43,6 +43,7 @@ namespace daxa
 
       private:
         friend struct PipelineCompiler;
+        friend struct CommandList;
         ComputePipeline(std::shared_ptr<void> impl);
     };
 
