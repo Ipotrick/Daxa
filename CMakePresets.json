@@ -13,7 +13,8 @@
             "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
             "generator": "Ninja",
             "cacheVariables": {
-                "DAXA_ENABLE_STATIC_ANALYSIS": false
+                "DAXA_ENABLE_STATIC_ANALYSIS": false,
+                "DAXA_TESTS_DISABLE_WINDOWS_CONSOLE": false
             }
         },
         {

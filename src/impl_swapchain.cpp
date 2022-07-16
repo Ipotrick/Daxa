@@ -1,10 +1,11 @@
 // #define
 
 #include "impl_swapchain.hpp"
+#include "impl_device.hpp"
 
 namespace daxa
 {
-    Swapchain::Swapchain(std::shared_ptr<void> impl) : Handle(impl) {}
+    Swapchain::Swapchain(std::shared_ptr<void> a_impl) : Handle(std::move(a_impl)) {}
 
     ImageId Swapchain::acquire_next_image()
     {

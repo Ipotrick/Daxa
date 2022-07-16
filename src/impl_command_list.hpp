@@ -1,15 +1,18 @@
 #pragma once
 
-#include <daxa/swapchain.hpp>
+#include <daxa/command_list.hpp>
 
 #include "impl_core.hpp"
-#include "impl_device.hpp"
 #include "impl_semaphore.hpp"
 
 namespace daxa
 {
+    struct ImplDevice;
+
     struct ImplCommandList
     {
+        using InfoT = CommandListInfo;
+
         std::weak_ptr<ImplDevice> impl_device = {};
         CommandListInfo info = {};
         VkCommandBuffer vk_cmd_buffer_handle = {};
