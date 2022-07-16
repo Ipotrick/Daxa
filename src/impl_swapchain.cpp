@@ -109,6 +109,8 @@ namespace daxa
 
         cleanup();
 
+        ImageUsageFlags usage = info.image_usage | ImageUsageFlagBits::COLOR_ATTACHMENT;
+
         VkSwapchainCreateInfoKHR swapchain_create_info{
             .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
             .pNext = nullptr,
@@ -119,7 +121,7 @@ namespace daxa
             .imageColorSpace = this->vk_surface_format.colorSpace,
             .imageExtent = VkExtent2D{info.width, info.height},
             .imageArrayLayers = 1,
-            .imageUsage = info.image_usage | ImageUsageFlagBits::COLOR_ATTACHMENT,
+            .imageUsage = usage,
             .imageSharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
             .queueFamilyIndexCount = 1,
             .pQueueFamilyIndices = &DAXA_LOCK_WEAK(this->impl_device)->main_queue_family_index,
@@ -149,7 +151,7 @@ namespace daxa
         this->image_resources.resize(image_count);
         for (u32 i = 0; i < image_resources.size(); i++)
         {
-            this->image_resources[i] = DAXA_LOCK_WEAK(this->impl_device)->new_swapchain_image(swapchain_images[i], vk_surface_format.format, i, this->info.debug_name);
+            this->image_resources[i] = DAXA_LOCK_WEAK(this->impl_device)->new_swapchain_image(swapchain_images[i], vk_surface_format.format, i, usage, this->info.debug_name);
         }
 
         if (DAXA_LOCK_WEAK(DAXA_LOCK_WEAK(this->impl_device)->impl_ctx)->enable_debug_names && this->info.debug_name.size() > 0)

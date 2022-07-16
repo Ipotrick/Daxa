@@ -471,13 +471,69 @@ namespace daxa
         check_and_cleanup_gpu_resources(this->main_queue_compute_pipeline_zombies, [&](auto & compute_pipeline){ });
     }
 
+    void write_descriptor_set_image(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkImageView vk_image_view_handle, ImageUsageFlags usage, u32 index)
+    {
+        u32 descriptor_set_write_count = 0;
+        std::array<VkWriteDescriptorSet, 2> descriptor_set_writes = {};
+
+        VkDescriptorImageInfo vk_descriptor_image_info_storage{
+            .sampler = VK_NULL_HANDLE,
+            .imageView = vk_image_view_handle,
+            .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+        };
+
+        VkWriteDescriptorSet vk_write_descriptor_set_storage{
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .pNext = nullptr,
+            .dstSet = vk_descriptor_set,
+            .dstBinding = STORAGE_IMAGE_BINDING,
+            .dstArrayElement = index,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+            .pImageInfo = &vk_descriptor_image_info_storage,
+            .pBufferInfo = nullptr,
+            .pTexelBufferView = nullptr,
+        };
+
+        if (usage & ImageUsageFlagBits::STORAGE)
+        {
+            descriptor_set_writes[descriptor_set_write_count++] = vk_write_descriptor_set_storage;
+        }
+
+        VkDescriptorImageInfo vk_descriptor_image_info_sampled{
+            .sampler = VK_NULL_HANDLE,
+            .imageView = vk_image_view_handle,
+            .imageLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+        };
+
+        VkWriteDescriptorSet vk_write_descriptor_set_sampled{
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .pNext = nullptr,
+            .dstSet = vk_descriptor_set,
+            .dstBinding = SAMPLED_IMAGE_BINDING,
+            .dstArrayElement = index,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            .pImageInfo = &vk_descriptor_image_info_sampled,
+            .pBufferInfo = nullptr,
+            .pTexelBufferView = nullptr,
+        };
+
+        if (usage & ImageUsageFlagBits::SAMPLED)
+        {
+            descriptor_set_writes[descriptor_set_write_count++] = vk_write_descriptor_set_sampled;
+        }
+
+        vkUpdateDescriptorSets(vk_device, descriptor_set_write_count, descriptor_set_writes.data(), 0, nullptr);
+    }
+
     auto ImplDevice::new_buffer() -> BufferId
     {
         DAXA_DBG_ASSERT_TRUE_M(false, "unimplemented");
         return BufferId{};
     }
 
-    auto ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, const std::string & debug_name) -> ImageId
+    auto ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, const std::string & debug_name) -> ImageId
     {
         auto [id, image_slot] = gpu_table.image_slots.new_slot();
 
@@ -507,9 +563,9 @@ namespace daxa
         ret.swapchain_image_index = static_cast<i32>(index);
         ret.info = ImageInfo{};
         vkCreateImageView(vk_device_handle, &view_ci, nullptr, &ret.vk_image_view_handle);
-        image_slot = ret;
 
         if (DAXA_LOCK_WEAK(this->impl_ctx)->enable_debug_names && debug_name.size() > 0)
+
         {
             VkDebugUtilsObjectNameInfoEXT swapchain_image_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -529,6 +585,10 @@ namespace daxa
             };
             vkSetDebugUtilsObjectNameEXT(vk_device_handle, &swapchain_image_view_name_info);
         }
+
+        write_descriptor_set_image(this->vk_device_handle, this->gpu_table.vk_descriptor_set_handle, ret.vk_image_view_handle, usage, id.index);
+
+        image_slot = ret;
 
         return ImageId{id};
     }
