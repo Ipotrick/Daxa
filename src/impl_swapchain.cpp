@@ -178,7 +178,7 @@ namespace daxa
     {
         for (size_t i = 0; i < image_resources.size(); i++)
         {
-            DAXA_LOCK_WEAK(this->impl_device)->cleanup_image(image_resources[i]);
+            DAXA_LOCK_WEAK(this->impl_device)->zombiefy_image(image_resources[i]);
         }
         image_resources.clear();
     }
