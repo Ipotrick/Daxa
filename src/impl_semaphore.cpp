@@ -1,19 +1,14 @@
 #include "impl_semaphore.hpp"
+#include "impl_device.hpp"
 
 namespace daxa
 {
-    BinarySemaphore::BinarySemaphore(std::shared_ptr<void> a_impl) : Handle{a_impl} {}
+    BinarySemaphore::BinarySemaphore(std::shared_ptr<void> a_impl) : Handle{std::move(a_impl)} {}
 
     BinarySemaphore::~BinarySemaphore()
     {
         auto & impl = *reinterpret_cast<ImplBinarySemaphore *>(this->impl.get());
-
-        if (this->impl.use_count() == 1)
-        {
-            impl.reset();
-            std::unique_lock lock{DAXA_LOCK_WEAK(impl.impl_device)->zombie_binary_semaphores_mtx};
-            DAXA_LOCK_WEAK(impl.impl_device)->zombie_binary_semaphores.push_back(std::static_pointer_cast<ImplBinarySemaphore>(this->impl));
-        }
+        DAXA_LOCK_WEAK(impl.impl_device)->binary_semaphore_zombie_list.try_zombiefy(this->impl);
     }
 
     ImplBinarySemaphore::ImplBinarySemaphore(std::weak_ptr<ImplDevice> a_impl_device)

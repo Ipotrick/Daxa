@@ -43,8 +43,8 @@ struct App : Window<App>
             // clang-format off
             case daxa::MsgSeverity::VERBOSE: /*std::cout << "[VERBOSE]: " << msg << std::endl;*/ break;
             case daxa::MsgSeverity::INFO:    /*std::cout << "[INFO]:    " << msg << std::endl;*/ break;
-            case daxa::MsgSeverity::WARNING: std::cout << "[WARNING]: " << msg << std::endl; DAXA_DBG_ASSERT_TRUE_M(false, "validation warning"); break;
-            case daxa::MsgSeverity::FAILURE: std::cout << "[FAILURE]: " << msg << std::endl; DAXA_DBG_ASSERT_TRUE_M(false, "validation error"); break;
+            case daxa::MsgSeverity::WARNING: std::cout << '\n' << "[WARNING]: " << msg << '\n' <<std::endl; DAXA_DBG_ASSERT_TRUE_M(false, "validation warning"); break;
+            case daxa::MsgSeverity::FAILURE: std::cout << '\n' << "[FAILURE]: " << msg << '\n' <<std::endl; DAXA_DBG_ASSERT_TRUE_M(false, "validation error"); break;
             // clang-format on
             default: std::cout << "[UNKNOWN]: " << msg << std::endl; break;
             }
@@ -99,7 +99,9 @@ struct App : Window<App>
     {
         auto img = swapchain.acquire_next_image();
 
-        auto binary_semaphore = device.create_binary_semaphore({});
+        auto binary_semaphore = device.create_binary_semaphore({
+            .debug_name = "Test1 Present Semaphore",
+        });
         auto cmd_list = device.create_command_list({
             .debug_name = "Test1 Command List",
         });

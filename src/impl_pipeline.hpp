@@ -1,11 +1,12 @@
 #pragma once
 
 #include <daxa/pipeline.hpp>
-
-#include "impl_device.hpp"
+#include "impl_core.hpp"
 
 namespace daxa
 {
+    struct ImplDevice;
+
     struct ImplPipelineCompiler
     {
         std::weak_ptr<ImplDevice> impl_device;

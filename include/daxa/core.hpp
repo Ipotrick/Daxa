@@ -8,7 +8,6 @@
 #include <filesystem>
 #include <functional>
 #include <chrono>
-#include <variant>
 
 #include <daxa/types.hpp>
 
