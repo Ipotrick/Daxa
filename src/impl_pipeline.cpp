@@ -4,6 +4,7 @@
 
 #include <regex>
 #include <iostream>
+#include <thread>
 
 struct DxcCustomIncluder : public IDxcIncludeHandler
 {
