@@ -155,8 +155,8 @@ namespace daxa
     {
         auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
 
+        impl.main_queue_collect_garbage();
         std::unique_lock lock{impl.submit_mtx};
-
         impl.collect_garbage_no_lock();
     }
 
