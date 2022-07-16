@@ -18,13 +18,17 @@ namespace daxa
         VkDevice vk_device_handle = {};
         DeviceVulkanInfo vk_info = {};
         DeviceInfo info = {};
+
+        // Gpu resource table:
         GPUResourceTable gpu_table = {};
 
+        // Zombie recycling:
         std::mutex zombie_command_lists_mtx = {};
         std::vector<std::shared_ptr<ImplCommandList>> zombie_command_lists = {};
         std::mutex zombie_binary_semaphores_mtx = {};
         std::vector<std::shared_ptr<ImplBinarySemaphore>> zombie_binary_semaphores = {};
 
+        // Submits:
         struct Submit
         {
             VkFence vk_fence_handle = {};
@@ -35,6 +39,7 @@ namespace daxa
         std::vector<Submit> submits_pool = {};
         std::vector<Submit> command_list_submits = {};
 
+        // Main queue:
         VkQueue vk_main_queue_handle = {};
         u32 main_queue_family_index = {};
         std::atomic_uint64_t main_queue_cpu_timeline = {};
@@ -56,20 +61,20 @@ namespace daxa
         auto new_image() -> ImageId;
         auto new_image_view() -> ImageViewId;
         auto new_sampler() -> SamplerId;
-        
-        void cleanup_buffer(BufferId id);
-        void cleanup_image(ImageId id);
-        void cleanup_image_view(ImageViewId id);
-        void cleanup_sampler(SamplerId id);
-
-        void zombiefy_buffer(BufferId id);
-        void zombiefy_image(ImageId id);
-        void zombiefy_image_view(ImageViewId id);
-        void zombiefy_sampler(SamplerId id);
 
         auto slot(BufferId id) -> ImplBufferSlot &;
         auto slot(ImageId id) -> ImplImageSlot &;
         auto slot(ImageViewId id) -> ImplImageViewSlot &;
         auto slot(SamplerId id) -> ImplSamplerSlot &;
+
+        void zombiefy_buffer(BufferId id);
+        void zombiefy_image(ImageId id);
+        void zombiefy_image_view(ImageViewId id);
+        void zombiefy_sampler(SamplerId id);
+        
+        void cleanup_buffer(BufferId id);
+        void cleanup_image(ImageId id);
+        void cleanup_image_view(ImageViewId id);
+        void cleanup_sampler(SamplerId id);
     };
 } // namespace daxa
