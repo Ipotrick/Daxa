@@ -47,7 +47,7 @@ namespace daxa
         vkCreateDescriptorPool(device, &vk_descriptor_pool_create_info_handle, nullptr, &this->vk_descriptor_pool_handle);
 
         VkDescriptorSetLayoutBinding buffer_descriptor_set_layout_binding {
-            .binding = 0,
+            .binding = BUFFER_BINDING,
             .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             .descriptorCount = static_cast<u32>(buffer_slots.max_resources),
             .stageFlags = VK_SHADER_STAGE_ALL,
@@ -55,7 +55,7 @@ namespace daxa
         };
 
         VkDescriptorSetLayoutBinding storage_image_descriptor_set_layout_binding {
-            .binding = 1,
+            .binding = STORAGE_IMAGE_BINDING,
             .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
             .descriptorCount = static_cast<u32>(image_slots.max_resources),
             .stageFlags = VK_SHADER_STAGE_ALL,
@@ -63,7 +63,7 @@ namespace daxa
         };
 
         VkDescriptorSetLayoutBinding sampled_image_descriptor_set_layout_binding {
-            .binding = 2,
+            .binding = SAMPLED_IMAGE_BINDING,
             .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             .descriptorCount = static_cast<u32>(image_slots.max_resources),
             .stageFlags = VK_SHADER_STAGE_ALL,
@@ -71,7 +71,7 @@ namespace daxa
         };
 
         VkDescriptorSetLayoutBinding sampler_descriptor_set_layout_binding {
-            .binding = 3,
+            .binding = SAMPLER_BINDING,
             .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
             .descriptorCount = static_cast<u32>(sampler_slots.max_resources),
             .stageFlags = VK_SHADER_STAGE_ALL,
