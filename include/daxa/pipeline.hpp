@@ -4,12 +4,28 @@
 
 namespace daxa
 {
+    struct ShaderFile
+    {
+        std::filesystem::path path;
+    };
+    struct ShaderCode
+    {
+        std::string string;
+    };
+    struct ShaderSPIRV
+    {
+        u32 * data;
+        usize size;
+    };
+
+    using ShaderSource = std::variant<ShaderFile, ShaderCode, ShaderSPIRV>;
+
     struct ShaderInfo
     {
-        std::string inline_source = {};
-        std::string path_to_source = {};
+        ShaderSource source;
         std::string entry_point = {};
         std::vector<std::string> defines = {};
+        std::string debug_name = {};
     };
 
     struct ComputePipelineInfo
@@ -21,6 +37,8 @@ namespace daxa
 
     struct ComputePipeline : Handle
     {
+        ~ComputePipeline();
+
         auto info() const -> ComputePipelineInfo const &;
 
       private:
