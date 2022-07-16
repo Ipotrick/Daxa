@@ -6,6 +6,11 @@
 
 namespace daxa
 {
+    static inline constexpr u32 BUFFER_BINDING = 0;
+    static inline constexpr u32 STORAGE_IMAGE_BINDING = 1;
+    static inline constexpr u32 SAMPLED_IMAGE_BINDING = 2;
+    static inline constexpr u32 SAMPLER_BINDING = 3;
+
     struct ImplBufferSlot
     {
         BufferInfo info = {};
