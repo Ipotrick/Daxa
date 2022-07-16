@@ -39,7 +39,7 @@ using ComPtr = CComPtr<T>;
         if (ptr == nullptr)                                                                              \
         {                                                                                                \
             std::cerr << DAXA_DBG_ASSERT_FAIL_STRING << ": destroyed device before object" << std::endl; \
-            throw std::exception("DAXA DEBUG ASSERT FAILURE");                                           \
+            throw std::runtime_error("DAXA DEBUG ASSERT FAILURE");                                       \
         }                                                                                                \
         return ptr;                                                                                      \
     }()
