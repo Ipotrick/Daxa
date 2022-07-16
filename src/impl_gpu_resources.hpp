@@ -152,7 +152,7 @@ namespace daxa
         VkDescriptorSet vk_descriptor_set_handle = {};
         VkDescriptorPool vk_descriptor_pool_handle = {};
 
-        void init(usize max_buffers, usize max_images, usize max_samplers, VkDevice device);
+        void initialize(usize max_buffers, usize max_images, usize max_samplers, VkDevice device);
         void cleanup(VkDevice device);
     };
 } // namespace daxa

@@ -66,7 +66,7 @@ struct App : Window<App>
         .debug_name = "Test1 Pipeline Compiler",
     });
     daxa::ComputePipeline compute_pipeline = pipeline_compiler.create_compute_pipeline({
-        .shader_info = {.path_to_source = "temp/shaders/test1_comp.hlsl"},
+        .shader_info = {.source = daxa::ShaderFile{"temp/shaders/test1_comp.hlsl"}},
         .debug_name = "Test1 Compute Pipeline",
     });
 

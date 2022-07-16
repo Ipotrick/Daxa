@@ -12,8 +12,8 @@ namespace daxa
         collect_garbage();
 
         impl.submits_pool.clear();
-        impl.binary_semaphore_zombie_list.clear();
-        impl.command_list_zombie_list.clear();
+        impl.binary_semaphore_recyclable_list.clear();
+        impl.command_list_recyclable_list.clear();
     }
 
     auto Device::info() const -> DeviceInfo const &
@@ -26,7 +26,7 @@ namespace daxa
     {
         auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
 
-        vkQueueWaitIdle(impl.vk_main_queue_handle);
+        vkQueueWaitIdle(impl.main_queue_vk_queue_handle);
         vkDeviceWaitIdle(impl.vk_device_handle);
     }
 
@@ -66,7 +66,6 @@ namespace daxa
         for (auto & binary_semaphore : submit_info.signal_binary_semaphores_on_completion)
         {
             auto & impl_binary_semaphore = *reinterpret_cast<ImplBinarySemaphore *>(binary_semaphore.impl.get());
-            submit.binary_semaphores.push_back(std::static_pointer_cast<ImplBinarySemaphore>(binary_semaphore.impl));
             submit_semaphore_signal_vk_handles.push_back(impl_binary_semaphore.vk_semaphore_handle);
             submit_semaphore_signal_values.push_back(0); // The vulkan spec requires to have dummy values for binary semaphores.
         }
@@ -92,12 +91,12 @@ namespace daxa
             .signalSemaphoreCount = static_cast<u32>(submit_semaphore_signal_vk_handles.size()),
             .pSignalSemaphores = submit_semaphore_signal_vk_handles.data(),
         };
-        vkQueueSubmit(impl.vk_main_queue_handle, 1, &vk_submit_info, VK_NULL_HANDLE);
+        vkQueueSubmit(impl.main_queue_vk_queue_handle, 1, &vk_submit_info, VK_NULL_HANDLE);
 
         impl.main_queue_command_list_submits.push_back(std::move(submit));
 
         impl.main_queue_housekeeping_api_handles_no_lock();
-        impl.main_queue_housekeeping_gpu_resources();
+        impl.main_queue_clean_dead_zombies();
     }
 
     void Device::present_frame(PresentInfo const & info)
@@ -117,7 +116,7 @@ namespace daxa
             .pImageIndices = &swapchain_impl.current_image_index,
         };
 
-        vkQueuePresentKHR(impl.vk_main_queue_handle, &present_info);
+        vkQueuePresentKHR(impl.main_queue_vk_queue_handle, &present_info);
 
         collect_garbage();
     }
@@ -128,7 +127,7 @@ namespace daxa
 
         std::unique_lock lock{impl.submit_mtx};
         impl.main_queue_housekeeping_api_handles_no_lock();
-        impl.main_queue_housekeeping_gpu_resources();
+        impl.main_queue_clean_dead_zombies();
     }
 
     auto Device::create_swapchain(SwapchainInfo const & info) -> Swapchain
@@ -144,13 +143,13 @@ namespace daxa
     auto Device::create_command_list(CommandListInfo const & info) -> CommandList
     {
         auto impl = std::static_pointer_cast<ImplDevice>(this->impl);
-        return CommandList{ impl->command_list_zombie_list.revive_zombie_or_create_new(impl, info) };
+        return CommandList{ impl->command_list_recyclable_list.recycle_or_create_new(impl, info) };
     }
 
     auto Device::create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore
     {
         auto impl = std::static_pointer_cast<ImplDevice>(this->impl);
-        return BinarySemaphore{ impl->binary_semaphore_zombie_list.revive_zombie_or_create_new(impl, info) };
+        return BinarySemaphore{ impl->binary_semaphore_recyclable_list.recycle_or_create_new(impl, info) };
     }
     
     void Device::destroy_buffer(BufferId id)
@@ -347,13 +346,13 @@ namespace daxa
         };
         vkCreateDevice(a_physical_device, &device_ci, nullptr, &this->vk_device_handle);
         volkLoadDevice(this->vk_device_handle);
-        gpu_table.init(
+        gpu_table.initialize(
             this->vk_info.limits.max_descriptor_set_storage_buffers,
             std::min(this->vk_info.limits.max_descriptor_set_sampled_images, this->vk_info.limits.max_descriptor_set_storage_images),
             this->vk_info.limits.max_descriptor_set_samplers,
             vk_device_handle);
 
-        vkGetDeviceQueue(this->vk_device_handle, this->main_queue_family_index, 0, &this->vk_main_queue_handle);
+        vkGetDeviceQueue(this->vk_device_handle, this->main_queue_family_index, 0, &this->main_queue_vk_queue_handle);
 
         VkSemaphoreTypeCreateInfo timelineCreateInfo{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
@@ -385,7 +384,7 @@ namespace daxa
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_QUEUE,
-                .objectHandle = reinterpret_cast<uint64_t>(this->vk_main_queue_handle),
+                .objectHandle = reinterpret_cast<uint64_t>(this->main_queue_vk_queue_handle),
                 .pObjectName = this->info.debug_name.c_str(),
             };
             vkSetDebugUtilsObjectNameEXT(vk_device_handle, &device_main_queue_name_info);
@@ -420,7 +419,6 @@ namespace daxa
             if (submit.timeline_value <= main_queue_gpu_timeline_value)
             {
                 submit.command_lists.clear();
-                submit.binary_semaphores.clear();
                 this->submits_pool.push_back(std::move(submit));
 
                 iter = this->main_queue_command_list_submits.erase(iter);
@@ -432,7 +430,7 @@ namespace daxa
         }
     }
     
-    void ImplDevice::main_queue_housekeeping_gpu_resources()
+    void ImplDevice::main_queue_clean_dead_zombies()
     {
         std::unique_lock lock{this->main_queue_zombies_mtx};
 
@@ -444,11 +442,11 @@ namespace daxa
         {
             for (auto iter = zombies.begin(); iter != zombies.end();)
             {
-                auto & [timeline_value, id] = *iter;
+                auto & [timeline_value, object] = *iter;
 
                 if (timeline_value <= gpu_timeline_value)
                 {
-                    cleanup_fn(id);
+                    cleanup_fn(object);
                     iter = zombies.erase(iter);
                 }
                 else
@@ -462,6 +460,14 @@ namespace daxa
         check_and_cleanup_gpu_resources(this->main_queue_image_zombies, [&](auto id){ this->cleanup_image(id); });
         check_and_cleanup_gpu_resources(this->main_queue_image_view_zombies, [&](auto id){ this->cleanup_image_view(id); });
         check_and_cleanup_gpu_resources(this->main_queue_sampler_zombies, [&](auto id){ this->cleanup_sampler(id); });
+        {
+            std::unique_lock lock{this->binary_semaphore_recyclable_list.mtx};
+            check_and_cleanup_gpu_resources(this->main_queue_binary_semaphore_zombies, [&](auto & binary_semaphore){ 
+                binary_semaphore->reset();
+                this->binary_semaphore_recyclable_list.recyclables.push_back(std::move(binary_semaphore));
+            });
+        }
+        check_and_cleanup_gpu_resources(this->main_queue_compute_pipeline_zombies, [&](auto & compute_pipeline){ });
     }
 
     auto ImplDevice::new_buffer() -> BufferId
