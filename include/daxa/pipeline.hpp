@@ -23,7 +23,7 @@ namespace daxa
     struct ShaderInfo
     {
         ShaderSource source;
-        std::string entry_point = {};
+        std::string entry_point = { "main" };
         std::vector<std::string> defines = {};
         std::string debug_name = {};
     };

@@ -38,7 +38,7 @@ namespace daxa
         VkDescriptorPoolCreateInfo vk_descriptor_pool_create_info_handle{
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
             .pNext = nullptr,
-            .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+            .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
             .maxSets = 1,
             .poolSizeCount = 4u,
             .pPoolSizes = pool_sizes,
@@ -55,7 +55,7 @@ namespace daxa
         };
 
         VkDescriptorSetLayoutBinding storage_image_descriptor_set_layout_binding {
-            .binding = 0,
+            .binding = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
             .descriptorCount = static_cast<u32>(image_slots.max_resources),
             .stageFlags = VK_SHADER_STAGE_ALL,
@@ -63,7 +63,7 @@ namespace daxa
         };
 
         VkDescriptorSetLayoutBinding sampled_image_descriptor_set_layout_binding {
-            .binding = 0,
+            .binding = 2,
             .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             .descriptorCount = static_cast<u32>(image_slots.max_resources),
             .stageFlags = VK_SHADER_STAGE_ALL,
@@ -71,7 +71,7 @@ namespace daxa
         };
 
         VkDescriptorSetLayoutBinding sampler_descriptor_set_layout_binding {
-            .binding = 0,
+            .binding = 3,
             .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
             .descriptorCount = static_cast<u32>(sampler_slots.max_resources),
             .stageFlags = VK_SHADER_STAGE_ALL,
@@ -102,6 +102,7 @@ namespace daxa
         VkDescriptorSetLayoutCreateInfo vk_descriptor_set_layout_create_info{
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
             .pNext = &vk_descriptor_set_layout_binding_flags_create_info,
+            .flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT,
             .bindingCount = 4,
             .pBindings = descriptor_set_layout_bindings,
         };
