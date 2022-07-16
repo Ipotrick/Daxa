@@ -402,6 +402,7 @@ namespace daxa
 
     ImplDevice::~ImplDevice()
     {
+        this->gpu_table.cleanup(this->vk_device_handle);
         vkDestroySemaphore(this->vk_device_handle, this->vk_main_queue_gpu_timeline_semaphore_handle, nullptr);
         vkDestroyDevice(this->vk_device_handle, nullptr);
     }
