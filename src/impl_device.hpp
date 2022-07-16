@@ -58,7 +58,7 @@ namespace daxa
         ~ImplDevice();
 
         auto new_buffer() -> BufferId;
-        auto new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, const std::string & debug_name) -> ImageId;
+        auto new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, const std::string & debug_name) -> ImageId;
         auto new_image() -> ImageId;
         auto new_image_view() -> ImageViewId;
         auto new_sampler() -> SamplerId;
