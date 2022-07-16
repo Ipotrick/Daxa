@@ -16,11 +16,9 @@ namespace daxa
         std::weak_ptr<ImplContext> impl_ctx = {};
         VkPhysicalDevice vk_physical_device = {};
         VkDevice vk_device_handle = {};
-        VkQueue vk_main_queue_handle = {};
-        u32 main_queue_family_index = {};
         DeviceVulkanInfo vk_info = {};
         DeviceInfo info = {};
-        GPUResourceTable gpu_table;
+        GPUResourceTable gpu_table = {};
 
         std::mutex zombie_command_lists_mtx = {};
         std::vector<std::shared_ptr<ImplCommandList>> zombie_command_lists = {};
@@ -37,24 +35,41 @@ namespace daxa
         std::vector<Submit> submits_pool = {};
         std::vector<Submit> command_list_submits = {};
 
+        VkQueue vk_main_queue_handle = {};
+        u32 main_queue_family_index = {};
+        std::atomic_uint64_t main_queue_cpu_timeline = {};
+        VkSemaphore vk_main_queue_gpu_timeline_semaphore_handle = {};
+        std::mutex main_queue_zombies_mtx = {};
+        std::vector<std::pair<u64, BufferId>> main_queue_buffer_zombies = {};
+        std::vector<std::pair<u64, ImageId>> main_queue_image_zombies = {};
+        std::vector<std::pair<u64, ImageViewId>> main_queue_image_view_zombies = {};
+        std::vector<std::pair<u64, SamplerId>> main_queue_sampler_zombies = {};
+
         ImplDevice(DeviceInfo const & info, DeviceVulkanInfo const & vk_info, std::shared_ptr<ImplContext> impl_ctx, VkPhysicalDevice physical_device);
         ~ImplDevice();
 
-        auto new_buffer() -> BufferId;
-        void cleanup_buffer(BufferId id);
-        auto slot(BufferId id) -> ImplBufferSlot const &;
+        void collect_garbage_no_lock();
+        void main_queue_collect_garbage();
 
+        auto new_buffer() -> BufferId;
         auto new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, const std::string & debug_name) -> ImageId;
         auto new_image() -> ImageId;
-        void cleanup_image(ImageId id);
-        auto slot(ImageId id) -> ImplImageSlot const &;
-
         auto new_image_view() -> ImageViewId;
-        void cleanup_image_view(ImageViewId id);
-        auto slot(ImageViewId id) -> ImplImageViewSlot const &;
-
         auto new_sampler() -> SamplerId;
+        
+        void cleanup_buffer(BufferId id);
+        void cleanup_image(ImageId id);
+        void cleanup_image_view(ImageViewId id);
         void cleanup_sampler(SamplerId id);
-        auto slot(SamplerId id) -> ImplSamplerSlot const &;
+
+        void zombiefy_buffer(BufferId id);
+        void zombiefy_image(ImageId id);
+        void zombiefy_image_view(ImageViewId id);
+        void zombiefy_sampler(SamplerId id);
+
+        auto slot(BufferId id) -> ImplBufferSlot &;
+        auto slot(ImageId id) -> ImplImageSlot &;
+        auto slot(ImageViewId id) -> ImplImageViewSlot &;
+        auto slot(SamplerId id) -> ImplSamplerSlot &;
     };
 } // namespace daxa

@@ -43,8 +43,8 @@ struct App : Window<App>
             // clang-format off
             case daxa::MsgSeverity::VERBOSE: /*std::cout << "[VERBOSE]: " << msg << std::endl;*/ break;
             case daxa::MsgSeverity::INFO:    /*std::cout << "[INFO]:    " << msg << std::endl;*/ break;
-            case daxa::MsgSeverity::WARNING: std::cout << "[WARNING]: " << msg << std::endl; DAXA_DBG_ASSERT_TRUE_M(false, ""); break;
-            case daxa::MsgSeverity::FAILURE: std::cout << "[FAILURE]: " << msg << std::endl; DAXA_DBG_ASSERT_TRUE_M(false, ""); break;
+            case daxa::MsgSeverity::WARNING: std::cout << "[WARNING]: " << msg << std::endl; DAXA_DBG_ASSERT_TRUE_M(false, "validation warning"); break;
+            case daxa::MsgSeverity::FAILURE: std::cout << "[FAILURE]: " << msg << std::endl; DAXA_DBG_ASSERT_TRUE_M(false, "validation error"); break;
             // clang-format on
             default: std::cout << "[UNKNOWN]: " << msg << std::endl; break;
             }
@@ -152,8 +152,6 @@ struct App : Window<App>
             .wait_on_binary = binary_semaphore,
             .swapchain = swapchain,
         });
-
-        device.collect_garbage();
     }
 
     void on_resize(u32 sx, u32 sy)
