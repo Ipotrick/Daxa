@@ -267,21 +267,7 @@ namespace daxa
     ImplComputePipeline::ImplComputePipeline(std::weak_ptr<ImplDevice> a_impl_device, ComputePipelineInfo const & info, VkShaderModule vk_shader_module_handle)
         : impl_device{std::move(a_impl_device)}, info{info}
     {
-        VkPipelineLayoutCreateInfo vk_pipeline_layout_create_info{
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-            .pNext = nullptr,
-            .flags = {},
-            .setLayoutCount = 0,
-            .pSetLayouts = nullptr,
-            .pushConstantRangeCount = 0,
-            .pPushConstantRanges = nullptr,
-        };
-
-        vkCreatePipelineLayout(
-            DAXA_LOCK_WEAK(this->impl_device)->vk_device_handle,
-            &vk_pipeline_layout_create_info,
-            nullptr,
-            &this->vk_pipeline_layout_handle);
+        usize pipeline_layout_index = get_pipeline_layout_index_from_push_constant_size(info.push_constant_size);
 
         VkComputePipelineCreateInfo vk_compute_pipeline_create_info{
             .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
@@ -296,7 +282,7 @@ namespace daxa
                 .pName = this->info.shader_info.entry_point.c_str(),
                 .pSpecializationInfo = nullptr,
             },
-            .layout = this->vk_pipeline_layout_handle,
+            .layout = DAXA_LOCK_WEAK(this->impl_device)->gpu_table.pipeline_layouts[pipeline_layout_index],
             .basePipelineHandle = VK_NULL_HANDLE,
             .basePipelineIndex = 0,
         };

@@ -16,17 +16,17 @@ namespace daxa
         }
     }
 
-    void CommandList::blit_image_to_image(ImageBlitInfo & info)
+    void CommandList::blit_image_to_image(ImageBlitInfo const & info)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
 
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
 
         VkImageBlit vk_blit{
-            .srcSubresource = *reinterpret_cast<VkImageSubresourceLayers *>(&info.src_slice),
-            .srcOffsets = {*reinterpret_cast<VkOffset3D *>(&info.src_offsets[0]), *reinterpret_cast<VkOffset3D *>(&info.src_offsets[1])},
-            .dstSubresource = *reinterpret_cast<VkImageSubresourceLayers *>(&info.dst_slice),
-            .dstOffsets = {*reinterpret_cast<VkOffset3D *>(&info.dst_offsets[0]), *reinterpret_cast<VkOffset3D *>(&info.dst_offsets[1])},
+            .srcSubresource = *reinterpret_cast<VkImageSubresourceLayers const *>(&info.src_slice),
+            .srcOffsets = {*reinterpret_cast<VkOffset3D const *>(&info.src_offsets[0]), *reinterpret_cast<VkOffset3D const *>(&info.src_offsets[1])},
+            .dstSubresource = *reinterpret_cast<VkImageSubresourceLayers const *>(&info.dst_slice),
+            .dstOffsets = {*reinterpret_cast<VkOffset3D const *>(&info.dst_offsets[0]), *reinterpret_cast<VkOffset3D const *>(&info.dst_offsets[1])},
         };
 
         vkCmdBlitImage(
@@ -40,18 +40,18 @@ namespace daxa
             static_cast<VkFilter>(info.filter));
     }
 
-    void CommandList::copy_image_to_image(ImageCopyInfo & info)
+    void CommandList::copy_image_to_image(ImageCopyInfo const & info)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
 
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
 
         VkImageCopy vk_image_copy{
-            .srcSubresource = *reinterpret_cast<VkImageSubresourceLayers *>(&info.src_slice),
-            .srcOffset = {*reinterpret_cast<VkOffset3D *>(&info.src_offset)},
-            .dstSubresource = *reinterpret_cast<VkImageSubresourceLayers *>(&info.dst_slice),
-            .dstOffset = {*reinterpret_cast<VkOffset3D *>(&info.dst_offset)},
-            .extent = {*reinterpret_cast<VkExtent3D *>(&info.extent)},
+            .srcSubresource = *reinterpret_cast<VkImageSubresourceLayers const *>(&info.src_slice),
+            .srcOffset = {*reinterpret_cast<VkOffset3D const *>(&info.src_offset)},
+            .dstSubresource = *reinterpret_cast<VkImageSubresourceLayers const *>(&info.dst_slice),
+            .dstOffset = {*reinterpret_cast<VkOffset3D const *>(&info.dst_offset)},
+            .extent = {*reinterpret_cast<VkExtent3D const *>(&info.extent)},
         };
 
         vkCmdCopyImage(
@@ -101,6 +101,31 @@ namespace daxa
                 1,
                 const_cast<VkImageSubresourceRange *>(reinterpret_cast<VkImageSubresourceRange const *>(&info.dst_slice)));
         }
+    }
+
+    void CommandList::push_constant(void const * data, u32 size, u32 offset)
+    {
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+
+        DAXA_DBG_ASSERT_TRUE_M(size <= 128, "push constant size is limited to 128 bytes");
+
+        usize push_constant_device_word_size = ((size + 3) / 4);
+        
+        usize pipeline_layout_index = get_pipeline_layout_index_from_push_constant_size(push_constant_device_word_size);
+
+        vkCmdPushConstants(impl.vk_cmd_buffer_handle, impl.pipeline_layouts[pipeline_layout_index], VK_SHADER_STAGE_ALL, offset, size, data);
+    }
+    void CommandList::bind_pipeline(ComputePipeline const & pipeline)
+    {
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        auto & pipeline_impl = *reinterpret_cast<ImplComputePipeline *>(pipeline.impl.get());
+
+        vkCmdBindPipeline(impl.vk_cmd_buffer_handle, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_handle);
+    }
+    void CommandList::dispatch(u32 group_x, u32 group_y, u32 group_z)
+    {
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        vkCmdDispatch(impl.vk_cmd_buffer_handle, group_x, group_y, group_z);
     }
 
     void CommandList::complete()
@@ -181,7 +206,7 @@ namespace daxa
     }
 
     ImplCommandList::ImplCommandList(std::weak_ptr<ImplDevice> a_impl_device)
-        : impl_device{a_impl_device}
+        : impl_device{a_impl_device}, pipeline_layouts{ DAXA_LOCK_WEAK(impl_device)->gpu_table.pipeline_layouts }
     {
         VkCommandPoolCreateInfo vk_command_pool_create_info{
             .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
