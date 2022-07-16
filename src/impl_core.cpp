@@ -2,5 +2,5 @@
 
 namespace daxa
 {
-    Handle::Handle(std::shared_ptr<void> impl) : impl{std::move(impl)} {}
+    Handle::Handle(std::shared_ptr<void> a_impl) : impl{std::move(a_impl)} {}
 } // namespace daxa

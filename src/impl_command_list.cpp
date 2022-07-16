@@ -1,19 +1,14 @@
 #include "impl_command_list.hpp"
+#include "impl_device.hpp"
 
 namespace daxa
 {
-    CommandList::CommandList(std::shared_ptr<void> impl) : Handle(impl) {}
+    CommandList::CommandList(std::shared_ptr<void> a_impl) : Handle(std::move(a_impl)) {}
 
     CommandList::~CommandList()
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
-
-        if (this->impl.use_count() == 1)
-        {
-            impl.reset();
-            std::unique_lock lock{DAXA_LOCK_WEAK(impl.impl_device)->zombie_command_lists_mtx};
-            DAXA_LOCK_WEAK(impl.impl_device)->zombie_command_lists.push_back(std::static_pointer_cast<ImplCommandList>(this->impl));
-        }
+        DAXA_LOCK_WEAK(impl.impl_device)->command_list_zombie_list.try_zombiefy(this->impl);
     }
 
     void CommandList::blit_image_to_image(ImageBlitInfo & info)

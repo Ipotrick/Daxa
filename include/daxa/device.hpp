@@ -182,7 +182,6 @@ namespace daxa
         auto create_swapchain(SwapchainInfo const & info) -> Swapchain;
         auto create_command_list(CommandListInfo const & info) -> CommandList;
         auto create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore;
-        // auto create_signal(SignalInfo const & info) -> Signal;
 
         auto info() const -> DeviceInfo const &;
         void wait_idle();
