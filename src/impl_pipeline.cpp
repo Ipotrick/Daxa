@@ -113,7 +113,11 @@ namespace daxa
         };
         vkCreateShaderModule(DAXA_LOCK_WEAK(impl.impl_device)->vk_device_handle, &shader_module_ci, nullptr, &shader_module);
 
-        return ComputePipeline{std::make_shared<ImplComputePipeline>(impl.impl_device, info, shader_module)};
+        auto ret = ComputePipeline{std::make_shared<ImplComputePipeline>(impl.impl_device, info, shader_module)};
+
+        vkDestroyShaderModule(DAXA_LOCK_WEAK(impl.impl_device)->vk_device_handle, shader_module, nullptr);
+
+        return ret;
     }
 
     ImplPipelineCompiler::ImplPipelineCompiler(std::weak_ptr<ImplDevice> a_impl_device, PipelineCompilerInfo const & info)
@@ -288,7 +292,7 @@ namespace daxa
                 .flags = {},
                 .stage = VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT,
                 .module = vk_shader_module_handle,
-                .pName = this->info.shader_info.debug_name.c_str(),
+                .pName = this->info.shader_info.entry_point.c_str(),
                 .pSpecializationInfo = nullptr,
             },
             .layout = this->vk_pipeline_layout_handle,
