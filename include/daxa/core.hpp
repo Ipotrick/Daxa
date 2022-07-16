@@ -9,6 +9,7 @@
 #include <functional>
 #include <chrono>
 #include <variant>
+#include <stdexcept>
 
 #include <daxa/types.hpp>
 
@@ -27,7 +28,7 @@
         if (!(x))                                                                 \
         {                                                                         \
             std::cerr << DAXA_DBG_ASSERT_FAIL_STRING << ": " << (m) << std::endl; \
-            throw std::exception("DAXA DEBUG ASSERTION FAILURE");                 \
+            throw std::runtime_error("DAXA DEBUG ASSERTION FAILURE");             \
         }                                                                         \
     }()
 #else
