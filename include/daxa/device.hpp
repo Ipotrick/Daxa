@@ -170,7 +170,7 @@ namespace daxa
 
         void destroy_buffer(BufferId id);
         void destroy_image(ImageId id);
-        void destroy_image(ImageViewId id);
+        void destroy_image_view(ImageViewId id);
         void destroy_sampler(SamplerId id);
 
         auto info_buffer(BufferId id) const -> BufferInfo;

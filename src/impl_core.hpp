@@ -10,6 +10,7 @@
 #include <volk.h>
 #define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
+#include <vk_mem_alloc.h>
 
 #if defined(_WIN32)
 #define NOMINMAX
@@ -47,3 +48,14 @@ using ComPtr = CComPtr<T>;
 #define DAXA_LOCK_WEAK(x) \
     x.lock()
 #endif
+
+namespace daxa {
+    auto round_up_to_next_multiple_of_two(auto num_to_round) -> auto
+    {
+        auto remainder = num_to_round % 2;
+        if (remainder == 0)
+            return num_to_round;
+
+        return num_to_round + 2 - remainder;
+    }
+}
