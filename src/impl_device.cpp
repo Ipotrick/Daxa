@@ -155,7 +155,6 @@ namespace daxa
     {
         auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
 
-        impl.main_queue_collect_garbage();
         std::unique_lock lock{impl.submit_mtx};
         impl.collect_garbage_no_lock();
     }
@@ -485,10 +484,10 @@ namespace daxa
 
             if (result == VK_SUCCESS)
             {
-                // Return the fence into a pool, so they can be reused in future submits.
                 submit.command_lists.clear();
                 submit.binary_semaphores.clear();
 
+                // Return the fence into a pool, so they can be reused in future submits.
                 this->submits_pool.push_back(std::move(submit));
                 vkResetFences(this->vk_device_handle, 1, &submit.vk_fence_handle);
 
@@ -499,91 +498,44 @@ namespace daxa
                 ++iter;
             }
         }
+        this->main_queue_collect_garbage();
     }
     
     void ImplDevice::main_queue_collect_garbage()
     {
         std::unique_lock lock{this->main_queue_zombies_mtx};
 
-        for (auto iter = this->main_queue_buffer_zombies.begin(); iter != this->main_queue_buffer_zombies.end();)
+        u64 gpu_timeline_value = std::numeric_limits<u64>::max();
+
+        DAXA_DBG_ASSERT_TRUE_M(vkGetSemaphoreCounterValue(this->vk_device_handle, this->vk_main_queue_gpu_timeline_semaphore_handle, &gpu_timeline_value) != VK_ERROR_DEVICE_LOST, "device lost");
+
+        auto check_and_cleanup_gpu_resources = [&](auto & zombies, auto const & cleanup_fn)
         {
-            auto & [timeline_value, buffer_id] = *iter;
-
-            u64 gpu_timeline_value = std::numeric_limits<u64>::max();
-
-            vkGetSemaphoreCounterValue(this->vk_device_handle, this->vk_main_queue_gpu_timeline_semaphore_handle, &gpu_timeline_value);
-
-            if (timeline_value <= gpu_timeline_value)
+            for (auto iter = zombies.begin(); iter != zombies.end();)
             {
-                this->cleanup_buffer(buffer_id);
-                iter = this->main_queue_buffer_zombies.erase(iter);
+                auto & [timeline_value, id] = *iter;
+
+                if (timeline_value <= gpu_timeline_value)
+                {
+                    cleanup_fn(id);
+                    iter = zombies.erase(iter);
+                }
+                else
+                {
+                    ++iter;
+                }
             }
-            else
-            {
-                ++iter;
-            }
-        }
+        };
 
-        for (auto iter = this->main_queue_image_zombies.begin(); iter != this->main_queue_image_zombies.end();)
-        {
-            auto & [timeline_value, image_id] = *iter;
-
-            u64 gpu_timeline_value = std::numeric_limits<u64>::max();
-
-            vkGetSemaphoreCounterValue(this->vk_device_handle, this->vk_main_queue_gpu_timeline_semaphore_handle, &gpu_timeline_value);
-
-            if (timeline_value <= gpu_timeline_value)
-            {
-                this->cleanup_image(image_id);
-                iter = this->main_queue_image_zombies.erase(iter);
-            }
-            else
-            {
-                ++iter;
-            }
-        }
-
-        for (auto iter = this->main_queue_image_view_zombies.begin(); iter != this->main_queue_image_view_zombies.end();)
-        {
-            auto & [timeline_value, image_view_id] = *iter;
-
-            u64 gpu_timeline_value = std::numeric_limits<u64>::max();
-
-            vkGetSemaphoreCounterValue(this->vk_device_handle, this->vk_main_queue_gpu_timeline_semaphore_handle, &gpu_timeline_value);
-
-            if (timeline_value <= gpu_timeline_value)
-            {
-                this->cleanup_image_view(image_view_id);
-                iter = this->main_queue_image_view_zombies.erase(iter);
-            }
-            else
-            {
-                ++iter;
-            }
-        }
-
-        for (auto iter = this->main_queue_sampler_zombies.begin(); iter != this->main_queue_sampler_zombies.end();)
-        {
-            auto & [timeline_value, sampler_id] = *iter;
-
-            u64 gpu_timeline_value = std::numeric_limits<u64>::max();
-
-            vkGetSemaphoreCounterValue(this->vk_device_handle, this->vk_main_queue_gpu_timeline_semaphore_handle, &gpu_timeline_value);
-
-            if (timeline_value <= gpu_timeline_value)
-            {
-                this->cleanup_sampler(sampler_id);
-                iter = this->main_queue_sampler_zombies.erase(iter);
-            }
-            else
-            {
-                ++iter;
-            }
-        }
+        check_and_cleanup_gpu_resources(this->main_queue_buffer_zombies, [&](auto id){ this->cleanup_buffer(id); });
+        check_and_cleanup_gpu_resources(this->main_queue_image_zombies, [&](auto id){ this->cleanup_image(id); });
+        check_and_cleanup_gpu_resources(this->main_queue_image_view_zombies, [&](auto id){ this->cleanup_image_view(id); });
+        check_and_cleanup_gpu_resources(this->main_queue_sampler_zombies, [&](auto id){ this->cleanup_sampler(id); });
     }
 
     auto ImplDevice::new_buffer() -> BufferId
     {
+        DAXA_DBG_ASSERT_TRUE_M(false, "unimplemented");
         return BufferId{};
     }
 
@@ -645,21 +597,25 @@ namespace daxa
 
     auto ImplDevice::new_image() -> ImageId
     {
+        DAXA_DBG_ASSERT_TRUE_M(false, "unimplemented");
         return ImageId{};
     }
 
     auto ImplDevice::new_image_view() -> ImageViewId
     {
+        DAXA_DBG_ASSERT_TRUE_M(false, "unimplemented");
         return ImageViewId{};
     }
 
     auto ImplDevice::new_sampler() -> SamplerId
     {
+        DAXA_DBG_ASSERT_TRUE_M(false, "unimplemented");
         return SamplerId{};
     }
 
     void ImplDevice::cleanup_buffer(BufferId id)
     {
+        DAXA_DBG_ASSERT_TRUE_M(false, "unimplemented");
     }
 
     void ImplDevice::cleanup_image(ImageId id)
@@ -678,10 +634,12 @@ namespace daxa
 
     void ImplDevice::cleanup_image_view(ImageViewId id)
     {
+        DAXA_DBG_ASSERT_TRUE_M(false, "unimplemented");
     }
 
     void ImplDevice::cleanup_sampler(SamplerId id)
     {
+        DAXA_DBG_ASSERT_TRUE_M(false, "unimplemented");
     }
     
     void ImplDevice::zombiefy_buffer(BufferId id)
