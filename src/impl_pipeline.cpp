@@ -3,9 +3,9 @@
 
 namespace daxa
 {
-    ComputePipeline::ComputePipeline(std::shared_ptr<void> impl) : Handle(impl) {}
+    ComputePipeline::ComputePipeline(std::shared_ptr<void> a_impl) : Handle(std::move(a_impl)) {}
 
-    PipelineCompiler::PipelineCompiler(std::shared_ptr<void> impl) : Handle(impl) {}
+    PipelineCompiler::PipelineCompiler(std::shared_ptr<void> a_impl) : Handle(std::move(a_impl)) {}
 
     auto PipelineCompiler::create_compute_pipeline(ComputePipelineInfo const & info) -> ComputePipeline
     {
