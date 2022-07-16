@@ -67,12 +67,21 @@ namespace daxa
     {
         ~CommandList();
 
-        void blit_image_to_image(ImageBlitInfo & info);
-        void copy_image_to_image(ImageCopyInfo & info);
+        void blit_image_to_image(ImageBlitInfo const & info);
+        void copy_image_to_image(ImageCopyInfo const & info);
         void clear_image(ImageClearInfo const & info);
 
         void pipeline_barrier(PipelineBarrierInfo const & info);
         void pipeline_barrier_image_transition(PipelineBarrierImageTransitionInfo const & info);
+
+        void push_constant(void const * data, u32 size, u32 offset = 0);
+        template <typename T>
+        void push_constant(T const & constant, usize offset = 0)
+        {
+            push_constant(&constant, static_cast<u32>(sizeof(T)), static_cast<u32>(offset));
+        }
+        void bind_pipeline(ComputePipeline const & compute_pipeline);
+        void dispatch(u32 group_x, u32 group_y = 1, u32 group_z = 1);
 
         void complete();
 

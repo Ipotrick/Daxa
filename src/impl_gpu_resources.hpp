@@ -23,6 +23,7 @@ namespace daxa
         ImageInfo info = {};
         VkImageView vk_image_view_handle = {};
         VkImage vk_image_handle = {};
+        VmaAllocation vma_allocation = {};
         i32 swapchain_image_index = NOT_OWNED_BY_SWAPCHAIN;
     };
 
@@ -157,7 +158,13 @@ namespace daxa
         VkDescriptorSet vk_descriptor_set_handle = {};
         VkDescriptorPool vk_descriptor_pool_handle = {};
 
+        // Contains pipeline layouts with variing push constant range size.
+        // The first size is 0 word, second is 1 word, all others are a power of two (maximum is 32).
+        std::array<VkPipelineLayout, 7> pipeline_layouts = {};
+
         void initialize(usize max_buffers, usize max_images, usize max_samplers, VkDevice device);
         void cleanup(VkDevice device);
     };
+
+    auto get_pipeline_layout_index_from_push_constant_size(usize push_constant_size) -> usize;
 } // namespace daxa

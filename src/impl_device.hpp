@@ -19,6 +19,7 @@ namespace daxa
         std::weak_ptr<ImplContext> impl_ctx = {};
         VkPhysicalDevice vk_physical_device = {};
         VkDevice vk_device_handle = {};
+        VmaAllocator vma_allocator = {};
         DeviceVulkanInfo vk_info = {};
         DeviceInfo info = {};
 
@@ -57,11 +58,11 @@ namespace daxa
         ImplDevice(DeviceInfo const & info, DeviceVulkanInfo const & vk_info, std::shared_ptr<ImplContext> impl_ctx, VkPhysicalDevice physical_device);
         ~ImplDevice();
 
-        auto new_buffer() -> BufferId;
+        auto new_buffer(BufferInfo const & info) -> BufferId;
         auto new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, const std::string & debug_name) -> ImageId;
-        auto new_image() -> ImageId;
-        auto new_image_view() -> ImageViewId;
-        auto new_sampler() -> SamplerId;
+        auto new_image(ImageInfo const & info) -> ImageId;
+        auto new_image_view(ImageViewInfo const & info) -> ImageViewId;
+        auto new_sampler(SamplerInfo const & info) -> SamplerId;
 
         auto slot(BufferId id) -> ImplBufferSlot &;
         auto slot(ImageId id) -> ImplImageSlot &;

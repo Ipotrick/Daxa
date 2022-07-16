@@ -380,6 +380,16 @@ namespace daxa
         static inline constexpr ImageUsageFlags SHADING_RATE_IMAGE = FRAGMENT_SHADING_RATE_ATTACHMENT;
     };
 
+    using MemoryFlags = u32;
+    struct MemoryFlagBits {
+        static inline constexpr MemoryFlags DEDICATED_MEMORY = 0x00000001;
+        static inline constexpr MemoryFlags CAN_ALIAS = 0x00000200;
+        static inline constexpr MemoryFlags HOST_ACCESS_SEQUENTIAL_WRITE = 0x00000400;
+        static inline constexpr MemoryFlags HOST_ACCESS_RANDOM = 0x00000800;
+        static inline constexpr MemoryFlags STRATEGY_MIN_MEMORY = 0x00010000;
+        static inline constexpr MemoryFlags STRATEGY_MIN_TIME = 0x00020000;
+    };
+
     enum class ColorSpace
     {
         SRGB_NONLINEAR = 0,

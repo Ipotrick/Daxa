@@ -78,6 +78,11 @@ struct App : AppWindow<App>
         .debug_name = "Test1 Compute Pipeline",
     });
 
+    daxa::ImageId render_image = device.create_image(daxa::ImageInfo{
+        .size = {size_x, size_y},
+        .usage = daxa::ImageUsageFlagBits::STORAGE,
+    });
+
     App()
     {
     }
@@ -105,7 +110,7 @@ struct App : AppWindow<App>
 
     void draw()
     {
-        auto img = swapchain.acquire_next_image();
+        auto swapchain_image = swapchain.acquire_next_image();
 
         auto binary_semaphore = device.create_binary_semaphore({
             .debug_name = "Test1 Present Semaphore",
@@ -114,11 +119,29 @@ struct App : AppWindow<App>
             .debug_name = "Test1 Command List",
         });
 
+        struct ComputePush
+        {
+            daxa::ImageId image_id;
+            u32 frame_dim_x, frame_dim_y;
+        };
+
+        cmd_list.bind_pipeline(compute_pipeline);
+        cmd_list.push_constant(ComputePush{
+            .image_id = render_image,
+            .frame_dim_x = size_x,
+            .frame_dim_y = size_y,
+        });
+        cmd_list.dispatch((size_x + 7) / 8, (size_y + 7) / 8);
+
+        cmd_list.pipeline_barrier({
+            .waiting_pipeline_access = daxa::PipelineStageAccessFlagBits::COMPUTE_SHADER_WRITE,
+        });
+
         cmd_list.pipeline_barrier_image_transition({
             .waiting_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_WRITE,
             .before_layout = daxa::ImageLayout::UNDEFINED,
             .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-            .image_id = img,
+            .image_id = swapchain_image,
             .image_slice = {
                 .image_aspect = daxa::ImageAspectFlagBits::COLOR,
                 .level_count = 1,
@@ -126,24 +149,46 @@ struct App : AppWindow<App>
             },
         });
 
-        cmd_list.clear_image({
-            .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-            .clear_color = daxa::ClearColor{.f32_value = {0.30f, 0.10f, 1.00f, 1.00f}},
-            .dst_image = img,
-            .dst_slice = daxa::ImageMipArraySlice{
+        cmd_list.pipeline_barrier_image_transition({
+            .waiting_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_READ,
+            .before_layout = daxa::ImageLayout::UNDEFINED,
+            .after_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
+            .image_id = render_image,
+            .image_slice = {
                 .image_aspect = daxa::ImageAspectFlagBits::COLOR,
-                .base_mip_level = 0,
                 .level_count = 1,
-                .base_array_layer = 0,
                 .layer_count = 1,
             },
+        });
+
+        cmd_list.blit_image_to_image({
+            .src_image = render_image,
+            .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
+            .dst_image = swapchain_image,
+            .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+            .src_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
+            .src_offsets = {{{0, 0, 0}, {0, 0, 0}}},
+            .dst_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
+            .dst_offsets = {{{0, 0, 0}, {0, 0, 0}}},
         });
 
         cmd_list.pipeline_barrier_image_transition({
             .awaited_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_WRITE,
             .before_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .after_layout = daxa::ImageLayout::PRESENT_SRC,
-            .image_id = img,
+            .image_id = swapchain_image,
+            .image_slice = {
+                .image_aspect = daxa::ImageAspectFlagBits::COLOR,
+                .level_count = 1,
+                .layer_count = 1,
+            },
+        });
+
+        cmd_list.pipeline_barrier_image_transition({
+            .awaited_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_READ,
+            .before_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
+            .after_layout = daxa::ImageLayout::GENERAL,
+            .image_id = render_image,
             .image_slice = {
                 .image_aspect = daxa::ImageAspectFlagBits::COLOR,
                 .level_count = 1,
