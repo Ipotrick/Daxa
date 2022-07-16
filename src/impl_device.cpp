@@ -44,6 +44,8 @@ namespace daxa
     {
         auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
 
+        u64 curreny_main_queue_timeline_value = impl.main_queue_cpu_timeline.fetch_add(1ull, std::memory_order::relaxed) + 1;
+
         std::unique_lock lock{impl.submit_mtx};
 
         ImplDevice::Submit submit = {};
@@ -84,29 +86,47 @@ namespace daxa
             submit_vk_command_buffer_handles.push_back(impl_cmd_list.vk_cmd_buffer_handle);
         }
 
-        std::vector<VkSemaphore> submit_vk_semaphore_handles = {};
+        std::vector<VkSemaphore> submit_semaphore_signal_vk_handles = {};   // All timeline semaphores come first, then binary semaphores follow.
+        std::vector<u64> submit_semaphore_signal_values = {};   // Used for timeline semaphores. Ignored (push dummy value) for binary semaphores.
+
+        // Add main queue timeline signaling as first timeline semaphore singaling:
+        submit_semaphore_signal_vk_handles.push_back(impl.vk_main_queue_gpu_timeline_semaphore_handle);
+        submit_semaphore_signal_values.push_back(curreny_main_queue_timeline_value);
+
         for (auto & binary_semaphore : submit_info.signal_binary_semaphores_on_completion)
         {
             auto & impl_binary_semaphore = *reinterpret_cast<ImplBinarySemaphore *>(binary_semaphore.impl.get());
-            submit_vk_semaphore_handles.push_back(impl_binary_semaphore.vk_semaphore_handle);
+            submit.binary_semaphores.push_back(std::static_pointer_cast<ImplBinarySemaphore>(binary_semaphore.impl));
+            submit_semaphore_signal_vk_handles.push_back(impl_binary_semaphore.vk_semaphore_handle);
+            submit_semaphore_signal_values.push_back(0); // The vulkan spec requires to have dummy values for binary semaphores.
         }
 
-        VkPipelineStageFlags pipe_stage_flags;
-        pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        VkTimelineSemaphoreSubmitInfo timelineInfo{
+            .sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
+            .pNext = nullptr,
+            .waitSemaphoreValueCount = 0,
+            .pWaitSemaphoreValues = nullptr,
+            .signalSemaphoreValueCount = static_cast<u32>(submit_semaphore_signal_values.size()),
+            .pSignalSemaphoreValues = submit_semaphore_signal_values.data(),
+        };
+
+        VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;  // TODO: rethink this!
         VkSubmitInfo vk_submit_info{
             .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-            .pNext = nullptr,
+            .pNext = reinterpret_cast<void*>(&timelineInfo),
             .waitSemaphoreCount = 0,
             .pWaitSemaphores = nullptr,
             .pWaitDstStageMask = &pipe_stage_flags,
             .commandBufferCount = static_cast<u32>(submit_vk_command_buffer_handles.size()),
             .pCommandBuffers = submit_vk_command_buffer_handles.data(),
-            .signalSemaphoreCount = static_cast<u32>(submit_vk_semaphore_handles.size()),
-            .pSignalSemaphores = submit_vk_semaphore_handles.data(),
+            .signalSemaphoreCount = static_cast<u32>(submit_semaphore_signal_vk_handles.size()),
+            .pSignalSemaphores = submit_semaphore_signal_vk_handles.data(),
         };
         vkQueueSubmit(impl.vk_main_queue_handle, 1, &vk_submit_info, submit.vk_fence_handle);
 
         impl.command_list_submits.push_back(std::move(submit));
+
+        impl.collect_garbage_no_lock();
     }
 
     void Device::present_frame(PresentInfo const & info)
@@ -127,6 +147,8 @@ namespace daxa
         };
 
         vkQueuePresentKHR(impl.vk_main_queue_handle, &present_info);
+
+        collect_garbage();
     }
 
     void Device::collect_garbage()
@@ -135,27 +157,7 @@ namespace daxa
 
         std::unique_lock lock{impl.submit_mtx};
 
-        for (auto iter = impl.command_list_submits.begin(); iter != impl.command_list_submits.end();)
-        {
-            ImplDevice::Submit & submit = *iter;
-            VkResult result = vkGetFenceStatus(impl.vk_device_handle, submit.vk_fence_handle);
-
-            DAXA_DBG_ASSERT_TRUE_M(result != VK_ERROR_DEVICE_LOST, "device lost");
-
-            if (result == VK_SUCCESS)
-            {
-                // Return the fence into a pool, so they can be reused in future submits.
-                submit.command_lists.clear();
-                impl.submits_pool.push_back(std::move(submit));
-                vkResetFences(impl.vk_device_handle, 1, &submit.vk_fence_handle);
-
-                iter = impl.command_list_submits.erase(iter);
-            }
-            else
-            {
-                ++iter;
-            }
-        }
+        impl.collect_garbage_no_lock();
     }
 
     auto Device::create_swapchain(SwapchainInfo const & info) -> Swapchain
@@ -216,6 +218,30 @@ namespace daxa
         ret->initialize(info);
 
         return BinarySemaphore{ret};
+    }
+    
+    void Device::destroy_buffer(BufferId id)
+    {
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+        impl.zombiefy_buffer(id);
+    }
+
+    void Device::destroy_image(ImageId id)
+    {
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+        impl.zombiefy_image(id);
+    }
+
+    void Device::destroy_image(ImageViewId id)
+    {
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+        impl.zombiefy_image_view(id);
+    }
+
+    void Device::destroy_sampler(SamplerId id)
+    {
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+        impl.zombiefy_sampler(id);
     }
 
     static const VkPhysicalDeviceFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES{
@@ -396,6 +422,21 @@ namespace daxa
 
         vkGetDeviceQueue(this->vk_device_handle, this->main_queue_family_index, 0, &this->vk_main_queue_handle);
 
+        VkSemaphoreTypeCreateInfo timelineCreateInfo{
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
+            .pNext = NULL,
+            .semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
+            .initialValue = 0,
+        };
+
+        VkSemaphoreCreateInfo vk_semaphore_create_info_handle {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+            .pNext = reinterpret_cast<void*>(&timelineCreateInfo),
+            .flags = {}
+        };
+
+        vkCreateSemaphore(this->vk_device_handle, &vk_semaphore_create_info_handle, nullptr, &this->vk_main_queue_gpu_timeline_semaphore_handle);
+
         if (DAXA_LOCK_WEAK(this->impl_ctx)->enable_debug_names && this->info.debug_name.size() > 0)
         {
             VkDebugUtilsObjectNameInfoEXT device_name_info{
@@ -415,21 +456,135 @@ namespace daxa
                 .pObjectName = this->info.debug_name.c_str(),
             };
             vkSetDebugUtilsObjectNameEXT(vk_device_handle, &device_main_queue_name_info);
+
+            VkDebugUtilsObjectNameInfoEXT device_main_queue_timeline_semaphore_name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_SEMAPHORE,
+                .objectHandle = reinterpret_cast<uint64_t>(this->vk_main_queue_gpu_timeline_semaphore_handle),
+                .pObjectName = this->info.debug_name.c_str(),
+            };
+            vkSetDebugUtilsObjectNameEXT(vk_device_handle, &device_main_queue_timeline_semaphore_name_info);
         }
     }
 
     ImplDevice::~ImplDevice()
     {
+        vkDestroySemaphore(this->vk_device_handle, this->vk_main_queue_gpu_timeline_semaphore_handle, nullptr);
         vkDestroyDevice(this->vk_device_handle, nullptr);
+    }
+    
+    void ImplDevice::collect_garbage_no_lock()
+    {
+        for (auto iter = this->command_list_submits.begin(); iter != this->command_list_submits.end();)
+        {
+            ImplDevice::Submit & submit = *iter;
+            VkResult result = vkGetFenceStatus(this->vk_device_handle, submit.vk_fence_handle);
+
+            DAXA_DBG_ASSERT_TRUE_M(result != VK_ERROR_DEVICE_LOST, "device lost");
+
+            if (result == VK_SUCCESS)
+            {
+                // Return the fence into a pool, so they can be reused in future submits.
+                submit.command_lists.clear();
+                submit.binary_semaphores.clear();
+
+                this->submits_pool.push_back(std::move(submit));
+                vkResetFences(this->vk_device_handle, 1, &submit.vk_fence_handle);
+
+                iter = this->command_list_submits.erase(iter);
+            }
+            else
+            {
+                ++iter;
+            }
+        }
+    }
+    
+    void ImplDevice::main_queue_collect_garbage()
+    {
+        std::unique_lock lock{this->main_queue_zombies_mtx};
+
+        for (auto iter = this->main_queue_buffer_zombies.begin(); iter != this->main_queue_buffer_zombies.end();)
+        {
+            auto & [timeline_value, buffer_id] = *iter;
+
+            u64 gpu_timeline_value = std::numeric_limits<u64>::max();
+
+            vkGetSemaphoreCounterValue(this->vk_device_handle, this->vk_main_queue_gpu_timeline_semaphore_handle, &gpu_timeline_value);
+
+            if (timeline_value <= gpu_timeline_value)
+            {
+                this->cleanup_buffer(buffer_id);
+                iter = this->main_queue_buffer_zombies.erase(iter);
+            }
+            else
+            {
+                ++iter;
+            }
+        }
+
+        for (auto iter = this->main_queue_image_zombies.begin(); iter != this->main_queue_image_zombies.end();)
+        {
+            auto & [timeline_value, image_id] = *iter;
+
+            u64 gpu_timeline_value = std::numeric_limits<u64>::max();
+
+            vkGetSemaphoreCounterValue(this->vk_device_handle, this->vk_main_queue_gpu_timeline_semaphore_handle, &gpu_timeline_value);
+
+            if (timeline_value <= gpu_timeline_value)
+            {
+                this->cleanup_image(image_id);
+                iter = this->main_queue_image_zombies.erase(iter);
+            }
+            else
+            {
+                ++iter;
+            }
+        }
+
+        for (auto iter = this->main_queue_image_view_zombies.begin(); iter != this->main_queue_image_view_zombies.end();)
+        {
+            auto & [timeline_value, image_view_id] = *iter;
+
+            u64 gpu_timeline_value = std::numeric_limits<u64>::max();
+
+            vkGetSemaphoreCounterValue(this->vk_device_handle, this->vk_main_queue_gpu_timeline_semaphore_handle, &gpu_timeline_value);
+
+            if (timeline_value <= gpu_timeline_value)
+            {
+                this->cleanup_image_view(image_view_id);
+                iter = this->main_queue_image_view_zombies.erase(iter);
+            }
+            else
+            {
+                ++iter;
+            }
+        }
+
+        for (auto iter = this->main_queue_sampler_zombies.begin(); iter != this->main_queue_sampler_zombies.end();)
+        {
+            auto & [timeline_value, sampler_id] = *iter;
+
+            u64 gpu_timeline_value = std::numeric_limits<u64>::max();
+
+            vkGetSemaphoreCounterValue(this->vk_device_handle, this->vk_main_queue_gpu_timeline_semaphore_handle, &gpu_timeline_value);
+
+            if (timeline_value <= gpu_timeline_value)
+            {
+                this->cleanup_sampler(sampler_id);
+                iter = this->main_queue_sampler_zombies.erase(iter);
+            }
+            else
+            {
+                ++iter;
+            }
+        }
     }
 
     auto ImplDevice::new_buffer() -> BufferId
     {
         return BufferId{};
-    }
-
-    void ImplDevice::cleanup_buffer(BufferId id)
-    {
     }
 
     auto ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, const std::string & debug_name) -> ImageId
@@ -493,6 +648,20 @@ namespace daxa
         return ImageId{};
     }
 
+    auto ImplDevice::new_image_view() -> ImageViewId
+    {
+        return ImageViewId{};
+    }
+
+    auto ImplDevice::new_sampler() -> SamplerId
+    {
+        return SamplerId{};
+    }
+
+    void ImplDevice::cleanup_buffer(BufferId id)
+    {
+    }
+
     void ImplDevice::cleanup_image(ImageId id)
     {
         ImplImageSlot & image_slot = std::get<ImplImageSlot>(gpu_table.image_slots.dereference_id(id));
@@ -507,40 +676,58 @@ namespace daxa
         gpu_table.image_slots.return_slot(id);
     }
 
-    auto ImplDevice::new_image_view() -> ImageViewId
-    {
-        return ImageViewId{};
-    }
-
     void ImplDevice::cleanup_image_view(ImageViewId id)
     {
-    }
-
-    auto ImplDevice::new_sampler() -> SamplerId
-    {
-        return SamplerId{};
     }
 
     void ImplDevice::cleanup_sampler(SamplerId id)
     {
     }
+    
+    void ImplDevice::zombiefy_buffer(BufferId id)
+    {
+        std::unique_lock lock{this->main_queue_zombies_mtx};
+        u64 main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
+        this->main_queue_buffer_zombies.push_back({main_queue_cpu_timeline_value, id});
+    }
 
-    auto ImplDevice::slot(BufferId id) -> ImplBufferSlot const &
+    void ImplDevice::zombiefy_image(ImageId id)
+    {
+        std::unique_lock lock{this->main_queue_zombies_mtx};
+        u64 main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
+        this->main_queue_image_zombies.push_back({main_queue_cpu_timeline_value, id});
+    }
+
+    void ImplDevice::zombiefy_image_view(ImageViewId id)
+    {
+        std::unique_lock lock{this->main_queue_zombies_mtx};
+        u64 main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
+        this->main_queue_image_view_zombies.push_back({main_queue_cpu_timeline_value, id});
+    }
+
+    void ImplDevice::zombiefy_sampler(SamplerId id)
+    {
+        std::unique_lock lock{this->main_queue_zombies_mtx};
+        u64 main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
+        this->main_queue_sampler_zombies.push_back({main_queue_cpu_timeline_value, id});
+    }
+
+    auto ImplDevice::slot(BufferId id) -> ImplBufferSlot &
     {
         return gpu_table.buffer_slots.dereference_id(id);
     }
 
-    auto ImplDevice::slot(ImageId id) -> ImplImageSlot const &
+    auto ImplDevice::slot(ImageId id) -> ImplImageSlot &
     {
         return std::get<ImplImageSlot>(gpu_table.image_slots.dereference_id(id));
     }
 
-    auto ImplDevice::slot(ImageViewId id) -> ImplImageViewSlot const &
+    auto ImplDevice::slot(ImageViewId id) -> ImplImageViewSlot &
     {
         return std::get<ImplImageViewSlot>(gpu_table.image_slots.dereference_id(id));
     }
 
-    auto ImplDevice::slot(SamplerId id) -> ImplSamplerSlot const &
+    auto ImplDevice::slot(SamplerId id) -> ImplSamplerSlot &
     {
         return gpu_table.sampler_slots.dereference_id(id);
     }
