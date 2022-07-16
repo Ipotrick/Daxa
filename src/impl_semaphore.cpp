@@ -7,8 +7,13 @@ namespace daxa
 
     BinarySemaphore::~BinarySemaphore()
     {
-        auto & impl = *reinterpret_cast<ImplBinarySemaphore *>(this->impl.get());
-        DAXA_LOCK_WEAK(impl.impl_device)->binary_semaphore_zombie_list.try_zombiefy(this->impl);
+        if (this->impl.use_count() == 1)
+        {
+            std::shared_ptr<ImplBinarySemaphore> impl = std::static_pointer_cast<ImplBinarySemaphore>(this->impl);
+            std::unique_lock lock{DAXA_LOCK_WEAK(impl->impl_device)->main_queue_zombies_mtx};
+            u64 main_queue_cpu_timeline_value = DAXA_LOCK_WEAK(impl->impl_device)->main_queue_cpu_timeline.load(std::memory_order::relaxed);
+            DAXA_LOCK_WEAK(impl->impl_device)->main_queue_binary_semaphore_zombies.push_back({ main_queue_cpu_timeline_value, impl });
+        }
     }
 
     ImplBinarySemaphore::ImplBinarySemaphore(std::weak_ptr<ImplDevice> a_impl_device)

@@ -7,13 +7,20 @@ namespace daxa
 
     CommandList::~CommandList()
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
-        DAXA_LOCK_WEAK(impl.impl_device)->command_list_zombie_list.try_zombiefy(this->impl);
+        if (this->impl.use_count() == 1)
+        {
+            std::shared_ptr<ImplCommandList> impl = std::static_pointer_cast<ImplCommandList>(this->impl);
+            impl->reset();
+            std::unique_lock lock{DAXA_LOCK_WEAK(impl->impl_device)->command_list_recyclable_list.mtx};
+            DAXA_LOCK_WEAK(impl->impl_device)->command_list_recyclable_list.recyclables.push_back(impl);
+        }
     }
 
     void CommandList::blit_image_to_image(ImageBlitInfo & info)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
 
         VkImageBlit vk_blit{
             .srcSubresource = *reinterpret_cast<VkImageSubresourceLayers *>(&info.src_slice),
@@ -37,6 +44,8 @@ namespace daxa
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
 
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
+
         VkImageCopy vk_image_copy{
             .srcSubresource = *reinterpret_cast<VkImageSubresourceLayers *>(&info.src_slice),
             .srcOffset = {*reinterpret_cast<VkOffset3D *>(&info.src_offset)},
@@ -58,6 +67,8 @@ namespace daxa
     void CommandList::clear_image(ImageClearInfo const & info)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
 
         if (info.dst_slice.image_aspect & ImageAspectFlagBits::COLOR)
         {
@@ -96,7 +107,7 @@ namespace daxa
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
 
-        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete command list once");
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
 
         impl.recording_complete = true;
 
@@ -106,6 +117,8 @@ namespace daxa
     void CommandList::pipeline_barrier(PipelineBarrierInfo const & info)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
 
         VkMemoryBarrier2 vk_memory_barrier{
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
@@ -134,6 +147,8 @@ namespace daxa
     void CommandList::pipeline_barrier_image_transition(PipelineBarrierImageTransitionInfo const & info)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
 
         VkImageMemoryBarrier2 vk_image_memory_barrier{
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
@@ -186,7 +201,6 @@ namespace daxa
         };
 
         vkAllocateCommandBuffers(DAXA_LOCK_WEAK(impl_device)->vk_device_handle, &vk_command_buffer_allocate_info, &this->vk_cmd_buffer_handle);
-        this->used_binary_semaphores.reserve(4);
     }
 
     ImplCommandList::~ImplCommandList()
@@ -196,8 +210,6 @@ namespace daxa
 
     void ImplCommandList::initialize(CommandListInfo const & a_info)
     {
-        vkResetCommandPool(DAXA_LOCK_WEAK(impl_device)->vk_device_handle, this->vk_cmd_pool_handle, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
-
         VkCommandBufferBeginInfo vk_command_buffer_begin_info{
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
             .pNext = nullptr,
@@ -232,6 +244,6 @@ namespace daxa
 
     void ImplCommandList::reset()
     {
-        this->used_binary_semaphores.clear();
+        vkResetCommandPool(DAXA_LOCK_WEAK(impl_device)->vk_device_handle, this->vk_cmd_pool_handle, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
     }
 } // namespace daxa

@@ -4,7 +4,7 @@
 #include <daxa/device.hpp>
 
 #include "impl_context.hpp"
-#include "impl_zombie_list.hpp"
+#include "impl_recyclable_list.hpp"
 
 #include "impl_pipeline.hpp"
 #include "impl_command_list.hpp"
@@ -14,30 +14,6 @@
 
 namespace daxa
 {
-    template <typename ImplRetType>
-    auto revive_zombie_or_create_new(auto & device_impl, auto & zombie_list, auto & zombie_smtx, auto const & info) -> auto
-    {
-        std::shared_ptr<ImplRetType> ret = {};
-
-        {
-            std::unique_lock lock{zombie_smtx};
-            if (!zombie_list.empty())
-            {
-                ret = zombie_list.back();
-                zombie_list.pop_back();
-            }
-        }
-
-        if (!ret)
-        {
-            ret = std::make_shared<ImplRetType>(device_impl);
-        }
-
-        ret->initialize(info);
-
-        return ret;
-    }
-
     struct ImplDevice
     {
         std::weak_ptr<ImplContext> impl_ctx = {};
@@ -49,23 +25,22 @@ namespace daxa
         // Gpu resource table:
         GPUResourceTable gpu_table = {};
 
-        // Zombie recycling:
-        ZombieList<ImplCommandList> command_list_zombie_list = {};
-        ZombieList<ImplBinarySemaphore> binary_semaphore_zombie_list = {};
+        // Resource recycling:
+        RecyclableList<ImplCommandList> command_list_recyclable_list = {};
+        RecyclableList<ImplBinarySemaphore> binary_semaphore_recyclable_list = {};
 
         // Submits:
         struct Submit
         {
             u64 timeline_value = {};
             std::vector<std::shared_ptr<ImplCommandList>> command_lists = {};
-            std::vector<std::shared_ptr<ImplBinarySemaphore>> binary_semaphores = {};
         };
         std::mutex submit_mtx = {};
         std::vector<Submit> submits_pool = {};
 
         // Main queue:
         std::vector<Submit> main_queue_command_list_submits = {};
-        VkQueue vk_main_queue_handle = {};
+        VkQueue main_queue_vk_queue_handle = {};
         u32 main_queue_family_index = {};
         std::atomic_uint64_t main_queue_cpu_timeline = {};
         VkSemaphore vk_main_queue_gpu_timeline_semaphore_handle = {};
@@ -74,12 +49,13 @@ namespace daxa
         std::vector<std::pair<u64, ImageId>> main_queue_image_zombies = {};
         std::vector<std::pair<u64, ImageViewId>> main_queue_image_view_zombies = {};
         std::vector<std::pair<u64, SamplerId>> main_queue_sampler_zombies = {};
+        std::vector<std::pair<u64, std::shared_ptr<ImplBinarySemaphore>>> main_queue_binary_semaphore_zombies = {};
+        std::vector<std::pair<u64, std::shared_ptr<ImplComputePipeline>>> main_queue_compute_pipeline_zombies = {};
+        void main_queue_housekeeping_api_handles_no_lock();
+        void main_queue_clean_dead_zombies();
 
         ImplDevice(DeviceInfo const & info, DeviceVulkanInfo const & vk_info, std::shared_ptr<ImplContext> impl_ctx, VkPhysicalDevice physical_device);
         ~ImplDevice();
-
-        void main_queue_housekeeping_api_handles_no_lock();
-        void main_queue_housekeeping_gpu_resources();
 
         auto new_buffer() -> BufferId;
         auto new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, const std::string & debug_name) -> ImageId;
