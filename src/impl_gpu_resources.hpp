@@ -14,6 +14,8 @@ namespace daxa
     struct ImplBufferSlot
     {
         BufferInfo info = {};
+        VkBuffer vk_buffer = {};
+        VmaAllocation vma_allocation = {};
     };
 
     static inline constexpr i32 NOT_OWNED_BY_SWAPCHAIN = -1;
@@ -21,8 +23,8 @@ namespace daxa
     struct ImplImageSlot
     {
         ImageInfo info = {};
-        VkImageView vk_image_view_handle = {};
-        VkImage vk_image_handle = {};
+        VkImageView vk_image_view = {};
+        VkImage vk_image = {};
         VmaAllocation vma_allocation = {};
         i32 swapchain_image_index = NOT_OWNED_BY_SWAPCHAIN;
     };
@@ -30,11 +32,13 @@ namespace daxa
     struct ImplImageViewSlot
     {
         ImageViewInfo info = {};
+        VkImageView vk_image_view = {};
     };
 
     struct ImplSamplerSlot
     {
         SamplerInfo info = {};
+        VkSampler vk_sampler = {};
     };
 
 #define DAXA_DEBUG_GPU_VALIDATE_GPU_ID 1
@@ -154,9 +158,9 @@ namespace daxa
         GpuResourcePool<std::variant<ImplImageSlot, ImplImageViewSlot, std::monostate>> image_slots = {};
         GpuResourcePool<ImplSamplerSlot> sampler_slots = {};
 
-        VkDescriptorSetLayout vk_descriptor_set_layout_handle = {};
-        VkDescriptorSet vk_descriptor_set_handle = {};
-        VkDescriptorPool vk_descriptor_pool_handle = {};
+        VkDescriptorSetLayout vk_descriptor_set_layout = {};
+        VkDescriptorSet vk_descriptor_set = {};
+        VkDescriptorPool vk_descriptor_pool = {};
 
         // Contains pipeline layouts with variing push constant range size.
         // The first size is 0 word, second is 1 word, all others are a power of two (maximum is MAX_PUSH_CONSTANT_BYTE_SIZE).
@@ -165,4 +169,11 @@ namespace daxa
         void initialize(usize max_buffers, usize max_images, usize max_samplers, VkDevice device);
         void cleanup(VkDevice device);
     };
+    
+
+    void write_descriptor_set_sampler(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkSampler vk_sampler, u32 index);
+
+    void write_descriptor_set_buffer(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkBuffer vk_buffer, VkDeviceSize offset, VkDeviceSize range, u32 index);
+
+    void write_descriptor_set_image(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkImageView vk_image_view, ImageUsageFlags usage, u32 index);
 } // namespace daxa

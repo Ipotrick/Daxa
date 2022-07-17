@@ -9,7 +9,7 @@ namespace daxa
     struct ImplContext
     {
         ContextInfo info;
-        VkInstance vk_instance_handle;
+        VkInstance vk_instance;
         VkDebugUtilsMessengerEXT vk_debug_utils_messenger;
         bool enable_debug_names = true;
 

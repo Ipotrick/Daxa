@@ -12,8 +12,8 @@ namespace daxa
     {
         std::weak_ptr<ImplDevice> impl_device = {};
         SwapchainInfo info = {};
-        VkSwapchainKHR vk_swapchain_handle = VK_NULL_HANDLE;
-        VkSurfaceKHR vk_surface_handle = {};
+        VkSwapchainKHR vk_swapchain = VK_NULL_HANDLE;
+        VkSurfaceKHR vk_surface = {};
         VkSurfaceFormatKHR vk_surface_format = {};
         std::vector<ImageId> image_resources = {};
 

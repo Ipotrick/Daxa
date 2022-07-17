@@ -44,7 +44,7 @@ namespace daxa
 
     struct DxcCustomIncluder : public IDxcIncludeHandler
     {
-        IDxcIncludeHandler * default_include_handler;
+        IDxcIncludeHandler * default_includer;
         ImplPipelineCompiler * impl_pipeline_compiler;
 
         virtual ~DxcCustomIncluder() {}
@@ -94,7 +94,7 @@ namespace daxa
 
         HRESULT QueryInterface(REFIID riid, void ** object) override
         {
-            return default_include_handler->QueryInterface(riid, object);
+            return default_includer->QueryInterface(riid, object);
         }
 
         unsigned long STDMETHODCALLTYPE AddRef(void) override { return 0; }
@@ -173,11 +173,11 @@ namespace daxa
             .codeSize = static_cast<u32>(spirv.size() * sizeof(u32)),
             .pCode = spirv.data(),
         };
-        vkCreateShaderModule(DAXA_LOCK_WEAK(impl.impl_device)->vk_device_handle, &shader_module_ci, nullptr, &shader_module);
+        vkCreateShaderModule(DAXA_LOCK_WEAK(impl.impl_device)->vk_device, &shader_module_ci, nullptr, &shader_module);
 
         auto ret = ComputePipeline{std::make_shared<ImplComputePipeline>(impl.impl_device, info, shader_module)};
 
-        vkDestroyShaderModule(DAXA_LOCK_WEAK(impl.impl_device)->vk_device_handle, shader_module, nullptr);
+        vkDestroyShaderModule(DAXA_LOCK_WEAK(impl.impl_device)->vk_device, shader_module, nullptr);
 
         return { ret };
     }
@@ -193,8 +193,8 @@ namespace daxa
 
         ComPtr<DxcCustomIncluder> dxc_includer = new DxcCustomIncluder();
         dxc_includer->impl_pipeline_compiler = this;
-        this->dxc_utils->CreateDefaultIncludeHandler(&(dxc_includer->default_include_handler));
-        this->dxc_include_handler = dxc_includer.Detach();
+        this->dxc_utils->CreateDefaultIncludeHandler(&(dxc_includer->default_includer));
+        this->dxc_includer = dxc_includer.Detach();
     }
 
     ImplPipelineCompiler::~ImplPipelineCompiler()
@@ -321,8 +321,8 @@ namespace daxa
         };
 
         IDxcResult * result;
-        // this->dxc_compiler->Compile(nullptr, nullptr, 0, dxc_include_handler, IID_PPV_ARGS(&result));
-        this->dxc_compiler->Compile(&source_buffer, args.data(), static_cast<u32>(args.size()), dxc_include_handler, IID_PPV_ARGS(&result));
+        // this->dxc_compiler->Compile(nullptr, nullptr, 0, dxc_includer, IID_PPV_ARGS(&result));
+        this->dxc_compiler->Compile(&source_buffer, args.data(), static_cast<u32>(args.size()), dxc_includer, IID_PPV_ARGS(&result));
         IDxcBlobUtf8 * error_message;
         result->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&error_message), nullptr);
 
@@ -352,10 +352,10 @@ namespace daxa
         return { spv };
     }
 
-    ImplComputePipeline::ImplComputePipeline(std::weak_ptr<ImplDevice> a_impl_device, ComputePipelineInfo const & info, VkShaderModule vk_shader_module_handle)
+    ImplComputePipeline::ImplComputePipeline(std::weak_ptr<ImplDevice> a_impl_device, ComputePipelineInfo const & info, VkShaderModule vk_shader_module)
         : impl_device{std::move(a_impl_device)}, info{info}
     {
-        this->vk_pipeline_layout_handle = DAXA_LOCK_WEAK(this->impl_device)->gpu_table.pipeline_layouts[info.push_constant_size / 4];
+        this->vk_pipeline_layout = DAXA_LOCK_WEAK(this->impl_device)->gpu_table.pipeline_layouts[info.push_constant_size / 4];
 
         VkComputePipelineCreateInfo vk_compute_pipeline_create_info{
             .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
@@ -366,22 +366,22 @@ namespace daxa
                 .pNext = nullptr,
                 .flags = {},
                 .stage = VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT,
-                .module = vk_shader_module_handle,
+                .module = vk_shader_module,
                 .pName = this->info.shader_info.entry_point.c_str(),
                 .pSpecializationInfo = nullptr,
             },
-            .layout = this->vk_pipeline_layout_handle,
+            .layout = this->vk_pipeline_layout,
             .basePipelineHandle = VK_NULL_HANDLE,
             .basePipelineIndex = 0,
         };
 
         auto result = vkCreateComputePipelines(
-            DAXA_LOCK_WEAK(this->impl_device)->vk_device_handle,
+            DAXA_LOCK_WEAK(this->impl_device)->vk_device,
             VK_NULL_HANDLE,
             1u,
             &vk_compute_pipeline_create_info,
             nullptr,
-            &this->vk_pipeline_handle);
+            &this->vk_pipeline);
 
         DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create compute pipeline");
 
@@ -391,15 +391,15 @@ namespace daxa
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_PIPELINE,
-                .objectHandle = reinterpret_cast<uint64_t>(this->vk_pipeline_handle),
+                .objectHandle = reinterpret_cast<uint64_t>(this->vk_pipeline),
                 .pObjectName = this->info.debug_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(impl_device.lock()->vk_device_handle, &name_info);
+            vkSetDebugUtilsObjectNameEXT(impl_device.lock()->vk_device, &name_info);
         }
     }
 
     ImplComputePipeline::~ImplComputePipeline()
     {
-        vkDestroyPipeline(DAXA_LOCK_WEAK(this->impl_device)->vk_device_handle, this->vk_pipeline_handle, nullptr);
+        vkDestroyPipeline(DAXA_LOCK_WEAK(this->impl_device)->vk_device, this->vk_pipeline, nullptr);
     }
 } // namespace daxa

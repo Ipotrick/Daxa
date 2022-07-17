@@ -20,7 +20,7 @@ namespace daxa
 
     struct SwapchainInfo
     {
-        NativeWindowHandle native_window_handle;
+        NativeWindowHandle native_window;
         u32 width = 0;
         u32 height = 0;
         std::function<i32(Format)> surface_format_selector = default_format_score;

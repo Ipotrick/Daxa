@@ -412,6 +412,17 @@ namespace daxa
         DCI_P3_LINEAR = DISPLAY_P3_LINEAR,
     };
 
+    enum class ImageViewType
+    {
+        REGULAR_1D = 0,
+        REGULAR_2D = 1,
+        REGULAR_3D = 2,
+        CUBE = 3,
+        REGULAR_1D_ARRAY = 4,
+        REGULAR_2D_ARRAY = 5,
+        CUBE_ARRAY = 6,
+    }; 
+
     using ImageAspectFlags = u32;
     struct ImageAspectFlagBits
     {
@@ -587,5 +598,25 @@ namespace daxa
         static inline constexpr PipelineStageAccessFlags INDEX_INPUT_READ_WRITE = 0x1000000000ull | WRITE_ACCESS | READ_ACCESS;
         static inline constexpr PipelineStageAccessFlags VERTEX_ATTRIBUTE_INPUT_READ_WRITE = 0x2000000000ull | WRITE_ACCESS | READ_ACCESS;
         static inline constexpr PipelineStageAccessFlags PRE_RASTERIZATION_SHADERS_READ_WRITE = 0x4000000000ull | WRITE_ACCESS | READ_ACCESS;
+    };
+
+    enum class SamplerAddressMode
+    {
+        REPEAT = 0,
+        MIRRORED_REPEAT = 1,
+        CLAMP_TO_EDGE = 2,
+        MIRROR_CLAMP_TO_EDGE = 4,
+    };
+
+    enum class CompareOp
+    {
+        NEVER = 0,
+        LESS = 1,
+        EQUAL = 2,
+        LESS_OR_EQUAL = 3,
+        GREATER = 4,
+        NOT_EQUAL = 5,
+        GREATER_OR_EQUAL = 6,
+        ALWAYS = 7,
     };
 } // namespace daxa

@@ -25,12 +25,12 @@ namespace daxa
             .flags = {},
         };
 
-        vkCreateSemaphore(DAXA_LOCK_WEAK(impl_device)->vk_device_handle, &vk_semaphore_create_info, nullptr, &this->vk_semaphore_handle);
+        vkCreateSemaphore(DAXA_LOCK_WEAK(impl_device)->vk_device, &vk_semaphore_create_info, nullptr, &this->vk_semaphore);
     }
 
     ImplBinarySemaphore::~ImplBinarySemaphore()
     {
-        vkDestroySemaphore(DAXA_LOCK_WEAK(impl_device)->vk_device_handle, this->vk_semaphore_handle, nullptr);
+        vkDestroySemaphore(DAXA_LOCK_WEAK(impl_device)->vk_device, this->vk_semaphore, nullptr);
     }
 
     void ImplBinarySemaphore::initialize(BinarySemaphoreInfo const & info)
@@ -43,10 +43,10 @@ namespace daxa
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_SEMAPHORE,
-                .objectHandle = reinterpret_cast<uint64_t>(this->vk_semaphore_handle),
+                .objectHandle = reinterpret_cast<uint64_t>(this->vk_semaphore),
                 .pObjectName = this->info.debug_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(DAXA_LOCK_WEAK(impl_device)->vk_device_handle, &name_info);
+            vkSetDebugUtilsObjectNameEXT(DAXA_LOCK_WEAK(impl_device)->vk_device, &name_info);
         }
     }
 

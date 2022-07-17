@@ -14,7 +14,7 @@ namespace daxa
 
         IDxcUtils * dxc_utils = nullptr;
         IDxcCompiler3 * dxc_compiler = nullptr;
-        IDxcIncludeHandler * dxc_include_handler = nullptr;
+        IDxcIncludeHandler * dxc_includer = nullptr;
 
         ImplPipelineCompiler(std::weak_ptr<ImplDevice> impl_device, PipelineCompilerInfo const & info);
         ~ImplPipelineCompiler();
@@ -28,10 +28,10 @@ namespace daxa
     {
         std::weak_ptr<ImplDevice> impl_device;
         ComputePipelineInfo info;
-        VkPipeline vk_pipeline_handle = {};
-        VkPipelineLayout vk_pipeline_layout_handle = {};
+        VkPipeline vk_pipeline = {};
+        VkPipelineLayout vk_pipeline_layout = {};
 
-        ImplComputePipeline(std::weak_ptr<ImplDevice> impl_device, ComputePipelineInfo const & info, VkShaderModule vk_shader_module_handle);
+        ImplComputePipeline(std::weak_ptr<ImplDevice> impl_device, ComputePipelineInfo const & info, VkShaderModule vk_shader_module);
         ~ImplComputePipeline();
     };
 } // namespace daxa

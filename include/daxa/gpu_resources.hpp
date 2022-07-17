@@ -12,6 +12,9 @@ namespace daxa
 
     struct BufferInfo
     {
+        MemoryFlags memory_flags = {};
+        u32 size = {};
+        std::string debug_name = {};
     };
 
     struct BufferId : public GPUResourceId
@@ -38,6 +41,11 @@ namespace daxa
 
     struct ImageViewInfo
     {
+        ImageViewType type = ImageViewType::REGULAR_2D;
+        Format format = Format::R8G8B8A8_SRGB;
+        ImageId image = {};
+        ImageMipArraySlice slice = {};
+        std::string debug_name = {};
     };
 
     struct ImageViewId : public GPUResourceId
@@ -46,6 +54,21 @@ namespace daxa
 
     struct SamplerInfo
     {
+        Filter magnification_filter = Filter::LINEAR;
+        Filter minification_filter = Filter::LINEAR;
+        Filter mipmap_filter = Filter::LINEAR;
+        SamplerAddressMode adress_mode_u = SamplerAddressMode::CLAMP_TO_EDGE;
+        SamplerAddressMode adress_mode_v = SamplerAddressMode::CLAMP_TO_EDGE;
+        SamplerAddressMode adress_mode_w = SamplerAddressMode::CLAMP_TO_EDGE;
+        f32 mip_lod_bias = 0.5f;
+        bool enable_anisotropy = false;
+        f32 max_anisotropy = 0.0f;
+        bool enable_compare = false;
+        CompareOp compareOp = CompareOp::ALWAYS;
+        f32 min_lod = 0.0f;
+        f32 max_lod = -1.0f;
+        bool enable_unnormalized_coordinates = false;
+        std::string debug_name = {};
     };
 
     struct SamplerId : public GPUResourceId
