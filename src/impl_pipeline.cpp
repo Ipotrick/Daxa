@@ -6,25 +6,6 @@
 #include <iostream>
 #include <thread>
 
-struct DxcCustomIncluder : public IDxcIncludeHandler
-{
-    IDxcIncludeHandler * default_include_handler;
-
-    virtual ~DxcCustomIncluder() {}
-    HRESULT LoadSource(LPCWSTR filename, IDxcBlob ** include_source) override
-    {
-        return S_OK;
-    }
-
-    HRESULT QueryInterface(REFIID riid, void ** object) override
-    {
-        return default_include_handler->QueryInterface(riid, object);
-    }
-
-    unsigned long STDMETHODCALLTYPE AddRef(void) override { return 0; }
-    unsigned long STDMETHODCALLTYPE Release(void) override { return 0; }
-};
-
 static const std::regex PRAGMA_ONCE_REGEX = std::regex(R"reg(#\s*pragma\s*once\s*)reg");
 static const std::regex REPLACE_REGEX = std::regex(R"reg(\W)reg");
 static void shader_preprocess(std::string & file_str, std::filesystem::path const & path)
@@ -60,7 +41,70 @@ static void shader_preprocess(std::string & file_str, std::filesystem::path cons
 
 namespace daxa
 {
-    ComputePipeline::ComputePipeline(std::shared_ptr<void> a_impl) : Handle(std::move(a_impl)) {}
+
+    struct DxcCustomIncluder : public IDxcIncludeHandler
+    {
+        IDxcIncludeHandler * default_include_handler;
+        ImplPipelineCompiler * impl_pipeline_compiler;
+
+        virtual ~DxcCustomIncluder() {}
+        HRESULT LoadSource(LPCWSTR filename, IDxcBlob ** include_source) override
+        {
+            if (filename[0] == '.')
+            {
+                filename += 2;
+            }
+
+            auto result = impl_pipeline_compiler->full_path_to_file(filename);
+            if (result.isErr())
+            {
+                *include_source = nullptr;
+                return SCARD_E_FILE_NOT_FOUND;
+            }
+            auto full_path = result.value();
+            auto search_pred = [&](std::filesystem::path const & p)
+            { return p == full_path; };
+
+            ComPtr<IDxcBlobEncoding> dxc_blob_encoding;
+            // if (std::find_if(sharedData->currentShaderSeenFiles.begin(), sharedData->currentShaderSeenFiles.end(), search_pred) != sharedData->currentShaderSeenFiles.end())
+            // {
+            //     // Return empty string blob if this file has been included before
+            //     static const char nullStr[] = " ";
+            //     pUtils->CreateBlob(nullStr, ARRAYSIZE(nullStr), CP_UTF8, pEncoding.GetAddressOf());
+            //     *ppIncludeSource = pEncoding.Detach();
+            //     return S_OK;
+            // }
+            // else
+            // {
+            //     sharedData->observedHotLoadFiles->insert({fullPath, std::chrono::file_clock::now()});
+            // }
+
+            auto str = impl_pipeline_compiler->load_shader_source_from_file(full_path);
+            // if (str_result.isErr())
+            // {
+            //     *ppIncludeSource = nullptr;
+            //     return SCARD_E_INVALID_PARAMETER;
+            // }
+            // std::string str = str_result.value();
+
+            impl_pipeline_compiler->dxc_utils->CreateBlob(str.string.c_str(), static_cast<u32>(str.string.size()), CP_UTF8, dxc_blob_encoding.GetAddressOf());
+            *include_source = dxc_blob_encoding.Detach();
+            return S_OK;
+        }
+
+        HRESULT QueryInterface(REFIID riid, void ** object) override
+        {
+            return default_include_handler->QueryInterface(riid, object);
+        }
+
+        unsigned long STDMETHODCALLTYPE AddRef(void) override { return 0; }
+        unsigned long STDMETHODCALLTYPE Release(void) override { return 0; }
+    };
+
+    ComputePipeline::ComputePipeline(std::shared_ptr<void> a_impl) : Handle(std::move(a_impl))
+    {
+        std::cout << "ComputePipeline";
+    }
 
     ComputePipeline::~ComputePipeline()
     {
@@ -69,7 +113,7 @@ namespace daxa
             std::shared_ptr<ImplComputePipeline> impl = std::static_pointer_cast<ImplComputePipeline>(this->impl);
             std::unique_lock lock{DAXA_LOCK_WEAK(impl->impl_device)->main_queue_zombies_mtx};
             u64 main_queue_cpu_timeline_value = DAXA_LOCK_WEAK(impl->impl_device)->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-            DAXA_LOCK_WEAK(impl->impl_device)->main_queue_compute_pipeline_zombies.push_back({ main_queue_cpu_timeline_value, impl });
+            DAXA_LOCK_WEAK(impl->impl_device)->main_queue_compute_pipeline_zombies.push_back({main_queue_cpu_timeline_value, impl});
         }
     }
 
@@ -124,6 +168,7 @@ namespace daxa
     ImplPipelineCompiler::ImplPipelineCompiler(std::weak_ptr<ImplDevice> a_impl_device, PipelineCompilerInfo const & info)
         : impl_device{std::move(a_impl_device)}, info{info}
     {
+        std::cout << "ImplPipelineCompiler\n";
         HRESULT dxc_utils_result = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&this->dxc_utils));
         DAXA_DBG_ASSERT_TRUE_M(SUCCEEDED(dxc_utils_result), "Failed to create DXC utils");
 
@@ -131,6 +176,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(SUCCEEDED(dxc_compiler_result), "Failed to create DXC compiler");
 
         ComPtr<DxcCustomIncluder> dxc_includer = new DxcCustomIncluder();
+        dxc_includer->impl_pipeline_compiler = this;
         this->dxc_utils->CreateDefaultIncludeHandler(&(dxc_includer->default_include_handler));
         this->dxc_include_handler = dxc_includer.Detach();
     }
@@ -139,31 +185,56 @@ namespace daxa
     {
     }
 
-    ShaderCode ImplPipelineCompiler::load_shader_source_from_file(std::filesystem::path const & path)
+    auto ImplPipelineCompiler::full_path_to_file(std::filesystem::path const & file) -> Result<std::filesystem::path>
+    {
+        std::ifstream ifs{file};
+        if (ifs.good())
+        {
+            return {file};
+        }
+        std::filesystem::path potential_path;
+        for (auto & root : this->info.root_paths)
+        {
+            potential_path.clear();
+            potential_path = root / file;
+            std::ifstream ifs{potential_path};
+            if (ifs.good())
+            {
+                return {potential_path};
+            }
+        }
+        std::string error_msg;
+        error_msg += "could not find file :\"";
+        error_msg += file.string();
+        error_msg += "\"";
+        return ResultErr{.message = std::move(error_msg)};
+    }
+
+    auto ImplPipelineCompiler::load_shader_source_from_file(std::filesystem::path const & path) -> ShaderCode
     {
         // auto start_time = std::chrono::steady_clock::now();
         // while ((std::chrono::steady_clock::now() - start_time).count() < 100'000'000)
         // {
         // }
-            std::ifstream ifs{path};
-            DAXA_DBG_ASSERT_TRUE_M(ifs.good(), "Could not open shader file");
-            std::string str;
-            ifs.seekg(0, std::ios::end);
-            str.reserve(ifs.tellg());
-            ifs.seekg(0, std::ios::beg);
-            str.assign(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
-            if (str.size() < 1)
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                // continue;
-            }
-            shader_preprocess(str, path);
-            return {.string = str};
+        std::ifstream ifs{path};
+        DAXA_DBG_ASSERT_TRUE_M(ifs.good(), "Could not open shader file");
+        std::string str;
+        ifs.seekg(0, std::ios::end);
+        str.reserve(ifs.tellg());
+        ifs.seekg(0, std::ios::beg);
+        str.assign(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
+        if (str.size() < 1)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            // continue;
+        }
+        shader_preprocess(str, path);
+        return {.string = str};
 
         // return {.string = {}};
     }
 
-    std::vector<u32> ImplPipelineCompiler::gen_spirv_from_dxc(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, ShaderCode const & code)
+    auto ImplPipelineCompiler::gen_spirv_from_dxc(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, ShaderCode const & code) -> std::vector<u32>
     {
         auto u8_ascii_to_wstring = [](char const * str) -> std::wstring
         {
@@ -269,6 +340,8 @@ namespace daxa
     {
         usize pipeline_layout_index = get_pipeline_layout_index_from_push_constant_size(info.push_constant_size);
 
+        this->vk_pipeline_layout_handle = DAXA_LOCK_WEAK(this->impl_device)->gpu_table.pipeline_layouts[pipeline_layout_index];
+
         VkComputePipelineCreateInfo vk_compute_pipeline_create_info{
             .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
             .pNext = nullptr,
@@ -282,7 +355,7 @@ namespace daxa
                 .pName = this->info.shader_info.entry_point.c_str(),
                 .pSpecializationInfo = nullptr,
             },
-            .layout = DAXA_LOCK_WEAK(this->impl_device)->gpu_table.pipeline_layouts[pipeline_layout_index],
+            .layout = this->vk_pipeline_layout_handle,
             .basePipelineHandle = VK_NULL_HANDLE,
             .basePipelineIndex = 0,
         };
@@ -310,7 +383,6 @@ namespace daxa
 
     ImplComputePipeline::~ImplComputePipeline()
     {
-        vkDestroyPipelineLayout(DAXA_LOCK_WEAK(this->impl_device)->vk_device_handle, this->vk_pipeline_layout_handle, nullptr);
         vkDestroyPipeline(DAXA_LOCK_WEAK(this->impl_device)->vk_device_handle, this->vk_pipeline_handle, nullptr);
     }
 } // namespace daxa
