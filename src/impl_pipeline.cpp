@@ -10,10 +10,10 @@ static const std::regex PRAGMA_ONCE_REGEX = std::regex(R"reg(#\s*pragma\s*once\s
 static const std::regex REPLACE_REGEX = std::regex(R"reg(\W)reg");
 static void shader_preprocess(std::string & file_str, std::filesystem::path const & path)
 {
-    std::smatch matches;
-    std::string line;
+    std::smatch matches = {};
+    std::string line = {};
     std::stringstream file_ss{file_str};
-    std::stringstream result_ss;
+    std::stringstream result_ss = {};
     bool has_pragma_once = false;
     auto abspath_str = std::filesystem::absolute(path).string();
     for (std::size_t line_num = 0; std::getline(file_ss, line); ++line_num)
@@ -65,7 +65,7 @@ namespace daxa
             auto search_pred = [&](std::filesystem::path const & p)
             { return p == full_path; };
 
-            ComPtr<IDxcBlobEncoding> dxc_blob_encoding;
+            ComPtr<IDxcBlobEncoding> dxc_blob_encoding = {};
             // if (std::find_if(sharedData->currentShaderSeenFiles.begin(), sharedData->currentShaderSeenFiles.end(), search_pred) != sharedData->currentShaderSeenFiles.end())
             // {
             //     // Return empty string blob if this file has been included before
@@ -118,7 +118,7 @@ namespace daxa
 
     auto PipelineCompiler::create_compute_pipeline(ComputePipelineInfo const & info) -> ComputePipeline
     {
-        std::vector<u32> spirv;
+        std::vector<u32> spirv = {};
         auto & impl = *reinterpret_cast<ImplPipelineCompiler *>(this->impl.get());
 
         if (info.shader_info.source.index() == 2)
@@ -132,10 +132,13 @@ namespace daxa
         }
         else
         {
-            ShaderCode code;
-            if (info.shader_info.source.index() == 0)
+            ShaderCode code = {};
+            if (auto shader_source = std::get_if<ShaderFile>(&info.shader_info.source))
             {
-                code = impl.load_shader_source_from_file(std::get<ShaderFile>(info.shader_info.source).path);
+                auto ret = impl.full_path_to_file(shader_source->path);
+                DAXA_DBG_ASSERT_TRUE_M(ret.isOk(), "could not find file");
+                
+                code = impl.load_shader_source_from_file(ret.value());
             }
             else
             {
@@ -145,7 +148,7 @@ namespace daxa
             spirv = impl.gen_spirv_from_dxc(info.shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT, code);
         }
 
-        VkShaderModule shader_module;
+        VkShaderModule shader_module = {};
 
         VkShaderModuleCreateInfo shader_module_ci{
             .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
@@ -183,8 +186,7 @@ namespace daxa
 
     auto ImplPipelineCompiler::full_path_to_file(std::filesystem::path const & file) -> Result<std::filesystem::path>
     {
-        std::ifstream ifs{file};
-        if (ifs.good())
+        if (std::filesystem::exists(file))
         {
             return {file};
         }
@@ -193,13 +195,12 @@ namespace daxa
         {
             potential_path.clear();
             potential_path = root / file;
-            std::ifstream ifs{potential_path};
-            if (ifs.good())
+            if (std::filesystem::exists(potential_path))
             {
                 return {potential_path};
             }
         }
-        std::string error_msg;
+        std::string error_msg = {};
         error_msg += "could not find file :\"";
         error_msg += file.string();
         error_msg += "\"";
@@ -214,7 +215,7 @@ namespace daxa
         // }
         std::ifstream ifs{path};
         DAXA_DBG_ASSERT_TRUE_M(ifs.good(), "Could not open shader file");
-        std::string str;
+        std::string str = {};
         ifs.seekg(0, std::ios::end);
         str.reserve(ifs.tellg());
         ifs.seekg(0, std::ios::beg);
@@ -234,7 +235,7 @@ namespace daxa
     {
         auto u8_ascii_to_wstring = [](char const * str) -> std::wstring
         {
-            std::wstring ret;
+            std::wstring ret = {};
             for (int i = 0; i < std::strlen(str) + 1 && str != nullptr; i++)
             {
                 ret.push_back(str[i]);
@@ -242,9 +243,10 @@ namespace daxa
             return ret;
         };
 
-        std::vector<const wchar_t *> args;
+        std::vector<const wchar_t *> args = {};
 
-        std::vector<std::wstring> wstring_buffer;
+        std::vector<std::wstring> wstring_buffer = {};
+
         wstring_buffer.reserve(shader_info.defines.size());
 
         for (auto & define : shader_info.defines)
@@ -256,13 +258,15 @@ namespace daxa
 
         if (shader_info.source.index() == 0)
         {
-            args.push_back(std::get<ShaderFile>(shader_info.source).path.wstring().c_str());
+            wstring_buffer.push_back(std::get<ShaderFile>(shader_info.source).path.wstring());
+            args.push_back(wstring_buffer.back().c_str());
         }
 
         for (auto & root : info.root_paths)
         {
             args.push_back(L"-I");
-            args.push_back(root.wstring().c_str());
+            wstring_buffer.push_back(root.wstring());
+            args.push_back(wstring_buffer.back().c_str());
         }
 
         // set matrix packing to column major
