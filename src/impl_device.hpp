@@ -18,7 +18,7 @@ namespace daxa
     {
         std::weak_ptr<ImplContext> impl_ctx = {};
         VkPhysicalDevice vk_physical_device = {};
-        VkDevice vk_device_handle = {};
+        VkDevice vk_device = {};
         VmaAllocator vma_allocator = {};
         DeviceVulkanInfo vk_info = {};
         DeviceInfo info = {};
@@ -41,10 +41,10 @@ namespace daxa
 
         // Main queue:
         std::vector<Submit> main_queue_command_list_submits = {};
-        VkQueue main_queue_vk_queue_handle = {};
+        VkQueue main_queue_vk_queue = {};
         u32 main_queue_family_index = {};
         std::atomic_uint64_t main_queue_cpu_timeline = {};
-        VkSemaphore vk_main_queue_gpu_timeline_semaphore_handle = {};
+        VkSemaphore vk_main_queue_gpu_timeline_semaphore = {};
         std::mutex main_queue_zombies_mtx = {};
         std::vector<std::pair<u64, BufferId>> main_queue_buffer_zombies = {};
         std::vector<std::pair<u64, ImageId>> main_queue_image_zombies = {};
@@ -52,7 +52,7 @@ namespace daxa
         std::vector<std::pair<u64, SamplerId>> main_queue_sampler_zombies = {};
         std::vector<std::pair<u64, std::shared_ptr<ImplBinarySemaphore>>> main_queue_binary_semaphore_zombies = {};
         std::vector<std::pair<u64, std::shared_ptr<ImplComputePipeline>>> main_queue_compute_pipeline_zombies = {};
-        void main_queue_housekeeping_api_handles_no_lock();
+        void main_queue_housekeeping_apis_no_lock();
         void main_queue_clean_dead_zombies();
 
         ImplDevice(DeviceInfo const & info, DeviceVulkanInfo const & vk_info, std::shared_ptr<ImplContext> impl_ctx, VkPhysicalDevice physical_device);

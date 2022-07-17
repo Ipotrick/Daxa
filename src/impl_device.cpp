@@ -26,8 +26,8 @@ namespace daxa
     {
         auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
 
-        vkQueueWaitIdle(impl.main_queue_vk_queue_handle);
-        vkDeviceWaitIdle(impl.vk_device_handle);
+        vkQueueWaitIdle(impl.main_queue_vk_queue);
+        vkDeviceWaitIdle(impl.vk_device);
     }
 
     void Device::submit_commands(CommandSubmitInfo const & submit_info)
@@ -47,26 +47,26 @@ namespace daxa
         }
         submit.timeline_value = curreny_main_queue_cpu_timeline_value;
 
-        std::vector<VkCommandBuffer> submit_vk_command_buffer_handles = {};
+        std::vector<VkCommandBuffer> submit_vk_command_buffers = {};
         for (auto & command_list : submit_info.command_lists)
         {
             auto & impl_cmd_list = *reinterpret_cast<ImplCommandList *>(command_list.impl.get());
             DAXA_DBG_ASSERT_TRUE_M(impl_cmd_list.recording_complete, "all submitted command lists must be completed before submission");
             submit.command_lists.push_back(std::static_pointer_cast<ImplCommandList>(command_list.impl));
-            submit_vk_command_buffer_handles.push_back(impl_cmd_list.vk_cmd_buffer_handle);
+            submit_vk_command_buffers.push_back(impl_cmd_list.vk_cmd_buffer);
         }
 
-        std::vector<VkSemaphore> submit_semaphore_signal_vk_handles = {}; // All timeline semaphores come first, then binary semaphores follow.
+        std::vector<VkSemaphore> submit_semaphore_signal_vks = {}; // All timeline semaphores come first, then binary semaphores follow.
         std::vector<u64> submit_semaphore_signal_values = {};             // Used for timeline semaphores. Ignored (push dummy value) for binary semaphores.
 
         // Add main queue timeline signaling as first timeline semaphore singaling:
-        submit_semaphore_signal_vk_handles.push_back(impl.vk_main_queue_gpu_timeline_semaphore_handle);
+        submit_semaphore_signal_vks.push_back(impl.vk_main_queue_gpu_timeline_semaphore);
         submit_semaphore_signal_values.push_back(curreny_main_queue_cpu_timeline_value);
 
         for (auto & binary_semaphore : submit_info.signal_binary_semaphores_on_completion)
         {
             auto & impl_binary_semaphore = *reinterpret_cast<ImplBinarySemaphore *>(binary_semaphore.impl.get());
-            submit_semaphore_signal_vk_handles.push_back(impl_binary_semaphore.vk_semaphore_handle);
+            submit_semaphore_signal_vks.push_back(impl_binary_semaphore.vk_semaphore);
             submit_semaphore_signal_values.push_back(0); // The vulkan spec requires to have dummy values for binary semaphores.
         }
 
@@ -86,16 +86,16 @@ namespace daxa
             .waitSemaphoreCount = 0,
             .pWaitSemaphores = nullptr,
             .pWaitDstStageMask = &pipe_stage_flags,
-            .commandBufferCount = static_cast<u32>(submit_vk_command_buffer_handles.size()),
-            .pCommandBuffers = submit_vk_command_buffer_handles.data(),
-            .signalSemaphoreCount = static_cast<u32>(submit_semaphore_signal_vk_handles.size()),
-            .pSignalSemaphores = submit_semaphore_signal_vk_handles.data(),
+            .commandBufferCount = static_cast<u32>(submit_vk_command_buffers.size()),
+            .pCommandBuffers = submit_vk_command_buffers.data(),
+            .signalSemaphoreCount = static_cast<u32>(submit_semaphore_signal_vks.size()),
+            .pSignalSemaphores = submit_semaphore_signal_vks.data(),
         };
-        vkQueueSubmit(impl.main_queue_vk_queue_handle, 1, &vk_submit_info, VK_NULL_HANDLE);
+        vkQueueSubmit(impl.main_queue_vk_queue, 1, &vk_submit_info, VK_NULL_HANDLE);
 
         impl.main_queue_command_list_submits.push_back(std::move(submit));
 
-        impl.main_queue_housekeeping_api_handles_no_lock();
+        impl.main_queue_housekeeping_apis_no_lock();
         impl.main_queue_clean_dead_zombies();
     }
 
@@ -110,13 +110,13 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
             .pNext = nullptr,
             .waitSemaphoreCount = static_cast<u32>(1),
-            .pWaitSemaphores = &binary_semaphore_impl.vk_semaphore_handle,
+            .pWaitSemaphores = &binary_semaphore_impl.vk_semaphore,
             .swapchainCount = static_cast<u32>(1),
-            .pSwapchains = &swapchain_impl.vk_swapchain_handle,
+            .pSwapchains = &swapchain_impl.vk_swapchain,
             .pImageIndices = &swapchain_impl.current_image_index,
         };
 
-        vkQueuePresentKHR(impl.main_queue_vk_queue_handle, &present_info);
+        vkQueuePresentKHR(impl.main_queue_vk_queue, &present_info);
 
         collect_garbage();
     }
@@ -126,7 +126,7 @@ namespace daxa
         auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
 
         std::unique_lock lock{impl.submit_mtx};
-        impl.main_queue_housekeeping_api_handles_no_lock();
+        impl.main_queue_housekeeping_apis_no_lock();
         impl.main_queue_clean_dead_zombies();
     }
 
@@ -374,8 +374,8 @@ namespace daxa
             .ppEnabledExtensionNames = extension_names.data(),
             .pEnabledFeatures = nullptr,
         };
-        vkCreateDevice(a_physical_device, &device_ci, nullptr, &this->vk_device_handle);
-        volkLoadDevice(this->vk_device_handle);
+        vkCreateDevice(a_physical_device, &device_ci, nullptr, &this->vk_device);
+        volkLoadDevice(this->vk_device);
         u32 max_buffers = this->vk_info.limits.max_descriptor_set_storage_buffers;
         u32 max_images = std::min(this->vk_info.limits.max_descriptor_set_sampled_images, this->vk_info.limits.max_descriptor_set_storage_images);
         u32 max_samplers = this->vk_info.limits.max_descriptor_set_samplers;
@@ -383,9 +383,9 @@ namespace daxa
             std::min({max_buffers, 1'000u}),
             std::min({max_images, 1'000u}),
             std::min({max_samplers, 1'000u}),
-            vk_device_handle);
+            vk_device);
 
-        vkGetDeviceQueue(this->vk_device_handle, this->main_queue_family_index, 0, &this->main_queue_vk_queue_handle);
+        vkGetDeviceQueue(this->vk_device, this->main_queue_family_index, 0, &this->main_queue_vk_queue);
 
         VkSemaphoreTypeCreateInfo timelineCreateInfo{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
@@ -394,12 +394,12 @@ namespace daxa
             .initialValue = 0,
         };
 
-        VkSemaphoreCreateInfo vk_semaphore_create_info_handle{
+        VkSemaphoreCreateInfo vk_semaphore_create_info{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
             .pNext = reinterpret_cast<void *>(&timelineCreateInfo),
             .flags = {}};
 
-        vkCreateSemaphore(this->vk_device_handle, &vk_semaphore_create_info_handle, nullptr, &this->vk_main_queue_gpu_timeline_semaphore_handle);
+        vkCreateSemaphore(this->vk_device, &vk_semaphore_create_info, nullptr, &this->vk_main_queue_gpu_timeline_semaphore);
 
         VmaVulkanFunctions vma_vulkan_functions{
             .vkGetInstanceProcAddr = vkGetInstanceProcAddr,
@@ -409,13 +409,13 @@ namespace daxa
         VmaAllocatorCreateInfo vma_allocator_create_info{
             .flags = {},
             .physicalDevice = this->vk_physical_device,
-            .device = this->vk_device_handle,
+            .device = this->vk_device,
             .preferredLargeHeapBlockSize = 0, // Sets it to lib internal default (256MiB).
             .pAllocationCallbacks = nullptr,
             .pDeviceMemoryCallbacks = nullptr,
             .pHeapSizeLimit = nullptr,
             .pVulkanFunctions = &vma_vulkan_functions,
-            .instance = DAXA_LOCK_WEAK(this->impl_ctx)->vk_instance_handle,
+            .instance = DAXA_LOCK_WEAK(this->impl_ctx)->vk_instance,
             .vulkanApiVersion = VK_API_VERSION_1_3,
         };
 
@@ -427,47 +427,47 @@ namespace daxa
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_DEVICE,
-                .objectHandle = reinterpret_cast<uint64_t>(this->vk_device_handle),
+                .objectHandle = reinterpret_cast<uint64_t>(this->vk_device),
                 .pObjectName = this->info.debug_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(vk_device_handle, &device_name_info);
+            vkSetDebugUtilsObjectNameEXT(vk_device, &device_name_info);
 
             VkDebugUtilsObjectNameInfoEXT device_main_queue_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_QUEUE,
-                .objectHandle = reinterpret_cast<uint64_t>(this->main_queue_vk_queue_handle),
+                .objectHandle = reinterpret_cast<uint64_t>(this->main_queue_vk_queue),
                 .pObjectName = this->info.debug_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(vk_device_handle, &device_main_queue_name_info);
+            vkSetDebugUtilsObjectNameEXT(vk_device, &device_main_queue_name_info);
 
             VkDebugUtilsObjectNameInfoEXT device_main_queue_timeline_semaphore_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_SEMAPHORE,
-                .objectHandle = reinterpret_cast<uint64_t>(this->vk_main_queue_gpu_timeline_semaphore_handle),
+                .objectHandle = reinterpret_cast<uint64_t>(this->vk_main_queue_gpu_timeline_semaphore),
                 .pObjectName = this->info.debug_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(vk_device_handle, &device_main_queue_timeline_semaphore_name_info);
+            vkSetDebugUtilsObjectNameEXT(vk_device, &device_main_queue_timeline_semaphore_name_info);
         }
     }
 
     ImplDevice::~ImplDevice()
     {
         vmaDestroyAllocator(this->vma_allocator);
-        this->gpu_table.cleanup(this->vk_device_handle);
-        vkDestroySemaphore(this->vk_device_handle, this->vk_main_queue_gpu_timeline_semaphore_handle, nullptr);
-        vkDestroyDevice(this->vk_device_handle, nullptr);
+        this->gpu_table.cleanup(this->vk_device);
+        vkDestroySemaphore(this->vk_device, this->vk_main_queue_gpu_timeline_semaphore, nullptr);
+        vkDestroyDevice(this->vk_device, nullptr);
     }
 
-    void ImplDevice::main_queue_housekeeping_api_handles_no_lock()
+    void ImplDevice::main_queue_housekeeping_apis_no_lock()
     {
         for (auto iter = this->main_queue_command_list_submits.begin(); iter != this->main_queue_command_list_submits.end();)
         {
             ImplDevice::Submit & submit = *iter;
 
             u64 main_queue_gpu_timeline_value = std::numeric_limits<u64>::max();
-            auto vk_result = vkGetSemaphoreCounterValue(this->vk_device_handle, vk_main_queue_gpu_timeline_semaphore_handle, &main_queue_gpu_timeline_value);
+            auto vk_result = vkGetSemaphoreCounterValue(this->vk_device, vk_main_queue_gpu_timeline_semaphore, &main_queue_gpu_timeline_value);
             DAXA_DBG_ASSERT_TRUE_M(vk_result != VK_ERROR_DEVICE_LOST, "device lost");
 
             if (submit.timeline_value <= main_queue_gpu_timeline_value)
@@ -489,7 +489,7 @@ namespace daxa
         std::unique_lock lock{this->main_queue_zombies_mtx};
 
         u64 gpu_timeline_value = std::numeric_limits<u64>::max();
-        auto vk_result = vkGetSemaphoreCounterValue(this->vk_device_handle, this->vk_main_queue_gpu_timeline_semaphore_handle, &gpu_timeline_value);
+        auto vk_result = vkGetSemaphoreCounterValue(this->vk_device, this->vk_main_queue_gpu_timeline_semaphore, &gpu_timeline_value);
         DAXA_DBG_ASSERT_TRUE_M(vk_result != VK_ERROR_DEVICE_LOST, "device lost");
 
         auto check_and_cleanup_gpu_resources = [&](auto & zombies, auto const & cleanup_fn)
@@ -528,66 +528,66 @@ namespace daxa
         check_and_cleanup_gpu_resources(this->main_queue_compute_pipeline_zombies, [&](auto & compute_pipeline) {});
     }
 
-    void write_descriptor_set_image(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkImageView vk_image_view_handle, ImageUsageFlags usage, u32 index)
-    {
-        u32 descriptor_set_write_count = 0;
-        std::array<VkWriteDescriptorSet, 2> descriptor_set_writes = {};
-
-        VkDescriptorImageInfo vk_descriptor_image_info_storage{
-            .sampler = VK_NULL_HANDLE,
-            .imageView = vk_image_view_handle,
-            .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
-        };
-
-        VkWriteDescriptorSet vk_write_descriptor_set_storage{
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .pNext = nullptr,
-            .dstSet = vk_descriptor_set,
-            .dstBinding = STORAGE_IMAGE_BINDING,
-            .dstArrayElement = index,
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-            .pImageInfo = &vk_descriptor_image_info_storage,
-            .pBufferInfo = nullptr,
-            .pTexelBufferView = nullptr,
-        };
-
-        if (usage & ImageUsageFlagBits::STORAGE)
-        {
-            descriptor_set_writes[descriptor_set_write_count++] = vk_write_descriptor_set_storage;
-        }
-
-        VkDescriptorImageInfo vk_descriptor_image_info_sampled{
-            .sampler = VK_NULL_HANDLE,
-            .imageView = vk_image_view_handle,
-            .imageLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-        };
-
-        VkWriteDescriptorSet vk_write_descriptor_set_sampled{
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .pNext = nullptr,
-            .dstSet = vk_descriptor_set,
-            .dstBinding = SAMPLED_IMAGE_BINDING,
-            .dstArrayElement = index,
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            .pImageInfo = &vk_descriptor_image_info_sampled,
-            .pBufferInfo = nullptr,
-            .pTexelBufferView = nullptr,
-        };
-
-        if (usage & ImageUsageFlagBits::SAMPLED)
-        {
-            descriptor_set_writes[descriptor_set_write_count++] = vk_write_descriptor_set_sampled;
-        }
-
-        vkUpdateDescriptorSets(vk_device, descriptor_set_write_count, descriptor_set_writes.data(), 0, nullptr);
-    }
-
     auto ImplDevice::new_buffer(BufferInfo const & info) -> BufferId
     {
-        DAXA_DBG_ASSERT_TRUE_M(false, "unimplemented");
-        return BufferId{};
+        auto [id, ret] = gpu_table.buffer_slots.new_slot();
+
+        ret.info = info;
+
+        VkBufferUsageFlags usageFlags = 
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+            VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT |
+            VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT |
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+            VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+            VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT |
+            VK_BUFFER_USAGE_TRANSFORM_FEEDBACK_BUFFER_BIT_EXT |
+            VK_BUFFER_USAGE_TRANSFORM_FEEDBACK_COUNTER_BUFFER_BIT_EXT |
+            VK_BUFFER_USAGE_CONDITIONAL_RENDERING_BIT_EXT |
+            VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+            VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
+            VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
+
+        VkBufferCreateInfo vk_buffer_create_info{
+            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = {},
+            .size = static_cast<VkDeviceSize>(info.size),
+            .usage = usageFlags,
+            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+            .queueFamilyIndexCount = 1,
+            .pQueueFamilyIndices = &this->main_queue_family_index,
+        };
+
+        VmaAllocationCreateInfo vma_allocation_create_info{
+            .flags = static_cast<VmaAllocationCreateFlags>(info.memory_flags),
+            .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+            .memoryTypeBits = std::numeric_limits<u32>::max(),
+            .pool = nullptr,
+            .pUserData = nullptr,
+            .priority = 0.5f,
+        };
+
+        vmaCreateBuffer(this->vma_allocator, &vk_buffer_create_info, &vma_allocation_create_info, &ret.vk_buffer, &ret.vma_allocation, nullptr);
+
+        if (DAXA_LOCK_WEAK(this->impl_ctx)->enable_debug_names && info.debug_name.size() > 0)
+        {
+            VkDebugUtilsObjectNameInfoEXT swapchain_image_view_name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_BUFFER,
+                .objectHandle = reinterpret_cast<uint64_t>(ret.vk_buffer),
+                .pObjectName = info.debug_name.c_str(),
+            };
+            vkSetDebugUtilsObjectNameEXT(vk_device, &swapchain_image_view_name_info);
+        }
+
+        write_descriptor_set_buffer(this->vk_device, this->gpu_table.vk_descriptor_set, ret.vk_buffer, 0, static_cast<VkDeviceSize>(info.size), id.index);
+
+        return BufferId{ id };
     }
 
     auto ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, const std::string & debug_name) -> ImageId
@@ -595,7 +595,7 @@ namespace daxa
         auto [id, image_slot] = gpu_table.image_slots.new_slot();
 
         ImplImageSlot ret;
-        ret.vk_image_handle = swapchain_image;
+        ret.vk_image = swapchain_image;
         VkImageViewCreateInfo view_ci{
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .pNext = nullptr,
@@ -619,7 +619,7 @@ namespace daxa
         };
         ret.swapchain_image_index = static_cast<i32>(index);
         ret.info = ImageInfo{};
-        vkCreateImageView(vk_device_handle, &view_ci, nullptr, &ret.vk_image_view_handle);
+        vkCreateImageView(vk_device, &view_ci, nullptr, &ret.vk_image_view);
 
         if (DAXA_LOCK_WEAK(this->impl_ctx)->enable_debug_names && debug_name.size() > 0)
         {
@@ -627,22 +627,22 @@ namespace daxa
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_IMAGE,
-                .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image_handle),
+                .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image),
                 .pObjectName = debug_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(vk_device_handle, &swapchain_image_name_info);
+            vkSetDebugUtilsObjectNameEXT(vk_device, &swapchain_image_name_info);
 
             VkDebugUtilsObjectNameInfoEXT swapchain_image_view_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
-                .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image_view_handle),
+                .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image_view),
                 .pObjectName = debug_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(vk_device_handle, &swapchain_image_view_name_info);
+            vkSetDebugUtilsObjectNameEXT(vk_device, &swapchain_image_view_name_info);
         }
 
-        write_descriptor_set_image(this->vk_device_handle, this->gpu_table.vk_descriptor_set_handle, ret.vk_image_view_handle, usage, id.index);
+        write_descriptor_set_image(this->vk_device, this->gpu_table.vk_descriptor_set, ret.vk_image_view, usage, id.index);
 
         image_slot = ret;
 
@@ -653,7 +653,7 @@ namespace daxa
     {
         auto [id, image_slot_variant] = gpu_table.image_slots.new_slot();
 
-        VkDevice vk_device = this->vk_device_handle;
+        VkDevice vk_device = this->vk_device;
 
         ImplImageSlot ret = {};
         ret.info = info;
@@ -690,13 +690,13 @@ namespace daxa
             .priority = 0.5f,
         };
 
-        vmaCreateImage(this->vma_allocator, &vk_image_create_info, &vma_allocation_create_info, &ret.vk_image_handle, &ret.vma_allocation, nullptr);
+        vmaCreateImage(this->vma_allocator, &vk_image_create_info, &vma_allocation_create_info, &ret.vk_image, &ret.vma_allocation, nullptr);
 
         VkImageViewCreateInfo vk_image_view_create_info{
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},
-            .image = ret.vk_image_handle,
+            .image = ret.vk_image,
             .viewType = static_cast<VkImageViewType>(vk_image_type),
             .format = *reinterpret_cast<VkFormat const *>(&info.format),
             .components = VkComponentMapping{
@@ -714,7 +714,7 @@ namespace daxa
             },
         };
 
-        vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.vk_image_view_handle);
+        vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.vk_image_view);
 
         if (DAXA_LOCK_WEAK(this->impl_ctx)->enable_debug_names && info.debug_name.size() > 0)
         {
@@ -722,22 +722,22 @@ namespace daxa
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_IMAGE,
-                .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image_handle),
+                .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image),
                 .pObjectName = info.debug_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(vk_device_handle, &swapchain_image_name_info);
+            vkSetDebugUtilsObjectNameEXT(vk_device, &swapchain_image_name_info);
 
             VkDebugUtilsObjectNameInfoEXT swapchain_image_view_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
-                .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image_view_handle),
+                .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image_view),
                 .pObjectName = info.debug_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(vk_device_handle, &swapchain_image_view_name_info);
+            vkSetDebugUtilsObjectNameEXT(vk_device, &swapchain_image_view_name_info);
         }
 
-        write_descriptor_set_image(this->vk_device_handle, this->gpu_table.vk_descriptor_set_handle, ret.vk_image_view_handle, info.usage, id.index);
+        write_descriptor_set_image(this->vk_device, this->gpu_table.vk_descriptor_set, ret.vk_image_view, info.usage, id.index);
 
         image_slot_variant = ret;
 
@@ -746,32 +746,121 @@ namespace daxa
 
     auto ImplDevice::new_image_view(ImageViewInfo const & info) -> ImageViewId
     {
-        DAXA_DBG_ASSERT_TRUE_M(false, "unimplemented");
-        return ImageViewId{};
+        auto [id, image_slot_variant] = gpu_table.image_slots.new_slot();
+
+        VkDevice vk_device = this->vk_device;
+
+        ImplImageSlot& parent_image_slot = slot(info.image);
+
+        ImplImageViewSlot ret = {};
+        ret.info = info;
+
+        VkImageViewCreateInfo vk_image_view_create_info{
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = {},
+            .image = parent_image_slot.vk_image,
+            .viewType = static_cast<VkImageViewType>(info.type),
+            .format = *reinterpret_cast<VkFormat const *>(&info.format),
+            .components = VkComponentMapping{
+                .r = VK_COMPONENT_SWIZZLE_IDENTITY,
+                .g = VK_COMPONENT_SWIZZLE_IDENTITY,
+                .b = VK_COMPONENT_SWIZZLE_IDENTITY,
+                .a = VK_COMPONENT_SWIZZLE_IDENTITY,
+            },
+            .subresourceRange = *reinterpret_cast<VkImageSubresourceRange const *>(&info.slice),
+        };
+
+        vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.vk_image_view);
+
+        if (DAXA_LOCK_WEAK(this->impl_ctx)->enable_debug_names && info.debug_name.size() > 0)
+        {
+            VkDebugUtilsObjectNameInfoEXT swapchain_image_view_name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
+                .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image_view),
+                .pObjectName = info.debug_name.c_str(),
+            };
+            vkSetDebugUtilsObjectNameEXT(vk_device, &swapchain_image_view_name_info);
+        }
+
+        write_descriptor_set_image(this->vk_device, this->gpu_table.vk_descriptor_set, ret.vk_image_view, parent_image_slot.info.usage, id.index);
+
+        image_slot_variant = ret;
+
+        return ImageViewId{id};
     }
 
     auto ImplDevice::new_sampler(SamplerInfo const & info) -> SamplerId
-    {
-        DAXA_DBG_ASSERT_TRUE_M(false, "unimplemented");
-        return SamplerId{};
+    {auto [id, ret] = gpu_table.sampler_slots.new_slot();
+
+        ret.info = info;
+
+        VkSamplerCreateInfo vk_sampler_create_info{
+            .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = {},
+            .magFilter = static_cast<VkFilter>(info.magnification_filter),
+            .minFilter = static_cast<VkFilter>(info.minification_filter),
+            .mipmapMode = static_cast<VkSamplerMipmapMode>(info.mipmap_filter),
+            .addressModeU = static_cast<VkSamplerAddressMode>(info.adress_mode_u),
+            .addressModeV = static_cast<VkSamplerAddressMode>(info.adress_mode_v),
+            .addressModeW = static_cast<VkSamplerAddressMode>(info.adress_mode_w),
+            .mipLodBias = info.mip_lod_bias,
+            .anisotropyEnable = info.enable_anisotropy,
+            .maxAnisotropy = info.max_anisotropy,
+            .compareEnable = info.enable_compare,
+            .compareOp = static_cast<VkCompareOp>(info.compareOp),
+            .minLod = info.min_lod,
+            .maxLod = info.max_lod,
+            .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK,
+            .unnormalizedCoordinates = info.enable_unnormalized_coordinates,
+        };
+
+        vkCreateSampler(this->vk_device, &vk_sampler_create_info, nullptr, &ret.vk_sampler);
+
+        if (DAXA_LOCK_WEAK(this->impl_ctx)->enable_debug_names && info.debug_name.size() > 0)
+        {
+            VkDebugUtilsObjectNameInfoEXT swapchain_image_view_name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_SAMPLER,
+                .objectHandle = reinterpret_cast<uint64_t>(ret.vk_sampler),
+                .pObjectName = info.debug_name.c_str(),
+            };
+            vkSetDebugUtilsObjectNameEXT(vk_device, &swapchain_image_view_name_info);
+        }
+
+        write_descriptor_set_sampler(this->vk_device, this->gpu_table.vk_descriptor_set, ret.vk_sampler, id.index);
+
+        return SamplerId{ id };
     }
 
     void ImplDevice::cleanup_buffer(BufferId id)
     {
-        DAXA_DBG_ASSERT_TRUE_M(false, "unimplemented");
+        ImplBufferSlot & buffer_slot = this->gpu_table.buffer_slots.dereference_id(id);
+        
+        write_descriptor_set_buffer(this->vk_device, this->gpu_table.vk_descriptor_set, buffer_slot.vk_buffer, 0, static_cast<VkDeviceSize>(buffer_slot.info.size), id.index);
+
+        vmaDestroyBuffer(this->vma_allocator, buffer_slot.vk_buffer, buffer_slot.vma_allocation);
+
+        buffer_slot = {};
+
+        gpu_table.buffer_slots.return_slot(id);
     }
 
     void ImplDevice::cleanup_image(ImageId id)
     {
         ImplImageSlot & image_slot = std::get<ImplImageSlot>(gpu_table.image_slots.dereference_id(id));
 
-        write_descriptor_set_image(this->vk_device_handle, this->gpu_table.vk_descriptor_set_handle, VK_NULL_HANDLE, image_slot.info.usage, id.index);
+        write_descriptor_set_image(this->vk_device, this->gpu_table.vk_descriptor_set, VK_NULL_HANDLE, image_slot.info.usage, id.index);
 
-        vkDestroyImageView(vk_device_handle, image_slot.vk_image_view_handle, nullptr);
+        vkDestroyImageView(vk_device, image_slot.vk_image_view, nullptr);
 
         if (image_slot.swapchain_image_index == NOT_OWNED_BY_SWAPCHAIN && image_slot.vma_allocation != nullptr)
         {
-            vmaDestroyImage(this->vma_allocator, image_slot.vk_image_handle, image_slot.vma_allocation);
+            vmaDestroyImage(this->vma_allocator, image_slot.vk_image, image_slot.vma_allocation);
         }
 
         image_slot = {};
@@ -781,12 +870,28 @@ namespace daxa
 
     void ImplDevice::cleanup_image_view(ImageViewId id)
     {
-        DAXA_DBG_ASSERT_TRUE_M(false, "unimplemented");
+        ImplImageViewSlot & image_slot = std::get<ImplImageViewSlot>(gpu_table.image_slots.dereference_id(id));
+
+        write_descriptor_set_image(this->vk_device, this->gpu_table.vk_descriptor_set, VK_NULL_HANDLE, slot(image_slot.info.image).info.usage, id.index);
+
+        vkDestroyImageView(vk_device, image_slot.vk_image_view, nullptr);
+
+        image_slot = {};
+
+        gpu_table.image_slots.return_slot(id);
     }
 
     void ImplDevice::cleanup_sampler(SamplerId id)
     {
-        DAXA_DBG_ASSERT_TRUE_M(false, "unimplemented");
+        ImplSamplerSlot & sampler_slot = this->gpu_table.sampler_slots.dereference_id(id);
+        
+        write_descriptor_set_sampler(this->vk_device, this->gpu_table.vk_descriptor_set, sampler_slot.vk_sampler, id.index);
+
+        vkDestroySampler(this->vk_device, sampler_slot.vk_sampler, nullptr);
+
+        sampler_slot = {};
+
+        gpu_table.sampler_slots.return_slot(id);
     }
 
     void ImplDevice::zombiefy_buffer(BufferId id)
