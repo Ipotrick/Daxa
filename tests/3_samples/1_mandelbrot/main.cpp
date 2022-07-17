@@ -40,27 +40,17 @@ struct AppWindow
                 app.on_resize(static_cast<u32>(sx), static_cast<u32>(sy));
             });
     }
+
+    ~AppWindow()
+    {
+        glfwDestroyWindow(glfw_window_ptr);
+        glfwTerminate();
+    }
 };
 
 struct App : AppWindow<App>
 {
-    daxa::Context daxa_ctx = daxa::create_context({
-        .enable_validation = true,
-        .validation_callback = [](daxa::MsgSeverity s, daxa::MsgType, std::string_view msg)
-        {
-            switch (s)
-            {
-            // clang-format off
-            case daxa::MsgSeverity::VERBOSE: /*std::cout << "[VERBOSE]: " << msg << std::endl;*/ break;
-            case daxa::MsgSeverity::INFO:    /*std::cout << "[INFO]:    " << msg << std::endl;*/ break;
-            case daxa::MsgSeverity::WARNING: std::cout << '\n' << "[WARNING]: " << msg << '\n' <<std::endl; DAXA_DBG_ASSERT_TRUE_M(false, "validation warning"); break;
-            case daxa::MsgSeverity::FAILURE: std::cout << '\n' << "[FAILURE]: " << msg << '\n' <<std::endl; DAXA_DBG_ASSERT_TRUE_M(false, "validation error"); break;
-            // clang-format on
-            default: std::cout << "[UNKNOWN]: " << msg << std::endl; break;
-            }
-        },
-    });
-
+    daxa::Context daxa_ctx = daxa::create_context({});
     daxa::Device device = daxa_ctx.create_default_device();
 
     daxa::Swapchain swapchain = device.create_swapchain({
@@ -71,23 +61,34 @@ struct App : AppWindow<App>
 #endif
         .width = size_x,
         .height = size_y,
-        .present_mode = daxa::PresentMode::DO_NOT_WAIT_FOR_VBLANK,
+        .surface_format_selector =
+            [](daxa::Format format)
+        {
+            switch (format)
+            {
+            case daxa::Format::R8G8B8A8_UINT: return 100;
+            default: return daxa::default_format_score(format);
+            }
+        },
+        .present_mode = daxa::PresentMode::DOUBLE_BUFFER_WAIT_FOR_VBLANK,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
         .debug_name = "Test1 Swapchain",
     });
 
     daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
         .root_paths = {
-            "temp/shaders",
+            "tests/3_samples/1_mandelbrot/shaders",
             "include",
         },
         .debug_name = "Test1 Pipeline Compiler",
     });
+    // clang-format off
     daxa::ComputePipeline compute_pipeline = pipeline_compiler.create_compute_pipeline({
-        .shader_info = {.source = daxa::ShaderFile{"test1_comp.hlsl"}},
+        .shader_info = {.source = daxa::ShaderFile{"compute.hlsl"}},
         .push_constant_size = sizeof(ComputePush),
         .debug_name = "Test1 Compute Pipeline",
     }).value();
+    // clang-format on
 
     daxa::ImageId render_image = device.create_image(daxa::ImageInfo{
         .format = daxa::Format::R8G8B8A8_UNORM,
@@ -99,7 +100,8 @@ struct App : AppWindow<App>
     {
     }
 
-    ~App() {
+    ~App()
+    {
         device.destroy_image(render_image);
     }
 
