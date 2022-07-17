@@ -452,7 +452,7 @@ namespace daxa
 
     struct ImageMipArraySlice
     {
-        ImageAspectFlags image_aspect = {};
+        ImageAspectFlags image_aspect = ImageAspectFlagBits::COLOR;
         u32 base_mip_level = 0;
         u32 level_count = 1;
         u32 base_array_layer = 0;
@@ -460,14 +460,14 @@ namespace daxa
     };
     struct ImageArraySlice
     {
-        ImageAspectFlags image_aspect = {};
+        ImageAspectFlags image_aspect = ImageAspectFlagBits::COLOR;
         u32 mip_level = 0;
         u32 base_array_layer = 0;
         u32 layer_count = 1;
     };
     struct ImageSlice
     {
-        ImageAspectFlags image_aspect = {};
+        ImageAspectFlags image_aspect = ImageAspectFlagBits::COLOR;
         u32 mip_level = 0;
         u32 array_layer = 0;
     };

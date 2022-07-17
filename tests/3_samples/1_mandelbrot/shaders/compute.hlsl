@@ -6,7 +6,9 @@ struct Push
 };
 [[vk::push_constant]] const Push p;
 
-[numthreads(8, 8, 1)] void main(uint3 pixel_i: SV_DispatchThreadID)
+// clang-format off
+[numthreads(8, 8, 1)] void main(uint3 pixel_i : SV_DispatchThreadID)
+// clang-format on
 {
     RWTexture2D<float4> render_image = daxa::get_RWTexture2D<float4>(p.image_id);
 
@@ -19,7 +21,8 @@ struct Push
     float2 z = uv * 3;
     float2 c = z;
 
-    for (uint i = 0; i < 100; ++i) {
+    for (uint i = 0; i < 100; ++i)
+    {
         float2 z_ = z;
         z.x = z_.x * z_.x - z_.y * z_.y;
         z.y = 2.0 * z_.x * z_.y;
