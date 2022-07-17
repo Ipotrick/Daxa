@@ -46,7 +46,7 @@ namespace daxa
 
         vkCreateDescriptorPool(device, &vk_descriptor_pool_create_info_handle, nullptr, &this->vk_descriptor_pool_handle);
 
-        VkDescriptorSetLayoutBinding buffer_descriptor_set_layout_binding {
+        VkDescriptorSetLayoutBinding buffer_descriptor_set_layout_binding{
             .binding = BUFFER_BINDING,
             .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             .descriptorCount = static_cast<u32>(buffer_slots.max_resources),
@@ -54,7 +54,7 @@ namespace daxa
             .pImmutableSamplers = nullptr,
         };
 
-        VkDescriptorSetLayoutBinding storage_image_descriptor_set_layout_binding {
+        VkDescriptorSetLayoutBinding storage_image_descriptor_set_layout_binding{
             .binding = STORAGE_IMAGE_BINDING,
             .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
             .descriptorCount = static_cast<u32>(image_slots.max_resources),
@@ -62,7 +62,7 @@ namespace daxa
             .pImmutableSamplers = nullptr,
         };
 
-        VkDescriptorSetLayoutBinding sampled_image_descriptor_set_layout_binding {
+        VkDescriptorSetLayoutBinding sampled_image_descriptor_set_layout_binding{
             .binding = SAMPLED_IMAGE_BINDING,
             .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             .descriptorCount = static_cast<u32>(image_slots.max_resources),
@@ -70,7 +70,7 @@ namespace daxa
             .pImmutableSamplers = nullptr,
         };
 
-        VkDescriptorSetLayoutBinding sampler_descriptor_set_layout_binding {
+        VkDescriptorSetLayoutBinding sampler_descriptor_set_layout_binding{
             .binding = SAMPLER_BINDING,
             .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
             .descriptorCount = static_cast<u32>(sampler_slots.max_resources),
@@ -82,22 +82,21 @@ namespace daxa
             buffer_descriptor_set_layout_binding,
             storage_image_descriptor_set_layout_binding,
             sampled_image_descriptor_set_layout_binding,
-            sampler_descriptor_set_layout_binding
+            sampler_descriptor_set_layout_binding};
+
+        VkDescriptorBindingFlags vk_descriptor_binding_flags[] = {
+            VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+            VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+            VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+            VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+            VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
         };
-        
-		VkDescriptorBindingFlags vk_descriptor_binding_flags[] = {
-			VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
-			VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
-			VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
-			VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
-			VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
-		};
-		VkDescriptorSetLayoutBindingFlagsCreateInfo vk_descriptor_set_layout_binding_flags_create_info {
-			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
-			.pNext = nullptr,
-			.bindingCount = 4u,
-			.pBindingFlags = vk_descriptor_binding_flags,
-		};
+        VkDescriptorSetLayoutBindingFlagsCreateInfo vk_descriptor_set_layout_binding_flags_create_info{
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
+            .pNext = nullptr,
+            .bindingCount = 4u,
+            .pBindingFlags = vk_descriptor_binding_flags,
+        };
 
         VkDescriptorSetLayoutCreateInfo vk_descriptor_set_layout_create_info{
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -111,7 +110,7 @@ namespace daxa
 
         VkDescriptorSetAllocateInfo vk_descriptor_set_allocate_info{
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-            .pNext= nullptr,
+            .pNext = nullptr,
             .descriptorPool = this->vk_descriptor_pool_handle,
             .descriptorSetCount = 1,
             .pSetLayouts = &this->vk_descriptor_set_layout_handle,
@@ -136,7 +135,7 @@ namespace daxa
             VkPushConstantRange vk_push_constant_range{
                 .stageFlags = VK_SHADER_STAGE_ALL,
                 .offset = 0,
-                .size = static_cast<u32>((1ull << (i - 1ull) * sizeof(u32))),
+                .size = static_cast<u32>((1ull << (i - 1ull)) * sizeof(u32)),
             };
             vk_pipeline_create_info.pushConstantRangeCount = 1;
             vk_pipeline_create_info.pPushConstantRanges = &vk_push_constant_range;
@@ -154,9 +153,9 @@ namespace daxa
         vkResetDescriptorPool(device, this->vk_descriptor_pool_handle, {});
         vkDestroyDescriptorPool(device, this->vk_descriptor_pool_handle, nullptr);
     }
-    
+
     auto get_pipeline_layout_index_from_push_constant_size(usize push_constant_size) -> usize
     {
-        return static_cast<u32>(std::ceil(std::log2(push_constant_size*2ull)));
+        return static_cast<usize>(std::ceil(std::log2(std::max(push_constant_size * 2ull, 1ull))));
     }
 } // namespace daxa

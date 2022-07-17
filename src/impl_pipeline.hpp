@@ -19,8 +19,9 @@ namespace daxa
         ImplPipelineCompiler(std::weak_ptr<ImplDevice> impl_device, PipelineCompilerInfo const & info);
         ~ImplPipelineCompiler();
 
-        ShaderCode load_shader_source_from_file(std::filesystem::path const & path);
-        std::vector<u32> gen_spirv_from_dxc(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, ShaderCode const & code);
+        auto full_path_to_file(std::filesystem::path const& path) -> Result<std::filesystem::path>;
+        auto load_shader_source_from_file(std::filesystem::path const & path) -> ShaderCode;
+        auto gen_spirv_from_dxc(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, ShaderCode const & code) -> std::vector<u32>;
     };
 
     struct ImplComputePipeline

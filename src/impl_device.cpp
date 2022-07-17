@@ -370,10 +370,13 @@ namespace daxa
         };
         vkCreateDevice(a_physical_device, &device_ci, nullptr, &this->vk_device_handle);
         volkLoadDevice(this->vk_device_handle);
+        u32 max_buffers = this->vk_info.limits.max_descriptor_set_storage_buffers;
+        u32 max_images = std::min(this->vk_info.limits.max_descriptor_set_sampled_images, this->vk_info.limits.max_descriptor_set_storage_images);
+        u32 max_samplers = this->vk_info.limits.max_descriptor_set_samplers;
         gpu_table.initialize(
-            this->vk_info.limits.max_descriptor_set_storage_buffers,
-            std::min(this->vk_info.limits.max_descriptor_set_sampled_images, this->vk_info.limits.max_descriptor_set_storage_images),
-            this->vk_info.limits.max_descriptor_set_samplers,
+            std::min({max_buffers, 1'000u}),
+            std::min({max_images, 1'000u}),
+            std::min({max_samplers, 1'000u}),
             vk_device_handle);
 
         vkGetDeviceQueue(this->vk_device_handle, this->main_queue_family_index, 0, &this->main_queue_vk_queue_handle);
@@ -392,6 +395,11 @@ namespace daxa
 
         vkCreateSemaphore(this->vk_device_handle, &vk_semaphore_create_info_handle, nullptr, &this->vk_main_queue_gpu_timeline_semaphore_handle);
 
+        VmaVulkanFunctions vma_vulkan_functions{
+            .vkGetInstanceProcAddr = vkGetInstanceProcAddr,
+            .vkGetDeviceProcAddr = vkGetDeviceProcAddr,
+        };
+
         VmaAllocatorCreateInfo vma_allocator_create_info{
             .flags = {},
             .physicalDevice = this->vk_physical_device,
@@ -400,7 +408,7 @@ namespace daxa
             .pAllocationCallbacks = nullptr,
             .pDeviceMemoryCallbacks = nullptr,
             .pHeapSizeLimit = nullptr,
-            .pVulkanFunctions = nullptr,
+            .pVulkanFunctions = &vma_vulkan_functions,
             .instance = DAXA_LOCK_WEAK(this->impl_ctx)->vk_instance_handle,
             .vulkanApiVersion = VK_API_VERSION_1_3,
         };
@@ -440,6 +448,7 @@ namespace daxa
 
     ImplDevice::~ImplDevice()
     {
+        vmaDestroyAllocator(this->vma_allocator);
         this->gpu_table.cleanup(this->vk_device_handle);
         vkDestroySemaphore(this->vk_device_handle, this->vk_main_queue_gpu_timeline_semaphore_handle, nullptr);
         vkDestroyDevice(this->vk_device_handle, nullptr);
@@ -690,6 +699,13 @@ namespace daxa
                 .b = VK_COMPONENT_SWIZZLE_IDENTITY,
                 .a = VK_COMPONENT_SWIZZLE_IDENTITY,
             },
+            .subresourceRange = {
+                .aspectMask = static_cast<VkImageAspectFlags>(info.aspect),
+                .baseMipLevel = 0,
+                .levelCount = info.mip_level_count,
+                .baseArrayLayer = 0,
+                .layerCount = info.array_layer_count,
+            },
         };
 
         vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.vk_image_view_handle);
@@ -719,7 +735,7 @@ namespace daxa
 
         image_slot_variant = ret;
 
-        return ImageId{ id };
+        return ImageId{id};
     }
 
     auto ImplDevice::new_image_view(ImageViewInfo const & info) -> ImageViewId

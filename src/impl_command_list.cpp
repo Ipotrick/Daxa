@@ -110,7 +110,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(size <= 128, "push constant size is limited to 128 bytes");
 
         usize push_constant_device_word_size = ((size + 3) / 4);
-        
+
         usize pipeline_layout_index = get_pipeline_layout_index_from_push_constant_size(push_constant_device_word_size);
 
         vkCmdPushConstants(impl.vk_cmd_buffer_handle, impl.pipeline_layouts[pipeline_layout_index], VK_SHADER_STAGE_ALL, offset, size, data);
@@ -119,6 +119,8 @@ namespace daxa
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
         auto & pipeline_impl = *reinterpret_cast<ImplComputePipeline *>(pipeline.impl.get());
+
+        vkCmdBindDescriptorSets(impl.vk_cmd_buffer_handle, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_layout_handle, 0, 1, &DAXA_LOCK_WEAK(impl.impl_device)->gpu_table.vk_descriptor_set_handle, 0, nullptr);
 
         vkCmdBindPipeline(impl.vk_cmd_buffer_handle, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_handle);
     }
@@ -146,7 +148,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
 
         VkMemoryBarrier2 vk_memory_barrier{
-            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+            .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
             .pNext = nullptr,
             .srcStageMask = 0x0111'1111'1111'1111ull & info.awaited_pipeline_access,
             .srcAccessMask = (info.awaited_pipeline_access & PipelineStageAccessFlagBits::WRITE_ACCESS ? VK_ACCESS_2_MEMORY_WRITE_BIT : 0ull) | (info.awaited_pipeline_access & PipelineStageAccessFlagBits::READ_ACCESS ? VK_ACCESS_2_MEMORY_READ_BIT : 0ull),
@@ -206,7 +208,7 @@ namespace daxa
     }
 
     ImplCommandList::ImplCommandList(std::weak_ptr<ImplDevice> a_impl_device)
-        : impl_device{a_impl_device}, pipeline_layouts{ DAXA_LOCK_WEAK(impl_device)->gpu_table.pipeline_layouts }
+        : impl_device{a_impl_device}, pipeline_layouts{DAXA_LOCK_WEAK(impl_device)->gpu_table.pipeline_layouts}
     {
         VkCommandPoolCreateInfo vk_command_pool_create_info{
             .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
