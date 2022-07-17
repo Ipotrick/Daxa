@@ -90,9 +90,9 @@ namespace daxa
             .enabledExtensionCount = static_cast<u32>(extension_names.size()),
             .ppEnabledExtensionNames = extension_names.data(),
         };
-        vkCreateInstance(&instance_ci, nullptr, &vk_instance_handle);
+        vkCreateInstance(&instance_ci, nullptr, &vk_instance);
 
-        volkLoadInstance(vk_instance_handle);
+        volkLoadInstance(vk_instance);
 
         VkDebugUtilsMessengerCreateInfoEXT createInfo = {
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
@@ -102,21 +102,21 @@ namespace daxa
             .pUserData = const_cast<ContextInfo *>(&this->info),
         };
 
-        auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vk_instance_handle, "vkCreateDebugUtilsMessengerEXT");
+        auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vk_instance, "vkCreateDebugUtilsMessengerEXT");
         DAXA_DBG_ASSERT_TRUE_M(func != nullptr, "failed to set up debug messenger!");
-        func(vk_instance_handle, &createInfo, nullptr, &vk_debug_utils_messenger);
+        func(vk_instance, &createInfo, nullptr, &vk_debug_utils_messenger);
     }
 
     ImplContext::~ImplContext()
     {
         if (info.enable_validation)
         {
-            auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vk_instance_handle, "vkDestroyDebugUtilsMessengerEXT");
+            auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vk_instance, "vkDestroyDebugUtilsMessengerEXT");
             DAXA_DBG_ASSERT_TRUE_M(func != nullptr, "failed to destroy debug messenger!");
-            func(vk_instance_handle, vk_debug_utils_messenger, nullptr);
+            func(vk_instance, vk_debug_utils_messenger, nullptr);
         }
 
-        vkDestroyInstance(vk_instance_handle, nullptr);
+        vkDestroyInstance(vk_instance, nullptr);
     }
 
     Context::Context(std::shared_ptr<void> impl) : Handle(impl) {}
@@ -126,10 +126,10 @@ namespace daxa
         ImplContext & impl = *reinterpret_cast<ImplContext *>(this->impl.get());
 
         u32 physical_device_n = 0;
-        vkEnumeratePhysicalDevices(impl.vk_instance_handle, &physical_device_n, nullptr);
+        vkEnumeratePhysicalDevices(impl.vk_instance, &physical_device_n, nullptr);
         std::vector<VkPhysicalDevice> physical_devices;
         physical_devices.resize(physical_device_n);
-        vkEnumeratePhysicalDevices(impl.vk_instance_handle, &physical_device_n, physical_devices.data());
+        vkEnumeratePhysicalDevices(impl.vk_instance, &physical_device_n, physical_devices.data());
 
         auto device_score = [&](VkPhysicalDevice physical_device) -> i32
         {

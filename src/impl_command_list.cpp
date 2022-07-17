@@ -30,10 +30,10 @@ namespace daxa
         };
 
         vkCmdBlitImage(
-            impl.vk_cmd_buffer_handle,
-            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.src_image).vk_image_handle,
+            impl.vk_cmd_buffer,
+            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.src_image).vk_image,
             static_cast<VkImageLayout>(info.src_image_layout),
-            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.dst_image).vk_image_handle,
+            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.dst_image).vk_image,
             static_cast<VkImageLayout>(info.dst_image_layout),
             1,
             &vk_blit,
@@ -55,10 +55,10 @@ namespace daxa
         };
 
         vkCmdCopyImage(
-            impl.vk_cmd_buffer_handle,
-            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.src_image).vk_image_handle,
+            impl.vk_cmd_buffer,
+            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.src_image).vk_image,
             static_cast<VkImageLayout>(info.src_image_layout),
-            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.dst_image).vk_image_handle,
+            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.dst_image).vk_image,
             static_cast<VkImageLayout>(info.dst_image_layout),
             1,
             &vk_image_copy);
@@ -77,8 +77,8 @@ namespace daxa
             };
 
             vkCmdClearColorImage(
-                impl.vk_cmd_buffer_handle,
-                DAXA_LOCK_WEAK(impl.impl_device)->slot(info.dst_image).vk_image_handle,
+                impl.vk_cmd_buffer,
+                DAXA_LOCK_WEAK(impl.impl_device)->slot(info.dst_image).vk_image,
                 static_cast<VkImageLayout>(info.dst_image_layout),
                 &color,
                 1,
@@ -94,8 +94,8 @@ namespace daxa
             };
 
             vkCmdClearDepthStencilImage(
-                impl.vk_cmd_buffer_handle,
-                DAXA_LOCK_WEAK(impl.impl_device)->slot(info.dst_image).vk_image_handle,
+                impl.vk_cmd_buffer,
+                DAXA_LOCK_WEAK(impl.impl_device)->slot(info.dst_image).vk_image,
                 static_cast<VkImageLayout>(info.dst_image_layout),
                 &color,
                 1,
@@ -112,21 +112,21 @@ namespace daxa
 
         usize push_constant_device_word_size = size / 4;
 
-        vkCmdPushConstants(impl.vk_cmd_buffer_handle, impl.pipeline_layouts[push_constant_device_word_size], VK_SHADER_STAGE_ALL, offset, size, data);
+        vkCmdPushConstants(impl.vk_cmd_buffer, impl.pipeline_layouts[push_constant_device_word_size], VK_SHADER_STAGE_ALL, offset, size, data);
     }
     void CommandList::bind_pipeline(ComputePipeline const & pipeline)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
         auto & pipeline_impl = *reinterpret_cast<ImplComputePipeline *>(pipeline.impl.get());
 
-        vkCmdBindDescriptorSets(impl.vk_cmd_buffer_handle, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_layout_handle, 0, 1, &DAXA_LOCK_WEAK(impl.impl_device)->gpu_table.vk_descriptor_set_handle, 0, nullptr);
+        vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_layout, 0, 1, &DAXA_LOCK_WEAK(impl.impl_device)->gpu_table.vk_descriptor_set, 0, nullptr);
 
-        vkCmdBindPipeline(impl.vk_cmd_buffer_handle, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_handle);
+        vkCmdBindPipeline(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline);
     }
     void CommandList::dispatch(u32 group_x, u32 group_y, u32 group_z)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
-        vkCmdDispatch(impl.vk_cmd_buffer_handle, group_x, group_y, group_z);
+        vkCmdDispatch(impl.vk_cmd_buffer, group_x, group_y, group_z);
     }
 
     void CommandList::complete()
@@ -137,7 +137,7 @@ namespace daxa
 
         impl.recording_complete = true;
 
-        vkEndCommandBuffer(impl.vk_cmd_buffer_handle);
+        vkEndCommandBuffer(impl.vk_cmd_buffer);
     }
 
     void CommandList::pipeline_barrier(PipelineBarrierInfo const & info)
@@ -167,7 +167,7 @@ namespace daxa
             .pImageMemoryBarriers = nullptr,
         };
 
-        vkCmdPipelineBarrier2(impl.vk_cmd_buffer_handle, &vk_dependency_info);
+        vkCmdPipelineBarrier2(impl.vk_cmd_buffer, &vk_dependency_info);
     }
 
     void CommandList::pipeline_barrier_image_transition(PipelineBarrierImageTransitionInfo const & info)
@@ -187,7 +187,7 @@ namespace daxa
             .newLayout = static_cast<VkImageLayout>(info.after_layout),
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = DAXA_LOCK_WEAK(impl.impl_device)->slot(info.image_id).vk_image_handle,
+            .image = DAXA_LOCK_WEAK(impl.impl_device)->slot(info.image_id).vk_image,
             .subresourceRange = *reinterpret_cast<VkImageSubresourceRange const *>(&info.image_slice),
         };
 
@@ -203,7 +203,7 @@ namespace daxa
             .pImageMemoryBarriers = &vk_image_memory_barrier,
         };
 
-        vkCmdPipelineBarrier2(impl.vk_cmd_buffer_handle, &vk_dependency_info);
+        vkCmdPipelineBarrier2(impl.vk_cmd_buffer, &vk_dependency_info);
     }
 
     ImplCommandList::ImplCommandList(std::weak_ptr<ImplDevice> a_impl_device)
@@ -216,22 +216,22 @@ namespace daxa
             .queueFamilyIndex = DAXA_LOCK_WEAK(impl_device)->main_queue_family_index,
         };
 
-        vkCreateCommandPool(DAXA_LOCK_WEAK(impl_device)->vk_device_handle, &vk_command_pool_create_info, nullptr, &this->vk_cmd_pool_handle);
+        vkCreateCommandPool(DAXA_LOCK_WEAK(impl_device)->vk_device, &vk_command_pool_create_info, nullptr, &this->vk_cmd_pool);
 
         VkCommandBufferAllocateInfo vk_command_buffer_allocate_info{
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
             .pNext = nullptr,
-            .commandPool = this->vk_cmd_pool_handle,
+            .commandPool = this->vk_cmd_pool,
             .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
             .commandBufferCount = 1,
         };
 
-        vkAllocateCommandBuffers(DAXA_LOCK_WEAK(impl_device)->vk_device_handle, &vk_command_buffer_allocate_info, &this->vk_cmd_buffer_handle);
+        vkAllocateCommandBuffers(DAXA_LOCK_WEAK(impl_device)->vk_device, &vk_command_buffer_allocate_info, &this->vk_cmd_buffer);
     }
 
     ImplCommandList::~ImplCommandList()
     {
-        vkDestroyCommandPool(DAXA_LOCK_WEAK(impl_device)->vk_device_handle, this->vk_cmd_pool_handle, nullptr);
+        vkDestroyCommandPool(DAXA_LOCK_WEAK(impl_device)->vk_device, this->vk_cmd_pool, nullptr);
     }
 
     void ImplCommandList::initialize(CommandListInfo const & a_info)
@@ -242,7 +242,7 @@ namespace daxa
             .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
         };
 
-        vkBeginCommandBuffer(this->vk_cmd_buffer_handle, &vk_command_buffer_begin_info);
+        vkBeginCommandBuffer(this->vk_cmd_buffer, &vk_command_buffer_begin_info);
 
         recording_complete = false;
 
@@ -252,24 +252,24 @@ namespace daxa
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_COMMAND_BUFFER,
-                .objectHandle = reinterpret_cast<uint64_t>(this->vk_cmd_buffer_handle),
+                .objectHandle = reinterpret_cast<uint64_t>(this->vk_cmd_buffer),
                 .pObjectName = this->info.debug_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(DAXA_LOCK_WEAK(this->impl_device)->vk_device_handle, &cmd_buffer_name_info);
+            vkSetDebugUtilsObjectNameEXT(DAXA_LOCK_WEAK(this->impl_device)->vk_device, &cmd_buffer_name_info);
 
             VkDebugUtilsObjectNameInfoEXT cmd_pool_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_COMMAND_POOL,
-                .objectHandle = reinterpret_cast<uint64_t>(this->vk_cmd_pool_handle),
+                .objectHandle = reinterpret_cast<uint64_t>(this->vk_cmd_pool),
                 .pObjectName = this->info.debug_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(DAXA_LOCK_WEAK(this->impl_device)->vk_device_handle, &cmd_pool_name_info);
+            vkSetDebugUtilsObjectNameEXT(DAXA_LOCK_WEAK(this->impl_device)->vk_device, &cmd_pool_name_info);
         }
     }
 
     void ImplCommandList::reset()
     {
-        vkResetCommandPool(DAXA_LOCK_WEAK(impl_device)->vk_device_handle, this->vk_cmd_pool_handle, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
+        vkResetCommandPool(DAXA_LOCK_WEAK(impl_device)->vk_device, this->vk_cmd_pool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
     }
 } // namespace daxa

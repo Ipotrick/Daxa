@@ -16,8 +16,8 @@ namespace daxa
 
         std::weak_ptr<ImplDevice> impl_device = {};
         CommandListInfo info = {};
-        VkCommandBuffer vk_cmd_buffer_handle = {};
-        VkCommandPool vk_cmd_pool_handle = {};
+        VkCommandBuffer vk_cmd_buffer = {};
+        VkCommandPool vk_cmd_pool = {};
         bool recording_complete = true;
         std::array<VkPipelineLayout, PIPELINE_LAYOUT_COUNT> pipeline_layouts = {};
 
