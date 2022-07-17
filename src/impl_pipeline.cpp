@@ -101,10 +101,7 @@ namespace daxa
         unsigned long STDMETHODCALLTYPE Release(void) override { return 0; }
     };
 
-    ComputePipeline::ComputePipeline(std::shared_ptr<void> a_impl) : Handle(std::move(a_impl))
-    {
-        std::cout << "ComputePipeline";
-    }
+    ComputePipeline::ComputePipeline(std::shared_ptr<void> a_impl) : Handle(std::move(a_impl)) {}
 
     ComputePipeline::~ComputePipeline()
     {
@@ -168,7 +165,6 @@ namespace daxa
     ImplPipelineCompiler::ImplPipelineCompiler(std::weak_ptr<ImplDevice> a_impl_device, PipelineCompilerInfo const & info)
         : impl_device{std::move(a_impl_device)}, info{info}
     {
-        std::cout << "ImplPipelineCompiler\n";
         HRESULT dxc_utils_result = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&this->dxc_utils));
         DAXA_DBG_ASSERT_TRUE_M(SUCCEEDED(dxc_utils_result), "Failed to create DXC utils");
 
