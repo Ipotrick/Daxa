@@ -65,9 +65,9 @@ struct App : AppWindow<App>
 
     daxa::Swapchain swapchain = device.create_swapchain({
 #if defined(_WIN32)
-        .native_window_handle = glfwGetWin32Window(glfw_window_ptr),
+        .native_window = glfwGetWin32Window(glfw_window_ptr),
 #elif defined(__linux__)
-        .native_window_handle = glfwGetX11Window(glfw_window_ptr),
+        .native_window = glfwGetX11Window(glfw_window_ptr),
 #endif
         .width = size_x,
         .height = size_y,
