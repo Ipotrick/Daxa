@@ -92,7 +92,6 @@ namespace daxa
         };
         vkCreateInstance(&instance_ci, nullptr, &vk_instance_handle);
 
-        // volkLoadInstance(vk_instance_handle);
         volkLoadInstance(vk_instance_handle);
 
         VkDebugUtilsMessengerCreateInfoEXT createInfo = {

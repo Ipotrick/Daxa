@@ -87,7 +87,7 @@ struct App : AppWindow<App>
         .shader_info = {.source = daxa::ShaderFile{"test1_comp.hlsl"}},
         .push_constant_size = sizeof(ComputePush),
         .debug_name = "Test1 Compute Pipeline",
-    });
+    }).value();
 
     daxa::ImageId render_image = device.create_image(daxa::ImageInfo{
         .format = daxa::Format::R8G8B8A8_UNORM,

@@ -60,22 +60,10 @@ namespace daxa
         surface_formats.resize(format_count);
         vkGetPhysicalDeviceSurfaceFormatsKHR(DAXA_LOCK_WEAK(impl_device)->vk_physical_device, this->vk_surface_handle, &format_count, surface_formats.data());
 
-        auto format_score = [&](VkSurfaceFormatKHR surface_format) -> i32
-        {
-            switch (static_cast<daxa::Format>(surface_format.format))
-            {
-            // case Format::A2B10G10R10_UNORM_PACK32: return 100;
-            case Format::R8G8B8A8_SRGB: return 90;
-            case Format::R8G8B8A8_UNORM: return 80;
-            case Format::B8G8R8A8_SRGB: return 70;
-            case Format::B8G8R8A8_UNORM: return 60;
-            default: return 0;
-            }
-        };
-
         auto format_comparator = [&](auto const & a, auto const & b) -> bool
         {
-            return format_score(a) < format_score(b);
+            return a_info.surface_format_selector(static_cast<Format>(a.format)) <
+                   a_info.surface_format_selector(static_cast<Format>(b.format));
         };
         auto best_format = std::max_element(surface_formats.begin(), surface_formats.end(), format_comparator);
         this->vk_surface_format = *best_format;
