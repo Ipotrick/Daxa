@@ -107,13 +107,12 @@ namespace daxa
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
 
-        DAXA_DBG_ASSERT_TRUE_M(size <= 128, "push constant size is limited to 128 bytes");
+        DAXA_DBG_ASSERT_TRUE_M(size <= MAX_PUSH_CONSTANT_BYTE_SIZE, MAX_PUSH_CONSTANT_SIZE_ERROR);
+        DAXA_DBG_ASSERT_TRUE_M(size % 4 == 0, "push constant size must be a multiple of 4 bytes");
 
-        usize push_constant_device_word_size = ((size + 3) / 4);
+        usize push_constant_device_word_size = size / 4;
 
-        usize pipeline_layout_index = get_pipeline_layout_index_from_push_constant_size(push_constant_device_word_size);
-
-        vkCmdPushConstants(impl.vk_cmd_buffer_handle, impl.pipeline_layouts[pipeline_layout_index], VK_SHADER_STAGE_ALL, offset, size, data);
+        vkCmdPushConstants(impl.vk_cmd_buffer_handle, impl.pipeline_layouts[push_constant_device_word_size], VK_SHADER_STAGE_ALL, offset, size, data);
     }
     void CommandList::bind_pipeline(ComputePipeline const & pipeline)
     {

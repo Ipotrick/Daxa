@@ -55,7 +55,7 @@ namespace daxa
 
     struct PipelineCompiler : Handle
     {
-        auto create_compute_pipeline(ComputePipelineInfo const & info) -> ComputePipeline;
+        auto create_compute_pipeline(ComputePipelineInfo const & info) -> Result<ComputePipeline>;
 
       private:
         friend struct Device;

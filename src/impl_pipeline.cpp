@@ -116,8 +116,17 @@ namespace daxa
 
     PipelineCompiler::PipelineCompiler(std::shared_ptr<void> a_impl) : Handle(std::move(a_impl)) {}
 
-    auto PipelineCompiler::create_compute_pipeline(ComputePipelineInfo const & info) -> ComputePipeline
+    auto PipelineCompiler::create_compute_pipeline(ComputePipelineInfo const & info) -> Result<ComputePipeline>
     {
+        if (info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE) 
+        {
+            return ResultErr{ std::string("push constant size of ") + std::to_string(info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(MAX_PUSH_CONSTANT_BYTE_SIZE)};
+        }
+        if (info.push_constant_size % 4 != 0) 
+        {
+            return ResultErr{ std::string("push constant size of ") + std::to_string(info.push_constant_size) + std::string(" is not a multiple of 4(bytes)") };
+        }
+
         std::vector<u32> spirv = {};
         auto & impl = *reinterpret_cast<ImplPipelineCompiler *>(this->impl.get());
 
@@ -136,7 +145,10 @@ namespace daxa
             if (auto shader_source = std::get_if<ShaderFile>(&info.shader_info.source))
             {
                 auto ret = impl.full_path_to_file(shader_source->path);
-                DAXA_DBG_ASSERT_TRUE_M(ret.isOk(), "could not find file");
+                if (ret.isErr())
+                {
+                    return ResultErr{ ret.message() };
+                }
                 
                 code = impl.load_shader_source_from_file(ret.value());
             }
@@ -145,7 +157,12 @@ namespace daxa
                 code = std::get<ShaderCode>(info.shader_info.source);
             }
 
-            spirv = impl.gen_spirv_from_dxc(info.shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT, code);
+            auto ret = impl.gen_spirv_from_dxc(info.shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT, code);
+            if (ret.isErr())
+            {
+                return ResultErr{ ret.message() };
+            }
+            spirv = ret.value();
         }
 
         VkShaderModule shader_module = {};
@@ -162,7 +179,7 @@ namespace daxa
 
         vkDestroyShaderModule(DAXA_LOCK_WEAK(impl.impl_device)->vk_device_handle, shader_module, nullptr);
 
-        return ret;
+        return { ret };
     }
 
     ImplPipelineCompiler::ImplPipelineCompiler(std::weak_ptr<ImplDevice> a_impl_device, PipelineCompilerInfo const & info)
@@ -231,7 +248,7 @@ namespace daxa
         // return {.string = {}};
     }
 
-    auto ImplPipelineCompiler::gen_spirv_from_dxc(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, ShaderCode const & code) -> std::vector<u32>
+    auto ImplPipelineCompiler::gen_spirv_from_dxc(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
     {
         auto u8_ascii_to_wstring = [](char const * str) -> std::wstring
         {
@@ -319,7 +336,7 @@ namespace daxa
             }
             str = std::string("DXC: ") + str;
             std::cerr << str << std::endl;
-            // return daxa::ResultErr{.message = str};
+            return daxa::ResultErr{.message = str};
         }
 
         IDxcBlob * shaderobj;
@@ -332,15 +349,13 @@ namespace daxa
             spv[i] = static_cast<u32 *>(shaderobj->GetBufferPointer())[i];
         }
 
-        return spv;
+        return { spv };
     }
 
     ImplComputePipeline::ImplComputePipeline(std::weak_ptr<ImplDevice> a_impl_device, ComputePipelineInfo const & info, VkShaderModule vk_shader_module_handle)
         : impl_device{std::move(a_impl_device)}, info{info}
     {
-        usize pipeline_layout_index = get_pipeline_layout_index_from_push_constant_size(info.push_constant_size);
-
-        this->vk_pipeline_layout_handle = DAXA_LOCK_WEAK(this->impl_device)->gpu_table.pipeline_layouts[pipeline_layout_index];
+        this->vk_pipeline_layout_handle = DAXA_LOCK_WEAK(this->impl_device)->gpu_table.pipeline_layouts[info.push_constant_size / 4];
 
         VkComputePipelineCreateInfo vk_compute_pipeline_create_info{
             .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
@@ -360,13 +375,15 @@ namespace daxa
             .basePipelineIndex = 0,
         };
 
-        vkCreateComputePipelines(
+        auto result = vkCreateComputePipelines(
             DAXA_LOCK_WEAK(this->impl_device)->vk_device_handle,
             VK_NULL_HANDLE,
             1u,
             &vk_compute_pipeline_create_info,
             nullptr,
             &this->vk_pipeline_handle);
+
+        DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create compute pipeline");
 
         if (this->info.debug_name.size() > 0)
         {
