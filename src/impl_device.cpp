@@ -301,7 +301,13 @@ namespace daxa
         .synchronization2 = VK_TRUE,
     };
 
-    static void * REQUIRED_DEVICE_FEATURE_P_CHAIN = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SYNCHRONIZATION_2);
+    static const VkPhysicalDeviceRobustness2FeaturesEXT REQUIRED_PHYSICAL_DEVICE_FEATURES_ROBUSTNESS_2{
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT,
+        .pNext = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SYNCHRONIZATION_2),
+        .nullDescriptor = VK_TRUE,
+    };
+
+    static void * REQUIRED_DEVICE_FEATURE_P_CHAIN = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_ROBUSTNESS_2);
 
     ImplDevice::ImplDevice(DeviceInfo const & a_info, DeviceVulkanInfo const & a_vk_info, std::shared_ptr<ImplContext> a_impl_ctx, VkPhysicalDevice a_physical_device)
         : info{a_info}, vk_info{a_vk_info}, impl_ctx{a_impl_ctx}, vk_physical_device{a_physical_device}
@@ -758,6 +764,8 @@ namespace daxa
     void ImplDevice::cleanup_image(ImageId id)
     {
         ImplImageSlot & image_slot = std::get<ImplImageSlot>(gpu_table.image_slots.dereference_id(id));
+
+        write_descriptor_set_image(this->vk_device_handle, this->gpu_table.vk_descriptor_set_handle, VK_NULL_HANDLE, image_slot.info.usage, id.index);
 
         vkDestroyImageView(vk_device_handle, image_slot.vk_image_view_handle, nullptr);
 
