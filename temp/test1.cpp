@@ -13,6 +13,12 @@
 
 using namespace daxa::types;
 
+struct ComputePush
+{
+    daxa::ImageId image_id;
+    u32 frame_dim_x, frame_dim_y;
+};
+
 template <typename App>
 struct AppWindow
 {
@@ -70,21 +76,30 @@ struct App : AppWindow<App>
     });
 
     daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
-        .root_paths = {"temp/shaders"},
+        .root_paths = {
+            "temp/shaders",
+            "include",
+        },
         .debug_name = "Test1 Pipeline Compiler",
     });
     daxa::ComputePipeline compute_pipeline = pipeline_compiler.create_compute_pipeline({
         .shader_info = {.source = daxa::ShaderFile{"temp/shaders/test1_comp.hlsl"}},
+        .push_constant_size = sizeof(ComputePush),
         .debug_name = "Test1 Compute Pipeline",
     });
 
     daxa::ImageId render_image = device.create_image(daxa::ImageInfo{
-        .size = {size_x, size_y},
-        .usage = daxa::ImageUsageFlagBits::STORAGE,
+        .format = daxa::Format::R8G8B8A8_UNORM,
+        .size = {size_x, size_y, 1},
+        .usage = daxa::ImageUsageFlagBits::STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
     });
 
     App()
     {
+    }
+
+    ~App() {
+        device.destroy_image(render_image);
     }
 
     bool update()
@@ -118,12 +133,6 @@ struct App : AppWindow<App>
         auto cmd_list = device.create_command_list({
             .debug_name = "Test1 Command List",
         });
-
-        struct ComputePush
-        {
-            daxa::ImageId image_id;
-            u32 frame_dim_x, frame_dim_y;
-        };
 
         cmd_list.bind_pipeline(compute_pipeline);
         cmd_list.push_constant(ComputePush{
@@ -167,9 +176,9 @@ struct App : AppWindow<App>
             .dst_image = swapchain_image,
             .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .src_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
-            .src_offsets = {{{0, 0, 0}, {0, 0, 0}}},
+            .src_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
             .dst_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
-            .dst_offsets = {{{0, 0, 0}, {0, 0, 0}}},
+            .dst_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
         });
 
         cmd_list.pipeline_barrier_image_transition({
@@ -199,7 +208,7 @@ struct App : AppWindow<App>
         cmd_list.complete();
 
         device.submit_commands({
-            .command_lists = {cmd_list},
+            .command_lists = {std::move(cmd_list)},
             .signal_binary_semaphores_on_completion = {binary_semaphore},
         });
 
@@ -217,6 +226,12 @@ struct App : AppWindow<App>
 
         if (!minimized)
         {
+            device.destroy_image(render_image);
+            render_image = device.create_image({
+                .format = daxa::Format::R8G8B8A8_UNORM,
+                .size = {size_x, size_y, 1},
+                .usage = daxa::ImageUsageFlagBits::STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+            });
             swapchain.resize(size_x, size_y);
             draw();
         }
