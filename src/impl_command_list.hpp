@@ -19,7 +19,7 @@ namespace daxa
         VkCommandBuffer vk_cmd_buffer_handle = {};
         VkCommandPool vk_cmd_pool_handle = {};
         bool recording_complete = true;
-        std::array<VkPipelineLayout, 7> pipeline_layouts = {};
+        std::array<VkPipelineLayout, PIPELINE_LAYOUT_COUNT> pipeline_layouts = {};
 
         ImplCommandList(std::weak_ptr<ImplDevice> device_impl);
         ~ImplCommandList();

@@ -130,12 +130,12 @@ namespace daxa
 
         vkCreatePipelineLayout(device, &vk_pipeline_create_info, nullptr, &pipeline_layouts[0]);
 
-        for (usize i = 1; i < 7; ++i)
+        for (usize i = 1; i < PIPELINE_LAYOUT_COUNT; ++i)
         {
             VkPushConstantRange vk_push_constant_range{
                 .stageFlags = VK_SHADER_STAGE_ALL,
                 .offset = 0,
-                .size = static_cast<u32>((1ull << (i - 1ull)) * sizeof(u32)),
+                .size = static_cast<u32>(i * 4),
             };
             vk_pipeline_create_info.pushConstantRangeCount = 1;
             vk_pipeline_create_info.pPushConstantRanges = &vk_push_constant_range;
@@ -145,17 +145,12 @@ namespace daxa
 
     void GPUResourceTable::cleanup(VkDevice device)
     {
-        for (usize i = 0; i < 7; ++i)
+        for (usize i = 0; i < PIPELINE_LAYOUT_COUNT; ++i)
         {
             vkDestroyPipelineLayout(device, pipeline_layouts[i], nullptr);
         }
         vkDestroyDescriptorSetLayout(device, this->vk_descriptor_set_layout_handle, nullptr);
         vkResetDescriptorPool(device, this->vk_descriptor_pool_handle, {});
         vkDestroyDescriptorPool(device, this->vk_descriptor_pool_handle, nullptr);
-    }
-
-    auto get_pipeline_layout_index_from_push_constant_size(usize push_constant_size) -> usize
-    {
-        return static_cast<usize>(std::ceil(std::log2(std::max(push_constant_size * 2ull, 1ull))));
     }
 } // namespace daxa
