@@ -14,6 +14,7 @@
             "generator": "Ninja",
             "cacheVariables": {
                 "DAXA_ENABLE_STATIC_ANALYSIS": false,
+                "DAXA_ENABLE_TESTS": true,
                 "DAXA_TESTS_DISABLE_WINDOWS_CONSOLE": false
             }
         },
