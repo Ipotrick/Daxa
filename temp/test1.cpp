@@ -71,6 +71,7 @@ struct App : AppWindow<App>
 #endif
         .width = size_x,
         .height = size_y,
+        .present_mode = daxa::PresentMode::DO_NOT_WAIT_FOR_VBLANK,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
         .debug_name = "Test1 Swapchain",
     });
