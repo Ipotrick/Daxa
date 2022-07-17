@@ -62,8 +62,9 @@ target_include_directories(daxa
 
 set_project_warnings(daxa)
 
-# TODO: REMOVE (TEMP)
-add_subdirectory(temp)
+if(DAXA_ENABLE_TESTS)
+    add_subdirectory(tests)
+endif()
 
 # Packaging
 include(CMakePackageConfigHelpers)
