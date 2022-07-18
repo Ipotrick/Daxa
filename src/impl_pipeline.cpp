@@ -40,7 +40,6 @@ static void shader_preprocess(std::string & file_str, std::filesystem::path cons
 
 namespace daxa
 {
-
     struct DxcCustomIncluder : public IDxcIncludeHandler
     {
         IDxcIncludeHandler * default_includer;
@@ -65,28 +64,29 @@ namespace daxa
             { return p == full_path; };
 
             ComPtr<IDxcBlobEncoding> dxc_blob_encoding = {};
-            // if (std::find_if(sharedData->currentShaderSeenFiles.begin(), sharedData->currentShaderSeenFiles.end(), search_pred) != sharedData->currentShaderSeenFiles.end())
-            // {
-            //     // Return empty string blob if this file has been included before
-            //     static const char nullStr[] = " ";
-            //     pUtils->CreateBlob(nullStr, ARRAYSIZE(nullStr), CP_UTF8, pEncoding.GetAddressOf());
-            //     *ppIncludeSource = pEncoding.Detach();
-            //     return S_OK;
-            // }
-            // else
-            // {
-            //     sharedData->observedHotLoadFiles->insert({fullPath, std::chrono::file_clock::now()});
-            // }
+            if (std::find_if(impl_pipeline_compiler->current_seen_shader_files.begin(),
+                             impl_pipeline_compiler->current_seen_shader_files.end(), search_pred) != impl_pipeline_compiler->current_seen_shader_files.end())
+            {
+                // Return empty string blob if this file has been included before
+                static const char null_str[] = " ";
+                impl_pipeline_compiler->dxc_utils->CreateBlob(null_str, sizeof(null_str), CP_UTF8, dxc_blob_encoding.GetAddressOf());
+                *include_source = dxc_blob_encoding.Detach();
+                return S_OK;
+            }
+            else
+            {
+                impl_pipeline_compiler->current_observed_hotload_files->insert({full_path, std::chrono::file_clock::now()});
+            }
 
-            auto str = impl_pipeline_compiler->load_shader_source_from_file(full_path);
-            // if (str_result.isErr())
-            // {
-            //     *ppIncludeSource = nullptr;
-            //     return SCARD_E_INVALID_PARAMETER;
-            // }
-            // std::string str = str_result.value();
+            auto str_result = impl_pipeline_compiler->load_shader_source_from_file(full_path);
+            if (str_result.isErr())
+            {
+                *include_source = nullptr;
+                return SCARD_E_INVALID_PARAMETER;
+            }
+            std::string str = str_result.value().string;
 
-            impl_pipeline_compiler->dxc_utils->CreateBlob(str.string.c_str(), static_cast<u32>(str.string.size()), CP_UTF8, dxc_blob_encoding.GetAddressOf());
+            impl_pipeline_compiler->dxc_utils->CreateBlob(str.c_str(), static_cast<u32>(str.size()), CP_UTF8, dxc_blob_encoding.GetAddressOf());
             *include_source = dxc_blob_encoding.Detach();
             return S_OK;
         }
@@ -121,17 +121,21 @@ namespace daxa
 
     auto PipelineCompiler::create_compute_pipeline(ComputePipelineInfo const & info) -> Result<ComputePipeline>
     {
-        if (info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE) 
+        auto & impl = *reinterpret_cast<ImplPipelineCompiler *>(this->impl.get());
+
+        if (info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
         {
-            return ResultErr{ std::string("push constant size of ") + std::to_string(info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(MAX_PUSH_CONSTANT_BYTE_SIZE)};
+            return ResultErr{std::string("push constant size of ") + std::to_string(info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(MAX_PUSH_CONSTANT_BYTE_SIZE)};
         }
-        if (info.push_constant_size % 4 != 0) 
+        if (info.push_constant_size % 4 != 0)
         {
-            return ResultErr{ std::string("push constant size of ") + std::to_string(info.push_constant_size) + std::string(" is not a multiple of 4(bytes)") };
+            return ResultErr{std::string("push constant size of ") + std::to_string(info.push_constant_size) + std::string(" is not a multiple of 4(bytes)")};
         }
 
+        auto impl_pipeline = std::make_shared<ImplComputePipeline>(impl.impl_device, info);
+        impl.current_observed_hotload_files = &impl_pipeline->observed_hotload_files;
+
         std::vector<u32> spirv = {};
-        auto & impl = *reinterpret_cast<ImplPipelineCompiler *>(this->impl.get());
 
         if (info.shader_info.source.index() == 2)
         {
@@ -150,10 +154,14 @@ namespace daxa
                 auto ret = impl.full_path_to_file(shader_source->path);
                 if (ret.isErr())
                 {
-                    return ResultErr{ ret.message() };
+                    return ResultErr{ret.message()};
                 }
-                
-                code = impl.load_shader_source_from_file(ret.value());
+                auto code_ret = impl.load_shader_source_from_file(ret.value());
+                if (code_ret.isErr())
+                {
+                    return ResultErr{code_ret.message()};
+                }
+                code = code_ret.value();
             }
             else
             {
@@ -163,12 +171,12 @@ namespace daxa
             auto ret = impl.gen_spirv_from_dxc(info.shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT, code);
             if (ret.isErr())
             {
-                return ResultErr{ ret.message() };
+                return ResultErr{ret.message()};
             }
             spirv = ret.value();
         }
 
-        VkShaderModule shader_module = {};
+        VkShaderModule vk_shader_module = {};
 
         VkShaderModuleCreateInfo shader_module_ci{
             .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
@@ -176,13 +184,102 @@ namespace daxa
             .codeSize = static_cast<u32>(spirv.size() * sizeof(u32)),
             .pCode = spirv.data(),
         };
-        vkCreateShaderModule(DAXA_LOCK_WEAK(impl.impl_device)->vk_device, &shader_module_ci, nullptr, &shader_module);
+        vkCreateShaderModule(DAXA_LOCK_WEAK(impl.impl_device)->vk_device, &shader_module_ci, nullptr, &vk_shader_module);
 
-        auto ret = ComputePipeline{std::make_shared<ImplComputePipeline>(impl.impl_device, info, shader_module)};
+        impl_pipeline->vk_pipeline_layout = DAXA_LOCK_WEAK(impl.impl_device)->gpu_table.pipeline_layouts[info.push_constant_size / 4];
 
-        vkDestroyShaderModule(DAXA_LOCK_WEAK(impl.impl_device)->vk_device, shader_module, nullptr);
+        VkComputePipelineCreateInfo vk_compute_pipeline_create_info{
+            .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = {},
+            .stage = VkPipelineShaderStageCreateInfo{
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = {},
+                .stage = VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT,
+                .module = vk_shader_module,
+                .pName = info.shader_info.entry_point.c_str(),
+                .pSpecializationInfo = nullptr,
+            },
+            .layout = impl_pipeline->vk_pipeline_layout,
+            .basePipelineHandle = VK_NULL_HANDLE,
+            .basePipelineIndex = 0,
+        };
 
-        return { ret };
+        auto pipeline_result = vkCreateComputePipelines(
+            DAXA_LOCK_WEAK(impl.impl_device)->vk_device,
+            VK_NULL_HANDLE,
+            1u,
+            &vk_compute_pipeline_create_info,
+            nullptr,
+            &impl_pipeline->vk_pipeline);
+
+        DAXA_DBG_ASSERT_TRUE_M(pipeline_result == VK_SUCCESS, "failed to create compute pipeline");
+
+        vkDestroyShaderModule(DAXA_LOCK_WEAK(impl.impl_device)->vk_device, vk_shader_module, nullptr);
+
+        if (info.debug_name.size() > 0)
+        {
+            VkDebugUtilsObjectNameInfoEXT name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_PIPELINE,
+                .objectHandle = reinterpret_cast<uint64_t>(impl_pipeline->vk_pipeline),
+                .pObjectName = info.debug_name.c_str(),
+            };
+            vkSetDebugUtilsObjectNameEXT(impl.impl_device.lock()->vk_device, &name_info);
+        }
+
+        return ComputePipeline{impl_pipeline};
+    }
+
+    auto PipelineCompiler::recreate_compute_pipeline(ComputePipeline const & pipeline) -> Result<ComputePipeline>
+    {
+        auto & impl_pipeline = *reinterpret_cast<ImplComputePipeline *>(pipeline.impl.get());
+        auto result = create_compute_pipeline(impl_pipeline.info);
+        if (result.isOk())
+        {
+            return {std::move(result.value())};
+        }
+        return ResultErr{.message = result.message()};
+    }
+
+    auto PipelineCompiler::check_if_sources_changed(ComputePipeline const & pipeline) -> bool
+    {
+        auto & impl = *reinterpret_cast<ImplPipelineCompiler *>(this->impl.get());
+        auto & pipeline_impl = *reinterpret_cast<ImplComputePipeline *>(pipeline.impl.get());
+        auto now = std::chrono::file_clock::now();
+        using namespace std::chrono_literals;
+        if (now - pipeline_impl.last_hotload_time < 250ms)
+        {
+            return false;
+        }
+        pipeline_impl.last_hotload_time = now;
+        bool reload = false;
+        for (auto & [path, recordedWriteTime] : pipeline_impl.observed_hotload_files)
+        {
+            auto ifs = std::ifstream(path);
+            if (ifs.good())
+            {
+                auto latestWriteTime = std::filesystem::last_write_time(path);
+                if (latestWriteTime > recordedWriteTime)
+                {
+                    reload = true;
+                }
+            }
+        }
+        if (reload)
+        {
+            for (auto & pair : pipeline_impl.observed_hotload_files)
+            {
+                auto ifs = std::ifstream(pair.first);
+                if (ifs.good())
+                {
+                    pair.second = std::filesystem::last_write_time(pair.first);
+                }
+            }
+        }
+        return reload;
     }
 
     ImplPipelineCompiler::ImplPipelineCompiler(std::weak_ptr<ImplDevice> a_impl_device, PipelineCompilerInfo const & info)
@@ -227,28 +324,38 @@ namespace daxa
         return ResultErr{.message = std::move(error_msg)};
     }
 
-    auto ImplPipelineCompiler::load_shader_source_from_file(std::filesystem::path const & path) -> ShaderCode
+    auto ImplPipelineCompiler::load_shader_source_from_file(std::filesystem::path const & path) -> Result<ShaderCode>
     {
-        // auto start_time = std::chrono::steady_clock::now();
-        // while ((std::chrono::steady_clock::now() - start_time).count() < 100'000'000)
-        // {
-        // }
-        std::ifstream ifs{path};
-        DAXA_DBG_ASSERT_TRUE_M(ifs.good(), "Could not open shader file");
-        std::string str = {};
-        ifs.seekg(0, std::ios::end);
-        str.reserve(ifs.tellg());
-        ifs.seekg(0, std::ios::beg);
-        str.assign(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
-        if (str.size() < 1)
+        auto result_path = full_path_to_file(path);
+        if (result_path.isErr())
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            // continue;
+            return ResultErr{.message = result_path.message()};
         }
-        shader_preprocess(str, path);
-        return {.string = str};
-
-        // return {.string = {}};
+        auto start_time = std::chrono::steady_clock::now();
+        while ((std::chrono::steady_clock::now() - start_time).count() < 100'000'000)
+        {
+            std::ifstream ifs{path};
+            DAXA_DBG_ASSERT_TRUE_M(ifs.good(), "Could not open shader file");
+            current_observed_hotload_files->insert({
+                result_path.value(),
+                std::filesystem::last_write_time(result_path.value()),
+            });
+            std::string str = {};
+            ifs.seekg(0, std::ios::end);
+            str.reserve(ifs.tellg());
+            ifs.seekg(0, std::ios::beg);
+            str.assign(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
+            if (str.size() < 1)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                continue;
+            }
+            shader_preprocess(str, path);
+            return ShaderCode{.string = str};
+        }
+        std::string err = "timeout while trying to read file: \"";
+        err += result_path.value().string() + "\"";
+        return ResultErr{.message = err};
     }
 
     auto ImplPipelineCompiler::gen_spirv_from_dxc(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
@@ -351,53 +458,12 @@ namespace daxa
             spv[i] = static_cast<u32 *>(shaderobj->GetBufferPointer())[i];
         }
 
-        return { spv };
+        return {spv};
     }
 
-    ImplComputePipeline::ImplComputePipeline(std::weak_ptr<ImplDevice> a_impl_device, ComputePipelineInfo const & info, VkShaderModule vk_shader_module)
+    ImplComputePipeline::ImplComputePipeline(std::weak_ptr<ImplDevice> a_impl_device, ComputePipelineInfo const & info)
         : impl_device{std::move(a_impl_device)}, info{info}
     {
-        this->vk_pipeline_layout = DAXA_LOCK_WEAK(this->impl_device)->gpu_table.pipeline_layouts[info.push_constant_size / 4];
-
-        VkComputePipelineCreateInfo vk_compute_pipeline_create_info{
-            .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-            .pNext = nullptr,
-            .flags = {},
-            .stage = VkPipelineShaderStageCreateInfo{
-                .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-                .pNext = nullptr,
-                .flags = {},
-                .stage = VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT,
-                .module = vk_shader_module,
-                .pName = this->info.shader_info.entry_point.c_str(),
-                .pSpecializationInfo = nullptr,
-            },
-            .layout = this->vk_pipeline_layout,
-            .basePipelineHandle = VK_NULL_HANDLE,
-            .basePipelineIndex = 0,
-        };
-
-        auto result = vkCreateComputePipelines(
-            DAXA_LOCK_WEAK(this->impl_device)->vk_device,
-            VK_NULL_HANDLE,
-            1u,
-            &vk_compute_pipeline_create_info,
-            nullptr,
-            &this->vk_pipeline);
-
-        DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create compute pipeline");
-
-        if (this->info.debug_name.size() > 0)
-        {
-            VkDebugUtilsObjectNameInfoEXT name_info{
-                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-                .pNext = nullptr,
-                .objectType = VK_OBJECT_TYPE_PIPELINE,
-                .objectHandle = reinterpret_cast<uint64_t>(this->vk_pipeline),
-                .pObjectName = this->info.debug_name.c_str(),
-            };
-            vkSetDebugUtilsObjectNameEXT(impl_device.lock()->vk_device, &name_info);
-        }
     }
 
     ImplComputePipeline::~ImplComputePipeline()
