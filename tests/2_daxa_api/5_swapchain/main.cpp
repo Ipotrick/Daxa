@@ -22,14 +22,14 @@ namespace tests
         App app;
     }
 
-    void usage()
+    void clearcolor()
     {
         struct App : AppWindow<App>
         {
             daxa::Context daxa_ctx = daxa::create_context({});
-            daxa::Device daxa_device = daxa_ctx.create_default_device();
+            daxa::Device device = daxa_ctx.create_default_device();
 
-            daxa::Swapchain daxa_swapchain = daxa_device.create_swapchain({
+            daxa::Swapchain swapchain = device.create_swapchain({
                 .native_window = get_native_handle(),
                 .width = size_x,
                 .height = size_y,
@@ -59,9 +59,9 @@ namespace tests
 
             void draw()
             {
-                auto swapchain_image = daxa_swapchain.acquire_next_image();
-                auto binary_semaphore = daxa_device.create_binary_semaphore({});
-                auto cmd_list = daxa_device.create_command_list({});
+                auto swapchain_image = swapchain.acquire_next_image();
+                auto binary_semaphore = device.create_binary_semaphore({});
+                auto cmd_list = device.create_command_list({});
 
                 cmd_list.pipeline_barrier_image_transition({
                     .waiting_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_WRITE,
@@ -85,14 +85,14 @@ namespace tests
 
                 cmd_list.complete();
 
-                daxa_device.submit_commands({
+                device.submit_commands({
                     .command_lists = {std::move(cmd_list)},
                     .signal_binary_semaphores_on_completion = {binary_semaphore},
                 });
 
-                daxa_device.present_frame({
+                device.present_frame({
                     .wait_on_binary = binary_semaphore,
-                    .swapchain = daxa_swapchain,
+                    .swapchain = swapchain,
                 });
             }
 
@@ -100,7 +100,7 @@ namespace tests
             {
                 size_x = sx;
                 size_y = sy;
-                daxa_swapchain.resize(size_x, size_y);
+                swapchain.resize(size_x, size_y);
                 draw();
             }
         };
@@ -117,5 +117,5 @@ namespace tests
 int main()
 {
     tests::simple_creation();
-    tests::usage();
+    tests::clearcolor();
 }
