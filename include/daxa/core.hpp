@@ -13,8 +13,6 @@
 
 #include <daxa/types.hpp>
 
-#define DAXA_DISABLE_THREADSAFETY
-
 #if !defined(NDEBUG)
 #define DAXA_DEBUG
 #endif
