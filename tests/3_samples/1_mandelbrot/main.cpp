@@ -57,8 +57,6 @@ struct App : AppWindow<App>
         .usage = daxa::ImageUsageFlagBits::STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
     });
 
-    daxa::BufferId buffer = device.create_buffer({ .size = 64, });
-
     App()
     {
     }
