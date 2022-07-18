@@ -21,8 +21,8 @@ namespace daxa
     void CommandList::copy_buffer_to_buffer(BufferCopyInfo const & info)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
-
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+        impl.flush_barriers();
 
         VkBufferCopy vk_buffer_copy{
             .srcOffset = info.src_offset,
@@ -42,8 +42,8 @@ namespace daxa
     void CommandList::copy_buffer_to_image(BufferImageCopy const & info)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
-
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+        impl.flush_barriers();
 
         VkBufferImageCopy vk_buffer_image_copy{
             .bufferOffset = info.buffer_offset,
@@ -67,8 +67,8 @@ namespace daxa
     void CommandList::copy_image_to_buffer(BufferImageCopy const & info)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
-
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+        impl.flush_barriers();
 
         VkBufferImageCopy vk_buffer_image_copy{
             .bufferOffset = info.buffer_offset,
@@ -93,8 +93,8 @@ namespace daxa
     void CommandList::blit_image_to_image(ImageBlitInfo const & info)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
-
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
+        impl.flush_barriers();
 
         VkImageBlit vk_blit{
             .srcSubresource = *reinterpret_cast<VkImageSubresourceLayers const *>(&info.src_slice),
@@ -117,8 +117,8 @@ namespace daxa
     void CommandList::copy_image_to_image(ImageCopyInfo const & info)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
-
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
+        impl.flush_barriers();
 
         VkImageCopy vk_image_copy{
             .srcSubresource = *reinterpret_cast<VkImageSubresourceLayers const *>(&info.src_slice),
@@ -141,8 +141,8 @@ namespace daxa
     void CommandList::clear_image(ImageClearInfo const & info)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
-
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
+        impl.flush_barriers();
 
         if (info.dst_slice.image_aspect & ImageAspectFlagBits::COLOR)
         {
@@ -180,11 +180,10 @@ namespace daxa
     void CommandList::push_constant(void const * data, u32 size, u32 offset)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
-
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
-
         DAXA_DBG_ASSERT_TRUE_M(size <= MAX_PUSH_CONSTANT_BYTE_SIZE, MAX_PUSH_CONSTANT_SIZE_ERROR);
         DAXA_DBG_ASSERT_TRUE_M(size % 4 == 0, "push constant size must be a multiple of 4 bytes");
+        impl.flush_barriers();
 
         usize push_constant_device_word_size = size / 4;
 
@@ -194,6 +193,8 @@ namespace daxa
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
         auto & pipeline_impl = *reinterpret_cast<ImplComputePipeline *>(pipeline.impl.get());
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+        impl.flush_barriers();
 
         vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_layout, 0, 1, &DAXA_LOCK_WEAK(impl.impl_device)->gpu_table.vk_descriptor_set, 0, nullptr);
 
@@ -202,8 +203,8 @@ namespace daxa
     void CommandList::dispatch(u32 group_x, u32 group_y, u32 group_z)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
-
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+        impl.flush_barriers();
 
         vkCmdDispatch(impl.vk_cmd_buffer, group_x, group_y, group_z);
     }
@@ -211,9 +212,9 @@ namespace daxa
     void defer_destruction_helper(void* impl_coid, GPUResourceId id, u8 index)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(impl_coid);
-
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         DAXA_DBG_ASSERT_TRUE_M(impl.deferred_destruction_count < DEFERRED_DESTRUCTION_COUNT_MAX, "can not defer the destruction of more than 32 resources per command list recording");
+        impl.flush_barriers();
 
         impl.deferred_destructions[impl.deferred_destruction_count++] = { id, index };
     }
@@ -242,8 +243,8 @@ namespace daxa
     void CommandList::complete()
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
-
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+        impl.flush_barriers();
 
         impl.recording_complete = true;
 
@@ -256,7 +257,12 @@ namespace daxa
 
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
 
-        VkMemoryBarrier2 vk_memory_barrier{
+        if (impl.memory_barrier_batch_count == COMMAND_LIST_BARRIER_MAX_BATCH_SIZE)
+        {
+            impl.flush_barriers();
+        }
+
+        impl.memory_barrier_batch[impl.memory_barrier_batch_count++] = {
             .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
             .pNext = nullptr,
             .srcStageMask = 0x0111'1111'1111'1111ull & info.awaited_pipeline_access,
@@ -264,20 +270,6 @@ namespace daxa
             .dstStageMask = 0x0111'1111'1111'1111ull & info.waiting_pipeline_access,
             .dstAccessMask = (info.waiting_pipeline_access & PipelineStageAccessFlagBits::WRITE_ACCESS ? VK_ACCESS_2_MEMORY_WRITE_BIT : 0ull) | (info.waiting_pipeline_access & PipelineStageAccessFlagBits::READ_ACCESS ? VK_ACCESS_2_MEMORY_READ_BIT : 0ull),
         };
-
-        VkDependencyInfo vk_dependency_info{
-            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-            .pNext = nullptr,
-            .dependencyFlags = {},
-            .memoryBarrierCount = 1,
-            .pMemoryBarriers = &vk_memory_barrier,
-            .bufferMemoryBarrierCount = 0,
-            .pBufferMemoryBarriers = nullptr,
-            .imageMemoryBarrierCount = 0,
-            .pImageMemoryBarriers = nullptr,
-        };
-
-        vkCmdPipelineBarrier2(impl.vk_cmd_buffer, &vk_dependency_info);
     }
 
     void CommandList::pipeline_barrier_image_transition(PipelineBarrierImageTransitionInfo const & info)
@@ -286,7 +278,12 @@ namespace daxa
 
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
 
-        VkImageMemoryBarrier2 vk_image_memory_barrier{
+        if (impl.image_barrier_batch_count == COMMAND_LIST_BARRIER_MAX_BATCH_SIZE)
+        {
+            impl.flush_barriers();
+        }
+
+        impl.image_barrier_batch[impl.image_barrier_batch_count++] = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
             .pNext = nullptr,
             .srcStageMask = 0x0111'1111'1111'1111ull & info.awaited_pipeline_access,
@@ -300,20 +297,29 @@ namespace daxa
             .image = DAXA_LOCK_WEAK(impl.impl_device)->slot(info.image_id).vk_image,
             .subresourceRange = *reinterpret_cast<VkImageSubresourceRange const *>(&info.image_slice),
         };
+    }
 
-        VkDependencyInfo vk_dependency_info{
-            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-            .pNext = nullptr,
-            .dependencyFlags = {},
-            .memoryBarrierCount = 0,
-            .pMemoryBarriers = nullptr,
-            .bufferMemoryBarrierCount = 0,
-            .pBufferMemoryBarriers = nullptr,
-            .imageMemoryBarrierCount = 1,
-            .pImageMemoryBarriers = &vk_image_memory_barrier,
-        };
+    void ImplCommandList::flush_barriers()
+    {
+        if (memory_barrier_batch_count > 0 || image_barrier_batch_count > 0)
+        {
+            VkDependencyInfo vk_dependency_info{
+                .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+                .pNext = nullptr,
+                .dependencyFlags = {},
+                .memoryBarrierCount = static_cast<u32>(memory_barrier_batch_count),
+                .pMemoryBarriers = memory_barrier_batch.data(),
+                .bufferMemoryBarrierCount = 0,
+                .pBufferMemoryBarriers = nullptr,
+                .imageMemoryBarrierCount = static_cast<u32>(image_barrier_batch_count),
+                .pImageMemoryBarriers = image_barrier_batch.data(),
+            };
 
-        vkCmdPipelineBarrier2(impl.vk_cmd_buffer, &vk_dependency_info);
+            vkCmdPipelineBarrier2(vk_cmd_buffer, &vk_dependency_info);
+
+            memory_barrier_batch_count = 0;
+            image_barrier_batch_count = 0;
+        }
     }
 
     ImplCommandList::ImplCommandList(std::weak_ptr<ImplDevice> a_impl_device)
