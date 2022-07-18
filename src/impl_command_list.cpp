@@ -18,6 +18,72 @@ namespace daxa
         }
     }
 
+    void CommandList::copy_buffer_to_buffer(BufferCopyInfo const & info)
+    {
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+
+        VkBufferCopy vk_buffer_copy{
+            .srcOffset = info.src_offset,
+            .dstOffset = info.dst_offset,
+            .size = info.size,
+        };
+
+        vkCmdCopyBuffer(
+            impl.vk_cmd_buffer, 
+            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.src_buffer).vk_buffer, 
+            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.dst_buffer).vk_buffer,
+            1,
+            &vk_buffer_copy
+        );
+    }
+
+    void CommandList::copy_buffer_to_image(BufferImageCopy const & info)
+    {
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+
+        VkBufferImageCopy vk_buffer_image_copy{
+            .bufferOffset = info.buffer_offset,
+            .bufferRowLength = static_cast<u32>(info.image_extent.x * info.image_extent.y * info.image_extent.z),
+            .bufferImageHeight = 1u,
+            .imageSubresource = *reinterpret_cast<VkImageSubresourceLayers const *>(&info.image_slice),
+            .imageOffset = *reinterpret_cast<VkOffset3D const *>(&info.image_offset),
+            .imageExtent = *reinterpret_cast<VkExtent3D const *>(&info.image_extent),
+        };
+
+        vkCmdCopyBufferToImage(
+            impl.vk_cmd_buffer,
+            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.buffer).vk_buffer,
+            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.image).vk_image,
+            static_cast<VkImageLayout>(info.image_layout),
+            1,
+            &vk_buffer_image_copy
+        );
+    }
+
+    void CommandList::copy_image_to_buffer(BufferImageCopy const & info)
+    {
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+
+        VkBufferImageCopy vk_buffer_image_copy{
+            .bufferOffset = info.buffer_offset,
+            .bufferRowLength = static_cast<u32>(info.image_extent.x * info.image_extent.y * info.image_extent.z),
+            .bufferImageHeight = 1u,
+            .imageSubresource = *reinterpret_cast<VkImageSubresourceLayers const *>(&info.image_slice),
+            .imageOffset = *reinterpret_cast<VkOffset3D const *>(&info.image_offset),
+            .imageExtent = *reinterpret_cast<VkExtent3D const *>(&info.image_extent),
+        };
+
+        vkCmdCopyImageToBuffer(
+            impl.vk_cmd_buffer,
+            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.image).vk_image,
+            static_cast<VkImageLayout>(info.image_layout),
+            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.buffer).vk_buffer,
+            1,
+            &vk_buffer_image_copy
+        );
+    }
+
+
     void CommandList::blit_image_to_image(ImageBlitInfo const & info)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
