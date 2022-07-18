@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <mutex>
 #include <fstream>
+#include <map>
 
 #include <daxa/core.hpp>
 
@@ -55,7 +56,8 @@ using ComPtr = CComPtr<T>;
     x.lock()
 #endif
 
-namespace daxa {
+namespace daxa
+{
     auto round_up_to_next_multiple_of_two(auto num_to_round) -> auto
     {
         auto remainder = num_to_round % 2;
@@ -65,8 +67,8 @@ namespace daxa {
         return num_to_round + 2 - remainder;
     }
 
-    static inline constexpr u32 MAX_PUSH_CONSTANT_WORD_SIZE = { 32 };
-    static inline constexpr u32 MAX_PUSH_CONSTANT_BYTE_SIZE = { MAX_PUSH_CONSTANT_WORD_SIZE * 4 };
-    static inline constexpr u32 PIPELINE_LAYOUT_COUNT = { MAX_PUSH_CONSTANT_WORD_SIZE + 1 };
+    static inline constexpr u32 MAX_PUSH_CONSTANT_WORD_SIZE = {32};
+    static inline constexpr u32 MAX_PUSH_CONSTANT_BYTE_SIZE = {MAX_PUSH_CONSTANT_WORD_SIZE * 4};
+    static inline constexpr u32 PIPELINE_LAYOUT_COUNT = {MAX_PUSH_CONSTANT_WORD_SIZE + 1};
     static inline constexpr char const * MAX_PUSH_CONSTANT_SIZE_ERROR = {"push constant size is limited to 128 bytes/ 32 device words"};
-}
+} // namespace daxa
