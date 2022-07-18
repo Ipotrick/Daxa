@@ -155,7 +155,7 @@ struct App : AppWindow<App>
 
         device.submit_commands({
             .command_lists = {std::move(cmd_list)},
-            .signal_binary_semaphores_on_completion = {binary_semaphore},
+            .signal_binary_semaphores = {binary_semaphore},
         });
 
         device.present_frame({

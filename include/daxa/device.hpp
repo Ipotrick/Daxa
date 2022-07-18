@@ -131,31 +131,34 @@ namespace daxa
 
     struct DeviceVulkanInfo
     {
-        u32 vulkan_api_version;
-        u32 driver_version;
-        u32 vendor_id;
-        u32 device_id;
-        DeviceType device_type;
-        u8 device_name[256U];
-        u8 pipeline_cache_uuid[16U];
-        DeviceLimits limits;
+        u32 vulkan_api_version = {};
+        u32 driver_version = {};
+        u32 vendor_id = {};
+        u32 device_id = {};
+        DeviceType device_type = {};
+        u8 device_name[256U] = {};
+        u8 pipeline_cache_uuid[16U] = {};
+        DeviceLimits limits = {};
     };
 
     struct DeviceInfo
     {
-        std::function<i32(DeviceVulkanInfo const &)> selector;
-        std::string debug_name;
+        std::function<i32(DeviceVulkanInfo const &)> selector = {};
+        std::string debug_name = {};
     };
 
     struct CommandSubmitInfo
     {
         std::vector<CommandList> command_lists = {};
-        std::vector<BinarySemaphore> signal_binary_semaphores_on_completion = {};
+        std::vector<BinarySemaphore> wait_binary_semaphores = {};
+        std::vector<BinarySemaphore> signal_binary_semaphores = {};
+        std::vector<std::pair<TimelineSemaphore, u64>> wait_timeline_semaphores = {};
+        std::vector<std::pair<TimelineSemaphore, u64>> signal_timeline_semaphores = {};
     };
 
     struct PresentInfo
     {
-        BinarySemaphore & wait_on_binary;
+        std::vector<BinarySemaphore> wait_binary_semaphores = {};
         Swapchain & swapchain;
     };
 
@@ -182,6 +185,7 @@ namespace daxa
         auto create_swapchain(SwapchainInfo const & info) -> Swapchain;
         auto create_command_list(CommandListInfo const & info) -> CommandList;
         auto create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore;
+        auto create_timeline_semaphore(TimelineSemaphoreInfo const & info) -> TimelineSemaphore;
 
         auto map_memory(BufferId id) -> void *;
         void unmap_memory(BufferId id);
