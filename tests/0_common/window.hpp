@@ -1,3 +1,5 @@
+#include <daxa/daxa.hpp>
+using namespace daxa::types;
 
 #include <GLFW/glfw3.h>
 #if defined(_WIN32)
@@ -6,9 +8,6 @@
 #define GLFW_EXPOSE_NATIVE_X11
 #endif
 #include <GLFW/glfw3native.h>
-
-#include <daxa/daxa.hpp>
-using namespace daxa::types;
 
 template <typename App>
 struct AppWindow
