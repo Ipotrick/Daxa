@@ -14,7 +14,9 @@ namespace daxa
     template <Zombifiable RecyclableT>
     struct RecyclableList
     {
+#if defined(DAXA_ENABLE_THREADSAFETY)
         std::mutex mtx = {};
+#endif
         std::vector<std::shared_ptr<RecyclableT>> recyclables = {};
 
         auto recycle_or_create_new(std::shared_ptr<ImplDevice> & device_impl, auto const & info) -> std::shared_ptr<RecyclableT>
@@ -22,7 +24,9 @@ namespace daxa
             std::shared_ptr<RecyclableT> ret = {};
 
             {
+#if defined(DAXA_ENABLE_THREADSAFETY)
                 std::unique_lock lock{mtx};
+#endif
                 if (!recyclables.empty())
                 {
                     ret = recyclables.back();

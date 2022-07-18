@@ -153,7 +153,6 @@ namespace daxa
         vkResetDescriptorPool(device, this->vk_descriptor_pool, {});
         vkDestroyDescriptorPool(device, this->vk_descriptor_pool, nullptr);
     }
-    
 
     void write_descriptor_set_sampler(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkSampler vk_sampler, u32 index)
     {
