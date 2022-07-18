@@ -1,6 +1,7 @@
 #pragma once
 
 #include <daxa/pipeline.hpp>
+
 #include "impl_core.hpp"
 
 namespace daxa

@@ -26,6 +26,9 @@ template <typename T>
 using ComPtr = CComPtr<T>;
 #endif
 
+#define DAXA_DISABLE_THREADSAFETY
+#define DAXA_ENABLE_GPU_ID_VALIDATION
+
 #if !defined(DAXA_DISABLE_THREADSAFETY)
 #define DAXA_ENABLE_THREADSAFETY
 #endif
