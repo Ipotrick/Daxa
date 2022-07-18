@@ -36,16 +36,26 @@ namespace daxa
             u64 timeline_value = {};
             std::vector<std::shared_ptr<ImplCommandList>> command_lists = {};
         };
+#if defined(DAXA_ENABLE_THREADSAFETY)
         std::mutex submit_mtx = {};
+#endif
         std::vector<Submit> submits_pool = {};
 
         // Main queue:
         std::vector<Submit> main_queue_command_list_submits = {};
         VkQueue main_queue_vk_queue = {};
         u32 main_queue_family_index = {};
+        
+#if defined(DAXA_ENABLE_THREADSAFETY)
         std::atomic_uint64_t main_queue_cpu_timeline = {};
+#else
+        u64 main_queue_cpu_timeline = {};
+#endif 
         VkSemaphore vk_main_queue_gpu_timeline_semaphore = {};
+        
+#if defined(DAXA_ENABLE_THREADSAFETY)
         std::mutex main_queue_zombies_mtx = {};
+#endif
         std::vector<std::pair<u64, BufferId>> main_queue_buffer_zombies = {};
         std::vector<std::pair<u64, ImageId>> main_queue_image_zombies = {};
         std::vector<std::pair<u64, ImageViewId>> main_queue_image_view_zombies = {};

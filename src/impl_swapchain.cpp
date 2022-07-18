@@ -45,7 +45,7 @@ namespace daxa
             .pNext = nullptr,
             .flags = 0,
             .dpy = nullptr,
-            .window = info.native_window,
+            .window = info.native_window_handle,
         };
         {
             auto func = (PFN_vkCreateXlibSurfaceKHR)vkGetInstanceProcAddr(DAXA_LOCK_WEAK(DAXA_LOCK_WEAK(impl_device)->impl_ctx)->vk_instance, "vkCreateXlibSurfaceKHR");

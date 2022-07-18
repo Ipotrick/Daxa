@@ -18,18 +18,12 @@ struct Push
     float2 uv = float2(pixel_i.xy) / float2(p.frame_dim.xy);
     uv = (uv - 0.5) * float2(float(p.frame_dim.x) / float(p.frame_dim.y), 1);
 
-    float2 z = uv * 3;
-    float2 c = z;
+    float3 col = float3(0, 0, 0);
 
-    for (uint i = 0; i < 100; ++i)
+    if (uv.x > 0)
     {
-        float2 z_ = z;
-        z.x = z_.x * z_.x - z_.y * z_.y;
-        z.y = 2.0 * z_.x * z_.y;
-        z += c;
+        col = float3(1, 0, 1);
     }
-
-    float3 col = length(z);
 
     render_image[pixel_i.xy] = float4(col, 1.0);
 }
