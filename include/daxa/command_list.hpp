@@ -117,6 +117,11 @@ namespace daxa
         void bind_pipeline(ComputePipeline const & compute_pipeline);
         void dispatch(u32 group_x, u32 group_y = 1, u32 group_z = 1);
 
+        void destroy_buffer_deferred(BufferId id);
+        void destroy_image_deferred(ImageId id);
+        void destroy_image_view_deferred(ImageViewId id);
+        void destroy_sampler_deferred(SamplerId id);
+
         void complete();
 
       private:
