@@ -56,6 +56,8 @@ namespace daxa
     struct PipelineCompiler : Handle
     {
         auto create_compute_pipeline(ComputePipelineInfo const & info) -> Result<ComputePipeline>;
+        auto recreate_compute_pipeline(ComputePipeline const &pipeline) -> Result<ComputePipeline>;
+        auto check_if_sources_changed(ComputePipeline const &pipeline) -> bool;
 
       private:
         friend struct Device;
