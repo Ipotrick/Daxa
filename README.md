@@ -1,59 +1,33 @@
-# This repo is the home of the Daxa GPU-library
+# This repo is the home of the daxa gpu api
 
-Daxa is not aimed to expose all vulkan features or even stay very close to it api wise. 
+## What is daxa:
+Daxa is a gpu api build on vulkan.
 
-Its primary goal is be easy to use, very low cpu overhead and modern gpu feature access.
+When i started to learn vulkan, i realized that vulkan is too verbose for my likeing. Things like descriptor sets, renderpasses, resource destruction and the general lack of defaults annoyed me.
 
-Aside from the gpu abstraction, daxa also includes a few generalized helper abstractions, like an ImGui backend or a simple asset manager. These are included mainly to get things going in a new project.
+So I started to make daxa with the intention to combat the problems i have with raw vulkan by a lot, while maintaining the low overhead and access to modern features vulkan provides. It is also a research project for me personally to learn more about api and library design.
 
-## Features:
+Daxa is generally stable and tests for the included tests and my (and other Projects using daxa) but there is no guarantee for stability or future maintenance from me. But i usually read issues and accespt pull requests.
 
-* easy debugability.
-* easy shader resource model (bindless):
-  * no descriptor sets
-  * no binding slots
-  * no resource binding
-  * resources are passed to and accessed in a shader via an id
-* easy gpu driven rendering:
-  * binding model allows for very easy gpu side manipulation of resources
-  * (TODO) more
-* little boilerplace with many defaults:
-  * optional automatic staging buffer usage for data up- and download
-  * easy resource creation
-  * no renderpasses
-  * no framebuffers
-  * dynamic state with defaults
-* simple shader build system:
-  * dxc compiler integration for vulkan-hlsl
-  * shaderc compiler integration for glsl
-  * hot reloading
-  * full preprocessor integration
-* threadsafety:
-  * all functions can be called in any context without external synchronization.
-  * this usually does not affect performance except for resource creation which is serialized.
-* efficient automatic lifetime management of resources:
-  * reference counting to enforce shared ownership
-  * resources are freed after all potential uses in command lists are over
-* explicit synchronization:
-  * auto sync usually comes with a high price in cpu overhead
-  * allows for implementation of custom rendergraph
-  * cpu cost in recording commands is in place and not defered to submission
-  * makes fun times when debugging
-## Notable exposed vulkan features:
-* rasterization graphics pipeline
-* rasterization dynamic state
-* compute pipeline
-* multiqueue
+That said it is not meant to be the "ultimate vulkan can-do-anything abstraction"!
+It esposes the vulkan features that i personally (and a few other folks using daxa) use.
+The abstraction level is not too high, synchronization for example is still manual without the use of the taskgraph(TODO).
 
-# Examples
-Examples are given as DaxaXYZ, besides the daxa library itself in this repository. There are also two full projects currently residing in this repository:
-DaxaMinecraft, which is a raytraced voxel engine implemented mainly by Gabe Rundlett and also me.
-DaxaMeshview, which is a general mesh view utility in which i implement various rendering techniques for normal triangle meshes.
+Yet it changes a few fundamental things about vulkan, like the binding model.
 
-# DaxaMeshview and DaxaMinecraft
-
-There are two projects in this repository which are built upon Daxa. These are used for testing the api but also toy projects of me and a friend (Gabe Rundlett).
+## List of notable features:
+* Easy initialization: Lots of defaults in creation of any resource. Much less boilderplate code then raw vulkan.
+* Low overhead: daxa is is intended to impose minimal overhead over raw vulkan (for my usecases). As a traidoff usability and performance are favoured over memory usage.
+* Thread safety: it is build with multithreading in mind from the beginning. All device calls are fully threadsave and can be called on multiple threads. All other objects like Swapchain or command list should only be accessed by on thread at a time (this is deliberate to reduce overhead on high frequency functions like drawcalls). This threadsafety and the runtime overhead it generates can be turned off, by building daxa with the define DAXA_NO_THREADSAFETY.
+* Bindless resource model by default: daxa binds all resources to one mega descriptor set.
+  The user never needs to interact with any binding, they can simply pass the resource id to the shader and use it. No more annoying descriptor set management!
+* Defered resource destruction: daxa will automatically detect when you free a resource that is still in use on the gpu and defer that destruction until it is safe to do so.
+* Shader build system: Shaders in daxa are written in hlsl or directly provided in SPIRV. Daxa provides functionality like a preprocessor for shaders and also convenience tools like hot reloading for pipelines.
+* Task graph(TODO): daxa also provides a simple task graph that automaticaly generates pipeline barriers for the user. This taskgraph is relatively simple: it does not reoder commands, but it does allow aliasing transient resources and batching pipeline barriers.
 
 # Building
-The library and the examples can be built using cmake with vcpkg. There is an included vcpkg.json, which should pull all the nessecary dependencies for everything in this repository.
-The library is tested using the msvc stl, with clang and the msvc compiler. I recommend building the project with cmake and ninja.
+All dependencies are managed via vcpkg.
+
+The library and the tests can be built using cmake.
+
+It is tested using the msvc stl, with clang and msvc.

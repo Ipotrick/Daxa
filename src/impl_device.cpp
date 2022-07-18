@@ -34,9 +34,12 @@ namespace daxa
     {
         auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
 
+#if defined(DAXA_ENABLE_THREADSAFETY)
         u64 curreny_main_queue_cpu_timeline_value = impl.main_queue_cpu_timeline.fetch_add(1ull, std::memory_order::relaxed) + 1;
-
         std::unique_lock lock{impl.submit_mtx};
+#else
+        u64 curreny_main_queue_cpu_timeline_value = impl.main_queue_cpu_timeline++;
+#endif
 
         ImplDevice::Submit submit = {};
 
@@ -125,7 +128,9 @@ namespace daxa
     {
         auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
 
+#if defined(DAXA_ENABLE_THREADSAFETY)
         std::unique_lock lock{impl.submit_mtx};
+#endif
         impl.main_queue_housekeeping_apis_no_lock();
         impl.main_queue_clean_dead_zombies();
     }
@@ -198,6 +203,21 @@ namespace daxa
     {
         auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
         impl.zombiefy_sampler(id);
+    }
+    
+    auto Device::map_memory(BufferId id) -> void *
+    {
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+        void* ret = nullptr;
+        vmaMapMemory(impl.vma_allocator, impl.slot(id).vma_allocation, &ret);
+        return ret;
+    }
+
+    void Device::unmap_memory(BufferId id)
+    {
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+        void* ret = nullptr;
+        vmaUnmapMemory(impl.vma_allocator, impl.slot(id).vma_allocation);
     }
 
     static const VkPhysicalDeviceFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES{
@@ -486,7 +506,9 @@ namespace daxa
 
     void ImplDevice::main_queue_clean_dead_zombies()
     {
+#if defined(DAXA_ENABLE_THREADSAFETY)
         std::unique_lock lock{this->main_queue_zombies_mtx};
+#endif
 
         u64 gpu_timeline_value = std::numeric_limits<u64>::max();
         auto vk_result = vkGetSemaphoreCounterValue(this->vk_device, this->vk_main_queue_gpu_timeline_semaphore, &gpu_timeline_value);
@@ -519,7 +541,9 @@ namespace daxa
         check_and_cleanup_gpu_resources(this->main_queue_sampler_zombies, [&](auto id)
                                         { this->cleanup_sampler(id); });
         {
+#if defined(DAXA_ENABLE_THREADSAFETY)
             std::unique_lock lock{this->binary_semaphore_recyclable_list.mtx};
+#endif
             check_and_cleanup_gpu_resources(this->main_queue_binary_semaphore_zombies, [&](auto & binary_semaphore)
                                             { 
                 binary_semaphore->reset();
@@ -896,30 +920,38 @@ namespace daxa
 
     void ImplDevice::zombiefy_buffer(BufferId id)
     {
+#if defined(DAXA_ENABLE_THREADSAFETY)
         std::unique_lock lock{this->main_queue_zombies_mtx};
-        u64 main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-        this->main_queue_buffer_zombies.push_back({main_queue_cpu_timeline_value, id});
+        u64 main_queue_cpu_timeline = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
+#endif
+        this->main_queue_buffer_zombies.push_back({main_queue_cpu_timeline, id});
     }
 
     void ImplDevice::zombiefy_image(ImageId id)
     {
+#if defined(DAXA_ENABLE_THREADSAFETY)
         std::unique_lock lock{this->main_queue_zombies_mtx};
-        u64 main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-        this->main_queue_image_zombies.push_back({main_queue_cpu_timeline_value, id});
+        u64 main_queue_cpu_timeline = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
+#endif
+        this->main_queue_image_zombies.push_back({main_queue_cpu_timeline, id});
     }
 
     void ImplDevice::zombiefy_image_view(ImageViewId id)
     {
+#if defined(DAXA_ENABLE_THREADSAFETY)
         std::unique_lock lock{this->main_queue_zombies_mtx};
-        u64 main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-        this->main_queue_image_view_zombies.push_back({main_queue_cpu_timeline_value, id});
+        u64 main_queue_cpu_timeline = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
+#endif
+        this->main_queue_image_view_zombies.push_back({main_queue_cpu_timeline, id});
     }
 
     void ImplDevice::zombiefy_sampler(SamplerId id)
     {
+#if defined(DAXA_ENABLE_THREADSAFETY)
         std::unique_lock lock{this->main_queue_zombies_mtx};
-        u64 main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-        this->main_queue_sampler_zombies.push_back({main_queue_cpu_timeline_value, id});
+        u64 main_queue_cpu_timeline = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
+#endif
+        this->main_queue_sampler_zombies.push_back({main_queue_cpu_timeline, id});
     }
 
     auto ImplDevice::slot(BufferId id) -> ImplBufferSlot &

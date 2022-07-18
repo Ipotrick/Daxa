@@ -183,6 +183,8 @@ namespace daxa
         auto create_command_list(CommandListInfo const & info) -> CommandList;
         auto create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore;
 
+        auto map_memory(BufferId id) -> void *;
+        void unmap_memory(BufferId id);
         auto info() const -> DeviceInfo const &;
         void wait_idle();
 
