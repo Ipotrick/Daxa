@@ -1,3 +1,6 @@
+#include <daxa/daxa.hpp>
+using namespace daxa::types;
+
 #include <iostream>
 #include <thread>
 
@@ -8,9 +11,6 @@
 #define GLFW_EXPOSE_NATIVE_X11
 #endif
 #include <GLFW/glfw3native.h>
-
-#include <daxa/daxa.hpp>
-using namespace daxa::types;
 
 template <typename App>
 struct AppWindow
