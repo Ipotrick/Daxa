@@ -169,7 +169,7 @@ namespace daxa
             .dstBinding = STORAGE_IMAGE_BINDING,
             .dstArrayElement = index,
             .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
             .pImageInfo = &vk_descriptor_image_info,
             .pBufferInfo = nullptr,
             .pTexelBufferView = nullptr,
