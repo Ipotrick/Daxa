@@ -26,6 +26,37 @@ namespace daxa
         Filter filter = {};
     };
 
+    struct BufferCopyInfo
+    {
+        BufferId src_buffer = {};
+        usize src_offset = {};
+        BufferId dst_buffer = {};
+        usize dst_offset = {};
+        usize size = {};
+    }; 
+
+    struct BufferImageCopy
+    {
+        BufferId buffer = {};
+        usize buffer_offset = {};
+        ImageId image = {};
+        ImageLayout image_layout = {};
+        ImageArraySlice image_slice = {};
+        Offset3D image_offset = {};
+        Extent3D image_extent = {};
+    };
+
+    struct ImageToBufferInfo
+    {
+        ImageId image = {};
+        ImageLayout image_layout = {};
+        ImageArraySlice image_slice = {};
+        Offset3D image_offset = {};
+        Extent3D image_extent = {};
+        BufferId buffer = {};
+        usize buffer_offset = {};
+    }; 
+
     struct ImageCopyInfo
     {
         ImageId src_image = {};
@@ -67,8 +98,11 @@ namespace daxa
     {
         ~CommandList();
 
-        void blit_image_to_image(ImageBlitInfo const & info);
+        void copy_buffer_to_buffer(BufferCopyInfo const & info);
+        void copy_buffer_to_image(BufferImageCopy const & info);
+        void copy_image_to_buffer(BufferImageCopy const & info);
         void copy_image_to_image(ImageCopyInfo const & info);
+        void blit_image_to_image(ImageBlitInfo const & info);
         void clear_image(ImageClearInfo const & info);
 
         void pipeline_barrier(PipelineBarrierInfo const & info);
