@@ -62,6 +62,7 @@ namespace daxa
         std::vector<std::pair<u64, ImageViewId>> main_queue_image_view_zombies = {};
         std::vector<std::pair<u64, SamplerId>> main_queue_sampler_zombies = {};
         std::vector<std::pair<u64, std::shared_ptr<ImplBinarySemaphore>>> main_queue_binary_semaphore_zombies = {};
+        std::vector<std::pair<u64, std::shared_ptr<ImplBinarySemaphore>>> main_queue_timeline_semaphore_zombies = {};
         std::vector<std::pair<u64, std::shared_ptr<ImplComputePipeline>>> main_queue_compute_pipeline_zombies = {};
         void main_queue_housekeeping_apis_no_lock();
         void main_queue_clean_dead_zombies();

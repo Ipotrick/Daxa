@@ -24,7 +24,7 @@ namespace tests
         // with the swapchain, ie. clearing the surface!)
         app.device.submit_commands({
             .command_lists = {cmd_list},
-            .signal_binary_semaphores_on_completion = {binary_semaphore},
+            .signal_binary_semaphores = {binary_semaphore},
         });
     }
 } // namespace tests
