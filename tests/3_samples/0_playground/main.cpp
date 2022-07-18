@@ -159,7 +159,7 @@ struct App : AppWindow<App>
         });
 
         device.present_frame({
-            .wait_on_binary = binary_semaphore,
+            .wait_binary_semaphores = {binary_semaphore},
             .swapchain = swapchain,
         });
     }
