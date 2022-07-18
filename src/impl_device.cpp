@@ -555,19 +555,17 @@ namespace daxa
 
         auto check_and_cleanup_gpu_resources = [&](auto & zombies, auto const & cleanup_fn)
         {
-            for (auto iter = zombies.begin(); iter != zombies.end();)
+            while (true)
             {
-                auto & [timeline_value, object] = *iter;
+                auto & [timeline_value, object] = zombies.back();
 
-                if (timeline_value <= gpu_timeline_value)
+                if (timeline_value > gpu_timeline_value)
                 {
-                    cleanup_fn(object);
-                    iter = zombies.erase(iter);
+                    break;
                 }
-                else
-                {
-                    ++iter;
-                }
+
+                cleanup_fn(object);
+                zombies.pop_back();
             }
         };
 
