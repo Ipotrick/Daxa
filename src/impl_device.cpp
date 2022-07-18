@@ -59,25 +59,50 @@ namespace daxa
             submit_vk_command_buffers.push_back(impl_cmd_list.vk_cmd_buffer);
         }
 
-        std::vector<VkSemaphore> submit_semaphore_signal_vks = {}; // All timeline semaphores come first, then binary semaphores follow.
-        std::vector<u64> submit_semaphore_signal_values = {};             // Used for timeline semaphores. Ignored (push dummy value) for binary semaphores.
+        std::vector<VkSemaphore> submit_semaphore_signals = {};  // All timeline semaphores come first, then binary semaphores follow.
+        std::vector<u64> submit_semaphore_signal_values = {};       // Used for timeline semaphores. Ignored (push dummy value) for binary semaphores.
 
         // Add main queue timeline signaling as first timeline semaphore singaling:
-        submit_semaphore_signal_vks.push_back(impl.vk_main_queue_gpu_timeline_semaphore);
+        submit_semaphore_signals.push_back(impl.vk_main_queue_gpu_timeline_semaphore);
         submit_semaphore_signal_values.push_back(curreny_main_queue_cpu_timeline_value);
 
-        for (auto & binary_semaphore : submit_info.signal_binary_semaphores_on_completion)
+        for (auto & [timeline_semaphore, signal_value] : submit_info.signal_timeline_semaphores)
+        {
+            auto & impl_timeline_semaphore = *reinterpret_cast<ImplTimelineSemaphore *>(timeline_semaphore.impl.get());
+            submit_semaphore_signals.push_back(impl_timeline_semaphore.vk_semaphore);
+            submit_semaphore_signal_values.push_back(signal_value);
+        }
+
+        for (auto & binary_semaphore : submit_info.signal_binary_semaphores)
         {
             auto & impl_binary_semaphore = *reinterpret_cast<ImplBinarySemaphore *>(binary_semaphore.impl.get());
-            submit_semaphore_signal_vks.push_back(impl_binary_semaphore.vk_semaphore);
+            submit_semaphore_signals.push_back(impl_binary_semaphore.vk_semaphore);
             submit_semaphore_signal_values.push_back(0); // The vulkan spec requires to have dummy values for binary semaphores.
+        }
+
+        // used to synchronize with previous submits:
+        std::vector<VkSemaphore> submit_semaphore_waits = {};  // All timeline semaphores come first, then binary semaphores follow.
+        std::vector<u64> submit_semaphore_wait_values = {};     // Used for timeline semaphores. Ignored (push dummy value) for binary semaphores.
+
+        for (auto & [timeline_semaphore, wait_value] : submit_info.wait_timeline_semaphores)
+        {
+            auto & impl_timeline_semaphore = *reinterpret_cast<ImplTimelineSemaphore *>(timeline_semaphore.impl.get());
+            submit_semaphore_waits.push_back(impl_timeline_semaphore.vk_semaphore);
+            submit_semaphore_wait_values.push_back(wait_value);
+        }
+
+        for (auto & binary_semaphore : submit_info.wait_binary_semaphores)
+        {
+            auto & impl_binary_semaphore = *reinterpret_cast<ImplTimelineSemaphore *>(binary_semaphore.impl.get());
+            submit_semaphore_waits.push_back(impl_binary_semaphore.vk_semaphore);
+            submit_semaphore_wait_values.push_back(0);
         }
 
         VkTimelineSemaphoreSubmitInfo timelineInfo{
             .sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
             .pNext = nullptr,
-            .waitSemaphoreValueCount = 0,
-            .pWaitSemaphoreValues = nullptr,
+            .waitSemaphoreValueCount = static_cast<u32>(submit_semaphore_wait_values.size()),
+            .pWaitSemaphoreValues = submit_semaphore_wait_values.data(),
             .signalSemaphoreValueCount = static_cast<u32>(submit_semaphore_signal_values.size()),
             .pSignalSemaphoreValues = submit_semaphore_signal_values.data(),
         };
@@ -86,13 +111,13 @@ namespace daxa
         VkSubmitInfo vk_submit_info{
             .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
             .pNext = reinterpret_cast<void *>(&timelineInfo),
-            .waitSemaphoreCount = 0,
-            .pWaitSemaphores = nullptr,
+            .waitSemaphoreCount = static_cast<u32>(submit_semaphore_waits.size()),
+            .pWaitSemaphores = submit_semaphore_waits.data(),
             .pWaitDstStageMask = &pipe_stage_flags,
             .commandBufferCount = static_cast<u32>(submit_vk_command_buffers.size()),
             .pCommandBuffers = submit_vk_command_buffers.data(),
-            .signalSemaphoreCount = static_cast<u32>(submit_semaphore_signal_vks.size()),
-            .pSignalSemaphores = submit_semaphore_signal_vks.data(),
+            .signalSemaphoreCount = static_cast<u32>(submit_semaphore_signals.size()),
+            .pSignalSemaphores = submit_semaphore_signals.data(),
         };
         vkQueueSubmit(impl.main_queue_vk_queue, 1, &vk_submit_info, VK_NULL_HANDLE);
 
@@ -106,14 +131,22 @@ namespace daxa
     {
         auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
         auto & swapchain_impl = *reinterpret_cast<ImplSwapchain *>(info.swapchain.impl.get());
-        auto & binary_semaphore_impl = *reinterpret_cast<ImplBinarySemaphore *>(info.wait_on_binary.impl.get());
+
+        // used to synchronise with previous submits:
+        std::vector<VkSemaphore> submit_semaphore_waits = {};
+
+        for (auto & binary_semaphore : info.wait_binary_semaphores)
+        {
+            auto & impl_binary_semaphore = *reinterpret_cast<ImplTimelineSemaphore *>(binary_semaphore.impl.get());
+            submit_semaphore_waits.push_back(impl_binary_semaphore.vk_semaphore);
+        }
 
         u32 image_index = 0;
         VkPresentInfoKHR present_info{
             .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
             .pNext = nullptr,
-            .waitSemaphoreCount = static_cast<u32>(1),
-            .pWaitSemaphores = &binary_semaphore_impl.vk_semaphore,
+            .waitSemaphoreCount = static_cast<u32>(submit_semaphore_waits.size()),
+            .pWaitSemaphores = submit_semaphore_waits.data(),
             .swapchainCount = static_cast<u32>(1),
             .pSwapchains = &swapchain_impl.vk_swapchain,
             .pImageIndices = &swapchain_impl.current_image_index,
@@ -155,6 +188,12 @@ namespace daxa
     {
         auto impl = std::static_pointer_cast<ImplDevice>(this->impl);
         return BinarySemaphore{impl->binary_semaphore_recyclable_list.recycle_or_create_new(impl, info)};
+    }
+    
+    auto Device::create_timeline_semaphore(TimelineSemaphoreInfo const & info) -> TimelineSemaphore
+    {
+        auto impl = std::static_pointer_cast<ImplDevice>(this->impl);
+        return TimelineSemaphore{ std::make_shared<ImplTimelineSemaphore>(impl, info)};
     }
 
     auto Device::create_buffer(BufferInfo const & info) -> BufferId
@@ -409,7 +448,7 @@ namespace daxa
 
         VkSemaphoreTypeCreateInfo timelineCreateInfo{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
-            .pNext = NULL,
+            .pNext = nullptr,
             .semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
             .initialValue = 0,
         };
@@ -550,6 +589,7 @@ namespace daxa
                 this->binary_semaphore_recyclable_list.recyclables.push_back(std::move(binary_semaphore)); });
         }
         check_and_cleanup_gpu_resources(this->main_queue_compute_pipeline_zombies, [&](auto & compute_pipeline) {});
+        check_and_cleanup_gpu_resources(this->main_queue_timeline_semaphore_zombies, [&](auto & timeline_semaphore) {});
     }
 
     auto ImplDevice::new_buffer(BufferInfo const & info) -> BufferId
