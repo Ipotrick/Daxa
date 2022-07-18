@@ -1,10 +1,8 @@
 #pragma once
 
-#include <memory>
-
+#include <daxa/core.hpp>
 #include <daxa/gpu_resources.hpp>
 #include <daxa/pipeline.hpp>
-#include <daxa/swapchain.hpp>
 
 namespace daxa
 {

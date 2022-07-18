@@ -6,5 +6,6 @@
 #include <daxa/pipeline.hpp>
 #include <daxa/semaphore.hpp>
 #include <daxa/swapchain.hpp>
+#include <daxa/command_list.hpp>
 #include <daxa/device.hpp>
 #include <daxa/context.hpp>
