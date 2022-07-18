@@ -11,7 +11,7 @@ namespace tests
             daxa::Device daxa_device = daxa_ctx.create_default_device();
 
             daxa::Swapchain daxa_swapchain = daxa_device.create_swapchain({
-                .native_window_handle = get_native_handle(),
+                .native_window = get_native_handle(),
                 .width = size_x,
                 .height = size_y,
                 .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
@@ -30,7 +30,7 @@ namespace tests
             daxa::Device daxa_device = daxa_ctx.create_default_device();
 
             daxa::Swapchain daxa_swapchain = daxa_device.create_swapchain({
-                .native_window_handle = get_native_handle(),
+                .native_window = get_native_handle(),
                 .width = size_x,
                 .height = size_y,
                 .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
