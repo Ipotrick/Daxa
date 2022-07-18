@@ -38,7 +38,7 @@ struct App : AppWindow<App>
 
     daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
         .root_paths = {
-            "tests/3_samples/1_mandelbrot/shaders",
+            "tests/3_samples/0_playground/shaders",
             "include",
         },
         .debug_name = "Test1 Pipeline Compiler",
