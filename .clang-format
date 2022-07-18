@@ -20,3 +20,4 @@ AllowShortCaseLabelsOnASingleLine: true
 AllowShortBlocksOnASingleLine: false
 
 PointerAlignment: Middle
+IndentPPDirectives: BeforeHash

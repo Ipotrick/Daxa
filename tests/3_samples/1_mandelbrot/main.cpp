@@ -1,15 +1,5 @@
-#include <iostream>
+#include <0_common/window.hpp>
 #include <thread>
-
-#include <GLFW/glfw3.h>
-#if defined(_WIN32)
-#define GLFW_EXPOSE_NATIVE_WIN32
-#elif defined(__linux__)
-#define GLFW_EXPOSE_NATIVE_X11
-#endif
-#include <GLFW/glfw3native.h>
-
-#include <daxa/daxa.hpp>
 
 using namespace daxa::types;
 
@@ -17,35 +7,6 @@ struct ComputePush
 {
     daxa::ImageId image_id;
     u32 frame_dim_x, frame_dim_y;
-};
-
-template <typename App>
-struct AppWindow
-{
-    GLFWwindow * glfw_window_ptr;
-    u32 size_x = 800, size_y = 600;
-    bool minimized = false;
-
-    AppWindow()
-    {
-        glfwInit();
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        glfw_window_ptr = glfwCreateWindow(static_cast<i32>(size_x), static_cast<i32>(size_y), "test1", nullptr, nullptr);
-        glfwSetWindowUserPointer(glfw_window_ptr, this);
-        glfwSetWindowSizeCallback(
-            glfw_window_ptr,
-            [](GLFWwindow * window_ptr, i32 sx, i32 sy)
-            {
-                auto & app = *reinterpret_cast<App *>(glfwGetWindowUserPointer(window_ptr));
-                app.on_resize(static_cast<u32>(sx), static_cast<u32>(sy));
-            });
-    }
-
-    ~AppWindow()
-    {
-        glfwDestroyWindow(glfw_window_ptr);
-        glfwTerminate();
-    }
 };
 
 struct App : AppWindow<App>
@@ -95,6 +56,8 @@ struct App : AppWindow<App>
         .size = {size_x, size_y, 1},
         .usage = daxa::ImageUsageFlagBits::STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
     });
+
+    daxa::BufferId buffer = device.create_buffer({ .size = 64, });
 
     App()
     {
@@ -154,11 +117,6 @@ struct App : AppWindow<App>
             .before_layout = daxa::ImageLayout::UNDEFINED,
             .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .image_id = swapchain_image,
-            .image_slice = {
-                .image_aspect = daxa::ImageAspectFlagBits::COLOR,
-                .level_count = 1,
-                .layer_count = 1,
-            },
         });
 
         cmd_list.pipeline_barrier_image_transition({
@@ -166,11 +124,6 @@ struct App : AppWindow<App>
             .before_layout = daxa::ImageLayout::UNDEFINED,
             .after_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
             .image_id = render_image,
-            .image_slice = {
-                .image_aspect = daxa::ImageAspectFlagBits::COLOR,
-                .level_count = 1,
-                .layer_count = 1,
-            },
         });
 
         cmd_list.blit_image_to_image({
@@ -189,11 +142,6 @@ struct App : AppWindow<App>
             .before_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .after_layout = daxa::ImageLayout::PRESENT_SRC,
             .image_id = swapchain_image,
-            .image_slice = {
-                .image_aspect = daxa::ImageAspectFlagBits::COLOR,
-                .level_count = 1,
-                .layer_count = 1,
-            },
         });
 
         cmd_list.pipeline_barrier_image_transition({
@@ -201,11 +149,6 @@ struct App : AppWindow<App>
             .before_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
             .after_layout = daxa::ImageLayout::GENERAL,
             .image_id = render_image,
-            .image_slice = {
-                .image_aspect = daxa::ImageAspectFlagBits::COLOR,
-                .level_count = 1,
-                .layer_count = 1,
-            },
         });
 
         cmd_list.complete();

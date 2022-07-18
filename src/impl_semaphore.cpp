@@ -10,8 +10,12 @@ namespace daxa
         if (this->impl.use_count() == 1)
         {
             std::shared_ptr<ImplBinarySemaphore> impl = std::static_pointer_cast<ImplBinarySemaphore>(this->impl);
+#if defined(DAXA_ENABLE_THREADSAFETY)
             std::unique_lock lock{DAXA_LOCK_WEAK(impl->impl_device)->main_queue_zombies_mtx};
             u64 main_queue_cpu_timeline_value = DAXA_LOCK_WEAK(impl->impl_device)->main_queue_cpu_timeline.load(std::memory_order::relaxed);
+#else 
+            u64 main_queue_cpu_timeline_value = DAXA_LOCK_WEAK(impl->impl_device)->main_queue_cpu_timeline;
+#endif
             DAXA_LOCK_WEAK(impl->impl_device)->main_queue_binary_semaphore_zombies.push_back({main_queue_cpu_timeline_value, impl});
         }
     }

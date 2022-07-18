@@ -26,6 +26,10 @@ template <typename T>
 using ComPtr = CComPtr<T>;
 #endif
 
+#if !defined(DAXA_DISABLE_THREADSAFETY)
+#define DAXA_ENABLE_THREADSAFETY
+#endif
+
 #if !defined(NDEBUG)
 
 // TODO: Figure out what to do for debug callback
@@ -33,7 +37,7 @@ using ComPtr = CComPtr<T>;
 
 #endif
 
-#ifdef DAXA_DEBUG
+#if defined(DAXA_DEBUG)
 #define DAXA_LOCK_WEAK(x)                                                                                \
     [&]() {                                                                                              \
         auto ptr = x.lock();                                                                             \
@@ -47,10 +51,6 @@ using ComPtr = CComPtr<T>;
 #else
 #define DAXA_LOCK_WEAK(x) \
     x.lock()
-#endif
-
-#ifndef DAXA_NO_THREADSAFETY
-#define DAXA_ENABLE_THREADSAFETY
 #endif
 
 namespace daxa {
