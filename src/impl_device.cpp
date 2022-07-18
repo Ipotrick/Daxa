@@ -11,7 +11,6 @@ namespace daxa
         wait_idle();
         collect_garbage();
 
-        impl.submits_pool.clear();
         impl.binary_semaphore_recyclable_list.clear();
         impl.command_list_recyclable_list.clear();
     }
@@ -41,21 +40,14 @@ namespace daxa
         u64 curreny_main_queue_cpu_timeline_value = ++impl.main_queue_cpu_timeline;
 #endif
 
-        ImplDevice::Submit submit = {};
-
-        if (!impl.submits_pool.empty())
-        {
-            submit = std::move(impl.submits_pool.back());
-            impl.submits_pool.pop_back();
-        }
-        submit.timeline_value = curreny_main_queue_cpu_timeline_value;
+        std::pair<u64, std::vector<std::shared_ptr<ImplCommandList>>> submit = { curreny_main_queue_cpu_timeline_value, {} };
 
         std::vector<VkCommandBuffer> submit_vk_command_buffers = {};
         for (auto & command_list : submit_info.command_lists)
         {
             auto & impl_cmd_list = *reinterpret_cast<ImplCommandList *>(command_list.impl.get());
             DAXA_DBG_ASSERT_TRUE_M(impl_cmd_list.recording_complete, "all submitted command lists must be completed before submission");
-            submit.command_lists.push_back(std::static_pointer_cast<ImplCommandList>(command_list.impl));
+            submit.second.push_back(std::static_pointer_cast<ImplCommandList>(command_list.impl));
             submit_vk_command_buffers.push_back(impl_cmd_list.vk_cmd_buffer);
         }
 
@@ -121,10 +113,9 @@ namespace daxa
         };
         vkQueueSubmit(impl.main_queue_vk_queue, 1, &vk_submit_info, VK_NULL_HANDLE);
 
-        impl.main_queue_command_list_submits.push_back(std::move(submit));
+        impl.main_queue_submits_zombies.push_back(std::move(submit));
 
-        impl.main_queue_housekeeping_apis_no_lock();
-        impl.main_queue_clean_dead_zombies();
+        impl.main_queue_collect_garbage(false);
     }
 
     void Device::present_frame(PresentInfo const & info)
@@ -160,12 +151,7 @@ namespace daxa
     void Device::collect_garbage()
     {
         auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
-
-#if defined(DAXA_ENABLE_THREADSAFETY)
-        std::unique_lock lock{impl.submit_mtx};
-#endif
-        impl.main_queue_housekeeping_apis_no_lock();
-        impl.main_queue_clean_dead_zombies();
+        impl.main_queue_collect_garbage(true);
     }
 
     auto Device::create_swapchain(SwapchainInfo const & info) -> Swapchain
@@ -519,31 +505,7 @@ namespace daxa
         vkDestroyDevice(this->vk_device, nullptr);
     }
 
-    void ImplDevice::main_queue_housekeeping_apis_no_lock()
-    {
-        for (auto iter = this->main_queue_command_list_submits.begin(); iter != this->main_queue_command_list_submits.end();)
-        {
-            ImplDevice::Submit & submit = *iter;
-
-            u64 main_queue_gpu_timeline_value = std::numeric_limits<u64>::max();
-            auto vk_result = vkGetSemaphoreCounterValue(this->vk_device, vk_main_queue_gpu_timeline_semaphore, &main_queue_gpu_timeline_value);
-            DAXA_DBG_ASSERT_TRUE_M(vk_result != VK_ERROR_DEVICE_LOST, "device lost");
-
-            if (submit.timeline_value <= main_queue_gpu_timeline_value)
-            {
-                submit.command_lists.clear();
-                this->submits_pool.push_back(std::move(submit));
-
-                iter = this->main_queue_command_list_submits.erase(iter);
-            }
-            else
-            {
-                ++iter;
-            }
-        }
-    }
-
-    void ImplDevice::main_queue_clean_dead_zombies()
+    void ImplDevice::main_queue_collect_garbage(bool lock_submit)
     {
 #if defined(DAXA_ENABLE_THREADSAFETY)
         std::unique_lock lock{this->main_queue_zombies_mtx};
@@ -555,7 +517,7 @@ namespace daxa
 
         auto check_and_cleanup_gpu_resources = [&](auto & zombies, auto const & cleanup_fn)
         {
-            while (true)
+            while (!zombies.empty())
             {
                 auto & [timeline_value, object] = zombies.back();
 
@@ -569,14 +531,40 @@ namespace daxa
             }
         };
 
-        check_and_cleanup_gpu_resources(this->main_queue_buffer_zombies, [&](auto id)
-                                        { this->cleanup_buffer(id); });
-        check_and_cleanup_gpu_resources(this->main_queue_image_zombies, [&](auto id)
-                                        { this->cleanup_image(id); });
-        check_and_cleanup_gpu_resources(this->main_queue_image_view_zombies, [&](auto id)
-                                        { this->cleanup_image_view(id); });
-        check_and_cleanup_gpu_resources(this->main_queue_sampler_zombies, [&](auto id)
-                                        { this->cleanup_sampler(id); });
+#if defined(DAXA_ENABLE_THREADSAFETY)
+        if (lock_submit)
+        {
+            this->submit_mtx.lock();
+        }
+#endif
+        check_and_cleanup_gpu_resources(this->main_queue_submits_zombies, [&, this](auto & command_lists){
+            for (std::shared_ptr<ImplCommandList>& cmd_list : command_lists)
+            {
+                for (usize i = 0; cmd_list->deferred_destruction_count; ++i)
+                {
+                    auto [id, index] = cmd_list->deferred_destructions[i];
+                    switch (index)
+                    {
+                        case DEFERRED_DESTRUCTION_BUFFER_INDEX: this->zombiefy_buffer(BufferId{id}); break;
+                        case DEFERRED_DESTRUCTION_IMAGE_INDEX: this->zombiefy_image(ImageId{id}); break;
+                        case DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX: this->zombiefy_image_view(ImageViewId{id}); break;
+                        case DEFERRED_DESTRUCTION_SAMPLER_INDEX: this->zombiefy_sampler(SamplerId{id}); break;
+                        default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
+                    }
+                }
+            }
+            command_lists.clear();
+        });
+#if defined(DAXA_ENABLE_THREADSAFETY)
+        if (lock_submit)
+        {
+            this->submit_mtx.unlock();
+        }
+#endif
+        check_and_cleanup_gpu_resources(this->main_queue_buffer_zombies, [&](auto id) { this->cleanup_buffer(id); });
+        check_and_cleanup_gpu_resources(this->main_queue_image_zombies, [&](auto id) { this->cleanup_image(id); });
+        check_and_cleanup_gpu_resources(this->main_queue_image_view_zombies, [&](auto id) { this->cleanup_image_view(id); });
+        check_and_cleanup_gpu_resources(this->main_queue_sampler_zombies, [&](auto id) { this->cleanup_sampler(id); });
         {
 #if defined(DAXA_ENABLE_THREADSAFETY)
             std::unique_lock lock{this->binary_semaphore_recyclable_list.mtx};

@@ -22,6 +22,8 @@ namespace daxa
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
 
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+
         VkBufferCopy vk_buffer_copy{
             .srcOffset = info.src_offset,
             .dstOffset = info.dst_offset,
@@ -40,6 +42,8 @@ namespace daxa
     void CommandList::copy_buffer_to_image(BufferImageCopy const & info)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
 
         VkBufferImageCopy vk_buffer_image_copy{
             .bufferOffset = info.buffer_offset,
@@ -63,6 +67,8 @@ namespace daxa
     void CommandList::copy_image_to_buffer(BufferImageCopy const & info)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
 
         VkBufferImageCopy vk_buffer_image_copy{
             .bufferOffset = info.buffer_offset,
@@ -175,6 +181,8 @@ namespace daxa
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
 
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+
         DAXA_DBG_ASSERT_TRUE_M(size <= MAX_PUSH_CONSTANT_BYTE_SIZE, MAX_PUSH_CONSTANT_SIZE_ERROR);
         DAXA_DBG_ASSERT_TRUE_M(size % 4 == 0, "push constant size must be a multiple of 4 bytes");
 
@@ -194,8 +202,42 @@ namespace daxa
     void CommandList::dispatch(u32 group_x, u32 group_y, u32 group_z)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+
         vkCmdDispatch(impl.vk_cmd_buffer, group_x, group_y, group_z);
     }
+
+    void defer_destruction_helper(void* impl_coid, GPUResourceId id, u8 index)
+    {
+        auto & impl = *reinterpret_cast<ImplCommandList *>(impl_coid);
+
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+        DAXA_DBG_ASSERT_TRUE_M(impl.deferred_destruction_count < DEFERRED_DESTRUCTION_COUNT_MAX, "can not defer the destruction of more than 32 resources per command list recording");
+
+        impl.deferred_destructions[impl.deferred_destruction_count++] = { id, index };
+    }
+
+    void CommandList::destroy_buffer_deferred(BufferId id)
+    {
+        defer_destruction_helper(impl.get(), GPUResourceId{ .index = id.index, .version = id.version }, DEFERRED_DESTRUCTION_BUFFER_INDEX);
+    }
+
+    void CommandList::destroy_image_deferred(ImageId id)
+    {
+        defer_destruction_helper(impl.get(), GPUResourceId{ .index = id.index, .version = id.version }, DEFERRED_DESTRUCTION_IMAGE_INDEX);
+    }
+
+    void CommandList::destroy_image_view_deferred(ImageViewId id)
+    {
+        defer_destruction_helper(impl.get(), GPUResourceId{ .index = id.index, .version = id.version }, DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX);
+    }
+
+    void CommandList::destroy_sampler_deferred(SamplerId id)
+    {
+        defer_destruction_helper(impl.get(), GPUResourceId{ .index = id.index, .version = id.version }, DEFERRED_DESTRUCTION_SAMPLER_INDEX);
+    }
+
 
     void CommandList::complete()
     {
@@ -339,5 +381,6 @@ namespace daxa
     void ImplCommandList::reset()
     {
         vkResetCommandPool(DAXA_LOCK_WEAK(impl_device)->vk_device, this->vk_cmd_pool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
+        deferred_destruction_count = 0;
     }
 } // namespace daxa

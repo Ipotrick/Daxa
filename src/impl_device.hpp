@@ -31,19 +31,10 @@ namespace daxa
         RecyclableList<ImplCommandList> command_list_recyclable_list = {};
         RecyclableList<ImplBinarySemaphore> binary_semaphore_recyclable_list = {};
 
-        // Submits:
-        struct Submit
-        {
-            u64 timeline_value = {};
-            std::vector<std::shared_ptr<ImplCommandList>> command_lists = {};
-        };
 #if defined(DAXA_ENABLE_THREADSAFETY)
         std::mutex submit_mtx = {};
 #endif
-        std::vector<Submit> submits_pool = {};
-
         // Main queue:
-        std::vector<Submit> main_queue_command_list_submits = {};
         VkQueue main_queue_vk_queue = {};
         u32 main_queue_family_index = {};
         
@@ -57,6 +48,7 @@ namespace daxa
 #if defined(DAXA_ENABLE_THREADSAFETY)
         std::mutex main_queue_zombies_mtx = {};
 #endif
+        std::vector<std::pair<u64, std::vector<std::shared_ptr<ImplCommandList>>>> main_queue_submits_zombies = {};
         std::vector<std::pair<u64, BufferId>> main_queue_buffer_zombies = {};
         std::vector<std::pair<u64, ImageId>> main_queue_image_zombies = {};
         std::vector<std::pair<u64, ImageViewId>> main_queue_image_view_zombies = {};
@@ -64,8 +56,7 @@ namespace daxa
         std::vector<std::pair<u64, std::shared_ptr<ImplBinarySemaphore>>> main_queue_binary_semaphore_zombies = {};
         std::vector<std::pair<u64, std::shared_ptr<ImplBinarySemaphore>>> main_queue_timeline_semaphore_zombies = {};
         std::vector<std::pair<u64, std::shared_ptr<ImplComputePipeline>>> main_queue_compute_pipeline_zombies = {};
-        void main_queue_housekeeping_apis_no_lock();
-        void main_queue_clean_dead_zombies();
+        void main_queue_collect_garbage(bool lock_submit);
 
         ImplDevice(DeviceInfo const & info, DeviceVulkanInfo const & vk_info, std::shared_ptr<ImplContext> impl_ctx, VkPhysicalDevice physical_device);
         ~ImplDevice();
