@@ -3,7 +3,6 @@
 #include "impl_device.hpp"
 
 #include <regex>
-#include <iostream>
 #include <thread>
 
 static const std::regex PRAGMA_ONCE_REGEX = std::regex(R"reg(#\s*pragma\s*once\s*)reg");
@@ -339,7 +338,6 @@ namespace daxa
                 str[i] = static_cast<char const *>(error_message->GetBufferPointer())[i];
             }
             str = std::string("DXC: ") + str;
-            std::cerr << str << std::endl;
             return daxa::ResultErr{.message = str};
         }
 
