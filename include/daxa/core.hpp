@@ -9,7 +9,6 @@
 #include <functional>
 #include <chrono>
 #include <variant>
-#include <stdexcept>
 
 #include <daxa/types.hpp>
 
@@ -20,6 +19,7 @@
 #if defined(DAXA_DEBUG)
 #include <iostream>
 #include <cstdlib>
+#include <stdexcept>
 
 #define DAXA_DBG_ASSERT_FAIL_STRING "[[DAXA ASSERT FAILURE]]"
 
