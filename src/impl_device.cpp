@@ -540,7 +540,7 @@ namespace daxa
         check_and_cleanup_gpu_resources(this->main_queue_submits_zombies, [&, this](auto & command_lists){
             for (std::shared_ptr<ImplCommandList>& cmd_list : command_lists)
             {
-                for (usize i = 0; cmd_list->deferred_destruction_count; ++i)
+                for (usize i = 0; i < cmd_list->deferred_destruction_count; ++i)
                 {
                     auto [id, index] = cmd_list->deferred_destructions[i];
                     switch (index)
@@ -562,8 +562,8 @@ namespace daxa
         }
 #endif
         check_and_cleanup_gpu_resources(this->main_queue_buffer_zombies, [&](auto id) { this->cleanup_buffer(id); });
-        check_and_cleanup_gpu_resources(this->main_queue_image_zombies, [&](auto id) { this->cleanup_image(id); });
         check_and_cleanup_gpu_resources(this->main_queue_image_view_zombies, [&](auto id) { this->cleanup_image_view(id); });
+        check_and_cleanup_gpu_resources(this->main_queue_image_zombies, [&](auto id) { this->cleanup_image(id); });
         check_and_cleanup_gpu_resources(this->main_queue_sampler_zombies, [&](auto id) { this->cleanup_sampler(id); });
         {
 #if defined(DAXA_ENABLE_THREADSAFETY)
@@ -581,6 +581,8 @@ namespace daxa
     auto ImplDevice::new_buffer(BufferInfo const & info) -> BufferId
     {
         auto [id, ret] = gpu_table.buffer_slots.new_slot();
+
+        DAXA_DBG_ASSERT_TRUE_M(info.size > 0, "can not create buffers of size zero");
 
         ret.info = info;
 
