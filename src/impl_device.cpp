@@ -38,7 +38,7 @@ namespace daxa
         u64 curreny_main_queue_cpu_timeline_value = impl.main_queue_cpu_timeline.fetch_add(1ull, std::memory_order::relaxed) + 1;
         std::unique_lock lock{impl.submit_mtx};
 #else
-        u64 curreny_main_queue_cpu_timeline_value = impl.main_queue_cpu_timeline++;
+        u64 curreny_main_queue_cpu_timeline_value = ++impl.main_queue_cpu_timeline;
 #endif
 
         ImplDevice::Submit submit = {};

@@ -3,6 +3,7 @@
 #include <daxa/daxa.hpp>
 #include <daxa/device.hpp>
 
+#include "impl_core.hpp"
 #include "impl_context.hpp"
 #include "impl_recyclable_list.hpp"
 
