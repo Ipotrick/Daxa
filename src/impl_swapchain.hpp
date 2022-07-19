@@ -25,5 +25,6 @@ namespace daxa
 
         void recreate();
         void cleanup();
+        void recreate_surface();
     };
 } // namespace daxa
