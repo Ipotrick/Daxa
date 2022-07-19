@@ -13,6 +13,8 @@ namespace daxa
     {
         ~BinarySemaphore();
 
+        auto info() const -> BinarySemaphoreInfo const &;
+
       private:
         friend struct Device;
         BinarySemaphore(std::shared_ptr<void> impl);
@@ -27,6 +29,8 @@ namespace daxa
     struct TimelineSemaphore : Handle
     {
         ~TimelineSemaphore();
+
+        auto info() const -> TimelineSemaphoreInfo const &;
 
         auto value() const -> u64;
         void set_value(u64 value);
