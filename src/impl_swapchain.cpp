@@ -45,7 +45,7 @@ namespace daxa
             .pNext = nullptr,
             .flags = 0,
             .dpy = nullptr,
-            .window = info.native_window_handle,
+            .window = info.native_window,
         };
         {
             auto func = (PFN_vkCreateXlibSurfaceKHR)vkGetInstanceProcAddr(DAXA_LOCK_WEAK(DAXA_LOCK_WEAK(impl_device)->impl_ctx)->vk_instance, "vkCreateXlibSurfaceKHR");
@@ -59,6 +59,7 @@ namespace daxa
         std::vector<VkSurfaceFormatKHR> surface_formats;
         surface_formats.resize(format_count);
         vkGetPhysicalDeviceSurfaceFormatsKHR(DAXA_LOCK_WEAK(impl_device)->vk_physical_device, this->vk_surface, &format_count, surface_formats.data());
+        DAXA_DBG_ASSERT_TRUE_M(format_count > 0, "No formats found");
 
         auto format_comparator = [&](auto const & a, auto const & b) -> bool
         {
@@ -66,6 +67,7 @@ namespace daxa
                    a_info.surface_format_selector(static_cast<Format>(b.format));
         };
         auto best_format = std::max_element(surface_formats.begin(), surface_formats.end(), format_comparator);
+        DAXA_DBG_ASSERT_TRUE_M(best_format != surface_formats.end(), "No viable formats found");
         this->vk_surface_format = *best_format;
 
         VkFenceCreateInfo fence_ci = {
