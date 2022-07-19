@@ -69,7 +69,7 @@ namespace daxa
             {
                 // Return empty string blob if this file has been included before
                 static const char null_str[] = " ";
-                impl_pipeline_compiler->dxc_utils->CreateBlob(null_str, sizeof(null_str), CP_UTF8, dxc_blob_encoding.GetAddressOf());
+                impl_pipeline_compiler->dxc_utils->CreateBlob(null_str, sizeof(null_str), CP_UTF8, &dxc_blob_encoding);
                 *include_source = dxc_blob_encoding.Detach();
                 return S_OK;
             }
@@ -86,7 +86,7 @@ namespace daxa
             }
             std::string str = str_result.value().string;
 
-            impl_pipeline_compiler->dxc_utils->CreateBlob(str.c_str(), static_cast<u32>(str.size()), CP_UTF8, dxc_blob_encoding.GetAddressOf());
+            impl_pipeline_compiler->dxc_utils->CreateBlob(str.c_str(), static_cast<u32>(str.size()), CP_UTF8, &dxc_blob_encoding);
             *include_source = dxc_blob_encoding.Detach();
             return S_OK;
         }
