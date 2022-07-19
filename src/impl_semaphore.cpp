@@ -20,6 +20,12 @@ namespace daxa
         }
     }
 
+    auto BinarySemaphore::info() const -> BinarySemaphoreInfo const &
+    {
+        auto& impl = *reinterpret_cast<ImplBinarySemaphore*>(this->impl.get());
+        return impl.info;
+    }
+
     ImplBinarySemaphore::ImplBinarySemaphore(std::weak_ptr<ImplDevice> a_impl_device)
         : impl_device{a_impl_device}
     {
@@ -98,6 +104,12 @@ namespace daxa
 
         VkResult result = vkWaitSemaphores(DAXA_LOCK_WEAK(impl.impl_device)->vk_device, &vk_semaphore_wait_info, timeout_nanos);
         return result != VK_TIMEOUT;
+    }
+
+    auto TimelineSemaphore::info() const -> TimelineSemaphoreInfo const &
+    {
+        auto& impl = *reinterpret_cast<ImplTimelineSemaphore*>(this->impl.get());
+        return impl.info;
     }
 
     TimelineSemaphore::~TimelineSemaphore()

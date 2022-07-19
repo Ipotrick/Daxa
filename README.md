@@ -11,9 +11,8 @@ Daxa is generally stable and tests for the included tests and my (and other Proj
 
 That said it is not meant to be the "ultimate vulkan can-do-anything abstraction"!
 It esposes the vulkan features that i personally (and a few other folks using daxa) use.
-The abstraction level is not too high, synchronization for example is still manual without the use of the taskgraph(TODO).
-
-Yet it changes a few fundamental things about vulkan, like the binding model.
+This also means that features that i didnt use or needed yet personally in the projects that use daxa are not exposed, glaring examples would be that raster pipelines only have a vertex and fragment shader.
+The abstraction level is not too high, synchronization for example is still manual without the use of the task lists (a simple rendergraph).
 
 ## List of notable features:
 * Easy initialization: Lots of defaults in creation of any resource. Much less boilderplate code then raw vulkan.

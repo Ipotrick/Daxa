@@ -76,6 +76,14 @@ namespace daxa
         ImageMipArraySlice dst_slice = {};
     };
 
+    struct BufferClearInfo
+    {
+        BufferId buffer = {};
+        usize offset = {};
+        usize size = {};
+        u32 clear_value = {};
+    };
+
     struct PipelineBarrierInfo
     {
         PipelineStageAccessFlags awaited_pipeline_access = PipelineStageAccessFlagBits::NONE;
@@ -101,6 +109,8 @@ namespace daxa
         void copy_image_to_buffer(BufferImageCopy const & info);
         void copy_image_to_image(ImageCopyInfo const & info);
         void blit_image_to_image(ImageBlitInfo const & info);
+        
+        void clear_buffer(BufferClearInfo const & info);
         void clear_image(ImageClearInfo const & info);
 
         void pipeline_barrier(PipelineBarrierInfo const & info);
@@ -121,6 +131,9 @@ namespace daxa
         void destroy_sampler_deferred(SamplerId id);
 
         void complete();
+        auto is_complete() const -> bool;
+
+        auto info() const -> CommandListInfo const &;
 
       private:
         friend struct Device;

@@ -14,17 +14,11 @@ namespace tests
     {
         auto cmd_list = app.device.create_command_list({});
 
-        auto binary_semaphore = app.device.create_binary_semaphore({});
-
+        // command lists must be completed before submission!
         cmd_list.complete();
 
-        // This semaphore is useful in the future, it will be used to
-        // notify the swapchain that it should wait for this semaphore
-        // before presenting (this is used when the command list interacts
-        // with the swapchain, ie. clearing the surface!)
         app.device.submit_commands({
             .command_lists = {cmd_list},
-            .signal_binary_semaphores = {binary_semaphore},
         });
     }
 } // namespace tests

@@ -177,6 +177,20 @@ namespace daxa
         }
     }
 
+    void CommandList::clear_buffer(BufferClearInfo const & info)
+    {
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
+        impl.flush_barriers();
+
+        vkCmdFillBuffer(
+            impl.vk_cmd_buffer,
+            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.buffer).vk_buffer,
+            static_cast<VkDeviceSize>(info.offset),
+            static_cast<VkDeviceSize>(info.size),
+            info.clear_value);
+    }
+
     void CommandList::push_constant(void const * data, u32 size, u32 offset)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
@@ -249,6 +263,18 @@ namespace daxa
         impl.recording_complete = true;
 
         vkEndCommandBuffer(impl.vk_cmd_buffer);
+    }
+
+    auto CommandList::is_complete() const -> bool
+    {
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        return impl.recording_complete;
+    }
+
+    auto CommandList::info() const -> CommandListInfo const &
+    {
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        return impl.info;
     }
 
     void CommandList::pipeline_barrier(PipelineBarrierInfo const & info)
