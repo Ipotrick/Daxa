@@ -326,6 +326,14 @@ namespace daxa
         static inline constexpr ImageUsageFlags SHADING_RATE_IMAGE = FRAGMENT_SHADING_RATE_ATTACHMENT;
     };
 
+    using BufferUsageFlags = u32;
+    struct BufferUsageFlagBits
+    {
+        static inline constexpr ImageUsageFlags READ = 0x00000001;
+        static inline constexpr ImageUsageFlags WRITE = 0x00000002;
+        static inline constexpr ImageUsageFlags READ_WRITE = READ | WRITE;
+    };
+
     using MemoryFlags = u32;
     struct MemoryFlagBits {
         static inline constexpr MemoryFlags DEDICATED_MEMORY = 0x00000001;
