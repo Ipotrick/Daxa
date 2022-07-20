@@ -13,7 +13,7 @@ namespace daxa
 #if defined(DAXA_ENABLE_THREADSAFETY)
             std::unique_lock lock{DAXA_LOCK_WEAK(impl->impl_device)->main_queue_zombies_mtx};
             u64 main_queue_cpu_timeline_value = DAXA_LOCK_WEAK(impl->impl_device)->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-#else 
+#else
             u64 main_queue_cpu_timeline_value = DAXA_LOCK_WEAK(impl->impl_device)->main_queue_cpu_timeline;
 #endif
             DAXA_LOCK_WEAK(impl->impl_device)->main_queue_binary_semaphore_zombies.push_back({main_queue_cpu_timeline_value, impl});
@@ -22,7 +22,7 @@ namespace daxa
 
     auto BinarySemaphore::info() const -> BinarySemaphoreInfo const &
     {
-        auto& impl = *reinterpret_cast<ImplBinarySemaphore*>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplBinarySemaphore *>(this->impl.get());
         return impl.info;
     }
 
@@ -68,7 +68,7 @@ namespace daxa
 
     auto TimelineSemaphore::value() const -> u64
     {
-        auto& impl = *reinterpret_cast<ImplTimelineSemaphore*>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplTimelineSemaphore *>(this->impl.get());
 
         u64 ret = {};
         vkGetSemaphoreCounterValue(DAXA_LOCK_WEAK(impl.impl_device)->vk_device, impl.vk_semaphore, &ret);
@@ -77,9 +77,9 @@ namespace daxa
 
     void TimelineSemaphore::set_value(u64 value)
     {
-        auto& impl = *reinterpret_cast<ImplTimelineSemaphore*>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplTimelineSemaphore *>(this->impl.get());
 
-        VkSemaphoreSignalInfo vk_semaphore_signal_info {
+        VkSemaphoreSignalInfo vk_semaphore_signal_info{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
             .pNext = nullptr,
             .semaphore = impl.vk_semaphore,
@@ -91,7 +91,7 @@ namespace daxa
 
     auto TimelineSemaphore::wait_for_value(u64 value, u64 timeout_nanos) -> bool
     {
-        auto& impl = *reinterpret_cast<ImplTimelineSemaphore*>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplTimelineSemaphore *>(this->impl.get());
 
         VkSemaphoreWaitInfo vk_semaphore_wait_info{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
@@ -108,16 +108,16 @@ namespace daxa
 
     auto TimelineSemaphore::info() const -> TimelineSemaphoreInfo const &
     {
-        auto& impl = *reinterpret_cast<ImplTimelineSemaphore*>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplTimelineSemaphore *>(this->impl.get());
         return impl.info;
     }
 
     TimelineSemaphore::~TimelineSemaphore()
     {
     }
-    
+
     ImplTimelineSemaphore::ImplTimelineSemaphore(std::weak_ptr<ImplDevice> a_impl_device, TimelineSemaphoreInfo const & a_info)
-        : impl_device{ a_impl_device }, info { a_info }
+        : impl_device{a_impl_device}, info{a_info}
     {
         VkSemaphoreTypeCreateInfo timelineCreateInfo{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
@@ -128,7 +128,7 @@ namespace daxa
 
         VkSemaphoreCreateInfo vk_semaphore_create_info{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-            .pNext = reinterpret_cast<void*>(&timelineCreateInfo),
+            .pNext = reinterpret_cast<void *>(&timelineCreateInfo),
             .flags = {},
         };
 

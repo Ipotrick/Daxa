@@ -23,7 +23,7 @@ namespace daxa
     struct ShaderInfo
     {
         ShaderSource source;
-        std::string entry_point = { "main" };
+        std::string entry_point = {"main"};
         std::vector<std::string> defines = {};
         std::string debug_name = {};
     };
@@ -56,8 +56,8 @@ namespace daxa
     struct PipelineCompiler : Handle
     {
         auto create_compute_pipeline(ComputePipelineInfo const & info) -> Result<ComputePipeline>;
-        auto recreate_compute_pipeline(ComputePipeline const &pipeline) -> Result<ComputePipeline>;
-        auto check_if_sources_changed(ComputePipeline const &pipeline) -> bool;
+        auto recreate_compute_pipeline(ComputePipeline const & pipeline) -> Result<ComputePipeline>;
+        auto check_if_sources_changed(ComputePipeline const & pipeline) -> bool;
 
       private:
         friend struct Device;
