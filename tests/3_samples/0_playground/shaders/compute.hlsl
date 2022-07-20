@@ -17,14 +17,45 @@ struct Push
 
     float2 uv = float2(pixel_i.xy) / float2(p.frame_dim.xy);
     uv = (uv - 0.5) * float2(float(p.frame_dim.x) / float(p.frame_dim.y), 1);
+    uv = uv * 2;
 
     float3 col = float3(0, 0, 0);
 
+    float2 points[3] = {
+        float2(-0.5, +0.1),
+        float2(+0.7, +0.8),
+        float2(+0.0, -0.5),
+    };
     
+    float3 point_colors[3] = {
+        float3(1, 0, 0),
+        float3(0, 1, 0),
+        float3(0, 0, 1),
+    };
 
-    if (uv.x > -0.5 * uv.y - 0.125 && uv.x < 0.5 * uv.y + 0.125 && -uv.y > -0.25)
+    float2 points_del[3] = {
+        points[1] - points[0],
+        points[2] - points[1],
+        points[0] - points[2],
+    };
+
+    float slopes[3] = {
+        points_del[0].y / points_del[0].x,
+        points_del[1].y / points_del[1].x,
+        points_del[2].y / points_del[2].x,
+    };
+
+    if (slopes[0] * (uv.x - points[0].x) > (uv.y - points[0].y) &&
+        slopes[1] * (uv.x - points[1].x) < (uv.y - points[1].y) &&
+        slopes[2] * (uv.x - points[2].x) < (uv.y - points[2].y))
     {
-        col = float3(1, 0, 1);
+        float p0 = clamp(dot(points_del[0], uv - points[0]) / dot(points_del[0], points_del[0]), 0, 1);
+        float p1 = clamp(dot(points_del[1], uv - points[1]) / dot(points_del[1], points_del[1]), 0, 1);
+        float p2 = clamp(dot(points_del[2], uv - points[2]) / dot(points_del[2], points_del[2]), 0, 1);
+
+        col = lerp(col, point_colors[0], 1);
+        col = lerp(col, point_colors[1], p0);
+        col = lerp(col, point_colors[2], p1 - p2);
     }
 
     render_image[pixel_i.xy] = float4(col, 1.0);

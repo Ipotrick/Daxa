@@ -2,6 +2,7 @@
 #include <thread>
 
 using namespace daxa::types;
+using Clock = std::chrono::high_resolution_clock;
 
 struct ComputeInput
 {
@@ -39,7 +40,7 @@ struct App : AppWindow<App>
         },
         .present_mode = daxa::PresentMode::DOUBLE_BUFFER_WAIT_FOR_VBLANK,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-        .debug_name = "Test1 Swapchain",
+        .debug_name = "Mandelbrot Swapchain",
     });
 
     daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
@@ -47,26 +48,30 @@ struct App : AppWindow<App>
             "tests/3_samples/1_mandelbrot/shaders",
             "include",
         },
-        .debug_name = "Test1 Pipeline Compiler",
+        .debug_name = "Mandelbrot Pipeline Compiler",
     });
     // clang-format off
     daxa::ComputePipeline compute_pipeline = pipeline_compiler.create_compute_pipeline({
         .shader_info = {.source = daxa::ShaderFile{"compute.hlsl"}},
         .push_constant_size = sizeof(ComputePush),
-        .debug_name = "Test1 Compute Pipeline",
+        .debug_name = "Mandelbrot Compute Pipeline",
     }).value();
     // clang-format on
 
-    daxa::BufferId compute_input = device.create_buffer(daxa::BufferInfo{
-        .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
+    daxa::BufferId compute_input_buffer = device.create_buffer(daxa::BufferInfo{
         .size = sizeof(ComputeInput),
+        .debug_name = "Mandelbrot Compute Input buffer",
     });
+    ComputeInput compute_input = {};
 
     daxa::ImageId render_image = device.create_image(daxa::ImageInfo{
         .format = daxa::Format::R8G8B8A8_UNORM,
         .size = {size_x, size_y, 1},
         .usage = daxa::ImageUsageFlagBits::STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+        .debug_name = "Mandelbrot Render Image",
     });
+
+    Clock::time_point start = Clock::now();
 
     App()
     {
@@ -74,7 +79,7 @@ struct App : AppWindow<App>
 
     ~App()
     {
-        device.destroy_buffer(compute_input);
+        device.destroy_buffer(compute_input_buffer);
         device.destroy_image(render_image);
     }
 
@@ -110,25 +115,50 @@ struct App : AppWindow<App>
             }
         }
 
-        auto buffer_ptr = reinterpret_cast<ComputeInput *>(device.map_memory(compute_input));
-        *buffer_ptr = {
-            .time = static_cast<float>(glfwGetTime()),
-        };
-        device.unmap_memory(compute_input);
-
         auto swapchain_image = swapchain.acquire_next_image();
 
         auto binary_semaphore = device.create_binary_semaphore({
-            .debug_name = "Test1 Present Semaphore",
+            .debug_name = "Mandelbrot Present Semaphore",
         });
         auto cmd_list = device.create_command_list({
-            .debug_name = "Test1 Command List",
+            .debug_name = "Mandelbrot Command List",
+        });
+
+        auto now = Clock::now();
+        auto elapsed = std::chrono::duration<float>(now - start).count();
+
+        auto compute_input_staging_buffer = device.create_buffer({
+            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+            .size = sizeof(ComputeInput),
+            .debug_name = "Mandelbrot Compute Input Staging buffer",
+        });
+        cmd_list.destroy_buffer_deferred(compute_input_staging_buffer);
+
+        compute_input.time += elapsed;
+        auto buffer_ptr = reinterpret_cast<ComputeInput *>(device.map_memory(compute_input_staging_buffer));
+        *buffer_ptr = compute_input;
+        device.unmap_memory(compute_input_staging_buffer);
+
+        cmd_list.pipeline_barrier({
+            .awaited_pipeline_access = daxa::PipelineStageAccessFlagBits::HOST_WRITE,
+            .waiting_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_READ,
+        });
+
+        cmd_list.copy_buffer_to_buffer({
+            .src_buffer = compute_input_staging_buffer,
+            .dst_buffer = compute_input_buffer,
+            .size = sizeof(ComputeInput),
+        });
+
+        cmd_list.pipeline_barrier({
+            .awaited_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_WRITE,
+            .waiting_pipeline_access = daxa::PipelineStageAccessFlagBits::COMPUTE_SHADER_READ,
         });
 
         cmd_list.bind_pipeline(compute_pipeline);
         cmd_list.push_constant(ComputePush{
             .image_id = render_image,
-            .input_buffer_id = compute_input,
+            .input_buffer_id = compute_input_buffer,
             .frame_dim_x = size_x,
             .frame_dim_y = size_y,
         });
