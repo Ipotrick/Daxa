@@ -3,9 +3,15 @@
 
 using namespace daxa::types;
 
+struct ComputeInput
+{
+    float time;
+};
+
 struct ComputePush
 {
     daxa::ImageId image_id;
+    daxa::BufferId input_buffer_id;
     u32 frame_dim_x, frame_dim_y;
 };
 
@@ -51,6 +57,11 @@ struct App : AppWindow<App>
     }).value();
     // clang-format on
 
+    daxa::BufferId compute_input = device.create_buffer(daxa::BufferInfo{
+        .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
+        .size = sizeof(ComputeInput),
+    });
+
     daxa::ImageId render_image = device.create_image(daxa::ImageInfo{
         .format = daxa::Format::R8G8B8A8_UNORM,
         .size = {size_x, size_y, 1},
@@ -63,6 +74,7 @@ struct App : AppWindow<App>
 
     ~App()
     {
+        device.destroy_buffer(compute_input);
         device.destroy_image(render_image);
     }
 
@@ -98,6 +110,12 @@ struct App : AppWindow<App>
             }
         }
 
+        auto buffer_ptr = reinterpret_cast<ComputeInput *>(device.map_memory(compute_input));
+        *buffer_ptr = {
+            .time = static_cast<float>(glfwGetTime()),
+        };
+        device.unmap_memory(compute_input);
+
         auto swapchain_image = swapchain.acquire_next_image();
 
         auto binary_semaphore = device.create_binary_semaphore({
@@ -110,6 +128,7 @@ struct App : AppWindow<App>
         cmd_list.bind_pipeline(compute_pipeline);
         cmd_list.push_constant(ComputePush{
             .image_id = render_image,
+            .input_buffer_id = compute_input,
             .frame_dim_x = size_x,
             .frame_dim_y = size_y,
         });
