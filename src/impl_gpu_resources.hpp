@@ -65,7 +65,7 @@ namespace daxa
         std::vector<u32> free_index_stack = {};
         u32 next_index = {};
         usize max_resources = {};
-        
+
 #if defined(DAXA_ENABLE_THREADSAFETY)
         std::mutex page_alloc_mtx = {};
 #if defined(DAXA_ENABLE_GPU_ID_VALIDATION)

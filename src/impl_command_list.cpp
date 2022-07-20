@@ -31,12 +31,11 @@ namespace daxa
         };
 
         vkCmdCopyBuffer(
-            impl.vk_cmd_buffer, 
-            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.src_buffer).vk_buffer, 
+            impl.vk_cmd_buffer,
+            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.src_buffer).vk_buffer,
             DAXA_LOCK_WEAK(impl.impl_device)->slot(info.dst_buffer).vk_buffer,
             1,
-            &vk_buffer_copy
-        );
+            &vk_buffer_copy);
     }
 
     void CommandList::copy_buffer_to_image(BufferImageCopy const & info)
@@ -60,8 +59,7 @@ namespace daxa
             DAXA_LOCK_WEAK(impl.impl_device)->slot(info.image).vk_image,
             static_cast<VkImageLayout>(info.image_layout),
             1,
-            &vk_buffer_image_copy
-        );
+            &vk_buffer_image_copy);
     }
 
     void CommandList::copy_image_to_buffer(BufferImageCopy const & info)
@@ -85,10 +83,8 @@ namespace daxa
             static_cast<VkImageLayout>(info.image_layout),
             DAXA_LOCK_WEAK(impl.impl_device)->slot(info.buffer).vk_buffer,
             1,
-            &vk_buffer_image_copy
-        );
+            &vk_buffer_image_copy);
     }
-
 
     void CommandList::blit_image_to_image(ImageBlitInfo const & info)
     {
@@ -223,36 +219,35 @@ namespace daxa
         vkCmdDispatch(impl.vk_cmd_buffer, group_x, group_y, group_z);
     }
 
-    void defer_destruction_helper(void* impl_coid, GPUResourceId id, u8 index)
+    void defer_destruction_helper(void * impl_coid, GPUResourceId id, u8 index)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(impl_coid);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         DAXA_DBG_ASSERT_TRUE_M(impl.deferred_destruction_count < DEFERRED_DESTRUCTION_COUNT_MAX, "can not defer the destruction of more than 32 resources per command list recording");
         impl.flush_barriers();
 
-        impl.deferred_destructions[impl.deferred_destruction_count++] = { id, index };
+        impl.deferred_destructions[impl.deferred_destruction_count++] = {id, index};
     }
 
     void CommandList::destroy_buffer_deferred(BufferId id)
     {
-        defer_destruction_helper(impl.get(), GPUResourceId{ .index = id.index, .version = id.version }, DEFERRED_DESTRUCTION_BUFFER_INDEX);
+        defer_destruction_helper(impl.get(), GPUResourceId{.index = id.index, .version = id.version}, DEFERRED_DESTRUCTION_BUFFER_INDEX);
     }
 
     void CommandList::destroy_image_deferred(ImageId id)
     {
-        defer_destruction_helper(impl.get(), GPUResourceId{ .index = id.index, .version = id.version }, DEFERRED_DESTRUCTION_IMAGE_INDEX);
+        defer_destruction_helper(impl.get(), GPUResourceId{.index = id.index, .version = id.version}, DEFERRED_DESTRUCTION_IMAGE_INDEX);
     }
 
     void CommandList::destroy_image_view_deferred(ImageViewId id)
     {
-        defer_destruction_helper(impl.get(), GPUResourceId{ .index = id.index, .version = id.version }, DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX);
+        defer_destruction_helper(impl.get(), GPUResourceId{.index = id.index, .version = id.version}, DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX);
     }
 
     void CommandList::destroy_sampler_deferred(SamplerId id)
     {
-        defer_destruction_helper(impl.get(), GPUResourceId{ .index = id.index, .version = id.version }, DEFERRED_DESTRUCTION_SAMPLER_INDEX);
+        defer_destruction_helper(impl.get(), GPUResourceId{.index = id.index, .version = id.version}, DEFERRED_DESTRUCTION_SAMPLER_INDEX);
     }
-
 
     void CommandList::complete()
     {
