@@ -1,14 +1,21 @@
 #include "daxa/daxa.hlsl"
+struct Input
+{
+    float time;
+};
+DAXA_DEFINE_GET_BUFFER(Input);
+
 struct Push
 {
     daxa::ImageId image_id;
+    daxa::BufferId input_buffer_id;
     uint2 frame_dim;
 };
 [[vk::push_constant]] const Push p;
 
 #define CENTER float2(-1, 0)
 #define SCALE 1
-#define SUBSAMPLES 3
+#define SUBSAMPLES 1
 
 float3 hsv2rgb(float3 c)
 {
@@ -21,7 +28,9 @@ float3 mandelbrot_colored(float2 pixel_p)
 {
     float2 uv = pixel_p / float2(p.frame_dim.xy);
     uv = (uv - 0.5) * float2(float(p.frame_dim.x) / float(p.frame_dim.y), 1);
-    float2 z = uv * SCALE * 2 + CENTER;
+    StructuredBuffer<Input> input = daxa::get_Buffer<Input>(p.input_buffer_id);
+    float time = input[0].time;
+    float2 z = uv * SCALE * 2 + CENTER + float2(time, 0);
     float2 c = z;
     uint i = 0;
     for (; i < 1000; ++i)
