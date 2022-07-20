@@ -534,6 +534,7 @@ namespace daxa
     {
 #if defined(DAXA_ENABLE_THREADSAFETY)
         std::unique_lock lock{this->main_queue_zombies_mtx};
+        u64 main_queue_cpu_timeline = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
 #endif
 
         u64 gpu_timeline_value = std::numeric_limits<u64>::max();
@@ -571,12 +572,18 @@ namespace daxa
                     auto [id, index] = cmd_list->deferred_destructions[i];
                     switch (index)
                     {
-                        case DEFERRED_DESTRUCTION_BUFFER_INDEX: this->zombiefy_buffer(BufferId{id}); break;
-                        case DEFERRED_DESTRUCTION_IMAGE_INDEX: this->zombiefy_image(ImageId{id}); break;
-                        case DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX: this->zombiefy_image_view(ImageViewId{id}); break;
-                        case DEFERRED_DESTRUCTION_SAMPLER_INDEX: this->zombiefy_sampler(SamplerId{id}); break;
+                        case DEFERRED_DESTRUCTION_BUFFER_INDEX: this->main_queue_buffer_zombies.push_back({main_queue_cpu_timeline,BufferId{id}}); break;
+                        case DEFERRED_DESTRUCTION_IMAGE_INDEX: this->main_queue_image_zombies.push_back({main_queue_cpu_timeline, ImageId{id}}); break;
+                        case DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX: this->main_queue_image_view_zombies.push_back({main_queue_cpu_timeline, ImageViewId{id}}); break;
+                        case DEFERRED_DESTRUCTION_SAMPLER_INDEX: this->main_queue_sampler_zombies.push_back({main_queue_cpu_timeline, SamplerId{id}}); break;
                         default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
                     }
+                }
+                if (cmd_list.use_count() == 1)
+                {
+                    cmd_list->reset();
+                    this->command_list_recyclable_list.recyclables.push_back(std::move(cmd_list));
+                    cmd_list = {};
                 }
             }
             command_lists.clear(); });

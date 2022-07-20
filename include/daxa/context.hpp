@@ -7,6 +7,7 @@ namespace daxa
 {
     static inline void default_validation_callback(daxa::MsgSeverity severity, daxa::MsgType, std::string_view msg)
     {
+#if defined(DAXA_DEBUG)
         switch (severity)
         {
         // clang-format off
@@ -17,6 +18,7 @@ namespace daxa
         // clang-format on
         default: std::cout << "[UNKNOWN]: " << msg << std::endl; break;
         }
+#endif // #if defined(DAXA_DEBUG)
     }
 
     struct ContextInfo
