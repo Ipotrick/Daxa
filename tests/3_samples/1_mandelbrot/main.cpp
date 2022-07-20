@@ -75,14 +75,16 @@ struct App : AppWindow<App>
         .debug_name = "Mandelbrot Present Semaphore",
     });
 
-    Clock::time_point start = Clock::now();
-
     // static inline constexpr u64 FRAMES_IN_FLIGHT = 1;
     // daxa::TimelineSemaphore gpu_framecount_timeline_sema = device.create_timeline_semaphore(daxa::TimelineSemaphoreInfo{
     //     .initial_value = 0,
     //     .debug_name = "Mandelbrot gpu framecount Timeline Semaphore",
     // });
     // u64 cpu_framecount = FRAMES_IN_FLIGHT - 1;
+
+    Clock::time_point start = Clock::now();
+
+    bool should_resize = false;
 
     App()
     {
@@ -124,6 +126,11 @@ struct App : AppWindow<App>
             {
                 compute_pipeline = new_pipeline.value();
             }
+        }
+
+        if (should_resize)
+        {
+            do_resize();
         }
 
         auto swapchain_image = swapchain.acquire_next_image();
@@ -251,15 +258,21 @@ struct App : AppWindow<App>
 
         if (!minimized)
         {
-            device.destroy_image(render_image);
-            render_image = device.create_image({
-                .format = daxa::Format::R8G8B8A8_UNORM,
-                .size = {size_x, size_y, 1},
-                .usage = daxa::ImageUsageFlagBits::STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
-            });
-            swapchain.resize(size_x, size_y);
-            draw();
+            should_resize = true;
+            // do_resize();
         }
+    }
+
+    void do_resize()
+    {
+        should_resize = false;
+        device.destroy_image(render_image);
+        render_image = device.create_image({
+            .format = daxa::Format::R8G8B8A8_UNORM,
+            .size = {size_x, size_y, 1},
+            .usage = daxa::ImageUsageFlagBits::STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+        });
+        swapchain.resize(size_x, size_y);
     }
 };
 
