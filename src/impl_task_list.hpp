@@ -6,6 +6,5 @@ namespace daxa
 {
     struct ImplTaskList
     {
-        
     };
-}
+} // namespace daxa

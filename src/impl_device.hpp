@@ -37,14 +37,14 @@ namespace daxa
         // Main queue:
         VkQueue main_queue_vk_queue = {};
         u32 main_queue_family_index = {};
-        
+
 #if defined(DAXA_ENABLE_THREADSAFETY)
         std::atomic_uint64_t main_queue_cpu_timeline = {};
 #else
         u64 main_queue_cpu_timeline = {};
-#endif 
+#endif
         VkSemaphore vk_main_queue_gpu_timeline_semaphore = {};
-        
+
 #if defined(DAXA_ENABLE_THREADSAFETY)
         std::mutex main_queue_zombies_mtx = {};
 #endif
