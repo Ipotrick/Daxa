@@ -335,7 +335,8 @@ namespace daxa
     };
 
     using MemoryFlags = u32;
-    struct MemoryFlagBits {
+    struct MemoryFlagBits
+    {
         static inline constexpr MemoryFlags DEDICATED_MEMORY = 0x00000001;
         static inline constexpr MemoryFlags CAN_ALIAS = 0x00000200;
         static inline constexpr MemoryFlags HOST_ACCESS_SEQUENTIAL_WRITE = 0x00000400;
@@ -375,7 +376,7 @@ namespace daxa
         REGULAR_1D_ARRAY = 4,
         REGULAR_2D_ARRAY = 5,
         CUBE_ARRAY = 6,
-    }; 
+    };
 
     using ImageAspectFlags = u32;
     struct ImageAspectFlagBits
