@@ -59,12 +59,12 @@ namespace daxa
 
     struct DepthTestInfo
     {
-		Format 	    depthAttachmentFormat 	= {};
-		bool 		enableDepthTest 		= false;
-		bool 		enableDepthWrite 		= false;
-		CompareOp   depthTestCompareOp 		= {};
-		f32 		minDepthBounds 			= 0.0f;
-		f32 		maxDepthBounds 			= 1.0f;
+        Format depth_attachment_format = {};
+        bool enable_depth_test = false;
+        bool enable_depth_write = false;
+        CompareOp depth_test_compare_op = {};
+        f32 min_depth_bounds = 0.0f;
+        f32 max_depth_bounds = 1.0f;
     };
 
     enum class PolygonMode
@@ -75,20 +75,19 @@ namespace daxa
     using FaceCullFlags = u32;
     struct FaceCullFlagBits
     {
-
     };
 
     struct RasterizerInfo
     {
         PolygonMode polygon_mode = {};
         FaceCullFlags face_culling = {};
-        bool depthClampEnable = false;
-        bool rasterizerDiscardEnable = false;
-        bool depthBiasEnable = false;
-        f32 depthBiasConstantFactor = 0.0f;
-        f32 depthBiasClamp = 0.0f;
-        f32 depthBiasSlopeFactor = 0.0f;
-        f32 lineWidth = 1.0f;
+        bool depth_clamp_enable = false;
+        bool rasterizer_discard_enable = false;
+        bool depth_bias_enable = false;
+        f32 depth_bias_constant_factor = 0.0f;
+        f32 depth_bias_clamp = 0.0f;
+        f32 depth_bias_slope_factor = 0.0f;
+        f32 line_width = 1.0f;
     };
 
     struct BlendInfo
