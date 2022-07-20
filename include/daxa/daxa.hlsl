@@ -66,15 +66,15 @@ namespace daxa
             return BufferView##Type[ID_INDEX_MASK & buffer_id.data];                                           \
         }                                                                                                      \
     }
-#define DAXA_DEFINE_GET_RWBUFFER(Type)                                                                              \
-    namespace daxa                                                                                                  \
-    {                                                                                                               \
-        [[vk::binding(daxa::CONSTANTS::STORAGE_BUFFER_BINDING, 0)]] RWStructuredBuffer<Type> RWBufferView##Type[];  \
-        template <>                                                                                                 \
-        RWStructuredBuffer<Type> get_RWBuffer(BufferId buffer_id)                                                   \
-        {                                                                                                           \
-            return RWBufferView##Type[ID_INDEX_MASK & buffer_id.data];                                              \
-        }                                                                                                           \
+#define DAXA_DEFINE_GET_RWBUFFER(Type)                                                                             \
+    namespace daxa                                                                                                 \
+    {                                                                                                              \
+        [[vk::binding(daxa::CONSTANTS::STORAGE_BUFFER_BINDING, 0)]] RWStructuredBuffer<Type> RWBufferView##Type[]; \
+        template <>                                                                                                \
+        RWStructuredBuffer<Type> get_RWBuffer(BufferId buffer_id)                                                  \
+        {                                                                                                          \
+            return RWBufferView##Type[ID_INDEX_MASK & buffer_id.data];                                             \
+        }                                                                                                          \
     }
 #define DAXA_DEFINE_GET_TEXTURE1D(Type)                                                                   \
     namespace daxa                                                                                        \

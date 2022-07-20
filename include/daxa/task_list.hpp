@@ -8,7 +8,6 @@ namespace daxa
 {
     struct TaskInterface
     {
-
     };
 
     struct TaskResources
@@ -59,4 +58,4 @@ namespace daxa
         friend struct Device;
         TaskList(std::shared_ptr<void> impl);
     };
-}
+} // namespace daxa
