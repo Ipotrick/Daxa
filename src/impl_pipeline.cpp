@@ -119,6 +119,20 @@ namespace daxa
 
     PipelineCompiler::PipelineCompiler(std::shared_ptr<void> a_impl) : Handle(std::move(a_impl)) {}
 
+    auto PipelineCompiler::create_graphics_pipeline(GraphicsPipelineInfo const & info) -> Result<GraphicsPipeline>
+    {
+        auto & impl = *reinterpret_cast<ImplPipelineCompiler *>(this->impl.get());
+
+        if (info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
+        {
+            return ResultErr{std::string("push constant size of ") + std::to_string(info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(MAX_PUSH_CONSTANT_BYTE_SIZE)};
+        }
+        if (info.push_constant_size % 4 != 0)
+        {
+            return ResultErr{std::string("push constant size of ") + std::to_string(info.push_constant_size) + std::string(" is not a multiple of 4(bytes)")};
+        }
+    }
+
     auto PipelineCompiler::create_compute_pipeline(ComputePipelineInfo const & info) -> Result<ComputePipeline>
     {
         auto & impl = *reinterpret_cast<ImplPipelineCompiler *>(this->impl.get());
