@@ -71,6 +71,10 @@ struct App : AppWindow<App>
         .debug_name = "Mandelbrot Render Image",
     });
 
+    daxa::BinarySemaphore binary_semaphore = device.create_binary_semaphore({
+        .debug_name = "Mandelbrot Present Semaphore",
+    });
+
     Clock::time_point start = Clock::now();
 
     App()
@@ -117,9 +121,6 @@ struct App : AppWindow<App>
 
         auto swapchain_image = swapchain.acquire_next_image();
 
-        auto binary_semaphore = device.create_binary_semaphore({
-            .debug_name = "Mandelbrot Present Semaphore",
-        });
         auto cmd_list = device.create_command_list({
             .debug_name = "Mandelbrot Command List",
         });
