@@ -89,6 +89,15 @@ struct App : AppWindow<App>
 
     void draw()
     {
+        if (pipeline_compiler.check_if_sources_changed(compute_pipeline))
+        {
+            auto new_pipeline = pipeline_compiler.recreate_compute_pipeline(compute_pipeline);
+            if (new_pipeline.isOk())
+            {
+                compute_pipeline = new_pipeline.value();
+            }
+        }
+
         auto swapchain_image = swapchain.acquire_next_image();
 
         auto binary_semaphore = device.create_binary_semaphore({
