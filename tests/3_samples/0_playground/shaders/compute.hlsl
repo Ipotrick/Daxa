@@ -20,7 +20,7 @@ struct Push
 
     float3 col = float3(0, 0, 0);
 
-    if (uv.x < 1.0 * uv.y)
+    if (uv.x > -0.5 * uv.y - 0.125 && uv.x < 0.5 * uv.y + 0.125 && -uv.y > -0.25)
     {
         col = float3(1, 0, 1);
     }

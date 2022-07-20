@@ -6,30 +6,60 @@ struct Push
 };
 [[vk::push_constant]] const Push p;
 
-// clang-format off
-[numthreads(8, 8, 1)] void main(uint3 pixel_i : SV_DispatchThreadID)
-// clang-format on
+#define CENTER float2(-1, 0)
+#define SCALE 1
+#define SUBSAMPLES 3
+
+float3 hsv2rgb(float3 c)
 {
-    RWTexture2D<float4> render_image = daxa::get_RWTexture2D<float4>(p.image_id);
+    float4 k = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    float3 p = abs(frac(c.xxx + k.xyz) * 6.0 - k.www);
+    return c.z * lerp(k.xxx, clamp(p - k.xxx, 0.0, 1.0), c.y);
+}
 
-    if (pixel_i.x >= p.frame_dim.x || pixel_i.y >= p.frame_dim.y)
-        return;
-
-    float2 uv = float2(pixel_i.xy) / float2(p.frame_dim.xy);
+float3 mandelbrot_colored(float2 pixel_p)
+{
+    float2 uv = pixel_p / float2(p.frame_dim.xy);
     uv = (uv - 0.5) * float2(float(p.frame_dim.x) / float(p.frame_dim.y), 1);
-
-    float2 z = uv * 3;
+    float2 z = uv * SCALE * 2 + CENTER;
     float2 c = z;
-
-    for (uint i = 0; i < 100; ++i)
+    uint i = 0;
+    for (; i < 1000; ++i)
     {
         float2 z_ = z;
         z.x = z_.x * z_.x - z_.y * z_.y;
         z.y = 2.0 * z_.x * z_.y;
         z += c;
+        if (dot(z, z) > 256 * 256)
+            break;
     }
+    float3 col = 0;
+    if (i != 1000)
+    {
+        float l = i;
+        float sl = l - log2(log2(dot(z, z))) + 4.0;
+        sl = pow(sl * 0.01, 1.0);
+        col = hsv2rgb(float3(sl, 1, 1));
+    }
+    return col;
+}
 
-    float3 col = length(z);
-
+// clang-format off
+[numthreads(8, 8, 1)] void main(uint3 pixel_i : SV_DispatchThreadID)
+// clang-format on
+{
+    RWTexture2D<float4> render_image = daxa::get_RWTexture2D<float4>(p.image_id);
+    if (pixel_i.x >= p.frame_dim.x || pixel_i.y >= p.frame_dim.y)
+        return;
+    float3 col = 0;
+    for (int yi = 0; yi < SUBSAMPLES; ++yi)
+    {
+        for (int xi = 0; xi < SUBSAMPLES; ++xi)
+        {
+            float2 offset = float2(xi, yi) / float(SUBSAMPLES);
+            col += mandelbrot_colored(float2(pixel_i.xy) + offset);
+        }
+    }
+    col *= 1.0 / float(SUBSAMPLES * SUBSAMPLES);
     render_image[pixel_i.xy] = float4(col, 1.0);
 }
