@@ -354,7 +354,7 @@ namespace daxa
         VkCommandPoolCreateInfo vk_command_pool_create_info{
             .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
             .pNext = nullptr,
-            .flags = {},
+            .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
             .queueFamilyIndex = DAXA_LOCK_WEAK(impl_device)->main_queue_family_index,
         };
 

@@ -156,7 +156,8 @@ namespace daxa
             std::unique_lock use_after_free_check_lock{use_after_free_check_mtx};
 #endif
             verify_ressource_id(id);
-            DAXA_DBG_ASSERT_TRUE_M(pages[page]->at(offset).second == id.version, "detected use after free for a resource id");
+            u8 version = pages[page]->at(offset).second;
+            DAXA_DBG_ASSERT_TRUE_M(version == id.version, "detected use after free for a resource id");
 #endif
             return pages[page]->at(offset).first;
         }
