@@ -77,6 +77,13 @@ struct App : AppWindow<App>
 
     Clock::time_point start = Clock::now();
 
+    // static inline constexpr u64 FRAMES_IN_FLIGHT = 1;
+    // daxa::TimelineSemaphore gpu_framecount_timeline_sema = device.create_timeline_semaphore(daxa::TimelineSemaphoreInfo{
+    //     .initial_value = 0,
+    //     .debug_name = "Mandelbrot gpu framecount Timeline Semaphore",
+    // });
+    // u64 cpu_framecount = FRAMES_IN_FLIGHT - 1;
+
     App()
     {
     }
@@ -219,6 +226,21 @@ struct App : AppWindow<App>
             .wait_binary_semaphores = {binary_semaphore},
             .swapchain = swapchain,
         });
+
+        // ++cpu_framecount;
+        // device.submit_commands({
+        //     .command_lists = {std::move(cmd_list)},
+        //     .signal_binary_semaphores = {binary_semaphore},
+        //     .signal_timeline_semaphores = {{gpu_framecount_timeline_sema, cpu_framecount}},
+        // });
+
+        // device.present_frame({
+        //     .wait_binary_semaphores = {binary_semaphore},
+        //     .swapchain = swapchain,
+        // });
+
+        // gpu_framecount_timeline_sema.wait_for_value(cpu_framecount - 1);
+        // printf("ahead: %llu\n", cpu_framecount - gpu_framecount_timeline_sema.value());
     }
 
     void on_resize(u32 sx, u32 sy)

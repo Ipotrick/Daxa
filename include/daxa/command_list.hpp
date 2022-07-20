@@ -31,7 +31,7 @@ namespace daxa
         BufferId dst_buffer = {};
         usize dst_offset = {};
         usize size = {};
-    }; 
+    };
 
     struct BufferImageCopy
     {
@@ -53,7 +53,7 @@ namespace daxa
         Extent3D image_extent = {};
         BufferId buffer = {};
         usize buffer_offset = {};
-    }; 
+    };
 
     struct ImageCopyInfo
     {
@@ -109,7 +109,7 @@ namespace daxa
         void copy_image_to_buffer(BufferImageCopy const & info);
         void copy_image_to_image(ImageCopyInfo const & info);
         void blit_image_to_image(ImageBlitInfo const & info);
-        
+
         void clear_buffer(BufferClearInfo const & info);
         void clear_image(ImageClearInfo const & info);
 
