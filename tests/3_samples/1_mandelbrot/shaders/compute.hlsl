@@ -28,8 +28,8 @@ float3 mandelbrot_colored(float2 pixel_p)
 {
     float2 uv = pixel_p / float2(p.frame_dim.xy);
     uv = (uv - 0.5) * float2(float(p.frame_dim.x) / float(p.frame_dim.y), 1);
-    // StructuredBuffer<Input> input = daxa::get_Buffer<Input>(p.input_buffer_id);
-    float time = 0; // input[0].time;
+    StructuredBuffer<Input> input = daxa::get_Buffer<Input>(p.input_buffer_id);
+    float time = input[0].time;
     float2 z = uv * SCALE * 2 + CENTER + float2(sin(time), 0);
     float2 c = z;
     uint i = 0;
