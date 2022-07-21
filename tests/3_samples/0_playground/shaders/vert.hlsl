@@ -61,7 +61,7 @@ VertexOutput main(uint vert_i
     Vertex vert = vertex_buffer[0].get(vert_i);
 
     VertexOutput result;
-    result.frag_pos = float4(vert.pos, 1);
+    result.frag_pos = mul(p.view_mat, float4(vert.pos, 1));
     result.col = float4(0, 0, 1, 1);
     return result;
 }
