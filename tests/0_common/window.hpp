@@ -22,6 +22,20 @@ struct AppWindow
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         glfw_window_ptr = glfwCreateWindow(static_cast<i32>(size_x), static_cast<i32>(size_y), "test1", nullptr, nullptr);
         glfwSetWindowUserPointer(glfw_window_ptr, this);
+        glfwSetCursorPosCallback(
+            glfw_window_ptr,
+            [](GLFWwindow * window_ptr, f64 x, f64 y)
+            {
+                auto & app = *reinterpret_cast<App *>(glfwGetWindowUserPointer(window_ptr));
+                app.on_mouse_move(static_cast<f32>(x), static_cast<f32>(y));
+            });
+        glfwSetKeyCallback(
+            glfw_window_ptr,
+            [](GLFWwindow * window_ptr, i32 key, i32 action, i32, i32)
+            {
+                auto & app = *reinterpret_cast<App *>(glfwGetWindowUserPointer(window_ptr));
+                app.on_key(key, action);
+            });
         glfwSetWindowSizeCallback(
             glfw_window_ptr,
             [](GLFWwindow * window_ptr, i32 sx, i32 sy)
@@ -44,5 +58,10 @@ struct AppWindow
 #elif defined(__linux__)
         return glfwGetX11Window(glfw_window_ptr);
 #endif
+    }
+
+    inline void set_mouse_pos(f32 x, f32 y)
+    {
+        glfwSetCursorPos(glfw_window_ptr, static_cast<f64>(x), static_cast<f64>(y));
     }
 };

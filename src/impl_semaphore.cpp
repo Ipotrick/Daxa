@@ -114,6 +114,17 @@ namespace daxa
 
     TimelineSemaphore::~TimelineSemaphore()
     {
+        if (this->impl.use_count() == 1)
+        {
+            std::shared_ptr<ImplTimelineSemaphore> impl = std::static_pointer_cast<ImplTimelineSemaphore>(this->impl);
+#if defined(DAXA_ENABLE_THREADSAFETY)
+            std::unique_lock lock{DAXA_LOCK_WEAK(impl->impl_device)->main_queue_zombies_mtx};
+            u64 main_queue_cpu_timeline_value = DAXA_LOCK_WEAK(impl->impl_device)->main_queue_cpu_timeline.load(std::memory_order::relaxed);
+#else
+            u64 main_queue_cpu_timeline_value = DAXA_LOCK_WEAK(impl->impl_device)->main_queue_cpu_timeline;
+#endif
+            DAXA_LOCK_WEAK(impl->impl_device)->main_queue_timeline_semaphore_zombies.push_back({main_queue_cpu_timeline_value, impl});
+        }
     }
 
     ImplTimelineSemaphore::ImplTimelineSemaphore(std::weak_ptr<ImplDevice> a_impl_device, TimelineSemaphoreInfo const & a_info)
