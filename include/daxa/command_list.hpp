@@ -71,7 +71,7 @@ namespace daxa
     struct ImageClearInfo
     {
         ImageLayout dst_image_layout = {};
-        ClearColor clear_color;
+        ClearValue clear_value;
         ImageId dst_image = {};
         ImageMipArraySlice dst_slice = {};
     };
@@ -107,7 +107,7 @@ namespace daxa
         ImageLayout layout = ImageLayout::ATTACHMENT_OPTIMAL;
         AttachmentLoadOp load_op = AttachmentLoadOp::DONT_CARE;
         AttachmentStoreOp store_op = AttachmentStoreOp::STORE;
-        ClearColor clear_value = {};
+        ClearValue clear_value = {};
     };
 
     struct RenderPassBeginInfo
