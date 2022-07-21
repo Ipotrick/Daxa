@@ -37,6 +37,12 @@ namespace daxa
         return impl.image_resources[impl.current_image_index];
     }
 
+    auto Swapchain::get_format() const -> Format
+    {
+        auto & impl = *reinterpret_cast<ImplSwapchain *>(this->impl.get());
+        return static_cast<Format>(impl.vk_surface_format.format);
+    }
+
     void Swapchain::resize(u32 width, u32 height)
     {
         auto & impl = *reinterpret_cast<ImplSwapchain *>(this->impl.get());

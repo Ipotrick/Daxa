@@ -31,13 +31,6 @@ namespace daxa
         std::string debug_name = {};
     };
 
-    struct GraphicsPipelineInfo
-    {
-        ShaderInfo shader_info = {};
-        u32 push_constant_size = {};
-        std::string debug_name = {};
-    };
-
     struct ComputePipelineInfo
     {
         ShaderInfo shader_info = {};
@@ -59,28 +52,18 @@ namespace daxa
 
     struct DepthTestInfo
     {
-        Format depth_attachment_format = {};
+        Format depth_attachment_format = Format::UNDEFINED;
         bool enable_depth_test = false;
         bool enable_depth_write = false;
-        CompareOp depth_test_compare_op = {};
+        CompareOp depth_test_compare_op = CompareOp::LESS_OR_EQUAL;
         f32 min_depth_bounds = 0.0f;
         f32 max_depth_bounds = 1.0f;
     };
 
-    enum class PolygonMode
-    {
-
-    };
-
-    using FaceCullFlags = u32;
-    struct FaceCullFlagBits
-    {
-    };
-
     struct RasterizerInfo
     {
-        PolygonMode polygon_mode = {};
-        FaceCullFlags face_culling = {};
+        PolygonMode polygon_mode = PolygonMode::FILL;
+        FaceCullFlags face_culling = FaceCullFlagBits::NONE;
         bool depth_clamp_enable = false;
         bool rasterizer_discard_enable = false;
         bool depth_bias_enable = false;
@@ -88,10 +71,6 @@ namespace daxa
         f32 depth_bias_clamp = 0.0f;
         f32 depth_bias_slope_factor = 0.0f;
         f32 line_width = 1.0f;
-    };
-
-    struct BlendInfo
-    {
     };
 
     struct RenderAttachment
@@ -104,7 +83,7 @@ namespace daxa
     {
         ShaderInfo vertex_shader_info = {};
         ShaderInfo fragment_shader_info = {};
-        std::vector<RenderAttachment> render_attachment = {};
+        std::vector<RenderAttachment> color_attachments = {};
         DepthTestInfo depth_test = {};
         RasterizerInfo raster = {};
         u32 push_constant_size = {};
@@ -131,11 +110,11 @@ namespace daxa
 
     struct PipelineCompiler : Handle
     {
-        auto create_graphics_pipeline(GraphicsPipelineInfo const & info) -> Result<GraphicsPipeline>;
-        auto recreate_graphics_pipeline(GraphicsPipeline const & pipeline) -> Result<GraphicsPipeline>;
+        auto create_raster_pipeline(RasterPipelineInfo const & info) -> Result<RasterPipeline>;
+        auto recreate_raster_pipeline(RasterPipeline const & pipeline) -> Result<RasterPipeline>;
         auto create_compute_pipeline(ComputePipelineInfo const & info) -> Result<ComputePipeline>;
         auto recreate_compute_pipeline(ComputePipeline const & pipeline) -> Result<ComputePipeline>;
-        auto check_if_sources_changed(GraphicsPipeline const & pipeline) -> bool;
+        auto check_if_sources_changed(RasterPipeline const & pipeline) -> bool;
         auto check_if_sources_changed(ComputePipeline const & pipeline) -> bool;
 
       private:
