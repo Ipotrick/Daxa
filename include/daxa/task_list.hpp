@@ -76,7 +76,7 @@ namespace daxa
         ImageLayout layout_override = {};
         AttachmentLoadOp load_op = AttachmentLoadOp::DONT_CARE;
         AttachmentStoreOp store_op = AttachmentStoreOp::STORE;
-        ClearColor clear_value = {};
+        ClearValue clear_value = {};
     };
 
     struct TaskRenderPassBeginInfo
