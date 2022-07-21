@@ -206,6 +206,11 @@ namespace daxa
         auto impl = std::static_pointer_cast<ImplDevice>(this->impl);
         return TimelineSemaphore{std::make_shared<ImplTimelineSemaphore>(impl, info)};
     }
+    
+    auto Device::create_task_list(TaskListInfo const & info) -> TaskList
+    {
+
+    }
 
     auto Device::create_buffer(BufferInfo const & info) -> BufferId
     {

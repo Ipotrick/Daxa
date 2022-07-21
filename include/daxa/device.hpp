@@ -6,6 +6,7 @@
 #include <daxa/swapchain.hpp>
 #include <daxa/command_list.hpp>
 #include <daxa/semaphore.hpp>
+#include <daxa/task_list.hpp>
 
 namespace daxa
 {
@@ -185,6 +186,7 @@ namespace daxa
         auto create_command_list(CommandListInfo const & info) -> CommandList;
         auto create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore;
         auto create_timeline_semaphore(TimelineSemaphoreInfo const & info) -> TimelineSemaphore;
+        auto create_task_list(TaskListInfo const & info) -> TaskList;
 
         auto map_memory(BufferId id) -> void *;
         void unmap_memory(BufferId id);
