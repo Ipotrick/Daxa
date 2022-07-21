@@ -58,7 +58,7 @@ struct Player3D
 {
     Camera3D camera{};
     input::Keybinds keybinds = input::DEFAULT_KEYBINDS;
-    glm::vec3 pos{}, vel{}, rot{};
+    glm::vec3 pos{0, 0, 0}, vel{}, rot{};
     float speed = 30.0f, mouse_sens = 0.1f;
     float sprint_speed = 8.0f;
     float sin_rot_x = 0, cos_rot_x = 1;
@@ -78,13 +78,13 @@ struct Player3D
         if (move.nx)
             pos.z -= sin_rot_x * delta_pos, pos.x -= cos_rot_x * delta_pos;
         if (move.pz)
-            pos.x += sin_rot_x * delta_pos, pos.z -= cos_rot_x * delta_pos;
-        if (move.nz)
             pos.x -= sin_rot_x * delta_pos, pos.z += cos_rot_x * delta_pos;
+        if (move.nz)
+            pos.x += sin_rot_x * delta_pos, pos.z -= cos_rot_x * delta_pos;
         if (move.py)
-            pos.y -= delta_pos;
-        if (move.ny)
             pos.y += delta_pos;
+        if (move.ny)
+            pos.y -= delta_pos;
 
         constexpr auto MAX_ROT = std::numbers::pi_v<float> / 2;
         if (rot.y > MAX_ROT)

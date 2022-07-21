@@ -142,8 +142,10 @@ namespace daxa
 
         if (info.dst_slice.image_aspect & ImageAspectFlagBits::COLOR)
         {
+            // TODO: Also use the other 4 component values: i32 and u32!
+            auto const & clear_value = std::get<std::array<f32, 4>>(info.clear_value);
             VkClearColorValue color{
-                .float32 = {info.clear_color.f32_value[0], info.clear_color.f32_value[1], info.clear_color.f32_value[2], info.clear_color.f32_value[3]},
+                .float32 = {clear_value[0], clear_value[1], clear_value[2], clear_value[3]},
             };
 
             vkCmdClearColorImage(
@@ -158,9 +160,10 @@ namespace daxa
 
         if (info.dst_slice.image_aspect & (ImageAspectFlagBits::DEPTH | ImageAspectFlagBits::STENCIL))
         {
+            auto const & clear_value = std::get<DepthValue>(info.clear_value);
             VkClearDepthStencilValue color{
-                .depth = info.clear_color.depth_stencil.depth,
-                .stencil = info.clear_color.depth_stencil.stencil,
+                .depth = clear_value.depth,
+                .stencil = clear_value.stencil,
             };
 
             vkCmdClearDepthStencilImage(
@@ -376,7 +379,7 @@ namespace daxa
         };
 
         VkRenderingAttachmentInfo stencil_attachment_info = {};
-        if (info.depth_attachment.has_value())
+        if (info.stencil_attachment.has_value())
         {
             fill_rendering_attachment_info(info.stencil_attachment.value(), stencil_attachment_info);
         };

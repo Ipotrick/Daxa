@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <array>
+#include <variant>
 
 namespace daxa
 {
@@ -451,17 +452,12 @@ namespace daxa
         u32 z = {};
     };
 
-    union ClearColor
-    {
-        std::array<f32, 4> f32_value;
-        std::array<i32, 4> i32_value;
-        std::array<u32, 4> u32_value;
-        struct
-        {
-            f32 depth;
-            u32 stencil;
-        } depth_stencil;
+    struct DepthValue {
+        f32 depth;
+        u32 stencil;
     };
+
+    using ClearValue = std::variant<std::array<f32, 4>, std::array<i32, 4>, std::array<u32, 4>, DepthValue>;
 
     using AccessFlags = u64;
     struct AccessFlagBits
