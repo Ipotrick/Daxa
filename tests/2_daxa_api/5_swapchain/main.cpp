@@ -7,7 +7,9 @@ namespace tests
     {
         struct App : AppWindow<App>
         {
-            daxa::Context daxa_ctx = daxa::create_context({});
+            daxa::Context daxa_ctx = daxa::create_context({
+                .enable_validation = true,
+            });
             daxa::Device daxa_device = daxa_ctx.create_default_device();
 
             daxa::Swapchain daxa_swapchain = daxa_device.create_swapchain({
@@ -26,7 +28,9 @@ namespace tests
     {
         struct App : AppWindow<App>
         {
-            daxa::Context daxa_ctx = daxa::create_context({});
+            daxa::Context daxa_ctx = daxa::create_context({
+                .enable_validation = true,
+            });
             daxa::Device device = daxa_ctx.create_default_device();
 
             daxa::Swapchain swapchain = device.create_swapchain({
