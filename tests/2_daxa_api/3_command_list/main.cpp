@@ -1,4 +1,5 @@
 #include <daxa/daxa.hpp>
+#include <iostream>
 
 struct App
 {

@@ -38,12 +38,8 @@
 #endif
 
 #if defined(_WIN32)
-#define VK_USE_PLATFORM_WIN32_KHR
-#define VK_KHR_win32_surface
-
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
+// HACK TO NOT INCLUDE Windows.h, DECLARE HWND
+typedef struct HWND__ * HWND;
 
 namespace daxa
 {
@@ -52,9 +48,6 @@ namespace daxa
 #endif
 
 #if defined(__linux__)
-#define VK_USE_PLATFORM_XLIB_KHR
-#define VK_KHR_xlib_surface
-
 #include <X11/Xlib.h>
 
 namespace daxa

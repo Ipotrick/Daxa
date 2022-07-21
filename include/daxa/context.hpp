@@ -18,7 +18,10 @@ namespace daxa
         // clang-format on
         default: std::cout << "[UNKNOWN]: " << msg << std::endl; break;
         }
-#endif // #if defined(DAXA_DEBUG)
+#else
+        (void)severity;
+        (void)msg;
+#endif
     }
 
     struct ContextInfo
