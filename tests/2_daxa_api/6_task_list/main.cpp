@@ -85,38 +85,41 @@ struct App : AppWindow<App>
             .debug_name = "HelloTriangle Task List",
         });
 
-        daxa::TaskBufferId t_vertex_buffer = task_list.create_task_buffer({.fetch_callback = [=](daxa::TaskInterface&) { return vertex_buffer; }});
-        daxa::TaskImageId t_swapchain_image = task_list.create_task_image({.fetch_callback = [=](daxa::TaskInterface&) { return swapchain.acquire_next_image(); }});
-        
+        daxa::TaskBufferId t_vertex_buffer = task_list.create_task_buffer({.fetch_callback = [=](daxa::TaskInterface &)
+                                                                           { return vertex_buffer; }});
+        daxa::TaskImageId t_swapchain_image = task_list.create_task_image({.fetch_callback = [=](daxa::TaskInterface &)
+                                                                           { return swapchain.acquire_next_image(); }});
+
         task_list.add_task({
             .resources = {
-                .buffers = { 
-                    { daxa::AccessFlagBits::TRANSFER_WRITE, t_vertex_buffer }
-                }
+                .buffers = {
+                    {daxa::AccessFlagBits::TRANSFER_WRITE, t_vertex_buffer},
+                },
             },
-            .task = [&](daxa::TaskInterface & interface){
+            .task = [&](daxa::TaskInterface & task_interface)
+            {
                 // Id Fetch can be ommited, as it is known ahead of time.
                 // daxa::BufferId vertex_buffer = interface.get_buffer(t_vertex_buffer);
 
-                auto vertex_staging_buffer = interface.device.create_buffer({
+                auto vertex_staging_buffer = task_interface.device.create_buffer({
                     .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM | daxa::MemoryFlagBits::STRATEGY_MIN_TIME,
                     .size = sizeof(Vertex) * 3,
                     .debug_name = "HelloTriangle Vertex Staging buffer",
                 });
-                interface.cmd_list.destroy_buffer_deferred(vertex_staging_buffer);
+                task_interface.cmd_list.destroy_buffer_deferred(vertex_staging_buffer);
 
                 auto buffer_ptr = reinterpret_cast<Vertex *>(device.map_memory(vertex_staging_buffer));
                 buffer_ptr[0] = Vertex{-0.5f, +0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f};
                 buffer_ptr[1] = Vertex{+0.5f, +0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f};
                 buffer_ptr[2] = Vertex{+0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f};
-                interface.device.unmap_memory(vertex_staging_buffer);
+                task_interface.device.unmap_memory(vertex_staging_buffer);
 
-                interface.cmd_list.copy_buffer_to_buffer({
+                task_interface.cmd_list.copy_buffer_to_buffer({
                     .src_buffer = vertex_staging_buffer,
                     .dst_buffer = vertex_buffer,
                     .size = sizeof(Vertex) * 3,
                 });
-            }
+            },
         });
 
         task_list.add_render_task({
@@ -124,13 +127,14 @@ struct App : AppWindow<App>
                 .color_attachments = {{.image = t_swapchain_image}},
                 .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
             },
-            .task = [=](daxa::TaskInterface & interface) {
-                interface.cmd_list.set_pipeline(raster_pipeline);
-                interface.cmd_list.push_constant(RasterPush{
+            .task = [=](daxa::TaskInterface & task_interface)
+            {
+                task_interface.cmd_list.set_pipeline(raster_pipeline);
+                task_interface.cmd_list.push_constant(RasterPush{
                     .vertex_buffer_id = vertex_buffer,
                 });
-                interface.cmd_list.draw({.vertex_count = 3});
-            }
+                task_interface.cmd_list.draw({.vertex_count = 3});
+            },
         });
 
         task_list.add_present(t_swapchain_image);
@@ -180,13 +184,19 @@ struct App : AppWindow<App>
             do_resize();
         }
 
-
         // auto now = Clock::now();
         // auto elapsed = std::chrono::duration<float>(now - start).count();
 
-
         gpu_framecount_timeline_sema.wait_for_value(cpu_framecount - 1);
         // printf("ahead: %llu\n", cpu_framecount - gpu_framecount_timeline_sema.value());
+    }
+
+    void on_mouse_move(f32, f32)
+    {
+    }
+
+    void on_key(int, int)
+    {
     }
 
     void on_resize(u32 sx, u32 sy)
