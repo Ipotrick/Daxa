@@ -611,6 +611,7 @@ namespace daxa
                 this->binary_semaphore_recyclable_list.recyclables.push_back(std::move(binary_semaphore)); });
         }
         check_and_cleanup_gpu_resources(this->main_queue_compute_pipeline_zombies, [&](auto & compute_pipeline) {});
+        check_and_cleanup_gpu_resources(this->main_queue_raster_pipeline_zombies, [&](auto & raster_pipeline) {});
         check_and_cleanup_gpu_resources(this->main_queue_timeline_semaphore_zombies, [&](auto & timeline_semaphore) {});
     }
 

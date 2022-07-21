@@ -18,6 +18,8 @@ namespace daxa
 
     static inline constexpr usize COMMAND_LIST_BARRIER_MAX_BATCH_SIZE = 16;
 
+    static inline constexpr usize COMMAND_LIST_COLOR_ATTACHMENT_MAX = 16;
+
     struct ImplCommandList
     {
         using InfoT = CommandListInfo;

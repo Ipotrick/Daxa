@@ -2,6 +2,11 @@
 
 namespace daxa
 {
+    auto GPUResourceId::is_empty() const -> bool
+    {
+        return version == 0;
+    }
+
     void GPUResourceTable::initialize(usize max_buffers, usize max_images, usize max_samplers, VkDevice device)
     {
         buffer_slots.max_resources = max_buffers;
