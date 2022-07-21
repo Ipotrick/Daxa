@@ -4,7 +4,7 @@ function(DAXA_CREATE_TEST FOLDER SUBFOLDER)
         daxa_test_${FOLDER}_${SUBFOLDER}
         "${FOLDER}/${SUBFOLDER}/main.cpp"
     )
-    target_link_libraries(daxa_test_${FOLDER}_${SUBFOLDER} PRIVATE daxa::daxa glfw)
+    target_link_libraries(daxa_test_${FOLDER}_${SUBFOLDER} PRIVATE daxa::daxa glfw glm::glm)
     target_include_directories(daxa_test_${FOLDER}_${SUBFOLDER} PRIVATE "${CMAKE_CURRENT_LIST_DIR}")
 
     if(DAXA_TESTS_DISABLE_WINDOWS_CONSOLE)
@@ -17,6 +17,7 @@ function(DAXA_CREATE_TEST FOLDER SUBFOLDER)
 endfunction()
 
 find_package(glfw3 CONFIG REQUIRED)
+find_package(glm CONFIG REQUIRED)
 
 DAXA_CREATE_TEST(1_setup 1_window)
 
@@ -30,3 +31,4 @@ DAXA_CREATE_TEST(2_daxa_api 6_task_list)
 DAXA_CREATE_TEST(3_samples 0_playground)
 DAXA_CREATE_TEST(3_samples 1_mandelbrot)
 DAXA_CREATE_TEST(3_samples 2_hello_triangle)
+DAXA_CREATE_TEST(3_samples 3_hello_triangle_compute)

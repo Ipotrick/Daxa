@@ -2,17 +2,10 @@
 #include <thread>
 
 using namespace daxa::types;
-using Clock = std::chrono::high_resolution_clock;
-
-struct ComputeInput
-{
-    float time;
-};
 
 struct ComputePush
 {
     daxa::ImageId image_id;
-    daxa::BufferId input_buffer_id;
     u32 frame_dim_x, frame_dim_y;
 };
 
@@ -35,53 +28,31 @@ struct App : AppWindow<App>
             default: return daxa::default_format_score(format);
             }
         },
-        .present_mode = daxa::PresentMode::DO_NOT_WAIT_FOR_VBLANK,
+        .present_mode = daxa::PresentMode::DOUBLE_BUFFER_WAIT_FOR_VBLANK,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-        .debug_name = "Mandelbrot Swapchain",
+        .debug_name = "HelloTriangleCompute Swapchain",
     });
 
     daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
         .root_paths = {
-            "tests/3_samples/1_mandelbrot/shaders",
+            "tests/3_samples/3_hello_triangle_compute/shaders",
             "include",
         },
-        .debug_name = "Mandelbrot Pipeline Compiler",
+        .debug_name = "HelloTriangleCompute Pipeline Compiler",
     });
     // clang-format off
     daxa::ComputePipeline compute_pipeline = pipeline_compiler.create_compute_pipeline({
         .shader_info = {.source = daxa::ShaderFile{"compute.hlsl"}},
         .push_constant_size = sizeof(ComputePush),
-        .debug_name = "Mandelbrot Compute Pipeline",
+        .debug_name = "HelloTriangleCompute Compute Pipeline",
     }).value();
     // clang-format on
-
-    daxa::BufferId compute_input_buffer = device.create_buffer(daxa::BufferInfo{
-        .size = sizeof(ComputeInput),
-        .debug_name = "Mandelbrot Compute Input buffer",
-    });
-    ComputeInput compute_input = {};
 
     daxa::ImageId render_image = device.create_image(daxa::ImageInfo{
         .format = daxa::Format::R8G8B8A8_UNORM,
         .size = {size_x, size_y, 1},
         .usage = daxa::ImageUsageFlagBits::STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
-        .debug_name = "Mandelbrot Render Image",
     });
-
-    daxa::BinarySemaphore binary_semaphore = device.create_binary_semaphore({
-        .debug_name = "Mandelbrot Present Semaphore",
-    });
-
-    static inline constexpr u64 FRAMES_IN_FLIGHT = 1;
-    daxa::TimelineSemaphore gpu_framecount_timeline_sema = device.create_timeline_semaphore(daxa::TimelineSemaphoreInfo{
-        .initial_value = 0,
-        .debug_name = "Mandelbrot gpu framecount Timeline Semaphore",
-    });
-    u64 cpu_framecount = FRAMES_IN_FLIGHT - 1;
-
-    Clock::time_point start = Clock::now();
-
-    bool should_resize = false;
 
     App()
     {
@@ -89,7 +60,6 @@ struct App : AppWindow<App>
 
     ~App()
     {
-        device.destroy_buffer(compute_input_buffer);
         device.destroy_image(render_image);
     }
 
@@ -125,52 +95,18 @@ struct App : AppWindow<App>
             }
         }
 
-        if (should_resize)
-        {
-            do_resize();
-        }
-
         auto swapchain_image = swapchain.acquire_next_image();
 
+        auto binary_semaphore = device.create_binary_semaphore({
+            .debug_name = "HelloTriangleCompute Present Semaphore",
+        });
         auto cmd_list = device.create_command_list({
-            .debug_name = "Mandelbrot Command List",
-        });
-
-        auto now = Clock::now();
-        auto elapsed = std::chrono::duration<float>(now - start).count();
-
-        auto compute_input_staging_buffer = device.create_buffer({
-            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-            .size = sizeof(ComputeInput),
-            .debug_name = "Mandelbrot Compute Input Staging buffer",
-        });
-        cmd_list.destroy_buffer_deferred(compute_input_staging_buffer);
-
-        compute_input.time = elapsed;
-        auto buffer_ptr = reinterpret_cast<ComputeInput *>(device.map_memory(compute_input_staging_buffer));
-        *buffer_ptr = compute_input;
-        device.unmap_memory(compute_input_staging_buffer);
-
-        cmd_list.pipeline_barrier({
-            .awaited_pipeline_access = daxa::PipelineStageAccessFlagBits::HOST_WRITE,
-            .waiting_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_READ,
-        });
-
-        cmd_list.copy_buffer_to_buffer({
-            .src_buffer = compute_input_staging_buffer,
-            .dst_buffer = compute_input_buffer,
-            .size = sizeof(ComputeInput),
-        });
-
-        cmd_list.pipeline_barrier({
-            .awaited_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_WRITE,
-            .waiting_pipeline_access = daxa::PipelineStageAccessFlagBits::COMPUTE_SHADER_READ,
+            .debug_name = "HelloTriangleCompute Command List",
         });
 
         cmd_list.set_pipeline(compute_pipeline);
         cmd_list.push_constant(ComputePush{
             .image_id = render_image,
-            .input_buffer_id = compute_input_buffer,
             .frame_dim_x = size_x,
             .frame_dim_y = size_y,
         });
@@ -221,20 +157,15 @@ struct App : AppWindow<App>
 
         cmd_list.complete();
 
-        ++cpu_framecount;
         device.submit_commands({
             .command_lists = {std::move(cmd_list)},
             .signal_binary_semaphores = {binary_semaphore},
-            .signal_timeline_semaphores = {{gpu_framecount_timeline_sema, cpu_framecount}},
         });
 
         device.present_frame({
             .wait_binary_semaphores = {binary_semaphore},
             .swapchain = swapchain,
         });
-
-        gpu_framecount_timeline_sema.wait_for_value(cpu_framecount - 1);
-        // printf("ahead: %llu\n", cpu_framecount - gpu_framecount_timeline_sema.value());
     }
 
     void on_resize(u32 sx, u32 sy)
@@ -245,22 +176,15 @@ struct App : AppWindow<App>
 
         if (!minimized)
         {
-            should_resize = true;
-            do_resize();
+            device.destroy_image(render_image);
+            render_image = device.create_image({
+                .format = daxa::Format::R8G8B8A8_UNORM,
+                .size = {size_x, size_y, 1},
+                .usage = daxa::ImageUsageFlagBits::STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+            });
+            swapchain.resize(size_x, size_y);
+            draw();
         }
-    }
-
-    void do_resize()
-    {
-        should_resize = false;
-        device.destroy_image(render_image);
-        render_image = device.create_image({
-            .format = daxa::Format::R8G8B8A8_UNORM,
-            .size = {size_x, size_y, 1},
-            .usage = daxa::ImageUsageFlagBits::STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
-        });
-        swapchain.resize(size_x, size_y);
-        draw();
     }
 };
 
