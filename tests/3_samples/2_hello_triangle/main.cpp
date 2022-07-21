@@ -207,6 +207,14 @@ struct App : AppWindow<App>
         // printf("ahead: %llu\n", cpu_framecount - gpu_framecount_timeline_sema.value());
     }
 
+    void on_mouse_move(f32, f32)
+    {
+    }
+
+    void on_key(int, int)
+    {
+    }
+
     void on_resize(u32 sx, u32 sy)
     {
         size_x = sx;

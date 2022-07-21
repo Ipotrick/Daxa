@@ -19,6 +19,8 @@ namespace tests
                 .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
             });
 
+            void on_mouse_move(f32, f32) {}
+            void on_key(int, int) {}
             void on_resize(u32, u32) {}
         };
         App app;
@@ -98,6 +100,14 @@ namespace tests
                     .wait_binary_semaphores = {binary_semaphore},
                     .swapchain = swapchain,
                 });
+            }
+
+            void on_mouse_move(f32, f32)
+            {
+            }
+
+            void on_key(int, int)
+            {
             }
 
             void on_resize(u32 sx, u32 sy)
