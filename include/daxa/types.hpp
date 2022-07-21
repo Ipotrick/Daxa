@@ -574,4 +574,104 @@ namespace daxa
         GREATER_OR_EQUAL = 6,
         ALWAYS = 7,
     };
+
+    enum class BlendFactor
+    {
+        ZERO = 0,
+        ONE = 1,
+        SRC_COLOR = 2,
+        ONE_MINUS_SRC_COLOR = 3,
+        DST_COLOR = 4,
+        ONE_MINUS_DST_COLOR = 5,
+        SRC_ALPHA = 6,
+        ONE_MINUS_SRC_ALPHA = 7,
+        DST_ALPHA = 8,
+        ONE_MINUS_DST_ALPHA = 9,
+        CONSTANT_COLOR = 10,
+        ONE_MINUS_CONSTANT_COLOR = 11,
+        CONSTANT_ALPHA = 12,
+        ONE_MINUS_CONSTANT_ALPHA = 13,
+        SRC_ALPHA_SATURATE = 14,
+        SRC1_COLOR = 15,
+        ONE_MINUS_SRC1_COLOR = 16,
+        SRC1_ALPHA = 17,
+        ONE_MINUS_SRC1_ALPHA = 18,
+    };
+
+    enum class BlendOp
+    {
+        ADD = 0,
+        SUBTRACT = 1,
+        REVERSE_SUBTRACT = 2,
+        MIN = 3,
+        MAX = 4,
+    };
+
+    using ColorComponentFlags = u32;
+    struct ColorComponentFlagBits
+    {
+        static inline constexpr ColorComponentFlags R = 0x00000001;
+        static inline constexpr ColorComponentFlags G = 0x00000002;
+        static inline constexpr ColorComponentFlags B = 0x00000004;
+        static inline constexpr ColorComponentFlags A = 0x00000008;
+    };
+
+    struct BlendInfo
+    {
+        u32 blend_enable = false;
+        BlendFactor src_color_blend_factor = BlendFactor::ONE;
+        BlendFactor dst_color_blend_factor = BlendFactor::ZERO;
+        BlendOp color_blend_op = BlendOp::ADD;
+        BlendFactor src_alpha_blend_factor = BlendFactor::ONE;
+        BlendFactor dst_alpha_blend_factor = BlendFactor::ZERO;
+        BlendOp alpha_blend_op = BlendOp::ADD;
+        ColorComponentFlags color_write_mask = ColorComponentFlagBits::R | ColorComponentFlagBits::G | ColorComponentFlagBits::B | ColorComponentFlagBits::A;
+    };
+
+    enum class PolygonMode
+    {
+        FILL = 0,
+        LINE = 1,
+        POINT = 2,
+    };
+
+    using FaceCullFlags = u32;
+    struct FaceCullFlagBits
+    {
+        static inline constexpr FaceCullFlags NONE = 0;
+        static inline constexpr FaceCullFlags FRONT_BIT = 0x00000001;
+        static inline constexpr FaceCullFlags BACK_BIT = 0x00000002;
+        static inline constexpr FaceCullFlags FRONT_AND_BACK = 0x00000003;
+    };
+
+    enum class AttachmentLoadOp
+    {
+        LOAD = 0,
+        CLEAR = 1,
+        DONT_CARE = 2,
+    };
+
+    enum class AttachmentStoreOp
+    {
+        STORE = 0,
+        DONT_CARE = 1,
+    };
+
+    struct ViewportInfo
+    {
+        f32 x = {};
+        f32 y = {};
+        f32 width = {};
+        f32 height = {};
+        f32 min_depth = {};
+        f32 max_depth = {};
+    };
+
+    struct Rect2D
+    {
+        i32 x = {};
+        i32 y = {};
+        u32 width = {};
+        u32 height = {};
+    };
 } // namespace daxa

@@ -8,6 +8,8 @@ namespace daxa
     {
         u32 index : 24;
         u32 version : 8;
+
+        auto is_empty() const -> bool;
     };
 
     struct BufferInfo

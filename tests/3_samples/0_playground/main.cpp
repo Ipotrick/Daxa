@@ -15,15 +15,10 @@ struct App : AppWindow<App>
     daxa::Device device = daxa_ctx.create_default_device();
 
     daxa::Swapchain swapchain = device.create_swapchain({
-#if defined(_WIN32)
-        .native_window = glfwGetWin32Window(glfw_window_ptr),
-#elif defined(__linux__)
-        .native_window = glfwGetX11Window(glfw_window_ptr),
-#endif
+        .native_window = get_native_handle(),
         .width = size_x,
         .height = size_y,
-        .surface_format_selector =
-            [](daxa::Format format)
+        .surface_format_selector = [](daxa::Format format)
         {
             switch (format)
             {
@@ -92,7 +87,7 @@ struct App : AppWindow<App>
         if (pipeline_compiler.check_if_sources_changed(compute_pipeline))
         {
             auto new_pipeline = pipeline_compiler.recreate_compute_pipeline(compute_pipeline);
-            if (new_pipeline.isOk())
+            if (new_pipeline.is_ok())
             {
                 compute_pipeline = new_pipeline.value();
             }
@@ -107,7 +102,7 @@ struct App : AppWindow<App>
             .debug_name = "Test1 Command List",
         });
 
-        cmd_list.bind_pipeline(compute_pipeline);
+        cmd_list.set_pipeline(compute_pipeline);
         cmd_list.push_constant(ComputePush{
             .image_id = render_image,
             .frame_dim_x = size_x,

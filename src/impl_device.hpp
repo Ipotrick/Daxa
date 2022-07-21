@@ -56,6 +56,7 @@ namespace daxa
         std::vector<std::pair<u64, std::shared_ptr<ImplBinarySemaphore>>> main_queue_binary_semaphore_zombies = {};
         std::vector<std::pair<u64, std::shared_ptr<ImplBinarySemaphore>>> main_queue_timeline_semaphore_zombies = {};
         std::vector<std::pair<u64, std::shared_ptr<ImplComputePipeline>>> main_queue_compute_pipeline_zombies = {};
+        std::vector<std::pair<u64, std::shared_ptr<ImplRasterPipeline>>> main_queue_raster_pipeline_zombies = {};
         void main_queue_collect_garbage(bool lock_submit);
 
         ImplDevice(DeviceInfo const & info, DeviceVulkanInfo const & vk_info, std::shared_ptr<ImplContext> impl_ctx, VkPhysicalDevice physical_device);
