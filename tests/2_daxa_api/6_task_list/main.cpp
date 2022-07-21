@@ -73,12 +73,69 @@ struct App : AppWindow<App>
     });
     u64 cpu_framecount = FRAMES_IN_FLIGHT - 1;
 
+    daxa::TaskList task_list = {};
+
     // Clock::time_point start = Clock::now();
 
     bool should_resize = false;
 
     App()
     {
+        task_list = device.create_task_list({
+            .debug_name = "HelloTriangle Task List",
+        });
+
+        daxa::TaskBufferId t_vertex_buffer = task_list.create_task_buffer({.fetch_callback = [=](daxa::TaskInterface&) { return vertex_buffer; }});
+        daxa::TaskImageId t_swapchain_image = task_list.create_task_image({.fetch_callback = [=](daxa::TaskInterface&) { return swapchain.acquire_next_image(); }});
+        
+        task_list.add_task({
+            .resources = {
+                .buffers = { 
+                    { daxa::AccessFlagBits::TRANSFER_WRITE, t_vertex_buffer }
+                }
+            },
+            .task = [&](daxa::TaskInterface & interface){
+                // Id Fetch can be ommited, as it is known ahead of time.
+                // daxa::BufferId vertex_buffer = interface.get_buffer(t_vertex_buffer);
+
+                auto vertex_staging_buffer = interface.device.create_buffer({
+                    .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM | daxa::MemoryFlagBits::STRATEGY_MIN_TIME,
+                    .size = sizeof(Vertex) * 3,
+                    .debug_name = "HelloTriangle Vertex Staging buffer",
+                });
+                interface.cmd_list.destroy_buffer_deferred(vertex_staging_buffer);
+
+                auto buffer_ptr = reinterpret_cast<Vertex *>(device.map_memory(vertex_staging_buffer));
+                buffer_ptr[0] = Vertex{-0.5f, +0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f};
+                buffer_ptr[1] = Vertex{+0.5f, +0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f};
+                buffer_ptr[2] = Vertex{+0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f};
+                interface.device.unmap_memory(vertex_staging_buffer);
+
+                interface.cmd_list.copy_buffer_to_buffer({
+                    .src_buffer = vertex_staging_buffer,
+                    .dst_buffer = vertex_buffer,
+                    .size = sizeof(Vertex) * 3,
+                });
+            }
+        });
+
+        task_list.add_render_task({
+            .render_info = {
+                .color_attachments = {{.image = t_swapchain_image}},
+                .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
+            },
+            .task = [=](daxa::TaskInterface & interface) {
+                interface.cmd_list.set_pipeline(raster_pipeline);
+                interface.cmd_list.push_constant(RasterPush{
+                    .vertex_buffer_id = vertex_buffer,
+                });
+                interface.cmd_list.draw({.vertex_count = 3});
+            }
+        });
+
+        task_list.add_present(t_swapchain_image);
+
+        task_list.compile();
     }
 
     ~App()
@@ -123,83 +180,10 @@ struct App : AppWindow<App>
             do_resize();
         }
 
-        auto swapchain_image = swapchain.acquire_next_image();
-
-        auto task_list = device.create_task_list({});
-
-        auto cmd_list = device.create_command_list({
-            .debug_name = "HelloTriangle Command List",
-        });
 
         // auto now = Clock::now();
         // auto elapsed = std::chrono::duration<float>(now - start).count();
 
-        auto vertex_staging_buffer = device.create_buffer({
-            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-            .size = sizeof(Vertex) * 3,
-            .debug_name = "HelloTriangle Vertex Staging buffer",
-        });
-        cmd_list.destroy_buffer_deferred(vertex_staging_buffer);
-
-        auto buffer_ptr = reinterpret_cast<Vertex *>(device.map_memory(vertex_staging_buffer));
-        *buffer_ptr = Vertex{-0.5f, +0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f};
-        ++buffer_ptr;
-        *buffer_ptr = Vertex{+0.5f, +0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f};
-        ++buffer_ptr;
-        *buffer_ptr = Vertex{+0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f};
-        ++buffer_ptr;
-        device.unmap_memory(vertex_staging_buffer);
-
-        cmd_list.pipeline_barrier({
-            .awaited_pipeline_access = daxa::PipelineStageAccessFlagBits::HOST_WRITE,
-            .waiting_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_READ,
-        });
-
-        cmd_list.copy_buffer_to_buffer({
-            .src_buffer = vertex_staging_buffer,
-            .dst_buffer = vertex_buffer,
-            .size = sizeof(Vertex) * 3,
-        });
-
-        cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_WRITE,
-            .waiting_pipeline_access = daxa::PipelineStageAccessFlagBits::VERTEX_SHADER_READ,
-            .before_layout = daxa::ImageLayout::UNDEFINED,
-            .after_layout = daxa::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
-            .image_id = swapchain_image,
-        });
-
-        cmd_list.begin_renderpass({
-            .color_attachments = {{.image = swapchain_image}},
-            .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
-        });
-        cmd_list.set_pipeline(raster_pipeline);
-        cmd_list.push_constant(RasterPush{
-            .vertex_buffer_id = vertex_buffer,
-        });
-        cmd_list.draw({.vertex_count = 3});
-        cmd_list.end_renderpass();
-
-        cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_WRITE,
-            .before_layout = daxa::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
-            .after_layout = daxa::ImageLayout::PRESENT_SRC,
-            .image_id = swapchain_image,
-        });
-
-        cmd_list.complete();
-
-        ++cpu_framecount;
-        device.submit_commands({
-            .command_lists = {std::move(cmd_list)},
-            .signal_binary_semaphores = {binary_semaphore},
-            .signal_timeline_semaphores = {{gpu_framecount_timeline_sema, cpu_framecount}},
-        });
-
-        device.present_frame({
-            .wait_binary_semaphores = {binary_semaphore},
-            .swapchain = swapchain,
-        });
 
         gpu_framecount_timeline_sema.wait_for_value(cpu_framecount - 1);
         // printf("ahead: %llu\n", cpu_framecount - gpu_framecount_timeline_sema.value());

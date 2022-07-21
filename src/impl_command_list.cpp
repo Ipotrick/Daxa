@@ -296,9 +296,9 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
             .pNext = nullptr,
             .srcStageMask = 0x0111'1111'1111'1111ull & info.awaited_pipeline_access,
-            .srcAccessMask = (info.awaited_pipeline_access & PipelineStageAccessFlagBits::WRITE_ACCESS ? VK_ACCESS_2_MEMORY_WRITE_BIT : 0ull) | (info.awaited_pipeline_access & PipelineStageAccessFlagBits::READ_ACCESS ? VK_ACCESS_2_MEMORY_READ_BIT : 0ull),
+            .srcAccessMask = (info.awaited_pipeline_access & AccessFlagBits::WRITE_ACCESS ? VK_ACCESS_2_MEMORY_WRITE_BIT : 0ull) | (info.awaited_pipeline_access & AccessFlagBits::READ_ACCESS ? VK_ACCESS_2_MEMORY_READ_BIT : 0ull),
             .dstStageMask = 0x0111'1111'1111'1111ull & info.waiting_pipeline_access,
-            .dstAccessMask = (info.waiting_pipeline_access & PipelineStageAccessFlagBits::WRITE_ACCESS ? VK_ACCESS_2_MEMORY_WRITE_BIT : 0ull) | (info.waiting_pipeline_access & PipelineStageAccessFlagBits::READ_ACCESS ? VK_ACCESS_2_MEMORY_READ_BIT : 0ull),
+            .dstAccessMask = (info.waiting_pipeline_access & AccessFlagBits::WRITE_ACCESS ? VK_ACCESS_2_MEMORY_WRITE_BIT : 0ull) | (info.waiting_pipeline_access & AccessFlagBits::READ_ACCESS ? VK_ACCESS_2_MEMORY_READ_BIT : 0ull),
         };
     }
 
@@ -317,9 +317,9 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
             .pNext = nullptr,
             .srcStageMask = 0x0111'1111'1111'1111ull & info.awaited_pipeline_access,
-            .srcAccessMask = (info.awaited_pipeline_access & PipelineStageAccessFlagBits::WRITE_ACCESS ? VK_ACCESS_2_MEMORY_WRITE_BIT : 0ull) | (info.awaited_pipeline_access & PipelineStageAccessFlagBits::READ_ACCESS ? VK_ACCESS_2_MEMORY_READ_BIT : 0ull),
+            .srcAccessMask = (info.awaited_pipeline_access & AccessFlagBits::WRITE_ACCESS ? VK_ACCESS_2_MEMORY_WRITE_BIT : 0ull) | (info.awaited_pipeline_access & AccessFlagBits::READ_ACCESS ? VK_ACCESS_2_MEMORY_READ_BIT : 0ull),
             .dstStageMask = 0x0111'1111'1111'1111ull & info.waiting_pipeline_access,
-            .dstAccessMask = (info.waiting_pipeline_access & PipelineStageAccessFlagBits::WRITE_ACCESS ? VK_ACCESS_2_MEMORY_WRITE_BIT : 0ull) | (info.waiting_pipeline_access & PipelineStageAccessFlagBits::READ_ACCESS ? VK_ACCESS_2_MEMORY_READ_BIT : 0ull),
+            .dstAccessMask = (info.waiting_pipeline_access & AccessFlagBits::WRITE_ACCESS ? VK_ACCESS_2_MEMORY_WRITE_BIT : 0ull) | (info.waiting_pipeline_access & AccessFlagBits::READ_ACCESS ? VK_ACCESS_2_MEMORY_READ_BIT : 0ull),
             .oldLayout = static_cast<VkImageLayout>(info.before_layout),
             .newLayout = static_cast<VkImageLayout>(info.after_layout),
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,

@@ -12,6 +12,7 @@
 #include "impl_swapchain.hpp"
 #include "impl_semaphore.hpp"
 #include "impl_gpu_resources.hpp"
+#include "impl_task_list.hpp"
 
 namespace daxa
 {

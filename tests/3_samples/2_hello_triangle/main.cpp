@@ -149,8 +149,8 @@ struct App : AppWindow<App>
         device.unmap_memory(vertex_staging_buffer);
 
         cmd_list.pipeline_barrier({
-            .awaited_pipeline_access = daxa::PipelineStageAccessFlagBits::HOST_WRITE,
-            .waiting_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_READ,
+            .awaited_pipeline_access = daxa::AccessFlagBits::HOST_WRITE,
+            .waiting_pipeline_access = daxa::AccessFlagBits::TRANSFER_READ,
         });
 
         cmd_list.copy_buffer_to_buffer({
@@ -160,8 +160,8 @@ struct App : AppWindow<App>
         });
 
         cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_WRITE,
-            .waiting_pipeline_access = daxa::PipelineStageAccessFlagBits::VERTEX_SHADER_READ,
+            .awaited_pipeline_access = daxa::AccessFlagBits::TRANSFER_WRITE,
+            .waiting_pipeline_access = daxa::AccessFlagBits::VERTEX_SHADER_READ,
             .before_layout = daxa::ImageLayout::UNDEFINED,
             .after_layout = daxa::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
             .image_id = swapchain_image,
@@ -179,7 +179,7 @@ struct App : AppWindow<App>
         cmd_list.end_renderpass();
 
         cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_WRITE,
+            .awaited_pipeline_access = daxa::AccessFlagBits::TRANSFER_WRITE,
             .before_layout = daxa::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
             .after_layout = daxa::ImageLayout::PRESENT_SRC,
             .image_id = swapchain_image,
