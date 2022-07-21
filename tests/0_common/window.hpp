@@ -31,7 +31,7 @@ struct AppWindow
             });
         glfwSetKeyCallback(
             glfw_window_ptr,
-            [](GLFWwindow * window_ptr, i32 key, i32 action, i32, i32)
+            [](GLFWwindow * window_ptr, i32 key, i32, i32 action, i32)
             {
                 auto & app = *reinterpret_cast<App *>(glfwGetWindowUserPointer(window_ptr));
                 app.on_key(key, action);
@@ -63,5 +63,12 @@ struct AppWindow
     inline void set_mouse_pos(f32 x, f32 y)
     {
         glfwSetCursorPos(glfw_window_ptr, static_cast<f64>(x), static_cast<f64>(y));
+    }
+
+    inline void set_mouse_capture(bool should_capture)
+    {
+        glfwSetCursorPos(glfw_window_ptr, static_cast<f64>(size_x / 2), static_cast<f64>(size_y / 2));
+        glfwSetInputMode(glfw_window_ptr, GLFW_CURSOR, should_capture ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+        glfwSetInputMode(glfw_window_ptr, GLFW_RAW_MOUSE_MOTION, should_capture);
     }
 };
