@@ -1,5 +1,7 @@
 #pragma once
 
+#define GLM_DEPTH_ZERO_TO_ONE
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -24,7 +26,7 @@ struct Camera3D
     void set_pos(glm::vec3 pos) { vtrn_mat = glm::translate(glm::mat4(1), pos); }
     void set_rot(float x, float y)
     {
-        vrot_mat = glm::rotate(glm::rotate(glm::mat4(1), x, {0, 1, 0}), y, {1, 0, 0});
+        vrot_mat = glm::rotate(glm::rotate(glm::mat4(1), y, {1, 0, 0}), x, {0, 1, 0});
     }
     glm::mat4 get_vp() { return proj_mat * vrot_mat * vtrn_mat; }
 };
@@ -54,8 +56,8 @@ namespace input
 
 struct Player3D
 {
-    Camera3D camera;
-    input::Keybinds keybinds;
+    Camera3D camera{};
+    input::Keybinds keybinds = input::DEFAULT_KEYBINDS;
     glm::vec3 pos{}, vel{}, rot{};
     float speed = 30.0f, mouse_sens = 0.1f;
     float sprint_speed = 8.0f;
@@ -72,13 +74,13 @@ struct Player3D
         if (move.sprint)
             delta_pos *= sprint_speed;
         if (move.px)
-            pos.z += sin_rot_x * delta_pos, pos.x -= cos_rot_x * delta_pos;
+            pos.z += sin_rot_x * delta_pos, pos.x += cos_rot_x * delta_pos;
         if (move.nx)
-            pos.z -= sin_rot_x * delta_pos, pos.x += cos_rot_x * delta_pos;
+            pos.z -= sin_rot_x * delta_pos, pos.x -= cos_rot_x * delta_pos;
         if (move.pz)
-            pos.x += sin_rot_x * delta_pos, pos.z += cos_rot_x * delta_pos;
+            pos.x += sin_rot_x * delta_pos, pos.z -= cos_rot_x * delta_pos;
         if (move.nz)
-            pos.x -= sin_rot_x * delta_pos, pos.z -= cos_rot_x * delta_pos;
+            pos.x -= sin_rot_x * delta_pos, pos.z += cos_rot_x * delta_pos;
         if (move.py)
             pos.y -= delta_pos;
         if (move.ny)

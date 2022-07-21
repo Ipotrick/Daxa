@@ -112,6 +112,9 @@ struct App : AppWindow<App>
         auto elapsed_s = std::chrono::duration<f32>(now - prev_time).count();
         prev_time = now;
 
+        player.camera.resize(size_x, size_y);
+        player.camera.set_pos(player.pos);
+        player.camera.set_rot(player.rot.x, player.rot.y);
         player.update(elapsed_s);
 
         if (!minimized)
