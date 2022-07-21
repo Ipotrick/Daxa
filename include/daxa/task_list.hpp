@@ -23,6 +23,13 @@ namespace daxa
         std::function<void(TaskInterface &, CommandList &, TaskResources const &)> task = {};
     };
 
+    struct RenderTaskInfo
+    {
+        RenderPassBeginInfo render_pass_info = {};
+        TaskResources resources = {};
+        std::function<void(TaskInterface &, CommandList &, TaskResources const &)> task = {};
+    };
+
     struct CommandSubmitInfo;
     struct PresentInfo;
 
@@ -45,6 +52,7 @@ namespace daxa
         void clear_image(ImageClearInfo const & info);
 
         void add_task(TaskInfo const & info);
+        void add_render_task(RenderTaskInfo const & ifno);
 
         void submit(CommandSubmitInfo const & info);
 
