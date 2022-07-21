@@ -35,7 +35,9 @@ namespace tests
 
 int main()
 {
-    auto daxa_ctx = daxa::create_context({});
+    auto daxa_ctx = daxa::create_context({
+        .enable_validation = true,
+    });
 
     tests::simplest(daxa_ctx);
     tests::device_selection(daxa_ctx);
