@@ -209,7 +209,8 @@ namespace daxa
     
     auto Device::create_task_list(TaskListInfo const & info) -> TaskList
     {
-
+        auto impl = std::static_pointer_cast<ImplDevice>(this->impl);
+        return TaskList{std::make_shared<ImplTaskList>(impl, info)};
     }
 
     auto Device::create_buffer(BufferInfo const & info) -> BufferId

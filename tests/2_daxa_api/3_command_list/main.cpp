@@ -50,14 +50,14 @@ namespace tests
         daxa::ImageId image_1 = app.device.create_image({
             .format = daxa::Format::R32G32B32A32_SFLOAT,
             .size = {1, 1, 1},
-            .usage = daxa::ImageUsageFlagBits::STORAGE | daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+            .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             .debug_name = "image_1",
         });
 
         daxa::ImageId image_2 = app.device.create_image({
             .format = daxa::Format::R32G32B32A32_SFLOAT,
             .size = {1, 1, 1},
-            .usage = daxa::ImageUsageFlagBits::STORAGE | daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+            .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             .debug_name = "image_2",
         });
 
@@ -68,8 +68,8 @@ namespace tests
         app.device.unmap_memory(staging_upload_buffer);
 
         cmd_list.pipeline_barrier({
-            .awaited_pipeline_access = daxa::PipelineStageAccessFlagBits::HOST_WRITE,
-            .waiting_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_READ,
+            .awaited_pipeline_access = daxa::AccessFlagBits::HOST_WRITE,
+            .waiting_pipeline_access = daxa::AccessFlagBits::TRANSFER_READ,
         });
 
         cmd_list.copy_buffer_to_buffer({
@@ -79,8 +79,8 @@ namespace tests
         });
 
         cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_WRITE,
-            .waiting_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_READ,
+            .awaited_pipeline_access = daxa::AccessFlagBits::TRANSFER_WRITE,
+            .waiting_pipeline_access = daxa::AccessFlagBits::TRANSFER_READ,
             .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .image_id = image_1,
         });
@@ -93,8 +93,8 @@ namespace tests
         });
 
         cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_WRITE,
-            .waiting_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_READ,
+            .awaited_pipeline_access = daxa::AccessFlagBits::TRANSFER_WRITE,
+            .waiting_pipeline_access = daxa::AccessFlagBits::TRANSFER_READ,
             .after_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
             .image_id = image_1,
         });
@@ -114,8 +114,8 @@ namespace tests
         });
 
         cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_WRITE,
-            .waiting_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_READ,
+            .awaited_pipeline_access = daxa::AccessFlagBits::TRANSFER_WRITE,
+            .waiting_pipeline_access = daxa::AccessFlagBits::TRANSFER_READ,
             .after_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
             .image_id = image_2,
         });
@@ -128,8 +128,8 @@ namespace tests
         });
 
         cmd_list.pipeline_barrier({
-            .awaited_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_WRITE,
-            .waiting_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_READ,
+            .awaited_pipeline_access = daxa::AccessFlagBits::TRANSFER_WRITE,
+            .waiting_pipeline_access = daxa::AccessFlagBits::TRANSFER_READ,
         });
 
         cmd_list.copy_buffer_to_buffer({
@@ -139,8 +139,8 @@ namespace tests
         });
 
         cmd_list.pipeline_barrier({
-            .awaited_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_WRITE,
-            .waiting_pipeline_access = daxa::PipelineStageAccessFlagBits::HOST_READ,
+            .awaited_pipeline_access = daxa::AccessFlagBits::TRANSFER_WRITE,
+            .waiting_pipeline_access = daxa::AccessFlagBits::HOST_READ,
         });
 
         cmd_list.complete();
