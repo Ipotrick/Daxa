@@ -33,6 +33,7 @@ namespace daxa
     struct Swapchain : Handle
     {
         auto info() const -> SwapchainInfo const &;
+        auto get_format() const -> Format;
 
         ImageId acquire_next_image();
         void resize(u32 width, u32 height);

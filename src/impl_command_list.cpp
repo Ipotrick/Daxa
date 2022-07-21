@@ -195,11 +195,9 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(size % 4 == 0, "push constant size must be a multiple of 4 bytes");
         impl.flush_barriers();
 
-        usize push_constant_device_word_size = size / 4;
-
-        vkCmdPushConstants(impl.vk_cmd_buffer, impl.pipeline_layouts[push_constant_device_word_size], VK_SHADER_STAGE_ALL, offset, size, data);
+        vkCmdPushConstants(impl.vk_cmd_buffer, impl.pipeline_layouts[(size + 3) / 4], VK_SHADER_STAGE_ALL, offset, size, data);
     }
-    void CommandList::bind_pipeline(ComputePipeline const & pipeline)
+    void CommandList::set_pipeline(ComputePipeline const & pipeline)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
         auto & pipeline_impl = *reinterpret_cast<ImplComputePipeline *>(pipeline.impl.get());
@@ -209,6 +207,17 @@ namespace daxa
         vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_layout, 0, 1, &DAXA_LOCK_WEAK(impl.impl_device)->gpu_table.vk_descriptor_set, 0, nullptr);
 
         vkCmdBindPipeline(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline);
+    }
+    void CommandList::set_pipeline(RasterPipeline const & pipeline)
+    {
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        auto & pipeline_impl = *reinterpret_cast<ImplRasterPipeline *>(pipeline.impl.get());
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+        impl.flush_barriers();
+
+        vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline_layout, 0, 1, &DAXA_LOCK_WEAK(impl.impl_device)->gpu_table.vk_descriptor_set, 0, nullptr);
+
+        vkCmdBindPipeline(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline);
     }
     void CommandList::dispatch(u32 group_x, u32 group_y, u32 group_z)
     {
@@ -318,6 +327,142 @@ namespace daxa
             .image = DAXA_LOCK_WEAK(impl.impl_device)->slot(info.image_id).vk_image,
             .subresourceRange = *reinterpret_cast<VkImageSubresourceRange const *>(&info.image_slice),
         };
+    }
+
+    void CommandList::begin_renderpass(RenderPassBeginInfo const & info)
+    {
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+        impl.flush_barriers();
+
+        auto fill_rendering_attachment_info = [&](RenderAttachmentInfo const & in, VkRenderingAttachmentInfo & out)
+        {
+            DAXA_DBG_ASSERT_TRUE_M(!in.image.is_empty() || !in.image_view.is_empty(), "must provide either image or image view to render attachment");
+            VkImageView vk_image_view = VK_NULL_HANDLE;
+            if (!in.image.is_empty())
+            {
+                vk_image_view = DAXA_LOCK_WEAK(impl.impl_device)->slot(in.image).vk_image_view;
+            }
+            if (!in.image_view.is_empty())
+            {
+                vk_image_view = DAXA_LOCK_WEAK(impl.impl_device)->slot(in.image_view).vk_image_view;
+            }
+            out = VkRenderingAttachmentInfo{
+                .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+                .pNext = nullptr,
+                .imageView = vk_image_view,
+                .imageLayout = *reinterpret_cast<VkImageLayout const *>(&in.layout),
+                .resolveMode = VkResolveModeFlagBits::VK_RESOLVE_MODE_NONE,
+                .resolveImageView = VK_NULL_HANDLE,
+                .resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                .loadOp = static_cast<VkAttachmentLoadOp>(in.load_op),
+                .storeOp = static_cast<VkAttachmentStoreOp>(in.store_op),
+                .clearValue = *reinterpret_cast<VkClearValue const *>(&in.clear_value),
+            };
+        };
+
+        DAXA_DBG_ASSERT_TRUE_M(info.color_attachments.size() <= COMMAND_LIST_COLOR_ATTACHMENT_MAX, "too many color attachments, make pull request to bump maximum");
+        std::array<VkRenderingAttachmentInfo, COMMAND_LIST_COLOR_ATTACHMENT_MAX> vk_color_attachments = {};
+
+        for (usize i = 0; i < info.color_attachments.size(); ++i)
+        {
+            fill_rendering_attachment_info(info.color_attachments[i], vk_color_attachments[i]);
+        }
+
+        VkRenderingAttachmentInfo depth_attachment_info = {};
+        if (info.depth_attachment.has_value())
+        {
+            fill_rendering_attachment_info(info.depth_attachment.value(), depth_attachment_info);
+        };
+
+        VkRenderingAttachmentInfo stencil_attachment_info = {};
+        if (info.depth_attachment.has_value())
+        {
+            fill_rendering_attachment_info(info.stencil_attachment.value(), stencil_attachment_info);
+        };
+
+        VkRenderingInfo vk_rendering_info{
+            .sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR,
+            .pNext = nullptr,
+            .flags = {},
+            .renderArea = *reinterpret_cast<VkRect2D const *>(&info.render_area),
+            .layerCount = 1,
+            .viewMask = {},
+            .colorAttachmentCount = static_cast<u32>(info.color_attachments.size()),
+            .pColorAttachments = vk_color_attachments.data(),
+            .pDepthAttachment = info.depth_attachment.has_value() ? &depth_attachment_info : nullptr,
+            .pStencilAttachment = info.stencil_attachment.has_value() ? &stencil_attachment_info : nullptr,
+        };
+
+        vkCmdSetScissor(impl.vk_cmd_buffer, 0, 1, reinterpret_cast<VkRect2D const *>(&info.render_area));
+
+        VkViewport vk_viewport = {
+            .x = static_cast<f32>(info.render_area.x),
+            .y = static_cast<f32>(info.render_area.y),
+            .width = static_cast<f32>(info.render_area.width),
+            .height = static_cast<f32>(info.render_area.height),
+            .minDepth = 0.0f,
+            .maxDepth = 1.0f,
+        };
+        vkCmdSetViewport(impl.vk_cmd_buffer, 0, 1, &vk_viewport);
+
+        vkCmdBeginRendering(impl.vk_cmd_buffer, &vk_rendering_info);
+    }
+
+    void CommandList::end_renderpass()
+    {
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+        impl.flush_barriers();
+        vkCmdEndRendering(impl.vk_cmd_buffer);
+    }
+
+    void CommandList::set_viewport(ViewportInfo const & info)
+    {
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+        impl.flush_barriers();
+        vkCmdSetViewport(impl.vk_cmd_buffer, 0, 1, reinterpret_cast<VkViewport const *>(&info));
+    }
+
+    void CommandList::set_scissor(Rect2D const & info)
+    {
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+        impl.flush_barriers();
+        vkCmdSetScissor(impl.vk_cmd_buffer, 0, 1, reinterpret_cast<VkRect2D const *>(&info));
+    }
+
+    void CommandList::set_index_buffer(BufferId id, usize offset, usize index_type_byte_size)
+    {
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+        impl.flush_barriers();
+
+        VkIndexType vk_index_type = {};
+        switch (index_type_byte_size)
+        {
+        case 2: vk_index_type = VK_INDEX_TYPE_UINT16; break;
+        case 4: vk_index_type = VK_INDEX_TYPE_UINT32; break;
+        default: DAXA_DBG_ASSERT_TRUE_M(false, "only index byte sizes 2 and 4 are supported");
+        }
+        vkCmdBindIndexBuffer(impl.vk_cmd_buffer, DAXA_LOCK_WEAK(impl.impl_device)->slot(id).vk_buffer, static_cast<VkDeviceSize>(offset), vk_index_type);
+    }
+
+    void CommandList::draw(DrawInfo const & info)
+    {
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+        impl.flush_barriers();
+        vkCmdDraw(impl.vk_cmd_buffer, info.vertex_count, info.instance_count, info.first_vertex, info.first_instance);
+    }
+
+    void CommandList::draw_indirect(DrawIndirectInfo const & info)
+    {
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+        impl.flush_barriers();
+        vkCmdDrawIndirect(impl.vk_cmd_buffer, DAXA_LOCK_WEAK(impl.impl_device)->slot(info.indirect_buffer).vk_buffer, info.offset, info.draw_count, info.stride);
     }
 
     void ImplCommandList::flush_barriers()

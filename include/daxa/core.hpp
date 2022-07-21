@@ -116,12 +116,12 @@ namespace daxa
         {
         }
 
-        bool isOk() const
+        bool is_ok() const
         {
             return v.has_value();
         }
 
-        bool isErr() const
+        bool is_err() const
         {
             return !v.has_value();
         }

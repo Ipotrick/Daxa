@@ -29,3 +29,4 @@ DAXA_CREATE_TEST(2_daxa_api 6_task_list)
 
 DAXA_CREATE_TEST(3_samples 0_playground)
 DAXA_CREATE_TEST(3_samples 1_mandelbrot)
+DAXA_CREATE_TEST(3_samples 2_hello_triangle)

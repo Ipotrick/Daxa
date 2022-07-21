@@ -29,9 +29,11 @@ namespace daxa
     };
 
     template <typename T>
-    StructuredBuffer<T> get_Buffer(BufferId buffer_id);
+    Buffer<T> get_Buffer(BufferId buffer_id);
     template <typename T>
-    StructuredBuffer<T> get_RWBuffer(BufferId buffer_id);
+    StructuredBuffer<T> get_StructuredBuffer(BufferId buffer_id);
+    template <typename T>
+    StructuredBuffer<T> get_RWStructuredBuffer(BufferId buffer_id);
     template <typename T>
     Texture1D<T> get_Texture1D(ImageId image_id);
     template <typename T>
@@ -54,27 +56,38 @@ namespace daxa
     {
         return SamplerStateView[ID_INDEX_MASK & sampler_id.data];
     }
+
 } // namespace daxa
 
-#define DAXA_DEFINE_GET_BUFFER(Type)                                                                           \
-    namespace daxa                                                                                             \
-    {                                                                                                          \
-        [[vk::binding(daxa::CONSTANTS::STORAGE_BUFFER_BINDING, 0)]] StructuredBuffer<Type> BufferView##Type[]; \
-        template <>                                                                                            \
-        StructuredBuffer<Type> get_Buffer(BufferId buffer_id)                                                  \
-        {                                                                                                      \
-            return BufferView##Type[ID_INDEX_MASK & buffer_id.data];                                           \
-        }                                                                                                      \
+#define DAXA_DEFINE_GET_STRUCTURED_BUFFER(Type)                                                                          \
+    namespace daxa                                                                                                       \
+    {                                                                                                                    \
+        [[vk::binding(daxa::CONSTANTS::STORAGE_BUFFER_BINDING, 0)]] StructuredBuffer<Type> StructuredBufferView##Type[]; \
+        template <>                                                                                                      \
+        StructuredBuffer<Type> get_StructuredBuffer(BufferId buffer_id)                                                  \
+        {                                                                                                                \
+            return StructuredBufferView##Type[ID_INDEX_MASK & buffer_id.data];                                           \
+        }                                                                                                                \
     }
-#define DAXA_DEFINE_GET_RWBUFFER(Type)                                                                             \
-    namespace daxa                                                                                                 \
-    {                                                                                                              \
-        [[vk::binding(daxa::CONSTANTS::STORAGE_BUFFER_BINDING, 0)]] RWStructuredBuffer<Type> RWBufferView##Type[]; \
-        template <>                                                                                                \
-        RWStructuredBuffer<Type> get_RWBuffer(BufferId buffer_id)                                                  \
-        {                                                                                                          \
-            return RWBufferView##Type[ID_INDEX_MASK & buffer_id.data];                                             \
-        }                                                                                                          \
+#define DAXA_DEFINE_GET_BUFFER(Type)                                                                                     \
+    namespace daxa                                                                                                       \
+    {                                                                                                                    \
+        [[vk::binding(daxa::CONSTANTS::STORAGE_BUFFER_BINDING, 0)]] Buffer<Type> BufferView##Type[];                     \
+        template <>                                                                                                      \
+        Buffer<Type> get_Buffer(BufferId buffer_id)                                                                      \
+        {                                                                                                                \
+            return BufferView##Type[ID_INDEX_MASK & buffer_id.data];                                                     \
+        }                                                                                                                \
+    }
+#define DAXA_DEFINE_GET_RWBUFFER(Type)                                                                                       \
+    namespace daxa                                                                                                           \
+    {                                                                                                                        \
+        [[vk::binding(daxa::CONSTANTS::STORAGE_BUFFER_BINDING, 0)]] RWStructuredBuffer<Type> RWStructuredBufferView##Type[]; \
+        template <>                                                                                                          \
+        RWStructuredBuffer<Type> get_RWStructuredBuffer(BufferId buffer_id)                                                  \
+        {                                                                                                                    \
+            return RWStructuredBufferView##Type[ID_INDEX_MASK & buffer_id.data];                                             \
+        }                                                                                                                    \
     }
 #define DAXA_DEFINE_GET_TEXTURE1D(Type)                                                                   \
     namespace daxa                                                                                        \
