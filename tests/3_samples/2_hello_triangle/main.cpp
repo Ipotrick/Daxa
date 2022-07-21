@@ -34,7 +34,7 @@ struct App : AppWindow<App>
             default: return daxa::default_format_score(format);
             }
         },
-        .present_mode = daxa::PresentMode::DOUBLE_BUFFER_WAIT_FOR_VBLANK,
+        .present_mode = daxa::PresentMode::DO_NOT_WAIT_FOR_VBLANK,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
         .debug_name = "HelloTriangle Swapchain",
     });

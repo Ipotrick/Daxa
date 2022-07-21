@@ -2,7 +2,9 @@
 
 struct App
 {
-    daxa::Context daxa_ctx = daxa::create_context({});
+    daxa::Context daxa_ctx = daxa::create_context({
+        .enable_validation = true,
+    });
     daxa::Device device = daxa_ctx.create_default_device();
 };
 
@@ -26,7 +28,7 @@ namespace tests
     {
         auto cmd_list = app.device.create_command_list({.debug_name = "copy command list"});
 
-        std::array<f32,4> data = { 0.0f, 1.0f, 2.0f, 3.0f };
+        std::array<f32, 4> data = {0.0f, 1.0f, 2.0f, 3.0f};
 
         daxa::BufferId staging_upload_buffer = app.device.create_buffer({
             .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
@@ -47,19 +49,19 @@ namespace tests
 
         daxa::ImageId image_1 = app.device.create_image({
             .format = daxa::Format::R32G32B32A32_SFLOAT,
-            .size = {1,1,1},
-            .usage = daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+            .size = {1, 1, 1},
+            .usage = daxa::ImageUsageFlagBits::STORAGE | daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             .debug_name = "image_1",
         });
 
         daxa::ImageId image_2 = app.device.create_image({
             .format = daxa::Format::R32G32B32A32_SFLOAT,
-            .size = {1,1,1},
-            .usage = daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+            .size = {1, 1, 1},
+            .usage = daxa::ImageUsageFlagBits::STORAGE | daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             .debug_name = "image_2",
         });
 
-        auto buffer_ptr = reinterpret_cast<std::array<f32,4> *>(app.device.map_memory(staging_upload_buffer));
+        auto buffer_ptr = reinterpret_cast<std::array<f32, 4> *>(app.device.map_memory(staging_upload_buffer));
 
         *buffer_ptr = data;
 
@@ -87,7 +89,7 @@ namespace tests
             .buffer = device_local_buffer,
             .image = image_1,
             .image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-            .image_extent = { 1, 1, 1 },
+            .image_extent = {1, 1, 1},
         });
 
         cmd_list.pipeline_barrier_image_transition({
@@ -108,7 +110,7 @@ namespace tests
             .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
             .dst_image = image_2,
             .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-            .extent = { 1, 1, 1 },
+            .extent = {1, 1, 1},
         });
 
         cmd_list.pipeline_barrier_image_transition({
@@ -122,7 +124,7 @@ namespace tests
             .buffer = device_local_buffer,
             .image = image_2,
             .image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
-            .image_extent = { 1, 1, 1 },
+            .image_extent = {1, 1, 1},
         });
 
         cmd_list.pipeline_barrier({
@@ -146,15 +148,15 @@ namespace tests
         app.device.submit_commands({
             .command_lists = {cmd_list},
         });
-        
+
         app.device.wait_idle();
 
         std::array<f32, 4> readback_data = *reinterpret_cast<std::array<f32, 4> *>(app.device.map_memory(staging_readback_buffer));
 
         app.device.unmap_memory(staging_readback_buffer);
 
-        std::cout << "Original data: " << data[0] <<  ' ' << data[1] <<  ' ' << data[2] <<  ' ' << data[3] << std::endl;
-        std::cout << "Readback data: " << readback_data[0] <<  ' ' << readback_data[1] <<  ' ' << readback_data[2] <<  ' ' << readback_data[3] << std::endl;
+        std::cout << "Original data: " << data[0] << ' ' << data[1] << ' ' << data[2] << ' ' << data[3] << std::endl;
+        std::cout << "Readback data: " << readback_data[0] << ' ' << readback_data[1] << ' ' << readback_data[2] << ' ' << readback_data[3] << std::endl;
 
         for (usize i = 0; i < 4; ++i)
         {
@@ -166,7 +168,7 @@ namespace tests
         app.device.destroy_buffer(staging_readback_buffer);
         app.device.destroy_image(image_1);
         app.device.destroy_image(image_2);
-        
+
         app.device.collect_garbage();
     }
 
@@ -175,8 +177,11 @@ namespace tests
         auto cmd_list = app.device.create_command_list({.debug_name = "deferred_destruction command list"});
 
         daxa::BufferId buffer = app.device.create_buffer({.size = 4});
-        daxa::ImageId image = app.device.create_image({.size = {1,1,1}});
-        daxa::ImageViewId image_view = app.device.create_image_view({.image=image});
+        daxa::ImageId image = app.device.create_image({
+            .size = {1, 1, 1},
+            .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT,
+        });
+        daxa::ImageViewId image_view = app.device.create_image_view({.image = image});
         daxa::SamplerId sampler = app.device.create_sampler({});
 
         // The gpu resources are not destroyed here. Their destruction is defered until the command list completes execution on the gpu.
@@ -198,7 +203,6 @@ namespace tests
         // Here the gpu resources will be destroyed.
         // Collect_garbage loops over all zombie resources and destroyes them when they are no longer used on the gpu/ their assoziated command list finished executng.
         app.device.collect_garbage();
-
     }
 } // namespace tests
 
