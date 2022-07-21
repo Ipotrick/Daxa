@@ -239,8 +239,8 @@ void RenderableChunk::update_chunk_mesh(daxa::CommandList & cmd_list)
     device.unmap_memory(vertex_staging_buffer);
 
     cmd_list.pipeline_barrier({
-        .awaited_pipeline_access = daxa::PipelineStageAccessFlagBits::HOST_WRITE,
-        .waiting_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_READ,
+        .awaited_pipeline_access = daxa::AccessFlagBits::HOST_WRITE,
+        .waiting_pipeline_access = daxa::AccessFlagBits::TRANSFER_READ,
     });
 
     cmd_list.copy_buffer_to_buffer({
@@ -250,8 +250,8 @@ void RenderableChunk::update_chunk_mesh(daxa::CommandList & cmd_list)
     });
 
     cmd_list.pipeline_barrier({
-        .awaited_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_WRITE,
-        .waiting_pipeline_access = daxa::PipelineStageAccessFlagBits::VERTEX_SHADER_READ,
+        .awaited_pipeline_access = daxa::AccessFlagBits::TRANSFER_WRITE,
+        .waiting_pipeline_access = daxa::AccessFlagBits::VERTEX_SHADER_READ,
     });
 }
 
