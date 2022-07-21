@@ -22,8 +22,8 @@ struct Push
     float3 col = float3(0, 0, 0);
 
     float2 points[3] = {
-        float2(-0.5, +0.1),
-        float2(+0.7, +0.8),
+        float2(-0.5, +0.5),
+        float2(+0.5, +0.5),
         float2(+0.0, -0.5),
     };
     

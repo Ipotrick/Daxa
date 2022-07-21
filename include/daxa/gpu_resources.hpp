@@ -68,7 +68,7 @@ namespace daxa
         bool enable_compare = false;
         CompareOp compareOp = CompareOp::ALWAYS;
         f32 min_lod = 0.0f;
-        f32 max_lod = -1.0f;
+        f32 max_lod = 1.0f;
         bool enable_unnormalized_coordinates = false;
         std::string debug_name = {};
     };
