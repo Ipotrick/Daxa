@@ -51,7 +51,7 @@ struct App : AppWindow<App>
     daxa::ImageId render_image = device.create_image(daxa::ImageInfo{
         .format = daxa::Format::R8G8B8A8_UNORM,
         .size = {size_x, size_y, 1},
-        .usage = daxa::ImageUsageFlagBits::STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+        .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
     });
 
     App()
@@ -113,18 +113,18 @@ struct App : AppWindow<App>
         cmd_list.dispatch((size_x + 7) / 8, (size_y + 7) / 8);
 
         cmd_list.pipeline_barrier({
-            .waiting_pipeline_access = daxa::PipelineStageAccessFlagBits::COMPUTE_SHADER_WRITE,
+            .waiting_pipeline_access = daxa::AccessFlagBits::COMPUTE_SHADER_WRITE,
         });
 
         cmd_list.pipeline_barrier_image_transition({
-            .waiting_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_WRITE,
+            .waiting_pipeline_access = daxa::AccessFlagBits::TRANSFER_WRITE,
             .before_layout = daxa::ImageLayout::UNDEFINED,
             .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .image_id = swapchain_image,
         });
 
         cmd_list.pipeline_barrier_image_transition({
-            .waiting_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_READ,
+            .waiting_pipeline_access = daxa::AccessFlagBits::TRANSFER_READ,
             .before_layout = daxa::ImageLayout::UNDEFINED,
             .after_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
             .image_id = render_image,
@@ -142,14 +142,14 @@ struct App : AppWindow<App>
         });
 
         cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_WRITE,
+            .awaited_pipeline_access = daxa::AccessFlagBits::TRANSFER_WRITE,
             .before_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .after_layout = daxa::ImageLayout::PRESENT_SRC,
             .image_id = swapchain_image,
         });
 
         cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::PipelineStageAccessFlagBits::TRANSFER_READ,
+            .awaited_pipeline_access = daxa::AccessFlagBits::TRANSFER_READ,
             .before_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
             .after_layout = daxa::ImageLayout::GENERAL,
             .image_id = render_image,
@@ -188,7 +188,7 @@ struct App : AppWindow<App>
             render_image = device.create_image({
                 .format = daxa::Format::R8G8B8A8_UNORM,
                 .size = {size_x, size_y, 1},
-                .usage = daxa::ImageUsageFlagBits::STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+                .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             });
             swapchain.resize(size_x, size_y);
             draw();
