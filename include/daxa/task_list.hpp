@@ -33,6 +33,11 @@ namespace daxa
     struct CommandSubmitInfo;
     struct PresentInfo;
 
+    struct TaskListInfo
+    {
+        std::string debug_info = {};
+    };
+
     struct TaskList : Handle
     {
         ~TaskList();
