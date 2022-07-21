@@ -78,7 +78,7 @@ namespace tests
 
                 cmd_list.clear_image({
                     .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-                    .clear_color = {std::array<f32, 4>{1, 0, 1, 1}},
+                    .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
                     .dst_image = swapchain_image,
                 });
 
