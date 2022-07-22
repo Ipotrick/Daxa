@@ -298,10 +298,10 @@ namespace daxa
         impl.memory_barrier_batch[impl.memory_barrier_batch_count++] = {
             .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
             .pNext = nullptr,
-            .srcStageMask = 0x0111'1111'1111'1111ull & info.awaited_pipeline_access,
-            .srcAccessMask = (info.awaited_pipeline_access & AccessFlagBits::WRITE_ACCESS ? VK_ACCESS_2_MEMORY_WRITE_BIT : 0ull) | (info.awaited_pipeline_access & AccessFlagBits::READ_ACCESS ? VK_ACCESS_2_MEMORY_READ_BIT : 0ull),
-            .dstStageMask = 0x0111'1111'1111'1111ull & info.waiting_pipeline_access,
-            .dstAccessMask = (info.waiting_pipeline_access & AccessFlagBits::WRITE_ACCESS ? VK_ACCESS_2_MEMORY_WRITE_BIT : 0ull) | (info.waiting_pipeline_access & AccessFlagBits::READ_ACCESS ? VK_ACCESS_2_MEMORY_READ_BIT : 0ull),
+            .srcStageMask = static_cast<u64>(info.awaited_pipeline_access.stage),
+            .srcAccessMask = static_cast<u32>(info.awaited_pipeline_access.type),
+            .dstStageMask = static_cast<u64>(info.waiting_pipeline_access.stage),
+            .dstAccessMask = static_cast<u32>(info.waiting_pipeline_access.type),
         };
     }
 
@@ -319,10 +319,10 @@ namespace daxa
         impl.image_barrier_batch[impl.image_barrier_batch_count++] = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
             .pNext = nullptr,
-            .srcStageMask = 0x0111'1111'1111'1111ull & info.awaited_pipeline_access,
-            .srcAccessMask = (info.awaited_pipeline_access & AccessFlagBits::WRITE_ACCESS ? VK_ACCESS_2_MEMORY_WRITE_BIT : 0ull) | (info.awaited_pipeline_access & AccessFlagBits::READ_ACCESS ? VK_ACCESS_2_MEMORY_READ_BIT : 0ull),
-            .dstStageMask = 0x0111'1111'1111'1111ull & info.waiting_pipeline_access,
-            .dstAccessMask = (info.waiting_pipeline_access & AccessFlagBits::WRITE_ACCESS ? VK_ACCESS_2_MEMORY_WRITE_BIT : 0ull) | (info.waiting_pipeline_access & AccessFlagBits::READ_ACCESS ? VK_ACCESS_2_MEMORY_READ_BIT : 0ull),
+            .srcStageMask = static_cast<u64>(info.awaited_pipeline_access.stage),
+            .srcAccessMask = static_cast<u32>(info.awaited_pipeline_access.type),
+            .dstStageMask = static_cast<u64>(info.waiting_pipeline_access.stage),
+            .dstAccessMask = static_cast<u32>(info.waiting_pipeline_access.type),
             .oldLayout = static_cast<VkImageLayout>(info.before_layout),
             .newLayout = static_cast<VkImageLayout>(info.after_layout),
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,

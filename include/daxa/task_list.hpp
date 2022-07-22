@@ -3,9 +3,77 @@
 #include <daxa/core.hpp>
 
 #include <daxa/command_list.hpp>
+#include <daxa/swapchain.hpp>
 
 namespace daxa
 {
+    enum struct TaskBufferUsage
+    {
+        SHADER_READ_ONLY,
+        VERTEX_SHADER_READ_ONLY,
+        TESSELLATION_CONTROL_SHADER_READ_ONLY,
+        TESSELLATION_EVALUATION_SHADER_READ_ONLY,
+        GEOMETRY_SHADER_READ_ONLY,
+        FRAGMENT_SHADER_READ_ONLY,
+        COMPUTE_SHADER_READ_ONLY,
+        SHADER_WRITE_ONLY,
+        VERTEX_SHADER_WRITE_ONLY,
+        TESSELLATION_CONTROL_SHADER_WRITE_ONLY,
+        TESSELLATION_EVALUATION_SHADER_WRITE_ONLY,
+        GEOMETRY_SHADER_WRITE_ONLY,
+        FRAGMENT_SHADER_WRITE_ONLY,
+        COMPUTE_SHADER_WRITE_ONLY,
+        SHADER_READ_WRITE,
+        VERTEX_SHADER_READ_WRITE,
+        TESSELLATION_CONTROL_SHADER_READ_WRITE,
+        TESSELLATION_EVALUATION_SHADER_READ_WRITE,
+        GEOMETRY_SHADER_READ_WRITE,
+        FRAGMENT_SHADER_READ_WRITE,
+        COMPUTE_SHADER_READ_WRITE,
+        TRANSFER_READ,
+        TRANSFER_WRTIE,
+    };
+
+    auto to_string(TaskBufferUsage const & usage) -> std::string_view;
+
+    enum struct TaskImageUsage
+    {
+        SHADER_READ_ONLY,
+        VERTEX_SHADER_READ_ONLY,
+        TESSELLATION_CONTROL_SHADER_READ_ONLY,
+        TESSELLATION_EVALUATION_SHADER_READ_ONLY,
+        GEOMETRY_SHADER_READ_ONLY,
+        FRAGMENT_SHADER_READ_ONLY,
+        COMPUTE_SHADER_READ_ONLY,
+        SHADER_WRITE_ONLY,
+        VERTEX_SHADER_WRITE_ONLY,
+        TESSELLATION_CONTROL_SHADER_WRITE_ONLY,
+        TESSELLATION_EVALUATION_SHADER_WRITE_ONLY,
+        GEOMETRY_SHADER_WRITE_ONLY,
+        FRAGMENT_SHADER_WRITE_ONLY,
+        COMPUTE_SHADER_WRITE_ONLY,
+        SHADER_READ_WRITE,
+        VERTEX_SHADER_READ_WRITE,
+        TESSELLATION_CONTROL_SHADER_READ_WRITE,
+        TESSELLATION_EVALUATION_SHADER_READ_WRITE,
+        GEOMETRY_SHADER_READ_WRITE,
+        FRAGMENT_SHADER_READ_WRITE,
+        COMPUTE_SHADER_READ_WRITE,
+        TRANSFER_READ,
+        TRANSFER_WRTIE,
+        COLOR_ATTACHMENT,
+        DEPTH_ATTACHMENT,
+        STENCIL_ATTACHMENT,
+        DEPTH_STENCIL_ATTACHMENT,
+        DEPTH_ATTACHMENT_READ_ONLY,
+        STENCIL_ATTACHMENT_READ_ONLY,
+        DEPTH_STENCIL_ATTACHMENT_READ_ONLY,
+        RESOLVE_WRITE,
+        PRESENT,
+    };
+
+    auto to_string(TaskImageUsage const & usage) -> std::string_view;
+
     struct TaskGPUResourceId
     {
         u32 index = {};
@@ -21,25 +89,25 @@ namespace daxa
     {
     };
 
-    struct TaskImageViewId : public TaskGPUResourceId
-    {
-    };
-
     struct TaskResources
     {
-        std::vector<std::pair<AccessFlags, TaskBufferId>> buffers = {};
-        std::vector<std::pair<AccessFlags, TaskImageId>> images = {};
-        std::vector<std::pair<AccessFlags, TaskImageViewId>> image_views = {};
+        std::vector<std::tuple<TaskBufferId, TaskBufferUsage>> buffers = {};
+        std::vector<std::tuple<TaskImageId, ImageMipArraySlice, TaskImageUsage>> images = {};
     };
+
+    struct TaskList;
 
     struct TaskInterface
     {
         Device & device;
         CommandList & cmd_list;
         TaskResources & resources;
-        auto get_buffer(TaskBufferId const & task_id) -> BufferId;
-        auto get_image(TaskImageId const & task_id) -> ImageId;
-        auto get_image_view(TaskImageViewId const & task_id) -> ImageViewId;
+        // auto get_buffer(TaskBufferId const & task_id) -> BufferId;
+        // auto get_image(TaskImageId const & task_id) -> ImageId;
+        // auto get_image_view(TaskImageId const & task_id) -> ImageViewId;
+
+      private:
+        void * backend;
     };
 
     using TaskCallback = std::function<void(TaskInterface &)>;
@@ -71,7 +139,6 @@ namespace daxa
     struct TaskRenderAttachmentInfo
     {
         TaskImageId image = {};
-        TaskImageViewId image_view{};
         // optional field:
         ImageLayout layout_override = {};
         AttachmentLoadOp load_op = AttachmentLoadOp::DONT_CARE;
@@ -109,13 +176,11 @@ namespace daxa
 
         auto create_task_buffer(TaskBufferInfo const & info) -> TaskBufferId;
         auto create_task_image(TaskImageInfo const & info) -> TaskImageId;
-        auto create_task_image_view(TaskImageViewInfo const & info) -> TaskImageViewId;
 
         void add_task(TaskInfo const & info);
         void add_render_task(TaskRenderInfo const & info);
 
-        void add_present(TaskImageId const & id);
-        void add_present(TaskImageViewId const & id);
+        void add_present(Swapchain swapchain);
 
         void compile();
         void execute();
