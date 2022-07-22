@@ -8,12 +8,12 @@ using Clock = std::chrono::high_resolution_clock;
 struct Vertex
 {
     u32 data;
-    Vertex(u32 x, u32 y, u32 z, u32 side)
+    Vertex(i32 x, i32 y, i32 z, u32 side)
     {
         data = 0;
-        data |= x << 0x00;
-        data |= y << 0x05;
-        data |= z << 0x0a;
+        data |= (static_cast<u32>(x) & 0x1f) << 0x00;
+        data |= (static_cast<u32>(y) & 0x1f) << 0x05;
+        data |= (static_cast<u32>(z) & 0x1f) << 0x0a;
         data |= side << 0x0f;
     }
 };
@@ -36,7 +36,7 @@ struct RasterPush
 
 static inline constexpr u64 CHUNK_SIZE = 32;
 static inline constexpr u64 CHUNK_VOXEL_N = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
-static inline constexpr u64 CHUNK_MAX_VERTS = CHUNK_VOXEL_N * 6;
+static inline constexpr u64 CHUNK_MAX_VERTS = CHUNK_VOXEL_N;
 static inline constexpr u64 CHUNK_MAX_SIZE = CHUNK_MAX_VERTS * sizeof(Vertex);
 
 static inline constexpr u64 CHUNK_N = 8;
@@ -48,7 +48,7 @@ struct VoxelChunk
 
     u32 generate_block(glm::vec3 p)
     {
-        return std::sin(p.x * 0.04) * 40 + std::sin(p.z * 0.05 + 10) * 45 < p.y - 100;
+        return std::sin(p.x * 0.04f) * 40.0f + std::sin(p.z * 0.05f + 10.0f) * 45.0f < p.y - 100;
     }
 
     void generate()
@@ -101,26 +101,26 @@ struct RenderableVoxelWorld
 
     RenderableVoxelWorld(daxa::Device device)
     {
-        for (i32 z = 0; z < CHUNK_N; ++z)
+        for (u64 z = 0; z < CHUNK_N; ++z)
         {
-            for (i32 y = 0; y < CHUNK_N; ++y)
+            for (u64 y = 0; y < CHUNK_N; ++y)
             {
-                for (i32 x = 0; x < CHUNK_N; ++x)
+                for (u64 x = 0; x < CHUNK_N; ++x)
                 {
                     chunks[x + y * CHUNK_N + z * CHUNK_N * CHUNK_N] = new RenderableChunk{.device = device};
                     auto & chunk = *chunks[x + y * CHUNK_N + z * CHUNK_N * CHUNK_N];
-                    chunk.voxel_chunk.pos = glm::vec3(x * CHUNK_SIZE, y * CHUNK_SIZE, z * CHUNK_SIZE);
+                    chunk.voxel_chunk.pos = glm::vec3(static_cast<f32>(x * CHUNK_SIZE), static_cast<f32>(y * CHUNK_SIZE), static_cast<f32>(z * CHUNK_SIZE));
                     chunk.voxel_chunk.generate();
                     chunk.renderable_world = this;
                 }
             }
         }
 
-        for (i32 z = 0; z < CHUNK_N; ++z)
+        for (u64 z = 0; z < CHUNK_N; ++z)
         {
-            for (i32 y = 0; y < CHUNK_N; ++y)
+            for (u64 y = 0; y < CHUNK_N; ++y)
             {
-                for (i32 x = 0; x < CHUNK_N; ++x)
+                for (u64 x = 0; x < CHUNK_N; ++x)
                 {
                     auto & chunk = *chunks[x + y * CHUNK_N + z * CHUNK_N * CHUNK_N];
                     auto cmd_list = device.create_command_list({
@@ -153,9 +153,9 @@ struct RenderableVoxelWorld
 
     u32 get_voxel(glm::ivec3 p)
     {
-        i32 x = p.x / CHUNK_SIZE;
-        i32 y = p.y / CHUNK_SIZE;
-        i32 z = p.z / CHUNK_SIZE;
+        i32 x = p.x / static_cast<i32>(CHUNK_SIZE);
+        i32 y = p.y / static_cast<i32>(CHUNK_SIZE);
+        i32 z = p.z / static_cast<i32>(CHUNK_SIZE);
 
         if (p.x < 0 || x >= static_cast<i32>(CHUNK_N))
             return 0;
@@ -164,11 +164,11 @@ struct RenderableVoxelWorld
         if (p.z < 0 || z >= static_cast<i32>(CHUNK_N))
             return 0;
 
-        auto & chunk = chunks[x + y * CHUNK_N + z * CHUNK_N * CHUNK_N];
+        auto & chunk = chunks[static_cast<u64>(x) + static_cast<u64>(y) * CHUNK_N + static_cast<u64>(z) * CHUNK_N * CHUNK_N];
 
-        u64 xi = static_cast<u64>(p.x % CHUNK_SIZE);
-        u64 yi = static_cast<u64>(p.y % CHUNK_SIZE);
-        u64 zi = static_cast<u64>(p.z % CHUNK_SIZE);
+        u64 xi = static_cast<u64>(p.x) % CHUNK_SIZE;
+        u64 yi = static_cast<u64>(p.y) % CHUNK_SIZE;
+        u64 zi = static_cast<u64>(p.z) % CHUNK_SIZE;
         u64 i = xi + yi * CHUNK_SIZE + zi * CHUNK_SIZE * CHUNK_SIZE;
         return chunk->voxel_chunk.voxels[i];
     }
