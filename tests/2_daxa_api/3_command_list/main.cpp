@@ -69,8 +69,8 @@ namespace tests
         app.device.unmap_memory(staging_upload_buffer);
 
         cmd_list.pipeline_barrier({
-            .awaited_pipeline_access = daxa::AccessFlagBits::HOST_WRITE,
-            .waiting_pipeline_access = daxa::AccessFlagBits::TRANSFER_READ,
+            .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
+            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
         });
 
         cmd_list.copy_buffer_to_buffer({
@@ -80,8 +80,8 @@ namespace tests
         });
 
         cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::AccessFlagBits::TRANSFER_WRITE,
-            .waiting_pipeline_access = daxa::AccessFlagBits::TRANSFER_READ,
+            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
             .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .image_id = image_1,
         });
@@ -94,8 +94,8 @@ namespace tests
         });
 
         cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::AccessFlagBits::TRANSFER_WRITE,
-            .waiting_pipeline_access = daxa::AccessFlagBits::TRANSFER_READ,
+            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
             .after_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
             .image_id = image_1,
         });
@@ -115,8 +115,8 @@ namespace tests
         });
 
         cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::AccessFlagBits::TRANSFER_WRITE,
-            .waiting_pipeline_access = daxa::AccessFlagBits::TRANSFER_READ,
+            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
             .after_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
             .image_id = image_2,
         });
@@ -129,8 +129,8 @@ namespace tests
         });
 
         cmd_list.pipeline_barrier({
-            .awaited_pipeline_access = daxa::AccessFlagBits::TRANSFER_WRITE,
-            .waiting_pipeline_access = daxa::AccessFlagBits::TRANSFER_READ,
+            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
         });
 
         cmd_list.copy_buffer_to_buffer({
@@ -140,8 +140,8 @@ namespace tests
         });
 
         cmd_list.pipeline_barrier({
-            .awaited_pipeline_access = daxa::AccessFlagBits::TRANSFER_WRITE,
-            .waiting_pipeline_access = daxa::AccessFlagBits::HOST_READ,
+            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .waiting_pipeline_access = daxa::AccessConsts::HOST_READ,
         });
 
         cmd_list.complete();
