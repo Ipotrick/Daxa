@@ -36,7 +36,7 @@ struct App : AppWindow<App>
         },
         .present_mode = daxa::PresentMode::DO_NOT_WAIT_FOR_VBLANK,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-        .debug_name = "HelloTriangle Swapchain",
+        .debug_name = "TaskList Swapchain",
     });
 
     daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
@@ -44,7 +44,7 @@ struct App : AppWindow<App>
             "tests/2_daxa_api/6_task_list/shaders",
             "include",
         },
-        .debug_name = "HelloTriangle Compiler",
+        .debug_name = "TaskList Compiler",
     });
     // clang-format off
     daxa::RasterPipeline raster_pipeline = pipeline_compiler.create_raster_pipeline({
@@ -53,38 +53,34 @@ struct App : AppWindow<App>
         .color_attachments = {{.format = swapchain.get_format()}},
         .raster = {},
         .push_constant_size = sizeof(RasterPush),
-        .debug_name = "HelloTriangle Pipeline",
+        .debug_name = "TaskList Pipeline",
     }).value();
     // clang-format on
 
     daxa::BufferId vertex_buffer = device.create_buffer(daxa::BufferInfo{
         .size = sizeof(Vertex) * 3,
-        .debug_name = "HelloTriangle Vertex buffer",
+        .debug_name = "TaskList Vertex buffer",
     });
 
     daxa::BinarySemaphore binary_semaphore = device.create_binary_semaphore({
-        .debug_name = "HelloTriangle Present Semaphore",
+        .debug_name = "TaskList Present Semaphore",
     });
 
     static inline constexpr u64 FRAMES_IN_FLIGHT = 1;
     daxa::TimelineSemaphore gpu_framecount_timeline_sema = device.create_timeline_semaphore(daxa::TimelineSemaphoreInfo{
         .initial_value = 0,
-        .debug_name = "HelloTriangle gpu framecount Timeline Semaphore",
+        .debug_name = "TaskList gpu framecount Timeline Semaphore",
     });
     u64 cpu_framecount = FRAMES_IN_FLIGHT - 1;
 
-    daxa::TaskList task_list = {};
-
-    // Clock::time_point start = Clock::now();
+    daxa::TaskList task_list = device.create_task_list({
+        .debug_name = "TaskList Task List",
+    });
 
     bool should_resize = false;
 
     App()
     {
-        task_list = device.create_task_list({
-            .debug_name = "HelloTriangle Task List",
-        });
-
         daxa::TaskBufferId t_vertex_buffer = task_list.create_task_buffer({.fetch_callback = [=](daxa::TaskInterface &)
                                                                            { return vertex_buffer; }});
         daxa::TaskImageId t_swapchain_image = task_list.create_task_image({.fetch_callback = [=](daxa::TaskInterface &)
@@ -93,7 +89,7 @@ struct App : AppWindow<App>
         task_list.add_task({
             .resources = {
                 .buffers = {
-                    {daxa::AccessFlagBits::TRANSFER_WRITE, t_vertex_buffer},
+                    {t_vertex_buffer, daxa::TaskBufferUsage::TRANSFER_WRTIE},
                 },
             },
             .task = [&](daxa::TaskInterface & task_interface)
@@ -104,7 +100,7 @@ struct App : AppWindow<App>
                 auto vertex_staging_buffer = task_interface.device.create_buffer({
                     .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM | daxa::MemoryFlagBits::STRATEGY_MIN_TIME,
                     .size = sizeof(Vertex) * 3,
-                    .debug_name = "HelloTriangle Vertex Staging buffer",
+                    .debug_name = "TaskList Vertex Staging buffer",
                 });
                 task_interface.cmd_list.destroy_buffer_deferred(vertex_staging_buffer);
 
@@ -129,6 +125,8 @@ struct App : AppWindow<App>
             },
             .task = [=](daxa::TaskInterface & task_interface)
             {
+                //daxa::BufferId vertex_buffer = task_interface.get_buffer(t_vertex_buffer);
+
                 task_interface.cmd_list.set_pipeline(raster_pipeline);
                 task_interface.cmd_list.push_constant(RasterPush{
                     .vertex_buffer_id = vertex_buffer,
@@ -137,7 +135,7 @@ struct App : AppWindow<App>
             },
         });
 
-        task_list.add_present(t_swapchain_image);
+        task_list.add_present(swapchain);
 
         task_list.compile();
     }
@@ -184,11 +182,7 @@ struct App : AppWindow<App>
             do_resize();
         }
 
-        // auto now = Clock::now();
-        // auto elapsed = std::chrono::duration<float>(now - start).count();
-
-        gpu_framecount_timeline_sema.wait_for_value(cpu_framecount - 1);
-        // printf("ahead: %llu\n", cpu_framecount - gpu_framecount_timeline_sema.value());
+        task_list.execute();
     }
 
     void on_mouse_move(f32, f32)

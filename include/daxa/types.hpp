@@ -1,9 +1,17 @@
 #pragma once
 
+#include <memory>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <vector>
+#include <filesystem>
+#include <functional>
+#include <chrono>
+#include <variant>
 #include <cstdint>
 #include <cstddef>
 #include <array>
-#include <variant>
 
 namespace daxa
 {
@@ -394,19 +402,19 @@ namespace daxa
         SHADER_READ_ONLY_OPTIMAL = 5,
         TRANSFER_SRC_OPTIMAL = 6,
         TRANSFER_DST_OPTIMAL = 7,
-        PREINITIALIZED = 8,
+        //PREINITIALIZED = 8,
         DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL = 1000117000,
         DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL = 1000117001,
         DEPTH_ATTACHMENT_OPTIMAL = 1000241000,
         DEPTH_READ_ONLY_OPTIMAL = 1000241001,
         STENCIL_ATTACHMENT_OPTIMAL = 1000241002,
         STENCIL_READ_ONLY_OPTIMAL = 1000241003,
-        READ_ONLY_OPTIMAL = 1000314000,
+        //READ_ONLY_OPTIMAL = 1000314000,
         ATTACHMENT_OPTIMAL = 1000314001,
         PRESENT_SRC = 1000001002,
-        SHARED_PRESENT = 1000111000,
-        FRAGMENT_DENSITY_MAP_OPTIMAL_EXT = 1000218000,
-        FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL = 1000164003,
+        //SHARED_PRESENT = 1000111000,
+        //FRAGMENT_DENSITY_MAP_OPTIMAL_EXT = 1000218000,
+        //FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL = 1000164003,
     };
 
     struct ImageMipArraySlice
@@ -416,7 +424,10 @@ namespace daxa
         u32 level_count = 1;
         u32 base_array_layer = 0;
         u32 layer_count = 1;
+
+        static auto whole(ImageAspectFlags aspect = ImageAspectFlagBits::COLOR) -> ImageMipArraySlice;
     };
+
     struct ImageArraySlice
     {
         ImageAspectFlags image_aspect = ImageAspectFlagBits::COLOR;
@@ -424,6 +435,7 @@ namespace daxa
         u32 base_array_layer = 0;
         u32 layer_count = 1;
     };
+
     struct ImageSlice
     {
         ImageAspectFlags image_aspect = ImageAspectFlagBits::COLOR;
@@ -452,96 +464,135 @@ namespace daxa
         u32 z = {};
     };
 
-    struct DepthValue {
+    struct DepthValue
+    {
         f32 depth;
         u32 stencil;
     };
 
     using ClearValue = std::variant<std::array<f32, 4>, std::array<i32, 4>, std::array<u32, 4>, DepthValue>;
 
-    using AccessFlags = u64;
-    struct AccessFlagBits
+    using AccessTypeFlags = u32;
+    struct AccessTypeFlagBits
     {
-        static inline constexpr u64 READ_ACCESS = 0x8000'0000'0000'0000;
-        static inline constexpr u64 WRITE_ACCESS = 0x4000'0000'0000'0000;
-
-        static inline constexpr AccessFlags NONE = 0x00000000ull;
-        static inline constexpr AccessFlags TOP_OF_PIPE_READ = 0x00000001ull | READ_ACCESS;
-        static inline constexpr AccessFlags DRAW_INDIRECT_READ = 0x00000002ull | READ_ACCESS;
-        static inline constexpr AccessFlags VERTEX_INPUT_READ = 0x00000004ull | READ_ACCESS;
-        static inline constexpr AccessFlags VERTEX_SHADER_READ = 0x00000008ull | READ_ACCESS;
-        static inline constexpr AccessFlags TESSELLATION_CONTROL_SHADER_READ = 0x00000010ull | READ_ACCESS;
-        static inline constexpr AccessFlags TESSELLATION_EVALUATION_SHADER_READ = 0x00000020ull | READ_ACCESS;
-        static inline constexpr AccessFlags GEOMETRY_SHADER_READ = 0x00000040ull | READ_ACCESS;
-        static inline constexpr AccessFlags FRAGMENT_SHADER_READ = 0x00000080ull | READ_ACCESS;
-        static inline constexpr AccessFlags EARLY_FRAGMENT_TESTS_READ = 0x00000100ull | READ_ACCESS;
-        static inline constexpr AccessFlags LATE_FRAGMENT_TESTS_READ = 0x00000200ull | READ_ACCESS;
-        static inline constexpr AccessFlags COLOR_ATTACHMENT_OUTPUT_READ = 0x00000400ull | READ_ACCESS;
-        static inline constexpr AccessFlags COMPUTE_SHADER_READ = 0x00000800ull | READ_ACCESS;
-        static inline constexpr AccessFlags ALL_TRANSFER_READ = 0x00001000ull | READ_ACCESS;
-        static inline constexpr AccessFlags TRANSFER_READ = 0x00001000ull | READ_ACCESS;
-        static inline constexpr AccessFlags BOTTOM_OF_PIPE_READ = 0x00002000ull | READ_ACCESS;
-        static inline constexpr AccessFlags HOST_READ = 0x00004000ull | READ_ACCESS;
-        static inline constexpr AccessFlags ALL_GRAPHICS_READ = 0x00008000ull | READ_ACCESS;
-        static inline constexpr AccessFlags ALL_COMMANDS_READ = 0x00010000ull | READ_ACCESS;
-        static inline constexpr AccessFlags COPY_READ = 0x100000000ull | READ_ACCESS;
-        static inline constexpr AccessFlags RESOLVE_READ = 0x200000000ull | READ_ACCESS;
-        static inline constexpr AccessFlags BLIT_READ = 0x400000000ull | READ_ACCESS;
-        static inline constexpr AccessFlags CLEAR_READ = 0x800000000ull | READ_ACCESS;
-        static inline constexpr AccessFlags INDEX_INPUT_READ = 0x1000000000ull | READ_ACCESS;
-        static inline constexpr AccessFlags VERTEX_ATTRIBUTE_INPUT_READ = 0x2000000000ull | READ_ACCESS;
-        static inline constexpr AccessFlags PRE_RASTERIZATION_SHADERS_READ = 0x4000000000ull | READ_ACCESS;
-        static inline constexpr AccessFlags TOP_OF_PIPE_WRITE = 0x00000001ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags DRAW_INDIRECT_WRITE = 0x00000002ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags VERTEX_INPUT_WRITE = 0x00000004ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags VERTEX_SHADER_WRITE = 0x00000008ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags TESSELLATION_CONTROL_SHADER_WRITE = 0x00000010ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags TESSELLATION_EVALUATION_SHADER_WRITE = 0x00000020ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags GEOMETRY_SHADER_WRITE = 0x00000040ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags FRAGMENT_SHADER_WRITE = 0x00000080ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags EARLY_FRAGMENT_TESTS_WRITE = 0x00000100ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags LATE_FRAGMENT_TESTS_WRITE = 0x00000200ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags COLOR_ATTACHMENT_OUTPUT_WRITE = 0x00000400ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags COMPUTE_SHADER_WRITE = 0x00000800ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags ALL_TRANSFER_WRITE = 0x00001000ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags TRANSFER_WRITE = 0x00001000ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags BOTTOM_OF_PIPE_WRITE = 0x00002000ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags HOST_WRITE = 0x00004000ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags ALL_GRAPHICS_WRITE = 0x00008000ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags ALL_COMMANDS_WRITE = 0x00010000ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags COPY_WRITE = 0x100000000ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags RESOLVE_WRITE = 0x200000000ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags BLIT_WRITE = 0x400000000ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags CLEAR_WRITE = 0x800000000ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags INDEX_INPUT_WRITE = 0x1000000000ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags VERTEX_ATTRIBUTE_INPUT_WRITE = 0x2000000000ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags PRE_RASTERIZATION_SHADERS_WRITE = 0x4000000000ull | WRITE_ACCESS;
-        static inline constexpr AccessFlags TOP_OF_PIPE_READ_WRITE = 0x00000001ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags DRAW_INDIRECT_READ_WRITE = 0x00000002ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags VERTEX_INPUT_READ_WRITE = 0x00000004ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags VERTEX_SHADER_READ_WRITE = 0x00000008ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags TESSELLATION_CONTROL_SHADER_READ_WRITE = 0x00000010ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags TESSELLATION_EVALUATION_SHADER_READ_WRITE = 0x00000020ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags GEOMETRY_SHADER_READ_WRITE = 0x00000040ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags FRAGMENT_SHADER_READ_WRITE = 0x00000080ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags EARLY_FRAGMENT_TESTS_READ_WRITE = 0x00000100ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags LATE_FRAGMENT_TESTS_READ_WRITE = 0x00000200ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags COLOR_ATTACHMENT_OUTPUT_READ_WRITE = 0x00000400ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags COMPUTE_SHADER_READ_WRITE = 0x00000800ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags ALL_TRANSFER_READ_WRITE = 0x00001000ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags TRANSFER_READ_WRITE = 0x00001000ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags BOTTOM_OF_PIPE_READ_WRITE = 0x00002000ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags HOST_READ_WRITE = 0x00004000ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags ALL_GRAPHICS_READ_WRITE = 0x00008000ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags ALL_COMMANDS_READ_WRITE = 0x00010000ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags COPY_READ_WRITE = 0x100000000ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags RESOLVE_READ_WRITE = 0x200000000ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags BLIT_READ_WRITE = 0x400000000ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags CLEAR_READ_WRITE = 0x800000000ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags INDEX_INPUT_READ_WRITE = 0x1000000000ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags VERTEX_ATTRIBUTE_INPUT_READ_WRITE = 0x2000000000ull | WRITE_ACCESS | READ_ACCESS;
-        static inline constexpr AccessFlags PRE_RASTERIZATION_SHADERS_READ_WRITE = 0x4000000000ull | WRITE_ACCESS | READ_ACCESS;
+        static inline constexpr AccessTypeFlags NONE = 0x0000'0000;
+        static inline constexpr AccessTypeFlags READ = 0x0000'0001;
+        static inline constexpr AccessTypeFlags WRITE = 0x0000'0002;
+        static inline constexpr AccessTypeFlags READ_WRITE = READ | WRITE;
     };
+
+    using PipelineStageFlags = u64;
+    struct PipelineStageFlagBits
+    {
+        static inline constexpr PipelineStageFlags NONE = 0x00000000ull;
+
+        static inline constexpr PipelineStageFlags TOP_OF_PIPE = 0x00000001ull;
+        static inline constexpr PipelineStageFlags DRAW_INDIRECT = 0x00000002ull;
+        static inline constexpr PipelineStageFlags VERTEX_SHADER = 0x00000008ull;
+        static inline constexpr PipelineStageFlags TESSELLATION_CONTROL_SHADER = 0x00000010ull;
+        static inline constexpr PipelineStageFlags TESSELLATION_EVALUATION_SHADER = 0x00000020ull;
+        static inline constexpr PipelineStageFlags GEOMETRY_SHADER = 0x00000040ull;
+        static inline constexpr PipelineStageFlags FRAGMENT_SHADER = 0x00000080ull;
+        static inline constexpr PipelineStageFlags EARLY_FRAGMENT_TESTS = 0x00000100ull;
+        static inline constexpr PipelineStageFlags LATE_FRAGMENT_TESTS = 0x00000200ull;
+        static inline constexpr PipelineStageFlags COLOR_ATTACHMENT_OUTPUT = 0x00000400ull;
+        static inline constexpr PipelineStageFlags COMPUTE_SHADER = 0x00000800ull;
+        static inline constexpr PipelineStageFlags TRANSFER = 0x00001000ull;
+        static inline constexpr PipelineStageFlags BOTTOM_OF_PIPE = 0x00002000ull;
+        static inline constexpr PipelineStageFlags HOST = 0x00004000ull;
+        static inline constexpr PipelineStageFlags ALL_GRAPHICS = 0x00008000ull;
+        static inline constexpr PipelineStageFlags ALL_COMMANDS = 0x00010000ull;
+        static inline constexpr PipelineStageFlags COPY = 0x100000000ull;
+        static inline constexpr PipelineStageFlags RESOLVE = 0x200000000ull;
+        static inline constexpr PipelineStageFlags BLIT = 0x400000000ull;
+        static inline constexpr PipelineStageFlags CLEAR = 0x800000000ull;
+        static inline constexpr PipelineStageFlags INDEX_INPUT = 0x1000000000ull;
+        static inline constexpr PipelineStageFlags PRE_RASTERIZATION_SHADERS = 0x4000000000ull;
+    };
+
+    struct Access
+    {
+        PipelineStageFlags stage = PipelineStageFlagBits::NONE;
+        AccessTypeFlags type = AccessTypeFlagBits::NONE;
+
+        auto operator | (Access const & other) -> Access;
+        auto operator & (Access const & other) -> Access;
+    };
+    namespace AccessConsts
+    {
+        static inline constexpr Access NONE = {.stage = PipelineStageFlagBits::NONE, .type = AccessTypeFlagBits::NONE};
+
+        static inline constexpr Access TOP_OF_PIPE_READ = {.stage = PipelineStageFlagBits::TOP_OF_PIPE, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access DRAW_INDIRECT_READ = {.stage = PipelineStageFlagBits::DRAW_INDIRECT, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access VERTEX_SHADER_READ = {.stage = PipelineStageFlagBits::VERTEX_SHADER, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access TESSELLATION_CONTROL_SHADER_READ = {.stage = PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access TESSELLATION_EVALUATION_SHADER_READ = {.stage = PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access GEOMETRY_SHADER_READ = {.stage = PipelineStageFlagBits::GEOMETRY_SHADER, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access FRAGMENT_SHADER_READ = {.stage = PipelineStageFlagBits::FRAGMENT_SHADER, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access EARLY_FRAGMENT_TESTS_READ = {.stage = PipelineStageFlagBits::EARLY_FRAGMENT_TESTS, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access LATE_FRAGMENT_TESTS_READ = {.stage = PipelineStageFlagBits::LATE_FRAGMENT_TESTS, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access COLOR_ATTACHMENT_OUTPUT_READ = {.stage = PipelineStageFlagBits::COLOR_ATTACHMENT_OUTPUT, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access COMPUTE_SHADER_READ = {.stage = PipelineStageFlagBits::COMPUTE_SHADER, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access TRANSFER_READ = {.stage = PipelineStageFlagBits::TRANSFER, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access BOTTOM_OF_PIPE_READ = {.stage = PipelineStageFlagBits::BOTTOM_OF_PIPE, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access HOST_READ = {.stage = PipelineStageFlagBits::HOST, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access ALL_GRAPHICS_READ = {.stage = PipelineStageFlagBits::ALL_GRAPHICS, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access READ = {.stage = PipelineStageFlagBits::ALL_COMMANDS, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access COPY_READ = {.stage = PipelineStageFlagBits::COPY, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access RESOLVE_READ = {.stage = PipelineStageFlagBits::RESOLVE, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access BLIT_READ = {.stage = PipelineStageFlagBits::BLIT, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access CLEAR_READ = {.stage = PipelineStageFlagBits::CLEAR, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access INDEX_INPUT_READ = {.stage = PipelineStageFlagBits::INDEX_INPUT, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access PRE_RASTERIZATION_SHADERS_READ = {.stage = PipelineStageFlagBits::PRE_RASTERIZATION_SHADERS, .type = AccessTypeFlagBits::READ};
+        
+        static inline constexpr Access TOP_OF_PIPE_WRITE = {.stage = PipelineStageFlagBits::TOP_OF_PIPE, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access DRAW_INDIRECT_WRITE = {.stage = PipelineStageFlagBits::DRAW_INDIRECT, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access VERTEX_SHADER_WRITE = {.stage = PipelineStageFlagBits::VERTEX_SHADER, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access TESSELLATION_CONTROL_SHADER_WRITE = {.stage = PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access TESSELLATION_EVALUATION_SHADER_WRITE = {.stage = PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access GEOMETRY_SHADER_WRITE = {.stage = PipelineStageFlagBits::GEOMETRY_SHADER, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access FRAGMENT_SHADER_WRITE = {.stage = PipelineStageFlagBits::FRAGMENT_SHADER, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access EARLY_FRAGMENT_TESTS_WRITE = {.stage = PipelineStageFlagBits::EARLY_FRAGMENT_TESTS, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access LATE_FRAGMENT_TESTS_WRITE = {.stage = PipelineStageFlagBits::LATE_FRAGMENT_TESTS, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access COLOR_ATTACHMENT_OUTPUT_WRITE = {.stage = PipelineStageFlagBits::COLOR_ATTACHMENT_OUTPUT, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access COMPUTE_SHADER_WRITE = {.stage = PipelineStageFlagBits::COMPUTE_SHADER, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access TRANSFER_WRITE = {.stage = PipelineStageFlagBits::TRANSFER, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access BOTTOM_OF_PIPE_WRITE = {.stage = PipelineStageFlagBits::BOTTOM_OF_PIPE, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access HOST_WRITE = {.stage = PipelineStageFlagBits::HOST, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access ALL_GRAPHICS_WRITE = {.stage = PipelineStageFlagBits::ALL_GRAPHICS, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access WRITE = {.stage = PipelineStageFlagBits::ALL_COMMANDS, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access COPY_WRITE = {.stage = PipelineStageFlagBits::COPY, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access RESOLVE_WRITE = {.stage = PipelineStageFlagBits::RESOLVE, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access BLIT_WRITE = {.stage = PipelineStageFlagBits::BLIT, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access CLEAR_WRITE = {.stage = PipelineStageFlagBits::CLEAR, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access INDEX_INPUT_WRITE = {.stage = PipelineStageFlagBits::INDEX_INPUT, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access PRE_RASTERIZATION_SHADERS_WRITE = {.stage = PipelineStageFlagBits::PRE_RASTERIZATION_SHADERS, .type = AccessTypeFlagBits::WRITE};
+        
+        static inline constexpr Access TOP_OF_PIPE_READ_WRITE = {.stage = PipelineStageFlagBits::TOP_OF_PIPE, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access DRAW_INDIRECT_READ_WRITE = {.stage = PipelineStageFlagBits::DRAW_INDIRECT, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access VERTEX_SHADER_READ_WRITE = {.stage = PipelineStageFlagBits::VERTEX_SHADER, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access TESSELLATION_CONTROL_SHADER_READ_WRITE = {.stage = PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access TESSELLATION_EVALUATION_SHADER_READ_WRITE = {.stage = PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access GEOMETRY_SHADER_READ_WRITE = {.stage = PipelineStageFlagBits::GEOMETRY_SHADER, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access FRAGMENT_SHADER_READ_WRITE = {.stage = PipelineStageFlagBits::FRAGMENT_SHADER, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access EARLY_FRAGMENT_TESTS_READ_WRITE = {.stage = PipelineStageFlagBits::EARLY_FRAGMENT_TESTS, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access LATE_FRAGMENT_TESTS_READ_WRITE = {.stage = PipelineStageFlagBits::LATE_FRAGMENT_TESTS, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access COLOR_ATTACHMENT_OUTPUT_READ_WRITE = {.stage = PipelineStageFlagBits::COLOR_ATTACHMENT_OUTPUT, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access COMPUTE_SHADER_READ_WRITE = {.stage = PipelineStageFlagBits::COMPUTE_SHADER, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access TRANSFER_READ_WRITE = {.stage = PipelineStageFlagBits::TRANSFER, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access BOTTOM_OF_PIPE_READ_WRITE = {.stage = PipelineStageFlagBits::BOTTOM_OF_PIPE, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access HOST_READ_WRITE = {.stage = PipelineStageFlagBits::HOST, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access ALL_GRAPHICS_READ_WRITE = {.stage = PipelineStageFlagBits::ALL_GRAPHICS, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access READ_WRITE = {.stage = PipelineStageFlagBits::ALL_COMMANDS, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access COPY_READ_WRITE = {.stage = PipelineStageFlagBits::COPY, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access RESOLVE_READ_WRITE = {.stage = PipelineStageFlagBits::RESOLVE, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access BLIT_READ_WRITE = {.stage = PipelineStageFlagBits::BLIT, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access CLEAR_READ_WRITE = {.stage = PipelineStageFlagBits::CLEAR, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access INDEX_INPUT_READ_WRITE = {.stage = PipelineStageFlagBits::INDEX_INPUT, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access PRE_RASTERIZATION_SHADERS_READ_WRITE = {.stage = PipelineStageFlagBits::PRE_RASTERIZATION_SHADERS, .type = AccessTypeFlagBits::READ_WRITE};
+    }; // namespace AccessConsts
+
+    auto to_string(Access const & access) -> std::string_view;
 
     enum class SamplerAddressMode
     {

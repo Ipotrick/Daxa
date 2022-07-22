@@ -1,15 +1,5 @@
 #pragma once
 
-#include <memory>
-#include <optional>
-#include <string>
-#include <vector>
-#include <array>
-#include <filesystem>
-#include <functional>
-#include <chrono>
-#include <variant>
-
 #include <daxa/types.hpp>
 
 #if !defined(NDEBUG)
