@@ -49,15 +49,15 @@ namespace daxa
 #if defined(DAXA_ENABLE_THREADSAFETY)
         std::mutex main_queue_zombies_mtx = {};
 #endif
-        std::vector<std::pair<u64, std::vector<std::shared_ptr<ImplCommandList>>>> main_queue_submits_zombies = {};
-        std::vector<std::pair<u64, BufferId>> main_queue_buffer_zombies = {};
-        std::vector<std::pair<u64, ImageId>> main_queue_image_zombies = {};
-        std::vector<std::pair<u64, ImageViewId>> main_queue_image_view_zombies = {};
-        std::vector<std::pair<u64, SamplerId>> main_queue_sampler_zombies = {};
-        std::vector<std::pair<u64, std::shared_ptr<ImplBinarySemaphore>>> main_queue_binary_semaphore_zombies = {};
-        std::vector<std::pair<u64, std::shared_ptr<ImplTimelineSemaphore>>> main_queue_timeline_semaphore_zombies = {};
-        std::vector<std::pair<u64, std::shared_ptr<ImplComputePipeline>>> main_queue_compute_pipeline_zombies = {};
-        std::vector<std::pair<u64, std::shared_ptr<ImplRasterPipeline>>> main_queue_raster_pipeline_zombies = {};
+        std::deque<std::pair<u64, std::vector<std::shared_ptr<ImplCommandList>>>> main_queue_submits_zombies = {};
+        std::deque<std::pair<u64, BufferId>> main_queue_buffer_zombies = {};
+        std::deque<std::pair<u64, ImageId>> main_queue_image_zombies = {};
+        std::deque<std::pair<u64, ImageViewId>> main_queue_image_view_zombies = {};
+        std::deque<std::pair<u64, SamplerId>> main_queue_sampler_zombies = {};
+        std::deque<std::pair<u64, std::shared_ptr<ImplBinarySemaphore>>> main_queue_binary_semaphore_zombies = {};
+        std::deque<std::pair<u64, std::shared_ptr<ImplTimelineSemaphore>>> main_queue_timeline_semaphore_zombies = {};
+        std::deque<std::pair<u64, std::shared_ptr<ImplComputePipeline>>> main_queue_compute_pipeline_zombies = {};
+        std::deque<std::pair<u64, std::shared_ptr<ImplRasterPipeline>>> main_queue_raster_pipeline_zombies = {};
         void main_queue_collect_garbage(bool lock_submit);
 
         ImplDevice(DeviceInfo const & info, DeviceVulkanInfo const & vk_info, std::shared_ptr<ImplContext> impl_ctx, VkPhysicalDevice physical_device);

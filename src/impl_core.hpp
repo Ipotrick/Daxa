@@ -4,6 +4,7 @@
 #include <mutex>
 #include <fstream>
 #include <map>
+#include <deque>
 
 #include <daxa/core.hpp>
 

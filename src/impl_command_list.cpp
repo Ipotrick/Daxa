@@ -7,7 +7,7 @@ namespace daxa
 
     CommandList::~CommandList()
     {
-        if (this->impl.use_count() == 1)
+        if (this->impl.use_count() == 1 && false)
         {
             std::shared_ptr<ImplCommandList> impl = std::static_pointer_cast<ImplCommandList>(this->impl);
             impl->reset();
@@ -243,7 +243,7 @@ namespace daxa
 
     void CommandList::destroy_buffer_deferred(BufferId id)
     {
-        defer_destruction_helper(impl.get(), GPUResourceId{.index = id.index, .version = id.version}, DEFERRED_DESTRUCTION_BUFFER_INDEX);
+        defer_destruction_helper(this->impl.get(), GPUResourceId{.index = id.index, .version = id.version}, DEFERRED_DESTRUCTION_BUFFER_INDEX);
     }
 
     void CommandList::destroy_image_deferred(ImageId id)
