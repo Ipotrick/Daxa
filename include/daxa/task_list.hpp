@@ -98,6 +98,7 @@ namespace daxa
     };
 
     struct TaskList;
+    struct Device;
 
     struct TaskInterface
     {
