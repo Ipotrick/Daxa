@@ -89,7 +89,7 @@ struct App : AppWindow<App>
         task_list.add_task({
             .resources = {
                 .buffers = {
-                    {t_vertex_buffer, daxa::TaskBufferUsage::TRANSFER_WRTIE},
+                    {t_vertex_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE},
                 },
             },
             .task = [&](daxa::TaskInterface & task_interface)
