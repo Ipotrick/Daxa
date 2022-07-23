@@ -102,7 +102,6 @@ namespace daxa
 
     struct RenderAttachmentInfo
     {
-        ImageId image = {};
         ImageViewId image_view{};
         ImageLayout layout = ImageLayout::ATTACHMENT_OPTIMAL;
         AttachmentLoadOp load_op = AttachmentLoadOp::DONT_CARE;

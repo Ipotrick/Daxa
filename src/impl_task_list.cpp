@@ -120,10 +120,9 @@ namespace daxa
             ImageLayout layout =
                 attach.layout_override != ImageLayout::UNDEFINED ? attach.layout_override : ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
             DAXA_DBG_ASSERT_TRUE_M(!attach.image.is_empty(), "must declare image for render pass attachment");
-            images.push_back({attach.image, ImageMipArraySlice::whole(), usage});
+            images.push_back({attach.image, {}, usage});
 
             return RenderAttachmentInfo{
-                .image = impl.get_image(attach.image),
                 .image_view = impl.get_image_view(attach.image),
                 .layout = layout,
                 .load_op = attach.load_op,

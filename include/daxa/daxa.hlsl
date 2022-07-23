@@ -8,7 +8,7 @@ namespace daxa
         STORAGE_IMAGE_BINDING = 1,
         SAMPLED_IMAGE_BINDING = 2,
         SAMPLER_BINDING = 3,
-        ID_INDEX_MASK = 0x00FFFFFF,
+        ID_INDEX_MASK = 0xFFFFFFFF >> 8,
     };
 
     struct BufferId

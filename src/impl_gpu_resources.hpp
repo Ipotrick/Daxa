@@ -20,19 +20,19 @@ namespace daxa
 
     static inline constexpr i32 NOT_OWNED_BY_SWAPCHAIN = -1;
 
-    struct ImplImageSlot
-    {
-        ImageInfo info = {};
-        VkImageView vk_image_view = {};
-        VkImage vk_image = {};
-        VmaAllocation vma_allocation = {};
-        i32 swapchain_image_index = NOT_OWNED_BY_SWAPCHAIN;
-    };
-
     struct ImplImageViewSlot
     {
         ImageViewInfo info = {};
         VkImageView vk_image_view = {};
+    };
+
+    struct ImplImageSlot
+    {
+        ImplImageViewSlot view_slot = {};
+        ImageInfo info = {};
+        VkImage vk_image = {};
+        VmaAllocation vma_allocation = {};
+        i32 swapchain_image_index = NOT_OWNED_BY_SWAPCHAIN;
     };
 
     struct ImplSamplerSlot
@@ -166,7 +166,7 @@ namespace daxa
     struct GPUResourceTable
     {
         GpuResourcePool<ImplBufferSlot> buffer_slots = {};
-        GpuResourcePool<std::variant<ImplImageSlot, ImplImageViewSlot, std::monostate>> image_slots = {};
+        GpuResourcePool<ImplImageSlot> image_slots = {};
         GpuResourcePool<ImplSamplerSlot> sampler_slots = {};
 
         VkDescriptorSetLayout vk_descriptor_set_layout = {};
