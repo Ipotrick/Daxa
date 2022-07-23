@@ -99,7 +99,7 @@ namespace daxa
             .pSignalSemaphoreValues = submit_semaphore_signal_values.data(),
         };
 
-        VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT; // TODO: rethink this!
+        VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
         VkSubmitInfo vk_submit_info{
             .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
             .pNext = reinterpret_cast<void *>(&timelineInfo),
@@ -206,7 +206,7 @@ namespace daxa
         auto impl = std::static_pointer_cast<ImplDevice>(this->impl);
         return TimelineSemaphore{std::make_shared<ImplTimelineSemaphore>(impl, info)};
     }
-    
+
     auto Device::create_task_list(TaskListInfo const & info) -> TaskList
     {
         auto impl = std::static_pointer_cast<ImplDevice>(this->impl);
@@ -685,6 +685,38 @@ namespace daxa
         return BufferId{id};
     }
 
+
+    auto ImplDevice::validate_image_slice(ImageMipArraySlice const & slice, ImageId id) -> ImageMipArraySlice
+    {
+        if (slice.level_count == std::numeric_limits<u32>::max())
+        {
+            auto & info = this->slot(id).info;
+            return ImageMipArraySlice{
+                .image_aspect = info.aspect,
+                .base_mip_level = 0,
+                .level_count = info.mip_level_count,
+                .base_array_layer = 0,
+                .level_count = info.array_layer_count,
+            };
+        }
+        else
+        {
+            return slice;
+        }
+    }
+
+    auto ImplDevice::validate_image_slice(ImageMipArraySlice const & slice, ImageViewId id) -> ImageMipArraySlice
+    {
+        if (slice.level_count == std::numeric_limits<u32>::max())
+        {
+            return this->slot(id).info.slice;
+        }
+        else
+        {
+            return slice;
+        }
+    }
+
     auto ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, const std::string & debug_name) -> ImageId
     {
         auto [id, image_slot] = gpu_table.image_slots.new_slot();
@@ -845,10 +877,14 @@ namespace daxa
 
         VkDevice vk_device = this->vk_device;
 
+
         ImplImageSlot & parent_image_slot = slot(info.image);
 
         ImplImageViewSlot ret = {};
         ret.info = info;
+
+        ImageMipArraySlice slice = this->validate_image_slice(info.slice, info.image);
+        ret.info.slice = slice;
 
         VkImageViewCreateInfo vk_image_view_create_info{
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -863,21 +899,21 @@ namespace daxa
                 .b = VK_COMPONENT_SWIZZLE_IDENTITY,
                 .a = VK_COMPONENT_SWIZZLE_IDENTITY,
             },
-            .subresourceRange = *reinterpret_cast<VkImageSubresourceRange const *>(&info.slice),
+            .subresourceRange = *reinterpret_cast<VkImageSubresourceRange const *>(&slice),
         };
 
         vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.vk_image_view);
 
         if (DAXA_LOCK_WEAK(this->impl_ctx)->enable_debug_names && info.debug_name.size() > 0)
         {
-            VkDebugUtilsObjectNameInfoEXT swapchain_image_view_name_info{
+            VkDebugUtilsObjectNameInfoEXT name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
                 .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image_view),
                 .pObjectName = info.debug_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(vk_device, &swapchain_image_view_name_info);
+            vkSetDebugUtilsObjectNameEXT(vk_device, &name_info);
         }
 
         write_descriptor_set_image(this->vk_device, this->gpu_table.vk_descriptor_set, ret.vk_image_view, parent_image_slot.info.usage, id.index);
