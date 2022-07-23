@@ -1,14 +1,27 @@
 {
     "name": "daxa",
     "version": "1.0.0",
+    "description": "Daxa C++ Vulkan Abstraction",
+    "homepage": "https://github.com/Ipotrick/Daxa",
     "dependencies": [
-        "imgui",
         "dxc",
         "vulkan-memory-allocator",
         "volk",
-        "vulkan",
-
-        "glfw3",
-        "glm"
-    ]
+        "vulkan"
+    ],
+    "features": {
+        "utils": {
+            "description": "Build with core utils",
+            "dependencies": [
+                "imgui"
+            ]
+        },
+        "tests": {
+            "description": "Build Tests",
+            "dependencies": [
+                "glfw3",
+                "glm"
+            ]
+        }
+    }
 }
