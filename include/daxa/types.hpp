@@ -476,8 +476,8 @@ namespace daxa
     struct AccessTypeFlagBits
     {
         static inline constexpr AccessTypeFlags NONE = 0x0000'0000;
-        static inline constexpr AccessTypeFlags READ = 0x0000'0001;
-        static inline constexpr AccessTypeFlags WRITE = 0x0000'0002;
+        static inline constexpr AccessTypeFlags READ = 0x00008000;
+        static inline constexpr AccessTypeFlags WRITE = 0x00010000;
         static inline constexpr AccessTypeFlags READ_WRITE = READ | WRITE;
     };
 

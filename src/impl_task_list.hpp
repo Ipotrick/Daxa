@@ -11,6 +11,7 @@ namespace daxa
     struct ImplTaskBuffer
     {
         Access last_access = AccessConsts::NONE;
+        TaskImageAccess last_task_access = TaskImageAccess::NONE;
         usize last_access_task_index = {};
         BufferId runtime_id = {};
     };
@@ -18,6 +19,7 @@ namespace daxa
     struct ImplTaskImage
     {
         Access last_access = AccessConsts::NONE;
+        TaskImageAccess last_task_access = TaskImageAccess::NONE;
         usize last_access_task_index = {};
         ImageId runtime_id = {};
         ImageViewId runtime_view_id = {};
@@ -42,15 +44,15 @@ namespace daxa
 
         bool compiled = false;
         std::vector<ImplTask> tasks = {};
-        usize last_task_with_barrier = 0;
+        usize last_task_index_with_barrier = 0;
 
         u32 next_task_buffer_id = 0;
         u32 next_task_image_id = 0;
-        u32 next_task_image_view_id = 0;
         std::vector<ImplTaskBuffer> impl_task_buffers = {};
         std::vector<ImplTaskImage> impl_task_images = {};
 
-        auto access_to_image_layout(Access const & access) -> ImageLayout;
+        auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access>;
+        auto task_buffer_access_to_access(TaskImageAccess const & access) -> Access;
         auto compute_needed_barrier(Access const & previous_access, Access const & new_access) -> std::optional<TaskPipelineBarrier>;
 
         auto slot(TaskBufferId id) -> ImplTaskBuffer &;
