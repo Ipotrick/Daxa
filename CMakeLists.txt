@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.12)
 include(cmake/warnings.cmake)
 
+if(DAXA_ENABLE_UTILS)
+    list(APPEND VCPKG_MANIFEST_FEATURES "utils")
+endif()
 if(DAXA_ENABLE_TESTS)
     list(APPEND VCPKG_MANIFEST_FEATURES "tests")
 endif()
@@ -47,17 +50,23 @@ else()
 endif()
 
 find_package(dxc CONFIG REQUIRED)
-find_package(imgui CONFIG REQUIRED)
 find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(volk CONFIG REQUIRED)
+
+if(DAXA_ENABLE_UTILS)
+    find_package(imgui CONFIG REQUIRED)
+    target_link_libraries(daxa
+        PUBLIC
+        imgui::imgui
+    )
+endif()
 
 target_link_libraries(daxa
     PUBLIC
     unofficial::vulkan-memory-allocator::vulkan-memory-allocator
     Vulkan::Vulkan
     volk::volk
-    imgui::imgui
     dxc::dxc
 )
 target_include_directories(daxa
