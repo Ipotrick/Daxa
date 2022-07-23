@@ -6,12 +6,12 @@ namespace daxa
     
     auto Access::operator | (Access const & other) -> Access
     {
-        Access{ .stage = this->stage | other.stage, .type = this->type | other.type };
+        return Access{ .stage = this->stage | other.stage, .type = this->type | other.type };
     }
 
     auto Access::operator & (Access const & other) -> Access
     {
-        Access{ .stage = this->stage & other.stage, .type = this->type & other.type };
+        return Access{ .stage = this->stage & other.stage, .type = this->type & other.type };
     }
 
     auto ImageMipArraySlice::whole(ImageAspectFlags aspect) -> ImageMipArraySlice

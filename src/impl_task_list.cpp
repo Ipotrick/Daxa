@@ -1,6 +1,8 @@
 #include "impl_task_list.hpp"
 #include "impl_device.hpp"
 
+#include <iostream>
+
 namespace daxa
 {
     auto TaskGPUResourceId::is_empty() const -> bool
@@ -221,39 +223,39 @@ namespace daxa
     {
         switch (access)
         {
-        case TaskImageAccess::NONE: return { ImageLayout::UNDEFINED, { PipelineStageFlagBits::NONE, AccessTypeFlagBits::NONE } };
-        case TaskImageAccess::SHADER_READ_ONLY: return { ImageLayout::SHADER_READ_ONLY_OPTIMAL, { PipelineStageFlagBits::ALL_GRAPHICS | PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ } };
-        case TaskImageAccess::VERTEX_SHADER_READ_ONLY: return { ImageLayout::SHADER_READ_ONLY_OPTIMAL, { PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ } };
-        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ_ONLY: return { ImageLayout::SHADER_READ_ONLY_OPTIMAL, { PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ } };
-        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ_ONLY: return { ImageLayout::SHADER_READ_ONLY_OPTIMAL, { PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ } };
-        case TaskImageAccess::GEOMETRY_SHADER_READ_ONLY: return { ImageLayout::SHADER_READ_ONLY_OPTIMAL, { PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ } };
-        case TaskImageAccess::FRAGMENT_SHADER_READ_ONLY: return { ImageLayout::SHADER_READ_ONLY_OPTIMAL, { PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ } };
-        case TaskImageAccess::COMPUTE_SHADER_READ_ONLY: return { ImageLayout::SHADER_READ_ONLY_OPTIMAL, { PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ } };
-        case TaskImageAccess::SHADER_WRITE_ONLY: return { ImageLayout::GENERAL, { PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS | PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::WRITE } };
-        case TaskImageAccess::VERTEX_SHADER_WRITE_ONLY: return { ImageLayout::GENERAL, { PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::WRITE } };
-        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_WRITE_ONLY: return { ImageLayout::GENERAL, { PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::WRITE } };
-        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_WRITE_ONLY: return { ImageLayout::GENERAL, { PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::WRITE } };
-        case TaskImageAccess::GEOMETRY_SHADER_WRITE_ONLY: return { ImageLayout::GENERAL, { PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::WRITE } };
-        case TaskImageAccess::FRAGMENT_SHADER_WRITE_ONLY: return { ImageLayout::GENERAL, { PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::WRITE } };
-        case TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY: return { ImageLayout::GENERAL, { PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::WRITE } };
-        case TaskImageAccess::SHADER_READ_WRITE: return { ImageLayout::GENERAL, { PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS | PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ_WRITE } };
-        case TaskImageAccess::VERTEX_SHADER_READ_WRITE: return { ImageLayout::GENERAL, { PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ_WRITE } };
-        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE: return { ImageLayout::GENERAL, { PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ_WRITE } };
-        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ_WRITE: return { ImageLayout::GENERAL, { PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ_WRITE } };
-        case TaskImageAccess::GEOMETRY_SHADER_READ_WRITE: return { ImageLayout::GENERAL, { PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ_WRITE } };
-        case TaskImageAccess::FRAGMENT_SHADER_READ_WRITE: return { ImageLayout::GENERAL, { PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ_WRITE } };
-        case TaskImageAccess::COMPUTE_SHADER_READ_WRITE: return { ImageLayout::GENERAL, { PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ_WRITE } };
-        case TaskImageAccess::TRANSFER_READ: return { ImageLayout::TRANSFER_SRC_OPTIMAL, { PipelineStageFlagBits::TRANSFER, AccessTypeFlagBits::READ } };
-        case TaskImageAccess::TRANSFER_WRITE: return { ImageLayout::TRANSFER_DST_OPTIMAL, { PipelineStageFlagBits::TRANSFER, AccessTypeFlagBits::WRITE } };
-        case TaskImageAccess::COLOR_ATTACHMENT: return { ImageLayout::COLOR_ATTACHMENT_OPTIMAL, { PipelineStageFlagBits::COLOR_ATTACHMENT_OUTPUT, AccessTypeFlagBits::READ_WRITE } };
-        case TaskImageAccess::DEPTH_ATTACHMENT: return { ImageLayout::DEPTH_ATTACHMENT_OPTIMAL, { PipelineStageFlagBits::EARLY_FRAGMENT_TESTS | PipelineStageFlagBits::LATE_FRAGMENT_TESTS, AccessTypeFlagBits::READ_WRITE } };
-        case TaskImageAccess::STENCIL_ATTACHMENT: return { ImageLayout::STENCIL_ATTACHMENT_OPTIMAL, { PipelineStageFlagBits::EARLY_FRAGMENT_TESTS | PipelineStageFlagBits::LATE_FRAGMENT_TESTS, AccessTypeFlagBits::READ_WRITE } };
-        case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT: return { ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL, { PipelineStageFlagBits::EARLY_FRAGMENT_TESTS | PipelineStageFlagBits::LATE_FRAGMENT_TESTS, AccessTypeFlagBits::READ_WRITE } };
-        case TaskImageAccess::DEPTH_ATTACHMENT_READ_ONLY: return { ImageLayout::DEPTH_READ_ONLY_OPTIMAL, { PipelineStageFlagBits::EARLY_FRAGMENT_TESTS | PipelineStageFlagBits::LATE_FRAGMENT_TESTS, AccessTypeFlagBits::READ } };
-        case TaskImageAccess::STENCIL_ATTACHMENT_READ_ONLY: return { ImageLayout::STENCIL_READ_ONLY_OPTIMAL, { PipelineStageFlagBits::EARLY_FRAGMENT_TESTS | PipelineStageFlagBits::LATE_FRAGMENT_TESTS, AccessTypeFlagBits::READ } };
-        case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT_READ_ONLY: return { ImageLayout::DEPTH_STENCIL_READ_ONLY_OPTIMAL, { PipelineStageFlagBits::EARLY_FRAGMENT_TESTS | PipelineStageFlagBits::LATE_FRAGMENT_TESTS, AccessTypeFlagBits::READ } };
-        case TaskImageAccess::RESOLVE_WRITE: return { ImageLayout::ATTACHMENT_OPTIMAL, { PipelineStageFlagBits::RESOLVE, AccessTypeFlagBits::WRITE } };
-        case TaskImageAccess::PRESENT: return { ImageLayout::PRESENT_SRC, { PipelineStageFlagBits::ALL_COMMANDS, AccessTypeFlagBits::READ } };
+        case TaskImageAccess::NONE: return {ImageLayout::UNDEFINED, {PipelineStageFlagBits::NONE, AccessTypeFlagBits::NONE}};
+        case TaskImageAccess::SHADER_READ_ONLY: return {ImageLayout::SHADER_READ_ONLY_OPTIMAL, {PipelineStageFlagBits::ALL_GRAPHICS | PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::VERTEX_SHADER_READ_ONLY: return {ImageLayout::SHADER_READ_ONLY_OPTIMAL, {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ_ONLY: return {ImageLayout::SHADER_READ_ONLY_OPTIMAL, {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ_ONLY: return {ImageLayout::SHADER_READ_ONLY_OPTIMAL, {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::GEOMETRY_SHADER_READ_ONLY: return {ImageLayout::SHADER_READ_ONLY_OPTIMAL, {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::FRAGMENT_SHADER_READ_ONLY: return {ImageLayout::SHADER_READ_ONLY_OPTIMAL, {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::COMPUTE_SHADER_READ_ONLY: return {ImageLayout::SHADER_READ_ONLY_OPTIMAL, {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::SHADER_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS | PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::WRITE}};
+        case TaskImageAccess::VERTEX_SHADER_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::WRITE}};
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::WRITE}};
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::WRITE}};
+        case TaskImageAccess::GEOMETRY_SHADER_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::WRITE}};
+        case TaskImageAccess::FRAGMENT_SHADER_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::WRITE}};
+        case TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::WRITE}};
+        case TaskImageAccess::SHADER_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS | PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ_WRITE}};
+        case TaskImageAccess::VERTEX_SHADER_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ_WRITE}};
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ_WRITE}};
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ_WRITE}};
+        case TaskImageAccess::GEOMETRY_SHADER_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ_WRITE}};
+        case TaskImageAccess::FRAGMENT_SHADER_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ_WRITE}};
+        case TaskImageAccess::COMPUTE_SHADER_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ_WRITE}};
+        case TaskImageAccess::TRANSFER_READ: return {ImageLayout::TRANSFER_SRC_OPTIMAL, {PipelineStageFlagBits::TRANSFER, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::TRANSFER_WRITE: return {ImageLayout::TRANSFER_DST_OPTIMAL, {PipelineStageFlagBits::TRANSFER, AccessTypeFlagBits::WRITE}};
+        case TaskImageAccess::COLOR_ATTACHMENT: return {ImageLayout::COLOR_ATTACHMENT_OPTIMAL, {PipelineStageFlagBits::COLOR_ATTACHMENT_OUTPUT, AccessTypeFlagBits::READ_WRITE}};
+        case TaskImageAccess::DEPTH_ATTACHMENT: return {ImageLayout::DEPTH_ATTACHMENT_OPTIMAL, {PipelineStageFlagBits::EARLY_FRAGMENT_TESTS | PipelineStageFlagBits::LATE_FRAGMENT_TESTS, AccessTypeFlagBits::READ_WRITE}};
+        case TaskImageAccess::STENCIL_ATTACHMENT: return {ImageLayout::STENCIL_ATTACHMENT_OPTIMAL, {PipelineStageFlagBits::EARLY_FRAGMENT_TESTS | PipelineStageFlagBits::LATE_FRAGMENT_TESTS, AccessTypeFlagBits::READ_WRITE}};
+        case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT: return {ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL, {PipelineStageFlagBits::EARLY_FRAGMENT_TESTS | PipelineStageFlagBits::LATE_FRAGMENT_TESTS, AccessTypeFlagBits::READ_WRITE}};
+        case TaskImageAccess::DEPTH_ATTACHMENT_READ_ONLY: return {ImageLayout::DEPTH_READ_ONLY_OPTIMAL, {PipelineStageFlagBits::EARLY_FRAGMENT_TESTS | PipelineStageFlagBits::LATE_FRAGMENT_TESTS, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::STENCIL_ATTACHMENT_READ_ONLY: return {ImageLayout::STENCIL_READ_ONLY_OPTIMAL, {PipelineStageFlagBits::EARLY_FRAGMENT_TESTS | PipelineStageFlagBits::LATE_FRAGMENT_TESTS, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT_READ_ONLY: return {ImageLayout::DEPTH_STENCIL_READ_ONLY_OPTIMAL, {PipelineStageFlagBits::EARLY_FRAGMENT_TESTS | PipelineStageFlagBits::LATE_FRAGMENT_TESTS, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::RESOLVE_WRITE: return {ImageLayout::ATTACHMENT_OPTIMAL, {PipelineStageFlagBits::RESOLVE, AccessTypeFlagBits::WRITE}};
+        case TaskImageAccess::PRESENT: return {ImageLayout::PRESENT_SRC, {PipelineStageFlagBits::ALL_COMMANDS, AccessTypeFlagBits::READ}};
         default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
         }
     }
@@ -262,30 +264,30 @@ namespace daxa
     {
         switch (access)
         {
-        case TaskImageAccess::NONE: return { PipelineStageFlagBits::NONE, AccessTypeFlagBits::NONE };
-        case TaskImageAccess::SHADER_READ_ONLY: return { PipelineStageFlagBits::ALL_GRAPHICS | PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ };
-        case TaskImageAccess::VERTEX_SHADER_READ_ONLY: return { PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ };
-        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ_ONLY: return { PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ };
-        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ_ONLY: return { PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ };
-        case TaskImageAccess::GEOMETRY_SHADER_READ_ONLY: return { PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ };
-        case TaskImageAccess::FRAGMENT_SHADER_READ_ONLY: return { PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ };
-        case TaskImageAccess::COMPUTE_SHADER_READ_ONLY: return { PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ };
-        case TaskImageAccess::SHADER_WRITE_ONLY: return { PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS | PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::WRITE };
-        case TaskImageAccess::VERTEX_SHADER_WRITE_ONLY: return { PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::WRITE };
-        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_WRITE_ONLY: return { PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::WRITE };
-        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_WRITE_ONLY: return { PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::WRITE };
-        case TaskImageAccess::GEOMETRY_SHADER_WRITE_ONLY: return { PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::WRITE };
-        case TaskImageAccess::FRAGMENT_SHADER_WRITE_ONLY: return { PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::WRITE };
-        case TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY: return { PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::WRITE };
-        case TaskImageAccess::SHADER_READ_WRITE: return { PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS | PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ_WRITE };
-        case TaskImageAccess::VERTEX_SHADER_READ_WRITE: return { PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ_WRITE };
-        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE: return { PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ_WRITE };
-        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ_WRITE: return { PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ_WRITE };
-        case TaskImageAccess::GEOMETRY_SHADER_READ_WRITE: return { PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ_WRITE };
-        case TaskImageAccess::FRAGMENT_SHADER_READ_WRITE: return { PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ_WRITE };
-        case TaskImageAccess::COMPUTE_SHADER_READ_WRITE: return { PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ_WRITE };
-        case TaskImageAccess::TRANSFER_READ: return { PipelineStageFlagBits::TRANSFER, AccessTypeFlagBits::READ };
-        case TaskImageAccess::TRANSFER_WRITE: return { PipelineStageFlagBits::TRANSFER, AccessTypeFlagBits::WRITE };
+        case TaskImageAccess::NONE: return {PipelineStageFlagBits::NONE, AccessTypeFlagBits::NONE};
+        case TaskImageAccess::SHADER_READ_ONLY: return {PipelineStageFlagBits::ALL_GRAPHICS | PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ};
+        case TaskImageAccess::VERTEX_SHADER_READ_ONLY: return {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ};
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ_ONLY: return {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ};
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ_ONLY: return {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ};
+        case TaskImageAccess::GEOMETRY_SHADER_READ_ONLY: return {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ};
+        case TaskImageAccess::FRAGMENT_SHADER_READ_ONLY: return {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ};
+        case TaskImageAccess::COMPUTE_SHADER_READ_ONLY: return {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ};
+        case TaskImageAccess::SHADER_WRITE_ONLY: return {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS | PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::WRITE};
+        case TaskImageAccess::VERTEX_SHADER_WRITE_ONLY: return {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::WRITE};
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_WRITE_ONLY: return {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::WRITE};
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_WRITE_ONLY: return {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::WRITE};
+        case TaskImageAccess::GEOMETRY_SHADER_WRITE_ONLY: return {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::WRITE};
+        case TaskImageAccess::FRAGMENT_SHADER_WRITE_ONLY: return {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::WRITE};
+        case TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY: return {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::WRITE};
+        case TaskImageAccess::SHADER_READ_WRITE: return {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS | PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ_WRITE};
+        case TaskImageAccess::VERTEX_SHADER_READ_WRITE: return {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ_WRITE};
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE: return {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ_WRITE};
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ_WRITE: return {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ_WRITE};
+        case TaskImageAccess::GEOMETRY_SHADER_READ_WRITE: return {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ_WRITE};
+        case TaskImageAccess::FRAGMENT_SHADER_READ_WRITE: return {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ_WRITE};
+        case TaskImageAccess::COMPUTE_SHADER_READ_WRITE: return {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ_WRITE};
+        case TaskImageAccess::TRANSFER_READ: return {PipelineStageFlagBits::TRANSFER, AccessTypeFlagBits::READ};
+        case TaskImageAccess::TRANSFER_WRITE: return {PipelineStageFlagBits::TRANSFER, AccessTypeFlagBits::WRITE};
         default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
         }
     }
@@ -297,6 +299,8 @@ namespace daxa
         {
             return {};
         }
+
+        return {};
     }
 
     auto ImplTaskList::slot(TaskBufferId id) -> ImplTaskBuffer &
