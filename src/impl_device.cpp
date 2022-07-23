@@ -119,7 +119,6 @@ namespace daxa
         impl.main_queue_submits_zombies.push_front(std::move(submit));
 
         impl.main_queue_collect_garbage(false);
-
     }
 
     void Device::present_frame(PresentInfo const & info)
@@ -691,7 +690,7 @@ namespace daxa
 
     auto ImplDevice::validate_image_slice(ImageMipArraySlice const & slice, ImageId id) -> ImageMipArraySlice
     {
-        if (slice.level_count == std::numeric_limits<u32>::max())
+        if (slice.level_count == std::numeric_limits<u32>::max() || slice.level_count == 0)
         {
             auto & info = this->slot(id).info;
             return ImageMipArraySlice{
@@ -710,7 +709,7 @@ namespace daxa
 
     auto ImplDevice::validate_image_slice(ImageMipArraySlice const & slice, ImageViewId id) -> ImageMipArraySlice
     {
-        if (slice.level_count == std::numeric_limits<u32>::max())
+        if (slice.level_count == std::numeric_limits<u32>::max() || slice.level_count == 0)
         {
             return this->slot(id).info.slice;
         }
@@ -749,7 +748,7 @@ namespace daxa
         };
         ret.swapchain_image_index = static_cast<i32>(index);
         ret.info = ImageInfo{};
-        vkCreateImageView(vk_device, &view_ci, nullptr, &ret.vk_image_view);
+        vkCreateImageView(vk_device, &view_ci, nullptr, &ret.view_slot.vk_image_view);
 
         if (DAXA_LOCK_WEAK(this->impl_ctx)->enable_debug_names && debug_name.size() > 0)
         {
@@ -766,13 +765,13 @@ namespace daxa
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
-                .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image_view),
+                .objectHandle = reinterpret_cast<uint64_t>(ret.view_slot.vk_image_view),
                 .pObjectName = debug_name.c_str(),
             };
             vkSetDebugUtilsObjectNameEXT(vk_device, &swapchain_image_view_name_info);
         }
 
-        write_descriptor_set_image(this->vk_device, this->gpu_table.vk_descriptor_set, ret.vk_image_view, usage, id.index);
+        write_descriptor_set_image(this->vk_device, this->gpu_table.vk_descriptor_set, ret.view_slot.vk_image_view, usage, id.index);
 
         image_slot = ret;
 
@@ -787,6 +786,19 @@ namespace daxa
 
         ImplImageSlot ret = {};
         ret.info = info;
+        ret.view_slot.info = ImageViewInfo{
+            .type = static_cast<ImageViewType>(info.dimensions),
+            .format = info.format,
+            .image = id,
+            .slice = ImageMipArraySlice{
+                .image_aspect = info.aspect,
+                .base_mip_level = 0,
+                .level_count = info.mip_level_count,
+                .base_array_layer = 0,
+                .layer_count = info.array_layer_count,
+            },
+            .debug_name = info.debug_name,
+        };
 
         DAXA_DBG_ASSERT_TRUE_M(info.dimensions >= 1 && info.dimensions <= 3, "image dimensions must be a value between 1 to 3(inclusive)");
         DAXA_DBG_ASSERT_TRUE_M(std::popcount(info.sample_count) == 1 && info.sample_count <= 64, "image samples must be power of two and between 1 and 64(inclusive)");
@@ -844,7 +856,7 @@ namespace daxa
             },
         };
 
-        vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.vk_image_view);
+        vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view);
 
         if (DAXA_LOCK_WEAK(this->impl_ctx)->enable_debug_names && info.debug_name.size() > 0)
         {
@@ -861,13 +873,13 @@ namespace daxa
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
-                .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image_view),
+                .objectHandle = reinterpret_cast<uint64_t>(ret.view_slot.vk_image_view),
                 .pObjectName = info.debug_name.c_str(),
             };
             vkSetDebugUtilsObjectNameEXT(vk_device, &swapchain_image_view_name_info);
         }
 
-        write_descriptor_set_image(this->vk_device, this->gpu_table.vk_descriptor_set, ret.vk_image_view, info.usage, id.index);
+        write_descriptor_set_image(this->vk_device, this->gpu_table.vk_descriptor_set, ret.view_slot.vk_image_view, info.usage, id.index);
 
         image_slot_variant = ret;
 
@@ -876,7 +888,9 @@ namespace daxa
 
     auto ImplDevice::new_image_view(ImageViewInfo const & info) -> ImageViewId
     {
-        auto [id, image_slot_variant] = gpu_table.image_slots.new_slot();
+        auto [id, image_slot] = gpu_table.image_slots.new_slot();
+
+        image_slot = {};
 
         VkDevice vk_device = this->vk_device;
 
@@ -920,7 +934,7 @@ namespace daxa
 
         write_descriptor_set_image(this->vk_device, this->gpu_table.vk_descriptor_set, ret.vk_image_view, parent_image_slot.info.usage, id.index);
 
-        image_slot_variant = ret;
+        image_slot.view_slot = ret;
 
         return ImageViewId{id};
     }
@@ -986,11 +1000,11 @@ namespace daxa
 
     void ImplDevice::cleanup_image(ImageId id)
     {
-        ImplImageSlot & image_slot = std::get<ImplImageSlot>(gpu_table.image_slots.dereference_id(id));
+        ImplImageSlot & image_slot = gpu_table.image_slots.dereference_id(id);
 
         write_descriptor_set_image(this->vk_device, this->gpu_table.vk_descriptor_set, VK_NULL_HANDLE, image_slot.info.usage, id.index);
 
-        vkDestroyImageView(vk_device, image_slot.vk_image_view, nullptr);
+        vkDestroyImageView(vk_device, image_slot.view_slot.vk_image_view, nullptr);
 
         if (image_slot.swapchain_image_index == NOT_OWNED_BY_SWAPCHAIN && image_slot.vma_allocation != nullptr)
         {
@@ -1004,7 +1018,9 @@ namespace daxa
 
     void ImplDevice::cleanup_image_view(ImageViewId id)
     {
-        ImplImageViewSlot & image_slot = std::get<ImplImageViewSlot>(gpu_table.image_slots.dereference_id(id));
+        DAXA_DBG_ASSERT_TRUE_M(gpu_table.image_slots.dereference_id(id).vk_image == VK_NULL_HANDLE, "can not destroy default image view of image");
+
+        ImplImageViewSlot & image_slot = gpu_table.image_slots.dereference_id(id).view_slot;
 
         write_descriptor_set_image(this->vk_device, this->gpu_table.vk_descriptor_set, VK_NULL_HANDLE, slot(image_slot.info.image).info.usage, id.index);
 
@@ -1071,12 +1087,12 @@ namespace daxa
 
     auto ImplDevice::slot(ImageId id) -> ImplImageSlot &
     {
-        return std::get<ImplImageSlot>(gpu_table.image_slots.dereference_id(id));
+        return gpu_table.image_slots.dereference_id(id);
     }
 
     auto ImplDevice::slot(ImageViewId id) -> ImplImageViewSlot &
     {
-        return std::get<ImplImageViewSlot>(gpu_table.image_slots.dereference_id(id));
+        return gpu_table.image_slots.dereference_id(id).view_slot;
     }
 
     auto ImplDevice::slot(SamplerId id) -> ImplSamplerSlot &

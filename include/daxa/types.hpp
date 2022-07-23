@@ -424,8 +424,6 @@ namespace daxa
         u32 level_count = 1;
         u32 base_array_layer = 0;
         u32 layer_count = 1;
-
-        static auto whole(ImageAspectFlags aspect = ImageAspectFlagBits::COLOR) -> ImageMipArraySlice;
     };
 
     struct ImageArraySlice
