@@ -7,8 +7,9 @@
 
 namespace daxa
 {
-    enum struct TaskBufferUsage
+    enum struct TaskBufferAccess
     {
+        NONE,
         SHADER_READ_ONLY,
         VERTEX_SHADER_READ_ONLY,
         TESSELLATION_CONTROL_SHADER_READ_ONLY,
@@ -31,13 +32,14 @@ namespace daxa
         FRAGMENT_SHADER_READ_WRITE,
         COMPUTE_SHADER_READ_WRITE,
         TRANSFER_READ,
-        TRANSFER_WRTIE,
+        TRANSFER_WRITE,
     };
 
-    auto to_string(TaskBufferUsage const & usage) -> std::string_view;
+    auto to_string(TaskBufferAccess const & usage) -> std::string_view;
 
-    enum struct TaskImageUsage
+    enum struct TaskImageAccess
     {
+        NONE,
         SHADER_READ_ONLY,
         VERTEX_SHADER_READ_ONLY,
         TESSELLATION_CONTROL_SHADER_READ_ONLY,
@@ -60,7 +62,7 @@ namespace daxa
         FRAGMENT_SHADER_READ_WRITE,
         COMPUTE_SHADER_READ_WRITE,
         TRANSFER_READ,
-        TRANSFER_WRTIE,
+        TRANSFER_WRITE,
         COLOR_ATTACHMENT,
         DEPTH_ATTACHMENT,
         STENCIL_ATTACHMENT,
@@ -72,7 +74,7 @@ namespace daxa
         PRESENT,
     };
 
-    auto to_string(TaskImageUsage const & usage) -> std::string_view;
+    auto to_string(TaskImageAccess const & usage) -> std::string_view;
 
     struct TaskGPUResourceId
     {
@@ -91,8 +93,8 @@ namespace daxa
 
     struct TaskResources
     {
-        std::vector<std::tuple<TaskBufferId, TaskBufferUsage>> buffers = {};
-        std::vector<std::tuple<TaskImageId, ImageMipArraySlice, TaskImageUsage>> images = {};
+        std::vector<std::tuple<TaskBufferId, TaskBufferAccess>> buffers = {};
+        std::vector<std::tuple<TaskImageId, ImageMipArraySlice, TaskImageAccess>> images = {};
     };
 
     struct TaskList;
