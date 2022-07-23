@@ -34,7 +34,7 @@ namespace daxa
         auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
 
 #if defined(DAXA_ENABLE_THREADSAFETY)
-        u64 curreny_main_queue_cpu_timeline_value = impl.main_queue_cpu_timeline.fetch_add(1ull, std::memory_order::relaxed) + 1;
+        u64 curreny_main_queue_cpu_timeline_value = impl.main_queue_cpu_timeline.fetch_add(1ull, std::memory_order::relaxed);
         std::unique_lock lock{impl.submit_mtx};
 #else
         u64 curreny_main_queue_cpu_timeline_value = ++impl.main_queue_cpu_timeline;
@@ -74,12 +74,14 @@ namespace daxa
 
         // used to synchronize with previous submits:
         std::vector<VkSemaphore> submit_semaphore_waits = {}; // All timeline semaphores come first, then binary semaphores follow.
-        std::vector<u64> submit_semaphore_wait_values = {};   // Used for timeline semaphores. Ignored (push dummy value) for binary semaphores.
+        std::vector<VkPipelineStageFlags> submit_semaphore_wait_stage_masks = {};
+        std::vector<u64> submit_semaphore_wait_values = {}; // Used for timeline semaphores. Ignored (push dummy value) for binary semaphores.
 
         for (auto & [timeline_semaphore, wait_value] : submit_info.wait_timeline_semaphores)
         {
             auto & impl_timeline_semaphore = *reinterpret_cast<ImplTimelineSemaphore *>(timeline_semaphore.impl.get());
             submit_semaphore_waits.push_back(impl_timeline_semaphore.vk_semaphore);
+            submit_semaphore_wait_stage_masks.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
             submit_semaphore_wait_values.push_back(wait_value);
         }
 
@@ -87,6 +89,7 @@ namespace daxa
         {
             auto & impl_binary_semaphore = *reinterpret_cast<ImplTimelineSemaphore *>(binary_semaphore.impl.get());
             submit_semaphore_waits.push_back(impl_binary_semaphore.vk_semaphore);
+            submit_semaphore_wait_stage_masks.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
             submit_semaphore_wait_values.push_back(0);
         }
 
@@ -105,7 +108,7 @@ namespace daxa
             .pNext = reinterpret_cast<void *>(&timelineInfo),
             .waitSemaphoreCount = static_cast<u32>(submit_semaphore_waits.size()),
             .pWaitSemaphores = submit_semaphore_waits.data(),
-            .pWaitDstStageMask = &pipe_stage_flags,
+            .pWaitDstStageMask = submit_semaphore_wait_stage_masks.data(),
             .commandBufferCount = static_cast<u32>(submit_vk_command_buffers.size()),
             .pCommandBuffers = submit_vk_command_buffers.data(),
             .signalSemaphoreCount = static_cast<u32>(submit_semaphore_signals.size()),
@@ -113,9 +116,10 @@ namespace daxa
         };
         vkQueueSubmit(impl.main_queue_vk_queue, 1, &vk_submit_info, VK_NULL_HANDLE);
 
-        impl.main_queue_submits_zombies.push_back(std::move(submit));
+        impl.main_queue_submits_zombies.push_front(std::move(submit));
 
         impl.main_queue_collect_garbage(false);
+
     }
 
     void Device::present_frame(PresentInfo const & info)
@@ -578,14 +582,14 @@ namespace daxa
                     auto [id, index] = cmd_list->deferred_destructions[i];
                     switch (index)
                     {
-                        case DEFERRED_DESTRUCTION_BUFFER_INDEX: this->main_queue_buffer_zombies.push_back({main_queue_cpu_timeline,BufferId{id}}); break;
-                        case DEFERRED_DESTRUCTION_IMAGE_INDEX: this->main_queue_image_zombies.push_back({main_queue_cpu_timeline, ImageId{id}}); break;
-                        case DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX: this->main_queue_image_view_zombies.push_back({main_queue_cpu_timeline, ImageViewId{id}}); break;
-                        case DEFERRED_DESTRUCTION_SAMPLER_INDEX: this->main_queue_sampler_zombies.push_back({main_queue_cpu_timeline, SamplerId{id}}); break;
+                        case DEFERRED_DESTRUCTION_BUFFER_INDEX: this->main_queue_buffer_zombies.push_front({main_queue_cpu_timeline,BufferId{id}}); break;
+                        case DEFERRED_DESTRUCTION_IMAGE_INDEX: this->main_queue_image_zombies.push_front({main_queue_cpu_timeline, ImageId{id}}); break;
+                        case DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX: this->main_queue_image_view_zombies.push_front({main_queue_cpu_timeline, ImageViewId{id}}); break;
+                        case DEFERRED_DESTRUCTION_SAMPLER_INDEX: this->main_queue_sampler_zombies.push_front({main_queue_cpu_timeline, SamplerId{id}}); break;
                         default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
                     }
                 }
-                if (cmd_list.use_count() == 1)
+                if (cmd_list.use_count() == 1 && false)
                 {
                     cmd_list->reset();
                     this->command_list_recyclable_list.recyclables.push_back(std::move(cmd_list));
@@ -684,7 +688,6 @@ namespace daxa
 
         return BufferId{id};
     }
-
 
     auto ImplDevice::validate_image_slice(ImageMipArraySlice const & slice, ImageId id) -> ImageMipArraySlice
     {
@@ -877,7 +880,6 @@ namespace daxa
 
         VkDevice vk_device = this->vk_device;
 
-
         ImplImageSlot & parent_image_slot = slot(info.image);
 
         ImplImageViewSlot ret = {};
@@ -973,7 +975,7 @@ namespace daxa
     {
         ImplBufferSlot & buffer_slot = this->gpu_table.buffer_slots.dereference_id(id);
 
-        write_descriptor_set_buffer(this->vk_device, this->gpu_table.vk_descriptor_set, buffer_slot.vk_buffer, 0, static_cast<VkDeviceSize>(buffer_slot.info.size), id.index);
+        write_descriptor_set_buffer(this->vk_device, this->gpu_table.vk_descriptor_set, VK_NULL_HANDLE, 0, static_cast<VkDeviceSize>(buffer_slot.info.size), id.index);
 
         vmaDestroyBuffer(this->vma_allocator, buffer_slot.vk_buffer, buffer_slot.vma_allocation);
 
@@ -1017,7 +1019,7 @@ namespace daxa
     {
         ImplSamplerSlot & sampler_slot = this->gpu_table.sampler_slots.dereference_id(id);
 
-        write_descriptor_set_sampler(this->vk_device, this->gpu_table.vk_descriptor_set, sampler_slot.vk_sampler, id.index);
+        write_descriptor_set_sampler(this->vk_device, this->gpu_table.vk_descriptor_set, VK_NULL_HANDLE, id.index);
 
         vkDestroySampler(this->vk_device, sampler_slot.vk_sampler, nullptr);
 
@@ -1032,7 +1034,7 @@ namespace daxa
         std::unique_lock lock{this->main_queue_zombies_mtx};
         u64 main_queue_cpu_timeline = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
 #endif
-        this->main_queue_buffer_zombies.push_back({main_queue_cpu_timeline, id});
+        this->main_queue_buffer_zombies.push_front({main_queue_cpu_timeline, id});
     }
 
     void ImplDevice::zombiefy_image(ImageId id)
@@ -1041,7 +1043,7 @@ namespace daxa
         std::unique_lock lock{this->main_queue_zombies_mtx};
         u64 main_queue_cpu_timeline = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
 #endif
-        this->main_queue_image_zombies.push_back({main_queue_cpu_timeline, id});
+        this->main_queue_image_zombies.push_front({main_queue_cpu_timeline, id});
     }
 
     void ImplDevice::zombiefy_image_view(ImageViewId id)
@@ -1050,7 +1052,7 @@ namespace daxa
         std::unique_lock lock{this->main_queue_zombies_mtx};
         u64 main_queue_cpu_timeline = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
 #endif
-        this->main_queue_image_view_zombies.push_back({main_queue_cpu_timeline, id});
+        this->main_queue_image_view_zombies.push_front({main_queue_cpu_timeline, id});
     }
 
     void ImplDevice::zombiefy_sampler(SamplerId id)
@@ -1059,7 +1061,7 @@ namespace daxa
         std::unique_lock lock{this->main_queue_zombies_mtx};
         u64 main_queue_cpu_timeline = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
 #endif
-        this->main_queue_sampler_zombies.push_back({main_queue_cpu_timeline, id});
+        this->main_queue_sampler_zombies.push_front({main_queue_cpu_timeline, id});
     }
 
     auto ImplDevice::slot(BufferId id) -> ImplBufferSlot &

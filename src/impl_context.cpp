@@ -42,7 +42,7 @@ namespace daxa
         {
             enabled_layers.push_back("VK_LAYER_KHRONOS_validation");
         }
-        enabled_layers.push_back("VK_LAYER_LUNARG_monitor");
+        //enabled_layers.push_back("VK_LAYER_LUNARG_monitor");
         extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
         extension_names.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 

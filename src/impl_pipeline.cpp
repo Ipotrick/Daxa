@@ -113,7 +113,7 @@ namespace daxa
 #else
             u64 main_queue_cpu_timeline_value = DAXA_LOCK_WEAK(impl->impl_device)->main_queue_cpu_timeline;
 #endif
-            DAXA_LOCK_WEAK(impl->impl_device)->main_queue_raster_pipeline_zombies.push_back({main_queue_cpu_timeline_value, impl});
+            DAXA_LOCK_WEAK(impl->impl_device)->main_queue_raster_pipeline_zombies.push_front({main_queue_cpu_timeline_value, impl});
         }
     }
 
@@ -130,7 +130,7 @@ namespace daxa
 #else
             u64 main_queue_cpu_timeline_value = DAXA_LOCK_WEAK(impl->impl_device)->main_queue_cpu_timeline;
 #endif
-            DAXA_LOCK_WEAK(impl->impl_device)->main_queue_compute_pipeline_zombies.push_back({main_queue_cpu_timeline_value, impl});
+            DAXA_LOCK_WEAK(impl->impl_device)->main_queue_compute_pipeline_zombies.push_front({main_queue_cpu_timeline_value, impl});
         }
     }
 

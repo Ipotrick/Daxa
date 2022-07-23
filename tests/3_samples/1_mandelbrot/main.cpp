@@ -142,7 +142,7 @@ struct App : AppWindow<App>
         auto compute_input_staging_buffer = device.create_buffer({
             .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .size = sizeof(ComputeInput),
-            .debug_name = "Mandelbrot Compute Input Staging buffer",
+            .debug_name = "Mandelbrot Compute Input Staging buffer " + std::to_string(cpu_framecount),
         });
         cmd_list.destroy_buffer_deferred(compute_input_staging_buffer);
 
