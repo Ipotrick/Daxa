@@ -114,8 +114,12 @@ namespace tests
             {
                 size_x = sx;
                 size_y = sy;
-                swapchain.resize(size_x, size_y);
-                draw();
+                minimized = size_x == 0 || size_y == 0;
+                if (!minimized)
+                {
+                    swapchain.resize(size_x, size_y);
+                    draw();
+                }
             }
         };
 
