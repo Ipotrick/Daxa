@@ -789,7 +789,7 @@ namespace daxa
         ret.view_slot.info = ImageViewInfo{
             .type = static_cast<ImageViewType>(info.dimensions),
             .format = info.format,
-            .image = id,
+            .image = {id},
             .slice = ImageMipArraySlice{
                 .image_aspect = info.aspect,
                 .base_mip_level = 0,

@@ -168,7 +168,7 @@ struct App : AppWindow<App>
         });
 
         cmd_list.begin_renderpass({
-            .color_attachments = {{.image = swapchain_image}},
+            .color_attachments = {{.image_view = swapchain_image.default_view()}},
             .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
         });
         cmd_list.set_pipeline(raster_pipeline);
