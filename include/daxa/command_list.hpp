@@ -86,14 +86,14 @@ namespace daxa
 
     struct PipelineBarrierInfo
     {
-        AccessFlags awaited_pipeline_access = AccessFlagBits::NONE;
-        AccessFlags waiting_pipeline_access = AccessFlagBits::NONE;
+        Access awaited_pipeline_access = AccessConsts::NONE;
+        Access waiting_pipeline_access = AccessConsts::NONE;
     };
 
     struct PipelineBarrierImageTransitionInfo
     {
-        AccessFlags awaited_pipeline_access = AccessFlagBits::NONE;
-        AccessFlags waiting_pipeline_access = AccessFlagBits::NONE;
+        Access awaited_pipeline_access = AccessConsts::NONE;
+        Access waiting_pipeline_access = AccessConsts::NONE;
         ImageLayout before_layout = ImageLayout::UNDEFINED;
         ImageLayout after_layout = ImageLayout::UNDEFINED;
         ImageId image_id = {};
