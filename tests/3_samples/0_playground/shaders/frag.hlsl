@@ -20,7 +20,7 @@ float4 main(VertexOutput vertex_output) : SV_TARGET
     switch (p.mode)
     {
     case 0: result = float4(float3(1.0, 1.0, 1.0) * diffuse * sky_col, 1.0f); break;
-    case 1: result = float4(float3(0.2, 0.4, 1.0) * diffuse * sky_col, 0.1f); break;
+    case 1: result = float4(float3(0.2, 0.4, 1.0) * diffuse * sky_col, 0.6f); break;
     }
     return result;
 }

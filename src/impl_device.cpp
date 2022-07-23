@@ -975,7 +975,7 @@ namespace daxa
     {
         ImplBufferSlot & buffer_slot = this->gpu_table.buffer_slots.dereference_id(id);
 
-        write_descriptor_set_buffer(this->vk_device, this->gpu_table.vk_descriptor_set, VK_NULL_HANDLE, 0, static_cast<VkDeviceSize>(buffer_slot.info.size), id.index);
+        write_descriptor_set_buffer(this->vk_device, this->gpu_table.vk_descriptor_set, VK_NULL_HANDLE, 0, VK_WHOLE_SIZE, id.index);
 
         vmaDestroyBuffer(this->vma_allocator, buffer_slot.vk_buffer, buffer_slot.vma_allocation);
 
