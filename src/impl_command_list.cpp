@@ -340,20 +340,13 @@ namespace daxa
 
         auto fill_rendering_attachment_info = [&](RenderAttachmentInfo const & in, VkRenderingAttachmentInfo & out)
         {
-            DAXA_DBG_ASSERT_TRUE_M(!in.image.is_empty() || !in.image_view.is_empty(), "must provide either image or image view to render attachment");
+            DAXA_DBG_ASSERT_TRUE_M(!in.image_view.is_empty(), "must provide either image view to render attachment");
             VkImageView vk_image_view = VK_NULL_HANDLE;
-            if (!in.image.is_empty())
-            {
-                vk_image_view = DAXA_LOCK_WEAK(impl.impl_device)->slot(in.image).vk_image_view;
-            }
-            if (!in.image_view.is_empty())
-            {
-                vk_image_view = DAXA_LOCK_WEAK(impl.impl_device)->slot(in.image_view).vk_image_view;
-            }
+            
             out = VkRenderingAttachmentInfo{
                 .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
                 .pNext = nullptr,
-                .imageView = vk_image_view,
+                .imageView = DAXA_LOCK_WEAK(impl.impl_device)->slot(in.image_view).vk_image_view,
                 .imageLayout = *reinterpret_cast<VkImageLayout const *>(&in.layout),
                 .resolveMode = VkResolveModeFlagBits::VK_RESOLVE_MODE_NONE,
                 .resolveImageView = VK_NULL_HANDLE,
