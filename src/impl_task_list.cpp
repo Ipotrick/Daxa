@@ -1,6 +1,8 @@
 #include "impl_task_list.hpp"
 #include "impl_device.hpp"
 
+#include <iostream>
+
 namespace daxa
 {
     auto TaskGPUResourceId::is_empty() const -> bool
