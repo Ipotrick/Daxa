@@ -142,6 +142,8 @@ struct RenderableChunk
             });
             cmd_list.draw({.vertex_count = face_n * 6});
         }
+    }
+    void draw_water(daxa::CommandList & cmd_list, glm::mat4 const & view_mat) {
         if (water_face_n > 0)
         {
             cmd_list.push_constant(RasterPush{
@@ -206,6 +208,8 @@ struct RenderableVoxelWorld
     {
         for (auto & chunk : chunks)
             chunk->draw(cmd_list, view_mat);
+        for (auto & chunk : chunks)
+            chunk->draw_water(cmd_list, view_mat);
     }
 
     Voxel get_voxel(glm::ivec3 p)
@@ -361,7 +365,7 @@ struct App : AppWindow<App>
             default: return daxa::default_format_score(format);
             }
         },
-        .present_mode = daxa::PresentMode::DO_NOT_WAIT_FOR_VBLANK,
+        .present_mode = daxa::PresentMode::DOUBLE_BUFFER_WAIT_FOR_VBLANK,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
         .debug_name = "HelloTriangle Swapchain",
     });
@@ -385,7 +389,7 @@ struct App : AppWindow<App>
     daxa::RasterPipeline raster_pipeline = pipeline_compiler.create_raster_pipeline({
         .vertex_shader_info = {.source = daxa::ShaderFile{"vert.hlsl"}},
         .fragment_shader_info = {.source = daxa::ShaderFile{"frag.hlsl"}},
-        .color_attachments = {{.format = swapchain.get_format()}},
+        .color_attachments = {{.format = swapchain.get_format(), .blend = {.blend_enable = true, .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA, .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA}}},
         .depth_test = {
             .depth_attachment_format = daxa::Format::D32_SFLOAT,
             .enable_depth_test = true,
