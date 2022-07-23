@@ -120,7 +120,7 @@ struct RenderableChunk
         .debug_name = "Chunk Water Face buffer",
     });
     u32 face_n = 0, water_face_n = 0;
-    RenderableVoxelWorld * renderable_world;
+    RenderableVoxelWorld * renderable_world = nullptr;
 
     ~RenderableChunk()
     {
