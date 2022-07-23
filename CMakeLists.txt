@@ -4,6 +4,7 @@ include(cmake/warnings.cmake)
 if(DAXA_ENABLE_UTILS)
     list(APPEND VCPKG_MANIFEST_FEATURES "utils")
 endif()
+
 if(DAXA_ENABLE_TESTS)
     list(APPEND VCPKG_MANIFEST_FEATURES "tests")
 endif()
@@ -90,10 +91,17 @@ include(${CMAKE_CURRENT_LIST_DIR}/daxa-targets.cmake)
 check_required_components(daxa)
 
 find_package(dxc CONFIG REQUIRED)
-find_package(imgui CONFIG REQUIRED)
-find_package(Vulkan REQUIRED)
 find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
+find_package(Vulkan REQUIRED)
+find_package(volk CONFIG REQUIRED)
 ]=])
+
+if(DAXA_ENABLE_UTILS)
+    file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
+find_package(imgui CONFIG REQUIRED)
+]=])
+endif()
+
 configure_package_config_file(${CMAKE_BINARY_DIR}/config.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/daxa-config.cmake
     INSTALL_DESTINATION ${CMAKE_INSTALL_DATADIR}/daxa
