@@ -108,8 +108,10 @@ namespace daxa
         // auto get_image(TaskImageId const & task_id) -> ImageId;
         // auto get_image_view(TaskImageId const & task_id) -> ImageViewId;
 
+        TaskInterface() = delete;
+
       private:
-        void * backend;
+        // void * backend = nullptr;
     };
 
     using TaskCallback = std::function<void(TaskInterface &)>;

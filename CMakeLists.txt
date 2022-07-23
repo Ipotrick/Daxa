@@ -1,5 +1,14 @@
 cmake_minimum_required(VERSION 3.12)
 include(cmake/warnings.cmake)
+
+if(DAXA_ENABLE_UTILS)
+    list(APPEND VCPKG_MANIFEST_FEATURES "utils")
+endif()
+
+if(DAXA_ENABLE_TESTS)
+    list(APPEND VCPKG_MANIFEST_FEATURES "tests")
+endif()
+
 project(daxa VERSION 1.0.0)
 
 if(DAXA_ENABLE_STATIC_ANALYSIS)
@@ -20,7 +29,7 @@ if(DAXA_ENABLE_STATIC_ANALYSIS)
         ${CPPCHECK_OPTIONS})
 endif()
 
-add_library(daxa
+add_library(daxa STATIC
     "src/impl_device.cpp"
     "src/impl_context.cpp"
     "src/impl_core.cpp"
@@ -36,23 +45,29 @@ add_library(daxa
 add_library(daxa::daxa ALIAS daxa)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    target_compile_options(daxa PUBLIC /std:c++latest)
+    target_compile_options(daxa PRIVATE /std:c++latest)
 else()
-    target_compile_features(daxa PUBLIC cxx_std_20)
+    target_compile_features(daxa PRIVATE cxx_std_20)
 endif()
 
 find_package(dxc CONFIG REQUIRED)
-find_package(imgui CONFIG REQUIRED)
 find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(volk CONFIG REQUIRED)
+
+if(DAXA_ENABLE_UTILS)
+    find_package(imgui CONFIG REQUIRED)
+    target_link_libraries(daxa
+        PUBLIC
+        imgui::imgui
+    )
+endif()
 
 target_link_libraries(daxa
     PUBLIC
     unofficial::vulkan-memory-allocator::vulkan-memory-allocator
     Vulkan::Vulkan
     volk::volk
-    imgui::imgui
     dxc::dxc
 )
 target_include_directories(daxa
@@ -76,10 +91,17 @@ include(${CMAKE_CURRENT_LIST_DIR}/daxa-targets.cmake)
 check_required_components(daxa)
 
 find_package(dxc CONFIG REQUIRED)
-find_package(imgui CONFIG REQUIRED)
-find_package(Vulkan REQUIRED)
 find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
+find_package(Vulkan REQUIRED)
+find_package(volk CONFIG REQUIRED)
 ]=])
+
+if(DAXA_ENABLE_UTILS)
+    file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
+find_package(imgui CONFIG REQUIRED)
+]=])
+endif()
+
 configure_package_config_file(${CMAKE_BINARY_DIR}/config.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/daxa-config.cmake
     INSTALL_DESTINATION ${CMAKE_INSTALL_DATADIR}/daxa
