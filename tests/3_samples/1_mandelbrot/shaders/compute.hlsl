@@ -13,8 +13,8 @@ struct Push
 };
 [[vk::push_constant]] const Push p;
 
-#define CENTER float2(-0.75, 0.0)
-#define SCALE 2
+#define CENTER float2(-0.752, -0.0321)
+#define SCALE 0.000002
 #define SUBSAMPLES 2
 
 float3 hsv2rgb(float3 c)
@@ -30,10 +30,10 @@ float3 mandelbrot_colored(float2 pixel_p)
     uv = (uv - 0.5) * float2(float(p.frame_dim.x) / float(p.frame_dim.y), 1);
     StructuredBuffer<Input> input = daxa::get_StructuredBuffer<Input>(p.input_buffer_id);
     float time = input[0].time;
-    float2 z = uv * SCALE * 2 + CENTER + float2(sin(time), 0);
+    float2 z = uv * SCALE * 2 + CENTER;
     float2 c = z;
     uint i = 0;
-    for (; i < 100; ++i)
+    for (; i < 50000; ++i)
     {
         float2 z_ = z;
         z.x = z_.x * z_.x - z_.y * z_.y;
@@ -43,7 +43,7 @@ float3 mandelbrot_colored(float2 pixel_p)
             break;
     }
     float3 col = 0;
-    if (i != 100)
+    if (i != 50000)
     {
         float l = i;
         float sl = l - log2(log2(dot(z, z))) + 4.0;
