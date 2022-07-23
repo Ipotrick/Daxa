@@ -696,7 +696,7 @@ namespace daxa
                 .base_mip_level = 0,
                 .level_count = info.mip_level_count,
                 .base_array_layer = 0,
-                .level_count = info.array_layer_count,
+                .layer_count = info.array_layer_count,
             };
         }
         else

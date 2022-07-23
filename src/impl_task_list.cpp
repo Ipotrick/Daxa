@@ -219,6 +219,7 @@ namespace daxa
 
     auto access_to_image_layout(Access const & access) -> ImageLayout
     {
+        return {};
     }
 
     auto ImplTaskList::compute_needed_barrier(Access const & previous_access, Access const & new_access)
@@ -228,6 +229,8 @@ namespace daxa
         {
             return {};
         }
+
+        return {};
     }
 
     auto ImplTaskList::slot(TaskBufferId id) -> ImplTaskBuffer &
@@ -280,7 +283,7 @@ namespace daxa
                                 << to_string(usage)
                                 << std::endl;
 
-                            //slot(tid).last_access = usage;
+                            // slot(tid).last_access = usage;
                             slot(tid).last_access_task_index = task_index;
                         }
 
@@ -294,7 +297,7 @@ namespace daxa
                                 << ", access: " << to_string(usage)
                                 << std::endl;
 
-                            //slot(tid).last_access = access;
+                            // slot(tid).last_access = access;
                             slot(tid).last_access_task_index = task_index;
                         }
                     }
