@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.12)
 include(cmake/warnings.cmake)
+
+if(DAXA_ENABLE_TESTS)
+    list(APPEND VCPKG_MANIFEST_FEATURES "tests")
+endif()
+
 project(daxa VERSION 1.0.0)
 
 if(DAXA_ENABLE_STATIC_ANALYSIS)
