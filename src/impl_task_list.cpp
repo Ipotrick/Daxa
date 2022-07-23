@@ -39,6 +39,7 @@ namespace daxa
         case TaskBufferAccess::TRANSFER_WRITE: return std::string_view{"TRANSFER_WRITE"};
         default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
         }
+        return "invalid";
     }
 
     auto to_string(TaskImageAccess const & usage) -> std::string_view
@@ -79,6 +80,7 @@ namespace daxa
         case TaskImageAccess::PRESENT: return std::string_view{"PRESENT"};
         default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
         }
+        return "invalid";
     }
 
     TaskList::TaskList() : Handle{nullptr} {}
@@ -257,6 +259,7 @@ namespace daxa
         case TaskImageAccess::PRESENT: return {ImageLayout::PRESENT_SRC, {PipelineStageFlagBits::ALL_COMMANDS, AccessTypeFlagBits::READ}};
         default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
         }
+        return {};
     }
 
     auto ImplTaskList::task_buffer_access_to_access(TaskBufferAccess const & access) -> Access
@@ -289,6 +292,7 @@ namespace daxa
         case TaskBufferAccess::TRANSFER_WRITE: return {PipelineStageFlagBits::TRANSFER, AccessTypeFlagBits::WRITE};
         default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
         }
+        return {};
     }
 
     auto ImplTaskList::compute_needed_barrier(Access const & previous_access, Access const & new_access)
