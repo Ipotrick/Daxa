@@ -37,8 +37,11 @@ namespace daxa
         std::string debug_name = {};
     };
 
+    struct ImageViewId;
+
     struct ImageId : public GPUResourceId
     {
+        auto default_view() const -> ImageViewId;
     };
 
     struct ImageViewInfo

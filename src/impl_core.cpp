@@ -14,15 +14,6 @@ namespace daxa
         return Access{ .stage = this->stage & other.stage, .type = this->type & other.type };
     }
 
-    auto ImageMipArraySlice::whole(ImageAspectFlags aspect) -> ImageMipArraySlice
-    {
-        return ImageMipArraySlice{
-            .image_aspect = aspect,
-            .base_mip_level = std::numeric_limits<u32>::max(),
-            .base_array_layer = std::numeric_limits<u32>::max(),
-        };
-    }
-
     auto to_string(Access const & access) -> std::string_view
     {
         switch(access.stage) {
