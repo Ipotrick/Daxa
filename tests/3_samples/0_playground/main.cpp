@@ -2,6 +2,8 @@
 #include <0_common/player.hpp>
 #include <thread>
 
+#include "util.hpp"
+
 using namespace daxa::types;
 using Clock = std::chrono::high_resolution_clock;
 
@@ -32,23 +34,62 @@ struct RasterPush
     glm::mat4 view_mat;
     glm::vec3 chunk_pos;
     daxa::BufferId vertex_buffer_id;
+    u32 mode;
 };
 
 static inline constexpr u64 CHUNK_SIZE = 32;
 static inline constexpr u64 CHUNK_VOXEL_N = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
-static inline constexpr u64 CHUNK_MAX_VERTS = CHUNK_VOXEL_N;
+static inline constexpr u64 CHUNK_MAX_VERTS = CHUNK_VOXEL_N * 6;
 static inline constexpr u64 CHUNK_MAX_SIZE = CHUNK_MAX_VERTS * sizeof(Vertex);
 
-static inline constexpr u64 CHUNK_N = 8;
+static inline constexpr u64 CHUNK_N = 4;
+
+struct Voxel
+{
+    u32 id;
+
+    bool is_occluding()
+    {
+        switch (id)
+        {
+        case 0:
+        case 2: return false;
+        default: return true;
+        }
+    }
+
+    bool is_occluding_nx() { return is_occluding(); }
+    bool is_occluding_px() { return is_occluding(); }
+    bool is_occluding_ny() { return is_occluding(); }
+    bool is_occluding_py() { return is_occluding(); }
+    bool is_occluding_nz() { return is_occluding(); }
+    bool is_occluding_pz() { return is_occluding(); }
+};
 
 struct VoxelChunk
 {
-    u32 voxels[CHUNK_VOXEL_N];
+    Voxel voxels[CHUNK_VOXEL_N];
     glm::vec3 pos;
 
-    u32 generate_block(glm::vec3 p)
+    u32 generate_block_id(glm::vec3 p)
     {
-        return std::sin(p.x * 0.04f) * 40.0f + std::sin(p.z * 0.05f + 10.0f) * 45.0f < p.y - 100;
+        p = p * 0.5f;
+        FractalNoiseConfig noise_conf = {
+            /* .amplitude   = */ 1.0f,
+            /* .persistance = */ 0.12f,
+            /* .scale       = */ 0.03f,
+            /* .lacunarity  = */ 4.7f,
+            /* .octaves     = */ 2,
+        };
+        float val = fractal_noise(p + 100.0f, noise_conf);
+        val = val - (-p.y + 30.0f) * 0.04f;
+        val -= std::pow(smoothstep(-1.0f, 1.0f, -p.y + 32.0f), 2.0f) * 0.15f;
+        val = std::max(val, 0.0f);
+        if (val > 0.0f)
+            return 1;
+        if (p.y > 33.0f)
+            return 2;
+        return 0;
     }
 
     void generate()
@@ -59,7 +100,7 @@ struct VoxelChunk
                 {
                     u64 i = xi + yi * CHUNK_SIZE + zi * CHUNK_SIZE * CHUNK_SIZE;
                     glm::vec3 block_pos = glm::vec3(xi, yi, zi) + pos;
-                    voxels[i] = generate_block(block_pos);
+                    voxels[i].id = generate_block_id(block_pos);
                 }
     }
 };
@@ -70,28 +111,47 @@ struct RenderableChunk
 {
     VoxelChunk voxel_chunk = {};
     daxa::Device device;
-    daxa::BufferId vertex_buffer = device.create_buffer(daxa::BufferInfo{
+    daxa::BufferId face_buffer = device.create_buffer(daxa::BufferInfo{
         .size = CHUNK_MAX_SIZE,
-        .debug_name = "Chunk Vertex buffer",
+        .debug_name = "Chunk Face buffer",
     });
-    u32 vert_n = 0;
+    daxa::BufferId water_face_buffer = device.create_buffer(daxa::BufferInfo{
+        .size = CHUNK_MAX_SIZE,
+        .debug_name = "Chunk Water Face buffer",
+    });
+    u32 face_n = 0, water_face_n = 0;
     RenderableVoxelWorld * renderable_world;
 
     ~RenderableChunk()
     {
-        device.destroy_buffer(vertex_buffer);
+        device.destroy_buffer(face_buffer);
+        device.destroy_buffer(water_face_buffer);
     }
 
     void update_chunk_mesh(daxa::CommandList & cmd_list);
 
     void draw(daxa::CommandList & cmd_list, glm::mat4 const & view_mat)
     {
-        cmd_list.push_constant(RasterPush{
-            .view_mat = view_mat,
-            .chunk_pos = voxel_chunk.pos,
-            .vertex_buffer_id = vertex_buffer,
-        });
-        cmd_list.draw({.vertex_count = vert_n * 6});
+        if (face_n > 0)
+        {
+            cmd_list.push_constant(RasterPush{
+                .view_mat = view_mat,
+                .chunk_pos = voxel_chunk.pos,
+                .vertex_buffer_id = face_buffer,
+                .mode = 0,
+            });
+            cmd_list.draw({.vertex_count = face_n * 6});
+        }
+        if (water_face_n > 0)
+        {
+            cmd_list.push_constant(RasterPush{
+                .view_mat = view_mat,
+                .chunk_pos = voxel_chunk.pos,
+                .vertex_buffer_id = water_face_buffer,
+                .mode = 1,
+            });
+            cmd_list.draw({.vertex_count = water_face_n * 6});
+        }
     }
 };
 
@@ -145,24 +205,21 @@ struct RenderableVoxelWorld
     void draw(daxa::CommandList & cmd_list, glm::mat4 const & view_mat)
     {
         for (auto & chunk : chunks)
-        {
-            if (chunk->vert_n > 0)
-                chunk->draw(cmd_list, view_mat);
-        }
+            chunk->draw(cmd_list, view_mat);
     }
 
-    u32 get_voxel(glm::ivec3 p)
+    Voxel get_voxel(glm::ivec3 p)
     {
         i32 x = p.x / static_cast<i32>(CHUNK_SIZE);
         i32 y = p.y / static_cast<i32>(CHUNK_SIZE);
         i32 z = p.z / static_cast<i32>(CHUNK_SIZE);
 
         if (p.x < 0 || x >= static_cast<i32>(CHUNK_N))
-            return 0;
+            return {.id = 0};
         if (p.y < 0 || y >= static_cast<i32>(CHUNK_N))
-            return 0;
+            return {.id = 0};
         if (p.z < 0 || z >= static_cast<i32>(CHUNK_N))
-            return 0;
+            return {.id = 0};
 
         auto & chunk = chunks[static_cast<u64>(x) + static_cast<u64>(y) * CHUNK_N + static_cast<u64>(z) * CHUNK_N * CHUNK_N];
 
@@ -176,83 +233,113 @@ struct RenderableVoxelWorld
 
 void RenderableChunk::update_chunk_mesh(daxa::CommandList & cmd_list)
 {
-    auto vertex_staging_buffer = device.create_buffer({
-        .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-        .size = CHUNK_MAX_SIZE,
-        .debug_name = "HelloTriangle Vertex Staging buffer",
-    });
-    cmd_list.destroy_buffer_deferred(vertex_staging_buffer);
-
-    auto buffer_ptr = reinterpret_cast<Vertex *>(device.map_memory(vertex_staging_buffer));
-
-    vert_n = 0;
-    for (i32 zi = 0; zi < 32; ++zi)
     {
-        for (i32 yi = 0; yi < 32; ++yi)
+        auto face_staging_buffer = device.create_buffer({
+            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+            .size = CHUNK_MAX_SIZE,
+            .debug_name = "HelloTriangle Vertex Staging buffer",
+        });
+        cmd_list.destroy_buffer_deferred(face_staging_buffer);
+
+        Vertex * buffer_ptr = reinterpret_cast<Vertex *>(device.map_memory(face_staging_buffer));
+        face_n = 0;
+        for (i32 zi = 0; zi < 32; ++zi)
         {
-            for (i32 xi = 0; xi < 32; ++xi)
+            for (i32 yi = 0; yi < 32; ++yi)
             {
-                glm::ivec3 voxel_pos = glm::ivec3{xi, yi, zi} + glm::ivec3(voxel_chunk.pos);
-                if (renderable_world->get_voxel(voxel_pos) != 0)
+                for (i32 xi = 0; xi < 32; ++xi)
                 {
-                    if (renderable_world->get_voxel(voxel_pos + glm::ivec3(1, 0, 0)) == 0)
+                    glm::ivec3 voxel_pos = glm::ivec3{xi, yi, zi} + glm::ivec3(voxel_chunk.pos);
+                    if (renderable_world->get_voxel(voxel_pos).is_occluding())
                     {
-                        *buffer_ptr = Vertex(xi, yi, zi, 0);
-                        ++buffer_ptr;
-                        ++vert_n;
-                    }
-                    if (renderable_world->get_voxel(voxel_pos + glm::ivec3(-1, 0, 0)) == 0)
-                    {
-                        *buffer_ptr = Vertex(xi, yi, zi, 1);
-                        ++buffer_ptr;
-                        ++vert_n;
-                    }
-                    if (renderable_world->get_voxel(voxel_pos + glm::ivec3(0, 1, 0)) == 0)
-                    {
-                        *buffer_ptr = Vertex(xi, yi, zi, 2);
-                        ++buffer_ptr;
-                        ++vert_n;
-                    }
-                    if (renderable_world->get_voxel(voxel_pos + glm::ivec3(0, -1, 0)) == 0)
-                    {
-                        *buffer_ptr = Vertex(xi, yi, zi, 3);
-                        ++buffer_ptr;
-                        ++vert_n;
-                    }
-                    if (renderable_world->get_voxel(voxel_pos + glm::ivec3(0, 0, 1)) == 0)
-                    {
-                        *buffer_ptr = Vertex(xi, yi, zi, 4);
-                        ++buffer_ptr;
-                        ++vert_n;
-                    }
-                    if (renderable_world->get_voxel(voxel_pos + glm::ivec3(0, 0, -1)) == 0)
-                    {
-                        *buffer_ptr = Vertex(xi, yi, zi, 5);
-                        ++buffer_ptr;
-                        ++vert_n;
+                        if (!renderable_world->get_voxel(voxel_pos + glm::ivec3(+1, 0, 0)).is_occluding_nx())
+                            *buffer_ptr = Vertex(xi, yi, zi, 0), ++buffer_ptr, ++face_n;
+                        if (!renderable_world->get_voxel(voxel_pos + glm::ivec3(-1, 0, 0)).is_occluding_px())
+                            *buffer_ptr = Vertex(xi, yi, zi, 1), ++buffer_ptr, ++face_n;
+                        if (!renderable_world->get_voxel(voxel_pos + glm::ivec3(0, +1, 0)).is_occluding_ny())
+                            *buffer_ptr = Vertex(xi, yi, zi, 2), ++buffer_ptr, ++face_n;
+                        if (!renderable_world->get_voxel(voxel_pos + glm::ivec3(0, -1, 0)).is_occluding_py())
+                            *buffer_ptr = Vertex(xi, yi, zi, 3), ++buffer_ptr, ++face_n;
+                        if (!renderable_world->get_voxel(voxel_pos + glm::ivec3(0, 0, +1)).is_occluding_nz())
+                            *buffer_ptr = Vertex(xi, yi, zi, 4), ++buffer_ptr, ++face_n;
+                        if (!renderable_world->get_voxel(voxel_pos + glm::ivec3(0, 0, -1)).is_occluding_pz())
+                            *buffer_ptr = Vertex(xi, yi, zi, 5), ++buffer_ptr, ++face_n;
                     }
                 }
             }
         }
+        device.unmap_memory(face_staging_buffer);
+
+        cmd_list.pipeline_barrier({
+            .awaited_pipeline_access = daxa::AccessFlagBits::HOST_WRITE,
+            .waiting_pipeline_access = daxa::AccessFlagBits::TRANSFER_READ,
+        });
+
+        cmd_list.copy_buffer_to_buffer({
+            .src_buffer = face_staging_buffer,
+            .dst_buffer = face_buffer,
+            .size = CHUNK_MAX_SIZE,
+        });
+
+        cmd_list.pipeline_barrier({
+            .awaited_pipeline_access = daxa::AccessFlagBits::TRANSFER_WRITE,
+            .waiting_pipeline_access = daxa::AccessFlagBits::VERTEX_SHADER_READ,
+        });
     }
 
-    device.unmap_memory(vertex_staging_buffer);
+    {
+        auto face_staging_buffer = device.create_buffer({
+            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+            .size = CHUNK_MAX_SIZE,
+            .debug_name = "HelloTriangle Vertex Staging buffer",
+        });
+        cmd_list.destroy_buffer_deferred(face_staging_buffer);
 
-    cmd_list.pipeline_barrier({
-        .awaited_pipeline_access = daxa::AccessFlagBits::HOST_WRITE,
-        .waiting_pipeline_access = daxa::AccessFlagBits::TRANSFER_READ,
-    });
+        Vertex * buffer_ptr = reinterpret_cast<Vertex *>(device.map_memory(face_staging_buffer));
+        water_face_n = 0;
+        for (i32 zi = 0; zi < 32; ++zi)
+        {
+            for (i32 yi = 0; yi < 32; ++yi)
+            {
+                for (i32 xi = 0; xi < 32; ++xi)
+                {
+                    glm::ivec3 voxel_pos = glm::ivec3{xi, yi, zi} + glm::ivec3(voxel_chunk.pos);
+                    if (renderable_world->get_voxel(voxel_pos).id == 2)
+                    {
+                        if (renderable_world->get_voxel(voxel_pos + glm::ivec3(+1, 0, 0)).id == 0)
+                            *buffer_ptr = Vertex(xi, yi, zi, 0), ++buffer_ptr, ++water_face_n;
+                        if (renderable_world->get_voxel(voxel_pos + glm::ivec3(-1, 0, 0)).id == 0)
+                            *buffer_ptr = Vertex(xi, yi, zi, 1), ++buffer_ptr, ++water_face_n;
+                        if (renderable_world->get_voxel(voxel_pos + glm::ivec3(0, +1, 0)).id == 0)
+                            *buffer_ptr = Vertex(xi, yi, zi, 2), ++buffer_ptr, ++water_face_n;
+                        if (renderable_world->get_voxel(voxel_pos + glm::ivec3(0, -1, 0)).id == 0)
+                            *buffer_ptr = Vertex(xi, yi, zi, 3), ++buffer_ptr, ++water_face_n;
+                        if (renderable_world->get_voxel(voxel_pos + glm::ivec3(0, 0, +1)).id == 0)
+                            *buffer_ptr = Vertex(xi, yi, zi, 4), ++buffer_ptr, ++water_face_n;
+                        if (renderable_world->get_voxel(voxel_pos + glm::ivec3(0, 0, -1)).id == 0)
+                            *buffer_ptr = Vertex(xi, yi, zi, 5), ++buffer_ptr, ++water_face_n;
+                    }
+                }
+            }
+        }
+        device.unmap_memory(face_staging_buffer);
 
-    cmd_list.copy_buffer_to_buffer({
-        .src_buffer = vertex_staging_buffer,
-        .dst_buffer = vertex_buffer,
-        .size = CHUNK_MAX_SIZE,
-    });
+        cmd_list.pipeline_barrier({
+            .awaited_pipeline_access = daxa::AccessFlagBits::HOST_WRITE,
+            .waiting_pipeline_access = daxa::AccessFlagBits::TRANSFER_READ,
+        });
 
-    cmd_list.pipeline_barrier({
-        .awaited_pipeline_access = daxa::AccessFlagBits::TRANSFER_WRITE,
-        .waiting_pipeline_access = daxa::AccessFlagBits::VERTEX_SHADER_READ,
-    });
+        cmd_list.copy_buffer_to_buffer({
+            .src_buffer = face_staging_buffer,
+            .dst_buffer = water_face_buffer,
+            .size = CHUNK_MAX_SIZE,
+        });
+
+        cmd_list.pipeline_barrier({
+            .awaited_pipeline_access = daxa::AccessFlagBits::TRANSFER_WRITE,
+            .waiting_pipeline_access = daxa::AccessFlagBits::VERTEX_SHADER_READ,
+        });
+    }
 }
 
 struct App : AppWindow<App>
