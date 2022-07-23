@@ -81,9 +81,9 @@ struct App : AppWindow<App>
 
     App()
     {
-        daxa::TaskBufferId t_vertex_buffer = task_list.create_task_buffer({.fetch_callback = [=](daxa::TaskInterface &)
+        daxa::TaskBufferId t_vertex_buffer = task_list.create_task_buffer({.fetch_callback = [this](daxa::TaskInterface &)
                                                                            { return vertex_buffer; }});
-        daxa::TaskImageId t_swapchain_image = task_list.create_task_image({.fetch_callback = [=](daxa::TaskInterface &)
+        daxa::TaskImageId t_swapchain_image = task_list.create_task_image({.fetch_callback = [this](daxa::TaskInterface &)
                                                                            { return swapchain.acquire_next_image(); }});
 
         task_list.add_task({
@@ -123,7 +123,7 @@ struct App : AppWindow<App>
                 .color_attachments = {{.image = t_swapchain_image}},
                 .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
             },
-            .task = [=](daxa::TaskInterface & task_interface)
+            .task = [this](daxa::TaskInterface & task_interface)
             {
                 //daxa::BufferId vertex_buffer = task_interface.get_buffer(t_vertex_buffer);
 

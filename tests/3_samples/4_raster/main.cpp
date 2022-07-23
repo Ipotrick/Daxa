@@ -20,6 +20,15 @@ struct Vertex
     }
 };
 
+// struct RasterInput
+// {
+//     glm::mat4 view_mat;
+// };
+
+// struct RasterGlobals
+// {
+// };
+
 struct RasterPush
 {
     glm::mat4 view_mat;
@@ -177,7 +186,7 @@ struct RenderableVoxelWorld
                 {
                     auto & chunk = *chunks[x + y * CHUNK_N + z * CHUNK_N * CHUNK_N];
                     auto cmd_list = device.create_command_list({
-                        .debug_name = "Playground Command List",
+                        .debug_name = "Raster Command List",
                     });
                     chunk.update_chunk_mesh(cmd_list);
                     cmd_list.complete();
@@ -232,7 +241,7 @@ void RenderableChunk::update_chunk_mesh(daxa::CommandList & cmd_list)
         auto face_staging_buffer = device.create_buffer({
             .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .size = CHUNK_MAX_SIZE,
-            .debug_name = "Playground Vertex Staging buffer",
+            .debug_name = "Raster Vertex Staging buffer",
         });
         cmd_list.destroy_buffer_deferred(face_staging_buffer);
 
@@ -286,7 +295,7 @@ void RenderableChunk::update_chunk_mesh(daxa::CommandList & cmd_list)
         auto face_staging_buffer = device.create_buffer({
             .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .size = CHUNK_MAX_SIZE,
-            .debug_name = "Playground Vertex Staging buffer",
+            .debug_name = "Raster Vertex Staging buffer",
         });
         cmd_list.destroy_buffer_deferred(face_staging_buffer);
 
@@ -358,7 +367,7 @@ struct App : AppWindow<App>
         },
         .present_mode = daxa::PresentMode::DOUBLE_BUFFER_WAIT_FOR_VBLANK,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-        .debug_name = "Playground Swapchain",
+        .debug_name = "Raster Swapchain",
     });
 
     daxa::ImageId depth_image = device.create_image({
@@ -373,7 +382,7 @@ struct App : AppWindow<App>
             "tests/3_samples/0_playground/shaders",
             "include",
         },
-        .debug_name = "Playground Compiler",
+        .debug_name = "Raster Compiler",
     });
 
     // clang-format off
@@ -390,18 +399,18 @@ struct App : AppWindow<App>
             .face_culling = daxa::FaceCullFlagBits::BACK_BIT,
         },
         .push_constant_size = sizeof(RasterPush),
-        .debug_name = "Playground Pipeline",
+        .debug_name = "Raster Pipeline",
     }).value();
     // clang-format on
 
     daxa::BinarySemaphore binary_semaphore = device.create_binary_semaphore({
-        .debug_name = "Playground Present Semaphore",
+        .debug_name = "Raster Present Semaphore",
     });
 
     static inline constexpr u64 FRAMES_IN_FLIGHT = 1;
     daxa::TimelineSemaphore gpu_framecount_timeline_sema = device.create_timeline_semaphore(daxa::TimelineSemaphoreInfo{
         .initial_value = 0,
-        .debug_name = "Playground gpu framecount Timeline Semaphore",
+        .debug_name = "Raster gpu framecount Timeline Semaphore",
     });
     u64 cpu_framecount = FRAMES_IN_FLIGHT - 1;
 
@@ -412,6 +421,10 @@ struct App : AppWindow<App>
         .rot = {2.0f, 0.0f, 0.0f},
     };
     bool should_resize = false, paused = true;
+    // daxa::BufferId raster_input_buffer = device.create_buffer({
+    //     .size = sizeof(RasterInput),
+    // });
+    // RasterInput raster_input;
 
     App()
     {
@@ -471,7 +484,7 @@ struct App : AppWindow<App>
         auto swapchain_image = swapchain.acquire_next_image();
 
         auto cmd_list = device.create_command_list({
-            .debug_name = "Playground Command List",
+            .debug_name = "Raster Command List",
         });
 
         cmd_list.pipeline_barrier_image_transition({
@@ -529,6 +542,7 @@ struct App : AppWindow<App>
         });
 
         gpu_framecount_timeline_sema.wait_for_value(cpu_framecount - 1);
+        // printf("ahead: %llu\n", cpu_framecount - gpu_framecount_timeline_sema.value());
     }
 
     void on_mouse_move(f32 x, f32 y)
