@@ -504,12 +504,12 @@ struct App : AppWindow<App>
 
         cmd_list.begin_renderpass({
             .color_attachments = {{
-                .image = swapchain_image,
+                .image_view = swapchain_image.default_view(),
                 .load_op = daxa::AttachmentLoadOp::CLEAR,
                 .clear_value = std::array<f32, 4>{0.2f, 0.4f, 1.0f, 1.0f},
             }},
             .depth_attachment = {{
-                .image = depth_image,
+                .image_view = depth_image.default_view(),
                 .load_op = daxa::AttachmentLoadOp::CLEAR,
                 .clear_value = daxa::DepthValue{1.0f, 0},
             }},
