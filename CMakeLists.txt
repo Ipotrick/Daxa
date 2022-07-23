@@ -28,7 +28,7 @@ if(DAXA_ENABLE_STATIC_ANALYSIS)
         ${CPPCHECK_OPTIONS})
 endif()
 
-add_library(daxa
+add_library(daxa STATIC
     "src/impl_device.cpp"
     "src/impl_context.cpp"
     "src/impl_core.cpp"
