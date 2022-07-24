@@ -24,6 +24,7 @@ namespace daxa
         case AccessTypeFlagBits::READ_WRITE: return "READ_WRITE";
         default: DAXA_DBG_ASSERT_TRUE_M(false, "invalid AccessTypeFlags");
         }
+        return "invalid AccessTypeFlags";
     }
 
     auto to_string(ImageLayout layout) -> std::string_view
