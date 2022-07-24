@@ -21,8 +21,6 @@ namespace daxa
         uint data;
     };
 
-    // using ImageViewId = ImageId;
-
     struct SamplerId
     {
         uint data;

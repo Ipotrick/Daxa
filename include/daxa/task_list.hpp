@@ -2,8 +2,7 @@
 
 #include <daxa/core.hpp>
 
-#include <daxa/command_list.hpp>
-#include <daxa/swapchain.hpp>
+#include <daxa/device.hpp>
 
 namespace daxa
 {
@@ -102,17 +101,18 @@ namespace daxa
 
     struct TaskInterface
     {
-        Device & device;
-        CommandList & cmd_list;
-        TaskResources & resources;
-        // auto get_buffer(TaskBufferId const & task_id) -> BufferId;
-        // auto get_image(TaskImageId const & task_id) -> ImageId;
-        // auto get_image_view(TaskImageId const & task_id) -> ImageViewId;
-
-        TaskInterface() = delete;
+        auto get_device() -> Device &;
+        auto get_command_list() -> CommandList &;
+        auto get_resources() -> TaskResources &;
+        auto get_buffer(TaskBufferId const & task_id) -> BufferId;
+        auto get_image(TaskImageId const & task_id) -> ImageId;
+        auto get_image_view(TaskImageId const & task_id) -> ImageViewId;
 
       private:
-        // void * backend = nullptr;
+        friend TaskList;
+        friend ImplTaskList;
+        TaskInterface(void*);
+        void * backend = nullptr;
     };
 
     using TaskCallback = std::function<void(TaskInterface &)>;
@@ -123,16 +123,13 @@ namespace daxa
     struct TaskBufferInfo
     {
         CreateTaskBufferCallback fetch_callback = {};
+        TaskBufferAccess prev_access = {};
     };
 
     struct TaskImageInfo
     {
         CreateTaskImageCallback fetch_callback = {};
-    };
-
-    struct TaskImageViewInfo
-    {
-        CreateTaskImageViewCallback fetch_callback = {};
+        TaskImageAccess prev_access = {};
     };
 
     struct TaskInfo
@@ -171,12 +168,13 @@ namespace daxa
 
     struct TaskListInfo
     {
+        Device device;
         std::string debug_name = {};
     };
 
     struct TaskList : Handle
     {
-        TaskList();
+        TaskList(TaskListInfo const & info);
         ~TaskList();
 
         auto create_task_buffer(TaskBufferInfo const & info) -> TaskBufferId;
