@@ -107,7 +107,7 @@ namespace daxa
         if (this->impl.use_count() == 1)
         {
             std::shared_ptr<ImplRasterPipeline> impl = std::static_pointer_cast<ImplRasterPipeline>(this->impl);
-#if defined(DAXA_ENABLE_THREADSAFETY)
+#if DAXA_THREADSAFETY
             std::unique_lock lock{DAXA_LOCK_WEAK(impl->impl_device)->main_queue_zombies_mtx};
             u64 main_queue_cpu_timeline_value = DAXA_LOCK_WEAK(impl->impl_device)->main_queue_cpu_timeline.load(std::memory_order::relaxed);
 #else
@@ -124,7 +124,7 @@ namespace daxa
         if (this->impl.use_count() == 1)
         {
             std::shared_ptr<ImplComputePipeline> impl = std::static_pointer_cast<ImplComputePipeline>(this->impl);
-#if defined(DAXA_ENABLE_THREADSAFETY)
+#if DAXA_THREADSAFETY
             std::unique_lock lock{DAXA_LOCK_WEAK(impl->impl_device)->main_queue_zombies_mtx};
             u64 main_queue_cpu_timeline_value = DAXA_LOCK_WEAK(impl->impl_device)->main_queue_cpu_timeline.load(std::memory_order::relaxed);
 #else

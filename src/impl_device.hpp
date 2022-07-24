@@ -23,6 +23,7 @@ namespace daxa
         VmaAllocator vma_allocator = {};
         DeviceVulkanInfo vk_info = {};
         DeviceInfo info = {};
+        VkSampler vk_dummy_sampler = {};
 
         // Gpu resource table:
         GPUResourceTable gpu_table = {};
@@ -31,21 +32,21 @@ namespace daxa
         RecyclableList<ImplCommandList> command_list_recyclable_list = {};
         RecyclableList<ImplBinarySemaphore> binary_semaphore_recyclable_list = {};
 
-#if defined(DAXA_ENABLE_THREADSAFETY)
+#if DAXA_THREADSAFETY
         std::mutex submit_mtx = {};
 #endif
         // Main queue:
         VkQueue main_queue_vk_queue = {};
         u32 main_queue_family_index = {};
 
-#if defined(DAXA_ENABLE_THREADSAFETY)
+#if DAXA_THREADSAFETY
         std::atomic_uint64_t main_queue_cpu_timeline = {};
 #else
         u64 main_queue_cpu_timeline = {};
 #endif
         VkSemaphore vk_main_queue_gpu_timeline_semaphore = {};
 
-#if defined(DAXA_ENABLE_THREADSAFETY)
+#if DAXA_THREADSAFETY
         std::mutex main_queue_zombies_mtx = {};
 #endif
         std::deque<std::pair<u64, std::vector<std::shared_ptr<ImplCommandList>>>> main_queue_submits_zombies = {};

@@ -7,7 +7,7 @@ namespace daxa
 {
     static inline void default_validation_callback(daxa::MsgSeverity severity, daxa::MsgType, std::string_view msg)
     {
-#if defined(DAXA_DEBUG)
+#if DAXA_VALIDATION
         switch (severity)
         {
         // clang-format off
