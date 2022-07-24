@@ -49,7 +49,7 @@ namespace daxa
      * * never delete a resource twice
      * That means the function dereference_id can be used without synchonization, even calling get_new_slot or return_old_slot in parallel is safe.
      *
-     * To check if these assumptions are met at runtime, the debug define DAXA_ENABLE_GPU_ID_VALIDATION can be used.
+     * To check if these assumptions are met at runtime, the debug define DAXA_GPU_ID_VALIDATION can be used.
      * The define enables runtime checking to detect use after free and double free at the cost of performance.
      */
     template <typename ResourceT, usize MAX_RESOURCE_COUNT = 1u << 20u>
@@ -66,15 +66,15 @@ namespace daxa
         u32 next_index = {};
         usize max_resources = {};
 
-#if defined(DAXA_ENABLE_THREADSAFETY)
+#if DAXA_THREADSAFETY
         std::mutex page_alloc_mtx = {};
-#if defined(DAXA_ENABLE_GPU_ID_VALIDATION)
+#if DAXA_GPU_ID_VALIDATION
         std::mutex use_after_free_check_mtx = {};
 #endif
 #endif
         std::array<std::unique_ptr<PageT>, PAGE_COUNT> pages = {};
 
-#if defined(DAXA_ENABLE_GPU_ID_VALIDATION)
+#if DAXA_GPU_ID_VALIDATION
         void verify_ressource_id(GPUResourceId id)
         {
             size_t page = id.index >> PAGE_BITS;
@@ -86,8 +86,8 @@ namespace daxa
 
         auto new_slot() -> std::pair<GPUResourceId, ResourceT &>
         {
-#if defined(DAXA_ENABLE_THREADSAFETY)
-#if defined(DAXA_ENABLE_GPU_ID_VALIDATION)
+#if DAXA_THREADSAFETY
+#if DAXA_GPU_ID_VALIDATION
             std::unique_lock use_after_free_check_lock{use_after_free_check_mtx};
 #endif
             std::unique_lock page_alloc_lock{page_alloc_mtx};
@@ -129,15 +129,15 @@ namespace daxa
             size_t page = id.index >> PAGE_BITS;
             size_t offset = id.index & PAGE_MASK;
 
-#if defined(DAXA_ENABLE_GPU_ID_VALIDATION)
-#if defined(DAXA_ENABLE_THREADSAFETY)
+#if DAXA_GPU_ID_VALIDATION
+#if DAXA_THREADSAFETY
             std::unique_lock use_after_free_check_lock{use_after_free_check_mtx};
 #endif
             verify_ressource_id(id);
             DAXA_DBG_ASSERT_TRUE_M(pages[page]->at(offset).second == id.version, "detected double delete for a resource id");
 #endif
 
-#if defined(DAXA_ENABLE_THREADSAFETY)
+#if DAXA_THREADSAFETY
             std::unique_lock page_alloc_lock{page_alloc_mtx};
 #endif
 
@@ -151,8 +151,8 @@ namespace daxa
             size_t page = id.index >> PAGE_BITS;
             size_t offset = id.index & PAGE_MASK;
 
-#if defined(DAXA_ENABLE_GPU_ID_VALIDATION)
-#if defined(DAXA_ENABLE_THREADSAFETY)
+#if DAXA_GPU_ID_VALIDATION
+#if DAXA_THREADSAFETY
             std::unique_lock use_after_free_check_lock{use_after_free_check_mtx};
 #endif
             verify_ressource_id(id);

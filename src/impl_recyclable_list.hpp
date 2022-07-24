@@ -14,7 +14,7 @@ namespace daxa
     template <Zombifiable RecyclableT>
     struct RecyclableList
     {
-#if defined(DAXA_ENABLE_THREADSAFETY)
+#if DAXA_THREADSAFETY
         std::mutex mtx = {};
 #endif
         std::vector<std::shared_ptr<RecyclableT>> recyclables = {};
@@ -24,7 +24,7 @@ namespace daxa
             std::shared_ptr<RecyclableT> ret = {};
 
             {
-#if defined(DAXA_ENABLE_THREADSAFETY)
+#if DAXA_THREADSAFETY
                 std::unique_lock lock{mtx};
 #endif
                 if (!recyclables.empty())
