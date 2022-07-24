@@ -158,8 +158,8 @@ namespace daxa
 
         impl.impl_task_images.push_back(ImplTaskImage{
             .last_access = access,
-            .last_access_task_index = 0,
             .last_layout = layout,
+            .last_access_task_index = 0,
             .fetch_callback = info.fetch_callback,
         });
 
