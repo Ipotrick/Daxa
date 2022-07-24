@@ -77,9 +77,7 @@ struct App : AppWindow<App>
 
     bool should_resize = false;
 
-    App()
-    {
-    }
+    App() : AppWindow<App>("Samples: Hello Triangle") {}
 
     ~App()
     {
