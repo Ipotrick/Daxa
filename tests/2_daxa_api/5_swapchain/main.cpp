@@ -19,14 +19,11 @@ namespace tests
                 .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
             });
 
+            App() : AppWindow<App>("Daxa API: Swapchain (simple_creation)") {}
+
             void on_mouse_move(f32, f32) {}
             void on_key(int, int) {}
             void on_resize(u32, u32) {}
-
-            App()
-                : AppWindow{ "5_swapchain" }
-            {
-            }
         };
         App app;
     }
@@ -46,6 +43,8 @@ namespace tests
                 .height = size_y,
                 .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
             });
+
+            App() : AppWindow<App>("Daxa API: Swapchain (clearcolor)") {}
 
             bool update()
             {

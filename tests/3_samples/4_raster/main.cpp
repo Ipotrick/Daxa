@@ -426,9 +426,7 @@ struct App : AppWindow<App>
     // });
     // RasterInput raster_input;
 
-    App()
-    {
-    }
+    App() : AppWindow<App>("Samples: Raster") {}
 
     ~App()
     {

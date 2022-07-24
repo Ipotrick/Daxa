@@ -54,9 +54,7 @@ struct App : AppWindow<App>
         .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
     });
 
-    App()
-    {
-    }
+    App() : AppWindow<App>("Samples: Hello Triangle Compute") {}
 
     ~App()
     {
