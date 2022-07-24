@@ -1,9 +1,12 @@
 {
     "registries": [
         {
-            "kind": "filesystem",
-            "path": "vcpkg-registry",
-            "packages": [ "dxc" ]
+            "kind": "git",
+            "repository": "https://github.com/GabeRundlett/vcpkg-registry",
+            "baseline": "142fe2334e6109d357a9b531c75479c31f0a3013",
+            "packages": [
+                "dxc"
+            ]
         }
     ]
 }
