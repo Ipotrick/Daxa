@@ -1,6 +1,4 @@
 #include "impl_task_list.hpp"
-#include "impl_device.hpp"
-
 #include <iostream>
 
 namespace daxa
@@ -83,26 +81,93 @@ namespace daxa
         return "invalid";
     }
 
-    TaskList::TaskList() : Handle{nullptr} {}
+    TaskInterface::TaskInterface(void * backend) : backend{backend} {}
+
+    auto TaskInterface::get_device() -> Device &
+    {
+        ImplTaskList impl = *reinterpret_cast<ImplTaskList *>(backend);
+        return *impl.current_device;
+    }
+
+    auto TaskInterface::get_command_list() -> CommandList &
+    {
+        ImplTaskList impl = *reinterpret_cast<ImplTaskList *>(backend);
+        return *impl.current_command_list;
+    }
+
+    auto TaskInterface::get_resources() -> TaskResources &
+    {
+        ImplTaskList impl = *reinterpret_cast<ImplTaskList *>(backend);
+        return *impl.current_resources;
+    }
+
+    auto TaskInterface::get_buffer(TaskBufferId const & task_id) -> BufferId
+    {
+        ImplTaskList impl = *reinterpret_cast<ImplTaskList *>(backend);
+        return impl.impl_task_buffers[task_id.index].runtime_id;
+    }
+
+    auto TaskInterface::get_image(TaskImageId const & task_id) -> ImageId
+    {
+        ImplTaskList impl = *reinterpret_cast<ImplTaskList *>(backend);
+        return impl.impl_task_images[task_id.index].runtime_id;
+    }
+
+    auto TaskInterface::get_image_view(TaskImageId const & task_id) -> ImageViewId
+    {
+        ImplTaskList impl = *reinterpret_cast<ImplTaskList *>(backend);
+        return impl.impl_task_images[task_id.index].runtime_view_id;
+    }
+
+    TaskList::TaskList(TaskListInfo const & info)
+        : Handle{std::make_shared<ImplTaskList>(info)}
+    {
+    }
 
     TaskList::~TaskList() {}
 
     TaskList::TaskList(std::shared_ptr<void> a_impl) : Handle{std::move(a_impl)} {}
 
-    auto TaskList::create_task_buffer(TaskBufferInfo const & callback) -> TaskBufferId
+    auto TaskList::create_task_buffer(TaskBufferInfo const & info) -> TaskBufferId
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->impl.get());
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can only record to uncompleted task list");
-        impl.impl_task_buffers.push_back(ImplTaskBuffer{.last_access = AccessConsts::NONE, .last_access_task_index = 0});
-        return TaskBufferId{{.index = ++impl.next_task_buffer_id}};
+
+        auto access = impl.task_buffer_access_to_access(info.prev_access);
+
+        impl.impl_task_buffers.push_back(ImplTaskBuffer{
+            .last_access = access,
+            .last_access_task_index = 0,
+            .fetch_callback = info.fetch_callback,
+        });
+
+        u32 tid = ++impl.next_task_buffer_id;
+
+        impl.tasks.back().create_task_buffer_ids.push_back(tid);
+
+        return TaskBufferId{{.index = tid}};
     }
 
-    auto TaskList::create_task_image(TaskImageInfo const & callback) -> TaskImageId
+    auto TaskList::create_task_image(TaskImageInfo const & info) -> TaskImageId
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->impl.get());
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can only record to uncompleted task list");
         impl.impl_task_images.push_back(ImplTaskImage{.last_access = AccessConsts::NONE, .last_access_task_index = 0});
-        return TaskImageId{{.index = ++impl.next_task_image_id}};
+
+        auto [layout, access] = impl.task_image_access_to_layout_access(info.prev_access);
+
+        impl.impl_task_images.push_back(ImplTaskImage{
+            .last_access = access,
+            .last_access_task_index = 0,
+            .last_layout = layout,
+            .fetch_callback = info.fetch_callback,
+        });
+
+        u32 tid = ++impl.next_task_image_id;
+
+        impl.tasks.back().create_task_image_ids.push_back(tid);
+
+        return TaskImageId{{.index = tid}};
     }
 
     void TaskList::add_task(TaskInfo const & info)
@@ -158,14 +223,15 @@ namespace daxa
         }
         task.task = [=](TaskInterface & interf)
         {
-            interf.cmd_list.begin_renderpass({
+            auto & cmd = interf.get_command_list();
+            cmd.begin_renderpass({
                 .color_attachments = color_attachments,
                 .depth_attachment = depth_attach,
                 .stencil_attachment = stencil_attach,
                 .render_area = info.render_info.render_area,
             });
             info.task(interf);
-            interf.cmd_list.end_renderpass();
+            cmd.end_renderpass();
         };
 
         add_task(task);
@@ -179,17 +245,17 @@ namespace daxa
         add_task({
             .task = [swapchain](TaskInterface & interf) mutable
             {
-                BinarySemaphore binary_semaphore = interf.device.create_binary_semaphore({
+                BinarySemaphore binary_semaphore = interf.get_device().create_binary_semaphore({
                     .debug_name = "TaskList Implicit Present Semaphore",
                 });
 
-                interf.device.submit_commands({
-                    .command_lists = {std::move(interf.cmd_list)},
+                interf.get_device().submit_commands({
+                    .command_lists = {std::move(interf.get_command_list())},
                     .signal_binary_semaphores = {binary_semaphore},
                     // .signal_timeline_semaphores = {{gpu_framecount_timeline_sema, cpu_framecount}},
                 });
 
-                interf.device.present_frame({
+                interf.get_device().present_frame({
                     .wait_binary_semaphores = {binary_semaphore},
                     .swapchain = swapchain,
                 });
@@ -202,18 +268,45 @@ namespace daxa
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->impl.get());
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "Can only compile a task list one time");
         impl.compiled = true;
-        impl.analyze_dependencies();
+        impl.insert_synchronization();
     }
 
     void TaskList::execute()
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->impl.get());
         DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "Can only execute a completed task list");
+
+        CommandList cmd_list = impl.info.device.create_command_list({
+            .debug_name = impl.info.debug_name += " command list",
+        });
+
+        impl.current_device = &impl.info.device;
+        impl.current_command_list = &cmd_list;
+        impl.current_device = &impl.info.device;
+
+        TaskInterface task_interface{this};
+
+        usize task_index = 0;
+        for (ImplTask & task : impl.tasks)
+        {
+            impl.current_resources = &task.info.resources;
+            for (u32 t_buffer_id : task.create_task_buffer_ids)
+            {
+                impl.impl_task_buffers[t_buffer_id].runtime_id = impl.impl_task_buffers[t_buffer_id].fetch_callback(task_interface);
+            }
+            for (u32 t_image_id : task.create_task_buffer_ids)
+            {
+                impl.impl_task_images[t_image_id].runtime_id = impl.impl_task_images[t_image_id].fetch_callback(task_interface);
+            }
+            
+            ++task_index;
+        }
     }
 
-    ImplTaskList::ImplTaskList(std::shared_ptr<ImplDevice> a_impl_device, TaskListInfo const & info)
-        : impl_device{std::move(a_impl_device)}, info{info}
+    ImplTaskList::ImplTaskList(TaskListInfo const & info)
+        : info{info}
     {
+        tasks.push_back({});
     }
 
     ImplTaskList::~ImplTaskList()
@@ -333,104 +426,178 @@ namespace daxa
         return {};
     }
 
-    void ImplTaskList::analyze_dependencies()
+    void ImplTaskList::insert_synchronization()
     {
         usize task_index = 0;
-        for (auto & task : tasks)
+        for (ImplTask & task : tasks)
         {
-            std::visit(
-                [&](auto & obj)
+            std::cout
+                << "process task index : "
+                << task_index
+                << "\n{"
+                << std::endl;
+
+            TaskResources & resources = task.info.resources;
+
+            for (auto & [tid, t_access] : resources.buffers)
+            {
+
+                // slot(tid).last_access = usage;
+                slot(tid).last_access_task_index = task_index;
+                auto new_access = task_buffer_access_to_access(t_access);
+                auto & latest_access = slot(tid).last_access;
+
+                std::cout
+                    << "  task access: buffer tid: "
+                    << tid.index
+                    << ",\n    previous access: "
+                    << to_string(slot(tid).last_access)
+                    << ",\n    new access: "
+                    << to_string(new_access)
+                    << std::endl;
+
+                bool need_memory_barrier = false;
+                bool need_execution_barrier = false;
+
+                if (latest_access.type & AccessTypeFlagBits::WRITE)
                 {
-                    if constexpr (std::is_base_of_v<TaskInfo, std::decay_t<decltype(obj)>>)
+                    need_memory_barrier = true;
+                    need_execution_barrier = true;
+                }
+                else if ((latest_access.type & AccessTypeFlagBits::READ) != 0 && (new_access.type & AccessTypeFlagBits::WRITE) != 0)
+                {
+                    need_execution_barrier = true;
+                }
+
+                if (need_memory_barrier || need_execution_barrier)
+                {
+                    usize last_access_task_index = slot(tid).last_access_task_index;
+
+                    usize barrier_task_index = {};
+
+                    if (last_access_task_index >= this->last_task_index_with_barrier)
                     {
-                        TaskResources & resources = obj.resources;
-
-                        for (auto & [tid, access] : resources.buffers)
-                        {
-                            std::cout
-                                << "buffer tid: "
-                                << tid.index
-                                << ", previous access: "
-                                << to_string(slot(tid).last_access)
-                                << ", access: "
-                                << to_string(access)
-                                << std::endl;
-
-                            // slot(tid).last_access = usage;
-                            slot(tid).last_access_task_index = task_index;
-                        }
-
-                        for (auto & [tid, slice, t_access] : resources.images)
-                        {
-                            std::cout
-                                << "image tid: "
-                                << tid.index
-                                << ", previous access: "
-                                << to_string(slot(tid).last_access)
-                                << ", access: " << to_string(t_access)
-                                << std::endl;
-
-                            auto [new_layout, new_access] = task_image_access_to_layout_access(t_access);
-                            auto& latest_layout = slot(tid).last_layout;
-                            auto& latest_access = slot(tid).last_access;
-
-                            bool need_memory_barrier = false;
-                            bool need_execution_barrier = false;
-
-                            if (latest_access.type & AccessTypeFlagBits::WRITE)
-                            {
-                                need_memory_barrier = true;
-                                need_execution_barrier = true;
-                            }
-                            else if ((latest_access.type & AccessTypeFlagBits::READ) != 0 && (new_access.type & AccessTypeFlagBits::WRITE) != 0)
-                            {
-                                need_execution_barrier = true;
-                            }
-
-                            bool need_layout_transition = new_layout != latest_layout;
-
-                            if (need_memory_barrier || need_execution_barrier || need_layout_transition)
-                            {
-                                usize last_access_task_index = slot(tid).last_access_task_index;
-
-                                if (last_access_task_index >= this->last_task_index_with_barrier)
-                                {
-                                    // reuse old barrier
-                                    tasks[last_task_index_with_barrier].barriers.push_back(TaskPipelineBarrier{
-                                        .awaited_pipeline_access = Access{
-                                            .stage = latest_access.stage,
-                                            .type = need_memory_barrier ? latest_access.type : AccessTypeFlagBits::NONE,
-                                        },
-                                        .waiting_pipeline_access = Access{
-                                            .stage = new_access.stage,
-                                            .type = need_memory_barrier ? new_access.type : AccessTypeFlagBits::NONE,
-                                        },
-                                        .before_layout = latest_layout,
-                                        .after_layout = new_layout,
-                                        .image_id = tid,
-                                        //.image_slice = ,
-                                    });
-                                }
-                                else
-                                {
-                                    // insert new barrier
-
-                                }
-
-                                latest_layout = new_layout;
-                                latest_access = new_access;
-
-                            }
-                            else
-                            {
-                                latest_access = latest_access | new_access;
-                            }
-
-                            slot(tid).last_access_task_index = task_index;
-                        }
+                        // reuse old barrier
+                        barrier_task_index = last_task_index_with_barrier;
                     }
-                },
-                task.info);
+                    else
+                    {
+                        // insert new barrier
+                        barrier_task_index = task_index;
+                        last_task_index_with_barrier = task_index;
+                    }
+                    tasks[barrier_task_index].barriers.push_back(TaskPipelineBarrier{
+                        .awaited_pipeline_access = Access{
+                            .stages = latest_access.stages,
+                            .type = need_memory_barrier ? latest_access.type : AccessTypeFlagBits::NONE,
+                        },
+                        .waiting_pipeline_access = Access{
+                            .stages = new_access.stages,
+                            .type = need_memory_barrier ? new_access.type : AccessTypeFlagBits::NONE,
+                        },
+                    });
+
+                    latest_access = new_access;
+                }
+                else
+                {
+                    latest_access = latest_access | new_access;
+                }
+            }
+
+            for (auto & [tid, slice, t_access] : resources.images)
+            {
+                slot(tid).last_access_task_index = task_index;
+                auto [new_layout, new_access] = task_image_access_to_layout_access(t_access);
+                auto & latest_layout = slot(tid).last_layout;
+                auto & latest_access = slot(tid).last_access;
+
+                std::cout
+                    << "  task access: image tid: "
+                    << tid.index
+                    << ",\n    previous access: "
+                    << to_string(slot(tid).last_access)
+                    << ",\n    previous layout: "
+                    << to_string(slot(tid).last_layout)
+                    << ",\n    new access: "
+                    << to_string(new_access)
+                    << ",\n    new layout: "
+                    << to_string(new_layout)
+                    << std::endl;
+
+                bool need_memory_barrier = false;
+                bool need_execution_barrier = false;
+
+                if (latest_access.type & AccessTypeFlagBits::WRITE)
+                {
+                    need_memory_barrier = true;
+                    need_execution_barrier = true;
+                }
+                else if ((latest_access.type & AccessTypeFlagBits::READ) != 0 && (new_access.type & AccessTypeFlagBits::WRITE) != 0)
+                {
+                    need_execution_barrier = true;
+                }
+
+                bool need_layout_transition = new_layout != latest_layout;
+
+                if (need_memory_barrier || need_execution_barrier || need_layout_transition)
+                {
+                    usize last_access_task_index = slot(tid).last_access_task_index;
+
+                    usize barrier_task_index = {};
+
+                    if (last_access_task_index >= this->last_task_index_with_barrier)
+                    {
+                        // reuse old barrier
+                        barrier_task_index = last_task_index_with_barrier;
+                    }
+                    else
+                    {
+                        // insert new barrier
+                        barrier_task_index = task_index;
+                        last_task_index_with_barrier = task_index;
+                    }
+                    tasks[barrier_task_index].barriers.push_back(TaskPipelineBarrier{
+                        .awaited_pipeline_access = Access{
+                            .stages = latest_access.stages,
+                            .type = need_memory_barrier ? latest_access.type : AccessTypeFlagBits::NONE,
+                        },
+                        .waiting_pipeline_access = Access{
+                            .stages = new_access.stages,
+                            .type = need_memory_barrier ? new_access.type : AccessTypeFlagBits::NONE,
+                        },
+                        .before_layout = latest_layout,
+                        .after_layout = new_layout,
+                        .image_id = tid,
+                        .image_slice = slot(tid).slice,
+                    });
+
+                    std::cout
+                        << "  inserted barrier at task index: "
+                        << task_index
+                        << ",\n    task image index: "
+                        << tid.index
+                        << ",\n    awaited_pipeline_access: "
+                        << to_string(tasks[barrier_task_index].barriers.back().awaited_pipeline_access)
+                        << ",\n    waiting_pipeline_access: "
+                        << to_string(tasks[barrier_task_index].barriers.back().waiting_pipeline_access)
+                        << ",\n    before_layout: "
+                        << to_string(tasks[barrier_task_index].barriers.back().before_layout)
+                        << ",\n    after_layout: "
+                        << to_string(tasks[barrier_task_index].barriers.back().after_layout)
+                        << std::endl;
+
+                    latest_layout = new_layout;
+                    latest_access = new_access;
+                }
+                else
+                {
+                    latest_access = latest_access | new_access;
+                }
+            }
+            std::cout
+                << "}\n"
+                << std::endl;
             ++task_index;
         }
     }

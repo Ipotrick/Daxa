@@ -73,7 +73,8 @@ struct App : AppWindow<App>
     });
     u64 cpu_framecount = FRAMES_IN_FLIGHT - 1;
 
-    daxa::TaskList task_list = device.create_task_list({
+    daxa::TaskList task_list = daxa::TaskList({
+        .device = device,
         .debug_name = "TaskList Task List",
     });
 
@@ -81,10 +82,14 @@ struct App : AppWindow<App>
 
     App()
     {
-        daxa::TaskBufferId t_vertex_buffer = task_list.create_task_buffer({.fetch_callback = [this](daxa::TaskInterface &)
-                                                                           { return vertex_buffer; }});
-        daxa::TaskImageId t_swapchain_image = task_list.create_task_image({.fetch_callback = [this](daxa::TaskInterface &)
-                                                                           { return swapchain.acquire_next_image(); }});
+        daxa::TaskBufferId t_vertex_buffer = task_list.create_task_buffer({
+            .fetch_callback = [this](daxa::TaskInterface &)
+            { return vertex_buffer; },
+        });
+        daxa::TaskImageId t_swapchain_image = task_list.create_task_image({
+            .fetch_callback = [this](daxa::TaskInterface &)
+            { return swapchain.acquire_next_image(); },
+        });
 
         task_list.add_task({
             .resources = {
@@ -125,7 +130,7 @@ struct App : AppWindow<App>
             },
             .task = [this](daxa::TaskInterface & task_interface)
             {
-                //daxa::BufferId vertex_buffer = task_interface.get_buffer(t_vertex_buffer);
+                // daxa::BufferId vertex_buffer = task_interface.get_buffer(t_vertex_buffer);
 
                 task_interface.cmd_list.set_pipeline(raster_pipeline);
                 task_interface.cmd_list.push_constant(RasterPush{
