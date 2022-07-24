@@ -518,10 +518,10 @@ namespace daxa
     {
         PipelineStageFlags stages = PipelineStageFlagBits::NONE;
         AccessTypeFlags type = AccessTypeFlagBits::NONE;
-
-        auto operator | (Access const & other) -> Access;
-        auto operator & (Access const & other) -> Access;
     };
+
+    auto operator | (Access const & a, Access const & b) -> Access;
+    auto operator & (Access const & a, Access const & b) -> Access;
 
     auto to_string(Access access) -> std::string;
 
