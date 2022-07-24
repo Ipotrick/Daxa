@@ -413,9 +413,7 @@ struct App : AppWindow<App>
     };
     bool should_resize = false, paused = true;
 
-    App()
-    {
-    }
+    App() : AppWindow<App>("Samples: Playground") {}
 
     ~App()
     {
