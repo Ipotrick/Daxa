@@ -79,9 +79,15 @@ namespace tests
             .size = sizeof(decltype(data)),
         });
 
-        cmd_list.pipeline_barrier_image_transition({
+        // Barrier to make sure device_local_buffer is has no read after write hazard.
+        cmd_list.pipeline_barrier({
             .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
             .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
+        });
+
+        cmd_list.pipeline_barrier_image_transition({
+            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
             .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .image_id = image_1,
         });
@@ -100,8 +106,8 @@ namespace tests
             .image_id = image_1,
         });
 
-        // Pipeline barrier calls that directly follow each other are automatically combined into one vulkan api call.
         cmd_list.pipeline_barrier_image_transition({
+            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
             .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .image_id = image_2,
         });
@@ -121,6 +127,12 @@ namespace tests
             .image_id = image_2,
         });
 
+        // Barrier to make sure device_local_buffer is has no write after read hazard.
+        cmd_list.pipeline_barrier({
+            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
+            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+        });
+
         cmd_list.copy_image_to_buffer({
             .buffer = device_local_buffer,
             .image = image_2,
@@ -128,6 +140,7 @@ namespace tests
             .image_extent = {1, 1, 1},
         });
 
+        // Barrier to make sure device_local_buffer is has no read after write hazard.
         cmd_list.pipeline_barrier({
             .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
             .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
@@ -139,6 +152,7 @@ namespace tests
             .size = sizeof(decltype(data)),
         });
 
+        // Barrier to make sure staging_readback_buffer is has no read after write hazard.
         cmd_list.pipeline_barrier({
             .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
             .waiting_pipeline_access = daxa::AccessConsts::HOST_READ,

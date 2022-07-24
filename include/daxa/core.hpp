@@ -6,10 +6,6 @@
 #define DAXA_GPU_ID_VALIDATION 0
 #endif
 
-#if !defined(DAXA_VALIDATION)
-#define DAXA_VALIDATION 0
-#endif
-
 #if !defined(DAXA_THREADSAFETY)
 #define DAXA_THREADSAFETY 1
 #endif

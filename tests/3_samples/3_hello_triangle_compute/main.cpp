@@ -52,6 +52,7 @@ struct App : AppWindow<App>
         .format = daxa::Format::R8G8B8A8_UNORM,
         .size = {size_x, size_y, 1},
         .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+        .debug_name = "HelloTriangleCompute render_image",
     });
 
     App() : AppWindow<App>("Samples: Hello Triangle Compute") {}
@@ -122,6 +123,7 @@ struct App : AppWindow<App>
         });
 
         cmd_list.pipeline_barrier_image_transition({
+            .awaited_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
             .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
             .before_layout = daxa::ImageLayout::UNDEFINED,
             .after_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
