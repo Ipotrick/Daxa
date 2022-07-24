@@ -16,11 +16,11 @@ struct AppWindow
     u32 size_x = 800, size_y = 600;
     bool minimized = false;
 
-    AppWindow()
+    AppWindow(char const * window_name)
     {
         glfwInit();
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        glfw_window_ptr = glfwCreateWindow(static_cast<i32>(size_x), static_cast<i32>(size_y), "test1", nullptr, nullptr);
+        glfw_window_ptr = glfwCreateWindow(static_cast<i32>(size_x), static_cast<i32>(size_y), window_name, nullptr, nullptr);
         glfwSetWindowUserPointer(glfw_window_ptr, this);
         glfwSetCursorPosCallback(
             glfw_window_ptr,
