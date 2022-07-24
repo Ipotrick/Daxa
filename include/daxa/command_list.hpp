@@ -135,6 +135,7 @@ namespace daxa
 
     struct CommandList : Handle
     {
+        CommandList();
         ~CommandList();
 
         void copy_buffer_to_buffer(BufferCopyInfo const & info);

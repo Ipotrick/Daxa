@@ -298,9 +298,9 @@ namespace daxa
         impl.memory_barrier_batch[impl.memory_barrier_batch_count++] = {
             .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
             .pNext = nullptr,
-            .srcStageMask = static_cast<u64>(info.awaited_pipeline_access.stage),
+            .srcStageMask = static_cast<u64>(info.awaited_pipeline_access.stages),
             .srcAccessMask = static_cast<u32>(info.awaited_pipeline_access.type),
-            .dstStageMask = static_cast<u64>(info.waiting_pipeline_access.stage),
+            .dstStageMask = static_cast<u64>(info.waiting_pipeline_access.stages),
             .dstAccessMask = static_cast<u32>(info.waiting_pipeline_access.type),
         };
     }
@@ -319,9 +319,9 @@ namespace daxa
         impl.image_barrier_batch[impl.image_barrier_batch_count++] = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
             .pNext = nullptr,
-            .srcStageMask = static_cast<u64>(info.awaited_pipeline_access.stage),
+            .srcStageMask = static_cast<u64>(info.awaited_pipeline_access.stages),
             .srcAccessMask = static_cast<u32>(info.awaited_pipeline_access.type),
-            .dstStageMask = static_cast<u64>(info.waiting_pipeline_access.stage),
+            .dstStageMask = static_cast<u64>(info.waiting_pipeline_access.stages),
             .dstAccessMask = static_cast<u32>(info.waiting_pipeline_access.type),
             .oldLayout = static_cast<VkImageLayout>(info.before_layout),
             .newLayout = static_cast<VkImageLayout>(info.after_layout),
