@@ -186,6 +186,7 @@ struct App : AppWindow<App>
         });
 
         cmd_list.pipeline_barrier_image_transition({
+            .awaited_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
             .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
             .before_layout = daxa::ImageLayout::UNDEFINED,
             .after_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
@@ -212,6 +213,7 @@ struct App : AppWindow<App>
 
         cmd_list.pipeline_barrier_image_transition({
             .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
+            .waiting_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
             .before_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
             .after_layout = daxa::ImageLayout::GENERAL,
             .image_id = render_image,
