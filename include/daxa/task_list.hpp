@@ -110,7 +110,6 @@ namespace daxa
 
       private:
         friend TaskList;
-        friend ImplTaskList;
         TaskInterface(void*);
         void * backend = nullptr;
     };
