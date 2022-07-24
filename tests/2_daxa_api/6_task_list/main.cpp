@@ -102,20 +102,20 @@ struct App : AppWindow<App>
                 // Id Fetch can be ommited, as it is known ahead of time.
                 // daxa::BufferId vertex_buffer = interface.get_buffer(t_vertex_buffer);
 
-                auto vertex_staging_buffer = task_interface.device.create_buffer({
+                auto vertex_staging_buffer = task_interface.get_device().create_buffer({
                     .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM | daxa::MemoryFlagBits::STRATEGY_MIN_TIME,
                     .size = sizeof(Vertex) * 3,
                     .debug_name = "TaskList Vertex Staging buffer",
                 });
-                task_interface.cmd_list.destroy_buffer_deferred(vertex_staging_buffer);
+                task_interface.get_command_list().destroy_buffer_deferred(vertex_staging_buffer);
 
-                auto buffer_ptr = reinterpret_cast<Vertex *>(device.map_memory(vertex_staging_buffer));
+                auto buffer_ptr = reinterpret_cast<Vertex *>(task_interface.get_device().map_memory(vertex_staging_buffer));
                 buffer_ptr[0] = Vertex{-0.5f, +0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f};
                 buffer_ptr[1] = Vertex{+0.5f, +0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f};
                 buffer_ptr[2] = Vertex{+0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f};
-                task_interface.device.unmap_memory(vertex_staging_buffer);
+                task_interface.get_device().unmap_memory(vertex_staging_buffer);
 
-                task_interface.cmd_list.copy_buffer_to_buffer({
+                task_interface.get_command_list().copy_buffer_to_buffer({
                     .src_buffer = vertex_staging_buffer,
                     .dst_buffer = vertex_buffer,
                     .size = sizeof(Vertex) * 3,
@@ -132,11 +132,11 @@ struct App : AppWindow<App>
             {
                 // daxa::BufferId vertex_buffer = task_interface.get_buffer(t_vertex_buffer);
 
-                task_interface.cmd_list.set_pipeline(raster_pipeline);
-                task_interface.cmd_list.push_constant(RasterPush{
+                task_interface.get_command_list().set_pipeline(raster_pipeline);
+                task_interface.get_command_list().push_constant(RasterPush{
                     .vertex_buffer_id = vertex_buffer,
                 });
-                task_interface.cmd_list.draw({.vertex_count = 3});
+                task_interface.get_command_list().draw({.vertex_count = 3});
             },
         });
 
