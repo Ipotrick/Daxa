@@ -11,7 +11,7 @@ namespace daxa
         {
             std::shared_ptr<ImplCommandList> impl = std::static_pointer_cast<ImplCommandList>(this->impl);
             impl->reset();
-#if defined(DAXA_ENABLE_THREADSAFETY)
+#if DAXA_THREADSAFETY
             std::unique_lock lock{DAXA_LOCK_WEAK(impl->impl_device)->command_list_recyclable_list.mtx};
 #endif
             DAXA_LOCK_WEAK(impl->impl_device)->command_list_recyclable_list.recyclables.push_back(impl);

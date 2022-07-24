@@ -2,14 +2,28 @@
 
 #include <daxa/types.hpp>
 
-#if !defined(NDEBUG)
-#define DAXA_DEBUG
+#if !defined(DAXA_GPU_ID_VALIDATION)
+#define DAXA_GPU_ID_VALIDATION 0
 #endif
 
-#if defined(DAXA_DEBUG)
+#if !defined(DAXA_VALIDATION)
+#define DAXA_VALIDATION 0
+#endif
+
+#if !defined(DAXA_THREADSAFETY)
+#define DAXA_THREADSAFETY 1
+#endif
+
+#if !defined(DAXA_VALIDATION)
+#define DAXA_VALIDATION !defined(NDEBUG)
+#endif
+
+#if DAXA_VALIDATION
 #include <iostream>
 #include <cstdlib>
 #include <stdexcept>
+
+#define DAXA_GPU_ID_VALIDATION 1
 
 #define DAXA_DBG_ASSERT_FAIL_STRING "[[DAXA ASSERT FAILURE]]"
 

@@ -33,8 +33,8 @@ namespace daxa
     {
         auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
 
-#if defined(DAXA_ENABLE_THREADSAFETY)
-        u64 curreny_main_queue_cpu_timeline_value = impl.main_queue_cpu_timeline.fetch_add(1ull, std::memory_order::relaxed);
+#if DAXA_THREADSAFETY
+        u64 curreny_main_queue_cpu_timeline_value = impl.main_queue_cpu_timeline.fetch_add(1ull, std::memory_order::relaxed) + 1;
         std::unique_lock lock{impl.submit_mtx};
 #else
         u64 curreny_main_queue_cpu_timeline_value = ++impl.main_queue_cpu_timeline;
@@ -494,6 +494,28 @@ namespace daxa
 
         vmaCreateAllocator(&vma_allocator_create_info, &this->vma_allocator);
 
+        VkSamplerCreateInfo vk_sampler_create_info {
+            .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = {},
+            .magFilter = VkFilter::VK_FILTER_LINEAR,
+            .minFilter = VkFilter::VK_FILTER_LINEAR,
+            .mipmapMode = VkSamplerMipmapMode::VK_SAMPLER_MIPMAP_MODE_LINEAR,
+            .addressModeU = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+            .addressModeV = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+            .addressModeW = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+            .mipLodBias = 0.0f,
+            .anisotropyEnable = VK_FALSE,
+            .maxAnisotropy = 0,
+            .compareEnable = VK_FALSE,
+            .compareOp = VkCompareOp::VK_COMPARE_OP_ALWAYS,
+            .minLod = 0,
+            .maxLod = 0,
+            .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK,
+            .unnormalizedCoordinates = VK_FALSE,
+        };
+        vkCreateSampler(vk_device, &vk_sampler_create_info, nullptr, &this->vk_dummy_sampler);
+
         if (DAXA_LOCK_WEAK(this->impl_ctx)->enable_debug_names && this->info.debug_name.size() > 0)
         {
             VkDebugUtilsObjectNameInfoEXT device_name_info{
@@ -529,13 +551,14 @@ namespace daxa
     {
         vmaDestroyAllocator(this->vma_allocator);
         this->gpu_table.cleanup(this->vk_device);
+        vkDestroySampler(vk_device, this->vk_dummy_sampler, nullptr);
         vkDestroySemaphore(this->vk_device, this->vk_main_queue_gpu_timeline_semaphore, nullptr);
         vkDestroyDevice(this->vk_device, nullptr);
     }
 
     void ImplDevice::main_queue_collect_garbage(bool lock_submit)
     {
-#if defined(DAXA_ENABLE_THREADSAFETY)
+#if DAXA_THREADSAFETY
         std::unique_lock lock{this->main_queue_zombies_mtx};
         u64 main_queue_cpu_timeline = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
 #endif
@@ -560,7 +583,7 @@ namespace daxa
             }
         };
 
-#if defined(DAXA_ENABLE_THREADSAFETY)
+#if DAXA_THREADSAFETY
         if (lock_submit)
         {
             this->submit_mtx.lock();
@@ -590,7 +613,7 @@ namespace daxa
                 }
             }
             command_lists.clear(); });
-#if defined(DAXA_ENABLE_THREADSAFETY)
+#if DAXA_THREADSAFETY
         if (lock_submit)
         {
             this->submit_mtx.unlock();
@@ -605,7 +628,7 @@ namespace daxa
         check_and_cleanup_gpu_resources(this->main_queue_sampler_zombies, [&](auto id)
                                         { this->cleanup_sampler(id); });
         {
-#if defined(DAXA_ENABLE_THREADSAFETY)
+#if DAXA_THREADSAFETY
             std::unique_lock lock{this->binary_semaphore_recyclable_list.mtx};
 #endif
             check_and_cleanup_gpu_resources(this->main_queue_binary_semaphore_zombies, [&](auto & binary_semaphore)
@@ -1029,7 +1052,7 @@ namespace daxa
     {
         ImplSamplerSlot & sampler_slot = this->gpu_table.sampler_slots.dereference_id(id);
 
-        write_descriptor_set_sampler(this->vk_device, this->gpu_table.vk_descriptor_set, VK_NULL_HANDLE, id.index);
+        write_descriptor_set_sampler(this->vk_device, this->gpu_table.vk_descriptor_set, this->vk_dummy_sampler, id.index);
 
         vkDestroySampler(this->vk_device, sampler_slot.vk_sampler, nullptr);
 
@@ -1040,7 +1063,7 @@ namespace daxa
 
     void ImplDevice::zombiefy_buffer(BufferId id)
     {
-#if defined(DAXA_ENABLE_THREADSAFETY)
+#if DAXA_THREADSAFETY
         std::unique_lock lock{this->main_queue_zombies_mtx};
         u64 main_queue_cpu_timeline = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
 #endif
@@ -1049,7 +1072,7 @@ namespace daxa
 
     void ImplDevice::zombiefy_image(ImageId id)
     {
-#if defined(DAXA_ENABLE_THREADSAFETY)
+#if DAXA_THREADSAFETY
         std::unique_lock lock{this->main_queue_zombies_mtx};
         u64 main_queue_cpu_timeline = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
 #endif
@@ -1058,7 +1081,7 @@ namespace daxa
 
     void ImplDevice::zombiefy_image_view(ImageViewId id)
     {
-#if defined(DAXA_ENABLE_THREADSAFETY)
+#if DAXA_THREADSAFETY
         std::unique_lock lock{this->main_queue_zombies_mtx};
         u64 main_queue_cpu_timeline = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
 #endif
@@ -1067,7 +1090,7 @@ namespace daxa
 
     void ImplDevice::zombiefy_sampler(SamplerId id)
     {
-#if defined(DAXA_ENABLE_THREADSAFETY)
+#if DAXA_THREADSAFETY
         std::unique_lock lock{this->main_queue_zombies_mtx};
         u64 main_queue_cpu_timeline = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
 #endif

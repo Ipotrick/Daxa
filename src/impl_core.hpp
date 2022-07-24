@@ -32,21 +32,7 @@ using ComPtr = CComPtr<T>;
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 
-#define DAXA_DISABLE_THREADSAFETY
-#define DAXA_ENABLE_GPU_ID_VALIDATION
-
-#if !defined(DAXA_DISABLE_THREADSAFETY)
-#define DAXA_ENABLE_THREADSAFETY
-#endif
-
-#if !defined(NDEBUG)
-
-// TODO: Figure out what to do for debug callback
-// static std::function<void(daxa::MsgSeverity, daxa::MsgType, std::string_view)> * debug_callback;
-
-#endif
-
-#if defined(DAXA_DEBUG)
+#if DAXA_VALIDATION
 #define DAXA_LOCK_WEAK(x)                                                                                \
     [&]() {                                                                                              \
         auto ptr = x.lock();                                                                             \
