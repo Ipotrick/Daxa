@@ -4,14 +4,14 @@ namespace daxa
 {
     Handle::Handle(std::shared_ptr<void> a_impl) : impl{std::move(a_impl)} {}
     
-    auto Access::operator | (Access const & other) -> Access
+    auto operator | (Access const & a, Access const & b) -> Access
     {
-        return Access{ .stages = this->stages | other.stages, .type = this->type | other.type };
+        return Access{ .stages = a.stages | b.stages, .type = a.type | b.type };
     }
 
-    auto Access::operator & (Access const & other) -> Access
+    auto operator & (Access const & a, Access const & b) -> Access
     {
-        return Access{ .stages = this->stages & other.stages, .type = this->type & other.type };
+        return Access{ .stages = a.stages & b.stages, .type = a.type & b.type };
     }
 
     auto to_string(AccessTypeFlags flags) -> std::string_view

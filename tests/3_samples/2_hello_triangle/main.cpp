@@ -157,9 +157,13 @@ struct App : AppWindow<App>
             .size = sizeof(Vertex) * 3,
         });
 
-        cmd_list.pipeline_barrier_image_transition({
+        cmd_list.pipeline_barrier({
             .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
             .waiting_pipeline_access = daxa::AccessConsts::VERTEX_SHADER_READ,
+        });
+
+        cmd_list.pipeline_barrier_image_transition({
+            .waiting_pipeline_access = daxa::AccessConsts::COLOR_ATTACHMENT_OUTPUT_WRITE,
             .before_layout = daxa::ImageLayout::UNDEFINED,
             .after_layout = daxa::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
             .image_id = swapchain_image,
