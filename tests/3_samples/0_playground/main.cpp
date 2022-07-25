@@ -1,6 +1,7 @@
 #include <0_common/window.hpp>
 #include <0_common/player.hpp>
 #include <thread>
+#include <iostream>
 
 #include "util.hpp"
 
@@ -134,7 +135,8 @@ struct RenderableChunk
             cmd_list.draw({.vertex_count = face_n * 6});
         }
     }
-    void draw_water(daxa::CommandList & cmd_list, glm::mat4 const & view_mat) {
+    void draw_water(daxa::CommandList & cmd_list, glm::mat4 const & view_mat)
+    {
         if (water_face_n > 0)
         {
             cmd_list.push_constant(RasterPush{
@@ -150,7 +152,7 @@ struct RenderableChunk
 
 struct RenderableVoxelWorld
 {
-    RenderableChunk * chunks[CHUNK_N * CHUNK_N * CHUNK_N] = {};
+    std::unique_ptr<RenderableChunk> chunks[CHUNK_N * CHUNK_N * CHUNK_N] = {};
 
     RenderableVoxelWorld(daxa::Device device)
     {
@@ -160,7 +162,7 @@ struct RenderableVoxelWorld
             {
                 for (u64 x = 0; x < CHUNK_N; ++x)
                 {
-                    chunks[x + y * CHUNK_N + z * CHUNK_N * CHUNK_N] = new RenderableChunk{.device = device};
+                    chunks[x + y * CHUNK_N + z * CHUNK_N * CHUNK_N] = std::make_unique<RenderableChunk>(RenderableChunk{.device = device});
                     auto & chunk = *chunks[x + y * CHUNK_N + z * CHUNK_N * CHUNK_N];
                     chunk.voxel_chunk.pos = glm::vec3(static_cast<f32>(x * CHUNK_SIZE), static_cast<f32>(y * CHUNK_SIZE), static_cast<f32>(z * CHUNK_SIZE));
                     chunk.voxel_chunk.generate();
@@ -191,8 +193,6 @@ struct RenderableVoxelWorld
 
     ~RenderableVoxelWorld()
     {
-        for (auto & chunk : chunks)
-            delete chunk;
     }
 
     void draw(daxa::CommandList & cmd_list, glm::mat4 const & view_mat)
@@ -461,7 +461,7 @@ struct App : AppWindow<App>
             }
             else
             {
-                std::cout << new_pipeline << std::endl;
+                std::cout << new_pipeline.message() << std::endl;
             }
         }
 

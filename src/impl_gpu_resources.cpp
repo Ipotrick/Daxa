@@ -6,10 +6,10 @@ namespace daxa
     {
         return version == 0;
     }
-    
+
     auto ImageId::default_view() const -> ImageViewId
     {
-        return ImageViewId{{ .index = index, .version = version }};
+        return ImageViewId{{.index = index, .version = version}};
     }
 
     void GPUResourceTable::initialize(usize max_buffers, usize max_images, usize max_samplers, VkDevice device)

@@ -3,15 +3,15 @@
 namespace daxa
 {
     Handle::Handle(std::shared_ptr<void> a_impl) : impl{std::move(a_impl)} {}
-    
-    auto operator | (Access const & a, Access const & b) -> Access
+
+    auto operator|(Access const & a, Access const & b) -> Access
     {
-        return Access{ .stages = a.stages | b.stages, .type = a.type | b.type };
+        return Access{.stages = a.stages | b.stages, .type = a.type | b.type};
     }
 
-    auto operator & (Access const & a, Access const & b) -> Access
+    auto operator&(Access const & a, Access const & b) -> Access
     {
-        return Access{ .stages = a.stages & b.stages, .type = a.type & b.type };
+        return Access{.stages = a.stages & b.stages, .type = a.type & b.type};
     }
 
     auto to_string(AccessTypeFlags flags) -> std::string_view
@@ -39,19 +39,19 @@ namespace daxa
         case ImageLayout::SHADER_READ_ONLY_OPTIMAL: return "SHADER_READ_ONLY_OPTIMAL";
         case ImageLayout::TRANSFER_SRC_OPTIMAL: return "TRANSFER_SRC_OPTIMAL";
         case ImageLayout::TRANSFER_DST_OPTIMAL: return "TRANSFER_DST_OPTIMAL";
-        //PREINITIALIZED = 8,
+        // PREINITIALIZED = 8,
         case ImageLayout::DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL: return "DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL";
         case ImageLayout::DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL: return "DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL";
         case ImageLayout::DEPTH_ATTACHMENT_OPTIMAL: return "DEPTH_ATTACHMENT_OPTIMAL";
         case ImageLayout::DEPTH_READ_ONLY_OPTIMAL: return "DEPTH_READ_ONLY_OPTIMAL";
         case ImageLayout::STENCIL_ATTACHMENT_OPTIMAL: return "STENCIL_ATTACHMENT_OPTIMAL";
         case ImageLayout::STENCIL_READ_ONLY_OPTIMAL: return "STENCIL_READ_ONLY_OPTIMAL";
-        //READ_ONLY_OPTIMAL = 1000314000,
+        // READ_ONLY_OPTIMAL = 1000314000,
         case ImageLayout::ATTACHMENT_OPTIMAL: return "ATTACHMENT_OPTIMAL";
         case ImageLayout::PRESENT_SRC: return "PRESENT_SRC";
-        //SHARED_PRESENT = 1000111000,
-        //FRAGMENT_DENSITY_MAP_OPTIMAL_EXT = 1000218000,
-        //FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL = 1000164003,
+        // SHARED_PRESENT = 1000111000,
+        // FRAGMENT_DENSITY_MAP_OPTIMAL_EXT = 1000218000,
+        // FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL = 1000164003,
         default: DAXA_DBG_ASSERT_TRUE_M(false, "invalid ImageLayout");
         }
     }
@@ -64,14 +64,14 @@ namespace daxa
         }
 
         std::string ret = {};
-        
+
         if (flags & PipelineStageFlagBits::TOP_OF_PIPE)
         {
             ret += "TOP_OF_PIPE";
         }
         if (flags & PipelineStageFlagBits::DRAW_INDIRECT)
         {
-            if (ret.size() != 0) 
+            if (ret.size() != 0)
             {
                 ret += " | ";
             }
@@ -79,7 +79,7 @@ namespace daxa
         }
         if (flags & PipelineStageFlagBits::VERTEX_SHADER)
         {
-            if (ret.size() != 0) 
+            if (ret.size() != 0)
             {
                 ret += " | ";
             }
@@ -87,7 +87,7 @@ namespace daxa
         }
         if (flags & PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER)
         {
-            if (ret.size() != 0) 
+            if (ret.size() != 0)
             {
                 ret += " | ";
             }
@@ -95,7 +95,7 @@ namespace daxa
         }
         if (flags & PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER)
         {
-            if (ret.size() != 0) 
+            if (ret.size() != 0)
             {
                 ret += " | ";
             }
@@ -103,7 +103,7 @@ namespace daxa
         }
         if (flags & PipelineStageFlagBits::GEOMETRY_SHADER)
         {
-            if (ret.size() != 0) 
+            if (ret.size() != 0)
             {
                 ret += " | ";
             }
@@ -111,7 +111,7 @@ namespace daxa
         }
         if (flags & PipelineStageFlagBits::FRAGMENT_SHADER)
         {
-            if (ret.size() != 0) 
+            if (ret.size() != 0)
             {
                 ret += " | ";
             }
@@ -119,7 +119,7 @@ namespace daxa
         }
         if (flags & PipelineStageFlagBits::EARLY_FRAGMENT_TESTS)
         {
-            if (ret.size() != 0) 
+            if (ret.size() != 0)
             {
                 ret += " | ";
             }
@@ -127,7 +127,7 @@ namespace daxa
         }
         if (flags & PipelineStageFlagBits::LATE_FRAGMENT_TESTS)
         {
-            if (ret.size() != 0) 
+            if (ret.size() != 0)
             {
                 ret += " | ";
             }
@@ -135,7 +135,7 @@ namespace daxa
         }
         if (flags & PipelineStageFlagBits::COLOR_ATTACHMENT_OUTPUT)
         {
-            if (ret.size() != 0) 
+            if (ret.size() != 0)
             {
                 ret += " | ";
             }
@@ -143,7 +143,7 @@ namespace daxa
         }
         if (flags & PipelineStageFlagBits::COMPUTE_SHADER)
         {
-            if (ret.size() != 0) 
+            if (ret.size() != 0)
             {
                 ret += " | ";
             }
@@ -151,7 +151,7 @@ namespace daxa
         }
         if (flags & PipelineStageFlagBits::TRANSFER)
         {
-            if (ret.size() != 0) 
+            if (ret.size() != 0)
             {
                 ret += " | ";
             }
@@ -159,7 +159,7 @@ namespace daxa
         }
         if (flags & PipelineStageFlagBits::BOTTOM_OF_PIPE)
         {
-            if (ret.size() != 0) 
+            if (ret.size() != 0)
             {
                 ret += " | ";
             }
@@ -167,7 +167,7 @@ namespace daxa
         }
         if (flags & PipelineStageFlagBits::HOST)
         {
-            if (ret.size() != 0) 
+            if (ret.size() != 0)
             {
                 ret += " | ";
             }
@@ -175,7 +175,7 @@ namespace daxa
         }
         if (flags & PipelineStageFlagBits::ALL_GRAPHICS)
         {
-            if (ret.size() != 0) 
+            if (ret.size() != 0)
             {
                 ret += " | ";
             }
@@ -183,7 +183,7 @@ namespace daxa
         }
         if (flags & PipelineStageFlagBits::ALL_COMMANDS)
         {
-            if (ret.size() != 0) 
+            if (ret.size() != 0)
             {
                 ret += " | ";
             }
@@ -191,7 +191,7 @@ namespace daxa
         }
         if (flags & PipelineStageFlagBits::COPY)
         {
-            if (ret.size() != 0) 
+            if (ret.size() != 0)
             {
                 ret += " | ";
             }
@@ -199,7 +199,7 @@ namespace daxa
         }
         if (flags & PipelineStageFlagBits::RESOLVE)
         {
-            if (ret.size() != 0) 
+            if (ret.size() != 0)
             {
                 ret += " | ";
             }
@@ -207,7 +207,7 @@ namespace daxa
         }
         if (flags & PipelineStageFlagBits::BLIT)
         {
-            if (ret.size() != 0) 
+            if (ret.size() != 0)
             {
                 ret += " | ";
             }
@@ -215,7 +215,7 @@ namespace daxa
         }
         if (flags & PipelineStageFlagBits::CLEAR)
         {
-            if (ret.size() != 0) 
+            if (ret.size() != 0)
             {
                 ret += " | ";
             }
@@ -223,7 +223,7 @@ namespace daxa
         }
         if (flags & PipelineStageFlagBits::INDEX_INPUT)
         {
-            if (ret.size() != 0) 
+            if (ret.size() != 0)
             {
                 ret += " | ";
             }
@@ -231,7 +231,7 @@ namespace daxa
         }
         if (flags & PipelineStageFlagBits::PRE_RASTERIZATION_SHADERS)
         {
-            if (ret.size() != 0) 
+            if (ret.size() != 0)
             {
                 ret += " | ";
             }
