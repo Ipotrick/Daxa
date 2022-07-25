@@ -133,10 +133,11 @@ namespace daxa
         u32 stride = {};
     };
 
-    struct CommandList : Handle
+    struct CommandList : HandleWithCleanup<CommandList>
     {
         CommandList();
         ~CommandList();
+        void cleanup();
 
         void copy_buffer_to_buffer(BufferCopyInfo const & info);
         void copy_buffer_to_image(BufferImageCopy const & info);

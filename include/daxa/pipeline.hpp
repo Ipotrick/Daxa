@@ -38,9 +38,10 @@ namespace daxa
         std::string debug_name = {};
     };
 
-    struct ComputePipeline : Handle
+    struct ComputePipeline : HandleWithCleanup<ComputePipeline>
     {
         ~ComputePipeline();
+        void cleanup();
 
         auto info() const -> ComputePipelineInfo const &;
 
@@ -90,9 +91,10 @@ namespace daxa
         std::string debug_name = {};
     };
 
-    struct RasterPipeline : Handle
+    struct RasterPipeline : HandleWithCleanup<RasterPipeline>
     {
         ~RasterPipeline();
+        void cleanup();
 
         auto info() const -> RasterPipelineInfo const &;
 

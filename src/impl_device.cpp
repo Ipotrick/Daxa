@@ -2,9 +2,14 @@
 
 namespace daxa
 {
-    Device::Device(std::shared_ptr<void> a_impl) : Handle(std::move(a_impl)) {}
+    Device::Device(std::shared_ptr<void> a_impl) : HandleWithCleanup(std::move(a_impl)) {}
 
     Device::~Device()
+    {
+        // cleanup();
+    }
+
+    void Device::cleanup()
     {
         auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
 

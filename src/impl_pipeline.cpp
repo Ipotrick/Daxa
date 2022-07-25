@@ -100,9 +100,14 @@ namespace daxa
         unsigned long STDMETHODCALLTYPE Release(void) override { return 0; }
     };
 
-    RasterPipeline::RasterPipeline(std::shared_ptr<void> a_impl) : Handle(std::move(a_impl)) {}
+    RasterPipeline::RasterPipeline(std::shared_ptr<void> a_impl) : HandleWithCleanup(std::move(a_impl)) {}
 
     RasterPipeline::~RasterPipeline()
+    {
+        // cleanup();
+    }
+
+    void RasterPipeline::cleanup()
     {
         if (this->impl.use_count() == 1)
         {
@@ -117,9 +122,14 @@ namespace daxa
         }
     }
 
-    ComputePipeline::ComputePipeline(std::shared_ptr<void> a_impl) : Handle(std::move(a_impl)) {}
+    ComputePipeline::ComputePipeline(std::shared_ptr<void> a_impl) : HandleWithCleanup(std::move(a_impl)) {}
 
     ComputePipeline::~ComputePipeline()
+    {
+        // cleanup();
+    }
+
+    void ComputePipeline::cleanup()
     {
         if (this->impl.use_count() == 1)
         {

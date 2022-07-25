@@ -2,16 +2,16 @@
 
 #include <daxa/types.hpp>
 
-#if !defined(DAXA_GPU_ID_VALIDATION)
-#define DAXA_GPU_ID_VALIDATION 0
-#endif
-
 #if !defined(DAXA_THREADSAFETY)
 #define DAXA_THREADSAFETY 1
 #endif
 
 #if !defined(DAXA_VALIDATION)
-#define DAXA_VALIDATION !defined(NDEBUG)
+#if defined(NDEBUG)
+#define DAXA_VALIDATION 0
+#else
+#define DAXA_VALIDATION 1
+#endif
 #endif
 
 #if DAXA_VALIDATION
@@ -37,6 +37,10 @@
 
 #endif
 
+#if !defined(DAXA_GPU_ID_VALIDATION)
+#define DAXA_GPU_ID_VALIDATION 0
+#endif
+
 #if defined(_WIN32)
 // HACK TO NOT INCLUDE Windows.h, DECLARE HWND
 typedef struct HWND__ * HWND;
@@ -58,10 +62,34 @@ namespace daxa
 
 namespace daxa
 {
-
     struct Handle
     {
         Handle(std::shared_ptr<void> impl);
+
+      protected:
+        std::shared_ptr<void> impl = {};
+    };
+
+    template <typename Derived>
+    struct HandleWithCleanup
+    {
+        HandleWithCleanup(std::shared_ptr<void> impl) : impl(impl) {}
+
+        HandleWithCleanup(HandleWithCleanup const &) = default;
+        HandleWithCleanup(HandleWithCleanup &&) = default;
+        HandleWithCleanup & operator=(HandleWithCleanup const & other)
+        {
+            static_cast<Derived *>(this)->cleanup();
+            this->impl = other.impl;
+            return *this;
+        }
+        HandleWithCleanup & operator=(HandleWithCleanup && other)
+        {
+            static_cast<Derived *>(this)->cleanup();
+            std::swap(this->impl, other.impl);
+            return *this;
+        }
+        ~HandleWithCleanup() { static_cast<Derived *>(this)->cleanup(); }
 
       protected:
         std::shared_ptr<void> impl = {};

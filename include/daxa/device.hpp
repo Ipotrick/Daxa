@@ -161,9 +161,10 @@ namespace daxa
         Swapchain & swapchain;
     };
 
-    struct Device : public Handle
+    struct Device : HandleWithCleanup<Device>
     {
         ~Device();
+        void cleanup();
 
         auto create_buffer(BufferInfo const & info) -> BufferId;
         auto create_image(ImageInfo const & info) -> ImageId;
