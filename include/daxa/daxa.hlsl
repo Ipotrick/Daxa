@@ -52,7 +52,7 @@ namespace daxa
     {
         return SamplerStateView[ID_INDEX_MASK & sampler_id.data];
     }
-    
+
 } // namespace daxa
 
 #define DAXA_DEFINE_GET_STRUCTURED_BUFFER(Type)                                                                          \
@@ -65,15 +65,15 @@ namespace daxa
             return StructuredBufferView##Type[ID_INDEX_MASK & buffer_id.data];                                           \
         }                                                                                                                \
     }
-#define DAXA_DEFINE_GET_BUFFER(Type)                                                                                     \
-    namespace daxa                                                                                                       \
-    {                                                                                                                    \
-        [[vk::binding(daxa::CONSTANTS::STORAGE_BUFFER_BINDING, 0)]] Buffer<Type> BufferView##Type[];                     \
-        template <>                                                                                                      \
-        Buffer<Type> get_Buffer(BufferId buffer_id)                                                                      \
-        {                                                                                                                \
-            return BufferView##Type[ID_INDEX_MASK & buffer_id.data];                                                     \
-        }                                                                                                                \
+#define DAXA_DEFINE_GET_BUFFER(Type)                                                                 \
+    namespace daxa                                                                                   \
+    {                                                                                                \
+        [[vk::binding(daxa::CONSTANTS::STORAGE_BUFFER_BINDING, 0)]] Buffer<Type> BufferView##Type[]; \
+        template <>                                                                                  \
+        Buffer<Type> get_Buffer(BufferId buffer_id)                                                  \
+        {                                                                                            \
+            return BufferView##Type[ID_INDEX_MASK & buffer_id.data];                                 \
+        }                                                                                            \
     }
 #define DAXA_DEFINE_GET_TEXTURE1D(Type)                                                                   \
     namespace daxa                                                                                        \

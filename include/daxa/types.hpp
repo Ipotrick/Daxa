@@ -402,19 +402,19 @@ namespace daxa
         SHADER_READ_ONLY_OPTIMAL = 5,
         TRANSFER_SRC_OPTIMAL = 6,
         TRANSFER_DST_OPTIMAL = 7,
-        //PREINITIALIZED = 8,
+        // PREINITIALIZED = 8,
         DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL = 1000117000,
         DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL = 1000117001,
         DEPTH_ATTACHMENT_OPTIMAL = 1000241000,
         DEPTH_READ_ONLY_OPTIMAL = 1000241001,
         STENCIL_ATTACHMENT_OPTIMAL = 1000241002,
         STENCIL_READ_ONLY_OPTIMAL = 1000241003,
-        //READ_ONLY_OPTIMAL = 1000314000,
+        // READ_ONLY_OPTIMAL = 1000314000,
         ATTACHMENT_OPTIMAL = 1000314001,
         PRESENT_SRC = 1000001002,
-        //SHARED_PRESENT = 1000111000,
-        //FRAGMENT_DENSITY_MAP_OPTIMAL_EXT = 1000218000,
-        //FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL = 1000164003,
+        // SHARED_PRESENT = 1000111000,
+        // FRAGMENT_DENSITY_MAP_OPTIMAL_EXT = 1000218000,
+        // FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL = 1000164003,
     };
 
     auto to_string(ImageLayout layout) -> std::string_view;
@@ -520,8 +520,8 @@ namespace daxa
         AccessTypeFlags type = AccessTypeFlagBits::NONE;
     };
 
-    auto operator | (Access const & a, Access const & b) -> Access;
-    auto operator & (Access const & a, Access const & b) -> Access;
+    auto operator|(Access const & a, Access const & b) -> Access;
+    auto operator&(Access const & a, Access const & b) -> Access;
 
     auto to_string(Access access) -> std::string;
 
@@ -551,7 +551,7 @@ namespace daxa
         static inline constexpr Access CLEAR_READ = {.stages = PipelineStageFlagBits::CLEAR, .type = AccessTypeFlagBits::READ};
         static inline constexpr Access INDEX_INPUT_READ = {.stages = PipelineStageFlagBits::INDEX_INPUT, .type = AccessTypeFlagBits::READ};
         static inline constexpr Access PRE_RASTERIZATION_SHADERS_READ = {.stages = PipelineStageFlagBits::PRE_RASTERIZATION_SHADERS, .type = AccessTypeFlagBits::READ};
-        
+
         static inline constexpr Access TOP_OF_PIPE_WRITE = {.stages = PipelineStageFlagBits::TOP_OF_PIPE, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access DRAW_INDIRECT_WRITE = {.stages = PipelineStageFlagBits::DRAW_INDIRECT, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access VERTEX_SHADER_WRITE = {.stages = PipelineStageFlagBits::VERTEX_SHADER, .type = AccessTypeFlagBits::WRITE};
@@ -574,7 +574,7 @@ namespace daxa
         static inline constexpr Access CLEAR_WRITE = {.stages = PipelineStageFlagBits::CLEAR, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access INDEX_INPUT_WRITE = {.stages = PipelineStageFlagBits::INDEX_INPUT, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access PRE_RASTERIZATION_SHADERS_WRITE = {.stages = PipelineStageFlagBits::PRE_RASTERIZATION_SHADERS, .type = AccessTypeFlagBits::WRITE};
-        
+
         static inline constexpr Access TOP_OF_PIPE_READ_WRITE = {.stages = PipelineStageFlagBits::TOP_OF_PIPE, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access DRAW_INDIRECT_READ_WRITE = {.stages = PipelineStageFlagBits::DRAW_INDIRECT, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access VERTEX_SHADER_READ_WRITE = {.stages = PipelineStageFlagBits::VERTEX_SHADER, .type = AccessTypeFlagBits::READ_WRITE};

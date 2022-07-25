@@ -408,7 +408,7 @@ namespace daxa
 
         for (u32 i = 0; i < queue_family_props_count; i++)
         {
-            if ((queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
+            if ((queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0 && (queue_props[i].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0)
             {
                 this->main_queue_family_index = i;
                 break;
@@ -499,7 +499,7 @@ namespace daxa
 
         vmaCreateAllocator(&vma_allocator_create_info, &this->vma_allocator);
 
-        VkSamplerCreateInfo vk_sampler_create_info {
+        VkSamplerCreateInfo vk_sampler_create_info{
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},

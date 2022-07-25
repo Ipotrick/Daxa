@@ -347,7 +347,7 @@ namespace daxa
         {
             DAXA_DBG_ASSERT_TRUE_M(!in.image_view.is_empty(), "must provide either image view to render attachment");
             VkImageView vk_image_view = VK_NULL_HANDLE;
-            
+
             out = VkRenderingAttachmentInfo{
                 .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
                 .pNext = nullptr,
@@ -492,7 +492,7 @@ namespace daxa
     ImplCommandList::ImplCommandList(std::weak_ptr<ImplDevice> a_impl_device)
         : impl_device{a_impl_device}, pipeline_layouts{DAXA_LOCK_WEAK(impl_device)->gpu_table.pipeline_layouts}
     {
-        // std::printf("BRUH!\n");
+        std::printf("BRUH!\n");
 
         VkCommandPoolCreateInfo vk_command_pool_create_info{
             .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,

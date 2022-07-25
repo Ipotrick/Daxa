@@ -1,5 +1,6 @@
 #include <0_common/window.hpp>
 #include <thread>
+#include <iostream>
 
 using namespace daxa::types;
 
@@ -94,7 +95,7 @@ struct App : AppWindow<App>
             }
             else
             {
-                std::cout << new_pipeline << std::endl;
+                std::cout << new_pipeline.message() << std::endl;
             }
         }
 

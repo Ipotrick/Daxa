@@ -678,7 +678,7 @@ namespace daxa
 
         std::vector<std::wstring> wstring_buffer = {};
 
-        wstring_buffer.reserve(shader_info.defines.size());
+        wstring_buffer.reserve(shader_info.defines.size() + 1 + info.root_paths.size());
 
         for (auto & define : shader_info.defines)
         {
