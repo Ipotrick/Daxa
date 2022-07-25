@@ -133,11 +133,9 @@ namespace daxa
         u32 stride = {};
     };
 
-    struct CommandList : HandleWithCleanup<CommandList>
+    struct CommandList : ManagedPtr
     {
         CommandList();
-        ~CommandList();
-        void cleanup();
 
         void copy_buffer_to_buffer(BufferCopyInfo const & info);
         void copy_buffer_to_image(BufferImageCopy const & info);
@@ -181,6 +179,6 @@ namespace daxa
 
       private:
         friend struct Device;
-        CommandList(std::shared_ptr<void> impl);
+        CommandList(ManagedPtr impl);
     };
 } // namespace daxa

@@ -2,7 +2,84 @@
 
 namespace daxa
 {
-    Handle::Handle(std::shared_ptr<void> a_impl) : impl{std::move(a_impl)} {}
+    auto ManagedSharedState::managed_cleanup() -> bool
+    {
+        return true;
+    }
+
+    ManagedPtr::ManagedPtr(ManagedSharedState * ptr) : object{ptr}
+    {
+        DAXA_ATOMIC_FETCH_INC(object->strong_count);
+    }
+    ManagedPtr::~ManagedPtr()
+    {
+        cleanup();
+    }
+
+    ManagedPtr::ManagedPtr(const ManagedPtr & other) { *this = other; }
+    ManagedPtr::ManagedPtr(ManagedPtr && other) { *this = std::move(other); }
+    ManagedPtr & ManagedPtr::operator=(const ManagedPtr & other)
+    {
+        cleanup();
+        this->object = other.object;
+        DAXA_ATOMIC_FETCH_INC(this->object->strong_count);
+        return *this;
+    }
+    ManagedPtr & ManagedPtr::operator=(ManagedPtr && other)
+    {
+        cleanup();
+        std::swap(this->object, other.object);
+        return *this;
+    }
+
+    void ManagedPtr::cleanup()
+    {
+        if (this->object && DAXA_ATOMIC_FETCH_DEC(this->object->strong_count) == 1)
+        {
+            bool should_delete = this->object->managed_cleanup();
+            if (should_delete)
+            {
+                this->object->~ManagedSharedState();
+            }
+            DAXA_DBG_ASSERT_TRUE_M(DAXA_ATOMIC_FETCH(this->object->weak_count) == 0, "Weak pointer reference count was NOT ZERO");
+            if (should_delete)
+            {
+                free(this->object);
+            }
+            this->object = {};
+        }
+    }
+
+    ManagedWeakPtr ManagedPtr::make_weak()
+    {
+        return ManagedWeakPtr(this->object);
+    }
+
+    ManagedWeakPtr::ManagedWeakPtr(ManagedSharedState * ptr) : object{ptr}
+    {
+        DAXA_ATOMIC_FETCH_INC(object->weak_count);
+    }
+    ManagedWeakPtr::~ManagedWeakPtr()
+    {
+        if (object)
+        {
+            DAXA_ATOMIC_FETCH_DEC(object->weak_count);
+        }
+    }
+
+    ManagedWeakPtr::ManagedWeakPtr(const ManagedWeakPtr & other) { *this = other; }
+    ManagedWeakPtr::ManagedWeakPtr(ManagedWeakPtr && other) { *this = std::move(other); }
+    ManagedWeakPtr & ManagedWeakPtr::operator=(const ManagedWeakPtr & other)
+    {
+        object = other.object;
+        DAXA_ATOMIC_FETCH_INC(object->weak_count);
+        return *this;
+    }
+    ManagedWeakPtr & ManagedWeakPtr::operator=(ManagedWeakPtr && other)
+    {
+        std::swap(object, other.object);
+        return *this;
+    }
 
     auto operator|(Access const & a, Access const & b) -> Access
     {

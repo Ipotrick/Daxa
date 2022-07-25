@@ -3,29 +3,11 @@
 
 namespace daxa
 {
-    CommandList::CommandList(std::shared_ptr<void> a_impl) : HandleWithCleanup(std::move(a_impl)) {}
-
-    CommandList::~CommandList()
-    {
-        // cleanup();
-    }
-
-    void CommandList::cleanup()
-    {
-        if (this->impl.use_count() == 1)
-        {
-            std::shared_ptr<ImplCommandList> impl = std::static_pointer_cast<ImplCommandList>(this->impl);
-            impl->reset();
-#if DAXA_THREADSAFETY
-            std::unique_lock lock{DAXA_LOCK_WEAK(impl->impl_device)->command_list_recyclable_list.mtx};
-#endif
-            DAXA_LOCK_WEAK(impl->impl_device)->command_list_recyclable_list.recyclables.push_back(impl);
-        }
-    }
+    CommandList::CommandList(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
     void CommandList::copy_buffer_to_buffer(BufferCopyInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
@@ -37,15 +19,15 @@ namespace daxa
 
         vkCmdCopyBuffer(
             impl.vk_cmd_buffer,
-            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.src_buffer).vk_buffer,
-            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.dst_buffer).vk_buffer,
+            impl.impl_device.as<ImplDevice>()->slot(info.src_buffer).vk_buffer,
+            impl.impl_device.as<ImplDevice>()->slot(info.dst_buffer).vk_buffer,
             1,
             &vk_buffer_copy);
     }
 
     void CommandList::copy_buffer_to_image(BufferImageCopy const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
@@ -60,8 +42,8 @@ namespace daxa
 
         vkCmdCopyBufferToImage(
             impl.vk_cmd_buffer,
-            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.buffer).vk_buffer,
-            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.image).vk_image,
+            impl.impl_device.as<ImplDevice>()->slot(info.buffer).vk_buffer,
+            impl.impl_device.as<ImplDevice>()->slot(info.image).vk_image,
             static_cast<VkImageLayout>(info.image_layout),
             1,
             &vk_buffer_image_copy);
@@ -69,7 +51,7 @@ namespace daxa
 
     void CommandList::copy_image_to_buffer(BufferImageCopy const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
@@ -84,16 +66,16 @@ namespace daxa
 
         vkCmdCopyImageToBuffer(
             impl.vk_cmd_buffer,
-            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.image).vk_image,
+            impl.impl_device.as<ImplDevice>()->slot(info.image).vk_image,
             static_cast<VkImageLayout>(info.image_layout),
-            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.buffer).vk_buffer,
+            impl.impl_device.as<ImplDevice>()->slot(info.buffer).vk_buffer,
             1,
             &vk_buffer_image_copy);
     }
 
     void CommandList::blit_image_to_image(ImageBlitInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
         impl.flush_barriers();
 
@@ -106,9 +88,9 @@ namespace daxa
 
         vkCmdBlitImage(
             impl.vk_cmd_buffer,
-            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.src_image).vk_image,
+            impl.impl_device.as<ImplDevice>()->slot(info.src_image).vk_image,
             static_cast<VkImageLayout>(info.src_image_layout),
-            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.dst_image).vk_image,
+            impl.impl_device.as<ImplDevice>()->slot(info.dst_image).vk_image,
             static_cast<VkImageLayout>(info.dst_image_layout),
             1,
             &vk_blit,
@@ -117,7 +99,7 @@ namespace daxa
 
     void CommandList::copy_image_to_image(ImageCopyInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
         impl.flush_barriers();
 
@@ -131,9 +113,9 @@ namespace daxa
 
         vkCmdCopyImage(
             impl.vk_cmd_buffer,
-            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.src_image).vk_image,
+            impl.impl_device.as<ImplDevice>()->slot(info.src_image).vk_image,
             static_cast<VkImageLayout>(info.src_image_layout),
-            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.dst_image).vk_image,
+            impl.impl_device.as<ImplDevice>()->slot(info.dst_image).vk_image,
             static_cast<VkImageLayout>(info.dst_image_layout),
             1,
             &vk_image_copy);
@@ -141,7 +123,7 @@ namespace daxa
 
     void CommandList::clear_image(ImageClearInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
         impl.flush_barriers();
 
@@ -155,7 +137,7 @@ namespace daxa
 
             vkCmdClearColorImage(
                 impl.vk_cmd_buffer,
-                DAXA_LOCK_WEAK(impl.impl_device)->slot(info.dst_image).vk_image,
+                impl.impl_device.as<ImplDevice>()->slot(info.dst_image).vk_image,
                 static_cast<VkImageLayout>(info.dst_image_layout),
                 &color,
                 1,
@@ -173,7 +155,7 @@ namespace daxa
 
             vkCmdClearDepthStencilImage(
                 impl.vk_cmd_buffer,
-                DAXA_LOCK_WEAK(impl.impl_device)->slot(info.dst_image).vk_image,
+                impl.impl_device.as<ImplDevice>()->slot(info.dst_image).vk_image,
                 static_cast<VkImageLayout>(info.dst_image_layout),
                 &color,
                 1,
@@ -183,13 +165,13 @@ namespace daxa
 
     void CommandList::clear_buffer(BufferClearInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
         impl.flush_barriers();
 
         vkCmdFillBuffer(
             impl.vk_cmd_buffer,
-            DAXA_LOCK_WEAK(impl.impl_device)->slot(info.buffer).vk_buffer,
+            impl.impl_device.as<ImplDevice>()->slot(info.buffer).vk_buffer,
             static_cast<VkDeviceSize>(info.offset),
             static_cast<VkDeviceSize>(info.size),
             info.clear_value);
@@ -197,7 +179,7 @@ namespace daxa
 
     void CommandList::push_constant(void const * data, u32 size, u32 offset)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         DAXA_DBG_ASSERT_TRUE_M(size <= MAX_PUSH_CONSTANT_BYTE_SIZE, MAX_PUSH_CONSTANT_SIZE_ERROR);
         DAXA_DBG_ASSERT_TRUE_M(size % 4 == 0, "push constant size must be a multiple of 4 bytes");
@@ -207,29 +189,29 @@ namespace daxa
     }
     void CommandList::set_pipeline(ComputePipeline const & pipeline)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
-        auto & pipeline_impl = *reinterpret_cast<ImplComputePipeline *>(pipeline.impl.get());
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
+        auto & pipeline_impl = *reinterpret_cast<ImplComputePipeline *>(pipeline.object);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
-        vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_layout, 0, 1, &DAXA_LOCK_WEAK(impl.impl_device)->gpu_table.vk_descriptor_set, 0, nullptr);
+        vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_layout, 0, 1, &impl.impl_device.as<ImplDevice>()->gpu_table.vk_descriptor_set, 0, nullptr);
 
         vkCmdBindPipeline(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline);
     }
     void CommandList::set_pipeline(RasterPipeline const & pipeline)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
-        auto & pipeline_impl = *reinterpret_cast<ImplRasterPipeline *>(pipeline.impl.get());
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
+        auto & pipeline_impl = *reinterpret_cast<ImplRasterPipeline *>(pipeline.object);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
-        vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline_layout, 0, 1, &DAXA_LOCK_WEAK(impl.impl_device)->gpu_table.vk_descriptor_set, 0, nullptr);
+        vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline_layout, 0, 1, &impl.impl_device.as<ImplDevice>()->gpu_table.vk_descriptor_set, 0, nullptr);
 
         vkCmdBindPipeline(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline);
     }
     void CommandList::dispatch(u32 group_x, u32 group_y, u32 group_z)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
@@ -248,27 +230,27 @@ namespace daxa
 
     void CommandList::destroy_buffer_deferred(BufferId id)
     {
-        defer_destruction_helper(this->impl.get(), GPUResourceId{.index = id.index, .version = id.version}, DEFERRED_DESTRUCTION_BUFFER_INDEX);
+        defer_destruction_helper(this->object, GPUResourceId{.index = id.index, .version = id.version}, DEFERRED_DESTRUCTION_BUFFER_INDEX);
     }
 
     void CommandList::destroy_image_deferred(ImageId id)
     {
-        defer_destruction_helper(impl.get(), GPUResourceId{.index = id.index, .version = id.version}, DEFERRED_DESTRUCTION_IMAGE_INDEX);
+        defer_destruction_helper(object, GPUResourceId{.index = id.index, .version = id.version}, DEFERRED_DESTRUCTION_IMAGE_INDEX);
     }
 
     void CommandList::destroy_image_view_deferred(ImageViewId id)
     {
-        defer_destruction_helper(impl.get(), GPUResourceId{.index = id.index, .version = id.version}, DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX);
+        defer_destruction_helper(object, GPUResourceId{.index = id.index, .version = id.version}, DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX);
     }
 
     void CommandList::destroy_sampler_deferred(SamplerId id)
     {
-        defer_destruction_helper(impl.get(), GPUResourceId{.index = id.index, .version = id.version}, DEFERRED_DESTRUCTION_SAMPLER_INDEX);
+        defer_destruction_helper(object, GPUResourceId{.index = id.index, .version = id.version}, DEFERRED_DESTRUCTION_SAMPLER_INDEX);
     }
 
     void CommandList::complete()
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
@@ -279,19 +261,19 @@ namespace daxa
 
     auto CommandList::is_complete() const -> bool
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
         return impl.recording_complete;
     }
 
     auto CommandList::info() const -> CommandListInfo const &
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
         return impl.info;
     }
 
     void CommandList::pipeline_barrier(PipelineBarrierInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
 
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
 
@@ -312,7 +294,7 @@ namespace daxa
 
     void CommandList::pipeline_barrier_image_transition(PipelineBarrierImageTransitionInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
 
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
 
@@ -332,14 +314,14 @@ namespace daxa
             .newLayout = static_cast<VkImageLayout>(info.after_layout),
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = DAXA_LOCK_WEAK(impl.impl_device)->slot(info.image_id).vk_image,
+            .image = impl.impl_device.as<ImplDevice>()->slot(info.image_id).vk_image,
             .subresourceRange = *reinterpret_cast<VkImageSubresourceRange const *>(&info.image_slice),
         };
     }
 
     void CommandList::begin_renderpass(RenderPassBeginInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
@@ -351,7 +333,7 @@ namespace daxa
             out = VkRenderingAttachmentInfo{
                 .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
                 .pNext = nullptr,
-                .imageView = DAXA_LOCK_WEAK(impl.impl_device)->slot(in.image_view).vk_image_view,
+                .imageView = impl.impl_device.as<ImplDevice>()->slot(in.image_view).vk_image_view,
                 .imageLayout = *reinterpret_cast<VkImageLayout const *>(&in.layout),
                 .resolveMode = VkResolveModeFlagBits::VK_RESOLVE_MODE_NONE,
                 .resolveImageView = VK_NULL_HANDLE,
@@ -412,7 +394,7 @@ namespace daxa
 
     void CommandList::end_renderpass()
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
         vkCmdEndRendering(impl.vk_cmd_buffer);
@@ -420,7 +402,7 @@ namespace daxa
 
     void CommandList::set_viewport(ViewportInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
         vkCmdSetViewport(impl.vk_cmd_buffer, 0, 1, reinterpret_cast<VkViewport const *>(&info));
@@ -428,7 +410,7 @@ namespace daxa
 
     void CommandList::set_scissor(Rect2D const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
         vkCmdSetScissor(impl.vk_cmd_buffer, 0, 1, reinterpret_cast<VkRect2D const *>(&info));
@@ -436,7 +418,7 @@ namespace daxa
 
     void CommandList::set_index_buffer(BufferId id, usize offset, usize index_type_byte_size)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
@@ -447,12 +429,12 @@ namespace daxa
         case 4: vk_index_type = VK_INDEX_TYPE_UINT32; break;
         default: DAXA_DBG_ASSERT_TRUE_M(false, "only index byte sizes 2 and 4 are supported");
         }
-        vkCmdBindIndexBuffer(impl.vk_cmd_buffer, DAXA_LOCK_WEAK(impl.impl_device)->slot(id).vk_buffer, static_cast<VkDeviceSize>(offset), vk_index_type);
+        vkCmdBindIndexBuffer(impl.vk_cmd_buffer, impl.impl_device.as<ImplDevice>()->slot(id).vk_buffer, static_cast<VkDeviceSize>(offset), vk_index_type);
     }
 
     void CommandList::draw(DrawInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
         vkCmdDraw(impl.vk_cmd_buffer, info.vertex_count, info.instance_count, info.first_vertex, info.first_instance);
@@ -460,10 +442,10 @@ namespace daxa
 
     void CommandList::draw_indirect(DrawIndirectInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
-        vkCmdDrawIndirect(impl.vk_cmd_buffer, DAXA_LOCK_WEAK(impl.impl_device)->slot(info.indirect_buffer).vk_buffer, info.offset, info.draw_count, info.stride);
+        vkCmdDrawIndirect(impl.vk_cmd_buffer, impl.impl_device.as<ImplDevice>()->slot(info.indirect_buffer).vk_buffer, info.offset, info.draw_count, info.stride);
     }
 
     void ImplCommandList::flush_barriers()
@@ -489,8 +471,8 @@ namespace daxa
         }
     }
 
-    ImplCommandList::ImplCommandList(std::weak_ptr<ImplDevice> a_impl_device)
-        : impl_device{a_impl_device}, pipeline_layouts{DAXA_LOCK_WEAK(impl_device)->gpu_table.pipeline_layouts}
+    ImplCommandList::ImplCommandList(ManagedWeakPtr a_impl_device)
+        : impl_device{std::move(a_impl_device)}, pipeline_layouts{impl_device.as<ImplDevice>()->gpu_table.pipeline_layouts}
     {
         std::printf("BRUH!\n");
 
@@ -498,10 +480,10 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
             .pNext = nullptr,
             .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-            .queueFamilyIndex = DAXA_LOCK_WEAK(impl_device)->main_queue_family_index,
+            .queueFamilyIndex = this->impl_device.as<ImplDevice>()->main_queue_family_index,
         };
 
-        vkCreateCommandPool(DAXA_LOCK_WEAK(impl_device)->vk_device, &vk_command_pool_create_info, nullptr, &this->vk_cmd_pool);
+        vkCreateCommandPool(impl_device.as<ImplDevice>()->vk_device, &vk_command_pool_create_info, nullptr, &this->vk_cmd_pool);
 
         VkCommandBufferAllocateInfo vk_command_buffer_allocate_info{
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -511,12 +493,12 @@ namespace daxa
             .commandBufferCount = 1,
         };
 
-        vkAllocateCommandBuffers(DAXA_LOCK_WEAK(impl_device)->vk_device, &vk_command_buffer_allocate_info, &this->vk_cmd_buffer);
+        vkAllocateCommandBuffers(impl_device.as<ImplDevice>()->vk_device, &vk_command_buffer_allocate_info, &this->vk_cmd_buffer);
     }
 
     ImplCommandList::~ImplCommandList()
     {
-        vkDestroyCommandPool(DAXA_LOCK_WEAK(impl_device)->vk_device, this->vk_cmd_pool, nullptr);
+        vkDestroyCommandPool(impl_device.as<ImplDevice>()->vk_device, this->vk_cmd_pool, nullptr);
     }
 
     void ImplCommandList::initialize(CommandListInfo const & a_info)
@@ -531,7 +513,7 @@ namespace daxa
 
         recording_complete = false;
 
-        if (DAXA_LOCK_WEAK(DAXA_LOCK_WEAK(this->impl_device)->impl_ctx)->enable_debug_names && this->info.debug_name.size() > 0)
+        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && this->info.debug_name.size() > 0)
         {
             VkDebugUtilsObjectNameInfoEXT cmd_buffer_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -540,7 +522,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_cmd_buffer),
                 .pObjectName = this->info.debug_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(DAXA_LOCK_WEAK(this->impl_device)->vk_device, &cmd_buffer_name_info);
+            vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &cmd_buffer_name_info);
 
             VkDebugUtilsObjectNameInfoEXT cmd_pool_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -549,13 +531,21 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_cmd_pool),
                 .pObjectName = this->info.debug_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(DAXA_LOCK_WEAK(this->impl_device)->vk_device, &cmd_pool_name_info);
+            vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &cmd_pool_name_info);
         }
     }
 
     void ImplCommandList::reset()
     {
-        vkResetCommandPool(DAXA_LOCK_WEAK(impl_device)->vk_device, this->vk_cmd_pool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
+        vkResetCommandPool(impl_device.as<ImplDevice>()->vk_device, this->vk_cmd_pool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
         deferred_destruction_count = 0;
+    }
+
+    auto ImplCommandList::managed_cleanup() -> bool
+    {
+        this->reset();
+        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->impl_device.as<ImplDevice>()->command_list_recyclable_list.mtx});
+        this->impl_device.as<ImplDevice>()->command_list_recyclable_list.recyclables.emplace_back(std::unique_ptr<ImplCommandList>{this});
+        return false;
     }
 } // namespace daxa

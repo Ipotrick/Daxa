@@ -100,55 +100,15 @@ namespace daxa
         unsigned long STDMETHODCALLTYPE Release(void) override { return 0; }
     };
 
-    RasterPipeline::RasterPipeline(std::shared_ptr<void> a_impl) : HandleWithCleanup(std::move(a_impl)) {}
+    RasterPipeline::RasterPipeline(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
-    RasterPipeline::~RasterPipeline()
-    {
-        // cleanup();
-    }
+    ComputePipeline::ComputePipeline(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
-    void RasterPipeline::cleanup()
-    {
-        if (this->impl.use_count() == 1)
-        {
-            std::shared_ptr<ImplRasterPipeline> impl = std::static_pointer_cast<ImplRasterPipeline>(this->impl);
-#if DAXA_THREADSAFETY
-            std::unique_lock lock{DAXA_LOCK_WEAK(impl->impl_device)->main_queue_zombies_mtx};
-            u64 main_queue_cpu_timeline_value = DAXA_LOCK_WEAK(impl->impl_device)->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-#else
-            u64 main_queue_cpu_timeline_value = DAXA_LOCK_WEAK(impl->impl_device)->main_queue_cpu_timeline;
-#endif
-            DAXA_LOCK_WEAK(impl->impl_device)->main_queue_raster_pipeline_zombies.push_front({main_queue_cpu_timeline_value, impl});
-        }
-    }
-
-    ComputePipeline::ComputePipeline(std::shared_ptr<void> a_impl) : HandleWithCleanup(std::move(a_impl)) {}
-
-    ComputePipeline::~ComputePipeline()
-    {
-        // cleanup();
-    }
-
-    void ComputePipeline::cleanup()
-    {
-        if (this->impl.use_count() == 1)
-        {
-            std::shared_ptr<ImplComputePipeline> impl = std::static_pointer_cast<ImplComputePipeline>(this->impl);
-#if DAXA_THREADSAFETY
-            std::unique_lock lock{DAXA_LOCK_WEAK(impl->impl_device)->main_queue_zombies_mtx};
-            u64 main_queue_cpu_timeline_value = DAXA_LOCK_WEAK(impl->impl_device)->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-#else
-            u64 main_queue_cpu_timeline_value = DAXA_LOCK_WEAK(impl->impl_device)->main_queue_cpu_timeline;
-#endif
-            DAXA_LOCK_WEAK(impl->impl_device)->main_queue_compute_pipeline_zombies.push_front({main_queue_cpu_timeline_value, impl});
-        }
-    }
-
-    PipelineCompiler::PipelineCompiler(std::shared_ptr<void> a_impl) : Handle(std::move(a_impl)) {}
+    PipelineCompiler::PipelineCompiler(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
     auto PipelineCompiler::create_raster_pipeline(RasterPipelineInfo const & info) -> Result<RasterPipeline>
     {
-        auto & impl = *reinterpret_cast<ImplPipelineCompiler *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplPipelineCompiler *>(this->object);
 
         if (info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
         {
@@ -159,7 +119,7 @@ namespace daxa
             return ResultErr{std::string("push constant size of ") + std::to_string(info.push_constant_size) + std::string(" is not a multiple of 4(bytes)")};
         }
 
-        auto impl_pipeline = std::make_shared<ImplRasterPipeline>(impl.impl_device, info);
+        auto impl_pipeline = new ImplRasterPipeline(impl.impl_device, info);
         impl.current_observed_hotload_files = &impl_pipeline->observed_hotload_files;
 
         auto v_spirv_result = impl.get_spirv(info.vertex_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT);
@@ -185,7 +145,7 @@ namespace daxa
             .codeSize = static_cast<u32>(v_spirv.size() * sizeof(u32)),
             .pCode = v_spirv.data(),
         };
-        vkCreateShaderModule(DAXA_LOCK_WEAK(impl.impl_device)->vk_device, &shader_module_vertex, nullptr, &v_vk_shader_module);
+        vkCreateShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, &shader_module_vertex, nullptr, &v_vk_shader_module);
 
         VkShaderModuleCreateInfo shader_module_pixel{
             .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
@@ -193,9 +153,9 @@ namespace daxa
             .codeSize = static_cast<u32>(p_spirv.size() * sizeof(u32)),
             .pCode = p_spirv.data(),
         };
-        vkCreateShaderModule(DAXA_LOCK_WEAK(impl.impl_device)->vk_device, &shader_module_pixel, nullptr, &p_vk_shader_module);
+        vkCreateShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, &shader_module_pixel, nullptr, &p_vk_shader_module);
 
-        impl_pipeline->vk_pipeline_layout = DAXA_LOCK_WEAK(impl.impl_device)->gpu_table.pipeline_layouts[(info.push_constant_size + 3) / 4];
+        impl_pipeline->vk_pipeline_layout = impl.impl_device.as<ImplDevice>()->gpu_table.pipeline_layouts[(info.push_constant_size + 3) / 4];
 
         VkPipelineShaderStageCreateInfo vk_pipeline_shader_stage_create_infos[2] = {
             VkPipelineShaderStageCreateInfo{
@@ -338,7 +298,7 @@ namespace daxa
         };
 
         auto pipeline_result = vkCreateGraphicsPipelines(
-            DAXA_LOCK_WEAK(impl.impl_device)->vk_device,
+            impl.impl_device.as<ImplDevice>()->vk_device,
             VK_NULL_HANDLE,
             1u,
             &vk_graphics_pipeline_create_info,
@@ -347,10 +307,10 @@ namespace daxa
 
         DAXA_DBG_ASSERT_TRUE_M(pipeline_result == VK_SUCCESS, "failed to create graphics pipeline");
 
-        vkDestroyShaderModule(DAXA_LOCK_WEAK(impl.impl_device)->vk_device, v_vk_shader_module, nullptr);
-        vkDestroyShaderModule(DAXA_LOCK_WEAK(impl.impl_device)->vk_device, p_vk_shader_module, nullptr);
+        vkDestroyShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, v_vk_shader_module, nullptr);
+        vkDestroyShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, p_vk_shader_module, nullptr);
 
-        if (info.debug_name.size() > 0)
+        if (impl.impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
         {
             VkDebugUtilsObjectNameInfoEXT name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -359,14 +319,14 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(impl_pipeline->vk_pipeline),
                 .pObjectName = info.debug_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(impl.impl_device.lock()->vk_device, &name_info);
+            vkSetDebugUtilsObjectNameEXT(impl.impl_device.as<ImplDevice>()->vk_device, &name_info);
         }
-        return RasterPipeline{impl_pipeline};
+        return RasterPipeline{ManagedPtr{impl_pipeline}};
     }
 
     auto PipelineCompiler::create_compute_pipeline(ComputePipelineInfo const & info) -> Result<ComputePipeline>
     {
-        auto & impl = *reinterpret_cast<ImplPipelineCompiler *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplPipelineCompiler *>(this->object);
 
         if (info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
         {
@@ -377,7 +337,7 @@ namespace daxa
             return ResultErr{std::string("push constant size of ") + std::to_string(info.push_constant_size) + std::string(" is not a multiple of 4(bytes)")};
         }
 
-        auto impl_pipeline = std::make_shared<ImplComputePipeline>(impl.impl_device, info);
+        auto impl_pipeline = new ImplComputePipeline(impl.impl_device, info);
         impl.current_observed_hotload_files = &impl_pipeline->observed_hotload_files;
 
         auto spirv_result = impl.get_spirv(info.shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT);
@@ -395,9 +355,9 @@ namespace daxa
             .codeSize = static_cast<u32>(spirv.size() * sizeof(u32)),
             .pCode = spirv.data(),
         };
-        vkCreateShaderModule(DAXA_LOCK_WEAK(impl.impl_device)->vk_device, &shader_module_ci, nullptr, &vk_shader_module);
+        vkCreateShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, &shader_module_ci, nullptr, &vk_shader_module);
 
-        impl_pipeline->vk_pipeline_layout = DAXA_LOCK_WEAK(impl.impl_device)->gpu_table.pipeline_layouts[(info.push_constant_size + 3) / 4];
+        impl_pipeline->vk_pipeline_layout = impl.impl_device.as<ImplDevice>()->gpu_table.pipeline_layouts[(info.push_constant_size + 3) / 4];
 
         VkComputePipelineCreateInfo vk_compute_pipeline_create_info{
             .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
@@ -418,7 +378,7 @@ namespace daxa
         };
 
         auto pipeline_result = vkCreateComputePipelines(
-            DAXA_LOCK_WEAK(impl.impl_device)->vk_device,
+            impl.impl_device.as<ImplDevice>()->vk_device,
             VK_NULL_HANDLE,
             1u,
             &vk_compute_pipeline_create_info,
@@ -427,9 +387,9 @@ namespace daxa
 
         DAXA_DBG_ASSERT_TRUE_M(pipeline_result == VK_SUCCESS, "failed to create compute pipeline");
 
-        vkDestroyShaderModule(DAXA_LOCK_WEAK(impl.impl_device)->vk_device, vk_shader_module, nullptr);
+        vkDestroyShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, vk_shader_module, nullptr);
 
-        if (info.debug_name.size() > 0)
+        if (impl.impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
         {
             VkDebugUtilsObjectNameInfoEXT name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -438,15 +398,15 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(impl_pipeline->vk_pipeline),
                 .pObjectName = info.debug_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(impl.impl_device.lock()->vk_device, &name_info);
+            vkSetDebugUtilsObjectNameEXT(impl.impl_device.as<ImplDevice>()->vk_device, &name_info);
         }
 
-        return ComputePipeline{impl_pipeline};
+        return ComputePipeline{ManagedPtr{impl_pipeline}};
     }
 
     auto PipelineCompiler::recreate_raster_pipeline(RasterPipeline const & pipeline) -> Result<RasterPipeline>
     {
-        auto & impl_pipeline = *reinterpret_cast<ImplRasterPipeline *>(pipeline.impl.get());
+        auto & impl_pipeline = *reinterpret_cast<ImplRasterPipeline *>(pipeline.object);
         auto result = create_raster_pipeline(impl_pipeline.info);
         if (result.is_ok())
         {
@@ -457,7 +417,7 @@ namespace daxa
 
     auto PipelineCompiler::recreate_compute_pipeline(ComputePipeline const & pipeline) -> Result<ComputePipeline>
     {
-        auto & impl_pipeline = *reinterpret_cast<ImplComputePipeline *>(pipeline.impl.get());
+        auto & impl_pipeline = *reinterpret_cast<ImplComputePipeline *>(pipeline.object);
         auto result = create_compute_pipeline(impl_pipeline.info);
         if (result.is_ok())
         {
@@ -468,8 +428,8 @@ namespace daxa
 
     auto PipelineCompiler::check_if_sources_changed(RasterPipeline const & pipeline) -> bool
     {
-        auto & impl = *reinterpret_cast<ImplPipelineCompiler *>(this->impl.get());
-        auto & pipeline_impl = *reinterpret_cast<ImplRasterPipeline *>(pipeline.impl.get());
+        auto & impl = *reinterpret_cast<ImplPipelineCompiler *>(this->object);
+        auto & pipeline_impl = *reinterpret_cast<ImplRasterPipeline *>(pipeline.object);
         auto now = std::chrono::file_clock::now();
         using namespace std::chrono_literals;
         if (now - pipeline_impl.last_hotload_time < 250ms)
@@ -506,8 +466,8 @@ namespace daxa
 
     auto PipelineCompiler::check_if_sources_changed(ComputePipeline const & pipeline) -> bool
     {
-        auto & impl = *reinterpret_cast<ImplPipelineCompiler *>(this->impl.get());
-        auto & pipeline_impl = *reinterpret_cast<ImplComputePipeline *>(pipeline.impl.get());
+        auto & impl = *reinterpret_cast<ImplPipelineCompiler *>(this->object);
+        auto & pipeline_impl = *reinterpret_cast<ImplComputePipeline *>(pipeline.object);
         auto now = std::chrono::file_clock::now();
         using namespace std::chrono_literals;
         if (now - pipeline_impl.last_hotload_time < 250ms)
@@ -542,7 +502,7 @@ namespace daxa
         return reload;
     }
 
-    ImplPipelineCompiler::ImplPipelineCompiler(std::weak_ptr<ImplDevice> a_impl_device, PipelineCompilerInfo const & info)
+    ImplPipelineCompiler::ImplPipelineCompiler(ManagedWeakPtr a_impl_device, PipelineCompilerInfo const & info)
         : impl_device{std::move(a_impl_device)}, info{info}
     {
         HRESULT dxc_utils_result = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&this->dxc_utils));
@@ -765,23 +725,39 @@ namespace daxa
         return {spv};
     }
 
-    ImplRasterPipeline::ImplRasterPipeline(std::weak_ptr<ImplDevice> a_impl_device, RasterPipelineInfo const & info)
+    ImplRasterPipeline::ImplRasterPipeline(ManagedWeakPtr a_impl_device, RasterPipelineInfo const & info)
         : impl_device{std::move(a_impl_device)}, info{info}
     {
     }
 
     ImplRasterPipeline::~ImplRasterPipeline()
     {
-        vkDestroyPipeline(DAXA_LOCK_WEAK(this->impl_device)->vk_device, this->vk_pipeline, nullptr);
+        vkDestroyPipeline(this->impl_device.as<ImplDevice>()->vk_device, this->vk_pipeline, nullptr);
     }
 
-    ImplComputePipeline::ImplComputePipeline(std::weak_ptr<ImplDevice> a_impl_device, ComputePipelineInfo const & info)
+    auto ImplRasterPipeline::managed_cleanup() -> bool
+    {
+        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->impl_device.as<ImplDevice>()->main_queue_zombies_mtx});
+        u64 main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(this->impl_device.as<ImplDevice>()->main_queue_cpu_timeline);
+        this->impl_device.as<ImplDevice>()->main_queue_raster_pipeline_zombies.push_front({main_queue_cpu_timeline_value, std::unique_ptr<ImplRasterPipeline>{this}});
+        return false;
+    }
+
+    ImplComputePipeline::ImplComputePipeline(ManagedWeakPtr a_impl_device, ComputePipelineInfo const & info)
         : impl_device{std::move(a_impl_device)}, info{info}
     {
     }
 
     ImplComputePipeline::~ImplComputePipeline()
     {
-        vkDestroyPipeline(DAXA_LOCK_WEAK(this->impl_device)->vk_device, this->vk_pipeline, nullptr);
+        vkDestroyPipeline(this->impl_device.as<ImplDevice>()->vk_device, this->vk_pipeline, nullptr);
+    }
+
+    auto ImplComputePipeline::managed_cleanup()-> bool
+    {
+        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->impl_device.as<ImplDevice>()->main_queue_zombies_mtx});
+        u64 main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(this->impl_device.as<ImplDevice>()->main_queue_cpu_timeline);
+        this->impl_device.as<ImplDevice>()->main_queue_compute_pipeline_zombies.push_front({main_queue_cpu_timeline_value, std::unique_ptr<ImplComputePipeline>{this}});
+        return false;
     }
 } // namespace daxa

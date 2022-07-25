@@ -9,16 +9,13 @@ namespace daxa
         std::string debug_name = {};
     };
 
-    struct BinarySemaphore : HandleWithCleanup<BinarySemaphore>
+    struct BinarySemaphore : ManagedPtr
     {
-        ~BinarySemaphore();
-        void cleanup();
-
         auto info() const -> BinarySemaphoreInfo const &;
 
       private:
         friend struct Device;
-        BinarySemaphore(std::shared_ptr<void> impl);
+        BinarySemaphore(ManagedPtr impl);
     };
 
     struct TimelineSemaphoreInfo
@@ -27,11 +24,8 @@ namespace daxa
         std::string debug_name = {};
     };
 
-    struct TimelineSemaphore : HandleWithCleanup<TimelineSemaphore>
+    struct TimelineSemaphore : ManagedPtr
     {
-        ~TimelineSemaphore();
-        void cleanup();
-
         auto info() const -> TimelineSemaphoreInfo const &;
 
         auto value() const -> u64;
@@ -40,6 +34,6 @@ namespace daxa
 
       private:
         friend struct Device;
-        TimelineSemaphore(std::shared_ptr<void> impl);
+        TimelineSemaphore(ManagedPtr impl);
     };
 } // namespace daxa

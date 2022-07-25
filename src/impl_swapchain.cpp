@@ -5,15 +5,15 @@
 
 namespace daxa
 {
-    Swapchain::Swapchain(std::shared_ptr<void> a_impl) : Handle(std::move(a_impl)) {}
+    Swapchain::Swapchain(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
     ImageId Swapchain::acquire_next_image()
     {
-        auto & impl = *reinterpret_cast<ImplSwapchain *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplSwapchain *>(this->object);
         VkResult err;
         do
         {
-            err = vkAcquireNextImageKHR(DAXA_LOCK_WEAK(impl.impl_device)->vk_device, impl.vk_swapchain, UINT64_MAX, nullptr, impl.acquisition_fence, &impl.current_image_index);
+            err = vkAcquireNextImageKHR(impl.impl_device.as<ImplDevice>()->vk_device, impl.vk_swapchain, UINT64_MAX, nullptr, impl.acquisition_fence, &impl.current_image_index);
             if (err == VK_ERROR_OUT_OF_DATE_KHR)
             {
                 impl.recreate();
@@ -32,20 +32,20 @@ namespace daxa
                 throw std::runtime_error("Unexpected swapchain error");
             }
         } while (err != VK_SUCCESS);
-        vkWaitForFences(DAXA_LOCK_WEAK(impl.impl_device)->vk_device, 1, &impl.acquisition_fence, VK_TRUE, UINT64_MAX);
-        vkResetFences(DAXA_LOCK_WEAK(impl.impl_device)->vk_device, 1, &impl.acquisition_fence);
+        vkWaitForFences(impl.impl_device.as<ImplDevice>()->vk_device, 1, &impl.acquisition_fence, VK_TRUE, UINT64_MAX);
+        vkResetFences(impl.impl_device.as<ImplDevice>()->vk_device, 1, &impl.acquisition_fence);
         return impl.image_resources[impl.current_image_index];
     }
 
     auto Swapchain::get_format() const -> Format
     {
-        auto & impl = *reinterpret_cast<ImplSwapchain *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplSwapchain *>(this->object);
         return static_cast<Format>(impl.vk_surface_format.format);
     }
 
     void Swapchain::resize(u32 width, u32 height)
     {
-        auto & impl = *reinterpret_cast<ImplSwapchain *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplSwapchain *>(this->object);
         impl.info.width = width;
         impl.info.height = height;
         impl.recreate();
@@ -55,7 +55,7 @@ namespace daxa
     {
         if (this->vk_surface)
         {
-            vkDestroySurfaceKHR(DAXA_LOCK_WEAK(DAXA_LOCK_WEAK(this->impl_device)->impl_ctx)->vk_instance, this->vk_surface, nullptr);
+            vkDestroySurfaceKHR(this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, this->vk_surface, nullptr);
         }
 #if defined(_WIN32)
         VkWin32SurfaceCreateInfoKHR surface_ci{
@@ -66,8 +66,8 @@ namespace daxa
             .hwnd = info.native_window,
         };
         {
-            auto func = (PFN_vkCreateWin32SurfaceKHR)vkGetInstanceProcAddr(DAXA_LOCK_WEAK(DAXA_LOCK_WEAK(impl_device)->impl_ctx)->vk_instance, "vkCreateWin32SurfaceKHR");
-            func(DAXA_LOCK_WEAK(DAXA_LOCK_WEAK(impl_device)->impl_ctx)->vk_instance, &surface_ci, nullptr, &this->vk_surface);
+            auto func = (PFN_vkCreateWin32SurfaceKHR)vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, "vkCreateWin32SurfaceKHR");
+            func(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, &surface_ci, nullptr, &this->vk_surface);
         }
 #elif defined(__linux__)
         VkXlibSurfaceCreateInfoKHR surface_ci{
@@ -78,23 +78,23 @@ namespace daxa
             .window = this->info.native_window,
         };
         {
-            auto func = (PFN_vkCreateXlibSurfaceKHR)vkGetInstanceProcAddr(DAXA_LOCK_WEAK(DAXA_LOCK_WEAK(impl_device)->impl_ctx)->vk_instance, "vkCreateXlibSurfaceKHR");
-            func(DAXA_LOCK_WEAK(DAXA_LOCK_WEAK(impl_device)->impl_ctx)->vk_instance, &surface_ci, nullptr, &this->vk_surface);
+            auto func = (PFN_vkCreateXlibSurfaceKHR)vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext()->vk_instance, "vkCreateXlibSurfaceKHR");
+            func(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext()->vk_instance, &surface_ci, nullptr, &this->vk_surface);
         }
 #endif
     }
 
-    ImplSwapchain::ImplSwapchain(std::weak_ptr<ImplDevice> a_impl_device, SwapchainInfo const & a_info)
+    ImplSwapchain::ImplSwapchain(ManagedWeakPtr a_impl_device, SwapchainInfo const & a_info)
         : impl_device{a_impl_device}, info{a_info}
     {
         recreate_surface();
 
         u32 format_count = 0;
 
-        vkGetPhysicalDeviceSurfaceFormatsKHR(DAXA_LOCK_WEAK(impl_device)->vk_physical_device, this->vk_surface, &format_count, nullptr);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(impl_device.as<ImplDevice>()->vk_physical_device, this->vk_surface, &format_count, nullptr);
         std::vector<VkSurfaceFormatKHR> surface_formats;
         surface_formats.resize(format_count);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(DAXA_LOCK_WEAK(impl_device)->vk_physical_device, this->vk_surface, &format_count, surface_formats.data());
+        vkGetPhysicalDeviceSurfaceFormatsKHR(impl_device.as<ImplDevice>()->vk_physical_device, this->vk_surface, &format_count, surface_formats.data());
         DAXA_DBG_ASSERT_TRUE_M(format_count > 0, "No formats found");
 
         auto format_comparator = [&](auto const & a, auto const & b) -> bool
@@ -111,7 +111,7 @@ namespace daxa
             .pNext = nullptr,
             .flags = 0,
         };
-        vkCreateFence(DAXA_LOCK_WEAK(impl_device)->vk_device, &fence_ci, nullptr, &this->acquisition_fence);
+        vkCreateFence(impl_device.as<ImplDevice>()->vk_device, &fence_ci, nullptr, &this->acquisition_fence);
 
         recreate();
     }
@@ -119,10 +119,10 @@ namespace daxa
     ImplSwapchain::~ImplSwapchain()
     {
         cleanup();
-        vkDestroyFence(DAXA_LOCK_WEAK(impl_device)->vk_device, this->acquisition_fence, nullptr);
+        vkDestroyFence(impl_device.as<ImplDevice>()->vk_device, this->acquisition_fence, nullptr);
 
-        vkDestroySwapchainKHR(DAXA_LOCK_WEAK(this->impl_device)->vk_device, this->vk_swapchain, nullptr);
-        vkDestroySurfaceKHR(DAXA_LOCK_WEAK(DAXA_LOCK_WEAK(impl_device)->impl_ctx)->vk_instance, this->vk_surface, nullptr);
+        vkDestroySwapchainKHR(this->impl_device.as<ImplDevice>()->vk_device, this->vk_swapchain, nullptr);
+        vkDestroySurfaceKHR(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, this->vk_surface, nullptr);
     }
 
     void ImplSwapchain::recreate()
@@ -131,7 +131,7 @@ namespace daxa
         // we need to pass in the old swapchain handle to create a new one
 
         VkSurfaceCapabilitiesKHR surface_capabilities;
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(DAXA_LOCK_WEAK(this->impl_device)->vk_physical_device, this->vk_surface, &surface_capabilities);
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(this->impl_device.as<ImplDevice>()->vk_physical_device, this->vk_surface, &surface_capabilities);
         info.width = surface_capabilities.currentExtent.width;
         info.height = surface_capabilities.currentExtent.height;
 
@@ -154,7 +154,7 @@ namespace daxa
             .imageUsage = usage,
             .imageSharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
             .queueFamilyIndexCount = 1,
-            .pQueueFamilyIndices = &DAXA_LOCK_WEAK(this->impl_device)->main_queue_family_index,
+            .pQueueFamilyIndices = &this->impl_device.as<ImplDevice>()->main_queue_family_index,
             .preTransform = static_cast<VkSurfaceTransformFlagBitsKHR>(info.present_operation),
             .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
             .presentMode = static_cast<VkPresentModeKHR>(info.present_mode),
@@ -163,28 +163,28 @@ namespace daxa
         };
 
         vkCreateSwapchainKHR(
-            DAXA_LOCK_WEAK(this->impl_device)->vk_device,
+            this->impl_device.as<ImplDevice>()->vk_device,
             &swapchain_create_info,
             nullptr,
             &this->vk_swapchain);
 
         if (old_swapchain != VK_NULL_HANDLE)
         {
-            vkDestroySwapchainKHR(DAXA_LOCK_WEAK(impl_device)->vk_device, old_swapchain, nullptr);
+            vkDestroySwapchainKHR(impl_device.as<ImplDevice>()->vk_device, old_swapchain, nullptr);
         }
 
         u32 image_count;
         std::vector<VkImage> swapchain_images;
-        vkGetSwapchainImagesKHR(DAXA_LOCK_WEAK(impl_device)->vk_device, vk_swapchain, &image_count, nullptr);
+        vkGetSwapchainImagesKHR(impl_device.as<ImplDevice>()->vk_device, vk_swapchain, &image_count, nullptr);
         swapchain_images.resize(image_count);
-        vkGetSwapchainImagesKHR(DAXA_LOCK_WEAK(impl_device)->vk_device, vk_swapchain, &image_count, swapchain_images.data());
+        vkGetSwapchainImagesKHR(impl_device.as<ImplDevice>()->vk_device, vk_swapchain, &image_count, swapchain_images.data());
         this->image_resources.resize(image_count);
         for (u32 i = 0; i < image_resources.size(); i++)
         {
-            this->image_resources[i] = DAXA_LOCK_WEAK(this->impl_device)->new_swapchain_image(swapchain_images[i], vk_surface_format.format, i, usage, this->info.debug_name);
+            this->image_resources[i] = this->impl_device.as<ImplDevice>()->new_swapchain_image(swapchain_images[i], vk_surface_format.format, i, usage, this->info.debug_name);
         }
 
-        if (DAXA_LOCK_WEAK(DAXA_LOCK_WEAK(this->impl_device)->impl_ctx)->enable_debug_names && this->info.debug_name.size() > 0)
+        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && this->info.debug_name.size() > 0)
         {
             VkDebugUtilsObjectNameInfoEXT swapchain_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -193,7 +193,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_swapchain),
                 .pObjectName = this->info.debug_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(DAXA_LOCK_WEAK(impl_device)->vk_device, &swapchain_name_info);
+            vkSetDebugUtilsObjectNameEXT(impl_device.as<ImplDevice>()->vk_device, &swapchain_name_info);
 
             std::string fence_name = this->info.debug_name + " fence";
             VkDebugUtilsObjectNameInfoEXT fence_name_info{
@@ -203,7 +203,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(this->acquisition_fence),
                 .pObjectName = fence_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(DAXA_LOCK_WEAK(impl_device)->vk_device, &fence_name_info);
+            vkSetDebugUtilsObjectNameEXT(impl_device.as<ImplDevice>()->vk_device, &fence_name_info);
         }
     }
 
@@ -211,7 +211,7 @@ namespace daxa
     {
         for (size_t i = 0; i < image_resources.size(); i++)
         {
-            DAXA_LOCK_WEAK(this->impl_device)->zombiefy_image(image_resources[i]);
+            this->impl_device.as<ImplDevice>()->zombiefy_image(image_resources[i]);
         }
         image_resources.clear();
     }
