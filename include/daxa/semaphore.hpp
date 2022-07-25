@@ -9,9 +9,10 @@ namespace daxa
         std::string debug_name = {};
     };
 
-    struct BinarySemaphore : Handle
+    struct BinarySemaphore : HandleWithCleanup<BinarySemaphore>
     {
         ~BinarySemaphore();
+        void cleanup();
 
         auto info() const -> BinarySemaphoreInfo const &;
 
@@ -26,9 +27,10 @@ namespace daxa
         std::string debug_name = {};
     };
 
-    struct TimelineSemaphore : Handle
+    struct TimelineSemaphore : HandleWithCleanup<TimelineSemaphore>
     {
         ~TimelineSemaphore();
+        void cleanup();
 
         auto info() const -> TimelineSemaphoreInfo const &;
 
