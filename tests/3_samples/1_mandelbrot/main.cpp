@@ -121,6 +121,10 @@ struct App : AppWindow<App>
             {
                 compute_pipeline = new_pipeline.value();
             }
+            else
+            {
+                std::cout << new_pipeline << std::endl;
+            }
         }
 
         if (should_resize)

@@ -3,9 +3,14 @@
 
 namespace daxa
 {
-    BinarySemaphore::BinarySemaphore(std::shared_ptr<void> a_impl) : Handle{std::move(a_impl)} {}
+    BinarySemaphore::BinarySemaphore(std::shared_ptr<void> a_impl) : HandleWithCleanup{std::move(a_impl)} {}
 
     BinarySemaphore::~BinarySemaphore()
+    {
+        // cleanup();
+    }
+
+    void BinarySemaphore::cleanup()
     {
         if (this->impl.use_count() == 1)
         {
@@ -64,7 +69,7 @@ namespace daxa
     {
     }
 
-    TimelineSemaphore::TimelineSemaphore(std::shared_ptr<void> a_impl) : Handle{a_impl} {}
+    TimelineSemaphore::TimelineSemaphore(std::shared_ptr<void> a_impl) : HandleWithCleanup{a_impl} {}
 
     auto TimelineSemaphore::value() const -> u64
     {
@@ -113,6 +118,11 @@ namespace daxa
     }
 
     TimelineSemaphore::~TimelineSemaphore()
+    {
+        // cleanup();
+    }
+
+    void TimelineSemaphore::cleanup()
     {
         if (this->impl.use_count() == 1)
         {

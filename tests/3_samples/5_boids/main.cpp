@@ -193,6 +193,10 @@ struct App : AppWindow<App>
             {
                 raster_pipeline = new_pipeline.value();
             }
+            else
+            {
+                std::cout << new_pipeline << std::endl;
+            }
         }
         if (pipeline_compiler.check_if_sources_changed(update_pipeline))
         {
@@ -200,6 +204,10 @@ struct App : AppWindow<App>
             if (new_pipeline.is_ok())
             {
                 update_pipeline = new_pipeline.value();
+            }
+            else
+            {
+                std::cout << new_pipeline << std::endl;
             }
         }
 
@@ -235,7 +243,11 @@ struct App : AppWindow<App>
         });
 
         cmd_list.begin_renderpass({
-            .color_attachments = {{.image_view = swapchain_image.default_view()}},
+            .color_attachments = {{
+                .image_view = swapchain_image.default_view(),
+                .load_op = daxa::AttachmentLoadOp::CLEAR,
+                .clear_value = std::array<f32, 4>{0.2f, 0.4f, 1.0f, 1.0f},
+            }},
             .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
         });
         cmd_list.set_pipeline(raster_pipeline);

@@ -92,6 +92,10 @@ struct App : AppWindow<App>
             {
                 compute_pipeline = new_pipeline.value();
             }
+            else
+            {
+                std::cout << new_pipeline << std::endl;
+            }
         }
 
         auto swapchain_image = swapchain.acquire_next_image();
