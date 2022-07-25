@@ -21,16 +21,16 @@ struct Push
 
     BoidState me = prev_boids_buffer[0].boid_states[tid];
 
-    float2 vel = 0;
+    float2 vel = me.dir * me.speed;
 
-    vel += prev_boids_buffer[0].eval_field(MAX_BOIDS + 1, me.pos, vel);
+    vel += prev_boids_buffer[0].eval_field(tid, me.pos, vel);
 
     me.speed = length(vel);
     me.dir = vel / me.speed;
     me.speed = clamp(me.speed, 0, 0.1);
 
-    me.pos += vel * push.delta_time;
-    me.pos = frac(me.pos * 0.5 + 0.5) * 2.0 - 1.0;
+    // me.pos += vel * push.delta_time;
+    // me.pos = frac(me.pos * 0.5 + 0.5) * 2.0 - 1.0;
 
     boids_buffer[0].boid_states[tid] = me;
 }
