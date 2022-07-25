@@ -20,11 +20,11 @@ namespace daxa
 
     static inline constexpr usize COMMAND_LIST_COLOR_ATTACHMENT_MAX = 16;
 
-    struct ImplCommandList
+    struct ImplCommandList final : ManagedSharedState
     {
         using InfoT = CommandListInfo;
 
-        std::weak_ptr<ImplDevice> impl_device = {};
+        ManagedWeakPtr impl_device = {};
         CommandListInfo info = {};
         VkCommandBuffer vk_cmd_buffer = {};
         VkCommandPool vk_cmd_pool = {};
@@ -39,10 +39,12 @@ namespace daxa
 
         void flush_barriers();
 
-        ImplCommandList(std::weak_ptr<ImplDevice> device_impl);
-        ~ImplCommandList();
+        ImplCommandList(ManagedWeakPtr device_impl);
+        virtual ~ImplCommandList() override final;
 
         void initialize(CommandListInfo const & a_info);
         void reset();
+
+        auto managed_cleanup() -> bool override final;
     };
 } // namespace daxa

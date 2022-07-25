@@ -12,9 +12,9 @@ namespace daxa
 
     static inline constexpr usize PIPELINE_COMPILER_MAX_ATTACHMENTS = 16;
 
-    struct ImplPipelineCompiler
+    struct ImplPipelineCompiler final : ManagedSharedState
     {
-        std::weak_ptr<ImplDevice> impl_device = {};
+        ManagedWeakPtr impl_device = {};
         PipelineCompilerInfo info = {};
 
         std::vector<std::filesystem::path> current_seen_shader_files = {};
@@ -24,7 +24,7 @@ namespace daxa
         IDxcCompiler3 * dxc_compiler = nullptr;
         IDxcIncludeHandler * dxc_includer = nullptr;
 
-        ImplPipelineCompiler(std::weak_ptr<ImplDevice> impl_device, PipelineCompilerInfo const & info);
+        ImplPipelineCompiler(ManagedWeakPtr impl_device, PipelineCompilerInfo const & info);
         ~ImplPipelineCompiler();
 
         auto get_spirv(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage) -> Result<std::vector<u32>>;
@@ -33,29 +33,33 @@ namespace daxa
         auto gen_spirv_from_dxc(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>;
     };
 
-    struct ImplRasterPipeline
+    struct ImplRasterPipeline final : ManagedSharedState
     {
-        std::weak_ptr<ImplDevice> impl_device;
+        ManagedWeakPtr impl_device;
         RasterPipelineInfo info;
         VkPipeline vk_pipeline = {};
         VkPipelineLayout vk_pipeline_layout = {};
         ShaderFileTimeSet observed_hotload_files = {};
         std::chrono::file_clock::time_point last_hotload_time = {};
 
-        ImplRasterPipeline(std::weak_ptr<ImplDevice> impl_device, RasterPipelineInfo const & info);
-        ~ImplRasterPipeline();
+        ImplRasterPipeline(ManagedWeakPtr impl_device, RasterPipelineInfo const & info);
+        virtual ~ImplRasterPipeline() override final;
+
+        auto managed_cleanup() -> bool override final;
     };
 
-    struct ImplComputePipeline
+    struct ImplComputePipeline final : ManagedSharedState
     {
-        std::weak_ptr<ImplDevice> impl_device;
+        ManagedWeakPtr impl_device;
         ComputePipelineInfo info;
         VkPipeline vk_pipeline = {};
         VkPipelineLayout vk_pipeline_layout = {};
         ShaderFileTimeSet observed_hotload_files = {};
         std::chrono::file_clock::time_point last_hotload_time = {};
 
-        ImplComputePipeline(std::weak_ptr<ImplDevice> impl_device, ComputePipelineInfo const & info);
-        ~ImplComputePipeline();
+        ImplComputePipeline(ManagedWeakPtr impl_device, ComputePipelineInfo const & info);
+        virtual ~ImplComputePipeline() override final;
+
+        auto managed_cleanup() -> bool override final;
     };
 } // namespace daxa

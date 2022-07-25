@@ -38,17 +38,14 @@ namespace daxa
         std::string debug_name = {};
     };
 
-    struct ComputePipeline : HandleWithCleanup<ComputePipeline>
+    struct ComputePipeline : ManagedPtr
     {
-        ~ComputePipeline();
-        void cleanup();
-
         auto info() const -> ComputePipelineInfo const &;
 
       private:
         friend struct PipelineCompiler;
         friend struct CommandList;
-        ComputePipeline(std::shared_ptr<void> impl);
+        ComputePipeline(ManagedPtr impl);
     };
 
     struct DepthTestInfo
@@ -91,17 +88,14 @@ namespace daxa
         std::string debug_name = {};
     };
 
-    struct RasterPipeline : HandleWithCleanup<RasterPipeline>
+    struct RasterPipeline : ManagedPtr
     {
-        ~RasterPipeline();
-        void cleanup();
-
         auto info() const -> RasterPipelineInfo const &;
 
       private:
         friend struct PipelineCompiler;
         friend struct CommandList;
-        RasterPipeline(std::shared_ptr<void> impl);
+        RasterPipeline(ManagedPtr impl);
     };
 
     struct PipelineCompilerInfo
@@ -110,7 +104,7 @@ namespace daxa
         std::string debug_name = {};
     };
 
-    struct PipelineCompiler : Handle
+    struct PipelineCompiler : ManagedPtr
     {
         auto create_raster_pipeline(RasterPipelineInfo const & info) -> Result<RasterPipeline>;
         auto recreate_raster_pipeline(RasterPipeline const & pipeline) -> Result<RasterPipeline>;
@@ -121,6 +115,6 @@ namespace daxa
 
       private:
         friend struct Device;
-        PipelineCompiler(std::shared_ptr<void> impl);
+        PipelineCompiler(ManagedPtr impl);
     };
 } // namespace daxa

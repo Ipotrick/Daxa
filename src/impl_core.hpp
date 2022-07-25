@@ -32,22 +32,6 @@ using ComPtr = CComPtr<T>;
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 
-#if DAXA_VALIDATION
-#define DAXA_LOCK_WEAK(x)                                                                                \
-    [&]() {                                                                                              \
-        auto ptr = x.lock();                                                                             \
-        if (ptr == nullptr)                                                                              \
-        {                                                                                                \
-            std::cerr << DAXA_DBG_ASSERT_FAIL_STRING << ": destroyed device before object" << std::endl; \
-            throw std::runtime_error("DAXA DEBUG ASSERT FAILURE");                                       \
-        }                                                                                                \
-        return ptr;                                                                                      \
-    }()
-#else
-#define DAXA_LOCK_WEAK(x) \
-    x.lock()
-#endif
-
 namespace daxa
 {
     static inline constexpr u32 MAX_PUSH_CONSTANT_WORD_SIZE = {32};
