@@ -3,11 +3,16 @@
 
 namespace daxa
 {
-    CommandList::CommandList(std::shared_ptr<void> a_impl) : Handle(std::move(a_impl)) {}
+    CommandList::CommandList(std::shared_ptr<void> a_impl) : HandleWithCleanup(std::move(a_impl)) {}
 
     CommandList::~CommandList()
     {
-        if (this->impl.use_count() == 1 && false)
+        // cleanup();
+    }
+
+    void CommandList::cleanup()
+    {
+        if (this->impl.use_count() == 1)
         {
             std::shared_ptr<ImplCommandList> impl = std::static_pointer_cast<ImplCommandList>(this->impl);
             impl->reset();
@@ -487,6 +492,8 @@ namespace daxa
     ImplCommandList::ImplCommandList(std::weak_ptr<ImplDevice> a_impl_device)
         : impl_device{a_impl_device}, pipeline_layouts{DAXA_LOCK_WEAK(impl_device)->gpu_table.pipeline_layouts}
     {
+        // std::printf("BRUH!\n");
+
         VkCommandPoolCreateInfo vk_command_pool_create_info{
             .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
             .pNext = nullptr,
