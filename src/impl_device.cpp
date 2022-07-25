@@ -2,57 +2,34 @@
 
 namespace daxa
 {
-    Device::Device(std::shared_ptr<void> a_impl) : HandleWithCleanup(std::move(a_impl)) {}
-
-    Device::~Device()
-    {
-        // cleanup();
-    }
-
-    void Device::cleanup()
-    {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
-
-        wait_idle();
-        collect_garbage();
-
-        impl.binary_semaphore_recyclable_list.clear();
-        impl.command_list_recyclable_list.clear();
-    }
+    Device::Device(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
     auto Device::info() const -> DeviceInfo const &
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
         return impl.info;
     }
 
     void Device::wait_idle()
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
-
-        vkQueueWaitIdle(impl.main_queue_vk_queue);
-        vkDeviceWaitIdle(impl.vk_device);
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
+        impl.wait_idle();
     }
 
     void Device::submit_commands(CommandSubmitInfo const & submit_info)
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
 
-#if DAXA_THREADSAFETY
-        u64 curreny_main_queue_cpu_timeline_value = impl.main_queue_cpu_timeline.fetch_add(1ull, std::memory_order::relaxed) + 1;
-        std::unique_lock lock{impl.submit_mtx};
-#else
-        u64 curreny_main_queue_cpu_timeline_value = ++impl.main_queue_cpu_timeline;
-#endif
+        u64 curreny_main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH_INC(impl.main_queue_cpu_timeline) + 1;
 
-        std::pair<u64, std::vector<std::shared_ptr<ImplCommandList>>> submit = {curreny_main_queue_cpu_timeline_value, {}};
+        std::pair<u64, std::vector<ManagedPtr>> submit = {curreny_main_queue_cpu_timeline_value, {}};
 
         std::vector<VkCommandBuffer> submit_vk_command_buffers = {};
         for (auto & command_list : submit_info.command_lists)
         {
-            auto & impl_cmd_list = *reinterpret_cast<ImplCommandList *>(command_list.impl.get());
+            auto & impl_cmd_list = *reinterpret_cast<ImplCommandList *>(command_list.object);
             DAXA_DBG_ASSERT_TRUE_M(impl_cmd_list.recording_complete, "all submitted command lists must be completed before submission");
-            submit.second.push_back(std::static_pointer_cast<ImplCommandList>(command_list.impl));
+            submit.second.push_back(command_list);
             submit_vk_command_buffers.push_back(impl_cmd_list.vk_cmd_buffer);
         }
 
@@ -65,14 +42,14 @@ namespace daxa
 
         for (auto & [timeline_semaphore, signal_value] : submit_info.signal_timeline_semaphores)
         {
-            auto & impl_timeline_semaphore = *reinterpret_cast<ImplTimelineSemaphore *>(timeline_semaphore.impl.get());
+            auto & impl_timeline_semaphore = *reinterpret_cast<ImplTimelineSemaphore *>(timeline_semaphore.object);
             submit_semaphore_signals.push_back(impl_timeline_semaphore.vk_semaphore);
             submit_semaphore_signal_values.push_back(signal_value);
         }
 
         for (auto & binary_semaphore : submit_info.signal_binary_semaphores)
         {
-            auto & impl_binary_semaphore = *reinterpret_cast<ImplBinarySemaphore *>(binary_semaphore.impl.get());
+            auto & impl_binary_semaphore = *reinterpret_cast<ImplBinarySemaphore *>(binary_semaphore.object);
             submit_semaphore_signals.push_back(impl_binary_semaphore.vk_semaphore);
             submit_semaphore_signal_values.push_back(0); // The vulkan spec requires to have dummy values for binary semaphores.
         }
@@ -84,7 +61,7 @@ namespace daxa
 
         for (auto & [timeline_semaphore, wait_value] : submit_info.wait_timeline_semaphores)
         {
-            auto & impl_timeline_semaphore = *reinterpret_cast<ImplTimelineSemaphore *>(timeline_semaphore.impl.get());
+            auto & impl_timeline_semaphore = *reinterpret_cast<ImplTimelineSemaphore *>(timeline_semaphore.object);
             submit_semaphore_waits.push_back(impl_timeline_semaphore.vk_semaphore);
             submit_semaphore_wait_stage_masks.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
             submit_semaphore_wait_values.push_back(wait_value);
@@ -92,7 +69,7 @@ namespace daxa
 
         for (auto & binary_semaphore : submit_info.wait_binary_semaphores)
         {
-            auto & impl_binary_semaphore = *reinterpret_cast<ImplTimelineSemaphore *>(binary_semaphore.impl.get());
+            auto & impl_binary_semaphore = *reinterpret_cast<ImplTimelineSemaphore *>(binary_semaphore.object);
             submit_semaphore_waits.push_back(impl_binary_semaphore.vk_semaphore);
             submit_semaphore_wait_stage_masks.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
             submit_semaphore_wait_values.push_back(0);
@@ -128,15 +105,15 @@ namespace daxa
 
     void Device::present_frame(PresentInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
-        auto & swapchain_impl = *reinterpret_cast<ImplSwapchain *>(info.swapchain.impl.get());
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
+        auto & swapchain_impl = *reinterpret_cast<ImplSwapchain *>(info.swapchain.object);
 
         // used to synchronise with previous submits:
         std::vector<VkSemaphore> submit_semaphore_waits = {};
 
         for (auto & binary_semaphore : info.wait_binary_semaphores)
         {
-            auto & impl_binary_semaphore = *reinterpret_cast<ImplTimelineSemaphore *>(binary_semaphore.impl.get());
+            auto & impl_binary_semaphore = *reinterpret_cast<ImplTimelineSemaphore *>(binary_semaphore.object);
             submit_semaphore_waits.push_back(impl_binary_semaphore.vk_semaphore);
         }
 
@@ -161,7 +138,7 @@ namespace daxa
         else if (err == VK_SUBOPTIMAL_KHR)
         {
             VkSurfaceCapabilitiesKHR surface_capabilities;
-            vkGetPhysicalDeviceSurfaceCapabilitiesKHR(DAXA_LOCK_WEAK(swapchain_impl.impl_device)->vk_physical_device, swapchain_impl.vk_surface, &surface_capabilities);
+            vkGetPhysicalDeviceSurfaceCapabilitiesKHR(swapchain_impl.impl_device.as<ImplDevice>()->vk_physical_device, swapchain_impl.vk_surface, &surface_capabilities);
             if (surface_capabilities.currentExtent.width != swapchain_impl.info.width ||
                 surface_capabilities.currentExtent.height != swapchain_impl.info.height)
             {
@@ -183,89 +160,89 @@ namespace daxa
 
     void Device::collect_garbage()
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
         impl.main_queue_collect_garbage(true);
     }
 
     auto Device::create_swapchain(SwapchainInfo const & info) -> Swapchain
     {
-        return Swapchain{std::make_shared<ImplSwapchain>(std::static_pointer_cast<ImplDevice>(this->impl), info)};
+        return Swapchain{ManagedPtr{new ImplSwapchain(this->make_weak(), info)}};
     }
 
     auto Device::create_pipeline_compiler(PipelineCompilerInfo const & info) -> PipelineCompiler
     {
-        return PipelineCompiler{std::make_shared<ImplPipelineCompiler>(std::static_pointer_cast<ImplDevice>(this->impl), info)};
+        return PipelineCompiler{new ImplPipelineCompiler(this->make_weak(), info)};
     }
 
     auto Device::create_command_list(CommandListInfo const & info) -> CommandList
     {
-        auto impl = std::static_pointer_cast<ImplDevice>(this->impl);
-        return CommandList{impl->command_list_recyclable_list.recycle_or_create_new(impl, info)};
+        auto impl = as<ImplDevice>();
+        return CommandList{ManagedPtr{impl->command_list_recyclable_list.recycle_or_create_new(this->make_weak(), info).release()}};
     }
 
     auto Device::create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore
     {
-        auto impl = std::static_pointer_cast<ImplDevice>(this->impl);
-        return BinarySemaphore{impl->binary_semaphore_recyclable_list.recycle_or_create_new(impl, info)};
+        auto impl = as<ImplDevice>();
+        return BinarySemaphore{ManagedPtr{impl->binary_semaphore_recyclable_list.recycle_or_create_new(this->make_weak(), info).release()}};
     }
 
     auto Device::create_timeline_semaphore(TimelineSemaphoreInfo const & info) -> TimelineSemaphore
     {
-        auto impl = std::static_pointer_cast<ImplDevice>(this->impl);
-        return TimelineSemaphore{std::make_shared<ImplTimelineSemaphore>(impl, info)};
+        auto impl = as<ImplDevice>();
+        return TimelineSemaphore{ManagedPtr{new ImplTimelineSemaphore(this->make_weak(), info)}};
     }
 
     auto Device::create_buffer(BufferInfo const & info) -> BufferId
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
         return impl.new_buffer(info);
     }
 
     auto Device::create_image(ImageInfo const & info) -> ImageId
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
         return impl.new_image(info);
     }
 
     auto Device::create_image_view(ImageViewInfo const & info) -> ImageViewId
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
         return impl.new_image_view(info);
     }
 
     auto Device::create_sampler(SamplerInfo const & info) -> SamplerId
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
         return impl.new_sampler(info);
     }
 
     void Device::destroy_buffer(BufferId id)
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
         impl.zombiefy_buffer(id);
     }
 
     void Device::destroy_image(ImageId id)
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
         impl.zombiefy_image(id);
     }
 
     void Device::destroy_image_view(ImageViewId id)
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
         impl.zombiefy_image_view(id);
     }
 
     void Device::destroy_sampler(SamplerId id)
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
         impl.zombiefy_sampler(id);
     }
 
     auto Device::map_memory(BufferId id) -> void *
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
         void * ret = nullptr;
         vmaMapMemory(impl.vma_allocator, impl.slot(id).vma_allocation, &ret);
         return ret;
@@ -273,7 +250,7 @@ namespace daxa
 
     void Device::unmap_memory(BufferId id)
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
         void * ret = nullptr;
         vmaUnmapMemory(impl.vma_allocator, impl.slot(id).vma_allocation);
     }
@@ -387,7 +364,7 @@ namespace daxa
 
     static void * REQUIRED_DEVICE_FEATURE_P_CHAIN = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_ROBUSTNESS_2);
 
-    ImplDevice::ImplDevice(DeviceInfo const & a_info, DeviceVulkanInfo const & a_vk_info, std::shared_ptr<ImplContext> a_impl_ctx, VkPhysicalDevice a_physical_device)
+    ImplDevice::ImplDevice(DeviceInfo const & a_info, DeviceVulkanInfo const & a_vk_info, ManagedWeakPtr a_impl_ctx, VkPhysicalDevice a_physical_device)
         : info{a_info}, vk_info{a_vk_info}, impl_ctx{a_impl_ctx}, vk_physical_device{a_physical_device}
     {
         // SELECT QUEUE
@@ -435,7 +412,7 @@ namespace daxa
         std::vector<char const *> extension_names;
         std::vector<char const *> enabled_layers;
 
-        if (DAXA_LOCK_WEAK(impl_ctx)->info.enable_validation)
+        if (impl_ctx.as<ImplContext>()->info.enable_validation)
         {
             enabled_layers.push_back("VK_LAYER_KHRONOS_validation");
         }
@@ -493,7 +470,7 @@ namespace daxa
             .pDeviceMemoryCallbacks = nullptr,
             .pHeapSizeLimit = nullptr,
             .pVulkanFunctions = &vma_vulkan_functions,
-            .instance = DAXA_LOCK_WEAK(this->impl_ctx)->vk_instance,
+            .instance = this->impl_ctx.as<ImplContext>()->vk_instance,
             .vulkanApiVersion = VK_API_VERSION_1_3,
         };
 
@@ -521,7 +498,7 @@ namespace daxa
         };
         vkCreateSampler(vk_device, &vk_sampler_create_info, nullptr, &this->vk_dummy_sampler);
 
-        if (DAXA_LOCK_WEAK(this->impl_ctx)->enable_debug_names && this->info.debug_name.size() > 0)
+        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && this->info.debug_name.size() > 0)
         {
             VkDebugUtilsObjectNameInfoEXT device_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -554,6 +531,12 @@ namespace daxa
 
     ImplDevice::~ImplDevice()
     {
+        wait_idle();
+        main_queue_collect_garbage(true);
+
+        binary_semaphore_recyclable_list.clear();
+        command_list_recyclable_list.clear();
+
         vmaDestroyAllocator(this->vma_allocator);
         this->gpu_table.cleanup(this->vk_device);
         vkDestroySampler(vk_device, this->vk_dummy_sampler, nullptr);
@@ -563,10 +546,8 @@ namespace daxa
 
     void ImplDevice::main_queue_collect_garbage(bool lock_submit)
     {
-#if DAXA_THREADSAFETY
-        std::unique_lock lock{this->main_queue_zombies_mtx};
-        u64 main_queue_cpu_timeline = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-#endif
+        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_zombies_mtx});
+        u64 main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
 
         u64 gpu_timeline_value = std::numeric_limits<u64>::max();
         auto vk_result = vkGetSemaphoreCounterValue(this->vk_device, this->vk_main_queue_gpu_timeline_semaphore, &gpu_timeline_value);
@@ -596,8 +577,9 @@ namespace daxa
 #endif
         check_and_cleanup_gpu_resources(this->main_queue_submits_zombies, [&, this](auto & command_lists)
                                         {
-            for (std::shared_ptr<ImplCommandList>& cmd_list : command_lists)
+            for (ManagedPtr & cmd_list_mp : command_lists)
             {
+                auto cmd_list = cmd_list_mp.as<ImplCommandList>();
                 for (usize i = 0; i < cmd_list->deferred_destruction_count; ++i)
                 {
                     auto [id, index] = cmd_list->deferred_destructions[i];
@@ -609,12 +591,6 @@ namespace daxa
                         case DEFERRED_DESTRUCTION_SAMPLER_INDEX: this->main_queue_sampler_zombies.push_front({main_queue_cpu_timeline, SamplerId{id}}); break;
                         default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
                     }
-                }
-                if (cmd_list.use_count() == 1 && false)
-                {
-                    cmd_list->reset();
-                    this->command_list_recyclable_list.recyclables.push_back(std::move(cmd_list));
-                    cmd_list = {};
                 }
             }
             command_lists.clear(); });
@@ -633,9 +609,7 @@ namespace daxa
         check_and_cleanup_gpu_resources(this->main_queue_sampler_zombies, [&](auto id)
                                         { this->cleanup_sampler(id); });
         {
-#if DAXA_THREADSAFETY
-            std::unique_lock lock{this->binary_semaphore_recyclable_list.mtx};
-#endif
+            DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->binary_semaphore_recyclable_list.mtx});
             check_and_cleanup_gpu_resources(this->main_queue_binary_semaphore_zombies, [&](auto & binary_semaphore)
                                             { 
                 binary_semaphore->reset();
@@ -644,6 +618,12 @@ namespace daxa
         check_and_cleanup_gpu_resources(this->main_queue_compute_pipeline_zombies, [&](auto & compute_pipeline) {});
         check_and_cleanup_gpu_resources(this->main_queue_raster_pipeline_zombies, [&](auto & raster_pipeline) {});
         check_and_cleanup_gpu_resources(this->main_queue_timeline_semaphore_zombies, [&](auto & timeline_semaphore) {});
+    }
+
+    void ImplDevice::wait_idle()
+    {
+        vkQueueWaitIdle(this->main_queue_vk_queue);
+        vkDeviceWaitIdle(this->vk_device);
     }
 
     auto ImplDevice::new_buffer(BufferInfo const & info) -> BufferId
@@ -693,7 +673,7 @@ namespace daxa
 
         vmaCreateBuffer(this->vma_allocator, &vk_buffer_create_info, &vma_allocation_create_info, &ret.vk_buffer, &ret.vma_allocation, nullptr);
 
-        if (DAXA_LOCK_WEAK(this->impl_ctx)->enable_debug_names && info.debug_name.size() > 0)
+        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
         {
             VkDebugUtilsObjectNameInfoEXT swapchain_image_view_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -772,7 +752,7 @@ namespace daxa
         ret.info = ImageInfo{};
         vkCreateImageView(vk_device, &view_ci, nullptr, &ret.view_slot.vk_image_view);
 
-        if (DAXA_LOCK_WEAK(this->impl_ctx)->enable_debug_names && debug_name.size() > 0)
+        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && debug_name.size() > 0)
         {
             VkDebugUtilsObjectNameInfoEXT swapchain_image_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -880,7 +860,7 @@ namespace daxa
 
         vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view);
 
-        if (DAXA_LOCK_WEAK(this->impl_ctx)->enable_debug_names && info.debug_name.size() > 0)
+        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
         {
             VkDebugUtilsObjectNameInfoEXT swapchain_image_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -942,7 +922,7 @@ namespace daxa
 
         vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.vk_image_view);
 
-        if (DAXA_LOCK_WEAK(this->impl_ctx)->enable_debug_names && info.debug_name.size() > 0)
+        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
         {
             VkDebugUtilsObjectNameInfoEXT name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -990,7 +970,7 @@ namespace daxa
 
         vkCreateSampler(this->vk_device, &vk_sampler_create_info, nullptr, &ret.vk_sampler);
 
-        if (DAXA_LOCK_WEAK(this->impl_ctx)->enable_debug_names && info.debug_name.size() > 0)
+        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
         {
             VkDebugUtilsObjectNameInfoEXT swapchain_image_view_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -1068,37 +1048,29 @@ namespace daxa
 
     void ImplDevice::zombiefy_buffer(BufferId id)
     {
-#if DAXA_THREADSAFETY
-        std::unique_lock lock{this->main_queue_zombies_mtx};
-        u64 main_queue_cpu_timeline = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-#endif
+        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_zombies_mtx});
+        u64 main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
         this->main_queue_buffer_zombies.push_front({main_queue_cpu_timeline, id});
     }
 
     void ImplDevice::zombiefy_image(ImageId id)
     {
-#if DAXA_THREADSAFETY
-        std::unique_lock lock{this->main_queue_zombies_mtx};
-        u64 main_queue_cpu_timeline = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-#endif
+        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_zombies_mtx});
+        u64 main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
         this->main_queue_image_zombies.push_front({main_queue_cpu_timeline, id});
     }
 
     void ImplDevice::zombiefy_image_view(ImageViewId id)
     {
-#if DAXA_THREADSAFETY
-        std::unique_lock lock{this->main_queue_zombies_mtx};
-        u64 main_queue_cpu_timeline = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-#endif
+        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_zombies_mtx});
+        u64 main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
         this->main_queue_image_view_zombies.push_front({main_queue_cpu_timeline, id});
     }
 
     void ImplDevice::zombiefy_sampler(SamplerId id)
     {
-#if DAXA_THREADSAFETY
-        std::unique_lock lock{this->main_queue_zombies_mtx};
-        u64 main_queue_cpu_timeline = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-#endif
+        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_zombies_mtx});
+        u64 main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
         this->main_queue_sampler_zombies.push_front({main_queue_cpu_timeline, id});
     }
 

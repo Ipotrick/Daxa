@@ -3,35 +3,15 @@
 
 namespace daxa
 {
-    BinarySemaphore::BinarySemaphore(std::shared_ptr<void> a_impl) : HandleWithCleanup{std::move(a_impl)} {}
-
-    BinarySemaphore::~BinarySemaphore()
-    {
-        // cleanup();
-    }
-
-    void BinarySemaphore::cleanup()
-    {
-        if (this->impl.use_count() == 1)
-        {
-            std::shared_ptr<ImplBinarySemaphore> impl = std::static_pointer_cast<ImplBinarySemaphore>(this->impl);
-#if DAXA_THREADSAFETY
-            std::unique_lock lock{DAXA_LOCK_WEAK(impl->impl_device)->main_queue_zombies_mtx};
-            u64 main_queue_cpu_timeline_value = DAXA_LOCK_WEAK(impl->impl_device)->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-#else
-            u64 main_queue_cpu_timeline_value = DAXA_LOCK_WEAK(impl->impl_device)->main_queue_cpu_timeline;
-#endif
-            DAXA_LOCK_WEAK(impl->impl_device)->main_queue_binary_semaphore_zombies.push_front({main_queue_cpu_timeline_value, impl});
-        }
-    }
+    BinarySemaphore::BinarySemaphore(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
     auto BinarySemaphore::info() const -> BinarySemaphoreInfo const &
     {
-        auto & impl = *reinterpret_cast<ImplBinarySemaphore *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplBinarySemaphore *>(this->object);
         return impl.info;
     }
 
-    ImplBinarySemaphore::ImplBinarySemaphore(std::weak_ptr<ImplDevice> a_impl_device)
+    ImplBinarySemaphore::ImplBinarySemaphore(ManagedWeakPtr a_impl_device)
         : impl_device{a_impl_device}
     {
         VkSemaphoreCreateInfo vk_semaphore_create_info{
@@ -40,19 +20,19 @@ namespace daxa
             .flags = {},
         };
 
-        vkCreateSemaphore(DAXA_LOCK_WEAK(impl_device)->vk_device, &vk_semaphore_create_info, nullptr, &this->vk_semaphore);
+        vkCreateSemaphore(impl_device.as<ImplDevice>()->vk_device, &vk_semaphore_create_info, nullptr, &this->vk_semaphore);
     }
 
     ImplBinarySemaphore::~ImplBinarySemaphore()
     {
-        vkDestroySemaphore(DAXA_LOCK_WEAK(impl_device)->vk_device, this->vk_semaphore, nullptr);
+        vkDestroySemaphore(impl_device.as<ImplDevice>()->vk_device, this->vk_semaphore, nullptr);
     }
 
     void ImplBinarySemaphore::initialize(BinarySemaphoreInfo const & info)
     {
         this->info = info;
 
-        if (DAXA_LOCK_WEAK(DAXA_LOCK_WEAK(this->impl_device)->impl_ctx)->enable_debug_names && this->info.debug_name.size() > 0)
+        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && this->info.debug_name.size() > 0)
         {
             VkDebugUtilsObjectNameInfoEXT name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -61,7 +41,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_semaphore),
                 .pObjectName = this->info.debug_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(DAXA_LOCK_WEAK(impl_device)->vk_device, &name_info);
+            vkSetDebugUtilsObjectNameEXT(impl_device.as<ImplDevice>()->vk_device, &name_info);
         }
     }
 
@@ -69,20 +49,28 @@ namespace daxa
     {
     }
 
-    TimelineSemaphore::TimelineSemaphore(std::shared_ptr<void> a_impl) : HandleWithCleanup{a_impl} {}
+    auto ImplBinarySemaphore::managed_cleanup() -> bool
+    {
+        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->impl_device.as<ImplDevice>()->main_queue_zombies_mtx});
+        u64 main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(this->impl_device.as<ImplDevice>()->main_queue_cpu_timeline);
+        this->impl_device.as<ImplDevice>()->main_queue_binary_semaphore_zombies.emplace_front(main_queue_cpu_timeline_value, this);
+        return false;
+    }
+
+    TimelineSemaphore::TimelineSemaphore(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
     auto TimelineSemaphore::value() const -> u64
     {
-        auto & impl = *reinterpret_cast<ImplTimelineSemaphore *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplTimelineSemaphore *>(this->object);
 
         u64 ret = {};
-        vkGetSemaphoreCounterValue(DAXA_LOCK_WEAK(impl.impl_device)->vk_device, impl.vk_semaphore, &ret);
+        vkGetSemaphoreCounterValue(impl.impl_device.as<ImplDevice>()->vk_device, impl.vk_semaphore, &ret);
         return ret;
     }
 
     void TimelineSemaphore::set_value(u64 value)
     {
-        auto & impl = *reinterpret_cast<ImplTimelineSemaphore *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplTimelineSemaphore *>(this->object);
 
         VkSemaphoreSignalInfo vk_semaphore_signal_info{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
@@ -91,12 +79,12 @@ namespace daxa
             .value = value,
         };
 
-        vkSignalSemaphore(DAXA_LOCK_WEAK(impl.impl_device)->vk_device, &vk_semaphore_signal_info);
+        vkSignalSemaphore(impl.impl_device.as<ImplDevice>()->vk_device, &vk_semaphore_signal_info);
     }
 
     auto TimelineSemaphore::wait_for_value(u64 value, u64 timeout_nanos) -> bool
     {
-        auto & impl = *reinterpret_cast<ImplTimelineSemaphore *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplTimelineSemaphore *>(this->object);
 
         VkSemaphoreWaitInfo vk_semaphore_wait_info{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
@@ -107,37 +95,17 @@ namespace daxa
             .pValues = &value,
         };
 
-        VkResult result = vkWaitSemaphores(DAXA_LOCK_WEAK(impl.impl_device)->vk_device, &vk_semaphore_wait_info, timeout_nanos);
+        VkResult result = vkWaitSemaphores(impl.impl_device.as<ImplDevice>()->vk_device, &vk_semaphore_wait_info, timeout_nanos);
         return result != VK_TIMEOUT;
     }
 
     auto TimelineSemaphore::info() const -> TimelineSemaphoreInfo const &
     {
-        auto & impl = *reinterpret_cast<ImplTimelineSemaphore *>(this->impl.get());
+        auto & impl = *reinterpret_cast<ImplTimelineSemaphore *>(this->object);
         return impl.info;
     }
 
-    TimelineSemaphore::~TimelineSemaphore()
-    {
-        // cleanup();
-    }
-
-    void TimelineSemaphore::cleanup()
-    {
-        if (this->impl.use_count() == 1)
-        {
-            std::shared_ptr<ImplTimelineSemaphore> impl = std::static_pointer_cast<ImplTimelineSemaphore>(this->impl);
-#if DAXA_THREADSAFETY
-            std::unique_lock lock{DAXA_LOCK_WEAK(impl->impl_device)->main_queue_zombies_mtx};
-            u64 main_queue_cpu_timeline_value = DAXA_LOCK_WEAK(impl->impl_device)->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-#else
-            u64 main_queue_cpu_timeline_value = DAXA_LOCK_WEAK(impl->impl_device)->main_queue_cpu_timeline;
-#endif
-            DAXA_LOCK_WEAK(impl->impl_device)->main_queue_timeline_semaphore_zombies.push_front({main_queue_cpu_timeline_value, impl});
-        }
-    }
-
-    ImplTimelineSemaphore::ImplTimelineSemaphore(std::weak_ptr<ImplDevice> a_impl_device, TimelineSemaphoreInfo const & a_info)
+    ImplTimelineSemaphore::ImplTimelineSemaphore(ManagedWeakPtr a_impl_device, TimelineSemaphoreInfo const & a_info)
         : impl_device{a_impl_device}, info{a_info}
     {
         VkSemaphoreTypeCreateInfo timelineCreateInfo{
@@ -153,9 +121,9 @@ namespace daxa
             .flags = {},
         };
 
-        vkCreateSemaphore(DAXA_LOCK_WEAK(impl_device)->vk_device, &vk_semaphore_create_info, nullptr, &this->vk_semaphore);
+        vkCreateSemaphore(impl_device.as<ImplDevice>()->vk_device, &vk_semaphore_create_info, nullptr, &this->vk_semaphore);
 
-        if (DAXA_LOCK_WEAK(DAXA_LOCK_WEAK(this->impl_device)->impl_ctx)->enable_debug_names && this->info.debug_name.size() > 0)
+        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && this->info.debug_name.size() > 0)
         {
             VkDebugUtilsObjectNameInfoEXT name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -164,14 +132,22 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_semaphore),
                 .pObjectName = this->info.debug_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(DAXA_LOCK_WEAK(impl_device)->vk_device, &name_info);
+            vkSetDebugUtilsObjectNameEXT(impl_device.as<ImplDevice>()->vk_device, &name_info);
         }
     }
 
     ImplTimelineSemaphore::~ImplTimelineSemaphore()
     {
-        vkDestroySemaphore(DAXA_LOCK_WEAK(impl_device)->vk_device, this->vk_semaphore, nullptr);
+        vkDestroySemaphore(impl_device.as<ImplDevice>()->vk_device, this->vk_semaphore, nullptr);
         this->vk_semaphore = {};
+    }
+
+    auto ImplTimelineSemaphore::managed_cleanup() -> bool
+    {
+        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->impl_device.as<ImplDevice>()->main_queue_zombies_mtx});
+        u64 main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(this->impl_device.as<ImplDevice>()->main_queue_cpu_timeline);
+        this->impl_device.as<ImplDevice>()->main_queue_timeline_semaphore_zombies.push_front({main_queue_cpu_timeline_value, std::unique_ptr<ImplTimelineSemaphore>{this}});
+        return false;
     }
 
 } // namespace daxa
