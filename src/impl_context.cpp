@@ -18,7 +18,70 @@ namespace daxa
 
     auto create_context(ContextInfo const & info) -> Context
     {
-        return Context{std::make_shared<ImplContext>(info)};
+        return Context{ManagedPtr{new ImplContext(info)}};
+    }
+
+    Context::Context(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
+
+    auto Context::create_device(DeviceInfo const & device_info) -> Device
+    {
+        ImplContext & impl = *reinterpret_cast<ImplContext *>(this->object);
+
+        u32 physical_device_n = 0;
+        vkEnumeratePhysicalDevices(impl.vk_instance, &physical_device_n, nullptr);
+        std::vector<VkPhysicalDevice> physical_devices;
+        physical_devices.resize(physical_device_n);
+        vkEnumeratePhysicalDevices(impl.vk_instance, &physical_device_n, physical_devices.data());
+
+        auto device_score = [&](VkPhysicalDevice physical_device) -> i32
+        {
+            VkPhysicalDeviceProperties vk_device_properties;
+            vkGetPhysicalDeviceProperties(physical_device, &vk_device_properties);
+            return device_info.selector(*reinterpret_cast<DeviceVulkanInfo *>(&vk_device_properties));
+        };
+
+        auto device_comparator = [&](auto const & a, auto const & b) -> bool
+        {
+            return device_score(a) < device_score(b);
+        };
+        auto best_physical_device = std::max_element(physical_devices.begin(), physical_devices.end(), device_comparator);
+
+        DAXA_DBG_ASSERT_TRUE_M(device_score(*best_physical_device) != -1, "no suitable device found");
+
+        // TODO: check for every possible device if it has the required features and if not dont even consider them.
+
+        auto physical_device = *best_physical_device;
+
+        VkPhysicalDeviceProperties vk_device_properties;
+        vkGetPhysicalDeviceProperties(physical_device, &vk_device_properties);
+        auto device_vulkan_info = *reinterpret_cast<DeviceVulkanInfo *>(&vk_device_properties);
+
+        // std::cout << "Selected device: " << vk_device_properties.deviceName << std::endl;
+
+        return Device{ManagedPtr{new ImplDevice(device_info, device_vulkan_info, this->make_weak(), physical_device)}};
+    }
+
+    auto Context::create_default_device() -> Device
+    {
+        auto default_selector = [](DeviceVulkanInfo const & device_info) -> i32
+        {
+            i32 score = 0;
+            switch (device_info.device_type)
+            {
+            case daxa::DeviceType::DISCRETE_GPU: score += 10000; break;
+            case daxa::DeviceType::VIRTUAL_GPU: score += 1000; break;
+            case daxa::DeviceType::INTEGRATED_GPU: score += 100; break;
+            default: break;
+            }
+            score += device_info.limits.max_memory_allocation_count;
+            score += device_info.limits.max_descriptor_set_storage_buffers / 10;
+            score += device_info.limits.max_image_array_layers;
+            return score;
+        };
+        return create_device({
+            .selector = default_selector,
+            .debug_name = "Daxa Default Device",
+        });
     }
 
     ImplContext::ImplContext(ContextInfo const & info_param)
@@ -120,68 +183,5 @@ namespace daxa
         }
 
         vkDestroyInstance(vk_instance, nullptr);
-    }
-
-    Context::Context(std::shared_ptr<void> impl) : Handle(impl) {}
-
-    auto Context::create_device(DeviceInfo const & device_info) -> Device
-    {
-        ImplContext & impl = *reinterpret_cast<ImplContext *>(this->impl.get());
-
-        u32 physical_device_n = 0;
-        vkEnumeratePhysicalDevices(impl.vk_instance, &physical_device_n, nullptr);
-        std::vector<VkPhysicalDevice> physical_devices;
-        physical_devices.resize(physical_device_n);
-        vkEnumeratePhysicalDevices(impl.vk_instance, &physical_device_n, physical_devices.data());
-
-        auto device_score = [&](VkPhysicalDevice physical_device) -> i32
-        {
-            VkPhysicalDeviceProperties vk_device_properties;
-            vkGetPhysicalDeviceProperties(physical_device, &vk_device_properties);
-            return device_info.selector(*reinterpret_cast<DeviceVulkanInfo *>(&vk_device_properties));
-        };
-
-        auto device_comparator = [&](auto const & a, auto const & b) -> bool
-        {
-            return device_score(a) < device_score(b);
-        };
-        auto best_physical_device = std::max_element(physical_devices.begin(), physical_devices.end(), device_comparator);
-
-        DAXA_DBG_ASSERT_TRUE_M(device_score(*best_physical_device) != -1, "no suitable device found");
-
-        // TODO: check for every possible device if it has the required features and if not dont even consider them.
-
-        auto physical_device = *best_physical_device;
-
-        VkPhysicalDeviceProperties vk_device_properties;
-        vkGetPhysicalDeviceProperties(physical_device, &vk_device_properties);
-        auto device_vulkan_info = *reinterpret_cast<DeviceVulkanInfo *>(&vk_device_properties);
-
-        // std::cout << "Selected device: " << vk_device_properties.deviceName << std::endl;
-
-        return Device{std::make_shared<ImplDevice>(device_info, device_vulkan_info, std::static_pointer_cast<ImplContext>(this->impl), physical_device)};
-    }
-
-    auto Context::create_default_device() -> Device
-    {
-        auto default_selector = [](DeviceVulkanInfo const & device_info) -> i32
-        {
-            i32 score = 0;
-            switch (device_info.device_type)
-            {
-            case daxa::DeviceType::DISCRETE_GPU: score += 10000; break;
-            case daxa::DeviceType::VIRTUAL_GPU: score += 1000; break;
-            case daxa::DeviceType::INTEGRATED_GPU: score += 100; break;
-            default: break;
-            }
-            score += device_info.limits.max_memory_allocation_count;
-            score += device_info.limits.max_descriptor_set_storage_buffers / 10;
-            score += device_info.limits.max_image_array_layers;
-            return score;
-        };
-        return create_device({
-            .selector = default_selector,
-            .debug_name = "Daxa Default Device",
-        });
     }
 } // namespace daxa

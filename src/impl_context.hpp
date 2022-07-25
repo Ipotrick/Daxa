@@ -6,7 +6,7 @@
 
 namespace daxa
 {
-    struct ImplContext
+    struct ImplContext final : ManagedSharedState
     {
         ContextInfo info;
         VkInstance vk_instance;
@@ -14,6 +14,6 @@ namespace daxa
         bool enable_debug_names = true;
 
         ImplContext(ContextInfo const & info);
-        ~ImplContext();
+        virtual ~ImplContext() override final;
     };
 } // namespace daxa

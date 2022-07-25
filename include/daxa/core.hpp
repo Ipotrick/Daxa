@@ -1,5 +1,8 @@
 #pragma once
 
+#include <atomic>
+#include <concepts>
+
 #include <daxa/types.hpp>
 
 #if !defined(DAXA_THREADSAFETY)
@@ -60,39 +63,80 @@ namespace daxa
 } // namespace daxa
 #endif
 
+#if DAXA_THREADSAFETY
+#define DAXA_ONLY_IF_THREADSAFETY(x) x
+#define DAXA_ATOMIC_U64 std::atomic_uint64_t
+#define DAXA_ATOMIC_FETCH_INC(x) x.fetch_add(1)
+#define DAXA_ATOMIC_FETCH_DEC(x) x.fetch_sub(1)
+#define DAXA_ATOMIC_FETCH(x) x.load()
+#else
+#define DAXA_ONLY_IF_THREADSAFETY(x)
+#define DAXA_ATOMIC_U64 daxa::types::u64
+#define DAXA_ATOMIC_FETCH_INC(x) (x++)
+#define DAXA_ATOMIC_FETCH_DEC(x) (x--)
+#define DAXA_ATOMIC_FETCH(x) (x)
+#endif
+
 namespace daxa
 {
-    struct Handle
+    struct ManagedSharedState
     {
-        Handle(std::shared_ptr<void> impl);
+        virtual ~ManagedSharedState() = default;
 
-      protected:
-        std::shared_ptr<void> impl = {};
+        DAXA_ATOMIC_U64 weak_count = {};
+        DAXA_ATOMIC_U64 strong_count = {};
+        virtual auto managed_cleanup() -> bool;
     };
 
-    template <typename Derived>
-    struct HandleWithCleanup
+    struct ManagedWeakPtr
     {
-        HandleWithCleanup(std::shared_ptr<void> impl) : impl(impl) {}
+        ManagedSharedState * object = {};
 
-        HandleWithCleanup(HandleWithCleanup const &) = default;
-        HandleWithCleanup(HandleWithCleanup &&) = default;
-        HandleWithCleanup & operator=(HandleWithCleanup const & other)
+        template <typename T>
+        auto as() -> T *
         {
-            static_cast<Derived *>(this)->cleanup();
-            this->impl = other.impl;
-            return *this;
+#if DAXA_VALIDATION
+            return dynamic_cast<T *>(object);
+#else
+            return reinterpret_cast<T *>(object);
+#endif
         }
-        HandleWithCleanup & operator=(HandleWithCleanup && other)
-        {
-            static_cast<Derived *>(this)->cleanup();
-            std::swap(this->impl, other.impl);
-            return *this;
-        }
-        ~HandleWithCleanup() { static_cast<Derived *>(this)->cleanup(); }
 
-      protected:
-        std::shared_ptr<void> impl = {};
+        ManagedWeakPtr() = default;
+        ManagedWeakPtr(ManagedSharedState * ptr);
+        ~ManagedWeakPtr();
+
+        ManagedWeakPtr(const ManagedWeakPtr &);
+        ManagedWeakPtr(ManagedWeakPtr &&);
+        ManagedWeakPtr & operator=(const ManagedWeakPtr &);
+        ManagedWeakPtr & operator=(ManagedWeakPtr &&);
+    };
+
+    struct ManagedPtr
+    {
+        ManagedSharedState * object = {};
+
+        template <typename T>
+        auto as() -> T *
+        {
+#if DAXA_VALIDATION
+            return dynamic_cast<T *>(object);
+#else
+            return reinterpret_cast<T *>(object);
+#endif
+        }
+
+        ManagedPtr() = default;
+        ManagedPtr(ManagedSharedState * ptr);
+        ~ManagedPtr();
+
+        ManagedPtr(const ManagedPtr &);
+        ManagedPtr(ManagedPtr &&);
+        ManagedPtr & operator=(const ManagedPtr &);
+        ManagedPtr & operator=(ManagedPtr &&);
+
+        void cleanup();
+        ManagedWeakPtr make_weak();
     };
 
     struct ResultErr

@@ -30,7 +30,7 @@ namespace daxa
         std::string debug_name = {};
     };
 
-    struct Swapchain : Handle
+    struct Swapchain : ManagedPtr
     {
         auto info() const -> SwapchainInfo const &;
         auto get_format() const -> Format;
@@ -41,6 +41,6 @@ namespace daxa
 
       private:
         friend struct Device;
-        Swapchain(std::shared_ptr<void> impl);
+        Swapchain(ManagedPtr impl);
     };
 } // namespace daxa

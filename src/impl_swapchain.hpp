@@ -8,9 +8,9 @@ namespace daxa
 {
     struct ImplDevice;
 
-    struct ImplSwapchain
+    struct ImplSwapchain final : ManagedSharedState
     {
-        std::weak_ptr<ImplDevice> impl_device = {};
+        ManagedWeakPtr impl_device = {};
         SwapchainInfo info = {};
         VkSwapchainKHR vk_swapchain = VK_NULL_HANDLE;
         VkSurfaceKHR vk_surface = {};
@@ -20,7 +20,7 @@ namespace daxa
         VkFence acquisition_fence;
         u32 current_image_index;
 
-        ImplSwapchain(std::weak_ptr<ImplDevice> device_impl, SwapchainInfo const & info);
+        ImplSwapchain(ManagedWeakPtr device_impl, SwapchainInfo const & info);
         ~ImplSwapchain();
 
         void recreate();

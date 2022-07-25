@@ -66,11 +66,9 @@ namespace daxa
         u32 next_index = {};
         usize max_resources = {};
 
-#if DAXA_THREADSAFETY
-        std::mutex page_alloc_mtx = {};
+        DAXA_ONLY_IF_THREADSAFETY(std::mutex page_alloc_mtx = {});
 #if DAXA_GPU_ID_VALIDATION
         std::mutex use_after_free_check_mtx = {};
-#endif
 #endif
         std::array<std::unique_ptr<PageT>, PAGE_COUNT> pages = {};
 
@@ -86,12 +84,10 @@ namespace daxa
 
         auto new_slot() -> std::pair<GPUResourceId, ResourceT &>
         {
-#if DAXA_THREADSAFETY
 #if DAXA_GPU_ID_VALIDATION
             std::unique_lock use_after_free_check_lock{use_after_free_check_mtx};
 #endif
-            std::unique_lock page_alloc_lock{page_alloc_mtx};
-#endif
+            DAXA_ONLY_IF_THREADSAFETY(std::unique_lock page_alloc_lock{page_alloc_mtx});
             u32 index = {};
             if (free_index_stack.empty())
             {
@@ -130,16 +126,11 @@ namespace daxa
             size_t offset = id.index & PAGE_MASK;
 
 #if DAXA_GPU_ID_VALIDATION
-#if DAXA_THREADSAFETY
-            std::unique_lock use_after_free_check_lock{use_after_free_check_mtx};
-#endif
+            DAXA_ONLY_IF_THREADSAFETY(std::unique_lock use_after_free_check_lock{use_after_free_check_mtx});
             verify_ressource_id(id);
             DAXA_DBG_ASSERT_TRUE_M(pages[page]->at(offset).second == id.version, "detected double delete for a resource id");
 #endif
-
-#if DAXA_THREADSAFETY
-            std::unique_lock page_alloc_lock{page_alloc_mtx};
-#endif
+            DAXA_ONLY_IF_THREADSAFETY(std::unique_lock page_alloc_lock{page_alloc_mtx});
 
             pages[page]->at(offset).second = std::max<u8>(pages[page]->at(offset).second + 1, 1); // the max is needed, as version = 0 is invalid
 
@@ -152,9 +143,7 @@ namespace daxa
             size_t offset = id.index & PAGE_MASK;
 
 #if DAXA_GPU_ID_VALIDATION
-#if DAXA_THREADSAFETY
-            std::unique_lock use_after_free_check_lock{use_after_free_check_mtx};
-#endif
+            DAXA_ONLY_IF_THREADSAFETY(std::unique_lock use_after_free_check_lock{use_after_free_check_mtx});
             verify_ressource_id(id);
             u8 version = pages[page]->at(offset).second;
             DAXA_DBG_ASSERT_TRUE_M(version == id.version, "detected use after free for a resource id");

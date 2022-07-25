@@ -161,11 +161,8 @@ namespace daxa
         Swapchain & swapchain;
     };
 
-    struct Device : HandleWithCleanup<Device>
+    struct Device : ManagedPtr
     {
-        ~Device();
-        void cleanup();
-
         auto create_buffer(BufferInfo const & info) -> BufferId;
         auto create_image(ImageInfo const & info) -> ImageId;
         auto create_image_view(ImageViewInfo const & info) -> ImageViewId;
@@ -198,6 +195,6 @@ namespace daxa
 
       private:
         friend struct Context;
-        Device(std::shared_ptr<void> impl);
+        Device(ManagedPtr impl);
     };
 } // namespace daxa

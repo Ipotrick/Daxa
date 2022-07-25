@@ -17,11 +17,11 @@ namespace daxa
 #if DAXA_THREADSAFETY
         std::mutex mtx = {};
 #endif
-        std::vector<std::shared_ptr<RecyclableT>> recyclables = {};
+        std::vector<std::unique_ptr<RecyclableT>> recyclables = {};
 
-        auto recycle_or_create_new(std::shared_ptr<ImplDevice> & device_impl, auto const & info) -> std::shared_ptr<RecyclableT>
+        auto recycle_or_create_new(ManagedWeakPtr device_impl, auto const & info) -> std::unique_ptr<RecyclableT>
         {
-            std::shared_ptr<RecyclableT> ret = {};
+            std::unique_ptr<RecyclableT> ret = {};
 
             {
 #if DAXA_THREADSAFETY
@@ -29,14 +29,14 @@ namespace daxa
 #endif
                 if (!recyclables.empty())
                 {
-                    ret = recyclables.back();
+                    ret = std::move(recyclables.back());
                     recyclables.pop_back();
                 }
             }
 
             if (!ret)
             {
-                ret = std::make_shared<RecyclableT>(device_impl);
+                ret = std::make_unique<RecyclableT>(device_impl);
             }
 
             ret->initialize(info);
