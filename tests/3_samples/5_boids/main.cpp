@@ -10,8 +10,8 @@ using namespace daxa::types;
 using Clock = std::chrono::high_resolution_clock;
 
 static inline constexpr usize MAX_BOIDS = 1000;
-// static inline constexpr usize VECTORS_PER_AXIS = 100;
-// static inline constexpr usize MAX_VECTORS = VECTORS_PER_AXIS * VECTORS_PER_AXIS;
+static inline constexpr usize VECTORS_PER_AXIS = 100;
+static inline constexpr usize MAX_VECTORS = VECTORS_PER_AXIS * VECTORS_PER_AXIS;
 
 struct BoidState
 {
@@ -81,11 +81,11 @@ struct App : AppWindow<App>
         .push_constant_size = sizeof(UpdatePush),
         .debug_name = "Boids Update Pipeline",
     }).value();
-    // daxa::ComputePipeline vector_update_pipeline = pipeline_compiler.create_compute_pipeline({
-    //     .shader_info = {.source = daxa::ShaderFile{"update_vectors.hlsl"}},
-    //     .push_constant_size = sizeof(UpdatePush),
-    //     .debug_name = "Vector Field Update Pipeline",
-    // }).value();
+    daxa::ComputePipeline vector_update_pipeline = pipeline_compiler.create_compute_pipeline({
+        .shader_info = {.source = daxa::ShaderFile{"update_vectors.hlsl"}},
+        .push_constant_size = sizeof(UpdatePush),
+        .debug_name = "Vector Field Update Pipeline",
+    }).value();
     // clang-format on
 
     daxa::BufferId boids_buffers[2] = {
@@ -99,10 +99,10 @@ struct App : AppWindow<App>
         }),
     };
 
-    // daxa::BufferId vector_field_buffer = device.create_buffer(daxa::BufferInfo{
-    //     .size = sizeof(BoidState) * MAX_VECTORS,
-    //     .debug_name = "Vector Field Buffer",
-    // });
+    daxa::BufferId vector_field_buffer = device.create_buffer(daxa::BufferInfo{
+        .size = sizeof(BoidState) * MAX_VECTORS,
+        .debug_name = "Vector Field Buffer",
+    });
 
     daxa::BinarySemaphore binary_semaphore = device.create_binary_semaphore({
         .debug_name = "Boids Present Semaphore",
@@ -214,7 +214,7 @@ struct App : AppWindow<App>
     {
         device.destroy_buffer(boids_buffers[0]);
         device.destroy_buffer(boids_buffers[1]);
-        // device.destroy_buffer(vector_field_buffer);
+        device.destroy_buffer(vector_field_buffer);
     }
 
     bool update()
@@ -268,18 +268,18 @@ struct App : AppWindow<App>
                 std::cout << new_pipeline.message() << std::endl;
             }
         }
-        // if (pipeline_compiler.check_if_sources_changed(vector_update_pipeline))
-        // {
-        //     auto new_pipeline = pipeline_compiler.recreate_compute_pipeline(vector_update_pipeline);
-        //     if (new_pipeline.is_ok())
-        //     {
-        //         vector_update_pipeline = new_pipeline.value();
-        //     }
-        //     else
-        //     {
-        //         std::cout << new_pipeline.message() << std::endl;
-        //     }
-        // }
+        if (pipeline_compiler.check_if_sources_changed(vector_update_pipeline))
+        {
+            auto new_pipeline = pipeline_compiler.recreate_compute_pipeline(vector_update_pipeline);
+            if (new_pipeline.is_ok())
+            {
+                vector_update_pipeline = new_pipeline.value();
+            }
+            else
+            {
+                std::cout << new_pipeline.message() << std::endl;
+            }
+        }
 
         if (should_resize)
         {
@@ -292,61 +292,54 @@ struct App : AppWindow<App>
             .debug_name = "Boids Command List",
         });
 
-        // cmd_list.set_pipeline(update_pipeline);
-        // cmd_list.push_constant(UpdatePush{
-        //     .prev_boids_buffer_id = boids_buffers[!current_buffer_i],
-        //     .boids_buffer_id = boids_buffers[current_buffer_i],
-        //     .delta_time = elapsed_s,
-        // });
-        // cmd_list.dispatch((MAX_BOIDS + 63) / 64);
+        cmd_list.set_pipeline(update_pipeline);
+        cmd_list.push_constant(UpdatePush{
+            .prev_boids_buffer_id = boids_buffers[!current_buffer_i],
+            .boids_buffer_id = boids_buffers[current_buffer_i],
+            .delta_time = elapsed_s,
+        });
+        cmd_list.dispatch((MAX_BOIDS + 63) / 64);
 
-        // cmd_list.set_pipeline(vector_update_pipeline);
-        // cmd_list.push_constant(UpdatePush{
-        //     .prev_boids_buffer_id = boids_buffers[!current_buffer_i],
-        //     .boids_buffer_id = vector_field_buffer,
-        //     .delta_time = elapsed_s,
-        // });
-        // cmd_list.dispatch((MAX_VECTORS + 63) / 64);
+        cmd_list.set_pipeline(vector_update_pipeline);
+        cmd_list.push_constant(UpdatePush{
+            .prev_boids_buffer_id = boids_buffers[!current_buffer_i],
+            .boids_buffer_id = vector_field_buffer,
+            .delta_time = elapsed_s,
+        });
+        cmd_list.dispatch((MAX_VECTORS + 63) / 64);
 
-        // cmd_list.pipeline_barrier({
-        //     .awaited_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
-        //     .waiting_pipeline_access = daxa::AccessConsts::VERTEX_SHADER_READ,
-        // });
-
-        // cmd_list.pipeline_barrier_image_transition({
-        //     .waiting_pipeline_access = daxa::AccessConsts::COLOR_ATTACHMENT_OUTPUT_WRITE,
-        //     .before_layout = daxa::ImageLayout::UNDEFINED,
-        //     .after_layout = daxa::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
-        //     .image_id = swapchain_image,
-        // });
-
-        // cmd_list.begin_renderpass({
-        //     .color_attachments = {{
-        //         .image_view = swapchain_image.default_view(),
-        //         .load_op = daxa::AttachmentLoadOp::CLEAR,
-        //         .clear_value = std::array<f32, 4>{0.2f, 0.4f, 1.0f, 1.0f},
-        //     }},
-        //     .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
-        // });
-        // cmd_list.set_pipeline(raster_pipeline);
-        // raster_push.boids_buffer_id = boids_buffers[current_buffer_i],
-        // cmd_list.push_constant(raster_push);
-        // cmd_list.draw({.vertex_count = MAX_BOIDS * 3});
-        // raster_push.boids_buffer_id = vector_field_buffer,
-        // cmd_list.push_constant(raster_push);
-        // cmd_list.draw({.vertex_count = MAX_VECTORS * 3});
-        // cmd_list.end_renderpass();
-
-        cmd_list.pipeline_barrier_image_transition({
-            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .before_layout = daxa::ImageLayout::UNDEFINED,
-            .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-            .image_id = swapchain_image,
+        cmd_list.pipeline_barrier({
+            .awaited_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
+            .waiting_pipeline_access = daxa::AccessConsts::VERTEX_SHADER_READ,
         });
 
         cmd_list.pipeline_barrier_image_transition({
+            .waiting_pipeline_access = daxa::AccessConsts::COLOR_ATTACHMENT_OUTPUT_WRITE,
+            .before_layout = daxa::ImageLayout::UNDEFINED,
+            .after_layout = daxa::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
+            .image_id = swapchain_image,
+        });
+
+        cmd_list.begin_renderpass({
+            .color_attachments = {{
+                .image_view = swapchain_image.default_view(),
+                .load_op = daxa::AttachmentLoadOp::CLEAR,
+                .clear_value = std::array<f32, 4>{0.2f, 0.4f, 1.0f, 1.0f},
+            }},
+            .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
+        });
+        cmd_list.set_pipeline(raster_pipeline);
+        raster_push.boids_buffer_id = boids_buffers[current_buffer_i],
+        cmd_list.push_constant(raster_push);
+        cmd_list.draw({.vertex_count = MAX_BOIDS * 3});
+        raster_push.boids_buffer_id = vector_field_buffer,
+        cmd_list.push_constant(raster_push);
+        cmd_list.draw({.vertex_count = MAX_VECTORS * 3});
+        cmd_list.end_renderpass();
+
+        cmd_list.pipeline_barrier_image_transition({
             .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .before_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+            .before_layout = daxa::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
             .after_layout = daxa::ImageLayout::PRESENT_SRC,
             .image_id = swapchain_image,
         });
@@ -367,7 +360,7 @@ struct App : AppWindow<App>
 
         gpu_framecount_timeline_sema.wait_for_value(cpu_framecount - 1);
 
-        // current_buffer_i = !current_buffer_i;
+        current_buffer_i = !current_buffer_i;
     }
 
     void on_mouse_move(f32, f32)

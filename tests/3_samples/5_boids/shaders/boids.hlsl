@@ -99,10 +99,10 @@ struct BoidsBuffer
         center_of_mass *= 1.0 / center_n;
         average_vel *= 1.0 / avg_vel_n;
 
-        v1 = (pos - center_of_mass) * 0.00;
-        v2 = c * 0.00;
-        v3 = (average_vel - vel) * 0.00;
-        v4 = v4 * 0.00;
+        v1 = (pos - center_of_mass) * 0.1;
+        v2 = c * 0.01;
+        v3 = (average_vel - vel) * 0.01;
+        v4 = v4 * 0.01;
 
         return v1 + v2 + v3 + v4;
     }

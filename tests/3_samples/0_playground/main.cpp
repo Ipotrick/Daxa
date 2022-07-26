@@ -103,16 +103,22 @@ struct RenderableChunk
 {
     VoxelChunk voxel_chunk = {};
     daxa::Device device;
-    daxa::BufferId face_buffer = device.create_buffer(daxa::BufferInfo{
-        .size = CHUNK_MAX_SIZE,
-        .debug_name = "Chunk Face buffer",
-    });
-    daxa::BufferId water_face_buffer = device.create_buffer(daxa::BufferInfo{
-        .size = CHUNK_MAX_SIZE,
-        .debug_name = "Chunk Water Face buffer",
-    });
+    daxa::BufferId face_buffer;
+    daxa::BufferId water_face_buffer;
     u32 face_n = 0, water_face_n = 0;
     RenderableVoxelWorld * renderable_world = nullptr;
+
+    RenderableChunk(daxa::Device & device) : device{device}
+    {
+        face_buffer = device.create_buffer(daxa::BufferInfo{
+            .size = CHUNK_MAX_SIZE,
+            .debug_name = "Chunk Face buffer",
+        });
+        water_face_buffer = device.create_buffer(daxa::BufferInfo{
+            .size = CHUNK_MAX_SIZE,
+            .debug_name = "Chunk Water Face buffer",
+        });
+    }
 
     ~RenderableChunk()
     {
@@ -154,7 +160,7 @@ struct RenderableVoxelWorld
 {
     std::unique_ptr<RenderableChunk> chunks[CHUNK_N * CHUNK_N * CHUNK_N] = {};
 
-    RenderableVoxelWorld(daxa::Device device)
+    RenderableVoxelWorld(daxa::Device & device)
     {
         for (u64 z = 0; z < CHUNK_N; ++z)
         {
@@ -162,7 +168,7 @@ struct RenderableVoxelWorld
             {
                 for (u64 x = 0; x < CHUNK_N; ++x)
                 {
-                    chunks[x + y * CHUNK_N + z * CHUNK_N * CHUNK_N] = std::make_unique<RenderableChunk>(RenderableChunk{.device = device});
+                    chunks[x + y * CHUNK_N + z * CHUNK_N * CHUNK_N] = std::make_unique<RenderableChunk>(device);
                     auto & chunk = *chunks[x + y * CHUNK_N + z * CHUNK_N * CHUNK_N];
                     chunk.voxel_chunk.pos = glm::vec3(static_cast<f32>(x * CHUNK_SIZE), static_cast<f32>(y * CHUNK_SIZE), static_cast<f32>(z * CHUNK_SIZE));
                     chunk.voxel_chunk.generate();
@@ -171,9 +177,6 @@ struct RenderableVoxelWorld
             }
         }
 
-        auto cmd_list = device.create_command_list({
-            .debug_name = "Playground Command List",
-        });
         for (u64 z = 0; z < CHUNK_N; ++z)
         {
             for (u64 y = 0; y < CHUNK_N; ++y)
@@ -181,14 +184,17 @@ struct RenderableVoxelWorld
                 for (u64 x = 0; x < CHUNK_N; ++x)
                 {
                     auto & chunk = *chunks[x + y * CHUNK_N + z * CHUNK_N * CHUNK_N];
+                    auto cmd_list = device.create_command_list({
+                        .debug_name = "Playground Command List",
+                    });
                     chunk.update_chunk_mesh(cmd_list);
+                    cmd_list.complete();
+                    device.submit_commands({
+                        .command_lists = {std::move(cmd_list)},
+                    });
                 }
             }
         }
-        cmd_list.complete();
-        device.submit_commands({
-            .command_lists = {std::move(cmd_list)},
-        });
     }
 
     ~RenderableVoxelWorld()
