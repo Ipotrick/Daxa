@@ -31,8 +31,6 @@ namespace daxa
         // Resource recycling:
         RecyclableList<ImplCommandList> command_list_recyclable_list = {};
         RecyclableList<ImplBinarySemaphore> binary_semaphore_recyclable_list = {};
-
-        DAXA_ONLY_IF_THREADSAFETY(std::mutex submit_mtx = {});
         // Main queue:
         VkQueue main_queue_vk_queue = {};
         u32 main_queue_family_index = {};
@@ -50,7 +48,7 @@ namespace daxa
         std::deque<std::pair<u64, std::unique_ptr<ImplTimelineSemaphore>>> main_queue_timeline_semaphore_zombies = {};
         std::deque<std::pair<u64, std::unique_ptr<ImplComputePipeline>>> main_queue_compute_pipeline_zombies = {};
         std::deque<std::pair<u64, std::unique_ptr<ImplRasterPipeline>>> main_queue_raster_pipeline_zombies = {};
-        void main_queue_collect_garbage(bool lock_submit);
+        void main_queue_collect_garbage();
         void wait_idle();
 
         ImplDevice(DeviceInfo const & info, DeviceVulkanInfo const & vk_info, ManagedWeakPtr impl_ctx, VkPhysicalDevice physical_device);
