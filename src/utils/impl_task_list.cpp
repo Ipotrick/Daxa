@@ -629,7 +629,7 @@ namespace daxa
 
                         usize barrier_task_index = {};
 
-                        if (latest_access_task_index >= this->last_task_index_with_barrier)
+                        if (last_task_index_with_barrier != std::numeric_limits<usize>::max() && latest_access_task_index >= this->last_task_index_with_barrier)
                         {
                             // reuse old barrier
                             barrier_task_index = last_task_index_with_barrier;
