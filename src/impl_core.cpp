@@ -37,14 +37,10 @@ namespace daxa
         if (this->object && DAXA_ATOMIC_FETCH_DEC(this->object->strong_count) == 1)
         {
             bool should_delete = this->object->managed_cleanup();
-            if (should_delete)
-            {
-                this->object->~ManagedSharedState();
-            }
             DAXA_DBG_ASSERT_TRUE_M(DAXA_ATOMIC_FETCH(this->object->weak_count) == 0, "Weak pointer reference count was NOT ZERO");
             if (should_delete)
             {
-                free(this->object);
+                delete this->object;
             }
             this->object = {};
         }

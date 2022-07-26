@@ -529,21 +529,6 @@ namespace daxa
         }
     }
 
-    ImplDevice::~ImplDevice()
-    {
-        wait_idle();
-        main_queue_collect_garbage(true);
-
-        binary_semaphore_recyclable_list.clear();
-        command_list_recyclable_list.clear();
-
-        vmaDestroyAllocator(this->vma_allocator);
-        this->gpu_table.cleanup(this->vk_device);
-        vkDestroySampler(vk_device, this->vk_dummy_sampler, nullptr);
-        vkDestroySemaphore(this->vk_device, this->vk_main_queue_gpu_timeline_semaphore, nullptr);
-        vkDestroyDevice(this->vk_device, nullptr);
-    }
-
     void ImplDevice::main_queue_collect_garbage(bool lock_submit)
     {
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_zombies_mtx});
@@ -1044,6 +1029,23 @@ namespace daxa
         sampler_slot = {};
 
         gpu_table.sampler_slots.return_slot(id);
+    }
+
+    auto ImplDevice::managed_cleanup() -> bool
+    {
+        wait_idle();
+        main_queue_collect_garbage(true);
+
+        binary_semaphore_recyclable_list.clear();
+        command_list_recyclable_list.clear();
+
+        vmaDestroyAllocator(this->vma_allocator);
+        this->gpu_table.cleanup(this->vk_device);
+        vkDestroySampler(vk_device, this->vk_dummy_sampler, nullptr);
+        vkDestroySemaphore(this->vk_device, this->vk_main_queue_gpu_timeline_semaphore, nullptr);
+        vkDestroyDevice(this->vk_device, nullptr);
+
+        return true;
     }
 
     void ImplDevice::zombiefy_buffer(BufferId id)
