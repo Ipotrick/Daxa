@@ -114,7 +114,7 @@ namespace daxa
 
         for (auto & binary_semaphore : info.wait_binary_semaphores)
         {
-            auto & impl_binary_semaphore = *binary_semaphore.as<ImplTimelineSemaphore>();
+            auto & impl_binary_semaphore = *binary_semaphore.as<ImplBinarySemaphore>();
             submit_semaphore_waits.push_back(impl_binary_semaphore.vk_semaphore);
         }
 
