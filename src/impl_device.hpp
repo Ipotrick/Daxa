@@ -54,7 +54,7 @@ namespace daxa
         void wait_idle();
 
         ImplDevice(DeviceInfo const & info, DeviceVulkanInfo const & vk_info, ManagedWeakPtr impl_ctx, VkPhysicalDevice physical_device);
-        virtual ~ImplDevice() override final;
+        virtual ~ImplDevice() override final = default;
 
         auto validate_image_slice(ImageMipArraySlice const & slice, ImageId id) -> ImageMipArraySlice;
         auto validate_image_slice(ImageMipArraySlice const & slice, ImageViewId id) -> ImageMipArraySlice;
@@ -79,5 +79,7 @@ namespace daxa
         void cleanup_image(ImageId id);
         void cleanup_image_view(ImageViewId id);
         void cleanup_sampler(SamplerId id);
+
+        auto managed_cleanup() -> bool override final;
     };
 } // namespace daxa
