@@ -96,7 +96,9 @@ namespace daxa
         auto as() -> T *
         {
 #if DAXA_VALIDATION
-            return dynamic_cast<T *>(object);
+            auto ret = dynamic_cast<T *>(object);
+            DAXA_DBG_ASSERT_TRUE_M(ret != nullptr, "bad dynamic cast");
+            return ret;
 #else
             return reinterpret_cast<T *>(object);
 #endif
@@ -105,7 +107,9 @@ namespace daxa
         auto as() const -> T const *
         {
 #if DAXA_VALIDATION
-            return dynamic_cast<T const *>(object);
+            auto ret = dynamic_cast<T const *>(object);
+            DAXA_DBG_ASSERT_TRUE_M(ret != nullptr, "bad dynamic cast");
+            return ret;
 #else
             return reinterpret_cast<T const *>(object);
 #endif
@@ -129,7 +133,9 @@ namespace daxa
         auto as() -> T *
         {
 #if DAXA_VALIDATION
-            return dynamic_cast<T *>(object);
+            auto ret = dynamic_cast<T *>(object);
+            DAXA_DBG_ASSERT_TRUE_M(ret != nullptr, "bad dynamic cast");
+            return ret;
 #else
             return reinterpret_cast<T *>(object);
 #endif
@@ -138,7 +144,9 @@ namespace daxa
         auto as() const -> T const *
         {
 #if DAXA_VALIDATION
-            return dynamic_cast<T const *>(object);
+            auto ret = dynamic_cast<T const *>(object);
+            DAXA_DBG_ASSERT_TRUE_M(ret != nullptr, "bad dynamic cast");
+            return ret;
 #else
             return reinterpret_cast<T const *>(object);
 #endif

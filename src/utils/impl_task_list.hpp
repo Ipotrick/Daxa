@@ -94,7 +94,7 @@ namespace daxa
 
         bool compiled = false;
         std::vector<TaskVariant> tasks = {};
-        usize last_task_index_with_barrier = 0;
+        usize last_task_index_with_barrier = std::numeric_limits<usize>::max();
 
         std::vector<ImplTaskBuffer> impl_task_buffers = {};
         std::vector<ImplTaskImage> impl_task_images = {};
