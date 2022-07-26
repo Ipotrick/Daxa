@@ -142,7 +142,7 @@ struct App : AppWindow<App>
         });
         cmd_list.destroy_buffer_deferred(vertex_staging_buffer);
 
-        auto buffer_ptr = reinterpret_cast<Vertex *>(device.map_memory(vertex_staging_buffer));
+        auto buffer_ptr = device.map_memory_as<Vertex>(vertex_staging_buffer);
         *buffer_ptr = Vertex{-0.5f, +0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f};
         ++buffer_ptr;
         *buffer_ptr = Vertex{+0.5f, +0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f};
