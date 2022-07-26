@@ -9,7 +9,7 @@
 
 namespace daxa
 {
-    enum class DeviceType
+    enum struct DeviceType
     {
         OTHER = 0,
         INTEGRATED_GPU = 1,
@@ -188,6 +188,11 @@ namespace daxa
         void unmap_memory(BufferId id);
         auto info() const -> DeviceInfo const &;
         void wait_idle();
+        template <typename T>
+        auto map_memory_as(BufferId id) -> T *
+        {
+            return reinterpret_cast<T *>(map_memory(id));
+        }
 
         void submit_commands(CommandSubmitInfo const & submit_info);
         void present_frame(PresentInfo const & info);

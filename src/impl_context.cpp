@@ -25,7 +25,7 @@ namespace daxa
 
     auto Context::create_device(DeviceInfo const & device_info) -> Device
     {
-        ImplContext & impl = *reinterpret_cast<ImplContext *>(this->object);
+        auto & impl = *as<ImplContext>();
 
         u32 physical_device_n = 0;
         vkEnumeratePhysicalDevices(impl.vk_instance, &physical_device_n, nullptr);

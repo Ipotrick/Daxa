@@ -139,7 +139,7 @@ struct App : AppWindow<App>
                 .debug_name = "Boids Vertex Staging buffer",
             });
             cmd_list.destroy_buffer_deferred(init_boids_buffer);
-            auto boids_buffer_ptr = reinterpret_cast<BoidState *>(device.map_memory(init_boids_buffer));
+            auto boids_buffer_ptr = device.map_memory_as<BoidState>(init_boids_buffer);
             for (usize i = 0; i < MAX_BOIDS; ++i)
             {
                 f32 angle = static_cast<f32>(static_cast<u32>(rand()) % MAX_BOIDS) / MAX_BOIDS * 3.14159f * 2.0f;
@@ -174,7 +174,7 @@ struct App : AppWindow<App>
         //         .debug_name = "Vectors Vertex Staging buffer",
         //     });
         //     cmd_list.destroy_buffer_deferred(init_vectors_buffer);
-        //     auto vectors_buffer_ptr = reinterpret_cast<BoidState *>(device.map_memory(init_vectors_buffer));
+        //     auto vectors_buffer_ptr = device.map_memory_as<BoidState>(init_vectors_buffer);
         //     for (usize yi = 0; yi < VECTORS_PER_AXIS; ++yi)
         //         for (usize xi = 0; xi < VECTORS_PER_AXIS; ++xi)
         //         {
