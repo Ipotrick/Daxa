@@ -57,12 +57,24 @@ namespace tests
         AppContext app = {};
         auto task_list = daxa::TaskList({.device = app.device, .debug_name = "TaskList task list"});
 
+        auto buffer = app.device.create_buffer({
+            .size = 4,
+            .debug_name = "buffer",
+        });
+        auto image = app.device.create_image({
+            .size = {1,1,1},
+            .usage = daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
+            .debug_name = "image",
+        });
+
         auto task_image = task_list.create_task_image({
-            .fetch_callback = [](){ return daxa::ImageId{}; },
+            .fetch_callback = [=]()
+            { return image; },
         });
 
         auto upload_buffer = task_list.create_task_buffer({
-            .fetch_callback = [](){ return daxa::BufferId{}; },
+            .fetch_callback = [=]()
+            { return buffer; },
         });
 
         task_list.add_task({
@@ -70,12 +82,15 @@ namespace tests
                 .buffers = {{upload_buffer, daxa::TaskBufferAccess::TRANSFER_READ}},
                 .images = {{task_image, daxa::TaskImageAccess::TRANSFER_WRITE}},
             },
-            .task = [](daxa::TaskInterface &){},
+            .task = [](daxa::TaskInterface &) {},
         });
 
         task_list.compile();
 
         task_list.execute();
+
+        app.device.destroy_buffer(buffer);
+        app.device.destroy_image(image);
     }
 
     void compute()
