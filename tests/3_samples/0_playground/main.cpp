@@ -171,6 +171,9 @@ struct RenderableVoxelWorld
             }
         }
 
+        auto cmd_list = device.create_command_list({
+            .debug_name = "Playground Command List",
+        });
         for (u64 z = 0; z < CHUNK_N; ++z)
         {
             for (u64 y = 0; y < CHUNK_N; ++y)
@@ -178,17 +181,14 @@ struct RenderableVoxelWorld
                 for (u64 x = 0; x < CHUNK_N; ++x)
                 {
                     auto & chunk = *chunks[x + y * CHUNK_N + z * CHUNK_N * CHUNK_N];
-                    auto cmd_list = device.create_command_list({
-                        .debug_name = "Playground Command List",
-                    });
                     chunk.update_chunk_mesh(cmd_list);
-                    cmd_list.complete();
-                    device.submit_commands({
-                        .command_lists = {std::move(cmd_list)},
-                    });
                 }
             }
         }
+        cmd_list.complete();
+        device.submit_commands({
+            .command_lists = {std::move(cmd_list)},
+        });
     }
 
     ~RenderableVoxelWorld()
