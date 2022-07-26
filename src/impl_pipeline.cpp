@@ -108,7 +108,7 @@ namespace daxa
 
     auto PipelineCompiler::create_raster_pipeline(RasterPipelineInfo const & info) -> Result<RasterPipeline>
     {
-        auto & impl = *reinterpret_cast<ImplPipelineCompiler *>(this->object);
+        auto & impl = *as<ImplPipelineCompiler>();
 
         if (info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
         {
@@ -326,7 +326,7 @@ namespace daxa
 
     auto PipelineCompiler::create_compute_pipeline(ComputePipelineInfo const & info) -> Result<ComputePipeline>
     {
-        auto & impl = *reinterpret_cast<ImplPipelineCompiler *>(this->object);
+        auto & impl = *as<ImplPipelineCompiler>();
 
         if (info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
         {
@@ -406,7 +406,7 @@ namespace daxa
 
     auto PipelineCompiler::recreate_raster_pipeline(RasterPipeline const & pipeline) -> Result<RasterPipeline>
     {
-        auto & impl_pipeline = *reinterpret_cast<ImplRasterPipeline *>(pipeline.object);
+        auto & impl_pipeline = *pipeline.as<ImplRasterPipeline>();
         auto result = create_raster_pipeline(impl_pipeline.info);
         if (result.is_ok())
         {
@@ -417,7 +417,7 @@ namespace daxa
 
     auto PipelineCompiler::recreate_compute_pipeline(ComputePipeline const & pipeline) -> Result<ComputePipeline>
     {
-        auto & impl_pipeline = *reinterpret_cast<ImplComputePipeline *>(pipeline.object);
+        auto & impl_pipeline = *pipeline.as<ImplComputePipeline>();
         auto result = create_compute_pipeline(impl_pipeline.info);
         if (result.is_ok())
         {
@@ -426,10 +426,10 @@ namespace daxa
         return ResultErr{.message = result.message()};
     }
 
-    auto PipelineCompiler::check_if_sources_changed(RasterPipeline const & pipeline) -> bool
+    auto PipelineCompiler::check_if_sources_changed(RasterPipeline & pipeline) -> bool
     {
-        auto & impl = *reinterpret_cast<ImplPipelineCompiler *>(this->object);
-        auto & pipeline_impl = *reinterpret_cast<ImplRasterPipeline *>(pipeline.object);
+        auto & impl = *as<ImplPipelineCompiler>();
+        auto & pipeline_impl = *pipeline.as<ImplRasterPipeline>();
         auto now = std::chrono::file_clock::now();
         using namespace std::chrono_literals;
         if (now - pipeline_impl.last_hotload_time < 250ms)
@@ -464,10 +464,10 @@ namespace daxa
         return reload;
     }
 
-    auto PipelineCompiler::check_if_sources_changed(ComputePipeline const & pipeline) -> bool
+    auto PipelineCompiler::check_if_sources_changed(ComputePipeline & pipeline) -> bool
     {
-        auto & impl = *reinterpret_cast<ImplPipelineCompiler *>(this->object);
-        auto & pipeline_impl = *reinterpret_cast<ImplComputePipeline *>(pipeline.object);
+        auto & impl = *as<ImplPipelineCompiler>();
+        auto & pipeline_impl = *pipeline.as<ImplComputePipeline>();
         auto now = std::chrono::file_clock::now();
         using namespace std::chrono_literals;
         if (now - pipeline_impl.last_hotload_time < 250ms)
@@ -753,7 +753,7 @@ namespace daxa
         vkDestroyPipeline(this->impl_device.as<ImplDevice>()->vk_device, this->vk_pipeline, nullptr);
     }
 
-    auto ImplComputePipeline::managed_cleanup()-> bool
+    auto ImplComputePipeline::managed_cleanup() -> bool
     {
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->impl_device.as<ImplDevice>()->main_queue_zombies_mtx});
         u64 main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(this->impl_device.as<ImplDevice>()->main_queue_cpu_timeline);

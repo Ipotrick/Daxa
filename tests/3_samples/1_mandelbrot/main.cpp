@@ -150,7 +150,7 @@ struct App : AppWindow<App>
         cmd_list.destroy_buffer_deferred(compute_input_staging_buffer);
 
         compute_input.time = elapsed;
-        auto buffer_ptr = reinterpret_cast<ComputeInput *>(device.map_memory(compute_input_staging_buffer));
+        auto buffer_ptr = device.map_memory_as<ComputeInput>(compute_input_staging_buffer);
         *buffer_ptr = compute_input;
         device.unmap_memory(compute_input_staging_buffer);
 

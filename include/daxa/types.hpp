@@ -33,7 +33,7 @@ namespace daxa
         using f64 = double;
     } // namespace types
 
-    enum class Format
+    enum struct Format
     {
         UNDEFINED = 0,
         R4G4_UNORM_PACK8 = 1,
@@ -284,7 +284,7 @@ namespace daxa
         PVRTC2_4BPP_SRGB_BLOCK_IMG = 1000054007,
     };
 
-    enum class MsgSeverity
+    enum struct MsgSeverity
     {
         VERBOSE = 0x00000001,
         INFO = 0x00000010,
@@ -292,14 +292,14 @@ namespace daxa
         FAILURE = 0x00001000,
     };
 
-    enum class MsgType
+    enum struct MsgType
     {
         GENERAL = 0x00000001,
         VALIDATION = 0x00000002,
         PERFORMANCE = 0x00000004,
     };
 
-    enum class PresentMode
+    enum struct PresentMode
     {
         DO_NOT_WAIT_FOR_VBLANK = 0,
         TRIPPLE_BUFFER_WAIT_FOR_VBLANK = 1,
@@ -307,7 +307,7 @@ namespace daxa
         DOUBLE_BUFFER_WAIT_FOR_VBLANK_RELAXED = 3,
     };
 
-    enum class PresentOp
+    enum struct PresentOp
     {
         IDENTITY = 0x00000001,
         ROTATE_90 = 0x00000002,
@@ -346,7 +346,7 @@ namespace daxa
         static inline constexpr MemoryFlags STRATEGY_MIN_TIME = 0x00020000;
     };
 
-    enum class ColorSpace
+    enum struct ColorSpace
     {
         SRGB_NONLINEAR = 0,
         DISPLAY_P3_NONLINEAR = 1000104001,
@@ -368,7 +368,7 @@ namespace daxa
         DCI_P3_LINEAR = DISPLAY_P3_LINEAR,
     };
 
-    enum class ImageViewType
+    enum struct ImageViewType
     {
         REGULAR_1D = 0,
         REGULAR_2D = 1,
@@ -392,7 +392,7 @@ namespace daxa
         static inline constexpr ImageAspectFlags PLANE_2 = 0x00000040;
     };
 
-    enum class ImageLayout
+    enum struct ImageLayout
     {
         UNDEFINED = 0,
         GENERAL = 1,
@@ -426,6 +426,8 @@ namespace daxa
         u32 level_count = 1;
         u32 base_array_layer = 0;
         u32 layer_count = 1;
+
+        friend auto operator<=>(ImageMipArraySlice const &, ImageMipArraySlice const &) = default;
     };
 
     struct ImageArraySlice
@@ -434,6 +436,8 @@ namespace daxa
         u32 mip_level = 0;
         u32 base_array_layer = 0;
         u32 layer_count = 1;
+
+        friend auto operator<=>(ImageArraySlice const &, ImageArraySlice const &) = default;
     };
 
     struct ImageSlice
@@ -441,9 +445,11 @@ namespace daxa
         ImageAspectFlags image_aspect = ImageAspectFlagBits::COLOR;
         u32 mip_level = 0;
         u32 array_layer = 0;
+
+        friend auto operator<=>(ImageSlice const &, ImageSlice const &) = default;
     };
 
-    enum class Filter
+    enum struct Filter
     {
         NEAREST = 0,
         LINEAR = 1,
@@ -455,6 +461,8 @@ namespace daxa
         i32 x = {};
         i32 y = {};
         i32 z = {};
+
+        friend auto operator<=>(Offset3D const &, Offset3D const &) = default;
     };
 
     struct Extent3D
@@ -462,12 +470,16 @@ namespace daxa
         u32 x = {};
         u32 y = {};
         u32 z = {};
+
+        friend auto operator<=>(Extent3D const &, Extent3D const &) = default;
     };
 
     struct DepthValue
     {
         f32 depth;
         u32 stencil;
+
+        friend auto operator<=>(DepthValue const &, DepthValue const &) = default;
     };
 
     using ClearValue = std::variant<std::array<f32, 4>, std::array<i32, 4>, std::array<u32, 4>, DepthValue>;
@@ -518,6 +530,8 @@ namespace daxa
     {
         PipelineStageFlags stages = PipelineStageFlagBits::NONE;
         AccessTypeFlags type = AccessTypeFlagBits::NONE;
+
+        friend auto operator<=>(Access const &, Access const &) = default;
     };
 
     auto operator|(Access const & a, Access const & b) -> Access;
@@ -599,7 +613,7 @@ namespace daxa
         static inline constexpr Access PRE_RASTERIZATION_SHADERS_READ_WRITE = {.stages = PipelineStageFlagBits::PRE_RASTERIZATION_SHADERS, .type = AccessTypeFlagBits::READ_WRITE};
     }; // namespace AccessConsts
 
-    enum class SamplerAddressMode
+    enum struct SamplerAddressMode
     {
         REPEAT = 0,
         MIRRORED_REPEAT = 1,
@@ -607,7 +621,7 @@ namespace daxa
         MIRROR_CLAMP_TO_EDGE = 4,
     };
 
-    enum class CompareOp
+    enum struct CompareOp
     {
         NEVER = 0,
         LESS = 1,
@@ -619,7 +633,7 @@ namespace daxa
         ALWAYS = 7,
     };
 
-    enum class BlendFactor
+    enum struct BlendFactor
     {
         ZERO = 0,
         ONE = 1,
@@ -642,7 +656,7 @@ namespace daxa
         ONE_MINUS_SRC1_ALPHA = 18,
     };
 
-    enum class BlendOp
+    enum struct BlendOp
     {
         ADD = 0,
         SUBTRACT = 1,
@@ -670,9 +684,11 @@ namespace daxa
         BlendFactor dst_alpha_blend_factor = BlendFactor::ZERO;
         BlendOp alpha_blend_op = BlendOp::ADD;
         ColorComponentFlags color_write_mask = ColorComponentFlagBits::R | ColorComponentFlagBits::G | ColorComponentFlagBits::B | ColorComponentFlagBits::A;
+
+        friend auto operator<=>(BlendInfo const &, BlendInfo const &) = default;
     };
 
-    enum class PolygonMode
+    enum struct PolygonMode
     {
         FILL = 0,
         LINE = 1,
@@ -688,14 +704,14 @@ namespace daxa
         static inline constexpr FaceCullFlags FRONT_AND_BACK = 0x00000003;
     };
 
-    enum class AttachmentLoadOp
+    enum struct AttachmentLoadOp
     {
         LOAD = 0,
         CLEAR = 1,
         DONT_CARE = 2,
     };
 
-    enum class AttachmentStoreOp
+    enum struct AttachmentStoreOp
     {
         STORE = 0,
         DONT_CARE = 1,

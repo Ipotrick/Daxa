@@ -10,8 +10,7 @@ struct Push
 };
 [[vk::push_constant]] Push push;
 
-[numthreads(64, 1, 1)] void main(uint tid
-                                 : SV_DISPATCHTHREADID)
+[numthreads(64, 1, 1)] void main(uint tid : SV_DISPATCHTHREADID)
 {
     if (tid >= MAX_BOIDS)
         return;

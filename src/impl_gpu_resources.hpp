@@ -68,12 +68,12 @@ namespace daxa
 
         DAXA_ONLY_IF_THREADSAFETY(std::mutex page_alloc_mtx = {});
 #if DAXA_GPU_ID_VALIDATION
-        std::mutex use_after_free_check_mtx = {};
+        mutable std::mutex use_after_free_check_mtx = {};
 #endif
         std::array<std::unique_ptr<PageT>, PAGE_COUNT> pages = {};
 
 #if DAXA_GPU_ID_VALIDATION
-        void verify_ressource_id(GPUResourceId id)
+        void verify_ressource_id(GPUResourceId id) const
         {
             size_t page = id.index >> PAGE_BITS;
             size_t offset = id.index & PAGE_MASK;
@@ -138,6 +138,20 @@ namespace daxa
         }
 
         auto dereference_id(GPUResourceId id) -> ResourceT &
+        {
+            size_t page = id.index >> PAGE_BITS;
+            size_t offset = id.index & PAGE_MASK;
+
+#if DAXA_GPU_ID_VALIDATION
+            DAXA_ONLY_IF_THREADSAFETY(std::unique_lock use_after_free_check_lock{use_after_free_check_mtx});
+            verify_ressource_id(id);
+            u8 version = pages[page]->at(offset).second;
+            DAXA_DBG_ASSERT_TRUE_M(version == id.version, "detected use after free for a resource id");
+#endif
+            return pages[page]->at(offset).first;
+        }
+
+        auto dereference_id(GPUResourceId id) const -> ResourceT const &
         {
             size_t page = id.index >> PAGE_BITS;
             size_t offset = id.index & PAGE_MASK;

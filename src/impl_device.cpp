@@ -6,19 +6,19 @@ namespace daxa
 
     auto Device::info() const -> DeviceInfo const &
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
+        auto & impl = *as<ImplDevice>();
         return impl.info;
     }
 
     void Device::wait_idle()
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
+        auto & impl = *as<ImplDevice>();
         impl.wait_idle();
     }
 
     void Device::submit_commands(CommandSubmitInfo const & submit_info)
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
+        auto & impl = *as<ImplDevice>();
 
         impl.main_queue_collect_garbage();
 
@@ -29,7 +29,7 @@ namespace daxa
         std::vector<VkCommandBuffer> submit_vk_command_buffers = {};
         for (auto & command_list : submit_info.command_lists)
         {
-            auto & impl_cmd_list = *reinterpret_cast<ImplCommandList *>(command_list.object);
+            auto & impl_cmd_list = *command_list.as<ImplCommandList>();
             DAXA_DBG_ASSERT_TRUE_M(impl_cmd_list.recording_complete, "all submitted command lists must be completed before submission");
             submit.second.push_back(command_list);
             submit_vk_command_buffers.push_back(impl_cmd_list.vk_cmd_buffer);
@@ -44,14 +44,14 @@ namespace daxa
 
         for (auto & [timeline_semaphore, signal_value] : submit_info.signal_timeline_semaphores)
         {
-            auto & impl_timeline_semaphore = *reinterpret_cast<ImplTimelineSemaphore *>(timeline_semaphore.object);
+            auto & impl_timeline_semaphore = *timeline_semaphore.as<ImplTimelineSemaphore>();
             submit_semaphore_signals.push_back(impl_timeline_semaphore.vk_semaphore);
             submit_semaphore_signal_values.push_back(signal_value);
         }
 
         for (auto & binary_semaphore : submit_info.signal_binary_semaphores)
         {
-            auto & impl_binary_semaphore = *reinterpret_cast<ImplBinarySemaphore *>(binary_semaphore.object);
+            auto & impl_binary_semaphore = *binary_semaphore.as<ImplBinarySemaphore>();
             submit_semaphore_signals.push_back(impl_binary_semaphore.vk_semaphore);
             submit_semaphore_signal_values.push_back(0); // The vulkan spec requires to have dummy values for binary semaphores.
         }
@@ -63,7 +63,7 @@ namespace daxa
 
         for (auto & [timeline_semaphore, wait_value] : submit_info.wait_timeline_semaphores)
         {
-            auto & impl_timeline_semaphore = *reinterpret_cast<ImplTimelineSemaphore *>(timeline_semaphore.object);
+            auto & impl_timeline_semaphore = *timeline_semaphore.as<ImplTimelineSemaphore>();
             submit_semaphore_waits.push_back(impl_timeline_semaphore.vk_semaphore);
             submit_semaphore_wait_stage_masks.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
             submit_semaphore_wait_values.push_back(wait_value);
@@ -71,7 +71,7 @@ namespace daxa
 
         for (auto & binary_semaphore : submit_info.wait_binary_semaphores)
         {
-            auto & impl_binary_semaphore = *reinterpret_cast<ImplTimelineSemaphore *>(binary_semaphore.object);
+            auto & impl_binary_semaphore = *binary_semaphore.as<ImplTimelineSemaphore>();
             submit_semaphore_waits.push_back(impl_binary_semaphore.vk_semaphore);
             submit_semaphore_wait_stage_masks.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
             submit_semaphore_wait_values.push_back(0);
@@ -106,15 +106,15 @@ namespace daxa
 
     void Device::present_frame(PresentInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
-        auto & swapchain_impl = *reinterpret_cast<ImplSwapchain *>(info.swapchain.object);
+        auto & impl = *as<ImplDevice>();
+        auto & swapchain_impl = *info.swapchain.as<ImplSwapchain>();
 
         // used to synchronise with previous submits:
         std::vector<VkSemaphore> submit_semaphore_waits = {};
 
         for (auto & binary_semaphore : info.wait_binary_semaphores)
         {
-            auto & impl_binary_semaphore = *reinterpret_cast<ImplTimelineSemaphore *>(binary_semaphore.object);
+            auto & impl_binary_semaphore = *binary_semaphore.as<ImplTimelineSemaphore>();
             submit_semaphore_waits.push_back(impl_binary_semaphore.vk_semaphore);
         }
 
@@ -161,7 +161,7 @@ namespace daxa
 
     void Device::collect_garbage()
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
+        auto & impl = *as<ImplDevice>();
         impl.main_queue_collect_garbage();
     }
 
@@ -195,55 +195,79 @@ namespace daxa
 
     auto Device::create_buffer(BufferInfo const & info) -> BufferId
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
+        auto & impl = *as<ImplDevice>();
         return impl.new_buffer(info);
     }
 
     auto Device::create_image(ImageInfo const & info) -> ImageId
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
+        auto & impl = *as<ImplDevice>();
         return impl.new_image(info);
     }
 
     auto Device::create_image_view(ImageViewInfo const & info) -> ImageViewId
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
+        auto & impl = *as<ImplDevice>();
         return impl.new_image_view(info);
     }
 
     auto Device::create_sampler(SamplerInfo const & info) -> SamplerId
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
+        auto & impl = *as<ImplDevice>();
         return impl.new_sampler(info);
     }
 
     void Device::destroy_buffer(BufferId id)
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
+        auto & impl = *as<ImplDevice>();
         impl.zombiefy_buffer(id);
     }
 
     void Device::destroy_image(ImageId id)
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
+        auto & impl = *as<ImplDevice>();
         impl.zombiefy_image(id);
     }
 
     void Device::destroy_image_view(ImageViewId id)
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
+        auto & impl = *as<ImplDevice>();
         impl.zombiefy_image_view(id);
     }
 
     void Device::destroy_sampler(SamplerId id)
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
+        auto & impl = *as<ImplDevice>();
         impl.zombiefy_sampler(id);
+    }
+
+    auto Device::info_buffer(BufferId id) const -> BufferInfo
+    {
+        auto & impl = *as<ImplDevice>();
+        return impl.slot(id).info;
+    }
+
+    auto Device::info_image(ImageId id) const -> ImageInfo
+    {
+        auto & impl = *as<ImplDevice>();
+        return impl.slot(id).info;
+    }
+
+    auto Device::info_image_view(ImageViewId id) const -> ImageViewInfo
+    {
+        auto & impl = *as<ImplDevice>();
+        return impl.slot(id).info;
+    }
+
+    auto Device::info_sampler(SamplerId id) const -> SamplerInfo
+    {
+        auto & impl = *as<ImplDevice>();
+        return impl.slot(id).info;
     }
 
     auto Device::map_memory(BufferId id) -> void *
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
+        auto & impl = *as<ImplDevice>();
         void * ret = nullptr;
         vmaMapMemory(impl.vma_allocator, impl.slot(id).vma_allocation, &ret);
         return ret;
@@ -251,7 +275,7 @@ namespace daxa
 
     void Device::unmap_memory(BufferId id)
     {
-        auto & impl = *reinterpret_cast<ImplDevice *>(this->object);
+        auto & impl = *as<ImplDevice>();
         void * ret = nullptr;
         vmaUnmapMemory(impl.vma_allocator, impl.slot(id).vma_allocation);
     }
@@ -1080,6 +1104,26 @@ namespace daxa
     }
 
     auto ImplDevice::slot(SamplerId id) -> ImplSamplerSlot &
+    {
+        return gpu_table.sampler_slots.dereference_id(id);
+    }
+
+    auto ImplDevice::slot(BufferId id) const -> ImplBufferSlot const &
+    {
+        return gpu_table.buffer_slots.dereference_id(id);
+    }
+
+    auto ImplDevice::slot(ImageId id) const -> ImplImageSlot const &
+    {
+        return gpu_table.image_slots.dereference_id(id);
+    }
+
+    auto ImplDevice::slot(ImageViewId id) const -> ImplImageViewSlot const &
+    {
+        return gpu_table.image_slots.dereference_id(id).view_slot;
+    }
+
+    auto ImplDevice::slot(SamplerId id) const -> ImplSamplerSlot const &
     {
         return gpu_table.sampler_slots.dereference_id(id);
     }
