@@ -7,7 +7,7 @@ namespace daxa
 
     auto BinarySemaphore::info() const -> BinarySemaphoreInfo const &
     {
-        auto & impl = *reinterpret_cast<ImplBinarySemaphore *>(this->object);
+        auto & impl = *as<ImplBinarySemaphore>();
         return impl.info;
     }
 
@@ -38,7 +38,7 @@ namespace daxa
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_SEMAPHORE,
-                .objectHandle = reinterpret_cast<uint64_t>(this->vk_semaphore),
+                .objectHandle = reinterpret_cast<u64>(this->vk_semaphore),
                 .pObjectName = this->info.debug_name.c_str(),
             };
             vkSetDebugUtilsObjectNameEXT(impl_device.as<ImplDevice>()->vk_device, &name_info);
@@ -61,7 +61,7 @@ namespace daxa
 
     auto TimelineSemaphore::value() const -> u64
     {
-        auto & impl = *reinterpret_cast<ImplTimelineSemaphore *>(this->object);
+        auto & impl = *as<ImplTimelineSemaphore>();
 
         u64 ret = {};
         vkGetSemaphoreCounterValue(impl.impl_device.as<ImplDevice>()->vk_device, impl.vk_semaphore, &ret);
@@ -70,7 +70,7 @@ namespace daxa
 
     void TimelineSemaphore::set_value(u64 value)
     {
-        auto & impl = *reinterpret_cast<ImplTimelineSemaphore *>(this->object);
+        auto & impl = *as<ImplTimelineSemaphore>();
 
         VkSemaphoreSignalInfo vk_semaphore_signal_info{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
@@ -84,7 +84,7 @@ namespace daxa
 
     auto TimelineSemaphore::wait_for_value(u64 value, u64 timeout_nanos) -> bool
     {
-        auto & impl = *reinterpret_cast<ImplTimelineSemaphore *>(this->object);
+        auto & impl = *as<ImplTimelineSemaphore>();
 
         VkSemaphoreWaitInfo vk_semaphore_wait_info{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
@@ -101,14 +101,14 @@ namespace daxa
 
     auto TimelineSemaphore::info() const -> TimelineSemaphoreInfo const &
     {
-        auto & impl = *reinterpret_cast<ImplTimelineSemaphore *>(this->object);
+        auto & impl = *as<ImplTimelineSemaphore>();
         return impl.info;
     }
 
     ImplTimelineSemaphore::ImplTimelineSemaphore(ManagedWeakPtr a_impl_device, TimelineSemaphoreInfo const & a_info)
         : impl_device{a_impl_device}, info{a_info}
     {
-        VkSemaphoreTypeCreateInfo timelineCreateInfo{
+        VkSemaphoreTypeCreateInfo timeline_vk_semaphore{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
             .pNext = nullptr,
             .semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
@@ -117,7 +117,7 @@ namespace daxa
 
         VkSemaphoreCreateInfo vk_semaphore_create_info{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-            .pNext = reinterpret_cast<void *>(&timelineCreateInfo),
+            .pNext = &timeline_vk_semaphore,
             .flags = {},
         };
 

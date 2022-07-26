@@ -101,6 +101,15 @@ namespace daxa
             return reinterpret_cast<T *>(object);
 #endif
         }
+        template <typename T>
+        auto as() const -> T const *
+        {
+#if DAXA_VALIDATION
+            return dynamic_cast<T const *>(object);
+#else
+            return reinterpret_cast<T const *>(object);
+#endif
+        }
 
         ManagedWeakPtr() = default;
         ManagedWeakPtr(ManagedSharedState * ptr);
@@ -123,6 +132,15 @@ namespace daxa
             return dynamic_cast<T *>(object);
 #else
             return reinterpret_cast<T *>(object);
+#endif
+        }
+        template <typename T>
+        auto as() const -> T const *
+        {
+#if DAXA_VALIDATION
+            return dynamic_cast<T const *>(object);
+#else
+            return reinterpret_cast<T const *>(object);
 #endif
         }
 

@@ -39,11 +39,14 @@ add_library(daxa STATIC
     "src/impl_gpu_resources.cpp"
     "src/impl_semaphore.cpp"
     "src/impl_dependencies.cpp"
+
+    "src/utils/impl_task_list.cpp"
 )
 
 add_library(daxa::daxa ALIAS daxa)
 
 target_compile_features(daxa PUBLIC cxx_std_20)
+
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     target_compile_options(daxa PRIVATE /std:c++latest)
 endif()

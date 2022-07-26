@@ -7,7 +7,7 @@ namespace daxa
 
     void CommandList::copy_buffer_to_buffer(BufferCopyInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
+        auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
@@ -27,7 +27,7 @@ namespace daxa
 
     void CommandList::copy_buffer_to_image(BufferImageCopy const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
+        auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
@@ -51,7 +51,7 @@ namespace daxa
 
     void CommandList::copy_image_to_buffer(BufferImageCopy const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
+        auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
@@ -75,7 +75,7 @@ namespace daxa
 
     void CommandList::blit_image_to_image(ImageBlitInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
+        auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
         impl.flush_barriers();
 
@@ -99,7 +99,7 @@ namespace daxa
 
     void CommandList::copy_image_to_image(ImageCopyInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
+        auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
         impl.flush_barriers();
 
@@ -123,7 +123,7 @@ namespace daxa
 
     void CommandList::clear_image(ImageClearInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
+        auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
         impl.flush_barriers();
 
@@ -165,7 +165,7 @@ namespace daxa
 
     void CommandList::clear_buffer(BufferClearInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
+        auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
         impl.flush_barriers();
 
@@ -179,7 +179,7 @@ namespace daxa
 
     void CommandList::push_constant(void const * data, u32 size, u32 offset)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
+        auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         DAXA_DBG_ASSERT_TRUE_M(size <= MAX_PUSH_CONSTANT_BYTE_SIZE, MAX_PUSH_CONSTANT_SIZE_ERROR);
         DAXA_DBG_ASSERT_TRUE_M(size % 4 == 0, "push constant size must be a multiple of 4 bytes");
@@ -189,8 +189,8 @@ namespace daxa
     }
     void CommandList::set_pipeline(ComputePipeline const & pipeline)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
-        auto & pipeline_impl = *reinterpret_cast<ImplComputePipeline *>(pipeline.object);
+        auto & impl = *as<ImplCommandList>();
+        auto const & pipeline_impl = *pipeline.as<ImplComputePipeline>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
@@ -200,8 +200,8 @@ namespace daxa
     }
     void CommandList::set_pipeline(RasterPipeline const & pipeline)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
-        auto & pipeline_impl = *reinterpret_cast<ImplRasterPipeline *>(pipeline.object);
+        auto & impl = *as<ImplCommandList>();
+        auto const & pipeline_impl = *pipeline.as<ImplRasterPipeline>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
@@ -211,16 +211,16 @@ namespace daxa
     }
     void CommandList::dispatch(u32 group_x, u32 group_y, u32 group_z)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
+        auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
         vkCmdDispatch(impl.vk_cmd_buffer, group_x, group_y, group_z);
     }
 
-    void defer_destruction_helper(void * impl_coid, GPUResourceId id, u8 index)
+    void defer_destruction_helper(void * impl_void, GPUResourceId id, u8 index)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(impl_coid);
+        auto & impl = *reinterpret_cast<ImplCommandList *>(impl_void);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         DAXA_DBG_ASSERT_TRUE_M(impl.deferred_destruction_count < DEFERRED_DESTRUCTION_COUNT_MAX, "can not defer the destruction of more than 32 resources per command list recording");
         impl.flush_barriers();
@@ -250,7 +250,7 @@ namespace daxa
 
     void CommandList::complete()
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
+        auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
@@ -261,19 +261,19 @@ namespace daxa
 
     auto CommandList::is_complete() const -> bool
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
+        auto & impl = *as<ImplCommandList>();
         return impl.recording_complete;
     }
 
     auto CommandList::info() const -> CommandListInfo const &
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
+        auto & impl = *as<ImplCommandList>();
         return impl.info;
     }
 
     void CommandList::pipeline_barrier(PipelineBarrierInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
+        auto & impl = *as<ImplCommandList>();
 
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
 
@@ -294,7 +294,7 @@ namespace daxa
 
     void CommandList::pipeline_barrier_image_transition(PipelineBarrierImageTransitionInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
+        auto & impl = *as<ImplCommandList>();
 
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
 
@@ -321,7 +321,7 @@ namespace daxa
 
     void CommandList::begin_renderpass(RenderPassBeginInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
+        auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
@@ -394,7 +394,7 @@ namespace daxa
 
     void CommandList::end_renderpass()
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
+        auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
         vkCmdEndRendering(impl.vk_cmd_buffer);
@@ -402,7 +402,7 @@ namespace daxa
 
     void CommandList::set_viewport(ViewportInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
+        auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
         vkCmdSetViewport(impl.vk_cmd_buffer, 0, 1, reinterpret_cast<VkViewport const *>(&info));
@@ -410,7 +410,7 @@ namespace daxa
 
     void CommandList::set_scissor(Rect2D const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
+        auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
         vkCmdSetScissor(impl.vk_cmd_buffer, 0, 1, reinterpret_cast<VkRect2D const *>(&info));
@@ -418,7 +418,7 @@ namespace daxa
 
     void CommandList::set_index_buffer(BufferId id, usize offset, usize index_type_byte_size)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
+        auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
@@ -434,7 +434,7 @@ namespace daxa
 
     void CommandList::draw(DrawInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
+        auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
         vkCmdDraw(impl.vk_cmd_buffer, info.vertex_count, info.instance_count, info.first_vertex, info.first_instance);
@@ -442,7 +442,7 @@ namespace daxa
 
     void CommandList::draw_indirect(DrawIndirectInfo const & info)
     {
-        auto & impl = *reinterpret_cast<ImplCommandList *>(this->object);
+        auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
         vkCmdDrawIndirect(impl.vk_cmd_buffer, impl.impl_device.as<ImplDevice>()->slot(info.indirect_buffer).vk_buffer, info.offset, info.draw_count, info.stride);

@@ -62,7 +62,7 @@ namespace tests
             .debug_name = "image_2",
         });
 
-        auto buffer_ptr = reinterpret_cast<std::array<f32, 4> *>(app.device.map_memory(staging_upload_buffer));
+        auto buffer_ptr = app.device.map_memory_as<std::array<f32, 4>>(staging_upload_buffer);
 
         *buffer_ptr = data;
 
@@ -166,7 +166,7 @@ namespace tests
 
         app.device.wait_idle();
 
-        std::array<f32, 4> readback_data = *reinterpret_cast<std::array<f32, 4> *>(app.device.map_memory(staging_readback_buffer));
+        std::array<f32, 4> readback_data = *app.device.map_memory_as<std::array<f32, 4>>(staging_readback_buffer);
 
         app.device.unmap_memory(staging_readback_buffer);
 

@@ -9,7 +9,7 @@ namespace daxa
 
     ImageId Swapchain::acquire_next_image()
     {
-        auto & impl = *reinterpret_cast<ImplSwapchain *>(this->object);
+        auto & impl = *as<ImplSwapchain>();
         VkResult err;
         do
         {
@@ -39,13 +39,13 @@ namespace daxa
 
     auto Swapchain::get_format() const -> Format
     {
-        auto & impl = *reinterpret_cast<ImplSwapchain *>(this->object);
+        auto & impl = *as<ImplSwapchain>();
         return static_cast<Format>(impl.vk_surface_format.format);
     }
 
     void Swapchain::resize(u32 width, u32 height)
     {
-        auto & impl = *reinterpret_cast<ImplSwapchain *>(this->object);
+        auto & impl = *as<ImplSwapchain>();
         impl.info.width = width;
         impl.info.height = height;
         impl.recreate();

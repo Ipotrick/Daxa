@@ -251,7 +251,7 @@ void RenderableChunk::update_chunk_mesh(daxa::CommandList & cmd_list)
         });
         cmd_list.destroy_buffer_deferred(face_staging_buffer);
 
-        Vertex * buffer_ptr = reinterpret_cast<Vertex *>(device.map_memory(face_staging_buffer));
+        Vertex * buffer_ptr = device.map_memory_as<Vertex>(face_staging_buffer);
         face_n = 0;
         for (i32 zi = 0; zi < 32; ++zi)
         {
@@ -305,7 +305,7 @@ void RenderableChunk::update_chunk_mesh(daxa::CommandList & cmd_list)
         });
         cmd_list.destroy_buffer_deferred(face_staging_buffer);
 
-        Vertex * buffer_ptr = reinterpret_cast<Vertex *>(device.map_memory(face_staging_buffer));
+        Vertex * buffer_ptr = device.map_memory_as<Vertex>(face_staging_buffer);
         water_face_n = 0;
         for (i32 zi = 0; zi < 32; ++zi)
         {
