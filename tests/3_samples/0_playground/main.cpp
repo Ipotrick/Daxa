@@ -108,7 +108,7 @@ struct RenderableChunk
     u32 face_n = 0, water_face_n = 0;
     RenderableVoxelWorld * renderable_world = nullptr;
 
-    RenderableChunk(daxa::Device & device) : device{device}
+    RenderableChunk(daxa::Device & a_device) : device{a_device}
     {
         face_buffer = device.create_buffer(daxa::BufferInfo{
             .size = CHUNK_MAX_SIZE,
