@@ -16,6 +16,7 @@ namespace tests
                 .native_window = get_native_handle(),
                 .width = size_x,
                 .height = size_y,
+                .present_mode = daxa::PresentMode::DOUBLE_BUFFER_WAIT_FOR_VBLANK,
                 .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
             });
 
@@ -116,13 +117,18 @@ namespace tests
 
             void on_resize(u32 sx, u32 sy)
             {
-                size_x = sx;
-                size_y = sy;
-                minimized = size_x == 0 || size_y == 0;
-                if (!minimized)
+                std::cout << "resized CALLED!" << std::endl;
+                if (sx != size_x || sy != size_y)
                 {
-                    swapchain.resize(size_x, size_y);
-                    draw();
+                    std::cout << "resized!" << std::endl;
+                    size_x = sx;
+                    size_y = sy;
+                    minimized = size_x == 0 || size_y == 0;
+                    if (!minimized)
+                    {
+                        swapchain.resize(size_x, size_y);
+                        draw();
+                    }
                 }
             }
         };

@@ -78,8 +78,8 @@ namespace daxa
             .window = this->info.native_window,
         };
         {
-            auto func = (PFN_vkCreateXlibSurfaceKHR)vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext()->vk_instance, "vkCreateXlibSurfaceKHR");
-            func(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext()->vk_instance, &surface_ci, nullptr, &this->vk_surface);
+            auto func = (PFN_vkCreateXlibSurfaceKHR)vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, "vkCreateXlibSurfaceKHR");
+            func(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, &surface_ci, nullptr, &this->vk_surface);
         }
 #endif
     }

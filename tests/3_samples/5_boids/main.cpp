@@ -121,6 +121,7 @@ struct App : AppWindow<App>
     f32 aspect = static_cast<f32>(size_x) / static_cast<f32>(size_y);
     RasterPush raster_push{
         .view_mat = glm::ortho(-aspect, aspect, -1.0f, 1.0f),
+        .boids_buffer_id = boids_buffers[0],
     };
 
     using Clock = std::chrono::high_resolution_clock;
@@ -391,6 +392,7 @@ struct App : AppWindow<App>
         aspect = static_cast<f32>(size_x) / static_cast<f32>(size_y);
         raster_push = RasterPush{
             .view_mat = glm::ortho(-aspect, aspect, -1.0f, 1.0f),
+            .boids_buffer_id = boids_buffers[0],
         };
         draw();
     }

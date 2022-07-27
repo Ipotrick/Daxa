@@ -127,6 +127,7 @@ namespace daxa
         // FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL = 1000164003,
         default: DAXA_DBG_ASSERT_TRUE_M(false, "invalid ImageLayout");
         }
+        return "invalid ImageLayout";
     }
 
     auto to_string(PipelineStageFlags flags) -> std::string
