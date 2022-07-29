@@ -833,12 +833,23 @@ namespace daxa
 
         vmaCreateImage(this->vma_allocator, &vk_image_create_info, &vma_allocation_create_info, &ret.vk_image, &ret.vma_allocation, nullptr);
 
+        VkImageViewType vk_image_view_type;
+        if (info.array_layer_count > 1)
+        {
+            DAXA_DBG_ASSERT_TRUE_M(info.dimensions >= 1 && info.dimensions <= 2, "image dimensions must be 1 or 2 if making an image array");
+            vk_image_view_type = static_cast<VkImageViewType>(info.dimensions + 3);
+        }
+        else
+        {
+            vk_image_view_type = static_cast<VkImageViewType>(info.dimensions - 1);
+        }
+
         VkImageViewCreateInfo vk_image_view_create_info{
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},
             .image = ret.vk_image,
-            .viewType = static_cast<VkImageViewType>(vk_image_type),
+            .viewType = vk_image_view_type,
             .format = *reinterpret_cast<VkFormat const *>(&info.format),
             .components = VkComponentMapping{
                 .r = VK_COMPONENT_SWIZZLE_IDENTITY,
