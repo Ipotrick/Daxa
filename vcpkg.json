@@ -20,7 +20,8 @@
             "description": "Build Tests",
             "dependencies": [
                 "glfw3",
-                "glm"
+                "glm",
+                "stb"
             ]
         }
     }

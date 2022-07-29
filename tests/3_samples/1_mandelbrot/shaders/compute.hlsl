@@ -13,8 +13,11 @@ struct Push
 };
 [[vk::push_constant]] const Push p;
 
-#define CENTER float2(-0.752, -0.0321)
-#define SCALE 0.002
+// #define CENTER float2(-0.752, -0.0321)
+// #define SCALE 0.002
+// #define SUBSAMPLES 2
+#define CENTER float2(-0.5, 0)
+#define SCALE 2
 #define SUBSAMPLES 2
 
 float3 hsv2rgb(float3 c)
