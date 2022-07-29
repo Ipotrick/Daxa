@@ -30,8 +30,13 @@ float4 main(VertexOutput vertex_output) : SV_TARGET
 
     // float4 albedo = atlas_texture_array.Load(int4(vert.uv.x * 16, vert.uv.y * 16, vert.tex_id, 0));
     float4 albedo = atlas_texture_array.Sample(atlas_sampler, float3(vert.uv, vert.tex_id));
+    if (albedo.a < 0.25)
+        discard;
 
-    float3 col = albedo.rgb;
+    float3 col = 0;
+    col += albedo.rgb;
+    // col += vertex_output.pos * 1.0 / 32;
+    // col += rand_vec3(vertex_output.pos);
 
     switch (p.mode)
     {
