@@ -12,6 +12,21 @@ static const float2 instance_offsets[6] = {
     float2(+1.0, +1.0),
     float2(+0.0, +1.0),
 };
+static const float3 cross_instance_positions[6] = {
+    float3(+0.0 + 0.2, +0.2, +1.0 - 0.2),
+    float3(+1.0 - 0.2, +0.2, +0.0 + 0.2),
+    float3(+0.0 + 0.2, +1.0, +1.0 - 0.2),
+    float3(+1.0 - 0.2, +0.2, +0.0 + 0.2),
+    float3(+1.0 - 0.2, +1.0, +0.0 + 0.2),
+    float3(+0.0 + 0.2, +1.0, +1.0 - 0.2),
+};
+
+float3 rand_vec3(float3 v)
+{
+    float r1 = frac((dot(v.xy, float2(12.9898, 78.233))) * 43758.5453);
+    float r2 = frac((dot(v.zy, float2(12.9898, 78.233))) * 43758.5453);
+    return float3(r1, 0, r2);
+}
 
 enum class BlockID : uint
 {
@@ -48,6 +63,9 @@ enum class BlockFace : uint
     Top,
     Back,
     Front,
+
+    Cross_A,
+    Cross_B,
 };
 
 struct Vertex
@@ -59,35 +77,69 @@ struct Vertex
     BlockID block_id;
     BlockFace block_face;
     uint tex_id;
+    uint vert_id;
 
-    void correct_pos()
+    void correct_pos(uint face_id)
     {
-        // clang-format off
+        float3 cross_uv = cross_instance_positions[vert_id];
         switch (block_face)
         {
+            // clang-format off
         case BlockFace::Left:   pos += float3(1.0,        uv.x,       uv.y), nrm = float3(+1.0, +0.0, +0.0); break;
         case BlockFace::Right:  pos += float3(0.0,        1.0 - uv.x, uv.y), nrm = float3(-1.0, +0.0, +0.0); break;
         case BlockFace::Bottom: pos += float3(1.0 - uv.x, 1.0,        uv.y), nrm = float3(+0.0, +1.0, +0.0); break;
         case BlockFace::Top:    pos += float3(uv.x,       0.0,        uv.y), nrm = float3(+0.0, -1.0, +0.0); break;
         case BlockFace::Back:   pos += float3(uv.x,       uv.y,        1.0), nrm = float3(+0.0, +0.0, +1.0); break;
         case BlockFace::Front:  pos += float3(1.0 - uv.x, uv.y,        0.0), nrm = float3(+0.0, +0.0, -1.0); break;
+            // clang-format on
+
+        case BlockFace::Cross_A:
+        {
+            if (face_id % 2 == 0)
+            {
+                pos += cross_uv;
+            }
+            else
+            {
+                pos += float3(1.0 - cross_uv.x, cross_uv.y, 1.0 - cross_uv.z);
+            }
+            pos += rand_vec3(block_pos) * 0.25;
+            nrm = float3(+0.0, -1.0, +0.0);
         }
-        // clang-format on
+        break;
+        case BlockFace::Cross_B:
+        {
+            if (face_id % 2 == 0)
+            {
+                pos += float3(cross_uv.x, cross_uv.y, 1.0 - cross_uv.z);
+            }
+            else
+            {
+                pos += float3(1.0 - cross_uv.x, cross_uv.y, cross_uv.z);
+            }
+            pos += rand_vec3(block_pos) * 0.25;
+            nrm = float3(+0.0, -1.0, +0.0);
+        }
+        break;
+        }
     }
 
     void correct_uv()
     {
-        // clang-format off
         switch (block_face)
         {
-        case BlockFace::Left:   uv = float2(1.0, 1.0) + float2(-uv.y, -uv.x); break;
-        case BlockFace::Right:  uv = float2(0.0, 0.0) + float2(+uv.y, +uv.x); break;
-        case BlockFace::Bottom: uv = float2(0.0, 0.0) + float2(+uv.x, +uv.y); break;
-        case BlockFace::Top:    uv = float2(0.0, 0.0) + float2(+uv.x, +uv.y); break;
-        case BlockFace::Back:   uv = float2(1.0, 1.0) + float2(-uv.x, -uv.y); break;
-        case BlockFace::Front:  uv = float2(1.0, 1.0) + float2(-uv.x, -uv.y); break;
+            // clang-format off
+        case BlockFace::Left:    uv = float2(1.0, 1.0) + float2(-uv.y, -uv.x); break;
+        case BlockFace::Right:   uv = float2(0.0, 0.0) + float2(+uv.y, +uv.x); break;
+        case BlockFace::Bottom:  uv = float2(0.0, 0.0) + float2(+uv.x, +uv.y); break;
+        case BlockFace::Top:     uv = float2(0.0, 0.0) + float2(+uv.x, +uv.y); break;
+        case BlockFace::Back:    uv = float2(1.0, 1.0) + float2(-uv.x, -uv.y); break;
+        case BlockFace::Front:   uv = float2(1.0, 1.0) + float2(-uv.x, -uv.y); break;
+            // clang-format on
+
+        case BlockFace::Cross_A: uv = float2(1.0, 1.0) + float2(-uv.x, -uv.y); break;
+        case BlockFace::Cross_B: uv = float2(1.0, 1.0) + float2(-uv.x, -uv.y); break;
         }
-        // clang-format on
 
         if (tex_id == 11 || tex_id == 8)
         {
@@ -115,7 +167,8 @@ struct VertexOutput
     float2 uv : TEXCOORD0;
     // BlockID block_id : COLOR0;
     // BlockFace block_face : COLOR1;
-    uint tex_id : COLOR2;
+    float3 pos : DATA1;
+    uint tex_id : DATA0;
 };
 
 uint tile_texture_index(BlockID block_id, BlockFace face)
@@ -190,7 +243,8 @@ struct FaceBuffer
         result.block_id = (BlockID)((vert_data >> 18) & 0x3fff);
         result.block_face = (BlockFace)((vert_data >> 15) & 0x7);
 
-        result.correct_pos();
+        result.vert_id = data_instance;
+        result.correct_pos(data_index);
         result.tex_id = tile_texture_index(result.block_id, result.block_face);
         result.correct_uv();
 

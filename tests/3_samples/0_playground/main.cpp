@@ -171,7 +171,7 @@ static inline constexpr u64 CHUNK_VOXEL_N = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE
 static inline constexpr u64 CHUNK_MAX_VERTS = CHUNK_VOXEL_N * 6;
 static inline constexpr u64 CHUNK_MAX_SIZE = CHUNK_MAX_VERTS * sizeof(Vertex);
 
-static inline constexpr u64 CHUNK_N = 4;
+static inline constexpr u64 CHUNK_N = 6;
 
 struct Voxel
 {
@@ -182,8 +182,19 @@ struct Voxel
         switch (id)
         {
         case BlockID::Air:
+        case BlockID::Rose:
+        case BlockID::TallGrass:
         case BlockID::Water: return false;
         default: return true;
+        }
+    }
+    bool is_cross()
+    {
+        switch (id)
+        {
+        case BlockID::Rose:
+        case BlockID::TallGrass: return true;
+        default: return false;
         }
     }
 
@@ -230,14 +241,14 @@ struct VoxelChunk
                     u64 i = xi + yi * CHUNK_SIZE + zi * CHUNK_SIZE * CHUNK_SIZE;
                     glm::vec3 block_pos = glm::vec3(xi, yi, zi) + pos;
                     voxels[i].id = generate_block_id(block_pos);
-                    u32 above_i;
-                    for (above_i = 0; above_i < 6; ++above_i)
-                    {
-                        if (generate_block_id(block_pos - glm::vec3(0, above_i + 1, 0)) == BlockID::Air)
-                            break;
-                    }
                     if (voxels[i].id == BlockID::Stone)
                     {
+                        u32 above_i;
+                        for (above_i = 0; above_i < 6; ++above_i)
+                        {
+                            if (generate_block_id(block_pos - glm::vec3(0, above_i + 1, 0)) == BlockID::Air)
+                                break;
+                        }
                         switch (rand() % 10)
                         {
                         case 0: voxels[i].id = BlockID::Gravel; break;
@@ -248,6 +259,29 @@ struct VoxelChunk
                             voxels[i].id = BlockID::Grass;
                         else if (above_i < 4)
                             voxels[i].id = BlockID::Dirt;
+                    }
+                    else if (voxels[i].id == BlockID::Air)
+                    {
+                        u32 below_i;
+                        for (below_i = 0; below_i < 6; ++below_i)
+                        {
+                            if (generate_block_id(block_pos + glm::vec3(0, below_i + 1, 0)) == BlockID::Stone)
+                                break;
+                        }
+                        if (below_i == 0)
+                        {
+                            i32 r = rand() % 100;
+                            if (r < 50)
+                            {
+                                switch (r)
+                                {
+                                case 0: voxels[i].id = BlockID::Rose; break;
+                                default:
+                                    voxels[i].id = BlockID::TallGrass;
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
     }
@@ -475,15 +509,10 @@ struct RenderableVoxelWorld
             for (usize j = 0; j < 16 * 16; ++j)
             {
                 usize data_i = j * 4;
-                u8 r, g, b, a;
-                r = static_cast<u8>((1.0f - data[data_i + 0]) * 255.0f);
-                g = static_cast<u8>((1.0f - data[data_i + 1]) * 255.0f);
-                b = static_cast<u8>((1.0f - data[data_i + 2]) * 255.0f);
-                a = static_cast<u8>((1.0f - data[data_i + 3]) * 255.0f);
-                staging_buffer_data[offset + data_i + 0] = r;
-                staging_buffer_data[offset + data_i + 1] = g;
-                staging_buffer_data[offset + data_i + 2] = b;
-                staging_buffer_data[offset + data_i + 3] = a;
+                staging_buffer_data[offset + data_i + 0] = data[data_i + 0];
+                staging_buffer_data[offset + data_i + 1] = data[data_i + 1];
+                staging_buffer_data[offset + data_i + 2] = data[data_i + 2];
+                staging_buffer_data[offset + data_i + 3] = data[data_i + 3];
             }
         }
         device.unmap_memory(texture_staging_buffer);
@@ -587,6 +616,13 @@ void RenderableChunk::update_chunk_mesh(daxa::CommandList & cmd_list)
                             *buffer_ptr = Vertex(xi, yi, zi, 4, current_voxel.id), ++buffer_ptr, ++face_n;
                         if (!renderable_world->get_voxel(voxel_pos + glm::ivec3(0, 0, -1)).is_occluding_pz())
                             *buffer_ptr = Vertex(xi, yi, zi, 5, current_voxel.id), ++buffer_ptr, ++face_n;
+                    }
+                    else if (current_voxel.is_cross())
+                    {
+                        *buffer_ptr = Vertex(xi, yi, zi, 6, current_voxel.id), ++buffer_ptr, ++face_n;
+                        *buffer_ptr = Vertex(xi, yi, zi, 6, current_voxel.id), ++buffer_ptr, ++face_n;
+                        *buffer_ptr = Vertex(xi, yi, zi, 7, current_voxel.id), ++buffer_ptr, ++face_n;
+                        *buffer_ptr = Vertex(xi, yi, zi, 7, current_voxel.id), ++buffer_ptr, ++face_n;
                     }
                 }
             }
