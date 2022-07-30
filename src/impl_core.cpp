@@ -32,6 +32,64 @@ namespace daxa
         return *this;
     }
 
+    auto ImageMipArraySlice::contained_in(ImageMipArraySlice const & slice) const -> bool
+    {
+        return this->base_mip_level >= slice.base_mip_level &&
+               (this->base_mip_level + this->level_count) <= (slice.base_mip_level + slice.level_count) &&
+               this->base_array_layer >= slice.base_array_layer &&
+               (this->base_array_layer + this->layer_count) <= (slice.base_array_layer + slice.layer_count) &&
+               this->image_aspect == slice.image_aspect;
+    }
+
+    auto ImageArraySlice::slice(ImageMipArraySlice const & mipArraySlice, u32 mip_level) -> ImageArraySlice
+    {
+        DAXA_DBG_ASSERT_TRUE_M(mip_level >= mipArraySlice.base_mip_level && mip_level < (mipArraySlice.base_mip_level + mipArraySlice.level_count), "slices mip level must be contained in initial slice");
+
+        return ImageArraySlice{
+            .image_aspect = mipArraySlice.image_aspect,
+            .mip_level = mip_level,
+            .base_array_layer = mipArraySlice.base_array_layer,
+            .layer_count = mipArraySlice.layer_count,
+        };
+    }
+
+    auto ImageArraySlice::contained_in(ImageMipArraySlice const & slice) const -> bool
+    {
+        return this->mip_level >= slice.base_mip_level &&
+               this->mip_level < (slice.base_mip_level + slice.level_count) &&
+               this->base_array_layer >= slice.base_array_layer &&
+               (this->base_array_layer + this->layer_count) <= (slice.base_array_layer + slice.layer_count) &&
+               this->image_aspect == slice.image_aspect;
+    }
+
+    auto slice(ImageArraySlice const & mipArraySlice, u32 array_layer) -> ImageSlice
+    {
+        DAXA_DBG_ASSERT_TRUE_M(array_layer >= mipArraySlice.base_array_layer && array_layer < (mipArraySlice.base_array_layer + mipArraySlice.layer_count), "slices array layer must be contained in initial slice");
+
+        return ImageSlice{
+            .image_aspect = mipArraySlice.image_aspect,
+            .mip_level = mipArraySlice.mip_level,
+            .array_layer = array_layer,
+        };
+    }
+
+    auto ImageSlice::contained_in(ImageMipArraySlice const & slice) const -> bool
+    {
+        return this->mip_level >= slice.base_mip_level &&
+               this->mip_level < (slice.base_mip_level + slice.level_count) &&
+               this->array_layer >= slice.base_array_layer &&
+               array_layer < (slice.base_array_layer + slice.layer_count) &&
+               this->image_aspect == slice.image_aspect;
+    }
+
+    auto ImageSlice::contained_in(ImageArraySlice const & slice) const -> bool
+    {
+        return this->mip_level == slice.mip_level &&
+               this->array_layer >= slice.base_array_layer &&
+               array_layer < (slice.base_array_layer + slice.layer_count) &&
+               this->image_aspect == slice.image_aspect;
+    }
+
     void ManagedPtr::cleanup()
     {
         if (this->object && DAXA_ATOMIC_FETCH_DEC(this->object->strong_count) == 1)

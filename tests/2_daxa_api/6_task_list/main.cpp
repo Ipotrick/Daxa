@@ -2,6 +2,8 @@
 #include <iostream>
 
 #include <daxa/utils/task_list.hpp>
+#include <0_common/window.hpp>
+#include <thread>
 
 struct AppContext
 {
@@ -62,7 +64,7 @@ namespace tests
             .debug_name = "buffer",
         });
         auto image = app.device.create_image({
-            .size = {1,1,1},
+            .size = {1, 1, 1},
             .usage = daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
             .debug_name = "image",
         });
@@ -203,11 +205,217 @@ namespace tests
         // app.device.destroy_buffer(staging_buffer);
         // app.device.destroy_buffer(data_buffer);
     }
+
+    void drawing()
+    {
+        struct App : AppWindow<App>
+        {
+            daxa::Context daxa_ctx = daxa::create_context({
+                .enable_validation = true,
+            });
+            daxa::Device device = daxa_ctx.create_default_device();
+
+            daxa::Swapchain swapchain = device.create_swapchain({
+                .native_window = get_native_handle(),
+                .width = size_x,
+                .height = size_y,
+                .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
+            });
+
+            daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
+                .root_paths = {
+                    "tests/2_daxa_api/6_task_list/shaders",
+                    "include",
+                },
+                .debug_name = "TaskList Compiler",
+            });
+            // clang-format off
+            daxa::RasterPipeline raster_pipeline = pipeline_compiler.create_raster_pipeline({
+                .vertex_shader_info = {.source = daxa::ShaderFile{"vert.hlsl"}},
+                .fragment_shader_info = {.source = daxa::ShaderFile{"frag.hlsl"}},
+                .color_attachments = {{.format = swapchain.get_format()}},
+                .raster = {},
+                .debug_name = "TaskList Pipeline",
+            }).value();
+            // clang-format on
+
+            daxa::TaskList task_list = record_task_list();
+
+            daxa::ImageId render_image = create_render_image(size_x, size_y);
+            daxa::TaskImageId task_render_image;
+
+            daxa::ImageId swapchain_image;
+            daxa::TaskImageId task_swapchain_image;
+
+            App() : AppWindow<App>("Daxa API: Swapchain (clearcolor)")
+            {
+                record_task_list();
+            }
+
+            auto record_task_list() -> daxa::TaskList
+            {
+                daxa::TaskList new_task_list = daxa::TaskList({
+                    .device = device,
+                    .debug_name = "TaskList task list",
+                });
+                task_swapchain_image = new_task_list.create_task_image({
+                    .fetch_callback = [this]()
+                    { return swapchain_image; },
+                    .debug_name = "TaskList Task Swapchain Image",
+                });
+                task_render_image = new_task_list.create_task_image({
+                    .fetch_callback = [this]()
+                    { return render_image; },
+                    .debug_name = "TaskList Task Render Image",
+                });
+
+                new_task_list.add_clear_image({
+                    .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
+                    .dst_image = task_render_image,
+                    .dst_slice = {},
+                    .debug_name = "TaskList Clear Render Image Task",
+                });
+                new_task_list.add_task({
+                    .resources = {
+                        .images = {
+                            {task_render_image, daxa::TaskImageAccess::FRAGMENT_SHADER_WRITE_ONLY},
+                        },
+                    },
+                    .task = [this](daxa::TaskInterface interf)
+                    {
+                        auto cmd_list = interf.get_command_list();
+                        cmd_list.begin_renderpass({
+                            .color_attachments = {{.image_view = render_image.default_view()}},
+                            .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
+                        });
+                        cmd_list.set_pipeline(raster_pipeline);
+                        cmd_list.draw({.vertex_count = 3});
+                        cmd_list.end_renderpass();
+                    },
+                    .debug_name = "TaskList Draw to Render Image Task",
+                });
+
+                new_task_list.add_copy_image_to_image({
+                    .src_image = task_render_image,
+                    .dst_image = task_swapchain_image,
+                    .extent = {size_x, size_y, 1},
+                });
+                new_task_list.compile();
+
+                return new_task_list;
+            }
+
+            ~App()
+            {
+                device.destroy_image(render_image);
+            }
+
+            bool update()
+            {
+                glfwPollEvents();
+                if (glfwWindowShouldClose(glfw_window_ptr))
+                {
+                    return true;
+                }
+
+                if (!minimized)
+                {
+                    draw();
+                }
+                else
+                {
+                    using namespace std::literals;
+                    std::this_thread::sleep_for(1ms);
+                }
+
+                return false;
+            }
+
+            void draw()
+            {
+                if (pipeline_compiler.check_if_sources_changed(raster_pipeline))
+                {
+                    auto new_pipeline = pipeline_compiler.recreate_raster_pipeline(raster_pipeline);
+                    if (new_pipeline.is_ok())
+                    {
+                        raster_pipeline = new_pipeline.value();
+                    }
+                    else
+                    {
+                        std::cout << new_pipeline.message() << std::endl;
+                    }
+                }
+                swapchain_image = swapchain.acquire_next_image();
+                task_list.execute();
+                auto command_lists = task_list.command_lists();
+                auto cmd_list = device.create_command_list({});
+                cmd_list.pipeline_barrier_image_transition({
+                    .awaited_pipeline_access = task_list.last_access(task_swapchain_image),
+                    .before_layout = task_list.last_layout(task_swapchain_image),
+                    .after_layout = daxa::ImageLayout::PRESENT_SRC,
+                    .image_id = swapchain_image,
+                });
+                cmd_list.complete();
+                command_lists.push_back(cmd_list);
+                auto binary_semaphore = device.create_binary_semaphore({});
+                device.submit_commands({
+                    .command_lists = command_lists,
+                    .signal_binary_semaphores = {binary_semaphore},
+                });
+                device.present_frame({
+                    .wait_binary_semaphores = {binary_semaphore},
+                    .swapchain = swapchain,
+                });
+            }
+
+            void on_mouse_move(f32, f32)
+            {
+            }
+
+            void on_key(int, int)
+            {
+            }
+
+            auto create_render_image(u32 size_x, u32 size_y) -> daxa::ImageId
+            {
+                return device.create_image(daxa::ImageInfo{
+                    .format = swapchain.get_format(),
+                    .size = {size_x, size_y, 1},
+                    .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::TRANSFER_SRC | daxa::ImageUsageFlagBits::TRANSFER_DST,
+                    .debug_name = "TaskList render_image",
+                });
+            }
+
+            void on_resize(u32 sx, u32 sy)
+            {
+                size_x = sx;
+                size_y = sy;
+                minimized = (sx == 0 || sy == 0);
+
+                if (!minimized)
+                {
+                    task_list = record_task_list();
+                    device.destroy_image(render_image);
+                    render_image = create_render_image(sx, sy);
+                    swapchain.resize(size_x, size_y);
+                    draw();
+                }
+            }
+        };
+
+        App app = {};
+        while (true)
+        {
+            if (app.update())
+                break;
+        }
+    }
 } // namespace tests
 
 int main()
 {
     // tests::simplest();
-    tests::image_upload();
+    // tests::image_upload();
     // tests::execution();
+    tests::drawing();
 }
