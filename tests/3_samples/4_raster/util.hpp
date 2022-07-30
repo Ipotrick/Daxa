@@ -40,7 +40,7 @@ glm::vec3 frac(glm::vec3 v)
 {
     return glm::vec3(frac(v.x), frac(v.y), frac(v.z));
 }
-f32 lerp(f32 a, f32 b, f32 f)
+f32 mix(f32 a, f32 b, f32 f)
 {
     return a * (1.0f - f) + b * f;
 }
@@ -99,17 +99,17 @@ f32 noise(glm::vec3 x)
     glm::vec3 f = frac(x);
     f32 n = glm::dot(i, st);
     glm::vec3 u = f * f * (3.0f - 2.0f * f);
-    f32 r = lerp(
-        lerp(
-            lerp(rand(n + glm::dot(st, glm::vec3(0, 0, 0))),
+    f32 r = mix(
+        mix(
+            mix(rand(n + glm::dot(st, glm::vec3(0, 0, 0))),
                  rand(n + glm::dot(st, glm::vec3(1, 0, 0))), u.x),
-            lerp(rand(n + glm::dot(st, glm::vec3(0, 1, 0))),
+            mix(rand(n + glm::dot(st, glm::vec3(0, 1, 0))),
                  rand(n + glm::dot(st, glm::vec3(1, 1, 0))), u.x),
             u.y),
-        lerp(
-            lerp(rand(n + glm::dot(st, glm::vec3(0, 0, 1))),
+        mix(
+            mix(rand(n + glm::dot(st, glm::vec3(0, 0, 1))),
                  rand(n + glm::dot(st, glm::vec3(1, 0, 1))), u.x),
-            lerp(rand(n + glm::dot(st, glm::vec3(0, 1, 1))),
+            mix(rand(n + glm::dot(st, glm::vec3(0, 1, 1))),
                  rand(n + glm::dot(st, glm::vec3(1, 1, 1))), u.x),
             u.y),
         u.z);
