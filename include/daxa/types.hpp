@@ -428,6 +428,8 @@ namespace daxa
         u32 layer_count = 1;
 
         friend auto operator<=>(ImageMipArraySlice const &, ImageMipArraySlice const &) = default;
+        
+        auto contained_in(ImageMipArraySlice const & slice) const -> bool;
     };
 
     struct ImageArraySlice
@@ -438,6 +440,10 @@ namespace daxa
         u32 layer_count = 1;
 
         friend auto operator<=>(ImageArraySlice const &, ImageArraySlice const &) = default;
+
+        static auto slice(ImageMipArraySlice const & mipArraySlice, u32 mip_level = 0) -> ImageArraySlice;
+
+        auto contained_in(ImageMipArraySlice const & slice) const -> bool;
     };
 
     struct ImageSlice
@@ -447,6 +453,11 @@ namespace daxa
         u32 array_layer = 0;
 
         friend auto operator<=>(ImageSlice const &, ImageSlice const &) = default;
+
+        static auto slice(ImageArraySlice const & mipArraySlice, u32 array_layer = 0) -> ImageSlice;
+
+        auto contained_in(ImageMipArraySlice const & slice) const -> bool;
+        auto contained_in(ImageArraySlice const & slice) const -> bool;
     };
 
     enum struct Filter

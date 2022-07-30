@@ -23,6 +23,7 @@ namespace daxa
         Access latest_access = AccessConsts::NONE;
         usize latest_access_task_index = {};
         CreateTaskBufferCallback fetch_callback = {};
+        std::string debug_name = {};
     };
 
     struct RuntimeTaskBuffer
@@ -37,6 +38,7 @@ namespace daxa
         usize latest_access_task_index = {};
         CreateTaskImageCallback fetch_callback = {};
         ImageMipArraySlice slice = {};
+        std::string debug_name = {};
     };
 
     struct RuntimeTaskImage
@@ -76,12 +78,17 @@ namespace daxa
 
     struct TaskRuntime
     {
+        // interface:
+        bool reuse_last_command_list = true;
+
         Device current_device;
-        CommandList current_command_list;
+        std::vector<CommandList> command_lists = {};
         std::vector<ImplTaskBuffer>& impl_task_buffers;
         std::vector<ImplTaskImage>& impl_task_images;
         std::vector<RuntimeTaskBuffer> runtime_buffers = {};
         std::vector<RuntimeTaskImage> runtime_images = {};
+
+        std::optional<BinarySemaphore> last_submit_semaphore = {};
 
         void execute_task(TaskVariant& task, usize task_index);
 
@@ -98,6 +105,8 @@ namespace daxa
 
         std::vector<ImplTaskBuffer> impl_task_buffers = {};
         std::vector<ImplTaskImage> impl_task_images = {};
+
+        std::vector<CommandList> recorded_command_lists = {};
 
         auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access>;
         auto task_buffer_access_to_access(TaskBufferAccess const & access) -> Access;

@@ -103,17 +103,18 @@ namespace daxa
     struct TaskInterface
     {
         auto get_device() -> Device &;
-        auto get_command_list() -> CommandList &;
+        auto get_command_list() -> CommandList;
         auto get_resources() -> TaskResources &;
         auto get_buffer(TaskBufferId const & task_id) -> BufferId;
         auto get_image(TaskImageId const & task_id) -> ImageId;
         auto get_image_view(TaskImageId const & task_id) -> ImageViewId;
+        auto get_image_slice(TaskImageId const & task_id) -> ImageMipArraySlice;
 
       private:
         friend struct TaskRuntime;
         TaskInterface(void * backend, TaskResources * resources);
-        void * backend;
-        TaskResources * resources;
+        void * backend = {};
+        TaskResources * resources = {};
     };
 
     using TaskCallback = std::function<void(TaskInterface &)>;
@@ -124,6 +125,7 @@ namespace daxa
     {
         CreateTaskBufferCallback fetch_callback = {};
         Access last_access = AccessConsts::NONE;
+        std::string debug_name = {};
     };
 
     struct TaskImageInfo
@@ -132,6 +134,7 @@ namespace daxa
         Access last_access = AccessConsts::NONE;
         ImageLayout last_layout = ImageLayout::UNDEFINED;
         ImageMipArraySlice slice = {};
+        std::string debug_name = {};
     };
 
     struct TaskInfo
@@ -175,6 +178,26 @@ namespace daxa
         std::string debug_name = {};
     };
 
+    struct TaskCopyImageInfo
+    {
+        TaskImageId src_image = {};
+        TaskImageId dst_image = {};
+        ImageArraySlice src_slice = {};
+        Offset3D src_offset = {};
+        ImageArraySlice dst_slice = {};
+        Offset3D dst_offset = {};
+        Extent3D extent = {};
+        std::string debug_name = {};
+    };
+
+    struct TaskImageClearInfo
+    {
+        ClearValue clear_value;
+        TaskImageId dst_image = {};
+        ImageMipArraySlice dst_slice = {};
+        std::string debug_name = {};
+    };
+
     struct TaskList : ManagedPtr
     {
         TaskList(TaskListInfo const & info);
@@ -186,9 +209,17 @@ namespace daxa
         void add_task(TaskInfo const & info);
         void add_render_task(TaskRenderInfo const & info);
 
-        void add_present(Swapchain swapchain);
+        void add_copy_image_to_image(TaskCopyImageInfo const & info);
+        void add_clear_image(TaskImageClearInfo const & info);
 
         void compile();
+        
+        auto last_access(TaskBufferId buffer) -> Access;
+        auto last_access(TaskImageId image) -> Access;
+        auto last_layout(TaskImageId image) -> ImageLayout;
+
         void execute();
+
+        auto command_lists() -> std::vector<CommandList>&;
     };
 } // namespace daxa
