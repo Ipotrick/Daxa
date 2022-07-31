@@ -12,18 +12,16 @@ struct Push
 };
 [[vk::push_constant]] const Push p;
 
-VertexOutput main(uint vert_i
-                  : SV_VERTEXID)
+ShadowPassVertexOutput main(uint vert_i
+                            : SV_VERTEXID)
 {
     StructuredBuffer<FaceBuffer> face_buffer = daxa::get_StructuredBuffer<FaceBuffer>(p.face_buffer_id);
     StructuredBuffer<Input> input = daxa::get_StructuredBuffer<Input>(p.input_buffer_id);
     Vertex vert = face_buffer[0].get_vertex(vert_i, input[0].time);
 
-    VertexOutput result;
-    result.frag_pos = mul(input[0].view_mat, float4(vert.pos + p.chunk_pos, 1));
-    result.nrm = vert.nrm;
+    ShadowPassVertexOutput result;
+    result.frag_pos = mul(input[0].shadow_view_mat[p.data0], float4(vert.pos + p.chunk_pos, 1));
     result.uv = vert.uv;
-    result.pos = vert.pos + p.chunk_pos;
     result.tex_id = vert.tex_id;
     return result;
 }

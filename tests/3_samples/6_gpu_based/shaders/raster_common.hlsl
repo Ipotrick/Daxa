@@ -1,6 +1,6 @@
 #pragma once
 
-#include "daxa/daxa.hlsl"
+#include "common.hlsl"
 
 #include "utils/rand.hlsl"
 
@@ -19,46 +19,6 @@ static const float3 cross_instance_positions[6] = {
     float3(+1.0 - 0.2, +0.2, +0.0 + 0.2),
     float3(+1.0 - 0.2, +1.0, +0.0 + 0.2),
     float3(+0.0 + 0.2, +1.0, +1.0 - 0.2),
-};
-
-enum class BlockID : uint
-{
-    Debug,
-    Air,
-    Bedrock,
-    Brick,
-    Cactus,
-    Cobblestone,
-    CompressedStone,
-    DiamondOre,
-    Dirt,
-    DriedShrub,
-    Grass,
-    Gravel,
-    Lava,
-    Leaves,
-    Log,
-    MoltenRock,
-    Planks,
-    Rose,
-    Sand,
-    Sandstone,
-    Stone,
-    TallGrass,
-    Water,
-};
-
-enum class BlockFace : uint
-{
-    Left,
-    Right,
-    Bottom,
-    Top,
-    Back,
-    Front,
-
-    Cross_A,
-    Cross_B,
 };
 
 struct Vertex
@@ -91,13 +51,15 @@ struct Vertex
             if (face_id % 2 == 0)
             {
                 pos += cross_uv;
+                nrm = float3(0.707, 0, 0.707);
             }
             else
             {
                 pos += float3(1.0 - cross_uv.x, cross_uv.y, 1.0 - cross_uv.z);
+                nrm = float3(-0.707, 0, -0.707);
             }
-            pos.x += rand(block_pos.x + block_pos.z) * 0.1;
-            nrm = float3(+0.0, -1.0, +0.0);
+            pos.x += rand(block_pos.x + 2.0 * block_pos.z - block_pos.y) * 0.5 - 0.25;
+            pos.z += rand(block_pos.z + 2.0 * block_pos.x + block_pos.y) * 0.5 - 0.25;
         }
         break;
         case BlockFace::Cross_B:
@@ -105,13 +67,15 @@ struct Vertex
             if (face_id % 2 == 0)
             {
                 pos += float3(cross_uv.x, cross_uv.y, 1.0 - cross_uv.z);
+                nrm = float3(-0.707, 0, 0.707);
             }
             else
             {
                 pos += float3(1.0 - cross_uv.x, cross_uv.y, cross_uv.z);
+                nrm = float3(0.707,  0, -0.707);
             }
-            pos.x += rand(block_pos.x + block_pos.z) * 0.1;
-            nrm = float3(+0.0, -1.0, +0.0);
+            pos.x += rand(block_pos.x + 2.0 * block_pos.z - block_pos.y) * 0.5 - 0.25;
+            pos.z += rand(block_pos.z + 2.0 * block_pos.x + block_pos.y) * 0.5 - 0.25;
         }
         break;
         }
@@ -158,13 +122,17 @@ struct VertexOutput
     float4 frag_pos : SV_POSITION;
     float3 nrm : NORMAL0;
     float2 uv : TEXCOORD0;
-    // BlockID block_id : COLOR0;
-    // BlockFace block_face : COLOR1;
     float3 pos : DATA1;
     uint tex_id : DATA0;
 };
+struct ShadowPassVertexOutput
+{
+    float4 frag_pos : SV_POSITION;
+    float2 uv : TEXCOORD0;
+    uint tex_id : DATA0;
+};
 
-uint tile_texture_index(BlockID block_id, BlockFace face)
+uint tile_texture_index(BlockID block_id, BlockFace face, float time)
 {
     // clang-format off
     switch (block_id) {
@@ -189,7 +157,7 @@ uint tile_texture_index(BlockID block_id, BlockFace face)
         default:                   return 0;
         }
     case BlockID::Gravel:          return 12;
-    case BlockID::Lava:            return 13; // + int(globals[0].time * 6) % 8;
+    case BlockID::Lava:            return 13 + int(time * 6) % 8;
     case BlockID::Leaves:          return 21;
     case BlockID::Log:
         switch (face) {
@@ -218,7 +186,7 @@ struct FaceBuffer
 {
     uint data[32 * 32 * 32 * 6];
 
-    Vertex get_vertex(uint vert_i)
+    Vertex get_vertex(uint vert_i, float time)
     {
         uint data_index = vert_i / 6;
         uint data_instance = vert_i - data_index * 6;
@@ -228,17 +196,17 @@ struct FaceBuffer
         Vertex result;
 
         result.block_pos = float3(
-            (vert_data >> 0) & 0x1f,
-            (vert_data >> 5) & 0x1f,
-            (vert_data >> 10) & 0x1f);
+            (vert_data >> 0) & 0x3f,
+            (vert_data >> 6) & 0x3f,
+            (vert_data >> 12) & 0x3f);
         result.pos = result.block_pos;
         result.uv = instance_offsets[data_instance];
-        result.block_id = (BlockID)((vert_data >> 18) & 0x3fff);
-        result.block_face = (BlockFace)((vert_data >> 15) & 0x7);
+        result.block_face = (BlockFace)((vert_data >> 18) & 0x7);
+        result.block_id = (BlockID)((vert_data >> 21) & 0x07ff);
 
         result.vert_id = data_instance;
         result.correct_pos(data_index);
-        result.tex_id = tile_texture_index(result.block_id, result.block_face);
+        result.tex_id = tile_texture_index(result.block_id, result.block_face, time);
         result.correct_uv();
 
         return result;
@@ -247,13 +215,9 @@ struct FaceBuffer
 
 DAXA_DEFINE_GET_STRUCTURED_BUFFER(FaceBuffer);
 
-// struct Input
-// {
-//     float4x4 view_mat;
-// };
-// DAXA_DEFINE_GET_STRUCTURED_BUFFER(Input);
-
 // struct Globals
 // {
 // };
 // DAXA_DEFINE_GET_STRUCTURED_BUFFER(Globals);
+
+#define SHADOW_RES 512
