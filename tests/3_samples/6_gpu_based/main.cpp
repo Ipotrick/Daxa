@@ -11,7 +11,7 @@
 using namespace daxa::types;
 using Clock = std::chrono::high_resolution_clock;
 
-#define SHADOW_RES 512
+#include "config.inl"
 
 struct MipMapGenInfo
 {
@@ -794,11 +794,20 @@ struct App : AppWindow<App>
     daxa::RasterPipeline raster_pipeline = pipeline_compiler.create_raster_pipeline({
         .vertex_shader_info = {.source = daxa::ShaderFile{"vert.hlsl"}},
         .fragment_shader_info = {.source = daxa::ShaderFile{"frag.hlsl"}},
+#if VISUALIZE_OVERDRAW
         .color_attachments = {{.format = swapchain.get_format(), .blend = {.blend_enable = true, .src_color_blend_factor = daxa::BlendFactor::ONE, .dst_color_blend_factor = daxa::BlendFactor::ONE}}},
+#else
+        .color_attachments = {{.format = swapchain.get_format(), .blend = {.blend_enable = true, .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA, .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA}}},
+#endif
         .depth_test = {
             .depth_attachment_format = daxa::Format::D32_SFLOAT,
+#if VISUALIZE_OVERDRAW
             .enable_depth_test = false,
             .enable_depth_write = false,
+#else
+            .enable_depth_test = true,
+            .enable_depth_write = true,
+#endif
         },
         .raster = {
             .face_culling = daxa::FaceCullFlagBits::BACK_BIT,

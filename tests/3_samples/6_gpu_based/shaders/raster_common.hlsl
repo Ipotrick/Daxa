@@ -220,4 +220,4 @@ DAXA_DEFINE_GET_STRUCTURED_BUFFER(FaceBuffer);
 // };
 // DAXA_DEFINE_GET_STRUCTURED_BUFFER(Globals);
 
-#define SHADOW_RES 512
+#include "../config.inl"
