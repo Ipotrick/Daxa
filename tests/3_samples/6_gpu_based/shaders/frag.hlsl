@@ -14,7 +14,7 @@ struct Push
 
 DAXA_DEFINE_GET_TEXTURE2DARRAY(float4)
 
-#define SHOW_SHADOW_CASCADES 0
+#define SHOW_SHADOW_CASCADES 1
 
 float4 main(VertexOutput vertex_output) : SV_TARGET
 {
