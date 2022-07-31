@@ -39,7 +39,10 @@ float4 main(VertexOutput vertex_output) : SV_TARGET
         discard;
 
     float3 col = 0.1;
-    // col = albedo.rgb;
+#if VISUALIZE_OVERDRAW
+    col = 0.1;
+#else
+    col = albedo.rgb;
 
     Texture2D<float> shadow_depth_image0 = daxa::get_Texture2D<float>(input[0].shadow_depth_image[0]);
     float4 shadow_pos0 = mul(input[0].shadow_view_mat[0], float4(vertex_output.pos + vert.nrm * (80.0 / SHADOW_RES), 1));
@@ -103,9 +106,10 @@ float4 main(VertexOutput vertex_output) : SV_TARGET
 #endif
     }
 
-    // diffuse = max(diffuse, 0.0);
-    // col = col * (sun_col * diffuse + sky_col * 0.5);
+    diffuse = max(diffuse, 0.0);
+    col = col * (sun_col * diffuse + sky_col * 0.5);
     // col = vert.nrm;
+#endif
 
     switch (p.mode)
     {
