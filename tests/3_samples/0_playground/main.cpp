@@ -395,7 +395,7 @@ struct RenderableVoxelWorld
             }
         }
 
-        load_textures("C:/Users/gabe/Pictures/textures");
+        load_textures("tests/0_common/assets/textures");
 
         atlas_sampler = device.create_sampler({
             .magnification_filter = daxa::Filter::NEAREST,
