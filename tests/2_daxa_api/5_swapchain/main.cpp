@@ -117,10 +117,8 @@ namespace tests
 
             void on_resize(u32 sx, u32 sy)
             {
-                std::cout << "resized CALLED!" << std::endl;
                 if (sx != size_x || sy != size_y)
                 {
-                    std::cout << "resized!" << std::endl;
                     size_x = sx;
                     size_y = sy;
                     minimized = size_x == 0 || size_y == 0;

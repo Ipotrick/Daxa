@@ -11,6 +11,8 @@
 using namespace daxa::types;
 using Clock = std::chrono::high_resolution_clock;
 
+#define SHADOW_RES 512
+
 struct MipMapGenInfo
 {
     daxa::ImageId image;
@@ -148,25 +150,40 @@ struct Vertex
     Vertex(i32 x, i32 y, i32 z, u32 side, BlockID id)
     {
         data = 0;
-        data |= (static_cast<u32>(x) & 0x1f) << 0;
-        data |= (static_cast<u32>(y) & 0x1f) << 5;
-        data |= (static_cast<u32>(z) & 0x1f) << 10;
-        data |= (side & 0x7) << 15;
-        data |= (static_cast<u32>(id) & 0x3fff) << 18;
+        data |= (static_cast<u32>(x) & 0x3f) << 0;
+        data |= (static_cast<u32>(y) & 0x3f) << 6;
+        data |= (static_cast<u32>(z) & 0x3f) << 12;
+        data |= (side & 0x7) << 18;
+        data |= (static_cast<u32>(id) & 0x07ff) << 21;
     }
+};
+
+struct GpuInput
+{
+    glm::mat4 view_mat;
+    glm::mat4 shadow_view_mat[3];
+    daxa::ImageId shadow_depth_image[3];
+    float time;
 };
 
 struct RasterPush
 {
-    glm::mat4 view_mat;
     glm::vec3 chunk_pos;
-    daxa::BufferId vertex_buffer_id;
+    daxa::BufferId input_buffer_id;
+    daxa::BufferId face_buffer_id;
     daxa::ImageId texture_array_id;
     daxa::SamplerId sampler_id;
     u32 mode;
+    u32 data0;
 };
 
-static inline constexpr u64 CHUNK_SIZE = 32;
+struct ChunkgenComputePush
+{
+    glm::vec3 chunk_pos;
+    daxa::BufferId buffer_id;
+};
+
+static inline constexpr u64 CHUNK_SIZE = 64;
 static inline constexpr u64 CHUNK_VOXEL_N = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
 static inline constexpr u64 CHUNK_MAX_VERTS = CHUNK_VOXEL_N * 6;
 static inline constexpr u64 CHUNK_MAX_SIZE = CHUNK_MAX_VERTS * sizeof(Vertex);
@@ -208,83 +225,8 @@ struct Voxel
 
 struct VoxelChunk
 {
-    Voxel voxels[CHUNK_VOXEL_N];
+    std::array<Voxel, CHUNK_VOXEL_N> voxels;
     glm::vec3 pos;
-
-    BlockID generate_block_id(glm::vec3 p)
-    {
-        p = p * 0.5f;
-        FractalNoiseConfig noise_conf = {
-            /* .amplitude   = */ 1.0f,
-            /* .persistance = */ 0.12f,
-            /* .scale       = */ 0.03f,
-            /* .lacunarity  = */ 4.7f,
-            /* .octaves     = */ 2,
-        };
-        float val = fractal_noise(p + 100.0f, noise_conf);
-        val = val - (-p.y + 30.0f) * 0.04f;
-        val -= std::pow(smoothstep(-1.0f, 1.0f, -p.y + 32.0f), 2.0f) * 0.15f;
-        val = std::max(val, 0.0f);
-        if (val > 0.0f)
-            return BlockID::Stone;
-        if (p.y > 33.0f)
-            return BlockID::Water;
-        return BlockID::Air;
-    }
-
-    void generate()
-    {
-        for (u64 zi = 0; zi < 32; ++zi)
-            for (u64 yi = 0; yi < 32; ++yi)
-                for (u64 xi = 0; xi < 32; ++xi)
-                {
-                    u64 i = xi + yi * CHUNK_SIZE + zi * CHUNK_SIZE * CHUNK_SIZE;
-                    glm::vec3 block_pos = glm::vec3(xi, yi, zi) + pos;
-                    voxels[i].id = generate_block_id(block_pos);
-                    if (voxels[i].id == BlockID::Stone)
-                    {
-                        u32 above_i;
-                        for (above_i = 0; above_i < 6; ++above_i)
-                        {
-                            if (generate_block_id(block_pos - glm::vec3(0, above_i + 1, 0)) == BlockID::Air)
-                                break;
-                        }
-                        switch (rand() % 10)
-                        {
-                        case 0: voxels[i].id = BlockID::Gravel; break;
-                        case 1: voxels[i].id = BlockID::Cobblestone; break;
-                        default: break;
-                        }
-                        if (above_i == 0)
-                            voxels[i].id = BlockID::Grass;
-                        else if (above_i < 4)
-                            voxels[i].id = BlockID::Dirt;
-                    }
-                    else if (voxels[i].id == BlockID::Air)
-                    {
-                        u32 below_i;
-                        for (below_i = 0; below_i < 6; ++below_i)
-                        {
-                            if (generate_block_id(block_pos + glm::vec3(0, below_i + 1, 0)) == BlockID::Stone)
-                                break;
-                        }
-                        if (below_i == 0)
-                        {
-                            i32 r = rand() % 100;
-                            if (r < 50)
-                            {
-                                switch (r)
-                                {
-                                case 0: voxels[i].id = BlockID::Rose; break;
-                                default:
-                                    voxels[i].id = BlockID::TallGrass;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-    }
 };
 
 struct RenderableVoxelWorld;
@@ -297,6 +239,7 @@ struct RenderableChunk
     daxa::BufferId water_face_buffer;
     u32 face_n = 0, water_face_n = 0;
     RenderableVoxelWorld * renderable_world = nullptr;
+    bool valid = false;
 
     RenderableChunk(daxa::Device & a_device) : device{a_device}
     {
@@ -318,32 +261,34 @@ struct RenderableChunk
 
     void update_chunk_mesh(daxa::CommandList & cmd_list);
 
-    void draw(daxa::CommandList & cmd_list, glm::mat4 const & view_mat, daxa::ImageId texture_array_id, daxa::SamplerId atlas_sampler)
+    void draw(daxa::CommandList & cmd_list, daxa::BufferId gpu_input_buffer_id, daxa::ImageId texture_array_id, daxa::SamplerId atlas_sampler, u32 data0)
     {
-        if (face_n > 0)
+        if (valid && face_n > 0)
         {
             cmd_list.push_constant(RasterPush{
-                .view_mat = view_mat,
                 .chunk_pos = voxel_chunk.pos,
-                .vertex_buffer_id = face_buffer,
+                .input_buffer_id = gpu_input_buffer_id,
+                .face_buffer_id = face_buffer,
                 .texture_array_id = texture_array_id,
                 .sampler_id = atlas_sampler,
                 .mode = 0,
+                .data0 = data0,
             });
             cmd_list.draw({.vertex_count = face_n * 6});
         }
     }
-    void draw_water(daxa::CommandList & cmd_list, glm::mat4 const & view_mat, daxa::ImageId texture_array_id, daxa::SamplerId atlas_sampler)
+    void draw_water(daxa::CommandList & cmd_list, daxa::BufferId gpu_input_buffer_id, daxa::ImageId texture_array_id, daxa::SamplerId atlas_sampler, u32 data0)
     {
-        if (water_face_n > 0)
+        if (valid && water_face_n > 0)
         {
             cmd_list.push_constant(RasterPush{
-                .view_mat = view_mat,
                 .chunk_pos = voxel_chunk.pos,
-                .vertex_buffer_id = water_face_buffer,
+                .input_buffer_id = gpu_input_buffer_id,
+                .face_buffer_id = water_face_buffer,
                 .texture_array_id = texture_array_id,
                 .sampler_id = atlas_sampler,
                 .mode = 1,
+                .data0 = data0,
             });
             cmd_list.draw({.vertex_count = water_face_n * 6});
         }
@@ -353,10 +298,16 @@ struct RenderableChunk
 struct RenderableVoxelWorld
 {
     daxa::Device & device;
-    std::unique_ptr<RenderableChunk> chunks[CHUNK_N * CHUNK_N * CHUNK_N] = {};
+    std::array<std::unique_ptr<RenderableChunk>, CHUNK_N * CHUNK_N * CHUNK_N> chunks = {};
 
     daxa::ImageId atlas_texture_array;
     daxa::SamplerId atlas_sampler;
+
+    daxa::BufferId voxel_gpu_buffer = device.create_buffer({
+        .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+        .size = CHUNK_VOXEL_N * sizeof(u32),
+        .debug_name = "Playground Vertex Staging buffer",
+    });
 
     RenderableVoxelWorld(daxa::Device & a_device)
         : device{a_device}
@@ -370,8 +321,63 @@ struct RenderableVoxelWorld
                     chunks[x + y * CHUNK_N + z * CHUNK_N * CHUNK_N] = std::make_unique<RenderableChunk>(device);
                     auto & chunk = *chunks[x + y * CHUNK_N + z * CHUNK_N * CHUNK_N];
                     chunk.voxel_chunk.pos = glm::vec3(static_cast<f32>(x * CHUNK_SIZE), static_cast<f32>(y * CHUNK_SIZE), static_cast<f32>(z * CHUNK_SIZE));
-                    chunk.voxel_chunk.generate();
                     chunk.renderable_world = this;
+                }
+            }
+        }
+
+        load_textures("tests/0_common/assets/textures");
+
+        atlas_sampler = device.create_sampler({
+            .magnification_filter = daxa::Filter::NEAREST,
+            .minification_filter = daxa::Filter::NEAREST,
+            .mipmap_filter = daxa::Filter::NEAREST,
+            .min_lod = 0,
+            .max_lod = 4,
+        });
+    }
+
+    ~RenderableVoxelWorld()
+    {
+        device.destroy_image(atlas_texture_array);
+        device.destroy_sampler(atlas_sampler);
+        device.destroy_buffer(voxel_gpu_buffer);
+    }
+
+    void regenerate_chunk(RenderableChunk & chunk, daxa::ComputePipeline & compute_pipeline)
+    {
+        auto cmd_list = device.create_command_list({
+            .debug_name = "Playground Command List",
+        });
+
+        cmd_list.set_pipeline(compute_pipeline);
+        cmd_list.push_constant(ChunkgenComputePush{
+            .chunk_pos = chunk.voxel_chunk.pos,
+            .buffer_id = voxel_gpu_buffer,
+        });
+        cmd_list.dispatch(8, 8, 8);
+
+        cmd_list.complete();
+        device.submit_commands({
+            .command_lists = {std::move(cmd_list)},
+        });
+        device.wait_idle();
+
+        std::array<Voxel, CHUNK_VOXEL_N> * buffer_ptr = device.map_memory_as<std::array<Voxel, CHUNK_VOXEL_N>>(voxel_gpu_buffer);
+        chunk.voxel_chunk.voxels = *buffer_ptr;
+        device.unmap_memory(voxel_gpu_buffer);
+    }
+
+    void update_meshes(daxa::ComputePipeline & compute_pipeline)
+    {
+        for (u64 z = 0; z < CHUNK_N; ++z)
+        {
+            for (u64 y = 0; y < CHUNK_N; ++y)
+            {
+                for (u64 x = 0; x < CHUNK_N; ++x)
+                {
+                    auto & chunk = *chunks[x + y * CHUNK_N + z * CHUNK_N * CHUNK_N];
+                    regenerate_chunk(chunk, compute_pipeline);
                 }
             }
         }
@@ -394,29 +400,60 @@ struct RenderableVoxelWorld
                 }
             }
         }
-
-        load_textures("C:/Users/gabe/Pictures/textures");
-
-        atlas_sampler = device.create_sampler({
-            .magnification_filter = daxa::Filter::NEAREST,
-            .minification_filter = daxa::Filter::LINEAR,
-            .min_lod = 0,
-            .max_lod = 4,
-        });
     }
 
-    ~RenderableVoxelWorld()
+    void update(daxa::ComputePipeline & compute_pipeline, glm::vec3)
     {
-        device.destroy_image(atlas_texture_array);
-        device.destroy_sampler(atlas_sampler);
+        // auto invalid_chunk_iter = std::min_element(
+        //     chunks.begin(), chunks.end(),
+        //     [&](std::unique_ptr<RenderableChunk> const & a, std::unique_ptr<RenderableChunk> const & b)
+        //     {
+        //         if (a->valid)
+        //             return false;
+        //         if (b->valid)
+        //             return true;
+        //         glm::vec3 del_a = pos - (a->voxel_chunk.pos + 16.0f);
+        //         glm::vec3 del_b = pos - (b->voxel_chunk.pos + 16.0f);
+        //         return glm::dot(del_a, del_a) < glm::dot(del_b, del_b);
+        //     });
+        auto invalid_chunk_iter = std::find_if(
+            chunks.begin(), chunks.end(),
+            [&](std::unique_ptr<RenderableChunk> const & a)
+            {
+                return !a->valid;
+            });
+
+        if (invalid_chunk_iter != chunks.end())
+        {
+            auto & chunk = **invalid_chunk_iter;
+            regenerate_chunk(chunk, compute_pipeline);
+
+            auto cmd_list = device.create_command_list({
+                .debug_name = "Playground Command List",
+            });
+            chunk.update_chunk_mesh(cmd_list);
+            cmd_list.complete();
+            device.submit_commands({
+                .command_lists = {std::move(cmd_list)},
+            });
+            device.wait_idle();
+        }
     }
 
-    void draw(daxa::CommandList & cmd_list, glm::mat4 const & view_mat)
+    void invalidate_all()
     {
         for (auto & chunk : chunks)
-            chunk->draw(cmd_list, view_mat, atlas_texture_array, atlas_sampler);
+        {
+            chunk->valid = false;
+        }
+    }
+
+    void draw(daxa::CommandList & cmd_list, daxa::BufferId gpu_input_buffer_id, u32 data0)
+    {
         for (auto & chunk : chunks)
-            chunk->draw_water(cmd_list, view_mat, atlas_texture_array, atlas_sampler);
+            chunk->draw(cmd_list, gpu_input_buffer_id, atlas_texture_array, atlas_sampler, data0);
+        for (auto & chunk : chunks)
+            chunk->draw_water(cmd_list, gpu_input_buffer_id, atlas_texture_array, atlas_sampler, data0);
     }
 
     Voxel get_voxel(glm::ivec3 p)
@@ -481,7 +518,7 @@ struct RenderableVoxelWorld
         atlas_texture_array = device.create_image({
             .format = daxa::Format::R8G8B8A8_SRGB,
             .size = {16, 16, 1},
-            .mip_level_count = 4,
+            .mip_level_count = 5,
             .array_layer_count = static_cast<u32>(texture_names.size()),
             .usage = daxa::ImageUsageFlagBits::SHADER_READ_ONLY | daxa::ImageUsageFlagBits::TRANSFER_SRC | daxa::ImageUsageFlagBits::TRANSFER_DST,
         });
@@ -555,20 +592,6 @@ struct RenderableVoxelWorld
             });
         }
 
-        // cmd_list.pipeline_barrier_image_transition({
-        //     .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
-        //     .waiting_pipeline_access = daxa::AccessConsts::ALL_GRAPHICS_READ,
-        //     .before_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-        //     .after_layout = daxa::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
-        //     .image_id = atlas_texture_array,
-        //     .image_slice = {
-        //         .base_mip_level = 0,
-        //         .level_count = 1,
-        //         .base_array_layer = 0,
-        //         .layer_count = static_cast<u32>(texture_names.size()),
-        //     },
-        // });
-
         generate_mip_levels(device, cmd_list, {.image = atlas_texture_array, .base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())});
 
         cmd_list.complete();
@@ -594,11 +617,11 @@ void RenderableChunk::update_chunk_mesh(daxa::CommandList & cmd_list)
 
         Vertex * buffer_ptr = device.map_memory_as<Vertex>(face_staging_buffer);
         face_n = 0;
-        for (i32 zi = 0; zi < 32; ++zi)
+        for (i32 zi = 0; zi < static_cast<i32>(CHUNK_SIZE); ++zi)
         {
-            for (i32 yi = 0; yi < 32; ++yi)
+            for (i32 yi = 0; yi < static_cast<i32>(CHUNK_SIZE); ++yi)
             {
-                for (i32 xi = 0; xi < 32; ++xi)
+                for (i32 xi = 0; xi < static_cast<i32>(CHUNK_SIZE); ++xi)
                 {
                     glm::ivec3 voxel_pos = glm::ivec3{xi, yi, zi} + glm::ivec3(voxel_chunk.pos);
                     Voxel current_voxel = renderable_world->get_voxel(voxel_pos);
@@ -656,11 +679,11 @@ void RenderableChunk::update_chunk_mesh(daxa::CommandList & cmd_list)
 
         Vertex * buffer_ptr = device.map_memory_as<Vertex>(face_staging_buffer);
         water_face_n = 0;
-        for (i32 zi = 0; zi < 32; ++zi)
+        for (i32 zi = 0; zi < static_cast<i32>(CHUNK_SIZE); ++zi)
         {
-            for (i32 yi = 0; yi < 32; ++yi)
+            for (i32 yi = 0; yi < static_cast<i32>(CHUNK_SIZE); ++yi)
             {
-                for (i32 xi = 0; xi < 32; ++xi)
+                for (i32 xi = 0; xi < static_cast<i32>(CHUNK_SIZE); ++xi)
                 {
                     glm::ivec3 voxel_pos = glm::ivec3{xi, yi, zi} + glm::ivec3(voxel_chunk.pos);
                     Voxel current_voxel = renderable_world->get_voxel(voxel_pos);
@@ -700,6 +723,8 @@ void RenderableChunk::update_chunk_mesh(daxa::CommandList & cmd_list)
             .waiting_pipeline_access = daxa::AccessConsts::VERTEX_SHADER_READ,
         });
     }
+
+    valid = true;
 }
 
 struct App : AppWindow<App>
@@ -733,10 +758,33 @@ struct App : AppWindow<App>
         .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT,
     });
 
+    daxa::ImageId shadow_depth_image0 = device.create_image({
+        .format = daxa::Format::D32_SFLOAT,
+        .aspect = daxa::ImageAspectFlagBits::DEPTH,
+        .size = {SHADOW_RES, SHADOW_RES, 1},
+        .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_ONLY,
+    });
+    daxa::ImageId shadow_depth_image1 = device.create_image({
+        .format = daxa::Format::D32_SFLOAT,
+        .aspect = daxa::ImageAspectFlagBits::DEPTH,
+        .size = {SHADOW_RES, SHADOW_RES, 1},
+        .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_ONLY,
+    });
+    daxa::ImageId shadow_depth_image2 = device.create_image({
+        .format = daxa::Format::D32_SFLOAT,
+        .aspect = daxa::ImageAspectFlagBits::DEPTH,
+        .size = {SHADOW_RES, SHADOW_RES, 1},
+        .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_ONLY,
+    });
+
+    daxa::BufferId gpu_input_buffer_id = device.create_buffer({
+        .size = sizeof(GpuInput),
+    });
+
     daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
         .root_paths = {
             "tests/0_common/shaders",
-            "tests/3_samples/0_playground/shaders",
+            "tests/3_samples/6_gpu_based/shaders",
             "include",
         },
         .debug_name = "Playground Compiler",
@@ -746,7 +794,21 @@ struct App : AppWindow<App>
     daxa::RasterPipeline raster_pipeline = pipeline_compiler.create_raster_pipeline({
         .vertex_shader_info = {.source = daxa::ShaderFile{"vert.hlsl"}},
         .fragment_shader_info = {.source = daxa::ShaderFile{"frag.hlsl"}},
-        .color_attachments = {{.format = swapchain.get_format(), .blend = {.blend_enable = true, .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA, .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA}}},
+        .color_attachments = {{.format = swapchain.get_format(), .blend = {.blend_enable = true, .src_color_blend_factor = daxa::BlendFactor::ONE, .dst_color_blend_factor = daxa::BlendFactor::ONE}}},
+        .depth_test = {
+            .depth_attachment_format = daxa::Format::D32_SFLOAT,
+            .enable_depth_test = false,
+            .enable_depth_write = false,
+        },
+        .raster = {
+            .face_culling = daxa::FaceCullFlagBits::BACK_BIT,
+        },
+        .push_constant_size = sizeof(RasterPush),
+        .debug_name = "Playground Pipeline",
+    }).value();
+    daxa::RasterPipeline shadow_pipeline = pipeline_compiler.create_raster_pipeline({
+        .vertex_shader_info = {.source = daxa::ShaderFile{"shadow_vert.hlsl"}},
+        .fragment_shader_info = {.source = daxa::ShaderFile{"shadow_frag.hlsl"}},
         .depth_test = {
             .depth_attachment_format = daxa::Format::D32_SFLOAT,
             .enable_depth_test = true,
@@ -757,6 +819,11 @@ struct App : AppWindow<App>
         },
         .push_constant_size = sizeof(RasterPush),
         .debug_name = "Playground Pipeline",
+    }).value();
+    daxa::ComputePipeline chunkgen_compute_pipeline = pipeline_compiler.create_compute_pipeline({
+        .shader_info = {.source = daxa::ShaderFile{"chunkgen.hlsl"}},
+        .push_constant_size = sizeof(ChunkgenComputePush),
+        .debug_name = "Playground Chunkgen Compute Pipeline",
     }).value();
     // clang-format on
 
@@ -778,14 +845,20 @@ struct App : AppWindow<App>
         .rot = {2.0f, 0.0f, 0.0f},
     };
     bool should_resize = false, paused = true;
+    u32 camera_index = 0;
 
     App() : AppWindow<App>("Samples: Playground")
     {
+        renderable_world.update_meshes(chunkgen_compute_pipeline);
     }
 
     ~App()
     {
         device.destroy_image(depth_image);
+        device.destroy_image(shadow_depth_image0);
+        device.destroy_image(shadow_depth_image1);
+        device.destroy_image(shadow_depth_image2);
+        device.destroy_buffer(gpu_input_buffer_id);
     }
 
     bool update()
@@ -813,6 +886,7 @@ struct App : AppWindow<App>
     {
         auto now = Clock::now();
         auto elapsed_s = std::chrono::duration<f32>(now - prev_time).count();
+        auto time = std::chrono::duration<f32>(now - start).count();
         prev_time = now;
 
         player.camera.resize(static_cast<i32>(size_x), static_cast<i32>(size_y));
@@ -820,12 +894,29 @@ struct App : AppWindow<App>
         player.camera.set_rot(player.rot.x, player.rot.y);
         player.update(elapsed_s);
 
+        renderable_world.update(chunkgen_compute_pipeline, player.pos);
+
         if (pipeline_compiler.check_if_sources_changed(raster_pipeline))
         {
             auto new_pipeline = pipeline_compiler.recreate_raster_pipeline(raster_pipeline);
             if (new_pipeline.is_ok())
             {
                 raster_pipeline = new_pipeline.value();
+            }
+            else
+            {
+                std::cout << new_pipeline.message() << std::endl;
+            }
+        }
+
+        if (pipeline_compiler.check_if_sources_changed(chunkgen_compute_pipeline))
+        {
+            auto new_pipeline = pipeline_compiler.recreate_compute_pipeline(chunkgen_compute_pipeline);
+            if (new_pipeline.is_ok())
+            {
+                chunkgen_compute_pipeline = new_pipeline.value();
+                // renderable_world.update_meshes(chunkgen_compute_pipeline);
+                renderable_world.invalidate_all();
             }
             else
             {
@@ -844,6 +935,52 @@ struct App : AppWindow<App>
             .debug_name = "Playground Command List",
         });
 
+        auto shadow_map_view0 = glm::ortho(-16.0f, 16.0f, -16.0f, 16.0f, -64.0f, 64.0f);
+        auto shadow_map_view1 = glm::ortho(-64.0f, 64.0f, -64.0f, 64.0f, -256.0f, 256.0f);
+        auto shadow_map_view2 = glm::ortho(-256.0f, 256.0f, -256.0f, 256.0f, -1024.0f, 1024.0f);
+        glm::vec3 offset0 = -player.pos - glm::vec3(1, 3, 2) * 4.0f;
+        glm::vec3 offset1 = -player.pos - glm::vec3(1, 3, 2) * 16.0f;
+        glm::vec3 offset2 = -player.pos - glm::vec3(1, 3, 2) * 64.0f;
+        shadow_map_view0 = shadow_map_view0 * glm::lookAt(glm::vec3(0, 0, 0) + offset0, glm::vec3(1, 3, 2) + offset0, glm::vec3(0, -1, 0));
+        shadow_map_view1 = shadow_map_view1 * glm::lookAt(glm::vec3(0, 0, 0) + offset1, glm::vec3(1, 3, 2) + offset1, glm::vec3(0, -1, 0));
+        shadow_map_view2 = shadow_map_view2 * glm::lookAt(glm::vec3(0, 0, 0) + offset2, glm::vec3(1, 3, 2) + offset2, glm::vec3(0, -1, 0));
+        glm::mat4 player_view = player.camera.get_vp();
+        switch (camera_index)
+        {
+        case 0: player_view = player.camera.get_vp(); break;
+        case 1: player_view = shadow_map_view0; break;
+        case 2: player_view = shadow_map_view1; break;
+        case 3: player_view = shadow_map_view2; break;
+        default: break;
+        }
+        auto gpu_input_staging_buffer = device.create_buffer({
+            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+            .size = sizeof(GpuInput),
+            .debug_name = "Playground Input Staging buffer",
+        });
+        cmd_list.destroy_buffer_deferred(gpu_input_staging_buffer);
+        GpuInput * buffer_ptr = device.map_memory_as<GpuInput>(gpu_input_staging_buffer);
+        *buffer_ptr = GpuInput{
+            .view_mat = player_view,
+            .shadow_view_mat = {shadow_map_view0, shadow_map_view1, shadow_map_view2},
+            .shadow_depth_image = {shadow_depth_image0, shadow_depth_image1, shadow_depth_image2},
+            .time = time,
+        };
+        device.unmap_memory(gpu_input_staging_buffer);
+        cmd_list.pipeline_barrier({
+            .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
+            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
+        });
+        cmd_list.copy_buffer_to_buffer({
+            .src_buffer = gpu_input_staging_buffer,
+            .dst_buffer = gpu_input_buffer_id,
+            .size = sizeof(GpuInput),
+        });
+        cmd_list.pipeline_barrier({
+            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .waiting_pipeline_access = daxa::AccessConsts::VERTEX_SHADER_READ,
+        });
+
         cmd_list.pipeline_barrier_image_transition({
             .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
             .before_layout = daxa::ImageLayout::UNDEFINED,
@@ -859,11 +996,91 @@ struct App : AppWindow<App>
             .image_slice = {.image_aspect = daxa::ImageAspectFlagBits::DEPTH},
         });
 
+        // shadow mapping pass
+        cmd_list.pipeline_barrier_image_transition({
+            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .before_layout = daxa::ImageLayout::UNDEFINED,
+            .after_layout = daxa::ImageLayout::DEPTH_ATTACHMENT_OPTIMAL,
+            .image_id = shadow_depth_image0,
+            .image_slice = {.image_aspect = daxa::ImageAspectFlagBits::DEPTH},
+        });
+        cmd_list.pipeline_barrier_image_transition({
+            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .before_layout = daxa::ImageLayout::UNDEFINED,
+            .after_layout = daxa::ImageLayout::DEPTH_ATTACHMENT_OPTIMAL,
+            .image_id = shadow_depth_image1,
+            .image_slice = {.image_aspect = daxa::ImageAspectFlagBits::DEPTH},
+        });
+        cmd_list.pipeline_barrier_image_transition({
+            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .before_layout = daxa::ImageLayout::UNDEFINED,
+            .after_layout = daxa::ImageLayout::DEPTH_ATTACHMENT_OPTIMAL,
+            .image_id = shadow_depth_image2,
+            .image_slice = {.image_aspect = daxa::ImageAspectFlagBits::DEPTH},
+        });
+
+        cmd_list.begin_renderpass({
+            .depth_attachment = {{
+                .image_view = shadow_depth_image0.default_view(),
+                .load_op = daxa::AttachmentLoadOp::CLEAR,
+                .clear_value = daxa::DepthValue{1.0f, 0},
+            }},
+            .render_area = {.x = 0, .y = 0, .width = SHADOW_RES, .height = SHADOW_RES},
+        });
+        cmd_list.set_pipeline(shadow_pipeline);
+        renderable_world.draw(cmd_list, gpu_input_buffer_id, 0);
+        cmd_list.end_renderpass();
+
+        cmd_list.begin_renderpass({
+            .depth_attachment = {{
+                .image_view = shadow_depth_image1.default_view(),
+                .load_op = daxa::AttachmentLoadOp::CLEAR,
+                .clear_value = daxa::DepthValue{1.0f, 0},
+            }},
+            .render_area = {.x = 0, .y = 0, .width = SHADOW_RES, .height = SHADOW_RES},
+        });
+        cmd_list.set_pipeline(shadow_pipeline);
+        renderable_world.draw(cmd_list, gpu_input_buffer_id, 1);
+        cmd_list.end_renderpass();
+
+        cmd_list.begin_renderpass({
+            .depth_attachment = {{
+                .image_view = shadow_depth_image2.default_view(),
+                .load_op = daxa::AttachmentLoadOp::CLEAR,
+                .clear_value = daxa::DepthValue{1.0f, 0},
+            }},
+            .render_area = {.x = 0, .y = 0, .width = SHADOW_RES, .height = SHADOW_RES},
+        });
+        cmd_list.set_pipeline(shadow_pipeline);
+        renderable_world.draw(cmd_list, gpu_input_buffer_id, 2);
+        cmd_list.end_renderpass();
+
+        cmd_list.pipeline_barrier_image_transition({
+            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .before_layout = daxa::ImageLayout::DEPTH_ATTACHMENT_OPTIMAL,
+            .after_layout = daxa::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
+            .image_id = shadow_depth_image0,
+        });
+        cmd_list.pipeline_barrier_image_transition({
+            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .before_layout = daxa::ImageLayout::DEPTH_ATTACHMENT_OPTIMAL,
+            .after_layout = daxa::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
+            .image_id = shadow_depth_image1,
+        });
+        cmd_list.pipeline_barrier_image_transition({
+            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .before_layout = daxa::ImageLayout::DEPTH_ATTACHMENT_OPTIMAL,
+            .after_layout = daxa::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
+            .image_id = shadow_depth_image2,
+        });
+        // end shadow mapping pass
+
         cmd_list.begin_renderpass({
             .color_attachments = {{
                 .image_view = swapchain_image.default_view(),
                 .load_op = daxa::AttachmentLoadOp::CLEAR,
-                .clear_value = std::array<f32, 4>{0.2f, 0.4f, 1.0f, 1.0f},
+                // .clear_value = std::array<f32, 4>{0.2f, 0.4f, 1.0f, 1.0f},
+                .clear_value = std::array<f32, 4>{0.0f, 0.0f, 0.0f, 1.0f},
             }},
             .depth_attachment = {{
                 .image_view = depth_image.default_view(),
@@ -874,7 +1091,7 @@ struct App : AppWindow<App>
         });
 
         cmd_list.set_pipeline(raster_pipeline);
-        renderable_world.draw(cmd_list, player.camera.get_vp());
+        renderable_world.draw(cmd_list, gpu_input_buffer_id, 0);
         cmd_list.end_renderpass();
 
         cmd_list.pipeline_barrier_image_transition({
@@ -923,6 +1140,10 @@ struct App : AppWindow<App>
         if (!paused)
         {
             player.on_key(key, action);
+            if (key == GLFW_KEY_F5 && action == GLFW_PRESS)
+            {
+                toggle_view();
+            }
         }
     }
 
@@ -957,6 +1178,11 @@ struct App : AppWindow<App>
     {
         set_mouse_capture(paused);
         paused = !paused;
+    }
+
+    void toggle_view()
+    {
+        camera_index = (camera_index + 1) % 4;
     }
 };
 
