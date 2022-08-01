@@ -6,7 +6,7 @@ namespace tests
 
     void simplest(daxa::Context & daxa_ctx)
     {
-        auto device = daxa_ctx.create_default_device();
+        auto device = daxa_ctx.create_device({});
     }
     void device_selection(daxa::Context & daxa_ctx)
     {
