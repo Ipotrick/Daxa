@@ -73,9 +73,9 @@ namespace daxa
             case daxa::DeviceType::INTEGRATED_GPU: score += 100; break;
             default: break;
             }
-            score += device_info.limits.max_memory_allocation_count;
-            score += device_info.limits.max_descriptor_set_storage_buffers / 10;
-            score += device_info.limits.max_image_array_layers;
+            score += device_info.limits.max_memory_allocation_count / 1000;
+            score += device_info.limits.max_descriptor_set_storage_buffers / 1000;
+            score += device_info.limits.max_image_array_layers / 1000;
             return score;
         };
         return create_device({
