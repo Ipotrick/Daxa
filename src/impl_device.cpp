@@ -71,7 +71,7 @@ namespace daxa
 
         for (auto & binary_semaphore : submit_info.wait_binary_semaphores)
         {
-            auto & impl_binary_semaphore = *binary_semaphore.as<ImplTimelineSemaphore>();
+            auto & impl_binary_semaphore = *binary_semaphore.as<ImplBinarySemaphore>();
             submit_semaphore_waits.push_back(impl_binary_semaphore.vk_semaphore);
             submit_semaphore_wait_stage_masks.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
             submit_semaphore_wait_values.push_back(0);
