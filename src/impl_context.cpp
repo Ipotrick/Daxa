@@ -61,29 +61,6 @@ namespace daxa
         return Device{ManagedPtr{new ImplDevice(device_info, device_vulkan_info, this->make_weak(), physical_device)}};
     }
 
-    auto Context::create_default_device() -> Device
-    {
-        auto default_selector = [](DeviceVulkanInfo const & device_info) -> i32
-        {
-            i32 score = 0;
-            switch (device_info.device_type)
-            {
-            case daxa::DeviceType::DISCRETE_GPU: score += 10000; break;
-            case daxa::DeviceType::VIRTUAL_GPU: score += 1000; break;
-            case daxa::DeviceType::INTEGRATED_GPU: score += 100; break;
-            default: break;
-            }
-            score += device_info.limits.max_memory_allocation_count / 1000;
-            score += device_info.limits.max_descriptor_set_storage_buffers / 1000;
-            score += device_info.limits.max_image_array_layers / 1000;
-            return score;
-        };
-        return create_device({
-            .selector = default_selector,
-            .debug_name = "Daxa Default Device",
-        });
-    }
-
     ImplContext::ImplContext(ContextInfo const & info_param)
         : info{info_param}
     {
