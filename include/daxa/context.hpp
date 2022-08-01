@@ -33,7 +33,6 @@ namespace daxa
     struct Context : ManagedPtr
     {
         auto create_device(DeviceInfo const & device_info) -> Device;
-        auto create_default_device() -> Device;
 
       private:
         friend auto create_context(ContextInfo const & info) -> Context;
