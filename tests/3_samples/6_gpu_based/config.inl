@@ -1,4 +1,4 @@
 #pragma once
 
-#define SHADOW_RES 1024
-#define VISUALIZE_OVERDRAW 0
+#define SHADOW_RES 512
+#define VISUALIZE_OVERDRAW 1

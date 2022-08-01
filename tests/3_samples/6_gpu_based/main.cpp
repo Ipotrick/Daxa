@@ -188,7 +188,7 @@ static inline constexpr u64 CHUNK_VOXEL_N = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE
 static inline constexpr u64 CHUNK_MAX_VERTS = CHUNK_VOXEL_N * 6;
 static inline constexpr u64 CHUNK_MAX_SIZE = CHUNK_MAX_VERTS * sizeof(Vertex);
 
-static inline constexpr u64 CHUNK_N = 6;
+static inline constexpr u64 CHUNK_N = 4;
 
 struct Voxel
 {
@@ -1088,8 +1088,11 @@ struct App : AppWindow<App>
             .color_attachments = {{
                 .image_view = swapchain_image.default_view(),
                 .load_op = daxa::AttachmentLoadOp::CLEAR,
-                // .clear_value = std::array<f32, 4>{0.2f, 0.4f, 1.0f, 1.0f},
+#if VISUALIZE_OVERDRAW
                 .clear_value = std::array<f32, 4>{0.0f, 0.0f, 0.0f, 1.0f},
+#else
+                .clear_value = std::array<f32, 4>{0.2f, 0.4f, 1.0f, 1.0f},
+#endif
             }},
             .depth_attachment = {{
                 .image_view = depth_image.default_view(),

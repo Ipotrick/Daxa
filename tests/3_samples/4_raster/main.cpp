@@ -43,7 +43,7 @@ static inline constexpr u64 CHUNK_VOXEL_N = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE
 static inline constexpr u64 CHUNK_MAX_VERTS = CHUNK_VOXEL_N * 6;
 static inline constexpr u64 CHUNK_MAX_SIZE = CHUNK_MAX_VERTS * sizeof(Vertex);
 
-static inline constexpr u64 CHUNK_N = 4;
+static inline constexpr u64 CHUNK_N = 6;
 
 struct Voxel
 {
@@ -83,9 +83,8 @@ struct VoxelChunk
             /* .octaves     = */ 2,
         };
         float val = fractal_noise(p + 100.0f, noise_conf);
-        val = val - (-p.y + 30.0f) * 0.04f;
-        val -= std::pow(smoothstep(-1.0f, 1.0f, -p.y + 32.0f), 2.0f) * 0.15f;
-        val = std::max(val, 0.0f);
+        val = val - (-p.y + 30.0f) * 0.02f;
+        val -= std::pow(smoothstep(-1.0f, 1.0f, -p.y + 32.0f), 2.0f) * 0.05f;
         if (val > 0.0f)
             return 1;
         if (p.y > 33.0f)

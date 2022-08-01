@@ -30,8 +30,8 @@ WorldgenState get_worldgen_state(float3 pos)
         /* .octaves     = */ 2,
     };
     float val = fractal_noise(pos + 100.0, noise_conf);
-    // val = val - (-pos.y + 30.0) * 0.04;
-    // val -= pow(smoothstep(-1.0, 1.0, -pos.y + 32.0), 2.0) * 0.15;
+    val = val - (-pos.y + 30.0) * 0.02;
+    val -= pow(smoothstep(-1.0, 1.0, -pos.y + 32.0), 2.0) * 0.05;
     result.t_noise = val;
     result.r = rand(pos);
     result.r_xz = rand(pos * float3(13.1, 0, 13.1) + 0.17);
