@@ -47,7 +47,7 @@ namespace daxa
     struct ImageViewInfo
     {
         ImageViewType type = ImageViewType::REGULAR_2D;
-        Format format = Format::R8G8B8A8_SRGB;
+        Format format = Format::R8G8B8A8_UNORM;
         ImageId image = {};
         ImageMipArraySlice slice = {};
         std::string debug_name = {};

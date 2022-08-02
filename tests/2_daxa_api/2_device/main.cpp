@@ -6,7 +6,7 @@ namespace tests
 
     void simplest(daxa::Context & daxa_ctx)
     {
-        auto device = daxa_ctx.create_default_device();
+        auto device = daxa_ctx.create_device({});
     }
     void device_selection(daxa::Context & daxa_ctx)
     {
@@ -23,9 +23,6 @@ namespace tests
                 case daxa::DeviceType::INTEGRATED_GPU: score += 100; break;
                 default: break;
                 }
-                score += static_cast<i32>(device_info.limits.max_memory_allocation_count);
-                score += static_cast<i32>(device_info.limits.max_descriptor_set_storage_buffers / 10);
-                score += static_cast<i32>(device_info.limits.max_image_array_layers);
                 return score;
             },
             .debug_name = "My device",
