@@ -1,12 +1,13 @@
 #pragma once
 
 #include "daxa/daxa.hlsl"
+#include "../shared.inl"
 
 struct Input
 {
     float4x4 view_mat;
-    float4x4 shadow_view_mat[3];
-    daxa::ImageId shadow_depth_image[3];
+    // float4x4 shadow_view_mat[3];
+    // daxa::ImageId shadow_depth_image[3];
     float time;
 };
 
