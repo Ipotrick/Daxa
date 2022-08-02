@@ -1,6 +1,6 @@
 #pragma once
 
-#define SHADOW_RES 1024
+#define SHADOW_RES 2048
 #define VISUALIZE_OVERDRAW 0
 #define CHUNK_SIZE 64
 #define CHUNK_COUNT_X 6

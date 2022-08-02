@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <optional>
 #include <concepts>
 
 #include <daxa/types.hpp>
