@@ -12,7 +12,7 @@
 using namespace daxa::types;
 using Clock = std::chrono::high_resolution_clock;
 
-#include "config.inl"
+#include "shared.inl"
 
 // helper utils
 
@@ -46,22 +46,6 @@ auto refresh_pipeline(daxa::PipelineCompiler & compiler, auto & pipeline) -> boo
 }
 
 // end helper utils
-
-struct DrawRasterPush
-{
-    glm::vec3 chunk_pos;
-    daxa::BufferId chunk_meshlets_buffer_id;
-};
-struct ChunkgenComputePush
-{
-    glm::vec3 chunk_pos;
-    daxa::BufferId buffer_id;
-};
-struct MeshgenComputePush
-{
-    glm::vec3 chunk_pos;
-    daxa::BufferId buffer_id;
-};
 
 struct App : AppWindow<App>
 {
@@ -115,8 +99,8 @@ struct App : AppWindow<App>
 
     // clang-format off
     daxa::RasterPipeline draw_raster_pipeline = pipeline_compiler.create_raster_pipeline({
-        .vertex_shader_info = {.source = daxa::ShaderFile{"draw_vert.hlsl"}},
-        .fragment_shader_info = {.source = daxa::ShaderFile{"draw_frag.hlsl"}},
+        .vertex_shader_info = {.source = daxa::ShaderFile{"temp_vert.hlsl"}},
+        .fragment_shader_info = {.source = daxa::ShaderFile{"temp_frag.hlsl"}},
         #if VISUALIZE_OVERDRAW
         .color_attachments = {{.format = swapchain.get_format(), .blend = {.blend_enable = true, .src_color_blend_factor = daxa::BlendFactor::ONE, .dst_color_blend_factor = daxa::BlendFactor::ONE}}},
         #else
@@ -138,11 +122,11 @@ struct App : AppWindow<App>
         .push_constant_size = sizeof(DrawRasterPush),
         .debug_name = "Playground Pipeline",
     }).value();
-    // daxa::ComputePipeline chunkgen_compute_pipeline = pipeline_compiler.create_compute_pipeline({
-    //     .shader_info = {.source = daxa::ShaderFile{"chunkgen.hlsl"}},
-    //     .push_constant_size = sizeof(ChunkgenComputePush),
-    //     .debug_name = "Playground Chunkgen Compute Pipeline",
-    // }).value();
+    daxa::ComputePipeline chunkgen_compute_pipeline = pipeline_compiler.create_compute_pipeline({
+        .shader_info = {.source = daxa::ShaderFile{"chunkgen.hlsl"}},
+        .push_constant_size = sizeof(ChunkgenComputePush),
+        .debug_name = "Playground Chunkgen Compute Pipeline",
+    }).value();
     // daxa::ComputePipeline meshgen_compute_pipeline = pipeline_compiler.create_compute_pipeline({
     //     .shader_info = {.source = daxa::ShaderFile{"meshgen.hlsl"}},
     //     .push_constant_size = sizeof(MeshgenComputePush),
