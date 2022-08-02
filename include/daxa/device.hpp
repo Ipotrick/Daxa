@@ -140,9 +140,25 @@ namespace daxa
         DeviceLimits limits = {};
     };
 
+    static inline auto default_device_score(DeviceVulkanInfo const & device_info) -> i32
+    {
+        i32 score = 0;
+        switch (device_info.device_type)
+        {
+        case daxa::DeviceType::DISCRETE_GPU: score += 10000; break;
+        case daxa::DeviceType::VIRTUAL_GPU: score += 1000; break;
+        case daxa::DeviceType::INTEGRATED_GPU: score += 100; break;
+        default: break;
+        }
+        score += device_info.limits.max_memory_allocation_count / 1000;
+        score += device_info.limits.max_descriptor_set_storage_buffers / 1000;
+        score += device_info.limits.max_image_array_layers / 1000;
+        return score;
+    }
+
     struct DeviceInfo
     {
-        std::function<i32(DeviceVulkanInfo const &)> selector = {};
+        std::function<i32(DeviceVulkanInfo const &)> selector = default_device_score;
         std::string debug_name = {};
     };
 
