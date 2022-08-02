@@ -16,11 +16,22 @@ using Clock = std::chrono::high_resolution_clock;
 
 // helper utils
 
+auto recreate_pipeline(daxa::PipelineCompiler & compiler, auto const & pipeline)
+{
+    if constexpr (std::is_same_v<std::decay_t<decltype(pipeline)>, daxa::ComputePipeline>)
+    {
+        return compiler.recreate_compute_pipeline(pipeline);
+    }
+    else
+    {
+        return compiler.recreate_raster_pipeline(pipeline);
+    }
+}
 auto refresh_pipeline(daxa::PipelineCompiler & compiler, auto & pipeline) -> bool
 {
     if (compiler.check_if_sources_changed(pipeline))
     {
-        auto new_pipeline = compiler.recreate_compute_pipeline(pipeline);
+        auto new_pipeline = recreate_pipeline(compiler, pipeline);
         if (new_pipeline.is_ok())
         {
             pipeline = new_pipeline.value();
@@ -30,8 +41,8 @@ auto refresh_pipeline(daxa::PipelineCompiler & compiler, auto & pipeline) -> boo
         {
             std::cout << new_pipeline.message() << std::endl;
         }
-        return false;
     }
+    return false;
 }
 
 // end helper utils
@@ -39,6 +50,7 @@ auto refresh_pipeline(daxa::PipelineCompiler & compiler, auto & pipeline) -> boo
 struct DrawRasterPush
 {
     glm::vec3 chunk_pos;
+    daxa::BufferId chunk_meshlets_buffer_id;
 };
 struct ChunkgenComputePush
 {
@@ -54,7 +66,7 @@ struct MeshgenComputePush
 struct App : AppWindow<App>
 {
     daxa::Context daxa_ctx = daxa::create_context({.enable_validation = true});
-    daxa::Device device = daxa_ctx.create_default_device();
+    daxa::Device device = daxa_ctx.create_device({});
     daxa::Swapchain swapchain = device.create_swapchain({
         .native_window = get_native_handle(),
         .width = size_x,
@@ -73,8 +85,8 @@ struct App : AppWindow<App>
     });
     daxa::ImageId swapchain_image;
     daxa::TaskImageId task_swapchain_image;
-    daxa::ImageId depth_image = create_depth_image();
-    daxa::TaskImageId task_depth_image;
+    daxa::ImageId draw_depth_image = create_depth();
+    daxa::TaskImageId task_draw_depth_image;
     daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
         .root_paths = {
             "tests/0_common/shaders",
@@ -126,25 +138,25 @@ struct App : AppWindow<App>
         .push_constant_size = sizeof(DrawRasterPush),
         .debug_name = "Playground Pipeline",
     }).value();
-    daxa::ComputePipeline chunkgen_compute_pipeline = pipeline_compiler.create_compute_pipeline({
-        .shader_info = {.source = daxa::ShaderFile{"chunkgen.hlsl"}},
-        .push_constant_size = sizeof(ChunkgenComputePush),
-        .debug_name = "Playground Chunkgen Compute Pipeline",
-    }).value();
-    daxa::ComputePipeline meshgen_compute_pipeline = pipeline_compiler.create_compute_pipeline({
-        .shader_info = {.source = daxa::ShaderFile{"meshgen.hlsl"}},
-        .push_constant_size = sizeof(MeshgenComputePush),
-        .debug_name = "Playground Meshgen Compute Pipeline",
-    }).value();
+    // daxa::ComputePipeline chunkgen_compute_pipeline = pipeline_compiler.create_compute_pipeline({
+    //     .shader_info = {.source = daxa::ShaderFile{"chunkgen.hlsl"}},
+    //     .push_constant_size = sizeof(ChunkgenComputePush),
+    //     .debug_name = "Playground Chunkgen Compute Pipeline",
+    // }).value();
+    // daxa::ComputePipeline meshgen_compute_pipeline = pipeline_compiler.create_compute_pipeline({
+    //     .shader_info = {.source = daxa::ShaderFile{"meshgen.hlsl"}},
+    //     .push_constant_size = sizeof(MeshgenComputePush),
+    //     .debug_name = "Playground Meshgen Compute Pipeline",
+    // }).value();
     // clang-format on
-
-    daxa::TaskList task_list = record_task_list();
 
     daxa::BufferId voxel_world_buffer = device.create_buffer(daxa::BufferInfo{
         .size = sizeof(u32) * CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE * CHUNK_COUNT_X * CHUNK_COUNT_Y * CHUNK_COUNT_Z,
         .debug_name = "Voxel World buffer",
     });
     daxa::TaskBufferId task_voxel_world_buffer;
+
+    daxa::TaskList loop_task_list = record_loop_task_list();
 
     App() : AppWindow<App>("Samples: Gpu Driven")
     {
@@ -153,7 +165,7 @@ struct App : AppWindow<App>
     ~App()
     {
         device.destroy_buffer(voxel_world_buffer);
-        device.destroy_image(depth_image);
+        device.destroy_image(draw_depth_image);
     }
 
     bool update()
@@ -185,27 +197,26 @@ struct App : AppWindow<App>
     {
         player.update(delta_time);
         refresh_pipeline(pipeline_compiler, draw_raster_pipeline);
-        if (refresh_pipeline(pipeline_compiler, chunkgen_compute_pipeline))
-        {
-            // invalidate chunk block data
-        }
-        if (refresh_pipeline(pipeline_compiler, meshgen_compute_pipeline))
-        {
-            // invalidate chunk mesh data
-        }
+        // if (refresh_pipeline(pipeline_compiler, chunkgen_compute_pipeline))
+        // {
+        //     // invalidate chunk block data
+        // }
+        // if (refresh_pipeline(pipeline_compiler, meshgen_compute_pipeline))
+        // {
+        //     // invalidate chunk mesh data
+        // }
         swapchain_image = swapchain.acquire_next_image();
-        task_list.execute();
-        auto command_lists = task_list.command_lists();
+        loop_task_list.execute();
+        auto command_lists = loop_task_list.command_lists();
         auto cmd_list = device.create_command_list({});
         cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = task_list.last_access(task_swapchain_image),
-            .before_layout = task_list.last_layout(task_swapchain_image),
+            .awaited_pipeline_access = loop_task_list.last_access(task_swapchain_image),
+            .before_layout = loop_task_list.last_layout(task_swapchain_image),
             .after_layout = daxa::ImageLayout::PRESENT_SRC,
             .image_id = swapchain_image,
         });
         cmd_list.complete();
         command_lists.push_back(cmd_list);
-        auto binary_semaphore = device.create_binary_semaphore({});
         device.submit_commands({
             .command_lists = command_lists,
             .signal_binary_semaphores = {binary_semaphore},
@@ -216,7 +227,7 @@ struct App : AppWindow<App>
         });
     }
 
-    auto record_task_list() -> daxa::TaskList
+    auto record_loop_task_list() -> daxa::TaskList
     {
         daxa::TaskList new_task_list = daxa::TaskList({
             .device = device,
@@ -227,46 +238,73 @@ struct App : AppWindow<App>
             { return swapchain_image; },
             .debug_name = "TaskList Task Swapchain Image",
         });
-        task_render_image = new_task_list.create_task_image({
+        task_draw_depth_image = new_task_list.create_task_image({
             .fetch_callback = [this]()
-            { return render_image; },
-            .debug_name = "TaskList Task Render Image",
-        });
-
-        new_task_list.add_clear_image({
-            .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
-            .dst_image = task_render_image,
-            .dst_slice = {},
-            .debug_name = "TaskList Clear Render Image Task",
+            { return draw_depth_image; },
+            .slice = {.image_aspect = daxa::ImageAspectFlagBits::DEPTH},
+            .debug_name = "TaskList Task Draw Depth Image",
         });
         new_task_list.add_task({
             .resources = {
                 .images = {
-                    {task_render_image, daxa::TaskImageAccess::FRAGMENT_SHADER_WRITE_ONLY},
+                    {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
+                    {task_draw_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT},
                 },
             },
             .task = [this](daxa::TaskInterface interf)
             {
                 auto cmd_list = interf.get_command_list();
                 cmd_list.begin_renderpass({
-                    .color_attachments = {{.image_view = render_image.default_view()}},
+                    .color_attachments = {{
+                        .image_view = swapchain_image.default_view(),
+                        .load_op = daxa::AttachmentLoadOp::CLEAR,
+                        .clear_value = std::array<f32, 4>{0.2f, 0.4f, 1.0f, 1.0f},
+                        // .clear_value = std::array<f32, 4>{0.0f, 0.0f, 0.0f, 1.0f},
+                    }},
+                    .depth_attachment = {{
+                        .image_view = draw_depth_image.default_view(),
+                        .load_op = daxa::AttachmentLoadOp::CLEAR,
+                        .clear_value = daxa::DepthValue{1.0f, 0},
+                    }},
                     .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
                 });
-                cmd_list.set_pipeline(raster_pipeline);
+                cmd_list.set_pipeline(draw_raster_pipeline);
                 cmd_list.draw({.vertex_count = 3});
                 cmd_list.end_renderpass();
             },
-            .debug_name = "TaskList Draw to Render Image Task",
-        });
-
-        new_task_list.add_copy_image_to_image({
-            .src_image = task_render_image,
-            .dst_image = task_swapchain_image,
-            .extent = {size_x, size_y, 1},
+            .debug_name = "TaskList Draw Task",
         });
         new_task_list.compile();
-
         return new_task_list;
+    }
+
+    void on_mouse_move(f32 x, f32 y)
+    {
+        if (!paused)
+        {
+            f32 center_x = static_cast<f32>(size_x / 2);
+            f32 center_y = static_cast<f32>(size_y / 2);
+            auto offset = glm::vec2{x - center_x, center_y - y};
+            player.on_mouse_move(static_cast<f64>(offset.x), static_cast<f64>(offset.y));
+            set_mouse_pos(center_x, center_y);
+        }
+    }
+
+    void on_key(int key, int action)
+    {
+        if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+        {
+            toggle_pause();
+        }
+
+        if (!paused)
+        {
+            player.on_key(key, action);
+            if (key == GLFW_KEY_F5 && action == GLFW_PRESS)
+            {
+                toggle_view();
+            }
+        }
     }
 
     void on_resize(u32 sx, u32 sy)
@@ -277,15 +315,15 @@ struct App : AppWindow<App>
 
         if (!minimized)
         {
-            task_list = record_task_list();
-            device.destroy_image(depth_image);
-            depth_image = create_depth_image();
+            loop_task_list = record_loop_task_list();
+            device.destroy_image(draw_depth_image);
+            draw_depth_image = create_depth();
             swapchain.resize(size_x, size_y);
             on_update();
         }
     }
 
-    auto create_depth_image() -> daxa::ImageId
+    auto create_depth() -> daxa::ImageId
     {
         return device.create_image({
             .format = daxa::Format::D32_SFLOAT,
@@ -293,6 +331,15 @@ struct App : AppWindow<App>
             .size = {size_x, size_y, 1},
             .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT,
         });
+    }
+    void toggle_pause()
+    {
+        set_mouse_capture(paused);
+        paused = !paused;
+    }
+    void toggle_view()
+    {
+        camera_index = (camera_index + 1) % 4;
     }
 };
 
