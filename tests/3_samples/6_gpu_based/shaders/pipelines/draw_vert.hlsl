@@ -3,12 +3,7 @@
 struct Push
 {
     float3 chunk_pos;
-    daxa::BufferId input_buffer_id;
-    daxa::BufferId face_buffer_id;
-    daxa::ImageId texture_array_id;
-    daxa::SamplerId sampler_id;
-    uint mode;
-    uint data0;
+    daxa::BufferId chunk_meshlets_buffer_id;
 };
 [[vk::push_constant]] const Push p;
 
