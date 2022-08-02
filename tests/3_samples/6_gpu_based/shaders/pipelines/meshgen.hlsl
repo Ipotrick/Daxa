@@ -6,18 +6,11 @@
 struct ChunkMeshBuildInfo
 {
     uint face_count;
-    uint generation_barrier;    // must reach 8*8*8 = 256 to signal
-    uint allocation_barrier;    // must reach meshlet_count to signal
+    uint generation_barrier; // must reach 8*8*8 = 256 to signal
+    uint allocation_barrier; // must reach meshlet_count to signal
 };
 
-struct Push
-{
-    daxa::BufferId build_info_buffer_id;
-    daxa::BufferId meshlet_pool_buffer_id;
-    daxa::BufferId chunk_meshlets_buffer_id;
-    daxa::BufferId chunk_blocks_buffer_id;
-    uint3 chunk_i;
-};
+[[vk::push_constant]] const MeshgenComputePush p;
 
 groupshared uint group_face_count;
 
@@ -46,7 +39,7 @@ groupshared uint group_face_count;
     }
 
     uint in_group_faces_index = 0;
-    InterlockedAdd(group_face_count, faces_to_write, faces_index);
+    InterlockedAdd(group_face_count, faces_to_write, in_group_faces_index);
 
     GroupMemoryBarrierWithGroupSync();
 
@@ -91,7 +84,7 @@ groupshared uint group_face_count;
         meshlet_pool_buffer[0].unlock();
 
         uint dummy0;
-        InterlockedAdd(build_info.allocation_barrier, 1, dummy0);
+        InterlockedAdd(chunk_build_info_buffer[0].allocation_barrier, 1, dummy0);
     }
 
     // wait on allocation barrier
