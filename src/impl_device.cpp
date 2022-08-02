@@ -387,7 +387,13 @@ namespace daxa
         .nullDescriptor = VK_TRUE,
     };
 
-    static void * REQUIRED_DEVICE_FEATURE_P_CHAIN = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_ROBUSTNESS_2);
+    static const VkPhysicalDeviceMultiDrawFeaturesEXT REQUIRED_PHYSICAL_DEVICE_FEATURES_MULTI_DRAW{
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTI_DRAW_FEATURES_EXT,
+        .pNext = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_ROBUSTNESS_2),
+        .multiDraw = VK_TRUE,
+    };
+
+    static void * REQUIRED_DEVICE_FEATURE_P_CHAIN = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_MULTI_DRAW);
 
     ImplDevice::ImplDevice(DeviceInfo const & a_info, DeviceVulkanInfo const & a_vk_info, ManagedWeakPtr a_impl_ctx, VkPhysicalDevice a_physical_device)
         : info{a_info}, vk_info{a_vk_info}, impl_ctx{a_impl_ctx}, vk_physical_device{a_physical_device}
@@ -442,6 +448,8 @@ namespace daxa
             enabled_layers.push_back("VK_LAYER_KHRONOS_validation");
         }
         extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+        extension_names.push_back(VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME);
+        extension_names.push_back(VK_EXT_MULTI_DRAW_EXTENSION_NAME);
 
         VkDeviceCreateInfo device_ci = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,

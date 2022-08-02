@@ -22,6 +22,7 @@ namespace daxa
         using u32 = std::uint32_t;
         using u64 = std::uint64_t;
         using usize = std::size_t;
+        using b32 = u32;
 
         using i8 = std::int8_t;
         using i16 = std::int16_t;
@@ -31,6 +32,62 @@ namespace daxa
 
         using f32 = float;
         using f64 = double;
+
+        using b32vec2 = b32[2];
+        using b32vec3 = b32[3];
+        using b32vec4 = b32[4];
+        using f32vec2 = f32[2];
+        using f32vec2x2 = f32[2][2];
+        using f32vec2x3 = f32[2][3];
+        using f32vec2x4 = f32[2][4];
+        using f64vec2 = f64[2];
+        using f64vec2x2 = f64[2][2];
+        using f64vec2x3 = f64[2][3];
+        using f64vec2x4 = f64[2][4];
+        using f32vec3 = f32[3];
+        using f32vec3x2 = f32[3][2];
+        using f32vec3x3 = f32[3][3];
+        using f32vec3x4 = f32[3][4];
+        using f64vec3 = f64[3];
+        using f64vec3x2 = f64[3][2];
+        using f64vec3x3 = f64[3][3];
+        using f64vec3x4 = f64[3][4];
+        using f32vec4 = f32[4];
+        using f32vec4x2 = f32[4][2];
+        using f32vec4x3 = f32[4][3];
+        using f32vec4x4 = f32[4][4];
+        using f64vec4 = f64[4];
+        using f64vec4x2 = f64[4][2];
+        using f64vec4x3 = f64[4][3];
+        using f64vec4x4 = f64[4][4];
+        using f32vec4 = f32[4];
+        using f32vec4x2 = f32[4][2];
+        using f32vec4x3 = f32[4][3];
+        using f32vec4x4 = f32[4][4];
+        using i32vec2 = i32[2];
+        using i32vec2x2 = i32[2][2];
+        using i32vec2x3 = i32[2][3];
+        using i32vec2x4 = i32[2][4];
+        using u32vec2 = u32[2];
+        using u32vec2x2 = u32[2][2];
+        using u32vec2x3 = u32[2][3];
+        using u32vec2x4 = u32[2][4];
+        using i32vec3 = i32[3];
+        using i32vec3x2 = i32[3][2];
+        using i32vec3x3 = i32[3][3];
+        using i32vec3x4 = i32[3][4];
+        using u32vec3 = u32[3];
+        using u32vec3x2 = u32[3][2];
+        using u32vec3x3 = u32[3][3];
+        using u32vec3x4 = u32[3][4];
+        using i32vec4 = i32[4];
+        using i32vec4x2 = i32[4][2];
+        using i32vec4x3 = i32[4][3];
+        using i32vec4x4 = i32[4][4];
+        using u32vec4 = u32[4];
+        using u32vec4x2 = u32[4][2];
+        using u32vec4x3 = u32[4][3];
+        using u32vec4x4 = u32[4][4];
     } // namespace types
 
     enum struct Format
