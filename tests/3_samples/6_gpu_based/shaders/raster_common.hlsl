@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.hlsl"
+#include "meshlet.hlsl"
 
 #include "utils/rand.hlsl"
 
@@ -19,11 +20,6 @@ static const float3 cross_instance_positions[6] = {
     float3(+1.0 - 0.2, +0.2, +0.0 + 0.2),
     float3(+1.0 - 0.2, +1.0, +0.0 + 0.2),
     float3(+0.0 + 0.2, +1.0, +1.0 - 0.2),
-};
-
-struct PackedFace
-{
-    uint data;
 };
 
 struct Vertex
@@ -186,97 +182,6 @@ uint tile_texture_index(BlockID block_id, BlockFace face, float time)
     }
     // clang-format on
 }
-
-struct FaceMeshlet
-{
-    PackedFace faces[256];
-};
-
-static const uint FACE_MESHLET_POOL_SIZE = 1u << 17u;
-
-struct FaceMeshletPool
-{
-    FaceMeshlet meshlets[FACE_MESHLET_POOL_SIZE];
-    uint free_meshlet_list[FACE_MESHLET_POOL_SIZE];
-    uint free_meshlets_list_size;
-    uint lock_int;
-
-    void lock()
-    {
-        uint original_value;
-        do
-        {
-            InterlockedCompareExchange(lock_int, 0, 1, original_value);
-        }
-        while (original_value != 0);
-    }
-
-    void unlock()
-    {
-        uint original_value;
-        InterlockedExchange(lock_int, 0, original_value);
-    }
-
-    uint malloc_one()
-    {
-        uint allocation = free_meshlet_list[free_meshlets_list_size - 1];
-        free_meshlets_list_size -= 1;
-        return allocation;
-    }
-
-    void free_one(uint allocation)
-    {
-        free_meshlet_list[free_meshlets_list_size] = allocation;
-        free_meshlets_list_size += 1;
-    }
-
-    PackedFace read(uint allocation, uint index)
-    {
-        return meshlets[allocation].faces[index];
-    }
-
-    void write(uint allocation, uint index, PackedFace face)
-    {
-        meshlets[allocation].faces[index] = face;
-    }
-};
-
-struct ChunkFaces
-{
-    uint meshlet_allocations[1024*3];
-    uint meshlet_allocation_count;
-};
-
-struct FaceBuffer
-{
-    uint data[32 * 32 * 32 * 6];
-
-    Vertex get_vertex(uint vert_i, float time)
-    {
-        uint data_index = vert_i / 6;
-        uint data_instance = vert_i - data_index * 6;
-
-        uint vert_data = data[data_index];
-
-        Vertex result;
-
-        result.block_pos = float3(
-            (vert_data >> 0) & 0x3f,
-            (vert_data >> 6) & 0x3f,
-            (vert_data >> 12) & 0x3f);
-        result.pos = result.block_pos;
-        result.uv = instance_offsets[data_instance];
-        result.block_face = (BlockFace)((vert_data >> 18) & 0x7);
-        result.block_id = (BlockID)((vert_data >> 21) & 0x07ff);
-
-        result.vert_id = data_instance;
-        result.correct_pos(data_index);
-        result.tex_id = tile_texture_index(result.block_id, result.block_face, time);
-        result.correct_uv();
-
-        return result;
-    }
-};
 
 DAXA_DEFINE_GET_STRUCTURED_BUFFER(FaceBuffer);
 

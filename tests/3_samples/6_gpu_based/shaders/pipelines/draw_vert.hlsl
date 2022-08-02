@@ -12,8 +12,9 @@ struct Push
 };
 [[vk::push_constant]] const Push p;
 
-VertexOutput main(uint vert_i
-                  : SV_VERTEXID)
+// clang-format off
+VertexOutput main(uint vert_i : SV_VERTEXID)
+// clang-format on
 {
     StructuredBuffer<FaceBuffer> face_buffer = daxa::get_StructuredBuffer<FaceBuffer>(p.face_buffer_id);
     StructuredBuffer<Input> input = daxa::get_StructuredBuffer<Input>(p.input_buffer_id);
