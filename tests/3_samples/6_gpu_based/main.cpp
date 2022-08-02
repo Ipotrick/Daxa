@@ -97,6 +97,8 @@ struct App : AppWindow<App>
     float time, delta_time;
     bool should_resize = false, paused = true;
 
+    DrawRasterPush draw_push;
+
     // clang-format off
     daxa::RasterPipeline draw_raster_pipeline = pipeline_compiler.create_raster_pipeline({
         .vertex_shader_info = {.source = daxa::ShaderFile{"temp_vert.hlsl"}},
@@ -132,6 +134,11 @@ struct App : AppWindow<App>
     //     .push_constant_size = sizeof(MeshgenComputePush),
     //     .debug_name = "Playground Meshgen Compute Pipeline",
     // }).value();
+    // daxa::ComputePipeline meshgen_compute_pipeline = pipeline_compiler.create_compute_pipeline({
+    //     .shader_info = {.source = daxa::ShaderFile{"meshgen.hlsl"}},
+    //     .push_constant_size = sizeof(MeshgenComputePush),
+    //     .debug_name = "Playground Meshgen Compute Pipeline",
+    // }).value();
     // clang-format on
 
     daxa::BufferId voxel_world_buffer = device.create_buffer(daxa::BufferInfo{
@@ -139,6 +146,18 @@ struct App : AppWindow<App>
         .debug_name = "Voxel World buffer",
     });
     daxa::TaskBufferId task_voxel_world_buffer;
+
+    daxa::BufferId globals_buffer = device.create_buffer(daxa::BufferInfo{
+        .size = sizeof(SharedGlobals),
+        .debug_name = "Globals buffer",
+    });
+    daxa::TaskBufferId task_globals_buffer;
+
+    daxa::BufferId indirect_draw_buffer = device.create_buffer(daxa::BufferInfo{
+        .size = sizeof(IndirectDrawBuffer),
+        .debug_name = "Indirect Draw buffer",
+    });
+    daxa::TaskBufferId task_indirect_draw_buffer;
 
     daxa::TaskList loop_task_list = record_loop_task_list();
 
@@ -234,6 +253,10 @@ struct App : AppWindow<App>
                     {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
                     {task_draw_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT},
                 },
+                .buffers = {
+                    {task_globals_buffer, daxa::TaskImageAccess::SHADER_READ_ONLY},
+                    {task_indirect_draw_buffer, daxa::TaskImageAccess::SHADER_READ_ONLY},
+                },
             },
             .task = [this](daxa::TaskInterface interf)
             {
@@ -253,7 +276,9 @@ struct App : AppWindow<App>
                     .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
                 });
                 cmd_list.set_pipeline(draw_raster_pipeline);
-                cmd_list.draw({.vertex_count = 3});
+                draw_push.globals_buffer_id = globals_buffer;
+                cmd_list.push_constant(draw_push);
+                cmd_list.draw_indirect({.vertex_count = 3});
                 cmd_list.end_renderpass();
             },
             .debug_name = "TaskList Draw Task",
