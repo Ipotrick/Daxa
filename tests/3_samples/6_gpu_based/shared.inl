@@ -17,8 +17,7 @@
 
 struct DrawRasterPush
 {
-    daxa::f32vec3 chunk_pos;
-    daxa::BufferId chunk_meshlets_buffer_id;
+    daxa::BufferId globals_buffer_id;
 };
 
 struct ChunkgenComputePush
@@ -29,6 +28,42 @@ struct ChunkgenComputePush
 
 struct MeshgenComputePush
 {
-    daxa::f32vec3 chunk_pos;
-    daxa::BufferId buffer_id;
+    daxa::BufferId build_info_buffer_id;
+    daxa::BufferId meshlet_pool_buffer_id;
+    daxa::BufferId chunk_meshlets_buffer_id;
+    daxa::BufferId chunk_blocks_buffer_id;
+    daxa::i32vec3 chunk_i;
 };
+
+struct Input
+{
+    daxa::f32mat4x4 view_mat;
+    daxa::f32 time;
+};
+DAXA_DEFINE_GET_STRUCTURED_BUFFER(Input);
+
+struct IndirectDrawParam
+{
+    daxa::u32 vertex_count;
+    daxa::u32 instance_count;
+    daxa::u32 first_vertex;
+    daxa::u32 first_instance;
+};
+
+struct IndirectDrawBuffer
+{
+    IndirectDrawParam param_entries[CHUNK_COUNT_X * CHUNK_COUNT_Y * CHUNK_COUNT_Z];
+};
+
+struct ChunkDrawInfo
+{
+    daxa::u32vec3 chunk_index;
+};
+DAXA_DEFINE_GET_STRUCTURED_BUFFER(ChunkDrawInfo);
+
+struct SharedGlobals
+{
+    daxa::BufferId indirect_draw_buffer_id;
+    daxa::BufferId chunk_draw_infos_buffer_id;
+};
+DAXA_DEFINE_GET_STRUCTURED_BUFFER(SharedGlobals);
