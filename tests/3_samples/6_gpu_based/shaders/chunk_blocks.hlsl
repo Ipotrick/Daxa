@@ -1,44 +1,48 @@
-#include "common.hlsl"
-#include "utils/noise.hlsl"
+#pragma once
 
-#define CHUNK_SIZE 64
+#include "worldgen.hlsl"
 
-struct Push
+enum class BlockID : uint
 {
-    float3 chunk_pos;
-    daxa::BufferId buffer_id;
+    Debug,
+    Air,
+    Bedrock,
+    Brick,
+    Cactus,
+    Cobblestone,
+    CompressedStone,
+    DiamondOre,
+    Dirt,
+    DriedShrub,
+    Grass,
+    Gravel,
+    Lava,
+    Leaves,
+    Log,
+    MoltenRock,
+    Planks,
+    Rose,
+    Sand,
+    Sandstone,
+    Stone,
+    TallGrass,
+    Water,
 };
-[[vk::push_constant]] const Push p;
 
-struct WorldgenState
+enum class BlockFace : uint
 {
-    float3 pos;
-    float t_noise;
-    float r, r_xz;
+    Left,
+    Right,
+    Bottom,
+    Top,
+    Back,
+    Front,
+
+    Cross_A,
+    Cross_B,
 };
 
-WorldgenState get_worldgen_state(float3 pos)
-{
-    WorldgenState result;
-    pos = pos * 0.5;
-    result.pos = pos;
-    FractalNoiseConfig noise_conf = {
-        /* .amplitude   = */ 1.0,
-        /* .persistance = */ 0.12,
-        /* .scale       = */ 0.03,
-        /* .lacunarity  = */ 4.7,
-        /* .octaves     = */ 2,
-    };
-    float val = fractal_noise(pos + 100.0, noise_conf);
-    // val = val - (-pos.y + 30.0) * 0.04;
-    // val -= pow(smoothstep(-1.0, 1.0, -pos.y + 32.0), 2.0) * 0.15;
-    result.t_noise = val;
-    result.r = rand(pos);
-    result.r_xz = rand(pos * float3(13.1, 0, 13.1) + 0.17);
-    return result;
-}
-
-struct Chunk
+struct ChunkBlocks
 {
     BlockID voxels[CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE];
 
@@ -110,12 +114,9 @@ struct Chunk
     }
 };
 
-DAXA_DEFINE_GET_STRUCTURED_BUFFER(Chunk)
-
-// clang-format off
-[numthreads(8, 8, 8)] void main(uint3 block_offset : SV_DispatchThreadID)
-// clang-format on
+struct VoxelWorld
 {
-    StructuredBuffer<Chunk> chunk = daxa::get_StructuredBuffer<Chunk>(p.buffer_id);
-    chunk[0].chunkgen(block_offset);
-}
+    ChunkBlocks chunks_blocks[CHUNK_COUNT_X * CHUNK_COUNT_Y * CHUNK_COUNT_Z];
+
+    
+};
