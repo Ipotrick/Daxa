@@ -1,6 +1,7 @@
 #pragma once
 
 #include "worldgen.hlsl"
+#include "common.hlsl"
 
 enum class BlockID : uint
 {
@@ -44,6 +45,7 @@ enum class BlockFace : uint
 
 struct ChunkBlocks
 {
+    float3 chunk_pos;
     BlockID voxels[CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE];
 
     BlockID generate_block_id(in WorldgenState worldgen_state)
@@ -59,7 +61,7 @@ struct ChunkBlocks
 
     void chunkgen(uint3 block_offset)
     {
-        float3 block_pos = float3(block_offset) + p.chunk_pos;
+        float3 block_pos = float3(block_offset) + chunk_pos;
         WorldgenState worldgen_state = get_worldgen_state(block_pos);
         BlockID id = generate_block_id(worldgen_state);
 
@@ -117,6 +119,4 @@ struct ChunkBlocks
 struct VoxelWorld
 {
     ChunkBlocks chunks_blocks[CHUNK_COUNT_X * CHUNK_COUNT_Y * CHUNK_COUNT_Z];
-
-
 };

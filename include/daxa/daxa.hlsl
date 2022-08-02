@@ -2,6 +2,75 @@
 
 namespace daxa
 {
+    typedef uint u32;
+    typedef bool b32;
+
+    typedef int i32;
+
+    typedef float f32;
+    typedef double f64;
+
+    typedef bool b32;
+    typedef bool2 b32vec2;
+    typedef bool3 b32vec3;
+    typedef bool4 b32vec4;
+    typedef float f32;
+    typedef double f64;
+    typedef float2 f32vec2;
+    typedef float2x2 f32vec2x2;
+    typedef float2x3 f32vec2x3;
+    typedef float2x4 f32vec2x4;
+    typedef double2 f64vec2;
+    typedef double2x2 f64vec2x2;
+    typedef double2x3 f64vec2x3;
+    typedef double2x4 f64vec2x4;
+    typedef float3 f32vec3;
+    typedef float3x2 f32vec3x2;
+    typedef float3x3 f32vec3x3;
+    typedef float3x4 f32vec3x4;
+    typedef double3 f64vec3;
+    typedef double3x2 f64vec3x2;
+    typedef double3x3 f64vec3x3;
+    typedef double3x4 f64vec3x4;
+    typedef float4 f32vec4;
+    typedef float4x2 f32vec4x2;
+    typedef float4x3 f32vec4x3;
+    typedef float4x4 f32vec4x4;
+    typedef double4 f64vec4;
+    typedef double4x2 f64vec4x2;
+    typedef double4x3 f64vec4x3;
+    typedef double4x4 f64vec4x4;
+    typedef float4 f32vec4;
+    typedef float4x2 f32vec4x2;
+    typedef float4x3 f32vec4x3;
+    typedef float4x4 f32vec4x4;
+    typedef int i32;
+    typedef uint u32;
+    typedef int2 i32vec2;
+    typedef int2x2 i32vec2x2;
+    typedef int2x3 i32vec2x3;
+    typedef int2x4 i32vec2x4;
+    typedef uint2 u32vec2;
+    typedef uint2x2 u32vec2x2;
+    typedef uint2x3 u32vec2x3;
+    typedef uint2x4 u32vec2x4;
+    typedef int3 i32vec3;
+    typedef int3x2 i32vec3x2;
+    typedef int3x3 i32vec3x3;
+    typedef int3x4 i32vec3x4;
+    typedef uint3 u32vec3;
+    typedef uint3x2 u32vec3x2;
+    typedef uint3x3 u32vec3x3;
+    typedef uint3x4 u32vec3x4;
+    typedef int4 i32vec4;
+    typedef int4x2 i32vec4x2;
+    typedef int4x3 i32vec4x3;
+    typedef int4x4 i32vec4x4;
+    typedef uint4 u32vec4;
+    typedef uint4x2 u32vec4x2;
+    typedef uint4x3 u32vec4x3;
+    typedef uint4x4 u32vec4x4;
+
     enum CONSTANTS
     {
         STORAGE_BUFFER_BINDING = 0,
