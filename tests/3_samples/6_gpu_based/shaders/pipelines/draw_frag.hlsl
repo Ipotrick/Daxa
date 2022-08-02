@@ -14,7 +14,7 @@ struct Push
 
 DAXA_DEFINE_GET_TEXTURE2DARRAY(float4)
 
-#define SHOW_SHADOW_CASCADES 1
+#define SHOW_SHADOW_CASCADES 0
 
 float4 main(VertexOutput vertex_output) : SV_TARGET
 {
@@ -44,66 +44,54 @@ float4 main(VertexOutput vertex_output) : SV_TARGET
 #else
     col = albedo.rgb;
 
-    Texture2D<float> shadow_depth_image0 = daxa::get_Texture2D<float>(input[0].shadow_depth_image[0]);
-    float4 shadow_pos0 = mul(input[0].shadow_view_mat[0], float4(vertex_output.pos + vert.nrm * (80.0 / SHADOW_RES), 1));
-    shadow_pos0.xyz *= 1.0 / shadow_pos0.w;
-    float2 depth_uv0 = shadow_pos0.xy * 0.5 + 0.5;
-    float shadow_depth0 = shadow_depth_image0.Load(int3(depth_uv0 * SHADOW_RES, 0));
+    Texture2D<float> shadow_depth_image[3] = {
+        daxa::get_Texture2D<float>(input[0].shadow_depth_image[0]),
+        daxa::get_Texture2D<float>(input[0].shadow_depth_image[1]),
+        daxa::get_Texture2D<float>(input[0].shadow_depth_image[2]),
+    };
+    float4 shadow_pos[3] = {
+        mul(input[0].shadow_view_mat[0], float4(vertex_output.pos + vert.nrm * (80.0 / SHADOW_RES), 1)),
+        mul(input[0].shadow_view_mat[1], float4(vertex_output.pos + vert.nrm * (60.0 / SHADOW_RES), 1)),
+        mul(input[0].shadow_view_mat[2], float4(vertex_output.pos + vert.nrm * (20.0 / SHADOW_RES), 1)),
+    };
+    shadow_pos[0].xyz *= 1.0 / shadow_pos[0].w;
+    shadow_pos[1].xyz *= 1.0 / shadow_pos[1].w;
+    shadow_pos[2].xyz *= 1.0 / shadow_pos[2].w;
+    float2 depth_uv[3] = {
+        shadow_pos[0].xy * 0.5 + 0.5,
+        shadow_pos[1].xy * 0.5 + 0.5,
+        shadow_pos[2].xy * 0.5 + 0.5,
+    };
+    float shadow_depth[3] = {
+        shadow_depth_image[0].Load(int3(depth_uv[0] * SHADOW_RES, 0)),
+        shadow_depth_image[1].Load(int3(depth_uv[1] * SHADOW_RES, 0)),
+        shadow_depth_image[2].Load(int3(depth_uv[2] * SHADOW_RES, 0)),
+    };
 
-    Texture2D<float> shadow_depth_image1 = daxa::get_Texture2D<float>(input[0].shadow_depth_image[1]);
-    float4 shadow_pos1 = mul(input[0].shadow_view_mat[1], float4(vertex_output.pos + vert.nrm * (60.0 / SHADOW_RES), 1));
-    shadow_pos1.xyz *= 1.0 / shadow_pos1.w;
-    float2 depth_uv1 = shadow_pos1.xy * 0.5 + 0.5;
-    float shadow_depth1 = shadow_depth_image1.Load(int3(depth_uv1 * SHADOW_RES, 0));
+    bool shadow_nearclipped[3] = {
+        (shadow_depth[1] * 4 - 0.7) < 0.01,
+        (shadow_depth[2] * 4 - 0.7) < 0.01,
+        false,
+    };
+    shadow_nearclipped[0] = shadow_nearclipped[0] || shadow_nearclipped[1];
 
-    Texture2D<float> shadow_depth_image2 = daxa::get_Texture2D<float>(input[0].shadow_depth_image[2]);
-    float4 shadow_pos2 = mul(input[0].shadow_view_mat[2], float4(vertex_output.pos + vert.nrm * (20.0 / SHADOW_RES), 1));
-    shadow_pos2.xyz *= 1.0 / shadow_pos2.w;
-    float2 depth_uv2 = (shadow_pos2.xy * 0.5 + 0.5);
-    float shadow_depth2 = shadow_depth_image2.Load(int3(depth_uv2 * SHADOW_RES, 0));
-
-    bool shadow0_nearclipped = (shadow_depth1 * 4 - 0.7) < 0.01;
-    bool shadow1_nearclipped = (shadow_depth2 * 4 - 0.7) < 0.01;
-
-    if (!shadow1_nearclipped && !shadow0_nearclipped && shadow_pos0.x > -1 && shadow_pos0.x < 1 && shadow_pos0.y > -1 && shadow_pos0.y < 1 && shadow_pos0.z > -1 && shadow_pos0.z < 1)
+    for (uint cascade_i = 0; cascade_i < 3; ++cascade_i)
     {
-        float shade = shadow_depth0 + (0.4 / SHADOW_RES) > shadow_pos0.z;
-        diffuse *= shade;
-        // col = shadow_depth0;
+        if (!shadow_nearclipped[cascade_i] &&
+            shadow_pos[cascade_i].x > -1 && shadow_pos[cascade_i].x < 1 &&
+            shadow_pos[cascade_i].y > -1 && shadow_pos[cascade_i].y < 1 &&
+            shadow_pos[cascade_i].z > -1 && shadow_pos[cascade_i].z < 1)
+        {
+            float shade = shadow_depth[cascade_i] + (0.4 / SHADOW_RES) > shadow_pos[cascade_i].z;
+            diffuse *= shade;
+            // col = shadow_depth[cascade_i];
 
 #if SHOW_SHADOW_CASCADES
-        if (frac(vert.pos.x + vert.pos.y + vert.pos.z + 0.0001) < 0.5)
-            col = float3(0.0, 0.5, 0.0);
+            if (frac(vert.pos.x + vert.pos.y + vert.pos.z + 0.0001) < 0.5)
+                col = float3(0.0, 0.5, 0.0);
 #endif
-    }
-    else if (!shadow1_nearclipped && shadow_pos1.x > -1 && shadow_pos1.x < 1 && shadow_pos1.y > -1 && shadow_pos1.y < 1 && shadow_pos1.z > -1 && shadow_pos1.z < 1)
-    {
-        float shade = shadow_depth1 + (0.6 / SHADOW_RES) > shadow_pos1.z;
-        diffuse *= shade;
-        // col = shadow_depth1 * 4 - 0.7;
-
-#if SHOW_SHADOW_CASCADES
-        if (frac(vert.pos.x + vert.pos.y + vert.pos.z + 0.0001) < 0.5)
-            col = float3(0.5, 0.5, 0.0);
-#endif
-    }
-    else if (shadow_pos2.x > -1 && shadow_pos2.x < 1 && shadow_pos2.y > -1 && shadow_pos2.y < 1 && shadow_pos2.z > -1 && shadow_pos2.z < 1)
-    {
-        float shade = shadow_depth2 + (0.8 / SHADOW_RES) > shadow_pos2.z;
-        diffuse *= shade;
-        // col = (shadow_depth2 * 4 - 0.7) * 4 - 0.7;
-
-#if SHOW_SHADOW_CASCADES
-        if (frac(vert.pos.x + vert.pos.y + vert.pos.z + 0.0001) < 0.5)
-            col = float3(0.5, 0.0, 0.0);
-#endif
-    }
-    else
-    {
-#if SHOW_SHADOW_CASCADES
-        if (frac(vert.pos.x + vert.pos.y + vert.pos.z + 0.0001) < 0.5)
-            col = float3(0.0, 0.0, 0.0);
-#endif
+            break;
+        }
     }
 
     diffuse = max(diffuse, 0.0);

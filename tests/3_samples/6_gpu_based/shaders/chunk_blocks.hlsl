@@ -118,5 +118,5 @@ struct VoxelWorld
 {
     ChunkBlocks chunks_blocks[CHUNK_COUNT_X * CHUNK_COUNT_Y * CHUNK_COUNT_Z];
 
-    
+
 };

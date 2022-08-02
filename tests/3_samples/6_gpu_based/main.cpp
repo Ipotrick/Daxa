@@ -71,7 +71,10 @@ struct App : AppWindow<App>
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
         .debug_name = "Playground Swapchain",
     });
+    daxa::ImageId swapchain_image;
+    daxa::TaskImageId task_swapchain_image;
     daxa::ImageId depth_image = create_depth_image();
+    daxa::TaskImageId task_depth_image;
     daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
         .root_paths = {
             "tests/0_common/shaders",
@@ -190,6 +193,27 @@ struct App : AppWindow<App>
         {
             // invalidate chunk mesh data
         }
+        swapchain_image = swapchain.acquire_next_image();
+        task_list.execute();
+        auto command_lists = task_list.command_lists();
+        auto cmd_list = device.create_command_list({});
+        cmd_list.pipeline_barrier_image_transition({
+            .awaited_pipeline_access = task_list.last_access(task_swapchain_image),
+            .before_layout = task_list.last_layout(task_swapchain_image),
+            .after_layout = daxa::ImageLayout::PRESENT_SRC,
+            .image_id = swapchain_image,
+        });
+        cmd_list.complete();
+        command_lists.push_back(cmd_list);
+        auto binary_semaphore = device.create_binary_semaphore({});
+        device.submit_commands({
+            .command_lists = command_lists,
+            .signal_binary_semaphores = {binary_semaphore},
+        });
+        device.present_frame({
+            .wait_binary_semaphores = {binary_semaphore},
+            .swapchain = swapchain,
+        });
     }
 
     auto record_task_list() -> daxa::TaskList

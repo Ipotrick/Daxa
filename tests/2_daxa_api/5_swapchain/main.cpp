@@ -10,7 +10,7 @@ namespace tests
             daxa::Context daxa_ctx = daxa::create_context({
                 .enable_validation = true,
             });
-            daxa::Device daxa_device = daxa_ctx.create_default_device();
+            daxa::Device daxa_device = daxa_ctx.create_device({});
 
             daxa::Swapchain daxa_swapchain = daxa_device.create_swapchain({
                 .native_window = get_native_handle(),
@@ -36,7 +36,7 @@ namespace tests
             daxa::Context daxa_ctx = daxa::create_context({
                 .enable_validation = true,
             });
-            daxa::Device device = daxa_ctx.create_default_device();
+            daxa::Device device = daxa_ctx.create_device({});
 
             daxa::Swapchain swapchain = device.create_swapchain({
                 .native_window = get_native_handle(),
