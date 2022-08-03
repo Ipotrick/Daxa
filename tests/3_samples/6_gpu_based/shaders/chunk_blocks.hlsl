@@ -120,3 +120,54 @@ struct VoxelWorld
 {
     ChunkBlocks chunks_blocks[CHUNK_COUNT_X * CHUNK_COUNT_Y * CHUNK_COUNT_Z];
 };
+DAXA_DEFINE_GET_STRUCTURED_BUFFER(VoxelWorld);
+
+uint tile_texture_index(BlockID block_id, BlockFace face, float time)
+{
+    // clang-format off
+    switch (block_id) {
+    case BlockID::Debug:           return 0;
+    case BlockID::Air:             return 1;
+    case BlockID::Bedrock:         return 2;
+    case BlockID::Brick:           return 3;
+    case BlockID::Cactus:          return 4;
+    case BlockID::Cobblestone:     return 5;
+    case BlockID::CompressedStone: return 6;
+    case BlockID::DiamondOre:      return 7;
+    case BlockID::Dirt:            return 8;
+    case BlockID::DriedShrub:      return 9;
+    case BlockID::Grass:
+        switch (face) {
+        case BlockFace::Back:
+        case BlockFace::Front:
+        case BlockFace::Left:
+        case BlockFace::Right:     return 10;
+        case BlockFace::Bottom:    return 8;
+        case BlockFace::Top:       return 11;
+        default:                   return 0;
+        }
+    case BlockID::Gravel:          return 12;
+    case BlockID::Lava:            return 13 + int(time * 6) % 8;
+    case BlockID::Leaves:          return 21;
+    case BlockID::Log:
+        switch (face) {
+        case BlockFace::Back:
+        case BlockFace::Front:
+        case BlockFace::Left:
+        case BlockFace::Right:     return 22;
+        case BlockFace::Bottom:
+        case BlockFace::Top:       return 22;
+        default:                   return 0;
+        }
+    case BlockID::MoltenRock:      return 24;
+    case BlockID::Planks:          return 25;
+    case BlockID::Rose:            return 26;
+    case BlockID::Sand:            return 27;
+    case BlockID::Sandstone:       return 28;
+    case BlockID::Stone:           return 29;
+    case BlockID::TallGrass:       return 30;
+    case BlockID::Water:           return 31;
+    default:                       return 0;
+    }
+    // clang-format on
+}
