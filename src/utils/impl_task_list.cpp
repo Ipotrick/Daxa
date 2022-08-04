@@ -200,66 +200,6 @@ namespace daxa
         impl.tasks.push_back(ImplGenericTask{.info = info});
     }
 
-    void TaskList::add_render_task(TaskRenderInfo const & info)
-    {
-        auto & impl = *as<ImplTaskList>();
-        DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can only record to uncompleted task list");
-
-        auto convert_attachment = [&](TaskRenderAttachmentInfo const & attach, auto & images, auto usage) -> RenderAttachmentInfo
-        {
-            ImageLayout layout =
-                attach.layout_override != ImageLayout::UNDEFINED ? attach.layout_override : ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
-            DAXA_DBG_ASSERT_TRUE_M(!attach.image.is_empty(), "must declare image for render pass attachment");
-            images.push_back({attach.image, usage});
-
-            return RenderAttachmentInfo{
-                .image_view = impl.get_image_view(attach.image),
-                .layout = layout,
-                .load_op = attach.load_op,
-                .store_op = attach.store_op,
-                .clear_value = attach.clear_value,
-            };
-        };
-
-        TaskInfo task = {};
-        std::vector<RenderAttachmentInfo> color_attachments = {};
-        task.resources = info.resources;
-        for (auto const & attach : info.render_info.color_attachments)
-        {
-            color_attachments.push_back(convert_attachment(attach, task.resources.images, TaskImageAccess::COLOR_ATTACHMENT));
-        }
-        std::optional<RenderAttachmentInfo> depth_attach = {};
-        if (info.render_info.depth_attachment.has_value())
-        {
-            depth_attach = convert_attachment(
-                info.render_info.depth_attachment.value(),
-                task.resources.images,
-                TaskImageAccess::DEPTH_ATTACHMENT);
-        }
-        std::optional<RenderAttachmentInfo> stencil_attach = {};
-        if (info.render_info.stencil_attachment.has_value())
-        {
-            stencil_attach = convert_attachment(
-                info.render_info.stencil_attachment.value(),
-                task.resources.images,
-                TaskImageAccess::STENCIL_ATTACHMENT);
-        }
-        task.task = [=](TaskInterface & interf)
-        {
-            auto cmd = interf.get_command_list();
-            cmd.begin_renderpass({
-                .color_attachments = color_attachments,
-                .depth_attachment = depth_attach,
-                .stencil_attachment = stencil_attach,
-                .render_area = info.render_info.render_area,
-            });
-            info.task(interf);
-            cmd.end_renderpass();
-        };
-
-        add_task(task);
-    }
-
     void TaskList::add_copy_image_to_image(TaskCopyImageInfo const & info)
     {
         add_task({
