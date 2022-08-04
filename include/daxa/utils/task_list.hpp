@@ -154,21 +154,6 @@ namespace daxa
         ClearValue clear_value = {};
     };
 
-    struct TaskRenderPassBeginInfo
-    {
-        std::vector<TaskRenderAttachmentInfo> color_attachments = {};
-        std::optional<TaskRenderAttachmentInfo> depth_attachment = {};
-        std::optional<TaskRenderAttachmentInfo> stencil_attachment = {};
-        Rect2D render_area = {};
-    };
-
-    struct TaskRenderInfo
-    {
-        TaskRenderPassBeginInfo render_info = {};
-        TaskResources resources = {};
-        TaskCallback task = {};
-    };
-
     struct CommandSubmitInfo;
     struct PresentInfo;
 
@@ -207,7 +192,6 @@ namespace daxa
         auto create_task_image(TaskImageInfo const & info) -> TaskImageId;
 
         void add_task(TaskInfo const & info);
-        void add_render_task(TaskRenderInfo const & info);
 
         void add_copy_image_to_image(TaskCopyImageInfo const & info);
         void add_clear_image(TaskImageClearInfo const & info);

@@ -160,7 +160,6 @@ struct App : AppWindow<App>
     daxa::TaskBufferId task_indirect_draw_buffer;
 
     daxa::TaskList loop_task_list = record_loop_task_list();
-    // daxa::TaskList chunkgen_tasklist;  
 
     App() : AppWindow<App>("Samples: Gpu Driven")
     {
@@ -203,14 +202,14 @@ struct App : AppWindow<App>
     {
         player.update(delta_time);
         refresh_pipeline(pipeline_compiler, draw_raster_pipeline);
-        // if (refresh_pipeline(pipeline_compiler, chunkgen_compute_pipeline))
-        // {
-        //     // invalidate chunk block data
-        // }
-        // if (refresh_pipeline(pipeline_compiler, meshgen_compute_pipeline))
-        // {
-        //     // invalidate chunk mesh data
-        // }
+        if (refresh_pipeline(pipeline_compiler, chunkgen_compute_pipeline))
+        {
+            // invalidate chunk block data
+        }
+        if (refresh_pipeline(pipeline_compiler, meshgen_compute_pipeline))
+        {
+            // invalidate chunk mesh data
+        }
         swapchain_image = swapchain.acquire_next_image();
         loop_task_list.execute();
         auto command_lists = loop_task_list.command_lists();
@@ -250,13 +249,44 @@ struct App : AppWindow<App>
             .slice = {.image_aspect = daxa::ImageAspectFlagBits::DEPTH},
             .debug_name = "TaskList Task Draw Depth Image",
         });
+        task_globals_buffer = new_task_list.create_task_buffer({
+            .fetch_callback = [this]()
+            { return globals_buffer; },
+            .debug_name = "TaskList Task Globals Buffer",
+        });
+        task_indirect_draw_buffer = new_task_list.create_task_buffer({
+            .fetch_callback = [this]()
+            { return indirect_draw_buffer; },
+            .debug_name = "TaskList Task Indirect Draw Buffer",
+        });
+
+        new_task_list.add_task({
+            // .conditional = [this]() -> bool
+            // {
+            //     return true;
+            // },
+            .resources = {
+                .buffers = {
+                    {task_globals_buffer, daxa::TaskBufferAccess::SHADER_READ_WRITE},
+                },
+            },
+            .task = [this](daxa::TaskInterface interf)
+            {
+                auto cmd_list = interf.get_command_list();
+                cmd_list.set_pipeline(chunkgen_compute_pipeline);
+                // draw_push.globals_buffer_id = globals_buffer;
+                // cmd_list.push_constant(draw_push);
+                // cmd_list.draw({.vertex_count = 3});
+            },
+            .debug_name = "TaskList Chungen Task",
+        });
 
         new_task_list.add_task({
             .resources = {
-                // .buffers = {
-                //     {task_globals_buffer, daxa::TaskBufferAccess::SHADER_READ_ONLY},
-                //     {task_indirect_draw_buffer, daxa::TaskBufferAccess::SHADER_READ_ONLY},
-                // },
+                .buffers = {
+                    {task_globals_buffer, daxa::TaskBufferAccess::SHADER_READ_ONLY},
+                    {task_indirect_draw_buffer, daxa::TaskBufferAccess::SHADER_READ_ONLY},
+                },
                 .images = {
                     {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
                     {task_draw_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT},
