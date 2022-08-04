@@ -260,11 +260,14 @@ struct App : AppWindow<App>
             .debug_name = "TaskList Task Indirect Draw Buffer",
         });
 
-        new_task_list.add_task({
+        new_task_list.start_conditional_scope({
             // .conditional = [this]() -> bool
             // {
             //     return true;
             // },
+        });
+
+        new_task_list.add_task({
             .resources = {
                 .buffers = {
                     {task_globals_buffer, daxa::TaskBufferAccess::SHADER_READ_WRITE},
@@ -280,6 +283,8 @@ struct App : AppWindow<App>
             },
             .debug_name = "TaskList Chungen Task",
         });
+
+        new_task_list.end_conditional_scope();
 
         new_task_list.add_task({
             .resources = {
