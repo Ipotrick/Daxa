@@ -102,15 +102,15 @@ f32 noise(glm::vec3 x)
     f32 r = mix(
         mix(
             mix(rand(n + glm::dot(st, glm::vec3(0, 0, 0))),
-                 rand(n + glm::dot(st, glm::vec3(1, 0, 0))), u.x),
+                rand(n + glm::dot(st, glm::vec3(1, 0, 0))), u.x),
             mix(rand(n + glm::dot(st, glm::vec3(0, 1, 0))),
-                 rand(n + glm::dot(st, glm::vec3(1, 1, 0))), u.x),
+                rand(n + glm::dot(st, glm::vec3(1, 1, 0))), u.x),
             u.y),
         mix(
             mix(rand(n + glm::dot(st, glm::vec3(0, 0, 1))),
-                 rand(n + glm::dot(st, glm::vec3(1, 0, 1))), u.x),
+                rand(n + glm::dot(st, glm::vec3(1, 0, 1))), u.x),
             mix(rand(n + glm::dot(st, glm::vec3(0, 1, 1))),
-                 rand(n + glm::dot(st, glm::vec3(1, 1, 1))), u.x),
+                rand(n + glm::dot(st, glm::vec3(1, 1, 1))), u.x),
             u.y),
         u.z);
     return r * 2.0f - 1.0f;

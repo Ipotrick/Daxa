@@ -376,11 +376,11 @@ namespace tests
             {
             }
 
-            auto create_render_image(u32 size_x, u32 size_y) -> daxa::ImageId
+            auto create_render_image(u32 sx, u32 sy) -> daxa::ImageId
             {
                 return device.create_image(daxa::ImageInfo{
                     .format = swapchain.get_format(),
-                    .size = {size_x, size_y, 1},
+                    .size = {sx, sy, 1},
                     .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::TRANSFER_SRC | daxa::ImageUsageFlagBits::TRANSFER_DST,
                     .debug_name = "TaskList render_image",
                 });
