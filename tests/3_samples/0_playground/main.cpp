@@ -1,12 +1,11 @@
 #include <0_common/window.hpp>
 #include <0_common/player.hpp>
+#include <0_common/hlsl_util.hpp>
 #include <thread>
 #include <iostream>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-
-#include "util.hpp"
 
 using namespace daxa::types;
 using Clock = std::chrono::high_resolution_clock;
