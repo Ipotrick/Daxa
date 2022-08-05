@@ -3,7 +3,9 @@
 
 [[vk::push_constant]] const ChunkgenComputePush p;
 
-DAXA_DEFINE_GET_STRUCTURED_BUFFER(ChunkBlocks)
+DAXA_DEFINE_GET_STRUCTURED_BUFFER(ChunkBlocks);
+
+// using namespace daxa;
 
 // clang-format off
 [numthreads(8, 8, 8)] void main(uint3 block_offset : SV_DispatchThreadID)

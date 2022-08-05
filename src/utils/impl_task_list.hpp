@@ -7,12 +7,12 @@
 #if defined(DAXA_TASK_LIST_DEBUG)
 #if DAXA_TASK_LIST_DEBUG
 #define DAXA_ONLY_IF_TASK_LIST_DEBUG(x) x
-#else // #if DAXA_TASK_LIST_DEBUG
+#else
 #define DAXA_ONLY_IF_TASK_LIST_DEBUG(x)
-#endif // #if DAXA_TASK_LIST_DEBUG
-#else // #if defined(DAXA_TASK_LIST_DEBUG)
+#endif
+#else
 #define DAXA_ONLY_IF_TASK_LIST_DEBUG(x)
-#endif // #if defined(DAXA_TASK_LIST_DEBUG)
+#endif
 
 namespace daxa
 {
@@ -83,14 +83,14 @@ namespace daxa
 
         Device current_device;
         std::vector<CommandList> command_lists = {};
-        std::vector<ImplTaskBuffer>& impl_task_buffers;
-        std::vector<ImplTaskImage>& impl_task_images;
+        std::vector<ImplTaskBuffer> & impl_task_buffers;
+        std::vector<ImplTaskImage> & impl_task_images;
         std::vector<RuntimeTaskBuffer> runtime_buffers = {};
         std::vector<RuntimeTaskImage> runtime_images = {};
 
         std::optional<BinarySemaphore> last_submit_semaphore = {};
 
-        void execute_task(TaskVariant& task, usize task_index);
+        void execute_task(TaskVariant & task, usize task_index);
 
         void pipeline_barriers(std::vector<TaskPipelineBarrier> const & barriers);
     };
