@@ -100,6 +100,8 @@ namespace daxa
     template <typename T>
     StructuredBuffer<T> get_StructuredBuffer(BufferId buffer_id);
     template <typename T>
+    RWStructuredBuffer<T> get_RWStructuredBuffer(BufferId buffer_id);
+    template <typename T>
     Texture1D<T> get_Texture1D(ImageId image_id);
     template <typename T>
     Texture2D<T> get_Texture2D(ImageId image_id);
@@ -133,6 +135,16 @@ namespace daxa
         {                                                                                                                \
             return StructuredBufferView##Type[ID_INDEX_MASK & buffer_id.data];                                           \
         }                                                                                                                \
+    }
+#define DAXA_DEFINE_GET_RWSTRUCTURED_BUFFER(Type)                                                                            \
+    namespace daxa                                                                                                           \
+    {                                                                                                                        \
+        [[vk::binding(daxa::CONSTANTS::STORAGE_BUFFER_BINDING, 0)]] RWStructuredBuffer<Type> RWStructuredBufferView##Type[]; \
+        template <>                                                                                                          \
+        RWStructuredBuffer<Type> get_RWStructuredBuffer(BufferId buffer_id)                                                  \
+        {                                                                                                                    \
+            return RWStructuredBufferView##Type[ID_INDEX_MASK & buffer_id.data];                                             \
+        }                                                                                                                    \
     }
 #define DAXA_DEFINE_GET_BUFFER(Type)                                                                 \
     namespace daxa                                                                                   \
