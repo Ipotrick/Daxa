@@ -488,7 +488,7 @@ namespace daxa
         u32 layer_count = 1;
 
         friend auto operator<=>(ImageMipArraySlice const &, ImageMipArraySlice const &) = default;
-        
+
         auto contained_in(ImageMipArraySlice const & slice) const -> bool;
     };
 

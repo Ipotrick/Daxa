@@ -260,31 +260,29 @@ struct App : AppWindow<App>
             .debug_name = "TaskList Task Indirect Draw Buffer",
         });
 
-        new_task_list.start_conditional_scope({
-            // .conditional = [this]() -> bool
-            // {
-            //     return true;
-            // },
-        });
-
-        new_task_list.add_task({
-            .resources = {
-                .buffers = {
-                    {task_globals_buffer, daxa::TaskBufferAccess::SHADER_READ_WRITE},
-                },
-            },
-            .task = [this](daxa::TaskInterface interf)
-            {
-                auto cmd_list = interf.get_command_list();
-                cmd_list.set_pipeline(chunkgen_compute_pipeline);
-                // draw_push.globals_buffer_id = globals_buffer;
-                // cmd_list.push_constant(draw_push);
-                // cmd_list.draw({.vertex_count = 3});
-            },
-            .debug_name = "TaskList Chungen Task",
-        });
-
-        new_task_list.end_conditional_scope();
+        // new_task_list.start_conditional_scope({
+        //     // .conditional = [this]() -> bool
+        //     // {
+        //     //     return true;
+        //     // },
+        // });
+        // new_task_list.add_task({
+        //     .resources = {
+        //         .buffers = {
+        //             {task_globals_buffer, daxa::TaskBufferAccess::SHADER_READ_WRITE},
+        //         },
+        //     },
+        //     .task = [this](daxa::TaskInterface interf)
+        //     {
+        //         auto cmd_list = interf.get_command_list();
+        //         cmd_list.set_pipeline(chunkgen_compute_pipeline);
+        //         // draw_push.globals_buffer_id = globals_buffer;
+        //         // cmd_list.push_constant(draw_push);
+        //         // cmd_list.draw({.vertex_count = 3});
+        //     },
+        //     .debug_name = "TaskList Chungen Task",
+        // });
+        // new_task_list.end_conditional_scope();
 
         new_task_list.add_task({
             .resources = {
