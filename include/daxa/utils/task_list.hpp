@@ -120,6 +120,7 @@ namespace daxa
     using TaskCallback = std::function<void(TaskInterface &)>;
     using CreateTaskBufferCallback = std::function<BufferId(void)>;
     using CreateTaskImageCallback = std::function<ImageId(void)>;
+    using TaskConditionalCallback = std::function<void(void)>;
 
     struct TaskBufferInfo
     {
@@ -183,6 +184,11 @@ namespace daxa
         std::string debug_name = {};
     };
 
+    struct TaskConditionalInfo
+    {
+        TaskConditionalCallback condition;
+    };
+
     struct TaskList : ManagedPtr
     {
         TaskList(TaskListInfo const & info);
@@ -205,5 +211,8 @@ namespace daxa
         void execute();
 
         auto command_lists() -> std::vector<CommandList> &;
+
+        void begin_conditional_scope(TaskConditionalInfo const & info);
+        void end_conditional_scope();
     };
 } // namespace daxa

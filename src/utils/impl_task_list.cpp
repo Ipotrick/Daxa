@@ -269,6 +269,7 @@ namespace daxa
     {
         auto & impl = *as<ImplTaskList>();
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "Can only compile a task list one time");
+
         impl.compiled = true;
         impl.insert_synchronization();
     }
@@ -302,7 +303,33 @@ namespace daxa
     {
         auto & impl = *as<ImplTaskList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "to retrieve command lists, the list must be compiled and executed first");
+
         return impl.recorded_command_lists;
+    }
+
+    void TaskList::begin_conditional_scope(TaskConditionalInfo const & info)
+    {
+        auto & impl = *as<ImplTaskList>();
+
+        auto begin_index = impl.tasks.size();
+        impl.conditional_task_indices.push(begin_index);
+        impl.tasks.push_back(ImplConditionalTaskBegin{.info = info, .depth = impl.conditional_depth});
+        ++impl.conditional_depth;
+    }
+
+    void TaskList::end_conditional_scope()
+    {
+        auto & impl = *as<ImplTaskList>();
+
+        auto begin_index = impl.conditional_task_indices.back();
+        auto end_index = impl.tasks.size();
+
+        auto & begin_task = std::get<ImplConditionalTaskBegin>(impl.tasks[begin_index]);
+        begin_task.end_index = end_index;
+
+        impl.conditional_task_indices.pop();
+        --impl.conditional_depth;
+        impl.tasks.push_back(ImplConditionalTaskEnd{.depth = impl.conditional_depth, .begin_index = begin_index});
     }
 
     auto TaskList::last_access(TaskBufferId buffer) -> Access
@@ -558,13 +585,14 @@ namespace daxa
             {
                 auto & task = *task_ptr;
 
-                DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout
-                                             << "  process task index : "
-                                             << task_index
-                                             << ", name: "
-                                             << task_ptr->info.debug_name
-                                             << "\n  {"
-                                             << std::endl);
+                DAXA_ONLY_IF_TASK_LIST_DEBUG(
+                    std::cout
+                    << "  process task index : "
+                    << task_index
+                    << ", name: "
+                    << task_ptr->info.debug_name
+                    << "\n  {"
+                    << std::endl);
 
                 TaskResources & resources = task.info.resources;
 
@@ -576,14 +604,15 @@ namespace daxa
                     auto new_access = task_buffer_access_to_access(t_access);
                     auto & latest_access = task_buffer.latest_access;
 
-                    DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout
-                                                 << "    task access: buffer tid: "
-                                                 << task_buffer_id.index
-                                                 << ",\n      previous access: "
-                                                 << to_string(task_buffer.latest_access)
-                                                 << ",\n      new access: "
-                                                 << to_string(new_access)
-                                                 << std::endl);
+                    DAXA_ONLY_IF_TASK_LIST_DEBUG(
+                        std::cout
+                        << "    task access: buffer tid: "
+                        << task_buffer_id.index
+                        << ",\n      previous access: "
+                        << to_string(task_buffer.latest_access)
+                        << ",\n      new access: "
+                        << to_string(new_access)
+                        << std::endl);
 
                     bool need_memory_barrier = false;
                     bool need_execution_barrier = false;
@@ -644,20 +673,21 @@ namespace daxa
                     auto & latest_layout = task_image.latest_layout;
                     auto & latest_access = task_image.latest_access;
 
-                    DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout
-                                                 << "    task access: image task_image_id: "
-                                                 << task_image_id.index
-                                                 << ", name: "
-                                                 << impl_task_images[task_image_id.index].debug_name
-                                                 << ",\n      previous access: "
-                                                 << to_string(task_image.latest_access)
-                                                 << ",\n      previous layout: "
-                                                 << to_string(task_image.latest_layout)
-                                                 << ",\n      new access: "
-                                                 << to_string(new_access)
-                                                 << ",\n      new layout: "
-                                                 << to_string(new_layout)
-                                                 << std::endl);
+                    DAXA_ONLY_IF_TASK_LIST_DEBUG(
+                        std::cout
+                        << "    task access: image task_image_id: "
+                        << task_image_id.index
+                        << ", name: "
+                        << impl_task_images[task_image_id.index].debug_name
+                        << ",\n      previous access: "
+                        << to_string(task_image.latest_access)
+                        << ",\n      previous layout: "
+                        << to_string(task_image.latest_layout)
+                        << ",\n      new access: "
+                        << to_string(new_access)
+                        << ",\n      new layout: "
+                        << to_string(new_layout)
+                        << std::endl);
 
                     bool need_memory_barrier = false;
                     bool need_execution_barrier = false;
@@ -710,22 +740,23 @@ namespace daxa
                             .image_slice = task_image.slice,
                         });
 
-                        DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout
-                                                     << "    inserted barrier at task index: "
-                                                     << barrier_task_index
-                                                     << ",\n      task image index: "
-                                                     << task_image_id.index
-                                                     << ", name: "
-                                                     << impl_task_images[task_image_id.index].debug_name
-                                                     << ",\n      awaited_pipeline_access: "
-                                                     << to_string(std::get_if<ImplGenericTask>(&tasks[barrier_task_index])->barriers.back().awaited_pipeline_access)
-                                                     << ",\n      waiting_pipeline_access: "
-                                                     << to_string(std::get_if<ImplGenericTask>(&tasks[barrier_task_index])->barriers.back().waiting_pipeline_access)
-                                                     << ",\n      before_layout: "
-                                                     << to_string(latest_layout)
-                                                     << ",\n      after_layout: "
-                                                     << to_string(new_layout)
-                                                     << std::endl);
+                        DAXA_ONLY_IF_TASK_LIST_DEBUG(
+                            std::cout
+                            << "    inserted barrier at task index: "
+                            << barrier_task_index
+                            << ",\n      task image index: "
+                            << task_image_id.index
+                            << ", name: "
+                            << impl_task_images[task_image_id.index].debug_name
+                            << ",\n      awaited_pipeline_access: "
+                            << to_string(std::get_if<ImplGenericTask>(&tasks[barrier_task_index])->barriers.back().awaited_pipeline_access)
+                            << ",\n      waiting_pipeline_access: "
+                            << to_string(std::get_if<ImplGenericTask>(&tasks[barrier_task_index])->barriers.back().waiting_pipeline_access)
+                            << ",\n      before_layout: "
+                            << to_string(latest_layout)
+                            << ",\n      after_layout: "
+                            << to_string(new_layout)
+                            << std::endl);
 
                         latest_layout = new_layout;
                         latest_access = new_access;
