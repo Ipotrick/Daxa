@@ -124,6 +124,11 @@ namespace daxa
         return SamplerStateView[ID_INDEX_MASK & sampler_id.data];
     }
 
+    [[vk::binding(daxa::CONSTANTS::STORAGE_BUFFER_BINDING, 0)]] RWByteAddressBuffer RWByteAddressBufferView[];
+    RWByteAddressBuffer get_RWByteAddressBuffer(BufferId buffer_id)
+    {
+        return RWByteAddressBufferView[ID_INDEX_MASK & buffer_id.data];
+    }
 } // namespace daxa
 
 #define DAXA_DEFINE_GET_STRUCTURED_BUFFER(Type)                                                                          \
