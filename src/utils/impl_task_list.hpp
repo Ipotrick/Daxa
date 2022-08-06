@@ -1,8 +1,9 @@
 #pragma once
 
+#include <queue>
 #include <daxa/utils/task_list.hpp>
 
-#define DAXA_TASK_LIST_DEBUG 1
+#define DAXA_TASK_LIST_DEBUG 0
 
 #if defined(DAXA_TASK_LIST_DEBUG)
 #if DAXA_TASK_LIST_DEBUG
@@ -74,7 +75,23 @@ namespace daxa
         TaskImageId id = {};
     };
 
-    using TaskVariant = std::variant<ImplGenericTask, ImplCreateBufferTask, ImplCreateImageTask>;
+    struct ImplConditionalTaskBegin
+    {
+        TaskConditionalInfo info = {};
+        u64 depth = {}, end_index = {};
+    };
+
+    struct ImplConditionalTaskEnd
+    {
+        u64 depth = {}, begin_index = {};
+    };
+
+    using TaskVariant = std::variant<
+        ImplGenericTask,
+        ImplCreateBufferTask,
+        ImplCreateImageTask,
+        ImplConditionalTaskBegin,
+        ImplConditionalTaskEnd>;
 
     struct TaskRuntime
     {
@@ -102,6 +119,8 @@ namespace daxa
         bool compiled = false;
         std::vector<TaskVariant> tasks = {};
         usize last_task_index_with_barrier = std::numeric_limits<usize>::max();
+        u64 conditional_depth = {};
+        std::queue<u64> conditional_task_indices = {};
 
         std::vector<ImplTaskBuffer> impl_task_buffers = {};
         std::vector<ImplTaskImage> impl_task_images = {};

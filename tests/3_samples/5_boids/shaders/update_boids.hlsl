@@ -16,7 +16,6 @@ struct Push
         return;
 
     StructuredBuffer<BoidsBuffer> prev_boids_buffer = daxa::get_StructuredBuffer<BoidsBuffer>(push.prev_boids_buffer_id);
-    StructuredBuffer<BoidsBuffer> boids_buffer = daxa::get_StructuredBuffer<BoidsBuffer>(push.boids_buffer_id);
 
     BoidState me = prev_boids_buffer[0].boid_states[tid];
 
@@ -33,5 +32,11 @@ struct Push
     me.pos += vel * push.delta_time;
     me.pos = frac(me.pos * 0.5 + 0.5) * 2.0 - 1.0;
 
+#if 1
+    RWByteAddressBuffer boids_buffer_bab = daxa::get_RWByteAddressBuffer(push.boids_buffer_id);
+    boids_buffer_bab.Store<BoidState>(tid * sizeof(BoidState), me);
+#else
+    StructuredBuffer<BoidsBuffer> boids_buffer = daxa::get_StructuredBuffer<BoidsBuffer>(push.boids_buffer_id);
     boids_buffer[0].boid_states[tid] = me;
+#endif
 }
