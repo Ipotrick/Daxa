@@ -2,6 +2,8 @@
 
 #include "impl_imgui.hpp"
 
+#include <cstring>
+
 void set_imgui_style()
 {
     ImVec4 * colors = ImGui::GetStyle().Colors;
