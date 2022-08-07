@@ -4,7 +4,7 @@ function(DAXA_CREATE_TEST FOLDER SUBFOLDER)
         daxa_test_${FOLDER}_${SUBFOLDER}
         "${FOLDER}/${SUBFOLDER}/main.cpp"
     )
-    target_link_libraries(daxa_test_${FOLDER}_${SUBFOLDER} PRIVATE daxa::daxa glfw glm::glm)
+    target_link_libraries(daxa_test_${FOLDER}_${SUBFOLDER} PRIVATE daxa::daxa glfw glm::glm imgui_impl_glfw)
     target_include_directories(daxa_test_${FOLDER}_${SUBFOLDER} PRIVATE "${CMAKE_CURRENT_LIST_DIR}" ${STB_INCLUDE_DIRS})
 
     if(DAXA_TESTS_DISABLE_WINDOWS_CONSOLE)
@@ -19,6 +19,9 @@ endfunction()
 find_package(glfw3 CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_path(STB_INCLUDE_DIRS "stb_image.h" REQUIRED)
+
+add_library(imgui_impl_glfw STATIC "0_common/imgui/imgui_impl_glfw.cpp")
+target_link_libraries(imgui_impl_glfw PRIVATE imgui::imgui glfw)
 
 DAXA_CREATE_TEST(1_setup 1_window)
 

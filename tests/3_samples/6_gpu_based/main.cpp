@@ -260,7 +260,7 @@ struct App : AppWindow<App>
         });
 
         new_task_list.begin_conditional_scope({
-            .condition = [this]() -> bool
+            .condition = []() -> bool
             {
                 return true;
             },
