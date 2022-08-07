@@ -120,6 +120,10 @@ namespace daxa
         std::stack<u64> conditional_task_indices = {};
     };
 
+    // TODO: In sync check if a resource access is across scopes.
+    // If so, check if the scope of the previous access has ended
+    // if that is the case, write to the previous accesses scope the final state that resource needs to be in in the end of that scope.
+    // in execution, this is needed to perform a pipeline barrier, that transitions resources to the correct layout when the usual tasks do not execute.
     struct ImplTaskList final : ManagedSharedState
     {
         TaskListInfo info;
