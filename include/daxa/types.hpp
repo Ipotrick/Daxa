@@ -24,7 +24,7 @@ namespace daxa
         using u16 = std::uint16_t;
         using u32 = std::uint32_t;
         using u64 = std::uint64_t;
-        using usize = std::size_t;
+        using usize = std::usize;
         using b32 = u32;
 
         using i8 = std::int8_t;
@@ -36,61 +36,152 @@ namespace daxa
         using f32 = float;
         using f64 = double;
 
-        using b32vec2 = b32[2];
-        using b32vec3 = b32[3];
-        using b32vec4 = b32[4];
-        using f32vec2 = f32[2];
-        using f32mat2x2 = f32[2][2];
-        using f32mat2x3 = f32[2][3];
-        using f32mat2x4 = f32[2][4];
-        using f64vec2 = f64[2];
-        using f64mat2x2 = f64[2][2];
-        using f64mat2x3 = f64[2][3];
-        using f64mat2x4 = f64[2][4];
-        using f32vec3 = f32[3];
-        using f32mat3x2 = f32[3][2];
-        using f32mat3x3 = f32[3][3];
-        using f32mat3x4 = f32[3][4];
-        using f64vec3 = f64[3];
-        using f64mat3x2 = f64[3][2];
-        using f64mat3x3 = f64[3][3];
-        using f64mat3x4 = f64[3][4];
-        using f32vec4 = f32[4];
-        using f32mat4x2 = f32[4][2];
-        using f32mat4x3 = f32[4][3];
-        using f32mat4x4 = f32[4][4];
-        using f64vec4 = f64[4];
-        using f64mat4x2 = f64[4][2];
-        using f64mat4x3 = f64[4][3];
-        using f64mat4x4 = f64[4][4];
-        using f32vec4 = f32[4];
-        using f32mat4x2 = f32[4][2];
-        using f32mat4x3 = f32[4][3];
-        using f32mat4x4 = f32[4][4];
-        using i32vec2 = i32[2];
-        using i32mat2x2 = i32[2][2];
-        using i32mat2x3 = i32[2][3];
-        using i32mat2x4 = i32[2][4];
-        using u32vec2 = u32[2];
-        using u32mat2x2 = u32[2][2];
-        using u32mat2x3 = u32[2][3];
-        using u32mat2x4 = u32[2][4];
-        using i32vec3 = i32[3];
-        using i32mat3x2 = i32[3][2];
-        using i32mat3x3 = i32[3][3];
-        using i32mat3x4 = i32[3][4];
-        using u32vec3 = u32[3];
-        using u32mat3x2 = u32[3][2];
-        using u32mat3x3 = u32[3][3];
-        using u32mat3x4 = u32[3][4];
-        using i32vec4 = i32[4];
-        using i32mat4x2 = i32[4][2];
-        using i32mat4x3 = i32[4][3];
-        using i32mat4x4 = i32[4][4];
-        using u32vec4 = u32[4];
-        using u32mat4x2 = u32[4][2];
-        using u32mat4x3 = u32[4][3];
-        using u32mat4x4 = u32[4][4];
+        namespace detail
+        {
+            template <typename T, usize N>
+            struct GenericVecMembers
+            {
+                std::array<T, N> array;
+                constexpr T & operator[](usize i) noexcept { return array[i]; }
+                constexpr T const & operator[](usize i) const noexcept { return array[i]; }
+            };
+
+            template <typename T>
+            struct GenericVecMembers<T, 2>
+            {
+                T x, y;
+                constexpr T & operator[](usize i) noexcept
+                {
+                    switch (i)
+                    {
+                    case 1: return y;
+                    default: return x;
+                    }
+                }
+                constexpr T const & operator[](usize i) const noexcept
+                {
+                    switch (i)
+                    {
+                    case 1: return y;
+                    default: return x;
+                    }
+                }
+            };
+            template <typename T>
+            struct GenericVecMembers<T, 3>
+            {
+                T x, y, z;
+                constexpr T & operator[](usize i) noexcept
+                {
+                    switch (i)
+                    {
+                    case 1: return y;
+                    case 2: return z;
+                    default: return x;
+                    }
+                }
+                constexpr T const & operator[](usize i) const noexcept
+                {
+                    switch (i)
+                    {
+                    case 1: return y;
+                    case 2: return z;
+                    default: return x;
+                    }
+                }
+            };
+            template <typename T>
+            struct GenericVecMembers<T, 4>
+            {
+                T x, y, z, w;
+                constexpr T & operator[](usize i) noexcept
+                {
+                    switch (i)
+                    {
+                    case 1: return y;
+                    case 2: return z;
+                    case 3: return w;
+                    default: return x;
+                    }
+                }
+                constexpr T const & operator[](usize i) const noexcept
+                {
+                    switch (i)
+                    {
+                    case 1: return y;
+                    case 2: return z;
+                    case 3: return w;
+                    default: return x;
+                    }
+                }
+            };
+
+            template<typename T>
+            struct GenericVector final : GenericVecMembers<T, N>
+            {
+            };
+            template <typename T, usize COL_N, usize ROW_N>
+            struct GenericMatrix
+            {
+                T data[COL_N][ROW_N];
+            };
+        } // namespace detail
+
+        using b32vec2 = detail::GenericVec2<b32>;
+        using b32vec3 = detail::GenericVec3<b32>;
+        using b32vec4 = detail::GenericVec4<b32>;
+        using f32vec2 = detail::GenericVec2<f32>;
+        using f32mat2x2 = detail::GenericMatrix<f32, 2, 2>;
+        using f32mat2x3 = detail::GenericMatrix<f32, 2, 3>;
+        using f32mat2x4 = detail::GenericMatrix<f32, 2, 4>;
+        using f64vec2 = detail::GenericVec2<f64>;
+        using f64mat2x2 = detail::GenericMatrix<f64, 2, 2>;
+        using f64mat2x3 = detail::GenericMatrix<f64, 2, 3>;
+        using f64mat2x4 = detail::GenericMatrix<f64, 2, 4>;
+        using f32vec3 = detail::GenericVec3<f32>;
+        using f32mat3x2 = detail::GenericMatrix<f32, 3, 2>;
+        using f32mat3x3 = detail::GenericMatrix<f32, 3, 3>;
+        using f32mat3x4 = detail::GenericMatrix<f32, 3, 4>;
+        using f64vec3 = detail::GenericVec3<f64>;
+        using f64mat3x2 = detail::GenericMatrix<f64, 3, 2>;
+        using f64mat3x3 = detail::GenericMatrix<f64, 3, 3>;
+        using f64mat3x4 = detail::GenericMatrix<f64, 3, 4>;
+        using f32vec4 = detail::GenericVec4<f32>;
+        using f32mat4x2 = detail::GenericMatrix<f32, 4, 2>;
+        using f32mat4x3 = detail::GenericMatrix<f32, 4, 3>;
+        using f32mat4x4 = detail::GenericMatrix<f32, 4, 4>;
+        using f64vec4 = detail::GenericVec4<f64>;
+        using f64mat4x2 = detail::GenericMatrix<f64, 4, 2>;
+        using f64mat4x3 = detail::GenericMatrix<f64, 4, 3>;
+        using f64mat4x4 = detail::GenericMatrix<f64, 4, 4>;
+        using f32vec4 = detail::GenericVec4<f32>;
+        using f32mat4x2 = detail::GenericMatrix<f32, 4, 2>;
+        using f32mat4x3 = detail::GenericMatrix<f32, 4, 3>;
+        using f32mat4x4 = detail::GenericMatrix<f32, 4, 4>;
+        using i32vec2 = detail::GenericVec2<i32>;
+        using i32mat2x2 = detail::GenericMatrix<i32, 2, 2>;
+        using i32mat2x3 = detail::GenericMatrix<i32, 2, 3>;
+        using i32mat2x4 = detail::GenericMatrix<i32, 2, 4>;
+        using u32vec2 = detail::GenericVec2<u32>;
+        using u32mat2x2 = detail::GenericMatrix<u32, 2, 2>;
+        using u32mat2x3 = detail::GenericMatrix<u32, 2, 3>;
+        using u32mat2x4 = detail::GenericMatrix<u32, 2, 4>;
+        using i32vec3 = detail::GenericVec3<i32>;
+        using i32mat3x2 = detail::GenericMatrix<i32, 3, 2>;
+        using i32mat3x3 = detail::GenericMatrix<i32, 3, 3>;
+        using i32mat3x4 = detail::GenericMatrix<i32, 3, 4>;
+        using u32vec3 = detail::GenericVec3<u32>;
+        using u32mat3x2 = detail::GenericMatrix<u32, 3, 2>;
+        using u32mat3x3 = detail::GenericMatrix<u32, 3, 3>;
+        using u32mat3x4 = detail::GenericMatrix<u32, 3, 4>;
+        using i32vec4 = detail::GenericVec4<i32>;
+        using i32mat4x2 = detail::GenericMatrix<i32, 4, 2>;
+        using i32mat4x3 = detail::GenericMatrix<i32, 4, 3>;
+        using i32mat4x4 = detail::GenericMatrix<i32, 4, 4>;
+        using u32vec4 = detail::GenericVec4<u32>;
+        using u32mat4x2 = detail::GenericMatrix<u32, 4, 2>;
+        using u32mat4x3 = detail::GenericMatrix<u32, 4, 3>;
+        using u32mat4x4 = detail::GenericMatrix<u32, 4, 4>;
     } // namespace types
 
     enum struct Format

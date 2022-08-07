@@ -314,24 +314,24 @@ namespace daxa
         auto & impl = *as<ImplTaskList>();
 
         auto begin_index = impl.tasks.size();
-        impl.conditional_task_indices.push(begin_index);
-        impl.tasks.push_back(ImplConditionalTaskBegin{.info = info, .depth = impl.conditional_depth});
-        ++impl.conditional_depth;
+        impl.record_state.conditional_task_indices.push(begin_index);
+        impl.tasks.push_back(ImplConditionalTaskBegin{.info = info, .depth = impl.record_state.conditional_depth});
+        ++impl.record_state.conditional_depth;
     }
 
     void TaskList::end_conditional_scope()
     {
         auto & impl = *as<ImplTaskList>();
 
-        auto begin_index = impl.conditional_task_indices.top();
+        auto begin_index = impl.record_state.conditional_task_indices.top();
         auto end_index = impl.tasks.size();
 
         auto & begin_task = std::get<ImplConditionalTaskBegin>(impl.tasks[begin_index]);
         begin_task.end_index = end_index;
 
-        impl.conditional_task_indices.pop();
-        --impl.conditional_depth;
-        impl.tasks.push_back(ImplConditionalTaskEnd{.depth = impl.conditional_depth, .begin_index = begin_index});
+        impl.record_state.conditional_task_indices.pop();
+        --impl.record_state.conditional_depth;
+        impl.tasks.push_back(ImplConditionalTaskEnd{.depth = impl.record_state.conditional_depth, .begin_index = begin_index});
     }
 
     auto TaskList::last_access(TaskBufferId buffer) -> Access
@@ -358,7 +358,7 @@ namespace daxa
         return impl.impl_task_images[image.index].latest_layout;
     }
 
-    void TaskRuntime::execute_task(TaskVariant & task_variant, usize task_index)
+    void TaskRuntime::execute_task(TaskEvent & task_variant, usize task_index)
     {
         DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout << "execute task (index: " << task_index << ")" << std::endl);
 
@@ -581,6 +581,193 @@ namespace daxa
     void ImplTaskList::insert_synchronization()
     {
         DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout << "insert task list" << std::endl);
+
+        usize last_task_index_with_barrier = std::numeric_limits<usize>::max();
+        
+        auto insert_sync_for_resources = [&](TaskResources & resources, usize task_index)
+        {
+            for (auto & [task_buffer_id, t_access] : resources.buffers)
+            {
+                ImplTaskBuffer & task_buffer = this->impl_task_buffers[task_buffer_id.index];
+
+                auto new_access = task_buffer_access_to_access(t_access);
+                auto & latest_access = task_buffer.latest_access;
+
+                // When the last access is done by a conditional scope's beginning, we do not need to synchronize on it.
+                // This is because it is guaranteed that this access is actually our own, as the conditional scopes beginning is just gatering all out of scope accesses.
+                // This also means, that if a barrier is needed, that barrier will be inserted before the conditional scopes beginning, so inserting an additional barrier here would be redundant.
+                bool conditional_scope_covers_last_access_barrier = std::holds_alternative<ImplConditionalTaskBegin>(this->tasks[task_buffer.latest_access_task_index]);
+
+                DAXA_ONLY_IF_TASK_LIST_DEBUG(
+                    std::cout
+                    << "    task access: buffer tid: "
+                    << task_buffer_id.index
+                    << ",\n      previous access: "
+                    << to_string(task_buffer.latest_access)
+                    << ",\n      new access: "
+                    << to_string(new_access)
+                    << std::endl);
+
+                bool need_memory_barrier = false;
+                bool need_execution_barrier = false;
+
+                if (latest_access.type & AccessTypeFlagBits::WRITE)
+                {
+                    need_memory_barrier = true;
+                    need_execution_barrier = true;
+                }
+                else if ((latest_access.type & AccessTypeFlagBits::READ) != 0 && (new_access.type & AccessTypeFlagBits::WRITE) != 0)
+                {
+                    need_execution_barrier = true;
+                }
+
+                if ((need_memory_barrier || need_execution_barrier) && !conditional_scope_covers_last_access_barrier)
+                {
+                    usize latest_access_task_index = task_buffer.latest_access_task_index;
+
+                    usize barrier_task_index = {};
+
+                    if (latest_access_task_index >= last_task_index_with_barrier)
+                    {
+                        // reuse old barrier
+                        barrier_task_index = last_task_index_with_barrier;
+                    }
+                    else
+                    {
+                        // insert new barrier
+                        barrier_task_index = task_index;
+                        last_task_index_with_barrier = task_index;
+                    }
+                    std::get_if<ImplGenericTask>(&tasks[barrier_task_index])->barriers.push_back(TaskPipelineBarrier{
+                        .image_barrier = false,
+                        .awaited_pipeline_access = Access{
+                            .stages = latest_access.stages,
+                            .type = need_memory_barrier ? latest_access.type : AccessTypeFlagBits::NONE,
+                        },
+                        .waiting_pipeline_access = Access{
+                            .stages = new_access.stages,
+                            .type = need_memory_barrier ? new_access.type : AccessTypeFlagBits::NONE,
+                        },
+                    });
+
+                    latest_access = new_access;
+                }
+                else
+                {
+                    latest_access = latest_access | new_access;
+                }
+                task_buffer.latest_access_task_index = task_index;
+            }
+
+            for (auto & [task_image_id, t_access] : resources.images)
+            {
+                ImplTaskImage & task_image = this->impl_task_images[task_image_id.index];
+
+                auto [new_layout, new_access] = task_image_access_to_layout_access(t_access);
+                auto & latest_layout = task_image.latest_layout;
+                auto & latest_access = task_image.latest_access;
+
+                // When the last access is done by a conditional scope's beginning, we do not need to synchronize on it.
+                // This is because it is guaranteed that this access is actually our own, as the conditional scopes beginning is just gatering all out of scope accesses.
+                // This also means, that if a barrier is needed, that barrier will be inserted before the conditional scopes beginning, so inserting an additional barrier here would be redundant.
+                bool conditional_scope_covers_last_access_barrier = std::holds_alternative<ImplConditionalTaskBegin>(this->tasks[task_image.latest_access_task_index]);
+
+                DAXA_ONLY_IF_TASK_LIST_DEBUG(
+                    std::cout
+                    << "    task access: image task_image_id: "
+                    << task_image_id.index
+                    << ", name: "
+                    << impl_task_images[task_image_id.index].debug_name
+                    << ",\n      previous access: "
+                    << to_string(task_image.latest_access)
+                    << ",\n      previous layout: "
+                    << to_string(task_image.latest_layout)
+                    << ",\n      new access: "
+                    << to_string(new_access)
+                    << ",\n      new layout: "
+                    << to_string(new_layout)
+                    << std::endl);
+
+                bool need_memory_barrier = false;
+                bool need_execution_barrier = false;
+
+                if (latest_access.type & AccessTypeFlagBits::WRITE)
+                {
+                    need_memory_barrier = true;
+                    need_execution_barrier = true;
+                }
+                else if ((latest_access.type & AccessTypeFlagBits::READ) != 0 && (new_access.type & AccessTypeFlagBits::WRITE) != 0)
+                {
+                    need_execution_barrier = true;
+                }
+
+                bool need_layout_transition = new_layout != latest_layout;
+
+                need_memory_barrier |= need_layout_transition;
+                need_execution_barrier |= need_layout_transition;
+
+                if ((need_memory_barrier || need_execution_barrier || need_layout_transition) && !conditional_scope_covers_last_access_barrier)
+                {
+                    usize latest_access_task_index = task_image.latest_access_task_index;
+
+                    usize barrier_task_index = {};
+
+                    if (last_task_index_with_barrier != std::numeric_limits<usize>::max() && latest_access_task_index < last_task_index_with_barrier)
+                    {
+                        // reuse old barrier
+                        barrier_task_index = last_task_index_with_barrier;
+                    }
+                    else
+                    {
+                        // insert new barrier
+                        barrier_task_index = task_index;
+                        last_task_index_with_barrier = task_index;
+                    }
+                    std::get_if<ImplGenericTask>(&tasks[barrier_task_index])->barriers.push_back(TaskPipelineBarrier{
+                        .image_barrier = true,
+                        .awaited_pipeline_access = Access{
+                            .stages = latest_access.stages,
+                            .type = need_memory_barrier ? latest_access.type : AccessTypeFlagBits::NONE,
+                        },
+                        .waiting_pipeline_access = Access{
+                            .stages = new_access.stages,
+                            .type = need_memory_barrier ? new_access.type : AccessTypeFlagBits::NONE,
+                        },
+                        .before_layout = latest_layout,
+                        .after_layout = new_layout,
+                        .image_id = task_image_id,
+                        .image_slice = task_image.slice,
+                    });
+
+                    DAXA_ONLY_IF_TASK_LIST_DEBUG(
+                        std::cout
+                        << "    inserted barrier at task index: "
+                        << barrier_task_index
+                        << ",\n      task image index: "
+                        << task_image_id.index
+                        << ", name: "
+                        << impl_task_images[task_image_id.index].debug_name
+                        << ",\n      awaited_pipeline_access: "
+                        << to_string(std::get_if<ImplGenericTask>(&tasks[barrier_task_index])->barriers.back().awaited_pipeline_access)
+                        << ",\n      waiting_pipeline_access: "
+                        << to_string(std::get_if<ImplGenericTask>(&tasks[barrier_task_index])->barriers.back().waiting_pipeline_access)
+                        << ",\n      before_layout: "
+                        << to_string(latest_layout)
+                        << ",\n      after_layout: "
+                        << to_string(new_layout)
+                        << std::endl);
+
+                    latest_layout = new_layout;
+                    latest_access = new_access;
+                }
+                else
+                {
+                    latest_access = latest_access | new_access;
+                }
+                task_image.latest_access_task_index = task_index;
+            }
+        };
+        
         for (usize task_index = 0; task_index < this->tasks.size(); ++task_index)
         {
             if (ImplGenericTask * task_ptr = std::get_if<ImplGenericTask>(&tasks[task_index]))
@@ -596,179 +783,26 @@ namespace daxa
                     << "\n  {"
                     << std::endl);
 
-                TaskResources & resources = task.info.resources;
+                insert_sync_for_resources(task.info.resources, task_index);
 
-                for (auto & [task_buffer_id, t_access] : resources.buffers)
-                {
-                    ImplTaskBuffer & task_buffer = this->impl_task_buffers[task_buffer_id.index];
+                DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout
+                                             << "  }\n"
+                                             << std::endl);
+            }
+            if (ImplConditionalTaskBegin * conditional_scope_begin = std::get_if<ImplConditionalTaskBegin>(&tasks[task_index]))
+            {
+                
+                DAXA_ONLY_IF_TASK_LIST_DEBUG(
+                    std::cout
+                    << "  process conditional scope index : "
+                    << task_index
+                    << ", name: "
+                    << conditional_scope_begin->info.debug_name
+                    << "\n  {"
+                    << std::endl);
 
-                    // slot(task_buffer_id).latest_access = usage;
-                    auto new_access = task_buffer_access_to_access(t_access);
-                    auto & latest_access = task_buffer.latest_access;
+                insert_sync_for_resources(conditional_scope_begin->resources, task_index);
 
-                    DAXA_ONLY_IF_TASK_LIST_DEBUG(
-                        std::cout
-                        << "    task access: buffer tid: "
-                        << task_buffer_id.index
-                        << ",\n      previous access: "
-                        << to_string(task_buffer.latest_access)
-                        << ",\n      new access: "
-                        << to_string(new_access)
-                        << std::endl);
-
-                    bool need_memory_barrier = false;
-                    bool need_execution_barrier = false;
-
-                    if (latest_access.type & AccessTypeFlagBits::WRITE)
-                    {
-                        need_memory_barrier = true;
-                        need_execution_barrier = true;
-                    }
-                    else if ((latest_access.type & AccessTypeFlagBits::READ) != 0 && (new_access.type & AccessTypeFlagBits::WRITE) != 0)
-                    {
-                        need_execution_barrier = true;
-                    }
-
-                    if (need_memory_barrier || need_execution_barrier)
-                    {
-                        usize latest_access_task_index = task_buffer.latest_access_task_index;
-
-                        usize barrier_task_index = {};
-
-                        if (latest_access_task_index >= this->last_task_index_with_barrier)
-                        {
-                            // reuse old barrier
-                            barrier_task_index = last_task_index_with_barrier;
-                        }
-                        else
-                        {
-                            // insert new barrier
-                            barrier_task_index = task_index;
-                            last_task_index_with_barrier = task_index;
-                        }
-                        std::get_if<ImplGenericTask>(&tasks[barrier_task_index])->barriers.push_back(TaskPipelineBarrier{
-                            .image_barrier = false,
-                            .awaited_pipeline_access = Access{
-                                .stages = latest_access.stages,
-                                .type = need_memory_barrier ? latest_access.type : AccessTypeFlagBits::NONE,
-                            },
-                            .waiting_pipeline_access = Access{
-                                .stages = new_access.stages,
-                                .type = need_memory_barrier ? new_access.type : AccessTypeFlagBits::NONE,
-                            },
-                        });
-
-                        latest_access = new_access;
-                    }
-                    else
-                    {
-                        latest_access = latest_access | new_access;
-                    }
-                    task_buffer.latest_access_task_index = task_index;
-                }
-
-                for (auto & [task_image_id, t_access] : resources.images)
-                {
-                    ImplTaskImage & task_image = this->impl_task_images[task_image_id.index];
-
-                    auto [new_layout, new_access] = task_image_access_to_layout_access(t_access);
-                    auto & latest_layout = task_image.latest_layout;
-                    auto & latest_access = task_image.latest_access;
-
-                    DAXA_ONLY_IF_TASK_LIST_DEBUG(
-                        std::cout
-                        << "    task access: image task_image_id: "
-                        << task_image_id.index
-                        << ", name: "
-                        << impl_task_images[task_image_id.index].debug_name
-                        << ",\n      previous access: "
-                        << to_string(task_image.latest_access)
-                        << ",\n      previous layout: "
-                        << to_string(task_image.latest_layout)
-                        << ",\n      new access: "
-                        << to_string(new_access)
-                        << ",\n      new layout: "
-                        << to_string(new_layout)
-                        << std::endl);
-
-                    bool need_memory_barrier = false;
-                    bool need_execution_barrier = false;
-
-                    if (latest_access.type & AccessTypeFlagBits::WRITE)
-                    {
-                        need_memory_barrier = true;
-                        need_execution_barrier = true;
-                    }
-                    else if ((latest_access.type & AccessTypeFlagBits::READ) != 0 && (new_access.type & AccessTypeFlagBits::WRITE) != 0)
-                    {
-                        need_execution_barrier = true;
-                    }
-
-                    bool need_layout_transition = new_layout != latest_layout;
-
-                    need_memory_barrier |= need_layout_transition;
-                    need_execution_barrier |= need_layout_transition;
-
-                    if (need_memory_barrier || need_execution_barrier || need_layout_transition)
-                    {
-                        usize latest_access_task_index = task_image.latest_access_task_index;
-
-                        usize barrier_task_index = {};
-
-                        if (last_task_index_with_barrier != std::numeric_limits<usize>::max() && latest_access_task_index < this->last_task_index_with_barrier)
-                        {
-                            // reuse old barrier
-                            barrier_task_index = last_task_index_with_barrier;
-                        }
-                        else
-                        {
-                            // insert new barrier
-                            barrier_task_index = task_index;
-                            last_task_index_with_barrier = task_index;
-                        }
-                        std::get_if<ImplGenericTask>(&tasks[barrier_task_index])->barriers.push_back(TaskPipelineBarrier{
-                            .image_barrier = true,
-                            .awaited_pipeline_access = Access{
-                                .stages = latest_access.stages,
-                                .type = need_memory_barrier ? latest_access.type : AccessTypeFlagBits::NONE,
-                            },
-                            .waiting_pipeline_access = Access{
-                                .stages = new_access.stages,
-                                .type = need_memory_barrier ? new_access.type : AccessTypeFlagBits::NONE,
-                            },
-                            .before_layout = latest_layout,
-                            .after_layout = new_layout,
-                            .image_id = task_image_id,
-                            .image_slice = task_image.slice,
-                        });
-
-                        DAXA_ONLY_IF_TASK_LIST_DEBUG(
-                            std::cout
-                            << "    inserted barrier at task index: "
-                            << barrier_task_index
-                            << ",\n      task image index: "
-                            << task_image_id.index
-                            << ", name: "
-                            << impl_task_images[task_image_id.index].debug_name
-                            << ",\n      awaited_pipeline_access: "
-                            << to_string(std::get_if<ImplGenericTask>(&tasks[barrier_task_index])->barriers.back().awaited_pipeline_access)
-                            << ",\n      waiting_pipeline_access: "
-                            << to_string(std::get_if<ImplGenericTask>(&tasks[barrier_task_index])->barriers.back().waiting_pipeline_access)
-                            << ",\n      before_layout: "
-                            << to_string(latest_layout)
-                            << ",\n      after_layout: "
-                            << to_string(new_layout)
-                            << std::endl);
-
-                        latest_layout = new_layout;
-                        latest_access = new_access;
-                    }
-                    else
-                    {
-                        latest_access = latest_access | new_access;
-                    }
-                    task_image.latest_access_task_index = task_index;
-                }
                 DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout
                                              << "  }\n"
                                              << std::endl);
