@@ -306,22 +306,22 @@ namespace daxa
                     if (clip_min.y < 0.0f)
                         clip_min.y = 0.0f;
                     if (clip_max.x > size_x)
-                        clip_max.x = (float)size_x;
+                        clip_max.x = static_cast<float>(size_x);
                     if (clip_max.y > size_y)
-                        clip_max.y = (float)size_y;
+                        clip_max.y = static_cast<float>(size_y);
                     if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
                         continue;
 
                     // Apply scissor/clipping rectangle
                     Rect2D scissor;
-                    scissor.x = (int32_t)(clip_min.x);
-                    scissor.y = (int32_t)(clip_min.y);
-                    scissor.width = (uint32_t)(clip_max.x - clip_min.x);
-                    scissor.height = (uint32_t)(clip_max.y - clip_min.y);
+                    scissor.x = static_cast<i32>(clip_min.x);
+                    scissor.y = static_cast<i32>(clip_min.y);
+                    scissor.width = static_cast<u32>(clip_max.x - clip_min.x);
+                    scissor.height = static_cast<u32>(clip_max.y - clip_min.y);
                     cmd_list.set_scissor(scissor);
 
                     // Draw
-                    push.texture0_id = referenced_images[(size_t)pcmd->TextureId];
+                    push.texture0_id = referenced_images[reinterpret_cast<usize>(pcmd->TextureId)];
                     // It seems that this just works... I have no sampler, but using
                     // the (uninitialized?) sampler at location 0 just works for me.
                     push.sampler0_id = {};
