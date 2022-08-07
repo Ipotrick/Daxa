@@ -110,7 +110,6 @@ struct App : AppWindow<App>
 
         if (!minimized)
         {
-            ui_update();
             draw();
         }
         else
@@ -134,6 +133,8 @@ struct App : AppWindow<App>
 
     void draw()
     {
+        ui_update();
+
         if (pipeline_compiler.check_if_sources_changed(raster_pipeline))
         {
             auto new_pipeline = pipeline_compiler.recreate_raster_pipeline(raster_pipeline);
@@ -145,11 +146,6 @@ struct App : AppWindow<App>
             {
                 std::cout << new_pipeline.message() << std::endl;
             }
-        }
-
-        if (should_resize)
-        {
-            do_resize();
         }
 
         auto swapchain_image = swapchain.acquire_next_image();
