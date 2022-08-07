@@ -2,6 +2,10 @@
 
 #ifdef __cplusplus
 #include <daxa/daxa.hpp>
+
+#include <daxa/utils/math_operators.hpp>
+using namespace daxa::math_operators;
+
 #else
 #include "daxa/daxa.hlsl"
 #endif
