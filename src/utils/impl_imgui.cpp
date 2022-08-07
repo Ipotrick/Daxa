@@ -100,7 +100,7 @@ struct Push
     daxa::SamplerId sampler0_id;
 };
 
-char const * vert_hlsl = R"--(
+char const * shaders_hlsl = R"--(
     #include "daxa/daxa.hlsl"
     struct Push
     {
@@ -118,54 +118,25 @@ char const * vert_hlsl = R"--(
     {
         float2 pos;
         float2 uv;
-        float4 col;
+        uint col;
     };
-    DAXA_DEFINE_GET_STRUCTURED_BUFFER(Vertex);
-
     struct VertexOutput {
         float4 pos : SV_POSITION;
         float4 col : COLOR0;
         float2 uv  : TEXCOORD0;
     };
-
-    // static const float2 positions[3] = {
-    //     float2(-0.5,  0.5),
-    //     float2( 0.0, -0.5),
-    //     float2( 0.5,  0.5),
-    // };
-
-    VertexOutput main(uint invocation_index : SV_VERTEXID) {
-        StructuredBuffer<Vertex> vertices = daxa::get_StructuredBuffer<Vertex>(p.vbuffer_id);
-        Vertex input = vertices[invocation_index];
-        // input.pos += positions[invocation_index % 3] * 15;
-
+    VertexOutput vs_main(uint invocation_index : SV_VERTEXID) {
+        ByteAddressBuffer vbuffer = daxa::get_ByteAddressBuffer(p.vbuffer_id);
+        Vertex input = vbuffer.Load<Vertex>(invocation_index * sizeof(Vertex));
         VertexOutput output;
         output.pos = float4(input.pos * p.scale + p.translate, 0, 1);
-        output.col = input.col;
+        output.col.r = ((input.col >> 0x00) & 0xff) * 1.0 / 255.0;
+        output.col.g = ((input.col >> 0x08) & 0xff) * 1.0 / 255.0;
+        output.col.b = ((input.col >> 0x10) & 0xff) * 1.0 / 255.0;
+        output.col.a = ((input.col >> 0x18) & 0xff) * 1.0 / 255.0;
         output.uv  = input.uv;
         return output;
     }
-)--";
-
-char const * frag_hlsl = R"--(
-    #include "daxa/daxa.hlsl"
-    struct Push
-    {
-        daxa::f32vec2 scale;
-        daxa::f32vec2 translate;
-        daxa::u32 vbuffer_offset;
-        daxa::u32 ibuffer_offset;
-        daxa::BufferId vbuffer_id;
-        daxa::BufferId ibuffer_id;
-        daxa::ImageId texture0_id;
-        daxa::SamplerId sampler0_id;
-    };
-    [[vk::push_constant]] const Push p;
-    struct VertexOutput {
-        float4 pos : SV_POSITION;
-        float4 col : COLOR0;
-        float2 uv  : TEXCOORD0;
-    };
     float4 srgb_to_linear(float4 srgb) {
         float3 color_srgb = srgb.rgb;
         float3 selector = clamp(ceil(color_srgb - 0.04045), 0.0, 1.0); // 0 if under value, 1 if over
@@ -174,11 +145,10 @@ char const * frag_hlsl = R"--(
         float3 result = lerp(under, over, selector);
         return float4(result, srgb.a);
     }
-    float4 main(VertexOutput input) : SV_Target {
+    float4 fs_main(VertexOutput input) : SV_Target {
         Texture2D<float4> texture0 = daxa::get_Texture2D<float4>(p.texture0_id);
         SamplerState sampler0 = daxa::get_sampler(p.sampler0_id);
         float4 col = srgb_to_linear(input.col) * texture0.Sample(sampler0, input.uv);
-        col.a = 1;
         return col;
     }
 )--";
@@ -263,8 +233,6 @@ namespace daxa
                 for (int n = 0; n < draw_data->CmdListsCount; n++)
                 {
                     const ImDrawList * draws = draw_data->CmdLists[n];
-                    // for (u32 i = 0; i < draws->VtxBuffer.Size; ++i)
-                    //     vtx_dst[i] = draws->VtxBuffer.Data[i];
                     std::memcpy(vtx_dst, draws->VtxBuffer.Data, draws->VtxBuffer.Size * sizeof(ImDrawVert));
                     vtx_dst += draws->VtxBuffer.Size;
                 }
@@ -275,8 +243,6 @@ namespace daxa
                 for (int n = 0; n < draw_data->CmdListsCount; n++)
                 {
                     const ImDrawList * draws = draw_data->CmdLists[n];
-                    // for (u32 i = 0; i < draws->IdxBuffer.Size; ++i)
-                    //     idx_dst[i] = static_cast<u32>(draws->IdxBuffer.Data[i]);
                     std::memcpy(idx_dst, draws->IdxBuffer.Data, draws->IdxBuffer.Size * sizeof(ImDrawIdx));
                     idx_dst += draws->IdxBuffer.Size;
                 }
@@ -364,8 +330,6 @@ namespace daxa
                     push.ibuffer_offset = pcmd->IdxOffset + global_idx_offset;
 
                     cmd_list.push_constant(push);
-                    // cmd_list.draw({.vertex_count = static_cast<u32>(draws->VtxBuffer.Size * 3)});
-                    // cmd_list.draw({.vertex_count = static_cast<u32>(pcmd->ElemCount)});
                     cmd_list.draw_indexed({
                         .index_count = pcmd->ElemCount,
                         .first_index = pcmd->IdxOffset + global_idx_offset,
@@ -392,8 +356,8 @@ namespace daxa
         : info{info},
           // clang-format off
         raster_pipeline{this->info.pipeline_compiler.create_raster_pipeline({
-            .vertex_shader_info = {.source = daxa::ShaderCode{.string = vert_hlsl}},
-            .fragment_shader_info = {.source = daxa::ShaderCode{.string = frag_hlsl}},
+            .vertex_shader_info = {.source = daxa::ShaderCode{.string = shaders_hlsl}, .entry_point = "vs_main"},
+            .fragment_shader_info = {.source = daxa::ShaderCode{.string = shaders_hlsl}, .entry_point = "fs_main"},
             .color_attachments = {
                 {
                     .format = info.format,
@@ -420,7 +384,7 @@ namespace daxa
         u8 * pixels;
         int width, height;
         io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-        size_t upload_size = width * height * 4 * sizeof(u8);
+        usize upload_size = width * height * 4 * sizeof(u8);
         auto font_sheet = this->info.device.create_image({
             .size = {static_cast<u32>(width), static_cast<u32>(height), 1},
             .usage = ImageUsageFlagBits::TRANSFER_DST | ImageUsageFlagBits::SHADER_READ_ONLY,
@@ -467,7 +431,7 @@ namespace daxa
                 .layer_count = 1,
             },
             .image_offset = {0, 0, 0},
-            .image_extent = {16, 16, 1},
+            .image_extent = {static_cast<u32>(width), static_cast<u32>(height), 1},
         });
 
         cmd_list.pipeline_barrier_image_transition({
