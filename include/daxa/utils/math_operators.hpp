@@ -4,51 +4,96 @@
 
 namespace daxa::math_operators
 {
-    template <typename VecT>
-    constexpr auto operator+(detail::GenericVec2<VecT> const & a, detail::GenericVec2<VecT> const & b) -> detail::GenericVec2<VecT>
+    template <typename T, usize N>
+    constexpr auto operator+(detail::GenericVector<T, N> const & a, detail::GenericVector<T, N> const & b) -> detail::GenericVector<T, N>
     {
-        return detail::GenericVec2<VecT>{a.x + b.x, a.y + b.y};
+        detail::GenericVector<T, N> result;
+        for (usize i = 0; i < N; ++i)
+            result[i] = a[i] + b[i];
+        return result;
     }
-    template <typename VecT>
-    constexpr auto operator+(detail::GenericVec3<VecT> const & a, detail::GenericVec3<VecT> const & b) -> detail::GenericVec3<VecT>
+    template <typename T, usize N>
+    constexpr auto operator-(detail::GenericVector<T, N> const & a, detail::GenericVector<T, N> const & b) -> detail::GenericVector<T, N>
     {
-        return detail::GenericVec3<VecT>{a.x + b.x, a.y + b.y, a.z + b.z};
+        detail::GenericVector<T, N> result;
+        for (usize i = 0; i < N; ++i)
+            result[i] = a[i] - b[i];
+        return result;
     }
-    template <typename VecT>
-    constexpr auto operator+(detail::GenericVec4<VecT> const & a, detail::GenericVec4<VecT> const & b) -> detail::GenericVec4<VecT>
+    template <typename T, usize N>
+    constexpr auto operator*(detail::GenericVector<T, N> const & a, detail::GenericVector<T, N> const & b) -> detail::GenericVector<T, N>
     {
-        return detail::GenericVec4<VecT>{a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+        detail::GenericVector<T, N> result;
+        for (usize i = 0; i < N; ++i)
+            result[i] = a[i] / b[i];
+        return result;
+    }
+    template <typename T, usize N>
+    constexpr auto operator/(detail::GenericVector<T, N> const & a, detail::GenericVector<T, N> const & b) -> detail::GenericVector<T, N>
+    {
+        detail::GenericVector<T, N> result;
+        for (usize i = 0; i < N; ++i)
+            result[i] = a[i] / b[i];
+        return result;
+    }
+    template <typename T, usize N>
+    constexpr auto dot(detail::GenericVector<T, N> const & a, detail::GenericVector<T, N> const & b) -> detail::GenericVector<T, N>
+    {
+        T result = 0;
+        for (usize i = 0; i < N; ++i)
+            result[i] += a[i] * b[i];
+        return result;
     }
 
-    template <typename VecT>
-    constexpr auto operator-(detail::GenericVec2<VecT> const & a, detail::GenericVec2<VecT> const & b) -> detail::GenericVec2<VecT>
+    template <typename T, usize M, usize N, usize P>
+    constexpr auto operator*(detail::GenericMatrix<T, M, N> const & a, detail::GenericMatrix<T, N, P> const & b)
     {
-        return detail::GenericVec2<VecT>{a.x - b.x, a.y - b.y};
+        auto c = detail::GenericMatrix<T, M, P>{};
+        for (usize i = 0; i < M; ++i)
+        {
+            for (usize j = 0; j < P; ++j)
+            {
+                c[i][j] = 0;
+                for (usize k = 0; k < N; ++k)
+                    c[i][j] += a[i][k] * b[k][j];
+            }
+        }
+        return c;
     }
-    template <typename VecT>
-    constexpr auto operator-(detail::GenericVec3<VecT> const & a, detail::GenericVec3<VecT> const & b) -> detail::GenericVec3<VecT>
+    template <typename T, usize M, usize N>
+    constexpr auto operator*(detail::GenericMatrix<T, M, N> const & a, detail::GenericVector<T, N> const & v)
     {
-        return detail::GenericVec3<VecT>{a.x - b.x, a.y - b.y, a.z - b.z};
+        auto c = detail::GenericVector<T, N>{};
+        for (usize i = 0; i < M; ++i)
+        {
+            c[i] = 0;
+            for (usize k = 0; k < N; ++k)
+                c[i] += a[i][k] * v[k];
+        }
+        return c;
     }
-    template <typename VecT>
-    constexpr auto operator-(detail::GenericVec4<VecT> const & a, detail::GenericVec4<VecT> const & b) -> detail::GenericVec4<VecT>
+    template <typename T, usize N, usize P>
+    constexpr auto operator*(detail::GenericVector<T, N> const & v, detail::GenericMatrix<T, N, P> const & b)
     {
-        return detail::GenericVec4<VecT>{a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
+        auto c = detail::GenericVector<T, N>{};
+        for (usize j = 0; j < P; ++j)
+        {
+            c[j] = 0;
+            for (usize k = 0; k < N; ++k)
+                c[j] += v[k] * b[k][j];
+        }
+        return c;
     }
 
-    template <typename VecT>
-    constexpr auto dot(detail::GenericVec2<VecT> const & a, detail::GenericVec2<VecT> const & b) -> detail::GenericVec2<VecT>
+    template <typename T, usize M, usize N>
+    constexpr auto transpose(detail::GenericMatrix<T, M, N> const & x)
     {
-        return a.x * b.x + a.y * b.y;
-    }
-    template <typename VecT>
-    constexpr auto dot(detail::GenericVec3<VecT> const & a, detail::GenericVec3<VecT> const & b) -> detail::GenericVec3<VecT>
-    {
-        return a.x * b.x + a.y * b.y + a.z * b.z;
-    }
-    template <typename VecT>
-    constexpr auto dot(detail::GenericVec4<VecT> const & a, detail::GenericVec4<VecT> const & b) -> detail::GenericVec4<VecT>
-    {
-        return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+        auto result = detail::GenericMatrix<T, M, N>{};
+        for (usize mi = 0; mi < M; ++mi)
+        {
+            for (usize ni = 0; ni < N; ++ni)
+                result[ni][mi] = x[mi][ni];
+        }
+        return result;
     }
 } // namespace daxa::math_operators
