@@ -200,6 +200,31 @@ namespace daxa
         auto & impl = *as<ImplTaskList>();
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can only record to uncompleted task list");
         impl.tasks.push_back(ImplGenericTask{.info = info});
+
+        if (!impl.record_state.conditional_task_indices.empty())
+        {
+            usize conditional_scope_begin_index = impl.record_state.conditional_task_indices.top();
+            usize task_index = impl.tasks.size();
+            ImplConditionalTaskBegin * conditional_begin = std::get_if<ImplConditionalTaskBegin>(&impl.tasks[conditional_scope_begin_index]);
+            DAXA_DBG_ASSERT_TRUE_M(conditional_begin != nullptr, "unreachable. possible cause: bad value in conditional_task_indices");
+
+            // The task we just added could use a resource OUTSIDE of the conditional scope.
+            // All resource access that goes beyond the conditional scope must be recorded by the scope.
+            for (auto& imgtup : info.resources.images)
+            {
+                if (impl.impl_task_images[std::get<0>(imgtup).index].latest_access_task_index < conditional_scope_begin_index)
+                {
+                    conditional_begin->resources.images.push_back(imgtup);
+                }
+            }
+            for (auto& buftup : info.resources.buffers)
+            {
+                if (impl.impl_task_buffers[std::get<0>(buftup).index].latest_access_task_index < conditional_scope_begin_index)
+                {
+                    conditional_begin->resources.buffers.push_back(buftup);
+                }
+            }
+        }
     }
 
     void TaskList::add_copy_image_to_image(TaskCopyImageInfo const & info)
@@ -332,6 +357,8 @@ namespace daxa
         impl.record_state.conditional_task_indices.pop();
         --impl.record_state.conditional_depth;
         impl.tasks.push_back(ImplConditionalTaskEnd{.depth = impl.record_state.conditional_depth, .begin_index = begin_index});
+
+
     }
 
     auto TaskList::last_access(TaskBufferId buffer) -> Access
