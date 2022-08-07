@@ -120,36 +120,7 @@ char const * vert_hlsl = R"--(
         float2 uv;
         float4 col;
     };
-    struct VBuffer
-    {
-        Vertex vertices[1];
-        Vertex get_vertex(uint index)
-        {
-            return vertices[index];
-        }
-    };
-    DAXA_DEFINE_GET_STRUCTURED_BUFFER(VBuffer);
-    struct IBuffer
-    {
-        uint indices[1];
-        uint get_index(uint invocation_index)
-        {
-            // uint data_index = invocation_index / 2;
-            // uint data_shift = invocation_index & 1u;
-            // uint index = indices[data_index];
-            // if (data_shift == 1)
-            // {
-            //     index = (index >> 16) & 0xffff;
-            // }
-            // else
-            // {
-            //     index = (index >> 0) & 0xffff;
-            // }
-            // return index;
-            return indices[invocation_index];
-        }
-    };
-    DAXA_DEFINE_GET_STRUCTURED_BUFFER(IBuffer);
+    DAXA_DEFINE_GET_STRUCTURED_BUFFER(Vertex);
 
     struct VertexOutput {
         float4 pos : SV_POSITION;
@@ -157,11 +128,16 @@ char const * vert_hlsl = R"--(
         float2 uv  : TEXCOORD0;
     };
 
+    // static const float2 positions[3] = {
+    //     float2(-0.5,  0.5),
+    //     float2( 0.0, -0.5),
+    //     float2( 0.5,  0.5),
+    // };
+
     VertexOutput main(uint invocation_index : SV_VERTEXID) {
-        StructuredBuffer<VBuffer> vbuffer = daxa::get_StructuredBuffer<VBuffer>(p.vbuffer_id);
-        StructuredBuffer<IBuffer> ibuffer = daxa::get_StructuredBuffer<IBuffer>(p.ibuffer_id);
-        uint index = ibuffer[0].get_index(invocation_index + p.ibuffer_offset) + p.vbuffer_offset;
-        Vertex input = vbuffer[0].get_vertex(index);
+        StructuredBuffer<Vertex> vertices = daxa::get_StructuredBuffer<Vertex>(p.vbuffer_id);
+        Vertex input = vertices[invocation_index];
+        // input.pos += positions[invocation_index % 3] * 15;
 
         VertexOutput output;
         output.pos = float4(input.pos * p.scale + p.translate, 0, 1);
@@ -265,7 +241,7 @@ namespace daxa
             auto vbuffer_current_size = info.device.info_buffer(vbuffer).size;
             auto vbuffer_needed_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
             auto ibuffer_current_size = info.device.info_buffer(ibuffer).size;
-            auto ibuffer_needed_size = draw_data->TotalIdxCount * sizeof(u32);
+            auto ibuffer_needed_size = draw_data->TotalIdxCount * sizeof(ImDrawIdx);
 
             if (vbuffer_needed_size > vbuffer_current_size)
             {
@@ -295,13 +271,13 @@ namespace daxa
                 info.device.unmap_memory(staging_vbuffer);
             }
             {
-                auto idx_dst = info.device.map_memory_as<u32>(staging_ibuffer);
+                auto idx_dst = info.device.map_memory_as<ImDrawIdx>(staging_ibuffer);
                 for (int n = 0; n < draw_data->CmdListsCount; n++)
                 {
                     const ImDrawList * draws = draw_data->CmdLists[n];
-                    for (u32 i = 0; i < draws->IdxBuffer.Size; ++i)
-                        idx_dst[i] = static_cast<u32>(draws->IdxBuffer.Data[i]);
-                    // std::memcpy(idx_dst, draws->IdxBuffer.Data, draws->IdxBuffer.Size * sizeof(ImDrawIdx));
+                    // for (u32 i = 0; i < draws->IdxBuffer.Size; ++i)
+                    //     idx_dst[i] = static_cast<u32>(draws->IdxBuffer.Data[i]);
+                    std::memcpy(idx_dst, draws->IdxBuffer.Data, draws->IdxBuffer.Size * sizeof(ImDrawIdx));
                     idx_dst += draws->IdxBuffer.Size;
                 }
                 info.device.unmap_memory(staging_ibuffer);
@@ -331,6 +307,8 @@ namespace daxa
                 .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
             });
             cmd_list.set_pipeline(raster_pipeline);
+
+            cmd_list.set_index_buffer(ibuffer, 0, sizeof(ImDrawIdx));
 
             auto push = Push{};
             push.scale[0] = 2.0f / draw_data->DisplaySize.x;
@@ -386,7 +364,13 @@ namespace daxa
                     push.ibuffer_offset = pcmd->IdxOffset + global_idx_offset;
 
                     cmd_list.push_constant(push);
-                    cmd_list.draw({.vertex_count = static_cast<u32>(draws->IdxBuffer.Size)});
+                    // cmd_list.draw({.vertex_count = static_cast<u32>(draws->VtxBuffer.Size * 3)});
+                    // cmd_list.draw({.vertex_count = static_cast<u32>(pcmd->ElemCount)});
+                    cmd_list.draw_indexed({
+                        .index_count = pcmd->ElemCount,
+                        .first_index = pcmd->IdxOffset + global_idx_offset,
+                        .vertex_offset = pcmd->VtxOffset + global_vtx_offset,
+                    });
                 }
                 global_idx_offset += draws->IdxBuffer.Size;
                 global_vtx_offset += draws->VtxBuffer.Size;

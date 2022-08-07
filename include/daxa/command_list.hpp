@@ -125,6 +125,15 @@ namespace daxa
         u32 first_instance = 0;
     };
 
+    struct DrawIndexedInfo
+    {
+        u32 index_count = {};
+        u32 instance_count = 1;
+        u32 first_index = {};
+        u32 vertex_offset = {};
+        u32 first_instance = 0;
+    };
+
     struct DrawIndirectInfo
     {
         BufferId indirect_buffer = {};
@@ -170,6 +179,7 @@ namespace daxa
         void set_scissor(Rect2D const & info);
         void set_index_buffer(BufferId id, usize offset, usize index_type_byte_size = sizeof(u32));
         void draw(DrawInfo const & info);
+        void draw_indexed(DrawIndexedInfo const & info);
         void draw_indirect(DrawIndirectInfo const & info);
 
         void complete();

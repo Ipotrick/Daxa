@@ -442,6 +442,14 @@ namespace daxa
         vkCmdDraw(impl.vk_cmd_buffer, info.vertex_count, info.instance_count, info.first_vertex, info.first_instance);
     }
 
+    void CommandList::draw_indexed(DrawIndexedInfo const & info)
+    {
+        auto & impl = *as<ImplCommandList>();
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+        impl.flush_barriers();
+        vkCmdDrawIndexed(impl.vk_cmd_buffer, info.index_count, info.instance_count, info.first_index, info.vertex_offset, info.first_instance);
+    }
+
     void CommandList::draw_indirect(DrawIndirectInfo const & info)
     {
         auto & impl = *as<ImplCommandList>();
