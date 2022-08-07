@@ -96,7 +96,7 @@ struct Push
     daxa::u32 ibuffer_offset;
     daxa::BufferId vbuffer_id;
     daxa::BufferId ibuffer_id;
-    daxa::ImageId texture0_id;
+    daxa::ImageViewId texture0_id;
     daxa::SamplerId sampler0_id;
 };
 
@@ -110,7 +110,7 @@ char const * shaders_hlsl = R"--(
         daxa::u32 ibuffer_offset;
         daxa::BufferId vbuffer_id;
         daxa::BufferId ibuffer_id;
-        daxa::ImageId texture0_id;
+        daxa::ImageViewId texture0_id;
         daxa::SamplerId sampler0_id;
     };
     [[vk::push_constant]] const Push p;
@@ -193,17 +193,6 @@ namespace daxa
         });
     }
 
-    u64 ImplImGuiRenderer::get_imgui_texture_id(ImageId img)
-    {
-        u32 index = img.index + (img.version << 24);
-        if (!tex_handle_ptr_to_referenced_image_index.contains(index))
-        {
-            referenced_images.push_back(img);
-            tex_handle_ptr_to_referenced_image_index[index] = referenced_images.size() - 1;
-        }
-        return tex_handle_ptr_to_referenced_image_index[index];
-    }
-
     void ImplImGuiRenderer::record_commands(ImDrawData * draw_data, CommandList & cmd_list, ImageId target_image, u32 size_x, u32 size_y)
     {
         if (draw_data && draw_data->TotalIdxCount > 0)
@@ -277,16 +266,14 @@ namespace daxa
             cmd_list.set_index_buffer(ibuffer, 0, sizeof(ImDrawIdx));
 
             auto push = Push{};
-            push.scale[0] = 2.0f / draw_data->DisplaySize.x;
-            push.scale[1] = 2.0f / draw_data->DisplaySize.y;
-            push.translate[0] = -1.0f - draw_data->DisplayPos.x * push.scale[0];
-            push.translate[1] = -1.0f - draw_data->DisplayPos.y * push.scale[1];
+            push.scale = {2.0f / draw_data->DisplaySize.x, 2.0f / draw_data->DisplaySize.y};
+            push.translate = {-1.0f - draw_data->DisplayPos.x * push.scale.x, -1.0f - draw_data->DisplayPos.y * push.scale.y};
             ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
             ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
-            int global_vtx_offset = 0;
-            int global_idx_offset = 0;
+            int global_vtx_offset = 0, global_idx_offset = 0;
             push.vbuffer_id = vbuffer;
             push.ibuffer_id = ibuffer;
+            push.sampler0_id = sampler;
 
             for (int n = 0; n < draw_data->CmdListsCount; n++)
             {
@@ -301,16 +288,12 @@ namespace daxa
                     ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x, (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
 
                     // Clamp to viewport as vkCmdSetScissor() won't accept values that are off bounds
-                    if (clip_min.x < 0.0f)
-                        clip_min.x = 0.0f;
-                    if (clip_min.y < 0.0f)
-                        clip_min.y = 0.0f;
-                    if (clip_max.x > size_x)
-                        clip_max.x = static_cast<float>(size_x);
-                    if (clip_max.y > size_y)
-                        clip_max.y = static_cast<float>(size_y);
+                    clip_min.x = std::clamp(clip_min.x, 0.0f, static_cast<f32>(size_x));
+                    clip_min.y = std::clamp(clip_min.y, 0.0f, static_cast<f32>(size_y));
                     if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
+                    {
                         continue;
+                    }
 
                     // Apply scissor/clipping rectangle
                     Rect2D scissor;
@@ -321,10 +304,7 @@ namespace daxa
                     cmd_list.set_scissor(scissor);
 
                     // Draw
-                    push.texture0_id = referenced_images[reinterpret_cast<usize>(pcmd->TextureId)];
-                    // It seems that this just works... I have no sampler, but using
-                    // the (uninitialized?) sampler at location 0 just works for me.
-                    push.sampler0_id = {};
+                    push.texture0_id = *reinterpret_cast<daxa::ImageViewId const*>(&pcmd->TextureId);
 
                     push.vbuffer_offset = pcmd->VtxOffset + global_vtx_offset;
                     push.ibuffer_offset = pcmd->IdxOffset + global_idx_offset;
@@ -341,9 +321,6 @@ namespace daxa
             }
 
             cmd_list.end_renderpass();
-
-            referenced_images.resize(1);
-            tex_handle_ptr_to_referenced_image_index.clear();
         }
     }
 
@@ -379,13 +356,14 @@ namespace daxa
         set_imgui_style();
         recreate_vbuffer(4096);
         recreate_ibuffer(4096);
+        sampler = this->info.device.create_sampler({.debug_name = "ImGui Texture Sampler"});
 
         ImGuiIO & io = ImGui::GetIO();
         u8 * pixels;
         int width, height;
         io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
         usize upload_size = width * height * 4 * sizeof(u8);
-        auto font_sheet = this->info.device.create_image({
+        font_sheet = this->info.device.create_image({
             .size = {static_cast<u32>(width), static_cast<u32>(height), 1},
             .usage = ImageUsageFlagBits::TRANSFER_DST | ImageUsageFlagBits::SHADER_READ_ONLY,
             .debug_name = "ImGui Font Sheet Image",
@@ -452,10 +430,8 @@ namespace daxa
         this->info.device.submit_commands({
             .command_lists = {cmd_list},
         });
-        this->info.device.wait_idle();
         this->info.device.destroy_buffer(texture_staging_buffer);
-        referenced_images.push_back(font_sheet);
-        io.Fonts->SetTexID(0);
+        io.Fonts->SetTexID(*reinterpret_cast<ImTextureID*>(&(font_sheet.default_view())));
     }
 
     ImplImGuiRenderer::~ImplImGuiRenderer()
@@ -464,11 +440,8 @@ namespace daxa
         this->info.device.destroy_buffer(staging_vbuffer);
         this->info.device.destroy_buffer(ibuffer);
         this->info.device.destroy_buffer(staging_ibuffer);
-
-        for (auto & image : referenced_images)
-        {
-            this->info.device.destroy_image(image);
-        }
+        this->info.device.destroy_sampler(sampler);
+        this->info.device.destroy_image(font_sheet);
     }
 } // namespace daxa
 

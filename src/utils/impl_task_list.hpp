@@ -77,6 +77,8 @@ namespace daxa
 
     struct ImplConditionalTaskBegin
     {
+        std::vector<TaskPipelineBarrier> barriers = {};
+        TaskResources resources = {};
         TaskConditionalInfo info = {};
         u64 depth = {}, end_index = {};
     };
@@ -86,7 +88,7 @@ namespace daxa
         u64 depth = {}, begin_index = {};
     };
 
-    using TaskVariant = std::variant<
+    using TaskEvent = std::variant<
         ImplGenericTask,
         ImplCreateBufferTask,
         ImplCreateImageTask,
@@ -107,25 +109,29 @@ namespace daxa
 
         std::optional<BinarySemaphore> last_submit_semaphore = {};
 
-        void execute_task(TaskVariant & task, usize task_index);
+        void execute_task(TaskEvent & task, usize task_index);
 
         void pipeline_barriers(std::vector<TaskPipelineBarrier> const & barriers);
+    };
+
+    struct TaskRecordState
+    {
+        u64 conditional_depth = {};
+        std::stack<u64> conditional_task_indices = {};
     };
 
     struct ImplTaskList final : ManagedSharedState
     {
         TaskListInfo info;
 
-        bool compiled = false;
-        std::vector<TaskVariant> tasks = {};
-        usize last_task_index_with_barrier = std::numeric_limits<usize>::max();
-        u64 conditional_depth = {};
-        std::stack<u64> conditional_task_indices = {};
-
+        std::vector<TaskEvent> tasks = {};
         std::vector<ImplTaskBuffer> impl_task_buffers = {};
         std::vector<ImplTaskImage> impl_task_images = {};
-
         std::vector<CommandList> recorded_command_lists = {};
+
+        TaskRecordState record_state = {};
+
+        bool compiled = false;
 
         auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access>;
         auto task_buffer_access_to_access(TaskBufferAccess const & access) -> Access;

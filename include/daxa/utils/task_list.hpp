@@ -191,6 +191,7 @@ namespace daxa
     struct TaskConditionalInfo
     {
         TaskConditionalCallback condition;
+        std::string debug_name = {};
     };
 
     struct TaskList : ManagedPtr
