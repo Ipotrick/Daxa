@@ -323,7 +323,7 @@ namespace daxa
     {
         auto & impl = *as<ImplTaskList>();
 
-        auto begin_index = impl.conditional_task_indices.back();
+        auto begin_index = impl.conditional_task_indices.top();
         auto end_index = impl.tasks.size();
 
         auto & begin_task = std::get<ImplConditionalTaskBegin>(impl.tasks[begin_index]);
