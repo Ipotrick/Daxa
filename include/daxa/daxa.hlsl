@@ -94,9 +94,11 @@ namespace daxa
     {
         uint data;
 
-        operator ImageViewId() const 
+        operator ImageViewId()
         {
-            return ImageViewId{ .data = data };
+            ImageViewId result;
+            result.data = data;
+            return result;
         }
     };
 
