@@ -2,6 +2,9 @@
 #include <thread>
 #include <iostream>
 
+#include <daxa/utils/imgui.hpp>
+#include <0_common/imgui/imgui_impl_glfw.h>
+
 using namespace daxa::types;
 using Clock = std::chrono::high_resolution_clock;
 
@@ -35,7 +38,7 @@ struct App : AppWindow<App>
             default: return daxa::default_format_score(format);
             }
         },
-        .present_mode = daxa::PresentMode::DO_NOT_WAIT_FOR_VBLANK,
+        .present_mode = daxa::PresentMode::DOUBLE_BUFFER_WAIT_FOR_VBLANK,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
         .debug_name = "HelloTriangle Swapchain",
     });
@@ -47,6 +50,19 @@ struct App : AppWindow<App>
         },
         .debug_name = "HelloTriangle Compiler",
     });
+
+    daxa::ImGuiRenderer imgui_renderer = create_imgui_renderer();
+    auto create_imgui_renderer() -> daxa::ImGuiRenderer
+    {
+        ImGui::CreateContext();
+        ImGui_ImplGlfw_InitForVulkan(glfw_window_ptr, true);
+        return daxa::ImGuiRenderer({
+            .device = device,
+            .pipeline_compiler = pipeline_compiler,
+            .format = swapchain.get_format(),
+        });
+    }
+
     // clang-format off
     daxa::RasterPipeline raster_pipeline = pipeline_compiler.create_raster_pipeline({
         .vertex_shader_info = {.source = daxa::ShaderFile{"vert.hlsl"}},
@@ -74,14 +90,13 @@ struct App : AppWindow<App>
     });
     u64 cpu_framecount = FRAMES_IN_FLIGHT - 1;
 
-    // Clock::time_point start = Clock::now();
-
     bool should_resize = false;
 
     App() : AppWindow<App>("Samples: Hello Triangle") {}
 
     ~App()
     {
+        ImGui_ImplGlfw_Shutdown();
         device.destroy_buffer(vertex_buffer);
     }
 
@@ -95,6 +110,7 @@ struct App : AppWindow<App>
 
         if (!minimized)
         {
+            ui_update();
             draw();
         }
         else
@@ -104,6 +120,16 @@ struct App : AppWindow<App>
         }
 
         return false;
+    }
+
+    void ui_update()
+    {
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        ImGui::Begin("Debug");
+        ImGui::End();
+        ImGui::ShowDemoWindow();
+        ImGui::Render();
     }
 
     void draw()
@@ -131,9 +157,6 @@ struct App : AppWindow<App>
         auto cmd_list = device.create_command_list({
             .debug_name = "HelloTriangle Command List",
         });
-
-        // auto now = Clock::now();
-        // auto elapsed = std::chrono::duration<float>(now - start).count();
 
         auto vertex_staging_buffer = device.create_buffer({
             .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
@@ -175,7 +198,7 @@ struct App : AppWindow<App>
         });
 
         cmd_list.begin_renderpass({
-            .color_attachments = {{.image_view = swapchain_image.default_view()}},
+            .color_attachments = {{.image_view = swapchain_image.default_view(), .load_op = daxa::AttachmentLoadOp::CLEAR, .clear_value = std::array<f32, 4>{0.1f, 0.0f, 0.5f, 1.0f}}},
             .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
         });
         cmd_list.set_pipeline(raster_pipeline);
@@ -185,8 +208,10 @@ struct App : AppWindow<App>
         cmd_list.draw({.vertex_count = 3});
         cmd_list.end_renderpass();
 
+        imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, swapchain_image, size_x, size_y);
+
         cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .awaited_pipeline_access = daxa::AccessConsts::ALL_GRAPHICS_READ_WRITE,
             .before_layout = daxa::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
             .after_layout = daxa::ImageLayout::PRESENT_SRC,
             .image_id = swapchain_image,
@@ -207,7 +232,6 @@ struct App : AppWindow<App>
         });
 
         gpu_framecount_timeline_sema.wait_for_value(cpu_framecount - 1);
-        // printf("ahead: %llu\n", cpu_framecount - gpu_framecount_timeline_sema.value());
     }
 
     void on_mouse_move(f32, f32)
