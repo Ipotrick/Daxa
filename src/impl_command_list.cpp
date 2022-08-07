@@ -1,6 +1,8 @@
 #include "impl_command_list.hpp"
 #include "impl_device.hpp"
 
+#include <iostream>
+
 namespace daxa
 {
     CommandList::CommandList(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
@@ -474,6 +476,8 @@ namespace daxa
     ImplCommandList::ImplCommandList(ManagedWeakPtr a_impl_device)
         : impl_device{std::move(a_impl_device)}, pipeline_layouts{impl_device.as<ImplDevice>()->gpu_table.pipeline_layouts}
     {
+        std::cout << "cmd" << std::endl;
+
         VkCommandPoolCreateInfo vk_command_pool_create_info{
             .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
             .pNext = nullptr,

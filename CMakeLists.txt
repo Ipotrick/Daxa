@@ -41,6 +41,7 @@ add_library(daxa STATIC
     "src/impl_dependencies.cpp"
 
     "src/utils/impl_task_list.cpp"
+    "src/utils/impl_imgui.cpp"
 )
 
 add_library(daxa::daxa ALIAS daxa)
@@ -78,6 +79,13 @@ target_include_directories(daxa
 )
 
 set_project_warnings(daxa)
+
+if(DAXA_ENABLE_UTILS)
+    target_compile_definitions(daxa
+        PUBLIC
+        DAXA_BUILT_WITH_UTILS=true
+    )
+endif()
 
 if(DAXA_ENABLE_TESTS)
     add_subdirectory(tests)

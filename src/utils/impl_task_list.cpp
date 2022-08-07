@@ -1,3 +1,5 @@
+#if DAXA_BUILT_WITH_UTILS
+
 #include "impl_task_list.hpp"
 #include <iostream>
 
@@ -774,3 +776,5 @@ namespace daxa
         }
     }
 } // namespace daxa
+
+#endif
