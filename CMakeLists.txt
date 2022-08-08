@@ -3,10 +3,14 @@ include(cmake/warnings.cmake)
 
 if(DAXA_ENABLE_UTILS)
     list(APPEND VCPKG_MANIFEST_FEATURES "utils")
+elseif("utils" IN_LIST VCPKG_MANIFEST_FEATURES)
+    set(DAXA_ENABLE_UTILS true)
 endif()
 
 if(DAXA_ENABLE_TESTS)
     list(APPEND VCPKG_MANIFEST_FEATURES "tests")
+elseif("tests" IN_LIST VCPKG_MANIFEST_FEATURES)
+    set(DAXA_ENABLE_TESTS true)
 endif()
 
 project(daxa VERSION 1.0.0)
