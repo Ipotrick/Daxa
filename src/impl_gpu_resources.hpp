@@ -75,8 +75,8 @@ namespace daxa
 #if DAXA_GPU_ID_VALIDATION
         void verify_ressource_id(GPUResourceId id) const
         {
-            size_t page = id.index >> PAGE_BITS;
-            size_t offset = id.index & PAGE_MASK;
+            usize page = id.index >> PAGE_BITS;
+            usize offset = id.index & PAGE_MASK;
             DAXA_DBG_ASSERT_TRUE_M(pages[page] != nullptr, "detected invalid ressource id");
             DAXA_DBG_ASSERT_TRUE_M(id.version != 0, "detected invalid resource id");
         }
@@ -101,8 +101,8 @@ namespace daxa
                 free_index_stack.pop_back();
             }
 
-            size_t page = index >> PAGE_BITS;
-            size_t offset = index & PAGE_MASK;
+            usize page = index >> PAGE_BITS;
+            usize offset = index & PAGE_MASK;
 
             if (!pages[page])
             {
@@ -122,8 +122,8 @@ namespace daxa
 
         auto return_slot(GPUResourceId id)
         {
-            size_t page = id.index >> PAGE_BITS;
-            size_t offset = id.index & PAGE_MASK;
+            usize page = id.index >> PAGE_BITS;
+            usize offset = id.index & PAGE_MASK;
 
 #if DAXA_GPU_ID_VALIDATION
             DAXA_ONLY_IF_THREADSAFETY(std::unique_lock use_after_free_check_lock{use_after_free_check_mtx});
@@ -139,8 +139,8 @@ namespace daxa
 
         auto dereference_id(GPUResourceId id) -> ResourceT &
         {
-            size_t page = id.index >> PAGE_BITS;
-            size_t offset = id.index & PAGE_MASK;
+            usize page = id.index >> PAGE_BITS;
+            usize offset = id.index & PAGE_MASK;
 
 #if DAXA_GPU_ID_VALIDATION
             DAXA_ONLY_IF_THREADSAFETY(std::unique_lock use_after_free_check_lock{use_after_free_check_mtx});
@@ -153,8 +153,8 @@ namespace daxa
 
         auto dereference_id(GPUResourceId id) const -> ResourceT const &
         {
-            size_t page = id.index >> PAGE_BITS;
-            size_t offset = id.index & PAGE_MASK;
+            usize page = id.index >> PAGE_BITS;
+            usize offset = id.index & PAGE_MASK;
 
 #if DAXA_GPU_ID_VALIDATION
             DAXA_ONLY_IF_THREADSAFETY(std::unique_lock use_after_free_check_lock{use_after_free_check_mtx});

@@ -15,7 +15,7 @@ static void shader_preprocess(std::string & file_str, std::filesystem::path cons
     std::stringstream result_ss = {};
     bool has_pragma_once = false;
     auto abspath_str = std::filesystem::absolute(path).string();
-    for (std::size_t line_num = 0; std::getline(file_ss, line); ++line_num)
+    for (daxa::usize line_num = 0; std::getline(file_ss, line); ++line_num)
     {
         if (std::regex_match(line, matches, PRAGMA_ONCE_REGEX))
         {
@@ -717,7 +717,7 @@ namespace daxa
 
         std::vector<u32> spv;
         spv.resize(shaderobj->GetBufferSize() / sizeof(u32));
-        for (size_t i = 0; i < spv.size(); i++)
+        for (usize i = 0; i < spv.size(); i++)
         {
             spv[i] = static_cast<u32 *>(shaderobj->GetBufferPointer())[i];
         }
