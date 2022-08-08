@@ -7,7 +7,7 @@ DAXA_DEFINE_GET_STRUCTURED_BUFFER(Input);
 
 struct Push
 {
-    daxa::ImageId image_id;
+    daxa::ImageViewId image_id;
     daxa::BufferId input_buffer_id;
     uint2 frame_dim;
 };
