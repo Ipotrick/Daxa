@@ -3,7 +3,7 @@
 #include <stack>
 #include <daxa/utils/task_list.hpp>
 
-#define DAXA_TASK_LIST_DEBUG 0
+#define DAXA_TASK_LIST_DEBUG 1
 
 #if defined(DAXA_TASK_LIST_DEBUG)
 #if DAXA_TASK_LIST_DEBUG
@@ -88,12 +88,18 @@ namespace daxa
         u64 depth = {}, begin_index = {};
     };
 
-    using TaskEvent = std::variant<
+    using TaskEventVariant = std::variant<
         ImplGenericTask,
         ImplCreateBufferTask,
         ImplCreateImageTask,
         ImplConditionalTaskBegin,
         ImplConditionalTaskEnd>;
+    
+    struct TaskEvent
+    {
+        u64 parent_scope_id = {};
+        TaskEventVariant event_variant;
+    };
 
     struct TaskRuntime
     {
@@ -118,6 +124,8 @@ namespace daxa
     {
         u64 conditional_depth = {};
         std::stack<u64> conditional_task_indices = {};
+
+        auto get_current_scope_id() -> u64;
     };
 
     // TODO: In sync check if a resource access is across scopes.
@@ -149,6 +157,8 @@ namespace daxa
         auto get_buffer(TaskBufferId) -> BufferId;
         auto get_image(TaskImageId) -> ImageId;
         auto get_image_view(TaskImageId) -> ImageViewId;
+
+        void output_graphviz();
 
         void insert_synchronization();
 
