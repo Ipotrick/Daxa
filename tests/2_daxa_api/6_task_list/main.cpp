@@ -95,6 +95,70 @@ namespace tests
         app.device.destroy_image(image);
     }
 
+    void conditional()
+    {
+        AppContext app = {};
+        auto task_list = daxa::TaskList({.device = app.device, .debug_name = "TaskList task list"});
+
+        bool option = true;
+
+        task_list.begin_conditional_scope({
+            .condition = [&option]()
+            {
+                return option;
+            },
+        });
+        task_list.end_conditional_scope();
+        task_list.compile();
+        task_list.execute();
+    }
+
+    void output_graph()
+    {
+        AppContext app = {};
+        auto task_list = daxa::TaskList({.device = app.device, .debug_name = "TaskList task list"});
+
+        // auto buffer1 = app.device.create_buffer({.size = 4, .debug_name = "buffer1"});
+        // auto buffer2 = app.device.create_buffer({.size = 4, .debug_name = "buffer2"});
+        // auto buffer3 = app.device.create_buffer({.size = 4, .debug_name = "buffer3"});
+
+        auto task_buffer1 = task_list.create_task_buffer({.last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE}, .debug_name = "Buffer1"});
+        auto task_buffer2 = task_list.create_task_buffer({.last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE}, .debug_name = "Buffer2"});
+        auto task_buffer3 = task_list.create_task_buffer({.last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE}, .debug_name = "Buffer3"});
+
+        task_list.add_task({
+            .resources = {.buffers = {{task_buffer1, daxa::TaskBufferAccess::SHADER_WRITE_ONLY}, {task_buffer2, daxa::TaskBufferAccess::SHADER_READ_ONLY}}},
+            .task = [](daxa::TaskInterface &) {},
+            .debug_name = "task 1",
+        });
+        task_list.begin_conditional_scope({
+            .condition = []()
+            {
+                return true;
+            },
+        });
+        task_list.add_task({
+            .resources = {.buffers = {{task_buffer2, daxa::TaskBufferAccess::SHADER_WRITE_ONLY}}},
+            .task = [](daxa::TaskInterface &) {},
+            .debug_name = "inner task 1",
+        });
+        task_list.end_conditional_scope();
+
+        task_list.add_task({
+            .resources = {.buffers = {{task_buffer3, daxa::TaskBufferAccess::SHADER_WRITE_ONLY}}},
+            .task = [](daxa::TaskInterface &) {},
+            .debug_name = "task 2",
+        });
+        task_list.add_task({
+            .resources = {.buffers = {{task_buffer3, daxa::TaskBufferAccess::SHADER_READ_ONLY}}},
+            .task = [](daxa::TaskInterface &) {},
+            .debug_name = "task 3",
+        });
+
+        task_list.compile();
+        task_list.output_graphviz();
+    }
+
     void compute()
     {
         AppContext app = {};
@@ -417,5 +481,7 @@ int main()
     // tests::simplest();
     // tests::image_upload();
     // tests::execution();
-    tests::drawing();
+    // tests::drawing();
+    // tests::conditional();
+    tests::output_graph();
 }

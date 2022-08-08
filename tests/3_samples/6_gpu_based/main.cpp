@@ -262,8 +262,9 @@ struct App : AppWindow<App>
         new_task_list.begin_conditional_scope({
             .condition = []() -> bool
             {
-                return true;
+                return false;
             },
+            .debug_name = "TaskList Chunkgen Conditional",
         });
         new_task_list.add_task({
             .resources = {
@@ -279,7 +280,7 @@ struct App : AppWindow<App>
                 // cmd_list.push_constant(draw_push);
                 // cmd_list.draw({.vertex_count = 3});
             },
-            .debug_name = "TaskList Chungen Task",
+            .debug_name = "TaskList Chunkgen Task",
         });
         new_task_list.end_conditional_scope();
 
