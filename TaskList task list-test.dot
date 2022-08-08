@@ -1,0 +1,20 @@
+digraph graph1 {
+    node [style = filled; color = "#d3f4ff";];
+    subgraph cluster1 {
+        label = "Condition";
+        subgraph cluster2 {
+            label = "Condition2";
+            node3 [label = "Node 3";shape = box;];
+            node4 [label = "Node 4";shape = box;];
+            node5 [label = "Node 5";shape = box;];
+        }
+        node6 [label = "Node 3";shape = box;];
+        node7 [label = "Node 4";shape = box;];
+        node8 [label = "Node 5";shape = box;];
+    }
+    node1 -> node2;
+    node1 -> node3;
+    node3 -> node4;
+    node4 -> node5;
+    node5 -> node2;
+}
