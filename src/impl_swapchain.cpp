@@ -209,7 +209,7 @@ namespace daxa
 
     void ImplSwapchain::cleanup()
     {
-        for (size_t i = 0; i < image_resources.size(); i++)
+        for (usize i = 0; i < image_resources.size(); i++)
         {
             this->impl_device.as<ImplDevice>()->zombiefy_image(image_resources[i]);
         }

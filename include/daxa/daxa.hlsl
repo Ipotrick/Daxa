@@ -184,7 +184,7 @@ namespace daxa
     {                                                                                                     \
         [[vk::binding(daxa::CONSTANTS::SAMPLED_IMAGE_BINDING, 0)]] Texture2D<Type> Texture1DView##Type[]; \
         template <>                                                                                       \
-        Texture1D<Type> get_Texture1D<Type>(ImageViewId image_id)                                             \
+        Texture1D<Type> get_Texture1D<Type>(ImageViewId image_id)                                         \
         {                                                                                                 \
             return Texture1DView##Type[ID_INDEX_MASK & image_id.data];                                    \
         }                                                                                                 \
@@ -194,7 +194,7 @@ namespace daxa
     {                                                                                                     \
         [[vk::binding(daxa::CONSTANTS::SAMPLED_IMAGE_BINDING, 0)]] Texture2D<Type> Texture2DView##Type[]; \
         template <>                                                                                       \
-        Texture2D<Type> get_Texture2D<Type>(ImageViewId image_id)                                             \
+        Texture2D<Type> get_Texture2D<Type>(ImageViewId image_id)                                         \
         {                                                                                                 \
             return Texture2DView##Type[ID_INDEX_MASK & image_id.data];                                    \
         }                                                                                                 \
@@ -204,7 +204,7 @@ namespace daxa
     {                                                                                                     \
         [[vk::binding(daxa::CONSTANTS::SAMPLED_IMAGE_BINDING, 0)]] Texture3D<Type> Texture3DView##Type[]; \
         template <>                                                                                       \
-        Texture3D<Type> get_Texture3D<Type>(ImageViewId image_id)                                             \
+        Texture3D<Type> get_Texture3D<Type>(ImageViewId image_id)                                         \
         {                                                                                                 \
             return Texture3DView##Type[ID_INDEX_MASK & image_id.data];                                    \
         }                                                                                                 \
@@ -214,7 +214,7 @@ namespace daxa
     {                                                                                                               \
         [[vk::binding(daxa::CONSTANTS::SAMPLED_IMAGE_BINDING, 0)]] Texture1DArray<Type> Texture1DArrayView##Type[]; \
         template <>                                                                                                 \
-        Texture1DArray<Type> get_Texture1DArray<Type>(ImageViewId image_id)                                             \
+        Texture1DArray<Type> get_Texture1DArray<Type>(ImageViewId image_id)                                         \
         {                                                                                                           \
             return Texture1DArrayView##Type[ID_INDEX_MASK & image_id.data];                                         \
         }                                                                                                           \
@@ -224,7 +224,7 @@ namespace daxa
     {                                                                                                               \
         [[vk::binding(daxa::CONSTANTS::SAMPLED_IMAGE_BINDING, 0)]] Texture2DArray<Type> Texture2DArrayView##Type[]; \
         template <>                                                                                                 \
-        Texture2DArray<Type> get_Texture2DArray<Type>(ImageViewId image_id)                                             \
+        Texture2DArray<Type> get_Texture2DArray<Type>(ImageViewId image_id)                                         \
         {                                                                                                           \
             return Texture2DArrayView##Type[ID_INDEX_MASK & image_id.data];                                         \
         }                                                                                                           \
@@ -234,7 +234,7 @@ namespace daxa
     {                                                                                                         \
         [[vk::binding(daxa::CONSTANTS::STORAGE_IMAGE_BINDING, 0)]] RWTexture1D<Type> RWTexture1DView##Type[]; \
         template <>                                                                                           \
-        RWTexture1D<Type> get_RWTexture1D<Type>(ImageViewId image_id)                                             \
+        RWTexture1D<Type> get_RWTexture1D<Type>(ImageViewId image_id)                                         \
         {                                                                                                     \
             return RWTexture1DView##Type[ID_INDEX_MASK & image_id.data];                                      \
         }                                                                                                     \
@@ -244,7 +244,7 @@ namespace daxa
     {                                                                                                         \
         [[vk::binding(daxa::CONSTANTS::STORAGE_IMAGE_BINDING, 0)]] RWTexture2D<Type> RWTexture2DView##Type[]; \
         template <>                                                                                           \
-        RWTexture2D<Type> get_RWTexture2D<Type>(ImageViewId image_id)                                             \
+        RWTexture2D<Type> get_RWTexture2D<Type>(ImageViewId image_id)                                         \
         {                                                                                                     \
             return RWTexture2DView##Type[ID_INDEX_MASK & image_id.data];                                      \
         }                                                                                                     \
@@ -254,7 +254,7 @@ namespace daxa
     {                                                                                                         \
         [[vk::binding(daxa::CONSTANTS::STORAGE_IMAGE_BINDING, 0)]] RWTexture3D<Type> RWTexture3DView##Type[]; \
         template <>                                                                                           \
-        RWTexture3D<Type> get_RWTexture3D<Type>(ImageViewId image_id)                                             \
+        RWTexture3D<Type> get_RWTexture3D<Type>(ImageViewId image_id)                                         \
         {                                                                                                     \
             return RWTexture3DView##Type[ID_INDEX_MASK & image_id.data];                                      \
         }                                                                                                     \
