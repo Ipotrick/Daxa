@@ -6,7 +6,7 @@ using namespace daxa::types;
 
 struct ComputePush
 {
-    daxa::ImageId image_id;
+    daxa::ImageViewId image_id;
     u32 frame_dim_x, frame_dim_y;
 };
 
@@ -110,7 +110,7 @@ struct App : AppWindow<App>
 
         cmd_list.set_pipeline(compute_pipeline);
         cmd_list.push_constant(ComputePush{
-            .image_id = render_image,
+            .image_id = render_image.default_view(),
             .frame_dim_x = size_x,
             .frame_dim_y = size_y,
         });

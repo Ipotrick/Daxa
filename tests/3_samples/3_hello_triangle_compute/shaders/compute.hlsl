@@ -1,7 +1,7 @@
 #include "daxa/daxa.hlsl"
 struct Push
 {
-    daxa::ImageId image_id;
+    daxa::ImageViewId image_id;
     uint2 frame_dim;
 };
 [[vk::push_constant]] const Push p;
@@ -26,7 +26,7 @@ struct Push
         float2(+0.5, +0.5),
         float2(+0.0, -0.5),
     };
-    
+
     float3 point_colors[3] = {
         float3(1, 0, 0),
         float3(0, 1, 0),
@@ -55,7 +55,7 @@ struct Push
 
         col = lerp(col, point_colors[0], 1);
         col = lerp(col, point_colors[1], p0);
-        col = lerp(col, point_colors[2], p1 - p2);
+        col = lerp(col, point_colors[2], clamp((p1 - p2 + 0.5) / 1.5, 0, 1));
     }
 
     render_image[pixel_i.xy] = float4(col, 1.0);
