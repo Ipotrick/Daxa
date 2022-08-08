@@ -11,13 +11,6 @@ endif()
 
 project(daxa VERSION 1.0.0)
 
-if("utils" IN_LIST VCPKG_MANIFEST_FEATURES)
-    set(DAXA_ENABLE_UTILS true)
-endif()
-if("tests" IN_LIST VCPKG_MANIFEST_FEATURES)
-    set(DAXA_ENABLE_TESTS true)
-endif()
-
 if(DAXA_ENABLE_STATIC_ANALYSIS)
     set(CPPCHECK_TEMPLATE "gcc")
     find_program(CPPCHECK cppcheck)
