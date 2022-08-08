@@ -5,7 +5,7 @@ struct Push
     float4x4 view_mat;
     float3 chunk_pos;
     daxa::BufferId face_buffer_id;
-    daxa::ImageId texture_array_id;
+    daxa::ImageViewId texture_array_id;
     daxa::SamplerId sampler_id;
     uint mode;
 };

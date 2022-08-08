@@ -1,7 +1,7 @@
 
 struct MipMapGenInfo
 {
-    daxa::ImageId image;
+    daxa::ImageViewId image;
     u32 base_array_layer = 0;
     u32 layer_count = 1;
 };
@@ -148,7 +148,7 @@ struct GpuInput
 {
     glm::mat4 view_mat;
     glm::mat4 shadow_view_mat[3];
-    daxa::ImageId shadow_depth_image[3];
+    daxa::ImageViewId shadow_depth_image[3];
     float time;
 };
 
@@ -157,7 +157,7 @@ struct RasterPush
     glm::vec3 chunk_pos;
     daxa::BufferId input_buffer_id;
     daxa::BufferId face_buffer_id;
-    daxa::ImageId texture_array_id;
+    daxa::ImageViewId texture_array_id;
     daxa::SamplerId sampler_id;
     u32 mode;
     u32 data0;
