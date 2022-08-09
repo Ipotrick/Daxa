@@ -313,8 +313,6 @@ namespace daxa
 
         impl.compiled = true;
 
-        impl.construct_graph();
-
         impl.insert_synchronization();
     }
 
@@ -673,146 +671,6 @@ namespace daxa
         return {};
     }
 
-    void ImplTaskList::construct_graph()
-    {
-        usize last_task_index_with_barrier = std::numeric_limits<usize>::max();
-
-        auto insert_sync_for_resources = [&](TaskResources & resources, usize task_index)
-        {
-            for (auto & [task_buffer_id, t_access] : resources.buffers)
-            {
-                ImplTaskBuffer & task_buffer = this->impl_task_buffers[task_buffer_id.index];
-                auto new_access = task_buffer_access_to_access(t_access);
-                auto & latest_access = task_buffer.latest_access;
-                bool conditional_scope_covers_last_access_barrier = std::holds_alternative<ImplConditionalTaskBegin>(this->tasks[task_buffer.latest_access_task_index].event_variant);
-                bool need_memory_barrier = false;
-                bool need_execution_barrier = false;
-                if (latest_access.type & AccessTypeFlagBits::WRITE)
-                {
-                    need_memory_barrier = true;
-                    need_execution_barrier = true;
-                }
-                else if ((latest_access.type & AccessTypeFlagBits::READ) != 0 && (new_access.type & AccessTypeFlagBits::WRITE) != 0)
-                {
-                    need_execution_barrier = true;
-                }
-                if ((need_memory_barrier || need_execution_barrier) && !conditional_scope_covers_last_access_barrier)
-                {
-                    usize latest_access_task_index = task_buffer.latest_access_task_index;
-                    usize barrier_task_index = {};
-                    if (latest_access_task_index >= last_task_index_with_barrier)
-                    {
-                        barrier_task_index = last_task_index_with_barrier;
-                    }
-                    else
-                    {
-                        barrier_task_index = task_index;
-                        last_task_index_with_barrier = task_index;
-                    }
-
-                    compiled_graph.buffer_links.push_back(TaskLink{
-                        .event_a = latest_access_task_index,
-                        .event_b = task_index,
-                        .resource = task_buffer_id.index,
-                        .barrier = TaskPipelineBarrier{
-                            .image_barrier = false,
-                            .awaited_pipeline_access = Access{
-                                .stages = latest_access.stages,
-                                .type = need_memory_barrier ? latest_access.type : AccessTypeFlagBits::NONE,
-                            },
-                            .waiting_pipeline_access = Access{
-                                .stages = new_access.stages,
-                                .type = need_memory_barrier ? new_access.type : AccessTypeFlagBits::NONE,
-                            },
-                        },
-                    });
-                    latest_access = new_access;
-                }
-                else
-                {
-                    latest_access = latest_access | new_access;
-                }
-                task_buffer.latest_access_task_index = task_index;
-            }
-
-            for (auto & [task_image_id, t_access] : resources.images)
-            {
-                ImplTaskImage & task_image = this->impl_task_images[task_image_id.index];
-                auto [new_layout, new_access] = task_image_access_to_layout_access(t_access);
-                auto & latest_layout = task_image.latest_layout;
-                auto & latest_access = task_image.latest_access;
-                bool conditional_scope_covers_last_access_barrier = std::holds_alternative<ImplConditionalTaskBegin>(this->tasks[task_image.latest_access_task_index].event_variant);
-                bool need_memory_barrier = false;
-                bool need_execution_barrier = false;
-                if (latest_access.type & AccessTypeFlagBits::WRITE)
-                {
-                    need_memory_barrier = true;
-                    need_execution_barrier = true;
-                }
-                else if ((latest_access.type & AccessTypeFlagBits::READ) != 0 && (new_access.type & AccessTypeFlagBits::WRITE) != 0)
-                {
-                    need_execution_barrier = true;
-                }
-                bool need_layout_transition = new_layout != latest_layout;
-                need_memory_barrier |= need_layout_transition;
-                need_execution_barrier |= need_layout_transition;
-                if ((need_memory_barrier || need_execution_barrier || need_layout_transition) && !conditional_scope_covers_last_access_barrier)
-                {
-                    usize latest_access_task_index = task_image.latest_access_task_index;
-                    usize barrier_task_index = {};
-                    if (last_task_index_with_barrier != std::numeric_limits<usize>::max() && latest_access_task_index < last_task_index_with_barrier)
-                    {
-                        barrier_task_index = last_task_index_with_barrier;
-                    }
-                    else
-                    {
-                        barrier_task_index = task_index;
-                        last_task_index_with_barrier = task_index;
-                    }
-                    compiled_graph.buffer_links.push_back(TaskLink{
-                        .event_a = latest_access_task_index,
-                        .event_b = task_index,
-                        .resource = task_image_id.index,
-                        .barrier = TaskPipelineBarrier{
-                            .image_barrier = true,
-                            .awaited_pipeline_access = Access{
-                                .stages = latest_access.stages,
-                                .type = need_memory_barrier ? latest_access.type : AccessTypeFlagBits::NONE,
-                            },
-                            .waiting_pipeline_access = Access{
-                                .stages = new_access.stages,
-                                .type = need_memory_barrier ? new_access.type : AccessTypeFlagBits::NONE,
-                            },
-                            .before_layout = latest_layout,
-                            .after_layout = new_layout,
-                            .image_id = task_image_id,
-                            .image_slice = task_image.slice,
-                        },
-                    });
-                    latest_layout = new_layout;
-                    latest_access = new_access;
-                }
-                else
-                {
-                    latest_access = latest_access | new_access;
-                }
-                task_image.latest_access_task_index = task_index;
-            }
-        };
-
-        for (usize task_index = 0; task_index < this->tasks.size(); ++task_index)
-        {
-            if (ImplGenericTask * task_ptr = std::get_if<ImplGenericTask>(&tasks[task_index].event_variant))
-            {
-                insert_sync_for_resources(task_ptr->info.resources, task_index);
-            }
-            // if (ImplConditionalTaskBegin * conditional_scope_begin = std::get_if<ImplConditionalTaskBegin>(&tasks[task_index].event_variant))
-            // {
-            //     insert_sync_for_resources(conditional_scope_begin->resources, task_index);
-            // }
-        }
-    }
-
     void ImplTaskList::output_graphviz()
     {
         std::string filename = this->info.debug_name + ".dot";
@@ -878,7 +736,7 @@ namespace daxa
             dot_file << "node_" << a << "_" << i << "->node_" << b << "_" << i;
             dot_file << " [label=\"Sync\", labeltooltip=\"between "
                      << to_string(buffer_link.barrier.awaited_pipeline_access.stages) << " "
-                     << to_string(buffer_link.barrier.awaited_pipeline_access.type) << " and " 
+                     << to_string(buffer_link.barrier.awaited_pipeline_access.type) << " and "
                      << to_string(buffer_link.barrier.waiting_pipeline_access.stages) << " "
                      << to_string(buffer_link.barrier.waiting_pipeline_access.type) << "\"]\n";
         }
@@ -891,7 +749,7 @@ namespace daxa
             dot_file << "node_" << a << "_" << i << "->node_" << b << "_" << i;
             dot_file << " [label=\"Sync\", labeltooltip=\"between "
                      << to_string(image_link.barrier.awaited_pipeline_access.stages) << " "
-                     << to_string(image_link.barrier.awaited_pipeline_access.type) << " and " 
+                     << to_string(image_link.barrier.awaited_pipeline_access.type) << " and "
                      << to_string(image_link.barrier.waiting_pipeline_access.stages) << " "
                      << to_string(image_link.barrier.waiting_pipeline_access.type) << "\"]\n";
         }
@@ -975,6 +833,23 @@ namespace daxa
                         .waiting_pipeline_access = Access{
                             .stages = new_access.stages,
                             .type = need_memory_barrier ? new_access.type : AccessTypeFlagBits::NONE,
+                        },
+                    });
+
+                    compiled_graph.buffer_links.push_back(TaskLink{
+                        .event_a = latest_access_task_index,
+                        .event_b = task_index,
+                        .resource = task_buffer_id.index,
+                        .barrier = TaskPipelineBarrier{
+                            .image_barrier = false,
+                            .awaited_pipeline_access = Access{
+                                .stages = latest_access.stages,
+                                .type = need_memory_barrier ? latest_access.type : AccessTypeFlagBits::NONE,
+                            },
+                            .waiting_pipeline_access = Access{
+                                .stages = new_access.stages,
+                                .type = need_memory_barrier ? new_access.type : AccessTypeFlagBits::NONE,
+                            },
                         },
                     });
 
@@ -1066,6 +941,26 @@ namespace daxa
                         .image_id = task_image_id,
                         .image_slice = task_image.slice,
                     });
+                    compiled_graph.buffer_links.push_back(TaskLink{
+                        .event_a = latest_access_task_index,
+                        .event_b = task_index,
+                        .resource = task_image_id.index,
+                        .barrier = TaskPipelineBarrier{
+                            .image_barrier = true,
+                            .awaited_pipeline_access = Access{
+                                .stages = latest_access.stages,
+                                .type = need_memory_barrier ? latest_access.type : AccessTypeFlagBits::NONE,
+                            },
+                            .waiting_pipeline_access = Access{
+                                .stages = new_access.stages,
+                                .type = need_memory_barrier ? new_access.type : AccessTypeFlagBits::NONE,
+                            },
+                            .before_layout = latest_layout,
+                            .after_layout = new_layout,
+                            .image_id = task_image_id,
+                            .image_slice = task_image.slice,
+                        },
+                    });
 
                     DAXA_ONLY_IF_TASK_LIST_DEBUG(
                         std::cout
@@ -1115,23 +1010,21 @@ namespace daxa
                                              << "  }\n"
                                              << std::endl);
             }
-            if (ImplConditionalTaskBegin * conditional_scope_begin = std::get_if<ImplConditionalTaskBegin>(&tasks[task_index].event_variant))
-            {
-                DAXA_ONLY_IF_TASK_LIST_DEBUG(
-                    std::cout
-                    << "  process conditional scope index : "
-                    << task_index
-                    << ", name: "
-                    << conditional_scope_begin->info.debug_name
-                    << "\n  {"
-                    << std::endl);
-
-                insert_sync_for_resources(conditional_scope_begin->resources, task_index);
-
-                DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout
-                                             << "  }\n"
-                                             << std::endl);
-            }
+            // if (ImplConditionalTaskBegin * conditional_scope_begin = std::get_if<ImplConditionalTaskBegin>(&tasks[task_index].event_variant))
+            // {
+            //     DAXA_ONLY_IF_TASK_LIST_DEBUG(
+            //         std::cout
+            //         << "  process conditional scope index : "
+            //         << task_index
+            //         << ", name: "
+            //         << conditional_scope_begin->info.debug_name
+            //         << "\n  {"
+            //         << std::endl);
+            //     insert_sync_for_resources(conditional_scope_begin->resources, task_index);
+            //     DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout
+            //                                  << "  }\n"
+            //                                  << std::endl);
+            // }
         }
     }
 } // namespace daxa
