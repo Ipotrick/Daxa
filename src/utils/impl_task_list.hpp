@@ -174,7 +174,6 @@ namespace daxa
         auto get_image_view(TaskImageId) -> ImageViewId;
 
         void output_graphviz();
-        void construct_graph();
         void insert_synchronization();
 
         auto managed_cleanup() -> bool override;
