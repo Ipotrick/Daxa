@@ -128,6 +128,20 @@ namespace daxa
         auto get_current_scope_id() -> u64;
     };
 
+    struct TaskLink
+    {
+        u64 event_a;
+        u64 event_b;
+        u64 resource;
+        TaskPipelineBarrier barrier;
+    };
+
+    struct TaskGraph
+    {
+        std::vector<TaskLink> buffer_links;
+        std::vector<TaskLink> image_links;
+    };
+
     // TODO: In sync check if a resource access is across scopes.
     // If so, check if the scope of the previous access has ended
     // if that is the case, write to the previous accesses scope the final state that resource needs to be in in the end of that scope.
@@ -142,6 +156,7 @@ namespace daxa
         std::vector<CommandList> recorded_command_lists = {};
 
         TaskRecordState record_state = {};
+        TaskGraph compiled_graph = {};
 
         bool compiled = false;
 
@@ -159,7 +174,7 @@ namespace daxa
         auto get_image_view(TaskImageId) -> ImageViewId;
 
         void output_graphviz();
-
+        void construct_graph();
         void insert_synchronization();
 
         auto managed_cleanup() -> bool override;
