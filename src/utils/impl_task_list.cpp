@@ -941,7 +941,7 @@ namespace daxa
                         .image_id = task_image_id,
                         .image_slice = task_image.slice,
                     });
-                    compiled_graph.buffer_links.push_back(TaskLink{
+                    compiled_graph.image_links.push_back(TaskLink{
                         .event_a = latest_access_task_index,
                         .event_b = task_index,
                         .resource = task_image_id.index,
