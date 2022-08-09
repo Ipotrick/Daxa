@@ -4,6 +4,9 @@
 # imgui
 *.ini
 
+# graphviz
+*.dot
+
 # shader bytecode
 *.fspv
 *.vspv
