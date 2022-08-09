@@ -312,6 +312,9 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "Can only compile a task list one time");
 
         impl.compiled = true;
+
+        impl.construct_graph();
+
         impl.insert_synchronization();
     }
 
@@ -670,12 +673,152 @@ namespace daxa
         return {};
     }
 
+    void ImplTaskList::construct_graph()
+    {
+        usize last_task_index_with_barrier = std::numeric_limits<usize>::max();
+
+        auto insert_sync_for_resources = [&](TaskResources & resources, usize task_index)
+        {
+            for (auto & [task_buffer_id, t_access] : resources.buffers)
+            {
+                ImplTaskBuffer & task_buffer = this->impl_task_buffers[task_buffer_id.index];
+                auto new_access = task_buffer_access_to_access(t_access);
+                auto & latest_access = task_buffer.latest_access;
+                bool conditional_scope_covers_last_access_barrier = std::holds_alternative<ImplConditionalTaskBegin>(this->tasks[task_buffer.latest_access_task_index].event_variant);
+                bool need_memory_barrier = false;
+                bool need_execution_barrier = false;
+                if (latest_access.type & AccessTypeFlagBits::WRITE)
+                {
+                    need_memory_barrier = true;
+                    need_execution_barrier = true;
+                }
+                else if ((latest_access.type & AccessTypeFlagBits::READ) != 0 && (new_access.type & AccessTypeFlagBits::WRITE) != 0)
+                {
+                    need_execution_barrier = true;
+                }
+                if ((need_memory_barrier || need_execution_barrier) && !conditional_scope_covers_last_access_barrier)
+                {
+                    usize latest_access_task_index = task_buffer.latest_access_task_index;
+                    usize barrier_task_index = {};
+                    if (latest_access_task_index >= last_task_index_with_barrier)
+                    {
+                        barrier_task_index = last_task_index_with_barrier;
+                    }
+                    else
+                    {
+                        barrier_task_index = task_index;
+                        last_task_index_with_barrier = task_index;
+                    }
+
+                    compiled_graph.buffer_links.push_back(TaskLink{
+                        .event_a = latest_access_task_index,
+                        .event_b = task_index,
+                        .resource = task_buffer_id.index,
+                        .barrier = TaskPipelineBarrier{
+                            .image_barrier = false,
+                            .awaited_pipeline_access = Access{
+                                .stages = latest_access.stages,
+                                .type = need_memory_barrier ? latest_access.type : AccessTypeFlagBits::NONE,
+                            },
+                            .waiting_pipeline_access = Access{
+                                .stages = new_access.stages,
+                                .type = need_memory_barrier ? new_access.type : AccessTypeFlagBits::NONE,
+                            },
+                        },
+                    });
+                    latest_access = new_access;
+                }
+                else
+                {
+                    latest_access = latest_access | new_access;
+                }
+                task_buffer.latest_access_task_index = task_index;
+            }
+
+            for (auto & [task_image_id, t_access] : resources.images)
+            {
+                ImplTaskImage & task_image = this->impl_task_images[task_image_id.index];
+                auto [new_layout, new_access] = task_image_access_to_layout_access(t_access);
+                auto & latest_layout = task_image.latest_layout;
+                auto & latest_access = task_image.latest_access;
+                bool conditional_scope_covers_last_access_barrier = std::holds_alternative<ImplConditionalTaskBegin>(this->tasks[task_image.latest_access_task_index].event_variant);
+                bool need_memory_barrier = false;
+                bool need_execution_barrier = false;
+                if (latest_access.type & AccessTypeFlagBits::WRITE)
+                {
+                    need_memory_barrier = true;
+                    need_execution_barrier = true;
+                }
+                else if ((latest_access.type & AccessTypeFlagBits::READ) != 0 && (new_access.type & AccessTypeFlagBits::WRITE) != 0)
+                {
+                    need_execution_barrier = true;
+                }
+                bool need_layout_transition = new_layout != latest_layout;
+                need_memory_barrier |= need_layout_transition;
+                need_execution_barrier |= need_layout_transition;
+                if ((need_memory_barrier || need_execution_barrier || need_layout_transition) && !conditional_scope_covers_last_access_barrier)
+                {
+                    usize latest_access_task_index = task_image.latest_access_task_index;
+                    usize barrier_task_index = {};
+                    if (last_task_index_with_barrier != std::numeric_limits<usize>::max() && latest_access_task_index < last_task_index_with_barrier)
+                    {
+                        barrier_task_index = last_task_index_with_barrier;
+                    }
+                    else
+                    {
+                        barrier_task_index = task_index;
+                        last_task_index_with_barrier = task_index;
+                    }
+                    compiled_graph.buffer_links.push_back(TaskLink{
+                        .event_a = latest_access_task_index,
+                        .event_b = task_index,
+                        .resource = task_image_id.index,
+                        .barrier = TaskPipelineBarrier{
+                            .image_barrier = true,
+                            .awaited_pipeline_access = Access{
+                                .stages = latest_access.stages,
+                                .type = need_memory_barrier ? latest_access.type : AccessTypeFlagBits::NONE,
+                            },
+                            .waiting_pipeline_access = Access{
+                                .stages = new_access.stages,
+                                .type = need_memory_barrier ? new_access.type : AccessTypeFlagBits::NONE,
+                            },
+                            .before_layout = latest_layout,
+                            .after_layout = new_layout,
+                            .image_id = task_image_id,
+                            .image_slice = task_image.slice,
+                        },
+                    });
+                    latest_layout = new_layout;
+                    latest_access = new_access;
+                }
+                else
+                {
+                    latest_access = latest_access | new_access;
+                }
+                task_image.latest_access_task_index = task_index;
+            }
+        };
+
+        for (usize task_index = 0; task_index < this->tasks.size(); ++task_index)
+        {
+            if (ImplGenericTask * task_ptr = std::get_if<ImplGenericTask>(&tasks[task_index].event_variant))
+            {
+                insert_sync_for_resources(task_ptr->info.resources, task_index);
+            }
+            // if (ImplConditionalTaskBegin * conditional_scope_begin = std::get_if<ImplConditionalTaskBegin>(&tasks[task_index].event_variant))
+            // {
+            //     insert_sync_for_resources(conditional_scope_begin->resources, task_index);
+            // }
+        }
+    }
+
     void ImplTaskList::output_graphviz()
     {
         std::string filename = this->info.debug_name + ".dot";
         std::ofstream dot_file{filename};
 
-        dot_file << "digraph TaskGraph {\nnode [style=filled, color=\"#d3f4ff\"]\n";
+        dot_file << "digraph TaskGraph {\nnode [style=filled, shape=box, color=\"#d3f4ff\"]\n";
 
         for (usize task_index = 0; task_index < this->tasks.size(); ++task_index)
         {
@@ -683,9 +826,9 @@ namespace daxa
             if (ImplGenericTask * task_ptr =
                     std::get_if<ImplGenericTask>(&tasks[task_index].event_variant))
             {
-                dot_file << "subgraph " << task_name << " {\n";
+                dot_file << "subgraph cluster_" << task_name << " {\n";
                 dot_file << "label=\"" << task_ptr->info.debug_name << "\"\n";
-                // dot_file << "shape=box\nstyle=dashed\ncolor=lightgray\n";
+                dot_file << "shape=box\nstyle=filled\ncolor=lightgray\n";
                 for (auto & [task_buffer_id, t_access] : task_ptr->info.resources.buffers)
                 {
                     ImplTaskBuffer & task_buffer = this->impl_task_buffers[task_buffer_id.index];
@@ -698,23 +841,23 @@ namespace daxa
             else if (ImplCreateBufferTask * task_ptr =
                          std::get_if<ImplCreateBufferTask>(&tasks[task_index].event_variant))
             {
-                // ImplTaskBuffer & task_buffer = this->impl_task_buffers[task_ptr->id.index];
-                // auto name = std::string("Create TaskBuffer ") + task_buffer.debug_name;
-                // dot_file << "cbuf_node_" << task_index << " [label=\"" << name << "\", shape=box]\n";
+                ImplTaskBuffer & task_buffer = this->impl_task_buffers[task_ptr->id.index];
+                dot_file << "node_" << task_index + 1 << "_" << task_ptr->id.index;
+                dot_file << " [label=\"Create " << task_buffer.debug_name << "\", shape=box]\n";
             }
             else if (ImplCreateImageTask * task_ptr =
                          std::get_if<ImplCreateImageTask>(&tasks[task_index].event_variant))
             {
-                // ImplTaskImage & task_image = this->impl_task_images[task_ptr->id.index];
-                // auto name = std::string("Create TaskImage ") + task_image.debug_name;
-                // dot_file << "cimg_node_" << task_index << " [label=\"" << name << "\", shape=box]\n";
+                ImplTaskImage & task_image = this->impl_task_images[task_ptr->id.index];
+                dot_file << "node_" << task_index + 1 << "_" << task_ptr->id.index;
+                dot_file << " [label=\"Create " << task_image.debug_name << "\", shape=box]\n";
             }
             else if (ImplConditionalTaskBegin * conditional_scope_begin =
                          std::get_if<ImplConditionalTaskBegin>(&tasks[task_index].event_variant))
             {
                 auto name = std::string("Conditional") + conditional_scope_begin->info.debug_name;
-                dot_file << "subgraph cond" << task_index << " {\nlabel=\"" << name;
-                dot_file << "\"\nshape=box\nstyle=dashed\ncolor=lightgray\n"; 
+                dot_file << "subgraph cluster_cond" << task_index << " {\nlabel=\"" << name;
+                dot_file << "\"\nshape=box\nstyle=dashed\ncolor=lightgray\n";
             }
             else if (ImplConditionalTaskEnd * conditional_scope_end =
                          std::get_if<ImplConditionalTaskEnd>(&tasks[task_index].event_variant))
@@ -727,19 +870,30 @@ namespace daxa
             }
         }
 
-        for (usize task_index = 0; task_index < this->tasks.size(); ++task_index)
+        for (auto & buffer_link : compiled_graph.buffer_links)
         {
-            std::string node_b = "node_" + std::to_string(task_index);
-            if (ImplGenericTask * task_ptr = std::get_if<ImplGenericTask>(&this->tasks[task_index].event_variant))
-            {
-                for (auto & [task_buffer_id, t_access] : task_ptr->info.resources.buffers)
-                {
-                    ImplTaskBuffer & task_buffer = this->impl_task_buffers[task_buffer_id.index];
-                    auto a = task_buffer.latest_access_task_index;
-                    auto i = task_buffer_id.index;
-                    dot_file << "node_" << a << "_" << i << "->" << node_b << "_" << i << "\n";
-                }
-            }
+            auto a = buffer_link.event_a;
+            auto b = buffer_link.event_b;
+            auto i = buffer_link.resource;
+            dot_file << "node_" << a << "_" << i << "->node_" << b << "_" << i;
+            dot_file << " [label=\"Sync\", labeltooltip=\"between "
+                     << to_string(buffer_link.barrier.awaited_pipeline_access.stages) << " "
+                     << to_string(buffer_link.barrier.awaited_pipeline_access.type) << " and " 
+                     << to_string(buffer_link.barrier.waiting_pipeline_access.stages) << " "
+                     << to_string(buffer_link.barrier.waiting_pipeline_access.type) << "\"]\n";
+        }
+
+        for (auto & image_link : compiled_graph.image_links)
+        {
+            auto a = image_link.event_a;
+            auto b = image_link.event_b;
+            auto i = image_link.resource;
+            dot_file << "node_" << a << "_" << i << "->node_" << b << "_" << i;
+            dot_file << " [label=\"Sync\", labeltooltip=\"between "
+                     << to_string(image_link.barrier.awaited_pipeline_access.stages) << " "
+                     << to_string(image_link.barrier.awaited_pipeline_access.type) << " and " 
+                     << to_string(image_link.barrier.waiting_pipeline_access.stages) << " "
+                     << to_string(image_link.barrier.waiting_pipeline_access.type) << "\"]\n";
         }
 
         dot_file << "}\n";
