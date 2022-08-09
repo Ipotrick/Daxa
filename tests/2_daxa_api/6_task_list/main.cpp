@@ -145,7 +145,7 @@ namespace tests
         task_list.end_conditional_scope();
 
         task_list.add_task({
-            .resources = {.buffers = {{task_buffer3, daxa::TaskBufferAccess::SHADER_WRITE_ONLY}}},
+            .resources = {.buffers = {{task_buffer2, daxa::TaskBufferAccess::SHADER_WRITE_ONLY}, {task_buffer3, daxa::TaskBufferAccess::SHADER_WRITE_ONLY}}},
             .task = [](daxa::TaskInterface &) {},
             .debug_name = "task 2",
         });
