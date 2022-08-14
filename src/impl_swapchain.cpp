@@ -181,7 +181,8 @@ namespace daxa
         this->image_resources.resize(image_count);
         for (u32 i = 0; i < image_resources.size(); i++)
         {
-            this->image_resources[i] = this->impl_device.as<ImplDevice>()->new_swapchain_image(swapchain_images[i], vk_surface_format.format, i, usage, this->info.debug_name);
+            std::string image_name = this->info.debug_name + " Image #" + std::to_string(i);
+            this->image_resources[i] = this->impl_device.as<ImplDevice>()->new_swapchain_image(swapchain_images[i], vk_surface_format.format, i, usage, image_name);
         }
 
         if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && this->info.debug_name.size() > 0)
