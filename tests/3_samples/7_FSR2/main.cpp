@@ -798,9 +798,9 @@ struct App : AppWindow<App>
     u32 render_size_x, render_size_y;
     f32vec2 jitter = {0.0f, 0.0f};
     daxa::TaskImageId task_swapchain_image;
-    daxa::TaskImageId task_color_image, task_depth_image;
+    daxa::TaskImageId task_color_image, task_motion_vectors_image, task_depth_image;
     daxa::TaskList loop_task_list = record_loop_task_list();
-    bool fsr_enabled = false;
+    bool fsr_enabled = true;
 
     void create_render_images()
     {
@@ -885,6 +885,8 @@ struct App : AppWindow<App>
         player.camera.set_rot(player.rot.x, player.rot.y);
         player.update(elapsed_s);
 
+        // std::cout << "-- Frame #" << cpu_framecount << " ----------------" << std::endl;
+
         if (pipeline_compiler.check_if_sources_changed(raster_pipeline))
         {
             auto new_pipeline = pipeline_compiler.recreate_raster_pipeline(raster_pipeline);
@@ -904,6 +906,9 @@ struct App : AppWindow<App>
         }
 
         swapchain_image = swapchain.acquire_next_image();
+
+        // std::cout << "The real output image is [" << device.info_image(swapchain_image).debug_name << "]" << std::endl;
+
         loop_task_list.execute();
         auto command_lists = loop_task_list.command_lists();
         auto cmd_list = device.create_command_list({});
@@ -1015,6 +1020,11 @@ struct App : AppWindow<App>
             { return color_image; },
             .debug_name = "TaskList Task Draw Color Image",
         });
+        task_motion_vectors_image = new_task_list.create_task_image({
+            .fetch_callback = [this]()
+            { return motion_vectors_image; },
+            .debug_name = "TaskList Task Draw Motion Vectors Image",
+        });
         task_depth_image = new_task_list.create_task_image({
             .fetch_callback = [this]()
             { return depth_image; },
@@ -1026,11 +1036,13 @@ struct App : AppWindow<App>
             .resources = {
                 .images = {
                     {task_color_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
+                    {task_motion_vectors_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
                     {task_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT},
                 },
             },
             .task = [this](daxa::TaskInterface interf)
             {
+                // std::cout << "Task draw" << std::endl;
                 auto cmd_list = interf.get_command_list();
                 cmd_list.begin_renderpass({
                     .color_attachments = {{
@@ -1071,6 +1083,7 @@ struct App : AppWindow<App>
             {
                 if (!fsr_enabled)
                 {
+                    // std::cout << "Task scale" << std::endl;
                     auto cmd_list = interf.get_command_list();
                     cmd_list.blit_image_to_image({
                         .src_image = color_image,
@@ -1091,14 +1104,16 @@ struct App : AppWindow<App>
             .resources = {
                 .images = {
                     {task_color_image, daxa::TaskImageAccess::TRANSFER_READ},
+                    {task_motion_vectors_image, daxa::TaskImageAccess::TRANSFER_READ},
                     {task_depth_image, daxa::TaskImageAccess::TRANSFER_READ},
-                    {task_swapchain_image, daxa::TaskImageAccess::SHADER_READ_WRITE},
+                    {task_swapchain_image, daxa::TaskImageAccess::SHADER_WRITE_ONLY},
                 },
             },
             .task = [this](daxa::TaskInterface interf)
             {
                 if (fsr_enabled)
                 {
+                    // std::cout << "Task FSR" << std::endl;
                     auto cmd_list = interf.get_command_list();
                     fsr_context.upscale(
                         cmd_list,
@@ -1131,6 +1146,7 @@ struct App : AppWindow<App>
             },
             .task = [this](daxa::TaskInterface interf)
             {
+                // std::cout << "Task ImGUI" << std::endl;
                 auto cmd_list = interf.get_command_list();
                 imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, swapchain_image, size_x, size_y);
             },
@@ -1152,5 +1168,8 @@ int main()
     {
         if (app.update())
             break;
+
+        // if (app.cpu_framecount > 2)
+        //     break;
     }
 }

@@ -515,10 +515,11 @@ namespace daxa
             // std::cout << "waiting: " << to_string(barrier.waiting_pipeline_access) << "\n";
             if (barrier.image_barrier)
             {
-                // std::cout << "before layout: " << to_string(barrier.before_layout) << "\n";
-                // std::cout << " after layout: " << to_string(barrier.after_layout) << "\n";
                 ImplTaskImage const & task_image = this->impl_task_images[barrier.image_id.index];
                 RuntimeTaskImage const & runtime_image = this->runtime_images[barrier.image_id.index];
+                // std::cout << "before layout: " << to_string(barrier.before_layout) << "\n";
+                // std::cout << " after layout: " << to_string(barrier.after_layout) << "\n";
+                // std::cout << " ^ NAME: " << this->current_device.info_image(runtime_image.image_id).debug_name << "\n";
 
                 this->command_lists.back().pipeline_barrier_image_transition({
                     .awaited_pipeline_access = barrier.awaited_pipeline_access,
@@ -536,7 +537,7 @@ namespace daxa
                     .waiting_pipeline_access = barrier.waiting_pipeline_access,
                 });
             }
-            std::cout << std::endl;
+            // std::cout << std::endl;
         }
     }
 
