@@ -9,6 +9,8 @@
 #include <daxa/utils/imgui.hpp>
 #include <0_common/imgui/imgui_impl_glfw.h>
 
+#include <daxa/utils/fsr2.hpp>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
@@ -781,6 +783,7 @@ struct App : AppWindow<App>
     u64 cpu_framecount = FRAMES_IN_FLIGHT - 1;
 
     Clock::time_point start = Clock::now(), prev_time = start;
+    f32 elapsed_s = 1.0f;
 
     RenderableVoxelWorld renderable_world{device};
     Player3D player = {
@@ -788,15 +791,16 @@ struct App : AppWindow<App>
     };
     bool should_resize = false, paused = true;
 
+    daxa::Fsr2Context fsr_context = daxa::Fsr2Context{{.device = device}};
     f32 render_scl = 1.0f;
+    daxa::ImageId swapchain_image;
     daxa::ImageId color_image, motion_vectors_image, depth_image;
     u32 render_size_x, render_size_y;
-
-    daxa::ImageId swapchain_image;
+    f32vec2 jitter = {0.0f, 0.0f};
     daxa::TaskImageId task_swapchain_image;
-    daxa::TaskImageId task_color_image;
-    daxa::TaskImageId task_depth_image;
+    daxa::TaskImageId task_color_image, task_depth_image;
     daxa::TaskList loop_task_list = record_loop_task_list();
+    bool fsr_enabled = false;
 
     void create_render_images()
     {
@@ -820,6 +824,13 @@ struct App : AppWindow<App>
             .aspect = daxa::ImageAspectFlagBits::DEPTH,
             .size = {render_size_x, render_size_y, 1},
             .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT,
+        });
+
+        fsr_context.resize({
+            .render_size_x = render_size_x,
+            .render_size_y = render_size_y,
+            .display_size_x = size_x,
+            .display_size_y = size_y,
         });
     }
     void destroy_render_images()
@@ -864,7 +875,7 @@ struct App : AppWindow<App>
     void draw()
     {
         auto now = Clock::now();
-        auto elapsed_s = std::chrono::duration<f32>(now - prev_time).count();
+        elapsed_s = std::chrono::duration<f32>(now - prev_time).count();
         prev_time = now;
 
         ui_update();
@@ -983,6 +994,7 @@ struct App : AppWindow<App>
             destroy_render_images();
             create_render_images();
         }
+        ImGui::Checkbox("Enable FSR", &fsr_enabled);
         ImGui::End();
         ImGui::Render();
     }
@@ -1034,7 +1046,15 @@ struct App : AppWindow<App>
                     .render_area = {.x = 0, .y = 0, .width = render_size_x, .height = render_size_y},
                 });
                 cmd_list.set_pipeline(raster_pipeline);
-                renderable_world.draw(cmd_list, player.camera.get_vp());
+                auto view_mat = player.camera.get_vp();
+                jitter = fsr_context.get_jitter(cpu_framecount);
+                auto jitter_vec = glm::vec3{
+                    jitter.x * 1.0f / static_cast<f32>(render_size_x),
+                    jitter.y * 1.0f / static_cast<f32>(render_size_y),
+                    0.0f,
+                };
+                view_mat = glm::translate(glm::identity<glm::mat4>(), jitter_vec) * view_mat;
+                renderable_world.draw(cmd_list, view_mat);
                 cmd_list.end_renderpass();
             },
             .debug_name = "TaskList Draw Task",
@@ -1049,19 +1069,58 @@ struct App : AppWindow<App>
             },
             .task = [this](daxa::TaskInterface interf)
             {
-                auto cmd_list = interf.get_command_list();
-                cmd_list.blit_image_to_image({
-                    .src_image = color_image,
-                    .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
-                    .dst_image = swapchain_image,
-                    .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-                    .src_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
-                    .src_offsets = {{{0, 0, 0}, {static_cast<i32>(render_size_x), static_cast<i32>(render_size_y), 1}}},
-                    .dst_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
-                    .dst_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
-                });
+                if (!fsr_enabled)
+                {
+                    auto cmd_list = interf.get_command_list();
+                    cmd_list.blit_image_to_image({
+                        .src_image = color_image,
+                        .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
+                        .dst_image = swapchain_image,
+                        .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+                        .src_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
+                        .src_offsets = {{{0, 0, 0}, {static_cast<i32>(render_size_x), static_cast<i32>(render_size_y), 1}}},
+                        .dst_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
+                        .dst_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
+                    });
+                }
             },
             .debug_name = "TaskList Blit Task",
+        });
+
+        new_task_list.add_task({
+            .resources = {
+                .images = {
+                    {task_color_image, daxa::TaskImageAccess::TRANSFER_READ},
+                    {task_depth_image, daxa::TaskImageAccess::TRANSFER_READ},
+                    {task_swapchain_image, daxa::TaskImageAccess::SHADER_READ_WRITE},
+                },
+            },
+            .task = [this](daxa::TaskInterface interf)
+            {
+                if (fsr_enabled)
+                {
+                    auto cmd_list = interf.get_command_list();
+                    fsr_context.upscale(
+                        cmd_list,
+                        {
+                            .color = color_image,
+                            .depth = depth_image,
+                            .motion_vectors = motion_vectors_image,
+                            .output = swapchain_image,
+                            .should_reset = false,
+                            .delta_time = elapsed_s,
+                            .jitter = jitter,
+                            .should_sharpen = false,
+                            .sharpening = 0.0f,
+                            .camera = {
+                                .near_plane = player.camera.near_clip,
+                                .far_plane = player.camera.far_clip,
+                                .vertical_fov = glm::radians(player.camera.fov),
+                            },
+                        });
+                }
+            },
+            .debug_name = "TaskList Upscale Task",
         });
 
         new_task_list.add_task({
@@ -1077,7 +1136,11 @@ struct App : AppWindow<App>
             },
             .debug_name = "TaskList ImGui Task",
         });
+        // imgui_renderer.record_task(ImGui::GetDrawData(), new_task_list, task_swapchain_image, size_x, size_y);
+
         new_task_list.compile();
+        // new_task_list.output_graphviz();
+
         return new_task_list;
     }
 };
