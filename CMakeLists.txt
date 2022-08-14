@@ -42,6 +42,7 @@ add_library(daxa STATIC
 
     "src/utils/impl_task_list.cpp"
     "src/utils/impl_imgui.cpp"
+    "src/utils/impl_fsr2.cpp"
 )
 
 add_library(daxa::daxa ALIAS daxa)
@@ -56,6 +57,7 @@ find_package(dxc CONFIG REQUIRED)
 find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(volk CONFIG REQUIRED)
+find_package(fsr2 CONFIG REQUIRED)
 
 if(DAXA_ENABLE_UTILS)
     find_package(imgui CONFIG REQUIRED)
@@ -85,6 +87,11 @@ if(DAXA_ENABLE_UTILS)
         PUBLIC
         DAXA_BUILT_WITH_UTILS=true
     )
+    target_link_libraries(daxa
+        PUBLIC
+        fsr2::ffx_fsr2_api
+        fsr2::ffx_fsr2_api_vk
+    )
 endif()
 
 if(DAXA_ENABLE_TESTS)
@@ -108,6 +115,7 @@ find_package(volk CONFIG REQUIRED)
 if(DAXA_ENABLE_UTILS)
     file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
 find_package(imgui CONFIG REQUIRED)
+find_package(fsr2 CONFIG REQUIRED)
 ]=])
 endif()
 
