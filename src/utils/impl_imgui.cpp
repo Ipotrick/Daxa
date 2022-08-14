@@ -168,6 +168,25 @@ namespace daxa
         impl.record_commands(draw_data, cmd_list, target_image, size_x, size_y);
     }
 
+    void ImGuiRenderer::record_task(ImDrawData * draw_data, TaskList & task_list, TaskImageId task_swapchain_image, u32 size_x, u32 size_y)
+    {
+        // task_list.add_task({
+        //     .resources = {
+        //         .images = {
+        //             {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
+        //         },
+        //     },
+        //     .task = [this, task_swapchain_image, draw_data, size_x, size_y](daxa::TaskInterface interf)
+        //     {
+        //         auto cmd_list = interf.get_command_list();
+        //         auto & impl = *as<ImplImGuiRenderer>();
+        //         auto swapchain_image = interf.get_image(task_swapchain_image);
+        //         impl.record_commands(draw_data, cmd_list, swapchain_image, size_x, size_y);
+        //     },
+        //     .debug_name = "TaskList ImGui Task",
+        // });
+    }
+
     void ImplImGuiRenderer::recreate_vbuffer(usize vbuffer_new_size)
     {
         vbuffer = info.device.create_buffer({
@@ -304,7 +323,7 @@ namespace daxa
                     cmd_list.set_scissor(scissor);
 
                     // Draw
-                    push.texture0_id = *reinterpret_cast<daxa::ImageViewId const*>(&pcmd->TextureId);
+                    push.texture0_id = *reinterpret_cast<daxa::ImageViewId const *>(&pcmd->TextureId);
 
                     push.vbuffer_offset = pcmd->VtxOffset + global_vtx_offset;
                     push.ibuffer_offset = pcmd->IdxOffset + global_idx_offset;
@@ -432,7 +451,7 @@ namespace daxa
         });
         this->info.device.destroy_buffer(texture_staging_buffer);
         auto image_view = font_sheet.default_view();
-        io.Fonts->SetTexID(*reinterpret_cast<ImTextureID*>(&image_view));
+        io.Fonts->SetTexID(*reinterpret_cast<ImTextureID *>(&image_view));
     }
 
     ImplImGuiRenderer::~ImplImGuiRenderer()
