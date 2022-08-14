@@ -511,8 +511,12 @@ namespace daxa
     {
         for (auto const & barrier : barriers)
         {
+            // std::cout << "awaited: " << to_string(barrier.awaited_pipeline_access) << "\n";
+            // std::cout << "waiting: " << to_string(barrier.waiting_pipeline_access) << "\n";
             if (barrier.image_barrier)
             {
+                // std::cout << "before layout: " << to_string(barrier.before_layout) << "\n";
+                // std::cout << " after layout: " << to_string(barrier.after_layout) << "\n";
                 ImplTaskImage const & task_image = this->impl_task_images[barrier.image_id.index];
                 RuntimeTaskImage const & runtime_image = this->runtime_images[barrier.image_id.index];
 
@@ -532,6 +536,7 @@ namespace daxa
                     .waiting_pipeline_access = barrier.waiting_pipeline_access,
                 });
             }
+            std::cout << std::endl;
         }
     }
 

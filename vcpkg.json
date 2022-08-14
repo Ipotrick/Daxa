@@ -13,7 +13,14 @@
         "utils": {
             "description": "Build with core utils",
             "dependencies": [
-                "imgui"
+                "imgui",
+                {
+                    "name": "fsr2",
+                    "features": [
+                        "vulkan",
+                        "volk"
+                    ]
+                }
             ]
         },
         "tests": {
