@@ -755,6 +755,7 @@ namespace daxa
         };
         ret.swapchain_image_index = static_cast<i32>(index);
         ret.info = ImageInfo{};
+        ret.info.debug_name = debug_name;
         vkCreateImageView(vk_device, &view_ci, nullptr, &ret.view_slot.vk_image_view);
 
         if (this->impl_ctx.as<ImplContext>()->enable_debug_names && debug_name.size() > 0)

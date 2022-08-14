@@ -42,19 +42,6 @@ namespace daxa
     ImplFsr2Context::ImplFsr2Context(Fsr2ContextInfo const & info)
         : info{info}
     {
-        // Setup VK interface.
-        auto & impl_device = *info.device.as<ImplDevice>();
-        auto physical_device = impl_device.vk_physical_device;
-        auto logical_device = impl_device.vk_device;
-
-        const usize scratch_buffer_size = ffxFsr2GetScratchMemorySizeVK(physical_device);
-        void * scratch_buffer = malloc(scratch_buffer_size);
-        FfxErrorCode err = ffxFsr2GetInterfaceVK(&fsr2_context_description.callbacks, scratch_buffer, scratch_buffer_size, physical_device, vkGetDeviceProcAddr);
-        DAXA_DBG_ASSERT_TRUE_M(err == FFX_OK, "FSR2 Failed to create the Vulkan interface");
-
-        // set up for later, when we resize
-        fsr2_context_description.device = ffxGetDeviceVK(logical_device);
-        fsr2_context_description.flags = FFX_FSR2_ENABLE_AUTO_EXPOSURE; // FFX_FSR2_ENABLE_DYNAMIC_RESOLUTION |
     }
 
     ImplFsr2Context::~ImplFsr2Context()
@@ -75,8 +62,27 @@ namespace daxa
             FfxErrorCode err = ffxFsr2ContextDestroy(&fsr2_context);
             DAXA_DBG_ASSERT_TRUE_M(err == FFX_OK, "FSR2 Failed to destroy the FSR context");
         }
-        FfxErrorCode err = ffxFsr2ContextCreate(&fsr2_context, &fsr2_context_description);
-        DAXA_DBG_ASSERT_TRUE_M(err == FFX_OK, "FSR2 Failed to create the FSR context");
+
+        // Setup VK interface.
+        auto & impl_device = *this->info.device.as<ImplDevice>();
+        auto physical_device = impl_device.vk_physical_device;
+        auto logical_device = impl_device.vk_device;
+
+        const usize scratch_buffer_size = ffxFsr2GetScratchMemorySizeVK(physical_device);
+        void * scratch_buffer = malloc(scratch_buffer_size);
+        {
+            FfxErrorCode err = ffxFsr2GetInterfaceVK(&fsr2_context_description.callbacks, scratch_buffer, scratch_buffer_size, physical_device, vkGetDeviceProcAddr);
+            DAXA_DBG_ASSERT_TRUE_M(err == FFX_OK, "FSR2 Failed to create the Vulkan interface");
+        }
+
+        // set up for later, when we resize
+        fsr2_context_description.device = ffxGetDeviceVK(logical_device);
+        fsr2_context_description.flags = {}; // FFX_FSR2_ENABLE_AUTO_EXPOSURE; // FFX_FSR2_ENABLE_DYNAMIC_RESOLUTION |
+
+        {
+            FfxErrorCode err = ffxFsr2ContextCreate(&fsr2_context, &fsr2_context_description);
+            DAXA_DBG_ASSERT_TRUE_M(err == FFX_OK, "FSR2 Failed to create the FSR context");
+        }
         initialized = true;
     }
 
@@ -84,6 +90,7 @@ namespace daxa
     {
         auto & impl_command_list = *command_list.as<ImplCommandList>();
         auto & impl_device = *this->info.device.as<ImplDevice>();
+        impl_command_list.flush_barriers();
 
         auto & color_slot = impl_device.slot(info.color);
         auto & color_view_slot = impl_device.slot(info.color.default_view());
@@ -97,6 +104,8 @@ namespace daxa
         // auto & trans_and_comp_view_slot = impl_device.slot(info.trans_and_comp.default_view());
         auto & output_slot = impl_device.slot(info.output);
         auto & output_view_slot = impl_device.slot(info.output.default_view());
+
+        // std::cout << "and FSR thinks the output image is [" << output_slot.info.debug_name << "]" << std::endl;
 
         wchar_t fsr_inputcolor[] = L"FSR2_InputColor";
         wchar_t fsr_inputdepth[] = L"FSR2_InputDepth";
