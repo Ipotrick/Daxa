@@ -160,7 +160,7 @@ struct VertexOutput
     float2 uv : TEXCOORD0;
     // BlockID block_id : COLOR0;
     // BlockFace block_face : COLOR1;
-    float3 pos : DATA1;
+    // float3 pos : DATA1;
     uint tex_id : DATA0;
 };
 

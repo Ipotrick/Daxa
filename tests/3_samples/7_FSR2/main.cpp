@@ -9,7 +9,7 @@
 #include <daxa/utils/imgui.hpp>
 #include <0_common/imgui/imgui_impl_glfw.h>
 
-// #include <daxa/utils/fsr2.hpp>
+#include <daxa/utils/fsr2.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -490,6 +490,7 @@ struct RenderableVoxelWorld
             .mip_level_count = 4,
             .array_layer_count = static_cast<u32>(texture_names.size()),
             .usage = daxa::ImageUsageFlagBits::SHADER_READ_ONLY | daxa::ImageUsageFlagBits::TRANSFER_SRC | daxa::ImageUsageFlagBits::TRANSFER_DST,
+            .debug_name = "FSR sample Texture Array",
         });
 
         usize image_size = 16 * 16 * sizeof(u8) * 4;
@@ -791,7 +792,7 @@ struct App : AppWindow<App>
     };
     bool should_resize = false, paused = true;
 
-    // daxa::Fsr2Context fsr_context = daxa::Fsr2Context{{.device = device}};
+    daxa::Fsr2Context fsr_context = daxa::Fsr2Context{{.device = device}};
     f32 render_scl = 1.0f;
     daxa::ImageId swapchain_image;
     daxa::ImageId color_image, display_image, motion_vectors_image, depth_image;
@@ -811,33 +812,37 @@ struct App : AppWindow<App>
             .format = daxa::Format::R16G16B16A16_SFLOAT,
             .aspect = daxa::ImageAspectFlagBits::COLOR,
             .size = {render_size_x, render_size_y, 1},
-            .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_ONLY | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+            .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_ONLY | daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+            .debug_name = "FSR sample Render Color Image",
         });
         display_image = device.create_image({
             .format = daxa::Format::R16G16B16A16_SFLOAT,
             .aspect = daxa::ImageAspectFlagBits::COLOR,
             .size = {size_x, size_y, 1},
-            .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_ONLY | daxa::ImageUsageFlagBits::TRANSFER_SRC | daxa::ImageUsageFlagBits::TRANSFER_DST,
+            .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_ONLY | daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC | daxa::ImageUsageFlagBits::TRANSFER_DST,
+            .debug_name = "FSR sample Display Color Image",
         });
         motion_vectors_image = device.create_image({
             .format = daxa::Format::R16G16_SFLOAT,
             .aspect = daxa::ImageAspectFlagBits::COLOR,
             .size = {render_size_x, render_size_y, 1},
-            .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_ONLY,
+            .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_ONLY | daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
+            .debug_name = "FSR sample Render MV Image",
         });
         depth_image = device.create_image({
             .format = daxa::Format::D32_SFLOAT,
             .aspect = daxa::ImageAspectFlagBits::DEPTH,
             .size = {render_size_x, render_size_y, 1},
             .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_ONLY,
+            .debug_name = "FSR sample Render Depth Image",
         });
 
-        // fsr_context.resize({
-        //     .render_size_x = render_size_x,
-        //     .render_size_y = render_size_y,
-        //     .display_size_x = size_x,
-        //     .display_size_y = size_y,
-        // });
+        fsr_context.resize({
+            .render_size_x = render_size_x,
+            .render_size_y = render_size_y,
+            .display_size_x = size_x,
+            .display_size_y = size_y,
+        });
     }
     void destroy_render_images()
     {
@@ -850,10 +855,12 @@ struct App : AppWindow<App>
     App() : AppWindow<App>("Samples: Playground")
     {
         create_render_images();
+        // system("CLS");
     }
 
     ~App()
     {
+        device.wait_idle();
         ImGui_ImplGlfw_Shutdown();
         destroy_render_images();
     }
@@ -1006,6 +1013,10 @@ struct App : AppWindow<App>
             destroy_render_images();
             create_render_images();
         }
+        if (ImGui::Button("Clear Console"))
+        {
+            system("CLS");
+        }
         ImGui::Checkbox("Enable FSR", &fsr_enabled);
         ImGui::End();
         ImGui::Render();
@@ -1071,7 +1082,7 @@ struct App : AppWindow<App>
                 });
                 cmd_list.set_pipeline(raster_pipeline);
                 auto view_mat = player.camera.get_vp();
-                // jitter = fsr_context.get_jitter(cpu_framecount);
+                jitter = fsr_context.get_jitter(cpu_framecount);
                 auto jitter_vec = glm::vec3{
                     jitter.x * 1.0f / static_cast<f32>(render_size_x),
                     jitter.y * 1.0f / static_cast<f32>(render_size_y),
@@ -1126,25 +1137,25 @@ struct App : AppWindow<App>
                 if (fsr_enabled)
                 {
                     // std::cout << "Task FSR" << std::endl;
-                    // auto cmd_list = interf.get_command_list();
-                    // fsr_context.upscale(
-                    //     cmd_list,
-                    //     {
-                    //         .color = color_image,
-                    //         .depth = depth_image,
-                    //         .motion_vectors = motion_vectors_image,
-                    //         .output = display_image,
-                    //         .should_reset = false,
-                    //         .delta_time = elapsed_s,
-                    //         .jitter = jitter,
-                    //         .should_sharpen = false,
-                    //         .sharpening = 0.0f,
-                    //         .camera = {
-                    //             .near_plane = player.camera.near_clip,
-                    //             .far_plane = player.camera.far_clip,
-                    //             .vertical_fov = glm::radians(player.camera.fov),
-                    //         },
-                    //     });
+                    auto cmd_list = interf.get_command_list();
+                    fsr_context.upscale(
+                        cmd_list,
+                        {
+                            .color = color_image,
+                            .depth = depth_image,
+                            .motion_vectors = motion_vectors_image,
+                            .output = display_image,
+                            .should_reset = false,
+                            .delta_time = elapsed_s,
+                            .jitter = jitter,
+                            .should_sharpen = false,
+                            .sharpening = 0.0f,
+                            .camera = {
+                                .near_plane = player.camera.near_clip,
+                                .far_plane = player.camera.far_clip,
+                                .vertical_fov = glm::radians(player.camera.fov),
+                            },
+                        });
                 }
             },
             .debug_name = "TaskList Upscale Task",
@@ -1159,21 +1170,18 @@ struct App : AppWindow<App>
             },
             .task = [this](daxa::TaskInterface interf)
             {
-                if (!fsr_enabled)
-                {
-                    // std::cout << "Task scale 2" << std::endl;
-                    auto cmd_list = interf.get_command_list();
-                    cmd_list.blit_image_to_image({
-                        .src_image = display_image,
-                        .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
-                        .dst_image = swapchain_image,
-                        .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-                        .src_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
-                        .src_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
-                        .dst_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
-                        .dst_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
-                    });
-                }
+                // std::cout << "Task scale 2" << std::endl;
+                auto cmd_list = interf.get_command_list();
+                cmd_list.blit_image_to_image({
+                    .src_image = display_image,
+                    .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
+                    .dst_image = swapchain_image,
+                    .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+                    .src_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
+                    .src_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
+                    .dst_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
+                    .dst_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
+                });
             },
             .debug_name = "TaskList Blit Task 2",
         });
@@ -1209,8 +1217,8 @@ int main()
         if (app.update())
             break;
 
-        if (app.cpu_framecount > 2)
-            break;
+        // if (app.cpu_framecount > 2)
+        //     break;
     }
 
     std::cout << std::flush;
