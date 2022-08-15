@@ -397,57 +397,45 @@ namespace daxa
         std::memcpy(staging_buffer_data, pixels, upload_size);
         this->info.device.unmap_memory(texture_staging_buffer);
 
-        auto cmd_list = this->info.device.create_command_list({});
-
-        cmd_list.pipeline_barrier({
-            .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
-            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
+        TaskList temp_task_list{{.device = this->info.device}};
+        TaskImageId task_font_sheet = temp_task_list.create_task_image({
+            .fetch_callback = [this]()
+            { return this->font_sheet; },
+            // .debug_name = "Task Font Sheet",
         });
 
-        cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
-            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .before_layout = daxa::ImageLayout::UNDEFINED,
-            .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-            .image_id = font_sheet,
-            .image_slice = {
-                .base_mip_level = 0,
-                .level_count = 1,
-                .base_array_layer = 0,
-                .layer_count = 1,
+        TaskBufferId task_staging_buffer = temp_task_list.create_task_buffer({
+            .fetch_callback = [&texture_staging_buffer]()
+            { return texture_staging_buffer; },
+            // .debug_name = "Task Staging Buffer",
+        });
+
+        temp_task_list.add_task({
+            .resources = {
+                .buffers = {{task_staging_buffer, daxa::TaskBufferAccess::TRANSFER_READ}},
+                .images = {{task_font_sheet, daxa::TaskImageAccess::TRANSFER_WRITE}},
+            },
+            .task = [&](TaskInterface interf)
+            {
+                auto cmd_list = interf.get_command_list();
+                cmd_list.copy_buffer_to_image({
+                    .buffer = texture_staging_buffer,
+                    .image = font_sheet,
+                    .image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+                    .image_slice = {
+                        .mip_level = 0,
+                        .base_array_layer = 0,
+                        .layer_count = 1,
+                    },
+                    .image_offset = {0, 0, 0},
+                    .image_extent = {static_cast<u32>(width), static_cast<u32>(height), 1},
+                });
             },
         });
-
-        cmd_list.copy_buffer_to_image({
-            .buffer = texture_staging_buffer,
-            .image = font_sheet,
-            .image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-            .image_slice = {
-                .mip_level = 0,
-                .base_array_layer = 0,
-                .layer_count = 1,
-            },
-            .image_offset = {0, 0, 0},
-            .image_extent = {static_cast<u32>(width), static_cast<u32>(height), 1},
-        });
-
-        cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
-            .waiting_pipeline_access = daxa::AccessConsts::ALL_GRAPHICS_READ,
-            .before_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-            .after_layout = daxa::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
-            .image_id = font_sheet,
-            .image_slice = {
-                .base_mip_level = 0,
-                .level_count = 1,
-                .base_array_layer = 0,
-                .layer_count = 1,
-            },
-        });
-        cmd_list.complete();
-
+        temp_task_list.compile();
+        temp_task_list.execute();
         this->info.device.submit_commands({
-            .command_lists = {cmd_list},
+            .command_lists = temp_task_list.command_lists(),
         });
         this->info.device.destroy_buffer(texture_staging_buffer);
         auto image_view = font_sheet.default_view();
