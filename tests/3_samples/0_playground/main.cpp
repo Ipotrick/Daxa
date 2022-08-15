@@ -705,7 +705,7 @@ void RenderableChunk::update_chunk_mesh(daxa::CommandList & cmd_list)
 struct App : AppWindow<App>
 {
     daxa::Context daxa_ctx = daxa::create_context({
-        .enable_validation = false,
+        .enable_validation = true,
     });
     daxa::Device device = daxa_ctx.create_device({});
 

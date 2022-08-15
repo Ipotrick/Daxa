@@ -1,5 +1,3 @@
-#pragma once
-
 #include "daxa/daxa.hlsl"
 
 #include "utils/rand.hlsl"
@@ -160,7 +158,7 @@ struct VertexOutput
     float2 uv : TEXCOORD0;
     // BlockID block_id : COLOR0;
     // BlockFace block_face : COLOR1;
-    // float3 pos : DATA1;
+    float3 pos : DATA1;
     uint tex_id : DATA0;
 };
 
@@ -247,13 +245,88 @@ struct FaceBuffer
 
 DAXA_DEFINE_GET_STRUCTURED_BUFFER(FaceBuffer);
 
-// struct Input
-// {
-//     float4x4 view_mat;
-// };
-// DAXA_DEFINE_GET_STRUCTURED_BUFFER(Input);
+struct RasterInput
+{
+    float4x4 view_mat;
+    float4x4 prev_view_mat;
+    float2 jitter;
+    daxa::ImageViewId texture_array_id;
+    daxa::SamplerId sampler_id;
+};
+DAXA_DEFINE_GET_STRUCTURED_BUFFER(RasterInput);
 
-// struct Globals
-// {
-// };
-// DAXA_DEFINE_GET_STRUCTURED_BUFFER(Globals);
+struct Push
+{
+    float3 chunk_pos;
+    uint mode;
+    daxa::BufferId input_buffer_id;
+    daxa::BufferId face_buffer_id;
+};
+
+[[vk::push_constant]] const Push p;
+
+VertexOutput vs_main(uint vert_i
+                     : SV_VERTEXID)
+{
+    StructuredBuffer<FaceBuffer> face_buffer = daxa::get_StructuredBuffer<FaceBuffer>(p.face_buffer_id);
+    StructuredBuffer<RasterInput> raster_input = daxa::get_StructuredBuffer<RasterInput>(p.input_buffer_id);
+    Vertex vert = face_buffer[0].get_vertex(vert_i);
+
+    VertexOutput result;
+    result.frag_pos = mul(raster_input[0].view_mat, float4(vert.pos + p.chunk_pos, 1));
+    float4 prev_pos = mul(raster_input[0].prev_view_mat, float4(vert.pos + p.chunk_pos, 1));
+    result.nrm = vert.nrm;
+    result.uv = vert.uv;
+    result.pos = float3((result.frag_pos.xy / result.frag_pos.w - prev_pos.xy / prev_pos.w) - raster_input[0].jitter * 1, 0);
+    // result.block_id = vert.block_id;
+    // result.block_face = vert.block_face;
+    result.tex_id = vert.tex_id;
+    return result;
+}
+
+DAXA_DEFINE_GET_TEXTURE2DARRAY(float4)
+
+struct FragOutput
+{
+    float4 color : SV_TARGET0;
+    float2 motion : SV_TARGET1;
+};
+
+FragOutput fs_main(VertexOutput vertex_output)
+{
+    Vertex vert;
+    vert.nrm = vertex_output.nrm;
+    vert.uv = vertex_output.uv;
+    // vert.block_id = vertex_output.block_id;
+    // vert.block_face = vertex_output.block_face;
+    vert.tex_id = vertex_output.tex_id;
+    float diffuse = dot(normalize(float3(1, -3, 2)), vert.nrm) * 0.5 + 0.5;
+    float3 sky_col = lerp(float3(0.1, 0.3, 1.0), float3(1.6, 1.4, 1) * 0.75, diffuse);
+    FragOutput result;
+    result.color = 1;
+    result.motion = 0;
+
+    StructuredBuffer<RasterInput> raster_input = daxa::get_StructuredBuffer<RasterInput>(p.input_buffer_id);
+
+    SamplerState atlas_sampler = daxa::get_sampler(raster_input[0].sampler_id);
+    Texture2DArray atlas_texture_array = daxa::get_Texture2DArray<float4>(raster_input[0].texture_array_id);
+
+    // float4 albedo = atlas_texture_array.Load(int4(vert.uv.x * 16, vert.uv.y * 16, vert.tex_id, 0));
+    float4 albedo = atlas_texture_array.Sample(atlas_sampler, float3(vert.uv, vert.tex_id));
+    if (albedo.a < 0.25)
+        discard;
+
+    float3 col = 0;
+    col += albedo.rgb;
+    // col += vertex_output.pos * 1.0 / 32;
+    result.motion = -vertex_output.pos.xy;
+    // col += rand_vec3(vertex_output.pos);
+
+    switch (p.mode)
+    {
+    case 0: result.color = float4(col * diffuse * sky_col, 1.0f); break;
+    case 1: result.color = float4(col * diffuse * sky_col, 0.4f); break;
+    }
+
+    return result;
+}

@@ -9,12 +9,15 @@
 #include <daxa/utils/imgui.hpp>
 #include <0_common/imgui/imgui_impl_glfw.h>
 
+#include <daxa/utils/math_operators.hpp>
+
 #include <daxa/utils/fsr2.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
 using namespace daxa::types;
+using namespace daxa::math_operators;
 using Clock = std::chrono::high_resolution_clock;
 
 struct MipMapGenInfo
@@ -162,14 +165,21 @@ struct Vertex
     }
 };
 
-struct RasterPush
+struct RasterInput
 {
     glm::mat4 view_mat;
-    glm::vec3 chunk_pos;
-    daxa::BufferId vertex_buffer_id;
+    glm::mat4 prev_view_mat;
+    f32vec2 jitter;
     daxa::ImageId texture_array_id;
     daxa::SamplerId sampler_id;
+};
+
+struct RasterPush
+{
+    glm::vec3 chunk_pos;
     u32 mode;
+    daxa::BufferId input_buffer_id;
+    daxa::BufferId vertex_buffer_id;
 };
 
 static inline constexpr u64 CHUNK_SIZE = 32;
@@ -324,32 +334,28 @@ struct RenderableChunk
 
     void update_chunk_mesh(daxa::CommandList & cmd_list);
 
-    void draw(daxa::CommandList & cmd_list, glm::mat4 const & view_mat, daxa::ImageId texture_array_id, daxa::SamplerId atlas_sampler)
+    void draw(daxa::CommandList & cmd_list, daxa::BufferId input_buffer)
     {
         if (face_n > 0)
         {
             cmd_list.push_constant(RasterPush{
-                .view_mat = view_mat,
                 .chunk_pos = voxel_chunk.pos,
-                .vertex_buffer_id = face_buffer,
-                .texture_array_id = texture_array_id,
-                .sampler_id = atlas_sampler,
                 .mode = 0,
+                .input_buffer_id = input_buffer,
+                .vertex_buffer_id = face_buffer,
             });
             cmd_list.draw({.vertex_count = face_n * 6});
         }
     }
-    void draw_water(daxa::CommandList & cmd_list, glm::mat4 const & view_mat, daxa::ImageId texture_array_id, daxa::SamplerId atlas_sampler)
+    void draw_water(daxa::CommandList & cmd_list, daxa::BufferId input_buffer)
     {
         if (water_face_n > 0)
         {
             cmd_list.push_constant(RasterPush{
-                .view_mat = view_mat,
                 .chunk_pos = voxel_chunk.pos,
-                .vertex_buffer_id = water_face_buffer,
-                .texture_array_id = texture_array_id,
-                .sampler_id = atlas_sampler,
                 .mode = 1,
+                .input_buffer_id = input_buffer,
+                .vertex_buffer_id = water_face_buffer,
             });
             cmd_list.draw({.vertex_count = water_face_n * 6});
         }
@@ -417,12 +423,12 @@ struct RenderableVoxelWorld
         device.destroy_sampler(atlas_sampler);
     }
 
-    void draw(daxa::CommandList & cmd_list, glm::mat4 const & view_mat)
+    void draw(daxa::CommandList & cmd_list, daxa::BufferId input_buffer)
     {
         for (auto & chunk : chunks)
-            chunk->draw(cmd_list, view_mat, atlas_texture_array, atlas_sampler);
+            chunk->draw(cmd_list, input_buffer);
         for (auto & chunk : chunks)
-            chunk->draw_water(cmd_list, view_mat, atlas_texture_array, atlas_sampler);
+            chunk->draw_water(cmd_list, input_buffer);
     }
 
     Voxel get_voxel(glm::ivec3 p)
@@ -736,7 +742,7 @@ struct App : AppWindow<App>
     daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
         .root_paths = {
             "tests/0_common/shaders",
-            "tests/3_samples/0_playground/shaders",
+            "tests/3_samples/7_FSR2/shaders",
             "include",
         },
         .debug_name = "Playground Compiler",
@@ -744,9 +750,12 @@ struct App : AppWindow<App>
 
     // clang-format off
     daxa::RasterPipeline raster_pipeline = pipeline_compiler.create_raster_pipeline({
-        .vertex_shader_info = {.source = daxa::ShaderFile{"vert.hlsl"}},
-        .fragment_shader_info = {.source = daxa::ShaderFile{"frag.hlsl"}},
-        .color_attachments = {{.format = daxa::Format::R16G16B16A16_SFLOAT, .blend = {.blend_enable = true, .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA, .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA}}},
+        .vertex_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .entry_point = "vs_main"},
+        .fragment_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .entry_point = "fs_main"},
+        .color_attachments = {
+            {.format = daxa::Format::R16G16B16A16_SFLOAT, .blend = {.blend_enable = true, .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA, .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA}},
+            {.format = daxa::Format::R16G16_SFLOAT},
+        },
         .depth_test = {
             .depth_attachment_format = daxa::Format::D32_SFLOAT,
             .enable_depth_test = true,
@@ -755,7 +764,7 @@ struct App : AppWindow<App>
         .raster = {
             .face_culling = daxa::FaceCullFlagBits::BACK_BIT,
         },
-        .push_constant_size = sizeof(RasterPush),
+        .push_constant_size = sizeof(RasterPush) * 2,
         .debug_name = "Playground Pipeline",
     }).value();
     // clang-format on
@@ -791,6 +800,19 @@ struct App : AppWindow<App>
         .rot = {2.0f, 0.0f, 0.0f},
     };
     bool should_resize = false, paused = true;
+
+    RasterInput raster_input;
+    daxa::BufferId raster_input_buffer = device.create_buffer({
+        .size = sizeof(RasterInput),
+        .debug_name = "FSR sample Raster Input Buffer",
+    });
+    daxa::BufferId staging_raster_input_buffer = device.create_buffer({
+        .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+        .size = sizeof(RasterInput),
+        .debug_name = "FSR sample Raster Input Staging Buffer",
+    });
+    daxa::TaskBufferId task_raster_input_buffer;
+    daxa::TaskBufferId task_staging_raster_input_buffer;
 
     daxa::Fsr2Context fsr_context = daxa::Fsr2Context{{.device = device}};
     f32 render_scl = 1.0f;
@@ -863,6 +885,8 @@ struct App : AppWindow<App>
         device.wait_idle();
         ImGui_ImplGlfw_Shutdown();
         destroy_render_images();
+        device.destroy_buffer(raster_input_buffer);
+        device.destroy_buffer(staging_raster_input_buffer);
     }
 
     bool update()
@@ -1055,8 +1079,70 @@ struct App : AppWindow<App>
             .debug_name = "TaskList Task Draw Depth Image",
         });
 
+        task_raster_input_buffer = new_task_list.create_task_buffer({
+            .fetch_callback = [this]()
+            { return raster_input_buffer; },
+            .debug_name = "FSR sample Input Buffer",
+        });
+        task_staging_raster_input_buffer = new_task_list.create_task_buffer({
+            .fetch_callback = [this]()
+            { return staging_raster_input_buffer; },
+            .debug_name = "FSR sample Staging Input Buffer",
+        });
+
         new_task_list.add_task({
             .resources = {
+                .buffers = {
+                    {task_staging_raster_input_buffer, daxa::TaskBufferAccess::HOST_TRANSFER_WRITE},
+                },
+            },
+            .task = [this](daxa::TaskInterface /* interf */)
+            {
+                this->raster_input.prev_view_mat = this->raster_input.view_mat;
+
+                this->raster_input.view_mat = player.camera.get_vp();
+                auto prev_jitter = jitter;
+                jitter = fsr_context.get_jitter(cpu_framecount);
+                auto jitter_vec = glm::vec3{
+                    jitter.x * 1.0f / static_cast<f32>(render_size_x),
+                    jitter.y * 1.0f / static_cast<f32>(render_size_y),
+                    0.0f,
+                };
+                this->raster_input.view_mat = glm::translate(glm::identity<glm::mat4>(), jitter_vec) * this->raster_input.view_mat;
+                this->raster_input.jitter = (jitter - prev_jitter) * f32vec2{1.0f / static_cast<f32>(render_size_x), 1.0f / static_cast<f32>(render_size_y)};
+                this->raster_input.texture_array_id = renderable_world.atlas_texture_array;
+                this->raster_input.sampler_id = renderable_world.atlas_sampler;
+
+                RasterInput * buffer_ptr = device.map_memory_as<RasterInput>(staging_raster_input_buffer);
+                *buffer_ptr = this->raster_input;
+                device.unmap_memory(staging_raster_input_buffer);
+            },
+            .debug_name = "FSR sample Input MemMap",
+        });
+        new_task_list.add_task({
+            .resources = {
+                .buffers = {
+                    {task_raster_input_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE},
+                    {task_staging_raster_input_buffer, daxa::TaskBufferAccess::TRANSFER_READ},
+                },
+            },
+            .task = [this](daxa::TaskInterface interf)
+            {
+                auto cmd_list = interf.get_command_list();
+                cmd_list.copy_buffer_to_buffer({
+                    .src_buffer = staging_raster_input_buffer,
+                    .dst_buffer = raster_input_buffer,
+                    .size = sizeof(RasterInput),
+                });
+            },
+            .debug_name = "FSR sample Input Transfer",
+        });
+
+        new_task_list.add_task({
+            .resources = {
+                .buffers = {
+                    {task_raster_input_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
+                },
                 .images = {
                     {task_color_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
                     {task_motion_vectors_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
@@ -1068,11 +1154,18 @@ struct App : AppWindow<App>
                 // std::cout << "Task draw" << std::endl;
                 auto cmd_list = interf.get_command_list();
                 cmd_list.begin_renderpass({
-                    .color_attachments = {{
-                        .image_view = color_image.default_view(),
-                        .load_op = daxa::AttachmentLoadOp::CLEAR,
-                        .clear_value = std::array<f32, 4>{0.2f, 0.4f, 1.0f, 1.0f},
-                    }},
+                    .color_attachments = {
+                        {
+                            .image_view = color_image.default_view(),
+                            .load_op = daxa::AttachmentLoadOp::CLEAR,
+                            .clear_value = std::array<f32, 4>{0.2f, 0.4f, 1.0f, 1.0f},
+                        },
+                        {
+                            .image_view = motion_vectors_image.default_view(),
+                            .load_op = daxa::AttachmentLoadOp::CLEAR,
+                            .clear_value = std::array<f32, 4>{0.0f, 0.0f, 0.0f, 0.0f},
+                        },
+                    },
                     .depth_attachment = {{
                         .image_view = depth_image.default_view(),
                         .load_op = daxa::AttachmentLoadOp::CLEAR,
@@ -1081,15 +1174,7 @@ struct App : AppWindow<App>
                     .render_area = {.x = 0, .y = 0, .width = render_size_x, .height = render_size_y},
                 });
                 cmd_list.set_pipeline(raster_pipeline);
-                auto view_mat = player.camera.get_vp();
-                jitter = fsr_context.get_jitter(cpu_framecount);
-                auto jitter_vec = glm::vec3{
-                    jitter.x * 1.0f / static_cast<f32>(render_size_x),
-                    jitter.y * 1.0f / static_cast<f32>(render_size_y),
-                    0.0f,
-                };
-                view_mat = glm::translate(glm::identity<glm::mat4>(), jitter_vec) * view_mat;
-                renderable_world.draw(cmd_list, view_mat);
+                renderable_world.draw(cmd_list, raster_input_buffer);
                 cmd_list.end_renderpass();
             },
             .debug_name = "TaskList Draw Task",
