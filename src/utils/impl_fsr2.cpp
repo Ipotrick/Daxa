@@ -77,7 +77,7 @@ namespace daxa
 
         // set up for later, when we resize
         fsr2_context_description.device = ffxGetDeviceVK(logical_device);
-        fsr2_context_description.flags = {}; // FFX_FSR2_ENABLE_AUTO_EXPOSURE; // FFX_FSR2_ENABLE_DYNAMIC_RESOLUTION |
+        fsr2_context_description.flags = FFX_FSR2_ENABLE_AUTO_EXPOSURE; // FFX_FSR2_ENABLE_DYNAMIC_RESOLUTION |
 
         {
             FfxErrorCode err = ffxFsr2ContextCreate(&fsr2_context, &fsr2_context_description);

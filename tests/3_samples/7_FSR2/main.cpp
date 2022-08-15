@@ -9,7 +9,7 @@
 #include <daxa/utils/imgui.hpp>
 #include <0_common/imgui/imgui_impl_glfw.h>
 
-#include <daxa/utils/fsr2.hpp>
+// #include <daxa/utils/fsr2.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -728,7 +728,7 @@ struct App : AppWindow<App>
             }
         },
         .present_mode = daxa::PresentMode::DO_NOT_WAIT_FOR_VBLANK,
-        .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
+        .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
         .debug_name = "Playground Swapchain",
     });
 
@@ -745,7 +745,7 @@ struct App : AppWindow<App>
     daxa::RasterPipeline raster_pipeline = pipeline_compiler.create_raster_pipeline({
         .vertex_shader_info = {.source = daxa::ShaderFile{"vert.hlsl"}},
         .fragment_shader_info = {.source = daxa::ShaderFile{"frag.hlsl"}},
-        .color_attachments = {{.format = swapchain.get_format(), .blend = {.blend_enable = true, .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA, .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA}}},
+        .color_attachments = {{.format = daxa::Format::R16G16B16A16_SFLOAT, .blend = {.blend_enable = true, .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA, .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA}}},
         .depth_test = {
             .depth_attachment_format = daxa::Format::D32_SFLOAT,
             .enable_depth_test = true,
@@ -791,7 +791,7 @@ struct App : AppWindow<App>
     };
     bool should_resize = false, paused = true;
 
-    daxa::Fsr2Context fsr_context = daxa::Fsr2Context{{.device = device}};
+    // daxa::Fsr2Context fsr_context = daxa::Fsr2Context{{.device = device}};
     f32 render_scl = 1.0f;
     daxa::ImageId swapchain_image;
     daxa::ImageId color_image, display_image, motion_vectors_image, depth_image;
@@ -800,7 +800,7 @@ struct App : AppWindow<App>
     daxa::TaskImageId task_swapchain_image;
     daxa::TaskImageId task_color_image, task_display_image, task_motion_vectors_image, task_depth_image;
     daxa::TaskList loop_task_list = record_loop_task_list();
-    bool fsr_enabled = true;
+    bool fsr_enabled = false;
 
     void create_render_images()
     {
@@ -808,36 +808,36 @@ struct App : AppWindow<App>
         render_size_y = std::max<u32>(1, static_cast<u32>(static_cast<f32>(size_y) * render_scl));
 
         color_image = device.create_image({
-            .format = swapchain.get_format(),
+            .format = daxa::Format::R16G16B16A16_SFLOAT,
             .aspect = daxa::ImageAspectFlagBits::COLOR,
             .size = {render_size_x, render_size_y, 1},
-            .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
+            .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_ONLY | daxa::ImageUsageFlagBits::TRANSFER_SRC,
         });
         display_image = device.create_image({
-            .format = swapchain.get_format(),
+            .format = daxa::Format::R16G16B16A16_SFLOAT,
             .aspect = daxa::ImageAspectFlagBits::COLOR,
             .size = {size_x, size_y, 1},
-            .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
+            .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_ONLY | daxa::ImageUsageFlagBits::TRANSFER_SRC | daxa::ImageUsageFlagBits::TRANSFER_DST,
         });
         motion_vectors_image = device.create_image({
             .format = daxa::Format::R16G16_SFLOAT,
             .aspect = daxa::ImageAspectFlagBits::COLOR,
             .size = {render_size_x, render_size_y, 1},
-            .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
+            .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_ONLY,
         });
         depth_image = device.create_image({
             .format = daxa::Format::D32_SFLOAT,
             .aspect = daxa::ImageAspectFlagBits::DEPTH,
             .size = {render_size_x, render_size_y, 1},
-            .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
+            .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_ONLY,
         });
 
-        fsr_context.resize({
-            .render_size_x = render_size_x,
-            .render_size_y = render_size_y,
-            .display_size_x = size_x,
-            .display_size_y = size_y,
-        });
+        // fsr_context.resize({
+        //     .render_size_x = render_size_x,
+        //     .render_size_y = render_size_y,
+        //     .display_size_x = size_x,
+        //     .display_size_y = size_y,
+        // });
     }
     void destroy_render_images()
     {
@@ -1071,7 +1071,7 @@ struct App : AppWindow<App>
                 });
                 cmd_list.set_pipeline(raster_pipeline);
                 auto view_mat = player.camera.get_vp();
-                jitter = fsr_context.get_jitter(cpu_framecount);
+                // jitter = fsr_context.get_jitter(cpu_framecount);
                 auto jitter_vec = glm::vec3{
                     jitter.x * 1.0f / static_cast<f32>(render_size_x),
                     jitter.y * 1.0f / static_cast<f32>(render_size_y),
@@ -1115,9 +1115,9 @@ struct App : AppWindow<App>
         new_task_list.add_task({
             .resources = {
                 .images = {
-                    {task_color_image, daxa::TaskImageAccess::TRANSFER_READ},
-                    {task_motion_vectors_image, daxa::TaskImageAccess::TRANSFER_READ},
-                    {task_depth_image, daxa::TaskImageAccess::TRANSFER_READ},
+                    {task_color_image, daxa::TaskImageAccess::SHADER_READ_ONLY},
+                    {task_motion_vectors_image, daxa::TaskImageAccess::SHADER_READ_ONLY},
+                    {task_depth_image, daxa::TaskImageAccess::SHADER_READ_ONLY},
                     {task_display_image, daxa::TaskImageAccess::SHADER_WRITE_ONLY},
                 },
             },
@@ -1126,25 +1126,25 @@ struct App : AppWindow<App>
                 if (fsr_enabled)
                 {
                     // std::cout << "Task FSR" << std::endl;
-                    auto cmd_list = interf.get_command_list();
-                    fsr_context.upscale(
-                        cmd_list,
-                        {
-                            .color = color_image,
-                            .depth = depth_image,
-                            .motion_vectors = motion_vectors_image,
-                            .output = display_image,
-                            .should_reset = false,
-                            .delta_time = elapsed_s,
-                            .jitter = jitter,
-                            .should_sharpen = false,
-                            .sharpening = 0.0f,
-                            .camera = {
-                                .near_plane = player.camera.near_clip,
-                                .far_plane = player.camera.far_clip,
-                                .vertical_fov = glm::radians(player.camera.fov),
-                            },
-                        });
+                    // auto cmd_list = interf.get_command_list();
+                    // fsr_context.upscale(
+                    //     cmd_list,
+                    //     {
+                    //         .color = color_image,
+                    //         .depth = depth_image,
+                    //         .motion_vectors = motion_vectors_image,
+                    //         .output = display_image,
+                    //         .should_reset = false,
+                    //         .delta_time = elapsed_s,
+                    //         .jitter = jitter,
+                    //         .should_sharpen = false,
+                    //         .sharpening = 0.0f,
+                    //         .camera = {
+                    //             .near_plane = player.camera.near_clip,
+                    //             .far_plane = player.camera.far_clip,
+                    //             .vertical_fov = glm::radians(player.camera.fov),
+                    //         },
+                    //     });
                 }
             },
             .debug_name = "TaskList Upscale Task",
@@ -1209,7 +1209,9 @@ int main()
         if (app.update())
             break;
 
-        // if (app.cpu_framecount > 2)
-        //     break;
+        if (app.cpu_framecount > 2)
+            break;
     }
+
+    std::cout << std::flush;
 }
