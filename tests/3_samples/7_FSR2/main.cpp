@@ -728,7 +728,7 @@ struct App : AppWindow<App>
             }
         },
         .present_mode = daxa::PresentMode::DO_NOT_WAIT_FOR_VBLANK,
-        .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
+        .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
         .debug_name = "Playground Swapchain",
     });
 
@@ -794,11 +794,11 @@ struct App : AppWindow<App>
     daxa::Fsr2Context fsr_context = daxa::Fsr2Context{{.device = device}};
     f32 render_scl = 1.0f;
     daxa::ImageId swapchain_image;
-    daxa::ImageId color_image, motion_vectors_image, depth_image;
+    daxa::ImageId color_image, display_image, motion_vectors_image, depth_image;
     u32 render_size_x, render_size_y;
     f32vec2 jitter = {0.0f, 0.0f};
     daxa::TaskImageId task_swapchain_image;
-    daxa::TaskImageId task_color_image, task_motion_vectors_image, task_depth_image;
+    daxa::TaskImageId task_color_image, task_display_image, task_motion_vectors_image, task_depth_image;
     daxa::TaskList loop_task_list = record_loop_task_list();
     bool fsr_enabled = true;
 
@@ -811,19 +811,25 @@ struct App : AppWindow<App>
             .format = swapchain.get_format(),
             .aspect = daxa::ImageAspectFlagBits::COLOR,
             .size = {render_size_x, render_size_y, 1},
-            .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT,
+            .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
+        });
+        display_image = device.create_image({
+            .format = swapchain.get_format(),
+            .aspect = daxa::ImageAspectFlagBits::COLOR,
+            .size = {size_x, size_y, 1},
+            .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
         });
         motion_vectors_image = device.create_image({
             .format = daxa::Format::R16G16_SFLOAT,
             .aspect = daxa::ImageAspectFlagBits::COLOR,
             .size = {render_size_x, render_size_y, 1},
-            .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT,
+            .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
         });
         depth_image = device.create_image({
             .format = daxa::Format::D32_SFLOAT,
             .aspect = daxa::ImageAspectFlagBits::DEPTH,
             .size = {render_size_x, render_size_y, 1},
-            .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT,
+            .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
         });
 
         fsr_context.resize({
@@ -836,6 +842,7 @@ struct App : AppWindow<App>
     void destroy_render_images()
     {
         device.destroy_image(color_image);
+        device.destroy_image(display_image);
         device.destroy_image(motion_vectors_image);
         device.destroy_image(depth_image);
     }
@@ -1020,6 +1027,11 @@ struct App : AppWindow<App>
             { return color_image; },
             .debug_name = "TaskList Task Draw Color Image",
         });
+        task_display_image = new_task_list.create_task_image({
+            .fetch_callback = [this]()
+            { return display_image; },
+            .debug_name = "TaskList Task Draw Display Image",
+        });
         task_motion_vectors_image = new_task_list.create_task_image({
             .fetch_callback = [this]()
             { return motion_vectors_image; },
@@ -1076,7 +1088,7 @@ struct App : AppWindow<App>
             .resources = {
                 .images = {
                     {task_color_image, daxa::TaskImageAccess::TRANSFER_READ},
-                    {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE},
+                    {task_display_image, daxa::TaskImageAccess::TRANSFER_WRITE},
                 },
             },
             .task = [this](daxa::TaskInterface interf)
@@ -1088,7 +1100,7 @@ struct App : AppWindow<App>
                     cmd_list.blit_image_to_image({
                         .src_image = color_image,
                         .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
-                        .dst_image = swapchain_image,
+                        .dst_image = display_image,
                         .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                         .src_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
                         .src_offsets = {{{0, 0, 0}, {static_cast<i32>(render_size_x), static_cast<i32>(render_size_y), 1}}},
@@ -1106,7 +1118,7 @@ struct App : AppWindow<App>
                     {task_color_image, daxa::TaskImageAccess::TRANSFER_READ},
                     {task_motion_vectors_image, daxa::TaskImageAccess::TRANSFER_READ},
                     {task_depth_image, daxa::TaskImageAccess::TRANSFER_READ},
-                    {task_swapchain_image, daxa::TaskImageAccess::SHADER_WRITE_ONLY},
+                    {task_display_image, daxa::TaskImageAccess::SHADER_WRITE_ONLY},
                 },
             },
             .task = [this](daxa::TaskInterface interf)
@@ -1121,7 +1133,7 @@ struct App : AppWindow<App>
                             .color = color_image,
                             .depth = depth_image,
                             .motion_vectors = motion_vectors_image,
-                            .output = swapchain_image,
+                            .output = display_image,
                             .should_reset = false,
                             .delta_time = elapsed_s,
                             .jitter = jitter,
@@ -1136,6 +1148,34 @@ struct App : AppWindow<App>
                 }
             },
             .debug_name = "TaskList Upscale Task",
+        });
+
+        new_task_list.add_task({
+            .resources = {
+                .images = {
+                    {task_display_image, daxa::TaskImageAccess::TRANSFER_READ},
+                    {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE},
+                },
+            },
+            .task = [this](daxa::TaskInterface interf)
+            {
+                if (!fsr_enabled)
+                {
+                    // std::cout << "Task scale 2" << std::endl;
+                    auto cmd_list = interf.get_command_list();
+                    cmd_list.blit_image_to_image({
+                        .src_image = display_image,
+                        .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
+                        .dst_image = swapchain_image,
+                        .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+                        .src_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
+                        .src_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
+                        .dst_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
+                        .dst_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
+                    });
+                }
+            },
+            .debug_name = "TaskList Blit Task 2",
         });
 
         new_task_list.add_task({
