@@ -413,7 +413,7 @@ struct RenderableVoxelWorld
             .magnification_filter = daxa::Filter::NEAREST,
             .minification_filter = daxa::Filter::LINEAR,
             .min_lod = 0,
-            .max_lod = 4,
+            .max_lod = 0,
         });
     }
 
@@ -815,7 +815,7 @@ struct App : AppWindow<App>
     daxa::TaskBufferId task_staging_raster_input_buffer;
 
     daxa::Fsr2Context fsr_context = daxa::Fsr2Context{{.device = device}};
-    f32 render_scl = 1.0f;
+    f32 render_scl = 0.5f;
     daxa::ImageId swapchain_image;
     daxa::ImageId color_image, display_image, motion_vectors_image, depth_image;
     u32 render_size_x, render_size_y;
@@ -1104,12 +1104,12 @@ struct App : AppWindow<App>
                 auto prev_jitter = jitter;
                 jitter = fsr_context.get_jitter(cpu_framecount);
                 auto jitter_vec = glm::vec3{
-                    jitter.x * 1.0f / static_cast<f32>(render_size_x),
-                    jitter.y * 1.0f / static_cast<f32>(render_size_y),
+                    jitter.x * 2.0f / static_cast<f32>(render_size_x),
+                    jitter.y * 2.0f / static_cast<f32>(render_size_y),
                     0.0f,
                 };
                 this->raster_input.view_mat = glm::translate(glm::identity<glm::mat4>(), jitter_vec) * this->raster_input.view_mat;
-                this->raster_input.jitter = (jitter - prev_jitter) * f32vec2{1.0f / static_cast<f32>(render_size_x), 1.0f / static_cast<f32>(render_size_y)};
+                this->raster_input.jitter = (jitter - prev_jitter) * f32vec2{2.0f / static_cast<f32>(render_size_x), 2.0f / static_cast<f32>(render_size_y)};
                 this->raster_input.texture_array_id = renderable_world.atlas_texture_array;
                 this->raster_input.sampler_id = renderable_world.atlas_sampler;
 
