@@ -46,8 +46,11 @@ namespace daxa
 
     ImplFsr2Context::~ImplFsr2Context()
     {
-        FfxErrorCode err = ffxFsr2ContextDestroy(&fsr2_context);
-        DAXA_DBG_ASSERT_TRUE_M(err == FFX_OK, "FSR2 Failed to destroy the FSR context");
+        if (initialized)
+        {
+            FfxErrorCode err = ffxFsr2ContextDestroy(&fsr2_context);
+            DAXA_DBG_ASSERT_TRUE_M(err == FFX_OK, "FSR2 Failed to destroy the FSR context");
+        }
     }
 
     void ImplFsr2Context::resize(Fsr2SizeInfo const & info)

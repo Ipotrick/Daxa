@@ -170,7 +170,7 @@ static inline constexpr u64 CHUNK_VOXEL_N = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE
 static inline constexpr u64 CHUNK_MAX_VERTS = CHUNK_VOXEL_N * 6;
 static inline constexpr u64 CHUNK_MAX_SIZE = CHUNK_MAX_VERTS * sizeof(Vertex);
 
-static inline constexpr u64 CHUNK_N = 6;
+static inline constexpr u64 CHUNK_N = 2;
 
 struct Voxel
 {
@@ -483,6 +483,7 @@ struct RenderableVoxelWorld
             .mip_level_count = 4,
             .array_layer_count = static_cast<u32>(texture_names.size()),
             .usage = daxa::ImageUsageFlagBits::SHADER_READ_ONLY | daxa::ImageUsageFlagBits::TRANSFER_SRC | daxa::ImageUsageFlagBits::TRANSFER_DST,
+            .debug_name = "Playground Texture Array",
         });
 
         usize image_size = 16 * 16 * sizeof(u8) * 4;
