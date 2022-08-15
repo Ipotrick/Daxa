@@ -21,7 +21,7 @@ VertexOutput main(uint vert_i
     result.frag_pos = mul(p.view_mat, float4(vert.pos + p.chunk_pos, 1));
     result.nrm = vert.nrm;
     result.uv = vert.uv;
-    result.pos = vert.block_pos;
+    // result.pos = vert.block_pos;
     // result.block_id = vert.block_id;
     // result.block_face = vert.block_face;
     result.tex_id = vert.tex_id;
