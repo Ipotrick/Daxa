@@ -319,7 +319,7 @@ FragOutput fs_main(VertexOutput vertex_output)
     float3 col = 0;
     col += albedo.rgb;
     // col += vertex_output.pos * 1.0 / 32;
-    result.motion = -vertex_output.pos.xy;
+    result.motion = -0.5 * vertex_output.pos.xy;
     // col += rand_vec3(vertex_output.pos);
 
     switch (p.mode)
