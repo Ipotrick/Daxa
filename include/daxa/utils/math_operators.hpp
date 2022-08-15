@@ -25,7 +25,7 @@ namespace daxa::math_operators
     {
         detail::GenericVector<T, N> result;
         for (usize i = 0; i < N; ++i)
-            result[i] = a[i] / b[i];
+            result[i] = a[i] * b[i];
         return result;
     }
     template <typename T, usize N>
