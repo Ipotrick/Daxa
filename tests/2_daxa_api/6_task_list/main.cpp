@@ -95,24 +95,6 @@ namespace tests
         app.device.destroy_image(image);
     }
 
-    void conditional()
-    {
-        AppContext app = {};
-        auto task_list = daxa::TaskList({.device = app.device, .debug_name = "TaskList task list"});
-
-        bool option = true;
-
-        task_list.begin_conditional_scope({
-            .condition = [&option]()
-            {
-                return option;
-            },
-        });
-        task_list.end_conditional_scope();
-        task_list.compile();
-        task_list.execute();
-    }
-
     void output_graph()
     {
         AppContext app = {};
@@ -131,18 +113,11 @@ namespace tests
             .task = [](daxa::TaskInterface &) {},
             .debug_name = "task 1",
         });
-        task_list.begin_conditional_scope({
-            .condition = []()
-            {
-                return true;
-            },
-        });
         task_list.add_task({
             .resources = {.buffers = {{task_buffer2, daxa::TaskBufferAccess::SHADER_WRITE_ONLY}}},
             .task = [](daxa::TaskInterface &) {},
             .debug_name = "inner task 1",
         });
-        task_list.end_conditional_scope();
 
         task_list.add_task({
             .resources = {.buffers = {{task_buffer2, daxa::TaskBufferAccess::SHADER_WRITE_ONLY}, {task_buffer3, daxa::TaskBufferAccess::SHADER_WRITE_ONLY}}},
@@ -478,10 +453,9 @@ namespace tests
 
 int main()
 {
-    // tests::simplest();
-    // tests::image_upload();
-    // tests::execution();
+    tests::simplest();
+    tests::image_upload();
+    tests::execution();
     // tests::drawing();
-    // tests::conditional();
     tests::output_graph();
 }
