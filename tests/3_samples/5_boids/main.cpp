@@ -6,6 +6,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#define APPNAME "Daxa Sample: Boids"
+#define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
+
 using namespace daxa::types;
 using Clock = std::chrono::high_resolution_clock;
 
@@ -41,7 +44,9 @@ struct App : AppWindow<App>
     daxa::Context daxa_ctx = daxa::create_context({
         .enable_validation = true,
     });
-    daxa::Device device = daxa_ctx.create_device({});
+    daxa::Device device = daxa_ctx.create_device({
+        .debug_name = APPNAME_PREFIX("device"),
+    });
 
     daxa::Swapchain swapchain = device.create_swapchain({
         .native_window = get_native_handle(),
@@ -57,7 +62,7 @@ struct App : AppWindow<App>
         },
         .present_mode = daxa::PresentMode::DO_NOT_WAIT_FOR_VBLANK,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-        .debug_name = "Boids Swapchain",
+        .debug_name = APPNAME_PREFIX("swapchain"),
     });
 
     daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
@@ -65,7 +70,7 @@ struct App : AppWindow<App>
             "tests/3_samples/5_boids/shaders",
             "include",
         },
-        .debug_name = "Boids Compiler",
+        .debug_name = APPNAME_PREFIX("pipeline_compiler"),
     });
     // clang-format off
     daxa::RasterPipeline raster_pipeline = pipeline_compiler.create_raster_pipeline({
@@ -74,44 +79,44 @@ struct App : AppWindow<App>
         .color_attachments = {{.format = swapchain.get_format()}},
         .raster = {},
         .push_constant_size = sizeof(RasterPush),
-        .debug_name = "Boids Raster Pipeline",
+        .debug_name = APPNAME_PREFIX("raster_pipeline"),
     }).value();
     daxa::ComputePipeline update_pipeline = pipeline_compiler.create_compute_pipeline({
         .shader_info = {.source = daxa::ShaderFile{"update_boids.hlsl"}},
         .push_constant_size = sizeof(UpdatePush),
-        .debug_name = "Boids Update Pipeline",
+        .debug_name = APPNAME_PREFIX("update_pipeline"),
     }).value();
     daxa::ComputePipeline vector_update_pipeline = pipeline_compiler.create_compute_pipeline({
         .shader_info = {.source = daxa::ShaderFile{"update_vectors.hlsl"}},
         .push_constant_size = sizeof(UpdatePush),
-        .debug_name = "Vector Field Update Pipeline",
+        .debug_name = APPNAME_PREFIX("vector_update_pipeline"),
     }).value();
     // clang-format on
 
     daxa::BufferId boids_buffers[2] = {
         device.create_buffer(daxa::BufferInfo{
             .size = sizeof(BoidState) * MAX_BOIDS,
-            .debug_name = "Boids Buffer 0",
+            .debug_name = APPNAME_PREFIX("boids_buffers[0]"),
         }),
         device.create_buffer(daxa::BufferInfo{
             .size = sizeof(BoidState) * MAX_BOIDS,
-            .debug_name = "Boids Buffer 1",
+            .debug_name = APPNAME_PREFIX("boids_buffers[1]"),
         }),
     };
 
     daxa::BufferId vector_field_buffer = device.create_buffer(daxa::BufferInfo{
         .size = sizeof(BoidState) * MAX_VECTORS,
-        .debug_name = "Vector Field Buffer",
+        .debug_name = APPNAME_PREFIX("vector_field_buffer"),
     });
 
     daxa::BinarySemaphore binary_semaphore = device.create_binary_semaphore({
-        .debug_name = "Boids Present Semaphore",
+        .debug_name = APPNAME_PREFIX("binary_semaphore"),
     });
 
     static inline constexpr u64 FRAMES_IN_FLIGHT = 1;
     daxa::TimelineSemaphore gpu_framecount_timeline_sema = device.create_timeline_semaphore(daxa::TimelineSemaphoreInfo{
         .initial_value = 0,
-        .debug_name = "Boids gpu framecount Timeline Semaphore",
+        .debug_name = APPNAME_PREFIX("gpu_framecount_timeline_sema"),
     });
     u64 cpu_framecount = FRAMES_IN_FLIGHT - 1;
 
@@ -127,17 +132,17 @@ struct App : AppWindow<App>
     using Clock = std::chrono::high_resolution_clock;
     Clock::time_point start = Clock::now(), prev_time = start;
 
-    App() : AppWindow<App>("Samples: Boids")
+    App() : AppWindow<App>(APPNAME)
     {
         auto cmd_list = device.create_command_list({
-            .debug_name = "Boids Init Commandlist",
+            .debug_name = APPNAME_PREFIX("cmd_list"),
         });
 
         {
             auto init_boids_buffer = device.create_buffer({
                 .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                 .size = sizeof(BoidState) * MAX_BOIDS,
-                .debug_name = "Boids Vertex Staging buffer",
+                .debug_name = APPNAME_PREFIX("init_boids_buffer"),
             });
             cmd_list.destroy_buffer_deferred(init_boids_buffer);
             auto boids_buffer_ptr = device.map_memory_as<BoidState>(init_boids_buffer);
@@ -167,42 +172,6 @@ struct App : AppWindow<App>
                 .waiting_pipeline_access = daxa::AccessConsts::VERTEX_SHADER_READ,
             });
         }
-
-        // {
-        //     auto init_vectors_buffer = device.create_buffer({
-        //         .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-        //         .size = sizeof(BoidState) * MAX_VECTORS,
-        //         .debug_name = "Vectors Vertex Staging buffer",
-        //     });
-        //     cmd_list.destroy_buffer_deferred(init_vectors_buffer);
-        //     auto vectors_buffer_ptr = device.map_memory_as<BoidState>(init_vectors_buffer);
-        //     for (usize yi = 0; yi < VECTORS_PER_AXIS; ++yi)
-        //         for (usize xi = 0; xi < VECTORS_PER_AXIS; ++xi)
-        //         {
-        //             usize i = xi + yi * VECTORS_PER_AXIS;
-        //             vectors_buffer_ptr[i] = BoidState{
-        //                 .x = (static_cast<f32>(xi) / VECTORS_PER_AXIS - 0.5f) * 2.0f,
-        //                 .y = (static_cast<f32>(yi) / VECTORS_PER_AXIS - 0.5f) * 2.0f,
-        //                 .dir_x = 1.0f,
-        //                 .dir_y = 0.0f,
-        //                 .speed = 1.0f,
-        //             };
-        //         }
-        //     device.unmap_memory(init_vectors_buffer);
-        //     cmd_list.pipeline_barrier({
-        //         .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
-        //         .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
-        //     });
-        //     cmd_list.copy_buffer_to_buffer({
-        //         .src_buffer = init_vectors_buffer,
-        //         .dst_buffer = vector_field_buffer,
-        //         .size = sizeof(BoidState) * MAX_VECTORS,
-        //     });
-        //     cmd_list.pipeline_barrier({
-        //         .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-        //         .waiting_pipeline_access = daxa::AccessConsts::VERTEX_SHADER_READ,
-        //     });
-        // }
 
         cmd_list.complete();
 
@@ -290,7 +259,7 @@ struct App : AppWindow<App>
         auto swapchain_image = swapchain.acquire_next_image();
 
         auto cmd_list = device.create_command_list({
-            .debug_name = "Boids Command List",
+            .debug_name = APPNAME_PREFIX("cmd_list"),
         });
 
         cmd_list.set_pipeline(update_pipeline);
