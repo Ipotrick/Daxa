@@ -57,13 +57,19 @@ find_package(dxc CONFIG REQUIRED)
 find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(volk CONFIG REQUIRED)
-find_package(fsr2 CONFIG REQUIRED)
 
 if(DAXA_ENABLE_UTILS)
     find_package(imgui CONFIG REQUIRED)
+    find_package(fsr2 CONFIG REQUIRED)
+    target_compile_definitions(daxa
+        PUBLIC
+        DAXA_BUILT_WITH_UTILS=true
+    )
     target_link_libraries(daxa
         PUBLIC
         imgui::imgui
+        fsr2::ffx_fsr2_api
+        fsr2::ffx_fsr2_api_vk
     )
 endif()
 
@@ -81,18 +87,6 @@ target_include_directories(daxa
 )
 
 set_project_warnings(daxa)
-
-if(DAXA_ENABLE_UTILS)
-    target_compile_definitions(daxa
-        PUBLIC
-        DAXA_BUILT_WITH_UTILS=true
-    )
-    target_link_libraries(daxa
-        PUBLIC
-        fsr2::ffx_fsr2_api
-        fsr2::ffx_fsr2_api_vk
-    )
-endif()
 
 if(DAXA_ENABLE_TESTS)
     add_subdirectory(tests)
