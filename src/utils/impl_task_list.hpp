@@ -75,26 +75,11 @@ namespace daxa
         TaskImageId id = {};
     };
 
-    struct ImplConditionalTaskBegin
-    {
-        std::vector<TaskPipelineBarrier> barriers = {};
-        TaskResources resources = {};
-        TaskConditionalInfo info = {};
-        u64 depth = {}, end_index = {};
-    };
-
-    struct ImplConditionalTaskEnd
-    {
-        u64 depth = {}, begin_index = {};
-    };
-
     using TaskEventVariant = std::variant<
         ImplGenericTask,
         ImplCreateBufferTask,
-        ImplCreateImageTask,
-        ImplConditionalTaskBegin,
-        ImplConditionalTaskEnd>;
-    
+        ImplCreateImageTask>;
+
     struct TaskEvent
     {
         u64 parent_scope_id = {};
