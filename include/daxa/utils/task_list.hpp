@@ -188,12 +188,6 @@ namespace daxa
         std::string debug_name = {};
     };
 
-    struct TaskConditionalInfo
-    {
-        TaskConditionalCallback condition;
-        std::string debug_name = {};
-    };
-
     struct TaskList : ManagedPtr
     {
         TaskList(TaskListInfo const & info);
@@ -217,8 +211,5 @@ namespace daxa
         void execute();
 
         auto command_lists() -> std::vector<CommandList> &;
-
-        void begin_conditional_scope(TaskConditionalInfo const & info);
-        void end_conditional_scope();
     };
 } // namespace daxa

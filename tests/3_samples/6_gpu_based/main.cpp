@@ -259,13 +259,6 @@ struct App : AppWindow<App>
             .debug_name = "TaskList Task Indirect Draw Buffer",
         });
 
-        new_task_list.begin_conditional_scope({
-            .condition = []() -> bool
-            {
-                return false;
-            },
-            .debug_name = "TaskList Chunkgen Conditional",
-        });
         new_task_list.add_task({
             .resources = {
                 .buffers = {
@@ -282,7 +275,6 @@ struct App : AppWindow<App>
             },
             .debug_name = "TaskList Chunkgen Task",
         });
-        new_task_list.end_conditional_scope();
 
         new_task_list.add_task({
             .resources = {
