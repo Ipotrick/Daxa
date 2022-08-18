@@ -208,7 +208,10 @@ namespace daxa
         impl.tasks.push_back({
             .event_variant = ImplGenericTask{
                 .info = {
-                    .resources = info.resources,
+                    .resources = {
+                        .buffers = info.resources.buffers,
+                        .images = info.resources.images,
+                    },
                     .task = info.task,
                     .debug_name = info.debug_name,
                 },
