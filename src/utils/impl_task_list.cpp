@@ -207,7 +207,11 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can only record to uncompleted task list");
         impl.tasks.push_back({
             .event_variant = ImplGenericTask{
-                .info = info,
+                .info = {
+                    .resources = info.resources,
+                    .task = info.task,
+                    .debug_name = info.debug_name,
+                },
             },
         });
     }
