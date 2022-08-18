@@ -165,13 +165,11 @@ namespace daxa
 
         auto task_buffer_id = TaskBufferId{{.index = static_cast<u32>(impl.impl_task_buffers.size() - 1)}};
 
-        impl.tasks.push_back(
-            {
-                .parent_scope_id = impl.record_state.get_current_scope_id(),
-                .event_variant = ImplCreateBufferTask{
-                    .id = task_buffer_id,
-                },
-            });
+        impl.tasks.push_back({
+            .event_variant = ImplCreateBufferTask{
+                .id = task_buffer_id,
+            },
+        });
 
         return task_buffer_id;
     }
@@ -195,7 +193,6 @@ namespace daxa
         auto task_image_id = TaskImageId{{.index = static_cast<u32>(impl.impl_task_images.size() - 1)}};
 
         impl.tasks.push_back({
-            .parent_scope_id = impl.record_state.get_current_scope_id(),
             .event_variant = ImplCreateImageTask{
                 .id = task_image_id,
             },
@@ -209,7 +206,6 @@ namespace daxa
         auto & impl = *as<ImplTaskList>();
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can only record to uncompleted task list");
         impl.tasks.push_back({
-            .parent_scope_id = impl.record_state.get_current_scope_id(),
             .event_variant = ImplGenericTask{
                 .info = info,
             },
@@ -357,17 +353,6 @@ namespace daxa
     void TaskRuntime::execute_task(TaskEvent & task_event, usize task_index)
     {
         DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout << "execute task (index: " << task_index << ")");
-
-        // DAXA_ONLY_IF_TASK_LIST_DEBUG(
-        //     std::string indent_str = "";
-        //     if (task_event.parent_scope_id > 0) {
-        //         auto & parent_scope_task = std::get<ImplConditionalTaskBegin>(impl.tasks[task_event.parent_scope_id].event_variant);
-        //         for (u64 i = 0; i < parent_scope_task.depth + 1; ++i)
-        //         {
-        //             indent_str += "    ";
-        //         }
-        //     });
-
         if (ImplGenericTask * generic_task = std::get_if<ImplGenericTask>(&task_event.event_variant))
         {
             DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout << "  executing ImplGenericTask (name: " << generic_task->info.debug_name << ")" << std::endl);
@@ -468,13 +453,6 @@ namespace daxa
 
     ImplTaskList::~ImplTaskList()
     {
-    }
-
-    auto TaskRecordState::get_current_scope_id() -> u64
-    {
-        if (this->conditional_task_indices.size() == 0)
-            return 0;
-        return this->conditional_task_indices.top();
     }
 
     auto ImplTaskList::managed_cleanup() -> bool
@@ -679,13 +657,6 @@ namespace daxa
 
         auto insert_sync_for_resources = [&](TaskResources & resources, usize task_index)
         {
-            // TODO: Speak with Patrick
-            // if (tasks[task_index].parent_scope_id != 0)
-            // {
-            //     auto & cond_begin_task = std::get<ImplConditionalTaskBegin>(tasks[tasks[task_index].parent_scope_id].event_variant);
-            //     // insert resources?
-            // }
-
             for (auto & [task_buffer_id, t_access] : resources.buffers)
             {
                 ImplTaskBuffer & task_buffer = this->impl_task_buffers[task_buffer_id.index];

@@ -124,7 +124,6 @@ namespace daxa
     using TaskCallback = std::function<void(TaskInterface &)>;
     using CreateTaskBufferCallback = std::function<BufferId(void)>;
     using CreateTaskImageCallback = std::function<ImageId(void)>;
-    using TaskConditionalCallback = std::function<bool(void)>;
 
     struct TaskBufferInfo
     {
