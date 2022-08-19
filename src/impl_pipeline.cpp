@@ -668,20 +668,34 @@ namespace daxa
         args.push_back(L"-spirv");
         args.push_back(L"-fspv-target-env=vulkan1.1");
         // set optimization setting
-        args.push_back(L"-O1");
+        switch (this->info.opt_level)
+        {
+        case 0: args.push_back(L"-O0"); break;
+        case 1: args.push_back(L"-O1"); break;
+        case 2: args.push_back(L"-O2"); break;
+        case 3: args.push_back(L"-O3"); break;
+        default: DAXA_DBG_ASSERT_TRUE_M(false, "Bad optimization level set in Pipeline Compiler"); break;
+        }
         // setting entry point
         args.push_back(L"-E");
         auto entry_point_wstr = u8_ascii_to_wstring(shader_info.entry_point.c_str());
         args.push_back(entry_point_wstr.c_str());
 
+        if (this->impl_device.as<ImplDevice>()->info.use_scalar_layout)
+        {
+            args.push_back(L"-fvk-use-scalar-layout");
+        }
+
         // set shader model
         args.push_back(L"-T");
-        std::wstring profile;
+        std::wstring profile = L"vs_x_x";
+        profile[3] = L'0' + this->info.shader_model_major;
+        profile[5] = L'0' + this->info.shader_model_minor;
         switch (shader_stage)
         {
-        case VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT: profile = L"vs_6_6"; break;
-        case VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT: profile = L"ps_6_6"; break;
-        case VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT: profile = L"cs_6_6"; break;
+        case VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT: profile[0] = L'v'; break;
+        case VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT: profile[0] = L'p'; break;
+        case VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT: profile[0] = L'c'; break;
         default: break;
         }
         args.push_back(profile.c_str());
