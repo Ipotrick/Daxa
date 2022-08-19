@@ -376,7 +376,7 @@ struct RenderableVoxelWorld
             .magnification_filter = daxa::Filter::NEAREST,
             .minification_filter = daxa::Filter::LINEAR,
             .min_lod = 0,
-            .max_lod = 4,
+            .max_lod = 0,
             .debug_name = APPNAME_PREFIX("atlas_sampler"),
         });
     }
