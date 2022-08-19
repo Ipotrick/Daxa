@@ -154,7 +154,7 @@ namespace daxa
         auto & impl = *as<ImplTaskList>();
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can only record to uncompleted task list");
 
-        usize task_index = impl.tasks.size() + 1;
+        usize task_index = impl.tasks.size();
 
         impl.impl_task_buffers.push_back(ImplTaskBuffer{
             .latest_access = info.last_access,
@@ -179,7 +179,7 @@ namespace daxa
         auto & impl = *as<ImplTaskList>();
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can only record to uncompleted task list");
 
-        usize task_index = impl.tasks.size() + 1;
+        usize task_index = impl.tasks.size();
 
         impl.impl_task_images.push_back(ImplTaskImage{
             .latest_access = info.last_access,
@@ -592,8 +592,7 @@ namespace daxa
         for (usize task_index = 0; task_index < this->tasks.size(); ++task_index)
         {
             std::string task_name = std::string("task_") + std::to_string(task_index);
-            if (ImplGenericTask * task_ptr =
-                    std::get_if<ImplGenericTask>(&tasks[task_index].event_variant))
+            if (ImplGenericTask * task_ptr = std::get_if<ImplGenericTask>(&tasks[task_index].event_variant))
             {
                 dot_file << "subgraph cluster_" << task_name << " {\n";
                 dot_file << "label=\"" << task_ptr->info.debug_name << "\"\n";
@@ -601,24 +600,27 @@ namespace daxa
                 for (auto & [task_buffer_id, t_access] : task_ptr->info.resources.buffers)
                 {
                     ImplTaskBuffer & task_buffer = this->impl_task_buffers[task_buffer_id.index];
-                    auto node_name = task_name + "_res_" + std::to_string(task_buffer_id.index);
-                    dot_file << "node_" << task_index << "_" << task_buffer_id.index;
+                    dot_file << "bnode_" << task_index << "_" << task_buffer_id.index;
+                    dot_file << " [label=\"" << task_buffer.debug_name << "\", shape=box]\n";
+                }
+                for (auto & [task_image_id, t_access] : task_ptr->info.resources.images)
+                {
+                    ImplTaskImage & task_buffer = this->impl_task_images[task_image_id.index];
+                    dot_file << "inode_" << task_index << "_" << task_image_id.index;
                     dot_file << " [label=\"" << task_buffer.debug_name << "\", shape=box]\n";
                 }
                 dot_file << "}\n";
             }
-            else if (ImplCreateBufferTask * task_ptr =
-                         std::get_if<ImplCreateBufferTask>(&tasks[task_index].event_variant))
+            else if (ImplCreateBufferTask * task_ptr = std::get_if<ImplCreateBufferTask>(&tasks[task_index].event_variant))
             {
                 ImplTaskBuffer & task_buffer = this->impl_task_buffers[task_ptr->id.index];
-                dot_file << "node_" << task_index + 1 << "_" << task_ptr->id.index;
+                dot_file << "c_bnode_" << task_index << "_" << task_ptr->id.index;
                 dot_file << " [label=\"Create " << task_buffer.debug_name << "\", shape=box]\n";
             }
-            else if (ImplCreateImageTask * task_ptr =
-                         std::get_if<ImplCreateImageTask>(&tasks[task_index].event_variant))
+            else if (ImplCreateImageTask * task_ptr = std::get_if<ImplCreateImageTask>(&tasks[task_index].event_variant))
             {
                 ImplTaskImage & task_image = this->impl_task_images[task_ptr->id.index];
-                dot_file << "node_" << task_index + 1 << "_" << task_ptr->id.index;
+                dot_file << "c_inode_" << task_index << "_" << task_ptr->id.index;
                 dot_file << " [label=\"Create " << task_image.debug_name << "\", shape=box]\n";
             }
             else
@@ -632,7 +634,9 @@ namespace daxa
             auto a = buffer_link.event_a;
             auto b = buffer_link.event_b;
             auto i = buffer_link.resource;
-            dot_file << "node_" << a << "_" << i << "->node_" << b << "_" << i;
+            if (ImplCreateBufferTask * task_ptr = std::get_if<ImplCreateBufferTask>(&tasks[a].event_variant))
+                dot_file << "c_";
+            dot_file << "bnode_" << a << "_" << i << "->bnode_" << b << "_" << i;
             dot_file << " [label=\"Sync\", labeltooltip=\"between "
                      << to_string(buffer_link.barrier.awaited_pipeline_access.stages) << " "
                      << to_string(buffer_link.barrier.awaited_pipeline_access.type) << " and "
@@ -645,7 +649,9 @@ namespace daxa
             auto a = image_link.event_a;
             auto b = image_link.event_b;
             auto i = image_link.resource;
-            dot_file << "node_" << a << "_" << i << "->node_" << b << "_" << i;
+            if (ImplCreateImageTask * task_ptr = std::get_if<ImplCreateImageTask>(&tasks[a].event_variant))
+                dot_file << "c_";
+            dot_file << "inode_" << a << "_" << i << "->inode_" << b << "_" << i;
             dot_file << " [label=\"Sync\", labeltooltip=\"between "
                      << to_string(image_link.barrier.awaited_pipeline_access.stages) << " "
                      << to_string(image_link.barrier.awaited_pipeline_access.type) << " and "
