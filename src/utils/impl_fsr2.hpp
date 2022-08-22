@@ -18,6 +18,7 @@ namespace daxa
         FfxFsr2Context fsr2_context = {};
         FfxFsr2ContextDescription fsr2_context_description = {};
 
+        void * scratch_buffer = {};
         bool initialized = {};
 
         auto managed_cleanup() -> bool override;
