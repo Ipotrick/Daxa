@@ -8,10 +8,10 @@
 
 namespace daxa
 {
-    struct Fsr2Context : ManagedPtr
+    struct DlssContext : ManagedPtr
     {
-        Fsr2Context(UpscaleContextInfo const & info);
-        ~Fsr2Context();
+        DlssContext(UpscaleContextInfo const & info);
+        ~DlssContext();
 
         void resize(UpscaleSizeInfo const & info);
         void upscale(CommandList & command_list, UpscaleInfo const & info);
