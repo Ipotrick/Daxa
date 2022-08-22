@@ -53,7 +53,7 @@ using Clock = std::chrono::high_resolution_clock;
 struct App : AppWindow<App>
 {
     daxa::Context daxa_ctx = daxa::create_context({
-        .enable_validation = false,
+        .enable_validation = true,
     });
     daxa::Device device = daxa_ctx.create_device({});
 
@@ -89,7 +89,7 @@ struct App : AppWindow<App>
         .fragment_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .entry_point = "fs_main"},
         .color_attachments = {
             {.format = daxa::Format::R16G16B16A16_SFLOAT, .blend = {.blend_enable = true, .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA, .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA}},
-            {.format = daxa::Format::R16G16_SFLOAT},
+            {.format = daxa::Format::R16G16_SFLOAT, .blend = {.blend_enable = true, .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA, .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA}},
         },
         .depth_test = {
             .depth_attachment_format = daxa::Format::D32_SFLOAT,
