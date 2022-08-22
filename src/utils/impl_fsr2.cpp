@@ -63,7 +63,7 @@ namespace daxa
         auto logical_device = impl_device.vk_device;
 
         const usize scratch_buffer_size = ffxFsr2GetScratchMemorySizeVK(physical_device);
-        void * scratch_buffer = malloc(scratch_buffer_size);
+        scratch_buffer = malloc(scratch_buffer_size);
         {
             FfxErrorCode err = ffxFsr2GetInterfaceVK(&fsr2_context_description.callbacks, scratch_buffer, scratch_buffer_size, physical_device, vkGetDeviceProcAddr);
             DAXA_DBG_ASSERT_TRUE_M(err == FFX_OK, "FSR2 Failed to create the Vulkan interface");
@@ -86,6 +86,7 @@ namespace daxa
         {
             FfxErrorCode err = ffxFsr2ContextDestroy(&fsr2_context);
             DAXA_DBG_ASSERT_TRUE_M(err == FFX_OK, "FSR2 Failed to destroy the FSR context");
+            free(scratch_buffer);
         }
     }
 
