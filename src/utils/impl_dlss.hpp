@@ -1,22 +1,25 @@
 #pragma once
 
-#include <daxa/utils/fsr2.hpp>
+#include <daxa/utils/dlss.hpp>
 #include <deque>
 
 #include "../impl_core.hpp"
 #include "../impl_device.hpp"
 
-#include <ffx-fsr2-api/ffx_fsr2.h>
-#include <ffx-fsr2-api/vk/ffx_fsr2_vk.h>
+#include <nvsdk_ngx.h>
+#include <nvsdk_ngx_helpers.h>
+
+#include <nvsdk_ngx_vk.h>
+#include <nvsdk_ngx_helpers_vk.h>
 
 namespace daxa
 {
-    struct ImplFsr2Context final : ManagedSharedState
+    struct ImplDlssContext final : ManagedSharedState
     {
         UpscaleContextInfo info;
 
-        FfxFsr2Context fsr2_context = {};
-        FfxFsr2ContextDescription fsr2_context_description = {};
+        NVSDK_NGX_Parameter * ngx_parameters = nullptr;
+        NVSDK_NGX_Handle * dlss_feature = nullptr;
 
         bool initialized = {};
 
@@ -27,7 +30,7 @@ namespace daxa
         void create_resizable_resources();
         void destroy_resizable_resources();
 
-        ImplFsr2Context(UpscaleContextInfo const & info);
-        virtual ~ImplFsr2Context() override final;
+        ImplDlssContext(UpscaleContextInfo const & info);
+        virtual ~ImplDlssContext() override final;
     };
 } // namespace daxa
