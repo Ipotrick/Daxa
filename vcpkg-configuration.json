@@ -3,7 +3,7 @@
         {
             "kind": "git",
             "repository": "https://github.com/GabeRundlett/vcpkg-registry",
-            "baseline": "3d40ee16b41a60493c690360782cb12e83664fbc",
+            "baseline": "892d95be0f2dd9ca483f95ae287997cbec721590",
             "packages": [
                 "dxc",
                 "fsr2"
