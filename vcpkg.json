@@ -6,8 +6,7 @@
     "dependencies": [
         "dxc",
         "vulkan-memory-allocator",
-        "volk",
-        "vulkan"
+        "volk"
     ],
     "features": {
         "utils": {
