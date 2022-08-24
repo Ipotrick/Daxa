@@ -43,7 +43,7 @@ add_library(daxa STATIC
     "src/utils/impl_task_list.cpp"
     "src/utils/impl_imgui.cpp"
     "src/utils/impl_fsr2.cpp"
-    "src/utils/impl_dlss.cpp"
+    # "src/utils/impl_dlss.cpp"
 )
 
 add_library(daxa::daxa ALIAS daxa)
@@ -87,16 +87,16 @@ target_include_directories(daxa
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
-target_include_directories(daxa
-    PRIVATE
-    $<BUILD_INTERFACE:C:/dev/downloads/nvngx_dlss_sdk/include>
-)
-target_link_libraries(daxa
-    PRIVATE
-    "C:/dev/downloads/nvngx_dlss_sdk/lib/Windows_x86_64/x86_64/nvsdk_ngx_d_dbg.lib"
-    "C:/dev/downloads/nvngx_dlss_sdk/lib/Windows_x86_64/x86_64/nvsdk_ngx_d_dbg_iterator0.lib"
-    "C:/dev/downloads/nvngx_dlss_sdk/lib/Windows_x86_64/x86_64/nvsdk_ngx_d_dbg_iterator1.lib"
-)
+# target_include_directories(daxa
+#     PRIVATE
+#     $<BUILD_INTERFACE:C:/dev/downloads/nvngx_dlss_sdk/include>
+# )
+# target_link_libraries(daxa
+#     PRIVATE
+#     "C:/dev/downloads/nvngx_dlss_sdk/lib/Windows_x86_64/x86_64/nvsdk_ngx_d_dbg.lib"
+#     "C:/dev/downloads/nvngx_dlss_sdk/lib/Windows_x86_64/x86_64/nvsdk_ngx_d_dbg_iterator0.lib"
+#     "C:/dev/downloads/nvngx_dlss_sdk/lib/Windows_x86_64/x86_64/nvsdk_ngx_d_dbg_iterator1.lib"
+# )
 
 set_project_warnings(daxa)
 
