@@ -24,7 +24,7 @@ namespace daxa
     struct UpscaleInfo
     {
         ImageId color, depth, motion_vectors;
-        ImageId reactive, trans_and_comp;
+        // ImageId reactive, trans_and_comp;
         ImageId output;
 
         bool should_reset = false;
