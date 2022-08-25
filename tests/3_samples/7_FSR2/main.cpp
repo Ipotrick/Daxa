@@ -38,10 +38,10 @@ struct RasterInput
 
 struct RasterPush
 {
-    glm::vec3 chunk_pos;
-    u32 mode;
-    daxa::BufferId input_buffer_id;
-    daxa::BufferId vertex_buffer_id;
+    glm::vec3 chunk_pos = {};
+    u32 mode = {};
+    daxa::BufferId input_buffer_id = {};
+    daxa::BufferId vertex_buffer_id = {};
 };
 
 #include <0_common/voxels.hpp>
@@ -53,7 +53,7 @@ using Clock = std::chrono::high_resolution_clock;
 struct App : AppWindow<App>
 {
     daxa::Context daxa_ctx = daxa::create_context({
-        .enable_validation = true,
+        .enable_validation = false,
     });
     daxa::Device device = daxa_ctx.create_device({});
 
@@ -150,7 +150,7 @@ struct App : AppWindow<App>
     daxa::TaskBufferId task_staging_raster_input_buffer;
 
     UpscaleContext upscale_context = UpscaleContext{{.device = device}};
-    f32 render_scl = 0.5f;
+    f32 render_scl = 1.0f;
     daxa::ImageId swapchain_image;
     daxa::ImageId color_image, display_image, motion_vectors_image, depth_image;
     u32 render_size_x, render_size_y;
