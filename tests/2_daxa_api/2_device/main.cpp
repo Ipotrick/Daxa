@@ -13,10 +13,10 @@ namespace tests
         // To select a device, you look at its properties and return a score.
         // Daxa will choose the device you scored as the highest.
         auto device = daxa_ctx.create_device({
-            .selector = [](daxa::DeviceVulkanInfo device_info)
+            .selector = [](daxa::DeviceProperties const & device_props)
             {
                 i32 score = 0;
-                switch (device_info.device_type)
+                switch (device_props.device_type)
                 {
                 case daxa::DeviceType::DISCRETE_GPU: score += 10000; break;
                 case daxa::DeviceType::VIRTUAL_GPU: score += 1000; break;
@@ -27,6 +27,12 @@ namespace tests
             },
             .debug_name = "My device",
         });
+
+        // once the device is created, you can query its properties, such
+        // as its name and much more! These are the same properties we used
+        // to discriminate in the GPU selection.
+        std::cout << device.properties().device_name << std::endl;
+
     }
 } // namespace tests
 

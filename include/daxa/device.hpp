@@ -128,7 +128,7 @@ namespace daxa
         u64 non_coherent_atom_size;
     };
 
-    struct DeviceVulkanInfo
+    struct DeviceProperties
     {
         u32 vulkan_api_version = {};
         u32 driver_version = {};
@@ -140,25 +140,25 @@ namespace daxa
         DeviceLimits limits = {};
     };
 
-    static inline auto default_device_score(DeviceVulkanInfo const & device_info) -> i32
+    static inline auto default_device_score(DeviceProperties const & device_props) -> i32
     {
         i32 score = 0;
-        switch (device_info.device_type)
+        switch (device_props.device_type)
         {
         case daxa::DeviceType::DISCRETE_GPU: score += 10000; break;
         case daxa::DeviceType::VIRTUAL_GPU: score += 1000; break;
         case daxa::DeviceType::INTEGRATED_GPU: score += 100; break;
         default: break;
         }
-        score += static_cast<i32>(device_info.limits.max_memory_allocation_count / 1000);
-        score += static_cast<i32>(device_info.limits.max_descriptor_set_storage_buffers / 1000);
-        score += static_cast<i32>(device_info.limits.max_image_array_layers / 1000);
+        score += static_cast<i32>(device_props.limits.max_memory_allocation_count / 1000);
+        score += static_cast<i32>(device_props.limits.max_descriptor_set_storage_buffers / 1000);
+        score += static_cast<i32>(device_props.limits.max_image_array_layers / 1000);
         return score;
     }
 
     struct DeviceInfo
     {
-        std::function<i32(DeviceVulkanInfo const &)> selector = default_device_score;
+        std::function<i32(DeviceProperties const &)> selector = default_device_score;
         bool use_scalar_layout = true;
         std::string debug_name = {};
     };
@@ -204,6 +204,7 @@ namespace daxa
         auto map_memory(BufferId id) -> void *;
         void unmap_memory(BufferId id);
         auto info() const -> DeviceInfo const &;
+        auto properties() const -> DeviceProperties const &;
         void wait_idle();
         template <typename T>
         auto map_memory_as(BufferId id) -> T *
