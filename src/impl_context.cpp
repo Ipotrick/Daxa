@@ -37,7 +37,7 @@ namespace daxa
         {
             VkPhysicalDeviceProperties vk_device_properties;
             vkGetPhysicalDeviceProperties(physical_device, &vk_device_properties);
-            return device_info.selector(*reinterpret_cast<DeviceVulkanInfo *>(&vk_device_properties));
+            return device_info.selector(*reinterpret_cast<DeviceProperties *>(&vk_device_properties));
         };
 
         auto device_comparator = [&](auto const & a, auto const & b) -> bool
@@ -54,7 +54,7 @@ namespace daxa
 
         VkPhysicalDeviceProperties vk_device_properties;
         vkGetPhysicalDeviceProperties(physical_device, &vk_device_properties);
-        auto device_vulkan_info = *reinterpret_cast<DeviceVulkanInfo *>(&vk_device_properties);
+        auto device_vulkan_info = *reinterpret_cast<DeviceProperties *>(&vk_device_properties);
 
         // std::cout << "Selected device: " << vk_device_properties.deviceName << std::endl;
 

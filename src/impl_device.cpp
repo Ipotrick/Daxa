@@ -10,6 +10,12 @@ namespace daxa
         return impl.info;
     }
 
+    auto Device::properties() const -> DeviceProperties const &
+    {
+        auto & impl = *as<ImplDevice>();
+        return impl.vk_info;
+    }
+
     void Device::wait_idle()
     {
         auto & impl = *as<ImplDevice>();
@@ -408,7 +414,7 @@ namespace daxa
 
     static void * REQUIRED_DEVICE_FEATURE_P_CHAIN = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT);
 
-    ImplDevice::ImplDevice(DeviceInfo const & a_info, DeviceVulkanInfo const & a_vk_info, ManagedWeakPtr a_impl_ctx, VkPhysicalDevice a_physical_device)
+    ImplDevice::ImplDevice(DeviceInfo const & a_info, DeviceProperties const & a_vk_info, ManagedWeakPtr a_impl_ctx, VkPhysicalDevice a_physical_device)
         : info{a_info}, vk_info{a_vk_info}, impl_ctx{a_impl_ctx}, vk_physical_device{a_physical_device}
     {
         // SELECT QUEUE
