@@ -124,7 +124,6 @@ namespace daxa
             submit_semaphore_waits.push_back(impl_binary_semaphore.vk_semaphore);
         }
 
-        u32 image_index = 0;
         VkPresentInfoKHR present_info{
             .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
             .pNext = nullptr,
