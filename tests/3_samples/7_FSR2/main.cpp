@@ -17,15 +17,8 @@
 #define APPNAME "Daxa Sample: FSR2"
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
 
-#define USE_DLSS_INSTEAD 0
-
-#if USE_DLSS_INSTEAD
-#include <daxa/utils/dlss.hpp>
-using UpscaleContext = daxa::DlssContext;
-#else
 #include <daxa/utils/fsr2.hpp>
 using UpscaleContext = daxa::Fsr2Context;
-#endif
 
 struct RasterInput
 {
