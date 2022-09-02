@@ -145,13 +145,13 @@ struct App : AppWindow<App>
     }).value();
     daxa::ComputePipeline chunkgen_pipeline = pipeline_compiler.create_compute_pipeline({
         .shader_info = {.source = daxa::ShaderFile{"chunkgen.hlsl"}},
-        .push_constant_size = sizeof(ChunkgenComputePush),
-        .debug_name = APPNAME_PREFIX("chunkgen_compute_pipeline"),
+        .push_constant_size = sizeof(ChunkgenPush),
+        .debug_name = APPNAME_PREFIX("chunkgen_pipeline"),
     }).value();
-    daxa::ComputePipeline meshgen_compute_pipeline = pipeline_compiler.create_compute_pipeline({
+    daxa::ComputePipeline meshgen_pipeline = pipeline_compiler.create_compute_pipeline({
         .shader_info = {.source = daxa::ShaderFile{"meshgen.hlsl"}},
-        .push_constant_size = sizeof(MeshgenComputePush),
-        .debug_name = APPNAME_PREFIX("meshgen_compute_pipeline"),
+        .push_constant_size = sizeof(MeshgenPush),
+        .debug_name = APPNAME_PREFIX("meshgen_pipeline"),
     }).value();
     // clang-format on
 
@@ -216,12 +216,12 @@ struct App : AppWindow<App>
     {
         player.update(delta_time);
         refresh_pipeline(pipeline_compiler, draw_raster_pipeline);
-        if (refresh_pipeline(pipeline_compiler, chunkgen_compute_pipeline))
+        if (refresh_pipeline(pipeline_compiler, chunkgen_pipeline))
         {
             // invalidate chunk block data
             should_regen_chunks = true;
         }
-        if (refresh_pipeline(pipeline_compiler, meshgen_compute_pipeline))
+        if (refresh_pipeline(pipeline_compiler, meshgen_pipeline))
         {
             // invalidate chunk mesh data
             should_regen_chunks = true;
