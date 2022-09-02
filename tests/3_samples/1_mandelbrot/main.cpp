@@ -32,7 +32,7 @@ struct App : AppWindow<App>
         },
         .present_mode = daxa::PresentMode::DO_NOT_WAIT_FOR_VBLANK,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-        .debug_name = APPNAME_PREFIX("swpachain"),
+        .debug_name = APPNAME_PREFIX("swapchain"),
     });
 
     daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
@@ -57,7 +57,7 @@ struct App : AppWindow<App>
     ComputeInput compute_input = {};
 
     daxa::ImageId render_image = device.create_image(daxa::ImageInfo{
-        .format = daxa::Format::R16G16B16A16_SFLOAT,
+        .format = daxa::Format::R8G8B8A8_UNORM,
         .size = {size_x, size_y, 1},
         .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
         .debug_name = APPNAME_PREFIX("render_image"),
@@ -164,6 +164,13 @@ struct App : AppWindow<App>
             .waiting_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_READ,
         });
 
+        cmd_list.pipeline_barrier_image_transition({
+            .waiting_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
+            .before_layout = daxa::ImageLayout::UNDEFINED,
+            .after_layout = daxa::ImageLayout::GENERAL,
+            .image_id = render_image,
+        });
+
         cmd_list.set_pipeline(compute_pipeline);
         cmd_list.push_constant(ComputePush{
             .image_id = render_image.default_view(),
@@ -185,7 +192,7 @@ struct App : AppWindow<App>
         cmd_list.pipeline_barrier_image_transition({
             .awaited_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
             .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
-            .before_layout = daxa::ImageLayout::UNDEFINED,
+            .before_layout = daxa::ImageLayout::GENERAL,
             .after_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
             .image_id = render_image,
         });
