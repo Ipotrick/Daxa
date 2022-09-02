@@ -292,9 +292,11 @@ namespace tests
             });
 
             daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
-                .root_paths = {
-                    "tests/2_daxa_api/6_task_list/shaders",
-                    "include",
+                .shader_compile_options = {
+                    .root_paths = {
+                        "tests/2_daxa_api/6_task_list/shaders",
+                        "include",
+                    },
                 },
                 .debug_name = APPNAME_PREFIX("pipeline_compiler (drawing)"),
             });
@@ -405,13 +407,10 @@ namespace tests
                 if (pipeline_compiler.check_if_sources_changed(raster_pipeline))
                 {
                     auto new_pipeline = pipeline_compiler.recreate_raster_pipeline(raster_pipeline);
+                    std::cout << new_pipeline.to_string() << std::endl;
                     if (new_pipeline.is_ok())
                     {
                         raster_pipeline = new_pipeline.value();
-                    }
-                    else
-                    {
-                        std::cout << new_pipeline.message() << std::endl;
                     }
                 }
                 swapchain_image = swapchain.acquire_next_image();

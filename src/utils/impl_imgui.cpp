@@ -100,36 +100,36 @@ struct Push
     daxa::SamplerId sampler0_id;
 };
 
-char const * shaders_hlsl = R"--(
-    #include "daxa/daxa.hlsl"
+char const * shaders_hlsl = R"hlsl(
+    #include DAXA_SHADER_INCLUDE
     struct Push
     {
-        daxa::f32vec2 scale;
-        daxa::f32vec2 translate;
-        daxa::u32 vbuffer_offset;
-        daxa::u32 ibuffer_offset;
-        daxa::BufferId vbuffer_id;
-        daxa::BufferId ibuffer_id;
-        daxa::ImageViewId texture0_id;
-        daxa::SamplerId sampler0_id;
+        f32vec2 scale;
+        f32vec2 translate;
+        u32 vbuffer_offset;
+        u32 ibuffer_offset;
+        BufferId vbuffer_id;
+        BufferId ibuffer_id;
+        ImageViewId texture0_id;
+        SamplerId sampler0_id;
     };
     [[vk::push_constant]] const Push p;
     struct Vertex
     {
-        float2 pos;
-        float2 uv;
-        uint col;
+        f32vec2 pos;
+        f32vec2 uv;
+        u32 col;
     };
     struct VertexOutput {
-        float4 pos : SV_POSITION;
-        float4 col : COLOR0;
-        float2 uv  : TEXCOORD0;
+        f32vec4 pos : SV_POSITION;
+        f32vec4 col : COLOR0;
+        f32vec2 uv  : TEXCOORD0;
     };
-    VertexOutput vs_main(uint invocation_index : SV_VERTEXID) {
+    VertexOutput vs_main(u32 invocation_index : SV_VERTEXID) {
         ByteAddressBuffer vbuffer = daxa::get_ByteAddressBuffer(p.vbuffer_id);
         Vertex input = vbuffer.Load<Vertex>(invocation_index * sizeof(Vertex));
         VertexOutput output;
-        output.pos = float4(input.pos * p.scale + p.translate, 0, 1);
+        output.pos = f32vec4(input.pos * p.scale + p.translate, 0, 1);
         output.col.r = ((input.col >> 0x00) & 0xff) * 1.0 / 255.0;
         output.col.g = ((input.col >> 0x08) & 0xff) * 1.0 / 255.0;
         output.col.b = ((input.col >> 0x10) & 0xff) * 1.0 / 255.0;
@@ -137,21 +137,21 @@ char const * shaders_hlsl = R"--(
         output.uv  = input.uv;
         return output;
     }
-    float4 srgb_to_linear(float4 srgb) {
-        float3 color_srgb = srgb.rgb;
-        float3 selector = clamp(ceil(color_srgb - 0.04045), 0.0, 1.0); // 0 if under value, 1 if over
-        float3 under = color_srgb / 12.92;
-        float3 over = pow((color_srgb + 0.055) / 1.055, float3(2.4, 2.4, 2.4));
-        float3 result = lerp(under, over, selector);
-        return float4(result, srgb.a);
+    f32vec4 srgb_to_linear(f32vec4 srgb) {
+        f32vec3 color_srgb = srgb.rgb;
+        f32vec3 selector = clamp(ceil(color_srgb - 0.04045), 0.0, 1.0); // 0 if under value, 1 if over
+        f32vec3 under = color_srgb / 12.92;
+        f32vec3 over = pow((color_srgb + 0.055) / 1.055, f32vec3(2.4, 2.4, 2.4));
+        f32vec3 result = lerp(under, over, selector);
+        return f32vec4(result, srgb.a);
     }
-    float4 fs_main(VertexOutput input) : SV_Target {
-        Texture2D<float4> texture0 = daxa::get_Texture2D<float4>(p.texture0_id);
+    f32vec4 fs_main(VertexOutput input) : SV_Target {
+        Texture2D<f32vec4> texture0 = daxa::get_Texture2D<f32vec4>(p.texture0_id);
         SamplerState sampler0 = daxa::get_sampler(p.sampler0_id);
-        float4 col = srgb_to_linear(input.col) * texture0.Sample(sampler0, input.uv);
+        f32vec4 col = srgb_to_linear(input.col) * texture0.Sample(sampler0, input.uv);
         return col;
     }
-)--";
+)hlsl";
 
 namespace daxa
 {
@@ -170,21 +170,6 @@ namespace daxa
 
     void ImGuiRenderer::record_task(ImDrawData * draw_data, TaskList & task_list, TaskImageId task_swapchain_image, u32 size_x, u32 size_y)
     {
-        // task_list.add_task({
-        //     .resources = {
-        //         .images = {
-        //             {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
-        //         },
-        //     },
-        //     .task = [this, task_swapchain_image, draw_data, size_x, size_y](daxa::TaskInterface interf)
-        //     {
-        //         auto cmd_list = interf.get_command_list();
-        //         auto & impl = *as<ImplImGuiRenderer>();
-        //         auto swapchain_image = interf.get_image(task_swapchain_image);
-        //         impl.record_commands(draw_data, cmd_list, swapchain_image, size_x, size_y);
-        //     },
-        //     .debug_name = "TaskList ImGui Task",
-        // });
     }
 
     void ImplImGuiRenderer::recreate_vbuffer(usize vbuffer_new_size)
@@ -352,8 +337,8 @@ namespace daxa
         : info{info},
           // clang-format off
         raster_pipeline{this->info.pipeline_compiler.create_raster_pipeline({
-            .vertex_shader_info = {.source = daxa::ShaderCode{.string = shaders_hlsl}, .entry_point = "vs_main"},
-            .fragment_shader_info = {.source = daxa::ShaderCode{.string = shaders_hlsl}, .entry_point = "fs_main"},
+            .vertex_shader_info = {.source = daxa::ShaderCode{.string = shaders_hlsl}, .compile_options = {.entry_point = "vs_main"}},
+            .fragment_shader_info = {.source = daxa::ShaderCode{.string = shaders_hlsl}, .compile_options = {.entry_point = "fs_main"}},
             .color_attachments = {
                 {
                     .format = info.format,

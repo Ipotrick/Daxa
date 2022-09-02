@@ -8,7 +8,7 @@ DAXA_DEFINE_GET_STRUCTURED_BUFFER(ChunkBlocks);
 // using namespace daxa;
 
 // clang-format off
-[numthreads(8, 8, 8)] void main(uint3 block_offset : SV_DispatchThreadID)
+[numthreads(8, 8, 8)] void main(u32vec3 block_offset : SV_DispatchThreadID)
 // clang-format on
 {
     StructuredBuffer<ChunkBlocks> chunk = daxa::get_StructuredBuffer<ChunkBlocks>(p.buffer_id);
