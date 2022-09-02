@@ -20,7 +20,7 @@ static void shader_preprocess(std::string & file_str, std::filesystem::path cons
         if (std::regex_match(line, matches, PRAGMA_ONCE_REGEX))
         {
             result_ss << "#if !defined(";
-            std::regex_replace(std::ostreambuf_iterator<char>(result_ss), abspath_str.begin(), abspath_str.end(), REPLACE_REGEX, "_");
+            std::regex_replace(std::ostreambuf_iterator<char>(result_ss), abspath_str.begin(), abspath_str.end(), REPLACE_REGEX, "");
             result_ss << ")\n";
             has_pragma_once = true;
         }
@@ -32,72 +32,128 @@ static void shader_preprocess(std::string & file_str, std::filesystem::path cons
     if (has_pragma_once)
     {
         result_ss << "\n#define ";
-        std::regex_replace(std::ostreambuf_iterator<char>(result_ss), abspath_str.begin(), abspath_str.end(), REPLACE_REGEX, "_");
-        result_ss << "\n#endif";
+        std::regex_replace(std::ostreambuf_iterator<char>(result_ss), abspath_str.begin(), abspath_str.end(), REPLACE_REGEX, "");
+        result_ss << "\n#endif\n";
     }
     file_str = result_ss.str();
 }
 
 namespace daxa
 {
-    struct DxcCustomIncluder : public IDxcIncludeHandler
+    class ShadercFileIncluder : public shaderc::CompileOptions::IncluderInterface
     {
-        IDxcIncludeHandler * default_includer;
+      public:
+        constexpr static inline size_t DELETE_SOURCE_NAME = 0x1;
+        constexpr static inline size_t DELETE_CONTENT = 0x2;
+
         ImplPipelineCompiler * impl_pipeline_compiler;
 
-        virtual ~DxcCustomIncluder() {}
-        HRESULT LoadSource(LPCWSTR filename, IDxcBlob ** include_source) override
+        virtual shaderc_include_result * GetInclude(
+            const char * requested_source,
+            shaderc_include_type type,
+            const char * requesting_source,
+            size_t include_depth) override
         {
-            if (filename[0] == '.')
+            shaderc_include_result * res = new shaderc_include_result{};
+            if (include_depth <= 10)
             {
-                filename += 2;
-            }
+                res->source_name = requested_source;
+                res->source_name_length = strlen(requested_source);
+                res->user_data = 0;
 
-            auto result = impl_pipeline_compiler->full_path_to_file(filename);
-            if (result.is_err())
-            {
-                *include_source = nullptr;
-                return SCARD_E_FILE_NOT_FOUND;
-            }
-            auto full_path = result.value();
-            auto search_pred = [&](std::filesystem::path const & p)
-            { return p == full_path; };
+                auto result = impl_pipeline_compiler->full_path_to_file(requested_source);
+                if (result.is_err())
+                {
+                    res->content = "#error could not find file";
+                    res->content_length = strlen(res->content);
 
-            ComPtr<IDxcBlobEncoding> dxc_blob_encoding = {};
-            if (std::find_if(impl_pipeline_compiler->current_seen_shader_files.begin(),
-                             impl_pipeline_compiler->current_seen_shader_files.end(), search_pred) != impl_pipeline_compiler->current_seen_shader_files.end())
-            {
-                // Return empty string blob if this file has been included before
-                static const char null_str[] = " ";
-                impl_pipeline_compiler->dxc_utils->CreateBlob(null_str, sizeof(null_str), CP_UTF8, &dxc_blob_encoding);
-                *include_source = dxc_blob_encoding.Detach();
-                return S_OK;
+                    // res->source_name = nullptr;
+                    // res->source_name_length = 0;
+                    return res;
+                }
+
+                auto full_path = result.value();
+                auto search_pred = [&](std::filesystem::path const & p)
+                { return p == full_path; };
+
+                if (std::find_if(
+                        impl_pipeline_compiler->current_seen_shader_files.begin(),
+                        impl_pipeline_compiler->current_seen_shader_files.end(),
+                        search_pred) != impl_pipeline_compiler->current_seen_shader_files.end())
+                {
+                    // Return empty string blob if this file has been included before
+                    static const char null_str[] = " ";
+                    res->content = null_str;
+                    res->content_length = 0;
+                    return res;
+                }
+
+                impl_pipeline_compiler->current_observed_hotload_files->insert({full_path, std::chrono::file_clock::now()});
+                auto shadercode_result = impl_pipeline_compiler->load_shader_source_from_file(full_path);
+
+                if (shadercode_result.is_err())
+                {
+                    res->content = "#error could not load shader source";
+                    res->content_length = strlen(res->content);
+
+                    res->source_name = nullptr;
+                    res->source_name_length = 0;
+                    return res;
+                }
+
+                auto & shadercode_str = shadercode_result.value().string;
+                res->content_length = shadercode_str.size();
+                char * res_content = new char[res->content_length + 1];
+                for (usize i = 0; i < res->content_length; ++i)
+                {
+                    res_content[i] = shadercode_str[i];
+                }
+                res_content[res->content_length] = '\0';
+                res->content = res_content;
+
+                auto full_path_str = full_path.string();
+                res->source_name_length = full_path_str.size();
+                char * res_source_name = new char[res->source_name_length + 1];
+                for (usize i = 0; i < res->source_name_length; ++i)
+                {
+                    auto c = full_path_str[i];
+                    if (c == '\\')
+                        c = '/';
+                    res_source_name[i] = c;
+                }
+                res_source_name[res->source_name_length] = '\0';
+                res->source_name = res_source_name;
+
+                res->user_data = reinterpret_cast<void *>(reinterpret_cast<size_t>(res->user_data) | DELETE_CONTENT);
+                res->user_data = reinterpret_cast<void *>(reinterpret_cast<size_t>(res->user_data) | DELETE_SOURCE_NAME);
             }
             else
             {
-                impl_pipeline_compiler->current_observed_hotload_files->insert({full_path, std::chrono::file_clock::now()});
-            }
+                // max include depth exceeded
+                res->content = "current include depth of 10 was exceeded";
+                res->content_length = std::strlen(res->content);
 
-            auto str_result = impl_pipeline_compiler->load_shader_source_from_file(full_path);
-            if (str_result.is_err())
-            {
-                *include_source = nullptr;
-                return SCARD_E_INVALID_PARAMETER;
+                res->source_name = nullptr;
+                res->source_name_length = 0;
             }
-            std::string str = str_result.value().string;
-
-            impl_pipeline_compiler->dxc_utils->CreateBlob(str.c_str(), static_cast<u32>(str.size()), CP_UTF8, &dxc_blob_encoding);
-            *include_source = dxc_blob_encoding.Detach();
-            return S_OK;
+            return res;
         }
 
-        HRESULT QueryInterface(REFIID riid, void ** object) override
+        virtual void ReleaseInclude(shaderc_include_result * data) override
         {
-            return default_includer->QueryInterface(riid, object);
-        }
-
-        unsigned long STDMETHODCALLTYPE AddRef(void) override { return 0; }
-        unsigned long STDMETHODCALLTYPE Release(void) override { return 0; }
+            if (data)
+            {
+                if (reinterpret_cast<size_t>(data->user_data) & DELETE_CONTENT)
+                {
+                    delete data->content;
+                }
+                if (reinterpret_cast<size_t>(data->user_data) & DELETE_SOURCE_NAME)
+                {
+                    delete data->source_name;
+                }
+                delete data;
+            }
+        };
     };
 
     RasterPipeline::RasterPipeline(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
@@ -505,21 +561,14 @@ namespace daxa
     ImplPipelineCompiler::ImplPipelineCompiler(ManagedWeakPtr a_impl_device, PipelineCompilerInfo const & info)
         : impl_device{std::move(a_impl_device)}, info{info}
     {
-        HRESULT dxc_utils_result = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&this->dxc_utils));
-        DAXA_DBG_ASSERT_TRUE_M(SUCCEEDED(dxc_utils_result), "Failed to create DXC utils");
+        auto includer = ShadercFileIncluder{};
+        includer.impl_pipeline_compiler = this;
+        shaderc_backend.options.SetIncluder(std::make_unique<ShadercFileIncluder>(includer));
 
-        HRESULT dxc_compiler_result = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&this->dxc_compiler));
-        DAXA_DBG_ASSERT_TRUE_M(SUCCEEDED(dxc_compiler_result), "Failed to create DXC compiler");
-
-        ComPtr<DxcCustomIncluder> dxc_includer = new DxcCustomIncluder();
-        dxc_includer->impl_pipeline_compiler = this;
-        this->dxc_utils->CreateDefaultIncludeHandler(&(dxc_includer->default_includer));
-        this->dxc_includer = dxc_includer.Detach();
+        DAXA_DBG_ASSERT_TRUE_M(info.opt_level < 3, "The optimization level must be between 0 and 2 (inclusive)");
     }
 
-    ImplPipelineCompiler::~ImplPipelineCompiler()
-    {
-    }
+    ImplPipelineCompiler::~ImplPipelineCompiler() {}
 
     auto ImplPipelineCompiler::get_spirv(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage) -> Result<std::vector<u32>>
     {
@@ -555,7 +604,7 @@ namespace daxa
                 code = std::get<ShaderCode>(shader_info.source);
             }
 
-            auto ret = gen_spirv_from_dxc(shader_info, shader_stage, code);
+            auto ret = gen_spirv_from_shaderc(shader_info, shader_stage, code);
             if (ret.is_err())
             {
                 return ResultErr{ret.message()};
@@ -622,121 +671,63 @@ namespace daxa
         return ResultErr{.message = err};
     }
 
-    auto ImplPipelineCompiler::gen_spirv_from_dxc(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
+    auto ImplPipelineCompiler::gen_spirv_from_shaderc(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
     {
-        auto u8_ascii_to_wstring = [](char const * str) -> std::wstring
+        auto translate_shader_stage = [](VkShaderStageFlagBits stage) -> shaderc_shader_kind
         {
-            std::wstring ret = {};
-            for (int i = 0; i < std::strlen(str) + 1 && str != nullptr; i++)
+            switch (stage)
             {
-                ret.push_back(str[i]);
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT: return shaderc_shader_kind::shaderc_vertex_shader;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT: return shaderc_shader_kind::shaderc_tess_control_shader;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT: return shaderc_shader_kind::shaderc_tess_evaluation_shader;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_GEOMETRY_BIT: return shaderc_shader_kind::shaderc_geometry_shader;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT: return shaderc_shader_kind::shaderc_fragment_shader;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT: return shaderc_shader_kind::shaderc_compute_shader;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_RAYGEN_BIT_KHR: return shaderc_shader_kind::shaderc_raygen_shader;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_ANY_HIT_BIT_KHR: return shaderc_shader_kind::shaderc_anyhit_shader;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR: return shaderc_shader_kind::shaderc_closesthit_shader;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_MISS_BIT_KHR: return shaderc_shader_kind::shaderc_miss_shader;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_INTERSECTION_BIT_KHR: return shaderc_shader_kind::shaderc_intersection_shader;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_CALLABLE_BIT_KHR: return shaderc_shader_kind::shaderc_callable_shader;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_TASK_BIT_NV: return shaderc_shader_kind::shaderc_task_shader;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_MESH_BIT_NV: return shaderc_shader_kind::shaderc_mesh_shader;
+            default:
+                std::cerr << "error: unknown shader stage!\n";
+                std::abort();
             }
-            return ret;
         };
 
-        std::vector<const wchar_t *> args = {};
+        auto spirv_stage = translate_shader_stage(shader_stage);
+        shaderc_backend.options.SetSourceLanguage(shaderc_source_language_glsl);
+        shaderc_backend.options.SetTargetEnvironment(shaderc_target_env_vulkan, VK_API_VERSION_1_2);
+        shaderc_backend.options.SetTargetSpirv(shaderc_spirv_version_1_3);
+        shaderc_backend.options.SetOptimizationLevel(static_cast<shaderc_optimization_level>(this->info.opt_level));
 
-        std::vector<std::wstring> wstring_buffer = {};
-
-        wstring_buffer.reserve(shader_info.defines.size() + 1 + info.root_paths.size());
-
-        for (auto & define : shader_info.defines)
+        for (auto const & shader_define : shader_info.defines)
         {
-            wstring_buffer.push_back(u8_ascii_to_wstring(define.c_str()));
-            args.push_back(L"-D");
-            args.push_back(wstring_buffer.back().c_str());
-        }
-
-        if (shader_info.source.index() == 0)
-        {
-            wstring_buffer.push_back(std::get<ShaderFile>(shader_info.source).path.wstring());
-            args.push_back(wstring_buffer.back().c_str());
-        }
-
-        for (auto & root : info.root_paths)
-        {
-            args.push_back(L"-I");
-            wstring_buffer.push_back(root.wstring());
-            args.push_back(wstring_buffer.back().c_str());
-        }
-
-        // set matrix packing to column major
-        args.push_back(L"-Zpc");
-        // set warnings as errors
-        args.push_back(DXC_ARG_WARNINGS_ARE_ERRORS); //-WX
-        // setting target
-        args.push_back(L"-spirv");
-        args.push_back(L"-fspv-target-env=vulkan1.1");
-        // set optimization setting
-        switch (this->info.opt_level)
-        {
-        case 0: args.push_back(L"-O0"); break;
-        case 1: args.push_back(L"-O1"); break;
-        case 2: args.push_back(L"-O2"); break;
-        case 3: args.push_back(L"-O3"); break;
-        default: DAXA_DBG_ASSERT_TRUE_M(false, "Bad optimization level set in Pipeline Compiler"); break;
-        }
-        // setting entry point
-        args.push_back(L"-E");
-        auto entry_point_wstr = u8_ascii_to_wstring(shader_info.entry_point.c_str());
-        args.push_back(entry_point_wstr.c_str());
-
-        if (this->impl_device.as<ImplDevice>()->info.use_scalar_layout)
-        {
-            args.push_back(L"-fvk-use-scalar-layout");
-        }
-
-        // set shader model
-        args.push_back(L"-T");
-        std::wstring profile = L"vs_x_x";
-        profile[3] = L'0' + this->info.shader_model_major;
-        profile[5] = L'0' + this->info.shader_model_minor;
-        switch (shader_stage)
-        {
-        case VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT: profile[0] = L'v'; break;
-        case VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT: profile[0] = L'p'; break;
-        case VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT: profile[0] = L'c'; break;
-        default: break;
-        }
-        args.push_back(profile.c_str());
-        // set hlsl version to 2021
-        args.push_back(L"-HV");
-        args.push_back(L"2021");
-        DxcBuffer source_buffer{
-            .Ptr = code.string.c_str(),
-            .Size = static_cast<u32>(code.string.size()),
-            .Encoding = static_cast<u32>(0),
-        };
-
-        IDxcResult * result;
-        // this->dxc_compiler->Compile(nullptr, nullptr, 0, dxc_includer, IID_PPV_ARGS(&result));
-        this->dxc_compiler->Compile(&source_buffer, args.data(), static_cast<u32>(args.size()), dxc_includer, IID_PPV_ARGS(&result));
-        IDxcBlobUtf8 * error_message;
-        result->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&error_message), nullptr);
-
-        if (error_message && error_message->GetStringLength() > 0)
-        {
-            auto str = std::string();
-            str.resize(error_message->GetBufferSize());
-            for (usize i = 0; i < str.size(); i++)
+            if (shader_define.value.size() > 0)
             {
-                str[i] = static_cast<char const *>(error_message->GetBufferPointer())[i];
+                shaderc_backend.options.AddMacroDefinition(shader_define.name, shader_define.value);
             }
-            str = std::string("DXC: ") + str;
-            return daxa::ResultErr{.message = str};
+            else
+            {
+                shaderc_backend.options.AddMacroDefinition(shader_define.name);
+            }
         }
 
-        IDxcBlob * shaderobj;
-        result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderobj), nullptr);
+        std::string debug_name = "unnamed shader";
+        if (ShaderFile const * shader_file = std::get_if<ShaderFile>(&shader_info.source))
+            debug_name = shader_file->path.string();
+        else if (shader_info.debug_name.size() > 0)
+            debug_name = shader_info.debug_name;
 
-        std::vector<u32> spv;
-        spv.resize(shaderobj->GetBufferSize() / sizeof(u32));
-        for (usize i = 0; i < spv.size(); i++)
-        {
-            spv[i] = static_cast<u32 *>(shaderobj->GetBufferPointer())[i];
-        }
+        shaderc::SpvCompilationResult spv_module = shaderc_backend.compiler.CompileGlslToSpv(
+            code.string.c_str(), spirv_stage, debug_name.c_str(), shaderc_backend.options);
 
-        return {spv};
+        if (spv_module.GetCompilationStatus() != shaderc_compilation_status_success)
+            return daxa::ResultErr{.message = std::string("SHADERC: ") + spv_module.GetErrorMessage()};
+
+        return {std::vector<u32>{spv_module.begin(), spv_module.end()}};
     }
 
     ImplRasterPipeline::ImplRasterPipeline(ManagedWeakPtr a_impl_device, RasterPipelineInfo const & info)

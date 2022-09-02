@@ -13,9 +13,6 @@
 #include <cstddef>
 #include <array>
 
-#define DAXA_DEFINE_GET_STRUCTURED_BUFFER(x)
-#define DAXA_DEFINE_GET_BUFFER(x)
-
 namespace daxa
 {
     inline namespace types
