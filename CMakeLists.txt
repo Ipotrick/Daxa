@@ -43,6 +43,7 @@ add_library(daxa STATIC
     "src/utils/impl_task_list.cpp"
     "src/utils/impl_imgui.cpp"
     "src/utils/impl_fsr2.cpp"
+    "src/utils/impl_mem.cpp"
 )
 
 add_library(daxa::daxa ALIAS daxa)
