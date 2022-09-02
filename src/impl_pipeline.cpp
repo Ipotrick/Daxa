@@ -368,12 +368,13 @@ namespace daxa
 
         if (impl.impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
         {
+            auto raster_pipeline_name = info.debug_name + std::string(" [Daxa RasterPipeline]");
             VkDebugUtilsObjectNameInfoEXT name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_PIPELINE,
                 .objectHandle = reinterpret_cast<uint64_t>(impl_pipeline->vk_pipeline),
-                .pObjectName = info.debug_name.c_str(),
+                .pObjectName = raster_pipeline_name.c_str(),
             };
             vkSetDebugUtilsObjectNameEXT(impl.impl_device.as<ImplDevice>()->vk_device, &name_info);
         }
@@ -447,12 +448,13 @@ namespace daxa
 
         if (impl.impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
         {
+            auto raster_pipeline_name = info.debug_name + std::string(" [Daxa ComputePipeline]");
             VkDebugUtilsObjectNameInfoEXT name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_PIPELINE,
                 .objectHandle = reinterpret_cast<uint64_t>(impl_pipeline->vk_pipeline),
-                .pObjectName = info.debug_name.c_str(),
+                .pObjectName = raster_pipeline_name.c_str(),
             };
             vkSetDebugUtilsObjectNameEXT(impl.impl_device.as<ImplDevice>()->vk_device, &name_info);
         }
@@ -699,7 +701,7 @@ namespace daxa
 
         auto spirv_stage = translate_shader_stage(shader_stage);
         shaderc_backend.options.SetSourceLanguage(shaderc_source_language_glsl);
-        shaderc_backend.options.SetTargetEnvironment(shaderc_target_env_vulkan, VK_API_VERSION_1_2);
+        shaderc_backend.options.SetTargetEnvironment(shaderc_target_env_vulkan, VK_API_VERSION_1_1);
         shaderc_backend.options.SetTargetSpirv(shaderc_spirv_version_1_3);
         shaderc_backend.options.SetOptimizationLevel(static_cast<shaderc_optimization_level>(this->info.opt_level));
 
