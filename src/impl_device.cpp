@@ -553,30 +553,33 @@ namespace daxa
 
         if (this->impl_ctx.as<ImplContext>()->enable_debug_names && this->info.debug_name.size() > 0)
         {
+            auto device_name = this->info.debug_name + std::string(" [Daxa Device]");
             VkDebugUtilsObjectNameInfoEXT device_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_DEVICE,
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_device),
-                .pObjectName = this->info.debug_name.c_str(),
+                .pObjectName = device_name.c_str(),
             };
             vkSetDebugUtilsObjectNameEXT(vk_device, &device_name_info);
 
+            auto queue_name = this->info.debug_name + std::string(" [Daxa Queue]");
             VkDebugUtilsObjectNameInfoEXT device_main_queue_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_QUEUE,
                 .objectHandle = reinterpret_cast<uint64_t>(this->main_queue_vk_queue),
-                .pObjectName = this->info.debug_name.c_str(),
+                .pObjectName = queue_name.c_str(),
             };
             vkSetDebugUtilsObjectNameEXT(vk_device, &device_main_queue_name_info);
 
+            auto semaphore_name = this->info.debug_name + std::string(" [Daxa Semaphore]");
             VkDebugUtilsObjectNameInfoEXT device_main_queue_timeline_semaphore_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_SEMAPHORE,
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_main_queue_gpu_timeline_semaphore),
-                .pObjectName = this->info.debug_name.c_str(),
+                .pObjectName = semaphore_name.c_str(),
             };
             vkSetDebugUtilsObjectNameEXT(vk_device, &device_main_queue_timeline_semaphore_name_info);
         }
@@ -700,14 +703,15 @@ namespace daxa
 
         if (this->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
         {
-            VkDebugUtilsObjectNameInfoEXT swapchain_image_view_name_info{
+            auto buffer_name = info.debug_name + std::string(" [Daxa Buffer]");
+            VkDebugUtilsObjectNameInfoEXT buffer_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_BUFFER,
                 .objectHandle = reinterpret_cast<uint64_t>(ret.vk_buffer),
-                .pObjectName = info.debug_name.c_str(),
+                .pObjectName = buffer_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(vk_device, &swapchain_image_view_name_info);
+            vkSetDebugUtilsObjectNameEXT(vk_device, &buffer_name_info);
         }
 
         write_descriptor_set_buffer(this->vk_device, this->gpu_table.vk_descriptor_set, ret.vk_buffer, 0, static_cast<VkDeviceSize>(info.size), id.index);
@@ -780,21 +784,23 @@ namespace daxa
 
         if (this->impl_ctx.as<ImplContext>()->enable_debug_names && debug_name.size() > 0)
         {
+            auto swapchain_image_name = debug_name + std::string(" [Daxa Swapchain Image]");
             VkDebugUtilsObjectNameInfoEXT swapchain_image_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_IMAGE,
                 .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image),
-                .pObjectName = debug_name.c_str(),
+                .pObjectName = swapchain_image_name.c_str(),
             };
             vkSetDebugUtilsObjectNameEXT(vk_device, &swapchain_image_name_info);
 
+            auto swapchain_image_view_name = debug_name + std::string(" [Daxa Swapchain ImageView]");
             VkDebugUtilsObjectNameInfoEXT swapchain_image_view_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
                 .objectHandle = reinterpret_cast<uint64_t>(ret.view_slot.vk_image_view),
-                .pObjectName = debug_name.c_str(),
+                .pObjectName = swapchain_image_view_name.c_str(),
             };
             vkSetDebugUtilsObjectNameEXT(vk_device, &swapchain_image_view_name_info);
         }
@@ -899,21 +905,23 @@ namespace daxa
 
         if (this->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
         {
+            auto image_name = info.debug_name + std::string(" [Daxa Image]");
             VkDebugUtilsObjectNameInfoEXT swapchain_image_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_IMAGE,
                 .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image),
-                .pObjectName = info.debug_name.c_str(),
+                .pObjectName = image_name.c_str(),
             };
             vkSetDebugUtilsObjectNameEXT(vk_device, &swapchain_image_name_info);
 
+            auto image_view_name = info.debug_name + std::string(" [Daxa ImageView]");
             VkDebugUtilsObjectNameInfoEXT swapchain_image_view_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
                 .objectHandle = reinterpret_cast<uint64_t>(ret.view_slot.vk_image_view),
-                .pObjectName = info.debug_name.c_str(),
+                .pObjectName = image_view_name.c_str(),
             };
             vkSetDebugUtilsObjectNameEXT(vk_device, &swapchain_image_view_name_info);
         }
@@ -961,12 +969,13 @@ namespace daxa
 
         if (this->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
         {
+            auto image_view_name = info.debug_name + std::string(" [Daxa ImageView]");
             VkDebugUtilsObjectNameInfoEXT name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
                 .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image_view),
-                .pObjectName = info.debug_name.c_str(),
+                .pObjectName = image_view_name.c_str(),
             };
             vkSetDebugUtilsObjectNameEXT(vk_device, &name_info);
         }
@@ -1009,14 +1018,15 @@ namespace daxa
 
         if (this->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
         {
-            VkDebugUtilsObjectNameInfoEXT swapchain_image_view_name_info{
+            auto sampler_name = info.debug_name + std::string(" [Daxa Image]");
+            VkDebugUtilsObjectNameInfoEXT sampler_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_SAMPLER,
                 .objectHandle = reinterpret_cast<uint64_t>(ret.vk_sampler),
-                .pObjectName = info.debug_name.c_str(),
+                .pObjectName = sampler_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(vk_device, &swapchain_image_view_name_info);
+            vkSetDebugUtilsObjectNameEXT(vk_device, &sampler_name_info);
         }
 
         write_descriptor_set_sampler(this->vk_device, this->gpu_table.vk_descriptor_set, ret.vk_sampler, id.index);
