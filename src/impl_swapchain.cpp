@@ -187,22 +187,23 @@ namespace daxa
 
         if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && this->info.debug_name.size() > 0)
         {
+            auto swapchain_name = this->info.debug_name + std::string(" [Daxa Swapchain]");
             VkDebugUtilsObjectNameInfoEXT swapchain_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_SWAPCHAIN_KHR,
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_swapchain),
-                .pObjectName = this->info.debug_name.c_str(),
+                .pObjectName = swapchain_name.c_str(),
             };
             vkSetDebugUtilsObjectNameEXT(impl_device.as<ImplDevice>()->vk_device, &swapchain_name_info);
 
-            std::string fence_name = this->info.debug_name + " fence";
+            auto swapchain_fence_name = this->info.debug_name + std::string(" [Daxa Swapchain Fence]");
             VkDebugUtilsObjectNameInfoEXT fence_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_FENCE,
                 .objectHandle = reinterpret_cast<uint64_t>(this->acquisition_fence),
-                .pObjectName = fence_name.c_str(),
+                .pObjectName = swapchain_fence_name.c_str(),
             };
             vkSetDebugUtilsObjectNameEXT(impl_device.as<ImplDevice>()->vk_device, &fence_name_info);
         }
