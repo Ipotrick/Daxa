@@ -20,9 +20,12 @@ namespace daxa
         std::vector<std::filesystem::path> current_seen_shader_files = {};
         ShaderFileTimeSet * current_observed_hotload_files = nullptr;
 
-        IDxcUtils * dxc_utils = nullptr;
-        IDxcCompiler3 * dxc_compiler = nullptr;
-        IDxcIncludeHandler * dxc_includer = nullptr;
+        struct ShadercBackend
+        {
+            shaderc::Compiler compiler = {};
+            shaderc::CompileOptions options = {};
+        };
+        ShadercBackend shaderc_backend = {};
 
         ImplPipelineCompiler(ManagedWeakPtr impl_device, PipelineCompilerInfo const & info);
         ~ImplPipelineCompiler();
@@ -30,7 +33,7 @@ namespace daxa
         auto get_spirv(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage) -> Result<std::vector<u32>>;
         auto full_path_to_file(std::filesystem::path const & path) -> Result<std::filesystem::path>;
         auto load_shader_source_from_file(std::filesystem::path const & path) -> Result<ShaderCode>;
-        auto gen_spirv_from_dxc(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>;
+        auto gen_spirv_from_shaderc(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>;
     };
 
     struct ImplRasterPipeline final : ManagedSharedState

@@ -13,19 +13,12 @@
 #define VK_KHR_win32_surface
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
-#include "Windows.h"
-#include "wrl/client.h"
-using namespace Microsoft::WRL;
-#include <dxcapi.h>
 #else
 #define VK_USE_PLATFORM_XLIB_KHR
 #define VK_KHR_xlib_surface
-#define SCARD_E_FILE_NOT_FOUND 0x80100024
-#define SCARD_E_INVALID_PARAMETER 0x80100004
-#include <dxc/dxcapi.h>
-template <typename T>
-using ComPtr = CComPtr<T>;
 #endif
+
+#include <shaderc/shaderc.hpp>
 
 #include <volk.h>
 #define VK_NO_PROTOTYPES

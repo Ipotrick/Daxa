@@ -2,23 +2,12 @@
 #include <thread>
 #include <iostream>
 
+#include "shaders/shared.inl"
+
 #define APPNAME "Daxa Sample: Mandelbrot"
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
 
-using namespace daxa::types;
 using Clock = std::chrono::high_resolution_clock;
-
-struct ComputeInput
-{
-    float time;
-};
-
-struct ComputePush
-{
-    daxa::ImageViewId image_id;
-    daxa::BufferId input_buffer_id;
-    u32 frame_dim_x, frame_dim_y;
-};
 
 struct App : AppWindow<App>
 {
@@ -55,7 +44,7 @@ struct App : AppWindow<App>
     });
     // clang-format off
     daxa::ComputePipeline compute_pipeline = pipeline_compiler.create_compute_pipeline({
-        .shader_info = {.source = daxa::ShaderFile{"compute.hlsl"}},
+        .shader_info = {.source = daxa::ShaderFile{"compute.glsl"}},
         .push_constant_size = sizeof(ComputePush),
         .debug_name = APPNAME_PREFIX("compute_pipeline"),
     }).value();
@@ -68,7 +57,7 @@ struct App : AppWindow<App>
     ComputeInput compute_input = {};
 
     daxa::ImageId render_image = device.create_image(daxa::ImageInfo{
-        .format = daxa::Format::R8G8B8A8_UNORM,
+        .format = daxa::Format::R16G16B16A16_SFLOAT,
         .size = {size_x, size_y, 1},
         .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
         .debug_name = APPNAME_PREFIX("render_image"),
@@ -179,8 +168,6 @@ struct App : AppWindow<App>
         cmd_list.push_constant(ComputePush{
             .image_id = render_image.default_view(),
             .input_buffer_id = compute_input_buffer,
-            .frame_dim_x = size_x,
-            .frame_dim_y = size_y,
         });
         cmd_list.dispatch((size_x + 7) / 8, (size_y + 7) / 8);
 
