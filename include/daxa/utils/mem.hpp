@@ -11,7 +11,7 @@
 
 namespace daxa
 {
-    struct CommandSubmitInfo
+    struct MemoryUploadCommandSubmitInfo
     {
         CommandList command_list;
         TimelineSemaphore timeline;
@@ -25,8 +25,8 @@ namespace daxa
         MemoryUploader(Device device, usize capacity = 1 << 25);
 
         auto upload_to_buffer(BufferId dst_buffer, usize dst_offset, usize upload_size) -> void*;
-        auto get_commands() -> CommandSubmitInfo;
-        auto reclaim_unused_memory();
+        auto get_commands() -> MemoryUploadCommandSubmitInfo;
+        void reclaim_unused_memory();
 
       private:
         auto reserve_memoy(usize size) -> usize;
