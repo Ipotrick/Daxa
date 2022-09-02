@@ -3,7 +3,7 @@
 #include "worldgen.hlsl"
 #include "common.hlsl"
 
-enum class BlockID : uint
+enum class BlockID : u32
 {
     Debug,
     Air,
@@ -30,7 +30,7 @@ enum class BlockID : uint
     Water,
 };
 
-enum class BlockFace : uint
+enum class BlockFace : u32
 {
     Left,
     Right,
@@ -45,12 +45,12 @@ enum class BlockFace : uint
 
 struct ChunkBlocks
 {
-    float3 chunk_pos;
+    f32vec3 chunk_pos;
     BlockID voxels[CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE];
 
     BlockID generate_block_id(in WorldgenState worldgen_state)
     {
-        float val = worldgen_state.t_noise;
+        f32 val = worldgen_state.t_noise;
         val = max(val, 0.0);
         if (val > 0.0)
             return BlockID::Stone;
@@ -59,22 +59,22 @@ struct ChunkBlocks
         return BlockID::Air;
     }
 
-    void chunkgen(uint3 block_offset)
+    void chunkgen(u32vec3 block_offset)
     {
-        float3 block_pos = float3(block_offset) + chunk_pos;
+        f32vec3 block_pos = f32vec3(block_offset) + chunk_pos;
         WorldgenState worldgen_state = get_worldgen_state(block_pos);
         BlockID id = generate_block_id(worldgen_state);
 
         if (id == BlockID::Stone)
         {
-            uint above_i;
+            u32 above_i;
             for (above_i = 0; above_i < 6; ++above_i)
             {
-                WorldgenState temp_worldgen_state = get_worldgen_state(block_pos - float3(0, above_i + 1, 0));
+                WorldgenState temp_worldgen_state = get_worldgen_state(block_pos - f32vec3(0, above_i + 1, 0));
                 if (generate_block_id(temp_worldgen_state) == BlockID::Air)
                     break;
             }
-            uint r = (uint)(worldgen_state.r * 10);
+            u32 r = (u32)(worldgen_state.r * 10);
             switch (r)
             {
             case 0: id = BlockID::Gravel; break;
@@ -88,16 +88,16 @@ struct ChunkBlocks
         }
         else if (id == BlockID::Air)
         {
-            uint below_i;
+            u32 below_i;
             for (below_i = 0; below_i < 6; ++below_i)
             {
-                WorldgenState temp_worldgen_state = get_worldgen_state(block_pos + float3(0, below_i + 1, 0));
+                WorldgenState temp_worldgen_state = get_worldgen_state(block_pos + f32vec3(0, below_i + 1, 0));
                 if (generate_block_id(temp_worldgen_state) == BlockID::Stone)
                     break;
             }
             if (below_i == 0)
             {
-                uint r = (uint)(worldgen_state.r * 100);
+                u32 r = (u32)(worldgen_state.r * 100);
                 if (r < 50)
                 {
                     switch (r)
@@ -111,7 +111,7 @@ struct ChunkBlocks
             }
         }
 
-        uint voxel_index = block_offset.x + block_offset.y * CHUNK_SIZE + block_offset.z * CHUNK_SIZE * CHUNK_SIZE;
+        u32 voxel_index = block_offset.x + block_offset.y * CHUNK_SIZE + block_offset.z * CHUNK_SIZE * CHUNK_SIZE;
         voxels[voxel_index] = id;
     }
 };
@@ -122,7 +122,7 @@ struct VoxelWorld
 };
 DAXA_DEFINE_GET_STRUCTURED_BUFFER(VoxelWorld);
 
-uint tile_texture_index(BlockID block_id, BlockFace face, float time)
+u32 tile_texture_index(BlockID block_id, BlockFace face, f32 time)
 {
     // clang-format off
     switch (block_id) {
@@ -147,7 +147,7 @@ uint tile_texture_index(BlockID block_id, BlockFace face, float time)
         default:                   return 0;
         }
     case BlockID::Gravel:          return 12;
-    case BlockID::Lava:            return 13 + int(time * 6) % 8;
+    case BlockID::Lava:            return 13 + i32(time * 6) % 8;
     case BlockID::Leaves:          return 21;
     case BlockID::Log:
         switch (face) {

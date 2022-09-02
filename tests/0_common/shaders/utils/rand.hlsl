@@ -2,7 +2,7 @@
 
 #include "utils/math.hlsl"
 
-uint rand_hash(uint x)
+u32 rand_hash(u32 x)
 {
     x += (x << 10u);
     x ^= (x >> 6u);
@@ -11,67 +11,67 @@ uint rand_hash(uint x)
     x += (x << 15u);
     return x;
 }
-uint rand_hash(uint2 v) { return rand_hash(v.x ^ rand_hash(v.y)); }
-uint rand_hash(uint3 v)
+u32 rand_hash(u32vec2 v) { return rand_hash(v.x ^ rand_hash(v.y)); }
+u32 rand_hash(u32vec3 v)
 {
     return rand_hash(v.x ^ rand_hash(v.y) ^ rand_hash(v.z));
 }
-uint rand_hash(uint4 v)
+u32 rand_hash(u32vec4 v)
 {
     return rand_hash(v.x ^ rand_hash(v.y) ^ rand_hash(v.z) ^ rand_hash(v.w));
 }
-float rand_float_construct(uint m)
+f32 rand_float_construct(u32 m)
 {
-    const uint ieee_mantissa = 0x007FFFFFu;
-    const uint ieee_one = 0x3F800000u;
+    const u32 ieee_mantissa = 0x007FFFFFu;
+    const u32 ieee_one = 0x3F800000u;
     m &= ieee_mantissa;
     m |= ieee_one;
-    float f = asfloat(m);
+    f32 f = asfloat(m);
     return f - 1.0;
 }
-float rand(float x) { return rand_float_construct(rand_hash(asuint(x))); }
-float rand(float2 v) { return rand_float_construct(rand_hash(asuint(v))); }
-float rand(float3 v) { return rand_float_construct(rand_hash(asuint(v))); }
-float rand(float4 v) { return rand_float_construct(rand_hash(asuint(v))); }
+f32 rand(f32 x) { return rand_float_construct(rand_hash(asuint(x))); }
+f32 rand(f32vec2 v) { return rand_float_construct(rand_hash(asuint(v))); }
+f32 rand(f32vec3 v) { return rand_float_construct(rand_hash(asuint(v))); }
+f32 rand(f32vec4 v) { return rand_float_construct(rand_hash(asuint(v))); }
 
-float3 ortho(float3 v)
+f32vec3 ortho(f32vec3 v)
 {
-    return lerp(float3(-v.y, v.x, 0.0), float3(0.0, -v.z, v.y), step(abs(v.x), abs(v.z)));
+    return lerp(f32vec3(-v.y, v.x, 0.0), f32vec3(0.0, -v.z, v.y), step(abs(v.x), abs(v.z)));
 }
 
-float3 around(float3 v, float3 z)
+f32vec3 around(f32vec3 v, f32vec3 z)
 {
-    float3 t = ortho(z), b = cross(z, t);
-    return mad(t, float3(v.x, v.x, v.x), mad(b, float3(v.y, v.y, v.y), z * v.z));
+    f32vec3 t = ortho(z), b = cross(z, t);
+    return mad(t, f32vec3(v.x, v.x, v.x), mad(b, f32vec3(v.y, v.y, v.y), z * v.z));
 }
 
-float3 isotropic(float rp, float c)
+f32vec3 isotropic(f32 rp, f32 c)
 {
-    float p = 2 * 3.14159 * rp, s = sqrt(1.0 - c * c);
-    return float3(cos(p) * s, sin(p) * s, c);
+    f32 p = 2 * 3.14159 * rp, s = sqrt(1.0 - c * c);
+    return f32vec3(cos(p) * s, sin(p) * s, c);
 }
 
-float3 rand_pt(float3 n, float2 rnd)
+f32vec3 rand_pt(f32vec3 n, f32vec2 rnd)
 {
-    float c = sqrt(rnd.y);
+    f32 c = sqrt(rnd.y);
     return around(isotropic(rnd.x, c), n);
 }
 
-float3 rand_pt_in_sphere(float2 rnd)
+f32vec3 rand_pt_in_sphere(f32vec2 rnd)
 {
-    float l = acos(2 * rnd.x - 1) - PI / 2;
-    float p = 2 * PI * rnd.y;
-    return float3(cos(l) * cos(p), cos(l) * sin(p), sin(l));
+    f32 l = acos(2 * rnd.x - 1) - PI / 2;
+    f32 p = 2 * PI * rnd.y;
+    return f32vec3(cos(l) * cos(p), cos(l) * sin(p), sin(l));
 }
 
-float3 rand_lambertian_nrm(float3 n, float2 rnd)
+f32vec3 rand_lambertian_nrm(f32vec3 n, f32vec2 rnd)
 {
-    float3 pt = rand_pt_in_sphere(rnd);
+    f32vec3 pt = rand_pt_in_sphere(rnd);
     return normalize(pt + n);
 }
 
-float3 rand_lambertian_reflect(float3 i, float3 n, float2 rnd, float roughness)
+f32vec3 rand_lambertian_reflect(f32vec3 i, f32vec3 n, f32vec2 rnd, f32 roughness)
 {
-    float3 pt = rand_pt_in_sphere(rnd) * clamp(roughness, 0, 1);
+    f32vec3 pt = rand_pt_in_sphere(rnd) * clamp(roughness, 0, 1);
     return normalize(pt + reflect(i, n));
 }

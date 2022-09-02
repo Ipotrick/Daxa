@@ -1,11 +1,11 @@
 
 struct VertexOutput
 {
-    float4 frag_pos : SV_POSITION;
-    float4 col : COLOR0;
+    f32vec4 frag_pos : SV_POSITION;
+    f32vec4 col : COLOR0;
 };
 
-float4 main(VertexOutput vertex_output) : SV_TARGET
+f32vec4 main(VertexOutput vertex_output) : SV_TARGET
 {
-    return float4(vertex_output.col.rgb, 1);
+    return f32vec4(vertex_output.col.rgb, 1);
 }
