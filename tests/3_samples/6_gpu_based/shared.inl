@@ -1,14 +1,6 @@
 #pragma once
 
-#ifdef __cplusplus
-#include <daxa/daxa.hpp>
-
-#include <daxa/utils/math_operators.hpp>
-using namespace daxa::math_operators;
-
-#else
-#include "daxa/daxa.hlsl"
-#endif
+#include <daxa/daxa.inl>
 
 #define SHADOW_RES 2048
 #define VISUALIZE_OVERDRAW 0
@@ -44,7 +36,7 @@ struct Input
     daxa::f32mat4x4 view_mat;
     daxa::f32 time;
 };
-DAXA_DEFINE_GET_STRUCTURED_BUFFER(Input);
+DAXA_REGISTER_STRUCT_GET_BUFFER(Input);
 
 struct IndirectDrawParam
 {
@@ -63,11 +55,11 @@ struct ChunkDrawInfo
 {
     daxa::u32vec3 chunk_index;
 };
-DAXA_DEFINE_GET_STRUCTURED_BUFFER(ChunkDrawInfo);
+DAXA_REGISTER_STRUCT_GET_BUFFER(ChunkDrawInfo);
 
 struct SharedGlobals
 {
     daxa::BufferId indirect_draw_buffer_id;
     daxa::BufferId chunk_draw_infos_buffer_id;
 };
-DAXA_DEFINE_GET_STRUCTURED_BUFFER(SharedGlobals);
+DAXA_REGISTER_STRUCT_GET_BUFFER(SharedGlobals);
