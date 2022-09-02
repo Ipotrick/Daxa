@@ -312,7 +312,7 @@ FragOutput fs_main(VertexOutput vertex_output)
     Texture2DArray atlas_texture_array = daxa::get_Texture2DArray<float4>(raster_input[0].texture_array_id);
 
     // float4 albedo = atlas_texture_array.Load(int4(vert.uv.x * 16, vert.uv.y * 16, vert.tex_id, 0));
-    float4 albedo = atlas_texture_array.Sample(atlas_sampler, float3(vert.uv, vert.tex_id));
+    float4 albedo = atlas_texture_array.SampleLevel(atlas_sampler, float3(vert.uv, vert.tex_id), 0);
     if (albedo.a < 0.25)
         discard;
 

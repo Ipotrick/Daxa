@@ -411,7 +411,7 @@ struct RenderableVoxelWorld
 
         atlas_sampler = device.create_sampler({
             .magnification_filter = daxa::Filter::NEAREST,
-            .minification_filter = daxa::Filter::LINEAR,
+            .minification_filter = daxa::Filter::NEAREST,
             .min_lod = 0,
             .max_lod = 4,
         });

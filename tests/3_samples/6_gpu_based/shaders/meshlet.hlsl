@@ -144,12 +144,14 @@ struct FaceMeshlet
     PackedFace faces[256];
 };
 
+
+
 struct FaceMeshletPool
 {
     FaceMeshlet meshlets[FACE_MESHLET_POOL_SIZE];
     uint free_meshlet_list[FACE_MESHLET_POOL_SIZE];
-    uint free_meshlets_list_size;
     uint lock_int;
+    uint free_meshlets_list_size;
 
     // Needs one thread.
     uint malloc_one()
@@ -173,23 +175,24 @@ struct FaceMeshletPool
 };
 DAXA_DEFINE_GET_STRUCTURED_BUFFER(FaceMeshletPool);
 
-void FaceMeshletPool_lock(in out StructuredBuffer<FaceMeshletPool> meshlet_pool)
+void FaceMeshletPool_lock(RWByteAddressBuffer meshlet_pool)
 {
     uint original_value;
     do
     {
-        InterlockedCompareExchange(meshlet_pool[0].lock_int, 0, 1, original_value);
-    } while (original_value != 0);
+        meshlet_pool.InterlockedCompareExchange(sizeof(FaceMeshletPool::meshlets) + sizeof(FaceMeshletPool::free_meshlet_list), 1, original_value);
+    } 
+    while (original_value != 0); 
 }
 
-void FaceMeshletPool_unlock(in out StructuredBuffer<FaceMeshletPool> meshlet_pool)
+void FaceMeshletPool_unlock(RWByteAddressBuffer meshlet_pool)
 {
     uint original_value;
-    InterlockedExchange(meshlet_pool[0].lock_int, 0, original_value);
+    meshlet_pool.InterlockedCompareExchange(sizeof(FaceMeshletPool::meshlets) + sizeof(FaceMeshletPool::free_meshlet_list), 0, original_value);
 }
 
 // Needs 256 threads.
-void FaceMeshletPool_free_one(in out StructuredBuffer<FaceMeshletPool> meshlet_pool, uint allocation, uint thread_id)
+void FaceMeshletPool_free_one(in out RWByteAddressBuffer meshlet_pool, uint allocation, uint thread_id)
 {
     if (thread_id < 256)
     {

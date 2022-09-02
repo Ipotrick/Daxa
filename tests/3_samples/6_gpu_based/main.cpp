@@ -95,8 +95,13 @@ struct App : AppWindow<App>
     Clock::time_point start = Clock::now(), prev_time = start, now;
     float time, delta_time;
     bool should_resize = false, paused = true;
+    bool should_regen_chunks = true;
+    bool should_regen_meshes = false;
 
-    DrawRasterPush draw_push;
+    DrawRasterPush draw_push = {};
+    StartupPush startup_push = {};
+    UpdatePush update_push = {};
+    ChunkgenPush chunkgen_push = {};
 
     // clang-format off
     daxa::RasterPipeline draw_raster_pipeline = pipeline_compiler.create_raster_pipeline({
@@ -123,9 +128,19 @@ struct App : AppWindow<App>
         .push_constant_size = sizeof(DrawRasterPush),
         .debug_name = "Playground Pipeline",
     }).value();
-    daxa::ComputePipeline chunkgen_compute_pipeline = pipeline_compiler.create_compute_pipeline({
+    daxa::ComputePipeline startup_pipeline = pipeline_compiler.create_compute_pipeline({
+        .shader_info = {.source = daxa::ShaderFile{"startup.hlsl"}},
+        .push_constant_size = sizeof(StartupPush),
+        .debug_name = "Playground Startup Pipeline",
+    }).value();
+    daxa::ComputePipeline update_pipeline = pipeline_compiler.create_compute_pipeline({
+        .shader_info = {.source = daxa::ShaderFile{"update.hlsl"}},
+        .push_constant_size = sizeof(UpdatePush),
+        .debug_name = "Playground Update Pipeline",
+    }).value();
+    daxa::ComputePipeline chunkgen_pipeline = pipeline_compiler.create_compute_pipeline({
         .shader_info = {.source = daxa::ShaderFile{"chunkgen.hlsl"}},
-        .push_constant_size = sizeof(ChunkgenComputePush),
+        .push_constant_size = sizeof(ChunkgenPush),
         .debug_name = "Playground Chunkgen Compute Pipeline",
     }).value();
     daxa::ComputePipeline meshgen_compute_pipeline = pipeline_compiler.create_compute_pipeline({
@@ -204,10 +219,12 @@ struct App : AppWindow<App>
         if (refresh_pipeline(pipeline_compiler, chunkgen_compute_pipeline))
         {
             // invalidate chunk block data
+            should_regen_chunks = true;
         }
         if (refresh_pipeline(pipeline_compiler, meshgen_compute_pipeline))
         {
             // invalidate chunk mesh data
+            should_regen_chunks = true;
         }
         swapchain_image = swapchain.acquire_next_image();
         loop_task_list.execute();
@@ -259,13 +276,39 @@ struct App : AppWindow<App>
             .debug_name = "TaskList Task Indirect Draw Buffer",
         });
 
-        new_task_list.begin_conditional_scope({
-            .condition = []() -> bool
-            {
-                return false;
+        new_task_list.add_task({
+            .resources = {
+                .buffers = {
+                    {task_globals_buffer, daxa::TaskBufferAccess::SHADER_READ_WRITE},
+                },
             },
-            .debug_name = "TaskList Chunkgen Conditional",
+            .task = [this](daxa::TaskInterface interf)
+            {
+                if (should_regen_chunks)
+                {
+                    auto cmd_list = interf.get_command_list();
+                    cmd_list.set_pipeline(startup_pipeline);
+                    startup_push.globals_buffer_id = globals_buffer;
+                    startup_push.stage = 0;
+                    cmd_list.push_constant(startup_push);
+                    cmd_list.dispatch(1, 1, 1);
+                    should_regen_chunks = false;
+                    should_regen_meshes = false;
+                }
+                else if (should_regen_meshes)
+                {
+                    auto cmd_list = interf.get_command_list();
+                    cmd_list.set_pipeline(startup_pipeline);
+                    startup_push.globals_buffer_id = globals_buffer;
+                    startup_push.stage = 1;
+                    cmd_list.push_constant(startup_push);
+                    cmd_list.dispatch(1, 1, 1);
+                    should_regen_meshes = false;
+                }
+            },
+            .debug_name = "TaskList Startup Task",
         });
+
         new_task_list.add_task({
             .resources = {
                 .buffers = {
@@ -275,14 +318,29 @@ struct App : AppWindow<App>
             .task = [this](daxa::TaskInterface interf)
             {
                 auto cmd_list = interf.get_command_list();
-                cmd_list.set_pipeline(chunkgen_compute_pipeline);
-                // draw_push.globals_buffer_id = globals_buffer;
-                // cmd_list.push_constant(draw_push);
-                // cmd_list.draw({.vertex_count = 3});
+                cmd_list.set_pipeline(update_pipeline);
+                update_push.globals_buffer_id = globals_buffer;
+                cmd_list.push_constant(update_push);
+                cmd_list.dispatch(1, 1, 1);
+            },
+            .debug_name = "TaskList Update Task",
+        });
+
+        new_task_list.add_task({
+            .resources = {
+                .buffers = {
+                    {task_globals_buffer, daxa::TaskBufferAccess::SHADER_READ_WRITE},
+                },
+            },
+            .task = [this](daxa::TaskInterface interf)
+            {
+                auto cmd_list = interf.get_command_list();
+                cmd_list.set_pipeline(chunkgen_pipeline);
+                cmd_list.push_constant(chunkgen_push);
+                cmd_list.dispatch(8, 8, 8);
             },
             .debug_name = "TaskList Chunkgen Task",
         });
-        new_task_list.end_conditional_scope();
 
         new_task_list.add_task({
             .resources = {
