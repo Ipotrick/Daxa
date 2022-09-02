@@ -1,26 +1,26 @@
-#include "daxa/daxa.hlsl"
+#include DAXA_SHADER_INCLUDE
 
-static const float2 positions[3] = {
-    float2(-0.5, +0.5),
-    float2(+0.0, -0.5),
-    float2(+0.5, +0.5),
+static const f32vec2 positions[3] = {
+    f32vec2(-0.5, +0.5),
+    f32vec2(+0.0, -0.5),
+    f32vec2(+0.5, +0.5),
 };
-static const float3 colors[3] = {
-    float3(1, 0, 0),
-    float3(0, 1, 0),
-    float3(0, 0, 1),
+static const f32vec3 colors[3] = {
+    f32vec3(1, 0, 0),
+    f32vec3(0, 1, 0),
+    f32vec3(0, 0, 1),
 };
 
 struct VertexOutput
 {
-    float4 frag_pos : SV_POSITION;
-    float4 col : COLOR0;
+    f32vec4 frag_pos : SV_POSITION;
+    f32vec4 col : COLOR0;
 };
 
-VertexOutput main(uint vert_i : SV_VERTEXID)
+VertexOutput main(u32 vert_i : SV_VERTEXID)
 {
     VertexOutput result;
-    result.frag_pos = float4(positions[vert_i], 0, 1);
-    result.col = float4(colors[vert_i], 1);
+    result.frag_pos = f32vec4(positions[vert_i], 0, 1);
+    result.col = f32vec4(colors[vert_i], 1);
     return result;
 }

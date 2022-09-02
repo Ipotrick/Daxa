@@ -12,15 +12,31 @@ namespace daxa
         auto is_empty() const -> bool;
     };
 
+    inline namespace types
+    {
+        struct BufferId : public GPUResourceId
+        {
+        };
+
+        struct ImageViewId : public GPUResourceId
+        {
+        };
+
+        struct ImageId : public GPUResourceId
+        {
+            auto default_view() const -> ImageViewId;
+        };
+
+        struct SamplerId : public GPUResourceId
+        {
+        };
+    } // namespace types
+
     struct BufferInfo
     {
         MemoryFlags memory_flags = {};
         u32 size = {};
         std::string debug_name = {};
-    };
-
-    struct BufferId : public GPUResourceId
-    {
     };
 
     struct ImageInfo
@@ -37,13 +53,6 @@ namespace daxa
         std::string debug_name = {};
     };
 
-    struct ImageViewId;
-
-    struct ImageId : public GPUResourceId
-    {
-        auto default_view() const -> ImageViewId;
-    };
-
     struct ImageViewInfo
     {
         ImageViewType type = ImageViewType::REGULAR_2D;
@@ -51,10 +60,6 @@ namespace daxa
         ImageId image = {};
         ImageMipArraySlice slice = {};
         std::string debug_name = {};
-    };
-
-    struct ImageViewId : public GPUResourceId
-    {
     };
 
     struct SamplerInfo
@@ -74,9 +79,5 @@ namespace daxa
         f32 max_lod = 1.0f;
         bool enable_unnormalized_coordinates = false;
         std::string debug_name = {};
-    };
-
-    struct SamplerId : public GPUResourceId
-    {
     };
 } // namespace daxa
