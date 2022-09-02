@@ -13,17 +13,6 @@
 using namespace daxa::types;
 using Clock = std::chrono::high_resolution_clock;
 
-// struct Vertex
-// {
-//     f32 x, y, z, w;
-//     f32 r, g, b, a;
-// };
-
-// struct RasterPush
-// {
-//     daxa::BufferId vertex_buffer_id;
-// };
-
 struct App : AppWindow<App>
 {
     daxa::Context daxa_ctx = daxa::create_context({
@@ -169,11 +158,11 @@ struct App : AppWindow<App>
         cmd_list.destroy_buffer_deferred(vertex_staging_buffer);
 
         auto buffer_ptr = device.map_memory_as<DrawVertex>(vertex_staging_buffer);
-        *buffer_ptr = DrawVertex{-0.5f, +0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f};
+        *buffer_ptr = DrawVertex{{-0.5f, +0.5f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}};
         ++buffer_ptr;
-        *buffer_ptr = DrawVertex{+0.5f, +0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f};
+        *buffer_ptr = DrawVertex{{+0.5f, +0.5f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}};
         ++buffer_ptr;
-        *buffer_ptr = DrawVertex{+0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f};
+        *buffer_ptr = DrawVertex{{+0.0f, -0.5f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f}};
         ++buffer_ptr;
         device.unmap_memory(vertex_staging_buffer);
 
