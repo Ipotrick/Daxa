@@ -6,7 +6,7 @@ namespace daxa
 {
     MemoryUploader::MemoryUploader(Device device, usize capacity)
         : device{ std::move(device) }
-        , gpu_timeline{ this->device.create_timeline_semaphore({ .debug_name = "MemoryUploader", .initial_value = 0 }) }
+        , gpu_timeline{ this->device.create_timeline_semaphore({ .initial_value = 0, .debug_name = "MemoryUploader" }) }
         , current_command_list{ this->device.create_command_list({ .debug_name = "MemoryUploader CommandList Nr. 0" }) }
         , capacity{ capacity }
         , claimed_sizes{ ClaimedSize{ .timeline_value = 1, .size = 0 } }
@@ -21,23 +21,23 @@ namespace daxa
         this->claimed_sizes.back().size += size;
 
         current_command_list.copy_buffer_to_buffer({
+            .src_buffer = upload_buffer,
+            .src_offset = src_offset,
             .dst_buffer = dst_buffer,
             .dst_offset = dst_offset,
             .size = size,
-            .src_buffer = upload_buffer,
-            .src_offset = src_offset,
         });
 
         return reinterpret_cast<void*>(this->device.map_memory_as<u8>(this->upload_buffer) + src_offset);
     }
 
-    auto MemoryUploader::get_commands() -> CommandSubmitInfo
+    auto MemoryUploader::get_commands() -> MemoryUploadCommandSubmitInfo
     {
         this->reclaim_unused_memory();
 
         this->current_command_list.complete();
 
-        CommandSubmitInfo ret
+        MemoryUploadCommandSubmitInfo ret
         {
             .command_list = this->current_command_list,
             .timeline = this->gpu_timeline,
@@ -58,7 +58,7 @@ namespace daxa
         return ret;
     }
     
-    auto MemoryUploader::reclaim_unused_memory()
+    void MemoryUploader::reclaim_unused_memory()
     {
         usize gpu_timeline_value = gpu_timeline.value();
         while (true)
