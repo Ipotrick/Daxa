@@ -21,7 +21,7 @@ namespace daxa
         VkPhysicalDevice vk_physical_device = {};
         VkDevice vk_device = {};
         VmaAllocator vma_allocator = {};
-        DeviceVulkanInfo vk_info = {};
+        DeviceProperties vk_info = {};
         DeviceInfo info = {};
         VkSampler vk_dummy_sampler = {};
 
@@ -51,7 +51,7 @@ namespace daxa
         void main_queue_collect_garbage();
         void wait_idle();
 
-        ImplDevice(DeviceInfo const & info, DeviceVulkanInfo const & vk_info, ManagedWeakPtr impl_ctx, VkPhysicalDevice physical_device);
+        ImplDevice(DeviceInfo const & info, DeviceProperties const & vk_info, ManagedWeakPtr impl_ctx, VkPhysicalDevice physical_device);
         virtual ~ImplDevice() override final = default;
 
         auto validate_image_slice(ImageMipArraySlice const & slice, ImageId id) -> ImageMipArraySlice;

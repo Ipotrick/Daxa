@@ -6,7 +6,7 @@
 
 namespace daxa
 {
-    Fsr2Context::Fsr2Context(Fsr2ContextInfo const & info)
+    Fsr2Context::Fsr2Context(UpscaleContextInfo const & info)
         : ManagedPtr{new ImplFsr2Context(info)}
     {
     }
@@ -18,13 +18,13 @@ namespace daxa
         return true;
     }
 
-    void Fsr2Context::resize(Fsr2SizeInfo const & info)
+    void Fsr2Context::resize(UpscaleSizeInfo const & info)
     {
         auto & impl = *as<ImplFsr2Context>();
         impl.resize(info);
     }
 
-    void Fsr2Context::upscale(CommandList & command_list, Fsr2UpscaleInfo const & info)
+    void Fsr2Context::upscale(CommandList & command_list, UpscaleInfo const & info)
     {
         auto & impl = *as<ImplFsr2Context>();
         impl.upscale(command_list, info);
@@ -39,32 +39,23 @@ namespace daxa
         return result;
     }
 
-    ImplFsr2Context::ImplFsr2Context(Fsr2ContextInfo const & info)
+    ImplFsr2Context::ImplFsr2Context(UpscaleContextInfo const & info)
         : info{info}
     {
     }
 
     ImplFsr2Context::~ImplFsr2Context()
     {
-        if (initialized)
-        {
-            FfxErrorCode err = ffxFsr2ContextDestroy(&fsr2_context);
-            DAXA_DBG_ASSERT_TRUE_M(err == FFX_OK, "FSR2 Failed to destroy the FSR context");
-        }
+        destroy_resizable_resources();
     }
 
-    void ImplFsr2Context::resize(Fsr2SizeInfo const & info)
+    void ImplFsr2Context::create_resizable_resources()
     {
-        this->info.size_info = info;
-        fsr2_context_description.maxRenderSize.width = info.render_size_x;
-        fsr2_context_description.maxRenderSize.height = info.render_size_y;
-        fsr2_context_description.displaySize.width = info.display_size_x;
-        fsr2_context_description.displaySize.height = info.display_size_y;
-        if (initialized)
-        {
-            FfxErrorCode err = ffxFsr2ContextDestroy(&fsr2_context);
-            DAXA_DBG_ASSERT_TRUE_M(err == FFX_OK, "FSR2 Failed to destroy the FSR context");
-        }
+        destroy_resizable_resources();
+        fsr2_context_description.maxRenderSize.width = this->info.size_info.render_size_x;
+        fsr2_context_description.maxRenderSize.height = this->info.size_info.render_size_y;
+        fsr2_context_description.displaySize.width = this->info.size_info.display_size_x;
+        fsr2_context_description.displaySize.height = this->info.size_info.display_size_y;
 
         // Setup VK interface.
         auto & impl_device = *this->info.device.as<ImplDevice>();
@@ -72,7 +63,7 @@ namespace daxa
         auto logical_device = impl_device.vk_device;
 
         const usize scratch_buffer_size = ffxFsr2GetScratchMemorySizeVK(physical_device);
-        void * scratch_buffer = malloc(scratch_buffer_size);
+        scratch_buffer = malloc(scratch_buffer_size);
         {
             FfxErrorCode err = ffxFsr2GetInterfaceVK(&fsr2_context_description.callbacks, scratch_buffer, scratch_buffer_size, physical_device, vkGetDeviceProcAddr);
             DAXA_DBG_ASSERT_TRUE_M(err == FFX_OK, "FSR2 Failed to create the Vulkan interface");
@@ -80,7 +71,7 @@ namespace daxa
 
         // set up for later, when we resize
         fsr2_context_description.device = ffxGetDeviceVK(logical_device);
-        fsr2_context_description.flags = FFX_FSR2_ENABLE_AUTO_EXPOSURE; // FFX_FSR2_ENABLE_DYNAMIC_RESOLUTION |
+        fsr2_context_description.flags = FFX_FSR2_ENABLE_AUTO_EXPOSURE;
 
         {
             FfxErrorCode err = ffxFsr2ContextCreate(&fsr2_context, &fsr2_context_description);
@@ -89,7 +80,23 @@ namespace daxa
         initialized = true;
     }
 
-    void ImplFsr2Context::upscale(CommandList & command_list, Fsr2UpscaleInfo const & info)
+    void ImplFsr2Context::destroy_resizable_resources()
+    {
+        if (initialized)
+        {
+            FfxErrorCode err = ffxFsr2ContextDestroy(&fsr2_context);
+            DAXA_DBG_ASSERT_TRUE_M(err == FFX_OK, "FSR2 Failed to destroy the FSR context");
+            free(scratch_buffer);
+        }
+    }
+
+    void ImplFsr2Context::resize(UpscaleSizeInfo const & info)
+    {
+        this->info.size_info = info;
+        create_resizable_resources();
+    }
+
+    void ImplFsr2Context::upscale(CommandList & command_list, UpscaleInfo const & info)
     {
         auto & impl_command_list = *command_list.as<ImplCommandList>();
         auto & impl_device = *this->info.device.as<ImplDevice>();
@@ -101,14 +108,8 @@ namespace daxa
         auto & depth_view_slot = impl_device.slot(info.depth.default_view());
         auto & motion_vectors_slot = impl_device.slot(info.motion_vectors);
         auto & motion_vectors_view_slot = impl_device.slot(info.motion_vectors.default_view());
-        // auto & reactive_slot = impl_device.slot(info.reactive);
-        // auto & reactive_view_slot = impl_device.slot(info.reactive.default_view());
-        // auto & trans_and_comp_slot = impl_device.slot(info.trans_and_comp);
-        // auto & trans_and_comp_view_slot = impl_device.slot(info.trans_and_comp.default_view());
         auto & output_slot = impl_device.slot(info.output);
         auto & output_view_slot = impl_device.slot(info.output.default_view());
-
-        // std::cout << "and FSR thinks the output image is [" << output_slot.info.debug_name << "]" << std::endl;
 
         wchar_t fsr_inputcolor[] = L"FSR2_InputColor";
         wchar_t fsr_inputdepth[] = L"FSR2_InputDepth";
@@ -131,16 +132,6 @@ namespace daxa
             this->info.size_info.render_size_x, this->info.size_info.render_size_y,
             static_cast<VkFormat>(motion_vectors_slot.info.format), fsr_inputmotionvectors);
         dispatch_description.exposure = ffxGetTextureResourceVK(&fsr2_context, nullptr, nullptr, 1, 1, VK_FORMAT_UNDEFINED, fsr_inputexposure);
-        // dispatch_description.reactive = ffxGetTextureResourceVK(&fsr2_context, nullptr, nullptr, 1, 1, VK_FORMAT_UNDEFINED, L"FSR2_InputReactiveMap");
-        // dispatch_description.transparencyAndComposition = ffxGetTextureResourceVK(&fsr2_context, nullptr, nullptr, 1, 1, VK_FORMAT_UNDEFINED, L"FSR2_TransparencyAndCompositionMap");
-        // dispatch_description.reactive = ffxGetTextureResourceVK(
-        //     &fsr2_context, reactive_slot.vk_image, reactive_view_slot.vk_image_view,
-        //     this->info.size_info.render_size_x, this->info.size_info.render_size_y,
-        //     static_cast<VkFormat>(reactive_slot.info.format), L"FSR2_InputReactiveMap");
-        // dispatch_description.transparencyAndComposition = ffxGetTextureResourceVK(
-        //     &fsr2_context, trans_and_comp_slot.vk_image, trans_and_comp_view_slot.vk_image_view,
-        //     this->info.size_info.render_size_x, this->info.size_info.render_size_y,
-        //     static_cast<VkFormat>(trans_and_comp_slot.info.format), L"FSR2_TransparencyAndCompositionMap");
         dispatch_description.output = ffxGetTextureResourceVK(
             &fsr2_context, output_slot.vk_image, output_view_slot.vk_image_view,
             this->info.size_info.display_size_x, this->info.size_info.display_size_x,
@@ -150,17 +141,16 @@ namespace daxa
         dispatch_description.jitterOffset.y = info.jitter.y;
         dispatch_description.motionVectorScale.x = static_cast<f32>(this->info.size_info.render_size_x);
         dispatch_description.motionVectorScale.y = static_cast<f32>(this->info.size_info.render_size_y);
-        dispatch_description.reset = false; // info.should_reset;
+        dispatch_description.reset = info.should_reset;
         dispatch_description.enableSharpening = info.should_sharpen;
         dispatch_description.sharpness = info.sharpening;
         dispatch_description.frameTimeDelta = info.delta_time * 1000.0f;
         dispatch_description.preExposure = 1.0f;
         dispatch_description.renderSize.width = this->info.size_info.render_size_x;
         dispatch_description.renderSize.height = this->info.size_info.render_size_y;
-        dispatch_description.cameraFar = info.camera.far_plane;
-        dispatch_description.cameraNear = info.camera.near_plane;
-        dispatch_description.cameraFovAngleVertical = info.camera.vertical_fov;
-        // pState->bReset = false;
+        dispatch_description.cameraFar = info.camera_info.far_plane;
+        dispatch_description.cameraNear = info.camera_info.near_plane;
+        dispatch_description.cameraFovAngleVertical = info.camera_info.vertical_fov;
 
         FfxErrorCode err = ffxFsr2ContextDispatch(&fsr2_context, &dispatch_description);
         DAXA_DBG_ASSERT_TRUE_M(err == FFX_OK, "FSR2 Failed dispatch");

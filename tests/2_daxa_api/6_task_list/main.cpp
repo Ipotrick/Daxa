@@ -1,16 +1,20 @@
-#include <daxa/daxa.hpp>
+#include <0_common/window.hpp>
 #include <iostream>
+#include <thread>
 
 #include <daxa/utils/task_list.hpp>
-#include <0_common/window.hpp>
-#include <thread>
+
+#define APPNAME "Daxa API Sample: TaskList"
+#define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
 
 struct AppContext
 {
     daxa::Context daxa_ctx = daxa::create_context({
         .enable_validation = true,
     });
-    daxa::Device device = daxa_ctx.create_device({});
+    daxa::Device device = daxa_ctx.create_device({
+        .debug_name = APPNAME_PREFIX("device"),
+    });
 };
 
 namespace tests
@@ -20,18 +24,19 @@ namespace tests
     void simplest()
     {
         AppContext app = {};
-        auto task_list = daxa::TaskList({.device = app.device, .debug_name = "TaskList task list"});
-
-        // auto task_image = task_list.create_task_iamge({...});
-        // auto [task_image1, task_image2] = task_list.split({...});
-        // auto finalized_task_image = task_list.merge(task_image1, task_image2);
-        // TaskImageId = task_list.create_task_image({...});
+        auto task_list = daxa::TaskList({
+            .device = app.device,
+            .debug_name = APPNAME_PREFIX("task_list (simplest)"),
+        });
     }
 
     void execution()
     {
         AppContext app = {};
-        auto task_list = daxa::TaskList({.device = app.device, .debug_name = "TaskList task list"});
+        auto task_list = daxa::TaskList({
+            .device = app.device,
+            .debug_name = APPNAME_PREFIX("task_list (execution)"),
+        });
 
         // This is pointless, but done to show how the task list executes
         task_list.add_task({
@@ -39,14 +44,14 @@ namespace tests
             {
                 std::cout << "Hello, ";
             },
-            .debug_name = "task 1",
+            .debug_name = APPNAME_PREFIX("task 1 (execution)"),
         });
         task_list.add_task({
             .task = [&](daxa::TaskInterface &)
             {
                 std::cout << "World!" << std::endl;
             },
-            .debug_name = "task 2",
+            .debug_name = APPNAME_PREFIX("task 2 (execution)"),
         });
 
         task_list.compile();
@@ -57,26 +62,31 @@ namespace tests
     void image_upload()
     {
         AppContext app = {};
-        auto task_list = daxa::TaskList({.device = app.device, .debug_name = "TaskList task list"});
+        auto task_list = daxa::TaskList({
+            .device = app.device,
+            .debug_name = APPNAME_PREFIX("task_list (image_upload)"),
+        });
 
         auto buffer = app.device.create_buffer({
             .size = 4,
-            .debug_name = "buffer",
+            .debug_name = APPNAME_PREFIX("buffer (image_upload)"),
         });
         auto image = app.device.create_image({
             .size = {1, 1, 1},
             .usage = daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
-            .debug_name = "image",
+            .debug_name = APPNAME_PREFIX("image (image_upload)"),
         });
 
         auto task_image = task_list.create_task_image({
             .fetch_callback = [=]()
             { return image; },
+            .debug_name = APPNAME_PREFIX("task_image (image_upload)"),
         });
 
         auto upload_buffer = task_list.create_task_buffer({
             .fetch_callback = [=]()
             { return buffer; },
+            .debug_name = APPNAME_PREFIX("upload_buffer (image_upload)"),
         });
 
         task_list.add_task({
@@ -84,7 +94,11 @@ namespace tests
                 .buffers = {{upload_buffer, daxa::TaskBufferAccess::TRANSFER_READ}},
                 .images = {{task_image, daxa::TaskImageAccess::TRANSFER_WRITE}},
             },
-            .task = [](daxa::TaskInterface &) {},
+            .task = [](daxa::TaskInterface &)
+            {
+                // TODO: Implement this task!
+            },
+            .debug_name = APPNAME_PREFIX("upload task (image_upload)"),
         });
 
         task_list.compile();
@@ -95,64 +109,49 @@ namespace tests
         app.device.destroy_image(image);
     }
 
-    void conditional()
-    {
-        AppContext app = {};
-        auto task_list = daxa::TaskList({.device = app.device, .debug_name = "TaskList task list"});
-
-        bool option = true;
-
-        task_list.begin_conditional_scope({
-            .condition = [&option]()
-            {
-                return option;
-            },
-        });
-        task_list.end_conditional_scope();
-        task_list.compile();
-        task_list.execute();
-    }
-
     void output_graph()
     {
         AppContext app = {};
-        auto task_list = daxa::TaskList({.device = app.device, .debug_name = "TaskList task list"});
+        auto task_list = daxa::TaskList({
+            .device = app.device,
+            .debug_name = APPNAME_PREFIX("task_list (output_graph)"),
+        });
 
-        // auto buffer1 = app.device.create_buffer({.size = 4, .debug_name = "buffer1"});
-        // auto buffer2 = app.device.create_buffer({.size = 4, .debug_name = "buffer2"});
-        // auto buffer3 = app.device.create_buffer({.size = 4, .debug_name = "buffer3"});
-
-        auto task_buffer1 = task_list.create_task_buffer({.last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE}, .debug_name = "Buffer1"});
-        auto task_buffer2 = task_list.create_task_buffer({.last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE}, .debug_name = "Buffer2"});
-        auto task_buffer3 = task_list.create_task_buffer({.last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE}, .debug_name = "Buffer3"});
+        auto task_buffer1 = task_list.create_task_buffer({
+            .last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
+            .debug_name = APPNAME_PREFIX("task_buffer1 (output_graph)"),
+        });
+        auto task_buffer2 = task_list.create_task_buffer({
+            .last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
+            .debug_name = APPNAME_PREFIX("task_buffer2 (output_graph)"),
+        });
+        auto task_buffer3 = task_list.create_task_buffer({
+            .last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
+            .debug_name = APPNAME_PREFIX("task_buffer3 (output_graph)"),
+        });
 
         task_list.add_task({
             .resources = {.buffers = {{task_buffer1, daxa::TaskBufferAccess::SHADER_WRITE_ONLY}, {task_buffer2, daxa::TaskBufferAccess::SHADER_READ_ONLY}}},
             .task = [](daxa::TaskInterface &) {},
-            .debug_name = "task 1",
+            .debug_name = APPNAME_PREFIX("task 1 (output_graph)"),
         });
-        task_list.begin_conditional_scope({
-            .condition = []()
-            {
-                return true;
-            },
-        });
+
         task_list.add_task({
             .resources = {.buffers = {{task_buffer2, daxa::TaskBufferAccess::SHADER_WRITE_ONLY}}},
             .task = [](daxa::TaskInterface &) {},
-            .debug_name = "inner task 1",
+            .debug_name = APPNAME_PREFIX("task 2 (output_graph)"),
         });
-        task_list.end_conditional_scope();
 
         task_list.add_task({
             .resources = {.buffers = {{task_buffer2, daxa::TaskBufferAccess::SHADER_WRITE_ONLY}, {task_buffer3, daxa::TaskBufferAccess::SHADER_WRITE_ONLY}}},
             .task = [](daxa::TaskInterface &) {},
-            .debug_name = "task 2",
+            .debug_name = APPNAME_PREFIX("task 3 (output_graph)"),
         });
+
         task_list.add_task({
             .resources = {.buffers = {{task_buffer3, daxa::TaskBufferAccess::SHADER_READ_ONLY}}},
             .task = [](daxa::TaskInterface &) {},
-            .debug_name = "task 3",
+            .debug_name = APPNAME_PREFIX("task 4 (output_graph)"),
         });
 
         task_list.compile();
@@ -162,7 +161,10 @@ namespace tests
     void compute()
     {
         AppContext app = {};
-        auto task_list = daxa::TaskList({.device = app.device, .debug_name = "TaskList task list"});
+        auto task_list = daxa::TaskList({
+            .device = app.device,
+            .debug_name = APPNAME_PREFIX("task_list (compute)"),
+        });
 
         // std::array<f32, 32> data;
         // for (usize i = 0; i < data.size(); ++i)
@@ -277,13 +279,16 @@ namespace tests
             daxa::Context daxa_ctx = daxa::create_context({
                 .enable_validation = true,
             });
-            daxa::Device device = daxa_ctx.create_device({});
+            daxa::Device device = daxa_ctx.create_device({
+                .debug_name = APPNAME_PREFIX("device (drawing)"),
+            });
 
             daxa::Swapchain swapchain = device.create_swapchain({
                 .native_window = get_native_handle(),
                 .width = size_x,
                 .height = size_y,
                 .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
+                .debug_name = APPNAME_PREFIX("swapchain (drawing)"),
             });
 
             daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
@@ -291,7 +296,7 @@ namespace tests
                     "tests/2_daxa_api/6_task_list/shaders",
                     "include",
                 },
-                .debug_name = "TaskList Compiler",
+                .debug_name = APPNAME_PREFIX("pipeline_compiler (drawing)"),
             });
             // clang-format off
             daxa::RasterPipeline raster_pipeline = pipeline_compiler.create_raster_pipeline({
@@ -299,7 +304,7 @@ namespace tests
                 .fragment_shader_info = {.source = daxa::ShaderFile{"frag.hlsl"}},
                 .color_attachments = {{.format = swapchain.get_format()}},
                 .raster = {},
-                .debug_name = "TaskList Pipeline",
+                .debug_name = APPNAME_PREFIX("raster_pipeline (drawing)"),
             }).value();
             // clang-format on
 
@@ -320,24 +325,24 @@ namespace tests
             {
                 daxa::TaskList new_task_list = daxa::TaskList({
                     .device = device,
-                    .debug_name = "TaskList task list",
+                    .debug_name = APPNAME_PREFIX("task_list (drawing)"),
                 });
                 task_swapchain_image = new_task_list.create_task_image({
                     .fetch_callback = [this]()
                     { return swapchain_image; },
-                    .debug_name = "TaskList Task Swapchain Image",
+                    .debug_name = APPNAME_PREFIX("task_swapchain_image (drawing)"),
                 });
                 task_render_image = new_task_list.create_task_image({
                     .fetch_callback = [this]()
                     { return render_image; },
-                    .debug_name = "TaskList Task Render Image",
+                    .debug_name = APPNAME_PREFIX("task_render_image (drawing)"),
                 });
 
                 new_task_list.add_clear_image({
                     .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
                     .dst_image = task_render_image,
                     .dst_slice = {},
-                    .debug_name = "TaskList Clear Render Image Task",
+                    .debug_name = APPNAME_PREFIX("Clear render_image Task (drawing)"),
                 });
                 new_task_list.add_task({
                     .resources = {
@@ -356,7 +361,7 @@ namespace tests
                         cmd_list.draw({.vertex_count = 3});
                         cmd_list.end_renderpass();
                     },
-                    .debug_name = "TaskList Draw to Render Image Task",
+                    .debug_name = APPNAME_PREFIX("Draw to render_image Task (drawing)"),
                 });
 
                 new_task_list.add_copy_image_to_image({
@@ -446,7 +451,7 @@ namespace tests
                     .format = swapchain.get_format(),
                     .size = {sx, sy, 1},
                     .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::TRANSFER_SRC | daxa::ImageUsageFlagBits::TRANSFER_DST,
-                    .debug_name = "TaskList render_image",
+                    .debug_name = APPNAME_PREFIX("render_image (drawing)"),
                 });
             }
 
@@ -478,10 +483,10 @@ namespace tests
 
 int main()
 {
-    // tests::simplest();
-    // tests::image_upload();
-    // tests::execution();
-    // tests::drawing();
-    // tests::conditional();
+    tests::simplest();
+    tests::image_upload();
+    tests::execution();
     tests::output_graph();
+    // tests::compute();
+    // tests::drawing();
 }

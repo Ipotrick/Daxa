@@ -5,6 +5,8 @@ struct Push
     float4x4 view_mat;
     float3 chunk_pos;
     daxa::BufferId face_buffer_id;
+    daxa::ImageViewId texture_array_id;
+    daxa::SamplerId sampler_id;
     uint mode;
 };
 [[vk::push_constant]] const Push p;
@@ -18,6 +20,7 @@ VertexOutput main(uint vert_i
     VertexOutput result;
     result.frag_pos = mul(p.view_mat, float4(vert.pos + p.chunk_pos, 1));
     result.nrm = vert.nrm;
-    // result.uv = vert.uv;
+    result.uv = vert.uv;
+    result.tex_id = vert.tex_id;
     return result;
 }

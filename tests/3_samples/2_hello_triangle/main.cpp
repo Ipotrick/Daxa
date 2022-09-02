@@ -5,6 +5,9 @@
 #include <daxa/utils/imgui.hpp>
 #include <0_common/imgui/imgui_impl_glfw.h>
 
+#define APPNAME "Daxa Sample: HelloTriangle"
+#define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
+
 using namespace daxa::types;
 using Clock = std::chrono::high_resolution_clock;
 
@@ -24,7 +27,9 @@ struct App : AppWindow<App>
     daxa::Context daxa_ctx = daxa::create_context({
         .enable_validation = true,
     });
-    daxa::Device device = daxa_ctx.create_device({});
+    daxa::Device device = daxa_ctx.create_device({
+        .debug_name = APPNAME_PREFIX("device"),
+    });
 
     daxa::Swapchain swapchain = device.create_swapchain({
         .native_window = get_native_handle(),
@@ -40,7 +45,7 @@ struct App : AppWindow<App>
         },
         .present_mode = daxa::PresentMode::DOUBLE_BUFFER_WAIT_FOR_VBLANK,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-        .debug_name = "HelloTriangle Swapchain",
+        .debug_name = APPNAME_PREFIX("swapchain"),
     });
 
     daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
@@ -48,7 +53,7 @@ struct App : AppWindow<App>
             "tests/3_samples/2_hello_triangle/shaders",
             "include",
         },
-        .debug_name = "HelloTriangle Compiler",
+        .debug_name = APPNAME_PREFIX("pipeline_compiler"),
     });
 
     daxa::ImGuiRenderer imgui_renderer = create_imgui_renderer();
@@ -70,29 +75,29 @@ struct App : AppWindow<App>
         .color_attachments = {{.format = swapchain.get_format()}},
         .raster = {},
         .push_constant_size = sizeof(RasterPush),
-        .debug_name = "HelloTriangle Pipeline",
+        .debug_name = APPNAME_PREFIX("raster_pipeline"),
     }).value();
     // clang-format on
 
     daxa::BufferId vertex_buffer = device.create_buffer(daxa::BufferInfo{
         .size = sizeof(Vertex) * 3,
-        .debug_name = "HelloTriangle Vertex buffer",
+        .debug_name = APPNAME_PREFIX("vertex_buffer"),
     });
 
     daxa::BinarySemaphore binary_semaphore = device.create_binary_semaphore({
-        .debug_name = "HelloTriangle Present Semaphore",
+        .debug_name = APPNAME_PREFIX("binary_semaphore"),
     });
 
     static inline constexpr u64 FRAMES_IN_FLIGHT = 1;
     daxa::TimelineSemaphore gpu_framecount_timeline_sema = device.create_timeline_semaphore(daxa::TimelineSemaphoreInfo{
         .initial_value = 0,
-        .debug_name = "HelloTriangle gpu framecount Timeline Semaphore",
+        .debug_name = APPNAME_PREFIX("gpu_framecount_timeline_sema"),
     });
     u64 cpu_framecount = FRAMES_IN_FLIGHT - 1;
 
     bool should_resize = false;
 
-    App() : AppWindow<App>("Samples: Hello Triangle") {}
+    App() : AppWindow<App>(APPNAME) {}
 
     ~App()
     {
@@ -151,13 +156,13 @@ struct App : AppWindow<App>
         auto swapchain_image = swapchain.acquire_next_image();
 
         auto cmd_list = device.create_command_list({
-            .debug_name = "HelloTriangle Command List",
+            .debug_name = APPNAME_PREFIX("cmd_list"),
         });
 
         auto vertex_staging_buffer = device.create_buffer({
             .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .size = sizeof(Vertex) * 3,
-            .debug_name = "HelloTriangle Vertex Staging buffer",
+            .debug_name = APPNAME_PREFIX("vertex_staging_buffer"),
         });
         cmd_list.destroy_buffer_deferred(vertex_staging_buffer);
 
