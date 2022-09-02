@@ -292,6 +292,11 @@ struct FragOutput
     float2 motion : SV_TARGET1;
 };
 
+BufferId uniform = device.create_buffer(bla, staging buffer);
+UniformStruct* device.map<UniformStruct>(uniform);
+cmd_list.destroy_deferred(uniform);
+cmd_list.set_uniform(0, uniform, sizeof(UniformStruct), 0);
+
 FragOutput fs_main(VertexOutput vertex_output)
 {
     Vertex vert;
