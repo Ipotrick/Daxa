@@ -62,9 +62,9 @@ void main()
     // }
     // col *= 1.0 / f32(SUBSAMPLES * SUBSAMPLES);
 
-    f32vec4 result = f32vec4(col, 1.0);
-    imageStore(daxa_GetRWImage(image2D, rgba16f, daxa_push.image_id), i32vec2(pixel_i.xy), result);
+    // f32vec4 result = f32vec4(col, 1.0);
+    // imageStore(daxa_GetRWImage(image2D, rgba32f, daxa_push.image_id), i32vec2(pixel_i.xy), result);
 
-    // u32vec4 result = u32vec4(col * 255, 255);
-    // imageStore(daxa_GetRWImage(uimage2D, rgba8ui, daxa_push.image_id), i32vec2(pixel_i.xy), result);
+    u32vec4 result = u32vec4(col * 255, 255);
+    imageStore(daxa_GetRWImage(uimage2D, rgba8ui, daxa_push.image_id), i32vec2(pixel_i.xy), result);
 }
