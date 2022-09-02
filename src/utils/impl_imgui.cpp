@@ -100,18 +100,18 @@ struct Push
     daxa::SamplerId sampler0_id;
 };
 
-char const * shaders_hlsl = R"--(
-    #include "daxa/daxa.hlsl"
+char const * shaders_hlsl = R"glsl(
+    #include <daxa/daxa.glsl>
     struct Push
     {
-        daxa::f32vec2 scale;
-        daxa::f32vec2 translate;
-        daxa::u32 vbuffer_offset;
-        daxa::u32 ibuffer_offset;
-        daxa::BufferId vbuffer_id;
-        daxa::BufferId ibuffer_id;
-        daxa::ImageViewId texture0_id;
-        daxa::SamplerId sampler0_id;
+        f32vec2 scale;
+        f32vec2 translate;
+        u32 vbuffer_offset;
+        u32 ibuffer_offset;
+        BufferId vbuffer_id;
+        BufferId ibuffer_id;
+        ImageViewId texture0_id;
+        SamplerId sampler0_id;
     };
     [[vk::push_constant]] const Push p;
     struct Vertex
@@ -120,12 +120,14 @@ char const * shaders_hlsl = R"--(
         float2 uv;
         uint col;
     };
-    struct VertexOutput {
+    struct VertexOutput
+    {
         float4 pos : SV_POSITION;
         float4 col : COLOR0;
         float2 uv  : TEXCOORD0;
     };
-    VertexOutput vs_main(uint invocation_index : SV_VERTEXID) {
+    VertexOutput vs_main(uint invocation_index : SV_VERTEXID)
+    {
         ByteAddressBuffer vbuffer = daxa::get_ByteAddressBuffer(p.vbuffer_id);
         Vertex input = vbuffer.Load<Vertex>(invocation_index * sizeof(Vertex));
         VertexOutput output;
@@ -137,7 +139,8 @@ char const * shaders_hlsl = R"--(
         output.uv  = input.uv;
         return output;
     }
-    float4 srgb_to_linear(float4 srgb) {
+    float4 srgb_to_linear(float4 srgb)
+    {
         float3 color_srgb = srgb.rgb;
         float3 selector = clamp(ceil(color_srgb - 0.04045), 0.0, 1.0); // 0 if under value, 1 if over
         float3 under = color_srgb / 12.92;
@@ -145,13 +148,14 @@ char const * shaders_hlsl = R"--(
         float3 result = lerp(under, over, selector);
         return float4(result, srgb.a);
     }
-    float4 fs_main(VertexOutput input) : SV_Target {
+    float4 fs_main(VertexOutput input) : SV_Target
+    {
         Texture2D<float4> texture0 = daxa::get_Texture2D<float4>(p.texture0_id);
         SamplerState sampler0 = daxa::get_sampler(p.sampler0_id);
         float4 col = srgb_to_linear(input.col) * texture0.Sample(sampler0, input.uv);
         return col;
     }
-)--";
+)glsl";
 
 namespace daxa
 {
@@ -170,21 +174,6 @@ namespace daxa
 
     void ImGuiRenderer::record_task(ImDrawData * draw_data, TaskList & task_list, TaskImageId task_swapchain_image, u32 size_x, u32 size_y)
     {
-        // task_list.add_task({
-        //     .resources = {
-        //         .images = {
-        //             {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
-        //         },
-        //     },
-        //     .task = [this, task_swapchain_image, draw_data, size_x, size_y](daxa::TaskInterface interf)
-        //     {
-        //         auto cmd_list = interf.get_command_list();
-        //         auto & impl = *as<ImplImGuiRenderer>();
-        //         auto swapchain_image = interf.get_image(task_swapchain_image);
-        //         impl.record_commands(draw_data, cmd_list, swapchain_image, size_x, size_y);
-        //     },
-        //     .debug_name = "TaskList ImGui Task",
-        // });
     }
 
     void ImplImGuiRenderer::recreate_vbuffer(usize vbuffer_new_size)

@@ -9,7 +9,7 @@ namespace daxa
         std::filesystem::path path;
     };
 
-    // This string will only work if it is valid HLSL
+    // This string will only work if it is valid GLSL
     struct ShaderCode
     {
         std::string string;
@@ -23,11 +23,17 @@ namespace daxa
 
     using ShaderSource = std::variant<ShaderFile, ShaderCode, ShaderSPIRV>;
 
+    struct ShaderDefine
+    {
+        std::string name = {};
+        std::string value = {};
+    };
+
     struct ShaderInfo
     {
         ShaderSource source;
         std::string entry_point = {"main"};
-        std::vector<std::string> defines = {};
+        std::vector<ShaderDefine> defines = {};
         std::string debug_name = {};
     };
 
@@ -101,7 +107,7 @@ namespace daxa
     struct PipelineCompilerInfo
     {
         std::vector<std::filesystem::path> root_paths = {};
-        u32 opt_level = 1;
+        u32 opt_level = 2;
         u32 shader_model_major = 6;
         u32 shader_model_minor = 6;
         std::string debug_name = {};
