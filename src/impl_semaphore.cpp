@@ -38,12 +38,13 @@ namespace daxa
 
         if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && this->info.debug_name.size() > 0)
         {
+            auto binary_semaphore_name = this->info.debug_name + std::string(" [Daxa BinarySemaphore]");
             VkDebugUtilsObjectNameInfoEXT name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_SEMAPHORE,
                 .objectHandle = reinterpret_cast<u64>(this->vk_semaphore),
-                .pObjectName = this->info.debug_name.c_str(),
+                .pObjectName = binary_semaphore_name.c_str(),
             };
             vkSetDebugUtilsObjectNameEXT(impl_device.as<ImplDevice>()->vk_device, &name_info);
         }
@@ -131,12 +132,13 @@ namespace daxa
 
         if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && this->info.debug_name.size() > 0)
         {
+            auto timeline_semaphore_name = this->info.debug_name + std::string(" [Daxa TimelineSemaphore]");
             VkDebugUtilsObjectNameInfoEXT name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_SEMAPHORE,
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_semaphore),
-                .pObjectName = this->info.debug_name.c_str(),
+                .pObjectName = timeline_semaphore_name.c_str(),
             };
             vkSetDebugUtilsObjectNameEXT(impl_device.as<ImplDevice>()->vk_device, &name_info);
         }
