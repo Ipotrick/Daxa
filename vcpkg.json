@@ -4,12 +4,23 @@
     "description": "Daxa C++ Vulkan Abstraction",
     "homepage": "https://github.com/Ipotrick/Daxa",
     "dependencies": [
-        "dxc",
         "vulkan-memory-allocator",
         "volk",
         "vulkan"
     ],
     "features": {
+        "shaderc": {
+            "description": "Build with shaderc",
+            "dependencies": [
+                "shaderc"
+            ]
+        },
+        "dxc": {
+            "description": "Build with dxc",
+            "dependencies": [
+                "dxc"
+            ]
+        },
         "utils": {
             "description": "Build with core utils",
             "dependencies": [

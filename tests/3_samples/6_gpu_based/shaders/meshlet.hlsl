@@ -1,46 +1,46 @@
 #include "common.hlsl"
 #include "chunk_blocks.hlsl"
 
-static const float2 instance_offsets[6] = {
-    float2(+0.0, +0.0),
-    float2(+1.0, +0.0),
-    float2(+0.0, +1.0),
-    float2(+1.0, +0.0),
-    float2(+1.0, +1.0),
-    float2(+0.0, +1.0),
+static const f32vec2 instance_offsets[6] = {
+    f32vec2(+0.0, +0.0),
+    f32vec2(+1.0, +0.0),
+    f32vec2(+0.0, +1.0),
+    f32vec2(+1.0, +0.0),
+    f32vec2(+1.0, +1.0),
+    f32vec2(+0.0, +1.0),
 };
-static const float3 cross_instance_positions[6] = {
-    float3(+0.0 + 0.2, +0.2, +1.0 - 0.2),
-    float3(+1.0 - 0.2, +0.2, +0.0 + 0.2),
-    float3(+0.0 + 0.2, +1.0, +1.0 - 0.2),
-    float3(+1.0 - 0.2, +0.2, +0.0 + 0.2),
-    float3(+1.0 - 0.2, +1.0, +0.0 + 0.2),
-    float3(+0.0 + 0.2, +1.0, +1.0 - 0.2),
+static const f32vec3 cross_instance_positions[6] = {
+    f32vec3(+0.0 + 0.2, +0.2, +1.0 - 0.2),
+    f32vec3(+1.0 - 0.2, +0.2, +0.0 + 0.2),
+    f32vec3(+0.0 + 0.2, +1.0, +1.0 - 0.2),
+    f32vec3(+1.0 - 0.2, +0.2, +0.0 + 0.2),
+    f32vec3(+1.0 - 0.2, +1.0, +0.0 + 0.2),
+    f32vec3(+0.0 + 0.2, +1.0, +1.0 - 0.2),
 };
 
 struct FaceVertex
 {
-    float3 block_pos;
-    float3 pos;
-    float3 nrm;
-    float2 uv;
+    f32vec3 block_pos;
+    f32vec3 pos;
+    f32vec3 nrm;
+    f32vec2 uv;
     BlockID block_id;
     BlockFace block_face;
-    uint tex_id;
-    uint vert_id;
+    u32 tex_id;
+    u32 vert_id;
 
-    void correct_pos(uint face_id)
+    void correct_pos(u32 face_id)
     {
-        float3 cross_uv = cross_instance_positions[vert_id];
+        f32vec3 cross_uv = cross_instance_positions[vert_id];
         switch (block_face)
         {
             // clang-format off
-        case BlockFace::Left:   pos += float3(1.0,        uv.x,       uv.y), nrm = float3(+1.0, +0.0, +0.0); break;
-        case BlockFace::Right:  pos += float3(0.0,        1.0 - uv.x, uv.y), nrm = float3(-1.0, +0.0, +0.0); break;
-        case BlockFace::Bottom: pos += float3(1.0 - uv.x, 1.0,        uv.y), nrm = float3(+0.0, +1.0, +0.0); break;
-        case BlockFace::Top:    pos += float3(uv.x,       0.0,        uv.y), nrm = float3(+0.0, -1.0, +0.0); break;
-        case BlockFace::Back:   pos += float3(uv.x,       uv.y,        1.0), nrm = float3(+0.0, +0.0, +1.0); break;
-        case BlockFace::Front:  pos += float3(1.0 - uv.x, uv.y,        0.0), nrm = float3(+0.0, +0.0, -1.0); break;
+        case BlockFace::Left:   pos += f32vec3(1.0,        uv.x,       uv.y), nrm = f32vec3(+1.0, +0.0, +0.0); break;
+        case BlockFace::Right:  pos += f32vec3(0.0,        1.0 - uv.x, uv.y), nrm = f32vec3(-1.0, +0.0, +0.0); break;
+        case BlockFace::Bottom: pos += f32vec3(1.0 - uv.x, 1.0,        uv.y), nrm = f32vec3(+0.0, +1.0, +0.0); break;
+        case BlockFace::Top:    pos += f32vec3(uv.x,       0.0,        uv.y), nrm = f32vec3(+0.0, -1.0, +0.0); break;
+        case BlockFace::Back:   pos += f32vec3(uv.x,       uv.y,        1.0), nrm = f32vec3(+0.0, +0.0, +1.0); break;
+        case BlockFace::Front:  pos += f32vec3(1.0 - uv.x, uv.y,        0.0), nrm = f32vec3(+0.0, +0.0, -1.0); break;
             // clang-format on
 
         case BlockFace::Cross_A:
@@ -48,12 +48,12 @@ struct FaceVertex
             if (face_id % 2 == 0)
             {
                 pos += cross_uv;
-                nrm = float3(0.707, 0, 0.707);
+                nrm = f32vec3(0.707, 0, 0.707);
             }
             else
             {
-                pos += float3(1.0 - cross_uv.x, cross_uv.y, 1.0 - cross_uv.z);
-                nrm = float3(-0.707, 0, -0.707);
+                pos += f32vec3(1.0 - cross_uv.x, cross_uv.y, 1.0 - cross_uv.z);
+                nrm = f32vec3(-0.707, 0, -0.707);
             }
             pos.x += rand(block_pos.x + 2.0 * block_pos.z - block_pos.y) * 0.5 - 0.25;
             pos.z += rand(block_pos.z + 2.0 * block_pos.x + block_pos.y) * 0.5 - 0.25;
@@ -63,13 +63,13 @@ struct FaceVertex
         {
             if (face_id % 2 == 0)
             {
-                pos += float3(cross_uv.x, cross_uv.y, 1.0 - cross_uv.z);
-                nrm = float3(-0.707, 0, 0.707);
+                pos += f32vec3(cross_uv.x, cross_uv.y, 1.0 - cross_uv.z);
+                nrm = f32vec3(-0.707, 0, 0.707);
             }
             else
             {
-                pos += float3(1.0 - cross_uv.x, cross_uv.y, cross_uv.z);
-                nrm = float3(0.707, 0, -0.707);
+                pos += f32vec3(1.0 - cross_uv.x, cross_uv.y, cross_uv.z);
+                nrm = f32vec3(0.707, 0, -0.707);
             }
             pos.x += rand(block_pos.x + 2.0 * block_pos.z - block_pos.y) * 0.5 - 0.25;
             pos.z += rand(block_pos.z + 2.0 * block_pos.x + block_pos.y) * 0.5 - 0.25;
@@ -83,32 +83,32 @@ struct FaceVertex
         switch (block_face)
         {
             // clang-format off
-        case BlockFace::Left:    uv = float2(1.0, 1.0) + float2(-uv.y, -uv.x); break;
-        case BlockFace::Right:   uv = float2(0.0, 0.0) + float2(+uv.y, +uv.x); break;
-        case BlockFace::Bottom:  uv = float2(0.0, 0.0) + float2(+uv.x, +uv.y); break;
-        case BlockFace::Top:     uv = float2(0.0, 0.0) + float2(+uv.x, +uv.y); break;
-        case BlockFace::Back:    uv = float2(1.0, 1.0) + float2(-uv.x, -uv.y); break;
-        case BlockFace::Front:   uv = float2(1.0, 1.0) + float2(-uv.x, -uv.y); break;
+        case BlockFace::Left:    uv = f32vec2(1.0, 1.0) + f32vec2(-uv.y, -uv.x); break;
+        case BlockFace::Right:   uv = f32vec2(0.0, 0.0) + f32vec2(+uv.y, +uv.x); break;
+        case BlockFace::Bottom:  uv = f32vec2(0.0, 0.0) + f32vec2(+uv.x, +uv.y); break;
+        case BlockFace::Top:     uv = f32vec2(0.0, 0.0) + f32vec2(+uv.x, +uv.y); break;
+        case BlockFace::Back:    uv = f32vec2(1.0, 1.0) + f32vec2(-uv.x, -uv.y); break;
+        case BlockFace::Front:   uv = f32vec2(1.0, 1.0) + f32vec2(-uv.x, -uv.y); break;
             // clang-format on
 
-        case BlockFace::Cross_A: uv = float2(1.0, 1.0) + float2(-uv.x, -uv.y); break;
-        case BlockFace::Cross_B: uv = float2(1.0, 1.0) + float2(-uv.x, -uv.y); break;
+        case BlockFace::Cross_A: uv = f32vec2(1.0, 1.0) + f32vec2(-uv.x, -uv.y); break;
+        case BlockFace::Cross_B: uv = f32vec2(1.0, 1.0) + f32vec2(-uv.x, -uv.y); break;
         }
 
         if (tex_id == 11 || tex_id == 8)
         {
-            uint i = (uint)(rand(block_pos) * 8);
+            u32 i = (u32)(rand(block_pos) * 8);
             switch (i)
             {
-            case 0: uv = float2(0 + uv.x, 0 + uv.y); break;
-            case 1: uv = float2(1 - uv.x, 0 + uv.y); break;
-            case 2: uv = float2(1 - uv.x, 1 - uv.y); break;
-            case 3: uv = float2(0 + uv.x, 1 - uv.y); break;
+            case 0: uv = f32vec2(0 + uv.x, 0 + uv.y); break;
+            case 1: uv = f32vec2(1 - uv.x, 0 + uv.y); break;
+            case 2: uv = f32vec2(1 - uv.x, 1 - uv.y); break;
+            case 3: uv = f32vec2(0 + uv.x, 1 - uv.y); break;
 
-            case 4: uv = float2(0 + uv.y, 0 + uv.x); break;
-            case 5: uv = float2(1 - uv.y, 0 + uv.x); break;
-            case 6: uv = float2(1 - uv.y, 1 - uv.x); break;
-            case 7: uv = float2(0 + uv.y, 1 - uv.x); break;
+            case 4: uv = f32vec2(0 + uv.y, 0 + uv.x); break;
+            case 5: uv = f32vec2(1 - uv.y, 0 + uv.x); break;
+            case 6: uv = f32vec2(1 - uv.y, 1 - uv.x); break;
+            case 7: uv = f32vec2(0 + uv.y, 1 - uv.x); break;
             }
         }
     }
@@ -116,14 +116,14 @@ struct FaceVertex
 
 struct PackedFace
 {
-    uint data;
+    u32 data;
 
-    FaceVertex unpack(uint vert_i)
+    FaceVertex unpack(u32 vert_i)
     {
-        uint data_index = vert_i / 6;
-        uint data_instance = vert_i - data_index * 6;
+        u32 data_index = vert_i / 6;
+        u32 data_instance = vert_i - data_index * 6;
         FaceVertex result;
-        result.block_pos = float3(
+        result.block_pos = f32vec3(
             (data >> 0) & 0x3f,
             (data >> 6) & 0x3f,
             (data >> 12) & 0x3f);
@@ -149,24 +149,24 @@ struct FaceMeshlet
 struct FaceMeshletPool
 {
     FaceMeshlet meshlets[FACE_MESHLET_POOL_SIZE];
-    uint free_meshlet_list[FACE_MESHLET_POOL_SIZE];
-    uint lock_int;
-    uint free_meshlets_list_size;
+    u32 free_meshlet_list[FACE_MESHLET_POOL_SIZE];
+    u32 free_meshlets_list_size;
+    u32 lock_int;
 
     // Needs one thread.
-    uint malloc_one()
+    u32 malloc_one()
     {
-        uint allocation = free_meshlet_list[free_meshlets_list_size - 1];
+        u32 allocation = free_meshlet_list[free_meshlets_list_size - 1];
         free_meshlets_list_size -= 1;
         return allocation;
     }
 
-    PackedFace read(uint allocation, uint index)
+    PackedFace read(u32 allocation, u32 index)
     {
         return meshlets[allocation].faces[index];
     }
 
-    void write(uint allocation, uint index, PackedFace face)
+    void write(u32 allocation, u32 index, PackedFace face)
     {
         meshlets[allocation].faces[index] = face;
     }
@@ -177,7 +177,7 @@ DAXA_DEFINE_GET_STRUCTURED_BUFFER(FaceMeshletPool);
 
 void FaceMeshletPool_lock(RWByteAddressBuffer meshlet_pool)
 {
-    uint original_value;
+    u32 original_value;
     do
     {
         meshlet_pool.InterlockedCompareExchange(sizeof(FaceMeshletPool::meshlets) + sizeof(FaceMeshletPool::free_meshlet_list), 1, original_value);
@@ -187,12 +187,12 @@ void FaceMeshletPool_lock(RWByteAddressBuffer meshlet_pool)
 
 void FaceMeshletPool_unlock(RWByteAddressBuffer meshlet_pool)
 {
-    uint original_value;
-    meshlet_pool.InterlockedCompareExchange(sizeof(FaceMeshletPool::meshlets) + sizeof(FaceMeshletPool::free_meshlet_list), 0, original_value);
+    u32 original_value;
+    InterlockedExchange(meshlet_pool[0].lock_int, 0, original_value);
 }
 
 // Needs 256 threads.
-void FaceMeshletPool_free_one(in out RWByteAddressBuffer meshlet_pool, uint allocation, uint thread_id)
+void FaceMeshletPool_free_one(in out StructuredBuffer<FaceMeshletPool> meshlet_pool, u32 allocation, u32 thread_id)
 {
     if (thread_id < 256)
     {
@@ -210,21 +210,21 @@ void FaceMeshletPool_free_one(in out RWByteAddressBuffer meshlet_pool, uint allo
 
 struct ChunkFaces
 {
-    uint meshlet_allocations[1024 * 3];
-    uint meshlet_allocation_count;
+    u32 meshlet_allocations[1024 * 3];
+    u32 meshlet_allocation_count;
 
     void increment_meshlet_allocation_count() { ++meshlet_allocation_count; }
 };
 
 struct FaceBuffer
 {
-    uint data[32 * 32 * 32 * 6];
+    u32 data[32 * 32 * 32 * 6];
 };
 
 struct ChunkMeshlets
 {
-    uint meshlet_allocations[1024 * 3];
-    uint meshlet_allocation_count;
+    u32 meshlet_allocations[1024 * 3];
+    u32 meshlet_allocation_count;
 
     void increment_meshlet_allocation_count() { ++meshlet_allocation_count; }
 };
