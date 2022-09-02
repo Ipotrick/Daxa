@@ -40,6 +40,7 @@ static void shader_preprocess(std::string & file_str, std::filesystem::path cons
 
 namespace daxa
 {
+#if DAXA_BUILT_WITH_SHADERC
     class ShadercFileIncluder : public shaderc::CompileOptions::IncluderInterface
     {
       public:
@@ -155,6 +156,87 @@ namespace daxa
             }
         };
     };
+#endif
+
+#if DAXA_BUILT_WITH_DXC
+    struct DxcCustomIncluder : public IDxcIncludeHandler
+    {
+        IDxcIncludeHandler * default_includer;
+        ImplPipelineCompiler * impl_pipeline_compiler;
+
+        virtual ~DxcCustomIncluder() {}
+        HRESULT LoadSource(LPCWSTR filename, IDxcBlob ** include_source) override
+        {
+            if (filename[0] == '.')
+            {
+                filename += 2;
+            }
+
+            auto result = impl_pipeline_compiler->full_path_to_file(filename);
+            if (result.is_err())
+            {
+                *include_source = nullptr;
+                return SCARD_E_FILE_NOT_FOUND;
+            }
+            auto full_path = result.value();
+            auto search_pred = [&](std::filesystem::path const & p)
+            { return p == full_path; };
+
+            ComPtr<IDxcBlobEncoding> dxc_blob_encoding = {};
+            if (std::find_if(impl_pipeline_compiler->current_seen_shader_files.begin(),
+                             impl_pipeline_compiler->current_seen_shader_files.end(), search_pred) != impl_pipeline_compiler->current_seen_shader_files.end())
+            {
+                // Return empty string blob if this file has been included before
+                static const char null_str[] = " ";
+                impl_pipeline_compiler->dxc_backend.dxc_utils->CreateBlob(null_str, sizeof(null_str), CP_UTF8, &dxc_blob_encoding);
+                *include_source = dxc_blob_encoding.Detach();
+                return S_OK;
+            }
+            else
+            {
+                impl_pipeline_compiler->current_observed_hotload_files->insert({full_path, std::chrono::file_clock::now()});
+            }
+
+            auto str_result = impl_pipeline_compiler->load_shader_source_from_file(full_path);
+            if (str_result.is_err())
+            {
+                *include_source = nullptr;
+                return SCARD_E_INVALID_PARAMETER;
+            }
+            std::string str = str_result.value().string;
+
+            impl_pipeline_compiler->dxc_backend.dxc_utils->CreateBlob(str.c_str(), static_cast<u32>(str.size()), CP_UTF8, &dxc_blob_encoding);
+            *include_source = dxc_blob_encoding.Detach();
+            return S_OK;
+        }
+
+        HRESULT QueryInterface(REFIID riid, void ** object) override
+        {
+            return default_includer->QueryInterface(riid, object);
+        }
+
+        unsigned long STDMETHODCALLTYPE AddRef(void) override { return 0; }
+        unsigned long STDMETHODCALLTYPE Release(void) override { return 0; }
+    };
+#endif
+} // namespace daxa
+
+namespace daxa
+{
+    void ShaderCompileOptions::inherit(ShaderCompileOptions const & other)
+    {
+        if (!this->entry_point.has_value())
+            this->entry_point = other.entry_point;
+        if (!this->opt_level.has_value())
+            this->opt_level = other.opt_level;
+        if (!this->shader_model.has_value())
+            this->shader_model = other.shader_model;
+        if (!this->language.has_value())
+            this->language = other.language;
+
+        this->root_paths.insert(this->root_paths.begin(), other.root_paths.begin(), other.root_paths.end());
+        this->defines.insert(this->defines.end(), other.defines.begin(), other.defines.end());
+    }
 
     RasterPipeline::RasterPipeline(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
@@ -165,27 +247,30 @@ namespace daxa
     auto PipelineCompiler::create_raster_pipeline(RasterPipelineInfo const & info) -> Result<RasterPipeline>
     {
         auto & impl = *as<ImplPipelineCompiler>();
+        auto modified_info = info;
+        modified_info.vertex_shader_info.compile_options.inherit(impl.info.shader_compile_options);
+        modified_info.fragment_shader_info.compile_options.inherit(impl.info.shader_compile_options);
 
-        if (info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
+        if (modified_info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
         {
-            return ResultErr{std::string("push constant size of ") + std::to_string(info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(MAX_PUSH_CONSTANT_BYTE_SIZE)};
+            return ResultErr{std::string("push constant size of ") + std::to_string(modified_info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(MAX_PUSH_CONSTANT_BYTE_SIZE)};
         }
-        if (info.push_constant_size % 4 != 0)
+        if (modified_info.push_constant_size % 4 != 0)
         {
-            return ResultErr{std::string("push constant size of ") + std::to_string(info.push_constant_size) + std::string(" is not a multiple of 4(bytes)")};
+            return ResultErr{std::string("push constant size of ") + std::to_string(modified_info.push_constant_size) + std::string(" is not a multiple of 4(bytes)")};
         }
 
-        auto impl_pipeline = new ImplRasterPipeline(impl.impl_device, info);
+        auto impl_pipeline = new ImplRasterPipeline(impl.impl_device, modified_info);
         impl.current_observed_hotload_files = &impl_pipeline->observed_hotload_files;
 
-        auto v_spirv_result = impl.get_spirv(info.vertex_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT);
+        auto v_spirv_result = impl.get_spirv(modified_info.vertex_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT);
         if (v_spirv_result.is_err())
         {
             return ResultErr{.message = v_spirv_result.message()};
         }
         std::vector<u32> v_spirv = v_spirv_result.value();
 
-        auto p_spirv_result = impl.get_spirv(info.fragment_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT);
+        auto p_spirv_result = impl.get_spirv(modified_info.fragment_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT);
         if (p_spirv_result.is_err())
         {
             return ResultErr{.message = p_spirv_result.message()};
@@ -211,7 +296,7 @@ namespace daxa
         };
         vkCreateShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, &shader_module_pixel, nullptr, &p_vk_shader_module);
 
-        impl_pipeline->vk_pipeline_layout = impl.impl_device.as<ImplDevice>()->gpu_table.pipeline_layouts[(info.push_constant_size + 3) / 4];
+        impl_pipeline->vk_pipeline_layout = impl.impl_device.as<ImplDevice>()->gpu_table.pipeline_layouts[(modified_info.push_constant_size + 3) / 4];
 
         VkPipelineShaderStageCreateInfo vk_pipeline_shader_stage_create_infos[2] = {
             VkPipelineShaderStageCreateInfo{
@@ -220,7 +305,7 @@ namespace daxa
                 .flags = {},
                 .stage = VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT,
                 .module = v_vk_shader_module,
-                .pName = info.vertex_shader_info.entry_point.c_str(),
+                .pName = modified_info.vertex_shader_info.compile_options.entry_point.value().c_str(),
                 .pSpecializationInfo = nullptr,
             },
             VkPipelineShaderStageCreateInfo{
@@ -229,7 +314,7 @@ namespace daxa
                 .flags = {},
                 .stage = VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT,
                 .module = p_vk_shader_module,
-                .pName = info.fragment_shader_info.entry_point.c_str(),
+                .pName = modified_info.fragment_shader_info.compile_options.entry_point.value().c_str(),
                 .pSpecializationInfo = nullptr,
             },
         };
@@ -266,29 +351,29 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},
-            .depthTestEnable = info.depth_test.enable_depth_test,
-            .depthWriteEnable = info.depth_test.enable_depth_write,
-            .depthCompareOp = static_cast<VkCompareOp>(info.depth_test.depth_test_compare_op),
+            .depthTestEnable = modified_info.depth_test.enable_depth_test,
+            .depthWriteEnable = modified_info.depth_test.enable_depth_write,
+            .depthCompareOp = static_cast<VkCompareOp>(modified_info.depth_test.depth_test_compare_op),
             .depthBoundsTestEnable = VK_FALSE,
             .stencilTestEnable = VK_FALSE,
             .front = {},
             .back = {},
-            .minDepthBounds = info.depth_test.min_depth_bounds,
-            .maxDepthBounds = info.depth_test.max_depth_bounds,
+            .minDepthBounds = modified_info.depth_test.min_depth_bounds,
+            .maxDepthBounds = modified_info.depth_test.max_depth_bounds,
         };
 
-        DAXA_DBG_ASSERT_TRUE_M(info.color_attachments.size() < PIPELINE_COMPILER_MAX_ATTACHMENTS, "too many color attachments, make pull request to bump max");
+        DAXA_DBG_ASSERT_TRUE_M(modified_info.color_attachments.size() < PIPELINE_COMPILER_MAX_ATTACHMENTS, "too many color attachments, make pull request to bump max");
 
         std::array<VkPipelineColorBlendAttachmentState, PIPELINE_COMPILER_MAX_ATTACHMENTS> vk_pipeline_color_blend_attachment_blend_states = {};
-        for (usize i = 0; i < info.color_attachments.size(); ++i)
+        for (usize i = 0; i < modified_info.color_attachments.size(); ++i)
         {
-            vk_pipeline_color_blend_attachment_blend_states[i] = *reinterpret_cast<VkPipelineColorBlendAttachmentState const *>(&info.color_attachments[i].blend);
+            vk_pipeline_color_blend_attachment_blend_states[i] = *reinterpret_cast<VkPipelineColorBlendAttachmentState const *>(&modified_info.color_attachments[i].blend);
         }
 
         std::array<VkFormat, PIPELINE_COMPILER_MAX_ATTACHMENTS> vk_pipeline_color_attachment_formats = {};
-        for (usize i = 0; i < info.color_attachments.size(); ++i)
+        for (usize i = 0; i < modified_info.color_attachments.size(); ++i)
         {
-            vk_pipeline_color_attachment_formats[i] = *reinterpret_cast<VkFormat const *>(&info.color_attachments[i].format);
+            vk_pipeline_color_attachment_formats[i] = *reinterpret_cast<VkFormat const *>(&modified_info.color_attachments[i].format);
         }
 
         VkPipelineColorBlendStateCreateInfo vk_color_blend_state{
@@ -296,7 +381,7 @@ namespace daxa
             .pNext = nullptr,
             .logicOpEnable = VK_FALSE,
             .logicOp = {},
-            .attachmentCount = static_cast<u32>(info.color_attachments.size()),
+            .attachmentCount = static_cast<u32>(modified_info.color_attachments.size()),
             .pAttachments = vk_pipeline_color_blend_attachment_blend_states.data(),
             .blendConstants = {1.0f, 1.0f, 1.0f, 1.0f},
         };
@@ -327,9 +412,9 @@ namespace daxa
         VkPipelineRenderingCreateInfo vk_pipeline_rendering{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
             .pNext = nullptr,
-            .colorAttachmentCount = static_cast<u32>(info.color_attachments.size()),
+            .colorAttachmentCount = static_cast<u32>(modified_info.color_attachments.size()),
             .pColorAttachmentFormats = vk_pipeline_color_attachment_formats.data(),
-            .depthAttachmentFormat = static_cast<VkFormat>(info.depth_test.depth_attachment_format),
+            .depthAttachmentFormat = static_cast<VkFormat>(modified_info.depth_test.depth_attachment_format),
         };
 
         VkGraphicsPipelineCreateInfo vk_graphics_pipeline_create_info{
@@ -366,9 +451,9 @@ namespace daxa
         vkDestroyShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, v_vk_shader_module, nullptr);
         vkDestroyShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, p_vk_shader_module, nullptr);
 
-        if (impl.impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
+        if (impl.impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && modified_info.debug_name.size() > 0)
         {
-            auto raster_pipeline_name = info.debug_name + std::string(" [Daxa RasterPipeline]");
+            auto raster_pipeline_name = modified_info.debug_name + std::string(" [Daxa RasterPipeline]");
             VkDebugUtilsObjectNameInfoEXT name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
@@ -384,20 +469,22 @@ namespace daxa
     auto PipelineCompiler::create_compute_pipeline(ComputePipelineInfo const & info) -> Result<ComputePipeline>
     {
         auto & impl = *as<ImplPipelineCompiler>();
+        auto modified_info = info;
+        modified_info.shader_info.compile_options.inherit(impl.info.shader_compile_options);
 
-        if (info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
+        if (modified_info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
         {
-            return ResultErr{std::string("push constant size of ") + std::to_string(info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(MAX_PUSH_CONSTANT_BYTE_SIZE)};
+            return ResultErr{std::string("push constant size of ") + std::to_string(modified_info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(MAX_PUSH_CONSTANT_BYTE_SIZE)};
         }
-        if (info.push_constant_size % 4 != 0)
+        if (modified_info.push_constant_size % 4 != 0)
         {
-            return ResultErr{std::string("push constant size of ") + std::to_string(info.push_constant_size) + std::string(" is not a multiple of 4(bytes)")};
+            return ResultErr{std::string("push constant size of ") + std::to_string(modified_info.push_constant_size) + std::string(" is not a multiple of 4(bytes)")};
         }
 
-        auto impl_pipeline = new ImplComputePipeline(impl.impl_device, info);
+        auto impl_pipeline = new ImplComputePipeline(impl.impl_device, modified_info);
         impl.current_observed_hotload_files = &impl_pipeline->observed_hotload_files;
 
-        auto spirv_result = impl.get_spirv(info.shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT);
+        auto spirv_result = impl.get_spirv(modified_info.shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT);
         if (spirv_result.is_err())
         {
             return ResultErr{.message = spirv_result.message()};
@@ -414,7 +501,7 @@ namespace daxa
         };
         vkCreateShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, &shader_module_ci, nullptr, &vk_shader_module);
 
-        impl_pipeline->vk_pipeline_layout = impl.impl_device.as<ImplDevice>()->gpu_table.pipeline_layouts[(info.push_constant_size + 3) / 4];
+        impl_pipeline->vk_pipeline_layout = impl.impl_device.as<ImplDevice>()->gpu_table.pipeline_layouts[(modified_info.push_constant_size + 3) / 4];
 
         VkComputePipelineCreateInfo vk_compute_pipeline_create_info{
             .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
@@ -426,7 +513,7 @@ namespace daxa
                 .flags = {},
                 .stage = VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT,
                 .module = vk_shader_module,
-                .pName = info.shader_info.entry_point.c_str(),
+                .pName = modified_info.shader_info.compile_options.entry_point.value().c_str(),
                 .pSpecializationInfo = nullptr,
             },
             .layout = impl_pipeline->vk_pipeline_layout,
@@ -448,7 +535,7 @@ namespace daxa
 
         if (impl.impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
         {
-            auto raster_pipeline_name = info.debug_name + std::string(" [Daxa ComputePipeline]");
+            auto raster_pipeline_name = modified_info.debug_name + std::string(" [Daxa ComputePipeline]");
             VkDebugUtilsObjectNameInfoEXT name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
@@ -563,11 +650,35 @@ namespace daxa
     ImplPipelineCompiler::ImplPipelineCompiler(ManagedWeakPtr a_impl_device, PipelineCompilerInfo const & info)
         : impl_device{std::move(a_impl_device)}, info{info}
     {
-        auto includer = ShadercFileIncluder{};
-        includer.impl_pipeline_compiler = this;
-        shaderc_backend.options.SetIncluder(std::make_unique<ShadercFileIncluder>(includer));
+        if (!this->info.shader_compile_options.entry_point.has_value())
+            this->info.shader_compile_options.entry_point = std::optional<std::string>{"main"};
+        if (!this->info.shader_compile_options.opt_level.has_value())
+            this->info.shader_compile_options.opt_level = std::optional<u32>{0};
+        if (!this->info.shader_compile_options.shader_model.has_value())
+            this->info.shader_compile_options.shader_model = std::optional<ShaderModel>{ShaderModel{.major = 6, .minor = 6}};
+        if (!this->info.shader_compile_options.language.has_value())
+            this->info.shader_compile_options.language = std::optional<ShaderLanguage>{ShaderLanguage::HLSL};
 
-        DAXA_DBG_ASSERT_TRUE_M(info.opt_level < 3, "The optimization level must be between 0 and 2 (inclusive)");
+#if DAXA_BUILT_WITH_SHADERC
+        {
+            auto includer = ShadercFileIncluder{};
+            includer.impl_pipeline_compiler = this;
+            shaderc_backend.options.SetIncluder(std::make_unique<ShadercFileIncluder>(includer));
+        }
+#endif
+
+#if DAXA_BUILT_WITH_DXC
+        {
+            HRESULT dxc_utils_result = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&this->dxc_backend.dxc_utils));
+            DAXA_DBG_ASSERT_TRUE_M(SUCCEEDED(dxc_utils_result), "Failed to create DXC utils");
+            HRESULT dxc_compiler_result = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&this->dxc_backend.dxc_compiler));
+            DAXA_DBG_ASSERT_TRUE_M(SUCCEEDED(dxc_compiler_result), "Failed to create DXC compiler");
+            ComPtr<DxcCustomIncluder> dxc_includer = new DxcCustomIncluder();
+            dxc_includer->impl_pipeline_compiler = this;
+            this->dxc_backend.dxc_utils->CreateDefaultIncludeHandler(&(dxc_includer->default_includer));
+            this->dxc_backend.dxc_includer = dxc_includer.Detach();
+        }
+#endif
     }
 
     ImplPipelineCompiler::~ImplPipelineCompiler() {}
@@ -606,7 +717,23 @@ namespace daxa
                 code = std::get<ShaderCode>(shader_info.source);
             }
 
-            auto ret = gen_spirv_from_shaderc(shader_info, shader_stage, code);
+            Result<std::vector<u32>> ret = ResultErr{.message = "No shader was compiled"};
+
+            switch (shader_info.compile_options.language.value())
+            {
+#if DAXA_BUILT_WITH_SHADERC
+            case ShaderLanguage::GLSL:
+                ret = gen_spirv_from_shaderc(shader_info, shader_stage, code);
+                break;
+#endif
+#if DAXA_BUILT_WITH_DXC
+            case ShaderLanguage::HLSL:
+                ret = gen_spirv_from_dxc(shader_info, shader_stage, code);
+                break;
+#endif
+            default: break;
+            }
+
             if (ret.is_err())
             {
                 return ResultErr{ret.message()};
@@ -623,7 +750,8 @@ namespace daxa
             return {file};
         }
         std::filesystem::path potential_path;
-        for (auto & root : this->info.root_paths)
+        // TODO: FIX THIS!! URGENT. Root paths should be got from the shader
+        for (auto & root : this->info.shader_compile_options.root_paths)
         {
             potential_path.clear();
             potential_path = root / file;
@@ -675,6 +803,7 @@ namespace daxa
 
     auto ImplPipelineCompiler::gen_spirv_from_shaderc(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
     {
+#if DAXA_BUILT_WITH_SHADERC
         auto translate_shader_stage = [](VkShaderStageFlagBits stage) -> shaderc_shader_kind
         {
             switch (stage)
@@ -699,13 +828,15 @@ namespace daxa
             }
         };
 
+        DAXA_DBG_ASSERT_TRUE_M(shader_info.compile_options.opt_level < 3, "For shaderc, The optimization level must be between 0 and 2 (inclusive)");
+
         auto spirv_stage = translate_shader_stage(shader_stage);
         shaderc_backend.options.SetSourceLanguage(shaderc_source_language_glsl);
         shaderc_backend.options.SetTargetEnvironment(shaderc_target_env_vulkan, VK_API_VERSION_1_1);
         shaderc_backend.options.SetTargetSpirv(shaderc_spirv_version_1_3);
-        shaderc_backend.options.SetOptimizationLevel(static_cast<shaderc_optimization_level>(this->info.opt_level));
+        shaderc_backend.options.SetOptimizationLevel(static_cast<shaderc_optimization_level>(shader_info.compile_options.opt_level.value()));
 
-        for (auto const & shader_define : shader_info.defines)
+        for (auto const & shader_define : shader_info.compile_options.defines)
         {
             if (shader_define.value.size() > 0)
             {
@@ -716,6 +847,10 @@ namespace daxa
                 shaderc_backend.options.AddMacroDefinition(shader_define.name);
             }
         }
+
+        shaderc_backend.options.AddMacroDefinition("_DAXA_SHADER", "1");
+        shaderc_backend.options.AddMacroDefinition("_DAXA_GLSL", "1");
+        shaderc_backend.options.AddMacroDefinition("DAXA_SHADER_INCLUDE", "<daxa/daxa.inl>");
 
         std::string debug_name = "unnamed shader";
         if (ShaderFile const * shader_file = std::get_if<ShaderFile>(&shader_info.source))
@@ -730,6 +865,137 @@ namespace daxa
             return daxa::ResultErr{.message = std::string("SHADERC: ") + spv_module.GetErrorMessage()};
 
         return {std::vector<u32>{spv_module.begin(), spv_module.end()}};
+#else
+        return ResultErr{.message = "Asked for Shaderc compilation without enabling Shaderc"};
+#endif
+    }
+
+    auto ImplPipelineCompiler::gen_spirv_from_dxc(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
+    {
+#if DAXA_BUILT_WITH_DXC
+        auto u8_ascii_to_wstring = [](char const * str) -> std::wstring
+        {
+            std::wstring ret = {};
+            for (int i = 0; i < std::strlen(str) + 1 && str != nullptr; i++)
+            {
+                ret.push_back(str[i]);
+            }
+            return ret;
+        };
+
+        std::vector<const wchar_t *> args = {};
+
+        std::vector<std::wstring> wstring_buffer = {};
+
+        wstring_buffer.reserve(shader_info.compile_options.defines.size() + 1 + shader_info.compile_options.root_paths.size());
+
+        for (auto & define : shader_info.compile_options.defines)
+        {
+            auto define_str = define.name;
+            if (define.value.length() > 0)
+                define_str = define_str + "=" + define.value;
+            wstring_buffer.push_back(u8_ascii_to_wstring(define_str.c_str()));
+            args.push_back(L"-D");
+            args.push_back(wstring_buffer.back().c_str());
+        }
+        args.push_back(L"-D_DAXA_SHADER");
+        args.push_back(L"-D_DAXA_HLSL");
+        args.push_back(L"-DDAXA_SHADER_INCLUDE=\"daxa/daxa.inl\"");
+
+        if (shader_info.source.index() == 0)
+        {
+            wstring_buffer.push_back(std::get<ShaderFile>(shader_info.source).path.wstring());
+            args.push_back(wstring_buffer.back().c_str());
+        }
+
+        for (auto & root : shader_info.compile_options.root_paths)
+        {
+            args.push_back(L"-I");
+            wstring_buffer.push_back(root.wstring());
+            args.push_back(wstring_buffer.back().c_str());
+        }
+
+        // set matrix packing to column major
+        args.push_back(L"-Zpc");
+        // set warnings as errors
+        args.push_back(DXC_ARG_WARNINGS_ARE_ERRORS); //-WX
+        // setting target
+        args.push_back(L"-spirv");
+        args.push_back(L"-fspv-target-env=vulkan1.1");
+        // set optimization setting
+        switch (shader_info.compile_options.opt_level.value())
+        {
+        case 0: args.push_back(L"-O0"); break;
+        case 1: args.push_back(L"-O1"); break;
+        case 2: args.push_back(L"-O2"); break;
+        case 3: args.push_back(L"-O3"); break;
+        default: DAXA_DBG_ASSERT_TRUE_M(false, "Bad optimization level set in Pipeline Compiler"); break;
+        }
+        // setting entry point
+        args.push_back(L"-E");
+        auto entry_point_wstr = u8_ascii_to_wstring(shader_info.compile_options.entry_point.value().c_str());
+        args.push_back(entry_point_wstr.c_str());
+
+        if (this->impl_device.as<ImplDevice>()->info.use_scalar_layout)
+        {
+            args.push_back(L"-fvk-use-scalar-layout");
+        }
+
+        // set shader model
+        args.push_back(L"-T");
+        std::wstring profile = L"vs_x_x";
+        profile[3] = L'0' + shader_info.compile_options.shader_model.value().major;
+        profile[5] = L'0' + shader_info.compile_options.shader_model.value().minor;
+        switch (shader_stage)
+        {
+        case VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT: profile[0] = L'v'; break;
+        case VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT: profile[0] = L'p'; break;
+        case VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT: profile[0] = L'c'; break;
+        default: break;
+        }
+        args.push_back(profile.c_str());
+        // set hlsl version to 2021
+        args.push_back(L"-HV");
+        args.push_back(L"2021");
+        DxcBuffer source_buffer{
+            .Ptr = code.string.c_str(),
+            .Size = static_cast<u32>(code.string.size()),
+            .Encoding = static_cast<u32>(0),
+        };
+
+        IDxcResult * result;
+        this->dxc_backend.dxc_compiler->Compile(
+            &source_buffer, args.data(), static_cast<u32>(args.size()),
+            this->dxc_backend.dxc_includer, IID_PPV_ARGS(&result));
+        IDxcBlobUtf8 * error_message;
+        result->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&error_message), nullptr);
+
+        if (error_message && error_message->GetStringLength() > 0)
+        {
+            auto str = std::string();
+            str.resize(error_message->GetBufferSize());
+            for (usize i = 0; i < str.size(); i++)
+            {
+                str[i] = static_cast<char const *>(error_message->GetBufferPointer())[i];
+            }
+            str = std::string("DXC: ") + str;
+            return daxa::ResultErr{.message = str};
+        }
+
+        IDxcBlob * shaderobj;
+        result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderobj), nullptr);
+
+        std::vector<u32> spv;
+        spv.resize(shaderobj->GetBufferSize() / sizeof(u32));
+        for (usize i = 0; i < spv.size(); i++)
+        {
+            spv[i] = static_cast<u32 *>(shaderobj->GetBufferPointer())[i];
+        }
+
+        return {spv};
+#else
+        return ResultErr{.message = "Asked for Dxc compilation without enabling Dxc"};
+#endif
     }
 
     ImplRasterPipeline::ImplRasterPipeline(ManagedWeakPtr a_impl_device, RasterPipelineInfo const & info)

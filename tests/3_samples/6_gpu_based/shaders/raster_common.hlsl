@@ -7,17 +7,17 @@
 
 struct VertexOutput
 {
-    float4 frag_pos : SV_POSITION;
-    float3 nrm : NORMAL0;
-    float2 uv : TEXCOORD0;
-    float3 pos : DATA1;
-    uint tex_id : DATA0;
+    f32vec4 frag_pos : SV_POSITION;
+    f32vec3 nrm : NORMAL0;
+    f32vec2 uv : TEXCOORD0;
+    f32vec3 pos : DATA1;
+    u32 tex_id : DATA0;
 };
 struct ShadowPassVertexOutput
 {
-    float4 frag_pos : SV_POSITION;
-    float2 uv : TEXCOORD0;
-    uint tex_id : DATA0;
+    f32vec4 frag_pos : SV_POSITION;
+    f32vec2 uv : TEXCOORD0;
+    u32 tex_id : DATA0;
 };
 
 
