@@ -468,9 +468,9 @@ namespace daxa
         u32 max_images = std::min(this->vk_info.limits.max_descriptor_set_sampled_images, this->vk_info.limits.max_descriptor_set_storage_images);
         u32 max_samplers = this->vk_info.limits.max_descriptor_set_samplers;
         gpu_table.initialize(
-            std::min({max_buffers, 1'000u}),
-            std::min({max_images, 1'000u}),
-            std::min({max_samplers, 1'000u}),
+            std::min({max_buffers, 100'000u}),
+            std::min({max_images, 100'000u}),
+            std::min({max_samplers, 100'000u}),
             vk_device);
 
         vkGetDeviceQueue(this->vk_device, this->main_queue_family_index, 0, &this->main_queue_vk_queue);
