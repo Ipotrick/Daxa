@@ -68,18 +68,20 @@ struct App : AppWindow<App>
     });
 
     daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
-        .root_paths = {
-            "tests/0_common/shaders",
-            "tests/3_samples/7_FSR2/shaders",
-            "include",
+        .shader_compile_options = {
+            .root_paths = {
+                "tests/0_common/shaders",
+                "tests/3_samples/7_FSR2/shaders",
+                "include",
+            },
         },
         .debug_name = APPNAME_PREFIX("pipeline_compiler"),
     });
 
     // clang-format off
     daxa::RasterPipeline raster_pipeline = pipeline_compiler.create_raster_pipeline({
-        .vertex_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .entry_point = "vs_main"},
-        .fragment_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .entry_point = "fs_main"},
+        .vertex_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .compile_options = {.entry_point = "vs_main"}},
+        .fragment_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .compile_options = {.entry_point = "fs_main"}},
         .color_attachments = {
             {.format = daxa::Format::R16G16B16A16_SFLOAT, .blend = {.blend_enable = true, .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA, .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA}},
             {.format = daxa::Format::R16G16_SFLOAT, .blend = {.blend_enable = true, .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA, .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA}},
@@ -253,13 +255,10 @@ struct App : AppWindow<App>
         if (pipeline_compiler.check_if_sources_changed(raster_pipeline))
         {
             auto new_pipeline = pipeline_compiler.recreate_raster_pipeline(raster_pipeline);
+            std::cout << new_pipeline.to_string() << std::endl;
             if (new_pipeline.is_ok())
             {
                 raster_pipeline = new_pipeline.value();
-            }
-            else
-            {
-                std::cout << new_pipeline.message() << std::endl;
             }
         }
 

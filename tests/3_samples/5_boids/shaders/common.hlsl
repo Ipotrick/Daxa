@@ -1,7 +1,9 @@
 #pragma once
 
+#include DAXA_SHADER_INCLUDE
+
 struct VertexOutput
 {
-    float4 frag_pos : SV_POSITION;
-    float4 col : COLOR0;
+    f32vec4 frag_pos : SV_POSITION;
+    f32vec4 col : COLOR0;
 };

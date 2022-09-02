@@ -76,11 +76,13 @@ struct App : AppWindow<App>
     daxa::ImageId draw_depth_image = create_depth();
     daxa::TaskImageId task_draw_depth_image;
     daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
-        .root_paths = {
-            "tests/0_common/shaders",
-            "tests/3_samples/6_gpu_based/shaders",
-            "tests/3_samples/6_gpu_based/shaders/pipelines",
-            "include",
+        .shader_compile_options = {
+            .root_paths = {
+                "tests/0_common/shaders",
+                "tests/3_samples/6_gpu_based/shaders",
+                "tests/3_samples/6_gpu_based/shaders/pipelines",
+                "include",
+            },
         },
         .debug_name = APPNAME_PREFIX("pipeline_compiler"),
     });

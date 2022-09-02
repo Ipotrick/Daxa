@@ -2,25 +2,25 @@
 
 #include "utils/rand.hlsl"
 
-float noise(float3 x)
+f32 noise(f32vec3 x)
 {
-    const float3 st = float3(110, 241, 171);
-    float3 i = floor(x);
-    float3 f = frac(x);
-    float n = dot(i, st);
-    float3 u = f * f * (3.0 - 2.0 * f);
-    float r = lerp(
+    const f32vec3 st = f32vec3(110, 241, 171);
+    f32vec3 i = floor(x);
+    f32vec3 f = frac(x);
+    f32 n = dot(i, st);
+    f32vec3 u = f * f * (3.0 - 2.0 * f);
+    f32 r = lerp(
         lerp(
-            lerp(rand(n + dot(st, float3(0, 0, 0))),
-                 rand(n + dot(st, float3(1, 0, 0))), u.x),
-            lerp(rand(n + dot(st, float3(0, 1, 0))),
-                 rand(n + dot(st, float3(1, 1, 0))), u.x),
+            lerp(rand(n + dot(st, f32vec3(0, 0, 0))),
+                 rand(n + dot(st, f32vec3(1, 0, 0))), u.x),
+            lerp(rand(n + dot(st, f32vec3(0, 1, 0))),
+                 rand(n + dot(st, f32vec3(1, 1, 0))), u.x),
             u.y),
         lerp(
-            lerp(rand(n + dot(st, float3(0, 0, 1))),
-                 rand(n + dot(st, float3(1, 0, 1))), u.x),
-            lerp(rand(n + dot(st, float3(0, 1, 1))),
-                 rand(n + dot(st, float3(1, 1, 1))), u.x),
+            lerp(rand(n + dot(st, f32vec3(0, 0, 1))),
+                 rand(n + dot(st, f32vec3(1, 0, 1))), u.x),
+            lerp(rand(n + dot(st, f32vec3(0, 1, 1))),
+                 rand(n + dot(st, f32vec3(1, 1, 1))), u.x),
             u.y),
         u.z);
     return r * 2.0 - 1.0;
@@ -28,26 +28,26 @@ float noise(float3 x)
 
 struct FractalNoiseConfig
 {
-    float amplitude;
-    float persistance;
-    float scale;
-    float lacunarity;
-    uint octaves;
+    f32 amplitude;
+    f32 persistance;
+    f32 scale;
+    f32 lacunarity;
+    u32 octaves;
 };
 
-float fractal_noise(float3 pos, FractalNoiseConfig config)
+f32 fractal_noise(f32vec3 pos, FractalNoiseConfig config)
 {
-    float value = 0.0;
-    float max_value = 0.0;
-    float amplitude = config.amplitude;
-    float3x3 rot_mat = float3x3(
+    f32 value = 0.0;
+    f32 max_value = 0.0;
+    f32 amplitude = config.amplitude;
+    f32mat3x3 rot_mat = f32mat3x3(
         0.2184223, -0.5347182, 0.8163137,
         0.9079879, -0.1951438, -0.3707788,
         0.3575608, 0.8221893, 0.4428939);
-    for (uint i = 0; i < config.octaves; ++i)
+    for (u32 i = 0; i < config.octaves; ++i)
     {
-        pos = mul(rot_mat, pos) + float3(71.444, 25.170, -54.766);
-        float3 p = pos * config.scale;
+        pos = mul(rot_mat, pos) + f32vec3(71.444, 25.170, -54.766);
+        f32vec3 p = pos * config.scale;
         value += noise(p) * config.amplitude;
         max_value += config.amplitude;
         config.amplitude *= config.persistance;
@@ -56,19 +56,19 @@ float fractal_noise(float3 pos, FractalNoiseConfig config)
     return value / max_value * amplitude;
 }
 
-float voronoi_noise(float3 pos)
+f32 voronoi_noise(f32vec3 pos)
 {
-    float value = 1e38;
+    f32 value = 1e38;
 
-    for (int zi = 0; zi < 3; ++zi)
+    for (i32 zi = 0; zi < 3; ++zi)
     {
-        for (int yi = 0; yi < 3; ++yi)
+        for (i32 yi = 0; yi < 3; ++yi)
         {
-            for (int xi = 0; xi < 3; ++xi)
+            for (i32 xi = 0; xi < 3; ++xi)
             {
-                float3 p = pos + float3(xi - 1, yi - 1, zi - 1);
+                f32vec3 p = pos + f32vec3(xi - 1, yi - 1, zi - 1);
                 p = floor(p) + 0.5;
-                p += float3(rand(p + 71.444), rand(p + 25.170), rand(p + -54.766));
+                p += f32vec3(rand(p + 71.444), rand(p + 25.170), rand(p + -54.766));
                 value = min(value, dot(pos - p, pos - p));
             }
         }
@@ -77,19 +77,19 @@ float voronoi_noise(float3 pos)
     return value;
 }
 
-float fractal_voronoi_noise(float3 pos, FractalNoiseConfig config)
+f32 fractal_voronoi_noise(f32vec3 pos, FractalNoiseConfig config)
 {
-    float value = 0.0;
-    float max_value = 0.0;
-    float amplitude = config.amplitude;
-    float3x3 rot_mat = float3x3(
+    f32 value = 0.0;
+    f32 max_value = 0.0;
+    f32 amplitude = config.amplitude;
+    f32mat3x3 rot_mat = f32mat3x3(
         0.2184223, -0.5347182, 0.8163137,
         0.9079879, -0.1951438, -0.3707788,
         0.3575608, 0.8221893, 0.4428939);
-    for (uint i = 0; i < config.octaves; ++i)
+    for (u32 i = 0; i < config.octaves; ++i)
     {
-        pos = mul(rot_mat, pos) + float3(71.444, 25.170, -54.766);
-        float3 p = pos * config.scale;
+        pos = mul(rot_mat, pos) + f32vec3(71.444, 25.170, -54.766);
+        f32vec3 p = pos * config.scale;
         value += voronoi_noise(p) * config.amplitude;
         max_value += config.amplitude;
         config.amplitude *= config.persistance;

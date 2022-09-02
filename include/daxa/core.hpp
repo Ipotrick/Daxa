@@ -234,6 +234,18 @@ namespace daxa
             return m;
         }
 
+        auto to_string() const -> std::string
+        {
+            if (v.has_value())
+            {
+                return "Result OK";
+            }
+            else
+            {
+                return std::string("Result Err: ") + m;
+            }
+        }
+
         operator bool() const
         {
             return v.has_value();
