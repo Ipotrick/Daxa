@@ -75,29 +75,13 @@ namespace daxa
         TaskImageId id = {};
     };
 
-    struct ImplConditionalTaskBegin
-    {
-        std::vector<TaskPipelineBarrier> barriers = {};
-        TaskResources resources = {};
-        TaskConditionalInfo info = {};
-        u64 depth = {}, end_index = {};
-    };
-
-    struct ImplConditionalTaskEnd
-    {
-        u64 depth = {}, begin_index = {};
-    };
-
     using TaskEventVariant = std::variant<
         ImplGenericTask,
         ImplCreateBufferTask,
-        ImplCreateImageTask,
-        ImplConditionalTaskBegin,
-        ImplConditionalTaskEnd>;
-    
+        ImplCreateImageTask>;
+
     struct TaskEvent
     {
-        u64 parent_scope_id = {};
         TaskEventVariant event_variant;
     };
 
@@ -122,10 +106,6 @@ namespace daxa
 
     struct TaskRecordState
     {
-        u64 conditional_depth = {};
-        std::stack<u64> conditional_task_indices = {};
-
-        auto get_current_scope_id() -> u64;
     };
 
     struct TaskLink
@@ -142,10 +122,6 @@ namespace daxa
         std::vector<TaskLink> image_links;
     };
 
-    // TODO: In sync check if a resource access is across scopes.
-    // If so, check if the scope of the previous access has ended
-    // if that is the case, write to the previous accesses scope the final state that resource needs to be in in the end of that scope.
-    // in execution, this is needed to perform a pipeline barrier, that transitions resources to the correct layout when the usual tasks do not execute.
     struct ImplTaskList final : ManagedSharedState
     {
         TaskListInfo info;

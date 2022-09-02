@@ -8,6 +8,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#define APPNAME "Daxa Sample: GPU Based App"
+#define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
+
 using namespace daxa::types;
 using Clock = std::chrono::high_resolution_clock;
 
@@ -49,7 +52,9 @@ auto refresh_pipeline(daxa::PipelineCompiler & compiler, auto & pipeline) -> boo
 struct App : AppWindow<App>
 {
     daxa::Context daxa_ctx = daxa::create_context({.enable_validation = true});
-    daxa::Device device = daxa_ctx.create_device({});
+    daxa::Device device = daxa_ctx.create_device({
+        .debug_name = APPNAME_PREFIX("device"),
+    });
     daxa::Swapchain swapchain = device.create_swapchain({
         .native_window = get_native_handle(),
         .width = size_x,
@@ -64,7 +69,7 @@ struct App : AppWindow<App>
         },
         .present_mode = daxa::PresentMode::DO_NOT_WAIT_FOR_VBLANK,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-        .debug_name = "Playground Swapchain",
+        .debug_name = APPNAME_PREFIX("swapchain"),
     });
     daxa::ImageId swapchain_image;
     daxa::TaskImageId task_swapchain_image;
@@ -77,15 +82,15 @@ struct App : AppWindow<App>
             "tests/3_samples/6_gpu_based/shaders/pipelines",
             "include",
         },
-        .debug_name = "Playground Compiler",
+        .debug_name = APPNAME_PREFIX("pipeline_compiler"),
     });
     daxa::BinarySemaphore binary_semaphore = device.create_binary_semaphore({
-        .debug_name = "Playground Present Semaphore",
+        .debug_name = APPNAME_PREFIX("binary_semaphore"),
     });
     static inline constexpr u64 FRAMES_IN_FLIGHT = 1;
     daxa::TimelineSemaphore gpu_framecount_timeline_sema = device.create_timeline_semaphore(daxa::TimelineSemaphoreInfo{
         .initial_value = 0,
-        .debug_name = "Playground gpu framecount Timeline Semaphore",
+        .debug_name = APPNAME_PREFIX("gpu_framecount_timeline_sema"),
     });
     u64 cpu_framecount = FRAMES_IN_FLIGHT - 1;
     Player3D player = {
@@ -126,7 +131,7 @@ struct App : AppWindow<App>
             .face_culling = daxa::FaceCullFlagBits::BACK_BIT,
         },
         .push_constant_size = sizeof(DrawRasterPush),
-        .debug_name = "Playground Pipeline",
+        .debug_name = APPNAME_PREFIX("draw_raster_pipeline"),
     }).value();
     daxa::ComputePipeline startup_pipeline = pipeline_compiler.create_compute_pipeline({
         .shader_info = {.source = daxa::ShaderFile{"startup.hlsl"}},
@@ -140,42 +145,37 @@ struct App : AppWindow<App>
     }).value();
     daxa::ComputePipeline chunkgen_pipeline = pipeline_compiler.create_compute_pipeline({
         .shader_info = {.source = daxa::ShaderFile{"chunkgen.hlsl"}},
-        .push_constant_size = sizeof(ChunkgenPush),
-        .debug_name = "Playground Chunkgen Compute Pipeline",
+        .push_constant_size = sizeof(ChunkgenComputePush),
+        .debug_name = APPNAME_PREFIX("chunkgen_compute_pipeline"),
     }).value();
     daxa::ComputePipeline meshgen_compute_pipeline = pipeline_compiler.create_compute_pipeline({
         .shader_info = {.source = daxa::ShaderFile{"meshgen.hlsl"}},
         .push_constant_size = sizeof(MeshgenComputePush),
-        .debug_name = "Playground Meshgen Compute Pipeline",
+        .debug_name = APPNAME_PREFIX("meshgen_compute_pipeline"),
     }).value();
-    // daxa::ComputePipeline meshgen_compute_pipeline = pipeline_compiler.create_compute_pipeline({
-    //     .shader_info = {.source = daxa::ShaderFile{"meshgen.hlsl"}},
-    //     .push_constant_size = sizeof(MeshgenComputePush),
-    //     .debug_name = "Playground Meshgen Compute Pipeline",
-    // }).value();
     // clang-format on
 
     daxa::BufferId voxel_world_buffer = device.create_buffer(daxa::BufferInfo{
         .size = sizeof(u32) * CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE * CHUNK_COUNT_X * CHUNK_COUNT_Y * CHUNK_COUNT_Z,
-        .debug_name = "Voxel World buffer",
+        .debug_name = APPNAME_PREFIX("voxel_world_buffer"),
     });
     daxa::TaskBufferId task_voxel_world_buffer;
 
     daxa::BufferId globals_buffer = device.create_buffer(daxa::BufferInfo{
         .size = sizeof(SharedGlobals),
-        .debug_name = "Globals buffer",
+        .debug_name = APPNAME_PREFIX("globals_buffer"),
     });
     daxa::TaskBufferId task_globals_buffer;
 
     daxa::BufferId indirect_draw_buffer = device.create_buffer(daxa::BufferInfo{
         .size = sizeof(IndirectDrawBuffer),
-        .debug_name = "Indirect Draw buffer",
+        .debug_name = APPNAME_PREFIX("indirect_draw_buffer"),
     });
     daxa::TaskBufferId task_indirect_draw_buffer;
 
     daxa::TaskList loop_task_list = record_loop_task_list();
 
-    App() : AppWindow<App>("Samples: Gpu Driven")
+    App() : AppWindow<App>(APPNAME)
     {
     }
 
@@ -252,78 +252,28 @@ struct App : AppWindow<App>
     {
         daxa::TaskList new_task_list = daxa::TaskList({
             .device = device,
-            .debug_name = "TaskList task list",
+            .debug_name = APPNAME_PREFIX("task_list"),
         });
         task_swapchain_image = new_task_list.create_task_image({
             .fetch_callback = [this]()
             { return swapchain_image; },
-            .debug_name = "TaskList Task Swapchain Image",
+            .debug_name = APPNAME_PREFIX("task_swapchain_image"),
         });
         task_draw_depth_image = new_task_list.create_task_image({
             .fetch_callback = [this]()
             { return draw_depth_image; },
             .slice = {.image_aspect = daxa::ImageAspectFlagBits::DEPTH},
-            .debug_name = "TaskList Task Draw Depth Image",
+            .debug_name = APPNAME_PREFIX("task_draw_depth_image"),
         });
         task_globals_buffer = new_task_list.create_task_buffer({
             .fetch_callback = [this]()
             { return globals_buffer; },
-            .debug_name = "TaskList Task Globals Buffer",
+            .debug_name = APPNAME_PREFIX("task_globals_buffer"),
         });
         task_indirect_draw_buffer = new_task_list.create_task_buffer({
             .fetch_callback = [this]()
             { return indirect_draw_buffer; },
-            .debug_name = "TaskList Task Indirect Draw Buffer",
-        });
-
-        new_task_list.add_task({
-            .resources = {
-                .buffers = {
-                    {task_globals_buffer, daxa::TaskBufferAccess::SHADER_READ_WRITE},
-                },
-            },
-            .task = [this](daxa::TaskInterface interf)
-            {
-                if (should_regen_chunks)
-                {
-                    auto cmd_list = interf.get_command_list();
-                    cmd_list.set_pipeline(startup_pipeline);
-                    startup_push.globals_buffer_id = globals_buffer;
-                    startup_push.stage = 0;
-                    cmd_list.push_constant(startup_push);
-                    cmd_list.dispatch(1, 1, 1);
-                    should_regen_chunks = false;
-                    should_regen_meshes = false;
-                }
-                else if (should_regen_meshes)
-                {
-                    auto cmd_list = interf.get_command_list();
-                    cmd_list.set_pipeline(startup_pipeline);
-                    startup_push.globals_buffer_id = globals_buffer;
-                    startup_push.stage = 1;
-                    cmd_list.push_constant(startup_push);
-                    cmd_list.dispatch(1, 1, 1);
-                    should_regen_meshes = false;
-                }
-            },
-            .debug_name = "TaskList Startup Task",
-        });
-
-        new_task_list.add_task({
-            .resources = {
-                .buffers = {
-                    {task_globals_buffer, daxa::TaskBufferAccess::SHADER_READ_WRITE},
-                },
-            },
-            .task = [this](daxa::TaskInterface interf)
-            {
-                auto cmd_list = interf.get_command_list();
-                cmd_list.set_pipeline(update_pipeline);
-                update_push.globals_buffer_id = globals_buffer;
-                cmd_list.push_constant(update_push);
-                cmd_list.dispatch(1, 1, 1);
-            },
-            .debug_name = "TaskList Update Task",
+            .debug_name = APPNAME_PREFIX("task_indirect_draw_buffer"),
         });
 
         new_task_list.add_task({
@@ -339,7 +289,7 @@ struct App : AppWindow<App>
                 cmd_list.push_constant(chunkgen_push);
                 cmd_list.dispatch(8, 8, 8);
             },
-            .debug_name = "TaskList Chunkgen Task",
+            .debug_name = APPNAME_PREFIX("Chunkgen Task"),
         });
 
         new_task_list.add_task({
@@ -376,7 +326,7 @@ struct App : AppWindow<App>
                 cmd_list.draw({.vertex_count = 3});
                 cmd_list.end_renderpass();
             },
-            .debug_name = "TaskList Draw Task",
+            .debug_name = APPNAME_PREFIX("Draw Task"),
         });
         new_task_list.compile();
         return new_task_list;
