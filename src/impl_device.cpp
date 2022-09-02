@@ -10,6 +10,12 @@ namespace daxa
         return impl.info;
     }
 
+    auto Device::properties() const -> DeviceProperties const &
+    {
+        auto & impl = *as<ImplDevice>();
+        return impl.vk_info;
+    }
+
     void Device::wait_idle()
     {
         auto & impl = *as<ImplDevice>();
@@ -118,7 +124,6 @@ namespace daxa
             submit_semaphore_waits.push_back(impl_binary_semaphore.vk_semaphore);
         }
 
-        u32 image_index = 0;
         VkPresentInfoKHR present_info{
             .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
             .pNext = nullptr,
@@ -387,15 +392,28 @@ namespace daxa
         .nullDescriptor = VK_TRUE,
     };
 
+    static VkPhysicalDeviceScalarBlockLayoutFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT{
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES,
+        .pNext = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_ROBUSTNESS_2),
+        .scalarBlockLayout = VK_TRUE,
+    };
+
     // static const VkPhysicalDeviceMultiDrawFeaturesEXT REQUIRED_PHYSICAL_DEVICE_FEATURES_MULTI_DRAW{
     //     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTI_DRAW_FEATURES_EXT,
-    //     .pNext = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_ROBUSTNESS_2),
+    //     .pNext = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT),
     //     .multiDraw = VK_TRUE,
     // };
 
-    static void * REQUIRED_DEVICE_FEATURE_P_CHAIN = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_ROBUSTNESS_2);
+    typedef struct VkPhysicalDeviceScalarBlockLayoutFeatures
+    {
+        VkStructureType sType;
+        void * pNext;
+        VkBool32 scalarBlockLayout;
+    } VkPhysicalDeviceScalarBlockLayoutFeatures;
 
-    ImplDevice::ImplDevice(DeviceInfo const & a_info, DeviceVulkanInfo const & a_vk_info, ManagedWeakPtr a_impl_ctx, VkPhysicalDevice a_physical_device)
+    static void * REQUIRED_DEVICE_FEATURE_P_CHAIN = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT);
+
+    ImplDevice::ImplDevice(DeviceInfo const & a_info, DeviceProperties const & a_vk_info, ManagedWeakPtr a_impl_ctx, VkPhysicalDevice a_physical_device)
         : info{a_info}, vk_info{a_vk_info}, impl_ctx{a_impl_ctx}, vk_physical_device{a_physical_device}
     {
         // SELECT QUEUE
@@ -433,6 +451,8 @@ namespace daxa
             .queueCount = 1,
             .pQueuePriorities = queue_priorities,
         };
+
+        REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT.scalarBlockLayout = this->info.use_scalar_layout ? VK_TRUE : VK_FALSE;
 
         VkPhysicalDeviceFeatures2 physical_device_features_2{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,

@@ -15,33 +15,107 @@
             "cacheVariables": {
                 "DAXA_ENABLE_UTILS": true,
                 "DAXA_ENABLE_TESTS": true,
-                "DAXA_TESTS_DISABLE_WINDOWS_CONSOLE": false,
                 "DAXA_ENABLE_STATIC_ANALYSIS": false
             }
         },
         {
-            "name": "release",
-            "displayName": "release",
-            "inherits": "defaults",
+            "name": "defaults-windows",
+            "hidden": true,
+            "inherits": [
+                "defaults"
+            ],
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "cacheVariables": {
+                "DAXA_TESTS_DISABLE_WINDOWS_CONSOLE": false
+            }
+        },
+        {
+            "name": "defaults-linux",
+            "hidden": true,
+            "inherits": [
+                "defaults"
+            ],
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            },
+            "cacheVariables": {
+                "DAXA_TESTS_DISABLE_WINDOWS_CONSOLE": false
+            }
+        },
+        {
+            "name": "defaults-release",
+            "hidden": true,
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
         },
         {
-            "name": "relwithdebinfo",
-            "displayName": "relwithdebinfo",
-            "inherits": "defaults",
+            "name": "defaults-relwithdebinfo",
+            "hidden": true,
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "RelWithDebInfo"
             }
         },
         {
-            "name": "debug",
-            "displayName": "debug",
-            "inherits": "defaults",
+            "name": "defaults-debug",
+            "hidden": true,
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug"
             }
+        },
+        {
+            "name": "release-windows",
+            "displayName": "release",
+            "inherits": [
+                "defaults-windows",
+                "defaults-release"
+            ]
+        },
+        {
+            "name": "relwithdebinfo-windows",
+            "displayName": "relwithdebinfo",
+            "inherits": [
+                "defaults-windows",
+                "defaults-relwithdebinfo"
+            ]
+        },
+        {
+            "name": "debug-windows",
+            "displayName": "debug",
+            "inherits": [
+                "defaults-windows",
+                "defaults-debug"
+            ]
+        },
+        {
+            "name": "release-linux",
+            "displayName": "release",
+            "inherits": [
+                "defaults-linux",
+                "defaults-release"
+            ]
+        },
+        {
+            "name": "relwithdebinfo-linux",
+            "displayName": "relwithdebinfo",
+            "inherits": [
+                "defaults-linux",
+                "defaults-relwithdebinfo"
+            ]
+        },
+        {
+            "name": "debug-linux",
+            "displayName": "debug",
+            "inherits": [
+                "defaults-linux",
+                "defaults-debug"
+            ]
         }
     ]
 }
