@@ -2,50 +2,50 @@
 
 #define PI 3.14159265
 
-float deg2rad(float d)
+f32 deg2rad(f32 d)
 {
     return d * PI / 180.0;
 }
 
-float rad2deg(float r)
+f32 rad2deg(f32 r)
 {
     return r * 180.0 / PI;
 }
 
-float4 uint_to_float4(uint u)
+f32vec4 uint_to_float4(u32 u)
 {
-    float4 result;
-    result.r = float((u >> 0x00) & 0xff) / 255;
-    result.g = float((u >> 0x08) & 0xff) / 255;
-    result.b = float((u >> 0x10) & 0xff) / 255;
-    result.a = float((u >> 0x18) & 0xff) / 255;
+    f32vec4 result;
+    result.r = f32((u >> 0x00) & 0xff) / 255;
+    result.g = f32((u >> 0x08) & 0xff) / 255;
+    result.b = f32((u >> 0x10) & 0xff) / 255;
+    result.a = f32((u >> 0x18) & 0xff) / 255;
     return result;
 }
 
-uint float4_to_uint(float4 f)
+u32 float4_to_uint(f32vec4 f)
 {
-    uint result = 0;
-    result |= uint(clamp(f.r, 0, 1) * 255) << 0x00;
-    result |= uint(clamp(f.g, 0, 1) * 255) << 0x08;
-    result |= uint(clamp(f.b, 0, 1) * 255) << 0x10;
-    result |= uint(clamp(f.a, 0, 1) * 255) << 0x18;
+    u32 result = 0;
+    result |= u32(clamp(f.r, 0, 1) * 255) << 0x00;
+    result |= u32(clamp(f.g, 0, 1) * 255) << 0x08;
+    result |= u32(clamp(f.b, 0, 1) * 255) << 0x10;
+    result |= u32(clamp(f.a, 0, 1) * 255) << 0x18;
     return result;
 }
 
 float4x4 inverse(float4x4 m)
 {
-    float n11 = m[0][0], n12 = m[1][0], n13 = m[2][0], n14 = m[3][0];
-    float n21 = m[0][1], n22 = m[1][1], n23 = m[2][1], n24 = m[3][1];
-    float n31 = m[0][2], n32 = m[1][2], n33 = m[2][2], n34 = m[3][2];
-    float n41 = m[0][3], n42 = m[1][3], n43 = m[2][3], n44 = m[3][3];
+    f32 n11 = m[0][0], n12 = m[1][0], n13 = m[2][0], n14 = m[3][0];
+    f32 n21 = m[0][1], n22 = m[1][1], n23 = m[2][1], n24 = m[3][1];
+    f32 n31 = m[0][2], n32 = m[1][2], n33 = m[2][2], n34 = m[3][2];
+    f32 n41 = m[0][3], n42 = m[1][3], n43 = m[2][3], n44 = m[3][3];
 
-    float t11 = n23 * n34 * n42 - n24 * n33 * n42 + n24 * n32 * n43 - n22 * n34 * n43 - n23 * n32 * n44 + n22 * n33 * n44;
-    float t12 = n14 * n33 * n42 - n13 * n34 * n42 - n14 * n32 * n43 + n12 * n34 * n43 + n13 * n32 * n44 - n12 * n33 * n44;
-    float t13 = n13 * n24 * n42 - n14 * n23 * n42 + n14 * n22 * n43 - n12 * n24 * n43 - n13 * n22 * n44 + n12 * n23 * n44;
-    float t14 = n14 * n23 * n32 - n13 * n24 * n32 - n14 * n22 * n33 + n12 * n24 * n33 + n13 * n22 * n34 - n12 * n23 * n34;
+    f32 t11 = n23 * n34 * n42 - n24 * n33 * n42 + n24 * n32 * n43 - n22 * n34 * n43 - n23 * n32 * n44 + n22 * n33 * n44;
+    f32 t12 = n14 * n33 * n42 - n13 * n34 * n42 - n14 * n32 * n43 + n12 * n34 * n43 + n13 * n32 * n44 - n12 * n33 * n44;
+    f32 t13 = n13 * n24 * n42 - n14 * n23 * n42 + n14 * n22 * n43 - n12 * n24 * n43 - n13 * n22 * n44 + n12 * n23 * n44;
+    f32 t14 = n14 * n23 * n32 - n13 * n24 * n32 - n14 * n22 * n33 + n12 * n24 * n33 + n13 * n22 * n34 - n12 * n23 * n34;
 
-    float det = n11 * t11 + n21 * t12 + n31 * t13 + n41 * t14;
-    float idet = 1.0f / det;
+    f32 det = n11 * t11 + n21 * t12 + n31 * t13 + n41 * t14;
+    f32 idet = 1.0f / det;
 
     float4x4 ret;
 

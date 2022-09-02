@@ -33,12 +33,6 @@
 #define i32vec4 ivec4
 #define u32vec4 uvec4
 
-#define DAXA_STORAGE_BUFFER_BINDING 0
-#define DAXA_STORAGE_IMAGE_BINDING 1
-#define DAXA_SAMPLED_IMAGE_BINDING 2
-#define DAXA_SAMPLER_BINDING 3
-#define DAXA_ID_INDEX_MASK (0xFFFFFFFF >> 8)
-
 struct BufferId
 {
     u32 buffer_id_value;

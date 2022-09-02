@@ -18,7 +18,24 @@
 #define VK_KHR_xlib_surface
 #endif
 
+#if DAXA_BUILT_WITH_DXC
+#if defined(_WIN32)
+#include "Windows.h"
+#include "wrl/client.h"
+using namespace Microsoft::WRL;
+#include <dxcapi.h>
+#else
+#define SCARD_E_FILE_NOT_FOUND 0x80100024
+#define SCARD_E_INVALID_PARAMETER 0x80100004
+#include <dxc/dxcapi.h>
+template <typename T>
+using ComPtr = CComPtr<T>;
+#endif
+#endif
+
+#if DAXA_BUILT_WITH_SHADERC
 #include <shaderc/shaderc.hpp>
+#endif
 
 #include <volk.h>
 #define VK_NO_PROTOTYPES

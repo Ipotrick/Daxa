@@ -36,15 +36,18 @@ struct App : AppWindow<App>
     });
 
     daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
-        .root_paths = {
-            "tests/3_samples/1_mandelbrot/shaders",
-            "include",
+        .shader_compile_options = {
+            .root_paths = {
+                "tests/3_samples/1_mandelbrot/shaders",
+                "include",
+            },
+            .language = daxa::ShaderLanguage::HLSL,
         },
         .debug_name = APPNAME_PREFIX("pipeline_compiler"),
     });
     // clang-format off
     daxa::ComputePipeline compute_pipeline = pipeline_compiler.create_compute_pipeline({
-        .shader_info = {.source = daxa::ShaderFile{"compute.glsl"}},
+        .shader_info = {.source = daxa::ShaderFile{"compute.hlsl"}},
         .push_constant_size = sizeof(ComputePush),
         .debug_name = APPNAME_PREFIX("compute_pipeline"),
     }).value();
@@ -112,13 +115,10 @@ struct App : AppWindow<App>
         if (pipeline_compiler.check_if_sources_changed(compute_pipeline))
         {
             auto new_pipeline = pipeline_compiler.recreate_compute_pipeline(compute_pipeline);
+            std::cout << new_pipeline.to_string() << std::endl;
             if (new_pipeline.is_ok())
             {
                 compute_pipeline = new_pipeline.value();
-            }
-            else
-            {
-                std::cout << new_pipeline.message() << std::endl;
             }
         }
 

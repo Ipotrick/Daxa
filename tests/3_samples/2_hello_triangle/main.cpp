@@ -40,9 +40,12 @@ struct App : AppWindow<App>
     });
 
     daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
-        .root_paths = {
-            "tests/3_samples/2_hello_triangle/shaders",
-            "include",
+        .shader_compile_options = {
+            .root_paths = {
+                "tests/3_samples/2_hello_triangle/shaders",
+                "include",
+            },
+            .language = daxa::ShaderLanguage::GLSL,
         },
         .debug_name = APPNAME_PREFIX("pipeline_compiler"),
     });
@@ -61,8 +64,8 @@ struct App : AppWindow<App>
 
     // clang-format off
     daxa::RasterPipeline raster_pipeline = pipeline_compiler.create_raster_pipeline({
-        .vertex_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .defines = {daxa::ShaderDefine{"DRAW_VERT"}}},
-        .fragment_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .defines = {daxa::ShaderDefine{"DRAW_FRAG"}}},
+        .vertex_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_VERT"}}}},
+        .fragment_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_FRAG"}}}},
         .color_attachments = {{.format = swapchain.get_format()}},
         .raster = {},
         .push_constant_size = sizeof(DrawPush),
@@ -134,13 +137,10 @@ struct App : AppWindow<App>
         if (pipeline_compiler.check_if_sources_changed(raster_pipeline))
         {
             auto new_pipeline = pipeline_compiler.recreate_raster_pipeline(raster_pipeline);
+            std::cout << new_pipeline.to_string() << std::endl;
             if (new_pipeline.is_ok())
             {
                 raster_pipeline = new_pipeline.value();
-            }
-            else
-            {
-                std::cout << new_pipeline.message() << std::endl;
             }
         }
 
