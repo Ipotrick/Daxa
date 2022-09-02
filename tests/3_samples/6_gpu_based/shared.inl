@@ -24,13 +24,24 @@ struct DrawRasterPush
     daxa::BufferId globals_buffer_id;
 };
 
-struct ChunkgenComputePush
+struct StartupPush
+{
+    daxa::BufferId globals_buffer_id;
+    daxa::u32 stage;
+};
+
+struct UpdatePush
+{
+    daxa::BufferId globals_buffer_id;
+};
+
+struct ChunkgenPush
 {
     daxa::f32vec3 chunk_pos;
     daxa::BufferId buffer_id;
 };
 
-struct MeshgenComputePush
+struct MeshgenPush
 {
     daxa::BufferId build_info_buffer_id;
     daxa::BufferId meshlet_pool_buffer_id;
