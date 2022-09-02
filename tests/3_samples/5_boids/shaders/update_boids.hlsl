@@ -1,16 +1,16 @@
-#include "daxa/daxa.hlsl"
+#include DAXA_SHADER_INCLUDE
 
 #include "boids.hlsl"
 
 struct Push
 {
-    daxa::BufferId prev_boids_buffer_id;
-    daxa::BufferId boids_buffer_id;
-    float delta_time;
+    BufferId prev_boids_buffer_id;
+    BufferId boids_buffer_id;
+    f32 delta_time;
 };
 [[vk::push_constant]] Push push;
 
-[numthreads(64, 1, 1)] void main(uint tid : SV_DISPATCHTHREADID)
+[numthreads(64, 1, 1)] void main(u32 tid : SV_DISPATCHTHREADID)
 {
     if (tid >= MAX_BOIDS)
         return;
@@ -19,7 +19,7 @@ struct Push
 
     BoidState me = prev_boids_buffer[0].boid_states[tid];
 
-    float2 vel = me.dir * me.speed;
+    f32vec2 vel = me.dir * me.speed;
 
     vel += prev_boids_buffer[0].eval_field(tid, me.pos, vel);
 

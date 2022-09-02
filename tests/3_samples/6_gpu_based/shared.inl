@@ -1,14 +1,6 @@
 #pragma once
 
-#ifdef __cplusplus
-#include <daxa/daxa.hpp>
-
-#include <daxa/utils/math_operators.hpp>
-using namespace daxa::math_operators;
-
-#else
-#include "daxa/daxa.hlsl"
-#endif
+#include <daxa/daxa.inl>
 
 #define SHADOW_RES 2048
 #define VISUALIZE_OVERDRAW 0
@@ -21,7 +13,7 @@ using namespace daxa::math_operators;
 
 struct DrawRasterPush
 {
-    daxa::BufferId globals_buffer_id;
+    BufferId globals_buffer_id;
 };
 
 struct StartupPush
@@ -37,32 +29,32 @@ struct UpdatePush
 
 struct ChunkgenPush
 {
-    daxa::f32vec3 chunk_pos;
-    daxa::BufferId buffer_id;
+    f32vec3 chunk_pos;
+    BufferId buffer_id;
 };
 
 struct MeshgenPush
 {
-    daxa::BufferId build_info_buffer_id;
-    daxa::BufferId meshlet_pool_buffer_id;
-    daxa::BufferId chunk_meshlets_buffer_id;
-    daxa::BufferId chunk_blocks_buffer_id;
-    daxa::i32vec3 chunk_i;
+    BufferId build_info_buffer_id;
+    BufferId meshlet_pool_buffer_id;
+    BufferId chunk_meshlets_buffer_id;
+    BufferId chunk_blocks_buffer_id;
+    i32vec3 chunk_i;
 };
 
 struct Input
 {
-    daxa::f32mat4x4 view_mat;
-    daxa::f32 time;
+    f32mat4x4 view_mat;
+    f32 time;
 };
 DAXA_DEFINE_GET_STRUCTURED_BUFFER(Input);
 
 struct IndirectDrawParam
 {
-    daxa::u32 vertex_count;
-    daxa::u32 instance_count;
-    daxa::u32 first_vertex;
-    daxa::u32 first_instance;
+    u32 vertex_count;
+    u32 instance_count;
+    u32 first_vertex;
+    u32 first_instance;
 };
 
 struct IndirectDrawBuffer
@@ -72,13 +64,13 @@ struct IndirectDrawBuffer
 
 struct ChunkDrawInfo
 {
-    daxa::u32vec3 chunk_index;
+    u32vec3 chunk_index;
 };
 DAXA_DEFINE_GET_STRUCTURED_BUFFER(ChunkDrawInfo);
 
 struct SharedGlobals
 {
-    daxa::BufferId indirect_draw_buffer_id;
-    daxa::BufferId chunk_draw_infos_buffer_id;
+    BufferId indirect_draw_buffer_id;
+    BufferId chunk_draw_infos_buffer_id;
 };
 DAXA_DEFINE_GET_STRUCTURED_BUFFER(SharedGlobals);

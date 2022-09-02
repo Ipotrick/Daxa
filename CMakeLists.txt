@@ -4,7 +4,12 @@ include(cmake/warnings.cmake)
 if(DAXA_ENABLE_UTILS)
     list(APPEND VCPKG_MANIFEST_FEATURES "utils")
 endif()
-
+if(DAXA_ENABLE_DXC)
+    list(APPEND VCPKG_MANIFEST_FEATURES "dxc")
+endif()
+if(DAXA_ENABLE_SHADERC)
+    list(APPEND VCPKG_MANIFEST_FEATURES "shaderc")
+endif()
 if(DAXA_ENABLE_TESTS)
     list(APPEND VCPKG_MANIFEST_FEATURES "tests")
 endif()
@@ -54,10 +59,51 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     target_compile_options(daxa PRIVATE /std:c++latest)
 endif()
 
-find_package(dxc CONFIG REQUIRED)
 find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(volk CONFIG REQUIRED)
+
+if (DAXA_ENABLE_SHADERC)
+    find_library(SHADERC_LIBRARY_DIRS shaderc)
+    find_library(SHADERC_UTIL_LIBRARY_DIRS shaderc_util)
+    find_library(SHADERC_SPIRV_TOOLS_LIB SPIRV-Tools)
+    find_library(SHADERC_SPIRV_TOOLS_LINK_LIB SPIRV-Tools-link)
+    find_library(SHADERC_SPIRV_TOOLS_OPT_LIB SPIRV-Tools-opt)
+    find_library(SHADERC_SPIRV_TOOLS_REDUCE_LIB SPIRV-Tools-reduce)
+    find_library(SHADERC_SPIRV_TOOLS_SHARED_LIB SPIRV-Tools-shared)
+    find_path(SHADERC_INCLUDE_DIRS "shaderc/shaderc.h")
+    find_package(glslang CONFIG REQUIRED)
+
+    target_compile_definitions(daxa
+        PUBLIC
+        DAXA_BUILT_WITH_SHADERC=true
+    )
+    target_link_libraries(daxa
+        PUBLIC
+        HLSL SPIRV glslang OGLCompiler
+        ${SHADERC_LIBRARY_DIRS}
+        ${SHADERC_UTIL_LIBRARY_DIRS}
+        ${SHADERC_SPIRV_TOOLS_LIB}
+        ${SHADERC_SPIRV_TOOLS_LINK_LIB}
+        ${SHADERC_SPIRV_TOOLS_OPT_LIB}
+        ${SHADERC_SPIRV_TOOLS_REDUCE_LIB}
+        ${SHADERC_SPIRV_TOOLS_SHARED_LIB}
+    )
+endif()
+
+if (DAXA_ENABLE_SHADERC)
+    find_package(dxc CONFIG REQUIRED)
+
+    target_compile_definitions(daxa
+        PUBLIC
+        DAXA_BUILT_WITH_DXC=true
+    )
+    target_link_libraries(daxa
+        PUBLIC
+        dxc::dxc
+    )
+endif()
+
 
 if(DAXA_ENABLE_UTILS)
     find_package(imgui CONFIG REQUIRED)
@@ -79,8 +125,8 @@ target_link_libraries(daxa
     unofficial::vulkan-memory-allocator::vulkan-memory-allocator
     Vulkan::Vulkan
     volk::volk
-    dxc::dxc
 )
+
 target_include_directories(daxa
     PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
@@ -101,11 +147,22 @@ file(WRITE ${CMAKE_BINARY_DIR}/config.cmake.in [=[
 include(${CMAKE_CURRENT_LIST_DIR}/daxa-targets.cmake)
 check_required_components(daxa)
 
-find_package(dxc CONFIG REQUIRED)
 find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(volk CONFIG REQUIRED)
 ]=])
+
+if(DAXA_ENABLE_SHADERC)
+    file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
+find_package(glslang CONFIG REQUIRED)
+]=])
+endif()
+
+if(DAXA_ENABLE_DXC)
+    file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
+find_package(dxc CONFIG REQUIRED)
+]=])
+endif()
 
 if(DAXA_ENABLE_UTILS)
     file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[

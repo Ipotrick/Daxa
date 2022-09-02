@@ -1,27 +1,27 @@
 #pragma once
 
-#include "daxa/daxa.hlsl"
+#include DAXA_SHADER_INCLUDE
 
 #include "utils/rand.hlsl"
 
-static const float2 instance_offsets[6] = {
-    float2(+0.0, +0.0),
-    float2(+1.0, +0.0),
-    float2(+0.0, +1.0),
-    float2(+1.0, +0.0),
-    float2(+1.0, +1.0),
-    float2(+0.0, +1.0),
+static const f32vec2 instance_offsets[6] = {
+    f32vec2(+0.0, +0.0),
+    f32vec2(+1.0, +0.0),
+    f32vec2(+0.0, +1.0),
+    f32vec2(+1.0, +0.0),
+    f32vec2(+1.0, +1.0),
+    f32vec2(+0.0, +1.0),
 };
-static const float3 cross_instance_positions[6] = {
-    float3(+0.0 + 0.2, +0.2, +1.0 - 0.2),
-    float3(+1.0 - 0.2, +0.2, +0.0 + 0.2),
-    float3(+0.0 + 0.2, +1.0, +1.0 - 0.2),
-    float3(+1.0 - 0.2, +0.2, +0.0 + 0.2),
-    float3(+1.0 - 0.2, +1.0, +0.0 + 0.2),
-    float3(+0.0 + 0.2, +1.0, +1.0 - 0.2),
+static const f32vec3 cross_instance_positions[6] = {
+    f32vec3(+0.0 + 0.2, +0.2, +1.0 - 0.2),
+    f32vec3(+1.0 - 0.2, +0.2, +0.0 + 0.2),
+    f32vec3(+0.0 + 0.2, +1.0, +1.0 - 0.2),
+    f32vec3(+1.0 - 0.2, +0.2, +0.0 + 0.2),
+    f32vec3(+1.0 - 0.2, +1.0, +0.0 + 0.2),
+    f32vec3(+0.0 + 0.2, +1.0, +1.0 - 0.2),
 };
 
-enum class BlockID : uint
+enum class BlockID : u32
 {
     Debug,
     Air,
@@ -48,7 +48,7 @@ enum class BlockID : uint
     Water,
 };
 
-enum class BlockFace : uint
+enum class BlockFace : u32
 {
     Left,
     Right,
@@ -63,27 +63,27 @@ enum class BlockFace : uint
 
 struct Vertex
 {
-    float3 block_pos;
-    float3 pos;
-    float3 nrm;
-    float2 uv;
+    f32vec3 block_pos;
+    f32vec3 pos;
+    f32vec3 nrm;
+    f32vec2 uv;
     BlockID block_id;
     BlockFace block_face;
-    uint tex_id;
-    uint vert_id;
+    u32 tex_id;
+    u32 vert_id;
 
-    void correct_pos(uint face_id)
+    void correct_pos(u32 face_id)
     {
-        float3 cross_uv = cross_instance_positions[vert_id];
+        f32vec3 cross_uv = cross_instance_positions[vert_id];
         switch (block_face)
         {
             // clang-format off
-        case BlockFace::Left:   pos += float3(1.0,        uv.x,       uv.y), nrm = float3(+1.0, +0.0, +0.0); break;
-        case BlockFace::Right:  pos += float3(0.0,        1.0 - uv.x, uv.y), nrm = float3(-1.0, +0.0, +0.0); break;
-        case BlockFace::Bottom: pos += float3(1.0 - uv.x, 1.0,        uv.y), nrm = float3(+0.0, +1.0, +0.0); break;
-        case BlockFace::Top:    pos += float3(uv.x,       0.0,        uv.y), nrm = float3(+0.0, -1.0, +0.0); break;
-        case BlockFace::Back:   pos += float3(uv.x,       uv.y,        1.0), nrm = float3(+0.0, +0.0, +1.0); break;
-        case BlockFace::Front:  pos += float3(1.0 - uv.x, uv.y,        0.0), nrm = float3(+0.0, +0.0, -1.0); break;
+        case BlockFace::Left:   pos += f32vec3(1.0,        uv.x,       uv.y), nrm = f32vec3(+1.0, +0.0, +0.0); break;
+        case BlockFace::Right:  pos += f32vec3(0.0,        1.0 - uv.x, uv.y), nrm = f32vec3(-1.0, +0.0, +0.0); break;
+        case BlockFace::Bottom: pos += f32vec3(1.0 - uv.x, 1.0,        uv.y), nrm = f32vec3(+0.0, +1.0, +0.0); break;
+        case BlockFace::Top:    pos += f32vec3(uv.x,       0.0,        uv.y), nrm = f32vec3(+0.0, -1.0, +0.0); break;
+        case BlockFace::Back:   pos += f32vec3(uv.x,       uv.y,        1.0), nrm = f32vec3(+0.0, +0.0, +1.0); break;
+        case BlockFace::Front:  pos += f32vec3(1.0 - uv.x, uv.y,        0.0), nrm = f32vec3(+0.0, +0.0, -1.0); break;
             // clang-format on
 
         case BlockFace::Cross_A:
@@ -94,24 +94,24 @@ struct Vertex
             }
             else
             {
-                pos += float3(1.0 - cross_uv.x, cross_uv.y, 1.0 - cross_uv.z);
+                pos += f32vec3(1.0 - cross_uv.x, cross_uv.y, 1.0 - cross_uv.z);
             }
             pos.x += rand(block_pos.x + block_pos.z) * 0.1;
-            nrm = float3(+0.0, -1.0, +0.0);
+            nrm = f32vec3(+0.0, -1.0, +0.0);
         }
         break;
         case BlockFace::Cross_B:
         {
             if (face_id % 2 == 0)
             {
-                pos += float3(cross_uv.x, cross_uv.y, 1.0 - cross_uv.z);
+                pos += f32vec3(cross_uv.x, cross_uv.y, 1.0 - cross_uv.z);
             }
             else
             {
-                pos += float3(1.0 - cross_uv.x, cross_uv.y, cross_uv.z);
+                pos += f32vec3(1.0 - cross_uv.x, cross_uv.y, cross_uv.z);
             }
             pos.x += rand(block_pos.x + block_pos.z) * 0.1;
-            nrm = float3(+0.0, -1.0, +0.0);
+            nrm = f32vec3(+0.0, -1.0, +0.0);
         }
         break;
         }
@@ -122,32 +122,32 @@ struct Vertex
         switch (block_face)
         {
             // clang-format off
-        case BlockFace::Left:    uv = float2(1.0, 1.0) + float2(-uv.y, -uv.x); break;
-        case BlockFace::Right:   uv = float2(0.0, 0.0) + float2(+uv.y, +uv.x); break;
-        case BlockFace::Bottom:  uv = float2(0.0, 0.0) + float2(+uv.x, +uv.y); break;
-        case BlockFace::Top:     uv = float2(0.0, 0.0) + float2(+uv.x, +uv.y); break;
-        case BlockFace::Back:    uv = float2(1.0, 1.0) + float2(-uv.x, -uv.y); break;
-        case BlockFace::Front:   uv = float2(1.0, 1.0) + float2(-uv.x, -uv.y); break;
+        case BlockFace::Left:    uv = f32vec2(1.0, 1.0) + f32vec2(-uv.y, -uv.x); break;
+        case BlockFace::Right:   uv = f32vec2(0.0, 0.0) + f32vec2(+uv.y, +uv.x); break;
+        case BlockFace::Bottom:  uv = f32vec2(0.0, 0.0) + f32vec2(+uv.x, +uv.y); break;
+        case BlockFace::Top:     uv = f32vec2(0.0, 0.0) + f32vec2(+uv.x, +uv.y); break;
+        case BlockFace::Back:    uv = f32vec2(1.0, 1.0) + f32vec2(-uv.x, -uv.y); break;
+        case BlockFace::Front:   uv = f32vec2(1.0, 1.0) + f32vec2(-uv.x, -uv.y); break;
             // clang-format on
 
-        case BlockFace::Cross_A: uv = float2(1.0, 1.0) + float2(-uv.x, -uv.y); break;
-        case BlockFace::Cross_B: uv = float2(1.0, 1.0) + float2(-uv.x, -uv.y); break;
+        case BlockFace::Cross_A: uv = f32vec2(1.0, 1.0) + f32vec2(-uv.x, -uv.y); break;
+        case BlockFace::Cross_B: uv = f32vec2(1.0, 1.0) + f32vec2(-uv.x, -uv.y); break;
         }
 
         if (tex_id == 11 || tex_id == 8)
         {
-            uint i = (uint)(rand(block_pos) * 8);
+            u32 i = (u32)(rand(block_pos) * 8);
             switch (i)
             {
-            case 0: uv = float2(0 + uv.x, 0 + uv.y); break;
-            case 1: uv = float2(1 - uv.x, 0 + uv.y); break;
-            case 2: uv = float2(1 - uv.x, 1 - uv.y); break;
-            case 3: uv = float2(0 + uv.x, 1 - uv.y); break;
+            case 0: uv = f32vec2(0 + uv.x, 0 + uv.y); break;
+            case 1: uv = f32vec2(1 - uv.x, 0 + uv.y); break;
+            case 2: uv = f32vec2(1 - uv.x, 1 - uv.y); break;
+            case 3: uv = f32vec2(0 + uv.x, 1 - uv.y); break;
 
-            case 4: uv = float2(0 + uv.y, 0 + uv.x); break;
-            case 5: uv = float2(1 - uv.y, 0 + uv.x); break;
-            case 6: uv = float2(1 - uv.y, 1 - uv.x); break;
-            case 7: uv = float2(0 + uv.y, 1 - uv.x); break;
+            case 4: uv = f32vec2(0 + uv.y, 0 + uv.x); break;
+            case 5: uv = f32vec2(1 - uv.y, 0 + uv.x); break;
+            case 6: uv = f32vec2(1 - uv.y, 1 - uv.x); break;
+            case 7: uv = f32vec2(0 + uv.y, 1 - uv.x); break;
             }
         }
     }
@@ -155,16 +155,16 @@ struct Vertex
 
 struct VertexOutput
 {
-    float4 frag_pos : SV_POSITION;
-    float3 nrm : NORMAL0;
-    float2 uv : TEXCOORD0;
+    f32vec4 frag_pos : SV_POSITION;
+    f32vec3 nrm : NORMAL0;
+    f32vec2 uv : TEXCOORD0;
     // BlockID block_id : COLOR0;
     // BlockFace block_face : COLOR1;
-    // float3 pos : DATA1;
-    uint tex_id : DATA0;
+    // f32vec3 pos : DATA1;
+    u32 tex_id : DATA0;
 };
 
-uint tile_texture_index(BlockID block_id, BlockFace face)
+u32 tile_texture_index(BlockID block_id, BlockFace face)
 {
     // clang-format off
     switch (block_id) {
@@ -189,7 +189,7 @@ uint tile_texture_index(BlockID block_id, BlockFace face)
         default:                   return 0;
         }
     case BlockID::Gravel:          return 12;
-    case BlockID::Lava:            return 13; // + int(globals[0].time * 6) % 8;
+    case BlockID::Lava:            return 13; // + i32(globals[0].time * 6) % 8;
     case BlockID::Leaves:          return 21;
     case BlockID::Log:
         switch (face) {
@@ -216,18 +216,18 @@ uint tile_texture_index(BlockID block_id, BlockFace face)
 
 struct FaceBuffer
 {
-    uint data[32 * 32 * 32 * 6];
+    u32 data[32 * 32 * 32 * 6];
 
-    Vertex get_vertex(uint vert_i)
+    Vertex get_vertex(u32 vert_i)
     {
-        uint data_index = vert_i / 6;
-        uint data_instance = vert_i - data_index * 6;
+        u32 data_index = vert_i / 6;
+        u32 data_instance = vert_i - data_index * 6;
 
-        uint vert_data = data[data_index];
+        u32 vert_data = data[data_index];
 
         Vertex result;
 
-        result.block_pos = float3(
+        result.block_pos = f32vec3(
             (vert_data >> 0) & 0x1f,
             (vert_data >> 5) & 0x1f,
             (vert_data >> 10) & 0x1f);
@@ -249,7 +249,7 @@ DAXA_DEFINE_GET_STRUCTURED_BUFFER(FaceBuffer);
 
 // struct Input
 // {
-//     float4x4 view_mat;
+//     f32mat4x4 view_mat;
 // };
 // DAXA_DEFINE_GET_STRUCTURED_BUFFER(Input);
 

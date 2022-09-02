@@ -2,23 +2,12 @@
 #include <thread>
 #include <iostream>
 
+#include "shaders/shared.inl"
+
 #define APPNAME "Daxa Sample: Mandelbrot"
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
 
-using namespace daxa::types;
 using Clock = std::chrono::high_resolution_clock;
-
-struct ComputeInput
-{
-    float time;
-};
-
-struct ComputePush
-{
-    daxa::ImageViewId image_id;
-    daxa::BufferId input_buffer_id;
-    u32 frame_dim_x, frame_dim_y;
-};
 
 struct App : AppWindow<App>
 {
@@ -43,13 +32,16 @@ struct App : AppWindow<App>
         },
         .present_mode = daxa::PresentMode::DO_NOT_WAIT_FOR_VBLANK,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-        .debug_name = APPNAME_PREFIX("swpachain"),
+        .debug_name = APPNAME_PREFIX("swapchain"),
     });
 
     daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
-        .root_paths = {
-            "tests/3_samples/1_mandelbrot/shaders",
-            "include",
+        .shader_compile_options = {
+            .root_paths = {
+                "tests/3_samples/1_mandelbrot/shaders",
+                "include",
+            },
+            .language = daxa::ShaderLanguage::HLSL,
         },
         .debug_name = APPNAME_PREFIX("pipeline_compiler"),
     });
@@ -123,13 +115,10 @@ struct App : AppWindow<App>
         if (pipeline_compiler.check_if_sources_changed(compute_pipeline))
         {
             auto new_pipeline = pipeline_compiler.recreate_compute_pipeline(compute_pipeline);
+            std::cout << new_pipeline.to_string() << std::endl;
             if (new_pipeline.is_ok())
             {
                 compute_pipeline = new_pipeline.value();
-            }
-            else
-            {
-                std::cout << new_pipeline.message() << std::endl;
             }
         }
 
@@ -175,12 +164,17 @@ struct App : AppWindow<App>
             .waiting_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_READ,
         });
 
+        cmd_list.pipeline_barrier_image_transition({
+            .waiting_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
+            .before_layout = daxa::ImageLayout::UNDEFINED,
+            .after_layout = daxa::ImageLayout::GENERAL,
+            .image_id = render_image,
+        });
+
         cmd_list.set_pipeline(compute_pipeline);
         cmd_list.push_constant(ComputePush{
             .image_id = render_image.default_view(),
             .input_buffer_id = compute_input_buffer,
-            .frame_dim_x = size_x,
-            .frame_dim_y = size_y,
         });
         cmd_list.dispatch((size_x + 7) / 8, (size_y + 7) / 8);
 
@@ -198,7 +192,7 @@ struct App : AppWindow<App>
         cmd_list.pipeline_barrier_image_transition({
             .awaited_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
             .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
-            .before_layout = daxa::ImageLayout::UNDEFINED,
+            .before_layout = daxa::ImageLayout::GENERAL,
             .after_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
             .image_id = render_image,
         });

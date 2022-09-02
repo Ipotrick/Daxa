@@ -4,12 +4,12 @@
 
 struct WorldgenState
 {
-    float3 pos;
-    float t_noise;
-    float r, r_xz;
+    f32vec3 pos;
+    f32 t_noise;
+    f32 r, r_xz;
 };
 
-WorldgenState get_worldgen_state(float3 pos)
+WorldgenState get_worldgen_state(f32vec3 pos)
 {
     WorldgenState result;
     pos = pos * 0.5;
@@ -21,11 +21,11 @@ WorldgenState get_worldgen_state(float3 pos)
         /* .lacunarity  = */ 4.7,
         /* .octaves     = */ 2,
     };
-    float val = fractal_noise(pos + 100.0, noise_conf);
+    f32 val = fractal_noise(pos + 100.0, noise_conf);
     // val = val - (-pos.y + 30.0) * 0.04;
     // val -= pow(smoothstep(-1.0, 1.0, -pos.y + 32.0), 2.0) * 0.15;
     result.t_noise = val;
     result.r = rand(pos);
-    result.r_xz = rand(pos * float3(13.1, 0, 13.1) + 0.17);
+    result.r_xz = rand(pos * f32vec3(13.1, 0, 13.1) + 0.17);
     return result;
 }
