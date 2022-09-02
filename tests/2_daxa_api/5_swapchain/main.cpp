@@ -1,6 +1,9 @@
 #include <0_common/window.hpp>
 #include <thread>
 
+#define APPNAME "Daxa API Sample: Swapchain"
+#define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
+
 namespace tests
 {
     void simple_creation()
@@ -10,17 +13,20 @@ namespace tests
             daxa::Context daxa_ctx = daxa::create_context({
                 .enable_validation = true,
             });
-            daxa::Device daxa_device = daxa_ctx.create_device({});
+            daxa::Device device = daxa_ctx.create_device({
+                .debug_name = APPNAME_PREFIX("device (simple_creation)"),
+            });
 
-            daxa::Swapchain daxa_swapchain = daxa_device.create_swapchain({
+            daxa::Swapchain swapchain = device.create_swapchain({
                 .native_window = get_native_handle(),
                 .width = size_x,
                 .height = size_y,
                 .present_mode = daxa::PresentMode::DOUBLE_BUFFER_WAIT_FOR_VBLANK,
                 .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
+                .debug_name = APPNAME_PREFIX("swapchain (simple_creation)"),
             });
 
-            App() : AppWindow<App>("Daxa API: Swapchain (simple_creation)") {}
+            App() : AppWindow<App>(APPNAME " (simple_creation)") {}
 
             void on_mouse_move(f32, f32) {}
             void on_key(int, int) {}
@@ -36,16 +42,19 @@ namespace tests
             daxa::Context daxa_ctx = daxa::create_context({
                 .enable_validation = true,
             });
-            daxa::Device device = daxa_ctx.create_device({});
+            daxa::Device device = daxa_ctx.create_device({
+                .debug_name = APPNAME_PREFIX("device (clearcolor)"),
+            });
 
             daxa::Swapchain swapchain = device.create_swapchain({
                 .native_window = get_native_handle(),
                 .width = size_x,
                 .height = size_y,
                 .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
+                .debug_name = APPNAME_PREFIX("swpachain (clearcolor)"),
             });
 
-            App() : AppWindow<App>("Daxa API: Swapchain (clearcolor)") {}
+            App() : AppWindow<App>(APPNAME " (clearcolor)") {}
 
             bool update()
             {
@@ -71,8 +80,12 @@ namespace tests
             void draw()
             {
                 auto swapchain_image = swapchain.acquire_next_image();
-                auto binary_semaphore = device.create_binary_semaphore({});
-                auto cmd_list = device.create_command_list({});
+                auto binary_semaphore = device.create_binary_semaphore({
+                    .debug_name = APPNAME_PREFIX("binary_semaphore (clearcolor)"),
+                });
+                auto cmd_list = device.create_command_list({
+                    .debug_name = APPNAME_PREFIX("cmd_list (clearcolor)"),
+                });
 
                 cmd_list.pipeline_barrier_image_transition({
                     .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,

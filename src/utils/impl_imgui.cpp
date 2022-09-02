@@ -375,7 +375,7 @@ namespace daxa
         set_imgui_style();
         recreate_vbuffer(4096);
         recreate_ibuffer(4096);
-        sampler = this->info.device.create_sampler({.debug_name = "ImGui Texture Sampler"});
+        sampler = this->info.device.create_sampler({.debug_name = "dear ImGui sampler"});
 
         ImGuiIO & io = ImGui::GetIO();
         u8 * pixels;
@@ -385,7 +385,7 @@ namespace daxa
         font_sheet = this->info.device.create_image({
             .size = {static_cast<u32>(width), static_cast<u32>(height), 1},
             .usage = ImageUsageFlagBits::TRANSFER_DST | ImageUsageFlagBits::SHADER_READ_ONLY,
-            .debug_name = "ImGui Font Sheet Image",
+            .debug_name = "dear ImGui font sheet",
         });
 
         auto texture_staging_buffer = this->info.device.create_buffer({
@@ -401,13 +401,11 @@ namespace daxa
         TaskImageId task_font_sheet = temp_task_list.create_task_image({
             .fetch_callback = [this]()
             { return this->font_sheet; },
-            // .debug_name = "Task Font Sheet",
         });
 
         TaskBufferId task_staging_buffer = temp_task_list.create_task_buffer({
             .fetch_callback = [&texture_staging_buffer]()
             { return texture_staging_buffer; },
-            // .debug_name = "Task Staging Buffer",
         });
 
         temp_task_list.add_task({

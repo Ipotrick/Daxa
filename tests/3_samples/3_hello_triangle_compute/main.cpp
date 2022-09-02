@@ -2,6 +2,9 @@
 #include <thread>
 #include <iostream>
 
+#define APPNAME "Daxa Sample: HelloTriangle Compute"
+#define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
+
 using namespace daxa::types;
 
 struct ComputePush
@@ -15,7 +18,9 @@ struct App : AppWindow<App>
     daxa::Context daxa_ctx = daxa::create_context({
         .enable_validation = true,
     });
-    daxa::Device device = daxa_ctx.create_device({});
+    daxa::Device device = daxa_ctx.create_device({
+        .debug_name = APPNAME_PREFIX("device"),
+    });
 
     daxa::Swapchain swapchain = device.create_swapchain({
         .native_window = get_native_handle(),
@@ -31,7 +36,7 @@ struct App : AppWindow<App>
         },
         .present_mode = daxa::PresentMode::DOUBLE_BUFFER_WAIT_FOR_VBLANK,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-        .debug_name = "HelloTriangleCompute Swapchain",
+        .debug_name = APPNAME_PREFIX("swapchain"),
     });
 
     daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
@@ -39,13 +44,13 @@ struct App : AppWindow<App>
             "tests/3_samples/3_hello_triangle_compute/shaders",
             "include",
         },
-        .debug_name = "HelloTriangleCompute Pipeline Compiler",
+        .debug_name = APPNAME_PREFIX("pipeline_compiler"),
     });
     // clang-format off
     daxa::ComputePipeline compute_pipeline = pipeline_compiler.create_compute_pipeline({
         .shader_info = {.source = daxa::ShaderFile{"compute.hlsl"}},
         .push_constant_size = sizeof(ComputePush),
-        .debug_name = "HelloTriangleCompute Compute Pipeline",
+        .debug_name = APPNAME_PREFIX("compute_pipeline"),
     }).value();
     // clang-format on
 
@@ -53,10 +58,10 @@ struct App : AppWindow<App>
         .format = daxa::Format::R8G8B8A8_UNORM,
         .size = {size_x, size_y, 1},
         .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
-        .debug_name = "HelloTriangleCompute render_image",
+        .debug_name = APPNAME_PREFIX("render_image"),
     });
 
-    App() : AppWindow<App>("Samples: Hello Triangle Compute") {}
+    App() : AppWindow<App>(APPNAME) {}
 
     ~App()
     {
@@ -102,10 +107,10 @@ struct App : AppWindow<App>
         auto swapchain_image = swapchain.acquire_next_image();
 
         auto binary_semaphore = device.create_binary_semaphore({
-            .debug_name = "HelloTriangleCompute Present Semaphore",
+            .debug_name = APPNAME_PREFIX("binary_semaphore"),
         });
         auto cmd_list = device.create_command_list({
-            .debug_name = "HelloTriangleCompute Command List",
+            .debug_name = APPNAME_PREFIX("cmd_list"),
         });
 
         cmd_list.set_pipeline(compute_pipeline);

@@ -101,6 +101,9 @@ namespace daxa
     struct PipelineCompilerInfo
     {
         std::vector<std::filesystem::path> root_paths = {};
+        u32 opt_level = 1;
+        u32 shader_model_major = 6;
+        u32 shader_model_minor = 6;
         std::string debug_name = {};
     };
 
