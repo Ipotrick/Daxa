@@ -68,6 +68,7 @@ namespace daxa
 #define DAXA_ONLY_IF_THREADSAFETY(x) x
 #define DAXA_ATOMIC_U64 std::atomic_uint64_t
 #define DAXA_ATOMIC_FETCH_INC(x) x.fetch_add(1)
+#define DAXA_ATOMIC_ADD_FETCH(x, v) x.fetch_add(v)
 #define DAXA_ATOMIC_FETCH_DEC(x) x.fetch_sub(1)
 #define DAXA_ATOMIC_FETCH(x) x.load()
 #else
@@ -75,6 +76,7 @@ namespace daxa
 #define DAXA_ATOMIC_U64 daxa::types::u64
 #define DAXA_ATOMIC_FETCH_INC(x) (x++)
 #define DAXA_ATOMIC_FETCH_DEC(x) (x--)
+#define DAXA_ATOMIC_ADD_FETCH(x, v) (x += v)
 #define DAXA_ATOMIC_FETCH(x) (x)
 #endif
 
