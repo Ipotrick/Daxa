@@ -101,7 +101,7 @@ struct Push
 };
 
 char const * shaders_hlsl = R"hlsl(
-    #include DAXA_SHADER_INCLUDE
+    #include <daxa/daxa.inl>
     struct Push
     {
         f32vec2 scale;
@@ -337,8 +337,8 @@ namespace daxa
         : info{info},
           // clang-format off
         raster_pipeline{this->info.pipeline_compiler.create_raster_pipeline({
-            .vertex_shader_info = {.source = daxa::ShaderCode{.string = shaders_hlsl}, .compile_options = {.entry_point = "vs_main"}},
-            .fragment_shader_info = {.source = daxa::ShaderCode{.string = shaders_hlsl}, .compile_options = {.entry_point = "fs_main"}},
+            .vertex_shader_info = {.source = daxa::ShaderCode{.string = shaders_hlsl}, .compile_options = {.entry_point = "vs_main", .language = ShaderLanguage::HLSL}},
+            .fragment_shader_info = {.source = daxa::ShaderCode{.string = shaders_hlsl}, .compile_options = {.entry_point = "fs_main", .language = ShaderLanguage::HLSL}},
             .color_attachments = {
                 {
                     .format = info.format,
