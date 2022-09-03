@@ -2,6 +2,112 @@
 #include "impl_swapchain.hpp"
 #include "impl_device.hpp"
 
+static constexpr TBuiltInResource DAXA_DEFAULT_BUILTIN_RESOURCE = {
+    .maxLights = 32,
+    .maxClipPlanes = 6,
+    .maxTextureUnits = 32,
+    .maxTextureCoords = 32,
+    .maxVertexAttribs = 64,
+    .maxVertexUniformComponents = 4096,
+    .maxVaryingFloats = 64,
+    .maxVertexTextureImageUnits = 1 << 16,
+    .maxCombinedTextureImageUnits = 1 << 16,
+    .maxTextureImageUnits = 1 << 16,
+    .maxFragmentUniformComponents = 4096,
+    .maxDrawBuffers = 32,
+    .maxVertexUniformVectors = 128,
+    .maxVaryingVectors = 8,
+    .maxFragmentUniformVectors = 16,
+    .maxVertexOutputVectors = 16,
+    .maxFragmentInputVectors = 15,
+    .minProgramTexelOffset = -8,
+    .maxProgramTexelOffset = 7,
+    .maxClipDistances = 8,
+    .maxComputeWorkGroupCountX = 65535,
+    .maxComputeWorkGroupCountY = 65535,
+    .maxComputeWorkGroupCountZ = 65535,
+    .maxComputeWorkGroupSizeX = 1024,
+    .maxComputeWorkGroupSizeY = 1024,
+    .maxComputeWorkGroupSizeZ = 64,
+    .maxComputeUniformComponents = 1024,
+    .maxComputeTextureImageUnits = 1 << 16,
+    .maxComputeImageUniforms = 1 << 16,
+    .maxComputeAtomicCounters = 8,
+    .maxComputeAtomicCounterBuffers = 1,
+    .maxVaryingComponents = 60,
+    .maxVertexOutputComponents = 64,
+    .maxGeometryInputComponents = 64,
+    .maxGeometryOutputComponents = 128,
+    .maxFragmentInputComponents = 128,
+    .maxImageUnits = 1 << 16,
+    .maxCombinedImageUnitsAndFragmentOutputs = 8,
+    .maxCombinedShaderOutputResources = 8,
+    .maxImageSamples = 0,
+    .maxVertexImageUniforms = 0,
+    .maxTessControlImageUniforms = 0,
+    .maxTessEvaluationImageUniforms = 0,
+    .maxGeometryImageUniforms = 0,
+    .maxFragmentImageUniforms = 8,
+    .maxCombinedImageUniforms = 8,
+    .maxGeometryTextureImageUnits = 16,
+    .maxGeometryOutputVertices = 256,
+    .maxGeometryTotalOutputComponents = 1024,
+    .maxGeometryUniformComponents = 1024,
+    .maxGeometryVaryingComponents = 64,
+    .maxTessControlInputComponents = 128,
+    .maxTessControlOutputComponents = 128,
+    .maxTessControlTextureImageUnits = 16,
+    .maxTessControlUniformComponents = 1024,
+    .maxTessControlTotalOutputComponents = 4096,
+    .maxTessEvaluationInputComponents = 128,
+    .maxTessEvaluationOutputComponents = 128,
+    .maxTessEvaluationTextureImageUnits = 16,
+    .maxTessEvaluationUniformComponents = 1024,
+    .maxTessPatchComponents = 120,
+    .maxPatchVertices = 32,
+    .maxTessGenLevel = 64,
+    .maxViewports = 16,
+    .maxVertexAtomicCounters = 0,
+    .maxTessControlAtomicCounters = 0,
+    .maxTessEvaluationAtomicCounters = 0,
+    .maxGeometryAtomicCounters = 0,
+    .maxFragmentAtomicCounters = 8,
+    .maxCombinedAtomicCounters = 8,
+    .maxAtomicCounterBindings = 1,
+    .maxVertexAtomicCounterBuffers = 0,
+    .maxTessControlAtomicCounterBuffers = 0,
+    .maxTessEvaluationAtomicCounterBuffers = 0,
+    .maxGeometryAtomicCounterBuffers = 0,
+    .maxFragmentAtomicCounterBuffers = 1,
+    .maxCombinedAtomicCounterBuffers = 1,
+    .maxAtomicCounterBufferSize = 16384,
+    .maxTransformFeedbackBuffers = 4,
+    .maxTransformFeedbackInterleavedComponents = 64,
+    .maxCullDistances = 8,
+    .maxCombinedClipAndCullDistances = 8,
+    .maxSamples = 4,
+    .maxMeshOutputVerticesNV = 256,
+    .maxMeshOutputPrimitivesNV = 512,
+    .maxMeshWorkGroupSizeX_NV = 32,
+    .maxMeshWorkGroupSizeY_NV = 1,
+    .maxMeshWorkGroupSizeZ_NV = 1,
+    .maxTaskWorkGroupSizeX_NV = 32,
+    .maxTaskWorkGroupSizeY_NV = 1,
+    .maxTaskWorkGroupSizeZ_NV = 1,
+    .maxMeshViewCountNV = 4,
+    .limits{
+        .nonInductiveForLoops = 1,
+        .whileLoops = 1,
+        .doWhileLoops = 1,
+        .generalUniformIndexing = 1,
+        .generalAttributeMatrixVectorIndexing = 1,
+        .generalVaryingIndexing = 1,
+        .generalSamplerIndexing = 1,
+        .generalVariableIndexing = 1,
+        .generalConstantMatrixVectorIndexing = 1,
+    },
+};
+
 #include <regex>
 #include <thread>
 
@@ -40,121 +146,83 @@ static void shader_preprocess(std::string & file_str, std::filesystem::path cons
 
 namespace daxa
 {
-#if DAXA_BUILT_WITH_SHADERC
-    class ShadercFileIncluder : public shaderc::CompileOptions::IncluderInterface
+#if DAXA_BUILT_WITH_GLSLANG
+    class GlslangFileIncluder : public glslang::TShader::Includer
     {
       public:
         constexpr static inline size_t DELETE_SOURCE_NAME = 0x1;
         constexpr static inline size_t DELETE_CONTENT = 0x2;
 
-        ImplPipelineCompiler * impl_pipeline_compiler;
+        ImplPipelineCompiler * impl_pipeline_compiler = nullptr;
 
-        virtual shaderc_include_result * GetInclude(
-            const char * requested_source,
-            shaderc_include_type type,
-            const char * requesting_source,
-            size_t include_depth) override
+        virtual IncludeResult * includeLocal(
+            const char * header_name, const char * includer_name, size_t inclusion_depth) override
         {
-            shaderc_include_result * res = new shaderc_include_result{};
-            if (include_depth <= 10)
-            {
-                res->source_name = requested_source;
-                res->source_name_length = strlen(requested_source);
-                res->user_data = 0;
-
-                auto result = impl_pipeline_compiler->full_path_to_file(requested_source);
-                if (result.is_err())
-                {
-                    res->content = "#error could not find file";
-                    res->content_length = strlen(res->content);
-
-                    // res->source_name = nullptr;
-                    // res->source_name_length = 0;
-                    return res;
-                }
-
-                auto full_path = result.value();
-                auto search_pred = [&](std::filesystem::path const & p)
-                { return p == full_path; };
-
-                if (std::find_if(
-                        impl_pipeline_compiler->current_seen_shader_files.begin(),
-                        impl_pipeline_compiler->current_seen_shader_files.end(),
-                        search_pred) != impl_pipeline_compiler->current_seen_shader_files.end())
-                {
-                    // Return empty string blob if this file has been included before
-                    static const char null_str[] = " ";
-                    res->content = null_str;
-                    res->content_length = 0;
-                    return res;
-                }
-
-                impl_pipeline_compiler->current_observed_hotload_files->insert({full_path, std::chrono::file_clock::now()});
-                auto shadercode_result = impl_pipeline_compiler->load_shader_source_from_file(full_path);
-
-                if (shadercode_result.is_err())
-                {
-                    res->content = "#error could not load shader source";
-                    res->content_length = strlen(res->content);
-
-                    res->source_name = nullptr;
-                    res->source_name_length = 0;
-                    return res;
-                }
-
-                auto & shadercode_str = shadercode_result.value().string;
-                res->content_length = shadercode_str.size();
-                char * res_content = new char[res->content_length + 1];
-                for (usize i = 0; i < res->content_length; ++i)
-                {
-                    res_content[i] = shadercode_str[i];
-                }
-                res_content[res->content_length] = '\0';
-                res->content = res_content;
-
-                auto full_path_str = full_path.string();
-                res->source_name_length = full_path_str.size();
-                char * res_source_name = new char[res->source_name_length + 1];
-                for (usize i = 0; i < res->source_name_length; ++i)
-                {
-                    auto c = full_path_str[i];
-                    if (c == '\\')
-                        c = '/';
-                    res_source_name[i] = c;
-                }
-                res_source_name[res->source_name_length] = '\0';
-                res->source_name = res_source_name;
-
-                res->user_data = reinterpret_cast<void *>(reinterpret_cast<size_t>(res->user_data) | DELETE_CONTENT);
-                res->user_data = reinterpret_cast<void *>(reinterpret_cast<size_t>(res->user_data) | DELETE_SOURCE_NAME);
-            }
-            else
-            {
-                // max include depth exceeded
-                res->content = "current include depth of 10 was exceeded";
-                res->content_length = std::strlen(res->content);
-
-                res->source_name = nullptr;
-                res->source_name_length = 0;
-            }
-            return res;
+            return includeSystem(header_name, includer_name, inclusion_depth);
         }
 
-        virtual void ReleaseInclude(shaderc_include_result * data) override
+        virtual IncludeResult * includeSystem(
+            const char * header_name, const char * includer_name, size_t inclusion_depth) override
         {
-            if (data)
+            std::string headerName = {};
+            char const * headerData = nullptr;
+            size_t headerLength = 0;
+
+            auto result = impl_pipeline_compiler->full_path_to_file(header_name);
+            if (result.is_err())
             {
-                if (reinterpret_cast<size_t>(data->user_data) & DELETE_CONTENT)
-                {
-                    delete data->content;
-                }
-                if (reinterpret_cast<size_t>(data->user_data) & DELETE_SOURCE_NAME)
-                {
-                    delete data->source_name;
-                }
-                delete data;
+                return nullptr;
             }
-        };
+
+            auto full_path = result.value();
+            auto search_pred = [&](std::filesystem::path const & p)
+            { return p == full_path; };
+
+            if (std::find_if(
+                    impl_pipeline_compiler->current_seen_shader_files.begin(),
+                    impl_pipeline_compiler->current_seen_shader_files.end(),
+                    search_pred) != impl_pipeline_compiler->current_seen_shader_files.end())
+            {
+                return nullptr;
+            }
+
+            impl_pipeline_compiler->current_observed_hotload_files->insert({full_path, std::chrono::file_clock::now()});
+            auto shadercode_result = impl_pipeline_compiler->load_shader_source_from_file(full_path);
+
+            if (shadercode_result.is_err())
+            {
+                return nullptr;
+            }
+
+            auto & shadercode_str = shadercode_result.value().string;
+            headerLength = shadercode_str.size();
+            char * res_content = new char[headerLength + 1];
+            for (usize i = 0; i < headerLength; ++i)
+            {
+                res_content[i] = shadercode_str[i];
+            }
+            res_content[headerLength] = '\0';
+            headerData = res_content;
+
+            headerName = full_path.string();
+            for (auto & c : headerName)
+            {
+                if (c == '\\')
+                    c = '/';
+            }
+
+            return new IncludeResult{headerName, headerData, headerLength, nullptr};
+        }
+
+        virtual void releaseInclude(IncludeResult * result) override
+        {
+            if (result)
+            {
+                if (result->headerData)
+                    delete result->headerData;
+                delete result;
+            }
+        }
     };
 #endif
 
@@ -659,11 +727,9 @@ namespace daxa
         if (!this->info.shader_compile_options.language.has_value())
             this->info.shader_compile_options.language = std::optional<ShaderLanguage>{ShaderLanguage::HLSL};
 
-#if DAXA_BUILT_WITH_SHADERC
+#if DAXA_BUILT_WITH_GLSLANG
         {
-            auto includer = ShadercFileIncluder{};
-            includer.impl_pipeline_compiler = this;
-            shaderc_backend.options.SetIncluder(std::make_unique<ShadercFileIncluder>(includer));
+            glslang::InitializeProcess();
         }
 #endif
 
@@ -681,7 +747,14 @@ namespace daxa
 #endif
     }
 
-    ImplPipelineCompiler::~ImplPipelineCompiler() {}
+    ImplPipelineCompiler::~ImplPipelineCompiler()
+    {
+#if DAXA_BUILT_WITH_GLSLANG
+        {
+            glslang::FinalizeProcess();
+        }
+#endif
+    }
 
     auto ImplPipelineCompiler::get_spirv(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage) -> Result<std::vector<u32>>
     {
@@ -721,9 +794,9 @@ namespace daxa
 
             switch (shader_info.compile_options.language.value())
             {
-#if DAXA_BUILT_WITH_SHADERC
+#if DAXA_BUILT_WITH_GLSLANG
             case ShaderLanguage::GLSL:
-                ret = gen_spirv_from_shaderc(shader_info, shader_stage, code);
+                ret = gen_spirv_from_glslang(shader_info, shader_stage, code);
                 break;
 #endif
 #if DAXA_BUILT_WITH_DXC
@@ -801,77 +874,109 @@ namespace daxa
         return ResultErr{.message = err};
     }
 
-    auto ImplPipelineCompiler::gen_spirv_from_shaderc(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
+    auto ImplPipelineCompiler::gen_spirv_from_glslang(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
     {
-#if DAXA_BUILT_WITH_SHADERC
-        auto translate_shader_stage = [](VkShaderStageFlagBits stage) -> shaderc_shader_kind
+#if DAXA_BUILT_WITH_GLSLANG
+        auto translate_shader_stage = [](VkShaderStageFlagBits stage) -> EShLanguage
         {
             switch (stage)
             {
-            case VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT: return shaderc_shader_kind::shaderc_vertex_shader;
-            case VkShaderStageFlagBits::VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT: return shaderc_shader_kind::shaderc_tess_control_shader;
-            case VkShaderStageFlagBits::VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT: return shaderc_shader_kind::shaderc_tess_evaluation_shader;
-            case VkShaderStageFlagBits::VK_SHADER_STAGE_GEOMETRY_BIT: return shaderc_shader_kind::shaderc_geometry_shader;
-            case VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT: return shaderc_shader_kind::shaderc_fragment_shader;
-            case VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT: return shaderc_shader_kind::shaderc_compute_shader;
-            case VkShaderStageFlagBits::VK_SHADER_STAGE_RAYGEN_BIT_KHR: return shaderc_shader_kind::shaderc_raygen_shader;
-            case VkShaderStageFlagBits::VK_SHADER_STAGE_ANY_HIT_BIT_KHR: return shaderc_shader_kind::shaderc_anyhit_shader;
-            case VkShaderStageFlagBits::VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR: return shaderc_shader_kind::shaderc_closesthit_shader;
-            case VkShaderStageFlagBits::VK_SHADER_STAGE_MISS_BIT_KHR: return shaderc_shader_kind::shaderc_miss_shader;
-            case VkShaderStageFlagBits::VK_SHADER_STAGE_INTERSECTION_BIT_KHR: return shaderc_shader_kind::shaderc_intersection_shader;
-            case VkShaderStageFlagBits::VK_SHADER_STAGE_CALLABLE_BIT_KHR: return shaderc_shader_kind::shaderc_callable_shader;
-            case VkShaderStageFlagBits::VK_SHADER_STAGE_TASK_BIT_NV: return shaderc_shader_kind::shaderc_task_shader;
-            case VkShaderStageFlagBits::VK_SHADER_STAGE_MESH_BIT_NV: return shaderc_shader_kind::shaderc_mesh_shader;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT: return EShLanguage::EShLangVertex;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT: return EShLanguage::EShLangTessControl;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT: return EShLanguage::EShLangTessEvaluation;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_GEOMETRY_BIT: return EShLanguage::EShLangGeometry;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT: return EShLanguage::EShLangFragment;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT: return EShLanguage::EShLangCompute;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_RAYGEN_BIT_KHR: return EShLanguage::EShLangRayGen;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_ANY_HIT_BIT_KHR: return EShLanguage::EShLangAnyHit;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR: return EShLanguage::EShLangClosestHit;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_MISS_BIT_KHR: return EShLanguage::EShLangMiss;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_INTERSECTION_BIT_KHR: return EShLanguage::EShLangIntersect;
+            case VkShaderStageFlagBits::VK_SHADER_STAGE_CALLABLE_BIT_KHR: return EShLanguage::EShLangCallable;
+            // case VkShaderStageFlagBits::VK_SHADER_STAGE_TASK_BIT_NV: return EShLanguage::EShLangTask;
+            // case VkShaderStageFlagBits::VK_SHADER_STAGE_MESH_BIT_NV: return EShLanguage::EShLangMesh;
             default:
                 std::cerr << "error: unknown shader stage!\n";
                 std::abort();
             }
         };
 
-        DAXA_DBG_ASSERT_TRUE_M(shader_info.compile_options.opt_level < 3, "For shaderc, The optimization level must be between 0 and 2 (inclusive)");
+        DAXA_DBG_ASSERT_TRUE_M(shader_info.compile_options.opt_level < 3, "For glslang, The optimization level must be between 0 and 2 (inclusive)");
+
+        std::string preamble;
 
         auto spirv_stage = translate_shader_stage(shader_stage);
-        shaderc_backend.options.SetSourceLanguage(shaderc_source_language_glsl);
-        shaderc_backend.options.SetTargetEnvironment(shaderc_target_env_vulkan, VK_API_VERSION_1_1);
-        shaderc_backend.options.SetTargetSpirv(shaderc_spirv_version_1_3);
-        shaderc_backend.options.SetOptimizationLevel(static_cast<shaderc_optimization_level>(shader_info.compile_options.opt_level.value()));
 
+        // preamble += "#version 450\n";
+        preamble += "#define _DAXA_SHADER 1\n";
+        preamble += "#define _DAXA_GLSL 1\n";
+        preamble += "#define DAXA_SHADER_INCLUDE <daxa/daxa.inl>\n";
+        preamble += "#extension GL_GOOGLE_include_directive : enable\n";
         for (auto const & shader_define : shader_info.compile_options.defines)
         {
             if (shader_define.value.size() > 0)
             {
-                shaderc_backend.options.AddMacroDefinition(shader_define.name, shader_define.value);
+                preamble += std::string("#define ") + shader_define.name + " " + shader_define.value + "\n";
             }
             else
             {
-                shaderc_backend.options.AddMacroDefinition(shader_define.name);
+                preamble += std::string("#define ") + shader_define.name + "\n";
             }
         }
-
-        shaderc_backend.options.AddMacroDefinition("_DAXA_SHADER", "1");
-        shaderc_backend.options.AddMacroDefinition("_DAXA_GLSL", "1");
-        shaderc_backend.options.AddMacroDefinition("DAXA_SHADER_INCLUDE", "<daxa/daxa.inl>");
-
         std::string debug_name = "unnamed shader";
         if (ShaderFile const * shader_file = std::get_if<ShaderFile>(&shader_info.source))
             debug_name = shader_file->path.string();
         else if (shader_info.debug_name.size() > 0)
             debug_name = shader_info.debug_name;
 
-        shaderc::SpvCompilationResult spv_module = shaderc_backend.compiler.CompileGlslToSpv(
-            code.string.c_str(), spirv_stage, debug_name.c_str(), shaderc_backend.options);
+        glslang::TShader shader{spirv_stage};
 
-        if (spv_module.GetCompilationStatus() != shaderc_compilation_status_success)
-            return daxa::ResultErr{.message = std::string("SHADERC: ") + spv_module.GetErrorMessage()};
+        shader.setPreamble(preamble.c_str());
 
-        auto spv = std::vector<u32>{spv_module.begin(), spv_module.end()};
+        auto & source_str = code.string;
 
-        std::ofstream spv_output{"glsl_compute.spv", std::ios::binary};
-        spv_output.write((char const*)spv.data(), spv.size() * sizeof(spv[0]));
+        std::vector<char const *> sources;
+        sources.push_back(source_str.c_str());
 
+        shader.setStrings(sources.data(), sources.size());
+        shader.setEntryPoint("main");
+        // shader.setOverrideVersion(450); // not available yet in latest vcpkg version
+
+        GlslangFileIncluder includer;
+        includer.impl_pipeline_compiler = this;
+        auto messages = static_cast<EShMessages>(EShMsgSpvRules | EShMsgVulkanRules);
+        TBuiltInResource resource = DAXA_DEFAULT_BUILTIN_RESOURCE;
+
+        if (!shader.parse(&resource, 450, false, messages, includer))
+        {
+            std::cerr << shader.getInfoLog() << '\n'
+                      << shader.getInfoDebugLog() << std::endl;
+            return daxa::ResultErr{.message = std::string("GLSLANG: ") + shader.getInfoLog() + shader.getInfoDebugLog()};
+        }
+
+        glslang::TProgram program;
+        program.addShader(&shader);
+
+        if (!program.link(messages))
+        {
+            std::cerr << shader.getInfoLog() << '\n'
+                      << shader.getInfoDebugLog() << std::endl;
+            return daxa::ResultErr{.message = std::string("GLSLANG: ") + shader.getInfoLog() + shader.getInfoDebugLog()};
+        }
+
+        auto intermediary = program.getIntermediate(spirv_stage);
+        if (!intermediary)
+        {
+            return daxa::ResultErr{.message = std::string("GLSLANG: Failed to get shader stage intermediary")};
+        }
+
+        spv::SpvBuildLogger logger;
+        glslang::SpvOptions spv_options;
+        std::vector<unsigned int> spv;
+        glslang::GlslangToSpv(*intermediary, spv, &logger, &spv_options);
         return spv;
 #else
-        return ResultErr{.message = "Asked for Shaderc compilation without enabling Shaderc"};
+        return ResultErr{.message = "Asked for glslang compilation without enabling glslang"};
 #endif
     }
 
@@ -997,8 +1102,8 @@ namespace daxa
             spv[i] = static_cast<u32 *>(shaderobj->GetBufferPointer())[i];
         }
 
-        std::ofstream spv_output{"compute.spv", std::ios::binary};
-        spv_output.write((char const*)spv.data(), spv.size() * sizeof(spv[0]));
+        // std::ofstream spv_output{"compute.spv", std::ios::binary};
+        // spv_output.write((char const *)spv.data(), spv.size() * sizeof(spv[0]));
 
         return {spv};
 #else

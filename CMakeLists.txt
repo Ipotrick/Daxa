@@ -8,8 +8,8 @@ endif()
 if(DAXA_ENABLE_DXC)
     list(APPEND VCPKG_MANIFEST_FEATURES "dxc")
 endif()
-if(DAXA_ENABLE_SHADERC)
-    list(APPEND VCPKG_MANIFEST_FEATURES "shaderc")
+if(DAXA_ENABLE_GLSLANG)
+    list(APPEND VCPKG_MANIFEST_FEATURES "glslang")
 endif()
 if(DAXA_ENABLE_TESTS)
     list(APPEND VCPKG_MANIFEST_FEATURES "tests")
@@ -64,31 +64,16 @@ find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(volk CONFIG REQUIRED)
 
-if(DAXA_ENABLE_SHADERC)
-    find_library(SHADERC_LIBRARY_DIRS shaderc)
-    find_library(SHADERC_UTIL_LIBRARY_DIRS shaderc_util)
-    find_library(SHADERC_SPIRV_TOOLS_LIB SPIRV-Tools)
-    find_library(SHADERC_SPIRV_TOOLS_LINK_LIB SPIRV-Tools-link)
-    find_library(SHADERC_SPIRV_TOOLS_OPT_LIB SPIRV-Tools-opt)
-    find_library(SHADERC_SPIRV_TOOLS_REDUCE_LIB SPIRV-Tools-reduce)
-    find_library(SHADERC_SPIRV_TOOLS_SHARED_LIB SPIRV-Tools-shared)
-    find_path(SHADERC_INCLUDE_DIRS "shaderc/shaderc.h")
+if(DAXA_ENABLE_GLSLANG)
     find_package(glslang CONFIG REQUIRED)
 
     target_compile_definitions(daxa
         PUBLIC
-        DAXA_BUILT_WITH_SHADERC=true
+        DAXA_BUILT_WITH_GLSLANG=true
     )
     target_link_libraries(daxa
         PUBLIC
         HLSL SPIRV glslang OGLCompiler
-        ${SHADERC_LIBRARY_DIRS}
-        ${SHADERC_UTIL_LIBRARY_DIRS}
-        ${SHADERC_SPIRV_TOOLS_LIB}
-        ${SHADERC_SPIRV_TOOLS_LINK_LIB}
-        ${SHADERC_SPIRV_TOOLS_OPT_LIB}
-        ${SHADERC_SPIRV_TOOLS_REDUCE_LIB}
-        ${SHADERC_SPIRV_TOOLS_SHARED_LIB}
     )
 endif()
 
@@ -153,7 +138,7 @@ find_package(Vulkan REQUIRED)
 find_package(volk CONFIG REQUIRED)
 ]=])
 
-if(DAXA_ENABLE_SHADERC)
+if(DAXA_ENABLE_GLSLANG)
     file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
 find_package(glslang CONFIG REQUIRED)
 ]=])
