@@ -864,7 +864,12 @@ namespace daxa
         if (spv_module.GetCompilationStatus() != shaderc_compilation_status_success)
             return daxa::ResultErr{.message = std::string("SHADERC: ") + spv_module.GetErrorMessage()};
 
-        return {std::vector<u32>{spv_module.begin(), spv_module.end()}};
+        auto spv = std::vector<u32>{spv_module.begin(), spv_module.end()};
+
+        std::ofstream spv_output{"glsl_compute.spv", std::ios::binary};
+        spv_output.write((char const*)spv.data(), spv.size() * sizeof(spv[0]));
+
+        return spv;
 #else
         return ResultErr{.message = "Asked for Shaderc compilation without enabling Shaderc"};
 #endif
@@ -991,6 +996,9 @@ namespace daxa
         {
             spv[i] = static_cast<u32 *>(shaderobj->GetBufferPointer())[i];
         }
+
+        std::ofstream spv_output{"compute.spv", std::ios::binary};
+        spv_output.write((char const*)spv.data(), spv.size() * sizeof(spv[0]));
 
         return {spv};
 #else
