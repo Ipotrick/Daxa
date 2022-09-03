@@ -195,10 +195,10 @@ DAXA_REGISTER_SAMPLER_TYPE(samplerCubeShadow)
 DAXA_REGISTER_SAMPLER_TYPE(sampler1DArrayShadow)
 DAXA_REGISTER_SAMPLER_TYPE(sampler2DArrayShadow)
 
-#define daxa_GetBuffer(STRUCT_TYPE, buffer_id) daxa_BufferTable##STRUCT_TYPE[buffer_id.buffer_id_value].value
-#define daxa_GetCoherentBuffer(STRUCT_TYPE, buffer_id) daxa_CoherentBufferTable##STRUCT_TYPE[buffer_id.buffer_id_value].value
-#define daxa_GetRWImage(IMAGE_TYPE, IMAGE_FORMAT, image_view_id) daxa_ReadWriteImageTable_##IMAGE_FORMAT##_##IMAGE_TYPE[image_view_id.image_view_id_value]
-#define daxa_GetCoherentRWImage(IMAGE_TYPE, FORMAT, image_view_id) daxa_CoherentReadWriteImageTable_##IMAGE_FORMAT##_##IMAGE_TYPE[image_view_id.image_view_id_value]
-#define daxa_GetImage(IMAGE_TYPE, image_view_id) daxa_ReadOnlyImageTable_##IMAGE_TYPE[image_view_id.image_view_id_value]
-#define daxa_GetCoherentImage(IMAGE_TYPE, image_view_id) daxa_CoherentReadOnlyImageTable_##IMAGE_TYPE[image_view_id.image_view_id_value]
-#define daxa_GetSampler(SAMPLER_TYPE, sampler_id) daxa_SamplerTable##SAMPLER_TYPE[sampler_id.sampler_id_value]
+#define daxa_GetBuffer(STRUCT_TYPE, buffer_id) daxa_BufferTable##STRUCT_TYPE[(DAXA_ID_INDEX_MASK & buffer_id.buffer_id_value)].value
+#define daxa_GetCoherentBuffer(STRUCT_TYPE, buffer_id) daxa_CoherentBufferTable##STRUCT_TYPE[(DAXA_ID_INDEX_MASK & buffer_id.buffer_id_value)].value
+#define daxa_GetRWImage(IMAGE_TYPE, IMAGE_FORMAT, image_view_id) daxa_ReadWriteImageTable_##IMAGE_FORMAT##_##IMAGE_TYPE[(DAXA_ID_INDEX_MASK & image_view_id.image_view_id_value)]
+#define daxa_GetCoherentRWImage(IMAGE_TYPE, FORMAT, image_view_id) daxa_CoherentReadWriteImageTable_##IMAGE_FORMAT##_##IMAGE_TYPE[(DAXA_ID_INDEX_MASK & image_view_id.image_view_id_value)]
+#define daxa_GetImage(IMAGE_TYPE, image_view_id) daxa_ReadOnlyImageTable_##IMAGE_TYPE[(DAXA_ID_INDEX_MASK & image_view_id.image_view_id_value)]
+#define daxa_GetCoherentImage(IMAGE_TYPE, image_view_id) daxa_CoherentReadOnlyImageTable_##IMAGE_TYPE[(DAXA_ID_INDEX_MASK & image_view_id.image_view_id_value)]
+#define daxa_GetSampler(SAMPLER_TYPE, sampler_id) daxa_SamplerTable##SAMPLER_TYPE[(DAXA_ID_INDEX_MASK & sampler_id.sampler_id_value)]

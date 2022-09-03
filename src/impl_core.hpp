@@ -34,8 +34,9 @@ using ComPtr = CComPtr<T>;
 #endif
 #endif
 
-#if DAXA_BUILT_WITH_SHADERC
-#include <shaderc/shaderc.hpp>
+#if DAXA_BUILT_WITH_GLSLANG
+#include <glslang/Public/ShaderLang.h>
+#include <glslang/SPIRV/GlslangToSpv.h>
 #endif
 
 #include <volk.h>

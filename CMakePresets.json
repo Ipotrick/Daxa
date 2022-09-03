@@ -13,7 +13,7 @@
             "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
             "generator": "Ninja",
             "cacheVariables": {
-                "DAXA_ENABLE_SHADERC": true,
+                "DAXA_ENABLE_GLSLANG": true,
                 "DAXA_ENABLE_DXC": true,
                 "DAXA_ENABLE_UTILS": true,
                 "DAXA_ENABLE_TESTS": true,
