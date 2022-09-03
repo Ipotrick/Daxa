@@ -5,6 +5,7 @@
 #include <fstream>
 #include <map>
 #include <deque>
+#include <cstring>
 
 #include <daxa/core.hpp>
 
