@@ -14,7 +14,7 @@
             "generator": "Ninja",
             "cacheVariables": {
                 "DAXA_ENABLE_SHADERC": true,
-                "DAXA_ENABLE_DXC": false,
+                "DAXA_ENABLE_DXC": true,
                 "DAXA_ENABLE_UTILS": true,
                 "DAXA_ENABLE_TESTS": true,
                 "DAXA_ENABLE_STATIC_ANALYSIS": false
