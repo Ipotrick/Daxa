@@ -35,9 +35,4 @@ You must have the following things installed to build the repository
 All dependencies are managed via vcpkg.
 The library and the tests can be built using CMake.
 
-rm -rf build
-cmake -B build/debug -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DDAXA_ENABLE_TESTS=true
-cd build/debug
-cmake --build .
-cd ../..
-./build/debug/tests/daxa_test_2_daxa_api_5_swapchain
+Check out our GitHub wiki for more detailed instructions!
