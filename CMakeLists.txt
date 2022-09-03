@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
+
 include(cmake/warnings.cmake)
 
 if(DAXA_ENABLE_UTILS)
@@ -63,7 +64,7 @@ find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(volk CONFIG REQUIRED)
 
-if (DAXA_ENABLE_SHADERC)
+if(DAXA_ENABLE_SHADERC)
     find_library(SHADERC_LIBRARY_DIRS shaderc)
     find_library(SHADERC_UTIL_LIBRARY_DIRS shaderc_util)
     find_library(SHADERC_SPIRV_TOOLS_LIB SPIRV-Tools)
@@ -91,7 +92,7 @@ if (DAXA_ENABLE_SHADERC)
     )
 endif()
 
-if (DAXA_ENABLE_SHADERC)
+if(DAXA_ENABLE_DXC)
     find_package(dxc CONFIG REQUIRED)
 
     target_compile_definitions(daxa
