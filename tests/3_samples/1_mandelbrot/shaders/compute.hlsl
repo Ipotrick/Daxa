@@ -2,7 +2,6 @@
 
 [[vk::push_constant]] const ComputePush p;
 
-
 // clang-format off
 [numthreads(8, 8, 1)]
 void main(u32vec3 pixel_i : SV_DispatchThreadID)

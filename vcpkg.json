@@ -9,10 +9,10 @@
         "vulkan"
     ],
     "features": {
-        "shaderc": {
-            "description": "Build with shaderc",
+        "glslang": {
+            "description": "Build with glslang",
             "dependencies": [
-                "shaderc"
+                "glslang"
             ]
         },
         "dxc": {
