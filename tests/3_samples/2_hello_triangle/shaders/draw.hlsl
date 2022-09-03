@@ -8,7 +8,7 @@ struct VertexOutput
     f32vec4 col : COLOR0;
 };
 
-VertexOutput main(u32 vert_i : SV_VERTEXID)
+VertexOutput vs_main(u32 vert_i : SV_VERTEXID)
 {
     StructuredBuffer<DrawVertexBuffer> vertex_buffer = daxa::get_StructuredBuffer<DrawVertexBuffer>(p.vertex_buffer_id);
     DrawVertex vert = vertex_buffer[0].verts[vert_i];
@@ -19,7 +19,7 @@ VertexOutput main(u32 vert_i : SV_VERTEXID)
     return result;
 }
 
-f32vec4 main(VertexOutput vertex_output) : SV_TARGET
+f32vec4 fs_main(VertexOutput vertex_output) : SV_TARGET
 {
     return f32vec4(vertex_output.col.rgb, 1);
 }
