@@ -17,9 +17,6 @@
 #else
 #define VK_USE_PLATFORM_XLIB_KHR
 #define VK_KHR_xlib_surface
-
-#undef FFX_API
-#define FFX_API
 #endif
 
 #if DAXA_BUILT_WITH_DXC

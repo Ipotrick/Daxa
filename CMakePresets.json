@@ -14,7 +14,7 @@
             "generator": "Ninja",
             "cacheVariables": {
                 "DAXA_ENABLE_SHADERC": true,
-                "DAXA_ENABLE_DXC": true,
+                "DAXA_ENABLE_DXC": false,
                 "DAXA_ENABLE_UTILS": true,
                 "DAXA_ENABLE_TESTS": true,
                 "DAXA_ENABLE_STATIC_ANALYSIS": false
@@ -32,6 +32,7 @@
                 "rhs": "Windows"
             },
             "cacheVariables": {
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/clang-x86_64-windows-msvc.cmake",
                 "DAXA_TESTS_DISABLE_WINDOWS_CONSOLE": false
             }
         },
@@ -47,6 +48,7 @@
                 "rhs": "Linux"
             },
             "cacheVariables": {
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/gnu-x86_64-linux-gnu.cmake",
                 "DAXA_TESTS_DISABLE_WINDOWS_CONSOLE": false
             }
         },
