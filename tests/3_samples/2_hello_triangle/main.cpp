@@ -4,8 +4,8 @@
 
 #include "shaders/shared.inl"
 
-// #include <daxa/utils/imgui.hpp>
-// #include <0_common/imgui/imgui_impl_glfw.h>
+#include <daxa/utils/imgui.hpp>
+#include <0_common/imgui/imgui_impl_glfw.h>
 
 #define APPNAME "Daxa Sample: HelloTriangle"
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
@@ -50,22 +50,24 @@ struct App : AppWindow<App>
         .debug_name = APPNAME_PREFIX("pipeline_compiler"),
     });
 
-    // daxa::ImGuiRenderer imgui_renderer = create_imgui_renderer();
-    // auto create_imgui_renderer() -> daxa::ImGuiRenderer
-    // {
-    //     ImGui::CreateContext();
-    //     ImGui_ImplGlfw_InitForVulkan(glfw_window_ptr, true);
-    //     return daxa::ImGuiRenderer({
-    //         .device = device,
-    //         .pipeline_compiler = pipeline_compiler,
-    //         .format = swapchain.get_format(),
-    //     });
-    // }
+    daxa::ImGuiRenderer imgui_renderer = create_imgui_renderer();
+    auto create_imgui_renderer() -> daxa::ImGuiRenderer
+    {
+        ImGui::CreateContext();
+        ImGui_ImplGlfw_InitForVulkan(glfw_window_ptr, true);
+        return daxa::ImGuiRenderer({
+            .device = device,
+            .pipeline_compiler = pipeline_compiler,
+            .format = swapchain.get_format(),
+        });
+    }
 
     // clang-format off
     daxa::RasterPipeline raster_pipeline = pipeline_compiler.create_raster_pipeline({
         .vertex_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_VERT"}}}},
         .fragment_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_FRAG"}}}},
+        // .vertex_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .compile_options = {.entry_point = "vs_main"}},
+        // .fragment_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .compile_options = {.entry_point = "fs_main"}},
         .color_attachments = {{.format = swapchain.get_format()}},
         .raster = {},
         .push_constant_size = sizeof(DrawPush),
@@ -95,7 +97,7 @@ struct App : AppWindow<App>
 
     ~App()
     {
-        // ImGui_ImplGlfw_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
         device.destroy_buffer(vertex_buffer);
     }
 
@@ -122,12 +124,12 @@ struct App : AppWindow<App>
 
     void ui_update()
     {
-        // ImGui_ImplGlfw_NewFrame();
-        // ImGui::NewFrame();
-        // ImGui::Begin("Debug");
-        // ImGui::End();
-        // ImGui::ShowDemoWindow();
-        // ImGui::Render();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        ImGui::Begin("Debug");
+        ImGui::End();
+        ImGui::ShowDemoWindow();
+        ImGui::Render();
     }
 
     void draw()
@@ -200,7 +202,7 @@ struct App : AppWindow<App>
         cmd_list.draw({.vertex_count = 3});
         cmd_list.end_renderpass();
 
-        // imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, swapchain_image, size_x, size_y);
+        imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, swapchain_image, size_x, size_y);
 
         cmd_list.pipeline_barrier_image_transition({
             .awaited_pipeline_access = daxa::AccessConsts::ALL_GRAPHICS_READ_WRITE,
