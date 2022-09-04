@@ -3,6 +3,7 @@
 #include "impl_device.hpp"
 #include <iostream>
 
+#if DAXA_BUILT_WITH_GLSLANG
 static constexpr TBuiltInResource DAXA_DEFAULT_BUILTIN_RESOURCE = {
     .maxLights = 32,
     .maxClipPlanes = 6,
@@ -108,6 +109,7 @@ static constexpr TBuiltInResource DAXA_DEFAULT_BUILTIN_RESOURCE = {
         .generalConstantMatrixVectorIndexing = 1,
     },
 };
+#endif
 
 #include <regex>
 #include <thread>
