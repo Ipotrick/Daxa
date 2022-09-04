@@ -1,22 +1,18 @@
-#include DAXA_SHADER_INCLUDE
-struct Push
-{
-    ImageViewId image_id;
-    u32vec2 frame_dim;
-};
-[[vk::push_constant]] const Push p;
+#version 450
 
-// clang-format off
-[numthreads(8, 8, 1)] void main(u32vec3 pixel_i : SV_DispatchThreadID)
-// clang-format on
-{
-    RWTexture2D<f32vec4> render_image = daxa::get_RWTexture2D<f32vec4>(p.image_id);
+#include <shared.inl>
 
-    if (pixel_i.x >= p.frame_dim.x || pixel_i.y >= p.frame_dim.y)
+DAXA_PUSH_CONSTANT(ComputePush)
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+void main()
+{
+    u32vec3 pixel_i = gl_GlobalInvocationID.xyz;
+    if (pixel_i.x >= daxa_push.frame_dim.x || pixel_i.y >= daxa_push.frame_dim.y)
         return;
 
-    f32vec2 uv = f32vec2(pixel_i.xy) / f32vec2(p.frame_dim.xy);
-    uv = (uv - 0.5) * f32vec2(f32(p.frame_dim.x) / f32(p.frame_dim.y), 1);
+    f32vec2 uv = f32vec2(pixel_i.xy) / f32vec2(daxa_push.frame_dim.xy);
+    uv = (uv - 0.5) * f32vec2(f32(daxa_push.frame_dim.x) / f32(daxa_push.frame_dim.y), 1);
     uv = uv * 2;
 
     f32vec3 col = f32vec3(0, 0, 0);
@@ -53,10 +49,13 @@ struct Push
         f32 p1 = clamp(dot(points_del[1], uv - points[1]) / dot(points_del[1], points_del[1]), 0, 1);
         f32 p2 = clamp(dot(points_del[2], uv - points[2]) / dot(points_del[2], points_del[2]), 0, 1);
 
-        col = lerp(col, point_colors[0], 1);
-        col = lerp(col, point_colors[1], p0);
-        col = lerp(col, point_colors[2], clamp((p1 - p2 + 0.5) / 1.5, 0, 1));
+        col = mix(col, point_colors[0], f32vec3(1));
+        col = mix(col, point_colors[1], p0);
+        col = mix(col, point_colors[2], clamp((p1 - p2 + 0.5) / 1.5, 0, 1));
     }
 
-    render_image[pixel_i.xy] = f32vec4(col, 1.0);
+    imageStore(
+        daxa_GetRWImage(image2D, rgba32f, daxa_push.image_id),
+        i32vec2(pixel_i.xy),
+        f32vec4(col, 1));
 }

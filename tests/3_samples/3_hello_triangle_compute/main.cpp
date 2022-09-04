@@ -110,8 +110,8 @@ struct App : AppWindow<App>
 
         cmd_list.set_pipeline(compute_pipeline);
         cmd_list.push_constant(ComputePush{
-            .image_id = render_image.default_view(),
             .frame_dim = {size_x, size_y},
+            .image_id = render_image.default_view(),
         });
         cmd_list.dispatch((size_x + 7) / 8, (size_y + 7) / 8);
 
