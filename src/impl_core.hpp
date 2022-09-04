@@ -37,6 +37,7 @@ using ComPtr = CComPtr<T>;
 #if DAXA_BUILT_WITH_GLSLANG
 #include <glslang/Public/ShaderLang.h>
 #include <glslang/SPIRV/GlslangToSpv.h>
+#include <glslang/Include/ResourceLimits.h>
 #endif
 
 #include <volk.h>
