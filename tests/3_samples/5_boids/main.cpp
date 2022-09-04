@@ -2,6 +2,8 @@
 #include <thread>
 #include <iostream>
 
+#include "daxa/utils/task_list.hpp"
+
 #define GLM_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -12,32 +14,7 @@
 using namespace daxa::types;
 using Clock = std::chrono::high_resolution_clock;
 
-static inline constexpr usize MAX_BOIDS = 1000;
-static inline constexpr usize VECTORS_PER_AXIS = 100;
-static inline constexpr usize MAX_VECTORS = VECTORS_PER_AXIS * VECTORS_PER_AXIS;
-
-struct BoidState
-{
-    f32 x = {};
-    f32 y = {};
-    f32 dir_x = 1.0f;
-    f32 dir_y = {};
-    f32 speed = {};
-    u32 _pad[1] = {};
-};
-
-struct RasterPush
-{
-    glm::mat4 view_mat;
-    daxa::BufferId boids_buffer_id;
-};
-
-struct UpdatePush
-{
-    daxa::BufferId prev_boids_buffer_id;
-    daxa::BufferId boids_buffer_id;
-    f32 delta_time;
-};
+#include "shared.inl"
 
 struct App : AppWindow<App>
 {
@@ -69,51 +46,28 @@ struct App : AppWindow<App>
         .shader_compile_options = {
             .root_paths = {
                 "tests/3_samples/5_boids/shaders",
+                "tests/3_samples/5_boids",
                 "include",
             },
+            .language = daxa::ShaderLanguage::GLSL,
         },
         .debug_name = APPNAME_PREFIX("pipeline_compiler"),
     });
     // clang-format off
-    daxa::RasterPipeline raster_pipeline = pipeline_compiler.create_raster_pipeline({
-        .vertex_shader_info = {.source = daxa::ShaderFile{"vert.hlsl"}},
-        .fragment_shader_info = {.source = daxa::ShaderFile{"frag.hlsl"}},
+    daxa::RasterPipeline draw_pipeline = pipeline_compiler.create_raster_pipeline({
+        .vertex_shader_info = {.source = daxa::ShaderFile{"vert.glsl"}},
+        .fragment_shader_info = {.source = daxa::ShaderFile{"frag.glsl"}},
         .color_attachments = {{.format = swapchain.get_format()}},
         .raster = {},
-        .push_constant_size = sizeof(RasterPush),
-        .debug_name = APPNAME_PREFIX("raster_pipeline"),
+        .push_constant_size = sizeof(DrawPushConstant),
+        .debug_name = APPNAME_PREFIX("draw_pipeline"),
     }).value();
-    daxa::ComputePipeline update_pipeline = pipeline_compiler.create_compute_pipeline({
-        .shader_info = {.source = daxa::ShaderFile{"update_boids.hlsl"}},
-        .push_constant_size = sizeof(UpdatePush),
-        .debug_name = APPNAME_PREFIX("update_pipeline"),
-    }).value();
-    daxa::ComputePipeline vector_update_pipeline = pipeline_compiler.create_compute_pipeline({
-        .shader_info = {.source = daxa::ShaderFile{"update_vectors.hlsl"}},
-        .push_constant_size = sizeof(UpdatePush),
-        .debug_name = APPNAME_PREFIX("vector_update_pipeline"),
+    daxa::ComputePipeline update_boids_pipeline = pipeline_compiler.create_compute_pipeline({
+        .shader_info = {.source = daxa::ShaderFile{"update_boids.glsl"}},
+        .push_constant_size = sizeof(UpdateBoidsPushConstant),
+        .debug_name = APPNAME_PREFIX("draw_pipeline"),
     }).value();
     // clang-format on
-
-    daxa::BufferId boids_buffers[2] = {
-        device.create_buffer(daxa::BufferInfo{
-            .size = sizeof(BoidState) * MAX_BOIDS,
-            .debug_name = APPNAME_PREFIX("boids_buffers[0]"),
-        }),
-        device.create_buffer(daxa::BufferInfo{
-            .size = sizeof(BoidState) * MAX_BOIDS,
-            .debug_name = APPNAME_PREFIX("boids_buffers[1]"),
-        }),
-    };
-
-    daxa::BufferId vector_field_buffer = device.create_buffer(daxa::BufferInfo{
-        .size = sizeof(BoidState) * MAX_VECTORS,
-        .debug_name = APPNAME_PREFIX("vector_field_buffer"),
-    });
-
-    daxa::BinarySemaphore binary_semaphore = device.create_binary_semaphore({
-        .debug_name = APPNAME_PREFIX("binary_semaphore"),
-    });
 
     static inline constexpr u64 FRAMES_IN_FLIGHT = 1;
     daxa::TimelineSemaphore gpu_framecount_timeline_sema = device.create_timeline_semaphore(daxa::TimelineSemaphoreInfo{
@@ -126,67 +80,77 @@ struct App : AppWindow<App>
     u32 current_buffer_i = 1;
 
     f32 aspect = static_cast<f32>(size_x) / static_cast<f32>(size_y);
-    RasterPush raster_push{
-        .view_mat = glm::ortho(-aspect, aspect, -1.0f, 1.0f),
-        .boids_buffer_id = boids_buffers[0],
-    };
 
     using Clock = std::chrono::high_resolution_clock;
     Clock::time_point start = Clock::now(), prev_time = start;
 
+    daxa::TaskList task_list = record_tasks();
+
+    daxa::BufferId boid_buffer = device.create_buffer({
+        .size = sizeof(BoidBuffer),
+        .debug_name = APPNAME_PREFIX("boid_buffer"),
+    });
+
+    daxa::BufferId old_boid_buffer = device.create_buffer({
+        .size = sizeof(BoidBuffer),
+        .debug_name = APPNAME_PREFIX("old_boid_buffer"),
+    });
+
+    daxa::ImageId swapchain_image = {};
+    daxa::TaskImageId task_swapchain_image = {};
+
+    f32 elapsed_s = 1.0f;
+
     App() : AppWindow<App>(APPNAME)
     {
-        auto cmd_list = device.create_command_list({
-            .debug_name = APPNAME_PREFIX("cmd_list"),
-        });
+        auto cmd_list = device.create_command_list({ .debug_name = APPNAME_PREFIX("boid buffer init commands") });
 
+        auto upload_buffer_id = device.create_buffer({
+            .size = sizeof(BoidBuffer),
+            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
+            .debug_name = APPNAME_PREFIX("voids buffer init staging buffer"),
+        });
+        cmd_list.destroy_buffer_deferred(upload_buffer_id);
+
+        BoidBuffer* ptr = device.map_memory_as<BoidBuffer>(upload_buffer_id);
+
+        for (usize i = 0; i < MAX_BOIDS; ++i)
         {
-            auto init_boids_buffer = device.create_buffer({
-                .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-                .size = sizeof(BoidState) * MAX_BOIDS,
-                .debug_name = APPNAME_PREFIX("init_boids_buffer"),
-            });
-            cmd_list.destroy_buffer_deferred(init_boids_buffer);
-            auto boids_buffer_ptr = device.map_memory_as<BoidState>(init_boids_buffer);
-            for (usize i = 0; i < MAX_BOIDS; ++i)
-            {
-                f32 angle = static_cast<f32>(static_cast<u32>(rand()) % MAX_BOIDS) / MAX_BOIDS * 3.14159f * 2.0f;
-                boids_buffer_ptr[i] = BoidState{
-                    .x = (static_cast<f32>(static_cast<u32>(rand()) % MAX_BOIDS) / MAX_BOIDS - 0.5f) * 2.0f * aspect,
-                    .y = (static_cast<f32>(static_cast<u32>(rand()) % MAX_BOIDS) / MAX_BOIDS - 0.5f) * 2.0f,
-                    .dir_x = std::cos(angle),
-                    .dir_y = std::sin(angle),
-                    .speed = 1.0f,
-                };
-            }
-            device.unmap_memory(init_boids_buffer);
-            cmd_list.pipeline_barrier({
-                .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
-                .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
-            });
-            cmd_list.copy_buffer_to_buffer({
-                .src_buffer = init_boids_buffer,
-                .dst_buffer = boids_buffers[0],
-                .size = sizeof(BoidState) * MAX_BOIDS,
-            });
-            cmd_list.pipeline_barrier({
-                .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-                .waiting_pipeline_access = daxa::AccessConsts::VERTEX_SHADER_READ,
-            });
+            ptr->boids[i].position.x = ((rand() % 1000) * (1.0f / 500.0f)) - 1.0f;
+            ptr->boids[i].position.y = ((rand() % 1000) * (1.0f / 500.0f)) - 1.0f;
+            ptr->boids[i].direction.x = 0.0f;
+            ptr->boids[i].direction.y = 1.0f;
+            ptr->boids[i].speed = 1.0f;
         }
 
-        cmd_list.complete();
+        device.unmap_memory(upload_buffer_id);
 
+        cmd_list.copy_buffer_to_buffer({
+            .src_buffer = upload_buffer_id,
+            .dst_buffer = boid_buffer,
+            .size = sizeof(BoidBuffer),
+        });
+
+        cmd_list.copy_buffer_to_buffer({
+            .src_buffer = upload_buffer_id,
+            .dst_buffer = old_boid_buffer,
+            .size = sizeof(BoidBuffer),
+        });
+
+        cmd_list.pipeline_barrier({
+            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .waiting_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_READ_WRITE | daxa::AccessConsts::VERTEX_SHADER_READ,
+        });
+        cmd_list.complete();
         device.submit_commands({
-            .command_lists = {cmd_list},
+            .command_lists = { cmd_list },
         });
     }
 
     ~App()
     {
-        device.destroy_buffer(boids_buffers[0]);
-        device.destroy_buffer(boids_buffers[1]);
-        device.destroy_buffer(vector_field_buffer);
+        device.destroy_buffer(boid_buffer);
+        device.destroy_buffer(old_boid_buffer);
     }
 
     bool update()
@@ -210,37 +174,128 @@ struct App : AppWindow<App>
         return false;
     }
 
+    void update_boids(daxa::CommandList & cmd_list, daxa::BufferId boid_buffer_id, daxa::BufferId old_boid_buffer_id)
+    {
+        cmd_list.set_pipeline(update_boids_pipeline);
+
+        cmd_list.push_constant(UpdateBoidsPushConstant{
+            .boid_buffer_id = boid_buffer_id,
+            .old_boid_buffer_id = old_boid_buffer_id,
+            .delta_time = elapsed_s,
+        });
+
+        cmd_list.dispatch((MAX_BOIDS + 63) / 64, 1, 1);
+    }
+
+    void draw_boids(daxa::CommandList & cmd_list, daxa::ImageId render_target, daxa::BufferId boid_buffer_id, u32 size_x, u32 size_y)
+    {
+        cmd_list.set_pipeline(draw_pipeline);
+        cmd_list.begin_renderpass({
+            .color_attachments = {
+                {
+                    .image_view = render_target.default_view(),
+                    .layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
+                    .load_op = daxa::AttachmentLoadOp::CLEAR,
+                    .store_op = daxa::AttachmentStoreOp::STORE,
+                    .clear_value = std::array<f32, 4>{ 1.0f, 1.0f, 1.0f, 1.0f },
+                }
+            },
+            .render_area = {
+                .width = size_x,
+                .height = size_y,
+            },
+        });
+
+        cmd_list.push_constant(DrawPushConstant{
+            .boid_buffer_id = boid_buffer_id,
+        });
+
+        cmd_list.draw({.vertex_count = 3 * MAX_BOIDS });
+
+        cmd_list.end_renderpass();
+    }
+
+    auto record_tasks() -> daxa::TaskList
+    {
+        daxa::TaskList task_list = daxa::TaskList({.device = device, .debug_name = APPNAME_PREFIX("main task list")});
+
+        auto task_boid_buffer = task_list.create_task_buffer({
+            .fetch_callback = [=]()
+            { return boid_buffer; },
+            .debug_name = "task boid buffer",
+        });
+
+        auto task_old_boid_buffer = task_list.create_task_buffer({
+            .fetch_callback = [=]()
+            { return old_boid_buffer; },
+            .debug_name = "task old boid buffer",
+        });
+
+        task_swapchain_image = task_list.create_task_image({
+            .fetch_callback = [=]()
+            { return swapchain_image; },
+            .debug_name = "task swapchain image",
+        });
+
+        task_list.add_task({
+            .used_buffers = {
+                { task_boid_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE },
+                { task_old_boid_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY },
+            },
+            .task = [=](daxa::TaskInterface & interf)
+            {
+                BufferId boid_buffer_id = interf.get_buffer(task_boid_buffer);
+                BufferId old_boid_buffer_id = interf.get_buffer(task_old_boid_buffer);
+                daxa::CommandList cmd_list = interf.get_command_list();
+                this->update_boids(cmd_list, boid_buffer_id, old_boid_buffer_id);
+            },
+            .debug_name = "update boids",
+        });
+
+        task_list.add_task({
+            .used_buffers = {
+                { task_boid_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY },
+            },
+            .used_images = {
+                { task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT },
+            },
+            .task = [=](daxa::TaskInterface & interf)
+            {
+                ImageId render_target_id = interf.get_image(task_swapchain_image);
+                BufferId boid_buffer_id = interf.get_buffer(task_boid_buffer);
+                daxa::CommandList cmd_list = interf.get_command_list();
+                this->draw_boids(cmd_list, render_target_id, boid_buffer_id, this->size_x, this->size_y);
+            },
+            .debug_name = "draw boids",
+        });
+
+        task_list.compile();
+
+        return task_list;
+    }
+
     void draw()
     {
         auto now = Clock::now();
-        auto elapsed_s = std::chrono::duration<f32>(now - prev_time).count();
+        elapsed_s = std::chrono::duration<f32>(now - prev_time).count();
         prev_time = now;
 
-        if (pipeline_compiler.check_if_sources_changed(raster_pipeline))
+        if (pipeline_compiler.check_if_sources_changed(draw_pipeline))
         {
-            auto new_pipeline = pipeline_compiler.recreate_raster_pipeline(raster_pipeline);
+            auto new_pipeline = pipeline_compiler.recreate_raster_pipeline(draw_pipeline);
             std::cout << new_pipeline.to_string() << std::endl;
             if (new_pipeline.is_ok())
             {
-                raster_pipeline = new_pipeline.value();
+                draw_pipeline = new_pipeline.value();
             }
         }
-        if (pipeline_compiler.check_if_sources_changed(update_pipeline))
+        if (pipeline_compiler.check_if_sources_changed(update_boids_pipeline))
         {
-            auto new_pipeline = pipeline_compiler.recreate_compute_pipeline(update_pipeline);
+            auto new_pipeline = pipeline_compiler.recreate_compute_pipeline(update_boids_pipeline);
             std::cout << new_pipeline.to_string() << std::endl;
             if (new_pipeline.is_ok())
             {
-                update_pipeline = new_pipeline.value();
-            }
-        }
-        if (pipeline_compiler.check_if_sources_changed(vector_update_pipeline))
-        {
-            auto new_pipeline = pipeline_compiler.recreate_compute_pipeline(vector_update_pipeline);
-            std::cout << new_pipeline.to_string() << std::endl;
-            if (new_pipeline.is_ok())
-            {
-                vector_update_pipeline = new_pipeline.value();
+                update_boids_pipeline = new_pipeline.value();
             }
         }
 
@@ -249,69 +304,33 @@ struct App : AppWindow<App>
             do_resize();
         }
 
-        auto swapchain_image = swapchain.acquire_next_image();
+        swapchain_image = swapchain.acquire_next_image();
 
-        auto cmd_list = device.create_command_list({
-            .debug_name = APPNAME_PREFIX("cmd_list"),
-        });
+        std::swap(old_boid_buffer, boid_buffer);
 
-        cmd_list.set_pipeline(update_pipeline);
-        cmd_list.push_constant(UpdatePush{
-            .prev_boids_buffer_id = boids_buffers[!current_buffer_i],
-            .boids_buffer_id = boids_buffers[current_buffer_i],
-            .delta_time = elapsed_s,
-        });
-        cmd_list.dispatch((MAX_BOIDS + 63) / 64);
+        task_list.execute();
+        
+        auto commands = task_list.command_lists();
 
-        cmd_list.set_pipeline(vector_update_pipeline);
-        cmd_list.push_constant(UpdatePush{
-            .prev_boids_buffer_id = boids_buffers[!current_buffer_i],
-            .boids_buffer_id = vector_field_buffer,
-            .delta_time = elapsed_s,
-        });
-        cmd_list.dispatch((MAX_VECTORS + 63) / 64);
-
-        cmd_list.pipeline_barrier({
-            .awaited_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
-            .waiting_pipeline_access = daxa::AccessConsts::VERTEX_SHADER_READ,
-        });
+        auto cmd_list = device.create_command_list({ .debug_name = "frame finish command list" });
 
         cmd_list.pipeline_barrier_image_transition({
-            .waiting_pipeline_access = daxa::AccessConsts::COLOR_ATTACHMENT_OUTPUT_WRITE,
-            .before_layout = daxa::ImageLayout::UNDEFINED,
-            .after_layout = daxa::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
-            .image_id = swapchain_image,
-        });
-
-        cmd_list.begin_renderpass({
-            .color_attachments = {{
-                .image_view = swapchain_image.default_view(),
-                .load_op = daxa::AttachmentLoadOp::CLEAR,
-                .clear_value = std::array<f32, 4>{0.2f, 0.4f, 1.0f, 1.0f},
-            }},
-            .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
-        });
-        cmd_list.set_pipeline(raster_pipeline);
-        raster_push.boids_buffer_id = boids_buffers[current_buffer_i],
-        cmd_list.push_constant(raster_push);
-        cmd_list.draw({.vertex_count = MAX_BOIDS * 3});
-        raster_push.boids_buffer_id = vector_field_buffer,
-        cmd_list.push_constant(raster_push);
-        cmd_list.draw({.vertex_count = MAX_VECTORS * 3});
-        cmd_list.end_renderpass();
-
-        cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .before_layout = daxa::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
+            .awaited_pipeline_access = task_list.last_access(task_swapchain_image),
+            .before_layout = task_list.last_layout(task_swapchain_image),
             .after_layout = daxa::ImageLayout::PRESENT_SRC,
             .image_id = swapchain_image,
+            .image_slice = device.info_image_view(swapchain_image.default_view()).slice,
         });
 
         cmd_list.complete();
 
+        commands.push_back(cmd_list);
+
+        auto binary_semaphore = device.create_binary_semaphore({.debug_name = "present semaphore"});
+
         ++cpu_framecount;
         device.submit_commands({
-            .command_lists = {std::move(cmd_list)},
+            .command_lists = commands,
             .signal_binary_semaphores = {binary_semaphore},
             .signal_timeline_semaphores = {{gpu_framecount_timeline_sema, cpu_framecount}},
         });
@@ -352,10 +371,6 @@ struct App : AppWindow<App>
         should_resize = false;
         swapchain.resize(size_x, size_y);
         aspect = static_cast<f32>(size_x) / static_cast<f32>(size_y);
-        raster_push = RasterPush{
-            .view_mat = glm::ortho(-aspect, aspect, -1.0f, 1.0f),
-            .boids_buffer_id = boids_buffers[0],
-        };
         draw();
     }
 };

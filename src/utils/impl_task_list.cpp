@@ -87,8 +87,8 @@ namespace daxa
         return "invalid";
     }
 
-    TaskInterface::TaskInterface(void * backend, TaskResources * resources)
-        : backend{backend}, resources{resources}
+    TaskInterface::TaskInterface(void * backend, TaskUsedBuffers * used_task_buffers, TaskUsedImages * used_task_images)
+        : backend{backend}, used_task_buffers{used_task_buffers}, used_task_images{used_task_images}
     {
     }
 
@@ -113,9 +113,14 @@ namespace daxa
         }
     }
 
-    auto TaskInterface::get_resources() -> TaskResources &
+    auto TaskInterface::get_used_task_buffers() -> TaskUsedBuffers &
     {
-        return *resources;
+        return *used_task_buffers;
+    }
+
+    auto TaskInterface::get_used_task_images() -> TaskUsedImages &
+    {
+        return *used_task_images;
     }
 
     auto TaskInterface::get_buffer(TaskBufferId const & task_id) -> BufferId
@@ -208,10 +213,8 @@ namespace daxa
         impl.tasks.push_back({
             .event_variant = ImplGenericTask{
                 .info = {
-                    .resources = {
-                        .buffers = info.resources.buffers,
-                        .images = info.resources.images,
-                    },
+                    .used_buffers = info.used_buffers,
+                    .used_images = info.used_images,
                     .task = info.task,
                     .debug_name = info.debug_name,
                 },
@@ -222,11 +225,10 @@ namespace daxa
     void TaskList::add_copy_image_to_image(TaskCopyImageInfo const & info)
     {
         add_task({
-            .resources = {
-                .images = {
-                    {info.src_image, daxa::TaskImageAccess::TRANSFER_READ},
-                    {info.dst_image, daxa::TaskImageAccess::TRANSFER_WRITE},
-                }},
+            .used_images = {
+                {info.src_image, daxa::TaskImageAccess::TRANSFER_READ},
+                {info.dst_image, daxa::TaskImageAccess::TRANSFER_WRITE},
+            },
             .task = [=](TaskInterface & interface)
             {
                 auto cmd = interface.get_command_list();
@@ -259,10 +261,9 @@ namespace daxa
     void TaskList::add_clear_image(TaskImageClearInfo const & info)
     {
         add_task({
-            .resources = {
-                .images = {
-                    {info.dst_image, daxa::TaskImageAccess::TRANSFER_WRITE},
-                }},
+            .used_images = {
+                {info.dst_image, daxa::TaskImageAccess::TRANSFER_WRITE},
+            },
             .task = [=](TaskInterface & interface)
             {
                 auto cmd = interface.get_command_list();
@@ -367,7 +368,7 @@ namespace daxa
             usize last_command_list_index = command_lists.size() - 1;
 
             this->pipeline_barriers(generic_task->barriers);
-            auto interface = TaskInterface(this, &generic_task->info.resources);
+            auto interface = TaskInterface(this, &generic_task->info.used_buffers, &generic_task->info.used_images);
             generic_task->info.task(interface);
             this->reuse_last_command_list = true;
 
@@ -597,13 +598,13 @@ namespace daxa
                 dot_file << "subgraph cluster_" << task_name << " {\n";
                 dot_file << "label=\"" << task_ptr->info.debug_name << "\"\n";
                 dot_file << "shape=box\nstyle=filled\ncolor=lightgray\n";
-                for (auto & [task_buffer_id, t_access] : task_ptr->info.resources.buffers)
+                for (auto & [task_buffer_id, t_access] : task_ptr->info.used_buffers)
                 {
                     ImplTaskBuffer & task_buffer = this->impl_task_buffers[task_buffer_id.index];
                     dot_file << "bnode_" << task_index << "_" << task_buffer_id.index;
                     dot_file << " [label=\"" << task_buffer.debug_name << "\", shape=box]\n";
                 }
-                for (auto & [task_image_id, t_access] : task_ptr->info.resources.images)
+                for (auto & [task_image_id, t_access] : task_ptr->info.used_images)
                 {
                     ImplTaskImage & task_buffer = this->impl_task_images[task_image_id.index];
                     dot_file << "inode_" << task_index << "_" << task_image_id.index;
@@ -668,9 +669,9 @@ namespace daxa
 
         usize last_task_index_with_barrier = std::numeric_limits<usize>::max();
 
-        auto insert_sync_for_resources = [&](TaskResources & resources, usize task_index)
+        auto insert_sync_for_resources = [&](TaskUsedBuffers & used_buffers, TaskUsedImages & used_images, usize task_index)
         {
-            for (auto & [task_buffer_id, t_access] : resources.buffers)
+            for (auto & [task_buffer_id, t_access] : used_buffers)
             {
                 ImplTaskBuffer & task_buffer = this->impl_task_buffers[task_buffer_id.index];
 
@@ -755,7 +756,7 @@ namespace daxa
                 task_buffer.latest_access_task_index = task_index;
             }
 
-            for (auto & [task_image_id, t_access] : resources.images)
+            for (auto & [task_image_id, t_access] : used_images)
             {
                 ImplTaskImage & task_image = this->impl_task_images[task_image_id.index];
 
@@ -892,7 +893,7 @@ namespace daxa
                     << "\n  {"
                     << std::endl);
 
-                insert_sync_for_resources(task_ptr->info.resources, task_index);
+                insert_sync_for_resources(task_ptr->info.used_buffers, task_ptr->info.used_images, task_index);
 
                 DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout
                                              << "  }\n"

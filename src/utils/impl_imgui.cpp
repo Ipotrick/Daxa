@@ -394,10 +394,8 @@ namespace daxa
         });
 
         temp_task_list.add_task({
-            .resources = {
-                .buffers = {{task_staging_buffer, daxa::TaskBufferAccess::TRANSFER_READ}},
-                .images = {{task_font_sheet, daxa::TaskImageAccess::TRANSFER_WRITE}},
-            },
+            .used_buffers = {{task_staging_buffer, daxa::TaskBufferAccess::TRANSFER_READ}},
+            .used_images = {{task_font_sheet, daxa::TaskImageAccess::TRANSFER_WRITE}},
             .task = [&](TaskInterface interf)
             {
                 auto cmd_list = interf.get_command_list();
