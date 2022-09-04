@@ -1,6 +1,7 @@
 #include "impl_pipeline.hpp"
 #include "impl_swapchain.hpp"
 #include "impl_device.hpp"
+#include <iostream>
 
 static constexpr TBuiltInResource DAXA_DEFAULT_BUILTIN_RESOURCE = {
     .maxLights = 32,
