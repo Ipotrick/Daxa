@@ -13,8 +13,8 @@
 struct RasterPush
 {
     glm::mat4 view_mat = {};
-    glm::vec3 chunk_pos = {};
-    daxa::BufferId vertex_buffer_id = {};
+    f32vec3 chunk_pos = {};
+    daxa::BufferId face_buffer_id = {};
     daxa::ImageId texture_array_id = {};
     daxa::SamplerId sampler_id = {};
     u32 mode = {};

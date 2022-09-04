@@ -31,10 +31,10 @@ struct RasterInput
 
 struct RasterPush
 {
-    glm::vec3 chunk_pos = {};
+    f32vec3 chunk_pos = {};
     u32 mode = {};
     daxa::BufferId input_buffer_id = {};
-    daxa::BufferId vertex_buffer_id = {};
+    daxa::BufferId face_buffer_id = {};
 };
 
 #include <0_common/voxels.hpp>

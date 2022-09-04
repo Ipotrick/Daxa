@@ -1,13 +1,17 @@
-#include <shared.inl>
-
-[[vk::push_constant]] const ComputePush p;
+#include DAXA_SHADER_INCLUDE
+struct Push
+{
+    ImageViewId image_id;
+    u32vec2 frame_dim;
+};
+[[vk::push_constant]] const Push p;
 
 // clang-format off
-[numthreads(8, 8, 1)]
-void main(u32vec3 pixel_i : SV_DispatchThreadID)
+[numthreads(8, 8, 1)] void main(u32vec3 pixel_i : SV_DispatchThreadID)
 // clang-format on
 {
     RWTexture2D<f32vec4> render_image = daxa::get_RWTexture2D<f32vec4>(p.image_id);
+
     if (pixel_i.x >= p.frame_dim.x || pixel_i.y >= p.frame_dim.y)
         return;
 
