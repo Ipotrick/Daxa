@@ -95,11 +95,8 @@ namespace daxa
     {
     };
 
-    struct TaskResources
-    {
-        std::vector<std::tuple<TaskBufferId, TaskBufferAccess>> buffers = {};
-        std::vector<std::tuple<TaskImageId, TaskImageAccess>> images = {};
-    };
+    using TaskUsedBuffers = std::vector<std::tuple<TaskBufferId, TaskBufferAccess>>;
+    using TaskUsedImages = std::vector<std::tuple<TaskImageId, TaskImageAccess>>;
 
     struct TaskList;
     struct Device;
@@ -108,7 +105,8 @@ namespace daxa
     {
         auto get_device() -> Device &;
         auto get_command_list() -> CommandList;
-        auto get_resources() -> TaskResources &;
+        auto get_used_task_buffers() -> TaskUsedBuffers &;
+        auto get_used_task_images() -> TaskUsedImages &;
         auto get_buffer(TaskBufferId const & task_id) -> BufferId;
         auto get_image(TaskImageId const & task_id) -> ImageId;
         auto get_image_view(TaskImageId const & task_id) -> ImageViewId;
@@ -116,9 +114,10 @@ namespace daxa
 
       private:
         friend struct TaskRuntime;
-        TaskInterface(void * backend, TaskResources * resources);
+        TaskInterface(void * backend, TaskUsedBuffers * used_buffers, TaskUsedImages * used_images);
         void * backend = {};
-        TaskResources * resources = {};
+        TaskUsedBuffers * used_task_buffers = {};
+        TaskUsedImages * used_task_images = {};
     };
 
     using TaskCallback = std::function<void(TaskInterface &)>;
@@ -143,7 +142,8 @@ namespace daxa
 
     struct TaskInfo
     {
-        TaskResources resources = {};
+        TaskUsedBuffers used_buffers = {};
+        TaskUsedImages used_images = {};
         TaskCallback task = {};
         std::string debug_name = {};
     };
