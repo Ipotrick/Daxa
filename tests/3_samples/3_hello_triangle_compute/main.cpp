@@ -6,12 +6,7 @@
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
 
 using namespace daxa::types;
-
-struct ComputePush
-{
-    daxa::ImageViewId image_id;
-    u32 frame_dim_x, frame_dim_y;
-};
+#include "shaders/shared.inl"
 
 struct App : AppWindow<App>
 {
@@ -116,8 +111,7 @@ struct App : AppWindow<App>
         cmd_list.set_pipeline(compute_pipeline);
         cmd_list.push_constant(ComputePush{
             .image_id = render_image.default_view(),
-            .frame_dim_x = size_x,
-            .frame_dim_y = size_y,
+            .frame_dim = {size_x, size_y},
         });
         cmd_list.dispatch((size_x + 7) / 8, (size_y + 7) / 8);
 

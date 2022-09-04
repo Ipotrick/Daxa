@@ -10,15 +10,8 @@
 #define APPNAME "Daxa Sample: Raster"
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
 
-struct RasterPush
-{
-    glm::mat4 view_mat = {};
-    glm::vec3 chunk_pos = {};
-    daxa::BufferId vertex_buffer_id = {};
-    daxa::ImageId texture_array_id = {};
-    daxa::SamplerId sampler_id = {};
-    u32 mode = {};
-};
+using namespace daxa::types;
+#include "shaders/shared.inl"
 
 #include <0_common/voxels.hpp>
 
@@ -67,8 +60,8 @@ struct App : AppWindow<App>
     });
     // clang-format off
     daxa::RasterPipeline raster_pipeline = pipeline_compiler.create_raster_pipeline({
-        .vertex_shader_info = {.source = daxa::ShaderFile{"vert.hlsl"}},
-        .fragment_shader_info = {.source = daxa::ShaderFile{"frag.hlsl"}},
+        .vertex_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .compile_options = {.entry_point = "vs_main"}},
+        .fragment_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .compile_options = {.entry_point = "fs_main"}},
         .color_attachments = {{.format = swapchain.get_format(), .blend = {.blend_enable = true, .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA, .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA}}},
         .depth_test = {
             .depth_attachment_format = daxa::Format::D32_SFLOAT,
@@ -78,7 +71,7 @@ struct App : AppWindow<App>
         .raster = {
             .face_culling = daxa::FaceCullFlagBits::BACK_BIT,
         },
-        .push_constant_size = sizeof(RasterPush),
+        .push_constant_size = sizeof(DrawPush),
         .debug_name = APPNAME_PREFIX("raster_pipeline"),
     }).value();
     // clang-format on
@@ -188,9 +181,10 @@ struct App : AppWindow<App>
         });
 
         cmd_list.set_pipeline(raster_pipeline);
-        auto push = RasterPush{
-            .view_mat = player.camera.get_vp(),
-            .texture_array_id = renderable_world.atlas_texture_array,
+        auto mat = player.camera.get_vp();
+        auto push = DrawPush{
+            .view_mat = *reinterpret_cast<f32mat4x4*>(&mat),
+            .texture_array_id = renderable_world.atlas_texture_array.default_view(),
             .sampler_id = renderable_world.atlas_sampler,
         };
         renderable_world.draw(cmd_list, push);

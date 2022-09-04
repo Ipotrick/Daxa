@@ -1,6 +1,6 @@
 #pragma once
 
-#include DAXA_SHADER_INCLUDE
+#include <shared.inl>
 
 #include "utils/rand.hlsl"
 
@@ -61,7 +61,15 @@ enum class BlockFace : u32
     Cross_B,
 };
 
-struct Vertex
+struct VertexOutput
+{
+    f32vec4 frag_pos : SV_POSITION;
+    f32vec3 nrm : NORMAL0;
+    f32vec2 uv : TEXCOORD0;
+    u32 tex_id : DATA0;
+};
+
+struct UnpackedVertex
 {
     f32vec3 block_pos;
     f32vec3 pos;
@@ -153,14 +161,6 @@ struct Vertex
     }
 };
 
-struct VertexOutput
-{
-    f32vec4 frag_pos : SV_POSITION;
-    f32vec3 nrm : NORMAL0;
-    f32vec2 uv : TEXCOORD0;
-    u32 tex_id : DATA0;
-};
-
 u32 tile_texture_index(BlockID block_id, BlockFace face)
 {
     // clang-format off
@@ -211,35 +211,28 @@ u32 tile_texture_index(BlockID block_id, BlockFace face)
     // clang-format on
 }
 
-struct FaceBuffer
+UnpackedVertex get_vertex(StructuredBuffer<FaceBuffer> face_buffer, u32 vert_i)
 {
-    u32 data[32 * 32 * 32 * 6];
+    u32 data_index = vert_i / 6;
+    u32 data_instance = vert_i - data_index * 6;
 
-    Vertex get_vertex(u32 vert_i)
-    {
-        u32 data_index = vert_i / 6;
-        u32 data_instance = vert_i - data_index * 6;
+    u32 vert_data = face_buffer[0].data[data_index];
 
-        u32 vert_data = data[data_index];
+    UnpackedVertex result;
 
-        Vertex result;
+    result.block_pos = f32vec3(
+        (vert_data >> 0) & 0x1f,
+        (vert_data >> 5) & 0x1f,
+        (vert_data >> 10) & 0x1f);
+    result.pos = result.block_pos;
+    result.uv = instance_offsets[data_instance];
+    result.block_id = (BlockID)((vert_data >> 18) & 0x3fff);
+    result.block_face = (BlockFace)((vert_data >> 15) & 0x7);
 
-        result.block_pos = f32vec3(
-            (vert_data >> 0) & 0x1f,
-            (vert_data >> 5) & 0x1f,
-            (vert_data >> 10) & 0x1f);
-        result.pos = result.block_pos;
-        result.uv = instance_offsets[data_instance];
-        result.block_id = (BlockID)((vert_data >> 18) & 0x3fff);
-        result.block_face = (BlockFace)((vert_data >> 15) & 0x7);
+    result.vert_id = data_instance;
+    result.correct_pos(data_index);
+    result.tex_id = tile_texture_index(result.block_id, result.block_face);
+    result.correct_uv();
 
-        result.vert_id = data_instance;
-        result.correct_pos(data_index);
-        result.tex_id = tile_texture_index(result.block_id, result.block_face);
-        result.correct_uv();
-
-        return result;
-    }
-};
-
-DAXA_DEFINE_GET_STRUCTURED_BUFFER(FaceBuffer);
+    return result;
+}
