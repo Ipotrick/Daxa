@@ -912,6 +912,11 @@ namespace daxa
         preamble += "#define _DAXA_GLSL 1\n";
         preamble += "#define DAXA_SHADER_INCLUDE <daxa/daxa.inl>\n";
         preamble += "#extension GL_GOOGLE_include_directive : enable\n";
+        preamble += "#extension GL_EXT_nonuniform_qualifier : enable\n";
+        if (this->impl_device.as<ImplDevice>()->info.use_scalar_layout)
+        {
+            preamble += "#extension GL_EXT_scalar_block_layout : require\n";
+        }
         for (auto const & shader_define : shader_info.compile_options.defines)
         {
             if (shader_define.value.size() > 0)
@@ -1101,10 +1106,6 @@ namespace daxa
         {
             spv[i] = static_cast<u32 *>(shaderobj->GetBufferPointer())[i];
         }
-
-        // std::ofstream spv_output{"compute.spv", std::ios::binary};
-        // spv_output.write((char const *)spv.data(), spv.size() * sizeof(spv[0]));
-
         return {spv};
 #else
         return ResultErr{.message = "Asked for Dxc compilation without enabling Dxc"};

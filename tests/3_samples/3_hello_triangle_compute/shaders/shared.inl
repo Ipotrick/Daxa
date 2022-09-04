@@ -4,6 +4,6 @@
 
 struct ComputePush
 {
-    ImageViewId image_id;
     u32vec2 frame_dim;
+    ImageViewId image_id;
 };

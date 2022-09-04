@@ -1,8 +1,5 @@
 #pragma once
 
-#extension GL_EXT_nonuniform_qualifier : enable
-#extension GL_EXT_scalar_block_layout : enable
-
 #define b32 bool
 #define i32 int
 #define u32 uint
