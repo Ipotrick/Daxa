@@ -63,8 +63,7 @@ void main()
     col *= 1.0 / f32(SUBSAMPLES * SUBSAMPLES);
 
     imageStore(
-        daxa_GetRWImage(image2D, rgba32f, daxa_push.image_id), 
-        i32vec2(pixel_i.xy), 
-        f32vec4(col, 1)
-    );
+        daxa_GetRWImage(image2D, rgba32f, daxa_push.image_id),
+        i32vec2(pixel_i.xy),
+        f32vec4(col, 1));
 }
