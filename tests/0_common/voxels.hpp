@@ -301,23 +301,23 @@ struct RenderableChunk
 
     void update_chunk_mesh(daxa::CommandList & cmd_list);
 
-    void draw(daxa::CommandList & cmd_list, RasterPush push)
+    void draw(daxa::CommandList & cmd_list, auto push)
     {
         if (face_n > 0)
         {
-            push.chunk_pos = voxel_chunk.pos;
-            push.vertex_buffer_id = face_buffer;
+            push.chunk_pos = f32vec3{voxel_chunk.pos.x, voxel_chunk.pos.y, voxel_chunk.pos.z};
+            push.face_buffer_id = face_buffer;
             push.mode = 0;
             cmd_list.push_constant(push);
             cmd_list.draw({.vertex_count = face_n * 6});
         }
     }
-    void draw_water(daxa::CommandList & cmd_list, RasterPush push)
+    void draw_water(daxa::CommandList & cmd_list, auto push)
     {
         if (water_face_n > 0)
         {
-            push.chunk_pos = voxel_chunk.pos;
-            push.vertex_buffer_id = face_buffer;
+            push.chunk_pos = f32vec3{voxel_chunk.pos.x, voxel_chunk.pos.y, voxel_chunk.pos.z};
+            push.face_buffer_id = face_buffer;
             push.mode = 1;
             cmd_list.push_constant(push);
             cmd_list.draw({.vertex_count = water_face_n * 6});
@@ -387,7 +387,7 @@ struct RenderableVoxelWorld
         device.destroy_sampler(atlas_sampler);
     }
 
-    void draw(daxa::CommandList & cmd_list, RasterPush push)
+    void draw(daxa::CommandList & cmd_list, auto push)
     {
         for (auto & chunk : chunks)
             chunk->draw(cmd_list, push);
