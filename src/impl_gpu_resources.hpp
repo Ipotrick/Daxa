@@ -10,6 +10,7 @@ namespace daxa
     static inline constexpr u32 STORAGE_IMAGE_BINDING = 1;
     static inline constexpr u32 SAMPLED_IMAGE_BINDING = 2;
     static inline constexpr u32 SAMPLER_BINDING = 3;
+    static inline constexpr u32 BUFFER_DEVICE_ADDRESS_BUFFER_BINDING = 4;
 
     struct ImplBufferSlot
     {
@@ -181,7 +182,7 @@ namespace daxa
         // The first size is 0 word, second is 1 word, all others are a power of two (maximum is MAX_PUSH_CONSTANT_BYTE_SIZE).
         std::array<VkPipelineLayout, PIPELINE_LAYOUT_COUNT> pipeline_layouts = {};
 
-        void initialize(usize max_buffers, usize max_images, usize max_samplers, VkDevice device);
+        void initialize(usize max_buffers, usize max_images, usize max_samplers, VkDevice device, VkBuffer device_address_buffer);
         void cleanup(VkDevice device);
     };
 

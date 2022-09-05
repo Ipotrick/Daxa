@@ -498,14 +498,17 @@ namespace daxa
         };
         vkCreateDevice(a_physical_device, &device_ci, nullptr, &this->vk_device);
         volkLoadDevice(this->vk_device);
-        u32 max_buffers = this->vk_info.limits.max_descriptor_set_storage_buffers;
-        u32 max_images = std::min(this->vk_info.limits.max_descriptor_set_sampled_images, this->vk_info.limits.max_descriptor_set_storage_images);
-        u32 max_samplers = this->vk_info.limits.max_descriptor_set_samplers;
+        u32 max_buffers = std::min(this->vk_info.limits.max_descriptor_set_storage_buffers, 1'000u);
+        u32 max_images = std::min(std::min(this->vk_info.limits.max_descriptor_set_sampled_images, this->vk_info.limits.max_descriptor_set_storage_images), 1'000u);
+        u32 max_samplers = std::min(this->vk_info.limits.max_descriptor_set_samplers, 1'000u);
+
         gpu_table.initialize(
-            std::min({max_buffers, 1'000u}),
-            std::min({max_images, 1'000u}),
-            std::min({max_samplers, 1'000u}),
-            vk_device);
+            max_buffers,
+            max_images,
+            max_samplers,
+            vk_device,
+            buffer_device_address_buffer
+        );
 
         vkGetDeviceQueue(this->vk_device, this->main_queue_family_index, 0, &this->main_queue_vk_queue);
 
@@ -565,6 +568,34 @@ namespace daxa
         };
         vkCreateSampler(vk_device, &vk_sampler_create_info, nullptr, &this->vk_dummy_sampler);
 
+        
+        VkBufferUsageFlags usageFlags =
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+
+        VkBufferCreateInfo vk_buffer_create_info{
+            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = {},
+            .size = static_cast<VkDeviceSize>(max_buffers * sizeof(u64)),
+            .usage = usageFlags,
+            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+            .queueFamilyIndexCount = 1,
+            .pQueueFamilyIndices = &this->main_queue_family_index,
+        };
+
+        VmaAllocationCreateInfo vma_allocation_create_info{
+            .flags = static_cast<VmaAllocationCreateFlags>(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT),
+            .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+            .memoryTypeBits = std::numeric_limits<u32>::max(),
+            .pool = nullptr,
+            .pUserData = nullptr,
+            .priority = 0.5f,
+        };
+
+        vmaCreateBuffer(this->vma_allocator, &vk_buffer_create_info, &vma_allocation_create_info, &buffer_device_address_buffer, &buffer_device_address_buffer_allocation, nullptr);
+
         if (this->impl_ctx.as<ImplContext>()->enable_debug_names && this->info.debug_name.size() > 0)
         {
             auto device_name = this->info.debug_name + std::string(" [Daxa Device]");
@@ -577,7 +608,7 @@ namespace daxa
             };
             vkSetDebugUtilsObjectNameEXT(vk_device, &device_name_info);
 
-            auto queue_name = this->info.debug_name + std::string(" [Daxa Queue]");
+            auto queue_name = this->info.debug_name + std::string(" [Daxa Device Queue]");
             VkDebugUtilsObjectNameInfoEXT device_main_queue_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
@@ -587,7 +618,7 @@ namespace daxa
             };
             vkSetDebugUtilsObjectNameEXT(vk_device, &device_main_queue_name_info);
 
-            auto semaphore_name = this->info.debug_name + std::string(" [Daxa Semaphore]");
+            auto semaphore_name = this->info.debug_name + std::string(" [Daxa Device TimelineSemaphore]");
             VkDebugUtilsObjectNameInfoEXT device_main_queue_timeline_semaphore_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
@@ -596,6 +627,16 @@ namespace daxa
                 .pObjectName = semaphore_name.c_str(),
             };
             vkSetDebugUtilsObjectNameEXT(vk_device, &device_main_queue_timeline_semaphore_name_info);
+
+            auto buffer_name = this->info.debug_name + std::string(" [Daxa Device buffer device address buffer]");
+            VkDebugUtilsObjectNameInfoEXT device_main_queue_timeline_buffer_device_address_buffer_name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_BUFFER,
+                .objectHandle = reinterpret_cast<uint64_t>(this->buffer_device_address_buffer),
+                .pObjectName = buffer_name.c_str(),
+            };
+            vkSetDebugUtilsObjectNameEXT(vk_device, &device_main_queue_timeline_buffer_device_address_buffer_name_info);
         }
     }
 
@@ -723,6 +764,11 @@ namespace daxa
         };
 
         ret.device_address = vkGetBufferDeviceAddress(vk_device, &vk_buffer_device_address_info);
+
+        u64* mem = nullptr;
+        vmaMapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation, reinterpret_cast<void**>(&mem));
+        mem[id.index] = ret.device_address;
+        vmaUnmapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation);
 
         if (this->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
         {
@@ -1061,6 +1107,11 @@ namespace daxa
     {
         ImplBufferSlot & buffer_slot = this->gpu_table.buffer_slots.dereference_id(id);
 
+        u64* mem = nullptr;
+        vmaMapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation, reinterpret_cast<void**>(&mem));
+        mem[id.index] = 0;
+        vmaUnmapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation);
+
         write_descriptor_set_buffer(this->vk_device, this->gpu_table.vk_descriptor_set, VK_NULL_HANDLE, 0, VK_WHOLE_SIZE, id.index);
 
         vmaDestroyBuffer(this->vma_allocator, buffer_slot.vk_buffer, buffer_slot.vma_allocation);
@@ -1123,6 +1174,8 @@ namespace daxa
 
         binary_semaphore_recyclable_list.clear();
         command_list_recyclable_list.clear();
+
+        vmaDestroyBuffer(this->vma_allocator, this->buffer_device_address_buffer, this->buffer_device_address_buffer_allocation);
 
         vmaDestroyAllocator(this->vma_allocator);
         this->gpu_table.cleanup(this->vk_device);

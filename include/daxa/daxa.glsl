@@ -52,6 +52,12 @@ struct SamplerId
     u32 sampler_id_value;
 };
 
+layout(scalar, binding = DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, set = 0) readonly buffer DaxaBufferDeviceAddressBuffer
+{
+    u64 addresses[1000];
+} 
+daxaBufferDeviceAddressBuffer;
+
 #define DAXA_DECL_BUFFER_STRUCT(NAME, BODY)                                                                             \
     struct NAME BODY;                                                                                                   \
     layout(scalar, binding = DAXA_STORAGE_BUFFER_BINDING, set = 0) buffer daxa_BufferTableObject##NAME                  \
@@ -86,8 +92,10 @@ layout(scalar, push_constant) uniform _DAXA_PUSH_CONSTANT\
 #define CoherentBufferRef(STRUCT_TYPE) STRUCT_TYPE##WrappedBufferRef
 #define WrappedCoherentBufferRef(STRUCT_TYPE) STRUCT_TYPE##CoherentWrappedBufferRef
 
-#define daxa_address_of_bufferref(buffer_reference) u64(buffer_reference)
-#define daxa_cast_address_to_bufferref(STRUCT_TYPE, REFERENCE_TYPE, address) STRUCT_TYPE##REFERENCE_TYPE(address)
+#define daxa_buffer_ref_to_address(buffer_reference) u64(buffer_reference)
+#define daxa_buffer_id_to_address(id) daxaBufferDeviceAddressBuffer.addresses[(DAXA_ID_INDEX_MASK & id.buffer_id_value)]
+#define daxa_buffer_address_to_ref(STRUCT_TYPE, REFERENCE_TYPE, address) STRUCT_TYPE##REFERENCE_TYPE(address)
+#define daxa_buffer_id_to_ref(STRUCT_TYPE, REFERENCE_TYPE, id) daxa_buffer_address_to_ref(STRUCT_TYPE, REFERENCE_TYPE, daxa_buffer_id_to_address(id))
 
 #define _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, IMAGE_FORMAT)                                                                          \
     layout(binding = DAXA_STORAGE_IMAGE_BINDING, set = 0, IMAGE_FORMAT) uniform IMAGE_TYPE daxa_ReadWriteImageTable_##IMAGE_FORMAT##_##IMAGE_TYPE[]; \
@@ -219,7 +227,6 @@ DAXA_REGISTER_SAMPLER_TYPE(samplerCubeShadow)
 DAXA_REGISTER_SAMPLER_TYPE(sampler1DArrayShadow)
 DAXA_REGISTER_SAMPLER_TYPE(sampler2DArrayShadow)
 
-#define daxa_access_buffer_as(STRUCT_TYPE, buffer_id) daxa_BufferTable##STRUCT_TYPE[(DAXA_ID_INDEX_MASK & buffer_id.buffer_id_value)].value
 #define daxa_GetCoherentBuffer(STRUCT_TYPE, buffer_id) daxa_CoherentBufferTable##STRUCT_TYPE[(DAXA_ID_INDEX_MASK & buffer_id.buffer_id_value)].value
 #define daxa_GetRWImage(IMAGE_TYPE, IMAGE_FORMAT, image_view_id) daxa_ReadWriteImageTable_##IMAGE_FORMAT##_##IMAGE_TYPE[(DAXA_ID_INDEX_MASK & image_view_id.image_view_id_value)]
 #define daxa_GetCoherentRWImage(IMAGE_TYPE, FORMAT, image_view_id) daxa_CoherentReadWriteImageTable_##IMAGE_FORMAT##_##IMAGE_TYPE[(DAXA_ID_INDEX_MASK & image_view_id.image_view_id_value)]

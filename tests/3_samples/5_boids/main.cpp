@@ -100,6 +100,19 @@ struct App : AppWindow<App>
     daxa::ImageId swapchain_image = {};
     daxa::TaskImageId task_swapchain_image = {};
 
+    // GpuOutput gpu_output = {};
+    // BufferId gpu_output_buffer = device.create_buffer({
+    //     .size = sizeof(GpuOutput),
+    //     .debug_name = "gpu_output_buffer",
+    // });
+    // BufferId staging_gpu_output_buffer = device.create_buffer({
+    //     .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+    //     .size = sizeof(GpuOutput),
+    //     .debug_name = "staging_gpu_output_buffer",
+    // });
+    // daxa::TaskBufferId task_gpu_output_buffer;
+    // daxa::TaskBufferId task_staging_gpu_output_buffer;
+
     App() : AppWindow<App>(APPNAME)
     {
         auto cmd_list = device.create_command_list({ .debug_name = APPNAME_PREFIX("boid buffer init commands") });
@@ -150,6 +163,9 @@ struct App : AppWindow<App>
     {
         device.destroy_buffer(boid_buffer);
         device.destroy_buffer(old_boid_buffer);
+
+        // device.destroy_buffer(gpu_output_buffer);
+        // device.destroy_buffer(staging_gpu_output_buffer);
     }
 
     bool update()
@@ -178,7 +194,7 @@ struct App : AppWindow<App>
         cmd_list.set_pipeline(update_boids_pipeline);
 
         cmd_list.push_constant(UpdateBoidsPushConstant{
-            .boids_buffer = device.buffer_reference(boid_buffer_id),
+            .boids_buffer_id = boid_buffer_id,
             .old_boids_buffer = device.buffer_reference(old_boid_buffer_id),
         });
 
@@ -232,6 +248,15 @@ struct App : AppWindow<App>
             { return old_boid_buffer; },
             .debug_name = "task old boid buffer",
         });
+
+        // task_gpu_output_buffer = new_task_list.create_task_buffer({
+        //     .fetch_callback = [this]() { return gpu_output_buffer; },
+        //     .debug_name = "task_gpu_output_buffer",
+        // });
+        // task_staging_gpu_output_buffer = new_task_list.create_task_buffer({
+        //     .fetch_callback = [this]() { return staging_gpu_output_buffer; },
+        //     .debug_name = "task_staging_gpu_output_buffer",
+        // });
 
         task_swapchain_image = task_list.create_task_image({
             .fetch_callback = [=]()
