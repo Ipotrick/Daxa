@@ -2,7 +2,7 @@
 
 #include <shared.inl>
 
-DAXA_PUSH_CONSTANT(DrawPushConstant)
+DAXA_USE_PUSH_CONSTANT(DrawPushConstant)
 
 layout(location = 0) out vec4 color;
 

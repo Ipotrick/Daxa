@@ -9,7 +9,7 @@ DAXA_PUSH_CONSTANT(DrawPush)
 layout(location = 0) out f32vec4 v_col;
 void main()
 {
-    DrawVertexBuffer vertex_buffer = daxa_GetBuffer(DrawVertexBuffer, daxa_push.vertex_buffer_id);
+    DrawVertexBuffer vertex_buffer = daxa_access_buffer_as(DrawVertexBuffer, daxa_push.vertex_buffer_id);
     DrawVertex vert = vertex_buffer.verts[gl_VertexIndex];
     gl_Position = f32vec4(vert.pos.xy, 0, 1);
     v_col = vert.col;

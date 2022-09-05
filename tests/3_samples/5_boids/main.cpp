@@ -82,45 +82,44 @@ struct App : AppWindow<App>
     f32 aspect = static_cast<f32>(size_x) / static_cast<f32>(size_y);
 
     using Clock = std::chrono::high_resolution_clock;
-    Clock::time_point start = Clock::now(), prev_time = start;
+    Clock::time_point start = Clock::now();
+    Clock::time_point prev_time = start;
 
     daxa::TaskList task_list = record_tasks();
 
     daxa::BufferId boid_buffer = device.create_buffer({
-        .size = sizeof(BoidBuffer),
+        .size = sizeof(Boids),
         .debug_name = APPNAME_PREFIX("boid_buffer"),
     });
 
     daxa::BufferId old_boid_buffer = device.create_buffer({
-        .size = sizeof(BoidBuffer),
+        .size = sizeof(Boids),
         .debug_name = APPNAME_PREFIX("old_boid_buffer"),
     });
 
     daxa::ImageId swapchain_image = {};
     daxa::TaskImageId task_swapchain_image = {};
 
-    f32 elapsed_s = 1.0f;
-
     App() : AppWindow<App>(APPNAME)
     {
         auto cmd_list = device.create_command_list({ .debug_name = APPNAME_PREFIX("boid buffer init commands") });
 
         auto upload_buffer_id = device.create_buffer({
-            .size = sizeof(BoidBuffer),
+            .size = sizeof(Boids),
             .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
             .debug_name = APPNAME_PREFIX("voids buffer init staging buffer"),
         });
         cmd_list.destroy_buffer_deferred(upload_buffer_id);
 
-        BoidBuffer* ptr = device.map_memory_as<BoidBuffer>(upload_buffer_id);
+        Boids* ptr = device.map_memory_as<Boids>(upload_buffer_id);
 
         for (usize i = 0; i < MAX_BOIDS; ++i)
         {
-            ptr->boids[i].position.x = ((rand() % 1000) * (1.0f / 500.0f)) - 1.0f;
-            ptr->boids[i].position.y = ((rand() % 1000) * (1.0f / 500.0f)) - 1.0f;
-            ptr->boids[i].direction.x = 0.0f;
-            ptr->boids[i].direction.y = 1.0f;
-            ptr->boids[i].speed = 1.0f;
+            ptr->boids[i].position.x = (rand() % ((FIELD_SIZE) * 100) / 100.0f);
+            ptr->boids[i].position.y = (rand() % ((FIELD_SIZE) * 100) / 100.0f);
+            f32 angle = rand() % 3600 * 0.1f;
+            ptr->boids[i].direction.x = std::cos(angle);
+            ptr->boids[i].direction.y = std::sin(angle);
         }
 
         device.unmap_memory(upload_buffer_id);
@@ -128,13 +127,13 @@ struct App : AppWindow<App>
         cmd_list.copy_buffer_to_buffer({
             .src_buffer = upload_buffer_id,
             .dst_buffer = boid_buffer,
-            .size = sizeof(BoidBuffer),
+            .size = sizeof(Boids),
         });
 
         cmd_list.copy_buffer_to_buffer({
             .src_buffer = upload_buffer_id,
             .dst_buffer = old_boid_buffer,
-            .size = sizeof(BoidBuffer),
+            .size = sizeof(Boids),
         });
 
         cmd_list.pipeline_barrier({
@@ -179,9 +178,8 @@ struct App : AppWindow<App>
         cmd_list.set_pipeline(update_boids_pipeline);
 
         cmd_list.push_constant(UpdateBoidsPushConstant{
-            .boid_buffer_id = boid_buffer_id,
-            .old_boid_buffer_id = old_boid_buffer_id,
-            .delta_time = elapsed_s,
+            .boids_buffer = device.buffer_reference(boid_buffer_id),
+            .old_boids_buffer = device.buffer_reference(old_boid_buffer_id),
         });
 
         cmd_list.dispatch((MAX_BOIDS + 63) / 64, 1, 1);
@@ -207,7 +205,11 @@ struct App : AppWindow<App>
         });
 
         cmd_list.push_constant(DrawPushConstant{
-            .boid_buffer_id = boid_buffer_id,
+            .boids_buffer = device.buffer_reference(boid_buffer_id),
+            .axis_scaling = {
+                std::min(1.0f, static_cast<f32>(size_y) / static_cast<f32>(size_x)),
+                std::min(1.0f, static_cast<f32>(size_x) / static_cast<f32>(size_y)),
+            }
         });
 
         cmd_list.draw({.vertex_count = 3 * MAX_BOIDS });
@@ -277,7 +279,9 @@ struct App : AppWindow<App>
     void draw()
     {
         auto now = Clock::now();
-        elapsed_s = std::chrono::duration<f32>(now - prev_time).count();
+        while(std::chrono::duration<f32>(now - prev_time).count() < SIMULATION_DELTA_TIME_S) {
+            now = Clock::now();
+        }
         prev_time = now;
 
         if (pipeline_compiler.check_if_sources_changed(draw_pipeline))

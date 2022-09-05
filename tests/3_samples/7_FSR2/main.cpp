@@ -413,10 +413,8 @@ struct App : AppWindow<App>
         });
 
         new_task_list.add_task({
-            .resources = {
-                .buffers = {
-                    {task_staging_raster_input_buffer, daxa::TaskBufferAccess::HOST_TRANSFER_WRITE},
-                },
+            .used_buffers = {
+                {task_staging_raster_input_buffer, daxa::TaskBufferAccess::HOST_TRANSFER_WRITE},
             },
             .task = [this](daxa::TaskInterface /* interf */)
             {
@@ -442,11 +440,9 @@ struct App : AppWindow<App>
             .debug_name = APPNAME_PREFIX("Input MemMap"),
         });
         new_task_list.add_task({
-            .resources = {
-                .buffers = {
-                    {task_raster_input_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE},
-                    {task_staging_raster_input_buffer, daxa::TaskBufferAccess::TRANSFER_READ},
-                },
+            .used_buffers = {
+                {task_raster_input_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE},
+                {task_staging_raster_input_buffer, daxa::TaskBufferAccess::TRANSFER_READ},
             },
             .task = [this](daxa::TaskInterface interf)
             {
@@ -461,15 +457,13 @@ struct App : AppWindow<App>
         });
 
         new_task_list.add_task({
-            .resources = {
-                .buffers = {
-                    {task_raster_input_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
-                },
-                .images = {
-                    {task_color_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
-                    {task_motion_vectors_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
-                    {task_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT},
-                },
+            .used_buffers = {
+                {task_raster_input_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
+            },
+            .used_images = {
+                {task_color_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
+                {task_motion_vectors_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
+                {task_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT},
             },
             .task = [this](daxa::TaskInterface interf)
             {
@@ -503,11 +497,9 @@ struct App : AppWindow<App>
         });
 
         new_task_list.add_task({
-            .resources = {
-                .images = {
-                    {task_color_image, daxa::TaskImageAccess::TRANSFER_READ},
-                    {task_display_image, daxa::TaskImageAccess::TRANSFER_WRITE},
-                },
+            .used_images = {
+                {task_color_image, daxa::TaskImageAccess::TRANSFER_READ},
+                {task_display_image, daxa::TaskImageAccess::TRANSFER_WRITE},
             },
             .task = [this](daxa::TaskInterface interf)
             {
@@ -530,13 +522,11 @@ struct App : AppWindow<App>
         });
 
         new_task_list.add_task({
-            .resources = {
-                .images = {
-                    {task_color_image, daxa::TaskImageAccess::SHADER_READ_ONLY},
-                    {task_motion_vectors_image, daxa::TaskImageAccess::SHADER_READ_ONLY},
-                    {task_depth_image, daxa::TaskImageAccess::SHADER_READ_ONLY},
-                    {task_display_image, daxa::TaskImageAccess::SHADER_WRITE_ONLY},
-                },
+            .used_images = {
+                {task_color_image, daxa::TaskImageAccess::SHADER_READ_ONLY},
+                {task_motion_vectors_image, daxa::TaskImageAccess::SHADER_READ_ONLY},
+                {task_depth_image, daxa::TaskImageAccess::SHADER_READ_ONLY},
+                {task_display_image, daxa::TaskImageAccess::SHADER_WRITE_ONLY},
             },
             .task = [this](daxa::TaskInterface interf)
             {
@@ -567,11 +557,9 @@ struct App : AppWindow<App>
         });
 
         new_task_list.add_task({
-            .resources = {
-                .images = {
-                    {task_display_image, daxa::TaskImageAccess::TRANSFER_READ},
-                    {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE},
-                },
+            .used_images = {
+                {task_display_image, daxa::TaskImageAccess::TRANSFER_READ},
+                {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE},
             },
             .task = [this](daxa::TaskInterface interf)
             {
@@ -591,10 +579,8 @@ struct App : AppWindow<App>
         });
 
         new_task_list.add_task({
-            .resources = {
-                .images = {
-                    {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
-                },
+            .used_images = {
+                {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
             },
             .task = [this](daxa::TaskInterface interf)
             {

@@ -16,4 +16,4 @@ struct FaceBuffer
 {
     u32 data[32 * 32 * 32 * 6];
 };
-DAXA_REGISTER_STRUCT_GET_BUFFER(FaceBuffer)
+DAXA_REGISTER_STRUCT(FaceBuffer)
