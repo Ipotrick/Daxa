@@ -118,8 +118,8 @@ struct App : AppWindow<App>
         auto cmd_list = device.create_command_list({ .debug_name = APPNAME_PREFIX("boid buffer init commands") });
 
         auto upload_buffer_id = device.create_buffer({
-            .size = sizeof(Boids),
             .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
+            .size = sizeof(Boids),
             .debug_name = APPNAME_PREFIX("voids buffer init staging buffer"),
         });
         cmd_list.destroy_buffer_deferred(upload_buffer_id);
@@ -235,36 +235,27 @@ struct App : AppWindow<App>
 
     auto record_tasks() -> daxa::TaskList
     {
-        daxa::TaskList task_list = daxa::TaskList({.device = device, .debug_name = APPNAME_PREFIX("main task list")});
+        daxa::TaskList new_task_list = daxa::TaskList({.device = device, .debug_name = APPNAME_PREFIX("main task list")});
 
-        auto task_boid_buffer = task_list.create_task_buffer({
+        auto task_boid_buffer = new_task_list.create_task_buffer({
             .fetch_callback = [=]()
             { return boid_buffer; },
             .debug_name = "task boid buffer",
         });
 
-        auto task_old_boid_buffer = task_list.create_task_buffer({
+        auto task_old_boid_buffer = new_task_list.create_task_buffer({
             .fetch_callback = [=]()
             { return old_boid_buffer; },
             .debug_name = "task old boid buffer",
         });
 
-        // task_gpu_output_buffer = new_task_list.create_task_buffer({
-        //     .fetch_callback = [this]() { return gpu_output_buffer; },
-        //     .debug_name = "task_gpu_output_buffer",
-        // });
-        // task_staging_gpu_output_buffer = new_task_list.create_task_buffer({
-        //     .fetch_callback = [this]() { return staging_gpu_output_buffer; },
-        //     .debug_name = "task_staging_gpu_output_buffer",
-        // });
-
-        task_swapchain_image = task_list.create_task_image({
+        task_swapchain_image = new_task_list.create_task_image({
             .fetch_callback = [=]()
             { return swapchain_image; },
             .debug_name = "task swapchain image",
         });
 
-        task_list.add_task({
+        new_task_list.add_task({
             .used_buffers = {
                 { task_boid_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE },
                 { task_old_boid_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY },
@@ -279,7 +270,7 @@ struct App : AppWindow<App>
             .debug_name = "update boids",
         });
 
-        task_list.add_task({
+        new_task_list.add_task({
             .used_buffers = {
                 { task_boid_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY },
             },
@@ -296,9 +287,9 @@ struct App : AppWindow<App>
             .debug_name = "draw boids",
         });
 
-        task_list.compile();
+        new_task_list.compile();
 
-        return task_list;
+        return new_task_list;
     }
 
     void draw()
