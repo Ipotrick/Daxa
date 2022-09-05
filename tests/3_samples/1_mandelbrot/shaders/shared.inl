@@ -6,7 +6,7 @@ struct ComputeInput
 {
     f32 time;
 };
-DAXA_REGISTER_STRUCT_GET_BUFFER(ComputeInput)
+DAXA_REGISTER_STRUCT(ComputeInput)
 
 struct ComputePush
 {

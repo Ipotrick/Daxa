@@ -15,11 +15,20 @@
 #include "daxa/daxa.hlsl"
 #elif defined(__cplusplus)
 #include <daxa/daxa.hpp>
-#define DAXA_REGISTER_STRUCT_GET_BUFFER(STRUCT_TYPE)
+#define DAXA_REGISTER_STRUCT(STRUCT_TYPE)
 #define DAXA_REGISTER_READ_ONLY_IMAGE_TYPE(IMAGE_TYPE)
 #define DAXA_REGISTER_SAMPLER_TYPE(SAMPLER_TYPE)
 #define DAXA_PUSH_CONSTANT(STRUCT_TYPE)
 #define DAXA_SHARED_TYPE(x) daxa::types::x
+#define DAXA_DECL_BUFFER_STRUCT(NAME, BODY) \
+using NAME##BufferRef = u64; \
+using NAME##WrappedBufferRef = u64; \
+using NAME##CoherentBufferRef = u64; \
+using NAME##CoherentWrappedBufferRef = u64; \
+struct NAME BODY
+#define DAXA_DECL_PUSH_STRUCT(NAME, BODY) \
+struct NAME BODY
+
 
 #define DAXA_DEFINE_GET_STRUCTURED_BUFFER(STRUCT_TYPE)
 #endif

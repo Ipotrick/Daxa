@@ -252,6 +252,12 @@ namespace daxa
         return impl.slot(id).info;
     }
 
+    auto Device::buffer_reference(BufferId id) const -> u64
+    {
+        auto & impl = *as<ImplDevice>();
+        return static_cast<u64>(impl.slot(id).device_address);
+    }
+
     auto Device::info_image(ImageId id) const -> ImageInfo
     {
         auto & impl = *as<ImplDevice>();
@@ -326,7 +332,7 @@ namespace daxa
         .shaderClipDistance = VK_FALSE,
         .shaderCullDistance = VK_FALSE,
         .shaderFloat64 = VK_FALSE,
-        .shaderInt64 = VK_FALSE,
+        .shaderInt64 = VK_TRUE,
         .shaderInt16 = VK_FALSE,
         .shaderResourceResidency = VK_FALSE,
         .shaderResourceMinLod = VK_FALSE,
@@ -343,9 +349,17 @@ namespace daxa
         .inheritedQueries = VK_FALSE,
     };
 
+    static const VkPhysicalDeviceBufferDeviceAddressFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_BUFFER_DEVICE_ADDRESS{
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
+        .pNext = nullptr,
+        .bufferDeviceAddress = VK_TRUE,
+        .bufferDeviceAddressCaptureReplay = VK_TRUE,
+        .bufferDeviceAddressMultiDevice = VK_FALSE,
+    };
+
     static const VkPhysicalDeviceDescriptorIndexingFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_DESCRIPTOR_INDEXING{
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
-        .pNext = nullptr,
+        .pNext = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_BUFFER_DEVICE_ADDRESS),
         .shaderInputAttachmentArrayDynamicIndexing = VK_FALSE, // no render passes
         .shaderUniformTexelBufferArrayDynamicIndexing = VK_TRUE,
         .shaderStorageTexelBufferArrayDynamicIndexing = VK_TRUE,
@@ -488,9 +502,9 @@ namespace daxa
         u32 max_images = std::min(this->vk_info.limits.max_descriptor_set_sampled_images, this->vk_info.limits.max_descriptor_set_storage_images);
         u32 max_samplers = this->vk_info.limits.max_descriptor_set_samplers;
         gpu_table.initialize(
-            std::min({max_buffers, 100'000u}),
-            std::min({max_images, 100'000u}),
-            std::min({max_samplers, 100'000u}),
+            std::min({max_buffers, 1'000u}),
+            std::min({max_images, 1'000u}),
+            std::min({max_samplers, 1'000u}),
             vk_device);
 
         vkGetDeviceQueue(this->vk_device, this->main_queue_family_index, 0, &this->main_queue_vk_queue);
@@ -515,7 +529,7 @@ namespace daxa
         };
 
         VmaAllocatorCreateInfo vma_allocator_create_info{
-            .flags = {},
+            .flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
             .physicalDevice = this->vk_physical_device,
             .device = this->vk_device,
             .preferredLargeHeapBlockSize = 0, // Sets it to lib internal default (256MiB).
@@ -663,6 +677,7 @@ namespace daxa
         ret.info = info;
 
         VkBufferUsageFlags usageFlags =
+            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
             VK_BUFFER_USAGE_TRANSFER_DST_BIT |
             VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT |
@@ -700,6 +715,14 @@ namespace daxa
         };
 
         vmaCreateBuffer(this->vma_allocator, &vk_buffer_create_info, &vma_allocation_create_info, &ret.vk_buffer, &ret.vma_allocation, nullptr);
+
+        VkBufferDeviceAddressInfo vk_buffer_device_address_info{
+            .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+            .pNext = nullptr,
+            .buffer = ret.vk_buffer,
+        };
+
+        ret.device_address = vkGetBufferDeviceAddress(vk_device, &vk_buffer_device_address_info);
 
         if (this->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
         {

@@ -23,6 +23,8 @@
 #define f32mat4x4 mat4x4
 #define i32 int
 #define u32 uint
+#define i64 int64_t
+#define u64 uint64_t
 #define i32vec2 ivec2
 #define u32vec2 uvec2
 #define i32vec3 ivec3
@@ -50,17 +52,42 @@ struct SamplerId
     u32 sampler_id_value;
 };
 
-#define DAXA_REGISTER_STRUCT_GET_BUFFER(STRUCT_TYPE)                                                                           \
-    layout(scalar, binding = DAXA_STORAGE_BUFFER_BINDING, set = 0) buffer daxa_BufferTableObject##STRUCT_TYPE                  \
-    {                                                                                                                          \
-        STRUCT_TYPE value;                                                                                                     \
-    }                                                                                                                          \
-    daxa_BufferTable##STRUCT_TYPE[];                                                                                           \
-    layout(scalar, binding = DAXA_STORAGE_BUFFER_BINDING, set = 0) coherent buffer daxa_CoherentBufferTableObject##STRUCT_TYPE \
-    {                                                                                                                          \
-        STRUCT_TYPE value;                                                                                                     \
-    }                                                                                                                          \
-    daxa_CoherentBufferTable##STRUCT_TYPE[];
+#define DAXA_DECL_BUFFER_STRUCT(NAME, BODY)                                                                             \
+    struct NAME BODY;                                                                                                   \
+    layout(scalar, binding = DAXA_STORAGE_BUFFER_BINDING, set = 0) buffer daxa_BufferTableObject##NAME                  \
+    {                                                                                                                   \
+        NAME value;                                                                                                     \
+    }                                                                                                                   \
+    daxa_BufferTable##NAME[];                                                                                           \
+    layout(scalar, binding = DAXA_STORAGE_BUFFER_BINDING, set = 0) coherent buffer daxa_CoherentBufferTableObject##NAME \
+    {                                                                                                                   \
+        NAME value;                                                                                                     \
+    }                                                                                                                   \
+    daxa_CoherentBufferTable##NAME[];                                                                                   \
+    layout(scalar, buffer_reference, buffer_reference_align = 4) buffer NAME##BufferRef BODY;                           \
+    layout(scalar, buffer_reference, buffer_reference_align = 4) coherent buffer NAME##CoherentBufferRef BODY;          \
+    layout(scalar, buffer_reference, buffer_reference_align = 4) buffer NAME##WrappedBufferRef                          \
+    {                                                                                                                   \
+        NAME value;                                                                                                     \
+    };                                                                                                                  \
+    layout(scalar, buffer_reference, buffer_reference_align = 4) coherent buffer NAME##CoherentWrappedBufferRef         \
+    {                                                                                                                   \
+        NAME value;                                                                                                     \
+    }
+
+#define DAXA_USE_PUSH_CONSTANT(NAME) \
+layout(scalar, push_constant) uniform _DAXA_PUSH_CONSTANT\
+{\
+    NAME push_constant;\
+};
+
+#define BufferRef(STRUCT_TYPE) STRUCT_TYPE##BufferRef
+#define WrappedBufferRef(STRUCT_TYPE) STRUCT_TYPE##CoherentBufferRef
+#define CoherentBufferRef(STRUCT_TYPE) STRUCT_TYPE##WrappedBufferRef
+#define WrappedCoherentBufferRef(STRUCT_TYPE) STRUCT_TYPE##CoherentWrappedBufferRef
+
+#define daxa_address_of_bufferref(buffer_reference) u64(buffer_reference)
+#define daxa_cast_address_to_bufferref(STRUCT_TYPE, REFERENCE_TYPE, address) STRUCT_TYPE##REFERENCE_TYPE(address)
 
 #define _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, IMAGE_FORMAT)                                                                          \
     layout(binding = DAXA_STORAGE_IMAGE_BINDING, set = 0, IMAGE_FORMAT) uniform IMAGE_TYPE daxa_ReadWriteImageTable_##IMAGE_FORMAT##_##IMAGE_TYPE[]; \
@@ -118,7 +145,7 @@ struct SamplerId
     layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform SAMPLER_TYPE daxa_SamplerTable##SAMPLER_TYPE[];
 
 #define DAXA_PUSH_CONSTANT(STRUCT_TYPE) \
-    layout(push_constant) uniform _DAXA_PUSH_CONSTANT { STRUCT_TYPE daxa_push; };
+    layout(push_constant, scalar) uniform _DAXA_PUSH_CONSTANT { STRUCT_TYPE daxa_push; };
 
 DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_FLOAT(image1D)
 DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_FLOAT(image2D)
@@ -192,7 +219,7 @@ DAXA_REGISTER_SAMPLER_TYPE(samplerCubeShadow)
 DAXA_REGISTER_SAMPLER_TYPE(sampler1DArrayShadow)
 DAXA_REGISTER_SAMPLER_TYPE(sampler2DArrayShadow)
 
-#define daxa_GetBuffer(STRUCT_TYPE, buffer_id) daxa_BufferTable##STRUCT_TYPE[(DAXA_ID_INDEX_MASK & buffer_id.buffer_id_value)].value
+#define daxa_access_buffer_as(STRUCT_TYPE, buffer_id) daxa_BufferTable##STRUCT_TYPE[(DAXA_ID_INDEX_MASK & buffer_id.buffer_id_value)].value
 #define daxa_GetCoherentBuffer(STRUCT_TYPE, buffer_id) daxa_CoherentBufferTable##STRUCT_TYPE[(DAXA_ID_INDEX_MASK & buffer_id.buffer_id_value)].value
 #define daxa_GetRWImage(IMAGE_TYPE, IMAGE_FORMAT, image_view_id) daxa_ReadWriteImageTable_##IMAGE_FORMAT##_##IMAGE_TYPE[(DAXA_ID_INDEX_MASK & image_view_id.image_view_id_value)]
 #define daxa_GetCoherentRWImage(IMAGE_TYPE, FORMAT, image_view_id) daxa_CoherentReadWriteImageTable_##IMAGE_FORMAT##_##IMAGE_TYPE[(DAXA_ID_INDEX_MASK & image_view_id.image_view_id_value)]

@@ -16,6 +16,7 @@ namespace daxa
         BufferInfo info = {};
         VkBuffer vk_buffer = {};
         VmaAllocation vma_allocation = {};
+        VkDeviceAddress device_address = {};
     };
 
     static inline constexpr i32 NOT_OWNED_BY_SWAPCHAIN = -1;

@@ -2,29 +2,93 @@
 
 #include <shared.inl>
 
-DAXA_PUSH_CONSTANT(UpdateBoidsPushConstant)
+DAXA_USE_PUSH_CONSTANT(UpdateBoidsPushConstant)
+
+void update_boid_position(inout Boid boid, in Boid old_boid)
+{
+    vec2 new_position = old_boid.position + old_boid.direction * BOID_SPEED * SIMULATION_DELTA_TIME_S;
+
+    new_position = clamp(new_position, vec2(0.0f), vec2(FIELD_SIZE));
+
+    boid.position = new_position;
+}
+
+void update_boid(inout Boid boid, in Boid old_boid, in uint boid_index, BoidsBufferRef old_boids_buffer)
+{
+    float steer_angle = 0.0f;
+    uint neighboring_boids = 0;
+
+    for (uint i = 0; i < MAX_BOIDS; ++i)
+    {
+        if (boid_index == i)
+        {
+            continue;
+        }
+
+        const Boid other_boid = old_boids_buffer.boids[i];
+
+        float to_other_distance = length(other_boid.position - boid.position);
+        vec2 to_other_direction = normalize(other_boid.position - boid.position);
+
+        bool other_boid_in_range = to_other_distance < BOID_VIEW_RANGE;
+        bool other_boid_in_view_angle = acos(dot(to_other_direction, boid.direction)) < BOID_VIEW_ANGLE;
+
+        vec2 tangent_direction = vec2(-boid.direction.y, boid.direction.x);
+
+        float angle_between_directions = 
+            acos(dot(boid.direction, other_boid.direction)) *
+            sign(dot(tangent_direction, other_boid.position));
+
+        if (other_boid_in_range && other_boid_in_view_angle)
+        {
+            neighboring_boids += 1;
+            float relative_closeness = float(BOID_VIEW_RANGE) / to_other_distance;
+
+            float seperation_steer = 
+                BOIDS_SEPERATION_FACTOR *
+                relative_closeness *
+                float(BOID_STEER_PER_SECOND) * 
+                float(SIMULATION_DELTA_TIME_S) *
+                sign(dot(tangent_direction, to_other_direction));
+
+            steer_angle += seperation_steer;
+        }
+    }
+
+
+
+    if (neighboring_boids > 0)
+    {
+        float average_steer = clamp(steer_angle / float(neighboring_boids), -BOID_STEER_PER_TICK, BOID_STEER_PER_TICK);
+        boid.direction = vec2(
+            dot(boid.direction, vec2(cos(steer_angle), sin(steer_angle))),
+            dot(boid.direction, vec2(-sin(steer_angle), cos(steer_angle)))
+        );
+    }
+
+    update_boid_position(boid, old_boid);
+}
 
 layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 void main()
 {
     uint invocation = gl_GlobalInvocationID.x;
 
-    if (invocation > MAX_BOIDS)
+    if (invocation >= MAX_BOIDS)
     {
         return;
     }
 
-    vec2 new_position =
-        daxa_GetBuffer(BoidBuffer, daxa_push.old_boid_buffer_id).boids[invocation].position +
-        daxa_GetBuffer(BoidBuffer, daxa_push.old_boid_buffer_id).boids[invocation].direction *
-        daxa_GetBuffer(BoidBuffer, daxa_push.old_boid_buffer_id).boids[invocation].speed *
-        daxa_push.delta_time;
+    BoidsBufferRef boids_buffer = push_constant.boids_buffer;
+    BufferRef(Boids) old_boids_buffer = push_constant.old_boids_buffer;
 
-    new_position = (new_position + vec2(1.0f)) * 0.5f;
+    u64 address = daxa_address_of_bufferref(boids_buffer);
+    boids_buffer = daxa_cast_address_to_bufferref(Boids, BufferRef, address);
 
-    new_position = vec2(fract(new_position.x), fract(new_position.y));
-    
-    new_position = (new_position * 2.0f) - vec2(1.0f);
-
-    daxa_GetBuffer(BoidBuffer, daxa_push.boid_buffer_id).boids[invocation].position = new_position;
+    update_boid(
+        boids_buffer.boids[invocation],
+        old_boids_buffer.boids[invocation],
+        invocation,
+        old_boids_buffer
+    );
 }
