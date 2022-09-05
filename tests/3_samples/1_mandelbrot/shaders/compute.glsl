@@ -18,7 +18,7 @@ f32vec3 mandelbrot_colored(f32vec2 pixel_p)
 {
     f32vec2 uv = pixel_p / f32vec2(daxa_push.frame_dim.xy);
     uv = (uv - 0.5) * f32vec2(f32(daxa_push.frame_dim.x) / f32(daxa_push.frame_dim.y), 1);
-    ComputeInput compute_input = daxa_GetBuffer(ComputeInput, daxa_push.input_buffer_id);
+    ComputeInput compute_input = daxa_access_buffer_as(ComputeInput, daxa_push.input_buffer_id);
     f32 time = compute_input.time;
     f32 scale = 12.0 / (exp(time) + 0.0001);
     f32vec2 z = uv * scale * 2 + CENTER;

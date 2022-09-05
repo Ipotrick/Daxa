@@ -10,7 +10,7 @@ struct DrawVertexBuffer
 {
     DrawVertex verts[3];
 };
-DAXA_REGISTER_STRUCT_GET_BUFFER(DrawVertexBuffer)
+DAXA_REGISTER_STRUCT(DrawVertexBuffer)
 
 struct DrawPush
 {

@@ -90,10 +90,8 @@ namespace tests
         });
 
         task_list.add_task({
-            .resources = {
-                .buffers = {{upload_buffer, daxa::TaskBufferAccess::TRANSFER_READ}},
-                .images = {{task_image, daxa::TaskImageAccess::TRANSFER_WRITE}},
-            },
+            .used_buffers = {{upload_buffer, daxa::TaskBufferAccess::TRANSFER_READ}},
+            .used_images = {{task_image, daxa::TaskImageAccess::TRANSFER_WRITE}},
             .task = [](daxa::TaskInterface &)
             {
                 // TODO: Implement this task!
@@ -131,25 +129,35 @@ namespace tests
         });
 
         task_list.add_task({
-            .resources = {.buffers = {{task_buffer1, daxa::TaskBufferAccess::SHADER_WRITE_ONLY}, {task_buffer2, daxa::TaskBufferAccess::SHADER_READ_ONLY}}},
+            .used_buffers = {
+                {task_buffer1, daxa::TaskBufferAccess::SHADER_WRITE_ONLY}, 
+                {task_buffer2, daxa::TaskBufferAccess::SHADER_READ_ONLY},
+            },
             .task = [](daxa::TaskInterface &) {},
             .debug_name = APPNAME_PREFIX("task 1 (output_graph)"),
         });
 
         task_list.add_task({
-            .resources = {.buffers = {{task_buffer2, daxa::TaskBufferAccess::SHADER_WRITE_ONLY}}},
+            .used_buffers = {
+                {task_buffer2, daxa::TaskBufferAccess::SHADER_WRITE_ONLY},
+            },
             .task = [](daxa::TaskInterface &) {},
             .debug_name = APPNAME_PREFIX("task 2 (output_graph)"),
         });
 
         task_list.add_task({
-            .resources = {.buffers = {{task_buffer2, daxa::TaskBufferAccess::SHADER_WRITE_ONLY}, {task_buffer3, daxa::TaskBufferAccess::SHADER_WRITE_ONLY}}},
+            .used_buffers = {
+                {task_buffer2, daxa::TaskBufferAccess::SHADER_WRITE_ONLY}, 
+                {task_buffer3, daxa::TaskBufferAccess::SHADER_WRITE_ONLY},
+            },
             .task = [](daxa::TaskInterface &) {},
             .debug_name = APPNAME_PREFIX("task 3 (output_graph)"),
         });
 
         task_list.add_task({
-            .resources = {.buffers = {{task_buffer3, daxa::TaskBufferAccess::SHADER_READ_ONLY}}},
+            .used_buffers = {
+                {task_buffer3, daxa::TaskBufferAccess::SHADER_READ_ONLY},
+            },
             .task = [](daxa::TaskInterface &) {},
             .debug_name = APPNAME_PREFIX("task 4 (output_graph)"),
         });
@@ -347,10 +355,8 @@ namespace tests
                     .debug_name = APPNAME_PREFIX("Clear render_image Task (drawing)"),
                 });
                 new_task_list.add_task({
-                    .resources = {
-                        .images = {
-                            {task_render_image, daxa::TaskImageAccess::FRAGMENT_SHADER_WRITE_ONLY},
-                        },
+                    .used_images = {
+                         {task_render_image, daxa::TaskImageAccess::FRAGMENT_SHADER_WRITE_ONLY},
                     },
                     .task = [this](daxa::TaskInterface interf)
                     {
