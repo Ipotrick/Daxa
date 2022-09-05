@@ -31,6 +31,13 @@ DAXA_DECL_BUFFER_STRUCT(
     }
 );
 
+DAXA_DECL_BUFFER_STRUCT(
+    GpuOutput, 
+    {
+        f32 data;
+    }
+);
+
 struct DrawPushConstant
 {
     BufferRef(Boids) boids_buffer;
@@ -42,3 +49,4 @@ struct UpdateBoidsPushConstant
     BufferRef(Boids) old_boids_buffer;
     BufferId boids_buffer_id;
 };
+
