@@ -12,15 +12,15 @@ namespace daxa
         return ImageViewId{{.index = index, .version = version}};
     }
 
-    void GPUResourceTable::initialize(usize max_buffers, usize max_images, usize max_samplers, VkDevice device)
+    void GPUResourceTable::initialize(usize max_buffers, usize max_images, usize max_samplers, VkDevice device, VkBuffer buffer_device_address_buffer)
     {
         buffer_slots.max_resources = max_buffers;
         image_slots.max_resources = max_images;
         sampler_slots.max_resources = max_samplers;
-
+        
         VkDescriptorPoolSize buffer_descriptor_pool_size{
             .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            .descriptorCount = static_cast<u32>(buffer_slots.max_resources),
+            .descriptorCount = static_cast<u32>(buffer_slots.max_resources + 1),
         };
 
         VkDescriptorPoolSize storage_image_descriptor_pool_size{
@@ -88,11 +88,21 @@ namespace daxa
             .pImmutableSamplers = nullptr,
         };
 
+        VkDescriptorSetLayoutBinding buffer_address_buffer_descriptor_set_layout_binding{
+            .binding = BUFFER_DEVICE_ADDRESS_BUFFER_BINDING,
+            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_ALL,
+            .pImmutableSamplers = nullptr,
+        };
+
         VkDescriptorSetLayoutBinding descriptor_set_layout_bindings[] = {
             buffer_descriptor_set_layout_binding,
             storage_image_descriptor_set_layout_binding,
             sampled_image_descriptor_set_layout_binding,
-            sampler_descriptor_set_layout_binding};
+            sampler_descriptor_set_layout_binding,
+            buffer_address_buffer_descriptor_set_layout_binding,
+        };
 
         VkDescriptorBindingFlags vk_descriptor_binding_flags[] = {
             VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
@@ -100,11 +110,12 @@ namespace daxa
             VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
             VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
             VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+            {},
         };
         VkDescriptorSetLayoutBindingFlagsCreateInfo vk_descriptor_set_layout_binding_flags_create_info{
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
             .pNext = nullptr,
-            .bindingCount = 4u,
+            .bindingCount = 5u,
             .pBindingFlags = vk_descriptor_binding_flags,
         };
 
@@ -112,7 +123,7 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
             .pNext = &vk_descriptor_set_layout_binding_flags_create_info,
             .flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT,
-            .bindingCount = 4,
+            .bindingCount = 5,
             .pBindings = descriptor_set_layout_bindings,
         };
 
@@ -151,6 +162,27 @@ namespace daxa
             vk_pipeline_create_info.pPushConstantRanges = &vk_push_constant_range;
             vkCreatePipelineLayout(device, &vk_pipeline_create_info, nullptr, &pipeline_layouts[i]);
         }
+
+        VkDescriptorBufferInfo write_buffer{
+            .buffer = buffer_device_address_buffer,
+            .offset = 0,
+            .range = VK_WHOLE_SIZE,
+        };
+
+        VkWriteDescriptorSet write{
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .pNext = nullptr,
+            .dstSet = this->vk_descriptor_set,
+            .dstBinding = BUFFER_DEVICE_ADDRESS_BUFFER_BINDING,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            .pImageInfo = nullptr,
+            .pBufferInfo = &write_buffer,
+            .pTexelBufferView = nullptr,
+        };
+
+        vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
     }
 
     void GPUResourceTable::cleanup(VkDevice device)

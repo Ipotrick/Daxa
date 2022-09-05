@@ -5,6 +5,7 @@
 #define DAXA_STORAGE_IMAGE_BINDING 1
 #define DAXA_SAMPLED_IMAGE_BINDING 2
 #define DAXA_SAMPLER_BINDING 3
+#define DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING 4
 #define DAXA_ID_INDEX_MASK (0x00FFFFFF)
 #define DAXA_SHARED_TYPE(x) x
 #endif
@@ -26,9 +27,8 @@ using NAME##WrappedBufferRef = u64; \
 using NAME##CoherentBufferRef = u64; \
 using NAME##CoherentWrappedBufferRef = u64; \
 struct NAME BODY
-#define DAXA_DECL_PUSH_STRUCT(NAME, BODY) \
-struct NAME BODY
-
-
-#define DAXA_DEFINE_GET_STRUCTURED_BUFFER(STRUCT_TYPE)
+#define BufferRef(x) u64
+#define WrappedBufferRef(x) u64
+#define CoherentBufferRef(x) u64
+#define WrappedCoherentBufferRef(x) u64
 #endif

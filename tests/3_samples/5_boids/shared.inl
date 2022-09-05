@@ -33,12 +33,12 @@ DAXA_DECL_BUFFER_STRUCT(
 
 struct DrawPushConstant
 {
-    BoidsBufferRef boids_buffer;
+    BufferRef(Boids) boids_buffer;
     f32vec2 axis_scaling;
 };
 
 struct UpdateBoidsPushConstant
 {
-    BoidsBufferRef boids_buffer;
-    BoidsBufferRef old_boids_buffer;
+    BufferRef(Boids) old_boids_buffer;
+    BufferId boids_buffer_id;
 };

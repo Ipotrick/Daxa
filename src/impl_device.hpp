@@ -24,6 +24,8 @@ namespace daxa
         DeviceProperties vk_info = {};
         DeviceInfo info = {};
         VkSampler vk_dummy_sampler = {};
+        VkBuffer buffer_device_address_buffer = {};
+        VmaAllocation buffer_device_address_buffer_allocation = {};
 
         // Gpu resource table:
         GPUResourceTable gpu_table = {};
