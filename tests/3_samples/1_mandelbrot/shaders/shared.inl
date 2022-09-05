@@ -2,11 +2,12 @@
 
 #include <daxa/daxa.inl>
 
-struct ComputeInput
-{
-    f32 time;
-};
-DAXA_REGISTER_STRUCT(ComputeInput)
+DAXA_DECL_BUFFER_STRUCT(
+    ComputeInput,
+    {
+        f32 time;
+    }
+);
 
 struct ComputePush
 {

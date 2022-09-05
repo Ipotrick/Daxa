@@ -55,8 +55,6 @@ void update_boid(inout Boid boid, in Boid old_boid, in uint boid_index, BoidsBuf
         }
     }
 
-
-
     if (neighboring_boids > 0)
     {
         float average_steer = clamp(steer_angle / float(neighboring_boids), -BOID_STEER_PER_TICK, BOID_STEER_PER_TICK);
@@ -79,11 +77,11 @@ void main()
         return;
     }
 
-    BoidsBufferRef boids_buffer = push_constant.boids_buffer;
+    BufferRef(Boids) boids_buffer = daxa_buffer_id_to_ref(Boids, BufferRef, push_constant.boids_buffer_id);
     BufferRef(Boids) old_boids_buffer = push_constant.old_boids_buffer;
 
-    u64 address = daxa_address_of_bufferref(boids_buffer);
-    boids_buffer = daxa_cast_address_to_bufferref(Boids, BufferRef, address);
+    u64 address = daxa_buffer_ref_to_address(boids_buffer);
+    boids_buffer = daxa_buffer_address_to_ref(Boids, BufferRef, address);
 
     update_boid(
         boids_buffer.boids[invocation],
