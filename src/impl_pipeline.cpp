@@ -914,8 +914,11 @@ namespace daxa
         preamble += "#define _DAXA_SHADER 1\n";
         preamble += "#define _DAXA_GLSL 1\n";
         preamble += "#define DAXA_SHADER_INCLUDE <daxa/daxa.inl>\n";
+        //preamble += "#extension GL_KHR_vulkan_glsl : enable\n";
         preamble += "#extension GL_GOOGLE_include_directive : enable\n";
         preamble += "#extension GL_EXT_nonuniform_qualifier : enable\n";
+        preamble += "#extension GL_EXT_buffer_reference : enable\n";
+        preamble += "#extension GL_EXT_shader_explicit_arithmetic_types_int64 : enable\n";
         if (this->impl_device.as<ImplDevice>()->info.use_scalar_layout)
         {
             preamble += "#extension GL_EXT_scalar_block_layout : require\n";

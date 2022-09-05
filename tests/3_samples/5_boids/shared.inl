@@ -2,31 +2,43 @@
 
 #include <daxa/daxa.inl>
 
-#define MAX_BOIDS 100000
-#define BOID_SCALE 0.002f
+#define MAX_BOIDS 10000
+#define FIELD_SIZE 100
+#define BOID_SCALE 0.2f
+#define BOID_VIEW_ANGLE (0.65f * 3.14f)
+#define BOID_VIEW_RANGE 5
+#define BOID_BLIND_RANGE 0.1f
+#define BOID_STEER_PER_SECOND 0.25
+#define SIMULATION_DELTA_TIME_MS 5
+#define SIMULATION_DELTA_TIME_S (float(SIMULATION_DELTA_TIME_MS) * 0.001f)
+#define BOID_STEER_PER_TICK (BOID_STEER_PER_SECOND * SIMULATION_DELTA_TIME_S)
+#define BOID_SPEED 7.0f
 
-struct DrawPushConstant
-{
-    BufferId boid_buffer_id;
-};
-
-struct UpdateBoidsPushConstant
-{
-    BufferId boid_buffer_id;
-    BufferId old_boid_buffer_id;
-    f32 delta_time;
-};
+#define BOIDS_SEPERATION_FACTOR 1.0f
+#define BOIDS_COHESION_FACTOR 0.01f
+#define BOIDS_CENTER_FACTOR 1.0f
 
 struct Boid
 {
     f32vec2 position;
     f32vec2 direction;
-    f32 speed;
-    u32 pad[3];
 };
 
-struct BoidBuffer
+DAXA_DECL_BUFFER_STRUCT(
+    Boids, 
+    {
+        Boid boids[MAX_BOIDS];
+    }
+);
+
+struct DrawPushConstant
 {
-    Boid boids[MAX_BOIDS];
+    BoidsBufferRef boids_buffer;
+    f32vec2 axis_scaling;
 };
-DAXA_REGISTER_STRUCT_GET_BUFFER(BoidBuffer)
+
+struct UpdateBoidsPushConstant
+{
+    BoidsBufferRef boids_buffer;
+    BoidsBufferRef old_boids_buffer;
+};

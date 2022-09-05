@@ -279,10 +279,8 @@ struct App : AppWindow<App>
         });
 
         new_task_list.add_task({
-            .resources = {
-                .buffers = {
-                    {task_globals_buffer, daxa::TaskBufferAccess::SHADER_READ_WRITE},
-                },
+            .used_buffers = {
+                {task_globals_buffer, daxa::TaskBufferAccess::SHADER_READ_WRITE},
             },
             .task = [this](daxa::TaskInterface interf)
             {
@@ -295,15 +293,13 @@ struct App : AppWindow<App>
         });
 
         new_task_list.add_task({
-            .resources = {
-                .buffers = {
-                    {task_globals_buffer, daxa::TaskBufferAccess::SHADER_READ_ONLY},
-                    {task_indirect_draw_buffer, daxa::TaskBufferAccess::SHADER_READ_ONLY},
-                },
-                .images = {
-                    {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
-                    {task_draw_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT},
-                },
+            .used_buffers = {
+                {task_globals_buffer, daxa::TaskBufferAccess::SHADER_READ_ONLY},
+                {task_indirect_draw_buffer, daxa::TaskBufferAccess::SHADER_READ_ONLY},
+            },
+            .used_images = {
+                {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
+                {task_draw_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT},
             },
             .task = [this](daxa::TaskInterface interf)
             {
