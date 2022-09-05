@@ -100,22 +100,22 @@ struct App : AppWindow<App>
     daxa::ImageId swapchain_image = {};
     daxa::TaskImageId task_swapchain_image = {};
 
-    // GpuOutput gpu_output = {};
-    // BufferId gpu_output_buffer = device.create_buffer({
-    //     .size = sizeof(GpuOutput),
-    //     .debug_name = "gpu_output_buffer",
-    // });
-    // BufferId staging_gpu_output_buffer = device.create_buffer({
-    //     .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-    //     .size = sizeof(GpuOutput),
-    //     .debug_name = "staging_gpu_output_buffer",
-    // });
-    // daxa::TaskBufferId task_gpu_output_buffer;
-    // daxa::TaskBufferId task_staging_gpu_output_buffer;
+    GpuOutput gpu_output = {};
+    BufferId gpu_output_buffer = device.create_buffer({
+        .size = sizeof(GpuOutput),
+        .debug_name = "gpu_output_buffer",
+    });
+    BufferId staging_gpu_output_buffer = device.create_buffer({
+        .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+        .size = sizeof(GpuOutput),
+        .debug_name = "staging_gpu_output_buffer",
+    });
+    daxa::TaskBufferId task_gpu_output_buffer;
+    daxa::TaskBufferId task_staging_gpu_output_buffer;
 
     App() : AppWindow<App>(APPNAME)
     {
-        auto cmd_list = device.create_command_list({ .debug_name = APPNAME_PREFIX("boid buffer init commands") });
+        auto cmd_list = device.create_command_list({.debug_name = APPNAME_PREFIX("boid buffer init commands")});
 
         auto upload_buffer_id = device.create_buffer({
             .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
@@ -124,12 +124,12 @@ struct App : AppWindow<App>
         });
         cmd_list.destroy_buffer_deferred(upload_buffer_id);
 
-        Boids* ptr = device.map_memory_as<Boids>(upload_buffer_id);
+        Boids * ptr = device.map_memory_as<Boids>(upload_buffer_id);
 
         for (usize i = 0; i < MAX_BOIDS; ++i)
         {
-            ptr->boids[i].position.x = (rand() % ((FIELD_SIZE) * 100) / 100.0f);
-            ptr->boids[i].position.y = (rand() % ((FIELD_SIZE) * 100) / 100.0f);
+            ptr->boids[i].position.x = (rand() % ((FIELD_SIZE)*100) / 100.0f);
+            ptr->boids[i].position.y = (rand() % ((FIELD_SIZE)*100) / 100.0f);
             f32 angle = rand() % 3600 * 0.1f;
             ptr->boids[i].direction.x = std::cos(angle);
             ptr->boids[i].direction.y = std::sin(angle);
@@ -155,7 +155,7 @@ struct App : AppWindow<App>
         });
         cmd_list.complete();
         device.submit_commands({
-            .command_lists = { cmd_list },
+            .command_lists = {cmd_list},
         });
     }
 
@@ -164,8 +164,8 @@ struct App : AppWindow<App>
         device.destroy_buffer(boid_buffer);
         device.destroy_buffer(old_boid_buffer);
 
-        // device.destroy_buffer(gpu_output_buffer);
-        // device.destroy_buffer(staging_gpu_output_buffer);
+        device.destroy_buffer(gpu_output_buffer);
+        device.destroy_buffer(staging_gpu_output_buffer);
     }
 
     bool update()
@@ -211,9 +211,8 @@ struct App : AppWindow<App>
                     .layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
                     .load_op = daxa::AttachmentLoadOp::CLEAR,
                     .store_op = daxa::AttachmentStoreOp::STORE,
-                    .clear_value = std::array<f32, 4>{ 1.0f, 1.0f, 1.0f, 1.0f },
-                }
-            },
+                    .clear_value = std::array<f32, 4>{1.0f, 1.0f, 1.0f, 1.0f},
+                }},
             .render_area = {
                 .width = size_x,
                 .height = size_y,
@@ -225,10 +224,9 @@ struct App : AppWindow<App>
             .axis_scaling = {
                 std::min(1.0f, static_cast<f32>(size_y) / static_cast<f32>(size_x)),
                 std::min(1.0f, static_cast<f32>(size_x) / static_cast<f32>(size_y)),
-            }
-        });
+            }});
 
-        cmd_list.draw({.vertex_count = 3 * MAX_BOIDS });
+        cmd_list.draw({.vertex_count = 3 * MAX_BOIDS});
 
         cmd_list.end_renderpass();
     }
@@ -249,6 +247,17 @@ struct App : AppWindow<App>
             .debug_name = "task old boid buffer",
         });
 
+        task_gpu_output_buffer = new_task_list.create_task_buffer({
+            .fetch_callback = [this]()
+            { return gpu_output_buffer; },
+            .debug_name = "task_gpu_output_buffer",
+        });
+        task_staging_gpu_output_buffer = new_task_list.create_task_buffer({
+            .fetch_callback = [this]()
+            { return staging_gpu_output_buffer; },
+            .debug_name = "task_staging_gpu_output_buffer",
+        });
+
         task_swapchain_image = new_task_list.create_task_image({
             .fetch_callback = [=]()
             { return swapchain_image; },
@@ -257,8 +266,8 @@ struct App : AppWindow<App>
 
         new_task_list.add_task({
             .used_buffers = {
-                { task_boid_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE },
-                { task_old_boid_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY },
+                {task_boid_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE},
+                {task_old_boid_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY},
             },
             .task = [=](daxa::TaskInterface & interf)
             {
@@ -272,10 +281,10 @@ struct App : AppWindow<App>
 
         new_task_list.add_task({
             .used_buffers = {
-                { task_boid_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY },
+                {task_boid_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
             },
             .used_images = {
-                { task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT },
+                {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
             },
             .task = [=](daxa::TaskInterface & interf)
             {
@@ -287,6 +296,40 @@ struct App : AppWindow<App>
             .debug_name = "draw boids",
         });
 
+        new_task_list.add_task({
+            .resources = {
+                .buffers = {
+                    {task_gpu_output_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE},
+                    {task_staging_gpu_output_buffer, daxa::TaskBufferAccess::TRANSFER_READ},
+                },
+            },
+            .task = [this](daxa::TaskInterface interf)
+            {
+                auto cmd_list = interf.get_command_list();
+                cmd_list.copy_buffer_to_buffer({
+                    .src_buffer = gpu_output_buffer,
+                    .dst_buffer = staging_gpu_output_buffer,
+                    .size = sizeof(GpuOutput),
+                });
+            },
+            .debug_name = "Gpu Output Transfer",
+        });
+
+        new_task_list.add_task({
+            .resources = {
+                .buffers = {
+                    {task_staging_gpu_output_buffer, daxa::TaskBufferAccess::HOST_TRANSFER_WRITE},
+                },
+            },
+            .task = [this](daxa::TaskInterface /* interf */)
+            {
+                GpuOutput * buffer_ptr = device.map_memory_as<GpuOutput>(staging_gpu_output_buffer);
+                this->gpu_output = *buffer_ptr;
+                device.unmap_memory(staging_gpu_output_buffer);
+            },
+            .debug_name = "Gpu Output MemMap",
+        });
+
         new_task_list.compile();
 
         return new_task_list;
@@ -295,7 +338,8 @@ struct App : AppWindow<App>
     void draw()
     {
         auto now = Clock::now();
-        while(std::chrono::duration<f32>(now - prev_time).count() < SIMULATION_DELTA_TIME_S) {
+        while (std::chrono::duration<f32>(now - prev_time).count() < SIMULATION_DELTA_TIME_S)
+        {
             now = Clock::now();
         }
         prev_time = now;
@@ -329,10 +373,10 @@ struct App : AppWindow<App>
         std::swap(old_boid_buffer, boid_buffer);
 
         task_list.execute();
-        
+
         auto commands = task_list.command_lists();
 
-        auto cmd_list = device.create_command_list({ .debug_name = "frame finish command list" });
+        auto cmd_list = device.create_command_list({.debug_name = "frame finish command list"});
 
         cmd_list.pipeline_barrier_image_transition({
             .awaited_pipeline_access = task_list.last_access(task_swapchain_image),
