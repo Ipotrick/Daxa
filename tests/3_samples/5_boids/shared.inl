@@ -49,4 +49,3 @@ struct UpdateBoidsPushConstant
     BufferRef(Boids) old_boids_buffer;
     BufferId boids_buffer_id;
 };
-
