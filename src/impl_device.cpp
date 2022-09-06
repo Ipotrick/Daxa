@@ -502,14 +502,6 @@ namespace daxa
         u32 max_images = std::min(std::min(this->vk_info.limits.max_descriptor_set_sampled_images, this->vk_info.limits.max_descriptor_set_storage_images), 1'000u);
         u32 max_samplers = std::min(this->vk_info.limits.max_descriptor_set_samplers, 1'000u);
 
-        gpu_table.initialize(
-            max_buffers,
-            max_images,
-            max_samplers,
-            vk_device,
-            buffer_device_address_buffer
-        );
-
         vkGetDeviceQueue(this->vk_device, this->main_queue_family_index, 0, &this->main_queue_vk_queue);
 
         VkSemaphoreTypeCreateInfo timelineCreateInfo{
@@ -638,6 +630,14 @@ namespace daxa
             };
             vkSetDebugUtilsObjectNameEXT(vk_device, &device_main_queue_timeline_buffer_device_address_buffer_name_info);
         }
+
+        gpu_table.initialize(
+            max_buffers,
+            max_images,
+            max_samplers,
+            vk_device,
+            buffer_device_address_buffer
+        );
     }
 
     void ImplDevice::main_queue_collect_garbage()

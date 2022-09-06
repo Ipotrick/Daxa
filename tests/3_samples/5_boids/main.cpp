@@ -296,39 +296,39 @@ struct App : AppWindow<App>
             .debug_name = "draw boids",
         });
 
-        new_task_list.add_task({
-            .resources = {
-                .buffers = {
-                    {task_gpu_output_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE},
-                    {task_staging_gpu_output_buffer, daxa::TaskBufferAccess::TRANSFER_READ},
-                },
-            },
-            .task = [this](daxa::TaskInterface interf)
-            {
-                auto cmd_list = interf.get_command_list();
-                cmd_list.copy_buffer_to_buffer({
-                    .src_buffer = gpu_output_buffer,
-                    .dst_buffer = staging_gpu_output_buffer,
-                    .size = sizeof(GpuOutput),
-                });
-            },
-            .debug_name = "Gpu Output Transfer",
-        });
-
-        new_task_list.add_task({
-            .resources = {
-                .buffers = {
-                    {task_staging_gpu_output_buffer, daxa::TaskBufferAccess::HOST_TRANSFER_WRITE},
-                },
-            },
-            .task = [this](daxa::TaskInterface /* interf */)
-            {
-                GpuOutput * buffer_ptr = device.map_memory_as<GpuOutput>(staging_gpu_output_buffer);
-                this->gpu_output = *buffer_ptr;
-                device.unmap_memory(staging_gpu_output_buffer);
-            },
-            .debug_name = "Gpu Output MemMap",
-        });
+        //new_task_list.add_task({
+        //    .resources = {
+        //        .buffers = {
+        //            {task_gpu_output_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE},
+        //            {task_staging_gpu_output_buffer, daxa::TaskBufferAccess::TRANSFER_READ},
+        //        },
+        //    },
+        //    .task = [this](daxa::TaskInterface interf)
+        //    {
+        //        auto cmd_list = interf.get_command_list();
+        //        cmd_list.copy_buffer_to_buffer({
+        //            .src_buffer = gpu_output_buffer,
+        //            .dst_buffer = staging_gpu_output_buffer,
+        //            .size = sizeof(GpuOutput),
+        //        });
+        //    },
+        //    .debug_name = "Gpu Output Transfer",
+        //});
+//
+        //new_task_list.add_task({
+        //    .resources = {
+        //        .buffers = {
+        //            {task_staging_gpu_output_buffer, daxa::TaskBufferAccess::HOST_TRANSFER_WRITE},
+        //        },
+        //    },
+        //    .task = [this](daxa::TaskInterface /* interf */)
+        //    {
+        //        GpuOutput * buffer_ptr = device.map_memory_as<GpuOutput>(staging_gpu_output_buffer);
+        //        this->gpu_output = *buffer_ptr;
+        //        device.unmap_memory(staging_gpu_output_buffer);
+        //    },
+        //    .debug_name = "Gpu Output MemMap",
+        //});
 
         new_task_list.compile();
 
