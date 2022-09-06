@@ -1,7 +1,6 @@
 #include "impl_pipeline.hpp"
 #include "impl_swapchain.hpp"
 #include "impl_device.hpp"
-#include <iostream>
 
 #if DAXA_BUILT_WITH_GLSLANG
 static constexpr TBuiltInResource DAXA_DEFAULT_BUILTIN_RESOURCE = {
@@ -899,8 +898,8 @@ namespace daxa
             // case VkShaderStageFlagBits::VK_SHADER_STAGE_TASK_BIT_NV: return EShLanguage::EShLangTask;
             // case VkShaderStageFlagBits::VK_SHADER_STAGE_MESH_BIT_NV: return EShLanguage::EShLangMesh;
             default:
-                std::cerr << "error: unknown shader stage!\n";
-                std::abort();
+                DAXA_DBG_ASSERT_TRUE_M(false, "Tried creating shader with unknown shader stage");
+                return EShLanguage::EShLangCount;
             }
         };
 
@@ -914,7 +913,7 @@ namespace daxa
         preamble += "#define _DAXA_SHADER 1\n";
         preamble += "#define _DAXA_GLSL 1\n";
         preamble += "#define DAXA_SHADER_INCLUDE <daxa/daxa.inl>\n";
-        //preamble += "#extension GL_KHR_vulkan_glsl : enable\n";
+        // preamble += "#extension GL_KHR_vulkan_glsl : enable\n";
         preamble += "#extension GL_GOOGLE_include_directive : enable\n";
         preamble += "#extension GL_EXT_nonuniform_qualifier : enable\n";
         preamble += "#extension GL_EXT_buffer_reference : enable\n";
@@ -960,8 +959,6 @@ namespace daxa
 
         if (!shader.parse(&resource, 450, false, messages, includer))
         {
-            std::cerr << shader.getInfoLog() << '\n'
-                      << shader.getInfoDebugLog() << std::endl;
             return daxa::ResultErr{.message = std::string("GLSLANG: ") + shader.getInfoLog() + shader.getInfoDebugLog()};
         }
 
@@ -970,8 +967,6 @@ namespace daxa
 
         if (!program.link(messages))
         {
-            std::cerr << shader.getInfoLog() << '\n'
-                      << shader.getInfoDebugLog() << std::endl;
             return daxa::ResultErr{.message = std::string("GLSLANG: ") + shader.getInfoLog() + shader.getInfoDebugLog()};
         }
 
