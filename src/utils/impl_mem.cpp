@@ -5,16 +5,11 @@
 namespace daxa
 {
     MemoryUploader::MemoryUploader(Device device, usize capacity)
-        : device{ std::move(device) }
-        , gpu_timeline{ this->device.create_timeline_semaphore({ .initial_value = 0, .debug_name = "MemoryUploader" }) }
-        , current_command_list{ this->device.create_command_list({ .debug_name = "MemoryUploader CommandList Nr. 0" }) }
-        , capacity{ capacity }
-        , claimed_sizes{ ClaimedSize{ .timeline_value = 1, .size = 0 } }
-    { 
-
+        : device{std::move(device)}, gpu_timeline{this->device.create_timeline_semaphore({.initial_value = 0, .debug_name = "MemoryUploader"})}, current_command_list{this->device.create_command_list({.debug_name = "MemoryUploader CommandList Nr. 0"})}, capacity{capacity}, claimed_sizes{ClaimedSize{.timeline_value = 1, .size = 0}}
+    {
     }
 
-    auto MemoryUploader::upload_to_buffer(BufferId dst_buffer, usize dst_offset, usize size) -> void*
+    auto MemoryUploader::upload_to_buffer(BufferId dst_buffer, usize dst_offset, usize size) -> void *
     {
         usize src_offset = this->reserve_memoy(size);
 
@@ -28,7 +23,7 @@ namespace daxa
             .size = size,
         });
 
-        return reinterpret_cast<void*>(this->device.map_memory_as<u8>(this->upload_buffer) + src_offset);
+        return reinterpret_cast<void *>(this->device.map_memory_as<u8>(this->upload_buffer) + src_offset);
     }
 
     auto MemoryUploader::get_commands() -> MemoryUploadCommandSubmitInfo
@@ -37,8 +32,7 @@ namespace daxa
 
         this->current_command_list.complete();
 
-        MemoryUploadCommandSubmitInfo ret
-        {
+        MemoryUploadCommandSubmitInfo ret{
             .command_list = this->current_command_list,
             .timeline = this->gpu_timeline,
             .timeline_signal_value = this->timeline_value,
@@ -57,7 +51,7 @@ namespace daxa
 
         return ret;
     }
-    
+
     void MemoryUploader::reclaim_unused_memory()
     {
         usize gpu_timeline_value = gpu_timeline.value();
@@ -77,9 +71,9 @@ namespace daxa
         usize old_size = this->claimed_size;
         this->claimed_size += size;
         DAXA_DBG_ASSERT_TRUE_M(this->claimed_size <= capacity, "exceeded MemoryUploader ring buffer capacity! A potential fix would be to increase the uploaders capacity.");
-    
+
         return (start + old_size) % capacity;
     }
-}
+} // namespace daxa
 
 #endif // #if DAXA_BUILT_WITH_UTILS

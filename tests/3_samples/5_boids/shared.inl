@@ -8,13 +8,13 @@
 #define BOID_VIEW_ANGLE (0.65f * 3.14f)
 #define BOID_VIEW_RANGE 5
 #define BOID_BLIND_RANGE 0.1f
-#define BOID_STEER_PER_SECOND 0.25
+#define BOID_STEER_PER_SECOND 1.85f
 #define SIMULATION_DELTA_TIME_MS 5
 #define SIMULATION_DELTA_TIME_S (float(SIMULATION_DELTA_TIME_MS) * 0.001f)
 #define BOID_STEER_PER_TICK (BOID_STEER_PER_SECOND * SIMULATION_DELTA_TIME_S)
 #define BOID_SPEED 7.0f
 
-#define BOIDS_SEPERATION_FACTOR 1.0f
+#define BOIDS_AVOID_FACTOR 1.0f
 #define BOIDS_COHESION_FACTOR 0.01f
 #define BOIDS_CENTER_FACTOR 1.0f
 
@@ -46,6 +46,6 @@ struct DrawPushConstant
 
 struct UpdateBoidsPushConstant
 {
+    BufferRef(Boids) boids_buffer;
     BufferRef(Boids) old_boids_buffer;
-    BufferId boids_buffer_id;
 };
