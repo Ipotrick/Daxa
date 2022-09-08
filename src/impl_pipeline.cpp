@@ -910,10 +910,8 @@ namespace daxa
         auto spirv_stage = translate_shader_stage(shader_stage);
 
         // preamble += "#version 450\n";
-        preamble += "#define _DAXA_SHADER 1\n";
-        preamble += "#define _DAXA_GLSL 1\n";
-        preamble += "#define DAXA_SHADER_INCLUDE <daxa/daxa.inl>\n";
-        // preamble += "#extension GL_KHR_vulkan_glsl : enable\n";
+        preamble += "#define DAXA_SHADER 1\n";
+        preamble += "#define DAXA_GLSL 1\n";
         preamble += "#extension GL_GOOGLE_include_directive : enable\n";
         preamble += "#extension GL_EXT_nonuniform_qualifier : enable\n";
         preamble += "#extension GL_EXT_buffer_reference : enable\n";
@@ -1014,9 +1012,8 @@ namespace daxa
             args.push_back(L"-D");
             args.push_back(wstring_buffer.back().c_str());
         }
-        args.push_back(L"-D_DAXA_SHADER");
-        args.push_back(L"-D_DAXA_HLSL");
-        args.push_back(L"-DDAXA_SHADER_INCLUDE=\"daxa/daxa.inl\"");
+        args.push_back(L"-DDAXA_SHADER");
+        args.push_back(L"-DDAXA_HLSL");
 
         if (shader_info.source.index() == 0)
         {
