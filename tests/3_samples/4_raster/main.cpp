@@ -183,9 +183,12 @@ struct App : AppWindow<App>
         cmd_list.set_pipeline(raster_pipeline);
         auto mat = player.camera.get_vp();
         auto push = DrawPush{
-            .view_mat = *reinterpret_cast<f32mat4x4*>(&mat),
+            .view_mat = *reinterpret_cast<f32mat4x4 *>(&mat),
+            .chunk_pos = {},
+            .face_buffer_id = {},
             .texture_array_id = renderable_world.atlas_texture_array.default_view(),
             .sampler_id = renderable_world.atlas_sampler,
+            .mode = {},
         };
         renderable_world.draw(cmd_list, push);
         cmd_list.end_renderpass();
