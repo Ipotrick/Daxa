@@ -92,14 +92,22 @@ namespace daxa
 
     void ManagedPtr::cleanup()
     {
-        if (this->object && DAXA_ATOMIC_FETCH_DEC(this->object->strong_count) == 1)
+        if (this->object && DAXA_ATOMIC_FETCH(this->object->strong_count) == 1)
         {
             bool should_delete = this->object->managed_cleanup();
-            // TODO(pahrens): put this assert back, its only disabled for debugging
-            // DAXA_DBG_ASSERT_TRUE_M(DAXA_ATOMIC_FETCH(this->object->weak_count) == 0, "Weak pointer reference count was NOT ZERO");
+            u64 weak_count = DAXA_ATOMIC_FETCH(this->object->weak_count);
             if (should_delete)
             {
-                delete this->object;
+                this->object->~ManagedSharedState();
+                if (weak_count == 0)
+                {
+                    free(this->object);
+                }
+                else
+                {
+                    // keep the memory around for debugging, but set strong count to 0 to singal death.
+                    DAXA_ATOMIC_FETCH_DEC(this->object->strong_count);
+                }
             }
             this->object = {};
         }
@@ -118,6 +126,10 @@ namespace daxa
     {
         if (object)
         {
+#if DAXA_VALIDATION
+            u64 strong_count = DAXA_ATOMIC_FETCH(object->strong_count);
+            DAXA_DBG_ASSERT_TRUE_M(strong_count > 0, "strong count must be greater then zero when a weak ptr is still alive!");
+#endif
             DAXA_ATOMIC_FETCH_DEC(object->weak_count);
         }
     }
