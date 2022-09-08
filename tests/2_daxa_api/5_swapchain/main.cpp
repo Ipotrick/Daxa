@@ -54,6 +54,10 @@ namespace tests
                 .debug_name = APPNAME_PREFIX("swpachain (clearcolor)"),
             });
 
+            daxa::BinarySemaphore acquire_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("acquire_semaphore")});
+            
+            daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
+
             App() : AppWindow<App>(APPNAME " (clearcolor)") {}
 
             bool update()
@@ -79,10 +83,7 @@ namespace tests
 
             void draw()
             {
-                auto swapchain_image = swapchain.acquire_next_image();
-                auto binary_semaphore = device.create_binary_semaphore({
-                    .debug_name = APPNAME_PREFIX("binary_semaphore (clearcolor)"),
-                });
+                auto swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
                 auto cmd_list = device.create_command_list({
                     .debug_name = APPNAME_PREFIX("cmd_list (clearcolor)"),
                 });
@@ -111,11 +112,12 @@ namespace tests
 
                 device.submit_commands({
                     .command_lists = {std::move(cmd_list)},
-                    .signal_binary_semaphores = {binary_semaphore},
+                    .wait_binary_semaphores = { acquire_semaphore },
+                    .signal_binary_semaphores = { present_semaphore },
                 });
 
                 device.present_frame({
-                    .wait_binary_semaphores = {binary_semaphore},
+                    .wait_binary_semaphores = { present_semaphore },
                     .swapchain = swapchain,
                 });
             }

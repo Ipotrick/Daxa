@@ -7,13 +7,13 @@ namespace daxa
 {
     Swapchain::Swapchain(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
-    ImageId Swapchain::acquire_next_image()
+    ImageId Swapchain::acquire_next_image(BinarySemaphore& signal_semaphore)
     {
         auto & impl = *as<ImplSwapchain>();
         VkResult err;
         do
         {
-            err = vkAcquireNextImageKHR(impl.impl_device.as<ImplDevice>()->vk_device, impl.vk_swapchain, UINT64_MAX, nullptr, impl.acquisition_fence, &impl.current_image_index);
+            err = vkAcquireNextImageKHR(impl.impl_device.as<ImplDevice>()->vk_device, impl.vk_swapchain, UINT64_MAX, signal_semaphore.as<ImplBinarySemaphore>()->vk_semaphore, nullptr, &impl.current_image_index);
             if (err == VK_ERROR_OUT_OF_DATE_KHR)
             {
                 impl.recreate();
@@ -32,8 +32,8 @@ namespace daxa
                 throw std::runtime_error("Unexpected swapchain error");
             }
         } while (err != VK_SUCCESS);
-        vkWaitForFences(impl.impl_device.as<ImplDevice>()->vk_device, 1, &impl.acquisition_fence, VK_TRUE, UINT64_MAX);
-        vkResetFences(impl.impl_device.as<ImplDevice>()->vk_device, 1, &impl.acquisition_fence);
+        //vkWaitForFences(impl.impl_device.as<ImplDevice>()->vk_device, 1, &impl.acquisition_fence, VK_TRUE, UINT64_MAX);
+        //vkResetFences(impl.impl_device.as<ImplDevice>()->vk_device, 1, &impl.acquisition_fence);
         return impl.image_resources[impl.current_image_index];
     }
 
