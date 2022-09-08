@@ -90,10 +90,6 @@ struct App : AppWindow<App>
         .debug_name = APPNAME_PREFIX("vertex_buffer"),
     });
 
-    daxa::BinarySemaphore binary_semaphore = device.create_binary_semaphore({
-        .debug_name = APPNAME_PREFIX("binary_semaphore"),
-    });
-
     static inline constexpr u64 FRAMES_IN_FLIGHT = 1;
     daxa::TimelineSemaphore gpu_framecount_timeline_sema = device.create_timeline_semaphore(daxa::TimelineSemaphoreInfo{
         .initial_value = 0,
