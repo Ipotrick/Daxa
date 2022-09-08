@@ -31,7 +31,8 @@ namespace daxa
         GPUResourceTable gpu_table = {};
 
         // Resource recycling:
-        RecyclableList<ImplCommandList> command_list_recyclable_list = {};
+        DAXA_ONLY_IF_THREADSAFETY(std::mutex main_queue_command_pool_buffer_recycle_mtx = {});
+        CommandBufferPoolPool buffer_pool_pool = {};
         RecyclableList<ImplBinarySemaphore> binary_semaphore_recyclable_list = {};
         // Main queue:
         VkQueue main_queue_vk_queue = {};
@@ -42,19 +43,19 @@ namespace daxa
 
         DAXA_ONLY_IF_THREADSAFETY(std::mutex main_queue_zombies_mtx = {});
         std::deque<std::pair<u64, std::vector<ManagedPtr>>> main_queue_submits_zombies = {};
+        std::deque<std::pair<u64, CommandListZombie>> main_queue_command_list_zombies = {};
         std::deque<std::pair<u64, BufferId>> main_queue_buffer_zombies = {};
         std::deque<std::pair<u64, ImageId>> main_queue_image_zombies = {};
         std::deque<std::pair<u64, ImageViewId>> main_queue_image_view_zombies = {};
         std::deque<std::pair<u64, SamplerId>> main_queue_sampler_zombies = {};
-        std::deque<std::pair<u64, std::unique_ptr<ImplBinarySemaphore>>> main_queue_binary_semaphore_zombies = {};
-        std::deque<std::pair<u64, std::unique_ptr<ImplTimelineSemaphore>>> main_queue_timeline_semaphore_zombies = {};
+        std::deque<std::pair<u64, SemaphoreZombie>> main_queue_semaphore_zombies = {};
         std::deque<std::pair<u64, std::unique_ptr<ImplComputePipeline>>> main_queue_compute_pipeline_zombies = {};
         std::deque<std::pair<u64, std::unique_ptr<ImplRasterPipeline>>> main_queue_raster_pipeline_zombies = {};
         void main_queue_collect_garbage();
         void wait_idle();
 
         ImplDevice(DeviceInfo const & info, DeviceProperties const & vk_info, ManagedWeakPtr impl_ctx, VkPhysicalDevice physical_device);
-        virtual ~ImplDevice() override final = default;
+        virtual ~ImplDevice() override final;
 
         auto validate_image_slice(ImageMipArraySlice const & slice, ImageId id) -> ImageMipArraySlice;
         auto validate_image_slice(ImageMipArraySlice const & slice, ImageViewId id) -> ImageMipArraySlice;
