@@ -100,6 +100,10 @@ struct App : AppWindow<App>
     daxa::ImageId swapchain_image = {};
     daxa::TaskImageId task_swapchain_image = {};
 
+    daxa::BinarySemaphore acquire_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("acquire_semaphore")});
+    
+    daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
+
     App() : AppWindow<App>(APPNAME)
     {
         auto cmd_list = device.create_command_list({.debug_name = APPNAME_PREFIX("boid buffer init commands")});
@@ -307,7 +311,7 @@ struct App : AppWindow<App>
             do_resize();
         }
 
-        swapchain_image = swapchain.acquire_next_image();
+        swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
 
         std::swap(old_boid_buffer, boid_buffer);
 
@@ -329,17 +333,16 @@ struct App : AppWindow<App>
 
         commands.push_back(cmd_list);
 
-        auto binary_semaphore = device.create_binary_semaphore({.debug_name = "present semaphore"});
-
         ++cpu_framecount;
         device.submit_commands({
             .command_lists = commands,
-            .signal_binary_semaphores = {binary_semaphore},
+            .wait_binary_semaphores = { acquire_semaphore },
+            .signal_binary_semaphores = { present_semaphore },
             .signal_timeline_semaphores = {{gpu_framecount_timeline_sema, cpu_framecount}},
         });
 
         device.present_frame({
-            .wait_binary_semaphores = {binary_semaphore},
+            .wait_binary_semaphores = { present_semaphore },
             .swapchain = swapchain,
         });
 
