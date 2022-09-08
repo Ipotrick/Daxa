@@ -8,6 +8,11 @@ namespace daxa
 {
     struct ImplDevice;
 
+    struct SemaphoreZombie
+    {
+        VkSemaphore vk_semaphore = {};
+    };
+
     struct ImplBinarySemaphore final : ManagedSharedState
     {
         using InfoT = BinarySemaphoreInfo;
@@ -16,7 +21,7 @@ namespace daxa
         VkSemaphore vk_semaphore = {};
         BinarySemaphoreInfo info = {};
 
-        ImplBinarySemaphore(ManagedWeakPtr a_impl_device);
+        ImplBinarySemaphore(ManagedWeakPtr a_impl_device, BinarySemaphoreInfo const & info);
         ~ImplBinarySemaphore();
 
         void initialize(BinarySemaphoreInfo const & info);

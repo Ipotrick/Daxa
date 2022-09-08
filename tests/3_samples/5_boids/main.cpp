@@ -207,7 +207,7 @@ struct App : AppWindow<App>
             .boids_buffer = device.buffer_reference(boid_buffer_id),
             .axis_scaling = {
                 std::min(1.0f, static_cast<f32>(sy) / static_cast<f32>(sx)),
-                std::min(1.0f, static_cast<f32>(sy) / static_cast<f32>(sx)),
+                std::min(1.0f, static_cast<f32>(sx) / static_cast<f32>(sy)),
             }});
 
         cmd_list.draw({.vertex_count = 3 * MAX_BOIDS});
