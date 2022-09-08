@@ -16,7 +16,6 @@
 #include "daxa/daxa.hlsl"
 #elif defined(__cplusplus)
 #include <daxa/daxa.hpp>
-#define DAXA_REGISTER_STRUCT(STRUCT_TYPE)
 #define DAXA_REGISTER_READ_ONLY_IMAGE_TYPE(IMAGE_TYPE)
 #define DAXA_REGISTER_SAMPLER_TYPE(SAMPLER_TYPE)
 #define DAXA_PUSH_CONSTANT(STRUCT_TYPE)

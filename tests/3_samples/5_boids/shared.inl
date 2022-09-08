@@ -25,18 +25,16 @@ struct Boid
 };
 
 DAXA_DECL_BUFFER_STRUCT(
-    Boids, 
+    Boids,
     {
         Boid boids[MAX_BOIDS];
-    }
-);
+    });
 
 DAXA_DECL_BUFFER_STRUCT(
-    GpuOutput, 
+    GpuOutput,
     {
         f32 data;
-    }
-);
+    });
 
 struct DrawPushConstant
 {

@@ -212,48 +212,47 @@ u32 tile_texture_index(BlockID block_id, BlockFace face)
     // clang-format on
 }
 
-struct FaceBuffer
-{
-    u32 data[32 * 32 * 32 * 6];
-
-    Vertex get_vertex(u32 vert_i)
+DAXA_DECL_BUFFER_STRUCT(
+    FaceBuffer,
     {
-        u32 data_index = vert_i / 6;
-        u32 data_instance = vert_i - data_index * 6;
+        u32 data[32 * 32 * 32 * 6];
 
-        u32 vert_data = data[data_index];
+        Vertex get_vertex(u32 vert_i)
+        {
+            u32 data_index = vert_i / 6;
+            u32 data_instance = vert_i - data_index * 6;
 
-        Vertex result;
+            u32 vert_data = data[data_index];
 
-        result.block_pos = f32vec3(
-            (vert_data >> 0) & 0x1f,
-            (vert_data >> 5) & 0x1f,
-            (vert_data >> 10) & 0x1f);
-        result.pos = result.block_pos;
-        result.uv = instance_offsets[data_instance];
-        result.block_id = (BlockID)((vert_data >> 18) & 0x3fff);
-        result.block_face = (BlockFace)((vert_data >> 15) & 0x7);
+            Vertex result;
 
-        result.vert_id = data_instance;
-        result.correct_pos(data_index);
-        result.tex_id = tile_texture_index(result.block_id, result.block_face);
-        result.correct_uv();
+            result.block_pos = f32vec3(
+                (vert_data >> 0) & 0x1f,
+                (vert_data >> 5) & 0x1f,
+                (vert_data >> 10) & 0x1f);
+            result.pos = result.block_pos;
+            result.uv = instance_offsets[data_instance];
+            result.block_id = (BlockID)((vert_data >> 18) & 0x3fff);
+            result.block_face = (BlockFace)((vert_data >> 15) & 0x7);
 
-        return result;
-    }
-};
+            result.vert_id = data_instance;
+            result.correct_pos(data_index);
+            result.tex_id = tile_texture_index(result.block_id, result.block_face);
+            result.correct_uv();
 
-DAXA_DEFINE_GET_STRUCTURED_BUFFER(FaceBuffer);
+            return result;
+        }
+    });
 
-struct RasterInput
-{
-    f32mat4x4 view_mat;
-    f32mat4x4 prev_view_mat;
-    f32vec2 jitter;
-    ImageViewId texture_array_id;
-    SamplerId sampler_id;
-};
-DAXA_DEFINE_GET_STRUCTURED_BUFFER(RasterInput);
+DAXA_DECL_BUFFER_STRUCT(
+    RasterInput,
+    {
+        f32mat4x4 view_mat;
+        f32mat4x4 prev_view_mat;
+        f32vec2 jitter;
+        ImageViewId texture_array_id;
+        SamplerId sampler_id;
+    });
 
 struct Push
 {
@@ -292,10 +291,10 @@ struct FragOutput
     f32vec2 motion : SV_TARGET1;
 };
 
-BufferId uniform = device.create_buffer(bla, staging buffer);
-UniformStruct* device.map<UniformStruct>(uniform);
-cmd_list.destroy_deferred(uniform);
-cmd_list.set_uniform(0, uniform, sizeof(UniformStruct), 0);
+// BufferId uniform = device.create_buffer(bla, staging buffer);
+// UniformStruct* device.map<UniformStruct>(uniform);
+// cmd_list.destroy_deferred(uniform);
+// cmd_list.set_uniform(0, uniform, sizeof(UniformStruct), 0);
 
 FragOutput fs_main(VertexOutput vertex_output)
 {
