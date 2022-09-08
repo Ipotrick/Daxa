@@ -32,7 +32,6 @@ DAXA_CREATE_TEST(2_daxa_api 4_synchronization)
 DAXA_CREATE_TEST(2_daxa_api 5_swapchain)
 DAXA_CREATE_TEST(2_daxa_api 6_task_list)
 
-DAXA_CREATE_TEST(3_samples 0_playground)
 DAXA_CREATE_TEST(3_samples 1_mandelbrot)
 DAXA_CREATE_TEST(3_samples 2_hello_triangle)
 DAXA_CREATE_TEST(3_samples 3_hello_triangle_compute)

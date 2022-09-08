@@ -2,6 +2,9 @@
 #include <thread>
 #include <iostream>
 
+#define DAXA_GLSL 1
+#define DAXA_HLSL 0
+
 #include "shaders/shared.inl"
 
 #include <daxa/utils/imgui.hpp>
@@ -45,7 +48,11 @@ struct App : AppWindow<App>
                 "tests/3_samples/2_hello_triangle/shaders",
                 "include",
             },
+#if DAXA_GLSL
             .language = daxa::ShaderLanguage::GLSL,
+#elif DAXA_HLSL
+            .language = daxa::ShaderLanguage::HLSL,
+#endif
         },
         .debug_name = APPNAME_PREFIX("pipeline_compiler"),
     });
@@ -64,10 +71,13 @@ struct App : AppWindow<App>
 
     // clang-format off
     daxa::RasterPipeline raster_pipeline = pipeline_compiler.create_raster_pipeline({
+#if DAXA_GLSL
         .vertex_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_VERT"}}}},
         .fragment_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_FRAG"}}}},
-        // .vertex_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .compile_options = {.entry_point = "vs_main"}},
-        // .fragment_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .compile_options = {.entry_point = "fs_main"}},
+#elif DAXA_HLSL
+        .vertex_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .compile_options = {.entry_point = "vs_main"}},
+        .fragment_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .compile_options = {.entry_point = "fs_main"}},
+#endif
         .color_attachments = {{.format = swapchain.get_format()}},
         .raster = {},
         .push_constant_size = sizeof(DrawPush),
@@ -196,8 +206,12 @@ struct App : AppWindow<App>
             .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
         });
         cmd_list.set_pipeline(raster_pipeline);
-        cmd_list.push_constant(DrawPush{
-            .vertex_buffer_id = vertex_buffer,
+        cmd_list.push_constant(DrawPush {
+#if DAXA_GLSL
+            .face_buffer = this->device.buffer_reference(vertex_buffer),
+#elif DAXA_HLSL
+                .vertex_buffer_id = vertex_buffer,
+#endif
         });
         cmd_list.draw({.vertex_count = 3});
         cmd_list.end_renderpass();
