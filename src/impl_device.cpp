@@ -32,6 +32,23 @@ namespace daxa
 
         std::pair<u64, std::vector<ManagedPtr>> submit = {curreny_main_queue_cpu_timeline_value, {}};
 
+        for (auto& command_list : submit_info.command_lists)
+        {
+            auto cmd_list = command_list.as<ImplCommandList>();
+            for (usize i = 0; i < cmd_list->deferred_destruction_count; ++i)
+            {
+                auto [id, index] = cmd_list->deferred_destructions[i];
+                switch (index)
+                {
+                    case DEFERRED_DESTRUCTION_BUFFER_INDEX: impl.main_queue_buffer_zombies.push_front({curreny_main_queue_cpu_timeline_value,BufferId{id}}); break;
+                    case DEFERRED_DESTRUCTION_IMAGE_INDEX: impl.main_queue_image_zombies.push_front({curreny_main_queue_cpu_timeline_value, ImageId{id}}); break;
+                    case DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX: impl.main_queue_image_view_zombies.push_front({curreny_main_queue_cpu_timeline_value, ImageViewId{id}}); break;
+                    case DEFERRED_DESTRUCTION_SAMPLER_INDEX: impl.main_queue_sampler_zombies.push_front({curreny_main_queue_cpu_timeline_value, SamplerId{id}}); break;
+                    default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
+                }
+            }
+        }
+
         std::vector<VkCommandBuffer> submit_vk_command_buffers = {};
         for (auto & command_list : submit_info.command_lists)
         {
@@ -177,19 +194,21 @@ namespace daxa
 
     auto Device::create_pipeline_compiler(PipelineCompilerInfo const & info) -> PipelineCompiler
     {
-        return PipelineCompiler{new ImplPipelineCompiler(this->make_weak(), info)};
+        return PipelineCompiler{ManagedPtr{new ImplPipelineCompiler(this->make_weak(), info)}};
     }
 
     auto Device::create_command_list(CommandListInfo const & info) -> CommandList
     {
         auto impl = as<ImplDevice>();
-        return CommandList{ManagedPtr{impl->command_list_recyclable_list.recycle_or_create_new(this->make_weak(), info).release()}};
+        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{impl->main_queue_command_pool_buffer_recycle_mtx});
+        auto [pool, buffer] = impl->buffer_pool_pool.get(impl);
+        return CommandList{ManagedPtr{new ImplCommandList{ this->make_weak(), pool, buffer, info }}};
     }
 
     auto Device::create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore
     {
         auto impl = as<ImplDevice>();
-        return BinarySemaphore{ManagedPtr{impl->binary_semaphore_recyclable_list.recycle_or_create_new(this->make_weak(), info).release()}};
+        return BinarySemaphore{ManagedPtr{ new ImplBinarySemaphore{ impl, info}}};
     }
 
     auto Device::create_timeline_semaphore(TimelineSemaphoreInfo const & info) -> TimelineSemaphore
@@ -665,24 +684,12 @@ namespace daxa
             }
         };
         check_and_cleanup_gpu_resources(this->main_queue_submits_zombies, [&, this](auto & command_lists)
-                                        {
-            for (ManagedPtr & cmd_list_mp : command_lists)
-            {
-                auto cmd_list = cmd_list_mp.as<ImplCommandList>();
-                for (usize i = 0; i < cmd_list->deferred_destruction_count; ++i)
-                {
-                    auto [id, index] = cmd_list->deferred_destructions[i];
-                    switch (index)
-                    {
-                        case DEFERRED_DESTRUCTION_BUFFER_INDEX: this->main_queue_buffer_zombies.push_front({main_queue_cpu_timeline,BufferId{id}}); break;
-                        case DEFERRED_DESTRUCTION_IMAGE_INDEX: this->main_queue_image_zombies.push_front({main_queue_cpu_timeline, ImageId{id}}); break;
-                        case DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX: this->main_queue_image_view_zombies.push_front({main_queue_cpu_timeline, ImageViewId{id}}); break;
-                        case DEFERRED_DESTRUCTION_SAMPLER_INDEX: this->main_queue_sampler_zombies.push_front({main_queue_cpu_timeline, SamplerId{id}}); break;
-                        default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
-                    }
-                }
-            }
-            command_lists.clear(); });
+                                        { });
+        check_and_cleanup_gpu_resources(this->main_queue_command_list_zombies, [&](auto command_list_zombie) 
+        {
+            DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_command_pool_buffer_recycle_mtx});
+            this->buffer_pool_pool.put_back({command_list_zombie.vk_cmd_pool, command_list_zombie.vk_cmd_buffer});
+        });
         check_and_cleanup_gpu_resources(this->main_queue_buffer_zombies, [&](auto id)
                                         { this->cleanup_buffer(id); });
         check_and_cleanup_gpu_resources(this->main_queue_image_view_zombies, [&](auto id)
@@ -691,16 +698,11 @@ namespace daxa
                                         { this->cleanup_image(id); });
         check_and_cleanup_gpu_resources(this->main_queue_sampler_zombies, [&](auto id)
                                         { this->cleanup_sampler(id); });
-        {
-            DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->binary_semaphore_recyclable_list.mtx});
-            check_and_cleanup_gpu_resources(this->main_queue_binary_semaphore_zombies, [&](auto & binary_semaphore)
-                                            { 
-                binary_semaphore->reset();
-                this->binary_semaphore_recyclable_list.recyclables.push_back(std::move(binary_semaphore)); });
-        }
         check_and_cleanup_gpu_resources(this->main_queue_compute_pipeline_zombies, [&](auto & compute_pipeline) {});
         check_and_cleanup_gpu_resources(this->main_queue_raster_pipeline_zombies, [&](auto & raster_pipeline) {});
-        check_and_cleanup_gpu_resources(this->main_queue_timeline_semaphore_zombies, [&](auto & timeline_semaphore) {});
+        check_and_cleanup_gpu_resources(this->main_queue_semaphore_zombies, [&](auto & semaphore_zombie) {
+            vkDestroySemaphore(this->vk_device, semaphore_zombie.vk_semaphore, nullptr);
+        });
     }
 
     void ImplDevice::wait_idle()
@@ -1167,13 +1169,13 @@ namespace daxa
         gpu_table.sampler_slots.return_slot(id);
     }
 
-    auto ImplDevice::managed_cleanup() -> bool
+    ImplDevice::~ImplDevice()
     {
         wait_idle();
         main_queue_collect_garbage();
 
         binary_semaphore_recyclable_list.clear();
-        command_list_recyclable_list.clear();
+        buffer_pool_pool.cleanup(this);
 
         vmaDestroyBuffer(this->vma_allocator, this->buffer_device_address_buffer, this->buffer_device_address_buffer_allocation);
 
@@ -1183,6 +1185,10 @@ namespace daxa
         vkDestroySemaphore(this->vk_device, this->vk_main_queue_gpu_timeline_semaphore, nullptr);
         vkDestroyDevice(this->vk_device, nullptr);
 
+    }
+
+    auto ImplDevice::managed_cleanup() -> bool
+    {
         return true;
     }
 

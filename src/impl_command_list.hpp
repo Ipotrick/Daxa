@@ -19,8 +19,28 @@ namespace daxa
     static inline constexpr usize COMMAND_LIST_BARRIER_MAX_BATCH_SIZE = 16;
     static inline constexpr usize COMMAND_LIST_COLOR_ATTACHMENT_MAX = 16;
 
-    struct ImplCommandList
+    struct CommandBufferPoolPool
     {
+        auto get(ImplDevice * device) -> std::pair<VkCommandPool, VkCommandBuffer>;
+
+        void put_back(std::pair<VkCommandPool, VkCommandBuffer> pool_and_buffer);
+
+        void cleanup(ImplDevice * device);
+
+        std::vector<std::pair<VkCommandPool, VkCommandBuffer>> pools_and_buffers = {};
+    };
+
+    struct CommandListZombie
+    {
+        VkCommandBuffer vk_cmd_buffer = {};
+        VkCommandPool vk_cmd_pool = {};
+    };
+
+    struct ImplCommandList final : ManagedSharedState
+    {
+        using InfoT = CommandListInfo;
+
+        ManagedWeakPtr impl_device = {};
         CommandListInfo info = {};
         VkCommandBuffer vk_cmd_buffer = {};
         VkCommandPool vk_cmd_pool = {};
@@ -29,27 +49,18 @@ namespace daxa
         std::array<VkImageMemoryBarrier2, COMMAND_LIST_BARRIER_MAX_BATCH_SIZE> image_barrier_batch = {};
         usize image_barrier_batch_count = 0;
         usize memory_barrier_batch_count = 0;
-        std::array<VkPipelineLayout, PIPELINE_LAYOUT_COUNT> pipeline_layouts = {};
+        std::array<VkPipelineLayout, PIPELINE_LAYOUT_COUNT>* pipeline_layouts = {};
         std::array<std::pair<GPUResourceId, u8>, DEFERRED_DESTRUCTION_COUNT_MAX> deferred_destructions = {};
         usize deferred_destruction_count = {};
 
-        void create(ImplDevice* device);
-        void destroy(ImplDevice* device);
+        void flush_barriers();
+
+        ImplCommandList(ManagedWeakPtr device_impl, VkCommandPool pool, VkCommandBuffer buffer, CommandListInfo const & a_info);
+        virtual ~ImplCommandList() override final;
 
         void initialize(CommandListInfo const & a_info);
         void reset();
 
-        void flush_barriers();
-    };
-
-    struct ImplCommandListSharedState final : ManagedSharedState
-    {
-        using InfoT = CommandListInfo;
-
-        ManagedWeakPtr impl_device = {};
-        ImplCommandList list = {};
-
-        ImplCommandListSharedState(ManagedWeakPtr device_impl);
-        virtual ~ImplCommandListSharedState() override final;
+        auto managed_cleanup() -> bool override final;
     };
 } // namespace daxa
