@@ -46,6 +46,8 @@ namespace daxa
     void Swapchain::resize(u32 width, u32 height)
     {
         auto & impl = *as<ImplSwapchain>();
+        if (width == impl.info.width && height == impl.info.height)
+            return;
         impl.info.width = width;
         impl.info.height = height;
         impl.recreate();
@@ -136,6 +138,11 @@ namespace daxa
         info.height = surface_capabilities.currentExtent.height;
 
         auto old_swapchain = this->vk_swapchain;
+
+#if defined(__linux__)
+        // TODO: Figure out why this hack fixes things for Linux!
+        this->impl_device.as<ImplDevice>()->wait_idle();
+#endif
 
         cleanup();
 
