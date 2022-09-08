@@ -3,6 +3,7 @@
 #include <daxa/core.hpp>
 
 #include <daxa/gpu_resources.hpp>
+#include <daxa/semaphore.hpp>
 
 namespace daxa
 {
@@ -35,7 +36,7 @@ namespace daxa
         auto info() const -> SwapchainInfo const &;
         auto get_format() const -> Format;
 
-        ImageId acquire_next_image();
+        ImageId acquire_next_image(BinarySemaphore& signal_semaphore);
         void resize(u32 width, u32 height);
         void change_present_mode(PresentMode new_present_mode);
 

@@ -326,6 +326,10 @@ namespace tests
             daxa::ImageId swapchain_image;
             daxa::TaskImageId task_swapchain_image;
 
+            daxa::BinarySemaphore acquire_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("acquire_semaphore")});
+            
+            daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
+
             App() : AppWindow<App>("Daxa API: Swapchain (clearcolor)")
             {
                 record_task_list();
@@ -419,7 +423,7 @@ namespace tests
                         raster_pipeline = new_pipeline.value();
                     }
                 }
-                swapchain_image = swapchain.acquire_next_image();
+                swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
                 task_list.execute();
                 auto command_lists = task_list.command_lists();
                 auto cmd_list = device.create_command_list({});
@@ -431,13 +435,13 @@ namespace tests
                 });
                 cmd_list.complete();
                 command_lists.push_back(cmd_list);
-                auto binary_semaphore = device.create_binary_semaphore({});
                 device.submit_commands({
                     .command_lists = command_lists,
-                    .signal_binary_semaphores = {binary_semaphore},
+                    .wait_binary_semaphores = { acquire_semaphore },
+                    .signal_binary_semaphores = { present_semaphore },
                 });
                 device.present_frame({
-                    .wait_binary_semaphores = {binary_semaphore},
+                    .wait_binary_semaphores = { present_semaphore },
                     .swapchain = swapchain,
                 });
             }

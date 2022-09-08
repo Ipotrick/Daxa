@@ -111,8 +111,12 @@ struct App : AppWindow<App>
         });
     }
 
-    daxa::BinarySemaphore binary_semaphore = device.create_binary_semaphore({
-        .debug_name = APPNAME_PREFIX("binary_semaphore"),
+    daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({
+        .debug_name = APPNAME_PREFIX("present_semaphore"),
+    });
+
+    daxa::BinarySemaphore acquire_semaphore = device.create_binary_semaphore({
+        .debug_name = APPNAME_PREFIX("acquire_semaphore"),
     });
 
     static inline constexpr u64 FRAMES_IN_FLIGHT = 1;
@@ -267,7 +271,7 @@ struct App : AppWindow<App>
             do_resize();
         }
 
-        swapchain_image = swapchain.acquire_next_image();
+        swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
 
         loop_task_list.execute();
         auto command_lists = loop_task_list.command_lists();
@@ -283,11 +287,12 @@ struct App : AppWindow<App>
         command_lists.push_back(cmd_list);
         device.submit_commands({
             .command_lists = command_lists,
-            .signal_binary_semaphores = {binary_semaphore},
+            .wait_binary_semaphores = { acquire_semaphore },
+            .signal_binary_semaphores = { present_semaphore },
             .signal_timeline_semaphores = {{gpu_framecount_timeline_sema, cpu_framecount}},
         });
         device.present_frame({
-            .wait_binary_semaphores = {binary_semaphore},
+            .wait_binary_semaphores = {present_semaphore},
             .swapchain = swapchain,
         });
         gpu_framecount_timeline_sema.wait_for_value(cpu_framecount - 1);
