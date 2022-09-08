@@ -11,11 +11,10 @@ DAXA_DECL_BUFFER_STRUCT(
     DrawVertexBuffer,
     {
         DrawVertex verts[3];
-    }
-);
+    });
 
 struct DrawPush
 {
     BufferId vertex_buffer_id;
-    u32vec2 frame_dim;
+    // u32vec2 frame_dim;
 };
