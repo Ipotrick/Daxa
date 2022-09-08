@@ -2,6 +2,9 @@
 #include <thread>
 #include <iostream>
 
+#define DAXA_GLSL 1
+#define DAXA_HLSL 0
+
 #include "shaders/shared.inl"
 
 #define APPNAME "Daxa Sample: Mandelbrot"
@@ -42,13 +45,21 @@ struct App : AppWindow<App>
                 "include",
             },
             .opt_level = 2,
+#if DAXA_GLSL
             .language = daxa::ShaderLanguage::GLSL,
+#elif DAXA_HLSL
+            .language = daxa::ShaderLanguage::HLSL,
+#endif
         },
         .debug_name = APPNAME_PREFIX("pipeline_compiler"),
     });
     // clang-format off
     daxa::ComputePipeline compute_pipeline = pipeline_compiler.create_compute_pipeline({
+#if DAXA_GLSL
         .shader_info = {.source = daxa::ShaderFile{"compute.glsl"}},
+#elif DAXA_HLSL
+        .shader_info = {.source = daxa::ShaderFile{"compute.hlsl"}},
+#endif
         .push_constant_size = sizeof(ComputePush),
         .debug_name = APPNAME_PREFIX("compute_pipeline"),
     }).value();
@@ -158,9 +169,13 @@ struct App : AppWindow<App>
         });
 
         cmd_list.set_pipeline(compute_pipeline);
-        cmd_list.push_constant(ComputePush{
+        cmd_list.push_constant(ComputePush {
             .image_id = render_image.default_view(),
+#if DAXA_GLSL
+            .compute_input = this->device.buffer_reference(compute_input_buffer),
+#elif DAXA_HLSL
             .input_buffer_id = compute_input_buffer,
+#endif
             .frame_dim = {size_x, size_y},
         });
         cmd_list.dispatch((size_x + 7) / 8, (size_y + 7) / 8);

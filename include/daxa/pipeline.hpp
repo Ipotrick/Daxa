@@ -55,7 +55,7 @@ namespace daxa
     struct ShaderInfo
     {
         ShaderSource source;
-        ShaderCompileOptions compile_options;
+        ShaderCompileOptions compile_options = {};
         std::string debug_name = {};
     };
 
