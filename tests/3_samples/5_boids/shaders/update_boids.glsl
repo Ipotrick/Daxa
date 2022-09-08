@@ -4,14 +4,14 @@
 
 DAXA_USE_PUSH_CONSTANT(UpdateBoidsPushConstant)
 
-float good_sign(float v) 
+float good_sign(float v)
 {
     return v > 0.0f ? 1.0f : -1.0f;
 }
 
 float angle_between_normals(vec2 a, vec2 b)
 {
-    return acos(dot(a,b));
+    return acos(dot(a, b));
 }
 
 float angle_between_normals_sign(vec2 a, vec2 b)
@@ -22,14 +22,14 @@ float angle_between_normals_sign(vec2 a, vec2 b)
 
 float signed_angle_between_normals(vec2 a, vec2 b)
 {
-    return angle_between_normals_sign(a,b) * angle_between_normals(a,b);
+    return angle_between_normals_sign(a, b) * angle_between_normals(a, b);
 }
 
 void boid_update_position(inout Boid boid, in Boid old_boid, vec2 new_boid_direction)
 {
     vec2 new_position = old_boid.position + new_boid_direction * BOID_SPEED * SIMULATION_DELTA_TIME_S;
 
-    new_position = clamp(new_position, vec2(0.001f) , vec2(FIELD_SIZE - 0.001f) );
+    new_position = clamp(new_position, vec2(0.001f), vec2(FIELD_SIZE - 0.001f));
 
     boid.position = new_position;
     boid.direction = new_boid_direction;
@@ -42,7 +42,7 @@ void boid_avoid_walls(inout Boid old_boid, inout float steer_angle, inout float 
     // left wall
     if (old_boid.position.x < BOID_VIEW_RANGE)
     {
-        wall_normal += vec2(1.0f,0.0f);
+        wall_normal += vec2(1.0f, 0.0f);
         wall_dist = min(wall_dist, old_boid.position.x);
     }
     // top wall
@@ -54,13 +54,13 @@ void boid_avoid_walls(inout Boid old_boid, inout float steer_angle, inout float 
     // right wall
     if (old_boid.position.x + BOID_VIEW_RANGE > FIELD_SIZE)
     {
-        wall_normal += vec2(-1.0f,0.0f);
+        wall_normal += vec2(-1.0f, 0.0f);
         wall_dist = min(wall_dist, FIELD_SIZE - old_boid.position.x);
     }
     // bottom wall
     if (old_boid.position.y + BOID_VIEW_RANGE > FIELD_SIZE)
     {
-        wall_normal += vec2(0.0f,-1.0f);
+        wall_normal += vec2(0.0f, -1.0f);
         wall_dist = min(wall_dist, FIELD_SIZE - old_boid.position.y);
     }
 
@@ -85,7 +85,8 @@ void update_boid(inout Boid boid, in Boid old_boid, in uint boid_index, BufferRe
 
     for (uint i = 0; i < 0; ++i)
     {
-        if (i == boid_index) continue;
+        if (i == boid_index)
+            continue;
 
         const Boid other = old_boids_buffer.boids[i];
 
@@ -94,15 +95,16 @@ void update_boid(inout Boid boid, in Boid old_boid, in uint boid_index, BufferRe
         const vec2 dir_to_other = normalize(other.position - old_boid.position);
         const float signed_angle_of_boid_dir_to_other_dir = signed_angle_between_normals(old_boid.direction, dir_to_other);
 
-        if (dst_to_other < BOID_VIEW_RANGE || abs(signed_angle_of_boid_dir_to_other_dir) > BOID_VIEW_ANGLE) continue;
+        if (dst_to_other < BOID_VIEW_RANGE || abs(signed_angle_of_boid_dir_to_other_dir) > BOID_VIEW_ANGLE)
+            continue;
 
         // avoid other boids:
         float avoid_acc_weight = closeness_to_other;
         float avoid_angle_add = clamp(signed_angle_of_boid_dir_to_other_dir, -BOID_STEER_PER_TICK, BOID_STEER_PER_TICK) * BOIDS_AVOID_FACTOR;
-        
+
         // gabe take a look:
-        //acc_steer_angle += avoid_acc_weight * closeness_to_other * avoid_angle_add;
-        //acc_steer_angle_weight += avoid_acc_weight;
+        // acc_steer_angle += avoid_acc_weight * closeness_to_other * avoid_angle_add;
+        // acc_steer_angle_weight += avoid_acc_weight;
     }
 
     vec2 new_boid_direction = boid.direction;
@@ -110,9 +112,8 @@ void update_boid(inout Boid boid, in Boid old_boid, in uint boid_index, BufferRe
     {
         acc_steer_angle /= acc_steer_angle_weight;
         new_boid_direction = vec2(
-            dot(old_boid.direction, vec2( cos(acc_steer_angle), sin(acc_steer_angle))),
-            dot(old_boid.direction, vec2(-sin(acc_steer_angle), cos(acc_steer_angle)))
-        );
+            dot(old_boid.direction, vec2(cos(acc_steer_angle), sin(acc_steer_angle))),
+            dot(old_boid.direction, vec2(-sin(acc_steer_angle), cos(acc_steer_angle))));
     }
     boid_update_position(boid, old_boid, new_boid_direction);
 }
@@ -129,6 +130,5 @@ void main()
         push_constant.boids_buffer.boids[invocation],
         push_constant.old_boids_buffer.boids[invocation],
         invocation,
-        push_constant.old_boids_buffer
-    );
+        push_constant.old_boids_buffer);
 }

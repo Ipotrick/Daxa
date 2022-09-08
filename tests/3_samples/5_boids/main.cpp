@@ -115,9 +115,9 @@ struct App : AppWindow<App>
 
         for (usize i = 0; i < MAX_BOIDS; ++i)
         {
-            ptr->boids[i].position.x = (rand() % ((FIELD_SIZE)*100) / 100.0f);
-            ptr->boids[i].position.y = (rand() % ((FIELD_SIZE)*100) / 100.0f);
-            f32 angle = rand() % 3600 * 0.1f;
+            ptr->boids[i].position.x = static_cast<f32>(rand() % ((FIELD_SIZE)*100)) / 100.0f;
+            ptr->boids[i].position.y = static_cast<f32>(rand() % ((FIELD_SIZE)*100)) / 100.0f;
+            f32 angle = static_cast<f32>(rand() % 3600) * 0.1f;
             ptr->boids[i].direction.x = std::cos(angle);
             ptr->boids[i].direction.y = std::sin(angle);
         }
@@ -185,7 +185,7 @@ struct App : AppWindow<App>
         cmd_list.dispatch((MAX_BOIDS + 63) / 64, 1, 1);
     }
 
-    void draw_boids(daxa::CommandList & cmd_list, daxa::ImageId render_target, daxa::BufferId boid_buffer_id, u32 size_x, u32 size_y)
+    void draw_boids(daxa::CommandList & cmd_list, daxa::ImageId render_target, daxa::BufferId boid_buffer_id, u32 sx, u32 sy)
     {
         cmd_list.set_pipeline(draw_pipeline);
         cmd_list.begin_renderpass({
@@ -206,8 +206,8 @@ struct App : AppWindow<App>
         cmd_list.push_constant(DrawPushConstant{
             .boids_buffer = device.buffer_reference(boid_buffer_id),
             .axis_scaling = {
-                std::min(1.0f, static_cast<f32>(size_y) / static_cast<f32>(size_x)),
-                std::min(1.0f, static_cast<f32>(size_x) / static_cast<f32>(size_y)),
+                std::min(1.0f, static_cast<f32>(sy) / static_cast<f32>(sx)),
+                std::min(1.0f, static_cast<f32>(sy) / static_cast<f32>(sx)),
             }});
 
         cmd_list.draw({.vertex_count = 3 * MAX_BOIDS});
@@ -220,19 +220,19 @@ struct App : AppWindow<App>
         daxa::TaskList new_task_list = daxa::TaskList({.device = device, .debug_name = APPNAME_PREFIX("main task list")});
 
         auto task_boid_buffer = new_task_list.create_task_buffer({
-            .fetch_callback = [=]()
+            .fetch_callback = [=, this]()
             { return boid_buffer; },
             .debug_name = "task boid buffer",
         });
 
         auto task_old_boid_buffer = new_task_list.create_task_buffer({
-            .fetch_callback = [=]()
+            .fetch_callback = [=, this]()
             { return old_boid_buffer; },
             .debug_name = "task old boid buffer",
         });
 
         task_swapchain_image = new_task_list.create_task_image({
-            .fetch_callback = [=]()
+            .fetch_callback = [=, this]()
             { return swapchain_image; },
             .debug_name = "task swapchain image",
         });
@@ -242,7 +242,7 @@ struct App : AppWindow<App>
                 {task_boid_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE},
                 {task_old_boid_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY},
             },
-            .task = [=](daxa::TaskInterface & interf)
+            .task = [=, this](daxa::TaskInterface & interf)
             {
                 BufferId boid_buffer_id = interf.get_buffer(task_boid_buffer);
                 BufferId old_boid_buffer_id = interf.get_buffer(task_old_boid_buffer);
@@ -259,7 +259,7 @@ struct App : AppWindow<App>
             .used_images = {
                 {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
             },
-            .task = [=](daxa::TaskInterface & interf)
+            .task = [=, this](daxa::TaskInterface & interf)
             {
                 ImageId render_target_id = interf.get_image(task_swapchain_image);
                 BufferId boid_buffer_id = interf.get_buffer(task_boid_buffer);
