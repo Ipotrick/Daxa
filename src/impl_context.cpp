@@ -2,6 +2,9 @@
 #include "impl_context.hpp"
 #include "impl_device.hpp"
 
+#include <chrono>
+#include <iostream>
+
 namespace daxa
 {
     VKAPI_ATTR VkBool32 VKAPI_CALL debug_utils_messenger_callback(
@@ -64,35 +67,28 @@ namespace daxa
     ImplContext::ImplContext(ContextInfo const & info_param)
         : info{info_param}
     {
-        volkInitialize();
-
-        const VkApplicationInfo app_info = {
-            .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-            .pNext = nullptr,
-            .pApplicationName = "Daxa Vulkan App",
-            .applicationVersion = 0,
-            .pEngineName = "daxa",
-            .engineVersion = 1,
-            .apiVersion = VK_API_VERSION_1_3,
-        };
+        {
+            volkInitialize();
+        }
 
         std::vector<const char *> enabled_layers, extension_names;
-
-        if (info.enable_validation)
         {
-            enabled_layers.push_back("VK_LAYER_KHRONOS_validation");
-        }
-        //enabled_layers.push_back("VK_LAYER_LUNARG_monitor");
-        extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-        extension_names.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+            if (info.enable_validation)
+            {
+                enabled_layers.push_back("VK_LAYER_KHRONOS_validation");
+            }
+            // enabled_layers.push_back("VK_LAYER_LUNARG_monitor");
+            extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+            extension_names.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
 #if defined(WIN32)
-        extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+            extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #elif defined(__linux__)
-        extension_names.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+            extension_names.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 #else
 // no surface extension
 #endif
+        }
 
         {
             auto check_layers = [](auto && required_names, auto && layer_props) -> bool
@@ -121,18 +117,31 @@ namespace daxa
             check_layers(enabled_layers, instance_layers);
         }
 
-        VkInstanceCreateInfo instance_ci = {
-            .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-            .pNext = nullptr,
-            .pApplicationInfo = &app_info,
-            .enabledLayerCount = static_cast<u32>(enabled_layers.size()),
-            .ppEnabledLayerNames = enabled_layers.data(),
-            .enabledExtensionCount = static_cast<u32>(extension_names.size()),
-            .ppEnabledExtensionNames = extension_names.data(),
-        };
-        vkCreateInstance(&instance_ci, nullptr, &vk_instance);
+        {
+            const VkApplicationInfo app_info = {
+                .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+                .pNext = nullptr,
+                .pApplicationName = "Daxa Vulkan App",
+                .applicationVersion = 0,
+                .pEngineName = "daxa",
+                .engineVersion = 1,
+                .apiVersion = VK_API_VERSION_1_3,
+            };
+            VkInstanceCreateInfo instance_ci = {
+                .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+                .pNext = nullptr,
+                .pApplicationInfo = &app_info,
+                .enabledLayerCount = static_cast<u32>(enabled_layers.size()),
+                .ppEnabledLayerNames = enabled_layers.data(),
+                .enabledExtensionCount = static_cast<u32>(extension_names.size()),
+                .ppEnabledExtensionNames = extension_names.data(),
+            };
+            vkCreateInstance(&instance_ci, nullptr, &vk_instance);
+        }
 
-        volkLoadInstance(vk_instance);
+        {
+            volkLoadInstance(vk_instance);
+        }
 
         if (info.enable_validation)
         {

@@ -1,4 +1,4 @@
-#include DAXA_SHADER_INCLUDE
+#include <daxa/daxa.inl>
 
 static const f32vec2 positions[3] = {
     f32vec2(-0.5, +0.5),
