@@ -1,4 +1,4 @@
-#include DAXA_SHADER_INCLUDE
+#include <daxa/daxa.inl>
 
 #include "utils/rand.hlsl"
 

@@ -5,25 +5,6 @@
 #include <chrono>
 #include <iostream>
 
-struct TimedScope
-{
-    using Clock = std::chrono::high_resolution_clock;
-    Clock::time_point start;
-    std::string_view label;
-
-    TimedScope(std::string_view label)
-        : start{Clock::now()},
-          label{label}
-    {
-    }
-
-    ~TimedScope()
-    {
-        auto end = Clock::now();
-        std::cout << label << " took " << std::chrono::duration<daxa::f32, std::milli>(end - start).count() << "ms" << std::endl;
-    }
-};
-
 namespace daxa
 {
     VKAPI_ATTR VkBool32 VKAPI_CALL debug_utils_messenger_callback(
@@ -87,14 +68,11 @@ namespace daxa
         : info{info_param}
     {
         {
-            auto timer = TimedScope("volkInitialize");
             volkInitialize();
         }
 
         std::vector<const char *> enabled_layers, extension_names;
         {
-            auto timer = TimedScope("layers/extensions choosing");
-
             if (info.enable_validation)
             {
                 enabled_layers.push_back("VK_LAYER_KHRONOS_validation");
@@ -113,8 +91,6 @@ namespace daxa
         }
 
         {
-            auto timer = TimedScope("layers/extensions validating");
-
             auto check_layers = [](auto && required_names, auto && layer_props) -> bool
             {
                 for (auto & required_layer_name : required_names)
@@ -142,7 +118,6 @@ namespace daxa
         }
 
         {
-            auto timer = TimedScope("vkCreateInstance");
             const VkApplicationInfo app_info = {
                 .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
                 .pNext = nullptr,
@@ -165,14 +140,11 @@ namespace daxa
         }
 
         {
-            auto timer = TimedScope("volkLoadInstance");
             volkLoadInstance(vk_instance);
         }
 
         if (info.enable_validation)
         {
-            auto timer = TimedScope("enableValidation");
-
             VkDebugUtilsMessengerCreateInfoEXT createInfo = {
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
                 .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
