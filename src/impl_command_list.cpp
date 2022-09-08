@@ -187,7 +187,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(size % 4 == 0, "push constant size must be a multiple of 4 bytes");
         impl.flush_barriers();
 
-        vkCmdPushConstants(impl.vk_cmd_buffer, impl.pipeline_layouts[(size + 3) / 4], VK_SHADER_STAGE_ALL, offset, size, data);
+        vkCmdPushConstants(impl.vk_cmd_buffer, (*impl.pipeline_layouts)[(size + 3) / 4], VK_SHADER_STAGE_ALL, offset, size, data);
     }
     void CommandList::set_pipeline(ComputePipeline const & pipeline)
     {
@@ -458,6 +458,54 @@ namespace daxa
         vkCmdDrawIndirect(impl.vk_cmd_buffer, impl.impl_device.as<ImplDevice>()->slot(info.indirect_buffer).vk_buffer, info.offset, info.draw_count, info.stride);
     }
 
+    auto CommandBufferPoolPool::get(ImplDevice * device) -> std::pair<VkCommandPool, VkCommandBuffer>
+    {
+        std::pair<VkCommandPool, VkCommandBuffer> pair = {};
+        if (pools_and_buffers.empty())
+        {
+            VkCommandPool pool = {};
+            VkCommandBuffer buffer = {};
+            VkCommandPoolCreateInfo vk_command_pool_create_info{
+                .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+                .queueFamilyIndex = device->main_queue_family_index,
+            };
+
+            vkCreateCommandPool(device->vk_device, &vk_command_pool_create_info, nullptr, &pool);
+
+            VkCommandBufferAllocateInfo vk_command_buffer_allocate_info{
+                .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+                .pNext = nullptr,
+                .commandPool = pool,
+                .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                .commandBufferCount = 1,
+            };
+
+            vkAllocateCommandBuffers(device->vk_device, &vk_command_buffer_allocate_info, &buffer);
+            pair = { pool, buffer };
+        }
+        else
+        {
+            pair = pools_and_buffers.back();
+            pools_and_buffers.pop_back();
+        }
+        return pair;
+    }
+
+    void CommandBufferPoolPool::put_back(std::pair<VkCommandPool, VkCommandBuffer> pool_and_buffer)
+    {
+        pools_and_buffers.push_back(pool_and_buffer);
+    }
+
+    void CommandBufferPoolPool::cleanup(ImplDevice * device)
+    {
+        for (auto [pool, buffer] : pools_and_buffers)
+        {
+            vkDestroyCommandPool(device->vk_device, pool, nullptr);
+        }
+    }
+
     void ImplCommandList::flush_barriers()
     {
         if (memory_barrier_batch_count > 0 || image_barrier_batch_count > 0)
@@ -481,34 +529,13 @@ namespace daxa
         }
     }
 
-    ImplCommandList::ImplCommandList(ManagedWeakPtr a_impl_device)
-        : impl_device{std::move(a_impl_device)}, pipeline_layouts{impl_device.as<ImplDevice>()->gpu_table.pipeline_layouts}
+    ImplCommandList::ImplCommandList(ManagedWeakPtr a_impl_device, VkCommandPool pool, VkCommandBuffer buffer, CommandListInfo const & a_info)
+        : impl_device{std::move(a_impl_device)}
+        , pipeline_layouts{&(impl_device.as<ImplDevice>()->gpu_table.pipeline_layouts)}
+        , vk_cmd_pool{ pool }
+        , vk_cmd_buffer{ buffer}
     {
-        // std::cout << "cmd" << std::endl;
-
-        VkCommandPoolCreateInfo vk_command_pool_create_info{
-            .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-            .pNext = nullptr,
-            .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-            .queueFamilyIndex = this->impl_device.as<ImplDevice>()->main_queue_family_index,
-        };
-
-        vkCreateCommandPool(impl_device.as<ImplDevice>()->vk_device, &vk_command_pool_create_info, nullptr, &this->vk_cmd_pool);
-
-        VkCommandBufferAllocateInfo vk_command_buffer_allocate_info{
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-            .pNext = nullptr,
-            .commandPool = this->vk_cmd_pool,
-            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-            .commandBufferCount = 1,
-        };
-
-        vkAllocateCommandBuffers(impl_device.as<ImplDevice>()->vk_device, &vk_command_buffer_allocate_info, &this->vk_cmd_buffer);
-    }
-
-    ImplCommandList::~ImplCommandList()
-    {
-        vkDestroyCommandPool(impl_device.as<ImplDevice>()->vk_device, this->vk_cmd_pool, nullptr);
+        initialize(a_info);
     }
 
     void ImplCommandList::initialize(CommandListInfo const & a_info)
@@ -553,11 +580,26 @@ namespace daxa
         deferred_destruction_count = 0;
     }
 
+    ImplCommandList::~ImplCommandList()
+    {
+        auto device = this->impl_device.as<ImplDevice>();
+
+        vkResetCommandPool(device->vk_device, this->vk_cmd_pool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
+
+        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{device->main_queue_zombies_mtx});
+        u64 main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(device->main_queue_cpu_timeline);
+
+        device->main_queue_command_list_zombies.push_back({
+            main_queue_cpu_timeline,
+            CommandListZombie{
+                .vk_cmd_buffer = vk_cmd_buffer,
+                .vk_cmd_pool = vk_cmd_pool,
+            }
+        });
+    }
+
     auto ImplCommandList::managed_cleanup() -> bool
     {
-        this->reset();
-        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->impl_device.as<ImplDevice>()->command_list_recyclable_list.mtx});
-        this->impl_device.as<ImplDevice>()->command_list_recyclable_list.recyclables.emplace_back(std::unique_ptr<ImplCommandList>{this});
-        return false;
+        return true;
     }
 } // namespace daxa
