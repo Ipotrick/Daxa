@@ -5,6 +5,9 @@
 #define APPNAME "Daxa Sample: HelloTriangle Compute"
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
 
+#define DAXA_GLSL 1
+#define DAXA_HLSL 0
+
 using namespace daxa::types;
 #include "shaders/shared.inl"
 
@@ -40,13 +43,21 @@ struct App : AppWindow<App>
                 "tests/3_samples/3_hello_triangle_compute/shaders",
                 "include",
             },
+#if DAXA_GLSL
+            .language = daxa::ShaderLanguage::GLSL,
+#elif DAXA_HLSL
             .language = daxa::ShaderLanguage::HLSL,
+#endif
         },
         .debug_name = APPNAME_PREFIX("pipeline_compiler"),
     });
     // clang-format off
     daxa::ComputePipeline compute_pipeline = pipeline_compiler.create_compute_pipeline({
+#if DAXA_GLSL
+        .shader_info = {.source = daxa::ShaderFile{"compute.glsl"}},
+#elif DAXA_HLSL
         .shader_info = {.source = daxa::ShaderFile{"compute.hlsl"}},
+#endif
         .push_constant_size = sizeof(ComputePush),
         .debug_name = APPNAME_PREFIX("compute_pipeline"),
     }).value();

@@ -8,7 +8,8 @@ struct VertexOutput
     f32vec4 col : COLOR0;
 };
 
-VertexOutput vs_main(u32 vert_i : SV_VERTEXID)
+VertexOutput vs_main(u32 vert_i
+                     : SV_VERTEXID)
 {
     StructuredBuffer<DrawVertexBuffer> vertex_buffer = daxa::get_StructuredBuffer<DrawVertexBuffer>(p.vertex_buffer_id);
     DrawVertex vert = vertex_buffer[0].verts[vert_i];

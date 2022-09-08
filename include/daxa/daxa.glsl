@@ -152,9 +152,6 @@ layout(scalar, push_constant) uniform _DAXA_PUSH_CONSTANT\
 #define DAXA_REGISTER_SAMPLER_TYPE(SAMPLER_TYPE) \
     layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform SAMPLER_TYPE daxa_SamplerTable##SAMPLER_TYPE[];
 
-#define DAXA_PUSH_CONSTANT(STRUCT_TYPE) \
-    layout(push_constant, scalar) uniform _DAXA_PUSH_CONSTANT { STRUCT_TYPE daxa_push; };
-
 DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_FLOAT(image1D)
 DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_FLOAT(image2D)
 DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_FLOAT(image3D)

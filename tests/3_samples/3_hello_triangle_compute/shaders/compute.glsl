@@ -2,17 +2,17 @@
 
 #include <shared.inl>
 
-DAXA_PUSH_CONSTANT(ComputePush)
+DAXA_USE_PUSH_CONSTANT(ComputePush)
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 void main()
 {
     u32vec3 pixel_i = gl_GlobalInvocationID.xyz;
-    if (pixel_i.x >= daxa_push.frame_dim.x || pixel_i.y >= daxa_push.frame_dim.y)
+    if (pixel_i.x >= push_constant.frame_dim.x || pixel_i.y >= push_constant.frame_dim.y)
         return;
 
-    f32vec2 uv = f32vec2(pixel_i.xy) / f32vec2(daxa_push.frame_dim.xy);
-    uv = (uv - 0.5) * f32vec2(f32(daxa_push.frame_dim.x) / f32(daxa_push.frame_dim.y), 1);
+    f32vec2 uv = f32vec2(pixel_i.xy) / f32vec2(push_constant.frame_dim.xy);
+    uv = (uv - 0.5) * f32vec2(f32(push_constant.frame_dim.x) / f32(push_constant.frame_dim.y), 1);
     uv = uv * 2;
 
     f32vec3 col = f32vec3(0, 0, 0);
@@ -55,7 +55,7 @@ void main()
     }
 
     imageStore(
-        daxa_GetRWImage(image2D, rgba32f, daxa_push.image_id),
+        daxa_GetRWImage(image2D, rgba32f, push_constant.image_id),
         i32vec2(pixel_i.xy),
         f32vec4(col, 1));
 }
