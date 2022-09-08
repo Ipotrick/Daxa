@@ -127,9 +127,6 @@ struct App : AppWindow<App>
 
         auto swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
 
-        auto binary_semaphore = device.create_binary_semaphore({
-            .debug_name = APPNAME_PREFIX("binary_semaphore"),
-        });
         auto cmd_list = device.create_command_list({
             .debug_name = APPNAME_PREFIX("cmd_list"),
         });
