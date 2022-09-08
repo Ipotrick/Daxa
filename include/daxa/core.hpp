@@ -100,6 +100,8 @@ namespace daxa
         {
 #if DAXA_VALIDATION
             auto ret = dynamic_cast<T *>(object);
+            u64 strong_count = DAXA_ATOMIC_FETCH(object->strong_count);
+            DAXA_DBG_ASSERT_TRUE_M(strong_count > 0, "strong count must be greater then zero when a weak ptr is still alive!");
             DAXA_DBG_ASSERT_TRUE_M(ret != nullptr, "bad dynamic cast");
             return ret;
 #else
@@ -111,6 +113,8 @@ namespace daxa
         {
 #if DAXA_VALIDATION
             auto ret = dynamic_cast<T const *>(object);
+            u64 strong_count = DAXA_ATOMIC_FETCH(object->strong_count);
+            DAXA_DBG_ASSERT_TRUE_M(strong_count > 0, "strong count must be greater then zero when a weak ptr is still alive!");
             DAXA_DBG_ASSERT_TRUE_M(ret != nullptr, "bad dynamic cast");
             return ret;
 #else
