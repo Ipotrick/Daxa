@@ -178,8 +178,8 @@ struct App : AppWindow<App>
         cmd_list.set_pipeline(update_boids_pipeline);
 
         cmd_list.push_constant(UpdateBoidsPushConstant{
-            .old_boids_buffer = device.buffer_reference(old_boid_buffer_id),
             .boids_buffer = device.buffer_reference(boid_buffer_id),
+            .old_boids_buffer = device.buffer_reference(old_boid_buffer_id),
         });
 
         cmd_list.dispatch((MAX_BOIDS + 63) / 64, 1, 1);

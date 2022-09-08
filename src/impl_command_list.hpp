@@ -17,14 +17,10 @@ namespace daxa
     static inline constexpr usize DEFERRED_DESTRUCTION_COUNT_MAX = 32;
 
     static inline constexpr usize COMMAND_LIST_BARRIER_MAX_BATCH_SIZE = 16;
-
     static inline constexpr usize COMMAND_LIST_COLOR_ATTACHMENT_MAX = 16;
 
-    struct ImplCommandList final : ManagedSharedState
+    struct ImplCommandList
     {
-        using InfoT = CommandListInfo;
-
-        ManagedWeakPtr impl_device = {};
         CommandListInfo info = {};
         VkCommandBuffer vk_cmd_buffer = {};
         VkCommandPool vk_cmd_pool = {};
@@ -37,14 +33,23 @@ namespace daxa
         std::array<std::pair<GPUResourceId, u8>, DEFERRED_DESTRUCTION_COUNT_MAX> deferred_destructions = {};
         usize deferred_destruction_count = {};
 
-        void flush_barriers();
-
-        ImplCommandList(ManagedWeakPtr device_impl);
-        virtual ~ImplCommandList() override final;
+        void create(ImplDevice* device);
+        void destroy(ImplDevice* device);
 
         void initialize(CommandListInfo const & a_info);
         void reset();
 
-        auto managed_cleanup() -> bool override final;
+        void flush_barriers();
+    };
+
+    struct ImplCommandListSharedState final : ManagedSharedState
+    {
+        using InfoT = CommandListInfo;
+
+        ManagedWeakPtr impl_device = {};
+        ImplCommandList list = {};
+
+        ImplCommandListSharedState(ManagedWeakPtr device_impl);
+        virtual ~ImplCommandListSharedState() override final;
     };
 } // namespace daxa

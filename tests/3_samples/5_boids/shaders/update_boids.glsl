@@ -83,7 +83,7 @@ void update_boid(inout Boid boid, in Boid old_boid, in uint boid_index, BufferRe
     float acc_steer_angle_weight = 0.0f;
     boid_avoid_walls(old_boid, acc_steer_angle, acc_steer_angle_weight);
 
-    for (uint i = 0; i < MAX_BOIDS; ++i)
+    for (uint i = 0; i < 0; ++i)
     {
         if (i == boid_index) continue;
 
