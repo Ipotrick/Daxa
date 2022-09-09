@@ -213,6 +213,8 @@ namespace daxa
         void compile();
         void output_graphviz();
 
+        auto command_lists() -> std::vector<CommandList>;
+
         auto last_access(TaskBufferId buffer) -> Access;
         auto last_access(TaskImageId image) -> Access;
         auto last_layout(TaskImageId image) -> ImageLayout;
