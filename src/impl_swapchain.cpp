@@ -7,31 +7,19 @@ namespace daxa
 {
     Swapchain::Swapchain(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
-    ImageId Swapchain::acquire_next_image(BinarySemaphore& signal_semaphore)
+    void Swapchain::resize()
     {
         auto & impl = *as<ImplSwapchain>();
-        VkResult err;
-        do
-        {
-            err = vkAcquireNextImageKHR(impl.impl_device.as<ImplDevice>()->vk_device, impl.vk_swapchain, UINT64_MAX, signal_semaphore.as<ImplBinarySemaphore>()->vk_semaphore, nullptr, &impl.current_image_index);
-            if (err == VK_ERROR_OUT_OF_DATE_KHR)
-            {
-                impl.recreate();
-            }
-            else if (err == VK_ERROR_SURFACE_LOST_KHR)
-            {
-                impl.recreate_surface();
-                impl.recreate();
-            }
-            else if (err == VK_SUBOPTIMAL_KHR)
-            {
-                break;
-            }
-            else if (err != VK_SUCCESS)
-            {
-                throw std::runtime_error("Unexpected swapchain error");
-            }
-        } while (err != VK_SUCCESS);
+        impl.recreate();
+    }
+
+    ImageId Swapchain::acquire_next_image(BinarySemaphore & signal_semaphore)
+    {
+        auto & impl = *as<ImplSwapchain>();
+        VkResult err = vkAcquireNextImageKHR(impl.impl_device.as<ImplDevice>()->vk_device, impl.vk_swapchain, UINT64_MAX, signal_semaphore.as<ImplBinarySemaphore>()->vk_semaphore, nullptr, &impl.current_image_index);
+        // We currently ignore VK_ERROR_OUT_OF_DATE_KHR, VK_ERROR_SURFACE_LOST_KHR and VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT
+        // because supposedly these kinds of things are not specified within the spec. This is also handled in Device::present_frame()
+        DAXA_DBG_ASSERT_TRUE_M(err == VK_SUCCESS || err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_ERROR_SURFACE_LOST_KHR || err == VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT, "Daxa should never be in a situation where Acquire fails");
         return impl.image_resources[impl.current_image_index];
     }
 
@@ -39,16 +27,6 @@ namespace daxa
     {
         auto & impl = *as<ImplSwapchain>();
         return static_cast<Format>(impl.vk_surface_format.format);
-    }
-
-    void Swapchain::resize(u32 width, u32 height)
-    {
-        auto & impl = *as<ImplSwapchain>();
-        if (width == impl.info.width && height == impl.info.height)
-            return;
-        impl.info.width = width;
-        impl.info.height = height;
-        impl.recreate();
     }
 
     void ImplSwapchain::recreate_surface()
@@ -124,15 +102,26 @@ namespace daxa
 
         VkSurfaceCapabilitiesKHR surface_capabilities;
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(this->impl_device.as<ImplDevice>()->vk_physical_device, this->vk_surface, &surface_capabilities);
+        if (info.width == surface_capabilities.currentExtent.width &&
+            info.height == surface_capabilities.currentExtent.height &&
+            this->vk_swapchain != VK_NULL_HANDLE)
+            return;
+
         info.width = surface_capabilities.currentExtent.width;
         info.height = surface_capabilities.currentExtent.height;
 
+#if __linux__
+        // TODO: I (grundlett) am too lazy to find out why the other present modes
+        // fail on Linux. This can be inspected by Linux people and they can
+        // submit a PR if they find a fix.
+        info.present_mode = PresentMode::DO_NOT_WAIT_FOR_VBLANK;
+#endif
+
         auto old_swapchain = this->vk_swapchain;
 
-#if defined(__linux__)
-        // TODO: Figure out why this hack fixes things for Linux!
+        // NOTE: this is a hack that allows us to ignore issues caused
+        // by things that are just underspecified in the Vulkan spec.
         this->impl_device.as<ImplDevice>()->wait_idle();
-#endif
 
         cleanup();
 
