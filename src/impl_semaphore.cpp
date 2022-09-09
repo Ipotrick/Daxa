@@ -5,7 +5,7 @@
 
 namespace daxa
 {
-    BinarySemaphore::BinarySemaphore(ManagedPtr impl) : ManagedPtr(std::move(impl)) { }
+    BinarySemaphore::BinarySemaphore(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
     auto BinarySemaphore::info() const -> BinarySemaphoreInfo const &
     {
@@ -39,7 +39,7 @@ namespace daxa
             main_queue_cpu_timeline,
             SemaphoreZombie{
                 .vk_semaphore = vk_semaphore,
-            }
+            },
         });
     }
 
@@ -158,7 +158,7 @@ namespace daxa
             main_queue_cpu_timeline,
             SemaphoreZombie{
                 .vk_semaphore = vk_semaphore,
-            }
+            },
         });
     }
 

@@ -17,7 +17,7 @@ namespace daxa
         buffer_slots.max_resources = max_buffers;
         image_slots.max_resources = max_images;
         sampler_slots.max_resources = max_samplers;
-        
+
         VkDescriptorPoolSize buffer_descriptor_pool_size{
             .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             .descriptorCount = static_cast<u32>(buffer_slots.max_resources + 1),

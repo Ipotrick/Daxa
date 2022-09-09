@@ -79,7 +79,7 @@ struct App : AppWindow<App>
     });
 
     daxa::BinarySemaphore acquire_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("acquire_semaphore")});
-    
+
     daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
 
     Clock::time_point start = Clock::now();
@@ -175,7 +175,7 @@ struct App : AppWindow<App>
 #if DAXA_GLSL
             .compute_input = this->device.buffer_reference(compute_input_buffer),
 #elif DAXA_HLSL
-            .input_buffer_id = compute_input_buffer,
+                .input_buffer_id = compute_input_buffer,
 #endif
             .frame_dim = {size_x, size_y},
         });
@@ -229,12 +229,12 @@ struct App : AppWindow<App>
 
         device.submit_commands({
             .command_lists = {std::move(cmd_list)},
-            .wait_binary_semaphores = { acquire_semaphore },
-            .signal_binary_semaphores = { present_semaphore },
+            .wait_binary_semaphores = {acquire_semaphore},
+            .signal_binary_semaphores = {present_semaphore},
         });
 
         device.present_frame({
-            .wait_binary_semaphores = { present_semaphore },
+            .wait_binary_semaphores = {present_semaphore},
             .swapchain = swapchain,
         });
     }
@@ -261,7 +261,6 @@ struct App : AppWindow<App>
                 .size = {size_x, size_y, 1},
                 .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             });
-            swapchain.resize(size_x, size_y);
             draw();
         }
     }

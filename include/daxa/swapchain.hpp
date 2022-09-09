@@ -36,8 +36,7 @@ namespace daxa
         auto info() const -> SwapchainInfo const &;
         auto get_format() const -> Format;
 
-        ImageId acquire_next_image(BinarySemaphore& signal_semaphore);
-        void resize(u32 width, u32 height);
+        ImageId acquire_next_image(BinarySemaphore & signal_semaphore);
         void change_present_mode(PresentMode new_present_mode);
 
       private:

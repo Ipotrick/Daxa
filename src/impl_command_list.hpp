@@ -49,7 +49,7 @@ namespace daxa
         std::array<VkImageMemoryBarrier2, COMMAND_LIST_BARRIER_MAX_BATCH_SIZE> image_barrier_batch = {};
         usize image_barrier_batch_count = 0;
         usize memory_barrier_batch_count = 0;
-        std::array<VkPipelineLayout, PIPELINE_LAYOUT_COUNT>* pipeline_layouts = {};
+        std::array<VkPipelineLayout, PIPELINE_LAYOUT_COUNT> * pipeline_layouts = {};
         std::array<std::pair<GPUResourceId, u8>, DEFERRED_DESTRUCTION_COUNT_MAX> deferred_destructions = {};
         usize deferred_destruction_count = {};
 
