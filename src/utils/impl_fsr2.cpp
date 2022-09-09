@@ -13,11 +13,6 @@ namespace daxa
 
     Fsr2Context::~Fsr2Context() {}
 
-    auto ImplFsr2Context::managed_cleanup() -> bool
-    {
-        return true;
-    }
-
     void Fsr2Context::resize(UpscaleSizeInfo const & info)
     {
         auto & impl = *as<ImplFsr2Context>();

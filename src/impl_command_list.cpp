@@ -504,6 +504,7 @@ namespace daxa
         {
             vkDestroyCommandPool(device->vk_device, pool, nullptr);
         }
+        pools_and_buffers.clear();
     }
 
     void ImplCommandList::flush_barriers()
@@ -589,17 +590,12 @@ namespace daxa
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{device->main_queue_zombies_mtx});
         u64 main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(device->main_queue_cpu_timeline);
 
-        device->main_queue_command_list_zombies.push_back({
+        device->main_queue_command_list_zombies.push_front({
             main_queue_cpu_timeline,
             CommandListZombie{
                 .vk_cmd_buffer = vk_cmd_buffer,
                 .vk_cmd_pool = vk_cmd_pool,
             }
         });
-    }
-
-    auto ImplCommandList::managed_cleanup() -> bool
-    {
-        return true;
     }
 } // namespace daxa
