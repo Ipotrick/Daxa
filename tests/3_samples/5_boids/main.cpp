@@ -84,6 +84,9 @@ struct App : AppWindow<App>
     Clock::time_point start = Clock::now();
     Clock::time_point prev_time = start;
 
+    daxa::BinarySemaphore acquire_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("acquire_semaphore")});
+    daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
+
     daxa::TaskList task_list = record_tasks();
 
     daxa::BufferId boid_buffer = device.create_buffer({
@@ -98,9 +101,6 @@ struct App : AppWindow<App>
 
     daxa::ImageId swapchain_image = {};
     daxa::TaskImageId task_swapchain_image = {};
-
-    daxa::BinarySemaphore acquire_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("acquire_semaphore")});
-    daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
 
     daxa::CommandSubmitInfo submit_info;
 
@@ -227,19 +227,19 @@ struct App : AppWindow<App>
 
         auto task_boid_buffer = new_task_list.create_task_buffer({
             .fetch_callback = [=, this]()
-            { return boid_buffer; },
+            { return this->boid_buffer; },
             .debug_name = "task boid buffer",
         });
 
         auto task_old_boid_buffer = new_task_list.create_task_buffer({
             .fetch_callback = [=, this]()
-            { return old_boid_buffer; },
+            { return this->old_boid_buffer; },
             .debug_name = "task old boid buffer",
         });
 
         task_swapchain_image = new_task_list.create_task_image({
             .fetch_callback = [=, this]()
-            { return swapchain_image; },
+            { return swapchain.acquire_next_image(acquire_semaphore); },
             .swapchain_parent = std::pair{ swapchain, acquire_semaphore },
             .debug_name = "task swapchain image",
         });
@@ -275,11 +275,8 @@ struct App : AppWindow<App>
             },
             .debug_name = "draw boids",
         });
-
         new_task_list.submit(&submit_info);
-
         new_task_list.present({});
-
         new_task_list.compile();
 
         return new_task_list;
@@ -313,7 +310,6 @@ struct App : AppWindow<App>
             }
         }
 
-        swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
         std::swap(old_boid_buffer, boid_buffer);
         ++cpu_framecount;
         submit_info.signal_timeline_semaphores = {{gpu_framecount_timeline_sema, cpu_framecount}};
