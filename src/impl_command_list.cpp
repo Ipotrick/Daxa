@@ -1,8 +1,6 @@
 #include "impl_command_list.hpp"
 #include "impl_device.hpp"
 
-#include <iostream>
-
 namespace daxa
 {
     CommandList::CommandList(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}

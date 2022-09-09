@@ -3,40 +3,21 @@
 #include "impl_swapchain.hpp"
 #include "impl_device.hpp"
 
-// #include <iostream>
-
 namespace daxa
 {
     Swapchain::Swapchain(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
+    void Swapchain::resize()
+    {
+        auto & impl = *as<ImplSwapchain>();
+        impl.recreate();
+    }
+
     ImageId Swapchain::acquire_next_image(BinarySemaphore & signal_semaphore)
     {
         auto & impl = *as<ImplSwapchain>();
-        VkResult err;
-        do
-        {
-            err = vkAcquireNextImageKHR(impl.impl_device.as<ImplDevice>()->vk_device, impl.vk_swapchain, UINT64_MAX, signal_semaphore.as<ImplBinarySemaphore>()->vk_semaphore, nullptr, &impl.current_image_index);
-            if (err == VK_ERROR_OUT_OF_DATE_KHR)
-            {
-                // std::cout << "[Swapchain::acquire_next_image()] Swapchain out of date. Recreating..." << std::endl;
-                impl.recreate();
-            }
-            else if (err == VK_ERROR_SURFACE_LOST_KHR)
-            {
-                // std::cout << "[Swapchain::acquire_next_image()] Surface Lost. Recreating..." << std::endl;
-                impl.recreate_surface();
-                impl.recreate();
-            }
-            else if (err == VK_SUBOPTIMAL_KHR)
-            {
-                // std::cout << "[Swapchain::acquire_next_image()] suboptimal?" << std::endl;
-                break;
-            }
-            else if (err != VK_SUCCESS)
-            {
-                throw std::runtime_error("Unexpected swapchain error");
-            }
-        } while (err != VK_SUCCESS);
+        VkResult err = vkAcquireNextImageKHR(impl.impl_device.as<ImplDevice>()->vk_device, impl.vk_swapchain, UINT64_MAX, signal_semaphore.as<ImplBinarySemaphore>()->vk_semaphore, nullptr, &impl.current_image_index);
+        DAXA_DBG_ASSERT_TRUE_M(err == VK_SUCCESS, "Daxa should never be in a situation where Acquire fails");
         return impl.image_resources[impl.current_image_index];
     }
 
@@ -119,8 +100,20 @@ namespace daxa
 
         VkSurfaceCapabilitiesKHR surface_capabilities;
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(this->impl_device.as<ImplDevice>()->vk_physical_device, this->vk_surface, &surface_capabilities);
+        if (info.width == surface_capabilities.currentExtent.width &&
+            info.height == surface_capabilities.currentExtent.height &&
+            this->vk_swapchain != VK_NULL_HANDLE)
+            return;
+
         info.width = surface_capabilities.currentExtent.width;
         info.height = surface_capabilities.currentExtent.height;
+
+#if __linux__
+        // TODO: I (grundlett) am too lazy to find out why the other present modes
+        // fail on Linux. This can be inspected by Linux people and they can
+        // submit a PR if they find a fix.
+        info.present_mode = PresentMode::DO_NOT_WAIT_FOR_VBLANK;
+#endif
 
         // std::cout << "Recreating swapchain to size (" << info.width << ", " << info.height << ")" << std::endl;
 

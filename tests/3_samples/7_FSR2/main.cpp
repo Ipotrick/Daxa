@@ -133,7 +133,7 @@ struct App : AppWindow<App>
     Player3D player = {
         .rot = {2.0f, 0.0f, 0.0f},
     };
-    bool should_resize = false, paused = true;
+    bool paused = true;
 
     RasterInput raster_input;
     daxa::BufferId raster_input_buffer = device.create_buffer({
@@ -216,6 +216,7 @@ struct App : AppWindow<App>
     ~App()
     {
         device.wait_idle();
+        device.collect_garbage();
         ImGui_ImplGlfw_Shutdown();
         destroy_render_images();
         device.destroy_buffer(raster_input_buffer);
@@ -264,11 +265,6 @@ struct App : AppWindow<App>
             {
                 raster_pipeline = new_pipeline.value();
             }
-        }
-
-        if (should_resize)
-        {
-            do_resize();
         }
 
         swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
@@ -331,17 +327,11 @@ struct App : AppWindow<App>
 
         if (!minimized)
         {
-            should_resize = true;
-            do_resize();
+            swapchain.resize();
+            destroy_render_images();
+            create_render_images();
+            draw();
         }
-    }
-
-    void do_resize()
-    {
-        should_resize = false;
-        destroy_render_images();
-        create_render_images();
-        draw();
     }
 
     void toggle_pause()
@@ -608,6 +598,4 @@ int main()
         if (app.update())
             break;
     }
-
-    std::cout << std::flush;
 }

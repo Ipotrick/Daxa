@@ -33,7 +33,7 @@ struct App : AppWindow<App>
             default: return daxa::default_format_score(format);
             }
         },
-        .present_mode = daxa::PresentMode::DOUBLE_BUFFER_WAIT_FOR_VBLANK,
+        .present_mode = daxa::PresentMode::DO_NOT_WAIT_FOR_VBLANK,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
         .debug_name = APPNAME_PREFIX("swapchain"),
     });
@@ -79,7 +79,6 @@ struct App : AppWindow<App>
     });
 
     daxa::BinarySemaphore acquire_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("acquire_semaphore")});
-
     daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
 
     Clock::time_point start = Clock::now();
@@ -88,6 +87,8 @@ struct App : AppWindow<App>
 
     ~App()
     {
+        device.wait_idle();
+        device.collect_garbage();
         device.destroy_buffer(compute_input_buffer);
         device.destroy_image(render_image);
     }
@@ -261,7 +262,7 @@ struct App : AppWindow<App>
                 .size = {size_x, size_y, 1},
                 .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             });
-            device.wait_idle();
+            swapchain.resize();
             draw();
         }
     }
