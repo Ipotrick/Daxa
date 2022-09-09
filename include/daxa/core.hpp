@@ -167,8 +167,10 @@ namespace daxa
         ManagedPtr & operator=(const ManagedPtr &);
         ManagedPtr & operator=(ManagedPtr &&);
 
-        void cleanup();
         ManagedWeakPtr make_weak();
+
+      private:
+        void cleanup();
     };
 
     struct ResultErr

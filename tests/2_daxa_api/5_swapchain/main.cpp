@@ -83,11 +83,6 @@ namespace tests
 
             void draw()
             {
-                // if (should_resize)
-                // {
-                //     do_resize();
-                // }
-
                 auto swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
                 auto cmd_list = device.create_command_list({
                     .debug_name = APPNAME_PREFIX("cmd_list (clearcolor)"),
@@ -144,7 +139,7 @@ namespace tests
                     minimized = size_x == 0 || size_y == 0;
                     if (!minimized)
                     {
-                        // std::cout << "redrawing\n";
+                        swapchain.resize();
                         draw();
                     }
                 }

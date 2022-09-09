@@ -76,7 +76,6 @@ struct App : AppWindow<App>
     });
     u64 cpu_framecount = FRAMES_IN_FLIGHT - 1;
 
-    bool should_resize = false;
     u32 current_buffer_i = 1;
 
     f32 aspect = static_cast<f32>(size_x) / static_cast<f32>(size_y);
@@ -151,6 +150,8 @@ struct App : AppWindow<App>
 
     ~App()
     {
+        device.wait_idle();
+        device.collect_garbage();
         device.destroy_buffer(boid_buffer);
         device.destroy_buffer(old_boid_buffer);
     }
@@ -305,12 +306,6 @@ struct App : AppWindow<App>
             }
         }
 
-        if (should_resize)
-        {
-            exit(1);
-            do_resize();
-        }
-
         swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
 
         std::swap(old_boid_buffer, boid_buffer);
@@ -367,16 +362,10 @@ struct App : AppWindow<App>
 
         if (!minimized)
         {
-            should_resize = true;
-            do_resize();
+            aspect = static_cast<f32>(size_x) / static_cast<f32>(size_y);
+            swapchain.resize();
+            draw();
         }
-    }
-
-    void do_resize()
-    {
-        should_resize = false;
-        aspect = static_cast<f32>(size_x) / static_cast<f32>(size_y);
-        draw();
     }
 };
 
