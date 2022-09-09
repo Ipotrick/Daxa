@@ -175,7 +175,7 @@ namespace daxa
     struct PresentInfo
     {
         std::vector<BinarySemaphore> wait_binary_semaphores = {};
-        Swapchain & swapchain;
+        Swapchain swapchain;
     };
 
     struct Device : ManagedPtr

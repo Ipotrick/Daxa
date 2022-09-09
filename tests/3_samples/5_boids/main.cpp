@@ -104,6 +104,8 @@ struct App : AppWindow<App>
     
     daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
 
+    daxa::CommandSubmitInfo submit_info;
+
     App() : AppWindow<App>(APPNAME)
     {
         auto cmd_list = device.create_command_list({.debug_name = APPNAME_PREFIX("boid buffer init commands")});
@@ -238,6 +240,7 @@ struct App : AppWindow<App>
         task_swapchain_image = new_task_list.create_task_image({
             .fetch_callback = [=, this]()
             { return swapchain_image; },
+            .swapchain_parent = std::pair{ swapchain, acquire_semaphore },
             .debug_name = "task swapchain image",
         });
 
@@ -272,6 +275,10 @@ struct App : AppWindow<App>
             },
             .debug_name = "draw boids",
         });
+
+        new_task_list.submit(&submit_info);
+
+        new_task_list.present({});
 
         new_task_list.compile();
 
@@ -310,44 +317,12 @@ struct App : AppWindow<App>
         {
             do_resize();
         }
-
         swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
-
         std::swap(old_boid_buffer, boid_buffer);
-
-        task_list.execute();
-
-        auto commands = task_list.command_lists();
-
-        auto cmd_list = device.create_command_list({.debug_name = "frame finish command list"});
-
-        cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = task_list.last_access(task_swapchain_image),
-            .before_layout = task_list.last_layout(task_swapchain_image),
-            .after_layout = daxa::ImageLayout::PRESENT_SRC,
-            .image_id = swapchain_image,
-            .image_slice = device.info_image_view(swapchain_image.default_view()).slice,
-        });
-
-        cmd_list.complete();
-
-        commands.push_back(cmd_list);
-
         ++cpu_framecount;
-        device.submit_commands({
-            .command_lists = commands,
-            .wait_binary_semaphores = { acquire_semaphore },
-            .signal_binary_semaphores = { present_semaphore },
-            .signal_timeline_semaphores = {{gpu_framecount_timeline_sema, cpu_framecount}},
-        });
-
-        device.present_frame({
-            .wait_binary_semaphores = { present_semaphore },
-            .swapchain = swapchain,
-        });
-
+        submit_info.signal_timeline_semaphores = {{gpu_framecount_timeline_sema, cpu_framecount}};
+        task_list.execute();
         gpu_framecount_timeline_sema.wait_for_value(cpu_framecount - 1);
-
         current_buffer_i = !current_buffer_i;
     }
 

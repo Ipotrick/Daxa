@@ -137,6 +137,7 @@ namespace daxa
         Access last_access = AccessConsts::NONE;
         ImageLayout last_layout = ImageLayout::UNDEFINED;
         ImageMipArraySlice slice = {};
+        std::optional<std::pair<Swapchain, BinarySemaphore>> swapchain_parent = {};
         std::string debug_name = {};
     };
 
@@ -181,10 +182,16 @@ namespace daxa
 
     struct TaskImageClearInfo
     {
-        ClearValue clear_value;
+        ClearValue clear_value = std::array<f32, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
         TaskImageId dst_image = {};
         ImageMipArraySlice dst_slice = {};
         std::string debug_name = {};
+    };
+
+    struct TaskPresentInfo
+    {
+        std::vector<BinarySemaphore>* user_binary_semaphores = {};
+        TaskImageId presented_image = {};
     };
 
     struct TaskList : ManagedPtr
@@ -200,6 +207,9 @@ namespace daxa
         void add_copy_image_to_image(TaskCopyImageInfo const & info);
         void add_clear_image(TaskImageClearInfo const & info);
 
+        void submit(CommandSubmitInfo* info);
+        void present(TaskPresentInfo const& info);
+
         void compile();
         void output_graphviz();
 
@@ -208,7 +218,5 @@ namespace daxa
         auto last_layout(TaskImageId image) -> ImageLayout;
 
         void execute();
-
-        auto command_lists() -> std::vector<CommandList> &;
     };
 } // namespace daxa
