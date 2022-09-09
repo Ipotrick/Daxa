@@ -11,8 +11,7 @@
             "cwd": "${workspaceFolder}",
             "environment": [],
             "linux": {
-                "type": "lldb",
-                "terminal": "external"
+                "type": "lldb"
             },
             "windows": {
                 "type": "cppvsdbg",
