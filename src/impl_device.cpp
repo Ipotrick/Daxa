@@ -1213,14 +1213,6 @@ namespace daxa
         vkDestroySampler(vk_device, this->vk_dummy_sampler, nullptr);
         vkDestroySemaphore(this->vk_device, this->vk_main_queue_gpu_timeline_semaphore, nullptr);
         vkDestroyDevice(this->vk_device, nullptr);
-<<<<<<< HEAD
-    }
-
-    auto ImplDevice::managed_cleanup() -> bool
-    {
-        return true;
-=======
->>>>>>> 36c472a63796d5b32698300b030235a34f362838
     }
 
     void ImplDevice::zombiefy_buffer(BufferId id)
