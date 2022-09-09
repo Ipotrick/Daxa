@@ -130,7 +130,7 @@ namespace tests
 
         task_list.add_task({
             .used_buffers = {
-                {task_buffer1, daxa::TaskBufferAccess::SHADER_WRITE_ONLY}, 
+                {task_buffer1, daxa::TaskBufferAccess::SHADER_WRITE_ONLY},
                 {task_buffer2, daxa::TaskBufferAccess::SHADER_READ_ONLY},
             },
             .task = [](daxa::TaskInterface &) {},
@@ -147,7 +147,7 @@ namespace tests
 
         task_list.add_task({
             .used_buffers = {
-                {task_buffer2, daxa::TaskBufferAccess::SHADER_WRITE_ONLY}, 
+                {task_buffer2, daxa::TaskBufferAccess::SHADER_WRITE_ONLY},
                 {task_buffer3, daxa::TaskBufferAccess::SHADER_WRITE_ONLY},
             },
             .task = [](daxa::TaskInterface &) {},
@@ -327,7 +327,7 @@ namespace tests
             daxa::TaskImageId task_swapchain_image;
 
             daxa::BinarySemaphore acquire_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("acquire_semaphore")});
-            
+
             daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
 
             App() : AppWindow<App>("Daxa API: Swapchain (clearcolor)")
@@ -360,7 +360,7 @@ namespace tests
                 });
                 new_task_list.add_task({
                     .used_images = {
-                         {task_render_image, daxa::TaskImageAccess::FRAGMENT_SHADER_WRITE_ONLY},
+                        {task_render_image, daxa::TaskImageAccess::FRAGMENT_SHADER_WRITE_ONLY},
                     },
                     .task = [this](daxa::TaskInterface interf)
                     {
@@ -437,11 +437,11 @@ namespace tests
                 command_lists.push_back(cmd_list);
                 device.submit_commands({
                     .command_lists = command_lists,
-                    .wait_binary_semaphores = { acquire_semaphore },
-                    .signal_binary_semaphores = { present_semaphore },
+                    .wait_binary_semaphores = {acquire_semaphore},
+                    .signal_binary_semaphores = {present_semaphore},
                 });
                 device.present_frame({
-                    .wait_binary_semaphores = { present_semaphore },
+                    .wait_binary_semaphores = {present_semaphore},
                     .swapchain = swapchain,
                 });
             }

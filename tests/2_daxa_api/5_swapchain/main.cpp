@@ -117,12 +117,12 @@ namespace tests
 
                 device.submit_commands({
                     .command_lists = {std::move(cmd_list)},
-                    .wait_binary_semaphores = { acquire_semaphore },
-                    .signal_binary_semaphores = { present_semaphore },
+                    .wait_binary_semaphores = {acquire_semaphore},
+                    .signal_binary_semaphores = {present_semaphore},
                 });
 
                 device.present_frame({
-                    .wait_binary_semaphores = { present_semaphore },
+                    .wait_binary_semaphores = {present_semaphore},
                     .swapchain = swapchain,
                 });
             }
@@ -144,6 +144,7 @@ namespace tests
                     minimized = size_x == 0 || size_y == 0;
                     if (!minimized)
                     {
+                        // std::cout << "redrawing\n";
                         draw();
                     }
                 }

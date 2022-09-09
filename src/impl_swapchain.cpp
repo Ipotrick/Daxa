@@ -29,6 +29,7 @@ namespace daxa
             }
             else if (err == VK_SUBOPTIMAL_KHR)
             {
+                // std::cout << "[Swapchain::acquire_next_image()] suboptimal?" << std::endl;
                 break;
             }
             else if (err != VK_SUCCESS)

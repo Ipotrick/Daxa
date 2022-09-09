@@ -17,7 +17,8 @@ struct VertexOutput
     f32vec4 col : COLOR0;
 };
 
-VertexOutput main(u32 vert_i : SV_VERTEXID)
+VertexOutput main(u32 vert_i
+                  : SV_VERTEXID)
 {
     VertexOutput result;
     result.frag_pos = f32vec4(positions[vert_i], 0, 1);
