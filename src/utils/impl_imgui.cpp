@@ -328,11 +328,6 @@ namespace daxa
         }
     }
 
-    auto ImplImGuiRenderer::managed_cleanup() -> bool
-    {
-        return true;
-    }
-
     ImplImGuiRenderer::ImplImGuiRenderer(ImGuiRendererInfo const & info)
         : info{info},
           // clang-format off

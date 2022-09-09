@@ -61,11 +61,6 @@ namespace daxa
         }
     }
 
-    auto ImplBinarySemaphore::managed_cleanup() -> bool
-    {
-        return true;
-    }
-
     TimelineSemaphore::TimelineSemaphore(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
     auto TimelineSemaphore::value() const -> u64
@@ -161,10 +156,4 @@ namespace daxa
             }
         });
     }
-
-    auto ImplTimelineSemaphore::managed_cleanup() -> bool
-    {
-        return true;
-    }
-
 } // namespace daxa

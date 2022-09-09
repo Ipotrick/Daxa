@@ -17,7 +17,6 @@ namespace daxa
         VkSurfaceFormatKHR vk_surface_format = {};
         std::vector<ImageId> image_resources = {};
 
-        VkFence acquisition_fence;
         u32 current_image_index;
 
         ImplSwapchain(ManagedWeakPtr device_impl, SwapchainInfo const & info);
