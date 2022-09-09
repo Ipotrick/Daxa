@@ -55,7 +55,7 @@ struct SamplerId
 layout(scalar, binding = DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, set = 0) readonly buffer DaxaBufferDeviceAddressBuffer
 {
     u64 addresses[1000];
-} 
+}
 daxaBufferDeviceAddressBuffer;
 
 #define DAXA_DECL_BUFFER_STRUCT(NAME, BODY)                                                                             \
@@ -81,11 +81,11 @@ daxaBufferDeviceAddressBuffer;
         NAME value;                                                                                                     \
     }
 
-#define DAXA_USE_PUSH_CONSTANT(NAME) \
-layout(scalar, push_constant) uniform _DAXA_PUSH_CONSTANT\
-{\
-    NAME push_constant;\
-};
+#define DAXA_USE_PUSH_CONSTANT(NAME)                          \
+    layout(scalar, push_constant) uniform _DAXA_PUSH_CONSTANT \
+    {                                                         \
+        NAME push_constant;                                   \
+    };
 
 #define BufferRef(STRUCT_TYPE) STRUCT_TYPE##BufferRef
 #define WrappedBufferRef(STRUCT_TYPE) STRUCT_TYPE##CoherentBufferRef

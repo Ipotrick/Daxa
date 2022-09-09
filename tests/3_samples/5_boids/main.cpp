@@ -101,7 +101,6 @@ struct App : AppWindow<App>
     daxa::TaskImageId task_swapchain_image = {};
 
     daxa::BinarySemaphore acquire_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("acquire_semaphore")});
-    
     daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
 
     App() : AppWindow<App>(APPNAME)
@@ -308,6 +307,7 @@ struct App : AppWindow<App>
 
         if (should_resize)
         {
+            exit(1);
             do_resize();
         }
 
@@ -336,13 +336,13 @@ struct App : AppWindow<App>
         ++cpu_framecount;
         device.submit_commands({
             .command_lists = commands,
-            .wait_binary_semaphores = { acquire_semaphore },
-            .signal_binary_semaphores = { present_semaphore },
+            .wait_binary_semaphores = {acquire_semaphore},
+            .signal_binary_semaphores = {present_semaphore},
             .signal_timeline_semaphores = {{gpu_framecount_timeline_sema, cpu_framecount}},
         });
 
         device.present_frame({
-            .wait_binary_semaphores = { present_semaphore },
+            .wait_binary_semaphores = {present_semaphore},
             .swapchain = swapchain,
         });
 
@@ -375,7 +375,6 @@ struct App : AppWindow<App>
     void do_resize()
     {
         should_resize = false;
-        swapchain.resize(size_x, size_y);
         aspect = static_cast<f32>(size_x) / static_cast<f32>(size_y);
         draw();
     }

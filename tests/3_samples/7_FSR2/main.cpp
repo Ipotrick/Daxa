@@ -287,8 +287,8 @@ struct App : AppWindow<App>
         command_lists.push_back(cmd_list);
         device.submit_commands({
             .command_lists = command_lists,
-            .wait_binary_semaphores = { acquire_semaphore },
-            .signal_binary_semaphores = { present_semaphore },
+            .wait_binary_semaphores = {acquire_semaphore},
+            .signal_binary_semaphores = {present_semaphore},
             .signal_timeline_semaphores = {{gpu_framecount_timeline_sema, cpu_framecount}},
         });
         device.present_frame({
@@ -339,7 +339,6 @@ struct App : AppWindow<App>
     void do_resize()
     {
         should_resize = false;
-        swapchain.resize(size_x, size_y);
         destroy_render_images();
         create_render_images();
         draw();
