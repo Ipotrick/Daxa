@@ -688,23 +688,52 @@ namespace daxa
                 zombies.pop_back();
             }
         };
-        check_and_cleanup_gpu_resources(this->main_queue_submits_zombies, [&, this](auto & command_lists) {});
-        check_and_cleanup_gpu_resources(this->main_queue_command_list_zombies, [&](auto command_list_zombie)
-                                        {
-            DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_command_pool_buffer_recycle_mtx});
-            this->buffer_pool_pool.put_back({command_list_zombie.vk_cmd_pool, command_list_zombie.vk_cmd_buffer}); });
-        check_and_cleanup_gpu_resources(this->main_queue_buffer_zombies, [&](auto id)
-                                        { this->cleanup_buffer(id); });
-        check_and_cleanup_gpu_resources(this->main_queue_image_view_zombies, [&](auto id)
-                                        { this->cleanup_image_view(id); });
-        check_and_cleanup_gpu_resources(this->main_queue_image_zombies, [&](auto id)
-                                        { this->cleanup_image(id); });
-        check_and_cleanup_gpu_resources(this->main_queue_sampler_zombies, [&](auto id)
-                                        { this->cleanup_sampler(id); });
-        check_and_cleanup_gpu_resources(this->main_queue_compute_pipeline_zombies, [&](auto & compute_pipeline) {});
-        check_and_cleanup_gpu_resources(this->main_queue_raster_pipeline_zombies, [&](auto & raster_pipeline) {});
-        check_and_cleanup_gpu_resources(this->main_queue_semaphore_zombies, [&](auto & semaphore_zombie)
-                                        { vkDestroySemaphore(this->vk_device, semaphore_zombie.vk_semaphore, nullptr); });
+        // Need to unlock, as command list destructor locks this mutex too.
+        lock.unlock();
+        check_and_cleanup_gpu_resources(
+            this->main_queue_submits_zombies,
+            [&, this](auto & command_lists) {});
+        lock.lock();
+        check_and_cleanup_gpu_resources(
+            this->main_queue_command_list_zombies,
+            [&](auto & command_list_zombie)
+            {
+                DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_command_pool_buffer_recycle_mtx});
+                this->buffer_pool_pool.put_back({command_list_zombie.vk_cmd_pool, command_list_zombie.vk_cmd_buffer});
+            });
+        check_and_cleanup_gpu_resources(
+            this->main_queue_buffer_zombies,
+            [&](auto id)
+            {
+                this->cleanup_buffer(id);
+            });
+        check_and_cleanup_gpu_resources(
+            this->main_queue_image_view_zombies, [&](auto id)
+            { this->cleanup_image_view(id); });
+        check_and_cleanup_gpu_resources(
+            this->main_queue_image_zombies,
+            [&](auto id)
+            {
+                this->cleanup_image(id);
+            });
+        check_and_cleanup_gpu_resources(
+            this->main_queue_sampler_zombies,
+            [&](auto id)
+            {
+                this->cleanup_sampler(id);
+            });
+        check_and_cleanup_gpu_resources(
+            this->main_queue_pipeline_zombies,
+            [&](auto & pipeline_zombie)
+            {
+                vkDestroyPipeline(this->vk_device, pipeline_zombie.vk_pipeline, nullptr);
+            });
+        check_and_cleanup_gpu_resources(
+            this->main_queue_semaphore_zombies,
+            [&](auto & semaphore_zombie)
+            {
+                vkDestroySemaphore(this->vk_device, semaphore_zombie.vk_semaphore, nullptr);
+            });
     }
 
     void ImplDevice::wait_idle()
@@ -1175,8 +1204,6 @@ namespace daxa
     {
         wait_idle();
         main_queue_collect_garbage();
-
-        binary_semaphore_recyclable_list.clear();
         buffer_pool_pool.cleanup(this);
 
         vmaDestroyBuffer(this->vma_allocator, this->buffer_device_address_buffer, this->buffer_device_address_buffer_allocation);
@@ -1186,11 +1213,14 @@ namespace daxa
         vkDestroySampler(vk_device, this->vk_dummy_sampler, nullptr);
         vkDestroySemaphore(this->vk_device, this->vk_main_queue_gpu_timeline_semaphore, nullptr);
         vkDestroyDevice(this->vk_device, nullptr);
+<<<<<<< HEAD
     }
 
     auto ImplDevice::managed_cleanup() -> bool
     {
         return true;
+=======
+>>>>>>> 36c472a63796d5b32698300b030235a34f362838
     }
 
     void ImplDevice::zombiefy_buffer(BufferId id)

@@ -21,7 +21,6 @@ namespace daxa
         void * scratch_buffer = {};
         bool initialized = {};
 
-        auto managed_cleanup() -> bool override;
         void resize(UpscaleSizeInfo const & info);
         void upscale(CommandList & command_list, UpscaleInfo const & info);
 

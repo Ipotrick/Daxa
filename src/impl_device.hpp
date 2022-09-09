@@ -5,7 +5,6 @@
 
 #include "impl_core.hpp"
 #include "impl_context.hpp"
-#include "impl_recyclable_list.hpp"
 
 #include "impl_pipeline.hpp"
 #include "impl_command_list.hpp"
@@ -33,7 +32,6 @@ namespace daxa
         // Resource recycling:
         DAXA_ONLY_IF_THREADSAFETY(std::mutex main_queue_command_pool_buffer_recycle_mtx = {});
         CommandBufferPoolPool buffer_pool_pool = {};
-        RecyclableList<ImplBinarySemaphore> binary_semaphore_recyclable_list = {};
         // Main queue:
         VkQueue main_queue_vk_queue = {};
         u32 main_queue_family_index = {};
@@ -49,8 +47,7 @@ namespace daxa
         std::deque<std::pair<u64, ImageViewId>> main_queue_image_view_zombies = {};
         std::deque<std::pair<u64, SamplerId>> main_queue_sampler_zombies = {};
         std::deque<std::pair<u64, SemaphoreZombie>> main_queue_semaphore_zombies = {};
-        std::deque<std::pair<u64, std::unique_ptr<ImplComputePipeline>>> main_queue_compute_pipeline_zombies = {};
-        std::deque<std::pair<u64, std::unique_ptr<ImplRasterPipeline>>> main_queue_raster_pipeline_zombies = {};
+        std::deque<std::pair<u64, PipelineZombie>> main_queue_pipeline_zombies = {};
         void main_queue_collect_garbage();
         void wait_idle();
 
@@ -85,7 +82,5 @@ namespace daxa
         void cleanup_image(ImageId id);
         void cleanup_image_view(ImageViewId id);
         void cleanup_sampler(SamplerId id);
-
-        auto managed_cleanup() -> bool override final;
     };
 } // namespace daxa
