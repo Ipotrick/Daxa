@@ -88,7 +88,6 @@ namespace daxa
 
         DAXA_ATOMIC_U64 weak_count = {};
         DAXA_ATOMIC_U64 strong_count = {};
-        virtual auto managed_cleanup() -> bool;
     };
 
     struct ManagedWeakPtr

@@ -2,11 +2,6 @@
 
 namespace daxa
 {
-    auto ManagedSharedState::managed_cleanup() -> bool
-    {
-        return true;
-    }
-
     ManagedPtr::ManagedPtr(ManagedSharedState * ptr) : object{ptr}
     {
         DAXA_ATOMIC_FETCH_INC(object->strong_count);
@@ -92,22 +87,13 @@ namespace daxa
 
     void ManagedPtr::cleanup()
     {
-        if (this->object && DAXA_ATOMIC_FETCH(this->object->strong_count) == 1)
+        if (this->object && DAXA_ATOMIC_FETCH_DEC(this->object->strong_count) == 1)
         {
-            bool should_delete = this->object->managed_cleanup();
             u64 weak_count = DAXA_ATOMIC_FETCH(this->object->weak_count);
-            if (should_delete)
+            this->object->~ManagedSharedState();
+            if (weak_count == 0)
             {
-                this->object->~ManagedSharedState();
-                if (weak_count == 0)
-                {
-                    free(this->object);
-                }
-                else
-                {
-                    // keep the memory around for debugging, but set strong count to 0 to singal death.
-                    DAXA_ATOMIC_FETCH_DEC(this->object->strong_count);
-                }
+                free(this->object);
             }
             this->object = {};
         }

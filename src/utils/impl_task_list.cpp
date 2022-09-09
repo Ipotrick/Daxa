@@ -463,11 +463,6 @@ namespace daxa
     {
     }
 
-    auto ImplTaskList::managed_cleanup() -> bool
-    {
-        return true;
-    }
-
     auto ImplTaskList::task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access>
     {
         switch (access)

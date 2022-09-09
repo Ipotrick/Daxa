@@ -26,8 +26,6 @@ namespace daxa
 
         void initialize(BinarySemaphoreInfo const & info);
         void reset();
-
-        auto managed_cleanup() -> bool override final;
     };
 
     struct ImplTimelineSemaphore final : ManagedSharedState
@@ -38,7 +36,5 @@ namespace daxa
 
         ImplTimelineSemaphore(ManagedWeakPtr a_impl_device, TimelineSemaphoreInfo const & a_info);
         ~ImplTimelineSemaphore();
-
-        auto managed_cleanup() -> bool override final;
     };
 } // namespace daxa
