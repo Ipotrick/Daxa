@@ -9,6 +9,8 @@ using namespace daxa::types;
 #endif
 #include <GLFW/glfw3native.h>
 
+// #include <iostream>
+
 template <typename App>
 struct AppWindow
 {
@@ -36,10 +38,11 @@ struct AppWindow
                 auto & app = *reinterpret_cast<App *>(glfwGetWindowUserPointer(window_ptr));
                 app.on_key(key, action);
             });
-        glfwSetWindowSizeCallback(
+        glfwSetFramebufferSizeCallback(
             glfw_window_ptr,
             [](GLFWwindow * window_ptr, i32 sx, i32 sy)
             {
+                // std::cout << "Got GLFW resize: (" << sx << ", " << sy << ")" << std::endl;
                 auto & app = *reinterpret_cast<App *>(glfwGetWindowUserPointer(window_ptr));
                 app.on_resize(static_cast<u32>(sx), static_cast<u32>(sy));
             });

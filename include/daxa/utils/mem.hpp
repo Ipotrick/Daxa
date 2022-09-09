@@ -24,7 +24,7 @@ namespace daxa
     {
         MemoryUploader(Device device, usize capacity = 1 << 25);
 
-        auto upload_to_buffer(BufferId dst_buffer, usize dst_offset, usize upload_size) -> void*;
+        auto upload_to_buffer(BufferId dst_buffer, usize dst_offset, usize upload_size) -> void *;
         auto get_commands() -> MemoryUploadCommandSubmitInfo;
         void reclaim_unused_memory();
 
@@ -47,4 +47,4 @@ namespace daxa
         usize claimed_start = {};
         usize claimed_size = {};
     };
-}
+} // namespace daxa
