@@ -261,6 +261,7 @@ struct App : AppWindow<App>
                 .size = {size_x, size_y, 1},
                 .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             });
+            device.wait_idle();
             draw();
         }
     }
