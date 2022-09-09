@@ -1,8 +1,6 @@
 #include "impl_semaphore.hpp"
 #include "impl_device.hpp"
 
-#include <iostream>
-
 namespace daxa
 {
     BinarySemaphore::BinarySemaphore(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
@@ -16,8 +14,6 @@ namespace daxa
     ImplBinarySemaphore::ImplBinarySemaphore(ManagedWeakPtr a_impl_device, BinarySemaphoreInfo const & info)
         : impl_device{a_impl_device}
     {
-        // std::cout << "sem" << std::endl;
-
         VkSemaphoreCreateInfo vk_semaphore_create_info{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
             .pNext = nullptr,
@@ -112,8 +108,6 @@ namespace daxa
     ImplTimelineSemaphore::ImplTimelineSemaphore(ManagedWeakPtr a_impl_device, TimelineSemaphoreInfo const & a_info)
         : impl_device{a_impl_device}, info{a_info}
     {
-        // std::cout << "tsem" << std::endl;
-
         VkSemaphoreTypeCreateInfo timeline_vk_semaphore{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
             .pNext = nullptr,

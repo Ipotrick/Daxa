@@ -98,7 +98,6 @@ struct App : AppWindow<App>
     u64 cpu_framecount = FRAMES_IN_FLIGHT - 1;
 
     daxa::BinarySemaphore acquire_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("acquire_semaphore")});
-
     daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
 
     bool should_resize = false;
@@ -107,6 +106,8 @@ struct App : AppWindow<App>
 
     ~App()
     {
+        device.wait_idle();
+        device.collect_garbage();
         ImGui_ImplGlfw_Shutdown();
         device.destroy_buffer(vertex_buffer);
     }
@@ -267,6 +268,7 @@ struct App : AppWindow<App>
     void do_resize()
     {
         should_resize = false;
+        swapchain.resize();
         draw();
     }
 };
