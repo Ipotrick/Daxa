@@ -159,7 +159,7 @@ namespace daxa
         auto & impl = *as<ImplTaskList>();
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can only record to uncompleted task list");
 
-        usize task_index = impl.tasks.size();
+        usize task_index = impl.events.size();
 
         impl.impl_task_buffers.push_back(ImplTaskBuffer{
             .latest_access = info.last_access,
@@ -170,7 +170,8 @@ namespace daxa
 
         auto task_buffer_id = TaskBufferId{{.index = static_cast<u32>(impl.impl_task_buffers.size() - 1)}};
 
-        impl.tasks.push_back({
+        impl.events.push_back({
+            .submit_scope_index = impl.submit_scopes.size()-1,
             .event_variant = ImplCreateBufferTask{
                 .id = task_buffer_id,
             },
@@ -184,7 +185,7 @@ namespace daxa
         auto & impl = *as<ImplTaskList>();
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can only record to uncompleted task list");
 
-        usize task_index = impl.tasks.size();
+        usize task_index = impl.events.size();
 
         impl.impl_task_images.push_back(ImplTaskImage{
             .latest_access = info.last_access,
@@ -192,12 +193,14 @@ namespace daxa
             .latest_access_task_index = task_index,
             .fetch_callback = info.fetch_callback,
             .slice = info.slice,
+            .parent_swapchain = info.swapchain_parent,
             .debug_name = info.debug_name,
         });
 
         auto task_image_id = TaskImageId{{.index = static_cast<u32>(impl.impl_task_images.size() - 1)}};
 
-        impl.tasks.push_back({
+        impl.events.push_back({
+            .submit_scope_index = impl.submit_scopes.size()-1,
             .event_variant = ImplCreateImageTask{
                 .id = task_image_id,
             },
@@ -210,7 +213,8 @@ namespace daxa
     {
         auto & impl = *as<ImplTaskList>();
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can only record to uncompleted task list");
-        impl.tasks.push_back({
+        impl.events.push_back({
+            .submit_scope_index = impl.submit_scopes.size()-1,
             .event_variant = ImplGenericTask{
                 .info = {
                     .used_buffers = info.used_buffers,
@@ -285,6 +289,39 @@ namespace daxa
         });
     }
 
+    void TaskList::submit(CommandSubmitInfo* info)
+    {
+        auto & impl = *as<ImplTaskList>();
+        DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "Can only compile a task list one time");
+
+        impl.events.push_back(TaskEvent{
+            .submit_scope_index = impl.submit_scopes.size()-1,
+            .event_variant = TaskSubmitEvent{ .user_submit_info = info }
+        });
+        impl.submit_scopes.push_back({});
+    }
+
+    void TaskList::present(TaskPresentInfo const& info)
+    {
+        auto & impl = *as<ImplTaskList>();
+        DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "Can only compile a task list one time");
+
+        auto& task_image = impl.impl_task_images[info.presented_image.index];
+
+        DAXA_DBG_ASSERT_TRUE_M(task_image.parent_swapchain.has_value(), "presented image must have a parent swapchain set in task image creation");
+
+        impl.events.push_back(TaskEvent{ 
+            .submit_scope_index = impl.submit_scopes.size()-1,
+            .event_variant = TaskPresentEvent{ 
+                .present_info = PresentInfo{
+                    .swapchain = task_image.parent_swapchain.value().first,
+                },
+                .presented_image = info.presented_image,
+                .user_binary_semaphores = info.user_binary_semaphores,
+            } 
+        });
+    }
+
     void TaskList::compile()
     {
         auto & impl = *as<ImplTaskList>();
@@ -311,27 +348,15 @@ namespace daxa
             .command_lists = {impl.info.device.create_command_list({.debug_name = {std::string("Task Command List 0")}})},
             .impl_task_buffers = impl.impl_task_buffers,
             .impl_task_images = impl.impl_task_images,
+            .submit_scopes = impl.submit_scopes,
         };
 
-        for (usize task_index = 0; task_index < impl.tasks.size(); ++task_index)
+        for (usize task_index = 0; task_index < impl.events.size(); ++task_index)
         {
-            runtime.execute_task(impl.tasks[task_index], task_index);
+            runtime.execute_task(impl.events[task_index], task_index);
         }
 
-        if (!runtime.command_lists.back().is_complete())
-        {
-            runtime.command_lists.back().complete();
-        }
-
-        impl.recorded_command_lists = std::move(runtime.command_lists);
-    }
-
-    auto TaskList::command_lists() -> std::vector<CommandList> &
-    {
-        auto & impl = *as<ImplTaskList>();
-        DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "to retrieve command lists, the list must be compiled and executed first");
-
-        return impl.recorded_command_lists;
+        DAXA_DBG_ASSERT_TRUE_M(runtime.command_lists.empty(), "must submit all commands recorded in task list before ending command list");
     }
 
     auto TaskList::last_access(TaskBufferId buffer) -> Access
@@ -418,6 +443,38 @@ namespace daxa
                 .image_view_id = image_view_id,
             });
         }
+        else if (TaskSubmitEvent * submit_event = std::get_if<TaskSubmitEvent>(&task_event.event_variant))
+        {
+            if (!command_lists.back().is_complete())
+            {
+                command_lists.back().complete();
+            }
+            TaskSubmitScope & scope = submit_scopes[task_event.submit_scope_index];
+
+            CommandSubmitInfo submit_info = scope.submit_info;
+            submit_info.command_lists.insert(submit_info.command_lists.end(), command_lists.begin(), command_lists.end());
+            if (submit_event->user_submit_info)
+            {
+                submit_info.command_lists.insert(submit_info.command_lists.end(), submit_event->user_submit_info->command_lists.begin(), submit_event->user_submit_info->command_lists.end());
+                submit_info.wait_binary_semaphores.insert(submit_info.wait_binary_semaphores.end(), submit_event->user_submit_info->wait_binary_semaphores.begin(), submit_event->user_submit_info->wait_binary_semaphores.end());
+                submit_info.signal_binary_semaphores.insert(submit_info.signal_binary_semaphores.end(), submit_event->user_submit_info->signal_binary_semaphores.begin(), submit_event->user_submit_info->signal_binary_semaphores.end());
+                submit_info.wait_timeline_semaphores.insert(submit_info.wait_timeline_semaphores.end(), submit_event->user_submit_info->wait_timeline_semaphores.begin(), submit_event->user_submit_info->wait_timeline_semaphores.end());
+                submit_info.signal_timeline_semaphores.insert(submit_info.signal_timeline_semaphores.end(), submit_event->user_submit_info->signal_timeline_semaphores.begin(), submit_event->user_submit_info->signal_timeline_semaphores.end());
+            }
+            command_lists.clear();
+
+            current_device.submit_commands(scope.submit_info);
+        }
+        else if (TaskPresentEvent * present_event = std::get_if<TaskPresentEvent>(&task_event.event_variant))
+        {
+            PresentInfo present_info = present_event->present_info;
+            if (present_event->user_binary_semaphores)
+            {
+                present_info.wait_binary_semaphores.insert(present_info.wait_binary_semaphores.end(), present_event->user_binary_semaphores->begin(), present_event->user_binary_semaphores->end());
+            }
+
+            current_device.present_frame(present_info);
+        }
     }
 
     void TaskRuntime::pipeline_barriers(std::vector<TaskPipelineBarrier> const & barriers)
@@ -457,6 +514,7 @@ namespace daxa
     ImplTaskList::ImplTaskList(TaskListInfo const & info)
         : info{info}
     {
+        submit_scopes.push_back({});
     }
 
     ImplTaskList::~ImplTaskList()
@@ -585,10 +643,10 @@ namespace daxa
 
         dot_file << "digraph TaskGraph {\nnode [style=filled, shape=box, color=\"#d3f4ff\"]\n";
 
-        for (usize task_index = 0; task_index < this->tasks.size(); ++task_index)
+        for (usize task_index = 0; task_index < this->events.size(); ++task_index)
         {
             std::string task_name = std::string("task_") + std::to_string(task_index);
-            if (ImplGenericTask * task_ptr = std::get_if<ImplGenericTask>(&tasks[task_index].event_variant))
+            if (ImplGenericTask * task_ptr = std::get_if<ImplGenericTask>(&events[task_index].event_variant))
             {
                 dot_file << "subgraph cluster_" << task_name << " {\n";
                 dot_file << "label=\"" << task_ptr->info.debug_name << "\"\n";
@@ -607,13 +665,13 @@ namespace daxa
                 }
                 dot_file << "}\n";
             }
-            else if (ImplCreateBufferTask * task_ptr = std::get_if<ImplCreateBufferTask>(&tasks[task_index].event_variant))
+            else if (ImplCreateBufferTask * task_ptr = std::get_if<ImplCreateBufferTask>(&events[task_index].event_variant))
             {
                 ImplTaskBuffer & task_buffer = this->impl_task_buffers[task_ptr->id.index];
                 dot_file << "c_bnode_" << task_index << "_" << task_ptr->id.index;
                 dot_file << " [label=\"Create " << task_buffer.debug_name << "\", shape=box]\n";
             }
-            else if (ImplCreateImageTask * task_ptr = std::get_if<ImplCreateImageTask>(&tasks[task_index].event_variant))
+            else if (ImplCreateImageTask * task_ptr = std::get_if<ImplCreateImageTask>(&events[task_index].event_variant))
             {
                 ImplTaskImage & task_image = this->impl_task_images[task_ptr->id.index];
                 dot_file << "c_inode_" << task_index << "_" << task_ptr->id.index;
@@ -630,7 +688,7 @@ namespace daxa
             auto a = buffer_link.event_a;
             auto b = buffer_link.event_b;
             auto i = buffer_link.resource;
-            if (ImplCreateBufferTask * task_ptr = std::get_if<ImplCreateBufferTask>(&tasks[a].event_variant))
+            if (ImplCreateBufferTask * task_ptr = std::get_if<ImplCreateBufferTask>(&events[a].event_variant))
                 dot_file << "c_";
             dot_file << "bnode_" << a << "_" << i << "->bnode_" << b << "_" << i;
             dot_file << " [label=\"Sync\", labeltooltip=\"between "
@@ -645,7 +703,7 @@ namespace daxa
             auto a = image_link.event_a;
             auto b = image_link.event_b;
             auto i = image_link.resource;
-            if (ImplCreateImageTask * task_ptr = std::get_if<ImplCreateImageTask>(&tasks[a].event_variant))
+            if (ImplCreateImageTask * task_ptr = std::get_if<ImplCreateImageTask>(&events[a].event_variant))
                 dot_file << "c_";
             dot_file << "inode_" << a << "_" << i << "->inode_" << b << "_" << i;
             dot_file << " [label=\"Sync\", labeltooltip=\"between "
@@ -664,7 +722,7 @@ namespace daxa
 
         usize last_task_index_with_barrier = std::numeric_limits<usize>::max();
 
-        auto insert_sync_for_resources = [&](TaskUsedBuffers & used_buffers, TaskUsedImages & used_images, usize task_index)
+        auto insert_sync_for_resources = [&](TaskUsedBuffers & used_buffers, TaskUsedImages & used_images, usize task_index, usize submit_scope_index)
         {
             for (auto & [task_buffer_id, t_access] : used_buffers)
             {
@@ -713,7 +771,7 @@ namespace daxa
                         barrier_task_index = task_index;
                         last_task_index_with_barrier = task_index;
                     }
-                    std::get_if<ImplGenericTask>(&tasks[barrier_task_index].event_variant)->barriers.push_back(TaskPipelineBarrier{
+                    std::get_if<ImplGenericTask>(&events[barrier_task_index].event_variant)->barriers.push_back(TaskPipelineBarrier{
                         .image_barrier = false,
                         .awaited_pipeline_access = Access{
                             .stages = latest_access.stages,
@@ -754,6 +812,13 @@ namespace daxa
             for (auto & [task_image_id, t_access] : used_images)
             {
                 ImplTaskImage & task_image = this->impl_task_images[task_image_id.index];
+
+                if (task_image.parent_swapchain.has_value() && !task_image.swapchain_semaphore_waited_upon)
+                {
+                    task_image.swapchain_semaphore_waited_upon = true;
+
+                    submit_scopes[submit_scope_index].submit_info.wait_binary_semaphores.push_back(task_image.parent_swapchain.value().second);
+                }
 
                 auto [new_layout, new_access] = task_image_access_to_layout_access(t_access);
                 auto & latest_layout = task_image.latest_layout;
@@ -810,7 +875,7 @@ namespace daxa
                         barrier_task_index = task_index;
                         last_task_index_with_barrier = task_index;
                     }
-                    std::get_if<ImplGenericTask>(&tasks[barrier_task_index].event_variant)->barriers.push_back(TaskPipelineBarrier{
+                    std::get_if<ImplGenericTask>(&events[barrier_task_index].event_variant)->barriers.push_back(TaskPipelineBarrier{
                         .image_barrier = true,
                         .awaited_pipeline_access = Access{
                             .stages = latest_access.stages,
@@ -855,9 +920,9 @@ namespace daxa
                         << ", name: "
                         << impl_task_images[task_image_id.index].debug_name
                         << ",\n      awaited_pipeline_access: "
-                        << to_string(std::get_if<ImplGenericTask>(&tasks[barrier_task_index].event_variant)->barriers.back().awaited_pipeline_access)
+                        << to_string(std::get_if<ImplGenericTask>(&events[barrier_task_index].event_variant)->barriers.back().awaited_pipeline_access)
                         << ",\n      waiting_pipeline_access: "
-                        << to_string(std::get_if<ImplGenericTask>(&tasks[barrier_task_index].event_variant)->barriers.back().waiting_pipeline_access)
+                        << to_string(std::get_if<ImplGenericTask>(&events[barrier_task_index].event_variant)->barriers.back().waiting_pipeline_access)
                         << ",\n      before_layout: "
                         << to_string(latest_layout)
                         << ",\n      after_layout: "
@@ -872,12 +937,13 @@ namespace daxa
                     latest_access = latest_access | new_access;
                 }
                 task_image.latest_access_task_index = task_index;
+                task_image.latest_access_submit_scope_index = submit_scope_index;
             }
         };
 
-        for (usize task_index = 0; task_index < this->tasks.size(); ++task_index)
+        for (usize task_index = 0; task_index < this->events.size(); ++task_index)
         {
-            if (ImplGenericTask * task_ptr = std::get_if<ImplGenericTask>(&tasks[task_index].event_variant))
+            if (ImplGenericTask * task_ptr = std::get_if<ImplGenericTask>(&events[task_index].event_variant))
             {
                 DAXA_ONLY_IF_TASK_LIST_DEBUG(
                     std::cout
@@ -888,11 +954,28 @@ namespace daxa
                     << "\n  {"
                     << std::endl);
 
-                insert_sync_for_resources(task_ptr->info.used_buffers, task_ptr->info.used_images, task_index);
+                insert_sync_for_resources(task_ptr->info.used_buffers, task_ptr->info.used_images, task_index, events[task_index].submit_scope_index);
 
                 DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout
                                              << "  }\n"
                                              << std::endl);
+            }
+            else if (TaskPresentEvent* present_event = std::get_if<TaskPresentEvent>(&events[task_index].event_variant))
+            {
+                ImplTaskImage& image = impl_task_images[present_event->presented_image.index];
+
+                if (!image.swapchain_semaphore_waited_upon)
+                {
+                    image.swapchain_semaphore_waited_upon = true;
+                    present_event->present_info.wait_binary_semaphores.push_back(image.parent_swapchain.value().second);
+                }
+                else
+                {
+                    // find the last submit scope that used the presented image and insert a binart semaphore into its submit scope.
+                    BinarySemaphore sema = info.device.create_binary_semaphore({ .debug_name = std::string("TaskList (name:") + info.debug_name + std::string(") present semaphore for image: ") + image.debug_name });
+                    submit_scopes[image.latest_access_submit_scope_index].submit_info.signal_binary_semaphores.push_back(sema);
+                    present_event->present_info.wait_binary_semaphores.push_back(sema);
+                }
             }
         }
     }
