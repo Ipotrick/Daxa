@@ -1111,38 +1111,30 @@ namespace daxa
     }
 
     ImplRasterPipeline::ImplRasterPipeline(ManagedWeakPtr a_impl_device, RasterPipelineInfo const & info)
-        : impl_device{std::move(a_impl_device)}, info{info}
+        : ImplPipeline{std::move(a_impl_device)}, info{info}
     {
-    }
-
-    ImplRasterPipeline::~ImplRasterPipeline()
-    {
-        vkDestroyPipeline(this->impl_device.as<ImplDevice>()->vk_device, this->vk_pipeline, nullptr);
-    }
-
-    auto ImplRasterPipeline::managed_cleanup() -> bool
-    {
-        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->impl_device.as<ImplDevice>()->main_queue_zombies_mtx});
-        u64 main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(this->impl_device.as<ImplDevice>()->main_queue_cpu_timeline);
-        this->impl_device.as<ImplDevice>()->main_queue_raster_pipeline_zombies.push_front({main_queue_cpu_timeline_value, std::unique_ptr<ImplRasterPipeline>{this}});
-        return false;
     }
 
     ImplComputePipeline::ImplComputePipeline(ManagedWeakPtr a_impl_device, ComputePipelineInfo const & info)
-        : impl_device{std::move(a_impl_device)}, info{info}
+        : ImplPipeline{std::move(a_impl_device)}, info{info}
     {
     }
 
-    ImplComputePipeline::~ImplComputePipeline()
+    ImplPipeline::ImplPipeline(ManagedWeakPtr impl_device)
+        : impl_device{ impl_device }
     {
-        vkDestroyPipeline(this->impl_device.as<ImplDevice>()->vk_device, this->vk_pipeline, nullptr);
     }
 
-    auto ImplComputePipeline::managed_cleanup() -> bool
+    ImplPipeline::~ImplPipeline()
     {
-        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->impl_device.as<ImplDevice>()->main_queue_zombies_mtx});
-        u64 main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(this->impl_device.as<ImplDevice>()->main_queue_cpu_timeline);
-        this->impl_device.as<ImplDevice>()->main_queue_compute_pipeline_zombies.push_front({main_queue_cpu_timeline_value, std::unique_ptr<ImplComputePipeline>{this}});
-        return false;
+        auto device = this->impl_device.as<ImplDevice>();
+        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{device->main_queue_zombies_mtx});
+        u64 main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(device->main_queue_cpu_timeline);
+        device->main_queue_pipeline_zombies.push_front({
+            main_queue_cpu_timeline_value,
+            PipelineZombie{
+                .vk_pipeline = vk_pipeline,
+            }
+        });
     }
 } // namespace daxa
