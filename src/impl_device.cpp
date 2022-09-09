@@ -152,7 +152,9 @@ namespace daxa
         };
 
         VkResult err = vkQueuePresentKHR(impl.main_queue_vk_queue, &present_info);
-        DAXA_DBG_ASSERT_TRUE_M(err == VK_SUCCESS, "Daxa should never be in a situation where Present fails");
+        // We currently ignore VK_ERROR_OUT_OF_DATE_KHR, VK_ERROR_SURFACE_LOST_KHR and VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT
+        // because supposedly these kinds of things are not specified within the spec. This is also handled in Swapchain::acquire_next_image()
+        DAXA_DBG_ASSERT_TRUE_M(err == VK_SUCCESS || err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_ERROR_SURFACE_LOST_KHR || err == VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT, "Daxa should never be in a situation where Present fails");
 
         collect_garbage();
     }
