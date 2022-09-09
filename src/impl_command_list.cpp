@@ -1,8 +1,6 @@
 #include "impl_command_list.hpp"
 #include "impl_device.hpp"
 
-#include <iostream>
-
 namespace daxa
 {
     CommandList::CommandList(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
@@ -483,7 +481,7 @@ namespace daxa
             };
 
             vkAllocateCommandBuffers(device->vk_device, &vk_command_buffer_allocate_info, &buffer);
-            pair = { pool, buffer };
+            pair = {pool, buffer};
         }
         else
         {
@@ -531,10 +529,7 @@ namespace daxa
     }
 
     ImplCommandList::ImplCommandList(ManagedWeakPtr a_impl_device, VkCommandPool pool, VkCommandBuffer buffer, CommandListInfo const & a_info)
-        : impl_device{std::move(a_impl_device)}
-        , pipeline_layouts{&(impl_device.as<ImplDevice>()->gpu_table.pipeline_layouts)}
-        , vk_cmd_pool{ pool }
-        , vk_cmd_buffer{ buffer}
+        : impl_device{std::move(a_impl_device)}, pipeline_layouts{&(impl_device.as<ImplDevice>()->gpu_table.pipeline_layouts)}, vk_cmd_pool{pool}, vk_cmd_buffer{buffer}
     {
         initialize(a_info);
     }
@@ -595,7 +590,7 @@ namespace daxa
             CommandListZombie{
                 .vk_cmd_buffer = vk_cmd_buffer,
                 .vk_cmd_pool = vk_cmd_pool,
-            }
+            },
         });
     }
 } // namespace daxa

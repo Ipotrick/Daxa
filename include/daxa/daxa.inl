@@ -19,12 +19,12 @@
 #define DAXA_REGISTER_SAMPLER_TYPE(SAMPLER_TYPE)
 #define DAXA_PUSH_CONSTANT(STRUCT_TYPE)
 #define DAXA_SHARED_TYPE(x) daxa::types::x
-#define DAXA_DECL_BUFFER_STRUCT(NAME, BODY) \
-using NAME##BufferRef = u64; \
-using NAME##WrappedBufferRef = u64; \
-using NAME##CoherentBufferRef = u64; \
-using NAME##CoherentWrappedBufferRef = u64; \
-struct NAME BODY
+#define DAXA_DECL_BUFFER_STRUCT(NAME, BODY)     \
+    using NAME##BufferRef = u64;                \
+    using NAME##WrappedBufferRef = u64;         \
+    using NAME##CoherentBufferRef = u64;        \
+    using NAME##CoherentWrappedBufferRef = u64; \
+    struct NAME BODY
 #define BufferRef(x) u64
 #define WrappedBufferRef(x) u64
 #define CoherentBufferRef(x) u64

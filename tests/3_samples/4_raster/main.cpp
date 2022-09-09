@@ -86,16 +86,17 @@ struct App : AppWindow<App>
     Player3D player = {
         .rot = {2.0f, 0.0f, 0.0f},
     };
-    bool should_resize = false, paused = true;
+    bool paused = true;
 
     daxa::BinarySemaphore acquire_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("acquire_semaphore")});
-    
     daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
 
     App() : AppWindow<App>(APPNAME) {}
 
     ~App()
     {
+        device.wait_idle();
+        device.collect_garbage();
         device.destroy_image(depth_image);
     }
 
@@ -139,11 +140,6 @@ struct App : AppWindow<App>
             {
                 raster_pipeline = new_pipeline.value();
             }
-        }
-
-        if (should_resize)
-        {
-            do_resize();
         }
 
         auto swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
@@ -206,13 +202,13 @@ struct App : AppWindow<App>
         ++cpu_framecount;
         device.submit_commands({
             .command_lists = {std::move(cmd_list)},
-            .wait_binary_semaphores = { acquire_semaphore },
-            .signal_binary_semaphores = { present_semaphore },
+            .wait_binary_semaphores = {acquire_semaphore},
+            .signal_binary_semaphores = {present_semaphore},
             .signal_timeline_semaphores = {{gpu_framecount_timeline_sema, cpu_framecount}},
         });
 
         device.present_frame({
-            .wait_binary_semaphores = { present_semaphore },
+            .wait_binary_semaphores = {present_semaphore},
             .swapchain = swapchain,
         });
 
@@ -252,23 +248,16 @@ struct App : AppWindow<App>
 
         if (!minimized)
         {
-            should_resize = true;
-            do_resize();
+            device.destroy_image(depth_image);
+            depth_image = device.create_image({
+                .format = daxa::Format::D32_SFLOAT,
+                .aspect = daxa::ImageAspectFlagBits::DEPTH,
+                .size = {size_x, size_y, 1},
+                .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT,
+            });
+            swapchain.resize();
+            draw();
         }
-    }
-
-    void do_resize()
-    {
-        should_resize = false;
-        device.destroy_image(depth_image);
-        depth_image = device.create_image({
-            .format = daxa::Format::D32_SFLOAT,
-            .aspect = daxa::ImageAspectFlagBits::DEPTH,
-            .size = {size_x, size_y, 1},
-            .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT,
-        });
-        swapchain.resize(size_x, size_y);
-        draw();
     }
 
     void toggle_pause()
