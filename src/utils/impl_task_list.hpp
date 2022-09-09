@@ -37,8 +37,11 @@ namespace daxa
         Access latest_access = AccessConsts::NONE;
         ImageLayout latest_layout = ImageLayout::UNDEFINED;
         usize latest_access_task_index = {};
+        usize latest_access_submit_scope_index = {};
         CreateTaskImageCallback fetch_callback = {};
         ImageMipArraySlice slice = {};
+        std::optional<std::pair<Swapchain, BinarySemaphore>> parent_swapchain = {};
+        bool swapchain_semaphore_waited_upon = {};
         std::string debug_name = {};
     };
 
@@ -75,14 +78,37 @@ namespace daxa
         TaskImageId id = {};
     };
 
+    struct TaskSubmitEvent
+    {
+        CommandSubmitInfo submit_info;
+        CommandSubmitInfo* user_submit_info;
+    };  
+
+    struct TaskPresentEvent
+    {
+        PresentInfo present_info;
+        std::vector<BinarySemaphore>* user_binary_semaphores = {};
+        TaskImageId presented_image = {};
+    };
+
     using TaskEventVariant = std::variant<
         ImplGenericTask,
         ImplCreateBufferTask,
-        ImplCreateImageTask>;
+        ImplCreateImageTask,
+        TaskSubmitEvent,
+        TaskPresentEvent
+    >;
 
     struct TaskEvent
     {
+        usize submit_scope_index = {};
         TaskEventVariant event_variant;
+    };
+
+    struct TaskSubmitScope
+    {
+        CommandSubmitInfo submit_info = {};
+        std::vector<u64> used_swapchain_task_images = {};
     };
 
     struct TaskRuntime
@@ -94,6 +120,7 @@ namespace daxa
         std::vector<CommandList> command_lists = {};
         std::vector<ImplTaskBuffer> & impl_task_buffers;
         std::vector<ImplTaskImage> & impl_task_images;
+        std::vector<TaskSubmitScope> & submit_scopes;
         std::vector<RuntimeTaskBuffer> runtime_buffers = {};
         std::vector<RuntimeTaskImage> runtime_images = {};
 
@@ -106,6 +133,12 @@ namespace daxa
 
     struct TaskRecordState
     {
+    };
+
+    struct SubmitScope
+    {
+        std::vector<CommandList> recorded_command_lists = {};
+        std::vector<usize> used_swapchain_images = {}; 
     };
 
     struct TaskLink
@@ -126,10 +159,10 @@ namespace daxa
     {
         TaskListInfo info;
 
-        std::vector<TaskEvent> tasks = {};
+        std::vector<TaskEvent> events = {};
         std::vector<ImplTaskBuffer> impl_task_buffers = {};
         std::vector<ImplTaskImage> impl_task_images = {};
-        std::vector<CommandList> recorded_command_lists = {};
+        std::vector<TaskSubmitScope> submit_scopes = {};
 
         TaskRecordState record_state = {};
         TaskGraph compiled_graph = {};
