@@ -483,7 +483,7 @@ namespace daxa
             };
 
             vkAllocateCommandBuffers(device->vk_device, &vk_command_buffer_allocate_info, &buffer);
-            pair = { pool, buffer };
+            pair = {pool, buffer};
         }
         else
         {
@@ -530,10 +530,7 @@ namespace daxa
     }
 
     ImplCommandList::ImplCommandList(ManagedWeakPtr a_impl_device, VkCommandPool pool, VkCommandBuffer buffer, CommandListInfo const & a_info)
-        : impl_device{std::move(a_impl_device)}
-        , pipeline_layouts{&(impl_device.as<ImplDevice>()->gpu_table.pipeline_layouts)}
-        , vk_cmd_pool{ pool }
-        , vk_cmd_buffer{ buffer}
+        : impl_device{std::move(a_impl_device)}, pipeline_layouts{&(impl_device.as<ImplDevice>()->gpu_table.pipeline_layouts)}, vk_cmd_pool{pool}, vk_cmd_buffer{buffer}
     {
         initialize(a_info);
     }
@@ -589,13 +586,11 @@ namespace daxa
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{device->main_queue_zombies_mtx});
         u64 main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(device->main_queue_cpu_timeline);
 
-        device->main_queue_command_list_zombies.push_back({
-            main_queue_cpu_timeline,
-            CommandListZombie{
-                .vk_cmd_buffer = vk_cmd_buffer,
-                .vk_cmd_pool = vk_cmd_pool,
-            }
-        });
+        device->main_queue_command_list_zombies.push_back({main_queue_cpu_timeline,
+                                                           CommandListZombie{
+                                                               .vk_cmd_buffer = vk_cmd_buffer,
+                                                               .vk_cmd_pool = vk_cmd_pool,
+                                                           }});
     }
 
     auto ImplCommandList::managed_cleanup() -> bool

@@ -3,11 +3,13 @@
 #include "impl_swapchain.hpp"
 #include "impl_device.hpp"
 
+// #include <iostream>
+
 namespace daxa
 {
     Swapchain::Swapchain(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
-    ImageId Swapchain::acquire_next_image(BinarySemaphore& signal_semaphore)
+    ImageId Swapchain::acquire_next_image(BinarySemaphore & signal_semaphore)
     {
         auto & impl = *as<ImplSwapchain>();
         VkResult err;
@@ -16,10 +18,12 @@ namespace daxa
             err = vkAcquireNextImageKHR(impl.impl_device.as<ImplDevice>()->vk_device, impl.vk_swapchain, UINT64_MAX, signal_semaphore.as<ImplBinarySemaphore>()->vk_semaphore, nullptr, &impl.current_image_index);
             if (err == VK_ERROR_OUT_OF_DATE_KHR)
             {
+                // std::cout << "[Swapchain::acquire_next_image()] Swapchain out of date. Recreating..." << std::endl;
                 impl.recreate();
             }
             else if (err == VK_ERROR_SURFACE_LOST_KHR)
             {
+                // std::cout << "[Swapchain::acquire_next_image()] Surface Lost. Recreating..." << std::endl;
                 impl.recreate_surface();
                 impl.recreate();
             }
@@ -32,8 +36,6 @@ namespace daxa
                 throw std::runtime_error("Unexpected swapchain error");
             }
         } while (err != VK_SUCCESS);
-        //vkWaitForFences(impl.impl_device.as<ImplDevice>()->vk_device, 1, &impl.acquisition_fence, VK_TRUE, UINT64_MAX);
-        //vkResetFences(impl.impl_device.as<ImplDevice>()->vk_device, 1, &impl.acquisition_fence);
         return impl.image_resources[impl.current_image_index];
     }
 
@@ -41,16 +43,6 @@ namespace daxa
     {
         auto & impl = *as<ImplSwapchain>();
         return static_cast<Format>(impl.vk_surface_format.format);
-    }
-
-    void Swapchain::resize(u32 width, u32 height)
-    {
-        auto & impl = *as<ImplSwapchain>();
-        if (width == impl.info.width && height == impl.info.height)
-            return;
-        impl.info.width = width;
-        impl.info.height = height;
-        impl.recreate();
     }
 
     void ImplSwapchain::recreate_surface()
@@ -108,20 +100,12 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(best_format != surface_formats.end(), "No viable formats found");
         this->vk_surface_format = *best_format;
 
-        VkFenceCreateInfo fence_ci = {
-            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-            .pNext = nullptr,
-            .flags = 0,
-        };
-        vkCreateFence(impl_device.as<ImplDevice>()->vk_device, &fence_ci, nullptr, &this->acquisition_fence);
-
         recreate();
     }
 
     ImplSwapchain::~ImplSwapchain()
     {
         cleanup();
-        vkDestroyFence(impl_device.as<ImplDevice>()->vk_device, this->acquisition_fence, nullptr);
 
         vkDestroySwapchainKHR(this->impl_device.as<ImplDevice>()->vk_device, this->vk_swapchain, nullptr);
         vkDestroySurfaceKHR(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, this->vk_surface, nullptr);
@@ -136,6 +120,8 @@ namespace daxa
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(this->impl_device.as<ImplDevice>()->vk_physical_device, this->vk_surface, &surface_capabilities);
         info.width = surface_capabilities.currentExtent.width;
         info.height = surface_capabilities.currentExtent.height;
+
+        // std::cout << "Recreating swapchain to size (" << info.width << ", " << info.height << ")" << std::endl;
 
         auto old_swapchain = this->vk_swapchain;
 
@@ -203,16 +189,6 @@ namespace daxa
                 .pObjectName = swapchain_name.c_str(),
             };
             vkSetDebugUtilsObjectNameEXT(impl_device.as<ImplDevice>()->vk_device, &swapchain_name_info);
-
-            auto swapchain_fence_name = this->info.debug_name + std::string(" [Daxa Swapchain Fence]");
-            VkDebugUtilsObjectNameInfoEXT fence_name_info{
-                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-                .pNext = nullptr,
-                .objectType = VK_OBJECT_TYPE_FENCE,
-                .objectHandle = reinterpret_cast<uint64_t>(this->acquisition_fence),
-                .pObjectName = swapchain_fence_name.c_str(),
-            };
-            vkSetDebugUtilsObjectNameEXT(impl_device.as<ImplDevice>()->vk_device, &fence_name_info);
         }
     }
 

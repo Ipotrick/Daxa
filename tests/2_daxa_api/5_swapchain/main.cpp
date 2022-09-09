@@ -50,12 +50,12 @@ namespace tests
                 .native_window = get_native_handle(),
                 .width = size_x,
                 .height = size_y,
+                // .present_mode = daxa::PresentMode::DO_NOT_WAIT_FOR_VBLANK,
                 .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-                .debug_name = APPNAME_PREFIX("swpachain (clearcolor)"),
+                .debug_name = APPNAME_PREFIX("swapchain (clearcolor)"),
             });
 
             daxa::BinarySemaphore acquire_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("acquire_semaphore")});
-            
             daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
 
             App() : AppWindow<App>(APPNAME " (clearcolor)") {}
@@ -83,6 +83,11 @@ namespace tests
 
             void draw()
             {
+                // if (should_resize)
+                // {
+                //     do_resize();
+                // }
+
                 auto swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
                 auto cmd_list = device.create_command_list({
                     .debug_name = APPNAME_PREFIX("cmd_list (clearcolor)"),
@@ -139,7 +144,6 @@ namespace tests
                     minimized = size_x == 0 || size_y == 0;
                     if (!minimized)
                     {
-                        swapchain.resize(size_x, size_y);
                         draw();
                     }
                 }

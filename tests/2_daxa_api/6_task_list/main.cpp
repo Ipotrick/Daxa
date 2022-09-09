@@ -475,7 +475,6 @@ namespace tests
                     task_list = record_task_list();
                     device.destroy_image(render_image);
                     render_image = create_render_image(sx, sy);
-                    swapchain.resize(size_x, size_y);
                     draw();
                 }
             }

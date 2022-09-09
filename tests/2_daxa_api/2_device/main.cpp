@@ -33,7 +33,6 @@ namespace tests
         // as its name and much more! These are the same properties we used
         // to discriminate in the GPU selection.
         std::cout << device.properties().device_name << std::endl;
-
     }
 } // namespace tests
 
