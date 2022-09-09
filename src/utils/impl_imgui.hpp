@@ -17,7 +17,6 @@ namespace daxa
         void recreate_vbuffer(usize vbuffer_new_size);
         void recreate_ibuffer(usize ibuffer_new_size);
         void record_commands(ImDrawData * draw_data, CommandList & cmd_list, ImageId target_image, u32 size_x, u32 size_y);
-        auto managed_cleanup() -> bool override;
 
         ImplImGuiRenderer(ImGuiRendererInfo const & info);
         virtual ~ImplImGuiRenderer() override final;

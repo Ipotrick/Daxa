@@ -60,7 +60,5 @@ namespace daxa
 
         void initialize(CommandListInfo const & a_info);
         void reset();
-
-        auto managed_cleanup() -> bool override final;
     };
 } // namespace daxa
