@@ -1,7 +1,5 @@
 #include "impl_device.hpp"
 
-// #include <iostream>
-
 namespace daxa
 {
     Device::Device(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
@@ -153,37 +151,8 @@ namespace daxa
             .pImageIndices = &swapchain_impl.current_image_index,
         };
 
-        VkResult err;
-        err = vkQueuePresentKHR(impl.main_queue_vk_queue, &present_info);
-
-        if (err == VK_ERROR_OUT_OF_DATE_KHR)
-        {
-            // std::cout << "[Device::present_frame()] Swapchain out of date. Recreating..." << std::endl;
-            swapchain_impl.recreate();
-        }
-        else if (err == VK_SUBOPTIMAL_KHR)
-        {
-            VkSurfaceCapabilitiesKHR surface_capabilities;
-            vkGetPhysicalDeviceSurfaceCapabilitiesKHR(swapchain_impl.impl_device.as<ImplDevice>()->vk_physical_device, swapchain_impl.vk_surface, &surface_capabilities);
-            if (surface_capabilities.currentExtent.width != swapchain_impl.info.width ||
-                surface_capabilities.currentExtent.height != swapchain_impl.info.height)
-            {
-                // auto sx = surface_capabilities.currentExtent.width;
-                // auto sy = surface_capabilities.currentExtent.height;
-                // std::cout << "[Device::present_frame()] Swapchain suboptimal. Recreating... (" << sx << ", " << sy << ")" << std::endl;
-                swapchain_impl.recreate();
-            }
-        }
-        else if (err == VK_ERROR_SURFACE_LOST_KHR)
-        {
-            // std::cout << "[Device::present_frame()] Surface Lost. Recreating..." << std::endl;
-            swapchain_impl.recreate_surface();
-            swapchain_impl.recreate();
-        }
-        else if (err != VK_SUCCESS)
-        {
-            throw std::runtime_error("Unexpected swapchain error");
-        }
+        VkResult err = vkQueuePresentKHR(impl.main_queue_vk_queue, &present_info);
+        DAXA_DBG_ASSERT_TRUE_M(err == VK_SUCCESS, "Daxa should never be in a situation where Present fails");
 
         collect_garbage();
     }
