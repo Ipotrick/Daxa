@@ -152,8 +152,6 @@ namespace daxa
         void output_graphviz();
         void insert_synchronization();
 
-        auto managed_cleanup() -> bool override;
-
         ImplTaskList(TaskListInfo const & info);
         virtual ~ImplTaskList() override final;
     };
