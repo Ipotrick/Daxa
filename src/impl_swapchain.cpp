@@ -17,7 +17,9 @@ namespace daxa
     {
         auto & impl = *as<ImplSwapchain>();
         VkResult err = vkAcquireNextImageKHR(impl.impl_device.as<ImplDevice>()->vk_device, impl.vk_swapchain, UINT64_MAX, signal_semaphore.as<ImplBinarySemaphore>()->vk_semaphore, nullptr, &impl.current_image_index);
-        DAXA_DBG_ASSERT_TRUE_M(err == VK_SUCCESS, "Daxa should never be in a situation where Acquire fails");
+        // We currently ignore VK_ERROR_OUT_OF_DATE_KHR, VK_ERROR_SURFACE_LOST_KHR and VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT
+        // because supposedly these kinds of things are not specified within the spec. This is also handled in Device::present_frame()
+        DAXA_DBG_ASSERT_TRUE_M(err == VK_SUCCESS || err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_ERROR_SURFACE_LOST_KHR || err == VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT, "Daxa should never be in a situation where Acquire fails");
         return impl.image_resources[impl.current_image_index];
     }
 
@@ -115,14 +117,11 @@ namespace daxa
         info.present_mode = PresentMode::DO_NOT_WAIT_FOR_VBLANK;
 #endif
 
-        // std::cout << "Recreating swapchain to size (" << info.width << ", " << info.height << ")" << std::endl;
-
         auto old_swapchain = this->vk_swapchain;
 
-#if defined(__linux__)
-        // TODO: Figure out why this hack fixes things for Linux!
+        // NOTE: this is a hack that allows us to ignore issues caused
+        // by things that are just underspecified in the Vulkan spec.
         this->impl_device.as<ImplDevice>()->wait_idle();
-#endif
 
         cleanup();
 
