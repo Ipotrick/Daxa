@@ -36,7 +36,7 @@ struct AppWindow
                 auto & app = *reinterpret_cast<App *>(glfwGetWindowUserPointer(window_ptr));
                 app.on_key(key, action);
             });
-        glfwSetWindowSizeCallback(
+        glfwSetFramebufferSizeCallback(
             glfw_window_ptr,
             [](GLFWwindow * window_ptr, i32 sx, i32 sy)
             {

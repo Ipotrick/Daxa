@@ -32,7 +32,7 @@ namespace daxa
 
         std::pair<u64, std::vector<ManagedPtr>> submit = {curreny_main_queue_cpu_timeline_value, {}};
 
-        for (auto& command_list : submit_info.command_lists)
+        for (auto & command_list : submit_info.command_lists)
         {
             auto cmd_list = command_list.as<ImplCommandList>();
             for (usize i = 0; i < cmd_list->deferred_destruction_count; ++i)
@@ -40,11 +40,11 @@ namespace daxa
                 auto [id, index] = cmd_list->deferred_destructions[i];
                 switch (index)
                 {
-                    case DEFERRED_DESTRUCTION_BUFFER_INDEX: impl.main_queue_buffer_zombies.push_front({curreny_main_queue_cpu_timeline_value,BufferId{id}}); break;
-                    case DEFERRED_DESTRUCTION_IMAGE_INDEX: impl.main_queue_image_zombies.push_front({curreny_main_queue_cpu_timeline_value, ImageId{id}}); break;
-                    case DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX: impl.main_queue_image_view_zombies.push_front({curreny_main_queue_cpu_timeline_value, ImageViewId{id}}); break;
-                    case DEFERRED_DESTRUCTION_SAMPLER_INDEX: impl.main_queue_sampler_zombies.push_front({curreny_main_queue_cpu_timeline_value, SamplerId{id}}); break;
-                    default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
+                case DEFERRED_DESTRUCTION_BUFFER_INDEX: impl.main_queue_buffer_zombies.push_front({curreny_main_queue_cpu_timeline_value, BufferId{id}}); break;
+                case DEFERRED_DESTRUCTION_IMAGE_INDEX: impl.main_queue_image_zombies.push_front({curreny_main_queue_cpu_timeline_value, ImageId{id}}); break;
+                case DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX: impl.main_queue_image_view_zombies.push_front({curreny_main_queue_cpu_timeline_value, ImageViewId{id}}); break;
+                case DEFERRED_DESTRUCTION_SAMPLER_INDEX: impl.main_queue_sampler_zombies.push_front({curreny_main_queue_cpu_timeline_value, SamplerId{id}}); break;
+                default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
                 }
             }
         }
@@ -151,32 +151,10 @@ namespace daxa
             .pImageIndices = &swapchain_impl.current_image_index,
         };
 
-        VkResult err;
-        err = vkQueuePresentKHR(impl.main_queue_vk_queue, &present_info);
-
-        if (err == VK_ERROR_OUT_OF_DATE_KHR)
-        {
-            swapchain_impl.recreate();
-        }
-        else if (err == VK_SUBOPTIMAL_KHR)
-        {
-            VkSurfaceCapabilitiesKHR surface_capabilities;
-            vkGetPhysicalDeviceSurfaceCapabilitiesKHR(swapchain_impl.impl_device.as<ImplDevice>()->vk_physical_device, swapchain_impl.vk_surface, &surface_capabilities);
-            if (surface_capabilities.currentExtent.width != swapchain_impl.info.width ||
-                surface_capabilities.currentExtent.height != swapchain_impl.info.height)
-            {
-                swapchain_impl.recreate();
-            }
-        }
-        else if (err == VK_ERROR_SURFACE_LOST_KHR)
-        {
-            swapchain_impl.recreate_surface();
-            swapchain_impl.recreate();
-        }
-        else if (err != VK_SUCCESS)
-        {
-            throw std::runtime_error("Unexpected swapchain error");
-        }
+        VkResult err = vkQueuePresentKHR(impl.main_queue_vk_queue, &present_info);
+        // We currently ignore VK_ERROR_OUT_OF_DATE_KHR, VK_ERROR_SURFACE_LOST_KHR and VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT
+        // because supposedly these kinds of things are not specified within the spec. This is also handled in Swapchain::acquire_next_image()
+        DAXA_DBG_ASSERT_TRUE_M(err == VK_SUCCESS || err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_ERROR_SURFACE_LOST_KHR || err == VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT, "Daxa should never be in a situation where Present fails");
 
         collect_garbage();
     }
@@ -202,13 +180,13 @@ namespace daxa
         auto impl = as<ImplDevice>();
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{impl->main_queue_command_pool_buffer_recycle_mtx});
         auto [pool, buffer] = impl->buffer_pool_pool.get(impl);
-        return CommandList{ManagedPtr{new ImplCommandList{ this->make_weak(), pool, buffer, info }}};
+        return CommandList{ManagedPtr{new ImplCommandList{this->make_weak(), pool, buffer, info}}};
     }
 
     auto Device::create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore
     {
         auto impl = as<ImplDevice>();
-        return BinarySemaphore{ManagedPtr{ new ImplBinarySemaphore{ impl, info}}};
+        return BinarySemaphore{ManagedPtr{new ImplBinarySemaphore{impl, info}}};
     }
 
     auto Device::create_timeline_semaphore(TimelineSemaphoreInfo const & info) -> TimelineSemaphore
@@ -579,7 +557,6 @@ namespace daxa
         };
         vkCreateSampler(vk_device, &vk_sampler_create_info, nullptr, &this->vk_dummy_sampler);
 
-        
         VkBufferUsageFlags usageFlags =
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
             VK_BUFFER_USAGE_TRANSFER_DST_BIT |
@@ -655,8 +632,7 @@ namespace daxa
             max_images,
             max_samplers,
             vk_device,
-            buffer_device_address_buffer
-        );
+            buffer_device_address_buffer);
     }
 
     void ImplDevice::main_queue_collect_garbage()
@@ -685,32 +661,50 @@ namespace daxa
         };
         // Need to unlock, as command list destructor locks this mutex too.
         lock.unlock();
-        check_and_cleanup_gpu_resources(this->main_queue_submits_zombies, [&, this](auto & command_lists) {
-
-        });
+        check_and_cleanup_gpu_resources(
+            this->main_queue_submits_zombies,
+            [&, this](auto & command_lists) {});
         lock.lock();
-        check_and_cleanup_gpu_resources(this->main_queue_command_list_zombies, [&](auto & command_list_zombie) {
-            DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_command_pool_buffer_recycle_mtx});
-            this->buffer_pool_pool.put_back({command_list_zombie.vk_cmd_pool, command_list_zombie.vk_cmd_buffer});
-        });
-        check_and_cleanup_gpu_resources(this->main_queue_buffer_zombies, [&](auto id) { 
-            this->cleanup_buffer(id);
-        });
-        check_and_cleanup_gpu_resources(this->main_queue_image_view_zombies, [&](auto id) { 
-            this->cleanup_image_view(id);
-        });
-        check_and_cleanup_gpu_resources(this->main_queue_image_zombies, [&](auto id) {
-            this->cleanup_image(id);
-        });
-        check_and_cleanup_gpu_resources(this->main_queue_sampler_zombies, [&](auto id) {
-            this->cleanup_sampler(id);
-        });
-        check_and_cleanup_gpu_resources(this->main_queue_pipeline_zombies, [&](auto & pipeline_zombie) {
-            vkDestroyPipeline(this->vk_device, pipeline_zombie.vk_pipeline, nullptr);
-        });
-        check_and_cleanup_gpu_resources(this->main_queue_semaphore_zombies, [&](auto & semaphore_zombie) {
-            vkDestroySemaphore(this->vk_device, semaphore_zombie.vk_semaphore, nullptr);
-        });
+        check_and_cleanup_gpu_resources(
+            this->main_queue_command_list_zombies,
+            [&](auto & command_list_zombie)
+            {
+                DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_command_pool_buffer_recycle_mtx});
+                this->buffer_pool_pool.put_back({command_list_zombie.vk_cmd_pool, command_list_zombie.vk_cmd_buffer});
+            });
+        check_and_cleanup_gpu_resources(
+            this->main_queue_buffer_zombies,
+            [&](auto id)
+            {
+                this->cleanup_buffer(id);
+            });
+        check_and_cleanup_gpu_resources(
+            this->main_queue_image_view_zombies, [&](auto id)
+            { this->cleanup_image_view(id); });
+        check_and_cleanup_gpu_resources(
+            this->main_queue_image_zombies,
+            [&](auto id)
+            {
+                this->cleanup_image(id);
+            });
+        check_and_cleanup_gpu_resources(
+            this->main_queue_sampler_zombies,
+            [&](auto id)
+            {
+                this->cleanup_sampler(id);
+            });
+        check_and_cleanup_gpu_resources(
+            this->main_queue_pipeline_zombies,
+            [&](auto & pipeline_zombie)
+            {
+                vkDestroyPipeline(this->vk_device, pipeline_zombie.vk_pipeline, nullptr);
+            });
+        check_and_cleanup_gpu_resources(
+            this->main_queue_semaphore_zombies,
+            [&](auto & semaphore_zombie)
+            {
+                vkDestroySemaphore(this->vk_device, semaphore_zombie.vk_semaphore, nullptr);
+            });
     }
 
     void ImplDevice::wait_idle()
@@ -775,8 +769,8 @@ namespace daxa
 
         ret.device_address = vkGetBufferDeviceAddress(vk_device, &vk_buffer_device_address_info);
 
-        u64* mem = nullptr;
-        vmaMapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation, reinterpret_cast<void**>(&mem));
+        u64 * mem = nullptr;
+        vmaMapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation, reinterpret_cast<void **>(&mem));
         mem[id.index] = ret.device_address;
         vmaUnmapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation);
 
@@ -1117,8 +1111,8 @@ namespace daxa
     {
         ImplBufferSlot & buffer_slot = this->gpu_table.buffer_slots.dereference_id(id);
 
-        u64* mem = nullptr;
-        vmaMapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation, reinterpret_cast<void**>(&mem));
+        u64 * mem = nullptr;
+        vmaMapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation, reinterpret_cast<void **>(&mem));
         mem[id.index] = 0;
         vmaUnmapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation);
 

@@ -3,7 +3,6 @@
 #include "impl_device.hpp"
 
 #include <chrono>
-#include <iostream>
 
 namespace daxa
 {
@@ -59,8 +58,6 @@ namespace daxa
         vkGetPhysicalDeviceProperties(physical_device, &vk_device_properties);
         auto device_vulkan_info = *reinterpret_cast<DeviceProperties *>(&vk_device_properties);
 
-        // std::cout << "Selected device: " << vk_device_properties.deviceName << std::endl;
-
         return Device{ManagedPtr{new ImplDevice(device_info, device_vulkan_info, this->make_weak(), physical_device)}};
     }
 
@@ -77,7 +74,6 @@ namespace daxa
             {
                 enabled_layers.push_back("VK_LAYER_KHRONOS_validation");
             }
-            // enabled_layers.push_back("VK_LAYER_LUNARG_monitor");
             extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
             extension_names.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 

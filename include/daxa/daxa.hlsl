@@ -129,8 +129,8 @@ namespace daxa
     }
 } // namespace daxa
 
-#define DAXA_DECL_BUFFER_STRUCT(Type, BODY) \
-    struct Type BODY;                                                              \
+#define DAXA_DECL_BUFFER_STRUCT(Type, BODY)                                                                  \
+    struct Type BODY;                                                                                        \
     namespace daxa                                                                                           \
     {                                                                                                        \
         [[vk::binding(DAXA_STORAGE_BUFFER_BINDING, 0)]] StructuredBuffer<Type> StructuredBufferView##Type[]; \
@@ -140,8 +140,8 @@ namespace daxa
             return StructuredBufferView##Type[DAXA_ID_INDEX_MASK & buffer_id.buffer_id_value];               \
         }                                                                                                    \
     }
-#define DAXA_DEFINE_GET_RWSTRUCTURED_BUFFER(Type, BODY) \
-    struct Type BODY;                                                                  \
+#define DAXA_DEFINE_GET_RWSTRUCTURED_BUFFER(Type, BODY)                                                          \
+    struct Type BODY;                                                                                            \
     namespace daxa                                                                                               \
     {                                                                                                            \
         [[vk::binding(DAXA_STORAGE_BUFFER_BINDING, 0)]] RWStructuredBuffer<Type> RWStructuredBufferView##Type[]; \
@@ -151,8 +151,8 @@ namespace daxa
             return RWStructuredBufferView##Type[DAXA_ID_INDEX_MASK & buffer_id.buffer_id_value];                 \
         }                                                                                                        \
     }
-#define DAXA_DEFINE_GET_BUFFER(Type, BODY) \
-    struct Type BODY;                                                   \
+#define DAXA_DEFINE_GET_BUFFER(Type, BODY)                                               \
+    struct Type BODY;                                                                    \
     namespace daxa                                                                       \
     {                                                                                    \
         [[vk::binding(DAXA_STORAGE_BUFFER_BINDING, 0)]] Buffer<Type> BufferView##Type[]; \
