@@ -12,6 +12,24 @@ namespace daxa
 
     static inline constexpr usize PIPELINE_COMPILER_MAX_ATTACHMENTS = 16;
 
+    struct PipelineZombie
+    {
+        VkPipeline vk_pipeline = {};
+    };
+
+    struct ImplPipeline : ManagedSharedState
+    {
+        ImplPipeline(ManagedWeakPtr impl_device);
+
+        ManagedWeakPtr impl_device;
+        VkPipeline vk_pipeline = {};
+        VkPipelineLayout vk_pipeline_layout = {};
+        ShaderFileTimeSet observed_hotload_files = {};
+        std::chrono::file_clock::time_point last_hotload_time = {};
+
+        virtual ~ImplPipeline() override;
+    };
+
     struct ImplPipelineCompiler final : ManagedSharedState
     {
         ManagedWeakPtr impl_device = {};
@@ -48,33 +66,17 @@ namespace daxa
         auto gen_spirv_from_dxc(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>;
     };
 
-    struct ImplRasterPipeline final : ManagedSharedState
+    struct ImplRasterPipeline final : ImplPipeline
     {
-        ManagedWeakPtr impl_device;
         RasterPipelineInfo info;
-        VkPipeline vk_pipeline = {};
-        VkPipelineLayout vk_pipeline_layout = {};
-        ShaderFileTimeSet observed_hotload_files = {};
-        std::chrono::file_clock::time_point last_hotload_time = {};
 
         ImplRasterPipeline(ManagedWeakPtr impl_device, RasterPipelineInfo const & info);
-        virtual ~ImplRasterPipeline() override final;
-
-        auto managed_cleanup() -> bool override final;
     };
 
-    struct ImplComputePipeline final : ManagedSharedState
+    struct ImplComputePipeline final : ImplPipeline
     {
-        ManagedWeakPtr impl_device;
         ComputePipelineInfo info;
-        VkPipeline vk_pipeline = {};
-        VkPipelineLayout vk_pipeline_layout = {};
-        ShaderFileTimeSet observed_hotload_files = {};
-        std::chrono::file_clock::time_point last_hotload_time = {};
 
         ImplComputePipeline(ManagedWeakPtr impl_device, ComputePipelineInfo const & info);
-        virtual ~ImplComputePipeline() override final;
-
-        auto managed_cleanup() -> bool override final;
     };
 } // namespace daxa
