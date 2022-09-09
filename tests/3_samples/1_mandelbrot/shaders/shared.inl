@@ -6,8 +6,7 @@ DAXA_DECL_BUFFER_STRUCT(
     ComputeInput,
     {
         f32 time;
-    }
-);
+    });
 
 struct ComputePush
 {

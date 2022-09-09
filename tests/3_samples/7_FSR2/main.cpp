@@ -133,7 +133,7 @@ struct App : AppWindow<App>
     Player3D player = {
         .rot = {2.0f, 0.0f, 0.0f},
     };
-    bool should_resize = false, paused = true;
+    bool paused = true;
 
     RasterInput raster_input;
     daxa::BufferId raster_input_buffer = device.create_buffer({
@@ -216,6 +216,7 @@ struct App : AppWindow<App>
     ~App()
     {
         device.wait_idle();
+        device.collect_garbage();
         ImGui_ImplGlfw_Shutdown();
         destroy_render_images();
         device.destroy_buffer(raster_input_buffer);
@@ -266,11 +267,6 @@ struct App : AppWindow<App>
             }
         }
 
-        if (should_resize)
-        {
-            do_resize();
-        }
-
         swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
 
         loop_task_list.execute();
@@ -287,8 +283,8 @@ struct App : AppWindow<App>
         command_lists.push_back(cmd_list);
         device.submit_commands({
             .command_lists = command_lists,
-            .wait_binary_semaphores = { acquire_semaphore },
-            .signal_binary_semaphores = { present_semaphore },
+            .wait_binary_semaphores = {acquire_semaphore},
+            .signal_binary_semaphores = {present_semaphore},
             .signal_timeline_semaphores = {{gpu_framecount_timeline_sema, cpu_framecount}},
         });
         device.present_frame({
@@ -331,18 +327,11 @@ struct App : AppWindow<App>
 
         if (!minimized)
         {
-            should_resize = true;
-            do_resize();
+            swapchain.resize();
+            destroy_render_images();
+            create_render_images();
+            draw();
         }
-    }
-
-    void do_resize()
-    {
-        should_resize = false;
-        swapchain.resize(size_x, size_y);
-        destroy_render_images();
-        create_render_images();
-        draw();
     }
 
     void toggle_pause()
@@ -609,6 +598,4 @@ int main()
         if (app.update())
             break;
     }
-
-    std::cout << std::flush;
 }
