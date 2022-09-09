@@ -3,7 +3,7 @@
 #include <stack>
 #include <daxa/utils/task_list.hpp>
 
-#define DAXA_TASK_LIST_DEBUG 0
+#define DAXA_TASK_LIST_DEBUG 1
 
 #if defined(DAXA_TASK_LIST_DEBUG)
 #if DAXA_TASK_LIST_DEBUG
@@ -80,6 +80,7 @@ namespace daxa
 
     struct TaskSubmitEvent
     {
+        std::vector<TaskPipelineBarrier> barriers = {};
         CommandSubmitInfo submit_info;
         CommandSubmitInfo* user_submit_info;
     };  
@@ -166,6 +167,8 @@ namespace daxa
 
         TaskRecordState record_state = {};
         TaskGraph compiled_graph = {};
+        std::vector<CommandList> left_over_command_lists = {};
+        u64 last_submit_event_index = std::numeric_limits<u64>::max(); 
 
         bool compiled = false;
 

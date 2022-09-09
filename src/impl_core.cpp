@@ -17,7 +17,10 @@ namespace daxa
     {
         cleanup();
         this->object = other.object;
-        DAXA_ATOMIC_FETCH_INC(this->object->strong_count);
+        if (this->object)
+        {
+            DAXA_ATOMIC_FETCH_INC(this->object->strong_count);
+        }
         return *this;
     }
     ManagedPtr & ManagedPtr::operator=(ManagedPtr && other)
