@@ -52,11 +52,11 @@ namespace daxa
         // A border slice must start or end at the start or end of the slice.
         // The border slice CAN NOT be the whole range or either the mips or the array layers!
 
-        bool mip_border_slice = 
+        bool mip_border_slice =
             (this->base_mip_level == slice.level_count && this->level_count < slice.level_count) ||
             ((this->base_mip_level + this->level_count == slice.level_count + slice.level_count) && this->base_mip_level > slice.base_mip_level);
 
-        bool array_layer_border_slice = 
+        bool array_layer_border_slice =
             (this->base_array_layer == slice.layer_count && this->layer_count < slice.layer_count) ||
             ((this->base_array_layer + this->layer_count == slice.layer_count + slice.layer_count) && this->base_array_layer > slice.base_array_layer);
 
@@ -65,11 +65,11 @@ namespace daxa
 
     auto ImageMipArraySlice::intersects(ImageMipArraySlice const & slice) const -> bool
     {
-        bool mips_disjoint = 
+        bool mips_disjoint =
             (this->base_mip_level + this->level_count - 1) < slice.base_mip_level ||
             (slice.base_mip_level + slice.level_count - 1) < this->base_mip_level;
-            
-        bool layers_disjoint = 
+
+        bool layers_disjoint =
             (this->base_array_layer + this->layer_count - 1) < slice.base_array_layer ||
             (slice.base_array_layer + slice.layer_count - 1) < this->base_array_layer;
 
@@ -90,28 +90,28 @@ namespace daxa
             .layer_count = this->layer_count - slice.layer_count,
         };
     }
-    
+
     auto ImageMipArraySlice::is_mergable_with(ImageMipArraySlice const & slice) const -> bool
     {
         // A dimension (apspect, mips, ayyar layer) is mergable when they are disjoint but touching
 
-        bool mips_mergable = 
+        bool mips_mergable =
             this->base_mip_level + this->level_count == slice.base_mip_level ||
             slice.base_mip_level + slice.level_count == this->base_mip_level;
 
-        bool mips_identical = 
+        bool mips_identical =
             this->base_mip_level == slice.base_mip_level &&
             this->level_count == slice.level_count;
 
-        bool layers_mergable = 
+        bool layers_mergable =
             this->base_array_layer + this->layer_count == slice.base_array_layer ||
             slice.base_array_layer + slice.layer_count == this->base_array_layer;
 
-        bool layers_identical = 
+        bool layers_identical =
             this->base_array_layer == slice.base_array_layer &&
             this->layer_count == slice.layer_count;
 
-        bool aspect_mergable = this->image_aspect & slice.image_aspect == 0;
+        bool aspect_mergable = (this->image_aspect & slice.image_aspect) == 0;
 
         bool aspect_identical = this->image_aspect == slice.image_aspect;
 
