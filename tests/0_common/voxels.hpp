@@ -3,6 +3,9 @@
 #include <daxa/daxa.hpp>
 using namespace daxa::types;
 
+#include <daxa/utils/math_operators.hpp>
+using namespace daxa::math_operators;
+
 static inline constexpr u64 CHUNK_SIZE = 32;
 static inline constexpr u64 CHUNK_VOXEL_N = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
 static inline constexpr u64 CHUNK_MAX_VERTS = CHUNK_VOXEL_N * 6;
@@ -88,9 +91,9 @@ struct Voxel
 struct VoxelChunk
 {
     Voxel voxels[CHUNK_VOXEL_N];
-    glm::vec3 pos;
+    f32vec3 pos;
 
-    BlockID generate_block_id(glm::vec3 p)
+    BlockID generate_block_id(f32vec3 p)
     {
         p = p * 0.5f;
         FractalNoiseConfig noise_conf = {
@@ -100,7 +103,8 @@ struct VoxelChunk
             /* .lacunarity  = */ 4.7f,
             /* .octaves     = */ 2,
         };
-        float val = fractal_noise(p + 100.0f, noise_conf);
+        auto noise_p = p + 100.0f;
+        float val = fractal_noise(glm::vec3(noise_p.x, noise_p.y, noise_p.z), noise_conf);
         val = val - (-p.y + 30.0f) * 0.04f;
         val -= std::pow(smoothstep(-1.0f, 1.0f, -p.y + 32.0f), 2.0f) * 0.15f;
         val = std::max(val, 0.0f);
@@ -118,14 +122,14 @@ struct VoxelChunk
                 for (u64 xi = 0; xi < 32; ++xi)
                 {
                     u64 i = xi + yi * CHUNK_SIZE + zi * CHUNK_SIZE * CHUNK_SIZE;
-                    glm::vec3 block_pos = glm::vec3(xi, yi, zi) + pos;
+                    f32vec3 block_pos = f32vec3{static_cast<f32>(xi), static_cast<f32>(yi), static_cast<f32>(zi)} + pos;
                     voxels[i].id = generate_block_id(block_pos);
                     if (voxels[i].id == BlockID::Stone)
                     {
                         u32 above_i;
                         for (above_i = 0; above_i < 6; ++above_i)
                         {
-                            if (generate_block_id(block_pos - glm::vec3(0, above_i + 1, 0)) == BlockID::Air)
+                            if (generate_block_id(block_pos - f32vec3{static_cast<f32>(0), static_cast<f32>(above_i + 1), static_cast<f32>(0)}) == BlockID::Air)
                                 break;
                         }
                         switch (rand() % 10)
@@ -144,7 +148,7 @@ struct VoxelChunk
                         u32 below_i;
                         for (below_i = 0; below_i < 6; ++below_i)
                         {
-                            if (generate_block_id(block_pos + glm::vec3(0, below_i + 1, 0)) == BlockID::Stone)
+                            if (generate_block_id(block_pos + f32vec3{static_cast<f32>(0), static_cast<f32>(below_i + 1), static_cast<f32>(0)}) == BlockID::Stone)
                                 break;
                         }
                         if (below_i == 0)
@@ -344,7 +348,7 @@ struct RenderableVoxelWorld
                 {
                     chunks[x + y * CHUNK_N + z * CHUNK_N * CHUNK_N] = std::make_unique<RenderableChunk>(device);
                     auto & chunk = *chunks[x + y * CHUNK_N + z * CHUNK_N * CHUNK_N];
-                    chunk.voxel_chunk.pos = glm::vec3(static_cast<f32>(x * CHUNK_SIZE), static_cast<f32>(y * CHUNK_SIZE), static_cast<f32>(z * CHUNK_SIZE));
+                    chunk.voxel_chunk.pos = f32vec3{static_cast<f32>(x * CHUNK_SIZE), static_cast<f32>(y * CHUNK_SIZE), static_cast<f32>(z * CHUNK_SIZE)};
                     chunk.voxel_chunk.generate();
                     chunk.renderable_world = this;
                 }
@@ -395,7 +399,7 @@ struct RenderableVoxelWorld
             chunk->draw_water(cmd_list, push);
     }
 
-    Voxel get_voxel(glm::ivec3 p)
+    Voxel get_voxel(i32vec3 p)
     {
         i32 x = p.x / static_cast<i32>(CHUNK_SIZE);
         i32 y = p.y / static_cast<i32>(CHUNK_SIZE);
@@ -580,21 +584,22 @@ void RenderableChunk::update_chunk_mesh(daxa::CommandList & cmd_list)
             {
                 for (i32 xi = 0; xi < 32; ++xi)
                 {
-                    glm::ivec3 voxel_pos = glm::ivec3{xi, yi, zi} + glm::ivec3(voxel_chunk.pos);
+                    i32vec3 voxel_pos = i32vec3{xi, yi, zi} + i32vec3{static_cast<i32>(voxel_chunk.pos.x), static_cast<i32>(voxel_chunk.pos.y), static_cast<i32>(voxel_chunk.pos.z)};
+                    ;
                     Voxel current_voxel = renderable_world->get_voxel(voxel_pos);
                     if (current_voxel.is_occluding())
                     {
-                        if (!renderable_world->get_voxel(voxel_pos + glm::ivec3(+1, 0, 0)).is_occluding_nx())
+                        if (!renderable_world->get_voxel(voxel_pos + i32vec3{+1, 0, 0}).is_occluding_nx())
                             *buffer_ptr = Vertex(xi, yi, zi, 0, current_voxel.id), ++buffer_ptr, ++face_n;
-                        if (!renderable_world->get_voxel(voxel_pos + glm::ivec3(-1, 0, 0)).is_occluding_px())
+                        if (!renderable_world->get_voxel(voxel_pos + i32vec3{-1, 0, 0}).is_occluding_px())
                             *buffer_ptr = Vertex(xi, yi, zi, 1, current_voxel.id), ++buffer_ptr, ++face_n;
-                        if (!renderable_world->get_voxel(voxel_pos + glm::ivec3(0, +1, 0)).is_occluding_ny())
+                        if (!renderable_world->get_voxel(voxel_pos + i32vec3{0, +1, 0}).is_occluding_ny())
                             *buffer_ptr = Vertex(xi, yi, zi, 2, current_voxel.id), ++buffer_ptr, ++face_n;
-                        if (!renderable_world->get_voxel(voxel_pos + glm::ivec3(0, -1, 0)).is_occluding_py())
+                        if (!renderable_world->get_voxel(voxel_pos + i32vec3{0, -1, 0}).is_occluding_py())
                             *buffer_ptr = Vertex(xi, yi, zi, 3, current_voxel.id), ++buffer_ptr, ++face_n;
-                        if (!renderable_world->get_voxel(voxel_pos + glm::ivec3(0, 0, +1)).is_occluding_nz())
+                        if (!renderable_world->get_voxel(voxel_pos + i32vec3{0, 0, +1}).is_occluding_nz())
                             *buffer_ptr = Vertex(xi, yi, zi, 4, current_voxel.id), ++buffer_ptr, ++face_n;
-                        if (!renderable_world->get_voxel(voxel_pos + glm::ivec3(0, 0, -1)).is_occluding_pz())
+                        if (!renderable_world->get_voxel(voxel_pos + i32vec3{0, 0, -1}).is_occluding_pz())
                             *buffer_ptr = Vertex(xi, yi, zi, 5, current_voxel.id), ++buffer_ptr, ++face_n;
                     }
                     else if (current_voxel.is_cross())
@@ -642,21 +647,21 @@ void RenderableChunk::update_chunk_mesh(daxa::CommandList & cmd_list)
             {
                 for (i32 xi = 0; xi < 32; ++xi)
                 {
-                    glm::ivec3 voxel_pos = glm::ivec3{xi, yi, zi} + glm::ivec3(voxel_chunk.pos);
+                    i32vec3 voxel_pos = i32vec3{xi, yi, zi} + i32vec3{static_cast<i32>(voxel_chunk.pos.x), static_cast<i32>(voxel_chunk.pos.y), static_cast<i32>(voxel_chunk.pos.z)};
                     Voxel current_voxel = renderable_world->get_voxel(voxel_pos);
                     if (current_voxel.id == BlockID::Water)
                     {
-                        if (renderable_world->get_voxel(voxel_pos + glm::ivec3(+1, 0, 0)).id == BlockID::Air)
+                        if (renderable_world->get_voxel(voxel_pos + i32vec3{+1, 0, 0}).id == BlockID::Air)
                             *buffer_ptr = Vertex(xi, yi, zi, 0, current_voxel.id), ++buffer_ptr, ++water_face_n;
-                        if (renderable_world->get_voxel(voxel_pos + glm::ivec3(-1, 0, 0)).id == BlockID::Air)
+                        if (renderable_world->get_voxel(voxel_pos + i32vec3{-1, 0, 0}).id == BlockID::Air)
                             *buffer_ptr = Vertex(xi, yi, zi, 1, current_voxel.id), ++buffer_ptr, ++water_face_n;
-                        if (renderable_world->get_voxel(voxel_pos + glm::ivec3(0, +1, 0)).id == BlockID::Air)
+                        if (renderable_world->get_voxel(voxel_pos + i32vec3{0, +1, 0}).id == BlockID::Air)
                             *buffer_ptr = Vertex(xi, yi, zi, 2, current_voxel.id), ++buffer_ptr, ++water_face_n;
-                        if (renderable_world->get_voxel(voxel_pos + glm::ivec3(0, -1, 0)).id == BlockID::Air)
+                        if (renderable_world->get_voxel(voxel_pos + i32vec3{0, -1, 0}).id == BlockID::Air)
                             *buffer_ptr = Vertex(xi, yi, zi, 3, current_voxel.id), ++buffer_ptr, ++water_face_n;
-                        if (renderable_world->get_voxel(voxel_pos + glm::ivec3(0, 0, +1)).id == BlockID::Air)
+                        if (renderable_world->get_voxel(voxel_pos + i32vec3{0, 0, +1}).id == BlockID::Air)
                             *buffer_ptr = Vertex(xi, yi, zi, 4, current_voxel.id), ++buffer_ptr, ++water_face_n;
-                        if (renderable_world->get_voxel(voxel_pos + glm::ivec3(0, 0, -1)).id == BlockID::Air)
+                        if (renderable_world->get_voxel(voxel_pos + i32vec3{0, 0, -1}).id == BlockID::Air)
                             *buffer_ptr = Vertex(xi, yi, zi, 5, current_voxel.id), ++buffer_ptr, ++water_face_n;
                     }
                 }
