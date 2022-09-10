@@ -321,13 +321,12 @@ struct App : AppWindow<App>
 
     void on_resize(u32 sx, u32 sy)
     {
-        size_x = sx;
-        size_y = sy;
         minimized = (sx == 0 || sy == 0);
-
         if (!minimized)
         {
             swapchain.resize();
+            size_x = swapchain.info().width;
+            size_y = swapchain.info().height;
             destroy_render_images();
             create_render_images();
             draw();
