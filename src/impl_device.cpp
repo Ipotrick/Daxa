@@ -823,7 +823,7 @@ namespace daxa
         }
     }
 
-    auto ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, const std::string & debug_name) -> ImageId
+    auto ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, ImageInfo const & info) -> ImageId
     {
         auto [id, image_slot] = gpu_table.image_slots.new_slot();
 
@@ -851,13 +851,12 @@ namespace daxa
             },
         };
         ret.swapchain_image_index = static_cast<i32>(index);
-        ret.info = ImageInfo{};
-        ret.info.debug_name = debug_name;
+        ret.info = info;
         vkCreateImageView(vk_device, &view_ci, nullptr, &ret.view_slot.vk_image_view);
 
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && debug_name.size() > 0)
+        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
         {
-            auto swapchain_image_name = debug_name + std::string(" [Daxa Swapchain Image]");
+            auto swapchain_image_name = info.debug_name + std::string(" [Daxa Swapchain Image]");
             VkDebugUtilsObjectNameInfoEXT swapchain_image_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
@@ -867,7 +866,7 @@ namespace daxa
             };
             vkSetDebugUtilsObjectNameEXT(vk_device, &swapchain_image_name_info);
 
-            auto swapchain_image_view_name = debug_name + std::string(" [Daxa Swapchain ImageView]");
+            auto swapchain_image_view_name = info.debug_name + std::string(" [Daxa Swapchain ImageView]");
             VkDebugUtilsObjectNameInfoEXT swapchain_image_view_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
