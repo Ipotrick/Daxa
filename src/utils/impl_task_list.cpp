@@ -474,6 +474,7 @@ namespace daxa
 
             CommandSubmitInfo submit_info = scope.submit_info;
             submit_info.command_lists.insert(submit_info.command_lists.end(), command_lists.begin(), command_lists.end());
+            command_lists.clear();
             if (submit_event->user_submit_info)
             {
                 submit_info.command_lists.insert(submit_info.command_lists.end(), submit_event->user_submit_info->command_lists.begin(), submit_event->user_submit_info->command_lists.end());
@@ -482,9 +483,10 @@ namespace daxa
                 submit_info.wait_timeline_semaphores.insert(submit_info.wait_timeline_semaphores.end(), submit_event->user_submit_info->wait_timeline_semaphores.begin(), submit_event->user_submit_info->wait_timeline_semaphores.end());
                 submit_info.signal_timeline_semaphores.insert(submit_info.signal_timeline_semaphores.end(), submit_event->user_submit_info->signal_timeline_semaphores.begin(), submit_event->user_submit_info->signal_timeline_semaphores.end());
             }
-            command_lists.clear();
 
-            current_device.submit_commands(scope.submit_info);
+            current_device.submit_commands(submit_info);
+
+            command_lists.push_back(this->current_device.create_command_list({.debug_name = std::string("Task Command List ") + std::to_string(command_lists.size())}));
         }
         else if (TaskPresentEvent * present_event = std::get_if<TaskPresentEvent>(&task_event.event_variant))
         {
