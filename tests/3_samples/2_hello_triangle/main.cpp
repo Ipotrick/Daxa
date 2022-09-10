@@ -255,9 +255,9 @@ struct App : AppWindow<App>
         minimized = (sx == 0 || sy == 0);
         if (!minimized)
         {
+            swapchain.resize();
             size_x = swapchain.info().width;
             size_y = swapchain.info().height;
-            swapchain.resize();
             draw();
         }
     }
