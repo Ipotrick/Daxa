@@ -22,8 +22,8 @@ using UpscaleContext = daxa::Fsr2Context;
 
 struct RasterInput
 {
-    glm::mat4 view_mat;
-    glm::mat4 prev_view_mat;
+    f32mat4x4 view_mat;
+    f32mat4x4 prev_view_mat;
     f32vec2 jitter;
     daxa::ImageId texture_array_id;
     daxa::SamplerId sampler_id;
@@ -52,16 +52,6 @@ struct App : AppWindow<App>
 
     daxa::Swapchain swapchain = device.create_swapchain({
         .native_window = get_native_handle(),
-        .width = size_x,
-        .height = size_y,
-        .surface_format_selector = [](daxa::Format format)
-        {
-            switch (format)
-            {
-            case daxa::Format::R8G8B8A8_UINT: return 100;
-            default: return daxa::default_format_score(format);
-            }
-        },
         .present_mode = daxa::PresentMode::DO_NOT_WAIT_FOR_VBLANK,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
         .debug_name = APPNAME_PREFIX("swapchain"),
@@ -300,8 +290,8 @@ struct App : AppWindow<App>
         {
             f32 center_x = static_cast<f32>(size_x / 2);
             f32 center_y = static_cast<f32>(size_y / 2);
-            auto offset = glm::vec2{x - center_x, center_y - y};
-            player.on_mouse_move(static_cast<f64>(offset.x), static_cast<f64>(offset.y));
+            auto offset = f32vec2{x - center_x, center_y - y};
+            player.on_mouse_move(offset.x, offset.y);
             set_mouse_pos(center_x, center_y);
         }
     }
@@ -321,13 +311,12 @@ struct App : AppWindow<App>
 
     void on_resize(u32 sx, u32 sy)
     {
-        size_x = sx;
-        size_y = sy;
         minimized = (sx == 0 || sy == 0);
-
         if (!minimized)
         {
             swapchain.resize();
+            size_x = swapchain.info().width;
+            size_y = swapchain.info().height;
             destroy_render_images();
             create_render_images();
             draw();
@@ -414,15 +403,15 @@ struct App : AppWindow<App>
             {
                 this->raster_input.prev_view_mat = this->raster_input.view_mat;
 
-                this->raster_input.view_mat = player.camera.get_vp();
                 auto prev_jitter = jitter;
                 jitter = upscale_context.get_jitter(cpu_framecount);
-                auto jitter_vec = glm::vec3{
+                auto jitter_vec = f32vec2{
                     jitter.x * 2.0f / static_cast<f32>(render_size_x),
                     jitter.y * 2.0f / static_cast<f32>(render_size_y),
-                    0.0f,
                 };
-                this->raster_input.view_mat = glm::translate(glm::identity<glm::mat4>(), jitter_vec) * this->raster_input.view_mat;
+                auto view_mat = player.camera.get_vp();
+                view_mat = glm::translate(glm::identity<glm::mat4>(), glm::vec3(jitter_vec.x, jitter_vec.y, 0.0f)) * view_mat;
+                this->raster_input.view_mat = *reinterpret_cast<f32mat4x4 *>(&view_mat);
                 this->raster_input.jitter = (jitter - prev_jitter) * f32vec2{2.0f / static_cast<f32>(render_size_x), 2.0f / static_cast<f32>(render_size_y)};
                 this->raster_input.texture_array_id = renderable_world.atlas_texture_array;
                 this->raster_input.sampler_id = renderable_world.atlas_sampler;

@@ -6,20 +6,20 @@ u32 asuint(f32 x)
 {
     return *reinterpret_cast<u32 *>(&x);
 }
-u32 asuint(glm::vec2 v)
+u32 asuint(f32vec2 v)
 {
     f32 a = v.x;
     f32 b = v.y + static_cast<f32>(asuint(a));
     return asuint(b);
 }
-u32 asuint(glm::vec3 v)
+u32 asuint(f32vec3 v)
 {
     f32 a = v.x;
     f32 b = v.y + static_cast<f32>(asuint(a));
     f32 c = v.z + static_cast<f32>(asuint(b));
     return asuint(c);
 }
-u32 asuint(glm::vec4 v)
+u32 asuint(f32vec4 v)
 {
     f32 a = v.x;
     f32 b = v.y + static_cast<f32>(asuint(a));
@@ -38,7 +38,7 @@ f32 frac(f32 x)
 }
 glm::vec3 frac(glm::vec3 v)
 {
-    return glm::vec3(frac(v.x), frac(v.y), frac(v.z));
+    return glm::vec3{frac(v.x), frac(v.y), frac(v.z)};
 }
 f32 mix(f32 a, f32 b, f32 f)
 {
@@ -50,7 +50,6 @@ f32 smoothstep(f32 lo, f32 hi, f32 x)
         return 0.0f;
     if (x >= hi)
         return 1.0f;
-
     x = (x - lo) / (hi - lo);
     return x * x * (3.0f - 2.0f * x);
 }
@@ -64,12 +63,12 @@ u32 rand_hash(u32 x)
     x += (x << 15u);
     return x;
 }
-u32 rand_hash(glm::uvec2 v) { return rand_hash(v.x ^ rand_hash(v.y)); }
-u32 rand_hash(glm::uvec3 v)
+u32 rand_hash(u32vec2 v) { return rand_hash(v.x ^ rand_hash(v.y)); }
+u32 rand_hash(u32vec3 v)
 {
     return rand_hash(v.x ^ rand_hash(v.y) ^ rand_hash(v.z));
 }
-u32 rand_hash(glm::uvec4 v)
+u32 rand_hash(u32vec4 v)
 {
     return rand_hash(v.x ^ rand_hash(v.y) ^ rand_hash(v.z) ^ rand_hash(v.w));
 }
@@ -83,14 +82,14 @@ f32 rand_float_construct(u32 m)
     return f - 1.0f;
 }
 f32 rand(f32 x) { return rand_float_construct(rand_hash(asuint(x))); }
-f32 rand(glm::vec2 v) { return rand_float_construct(rand_hash(asuint(v))); }
-f32 rand(glm::vec3 v) { return rand_float_construct(rand_hash(asuint(v))); }
-f32 rand(glm::vec4 v) { return rand_float_construct(rand_hash(asuint(v))); }
-glm::vec2 rand_vec2(glm::vec2 v) { return glm::vec2(rand(v.x), rand(v.y)); }
-glm::vec3 rand_vec3(glm::vec3 v) { return glm::vec3(rand(v.x), rand(v.y), rand(v.z)); }
-glm::vec4 rand_vec4(glm::vec4 v)
+f32 rand(f32vec2 v) { return rand_float_construct(rand_hash(asuint(v))); }
+f32 rand(f32vec3 v) { return rand_float_construct(rand_hash(asuint(v))); }
+f32 rand(f32vec4 v) { return rand_float_construct(rand_hash(asuint(v))); }
+f32vec2 rand_vec2(f32vec2 v) { return f32vec2{rand(v.x), rand(v.y)}; }
+f32vec3 rand_vec3(f32vec3 v) { return f32vec3{rand(v.x), rand(v.y), rand(v.z)}; }
+f32vec4 rand_vec4(f32vec4 v)
 {
-    return glm::vec4(rand(v.x), rand(v.y), rand(v.z), rand(v.w));
+    return f32vec4{rand(v.x), rand(v.y), rand(v.z), rand(v.w)};
 }
 f32 noise(glm::vec3 x)
 {
@@ -125,11 +124,11 @@ struct FractalNoiseConfig
     u32 octaves;
 };
 
-float fractal_noise(glm::vec3 pos, FractalNoiseConfig config)
+f32 fractal_noise(glm::vec3 pos, FractalNoiseConfig config)
 {
-    float value = 0.0f;
-    float max_value = 0.0f;
-    float amplitude = config.amplitude;
+    f32 value = 0.0f;
+    f32 max_value = 0.0f;
+    f32 amplitude = config.amplitude;
     glm::mat3 rot_mat = glm::mat3(
         0.2184223f, -0.5347182f, 0.8163137f,
         0.9079879f, -0.1951438f, -0.3707788f,

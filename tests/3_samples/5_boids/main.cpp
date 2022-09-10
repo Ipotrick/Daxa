@@ -4,10 +4,6 @@
 
 #include "daxa/utils/task_list.hpp"
 
-#define GLM_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
 #define APPNAME "Daxa Sample: Boids"
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
 
@@ -27,16 +23,6 @@ struct App : AppWindow<App>
 
     daxa::Swapchain swapchain = device.create_swapchain({
         .native_window = get_native_handle(),
-        .width = size_x,
-        .height = size_y,
-        .surface_format_selector = [](daxa::Format format)
-        {
-            switch (format)
-            {
-            case daxa::Format::R8G8B8A8_UINT: return 100;
-            default: return daxa::default_format_score(format);
-            }
-        },
         .present_mode = daxa::PresentMode::DO_NOT_WAIT_FOR_VBLANK,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
         .debug_name = APPNAME_PREFIX("swapchain"),
@@ -329,14 +315,13 @@ struct App : AppWindow<App>
 
     void on_resize(u32 sx, u32 sy)
     {
-        size_x = sx;
-        size_y = sy;
         minimized = (sx == 0 || sy == 0);
-
         if (!minimized)
         {
-            aspect = static_cast<f32>(size_x) / static_cast<f32>(size_y);
             swapchain.resize();
+            size_x = swapchain.info().width;
+            size_y = swapchain.info().height;
+            aspect = static_cast<f32>(size_x) / static_cast<f32>(size_y);
             draw();
         }
     }
