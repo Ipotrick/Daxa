@@ -27,7 +27,8 @@ namespace tests
             App() : AppWindow<App>(APPNAME " (simple_creation)") {}
 
             void on_mouse_move(f32, f32) {}
-            void on_key(int, int) {}
+            void on_mouse_button(i32, i32) {}
+            void on_key(i32, i32) {}
             void on_resize(u32, u32) {}
         };
         App app;
@@ -117,13 +118,8 @@ namespace tests
                 });
             }
 
-            void on_mouse_move(f32, f32)
-            {
-            }
-
-            void on_key(int, int)
-            {
-            }
+            void on_mouse_move(f32, f32) {}
+            void on_key(i32, i32) {}
 
             void on_resize(u32 sx, u32 sy)
             {

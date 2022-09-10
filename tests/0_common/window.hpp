@@ -31,6 +31,13 @@ struct AppWindow
                 auto & app = *reinterpret_cast<App *>(glfwGetWindowUserPointer(window_ptr));
                 app.on_mouse_move(static_cast<f32>(x), static_cast<f32>(y));
             });
+        glfwSetMouseButtonCallback(
+            glfw_window_ptr,
+            [](GLFWwindow * window_ptr, i32 button, i32 action, i32)
+            {
+                auto & app = *reinterpret_cast<App *>(glfwGetWindowUserPointer(window_ptr));
+                app.on_mouse_button(button, action);
+            });
         glfwSetKeyCallback(
             glfw_window_ptr,
             [](GLFWwindow * window_ptr, i32 key, i32, i32 action, i32)

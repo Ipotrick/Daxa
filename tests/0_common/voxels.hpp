@@ -104,7 +104,7 @@ struct VoxelChunk
             /* .octaves     = */ 2,
         };
         auto noise_p = p + 100.0f;
-        float val = fractal_noise(glm::vec3(noise_p.x, noise_p.y, noise_p.z), noise_conf);
+        f32 val = fractal_noise(glm::vec3(noise_p.x, noise_p.y, noise_p.z), noise_conf);
         val = val - (-p.y + 30.0f) * 0.04f;
         val -= std::pow(smoothstep(-1.0f, 1.0f, -p.y + 32.0f), 2.0f) * 0.15f;
         val = std::max(val, 0.0f);
@@ -480,8 +480,8 @@ struct RenderableVoxelWorld
         {
             stbi_set_flip_vertically_on_load(true);
             auto path = filepath / texture_names[i];
-            int size_x, size_y, num_channels;
-            std::uint8_t * data = stbi_load(path.string().c_str(), &size_x, &size_y, &num_channels, 4);
+            i32 size_x, size_y, num_channels;
+            u8 * data = stbi_load(path.string().c_str(), &size_x, &size_y, &num_channels, 4);
             if (!data)
             {
                 std::cout << "could not find file: \"" << path << "\"" << std::endl;
