@@ -239,7 +239,7 @@ struct App : AppWindow<App>
 
         task_swapchain_image = new_task_list.create_task_image({
             .fetch_callback = [=, this]()
-            { return swapchain.acquire_next_image(acquire_semaphore); },
+            { return this->swapchain_image; },
             .swapchain_parent = std::pair{ swapchain, acquire_semaphore },
             .debug_name = "task swapchain image",
         });
@@ -310,6 +310,7 @@ struct App : AppWindow<App>
             }
         }
 
+        swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
         std::swap(old_boid_buffer, boid_buffer);
         ++cpu_framecount;
         submit_info.signal_timeline_semaphores = {{gpu_framecount_timeline_sema, cpu_framecount}};
