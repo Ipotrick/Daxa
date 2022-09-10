@@ -143,6 +143,8 @@ struct App : AppWindow<App>
         }
 
         auto swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
+        auto swapchain_size = device.info_image(swapchain_image).size;
+        size_x = swapchain_size[0], size_y = swapchain_size[1];
 
         auto cmd_list = device.create_command_list({
             .debug_name = APPNAME_PREFIX("cmd_list"),
