@@ -316,7 +316,7 @@ namespace tests
 
             void on_mouse_move(f32 x, f32 y)
             {
-                compute_input.mouse_x = x / static_cast<f32>(size_x * (2.0f / 3.0f)) * 512.0f;
+                compute_input.mouse_x = x / static_cast<f32>(size_x) * (2.0f / 3.0f) * 512.0f;
                 compute_input.mouse_y = y / static_cast<f32>(size_y) * 512.0f;
             }
 
@@ -326,7 +326,7 @@ namespace tests
                     mouse_drawing = action != GLFW_RELEASE;
             }
 
-            void on_key(i32 key, i32 action) {}
+            void on_key(i32, i32) {}
 
             void on_resize(u32 sx, u32 sy)
             {
