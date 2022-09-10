@@ -135,12 +135,6 @@ namespace daxa
         return impl.runtime_images[task_id.index].image_id;
     }
 
-    auto TaskInterface::get_image_view(TaskImageId const & task_id) -> ImageViewId
-    {
-        auto & impl = *reinterpret_cast<TaskRuntime *>(backend);
-        return impl.runtime_images[task_id.index].image_view_id;
-    }
-
     auto TaskInterface::get_image_slice(TaskImageId const & task_id) -> ImageMipArraySlice
     {
         auto & impl = *reinterpret_cast<TaskRuntime *>(backend);
@@ -188,6 +182,7 @@ namespace daxa
         usize task_index = impl.events.size();
 
         impl.impl_task_images.push_back(ImplTaskImage{
+            .lifetime_start_event_index = task_index,
             .latest_access = info.last_access,
             .latest_layout = info.last_layout,
             .latest_access_task_index = task_index,
@@ -201,12 +196,93 @@ namespace daxa
 
         impl.events.push_back({
             .submit_scope_index = impl.submit_scopes.size()-1,
-            .event_variant = ImplCreateImageTask{
-                .id = task_image_id,
+            .event_variant = TaskImageCreateEvent{
+                .ids = { task_image_id, {} },
+                .id_count = 1,
             },
         });
 
         return task_image_id;
+    }
+    
+    auto TaskList::split_task_image(TaskImageSplitInfo const & info) -> std::pair<TaskImageId, TaskImageId>
+    {
+        auto & impl = *as<ImplTaskList>();
+        DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can only record to uncompleted task list");
+
+        usize task_index = impl.events.size();
+        ImplTaskImage& src = impl.impl_task_images[info.src_image.index];
+        DAXA_DBG_ASSERT_TRUE_M(src.lifetime_end_event_index == std::numeric_limits<u64>::max(), "task image to split must still be alive");
+    
+        ImageMipArraySlice rest_slice = src.slice.subtract(info.result_image_a_slice);
+
+        TaskImageId root_parent = src.root_parent_id.is_empty() ? info.src_image : src.root_parent_id;
+
+        ImplTaskImage impl_img_a = src;
+        impl_img_a.root_parent_id = root_parent,
+        impl_img_a.lifetime_start_event_index = task_index;
+        impl_img_a.slice = info.result_image_a_slice;
+        impl_img_a.debug_name = "TODO(pahrens): remplace; split image a",
+        impl.impl_task_images.push_back(impl_img_a);
+        auto task_image_a_id = TaskImageId{{.index = static_cast<u32>(impl.impl_task_images.size() - 1)}};
+        
+        ImplTaskImage impl_img_b = src;
+        impl_img_a.root_parent_id = root_parent,
+        impl_img_a.lifetime_start_event_index = task_index;
+        impl_img_b.slice = rest_slice;
+        impl_img_b.debug_name = "TODO(pahrens): remplace; split image b",
+        impl.impl_task_images.push_back(impl_img_b);
+        auto task_image_b_id = TaskImageId{{.index = static_cast<u32>(impl.impl_task_images.size() - 1)}};
+
+        src.lifetime_end_event_index = task_index;
+
+        impl.events.push_back({
+            .submit_scope_index = impl.submit_scopes.size()-1,
+            .event_variant = TaskImageCreateEvent{
+                .ids = { task_image_a_id, task_image_b_id },
+                .id_count = 2,
+            },
+        });
+
+        return {task_image_a_id, task_image_b_id};
+    }
+    
+    auto TaskList::merge_task_images(TaskImageMergeInfo const & info) -> TaskImageId
+    {
+        auto & impl = *as<ImplTaskList>();
+        DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can only record to uncompleted task list");
+
+        usize task_index = impl.events.size();
+        ImplTaskImage& image_a = impl.impl_task_images[info.a.index];
+        ImplTaskImage& image_b = impl.impl_task_images[info.b.index];
+        DAXA_DBG_ASSERT_TRUE_M(image_a.lifetime_end_event_index == std::numeric_limits<u64>::max(), "task image to merge must still be alive");
+        DAXA_DBG_ASSERT_TRUE_M(image_a.lifetime_end_event_index == std::numeric_limits<u64>::max(), "task image to merge must still be alive");
+        DAXA_DBG_ASSERT_TRUE_M(image_a.root_parent_id == image_b.root_parent_id, "can only merge two images that were split from the same original image");
+
+        DAXA_DBG_ASSERT_TRUE_M(!image_a.slice.intersects(image_b.slice), "fatal internal error. It should never be possible to have overlapping task images");
+
+        ImplTaskImage merged_img{
+            .lifetime_start_event_index = task_index,
+            .merge_src_images = std::array{ info.a, info.b },
+            .fetch_callback = image_a.fetch_callback,
+            .slice = image_a.slice.merge(image_b.slice),
+            .debug_name = "TODO(pahrens): remplace; merged image",
+        };
+        impl.impl_task_images.push_back(merged_img);
+        auto merged_image_id = TaskImageId{{.index = static_cast<u32>(impl.impl_task_images.size() - 1)}};
+
+        impl.events.push_back({
+            .submit_scope_index = impl.submit_scopes.size()-1,
+            .event_variant = TaskImageCreateEvent{
+                .ids = { merged_image_id, {} },
+                .id_count = 1,
+            },
+        });
+
+        image_a.lifetime_end_event_index = task_index;
+        image_b.lifetime_end_event_index = task_index;
+        
+        return merged_image_id;
     }
 
     void TaskList::add_task(TaskInfo const & info)
@@ -438,28 +514,21 @@ namespace daxa
                 .buffer_id = buffer_id,
             });
         }
-        else if (ImplCreateImageTask * create_image_task = std::get_if<ImplCreateImageTask>(&task_event.event_variant))
+        else if (TaskImageCreateEvent * create_image_task = std::get_if<TaskImageCreateEvent>(&task_event.event_variant))
         {
-            DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout << "  executing ImplCreateImageTask" << std::endl);
+            DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout << "  executing TaskImageCreateEvent" << std::endl);
 
-            ImplTaskImage & impl_task_image = this->impl_task_images[create_image_task->id.index];
-            ImageId image_id = impl_task_image.fetch_callback();
-            ImageViewId image_view_id = image_id.default_view();
-            auto image_slice = this->current_device.info_image_view(image_view_id).slice;
-
-            if (image_slice != impl_task_image.slice)
+            for (usize i = 0; i < create_image_task->id_count; ++i)
             {
-                ImageViewInfo image_view_info = this->current_device.info_image_view(image_view_id);
-                image_view_info.slice = impl_task_image.slice;
+                ImplTaskImage & impl_task_image = this->impl_task_images[create_image_task->ids[i].index];
+                ImageId image_id = impl_task_image.fetch_callback();
+                ImageViewId image_view_id = image_id.default_view();
+                auto image_slice = this->current_device.info_image_view(image_view_id).slice;
 
-                // TODO(pahrens): This leaks. The view is never destroyed. Make sure the runtime kills it in the end of execution.
-                image_view_id = this->current_device.create_image_view(image_view_info);
+                this->runtime_images.push_back(RuntimeTaskImage{
+                    .image_id = image_id,
+                });
             }
-
-            this->runtime_images.push_back(RuntimeTaskImage{
-                .image_id = image_id,
-                .image_view_id = image_view_id,
-            });
         }
         else if (TaskSubmitEvent * submit_event = std::get_if<TaskSubmitEvent>(&task_event.event_variant))
         {
@@ -701,7 +770,7 @@ namespace daxa
                 dot_file << "c_bnode_" << task_index << "_" << task_ptr->id.index;
                 dot_file << " [label=\"Create " << task_buffer.debug_name << "\", shape=box]\n";
             }
-            else if (ImplCreateImageTask * task_ptr = std::get_if<ImplCreateImageTask>(&events[task_index].event_variant))
+            else if (TaskImageCreateEvent * task_ptr = std::get_if<TaskImageCreateEvent>(&events[task_index].event_variant))
             {
                 ImplTaskImage & task_image = this->impl_task_images[task_ptr->id.index];
                 dot_file << "c_inode_" << task_index << "_" << task_ptr->id.index;
@@ -733,7 +802,7 @@ namespace daxa
             auto a = image_link.event_a;
             auto b = image_link.event_b;
             auto i = image_link.resource;
-            if (ImplCreateImageTask * task_ptr = std::get_if<ImplCreateImageTask>(&events[a].event_variant))
+            if (TaskImageCreateEvent * task_ptr = std::get_if<TaskImageCreateEvent>(&events[a].event_variant))
                 dot_file << "c_";
             dot_file << "inode_" << a << "_" << i << "->inode_" << b << "_" << i;
             dot_file << " [label=\"Sync\", labeltooltip=\"between "

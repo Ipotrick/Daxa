@@ -226,7 +226,7 @@ struct App : AppWindow<App>
         task_swapchain_image = new_task_list.create_task_image({
             .fetch_callback = [=, this]()
             { return this->swapchain_image; },
-            .swapchain_parent = std::pair{ swapchain, acquire_semaphore },
+            .swapchain_parent = std::pair{swapchain, acquire_semaphore},
             .debug_name = "task swapchain image",
         });
 
@@ -305,13 +305,9 @@ struct App : AppWindow<App>
         current_buffer_i = !current_buffer_i;
     }
 
-    void on_mouse_move(f32, f32)
-    {
-    }
-
-    void on_key(int, int)
-    {
-    }
+    void on_mouse_move(f32, f32) {}
+    void on_mouse_button(i32, i32) {}
+    void on_key(i32, i32) {}
 
     void on_resize(u32 sx, u32 sy)
     {

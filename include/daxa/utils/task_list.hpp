@@ -4,6 +4,8 @@
 #error "[package management error] You must build Daxa with the UTILS option enabled"
 #endif
 
+#include <span>
+
 #include <daxa/core.hpp>
 #include <daxa/device.hpp>
 
@@ -85,6 +87,8 @@ namespace daxa
         u32 index = {};
 
         auto is_empty() const -> bool;
+
+        auto operator<=>(TaskGPUResourceId const& other) const -> bool = default;
     };
 
     struct TaskBufferId : public TaskGPUResourceId
@@ -109,7 +113,6 @@ namespace daxa
         auto get_used_task_images() -> TaskUsedImages &;
         auto get_buffer(TaskBufferId const & task_id) -> BufferId;
         auto get_image(TaskImageId const & task_id) -> ImageId;
-        auto get_image_view(TaskImageId const & task_id) -> ImageViewId;
         auto get_image_slice(TaskImageId const & task_id) -> ImageMipArraySlice;
 
       private:
@@ -139,6 +142,24 @@ namespace daxa
         ImageMipArraySlice slice = {};
         std::optional<std::pair<Swapchain, BinarySemaphore>> swapchain_parent = {};
         std::string debug_name = {};
+    };
+
+    struct TaskImageSplitInfo
+    {
+        TaskImageId src_image = {};
+        ImageMipArraySlice result_image_a_slice = {};
+    };
+
+    struct TaskImageMergeInfo
+    {
+        TaskImageId a = {};
+        TaskImageId b = {};
+    };
+
+    struct TaskImageBorrowInfo
+    {
+        TaskImageId image_to_borrow_from = {};
+        ImageMipArraySlice slice = {};
     };
 
     struct TaskInfo
@@ -201,6 +222,12 @@ namespace daxa
 
         auto create_task_buffer(TaskBufferInfo const & info) -> TaskBufferId;
         auto create_task_image(TaskImageInfo const & info) -> TaskImageId;
+        // Split results must not have "holes" in the ranges.
+        // They must be representable by one continuous ImageMipArraySlice each.
+        auto split_task_image(TaskImageSplitInfo const & info) -> std::pair<TaskImageId, TaskImageId>;
+        // Merge result must not have "holes" in the range.
+        // They must be representable by one continuous ImageMipArraySlice.
+        auto merge_task_images(TaskImageMergeInfo const & info) -> TaskImageId;
 
         void add_task(TaskInfo const & info);
 

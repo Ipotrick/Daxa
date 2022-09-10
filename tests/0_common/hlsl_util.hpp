@@ -78,7 +78,7 @@ f32 rand_float_construct(u32 m)
     const u32 ieee_one = 0x3F800000u;
     m &= ieee_mantissa;
     m |= ieee_one;
-    float f = asfloat(m);
+    f32 f = asfloat(m);
     return f - 1.0f;
 }
 f32 rand(f32 x) { return rand_float_construct(rand_hash(asuint(x))); }

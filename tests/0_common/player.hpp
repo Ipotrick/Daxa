@@ -98,7 +98,7 @@ struct Player3D
         if (rot.y < -MAX_ROT)
             rot.y = -MAX_ROT;
     }
-    void on_key(int key, int action)
+    void on_key(i32 key, i32 action)
     {
         if (key == keybinds.move_pz)
             move.pz = action != 0;
