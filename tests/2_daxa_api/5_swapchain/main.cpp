@@ -19,8 +19,6 @@ namespace tests
 
             daxa::Swapchain swapchain = device.create_swapchain({
                 .native_window = get_native_handle(),
-                .width = size_x,
-                .height = size_y,
                 .present_mode = daxa::PresentMode::DOUBLE_BUFFER_WAIT_FOR_VBLANK,
                 .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
                 .debug_name = APPNAME_PREFIX("swapchain (simple_creation)"),
@@ -48,9 +46,6 @@ namespace tests
 
             daxa::Swapchain swapchain = device.create_swapchain({
                 .native_window = get_native_handle(),
-                .width = size_x,
-                .height = size_y,
-                // .present_mode = daxa::PresentMode::DO_NOT_WAIT_FOR_VBLANK,
                 .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
                 .debug_name = APPNAME_PREFIX("swapchain (clearcolor)"),
             });
