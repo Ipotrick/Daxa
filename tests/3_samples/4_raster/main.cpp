@@ -244,12 +244,13 @@ struct App : AppWindow<App>
 
     void on_resize(u32 sx, u32 sy)
     {
-        size_x = sx;
-        size_y = sy;
         minimized = (sx == 0 || sy == 0);
 
         if (!minimized)
         {
+            swapchain.resize();
+            size_x = swapchain.info().width;
+            size_y = swapchain.info().height;
             device.destroy_image(depth_image);
             depth_image = device.create_image({
                 .format = daxa::Format::D32_SFLOAT,
@@ -257,7 +258,6 @@ struct App : AppWindow<App>
                 .size = {size_x, size_y, 1},
                 .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT,
             });
-            swapchain.resize();
             draw();
         }
     }

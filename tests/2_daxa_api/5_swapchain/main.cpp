@@ -132,16 +132,13 @@ namespace tests
 
             void on_resize(u32 sx, u32 sy)
             {
-                if (sx != size_x || sy != size_y)
+                minimized = sx == 0 || sy == 0;
+                if (!minimized)
                 {
-                    size_x = sx;
-                    size_y = sy;
-                    minimized = size_x == 0 || size_y == 0;
-                    if (!minimized)
-                    {
-                        swapchain.resize();
-                        draw();
-                    }
+                    swapchain.resize();
+                    size_x = swapchain.info().width;
+                    size_y = swapchain.info().height;
+                    draw();
                 }
             }
         };
