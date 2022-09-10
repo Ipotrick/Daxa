@@ -321,8 +321,8 @@ namespace daxa
                 .present_info = PresentInfo{
                     .swapchain = task_image.parent_swapchain.value().first,
                 },
-                .presented_image = info.presented_image,
                 .user_binary_semaphores = info.user_binary_semaphores,
+                .presented_image = info.presented_image,
             } 
         });
     }
@@ -347,7 +347,7 @@ namespace daxa
     auto TaskList::command_lists() -> std::vector<CommandList>
     {
         auto & impl = *as<ImplTaskList>();
-        DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "must compile and run before getting command lists");
+        DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "must compile and run before getting command lists");
         return impl.left_over_command_lists;
     }
 

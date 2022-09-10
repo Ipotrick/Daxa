@@ -58,7 +58,7 @@ namespace daxa
         auto validate_image_slice(ImageMipArraySlice const & slice, ImageViewId id) -> ImageMipArraySlice;
 
         auto new_buffer(BufferInfo const & info) -> BufferId;
-        auto new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, const std::string & debug_name) -> ImageId;
+        auto new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, ImageInfo const & info) -> ImageId;
         auto new_image(ImageInfo const & info) -> ImageId;
         auto new_image_view(ImageViewInfo const & info) -> ImageViewId;
         auto new_sampler(SamplerInfo const & info) -> SamplerId;
