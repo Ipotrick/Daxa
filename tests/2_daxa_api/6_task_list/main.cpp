@@ -223,6 +223,7 @@ namespace tests
             daxa::ImageId render_image = device.create_image(daxa::ImageInfo{
                 .format = daxa::Format::R8G8B8A8_UNORM,
                 .size = {512, 512, 1},
+                .mip_level_count = 5,
                 .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
                 .debug_name = APPNAME_PREFIX("render_image"),
             });
@@ -249,11 +250,11 @@ namespace tests
             daxa::TaskBufferId task_mipmapping_compute_input_buffer;
             daxa::TaskBufferId task_staging_mipmapping_compute_input_buffer;
 
-            bool mouse_drawing = false;
+            bool mouse_drawing = false, gen_mipmaps = false;
 
             daxa::TaskList task_list = record_tasks();
 
-            App() : AppWindow<App>(APPNAME, 1024, 512) {}
+            App() : AppWindow<App>(APPNAME, 768, 512) {}
 
             ~App()
             {
@@ -291,6 +292,8 @@ namespace tests
                 ImGui::NewFrame();
                 ImGui::Begin("Settings");
                 ImGui::ColorEdit3("Brush Color", reinterpret_cast<f32 *>(&compute_input.paint_col));
+                if (ImGui::Button("Gen Mip-maps"))
+                    gen_mipmaps = true;
                 ImGui::End();
                 ImGui::Render();
             }
@@ -313,15 +316,17 @@ namespace tests
 
             void on_mouse_move(f32 x, f32 y)
             {
-                compute_input.mouse_x = x / static_cast<f32>(size_x / 2) * 512.0f;
+                compute_input.mouse_x = x / static_cast<f32>(size_x * (2.0f / 3.0f)) * 512.0f;
                 compute_input.mouse_y = y / static_cast<f32>(size_y) * 512.0f;
             }
 
-            void on_key(int key, int action)
+            void on_mouse_button(i32 button, i32 action)
             {
-                if (key == GLFW_KEY_E)
+                if (button == GLFW_MOUSE_BUTTON_1)
                     mouse_drawing = action != GLFW_RELEASE;
             }
+
+            void on_key(i32 key, i32 action) {}
 
             void on_resize(u32 sx, u32 sy)
             {
@@ -331,12 +336,6 @@ namespace tests
                     swapchain.resize();
                     size_x = swapchain.info().width;
                     size_y = swapchain.info().height;
-                    // device.destroy_image(render_image);
-                    // render_image = device.create_image({
-                    //     .format = daxa::Format::R8G8B8A8_UNORM,
-                    //     .size = {size_x / 2, size_y, 1},
-                    //     .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
-                    // });
                     draw();
                 }
             }
@@ -400,6 +399,13 @@ namespace tests
                     .debug_name = APPNAME_PREFIX("Input Transfer"),
                 });
 
+                new_task_list.add_clear_image({
+                    .clear_value = {std::array<f32, 4>{0.2f, 0.2f, 0.2f, 1.0f}},
+                    .dst_image = task_swapchain_image,
+                    .dst_slice = {},
+                    .debug_name = APPNAME_PREFIX("Clear swapchain"),
+                });
+
                 new_task_list.add_task({
                     .used_buffers = {
                         {task_mipmapping_compute_input_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY},
@@ -414,9 +420,7 @@ namespace tests
                             auto cmd_list = interf.get_command_list();
                             auto render_target_id = interf.get_image(task_render_image);
                             auto input_buffer = interf.get_buffer(task_mipmapping_compute_input_buffer);
-
                             auto render_target_size = device.info_image(render_target_id).size;
-
                             cmd_list.set_pipeline(compute_pipeline);
                             cmd_list.push_constant(MipmappingComputePushConstant{
                                 .image_id = render_target_id.default_view(),
@@ -426,8 +430,16 @@ namespace tests
                             cmd_list.dispatch((render_target_size[0] + 7) / 8, (render_target_size[1] + 7) / 8);
                         }
                     },
-                    .debug_name = "compute",
+                    .debug_name = "mouse paint",
                 });
+
+                // TODO: HOW TO GENERATE MIPS?
+                // new_task_list.add_task({
+                //     .used_images = {
+                //         {task_render_image, daxa::TaskImageAccess::COMPUTE_SHADER_READ_WRITE, mip0},
+                //         {task_render_image, daxa::TaskImageAccess::COMPUTE_SHADER_READ_WRITE, mip1},
+                //     },
+                // });
 
                 new_task_list.add_task({
                     .used_images = {
@@ -439,7 +451,8 @@ namespace tests
                         daxa::CommandList cmd_list = interf.get_command_list();
                         ImageId src_image_id = interf.get_image(task_render_image);
                         ImageId dst_image_id = interf.get_image(task_swapchain_image);
-                        auto src_size = device.info_image(src_image_id).size;
+                        auto const & src_info = device.info_image(src_image_id);
+                        auto src_size = src_info.size;
                         auto dst_size = device.info_image(dst_image_id).size;
 
                         cmd_list.blit_image_to_image({
@@ -450,8 +463,37 @@ namespace tests
                             .src_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
                             .src_offsets = {{{0, 0, 0}, {static_cast<i32>(src_size[0]), static_cast<i32>(src_size[1]), 1}}},
                             .dst_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
-                            .dst_offsets = {{{0, 0, 0}, {static_cast<i32>(dst_size[0] / 2), static_cast<i32>(dst_size[1]), 1}}},
+                            .dst_offsets = {
+                                {
+                                    {0, 0, 0},
+                                    {static_cast<i32>(dst_size[0] * (2.0f / 3.0f)), static_cast<i32>(dst_size[1]), 1},
+                                },
+                            },
                         });
+
+                        for (i32 i = 0; i < src_info.mip_level_count - 1; ++i)
+                        {
+                            i32 scl_1 = 1 << (i + 0);
+                            i32 scl_2 = 1 << (i + 1);
+                            f32 s0 = static_cast<f32>(scl_1) * 0.5f;
+                            f32 s1 = (static_cast<f32>(scl_1) - 1.0f) / static_cast<f32>(scl_1);
+                            f32 s2 = (static_cast<f32>(scl_2) - 1.0f) / static_cast<f32>(scl_2);
+                            cmd_list.blit_image_to_image({
+                                .src_image = src_image_id,
+                                .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
+                                .dst_image = dst_image_id,
+                                .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+                                .src_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR, .mip_level = static_cast<u32>(i + 1)},
+                                .src_offsets = {{{0, 0, 0}, {static_cast<i32>(static_cast<f32>(src_size[0]) / scl_2), static_cast<i32>(static_cast<f32>(src_size[1]) / scl_2), 1}}},
+                                .dst_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
+                                .dst_offsets = {
+                                    {
+                                        {static_cast<i32>(dst_size[0] * (2.0f / 3.0f)), static_cast<i32>(dst_size[1] * s1), 0},
+                                        {static_cast<i32>(dst_size[0] * (2.0f / 3.0f + 1.0f / (s0 * 6.0f))), static_cast<i32>(static_cast<f32>(dst_size[1]) * s2), 1},
+                                    },
+                                },
+                            });
+                        }
                     },
                     .debug_name = "blit to swapchain",
                 });
@@ -652,13 +694,9 @@ namespace tests
                 });
             }
 
-            void on_mouse_move(f32, f32)
-            {
-            }
-
-            void on_key(int, int)
-            {
-            }
+            void on_mouse_move(f32, f32) {}
+            void on_mouse_button(i32, i32) {}
+            void on_key(i32, i32) {}
 
             auto create_render_image(u32 sx, u32 sy) -> daxa::ImageId
             {

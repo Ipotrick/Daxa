@@ -976,7 +976,7 @@ namespace daxa
 
         spv::SpvBuildLogger logger;
         glslang::SpvOptions spv_options;
-        std::vector<unsigned int> spv;
+        std::vector<u32> spv;
         glslang::GlslangToSpv(*intermediary, spv, &logger, &spv_options);
         return spv;
 #else
@@ -990,7 +990,7 @@ namespace daxa
         auto u8_ascii_to_wstring = [](char const * str) -> std::wstring
         {
             std::wstring ret = {};
-            for (int i = 0; i < std::strlen(str) + 1 && str != nullptr; i++)
+            for (i32 i = 0; i < std::strlen(str) + 1 && str != nullptr; i++)
             {
                 ret.push_back(str[i]);
             }

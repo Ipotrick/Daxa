@@ -223,7 +223,7 @@ namespace daxa
 
             {
                 auto vtx_dst = info.device.map_memory_as<ImDrawVert>(staging_vbuffer);
-                for (int n = 0; n < draw_data->CmdListsCount; n++)
+                for (i32 n = 0; n < draw_data->CmdListsCount; n++)
                 {
                     const ImDrawList * draws = draw_data->CmdLists[n];
                     std::memcpy(vtx_dst, draws->VtxBuffer.Data, draws->VtxBuffer.Size * sizeof(ImDrawVert));
@@ -233,7 +233,7 @@ namespace daxa
             }
             {
                 auto idx_dst = info.device.map_memory_as<ImDrawIdx>(staging_ibuffer);
-                for (int n = 0; n < draw_data->CmdListsCount; n++)
+                for (i32 n = 0; n < draw_data->CmdListsCount; n++)
                 {
                     const ImDrawList * draws = draw_data->CmdLists[n];
                     std::memcpy(idx_dst, draws->IdxBuffer.Data, draws->IdxBuffer.Size * sizeof(ImDrawIdx));
@@ -274,16 +274,16 @@ namespace daxa
             push.translate = {-1.0f - draw_data->DisplayPos.x * push.scale.x, -1.0f - draw_data->DisplayPos.y * push.scale.y};
             ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
             ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
-            int global_vtx_offset = 0, global_idx_offset = 0;
+            i32 global_vtx_offset = 0, global_idx_offset = 0;
             push.vbuffer_id = vbuffer;
             push.ibuffer_id = ibuffer;
             push.sampler0_id = sampler;
 
-            for (int n = 0; n < draw_data->CmdListsCount; n++)
+            for (i32 n = 0; n < draw_data->CmdListsCount; n++)
             {
                 const ImDrawList * draws = draw_data->CmdLists[n];
                 usize lastTexId = 0;
-                for (int cmd_i = 0; cmd_i < draws->CmdBuffer.Size; cmd_i++)
+                for (i32 cmd_i = 0; cmd_i < draws->CmdBuffer.Size; cmd_i++)
                 {
                     const ImDrawCmd * pcmd = &draws->CmdBuffer[cmd_i];
 
@@ -359,7 +359,7 @@ namespace daxa
 
         ImGuiIO & io = ImGui::GetIO();
         u8 * pixels;
-        int width, height;
+        i32 width, height;
         io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
         usize upload_size = width * height * 4 * sizeof(u8);
         font_sheet = this->info.device.create_image({

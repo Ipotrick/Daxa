@@ -217,7 +217,9 @@ struct App : AppWindow<App>
         }
     }
 
-    void on_key(int key, int action)
+    void on_mouse_button(i32, i32) {}
+
+    void on_key(i32 key, i32 action)
     {
         if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         {

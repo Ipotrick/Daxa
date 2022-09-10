@@ -34,6 +34,11 @@ namespace daxa
 
     struct ImplTaskImage
     {
+        TaskImageId root_parent_id = {};
+        usize lifetime_start_event_index = {};
+        usize lifetime_end_event_index = {};
+        std::optional<std::array<TaskImageId, 2>> merge_src_images = {};
+
         Access latest_access = AccessConsts::NONE;
         ImageLayout latest_layout = ImageLayout::UNDEFINED;
         usize latest_access_task_index = {};
@@ -48,7 +53,6 @@ namespace daxa
     struct RuntimeTaskImage
     {
         ImageId image_id = {};
-        ImageViewId image_view_id = {};
     };
 
     struct TaskPipelineBarrier
@@ -73,9 +77,10 @@ namespace daxa
         TaskBufferId id = {};
     };
 
-    struct ImplCreateImageTask
+    struct TaskImageCreateEvent
     {
-        TaskImageId id = {};
+        std::array<TaskImageId, 2> ids = {};
+        usize id_count = {};
     };
 
     struct TaskSubmitEvent
@@ -95,7 +100,7 @@ namespace daxa
     using TaskEventVariant = std::variant<
         ImplGenericTask,
         ImplCreateBufferTask,
-        ImplCreateImageTask,
+        TaskImageCreateEvent,
         TaskSubmitEvent,
         TaskPresentEvent
     >;
