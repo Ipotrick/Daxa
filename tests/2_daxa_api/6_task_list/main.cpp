@@ -471,7 +471,7 @@ namespace tests
                             },
                         });
 
-                        for (i32 i = 0; i < src_info.mip_level_count - 1; ++i)
+                        for (i32 i = 0; i < static_cast<i32>(src_info.mip_level_count - 1); ++i)
                         {
                             i32 scl_1 = 1 << (i + 0);
                             i32 scl_2 = 1 << (i + 1);
