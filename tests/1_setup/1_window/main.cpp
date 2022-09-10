@@ -31,11 +31,11 @@ struct App : AppWindow<App>
 
     void on_resize(u32 sx, u32 sy)
     {
-        size_x = sx;
-        size_y = sy;
         minimized = (sx == 0 || sy == 0);
         if (!minimized)
         {
+            size_x = sx;
+            size_y = sy;
             draw();
         }
     }

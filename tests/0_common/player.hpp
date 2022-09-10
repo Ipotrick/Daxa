@@ -12,23 +12,29 @@
 
 struct Camera3D
 {
-    float fov = 98.6f, aspect = 1.0f;
-    float near_clip = 0.01f, far_clip = 1000.0f;
+    f32 fov = 98.6f, aspect = 1.0f;
+    f32 near_clip = 0.01f, far_clip = 1000.0f;
     glm::mat4 proj_mat{};
     glm::mat4 vtrn_mat{};
     glm::mat4 vrot_mat{};
 
-    void resize(int size_x, int size_y)
+    void resize(i32 size_x, i32 size_y)
     {
-        aspect = static_cast<float>(size_x) / static_cast<float>(size_y);
+        aspect = static_cast<f32>(size_x) / static_cast<f32>(size_y);
         proj_mat = glm::perspective(glm::radians(fov), aspect, near_clip, far_clip);
     }
-    void set_pos(glm::vec3 pos) { vtrn_mat = glm::translate(glm::mat4(1), pos); }
-    void set_rot(float x, float y)
+    void set_pos(f32vec3 pos)
+    {
+        vtrn_mat = glm::translate(glm::mat4(1), glm::vec3(pos.x, pos.y, pos.z));
+    }
+    void set_rot(f32 x, f32 y)
     {
         vrot_mat = glm::rotate(glm::rotate(glm::mat4(1), y, {1, 0, 0}), x, {0, 1, 0});
     }
-    glm::mat4 get_vp() { return proj_mat * vrot_mat * vtrn_mat; }
+    glm::mat4 get_vp()
+    {
+        return proj_mat * vrot_mat * vtrn_mat;
+    }
 };
 
 namespace input
@@ -58,17 +64,17 @@ struct Player3D
 {
     Camera3D camera{};
     input::Keybinds keybinds = input::DEFAULT_KEYBINDS;
-    glm::vec3 pos{0, 0, 0}, vel{}, rot{};
-    float speed = 30.0f, mouse_sens = 0.1f;
-    float sprint_speed = 8.0f;
-    float sin_rot_x = 0, cos_rot_x = 1;
+    f32vec3 pos{0, 0, 0}, vel{}, rot{};
+    f32 speed = 30.0f, mouse_sens = 0.1f;
+    f32 sprint_speed = 8.0f;
+    f32 sin_rot_x = 0, cos_rot_x = 1;
 
     struct MoveFlags
     {
         uint8_t px : 1, py : 1, pz : 1, nx : 1, ny : 1, nz : 1, sprint : 1;
     } move{};
 
-    void update(float dt)
+    void update(f32 dt)
     {
         auto delta_pos = speed * dt;
         if (move.sprint)
@@ -86,7 +92,7 @@ struct Player3D
         if (move.ny)
             pos.y -= delta_pos;
 
-        constexpr auto MAX_ROT = std::numbers::pi_v<float> / 2;
+        constexpr auto MAX_ROT = std::numbers::pi_v<f32> / 2;
         if (rot.y > MAX_ROT)
             rot.y = MAX_ROT;
         if (rot.y < -MAX_ROT)
@@ -109,10 +115,10 @@ struct Player3D
         if (key == keybinds.toggle_sprint)
             move.sprint = action != 0;
     }
-    void on_mouse_move(double delta_x, double delta_y)
+    void on_mouse_move(f32 delta_x, f32 delta_y)
     {
-        rot.x += static_cast<float>(delta_x) * mouse_sens * 0.0001f * camera.fov;
-        rot.y += static_cast<float>(delta_y) * mouse_sens * 0.0001f * camera.fov;
+        rot.x += delta_x * mouse_sens * 0.0001f * camera.fov;
+        rot.y += delta_y * mouse_sens * 0.0001f * camera.fov;
         sin_rot_x = std::sin(rot.x);
         cos_rot_x = std::cos(rot.x);
     }
