@@ -87,8 +87,6 @@ struct App : AppWindow<App>
     daxa::BinarySemaphore acquire_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("acquire_semaphore")});
     daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
 
-    daxa::TaskList task_list = record_tasks();
-
     daxa::BufferId boid_buffer = device.create_buffer({
         .size = sizeof(Boids),
         .debug_name = APPNAME_PREFIX("boid_buffer"),
@@ -103,6 +101,8 @@ struct App : AppWindow<App>
     daxa::TaskImageId task_swapchain_image = {};
 
     daxa::CommandSubmitInfo submit_info;
+
+    daxa::TaskList task_list = record_tasks();
 
     App() : AppWindow<App>(APPNAME)
     {
