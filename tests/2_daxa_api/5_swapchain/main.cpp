@@ -119,6 +119,7 @@ namespace tests
             }
 
             void on_mouse_move(f32, f32) {}
+            void on_mouse_button(i32, i32) {}
             void on_key(i32, i32) {}
 
             void on_resize(u32 sx, u32 sy)

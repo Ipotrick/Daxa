@@ -772,8 +772,9 @@ namespace daxa
             }
             else if (TaskImageCreateEvent * task_ptr = std::get_if<TaskImageCreateEvent>(&events[task_index].event_variant))
             {
-                ImplTaskImage & task_image = this->impl_task_images[task_ptr->id.index];
-                dot_file << "c_inode_" << task_index << "_" << task_ptr->id.index;
+                // TODO(pahrens): make the `ids[]` use the "right" index (instead of 0)
+                ImplTaskImage & task_image = this->impl_task_images[task_ptr->ids[0].index];
+                dot_file << "c_inode_" << task_index << "_" << task_ptr->ids[0].index;
                 dot_file << " [label=\"Create " << task_image.debug_name << "\", shape=box]\n";
             }
             else
