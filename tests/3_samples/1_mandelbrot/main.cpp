@@ -250,19 +250,18 @@ struct App : AppWindow<App>
 
     void on_resize(u32 sx, u32 sy)
     {
-        size_x = sx;
-        size_y = sy;
         minimized = (sx == 0 || sy == 0);
-
         if (!minimized)
         {
+            swapchain.resize();
+            size_x = swapchain.info().width;
+            size_y = swapchain.info().height;
             device.destroy_image(render_image);
             render_image = device.create_image({
                 .format = daxa::Format::R8G8B8A8_UNORM,
                 .size = {size_x, size_y, 1},
                 .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             });
-            swapchain.resize();
             draw();
         }
     }

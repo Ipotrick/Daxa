@@ -328,14 +328,13 @@ struct App : AppWindow<App>
 
     void on_resize(u32 sx, u32 sy)
     {
-        size_x = sx;
-        size_y = sy;
         minimized = (sx == 0 || sy == 0);
-
         if (!minimized)
         {
-            aspect = static_cast<f32>(size_x) / static_cast<f32>(size_y);
             swapchain.resize();
+            size_x = swapchain.info().width;
+            size_y = swapchain.info().height;
+            aspect = static_cast<f32>(size_x) / static_cast<f32>(size_y);
             draw();
         }
     }
