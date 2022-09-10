@@ -49,6 +49,39 @@ namespace daxa::math_operators
         return result;
     }
 
+    template <typename T, usize N>
+    constexpr auto operator+(detail::GenericVector<T, N> const & a, T b) -> detail::GenericVector<T, N>
+    {
+        detail::GenericVector<T, N> result;
+        for (usize i = 0; i < N; ++i)
+            result[i] = a[i] + b;
+        return result;
+    }
+    template <typename T, usize N>
+    constexpr auto operator-(detail::GenericVector<T, N> const & a, T b) -> detail::GenericVector<T, N>
+    {
+        detail::GenericVector<T, N> result;
+        for (usize i = 0; i < N; ++i)
+            result[i] = a[i] - b;
+        return result;
+    }
+    template <typename T, usize N>
+    constexpr auto operator*(detail::GenericVector<T, N> const & a, T b) -> detail::GenericVector<T, N>
+    {
+        detail::GenericVector<T, N> result;
+        for (usize i = 0; i < N; ++i)
+            result[i] = a[i] * b;
+        return result;
+    }
+    template <typename T, usize N>
+    constexpr auto operator/(detail::GenericVector<T, N> const & a, T b) -> detail::GenericVector<T, N>
+    {
+        detail::GenericVector<T, N> result;
+        for (usize i = 0; i < N; ++i)
+            result[i] = a[i] / b;
+        return result;
+    }
+
     template <typename T, usize M, usize N, usize P>
     constexpr auto operator*(detail::GenericMatrix<T, M, N> const & a, detail::GenericMatrix<T, N, P> const & b)
     {

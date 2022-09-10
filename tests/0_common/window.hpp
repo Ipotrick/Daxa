@@ -3,6 +3,8 @@ using namespace daxa::types;
 
 #include <GLFW/glfw3.h>
 #if defined(_WIN32)
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
 #define GLFW_EXPOSE_NATIVE_WIN32
 #elif defined(__linux__)
 #define GLFW_EXPOSE_NATIVE_X11
@@ -13,10 +15,10 @@ template <typename App>
 struct AppWindow
 {
     GLFWwindow * glfw_window_ptr;
-    u32 size_x = 800, size_y = 600;
+    u32 size_x, size_y;
     bool minimized = false;
 
-    AppWindow(char const * window_name)
+    AppWindow(char const * window_name, u32 sx = 800, u32 sy = 600) : size_x{sx}, size_y{sy}
     {
         glfwInit();
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
