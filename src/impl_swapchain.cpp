@@ -1,5 +1,3 @@
-// #define
-
 #include "impl_swapchain.hpp"
 #include "impl_device.hpp"
 
@@ -11,6 +9,12 @@ namespace daxa
     {
         auto & impl = *as<ImplSwapchain>();
         impl.recreate();
+    }
+
+    auto Swapchain::info() const -> SwapchainInfo const &
+    {
+        auto & impl = *as<ImplSwapchain>();
+        return impl.info;
     }
 
     ImageId Swapchain::acquire_next_image(BinarySemaphore & signal_semaphore)

@@ -28,16 +28,6 @@ struct App : AppWindow<App>
     });
     daxa::Swapchain swapchain = device.create_swapchain({
         .native_window = get_native_handle(),
-        .width = size_x,
-        .height = size_y,
-        .surface_format_selector = [](daxa::Format format)
-        {
-            switch (format)
-            {
-            case daxa::Format::R8G8B8A8_UINT: return 100;
-            default: return daxa::default_format_score(format);
-            }
-        },
         .present_mode = daxa::PresentMode::DO_NOT_WAIT_FOR_VBLANK,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
         .debug_name = APPNAME_PREFIX("swapchain"),
@@ -143,8 +133,6 @@ struct App : AppWindow<App>
         }
 
         auto swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
-        auto swapchain_size = device.info_image(swapchain_image).size;
-        size_x = swapchain_size[0], size_y = swapchain_size[1];
 
         auto cmd_list = device.create_command_list({
             .debug_name = APPNAME_PREFIX("cmd_list"),
@@ -223,8 +211,8 @@ struct App : AppWindow<App>
         {
             f32 center_x = static_cast<f32>(size_x / 2);
             f32 center_y = static_cast<f32>(size_y / 2);
-            auto offset = glm::vec2{x - center_x, center_y - y};
-            player.on_mouse_move(static_cast<f64>(offset.x), static_cast<f64>(offset.y));
+            auto offset = f32vec2{x - center_x, center_y - y};
+            player.on_mouse_move(offset.x, offset.y);
             set_mouse_pos(center_x, center_y);
         }
     }
@@ -244,12 +232,13 @@ struct App : AppWindow<App>
 
     void on_resize(u32 sx, u32 sy)
     {
-        size_x = sx;
-        size_y = sy;
         minimized = (sx == 0 || sy == 0);
 
         if (!minimized)
         {
+            swapchain.resize();
+            size_x = swapchain.info().width;
+            size_y = swapchain.info().height;
             device.destroy_image(depth_image);
             depth_image = device.create_image({
                 .format = daxa::Format::D32_SFLOAT,
@@ -257,7 +246,6 @@ struct App : AppWindow<App>
                 .size = {size_x, size_y, 1},
                 .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT,
             });
-            swapchain.resize();
             draw();
         }
     }

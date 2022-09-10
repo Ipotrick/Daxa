@@ -27,16 +27,6 @@ struct App : AppWindow<App>
 
     daxa::Swapchain swapchain = device.create_swapchain({
         .native_window = get_native_handle(),
-        .width = size_x,
-        .height = size_y,
-        .surface_format_selector = [](daxa::Format format)
-        {
-            switch (format)
-            {
-            case daxa::Format::R8G8B8A8_UINT: return 100;
-            default: return daxa::default_format_score(format);
-            }
-        },
         .present_mode = daxa::PresentMode::DOUBLE_BUFFER_WAIT_FOR_VBLANK,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
         .debug_name = APPNAME_PREFIX("swapchain"),
@@ -99,8 +89,6 @@ struct App : AppWindow<App>
 
     daxa::BinarySemaphore acquire_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("acquire_semaphore")});
     daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
-
-    bool should_resize = false;
 
     App() : AppWindow<App>(APPNAME) {}
 
@@ -254,22 +242,14 @@ struct App : AppWindow<App>
 
     void on_resize(u32 sx, u32 sy)
     {
-        size_x = sx;
-        size_y = sy;
         minimized = (sx == 0 || sy == 0);
-
         if (!minimized)
         {
-            should_resize = true;
-            do_resize();
+            swapchain.resize();
+            size_x = swapchain.info().width;
+            size_y = swapchain.info().height;
+            draw();
         }
-    }
-
-    void do_resize()
-    {
-        should_resize = false;
-        swapchain.resize();
-        draw();
     }
 };
 
