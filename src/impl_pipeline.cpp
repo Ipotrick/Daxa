@@ -946,7 +946,7 @@ namespace daxa
         std::vector<char const *> sources;
         sources.push_back(source_str.c_str());
 
-        shader.setStrings(sources.data(), sources.size());
+        shader.setStrings(sources.data(), static_cast<i32>(sources.size()));
         shader.setEntryPoint("main");
         // shader.setOverrideVersion(450); // not available yet in latest vcpkg version
 
