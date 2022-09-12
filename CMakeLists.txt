@@ -119,6 +119,14 @@ target_include_directories(daxa
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_package(X11 REQUIRED)
+    target_link_libraries(daxa
+        PUBLIC
+        ${X11_LIBRARIES}
+    )
+endif()
+
 set_project_warnings(daxa)
 
 if(DAXA_ENABLE_TESTS)
