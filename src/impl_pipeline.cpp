@@ -332,6 +332,7 @@ namespace daxa
 
         auto impl_pipeline = new ImplRasterPipeline(impl.impl_device, modified_info);
         impl.current_observed_hotload_files = &impl_pipeline->observed_hotload_files;
+        impl_pipeline->last_hotload_time = std::chrono::file_clock::now();
 
         auto v_spirv_result = impl.get_spirv(modified_info.vertex_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT);
         if (v_spirv_result.is_err())
@@ -553,6 +554,7 @@ namespace daxa
 
         auto impl_pipeline = new ImplComputePipeline(impl.impl_device, modified_info);
         impl.current_observed_hotload_files = &impl_pipeline->observed_hotload_files;
+        impl_pipeline->last_hotload_time = std::chrono::file_clock::now();
 
         auto spirv_result = impl.get_spirv(modified_info.shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT);
         if (spirv_result.is_err())
