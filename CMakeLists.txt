@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.21)
 
 include(cmake/warnings.cmake)
 
@@ -55,7 +55,7 @@ add_library(daxa STATIC
 add_library(daxa::daxa ALIAS daxa)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    target_compile_options(daxa PRIVATE /std:c++latest)
+    target_compile_options(daxa PUBLIC /std:c++latest)
 else()
     target_compile_features(daxa PUBLIC cxx_std_20)
 endif()
