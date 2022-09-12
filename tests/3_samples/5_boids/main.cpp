@@ -1,6 +1,7 @@
 #include <0_common/window.hpp>
 #include <thread>
 #include <iostream>
+#include <cmath>
 
 #include "daxa/utils/task_list.hpp"
 

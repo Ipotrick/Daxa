@@ -47,10 +47,10 @@ struct AppWindow
             });
         glfwSetFramebufferSizeCallback(
             glfw_window_ptr,
-            [](GLFWwindow * window_ptr, i32 sx, i32 sy)
+            [](GLFWwindow * window_ptr, i32 w, i32 h)
             {
                 auto & app = *reinterpret_cast<App *>(glfwGetWindowUserPointer(window_ptr));
-                app.on_resize(static_cast<u32>(sx), static_cast<u32>(sy));
+                app.on_resize(static_cast<u32>(w), static_cast<u32>(h));
             });
     }
 
