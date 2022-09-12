@@ -39,7 +39,8 @@
             "dependencies": [
                 "glfw3",
                 "glm",
-                "stb"
+                "stb",
+                "cgltf"
             ]
         }
     }
