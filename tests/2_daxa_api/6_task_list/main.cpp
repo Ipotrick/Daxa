@@ -236,6 +236,10 @@ namespace tests
             daxa::TaskImageId task_render_image = {};
 
             MipmappingComputeInput compute_input = {
+                .mouse_x = {},
+                .mouse_y = {},
+                .p_mouse_x = {},
+                .p_mouse_y = {},
                 .paint_col = {1.0f, 0.0f, 0.0f},
             };
             daxa::BufferId mipmapping_compute_input_buffer = device.create_buffer({
@@ -466,18 +470,18 @@ namespace tests
                             .dst_offsets = {
                                 {
                                     {0, 0, 0},
-                                    {static_cast<i32>(dst_size[0] * (2.0f / 3.0f)), static_cast<i32>(dst_size[1]), 1},
+                                    {static_cast<i32>(static_cast<f32>(dst_size[0]) * (2.0f / 3.0f)), static_cast<i32>(dst_size[1]), 1},
                                 },
                             },
                         });
 
                         for (i32 i = 0; i < static_cast<i32>(src_info.mip_level_count - 1); ++i)
                         {
-                            i32 scl_1 = 1 << (i + 0);
-                            i32 scl_2 = 1 << (i + 1);
-                            f32 s0 = static_cast<f32>(scl_1) * 0.5f;
-                            f32 s1 = (static_cast<f32>(scl_1) - 1.0f) / static_cast<f32>(scl_1);
-                            f32 s2 = (static_cast<f32>(scl_2) - 1.0f) / static_cast<f32>(scl_2);
+                            f32 scl_1 = static_cast<f32>(1 << (i + 0));
+                            f32 scl_2 = static_cast<f32>(1 << (i + 1));
+                            f32 s0 = scl_1 * 0.5f;
+                            f32 s1 = (scl_1 - 1.0f) / scl_1;
+                            f32 s2 = (scl_2 - 1.0f) / scl_2;
                             cmd_list.blit_image_to_image({
                                 .src_image = src_image_id,
                                 .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
@@ -488,8 +492,16 @@ namespace tests
                                 .dst_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
                                 .dst_offsets = {
                                     {
-                                        {static_cast<i32>(dst_size[0] * (2.0f / 3.0f)), static_cast<i32>(dst_size[1] * s1), 0},
-                                        {static_cast<i32>(dst_size[0] * (2.0f / 3.0f + 1.0f / (s0 * 6.0f))), static_cast<i32>(static_cast<f32>(dst_size[1]) * s2), 1},
+                                        {
+                                            static_cast<i32>(static_cast<f32>(dst_size[0]) * (2.0f / 3.0f)),
+                                            static_cast<i32>(static_cast<f32>(dst_size[1]) * s1),
+                                            0,
+                                        },
+                                        {
+                                            static_cast<i32>(static_cast<f32>(dst_size[0]) * (2.0f / 3.0f + 1.0f / (s0 * 6.0f))),
+                                            static_cast<i32>(static_cast<f32>(dst_size[1]) * s2),
+                                            1,
+                                        },
                                     },
                                 },
                             });
