@@ -605,7 +605,7 @@ namespace daxa
                 });
             }
             DAXA_ONLY_IF_TASK_LIST_DEBUG(
-                td::cout << std::endl;
+                std::cout << std::endl;
             )
         }
     }
