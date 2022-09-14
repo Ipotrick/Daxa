@@ -416,7 +416,11 @@ namespace daxa
             .polygonMode = *reinterpret_cast<VkPolygonMode const *>(&info.raster.polygon_mode),
             .cullMode = *reinterpret_cast<VkCullModeFlags const *>(&info.raster.face_culling),
             .frontFace = VkFrontFace::VK_FRONT_FACE_CLOCKWISE,
-            .lineWidth = 1.0f,
+            .depthBiasEnable = info.raster.depth_bias_enable,
+            .depthBiasConstantFactor = info.raster.depth_bias_constant_factor,
+            .depthBiasClamp = info.raster.depth_bias_clamp,
+            .depthBiasSlopeFactor = info.raster.depth_bias_slope_factor,
+            .lineWidth = info.raster.line_width,
         };
         VkPipelineDepthStencilStateCreateInfo vk_depth_stencil_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
