@@ -49,7 +49,7 @@ struct App : AppWindow<App>
         .debug_name = APPNAME_PREFIX("pipeline_compiler"),
     });
     // clang-format off
-    daxa::RasterPipeline raster_pipeline = pipeline_compiler.create_raster_pipeline({
+    daxa::RasterPipeline fill_raster_pipeline = pipeline_compiler.create_raster_pipeline({
         .vertex_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .compile_options = {.entry_point = "vs_main"}},
         .fragment_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .compile_options = {.entry_point = "fs_main"}},
         .color_attachments = {{.format = swapchain.get_format(), .blend = {.blend_enable = true, .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA, .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA}}},
@@ -59,11 +59,33 @@ struct App : AppWindow<App>
             .enable_depth_write = true,
         },
         .raster = {
+            .polygon_mode = daxa::PolygonMode::FILL,
             .face_culling = daxa::FaceCullFlagBits::BACK_BIT,
         },
         .push_constant_size = sizeof(DrawPush),
-        .debug_name = APPNAME_PREFIX("raster_pipeline"),
+        .debug_name = APPNAME_PREFIX("raster_pipeline (fill)"),
     }).value();
+    daxa::RasterPipeline line_raster_pipeline = pipeline_compiler.create_raster_pipeline({
+        .vertex_shader_info = {.source = daxa::ShaderFile{"line.hlsl"}, .compile_options = {.entry_point = "vs_main"}},
+        .fragment_shader_info = {.source = daxa::ShaderFile{"line.hlsl"}, .compile_options = {.entry_point = "fs_main"}},
+        .color_attachments = {{.format = swapchain.get_format(), .blend = {.blend_enable = true, .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA, .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA}}},
+        .depth_test = {
+            .depth_attachment_format = daxa::Format::D32_SFLOAT,
+            .enable_depth_test = true,
+            .enable_depth_write = true,
+        },
+        .raster = {
+            .polygon_mode = daxa::PolygonMode::LINE,
+            .face_culling = daxa::FaceCullFlagBits::NONE,
+            .depth_bias_enable = true,
+            .depth_bias_constant_factor = 0.0f,
+            .depth_bias_slope_factor = -1.0f,
+            .line_width = 1.0f,
+        },
+        .push_constant_size = sizeof(DrawPush),
+        .debug_name = APPNAME_PREFIX("raster_pipeline (line)"),
+    }).value();
+    // daxa::RasterPipeline *raster_pipeline = &fill_raster_pipeline;
     // clang-format on
     static inline constexpr u64 FRAMES_IN_FLIGHT = 1;
     daxa::TimelineSemaphore gpu_framecount_timeline_sema = device.create_timeline_semaphore(daxa::TimelineSemaphoreInfo{
@@ -122,13 +144,23 @@ struct App : AppWindow<App>
         player.camera.set_rot(player.rot.x, player.rot.y);
         player.update(elapsed_s);
 
-        if (pipeline_compiler.check_if_sources_changed(raster_pipeline))
+        if (pipeline_compiler.check_if_sources_changed(fill_raster_pipeline))
         {
-            auto new_pipeline = pipeline_compiler.recreate_raster_pipeline(raster_pipeline);
+            auto new_pipeline = pipeline_compiler.recreate_raster_pipeline(fill_raster_pipeline);
             std::cout << new_pipeline.to_string() << std::endl;
             if (new_pipeline.is_ok())
             {
-                raster_pipeline = new_pipeline.value();
+                fill_raster_pipeline = new_pipeline.value();
+            }
+        }
+
+        if (pipeline_compiler.check_if_sources_changed(line_raster_pipeline))
+        {
+            auto new_pipeline = pipeline_compiler.recreate_raster_pipeline(line_raster_pipeline);
+            std::cout << new_pipeline.to_string() << std::endl;
+            if (new_pipeline.is_ok())
+            {
+                line_raster_pipeline = new_pipeline.value();
             }
         }
 
@@ -167,7 +199,6 @@ struct App : AppWindow<App>
             .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
         });
 
-        cmd_list.set_pipeline(raster_pipeline);
         auto mat = player.camera.get_vp();
         auto push = DrawPush{
             .view_mat = *reinterpret_cast<f32mat4x4 *>(&mat),
@@ -177,7 +208,13 @@ struct App : AppWindow<App>
             .sampler_id = renderable_world.atlas_sampler,
             .mode = {},
         };
+
+        cmd_list.set_pipeline(fill_raster_pipeline);
         renderable_world.draw(cmd_list, push);
+
+        cmd_list.set_pipeline(line_raster_pipeline);
+        renderable_world.draw(cmd_list, push);
+
         cmd_list.end_renderpass();
 
         cmd_list.pipeline_barrier_image_transition({
@@ -225,6 +262,14 @@ struct App : AppWindow<App>
         {
             toggle_pause();
         }
+
+        // if (key == GLFW_KEY_L && action == GLFW_PRESS)
+        // {
+        //     if (raster_pipeline == &fill_raster_pipeline)
+        //         raster_pipeline = &line_raster_pipeline;
+        //     else
+        //         raster_pipeline = &fill_raster_pipeline;
+        // }
 
         if (!paused)
         {

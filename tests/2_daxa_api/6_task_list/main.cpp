@@ -4,7 +4,7 @@
 
 #include <daxa/utils/task_list.hpp>
 
-#define APPNAME "Daxa API Sample: TaskList"
+#define APPNAME "Daxa API Sample TaskList"
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
 
 #include "shaders/shared.inl"
@@ -750,7 +750,7 @@ int main()
     // tests::simplest();
     // tests::image_upload();
     // tests::execution();
-    // tests::output_graph();
-    tests::mipmapping();
+    tests::output_graph();
+    // tests::mipmapping();
     // tests::drawing();
 }
