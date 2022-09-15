@@ -62,6 +62,11 @@ namespace tests
             .debug_name = "image_2",
         });
 
+        daxa::TimelineQueryPoolId timeline_querry_pool = app.device.create_timeline_query_pool({
+            .querry_count = 2,
+            .debug_name = "timeline_querry",
+        });
+
         auto buffer_ptr = app.device.map_memory_as<std::array<f32, 4>>(staging_upload_buffer);
 
         *buffer_ptr = data;
@@ -183,6 +188,7 @@ namespace tests
         app.device.destroy_buffer(staging_readback_buffer);
         app.device.destroy_image(image_1);
         app.device.destroy_image(image_2);
+        app.device.destroy_timeline_query_pool(timeline_querry_pool);
 
         app.device.collect_garbage();
     }

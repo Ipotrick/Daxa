@@ -12,6 +12,12 @@ namespace daxa
     static inline constexpr u32 SAMPLER_BINDING = 3;
     static inline constexpr u32 BUFFER_DEVICE_ADDRESS_BUFFER_BINDING = 4;
 
+    struct ImplTimelineQuerryPoolSlot
+    {
+        TimelineQueryPoolInfo info = {};
+        VkQueryPool vk_querry_pool = {};
+    };
+
     struct ImplBufferSlot
     {
         BufferInfo info = {};
@@ -173,6 +179,7 @@ namespace daxa
         GpuResourcePool<ImplBufferSlot> buffer_slots = {};
         GpuResourcePool<ImplImageSlot> image_slots = {};
         GpuResourcePool<ImplSamplerSlot> sampler_slots = {};
+        GpuResourcePool<ImplTimelineQuerryPoolSlot> timeline_querry_pool_slots = {};
 
         VkDescriptorSetLayout vk_descriptor_set_layout = {};
         VkDescriptorSet vk_descriptor_set = {};
@@ -182,7 +189,7 @@ namespace daxa
         // The first size is 0 word, second is 1 word, all others are a power of two (maximum is MAX_PUSH_CONSTANT_BYTE_SIZE).
         std::array<VkPipelineLayout, PIPELINE_LAYOUT_COUNT> pipeline_layouts = {};
 
-        void initialize(usize max_buffers, usize max_images, usize max_samplers, VkDevice device, VkBuffer device_address_buffer);
+        void initialize(usize max_buffers, usize max_images, usize max_samplers, usize max_timleline_querry_pools, VkDevice device, VkBuffer device_address_buffer);
         void cleanup(VkDevice device);
     };
 
