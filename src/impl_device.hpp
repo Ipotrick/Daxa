@@ -48,6 +48,7 @@ namespace daxa
         std::deque<std::pair<u64, SamplerId>> main_queue_sampler_zombies = {};
         std::deque<std::pair<u64, SemaphoreZombie>> main_queue_semaphore_zombies = {};
         std::deque<std::pair<u64, PipelineZombie>> main_queue_pipeline_zombies = {};
+        std::deque<std::pair<u64, TimelineQueryPoolId>> main_queue_timeline_querry_pool_zombies = {};
         void main_queue_collect_garbage();
         void wait_idle();
 
@@ -62,6 +63,7 @@ namespace daxa
         auto new_image(ImageInfo const & info) -> ImageId;
         auto new_image_view(ImageViewInfo const & info) -> ImageViewId;
         auto new_sampler(SamplerInfo const & info) -> SamplerId;
+        auto new_timeline_query_pool(TimelineQueryPoolInfo const & info) -> TimelineQueryPoolId;
 
         auto slot(BufferId id) -> ImplBufferSlot &;
         auto slot(ImageId id) -> ImplImageSlot &;
@@ -77,10 +79,12 @@ namespace daxa
         void zombiefy_image(ImageId id);
         void zombiefy_image_view(ImageViewId id);
         void zombiefy_sampler(SamplerId id);
+        void zombiefy_timeline_query_pool(TimelineQueryPoolId id);
 
         void cleanup_buffer(BufferId id);
         void cleanup_image(ImageId id);
         void cleanup_image_view(ImageViewId id);
         void cleanup_sampler(SamplerId id);
+        void cleanup_timeline_querry_pool(TimelineQueryPoolId id);
     };
 } // namespace daxa
