@@ -184,11 +184,13 @@ namespace daxa
         auto create_image(ImageInfo const & info) -> ImageId;
         auto create_image_view(ImageViewInfo const & info) -> ImageViewId;
         auto create_sampler(SamplerInfo const & info) -> SamplerId;
+        auto create_timeline_query_pool(TimelineQueryPoolInfo const & info) -> TimelineQueryPoolId;
 
         void destroy_buffer(BufferId id);
         void destroy_image(ImageId id);
         void destroy_image_view(ImageViewId id);
         void destroy_sampler(SamplerId id);
+        void destroy_timeline_query_pool(TimelineQueryPoolId id);
 
         auto info_buffer(BufferId id) const -> BufferInfo;
         auto buffer_reference(BufferId id) const -> u64;

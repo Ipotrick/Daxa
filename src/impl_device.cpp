@@ -218,6 +218,12 @@ namespace daxa
         auto & impl = *as<ImplDevice>();
         return impl.new_sampler(info);
     }
+    
+    auto Device::create_timeline_query_pool(TimelineQueryPoolInfo const & info) -> TimelineQueryPoolId
+    {
+        auto & impl = *as<ImplDevice>();
+        return impl.new_timeline_query_pool(info);
+    }
 
     void Device::destroy_buffer(BufferId id)
     {
@@ -241,6 +247,12 @@ namespace daxa
     {
         auto & impl = *as<ImplDevice>();
         impl.zombiefy_sampler(id);
+    }
+
+    void Device::destroy_timeline_query_pool(TimelineQueryPoolId id)
+    {
+        auto & impl = *as<ImplDevice>();
+        impl.zombiefy_timeline_query_pool(id);
     }
 
     auto Device::info_buffer(BufferId id) const -> BufferInfo
@@ -498,6 +510,8 @@ namespace daxa
         u32 max_buffers = std::min(this->vk_info.limits.max_descriptor_set_storage_buffers, 1'000u);
         u32 max_images = std::min(std::min(this->vk_info.limits.max_descriptor_set_sampled_images, this->vk_info.limits.max_descriptor_set_storage_images), 1'000u);
         u32 max_samplers = std::min(this->vk_info.limits.max_descriptor_set_samplers, 1'000u);
+        /* If timeline compute and graphics querries are not supported set max_limit to 0 */
+        u32 max_timleline_querry_pools = std::min(this->vk_info.limits.timestamp_compute_and_graphics, 1'000u);
 
         vkGetDeviceQueue(this->vk_device, this->main_queue_family_index, 0, &this->main_queue_vk_queue);
 
@@ -631,6 +645,7 @@ namespace daxa
             max_buffers,
             max_images,
             max_samplers,
+            max_timleline_querry_pools,
             vk_device,
             buffer_device_address_buffer);
     }
@@ -704,6 +719,12 @@ namespace daxa
             [&](auto & semaphore_zombie)
             {
                 vkDestroySemaphore(this->vk_device, semaphore_zombie.vk_semaphore, nullptr);
+            });
+        check_and_cleanup_gpu_resources(
+            this->main_queue_timeline_querry_pool_zombies,
+            [&](auto &id)
+            {
+                this->cleanup_timeline_querry_pool(id);
             });
     }
 
@@ -1106,6 +1127,38 @@ namespace daxa
         return SamplerId{id};
     }
 
+    auto ImplDevice::new_timeline_query_pool(TimelineQueryPoolInfo const & info) -> TimelineQueryPoolId
+    {
+        /* MASA TODO: Should Add a check for support of timeline querries
+            - here or earliner (during device creation/section) I'm not sure */
+        auto [id, ret] = gpu_table.timeline_querry_pool_slots.new_slot();
+        
+        ret.info = info;
+
+        VkQueryPoolCreateInfo vk_querry_pool_create_info{
+            .sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = 0,
+            .queryType = VK_QUERY_TYPE_TIMESTAMP,
+            .queryCount = info.querry_count
+        };
+        vkCreateQueryPool(this->vk_device, &vk_querry_pool_create_info, nullptr, &ret.vk_querry_pool);
+
+        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
+        {
+            VkDebugUtilsObjectNameInfoEXT querry_pool_name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_QUERY_POOL,
+                .objectHandle = reinterpret_cast<uint64_t>(ret.vk_querry_pool),
+                .pObjectName = info.debug_name.c_str(),
+            };
+            vkSetDebugUtilsObjectNameEXT(vk_device, &querry_pool_name_info);
+        }
+
+        return TimelineQueryPoolId{id};
+    }
+
     void ImplDevice::cleanup_buffer(BufferId id)
     {
         ImplBufferSlot & buffer_slot = this->gpu_table.buffer_slots.dereference_id(id);
@@ -1170,6 +1223,17 @@ namespace daxa
         gpu_table.sampler_slots.return_slot(id);
     }
 
+    void ImplDevice::cleanup_timeline_querry_pool(TimelineQueryPoolId id)
+    {
+        ImplTimelineQuerryPoolSlot & query_slot = this->gpu_table.timeline_querry_pool_slots.dereference_id(id);
+
+        vkDestroyQueryPool(this->vk_device, query_slot.vk_querry_pool, nullptr);
+
+        query_slot = {};
+
+        gpu_table.timeline_querry_pool_slots.return_slot(id);
+    }
+
     ImplDevice::~ImplDevice()
     {
         wait_idle();
@@ -1211,6 +1275,13 @@ namespace daxa
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_zombies_mtx});
         u64 main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
         this->main_queue_sampler_zombies.push_front({main_queue_cpu_timeline, id});
+    }
+
+    void ImplDevice::zombiefy_timeline_query_pool(TimelineQueryPoolId id)
+    {
+        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_zombies_mtx});
+        u64 main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
+        this->main_queue_timeline_querry_pool_zombies.push_front({main_queue_cpu_timeline, id});
     }
 
     auto ImplDevice::slot(BufferId id) -> ImplBufferSlot &
