@@ -35,13 +35,17 @@ f32vec4 fs_main(VertexOutput vertex_output) : SV_TARGET
     // if (albedo.a < 0.25)
     //     discard;
 
-    f32vec3 col = f32vec3(1, 0, 1);
-    col += albedo.rgb * 0.01;
+    f32vec3 col = albedo.rgb;
+    col = rgb2hsv(col);
+    col.x = frac(col.x + 0.5);
+    col.z = 1.0 - col.z;
+    col = hsv2rgb(col);
 
     switch (p.mode)
     {
-    case 0: result = f32vec4(col * diffuse * sky_col, 1.0f); break;
-    case 1: result = f32vec4(col * diffuse * sky_col, 0.4f); break;
+    case 0: result = f32vec4(col, 1.0f); break;
+    case 1: result = f32vec4(col, 0.2f); break;
+    case 2: result = f32vec4(col * diffuse * sky_col, 0.1f); break;
     }
 
     return result;

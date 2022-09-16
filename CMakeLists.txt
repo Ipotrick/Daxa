@@ -55,7 +55,8 @@ add_library(daxa STATIC
 add_library(daxa::daxa ALIAS daxa)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    target_compile_options(daxa PUBLIC /std:c++latest)
+    target_compile_options(daxa PRIVATE /std:c++latest)
+    target_compile_features(daxa PUBLIC cxx_std_20)
 else()
     target_compile_features(daxa PUBLIC cxx_std_20)
 endif()
@@ -73,7 +74,9 @@ if(DAXA_ENABLE_GLSLANG)
     )
     target_link_libraries(daxa
         PUBLIC
-        HLSL SPIRV glslang OGLCompiler
+        glslang::glslang
+        glslang::SPIRV
+        glslang::HLSL
     )
 endif()
 
