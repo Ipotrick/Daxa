@@ -189,15 +189,18 @@ namespace tests
 
         app.device.wait_idle();
 
-        std::array<u64, 2> query_pool_results;
+        std::array<u64, 4> query_pool_results;
         app.device.get_timeline_query_pool_results({
             .query_pool_id = timeline_querry_pool,
             .first_query_index = 0,
             .query_count = 2,
             .dst_data = query_pool_results.data(),
-            .wait = true,
+            .wait = false,
         });
-        std::cout << "gpu execution took " << static_cast<f64>(query_pool_results[1] - query_pool_results[0]) / 1000000.0 << std::endl;
+        if(query_pool_results[1] && query_pool_results[3])
+        {
+            std::cout << "gpu execution took " << static_cast<f64>(query_pool_results[2] - query_pool_results[0]) / 1000000.0 << " ms" << std::endl;
+        }
         std::array<f32, 4> readback_data = *app.device.map_memory_as<std::array<f32, 4>>(staging_readback_buffer);
 
         app.device.unmap_memory(staging_readback_buffer);
