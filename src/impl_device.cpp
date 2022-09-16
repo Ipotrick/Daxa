@@ -22,6 +22,15 @@ namespace daxa
         impl.wait_idle();
     }
 
+    void Device::get_timeline_query_pool_results(GetQueryPoolResultsInfo const & info)
+    {
+        auto & impl = *as<ImplDevice>();
+        DAXA_DBG_ASSERT_TRUE_M(info.first_query_index + info.query_count - 1 < impl.slot(info.query_pool_id).info.querry_count, "attempting to query results that are out of bound for given pool");
+        VkQueryResultFlagBits flags = VK_QUERY_RESULT_64_BIT;
+        if(info.wait) { flags = static_cast<VkQueryResultFlagBits>(flags | VK_QUERY_RESULT_WAIT_BIT); }
+        vkGetQueryPoolResults(impl.vk_device, impl.slot(info.query_pool_id).vk_query_pool, info.first_query_index, info.query_count, info.query_count * sizeof(u64), info.dst_data, 0, flags); 
+    }
+
     void Device::submit_commands(CommandSubmitInfo const & submit_info)
     {
         auto & impl = *as<ImplDevice>();
@@ -1142,7 +1151,7 @@ namespace daxa
             .queryType = VK_QUERY_TYPE_TIMESTAMP,
             .queryCount = info.querry_count
         };
-        vkCreateQueryPool(this->vk_device, &vk_querry_pool_create_info, nullptr, &ret.vk_querry_pool);
+        vkCreateQueryPool(this->vk_device, &vk_querry_pool_create_info, nullptr, &ret.vk_query_pool);
 
         if (this->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
         {
@@ -1150,7 +1159,7 @@ namespace daxa
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_QUERY_POOL,
-                .objectHandle = reinterpret_cast<uint64_t>(ret.vk_querry_pool),
+                .objectHandle = reinterpret_cast<uint64_t>(ret.vk_query_pool),
                 .pObjectName = info.debug_name.c_str(),
             };
             vkSetDebugUtilsObjectNameEXT(vk_device, &querry_pool_name_info);
@@ -1225,9 +1234,9 @@ namespace daxa
 
     void ImplDevice::cleanup_timeline_querry_pool(TimelineQueryPoolId id)
     {
-        ImplTimelineQuerryPoolSlot & query_slot = this->gpu_table.timeline_querry_pool_slots.dereference_id(id);
+        ImplTimelineQueryPoolSlot & query_slot = this->gpu_table.timeline_querry_pool_slots.dereference_id(id);
 
-        vkDestroyQueryPool(this->vk_device, query_slot.vk_querry_pool, nullptr);
+        vkDestroyQueryPool(this->vk_device, query_slot.vk_query_pool, nullptr);
 
         query_slot = {};
 
@@ -1322,5 +1331,10 @@ namespace daxa
     auto ImplDevice::slot(SamplerId id) const -> ImplSamplerSlot const &
     {
         return gpu_table.sampler_slots.dereference_id(id);
+    }
+
+    auto ImplDevice::slot(TimelineQueryPoolId id) const -> ImplTimelineQueryPoolSlot const &
+    {
+        return gpu_table.timeline_querry_pool_slots.dereference_id(id);
     }
 } // namespace daxa

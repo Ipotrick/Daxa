@@ -142,6 +142,20 @@ namespace daxa
         u32 stride = {};
     };
 
+    struct ResetTimelineQueryPoolInfo
+    {
+        TimelineQueryPoolId query_pool_id = {};
+        u32 first_query = {};
+        u32 query_count = {};
+    };
+
+    struct WriteTimestampInfo
+    {
+        TimelineQueryPoolId query_pool_id = {};
+        PipelineStageFlags pipeline_stage = {};
+        u32 query_index = {};
+    };
+
     struct CommandList : ManagedPtr
     {
         CommandList();
@@ -181,6 +195,9 @@ namespace daxa
         void draw(DrawInfo const & info);
         void draw_indexed(DrawIndexedInfo const & info);
         void draw_indirect(DrawIndirectInfo const & info);
+
+        void reset_timeline_query_pool(ResetTimelineQueryPoolInfo const & info);
+        void write_timestamp(WriteTimestampInfo const & info);
 
         void complete();
         auto is_complete() const -> bool;
