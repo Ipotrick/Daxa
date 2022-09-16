@@ -74,6 +74,7 @@ namespace daxa
         auto slot(ImageId id) const -> ImplImageSlot const &;
         auto slot(ImageViewId id) const -> ImplImageViewSlot const &;
         auto slot(SamplerId id) const -> ImplSamplerSlot const &;
+        auto slot(TimelineQueryPoolId id) const -> ImplTimelineQueryPoolSlot const &;
 
         void zombiefy_buffer(BufferId id);
         void zombiefy_image(ImageId id);
