@@ -79,7 +79,7 @@ struct App : AppWindow<App>
             .face_culling = daxa::FaceCullFlagBits::NONE,
             .depth_bias_enable = true,
             .depth_bias_constant_factor = 0.0f,
-            .depth_bias_slope_factor = -1.0f,
+            .depth_bias_slope_factor = 0.0f,
             .line_width = 1.0f,
         },
         .push_constant_size = sizeof(DrawPush),
