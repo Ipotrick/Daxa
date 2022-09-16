@@ -73,7 +73,9 @@ if(DAXA_ENABLE_GLSLANG)
     )
     target_link_libraries(daxa
         PUBLIC
-        HLSL SPIRV glslang OGLCompiler
+        glslang::glslang
+        glslang::SPIRV
+        glslang::HLSL
     )
 endif()
 
