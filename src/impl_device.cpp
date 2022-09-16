@@ -28,6 +28,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(info.first_query_index + info.query_count - 1 < impl.slot(info.query_pool_id).info.querry_count, "attempting to query results that are out of bound for given pool");
         VkQueryResultFlagBits flags = VK_QUERY_RESULT_64_BIT;
         if(info.wait) { flags = static_cast<VkQueryResultFlagBits>(flags | VK_QUERY_RESULT_WAIT_BIT); }
+        else { flags = static_cast<VkQueryResultFlagBits>(flags | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT); }
         vkGetQueryPoolResults(impl.vk_device, impl.slot(info.query_pool_id).vk_query_pool, info.first_query_index, info.query_count, info.query_count * sizeof(u64), info.dst_data, 0, flags); 
     }
 
