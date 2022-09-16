@@ -178,6 +178,15 @@ namespace daxa
         Swapchain swapchain;
     };
 
+    struct GetQueryPoolResultsInfo
+    {
+        TimelineQueryPoolId query_pool_id = {};
+        u32 first_query_index = {};
+        u32 query_count = {};
+        void* dst_data = {};
+        bool wait = {};
+    };
+
     struct Device : ManagedPtr
     {
         auto create_buffer(BufferInfo const & info) -> BufferId;
@@ -215,6 +224,7 @@ namespace daxa
             return reinterpret_cast<T *>(map_memory(id));
         }
 
+        void get_timeline_query_pool_results(GetQueryPoolResultsInfo const & info);
         void submit_commands(CommandSubmitInfo const & submit_info);
         void present_frame(PresentInfo const & info);
         void collect_garbage();
