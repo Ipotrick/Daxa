@@ -922,6 +922,17 @@ namespace daxa
         preamble += "#extension GL_EXT_nonuniform_qualifier : enable\n";
         preamble += "#extension GL_EXT_buffer_reference : enable\n";
         preamble += "#extension GL_EXT_shader_explicit_arithmetic_types_int64 : enable\n";
+
+        // TODO(grundlett): Probably expose this as a compile option!
+        preamble += "#extension GL_KHR_shader_subgroup_basic : enable\n";
+        preamble += "#extension GL_KHR_shader_subgroup_vote : enable\n";
+        preamble += "#extension GL_KHR_shader_subgroup_arithmetic : enable\n";
+        preamble += "#extension GL_KHR_shader_subgroup_ballot : enable\n";
+        preamble += "#extension GL_KHR_shader_subgroup_shuffle : enable\n";
+        preamble += "#extension GL_KHR_shader_subgroup_shuffle_relative : enable\n";
+        preamble += "#extension GL_KHR_shader_subgroup_clustered : enable\n";
+        preamble += "#extension GL_KHR_shader_subgroup_quad : enable\n";
+
         if (this->impl_device.as<ImplDevice>()->info.use_scalar_layout)
         {
             preamble += "#extension GL_EXT_scalar_block_layout : require\n";
@@ -954,6 +965,8 @@ namespace daxa
 
         shader.setStrings(sources.data(), static_cast<i32>(sources.size()));
         shader.setEntryPoint("main");
+        shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_3);
+        shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_5);
         // shader.setOverrideVersion(450); // not available yet in latest vcpkg version
 
         GlslangFileIncluder includer;
@@ -1127,7 +1140,7 @@ namespace daxa
     }
 
     ImplPipeline::ImplPipeline(ManagedWeakPtr impl_device)
-        : impl_device{ impl_device }
+        : impl_device{impl_device}
     {
     }
 
@@ -1140,7 +1153,7 @@ namespace daxa
             main_queue_cpu_timeline_value,
             PipelineZombie{
                 .vk_pipeline = vk_pipeline,
-            }
+            },
         });
     }
 } // namespace daxa
