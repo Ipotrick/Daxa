@@ -218,6 +218,15 @@ namespace daxa
         vkCmdDispatch(impl.vk_cmd_buffer, group_x, group_y, group_z);
     }
 
+    void CommandList::dispatch_indirect(DispatchIndirectInfo const & info)
+    {
+        auto & impl = *as<ImplCommandList>();
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+        impl.flush_barriers();
+
+        vkCmdDispatchIndirect(impl.vk_cmd_buffer, impl.impl_device.as<ImplDevice>()->slot(info.indirect_buffer).vk_buffer, info.offset);
+    }
+
     void defer_destruction_helper(void * impl_void, GPUResourceId id, u8 index)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(impl_void);
