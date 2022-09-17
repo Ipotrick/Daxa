@@ -967,7 +967,7 @@ namespace daxa
         shader.setEntryPoint("main");
         shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_3);
         shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_5);
-        // shader.setOverrideVersion(450); // not available yet in latest vcpkg version
+        // shader.setOverrideVersion(450); // What should this be? I think it might be set by default
 
         GlslangFileIncluder includer;
         includer.impl_pipeline_compiler = this;

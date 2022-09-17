@@ -117,6 +117,12 @@ namespace daxa
         Rect2D render_area = {};
     };
 
+    struct DispatchIndirectInfo
+    {
+        BufferId indirect_buffer = {};
+        usize offset = {};
+    };
+
     struct DrawInfo
     {
         u32 vertex_count = {};
@@ -167,6 +173,7 @@ namespace daxa
         void set_pipeline(ComputePipeline const & pipeline);
         void set_pipeline(RasterPipeline const & pipeline);
         void dispatch(u32 group_x, u32 group_y = 1, u32 group_z = 1);
+        void dispatch_indirect(DispatchIndirectInfo const & info);
 
         void destroy_buffer_deferred(BufferId id);
         void destroy_image_deferred(ImageId id);
