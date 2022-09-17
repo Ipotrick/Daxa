@@ -348,6 +348,36 @@ namespace daxa
         }
         std::vector<u32> p_spirv = p_spirv_result.value();
 
+        // TODO(grundlett): Maybe add ability to output the spirv binary for people!
+        // {
+        //     u32 i = 0;
+        //     std::string vs_name = modified_info.vertex_shader_info.debug_name + ".vert.txt";
+        //     std::ofstream vs_file{vs_name};
+        //     for (auto s : v_spirv)
+        //     {
+        //         vs_file << "0x" << std::setfill('0') << std::setw(8) << std::hex << s << ", ";
+        //         if (++i == 8)
+        //         {
+        //             i = 0;
+        //             vs_file << "\n";
+        //         }
+        //     }
+        // }
+        // {
+        //     u32 i = 0;
+        //     std::string fs_name = modified_info.fragment_shader_info.debug_name + ".frag.txt";
+        //     std::ofstream fs_file{fs_name};
+        //     for (auto s : p_spirv)
+        //     {
+        //         fs_file << "0x" << std::setfill('0') << std::setw(8) << std::hex << s << ", ";
+        //         if (++i == 8)
+        //         {
+        //             i = 0;
+        //             fs_file << "\n";
+        //         }
+        //     }
+        // }
+
         VkShaderModule v_vk_shader_module = {};
         VkShaderModule p_vk_shader_module = {};
 
