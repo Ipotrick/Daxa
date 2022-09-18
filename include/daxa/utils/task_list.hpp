@@ -100,7 +100,7 @@ namespace daxa
     };
 
     using TaskUsedBuffers = std::vector<std::tuple<TaskBufferId, TaskBufferAccess>>;
-    using TaskUsedImages = std::vector<std::tuple<TaskImageId, TaskImageAccess>>;
+    using TaskUsedImages = std::vector<std::tuple<TaskImageId, TaskImageAccess, std::optional<ImageMipArraySlice>>>;
 
     struct TaskList;
     struct Device;
@@ -113,7 +113,6 @@ namespace daxa
         auto get_used_task_images() -> TaskUsedImages &;
         auto get_buffer(TaskBufferId const & task_id) -> BufferId;
         auto get_image(TaskImageId const & task_id) -> ImageId;
-        auto get_image_slice(TaskImageId const & task_id) -> ImageMipArraySlice;
 
       private:
         friend struct TaskRuntime;
@@ -124,42 +123,19 @@ namespace daxa
     };
 
     using TaskCallback = std::function<void(TaskInterface &)>;
-    using CreateTaskBufferCallback = std::function<BufferId(void)>;
-    using CreateTaskImageCallback = std::function<ImageId(void)>;
 
     struct TaskBufferInfo
     {
-        CreateTaskBufferCallback fetch_callback = {};
+        BufferId * buffer = {};
         Access last_access = AccessConsts::NONE;
-        std::string debug_name = {};
     };
 
     struct TaskImageInfo
     {
-        CreateTaskImageCallback fetch_callback = {};
+        ImageId * image = {};
         Access last_access = AccessConsts::NONE;
         ImageLayout last_layout = ImageLayout::UNDEFINED;
-        ImageMipArraySlice slice = {};
         std::optional<std::pair<Swapchain, BinarySemaphore>> swapchain_parent = {};
-        std::string debug_name = {};
-    };
-
-    struct TaskImageSplitInfo
-    {
-        TaskImageId src_image = {};
-        ImageMipArraySlice result_image_a_slice = {};
-    };
-
-    struct TaskImageMergeInfo
-    {
-        TaskImageId a = {};
-        TaskImageId b = {};
-    };
-
-    struct TaskImageBorrowInfo
-    {
-        TaskImageId image_to_borrow_from = {};
-        ImageMipArraySlice slice = {};
     };
 
     struct TaskInfo
@@ -170,42 +146,14 @@ namespace daxa
         std::string debug_name = {};
     };
 
-    struct TaskRenderAttachmentInfo
-    {
-        TaskImageId image = {};
-        // optional field:
-        ImageLayout layout_override = {};
-        AttachmentLoadOp load_op = AttachmentLoadOp::DONT_CARE;
-        AttachmentStoreOp store_op = AttachmentStoreOp::STORE;
-        ClearValue clear_value = {};
-    };
-
     struct CommandSubmitInfo;
     struct PresentInfo;
 
     struct TaskListInfo
     {
         Device device;
-        std::string debug_name = {};
-    };
-
-    struct TaskCopyImageInfo
-    {
-        TaskImageId src_image = {};
-        TaskImageId dst_image = {};
-        ImageArraySlice src_slice = {};
-        Offset3D src_offset = {};
-        ImageArraySlice dst_slice = {};
-        Offset3D dst_offset = {};
-        Extent3D extent = {};
-        std::string debug_name = {};
-    };
-
-    struct TaskImageClearInfo
-    {
-        ClearValue clear_value = std::array<f32, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
-        TaskImageId dst_image = {};
-        ImageMipArraySlice dst_slice = {};
+        bool optimize_task_order = true;
+        bool optimize_barriers = true;
         std::string debug_name = {};
     };
 
@@ -222,17 +170,8 @@ namespace daxa
 
         auto create_task_buffer(TaskBufferInfo const & info) -> TaskBufferId;
         auto create_task_image(TaskImageInfo const & info) -> TaskImageId;
-        // Split results must not have "holes" in the ranges.
-        // They must be representable by one continuous ImageMipArraySlice each.
-        auto split_task_image(TaskImageSplitInfo const & info) -> std::pair<TaskImageId, TaskImageId>;
-        // Merge result must not have "holes" in the range.
-        // They must be representable by one continuous ImageMipArraySlice.
-        auto merge_task_images(TaskImageMergeInfo const & info) -> TaskImageId;
 
         void add_task(TaskInfo const & info);
-
-        void add_copy_image_to_image(TaskCopyImageInfo const & info);
-        void add_clear_image(TaskImageClearInfo const & info);
 
         void submit(CommandSubmitInfo* info);
         void present(TaskPresentInfo const& info);

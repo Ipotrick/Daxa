@@ -898,4 +898,20 @@ namespace daxa
         u32 width = {};
         u32 height = {};
     };
+    
+    struct MemoryBarrierInfo
+    {
+        Access awaited_pipeline_access = AccessConsts::NONE;
+        Access waiting_pipeline_access = AccessConsts::NONE;
+    };
+
+    struct ImageBarrierInfo
+    {
+        Access awaited_pipeline_access = AccessConsts::NONE;
+        Access waiting_pipeline_access = AccessConsts::NONE;
+        ImageLayout before_layout = ImageLayout::UNDEFINED;
+        ImageLayout after_layout = ImageLayout::UNDEFINED;
+        ImageId image_id = {};
+        ImageMipArraySlice image_slice = {};
+    };
 } // namespace daxa
