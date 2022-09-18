@@ -45,6 +45,7 @@ add_library(daxa STATIC
     "src/impl_gpu_resources.cpp"
     "src/impl_semaphore.cpp"
     "src/impl_dependencies.cpp"
+    "src/impl_split_barrier.cpp"
 
     "src/utils/impl_task_list.cpp"
     "src/utils/impl_imgui.cpp"

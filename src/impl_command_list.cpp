@@ -1,4 +1,6 @@
 #include "impl_command_list.hpp"
+
+#include "impl_split_barrier.hpp"
 #include "impl_device.hpp"
 
 namespace daxa
@@ -271,7 +273,7 @@ namespace daxa
         return impl.info;
     }
 
-    void CommandList::pipeline_barrier(PipelineBarrierInfo const & info)
+    void CommandList::pipeline_barrier(MemoryBarrierInfo const & info)
     {
         auto & impl = *as<ImplCommandList>();
 
@@ -292,7 +294,7 @@ namespace daxa
         };
     }
 
-    void CommandList::pipeline_barrier_image_transition(PipelineBarrierImageTransitionInfo const & info)
+    void CommandList::pipeline_barrier_image_transition(ImageBarrierInfo const & info)
     {
         auto & impl = *as<ImplCommandList>();
 
@@ -568,6 +570,67 @@ namespace daxa
             };
             vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &cmd_pool_name_info);
         }
+    }
+
+    void ImplCommandList::set_split_barrier(SetSplitBarrier const & info)
+    {
+        auto & impl = *as<ImplCommandList>();
+        SplitBarrierInfo split_barrier_info = info.split_barrier.info;
+
+        bool holds_memory_barrier = std::holds_alternative<MemoryBarrierInfo>(split_barrier_info.barrier); 
+        VkMemoryBarrier2 memory_barrier;
+        VkImageMemoryBarrier2 image_memory_barrier;
+
+        if(holds_memory_barrier)
+        {
+            memory_barrier = {
+                .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
+                .pNext = nullptr,
+                .srcStageFlags = static_cast<u64>(split_barrier_info.barrier.awaited_pipeline_access.stages),
+                .srcAccessMask = static_cast<u32>(split_barrier_info.barrier.awaited_pipeline_access.access),
+                .dstStageFlags = static_cast<u64>(split_barrier_info.barrier.waiting_pipeline_access.stages),
+                .dstAccessMask = static_cast<u32>(split_barrier_info.barrier.waiting_pipeline_access.access),
+            }
+        } else {
+            image_memory_barrier = {
+                .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+                .pNext = nullptr,
+                .srcStageFlags = static_cast<u64>(split_barrier_info.barrier.awaited_pipeline_access.stages),
+                .srcAccessMask = static_cast<u32>(split_barrier_info.barrier.awaited_pipeline_access.access),
+                .dstStageFlags = static_cast<u64>(split_barrier_info.barrier.waiting_pipeline_access.stages),
+                .dstAccessMask = static_cast<u32>(split_barrier_info.barrier.waiting_pipeline_access.access),
+                .oldLayout = static_cast<VkImageLayout>(split_barrier_info.barrier.before_layout),
+                .newLayout = static_cast<VkImageLayout>(split_barrier_info.barrier.after_layout),
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = impl.impl_device.as<ImplDevice>()->slot(split_barrier_info.barrier.image_id).vk_image,
+                .subresourceRange = *reinterpret_cast<VkImageSubresourceRange const *>(&split_barrier_info.barrier.image_slice),
+            }
+        }
+
+        VkDependencyInfo dependency_info{
+            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+            .pNext = nullptr,
+            .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+            .memoryBarrierCount = holds_memory_barrier ? 1 : 0,
+            .pMemoryBarriers = holds_memory_barrier ? &memory_barrier : nullptr,
+            .bufferMemoryBarrierCount = 0,
+            .pBufferMemoryBarriers = 0,
+            .imageMemoryBarrierCount = holds_memory_barrier ? 0 : 1,
+            .pImageMeoryBarriers = holds_memory_barrier ? nullptr : &image_memory_barrier,
+        };
+        vkCmdSetEvent2(impl.vk_command_buffer, info.split_barrier.data, &dependency_info);
+    }
+
+    void ImplCommandList::reset_split_barriers(ResetSplitBarriersInfo const & info)
+    {
+        auto & impl = *as<ImplCommandList>();
+        // MASA : CONTINUE HERE - single command reset
+    }
+
+    void ImplCommandList::wait_split_barriers(WaitSplitBarriersInfo const & info)
+    {
+
     }
 
     void ImplCommandList::reset()
