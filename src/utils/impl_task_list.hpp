@@ -19,45 +19,47 @@ namespace daxa
 {
     struct ImplDevice;
 
+    struct EventId
+    {
+        usize submit_scope_index = {};
+        usize event_index = {};
+    };
+
     struct ImplTaskBuffer
     {
-        Access latest_access = AccessConsts::NONE;
+        Access latest_access = AccessConsts::NONE; 
         usize latest_access_task_index = {};
-        CreateTaskBufferCallback fetch_callback = {};
+        EventId latest_access_event = {};
+        BufferId* buffer = {};
         std::string debug_name = {};
     };
 
-    struct RuntimeTaskBuffer
+    TaskImageTrackedSlice
     {
-        BufferId buffer_id = {};
+        Access latest_access = AccessConsts::NONE;
+        ImageLayout latest_layout = ImageLayout::UNDEFINED;
+        EventId latest_access_event = {};
+        ImageMipArraySlice slice = {};
     };
 
     struct ImplTaskImage
     {
-        TaskImageId root_parent_id = {};
-        usize lifetime_start_event_index = {};
-        usize lifetime_end_event_index = {};
-        std::optional<std::array<TaskImageId, 2>> merge_src_images = {};
-
-        Access latest_access = AccessConsts::NONE;
-        ImageLayout latest_layout = ImageLayout::UNDEFINED;
-        usize latest_access_task_index = {};
-        usize latest_access_submit_scope_index = {};
-        CreateTaskImageCallback fetch_callback = {};
-        ImageMipArraySlice slice = {};
+        ImageId* image = {};
+        std::vector<TaskImageTrackedSlice> slices = {};
         std::optional<std::pair<Swapchain, BinarySemaphore>> parent_swapchain = {};
         bool swapchain_semaphore_waited_upon = {};
         std::string debug_name = {};
     };
 
-    struct RuntimeTaskImage
+    struct TaskMemoryBarrier
     {
-        ImageId image_id = {};
+        Access awaited_pipeline_access = AccessConsts::NONE;
+        Access waiting_pipeline_access = AccessConsts::NONE;
+        BufferId buffer_id = {};
     };
 
-    struct TaskPipelineBarrier
+    struct TaskImageBarrier
     {
-        bool image_barrier = false;
         Access awaited_pipeline_access = AccessConsts::NONE;
         Access waiting_pipeline_access = AccessConsts::NONE;
         ImageLayout before_layout = ImageLayout::UNDEFINED;
@@ -66,49 +68,58 @@ namespace daxa
         ImageMipArraySlice image_slice = {};
     };
 
-    struct ImplGenericTask
+    struct TaskEvent
     {
-        std::vector<TaskPipelineBarrier> barriers = {};
         TaskInfo info = {};
     };
 
-    struct ImplCreateBufferTask
+    struct CreateTaskBufferEvent
     {
         TaskBufferId id = {};
     };
 
-    struct TaskImageCreateEvent
+    struct CreateTaskImageEvent
     {
         std::array<TaskImageId, 2> ids = {};
         usize id_count = {};
     };
 
-    struct TaskSubmitEvent
+    struct SubmitEvent
     {
         std::vector<TaskPipelineBarrier> barriers = {};
         CommandSubmitInfo submit_info;
         CommandSubmitInfo* user_submit_info;
     };  
 
-    struct TaskPresentEvent
+    struct PresentEvent
     {
         PresentInfo present_info;
         std::vector<BinarySemaphore>* user_binary_semaphores = {};
         TaskImageId presented_image = {};
     };
 
-    using TaskEventVariant = std::variant<
-        ImplGenericTask,
-        ImplCreateBufferTask,
-        TaskImageCreateEvent,
-        TaskSubmitEvent,
-        TaskPresentEvent
+    using EventVariant = std::variant<
+        TaskEvent,
+        CreateTaskBufferEvent,
+        CreateTaskImageEvent,
+        SubmitEvent,
+        PresentEvent,
+        std::monostate
     >;
 
-    struct TaskEvent
+    struct EventDependency
     {
-        usize submit_scope_index = {};
-        TaskEventVariant event_variant;
+        EventId src = {};
+        EventId dst = {};
+        std::vector<TaskMemoryBarrier> memory_barriers = {};
+        std::vector<TaskMemoryBarrier> image _barriers = {};
+    }
+
+    struct Event
+    {
+        std::vector<usize> src_event_dependency_indices = {};
+        std::vector<usize> dst_event_dependency_indices = {};
+        EventVariant event_variant = {};
     };
 
     struct TaskSubmitScope
@@ -127,8 +138,6 @@ namespace daxa
         std::vector<ImplTaskBuffer> & impl_task_buffers;
         std::vector<ImplTaskImage> & impl_task_images;
         std::vector<TaskSubmitScope> & submit_scopes;
-        std::vector<RuntimeTaskBuffer> runtime_buffers = {};
-        std::vector<RuntimeTaskImage> runtime_images = {};
 
         std::optional<BinarySemaphore> last_submit_semaphore = {};
 
@@ -137,38 +146,25 @@ namespace daxa
         void pipeline_barriers(std::vector<TaskPipelineBarrier> const & barriers);
     };
 
-    struct TaskRecordState
+    struct EventSubmitScope
     {
+        std::vector<Event> events = {};
     };
 
-    struct SubmitScope
+    struct EventBatch
     {
-        std::vector<CommandList> recorded_command_lists = {};
-        std::vector<usize> used_swapchain_images = {}; 
-    };
-
-    struct TaskLink
-    {
-        u64 event_a;
-        u64 event_b;
-        u64 resource;
-        TaskPipelineBarrier barrier;
-    };
-
-    struct TaskGraph
-    {
-        std::vector<TaskLink> buffer_links;
-        std::vector<TaskLink> image_links;
+        std::vector<EventId> events = {};
     };
 
     struct ImplTaskList final : ManagedSharedState
     {
         TaskListInfo info;
 
-        std::vector<TaskEvent> events = {};
+        std::vector<EventSubmitScope> event_submit_scopes = {};
+        std::vector<EventDependency> event_dependencies = {};
+        std::vector<EventBatch> event_batches = {};
         std::vector<ImplTaskBuffer> impl_task_buffers = {};
         std::vector<ImplTaskImage> impl_task_images = {};
-        std::vector<TaskSubmitScope> submit_scopes = {};
 
         TaskRecordState record_state = {};
         TaskGraph compiled_graph = {};

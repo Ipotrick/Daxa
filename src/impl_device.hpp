@@ -47,6 +47,7 @@ namespace daxa
         std::deque<std::pair<u64, ImageViewId>> main_queue_image_view_zombies = {};
         std::deque<std::pair<u64, SamplerId>> main_queue_sampler_zombies = {};
         std::deque<std::pair<u64, SemaphoreZombie>> main_queue_semaphore_zombies = {};
+        std::deque<std::pair<u64, GPUEventZombie>> main_queue_event_zombies = {};
         std::deque<std::pair<u64, PipelineZombie>> main_queue_pipeline_zombies = {};
         void main_queue_collect_garbage();
         void wait_idle();

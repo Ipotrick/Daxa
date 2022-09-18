@@ -3,6 +3,9 @@
 #include <daxa/core.hpp>
 #include <daxa/gpu_resources.hpp>
 #include <daxa/pipeline.hpp>
+#include <daxa/split_barrier.hpp>
+
+#include <span>
 
 namespace daxa
 {
@@ -84,22 +87,6 @@ namespace daxa
         u32 clear_value = {};
     };
 
-    struct PipelineBarrierInfo
-    {
-        Access awaited_pipeline_access = AccessConsts::NONE;
-        Access waiting_pipeline_access = AccessConsts::NONE;
-    };
-
-    struct PipelineBarrierImageTransitionInfo
-    {
-        Access awaited_pipeline_access = AccessConsts::NONE;
-        Access waiting_pipeline_access = AccessConsts::NONE;
-        ImageLayout before_layout = ImageLayout::UNDEFINED;
-        ImageLayout after_layout = ImageLayout::UNDEFINED;
-        ImageId image_id = {};
-        ImageMipArraySlice image_slice = {};
-    };
-
     struct RenderAttachmentInfo
     {
         ImageViewId image_view{};
@@ -142,6 +129,23 @@ namespace daxa
         u32 stride = {};
     };
 
+    struct SetSplitBarrierInfo
+    {
+        SplitBarrier & split_barrier;
+    };
+
+    struct ResetSplitBarriersInfo
+    {
+        SplitBarrier & split_barriers;
+        PipelineStageFlags stage;
+    };
+
+    struct WaitSplitBarriersInfo
+    {
+        std::span<SplitBarrier> split_barriers;
+    };
+
+
     struct CommandList : ManagedPtr
     {
         CommandList();
@@ -155,8 +159,8 @@ namespace daxa
         void clear_buffer(BufferClearInfo const & info);
         void clear_image(ImageClearInfo const & info);
 
-        void pipeline_barrier(PipelineBarrierInfo const & info);
-        void pipeline_barrier_image_transition(PipelineBarrierImageTransitionInfo const & info);
+        void pipeline_barrier(MemoryBarrierInfo const & info);
+        void pipeline_barrier_image_transition(ImageBarrierInfo const & info);
 
         void push_constant(void const * data, u32 size, u32 offset = 0);
         template <typename T>
@@ -181,6 +185,10 @@ namespace daxa
         void draw(DrawInfo const & info);
         void draw_indexed(DrawIndexedInfo const & info);
         void draw_indirect(DrawIndirectInfo const & info);
+
+        void set_split_barrier(SetSplitBarrierInfo const & info);
+        void reset_split_barriers(ResetSplitBarriersInfo const & info);
+        void wait_split_barriers(WaitSplitBarriersInfo const & info);
 
         void complete();
         auto is_complete() const -> bool;

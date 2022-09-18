@@ -196,93 +196,13 @@ namespace daxa
 
         impl.events.push_back({
             .submit_scope_index = impl.submit_scopes.size()-1,
-            .event_variant = TaskImageCreateEvent{
+            .event_variant = CreateTaskImageEvent{
                 .ids = { task_image_id, {} },
                 .id_count = 1,
             },
         });
 
         return task_image_id;
-    }
-    
-    auto TaskList::split_task_image(TaskImageSplitInfo const & info) -> std::pair<TaskImageId, TaskImageId>
-    {
-        auto & impl = *as<ImplTaskList>();
-        DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can only record to uncompleted task list");
-
-        usize task_index = impl.events.size();
-        ImplTaskImage& src = impl.impl_task_images[info.src_image.index];
-        DAXA_DBG_ASSERT_TRUE_M(src.lifetime_end_event_index == std::numeric_limits<u64>::max(), "task image to split must still be alive");
-    
-        ImageMipArraySlice rest_slice = src.slice.subtract(info.result_image_a_slice);
-
-        TaskImageId root_parent = src.root_parent_id.is_empty() ? info.src_image : src.root_parent_id;
-
-        ImplTaskImage impl_img_a = src;
-        impl_img_a.root_parent_id = root_parent,
-        impl_img_a.lifetime_start_event_index = task_index;
-        impl_img_a.slice = info.result_image_a_slice;
-        impl_img_a.debug_name = "TODO(pahrens): remplace; split image a",
-        impl.impl_task_images.push_back(impl_img_a);
-        auto task_image_a_id = TaskImageId{{.index = static_cast<u32>(impl.impl_task_images.size() - 1)}};
-        
-        ImplTaskImage impl_img_b = src;
-        impl_img_a.root_parent_id = root_parent,
-        impl_img_a.lifetime_start_event_index = task_index;
-        impl_img_b.slice = rest_slice;
-        impl_img_b.debug_name = "TODO(pahrens): remplace; split image b",
-        impl.impl_task_images.push_back(impl_img_b);
-        auto task_image_b_id = TaskImageId{{.index = static_cast<u32>(impl.impl_task_images.size() - 1)}};
-
-        src.lifetime_end_event_index = task_index;
-
-        impl.events.push_back({
-            .submit_scope_index = impl.submit_scopes.size()-1,
-            .event_variant = TaskImageCreateEvent{
-                .ids = { task_image_a_id, task_image_b_id },
-                .id_count = 2,
-            },
-        });
-
-        return {task_image_a_id, task_image_b_id};
-    }
-    
-    auto TaskList::merge_task_images(TaskImageMergeInfo const & info) -> TaskImageId
-    {
-        auto & impl = *as<ImplTaskList>();
-        DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can only record to uncompleted task list");
-
-        usize task_index = impl.events.size();
-        ImplTaskImage& image_a = impl.impl_task_images[info.a.index];
-        ImplTaskImage& image_b = impl.impl_task_images[info.b.index];
-        DAXA_DBG_ASSERT_TRUE_M(image_a.lifetime_end_event_index == std::numeric_limits<u64>::max(), "task image to merge must still be alive");
-        DAXA_DBG_ASSERT_TRUE_M(image_a.lifetime_end_event_index == std::numeric_limits<u64>::max(), "task image to merge must still be alive");
-        DAXA_DBG_ASSERT_TRUE_M(image_a.root_parent_id == image_b.root_parent_id, "can only merge two images that were split from the same original image");
-
-        DAXA_DBG_ASSERT_TRUE_M(!image_a.slice.intersects(image_b.slice), "fatal internal error. It should never be possible to have overlapping task images");
-
-        ImplTaskImage merged_img{
-            .lifetime_start_event_index = task_index,
-            .merge_src_images = std::array{ info.a, info.b },
-            .fetch_callback = image_a.fetch_callback,
-            .slice = image_a.slice.merge(image_b.slice),
-            .debug_name = "TODO(pahrens): remplace; merged image",
-        };
-        impl.impl_task_images.push_back(merged_img);
-        auto merged_image_id = TaskImageId{{.index = static_cast<u32>(impl.impl_task_images.size() - 1)}};
-
-        impl.events.push_back({
-            .submit_scope_index = impl.submit_scopes.size()-1,
-            .event_variant = TaskImageCreateEvent{
-                .ids = { merged_image_id, {} },
-                .id_count = 1,
-            },
-        });
-
-        image_a.lifetime_end_event_index = task_index;
-        image_b.lifetime_end_event_index = task_index;
-        
-        return merged_image_id;
     }
 
     void TaskList::add_task(TaskInfo const & info)
@@ -291,7 +211,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can only record to uncompleted task list");
         impl.events.push_back({
             .submit_scope_index = impl.submit_scopes.size()-1,
-            .event_variant = ImplGenericTask{
+            .event_variant = TaskEvent{
                 .info = {
                     .used_buffers = info.used_buffers,
                     .used_images = info.used_images,
@@ -299,69 +219,6 @@ namespace daxa
                     .debug_name = info.debug_name,
                 },
             },
-        });
-    }
-
-    void TaskList::add_copy_image_to_image(TaskCopyImageInfo const & info)
-    {
-        add_task({
-            .used_images = {
-                {info.src_image, daxa::TaskImageAccess::TRANSFER_READ},
-                {info.dst_image, daxa::TaskImageAccess::TRANSFER_WRITE},
-            },
-            .task = [=](TaskInterface & interface)
-            {
-                auto cmd = interface.get_command_list();
-
-                auto src_image = interface.get_image(info.src_image);
-                auto dst_image = interface.get_image(info.dst_image);
-
-                auto src_t_slice = interface.get_image_slice(info.src_image);
-                auto dst_t_slice = interface.get_image_slice(info.dst_image);
-
-                DAXA_DBG_ASSERT_TRUE_M(info.src_slice.contained_in(src_t_slice), "copy src slice must be contained in task src images slice");
-                DAXA_DBG_ASSERT_TRUE_M(info.dst_slice.contained_in(dst_t_slice), "copy src slice must be contained in task dst images slice");
-
-                cmd.copy_image_to_image({
-                    .src_image = src_image,
-                    .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
-                    .dst_image = dst_image,
-                    .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-                    .src_slice = info.src_slice,
-                    .src_offset = info.src_offset,
-                    .dst_slice = info.dst_slice,
-                    .dst_offset = info.dst_offset,
-                    .extent = info.extent,
-                });
-            },
-            .debug_name = info.debug_name,
-        });
-    }
-
-    void TaskList::add_clear_image(TaskImageClearInfo const & info)
-    {
-        add_task({
-            .used_images = {
-                {info.dst_image, daxa::TaskImageAccess::TRANSFER_WRITE},
-            },
-            .task = [=](TaskInterface & interface)
-            {
-                auto cmd = interface.get_command_list();
-
-                auto dst_image = interface.get_image(info.dst_image);
-
-                auto dst_t_slice = interface.get_image_slice(info.dst_image);
-
-                DAXA_DBG_ASSERT_TRUE_M(info.dst_slice.contained_in(dst_t_slice), "clear dst slice must be contained in task dst images slice");
-
-                cmd.clear_image({
-                    .dst_image_layout = ImageLayout::TRANSFER_DST_OPTIMAL,
-                    .clear_value = info.clear_value,
-                    .dst_image = dst_image,
-                    .dst_slice = info.dst_slice,
-                });
-            },
-            .debug_name = info.debug_name,
         });
     }
 
@@ -374,7 +231,7 @@ namespace daxa
 
         impl.events.push_back(TaskEvent{
             .submit_scope_index = submit_scope_index,
-            .event_variant = TaskSubmitEvent{ .user_submit_info = info }
+            .event_variant = SubmitEvent{ .user_submit_info = info }
         });
         impl.submit_scopes.push_back({});
 
@@ -393,7 +250,7 @@ namespace daxa
 
         impl.events.push_back(TaskEvent{ 
             .submit_scope_index = impl.submit_scopes.size()-1,
-            .event_variant = TaskPresentEvent{ 
+            .event_variant = PresentEvent{ 
                 .present_info = PresentInfo{
                     .swapchain = task_image.parent_swapchain.value().first,
                 },
@@ -480,9 +337,9 @@ namespace daxa
     void TaskRuntime::execute_task(TaskEvent & task_event, usize task_index)
     {
         DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout << "execute task (index: " << task_index << ")");
-        if (ImplGenericTask * generic_task = std::get_if<ImplGenericTask>(&task_event.event_variant))
+        if (TaskEvent * generic_task = std::get_if<TaskEvent>(&task_event.event_variant))
         {
-            DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout << "  executing ImplGenericTask (name: " << generic_task->info.debug_name << ")" << std::endl);
+            DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout << "  executing TaskEvent (name: " << generic_task->info.debug_name << ")" << std::endl);
 
             usize last_command_list_index = command_lists.size() - 1;
 
@@ -514,9 +371,9 @@ namespace daxa
                 .buffer_id = buffer_id,
             });
         }
-        else if (TaskImageCreateEvent * create_image_task = std::get_if<TaskImageCreateEvent>(&task_event.event_variant))
+        else if (CreateTaskImageEvent * create_image_task = std::get_if<CreateTaskImageEvent>(&task_event.event_variant))
         {
-            DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout << "  executing TaskImageCreateEvent" << std::endl);
+            DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout << "  executing CreateTaskImageEvent" << std::endl);
 
             for (usize i = 0; i < create_image_task->id_count; ++i)
             {
@@ -530,9 +387,9 @@ namespace daxa
                 });
             }
         }
-        else if (TaskSubmitEvent * submit_event = std::get_if<TaskSubmitEvent>(&task_event.event_variant))
+        else if (SubmitEvent * submit_event = std::get_if<SubmitEvent>(&task_event.event_variant))
         {
-            DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout << "  executing TaskSubmitEvent" << std::endl);
+            DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout << "  executing SubmitEvent" << std::endl);
             this->pipeline_barriers(submit_event->barriers);
 
             if (!command_lists.back().is_complete())
@@ -557,9 +414,9 @@ namespace daxa
 
             command_lists.push_back(this->current_device.create_command_list({.debug_name = std::string("Task Command List ") + std::to_string(command_lists.size())}));
         }
-        else if (TaskPresentEvent * present_event = std::get_if<TaskPresentEvent>(&task_event.event_variant))
+        else if (PresentEvent * present_event = std::get_if<PresentEvent>(&task_event.event_variant))
         {
-            DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout << "  executing TaskPresentEvent" << std::endl);
+            DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout << "  executing PresentEvent" << std::endl);
             PresentInfo present_info = present_event->present_info;
             if (present_event->user_binary_semaphores)
             {
@@ -745,7 +602,7 @@ namespace daxa
         for (usize task_index = 0; task_index < this->events.size(); ++task_index)
         {
             std::string task_name = std::string("task_") + std::to_string(task_index);
-            if (ImplGenericTask * task_ptr = std::get_if<ImplGenericTask>(&events[task_index].event_variant))
+            if (TaskEvent * task_ptr = std::get_if<TaskEvent>(&events[task_index].event_variant))
             {
                 dot_file << "subgraph cluster_" << task_name << " {\n";
                 dot_file << "label=\"" << task_ptr->info.debug_name << "\"\n";
@@ -770,7 +627,7 @@ namespace daxa
                 dot_file << "c_bnode_" << task_index << "_" << task_ptr->id.index;
                 dot_file << " [label=\"Create " << task_buffer.debug_name << "\", shape=box]\n";
             }
-            else if (TaskImageCreateEvent * task_ptr = std::get_if<TaskImageCreateEvent>(&events[task_index].event_variant))
+            else if (CreateTaskImageEvent * task_ptr = std::get_if<CreateTaskImageEvent>(&events[task_index].event_variant))
             {
                 ImplTaskImage & task_image = this->impl_task_images[task_ptr->id.index];
                 dot_file << "c_inode_" << task_index << "_" << task_ptr->id.index;
@@ -802,7 +659,7 @@ namespace daxa
             auto a = image_link.event_a;
             auto b = image_link.event_b;
             auto i = image_link.resource;
-            if (TaskImageCreateEvent * task_ptr = std::get_if<TaskImageCreateEvent>(&events[a].event_variant))
+            if (CreateTaskImageEvent * task_ptr = std::get_if<CreateTaskImageEvent>(&events[a].event_variant))
                 dot_file << "c_";
             dot_file << "inode_" << a << "_" << i << "->inode_" << b << "_" << i;
             dot_file << " [label=\"Sync\", labeltooltip=\"between "
@@ -896,17 +753,17 @@ namespace daxa
                     .image_slice = task_image.slice,
                 };
 
-                if (ImplGenericTask* generic_task = std::get_if<ImplGenericTask>(&events[barrier_task_index].event_variant))
+                if (TaskEvent* generic_task = std::get_if<TaskEvent>(&events[barrier_task_index].event_variant))
                 {
                     generic_task->barriers.push_back(barrier);
                 }
-                else if (TaskSubmitEvent* submit_event = std::get_if<TaskSubmitEvent>(&events[barrier_task_index].event_variant))
+                else if (SubmitEvent* submit_event = std::get_if<SubmitEvent>(&events[barrier_task_index].event_variant))
                 {
                     submit_event->barriers.push_back(barrier);
                 }
                 else 
                 {
-                    DAXA_DBG_ASSERT_TRUE_M(false, "can only insert barriers to ImplGenericTask events");
+                    DAXA_DBG_ASSERT_TRUE_M(false, "can only insert barriers to TaskEvent events");
                 }
 
                 compiled_graph.image_links.push_back(TaskLink{
@@ -1007,7 +864,7 @@ namespace daxa
                         },
                     };
 
-                    std::get_if<ImplGenericTask>(&events[barrier_task_index].event_variant)->barriers.push_back(barrier);
+                    std::get_if<TaskEvent>(&events[barrier_task_index].event_variant)->barriers.push_back(barrier);
 
                     compiled_graph.buffer_links.push_back(TaskLink{
                         .event_a = latest_access_task_index,
@@ -1068,7 +925,7 @@ namespace daxa
         {
             usize submit_scope_index = events[task_index].submit_scope_index;
 
-            if (ImplGenericTask * task_ptr = std::get_if<ImplGenericTask>(&events[task_index].event_variant))
+            if (TaskEvent * task_ptr = std::get_if<TaskEvent>(&events[task_index].event_variant))
             {
                 DAXA_ONLY_IF_TASK_LIST_DEBUG(
                     std::cout
@@ -1085,7 +942,7 @@ namespace daxa
                                              << "  }\n"
                                              << std::endl);
             }
-            else if (TaskPresentEvent* present_event = std::get_if<TaskPresentEvent>(&events[task_index].event_variant))
+            else if (PresentEvent* present_event = std::get_if<PresentEvent>(&events[task_index].event_variant))
             {
                 ImplTaskImage& image = impl_task_images[present_event->presented_image.index];
 
