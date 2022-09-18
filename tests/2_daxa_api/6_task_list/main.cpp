@@ -406,7 +406,7 @@ namespace tests
                     .debug_name = APPNAME_PREFIX("Clear swapchain"),
                 });
 
-                new_task_list.add_task({
+                new_task_list.add_task(daxa::TaskInfo{
                     .used_buffers = {
                         {task_mipmapping_compute_input_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY},
                     },

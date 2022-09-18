@@ -194,6 +194,11 @@ namespace daxa
         auto impl = as<ImplDevice>();
         return TimelineSemaphore{ManagedPtr{new ImplTimelineSemaphore(this->make_weak(), info)}};
     }
+    
+    auto Device::create_split_barrier(SplitBarrierInfo const & info) -> SplitBarrier
+    {
+        return SplitBarrier(*this, info);
+    }
 
     auto Device::create_buffer(BufferInfo const & info) -> BufferId
     {
@@ -704,6 +709,12 @@ namespace daxa
             [&](auto & semaphore_zombie)
             {
                 vkDestroySemaphore(this->vk_device, semaphore_zombie.vk_semaphore, nullptr);
+            });
+        check_and_cleanup_gpu_resources(
+            this->main_queue_event_zombies,
+            [&](auto & event_zombie)
+            {
+                vkDestroyEvent(this->vk_device, event_zombie.vk_event, nullptr);
             });
     }
 
