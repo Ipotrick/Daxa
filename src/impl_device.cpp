@@ -516,7 +516,9 @@ namespace daxa
             .pEnabledFeatures = nullptr,
         };
         vkCreateDevice(a_physical_device, &device_ci, nullptr, &this->vk_device);
-        volkLoadDevice(this->vk_device);
+
+        this->vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetDeviceProcAddr(this->vk_device, "vkSetDebugUtilsObjectNameEXT"));
+
         u32 max_buffers = std::min(this->vk_info.limits.max_descriptor_set_storage_buffers, 1'000u);
         u32 max_images = std::min(std::min(this->vk_info.limits.max_descriptor_set_sampled_images, this->vk_info.limits.max_descriptor_set_storage_images), 1'000u);
         u32 max_samplers = std::min(this->vk_info.limits.max_descriptor_set_samplers, 1'000u);
@@ -618,7 +620,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_device),
                 .pObjectName = device_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(vk_device, &device_name_info);
+            this->vkSetDebugUtilsObjectNameEXT(vk_device, &device_name_info);
 
             auto queue_name = this->info.debug_name + std::string(" [Daxa Device Queue]");
             VkDebugUtilsObjectNameInfoEXT device_main_queue_name_info{
@@ -628,7 +630,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(this->main_queue_vk_queue),
                 .pObjectName = queue_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(vk_device, &device_main_queue_name_info);
+            this->vkSetDebugUtilsObjectNameEXT(vk_device, &device_main_queue_name_info);
 
             auto semaphore_name = this->info.debug_name + std::string(" [Daxa Device TimelineSemaphore]");
             VkDebugUtilsObjectNameInfoEXT device_main_queue_timeline_semaphore_name_info{
@@ -638,7 +640,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_main_queue_gpu_timeline_semaphore),
                 .pObjectName = semaphore_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(vk_device, &device_main_queue_timeline_semaphore_name_info);
+            this->vkSetDebugUtilsObjectNameEXT(vk_device, &device_main_queue_timeline_semaphore_name_info);
 
             auto buffer_name = this->info.debug_name + std::string(" [Daxa Device buffer device address buffer]");
             VkDebugUtilsObjectNameInfoEXT device_main_queue_timeline_buffer_device_address_buffer_name_info{
@@ -648,7 +650,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(this->buffer_device_address_buffer),
                 .pObjectName = buffer_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(vk_device, &device_main_queue_timeline_buffer_device_address_buffer_name_info);
+            this->vkSetDebugUtilsObjectNameEXT(vk_device, &device_main_queue_timeline_buffer_device_address_buffer_name_info);
         }
 
         gpu_table.initialize(
@@ -815,7 +817,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(ret.vk_buffer),
                 .pObjectName = buffer_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(vk_device, &buffer_name_info);
+            this->vkSetDebugUtilsObjectNameEXT(vk_device, &buffer_name_info);
         }
 
         write_descriptor_set_buffer(this->vk_device, this->gpu_table.vk_descriptor_set, ret.vk_buffer, 0, static_cast<VkDeviceSize>(info.size), id.index);
@@ -895,7 +897,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image),
                 .pObjectName = swapchain_image_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(vk_device, &swapchain_image_name_info);
+            this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &swapchain_image_name_info);
 
             auto swapchain_image_view_name = info.debug_name + std::string(" [Daxa Swapchain ImageView]");
             VkDebugUtilsObjectNameInfoEXT swapchain_image_view_name_info{
@@ -905,7 +907,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(ret.view_slot.vk_image_view),
                 .pObjectName = swapchain_image_view_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(vk_device, &swapchain_image_view_name_info);
+            this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &swapchain_image_view_name_info);
         }
 
         write_descriptor_set_image(this->vk_device, this->gpu_table.vk_descriptor_set, ret.view_slot.vk_image_view, usage, id.index);
@@ -1016,7 +1018,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image),
                 .pObjectName = image_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(vk_device, &swapchain_image_name_info);
+            this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &swapchain_image_name_info);
 
             auto image_view_name = info.debug_name + std::string(" [Daxa ImageView]");
             VkDebugUtilsObjectNameInfoEXT swapchain_image_view_name_info{
@@ -1026,7 +1028,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(ret.view_slot.vk_image_view),
                 .pObjectName = image_view_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(vk_device, &swapchain_image_view_name_info);
+            this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &swapchain_image_view_name_info);
         }
 
         write_descriptor_set_image(this->vk_device, this->gpu_table.vk_descriptor_set, ret.view_slot.vk_image_view, info.usage, id.index);
@@ -1080,7 +1082,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image_view),
                 .pObjectName = image_view_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(vk_device, &name_info);
+            this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &name_info);
         }
 
         write_descriptor_set_image(this->vk_device, this->gpu_table.vk_descriptor_set, ret.vk_image_view, parent_image_slot.info.usage, id.index);
@@ -1129,7 +1131,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(ret.vk_sampler),
                 .pObjectName = sampler_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(vk_device, &sampler_name_info);
+            this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &sampler_name_info);
         }
 
         write_descriptor_set_sampler(this->vk_device, this->gpu_table.vk_descriptor_set, ret.vk_sampler, id.index);
