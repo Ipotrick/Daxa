@@ -63,7 +63,6 @@ endif()
 
 find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
-find_package(volk CONFIG REQUIRED)
 
 if(DAXA_ENABLE_GLSLANG)
     find_package(glslang CONFIG REQUIRED)
@@ -114,7 +113,6 @@ target_link_libraries(daxa
     PUBLIC
     unofficial::vulkan-memory-allocator::vulkan-memory-allocator
     Vulkan::Vulkan
-    volk::volk
 )
 
 target_include_directories(daxa
@@ -147,7 +145,6 @@ check_required_components(daxa)
 
 find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
-find_package(volk CONFIG REQUIRED)
 ]=])
 
 if(DAXA_ENABLE_GLSLANG)
