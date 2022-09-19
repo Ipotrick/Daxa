@@ -566,7 +566,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(impl_pipeline->vk_pipeline),
                 .pObjectName = raster_pipeline_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(impl.impl_device.as<ImplDevice>()->vk_device, &name_info);
+            impl.impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(impl.impl_device.as<ImplDevice>()->vk_device, &name_info);
         }
         return RasterPipeline{ManagedPtr{impl_pipeline}};
     }
@@ -649,7 +649,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(impl_pipeline->vk_pipeline),
                 .pObjectName = raster_pipeline_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(impl.impl_device.as<ImplDevice>()->vk_device, &name_info);
+            impl.impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(impl.impl_device.as<ImplDevice>()->vk_device, &name_info);
         }
 
         return ComputePipeline{ManagedPtr{impl_pipeline}};

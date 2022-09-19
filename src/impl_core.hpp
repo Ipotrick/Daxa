@@ -40,8 +40,6 @@ using ComPtr = CComPtr<T>;
 #include <glslang/Include/ResourceLimits.h>
 #endif
 
-#include <volk.h>
-#define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 
