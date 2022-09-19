@@ -348,6 +348,36 @@ namespace daxa
         }
         std::vector<u32> p_spirv = p_spirv_result.value();
 
+        // TODO(grundlett): Maybe add ability to output the spirv binary for people!
+        // {
+        //     u32 i = 0;
+        //     std::string vs_name = modified_info.vertex_shader_info.debug_name + ".vert.txt";
+        //     std::ofstream vs_file{vs_name};
+        //     for (auto s : v_spirv)
+        //     {
+        //         vs_file << "0x" << std::setfill('0') << std::setw(8) << std::hex << s << ", ";
+        //         if (++i == 8)
+        //         {
+        //             i = 0;
+        //             vs_file << "\n";
+        //         }
+        //     }
+        // }
+        // {
+        //     u32 i = 0;
+        //     std::string fs_name = modified_info.fragment_shader_info.debug_name + ".frag.txt";
+        //     std::ofstream fs_file{fs_name};
+        //     for (auto s : p_spirv)
+        //     {
+        //         fs_file << "0x" << std::setfill('0') << std::setw(8) << std::hex << s << ", ";
+        //         if (++i == 8)
+        //         {
+        //             i = 0;
+        //             fs_file << "\n";
+        //         }
+        //     }
+        // }
+
         VkShaderModule v_vk_shader_module = {};
         VkShaderModule p_vk_shader_module = {};
 
@@ -536,7 +566,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(impl_pipeline->vk_pipeline),
                 .pObjectName = raster_pipeline_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(impl.impl_device.as<ImplDevice>()->vk_device, &name_info);
+            impl.impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(impl.impl_device.as<ImplDevice>()->vk_device, &name_info);
         }
         return RasterPipeline{ManagedPtr{impl_pipeline}};
     }
@@ -619,7 +649,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(impl_pipeline->vk_pipeline),
                 .pObjectName = raster_pipeline_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(impl.impl_device.as<ImplDevice>()->vk_device, &name_info);
+            impl.impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(impl.impl_device.as<ImplDevice>()->vk_device, &name_info);
         }
 
         return ComputePipeline{ManagedPtr{impl_pipeline}};
@@ -967,7 +997,7 @@ namespace daxa
         shader.setEntryPoint("main");
         shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_3);
         shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_5);
-        // shader.setOverrideVersion(450); // not available yet in latest vcpkg version
+        // shader.setOverrideVersion(450); // What should this be? I think it might be set by default
 
         GlslangFileIncluder includer;
         includer.impl_pipeline_compiler = this;

@@ -1,5 +1,3 @@
-#version 450
-
 #include <shared.inl>
 
 DAXA_USE_PUSH_CONSTANT(ComputePush)
