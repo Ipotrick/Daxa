@@ -33,8 +33,8 @@ struct App : AppWindow<App>
         .debug_name = APPNAME_PREFIX("swapchain"),
     });
     daxa::ImageId depth_image = device.create_image({
-        .format = daxa::Format::D32_SFLOAT,
-        .aspect = daxa::ImageAspectFlagBits::DEPTH,
+        .format = daxa::Format::D24_UNORM_S8_UINT,
+        .aspect = daxa::ImageAspectFlagBits::DEPTH | daxa::ImageAspectFlagBits::STENCIL,
         .size = {size_x, size_y, 1},
         .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT,
     });
@@ -54,7 +54,7 @@ struct App : AppWindow<App>
         .fragment_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .compile_options = {.entry_point = "fs_main"}},
         .color_attachments = {{.format = swapchain.get_format(), .blend = {.blend_enable = true, .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA, .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA}}},
         .depth_test = {
-            .depth_attachment_format = daxa::Format::D32_SFLOAT,
+            .depth_attachment_format = daxa::Format::D24_UNORM_S8_UINT,
             .enable_depth_test = true,
             .enable_depth_write = true,
         },
@@ -70,7 +70,7 @@ struct App : AppWindow<App>
         .fragment_shader_info = {.source = daxa::ShaderFile{"line.hlsl"}, .compile_options = {.entry_point = "fs_main"}},
         .color_attachments = {{.format = swapchain.get_format(), .blend = {.blend_enable = true, .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA, .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA}}},
         .depth_test = {
-            .depth_attachment_format = daxa::Format::D32_SFLOAT,
+            .depth_attachment_format = daxa::Format::D24_UNORM_S8_UINT,
             .enable_depth_test = true,
             .enable_depth_write = true,
         },
@@ -78,8 +78,8 @@ struct App : AppWindow<App>
             .polygon_mode = daxa::PolygonMode::LINE,
             .face_culling = daxa::FaceCullFlagBits::NONE,
             .depth_bias_enable = true,
-            .depth_bias_constant_factor = 0.0f,
-            .depth_bias_slope_factor = 0.0f,
+            .depth_bias_constant_factor = -0.1f,
+            .depth_bias_slope_factor = -0.8f,
             .line_width = 1.0f,
         },
         .push_constant_size = sizeof(DrawPush),
@@ -182,7 +182,7 @@ struct App : AppWindow<App>
             .before_layout = daxa::ImageLayout::UNDEFINED,
             .after_layout = daxa::ImageLayout::DEPTH_ATTACHMENT_OPTIMAL,
             .image_id = depth_image,
-            .image_slice = {.image_aspect = daxa::ImageAspectFlagBits::DEPTH},
+            .image_slice = {.image_aspect = daxa::ImageAspectFlagBits::DEPTH | daxa::ImageAspectFlagBits::STENCIL},
         });
 
         cmd_list.begin_renderpass({
@@ -288,8 +288,8 @@ struct App : AppWindow<App>
             size_y = swapchain.info().height;
             device.destroy_image(depth_image);
             depth_image = device.create_image({
-                .format = daxa::Format::D32_SFLOAT,
-                .aspect = daxa::ImageAspectFlagBits::DEPTH,
+                .format = daxa::Format::D24_UNORM_S8_UINT,
+                .aspect = daxa::ImageAspectFlagBits::DEPTH | daxa::ImageAspectFlagBits::STENCIL,
                 .size = {size_x, size_y, 1},
                 .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT,
             });

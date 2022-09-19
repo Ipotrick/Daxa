@@ -64,10 +64,6 @@ namespace daxa
     ImplContext::ImplContext(ContextInfo const & info_param)
         : info{info_param}
     {
-        {
-            volkInitialize();
-        }
-
         std::vector<const char *> enabled_layers, extension_names;
         {
             if (info.enable_validation)
@@ -133,10 +129,6 @@ namespace daxa
                 .ppEnabledExtensionNames = extension_names.data(),
             };
             vkCreateInstance(&instance_ci, nullptr, &vk_instance);
-        }
-
-        {
-            volkLoadInstance(vk_instance);
         }
 
         if (info.enable_validation)

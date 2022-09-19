@@ -17,7 +17,7 @@ namespace daxa
 
     struct ShaderSPIRV
     {
-        u32 * data;
+        u32 const * data;
         usize size;
     };
 
