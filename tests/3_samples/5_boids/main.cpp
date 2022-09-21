@@ -212,23 +212,12 @@ struct App : AppWindow<App>
     {
         daxa::TaskList new_task_list = daxa::TaskList({.device = device, .debug_name = APPNAME_PREFIX("main task list")});
 
-        auto task_boid_buffer = new_task_list.create_task_buffer({
-            .fetch_callback = [=, this]()
-            { return this->boid_buffer; },
-            .debug_name = "task boid buffer",
-        });
-
-        auto task_old_boid_buffer = new_task_list.create_task_buffer({
-            .fetch_callback = [=, this]()
-            { return this->old_boid_buffer; },
-            .debug_name = "task old boid buffer",
-        });
+        auto task_boid_buffer = new_task_list.create_task_buffer({.buffer = &this->boid_buffer});
+        auto task_old_boid_buffer = new_task_list.create_task_buffer({.buffer = &this->old_boid_buffer});
 
         task_swapchain_image = new_task_list.create_task_image({
-            .fetch_callback = [=, this]()
-            { return this->swapchain_image; },
+            .image = &this->swapchain_image,
             .swapchain_parent = std::pair{swapchain, acquire_semaphore},
-            .debug_name = "task swapchain image",
         });
 
         new_task_list.add_task({
@@ -251,7 +240,7 @@ struct App : AppWindow<App>
                 {task_boid_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
             },
             .used_images = {
-                {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
+                {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, std::nullopt},
             },
             .task = [=, this](daxa::TaskInterface & interf)
             {

@@ -82,21 +82,12 @@ namespace tests
             .debug_name = APPNAME_PREFIX("image (image_upload)"),
         });
 
-        auto task_image = task_list.create_task_image({
-            .fetch_callback = [=]()
-            { return image; },
-            .debug_name = APPNAME_PREFIX("task_image (image_upload)"),
-        });
-
-        auto upload_buffer = task_list.create_task_buffer({
-            .fetch_callback = [=]()
-            { return buffer; },
-            .debug_name = APPNAME_PREFIX("upload_buffer (image_upload)"),
-        });
+        auto task_image = task_list.create_task_image({.image = &image});
+        auto upload_buffer = task_list.create_task_buffer({.buffer = &buffer});
 
         task_list.add_task({
             .used_buffers = {{upload_buffer, daxa::TaskBufferAccess::TRANSFER_READ}},
-            .used_images = {{task_image, daxa::TaskImageAccess::TRANSFER_WRITE}},
+            .used_images = {{task_image, daxa::TaskImageAccess::TRANSFER_WRITE, std::nullopt}},
             .task = [](daxa::TaskInterface &)
             {
                 // TODO: Implement this task!
@@ -122,15 +113,12 @@ namespace tests
 
         auto task_buffer1 = task_list.create_task_buffer({
             .last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
-            .debug_name = APPNAME_PREFIX("task_buffer1 (output_graph)"),
         });
         auto task_buffer2 = task_list.create_task_buffer({
             .last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
-            .debug_name = APPNAME_PREFIX("task_buffer2 (output_graph)"),
         });
         auto task_buffer3 = task_list.create_task_buffer({
             .last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
-            .debug_name = APPNAME_PREFIX("task_buffer3 (output_graph)"),
         });
 
         task_list.add_task({
@@ -348,28 +336,14 @@ namespace tests
             {
                 daxa::TaskList new_task_list = daxa::TaskList({.device = device, .debug_name = APPNAME_PREFIX("main task list")});
 
-                task_swapchain_image = new_task_list.create_task_image({
-                    .fetch_callback = [=, this]()
-                    { return swapchain.acquire_next_image(acquire_semaphore); },
-                    .swapchain_parent = std::pair{swapchain, acquire_semaphore},
-                    .debug_name = "task swapchain image",
-                });
-                task_render_image = new_task_list.create_task_image({
-                    .fetch_callback = [=, this]()
-                    { return render_image; },
-                    .debug_name = "task render image",
-                });
+                // task_swapchain_image = new_task_list.create_task_image({
+                //     .image = &swapchain_image,
+                //     .swapchain_parent = std::pair{swapchain, acquire_semaphore},
+                // });
+                task_render_image = new_task_list.create_task_image({.image = &render_image});
 
-                task_mipmapping_compute_input_buffer = new_task_list.create_task_buffer({
-                    .fetch_callback = [this]()
-                    { return mipmapping_compute_input_buffer; },
-                    .debug_name = APPNAME_PREFIX("task_mipmapping_compute_input_buffer"),
-                });
-                task_staging_mipmapping_compute_input_buffer = new_task_list.create_task_buffer({
-                    .fetch_callback = [this]()
-                    { return staging_mipmapping_compute_input_buffer; },
-                    .debug_name = APPNAME_PREFIX("task_staging_mipmapping_compute_input_buffer"),
-                });
+                // task_mipmapping_compute_input_buffer = new_task_list.create_task_buffer({.image = &mipmapping_compute_input_buffer});
+                // task_staging_mipmapping_compute_input_buffer = new_task_list.create_task_buffer({.image = &staging_mipmapping_compute_input_buffer});
 
                 new_task_list.add_task({
                     .used_buffers = {
@@ -403,19 +377,20 @@ namespace tests
                     .debug_name = APPNAME_PREFIX("Input Transfer"),
                 });
 
-                new_task_list.add_clear_image({
-                    .clear_value = {std::array<f32, 4>{0.2f, 0.2f, 0.2f, 1.0f}},
-                    .dst_image = task_swapchain_image,
-                    .dst_slice = {},
-                    .debug_name = APPNAME_PREFIX("Clear swapchain"),
-                });
+                // TODO: Find a replacement for this in new Daxa!
+                // new_task_list.add_clear_image({
+                //     .clear_value = {std::array<f32, 4>{0.2f, 0.2f, 0.2f, 1.0f}},
+                //     .dst_image = task_swapchain_image,
+                //     .dst_slice = {},
+                //     .debug_name = APPNAME_PREFIX("Clear swapchain"),
+                // });
 
                 new_task_list.add_task(daxa::TaskInfo{
                     .used_buffers = {
                         {task_mipmapping_compute_input_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY},
                     },
                     .used_images = {
-                        {task_render_image, daxa::TaskImageAccess::COMPUTE_SHADER_READ_WRITE},
+                        {task_render_image, daxa::TaskImageAccess::COMPUTE_SHADER_READ_WRITE, std::nullopt},
                     },
                     .task = [=, this](daxa::TaskInterface & interf)
                     {
@@ -447,8 +422,8 @@ namespace tests
 
                 new_task_list.add_task({
                     .used_images = {
-                        {task_render_image, daxa::TaskImageAccess::TRANSFER_READ},
-                        {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE},
+                        {task_render_image, daxa::TaskImageAccess::TRANSFER_READ, std::nullopt},
+                        {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE, std::nullopt},
                     },
                     .task = [=, this](daxa::TaskInterface & interf)
                     {
@@ -512,7 +487,7 @@ namespace tests
 
                 new_task_list.add_task({
                     .used_images = {
-                        {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
+                        {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, std::nullopt},
                     },
                     .task = [=, this](daxa::TaskInterface & interf)
                     {
@@ -599,26 +574,21 @@ namespace tests
                     .device = device,
                     .debug_name = APPNAME_PREFIX("task_list (drawing)"),
                 });
-                task_swapchain_image = new_task_list.create_task_image({
-                    .fetch_callback = [this]()
-                    { return swapchain_image; },
-                    .debug_name = APPNAME_PREFIX("task_swapchain_image (drawing)"),
-                });
-                task_render_image = new_task_list.create_task_image({
-                    .fetch_callback = [this]()
-                    { return render_image; },
-                    .debug_name = APPNAME_PREFIX("task_render_image (drawing)"),
-                });
+                // task_swapchain_image = new_task_list.create_task_image({
+                //     .image = &swapchain_image,
+                //     .swapchain_parent = {swapchain, present_semaphore},
+                // });
+                task_render_image = new_task_list.create_task_image({.image = &render_image});
 
-                new_task_list.add_clear_image({
-                    .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
-                    .dst_image = task_render_image,
-                    .dst_slice = {},
-                    .debug_name = APPNAME_PREFIX("Clear render_image Task (drawing)"),
-                });
+                // new_task_list.add_clear_image({
+                //     .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
+                //     .dst_image = task_render_image,
+                //     .dst_slice = {},
+                //     .debug_name = APPNAME_PREFIX("Clear render_image Task (drawing)"),
+                // });
                 new_task_list.add_task({
                     .used_images = {
-                        {task_render_image, daxa::TaskImageAccess::FRAGMENT_SHADER_WRITE_ONLY},
+                        {task_render_image, daxa::TaskImageAccess::FRAGMENT_SHADER_WRITE_ONLY, std::nullopt},
                     },
                     .task = [this](daxa::TaskInterface interf)
                     {
@@ -634,11 +604,11 @@ namespace tests
                     .debug_name = APPNAME_PREFIX("Draw to render_image Task (drawing)"),
                 });
 
-                new_task_list.add_copy_image_to_image({
-                    .src_image = task_render_image,
-                    .dst_image = task_swapchain_image,
-                    .extent = {size_x, size_y, 1},
-                });
+                // new_task_list.add_copy_image_to_image({
+                //     .src_image = task_render_image,
+                //     .dst_image = task_swapchain_image,
+                //     .extent = {size_x, size_y, 1},
+                // });
                 new_task_list.compile();
 
                 return new_task_list;
