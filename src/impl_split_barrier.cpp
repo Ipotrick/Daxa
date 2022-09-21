@@ -4,22 +4,22 @@
 
 namespace daxa
 {
-    SplitBarrier::SplitBarrier(SplitBarrier&& other)
+    SplitBarrier::SplitBarrier(SplitBarrier&& other) noexcept
         : device{ std::move(other.device) }
-        , info{ other.info }
+        , create_info{ other.create_info }
         , data{ other.data }
     {
-        other.info = {};
+        other.create_info = {};
         other.data = {};
     }
 
-    auto SplitBarrier::operator=(SplitBarrier&& other) -> SplitBarrier&
+    auto SplitBarrier::operator=(SplitBarrier&& other) noexcept -> SplitBarrier&
     {
         this->cleanup();
         this->device = std::move(other.device);
-        this->info = other.info;
+        this->create_info = other.create_info;
         this->data = other.data;
-        other.info = {};
+        other.create_info = {};
         other.data = {};
         return *this;
     }
@@ -29,9 +29,9 @@ namespace daxa
         this->cleanup();
     }
 
-    auto SplitBarrier::info() const -> SplitBarrierInfo const &;
+    auto SplitBarrier::info() const -> SplitBarrierInfo const &
     {
-        return this->info;
+        return this->create_info;
     }
 
     void SplitBarrier::cleanup()
@@ -42,9 +42,9 @@ namespace daxa
             DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{device->main_queue_zombies_mtx});
             u64 main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(device->main_queue_cpu_timeline);
 
-            device->main_queue_event_zombies.push_back({
+            device->main_queue_split_barrier_zombies.push_back({
                 main_queue_cpu_timeline,
-                GPUEventZombie{
+                SplitBarrierZombie{
                     .vk_event = reinterpret_cast<VkEvent>(this->data),
                 },
             });
@@ -52,9 +52,9 @@ namespace daxa
         }
     }
 
-    SplitBarrier::SplitBarrier(Device device, SplitBarrierInfo const& info)
+    SplitBarrier::SplitBarrier(ManagedWeakPtr device, SplitBarrierInfo const& create_info)
         : device{ std::move(device) }
-        , info{ info }
+        , create_info{ create_info }
     {
         ImplDevice* impl_device = this->device.as<ImplDevice>();
         VkEventCreateInfo vk_event_create_info{
@@ -65,5 +65,18 @@ namespace daxa
         VkEvent event = {};
         vkCreateEvent(impl_device->vk_device, &vk_event_create_info, nullptr, &event);
         this->data = reinterpret_cast<u64>(event);
+
+        if (impl_device->impl_ctx.as<ImplContext>()->enable_debug_names && this->create_info.debug_name.size() > 0)
+        {
+            auto name = this->create_info.debug_name + std::string(" [Daxa Split Barrier]");
+            VkDebugUtilsObjectNameInfoEXT name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_EVENT,
+                .objectHandle = this->data,
+                .pObjectName = name.c_str(),
+            };
+            vkSetDebugUtilsObjectNameEXT(impl_device->vk_device, &name_info);
+        }
     }
 }

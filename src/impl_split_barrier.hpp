@@ -1,14 +1,15 @@
 #pragma once
 
-#include <daxa/daxa.hpp>
-#include <daxa/device.hpp>
-
 #include <daxa/split_barrier.hpp>
+
+#include "impl_core.hpp"
 
 namespace daxa
 {
-    struct GPUEventZombie
+    struct SplitBarrierZombie
     {
         VkEvent vk_event = {};
     };
+
+    
 }
