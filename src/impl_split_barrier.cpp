@@ -76,7 +76,7 @@ namespace daxa
                 .objectHandle = this->data,
                 .pObjectName = name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(impl_device->vk_device, &name_info);
+            impl_device->vkSetDebugUtilsObjectNameEXT(impl_device->vk_device, &name_info);
         }
     }
 }

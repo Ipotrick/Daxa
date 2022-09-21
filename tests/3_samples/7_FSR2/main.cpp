@@ -359,43 +359,14 @@ struct App : AppWindow<App>
             .device = device,
             .debug_name = APPNAME_PREFIX("task_list"),
         });
-        task_swapchain_image = new_task_list.create_task_image({
-            .fetch_callback = [this]()
-            { return swapchain_image; },
-            .debug_name = APPNAME_PREFIX("task_swapchain_image"),
-        });
-        task_color_image = new_task_list.create_task_image({
-            .fetch_callback = [this]()
-            { return color_image; },
-            .debug_name = APPNAME_PREFIX("task_color_image"),
-        });
-        task_display_image = new_task_list.create_task_image({
-            .fetch_callback = [this]()
-            { return display_image; },
-            .debug_name = APPNAME_PREFIX("task_display_image"),
-        });
-        task_motion_vectors_image = new_task_list.create_task_image({
-            .fetch_callback = [this]()
-            { return motion_vectors_image; },
-            .debug_name = APPNAME_PREFIX("task_motion_vectors_image"),
-        });
-        task_depth_image = new_task_list.create_task_image({
-            .fetch_callback = [this]()
-            { return depth_image; },
-            .slice = {.image_aspect = daxa::ImageAspectFlagBits::DEPTH},
-            .debug_name = APPNAME_PREFIX("task_depth_image"),
-        });
+        task_swapchain_image = new_task_list.create_task_image({.image = &swapchain_image});
+        task_color_image = new_task_list.create_task_image({.image = &color_image});
+        task_display_image = new_task_list.create_task_image({.image = &display_image});
+        task_motion_vectors_image = new_task_list.create_task_image({.image = &motion_vectors_image});
+        task_depth_image = new_task_list.create_task_image({.image = &depth_image});
 
-        task_raster_input_buffer = new_task_list.create_task_buffer({
-            .fetch_callback = [this]()
-            { return raster_input_buffer; },
-            .debug_name = APPNAME_PREFIX("task_raster_input_buffer"),
-        });
-        task_staging_raster_input_buffer = new_task_list.create_task_buffer({
-            .fetch_callback = [this]()
-            { return staging_raster_input_buffer; },
-            .debug_name = APPNAME_PREFIX("task_staging_raster_input_buffer"),
-        });
+        task_raster_input_buffer = new_task_list.create_task_buffer({.buffer = &raster_input_buffer});
+        task_staging_raster_input_buffer = new_task_list.create_task_buffer({.buffer = &staging_raster_input_buffer});
 
         new_task_list.add_task({
             .used_buffers = {
@@ -446,9 +417,9 @@ struct App : AppWindow<App>
                 {task_raster_input_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
             },
             .used_images = {
-                {task_color_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
-                {task_motion_vectors_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
-                {task_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT},
+                {task_color_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, std::nullopt},
+                {task_motion_vectors_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, std::nullopt},
+                {task_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT, std::nullopt},
             },
             .task = [this](daxa::TaskInterface interf)
             {
@@ -483,8 +454,8 @@ struct App : AppWindow<App>
 
         new_task_list.add_task({
             .used_images = {
-                {task_color_image, daxa::TaskImageAccess::TRANSFER_READ},
-                {task_display_image, daxa::TaskImageAccess::TRANSFER_WRITE},
+                {task_color_image, daxa::TaskImageAccess::TRANSFER_READ, std::nullopt},
+                {task_display_image, daxa::TaskImageAccess::TRANSFER_WRITE, std::nullopt},
             },
             .task = [this](daxa::TaskInterface interf)
             {
@@ -508,10 +479,10 @@ struct App : AppWindow<App>
 
         new_task_list.add_task({
             .used_images = {
-                {task_color_image, daxa::TaskImageAccess::SHADER_READ_ONLY},
-                {task_motion_vectors_image, daxa::TaskImageAccess::SHADER_READ_ONLY},
-                {task_depth_image, daxa::TaskImageAccess::SHADER_READ_ONLY},
-                {task_display_image, daxa::TaskImageAccess::SHADER_WRITE_ONLY},
+                {task_color_image, daxa::TaskImageAccess::SHADER_READ_ONLY, std::nullopt},
+                {task_motion_vectors_image, daxa::TaskImageAccess::SHADER_READ_ONLY, std::nullopt},
+                {task_depth_image, daxa::TaskImageAccess::SHADER_READ_ONLY, std::nullopt},
+                {task_display_image, daxa::TaskImageAccess::SHADER_WRITE_ONLY, std::nullopt},
             },
             .task = [this](daxa::TaskInterface interf)
             {
@@ -543,8 +514,8 @@ struct App : AppWindow<App>
 
         new_task_list.add_task({
             .used_images = {
-                {task_display_image, daxa::TaskImageAccess::TRANSFER_READ},
-                {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE},
+                {task_display_image, daxa::TaskImageAccess::TRANSFER_READ, std::nullopt},
+                {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE, std::nullopt},
             },
             .task = [this](daxa::TaskInterface interf)
             {
@@ -565,7 +536,7 @@ struct App : AppWindow<App>
 
         new_task_list.add_task({
             .used_images = {
-                {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
+                {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, std::nullopt},
             },
             .task = [this](daxa::TaskInterface interf)
             {

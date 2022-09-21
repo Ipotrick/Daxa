@@ -194,7 +194,6 @@ void generate_mip_levels(daxa::Device & device, daxa::CommandList & cmd_list, Mi
             .waiting_pipeline_access = daxa::AccessConsts::BLIT_READ,
             .before_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .after_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
-            .image_id = info.image,
             .image_slice = {
                 .image_aspect = image_info.aspect,
                 .base_mip_level = i,
@@ -202,11 +201,11 @@ void generate_mip_levels(daxa::Device & device, daxa::CommandList & cmd_list, Mi
                 .base_array_layer = info.base_array_layer,
                 .layer_count = info.layer_count,
             },
+            .image_id = info.image,
         });
         cmd_list.pipeline_barrier_image_transition({
             .waiting_pipeline_access = daxa::AccessConsts::BLIT_READ,
             .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-            .image_id = info.image,
             .image_slice = {
                 .image_aspect = image_info.aspect,
                 .base_mip_level = i + 1,
@@ -214,6 +213,7 @@ void generate_mip_levels(daxa::Device & device, daxa::CommandList & cmd_list, Mi
                 .base_array_layer = info.base_array_layer,
                 .layer_count = info.layer_count,
             },
+            .image_id = info.image,
         });
         std::array<i32, 3> next_mip_size = {
             std::max<i32>(1, mip_size[0] / 2),
@@ -249,8 +249,7 @@ void generate_mip_levels(daxa::Device & device, daxa::CommandList & cmd_list, Mi
             .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_READ_WRITE,
             .waiting_pipeline_access = daxa::AccessConsts::READ_WRITE,
             .before_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
-            .after_layout = daxa::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
-            .image_id = info.image,
+            .after_layout = daxa::ImageLayout::READ_ONLY_OPTIMAL,
             .image_slice = {
                 .image_aspect = image_info.aspect,
                 .base_mip_level = i,
@@ -258,14 +257,14 @@ void generate_mip_levels(daxa::Device & device, daxa::CommandList & cmd_list, Mi
                 .base_array_layer = info.base_array_layer,
                 .layer_count = info.layer_count,
             },
+            .image_id = info.image,
         });
     }
     cmd_list.pipeline_barrier_image_transition({
         .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_READ_WRITE,
         .waiting_pipeline_access = daxa::AccessConsts::READ_WRITE,
         .before_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-        .after_layout = daxa::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
-        .image_id = info.image,
+        .after_layout = daxa::ImageLayout::READ_ONLY_OPTIMAL,
         .image_slice = {
             .image_aspect = image_info.aspect,
             .base_mip_level = image_info.mip_level_count - 1,
@@ -273,6 +272,7 @@ void generate_mip_levels(daxa::Device & device, daxa::CommandList & cmd_list, Mi
             .base_array_layer = info.base_array_layer,
             .layer_count = info.layer_count,
         },
+        .image_id = info.image,
     });
 }
 
@@ -513,13 +513,13 @@ struct RenderableVoxelWorld
             .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
             .before_layout = daxa::ImageLayout::UNDEFINED,
             .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-            .image_id = atlas_texture_array,
             .image_slice = {
                 .base_mip_level = 0,
                 .level_count = 1,
                 .base_array_layer = 0,
                 .layer_count = static_cast<u32>(texture_names.size()),
             },
+            .image_id = atlas_texture_array,
         });
 
         for (usize i = 0; i < texture_names.size(); ++i)
@@ -543,7 +543,7 @@ struct RenderableVoxelWorld
         //     .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
         //     .waiting_pipeline_access = daxa::AccessConsts::ALL_GRAPHICS_READ,
         //     .before_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-        //     .after_layout = daxa::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
+        //     .after_layout = daxa::ImageLayout::READ_ONLY_OPTIMAL,
         //     .image_id = atlas_texture_array,
         //     .image_slice = {
         //         .base_mip_level = 0,

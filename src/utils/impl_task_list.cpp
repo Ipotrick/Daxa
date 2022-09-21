@@ -7,15 +7,15 @@
 
 namespace daxa
 {
-    auto get_image_barrier(TaskImageBarrierInfo const & task_image_barrier, ImageId image_id) -> ImageBarrierInfo;
+    auto get_image_barrier(TaskImageBarrierInfo const & task_image_barrier, ImageId image_id) -> ImageBarrierInfo
     {
         return ImageBarrierInfo{
-            .awaited_pipeline_access = task_image_barrier.awaited_pipeline_access;
-            .waiting_pipeline_access = task_image_barrier.waiting_pipeline_access;
-            .before_layout = task_image_barrier.before_layout;
-            .after_layout = task_image_barrier.after_layout;
-            .image_slice = task_image_barrier.image_slice;
-            .image_id = image_id;
+            .awaited_pipeline_access = task_image_barrier.awaited_pipeline_access,
+            .waiting_pipeline_access = task_image_barrier.waiting_pipeline_access,
+            .before_layout = task_image_barrier.before_layout,
+            .after_layout = task_image_barrier.after_layout,
+            .image_slice = task_image_barrier.image_slice,
+            .image_id = image_id,
         };
     }
 
@@ -138,10 +138,14 @@ namespace daxa
     auto TaskInterface::get_buffer(TaskBufferId const & task_id) -> BufferId
     {
         auto & impl = *reinterpret_cast<TaskRuntime *>(backend);
+        // TODO(pahrens): IMPLEMENT THIS!
+        return {};
     }
 
     auto TaskInterface::get_image(TaskImageId const & task_id) -> ImageId
     {
+        // TODO(pahrens): IMPLEMENT THIS!
+        return {};
     }
 
     TaskList::TaskList(TaskListInfo const & info)
@@ -153,10 +157,14 @@ namespace daxa
 
     auto TaskList::create_task_buffer(TaskBufferInfo const & info) -> TaskBufferId
     {
+        // TODO(pahrens): IMPLEMENT THIS
+        return {};
     }
 
     auto TaskList::create_task_image(TaskImageInfo const & info) -> TaskImageId
     {
+        // TODO(pahrens): IMPLEMENT THIS
+        return {};
     }
 
     void TaskList::add_task(TaskInfo const & info)
@@ -190,6 +198,7 @@ namespace daxa
 
     auto TaskList::command_lists() -> std::vector<CommandList>
     {
+        return {};
     }
 
     void TaskList::execute()
@@ -202,6 +211,26 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "final access only available after compilation");
 
         return impl.impl_task_buffers[buffer.index].latest_access;
+    }
+
+    auto TaskList::last_access(TaskImageId image) -> Access
+    {
+        auto & impl = *as<ImplTaskList>();
+        DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "final access only available after compilation");
+
+        DAXA_DBG_ASSERT_TRUE_M(false, "THIS NEEDS TO BE IMPLEMENTED");
+
+        return Access{};
+    }
+
+    auto TaskList::last_layout(TaskImageId image) -> ImageLayout
+    {
+        auto & impl = *as<ImplTaskList>();
+        DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "final layout only available after compilation");
+
+        DAXA_DBG_ASSERT_TRUE_M(false, "THIS NEEDS TO BE IMPLEMENTED");
+
+        return ImageLayout{};
     }
 
     ImplTaskList::ImplTaskList(TaskListInfo const & info)
@@ -292,10 +321,14 @@ namespace daxa
 
     auto ImplTaskList::slot(TaskBufferId id) -> ImplTaskBuffer &
     {
+        static ImplTaskBuffer result = {};
+        return result;
     }
 
     auto ImplTaskList::slot(TaskImageId id) -> ImplTaskImage &
     {
+        static ImplTaskImage result = {};
+        return result;
     }
 
     auto ImplTaskList::get_buffer(TaskBufferId) -> BufferId
@@ -313,6 +346,15 @@ namespace daxa
         return {};
     }
 
+    void ImplTaskList::output_graphviz()
+    {
+        // TODO(grundlett): Implement this!
+    }
+
+    void ImplTaskList::insert_synchronization()
+    {
+        // TODO(pahrens): Implement this!
+    }
 } // namespace daxa
 
 #endif
