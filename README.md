@@ -4,14 +4,14 @@
 Daxa is a GPU api build on Vulkan.
 
 Daxa is not meant to be the "ultimate Vulkan can-do-anything abstraction"!
-It exposes the Vulkan features that I personally (and a few other folks using daxa) use.
-This also means that features that I didnt use or needed yet personally in the projects that use daxa are not exposed, glaring example of this would be that raster pipelines only have a vertex and fragment shader. 
+It exposes the Vulkan features that I personally (and a few other folks) use.
+This also means that features that I didnt use or need yet are not exposed, glaring example of this would be that raster pipelines only have a vertex and fragment shader. 
 
 ## Why is daxa?
 
 When I started to learn Vulkan, I realized that Vulkan was too verbose for my liking. Things like descriptor sets, renderpasses, resource destruction and the general lack of defaults annoyed me.
 
-So I started to make daxa with the intention to combat the problems I have with raw Vulkan, while maintaining the low cpu overhead and access to modern features that Vulkan provides. It is a research project for me personally to learn more about API, library design and low level api usage.
+So I started to make daxa with the intention to combat the problems I have with raw Vulkan, while maintaining the low cpu overhead and access to modern features that Vulkan provides. It is a research project for me personally to learn more about API, library design and low level api usage. I think i have made a very nice api thus far so i have it public to share it with others to enjoy.
 
 ## How is daxa?
 
