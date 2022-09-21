@@ -88,7 +88,7 @@ namespace daxa
 
         auto is_empty() const -> bool;
 
-        auto operator<=>(TaskGPUResourceId const& other) const -> bool = default;
+        auto operator<=>(TaskGPUResourceId const& other) const = default;
     };
 
     struct TaskBufferId : public TaskGPUResourceId

@@ -5,7 +5,6 @@
     "homepage": "https://github.com/Ipotrick/Daxa",
     "dependencies": [
         "vulkan-memory-allocator",
-        "volk",
         "vulkan"
     ],
     "features": {
@@ -28,8 +27,7 @@
                 {
                     "name": "fsr2",
                     "features": [
-                        "vulkan",
-                        "volk"
+                        "vulkan"
                     ]
                 }
             ]
@@ -39,7 +37,8 @@
             "dependencies": [
                 "glfw3",
                 "glm",
-                "stb"
+                "stb",
+                "cgltf"
             ]
         }
     }
