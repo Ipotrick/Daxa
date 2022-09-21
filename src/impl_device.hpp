@@ -20,6 +20,9 @@ namespace daxa
         ManagedWeakPtr impl_ctx = {};
         VkPhysicalDevice vk_physical_device = {};
         VkDevice vk_device = {};
+
+        PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT;
+
         VmaAllocator vma_allocator = {};
         DeviceProperties vk_info = {};
         DeviceInfo info = {};

@@ -271,6 +271,15 @@ namespace daxa
         vkCmdDispatch(impl.vk_cmd_buffer, group_x, group_y, group_z);
     }
 
+    void CommandList::dispatch_indirect(DispatchIndirectInfo const & info)
+    {
+        auto & impl = *as<ImplCommandList>();
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+        impl.flush_barriers();
+
+        vkCmdDispatchIndirect(impl.vk_cmd_buffer, impl.impl_device.as<ImplDevice>()->slot(info.indirect_buffer).vk_buffer, info.offset);
+    }
+
     void defer_destruction_helper(void * impl_void, GPUResourceId id, u8 index)
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(impl_void);
@@ -698,7 +707,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_cmd_buffer),
                 .pObjectName = cmd_buffer_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &cmd_buffer_name_info);
+            this->impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &cmd_buffer_name_info);
 
             auto cmd_pool_name = this->info.debug_name + std::string(" [Daxa CommandPool]");
             VkDebugUtilsObjectNameInfoEXT cmd_pool_name_info{
@@ -708,7 +717,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_cmd_pool),
                 .pObjectName = cmd_pool_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &cmd_pool_name_info);
+            this->impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &cmd_pool_name_info);
         }
     }
 
