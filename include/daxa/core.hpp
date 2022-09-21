@@ -3,6 +3,7 @@
 #include <atomic>
 #include <optional>
 #include <concepts>
+#include <span>
 
 #include <daxa/types.hpp>
 

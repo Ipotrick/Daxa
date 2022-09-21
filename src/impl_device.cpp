@@ -197,7 +197,7 @@ namespace daxa
     
     auto Device::create_split_barrier(SplitBarrierInfo const & info) -> SplitBarrier
     {
-        return SplitBarrier(*this, info);
+        return SplitBarrier(this->make_weak(), info);
     }
 
     auto Device::create_buffer(BufferInfo const & info) -> BufferId
@@ -711,10 +711,10 @@ namespace daxa
                 vkDestroySemaphore(this->vk_device, semaphore_zombie.vk_semaphore, nullptr);
             });
         check_and_cleanup_gpu_resources(
-            this->main_queue_event_zombies,
-            [&](auto & event_zombie)
+            this->main_queue_split_barrier_zombies,
+            [&](auto & split_barrier_zombie)
             {
-                vkDestroyEvent(this->vk_device, event_zombie.vk_event, nullptr);
+                vkDestroyEvent(this->vk_device, split_barrier_zombie.vk_event, nullptr);
             });
     }
 

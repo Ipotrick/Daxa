@@ -5,6 +5,54 @@
 
 namespace daxa
 {
+    auto get_vk_image_memory_barrier(ImageBarrierInfo const & image_barrier, VkImage vk_image) -> VkImageMemoryBarrier2
+    {
+        return VkImageMemoryBarrier2{
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+            .pNext = nullptr,
+            .srcStageMask = static_cast<u64>(image_barrier.awaited_pipeline_access.stages),
+            .srcAccessMask = static_cast<u32>(image_barrier.awaited_pipeline_access.type),
+            .dstStageMask = static_cast<u64>(image_barrier.waiting_pipeline_access.stages),
+            .dstAccessMask = static_cast<u32>(image_barrier.waiting_pipeline_access.type),
+            .oldLayout = static_cast<VkImageLayout>(image_barrier.before_layout),
+            .newLayout = static_cast<VkImageLayout>(image_barrier.after_layout),
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = vk_image,
+            .subresourceRange = *reinterpret_cast<VkImageSubresourceRange const *>(&image_barrier.image_slice),
+        };
+    }
+
+    auto get_vk_memory_barrier(MemoryBarrierInfo const & memory_barrier) -> VkMemoryBarrier2
+    {
+        return VkMemoryBarrier2{
+            .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
+            .pNext = nullptr,
+            .srcStageMask = static_cast<u64>(memory_barrier.awaited_pipeline_access.stages),
+            .srcAccessMask = static_cast<u32>(memory_barrier.awaited_pipeline_access.type),
+            .dstStageMask = static_cast<u64>(memory_barrier.waiting_pipeline_access.stages),
+            .dstAccessMask = static_cast<u32>(memory_barrier.waiting_pipeline_access.type),
+        };
+    }
+    
+    auto get_vk_dependency_info(
+        std::vector<VkImageMemoryBarrier2> const & vk_image_memory_barriers, 
+        std::vector<VkMemoryBarrier2> const & vk_memory_barriers
+    ) -> VkDependencyInfo
+    {
+        return VkDependencyInfo{
+            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+            .pNext = nullptr,
+            .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+            .memoryBarrierCount = static_cast<u32>(vk_memory_barriers.size()),
+            .pMemoryBarriers = vk_memory_barriers.data(),
+            .bufferMemoryBarrierCount = 0,
+            .pBufferMemoryBarriers = nullptr,
+            .imageMemoryBarrierCount = static_cast<u32>(vk_image_memory_barriers.size()),
+            .pImageMemoryBarriers = vk_image_memory_barriers.data(),
+        };
+    }
+
     CommandList::CommandList(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
     void CommandList::copy_buffer_to_buffer(BufferCopyInfo const & info)
@@ -189,6 +237,7 @@ namespace daxa
 
         vkCmdPushConstants(impl.vk_cmd_buffer, (*impl.pipeline_layouts)[(size + 3) / 4], VK_SHADER_STAGE_ALL, offset, size, data);
     }
+
     void CommandList::set_pipeline(ComputePipeline const & pipeline)
     {
         auto & impl = *as<ImplCommandList>();
@@ -200,6 +249,7 @@ namespace daxa
 
         vkCmdBindPipeline(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline);
     }
+
     void CommandList::set_pipeline(RasterPipeline const & pipeline)
     {
         auto & impl = *as<ImplCommandList>();
@@ -211,6 +261,7 @@ namespace daxa
 
         vkCmdBindPipeline(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline);
     }
+
     void CommandList::dispatch(u32 group_x, u32 group_y, u32 group_z)
     {
         auto & impl = *as<ImplCommandList>();
@@ -292,6 +343,95 @@ namespace daxa
             .dstStageMask = static_cast<u64>(info.waiting_pipeline_access.stages),
             .dstAccessMask = static_cast<u32>(info.waiting_pipeline_access.type),
         };
+    }
+
+    struct SplitBarrierDependencyInfoBuffer
+    {
+        std::vector<VkImageMemoryBarrier2> vk_image_memory_barriers = {};
+        std::vector<VkMemoryBarrier2> vk_memory_barriers = {};
+    };
+
+    inline static thread_local std::vector<SplitBarrierDependencyInfoBuffer> split_barrier_dependency_infos_aux_buffer = {};
+    inline static thread_local std::vector<VkDependencyInfo> split_barrier_dependency_infos_buffer = {};
+    inline static thread_local std::vector<VkEvent> split_barrier_events_buffer = {};
+
+    void CommandList::wait_split_barriers(std::span<SplitBarrierEndInfo const> const & infos)
+    {
+        auto & impl = *this->as<ImplCommandList>();
+        auto & device = *impl.impl_device.as<ImplDevice>();
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
+        impl.flush_barriers();
+
+        for (auto const & end_info : infos)
+        {
+            split_barrier_dependency_infos_buffer.push_back({});
+            auto& dependency_infos_aux_buffer = split_barrier_dependency_infos_aux_buffer.back();
+
+            for (auto & image_barrier : end_info.image_barriers)
+            {
+                dependency_infos_aux_buffer.vk_image_memory_barriers.push_back(
+                    get_vk_image_memory_barrier(image_barrier, device.slot(image_barrier.image_id).vk_image)
+                );
+            }
+
+            for (auto const & memory_barrier : end_info.memory_barriers)
+            {
+                dependency_infos_aux_buffer.vk_memory_barriers.push_back(get_vk_memory_barrier(memory_barrier));
+            }
+
+            split_barrier_dependency_infos_buffer.push_back(get_vk_dependency_info(
+                dependency_infos_aux_buffer.vk_image_memory_barriers, 
+                dependency_infos_aux_buffer.vk_memory_barriers
+            ));
+            
+            split_barrier_events_buffer.push_back(reinterpret_cast<VkEvent>(end_info.split_barrier.data));
+        }
+
+        vkCmdWaitEvents2(
+            impl.vk_cmd_buffer, 
+            static_cast<u32>(split_barrier_events_buffer.size()),
+            split_barrier_events_buffer.data(),
+            split_barrier_dependency_infos_buffer.data()
+        );
+
+        split_barrier_dependency_infos_aux_buffer.clear();
+        split_barrier_dependency_infos_buffer.clear();
+        split_barrier_events_buffer.clear();
+    }
+
+    void CommandList::wait_split_barrier(SplitBarrierEndInfo const & info)
+    {
+        this->wait_split_barriers(std::span{&info, 1});
+    }
+
+    void CommandList::signal_split_barrier(SplitBarrierStartInfo const & info)
+    {
+        auto & impl = *as<ImplCommandList>();
+        auto & device = *impl.impl_device.as<ImplDevice>();
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
+        impl.flush_barriers();
+
+        split_barrier_dependency_infos_buffer.push_back({});
+        auto& dependency_infos_aux_buffer = split_barrier_dependency_infos_aux_buffer.back();
+
+        for (auto & image_barrier : info.image_barriers)
+        {
+            dependency_infos_aux_buffer.vk_image_memory_barriers.push_back(
+                get_vk_image_memory_barrier(image_barrier, device.slot(image_barrier.image_id).vk_image)
+            );
+        }
+        for (auto & memory_barrier : info.memory_barriers)
+        {
+            dependency_infos_aux_buffer.vk_memory_barriers.push_back(get_vk_memory_barrier(memory_barrier));
+        }
+
+        VkDependencyInfo vk_dependency_info = get_vk_dependency_info(
+            dependency_infos_aux_buffer.vk_image_memory_barriers, 
+            dependency_infos_aux_buffer.vk_memory_barriers
+        );
+
+        vkCmdSetEvent2(impl.vk_cmd_buffer, reinterpret_cast<VkEvent>(info.split_barrier.data), &vk_dependency_info);
+        split_barrier_dependency_infos_aux_buffer.clear();
     }
 
     void CommandList::pipeline_barrier_image_transition(ImageBarrierInfo const & info)
@@ -570,67 +710,6 @@ namespace daxa
             };
             vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &cmd_pool_name_info);
         }
-    }
-
-    void ImplCommandList::set_split_barrier(SetSplitBarrier const & info)
-    {
-        auto & impl = *as<ImplCommandList>();
-        SplitBarrierInfo split_barrier_info = info.split_barrier.info;
-
-        bool holds_memory_barrier = std::holds_alternative<MemoryBarrierInfo>(split_barrier_info.barrier); 
-        VkMemoryBarrier2 memory_barrier;
-        VkImageMemoryBarrier2 image_memory_barrier;
-
-        if(holds_memory_barrier)
-        {
-            memory_barrier = {
-                .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
-                .pNext = nullptr,
-                .srcStageFlags = static_cast<u64>(split_barrier_info.barrier.awaited_pipeline_access.stages),
-                .srcAccessMask = static_cast<u32>(split_barrier_info.barrier.awaited_pipeline_access.access),
-                .dstStageFlags = static_cast<u64>(split_barrier_info.barrier.waiting_pipeline_access.stages),
-                .dstAccessMask = static_cast<u32>(split_barrier_info.barrier.waiting_pipeline_access.access),
-            }
-        } else {
-            image_memory_barrier = {
-                .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-                .pNext = nullptr,
-                .srcStageFlags = static_cast<u64>(split_barrier_info.barrier.awaited_pipeline_access.stages),
-                .srcAccessMask = static_cast<u32>(split_barrier_info.barrier.awaited_pipeline_access.access),
-                .dstStageFlags = static_cast<u64>(split_barrier_info.barrier.waiting_pipeline_access.stages),
-                .dstAccessMask = static_cast<u32>(split_barrier_info.barrier.waiting_pipeline_access.access),
-                .oldLayout = static_cast<VkImageLayout>(split_barrier_info.barrier.before_layout),
-                .newLayout = static_cast<VkImageLayout>(split_barrier_info.barrier.after_layout),
-                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                .image = impl.impl_device.as<ImplDevice>()->slot(split_barrier_info.barrier.image_id).vk_image,
-                .subresourceRange = *reinterpret_cast<VkImageSubresourceRange const *>(&split_barrier_info.barrier.image_slice),
-            }
-        }
-
-        VkDependencyInfo dependency_info{
-            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-            .pNext = nullptr,
-            .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
-            .memoryBarrierCount = holds_memory_barrier ? 1 : 0,
-            .pMemoryBarriers = holds_memory_barrier ? &memory_barrier : nullptr,
-            .bufferMemoryBarrierCount = 0,
-            .pBufferMemoryBarriers = 0,
-            .imageMemoryBarrierCount = holds_memory_barrier ? 0 : 1,
-            .pImageMeoryBarriers = holds_memory_barrier ? nullptr : &image_memory_barrier,
-        };
-        vkCmdSetEvent2(impl.vk_command_buffer, info.split_barrier.data, &dependency_info);
-    }
-
-    void ImplCommandList::reset_split_barriers(ResetSplitBarriersInfo const & info)
-    {
-        auto & impl = *as<ImplCommandList>();
-        // MASA : CONTINUE HERE - single command reset
-    }
-
-    void ImplCommandList::wait_split_barriers(WaitSplitBarriersInfo const & info)
-    {
-
     }
 
     void ImplCommandList::reset()
