@@ -173,16 +173,16 @@ struct App : AppWindow<App>
         cmd_list.pipeline_barrier_image_transition({
             .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
             .before_layout = daxa::ImageLayout::UNDEFINED,
-            .after_layout = daxa::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
+            .after_layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
             .image_id = swapchain_image,
         });
 
         cmd_list.pipeline_barrier_image_transition({
             .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
             .before_layout = daxa::ImageLayout::UNDEFINED,
-            .after_layout = daxa::ImageLayout::DEPTH_ATTACHMENT_OPTIMAL,
-            .image_id = depth_image,
+            .after_layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
             .image_slice = {.image_aspect = daxa::ImageAspectFlagBits::DEPTH | daxa::ImageAspectFlagBits::STENCIL},
+            .image_id = depth_image,
         });
 
         cmd_list.begin_renderpass({
@@ -219,7 +219,7 @@ struct App : AppWindow<App>
 
         cmd_list.pipeline_barrier_image_transition({
             .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .before_layout = daxa::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
+            .before_layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
             .after_layout = daxa::ImageLayout::PRESENT_SRC,
             .image_id = swapchain_image,
         });
