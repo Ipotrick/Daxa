@@ -3,21 +3,19 @@
 ## What is daxa?
 Daxa is a GPU api build on Vulkan.
 
+Daxa is not meant to be the "ultimate Vulkan can-do-anything abstraction"!
+It exposes the Vulkan features that I personally (and a few other folks using daxa) use.
+This also means that features that I didnt use or needed yet personally in the projects that use daxa are not exposed, glaring example of this would be that raster pipelines only have a vertex and fragment shader. 
+
 ## Why is daxa?
 
 When I started to learn Vulkan, I realized that Vulkan was too verbose for my liking. Things like descriptor sets, renderpasses, resource destruction and the general lack of defaults annoyed me.
 
 So I started to make daxa with the intention to combat the problems I have with raw Vulkan, while maintaining the low cpu overhead and access to modern features that Vulkan provides. It is a research project for me personally to learn more about API, library design and low level api usage.
 
-Daxa is generally stable and tests for the included tests and my (and other Projects using daxa) but there is no guarantee for stability or future maintenance from me. But I usually read issues and accespt pull requests.
-
-That said, daxa is not definetly not meant to be the "ultimate Vulkan can-do-anything abstraction"!
-It exposes the Vulkan features that I personally (and a few other folks using daxa) use.
-This also means that features that I didnt use or needed yet personally in the projects that use daxa are not exposed, glaring example of this would be that raster pipelines only have a vertex and fragment shader. 
-
 ## How is daxa?
 
-Daxa is under steady development and i am still very moticated to work on it. I am happy to accept pull requests for additional features, as long as they fit with the general design of daxa.
+Daxa is generally stable and tests for the included tests and my (and other Projects using daxa) but there is no guarantee for stability or future maintenance from me. It is under steady development and i am still very moticated to work on it. I am happy to accept pull requests for additional features, as long as they fit with the general design of daxa.
 
 ## Who is daxa?
 
