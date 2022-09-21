@@ -544,25 +544,11 @@ namespace daxa
     {
         UNDEFINED = 0,
         GENERAL = 1,
-        COLOR_ATTACHMENT_OPTIMAL = 2,
-        DEPTH_STENCIL_ATTACHMENT_OPTIMAL = 3,
-        DEPTH_STENCIL_READ_ONLY_OPTIMAL = 4,
-        SHADER_READ_ONLY_OPTIMAL = 5,
         TRANSFER_SRC_OPTIMAL = 6,
         TRANSFER_DST_OPTIMAL = 7,
-        // PREINITIALIZED = 8,
-        DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL = 1000117000,
-        DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL = 1000117001,
-        DEPTH_ATTACHMENT_OPTIMAL = 1000241000,
-        DEPTH_READ_ONLY_OPTIMAL = 1000241001,
-        STENCIL_ATTACHMENT_OPTIMAL = 1000241002,
-        STENCIL_READ_ONLY_OPTIMAL = 1000241003,
-        // READ_ONLY_OPTIMAL = 1000314000,
+        READ_ONLY_OPTIMAL = 1000314000,
         ATTACHMENT_OPTIMAL = 1000314001,
         PRESENT_SRC = 1000001002,
-        // SHARED_PRESENT = 1000111000,
-        // FRAGMENT_DENSITY_MAP_OPTIMAL_EXT = 1000218000,
-        // FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL = 1000164003,
     };
 
     auto to_string(ImageLayout layout) -> std::string_view;
@@ -897,21 +883,5 @@ namespace daxa
         i32 y = {};
         u32 width = {};
         u32 height = {};
-    };
-    
-    struct MemoryBarrierInfo
-    {
-        Access awaited_pipeline_access = AccessConsts::NONE;
-        Access waiting_pipeline_access = AccessConsts::NONE;
-    };
-
-    struct ImageBarrierInfo
-    {
-        Access awaited_pipeline_access = AccessConsts::NONE;
-        Access waiting_pipeline_access = AccessConsts::NONE;
-        ImageLayout before_layout = ImageLayout::UNDEFINED;
-        ImageLayout after_layout = ImageLayout::UNDEFINED;
-        ImageId image_id = {};
-        ImageMipArraySlice image_slice = {};
     };
 } // namespace daxa

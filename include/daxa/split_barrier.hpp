@@ -2,11 +2,29 @@
 
 #include <daxa/core.hpp>
 
+#include <daxa/gpu_resources.hpp>
+
 namespace daxa
 {
+    struct Device;
+    struct MemoryBarrierInfo
+    {
+        Access awaited_pipeline_access = AccessConsts::NONE;
+        Access waiting_pipeline_access = AccessConsts::NONE;
+    };
+
+    struct ImageBarrierInfo
+    {
+        Access awaited_pipeline_access = AccessConsts::NONE;
+        Access waiting_pipeline_access = AccessConsts::NONE;
+        ImageLayout before_layout = ImageLayout::UNDEFINED;
+        ImageLayout after_layout = ImageLayout::UNDEFINED;
+        ImageMipArraySlice image_slice = {};
+        ImageId image_id = {};
+    };
+
     struct SplitBarrierInfo
     {
-        std::variant<MemoryBarrierInfo, ImageBarrierInfo> barrier;
         std::string debug_name = {};
     };
 
@@ -21,13 +39,23 @@ namespace daxa
         auto info() const -> SplitBarrierInfo const &;
 
       private:
+
         friend struct Device;
         friend struct CommandList;
-        SplitBarrier(Device device, SplitBarrierInfo const& info);
+        SplitBarrier(ManagedWeakPtr device, SplitBarrierInfo const& info);
         void cleanup();
 
-        Device device;
-        SplitBarrierInfo info = {};
+        ManagedWeakPtr device = {};
+        SplitBarrierInfo create_info = {};
         u64 data = {};
     };
+
+    struct SplitBarrierStartInfo
+    {
+        std::span<MemoryBarrierInfo> memory_barriers = {};
+        std::span<ImageBarrierInfo> image_barriers = {};
+        SplitBarrier& split_barrier;
+    };
+
+    using SplitBarrierEndInfo = SplitBarrierStartInfo;
 } // namespace daxa
