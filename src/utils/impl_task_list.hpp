@@ -19,6 +19,8 @@ namespace daxa
 {
     struct ImplDevice;
 
+    using EventBatchId = usize;
+
     struct EventId
     {
         usize submit_scope_index = {};
@@ -28,13 +30,12 @@ namespace daxa
     struct ImplTaskBuffer
     {
         Access latest_access = AccessConsts::NONE; 
-        usize latest_access_task_index = {};
         EventId latest_access_event = {};
         BufferId* buffer = {};
         std::string debug_name = {};
     };
 
-    TaskImageTrackedSlice
+    struct TaskImageTrackedSlice
     {
         Access latest_access = AccessConsts::NONE;
         ImageLayout latest_layout = ImageLayout::UNDEFINED;
@@ -44,21 +45,24 @@ namespace daxa
 
     struct ImplTaskImage
     {
-        ImageId* image = {};
-        std::vector<TaskImageTrackedSlice> slices = {};
         std::optional<std::pair<Swapchain, BinarySemaphore>> parent_swapchain = {};
         bool swapchain_semaphore_waited_upon = {};
+        std::vector<TaskImageTrackedSlice> slices = {};
+        ImageId* image = {};
         std::string debug_name = {};
     };
 
-    struct TaskMemoryBarrier
+    struct TaskImageBarrierInfo
     {
         Access awaited_pipeline_access = AccessConsts::NONE;
         Access waiting_pipeline_access = AccessConsts::NONE;
-        BufferId buffer_id = {};
+        ImageLayout before_layout = ImageLayout::UNDEFINED;
+        ImageLayout after_layout = ImageLayout::UNDEFINED;
+        ImageMipArraySlice image_slice = {};
+        TaskImageId task_image_id = {};
     };
 
-    struct TaskImageBarrier
+    struct TaskImageBarrierInfo
     {
         Access awaited_pipeline_access = AccessConsts::NONE;
         Access waiting_pipeline_access = AccessConsts::NONE;
@@ -67,6 +71,8 @@ namespace daxa
         TaskImageId image_id = {};
         ImageMipArraySlice image_slice = {};
     };
+
+    auto get_image_barrier(TaskImageBarrierInfo const & task_image_barrier, ImageId image_id) -> ImageBarrierInfo;
 
     struct TaskEvent
     {
@@ -86,10 +92,9 @@ namespace daxa
 
     struct SubmitEvent
     {
-        std::vector<TaskPipelineBarrier> barriers = {};
         CommandSubmitInfo submit_info;
         CommandSubmitInfo* user_submit_info;
-    };  
+    };
 
     struct PresentEvent
     {
@@ -107,13 +112,13 @@ namespace daxa
         std::monostate
     >;
 
-    struct EventDependency
+    struct EventBatchDependency
     {
         EventId src = {};
         EventId dst = {};
-        std::vector<TaskMemoryBarrier> memory_barriers = {};
-        std::vector<TaskMemoryBarrier> image _barriers = {};
-    }
+        std::vector<TaskImageBarrierInfo> memory_barriers = {};
+        std::vector<MemoryBarrierInfo> image_barriers = {};
+    };
 
     struct Event
     {
@@ -142,8 +147,6 @@ namespace daxa
         std::optional<BinarySemaphore> last_submit_semaphore = {};
 
         void execute_task(TaskEvent & task, usize task_index);
-
-        void pipeline_barriers(std::vector<TaskPipelineBarrier> const & barriers);
     };
 
     struct EventSubmitScope
@@ -154,28 +157,23 @@ namespace daxa
     struct EventBatch
     {
         std::vector<EventId> events = {};
+        std::vector<EventBatchDependency> dependenceis = {};
     };
+
+    auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access>;
+    auto task_buffer_access_to_access(TaskBufferAccess const & access) -> Access;
+    auto compute_needed_barrier(Access const & previous_access, Access const & new_access) -> std::optional<TaskPipelineBarrierInfo>;
 
     struct ImplTaskList final : ManagedSharedState
     {
         TaskListInfo info;
 
         std::vector<EventSubmitScope> event_submit_scopes = {};
-        std::vector<EventDependency> event_dependencies = {};
         std::vector<EventBatch> event_batches = {};
         std::vector<ImplTaskBuffer> impl_task_buffers = {};
         std::vector<ImplTaskImage> impl_task_images = {};
 
-        TaskRecordState record_state = {};
-        TaskGraph compiled_graph = {};
-        std::vector<CommandList> left_over_command_lists = {};
-        u64 last_submit_event_index = std::numeric_limits<u64>::max(); 
-
         bool compiled = false;
-
-        auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access>;
-        auto task_buffer_access_to_access(TaskBufferAccess const & access) -> Access;
-        auto compute_needed_barrier(Access const & previous_access, Access const & new_access) -> std::optional<TaskPipelineBarrier>;
 
         void execute_barriers();
 

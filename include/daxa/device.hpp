@@ -6,7 +6,7 @@
 #include <daxa/swapchain.hpp>
 #include <daxa/command_list.hpp>
 #include <daxa/semaphore.hpp>
-#include <daxa/event.hpp>
+#include <daxa/split_barrier.hpp>
 
 namespace daxa
 {

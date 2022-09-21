@@ -129,14 +129,14 @@ namespace daxa
         u32 stride = {};
     };
 
-    struct SetSplitBarrierInfo
+    struct SignalSplitBarrierInfo
     {
         SplitBarrier & split_barrier;
     };
 
     struct ResetSplitBarriersInfo
     {
-        SplitBarrier & split_barriers;
+        SplitBarrier & split_barrier;
         PipelineStageFlags stage;
     };
 
@@ -161,6 +161,9 @@ namespace daxa
 
         void pipeline_barrier(MemoryBarrierInfo const & info);
         void pipeline_barrier_image_transition(ImageBarrierInfo const & info);
+        void signal_split_barrier(SplitBarrierStartInfo const & info);
+        void wait_split_barriers(std::span<SplitBarrierEndInfo const> const & infos);
+        void wait_split_barrier(SplitBarrierEndInfo const & info);
 
         void push_constant(void const * data, u32 size, u32 offset = 0);
         template <typename T>
@@ -185,10 +188,6 @@ namespace daxa
         void draw(DrawInfo const & info);
         void draw_indexed(DrawIndexedInfo const & info);
         void draw_indirect(DrawIndirectInfo const & info);
-
-        void set_split_barrier(SetSplitBarrierInfo const & info);
-        void reset_split_barriers(ResetSplitBarriersInfo const & info);
-        void wait_split_barriers(WaitSplitBarriersInfo const & info);
 
         void complete();
         auto is_complete() const -> bool;

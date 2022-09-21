@@ -273,25 +273,11 @@ namespace daxa
         {
         case ImageLayout::UNDEFINED: return "UNDEFINED";
         case ImageLayout::GENERAL: return "GENERAL";
-        case ImageLayout::COLOR_ATTACHMENT_OPTIMAL: return "COLOR_ATTACHMENT_OPTIMAL";
-        case ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL: return "DEPTH_STENCIL_ATTACHMENT_OPTIMAL";
-        case ImageLayout::DEPTH_STENCIL_READ_ONLY_OPTIMAL: return "DEPTH_STENCIL_READ_ONLY_OPTIMAL";
-        case ImageLayout::SHADER_READ_ONLY_OPTIMAL: return "SHADER_READ_ONLY_OPTIMAL";
         case ImageLayout::TRANSFER_SRC_OPTIMAL: return "TRANSFER_SRC_OPTIMAL";
         case ImageLayout::TRANSFER_DST_OPTIMAL: return "TRANSFER_DST_OPTIMAL";
-        // PREINITIALIZED = 8,
-        case ImageLayout::DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL: return "DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL";
-        case ImageLayout::DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL: return "DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL";
-        case ImageLayout::DEPTH_ATTACHMENT_OPTIMAL: return "DEPTH_ATTACHMENT_OPTIMAL";
-        case ImageLayout::DEPTH_READ_ONLY_OPTIMAL: return "DEPTH_READ_ONLY_OPTIMAL";
-        case ImageLayout::STENCIL_ATTACHMENT_OPTIMAL: return "STENCIL_ATTACHMENT_OPTIMAL";
-        case ImageLayout::STENCIL_READ_ONLY_OPTIMAL: return "STENCIL_READ_ONLY_OPTIMAL";
-        // READ_ONLY_OPTIMAL = 1000314000,
+        case ImageLayout::READ_ONLY_OPTIMAL: return "READ_ONLY_OPTIMAL";
         case ImageLayout::ATTACHMENT_OPTIMAL: return "ATTACHMENT_OPTIMAL";
         case ImageLayout::PRESENT_SRC: return "PRESENT_SRC";
-        // SHARED_PRESENT = 1000111000,
-        // FRAGMENT_DENSITY_MAP_OPTIMAL_EXT = 1000218000,
-        // FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL = 1000164003,
         default: DAXA_DBG_ASSERT_TRUE_M(false, "invalid ImageLayout");
         }
         return "invalid ImageLayout";
