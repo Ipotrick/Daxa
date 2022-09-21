@@ -62,16 +62,6 @@ namespace daxa
         TaskImageId task_image_id = {};
     };
 
-    struct TaskImageBarrierInfo
-    {
-        Access awaited_pipeline_access = AccessConsts::NONE;
-        Access waiting_pipeline_access = AccessConsts::NONE;
-        ImageLayout before_layout = ImageLayout::UNDEFINED;
-        ImageLayout after_layout = ImageLayout::UNDEFINED;
-        TaskImageId image_id = {};
-        ImageMipArraySlice image_slice = {};
-    };
-
     auto get_image_barrier(TaskImageBarrierInfo const & task_image_barrier, ImageId image_id) -> ImageBarrierInfo;
 
     struct TaskEvent
@@ -162,7 +152,9 @@ namespace daxa
 
     auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access>;
     auto task_buffer_access_to_access(TaskBufferAccess const & access) -> Access;
-    auto compute_needed_barrier(Access const & previous_access, Access const & new_access) -> std::optional<TaskPipelineBarrierInfo>;
+
+    // TODO(pahrens): Implement the body of this, and define TaskPipelineBarrierInfo
+    // auto compute_needed_barrier(Access const & previous_access, Access const & new_access) -> std::optional<TaskPipelineBarrierInfo>;
 
     struct ImplTaskList final : ManagedSharedState
     {

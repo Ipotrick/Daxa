@@ -520,18 +520,17 @@ namespace daxa
 
         TaskList temp_task_list{{.device = this->info.device}};
         TaskImageId task_font_sheet = temp_task_list.create_task_image({
-            .fetch_callback = [this]()
-            { return this->font_sheet; },
+            .image = &this->font_sheet,
         });
 
         TaskBufferId task_staging_buffer = temp_task_list.create_task_buffer({
-            .fetch_callback = [&texture_staging_buffer]()
-            { return texture_staging_buffer; },
+            .buffer = &texture_staging_buffer,
         });
 
         temp_task_list.add_task({
             .used_buffers = {{task_staging_buffer, daxa::TaskBufferAccess::TRANSFER_READ}},
-            .used_images = {{task_font_sheet, daxa::TaskImageAccess::TRANSFER_WRITE}},
+            // TODO(pahrens): Review this. I just put in nullopt - assuming it'll use the whole range
+            .used_images = {{task_font_sheet, daxa::TaskImageAccess::TRANSFER_WRITE, std::nullopt}},
             .task = [&](TaskInterface interf)
             {
                 auto cmd_list = interf.get_command_list();
