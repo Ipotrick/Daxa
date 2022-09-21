@@ -41,11 +41,11 @@ namespace daxa::math_operators
         return result;
     }
     template <typename T, usize N>
-    constexpr auto dot(detail::GenericVector<T, N> const & a, detail::GenericVector<T, N> const & b) -> detail::GenericVector<T, N>
+    constexpr auto dot(detail::GenericVector<T, N> const & a, detail::GenericVector<T, N> const & b) -> T
     {
         T result = 0;
         for (usize i = 0; i < N; ++i)
-            result[i] += a[i] * b[i];
+            result += a[i] * b[i];
         return result;
     }
 

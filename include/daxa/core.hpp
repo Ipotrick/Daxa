@@ -57,7 +57,9 @@ namespace daxa
 #endif
 
 #if defined(__linux__)
-#include <X11/Xlib.h>
+// HACK TO NOT INCLUDE X11/Xlib.h
+typedef unsigned long XID;
+typedef XID Window;
 
 namespace daxa
 {
