@@ -308,7 +308,7 @@ namespace daxa
         .largePoints = VK_FALSE,
         .alphaToOne = VK_FALSE,
         .multiViewport = VK_FALSE,
-        .samplerAnisotropy = VK_FALSE,
+        .samplerAnisotropy = VK_TRUE,
         .textureCompressionETC2 = VK_FALSE,
         .textureCompressionASTC_LDR = VK_FALSE,
         .textureCompressionBC = VK_FALSE,
