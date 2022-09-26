@@ -21,7 +21,7 @@ namespace daxa
         usize size;
     };
 
-    using ShaderSource = std::variant<ShaderFile, ShaderCode, ShaderSPIRV>;
+    using ShaderSource = std::variant<std::monostate, ShaderFile, ShaderCode, ShaderSPIRV>;
 
     struct ShaderDefine
     {
@@ -54,7 +54,7 @@ namespace daxa
 
     struct ShaderInfo
     {
-        ShaderSource source;
+        ShaderSource source = std::monostate{};
         ShaderCompileOptions compile_options = {};
         std::string debug_name = {};
     };
