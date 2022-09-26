@@ -364,9 +364,10 @@ namespace daxa
         //     }
         // }
 
-        u32 neeeded_shader_stages = 0;
+        std::vector<VkShaderModule> vk_shader_modules{};
+        std::vector<VkPipelineShaderStageCreateInfo> vk_pipeline_shader_stage_create_infos{};
 
-        auto create_shader_module = [&](ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, VkShaderModule& vk_shader_module) -> Result<bool> {
+        auto create_shader_module = [&](ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage) -> Result<bool> {
             if(!std::holds_alternative<std::monostate>(shader_info.source)) {
                 auto spirv_result = impl.get_spirv(shader_info, shader_stage);
                 if (spirv_result.is_err())
@@ -376,7 +377,9 @@ namespace daxa
 
                 std::vector<u32> spirv = spirv_result.value();
 
-                VkShaderModuleCreateInfo vk_shader_module_create_info{
+                VkShaderModule vk_shader_module;
+
+                VkShaderModuleCreateInfo vk_shader_module_create_info {
                     .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
                     .pNext = nullptr,
                     .codeSize = static_cast<u32>(spirv.size() * sizeof(u32)),
@@ -384,38 +387,8 @@ namespace daxa
                 };
 
                 vkCreateShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, &vk_shader_module_create_info, nullptr, &vk_shader_module);
+                vk_shader_modules.push_back(std::move(vk_shader_module));
 
-                neeeded_shader_stages++;
-            }
-
-            return true;
-        };
-
-        VkShaderModule v_vk_shader_module = {};
-
-        {
-            auto result = create_shader_module(modified_info.vertex_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT, v_vk_shader_module);
-            if(result.is_err()) {
-                return ResultErr{.message = result.message()};
-            } 
-        }
-
-        VkShaderModule p_vk_shader_module = {};
-
-        {
-            auto result = create_shader_module(modified_info.fragment_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT, p_vk_shader_module);
-            if(result.is_err()) {
-                return ResultErr{.message = result.message()};
-            } 
-        }
-
-        impl_pipeline->vk_pipeline_layout = impl.impl_device.as<ImplDevice>()->gpu_table.pipeline_layouts[(modified_info.push_constant_size + 3) / 4];
-
-        std::vector<VkPipelineShaderStageCreateInfo> vk_pipeline_shader_stage_create_infos;
-        vk_pipeline_shader_stage_create_infos.reserve(neeeded_shader_stages);
-
-        auto create_shader_stage = [&](ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, VkShaderModule& vk_shader_module) {
-            if(!std::holds_alternative<std::monostate>(shader_info.source)) {
                 VkPipelineShaderStageCreateInfo vk_pipeline_shader_stage_create_info {
                     .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
                     .pNext = nullptr,
@@ -428,10 +401,25 @@ namespace daxa
 
                 vk_pipeline_shader_stage_create_infos.push_back(std::move(vk_pipeline_shader_stage_create_info));
             }
+
+            return true;
         };
 
-        create_shader_stage(modified_info.vertex_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT, v_vk_shader_module);
-        create_shader_stage(modified_info.fragment_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT, p_vk_shader_module);
+        {
+            auto result = create_shader_module(modified_info.vertex_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT);
+            if(result.is_err()) {
+                return ResultErr{.message = result.message()};
+            } 
+        }
+
+        {
+            auto result = create_shader_module(modified_info.fragment_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT);
+            if(result.is_err()) {
+                return ResultErr{.message = result.message()};
+            } 
+        }
+
+        impl_pipeline->vk_pipeline_layout = impl.impl_device.as<ImplDevice>()->gpu_table.pipeline_layouts[(modified_info.push_constant_size + 3) / 4];
 
         constexpr VkPipelineVertexInputStateCreateInfo vk_vertex_input_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -539,7 +527,7 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
             .pNext = &vk_pipeline_rendering,
             .flags = {},
-            .stageCount = neeeded_shader_stages,
+            .stageCount = vk_pipeline_shader_stage_create_infos.size(),
             .pStages = vk_pipeline_shader_stage_create_infos.data(),
             .pVertexInputState = &vk_vertex_input_state,
             .pInputAssemblyState = &vk_input_assembly_state,
@@ -566,14 +554,9 @@ namespace daxa
 
         DAXA_DBG_ASSERT_TRUE_M(pipeline_result == VK_SUCCESS, "failed to create graphics pipeline");
 
-        auto destroy_shader_module = [&](VkShaderModule& vk_shader_module) {
-            if(vk_shader_module != VK_NULL_HANDLE) {
-                vkDestroyShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, vk_shader_module, nullptr);
-            }
-        };
-
-        destroy_shader_module(v_vk_shader_module);
-        destroy_shader_module(p_vk_shader_module);
+        for(auto& vk_shader_module : vk_shader_modules) {
+            vkDestroyShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, vk_shader_module, nullptr);
+        }
 
         if (impl.impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && modified_info.debug_name.size() > 0)
         {
