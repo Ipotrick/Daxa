@@ -30,7 +30,7 @@ namespace daxa
         return *this;
     }
 
-    auto ImageMipArraySlice::contained_in(ImageMipArraySlice const & slice) const -> bool
+    auto ImageMipArraySlice::contains(ImageMipArraySlice const & slice) const -> bool
     {
         return this->base_mip_level >= slice.base_mip_level &&
                (this->base_mip_level + this->level_count) <= (slice.base_mip_level + slice.level_count) &&
@@ -38,31 +38,6 @@ namespace daxa
                (this->base_array_layer + this->layer_count) <= (slice.base_array_layer + slice.layer_count) &&
                this->image_aspect == slice.image_aspect;
     }
-
-    auto ImageMipArraySlice::is_border_slice_of(ImageMipArraySlice const & slice) const -> bool
-    {
-        // If a border slice has idfferent aspect masks then it must have all mip and array layers.
-        if (slice.image_aspect != this->image_aspect)
-        {
-            bool mip_equal = this->base_mip_level == slice.base_mip_level && this->level_count == slice.level_count;
-            bool array_equal = this->base_array_layer == slice.base_array_layer && this->layer_count == slice.layer_count;
-            return mip_equal && array_equal;
-        }
-
-        // A border slice must start or end at the start or end of the slice.
-        // The border slice CAN NOT be the whole range or either the mips or the array layers!
-
-        bool mip_border_slice =
-            (this->base_mip_level == slice.level_count && this->level_count < slice.level_count) ||
-            ((this->base_mip_level + this->level_count == slice.level_count + slice.level_count) && this->base_mip_level > slice.base_mip_level);
-
-        bool array_layer_border_slice =
-            (this->base_array_layer == slice.layer_count && this->layer_count < slice.layer_count) ||
-            ((this->base_array_layer + this->layer_count == slice.layer_count + slice.layer_count) && this->base_array_layer > slice.base_array_layer);
-
-        return mip_border_slice && array_layer_border_slice;
-    }
-
     auto ImageMipArraySlice::intersects(ImageMipArraySlice const & slice) const -> bool
     {
         bool mips_disjoint =
@@ -77,73 +52,13 @@ namespace daxa
 
         return !mips_disjoint && !layers_disjoint && !aspect_disjoint;
     }
-
-    auto ImageMipArraySlice::subtract(ImageMipArraySlice const & slice) const -> ImageMipArraySlice
+    auto ImageMipArraySlice::intersect(ImageMipArraySlice const & slice) const -> ImageMipArraySlice
     {
-        DAXA_DBG_ASSERT_TRUE_M(slice.is_border_slice_of(*this), "can only substract a border slice");
-
-        return ImageMipArraySlice{
-            .image_aspect = this->image_aspect & !slice.image_aspect,
-            .base_mip_level = (this->base_mip_level == slice.base_mip_level ? this->base_mip_level + slice.level_count : this->base_mip_level),
-            .level_count = this->level_count - slice.level_count,
-            .base_array_layer = (this->base_array_layer == slice.base_array_layer ? this->base_array_layer + slice.layer_count : this->base_array_layer),
-            .layer_count = this->layer_count - slice.layer_count,
-        };
+        return {};
     }
-
-    auto ImageMipArraySlice::is_mergable_with(ImageMipArraySlice const & slice) const -> bool
+    auto ImageMipArraySlice::subtract(ImageMipArraySlice const & slice) const -> std::tuple<std::array<ImageMipArraySlice, 4>, usize>
     {
-        // A dimension (apspect, mips, ayyar layer) is mergable when they are disjoint but touching
-
-        bool mips_mergable =
-            this->base_mip_level + this->level_count == slice.base_mip_level ||
-            slice.base_mip_level + slice.level_count == this->base_mip_level;
-
-        bool mips_identical =
-            this->base_mip_level == slice.base_mip_level &&
-            this->level_count == slice.level_count;
-
-        bool layers_mergable =
-            this->base_array_layer + this->layer_count == slice.base_array_layer ||
-            slice.base_array_layer + slice.layer_count == this->base_array_layer;
-
-        bool layers_identical =
-            this->base_array_layer == slice.base_array_layer &&
-            this->layer_count == slice.layer_count;
-
-        bool aspect_mergable = (this->image_aspect & slice.image_aspect) == 0;
-
-        bool aspect_identical = this->image_aspect == slice.image_aspect;
-
-        if (!aspect_identical)
-        {
-            return aspect_mergable && mips_identical && layers_identical;
-        }
-
-        if (!mips_identical)
-        {
-            return mips_mergable && layers_identical && aspect_identical;
-        }
-
-        if (!layers_identical)
-        {
-            return layers_mergable && mips_identical && aspect_identical;
-        }
-
-        return false;
-    }
-
-    auto ImageMipArraySlice::merge(ImageMipArraySlice const & slice) const -> ImageMipArraySlice
-    {
-        DAXA_DBG_ASSERT_TRUE_M(slice.is_mergable_with(*this), "can not merge slices");
-
-        return ImageMipArraySlice{
-            .image_aspect = this->image_aspect | slice.image_aspect,
-            .base_mip_level = (this->base_mip_level == slice.base_mip_level ? this->base_mip_level + slice.level_count : this->base_mip_level),
-            .level_count = this->level_count - slice.level_count,
-            .base_array_layer = (this->base_array_layer == slice.base_array_layer ? this->base_array_layer + slice.layer_count : this->base_array_layer),
-            .layer_count = this->layer_count - slice.layer_count,
-        };
+        return {};
     }
 
     auto ImageArraySlice::slice(ImageMipArraySlice const & mipArraySlice, u32 mip_level) -> ImageArraySlice
