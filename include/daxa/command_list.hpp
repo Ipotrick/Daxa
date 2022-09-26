@@ -151,7 +151,6 @@ namespace daxa
         std::span<SplitBarrier> split_barriers;
     };
 
-
     struct CommandList : ManagedPtr
     {
         CommandList();
