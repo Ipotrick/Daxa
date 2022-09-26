@@ -29,9 +29,9 @@ namespace daxa
 
     struct ImplTaskBuffer
     {
-        Access latest_access = AccessConsts::NONE; 
+        Access latest_access = AccessConsts::NONE;
         EventId latest_access_event = {};
-        BufferId* buffer = {};
+        BufferId * buffer = {};
         std::string debug_name = {};
     };
 
@@ -48,7 +48,7 @@ namespace daxa
         std::optional<std::pair<Swapchain, BinarySemaphore>> parent_swapchain = {};
         bool swapchain_semaphore_waited_upon = {};
         std::vector<TaskImageTrackedSlice> slices = {};
-        ImageId* image = {};
+        ImageId * image = {};
         std::string debug_name = {};
     };
 
@@ -83,13 +83,13 @@ namespace daxa
     struct SubmitEvent
     {
         CommandSubmitInfo submit_info;
-        CommandSubmitInfo* user_submit_info;
+        CommandSubmitInfo * user_submit_info;
     };
 
     struct PresentEvent
     {
         PresentInfo present_info;
-        std::vector<BinarySemaphore>* user_binary_semaphores = {};
+        std::vector<BinarySemaphore> * user_binary_semaphores = {};
         TaskImageId presented_image = {};
     };
 
@@ -99,8 +99,7 @@ namespace daxa
         CreateTaskImageEvent,
         SubmitEvent,
         PresentEvent,
-        std::monostate
-    >;
+        std::monostate>;
 
     struct EventBatchDependency
     {
