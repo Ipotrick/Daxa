@@ -21,7 +21,7 @@ namespace daxa
         usize size;
     };
 
-    using ShaderSource = std::variant<ShaderFile, ShaderCode, ShaderSPIRV>;
+    using ShaderSource = std::variant<std::monostate, ShaderFile, ShaderCode, ShaderSPIRV>;
 
     struct ShaderDefine
     {
@@ -54,7 +54,7 @@ namespace daxa
 
     struct ShaderInfo
     {
-        ShaderSource source;
+        ShaderSource source = std::monostate{};
         ShaderCompileOptions compile_options = {};
         std::string debug_name = {};
     };
@@ -109,6 +109,10 @@ namespace daxa
     {
         ShaderInfo vertex_shader_info = {};
         ShaderInfo fragment_shader_info = {};
+        // ShaderInfo geometry_shader_info = {}; NOTE(Lukas): Maybe enable it but throw warning when used. Warning would be enabled with validation layer
+        // ShaderInfo tessellation_control_shader_info = {};
+        // ShaderInfo tessellation_evaluation_shader_info = {};
+        // ShaderInfo mesh_shader_info = {}; NOTE(Lukas): In future to add
         std::vector<RenderAttachment> color_attachments = {};
         DepthTestInfo depth_test = {};
         RasterizerInfo raster = {};
