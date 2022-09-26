@@ -334,20 +334,6 @@ namespace daxa
         impl.current_observed_hotload_files = &impl_pipeline->observed_hotload_files;
         impl_pipeline->last_hotload_time = std::chrono::file_clock::now();
 
-        auto v_spirv_result = impl.get_spirv(modified_info.vertex_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT);
-        if (v_spirv_result.is_err())
-        {
-            return ResultErr{.message = v_spirv_result.message()};
-        }
-        std::vector<u32> v_spirv = v_spirv_result.value();
-
-        auto p_spirv_result = impl.get_spirv(modified_info.fragment_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT);
-        if (p_spirv_result.is_err())
-        {
-            return ResultErr{.message = p_spirv_result.message()};
-        }
-        std::vector<u32> p_spirv = p_spirv_result.value();
-
         // TODO(grundlett): Maybe add ability to output the spirv binary for people!
         // {
         //     u32 i = 0;
@@ -378,47 +364,62 @@ namespace daxa
         //     }
         // }
 
-        VkShaderModule v_vk_shader_module = {};
-        VkShaderModule p_vk_shader_module = {};
+        std::vector<VkShaderModule> vk_shader_modules{};
+        std::vector<VkPipelineShaderStageCreateInfo> vk_pipeline_shader_stage_create_infos{};
 
-        VkShaderModuleCreateInfo shader_module_vertex{
-            .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-            .pNext = nullptr,
-            .codeSize = static_cast<u32>(v_spirv.size() * sizeof(u32)),
-            .pCode = v_spirv.data(),
-        };
-        vkCreateShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, &shader_module_vertex, nullptr, &v_vk_shader_module);
+        auto create_shader_module = [&](ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage) -> Result<bool> {
+            if(!std::holds_alternative<std::monostate>(shader_info.source)) {
+                auto spirv_result = impl.get_spirv(shader_info, shader_stage);
+                if (spirv_result.is_err())
+                {
+                    return ResultErr{.message = spirv_result.message()};
+                }
 
-        VkShaderModuleCreateInfo shader_module_pixel{
-            .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-            .pNext = nullptr,
-            .codeSize = static_cast<u32>(p_spirv.size() * sizeof(u32)),
-            .pCode = p_spirv.data(),
+                std::vector<u32> spirv = spirv_result.value();
+
+                VkShaderModule vk_shader_module;
+
+                VkShaderModuleCreateInfo vk_shader_module_create_info {
+                    .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+                    .pNext = nullptr,
+                    .codeSize = static_cast<u32>(spirv.size() * sizeof(u32)),
+                    .pCode = spirv.data(),
+                };
+
+                vkCreateShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, &vk_shader_module_create_info, nullptr, &vk_shader_module);
+                vk_shader_modules.push_back(std::move(vk_shader_module));
+
+                VkPipelineShaderStageCreateInfo vk_pipeline_shader_stage_create_info {
+                    .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                    .pNext = nullptr,
+                    .flags = {},
+                    .stage = shader_stage,
+                    .module = vk_shader_module,
+                    .pName = shader_info.compile_options.entry_point.value().c_str(),
+                    .pSpecializationInfo = nullptr,
+                };
+
+                vk_pipeline_shader_stage_create_infos.push_back(std::move(vk_pipeline_shader_stage_create_info));
+            }
+
+            return true;
         };
-        vkCreateShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, &shader_module_pixel, nullptr, &p_vk_shader_module);
+
+        {
+            auto result = create_shader_module(modified_info.vertex_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT);
+            if(result.is_err()) {
+                return ResultErr{.message = result.message()};
+            } 
+        }
+        
+        {
+            auto result = create_shader_module(modified_info.fragment_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT);
+            if(result.is_err()) {
+                return ResultErr{.message = result.message()};
+            } 
+        }
 
         impl_pipeline->vk_pipeline_layout = impl.impl_device.as<ImplDevice>()->gpu_table.pipeline_layouts[(modified_info.push_constant_size + 3) / 4];
-
-        VkPipelineShaderStageCreateInfo vk_pipeline_shader_stage_create_infos[2] = {
-            VkPipelineShaderStageCreateInfo{
-                .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-                .pNext = nullptr,
-                .flags = {},
-                .stage = VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT,
-                .module = v_vk_shader_module,
-                .pName = modified_info.vertex_shader_info.compile_options.entry_point.value().c_str(),
-                .pSpecializationInfo = nullptr,
-            },
-            VkPipelineShaderStageCreateInfo{
-                .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-                .pNext = nullptr,
-                .flags = {},
-                .stage = VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT,
-                .module = p_vk_shader_module,
-                .pName = modified_info.fragment_shader_info.compile_options.entry_point.value().c_str(),
-                .pSpecializationInfo = nullptr,
-            },
-        };
 
         constexpr VkPipelineVertexInputStateCreateInfo vk_vertex_input_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -526,8 +527,8 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
             .pNext = &vk_pipeline_rendering,
             .flags = {},
-            .stageCount = 2,
-            .pStages = vk_pipeline_shader_stage_create_infos,
+            .stageCount = static_cast<u32>(vk_pipeline_shader_stage_create_infos.size()),
+            .pStages = vk_pipeline_shader_stage_create_infos.data(),
             .pVertexInputState = &vk_vertex_input_state,
             .pInputAssemblyState = &vk_input_assembly_state,
             .pViewportState = &vk_viewport_state,
@@ -553,8 +554,9 @@ namespace daxa
 
         DAXA_DBG_ASSERT_TRUE_M(pipeline_result == VK_SUCCESS, "failed to create graphics pipeline");
 
-        vkDestroyShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, v_vk_shader_module, nullptr);
-        vkDestroyShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, p_vk_shader_module, nullptr);
+        for(auto& vk_shader_module : vk_shader_modules) {
+            vkDestroyShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, vk_shader_module, nullptr);
+        }
 
         if (impl.impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && modified_info.debug_name.size() > 0)
         {
