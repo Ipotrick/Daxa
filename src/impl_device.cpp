@@ -194,7 +194,7 @@ namespace daxa
         auto impl = as<ImplDevice>();
         return TimelineSemaphore{ManagedPtr{new ImplTimelineSemaphore(this->make_weak(), info)}};
     }
-    
+
     auto Device::create_split_barrier(SplitBarrierInfo const & info) -> SplitBarrier
     {
         return SplitBarrier(this->make_weak(), info);

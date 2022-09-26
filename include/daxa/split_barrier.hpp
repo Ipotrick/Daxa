@@ -32,17 +32,16 @@ namespace daxa
 
     struct SplitBarrier
     {
-        SplitBarrier(SplitBarrier&& other) noexcept;
-        auto operator=(SplitBarrier&& other) noexcept -> SplitBarrier&;
+        SplitBarrier(SplitBarrier && other) noexcept;
+        auto operator=(SplitBarrier && other) noexcept -> SplitBarrier &;
         ~SplitBarrier();
 
         auto info() const -> SplitBarrierInfo const &;
 
       private:
-
         friend struct Device;
         friend struct CommandList;
-        SplitBarrier(ManagedWeakPtr device, SplitBarrierInfo const& info);
+        SplitBarrier(ManagedWeakPtr device, SplitBarrierInfo const & info);
         void cleanup();
 
         ManagedWeakPtr device = {};
@@ -54,7 +53,7 @@ namespace daxa
     {
         std::span<MemoryBarrierInfo> memory_barriers = {};
         std::span<ImageBarrierInfo> image_barriers = {};
-        SplitBarrier& split_barrier;
+        SplitBarrier & split_barrier;
     };
 
     using SplitBarrierEndInfo = SplitBarrierStartInfo;

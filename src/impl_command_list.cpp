@@ -34,11 +34,10 @@ namespace daxa
             .dstAccessMask = static_cast<u32>(memory_barrier.waiting_pipeline_access.type),
         };
     }
-    
+
     auto get_vk_dependency_info(
-        std::vector<VkImageMemoryBarrier2> const & vk_image_memory_barriers, 
-        std::vector<VkMemoryBarrier2> const & vk_memory_barriers
-    ) -> VkDependencyInfo
+        std::vector<VkImageMemoryBarrier2> const & vk_image_memory_barriers,
+        std::vector<VkMemoryBarrier2> const & vk_memory_barriers) -> VkDependencyInfo
     {
         return VkDependencyInfo{
             .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
@@ -374,13 +373,12 @@ namespace daxa
         for (auto const & end_info : infos)
         {
             split_barrier_dependency_infos_buffer.push_back({});
-            auto& dependency_infos_aux_buffer = split_barrier_dependency_infos_aux_buffer.back();
+            auto & dependency_infos_aux_buffer = split_barrier_dependency_infos_aux_buffer.back();
 
             for (auto & image_barrier : end_info.image_barriers)
             {
                 dependency_infos_aux_buffer.vk_image_memory_barriers.push_back(
-                    get_vk_image_memory_barrier(image_barrier, device.slot(image_barrier.image_id).vk_image)
-                );
+                    get_vk_image_memory_barrier(image_barrier, device.slot(image_barrier.image_id).vk_image));
             }
 
             for (auto const & memory_barrier : end_info.memory_barriers)
@@ -389,19 +387,17 @@ namespace daxa
             }
 
             split_barrier_dependency_infos_buffer.push_back(get_vk_dependency_info(
-                dependency_infos_aux_buffer.vk_image_memory_barriers, 
-                dependency_infos_aux_buffer.vk_memory_barriers
-            ));
-            
+                dependency_infos_aux_buffer.vk_image_memory_barriers,
+                dependency_infos_aux_buffer.vk_memory_barriers));
+
             split_barrier_events_buffer.push_back(reinterpret_cast<VkEvent>(end_info.split_barrier.data));
         }
 
         vkCmdWaitEvents2(
-            impl.vk_cmd_buffer, 
+            impl.vk_cmd_buffer,
             static_cast<u32>(split_barrier_events_buffer.size()),
             split_barrier_events_buffer.data(),
-            split_barrier_dependency_infos_buffer.data()
-        );
+            split_barrier_dependency_infos_buffer.data());
 
         split_barrier_dependency_infos_aux_buffer.clear();
         split_barrier_dependency_infos_buffer.clear();
@@ -421,13 +417,12 @@ namespace daxa
         impl.flush_barriers();
 
         split_barrier_dependency_infos_buffer.push_back({});
-        auto& dependency_infos_aux_buffer = split_barrier_dependency_infos_aux_buffer.back();
+        auto & dependency_infos_aux_buffer = split_barrier_dependency_infos_aux_buffer.back();
 
         for (auto & image_barrier : info.image_barriers)
         {
             dependency_infos_aux_buffer.vk_image_memory_barriers.push_back(
-                get_vk_image_memory_barrier(image_barrier, device.slot(image_barrier.image_id).vk_image)
-            );
+                get_vk_image_memory_barrier(image_barrier, device.slot(image_barrier.image_id).vk_image));
         }
         for (auto & memory_barrier : info.memory_barriers)
         {
@@ -435,9 +430,8 @@ namespace daxa
         }
 
         VkDependencyInfo vk_dependency_info = get_vk_dependency_info(
-            dependency_infos_aux_buffer.vk_image_memory_barriers, 
-            dependency_infos_aux_buffer.vk_memory_barriers
-        );
+            dependency_infos_aux_buffer.vk_image_memory_barriers,
+            dependency_infos_aux_buffer.vk_memory_barriers);
 
         vkCmdSetEvent2(impl.vk_cmd_buffer, reinterpret_cast<VkEvent>(info.split_barrier.data), &vk_dependency_info);
         split_barrier_dependency_infos_aux_buffer.clear();

@@ -88,7 +88,7 @@ namespace daxa
 
         auto is_empty() const -> bool;
 
-        auto operator<=>(TaskGPUResourceId const& other) const = default;
+        auto operator<=>(TaskGPUResourceId const & other) const = default;
     };
 
     struct TaskBufferId : public TaskGPUResourceId
@@ -159,7 +159,7 @@ namespace daxa
 
     struct TaskPresentInfo
     {
-        std::vector<BinarySemaphore>* user_binary_semaphores = {};
+        std::vector<BinarySemaphore> * user_binary_semaphores = {};
         TaskImageId presented_image = {};
     };
 
@@ -173,8 +173,8 @@ namespace daxa
 
         void add_task(TaskInfo const & info);
 
-        void submit(CommandSubmitInfo* info);
-        void present(TaskPresentInfo const& info);
+        void submit(CommandSubmitInfo * info);
+        void present(TaskPresentInfo const & info);
 
         void compile();
         void output_graphviz();
