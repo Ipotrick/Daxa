@@ -376,14 +376,14 @@ namespace daxa
 
                 std::vector<u32> spirv = spirv_result.value();
 
-                VkShaderModuleCreateInfo shader_module_vertex{
+                VkShaderModuleCreateInfo vk_shader_module_create_info{
                     .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
                     .pNext = nullptr,
                     .codeSize = static_cast<u32>(spirv.size() * sizeof(u32)),
                     .pCode = spirv.data(),
                 };
 
-                vkCreateShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, &shader_module_vertex, nullptr, &vk_shader_module);
+                vkCreateShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, &vk_shader_module_create_info, nullptr, &vk_shader_module);
 
                 neeeded_shader_stages++;
             }
@@ -416,7 +416,7 @@ namespace daxa
 
         auto create_shader_stage = [&](ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, VkShaderModule& vk_shader_module) {
             if(!std::holds_alternative<std::monostate>(shader_info.source)) {
-                VkPipelineShaderStageCreateInfo info {
+                VkPipelineShaderStageCreateInfo vk_pipeline_shader_stage_create_info {
                     .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
                     .pNext = nullptr,
                     .flags = {},
@@ -426,7 +426,7 @@ namespace daxa
                     .pSpecializationInfo = nullptr,
                 };
 
-                vk_pipeline_shader_stage_create_infos.push_back(std::move(info));
+                vk_pipeline_shader_stage_create_infos.push_back(std::move(vk_pipeline_shader_stage_create_info));
             }
         };
 
