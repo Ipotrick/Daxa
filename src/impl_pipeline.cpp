@@ -411,7 +411,7 @@ namespace daxa
                 return ResultErr{.message = result.message()};
             } 
         }
-
+        
         {
             auto result = create_shader_module(modified_info.fragment_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT);
             if(result.is_err()) {
