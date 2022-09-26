@@ -527,7 +527,7 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
             .pNext = &vk_pipeline_rendering,
             .flags = {},
-            .stageCount = vk_pipeline_shader_stage_create_infos.size(),
+            .stageCount = static_cast<u32>(vk_pipeline_shader_stage_create_infos.size()),
             .pStages = vk_pipeline_shader_stage_create_infos.data(),
             .pVertexInputState = &vk_vertex_input_state,
             .pInputAssemblyState = &vk_input_assembly_state,
