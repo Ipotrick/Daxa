@@ -109,10 +109,6 @@ namespace daxa
     {
         ShaderInfo vertex_shader_info = {};
         ShaderInfo fragment_shader_info = {};
-        // ShaderInfo geometry_shader_info = {}; NOTE(Lukas): Maybe enable it but throw warning when used. Warning would be enabled with validation layer
-        // ShaderInfo tessellation_control_shader_info = {};
-        // ShaderInfo tessellation_evaluation_shader_info = {};
-        // ShaderInfo mesh_shader_info = {}; NOTE(Lukas): In future to add
         std::vector<RenderAttachment> color_attachments = {};
         DepthTestInfo depth_test = {};
         RasterizerInfo raster = {};
