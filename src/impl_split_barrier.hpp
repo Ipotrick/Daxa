@@ -10,6 +10,4 @@ namespace daxa
     {
         VkEvent vk_event = {};
     };
-
-    
-}
+} // namespace daxa

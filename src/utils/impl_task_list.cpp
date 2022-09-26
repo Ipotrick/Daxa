@@ -171,11 +171,11 @@ namespace daxa
     {
     }
 
-    void TaskList::submit(CommandSubmitInfo* info)
+    void TaskList::submit(CommandSubmitInfo * info)
     {
     }
 
-    void TaskList::present(TaskPresentInfo const& info)
+    void TaskList::present(TaskPresentInfo const & info)
     {
     }
 
