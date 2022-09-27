@@ -12,12 +12,6 @@ namespace daxa
     static inline constexpr u32 SAMPLER_BINDING = 3;
     static inline constexpr u32 BUFFER_DEVICE_ADDRESS_BUFFER_BINDING = 4;
 
-    struct ImplTimelineQueryPoolSlot
-    {
-        TimelineQueryPoolInfo info = {};
-        VkQueryPool vk_query_pool = {};
-    };
-
     struct ImplBufferSlot
     {
         BufferInfo info = {};
@@ -179,7 +173,6 @@ namespace daxa
         GpuResourcePool<ImplBufferSlot> buffer_slots = {};
         GpuResourcePool<ImplImageSlot> image_slots = {};
         GpuResourcePool<ImplSamplerSlot> sampler_slots = {};
-        GpuResourcePool<ImplTimelineQueryPoolSlot> timeline_querry_pool_slots = {};
 
         VkDescriptorSetLayout vk_descriptor_set_layout = {};
         VkDescriptorSet vk_descriptor_set = {};

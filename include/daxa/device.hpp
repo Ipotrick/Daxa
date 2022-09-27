@@ -6,6 +6,7 @@
 #include <daxa/swapchain.hpp>
 #include <daxa/command_list.hpp>
 #include <daxa/semaphore.hpp>
+#include <daxa/timeline_query.hpp>
 
 namespace daxa
 {
@@ -178,28 +179,18 @@ namespace daxa
         Swapchain swapchain;
     };
 
-    struct GetQueryPoolResultsInfo
-    {
-        TimelineQueryPoolId query_pool_id = {};
-        u32 first_query_index = {};
-        u32 query_count = {};
-        void* dst_data = {};
-        bool wait = {};
-    };
-
     struct Device : ManagedPtr
     {
         auto create_buffer(BufferInfo const & info) -> BufferId;
         auto create_image(ImageInfo const & info) -> ImageId;
         auto create_image_view(ImageViewInfo const & info) -> ImageViewId;
         auto create_sampler(SamplerInfo const & info) -> SamplerId;
-        auto create_timeline_query_pool(TimelineQueryPoolInfo const & info) -> TimelineQueryPoolId;
+        auto create_timeline_query_pool(TimelineQueryPoolInfo const & info) -> TimelineQueryPool;
 
         void destroy_buffer(BufferId id);
         void destroy_image(ImageId id);
         void destroy_image_view(ImageViewId id);
         void destroy_sampler(SamplerId id);
-        void destroy_timeline_query_pool(TimelineQueryPoolId id);
 
         auto info_buffer(BufferId id) const -> BufferInfo;
         auto buffer_reference(BufferId id) const -> u64;
@@ -224,7 +215,6 @@ namespace daxa
             return reinterpret_cast<T *>(map_memory(id));
         }
 
-        void get_timeline_query_pool_results(GetQueryPoolResultsInfo const & info);
         void submit_commands(CommandSubmitInfo const & submit_info);
         void present_frame(PresentInfo const & info);
         void collect_garbage();
