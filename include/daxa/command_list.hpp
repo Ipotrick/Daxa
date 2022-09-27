@@ -3,6 +3,7 @@
 #include <daxa/core.hpp>
 #include <daxa/gpu_resources.hpp>
 #include <daxa/pipeline.hpp>
+#include <daxa/timeline_query.hpp>
 
 namespace daxa
 {
@@ -148,18 +149,18 @@ namespace daxa
         u32 stride = {};
     };
 
-    struct ResetTimelineQueryPoolInfo
-    {
-        TimelineQueryPoolId query_pool_id = {};
-        u32 first_query = {};
-        u32 query_count = {};
-    };
-
     struct WriteTimestampInfo
     {
-        TimelineQueryPoolId query_pool_id = {};
+        TimelineQueryPool & query_pool;
         PipelineStageFlags pipeline_stage = {};
         u32 query_index = {};
+    };
+
+    struct ResetTimestampsInfo
+    {
+        TimelineQueryPool & query_pool;
+        u32 start_index = {};
+        u32 count = {};
     };
 
     struct CommandList : ManagedPtr
@@ -203,8 +204,8 @@ namespace daxa
         void draw_indexed(DrawIndexedInfo const & info);
         void draw_indirect(DrawIndirectInfo const & info);
 
-        void reset_timeline_query_pool(ResetTimelineQueryPoolInfo const & info);
         void write_timestamp(WriteTimestampInfo const & info);
+        void reset_timestamps(ResetTimestampsInfo const & info);
 
         void complete();
         auto is_complete() const -> bool;

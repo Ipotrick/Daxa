@@ -62,8 +62,8 @@ namespace tests
             .debug_name = "image_2",
         });
 
-        daxa::TimelineQueryPoolId timeline_querry_pool = app.device.create_timeline_query_pool({
-            .querry_count = 2,
+        daxa::TimelineQueryPool timeline_query_pool = app.device.create_timeline_query_pool({
+            .query_count = 2,
             .debug_name = "timeline_querry",
         });
 
@@ -73,14 +73,14 @@ namespace tests
 
         app.device.unmap_memory(staging_upload_buffer);
 
-        cmd_list.reset_timeline_query_pool({
-            .query_pool_id = timeline_querry_pool,
-            .first_query = 0,
-            .query_count = 2, 
+        cmd_list.reset_timestamps({
+            .query_pool = timeline_query_pool,
+            .start_index = 0,
+            .count = timeline_query_pool.info().query_count,
         });
 
         cmd_list.write_timestamp({
-            .query_pool_id = timeline_querry_pool,
+            .query_pool = timeline_query_pool,
             .pipeline_stage = daxa::PipelineStageFlagBits::BOTTOM_OF_PIPE,
             .query_index = 0,
         });
@@ -176,7 +176,7 @@ namespace tests
         });
 
         cmd_list.write_timestamp({
-            .query_pool_id = timeline_querry_pool,
+            .query_pool = timeline_query_pool,
             .pipeline_stage = daxa::PipelineStageFlagBits::BOTTOM_OF_PIPE,
             .query_index = 1,
         });
@@ -189,18 +189,12 @@ namespace tests
 
         app.device.wait_idle();
 
-        std::array<u64, 4> query_pool_results;
-        app.device.get_timeline_query_pool_results({
-            .query_pool_id = timeline_querry_pool,
-            .first_query_index = 0,
-            .query_count = 2,
-            .dst_data = query_pool_results.data(),
-            .wait = false,
-        });
-        if(query_pool_results[1] && query_pool_results[3])
+        auto query_results = timeline_query_pool.get_query_results(0, 2);
+        if(query_results[1] && query_results[3])
         {
-            std::cout << "gpu execution took " << static_cast<f64>(query_pool_results[2] - query_pool_results[0]) / 1000000.0 << " ms" << std::endl;
+            std::cout << "gpu execution took " << static_cast<f64>(query_results[2] - query_results[0]) / 1000000.0 << " ms" << std::endl;
         }
+
         std::array<f32, 4> readback_data = *app.device.map_memory_as<std::array<f32, 4>>(staging_readback_buffer);
 
         app.device.unmap_memory(staging_readback_buffer);
@@ -218,7 +212,6 @@ namespace tests
         app.device.destroy_buffer(staging_readback_buffer);
         app.device.destroy_image(image_1);
         app.device.destroy_image(image_2);
-        app.device.destroy_timeline_query_pool(timeline_querry_pool);
 
         app.device.collect_garbage();
     }
