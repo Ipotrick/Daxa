@@ -195,6 +195,12 @@ namespace daxa
         return TimelineSemaphore{ManagedPtr{new ImplTimelineSemaphore(this->make_weak(), info)}};
     }
 
+    auto Device::create_timeline_query_pool(TimelineQueryPoolInfo const & info) -> TimelineQueryPool
+    {
+        auto & impl = *as<ImplDevice>();
+        return TimelineQueryPool{ManagedPtr{new ImplTimelineQueryPool(this->make_weak(), info)}};
+    }
+
     auto Device::create_buffer(BufferInfo const & info) -> BufferId
     {
         auto & impl = *as<ImplDevice>();
@@ -378,10 +384,16 @@ namespace daxa
         .descriptorBindingVariableDescriptorCount = VK_TRUE,
         .runtimeDescriptorArray = VK_TRUE,
     };
+    
+    static const VkPhysicalDeviceHostQueryResetFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_HOST_QUERY_RESET{
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES,
+        .pNext = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_DESCRIPTOR_INDEXING),
+        .hostQueryReset = VK_TRUE,
+    };
 
     static const VkPhysicalDeviceDynamicRenderingFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_DYNAMIC_RENDERING{
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
-        .pNext = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_DESCRIPTOR_INDEXING),
+        .pNext = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_HOST_QUERY_RESET),
         .dynamicRendering = VK_TRUE,
     };
 
@@ -414,13 +426,6 @@ namespace daxa
     //     .pNext = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT),
     //     .multiDraw = VK_TRUE,
     // };
-
-    typedef struct VkPhysicalDeviceScalarBlockLayoutFeatures
-    {
-        VkStructureType sType;
-        void * pNext;
-        VkBool32 scalarBlockLayout;
-    } VkPhysicalDeviceScalarBlockLayoutFeatures;
 
     static void * REQUIRED_DEVICE_FEATURE_P_CHAIN = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT);
 
@@ -500,6 +505,8 @@ namespace daxa
         u32 max_buffers = std::min(this->vk_info.limits.max_descriptor_set_storage_buffers, 1'000u);
         u32 max_images = std::min(std::min(this->vk_info.limits.max_descriptor_set_sampled_images, this->vk_info.limits.max_descriptor_set_storage_images), 1'000u);
         u32 max_samplers = std::min(this->vk_info.limits.max_descriptor_set_samplers, 1'000u);
+        /* If timeline compute and graphics querries are not supported set max_limit to 0 */
+        u32 max_timleline_querry_pools = std::min(this->vk_info.limits.timestamp_compute_and_graphics, 1'000u);
 
         vkGetDeviceQueue(this->vk_device, this->main_queue_family_index, 0, &this->main_queue_vk_queue);
 
@@ -633,6 +640,7 @@ namespace daxa
             max_buffers,
             max_images,
             max_samplers,
+            max_timleline_querry_pools,
             vk_device,
             buffer_device_address_buffer);
     }
@@ -706,6 +714,12 @@ namespace daxa
             [&](auto & semaphore_zombie)
             {
                 vkDestroySemaphore(this->vk_device, semaphore_zombie.vk_semaphore, nullptr);
+            });
+        check_and_cleanup_gpu_resources(
+            this->main_queue_timeline_query_pool_zombies,
+            [&](auto & timeline_query_pool_zombie)
+            {
+                vkDestroyQueryPool(this->vk_device, timeline_query_pool_zombie.vk_timeline_query_pool, nullptr);
             });
     }
 
