@@ -4,7 +4,7 @@
 
 #include <daxa/utils/task_list.hpp>
 
-#define APPNAME "Daxa API Sample: TaskList"
+#define APPNAME "Daxa API Sample TaskList"
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
 
 #include "shaders/shared.inl"
@@ -82,21 +82,12 @@ namespace tests
             .debug_name = APPNAME_PREFIX("image (image_upload)"),
         });
 
-        auto task_image = task_list.create_task_image({
-            .fetch_callback = [=]()
-            { return image; },
-            .debug_name = APPNAME_PREFIX("task_image (image_upload)"),
-        });
-
-        auto upload_buffer = task_list.create_task_buffer({
-            .fetch_callback = [=]()
-            { return buffer; },
-            .debug_name = APPNAME_PREFIX("upload_buffer (image_upload)"),
-        });
+        auto task_image = task_list.create_task_image({.image = &image});
+        auto upload_buffer = task_list.create_task_buffer({.buffer = &buffer});
 
         task_list.add_task({
             .used_buffers = {{upload_buffer, daxa::TaskBufferAccess::TRANSFER_READ}},
-            .used_images = {{task_image, daxa::TaskImageAccess::TRANSFER_WRITE}},
+            .used_images = {{task_image, daxa::TaskImageAccess::TRANSFER_WRITE, std::nullopt}},
             .task = [](daxa::TaskInterface &)
             {
                 // TODO: Implement this task!
@@ -122,15 +113,12 @@ namespace tests
 
         auto task_buffer1 = task_list.create_task_buffer({
             .last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
-            .debug_name = APPNAME_PREFIX("task_buffer1 (output_graph)"),
         });
         auto task_buffer2 = task_list.create_task_buffer({
             .last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
-            .debug_name = APPNAME_PREFIX("task_buffer2 (output_graph)"),
         });
         auto task_buffer3 = task_list.create_task_buffer({
             .last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
-            .debug_name = APPNAME_PREFIX("task_buffer3 (output_graph)"),
         });
 
         task_list.add_task({
@@ -236,6 +224,10 @@ namespace tests
             daxa::TaskImageId task_render_image = {};
 
             MipmappingComputeInput compute_input = {
+                .mouse_x = {},
+                .mouse_y = {},
+                .p_mouse_x = {},
+                .p_mouse_y = {},
                 .paint_col = {1.0f, 0.0f, 0.0f},
             };
             daxa::BufferId mipmapping_compute_input_buffer = device.create_buffer({
@@ -316,7 +308,7 @@ namespace tests
 
             void on_mouse_move(f32 x, f32 y)
             {
-                compute_input.mouse_x = x / static_cast<f32>(size_x * (2.0f / 3.0f)) * 512.0f;
+                compute_input.mouse_x = x / static_cast<f32>(size_x) * (2.0f / 3.0f) * 512.0f;
                 compute_input.mouse_y = y / static_cast<f32>(size_y) * 512.0f;
             }
 
@@ -326,7 +318,7 @@ namespace tests
                     mouse_drawing = action != GLFW_RELEASE;
             }
 
-            void on_key(i32 key, i32 action) {}
+            void on_key(i32, i32) {}
 
             void on_resize(u32 sx, u32 sy)
             {
@@ -344,28 +336,14 @@ namespace tests
             {
                 daxa::TaskList new_task_list = daxa::TaskList({.device = device, .debug_name = APPNAME_PREFIX("main task list")});
 
-                task_swapchain_image = new_task_list.create_task_image({
-                    .fetch_callback = [=, this]()
-                    { return swapchain.acquire_next_image(acquire_semaphore); },
-                    .swapchain_parent = std::pair{swapchain, acquire_semaphore},
-                    .debug_name = "task swapchain image",
-                });
-                task_render_image = new_task_list.create_task_image({
-                    .fetch_callback = [=, this]()
-                    { return render_image; },
-                    .debug_name = "task render image",
-                });
+                // task_swapchain_image = new_task_list.create_task_image({
+                //     .image = &swapchain_image,
+                //     .swapchain_parent = std::pair{swapchain, acquire_semaphore},
+                // });
+                task_render_image = new_task_list.create_task_image({.image = &render_image});
 
-                task_mipmapping_compute_input_buffer = new_task_list.create_task_buffer({
-                    .fetch_callback = [this]()
-                    { return mipmapping_compute_input_buffer; },
-                    .debug_name = APPNAME_PREFIX("task_mipmapping_compute_input_buffer"),
-                });
-                task_staging_mipmapping_compute_input_buffer = new_task_list.create_task_buffer({
-                    .fetch_callback = [this]()
-                    { return staging_mipmapping_compute_input_buffer; },
-                    .debug_name = APPNAME_PREFIX("task_staging_mipmapping_compute_input_buffer"),
-                });
+                // task_mipmapping_compute_input_buffer = new_task_list.create_task_buffer({.image = &mipmapping_compute_input_buffer});
+                // task_staging_mipmapping_compute_input_buffer = new_task_list.create_task_buffer({.image = &staging_mipmapping_compute_input_buffer});
 
                 new_task_list.add_task({
                     .used_buffers = {
@@ -399,19 +377,20 @@ namespace tests
                     .debug_name = APPNAME_PREFIX("Input Transfer"),
                 });
 
-                new_task_list.add_clear_image({
-                    .clear_value = {std::array<f32, 4>{0.2f, 0.2f, 0.2f, 1.0f}},
-                    .dst_image = task_swapchain_image,
-                    .dst_slice = {},
-                    .debug_name = APPNAME_PREFIX("Clear swapchain"),
-                });
+                // TODO: Find a replacement for this in new Daxa!
+                // new_task_list.add_clear_image({
+                //     .clear_value = {std::array<f32, 4>{0.2f, 0.2f, 0.2f, 1.0f}},
+                //     .dst_image = task_swapchain_image,
+                //     .dst_slice = {},
+                //     .debug_name = APPNAME_PREFIX("Clear swapchain"),
+                // });
 
                 new_task_list.add_task(daxa::TaskInfo{
                     .used_buffers = {
                         {task_mipmapping_compute_input_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY},
                     },
                     .used_images = {
-                        {task_render_image, daxa::TaskImageAccess::COMPUTE_SHADER_READ_WRITE},
+                        {task_render_image, daxa::TaskImageAccess::COMPUTE_SHADER_READ_WRITE, std::nullopt},
                     },
                     .task = [=, this](daxa::TaskInterface & interf)
                     {
@@ -443,8 +422,8 @@ namespace tests
 
                 new_task_list.add_task({
                     .used_images = {
-                        {task_render_image, daxa::TaskImageAccess::TRANSFER_READ},
-                        {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE},
+                        {task_render_image, daxa::TaskImageAccess::TRANSFER_READ, std::nullopt},
+                        {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE, std::nullopt},
                     },
                     .task = [=, this](daxa::TaskInterface & interf)
                     {
@@ -466,18 +445,18 @@ namespace tests
                             .dst_offsets = {
                                 {
                                     {0, 0, 0},
-                                    {static_cast<i32>(dst_size[0] * (2.0f / 3.0f)), static_cast<i32>(dst_size[1]), 1},
+                                    {static_cast<i32>(static_cast<f32>(dst_size[0]) * (2.0f / 3.0f)), static_cast<i32>(dst_size[1]), 1},
                                 },
                             },
                         });
 
-                        for (i32 i = 0; i < src_info.mip_level_count - 1; ++i)
+                        for (i32 i = 0; i < static_cast<i32>(src_info.mip_level_count - 1); ++i)
                         {
-                            i32 scl_1 = 1 << (i + 0);
-                            i32 scl_2 = 1 << (i + 1);
-                            f32 s0 = static_cast<f32>(scl_1) * 0.5f;
-                            f32 s1 = (static_cast<f32>(scl_1) - 1.0f) / static_cast<f32>(scl_1);
-                            f32 s2 = (static_cast<f32>(scl_2) - 1.0f) / static_cast<f32>(scl_2);
+                            f32 scl_1 = static_cast<f32>(1 << (i + 0));
+                            f32 scl_2 = static_cast<f32>(1 << (i + 1));
+                            f32 s0 = scl_1 * 0.5f;
+                            f32 s1 = (scl_1 - 1.0f) / scl_1;
+                            f32 s2 = (scl_2 - 1.0f) / scl_2;
                             cmd_list.blit_image_to_image({
                                 .src_image = src_image_id,
                                 .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
@@ -488,8 +467,16 @@ namespace tests
                                 .dst_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
                                 .dst_offsets = {
                                     {
-                                        {static_cast<i32>(dst_size[0] * (2.0f / 3.0f)), static_cast<i32>(dst_size[1] * s1), 0},
-                                        {static_cast<i32>(dst_size[0] * (2.0f / 3.0f + 1.0f / (s0 * 6.0f))), static_cast<i32>(static_cast<f32>(dst_size[1]) * s2), 1},
+                                        {
+                                            static_cast<i32>(static_cast<f32>(dst_size[0]) * (2.0f / 3.0f)),
+                                            static_cast<i32>(static_cast<f32>(dst_size[1]) * s1),
+                                            0,
+                                        },
+                                        {
+                                            static_cast<i32>(static_cast<f32>(dst_size[0]) * (2.0f / 3.0f + 1.0f / (s0 * 6.0f))),
+                                            static_cast<i32>(static_cast<f32>(dst_size[1]) * s2),
+                                            1,
+                                        },
                                     },
                                 },
                             });
@@ -500,7 +487,7 @@ namespace tests
 
                 new_task_list.add_task({
                     .used_images = {
-                        {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
+                        {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, std::nullopt},
                     },
                     .task = [=, this](daxa::TaskInterface & interf)
                     {
@@ -587,26 +574,21 @@ namespace tests
                     .device = device,
                     .debug_name = APPNAME_PREFIX("task_list (drawing)"),
                 });
-                task_swapchain_image = new_task_list.create_task_image({
-                    .fetch_callback = [this]()
-                    { return swapchain_image; },
-                    .debug_name = APPNAME_PREFIX("task_swapchain_image (drawing)"),
-                });
-                task_render_image = new_task_list.create_task_image({
-                    .fetch_callback = [this]()
-                    { return render_image; },
-                    .debug_name = APPNAME_PREFIX("task_render_image (drawing)"),
-                });
+                // task_swapchain_image = new_task_list.create_task_image({
+                //     .image = &swapchain_image,
+                //     .swapchain_parent = {swapchain, present_semaphore},
+                // });
+                task_render_image = new_task_list.create_task_image({.image = &render_image});
 
-                new_task_list.add_clear_image({
-                    .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
-                    .dst_image = task_render_image,
-                    .dst_slice = {},
-                    .debug_name = APPNAME_PREFIX("Clear render_image Task (drawing)"),
-                });
+                // new_task_list.add_clear_image({
+                //     .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
+                //     .dst_image = task_render_image,
+                //     .dst_slice = {},
+                //     .debug_name = APPNAME_PREFIX("Clear render_image Task (drawing)"),
+                // });
                 new_task_list.add_task({
                     .used_images = {
-                        {task_render_image, daxa::TaskImageAccess::FRAGMENT_SHADER_WRITE_ONLY},
+                        {task_render_image, daxa::TaskImageAccess::FRAGMENT_SHADER_WRITE_ONLY, std::nullopt},
                     },
                     .task = [this](daxa::TaskInterface interf)
                     {
@@ -622,11 +604,11 @@ namespace tests
                     .debug_name = APPNAME_PREFIX("Draw to render_image Task (drawing)"),
                 });
 
-                new_task_list.add_copy_image_to_image({
-                    .src_image = task_render_image,
-                    .dst_image = task_swapchain_image,
-                    .extent = {size_x, size_y, 1},
-                });
+                // new_task_list.add_copy_image_to_image({
+                //     .src_image = task_render_image,
+                //     .dst_image = task_swapchain_image,
+                //     .extent = {size_x, size_y, 1},
+                // });
                 new_task_list.compile();
 
                 return new_task_list;
@@ -738,7 +720,7 @@ int main()
     // tests::simplest();
     // tests::image_upload();
     // tests::execution();
-    // tests::output_graph();
-    tests::mipmapping();
+    tests::output_graph();
+    // tests::mipmapping();
     // tests::drawing();
 }
