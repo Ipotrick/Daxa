@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.21)
 
 include(cmake/warnings.cmake)
 
@@ -57,16 +57,17 @@ add_library(daxa::daxa ALIAS daxa)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     target_compile_options(daxa PRIVATE /std:c++latest)
+    target_compile_features(daxa PUBLIC cxx_std_20)
 else()
     target_compile_features(daxa PUBLIC cxx_std_20)
 endif()
 
 find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
-find_package(volk CONFIG REQUIRED)
 
 if(DAXA_ENABLE_GLSLANG)
     find_package(glslang CONFIG REQUIRED)
+    find_package(Threads REQUIRED)
 
     target_compile_definitions(daxa
         PUBLIC
@@ -74,7 +75,9 @@ if(DAXA_ENABLE_GLSLANG)
     )
     target_link_libraries(daxa
         PUBLIC
-        HLSL SPIRV glslang OGLCompiler
+        glslang::glslang
+        glslang::SPIRV
+        glslang::HLSL
     )
 endif()
 
@@ -111,7 +114,6 @@ target_link_libraries(daxa
     PUBLIC
     unofficial::vulkan-memory-allocator::vulkan-memory-allocator
     Vulkan::Vulkan
-    volk::volk
 )
 
 target_include_directories(daxa
@@ -119,6 +121,14 @@ target_include_directories(daxa
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_package(X11 REQUIRED)
+    target_link_libraries(daxa
+        PUBLIC
+        ${X11_LIBRARIES}
+    )
+endif()
 
 set_project_warnings(daxa)
 
@@ -136,12 +146,12 @@ check_required_components(daxa)
 
 find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
-find_package(volk CONFIG REQUIRED)
 ]=])
 
 if(DAXA_ENABLE_GLSLANG)
     file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
 find_package(glslang CONFIG REQUIRED)
+find_package(Threads REQUIRED)
 ]=])
 endif()
 

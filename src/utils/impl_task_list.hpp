@@ -29,9 +29,9 @@ namespace daxa
 
     struct ImplTaskBuffer
     {
-        Access latest_access = AccessConsts::NONE; 
+        Access latest_access = AccessConsts::NONE;
         EventId latest_access_event = {};
-        BufferId* buffer = {};
+        BufferId * buffer = {};
         std::string debug_name = {};
     };
 
@@ -50,7 +50,7 @@ namespace daxa
         std::optional<std::pair<Swapchain, BinarySemaphore>> parent_swapchain = {};
         bool swapchain_semaphore_waited_upon = {};
         std::vector<TaskImageTrackedSlice> slices = {};
-        ImageId* image = {};
+        ImageId * image = {};
         std::string debug_name = {};
     };
 
@@ -62,17 +62,6 @@ namespace daxa
         ImageLayout after_layout = ImageLayout::UNDEFINED;
         ImageMipArraySlice image_slice = {};
         TaskImageId task_image_id = {};
-    };
-
-    struct TaskImageBarrierInfo
-    {
-        usize src_event_batch = {};
-        Access awaited_pipeline_access = AccessConsts::NONE;
-        Access waiting_pipeline_access = AccessConsts::NONE;
-        ImageLayout before_layout = ImageLayout::UNDEFINED;
-        ImageLayout after_layout = ImageLayout::UNDEFINED;
-        TaskImageId image_id = {};
-        ImageMipArraySlice image_slice = {};
     };
 
     auto get_image_barrier(TaskImageBarrierInfo const & task_image_barrier, ImageId image_id) -> ImageBarrierInfo;
@@ -96,13 +85,13 @@ namespace daxa
     struct SubmitEvent
     {
         CommandSubmitInfo submit_info;
-        CommandSubmitInfo* user_submit_info;
+        CommandSubmitInfo * user_submit_info;
     };
 
     struct PresentEvent
     {
         PresentInfo present_info;
-        std::vector<BinarySemaphore>* user_binary_semaphores = {};
+        std::vector<BinarySemaphore> * user_binary_semaphores = {};
         TaskImageId presented_image = {};
     };
 
@@ -112,8 +101,7 @@ namespace daxa
         CreateTaskImageEvent,
         SubmitEvent,
         PresentEvent,
-        std::monostate
-    >;
+        std::monostate>;
 
     struct EventBatchDependency
     {
@@ -165,7 +153,9 @@ namespace daxa
 
     auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access>;
     auto task_buffer_access_to_access(TaskBufferAccess const & access) -> Access;
-    auto compute_needed_barrier(Access const & previous_access, Access const & new_access) -> std::optional<TaskPipelineBarrierInfo>;
+
+    // TODO(pahrens): Implement the body of this, and define TaskPipelineBarrierInfo
+    // auto compute_needed_barrier(Access const & previous_access, Access const & new_access) -> std::optional<TaskPipelineBarrierInfo>;
 
     void insert_task()
     {

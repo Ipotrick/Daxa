@@ -12,6 +12,23 @@ f32 rad2deg(f32 r)
     return r * 180.0 / PI;
 }
 
+f32vec3 rgb2hsv(f32vec3 c)
+{
+    f32vec4 K = f32vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+    f32vec4 p = lerp(f32vec4(c.bg, K.wz), f32vec4(c.gb, K.xy), step(c.b, c.g));
+    f32vec4 q = lerp(f32vec4(p.xyw, c.r), f32vec4(c.r, p.yzx), step(p.x, c.r));
+    f32 d = q.x - min(q.w, q.y);
+    f32 e = 1.0e-10;
+    return f32vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+}
+
+f32vec3 hsv2rgb(f32vec3 c)
+{
+    f32vec4 k = f32vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    f32vec3 p = abs(frac(c.xxx + k.xyz) * 6.0 - k.www);
+    return c.z * lerp(k.xxx, clamp(p - k.xxx, 0.0, 1.0), c.y);
+}
+
 f32vec4 uint_to_float4(u32 u)
 {
     f32vec4 result;

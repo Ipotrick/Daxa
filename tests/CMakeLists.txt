@@ -1,15 +1,23 @@
 
-function(DAXA_CREATE_TEST FOLDER SUBFOLDER)
+function(DAXA_CREATE_TEST)
+    set(OPT_ARGS BRUH)
+    set(SNG_ARGS BRUH2)
+    set(MUL_ARGS FOLDER LIBS)
+    cmake_parse_arguments(PARSE_ARGV 0 DCT "${OPT_ARGS}" "${SNG_ARGS}" "${MUL_ARGS}")
+
+    list(JOIN DCT_FOLDER "_" FOLDER_NAME)
+    list(JOIN DCT_FOLDER "/" FOLDER_PATH)
+
     add_executable(
-        daxa_test_${FOLDER}_${SUBFOLDER}
-        "${FOLDER}/${SUBFOLDER}/main.cpp"
+        daxa_test_${FOLDER_NAME}
+        "${FOLDER_PATH}/main.cpp"
     )
-    target_link_libraries(daxa_test_${FOLDER}_${SUBFOLDER} PRIVATE daxa::daxa glfw glm::glm imgui_impl_glfw)
-    target_include_directories(daxa_test_${FOLDER}_${SUBFOLDER} PRIVATE "${CMAKE_CURRENT_LIST_DIR}" ${STB_INCLUDE_DIRS})
+    target_link_libraries(daxa_test_${FOLDER_NAME} PRIVATE daxa::daxa ${DCT_LIBS})
+    target_include_directories(daxa_test_${FOLDER_NAME} PRIVATE "${CMAKE_CURRENT_LIST_DIR}")
 
     if(DAXA_TESTS_DISABLE_WINDOWS_CONSOLE)
         if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-            target_link_options(daxa_test_${FOLDER}_${SUBFOLDER}
+            target_link_options(daxa_test_${FOLDER_NAME}
                 PRIVATE "-Wl,/ENTRY:mainCRTStartup,/SUBSYSTEM:WINDOWS"
             )
         endif()
@@ -19,22 +27,76 @@ endfunction()
 find_package(glfw3 CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_path(STB_INCLUDE_DIRS "stb_image.h" REQUIRED)
+find_path(CGLTF_INCLUDE_DIRS "cgltf.h" REQUIRED)
 
 add_library(imgui_impl_glfw STATIC "0_common/imgui/imgui_impl_glfw.cpp")
 target_link_libraries(imgui_impl_glfw PRIVATE imgui::imgui glfw)
 
-DAXA_CREATE_TEST(1_setup 1_window)
+add_library(stb_interface INTERFACE)
+target_include_directories(stb_interface INTERFACE ${STB_INCLUDE_DIRS})
+add_library(cgltf_interface STATIC "0_common/cgltf_impl.cpp")
+target_include_directories(cgltf_interface PUBLIC ${CGLTF_INCLUDE_DIRS})
+target_compile_definitions(cgltf_interface PUBLIC _CRT_SECURE_NO_WARNINGS=1)
 
-DAXA_CREATE_TEST(2_daxa_api 1_context)
-DAXA_CREATE_TEST(2_daxa_api 2_device)
-DAXA_CREATE_TEST(2_daxa_api 3_command_list)
-DAXA_CREATE_TEST(2_daxa_api 4_synchronization)
-DAXA_CREATE_TEST(2_daxa_api 5_swapchain)
-DAXA_CREATE_TEST(2_daxa_api 6_task_list)
+DAXA_CREATE_TEST(
+    FOLDER 1_setup 1_window
+    LIBS glfw
+)
 
-DAXA_CREATE_TEST(3_samples 1_mandelbrot)
-DAXA_CREATE_TEST(3_samples 2_hello_triangle)
-DAXA_CREATE_TEST(3_samples 3_hello_triangle_compute)
-DAXA_CREATE_TEST(3_samples 4_raster)
-DAXA_CREATE_TEST(3_samples 5_boids)
-DAXA_CREATE_TEST(3_samples 7_FSR2)
+DAXA_CREATE_TEST(
+    FOLDER 2_daxa_api 1_context
+    LIBS
+)
+DAXA_CREATE_TEST(
+    FOLDER 2_daxa_api 2_device
+    LIBS
+)
+DAXA_CREATE_TEST(
+    FOLDER 2_daxa_api 3_command_list
+    LIBS
+)
+DAXA_CREATE_TEST(
+    FOLDER 2_daxa_api 4_synchronization
+    LIBS
+)
+DAXA_CREATE_TEST(
+    FOLDER 2_daxa_api 5_swapchain
+    LIBS glfw
+)
+DAXA_CREATE_TEST(
+    FOLDER 2_daxa_api 6_task_list
+    LIBS glfw imgui_impl_glfw
+)
+
+DAXA_CREATE_TEST(
+    FOLDER 3_samples 0_playground
+    LIBS glfw imgui_impl_glfw
+)
+DAXA_CREATE_TEST(
+    FOLDER 3_samples 1_mandelbrot
+    LIBS glfw
+)
+DAXA_CREATE_TEST(
+    FOLDER 3_samples 2_hello_triangle
+    LIBS glfw imgui_impl_glfw
+)
+DAXA_CREATE_TEST(
+    FOLDER 3_samples 3_hello_triangle_compute
+    LIBS glfw
+)
+DAXA_CREATE_TEST(
+    FOLDER 3_samples 4_raster
+    LIBS glfw stb_interface
+)
+DAXA_CREATE_TEST(
+    FOLDER 3_samples 5_boids
+    LIBS glfw
+)
+DAXA_CREATE_TEST(
+    FOLDER 3_samples 6_sponza
+    LIBS glfw imgui_impl_glfw cgltf_interface
+)
+DAXA_CREATE_TEST(
+    FOLDER 3_samples 7_FSR2
+    LIBS glfw imgui_impl_glfw stb_interface
+)
