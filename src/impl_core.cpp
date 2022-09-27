@@ -118,7 +118,11 @@ namespace daxa
             auto & [result_rects, result_n] = result;
             result_n = 1;
             result_rects[0] = *this;
-            result_rects[0].image_aspect &= ~slice.image_aspect;
+
+            // TODO(grundlett): [aspect] If we want to do aspect cutting, we can
+            // but we would need to look into it more.
+            // result_rects[0].image_aspect &= ~slice.image_aspect;
+
             return result;
         }
 
@@ -165,7 +169,7 @@ namespace daxa
         };
         //   0      1      2      3      4      5
         // b1>a1  a0>b0  a0>a1  a0>b1  b0>b1  b0>a1
-        std::array<std::array<RectBCIndices, 4>, 16> bc_indices = {{
+        static constexpr std::array<std::array<RectBCIndices, 4>, 16> bc_indices = {{
             {{NO_RBC, NO_RBC, NO_RBC, NO_RBC}},   {{{0, 2}, NO_RBC, NO_RBC, NO_RBC}},   {{{1, 2}, NO_RBC, NO_RBC, NO_RBC}},   {{{1, 2}, {0, 2}, NO_RBC, NO_RBC}},
             {{{2, 0}, NO_RBC, NO_RBC, NO_RBC}},   {{{0, 3}, {2, 0}, NO_RBC, NO_RBC}},   {{{1, 3}, {2, 0}, NO_RBC, NO_RBC}},   {{{1, 3}, {0, 3}, {2, 0}, NO_RBC}},
             {{{2, 1}, NO_RBC, NO_RBC, NO_RBC}},   {{{2, 1}, {0, 5}, NO_RBC, NO_RBC}},   {{{2, 1}, {1, 5}, NO_RBC, NO_RBC}},   {{{2, 1}, {1, 5}, {0, 5}, NO_RBC}},
@@ -178,12 +182,12 @@ namespace daxa
             u32 base;
             u32 count;
         };
-        std::array<BaseAndCount, 3> mip_bc{
+        std::array<BaseAndCount, 3> const mip_bc{
             BaseAndCount{.base = b_mip_p1 + 1, .count = (a_mip_p1 + 1) - (b_mip_p1 + 1)}, // b1 -> a1
             BaseAndCount{.base = a_mip_p0, .count = b_mip_p0 - a_mip_p0},                 // a0 -> b0
             BaseAndCount{.base = a_mip_p0, .count = (a_mip_p1 + 1) - a_mip_p0},           // a0 -> a1
         };
-        std::array<BaseAndCount, 6> arr_bc{
+        std::array<BaseAndCount, 6> const arr_bc{
             BaseAndCount{.base = b_arr_p1 + 1, .count = (a_arr_p1 + 1) - (b_arr_p1 + 1)}, // b1 -> a1
             BaseAndCount{.base = a_arr_p0, .count = b_arr_p0 - a_arr_p0},                 // a0 -> b0
             BaseAndCount{.base = a_arr_p0, .count = (a_arr_p1 + 1) - a_arr_p0},           // a0 -> a1
@@ -193,11 +197,11 @@ namespace daxa
         };
 
         usize const result_index = mip_case + arr_case * 4;
-        usize const result_rect_n = rect_n[result_index] * ((this->image_aspect & ~slice.image_aspect) != 0);
+        // TODO(grundlett): [aspect] listed above
+        // usize const aspect_mask = ((this->image_aspect & ~slice.image_aspect) != 0);
+        usize const result_rect_n = rect_n[result_index]; // * aspect_mask
         auto const & bc = bc_indices[result_index];
         std::get<1>(result) = result_rect_n;
-
-        std::cout << "mip_case, arr_case, index: " << mip_case << ", " << arr_case << ", " << result_index << std::endl;
 
         for (usize i = 0; i < result_rect_n; ++i)
         {
@@ -205,7 +209,8 @@ namespace daxa
             auto const & bc_i = bc[i];
 
             rect_i = *this;
-            rect_i.image_aspect &= ~slice.image_aspect;
+            // TODO(grundlett): [aspect] listed above
+            // rect_i.image_aspect &= ~slice.image_aspect;
 
             rect_i.base_mip_level = mip_bc[bc_i.mip_i].base;
             rect_i.level_count = mip_bc[bc_i.mip_i].count;
