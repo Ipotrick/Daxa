@@ -181,14 +181,14 @@ namespace daxa
         std::array<BaseAndCount, 3> mip_bc{
             BaseAndCount{.base = b_mip_p1 + 1, .count = (a_mip_p1 + 1) - (b_mip_p1 + 1)}, // b1 -> a1
             BaseAndCount{.base = a_mip_p0, .count = b_mip_p0 - a_mip_p0},                 // a0 -> b0
-            BaseAndCount{.base = a_mip_p0, .count = a_mip_p1 + 1 - a_mip_p0},             // a0 -> a1
+            BaseAndCount{.base = a_mip_p0, .count = (a_mip_p1 + 1) - a_mip_p0},           // a0 -> a1
         };
         std::array<BaseAndCount, 6> arr_bc{
             BaseAndCount{.base = b_arr_p1 + 1, .count = (a_arr_p1 + 1) - (b_arr_p1 + 1)}, // b1 -> a1
             BaseAndCount{.base = a_arr_p0, .count = b_arr_p0 - a_arr_p0},                 // a0 -> b0
-            BaseAndCount{.base = a_arr_p0, .count = a_arr_p1 + 1 - a_arr_p0},             // a0 -> a1
+            BaseAndCount{.base = a_arr_p0, .count = (a_arr_p1 + 1) - a_arr_p0},           // a0 -> a1
             BaseAndCount{.base = a_arr_p0, .count = (b_arr_p1 + 1) - a_arr_p0},           // a0 -> b1
-            BaseAndCount{.base = b_arr_p0, .count = (b_arr_p1 + 1) + 1 - b_arr_p0},       // b0 -> b1
+            BaseAndCount{.base = b_arr_p0, .count = (b_arr_p1 + 1) - b_arr_p0},           // b0 -> b1
             BaseAndCount{.base = b_arr_p0, .count = (a_arr_p1 + 1) - b_arr_p0},           // b0 -> a1
         };
 
