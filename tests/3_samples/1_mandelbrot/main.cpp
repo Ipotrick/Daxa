@@ -70,6 +70,10 @@ struct App : AppWindow<App>
 
     daxa::BinarySemaphore acquire_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("acquire_semaphore")});
     daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
+    daxa::TimelineQueryPool timeline_query_pool = device.create_timeline_query_pool({
+        .query_count = 2,
+        .debug_name = "timeline_querry",
+    });
 
     Clock::time_point start = Clock::now();
 
@@ -123,6 +127,19 @@ struct App : AppWindow<App>
         });
 
         auto now = Clock::now();
+
+        cmd_list.reset_timestamps({
+            .query_pool = timeline_query_pool,
+            .start_index = 0,
+            .count = timeline_query_pool.info().query_count,
+        });
+
+        cmd_list.write_timestamp({
+            .query_pool = timeline_query_pool,
+            .pipeline_stage = daxa::PipelineStageFlagBits::BOTTOM_OF_PIPE,
+            .query_index = 0,
+        });
+
         auto elapsed = std::chrono::duration<f32>(now - start).count();
 
         auto compute_input_staging_buffer = device.create_buffer({
@@ -216,6 +233,12 @@ struct App : AppWindow<App>
             .image_id = render_image,
         });
 
+        cmd_list.write_timestamp({
+            .query_pool = timeline_query_pool,
+            .pipeline_stage = daxa::PipelineStageFlagBits::BOTTOM_OF_PIPE,
+            .query_index = 1,
+        });
+
         cmd_list.complete();
 
         device.submit_commands({
@@ -228,6 +251,12 @@ struct App : AppWindow<App>
             .wait_binary_semaphores = {present_semaphore},
             .swapchain = swapchain,
         });
+
+        auto query_results = timeline_query_pool.get_query_results(0, 2);
+        if(query_results[1] && query_results[3])
+        {
+            std::cout << "gpu execution took " << static_cast<f64>(query_results[2] - query_results[0]) / 1000000.0 << " ms" << std::endl;
+        }
     }
 
     void on_mouse_move(f32, f32) {}
