@@ -112,14 +112,17 @@ namespace daxa
         u32 const mip_case = (b_mip_p1 < a_mip_p1) + (b_mip_p0 > a_mip_p0) * 2;
         u32 const arr_case = (b_arr_p1 < a_arr_p1) + (b_arr_p0 > a_arr_p0) * 2;
 
+        std::tuple<std::array<ImageMipArraySlice, 4>, usize> result = {};
+        if (!this->intersects(slice))
+        {
+            auto & [result_rects, result_n] = result;
+            result_n = 1;
+            result_rects[0] = *this;
+            result_rects[0].image_aspect &= ~slice.image_aspect;
+            return result;
+        }
+
         // clang-format off
-
-        #define NULL_I {0, 0}
-        struct RectBCIndices {
-            usize mip_i;
-            usize arr_i;
-        };
-
         //
         //     mips ➡️
         // arrays       0              1          2            3
@@ -155,208 +158,59 @@ namespace daxa
             2, 3, 3, 4,
         };
 
-        // ██░░  ░░██  ░░░░  █░░█
-        // TODO(grundlett): X-axis were double checked (I think they're fine)
-        // Y-axis ARE ALL BROKEN! ACTUALLY LEGITIMATELY KILL ME
+        #define NO_RBC {0, 0}
+        struct RectBCIndices {
+            usize mip_i;
+            usize arr_i;
+        };
+        //   0      1      2      3      4      5
+        // b1>a1  a0>b0  a0>a1  a0>b1  b0>b1  b0>a1
         std::array<std::array<RectBCIndices, 4>, 16> bc_indices = {{
-            {{NULL_I, NULL_I, NULL_I, NULL_I}},   {{{0, 2}, NULL_I, NULL_I, NULL_I}},   {{{1, 2}, NULL_I, NULL_I, NULL_I}},   {{{1, 2}, {0, 2}, NULL_I, NULL_I}},
-            {{{2, 0}, NULL_I, NULL_I, NULL_I}},   {{{0, 1}, {2, 0}, NULL_I, NULL_I}},   {{{1, 1}, {2, 1}, NULL_I, NULL_I}},   {{{1, 1}, {0, 1}, {2, 0}, NULL_I}},
-            {{{2, 1}, NULL_I, NULL_I, NULL_I}},   {{{2, 1}, {0, 0}, NULL_I, NULL_I}},   {{{2, 1}, {1, 0}, NULL_I, NULL_I}},   {{{2, 1}, {1, 0}, {0, 0}, NULL_I}},
-            {{{2, 1}, {2, 0}, NULL_I, NULL_I}},   {{{2, 1}, {0, 3}, {2, 0}, NULL_I}},   {{{2, 1}, {1, 3}, {2, 0}, NULL_I}},   {{{2, 1}, {1, 3}, {0, 3}, {2, 0}}},
+            {{NO_RBC, NO_RBC, NO_RBC, NO_RBC}},   {{{0, 2}, NO_RBC, NO_RBC, NO_RBC}},   {{{1, 2}, NO_RBC, NO_RBC, NO_RBC}},   {{{1, 2}, {0, 2}, NO_RBC, NO_RBC}},
+            {{{2, 0}, NO_RBC, NO_RBC, NO_RBC}},   {{{0, 3}, {2, 0}, NO_RBC, NO_RBC}},   {{{1, 3}, {2, 0}, NO_RBC, NO_RBC}},   {{{1, 3}, {0, 3}, {2, 0}, NO_RBC}},
+            {{{2, 1}, NO_RBC, NO_RBC, NO_RBC}},   {{{2, 1}, {0, 5}, NO_RBC, NO_RBC}},   {{{2, 1}, {1, 5}, NO_RBC, NO_RBC}},   {{{2, 1}, {1, 5}, {0, 5}, NO_RBC}},
+            {{{2, 1}, {2, 0}, NO_RBC, NO_RBC}},   {{{2, 1}, {0, 4}, {2, 0}, NO_RBC}},   {{{2, 1}, {1, 4}, {2, 0}, NO_RBC}},   {{{2, 1}, {1, 4}, {0, 4}, {2, 0}}},
         }};
         // clang-format on
 
-        std::tuple<std::array<ImageMipArraySlice, 4>, usize> result = {};
         struct BaseAndCount
         {
             u32 base;
             u32 count;
         };
         std::array<BaseAndCount, 3> mip_bc{
-            BaseAndCount{.base = b_mip_p1 + 1, .count = (a_mip_p1 + 1) - (b_mip_p1 + 1)},
-            BaseAndCount{.base = a_mip_p0, .count = b_mip_p0 + 1 - a_mip_p0},
-            BaseAndCount{.base = a_mip_p0, .count = a_mip_p0 + 1 - a_mip_p0},
+            BaseAndCount{.base = b_mip_p1 + 1, .count = (a_mip_p1 + 1) - (b_mip_p1 + 1)}, // b1 -> a1
+            BaseAndCount{.base = a_mip_p0, .count = b_mip_p0 - a_mip_p0},                 // a0 -> b0
+            BaseAndCount{.base = a_mip_p0, .count = a_mip_p1 + 1 - a_mip_p0},             // a0 -> a1
         };
-        std::array<BaseAndCount, 4> arr_bc{
-            BaseAndCount{.base = b_arr_p1 + 1, .count = (a_arr_p1 + 1) - (b_arr_p1 + 1)},
-            BaseAndCount{.base = a_arr_p0, .count = b_arr_p0 + 1 - a_arr_p0},
-            BaseAndCount{.base = a_arr_p0, .count = a_arr_p0 + 1 - a_arr_p0},
-            BaseAndCount{.base = b_arr_p0 + 1, .count = b_arr_p0 + 1 - b_arr_p0},
+        std::array<BaseAndCount, 6> arr_bc{
+            BaseAndCount{.base = b_arr_p1 + 1, .count = (a_arr_p1 + 1) - (b_arr_p1 + 1)}, // b1 -> a1
+            BaseAndCount{.base = a_arr_p0, .count = b_arr_p0 - a_arr_p0},                 // a0 -> b0
+            BaseAndCount{.base = a_arr_p0, .count = a_arr_p1 + 1 - a_arr_p0},             // a0 -> a1
+            BaseAndCount{.base = a_arr_p0, .count = (b_arr_p1 + 1) - a_arr_p0},           // a0 -> b1
+            BaseAndCount{.base = b_arr_p0, .count = (b_arr_p1 + 1) + 1 - b_arr_p0},       // b0 -> b1
+            BaseAndCount{.base = b_arr_p0, .count = (a_arr_p1 + 1) - b_arr_p0},           // b0 -> a1
         };
 
-        switch (arr_case)
+        usize const result_index = mip_case + arr_case * 4;
+        usize const result_rect_n = rect_n[result_index] * ((this->image_aspect & ~slice.image_aspect) != 0);
+        auto const & bc = bc_indices[result_index];
+        std::get<1>(result) = result_rect_n;
+
+        std::cout << "mip_case, arr_case, index: " << mip_case << ", " << arr_case << ", " << result_index << std::endl;
+
+        for (usize i = 0; i < result_rect_n; ++i)
         {
-        case 0: // A-D
-            switch (mip_case)
-            {
-            case 0: // A
-            {
-                result = {{}, 0};
-            }
-            break;
-            case 1: // B
-            {
-                result = {{*this, {}, {}, {}}, 1};
+            auto & rect_i = std::get<0>(result)[i];
+            auto const & bc_i = bc[i];
 
-                std::get<0>(result)[0].base_mip_level = mip_bc[0].base;
-                std::get<0>(result)[0].level_count = mip_bc[0].count;
-            }
-            break;
-            case 2: // C
-            {
-                result = {{*this, {}, {}, {}}, 1};
+            rect_i = *this;
+            rect_i.image_aspect &= ~slice.image_aspect;
 
-                std::get<0>(result)[0].base_mip_level = mip_bc[1].base;
-                std::get<0>(result)[0].level_count = mip_bc[1].count;
-            }
-            break;
-            case 3: // D
-            {
-                result = {{*this, *this, {}, {}}, 2};
-
-                std::get<0>(result)[0].base_mip_level = mip_bc[1].base;
-                std::get<0>(result)[0].level_count = mip_bc[1].count;
-
-                std::get<0>(result)[1].base_mip_level = mip_bc[0].base;
-                std::get<0>(result)[1].level_count = mip_bc[0].count;
-            }
-            break;
-            }
-            break;
-        case 1: // E-H
-            switch (mip_case)
-            {
-            case 0: // E
-            {
-                result = {{*this, {}, {}, {}}, 1};
-
-                std::get<0>(result)[0].base_array_layer = arr_bc[0].base;
-                std::get<0>(result)[0].layer_count = arr_bc[0].count;
-            }
-            break;
-            case 1: // F
-            {
-                result = {{*this, *this, {}, {}}, 2};
-
-                std::get<0>(result)[0].base_mip_level = mip_bc[0].base;
-                std::get<0>(result)[0].level_count = mip_bc[0].count;
-                std::get<0>(result)[0].base_array_layer = arr_bc[0].base;
-                std::get<0>(result)[0].layer_count = arr_bc[0].count;
-
-                std::get<0>(result)[1].base_array_layer = arr_bc[0].base;
-                std::get<0>(result)[1].layer_count = arr_bc[0].count;
-            }
-            break;
-            case 2: // G
-            {
-                result = {{*this, *this, {}, {}}, 2};
-
-                std::get<0>(result)[1].base_array_layer = arr_bc[0].base;
-                std::get<0>(result)[1].layer_count = arr_bc[0].count;
-            }
-            break;
-            case 3: // H
-            {
-                result = {{*this, *this, *this, {}}, 3};
-
-                std::get<0>(result)[2].base_array_layer = arr_bc[0].base;
-                std::get<0>(result)[2].layer_count = arr_bc[0].count;
-            }
-            break;
-            }
-            break;
-        case 2: // I-L
-            switch (mip_case)
-            {
-            case 0: // I
-            {
-                result = {{*this, {}, {}, {}}, 1};
-
-                std::get<0>(result)[0].base_array_layer = arr_bc[0].base;
-                std::get<0>(result)[0].layer_count = arr_bc[0].count;
-            }
-            break;
-            case 1: // J
-            {
-                result = {{*this, *this, {}, {}}, 2};
-
-                std::get<0>(result)[0].base_array_layer = arr_bc[0].base;
-                std::get<0>(result)[0].layer_count = arr_bc[0].count;
-
-                std::get<0>(result)[1].base_mip_level = mip_bc[0].base;
-                std::get<0>(result)[1].level_count = mip_bc[0].count;
-            }
-            break;
-            case 2: // K
-            {
-                result = {{*this, *this, {}, {}}, 2};
-
-                std::get<0>(result)[0].base_array_layer = arr_bc[0].base;
-                std::get<0>(result)[0].layer_count = arr_bc[0].count;
-            }
-            break;
-            case 3: // L
-            {
-                result = {{*this, *this, *this, {}}, 3};
-
-                std::get<0>(result)[0].base_array_layer = arr_bc[0].base;
-                std::get<0>(result)[0].layer_count = arr_bc[0].count;
-            }
-            break;
-            }
-            break;
-        case 3: // M-P
-            switch (mip_case)
-            {
-            case 0: // M
-            {
-                result = {{*this, *this, {}, {}}, 2};
-
-                std::get<0>(result)[0].base_array_layer = arr_bc[1].base;
-                std::get<0>(result)[0].layer_count = arr_bc[1].count;
-
-                std::get<0>(result)[1].base_array_layer = arr_bc[0].base;
-                std::get<0>(result)[1].layer_count = arr_bc[0].count;
-            }
-            break;
-            case 1: // N
-            {
-                result = {{*this, *this, *this, {}}, 3};
-
-                std::get<0>(result)[0].base_array_layer = arr_bc[1].base;
-                std::get<0>(result)[0].layer_count = arr_bc[1].count;
-
-                std::get<0>(result)[1].base_mip_level = mip_bc[0].base;
-                std::get<0>(result)[1].level_count = mip_bc[0].count;
-
-                std::get<0>(result)[2].base_array_layer = arr_bc[0].base;
-                std::get<0>(result)[2].layer_count = arr_bc[0].count;
-            }
-            break;
-            case 2: // O
-            {
-                result = {{*this, *this, *this, {}}, 3};
-
-                std::get<0>(result)[0].base_array_layer = arr_bc[1].base;
-                std::get<0>(result)[0].layer_count = arr_bc[1].count;
-
-                std::get<0>(result)[2].base_array_layer = arr_bc[0].base;
-                std::get<0>(result)[2].layer_count = arr_bc[0].count;
-            }
-            break;
-            case 3: // P
-            {
-                result = {{*this, *this, *this, *this}, 4};
-
-                std::get<0>(result)[0].base_array_layer = arr_bc[1].base;
-                std::get<0>(result)[0].layer_count = arr_bc[1].count;
-
-                std::get<0>(result)[3].base_array_layer = arr_bc[0].base;
-                std::get<0>(result)[3].layer_count = arr_bc[0].count;
-            }
-            break;
-            }
-            break;
+            rect_i.base_mip_level = mip_bc[bc_i.mip_i].base;
+            rect_i.level_count = mip_bc[bc_i.mip_i].count;
+            rect_i.base_array_layer = arr_bc[bc_i.arr_i].base;
+            rect_i.layer_count = arr_bc[bc_i.arr_i].count;
         }
 
         return result;

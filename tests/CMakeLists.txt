@@ -69,6 +69,10 @@ DAXA_CREATE_TEST(
 )
 
 DAXA_CREATE_TEST(
+    FOLDER 3_samples 0_playground
+    LIBS glfw imgui_impl_glfw
+)
+DAXA_CREATE_TEST(
     FOLDER 3_samples 1_mandelbrot
     LIBS glfw
 )

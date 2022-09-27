@@ -518,40 +518,47 @@ namespace daxa
         std::memcpy(staging_buffer_data, pixels, upload_size);
         this->info.device.unmap_memory(texture_staging_buffer);
 
-        TaskList temp_task_list{{.device = this->info.device}};
-        TaskImageId task_font_sheet = temp_task_list.create_task_image({
-            .image = &this->font_sheet,
-        });
-
-        TaskBufferId task_staging_buffer = temp_task_list.create_task_buffer({
-            .buffer = &texture_staging_buffer,
-        });
-
-        temp_task_list.add_task({
-            .used_buffers = {{task_staging_buffer, daxa::TaskBufferAccess::TRANSFER_READ}},
-            // TODO(pahrens): Review this. I just put in nullopt - assuming it'll use the whole range
-            .used_images = {{task_font_sheet, daxa::TaskImageAccess::TRANSFER_WRITE, std::nullopt}},
-            .task = [&](TaskInterface interf)
-            {
-                auto cmd_list = interf.get_command_list();
-                cmd_list.copy_buffer_to_image({
-                    .buffer = texture_staging_buffer,
-                    .image = font_sheet,
-                    .image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-                    .image_slice = {
-                        .mip_level = 0,
-                        .base_array_layer = 0,
-                        .layer_count = 1,
-                    },
-                    .image_offset = {0, 0, 0},
-                    .image_extent = {static_cast<u32>(width), static_cast<u32>(height), 1},
-                });
+        auto cmd_list = this->info.device.create_command_list({.debug_name = "dear ImGui Font Sheet Upload"});
+        cmd_list.pipeline_barrier_image_transition({
+            .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
+            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
+            .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+            .image_slice = {
+                .base_mip_level = 0,
+                .level_count = 1,
+                .base_array_layer = 0,
+                .layer_count = 1,
             },
+            .image_id = font_sheet,
         });
-        temp_task_list.compile();
-        temp_task_list.execute();
+        cmd_list.copy_buffer_to_image({
+            .buffer = texture_staging_buffer,
+            .image = font_sheet,
+            .image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+            .image_slice = {
+                .mip_level = 0,
+                .base_array_layer = 0,
+                .layer_count = 1,
+            },
+            .image_offset = {0, 0, 0},
+            .image_extent = {static_cast<u32>(width), static_cast<u32>(height), 1},
+        });
+        cmd_list.pipeline_barrier_image_transition({
+            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .waiting_pipeline_access = daxa::AccessConsts::FRAGMENT_SHADER_READ,
+            .before_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+            .after_layout = daxa::ImageLayout::READ_ONLY_OPTIMAL,
+            .image_slice = {
+                .base_mip_level = 0,
+                .level_count = 1,
+                .base_array_layer = 0,
+                .layer_count = 1,
+            },
+            .image_id = font_sheet,
+        });
+        cmd_list.complete();
         this->info.device.submit_commands({
-            .command_lists = temp_task_list.command_lists(),
+            .command_lists = {cmd_list},
         });
         this->info.device.destroy_buffer(texture_staging_buffer);
         auto image_view = font_sheet.default_view();
