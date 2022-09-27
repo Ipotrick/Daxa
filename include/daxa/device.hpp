@@ -6,6 +6,7 @@
 #include <daxa/swapchain.hpp>
 #include <daxa/command_list.hpp>
 #include <daxa/semaphore.hpp>
+#include <daxa/timeline_query.hpp>
 
 namespace daxa
 {
@@ -184,6 +185,7 @@ namespace daxa
         auto create_image(ImageInfo const & info) -> ImageId;
         auto create_image_view(ImageViewInfo const & info) -> ImageViewId;
         auto create_sampler(SamplerInfo const & info) -> SamplerId;
+        auto create_timeline_query_pool(TimelineQueryPoolInfo const & info) -> TimelineQueryPool;
 
         void destroy_buffer(BufferId id);
         void destroy_image(ImageId id);

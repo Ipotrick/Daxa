@@ -62,11 +62,28 @@ namespace tests
             .debug_name = "image_2",
         });
 
+        daxa::TimelineQueryPool timeline_query_pool = app.device.create_timeline_query_pool({
+            .query_count = 2,
+            .debug_name = "timeline_querry",
+        });
+
         auto buffer_ptr = app.device.map_memory_as<std::array<f32, 4>>(staging_upload_buffer);
 
         *buffer_ptr = data;
 
         app.device.unmap_memory(staging_upload_buffer);
+
+        cmd_list.reset_timestamps({
+            .query_pool = timeline_query_pool,
+            .start_index = 0,
+            .count = timeline_query_pool.info().query_count,
+        });
+
+        cmd_list.write_timestamp({
+            .query_pool = timeline_query_pool,
+            .pipeline_stage = daxa::PipelineStageFlagBits::BOTTOM_OF_PIPE,
+            .query_index = 0,
+        });
 
         cmd_list.pipeline_barrier({
             .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
@@ -158,6 +175,12 @@ namespace tests
             .waiting_pipeline_access = daxa::AccessConsts::HOST_READ,
         });
 
+        cmd_list.write_timestamp({
+            .query_pool = timeline_query_pool,
+            .pipeline_stage = daxa::PipelineStageFlagBits::BOTTOM_OF_PIPE,
+            .query_index = 1,
+        });
+
         cmd_list.complete();
 
         app.device.submit_commands({
@@ -165,6 +188,12 @@ namespace tests
         });
 
         app.device.wait_idle();
+
+        auto query_results = timeline_query_pool.get_query_results(0, 2);
+        if(query_results[1] && query_results[3])
+        {
+            std::cout << "gpu execution took " << static_cast<f64>(query_results[2] - query_results[0]) / 1000000.0 << " ms" << std::endl;
+        }
 
         std::array<f32, 4> readback_data = *app.device.map_memory_as<std::array<f32, 4>>(staging_readback_buffer);
 
