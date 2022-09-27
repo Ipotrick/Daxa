@@ -18,7 +18,6 @@ namespace daxa
         buffer_slots.max_resources = max_buffers;
         image_slots.max_resources = max_images;
         sampler_slots.max_resources = max_samplers;
-        timeline_querry_pool_slots.max_resources = max_timeline_querry_pools;
 
 
         VkDescriptorPoolSize buffer_descriptor_pool_size{

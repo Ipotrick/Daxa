@@ -30,17 +30,7 @@ namespace daxa
         struct SamplerId : public GPUResourceId
         {
         };
-
-        struct TimelineQueryPoolId : public GPUResourceId
-        {
-        };
     } // namespace types
-
-    struct TimelineQueryPoolInfo
-    {
-        u32 querry_count = {};
-        std::string debug_name = {};
-    };
 
     struct BufferInfo
     {
