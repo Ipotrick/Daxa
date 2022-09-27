@@ -15,38 +15,8 @@
 using namespace daxa::types;
 using Clock = std::chrono::high_resolution_clock;
 
-i32 const max_layers = 6;
-i32 const max_levels = 8;
-
-void image_mip_array_slice()
-{
-    auto s0 = daxa::ImageMipArraySlice{
-        .image_aspect = daxa::ImageAspectFlagBits::COLOR | daxa::ImageAspectFlagBits::DEPTH,
-        .base_mip_level = 0,
-        .level_count = 2,
-        .base_array_layer = 0,
-        .layer_count = 2,
-    };
-    auto s1 = daxa::ImageMipArraySlice{
-        .image_aspect = daxa::ImageAspectFlagBits::COLOR,
-        .base_mip_level = 1,
-        .level_count = 1,
-        .base_array_layer = 1,
-        .layer_count = 1,
-    };
-
-    auto [slices, n] = s0.subtract(s1);
-
-    for (usize i = 0; i < n; ++i)
-    {
-        std::cout << "slice " << i << std::endl;
-        // std::cout << "aspect           " << slices[i].image_aspect << std::endl;
-        std::cout << "base_mip_level   " << slices[i].base_mip_level << std::endl;
-        std::cout << "level_count      " << slices[i].level_count << std::endl;
-        std::cout << "base_array_layer " << slices[i].base_array_layer << std::endl;
-        std::cout << "layer_count      " << slices[i].layer_count << std::endl;
-    }
-}
+i32 const max_layers = 12;
+i32 const max_levels = 16;
 
 #define MAX_VERTS 10000
 
@@ -127,17 +97,17 @@ struct App : AppWindow<App>
 
     daxa::ImageMipArraySlice s0 = {
         .image_aspect = daxa::ImageAspectFlagBits::COLOR | daxa::ImageAspectFlagBits::DEPTH,
-        .base_mip_level = 1,
+        .base_mip_level = 3,
         .level_count = 5,
         .base_array_layer = 2,
         .layer_count = 4,
     };
     daxa::ImageMipArraySlice s1 = {
         .image_aspect = daxa::ImageAspectFlagBits::COLOR,
-        .base_mip_level = 3,
+        .base_mip_level = 5,
         .level_count = 2,
         .base_array_layer = 3,
-        .layer_count = 3,
+        .layer_count = 4,
     };
 
     App() : AppWindow<App>(APPNAME, 1600, 1200) {}
