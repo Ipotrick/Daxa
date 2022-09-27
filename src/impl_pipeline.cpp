@@ -332,6 +332,7 @@ namespace daxa
 
         auto impl_pipeline = new ImplRasterPipeline(impl.impl_device, modified_info);
         impl.current_observed_hotload_files = &impl_pipeline->observed_hotload_files;
+        impl_pipeline->last_hotload_time = std::chrono::file_clock::now();
 
         auto v_spirv_result = impl.get_spirv(modified_info.vertex_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT);
         if (v_spirv_result.is_err())
@@ -346,6 +347,36 @@ namespace daxa
             return ResultErr{.message = p_spirv_result.message()};
         }
         std::vector<u32> p_spirv = p_spirv_result.value();
+
+        // TODO(grundlett): Maybe add ability to output the spirv binary for people!
+        // {
+        //     u32 i = 0;
+        //     std::string vs_name = modified_info.vertex_shader_info.debug_name + ".vert.txt";
+        //     std::ofstream vs_file{vs_name};
+        //     for (auto s : v_spirv)
+        //     {
+        //         vs_file << "0x" << std::setfill('0') << std::setw(8) << std::hex << s << ", ";
+        //         if (++i == 8)
+        //         {
+        //             i = 0;
+        //             vs_file << "\n";
+        //         }
+        //     }
+        // }
+        // {
+        //     u32 i = 0;
+        //     std::string fs_name = modified_info.fragment_shader_info.debug_name + ".frag.txt";
+        //     std::ofstream fs_file{fs_name};
+        //     for (auto s : p_spirv)
+        //     {
+        //         fs_file << "0x" << std::setfill('0') << std::setw(8) << std::hex << s << ", ";
+        //         if (++i == 8)
+        //         {
+        //             i = 0;
+        //             fs_file << "\n";
+        //         }
+        //     }
+        // }
 
         VkShaderModule v_vk_shader_module = {};
         VkShaderModule p_vk_shader_module = {};
@@ -415,7 +446,11 @@ namespace daxa
             .polygonMode = *reinterpret_cast<VkPolygonMode const *>(&info.raster.polygon_mode),
             .cullMode = *reinterpret_cast<VkCullModeFlags const *>(&info.raster.face_culling),
             .frontFace = VkFrontFace::VK_FRONT_FACE_CLOCKWISE,
-            .lineWidth = 1.0f,
+            .depthBiasEnable = info.raster.depth_bias_enable,
+            .depthBiasConstantFactor = info.raster.depth_bias_constant_factor,
+            .depthBiasClamp = info.raster.depth_bias_clamp,
+            .depthBiasSlopeFactor = info.raster.depth_bias_slope_factor,
+            .lineWidth = info.raster.line_width,
         };
         VkPipelineDepthStencilStateCreateInfo vk_depth_stencil_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
@@ -531,7 +566,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(impl_pipeline->vk_pipeline),
                 .pObjectName = raster_pipeline_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(impl.impl_device.as<ImplDevice>()->vk_device, &name_info);
+            impl.impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(impl.impl_device.as<ImplDevice>()->vk_device, &name_info);
         }
         return RasterPipeline{ManagedPtr{impl_pipeline}};
     }
@@ -553,6 +588,7 @@ namespace daxa
 
         auto impl_pipeline = new ImplComputePipeline(impl.impl_device, modified_info);
         impl.current_observed_hotload_files = &impl_pipeline->observed_hotload_files;
+        impl_pipeline->last_hotload_time = std::chrono::file_clock::now();
 
         auto spirv_result = impl.get_spirv(modified_info.shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT);
         if (spirv_result.is_err())
@@ -613,7 +649,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(impl_pipeline->vk_pipeline),
                 .pObjectName = raster_pipeline_name.c_str(),
             };
-            vkSetDebugUtilsObjectNameEXT(impl.impl_device.as<ImplDevice>()->vk_device, &name_info);
+            impl.impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(impl.impl_device.as<ImplDevice>()->vk_device, &name_info);
         }
 
         return ComputePipeline{ManagedPtr{impl_pipeline}};
@@ -916,6 +952,17 @@ namespace daxa
         preamble += "#extension GL_EXT_nonuniform_qualifier : enable\n";
         preamble += "#extension GL_EXT_buffer_reference : enable\n";
         preamble += "#extension GL_EXT_shader_explicit_arithmetic_types_int64 : enable\n";
+
+        // TODO(grundlett): Probably expose this as a compile option!
+        preamble += "#extension GL_KHR_shader_subgroup_basic : enable\n";
+        preamble += "#extension GL_KHR_shader_subgroup_vote : enable\n";
+        preamble += "#extension GL_KHR_shader_subgroup_arithmetic : enable\n";
+        preamble += "#extension GL_KHR_shader_subgroup_ballot : enable\n";
+        preamble += "#extension GL_KHR_shader_subgroup_shuffle : enable\n";
+        preamble += "#extension GL_KHR_shader_subgroup_shuffle_relative : enable\n";
+        preamble += "#extension GL_KHR_shader_subgroup_clustered : enable\n";
+        preamble += "#extension GL_KHR_shader_subgroup_quad : enable\n";
+
         if (this->impl_device.as<ImplDevice>()->info.use_scalar_layout)
         {
             preamble += "#extension GL_EXT_scalar_block_layout : require\n";
@@ -946,9 +993,11 @@ namespace daxa
         std::vector<char const *> sources;
         sources.push_back(source_str.c_str());
 
-        shader.setStrings(sources.data(), sources.size());
+        shader.setStrings(sources.data(), static_cast<i32>(sources.size()));
         shader.setEntryPoint("main");
-        // shader.setOverrideVersion(450); // not available yet in latest vcpkg version
+        shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_3);
+        shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_5);
+        // shader.setOverrideVersion(450); // What should this be? I think it might be set by default
 
         GlslangFileIncluder includer;
         includer.impl_pipeline_compiler = this;
@@ -1121,7 +1170,7 @@ namespace daxa
     }
 
     ImplPipeline::ImplPipeline(ManagedWeakPtr impl_device)
-        : impl_device{ impl_device }
+        : impl_device{impl_device}
     {
     }
 
@@ -1134,7 +1183,7 @@ namespace daxa
             main_queue_cpu_timeline_value,
             PipelineZombie{
                 .vk_pipeline = vk_pipeline,
-            }
+            },
         });
     }
 } // namespace daxa

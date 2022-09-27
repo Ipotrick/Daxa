@@ -563,14 +563,10 @@ namespace daxa
 
         friend auto operator<=>(ImageMipArraySlice const &, ImageMipArraySlice const &) = default;
 
+        auto contains(ImageMipArraySlice const & slice) const -> bool;
         auto intersects(ImageMipArraySlice const & slice) const -> bool;
-        auto contained_in(ImageMipArraySlice const & slice) const -> bool;
-        // BROKEN!!
-        auto subtract(ImageMipArraySlice const & slice) const -> ImageMipArraySlice;
-        // TODO!!
-        auto mergable(ImageMipArraySlice const & slice) const -> bool {}
-        // TODO!!
-        auto merge(ImageMipArraySlice const & slice) const -> ImageMipArraySlice {}
+        auto intersect(ImageMipArraySlice const & slice) const -> ImageMipArraySlice;
+        auto subtract(ImageMipArraySlice const & slice) const -> std::tuple<std::array<ImageMipArraySlice, 4>, usize>;
     };
 
     struct ImageArraySlice
