@@ -39,7 +39,9 @@ namespace daxa
     {
         Access latest_access = AccessConsts::NONE;
         ImageLayout latest_layout = ImageLayout::UNDEFINED;
-        EventId latest_access_event = {};
+        EventId latest_access_batch = {};
+        usize latest_access_batch_barrier_index_begin = {};
+        usize latest_access_batch_barrier_index_count = {};
         ImageMipArraySlice slice = {};
     };
 
@@ -64,6 +66,7 @@ namespace daxa
 
     struct TaskImageBarrierInfo
     {
+        usize src_event_batch = {};
         Access awaited_pipeline_access = AccessConsts::NONE;
         Access waiting_pipeline_access = AccessConsts::NONE;
         ImageLayout before_layout = ImageLayout::UNDEFINED;
@@ -157,12 +160,77 @@ namespace daxa
     struct EventBatch
     {
         std::vector<EventId> events = {};
-        std::vector<EventBatchDependency> dependenceis = {};
+        std::vector<EventProtoBarrier> dependenceis = {};
     };
 
     auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access>;
     auto task_buffer_access_to_access(TaskBufferAccess const & access) -> Access;
     auto compute_needed_barrier(Access const & previous_access, Access const & new_access) -> std::optional<TaskPipelineBarrierInfo>;
+
+    void insert_task()
+    {
+        usize batch_index = find_earliest_possible_batch_index(batches, event);
+
+        for (buffer : event.buffers)
+        {
+            insert_split_barrier_prototypes(buffer);
+        }
+
+        for (image : event.images)
+        {
+            insert_split_barrier_prototypes(buffer);
+        }
+    }
+
+    void insert_split_barrier_prototypes(TaskImageAccess t_access, ImageMipArraySlice slice, usize event_batch_index, TaskImageId image_id)
+    {
+        auto [layout, access] = task_image_access_to_layout_access(t_access);
+
+        ImplTaskImage& task_image = task_images[image_id.index];
+
+        TaskImageTrackedSlice new_tracked_slice = {};
+
+        // When we go over all tracked slices we can find ones that overlap with the new one.
+        // If we find overlap, we need to make sure that we put the new event after (write or diff read layout) or in the same (same read layout) batch.
+        // While iterating over the tracked slices we find the max batch index we need to put the new event into.
+        // The max batch index is the first one we can put the new event into without violating any synchronization.
+        usize batch_index = {};
+
+        // We need to make a list of barriers that will need to be inserted before the new event
+        std::vector<TaskImageBarrierInfo> barriers = {}; 
+        for (auto& old_use : task_image.slices)
+        {
+            if (old_use.slice.intersects(slice))
+            {
+                if (old_use.latest_layout == layout)
+                {
+                    // 1. find rest old, rest new, insersection.
+                    // 2. ignore old for pipeline barrier it doesnt matter. 
+                    // 3. we allready have a barrier. Add src and dst to the existing barrier.
+                    // 5. or on the slice we are building the accesses from old
+                    // 4. remove old, replace it with rest old
+                }
+                else
+                {
+                    // The first batch index we can put the new event into is one after the currently tested old use.
+                    // max the batch_index with old_use.batch_index+1
+
+                    // 1. find rest old, rest new, insersection.
+
+                    // 2. we need to create a new barrier
+                    
+                    // 3. we allready have a barrier. Add src and dst to the existing barrier.
+                    // 5. or on the slice we are building the accesses from old
+                    // 4. remove old, replace it with rest old
+                    // 5. max the batch_index with the 
+                }
+            }
+            else
+            {
+                // put event into first batch, no barriers
+            }
+        }
+    }
 
     struct ImplTaskList final : ManagedSharedState
     {
