@@ -578,7 +578,7 @@ namespace daxa
 
         friend auto operator<=>(ImageArraySlice const &, ImageArraySlice const &) = default;
 
-        static auto slice(ImageMipArraySlice const & mipArraySlice, u32 mip_level = 0) -> ImageArraySlice;
+        static auto slice(ImageMipArraySlice const & mip_array_slice, u32 mip_level = 0) -> ImageArraySlice;
 
         auto contained_in(ImageMipArraySlice const & slice) const -> bool;
     };
@@ -591,7 +591,7 @@ namespace daxa
 
         friend auto operator<=>(ImageSlice const &, ImageSlice const &) = default;
 
-        static auto slice(ImageArraySlice const & mipArraySlice, u32 array_layer = 0) -> ImageSlice;
+        static auto slice(ImageArraySlice const & mip_array_slice, u32 array_layer = 0) -> ImageSlice;
 
         auto contained_in(ImageMipArraySlice const & slice) const -> bool;
         auto contained_in(ImageArraySlice const & slice) const -> bool;

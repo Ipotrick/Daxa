@@ -29,7 +29,7 @@ namespace daxa
         void reclaim_unused_memory();
 
       private:
-        auto reserve_memoy(usize size) -> usize;
+        auto reserve_memory(usize size) -> usize;
 
         struct ClaimedSize
         {

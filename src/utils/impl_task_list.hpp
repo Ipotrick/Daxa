@@ -148,7 +148,7 @@ namespace daxa
     struct EventBatch
     {
         std::vector<EventId> events = {};
-        std::vector<EventProtoBarrier> dependenceis = {};
+        std::vector<EventProtoBarrier> dependencies = {};
     };
 
     auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access>;
@@ -194,9 +194,9 @@ namespace daxa
             {
                 if (old_use.latest_layout == layout)
                 {
-                    // 1. find rest old, rest new, insersection.
-                    // 2. ignore old for pipeline barrier it doesnt matter. 
-                    // 3. we allready have a barrier. Add src and dst to the existing barrier.
+                    // 1. find rest old, rest new, intersection.
+                    // 2. ignore old for pipeline barrier it doesn't matter. 
+                    // 3. we already have a barrier. Add src and dst to the existing barrier.
                     // 5. or on the slice we are building the accesses from old
                     // 4. remove old, replace it with rest old
                 }
@@ -205,11 +205,11 @@ namespace daxa
                     // The first batch index we can put the new event into is one after the currently tested old use.
                     // max the batch_index with old_use.batch_index+1
 
-                    // 1. find rest old, rest new, insersection.
+                    // 1. find rest old, rest new, intersection.
 
                     // 2. we need to create a new barrier
                     
-                    // 3. we allready have a barrier. Add src and dst to the existing barrier.
+                    // 3. we already have a barrier. Add src and dst to the existing barrier.
                     // 5. or on the slice we are building the accesses from old
                     // 4. remove old, replace it with rest old
                     // 5. max the batch_index with the 
