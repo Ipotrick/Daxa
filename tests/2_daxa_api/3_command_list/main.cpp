@@ -64,7 +64,7 @@ namespace tests
 
         daxa::TimelineQueryPool timeline_query_pool = app.device.create_timeline_query_pool({
             .query_count = 2,
-            .debug_name = "timeline_querry",
+            .debug_name = "timeline_query",
         });
 
         auto buffer_ptr = app.device.map_memory_as<std::array<f32, 4>>(staging_upload_buffer);
