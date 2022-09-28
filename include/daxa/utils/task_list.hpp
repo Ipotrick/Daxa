@@ -100,7 +100,7 @@ namespace daxa
     };
 
     using TaskUsedBuffers = std::vector<std::tuple<TaskBufferId, TaskBufferAccess>>;
-    using TaskUsedImages = std::vector<std::tuple<TaskImageId, TaskImageAccess, std::optional<ImageMipArraySlice>>>;
+    using TaskUsedImages = std::vector<std::tuple<TaskImageId, TaskImageAccess, ImageMipArraySlice>>;
 
     struct TaskList;
     struct Device;
@@ -152,8 +152,12 @@ namespace daxa
     struct TaskListInfo
     {
         Device device;
-        bool optimize_task_order = true;
-        bool optimize_barriers = true;
+        /// @brief reordering resource creation to the beginning optimizes synchronization and execution overlap. 
+        /// resource creation in recording order improves memory aliasing and reduces memory usage.
+        bool dont_reorder_resource_creation = false;
+        /// @brief task reordering can drastically improve performance, 
+        /// yet is it also nice to have sequential callback execution.
+        bool dont_reorder_tasks = false;
         std::string debug_name = {};
     };
 
@@ -171,7 +175,7 @@ namespace daxa
         auto create_task_buffer(TaskBufferInfo const & info) -> TaskBufferId;
         auto create_task_image(TaskImageInfo const & info) -> TaskImageId;
 
-        void add_task(TaskInfo const & info);
+        Result<void> add_task(TaskInfo const & info);
 
         void submit(CommandSubmitInfo * info);
         void present(TaskPresentInfo const & info);
@@ -185,6 +189,7 @@ namespace daxa
         auto last_access(TaskImageId image) -> Access;
         auto last_layout(TaskImageId image) -> ImageLayout;
 
+        void complete();
         void execute();
     };
 } // namespace daxa
