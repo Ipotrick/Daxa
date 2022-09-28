@@ -152,10 +152,10 @@ namespace daxa
     struct TaskListInfo
     {
         Device device;
-        /// @brief reordering resource creation to the beginning optimizes synchronization and execution overlap. 
+        /// @brief reordering resource creation to the beginning optimizes synchronization and execution overlap.
         /// resource creation in recording order improves memory aliasing and reduces memory usage.
         bool dont_reorder_resource_creation = false;
-        /// @brief task reordering can drastically improve performance, 
+        /// @brief task reordering can drastically improve performance,
         /// yet is it also nice to have sequential callback execution.
         bool dont_reorder_tasks = false;
         std::string debug_name = {};
