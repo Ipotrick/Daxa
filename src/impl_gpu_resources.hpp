@@ -49,7 +49,7 @@ namespace daxa
      * This struct is threadsafe if the following assumptions are met:
      * * never dereference a deleted resource
      * * never delete a resource twice
-     * That means the function dereference_id can be used without synchonization, even calling get_new_slot or return_old_slot in parallel is safe.
+     * That means the function dereference_id can be used without synchronization, even calling get_new_slot or return_old_slot in parallel is safe.
      *
      * To check if these assumptions are met at runtime, the debug define DAXA_GPU_ID_VALIDATION can be used.
      * The define enables runtime checking to detect use after free and double free at the cost of performance.
@@ -75,11 +75,11 @@ namespace daxa
         std::array<std::unique_ptr<PageT>, PAGE_COUNT> pages = {};
 
 #if DAXA_GPU_ID_VALIDATION
-        void verify_ressource_id(GPUResourceId id) const
+        void verify_resource_id(GPUResourceId id) const
         {
             usize page = id.index >> PAGE_BITS;
             usize offset = id.index & PAGE_MASK;
-            DAXA_DBG_ASSERT_TRUE_M(pages[page] != nullptr, "detected invalid ressource id");
+            DAXA_DBG_ASSERT_TRUE_M(pages[page] != nullptr, "detected invalid resource id");
             DAXA_DBG_ASSERT_TRUE_M(id.version != 0, "detected invalid resource id");
         }
 #endif
@@ -94,8 +94,8 @@ namespace daxa
             if (free_index_stack.empty())
             {
                 index = next_index++;
-                DAXA_DBG_ASSERT_TRUE_M(index < MAX_RESOURCE_COUNT, "exceded max resource count");
-                DAXA_DBG_ASSERT_TRUE_M(index < max_resources, "exceded max resource count");
+                DAXA_DBG_ASSERT_TRUE_M(index < MAX_RESOURCE_COUNT, "exceeded max resource count");
+                DAXA_DBG_ASSERT_TRUE_M(index < max_resources, "exceeded max resource count");
             }
             else
             {
@@ -129,7 +129,7 @@ namespace daxa
 
 #if DAXA_GPU_ID_VALIDATION
             DAXA_ONLY_IF_THREADSAFETY(std::unique_lock use_after_free_check_lock{use_after_free_check_mtx});
-            verify_ressource_id(id);
+            verify_resource_id(id);
             DAXA_DBG_ASSERT_TRUE_M(pages[page]->at(offset).second == id.version, "detected double delete for a resource id");
 #endif
             DAXA_ONLY_IF_THREADSAFETY(std::unique_lock page_alloc_lock{page_alloc_mtx});
@@ -146,7 +146,7 @@ namespace daxa
 
 #if DAXA_GPU_ID_VALIDATION
             DAXA_ONLY_IF_THREADSAFETY(std::unique_lock use_after_free_check_lock{use_after_free_check_mtx});
-            verify_ressource_id(id);
+            verify_resource_id(id);
             u8 version = pages[page]->at(offset).second;
             DAXA_DBG_ASSERT_TRUE_M(version == id.version, "detected use after free for a resource id");
 #endif
@@ -160,7 +160,7 @@ namespace daxa
 
 #if DAXA_GPU_ID_VALIDATION
             DAXA_ONLY_IF_THREADSAFETY(std::unique_lock use_after_free_check_lock{use_after_free_check_mtx});
-            verify_ressource_id(id);
+            verify_resource_id(id);
             u8 version = pages[page]->at(offset).second;
             DAXA_DBG_ASSERT_TRUE_M(version == id.version, "detected use after free for a resource id");
 #endif
@@ -178,7 +178,7 @@ namespace daxa
         VkDescriptorSet vk_descriptor_set = {};
         VkDescriptorPool vk_descriptor_pool = {};
 
-        // Contains pipeline layouts with variing push constant range size.
+        // Contains pipeline layouts with varying push constant range size.
         // The first size is 0 word, second is 1 word, all others are a power of two (maximum is MAX_PUSH_CONSTANT_BYTE_SIZE).
         std::array<VkPipelineLayout, PIPELINE_LAYOUT_COUNT> pipeline_layouts = {};
 

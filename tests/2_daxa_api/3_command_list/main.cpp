@@ -199,7 +199,7 @@ namespace tests
         daxa::ImageViewId image_view = app.device.create_image_view({.image = image});
         daxa::SamplerId sampler = app.device.create_sampler({});
 
-        // The gpu resources are not destroyed here. Their destruction is defered until the command list completes execution on the gpu.
+        // The gpu resources are not destroyed here. Their destruction is deferred until the command list completes execution on the gpu.
         cmd_list.destroy_buffer_deferred(buffer);
         cmd_list.destroy_image_deferred(image);
         cmd_list.destroy_image_view_deferred(image_view);
@@ -216,7 +216,7 @@ namespace tests
         app.device.wait_idle();
 
         // Here the gpu resources will be destroyed.
-        // Collect_garbage loops over all zombie resources and destroyes them when they are no longer used on the gpu/ their assoziated command list finished executng.
+        // Collect_garbage loops over all zombie resources and destroys them when they are no longer used on the gpu/ their associated command list finished executing.
         app.device.collect_garbage();
     }
 } // namespace tests

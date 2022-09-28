@@ -423,7 +423,7 @@ namespace daxa
             for (i32 n = 0; n < draw_data->CmdListsCount; n++)
             {
                 const ImDrawList * draws = draw_data->CmdLists[n];
-                usize lastTexId = 0;
+                usize last_tex_id = 0;
                 for (i32 cmd_i = 0; cmd_i < draws->CmdBuffer.Size; cmd_i++)
                 {
                     const ImDrawCmd * pcmd = &draws->CmdBuffer[cmd_i];
