@@ -367,8 +367,10 @@ namespace daxa
         std::vector<VkShaderModule> vk_shader_modules{};
         std::vector<VkPipelineShaderStageCreateInfo> vk_pipeline_shader_stage_create_infos{};
 
-        auto create_shader_module = [&](ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage) -> Result<bool> {
-            if(!std::holds_alternative<std::monostate>(shader_info.source)) {
+        auto create_shader_module = [&](ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage) -> Result<bool>
+        {
+            if (!std::holds_alternative<std::monostate>(shader_info.source))
+            {
                 auto spirv_result = impl.get_spirv(shader_info, shader_stage);
                 if (spirv_result.is_err())
                 {
@@ -379,7 +381,7 @@ namespace daxa
 
                 VkShaderModule vk_shader_module;
 
-                VkShaderModuleCreateInfo vk_shader_module_create_info {
+                VkShaderModuleCreateInfo vk_shader_module_create_info{
                     .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
                     .pNext = nullptr,
                     .codeSize = static_cast<u32>(spirv.size() * sizeof(u32)),
@@ -389,7 +391,7 @@ namespace daxa
                 vkCreateShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, &vk_shader_module_create_info, nullptr, &vk_shader_module);
                 vk_shader_modules.push_back(std::move(vk_shader_module));
 
-                VkPipelineShaderStageCreateInfo vk_pipeline_shader_stage_create_info {
+                VkPipelineShaderStageCreateInfo vk_pipeline_shader_stage_create_info{
                     .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
                     .pNext = nullptr,
                     .flags = {},
@@ -407,16 +409,18 @@ namespace daxa
 
         {
             auto result = create_shader_module(modified_info.vertex_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT);
-            if(result.is_err()) {
+            if (result.is_err())
+            {
                 return ResultErr{.message = result.message()};
-            } 
+            }
         }
-        
+
         {
             auto result = create_shader_module(modified_info.fragment_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT);
-            if(result.is_err()) {
+            if (result.is_err())
+            {
                 return ResultErr{.message = result.message()};
-            } 
+            }
         }
 
         impl_pipeline->vk_pipeline_layout = impl.impl_device.as<ImplDevice>()->gpu_table.pipeline_layouts[(modified_info.push_constant_size + 3) / 4];
@@ -554,7 +558,8 @@ namespace daxa
 
         DAXA_DBG_ASSERT_TRUE_M(pipeline_result == VK_SUCCESS, "failed to create graphics pipeline");
 
-        for(auto& vk_shader_module : vk_shader_modules) {
+        for (auto & vk_shader_module : vk_shader_modules)
+        {
             vkDestroyShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, vk_shader_module, nullptr);
         }
 
@@ -799,7 +804,7 @@ namespace daxa
     auto ImplPipelineCompiler::get_spirv(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage) -> Result<std::vector<u32>>
     {
         std::vector<u32> spirv = {};
-        if (shader_info.source.index() == 2)
+        if (std::holds_alternative<ShaderSPIRV>(shader_info.source))
         {
             ShaderSPIRV const & input_spirv = std::get<ShaderSPIRV>(shader_info.source);
             spirv.resize(input_spirv.size);
@@ -1066,7 +1071,7 @@ namespace daxa
         args.push_back(L"-DDAXA_SHADER");
         args.push_back(L"-DDAXA_HLSL");
 
-        if (shader_info.source.index() == 0)
+        if (std::holds_alternative<ShaderFile>(shader_info.source))
         {
             wstring_buffer.push_back(std::get<ShaderFile>(shader_info.source).path.wstring());
             args.push_back(wstring_buffer.back().c_str());
