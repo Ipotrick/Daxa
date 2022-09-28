@@ -29,7 +29,7 @@ void main()
 
     f32 dist = segment_distance(pixel_pos, prev_mouse_pos, mouse_pos);
 
-    if (dist < 5)
+    if (dist < push_constant.compute_input.paint_radius)
     {
         f32vec3 col = push_constant.compute_input.paint_col;
 
