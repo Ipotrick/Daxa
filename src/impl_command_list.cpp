@@ -601,6 +601,22 @@ namespace daxa
         vkCmdDrawIndirect(impl.vk_cmd_buffer, impl.impl_device.as<ImplDevice>()->slot(info.indirect_buffer).vk_buffer, info.offset, info.draw_count, info.stride);
     }
 
+    void CommandList::write_timestamp(WriteTimestampInfo const & info)
+    {
+        auto & impl = *as<ImplCommandList>();
+        DAXA_DBG_ASSERT_TRUE_M(info.query_index < info.query_pool.info().query_count, "query_index is out of bounds for the query pool");
+        impl.flush_barriers();
+        vkCmdWriteTimestamp(impl.vk_cmd_buffer, static_cast<VkPipelineStageFlagBits>(info.pipeline_stage), info.query_pool.as<ImplTimelineQueryPool>()->vk_timeline_query_pool, info.query_index);
+    }
+
+    void CommandList::reset_timestamps(ResetTimestampsInfo const & info)
+    {
+        auto & impl = *as<ImplCommandList>();
+        DAXA_DBG_ASSERT_TRUE_M(info.start_index < info.query_pool.info().query_count, "reset index is out of bounds for the query pool");
+        impl.flush_barriers();
+        vkCmdResetQueryPool(impl.vk_cmd_buffer, info.query_pool.as<ImplTimelineQueryPool>()->vk_timeline_query_pool, info.start_index, info.count); 
+    }
+
     auto CommandBufferPoolPool::get(ImplDevice * device) -> std::pair<VkCommandPool, VkCommandBuffer>
     {
         std::pair<VkCommandPool, VkCommandBuffer> pair = {};
