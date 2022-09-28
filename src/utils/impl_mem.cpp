@@ -11,7 +11,7 @@ namespace daxa
 
     auto MemoryUploader::upload_to_buffer(BufferId dst_buffer, usize dst_offset, usize size) -> void *
     {
-        usize src_offset = this->reserve_memoy(size);
+        usize src_offset = this->reserve_memory(size);
 
         this->claimed_sizes.back().size += size;
 
@@ -65,12 +65,12 @@ namespace daxa
         }
     }
 
-    auto MemoryUploader::reserve_memoy(usize size) -> usize
+    auto MemoryUploader::reserve_memory(usize size) -> usize
     {
         usize start = this->claimed_start;
         usize old_size = this->claimed_size;
         this->claimed_size += size;
-        DAXA_DBG_ASSERT_TRUE_M(this->claimed_size <= capacity, "exceeded MemoryUploader ring buffer capacity! A potential fix would be to increase the uploaders capacity.");
+        DAXA_DBG_ASSERT_TRUE_M(this->claimed_size <= capacity, "exceeded MemoryUploader ring buffer capacity! A potential fix would be to increase the uploader's capacity.");
 
         return (start + old_size) % capacity;
     }
