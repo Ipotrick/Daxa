@@ -254,11 +254,10 @@ namespace daxa
         return {false};
     }
     auto find_first_possible_batch_index(
-        ImplTaskList const & impl, 
-        TaskBatchSubmitScope const & current_submit_scope, 
-        usize const current_submit_scope_index, 
-        TaskInfo const & info
-    ) -> usize
+        ImplTaskList const & impl,
+        TaskBatchSubmitScope const & current_submit_scope,
+        usize const current_submit_scope_index,
+        TaskInfo const & info) -> usize
     {
         usize first_possible_batch_index = 0;
         if (impl.info.dont_reorder_tasks)
@@ -280,7 +279,7 @@ namespace daxa
             // Every other access (NONE, READ_WRITE, WRITE) are interpreted as writes in this context.
             bool is_last_access_read = impl_task_buffer.latest_access.type == AccessTypeFlagBits::READ;
             bool is_current_access_read = current_buffer_access.type == AccessTypeFlagBits::READ;
-            
+
             // When a buffer has been read in a previous use AND the current task also reads the buffer,
             // we must insert the task at or after the last use batch.
             usize current_buffer_first_possible_batch_index = impl_task_buffer.latest_access_batch_index;
@@ -295,7 +294,7 @@ namespace daxa
         {
             ImplTaskImage const & impl_task_image = impl.impl_task_images[used_image_t_id.index];
             auto [this_task_image_layout, this_task_image_access] = task_image_access_to_layout_access(used_image_t_access);
-            // As image subresources can be in different layouts and also different synchronization scopes, 
+            // As image subresources can be in different layouts and also different synchronization scopes,
             // we need to track these image ranges individually.
             for (TaskImageTrackedSlice const & tracked_slice : impl_task_image.slices_last_uses)
             {
@@ -303,14 +302,13 @@ namespace daxa
                 // the current scopes first batch.
                 // When the slices dont intersect, we dont need to do any sync or execution ordering between them.
                 if (
-                    tracked_slice.latest_access_submit_scope_index < current_submit_scope_index || 
-                    !tracked_slice.slice.intersects(used_image_slice)
-                )
+                    tracked_slice.latest_access_submit_scope_index < current_submit_scope_index ||
+                    !tracked_slice.slice.intersects(used_image_slice))
                 {
                     continue;
                 }
 
-                // Now that we found out that the new use and an old use intersect, 
+                // Now that we found out that the new use and an old use intersect,
                 // we need to insert the task in the same or a later batch.
                 bool is_last_access_read = tracked_slice.latest_access.type == AccessTypeFlagBits::READ;
                 bool is_current_access_read = this_task_image_access.type == AccessTypeFlagBits::READ;
@@ -335,7 +333,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can not record to completed command list");
 
         TaskId task_id = impl.tasks.size();
-        impl.tasks.emplace_back(GenericTask{ 
+        impl.tasks.emplace_back(GenericTask{
             .info = info,
         });
 
@@ -350,15 +348,14 @@ namespace daxa
         {
             return result;
         }
-        
+
         // Before we can insert any synchronization or update last uses,
         // we need to find the first possible batch index.
         const usize batch_index = find_first_possible_batch_index(
             impl,
             current_submit_scope,
             current_submit_scope_index,
-            info
-        );
+            info);
 
         // Now that we know what batch we need to insert the task into, we need to insert synchronization.
         // We also need to make sure that overlapping image uses and barriers are be split and corrected.
@@ -368,14 +365,13 @@ namespace daxa
         }
         for (auto & [used_image_t_id, used_image_t_access, used_image_o_slice] : info.used_images)
         {
-
             // Now we need to split the uses into three groups:
             // * the part of the tracked image slice that does not intersect with the current new use (tracked_slice_rest)
             // * the slice that is the intersection of tracked image slice and current new use (intersection)
             // * the part of the current new use slice that does not intersect with the tracked image (new_use_slice_rest)
-            //auto [tracked_slice_rest, tracked_slice_rest_count] = tracked_slice.slice.subtract(used_image_slice);
-            //auto intersection = tracked_slice.slice.intersect(used_image_slice);
-            //auto [new_use_slice_rest, new_use_slice_rest_count] = used_image_slice.subtract(tracked_slice.slice);
+            // auto [tracked_slice_rest, tracked_slice_rest_count] = tracked_slice.slice.subtract(used_image_slice);
+            // auto intersection = tracked_slice.slice.intersect(used_image_slice);
+            // auto [new_use_slice_rest, new_use_slice_rest_count] = used_image_slice.subtract(tracked_slice.slice);
         }
         return {false};
     }
