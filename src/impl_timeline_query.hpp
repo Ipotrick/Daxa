@@ -17,14 +17,14 @@ namespace daxa
 
     struct ImplTimelineQueryPool final : ManagedSharedState
     {
-        TimelineQueryPoolInfo info  = {};
-        VkQueryPool vk_timeline_query_pool = {};    
+        TimelineQueryPoolInfo info = {};
+        VkQueryPool vk_timeline_query_pool = {};
 
         ImplTimelineQueryPool(ManagedWeakPtr a_impl_device, TimelineQueryPoolInfo const & a_info);
         ~ImplTimelineQueryPool();
 
-        private:
-            friend struct TimelineQueryPool;
-            ManagedWeakPtr impl_device = {};
+      private:
+        friend struct TimelineQueryPool;
+        ManagedWeakPtr impl_device = {};
     };
-}
+} // namespace daxa

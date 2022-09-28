@@ -15,7 +15,7 @@ namespace daxa
     static inline constexpr usize DEFERRED_DESTRUCTION_IMAGE_INDEX = 1;
     static inline constexpr usize DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX = 2;
     static inline constexpr usize DEFERRED_DESTRUCTION_SAMPLER_INDEX = 3;
-    static inline constexpr usize DEFERRED_DESTRUCTION_TIMELINE_QUERRY_POOL_INDEX = 4;
+    static inline constexpr usize DEFERRED_DESTRUCTION_TIMELINE_QUERY_POOL_INDEX = 4;
     static inline constexpr usize DEFERRED_DESTRUCTION_COUNT_MAX = 32;
 
     static inline constexpr usize COMMAND_LIST_BARRIER_MAX_BATCH_SIZE = 16;

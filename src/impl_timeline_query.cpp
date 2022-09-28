@@ -34,28 +34,28 @@ namespace daxa
     ImplTimelineQueryPool::ImplTimelineQueryPool(ManagedWeakPtr a_impl_device, TimelineQueryPoolInfo const & info)
         : impl_device{a_impl_device}, info{info}
     {
-        // TODO(msakmary) Should Add a check for support of timeline querries
-        //                here or earliner (during device creation/section) I'm not sure...
-        VkQueryPoolCreateInfo vk_querry_pool_create_info{
+        // TODO(msakmary) Should Add a check for support of timeline queries
+        //                here or earlier (during device creation/section) I'm not sure...
+        VkQueryPoolCreateInfo vk_query_pool_create_info{
             .sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,
             .pNext = nullptr,
             .flags = 0,
             .queryType = VK_QUERY_TYPE_TIMESTAMP,
             .queryCount = info.query_count};
 
-        vkCreateQueryPool(impl_device.as<ImplDevice>()->vk_device, &vk_querry_pool_create_info, nullptr, &vk_timeline_query_pool);
+        vkCreateQueryPool(impl_device.as<ImplDevice>()->vk_device, &vk_query_pool_create_info, nullptr, &vk_timeline_query_pool);
         vkResetQueryPool(impl_device.as<ImplDevice>()->vk_device, vk_timeline_query_pool, 0, info.query_count);
 
         if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
         {
-            VkDebugUtilsObjectNameInfoEXT querry_pool_name_info{
+            VkDebugUtilsObjectNameInfoEXT query_pool_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_QUERY_POOL,
                 .objectHandle = reinterpret_cast<uint64_t>(vk_timeline_query_pool),
                 .pObjectName = info.debug_name.c_str(),
             };
-            this->impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(impl_device.as<ImplDevice>()->vk_device, &querry_pool_name_info);
+            this->impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(impl_device.as<ImplDevice>()->vk_device, &query_pool_name_info);
         }
     }
 
