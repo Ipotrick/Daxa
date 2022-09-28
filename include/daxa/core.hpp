@@ -187,7 +187,6 @@ namespace daxa
         std::optional<T> v = {};
         std::string m = {};
 
-      public:
         Result(T && value)
             : v{std::move(value)}, m{""}
         {
@@ -264,6 +263,55 @@ namespace daxa
         auto operator!() const -> bool
         {
             return !v.has_value();
+        }
+    };
+
+    template <>
+    struct Result<void>
+    {
+        bool v = {};
+        std::string m = {};
+
+        Result(bool opt)
+            : v{opt}, m{opt ? "" : "default error message"}
+        {
+        }
+
+        bool is_ok() const
+        {
+            return v;
+        }
+
+        bool is_err() const
+        {
+            return !v;
+        }
+
+        auto message() const -> std::string const &
+        {
+            return m;
+        }
+
+        auto to_string() const -> std::string
+        {
+            if (v)
+            {
+                return "Result OK";
+            }
+            else
+            {
+                return std::string("Result Err: ") + m;
+            }
+        }
+
+        operator bool() const
+        {
+            return v;
+        }
+
+        auto operator!() const -> bool
+        {
+            return !v;
         }
     };
 } // namespace daxa
