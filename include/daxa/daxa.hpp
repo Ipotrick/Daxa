@@ -9,3 +9,4 @@
 #include <daxa/command_list.hpp>
 #include <daxa/device.hpp>
 #include <daxa/context.hpp>
+#include <daxa/timeline_query.hpp>

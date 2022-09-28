@@ -12,6 +12,7 @@
 #include "impl_semaphore.hpp"
 #include "impl_gpu_resources.hpp"
 #include "impl_split_barrier.hpp"
+#include "impl_timeline_query.hpp"
 
 namespace daxa
 {
@@ -53,6 +54,7 @@ namespace daxa
         std::deque<std::pair<u64, SemaphoreZombie>> main_queue_semaphore_zombies = {};
         std::deque<std::pair<u64, SplitBarrierZombie>> main_queue_split_barrier_zombies = {};
         std::deque<std::pair<u64, PipelineZombie>> main_queue_pipeline_zombies = {};
+        std::deque<std::pair<u64, TimelineQueryPoolZombie>> main_queue_timeline_query_pool_zombies = {};
         void main_queue_collect_garbage();
         void wait_idle();
 

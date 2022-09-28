@@ -6,6 +6,7 @@
 #include <daxa/split_barrier.hpp>
 
 #include <span>
+#include <daxa/timeline_query.hpp>
 
 namespace daxa
 {
@@ -151,6 +152,20 @@ namespace daxa
         std::span<SplitBarrier> split_barriers;
     };
 
+    struct WriteTimestampInfo
+    {
+        TimelineQueryPool & query_pool;
+        PipelineStageFlags pipeline_stage = {};
+        u32 query_index = {};
+    };
+
+    struct ResetTimestampsInfo
+    {
+        TimelineQueryPool & query_pool;
+        u32 start_index = {};
+        u32 count = {};
+    };
+
     struct CommandList : ManagedPtr
     {
         CommandList();
@@ -194,6 +209,9 @@ namespace daxa
         void draw(DrawInfo const & info);
         void draw_indexed(DrawIndexedInfo const & info);
         void draw_indirect(DrawIndirectInfo const & info);
+
+        void write_timestamp(WriteTimestampInfo const & info);
+        void reset_timestamps(ResetTimestampsInfo const & info);
 
         void complete();
         auto is_complete() const -> bool;
