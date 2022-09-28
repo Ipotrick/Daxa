@@ -12,7 +12,7 @@ namespace daxa
         return ImageViewId{{.index = index, .version = version}};
     }
 
-    void GPUResourceTable::initialize(usize max_buffers, usize max_images, usize max_samplers, usize max_timeline_querry_pools,
+    void GPUResourceTable::initialize(usize max_buffers, usize max_images, usize max_samplers, usize max_timeline_query_pools,
         VkDevice device, VkBuffer buffer_device_address_buffer)
     {
         buffer_slots.max_resources = max_buffers;

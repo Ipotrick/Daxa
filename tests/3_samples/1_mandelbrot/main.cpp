@@ -72,7 +72,7 @@ struct App : AppWindow<App>
     daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
     daxa::TimelineQueryPool timeline_query_pool = device.create_timeline_query_pool({
         .query_count = 2,
-        .debug_name = "timeline_querry",
+        .debug_name = "timeline_query",
     });
 
     Clock::time_point start = Clock::now();
