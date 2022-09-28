@@ -122,13 +122,13 @@ static void shader_preprocess(std::string & file_str, std::filesystem::path cons
     std::stringstream file_ss{file_str};
     std::stringstream result_ss = {};
     bool has_pragma_once = false;
-    auto abspath_str = std::filesystem::absolute(path).string();
+    auto abs_path_str = std::filesystem::absolute(path).string();
     for (daxa::usize line_num = 0; std::getline(file_ss, line); ++line_num)
     {
         if (std::regex_match(line, matches, PRAGMA_ONCE_REGEX))
         {
             result_ss << "#if !defined(";
-            std::regex_replace(std::ostreambuf_iterator<char>(result_ss), abspath_str.begin(), abspath_str.end(), REPLACE_REGEX, "");
+            std::regex_replace(std::ostreambuf_iterator<char>(result_ss), abs_path_str.begin(), abs_path_str.end(), REPLACE_REGEX, "");
             result_ss << ")\n";
             has_pragma_once = true;
         }
@@ -140,7 +140,7 @@ static void shader_preprocess(std::string & file_str, std::filesystem::path cons
     if (has_pragma_once)
     {
         result_ss << "\n#define ";
-        std::regex_replace(std::ostreambuf_iterator<char>(result_ss), abspath_str.begin(), abspath_str.end(), REPLACE_REGEX, "");
+        std::regex_replace(std::ostreambuf_iterator<char>(result_ss), abs_path_str.begin(), abs_path_str.end(), REPLACE_REGEX, "");
         result_ss << "\n#endif\n";
     }
     file_str = result_ss.str();
@@ -189,19 +189,19 @@ namespace daxa
             }
 
             impl_pipeline_compiler->current_observed_hotload_files->insert({full_path, std::chrono::file_clock::now()});
-            auto shadercode_result = impl_pipeline_compiler->load_shader_source_from_file(full_path);
+            auto shader_code_result = impl_pipeline_compiler->load_shader_source_from_file(full_path);
 
-            if (shadercode_result.is_err())
+            if (shader_code_result.is_err())
             {
                 return nullptr;
             }
 
-            auto & shadercode_str = shadercode_result.value().string;
-            headerLength = shadercode_str.size();
+            auto & shader_code_str = shader_code_result.value().string;
+            headerLength = shader_code_str.size();
             char * res_content = new char[headerLength + 1];
             for (usize i = 0; i < headerLength; ++i)
             {
-                res_content[i] = shadercode_str[i];
+                res_content[i] = shader_code_str[i];
             }
             res_content[headerLength] = '\0';
             headerData = res_content;
@@ -689,13 +689,13 @@ namespace daxa
         }
         pipeline_impl.last_hotload_time = now;
         bool reload = false;
-        for (auto & [path, recordedWriteTime] : pipeline_impl.observed_hotload_files)
+        for (auto & [path, recorded_write_time] : pipeline_impl.observed_hotload_files)
         {
             auto ifs = std::ifstream(path);
             if (ifs.good())
             {
-                auto latestWriteTime = std::filesystem::last_write_time(path);
-                if (latestWriteTime > recordedWriteTime)
+                auto latest_write_time = std::filesystem::last_write_time(path);
+                if (latest_write_time > recorded_write_time)
                 {
                     reload = true;
                 }
@@ -727,13 +727,13 @@ namespace daxa
         }
         pipeline_impl.last_hotload_time = now;
         bool reload = false;
-        for (auto & [path, recordedWriteTime] : pipeline_impl.observed_hotload_files)
+        for (auto & [path, recorded_write_time] : pipeline_impl.observed_hotload_files)
         {
             auto ifs = std::ifstream(path);
             if (ifs.good())
             {
-                auto latestWriteTime = std::filesystem::last_write_time(path);
-                if (latestWriteTime > recordedWriteTime)
+                auto latest_write_time = std::filesystem::last_write_time(path);
+                if (latest_write_time > recorded_write_time)
                 {
                     reload = true;
                 }
@@ -1144,14 +1144,14 @@ namespace daxa
             return daxa::ResultErr{.message = str};
         }
 
-        IDxcBlob * shaderobj;
-        result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderobj), nullptr);
+        IDxcBlob * shader_obj;
+        result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shader_obj), nullptr);
 
         std::vector<u32> spv;
-        spv.resize(shaderobj->GetBufferSize() / sizeof(u32));
+        spv.resize(shader_obj->GetBufferSize() / sizeof(u32));
         for (usize i = 0; i < spv.size(); i++)
         {
-            spv[i] = static_cast<u32 *>(shaderobj->GetBufferPointer())[i];
+            spv[i] = static_cast<u32 *>(shader_obj->GetBufferPointer())[i];
         }
         return {spv};
 #else

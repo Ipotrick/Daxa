@@ -28,9 +28,9 @@ namespace daxa
 
         impl.main_queue_collect_garbage();
 
-        u64 curreny_main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH_INC(impl.main_queue_cpu_timeline) + 1;
+        u64 current_main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH_INC(impl.main_queue_cpu_timeline) + 1;
 
-        std::pair<u64, std::vector<ManagedPtr>> submit = {curreny_main_queue_cpu_timeline_value, {}};
+        std::pair<u64, std::vector<ManagedPtr>> submit = {current_main_queue_cpu_timeline_value, {}};
 
         for (auto & command_list : submit_info.command_lists)
         {
@@ -40,10 +40,10 @@ namespace daxa
                 auto [id, index] = cmd_list->deferred_destructions[i];
                 switch (index)
                 {
-                case DEFERRED_DESTRUCTION_BUFFER_INDEX: impl.main_queue_buffer_zombies.push_front({curreny_main_queue_cpu_timeline_value, BufferId{id}}); break;
-                case DEFERRED_DESTRUCTION_IMAGE_INDEX: impl.main_queue_image_zombies.push_front({curreny_main_queue_cpu_timeline_value, ImageId{id}}); break;
-                case DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX: impl.main_queue_image_view_zombies.push_front({curreny_main_queue_cpu_timeline_value, ImageViewId{id}}); break;
-                case DEFERRED_DESTRUCTION_SAMPLER_INDEX: impl.main_queue_sampler_zombies.push_front({curreny_main_queue_cpu_timeline_value, SamplerId{id}}); break;
+                case DEFERRED_DESTRUCTION_BUFFER_INDEX: impl.main_queue_buffer_zombies.push_front({current_main_queue_cpu_timeline_value, BufferId{id}}); break;
+                case DEFERRED_DESTRUCTION_IMAGE_INDEX: impl.main_queue_image_zombies.push_front({current_main_queue_cpu_timeline_value, ImageId{id}}); break;
+                case DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX: impl.main_queue_image_view_zombies.push_front({current_main_queue_cpu_timeline_value, ImageViewId{id}}); break;
+                case DEFERRED_DESTRUCTION_SAMPLER_INDEX: impl.main_queue_sampler_zombies.push_front({current_main_queue_cpu_timeline_value, SamplerId{id}}); break;
                 default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
                 }
             }
@@ -61,9 +61,9 @@ namespace daxa
         std::vector<VkSemaphore> submit_semaphore_signals = {}; // All timeline semaphores come first, then binary semaphores follow.
         std::vector<u64> submit_semaphore_signal_values = {};   // Used for timeline semaphores. Ignored (push dummy value) for binary semaphores.
 
-        // Add main queue timeline signaling as first timeline semaphore singaling:
+        // Add main queue timeline signaling as first timeline semaphore signaling:
         submit_semaphore_signals.push_back(impl.vk_main_queue_gpu_timeline_semaphore);
-        submit_semaphore_signal_values.push_back(curreny_main_queue_cpu_timeline_value);
+        submit_semaphore_signal_values.push_back(current_main_queue_cpu_timeline_value);
 
         for (auto & [timeline_semaphore, signal_value] : submit_info.signal_timeline_semaphores)
         {
@@ -100,7 +100,7 @@ namespace daxa
             submit_semaphore_wait_values.push_back(0);
         }
 
-        VkTimelineSemaphoreSubmitInfo timelineInfo{
+        VkTimelineSemaphoreSubmitInfo timeline_info{
             .sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
             .pNext = nullptr,
             .waitSemaphoreValueCount = static_cast<u32>(submit_semaphore_wait_values.size()),
@@ -112,7 +112,7 @@ namespace daxa
         VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
         VkSubmitInfo vk_submit_info{
             .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-            .pNext = reinterpret_cast<void *>(&timelineInfo),
+            .pNext = reinterpret_cast<void *>(&timeline_info),
             .waitSemaphoreCount = static_cast<u32>(submit_semaphore_waits.size()),
             .pWaitSemaphores = submit_semaphore_waits.data(),
             .pWaitDstStageMask = submit_semaphore_wait_stage_masks.data(),
@@ -132,7 +132,7 @@ namespace daxa
         auto & impl = *as<ImplDevice>();
         auto & swapchain_impl = *info.swapchain.as<ImplSwapchain>();
 
-        // used to synchronise with previous submits:
+        // used to synchronize with previous submits:
         std::vector<VkSemaphore> submit_semaphore_waits = {};
 
         for (auto & binary_semaphore : info.wait_binary_semaphores)
@@ -227,25 +227,25 @@ namespace daxa
     void Device::destroy_buffer(BufferId id)
     {
         auto & impl = *as<ImplDevice>();
-        impl.zombiefy_buffer(id);
+        impl.zombify_buffer(id);
     }
 
     void Device::destroy_image(ImageId id)
     {
         auto & impl = *as<ImplDevice>();
-        impl.zombiefy_image(id);
+        impl.zombify_image(id);
     }
 
     void Device::destroy_image_view(ImageViewId id)
     {
         auto & impl = *as<ImplDevice>();
-        impl.zombiefy_image_view(id);
+        impl.zombify_image_view(id);
     }
 
     void Device::destroy_sampler(SamplerId id)
     {
         auto & impl = *as<ImplDevice>();
-        impl.zombiefy_sampler(id);
+        impl.zombify_sampler(id);
     }
 
     auto Device::info_buffer(BufferId id) const -> BufferInfo
@@ -508,7 +508,7 @@ namespace daxa
 
         vkGetDeviceQueue(this->vk_device, this->main_queue_family_index, 0, &this->main_queue_vk_queue);
 
-        VkSemaphoreTypeCreateInfo timelineCreateInfo{
+        VkSemaphoreTypeCreateInfo timeline_ci{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
             .pNext = nullptr,
             .semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
@@ -517,7 +517,7 @@ namespace daxa
 
         VkSemaphoreCreateInfo vk_semaphore_create_info{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-            .pNext = reinterpret_cast<void *>(&timelineCreateInfo),
+            .pNext = reinterpret_cast<void *>(&timeline_ci),
             .flags = {}};
 
         vkCreateSemaphore(this->vk_device, &vk_semaphore_create_info, nullptr, &this->vk_main_queue_gpu_timeline_semaphore);
@@ -564,7 +564,7 @@ namespace daxa
         };
         vkCreateSampler(vk_device, &vk_sampler_create_info, nullptr, &this->vk_dummy_sampler);
 
-        VkBufferUsageFlags usageFlags =
+        VkBufferUsageFlags usage_flags =
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
             VK_BUFFER_USAGE_TRANSFER_DST_BIT |
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
@@ -574,7 +574,7 @@ namespace daxa
             .pNext = nullptr,
             .flags = {},
             .size = static_cast<VkDeviceSize>(max_buffers * sizeof(u64)),
-            .usage = usageFlags,
+            .usage = usage_flags,
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
             .queueFamilyIndexCount = 1,
             .pQueueFamilyIndices = &this->main_queue_family_index,
@@ -734,7 +734,7 @@ namespace daxa
 
         ret.info = info;
 
-        VkBufferUsageFlags usageFlags =
+        VkBufferUsageFlags usage_flags =
             VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
             VK_BUFFER_USAGE_TRANSFER_DST_BIT |
@@ -757,7 +757,7 @@ namespace daxa
             .pNext = nullptr,
             .flags = {},
             .size = static_cast<VkDeviceSize>(info.size),
-            .usage = usageFlags,
+            .usage = usage_flags,
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
             .queueFamilyIndexCount = 1,
             .pQueueFamilyIndices = &this->main_queue_family_index,
@@ -1085,14 +1085,14 @@ namespace daxa
             .magFilter = static_cast<VkFilter>(info.magnification_filter),
             .minFilter = static_cast<VkFilter>(info.minification_filter),
             .mipmapMode = static_cast<VkSamplerMipmapMode>(info.mipmap_filter),
-            .addressModeU = static_cast<VkSamplerAddressMode>(info.adress_mode_u),
-            .addressModeV = static_cast<VkSamplerAddressMode>(info.adress_mode_v),
-            .addressModeW = static_cast<VkSamplerAddressMode>(info.adress_mode_w),
+            .addressModeU = static_cast<VkSamplerAddressMode>(info.address_mode_u),
+            .addressModeV = static_cast<VkSamplerAddressMode>(info.address_mode_v),
+            .addressModeW = static_cast<VkSamplerAddressMode>(info.address_mode_w),
             .mipLodBias = info.mip_lod_bias,
             .anisotropyEnable = info.enable_anisotropy,
             .maxAnisotropy = info.max_anisotropy,
             .compareEnable = info.enable_compare,
-            .compareOp = static_cast<VkCompareOp>(info.compareOp),
+            .compareOp = static_cast<VkCompareOp>(info.compare_op),
             .minLod = info.min_lod,
             .maxLod = info.max_lod,
             .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK,
@@ -1198,28 +1198,28 @@ namespace daxa
         vkDestroyDevice(this->vk_device, nullptr);
     }
 
-    void ImplDevice::zombiefy_buffer(BufferId id)
+    void ImplDevice::zombify_buffer(BufferId id)
     {
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_zombies_mtx});
         u64 main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
         this->main_queue_buffer_zombies.push_front({main_queue_cpu_timeline, id});
     }
 
-    void ImplDevice::zombiefy_image(ImageId id)
+    void ImplDevice::zombify_image(ImageId id)
     {
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_zombies_mtx});
         u64 main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
         this->main_queue_image_zombies.push_front({main_queue_cpu_timeline, id});
     }
 
-    void ImplDevice::zombiefy_image_view(ImageViewId id)
+    void ImplDevice::zombify_image_view(ImageViewId id)
     {
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_zombies_mtx});
         u64 main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
         this->main_queue_image_view_zombies.push_front({main_queue_cpu_timeline, id});
     }
 
-    void ImplDevice::zombiefy_sampler(SamplerId id)
+    void ImplDevice::zombify_sampler(SamplerId id)
     {
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_zombies_mtx});
         u64 main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);

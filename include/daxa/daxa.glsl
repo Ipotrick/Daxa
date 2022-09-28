@@ -56,7 +56,7 @@ layout(scalar, binding = DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, set = 0) rea
 {
     u64 addresses[1000];
 }
-daxaBufferDeviceAddressBuffer;
+daxa_buffer_device_address_buffer;
 
 #define DAXA_DECL_BUFFER_STRUCT(NAME, BODY)                                                                             \
     struct NAME BODY;                                                                                                   \
@@ -93,7 +93,7 @@ daxaBufferDeviceAddressBuffer;
 #define WrappedCoherentBufferRef(STRUCT_TYPE) STRUCT_TYPE##CoherentWrappedBufferRef
 
 #define daxa_buffer_ref_to_address(buffer_reference) u64(buffer_reference)
-#define daxa_buffer_id_to_address(id) daxaBufferDeviceAddressBuffer.addresses[(DAXA_ID_INDEX_MASK & id.buffer_id_value)]
+#define daxa_buffer_id_to_address(id) daxa_buffer_device_address_buffer.addresses[(DAXA_ID_INDEX_MASK & id.buffer_id_value)]
 #define daxa_buffer_address_to_ref(STRUCT_TYPE, REFERENCE_TYPE, address) STRUCT_TYPE##REFERENCE_TYPE(address)
 #define daxa_buffer_id_to_ref(STRUCT_TYPE, REFERENCE_TYPE, id) daxa_buffer_address_to_ref(STRUCT_TYPE, REFERENCE_TYPE, daxa_buffer_id_to_address(id))
 

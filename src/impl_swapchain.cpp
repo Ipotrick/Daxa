@@ -199,7 +199,7 @@ namespace daxa
     {
         for (usize i = 0; i < image_resources.size(); i++)
         {
-            this->impl_device.as<ImplDevice>()->zombiefy_image(image_resources[i]);
+            this->impl_device.as<ImplDevice>()->zombify_image(image_resources[i]);
         }
         image_resources.clear();
     }

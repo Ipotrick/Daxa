@@ -78,10 +78,10 @@ namespace daxa
         auto slot(ImageViewId id) const -> ImplImageViewSlot const &;
         auto slot(SamplerId id) const -> ImplSamplerSlot const &;
 
-        void zombiefy_buffer(BufferId id);
-        void zombiefy_image(ImageId id);
-        void zombiefy_image_view(ImageViewId id);
-        void zombiefy_sampler(SamplerId id);
+        void zombify_buffer(BufferId id);
+        void zombify_image(ImageId id);
+        void zombify_image_view(ImageViewId id);
+        void zombify_sampler(SamplerId id);
 
         void cleanup_buffer(BufferId id);
         void cleanup_image(ImageId id);
