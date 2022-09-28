@@ -1,0 +1,27 @@
+#pragma once
+
+#include <0_common/window.hpp>
+#include <iostream>
+#include <thread>
+
+#include <daxa/utils/task_list.hpp>
+
+#define APPNAME "Daxa API Sample TaskList"
+#define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
+
+using namespace daxa::types;
+
+#include "shaders/shared.inl"
+
+#include <daxa/utils/imgui.hpp>
+#include <0_common/imgui/imgui_impl_glfw.h>
+
+struct AppContext
+{
+    daxa::Context daxa_ctx = daxa::create_context({
+        .enable_validation = true,
+    });
+    daxa::Device device = daxa_ctx.create_device({
+        .debug_name = APPNAME_PREFIX("device"),
+    });
+};

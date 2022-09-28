@@ -180,7 +180,6 @@ namespace daxa
         void submit(CommandSubmitInfo * info);
         void present(TaskPresentInfo const & info);
 
-        void compile();
         void output_graphviz();
 
         auto command_lists() -> std::vector<CommandList>;
