@@ -63,10 +63,10 @@ DAXA_CREATE_TEST(
     FOLDER 2_daxa_api 5_swapchain
     LIBS glfw
 )
-# DAXA_CREATE_TEST(
-#     FOLDER 2_daxa_api 6_task_list
-#     LIBS glfw imgui_impl_glfw
-# )
+DAXA_CREATE_TEST(
+    FOLDER 2_daxa_api 6_task_list
+    LIBS glfw imgui_impl_glfw
+)
 
 DAXA_CREATE_TEST(
     FOLDER 3_samples 0_playground
