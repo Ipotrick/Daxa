@@ -251,7 +251,7 @@ namespace daxa
     Result<void> check_for_overlapping_use()
     {
         // TODO(pahrens): IMPLEMENT THIS
-        return {};
+        return {false};
     }
     auto find_first_possible_batch_index(
         ImplTaskList const & impl, 
@@ -360,7 +360,7 @@ namespace daxa
             info
         );
 
-        // Now that we know what batch we need to insert the task into, we need to insert synchonization.
+        // Now that we know what batch we need to insert the task into, we need to insert synchronization.
         // We also need to make sure that overlapping image uses and barriers are be split and corrected.
         // To finish the insertion of the task, we also update the latest use in all of the used resources.
         for (auto & [used_buffer_t_id, used_buffer_t_access] : info.used_buffers)
@@ -377,7 +377,7 @@ namespace daxa
             //auto intersection = tracked_slice.slice.intersect(used_image_slice);
             //auto [new_use_slice_rest, new_use_slice_rest_count] = used_image_slice.subtract(tracked_slice.slice);
         }
-        return {};
+        return {false};
     }
 
     void TaskList::submit(CommandSubmitInfo * info)
@@ -481,10 +481,10 @@ namespace daxa
         // TODO(grundlett): Implement this!
     }
 
-    void ImplTaskList::insert_synchronization()
-    {
-        // TODO(pahrens): Implement this!
-    }
+    // void ImplTaskList::insert_synchronization()
+    // {
+    //     // TODO(pahrens): Implement this!
+    // }
 } // namespace daxa
 
 #endif
