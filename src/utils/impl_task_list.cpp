@@ -7,7 +7,6 @@
 
 namespace daxa
 {
-
     auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access>
     {
         switch (access)
@@ -165,20 +164,18 @@ namespace daxa
         return "invalid";
     }
 
-    TaskInterface::TaskInterface(void * backend, TaskUsedBuffers * used_task_buffers, TaskUsedImages * used_task_images)
-        : backend{backend}, used_task_buffers{used_task_buffers}, used_task_images{used_task_images}
+    TaskRuntime::TaskRuntime(ImplTaskRuntime & impl)
+        : impl{impl}
     {
     }
 
-    auto TaskInterface::get_device() -> Device &
+    auto TaskRuntime::get_device() const -> Device &
     {
-        auto & impl = *reinterpret_cast<TaskRuntime *>(backend);
-        return impl.current_device;
+        return impl.task_list.info.device;
     }
 
-    auto TaskInterface::get_command_list() -> CommandList
+    auto TaskRuntime::get_command_list() const -> CommandList
     {
-        auto & impl = *reinterpret_cast<TaskRuntime *>(backend);
         if (impl.reuse_last_command_list)
         {
             impl.reuse_last_command_list = false;
@@ -186,33 +183,29 @@ namespace daxa
         }
         else
         {
-            impl.command_lists.push_back({impl.current_device.create_command_list({.debug_name = std::string("Task Command List ") + std::to_string(impl.command_lists.size())})});
+            impl.command_lists.push_back({get_device().create_command_list({.debug_name = std::string("Task Command List ") + std::to_string(impl.command_lists.size())})});
             return impl.command_lists.back();
         }
     }
 
-    auto TaskInterface::get_used_task_buffers() -> TaskUsedBuffers &
+    auto TaskRuntime::get_used_task_buffers() const -> TaskUsedBuffers const &
     {
-        return *used_task_buffers;
+        return impl.current_task->info.used_buffers;
     }
 
-    auto TaskInterface::get_used_task_images() -> TaskUsedImages &
+    auto TaskRuntime::get_used_task_images() const -> TaskUsedImages const &
     {
-        return *used_task_images;
+        return impl.current_task->info.used_images;
     }
 
-    auto TaskInterface::get_buffer(TaskBufferId const & task_id) -> BufferId
+    auto TaskRuntime::get_buffer(TaskBufferId const & task_resource_id) const -> BufferId
     {
-        auto & impl = *reinterpret_cast<TaskRuntime *>(backend);
-        // TODO(pahrens): IMPLEMENT THIS!
-        return {};
+        return *(impl.task_list.impl_task_buffers[task_resource_id.index].info.buffer);
     }
 
-    auto TaskInterface::get_image(TaskImageId const & task_id) -> ImageId
+    auto TaskRuntime::get_image(TaskImageId const & task_resource_id) const -> ImageId
     {
-        auto & impl = *reinterpret_cast<TaskRuntime *>(backend);
-        // TODO(pahrens): IMPLEMENT THIS!
-        return {};
+        return *(impl.task_list.impl_task_images[task_resource_id.index].info.image);
     }
 
     TaskList::TaskList(TaskListInfo const & info)
@@ -226,14 +219,30 @@ namespace daxa
 
     auto TaskList::create_task_buffer(TaskBufferInfo const & info) -> TaskBufferId
     {
-        // TODO(pahrens): IMPLEMENT THIS
-        return {};
+        auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
+        DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can not record to completed command list");
+        TaskBufferId task_buffer_id{{.index = static_cast<u32>(impl.impl_task_buffers.size())}};
+        impl.impl_task_buffers.push_back(ImplTaskBuffer{
+            .info = info,
+        });
+        return task_buffer_id;
     }
 
     auto TaskList::create_task_image(TaskImageInfo const & info) -> TaskImageId
     {
-        // TODO(pahrens): IMPLEMENT THIS
-        return {};
+        auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
+        DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can not record to completed command list");
+        TaskImageId task_image_id{{.index = static_cast<u32>(impl.impl_task_images.size())}};
+        impl.impl_task_images.push_back(ImplTaskImage{
+            .info = info,
+            .swapchain_semaphore_waited_upon = false,
+            .slices_last_uses = {},
+        });
+        if (info.swapchain_image)
+        {
+            impl.swapchain_image = task_image_id;
+        }
+        return task_image_id;
     }
 
     void check_for_overlapping_use(TaskInfo const & info)
@@ -259,9 +268,17 @@ namespace daxa
                 {
                     continue;
                 }
-                auto const & [current_image_t_id, current_image_t_access, current_image_slice] = info.used_images[current_i];
-                auto const & [other_image_t_id, other_image_t_access, other_image_slice] = info.used_images[other_i];
 
+                // NOTE: This fails to compile with clang because it does not conform to the spec, and won't
+                // capture structured bindings... replacing it with the below code
+                // auto const & [current_image_t_id, current_image_t_access, current_image_slice] = info.used_images[current_i];
+                // auto const & [other_image_t_id, other_image_t_access, other_image_slice] = info.used_images[other_i];
+                // DAXA_DBG_ASSERT_TRUE_M(
+                //     !current_image_slice.intersects(other_image_slice),
+                //     "illegal to specify multiple uses for one image with overlapping slices for one task.");
+
+                auto const & current_image_slice = std::get<ImageMipArraySlice>(info.used_images[current_i]);
+                auto const & other_image_slice = std::get<ImageMipArraySlice>(info.used_images[other_i]);
                 DAXA_DBG_ASSERT_TRUE_M(
                     !current_image_slice.intersects(other_image_slice),
                     "illegal to specify multiple uses for one image with overlapping slices for one task.");
@@ -309,6 +326,7 @@ namespace daxa
         for (auto const & [used_image_t_id, used_image_t_access, used_image_slice] : info.used_images)
         {
             ImplTaskImage const & impl_task_image = impl.impl_task_images[used_image_t_id.index];
+            DAXA_DBG_ASSERT_TRUE_M(!impl_task_image.swapchain_semaphore_waited_upon, "swapchain image is already presented!");
             auto [this_task_image_layout, this_task_image_access] = task_image_access_to_layout_access(used_image_t_access);
             // As image subresources can be in different layouts and also different synchronization scopes,
             // we need to track these image ranges individually.
@@ -351,7 +369,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can not record to completed command list");
 
         TaskId task_id = impl.tasks.size();
-        impl.tasks.emplace_back(GenericTask{
+        impl.tasks.emplace_back(Task{
             .info = info,
         });
 
@@ -404,15 +422,17 @@ namespace daxa
                 // When the uses are incompatible (no read on read) we need to insert a new barrier.
                 usize split_barrier_index = impl.split_barriers.size();
                 impl.split_barriers.push_back(TaskSplitBarrier{
+                    {
+                        .image_id = {}, // {} signals that this is not an image barrier.
+                        .src_access = impl_task_buffer.latest_access,
+                        .dst_access = current_buffer_access,
+                    },
                     .split_barrier_state = impl.info.device.create_split_barrier({
                         .debug_name = std::string("TaskList \"") +
                                       impl.info.debug_name +
                                       "\" SplitBarrier Nr. " +
                                       std::to_string(split_barrier_index),
                     }),
-                    .image_id = {}, // {} signals that this is not an image barrier.
-                    .src_access = impl_task_buffer.latest_access,
-                    .dst_access = current_buffer_access,
                 });
                 // Now we give the src batch the index of this barrier to signal.
                 TaskBatchSubmitScope & src_scope = impl.batch_submit_scopes[impl_task_buffer.latest_access_submit_scope_index];
@@ -438,8 +458,8 @@ namespace daxa
             auto [current_image_layout, current_image_access] = task_image_access_to_layout_access(used_image_t_access);
             // Now this seems strange, why would be need multiple current use slices, as we only have one here.
             // This is because when we intersect this slice with the tracked slices, we get an intersection and a rest.
-            // We need to then test the rest against all the remaining tracked uses.
-            // If we keep a rest in the end we also need to transition all of them into the correct layout.
+            // We need to then test the rest against all the remaining tracked uses,
+            // as the intersected part is allready beeing handeled in the following code.
             tl_new_use_slices.push_back(used_image_slice);
             // This is the tracked slice we will insert after we finished analyzing the current used image.
             TaskImageTrackedSlice ret_tracked_slice{
@@ -447,7 +467,7 @@ namespace daxa
                 .latest_layout = current_image_layout,
                 .latest_access_batch_index = batch_index,
                 .latest_access_submit_scope_index = current_submit_scope_index,
-                .latest_access_read_barrier_index = {}, // this is a dummy value
+                .latest_access_read_barrier_index = {}, // This is a dummy value (either set later or ignored entirely).
                 .slice = used_image_slice,
             };
             // As image subresources can be in different layouts and also different synchronization scopes,
@@ -524,18 +544,20 @@ namespace daxa
                         // When the uses are incompatible (no read on read, or no identical layout) we need to insert a new barrier.
                         usize split_barrier_index = impl.split_barriers.size();
                         impl.split_barriers.push_back(TaskSplitBarrier{
+                            {
+                                .image_id = used_image_t_id,
+                                .slice = intersection,
+                                .layout_before = tracked_slice.latest_layout,
+                                .layout_after = current_image_layout,
+                                .src_access = tracked_slice.latest_access,
+                                .dst_access = current_image_access,
+                            },
                             .split_barrier_state = impl.info.device.create_split_barrier({
                                 .debug_name = std::string("TaskList \"") +
                                               impl.info.debug_name +
                                               "\" SplitBarrier (Image) Nr. " +
                                               std::to_string(split_barrier_index),
                             }),
-                            .image_id = used_image_t_id,
-                            .slice = intersection,
-                            .layout_before = tracked_slice.latest_layout,
-                            .layout_after = current_image_layout,
-                            .src_access = tracked_slice.latest_access,
-                            .dst_access = current_image_access,
                         });
                         // Now we give the src batch the index of this barrier to signal.
                         TaskBatchSubmitScope & src_scope = impl.batch_submit_scopes[tracked_slice.latest_access_submit_scope_index];
@@ -560,10 +582,10 @@ namespace daxa
                 impl.barriers.push_back(TaskBarrier{
                     .image_id = used_image_t_id,
                     .slice = rest_used_slice,
-                    .layout_before = impl_task_image.initial_layout,
+                    .layout_before = impl_task_image.info.initial_layout,
                     .layout_after = current_image_layout,
                     // In the future it may be good to give an initial image state and access.
-                    .src_access = impl_task_image.initial_access,
+                    .src_access = impl_task_image.info.initial_access,
                     .dst_access = current_image_access,
                 });
             }
@@ -581,18 +603,66 @@ namespace daxa
 
     void TaskList::submit(CommandSubmitInfo * info)
     {
+        auto & impl = *as<ImplTaskList>();
+        DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "Can only record to an uncompleted task list");
+        TaskBatchSubmitScope & submit_scope = impl.batch_submit_scopes.back();
+        submit_scope.submit_info = {};
+        // We provide the user submit info to the submit batch.
+        submit_scope.user_submit_info = info;
+        // Start a new batch.
+        impl.batch_submit_scopes.push_back({});
     }
 
     void TaskList::present(TaskPresentInfo const & info)
     {
+        auto & impl = *as<ImplTaskList>();
+        DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "Can only record to an uncompleted task list");
+        DAXA_DBG_ASSERT_TRUE_M(!impl.info.swapchain.has_value(), "Can only present, when a swapchain was provided in creation");
+        DAXA_DBG_ASSERT_TRUE_M(!(impl.batch_submit_scopes.size() > 1), "Can only present if at least one submit was issued before");
+        DAXA_DBG_ASSERT_TRUE_M(!impl.swapchain_image.is_empty(), "Can only present when an image was annotated as swapchain image");
+        DAXA_DBG_ASSERT_TRUE_M(!impl.impl_task_images[impl.swapchain_image.index].swapchain_semaphore_waited_upon, "Can only present once");
+        impl.impl_task_images[impl.swapchain_image.index].swapchain_semaphore_waited_upon = true;
+
+        TaskImageTrackedSlice const & tracked_slice = impl.impl_task_images[impl.swapchain_image.index].slices_last_uses.back();
+        usize submit_scope_index = tracked_slice.latest_access_submit_scope_index;
+        DAXA_DBG_ASSERT_TRUE_M(submit_scope_index < impl.batch_submit_scopes.size() - 1, "the last swapchain image use MUST be before the last submit when presenting");
+        TaskBatchSubmitScope & submit_scope = impl.batch_submit_scopes[submit_scope_index];
+        usize batch_index = tracked_slice.latest_access_batch_index;
+        // We need to insert a pipeline barrier to transition the swapchain image layout to present src optimal.
+        usize barrier_index = impl.barriers.size();
+        impl.barriers.push_back(TaskBarrier{
+            .image_id = impl.swapchain_image,
+            .slice = tracked_slice.slice,
+            .layout_before = tracked_slice.latest_layout,
+            .layout_after = ImageLayout::PRESENT_SRC,
+            .src_access = tracked_slice.latest_access,
+            .dst_access = { .stages = PipelineStageFlagBits::BOTTOM_OF_PIPE },
+        });
+        submit_scope.last_minute_barrier_indices.push_back(barrier_index);
+        // Now we need to insert the binary semaphore between submit and present.
+        BinarySemaphore present_semaphore = impl.info.device.create_binary_semaphore({.debug_name = "TaskList present binary semaphore"});
+        submit_scope.present_info = ImplPresentInfo{
+            .user_binary_semaphores = info.user_binary_semaphores,
+            .binary_semaphores = {present_semaphore},
+        };
+        submit_scope.submit_info.signal_binary_semaphores.push_back(present_semaphore);
     }
 
     void TaskList::complete()
     {
         auto & impl = *as<ImplTaskList>();
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "Can only complete a task list one time");
-
         impl.compiled = true;
+    }
+        
+    auto TaskList::get_command_lists() -> std::vector<CommandList>&&
+    {
+        auto & impl = *as<ImplTaskList>();
+        DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "Can only get command lists of a finished task list");
+        DAXA_DBG_ASSERT_TRUE_M(impl.executed, "Can only get command lists of a task list that has been executed");
+        auto command_lists = std::move(impl.left_over_command_lists);
+        impl.left_over_command_lists = {};
+        return std::move(command_lists);
     }
 
     void TaskList::output_graphviz()
@@ -602,13 +672,175 @@ namespace daxa
         impl.output_graphviz();
     }
 
-    auto TaskList::command_lists() -> std::vector<CommandList>
+    thread_local std::vector<SplitBarrierEndInfo> tl_split_barrier_wait_infos = {};
+    thread_local std::vector<ImageBarrierInfo> tl_image_barrier_infos = {};
+    thread_local std::vector<MemoryBarrierInfo> tl_memory_barrier_infos = {};
+    void insert_pipeline_barrier(CommandList & command_list, TaskBarrier & barrier, std::vector<daxa::ImplTaskImage> & task_images)
     {
-        return {};
+        // Check if barrier is image barrier or normal barrier (see TaskBarrier struct comments).
+        if (barrier.image_id.is_empty())
+        {
+            command_list.pipeline_barrier({
+                .awaited_pipeline_access = barrier.src_access,
+                .waiting_pipeline_access = barrier.dst_access,
+            });
+        }
+        else
+        {
+            command_list.pipeline_barrier_image_transition({
+                .awaited_pipeline_access = barrier.src_access,
+                .waiting_pipeline_access = barrier.dst_access,
+                .before_layout = barrier.layout_before,
+                .after_layout = barrier.layout_after,
+                .image_slice = barrier.slice,
+                .image_id = *task_images[barrier.image_id.index].info.image,
+            });
+        }
     }
 
     void TaskList::execute()
     {
+        auto & impl = *as<ImplTaskList>();
+        ImplTaskRuntime impl_runtime{.task_list = impl};
+        impl_runtime.command_lists.push_back(impl.info.device.create_command_list({}));
+
+        // TODO(msakmary) think (ask Patrick) about the asserts
+        // DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "must compile before executing");
+
+        //- Go through all TaskBatchSubmitScopes
+        //  - Go through all TaskBatches
+        //      - Wait for all pipeline barriers
+        //      - Wait for all split barrier indices
+        //      - Create all barriers for this TaskBatch
+        //      - Execute all task in this task batch
+        //      - reset all split barriers that were waited on
+        //      - Set all split barriers
+        //  - insert all last minute pipeline barriers
+        //  - do optional present
+        for (auto & submit_scope : impl.batch_submit_scopes)
+        {
+            for (auto & task_batch : submit_scope.task_batches)
+            {
+                for (auto barrier_index : task_batch.pipeline_barrier_indices)
+                {
+                    TaskBarrier& barrier = impl.barriers[barrier_index];
+                    insert_pipeline_barrier(impl_runtime.command_lists.back(), barrier, impl.impl_task_images);
+                }
+                if (impl.info.dont_use_split_barriers)
+                {
+                    for (auto barrier_index : task_batch.wait_split_barrier_indices)
+                    {
+                        TaskSplitBarrier& split_barrier = impl.split_barriers[barrier_index];
+                        TaskBarrier barrier = split_barrier;
+                        // Can I do this ^?
+                        // TaskBarrier barrier = {};
+                        // barrier.image_id = split_barrier.image_id;
+                        // barrier.slice = split_barrier.slice;
+                        // barrier.layout_before = split_barrier.layout_before;
+                        // barrier.layout_after = split_barrier.layout_after;
+                        // barrier.src_access = split_barrier.src_access;
+                        // barrier.dst_access = split_barrier.dst_access;
+                        insert_pipeline_barrier(impl_runtime.command_lists.back(), barrier, impl.impl_task_images);
+                    }
+                }
+                else
+                {
+                    // Currently it is guaranteed, that each split barrier in task list only contain either
+                    // one image barrier or one memory barrier.
+                    tl_split_barrier_wait_infos.reserve(task_batch.wait_split_barrier_indices.size());
+                    tl_image_barrier_infos.reserve(task_batch.wait_split_barrier_indices.size());
+                    tl_memory_barrier_infos.reserve(task_batch.wait_split_barrier_indices.size());
+                    for (auto barrier_index : task_batch.wait_split_barrier_indices)
+                    {
+                        TaskSplitBarrier& split_barrier = impl.split_barriers[barrier_index];
+                        if (split_barrier.image_id.is_empty())
+                        {
+                            tl_memory_barrier_infos.push_back(MemoryBarrierInfo{
+                                .awaited_pipeline_access = split_barrier.src_access,
+                                .waiting_pipeline_access = split_barrier.dst_access,
+                            });
+                            tl_split_barrier_wait_infos.push_back(SplitBarrierEndInfo{
+                                .memory_barriers = std::span{ &tl_memory_barrier_infos.back(), 1 },
+                            });
+                        }
+                        else
+                        {
+                            tl_image_barrier_infos.push_back(ImageBarrierInfo{
+                                .awaited_pipeline_access = split_barrier.src_access,
+                                .waiting_pipeline_access = split_barrier.dst_access,
+                                .before_layout = split_barrier.layout_before,
+                                .after_layout = split_barrier.layout_after,
+                                .image_slice = split_barrier.slice,
+                                .image_id = *impl.impl_task_images[split_barrier.image_id.index].info.image,
+                            });
+                            tl_split_barrier_wait_infos.push_back(SplitBarrierEndInfo{
+                                .image_barriers = std::span{ &tl_image_barrier_infos.back(), 1 },
+                            });
+                        }
+                    }
+                    impl_runtime.command_lists.back().wait_split_barriers(tl_split_barrier_wait_infos);
+                    tl_split_barrier_wait_infos.clear();
+                    tl_image_barrier_infos.clear();
+                    tl_memory_barrier_infos.clear();
+                }
+                for (TaskId task_id : task_batch.tasks)
+                {
+                    // We always allow to reuse the last command list ONCE.
+                    // when the get command list function is called in a task this is set to false.
+                    impl_runtime.reuse_last_command_list = true;
+                    Task & task = impl.tasks[task_id];
+                    impl_runtime.current_task = &task;
+                    task.info.task(TaskRuntime(impl_runtime));
+                }
+            }
+            for (usize barrier_index : submit_scope.last_minute_barrier_indices)
+            {
+                TaskBarrier& barrier = impl.barriers[barrier_index];
+                insert_pipeline_barrier(impl_runtime.command_lists.back(), barrier, impl.impl_task_images);
+            }
+            for (auto & command_list : impl_runtime.command_lists)
+            {
+                DAXA_DBG_ASSERT_TRUE_M(
+                    !command_list.is_complete(), 
+                    "it is illegal to complete command lists in tasks that are obtained by the runtime!"
+                );
+                command_list.complete();
+            }
+
+            if (&submit_scope != &impl.batch_submit_scopes.back())
+            {
+                auto submit_info = submit_scope.submit_info;
+                if (submit_scope.user_submit_info)
+                {
+                    submit_info.command_lists.insert(submit_info.command_lists.end(), submit_scope.user_submit_info->command_lists.begin(), submit_scope.user_submit_info->command_lists.end());
+                    submit_info.wait_binary_semaphores.insert(submit_info.wait_binary_semaphores.end(), submit_scope.user_submit_info->wait_binary_semaphores.begin(), submit_scope.user_submit_info->wait_binary_semaphores.end());
+                    submit_info.signal_binary_semaphores.insert(submit_info.signal_binary_semaphores.end(), submit_scope.user_submit_info->signal_binary_semaphores.begin(), submit_scope.user_submit_info->signal_binary_semaphores.end());
+                    submit_info.wait_timeline_semaphores.insert(submit_info.wait_timeline_semaphores.end(), submit_scope.user_submit_info->wait_timeline_semaphores.begin(), submit_scope.user_submit_info->wait_timeline_semaphores.end());
+                    submit_info.signal_timeline_semaphores.insert(submit_info.signal_timeline_semaphores.end(), submit_scope.user_submit_info->signal_timeline_semaphores.begin(), submit_scope.user_submit_info->signal_timeline_semaphores.end());
+                }
+                impl.info.device.submit_commands(submit_info);
+
+                if (submit_scope.present_info.has_value())
+                {
+                    ImplPresentInfo& impl_present_info = submit_scope.present_info.value();
+                    std::vector<BinarySemaphore> present_wait_semaphores = impl_present_info.binary_semaphores;
+                    if (impl_present_info.user_binary_semaphores)
+                    {
+                        present_wait_semaphores.insert(
+                            present_wait_semaphores.end(), 
+                            impl_present_info.user_binary_semaphores->begin(),
+                            impl_present_info.user_binary_semaphores->end()
+                        );
+                    }
+                    impl.info.device.present_frame(PresentInfo{
+                        .wait_binary_semaphores = impl_present_info.binary_semaphores,
+                        .swapchain = impl.info.swapchain.value(),
+                    });
+                }
+            }
+        }
+
+        impl.left_over_command_lists = std::move(impl_runtime.command_lists);
     }
 
     auto TaskList::last_access(TaskBufferId buffer) -> Access
@@ -646,21 +878,6 @@ namespace daxa
 
     ImplTaskList::~ImplTaskList()
     {
-    }
-
-    auto ImplTaskList::get_buffer(TaskBufferId) -> BufferId
-    {
-        return {};
-    }
-
-    auto ImplTaskList::get_image(TaskImageId) -> ImageId
-    {
-        return {};
-    }
-
-    auto ImplTaskList::get_image_view(TaskImageId) -> ImageViewId
-    {
-        return {};
     }
 
     void ImplTaskList::output_graphviz()
@@ -715,7 +932,7 @@ namespace daxa
                     // }
                     // else
                     {
-                        dot_file << "node" << task_id << " [label=\"unknown task\", shape=box]\n";
+                        dot_file << "node" << task_id << " [label=\"unknown task '" << task_name << "'\", shape=box]\n";
                     }
                 }
                 ++batch_index;
@@ -755,11 +972,6 @@ namespace daxa
 
         dot_file << "}\n";
     }
-
-    // void ImplTaskList::insert_synchronization()
-    // {
-    //     // TODO(pahrens): Implement this!
-    // }
 } // namespace daxa
 
 #endif
