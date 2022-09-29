@@ -436,7 +436,8 @@ namespace tests
                 daxa::TaskList new_task_list = daxa::TaskList({.device = device, .debug_name = APPNAME_PREFIX("main task list")});
                 task_swapchain_image = new_task_list.create_task_image({
                     .image = &swapchain_image,
-                    .swapchain_parent = std::pair{swapchain, acquire_semaphore},
+                    .swapchain_image = true,
+                    // .swapchain_parent = std::pair{swapchain, acquire_semaphore},
                 });
                 task_render_image = new_task_list.create_task_image({.image = &render_image});
                 task_mipmapping_compute_input_buffer = new_task_list.create_task_buffer({.buffer = &mipmapping_compute_input_buffer});
@@ -445,9 +446,9 @@ namespace tests
                     .used_buffers = {
                         {task_staging_mipmapping_compute_input_buffer, daxa::TaskBufferAccess::HOST_TRANSFER_WRITE},
                     },
-                    .task = [this](daxa::TaskInterface interf)
+                    .task = [this](daxa::TaskRuntime runtime)
                     {
-                        auto staging_buffer = interf.get_buffer(task_staging_mipmapping_compute_input_buffer);
+                        auto staging_buffer = runtime.get_buffer(task_staging_mipmapping_compute_input_buffer);
                         update_gpu_input(staging_buffer);
                     },
                     .debug_name = APPNAME_PREFIX("Input MemMap"),
@@ -456,11 +457,11 @@ namespace tests
                     .used_buffers = {
                         {task_staging_mipmapping_compute_input_buffer, daxa::TaskBufferAccess::HOST_TRANSFER_WRITE},
                     },
-                    .task = [this](daxa::TaskInterface interf)
+                    .task = [this](daxa::TaskRuntime runtime)
                     {
-                        auto cmd_list = interf.get_command_list();
-                        auto staging_buffer = interf.get_buffer(task_staging_mipmapping_compute_input_buffer);
-                        auto input_buffer = interf.get_buffer(task_mipmapping_compute_input_buffer);
+                        auto cmd_list = runtime.get_command_list();
+                        auto staging_buffer = runtime.get_buffer(task_staging_mipmapping_compute_input_buffer);
+                        auto input_buffer = runtime.get_buffer(task_mipmapping_compute_input_buffer);
                         finalize_gpu_input(cmd_list, staging_buffer, input_buffer);
                     },
                     .debug_name = APPNAME_PREFIX("Input Transfer"),
@@ -472,13 +473,13 @@ namespace tests
                     .used_images = {
                         {task_render_image, daxa::TaskImageAccess::COMPUTE_SHADER_READ_WRITE, daxa::ImageMipArraySlice{}},
                     },
-                    .task = [=, this](daxa::TaskInterface & interf)
+                    .task = [=, this](daxa::TaskRuntime const & runtime)
                     {
                         if (mouse_drawing)
                         {
-                            auto cmd_list = interf.get_command_list();
-                            auto render_target_id = interf.get_image(task_render_image);
-                            auto input_buffer = interf.get_buffer(task_mipmapping_compute_input_buffer);
+                            auto cmd_list = runtime.get_command_list();
+                            auto render_target_id = runtime.get_image(task_render_image);
+                            auto input_buffer = runtime.get_buffer(task_mipmapping_compute_input_buffer);
                             paint(cmd_list, render_target_id, input_buffer);
                         }
                     },
@@ -491,13 +492,13 @@ namespace tests
                     .used_images = {
                         {task_render_image, daxa::TaskImageAccess::COMPUTE_SHADER_READ_WRITE, daxa::ImageMipArraySlice{}},
                     },
-                    .task = [=, this](daxa::TaskInterface & interf)
+                    .task = [=, this](daxa::TaskRuntime const & runtime)
                     {
                         if (mouse_drawing)
                         {
-                            auto cmd_list = interf.get_command_list();
-                            auto render_target_id = interf.get_image(task_render_image);
-                            auto input_buffer = interf.get_buffer(task_mipmapping_compute_input_buffer);
+                            auto cmd_list = runtime.get_command_list();
+                            auto render_target_id = runtime.get_image(task_render_image);
+                            auto input_buffer = runtime.get_buffer(task_mipmapping_compute_input_buffer);
                             paint(cmd_list, render_target_id, input_buffer);
                         }
                     },
@@ -519,13 +520,13 @@ namespace tests
                                 {task_render_image, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{.base_mip_level = i}},
                                 {task_render_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{.base_mip_level = i + 1}},
                             },
-                            .task = [=](daxa::TaskInterface & interf)
+                            .task = [=](daxa::TaskRuntime const & runtime)
                             {
-                                auto cmd_list = interf.get_command_list();
-                                auto image_id = interf.get_image(task_render_image);
+                                auto cmd_list = runtime.get_command_list();
+                                auto image_id = runtime.get_image(task_render_image);
                                 cmd_list.blit_image_to_image({
                                     .src_image = image_id,
-                                    .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL, // TODO: get from TaskInterface
+                                    .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL, // TODO: get from TaskRuntime
                                     .dst_image = image_id,
                                     .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                                     .src_slice = {
@@ -554,11 +555,11 @@ namespace tests
                         {task_render_image, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{}},
                         {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{}},
                     },
-                    .task = [=, this](daxa::TaskInterface & interf)
+                    .task = [=, this](daxa::TaskRuntime const & runtime)
                     {
-                        auto cmd_list = interf.get_command_list();
-                        auto src_image_id = interf.get_image(task_render_image);
-                        auto dst_image_id = interf.get_image(task_swapchain_image);
+                        auto cmd_list = runtime.get_command_list();
+                        auto src_image_id = runtime.get_image(task_render_image);
+                        auto dst_image_id = runtime.get_image(task_swapchain_image);
                         // TODO: Find a replacement for this in new Daxa!
                         cmd_list.clear_image({
                             .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
@@ -573,10 +574,10 @@ namespace tests
                     .used_images = {
                         {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
                     },
-                    .task = [=, this](daxa::TaskInterface & interf)
+                    .task = [=, this](daxa::TaskRuntime const & runtime)
                     {
-                        auto cmd_list = interf.get_command_list();
-                        auto render_target_id = interf.get_image(task_swapchain_image);
+                        auto cmd_list = runtime.get_command_list();
+                        auto render_target_id = runtime.get_image(task_swapchain_image);
                         draw_ui(cmd_list, render_target_id);
                     },
                     .debug_name = "Imgui",
