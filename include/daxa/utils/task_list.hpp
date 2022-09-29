@@ -84,7 +84,7 @@ namespace daxa
 
     struct TaskGPUResourceId
     {
-        u32 index = {};
+        u32 index = std::numeric_limits<u32>::max();
 
         auto is_empty() const -> bool;
 
@@ -105,37 +105,38 @@ namespace daxa
     struct TaskList;
     struct Device;
 
-    struct TaskInterface
+    struct TaskRuntime
     {
-        auto get_device() -> Device &;
-        auto get_command_list() -> CommandList;
-        auto get_used_task_buffers() -> TaskUsedBuffers &;
-        auto get_used_task_images() -> TaskUsedImages &;
-        auto get_buffer(TaskBufferId const & task_id) -> BufferId;
-        auto get_image(TaskImageId const & task_id) -> ImageId;
+        auto get_device() const -> Device &;
+        auto get_command_list() const -> CommandList;
+        auto get_used_task_buffers() const -> TaskUsedBuffers const &;
+        auto get_used_task_images() const -> TaskUsedImages const &;
+        auto get_buffer(TaskBufferId const & task_id) const -> BufferId;
+        auto get_image(TaskImageId const & task_id) const -> ImageId;
 
       private:
-        friend struct TaskRuntime;
-        TaskInterface(void * backend, TaskUsedBuffers * used_buffers, TaskUsedImages * used_images);
-        void * backend = {};
-        TaskUsedBuffers * used_task_buffers = {};
-        TaskUsedImages * used_task_images = {};
+        friend struct ImplTaskRuntime;
+        friend struct TaskList;
+        TaskRuntime(ImplTaskRuntime & impl);
+        ImplTaskRuntime & impl;
     };
 
-    using TaskCallback = std::function<void(TaskInterface &)>;
+    using TaskCallback = std::function<void(TaskRuntime const &)>;
 
     struct TaskBufferInfo
     {
         BufferId * buffer = {};
-        Access last_access = AccessConsts::NONE;
+        Access initial_access = AccessConsts::NONE;
+        std::string debug_name = {};
     };
 
     struct TaskImageInfo
     {
         ImageId * image = {};
-        Access last_access = AccessConsts::NONE;
-        ImageLayout last_layout = ImageLayout::UNDEFINED;
-        std::optional<std::pair<Swapchain, BinarySemaphore>> swapchain_parent = {};
+        Access initial_access = AccessConsts::NONE;
+        ImageLayout initial_layout = ImageLayout::UNDEFINED;
+        bool swapchain_image = false;
+        std::string debug_name = {};
     };
 
     struct TaskInfo
@@ -152,19 +153,21 @@ namespace daxa
     struct TaskListInfo
     {
         Device device;
-        /// @brief reordering resource creation to the beginning optimizes synchronization and execution overlap.
-        /// resource creation in recording order improves memory aliasing and reduces memory usage.
-        bool dont_reorder_resource_creation = false;
-        /// @brief task reordering can drastically improve performance,
+        /// @brief Task reordering can drastically improve performance,
         /// yet is it also nice to have sequential callback execution.
         bool dont_reorder_tasks = false;
+        /// @brief Some drivers have bad implementations for split barriers.
+        /// If that is the case for you, you can turn off all use of split barriers.
+        /// Daxa will use pipeline barriers instead if this is set.
+        bool dont_use_split_barriers = false;
+        /// @brief Optionally the user can provide a swapchain. This enables the use of present.
+        std::optional<Swapchain> swapchain = {};
         std::string debug_name = {};
     };
 
     struct TaskPresentInfo
     {
         std::vector<BinarySemaphore> * user_binary_semaphores = {};
-        TaskImageId presented_image = {};
     };
 
     struct TaskList : ManagedPtr
@@ -189,6 +192,7 @@ namespace daxa
         auto last_layout(TaskImageId image) -> ImageLayout;
 
         void complete();
+        auto get_command_lists() -> std::vector<CommandList>&&;
         void execute();
     };
 } // namespace daxa

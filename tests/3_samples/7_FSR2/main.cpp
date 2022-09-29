@@ -372,7 +372,7 @@ struct App : AppWindow<App>
             .used_buffers = {
                 {task_staging_raster_input_buffer, daxa::TaskBufferAccess::HOST_TRANSFER_WRITE},
             },
-            .task = [this](daxa::TaskInterface /* interf */)
+            .task = [this](daxa::TaskRuntime /* runtime */)
             {
                 this->raster_input.prev_view_mat = this->raster_input.view_mat;
 
@@ -400,9 +400,9 @@ struct App : AppWindow<App>
                 {task_raster_input_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE},
                 {task_staging_raster_input_buffer, daxa::TaskBufferAccess::TRANSFER_READ},
             },
-            .task = [this](daxa::TaskInterface interf)
+            .task = [this](daxa::TaskRuntime runtime)
             {
-                auto cmd_list = interf.get_command_list();
+                auto cmd_list = runtime.get_command_list();
                 cmd_list.copy_buffer_to_buffer({
                     .src_buffer = staging_raster_input_buffer,
                     .dst_buffer = raster_input_buffer,
@@ -421,9 +421,9 @@ struct App : AppWindow<App>
                 {task_motion_vectors_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, std::nullopt},
                 {task_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT, std::nullopt},
             },
-            .task = [this](daxa::TaskInterface interf)
+            .task = [this](daxa::TaskRuntime runtime)
             {
-                auto cmd_list = interf.get_command_list();
+                auto cmd_list = runtime.get_command_list();
                 cmd_list.begin_renderpass({
                     .color_attachments = {
                         {
@@ -457,11 +457,11 @@ struct App : AppWindow<App>
                 {task_color_image, daxa::TaskImageAccess::TRANSFER_READ, std::nullopt},
                 {task_display_image, daxa::TaskImageAccess::TRANSFER_WRITE, std::nullopt},
             },
-            .task = [this](daxa::TaskInterface interf)
+            .task = [this](daxa::TaskRuntime runtime)
             {
                 if (!fsr_enabled)
                 {
-                    auto cmd_list = interf.get_command_list();
+                    auto cmd_list = runtime.get_command_list();
                     cmd_list.blit_image_to_image({
                         .src_image = color_image,
                         .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
@@ -484,11 +484,11 @@ struct App : AppWindow<App>
                 {task_depth_image, daxa::TaskImageAccess::SHADER_READ_ONLY, std::nullopt},
                 {task_display_image, daxa::TaskImageAccess::SHADER_WRITE_ONLY, std::nullopt},
             },
-            .task = [this](daxa::TaskInterface interf)
+            .task = [this](daxa::TaskRuntime runtime)
             {
                 if (fsr_enabled)
                 {
-                    auto cmd_list = interf.get_command_list();
+                    auto cmd_list = runtime.get_command_list();
                     upscale_context.upscale(
                         cmd_list,
                         {
@@ -517,9 +517,9 @@ struct App : AppWindow<App>
                 {task_display_image, daxa::TaskImageAccess::TRANSFER_READ, std::nullopt},
                 {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE, std::nullopt},
             },
-            .task = [this](daxa::TaskInterface interf)
+            .task = [this](daxa::TaskRuntime runtime)
             {
-                auto cmd_list = interf.get_command_list();
+                auto cmd_list = runtime.get_command_list();
                 cmd_list.blit_image_to_image({
                     .src_image = display_image,
                     .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
@@ -538,9 +538,9 @@ struct App : AppWindow<App>
             .used_images = {
                 {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, std::nullopt},
             },
-            .task = [this](daxa::TaskInterface interf)
+            .task = [this](daxa::TaskRuntime runtime)
             {
-                auto cmd_list = interf.get_command_list();
+                auto cmd_list = runtime.get_command_list();
                 imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, swapchain_image, size_x, size_y);
             },
             .debug_name = APPNAME_PREFIX("ImGui Task"),
