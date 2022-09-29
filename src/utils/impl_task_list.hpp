@@ -30,7 +30,7 @@ namespace daxa
         usize latest_access_batch_index = {};
         usize latest_access_submit_scope_index = {};
         // When the last index was a read and an additional read is followed after,
-        // we will combine all barriers into one, wich is the first barrier that the first read generates.
+        // we will combine all barriers into one, which is the first barrier that the first read generates.
         usize latest_access_read_barrier_index = {};
     };
 
@@ -58,7 +58,7 @@ namespace daxa
         usize latest_access_batch_index = {};
         usize latest_access_submit_scope_index = {};
         // When the last index was a read and an additional read is followed after,
-        // we will combine all barriers into one, wich is the first barrier that the first read generates.
+        // we will combine all barriers into one, which is the first barrier that the first read generates.
         usize latest_access_read_barrier_index = {};
         ImageMipArraySlice slice = {};
     };
@@ -108,7 +108,7 @@ namespace daxa
         std::vector<usize> last_minute_barrier_indices = {};
         std::vector<TaskBatch> task_batches = {};
         std::vector<u64> used_swapchain_task_images = {};
-        std::optional<ImplPresentInfo> present_info = {}; 
+        std::optional<ImplPresentInfo> present_info = {};
     };
 
     auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access>;
@@ -140,7 +140,7 @@ namespace daxa
     {
         // interface:
         ImplTaskList & task_list;
-        Task * current_task = {}; 
+        Task * current_task = {};
         bool reuse_last_command_list = true;
         std::vector<CommandList> command_lists = {};
         std::optional<BinarySemaphore> last_submit_semaphore = {};

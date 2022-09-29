@@ -377,9 +377,9 @@ namespace daxa
         TaskBatchSubmitScope & current_submit_scope = impl.batch_submit_scopes[current_submit_scope_index];
 
         // All tasks are reordered while recording.
-        // Tasks are grouped into "task batches" wich are just a group of tasks,
-        // that can execute together overlappingly without synchronization between them.
-        // Task batches are furthor grouped into submit scopes.
+        // Tasks are grouped into "task batches" which are just a group of tasks,
+        // that can execute together while overlapping without synchronization between them.
+        // Task batches are further grouped into submit scopes.
         // A submit scopes contains a group of batches between two submits.
 
 #if DAXA_VALIDATION
@@ -399,10 +399,10 @@ namespace daxa
         TaskBatch & batch = current_submit_scope.task_batches[batch_index];
 
         // Now that we know what batch we need to insert the task into, we need to add synchronization between batches.
-        // As stated earlier batches are groups of tasks wich can execute together without sync between them.
-        // To simplyfy and optimize the sync placement daxa only synchronizes between batches.
+        // As stated earlier batches are groups of tasks which can execute together without sync between them.
+        // To simplify and optimize the sync placement daxa only synchronizes between batches.
         // This effectively means that all the resource uses, and their memory and execution dependencies in a batch
-        // are combined into a single unit wich is synchronized against other batches.
+        // are combined into a single unit which is synchronized against other batches.
         for (auto & [used_buffer_t_id, used_buffer_t_access] : info.used_buffers)
         {
             ImplTaskBuffer & impl_task_buffer = impl.impl_task_buffers[used_buffer_t_id.index];
@@ -427,11 +427,8 @@ namespace daxa
                         .src_access = impl_task_buffer.latest_access,
                         .dst_access = current_buffer_access,
                     },
-                    .split_barrier_state = impl.info.device.create_split_barrier({
-                        .debug_name = std::string("TaskList \"") +
-                                      impl.info.debug_name +
-                                      "\" SplitBarrier Nr. " +
-                                      std::to_string(split_barrier_index),
+                    /* .split_barrier_state = */ impl.info.device.create_split_barrier({
+                        .debug_name = std::string("TaskList \"") + impl.info.debug_name + "\" SplitBarrier Nr. " + std::to_string(split_barrier_index),
                     }),
                 });
                 // Now we give the src batch the index of this barrier to signal.
@@ -459,7 +456,7 @@ namespace daxa
             // Now this seems strange, why would be need multiple current use slices, as we only have one here.
             // This is because when we intersect this slice with the tracked slices, we get an intersection and a rest.
             // We need to then test the rest against all the remaining tracked uses,
-            // as the intersected part is allready beeing handeled in the following code.
+            // as the intersected part is already beeing handled in the following code.
             tl_new_use_slices.push_back(used_image_slice);
             // This is the tracked slice we will insert after we finished analyzing the current used image.
             TaskImageTrackedSlice ret_tracked_slice{
@@ -484,7 +481,7 @@ namespace daxa
                     ++used_image_slice_iter)
                 {
                     ImageMipArraySlice used_image_slice = *used_image_slice_iter;
-                    // We are only intrested in intersecting ranges, as use of non intersecting ranges does not need synchronization.
+                    // We are only interested in intersecting ranges, as use of non intersecting ranges does not need synchronization.
                     if (!used_image_slice.intersects(tracked_slice.slice))
                     {
                         continue;
@@ -505,12 +502,12 @@ namespace daxa
                     auto [new_use_slice_rest, new_use_slice_rest_count] = used_image_slice.subtract(intersection);
                     // We now remove the old tracked slice from the list of tracked slices, as we just split it.
                     tracked_slice_iter = impl_task_image.slices_last_uses.erase(tracked_slice_iter);
-                    // Now we remember the left over slice from the origina tracked slice.
+                    // Now we remember the left over slice from the original tracked slice.
                     for (usize rest_i; rest_i < tracked_slice_rest_count; ++rest_i)
                     {
                         // The rest tracked slices are the same as the original tracked slice,
                         tl_tracked_slice_rests.push_back(tracked_slice);
-                        // except for the slice itself, wich is the remainder of the substraction of the intersection.
+                        // except for the slice itself, which is the remainder of the subtraction of the intersection.
                         tl_tracked_slice_rests.back().slice = tracked_slice_rest[rest_i];
                     }
                     // Now we remember the left over slice from our current used slice.
@@ -523,7 +520,7 @@ namespace daxa
                         used_image_slice_iter = tl_new_use_slices.insert(
                             tl_new_use_slices.end(),
                             new_use_slice_rest[rest_i]);
-                        // except for the slice itself, wich is the remainder of the substraction of the intersection.
+                        // except for the slice itself, which is the remainder of the subtraction of the intersection.
                         tl_tracked_slice_rests.back().slice = tracked_slice_rest[rest_i];
                     }
                     // Every other access (NONE, READ_WRITE, WRITE) are interpreted as writes in this context.
@@ -552,11 +549,8 @@ namespace daxa
                                 .src_access = tracked_slice.latest_access,
                                 .dst_access = current_image_access,
                             },
-                            .split_barrier_state = impl.info.device.create_split_barrier({
-                                .debug_name = std::string("TaskList \"") +
-                                              impl.info.debug_name +
-                                              "\" SplitBarrier (Image) Nr. " +
-                                              std::to_string(split_barrier_index),
+                            /* .split_barrier_state = */ impl.info.device.create_split_barrier({
+                                .debug_name = std::string("TaskList \"") + impl.info.debug_name + "\" SplitBarrier (Image) Nr. " + std::to_string(split_barrier_index),
                             }),
                         });
                         // Now we give the src batch the index of this barrier to signal.
@@ -636,7 +630,7 @@ namespace daxa
             .layout_before = tracked_slice.latest_layout,
             .layout_after = ImageLayout::PRESENT_SRC,
             .src_access = tracked_slice.latest_access,
-            .dst_access = { .stages = PipelineStageFlagBits::BOTTOM_OF_PIPE },
+            .dst_access = {.stages = PipelineStageFlagBits::BOTTOM_OF_PIPE},
         });
         submit_scope.last_minute_barrier_indices.push_back(barrier_index);
         // Now we need to insert the binary semaphore between submit and present.
@@ -654,8 +648,8 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "Can only complete a task list one time");
         impl.compiled = true;
     }
-        
-    auto TaskList::get_command_lists() -> std::vector<CommandList>&&
+
+    auto TaskList::get_command_lists() -> std::vector<CommandList> &&
     {
         auto & impl = *as<ImplTaskList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "Can only get command lists of a finished task list");
@@ -723,14 +717,14 @@ namespace daxa
             {
                 for (auto barrier_index : task_batch.pipeline_barrier_indices)
                 {
-                    TaskBarrier& barrier = impl.barriers[barrier_index];
+                    TaskBarrier & barrier = impl.barriers[barrier_index];
                     insert_pipeline_barrier(impl_runtime.command_lists.back(), barrier, impl.impl_task_images);
                 }
                 if (impl.info.dont_use_split_barriers)
                 {
                     for (auto barrier_index : task_batch.wait_split_barrier_indices)
                     {
-                        TaskSplitBarrier& split_barrier = impl.split_barriers[barrier_index];
+                        TaskSplitBarrier & split_barrier = impl.split_barriers[barrier_index];
                         TaskBarrier barrier = split_barrier;
                         // Can I do this ^?
                         // TaskBarrier barrier = {};
@@ -752,7 +746,7 @@ namespace daxa
                     tl_memory_barrier_infos.reserve(task_batch.wait_split_barrier_indices.size());
                     for (auto barrier_index : task_batch.wait_split_barrier_indices)
                     {
-                        TaskSplitBarrier& split_barrier = impl.split_barriers[barrier_index];
+                        TaskSplitBarrier & split_barrier = impl.split_barriers[barrier_index];
                         if (split_barrier.image_id.is_empty())
                         {
                             tl_memory_barrier_infos.push_back(MemoryBarrierInfo{
@@ -760,7 +754,8 @@ namespace daxa
                                 .waiting_pipeline_access = split_barrier.dst_access,
                             });
                             tl_split_barrier_wait_infos.push_back(SplitBarrierEndInfo{
-                                .memory_barriers = std::span{ &tl_memory_barrier_infos.back(), 1 },
+                                .memory_barriers = std::span{&tl_memory_barrier_infos.back(), 1},
+                                .split_barrier = split_barrier.split_barrier_state,
                             });
                         }
                         else
@@ -774,7 +769,8 @@ namespace daxa
                                 .image_id = *impl.impl_task_images[split_barrier.image_id.index].info.image,
                             });
                             tl_split_barrier_wait_infos.push_back(SplitBarrierEndInfo{
-                                .image_barriers = std::span{ &tl_image_barrier_infos.back(), 1 },
+                                .image_barriers = std::span{&tl_image_barrier_infos.back(), 1},
+                                .split_barrier = split_barrier.split_barrier_state,
                             });
                         }
                     }
@@ -795,15 +791,14 @@ namespace daxa
             }
             for (usize barrier_index : submit_scope.last_minute_barrier_indices)
             {
-                TaskBarrier& barrier = impl.barriers[barrier_index];
+                TaskBarrier & barrier = impl.barriers[barrier_index];
                 insert_pipeline_barrier(impl_runtime.command_lists.back(), barrier, impl.impl_task_images);
             }
             for (auto & command_list : impl_runtime.command_lists)
             {
                 DAXA_DBG_ASSERT_TRUE_M(
-                    !command_list.is_complete(), 
-                    "it is illegal to complete command lists in tasks that are obtained by the runtime!"
-                );
+                    !command_list.is_complete(),
+                    "it is illegal to complete command lists in tasks that are obtained by the runtime!");
                 command_list.complete();
             }
 
@@ -822,15 +817,14 @@ namespace daxa
 
                 if (submit_scope.present_info.has_value())
                 {
-                    ImplPresentInfo& impl_present_info = submit_scope.present_info.value();
+                    ImplPresentInfo & impl_present_info = submit_scope.present_info.value();
                     std::vector<BinarySemaphore> present_wait_semaphores = impl_present_info.binary_semaphores;
                     if (impl_present_info.user_binary_semaphores)
                     {
                         present_wait_semaphores.insert(
-                            present_wait_semaphores.end(), 
+                            present_wait_semaphores.end(),
                             impl_present_info.user_binary_semaphores->begin(),
-                            impl_present_info.user_binary_semaphores->end()
-                        );
+                            impl_present_info.user_binary_semaphores->end());
                     }
                     impl.info.device.present_frame(PresentInfo{
                         .wait_binary_semaphores = impl_present_info.binary_semaphores,
