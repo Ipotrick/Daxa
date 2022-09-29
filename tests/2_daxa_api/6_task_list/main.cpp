@@ -22,14 +22,14 @@ namespace tests
 
         // This is pointless, but done to show how the task list executes
         task_list.add_task({
-            .task = [&](daxa::TaskInterface &)
+            .task = [&](daxa::TaskRuntime const &)
             {
                 std::cout << "Hello, ";
             },
             .debug_name = APPNAME_PREFIX("task 1 (execution)"),
         });
         task_list.add_task({
-            .task = [&](daxa::TaskInterface &)
+            .task = [&](daxa::TaskRuntime const &)
             {
                 std::cout << "World!" << std::endl;
             },
@@ -65,7 +65,7 @@ namespace tests
         task_list.add_task({
             .used_buffers = {{upload_buffer, daxa::TaskBufferAccess::TRANSFER_READ}},
             .used_images = {{task_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{}}},
-            .task = [](daxa::TaskInterface &)
+            .task = [](daxa::TaskRuntime const &)
             {
                 // TODO: Implement this task!
             },
@@ -89,23 +89,23 @@ namespace tests
         });
 
         auto task_buffer1 = task_list.create_task_buffer({
-            .last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
+            .initial_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
         });
         auto task_buffer2 = task_list.create_task_buffer({
-            .last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
+            .initial_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
         });
         auto task_buffer3 = task_list.create_task_buffer({
-            .last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
+            .initial_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
         });
 
         auto task_image1 = task_list.create_task_image({
-            .last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
+            .initial_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
         });
         auto task_image2 = task_list.create_task_image({
-            .last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
+            .initial_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
         });
         auto task_image3 = task_list.create_task_image({
-            .last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
+            .initial_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
         });
 
         task_list.add_task({
@@ -117,7 +117,7 @@ namespace tests
                 {task_image1, daxa::TaskImageAccess::SHADER_WRITE_ONLY, daxa::ImageMipArraySlice{}},
                 {task_image2, daxa::TaskImageAccess::SHADER_READ_ONLY, daxa::ImageMipArraySlice{}},
             },
-            .task = [](daxa::TaskInterface &) {},
+            .task = [](daxa::TaskRuntime const &) {},
             .debug_name = APPNAME_PREFIX("task 1 (output_graph)"),
         });
 
@@ -128,7 +128,7 @@ namespace tests
             .used_images = {
                 {task_image2, daxa::TaskImageAccess::SHADER_WRITE_ONLY, daxa::ImageMipArraySlice{}},
             },
-            .task = [](daxa::TaskInterface &) {},
+            .task = [](daxa::TaskRuntime const &) {},
             .debug_name = APPNAME_PREFIX("task 2 (output_graph)"),
         });
 
@@ -159,7 +159,7 @@ namespace tests
                     },
                 },
             },
-            .task = [](daxa::TaskInterface &) {},
+            .task = [](daxa::TaskRuntime const &) {},
             .debug_name = APPNAME_PREFIX("task 3 (output_graph)"),
         });
 
@@ -170,7 +170,7 @@ namespace tests
             .used_images = {
                 {task_image3, daxa::TaskImageAccess::SHADER_READ_ONLY, daxa::ImageMipArraySlice{}},
             },
-            .task = [](daxa::TaskInterface &) {},
+            .task = [](daxa::TaskRuntime const &) {},
             .debug_name = APPNAME_PREFIX("task 4 (output_graph)"),
         });
 
@@ -253,9 +253,9 @@ namespace tests
                     .used_images = {
                         {task_render_image, daxa::TaskImageAccess::FRAGMENT_SHADER_WRITE_ONLY, daxa::ImageMipArraySlice{}},
                     },
-                    .task = [this](daxa::TaskInterface interf)
+                    .task = [this](daxa::TaskRuntime runtime)
                     {
-                        auto cmd_list = interf.get_command_list();
+                        auto cmd_list = runtime.get_command_list();
                         cmd_list.begin_renderpass({
                             .color_attachments = {{.image_view = render_image.default_view()}},
                             .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
