@@ -23,6 +23,30 @@ namespace daxa
 
     using TaskId = usize;
 
+    struct ImplTaskBuffer
+    {
+        Access latest_access = AccessConsts::NONE;
+        usize latest_access_batch_index = {};
+        usize latest_access_submit_scope_index = {};
+        // When the last index was a read and an additional read is followed after,
+        // we will combine all barriers into one, wich is the first barrier that the first read generates.
+        usize latest_access_read_barrier_index = {};
+        BufferId * buffer = {};
+        std::string debug_name = {};
+    };
+
+    struct TaskBarrier
+    {
+        // when this id is invalid, this barrier is NOT an image memory barrier but just a memory barrier.
+        // So when id invalid => memory barrier, id valid => image memory barrier.
+        TaskImageId image_id = {};
+        ImageMipArraySlice slice = {};
+        ImageLayout layout_before = {};
+        ImageLayout layout_after = {};
+        Access src_access = {};
+        Access dst_access = {};
+    };
+
     struct TaskSplitBarrier
     {
         SplitBarrier split_barrier_state;
@@ -36,48 +60,28 @@ namespace daxa
         Access dst_access = {};
     };
 
-    struct ImplTaskBuffer
-    {
-        Access latest_access = AccessConsts::NONE;
-        usize latest_access_batch_index = {};
-        usize latest_access_submit_scope_index = {};
-        usize latest_access_batch_barrier_index_begin = {};
-        usize latest_access_batch_barrier_index_count = {};
-        BufferId * buffer = {};
-        std::string debug_name = {};
-    };
-
     struct TaskImageTrackedSlice
     {
         Access latest_access = AccessConsts::NONE;
         ImageLayout latest_layout = ImageLayout::UNDEFINED;
         usize latest_access_batch_index = {};
         usize latest_access_submit_scope_index = {};
-        usize latest_access_batch_barrier_index_begin = {};
-        usize latest_access_batch_barrier_index_count = {};
+        // When the last index was a read and an additional read is followed after,
+        // we will combine all barriers into one, wich is the first barrier that the first read generates.
+        usize latest_access_read_barrier_index = {};
         ImageMipArraySlice slice = {};
     };
 
     struct ImplTaskImage
     {
+        ImageLayout initial_layout = {};
+        Access initial_access = {};
         std::optional<std::pair<Swapchain, BinarySemaphore>> parent_swapchain = {};
         bool swapchain_semaphore_waited_upon = {};
         std::vector<TaskImageTrackedSlice> slices_last_uses = {};
         ImageId * image = {};
         std::string debug_name = {};
     };
-
-    struct TaskImageBarrierInfo
-    {
-        Access awaited_pipeline_access = AccessConsts::NONE;
-        Access waiting_pipeline_access = AccessConsts::NONE;
-        ImageLayout before_layout = ImageLayout::UNDEFINED;
-        ImageLayout after_layout = ImageLayout::UNDEFINED;
-        ImageMipArraySlice image_slice = {};
-        TaskImageId task_image_id = {};
-    };
-
-    auto get_image_barrier(TaskImageBarrierInfo const & task_image_barrier, ImageId image_id) -> ImageBarrierInfo;
 
     struct GenericTask
     {
@@ -116,14 +120,6 @@ namespace daxa
         PresentTask,
         std::monostate>;
 
-    struct TaskBatchDependency
-    {
-        TaskId src = {};
-        TaskId dst = {};
-        std::vector<TaskImageBarrierInfo> memory_barriers = {};
-        std::vector<MemoryBarrierInfo> image_barriers = {};
-    };
-
     struct TaskSubmitScope
     {
         CommandSubmitInfo submit_info = {};
@@ -146,16 +142,17 @@ namespace daxa
         void execute_task(TaskVariant & task_variant, usize task_index);
     };
 
-    struct EventBatch
+    struct TaskBatch
     {
-        std::vector<TaskId> events = {};
-        std::vector<usize> src_split_barrier_indices = {};
-        std::vector<usize> dst_split_barrier_indices = {};
+        std::vector<TaskId> tasks = {};
+        std::vector<usize> pipeline_barrier_indices = {};
+        std::vector<usize> signal_split_barrier_indices = {};
+        std::vector<usize> wait_split_barrier_indices = {};
     };
 
     struct TaskBatchSubmitScope
     {
-        std::vector<EventBatch> event_batches = {};
+        std::vector<TaskBatch> task_batches = {};
     };
 
     auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access>;
@@ -234,14 +231,13 @@ namespace daxa
         TaskListInfo info;
         std::vector<TaskVariant> tasks = {};
         std::vector<TaskSplitBarrier> split_barriers = {};
+        std::vector<TaskBarrier> barriers = {};
         std::vector<ImplTaskBuffer> impl_task_buffers = {};
         std::vector<ImplTaskImage> impl_task_images = {};
-        std::vector<TaskBatchSubmitScope> event_submit_scopes = {};
+        std::vector<TaskBatchSubmitScope> batch_submit_scopes = {};
         bool compiled = false;
 
         void execute_barriers();
-        auto slot(TaskBufferId id) -> ImplTaskBuffer &;
-        auto slot(TaskImageId id) -> ImplTaskImage &;
         auto get_buffer(TaskBufferId) -> BufferId;
         auto get_image(TaskImageId) -> ImageId;
         auto get_image_view(TaskImageId) -> ImageViewId;
