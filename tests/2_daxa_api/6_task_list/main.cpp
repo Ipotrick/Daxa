@@ -98,10 +98,24 @@ namespace tests
             .last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
         });
 
+        auto task_image1 = task_list.create_task_image({
+            .last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
+        });
+        auto task_image2 = task_list.create_task_image({
+            .last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
+        });
+        auto task_image3 = task_list.create_task_image({
+            .last_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
+        });
+
         task_list.add_task({
             .used_buffers = {
                 {task_buffer1, daxa::TaskBufferAccess::SHADER_WRITE_ONLY},
                 {task_buffer2, daxa::TaskBufferAccess::SHADER_READ_ONLY},
+            },
+            .used_images = {
+                {task_image1, daxa::TaskImageAccess::SHADER_WRITE_ONLY, daxa::ImageMipArraySlice{}},
+                {task_image2, daxa::TaskImageAccess::SHADER_READ_ONLY, daxa::ImageMipArraySlice{}},
             },
             .task = [](daxa::TaskInterface &) {},
             .debug_name = APPNAME_PREFIX("task 1 (output_graph)"),
@@ -110,6 +124,9 @@ namespace tests
         task_list.add_task({
             .used_buffers = {
                 {task_buffer2, daxa::TaskBufferAccess::SHADER_WRITE_ONLY},
+            },
+            .used_images = {
+                {task_image2, daxa::TaskImageAccess::SHADER_WRITE_ONLY, daxa::ImageMipArraySlice{}},
             },
             .task = [](daxa::TaskInterface &) {},
             .debug_name = APPNAME_PREFIX("task 2 (output_graph)"),
@@ -120,6 +137,28 @@ namespace tests
                 {task_buffer2, daxa::TaskBufferAccess::SHADER_WRITE_ONLY},
                 {task_buffer3, daxa::TaskBufferAccess::SHADER_WRITE_ONLY},
             },
+            .used_images = {
+                {
+                    task_image2,
+                    daxa::TaskImageAccess::SHADER_WRITE_ONLY,
+                    daxa::ImageMipArraySlice{
+                        .base_mip_level = 0,
+                        .level_count = 3,
+                        .base_array_layer = 2,
+                        .layer_count = 2,
+                    },
+                },
+                {
+                    task_image3,
+                    daxa::TaskImageAccess::SHADER_WRITE_ONLY,
+                    daxa::ImageMipArraySlice{
+                        .base_mip_level = 0,
+                        .level_count = 3,
+                        .base_array_layer = 2,
+                        .layer_count = 2,
+                    },
+                },
+            },
             .task = [](daxa::TaskInterface &) {},
             .debug_name = APPNAME_PREFIX("task 3 (output_graph)"),
         });
@@ -127,6 +166,9 @@ namespace tests
         task_list.add_task({
             .used_buffers = {
                 {task_buffer3, daxa::TaskBufferAccess::SHADER_READ_ONLY},
+            },
+            .used_images = {
+                {task_image3, daxa::TaskImageAccess::SHADER_READ_ONLY, daxa::ImageMipArraySlice{}},
             },
             .task = [](daxa::TaskInterface &) {},
             .debug_name = APPNAME_PREFIX("task 4 (output_graph)"),
