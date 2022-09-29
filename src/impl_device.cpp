@@ -297,7 +297,7 @@ namespace daxa
     static const VkPhysicalDeviceFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES{
         .robustBufferAccess = VK_FALSE,
         .fullDrawIndexUint32 = VK_FALSE,
-        .imageCubeArray = VK_FALSE,
+        .imageCubeArray = VK_TRUE,
         .independentBlend = VK_FALSE,
         .geometryShader = VK_FALSE,
         .tessellationShader = VK_FALSE,
