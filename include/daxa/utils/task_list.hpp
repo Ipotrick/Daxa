@@ -175,7 +175,7 @@ namespace daxa
         auto create_task_buffer(TaskBufferInfo const & info) -> TaskBufferId;
         auto create_task_image(TaskImageInfo const & info) -> TaskImageId;
 
-        Result<void> add_task(TaskInfo const & info);
+        void add_task(TaskInfo const & info);
 
         void submit(CommandSubmitInfo * info);
         void present(TaskPresentInfo const & info);
