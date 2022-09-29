@@ -930,7 +930,7 @@ namespace daxa
         VkImageCreateInfo vk_image_create_info{
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             .pNext = nullptr,
-            .flags = {},
+            .flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT | VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT,
             .imageType = vk_image_type,
             .format = *reinterpret_cast<VkFormat const *>(&info.format),
             .extent = *reinterpret_cast<VkExtent3D const *>(&info.size),
