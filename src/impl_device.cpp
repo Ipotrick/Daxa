@@ -384,7 +384,7 @@ namespace daxa
         .descriptorBindingVariableDescriptorCount = VK_TRUE,
         .runtimeDescriptorArray = VK_TRUE,
     };
-    
+
     static const VkPhysicalDeviceHostQueryResetFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_HOST_QUERY_RESET{
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES,
         .pNext = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_DESCRIPTOR_INDEXING),
@@ -927,10 +927,23 @@ namespace daxa
 
         VkImageType vk_image_type = static_cast<VkImageType>(info.dimensions - 1);
 
+        VkImageCreateFlags vk_image_create_flags = {};
+
+        if (info.dimensions == 2 && info.size[0] == info.size[1] && info.array_layer_count % 6 == 0)
+        {
+            vk_image_create_flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+        }
+        if (info.dimensions == 3)
+        {
+            // TODO(grundlett): Figure out if there are cases where a 3D image CAN'T be used
+            // as a 2D array image view.
+            vk_image_create_flags |= VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
+        }
+
         VkImageCreateInfo vk_image_create_info{
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             .pNext = nullptr,
-            .flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT | VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT,
+            .flags = vk_image_create_flags,
             .imageType = vk_image_type,
             .format = *reinterpret_cast<VkFormat const *>(&info.format),
             .extent = *reinterpret_cast<VkExtent3D const *>(&info.size),
