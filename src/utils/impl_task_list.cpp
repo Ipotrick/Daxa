@@ -85,18 +85,6 @@ namespace daxa
         return {};
     }
 
-    auto get_image_barrier(TaskImageBarrierInfo const & task_image_barrier, ImageId image_id) -> ImageBarrierInfo
-    {
-        return ImageBarrierInfo{
-            .awaited_pipeline_access = task_image_barrier.awaited_pipeline_access,
-            .waiting_pipeline_access = task_image_barrier.waiting_pipeline_access,
-            .before_layout = task_image_barrier.before_layout,
-            .after_layout = task_image_barrier.after_layout,
-            .image_slice = task_image_barrier.image_slice,
-            .image_id = image_id,
-        };
-    }
-
     auto TaskGPUResourceId::is_empty() const -> bool
     {
         return index == std::numeric_limits<u32>::max();
@@ -231,7 +219,7 @@ namespace daxa
         : ManagedPtr{new ImplTaskList(info)}
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
-        impl.event_submit_scopes.push_back({});
+        impl.batch_submit_scopes.push_back({});
     }
 
     TaskList::~TaskList() {}
@@ -248,11 +236,39 @@ namespace daxa
         return {};
     }
 
-    Result<void> check_for_overlapping_use()
+    void check_for_overlapping_use(TaskInfo const & info)
     {
-        // TODO(pahrens): IMPLEMENT THIS
-        return {false};
+        for (usize current_i = 0; current_i < info.used_buffers.size(); ++current_i)
+        {
+            for (usize other_i = 0; other_i < info.used_buffers.size(); ++other_i)
+            {
+                if (current_i == other_i)
+                {
+                    continue;
+                }
+                DAXA_DBG_ASSERT_TRUE_M(
+                    std::get<0>(info.used_buffers[current_i]).index != std::get<0>(info.used_buffers[other_i]).index,
+                    "illegal to specify multiple uses for one buffer for one task. please combine all uses into one for each buffer.");
+            }
+        }
+        for (usize current_i = 0; current_i < info.used_images.size(); ++current_i)
+        {
+            for (usize other_i = 0; other_i < info.used_images.size(); ++other_i)
+            {
+                if (current_i == other_i)
+                {
+                    continue;
+                }
+                auto const & [current_image_t_id, current_image_t_access, current_image_slice] = info.used_images[current_i];
+                auto const & [other_image_t_id, other_image_t_access, other_image_slice] = info.used_images[other_i];
+
+                DAXA_DBG_ASSERT_TRUE_M(
+                    !current_image_slice.intersects(other_image_slice),
+                    "illegal to specify multiple uses for one image with overlapping slices for one task.");
+            }
+        }
     }
+
     auto find_first_possible_batch_index(
         ImplTaskList const & impl,
         TaskBatchSubmitScope const & current_submit_scope,
@@ -262,7 +278,7 @@ namespace daxa
         usize first_possible_batch_index = 0;
         if (impl.info.dont_reorder_tasks)
         {
-            first_possible_batch_index = current_submit_scope.event_batches.size() - 1;
+            first_possible_batch_index = current_submit_scope.task_batches.size() - 1;
         }
 
         for (auto const & [used_buffer_t_id, used_buffer_t_access] : info.used_buffers)
@@ -327,7 +343,9 @@ namespace daxa
         return first_possible_batch_index;
     }
 
-    Result<void> TaskList::add_task(TaskInfo const & info)
+    thread_local std::vector<TaskImageTrackedSlice> tl_tracked_slice_rests = {};
+    thread_local std::vector<ImageMipArraySlice> tl_new_use_slices = {};
+    void TaskList::add_task(TaskInfo const & info)
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can not record to completed command list");
@@ -337,43 +355,228 @@ namespace daxa
             .info = info,
         });
 
-        usize current_submit_scope_index = impl.event_submit_scopes.size() - 1;
-        TaskBatchSubmitScope & current_submit_scope = impl.event_submit_scopes[current_submit_scope_index];
+        usize current_submit_scope_index = impl.batch_submit_scopes.size() - 1;
+        TaskBatchSubmitScope & current_submit_scope = impl.batch_submit_scopes[current_submit_scope_index];
 
+        // All tasks are reordered while recording.
+        // Tasks are grouped into "task batches" wich are just a group of tasks,
+        // that can execute together overlappingly without synchronization between them.
+        // Task batches are furthor grouped into submit scopes.
+        // A submit scopes contains a group of batches between two submits.
+
+#if DAXA_VALIDATION
         // Overlapping resource uses can be valid in the case of reads in the same layout for example.
         // But in order to make the task list implementation simpler,
         // daxa does not allow for overlapping use of a resource within a task, even when it is a read in the same layout.
-        auto result = check_for_overlapping_use();
-        if (result.is_err())
-        {
-            return result;
-        }
+        check_for_overlapping_use(info);
+#endif // #if DAXA_VALIDATION
 
-        // Before we can insert any synchronization or update last uses,
-        // we need to find the first possible batch index.
+        // At first, we find the batch we need to insert the new task into.
+        // To optimize for optimal overlap and minimal pipeline barriers, we try to insert the task as early as possible.
         const usize batch_index = find_first_possible_batch_index(
             impl,
             current_submit_scope,
             current_submit_scope_index,
             info);
+        TaskBatch & batch = current_submit_scope.task_batches[batch_index];
 
-        // Now that we know what batch we need to insert the task into, we need to insert synchronization.
-        // We also need to make sure that overlapping image uses and barriers are be split and corrected.
-        // To finish the insertion of the task, we also update the latest use in all of the used resources.
+        // Now that we know what batch we need to insert the task into, we need to add synchronization between batches.
+        // As stated earlier batches are groups of tasks wich can execute together without sync between them.
+        // To simplyfy and optimize the sync placement daxa only synchronizes between batches.
+        // This effectively means that all the resource uses, and their memory and execution dependencies in a batch
+        // are combined into a single unit wich is synchronized against other batches.
         for (auto & [used_buffer_t_id, used_buffer_t_access] : info.used_buffers)
         {
+            ImplTaskBuffer & impl_task_buffer = impl.impl_task_buffers[used_buffer_t_id.index];
+            Access current_buffer_access = task_buffer_access_to_access(used_buffer_t_access);
+            // Every other access (NONE, READ_WRITE, WRITE) are interpreted as writes in this context.
+            // When the last use was a read AND the new use of the buffer is a read AND,
+            // we need to add our stage flags to the existing barrier of the last use.
+            bool is_last_access_read = impl_task_buffer.latest_access.type == AccessTypeFlagBits::READ;
+            bool is_current_access_read = current_buffer_access.type == AccessTypeFlagBits::READ;
+            if (is_last_access_read && is_current_access_read)
+            {
+                auto & last_read_split_barrier = impl.split_barriers[impl_task_buffer.latest_access_read_barrier_index];
+                last_read_split_barrier.dst_access = last_read_split_barrier.dst_access | current_buffer_access;
+            }
+            else
+            {
+                // When the uses are incompatible (no read on read) we need to insert a new barrier.
+                usize split_barrier_index = impl.split_barriers.size();
+                impl.split_barriers.push_back(TaskSplitBarrier{
+                    .split_barrier_state = impl.info.device.create_split_barrier({
+                        .debug_name = std::string("TaskList \"") +
+                                      impl.info.debug_name +
+                                      "\" SplitBarrier Nr. " +
+                                      std::to_string(split_barrier_index),
+                    }),
+                    .image_id = {}, // {} signals that this is not an image barrier.
+                    .src_access = impl_task_buffer.latest_access,
+                    .dst_access = current_buffer_access,
+                });
+                // Now we give the src batch the index of this barrier to signal.
+                TaskBatchSubmitScope & src_scope = impl.batch_submit_scopes[impl_task_buffer.latest_access_submit_scope_index];
+                TaskBatch & src_batch = src_scope.task_batches[impl_task_buffer.latest_access_batch_index];
+                src_batch.signal_split_barrier_indices.push_back(split_barrier_index);
+                // And we also insert the split barrier index into the waits of the current tasks batch.
+                batch.wait_split_barrier_indices.push_back(split_barrier_index);
+                if (current_buffer_access.type == AccessTypeFlagBits::READ)
+                {
+                    // As the new access is a read we remember our barrier index,
+                    // So that potential future reads after this can reuse this barrier.
+                    impl_task_buffer.latest_access_read_barrier_index = split_barrier_index;
+                }
+            }
+            // Now that we inserted/updated the synchronization, we update the latest access.
+            impl_task_buffer.latest_access = current_buffer_access;
+            impl_task_buffer.latest_access_batch_index = batch_index;
+            impl_task_buffer.latest_access_submit_scope_index = current_submit_scope_index;
         }
-        for (auto & [used_image_t_id, used_image_t_access, used_image_o_slice] : info.used_images)
+        for (auto & [used_image_t_id, used_image_t_access, used_image_slice] : info.used_images)
         {
-            // Now we need to split the uses into three groups:
-            // * the part of the tracked image slice that does not intersect with the current new use (tracked_slice_rest)
-            // * the slice that is the intersection of tracked image slice and current new use (intersection)
-            // * the part of the current new use slice that does not intersect with the tracked image (new_use_slice_rest)
-            // auto [tracked_slice_rest, tracked_slice_rest_count] = tracked_slice.slice.subtract(used_image_slice);
-            // auto intersection = tracked_slice.slice.intersect(used_image_slice);
-            // auto [new_use_slice_rest, new_use_slice_rest_count] = used_image_slice.subtract(tracked_slice.slice);
+            ImplTaskImage & impl_task_image = impl.impl_task_images[used_image_t_id.index];
+            auto [current_image_layout, current_image_access] = task_image_access_to_layout_access(used_image_t_access);
+            // Now this seems strange, why would be need multiple current use slices, as we only have one here.
+            // This is because when we intersect this slice with the tracked slices, we get an intersection and a rest.
+            // We need to then test the rest against all the remaining tracked uses.
+            // If we keep a rest in the end we also need to transition all of them into the correct layout.
+            tl_new_use_slices.push_back(used_image_slice);
+            // This is the tracked slice we will insert after we finished analyzing the current used image.
+            TaskImageTrackedSlice ret_tracked_slice{
+                .latest_access = current_image_access,
+                .latest_layout = current_image_layout,
+                .latest_access_batch_index = batch_index,
+                .latest_access_submit_scope_index = current_submit_scope_index,
+                .latest_access_read_barrier_index = {}, // this is a dummy value
+                .slice = used_image_slice,
+            };
+            // As image subresources can be in different layouts and also different synchronization scopes,
+            // we need to track these image ranges individually.
+            for (
+                auto tracked_slice_iter = impl_task_image.slices_last_uses.begin();
+                tracked_slice_iter != impl_task_image.slices_last_uses.end();
+                ++tracked_slice_iter)
+            {
+                TaskImageTrackedSlice tracked_slice = *tracked_slice_iter;
+                for (
+                    auto used_image_slice_iter = tl_new_use_slices.begin();
+                    used_image_slice_iter != tl_new_use_slices.end();
+                    ++used_image_slice_iter)
+                {
+                    ImageMipArraySlice used_image_slice = *used_image_slice_iter;
+                    // We are only intrested in intersecting ranges, as use of non intersecting ranges does not need synchronization.
+                    if (!used_image_slice.intersects(tracked_slice.slice))
+                    {
+                        continue;
+                    }
+                    // As we found an intersection, part of the old tracked slice must be altered.
+                    // Instead of altering it we remove it and add the rest slices back in later.
+                    used_image_slice_iter = tl_new_use_slices.erase(used_image_slice_iter);
+                    // Now we know that the new use intersects slices with a previous use.
+                    // This means that we need to find the intersecting part,
+                    // sync the intersecting part from the previous use to the current use
+                    // and remove the overlapping part from the tracked slice.
+                    // Now we need to split the uses into three groups:
+                    // * the slice that is the intersection of tracked image slice and current new use (intersection)
+                    // * the part of the tracked image slice that does not intersect with the current new use (tracked_slice_rest)
+                    // * the part of the current new use slice that does not intersect with the tracked image (new_use_slice_rest)
+                    auto intersection = tracked_slice.slice.intersect(used_image_slice);
+                    auto [tracked_slice_rest, tracked_slice_rest_count] = tracked_slice.slice.subtract(intersection);
+                    auto [new_use_slice_rest, new_use_slice_rest_count] = used_image_slice.subtract(intersection);
+                    // We now remove the old tracked slice from the list of tracked slices, as we just split it.
+                    tracked_slice_iter = impl_task_image.slices_last_uses.erase(tracked_slice_iter);
+                    // Now we remember the left over slice from the origina tracked slice.
+                    for (usize rest_i; rest_i < tracked_slice_rest_count; ++rest_i)
+                    {
+                        // The rest tracked slices are the same as the original tracked slice,
+                        tl_tracked_slice_rests.push_back(tracked_slice);
+                        // except for the slice itself, wich is the remainder of the substraction of the intersection.
+                        tl_tracked_slice_rests.back().slice = tracked_slice_rest[rest_i];
+                    }
+                    // Now we remember the left over slice from our current used slice.
+                    for (usize rest_i; rest_i < tracked_slice_rest_count; ++rest_i)
+                    {
+                        // We reassign the iterator here as it is getting invalidated by the insert.
+                        // The new iterator points to the newly inserted element.
+                        // When the next iteration of the outer for loop starts, all these elements get skipped.
+                        // This is good as these elements do NOT intersect with the currently inspected tracked slice.
+                        used_image_slice_iter = tl_new_use_slices.insert(
+                            tl_new_use_slices.end(),
+                            new_use_slice_rest[rest_i]);
+                        // except for the slice itself, wich is the remainder of the substraction of the intersection.
+                        tl_tracked_slice_rests.back().slice = tracked_slice_rest[rest_i];
+                    }
+                    // Every other access (NONE, READ_WRITE, WRITE) are interpreted as writes in this context.
+                    // When the last use was a read AND the new use of the buffer is a read AND,
+                    // we need to add our stage flags to the existing barrier of the last use.
+                    // To be able to do this the layout of the image slice must also match.
+                    // If they differ we need to insert an execution barrier with a layout transition.
+                    bool is_last_access_read = tracked_slice.latest_access.type == AccessTypeFlagBits::READ;
+                    bool is_current_access_read = current_image_access.type == AccessTypeFlagBits::READ;
+                    bool are_layouts_identical = tracked_slice.latest_layout == current_image_layout;
+                    if (is_last_access_read && is_current_access_read && are_layouts_identical)
+                    {
+                        auto & last_read_split_barrier = impl.split_barriers[tracked_slice.latest_access_read_barrier_index];
+                        last_read_split_barrier.dst_access = last_read_split_barrier.dst_access | current_image_access;
+                    }
+                    else
+                    {
+                        // When the uses are incompatible (no read on read, or no identical layout) we need to insert a new barrier.
+                        usize split_barrier_index = impl.split_barriers.size();
+                        impl.split_barriers.push_back(TaskSplitBarrier{
+                            .split_barrier_state = impl.info.device.create_split_barrier({
+                                .debug_name = std::string("TaskList \"") +
+                                              impl.info.debug_name +
+                                              "\" SplitBarrier (Image) Nr. " +
+                                              std::to_string(split_barrier_index),
+                            }),
+                            .image_id = used_image_t_id,
+                            .slice = intersection,
+                            .layout_before = tracked_slice.latest_layout,
+                            .layout_after = current_image_layout,
+                            .src_access = tracked_slice.latest_access,
+                            .dst_access = current_image_access,
+                        });
+                        // Now we give the src batch the index of this barrier to signal.
+                        TaskBatchSubmitScope & src_scope = impl.batch_submit_scopes[tracked_slice.latest_access_submit_scope_index];
+                        TaskBatch & src_batch = src_scope.task_batches[tracked_slice.latest_access_batch_index];
+                        src_batch.signal_split_barrier_indices.push_back(split_barrier_index);
+                        // And we also insert the split barrier index into the waits of the current tasks batch.
+                        batch.wait_split_barrier_indices.push_back(split_barrier_index);
+                        if (current_image_access.type == AccessTypeFlagBits::READ)
+                        {
+                            // As the new access is a read we remember our barrier index,
+                            // So that potential future reads after this can reuse this barrier.
+                            ret_tracked_slice.latest_access_read_barrier_index = split_barrier_index;
+                        }
+                    }
+                }
+            }
+            // If we have a remainder left of the used image slices, there was no previous use of those slices.
+            // We need to translate those image slices into the correct layout.
+            for (ImageMipArraySlice rest_used_slice : tl_new_use_slices)
+            {
+                usize pipeline_barrier_index = impl.barriers.size();
+                impl.barriers.push_back(TaskBarrier{
+                    .image_id = used_image_t_id,
+                    .slice = rest_used_slice,
+                    .layout_before = impl_task_image.initial_layout,
+                    .layout_after = current_image_layout,
+                    // In the future it may be good to give an initial image state and access.
+                    .src_access = impl_task_image.initial_access,
+                    .dst_access = current_image_access,
+                });
+            }
+            // Now we need to add the latest use and tracked range of our current access:
+            impl_task_image.slices_last_uses.push_back(ret_tracked_slice);
+            // The remainder tracked slices we remembered from earlier are now inserted back into the list of tracked slices.
+            // We deferred this step as we dont want to check these in the loop above, as we found them to not intersect with the new use.
+            impl_task_image.slices_last_uses.insert(
+                impl_task_image.slices_last_uses.end(),
+                tl_tracked_slice_rests.begin(),
+                tl_tracked_slice_rests.end());
+            tl_tracked_slice_rests.clear();
         }
-        return {false};
     }
 
     void TaskList::submit(CommandSubmitInfo * info)
@@ -445,18 +648,6 @@ namespace daxa
     {
     }
 
-    auto ImplTaskList::slot(TaskBufferId id) -> ImplTaskBuffer &
-    {
-        static ImplTaskBuffer result = {};
-        return result;
-    }
-
-    auto ImplTaskList::slot(TaskImageId id) -> ImplTaskImage &
-    {
-        static ImplTaskImage result = {};
-        return result;
-    }
-
     auto ImplTaskList::get_buffer(TaskBufferId) -> BufferId
     {
         return {};
@@ -475,6 +666,94 @@ namespace daxa
     void ImplTaskList::output_graphviz()
     {
         // TODO(grundlett): Implement this!
+        std::string filename = this->info.debug_name + ".dot";
+        std::ofstream dot_file{filename};
+
+        dot_file << "digraph TaskGraph {\nnode [style=filled, shape=box, color=\"#d3f4ff\"]\n";
+
+        usize scope_index = 0;
+        for (auto const & scope : batch_submit_scopes)
+        {
+            usize batch_index = 0;
+            for (auto const & batch : scope.task_batches)
+            {
+                dot_file << "subgraph cluster_" << std::to_string(batch_index) << " {\n";
+                for (auto const & task_id : batch.tasks)
+                {
+                    std::string task_name = std::string("task_") + std::to_string(task_id);
+                    // if (ImplGenericTask * task_ptr = std::get_if<ImplGenericTask>(&events[task_index].event_variant))
+                    // {
+                    //     dot_file << "subgraph cluster_" << task_name << " {\n";
+                    //     dot_file << "label=\"" << task_ptr->info.debug_name << "\"\n";
+                    //     dot_file << "shape=box\nstyle=filled\ncolor=lightgray\n";
+                    //     for (auto & [task_buffer_id, t_access] : task_ptr->info.used_buffers)
+                    //     {
+                    //         ImplTaskBuffer & task_buffer = this->impl_task_buffers[task_buffer_id.index];
+                    //         dot_file << "bnode_" << task_index << "_" << task_buffer_id.index;
+                    //         dot_file << " [label=\"" << task_buffer.debug_name << "\", shape=box]\n";
+                    //     }
+                    //     for (auto & [task_image_id, t_access] : task_ptr->info.used_images)
+                    //     {
+                    //         ImplTaskImage & task_buffer = this->impl_task_images[task_image_id.index];
+                    //         dot_file << "inode_" << task_index << "_" << task_image_id.index;
+                    //         dot_file << " [label=\"" << task_buffer.debug_name << "\", shape=box]\n";
+                    //     }
+                    //     dot_file << "}\n";
+                    // }
+                    // else if (ImplCreateBufferTask * task_ptr = std::get_if<ImplCreateBufferTask>(&events[task_index].event_variant))
+                    // {
+                    //     ImplTaskBuffer & task_buffer = this->impl_task_buffers[task_ptr->id.index];
+                    //     dot_file << "c_bnode_" << task_index << "_" << task_ptr->id.index;
+                    //     dot_file << " [label=\"Create " << task_buffer.debug_name << "\", shape=box]\n";
+                    // }
+                    // else if (TaskImageCreateEvent * task_ptr = std::get_if<TaskImageCreateEvent>(&events[task_index].event_variant))
+                    // {
+                    //     // TODO(pahrens): make the `ids[]` use the "right" index (instead of 0)
+                    //     ImplTaskImage & task_image = this->impl_task_images[task_ptr->ids[0].index];
+                    //     dot_file << "c_inode_" << task_index << "_" << task_ptr->ids[0].index;
+                    //     dot_file << " [label=\"Create " << task_image.debug_name << "\", shape=box]\n";
+                    // }
+                    // else
+                    {
+                        dot_file << "node" << task_id << " [label=\"unknown task\", shape=box]\n";
+                    }
+                }
+                ++batch_index;
+            }
+            ++scope_index;
+        }
+
+        // for (auto & buffer_link : compiled_graph.buffer_links)
+        // {
+        //     auto a = buffer_link.event_a;
+        //     auto b = buffer_link.event_b;
+        //     auto i = buffer_link.resource;
+        //     if (ImplCreateBufferTask * task_ptr = std::get_if<ImplCreateBufferTask>(&events[a].event_variant))
+        //         dot_file << "c_";
+        //     dot_file << "bnode_" << a << "_" << i << "->bnode_" << b << "_" << i;
+        //     dot_file << " [label=\"Sync\", labeltooltip=\"between "
+        //              << to_string(buffer_link.barrier.awaited_pipeline_access.stages) << " "
+        //              << to_string(buffer_link.barrier.awaited_pipeline_access.type) << " and "
+        //              << to_string(buffer_link.barrier.waiting_pipeline_access.stages) << " "
+        //              << to_string(buffer_link.barrier.waiting_pipeline_access.type) << "\"]\n";
+        // }
+
+        // for (auto & image_link : compiled_graph.image_links)
+        // {
+        //     auto a = image_link.event_a;
+        //     auto b = image_link.event_b;
+        //     auto i = image_link.resource;
+        //     if (TaskImageCreateEvent * task_ptr = std::get_if<TaskImageCreateEvent>(&events[a].event_variant))
+        //         dot_file << "c_";
+        //     dot_file << "inode_" << a << "_" << i << "->inode_" << b << "_" << i;
+        //     dot_file << " [label=\"Sync\", labeltooltip=\"between "
+        //              << to_string(image_link.barrier.awaited_pipeline_access.stages) << " "
+        //              << to_string(image_link.barrier.awaited_pipeline_access.type) << " and "
+        //              << to_string(image_link.barrier.waiting_pipeline_access.stages) << " "
+        //              << to_string(image_link.barrier.waiting_pipeline_access.type) << "\"]\n";
+        // }
+
+        dot_file << "}\n";
     }
 
     // void ImplTaskList::insert_synchronization()
