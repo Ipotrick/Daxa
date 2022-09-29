@@ -318,7 +318,7 @@ namespace tests
                 }
                 swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
                 task_list.execute();
-                auto command_lists = task_list.command_lists();
+                auto command_lists = task_list.get_command_lists();
                 auto cmd_list = device.create_command_list({});
                 cmd_list.pipeline_barrier_image_transition({
                     .awaited_pipeline_access = task_list.last_access(task_swapchain_image),
