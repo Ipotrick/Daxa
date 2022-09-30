@@ -433,7 +433,10 @@ namespace tests
 
             auto record_tasks() -> daxa::TaskList
             {
-                daxa::TaskList new_task_list = daxa::TaskList({.device = device, .debug_name = APPNAME_PREFIX("main task list")});
+                daxa::TaskList new_task_list = daxa::TaskList({
+                    .device = device, .debug_name = APPNAME_PREFIX("main task list"),
+                    .swapchain = swapchain,
+                });
                 task_swapchain_image = new_task_list.create_task_image({
                     .image = &swapchain_image,
                     .swapchain_image = true,

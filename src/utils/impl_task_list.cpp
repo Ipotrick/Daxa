@@ -268,7 +268,6 @@ namespace daxa
                 {
                     continue;
                 }
-
                 // NOTE: This fails to compile with clang because it does not conform to the spec, and won't
                 // capture structured bindings... replacing it with the below code
                 // auto const & [current_image_t_id, current_image_t_access, current_image_slice] = info.used_images[current_i];
@@ -276,7 +275,13 @@ namespace daxa
                 // DAXA_DBG_ASSERT_TRUE_M(
                 //     !current_image_slice.intersects(other_image_slice),
                 //     "illegal to specify multiple uses for one image with overlapping slices for one task.");
-
+                auto [current_id, current_use, current_slice] = info.used_images[current_i];
+                auto [other_id, other_use, other_slice] = info.used_images[other_i];
+                // We only check for overlapping use of the same image.
+                if (current_id != other_id)
+                {
+                    continue;
+                }
                 auto const & current_image_slice = std::get<ImageMipArraySlice>(info.used_images[current_i]);
                 auto const & other_image_slice = std::get<ImageMipArraySlice>(info.used_images[other_i]);
                 DAXA_DBG_ASSERT_TRUE_M(
@@ -288,7 +293,7 @@ namespace daxa
 
     auto find_first_possible_batch_index(
         ImplTaskList const & impl,
-        TaskBatchSubmitScope const & current_submit_scope,
+        TaskBatchSubmitScope & current_submit_scope,
         usize const current_submit_scope_index,
         TaskInfo const & info) -> usize
     {
@@ -357,6 +362,11 @@ namespace daxa
                 }
                 first_possible_batch_index = std::max(first_possible_batch_index, tracked_slice.latest_access_batch_index);
             }
+        }
+        // Make sure we have enough batches.
+        if (first_possible_batch_index >= current_submit_scope.task_batches.size())
+        {
+            current_submit_scope.task_batches.resize(first_possible_batch_index + 1);
         }
         return first_possible_batch_index;
     }
@@ -506,8 +516,8 @@ namespace daxa
                     for (usize rest_i; rest_i < tracked_slice_rest_count; ++rest_i)
                     {
                         // The rest tracked slices are the same as the original tracked slice,
-                        tl_tracked_slice_rests.push_back(tracked_slice);
                         // except for the slice itself, which is the remainder of the subtraction of the intersection.
+                        tracked_slice_iter = tl_tracked_slice_rests.insert(tracked_slice_iter, tracked_slice);
                         tl_tracked_slice_rests.back().slice = tracked_slice_rest[rest_i];
                     }
                     // Now we remember the left over slice from our current used slice.
@@ -566,6 +576,17 @@ namespace daxa
                             ret_tracked_slice.latest_access_read_barrier_index = split_barrier_index;
                         }
                     }
+                    // Make sure we do not try to operator++ the end iterator.
+                    if (used_image_slice_iter == tl_new_use_slices.end() ||
+                        tracked_slice_iter == impl_task_image.slices_last_uses.end())
+                    {
+                        break;
+                    }
+                }
+                // Make sure we do not try to operator++ the end iterator.
+                if (tracked_slice_iter == impl_task_image.slices_last_uses.end())
+                {
+                    break;
                 }
             }
             // If we have a remainder left of the used image slices, there was no previous use of those slices.
@@ -611,8 +632,8 @@ namespace daxa
     {
         auto & impl = *as<ImplTaskList>();
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "Can only record to an uncompleted task list");
-        DAXA_DBG_ASSERT_TRUE_M(!impl.info.swapchain.has_value(), "Can only present, when a swapchain was provided in creation");
-        DAXA_DBG_ASSERT_TRUE_M(!(impl.batch_submit_scopes.size() > 1), "Can only present if at least one submit was issued before");
+        DAXA_DBG_ASSERT_TRUE_M(impl.info.swapchain.has_value(), "Can only present, when a swapchain was provided in creation");
+        DAXA_DBG_ASSERT_TRUE_M(impl.batch_submit_scopes.size() > 1, "Can only present if at least one submit was issued before");
         DAXA_DBG_ASSERT_TRUE_M(!impl.swapchain_image.is_empty(), "Can only present when an image was annotated as swapchain image");
         DAXA_DBG_ASSERT_TRUE_M(!impl.impl_task_images[impl.swapchain_image.index].swapchain_semaphore_waited_upon, "Can only present once");
         impl.impl_task_images[impl.swapchain_image.index].swapchain_semaphore_waited_upon = true;
