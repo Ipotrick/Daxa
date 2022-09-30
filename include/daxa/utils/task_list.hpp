@@ -184,6 +184,7 @@ namespace daxa
         void present(TaskPresentInfo const & info);
 
         void output_graphviz();
+        void debug_print();
 
         auto last_access(TaskBufferId buffer) -> Access;
         auto last_access(TaskImageId image) -> Access;
