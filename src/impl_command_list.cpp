@@ -42,7 +42,7 @@ namespace daxa
         return VkDependencyInfo{
             .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
             .pNext = nullptr,
-            .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+            .dependencyFlags = {},
             .memoryBarrierCount = static_cast<u32>(vk_memory_barriers.size()),
             .pMemoryBarriers = vk_memory_barriers.data(),
             .bufferMemoryBarrierCount = 0,
@@ -409,7 +409,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
         impl.flush_barriers();
 
-        tl_split_barrier_dependency_infos_buffer.push_back({});
+        tl_split_barrier_dependency_infos_aux_buffer.push_back({});
         auto & dependency_infos_aux_buffer = tl_split_barrier_dependency_infos_aux_buffer.back();
 
         for (auto & image_barrier : info.image_barriers)
@@ -430,10 +430,21 @@ namespace daxa
         tl_split_barrier_dependency_infos_aux_buffer.clear();
     }
 
+    void CommandList::reset_split_barrier(ResetSplitBarrierInfo const & info)
+    {
+        auto & impl = *as<ImplCommandList>();
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
+        impl.flush_barriers();
+        vkCmdResetEvent2(
+            impl.vk_cmd_buffer,
+            reinterpret_cast<VkEvent>(info.barrier.data),
+            reinterpret_cast<VkPipelineStageFlags2>(info.stage_masks)
+        );
+    }
+
     void CommandList::pipeline_barrier_image_transition(ImageBarrierInfo const & info)
     {
         auto & impl = *as<ImplCommandList>();
-
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
 
         if (impl.image_barrier_batch_count == COMMAND_LIST_BARRIER_MAX_BATCH_SIZE)

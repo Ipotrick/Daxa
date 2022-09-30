@@ -382,7 +382,6 @@ namespace daxa
                 }
                 info.device.unmap_memory(staging_ibuffer);
             }
-
             cmd_list.pipeline_barrier({
                 .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
                 .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
@@ -521,7 +520,7 @@ namespace daxa
         auto cmd_list = this->info.device.create_command_list({.debug_name = "dear ImGui Font Sheet Upload"});
         cmd_list.pipeline_barrier_image_transition({
             .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
-            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
+            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ_WRITE,
             .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .image_slice = {
                 .base_mip_level = 0,
