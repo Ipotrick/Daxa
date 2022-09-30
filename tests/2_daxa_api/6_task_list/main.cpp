@@ -131,6 +131,16 @@ namespace tests
             .task = [](daxa::TaskRuntime const &) {},
             .debug_name = APPNAME_PREFIX("task 2 (output_graph)"),
         });
+        task_list.add_task({
+            .used_buffers = {
+                {task_buffer3, daxa::TaskBufferAccess::SHADER_WRITE_ONLY},
+            },
+            .used_images = {
+                {task_image3, daxa::TaskImageAccess::SHADER_WRITE_ONLY, daxa::ImageMipArraySlice{}},
+            },
+            .task = [](daxa::TaskRuntime const &) {},
+            .debug_name = APPNAME_PREFIX("task 3 (output_graph)"),
+        });
 
         task_list.add_task({
             .used_buffers = {
@@ -160,7 +170,7 @@ namespace tests
                 },
             },
             .task = [](daxa::TaskRuntime const &) {},
-            .debug_name = APPNAME_PREFIX("task 3 (output_graph)"),
+            .debug_name = APPNAME_PREFIX("task 4 (output_graph)"),
         });
 
         task_list.add_task({
@@ -171,7 +181,7 @@ namespace tests
                 {task_image3, daxa::TaskImageAccess::SHADER_READ_ONLY, daxa::ImageMipArraySlice{}},
             },
             .task = [](daxa::TaskRuntime const &) {},
-            .debug_name = APPNAME_PREFIX("task 4 (output_graph)"),
+            .debug_name = APPNAME_PREFIX("task 5 (output_graph)"),
         });
 
         task_list.complete();
