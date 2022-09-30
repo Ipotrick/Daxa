@@ -972,30 +972,93 @@ namespace daxa
             usize batch_index = 0;
             for (auto const & batch : scope.task_batches)
             {
-                dot_file << "subgraph cluster_b_" << std::to_string(batch_index) << " {\n"
-                         << "label=\"Batch " << std::to_string(batch_index) << "\"\n";
-                for (auto const & task_id : batch.tasks)
+                auto batch_name = std::string("b_") + std::to_string(batch_index);
+                auto batch_debug_name = "Batch " + std::to_string(batch_index);
+
                 {
-                    std::string task_name = std::string("b_") + std::to_string(batch_index) + std::string("_t_") + std::to_string(task_id);
-                    std::string task_debug_name = tasks[task_id].info.debug_name;
-                    dot_file << "node" << task_name << " [label=\"" << task_debug_name << "\", shape=box]\n";
+                    dot_file << "subgraph cluster_pb_" << batch_name << " {\n"
+                             //  << "label=\"" << batch_debug_name << "\"\n"
+                             << "style=filled\ncolor=\"#b5bec4\"\n";
+
+                    for (auto const & barrier_index : batch.pipeline_barrier_indices)
+                    {
+                        auto const & barrier = this->barriers[barrier_index];
+                        std::string name = batch_name + std::string("_pb_") + std::to_string(barrier.src_batch) + std::string("_") + std::to_string(barrier.dst_batch);
+                        dot_file << "node" << name << " [label=\"" << name << "\", shape=box]\n";
+                    }
+                    for (auto const & barrier_index : batch.wait_split_barrier_indices)
+                    {
+                        auto const & barrier = this->split_barriers[barrier_index];
+                        std::string name = batch_name + std::string("_wsb_") + std::to_string(barrier.src_batch) + std::string("_") + std::to_string(barrier.dst_batch);
+                        dot_file << "node" << name << " [label=\"" << name << "\", shape=box]\n";
+                    }
+
+                    dot_file << "node_pb_" << batch_name << " [label=\"" << batch_debug_name << " Barriers\", shape=box]\n";
+                    dot_file << "}\n";
                 }
-                for (auto const & barrier_index : batch.pipeline_barrier_indices)
+
                 {
-                    std::string name = std::string("b_") + std::to_string(batch_index) + std::string("_pb_") + std::to_string(barrier_index);
-                    dot_file << "node" << name << " [label=\"" << name << "\", shape=box]\n";
+                    dot_file << "subgraph cluster_" << batch_name << " {\n"
+                             //  << "label=\"" << batch_debug_name << "\"\n"
+                             << "style=filled\ncolor=\"#b5bec4\"\n";
+                    for (auto const & task_id : batch.tasks)
+                    {
+                        auto task_name = batch_name + std::string("_t_") + std::to_string(task_id);
+                        auto task_debug_name = tasks[task_id].info.debug_name;
+                        dot_file << "subgraph cluster_" << task_name << " {\n"
+                                 << "label=\"" << task_debug_name << "\"\n"
+                                 << "style=filled\ncolor=\"#d1e2ed\"\n";
+                        // dot_file << "node_" << task_name << " [label=\"" << task_debug_name << "\", shape=box]\n";
+                        usize resource_index = 0;
+
+                        resource_index = 0;
+                        for (auto const & [task_buffer_id, task_buffer_access] : tasks[task_id].info.used_buffers)
+                        {
+                            auto const & task_resource = this->impl_task_buffers[task_buffer_id.index];
+                            auto const & resource_debug_name = task_resource.info.debug_name;
+                            dot_file << "node_" << task_name << "_br" << resource_index << " [label=\"" << resource_debug_name << "\", shape=box, color=\"#d3fabe\"]\n";
+                            ++resource_index;
+                        }
+
+                        resource_index = 0;
+                        for (auto const & [task_image_id, task_buffer_access, image_slice] : tasks[task_id].info.used_images)
+                        {
+                            auto const & task_resource = this->impl_task_images[task_image_id.index];
+                            auto const & resource_debug_name = task_resource.info.debug_name;
+                            dot_file << "node_" << task_name << "_ir" << resource_index << " [label=\"" << resource_debug_name << "\", shape=box, color=\"#fffec2\"]\n";
+                            ++resource_index;
+                        }
+
+                        dot_file << "}\n";
+                    }
+
+                    dot_file << "node_" << batch_name << " [label=\"" << batch_debug_name << "\", shape=box]\n";
+                    dot_file << "}\n";
                 }
-                for (auto const & barrier_index : batch.wait_split_barrier_indices)
+
                 {
-                    std::string name = std::string("b_") + std::to_string(batch_index) + std::string("_wsb_") + std::to_string(barrier_index);
-                    dot_file << "node" << name << " [label=\"" << name << "\", shape=box]\n";
+                    dot_file << "subgraph cluster_ssb_" << batch_name << " {\n"
+                             //  << "label=\"" << batch_debug_name << "\"\n"
+                             << "style=filled\ncolor=\"#b5bec4\"\n";
+
+                    for (auto const & barrier_index : batch.signal_split_barrier_indices)
+                    {
+                        auto const & barrier = this->split_barriers[barrier_index];
+                        std::string name = batch_name + std::string("_ssb_") + std::to_string(barrier.src_batch) + std::string("_") + std::to_string(barrier.dst_batch);
+                        dot_file << "node" << name << " [label=\"" << name << "\", shape=box]\n";
+                    }
+
+                    dot_file << "node_ssb_" << batch_name << " [label=\"" << batch_debug_name << " Signal Split Barriers \", shape=box]\n";
+                    dot_file << "}\n";
                 }
-                for (auto const & barrier_index : batch.signal_split_barrier_indices)
+
+                if (batch_index > 0)
                 {
-                    std::string name = std::string("b_") + std::to_string(batch_index) + std::string("_ssb_") + std::to_string(barrier_index);
-                    dot_file << "node" << name << " [label=\"" << name << "\", shape=box]\n";
+                    dot_file << "node_ssb_b_" << (batch_index - 1) << "->node_pb_b_" << (batch_index) << "\n";
                 }
-                dot_file << "}\n";
+                dot_file << "node_pb_b_" << (batch_index) << "->node_b_" << (batch_index) << "\n";
+                dot_file << "node_b_" << (batch_index) << "->node_ssb_b_" << (batch_index) << "\n";
+
                 ++batch_index;
             }
             ++scope_index;
