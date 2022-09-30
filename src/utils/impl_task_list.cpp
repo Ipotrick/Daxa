@@ -521,7 +521,7 @@ namespace daxa
                     // We now remove the old tracked slice from the list of tracked slices, as we just split it.
                     tracked_slice_iter = impl_task_image.slices_last_uses.erase(tracked_slice_iter);
                     // Now we remember the left over slice from the original tracked slice.
-                    for (usize rest_i; rest_i < tracked_slice_rest_count; ++rest_i)
+                    for (usize rest_i = 0; rest_i < tracked_slice_rest_count; ++rest_i)
                     {
                         // The rest tracked slices are the same as the original tracked slice,
                         // except for the slice itself, which is the remainder of the subtraction of the intersection.
@@ -530,7 +530,7 @@ namespace daxa
                         tl_tracked_slice_rests.push_back(current_rest_tracked_slice);
                     }
                     // Now we remember the left over slice from our current used slice.
-                    for (usize rest_i; rest_i < tracked_slice_rest_count; ++rest_i)
+                    for (usize rest_i = 0; rest_i < new_use_slice_rest_count; ++rest_i)
                     {
                         // We reassign the iterator here as it is getting invalidated by the insert.
                         // The new iterator points to the newly inserted element.
@@ -763,15 +763,8 @@ namespace daxa
                     for (auto barrier_index : task_batch.wait_split_barrier_indices)
                     {
                         TaskSplitBarrier & split_barrier = impl.split_barriers[barrier_index];
+                        // Convert split barrier to normal barrier.
                         TaskBarrier barrier = split_barrier;
-                        // Can I do this ^?
-                        // TaskBarrier barrier = {};
-                        // barrier.image_id = split_barrier.image_id;
-                        // barrier.slice = split_barrier.slice;
-                        // barrier.layout_before = split_barrier.layout_before;
-                        // barrier.layout_after = split_barrier.layout_after;
-                        // barrier.src_access = split_barrier.src_access;
-                        // barrier.dst_access = split_barrier.dst_access;
                         insert_pipeline_barrier(impl_runtime.command_lists.back(), barrier, impl.impl_task_images);
                     }
                 }
@@ -812,7 +805,10 @@ namespace daxa
                             });
                         }
                     }
-                    impl_runtime.command_lists.back().wait_split_barriers(tl_split_barrier_wait_infos);
+                    if (!tl_split_barrier_wait_infos.empty())
+                    {
+                        impl_runtime.command_lists.back().wait_split_barriers(tl_split_barrier_wait_infos);
+                    }
                     tl_split_barrier_wait_infos.clear();
                     tl_image_barrier_infos.clear();
                     tl_memory_barrier_infos.clear();
@@ -889,6 +885,7 @@ namespace daxa
             if (&submit_scope != &impl.batch_submit_scopes.back())
             {
                 auto submit_info = submit_scope.submit_info;
+                submit_info.command_lists.insert(submit_info.command_lists.end(), impl_runtime.command_lists.begin(), impl_runtime.command_lists.end());
                 if (submit_scope.user_submit_info)
                 {
                     submit_info.command_lists.insert(submit_info.command_lists.end(), submit_scope.user_submit_info->command_lists.begin(), submit_scope.user_submit_info->command_lists.end());
@@ -915,6 +912,9 @@ namespace daxa
                         .swapchain = impl.info.swapchain.value(),
                     });
                 }
+                // We need to clear all completed command lists that have been submitted.
+                impl_runtime.command_lists.clear();
+                impl_runtime.command_lists.push_back(impl.info.device.create_command_list({}));
             }
         }
 
@@ -1114,7 +1114,8 @@ namespace daxa
             ImplTaskImage & impl_task_image = impl_task_images[barrier.image_id.index];
             std::string image_debug_name = "ERROR, IMAGE POINTER NOT ASSIGNED";
             std::string image_id_string = "ERROR, IMAGE POINTER NOT ASSIGNED";
-            if (impl_task_images[barrier.image_id.index].info.image)
+            if (impl_task_images[barrier.image_id.index].info.image && 
+                !impl_task_images[barrier.image_id.index].info.image->is_empty())
             {
                 image_debug_name = info.device.info_image(*impl_task_image.info.image).debug_name;
                 image_id_string = to_string(*impl_task_images[barrier.image_id.index].info.image);
@@ -1154,7 +1155,8 @@ namespace daxa
             ImplTaskImage & impl_task_image = impl_task_images[barrier.image_id.index];
             std::string image_debug_name = "ERROR, IMAGE POINTER NOT ASSIGNED";
             std::string image_id_string = "ERROR, IMAGE POINTER NOT ASSIGNED";
-            if (impl_task_images[barrier.image_id.index].info.image)
+            if (impl_task_images[barrier.image_id.index].info.image && 
+                !impl_task_images[barrier.image_id.index].info.image->is_empty())
             {
                 image_debug_name = info.device.info_image(*impl_task_image.info.image).debug_name;
                 image_id_string = to_string(*impl_task_images[barrier.image_id.index].info.image);
@@ -1184,7 +1186,8 @@ namespace daxa
             ImplTaskImage & impl_task_image = impl_task_images[task_image_id.index];
             std::string image_debug_name = "ERROR, IMAGE POINTER NOT ASSIGNED";
             std::string image_id_string = "ERROR, IMAGE POINTER NOT ASSIGNED";
-            if (impl_task_images[task_image_id.index].info.image)
+            if (impl_task_images[task_image_id.index].info.image && 
+                !impl_task_images[task_image_id.index].info.image->is_empty())
             {
                 image_debug_name = info.device.info_image(*impl_task_image.info.image).debug_name;
                 image_id_string = to_string(*impl_task_images[task_image_id.index].info.image);
@@ -1205,7 +1208,8 @@ namespace daxa
             ImplTaskBuffer & impl_task_buffer = impl_task_buffers[task_buffer_id.index];
             std::string buffer_id_string = "ERROR, BUFFER POINTER NOT ASSIGNED";
             std::string buffer_debug_name = "ERROR, BUFFER POINTER NOT ASSIGNED";
-            if (impl_task_buffers[task_buffer_id.index].info.buffer)
+            if (impl_task_buffers[task_buffer_id.index].info.buffer && 
+                !impl_task_buffers[task_buffer_id.index].info.buffer->is_empty())
             {
                 buffer_debug_name = info.device.info_buffer(*impl_task_buffers[task_buffer_id.index].info.buffer).debug_name;
                 buffer_id_string = to_string(*impl_task_buffers[task_buffer_id.index].info.buffer);
@@ -1273,12 +1277,12 @@ namespace daxa
                 std::cout << "\t\t\tEnd   tasks\n";
                 if (!impl.info.dont_use_split_barriers)
                 {
-                    std::cout << "\t\t\tBegin reset split barriers\n";
-                    for (auto barrier_index : task_batch.wait_split_barrier_indices)
-                    {
-                        impl.debug_print_task_split_barrier(impl.split_barriers[barrier_index], barrier_index, "\t\t\t\t");
-                    }
-                    std::cout << "\t\t\tEnd   reset split barriers\n";
+                    // std::cout << "\t\t\tBegin reset split barriers\n";
+                    // for (auto barrier_index : task_batch.wait_split_barrier_indices)
+                    // {
+                    //     impl.debug_print_task_split_barrier(impl.split_barriers[barrier_index], barrier_index, "\t\t\t\t");
+                    // }
+                    // std::cout << "\t\t\tEnd   reset split barriers\n";
                     std::cout << "\t\t\tBegin signal split barriers\n";
                     for (usize barrier_index : task_batch.signal_split_barrier_indices)
                     {

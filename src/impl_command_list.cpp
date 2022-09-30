@@ -708,8 +708,6 @@ namespace daxa
 
         vkBeginCommandBuffer(this->vk_cmd_buffer, &vk_command_buffer_begin_info);
 
-        recording_complete = false;
-
         if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && this->info.debug_name.size() > 0)
         {
             auto cmd_buffer_name = this->info.debug_name + std::string(" [Daxa CommandBuffer]");
