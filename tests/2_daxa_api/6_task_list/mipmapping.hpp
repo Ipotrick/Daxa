@@ -443,9 +443,13 @@ namespace tests
                 task_swapchain_image = new_task_list.create_task_image({
                     .image = &swapchain_image,
                     .swapchain_image = true,
+                    .debug_name = APPNAME_PREFIX("Task Swapchain Image"),
                     // .swapchain_parent = std::pair{swapchain, acquire_semaphore},
                 });
-                task_render_image = new_task_list.create_task_image({.image = &render_image});
+                task_render_image = new_task_list.create_task_image({
+                    .image = &render_image,
+                    .debug_name = APPNAME_PREFIX("Task Render Image"),
+                });
                 task_mipmapping_compute_input_buffer = new_task_list.create_task_buffer({.buffer = &mipmapping_compute_input_buffer});
                 task_staging_mipmapping_compute_input_buffer = new_task_list.create_task_buffer({.buffer = &staging_mipmapping_compute_input_buffer});
                 new_task_list.add_task({
@@ -471,25 +475,6 @@ namespace tests
                         finalize_gpu_input(cmd_list, staging_buffer, input_buffer);
                     },
                     .debug_name = APPNAME_PREFIX("Input Transfer"),
-                });
-                new_task_list.add_task(daxa::TaskInfo{
-                    .used_buffers = {
-                        {task_mipmapping_compute_input_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY},
-                    },
-                    .used_images = {
-                        {task_render_image, daxa::TaskImageAccess::COMPUTE_SHADER_READ_WRITE, daxa::ImageMipArraySlice{}},
-                    },
-                    .task = [=, this](daxa::TaskRuntime const & runtime)
-                    {
-                        if (mouse_drawing)
-                        {
-                            auto cmd_list = runtime.get_command_list();
-                            auto render_target_id = runtime.get_image(task_render_image);
-                            auto input_buffer = runtime.get_buffer(task_mipmapping_compute_input_buffer);
-                            paint(cmd_list, render_target_id, input_buffer);
-                        }
-                    },
-                    .debug_name = "mouse paint",
                 });
                 new_task_list.add_task(daxa::TaskInfo{
                     .used_buffers = {
@@ -552,6 +537,7 @@ namespace tests
                                     .filter = daxa::Filter::LINEAR,
                                 });
                             },
+                            .debug_name = "mip_level_" + std::to_string(i), 
                         });
                         mip_size = next_mip_size;
                     }
