@@ -337,7 +337,6 @@ namespace daxa
         }
 
         std::string ret = {};
-
         if ((flags & AccessTypeFlagBits::READ) != AccessTypeFlagBits::NONE)
         {
             if (ret.size() != 0)
@@ -345,7 +344,7 @@ namespace daxa
                 ret += " | ";
             }
             ret += "READ";
-        }
+        } 
         if ((flags & AccessTypeFlagBits::WRITE) != AccessTypeFlagBits::NONE)
         {
             if (ret.size() != 0)
@@ -353,14 +352,6 @@ namespace daxa
                 ret += " | ";
             }
             ret += "WRITE";
-        }
-        if ((flags & AccessTypeFlagBits::READ_WRITE) != AccessTypeFlagBits::NONE)
-        {
-            if (ret.size() != 0)
-            {
-                ret += " | ";
-            }
-            ret += "READ_WRITE";
         }
         return ret;
     }
