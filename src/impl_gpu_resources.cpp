@@ -12,7 +12,7 @@ namespace daxa
         return ImageViewId{{.index = index, .version = version}};
     }
 
-    auto to_string(ImageId image_id) -> std::string_view
+    auto to_string(ImageId image_id) -> std::string
     {
         std::string ret = {};
         ret += " index: " + std::to_string(image_id.index);
@@ -20,7 +20,7 @@ namespace daxa
         return ret;
     }
 
-    auto to_string(types::BufferId buffer_id) -> std::string_view
+    auto to_string(types::BufferId buffer_id) -> std::string
     {
         std::string ret = {};
         ret += " index: " + std::to_string(buffer_id.index);
