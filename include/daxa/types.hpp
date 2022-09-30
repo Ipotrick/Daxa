@@ -589,7 +589,7 @@ namespace daxa
         static inline constexpr ImageAspectFlags PLANE_2 = {0x00000040};
     };
 
-    auto to_string(ImageAspectFlags aspect_flags) -> std::string_view;
+    auto to_string(ImageAspectFlags aspect_flags) -> std::string;
 
     enum struct ImageLayout
     {
