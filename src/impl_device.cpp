@@ -778,7 +778,7 @@ namespace daxa
         };
 
         VmaAllocationCreateInfo vma_allocation_create_info{
-            .flags = static_cast<VmaAllocationCreateFlags>(info.memory_flags),
+            .flags = static_cast<VmaAllocationCreateFlags>(info.memory_flags.data),
             .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
             .memoryTypeBits = std::numeric_limits<u32>::max(),
             .pool = nullptr,
@@ -949,7 +949,7 @@ namespace daxa
             .arrayLayers = info.array_layer_count,
             .samples = static_cast<VkSampleCountFlagBits>(info.sample_count),
             .tiling = VK_IMAGE_TILING_OPTIMAL,
-            .usage = info.usage,
+            .usage = info.usage.data,
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
             .queueFamilyIndexCount = 1,
             .pQueueFamilyIndices = &this->main_queue_family_index,
@@ -957,7 +957,7 @@ namespace daxa
         };
 
         VmaAllocationCreateInfo vma_allocation_create_info{
-            .flags = static_cast<VmaAllocationCreateFlags>(info.memory_flags),
+            .flags = static_cast<VmaAllocationCreateFlags>(info.memory_flags.data),
             .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
             .memoryTypeBits = std::numeric_limits<u32>::max(),
             .pool = nullptr,
@@ -992,7 +992,7 @@ namespace daxa
                 .a = VK_COMPONENT_SWIZZLE_IDENTITY,
             },
             .subresourceRange = {
-                .aspectMask = static_cast<VkImageAspectFlags>(info.aspect),
+                .aspectMask = static_cast<VkImageAspectFlags>(info.aspect.data),
                 .baseMipLevel = 0,
                 .levelCount = info.mip_level_count,
                 .baseArrayLayer = 0,

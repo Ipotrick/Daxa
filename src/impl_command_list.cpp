@@ -10,10 +10,10 @@ namespace daxa
         return VkImageMemoryBarrier2{
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
             .pNext = nullptr,
-            .srcStageMask = static_cast<u64>(image_barrier.awaited_pipeline_access.stages),
-            .srcAccessMask = static_cast<u32>(image_barrier.awaited_pipeline_access.type),
-            .dstStageMask = static_cast<u64>(image_barrier.waiting_pipeline_access.stages),
-            .dstAccessMask = static_cast<u32>(image_barrier.waiting_pipeline_access.type),
+            .srcStageMask = image_barrier.awaited_pipeline_access.stages.data,
+            .srcAccessMask = image_barrier.awaited_pipeline_access.type.data,
+            .dstStageMask = image_barrier.waiting_pipeline_access.stages.data,
+            .dstAccessMask = image_barrier.waiting_pipeline_access.type.data,
             .oldLayout = static_cast<VkImageLayout>(image_barrier.before_layout),
             .newLayout = static_cast<VkImageLayout>(image_barrier.after_layout),
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -28,10 +28,10 @@ namespace daxa
         return VkMemoryBarrier2{
             .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
             .pNext = nullptr,
-            .srcStageMask = static_cast<u64>(memory_barrier.awaited_pipeline_access.stages),
-            .srcAccessMask = static_cast<u32>(memory_barrier.awaited_pipeline_access.type),
-            .dstStageMask = static_cast<u64>(memory_barrier.waiting_pipeline_access.stages),
-            .dstAccessMask = static_cast<u32>(memory_barrier.waiting_pipeline_access.type),
+            .srcStageMask = memory_barrier.awaited_pipeline_access.stages.data,
+            .srcAccessMask = memory_barrier.awaited_pipeline_access.type.data,
+            .dstStageMask = memory_barrier.waiting_pipeline_access.stages.data,
+            .dstAccessMask = memory_barrier.waiting_pipeline_access.type.data,
         };
     }
 
@@ -176,7 +176,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
         impl.flush_barriers();
 
-        if (info.dst_slice.image_aspect & ImageAspectFlagBits::COLOR)
+        if ((info.dst_slice.image_aspect & ImageAspectFlagBits::COLOR) != ImageAspectFlagBits::NONE)
         {
             // TODO: Also use the other 4 component values: i32 and u32!
             auto const & clear_value = std::get<std::array<f32, 4>>(info.clear_value);
@@ -194,7 +194,7 @@ namespace daxa
                     reinterpret_cast<VkImageSubresourceRange const *>(&info.dst_slice)));
         }
 
-        if (info.dst_slice.image_aspect & (ImageAspectFlagBits::DEPTH | ImageAspectFlagBits::STENCIL))
+        if ((info.dst_slice.image_aspect & (ImageAspectFlagBits::DEPTH | ImageAspectFlagBits::STENCIL)) != ImageAspectFlagBits::NONE)
         {
             auto const & clear_value = std::get<DepthValue>(info.clear_value);
             VkClearDepthStencilValue color{
@@ -346,10 +346,10 @@ namespace daxa
         impl.memory_barrier_batch[impl.memory_barrier_batch_count++] = {
             .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
             .pNext = nullptr,
-            .srcStageMask = static_cast<u64>(info.awaited_pipeline_access.stages),
-            .srcAccessMask = static_cast<u32>(info.awaited_pipeline_access.type),
-            .dstStageMask = static_cast<u64>(info.waiting_pipeline_access.stages),
-            .dstAccessMask = static_cast<u32>(info.waiting_pipeline_access.type),
+            .srcStageMask = info.awaited_pipeline_access.stages.data,
+            .srcAccessMask = info.awaited_pipeline_access.type.data,
+            .dstStageMask = info.waiting_pipeline_access.stages.data,
+            .dstAccessMask = info.waiting_pipeline_access.type.data,
         };
     }
 
@@ -438,8 +438,7 @@ namespace daxa
         vkCmdResetEvent2(
             impl.vk_cmd_buffer,
             reinterpret_cast<VkEvent>(info.barrier.data),
-            reinterpret_cast<VkPipelineStageFlags2>(info.stage_masks)
-        );
+            info.stage_masks.data);
     }
 
     void CommandList::pipeline_barrier_image_transition(ImageBarrierInfo const & info)
@@ -455,10 +454,10 @@ namespace daxa
         impl.image_barrier_batch[impl.image_barrier_batch_count++] = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
             .pNext = nullptr,
-            .srcStageMask = static_cast<u64>(info.awaited_pipeline_access.stages),
-            .srcAccessMask = static_cast<u32>(info.awaited_pipeline_access.type),
-            .dstStageMask = static_cast<u64>(info.waiting_pipeline_access.stages),
-            .dstAccessMask = static_cast<u32>(info.waiting_pipeline_access.type),
+            .srcStageMask = info.awaited_pipeline_access.stages.data,
+            .srcAccessMask = info.awaited_pipeline_access.type.data,
+            .dstStageMask = info.waiting_pipeline_access.stages.data,
+            .dstAccessMask = info.waiting_pipeline_access.type.data,
             .oldLayout = static_cast<VkImageLayout>(info.before_layout),
             .newLayout = static_cast<VkImageLayout>(info.after_layout),
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -610,7 +609,7 @@ namespace daxa
         auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(info.query_index < info.query_pool.info().query_count, "query_index is out of bounds for the query pool");
         impl.flush_barriers();
-        vkCmdWriteTimestamp(impl.vk_cmd_buffer, static_cast<VkPipelineStageFlagBits>(info.pipeline_stage), info.query_pool.as<ImplTimelineQueryPool>()->vk_timeline_query_pool, info.query_index);
+        vkCmdWriteTimestamp(impl.vk_cmd_buffer, static_cast<VkPipelineStageFlagBits>(info.pipeline_stage.data), info.query_pool.as<ImplTimelineQueryPool>()->vk_timeline_query_pool, info.query_index);
     }
 
     void CommandList::reset_timestamps(ResetTimestampsInfo const & info)
