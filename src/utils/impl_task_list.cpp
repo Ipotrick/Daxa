@@ -407,6 +407,8 @@ namespace daxa
             current_submit_scope_index,
             info);
         TaskBatch & batch = current_submit_scope.task_batches[batch_index];
+        // Add the task to the batch.
+        batch.tasks.push_back(task_id);
 
         // Now that we know what batch we need to insert the task into, we need to add synchronization between batches.
         // As stated earlier batches are groups of tasks which can execute together without sync between them.
@@ -459,6 +461,7 @@ namespace daxa
             impl_task_buffer.latest_access_batch_index = batch_index;
             impl_task_buffer.latest_access_submit_scope_index = current_submit_scope_index;
         }
+        // Now we insert image dependent sync 
         for (auto & [used_image_t_id, used_image_t_access, used_image_slice] : info.used_images)
         {
             ImplTaskImage & impl_task_image = impl.impl_task_images[used_image_t_id.index];
@@ -469,7 +472,7 @@ namespace daxa
             // as the intersected part is already beeing handled in the following code.
             tl_new_use_slices.push_back(used_image_slice);
             // This is the tracked slice we will insert after we finished analyzing the current used image.
-            TaskImageTrackedSlice ret_tracked_slice{
+            TaskImageTrackedSlice ret_new_use_tracked_slice{
                 .latest_access = current_image_access,
                 .latest_layout = current_image_layout,
                 .latest_access_batch_index = batch_index,
@@ -521,8 +524,9 @@ namespace daxa
                     {
                         // The rest tracked slices are the same as the original tracked slice,
                         // except for the slice itself, which is the remainder of the subtraction of the intersection.
-                        tracked_slice_iter = tl_tracked_slice_rests.insert(tracked_slice_iter, tracked_slice);
-                        tl_tracked_slice_rests.back().slice = tracked_slice_rest[rest_i];
+                        TaskImageTrackedSlice current_rest_tracked_slice = tracked_slice;
+                        current_rest_tracked_slice.slice = tracked_slice_rest[rest_i];
+                        tracked_slice_iter = tl_tracked_slice_rests.insert(tracked_slice_iter, current_rest_tracked_slice);
                     }
                     // Now we remember the left over slice from our current used slice.
                     for (usize rest_i; rest_i < tracked_slice_rest_count; ++rest_i)
@@ -533,9 +537,8 @@ namespace daxa
                         // This is good as these elements do NOT intersect with the currently inspected tracked slice.
                         used_image_slice_iter = tl_new_use_slices.insert(
                             tl_new_use_slices.end(),
-                            new_use_slice_rest[rest_i]);
-                        // except for the slice itself, which is the remainder of the subtraction of the intersection.
-                        tl_tracked_slice_rests.back().slice = tracked_slice_rest[rest_i];
+                            new_use_slice_rest[rest_i]
+                        );
                     }
                     // Every other access (NONE, READ_WRITE, WRITE) are interpreted as writes in this context.
                     // When the last use was a read AND the new use of the buffer is a read AND,
@@ -577,7 +580,7 @@ namespace daxa
                         {
                             // As the new access is a read we remember our barrier index,
                             // So that potential future reads after this can reuse this barrier.
-                            ret_tracked_slice.latest_access_read_barrier_index = split_barrier_index;
+                            ret_new_use_tracked_slice.latest_access_read_barrier_index = split_barrier_index;
                         }
                     }
                     // Make sure we do not try to operator++ the end iterator.
@@ -609,7 +612,7 @@ namespace daxa
                 });
             }
             // Now we need to add the latest use and tracked range of our current access:
-            impl_task_image.slices_last_uses.push_back(ret_tracked_slice);
+            impl_task_image.slices_last_uses.push_back(ret_new_use_tracked_slice);
             // The remainder tracked slices we remembered from earlier are now inserted back into the list of tracked slices.
             // We deferred this step as we dont want to check these in the loop above, as we found them to not intersect with the new use.
             impl_task_image.slices_last_uses.insert(
@@ -1038,6 +1041,113 @@ namespace daxa
         // }
 
         dot_file << "}\n";
+    }
+    
+    //void debug_print_task_barrier(TaskBarrier & barrier, std::vector<daxa::ImplTaskImage> & task_images)
+    //{
+    //    // Check if barrier is image barrier or normal barrier (see TaskBarrier struct comments).
+    //    if (barrier.image_id.is_empty())
+    //    {
+    //        std::cout << "\t\t\tMemory barrier" << std::endl;
+    //        std::cout << "\t\t\t\tsrc_access = "<< to_string(barrier.src_access) << std::endl;
+    //        std::cout << "\t\t\t\tdst_access = "<< to_string(barrier.dst_access) std::endl;
+    //        std::cout << "\t\t\t}]"  << std::endl;
+    //    }
+    //    else
+    //    {
+    //        std::cout << "\t\t\tImage memory barrier" << std::endl;
+    //        std::cout << "\t\t\t\t.src_access = "<< to_string(barrier.src_access) << std::endl;
+    //        std::cout << "\t\t\t\t.dst_access = "<< to_string(barrier.dst_access) std::endl;
+    //        std::cout << "\t\t\t\t.before_layout = "<< to_string(barrier.layout_before) std::endl;
+    //        std::cout << "\t\t\t\t.after_layout = "<< to_string(barrier.layout_after) std::endl;
+    //        std::cout << "}]"  << std::endl;
+    //        command_list.pipeline_barrier_image_transition({
+    //            .awaited_pipeline_access = barrier.src_access,
+    //            .waiting_pipeline_access = barrier.dst_access,
+    //            .before_layout = barrier.layout_before,
+    //            .after_layout = barrier.layout_after,
+    //            .image_slice = barrier.slice,
+    //            .image_id = *task_images[barrier.image_id.index].info.image,
+    //        });
+    //    }
+    //}
+
+    void TaskList::debug_print()
+    {
+#ifdef DAXA_TASK_LIST_DEBUG
+        auto & impl = *as<ImplTaskList>();
+        std::cout << "Begin TaskList \"" << impl.info.debug_name << "\"\n";
+        std::cout << "\tSwapchain: " << (impl.info.swapchain.has_value() ? impl.info.swapchain.value().info().debug_name : "-") << "\n";
+        std::cout << "\tdont reorder tasks: " << std::boolalpha << impl.info.dont_reorder_tasks << "\n";
+        std::cout << "\tdont use split barriers: " << std::boolalpha << impl.info.dont_use_split_barriers << "\n";
+        usize submit_scope_index = 0;
+        for (auto & submit_scope : impl.batch_submit_scopes)
+        {
+            std::cout << "\tBegin submit scope " << submit_scope_index++ << "\n";
+            usize batch_index = 0;
+            for (auto & task_batch : submit_scope.task_batches)
+            {
+                std::cout << "\t\tBegin task batch " << batch_index++ << "\n";
+                // Wait on pipeline barriers before batch execution.
+                std::cout << "\t\t\tBegin wait pipeline barriers\n";
+                for (auto barrier_index : task_batch.pipeline_barrier_indices)
+                {
+                }
+                std::cout << "\t\t\tEnd   wait pipeline barriers\n";
+                if (impl.info.dont_use_split_barriers)
+                {
+                    std::cout << "\t\t\tBegin wait split barriers (converted to pipeline barriers)\n";
+                    for (auto barrier_index : task_batch.wait_split_barrier_indices)
+                    {
+                    }
+                    std::cout << "\t\t\tEnd   wait split barriers (converted to pipeline barriers)\n";
+                }
+                else
+                {
+                    std::cout << "\t\t\tBegin wait split barriers\n";
+                    for (auto barrier_index : task_batch.wait_split_barrier_indices)
+                    {
+                    }
+                    std::cout << "\t\t\tEnd   wait split barriers\n";
+                }
+                std::cout << "\t\t\tBegin Task batch\n";
+                for (TaskId task_id : task_batch.tasks)
+                {
+                }
+                std::cout << "\t\t\tEnd   task batch\n";
+                if (!impl.info.dont_use_split_barriers)
+                {
+                    std::cout << "\t\t\tBegin reset split barriers\n";
+                    for (auto barrier_index : task_batch.wait_split_barrier_indices)
+                    {
+                    }
+                    std::cout << "\t\t\tEnd   reset split barriers\n";
+                    std::cout << "\t\t\tBegin signal split barriers\n";
+                    for (usize barrier_index : task_batch.signal_split_barrier_indices)
+                    {
+                    }
+                    std::cout << "\t\t\tEnd   signal split barriers\n";
+                }
+                std::cout << "\t\tEnd   task batch\n";
+            }
+            std::cout << "\t\tBegin last minute pipeline barriers\n";
+            for (usize barrier_index : submit_scope.last_minute_barrier_indices)
+            {
+            }
+            std::cout << "\t\tEnd   last minute pipeline barriers\n";
+            if (&submit_scope != &impl.batch_submit_scopes.back())
+            {
+                std::cout << "\t\t<<Submit>>\n";
+                if (submit_scope.present_info.has_value())
+                {
+                    std::cout << "\t\t<<Present>>\n";
+                }
+            }
+            std::cout << "\tEnd   submit scope\n";
+        }
+        std::cout << "End TaskList\n";
+        std::cout.flush();
+#endif // #ifdef DAXA_TASK_LIST_DEBUG
     }
 } // namespace daxa
 

@@ -152,6 +152,7 @@ namespace tests
                 //non_task_list_execute();
 
                 swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
+                task_list.debug_print();
                 task_list.execute();
             }
 

@@ -569,6 +569,8 @@ namespace daxa
         auto subtract(ImageMipArraySlice const & slice) const -> std::tuple<std::array<ImageMipArraySlice, 4>, usize>;
     };
 
+    auto to_string(ImageMipArraySlice mip_array_slice) -> std::string_view;
+
     struct ImageArraySlice
     {
         ImageAspectFlags image_aspect = ImageAspectFlagBits::COLOR;
@@ -582,6 +584,8 @@ namespace daxa
 
         auto contained_in(ImageMipArraySlice const & slice) const -> bool;
     };
+
+    auto to_string(ImageArraySlice array_slice) -> std::string_view;
 
     struct ImageSlice
     {
