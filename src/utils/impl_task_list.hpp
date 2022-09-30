@@ -129,6 +129,9 @@ namespace daxa
 
         std::vector<CommandList> left_over_command_lists = {};
 
+        void debug_print_task_barrier(TaskBarrier & barrier, usize index, std::string_view prefix);
+        void debug_print_task_split_barrier(TaskSplitBarrier & barrier, usize index, std::string_view prefix);
+        void debug_print_task(Task & task, usize task_id, std::string_view prefix);
         void execute_barriers();
         void output_graphviz();
 
