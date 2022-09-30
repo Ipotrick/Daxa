@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <array>
+#include <concepts>
 
 namespace daxa
 {
@@ -432,6 +433,40 @@ namespace daxa
         PVRTC2_4BPP_SRGB_BLOCK_IMG = 1000054007,
     };
 
+    template <typename Properties>
+    struct Flags final
+    {
+        typename Properties::Data data;
+        inline constexpr auto operator|=(Flags const & other) -> Flags &
+        {
+            data |= other.data;
+            return *this;
+        }
+        inline constexpr auto operator&=(Flags const & other) -> Flags &
+        {
+            data &= other.data;
+            return *this;
+        }
+        inline constexpr auto operator^=(Flags const & other) -> Flags &
+        {
+            data ^= other.data;
+            return *this;
+        }
+        inline constexpr auto operator|(Flags const & other) const -> Flags
+        {
+            return {data | other.data};
+        }
+        inline constexpr auto operator&(Flags const & other) const -> Flags
+        {
+            return {data & other.data};
+        }
+        inline constexpr auto operator^(Flags const & other) const -> Flags
+        {
+            return {data ^ other.data};
+        }
+        inline constexpr auto operator<=>(Flags const & other) const = default;
+    };
+
     enum struct MsgSeverity
     {
         VERBOSE = 0x00000001,
@@ -468,30 +503,40 @@ namespace daxa
         INHERIT = 0x00000100,
     };
 
-    using ImageUsageFlags = u32;
+    struct ImageUsageFlagsProperties
+    {
+        using Data = u32;
+    };
+    using ImageUsageFlags = Flags<ImageUsageFlagsProperties>;
     struct ImageUsageFlagBits
     {
-        static inline constexpr ImageUsageFlags TRANSFER_SRC = 0x00000001;
-        static inline constexpr ImageUsageFlags TRANSFER_DST = 0x00000002;
-        static inline constexpr ImageUsageFlags SHADER_READ_ONLY = 0x00000004;
-        static inline constexpr ImageUsageFlags SHADER_READ_WRITE = 0x00000008;
-        static inline constexpr ImageUsageFlags COLOR_ATTACHMENT = 0x00000010;
-        static inline constexpr ImageUsageFlags DEPTH_STENCIL_ATTACHMENT = 0x00000020;
-        static inline constexpr ImageUsageFlags TRANSIENT_ATTACHMENT = 0x00000040;
-        static inline constexpr ImageUsageFlags FRAGMENT_DENSITY_MAP = 0x00000200;
-        static inline constexpr ImageUsageFlags FRAGMENT_SHADING_RATE_ATTACHMENT = 0x00000100;
+        static inline constexpr ImageUsageFlags NONE = {0x00000000};
+        static inline constexpr ImageUsageFlags TRANSFER_SRC = {0x00000001};
+        static inline constexpr ImageUsageFlags TRANSFER_DST = {0x00000002};
+        static inline constexpr ImageUsageFlags SHADER_READ_ONLY = {0x00000004};
+        static inline constexpr ImageUsageFlags SHADER_READ_WRITE = {0x00000008};
+        static inline constexpr ImageUsageFlags COLOR_ATTACHMENT = {0x00000010};
+        static inline constexpr ImageUsageFlags DEPTH_STENCIL_ATTACHMENT = {0x00000020};
+        static inline constexpr ImageUsageFlags TRANSIENT_ATTACHMENT = {0x00000040};
+        static inline constexpr ImageUsageFlags FRAGMENT_DENSITY_MAP = {0x00000200};
+        static inline constexpr ImageUsageFlags FRAGMENT_SHADING_RATE_ATTACHMENT = {0x00000100};
         static inline constexpr ImageUsageFlags SHADING_RATE_IMAGE = FRAGMENT_SHADING_RATE_ATTACHMENT;
     };
 
-    using MemoryFlags = u32;
+    struct MemoryFlagsProperties
+    {
+        using Data = u32;
+    };
+    using MemoryFlags = Flags<MemoryFlagsProperties>;
     struct MemoryFlagBits
     {
-        static inline constexpr MemoryFlags DEDICATED_MEMORY = 0x00000001;
-        static inline constexpr MemoryFlags CAN_ALIAS = 0x00000200;
-        static inline constexpr MemoryFlags HOST_ACCESS_SEQUENTIAL_WRITE = 0x00000400;
-        static inline constexpr MemoryFlags HOST_ACCESS_RANDOM = 0x00000800;
-        static inline constexpr MemoryFlags STRATEGY_MIN_MEMORY = 0x00010000;
-        static inline constexpr MemoryFlags STRATEGY_MIN_TIME = 0x00020000;
+        static inline constexpr MemoryFlags NONE = {0x00000000};
+        static inline constexpr MemoryFlags DEDICATED_MEMORY = {0x00000001};
+        static inline constexpr MemoryFlags CAN_ALIAS = {0x00000200};
+        static inline constexpr MemoryFlags HOST_ACCESS_SEQUENTIAL_WRITE = {0x00000400};
+        static inline constexpr MemoryFlags HOST_ACCESS_RANDOM = {0x00000800};
+        static inline constexpr MemoryFlags STRATEGY_MIN_MEMORY = {0x00010000};
+        static inline constexpr MemoryFlags STRATEGY_MIN_TIME = {0x00020000};
     };
 
     enum struct ColorSpace
@@ -527,18 +572,24 @@ namespace daxa
         CUBE_ARRAY = 6,
     };
 
-    using ImageAspectFlags = u32;
+    struct ImageAspectFlagsProperties
+    {
+        using Data = u32;
+    };
+    using ImageAspectFlags = Flags<ImageAspectFlagsProperties>;
     struct ImageAspectFlagBits
     {
         static inline constexpr ImageAspectFlags NONE = {};
-        static inline constexpr ImageAspectFlags COLOR = 0x00000001;
-        static inline constexpr ImageAspectFlags DEPTH = 0x00000002;
-        static inline constexpr ImageAspectFlags STENCIL = 0x00000004;
-        static inline constexpr ImageAspectFlags METADATA = 0x00000008;
-        static inline constexpr ImageAspectFlags PLANE_0 = 0x00000010;
-        static inline constexpr ImageAspectFlags PLANE_1 = 0x00000020;
-        static inline constexpr ImageAspectFlags PLANE_2 = 0x00000040;
+        static inline constexpr ImageAspectFlags COLOR = {0x00000001};
+        static inline constexpr ImageAspectFlags DEPTH = {0x00000002};
+        static inline constexpr ImageAspectFlags STENCIL = {0x00000004};
+        static inline constexpr ImageAspectFlags METADATA = {0x00000008};
+        static inline constexpr ImageAspectFlags PLANE_0 = {0x00000010};
+        static inline constexpr ImageAspectFlags PLANE_1 = {0x00000020};
+        static inline constexpr ImageAspectFlags PLANE_2 = {0x00000040};
     };
+
+    auto to_string(ImageAspectFlags aspect_flags) -> std::string_view;
 
     enum struct ImageLayout
     {
@@ -569,7 +620,7 @@ namespace daxa
         auto subtract(ImageMipArraySlice const & slice) const -> std::tuple<std::array<ImageMipArraySlice, 4>, usize>;
     };
 
-    auto to_string(ImageMipArraySlice mip_array_slice) -> std::string_view;
+    auto to_string(ImageMipArraySlice image_mip_array_slice) -> std::string;
 
     struct ImageArraySlice
     {
@@ -585,7 +636,7 @@ namespace daxa
         auto contained_in(ImageMipArraySlice const & slice) const -> bool;
     };
 
-    auto to_string(ImageArraySlice array_slice) -> std::string_view;
+    auto to_string(ImageArraySlice image_array_slice) -> std::string;
 
     struct ImageSlice
     {
@@ -600,6 +651,8 @@ namespace daxa
         auto contained_in(ImageMipArraySlice const & slice) const -> bool;
         auto contained_in(ImageArraySlice const & slice) const -> bool;
     };
+
+    auto to_string(ImageSlice image_slice) -> std::string;
 
     enum struct Filter
     {
@@ -636,44 +689,52 @@ namespace daxa
 
     using ClearValue = std::variant<std::array<f32, 4>, std::array<i32, 4>, std::array<u32, 4>, DepthValue>;
 
-    using AccessTypeFlags = u32;
+    struct AccessTypeFlagsProperties
+    {
+        using Data = u32;
+    };
+    using AccessTypeFlags = Flags<AccessTypeFlagsProperties>;
     struct AccessTypeFlagBits
     {
-        static inline constexpr AccessTypeFlags NONE = 0x0000'0000;
-        static inline constexpr AccessTypeFlags READ = 0x00008000;
-        static inline constexpr AccessTypeFlags WRITE = 0x00010000;
+        static inline constexpr AccessTypeFlags NONE = {0x00000000};
+        static inline constexpr AccessTypeFlags READ = {0x00008000};
+        static inline constexpr AccessTypeFlags WRITE = {0x00010000};
         static inline constexpr AccessTypeFlags READ_WRITE = READ | WRITE;
     };
 
-    auto to_string(AccessTypeFlags flags) -> std::string_view;
+    auto to_string(AccessTypeFlags flags) -> std::string;
 
-    using PipelineStageFlags = u64;
+    struct PipelineStageFlagsProperties
+    {
+        using Data = u64;
+    };
+    using PipelineStageFlags = Flags<PipelineStageFlagsProperties>;
     struct PipelineStageFlagBits
     {
-        static inline constexpr PipelineStageFlags NONE = 0x00000000ull;
+        static inline constexpr PipelineStageFlags NONE = {0x00000000ull};
 
-        static inline constexpr PipelineStageFlags TOP_OF_PIPE = 0x00000001ull;
-        static inline constexpr PipelineStageFlags DRAW_INDIRECT = 0x00000002ull;
-        static inline constexpr PipelineStageFlags VERTEX_SHADER = 0x00000008ull;
-        static inline constexpr PipelineStageFlags TESSELLATION_CONTROL_SHADER = 0x00000010ull;
-        static inline constexpr PipelineStageFlags TESSELLATION_EVALUATION_SHADER = 0x00000020ull;
-        static inline constexpr PipelineStageFlags GEOMETRY_SHADER = 0x00000040ull;
-        static inline constexpr PipelineStageFlags FRAGMENT_SHADER = 0x00000080ull;
-        static inline constexpr PipelineStageFlags EARLY_FRAGMENT_TESTS = 0x00000100ull;
-        static inline constexpr PipelineStageFlags LATE_FRAGMENT_TESTS = 0x00000200ull;
-        static inline constexpr PipelineStageFlags COLOR_ATTACHMENT_OUTPUT = 0x00000400ull;
-        static inline constexpr PipelineStageFlags COMPUTE_SHADER = 0x00000800ull;
-        static inline constexpr PipelineStageFlags TRANSFER = 0x00001000ull;
-        static inline constexpr PipelineStageFlags BOTTOM_OF_PIPE = 0x00002000ull;
-        static inline constexpr PipelineStageFlags HOST = 0x00004000ull;
-        static inline constexpr PipelineStageFlags ALL_GRAPHICS = 0x00008000ull;
-        static inline constexpr PipelineStageFlags ALL_COMMANDS = 0x00010000ull;
-        static inline constexpr PipelineStageFlags COPY = 0x100000000ull;
-        static inline constexpr PipelineStageFlags RESOLVE = 0x200000000ull;
-        static inline constexpr PipelineStageFlags BLIT = 0x400000000ull;
-        static inline constexpr PipelineStageFlags CLEAR = 0x800000000ull;
-        static inline constexpr PipelineStageFlags INDEX_INPUT = 0x1000000000ull;
-        static inline constexpr PipelineStageFlags PRE_RASTERIZATION_SHADERS = 0x4000000000ull;
+        static inline constexpr PipelineStageFlags TOP_OF_PIPE = {0x00000001ull};
+        static inline constexpr PipelineStageFlags DRAW_INDIRECT = {0x00000002ull};
+        static inline constexpr PipelineStageFlags VERTEX_SHADER = {0x00000008ull};
+        static inline constexpr PipelineStageFlags TESSELLATION_CONTROL_SHADER = {0x00000010ull};
+        static inline constexpr PipelineStageFlags TESSELLATION_EVALUATION_SHADER = {0x00000020ull};
+        static inline constexpr PipelineStageFlags GEOMETRY_SHADER = {0x00000040ull};
+        static inline constexpr PipelineStageFlags FRAGMENT_SHADER = {0x00000080ull};
+        static inline constexpr PipelineStageFlags EARLY_FRAGMENT_TESTS = {0x00000100ull};
+        static inline constexpr PipelineStageFlags LATE_FRAGMENT_TESTS = {0x00000200ull};
+        static inline constexpr PipelineStageFlags COLOR_ATTACHMENT_OUTPUT = {0x00000400ull};
+        static inline constexpr PipelineStageFlags COMPUTE_SHADER = {0x00000800ull};
+        static inline constexpr PipelineStageFlags TRANSFER = {0x00001000ull};
+        static inline constexpr PipelineStageFlags BOTTOM_OF_PIPE = {0x00002000ull};
+        static inline constexpr PipelineStageFlags HOST = {0x00004000ull};
+        static inline constexpr PipelineStageFlags ALL_GRAPHICS = {0x00008000ull};
+        static inline constexpr PipelineStageFlags ALL_COMMANDS = {0x00010000ull};
+        static inline constexpr PipelineStageFlags COPY = {0x100000000ull};
+        static inline constexpr PipelineStageFlags RESOLVE = {0x200000000ull};
+        static inline constexpr PipelineStageFlags BLIT = {0x400000000ull};
+        static inline constexpr PipelineStageFlags CLEAR = {0x800000000ull};
+        static inline constexpr PipelineStageFlags INDEX_INPUT = {0x1000000000ull};
+        static inline constexpr PipelineStageFlags PRE_RASTERIZATION_SHADERS = {0x4000000000ull};
     };
 
     auto to_string(PipelineStageFlags flags) -> std::string;
@@ -817,13 +878,18 @@ namespace daxa
         MAX = 4,
     };
 
-    using ColorComponentFlags = u32;
+    struct ColorComponentFlagsProperties
+    {
+        using Data = u32;
+    };
+    using ColorComponentFlags = Flags<ColorComponentFlagsProperties>;
     struct ColorComponentFlagBits
     {
-        static inline constexpr ColorComponentFlags R = 0x00000001;
-        static inline constexpr ColorComponentFlags G = 0x00000002;
-        static inline constexpr ColorComponentFlags B = 0x00000004;
-        static inline constexpr ColorComponentFlags A = 0x00000008;
+        static inline constexpr ColorComponentFlags NONE = {0x00000000};
+        static inline constexpr ColorComponentFlags R = {0x00000001};
+        static inline constexpr ColorComponentFlags G = {0x00000002};
+        static inline constexpr ColorComponentFlags B = {0x00000004};
+        static inline constexpr ColorComponentFlags A = {0x00000008};
     };
 
     struct BlendInfo
@@ -847,13 +913,17 @@ namespace daxa
         POINT = 2,
     };
 
-    using FaceCullFlags = u32;
+    struct FaceCullFlagsProperties
+    {
+        using Data = u32;
+    };
+    using FaceCullFlags = Flags<FaceCullFlagsProperties>;
     struct FaceCullFlagBits
     {
-        static inline constexpr FaceCullFlags NONE = 0;
-        static inline constexpr FaceCullFlags FRONT_BIT = 0x00000001;
-        static inline constexpr FaceCullFlags BACK_BIT = 0x00000002;
-        static inline constexpr FaceCullFlags FRONT_AND_BACK = 0x00000003;
+        static inline constexpr FaceCullFlags NONE = {0x00000000};
+        static inline constexpr FaceCullFlags FRONT_BIT = {0x00000001};
+        static inline constexpr FaceCullFlags BACK_BIT = {0x00000002};
+        static inline constexpr FaceCullFlags FRONT_AND_BACK = {0x00000003};
     };
 
     enum struct AttachmentLoadOp

@@ -62,7 +62,7 @@ namespace daxa
 
         bool const mip_disjoint = (a_mip_p1 < b_mip_p0) || (b_mip_p1 < a_mip_p0);
         bool const arr_disjoint = (a_arr_p1 < b_arr_p0) || (b_arr_p1 < a_arr_p0);
-        bool const aspect_disjoint = !(this->image_aspect & slice.image_aspect);
+        bool const aspect_disjoint = !((this->image_aspect & slice.image_aspect) != ImageAspectFlagBits::NONE);
 
         return !mip_disjoint && !arr_disjoint && !aspect_disjoint;
     }
@@ -329,17 +329,40 @@ namespace daxa
         return Access{.stages = a.stages & b.stages, .type = a.type & b.type};
     }
 
-    auto to_string(AccessTypeFlags flags) -> std::string_view
+    auto to_string(AccessTypeFlags flags) -> std::string
     {
-        switch (flags)
+        if (flags == AccessTypeFlagBits::NONE)
         {
-        case AccessTypeFlagBits::NONE: return "NONE";
-        case AccessTypeFlagBits::READ: return "READ";
-        case AccessTypeFlagBits::WRITE: return "WRITE";
-        case AccessTypeFlagBits::READ_WRITE: return "READ_WRITE";
-        default: DAXA_DBG_ASSERT_TRUE_M(false, "invalid AccessTypeFlags");
+            return "NONE ";
         }
-        return "invalid AccessTypeFlags";
+
+        std::string ret = {};
+
+        if ((flags & AccessTypeFlagBits::READ) != AccessTypeFlagBits::NONE)
+        {
+            if (ret.size() != 0)
+            {
+                ret += " | ";
+            }
+            ret += "READ";
+        }
+        if ((flags & AccessTypeFlagBits::WRITE) != AccessTypeFlagBits::NONE)
+        {
+            if (ret.size() != 0)
+            {
+                ret += " | ";
+            }
+            ret += "WRITE";
+        }
+        if ((flags & AccessTypeFlagBits::READ_WRITE) != AccessTypeFlagBits::NONE)
+        {
+            if (ret.size() != 0)
+            {
+                ret += " | ";
+            }
+            ret += "READ_WRITE";
+        }
+        return ret;
     }
 
     auto to_string(ImageLayout layout) -> std::string_view
@@ -358,49 +381,103 @@ namespace daxa
         return "invalid ImageLayout";
     }
 
-    //auto to_string(ImageMipArraySlice image_mip_array_slice) -> std::string_view
-    //{
-    //    std::string ret = {};
-    //    ret += "Aspect: "
-    //    switch(image_mip_array_slice.image_aspect)
-    //    {
-    //        case ImageAspectFlagBits::NONE      : ret += "NONE"; break;
-    //        case ImageAspectFlagBits::COLOR     : ret += "COLOR"; break;
-    //        case ImageAspectFlagBits::DEPTH     : ret += "DEPTH"; break;
-    //        case ImageAspectFlagBits::STENCIL   : ret += "STENCIL"; break;
-    //        case ImageAspectFlagBits::METADATA  : ret += "METADATA"; break;
-    //        case ImageAspectFlagBits::PLANE_0   : ret += "PLANE_0"; break;
-    //        case ImageAspectFlagBits::PLANE_1   : ret += "PLANE_1"; break;
-    //        case ImageAspectFlagBits::PLANE_2   : ret += "PLANE_2"; break;
-    //        default                             : ret += "UNKNOWN LAYOUT"; break;
-    //    }
-    //    ret += " base_mip_level: " + std::to_string(image_mip_array_slice.base_mip_level);
-    //    ret += " level_count: " + std::to_string(image_mip_array_slice.level_count);
-    //    ret += " base_array_layer: " + std::to_string(image_mip_array_slice.base_array_layer);
-    //    ret += " layer_count: " + std::to_string(image_mip_array_slice.layer_count);
-    //}
+    auto to_string(ImageAspectFlags aspect_flags) -> std::string
+    {
+        if (aspect_flags == ImageAspectFlagBits::NONE)
+        {
+            return "NONE ";
+        }
 
-    //auto to_string(ImageArraySlice image_array_slice) -> std::string_view
-    //{
-    //    std::string ret = {};
-    //    ret += "Aspect: "
-    //    switch(mip_array_slice.image_aspect)
-    //    {
-    //        case ImageAspectFlagBits::NONE      : ret += "NONE"; break;
-    //        case ImageAspectFlagBits::COLOR     : ret += "COLOR"; break;
-    //        case ImageAspectFlagBits::DEPTH     : ret += "DEPTH"; break;
-    //        case ImageAspectFlagBits::STENCIL   : ret += "STENCIL"; break;
-    //        case ImageAspectFlagBits::METADATA  : ret += "METADATA"; break;
-    //        case ImageAspectFlagBits::PLANE_0   : ret += "PLANE_0"; break;
-    //        case ImageAspectFlagBits::PLANE_1   : ret += "PLANE_1"; break;
-    //        case ImageAspectFlagBits::PLANE_2   : ret += "PLANE_2"; break;
-    //        default                             : ret += "UNKNOWN LAYOUT"; break;
-    //    }
-    //    ret += " base_mip_level: " + std::to_string(mip_array_slice.base_mip_level);
-    //    ret += " level_count: " + std::to_string(mip_array_slice.level_count);
-    //    ret += " base_array_layer: " + std::to_string(mip_array_slice.base_array_layer);
-    //    ret += " layer_count: " + std::to_string(mip_array_slice.layer_count);
-    //}
+        std::string ret = {};
+
+        if ((aspect_flags & ImageAspectFlagBits::COLOR) != ImageAspectFlagBits::NONE)
+        {
+            if (ret.size() != 0)
+            {
+                ret += " | ";
+            }
+            ret += "COLOR";
+        }
+        if ((aspect_flags & ImageAspectFlagBits::DEPTH) != ImageAspectFlagBits::NONE)
+        {
+            if (ret.size() != 0)
+            {
+                ret += " | ";
+            }
+            ret += "DEPTH";
+        }
+        if ((aspect_flags & ImageAspectFlagBits::STENCIL) != ImageAspectFlagBits::NONE)
+        {
+            if (ret.size() != 0)
+            {
+                ret += " | ";
+            }
+            ret += "STENCIL";
+        }
+        if ((aspect_flags & ImageAspectFlagBits::METADATA) != ImageAspectFlagBits::NONE)
+        {
+            if (ret.size() != 0)
+            {
+                ret += " | ";
+            }
+            ret += "METADATA";
+        }
+        if ((aspect_flags & ImageAspectFlagBits::PLANE_0) != ImageAspectFlagBits::NONE)
+        {
+            if (ret.size() != 0)
+            {
+                ret += " | ";
+            }
+            ret += "PLANE_0";
+        }
+        if ((aspect_flags & ImageAspectFlagBits::PLANE_1) != ImageAspectFlagBits::NONE)
+        {
+            if (ret.size() != 0)
+            {
+                ret += " | ";
+            }
+            ret += "PLANE_1";
+        }
+        if ((aspect_flags & ImageAspectFlagBits::PLANE_2) != ImageAspectFlagBits::NONE)
+        {
+            if (ret.size() != 0)
+            {
+                ret += " | ";
+            }
+            ret += "PLANE_2";
+        }
+        return ret;
+    }
+
+    auto to_string(ImageMipArraySlice image_mip_array_slice) -> std::string
+    {
+        std::string ret = {};
+        ret += to_string(image_mip_array_slice.image_aspect);
+        ret += " base_mip_level: " + std::to_string(image_mip_array_slice.base_mip_level);
+        ret += " level_count: " + std::to_string(image_mip_array_slice.level_count);
+        ret += " base_array_layer: " + std::to_string(image_mip_array_slice.base_array_layer);
+        ret += " layer_count: " + std::to_string(image_mip_array_slice.layer_count);
+        return ret;
+    }
+
+    auto to_string(ImageArraySlice image_array_slice) -> std::string
+    {
+        std::string ret = {};
+        ret += to_string(image_array_slice.image_aspect);
+        ret += " mip_level: " + std::to_string(image_array_slice.mip_level);
+        ret += " base_array_layer: " + std::to_string(image_array_slice.base_array_layer);
+        ret += " layer_count: " + std::to_string(image_array_slice.layer_count);
+        return ret;
+    }
+
+    auto to_string(ImageSlice image_slice) -> std::string
+    {
+        std::string ret = {};
+        ret += to_string(image_slice.image_aspect);
+        ret += " mip_level: " + std::to_string(image_slice.mip_level);
+        ret += " array_layer: " + std::to_string(image_slice.array_layer);
+        return ret;
+    }
 
     auto to_string(PipelineStageFlags flags) -> std::string
     {
@@ -411,11 +488,11 @@ namespace daxa
 
         std::string ret = {};
 
-        if (flags & PipelineStageFlagBits::TOP_OF_PIPE)
+        if ((flags & PipelineStageFlagBits::TOP_OF_PIPE) != PipelineStageFlagBits::NONE)
         {
             ret += "TOP_OF_PIPE";
         }
-        if (flags & PipelineStageFlagBits::DRAW_INDIRECT)
+        if ((flags & PipelineStageFlagBits::DRAW_INDIRECT) != PipelineStageFlagBits::NONE)
         {
             if (ret.size() != 0)
             {
@@ -423,7 +500,7 @@ namespace daxa
             }
             ret += "DRAW_INDIRECT";
         }
-        if (flags & PipelineStageFlagBits::VERTEX_SHADER)
+        if ((flags & PipelineStageFlagBits::VERTEX_SHADER) != PipelineStageFlagBits::NONE)
         {
             if (ret.size() != 0)
             {
@@ -431,7 +508,7 @@ namespace daxa
             }
             ret += "VERTEX_SHADER";
         }
-        if (flags & PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER)
+        if ((flags & PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER) != PipelineStageFlagBits::NONE)
         {
             if (ret.size() != 0)
             {
@@ -439,7 +516,7 @@ namespace daxa
             }
             ret += "TESSELLATION_CONTROL_SHADER";
         }
-        if (flags & PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER)
+        if ((flags & PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER) != PipelineStageFlagBits::NONE)
         {
             if (ret.size() != 0)
             {
@@ -447,7 +524,7 @@ namespace daxa
             }
             ret += "TESSELLATION_EVALUATION_SHADER";
         }
-        if (flags & PipelineStageFlagBits::GEOMETRY_SHADER)
+        if ((flags & PipelineStageFlagBits::GEOMETRY_SHADER) != PipelineStageFlagBits::NONE)
         {
             if (ret.size() != 0)
             {
@@ -455,7 +532,7 @@ namespace daxa
             }
             ret += "GEOMETRY_SHADER";
         }
-        if (flags & PipelineStageFlagBits::FRAGMENT_SHADER)
+        if ((flags & PipelineStageFlagBits::FRAGMENT_SHADER) != PipelineStageFlagBits::NONE)
         {
             if (ret.size() != 0)
             {
@@ -463,7 +540,7 @@ namespace daxa
             }
             ret += "FRAGMENT_SHADER";
         }
-        if (flags & PipelineStageFlagBits::EARLY_FRAGMENT_TESTS)
+        if ((flags & PipelineStageFlagBits::EARLY_FRAGMENT_TESTS) != PipelineStageFlagBits::NONE)
         {
             if (ret.size() != 0)
             {
@@ -471,7 +548,7 @@ namespace daxa
             }
             ret += "EARLY_FRAGMENT_TESTS";
         }
-        if (flags & PipelineStageFlagBits::LATE_FRAGMENT_TESTS)
+        if ((flags & PipelineStageFlagBits::LATE_FRAGMENT_TESTS) != PipelineStageFlagBits::NONE)
         {
             if (ret.size() != 0)
             {
@@ -479,7 +556,7 @@ namespace daxa
             }
             ret += "LATE_FRAGMENT_TESTS";
         }
-        if (flags & PipelineStageFlagBits::COLOR_ATTACHMENT_OUTPUT)
+        if ((flags & PipelineStageFlagBits::COLOR_ATTACHMENT_OUTPUT) != PipelineStageFlagBits::NONE)
         {
             if (ret.size() != 0)
             {
@@ -487,7 +564,7 @@ namespace daxa
             }
             ret += "COLOR_ATTACHMENT_OUTPUT";
         }
-        if (flags & PipelineStageFlagBits::COMPUTE_SHADER)
+        if ((flags & PipelineStageFlagBits::COMPUTE_SHADER) != PipelineStageFlagBits::NONE)
         {
             if (ret.size() != 0)
             {
@@ -495,7 +572,7 @@ namespace daxa
             }
             ret += "COMPUTE_SHADER";
         }
-        if (flags & PipelineStageFlagBits::TRANSFER)
+        if ((flags & PipelineStageFlagBits::TRANSFER) != PipelineStageFlagBits::NONE)
         {
             if (ret.size() != 0)
             {
@@ -503,7 +580,7 @@ namespace daxa
             }
             ret += "TRANSFER";
         }
-        if (flags & PipelineStageFlagBits::BOTTOM_OF_PIPE)
+        if ((flags & PipelineStageFlagBits::BOTTOM_OF_PIPE) != PipelineStageFlagBits::NONE)
         {
             if (ret.size() != 0)
             {
@@ -511,7 +588,7 @@ namespace daxa
             }
             ret += "BOTTOM_OF_PIPE";
         }
-        if (flags & PipelineStageFlagBits::HOST)
+        if ((flags & PipelineStageFlagBits::HOST) != PipelineStageFlagBits::NONE)
         {
             if (ret.size() != 0)
             {
@@ -519,7 +596,7 @@ namespace daxa
             }
             ret += "HOST";
         }
-        if (flags & PipelineStageFlagBits::ALL_GRAPHICS)
+        if ((flags & PipelineStageFlagBits::ALL_GRAPHICS) != PipelineStageFlagBits::NONE)
         {
             if (ret.size() != 0)
             {
@@ -527,7 +604,7 @@ namespace daxa
             }
             ret += "ALL_GRAPHICS";
         }
-        if (flags & PipelineStageFlagBits::ALL_COMMANDS)
+        if ((flags & PipelineStageFlagBits::ALL_COMMANDS) != PipelineStageFlagBits::NONE)
         {
             if (ret.size() != 0)
             {
@@ -535,7 +612,7 @@ namespace daxa
             }
             ret += "ALL_COMMANDS";
         }
-        if (flags & PipelineStageFlagBits::COPY)
+        if ((flags & PipelineStageFlagBits::COPY) != PipelineStageFlagBits::NONE)
         {
             if (ret.size() != 0)
             {
@@ -543,7 +620,7 @@ namespace daxa
             }
             ret += "COPY";
         }
-        if (flags & PipelineStageFlagBits::RESOLVE)
+        if ((flags & PipelineStageFlagBits::RESOLVE) != PipelineStageFlagBits::NONE)
         {
             if (ret.size() != 0)
             {
@@ -551,7 +628,7 @@ namespace daxa
             }
             ret += "RESOLVE";
         }
-        if (flags & PipelineStageFlagBits::BLIT)
+        if ((flags & PipelineStageFlagBits::BLIT) != PipelineStageFlagBits::NONE)
         {
             if (ret.size() != 0)
             {
@@ -559,7 +636,7 @@ namespace daxa
             }
             ret += "BLIT";
         }
-        if (flags & PipelineStageFlagBits::CLEAR)
+        if ((flags & PipelineStageFlagBits::CLEAR) != PipelineStageFlagBits::NONE)
         {
             if (ret.size() != 0)
             {
@@ -567,7 +644,7 @@ namespace daxa
             }
             ret += "CLEAR";
         }
-        if (flags & PipelineStageFlagBits::INDEX_INPUT)
+        if ((flags & PipelineStageFlagBits::INDEX_INPUT) != PipelineStageFlagBits::NONE)
         {
             if (ret.size() != 0)
             {
@@ -575,7 +652,7 @@ namespace daxa
             }
             ret += "INDEX_INPUT";
         }
-        if (flags & PipelineStageFlagBits::PRE_RASTERIZATION_SHADERS)
+        if ((flags & PipelineStageFlagBits::PRE_RASTERIZATION_SHADERS) != PipelineStageFlagBits::NONE)
         {
             if (ret.size() != 0)
             {

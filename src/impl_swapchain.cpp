@@ -141,7 +141,7 @@ namespace daxa
             .imageColorSpace = this->vk_surface_format.colorSpace,
             .imageExtent = VkExtent2D{info.width, info.height},
             .imageArrayLayers = 1,
-            .imageUsage = usage,
+            .imageUsage = usage.data,
             .imageSharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
             .queueFamilyIndexCount = 1,
             .pQueueFamilyIndices = &this->impl_device.as<ImplDevice>()->main_queue_family_index,
