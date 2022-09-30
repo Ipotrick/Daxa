@@ -489,6 +489,10 @@ namespace daxa
                     used_image_slice_iter != tl_new_use_slices.end();
                     ++used_image_slice_iter)
                 {
+                    // We make a local copy of both slices here.
+                    // We can not rely on dereferencing the iterators, as we modify them in this function.
+                    // For this inner loop we want to remember the information about these slices, 
+                    // even after they are removed from their respective vector.
                     ImageMipArraySlice used_image_slice = *used_image_slice_iter;
                     TaskImageTrackedSlice tracked_slice = *tracked_slice_iter;
                     // We are only interested in intersecting ranges, as use of non intersecting ranges does not need synchronization.
@@ -736,11 +740,13 @@ namespace daxa
         {
             for (auto & task_batch : submit_scope.task_batches)
             {
+                // Wait on pipeline barriers before batch execution.
                 for (auto barrier_index : task_batch.pipeline_barrier_indices)
                 {
                     TaskBarrier & barrier = impl.barriers[barrier_index];
                     insert_pipeline_barrier(impl_runtime.command_lists.back(), barrier, impl.impl_task_images);
                 }
+                // Wait on split barriers before batch execution.
                 if (impl.info.dont_use_split_barriers)
                 {
                     for (auto barrier_index : task_batch.wait_split_barrier_indices)
@@ -800,6 +806,7 @@ namespace daxa
                     tl_image_barrier_infos.clear();
                     tl_memory_barrier_infos.clear();
                 }
+                // Execute all tasks in the batch.
                 for (TaskId task_id : task_batch.tasks)
                 {
                     // We always allow to reuse the last command list ONCE.
@@ -808,6 +815,51 @@ namespace daxa
                     Task & task = impl.tasks[task_id];
                     impl_runtime.current_task = &task;
                     task.info.task(TaskRuntime(impl_runtime));
+                }
+                if (!impl.info.dont_use_split_barriers)
+                {
+                    // Reset all waited upon split barriers here.
+                    for (auto barrier_index : task_batch.wait_split_barrier_indices)
+                    {
+                        // We wait on the stages, that waited on our split barrier earlier.
+                        // This way, we make sure, that the stages that wait on the split barrier
+                        // executed and saw the split barrier signaled, before we reset them.
+                        impl_runtime.command_lists.back().reset_split_barrier({
+                            .barrier = impl.split_barriers[barrier_index].split_barrier_state,
+                            .stage_masks = impl.split_barriers[barrier_index].dst_access.stages,
+                        });
+                    }
+                    // Signal all signal split barriers after batch execution.
+                    for (usize barrier_index : task_batch.signal_split_barrier_indices)
+                    {
+                        TaskSplitBarrier & task_split_barrier = impl.split_barriers[barrier_index];
+                        if (task_split_barrier.image_id.is_empty())
+                        {
+                            MemoryBarrierInfo memory_barrier{
+                                .awaited_pipeline_access = task_split_barrier.src_access,
+                                .waiting_pipeline_access = task_split_barrier.dst_access,
+                            };
+                            impl_runtime.command_lists.back().signal_split_barrier({
+                                .memory_barriers = std::span{&memory_barrier, 1},
+                                .split_barrier = task_split_barrier.split_barrier_state,
+                            });
+                        }
+                        else
+                        {
+                            ImageBarrierInfo image_barrier{
+                                .awaited_pipeline_access = task_split_barrier.src_access,
+                                .waiting_pipeline_access = task_split_barrier.dst_access,
+                                .before_layout = task_split_barrier.layout_before,
+                                .after_layout = task_split_barrier.layout_after,
+                                .image_slice = task_split_barrier.slice,
+                                .image_id = *impl.impl_task_images[task_split_barrier.image_id.index].info.image,
+                            };
+                            impl_runtime.command_lists.back().signal_split_barrier({
+                                .image_barriers = std::span{&image_barrier, 1},
+                                .split_barrier = task_split_barrier.split_barrier_state,
+                            });
+                        }
+                    }
                 }
             }
             for (usize barrier_index : submit_scope.last_minute_barrier_indices)

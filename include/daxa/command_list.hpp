@@ -166,6 +166,12 @@ namespace daxa
         u32 count = {};
     };
 
+    struct ResetSplitBarrierInfo
+    {
+        SplitBarrier& barrier;
+        PipelineStageFlags stage_masks;
+    };
+
     struct CommandList : ManagedPtr
     {
         CommandList();
@@ -184,6 +190,7 @@ namespace daxa
         void signal_split_barrier(SplitBarrierStartInfo const & info);
         void wait_split_barriers(std::span<SplitBarrierEndInfo const> const & infos);
         void wait_split_barrier(SplitBarrierEndInfo const & info);
+        void reset_split_barrier(ResetSplitBarrierInfo const & info);
 
         void push_constant(void const * data, u32 size, u32 offset = 0);
         template <typename T>
