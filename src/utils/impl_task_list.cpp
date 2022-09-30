@@ -984,13 +984,15 @@ namespace daxa
                     {
                         auto const & barrier = this->barriers[barrier_index];
                         std::string name = batch_name + std::string("_pb_") + std::to_string(barrier.src_batch) + std::string("_") + std::to_string(barrier.dst_batch);
-                        dot_file << "node" << name << " [label=\"" << name << "\", shape=box]\n";
+                        dot_file << "node_" << name << " [label=\"" << name << "\", shape=box, color=\"#faaff0\"]\n";
                     }
                     for (auto const & barrier_index : batch.wait_split_barrier_indices)
                     {
                         auto const & barrier = this->split_barriers[barrier_index];
+                        std::string name0 = std::string("b_") + std::to_string(barrier.src_batch) + std::string("_ssb_") + std::to_string(barrier.src_batch) + std::string("_") + std::to_string(barrier.dst_batch);
                         std::string name = batch_name + std::string("_wsb_") + std::to_string(barrier.src_batch) + std::string("_") + std::to_string(barrier.dst_batch);
-                        dot_file << "node" << name << " [label=\"" << name << "\", shape=box]\n";
+                        dot_file << "node_" << name << " [label=\"" << name << "\", shape=box, color=\"#fa8989\"]\n";
+                        dot_file << "node_" << name0 << "->node_" << name << "\n";
                     }
 
                     dot_file << "node_pb_" << batch_name << " [label=\"" << batch_debug_name << " Barriers\", shape=box]\n";
@@ -1045,7 +1047,7 @@ namespace daxa
                     {
                         auto const & barrier = this->split_barriers[barrier_index];
                         std::string name = batch_name + std::string("_ssb_") + std::to_string(barrier.src_batch) + std::string("_") + std::to_string(barrier.dst_batch);
-                        dot_file << "node" << name << " [label=\"" << name << "\", shape=box]\n";
+                        dot_file << "node_" << name << " [label=\"" << name << "\", shape=box, color=\"#fcc5c5\"]\n";
                     }
 
                     dot_file << "node_ssb_" << batch_name << " [label=\"" << batch_debug_name << " Signal Split Barriers \", shape=box]\n";
