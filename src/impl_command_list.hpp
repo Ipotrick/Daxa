@@ -46,7 +46,7 @@ namespace daxa
         CommandListInfo info = {};
         VkCommandBuffer vk_cmd_buffer = {};
         VkCommandPool vk_cmd_pool = {};
-        bool recording_complete = true;
+        bool recording_complete = false;
         std::array<VkMemoryBarrier2, COMMAND_LIST_BARRIER_MAX_BATCH_SIZE> memory_barrier_batch = {};
         std::array<VkImageMemoryBarrier2, COMMAND_LIST_BARRIER_MAX_BATCH_SIZE> image_barrier_batch = {};
         usize image_barrier_batch_count = 0;
