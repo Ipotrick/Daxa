@@ -32,9 +32,9 @@ namespace daxa
         };
     } // namespace types
 
-    auto to_string(types::ImageId image_id) -> std::string_view;
+    auto to_string(types::ImageId image_id) -> std::string;
 
-    auto to_string(types::BufferId buffer_id) -> std::string_view;
+    auto to_string(types::BufferId buffer_id) -> std::string;
 
 
     struct BufferInfo
