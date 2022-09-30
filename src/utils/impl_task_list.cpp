@@ -484,13 +484,13 @@ namespace daxa
                 tracked_slice_iter != impl_task_image.slices_last_uses.end();
                 ++tracked_slice_iter)
             {
-                TaskImageTrackedSlice tracked_slice = *tracked_slice_iter;
                 for (
                     auto used_image_slice_iter = tl_new_use_slices.begin();
                     used_image_slice_iter != tl_new_use_slices.end();
                     ++used_image_slice_iter)
                 {
                     ImageMipArraySlice used_image_slice = *used_image_slice_iter;
+                    TaskImageTrackedSlice tracked_slice = *tracked_slice_iter;
                     // We are only interested in intersecting ranges, as use of non intersecting ranges does not need synchronization.
                     if (!used_image_slice.intersects(tracked_slice.slice))
                     {
