@@ -359,49 +359,42 @@ namespace daxa
         std::vector<VkMemoryBarrier2> vk_memory_barriers = {};
     };
 
-    inline static thread_local std::vector<SplitBarrierDependencyInfoBuffer> split_barrier_dependency_infos_aux_buffer = {};
-    inline static thread_local std::vector<VkDependencyInfo> split_barrier_dependency_infos_buffer = {};
-    inline static thread_local std::vector<VkEvent> split_barrier_events_buffer = {};
-
+    inline static thread_local std::vector<SplitBarrierDependencyInfoBuffer> tl_split_barrier_dependency_infos_aux_buffer = {};
+    inline static thread_local std::vector<VkDependencyInfo> tl_split_barrier_dependency_infos_buffer = {};
+    inline static thread_local std::vector<VkEvent> tl_split_barrier_events_buffer = {};
     void CommandList::wait_split_barriers(std::span<SplitBarrierEndInfo const> const & infos)
     {
         auto & impl = *this->as<ImplCommandList>();
         auto & device = *impl.impl_device.as<ImplDevice>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
         impl.flush_barriers();
-
         for (auto const & end_info : infos)
         {
-            split_barrier_dependency_infos_buffer.push_back({});
-            auto & dependency_infos_aux_buffer = split_barrier_dependency_infos_aux_buffer.back();
-
+            tl_split_barrier_dependency_infos_aux_buffer.push_back({});
+            auto & dependency_infos_aux_buffer = tl_split_barrier_dependency_infos_aux_buffer.back();
             for (auto & image_barrier : end_info.image_barriers)
             {
                 dependency_infos_aux_buffer.vk_image_memory_barriers.push_back(
                     get_vk_image_memory_barrier(image_barrier, device.slot(image_barrier.image_id).vk_image));
             }
-
             for (auto const & memory_barrier : end_info.memory_barriers)
             {
                 dependency_infos_aux_buffer.vk_memory_barriers.push_back(get_vk_memory_barrier(memory_barrier));
             }
-
-            split_barrier_dependency_infos_buffer.push_back(get_vk_dependency_info(
+            tl_split_barrier_dependency_infos_buffer.push_back(get_vk_dependency_info(
                 dependency_infos_aux_buffer.vk_image_memory_barriers,
                 dependency_infos_aux_buffer.vk_memory_barriers));
 
-            split_barrier_events_buffer.push_back(reinterpret_cast<VkEvent>(end_info.split_barrier.data));
+            tl_split_barrier_events_buffer.push_back(reinterpret_cast<VkEvent>(end_info.split_barrier.data));
         }
-
         vkCmdWaitEvents2(
             impl.vk_cmd_buffer,
-            static_cast<u32>(split_barrier_events_buffer.size()),
-            split_barrier_events_buffer.data(),
-            split_barrier_dependency_infos_buffer.data());
-
-        split_barrier_dependency_infos_aux_buffer.clear();
-        split_barrier_dependency_infos_buffer.clear();
-        split_barrier_events_buffer.clear();
+            static_cast<u32>(tl_split_barrier_events_buffer.size()),
+            tl_split_barrier_events_buffer.data(),
+            tl_split_barrier_dependency_infos_buffer.data());
+        tl_split_barrier_dependency_infos_aux_buffer.clear();
+        tl_split_barrier_dependency_infos_buffer.clear();
+        tl_split_barrier_events_buffer.clear();
     }
 
     void CommandList::wait_split_barrier(SplitBarrierEndInfo const & info)
@@ -416,8 +409,8 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
         impl.flush_barriers();
 
-        split_barrier_dependency_infos_buffer.push_back({});
-        auto & dependency_infos_aux_buffer = split_barrier_dependency_infos_aux_buffer.back();
+        tl_split_barrier_dependency_infos_buffer.push_back({});
+        auto & dependency_infos_aux_buffer = tl_split_barrier_dependency_infos_aux_buffer.back();
 
         for (auto & image_barrier : info.image_barriers)
         {
@@ -434,7 +427,7 @@ namespace daxa
             dependency_infos_aux_buffer.vk_memory_barriers);
 
         vkCmdSetEvent2(impl.vk_cmd_buffer, reinterpret_cast<VkEvent>(info.split_barrier.data), &vk_dependency_info);
-        split_barrier_dependency_infos_aux_buffer.clear();
+        tl_split_barrier_dependency_infos_aux_buffer.clear();
     }
 
     void CommandList::pipeline_barrier_image_transition(ImageBarrierInfo const & info)
