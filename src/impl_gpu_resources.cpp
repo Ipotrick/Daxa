@@ -12,6 +12,22 @@ namespace daxa
         return ImageViewId{{.index = index, .version = version}};
     }
 
+    auto to_string(ImageId image_id) -> std::string_view
+    {
+        std::string ret = {};
+        ret += " index: " + std::to_string(image_id.index);
+        ret += " version: " + std::to_string(image_id.version);
+        return ret;
+    }
+
+    auto to_string(types::BufferId buffer_id) -> std::string_view
+    {
+        std::string ret = {};
+        ret += " index: " + std::to_string(buffer_id.index);
+        ret += " version: " + std::to_string(buffer_id.version);
+        return ret;
+    }
+
     void GPUResourceTable::initialize(usize max_buffers, usize max_images, usize max_samplers, usize max_timeline_query_pools,
                                       VkDevice device, VkBuffer buffer_device_address_buffer)
     {
@@ -269,7 +285,7 @@ namespace daxa
             .pTexelBufferView = nullptr,
         };
 
-        if (usage & ImageUsageFlagBits::SHADER_READ_WRITE)
+        if ((usage & ImageUsageFlagBits::SHADER_READ_WRITE) != ImageUsageFlagBits::NONE)
         {
             descriptor_set_writes[descriptor_set_write_count++] = vk_write_descriptor_set;
         }
@@ -293,7 +309,7 @@ namespace daxa
             .pTexelBufferView = nullptr,
         };
 
-        if (usage & ImageUsageFlagBits::SHADER_READ_ONLY)
+        if ((usage & ImageUsageFlagBits::SHADER_READ_ONLY) != ImageUsageFlagBits::NONE)
         {
             descriptor_set_writes[descriptor_set_write_count++] = vk_write_descriptor_set_sampled;
         }

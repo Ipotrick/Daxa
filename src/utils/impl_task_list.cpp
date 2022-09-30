@@ -1043,34 +1043,97 @@ namespace daxa
         dot_file << "}\n";
     }
     
-    //void debug_print_task_barrier(TaskBarrier & barrier, std::vector<daxa::ImplTaskImage> & task_images)
-    //{
-    //    // Check if barrier is image barrier or normal barrier (see TaskBarrier struct comments).
-    //    if (barrier.image_id.is_empty())
-    //    {
-    //        std::cout << "\t\t\tMemory barrier" << std::endl;
-    //        std::cout << "\t\t\t\tsrc_access = "<< to_string(barrier.src_access) << std::endl;
-    //        std::cout << "\t\t\t\tdst_access = "<< to_string(barrier.dst_access) std::endl;
-    //        std::cout << "\t\t\t}]"  << std::endl;
-    //    }
-    //    else
-    //    {
-    //        std::cout << "\t\t\tImage memory barrier" << std::endl;
-    //        std::cout << "\t\t\t\t.src_access = "<< to_string(barrier.src_access) << std::endl;
-    //        std::cout << "\t\t\t\t.dst_access = "<< to_string(barrier.dst_access) std::endl;
-    //        std::cout << "\t\t\t\t.before_layout = "<< to_string(barrier.layout_before) std::endl;
-    //        std::cout << "\t\t\t\t.after_layout = "<< to_string(barrier.layout_after) std::endl;
-    //        std::cout << "}]"  << std::endl;
-    //        command_list.pipeline_barrier_image_transition({
-    //            .awaited_pipeline_access = barrier.src_access,
-    //            .waiting_pipeline_access = barrier.dst_access,
-    //            .before_layout = barrier.layout_before,
-    //            .after_layout = barrier.layout_after,
-    //            .image_slice = barrier.slice,
-    //            .image_id = *task_images[barrier.image_id.index].info.image,
-    //        });
-    //    }
-    //}
+    void ImplTaskList::debug_print_task_barrier(TaskBarrier & barrier, usize index, std::string_view prefix)
+    {
+#ifdef DAXA_TASK_LIST_DEBUG
+        // Check if barrier is image barrier or normal barrier (see TaskBarrier struct comments).
+        if (barrier.image_id.is_empty())
+        {
+            std::cout << prefix << "Begin Memory barrier" << "\n";
+            std::cout << prefix << "\tbarrier index: " << index << "\n";
+            std::cout << prefix << "\t.src_access = "<< to_string(barrier.src_access) << "\n";
+            std::cout << prefix << "\t.dst_access = "<< to_string(barrier.dst_access) << "\n";
+            std::cout << prefix << "End   Memory barrier" << "\n";
+        }
+        else
+        {
+            std::cout << prefix << "Begin image memory barrier\n"; 
+            std::cout << prefix << "\tbarrier index: " << index << "\n";
+            std::cout << prefix << "\t.src_access = "<< to_string(barrier.src_access) << "\n";
+            std::cout << prefix << "\t.dst_access = "<< to_string(barrier.dst_access) << "\n";
+            std::cout << prefix << "\t.image_mip_array_slice = " << to_string(barrier.slice) << "\n";
+            std::cout << prefix << "\t.before_layout = "<< to_string(barrier.layout_before) << "\n";
+            std::cout << prefix << "\t.after_layout = "<< to_string(barrier.layout_after) << "\n";
+            std::cout << prefix << "\t.image_id = " << to_string(*impl_task_images[barrier.image_id.index].info.image) << " \n";
+            std::cout << prefix << "\t.image_debug_name = " << impl_task_images[barrier.image_id.index].info.debug_name << "\n";
+            std::cout << prefix << "\t.task_image_id = " << barrier.image_id.index << " \n";
+            std::cout << prefix << "End   image memory barrier\n"; 
+        }
+#endif // #ifdef DAXA_TASK_LIST_DEBUG
+    }
+    
+    void ImplTaskList::debug_print_task_split_barrier(TaskSplitBarrier & barrier, usize index, std::string_view prefix)
+    {
+#ifdef DAXA_TASK_LIST_DEBUG
+        // Check if barrier is image barrier or normal barrier (see TaskBarrier struct comments).
+        if (barrier.image_id.is_empty())
+        {
+            std::cout << prefix << "Begin split memory barrier" << "\n";
+            std::cout << prefix << "split barrier index: " << index << "\n";
+            std::cout << prefix << "\tsrc_access = "<< to_string(barrier.src_access) << "\n";
+            std::cout << prefix << "\tdst_access = "<< to_string(barrier.dst_access) << "\n";
+            std::cout << prefix << "End   split memory barrier" << "\n";
+        }
+        else
+        {
+            std::cout << prefix << "Begin split image memory barrier\n"; 
+            std::cout << prefix << "split barrier index: " << index << "\n";
+            std::cout << prefix << "\t.src_access = "<< to_string(barrier.src_access) << "\n";
+            std::cout << prefix << "\t.dst_access = "<< to_string(barrier.dst_access) << "\n";
+            std::cout << prefix << "\t.image_mip_array_slice = " << to_string(barrier.slice) << "\n";
+            std::cout << prefix << "\t.before_layout = " << to_string(barrier.layout_before) << "\n";
+            std::cout << prefix << "\t.after_layout = " << to_string(barrier.layout_after) << "\n";
+            std::cout << prefix << "\t.image_id = " << to_string(*impl_task_images[barrier.image_id.index].info.image) << " \n";
+            std::cout << prefix << "\t.image_debug_name = " << impl_task_images[barrier.image_id.index].info.debug_name << "\n";
+            std::cout << prefix << "\t.task_image_id = " << barrier.image_id.index << " \n";
+            std::cout << prefix << "End   split image memory barrier\n"; 
+        }
+#endif // #ifdef DAXA_TASK_LIST_DEBUG
+    }
+
+    void ImplTaskList::debug_print_task(Task & task, usize task_id, std::string_view prefix)
+    {
+#ifdef DAXA_TASK_LIST_DEBUG
+        std::cout << prefix << "Begin task " << task_id << "\n";
+        for (auto [task_image_id, task_image_access, slice] : task.info.used_images)
+        {
+            ImplTaskImage & impl_task_image = impl_task_images[task_image_id.index];
+            std::string const & image_debug_name = info.device.info_image(*impl_task_image.info.image).debug_name;
+            auto [layout, access] = task_image_access_to_layout_access(task_image_access);
+            std::cout << prefix << "\tBegin task image use " << task_image_id.index << "\n";
+            std::cout << prefix << "\t\task image debug name: " << impl_task_image.info.debug_name << "\n";
+            std::cout << prefix << "\t\timage id: " << to_string(*impl_task_image.info.image) << "\n";
+            std::cout << prefix << "\t\timage debug name: " << image_debug_name << "\n";
+            std::cout << prefix << "\t\trequired layout: " << to_string(layout) << "\n";
+            std::cout << prefix << "\t\tslice: " << to_string(slice) << "\n";
+            std::cout << prefix << "\t\tstage access: " << to_string(access) << "\n";
+            std::cout << prefix << "\tEnd   task image use\n";
+        }
+        for (auto [task_buffer_id, task_buffer_access] : task.info.used_buffers)
+        {
+            ImplTaskBuffer & impl_task_buffer = impl_task_buffers[task_buffer_id.index];
+            std::string const & buffer_debug_name = info.device.info_buffer(*impl_task_buffer.info.buffer).debug_name;
+            auto access = task_buffer_access_to_access(task_buffer_access);
+            std::cout << prefix << "\tBegin task buffer use " << task_buffer_id.index << "\n";
+            std::cout << prefix << "\t\task buffer debug name: " << impl_task_buffer.info.debug_name << "\n";
+            std::cout << prefix << "\t\tbuffer id: " << to_string(*impl_task_buffers[task_buffer_id.index].info.buffer) << "\n";
+            std::cout << prefix << "\t\tbuffer debug name: " << buffer_debug_name << "\n";
+            std::cout << prefix << "\t\tstage access: " << to_string(access) << "\n";
+            std::cout << prefix << "\tEnd   task buffer use\n";
+        }
+        std::cout << prefix << "End   task\n";
+#endif // #ifdef DAXA_TASK_LIST_DEBUG
+    }
 
     void TaskList::debug_print()
     {
@@ -1092,6 +1155,7 @@ namespace daxa
                 std::cout << "\t\t\tBegin wait pipeline barriers\n";
                 for (auto barrier_index : task_batch.pipeline_barrier_indices)
                 {
+                    impl.debug_print_task_barrier(impl.barriers[barrier_index], barrier_index, "\t\t\t\t");
                 }
                 std::cout << "\t\t\tEnd   wait pipeline barriers\n";
                 if (impl.info.dont_use_split_barriers)
@@ -1099,6 +1163,8 @@ namespace daxa
                     std::cout << "\t\t\tBegin wait split barriers (converted to pipeline barriers)\n";
                     for (auto barrier_index : task_batch.wait_split_barrier_indices)
                     {
+                        TaskBarrier task_barrier{};
+                        impl.debug_print_task_barrier(task_barrier, barrier_index, "\t\t\t\t");
                     }
                     std::cout << "\t\t\tEnd   wait split barriers (converted to pipeline barriers)\n";
                 }
@@ -1107,12 +1173,15 @@ namespace daxa
                     std::cout << "\t\t\tBegin wait split barriers\n";
                     for (auto barrier_index : task_batch.wait_split_barrier_indices)
                     {
+                        impl.debug_print_task_split_barrier(impl.split_barriers[barrier_index], barrier_index, "\t\t\t\t");
                     }
                     std::cout << "\t\t\tEnd   wait split barriers\n";
                 }
                 std::cout << "\t\t\tBegin Task batch\n";
                 for (TaskId task_id : task_batch.tasks)
                 {
+                    Task & task = impl.tasks[task_id];
+                    impl.debug_print_task(task, task_id, "\t\t\t\t");
                 }
                 std::cout << "\t\t\tEnd   task batch\n";
                 if (!impl.info.dont_use_split_barriers)
@@ -1120,11 +1189,13 @@ namespace daxa
                     std::cout << "\t\t\tBegin reset split barriers\n";
                     for (auto barrier_index : task_batch.wait_split_barrier_indices)
                     {
+                        impl.debug_print_task_barrier(impl.barriers[barrier_index], barrier_index, "\t\t\t\t");
                     }
                     std::cout << "\t\t\tEnd   reset split barriers\n";
                     std::cout << "\t\t\tBegin signal split barriers\n";
                     for (usize barrier_index : task_batch.signal_split_barrier_indices)
                     {
+                        impl.debug_print_task_split_barrier(impl.split_barriers[barrier_index], barrier_index, "\t\t\t\t");
                     }
                     std::cout << "\t\t\tEnd   signal split barriers\n";
                 }
@@ -1133,6 +1204,7 @@ namespace daxa
             std::cout << "\t\tBegin last minute pipeline barriers\n";
             for (usize barrier_index : submit_scope.last_minute_barrier_indices)
             {
+                impl.debug_print_task_barrier(impl.barriers[barrier_index], barrier_index, "\t\t\t\t");
             }
             std::cout << "\t\tEnd   last minute pipeline barriers\n";
             if (&submit_scope != &impl.batch_submit_scopes.back())
