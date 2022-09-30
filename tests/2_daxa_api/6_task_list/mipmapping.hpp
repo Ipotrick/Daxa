@@ -149,9 +149,10 @@ namespace tests
                     }
                 }
 
-                non_task_list_execute();
+                //non_task_list_execute();
 
-                // task_list.execute();
+                swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
+                task_list.execute();
             }
 
             void on_mouse_move(f32 x, f32 y)
