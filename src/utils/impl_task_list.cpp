@@ -972,30 +972,93 @@ namespace daxa
             usize batch_index = 0;
             for (auto const & batch : scope.task_batches)
             {
-                dot_file << "subgraph cluster_b_" << std::to_string(batch_index) << " {\n"
-                         << "label=\"Batch " << std::to_string(batch_index) << "\"\n";
-                for (auto const & task_id : batch.tasks)
+                auto batch_name = std::string("b_") + std::to_string(batch_index);
+                auto batch_debug_name = "Batch " + std::to_string(batch_index);
+
                 {
-                    std::string task_name = std::string("b_") + std::to_string(batch_index) + std::string("_t_") + std::to_string(task_id);
-                    std::string task_debug_name = tasks[task_id].info.debug_name;
-                    dot_file << "node" << task_name << " [label=\"" << task_debug_name << "\", shape=box]\n";
+                    dot_file << "subgraph cluster_pb_" << batch_name << " {\n"
+                             //  << "label=\"" << batch_debug_name << "\"\n"
+                             << "style=filled\ncolor=\"#b5bec4\"\n";
+
+                    for (auto const & barrier_index : batch.pipeline_barrier_indices)
+                    {
+                        auto const & barrier = this->barriers[barrier_index];
+                        std::string name = batch_name + std::string("_pb_") + std::to_string(barrier.src_batch) + std::string("_") + std::to_string(barrier.dst_batch);
+                        dot_file << "node" << name << " [label=\"" << name << "\", shape=box]\n";
+                    }
+                    for (auto const & barrier_index : batch.wait_split_barrier_indices)
+                    {
+                        auto const & barrier = this->split_barriers[barrier_index];
+                        std::string name = batch_name + std::string("_wsb_") + std::to_string(barrier.src_batch) + std::string("_") + std::to_string(barrier.dst_batch);
+                        dot_file << "node" << name << " [label=\"" << name << "\", shape=box]\n";
+                    }
+
+                    dot_file << "node_pb_" << batch_name << " [label=\"" << batch_debug_name << " Barriers\", shape=box]\n";
+                    dot_file << "}\n";
                 }
-                for (auto const & barrier_index : batch.pipeline_barrier_indices)
+
                 {
-                    std::string name = std::string("b_") + std::to_string(batch_index) + std::string("_pb_") + std::to_string(barrier_index);
-                    dot_file << "node" << name << " [label=\"" << name << "\", shape=box]\n";
+                    dot_file << "subgraph cluster_" << batch_name << " {\n"
+                             //  << "label=\"" << batch_debug_name << "\"\n"
+                             << "style=filled\ncolor=\"#b5bec4\"\n";
+                    for (auto const & task_id : batch.tasks)
+                    {
+                        auto task_name = batch_name + std::string("_t_") + std::to_string(task_id);
+                        auto task_debug_name = tasks[task_id].info.debug_name;
+                        dot_file << "subgraph cluster_" << task_name << " {\n"
+                                 << "label=\"" << task_debug_name << "\"\n"
+                                 << "style=filled\ncolor=\"#d1e2ed\"\n";
+                        // dot_file << "node_" << task_name << " [label=\"" << task_debug_name << "\", shape=box]\n";
+                        usize resource_index = 0;
+
+                        resource_index = 0;
+                        for (auto const & [task_buffer_id, task_buffer_access] : tasks[task_id].info.used_buffers)
+                        {
+                            auto const & task_resource = this->impl_task_buffers[task_buffer_id.index];
+                            auto const & resource_debug_name = task_resource.info.debug_name;
+                            dot_file << "node_" << task_name << "_br" << resource_index << " [label=\"" << resource_debug_name << "\", shape=box, color=\"#d3fabe\"]\n";
+                            ++resource_index;
+                        }
+
+                        resource_index = 0;
+                        for (auto const & [task_image_id, task_buffer_access, image_slice] : tasks[task_id].info.used_images)
+                        {
+                            auto const & task_resource = this->impl_task_images[task_image_id.index];
+                            auto const & resource_debug_name = task_resource.info.debug_name;
+                            dot_file << "node_" << task_name << "_ir" << resource_index << " [label=\"" << resource_debug_name << "\", shape=box, color=\"#fffec2\"]\n";
+                            ++resource_index;
+                        }
+
+                        dot_file << "}\n";
+                    }
+
+                    dot_file << "node_" << batch_name << " [label=\"" << batch_debug_name << "\", shape=box]\n";
+                    dot_file << "}\n";
                 }
-                for (auto const & barrier_index : batch.wait_split_barrier_indices)
+
                 {
-                    std::string name = std::string("b_") + std::to_string(batch_index) + std::string("_wsb_") + std::to_string(barrier_index);
-                    dot_file << "node" << name << " [label=\"" << name << "\", shape=box]\n";
+                    dot_file << "subgraph cluster_ssb_" << batch_name << " {\n"
+                             //  << "label=\"" << batch_debug_name << "\"\n"
+                             << "style=filled\ncolor=\"#b5bec4\"\n";
+
+                    for (auto const & barrier_index : batch.signal_split_barrier_indices)
+                    {
+                        auto const & barrier = this->split_barriers[barrier_index];
+                        std::string name = batch_name + std::string("_ssb_") + std::to_string(barrier.src_batch) + std::string("_") + std::to_string(barrier.dst_batch);
+                        dot_file << "node" << name << " [label=\"" << name << "\", shape=box]\n";
+                    }
+
+                    dot_file << "node_ssb_" << batch_name << " [label=\"" << batch_debug_name << " Signal Split Barriers \", shape=box]\n";
+                    dot_file << "}\n";
                 }
-                for (auto const & barrier_index : batch.signal_split_barrier_indices)
+
+                if (batch_index > 0)
                 {
-                    std::string name = std::string("b_") + std::to_string(batch_index) + std::string("_ssb_") + std::to_string(barrier_index);
-                    dot_file << "node" << name << " [label=\"" << name << "\", shape=box]\n";
+                    dot_file << "node_ssb_b_" << (batch_index - 1) << "->node_pb_b_" << (batch_index) << "\n";
                 }
-                dot_file << "}\n";
+                dot_file << "node_pb_b_" << (batch_index) << "->node_b_" << (batch_index) << "\n";
+                dot_file << "node_b_" << (batch_index) << "->node_ssb_b_" << (batch_index) << "\n";
+
                 ++batch_index;
             }
             ++scope_index;
@@ -1050,50 +1113,52 @@ namespace daxa
         {
             ImplTaskImage & impl_task_image = impl_task_images[barrier.image_id.index];
             std::string const & image_debug_name = info.device.info_image(*impl_task_image.info.image).debug_name;
-            std::cout << prefix << "Begin image memory barrier\n"; 
+            std::cout << prefix << "Begin image memory barrier\n";
             std::cout << prefix << "\tbarrier index: " << index << "\n";
             std::cout << prefix << "\ttask_image_id: " << barrier.image_id.index << " \n";
             std::cout << prefix << "\ttask image debug name: " << impl_task_image.info.debug_name << " \n";
             std::cout << prefix << "\timage id: " << to_string(*impl_task_images[barrier.image_id.index].info.image) << " \n";
             std::cout << prefix << "\timage debug name: " << image_debug_name << "\n";
-            std::cout << prefix << "\tsrc access: "<< to_string(barrier.src_access) << "\n";
-            std::cout << prefix << "\tdst access: "<< to_string(barrier.dst_access) << "\n";
+            std::cout << prefix << "\tsrc access: " << to_string(barrier.src_access) << "\n";
+            std::cout << prefix << "\tdst access: " << to_string(barrier.dst_access) << "\n";
             std::cout << prefix << "\timage mip array slice: " << to_string(barrier.slice) << "\n";
-            std::cout << prefix << "\tbefore layout: "<< to_string(barrier.layout_before) << "\n";
-            std::cout << prefix << "\tafter layout: "<< to_string(barrier.layout_after) << "\n";
-            std::cout << prefix << "End   image memory barrier\n"; 
+            std::cout << prefix << "\tbefore layout: " << to_string(barrier.layout_before) << "\n";
+            std::cout << prefix << "\tafter layout: " << to_string(barrier.layout_after) << "\n";
+            std::cout << prefix << "End   image memory barrier\n";
         }
 #endif // #ifdef DAXA_TASK_LIST_DEBUG
     }
-    
+
     void ImplTaskList::debug_print_task_split_barrier(TaskSplitBarrier & barrier, usize index, std::string_view prefix)
     {
 #ifdef DAXA_TASK_LIST_DEBUG
         // Check if barrier is image barrier or normal barrier (see TaskBarrier struct comments).
         if (barrier.image_id.is_empty())
         {
-            std::cout << prefix << "Begin split memory barrier" << "\n";
+            std::cout << prefix << "Begin split memory barrier"
+                      << "\n";
             std::cout << prefix << "split barrier index: " << index << "\n";
-            std::cout << prefix << "\tsrc_access = "<< to_string(barrier.src_access) << "\n";
-            std::cout << prefix << "\tdst_access = "<< to_string(barrier.dst_access) << "\n";
-            std::cout << prefix << "End   split memory barrier" << "\n";
+            std::cout << prefix << "\tsrc_access = " << to_string(barrier.src_access) << "\n";
+            std::cout << prefix << "\tdst_access = " << to_string(barrier.dst_access) << "\n";
+            std::cout << prefix << "End   split memory barrier"
+                      << "\n";
         }
         else
         {
             ImplTaskImage & impl_task_image = impl_task_images[barrier.image_id.index];
             std::string const & image_debug_name = info.device.info_image(*impl_task_image.info.image).debug_name;
-            std::cout << prefix << "Begin image memory barrier\n"; 
+            std::cout << prefix << "Begin image memory barrier\n";
             std::cout << prefix << "\tbarrier index: " << index << "\n";
             std::cout << prefix << "\ttask_image_id: " << barrier.image_id.index << " \n";
             std::cout << prefix << "\ttask image debug name: " << impl_task_image.info.debug_name << " \n";
             std::cout << prefix << "\timage id: " << to_string(*impl_task_images[barrier.image_id.index].info.image) << " \n";
             std::cout << prefix << "\timage debug name: " << image_debug_name << " \n";
-            std::cout << prefix << "\tsrc_access: "<< to_string(barrier.src_access) << "\n";
-            std::cout << prefix << "\tdst_access: "<< to_string(barrier.dst_access) << "\n";
+            std::cout << prefix << "\tsrc_access: " << to_string(barrier.src_access) << "\n";
+            std::cout << prefix << "\tdst_access: " << to_string(barrier.dst_access) << "\n";
             std::cout << prefix << "\timage_mip_array_slice: " << to_string(barrier.slice) << "\n";
             std::cout << prefix << "\tbefore_layout: " << to_string(barrier.layout_before) << "\n";
             std::cout << prefix << "\tafter_layout: " << to_string(barrier.layout_after) << "\n";
-            std::cout << prefix << "End   split image memory barrier\n"; 
+            std::cout << prefix << "End   split image memory barrier\n";
         }
 #endif // #ifdef DAXA_TASK_LIST_DEBUG
     }
