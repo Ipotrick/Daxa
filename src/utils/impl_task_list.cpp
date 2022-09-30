@@ -346,7 +346,6 @@ namespace daxa
                 {
                     continue;
                 }
-
                 // Now that we found out that the new use and an old use intersect,
                 // we need to insert the task in the same or a later batch.
                 bool is_last_access_read = tracked_slice.latest_access.type == AccessTypeFlagBits::READ;
@@ -354,13 +353,13 @@ namespace daxa
                 // When the image layouts differ, we must do a layout transition between reads.
                 // This forces us to place the task into a batch AFTER the tracked uses last batch.
                 bool is_layout_identical = this_task_image_layout == tracked_slice.latest_layout;
-                usize current_buffer_first_possible_batch_index = tracked_slice.latest_access_batch_index;
+                usize current_image_first_possible_batch_index = tracked_slice.latest_access_batch_index;
                 // If either the image layouts differ, or not both accesses are reads, we must place the task in a later batch.
                 if (!(is_last_access_read && is_current_access_read && is_layout_identical))
                 {
-                    current_buffer_first_possible_batch_index += 1;
+                    current_image_first_possible_batch_index += 1;
                 }
-                first_possible_batch_index = std::max(first_possible_batch_index, tracked_slice.latest_access_batch_index);
+                first_possible_batch_index = std::max(first_possible_batch_index, current_image_first_possible_batch_index);
             }
         }
         // Make sure we have enough batches.
@@ -613,10 +612,12 @@ namespace daxa
                     // In the future it may be good to give an initial image state and access.
                     .src_access = impl_task_image.info.initial_access,
                     .dst_access = current_image_access,
-                    .src_batch = batch_index,
-                    .dst_batch = batch_index + 1,
+                    //.src_batch = impl_task_image.info.creation_batch,
+                    //.dst_batch = batch_index,
                 });
+                batch.pipeline_barrier_indices.push_back(pipeline_barrier_index);
             }
+            tl_new_use_slices.clear();
             // Now we need to add the latest use and tracked range of our current access:
             impl_task_image.slices_last_uses.push_back(ret_new_use_tracked_slice);
             // The remainder tracked slices we remembered from earlier are now inserted back into the list of tracked slices.
@@ -1112,15 +1113,21 @@ namespace daxa
         else
         {
             ImplTaskImage & impl_task_image = impl_task_images[barrier.image_id.index];
-            std::string const & image_debug_name = info.device.info_image(*impl_task_image.info.image).debug_name;
-            std::cout << prefix << "Begin image memory barrier\n";
+            std::string image_debug_name = "ERROR, IMAGE POINTER NOT ASSIGNED";
+            std::string image_id_string = "ERROR, IMAGE POINTER NOT ASSIGNED";
+            if (impl_task_images[barrier.image_id.index].info.image)
+            {
+                image_debug_name = info.device.info_image(*impl_task_image.info.image).debug_name;
+                image_id_string = to_string(*impl_task_images[barrier.image_id.index].info.image);
+            }
+            std::cout << prefix << "Begin image memory barrier\n"; 
             std::cout << prefix << "\tbarrier index: " << index << "\n";
             std::cout << prefix << "\ttask_image_id: " << barrier.image_id.index << " \n";
             std::cout << prefix << "\ttask image debug name: " << impl_task_image.info.debug_name << " \n";
             std::cout << prefix << "\timage id: " << to_string(*impl_task_images[barrier.image_id.index].info.image) << " \n";
             std::cout << prefix << "\timage debug name: " << image_debug_name << "\n";
-            std::cout << prefix << "\tsrc access: " << to_string(barrier.src_access) << "\n";
-            std::cout << prefix << "\tdst access: " << to_string(barrier.dst_access) << "\n";
+            std::cout << prefix << "\tsrc access: "<< to_string(barrier.src_access) << "\n";
+            std::cout << prefix << "\tdst access: "<< to_string(barrier.dst_access) << "\n";
             std::cout << prefix << "\timage mip array slice: " << to_string(barrier.slice) << "\n";
             std::cout << prefix << "\tbefore layout: " << to_string(barrier.layout_before) << "\n";
             std::cout << prefix << "\tafter layout: " << to_string(barrier.layout_after) << "\n";
@@ -1146,12 +1153,18 @@ namespace daxa
         else
         {
             ImplTaskImage & impl_task_image = impl_task_images[barrier.image_id.index];
-            std::string const & image_debug_name = info.device.info_image(*impl_task_image.info.image).debug_name;
-            std::cout << prefix << "Begin image memory barrier\n";
+            std::string image_debug_name = "ERROR, IMAGE POINTER NOT ASSIGNED";
+            std::string image_id_string = "ERROR, IMAGE POINTER NOT ASSIGNED";
+            if (impl_task_images[barrier.image_id.index].info.image)
+            {
+                image_debug_name = info.device.info_image(*impl_task_image.info.image).debug_name;
+                image_id_string = to_string(*impl_task_images[barrier.image_id.index].info.image);
+            }
+            std::cout << prefix << "Begin image memory barrier\n"; 
             std::cout << prefix << "\tbarrier index: " << index << "\n";
             std::cout << prefix << "\ttask_image_id: " << barrier.image_id.index << " \n";
             std::cout << prefix << "\ttask image debug name: " << impl_task_image.info.debug_name << " \n";
-            std::cout << prefix << "\timage id: " << to_string(*impl_task_images[barrier.image_id.index].info.image) << " \n";
+            std::cout << prefix << "\timage id: " << image_id_string << " \n";
             std::cout << prefix << "\timage debug name: " << image_debug_name << " \n";
             std::cout << prefix << "\tsrc_access: " << to_string(barrier.src_access) << "\n";
             std::cout << prefix << "\tdst_access: " << to_string(barrier.dst_access) << "\n";
@@ -1170,12 +1183,18 @@ namespace daxa
         for (auto [task_image_id, task_image_access, slice] : task.info.used_images)
         {
             ImplTaskImage & impl_task_image = impl_task_images[task_image_id.index];
-            std::string const & image_debug_name = info.device.info_image(*impl_task_image.info.image).debug_name;
+            std::string image_debug_name = "ERROR, IMAGE POINTER NOT ASSIGNED";
+            std::string image_id_string = "ERROR, IMAGE POINTER NOT ASSIGNED";
+            if (impl_task_images[task_image_id.index].info.image)
+            {
+                image_debug_name = info.device.info_image(*impl_task_image.info.image).debug_name;
+                image_id_string = to_string(*impl_task_images[task_image_id.index].info.image);
+            }
             auto [layout, access] = task_image_access_to_layout_access(task_image_access);
             std::cout << prefix << "\tBegin task image use " << task_image_id.index << "\n";
             std::cout << prefix << "\ttask_image_id: " << task_image_id.index << " \n";
             std::cout << prefix << "\ttask image debug name: " << impl_task_image.info.debug_name << " \n";
-            std::cout << prefix << "\timage id: " << to_string(*impl_task_images[task_image_id.index].info.image) << " \n";
+            std::cout << prefix << "\timage id: " << image_id_string << " \n";
             std::cout << prefix << "\timage debug name: " << image_debug_name << " \n";
             std::cout << prefix << "\t\trequired layout: " << to_string(layout) << "\n";
             std::cout << prefix << "\t\tslice: " << to_string(slice) << "\n";
@@ -1185,11 +1204,17 @@ namespace daxa
         for (auto [task_buffer_id, task_buffer_access] : task.info.used_buffers)
         {
             ImplTaskBuffer & impl_task_buffer = impl_task_buffers[task_buffer_id.index];
-            std::string const & buffer_debug_name = info.device.info_buffer(*impl_task_buffer.info.buffer).debug_name;
+            std::string buffer_id_string = "ERROR, BUFFER POINTER NOT ASSIGNED";
+            std::string buffer_debug_name = "ERROR, BUFFER POINTER NOT ASSIGNED";
+            if (impl_task_buffers[task_buffer_id.index].info.buffer)
+            {
+                buffer_debug_name = info.device.info_buffer(*impl_task_buffers[task_buffer_id.index].info.buffer).debug_name;
+                buffer_id_string = to_string(*impl_task_buffers[task_buffer_id.index].info.buffer);
+            }
             auto access = task_buffer_access_to_access(task_buffer_access);
             std::cout << prefix << "\tBegin task buffer use " << task_buffer_id.index << "\n";
             std::cout << prefix << "\t\task buffer debug name: " << impl_task_buffer.info.debug_name << "\n";
-            std::cout << prefix << "\t\tbuffer id: " << to_string(*impl_task_buffers[task_buffer_id.index].info.buffer) << "\n";
+            std::cout << prefix << "\t\tbuffer id: " << buffer_id_string << "\n";
             std::cout << prefix << "\t\tbuffer debug name: " << buffer_debug_name << "\n";
             std::cout << prefix << "\t\tstage access: " << to_string(access) << "\n";
             std::cout << prefix << "\tEnd   task buffer use\n";
@@ -1240,13 +1265,13 @@ namespace daxa
                     }
                     std::cout << "\t\t\tEnd   wait split barriers\n";
                 }
-                std::cout << "\t\t\tBegin Task batch\n";
+                std::cout << "\t\t\tBegin tasks\n";
                 for (TaskId task_id : task_batch.tasks)
                 {
                     Task & task = impl.tasks[task_id];
                     impl.debug_print_task(task, task_id, "\t\t\t\t");
                 }
-                std::cout << "\t\t\tEnd   task batch\n";
+                std::cout << "\t\t\tEnd   tasks\n";
                 if (!impl.info.dont_use_split_barriers)
                 {
                     std::cout << "\t\t\tBegin reset split barriers\n";
