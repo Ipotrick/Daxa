@@ -201,11 +201,13 @@ namespace tests
                 {
                     auto render_target_size = device.info_image(render_target_id).size;
                     cmd_list.set_pipeline(compute_pipeline);
-                    cmd_list.push_constant(MipmappingComputePushConstant{
+                    auto const push = MipmappingComputePushConstant{
                         .image_id = render_target_id.default_view(),
-                        .compute_input = this->device.buffer_reference(input_buffer),
+                        .compute_input = input_buffer,
+                        // .compute_input = this->device.buffer_reference(input_buffer),
                         .frame_dim = {render_target_size[0], render_target_size[1]},
-                    });
+                    };
+                    cmd_list.push_constant(push);
                     cmd_list.dispatch((render_target_size[0] + 7) / 8, (render_target_size[1] + 7) / 8);
                 }
             }
