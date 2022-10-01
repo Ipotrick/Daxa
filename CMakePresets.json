@@ -17,7 +17,7 @@
                 "DAXA_ENABLE_DXC": true,
                 "DAXA_ENABLE_UTILS": true,
                 "DAXA_ENABLE_TESTS": true,
-                "DAXA_ENABLE_STATIC_ANALYSIS": true
+                "DAXA_ENABLE_STATIC_ANALYSIS": false
             }
         },
         {
