@@ -18,6 +18,6 @@ namespace daxa
 
       private:
         friend struct Device;
-        TimelineQueryPool(ManagedPtr impl);
+        explicit TimelineQueryPool(ManagedPtr impl);
     };
 } // namespace daxa

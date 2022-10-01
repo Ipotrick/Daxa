@@ -54,10 +54,8 @@ namespace tests
             .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
             .debug_name = APPNAME_PREFIX("image (create image)"),
         });
-        auto task_list = daxa::TaskList({
-            .device = app.device,
-            .debug_name = APPNAME_PREFIX("task_list (create-write-read image)")
-        });
+        auto task_list = daxa::TaskList({.device = app.device,
+                                         .debug_name = APPNAME_PREFIX("task_list (create-write-read image)")});
         // CREATE IMAGE
         auto task_image = task_list.create_task_image({
             .image = &image,
@@ -97,17 +95,17 @@ namespace tests
             .used_buffers = {},
             .used_images = {
                 {task_image, daxa::TaskImageAccess::SHADER_READ_WRITE, daxa::ImageMipArraySlice{
-                    .image_aspect = daxa::ImageAspectFlagBits::COLOR,
-                    .level_count = 1,
-                    .layer_count = 2,
-                }},
+                                                                           .image_aspect = daxa::ImageAspectFlagBits::COLOR,
+                                                                           .level_count = 1,
+                                                                           .layer_count = 2,
+                                                                       }},
             },
             .task = [](daxa::TaskRuntime const &) {},
             .debug_name = APPNAME_PREFIX("write image 2"),
         });
         task_list.complete();
         task_list.debug_print();
-        //task_list.execute();
+        // task_list.execute();
         app.device.destroy_image(image);
     }
 
@@ -160,22 +158,28 @@ namespace tests
 
         auto task_buffer1 = task_list.create_task_buffer({
             .initial_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
+            .debug_name = APPNAME_PREFIX("task_buffer1"),
         });
         auto task_buffer2 = task_list.create_task_buffer({
             .initial_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
+            .debug_name = APPNAME_PREFIX("task_buffer2"),
         });
         auto task_buffer3 = task_list.create_task_buffer({
             .initial_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
+            .debug_name = APPNAME_PREFIX("task_buffer3"),
         });
 
         auto task_image1 = task_list.create_task_image({
             .initial_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
+            .debug_name = APPNAME_PREFIX("task_image1"),
         });
         auto task_image2 = task_list.create_task_image({
             .initial_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
+            .debug_name = APPNAME_PREFIX("task_image2"),
         });
         auto task_image3 = task_list.create_task_image({
             .initial_access = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
+            .debug_name = APPNAME_PREFIX("task_image3"),
         });
 
         task_list.add_task({
@@ -462,11 +466,11 @@ namespace tests
 
 int main()
 {
-    //tests::write_read_image();
-    // tests::simplest();
-    // tests::image_upload();
-    // tests::execution();
-    //tests::output_graph();
+    // tests::write_read_image();
+    //  tests::simplest();
+    //  tests::image_upload();
+    //  tests::execution();
+    // tests::output_graph();
     tests::mipmapping();
     // tests::drawing();
 }

@@ -301,7 +301,7 @@ namespace daxa
     {
     }
 
-    ImGuiRenderer::~ImGuiRenderer() {}
+    ImGuiRenderer::~ImGuiRenderer() = default;
 
     void ImGuiRenderer::record_commands(ImDrawData * draw_data, CommandList & cmd_list, ImageId target_image, u32 size_x, u32 size_y)
     {
@@ -340,7 +340,7 @@ namespace daxa
 
     void ImplImGuiRenderer::record_commands(ImDrawData * draw_data, CommandList & cmd_list, ImageId target_image, u32 size_x, u32 size_y)
     {
-        if (draw_data && draw_data->TotalIdxCount > 0)
+        if ((draw_data != nullptr) && draw_data->TotalIdxCount > 0)
         {
             auto vbuffer_current_size = info.device.info_buffer(vbuffer).size;
             auto vbuffer_needed_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
@@ -363,20 +363,20 @@ namespace daxa
             }
 
             {
-                auto vtx_dst = info.device.map_memory_as<ImDrawVert>(staging_vbuffer);
+                auto * vtx_dst = info.device.map_memory_as<ImDrawVert>(staging_vbuffer);
                 for (i32 n = 0; n < draw_data->CmdListsCount; n++)
                 {
-                    const ImDrawList * draws = draw_data->CmdLists[n];
+                    ImDrawList const * draws = draw_data->CmdLists[n];
                     std::memcpy(vtx_dst, draws->VtxBuffer.Data, draws->VtxBuffer.Size * sizeof(ImDrawVert));
                     vtx_dst += draws->VtxBuffer.Size;
                 }
                 info.device.unmap_memory(staging_vbuffer);
             }
             {
-                auto idx_dst = info.device.map_memory_as<ImDrawIdx>(staging_ibuffer);
+                auto * idx_dst = info.device.map_memory_as<ImDrawIdx>(staging_ibuffer);
                 for (i32 n = 0; n < draw_data->CmdListsCount; n++)
                 {
-                    const ImDrawList * draws = draw_data->CmdLists[n];
+                    ImDrawList const * draws = draw_data->CmdLists[n];
                     std::memcpy(idx_dst, draws->IdxBuffer.Data, draws->IdxBuffer.Size * sizeof(ImDrawIdx));
                     idx_dst += draws->IdxBuffer.Size;
                 }
@@ -412,24 +412,25 @@ namespace daxa
             auto push = Push{};
             push.scale = {2.0f / draw_data->DisplaySize.x, 2.0f / draw_data->DisplaySize.y};
             push.translate = {-1.0f - draw_data->DisplayPos.x * push.scale.x, -1.0f - draw_data->DisplayPos.y * push.scale.y};
-            ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
-            ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
-            i32 global_vtx_offset = 0, global_idx_offset = 0;
+            ImVec2 const clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
+            ImVec2 const clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
+            i32 global_vtx_offset = 0;
+            i32 global_idx_offset = 0;
             push.vbuffer_id = vbuffer;
             push.ibuffer_id = ibuffer;
             push.sampler0_id = sampler;
 
             for (i32 n = 0; n < draw_data->CmdListsCount; n++)
             {
-                const ImDrawList * draws = draw_data->CmdLists[n];
-                usize last_tex_id = 0;
+                ImDrawList const * draws = draw_data->CmdLists[n];
+                usize const last_tex_id = 0;
                 for (i32 cmd_i = 0; cmd_i < draws->CmdBuffer.Size; cmd_i++)
                 {
-                    const ImDrawCmd * pcmd = &draws->CmdBuffer[cmd_i];
+                    ImDrawCmd const * pcmd = &draws->CmdBuffer[cmd_i];
 
                     // Project scissor/clipping rectangles into framebuffer space
                     ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
-                    ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x, (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
+                    ImVec2 const clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x, (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
 
                     // Clamp to viewport as vkCmdSetScissor() won't accept values that are off bounds
                     clip_min.x = std::clamp(clip_min.x, 0.0f, static_cast<f32>(size_x));
@@ -457,7 +458,7 @@ namespace daxa
                     cmd_list.draw_indexed({
                         .index_count = pcmd->ElemCount,
                         .first_index = pcmd->IdxOffset + global_idx_offset,
-                        .vertex_offset = pcmd->VtxOffset + global_vtx_offset,
+                        .vertex_offset = static_cast<i32>(pcmd->VtxOffset) + global_vtx_offset,
                     });
                 }
                 global_idx_offset += draws->IdxBuffer.Size;
@@ -478,7 +479,7 @@ namespace daxa
                 {
                     .format = info.format,
                     .blend = {
-                        .blend_enable = true,
+                        .blend_enable = 1u,
                         .src_color_blend_factor = BlendFactor::SRC_ALPHA,
                         .dst_color_blend_factor = BlendFactor::ONE_MINUS_SRC_ALPHA,
                         .src_alpha_blend_factor = BlendFactor::ONE,
@@ -498,10 +499,11 @@ namespace daxa
         sampler = this->info.device.create_sampler({.debug_name = "dear ImGui sampler"});
 
         ImGuiIO & io = ImGui::GetIO();
-        u8 * pixels;
-        i32 width, height;
+        u8 * pixels = nullptr;
+        i32 width = 0;
+        i32 height = 0;
         io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-        usize upload_size = width * height * 4 * sizeof(u8);
+        usize const upload_size = width * height * 4 * sizeof(u8);
         font_sheet = this->info.device.create_image({
             .size = {static_cast<u32>(width), static_cast<u32>(height), 1},
             .usage = ImageUsageFlagBits::TRANSFER_DST | ImageUsageFlagBits::SHADER_READ_ONLY,

@@ -20,7 +20,7 @@ namespace daxa
         TimelineQueryPoolInfo info = {};
         VkQueryPool vk_timeline_query_pool = {};
 
-        ImplTimelineQueryPool(ManagedWeakPtr a_impl_device, TimelineQueryPoolInfo const & a_info);
+        ImplTimelineQueryPool(ManagedWeakPtr a_impl_device, TimelineQueryPoolInfo const & info);
         ~ImplTimelineQueryPool();
 
       private:

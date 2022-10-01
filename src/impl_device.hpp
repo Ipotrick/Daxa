@@ -56,9 +56,9 @@ namespace daxa
         std::deque<std::pair<u64, PipelineZombie>> main_queue_pipeline_zombies = {};
         std::deque<std::pair<u64, TimelineQueryPoolZombie>> main_queue_timeline_query_pool_zombies = {};
         void main_queue_collect_garbage();
-        void wait_idle();
+        void wait_idle() const;
 
-        ImplDevice(DeviceInfo const & info, DeviceProperties const & vk_info, ManagedWeakPtr impl_ctx, VkPhysicalDevice physical_device);
+        ImplDevice(DeviceInfo info, DeviceProperties const & vk_info, ManagedWeakPtr impl_ctx, VkPhysicalDevice physical_device);
         virtual ~ImplDevice() override final;
 
         auto validate_image_slice(ImageMipArraySlice const & slice, ImageId id) -> ImageMipArraySlice;

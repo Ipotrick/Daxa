@@ -15,7 +15,7 @@ namespace daxa
 
       private:
         friend struct Device;
-        BinarySemaphore(ManagedPtr impl);
+        explicit BinarySemaphore(ManagedPtr impl);
     };
 
     struct TimelineSemaphoreInfo
@@ -34,6 +34,6 @@ namespace daxa
 
       private:
         friend struct Device;
-        TimelineSemaphore(ManagedPtr impl);
+        explicit TimelineSemaphore(ManagedPtr impl);
     };
 } // namespace daxa
