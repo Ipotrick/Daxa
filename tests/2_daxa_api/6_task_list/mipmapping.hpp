@@ -152,7 +152,7 @@ namespace tests
                 // non_task_list_execute();
 
                 swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
-                //task_list.debug_print();
+                // task_list.debug_print();
                 task_list.execute();
             }
 
@@ -271,59 +271,69 @@ namespace tests
             {
                 swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
                 auto cmd_list = device.create_command_list({});
+
+                cmd_list.pipeline_barrier_image_transition({
+                    .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+                    .before_layout = daxa::ImageLayout::UNDEFINED,
+                    .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+                    .image_id = swapchain_image,
+                });
+                cmd_list.clear_image({
+                    .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+                    .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
+                    .dst_image = swapchain_image,
+                });
+                cmd_list.pipeline_barrier({
+                    .awaited_pipeline_access = daxa::AccessConsts::NONE,
+                    .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+                });
                 update_gpu_input(staging_mipmapping_compute_input_buffer);
                 cmd_list.pipeline_barrier({
-                    .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
+                    .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
                     .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
                 });
                 finalize_gpu_input(cmd_list, staging_mipmapping_compute_input_buffer, mipmapping_compute_input_buffer);
-                cmd_list.pipeline_barrier({
-                    .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-                    .waiting_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_READ,
-                });
                 cmd_list.pipeline_barrier_image_transition({
+                    .awaited_pipeline_access = daxa::AccessConsts::NONE,
                     .waiting_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
                     .before_layout = daxa::ImageLayout::UNDEFINED,
                     .after_layout = daxa::ImageLayout::GENERAL,
                     .image_id = render_image,
                 });
-                paint(cmd_list, render_image, mipmapping_compute_input_buffer);
                 cmd_list.pipeline_barrier({
-                    .waiting_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
+                    .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+                    .waiting_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_READ,
                 });
-                cmd_list.pipeline_barrier_image_transition({
-                    .awaited_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
-                    .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
-                    .before_layout = daxa::ImageLayout::GENERAL,
-                    .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-                    .image_id = render_image,
-                });
-                // mipmapping part
+                paint(cmd_list, render_image, mipmapping_compute_input_buffer);
                 {
                     auto image_info = device.info_image(render_image);
                     std::array<i32, 3> mip_size = {static_cast<i32>(image_info.size[0]), static_cast<i32>(image_info.size[1]), static_cast<i32>(image_info.size[2])};
+
+                    cmd_list.pipeline_barrier_image_transition({
+                        .awaited_pipeline_access = daxa::AccessConsts::NONE,
+                        .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+                        .before_layout = daxa::ImageLayout::UNDEFINED,
+                        .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+                        .image_slice = {
+                            .image_aspect = image_info.aspect,
+                            .base_mip_level = 1,
+                            .level_count = 4,
+                            .base_array_layer = 0,
+                            .layer_count = 1,
+                        },
+                        .image_id = render_image,
+                    });
+
                     for (u32 i = 0; i < image_info.mip_level_count - 1; ++i)
                     {
                         cmd_list.pipeline_barrier_image_transition({
-                            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+                            .awaited_pipeline_access = (i == 0 ? daxa::AccessConsts::COMPUTE_SHADER_WRITE : daxa::AccessConsts::TRANSFER_WRITE),
                             .waiting_pipeline_access = daxa::AccessConsts::BLIT_READ,
-                            .before_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+                            .before_layout = (i == 0 ? daxa::ImageLayout::GENERAL : daxa::ImageLayout::TRANSFER_DST_OPTIMAL),
                             .after_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
                             .image_slice = {
                                 .image_aspect = image_info.aspect,
                                 .base_mip_level = i,
-                                .level_count = 1,
-                                .base_array_layer = 0,
-                                .layer_count = 1,
-                            },
-                            .image_id = render_image,
-                        });
-                        cmd_list.pipeline_barrier_image_transition({
-                            .waiting_pipeline_access = daxa::AccessConsts::BLIT_READ,
-                            .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-                            .image_slice = {
-                                .image_aspect = image_info.aspect,
-                                .base_mip_level = i + 1,
                                 .level_count = 1,
                                 .base_array_layer = 0,
                                 .layer_count = 1,
@@ -354,33 +364,14 @@ namespace tests
                         });
                         mip_size = next_mip_size;
                     }
-                    for (u32 i = 0; i < image_info.mip_level_count - 1; ++i)
-                    {
-                        // This part is technically un-necessary, since it's already in TRANSFER_SRC_OPTIMAL,
-                        // but might need to be done depending on the next required layout
-                        // cmd_list.pipeline_barrier_image_transition({
-                        //     .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_READ_WRITE,
-                        //     .waiting_pipeline_access = daxa::AccessConsts::READ_WRITE,
-                        //     .before_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
-                        //     .after_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
-                        //     .image_slice = {
-                        //         .image_aspect = image_info.aspect,
-                        //         .base_mip_level = i,
-                        //         .level_count = 1,
-                        //         .base_array_layer = 0,
-                        //         .layer_count = 1,
-                        //     },
-                        //     .image_id = render_image,
-                        // });
-                    }
                     cmd_list.pipeline_barrier_image_transition({
-                        .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_READ_WRITE,
-                        .waiting_pipeline_access = daxa::AccessConsts::READ_WRITE,
+                        .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+                        .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
                         .before_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                         .after_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
                         .image_slice = {
                             .image_aspect = image_info.aspect,
-                            .base_mip_level = image_info.mip_level_count - 1,
+                            .base_mip_level = 4,
                             .level_count = 1,
                             .base_array_layer = 0,
                             .layer_count = 1,
@@ -389,38 +380,28 @@ namespace tests
                     });
                 }
                 cmd_list.pipeline_barrier_image_transition({
+                    .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
                     .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-                    .before_layout = daxa::ImageLayout::UNDEFINED,
+                    .before_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                     .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                     .image_id = swapchain_image,
                 });
-                cmd_list.clear_image({
-                    .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-                    .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
-                    .dst_image = swapchain_image,
-                });
                 blit_image_to_swapchain(cmd_list, render_image, swapchain_image);
                 cmd_list.pipeline_barrier_image_transition({
-                    .awaited_pipeline_access = daxa::AccessConsts::BLIT_WRITE,
-                    .waiting_pipeline_access = daxa::AccessConsts::ALL_GRAPHICS_WRITE,
+                    .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+                    .waiting_pipeline_access = daxa::AccessConsts::COLOR_ATTACHMENT_OUTPUT_READ_WRITE,
                     .before_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                     .after_layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
                     .image_id = swapchain_image,
                 });
                 draw_ui(cmd_list, swapchain_image);
                 cmd_list.pipeline_barrier_image_transition({
-                    .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+                    .awaited_pipeline_access = daxa::AccessConsts::COLOR_ATTACHMENT_OUTPUT_READ_WRITE,
+                    .waiting_pipeline_access = {.stages = daxa::PipelineStageFlagBits::BOTTOM_OF_PIPE, .type = daxa::AccessTypeFlagBits::NONE},
                     .before_layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
                     .after_layout = daxa::ImageLayout::PRESENT_SRC,
                     .image_id = swapchain_image,
                 });
-                // Is this barrier necessary?
-                // cmd_list.pipeline_barrier_image_transition({
-                //     .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
-                //     .before_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
-                //     .after_layout = daxa::ImageLayout::GENERAL,
-                //     .image_id = render_image,
-                // });
                 cmd_list.complete();
                 device.submit_commands({
                     .command_lists = {std::move(cmd_list)},
