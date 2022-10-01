@@ -193,12 +193,12 @@ namespace daxa
         }
     }
 
-    auto TaskRuntime::get_used_task_buffers() const -> TaskUsedBuffers const &
+    auto TaskRuntime::get_used_task_buffers() const -> UsedTaskBuffers const &
     {
         return impl.current_task->info.used_buffers;
     }
 
-    auto TaskRuntime::get_used_task_images() const -> TaskUsedImages const &
+    auto TaskRuntime::get_used_task_images() const -> UsedTaskImages const &
     {
         return impl.current_task->info.used_images;
     }
@@ -261,7 +261,7 @@ namespace daxa
                     continue;
                 }
                 DAXA_DBG_ASSERT_TRUE_M(
-                    std::get<0>(info.used_buffers[current_i]).index != std::get<0>(info.used_buffers[other_i]).index,
+                    info.used_buffers[current_i].id.index != info.used_buffers[other_i].id.index,
                     "illegal to specify multiple uses for one buffer for one task. please combine all uses into one for each buffer.");
             }
         }
@@ -273,24 +273,15 @@ namespace daxa
                 {
                     continue;
                 }
-                // NOTE: This fails to compile with clang because it does not conform to the spec, and won't
-                // capture structured bindings... replacing it with the below code
-                // auto const & [current_image_t_id, current_image_t_access, current_image_slice] = info.used_images[current_i];
-                // auto const & [other_image_t_id, other_image_t_access, other_image_slice] = info.used_images[other_i];
-                // DAXA_DBG_ASSERT_TRUE_M(
-                //     !current_image_slice.intersects(other_image_slice),
-                //     "illegal to specify multiple uses for one image with overlapping slices for one task.");
-                auto [current_id, current_use, current_slice] = info.used_images[current_i];
-                auto [other_id, other_use, other_slice] = info.used_images[other_i];
+                auto const current_image_use = info.used_images[current_i];
+                auto const other_image_use = info.used_images[other_i];
                 // We only check for overlapping use of the same image.
-                if (current_id != other_id)
+                if (current_image_use.id != other_image_use.id)
                 {
                     continue;
                 }
-                auto const & current_image_slice = std::get<ImageMipArraySlice>(info.used_images[current_i]);
-                auto const & other_image_slice = std::get<ImageMipArraySlice>(info.used_images[other_i]);
                 DAXA_DBG_ASSERT_TRUE_M(
-                    !current_image_slice.intersects(other_image_slice),
+                    !current_image_use.slice.intersects(other_image_use.slice),
                     "illegal to specify multiple uses for one image with overlapping slices for one task.");
             }
         }
@@ -713,7 +704,7 @@ namespace daxa
         impl.output_graphviz();
     }
 
-    thread_local std::vector<SplitBarrierEndInfo> tl_split_barrier_wait_infos = {};
+    thread_local std::vector<SplitBarrierWaitInfo> tl_split_barrier_wait_infos = {};
     thread_local std::vector<ImageBarrierInfo> tl_image_barrier_infos = {};
     thread_local std::vector<MemoryBarrierInfo> tl_memory_barrier_infos = {};
     void insert_pipeline_barrier(CommandList & command_list, TaskBarrier & barrier, std::vector<daxa::ImplTaskImage> & task_images)
@@ -743,9 +734,7 @@ namespace daxa
     {
         auto & impl = *as<ImplTaskList>();
         ImplTaskRuntime impl_runtime{.task_list = impl};
-        impl_runtime.command_lists.push_back(impl.info.device.create_command_list({}));
-
-        // TODO(msakmary) think (ask Patrick) about the asserts
+        impl_runtime.command_lists.push_back(impl.info.device.create_command_list({.debug_name = std::string("Task Command List ") + std::to_string(impl_runtime.command_lists.size())}));
         // DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "must compile before executing");
 
         //- Go through all TaskBatchSubmitScopes
@@ -795,7 +784,7 @@ namespace daxa
                                 .awaited_pipeline_access = split_barrier.src_access,
                                 .waiting_pipeline_access = split_barrier.dst_access,
                             });
-                            tl_split_barrier_wait_infos.push_back(SplitBarrierEndInfo{
+                            tl_split_barrier_wait_infos.push_back(SplitBarrierWaitInfo{
                                 .memory_barriers = std::span{&tl_memory_barrier_infos.back(), 1},
                                 .split_barrier = split_barrier.split_barrier_state,
                             });
@@ -810,7 +799,7 @@ namespace daxa
                                 .image_slice = split_barrier.slice,
                                 .image_id = *impl.impl_task_images[split_barrier.image_id.index].info.image,
                             });
-                            tl_split_barrier_wait_infos.push_back(SplitBarrierEndInfo{
+                            tl_split_barrier_wait_infos.push_back(SplitBarrierWaitInfo{
                                 .image_barriers = std::span{&tl_image_barrier_infos.back(), 1},
                                 .split_barrier = split_barrier.split_barrier_state,
                             });
@@ -925,7 +914,7 @@ namespace daxa
                 }
                 // We need to clear all completed command lists that have been submitted.
                 impl_runtime.command_lists.clear();
-                impl_runtime.command_lists.push_back(impl.info.device.create_command_list({}));
+                impl_runtime.command_lists.push_back(impl.info.device.create_command_list({.debug_name = std::string("Task Command List ") + std::to_string(impl_runtime.command_lists.size())}));
             }
         }
 
