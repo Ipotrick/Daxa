@@ -293,7 +293,7 @@ namespace daxa
     {
         DAXA_ATOMIC_FETCH_INC(object->weak_count);
     }
-    ManagedWeakPtr::~ManagedWeakPtr()
+    ManagedWeakPtr::~ManagedWeakPtr() // NOLINT(bugprone-exception-escape)
     {
         if (object != nullptr)
         {

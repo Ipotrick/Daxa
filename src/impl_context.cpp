@@ -149,7 +149,7 @@ namespace daxa
         }
     }
 
-    ImplContext::~ImplContext()
+    ImplContext::~ImplContext() // NOLINT(bugprone-exception-escape)
     {
         if (this->info.enable_validation)
         {

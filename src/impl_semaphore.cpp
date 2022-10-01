@@ -28,7 +28,7 @@ namespace daxa
         initialize(info);
     }
 
-    ImplBinarySemaphore::~ImplBinarySemaphore()
+    ImplBinarySemaphore::~ImplBinarySemaphore() // NOLINT(bugprone-exception-escape)
     {
         auto * device = this->impl_device.as<ImplDevice>();
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{device->main_queue_zombies_mtx});
@@ -139,7 +139,7 @@ namespace daxa
         }
     }
 
-    ImplTimelineSemaphore::~ImplTimelineSemaphore()
+    ImplTimelineSemaphore::~ImplTimelineSemaphore() // NOLINT(bugprone-exception-escape)
     {
         auto * device = this->impl_device.as<ImplDevice>();
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{device->main_queue_zombies_mtx});
