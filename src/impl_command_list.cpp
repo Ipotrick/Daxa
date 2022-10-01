@@ -363,7 +363,7 @@ namespace daxa
     inline static thread_local std::vector<SplitBarrierDependencyInfoBuffer> tl_split_barrier_dependency_infos_aux_buffer = {}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
     inline static thread_local std::vector<VkDependencyInfo> tl_split_barrier_dependency_infos_buffer = {}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
     inline static thread_local std::vector<VkEvent> tl_split_barrier_events_buffer = {}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-    void CommandList::wait_split_barriers(std::span<SplitBarrierEndInfo const> const & infos)
+    void CommandList::wait_split_barriers(std::span<SplitBarrierWaitInfo const> const & infos)
     {
         auto & impl = *this->as<ImplCommandList>();
         auto & device = *impl.impl_device.as<ImplDevice>();
@@ -398,12 +398,12 @@ namespace daxa
         tl_split_barrier_events_buffer.clear();
     }
 
-    void CommandList::wait_split_barrier(SplitBarrierEndInfo const & info)
+    void CommandList::wait_split_barrier(SplitBarrierWaitInfo const & info)
     {
         this->wait_split_barriers(std::span{&info, 1});
     }
 
-    void CommandList::signal_split_barrier(SplitBarrierStartInfo const & info)
+    void CommandList::signal_split_barrier(SplitBarrierSignalInfo const & info)
     {
         auto & impl = *as<ImplCommandList>();
         auto & device = *impl.impl_device.as<ImplDevice>();

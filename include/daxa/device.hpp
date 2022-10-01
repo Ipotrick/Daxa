@@ -205,7 +205,7 @@ namespace daxa
         auto create_command_list(CommandListInfo const & info) -> CommandList;
         auto create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore;
         auto create_timeline_semaphore(TimelineSemaphoreInfo const & info) -> TimelineSemaphore;
-        auto create_split_barrier(SplitBarrierInfo const & info) -> SplitBarrier;
+        auto create_split_barrier(SplitBarrierInfo const & info) -> SplitBarrierState;
 
         auto map_memory(BufferId id) -> void *;
         void unmap_memory(BufferId id);
