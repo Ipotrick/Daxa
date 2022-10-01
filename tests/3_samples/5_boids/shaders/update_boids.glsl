@@ -88,12 +88,12 @@ void update_boid(inout Boid boid, in Boid old_boid, in uint boid_index, BufferRe
         if (i == boid_index)
             continue;
 
-        const Boid other = old_boids_buffer.boids[i];
+        Boid other = old_boids_buffer.boids[i];
 
-        float const dst_to_other = length(other.position - old_boid.position);
-        float const closeness_to_other = 1.0f - (dst_to_other / float(BOID_VIEW_RANGE));
-        const vec2 dir_to_other = normalize(other.position - old_boid.position);
-        float const signed_angle_of_boid_dir_to_other_dir = signed_angle_between_normals(old_boid.direction, dir_to_other);
+        float dst_to_other = length(other.position - old_boid.position);
+        float closeness_to_other = 1.0f - (dst_to_other / float(BOID_VIEW_RANGE));
+        vec2 dir_to_other = normalize(other.position - old_boid.position);
+        float signed_angle_of_boid_dir_to_other_dir = signed_angle_between_normals(old_boid.direction, dir_to_other);
 
         if (dst_to_other < BOID_VIEW_RANGE || abs(signed_angle_of_boid_dir_to_other_dir) > BOID_VIEW_ANGLE)
             continue;
