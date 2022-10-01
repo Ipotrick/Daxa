@@ -15,7 +15,11 @@ Checks: "*,
         -readability-uppercase-literal-suffix,
         -readability-identifier-length,
         -cppcoreguidelines-pro-type-reinterpret-cast,
-        -performance-no-int-to-ptr
+        -performance-no-int-to-ptr,
+        -bugprone-easily-swappable-parameters,
+        -readability-simplify-boolean-expr,
+        -hicpp-signed-bitwise,
+        -cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers,
 "
 WarningsAsErrors: ''
 HeaderFilterRegex: ''

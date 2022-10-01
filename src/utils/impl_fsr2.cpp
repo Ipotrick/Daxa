@@ -40,7 +40,7 @@ namespace daxa
     {
     }
 
-    ImplFsr2Context::~ImplFsr2Context()
+    ImplFsr2Context::~ImplFsr2Context() // NOLINT(bugprone-exception-escape)
     {
         destroy_resizable_resources();
     }
