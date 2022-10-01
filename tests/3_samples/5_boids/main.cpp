@@ -217,7 +217,7 @@ struct App : AppWindow<App>
 
         task_swapchain_image = new_task_list.create_task_image({
             .image = &this->swapchain_image,
-            .swapchain_parent = std::pair{swapchain, acquire_semaphore},
+            .swapchain_image = true,
         });
 
         new_task_list.add_task({
@@ -240,7 +240,7 @@ struct App : AppWindow<App>
                 {task_boid_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
             },
             .used_images = {
-                {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, std::nullopt},
+                {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
             },
             .task = [=, this](daxa::TaskRuntime const & runtime)
             {
@@ -253,7 +253,7 @@ struct App : AppWindow<App>
         });
         new_task_list.submit(&submit_info);
         new_task_list.present({});
-        new_task_list.compile();
+        new_task_list.complete();
 
         return new_task_list;
     }

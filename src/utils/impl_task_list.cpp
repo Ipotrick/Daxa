@@ -486,13 +486,12 @@ namespace daxa
             // we need to track these image ranges individually.
             for (
                 auto tracked_slice_iter = impl_task_image.slices_last_uses.begin();
-                tracked_slice_iter != impl_task_image.slices_last_uses.end();
-                ++tracked_slice_iter)
+                tracked_slice_iter != impl_task_image.slices_last_uses.end();)
             {
+                bool advanced_tracked_slice_iterator = false;
                 for (
                     auto used_image_slice_iter = tl_new_use_slices.begin();
-                    used_image_slice_iter != tl_new_use_slices.end();
-                    ++used_image_slice_iter)
+                    used_image_slice_iter != tl_new_use_slices.end();)
                 {
                     // We make a local copy of both slices here.
                     // We can not rely on dereferencing the iterators, as we modify them in this function.
@@ -503,6 +502,9 @@ namespace daxa
                     // We are only interested in intersecting ranges, as use of non intersecting ranges does not need synchronization.
                     if (!used_image_slice.intersects(tracked_slice.slice))
                     {
+                        // We only need to advance the iterator manually here.
+                        // After this if statement there is an unconditional erase that advances the iterator if this is not hit.
+                        ++used_image_slice_iter;
                         continue;
                     }
                     // As we found an intersection, part of the old tracked slice must be altered.
@@ -520,6 +522,9 @@ namespace daxa
                     auto [tracked_slice_rest, tracked_slice_rest_count] = tracked_slice.slice.subtract(intersection);
                     auto [new_use_slice_rest, new_use_slice_rest_count] = used_image_slice.subtract(intersection);
                     // We now remove the old tracked slice from the list of tracked slices, as we just split it.
+                    // We need to know if the iterator was advaned. This erase advances the iterator.
+                    // If the iterator got not advanced by this we need to advance it ourself manually later.
+                    advanced_tracked_slice_iterator = true;
                     tracked_slice_iter = impl_task_image.slices_last_uses.erase(tracked_slice_iter);
                     // Now we remember the left over slice from the original tracked slice.
                     for (usize rest_i = 0; rest_i < tracked_slice_rest_count; ++rest_i)
@@ -586,17 +591,18 @@ namespace daxa
                             ret_new_use_tracked_slice.latest_access_read_barrier_index = split_barrier_index;
                         }
                     }
-                    // Make sure we do not try to operator++ the end iterator.
-                    if (used_image_slice_iter == tl_new_use_slices.end() ||
-                        tracked_slice_iter == impl_task_image.slices_last_uses.end())
+                    // Make sure we have any tracked slices to intersect with left.
+                    if (tracked_slice_iter == impl_task_image.slices_last_uses.end())
                     {
                         break;
                     }
                 }
-                // Make sure we do not try to operator++ the end iterator.
-                if (tracked_slice_iter == impl_task_image.slices_last_uses.end())
+                if (!advanced_tracked_slice_iterator)
                 {
-                    break;
+                    // If we didnt find any intersections, we dont remove the tracked slice.
+                    // Erasing a tracked slice "advances" iterator. As we did not remove,
+                    // we need to advance it manually.
+                    ++tracked_slice_iter;
                 }
             }
             // If we have a remainder left of the used image slices, there was no previous use of those slices.
@@ -920,6 +926,7 @@ namespace daxa
         }
 
         impl.left_over_command_lists = std::move(impl_runtime.command_lists);
+        impl.executed = true;
     }
 
     auto TaskList::last_access(TaskBufferId buffer) -> Access
@@ -930,24 +937,24 @@ namespace daxa
         return impl.impl_task_buffers[buffer.index].latest_access;
     }
 
-    auto TaskList::last_access(TaskImageId /*image*/) -> Access
+    auto TaskList::last_uses(TaskImageId image) -> std::vector<TaskImageLastUse>
     {
         auto & impl = *as<ImplTaskList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "final access only available after compilation");
 
-        DAXA_DBG_ASSERT_TRUE_M(false, "THIS NEEDS TO BE IMPLEMENTED");
+        std::vector<TaskImageLastUse> result = {};
+        result.reserve(impl.impl_task_images[image.index].slices_last_uses.size());
 
-        return Access{};
-    }
+        for (auto const & tracked_slice : impl.impl_task_images[image.index].slices_last_uses)
+        {
+            result.push_back({
+                .slice = tracked_slice.slice,
+                .layout = tracked_slice.latest_layout,
+                .access = tracked_slice.latest_access,
+            });
+        }
 
-    auto TaskList::last_layout(TaskImageId /*image*/) -> ImageLayout
-    {
-        auto & impl = *as<ImplTaskList>();
-        DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "final layout only available after compilation");
-
-        DAXA_DBG_ASSERT_TRUE_M(false, "THIS NEEDS TO BE IMPLEMENTED");
-
-        return ImageLayout{};
+        return result;
     }
 
     ImplTaskList::ImplTaskList(TaskListInfo info)

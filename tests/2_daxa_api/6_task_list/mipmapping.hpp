@@ -152,7 +152,7 @@ namespace tests
                 // non_task_list_execute();
 
                 swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
-                // task_list.debug_print();
+                //task_list.debug_print();
                 task_list.execute();
             }
 
@@ -545,6 +545,21 @@ namespace tests
                 }
                 new_task_list.add_task({
                     .used_images = {
+                        {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{}},
+                    },
+                    .task = [=, this](daxa::TaskRuntime const & runtime)
+                    {
+                        auto cmd_list = runtime.get_command_list();
+                        cmd_list.clear_image({
+                            .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+                            .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
+                            .dst_image = swapchain_image,
+                        });
+                    },
+                    .debug_name = "clear swapchain",
+                });
+                new_task_list.add_task({
+                    .used_images = {
                         {task_render_image, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{.level_count = 5}},
                         {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{}},
                     },
@@ -553,12 +568,6 @@ namespace tests
                         auto cmd_list = runtime.get_command_list();
                         auto src_image_id = runtime.get_image(task_render_image);
                         auto dst_image_id = runtime.get_image(task_swapchain_image);
-                        // TODO: Find a replacement for this in new Daxa!
-                        cmd_list.clear_image({
-                            .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-                            .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
-                            .dst_image = swapchain_image,
-                        });
                         blit_image_to_swapchain(cmd_list, src_image_id, dst_image_id);
                     },
                     .debug_name = "blit to swapchain",
