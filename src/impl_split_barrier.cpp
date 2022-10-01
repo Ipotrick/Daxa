@@ -1,5 +1,7 @@
 #include "impl_split_barrier.hpp"
 
+#include <utility>
+
 #include "impl_device.hpp"
 
 namespace daxa
@@ -34,27 +36,26 @@ namespace daxa
 
     void SplitBarrier::cleanup()
     {
-        if (this->data)
+        if (this->data != 0u)
         {
-            ImplDevice * device = this->device.as<ImplDevice>();
-            DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{device->main_queue_zombies_mtx});
-            u64 main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(device->main_queue_cpu_timeline);
+            auto * device = this->device.as<ImplDevice>();
+            DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{device->main_queue_zombies_mtx});
+            u64 const main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(device->main_queue_cpu_timeline);
 
-            device->main_queue_split_barrier_zombies.push_back({
+            device->main_queue_split_barrier_zombies.emplace_back(
                 main_queue_cpu_timeline,
                 SplitBarrierZombie{
                     .vk_event = reinterpret_cast<VkEvent>(this->data),
-                },
-            });
+                });
             this->data = {};
         }
     }
 
-    SplitBarrier::SplitBarrier(ManagedWeakPtr device, SplitBarrierInfo const & create_info)
-        : device{std::move(device)}, create_info{create_info}
+    SplitBarrier::SplitBarrier(ManagedWeakPtr device, SplitBarrierInfo info)
+        : device{std::move(device)}, create_info{std::move(info)}
     {
-        ImplDevice * impl_device = this->device.as<ImplDevice>();
-        VkEventCreateInfo vk_event_create_info{
+        auto * impl_device = this->device.as<ImplDevice>();
+        VkEventCreateInfo const vk_event_create_info{
             .sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO,
             .pNext = nullptr,
             .flags = VK_EVENT_CREATE_DEVICE_ONLY_BIT,
@@ -63,10 +64,10 @@ namespace daxa
         vkCreateEvent(impl_device->vk_device, &vk_event_create_info, nullptr, &event);
         this->data = reinterpret_cast<u64>(event);
 
-        if (impl_device->impl_ctx.as<ImplContext>()->enable_debug_names && this->create_info.debug_name.size() > 0)
+        if (impl_device->impl_ctx.as<ImplContext>()->enable_debug_names && !this->create_info.debug_name.empty())
         {
             auto name = this->create_info.debug_name + std::string(" [Daxa Split Barrier]");
-            VkDebugUtilsObjectNameInfoEXT name_info{
+            VkDebugUtilsObjectNameInfoEXT const name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_EVENT,

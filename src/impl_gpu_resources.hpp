@@ -78,7 +78,7 @@ namespace daxa
         void verify_resource_id(GPUResourceId id) const
         {
             usize page = id.index >> PAGE_BITS;
-            usize offset = id.index & PAGE_MASK;
+            // usize offset = id.index & PAGE_MASK;
             DAXA_DBG_ASSERT_TRUE_M(pages[page] != nullptr, "detected invalid resource id");
             DAXA_DBG_ASSERT_TRUE_M(id.version != 0, "detected invalid resource id");
         }
@@ -90,7 +90,7 @@ namespace daxa
             std::unique_lock use_after_free_check_lock{use_after_free_check_mtx};
 #endif
             DAXA_ONLY_IF_THREADSAFETY(std::unique_lock page_alloc_lock{page_alloc_mtx});
-            u32 index = {};
+            u32 index;
             if (free_index_stack.empty())
             {
                 index = next_index++;

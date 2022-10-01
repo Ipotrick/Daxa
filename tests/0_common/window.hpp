@@ -18,7 +18,7 @@ struct AppWindow
     u32 size_x, size_y;
     bool minimized = false;
 
-    AppWindow(char const * window_name, u32 sx = 800, u32 sy = 600) : size_x{sx}, size_y{sy}
+    explicit AppWindow(char const * window_name, u32 sx = 800, u32 sy = 600) : size_x{sx}, size_y{sy}
     {
         glfwInit();
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);

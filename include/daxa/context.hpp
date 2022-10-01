@@ -36,7 +36,7 @@ namespace daxa
 
       private:
         friend auto create_context(ContextInfo const & info) -> Context;
-        Context(ManagedPtr impl);
+        explicit Context(ManagedPtr impl);
     };
 
     auto create_context(ContextInfo const & info) -> Context;

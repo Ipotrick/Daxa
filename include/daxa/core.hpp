@@ -125,13 +125,13 @@ namespace daxa
         }
 
         ManagedWeakPtr() = default;
-        ManagedWeakPtr(ManagedSharedState * ptr);
+        explicit ManagedWeakPtr(ManagedSharedState * ptr);
         ~ManagedWeakPtr();
 
-        ManagedWeakPtr(const ManagedWeakPtr &);
-        ManagedWeakPtr(ManagedWeakPtr &&);
-        ManagedWeakPtr & operator=(const ManagedWeakPtr &);
-        ManagedWeakPtr & operator=(ManagedWeakPtr &&);
+        ManagedWeakPtr(ManagedWeakPtr const &);
+        ManagedWeakPtr(ManagedWeakPtr &&) noexcept;
+        ManagedWeakPtr & operator=(ManagedWeakPtr const &);
+        ManagedWeakPtr & operator=(ManagedWeakPtr &&) noexcept;
     };
 
     struct ManagedPtr
@@ -162,23 +162,18 @@ namespace daxa
         }
 
         ManagedPtr() = default;
-        ManagedPtr(ManagedSharedState * ptr);
+        explicit ManagedPtr(ManagedSharedState * ptr);
         ~ManagedPtr();
 
-        ManagedPtr(const ManagedPtr &);
-        ManagedPtr(ManagedPtr &&);
-        ManagedPtr & operator=(const ManagedPtr &);
-        ManagedPtr & operator=(ManagedPtr &&);
+        ManagedPtr(ManagedPtr const &);
+        ManagedPtr(ManagedPtr &&) noexcept;
+        ManagedPtr & operator=(ManagedPtr const &);
+        ManagedPtr & operator=(ManagedPtr &&) noexcept;
 
-        ManagedWeakPtr make_weak();
+        ManagedWeakPtr make_weak() const;
 
       private:
         void cleanup();
-    };
-
-    struct ResultErr
-    {
-        std::string message = {};
     };
 
     template <typename T>
@@ -187,32 +182,27 @@ namespace daxa
         std::optional<T> v = {};
         std::string m = {};
 
-        Result(T && value)
+        explicit Result(T && value)
             : v{std::move(value)}, m{""}
         {
         }
 
-        Result(T const & value)
+        explicit Result(T const & value)
             : v{value}, m{""}
         {
         }
 
-        Result(std::optional<T> && opt)
+        explicit Result(std::optional<T> && opt)
             : v{std::move(opt)}, m{opt.has_value() ? "" : "default error message"}
         {
         }
 
-        Result(std::optional<T> const & opt)
+        explicit Result(std::optional<T> const & opt)
             : v{opt}, m{opt.has_value() ? "" : "default error message"}
         {
         }
 
-        Result(ResultErr const & err)
-            : v{std::nullopt}, m{err.message}
-        {
-        }
-
-        Result(std::string_view message)
+        explicit Result(std::string_view message)
             : v{std::nullopt}, m{message}
         {
         }
@@ -272,7 +262,7 @@ namespace daxa
         bool v = {};
         std::string m = {};
 
-        Result(bool opt)
+        explicit Result(bool opt)
             : v{opt}, m{opt ? "" : "default error message"}
         {
         }

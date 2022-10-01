@@ -19,23 +19,23 @@ void main()
     if (pixel_i.x >= push_constant.frame_dim.x || pixel_i.y >= push_constant.frame_dim.y)
         return;
 
-    // f32vec2 render_size = push_constant.frame_dim;
-    // f32vec2 inv_render_size = f32vec2(1.0) / render_size;
-    // f32vec2 pixel_pos = pixel_i.xy;
-    // f32vec2 mouse_pos = f32vec2(push_constant.compute_input.mouse_x, push_constant.compute_input.mouse_y);
-    // f32vec2 prev_mouse_pos = f32vec2(push_constant.compute_input.p_mouse_x, push_constant.compute_input.p_mouse_y);
+    f32vec2 render_size = push_constant.frame_dim;
+    f32vec2 inv_render_size = f32vec2(1.0) / render_size;
+    f32vec2 pixel_pos = pixel_i.xy;
+    f32vec2 mouse_pos = f32vec2(push_constant.compute_input.mouse_x, push_constant.compute_input.mouse_y);
+    f32vec2 prev_mouse_pos = f32vec2(push_constant.compute_input.p_mouse_x, push_constant.compute_input.p_mouse_y);
 
-    // f32vec2 uv = pixel_pos * inv_render_size;
+    f32vec2 uv = pixel_pos * inv_render_size;
 
-    // f32 dist = segment_distance(pixel_pos, prev_mouse_pos, mouse_pos);
+    f32 dist = segment_distance(pixel_pos, prev_mouse_pos, mouse_pos);
 
-    // if (dist < push_constant.compute_input.paint_radius)
-    // {
-    //     f32vec3 col = push_constant.compute_input.paint_col;
+    if (dist < push_constant.compute_input.paint_radius)
+    {
+        f32vec3 col = push_constant.compute_input.paint_col;
 
-    //     imageStore(
-    //         daxa_GetRWImage(image2D, rgba32f, push_constant.image_id),
-    //         i32vec2(pixel_i.xy),
-    //         f32vec4(col, 1));
-    // }
+        imageStore(
+            daxa_GetRWImage(image2D, rgba32f, push_constant.image_id),
+            i32vec2(pixel_i.xy),
+            f32vec4(col, 1));
+    }
 }

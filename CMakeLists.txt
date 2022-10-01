@@ -26,13 +26,16 @@ if(DAXA_ENABLE_STATIC_ANALYSIS)
         --template=${CPPCHECK_TEMPLATE}
         --enable=style,performance,warning,portability
         --inline-suppr
+        --suppress=cppcheckError
         --suppress=internalAstError
         --suppress=unmatchedSuppression
+        --suppress=preprocessorErrorDirective
+        --suppress=exceptThrowInDestructor
+        --suppress=functionStatic
         --inconclusive)
-    set(CMAKE_CXX_CPPCHECK
-        ${CPPCHECK}
-        --template=${CPPCHECK_TEMPLATE}
-        ${CPPCHECK_OPTIONS})
+    set(CMAKE_CXX_CLANG_TIDY
+        ${CLANG_TIDY}
+        --fix)
 endif()
 
 add_library(daxa STATIC

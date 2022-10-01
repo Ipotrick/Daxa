@@ -28,52 +28,52 @@ namespace daxa
         return ret;
     }
 
-    void GPUResourceTable::initialize(usize max_buffers, usize max_images, usize max_samplers, usize max_timeline_query_pools,
-                                      VkDevice device, VkBuffer buffer_device_address_buffer)
+    void GPUResourceTable::initialize(usize max_buffers, usize max_images, usize max_samplers, usize /*max_timeline_query_pools*/,
+                                      VkDevice device, VkBuffer device_address_buffer)
     {
         buffer_slots.max_resources = max_buffers;
         image_slots.max_resources = max_images;
         sampler_slots.max_resources = max_samplers;
 
-        VkDescriptorPoolSize buffer_descriptor_pool_size{
+        VkDescriptorPoolSize const buffer_descriptor_pool_size{
             .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             .descriptorCount = static_cast<u32>(buffer_slots.max_resources + 1),
         };
 
-        VkDescriptorPoolSize storage_image_descriptor_pool_size{
+        VkDescriptorPoolSize const storage_image_descriptor_pool_size{
             .type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
             .descriptorCount = static_cast<u32>(image_slots.max_resources),
         };
 
-        VkDescriptorPoolSize sampled_image_descriptor_pool_size{
+        VkDescriptorPoolSize const sampled_image_descriptor_pool_size{
             .type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             .descriptorCount = static_cast<u32>(image_slots.max_resources),
         };
 
-        VkDescriptorPoolSize sampler_descriptor_pool_size{
+        VkDescriptorPoolSize const sampler_descriptor_pool_size{
             .type = VK_DESCRIPTOR_TYPE_SAMPLER,
             .descriptorCount = static_cast<u32>(sampler_slots.max_resources),
         };
 
-        VkDescriptorPoolSize pool_sizes[] = {
+        std::array<VkDescriptorPoolSize, 4> const pool_sizes = {
             buffer_descriptor_pool_size,
             storage_image_descriptor_pool_size,
             sampled_image_descriptor_pool_size,
             sampler_descriptor_pool_size,
         };
 
-        VkDescriptorPoolCreateInfo vk_descriptor_pool_create_info{
+        VkDescriptorPoolCreateInfo const vk_descriptor_pool_create_info{
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
             .pNext = nullptr,
             .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
             .maxSets = 1,
-            .poolSizeCount = 4u,
-            .pPoolSizes = pool_sizes,
+            .poolSizeCount = static_cast<u32>(pool_sizes.size()),
+            .pPoolSizes = pool_sizes.data(),
         };
 
         vkCreateDescriptorPool(device, &vk_descriptor_pool_create_info, nullptr, &this->vk_descriptor_pool);
 
-        VkDescriptorSetLayoutBinding buffer_descriptor_set_layout_binding{
+        VkDescriptorSetLayoutBinding const buffer_descriptor_set_layout_binding{
             .binding = BUFFER_BINDING,
             .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             .descriptorCount = static_cast<u32>(buffer_slots.max_resources),
@@ -81,7 +81,7 @@ namespace daxa
             .pImmutableSamplers = nullptr,
         };
 
-        VkDescriptorSetLayoutBinding storage_image_descriptor_set_layout_binding{
+        VkDescriptorSetLayoutBinding const storage_image_descriptor_set_layout_binding{
             .binding = STORAGE_IMAGE_BINDING,
             .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
             .descriptorCount = static_cast<u32>(image_slots.max_resources),
@@ -89,7 +89,7 @@ namespace daxa
             .pImmutableSamplers = nullptr,
         };
 
-        VkDescriptorSetLayoutBinding sampled_image_descriptor_set_layout_binding{
+        VkDescriptorSetLayoutBinding const sampled_image_descriptor_set_layout_binding{
             .binding = SAMPLED_IMAGE_BINDING,
             .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             .descriptorCount = static_cast<u32>(image_slots.max_resources),
@@ -97,7 +97,7 @@ namespace daxa
             .pImmutableSamplers = nullptr,
         };
 
-        VkDescriptorSetLayoutBinding sampler_descriptor_set_layout_binding{
+        VkDescriptorSetLayoutBinding const sampler_descriptor_set_layout_binding{
             .binding = SAMPLER_BINDING,
             .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
             .descriptorCount = static_cast<u32>(sampler_slots.max_resources),
@@ -105,7 +105,7 @@ namespace daxa
             .pImmutableSamplers = nullptr,
         };
 
-        VkDescriptorSetLayoutBinding buffer_address_buffer_descriptor_set_layout_binding{
+        VkDescriptorSetLayoutBinding const buffer_address_buffer_descriptor_set_layout_binding{
             .binding = BUFFER_DEVICE_ADDRESS_BUFFER_BINDING,
             .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             .descriptorCount = 1,
@@ -113,7 +113,7 @@ namespace daxa
             .pImmutableSamplers = nullptr,
         };
 
-        VkDescriptorSetLayoutBinding descriptor_set_layout_bindings[] = {
+        std::array<VkDescriptorSetLayoutBinding, 5> const descriptor_set_layout_bindings = {
             buffer_descriptor_set_layout_binding,
             storage_image_descriptor_set_layout_binding,
             sampled_image_descriptor_set_layout_binding,
@@ -121,32 +121,32 @@ namespace daxa
             buffer_address_buffer_descriptor_set_layout_binding,
         };
 
-        VkDescriptorBindingFlags vk_descriptor_binding_flags[] = {
+        std::array<VkDescriptorBindingFlags, 5> vk_descriptor_binding_flags = {
             VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
             VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
             VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
             VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
             VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
-            {},
+
         };
         VkDescriptorSetLayoutBindingFlagsCreateInfo vk_descriptor_set_layout_binding_flags_create_info{
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
             .pNext = nullptr,
-            .bindingCount = 5u,
-            .pBindingFlags = vk_descriptor_binding_flags,
+            .bindingCount = static_cast<u32>(vk_descriptor_binding_flags.size()),
+            .pBindingFlags = vk_descriptor_binding_flags.data(),
         };
 
-        VkDescriptorSetLayoutCreateInfo vk_descriptor_set_layout_create_info{
+        VkDescriptorSetLayoutCreateInfo const vk_descriptor_set_layout_create_info{
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
             .pNext = &vk_descriptor_set_layout_binding_flags_create_info,
             .flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT,
-            .bindingCount = 5,
-            .pBindings = descriptor_set_layout_bindings,
+            .bindingCount = static_cast<u32>(descriptor_set_layout_bindings.size()),
+            .pBindings = descriptor_set_layout_bindings.data(),
         };
 
         vkCreateDescriptorSetLayout(device, &vk_descriptor_set_layout_create_info, nullptr, &this->vk_descriptor_set_layout);
 
-        VkDescriptorSetAllocateInfo vk_descriptor_set_allocate_info{
+        VkDescriptorSetAllocateInfo const vk_descriptor_set_allocate_info{
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
             .pNext = nullptr,
             .descriptorPool = this->vk_descriptor_pool,
@@ -166,27 +166,27 @@ namespace daxa
             .pPushConstantRanges = nullptr,
         };
 
-        vkCreatePipelineLayout(device, &vk_pipeline_create_info, nullptr, &pipeline_layouts[0]);
+        vkCreatePipelineLayout(device, &vk_pipeline_create_info, nullptr, pipeline_layouts.data());
 
         for (usize i = 1; i < PIPELINE_LAYOUT_COUNT; ++i)
         {
-            VkPushConstantRange vk_push_constant_range{
+            VkPushConstantRange const vk_push_constant_range{
                 .stageFlags = VK_SHADER_STAGE_ALL,
                 .offset = 0,
                 .size = static_cast<u32>(i * 4),
             };
             vk_pipeline_create_info.pushConstantRangeCount = 1;
             vk_pipeline_create_info.pPushConstantRanges = &vk_push_constant_range;
-            vkCreatePipelineLayout(device, &vk_pipeline_create_info, nullptr, &pipeline_layouts[i]);
+            vkCreatePipelineLayout(device, &vk_pipeline_create_info, nullptr, &pipeline_layouts.at(i));
         }
 
-        VkDescriptorBufferInfo write_buffer{
-            .buffer = buffer_device_address_buffer,
+        VkDescriptorBufferInfo const write_buffer{
+            .buffer = device_address_buffer,
             .offset = 0,
             .range = VK_WHOLE_SIZE,
         };
 
-        VkWriteDescriptorSet write{
+        VkWriteDescriptorSet const write{
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .pNext = nullptr,
             .dstSet = this->vk_descriptor_set,
@@ -206,7 +206,7 @@ namespace daxa
     {
         for (usize i = 0; i < PIPELINE_LAYOUT_COUNT; ++i)
         {
-            vkDestroyPipelineLayout(device, pipeline_layouts[i], nullptr);
+            vkDestroyPipelineLayout(device, pipeline_layouts.at(i), nullptr);
         }
         vkDestroyDescriptorSetLayout(device, this->vk_descriptor_set_layout, nullptr);
         vkResetDescriptorPool(device, this->vk_descriptor_pool, {});
@@ -215,13 +215,13 @@ namespace daxa
 
     void write_descriptor_set_sampler(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkSampler vk_sampler, u32 index)
     {
-        VkDescriptorImageInfo vk_descriptor_image_info{
+        VkDescriptorImageInfo const vk_descriptor_image_info{
             .sampler = vk_sampler,
             .imageView = VK_NULL_HANDLE,
             .imageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
         };
 
-        VkWriteDescriptorSet vk_write_descriptor_set_storage{
+        VkWriteDescriptorSet const vk_write_descriptor_set_storage{
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .pNext = nullptr,
             .dstSet = vk_descriptor_set,
@@ -239,13 +239,13 @@ namespace daxa
 
     void write_descriptor_set_buffer(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkBuffer vk_buffer, VkDeviceSize offset, VkDeviceSize range, u32 index)
     {
-        VkDescriptorBufferInfo vk_descriptor_image_info{
+        VkDescriptorBufferInfo const vk_descriptor_image_info{
             .buffer = vk_buffer,
             .offset = offset,
             .range = range,
         };
 
-        VkWriteDescriptorSet vk_write_descriptor_set{
+        VkWriteDescriptorSet const vk_write_descriptor_set{
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .pNext = nullptr,
             .dstSet = vk_descriptor_set,
@@ -266,13 +266,13 @@ namespace daxa
         u32 descriptor_set_write_count = 0;
         std::array<VkWriteDescriptorSet, 2> descriptor_set_writes = {};
 
-        VkDescriptorImageInfo vk_descriptor_image_info{
+        VkDescriptorImageInfo const vk_descriptor_image_info{
             .sampler = VK_NULL_HANDLE,
             .imageView = vk_image_view,
             .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
         };
 
-        VkWriteDescriptorSet vk_write_descriptor_set{
+        VkWriteDescriptorSet const vk_write_descriptor_set{
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .pNext = nullptr,
             .dstSet = vk_descriptor_set,
@@ -287,16 +287,16 @@ namespace daxa
 
         if ((usage & ImageUsageFlagBits::SHADER_READ_WRITE) != ImageUsageFlagBits::NONE)
         {
-            descriptor_set_writes[descriptor_set_write_count++] = vk_write_descriptor_set;
+            descriptor_set_writes.at(descriptor_set_write_count++) = vk_write_descriptor_set;
         }
 
-        VkDescriptorImageInfo vk_descriptor_image_info_sampled{
+        VkDescriptorImageInfo const vk_descriptor_image_info_sampled{
             .sampler = VK_NULL_HANDLE,
             .imageView = vk_image_view,
             .imageLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
         };
 
-        VkWriteDescriptorSet vk_write_descriptor_set_sampled{
+        VkWriteDescriptorSet const vk_write_descriptor_set_sampled{
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .pNext = nullptr,
             .dstSet = vk_descriptor_set,
@@ -311,7 +311,7 @@ namespace daxa
 
         if ((usage & ImageUsageFlagBits::SHADER_READ_ONLY) != ImageUsageFlagBits::NONE)
         {
-            descriptor_set_writes[descriptor_set_write_count++] = vk_write_descriptor_set_sampled;
+            descriptor_set_writes.at(descriptor_set_write_count++) = vk_write_descriptor_set_sampled;
         }
 
         vkUpdateDescriptorSets(vk_device, descriptor_set_write_count, descriptor_set_writes.data(), 0, nullptr);

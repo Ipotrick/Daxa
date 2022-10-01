@@ -152,7 +152,7 @@ namespace tests
                 // non_task_list_execute();
 
                 swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
-                task_list.debug_print();
+                // task_list.debug_print();
                 task_list.execute();
             }
 
@@ -538,14 +538,14 @@ namespace tests
                                     .filter = daxa::Filter::LINEAR,
                                 });
                             },
-                            .debug_name = "mip_level_" + std::to_string(i), 
+                            .debug_name = "mip_level_" + std::to_string(i),
                         });
                         mip_size = next_mip_size;
                     }
                 }
                 new_task_list.add_task({
                     .used_images = {
-                        {task_render_image, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{ .level_count = 5 }},
+                        {task_render_image, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{.level_count = 5}},
                         {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{}},
                     },
                     .task = [=, this](daxa::TaskRuntime const & runtime)
