@@ -169,18 +169,20 @@ namespace daxa
         return "invalid";
     }
 
-    TaskRuntime::TaskRuntime(ImplTaskRuntime & impl)
-        : impl{impl}
+    TaskRuntime::TaskRuntime(void * backend)
+        : backend{backend}
     {
     }
 
     auto TaskRuntime::get_device() const -> Device &
     {
+        auto & impl = *static_cast<ImplTaskRuntime *>(this->backend);
         return impl.task_list.info.device;
     }
 
     auto TaskRuntime::get_command_list() const -> CommandList
     {
+        auto & impl = *static_cast<ImplTaskRuntime *>(this->backend);
         if (impl.reuse_last_command_list)
         {
             impl.reuse_last_command_list = false;
@@ -195,21 +197,25 @@ namespace daxa
 
     auto TaskRuntime::get_used_task_buffers() const -> TaskUsedBuffers const &
     {
+        auto & impl = *static_cast<ImplTaskRuntime *>(this->backend);
         return impl.current_task->info.used_buffers;
     }
 
     auto TaskRuntime::get_used_task_images() const -> TaskUsedImages const &
     {
+        auto & impl = *static_cast<ImplTaskRuntime *>(this->backend);
         return impl.current_task->info.used_images;
     }
 
     auto TaskRuntime::get_buffer(TaskBufferId const & task_resource_id) const -> BufferId
     {
+        auto & impl = *static_cast<ImplTaskRuntime *>(this->backend);
         return *(impl.task_list.impl_task_buffers[task_resource_id.index].info.buffer);
     }
 
     auto TaskRuntime::get_image(TaskImageId const & task_resource_id) const -> ImageId
     {
+        auto & impl = *static_cast<ImplTaskRuntime *>(this->backend);
         return *(impl.task_list.impl_task_images[task_resource_id.index].info.image);
     }
 
@@ -832,7 +838,7 @@ namespace daxa
                     impl_runtime.reuse_last_command_list = true;
                     Task & task = impl.tasks[task_id];
                     impl_runtime.current_task = &task;
-                    task.info.task(TaskRuntime(impl_runtime));
+                    task.info.task(TaskRuntime(&impl_runtime));
                 }
                 if (!impl.info.dont_use_split_barriers)
                 {

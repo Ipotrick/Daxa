@@ -512,7 +512,7 @@ namespace tests
                                 {task_render_image, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{.base_mip_level = i}},
                                 {task_render_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{.base_mip_level = i + 1}},
                             },
-                            .task = [=](daxa::TaskRuntime const & runtime)
+                            .task = [=, this](daxa::TaskRuntime const & runtime)
                             {
                                 auto cmd_list = runtime.get_command_list();
                                 auto image_id = runtime.get_image(task_render_image);

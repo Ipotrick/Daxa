@@ -117,8 +117,8 @@ namespace daxa
       private:
         friend struct ImplTaskRuntime;
         friend struct TaskList;
-        TaskRuntime(ImplTaskRuntime & impl);
-        ImplTaskRuntime & impl;
+        TaskRuntime(void * backend);
+        void * backend;
     };
 
     using TaskCallback = std::function<void(TaskRuntime const &)>;
