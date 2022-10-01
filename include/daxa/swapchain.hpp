@@ -43,6 +43,6 @@ namespace daxa
 
       private:
         friend struct Device;
-        Swapchain(ManagedPtr impl);
+        explicit Swapchain(ManagedPtr impl);
     };
 } // namespace daxa

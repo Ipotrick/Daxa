@@ -58,10 +58,10 @@ namespace daxa
 
         void flush_barriers();
 
-        ImplCommandList(ManagedWeakPtr device_impl, VkCommandPool pool, VkCommandBuffer buffer, CommandListInfo const & a_info);
+        ImplCommandList(ManagedWeakPtr device_impl, VkCommandPool pool, VkCommandBuffer buffer, CommandListInfo a_info);
         virtual ~ImplCommandList() override final;
 
-        void initialize(CommandListInfo const & a_info);
+        void initialize();
         void reset();
     };
 } // namespace daxa

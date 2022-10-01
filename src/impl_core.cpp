@@ -11,19 +11,19 @@ namespace daxa
         cleanup();
     }
 
-    ManagedPtr::ManagedPtr(const ManagedPtr & other) { *this = other; }
-    ManagedPtr::ManagedPtr(ManagedPtr && other) { *this = std::move(other); }
-    ManagedPtr & ManagedPtr::operator=(const ManagedPtr & other)
+    ManagedPtr::ManagedPtr(ManagedPtr const & other) { *this = other; }
+    ManagedPtr::ManagedPtr(ManagedPtr && other) noexcept { *this = std::move(other); }
+    auto ManagedPtr::operator=(ManagedPtr const & other) -> ManagedPtr &
     {
         cleanup();
         this->object = other.object;
-        if (this->object)
+        if (this->object != nullptr)
         {
             DAXA_ATOMIC_FETCH_INC(this->object->strong_count);
         }
         return *this;
     }
-    ManagedPtr & ManagedPtr::operator=(ManagedPtr && other)
+    auto ManagedPtr::operator=(ManagedPtr && other) noexcept -> ManagedPtr &
     {
         cleanup();
         std::swap(this->object, other.object);
@@ -109,8 +109,8 @@ namespace daxa
         u32 const b_arr_p0 = slice.base_array_layer;
         u32 const b_arr_p1 = slice.base_array_layer + slice.layer_count - 1;
 
-        u32 const mip_case = (b_mip_p1 < a_mip_p1) + (b_mip_p0 > a_mip_p0) * 2;
-        u32 const arr_case = (b_arr_p1 < a_arr_p1) + (b_arr_p0 > a_arr_p0) * 2;
+        u32 const mip_case = static_cast<int>(b_mip_p1 < a_mip_p1) + static_cast<int>(b_mip_p0 > a_mip_p0) * 2;
+        u32 const arr_case = static_cast<int>(b_arr_p1 < a_arr_p1) + static_cast<int>(b_arr_p0 > a_arr_p0) * 2;
 
         std::tuple<std::array<ImageMipArraySlice, 4>, usize> result = {};
         if (!this->intersects(slice))
@@ -155,7 +155,7 @@ namespace daxa
         // clang-format on
 
         // clang-format off
-        std::array<usize, 16> rect_n {
+        static constexpr std::array<usize, 16> rect_n {
             0, 1, 1, 2,
             1, 2, 2, 3,
             1, 2, 2, 3,
@@ -199,23 +199,23 @@ namespace daxa
         usize const result_index = mip_case + arr_case * 4;
         // TODO(grundlett): [aspect] listed above
         // usize const aspect_mask = ((this->image_aspect & ~slice.image_aspect) != 0);
-        usize const result_rect_n = rect_n[result_index]; // * aspect_mask
-        auto const & bc = bc_indices[result_index];
+        usize const result_rect_n = rect_n.at(result_index); // * aspect_mask
+        auto const & bc = bc_indices.at(result_index);
         std::get<1>(result) = result_rect_n;
 
         for (usize i = 0; i < result_rect_n; ++i)
         {
             auto & rect_i = std::get<0>(result)[i];
-            auto const & bc_i = bc[i];
+            auto const & bc_i = bc.at(i);
 
             rect_i = *this;
             // TODO(grundlett): [aspect] listed above
             // rect_i.image_aspect &= ~slice.image_aspect;
 
-            rect_i.base_mip_level = mip_bc[bc_i.mip_i].base;
-            rect_i.level_count = mip_bc[bc_i.mip_i].count;
-            rect_i.base_array_layer = arr_bc[bc_i.arr_i].base;
-            rect_i.layer_count = arr_bc[bc_i.arr_i].count;
+            rect_i.base_mip_level = mip_bc.at(bc_i.mip_i).base;
+            rect_i.level_count = mip_bc.at(bc_i.mip_i).count;
+            rect_i.base_array_layer = arr_bc.at(bc_i.arr_i).base;
+            rect_i.layer_count = arr_bc.at(bc_i.arr_i).count;
         }
 
         return result;
@@ -272,9 +272,9 @@ namespace daxa
 
     void ManagedPtr::cleanup()
     {
-        if (this->object && DAXA_ATOMIC_FETCH_DEC(this->object->strong_count) == 1)
+        if ((this->object != nullptr) && DAXA_ATOMIC_FETCH_DEC(this->object->strong_count) == 1)
         {
-            u64 weak_count = DAXA_ATOMIC_FETCH(this->object->weak_count);
+            u64 const weak_count = DAXA_ATOMIC_FETCH(this->object->weak_count);
             this->object->~ManagedSharedState();
             if (weak_count == 0)
             {
@@ -284,7 +284,7 @@ namespace daxa
         }
     }
 
-    ManagedWeakPtr ManagedPtr::make_weak()
+    auto ManagedPtr::make_weak() const -> ManagedWeakPtr
     {
         return ManagedWeakPtr(this->object);
     }
@@ -295,7 +295,7 @@ namespace daxa
     }
     ManagedWeakPtr::~ManagedWeakPtr()
     {
-        if (object)
+        if (object != nullptr)
         {
 #if DAXA_VALIDATION
             u64 strong_count = DAXA_ATOMIC_FETCH(object->strong_count);
@@ -305,15 +305,15 @@ namespace daxa
         }
     }
 
-    ManagedWeakPtr::ManagedWeakPtr(const ManagedWeakPtr & other) { *this = other; }
-    ManagedWeakPtr::ManagedWeakPtr(ManagedWeakPtr && other) { *this = std::move(other); }
-    ManagedWeakPtr & ManagedWeakPtr::operator=(const ManagedWeakPtr & other)
+    ManagedWeakPtr::ManagedWeakPtr(ManagedWeakPtr const & other) { *this = other; }
+    ManagedWeakPtr::ManagedWeakPtr(ManagedWeakPtr && other) noexcept { *this = std::move(other); }
+    auto ManagedWeakPtr::operator=(ManagedWeakPtr const & other) -> ManagedWeakPtr &
     {
         object = other.object;
         DAXA_ATOMIC_FETCH_INC(object->weak_count);
         return *this;
     }
-    ManagedWeakPtr & ManagedWeakPtr::operator=(ManagedWeakPtr && other)
+    auto ManagedWeakPtr::operator=(ManagedWeakPtr && other) noexcept -> ManagedWeakPtr &
     {
         std::swap(object, other.object);
         return *this;
@@ -339,15 +339,15 @@ namespace daxa
         std::string ret = {};
         if ((flags & AccessTypeFlagBits::READ) != AccessTypeFlagBits::NONE)
         {
-            if (ret.size() != 0)
-            {
-                ret += " | ";
-            }
+            // if (ret.size() != 0)
+            // {
+            //     ret += " | ";
+            // }
             ret += "READ";
-        } 
+        }
         if ((flags & AccessTypeFlagBits::WRITE) != AccessTypeFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -383,15 +383,15 @@ namespace daxa
 
         if ((aspect_flags & ImageAspectFlagBits::COLOR) != ImageAspectFlagBits::NONE)
         {
-            if (ret.size() != 0)
-            {
-                ret += " | ";
-            }
+            // if (ret.size() != 0)
+            // {
+            //     ret += " | ";
+            // }
             ret += "COLOR";
         }
         if ((aspect_flags & ImageAspectFlagBits::DEPTH) != ImageAspectFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -399,7 +399,7 @@ namespace daxa
         }
         if ((aspect_flags & ImageAspectFlagBits::STENCIL) != ImageAspectFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -407,7 +407,7 @@ namespace daxa
         }
         if ((aspect_flags & ImageAspectFlagBits::METADATA) != ImageAspectFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -415,7 +415,7 @@ namespace daxa
         }
         if ((aspect_flags & ImageAspectFlagBits::PLANE_0) != ImageAspectFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -423,7 +423,7 @@ namespace daxa
         }
         if ((aspect_flags & ImageAspectFlagBits::PLANE_1) != ImageAspectFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -431,7 +431,7 @@ namespace daxa
         }
         if ((aspect_flags & ImageAspectFlagBits::PLANE_2) != ImageAspectFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -485,7 +485,7 @@ namespace daxa
         }
         if ((flags & PipelineStageFlagBits::DRAW_INDIRECT) != PipelineStageFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -493,7 +493,7 @@ namespace daxa
         }
         if ((flags & PipelineStageFlagBits::VERTEX_SHADER) != PipelineStageFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -501,7 +501,7 @@ namespace daxa
         }
         if ((flags & PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER) != PipelineStageFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -509,7 +509,7 @@ namespace daxa
         }
         if ((flags & PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER) != PipelineStageFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -517,7 +517,7 @@ namespace daxa
         }
         if ((flags & PipelineStageFlagBits::GEOMETRY_SHADER) != PipelineStageFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -525,7 +525,7 @@ namespace daxa
         }
         if ((flags & PipelineStageFlagBits::FRAGMENT_SHADER) != PipelineStageFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -533,7 +533,7 @@ namespace daxa
         }
         if ((flags & PipelineStageFlagBits::EARLY_FRAGMENT_TESTS) != PipelineStageFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -541,7 +541,7 @@ namespace daxa
         }
         if ((flags & PipelineStageFlagBits::LATE_FRAGMENT_TESTS) != PipelineStageFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -549,7 +549,7 @@ namespace daxa
         }
         if ((flags & PipelineStageFlagBits::COLOR_ATTACHMENT_OUTPUT) != PipelineStageFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -557,7 +557,7 @@ namespace daxa
         }
         if ((flags & PipelineStageFlagBits::COMPUTE_SHADER) != PipelineStageFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -565,7 +565,7 @@ namespace daxa
         }
         if ((flags & PipelineStageFlagBits::TRANSFER) != PipelineStageFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -573,7 +573,7 @@ namespace daxa
         }
         if ((flags & PipelineStageFlagBits::BOTTOM_OF_PIPE) != PipelineStageFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -581,7 +581,7 @@ namespace daxa
         }
         if ((flags & PipelineStageFlagBits::HOST) != PipelineStageFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -589,7 +589,7 @@ namespace daxa
         }
         if ((flags & PipelineStageFlagBits::ALL_GRAPHICS) != PipelineStageFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -597,7 +597,7 @@ namespace daxa
         }
         if ((flags & PipelineStageFlagBits::ALL_COMMANDS) != PipelineStageFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -605,7 +605,7 @@ namespace daxa
         }
         if ((flags & PipelineStageFlagBits::COPY) != PipelineStageFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -613,7 +613,7 @@ namespace daxa
         }
         if ((flags & PipelineStageFlagBits::RESOLVE) != PipelineStageFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -621,7 +621,7 @@ namespace daxa
         }
         if ((flags & PipelineStageFlagBits::BLIT) != PipelineStageFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -629,7 +629,7 @@ namespace daxa
         }
         if ((flags & PipelineStageFlagBits::CLEAR) != PipelineStageFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -637,7 +637,7 @@ namespace daxa
         }
         if ((flags & PipelineStageFlagBits::INDEX_INPUT) != PipelineStageFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }
@@ -645,7 +645,7 @@ namespace daxa
         }
         if ((flags & PipelineStageFlagBits::PRE_RASTERIZATION_SHADERS) != PipelineStageFlagBits::NONE)
         {
-            if (ret.size() != 0)
+            if (!ret.empty())
             {
                 ret += " | ";
             }

@@ -111,8 +111,8 @@ namespace daxa
         auto get_command_list() const -> CommandList;
         auto get_used_task_buffers() const -> TaskUsedBuffers const &;
         auto get_used_task_images() const -> TaskUsedImages const &;
-        auto get_buffer(TaskBufferId const & task_id) const -> BufferId;
-        auto get_image(TaskImageId const & task_id) const -> ImageId;
+        auto get_buffer(TaskBufferId const & task_resource_id) const -> BufferId;
+        auto get_image(TaskImageId const & task_resource_id) const -> ImageId;
 
       private:
         friend struct ImplTaskRuntime;
@@ -191,7 +191,7 @@ namespace daxa
         auto last_layout(TaskImageId image) -> ImageLayout;
 
         void complete();
-        auto get_command_lists() -> std::vector<CommandList>&&;
+        auto get_command_lists() -> std::vector<CommandList>;
         void execute();
     };
 } // namespace daxa

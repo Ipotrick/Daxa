@@ -137,7 +137,7 @@ namespace daxa
         void execute_barriers();
         void output_graphviz();
 
-        ImplTaskList(TaskListInfo const & info);
+        ImplTaskList(TaskListInfo info);
         virtual ~ImplTaskList() override final;
     };
 

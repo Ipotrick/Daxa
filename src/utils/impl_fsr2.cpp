@@ -3,6 +3,7 @@
 #include "impl_fsr2.hpp"
 
 #include <cstring>
+#include <utility>
 
 namespace daxa
 {
@@ -11,7 +12,7 @@ namespace daxa
     {
     }
 
-    Fsr2Context::~Fsr2Context() {}
+    Fsr2Context::~Fsr2Context() = default;
 
     void Fsr2Context::resize(UpscaleSizeInfo const & info)
     {
@@ -27,15 +28,15 @@ namespace daxa
 
     auto Fsr2Context::get_jitter(u64 index) const -> f32vec2
     {
-        auto & impl = *as<ImplFsr2Context>();
+        auto const & impl = *as<ImplFsr2Context>();
         f32vec2 result;
-        i32 const jitter_phase_count = ffxFsr2GetJitterPhaseCount(impl.info.size_info.render_size_x, impl.info.size_info.display_size_x);
+        i32 const jitter_phase_count = ffxFsr2GetJitterPhaseCount(static_cast<i32>(impl.info.size_info.render_size_x), static_cast<i32>(impl.info.size_info.display_size_x));
         ffxFsr2GetJitterOffset(&result.x, &result.y, static_cast<i32>(index), jitter_phase_count);
         return result;
     }
 
-    ImplFsr2Context::ImplFsr2Context(UpscaleContextInfo const & info)
-        : info{info}
+    ImplFsr2Context::ImplFsr2Context(UpscaleContextInfo info)
+        : info{std::move(info)}
     {
     }
 
@@ -54,8 +55,8 @@ namespace daxa
 
         // Setup VK interface.
         auto & impl_device = *this->info.device.as<ImplDevice>();
-        auto physical_device = impl_device.vk_physical_device;
-        auto logical_device = impl_device.vk_device;
+        auto * physical_device = impl_device.vk_physical_device;
+        auto * logical_device = impl_device.vk_device;
 
         const usize scratch_buffer_size = ffxFsr2GetScratchMemorySizeVK(physical_device);
         scratch_buffer = malloc(scratch_buffer_size);
