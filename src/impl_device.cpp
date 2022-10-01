@@ -1195,7 +1195,7 @@ namespace daxa
         gpu_table.sampler_slots.return_slot(id);
     }
 
-    ImplDevice::~ImplDevice()
+    ImplDevice::~ImplDevice() // NOLINT(bugprone-exception-escape)
     {
         wait_idle();
         main_queue_collect_garbage();

@@ -1209,7 +1209,7 @@ namespace daxa
     {
     }
 
-    ImplPipeline::~ImplPipeline()
+    ImplPipeline::~ImplPipeline() // NOLINT(bugprone-exception-escape)
     {
         auto * device = this->impl_device.as<ImplDevice>();
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{device->main_queue_zombies_mtx});
