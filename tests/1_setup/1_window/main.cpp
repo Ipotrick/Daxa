@@ -15,7 +15,7 @@ struct App : AppWindow<App>
         }
         if (!minimized)
         {
-            draw();
+            // draw();
         }
         else
         {
@@ -25,9 +25,9 @@ struct App : AppWindow<App>
         return false;
     }
 
-    void draw()
-    {
-    }
+    // void draw()
+    // {
+    // }
 
     void on_resize(u32 sx, u32 sy)
     {
@@ -36,7 +36,7 @@ struct App : AppWindow<App>
         {
             size_x = sx;
             size_y = sy;
-            draw();
+            // draw();
         }
     }
 

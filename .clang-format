@@ -8,6 +8,7 @@ AccessModifierOffset: -2
 IndentCaseLabels: false
 ColumnLimit: 0
 BreakBeforeBraces: Allman
+QualifierAlignment: Right
 
 SortIncludes: false
 SortUsingDeclarations: false

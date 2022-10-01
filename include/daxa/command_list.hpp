@@ -3,6 +3,9 @@
 #include <daxa/core.hpp>
 #include <daxa/gpu_resources.hpp>
 #include <daxa/pipeline.hpp>
+#include <daxa/split_barrier.hpp>
+
+#include <span>
 #include <daxa/timeline_query.hpp>
 
 namespace daxa
@@ -85,22 +88,6 @@ namespace daxa
         u32 clear_value = {};
     };
 
-    struct PipelineBarrierInfo
-    {
-        Access awaited_pipeline_access = AccessConsts::NONE;
-        Access waiting_pipeline_access = AccessConsts::NONE;
-    };
-
-    struct PipelineBarrierImageTransitionInfo
-    {
-        Access awaited_pipeline_access = AccessConsts::NONE;
-        Access waiting_pipeline_access = AccessConsts::NONE;
-        ImageLayout before_layout = ImageLayout::UNDEFINED;
-        ImageLayout after_layout = ImageLayout::UNDEFINED;
-        ImageId image_id = {};
-        ImageMipArraySlice image_slice = {};
-    };
-
     struct RenderAttachmentInfo
     {
         ImageViewId image_view{};
@@ -137,7 +124,7 @@ namespace daxa
         u32 index_count = {};
         u32 instance_count = 1;
         u32 first_index = {};
-        u32 vertex_offset = {};
+        i32 vertex_offset = {};
         u32 first_instance = 0;
     };
 
@@ -147,6 +134,22 @@ namespace daxa
         usize offset = {};
         u32 draw_count = {};
         u32 stride = {};
+    };
+
+    struct SignalSplitBarrierInfo
+    {
+        SplitBarrier & split_barrier;
+    };
+
+    struct ResetSplitBarriersInfo
+    {
+        SplitBarrier & split_barrier;
+        PipelineStageFlags stage;
+    };
+
+    struct WaitSplitBarriersInfo
+    {
+        std::span<SplitBarrier> split_barriers;
     };
 
     struct WriteTimestampInfo
@@ -163,6 +166,12 @@ namespace daxa
         u32 count = {};
     };
 
+    struct ResetSplitBarrierInfo
+    {
+        SplitBarrier & barrier;
+        PipelineStageFlags stage_masks;
+    };
+
     struct CommandList : ManagedPtr
     {
         CommandList();
@@ -176,8 +185,12 @@ namespace daxa
         void clear_buffer(BufferClearInfo const & info);
         void clear_image(ImageClearInfo const & info);
 
-        void pipeline_barrier(PipelineBarrierInfo const & info);
-        void pipeline_barrier_image_transition(PipelineBarrierImageTransitionInfo const & info);
+        void pipeline_barrier(MemoryBarrierInfo const & info);
+        void pipeline_barrier_image_transition(ImageBarrierInfo const & info);
+        void signal_split_barrier(SplitBarrierStartInfo const & info);
+        void wait_split_barriers(std::span<SplitBarrierEndInfo const> const & infos);
+        void wait_split_barrier(SplitBarrierEndInfo const & info);
+        void reset_split_barrier(ResetSplitBarrierInfo const & info);
 
         void push_constant(void const * data, u32 size, u32 offset = 0);
         template <typename T>
@@ -214,6 +227,6 @@ namespace daxa
 
       private:
         friend struct Device;
-        CommandList(ManagedPtr impl);
+        explicit CommandList(ManagedPtr impl);
     };
 } // namespace daxa

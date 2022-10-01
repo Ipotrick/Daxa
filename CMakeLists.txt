@@ -21,18 +21,25 @@ if(DAXA_ENABLE_STATIC_ANALYSIS)
     set(CPPCHECK_TEMPLATE "gcc")
     find_program(CPPCHECK cppcheck)
     find_program(CLANG_TIDY clang-tidy)
-    set(CMAKE_CXX_CPPCHECK
-        ${CPPCHECK}
-        --template=${CPPCHECK_TEMPLATE}
-        --enable=style,performance,warning,portability
-        --inline-suppr
-        --suppress=internalAstError
-        --suppress=unmatchedSuppression
-        --inconclusive)
-    set(CMAKE_CXX_CPPCHECK
-        ${CPPCHECK}
-        --template=${CPPCHECK_TEMPLATE}
-        ${CPPCHECK_OPTIONS})
+    if(CPPCHECK)
+        set(CMAKE_CXX_CPPCHECK
+            ${CPPCHECK}
+            --template=${CPPCHECK_TEMPLATE}
+            --enable=style,performance,warning,portability
+            --inline-suppr
+            --suppress=cppcheckError
+            --suppress=internalAstError
+            --suppress=unmatchedSuppression
+            --suppress=preprocessorErrorDirective
+            --suppress=exceptThrowInDestructor
+            --suppress=functionStatic
+            --inconclusive)
+    endif()
+    if(CLANG_TIDY)
+        set(CMAKE_CXX_CLANG_TIDY
+            ${CLANG_TIDY}
+            --fix)
+    endif()
 endif()
 
 add_library(daxa STATIC
@@ -45,6 +52,7 @@ add_library(daxa STATIC
     "src/impl_gpu_resources.cpp"
     "src/impl_semaphore.cpp"
     "src/impl_dependencies.cpp"
+    "src/impl_split_barrier.cpp"
     "src/impl_timeline_query.cpp"
 
     "src/utils/impl_task_list.cpp"

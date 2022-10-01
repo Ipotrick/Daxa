@@ -34,7 +34,7 @@ namespace daxa
         VkSemaphore vk_semaphore = {};
         TimelineSemaphoreInfo info = {};
 
-        ImplTimelineSemaphore(ManagedWeakPtr a_impl_device, TimelineSemaphoreInfo const & a_info);
+        ImplTimelineSemaphore(ManagedWeakPtr a_impl_device, TimelineSemaphoreInfo a_info);
         ~ImplTimelineSemaphore();
     };
 } // namespace daxa

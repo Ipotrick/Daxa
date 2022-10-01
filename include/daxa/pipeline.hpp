@@ -73,7 +73,7 @@ namespace daxa
       private:
         friend struct PipelineCompiler;
         friend struct CommandList;
-        ComputePipeline(ManagedPtr impl);
+        explicit ComputePipeline(ManagedPtr impl);
     };
 
     struct DepthTestInfo
@@ -123,7 +123,7 @@ namespace daxa
       private:
         friend struct PipelineCompiler;
         friend struct CommandList;
-        RasterPipeline(ManagedPtr impl);
+        explicit RasterPipeline(ManagedPtr impl);
     };
 
     struct PipelineCompilerInfo
@@ -143,6 +143,6 @@ namespace daxa
 
       private:
         friend struct Device;
-        PipelineCompiler(ManagedPtr impl);
+        explicit PipelineCompiler(ManagedPtr impl);
     };
 } // namespace daxa

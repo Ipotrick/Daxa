@@ -17,9 +17,9 @@ namespace daxa
         VkSurfaceFormatKHR vk_surface_format = {};
         std::vector<ImageId> image_resources = {};
 
-        u32 current_image_index;
+        u32 current_image_index{};
 
-        ImplSwapchain(ManagedWeakPtr device_impl, SwapchainInfo const & info);
+        ImplSwapchain(ManagedWeakPtr device_impl, SwapchainInfo info);
         ~ImplSwapchain();
 
         void recreate();
