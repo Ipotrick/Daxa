@@ -6,6 +6,7 @@
 #include <daxa/swapchain.hpp>
 #include <daxa/command_list.hpp>
 #include <daxa/semaphore.hpp>
+#include <daxa/split_barrier.hpp>
 #include <daxa/timeline_query.hpp>
 
 namespace daxa
@@ -166,6 +167,7 @@ namespace daxa
 
     struct CommandSubmitInfo
     {
+        PipelineStageFlags src_stages = {};
         std::vector<CommandList> command_lists = {};
         std::vector<BinarySemaphore> wait_binary_semaphores = {};
         std::vector<BinarySemaphore> signal_binary_semaphores = {};
@@ -203,6 +205,7 @@ namespace daxa
         auto create_command_list(CommandListInfo const & info) -> CommandList;
         auto create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore;
         auto create_timeline_semaphore(TimelineSemaphoreInfo const & info) -> TimelineSemaphore;
+        auto create_split_barrier(SplitBarrierInfo const & info) -> SplitBarrier;
 
         auto map_memory(BufferId id) -> void *;
         void unmap_memory(BufferId id);

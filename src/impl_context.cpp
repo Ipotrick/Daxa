@@ -3,17 +3,18 @@
 #include "impl_device.hpp"
 
 #include <chrono>
+#include <utility>
 
 namespace daxa
 {
-    VKAPI_ATTR VkBool32 VKAPI_CALL debug_utils_messenger_callback(
+    VKAPI_ATTR auto VKAPI_CALL debug_utils_messenger_callback(
         VkDebugUtilsMessageSeverityFlagBitsEXT msg_severity,
         VkDebugUtilsMessageTypeFlagsEXT msg_type,
-        const VkDebugUtilsMessengerCallbackDataEXT * p_callback_data,
-        void * p_user_data)
+        VkDebugUtilsMessengerCallbackDataEXT const * p_callback_data,
+        void * p_user_data) -> VkBool32
     {
         ContextInfo const & info = *reinterpret_cast<ContextInfo const *>(p_user_data);
-        std::string_view msg = p_callback_data->pMessage;
+        std::string_view const msg = p_callback_data->pMessage;
         info.validation_callback(static_cast<MsgSeverity>(msg_severity), static_cast<MsgType>(msg_type), msg);
         return VK_TRUE;
     }
@@ -52,7 +53,7 @@ namespace daxa
 
         // TODO: check for every possible device if it has the required features and if not dont even consider them.
 
-        auto physical_device = *best_physical_device;
+        VkPhysicalDevice physical_device = *best_physical_device;
 
         VkPhysicalDeviceProperties vk_device_properties;
         vkGetPhysicalDeviceProperties(physical_device, &vk_device_properties);
@@ -61,12 +62,13 @@ namespace daxa
         return Device{ManagedPtr{new ImplDevice(device_info, device_vulkan_info, this->make_weak(), physical_device)}};
     }
 
-    ImplContext::ImplContext(ContextInfo const & info_param)
-        : info{info_param}
+    ImplContext::ImplContext(ContextInfo info)
+        : info{std::move(info)}
     {
-        std::vector<const char *> enabled_layers, extension_names;
+        std::vector<char const *> enabled_layers{};
+        std::vector<char const *> extension_names{};
         {
-            if (info.enable_validation)
+            if (this->info.enable_validation)
             {
                 enabled_layers.push_back("VK_LAYER_KHRONOS_validation");
             }
@@ -101,8 +103,8 @@ namespace daxa
                 return true;
             };
 
-            std::vector<VkLayerProperties> instance_layers;
-            u32 instance_layer_count;
+            std::vector<VkLayerProperties> instance_layers = {};
+            u32 instance_layer_count = {};
             vkEnumerateInstanceLayerProperties(&instance_layer_count, nullptr);
             instance_layers.resize(instance_layer_count);
             vkEnumerateInstanceLayerProperties(&instance_layer_count, instance_layers.data());
@@ -119,7 +121,7 @@ namespace daxa
                 .engineVersion = 1,
                 .apiVersion = VK_API_VERSION_1_3,
             };
-            VkInstanceCreateInfo instance_ci = {
+            VkInstanceCreateInfo const instance_ci = {
                 .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
                 .pNext = nullptr,
                 .pApplicationInfo = &app_info,
@@ -131,27 +133,27 @@ namespace daxa
             vkCreateInstance(&instance_ci, nullptr, &vk_instance);
         }
 
-        if (info.enable_validation)
+        if (this->info.enable_validation)
         {
-            VkDebugUtilsMessengerCreateInfoEXT createInfo = {
+            VkDebugUtilsMessengerCreateInfoEXT const dbg_utils_messenger_ci = {
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
                 .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
                 .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT,
                 .pfnUserCallback = debug_utils_messenger_callback,
-                .pUserData = const_cast<ContextInfo *>(&this->info),
+                .pUserData = &this->info,
             };
 
-            auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vk_instance, "vkCreateDebugUtilsMessengerEXT");
+            auto func = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(vk_instance, "vkCreateDebugUtilsMessengerEXT"));
             DAXA_DBG_ASSERT_TRUE_M(func != nullptr, "failed to set up debug messenger!");
-            func(vk_instance, &createInfo, nullptr, &vk_debug_utils_messenger);
+            func(vk_instance, &dbg_utils_messenger_ci, nullptr, &vk_debug_utils_messenger);
         }
     }
 
-    ImplContext::~ImplContext()
+    ImplContext::~ImplContext() // NOLINT(bugprone-exception-escape)
     {
-        if (info.enable_validation)
+        if (this->info.enable_validation)
         {
-            auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vk_instance, "vkDestroyDebugUtilsMessengerEXT");
+            auto func = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(vk_instance, "vkDestroyDebugUtilsMessengerEXT"));
             DAXA_DBG_ASSERT_TRUE_M(func != nullptr, "failed to destroy debug messenger!");
             func(vk_instance, vk_debug_utils_messenger, nullptr);
         }
