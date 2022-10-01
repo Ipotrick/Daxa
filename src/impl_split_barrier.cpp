@@ -24,7 +24,7 @@ namespace daxa
         return *this;
     }
 
-    SplitBarrier::~SplitBarrier()
+    SplitBarrier::~SplitBarrier() // NOLINT(bugprone-exception-escape)
     {
         this->cleanup();
     }
