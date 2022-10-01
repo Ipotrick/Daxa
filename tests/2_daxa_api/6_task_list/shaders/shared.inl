@@ -16,6 +16,7 @@ DAXA_DECL_BUFFER_STRUCT(
 struct MipmappingComputePushConstant
 {
     ImageViewId image_id;
-    BufferRef(MipmappingComputeInput) compute_input;
+    BufferId compute_input;
+    // BufferRef(MipmappingComputeInput) compute_input;
     u32vec2 frame_dim;
 };
