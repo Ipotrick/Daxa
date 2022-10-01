@@ -406,9 +406,10 @@ namespace tests
                 task_list.execute();
                 auto command_lists = task_list.get_command_lists();
                 auto cmd_list = device.create_command_list({});
+                auto last_si_use = task_list.last_uses(task_swapchain_image).back();
                 cmd_list.pipeline_barrier_image_transition({
-                    .awaited_pipeline_access = task_list.last_access(task_swapchain_image),
-                    .before_layout = task_list.last_layout(task_swapchain_image),
+                    .awaited_pipeline_access = last_si_use.access,
+                    .before_layout = last_si_use.layout,
                     .after_layout = daxa::ImageLayout::PRESENT_SRC,
                     .image_id = swapchain_image,
                 });
