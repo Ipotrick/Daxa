@@ -29,8 +29,6 @@ Gabe Rundlett and I are the main contributors to Daxa. While I mainly work on th
 * A "TaskList" (render-graph): Probably one of the biggest headaches in Vulkan is synchronization and as Daxa has explicit sync, this is still a major headache that remains unaddressed. Daxa provides a render graph called TaskList which automatically handles all synchronization for the user.
 * Utilities: Daxa as an API does not have native support for things like ImGUI or auto sync. Daxa contains some helpers for things like FSR, ImGUI-backend, a TaskList render-graph, and other things under the utils folder. These utils are optional, but in some cases greatly enhance Daxa's usability (TaskList) and its setup speed (eg ImGui, FSR).
 
-For people that are not familiar with render graphs: A task list is like a higher-level power list with automatic synchronization. Tasks are recorded similarly to commands in a command list. The recorded Tasks are transformed into a graph, analyzed for resource execution and memory dependencies, and needed memory barriers and resource transitions are inserted automatically. TaskList also reorders tasks (while preserving effective recording execution order) to reduce the needed barriers, resource state transitions, and pipeline stalls to a minimum.
-
 # Building
 You must have the following things installed to build the repository
  * A C++ compiler
