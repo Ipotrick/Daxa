@@ -1,7 +1,7 @@
 # This repo is the home of the Daxa GPU API
 
 ## What is Daxa?
-Daxa is a GPU api build on Vulkan.
+Daxa is a GPU api built on Vulkan.
 
 Daxa is not meant to be the "ultimate Vulkan can-do-anything abstraction"! It exposes the Vulkan features that I personally (and a few other folks) use. This also means that features that I didn't use or need yet are not exposed, glaring example of this would be that raster pipelines only have a vertex and fragment shader.
 
