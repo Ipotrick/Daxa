@@ -13,6 +13,7 @@ namespace daxa
         BufferId ibuffer{};
         SamplerId sampler{};
         ImageId font_sheet{};
+        usize frame_count = {};
 
         void recreate_vbuffer(usize vbuffer_new_size);
         void recreate_ibuffer(usize ibuffer_new_size);

@@ -317,24 +317,20 @@ namespace daxa
     {
         vbuffer = info.device.create_buffer({
             .size = static_cast<u32>(vbuffer_new_size),
-            .debug_name = "dear ImGui vertex buffer",
+            .debug_name = std::string("dear ImGui vertex buffer ") + std::to_string(frame_count),
         });
     }
     void ImplImGuiRenderer::recreate_ibuffer(usize ibuffer_new_size)
     {
         ibuffer = info.device.create_buffer({
             .size = static_cast<u32>(ibuffer_new_size),
-            .debug_name = "dear ImGui index buffer",
+            .debug_name = std::string("dear ImGui index buffer ") + std::to_string(frame_count),
         });
-        // staging_ibuffer = info.device.create_buffer({
-        //     .memory_flags = MemoryFlagBits::HOST_ACCESS_RANDOM,
-        //     .size = static_cast<u32>(ibuffer_new_size),
-        //     .debug_name = "dear ImGui staging index buffer",
-        // });
     }
 
     void ImplImGuiRenderer::record_commands(ImDrawData * draw_data, CommandList & cmd_list, ImageId target_image, u32 size_x, u32 size_y)
     {
+        ++frame_count;
         if ((draw_data != nullptr) && draw_data->TotalIdxCount > 0)
         {
             auto vbuffer_current_size = info.device.info_buffer(vbuffer).size;
@@ -358,7 +354,7 @@ namespace daxa
             auto staging_vbuffer = info.device.create_buffer({
                 .memory_flags = MemoryFlagBits::HOST_ACCESS_RANDOM,
                 .size = static_cast<u32>(vbuffer_needed_size),
-                .debug_name = "dear ImGui staging vertex buffer",
+                .debug_name = std::string("dear ImGui vertex buffer ") + std::to_string(frame_count),
             });
             auto * vtx_dst = info.device.map_memory_as<ImDrawVert>(staging_vbuffer);
             for (i32 n = 0; n < draw_data->CmdListsCount; n++)
@@ -372,7 +368,7 @@ namespace daxa
             auto staging_ibuffer = info.device.create_buffer({
                 .memory_flags = MemoryFlagBits::HOST_ACCESS_RANDOM,
                 .size = static_cast<u32>(ibuffer_needed_size),
-                .debug_name = "dear ImGui staging index buffer",
+                .debug_name = std::string("dear ImGui index buffer ") + std::to_string(frame_count),
             });
             auto * idx_dst = info.device.map_memory_as<ImDrawIdx>(staging_ibuffer);
             for (i32 n = 0; n < draw_data->CmdListsCount; n++)
