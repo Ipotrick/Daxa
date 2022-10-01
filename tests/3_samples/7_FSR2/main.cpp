@@ -260,11 +260,12 @@ struct App : AppWindow<App>
         swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
 
         loop_task_list.execute();
-        auto command_lists = loop_task_list.command_lists();
+        auto command_lists = loop_task_list.get_command_lists();
         auto cmd_list = device.create_command_list({});
+        auto last_si_use = loop_task_list.last_uses(task_swapchain_image).back();
         cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = loop_task_list.last_access(task_swapchain_image),
-            .before_layout = loop_task_list.last_layout(task_swapchain_image),
+            .awaited_pipeline_access = last_si_use.access,
+            .before_layout = last_si_use.layout,
             .after_layout = daxa::ImageLayout::PRESENT_SRC,
             .image_id = swapchain_image,
         });
@@ -417,9 +418,9 @@ struct App : AppWindow<App>
                 {task_raster_input_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
             },
             .used_images = {
-                {task_color_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, std::nullopt},
-                {task_motion_vectors_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, std::nullopt},
-                {task_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT, std::nullopt},
+                {task_color_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
+                {task_motion_vectors_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
+                {task_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT, daxa::ImageMipArraySlice{}},
             },
             .task = [this](daxa::TaskRuntime runtime)
             {
@@ -454,8 +455,8 @@ struct App : AppWindow<App>
 
         new_task_list.add_task({
             .used_images = {
-                {task_color_image, daxa::TaskImageAccess::TRANSFER_READ, std::nullopt},
-                {task_display_image, daxa::TaskImageAccess::TRANSFER_WRITE, std::nullopt},
+                {task_color_image, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{}},
+                {task_display_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{}},
             },
             .task = [this](daxa::TaskRuntime runtime)
             {
@@ -479,10 +480,10 @@ struct App : AppWindow<App>
 
         new_task_list.add_task({
             .used_images = {
-                {task_color_image, daxa::TaskImageAccess::SHADER_READ_ONLY, std::nullopt},
-                {task_motion_vectors_image, daxa::TaskImageAccess::SHADER_READ_ONLY, std::nullopt},
-                {task_depth_image, daxa::TaskImageAccess::SHADER_READ_ONLY, std::nullopt},
-                {task_display_image, daxa::TaskImageAccess::SHADER_WRITE_ONLY, std::nullopt},
+                {task_color_image, daxa::TaskImageAccess::SHADER_READ_ONLY, daxa::ImageMipArraySlice{}},
+                {task_motion_vectors_image, daxa::TaskImageAccess::SHADER_READ_ONLY, daxa::ImageMipArraySlice{}},
+                {task_depth_image, daxa::TaskImageAccess::SHADER_READ_ONLY, daxa::ImageMipArraySlice{}},
+                {task_display_image, daxa::TaskImageAccess::SHADER_WRITE_ONLY, daxa::ImageMipArraySlice{}},
             },
             .task = [this](daxa::TaskRuntime runtime)
             {
@@ -514,8 +515,8 @@ struct App : AppWindow<App>
 
         new_task_list.add_task({
             .used_images = {
-                {task_display_image, daxa::TaskImageAccess::TRANSFER_READ, std::nullopt},
-                {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE, std::nullopt},
+                {task_display_image, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{}},
+                {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{}},
             },
             .task = [this](daxa::TaskRuntime runtime)
             {
@@ -536,7 +537,7 @@ struct App : AppWindow<App>
 
         new_task_list.add_task({
             .used_images = {
-                {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, std::nullopt},
+                {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
             },
             .task = [this](daxa::TaskRuntime runtime)
             {
@@ -546,7 +547,7 @@ struct App : AppWindow<App>
             .debug_name = APPNAME_PREFIX("ImGui Task"),
         });
 
-        new_task_list.compile();
+        new_task_list.complete();
 
         return new_task_list;
     }
