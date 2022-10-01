@@ -50,7 +50,7 @@ namespace daxa
 
     struct TaskSplitBarrier : TaskBarrier
     {
-        SplitBarrier split_barrier_state;
+        SplitBarrierState split_barrier_state;
     };
 
     struct TaskImageTrackedSlice

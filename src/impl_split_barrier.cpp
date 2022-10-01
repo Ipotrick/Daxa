@@ -6,14 +6,14 @@
 
 namespace daxa
 {
-    SplitBarrier::SplitBarrier(SplitBarrier && other) noexcept
+    SplitBarrierState::SplitBarrierState(SplitBarrierState && other) noexcept
         : device{std::move(other.device)}, create_info{other.create_info}, data{other.data}
     {
         other.create_info = {};
         other.data = {};
     }
 
-    auto SplitBarrier::operator=(SplitBarrier && other) noexcept -> SplitBarrier &
+    auto SplitBarrierState::operator=(SplitBarrierState && other) noexcept -> SplitBarrierState &
     {
         this->cleanup();
         this->device = std::move(other.device);
@@ -24,17 +24,17 @@ namespace daxa
         return *this;
     }
 
-    SplitBarrier::~SplitBarrier() // NOLINT(bugprone-exception-escape)
+    SplitBarrierState::~SplitBarrierState() // NOLINT(bugprone-exception-escape)
     {
         this->cleanup();
     }
 
-    auto SplitBarrier::info() const -> SplitBarrierInfo const &
+    auto SplitBarrierState::info() const -> SplitBarrierInfo const &
     {
         return this->create_info;
     }
 
-    void SplitBarrier::cleanup()
+    void SplitBarrierState::cleanup()
     {
         if (this->data != 0u)
         {
@@ -51,7 +51,7 @@ namespace daxa
         }
     }
 
-    SplitBarrier::SplitBarrier(ManagedWeakPtr device, SplitBarrierInfo info)
+    SplitBarrierState::SplitBarrierState(ManagedWeakPtr device, SplitBarrierInfo info)
         : device{std::move(device)}, create_info{std::move(info)}
     {
         auto * impl_device = this->device.as<ImplDevice>();

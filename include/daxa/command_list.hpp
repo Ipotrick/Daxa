@@ -138,18 +138,18 @@ namespace daxa
 
     struct SignalSplitBarrierInfo
     {
-        SplitBarrier & split_barrier;
+        SplitBarrierState & split_barrier;
     };
 
     struct ResetSplitBarriersInfo
     {
-        SplitBarrier & split_barrier;
+        SplitBarrierState & split_barrier;
         PipelineStageFlags stage;
     };
 
     struct WaitSplitBarriersInfo
     {
-        std::span<SplitBarrier> split_barriers;
+        std::span<SplitBarrierState> split_barriers;
     };
 
     struct WriteTimestampInfo
@@ -168,7 +168,7 @@ namespace daxa
 
     struct ResetSplitBarrierInfo
     {
-        SplitBarrier & barrier;
+        SplitBarrierState & barrier;
         PipelineStageFlags stage_masks;
     };
 
@@ -187,9 +187,9 @@ namespace daxa
 
         void pipeline_barrier(MemoryBarrierInfo const & info);
         void pipeline_barrier_image_transition(ImageBarrierInfo const & info);
-        void signal_split_barrier(SplitBarrierStartInfo const & info);
-        void wait_split_barriers(std::span<SplitBarrierEndInfo const> const & infos);
-        void wait_split_barrier(SplitBarrierEndInfo const & info);
+        void signal_split_barrier(SplitBarrierSignalInfo const & info);
+        void wait_split_barriers(std::span<SplitBarrierWaitInfo const> const & infos);
+        void wait_split_barrier(SplitBarrierWaitInfo const & info);
         void reset_split_barrier(ResetSplitBarrierInfo const & info);
 
         void push_constant(void const * data, u32 size, u32 offset = 0);
