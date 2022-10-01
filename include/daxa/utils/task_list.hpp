@@ -170,6 +170,13 @@ namespace daxa
         std::vector<BinarySemaphore> * user_binary_semaphores = {};
     };
 
+    struct TaskImageLastUse
+    {
+        ImageMipArraySlice slice = {};
+        ImageLayout layout = {};
+        Access access = {};
+    };
+
     struct TaskList : ManagedPtr
     {
         TaskList(TaskListInfo const & info);
@@ -183,15 +190,14 @@ namespace daxa
         void submit(CommandSubmitInfo * info);
         void present(TaskPresentInfo const & info);
 
+        void complete();
+        void execute();
+        auto get_command_lists() -> std::vector<CommandList>;
+
         void output_graphviz();
         void debug_print();
 
         auto last_access(TaskBufferId buffer) -> Access;
-        auto last_access(TaskImageId image) -> Access;
-        auto last_layout(TaskImageId image) -> ImageLayout;
-
-        void complete();
-        auto get_command_lists() -> std::vector<CommandList>;
-        void execute();
+        auto last_uses(TaskImageId image) -> std::vector<TaskImageLastUse>;
     };
 } // namespace daxa
