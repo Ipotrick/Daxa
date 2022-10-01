@@ -319,11 +319,6 @@ namespace daxa
             .size = static_cast<u32>(vbuffer_new_size),
             .debug_name = "dear ImGui vertex buffer",
         });
-        staging_vbuffer = info.device.create_buffer({
-            .memory_flags = MemoryFlagBits::HOST_ACCESS_RANDOM,
-            .size = static_cast<u32>(vbuffer_new_size),
-            .debug_name = "dear ImGui staging vertex buffer",
-        });
     }
     void ImplImGuiRenderer::recreate_ibuffer(usize ibuffer_new_size)
     {
@@ -331,11 +326,11 @@ namespace daxa
             .size = static_cast<u32>(ibuffer_new_size),
             .debug_name = "dear ImGui index buffer",
         });
-        staging_ibuffer = info.device.create_buffer({
-            .memory_flags = MemoryFlagBits::HOST_ACCESS_RANDOM,
-            .size = static_cast<u32>(ibuffer_new_size),
-            .debug_name = "dear ImGui staging index buffer",
-        });
+        // staging_ibuffer = info.device.create_buffer({
+        //     .memory_flags = MemoryFlagBits::HOST_ACCESS_RANDOM,
+        //     .size = static_cast<u32>(ibuffer_new_size),
+        //     .debug_name = "dear ImGui staging index buffer",
+        // });
     }
 
     void ImplImGuiRenderer::record_commands(ImDrawData * draw_data, CommandList & cmd_list, ImageId target_image, u32 size_x, u32 size_y)
@@ -351,37 +346,43 @@ namespace daxa
             {
                 auto vbuffer_new_size = vbuffer_needed_size + 4096;
                 info.device.destroy_buffer(vbuffer);
-                info.device.destroy_buffer(staging_vbuffer);
                 recreate_vbuffer(vbuffer_new_size);
             }
             if (ibuffer_needed_size > ibuffer_current_size)
             {
                 auto ibuffer_new_size = ibuffer_needed_size + 4096;
                 info.device.destroy_buffer(ibuffer);
-                info.device.destroy_buffer(staging_ibuffer);
                 recreate_ibuffer(ibuffer_new_size);
             }
 
+            auto staging_vbuffer = info.device.create_buffer({
+                .memory_flags = MemoryFlagBits::HOST_ACCESS_RANDOM,
+                .size = static_cast<u32>(vbuffer_needed_size),
+                .debug_name = "dear ImGui staging vertex buffer",
+            });
+            auto * vtx_dst = info.device.map_memory_as<ImDrawVert>(staging_vbuffer);
+            for (i32 n = 0; n < draw_data->CmdListsCount; n++)
             {
-                auto * vtx_dst = info.device.map_memory_as<ImDrawVert>(staging_vbuffer);
-                for (i32 n = 0; n < draw_data->CmdListsCount; n++)
-                {
-                    ImDrawList const * draws = draw_data->CmdLists[n];
-                    std::memcpy(vtx_dst, draws->VtxBuffer.Data, draws->VtxBuffer.Size * sizeof(ImDrawVert));
-                    vtx_dst += draws->VtxBuffer.Size;
-                }
-                info.device.unmap_memory(staging_vbuffer);
+                ImDrawList const * draws = draw_data->CmdLists[n];
+                std::memcpy(vtx_dst, draws->VtxBuffer.Data, draws->VtxBuffer.Size * sizeof(ImDrawVert));
+                vtx_dst += draws->VtxBuffer.Size;
             }
+            info.device.unmap_memory(staging_vbuffer);
+            cmd_list.destroy_buffer_deferred(staging_vbuffer);
+            auto staging_ibuffer = info.device.create_buffer({
+                .memory_flags = MemoryFlagBits::HOST_ACCESS_RANDOM,
+                .size = static_cast<u32>(ibuffer_needed_size),
+                .debug_name = "dear ImGui staging index buffer",
+            });
+            auto * idx_dst = info.device.map_memory_as<ImDrawIdx>(staging_ibuffer);
+            for (i32 n = 0; n < draw_data->CmdListsCount; n++)
             {
-                auto * idx_dst = info.device.map_memory_as<ImDrawIdx>(staging_ibuffer);
-                for (i32 n = 0; n < draw_data->CmdListsCount; n++)
-                {
-                    ImDrawList const * draws = draw_data->CmdLists[n];
-                    std::memcpy(idx_dst, draws->IdxBuffer.Data, draws->IdxBuffer.Size * sizeof(ImDrawIdx));
-                    idx_dst += draws->IdxBuffer.Size;
-                }
-                info.device.unmap_memory(staging_ibuffer);
+                ImDrawList const * draws = draw_data->CmdLists[n];
+                std::memcpy(idx_dst, draws->IdxBuffer.Data, draws->IdxBuffer.Size * sizeof(ImDrawIdx));
+                idx_dst += draws->IdxBuffer.Size;
             }
+            info.device.unmap_memory(staging_ibuffer);
+            cmd_list.destroy_buffer_deferred(staging_ibuffer);
             cmd_list.pipeline_barrier({
                 .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
                 .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
@@ -398,7 +399,7 @@ namespace daxa
             });
             cmd_list.pipeline_barrier({
                 .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-                .waiting_pipeline_access = daxa::AccessConsts::VERTEX_SHADER_READ,
+                .waiting_pipeline_access = daxa::AccessConsts::VERTEX_SHADER_READ | daxa::AccessConsts::INDEX_INPUT_READ,
             });
 
             cmd_list.begin_renderpass({
@@ -569,9 +570,7 @@ namespace daxa
     ImplImGuiRenderer::~ImplImGuiRenderer()
     {
         this->info.device.destroy_buffer(vbuffer);
-        this->info.device.destroy_buffer(staging_vbuffer);
         this->info.device.destroy_buffer(ibuffer);
-        this->info.device.destroy_buffer(staging_ibuffer);
         this->info.device.destroy_sampler(sampler);
         this->info.device.destroy_image(font_sheet);
     }
