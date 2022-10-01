@@ -30,18 +30,18 @@ namespace daxa
 
     struct Device;
 
-    struct SplitBarrier
+    struct SplitBarrierState
     {
-        SplitBarrier(SplitBarrier && other) noexcept;
-        auto operator=(SplitBarrier && other) noexcept -> SplitBarrier &;
-        ~SplitBarrier();
+        SplitBarrierState(SplitBarrierState && other) noexcept;
+        auto operator=(SplitBarrierState && other) noexcept -> SplitBarrierState &;
+        ~SplitBarrierState();
 
         auto info() const -> SplitBarrierInfo const &;
 
       private:
         friend struct Device;
         friend struct CommandList;
-        SplitBarrier(ManagedWeakPtr device, SplitBarrierInfo info);
+        SplitBarrierState(ManagedWeakPtr device, SplitBarrierInfo info);
         void cleanup();
 
         ManagedWeakPtr device = {};
@@ -49,12 +49,12 @@ namespace daxa
         u64 data = {};
     };
 
-    struct SplitBarrierStartInfo
+    struct SplitBarrierSignalInfo
     {
         std::span<MemoryBarrierInfo> memory_barriers = {};
         std::span<ImageBarrierInfo> image_barriers = {};
-        SplitBarrier & split_barrier;
+        SplitBarrierState & split_barrier;
     };
 
-    using SplitBarrierEndInfo = SplitBarrierStartInfo;
+    using SplitBarrierWaitInfo = SplitBarrierSignalInfo;
 } // namespace daxa

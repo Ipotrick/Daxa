@@ -99,8 +99,21 @@ namespace daxa
     {
     };
 
-    using TaskUsedBuffers = std::vector<std::tuple<TaskBufferId, TaskBufferAccess>>;
-    using TaskUsedImages = std::vector<std::tuple<TaskImageId, TaskImageAccess, ImageMipArraySlice>>;
+    struct TaskBufferUse
+    {
+        TaskBufferId id = {};
+        TaskBufferAccess access = {};
+    };
+
+    struct TaskImageUse
+    {
+        TaskImageId id = {};
+        TaskImageAccess access = {};
+        ImageMipArraySlice slice = {};
+    };
+
+    using UsedTaskBuffers = std::vector<TaskBufferUse>;
+    using UsedTaskImages = std::vector<TaskImageUse>;
 
     struct TaskList;
     struct Device;
@@ -109,8 +122,8 @@ namespace daxa
     {
         auto get_device() const -> Device &;
         auto get_command_list() const -> CommandList;
-        auto get_used_task_buffers() const -> TaskUsedBuffers const &;
-        auto get_used_task_images() const -> TaskUsedImages const &;
+        auto get_used_task_buffers() const -> UsedTaskBuffers const &;
+        auto get_used_task_images() const -> UsedTaskImages const &;
         auto get_buffer(TaskBufferId const & task_resource_id) const -> BufferId;
         auto get_image(TaskImageId const & task_resource_id) const -> ImageId;
 
@@ -141,8 +154,8 @@ namespace daxa
 
     struct TaskInfo
     {
-        TaskUsedBuffers used_buffers = {};
-        TaskUsedImages used_images = {};
+        UsedTaskBuffers used_buffers = {};
+        UsedTaskImages used_images = {};
         TaskCallback task = {};
         std::string debug_name = {};
     };
