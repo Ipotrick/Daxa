@@ -1,18 +1,20 @@
 #include "impl_device.hpp"
 
+#include <utility>
+
 namespace daxa
 {
     Device::Device(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
     auto Device::info() const -> DeviceInfo const &
     {
-        auto & impl = *as<ImplDevice>();
+        auto const & impl = *as<ImplDevice>();
         return impl.info;
     }
 
     auto Device::properties() const -> DeviceProperties const &
     {
-        auto & impl = *as<ImplDevice>();
+        auto const & impl = *as<ImplDevice>();
         return impl.vk_info;
     }
 
@@ -28,16 +30,16 @@ namespace daxa
 
         impl.main_queue_collect_garbage();
 
-        u64 current_main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH_INC(impl.main_queue_cpu_timeline) + 1;
+        u64 const current_main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH_INC(impl.main_queue_cpu_timeline) + 1;
 
         std::pair<u64, std::vector<ManagedPtr>> submit = {current_main_queue_cpu_timeline_value, {}};
 
-        for (auto & command_list : submit_info.command_lists)
+        for (auto const & command_list : submit_info.command_lists)
         {
-            auto cmd_list = command_list.as<ImplCommandList>();
+            auto const * cmd_list = command_list.as<ImplCommandList>();
             for (usize i = 0; i < cmd_list->deferred_destruction_count; ++i)
             {
-                auto [id, index] = cmd_list->deferred_destructions[i];
+                auto [id, index] = cmd_list->deferred_destructions.at(i);
                 switch (index)
                 {
                 case DEFERRED_DESTRUCTION_BUFFER_INDEX: impl.main_queue_buffer_zombies.push_front({current_main_queue_cpu_timeline_value, BufferId{id}}); break;
@@ -50,9 +52,9 @@ namespace daxa
         }
 
         std::vector<VkCommandBuffer> submit_vk_command_buffers = {};
-        for (auto & command_list : submit_info.command_lists)
+        for (auto const & command_list : submit_info.command_lists)
         {
-            auto & impl_cmd_list = *command_list.as<ImplCommandList>();
+            auto const & impl_cmd_list = *command_list.as<ImplCommandList>();
             DAXA_DBG_ASSERT_TRUE_M(impl_cmd_list.recording_complete, "all submitted command lists must be completed before submission");
             submit.second.push_back(command_list);
             submit_vk_command_buffers.push_back(impl_cmd_list.vk_cmd_buffer);
@@ -65,16 +67,16 @@ namespace daxa
         submit_semaphore_signals.push_back(impl.vk_main_queue_gpu_timeline_semaphore);
         submit_semaphore_signal_values.push_back(current_main_queue_cpu_timeline_value);
 
-        for (auto & [timeline_semaphore, signal_value] : submit_info.signal_timeline_semaphores)
+        for (auto const & [timeline_semaphore, signal_value] : submit_info.signal_timeline_semaphores)
         {
-            auto & impl_timeline_semaphore = *timeline_semaphore.as<ImplTimelineSemaphore>();
+            auto const & impl_timeline_semaphore = *timeline_semaphore.as<ImplTimelineSemaphore>();
             submit_semaphore_signals.push_back(impl_timeline_semaphore.vk_semaphore);
             submit_semaphore_signal_values.push_back(signal_value);
         }
 
-        for (auto & binary_semaphore : submit_info.signal_binary_semaphores)
+        for (auto const & binary_semaphore : submit_info.signal_binary_semaphores)
         {
-            auto & impl_binary_semaphore = *binary_semaphore.as<ImplBinarySemaphore>();
+            auto const & impl_binary_semaphore = *binary_semaphore.as<ImplBinarySemaphore>();
             submit_semaphore_signals.push_back(impl_binary_semaphore.vk_semaphore);
             submit_semaphore_signal_values.push_back(0); // The vulkan spec requires to have dummy values for binary semaphores.
         }
@@ -84,17 +86,17 @@ namespace daxa
         std::vector<VkPipelineStageFlags> submit_semaphore_wait_stage_masks = {};
         std::vector<u64> submit_semaphore_wait_values = {}; // Used for timeline semaphores. Ignored (push dummy value) for binary semaphores.
 
-        for (auto & [timeline_semaphore, wait_value] : submit_info.wait_timeline_semaphores)
+        for (auto const & [timeline_semaphore, wait_value] : submit_info.wait_timeline_semaphores)
         {
-            auto & impl_timeline_semaphore = *timeline_semaphore.as<ImplTimelineSemaphore>();
+            auto const & impl_timeline_semaphore = *timeline_semaphore.as<ImplTimelineSemaphore>();
             submit_semaphore_waits.push_back(impl_timeline_semaphore.vk_semaphore);
             submit_semaphore_wait_stage_masks.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
             submit_semaphore_wait_values.push_back(wait_value);
         }
 
-        for (auto & binary_semaphore : submit_info.wait_binary_semaphores)
+        for (auto const & binary_semaphore : submit_info.wait_binary_semaphores)
         {
-            auto & impl_binary_semaphore = *binary_semaphore.as<ImplBinarySemaphore>();
+            auto const & impl_binary_semaphore = *binary_semaphore.as<ImplBinarySemaphore>();
             submit_semaphore_waits.push_back(impl_binary_semaphore.vk_semaphore);
             submit_semaphore_wait_stage_masks.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
             submit_semaphore_wait_values.push_back(0);
@@ -109,8 +111,8 @@ namespace daxa
             .pSignalSemaphoreValues = submit_semaphore_signal_values.data(),
         };
 
-        VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-        VkSubmitInfo vk_submit_info{
+        VkPipelineStageFlags const pipe_stage_flags = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        VkSubmitInfo const vk_submit_info{
             .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
             .pNext = reinterpret_cast<void *>(&timeline_info),
             .waitSemaphoreCount = static_cast<u32>(submit_semaphore_waits.size()),
@@ -123,25 +125,25 @@ namespace daxa
         };
         vkQueueSubmit(impl.main_queue_vk_queue, 1, &vk_submit_info, VK_NULL_HANDLE);
 
-        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{impl.main_queue_zombies_mtx});
+        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{impl.main_queue_zombies_mtx});
         impl.main_queue_submits_zombies.push_front(std::move(submit));
     }
 
     void Device::present_frame(PresentInfo const & info)
     {
         auto & impl = *as<ImplDevice>();
-        auto & swapchain_impl = *info.swapchain.as<ImplSwapchain>();
+        auto const & swapchain_impl = *info.swapchain.as<ImplSwapchain>();
 
         // used to synchronize with previous submits:
         std::vector<VkSemaphore> submit_semaphore_waits = {};
 
-        for (auto & binary_semaphore : info.wait_binary_semaphores)
+        for (auto const & binary_semaphore : info.wait_binary_semaphores)
         {
-            auto & impl_binary_semaphore = *binary_semaphore.as<ImplBinarySemaphore>();
+            auto const & impl_binary_semaphore = *binary_semaphore.as<ImplBinarySemaphore>();
             submit_semaphore_waits.push_back(impl_binary_semaphore.vk_semaphore);
         }
 
-        VkPresentInfoKHR present_info{
+        VkPresentInfoKHR const present_info{
             .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
             .pNext = nullptr,
             .waitSemaphoreCount = static_cast<u32>(submit_semaphore_waits.size()),
@@ -177,33 +179,31 @@ namespace daxa
 
     auto Device::create_command_list(CommandListInfo const & info) -> CommandList
     {
-        auto impl = as<ImplDevice>();
-        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{impl->main_queue_command_pool_buffer_recycle_mtx});
-        auto [pool, buffer] = impl->buffer_pool_pool.get(impl);
+        auto & impl = *as<ImplDevice>();
+        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{impl.main_queue_command_pool_buffer_recycle_mtx});
+        auto [pool, buffer] = impl.buffer_pool_pool.get(&impl);
         return CommandList{ManagedPtr{new ImplCommandList{this->make_weak(), pool, buffer, info}}};
     }
 
     auto Device::create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore
     {
-        auto impl = as<ImplDevice>();
-        return BinarySemaphore{ManagedPtr{new ImplBinarySemaphore{impl, info}}};
+        return BinarySemaphore(ManagedPtr(new ImplBinarySemaphore{this->make_weak(), info}));
     }
 
     auto Device::create_timeline_semaphore(TimelineSemaphoreInfo const & info) -> TimelineSemaphore
     {
-        auto impl = as<ImplDevice>();
-        return TimelineSemaphore{ManagedPtr{new ImplTimelineSemaphore(this->make_weak(), info)}};
+        return TimelineSemaphore(ManagedPtr(new ImplTimelineSemaphore(this->make_weak(), info)));
     }
 
     auto Device::create_split_barrier(SplitBarrierInfo const & info) -> SplitBarrier
     {
-        return SplitBarrier(this->make_weak(), info);
+        return {this->make_weak(), info};
     }
 
     auto Device::create_timeline_query_pool(TimelineQueryPoolInfo const & info) -> TimelineQueryPool
     {
         auto & impl = *as<ImplDevice>();
-        return TimelineQueryPool{ManagedPtr{new ImplTimelineQueryPool(this->make_weak(), info)}};
+        return TimelineQueryPool(ManagedPtr(new ImplTimelineQueryPool(this->make_weak(), info)));
     }
 
     auto Device::create_buffer(BufferInfo const & info) -> BufferId
@@ -256,31 +256,31 @@ namespace daxa
 
     auto Device::info_buffer(BufferId id) const -> BufferInfo
     {
-        auto & impl = *as<ImplDevice>();
+        auto const & impl = *as<ImplDevice>();
         return impl.slot(id).info;
     }
 
     auto Device::buffer_reference(BufferId id) const -> u64
     {
-        auto & impl = *as<ImplDevice>();
+        auto const & impl = *as<ImplDevice>();
         return static_cast<u64>(impl.slot(id).device_address);
     }
 
     auto Device::info_image(ImageId id) const -> ImageInfo
     {
-        auto & impl = *as<ImplDevice>();
+        auto const & impl = *as<ImplDevice>();
         return impl.slot(id).info;
     }
 
     auto Device::info_image_view(ImageViewId id) const -> ImageViewInfo
     {
-        auto & impl = *as<ImplDevice>();
+        auto const & impl = *as<ImplDevice>();
         return impl.slot(id).info;
     }
 
     auto Device::info_sampler(SamplerId id) const -> SamplerInfo
     {
-        auto & impl = *as<ImplDevice>();
+        auto const & impl = *as<ImplDevice>();
         return impl.slot(id).info;
     }
 
@@ -420,25 +420,17 @@ namespace daxa
         .nullDescriptor = VK_TRUE,
     };
 
-    static VkPhysicalDeviceScalarBlockLayoutFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT{
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES,
-        .pNext = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_ROBUSTNESS_2),
-        .scalarBlockLayout = VK_TRUE,
-    };
-
     // static const VkPhysicalDeviceMultiDrawFeaturesEXT REQUIRED_PHYSICAL_DEVICE_FEATURES_MULTI_DRAW{
     //     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTI_DRAW_FEATURES_EXT,
     //     .pNext = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT),
     //     .multiDraw = VK_TRUE,
     // };
 
-    static void * REQUIRED_DEVICE_FEATURE_P_CHAIN = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT);
-
-    ImplDevice::ImplDevice(DeviceInfo const & a_info, DeviceProperties const & a_vk_info, ManagedWeakPtr a_impl_ctx, VkPhysicalDevice a_physical_device)
-        : info{a_info}, vk_info{a_vk_info}, impl_ctx{a_impl_ctx}, vk_physical_device{a_physical_device}
+    ImplDevice::ImplDevice(DeviceInfo a_info, DeviceProperties const & a_vk_info, ManagedWeakPtr a_impl_ctx, VkPhysicalDevice a_physical_device)
+        : info{std::move(a_info)}, main_queue_family_index(std::numeric_limits<u32>::max()), vk_info{a_vk_info}, impl_ctx{std::move(std::move(a_impl_ctx))}, vk_physical_device{a_physical_device}
     {
         // SELECT QUEUE
-        this->main_queue_family_index = std::numeric_limits<u32>::max();
+
         u32 queue_family_props_count = 0;
         std::vector<VkQueueFamilyProperties> queue_props;
         vkGetPhysicalDeviceQueueFamilyProperties(a_physical_device, &queue_family_props_count, nullptr);
@@ -463,17 +455,23 @@ namespace daxa
         }
         DAXA_DBG_ASSERT_TRUE_M(this->main_queue_family_index != std::numeric_limits<u32>::max(), "found no suitable queue family");
 
-        f32 queue_priorities[1] = {0.0};
-        VkDeviceQueueCreateInfo queue_ci{
+        std::array<f32, 1> queue_priorities = {0.0};
+        VkDeviceQueueCreateInfo const queue_ci{
             .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
             .pNext = nullptr,
             .flags = 0,
             .queueFamilyIndex = this->main_queue_family_index,
-            .queueCount = 1,
-            .pQueuePriorities = queue_priorities,
+            .queueCount = static_cast<u32>(queue_priorities.size()),
+            .pQueuePriorities = queue_priorities.data(),
         };
 
-        REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT.scalarBlockLayout = this->info.use_scalar_layout ? VK_TRUE : VK_FALSE;
+        VkPhysicalDeviceScalarBlockLayoutFeatures const REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT{
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES,
+            .pNext = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_ROBUSTNESS_2),
+            .scalarBlockLayout = this->info.use_scalar_layout ? VK_TRUE : VK_FALSE,
+        };
+
+        void * REQUIRED_DEVICE_FEATURE_P_CHAIN = (void *)(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT);
 
         VkPhysicalDeviceFeatures2 physical_device_features_2{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
@@ -492,7 +490,7 @@ namespace daxa
         extension_names.push_back(VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME);
         // extension_names.push_back(VK_EXT_MULTI_DRAW_EXTENSION_NAME);
 
-        VkDeviceCreateInfo device_ci = {
+        VkDeviceCreateInfo const device_ci = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
             .pNext = &physical_device_features_2,
             .queueCreateInfoCount = static_cast<u32>(1),
@@ -507,11 +505,11 @@ namespace daxa
 
         this->vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetDeviceProcAddr(this->vk_device, "vkSetDebugUtilsObjectNameEXT"));
 
-        u32 max_buffers = std::min(this->vk_info.limits.max_descriptor_set_storage_buffers, 1'000u);
-        u32 max_images = std::min(std::min(this->vk_info.limits.max_descriptor_set_sampled_images, this->vk_info.limits.max_descriptor_set_storage_images), 1'000u);
-        u32 max_samplers = std::min(this->vk_info.limits.max_descriptor_set_samplers, 1'000u);
+        u32 const max_buffers = std::min(this->vk_info.limits.max_descriptor_set_storage_buffers, 1'000u);
+        u32 const max_images = std::min(std::min(this->vk_info.limits.max_descriptor_set_sampled_images, this->vk_info.limits.max_descriptor_set_storage_images), 1'000u);
+        u32 const max_samplers = std::min(this->vk_info.limits.max_descriptor_set_samplers, 1'000u);
         /* If timeline compute and graphics queries are not supported set max_limit to 0 */
-        u32 max_timeline_query_pools = std::min(this->vk_info.limits.timestamp_compute_and_graphics, 1'000u);
+        u32 const max_timeline_query_pools = std::min(this->vk_info.limits.timestamp_compute_and_graphics, 1'000u);
 
         vkGetDeviceQueue(this->vk_device, this->main_queue_family_index, 0, &this->main_queue_vk_queue);
 
@@ -522,19 +520,20 @@ namespace daxa
             .initialValue = 0,
         };
 
-        VkSemaphoreCreateInfo vk_semaphore_create_info{
+        VkSemaphoreCreateInfo const vk_semaphore_create_info{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
             .pNext = reinterpret_cast<void *>(&timeline_ci),
-            .flags = {}};
+            .flags = {},
+        };
 
         vkCreateSemaphore(this->vk_device, &vk_semaphore_create_info, nullptr, &this->vk_main_queue_gpu_timeline_semaphore);
 
-        VmaVulkanFunctions vma_vulkan_functions{
+        VmaVulkanFunctions const vma_vulkan_functions{
             .vkGetInstanceProcAddr = vkGetInstanceProcAddr,
             .vkGetDeviceProcAddr = vkGetDeviceProcAddr,
         };
 
-        VmaAllocatorCreateInfo vma_allocator_create_info{
+        VmaAllocatorCreateInfo const vma_allocator_create_info{
             .flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
             .physicalDevice = this->vk_physical_device,
             .device = this->vk_device,
@@ -549,7 +548,7 @@ namespace daxa
 
         vmaCreateAllocator(&vma_allocator_create_info, &this->vma_allocator);
 
-        VkSamplerCreateInfo vk_sampler_create_info{
+        VkSamplerCreateInfo const vk_sampler_create_info{
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},
@@ -571,12 +570,12 @@ namespace daxa
         };
         vkCreateSampler(vk_device, &vk_sampler_create_info, nullptr, &this->vk_dummy_sampler);
 
-        VkBufferUsageFlags usage_flags =
+        VkBufferUsageFlags const usage_flags =
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
             VK_BUFFER_USAGE_TRANSFER_DST_BIT |
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
-        VkBufferCreateInfo vk_buffer_create_info{
+        VkBufferCreateInfo const vk_buffer_create_info{
             .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},
@@ -587,7 +586,7 @@ namespace daxa
             .pQueueFamilyIndices = &this->main_queue_family_index,
         };
 
-        VmaAllocationCreateInfo vma_allocation_create_info{
+        VmaAllocationCreateInfo const vma_allocation_create_info{
             .flags = static_cast<VmaAllocationCreateFlags>(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT),
             .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
             .memoryTypeBits = std::numeric_limits<u32>::max(),
@@ -598,10 +597,10 @@ namespace daxa
 
         vmaCreateBuffer(this->vma_allocator, &vk_buffer_create_info, &vma_allocation_create_info, &buffer_device_address_buffer, &buffer_device_address_buffer_allocation, nullptr);
 
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && this->info.debug_name.size() > 0)
+        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !this->info.debug_name.empty())
         {
-            auto device_name = this->info.debug_name + std::string(" [Daxa Device]");
-            VkDebugUtilsObjectNameInfoEXT device_name_info{
+            auto const device_name = this->info.debug_name + std::string(" [Daxa Device]");
+            VkDebugUtilsObjectNameInfoEXT const device_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_DEVICE,
@@ -610,8 +609,8 @@ namespace daxa
             };
             this->vkSetDebugUtilsObjectNameEXT(vk_device, &device_name_info);
 
-            auto queue_name = this->info.debug_name + std::string(" [Daxa Device Queue]");
-            VkDebugUtilsObjectNameInfoEXT device_main_queue_name_info{
+            auto const queue_name = this->info.debug_name + std::string(" [Daxa Device Queue]");
+            VkDebugUtilsObjectNameInfoEXT const device_main_queue_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_QUEUE,
@@ -620,8 +619,8 @@ namespace daxa
             };
             this->vkSetDebugUtilsObjectNameEXT(vk_device, &device_main_queue_name_info);
 
-            auto semaphore_name = this->info.debug_name + std::string(" [Daxa Device TimelineSemaphore]");
-            VkDebugUtilsObjectNameInfoEXT device_main_queue_timeline_semaphore_name_info{
+            auto const semaphore_name = this->info.debug_name + std::string(" [Daxa Device TimelineSemaphore]");
+            VkDebugUtilsObjectNameInfoEXT const device_main_queue_timeline_semaphore_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_SEMAPHORE,
@@ -630,8 +629,8 @@ namespace daxa
             };
             this->vkSetDebugUtilsObjectNameEXT(vk_device, &device_main_queue_timeline_semaphore_name_info);
 
-            auto buffer_name = this->info.debug_name + std::string(" [Daxa Device buffer device address buffer]");
-            VkDebugUtilsObjectNameInfoEXT device_main_queue_timeline_buffer_device_address_buffer_name_info{
+            auto const buffer_name = this->info.debug_name + std::string(" [Daxa Device buffer device address buffer]");
+            VkDebugUtilsObjectNameInfoEXT const device_main_queue_timeline_buffer_device_address_buffer_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_BUFFER,
@@ -653,7 +652,6 @@ namespace daxa
     void ImplDevice::main_queue_collect_garbage()
     {
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_zombies_mtx});
-        u64 main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
 
         u64 gpu_timeline_value = std::numeric_limits<u64>::max();
         auto vk_result = vkGetSemaphoreCounterValue(this->vk_device, this->vk_main_queue_gpu_timeline_semaphore, &gpu_timeline_value);
@@ -684,7 +682,7 @@ namespace daxa
             this->main_queue_command_list_zombies,
             [&](auto & command_list_zombie)
             {
-                DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_command_pool_buffer_recycle_mtx});
+                DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{this->main_queue_command_pool_buffer_recycle_mtx});
                 this->buffer_pool_pool.put_back({command_list_zombie.vk_cmd_pool, command_list_zombie.vk_cmd_buffer});
             });
         check_and_cleanup_gpu_resources(
@@ -734,7 +732,7 @@ namespace daxa
             });
     }
 
-    void ImplDevice::wait_idle()
+    void ImplDevice::wait_idle() const
     {
         vkQueueWaitIdle(this->main_queue_vk_queue);
         vkDeviceWaitIdle(this->vk_device);
@@ -748,7 +746,7 @@ namespace daxa
 
         ret.info = info;
 
-        VkBufferUsageFlags usage_flags =
+        VkBufferUsageFlags const usage_flags =
             VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
             VK_BUFFER_USAGE_TRANSFER_DST_BIT |
@@ -766,7 +764,7 @@ namespace daxa
             VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
             VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
 
-        VkBufferCreateInfo vk_buffer_create_info{
+        VkBufferCreateInfo const vk_buffer_create_info{
             .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},
@@ -777,7 +775,7 @@ namespace daxa
             .pQueueFamilyIndices = &this->main_queue_family_index,
         };
 
-        VmaAllocationCreateInfo vma_allocation_create_info{
+        VmaAllocationCreateInfo const vma_allocation_create_info{
             .flags = static_cast<VmaAllocationCreateFlags>(info.memory_flags.data),
             .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
             .memoryTypeBits = std::numeric_limits<u32>::max(),
@@ -788,7 +786,7 @@ namespace daxa
 
         vmaCreateBuffer(this->vma_allocator, &vk_buffer_create_info, &vma_allocation_create_info, &ret.vk_buffer, &ret.vma_allocation, nullptr);
 
-        VkBufferDeviceAddressInfo vk_buffer_device_address_info{
+        VkBufferDeviceAddressInfo const vk_buffer_device_address_info{
             .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
             .pNext = nullptr,
             .buffer = ret.vk_buffer,
@@ -801,10 +799,10 @@ namespace daxa
         mem[id.index] = ret.device_address;
         vmaUnmapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation);
 
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
+        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !info.debug_name.empty())
         {
-            auto buffer_name = info.debug_name + std::string(" [Daxa Buffer]");
-            VkDebugUtilsObjectNameInfoEXT buffer_name_info{
+            auto const buffer_name = info.debug_name + std::string(" [Daxa Buffer]");
+            VkDebugUtilsObjectNameInfoEXT const buffer_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_BUFFER,
@@ -856,7 +854,7 @@ namespace daxa
 
         ImplImageSlot ret;
         ret.vk_image = swapchain_image;
-        VkImageViewCreateInfo view_ci{
+        VkImageViewCreateInfo const view_ci{
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .pNext = nullptr,
             .flags = 0,
@@ -881,10 +879,10 @@ namespace daxa
         ret.info = info;
         vkCreateImageView(vk_device, &view_ci, nullptr, &ret.view_slot.vk_image_view);
 
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
+        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !info.debug_name.empty())
         {
             auto swapchain_image_name = info.debug_name + std::string(" [Daxa Swapchain Image]");
-            VkDebugUtilsObjectNameInfoEXT swapchain_image_name_info{
+            VkDebugUtilsObjectNameInfoEXT const swapchain_image_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_IMAGE,
@@ -894,7 +892,7 @@ namespace daxa
             this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &swapchain_image_name_info);
 
             auto swapchain_image_view_name = info.debug_name + std::string(" [Daxa Swapchain ImageView]");
-            VkDebugUtilsObjectNameInfoEXT swapchain_image_view_name_info{
+            VkDebugUtilsObjectNameInfoEXT const swapchain_image_view_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
@@ -936,9 +934,9 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(info.dimensions >= 1 && info.dimensions <= 3, "image dimensions must be a value between 1 to 3(inclusive)");
         DAXA_DBG_ASSERT_TRUE_M(std::popcount(info.sample_count) == 1 && info.sample_count <= 64, "image samples must be power of two and between 1 and 64(inclusive)");
 
-        VkImageType vk_image_type = static_cast<VkImageType>(info.dimensions - 1);
+        auto const vk_image_type = static_cast<VkImageType>(info.dimensions - 1);
 
-        VkImageCreateInfo vk_image_create_info{
+        VkImageCreateInfo const vk_image_create_info{
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},
@@ -956,7 +954,7 @@ namespace daxa
             .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
         };
 
-        VmaAllocationCreateInfo vma_allocation_create_info{
+        VmaAllocationCreateInfo const vma_allocation_create_info{
             .flags = static_cast<VmaAllocationCreateFlags>(info.memory_flags.data),
             .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
             .memoryTypeBits = std::numeric_limits<u32>::max(),
@@ -967,7 +965,7 @@ namespace daxa
 
         vmaCreateImage(this->vma_allocator, &vk_image_create_info, &vma_allocation_create_info, &ret.vk_image, &ret.vma_allocation, nullptr);
 
-        VkImageViewType vk_image_view_type;
+        VkImageViewType vk_image_view_type = {};
         if (info.array_layer_count > 1)
         {
             DAXA_DBG_ASSERT_TRUE_M(info.dimensions >= 1 && info.dimensions <= 2, "image dimensions must be 1 or 2 if making an image array");
@@ -978,7 +976,7 @@ namespace daxa
             vk_image_view_type = static_cast<VkImageViewType>(info.dimensions - 1);
         }
 
-        VkImageViewCreateInfo vk_image_view_create_info{
+        VkImageViewCreateInfo const vk_image_view_create_info{
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},
@@ -1002,10 +1000,10 @@ namespace daxa
 
         vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view);
 
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
+        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !info.debug_name.empty())
         {
             auto image_name = info.debug_name + std::string(" [Daxa Image]");
-            VkDebugUtilsObjectNameInfoEXT swapchain_image_name_info{
+            VkDebugUtilsObjectNameInfoEXT const swapchain_image_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_IMAGE,
@@ -1015,7 +1013,7 @@ namespace daxa
             this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &swapchain_image_name_info);
 
             auto image_view_name = info.debug_name + std::string(" [Daxa ImageView]");
-            VkDebugUtilsObjectNameInfoEXT swapchain_image_view_name_info{
+            VkDebugUtilsObjectNameInfoEXT const swapchain_image_view_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
@@ -1040,7 +1038,7 @@ namespace daxa
 
         VkDevice vk_device = this->vk_device;
 
-        ImplImageSlot & parent_image_slot = slot(info.image);
+        ImplImageSlot const & parent_image_slot = slot(info.image);
 
         ImplImageViewSlot ret = {};
         ret.info = info;
@@ -1048,7 +1046,7 @@ namespace daxa
         ImageMipArraySlice slice = this->validate_image_slice(info.slice, info.image);
         ret.info.slice = slice;
 
-        VkImageViewCreateInfo vk_image_view_create_info{
+        VkImageViewCreateInfo const vk_image_view_create_info{
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},
@@ -1066,10 +1064,10 @@ namespace daxa
 
         vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.vk_image_view);
 
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
+        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !info.debug_name.empty())
         {
             auto image_view_name = info.debug_name + std::string(" [Daxa ImageView]");
-            VkDebugUtilsObjectNameInfoEXT name_info{
+            VkDebugUtilsObjectNameInfoEXT const name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
@@ -1092,7 +1090,7 @@ namespace daxa
 
         ret.info = info;
 
-        VkSamplerCreateInfo vk_sampler_create_info{
+        VkSamplerCreateInfo const vk_sampler_create_info{
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},
@@ -1103,22 +1101,22 @@ namespace daxa
             .addressModeV = static_cast<VkSamplerAddressMode>(info.address_mode_v),
             .addressModeW = static_cast<VkSamplerAddressMode>(info.address_mode_w),
             .mipLodBias = info.mip_lod_bias,
-            .anisotropyEnable = info.enable_anisotropy,
+            .anisotropyEnable = static_cast<VkBool32>(info.enable_anisotropy),
             .maxAnisotropy = info.max_anisotropy,
-            .compareEnable = info.enable_compare,
+            .compareEnable = static_cast<VkBool32>(info.enable_compare),
             .compareOp = static_cast<VkCompareOp>(info.compare_op),
             .minLod = info.min_lod,
             .maxLod = info.max_lod,
             .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK,
-            .unnormalizedCoordinates = info.enable_unnormalized_coordinates,
+            .unnormalizedCoordinates = static_cast<VkBool32>(info.enable_unnormalized_coordinates),
         };
 
         vkCreateSampler(this->vk_device, &vk_sampler_create_info, nullptr, &ret.vk_sampler);
 
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && info.debug_name.size() > 0)
+        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !info.debug_name.empty())
         {
             auto sampler_name = info.debug_name + std::string(" [Daxa Image]");
-            VkDebugUtilsObjectNameInfoEXT sampler_name_info{
+            VkDebugUtilsObjectNameInfoEXT const sampler_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_SAMPLER,
@@ -1214,29 +1212,29 @@ namespace daxa
 
     void ImplDevice::zombify_buffer(BufferId id)
     {
-        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_zombies_mtx});
-        u64 main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
+        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{this->main_queue_zombies_mtx});
+        u64 const main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
         this->main_queue_buffer_zombies.push_front({main_queue_cpu_timeline, id});
     }
 
     void ImplDevice::zombify_image(ImageId id)
     {
-        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_zombies_mtx});
-        u64 main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
+        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{this->main_queue_zombies_mtx});
+        u64 const main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
         this->main_queue_image_zombies.push_front({main_queue_cpu_timeline, id});
     }
 
     void ImplDevice::zombify_image_view(ImageViewId id)
     {
-        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_zombies_mtx});
-        u64 main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
+        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{this->main_queue_zombies_mtx});
+        u64 const main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
         this->main_queue_image_view_zombies.push_front({main_queue_cpu_timeline, id});
     }
 
     void ImplDevice::zombify_sampler(SamplerId id)
     {
-        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_zombies_mtx});
-        u64 main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
+        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{this->main_queue_zombies_mtx});
+        u64 const main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
         this->main_queue_sampler_zombies.push_front({main_queue_cpu_timeline, id});
     }
 

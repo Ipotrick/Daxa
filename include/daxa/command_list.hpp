@@ -124,7 +124,7 @@ namespace daxa
         u32 index_count = {};
         u32 instance_count = 1;
         u32 first_index = {};
-        u32 vertex_offset = {};
+        i32 vertex_offset = {};
         u32 first_instance = 0;
     };
 
@@ -168,7 +168,7 @@ namespace daxa
 
     struct ResetSplitBarrierInfo
     {
-        SplitBarrier& barrier;
+        SplitBarrier & barrier;
         PipelineStageFlags stage_masks;
     };
 
@@ -227,6 +227,6 @@ namespace daxa
 
       private:
         friend struct Device;
-        CommandList(ManagedPtr impl);
+        explicit CommandList(ManagedPtr impl);
     };
 } // namespace daxa

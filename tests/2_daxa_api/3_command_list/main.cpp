@@ -190,7 +190,7 @@ namespace tests
         app.device.wait_idle();
 
         auto query_results = timeline_query_pool.get_query_results(0, 2);
-        if(query_results[1] && query_results[3])
+        if (query_results[1] && query_results[3])
         {
             std::cout << "gpu execution took " << static_cast<f64>(query_results[2] - query_results[0]) / 1000000.0 << " ms" << std::endl;
         }

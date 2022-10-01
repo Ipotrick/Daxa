@@ -36,7 +36,6 @@ namespace daxa
 
     auto to_string(types::BufferId buffer_id) -> std::string;
 
-
     struct BufferInfo
     {
         MemoryFlags memory_flags = {};
