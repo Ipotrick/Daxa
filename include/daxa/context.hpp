@@ -13,8 +13,8 @@ namespace daxa
         // clang-format off
         case daxa::MsgSeverity::VERBOSE: break;
         case daxa::MsgSeverity::INFO:    break;
-        case daxa::MsgSeverity::WARNING: std::cout << '\n' << "[WARNING]: " << msg << '\n' <<std::endl; DAXA_DBG_ASSERT_TRUE_M(false, "validation warning"); break;
-        case daxa::MsgSeverity::FAILURE: std::cout << '\n' << "[FAILURE]: " << msg << '\n' <<std::endl; DAXA_DBG_ASSERT_TRUE_M(false, "validation error"); break;
+        case daxa::MsgSeverity::WARNING: std::cout << '\n' << "[WARNING]: " << msg << '\n' << std::endl; DAXA_DBG_ASSERT_TRUE_M(false, "validation warning"); break;
+        case daxa::MsgSeverity::FAILURE: std::cout << '\n' << "[FAILURE]: " << msg << '\n' << std::endl; DAXA_DBG_ASSERT_TRUE_M(false, "validation error"); break;
         // clang-format on
         default: std::cout << "[UNKNOWN]: " << msg << std::endl; break;
         }
@@ -36,7 +36,7 @@ namespace daxa
 
       private:
         friend auto create_context(ContextInfo const & info) -> Context;
-        Context(ManagedPtr impl);
+        explicit Context(ManagedPtr impl);
     };
 
     auto create_context(ContextInfo const & info) -> Context;

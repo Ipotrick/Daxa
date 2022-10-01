@@ -9,10 +9,10 @@ namespace daxa
     {
         ImGuiRendererInfo info;
         RasterPipeline raster_pipeline;
-        BufferId vbuffer, staging_vbuffer;
-        BufferId ibuffer, staging_ibuffer;
-        SamplerId sampler;
-        ImageId font_sheet;
+        BufferId vbuffer{}, staging_vbuffer{};
+        BufferId ibuffer{}, staging_ibuffer{};
+        SamplerId sampler{};
+        ImageId font_sheet{};
 
         void recreate_vbuffer(usize vbuffer_new_size);
         void recreate_ibuffer(usize ibuffer_new_size);

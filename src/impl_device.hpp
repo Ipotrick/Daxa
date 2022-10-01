@@ -11,6 +11,7 @@
 #include "impl_swapchain.hpp"
 #include "impl_semaphore.hpp"
 #include "impl_gpu_resources.hpp"
+#include "impl_split_barrier.hpp"
 #include "impl_timeline_query.hpp"
 
 namespace daxa
@@ -51,12 +52,13 @@ namespace daxa
         std::deque<std::pair<u64, ImageViewId>> main_queue_image_view_zombies = {};
         std::deque<std::pair<u64, SamplerId>> main_queue_sampler_zombies = {};
         std::deque<std::pair<u64, SemaphoreZombie>> main_queue_semaphore_zombies = {};
+        std::deque<std::pair<u64, SplitBarrierZombie>> main_queue_split_barrier_zombies = {};
         std::deque<std::pair<u64, PipelineZombie>> main_queue_pipeline_zombies = {};
         std::deque<std::pair<u64, TimelineQueryPoolZombie>> main_queue_timeline_query_pool_zombies = {};
         void main_queue_collect_garbage();
-        void wait_idle();
+        void wait_idle() const;
 
-        ImplDevice(DeviceInfo const & info, DeviceProperties const & vk_info, ManagedWeakPtr impl_ctx, VkPhysicalDevice physical_device);
+        ImplDevice(DeviceInfo info, DeviceProperties const & vk_info, ManagedWeakPtr impl_ctx, VkPhysicalDevice physical_device);
         virtual ~ImplDevice() override final;
 
         auto validate_image_slice(ImageMipArraySlice const & slice, ImageId id) -> ImageMipArraySlice;
@@ -78,10 +80,10 @@ namespace daxa
         auto slot(ImageViewId id) const -> ImplImageViewSlot const &;
         auto slot(SamplerId id) const -> ImplSamplerSlot const &;
 
-        void zombiefy_buffer(BufferId id);
-        void zombiefy_image(ImageId id);
-        void zombiefy_image_view(ImageViewId id);
-        void zombiefy_sampler(SamplerId id);
+        void zombify_buffer(BufferId id);
+        void zombify_image(ImageId id);
+        void zombify_image_view(ImageViewId id);
+        void zombify_sampler(SamplerId id);
 
         void cleanup_buffer(BufferId id);
         void cleanup_image(ImageId id);

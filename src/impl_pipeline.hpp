@@ -19,7 +19,7 @@ namespace daxa
 
     struct ImplPipeline : ManagedSharedState
     {
-        ImplPipeline(ManagedWeakPtr impl_device);
+        explicit ImplPipeline(ManagedWeakPtr impl_device);
 
         ManagedWeakPtr impl_device;
         VkPipeline vk_pipeline = {};
@@ -55,7 +55,7 @@ namespace daxa
         DxcBackend dxc_backend = {};
 #endif
 
-        ImplPipelineCompiler(ManagedWeakPtr impl_device, PipelineCompilerInfo const & info);
+        ImplPipelineCompiler(ManagedWeakPtr device_impl, PipelineCompilerInfo info);
         ~ImplPipelineCompiler();
 
         auto get_spirv(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage) -> Result<std::vector<u32>>;
@@ -70,13 +70,13 @@ namespace daxa
     {
         RasterPipelineInfo info;
 
-        ImplRasterPipeline(ManagedWeakPtr impl_device, RasterPipelineInfo const & info);
+        ImplRasterPipeline(ManagedWeakPtr impl_device, RasterPipelineInfo info);
     };
 
     struct ImplComputePipeline final : ImplPipeline
     {
         ComputePipelineInfo info;
 
-        ImplComputePipeline(ManagedWeakPtr impl_device, ComputePipelineInfo const & info);
+        ImplComputePipeline(ManagedWeakPtr impl_device, ComputePipelineInfo info);
     };
 } // namespace daxa

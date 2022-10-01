@@ -3,7 +3,7 @@
 #include <stack>
 #include <daxa/utils/task_list.hpp>
 
-#define DAXA_TASK_LIST_DEBUG 0
+#define DAXA_TASK_LIST_DEBUG 1
 
 #if defined(DAXA_TASK_LIST_DEBUG)
 #if DAXA_TASK_LIST_DEBUG
@@ -19,181 +19,135 @@ namespace daxa
 {
     struct ImplDevice;
 
+    using TaskBatchId = usize;
+
+    using TaskId = usize;
+
     struct ImplTaskBuffer
     {
+        TaskBufferInfo info = {};
         Access latest_access = AccessConsts::NONE;
-        usize latest_access_task_index = {};
-        CreateTaskBufferCallback fetch_callback = {};
-        std::string debug_name = {};
+        usize latest_access_batch_index = {};
+        usize latest_access_submit_scope_index = {};
+        // When the last index was a read and an additional read is followed after,
+        // we will combine all barriers into one, which is the first barrier that the first read generates.
+        usize latest_access_read_barrier_index = {};
     };
 
-    struct RuntimeTaskBuffer
+    struct TaskBarrier
     {
-        BufferId buffer_id = {};
+        // when this ID is invalid, this barrier is NOT an image memory barrier but just a memory barrier.
+        // So when ID invalid => memory barrier, ID valid => image memory barrier.
+        TaskImageId image_id = {};
+        ImageMipArraySlice slice = {};
+        ImageLayout layout_before = {};
+        ImageLayout layout_after = {};
+        Access src_access = {};
+        Access dst_access = {};
+        usize src_batch = {};
+        usize dst_batch = {};
+    };
+
+    struct TaskSplitBarrier : TaskBarrier
+    {
+        SplitBarrier split_barrier_state;
+    };
+
+    struct TaskImageTrackedSlice
+    {
+        Access latest_access = AccessConsts::NONE;
+        ImageLayout latest_layout = ImageLayout::UNDEFINED;
+        usize latest_access_batch_index = {};
+        usize latest_access_submit_scope_index = {};
+        // When the last index was a read and an additional read is followed after,
+        // we will combine all barriers into one, which is the first barrier that the first read generates.
+        usize latest_access_read_barrier_index = {};
+        ImageMipArraySlice slice = {};
     };
 
     struct ImplTaskImage
     {
-        TaskImageId root_parent_id = {};
-        usize lifetime_start_event_index = {};
-        usize lifetime_end_event_index = {};
-        std::optional<std::array<TaskImageId, 2>> merge_src_images = {};
-
-        Access latest_access = AccessConsts::NONE;
-        ImageLayout latest_layout = ImageLayout::UNDEFINED;
-        usize latest_access_task_index = {};
-        usize latest_access_submit_scope_index = {};
-        CreateTaskImageCallback fetch_callback = {};
-        ImageMipArraySlice slice = {};
-        std::optional<std::pair<Swapchain, BinarySemaphore>> parent_swapchain = {};
+        TaskImageInfo info = {};
         bool swapchain_semaphore_waited_upon = {};
-        std::string debug_name = {};
+        std::vector<TaskImageTrackedSlice> slices_last_uses = {};
     };
 
-    struct RuntimeTaskImage
+    struct Task
     {
-        ImageId image_id = {};
-    };
-
-    struct TaskPipelineBarrier
-    {
-        bool image_barrier = false;
-        Access awaited_pipeline_access = AccessConsts::NONE;
-        Access waiting_pipeline_access = AccessConsts::NONE;
-        ImageLayout before_layout = ImageLayout::UNDEFINED;
-        ImageLayout after_layout = ImageLayout::UNDEFINED;
-        TaskImageId image_id = {};
-        ImageMipArraySlice image_slice = {};
-    };
-
-    struct ImplGenericTask
-    {
-        std::vector<TaskPipelineBarrier> barriers = {};
         TaskInfo info = {};
     };
 
-    struct ImplCreateBufferTask
+    struct CreateTaskBufferTask
     {
         TaskBufferId id = {};
     };
 
-    struct TaskImageCreateEvent
+    struct CreateTaskImageTask
     {
         std::array<TaskImageId, 2> ids = {};
         usize id_count = {};
     };
 
-    struct TaskSubmitEvent
+    struct ImplPresentInfo
     {
-        std::vector<TaskPipelineBarrier> barriers = {};
-        CommandSubmitInfo submit_info;
-        CommandSubmitInfo* user_submit_info;
-    };  
-
-    struct TaskPresentEvent
-    {
-        PresentInfo present_info;
-        std::vector<BinarySemaphore>* user_binary_semaphores = {};
-        TaskImageId presented_image = {};
+        std::vector<BinarySemaphore> * user_binary_semaphores = {};
+        std::vector<BinarySemaphore> binary_semaphores = {};
     };
 
-    using TaskEventVariant = std::variant<
-        ImplGenericTask,
-        ImplCreateBufferTask,
-        TaskImageCreateEvent,
-        TaskSubmitEvent,
-        TaskPresentEvent
-    >;
-
-    struct TaskEvent
+    struct TaskBatch
     {
-        usize submit_scope_index = {};
-        TaskEventVariant event_variant;
+        std::vector<usize> pipeline_barrier_indices = {};
+        std::vector<usize> wait_split_barrier_indices = {};
+        std::vector<TaskId> tasks = {};
+        std::vector<usize> signal_split_barrier_indices = {};
     };
 
-    struct TaskSubmitScope
+    struct TaskBatchSubmitScope
     {
         CommandSubmitInfo submit_info = {};
+        CommandSubmitInfo * user_submit_info = {};
+        // These barriers are inserted after all batches and their sync.
+        std::vector<usize> last_minute_barrier_indices = {};
+        std::vector<TaskBatch> task_batches = {};
         std::vector<u64> used_swapchain_task_images = {};
+        std::optional<ImplPresentInfo> present_info = {};
     };
 
-    struct TaskRuntime
-    {
-        // interface:
-        bool reuse_last_command_list = true;
-
-        Device current_device;
-        std::vector<CommandList> command_lists = {};
-        std::vector<ImplTaskBuffer> & impl_task_buffers;
-        std::vector<ImplTaskImage> & impl_task_images;
-        std::vector<TaskSubmitScope> & submit_scopes;
-        std::vector<RuntimeTaskBuffer> runtime_buffers = {};
-        std::vector<RuntimeTaskImage> runtime_images = {};
-
-        std::optional<BinarySemaphore> last_submit_semaphore = {};
-
-        void execute_task(TaskEvent & task, usize task_index);
-
-        void pipeline_barriers(std::vector<TaskPipelineBarrier> const & barriers);
-    };
-
-    struct TaskRecordState
-    {
-    };
-
-    struct SubmitScope
-    {
-        std::vector<CommandList> recorded_command_lists = {};
-        std::vector<usize> used_swapchain_images = {}; 
-    };
-
-    struct TaskLink
-    {
-        u64 event_a;
-        u64 event_b;
-        u64 resource;
-        TaskPipelineBarrier barrier;
-    };
-
-    struct TaskGraph
-    {
-        std::vector<TaskLink> buffer_links;
-        std::vector<TaskLink> image_links;
-    };
+    auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access>;
+    auto task_buffer_access_to_access(TaskBufferAccess const & access) -> Access;
 
     struct ImplTaskList final : ManagedSharedState
     {
         TaskListInfo info;
-
-        std::vector<TaskEvent> events = {};
+        TaskImageId swapchain_image = {};
+        std::vector<Task> tasks = {};
+        std::vector<TaskSplitBarrier> split_barriers = {};
+        std::vector<TaskBarrier> barriers = {};
         std::vector<ImplTaskBuffer> impl_task_buffers = {};
         std::vector<ImplTaskImage> impl_task_images = {};
-        std::vector<TaskSubmitScope> submit_scopes = {};
-
-        TaskRecordState record_state = {};
-        TaskGraph compiled_graph = {};
-        std::vector<CommandList> left_over_command_lists = {};
-        u64 last_submit_event_index = std::numeric_limits<u64>::max(); 
-
+        std::vector<TaskBatchSubmitScope> batch_submit_scopes = {};
         bool compiled = false;
+        bool executed = false;
 
-        auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access>;
-        auto task_buffer_access_to_access(TaskBufferAccess const & access) -> Access;
-        auto compute_needed_barrier(Access const & previous_access, Access const & new_access) -> std::optional<TaskPipelineBarrier>;
+        std::vector<CommandList> left_over_command_lists = {};
 
+        void debug_print_task_barrier(TaskBarrier & barrier, usize index, std::string_view prefix);
+        void debug_print_task_split_barrier(TaskSplitBarrier & barrier, usize index, std::string_view prefix);
+        void debug_print_task(Task & task, usize task_id, std::string_view prefix);
         void execute_barriers();
-
-        auto slot(TaskBufferId id) -> ImplTaskBuffer &;
-        auto slot(TaskImageId id) -> ImplTaskImage &;
-
-        auto get_buffer(TaskBufferId) -> BufferId;
-        auto get_image(TaskImageId) -> ImageId;
-        auto get_image_view(TaskImageId) -> ImageViewId;
-
         void output_graphviz();
-        void insert_synchronization();
 
-        ImplTaskList(TaskListInfo const & info);
+        ImplTaskList(TaskListInfo info);
         virtual ~ImplTaskList() override final;
+    };
+
+    struct ImplTaskRuntime
+    {
+        // interface:
+        ImplTaskList & task_list;
+        Task * current_task = {};
+        bool reuse_last_command_list = true;
+        std::vector<CommandList> command_lists = {};
+        std::optional<BinarySemaphore> last_submit_semaphore = {};
     };
 } // namespace daxa

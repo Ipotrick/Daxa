@@ -210,25 +210,14 @@ struct App : AppWindow<App>
 
     auto record_tasks() -> daxa::TaskList
     {
-        daxa::TaskList new_task_list = daxa::TaskList({.device = device, .debug_name = APPNAME_PREFIX("main task list")});
+        daxa::TaskList new_task_list = daxa::TaskList({.device = device, .swapchain = swapchain, .debug_name = APPNAME_PREFIX("main task list")});
 
-        auto task_boid_buffer = new_task_list.create_task_buffer({
-            .fetch_callback = [=, this]()
-            { return this->boid_buffer; },
-            .debug_name = "task boid buffer",
-        });
-
-        auto task_old_boid_buffer = new_task_list.create_task_buffer({
-            .fetch_callback = [=, this]()
-            { return this->old_boid_buffer; },
-            .debug_name = "task old boid buffer",
-        });
+        auto task_boid_buffer = new_task_list.create_task_buffer({.buffer = &this->boid_buffer});
+        auto task_old_boid_buffer = new_task_list.create_task_buffer({.buffer = &this->old_boid_buffer});
 
         task_swapchain_image = new_task_list.create_task_image({
-            .fetch_callback = [=, this]()
-            { return this->swapchain_image; },
-            .swapchain_parent = std::pair{swapchain, acquire_semaphore},
-            .debug_name = "task swapchain image",
+            .image = &this->swapchain_image,
+            .swapchain_image = true,
         });
 
         new_task_list.add_task({
@@ -236,11 +225,11 @@ struct App : AppWindow<App>
                 {task_boid_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE},
                 {task_old_boid_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY},
             },
-            .task = [=, this](daxa::TaskInterface & interf)
+            .task = [=, this](daxa::TaskRuntime const & runtime)
             {
-                BufferId boid_buffer_id = interf.get_buffer(task_boid_buffer);
-                BufferId old_boid_buffer_id = interf.get_buffer(task_old_boid_buffer);
-                daxa::CommandList cmd_list = interf.get_command_list();
+                BufferId boid_buffer_id = runtime.get_buffer(task_boid_buffer);
+                BufferId old_boid_buffer_id = runtime.get_buffer(task_old_boid_buffer);
+                daxa::CommandList cmd_list = runtime.get_command_list();
                 this->update_boids(cmd_list, boid_buffer_id, old_boid_buffer_id);
             },
             .debug_name = "update boids",
@@ -251,20 +240,20 @@ struct App : AppWindow<App>
                 {task_boid_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
             },
             .used_images = {
-                {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
+                {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
             },
-            .task = [=, this](daxa::TaskInterface & interf)
+            .task = [=, this](daxa::TaskRuntime const & runtime)
             {
-                ImageId render_target_id = interf.get_image(task_swapchain_image);
-                BufferId boid_buffer_id = interf.get_buffer(task_boid_buffer);
-                daxa::CommandList cmd_list = interf.get_command_list();
+                ImageId render_target_id = runtime.get_image(task_swapchain_image);
+                BufferId boid_buffer_id = runtime.get_buffer(task_boid_buffer);
+                daxa::CommandList cmd_list = runtime.get_command_list();
                 this->draw_boids(cmd_list, render_target_id, boid_buffer_id, this->size_x, this->size_y);
             },
             .debug_name = "draw boids",
         });
         new_task_list.submit(&submit_info);
         new_task_list.present({});
-        new_task_list.compile();
+        new_task_list.complete();
 
         return new_task_list;
     }

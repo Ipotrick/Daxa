@@ -64,7 +64,7 @@ namespace tests
 
         daxa::TimelineQueryPool timeline_query_pool = app.device.create_timeline_query_pool({
             .query_count = 2,
-            .debug_name = "timeline_querry",
+            .debug_name = "timeline_query",
         });
 
         auto buffer_ptr = app.device.map_memory_as<std::array<f32, 4>>(staging_upload_buffer);
@@ -190,7 +190,7 @@ namespace tests
         app.device.wait_idle();
 
         auto query_results = timeline_query_pool.get_query_results(0, 2);
-        if(query_results[1] && query_results[3])
+        if (query_results[1] && query_results[3])
         {
             std::cout << "gpu execution took " << static_cast<f64>(query_results[2] - query_results[0]) / 1000000.0 << " ms" << std::endl;
         }
@@ -228,7 +228,7 @@ namespace tests
         daxa::ImageViewId image_view = app.device.create_image_view({.image = image});
         daxa::SamplerId sampler = app.device.create_sampler({});
 
-        // The gpu resources are not destroyed here. Their destruction is defered until the command list completes execution on the gpu.
+        // The gpu resources are not destroyed here. Their destruction is deferred until the command list completes execution on the gpu.
         cmd_list.destroy_buffer_deferred(buffer);
         cmd_list.destroy_image_deferred(image);
         cmd_list.destroy_image_view_deferred(image_view);
@@ -245,7 +245,7 @@ namespace tests
         app.device.wait_idle();
 
         // Here the gpu resources will be destroyed.
-        // Collect_garbage loops over all zombie resources and destroyes them when they are no longer used on the gpu/ their assoziated command list finished executng.
+        // Collect_garbage loops over all zombie resources and destroys them when they are no longer used on the gpu/ their associated command list finished executing.
         app.device.collect_garbage();
     }
 } // namespace tests

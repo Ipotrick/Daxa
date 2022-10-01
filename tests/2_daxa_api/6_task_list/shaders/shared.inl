@@ -9,6 +9,7 @@ DAXA_DECL_BUFFER_STRUCT(
         f32 mouse_y;
         f32 p_mouse_x;
         f32 p_mouse_y;
+        f32 paint_radius;
         f32vec3 paint_col;
     });
 
