@@ -260,11 +260,12 @@ struct App : AppWindow<App>
         swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
 
         loop_task_list.execute();
-        auto command_lists = loop_task_list.command_lists();
+        auto command_lists = loop_task_list.get_command_lists();
         auto cmd_list = device.create_command_list({});
+        auto last_si_use = loop_task_list.last_uses(task_swapchain_image).back();
         cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = loop_task_list.last_access(task_swapchain_image),
-            .before_layout = loop_task_list.last_layout(task_swapchain_image),
+            .awaited_pipeline_access = last_si_use.access,
+            .before_layout = last_si_use.layout,
             .after_layout = daxa::ImageLayout::PRESENT_SRC,
             .image_id = swapchain_image,
         });
@@ -359,49 +360,20 @@ struct App : AppWindow<App>
             .device = device,
             .debug_name = APPNAME_PREFIX("task_list"),
         });
-        task_swapchain_image = new_task_list.create_task_image({
-            .fetch_callback = [this]()
-            { return swapchain_image; },
-            .debug_name = APPNAME_PREFIX("task_swapchain_image"),
-        });
-        task_color_image = new_task_list.create_task_image({
-            .fetch_callback = [this]()
-            { return color_image; },
-            .debug_name = APPNAME_PREFIX("task_color_image"),
-        });
-        task_display_image = new_task_list.create_task_image({
-            .fetch_callback = [this]()
-            { return display_image; },
-            .debug_name = APPNAME_PREFIX("task_display_image"),
-        });
-        task_motion_vectors_image = new_task_list.create_task_image({
-            .fetch_callback = [this]()
-            { return motion_vectors_image; },
-            .debug_name = APPNAME_PREFIX("task_motion_vectors_image"),
-        });
-        task_depth_image = new_task_list.create_task_image({
-            .fetch_callback = [this]()
-            { return depth_image; },
-            .slice = {.image_aspect = daxa::ImageAspectFlagBits::DEPTH},
-            .debug_name = APPNAME_PREFIX("task_depth_image"),
-        });
+        task_swapchain_image = new_task_list.create_task_image({.image = &swapchain_image});
+        task_color_image = new_task_list.create_task_image({.image = &color_image});
+        task_display_image = new_task_list.create_task_image({.image = &display_image});
+        task_motion_vectors_image = new_task_list.create_task_image({.image = &motion_vectors_image});
+        task_depth_image = new_task_list.create_task_image({.image = &depth_image});
 
-        task_raster_input_buffer = new_task_list.create_task_buffer({
-            .fetch_callback = [this]()
-            { return raster_input_buffer; },
-            .debug_name = APPNAME_PREFIX("task_raster_input_buffer"),
-        });
-        task_staging_raster_input_buffer = new_task_list.create_task_buffer({
-            .fetch_callback = [this]()
-            { return staging_raster_input_buffer; },
-            .debug_name = APPNAME_PREFIX("task_staging_raster_input_buffer"),
-        });
+        task_raster_input_buffer = new_task_list.create_task_buffer({.buffer = &raster_input_buffer});
+        task_staging_raster_input_buffer = new_task_list.create_task_buffer({.buffer = &staging_raster_input_buffer});
 
         new_task_list.add_task({
             .used_buffers = {
                 {task_staging_raster_input_buffer, daxa::TaskBufferAccess::HOST_TRANSFER_WRITE},
             },
-            .task = [this](daxa::TaskInterface /* interf */)
+            .task = [this](daxa::TaskRuntime /* runtime */)
             {
                 this->raster_input.prev_view_mat = this->raster_input.view_mat;
 
@@ -429,9 +401,9 @@ struct App : AppWindow<App>
                 {task_raster_input_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE},
                 {task_staging_raster_input_buffer, daxa::TaskBufferAccess::TRANSFER_READ},
             },
-            .task = [this](daxa::TaskInterface interf)
+            .task = [this](daxa::TaskRuntime runtime)
             {
-                auto cmd_list = interf.get_command_list();
+                auto cmd_list = runtime.get_command_list();
                 cmd_list.copy_buffer_to_buffer({
                     .src_buffer = staging_raster_input_buffer,
                     .dst_buffer = raster_input_buffer,
@@ -446,13 +418,13 @@ struct App : AppWindow<App>
                 {task_raster_input_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
             },
             .used_images = {
-                {task_color_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
-                {task_motion_vectors_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
-                {task_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT},
+                {task_color_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
+                {task_motion_vectors_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
+                {task_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT, daxa::ImageMipArraySlice{}},
             },
-            .task = [this](daxa::TaskInterface interf)
+            .task = [this](daxa::TaskRuntime runtime)
             {
-                auto cmd_list = interf.get_command_list();
+                auto cmd_list = runtime.get_command_list();
                 cmd_list.begin_renderpass({
                     .color_attachments = {
                         {
@@ -483,14 +455,14 @@ struct App : AppWindow<App>
 
         new_task_list.add_task({
             .used_images = {
-                {task_color_image, daxa::TaskImageAccess::TRANSFER_READ},
-                {task_display_image, daxa::TaskImageAccess::TRANSFER_WRITE},
+                {task_color_image, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{}},
+                {task_display_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{}},
             },
-            .task = [this](daxa::TaskInterface interf)
+            .task = [this](daxa::TaskRuntime runtime)
             {
                 if (!fsr_enabled)
                 {
-                    auto cmd_list = interf.get_command_list();
+                    auto cmd_list = runtime.get_command_list();
                     cmd_list.blit_image_to_image({
                         .src_image = color_image,
                         .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
@@ -508,16 +480,16 @@ struct App : AppWindow<App>
 
         new_task_list.add_task({
             .used_images = {
-                {task_color_image, daxa::TaskImageAccess::SHADER_READ_ONLY},
-                {task_motion_vectors_image, daxa::TaskImageAccess::SHADER_READ_ONLY},
-                {task_depth_image, daxa::TaskImageAccess::SHADER_READ_ONLY},
-                {task_display_image, daxa::TaskImageAccess::SHADER_WRITE_ONLY},
+                {task_color_image, daxa::TaskImageAccess::SHADER_READ_ONLY, daxa::ImageMipArraySlice{}},
+                {task_motion_vectors_image, daxa::TaskImageAccess::SHADER_READ_ONLY, daxa::ImageMipArraySlice{}},
+                {task_depth_image, daxa::TaskImageAccess::SHADER_READ_ONLY, daxa::ImageMipArraySlice{}},
+                {task_display_image, daxa::TaskImageAccess::SHADER_WRITE_ONLY, daxa::ImageMipArraySlice{}},
             },
-            .task = [this](daxa::TaskInterface interf)
+            .task = [this](daxa::TaskRuntime runtime)
             {
                 if (fsr_enabled)
                 {
-                    auto cmd_list = interf.get_command_list();
+                    auto cmd_list = runtime.get_command_list();
                     upscale_context.upscale(
                         cmd_list,
                         {
@@ -543,12 +515,12 @@ struct App : AppWindow<App>
 
         new_task_list.add_task({
             .used_images = {
-                {task_display_image, daxa::TaskImageAccess::TRANSFER_READ},
-                {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE},
+                {task_display_image, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{}},
+                {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{}},
             },
-            .task = [this](daxa::TaskInterface interf)
+            .task = [this](daxa::TaskRuntime runtime)
             {
-                auto cmd_list = interf.get_command_list();
+                auto cmd_list = runtime.get_command_list();
                 cmd_list.blit_image_to_image({
                     .src_image = display_image,
                     .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
@@ -565,17 +537,17 @@ struct App : AppWindow<App>
 
         new_task_list.add_task({
             .used_images = {
-                {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT},
+                {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
             },
-            .task = [this](daxa::TaskInterface interf)
+            .task = [this](daxa::TaskRuntime runtime)
             {
-                auto cmd_list = interf.get_command_list();
+                auto cmd_list = runtime.get_command_list();
                 imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, swapchain_image, size_x, size_y);
             },
             .debug_name = APPNAME_PREFIX("ImGui Task"),
         });
 
-        new_task_list.compile();
+        new_task_list.complete();
 
         return new_task_list;
     }

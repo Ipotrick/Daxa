@@ -16,8 +16,8 @@ namespace daxa
 
         auto get_query_results(u32 start_index, u32 count) -> std::vector<u64>;
 
-        private:
-            friend struct Device;
-            TimelineQueryPool(ManagedPtr impl);
+      private:
+        friend struct Device;
+        explicit TimelineQueryPool(ManagedPtr impl);
     };
-}
+} // namespace daxa

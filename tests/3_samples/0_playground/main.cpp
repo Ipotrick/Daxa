@@ -2,19 +2,23 @@
 #include <thread>
 #include <iostream>
 
-#define DAXA_GLSL 1
-#define DAXA_HLSL 0
-
 #include "shaders/shared.inl"
 
 #include <daxa/utils/imgui.hpp>
 #include <0_common/imgui/imgui_impl_glfw.h>
 
-#define APPNAME "Daxa Sample: HelloTriangle"
+#define APPNAME "Daxa Sample: Playground"
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
+
+#include <daxa/utils/math_operators.hpp>
 
 using namespace daxa::types;
 using Clock = std::chrono::high_resolution_clock;
+
+i32 const max_layers = 12;
+i32 const max_levels = 16;
+
+#define MAX_VERTS 10000
 
 struct App : AppWindow<App>
 {
@@ -35,14 +39,10 @@ struct App : AppWindow<App>
     daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
         .shader_compile_options = {
             .root_paths = {
-                "tests/3_samples/2_hello_triangle/shaders",
+                "tests/3_samples/0_playground/shaders",
                 "include",
             },
-#if DAXA_GLSL
             .language = daxa::ShaderLanguage::GLSL,
-#elif DAXA_HLSL
-            .language = daxa::ShaderLanguage::HLSL,
-#endif
         },
         .debug_name = APPNAME_PREFIX("pipeline_compiler"),
     });
@@ -61,14 +61,18 @@ struct App : AppWindow<App>
 
     // clang-format off
     daxa::RasterPipeline raster_pipeline = pipeline_compiler.create_raster_pipeline({
-#if DAXA_GLSL
         .vertex_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_VERT"}}}},
         .fragment_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_FRAG"}}}},
-#elif DAXA_HLSL
-        .vertex_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .compile_options = {.entry_point = "vs_main"}},
-        .fragment_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .compile_options = {.entry_point = "fs_main"}},
-#endif
-        .color_attachments = {{.format = swapchain.get_format()}},
+        .color_attachments = {{
+            .format = swapchain.get_format(),
+            .blend = {
+                .blend_enable = true,
+                .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA,
+                .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA,
+                .src_alpha_blend_factor = daxa::BlendFactor::ONE,
+                .dst_alpha_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA,
+            },
+        }},
         .raster = {},
         .push_constant_size = sizeof(DrawPush),
         .debug_name = APPNAME_PREFIX("raster_pipeline"),
@@ -76,9 +80,10 @@ struct App : AppWindow<App>
     // clang-format on
 
     daxa::BufferId vertex_buffer = device.create_buffer(daxa::BufferInfo{
-        .size = sizeof(DrawVertex) * 3,
+        .size = sizeof(DrawVertex) * MAX_VERTS,
         .debug_name = APPNAME_PREFIX("vertex_buffer"),
     });
+    u32 vert_n = 0;
 
     static inline constexpr u64 FRAMES_IN_FLIGHT = 1;
     daxa::TimelineSemaphore gpu_framecount_timeline_sema = device.create_timeline_semaphore(daxa::TimelineSemaphoreInfo{
@@ -90,7 +95,22 @@ struct App : AppWindow<App>
     daxa::BinarySemaphore acquire_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("acquire_semaphore")});
     daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
 
-    App() : AppWindow<App>(APPNAME) {}
+    daxa::ImageMipArraySlice s0 = {
+        .image_aspect = daxa::ImageAspectFlagBits::COLOR | daxa::ImageAspectFlagBits::DEPTH,
+        .base_mip_level = 3,
+        .level_count = 5,
+        .base_array_layer = 2,
+        .layer_count = 4,
+    };
+    daxa::ImageMipArraySlice s1 = {
+        .image_aspect = daxa::ImageAspectFlagBits::COLOR,
+        .base_mip_level = 5,
+        .level_count = 2,
+        .base_array_layer = 3,
+        .layer_count = 4,
+    };
+
+    App() : AppWindow<App>(APPNAME, 1600, 1200) {}
 
     ~App()
     {
@@ -121,14 +141,94 @@ struct App : AppWindow<App>
         return false;
     }
 
+    void add_rect(DrawVertex *& buffer_ptr, f32vec2 p0, f32vec2 p1, f32vec4 col)
+    {
+        // clang-format off
+        *buffer_ptr = DrawVertex{{p0.x, p0.y, 0.0f, 0.0f}, col}; ++buffer_ptr;
+        *buffer_ptr = DrawVertex{{p1.x, p0.y, 0.0f, 0.0f}, col}; ++buffer_ptr;
+        *buffer_ptr = DrawVertex{{p0.x, p1.y, 0.0f, 0.0f}, col}; ++buffer_ptr;
+
+        *buffer_ptr = DrawVertex{{p1.x, p0.y, 0.0f, 0.0f}, col}; ++buffer_ptr;
+        *buffer_ptr = DrawVertex{{p0.x, p1.y, 0.0f, 0.0f}, col}; ++buffer_ptr;
+        *buffer_ptr = DrawVertex{{p1.x, p1.y, 0.0f, 0.0f}, col}; ++buffer_ptr;
+        // clang-format on
+
+        vert_n += 6;
+    }
+
     void ui_update()
     {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
         ImGui::Begin("Debug");
+        {
+            i32 mips[2] = {static_cast<i32>(s0.base_mip_level), static_cast<i32>(s0.level_count)};
+            ImGui::SliderInt("Mip Base 0", &mips[0], 0, max_levels - 1);
+            ImGui::SliderInt("Mip Count 0", &mips[1], 1, max_levels - mips[0]);
+            s0.base_mip_level = static_cast<u32>(mips[0]);
+            s0.level_count = static_cast<u32>(mips[1]);
+            i32 arrs[2] = {static_cast<i32>(s0.base_array_layer), static_cast<i32>(s0.layer_count)};
+            ImGui::SliderInt("Array Base 0", &arrs[0], 0, max_layers - 1);
+            ImGui::SliderInt("Array Count 0", &arrs[1], 1, max_layers - arrs[0]);
+            s0.base_array_layer = static_cast<u32>(arrs[0]);
+            s0.layer_count = static_cast<u32>(arrs[1]);
+        }
+        {
+            i32 mips[2] = {static_cast<i32>(s1.base_mip_level), static_cast<i32>(s1.level_count)};
+            ImGui::SliderInt("Mip Base 1", &mips[0], 0, max_levels - 1);
+            ImGui::SliderInt("Mip Count 1", &mips[1], 1, max_levels - mips[0]);
+            s1.base_mip_level = static_cast<u32>(mips[0]);
+            s1.level_count = static_cast<u32>(mips[1]);
+            i32 arrs[2] = {static_cast<i32>(s1.base_array_layer), static_cast<i32>(s1.layer_count)};
+            ImGui::SliderInt("Array Base 1", &arrs[0], 0, max_layers - 1);
+            ImGui::SliderInt("Array Count 1", &arrs[1], 1, max_layers - arrs[0]);
+            s1.base_array_layer = static_cast<u32>(arrs[0]);
+            s1.layer_count = static_cast<u32>(arrs[1]);
+        }
         ImGui::End();
-        ImGui::ShowDemoWindow();
         ImGui::Render();
+    }
+
+    void construct_scene(DrawVertex *& buffer_ptr)
+    {
+        vert_n = 0;
+        using namespace daxa::math_operators;
+
+        auto view_transform = [](auto v)
+        {
+            return (v / f32vec2{static_cast<f32>(max_levels), static_cast<f32>(max_layers)}) * 2.0f - 1.0f;
+        };
+        auto add_int_rect = [&](auto xi, auto yi, auto sx, auto sy, f32 scl, f32vec4 col)
+        {
+            f32vec2 p0 = f32vec2{static_cast<f32>(xi), static_cast<f32>(yi)} + scl * 0.5f;
+            f32vec2 p1 = p0 + f32vec2{static_cast<f32>(sx), static_cast<f32>(sy)} - scl;
+            add_rect(buffer_ptr, view_transform(p0), view_transform(p1), col);
+        };
+
+        for (i32 yi = 0; yi < max_layers; ++yi)
+        {
+            for (i32 xi = 0; xi < max_levels; ++xi)
+            {
+                add_int_rect(xi, yi, 1, 1, 0.1f, {0.1f, 0.1f, 0.1f, 0.5f});
+            }
+        }
+
+        add_int_rect(s0.base_mip_level, s0.base_array_layer, s0.level_count, s0.layer_count, 0.0f, {0.3f, 0.9f, 0.3f, 0.9f});
+        add_int_rect(s1.base_mip_level, s1.base_array_layer, s1.level_count, s1.layer_count, 0.0f, {0.9f, 0.3f, 0.3f, 0.9f});
+
+        auto [s2_rects, s2_rect_n] = s0.subtract(s1);
+        f32vec4 s2_colors[4] = {
+            {0.1f, 0.1f, 0.1f, 0.5f},
+            {0.1f, 0.1f, 0.1f, 0.5f},
+            {0.1f, 0.1f, 0.1f, 0.5f},
+            {0.1f, 0.1f, 0.1f, 0.5f},
+        };
+
+        for (usize i = 0; i < s2_rect_n; ++i)
+        {
+            auto const & s2 = s2_rects[i];
+            add_int_rect(s2.base_mip_level, s2.base_array_layer, s2.level_count, s2.layer_count, 0.2f, s2_colors[i]);
+        }
     }
 
     void draw()
@@ -153,18 +253,13 @@ struct App : AppWindow<App>
 
         auto vertex_staging_buffer = device.create_buffer({
             .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-            .size = sizeof(DrawVertex) * 3,
+            .size = sizeof(DrawVertex) * MAX_VERTS,
             .debug_name = APPNAME_PREFIX("vertex_staging_buffer"),
         });
         cmd_list.destroy_buffer_deferred(vertex_staging_buffer);
 
         auto buffer_ptr = device.map_memory_as<DrawVertex>(vertex_staging_buffer);
-        *buffer_ptr = DrawVertex{{-0.5f, +0.5f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}};
-        ++buffer_ptr;
-        *buffer_ptr = DrawVertex{{+0.5f, +0.5f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}};
-        ++buffer_ptr;
-        *buffer_ptr = DrawVertex{{+0.0f, -0.5f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f}};
-        ++buffer_ptr;
+        construct_scene(buffer_ptr);
         device.unmap_memory(vertex_staging_buffer);
 
         cmd_list.pipeline_barrier({
@@ -175,7 +270,7 @@ struct App : AppWindow<App>
         cmd_list.copy_buffer_to_buffer({
             .src_buffer = vertex_staging_buffer,
             .dst_buffer = vertex_buffer,
-            .size = sizeof(DrawVertex) * 3,
+            .size = sizeof(DrawVertex) * vert_n,
         });
 
         cmd_list.pipeline_barrier({
@@ -191,18 +286,14 @@ struct App : AppWindow<App>
         });
 
         cmd_list.begin_renderpass({
-            .color_attachments = {{.image_view = swapchain_image.default_view(), .load_op = daxa::AttachmentLoadOp::CLEAR, .clear_value = std::array<f32, 4>{0.1f, 0.0f, 0.5f, 1.0f}}},
+            .color_attachments = {{.image_view = swapchain_image.default_view(), .load_op = daxa::AttachmentLoadOp::CLEAR, .clear_value = std::array<f32, 4>{0.5f, 0.5f, 0.5f, 1.0f}}},
             .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
         });
         cmd_list.set_pipeline(raster_pipeline);
-        cmd_list.push_constant(DrawPush {
-#if DAXA_GLSL
+        cmd_list.push_constant(DrawPush{
             .face_buffer = this->device.buffer_reference(vertex_buffer),
-#elif DAXA_HLSL
-                .vertex_buffer_id = vertex_buffer,
-#endif
         });
-        cmd_list.draw({.vertex_count = 3});
+        cmd_list.draw({.vertex_count = vert_n});
         cmd_list.end_renderpass();
 
         imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, swapchain_image, size_x, size_y);
