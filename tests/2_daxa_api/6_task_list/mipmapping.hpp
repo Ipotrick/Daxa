@@ -81,11 +81,6 @@ namespace tests
                 .size = sizeof(MipmappingComputeInput),
                 .debug_name = APPNAME_PREFIX("mipmapping_compute_input_buffer"),
             });
-            daxa::BufferId staging_mipmapping_compute_input_buffer = device.create_buffer({
-                .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-                .size = sizeof(MipmappingComputeInput),
-                .debug_name = APPNAME_PREFIX("staging_mipmapping_compute_input_buffer"),
-            });
             daxa::TaskBufferId task_mipmapping_compute_input_buffer;
             daxa::TaskBufferId task_staging_mipmapping_compute_input_buffer;
 
@@ -99,7 +94,6 @@ namespace tests
                 device.wait_idle();
                 device.collect_garbage();
                 device.destroy_buffer(mipmapping_compute_input_buffer);
-                device.destroy_buffer(staging_mipmapping_compute_input_buffer);
                 device.destroy_image(render_image);
             }
 
@@ -179,16 +173,20 @@ namespace tests
                 }
             }
 
-            void update_gpu_input(daxa::BufferId staging_buffer)
+            void update_gpu_input(daxa::CommandList & cmd_list, daxa::BufferId input_buffer)
             {
+                auto staging_buffer = device.create_buffer({
+                    .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                    .size = sizeof(MipmappingComputeInput),
+                    .debug_name = APPNAME_PREFIX("staging_mipmapping_compute_input_buffer"),
+                });
                 MipmappingComputeInput * buffer_ptr = device.map_memory_as<MipmappingComputeInput>(staging_buffer);
                 *buffer_ptr = this->compute_input;
                 this->compute_input.p_mouse_x = this->compute_input.mouse_x;
                 this->compute_input.p_mouse_y = this->compute_input.mouse_y;
                 device.unmap_memory(staging_buffer);
-            }
-            void finalize_gpu_input(daxa::CommandList & cmd_list, daxa::BufferId staging_buffer, daxa::BufferId input_buffer)
-            {
+                cmd_list.destroy_buffer_deferred(staging_buffer);
+
                 cmd_list.copy_buffer_to_buffer({
                     .src_buffer = staging_buffer,
                     .dst_buffer = input_buffer,
@@ -208,6 +206,8 @@ namespace tests
                         .frame_dim = {render_target_size[0], render_target_size[1]},
                     };
                     cmd_list.push_constant(push);
+                    std::cout << "compute uses buffer id: " << daxa::to_string(input_buffer) << " with the debug name: " << device.info_buffer(input_buffer).debug_name << std::endl;
+                    std::cout << "compute uses image id: " << daxa::to_string(render_target_id) << " with the debug name: " << device.info_image_view(render_target_id.default_view()).debug_name << std::endl;
                     cmd_list.dispatch((render_target_size[0] + 7) / 8, (render_target_size[1] + 7) / 8);
                 }
             }
@@ -289,12 +289,12 @@ namespace tests
                     .awaited_pipeline_access = daxa::AccessConsts::NONE,
                     .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
                 });
-                update_gpu_input(staging_mipmapping_compute_input_buffer);
+                // update_gpu_input(staging_mipmapping_compute_input_buffer);
                 cmd_list.pipeline_barrier({
                     .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
                     .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
                 });
-                finalize_gpu_input(cmd_list, staging_mipmapping_compute_input_buffer, mipmapping_compute_input_buffer);
+                update_gpu_input(cmd_list, mipmapping_compute_input_buffer);
                 cmd_list.pipeline_barrier_image_transition({
                     .awaited_pipeline_access = daxa::AccessConsts::NONE,
                     .waiting_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
@@ -421,42 +421,36 @@ namespace tests
                 daxa::TaskList new_task_list = daxa::TaskList({
                     .device = device,
                     .swapchain = swapchain,
+                    //.dont_use_split_barriers = true,
                     .debug_name = APPNAME_PREFIX("main task list"),
                 });
                 task_swapchain_image = new_task_list.create_task_image({
                     .image = &swapchain_image,
                     .swapchain_image = true,
                     .debug_name = APPNAME_PREFIX("Task Swapchain Image"),
-                    // .swapchain_parent = std::pair{swapchain, acquire_semaphore},
                 });
                 task_render_image = new_task_list.create_task_image({
                     .image = &render_image,
                     .debug_name = APPNAME_PREFIX("Task Render Image"),
                 });
                 task_mipmapping_compute_input_buffer = new_task_list.create_task_buffer({.buffer = &mipmapping_compute_input_buffer});
-                task_staging_mipmapping_compute_input_buffer = new_task_list.create_task_buffer({.buffer = &staging_mipmapping_compute_input_buffer});
                 new_task_list.add_task({
                     .used_buffers = {
-                        {task_staging_mipmapping_compute_input_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE},
-                    },
-                    .task = [this](daxa::TaskRuntime runtime)
-                    {
-                        auto staging_buffer = runtime.get_buffer(task_staging_mipmapping_compute_input_buffer);
-                        update_gpu_input(staging_buffer);
-                    },
-                    .debug_name = APPNAME_PREFIX("Input MemMap"),
-                });
-                new_task_list.add_task({
-                    .used_buffers = {
-                        {task_staging_mipmapping_compute_input_buffer, daxa::TaskBufferAccess::TRANSFER_READ},
                         {task_mipmapping_compute_input_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE},
                     },
                     .task = [this](daxa::TaskRuntime runtime)
                     {
                         auto cmd_list = runtime.get_command_list();
-                        auto staging_buffer = runtime.get_buffer(task_staging_mipmapping_compute_input_buffer);
                         auto input_buffer = runtime.get_buffer(task_mipmapping_compute_input_buffer);
-                        finalize_gpu_input(cmd_list, staging_buffer, input_buffer);
+                        cmd_list.pipeline_barrier({
+                            .awaited_pipeline_access = daxa::AccessConsts::READ_WRITE,
+                            .waiting_pipeline_access = daxa::AccessConsts::READ_WRITE,
+                        });
+                        update_gpu_input(cmd_list, input_buffer);
+                        cmd_list.pipeline_barrier({
+                            .awaited_pipeline_access = daxa::AccessConsts::READ_WRITE,
+                            .waiting_pipeline_access = daxa::AccessConsts::READ_WRITE,
+                        });
                     },
                     .debug_name = APPNAME_PREFIX("Input Transfer"),
                 });
@@ -563,7 +557,15 @@ namespace tests
                     {
                         auto cmd_list = runtime.get_command_list();
                         auto render_target_id = runtime.get_image(task_swapchain_image);
+                        // cmd_list.pipeline_barrier({
+                        //     .awaited_pipeline_access = daxa::AccessConsts::READ_WRITE,
+                        //     .waiting_pipeline_access = daxa::AccessConsts::READ_WRITE,
+                        // });
                         draw_ui(cmd_list, render_target_id);
+                        // cmd_list.pipeline_barrier({
+                        //     .awaited_pipeline_access = daxa::AccessConsts::READ_WRITE,
+                        //     .waiting_pipeline_access = daxa::AccessConsts::READ_WRITE,
+                        // });
                     },
                     .debug_name = "Imgui",
                 });
