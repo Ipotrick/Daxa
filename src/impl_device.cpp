@@ -1147,8 +1147,6 @@ namespace daxa
     {
         ImplBufferSlot & buffer_slot = this->gpu_table.buffer_slots.dereference_id(id);
 
-        std::cout << "destroy buffer: " << to_string(id) << " debug_name: " << buffer_slot.info.debug_name << std::endl;
-
         u64 * mem = nullptr;
         vmaMapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation, reinterpret_cast<void **>(&mem));
         mem[id.index] = 0;
