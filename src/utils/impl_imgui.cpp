@@ -317,14 +317,14 @@ namespace daxa
     {
         vbuffer = info.device.create_buffer({
             .size = static_cast<u32>(vbuffer_new_size),
-            .debug_name = std::string("dear ImGui vertex buffer ") + std::to_string(frame_count),
+            .debug_name = std::string("dear ImGui vertex buffer"),
         });
     }
     void ImplImGuiRenderer::recreate_ibuffer(usize ibuffer_new_size)
     {
         ibuffer = info.device.create_buffer({
             .size = static_cast<u32>(ibuffer_new_size),
-            .debug_name = std::string("dear ImGui index buffer ") + std::to_string(frame_count),
+            .debug_name = std::string("dear ImGui index buffer"),
         });
     }
 
@@ -354,7 +354,7 @@ namespace daxa
             auto staging_vbuffer = info.device.create_buffer({
                 .memory_flags = MemoryFlagBits::HOST_ACCESS_RANDOM,
                 .size = static_cast<u32>(vbuffer_needed_size),
-                .debug_name = std::string("dear ImGui vertex buffer ") + std::to_string(frame_count),
+                .debug_name = std::string("dear ImGui vertex staging buffer ") + std::to_string(frame_count),
             });
             auto * vtx_dst = info.device.map_memory_as<ImDrawVert>(staging_vbuffer);
             for (i32 n = 0; n < draw_data->CmdListsCount; n++)
@@ -368,7 +368,7 @@ namespace daxa
             auto staging_ibuffer = info.device.create_buffer({
                 .memory_flags = MemoryFlagBits::HOST_ACCESS_RANDOM,
                 .size = static_cast<u32>(ibuffer_needed_size),
-                .debug_name = std::string("dear ImGui index buffer ") + std::to_string(frame_count),
+                .debug_name = std::string("dear ImGui index staging buffer ") + std::to_string(frame_count),
             });
             auto * idx_dst = info.device.map_memory_as<ImDrawIdx>(staging_ibuffer);
             for (i32 n = 0; n < draw_data->CmdListsCount; n++)
