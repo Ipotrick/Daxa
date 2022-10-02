@@ -206,8 +206,6 @@ namespace tests
                         .frame_dim = {render_target_size[0], render_target_size[1]},
                     };
                     cmd_list.push_constant(push);
-                    std::cout << "compute uses buffer id: " << daxa::to_string(input_buffer) << " with the debug name: " << device.info_buffer(input_buffer).debug_name << std::endl;
-                    std::cout << "compute uses image id: " << daxa::to_string(render_target_id) << " with the debug name: " << device.info_image_view(render_target_id.default_view()).debug_name << std::endl;
                     cmd_list.dispatch((render_target_size[0] + 7) / 8, (render_target_size[1] + 7) / 8);
                 }
             }

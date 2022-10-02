@@ -384,14 +384,14 @@ namespace daxa
                 .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
             });
             cmd_list.copy_buffer_to_buffer({
-                .src_buffer = staging_vbuffer,
-                .dst_buffer = vbuffer,
-                .size = vbuffer_needed_size,
-            });
-            cmd_list.copy_buffer_to_buffer({
                 .src_buffer = staging_ibuffer,
                 .dst_buffer = ibuffer,
                 .size = ibuffer_needed_size,
+            });
+            cmd_list.copy_buffer_to_buffer({
+                .src_buffer = staging_vbuffer,
+                .dst_buffer = vbuffer,
+                .size = vbuffer_needed_size,
             });
             cmd_list.pipeline_barrier({
                 .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
