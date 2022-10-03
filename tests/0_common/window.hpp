@@ -3,11 +3,12 @@ using namespace daxa::types;
 
 #include <GLFW/glfw3.h>
 #if defined(_WIN32)
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
 #define GLFW_EXPOSE_NATIVE_WIN32
+#define GLFW_NATIVE_INCLUDE_NONE
+using HWND = void *;
 #elif defined(__linux__)
 #define GLFW_EXPOSE_NATIVE_X11
+#define GLFW_EXPOSE_NATIVE_WAYLAND
 #endif
 #include <GLFW/glfw3native.h>
 
@@ -65,8 +66,28 @@ struct AppWindow
 #if defined(_WIN32)
         return glfwGetWin32Window(glfw_window_ptr);
 #elif defined(__linux__)
-        return glfwGetX11Window(glfw_window_ptr);
+        // TODO(grundlett): switch which to return based on the window "platform"
+        switch (get_native_platform())
+        {
+        case daxa::NativeWindowPlatform::WAYLAND:
+            return nullptr; // reinterpret_cast<daxa::NativeWindowHandle>(glfwGetWaylandWindow(glfw_window_ptr));
+        case daxa::NativeWindowPlatform::XLIB:
+        default:
+            return reinterpret_cast<daxa::NativeWindowHandle>(glfwGetX11Window(glfw_window_ptr));
+        }
 #endif
+    }
+
+    auto get_native_platform() -> daxa::NativeWindowPlatform
+    {
+        // switch(glfwGetPlatform())
+        // {
+        // case GLFW_PLATFORM_WIN32: return daxa::NativeWindowPlatform::WIN32;
+        // case GLFW_PLATFORM_X11: return daxa::NativeWindowPlatform::XLIB;
+        // case GLFW_PLATFORM_WAYLAND: return daxa::NativeWindowPlatform::WAYLAND;
+        // default: return daxa::NativeWindowPlatform::UNKNOWN;
+        // }
+        return daxa::NativeWindowPlatform::UNKNOWN;
     }
 
     inline void set_mouse_pos(f32 x, f32 y)

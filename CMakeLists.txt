@@ -131,7 +131,7 @@ target_include_directories(daxa
 )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    find_package(X11 REQUIRED)
+    find_package(X11)
     target_link_libraries(daxa
         PUBLIC
         ${X11_LIBRARIES}

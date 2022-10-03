@@ -824,7 +824,7 @@ namespace daxa
         static inline constexpr Access CLEAR_READ_WRITE = {.stages = PipelineStageFlagBits::CLEAR, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access INDEX_INPUT_READ_WRITE = {.stages = PipelineStageFlagBits::INDEX_INPUT, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access PRE_RASTERIZATION_SHADERS_READ_WRITE = {.stages = PipelineStageFlagBits::PRE_RASTERIZATION_SHADERS, .type = AccessTypeFlagBits::READ_WRITE};
-    }; // namespace AccessConsts
+    } // namespace AccessConsts
 
     enum struct SamplerAddressMode
     {
