@@ -29,7 +29,7 @@ namespace daxa
         PresentMode present_mode = PresentMode::DOUBLE_BUFFER_WAIT_FOR_VBLANK;
         PresentOp present_operation = PresentOp::IDENTITY;
         ImageUsageFlags image_usage = {};
-        usize max_allowed_frames_in_flight = 1;
+        usize max_allowed_frames_in_flight = 2;
         std::string debug_name = {};
     };
 
@@ -38,21 +38,26 @@ namespace daxa
         auto info() const -> SwapchainInfo const &;
         auto get_format() const -> Format;
         void resize();
+        /// @brief The ImageId may change between calls. This must be called to optain a new swapchain image to be used for rendering.
+        /// @return An image id of a swapchain image. This image will be available on gpu after the acquire semaphore is signaled.
         auto acquire_next_image() -> ImageId;
         /// @brief The gpu needs to wait until the swapchain image is available. 
         //// The first submit that uses the acquired image must wait on this.
-        /// @return the binary semaphore that needs to be waited on in the first use of the image.
+        /// This semaphore may change between acquire calls.
+        /// @return the binary semaphore that needs to be waited on in the first use of the currently acquired swapchain image.
         auto get_acquire_semaphore() -> BinarySemaphore &;
         /// @brief The gpu needs to wait until the swapchain image is presentable. 
         /// The LAST submit that uses the swapchain image must signal this semaphore.
         /// The present must wait on this semaphore.
+        /// This semaphore may change between acquire calls.
         /// @return the binary semaphore that needs to be signaled on in the last use, waited on present.
         auto get_present_semaphore() -> BinarySemaphore &;
         /// @brief The swapchain needs to know when the last frame has ended because of some insane vulkan spec problems.
         /// On the last submit of a frame, signal this timeline semaphore to to the cpu frame value.
         /// @return the gpu timeline value that needs to be signaled in the end of the frame.
         auto get_gpu_timeline_semaphore() -> TimelineSemaphore &;
-        // The current cpu framecount.
+        /// @brief The last submission that uses the swapchain image needs to signal the timeline with the cpu value.
+        /// @return The cpu frame timeline value.
         auto get_cpu_timeline_value() -> usize;
         void change_present_mode(PresentMode new_present_mode);
 

@@ -51,15 +51,20 @@ namespace daxa
             nullptr, 
             &impl.current_image_index
         );
-        // We currently ignore VK_ERROR_OUT_OF_DATE_KHR, VK_ERROR_SURFACE_LOST_KHR and VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT
-        // because supposedly these kinds of things are not specified within the spec. This is also handled in Device::present_frame()
         DAXA_DBG_ASSERT_TRUE_M(
             err == VK_SUCCESS || 
             err == VK_ERROR_OUT_OF_DATE_KHR || 
             err == VK_ERROR_SURFACE_LOST_KHR || 
             err == VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT,
-            "Daxa should never be in a situation where Acquire fails"
-        );
+            "Daxa should never be in a situation where Acquire fails");
+
+        if (err == VK_ERROR_OUT_OF_DATE_KHR || 
+            err == VK_ERROR_SURFACE_LOST_KHR || 
+            err == VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT)
+        {
+            // The swapchain needs recreation, we can only return a null ImageId here.
+            return ImageId{};
+        }
         return impl.images[impl.current_image_index];
     }
     
