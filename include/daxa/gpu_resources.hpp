@@ -10,6 +10,7 @@ namespace daxa
         u32 version : 8;
 
         auto is_empty() const -> bool;
+        auto operator<=>(GPUResourceId const & other) const = default;
     };
 
     inline namespace types

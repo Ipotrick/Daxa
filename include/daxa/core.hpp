@@ -101,6 +101,7 @@ namespace daxa
         auto as() -> T *
         {
 #if DAXA_VALIDATION
+            DAXA_DBG_ASSERT_TRUE_M(object != nullptr, "can not dereference empty weak pointer!");
             auto ret = dynamic_cast<T *>(object);
             u64 strong_count = DAXA_ATOMIC_FETCH(object->strong_count);
             DAXA_DBG_ASSERT_TRUE_M(strong_count > 0, "strong count must be greater then zero when a weak ptr is still alive!");
@@ -114,6 +115,7 @@ namespace daxa
         auto as() const -> T const *
         {
 #if DAXA_VALIDATION
+            DAXA_DBG_ASSERT_TRUE_M(object != nullptr, "can not dereference empty weak pointer!");
             auto ret = dynamic_cast<T const *>(object);
             u64 strong_count = DAXA_ATOMIC_FETCH(object->strong_count);
             DAXA_DBG_ASSERT_TRUE_M(strong_count > 0, "strong count must be greater then zero when a weak ptr is still alive!");
@@ -142,6 +144,7 @@ namespace daxa
         auto as() -> T *
         {
 #if DAXA_VALIDATION
+            DAXA_DBG_ASSERT_TRUE_M(object != nullptr, "can not dereference empty weak pointer!");
             auto ret = dynamic_cast<T *>(object);
             DAXA_DBG_ASSERT_TRUE_M(ret != nullptr, "bad dynamic cast");
             return ret;
@@ -153,6 +156,7 @@ namespace daxa
         auto as() const -> T const *
         {
 #if DAXA_VALIDATION
+            DAXA_DBG_ASSERT_TRUE_M(object != nullptr, "can not dereference empty weak pointer!");
             auto ret = dynamic_cast<T const *>(object);
             DAXA_DBG_ASSERT_TRUE_M(ret != nullptr, "bad dynamic cast");
             return ret;
