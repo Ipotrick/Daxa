@@ -11,10 +11,12 @@ namespace daxa
 
     struct BinarySemaphore : ManagedPtr
     {
+        explicit BinarySemaphore();
         auto info() const -> BinarySemaphoreInfo const &;
 
       private:
         friend struct Device;
+        friend struct ImplSwapchain;
         explicit BinarySemaphore(ManagedPtr impl);
     };
 
@@ -34,6 +36,7 @@ namespace daxa
 
       private:
         friend struct Device;
+        friend struct ImplSwapchain;
         explicit TimelineSemaphore(ManagedPtr impl);
     };
 } // namespace daxa

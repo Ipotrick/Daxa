@@ -62,7 +62,7 @@ namespace tests
                 .debug_name = APPNAME_PREFIX("render_image"),
             });
 
-            daxa::BinarySemaphore acquire_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("acquire_semaphore")});
+            daxa::BinarySemaphore acquire_semaphore;
             daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
 
             daxa::CommandSubmitInfo submit_info = {};
@@ -145,7 +145,9 @@ namespace tests
 
                 // non_task_list_execute();
 
-                swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
+                auto aquire = swapchain.acquire_next_image();
+                swapchain_image = aquire.first;
+                acquire_semaphore = aquire.second;
                 // task_list.debug_print();
                 task_list.execute();
             }
@@ -269,7 +271,9 @@ namespace tests
 
             void non_task_list_execute()
             {
-                swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
+                auto acquire = swapchain.acquire_next_image();
+                swapchain_image = acquire.first;
+                acquire_semaphore = acquire.second;
                 auto cmd_list = device.create_command_list({});
 
                 cmd_list.pipeline_barrier_image_transition({

@@ -6,7 +6,15 @@
 
 namespace daxa
 {
-    BinarySemaphore::BinarySemaphore(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
+    BinarySemaphore::BinarySemaphore(ManagedPtr impl) : ManagedPtr{std::move(impl)}
+    {
+
+    }
+
+    BinarySemaphore::BinarySemaphore() : ManagedPtr{} 
+    {
+
+    }
 
     auto BinarySemaphore::info() const -> BinarySemaphoreInfo const &
     {
