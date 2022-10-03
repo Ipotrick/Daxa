@@ -245,9 +245,7 @@ struct App : AppWindow<App>
             }
         }
 
-        auto acquire = swapchain.acquire_next_image();
-        auto swapchain_image = acquire.first;
-        acquire_semaphore = acquire.second;
+        auto swapchain_image = swapchain.acquire_next_image();
 
         auto cmd_list = device.create_command_list({
             .debug_name = APPNAME_PREFIX("cmd_list"),

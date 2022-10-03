@@ -62,9 +62,6 @@ namespace tests
                 .debug_name = APPNAME_PREFIX("render_image"),
             });
 
-            daxa::BinarySemaphore acquire_semaphore;
-            daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
-
             daxa::CommandSubmitInfo submit_info = {};
             daxa::TaskImageId task_swapchain_image = {};
             daxa::TaskImageId task_render_image = {};
@@ -145,9 +142,7 @@ namespace tests
 
                 // non_task_list_execute();
 
-                auto aquire = swapchain.acquire_next_image();
-                swapchain_image = aquire.first;
-                acquire_semaphore = aquire.second;
+                swapchain_image = swapchain.acquire_next_image();
                 // task_list.debug_print();
                 task_list.execute();
             }
@@ -271,9 +266,7 @@ namespace tests
 
             void non_task_list_execute()
             {
-                auto acquire = swapchain.acquire_next_image();
-                swapchain_image = acquire.first;
-                acquire_semaphore = acquire.second;
+                swapchain_image = swapchain.acquire_next_image();
                 auto cmd_list = device.create_command_list({});
 
                 cmd_list.pipeline_barrier_image_transition({
@@ -409,11 +402,14 @@ namespace tests
                 cmd_list.complete();
                 device.submit_commands({
                     .command_lists = {std::move(cmd_list)},
-                    .wait_binary_semaphores = {acquire_semaphore},
-                    .signal_binary_semaphores = {present_semaphore},
+                    .wait_binary_semaphores = {swapchain.get_acquire_semaphore()},
+                    .signal_binary_semaphores = {swapchain.get_present_semaphore()},
+                    .signal_timeline_semaphores = {
+                        { swapchain.get_gpu_timeline_semaphore(), swapchain.get_cpu_timeline_value() }
+                    },
                 });
                 device.present_frame({
-                    .wait_binary_semaphores = {present_semaphore},
+                    .wait_binary_semaphores = {swapchain.get_present_semaphore()},
                     .swapchain = swapchain,
                 });
             }
