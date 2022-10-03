@@ -55,16 +55,40 @@ namespace daxa
             func(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, &surface_ci, nullptr, &this->vk_surface);
         }
 #elif defined(__linux__)
-        VkXlibSurfaceCreateInfoKHR surface_ci{
-            .sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
-            .pNext = nullptr,
-            .flags = 0,
-            .dpy = XOpenDisplay(nullptr),
-            .window = *reinterpret_cast<Window*>(&this->info.native_window),
-        };
+        switch (this->info.native_window_platform)
         {
-            auto func = (PFN_vkCreateXlibSurfaceKHR)vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, "vkCreateXlibSurfaceKHR");
-            func(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, &surface_ci, nullptr, &this->vk_surface);
+        case NativeWindowPlatform::WAYLAND:
+        {
+            // TODO(grundlett): figure out how to link Wayland
+            // VkWaylandSurfaceCreateInfoKHR surface_ci{
+            //     .sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
+            //     .pNext = nullptr,
+            //     .flags = 0,
+            //     .display = wl_display_connect(nullptr),
+            //     .surface = static_cast<wl_surface *>(this->info.native_window),
+            // };
+            // {
+            //     auto func = (PFN_vkCreateWaylandSurfaceKHR)vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, "vkCreateWaylandSurfaceKHR");
+            //     func(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, &surface_ci, nullptr, &this->vk_surface);
+            // }
+        }
+        break;
+        case NativeWindowPlatform::XLIB:
+        default:
+        {
+            VkXlibSurfaceCreateInfoKHR surface_ci{
+                .sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
+                .pNext = nullptr,
+                .flags = 0,
+                .dpy = XOpenDisplay(nullptr),
+                .window = reinterpret_cast<Window>(this->info.native_window),
+            };
+            {
+                auto func = (PFN_vkCreateXlibSurfaceKHR)vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, "vkCreateXlibSurfaceKHR");
+                func(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, &surface_ci, nullptr, &this->vk_surface);
+            }
+        }
+        break;
         }
 #endif
     }
