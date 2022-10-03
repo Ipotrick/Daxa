@@ -21,6 +21,7 @@ namespace daxa
         usize cpu_frame_timeline = {};
         TimelineSemaphore gpu_frame_timeline;
         u32 current_image_index{};
+        usize frames_in_flight = {};
 
         auto get_index_of_image(ImageId image) const -> usize;
 

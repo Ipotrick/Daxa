@@ -29,11 +29,15 @@ namespace daxa
     auto Swapchain::acquire_next_image() -> ImageId
     {
         auto & impl = *as<ImplSwapchain>();
+        // We wait until the gpu timeline is frames of flight behind our cpu timeline value.
+        impl.gpu_frame_timeline.wait_for_value(static_cast<u64>(std::max(0ll, static_cast<i64>(impl.cpu_frame_timeline) - static_cast<i64>(impl.frames_in_flight))));
         BinarySemaphore & signal_semaphore = impl.acquire_semaphores[impl.current_image_index];
         VkResult err = vkAcquireNextImageKHR(impl.impl_device.as<ImplDevice>()->vk_device, impl.vk_swapchain, UINT64_MAX, signal_semaphore.as<ImplBinarySemaphore>()->vk_semaphore, nullptr, &impl.current_image_index);
         // We currently ignore VK_ERROR_OUT_OF_DATE_KHR, VK_ERROR_SURFACE_LOST_KHR and VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT
         // because supposedly these kinds of things are not specified within the spec. This is also handled in Device::present_frame()
         DAXA_DBG_ASSERT_TRUE_M(err == VK_SUCCESS || err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_ERROR_SURFACE_LOST_KHR || err == VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT, "Daxa should never be in a situation where Acquire fails");
+        // We now bump the cpu timeline value.
+        impl.cpu_frame_timeline += 1;
         return impl.images[impl.current_image_index];
     }
     
@@ -135,6 +139,8 @@ namespace daxa
         this->vk_surface_format = *best_format;
 
         recreate();
+
+        this->frames_in_flight = std::min(images.size(), info.max_allowed_frames_in_flight);
 
         for (u32 i = 0; i < images.size(); i++)
         {
