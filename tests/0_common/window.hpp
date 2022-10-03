@@ -8,6 +8,7 @@ using namespace daxa::types;
 using HWND = void *;
 #elif defined(__linux__)
 #define GLFW_EXPOSE_NATIVE_X11
+#define GLFW_EXPOSE_NATIVE_WAYLAND
 #endif
 #include <GLFW/glfw3native.h>
 
@@ -66,7 +67,14 @@ struct AppWindow
         return glfwGetWin32Window(glfw_window_ptr);
 #elif defined(__linux__)
         // TODO(grundlett): switch which to return based on the window "platform"
-        return *reinterpret_cast<daxa::NativeWindowHandle*>(&glfwGetX11Window(glfw_window_ptr));
+        switch (get_native_platform())
+        {
+        case daxa::NativeWindowPlatform::WAYLAND:
+            return nullptr; // reinterpret_cast<daxa::NativeWindowHandle>(glfwGetWaylandWindow(glfw_window_ptr));
+        case daxa::NativeWindowPlatform::XLIB:
+        default:
+            return reinterpret_cast<daxa::NativeWindowHandle>(glfwGetX11Window(glfw_window_ptr));
+        }
 #endif
     }
 
