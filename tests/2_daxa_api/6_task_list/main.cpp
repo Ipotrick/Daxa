@@ -402,7 +402,9 @@ namespace tests
                         raster_pipeline = new_pipeline.value();
                     }
                 }
-                swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
+                auto acquire = swapchain.acquire_next_image();
+                swapchain_image = acquire.first;
+                acquire_semaphore = acquire.second;
                 task_list.execute();
                 auto command_lists = task_list.get_command_lists();
                 auto cmd_list = device.create_command_list({});

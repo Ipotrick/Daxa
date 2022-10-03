@@ -20,20 +20,47 @@ namespace daxa
         return impl.info;
     }
 
-    auto Swapchain::acquire_next_image(BinarySemaphore & signal_semaphore) -> ImageId
-    {
-        auto & impl = *as<ImplSwapchain>();
-        VkResult err = vkAcquireNextImageKHR(impl.impl_device.as<ImplDevice>()->vk_device, impl.vk_swapchain, UINT64_MAX, signal_semaphore.as<ImplBinarySemaphore>()->vk_semaphore, nullptr, &impl.current_image_index);
-        // We currently ignore VK_ERROR_OUT_OF_DATE_KHR, VK_ERROR_SURFACE_LOST_KHR and VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT
-        // because supposedly these kinds of things are not specified within the spec. This is also handled in Device::present_frame()
-        DAXA_DBG_ASSERT_TRUE_M(err == VK_SUCCESS || err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_ERROR_SURFACE_LOST_KHR || err == VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT, "Daxa should never be in a situation where Acquire fails");
-        return impl.image_resources[impl.current_image_index];
-    }
-
     auto Swapchain::get_format() const -> Format
     {
         auto const & impl = *as<ImplSwapchain>();
         return static_cast<Format>(impl.vk_surface_format.format);
+    }
+
+    auto Swapchain::acquire_next_image() -> ImageId
+    {
+        auto & impl = *as<ImplSwapchain>();
+        BinarySemaphore & signal_semaphore = impl.acquire_semaphores[impl.current_image_index];
+        VkResult err = vkAcquireNextImageKHR(impl.impl_device.as<ImplDevice>()->vk_device, impl.vk_swapchain, UINT64_MAX, signal_semaphore.as<ImplBinarySemaphore>()->vk_semaphore, nullptr, &impl.current_image_index);
+        // We currently ignore VK_ERROR_OUT_OF_DATE_KHR, VK_ERROR_SURFACE_LOST_KHR and VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT
+        // because supposedly these kinds of things are not specified within the spec. This is also handled in Device::present_frame()
+        DAXA_DBG_ASSERT_TRUE_M(err == VK_SUCCESS || err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_ERROR_SURFACE_LOST_KHR || err == VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT, "Daxa should never be in a situation where Acquire fails");
+        return impl.images[impl.current_image_index];
+    }
+    
+    auto Swapchain::get_acquire_semaphore(ImageId swapchain_image) -> BinarySemaphore &
+    {
+        auto & impl = *as<ImplSwapchain>();
+        usize index = impl.get_index_of_image(swapchain_image);
+        return impl.acquire_semaphores[index];
+    }
+    
+    auto Swapchain::get_present_semaphore(ImageId swapchain_image) -> BinarySemaphore &
+    {
+        auto & impl = *as<ImplSwapchain>();
+        usize index = impl.get_index_of_image(swapchain_image);
+        return impl.present_semaphores[index];
+    }
+    
+    auto Swapchain::get_gpu_timeline_semaphore() -> TimelineSemaphore &
+    {
+        auto & impl = *as<ImplSwapchain>();
+        return impl.gpu_frame_timeline;
+    }
+
+    auto Swapchain::get_cpu_timeline_value() -> usize
+    {
+        auto const & impl = *as<ImplSwapchain>();
+        return impl.cpu_frame_timeline;
     }
 
     void ImplSwapchain::recreate_surface()
@@ -69,17 +96,33 @@ namespace daxa
 #endif
     }
 
-    ImplSwapchain::ImplSwapchain(ManagedWeakPtr device_impl, SwapchainInfo info)
-        : impl_device{std::move(std::move(device_impl))}, info{std::move(info)}
+    auto ImplSwapchain::get_index_of_image(ImageId image) const -> usize
+    {
+        for (usize i = 0; i < images.size(); ++i)
+        {
+            if (images[i] == image)
+            {
+                return i ;
+            }
+        }
+        DAXA_DBG_ASSERT_TRUE_M(false, "tried to get swapchain index of an image not owned by this swapchain!");
+    }
+
+    ImplSwapchain::ImplSwapchain(ManagedWeakPtr a_impl_device, SwapchainInfo info)
+        : impl_device{std::move(a_impl_device)}
+        , info{std::move(info)}
+        , gpu_frame_timeline{ TimelineSemaphore{ ManagedPtr(new ImplTimelineSemaphore{ impl_device, TimelineSemaphoreInfo{ .initial_value = 0, .debug_name = info.debug_name + " gpu timeline" }})}}
     {
         recreate_surface();
 
         u32 format_count = 0;
 
-        vkGetPhysicalDeviceSurfaceFormatsKHR(impl_device.as<ImplDevice>()->vk_physical_device, this->vk_surface, &format_count, nullptr);
+        ImplDevice & impl_device = *this->impl_device.as<ImplDevice>();
+
+        vkGetPhysicalDeviceSurfaceFormatsKHR(impl_device.vk_physical_device, this->vk_surface, &format_count, nullptr);
         std::vector<VkSurfaceFormatKHR> surface_formats;
         surface_formats.resize(format_count);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(impl_device.as<ImplDevice>()->vk_physical_device, this->vk_surface, &format_count, surface_formats.data());
+        vkGetPhysicalDeviceSurfaceFormatsKHR(impl_device.vk_physical_device, this->vk_surface, &format_count, surface_formats.data());
         DAXA_DBG_ASSERT_TRUE_M(format_count > 0, "No formats found");
 
         auto format_comparator = [&](auto const & a, auto const & b) -> bool
@@ -92,6 +135,16 @@ namespace daxa
         this->vk_surface_format = *best_format;
 
         recreate();
+
+        for (u32 i = 0; i < images.size(); i++)
+        {
+            acquire_semaphores.push_back(BinarySemaphore{ManagedPtr(new ImplBinarySemaphore{this->impl_device, BinarySemaphoreInfo{
+                .debug_name = info.debug_name + ", image " + std::to_string(i) + " acquire semaphore",
+            }})});
+            present_semaphores.push_back(BinarySemaphore{ManagedPtr(new ImplBinarySemaphore{this->impl_device, BinarySemaphoreInfo{
+                .debug_name = info.debug_name + ", image " + std::to_string(i) + " present semaphore",
+            }})});
+        }
     }
 
     ImplSwapchain::~ImplSwapchain()
@@ -173,8 +226,8 @@ namespace daxa
         vkGetSwapchainImagesKHR(impl_device.as<ImplDevice>()->vk_device, vk_swapchain, &image_count, nullptr);
         swapchain_images.resize(image_count);
         vkGetSwapchainImagesKHR(impl_device.as<ImplDevice>()->vk_device, vk_swapchain, &image_count, swapchain_images.data());
-        this->image_resources.resize(image_count);
-        for (u32 i = 0; i < image_resources.size(); i++)
+        this->images.resize(image_count);
+        for (u32 i = 0; i < images.size(); i++)
         {
             ImageInfo const image_info = {
                 .format = static_cast<Format>(this->vk_surface_format.format),
@@ -182,7 +235,7 @@ namespace daxa
                 .usage = usage,
                 .debug_name = this->info.debug_name + " Image #" + std::to_string(i),
             };
-            this->image_resources[i] = this->impl_device.as<ImplDevice>()->new_swapchain_image(
+            this->images[i] = this->impl_device.as<ImplDevice>()->new_swapchain_image(
                 swapchain_images[i], vk_surface_format.format, i, usage, image_info);
         }
 
@@ -202,10 +255,10 @@ namespace daxa
 
     void ImplSwapchain::cleanup()
     {
-        for (auto & image_resource : image_resources)
+        for (auto & image : images)
         {
-            this->impl_device.as<ImplDevice>()->zombify_image(image_resource);
+            this->impl_device.as<ImplDevice>()->zombify_image(image);
         }
-        image_resources.clear();
+        images.clear();
     }
 } // namespace daxa
