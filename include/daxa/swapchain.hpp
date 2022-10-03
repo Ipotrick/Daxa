@@ -41,18 +41,16 @@ namespace daxa
         /// @brief The ImageId may change between calls. This must be called to optain a new swapchain image to be used for rendering.
         /// @return A swapchain image, that will be ready to render to when the acquire smaphore is signaled. This may return an empty image id if the swapchain is out of date.
         auto acquire_next_image() -> ImageId;
-        /// @brief The gpu needs to wait until the swapchain image is available. 
-        //// The first submit that uses the acquired image must wait on this.
-        /// This semaphore may change between acquire calls.
-        /// @return the binary semaphore that needs to be waited on in the first use of the currently acquired swapchain image.
+        /// The acquire semaphore must be waited on in the first submission that uses the last acquired image.
+        /// This semaphore may change between acquires, so it needs to be requerried after every get_acquire_semaphore call.
+        /// @return The binary semaphore that is signaled when the last acquired image is ready to be used.
         auto get_acquire_semaphore() -> BinarySemaphore &;
-        /// @brief The gpu needs to wait until the swapchain image is presentable. 
-        /// The LAST submit that uses the swapchain image must signal this semaphore.
-        /// The present must wait on this semaphore.
-        /// This semaphore may change between acquire calls.
-        /// @return the binary semaphore that needs to be signaled on in the last use, waited on present.
+        /// @brief The present semaphore must be signaled in the last submission that uses the last acquired swapchain image.
+        /// The present semaphore must be waited on in the present of the last acquired image.
+        /// This semaphore may change between acquires, so it needs to be requerried after every get_acquire_semaphore call.
+        /// @return The present semaphore that needs to be signaled and waited on for present of the last acquired image.
         auto get_present_semaphore() -> BinarySemaphore &;
-        /// @brief The swapchain needs to know when the last frame has ended because of some insane vulkan spec problems.
+        /// @brief The swapchain needs to know when the last use of the swapchain happenes to limit the frames in flight.
         /// In the last submission that uses the swapchain image, signal this timeline semaphore with the cpu timeline value.
         /// @return the gpu timeline semaphore that needs to be signaled.
         auto get_gpu_timeline_semaphore() -> TimelineSemaphore &;
