@@ -1,3 +1,1 @@
-
-set(CMAKE_C_COMPILER cl)
-set(CMAKE_CXX_COMPILER cl)
+# Don't set the MSVC compiler.. This works when opening the folder in Visual Studio
