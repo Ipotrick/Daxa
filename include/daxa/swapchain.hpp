@@ -39,7 +39,7 @@ namespace daxa
         auto get_format() const -> Format;
         void resize();
         /// @brief The ImageId may change between calls. This must be called to optain a new swapchain image to be used for rendering.
-        /// @return An image id of a swapchain image. This image will be available on gpu after the acquire semaphore is signaled.
+        /// @return A swapchain image, that will be ready to render to when the acquire smaphore is signaled. This may return an empty image id if the swapchain is out of date.
         auto acquire_next_image() -> ImageId;
         /// @brief The gpu needs to wait until the swapchain image is available. 
         //// The first submit that uses the acquired image must wait on this.
@@ -53,8 +53,8 @@ namespace daxa
         /// @return the binary semaphore that needs to be signaled on in the last use, waited on present.
         auto get_present_semaphore() -> BinarySemaphore &;
         /// @brief The swapchain needs to know when the last frame has ended because of some insane vulkan spec problems.
-        /// On the last submit of a frame, signal this timeline semaphore to to the cpu frame value.
-        /// @return the gpu timeline value that needs to be signaled in the end of the frame.
+        /// In the last submission that uses the swapchain image, signal this timeline semaphore with the cpu timeline value.
+        /// @return the gpu timeline semaphore that needs to be signaled.
         auto get_gpu_timeline_semaphore() -> TimelineSemaphore &;
         /// @brief The last submission that uses the swapchain image needs to signal the timeline with the cpu value.
         /// @return The cpu frame timeline value.
