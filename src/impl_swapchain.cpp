@@ -36,13 +36,13 @@ namespace daxa
             static_cast<u64>(
                 std::max<i64>(
                     0,
-                    static_cast<i64>(impl.cpu_frame_timeline) - static_cast<i64>(impl.frames_in_flight)
+                    static_cast<i64>(impl.cpu_frame_timeline) - static_cast<i64>(impl.info.max_allowed_frames_in_flight)
                 )
             )
         );
         // We now bump the cpu timeline value.
         impl.cpu_frame_timeline += 1;
-        impl.aquire_semaphore_index = impl.cpu_frame_timeline % impl.frames_in_flight;
+        impl.aquire_semaphore_index = impl.cpu_frame_timeline % impl.info.max_allowed_frames_in_flight;
         BinarySemaphore & acquire_semaphore = impl.acquire_semaphores[impl.aquire_semaphore_index];
         VkResult err = vkAcquireNextImageKHR(
             impl.impl_device.as<ImplDevice>()->vk_device, 
@@ -189,13 +189,16 @@ namespace daxa
 
         recreate();
 
-        this->frames_in_flight = std::min(images.size(), this->info.max_allowed_frames_in_flight);
-
-        for (u32 i = 0; i < images.size(); i++)
+        // We have an aquire semaphore for each frame in flight.
+        for (u32 i = 0; i < this->info.max_allowed_frames_in_flight; i++)
         {
             acquire_semaphores.push_back(BinarySemaphore{ManagedPtr(new ImplBinarySemaphore{this->impl_device, BinarySemaphoreInfo{
                 .debug_name =  this->info.debug_name + ", image " + std::to_string(i) + " acquire semaphore",
             }})});
+        }
+        // We have a present semaphore for each swapchain image.
+        for (u32 i = 0; i < this->images.size(); i++)
+        {
             present_semaphores.push_back(BinarySemaphore{ManagedPtr(new ImplBinarySemaphore{this->impl_device, BinarySemaphoreInfo{
                 .debug_name =  this->info.debug_name + ", image " + std::to_string(i) + " present semaphore",
             }})});
