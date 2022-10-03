@@ -81,16 +81,6 @@ struct App : AppWindow<App>
     });
     GpuInput gpu_input = {};
 
-    static inline constexpr u64 FRAMES_IN_FLIGHT = 1;
-    daxa::TimelineSemaphore gpu_framecount_timeline_sema = device.create_timeline_semaphore(daxa::TimelineSemaphoreInfo{
-        .initial_value = 0,
-        .debug_name = APPNAME_PREFIX("gpu_framecount_timeline_sema"),
-    });
-    u64 cpu_framecount = FRAMES_IN_FLIGHT - 1;
-
-    daxa::BinarySemaphore acquire_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("acquire_semaphore")});
-    daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
-
     std::vector<std::optional<daxa::BufferId>> model_buffers;
     std::vector<Model> models;
 
@@ -349,7 +339,11 @@ struct App : AppWindow<App>
             }
         }
 
-        auto swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
+        auto swapchain_image = swapchain.acquire_next_image();
+        if (swapchain_image.is_empty())
+        {
+            return;
+        }
 
         auto cmd_list = device.create_command_list({
             .debug_name = APPNAME_PREFIX("cmd_list"),
@@ -422,20 +416,17 @@ struct App : AppWindow<App>
 
         cmd_list.complete();
 
-        ++cpu_framecount;
         device.submit_commands({
             .command_lists = {std::move(cmd_list)},
-            .wait_binary_semaphores = {acquire_semaphore},
-            .signal_binary_semaphores = {present_semaphore},
-            .signal_timeline_semaphores = {{gpu_framecount_timeline_sema, cpu_framecount}},
+            .wait_binary_semaphores = {swapchain.get_acquire_semaphore()},
+            .signal_binary_semaphores = {swapchain.get_present_semaphore()},
+            .signal_timeline_semaphores = {{swapchain.get_gpu_timeline_semaphore(), swapchain.get_cpu_timeline_value()}},
         });
 
         device.present_frame({
-            .wait_binary_semaphores = {present_semaphore},
+            .wait_binary_semaphores = {swapchain.get_present_semaphore()},
             .swapchain = swapchain,
         });
-
-        gpu_framecount_timeline_sema.wait_for_value(cpu_framecount - 1);
     }
 
     void on_mouse_move(f32 x, f32 y)

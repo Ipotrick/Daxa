@@ -102,20 +102,7 @@ struct App : AppWindow<App>
         });
     }
 
-    daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({
-        .debug_name = APPNAME_PREFIX("present_semaphore"),
-    });
-
-    daxa::BinarySemaphore acquire_semaphore = device.create_binary_semaphore({
-        .debug_name = APPNAME_PREFIX("acquire_semaphore"),
-    });
-
-    static inline constexpr u64 FRAMES_IN_FLIGHT = 1;
-    daxa::TimelineSemaphore gpu_framecount_timeline_sema = device.create_timeline_semaphore(daxa::TimelineSemaphoreInfo{
-        .initial_value = 0,
-        .debug_name = APPNAME_PREFIX("gpu_framecount_timeline_semaphore"),
-    });
-    u64 cpu_framecount = FRAMES_IN_FLIGHT - 1;
+    u64 cpu_framecount = 0;
 
     Clock::time_point start = Clock::now(), prev_time = start;
     f32 elapsed_s = 1.0f;
@@ -259,11 +246,12 @@ struct App : AppWindow<App>
             }
         }
 
-        swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
-        ++cpu_framecount;
-        submit_info.signal_timeline_semaphores = {{gpu_framecount_timeline_sema, cpu_framecount}};
+        swapchain_image = swapchain.acquire_next_image();
+        if (swapchain_image.is_empty())
+        {
+            return;
+        }
         loop_task_list.execute();
-        gpu_framecount_timeline_sema.wait_for_value(cpu_framecount - 1);
     }
 
     void on_mouse_move(f32 x, f32 y)

@@ -57,13 +57,6 @@ struct App : AppWindow<App>
     }).value();
     // clang-format on
 
-    static inline constexpr u64 FRAMES_IN_FLIGHT = 1;
-    daxa::TimelineSemaphore gpu_framecount_timeline_sema = device.create_timeline_semaphore(daxa::TimelineSemaphoreInfo{
-        .initial_value = 0,
-        .debug_name = APPNAME_PREFIX("gpu_framecount_timeline_sema"),
-    });
-    u64 cpu_framecount = FRAMES_IN_FLIGHT - 1;
-
     u32 current_buffer_i = 1;
 
     f32 aspect = static_cast<f32>(size_x) / static_cast<f32>(size_y);
@@ -71,9 +64,6 @@ struct App : AppWindow<App>
     using Clock = std::chrono::high_resolution_clock;
     Clock::time_point start = Clock::now();
     Clock::time_point prev_time = start;
-
-    daxa::BinarySemaphore acquire_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("acquire_semaphore")});
-    daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
 
     daxa::BufferId boid_buffer = device.create_buffer({
         .size = sizeof(Boids),
@@ -287,13 +277,12 @@ struct App : AppWindow<App>
             }
         }
 
-        swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
-        std::swap(old_boid_buffer, boid_buffer);
-        ++cpu_framecount;
-        submit_info.signal_timeline_semaphores = {{gpu_framecount_timeline_sema, cpu_framecount}};
+        swapchain_image = swapchain.acquire_next_image();
+        if (swapchain_image.is_empty())
+        {
+            return;
+        }
         task_list.execute();
-        gpu_framecount_timeline_sema.wait_for_value(cpu_framecount - 1);
-        current_buffer_i = !current_buffer_i;
     }
 
     void on_mouse_move(f32, f32) {}
