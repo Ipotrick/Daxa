@@ -126,6 +126,8 @@ namespace daxa
         std::vector<ImplTaskBuffer> impl_task_buffers = {};
         std::vector<ImplTaskImage> impl_task_images = {};
         std::vector<TaskBatchSubmitScope> batch_submit_scopes = {};
+        usize swapchain_image_first_use_submit_scope_index = std::numeric_limits<usize>::max();
+        usize swapchain_image_last_use_submit_scope_index = std::numeric_limits<usize>::max();
         bool compiled = false;
         bool executed = false;
 
