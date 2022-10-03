@@ -38,15 +38,15 @@ namespace daxa
         auto info() const -> SwapchainInfo const &;
         auto get_format() const -> Format;
         void resize();
-        /// @brief The ImageId may change between calls. This must be called to optain a new swapchain image to be used for rendering.
+        /// @brief The ImageId may change between calls. This must be called to obtain a new swapchain image to be used for rendering.
         /// @return An image id of a swapchain image. This image will be available on gpu after the acquire semaphore is signaled.
         auto acquire_next_image() -> ImageId;
-        /// @brief The gpu needs to wait until the swapchain image is available. 
+        /// @brief The gpu needs to wait until the swapchain image is available.
         //// The first submit that uses the acquired image must wait on this.
         /// This semaphore may change between acquire calls.
         /// @return the binary semaphore that needs to be waited on in the first use of the currently acquired swapchain image.
         auto get_acquire_semaphore() -> BinarySemaphore &;
-        /// @brief The gpu needs to wait until the swapchain image is presentable. 
+        /// @brief The gpu needs to wait until the swapchain image is presentable.
         /// The LAST submit that uses the swapchain image must signal this semaphore.
         /// The present must wait on this semaphore.
         /// This semaphore may change between acquire calls.
