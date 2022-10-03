@@ -144,6 +144,10 @@ namespace tests
                 // non_task_list_execute();
 
                 swapchain_image = swapchain.acquire_next_image();
+                if (swapchain_image.is_empty())
+                {
+                    return;
+                }
                 // task_list.debug_print();
                 task_list.execute();
             }
@@ -268,6 +272,10 @@ namespace tests
             void non_task_list_execute()
             {
                 swapchain_image = swapchain.acquire_next_image();
+                if (swapchain_image.is_empty())
+                {
+                    return;
+                }
                 auto cmd_list = device.create_command_list({});
 
                 cmd_list.pipeline_barrier_image_transition({

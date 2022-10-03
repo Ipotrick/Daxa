@@ -400,6 +400,10 @@ namespace tests
                     }
                 }
                 swapchain_image = swapchain.acquire_next_image();
+                if (swapchain_image.is_empty())
+                {
+                    return;
+                }
                 task_list.execute();
                 auto command_lists = task_list.get_command_lists();
                 auto cmd_list = device.create_command_list({});
