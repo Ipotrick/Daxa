@@ -42,8 +42,8 @@ namespace daxa
                 )
             )
         );
-        impl.aquire_semaphore_index = impl.cpu_frame_timeline % impl.frames_in_flight;
-        BinarySemaphore & acquire_semaphore = impl.acquire_semaphores[impl.aquire_semaphore_index];
+        impl.acquire_semaphore_index = impl.cpu_frame_timeline % impl.frames_in_flight;
+        BinarySemaphore & acquire_semaphore = impl.acquire_semaphores[impl.acquire_semaphore_index];
         VkResult err = vkAcquireNextImageKHR(
             impl.impl_device.as<ImplDevice>()->vk_device, 
             impl.vk_swapchain, UINT64_MAX, 
@@ -71,7 +71,7 @@ namespace daxa
     auto Swapchain::get_acquire_semaphore() -> BinarySemaphore &
     {
         auto & impl = *as<ImplSwapchain>();
-        return impl.acquire_semaphores[impl.aquire_semaphore_index];
+        return impl.acquire_semaphores[impl.acquire_semaphore_index];
     }
     
     auto Swapchain::get_present_semaphore() -> BinarySemaphore &
@@ -155,10 +155,11 @@ namespace daxa
         {
             if (images[i] == image)
             {
-                return i ;
+                return i;
             }
         }
         DAXA_DBG_ASSERT_TRUE_M(false, "tried to get swapchain index of an image not owned by this swapchain!");
+        return std::numeric_limits<usize>::max();
     }
 
     ImplSwapchain::ImplSwapchain(ManagedWeakPtr a_impl_device, SwapchainInfo info)
