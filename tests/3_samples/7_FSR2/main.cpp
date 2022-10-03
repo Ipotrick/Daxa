@@ -147,6 +147,7 @@ struct App : AppWindow<App>
     f32vec2 jitter = {0.0f, 0.0f};
     daxa::TaskImageId task_swapchain_image;
     daxa::TaskImageId task_color_image, task_display_image, task_motion_vectors_image, task_depth_image;
+    daxa::CommandSubmitInfo submit_info = {};
     daxa::TaskList loop_task_list = record_loop_task_list();
     bool fsr_enabled = false;
 
@@ -259,30 +260,9 @@ struct App : AppWindow<App>
         }
 
         swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
-
-        loop_task_list.execute();
-        auto command_lists = loop_task_list.get_command_lists();
-        auto cmd_list = device.create_command_list({});
-        auto last_si_use = loop_task_list.last_uses(task_swapchain_image).back();
-        cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = last_si_use.access,
-            .before_layout = last_si_use.layout,
-            .after_layout = daxa::ImageLayout::PRESENT_SRC,
-            .image_id = swapchain_image,
-        });
-        cmd_list.complete();
         ++cpu_framecount;
-        command_lists.push_back(cmd_list);
-        device.submit_commands({
-            .command_lists = command_lists,
-            .wait_binary_semaphores = {acquire_semaphore},
-            .signal_binary_semaphores = {present_semaphore},
-            .signal_timeline_semaphores = {{gpu_framecount_timeline_sema, cpu_framecount}},
-        });
-        device.present_frame({
-            .wait_binary_semaphores = {present_semaphore},
-            .swapchain = swapchain,
-        });
+        submit_info.signal_timeline_semaphores = {{gpu_framecount_timeline_sema, cpu_framecount}};
+        loop_task_list.execute();
         gpu_framecount_timeline_sema.wait_for_value(cpu_framecount - 1);
     }
 
@@ -359,9 +339,10 @@ struct App : AppWindow<App>
     {
         daxa::TaskList new_task_list = daxa::TaskList({
             .device = device,
+            .swapchain = swapchain,
             .debug_name = APPNAME_PREFIX("task_list"),
         });
-        task_swapchain_image = new_task_list.create_task_image({.image = &swapchain_image});
+        task_swapchain_image = new_task_list.create_task_image({.image = &swapchain_image, .swapchain_image = true});
         task_color_image = new_task_list.create_task_image({.image = &color_image});
         task_display_image = new_task_list.create_task_image({.image = &display_image});
         task_motion_vectors_image = new_task_list.create_task_image({.image = &motion_vectors_image});
@@ -547,7 +528,8 @@ struct App : AppWindow<App>
             },
             .debug_name = APPNAME_PREFIX("ImGui Task"),
         });
-
+        new_task_list.submit(&submit_info);
+        new_task_list.present({});
         new_task_list.complete();
 
         return new_task_list;
