@@ -46,26 +46,16 @@
 #define DAXA_GPU_ID_VALIDATION 0
 #endif
 
-#if defined(_WIN32)
-// HACK TO NOT INCLUDE Windows.h, DECLARE HWND
-typedef struct HWND__ * HWND;
-
 namespace daxa
 {
-    using NativeWindowHandle = HWND;
+    using NativeWindowHandle = void *;
+    enum struct NativeWindowPlatform {
+        UNKNOWN,
+        WIN32,
+        XLIB,
+        WAYLAND,
+    };
 } // namespace daxa
-#endif
-
-#if defined(__linux__)
-// HACK TO NOT INCLUDE X11/Xlib.h
-typedef unsigned long XID;
-typedef XID Window;
-
-namespace daxa
-{
-    using NativeWindowHandle = ::Window;
-} // namespace daxa
-#endif
 
 #if DAXA_THREADSAFETY
 #define DAXA_ONLY_IF_THREADSAFETY(x) x
