@@ -30,8 +30,6 @@ namespace daxa
     {
         auto & impl = *as<ImplSwapchain>();
         // A new frame starts.
-        // We now bump the cpu timeline value.
-        impl.cpu_frame_timeline += 1;
         // We wait until the gpu timeline is frames of flight behind our cpu timeline value.
         // This will limit the frames in flight.
         impl.gpu_frame_timeline.wait_for_value(
@@ -42,6 +40,8 @@ namespace daxa
                 )
             )
         );
+        // We now bump the cpu timeline value.
+        impl.cpu_frame_timeline += 1;
         impl.aquire_semaphore_index = impl.cpu_frame_timeline % impl.frames_in_flight;
         BinarySemaphore & acquire_semaphore = impl.acquire_semaphores[impl.aquire_semaphore_index];
         VkResult err = vkAcquireNextImageKHR(
