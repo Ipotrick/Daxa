@@ -32,7 +32,7 @@
                 "rhs": "Windows"
             },
             "cacheVariables": {
-                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/clang-x86_64-windows-msvc.cmake",
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/cl-x86_64-windows-msvc.cmake",
                 "DAXA_TESTS_DISABLE_WINDOWS_CONSOLE": false
             }
         },
