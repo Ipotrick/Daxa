@@ -414,8 +414,7 @@ namespace tests
                     .wait_binary_semaphores = {swapchain.get_acquire_semaphore()},
                     .signal_binary_semaphores = {swapchain.get_present_semaphore()},
                     .signal_timeline_semaphores = {
-                        { swapchain.get_gpu_timeline_semaphore(), swapchain.get_cpu_timeline_value() }
-                    },
+                        {swapchain.get_gpu_timeline_semaphore(), swapchain.get_cpu_timeline_value()}},
                 });
                 device.present_frame({
                     .wait_binary_semaphores = {swapchain.get_present_semaphore()},

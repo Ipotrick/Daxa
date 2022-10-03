@@ -92,10 +92,10 @@ DAXA_CREATE_TEST(
     FOLDER 3_samples 5_boids
     LIBS glfw
 )
-DAXA_CREATE_TEST(
-    FOLDER 3_samples 6_sponza
-    LIBS glfw imgui_impl_glfw cgltf_interface
-)
+# DAXA_CREATE_TEST(
+#     FOLDER 3_samples 6_sponza
+#     LIBS glfw imgui_impl_glfw cgltf_interface
+# )
 DAXA_CREATE_TEST(
     FOLDER 3_samples 7_FSR2
     LIBS glfw imgui_impl_glfw stb_interface
