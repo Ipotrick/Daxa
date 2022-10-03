@@ -48,7 +48,7 @@ namespace daxa
             .pNext = nullptr,
             .flags = 0,
             .hinstance = GetModuleHandleA(nullptr),
-            .hwnd = info.native_window,
+            .hwnd = static_cast<HWND>(info.native_window),
         };
         {
             auto func = reinterpret_cast<PFN_vkCreateWin32SurfaceKHR>(vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, "vkCreateWin32SurfaceKHR"));
@@ -60,7 +60,7 @@ namespace daxa
             .pNext = nullptr,
             .flags = 0,
             .dpy = XOpenDisplay(nullptr),
-            .window = this->info.native_window,
+            .window = *reinterpret_cast<Window*>(&this->info.native_window),
         };
         {
             auto func = (PFN_vkCreateXlibSurfaceKHR)vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, "vkCreateXlibSurfaceKHR");

@@ -27,6 +27,7 @@ struct App : AppWindow<App>
 
     daxa::Swapchain swapchain = device.create_swapchain({
         .native_window = get_native_handle(),
+        .native_window_platform = get_native_platform(),
         .present_mode = daxa::PresentMode::DO_NOT_WAIT_FOR_VBLANK,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
         .debug_name = APPNAME_PREFIX("swapchain"),
