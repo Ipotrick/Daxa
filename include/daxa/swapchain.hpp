@@ -35,10 +35,26 @@ namespace daxa
     {
         auto info() const -> SwapchainInfo const &;
         auto get_format() const -> Format;
-
         void resize();
-
-        ImageId acquire_next_image(BinarySemaphore & signal_semaphore);
+        auto acquire_next_image() -> ImageId;
+        /// @brief The gpu needs to wait until the swapchain image is available. 
+        //// The first submit that uses the acquired image must wait on this.
+        /// @param swapchain_image the image which was aquired.
+        /// @return the binary semaphore that needs to be waited on in the first use of the image.
+        auto get_acquire_semaphore(ImageId swapchain_image) -> BinarySemaphore &;
+        /// @brief The gpu needs to wait until the swapchain image is presentable. 
+        /// The LAST submit that uses the swapchain image must signal this semaphore.
+        /// The present must wait on this semaphore.
+        /// @param swapchain_image the image wihch was aquired.
+        /// @return the binary semaphore that needs to be signaled on in the last use, waited on present.
+        auto get_present_semaphore(ImageId swapchain_image) -> BinarySemaphore &;
+        /// @brief The swapchain needs to know when the last frame has ended because of some insane vulkan spec problems.
+        /// On the last submit of a frame, signal this timeline semaphore to to the cpu frame value.
+        /// @param swapchain_image the image wihch was aquired.
+        /// @return the gpu timeline value that needs to be signaled in the end of the frame.
+        auto get_gpu_timeline_semaphore() -> TimelineSemaphore &;
+        // The current cpu framecount.
+        auto get_cpu_timeline_value() -> usize;
         void change_present_mode(PresentMode new_present_mode);
 
       private:
