@@ -69,8 +69,6 @@ struct App : AppWindow<App>
         .debug_name = APPNAME_PREFIX("render_image"),
     });
 
-    daxa::BinarySemaphore acquire_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("acquire_semaphore")});
-    daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
     daxa::TimelineQueryPool timeline_query_pool = device.create_timeline_query_pool({
         .query_count = 2,
         .debug_name = "timeline_query",
@@ -121,7 +119,11 @@ struct App : AppWindow<App>
             }
         }
 
-        auto swapchain_image = swapchain.acquire_next_image(acquire_semaphore);
+        auto swapchain_image = swapchain.acquire_next_image();
+        if (swapchain_image.is_empty())
+        {
+            return;
+        }
 
         auto cmd_list = device.create_command_list({
             .debug_name = APPNAME_PREFIX("cmd_list"),
@@ -244,12 +246,13 @@ struct App : AppWindow<App>
 
         device.submit_commands({
             .command_lists = {std::move(cmd_list)},
-            .wait_binary_semaphores = {acquire_semaphore},
-            .signal_binary_semaphores = {present_semaphore},
+            .wait_binary_semaphores = {swapchain.get_acquire_semaphore()},
+            .signal_binary_semaphores = {swapchain.get_present_semaphore()},
+            .signal_timeline_semaphores = {{swapchain.get_gpu_timeline_semaphore(), swapchain.get_cpu_timeline_value()}},
         });
 
         device.present_frame({
-            .wait_binary_semaphores = {present_semaphore},
+            .wait_binary_semaphores = {swapchain.get_present_semaphore()},
             .swapchain = swapchain,
         });
 
