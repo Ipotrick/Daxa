@@ -36,8 +36,8 @@ namespace daxa
         // This will limit the frames in flight.
         impl.gpu_frame_timeline.wait_for_value(
             static_cast<u64>(
-                std::max(
-                    0ll, 
+                std::max<i64>(
+                    0,
                     static_cast<i64>(impl.cpu_frame_timeline) - static_cast<i64>(impl.frames_in_flight)
                 )
             )
