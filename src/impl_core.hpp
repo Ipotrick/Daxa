@@ -11,12 +11,11 @@
 
 #if defined(_WIN32)
 #define VK_USE_PLATFORM_WIN32_KHR
-#define VK_KHR_win32_surface
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #else
 #define VK_USE_PLATFORM_XLIB_KHR
-#define VK_KHR_xlib_surface
+#define VK_USE_PLATFORM_WAYLAND_KHR
 #endif
 
 #if DAXA_BUILT_WITH_DXC
