@@ -294,7 +294,7 @@ namespace daxa
     }
 
     auto find_first_possible_batch_index(
-        ImplTaskList const & impl,
+        ImplTaskList & impl,
         TaskBatchSubmitScope & current_submit_scope,
         usize const current_submit_scope_index,
         TaskInfo const & info) -> usize
@@ -334,6 +334,20 @@ namespace daxa
         {
             ImplTaskImage const & impl_task_image = impl.impl_task_images[used_image_t_id.index];
             DAXA_DBG_ASSERT_TRUE_M(!impl_task_image.swapchain_semaphore_waited_upon, "swapchain image is already presented!");
+            if (impl_task_image.info.swapchain_image)
+            {
+                if (impl.swapchain_image_first_use_submit_scope_index == std::numeric_limits<u64>::max())
+                {
+                    impl.swapchain_image_first_use_submit_scope_index = current_submit_scope_index;
+                    impl.swapchain_image_last_use_submit_scope_index = current_submit_scope_index;
+                }
+                else
+                {
+                    impl.swapchain_image_first_use_submit_scope_index = std::min(current_submit_scope_index, impl.swapchain_image_first_use_submit_scope_index);
+                    impl.swapchain_image_last_use_submit_scope_index = std::max(current_submit_scope_index, impl.swapchain_image_last_use_submit_scope_index);
+                }
+            }
+
             auto [this_task_image_layout, this_task_image_access] = task_image_access_to_layout_access(used_image_t_access);
             // As image subresources can be in different layouts and also different synchronization scopes,
             // we need to track these image ranges individually.
@@ -678,12 +692,9 @@ namespace daxa
         });
         submit_scope.last_minute_barrier_indices.push_back(barrier_index);
         // Now we need to insert the binary semaphore between submit and present.
-        BinarySemaphore present_semaphore = impl.info.device.create_binary_semaphore({.debug_name = "TaskList present binary semaphore"});
         submit_scope.present_info = ImplPresentInfo{
             .user_binary_semaphores = info.user_binary_semaphores,
-            .binary_semaphores = {present_semaphore},
         };
-        submit_scope.submit_info.signal_binary_semaphores.push_back(present_semaphore);
     }
 
     void TaskList::complete()
@@ -753,6 +764,7 @@ namespace daxa
         //      - Set all split barriers
         //  - insert all last minute pipeline barriers
         //  - do optional present
+        usize submit_scope_index = 0;
         for (auto & submit_scope : impl.batch_submit_scopes)
         {
             for (auto & task_batch : submit_scope.task_batches)
@@ -892,6 +904,22 @@ namespace daxa
             {
                 auto submit_info = submit_scope.submit_info;
                 submit_info.command_lists.insert(submit_info.command_lists.end(), impl_runtime.command_lists.begin(), impl_runtime.command_lists.end());
+                if (impl.info.swapchain.has_value())
+                {
+                    Swapchain & swapchain = impl.info.swapchain.value(); 
+                    if (submit_scope_index == impl.swapchain_image_first_use_submit_scope_index)
+                    {
+                        submit_info.wait_binary_semaphores.push_back(swapchain.get_acquire_semaphore());
+                    }
+                    if (submit_scope_index == impl.swapchain_image_last_use_submit_scope_index)
+                    {
+                        submit_info.signal_binary_semaphores.push_back(swapchain.get_present_semaphore());
+                        submit_info.signal_timeline_semaphores.push_back({
+                            swapchain.get_gpu_timeline_semaphore(),
+                            swapchain.get_cpu_timeline_value(),
+                        });
+                    }
+                }
                 if (submit_scope.user_submit_info != nullptr)
                 {
                     submit_info.command_lists.insert(submit_info.command_lists.end(), submit_scope.user_submit_info->command_lists.begin(), submit_scope.user_submit_info->command_lists.end());
@@ -906,6 +934,7 @@ namespace daxa
                 {
                     ImplPresentInfo & impl_present_info = submit_scope.present_info.value();
                     std::vector<BinarySemaphore> present_wait_semaphores = impl_present_info.binary_semaphores;
+                    present_wait_semaphores.push_back(impl.info.swapchain.value().get_present_semaphore());
                     if (impl_present_info.user_binary_semaphores != nullptr)
                     {
                         present_wait_semaphores.insert(
@@ -914,7 +943,7 @@ namespace daxa
                             impl_present_info.user_binary_semaphores->end());
                     }
                     impl.info.device.present_frame(PresentInfo{
-                        .wait_binary_semaphores = impl_present_info.binary_semaphores,
+                        .wait_binary_semaphores = present_wait_semaphores,
                         .swapchain = impl.info.swapchain.value(),
                     });
                 }
@@ -922,6 +951,7 @@ namespace daxa
                 impl_runtime.command_lists.clear();
                 impl_runtime.command_lists.push_back(impl.info.device.create_command_list({.debug_name = std::string("Task Command List ") + std::to_string(impl_runtime.command_lists.size())}));
             }
+            ++submit_scope_index;
         }
 
         impl.left_over_command_lists = std::move(impl_runtime.command_lists);

@@ -307,10 +307,6 @@ namespace tests
             daxa::ImageId swapchain_image;
             daxa::TaskImageId task_swapchain_image;
 
-            daxa::BinarySemaphore acquire_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("acquire_semaphore")});
-
-            daxa::BinarySemaphore present_semaphore = device.create_binary_semaphore({.debug_name = APPNAME_PREFIX("present_semaphore")});
-
             App() : AppWindow<App>("Daxa API: Swapchain (clearcolor)")
             {
                 record_task_list();
@@ -402,9 +398,7 @@ namespace tests
                         raster_pipeline = new_pipeline.value();
                     }
                 }
-                auto acquire = swapchain.acquire_next_image();
-                swapchain_image = acquire.first;
-                acquire_semaphore = acquire.second;
+                swapchain_image = swapchain.acquire_next_image();
                 task_list.execute();
                 auto command_lists = task_list.get_command_lists();
                 auto cmd_list = device.create_command_list({});
@@ -419,11 +413,14 @@ namespace tests
                 command_lists.push_back(cmd_list);
                 device.submit_commands({
                     .command_lists = command_lists,
-                    .wait_binary_semaphores = {acquire_semaphore},
-                    .signal_binary_semaphores = {present_semaphore},
+                    .wait_binary_semaphores = {swapchain.get_acquire_semaphore()},
+                    .signal_binary_semaphores = {swapchain.get_present_semaphore()},
+                    .signal_timeline_semaphores = {
+                        { swapchain.get_gpu_timeline_semaphore(), swapchain.get_cpu_timeline_value() }
+                    },
                 });
                 device.present_frame({
-                    .wait_binary_semaphores = {present_semaphore},
+                    .wait_binary_semaphores = {swapchain.get_present_semaphore()},
                     .swapchain = swapchain,
                 });
             }
