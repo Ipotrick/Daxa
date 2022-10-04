@@ -49,9 +49,9 @@ namespace daxa
             });
     }
 
-    void ImplBinarySemaphore::initialize(BinarySemaphoreInfo const & info)
+    void ImplBinarySemaphore::initialize(BinarySemaphoreInfo const & a_info)
     {
-        this->info = info;
+        this->info = a_info;
 
         if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && !this->info.debug_name.empty())
         {

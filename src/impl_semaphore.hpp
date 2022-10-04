@@ -24,7 +24,7 @@ namespace daxa
         ImplBinarySemaphore(ManagedWeakPtr a_impl_device, BinarySemaphoreInfo const & info);
         ~ImplBinarySemaphore();
 
-        void initialize(BinarySemaphoreInfo const & info);
+        void initialize(BinarySemaphoreInfo const & a_info);
         void reset();
     };
 

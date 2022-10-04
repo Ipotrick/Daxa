@@ -86,26 +86,26 @@ namespace daxa
         }
     }
 
-    void ImplFsr2Context::resize(UpscaleSizeInfo const & info)
+    void ImplFsr2Context::resize(UpscaleSizeInfo const & resize_info)
     {
-        this->info.size_info = info;
+        this->info.size_info = resize_info;
         create_resizable_resources();
     }
 
-    void ImplFsr2Context::upscale(CommandList & command_list, UpscaleInfo const & info)
+    void ImplFsr2Context::upscale(CommandList & command_list, UpscaleInfo const & upscale_info)
     {
         auto & impl_command_list = *command_list.as<ImplCommandList>();
         auto & impl_device = *this->info.device.as<ImplDevice>();
         impl_command_list.flush_barriers();
 
-        auto & color_slot = impl_device.slot(info.color);
-        auto & color_view_slot = impl_device.slot(info.color.default_view());
-        auto & depth_slot = impl_device.slot(info.depth);
-        auto & depth_view_slot = impl_device.slot(info.depth.default_view());
-        auto & motion_vectors_slot = impl_device.slot(info.motion_vectors);
-        auto & motion_vectors_view_slot = impl_device.slot(info.motion_vectors.default_view());
-        auto & output_slot = impl_device.slot(info.output);
-        auto & output_view_slot = impl_device.slot(info.output.default_view());
+        auto & color_slot = impl_device.slot(upscale_info.color);
+        auto & color_view_slot = impl_device.slot(upscale_info.color.default_view());
+        auto & depth_slot = impl_device.slot(upscale_info.depth);
+        auto & depth_view_slot = impl_device.slot(upscale_info.depth.default_view());
+        auto & motion_vectors_slot = impl_device.slot(upscale_info.motion_vectors);
+        auto & motion_vectors_view_slot = impl_device.slot(upscale_info.motion_vectors.default_view());
+        auto & output_slot = impl_device.slot(upscale_info.output);
+        auto & output_view_slot = impl_device.slot(upscale_info.output.default_view());
 
         wchar_t fsr_inputcolor[] = L"FSR2_InputColor";
         wchar_t fsr_inputdepth[] = L"FSR2_InputDepth";
@@ -133,20 +133,20 @@ namespace daxa
             this->info.size_info.display_size_x, this->info.size_info.display_size_x,
             static_cast<VkFormat>(output_slot.info.format), fsr_outputupscaledcolor,
             FFX_RESOURCE_STATE_UNORDERED_ACCESS);
-        dispatch_description.jitterOffset.x = info.jitter.x;
-        dispatch_description.jitterOffset.y = info.jitter.y;
+        dispatch_description.jitterOffset.x = upscale_info.jitter.x;
+        dispatch_description.jitterOffset.y = upscale_info.jitter.y;
         dispatch_description.motionVectorScale.x = static_cast<f32>(this->info.size_info.render_size_x);
         dispatch_description.motionVectorScale.y = static_cast<f32>(this->info.size_info.render_size_y);
-        dispatch_description.reset = info.should_reset;
-        dispatch_description.enableSharpening = info.should_sharpen;
-        dispatch_description.sharpness = info.sharpening;
-        dispatch_description.frameTimeDelta = info.delta_time * 1000.0f;
+        dispatch_description.reset = upscale_info.should_reset;
+        dispatch_description.enableSharpening = upscale_info.should_sharpen;
+        dispatch_description.sharpness = upscale_info.sharpening;
+        dispatch_description.frameTimeDelta = upscale_info.delta_time * 1000.0f;
         dispatch_description.preExposure = 1.0f;
         dispatch_description.renderSize.width = this->info.size_info.render_size_x;
         dispatch_description.renderSize.height = this->info.size_info.render_size_y;
-        dispatch_description.cameraFar = info.camera_info.far_plane;
-        dispatch_description.cameraNear = info.camera_info.near_plane;
-        dispatch_description.cameraFovAngleVertical = info.camera_info.vertical_fov;
+        dispatch_description.cameraFar = upscale_info.camera_info.far_plane;
+        dispatch_description.cameraNear = upscale_info.camera_info.near_plane;
+        dispatch_description.cameraFovAngleVertical = upscale_info.camera_info.vertical_fov;
 
         FfxErrorCode err = ffxFsr2ContextDispatch(&fsr2_context, &dispatch_description);
         DAXA_DBG_ASSERT_TRUE_M(err == FFX_OK, "FSR2 Failed dispatch");

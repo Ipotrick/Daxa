@@ -124,7 +124,7 @@ static void shader_preprocess(std::string & file_str, std::filesystem::path cons
     std::stringstream result_ss = {};
     bool has_pragma_once = false;
     auto abs_path_str = std::filesystem::absolute(path).string();
-    for (daxa::usize line_num = 0; std::getline(file_ss, line); ++line_num)
+    while (std::getline(file_ss, line))
     {
         if (std::regex_match(line, matches, PRAGMA_ONCE_REGEX))
         {
@@ -701,7 +701,6 @@ namespace daxa
 
     auto PipelineCompiler::check_if_sources_changed(RasterPipeline & pipeline) -> bool
     {
-        auto const & impl = *as<ImplPipelineCompiler>();
         auto & pipeline_impl = *pipeline.as<ImplRasterPipeline>();
         auto now = std::chrono::file_clock::now();
         if (now - pipeline_impl.last_hotload_time < HOTRELOAD_MIN_TIME)
@@ -738,7 +737,6 @@ namespace daxa
 
     auto PipelineCompiler::check_if_sources_changed(ComputePipeline & pipeline) -> bool
     {
-        auto const & impl = *as<ImplPipelineCompiler>();
         auto & pipeline_impl = *pipeline.as<ImplComputePipeline>();
         auto now = std::chrono::file_clock::now();
         using namespace std::chrono_literals;
@@ -925,7 +923,7 @@ namespace daxa
             });
             std::string str = {};
             ifs.seekg(0, std::ios::end);
-            str.reserve(ifs.tellg());
+            str.reserve(static_cast<usize>(ifs.tellg()));
             ifs.seekg(0, std::ios::beg);
             str.assign(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
             if (str.empty())
@@ -1072,9 +1070,9 @@ namespace daxa
         auto u8_ascii_to_wstring = [](char const * str) -> std::wstring
         {
             std::wstring ret = {};
-            for (i32 i = 0; i < std::strlen(str) + 1 && str != nullptr; i++)
+            for (usize i = 0; (i < std::strlen(str) + 1) && str != nullptr; i++)
             {
-                ret.push_back(str[i]);
+                ret.push_back(static_cast<wchar_t>(str[i]));
             }
             return ret;
         };
@@ -1141,8 +1139,8 @@ namespace daxa
         // set shader model
         args.push_back(L"-T");
         std::wstring profile = L"vs_x_x";
-        profile[3] = L'0' + shader_info.compile_options.shader_model.value().major;
-        profile[5] = L'0' + shader_info.compile_options.shader_model.value().minor;
+        profile[3] = L'0' + static_cast<wchar_t>(shader_info.compile_options.shader_model.value().major);
+        profile[5] = L'0' + static_cast<wchar_t>(shader_info.compile_options.shader_model.value().minor);
         switch (shader_stage)
         {
         case VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT: profile[0] = L'v'; break;

@@ -109,8 +109,8 @@ namespace daxa
         u32 const b_arr_p0 = slice.base_array_layer;
         u32 const b_arr_p1 = slice.base_array_layer + slice.layer_count - 1;
 
-        u32 const mip_case = static_cast<int>(b_mip_p1 < a_mip_p1) + static_cast<int>(b_mip_p0 > a_mip_p0) * 2;
-        u32 const arr_case = static_cast<int>(b_arr_p1 < a_arr_p1) + static_cast<int>(b_arr_p0 > a_arr_p0) * 2;
+        u32 const mip_case = static_cast<u32>(b_mip_p1 < a_mip_p1) + static_cast<u32>(b_mip_p0 > a_mip_p0) * 2;
+        u32 const arr_case = static_cast<u32>(b_arr_p1 < a_arr_p1) + static_cast<u32>(b_arr_p0 > a_arr_p0) * 2;
 
         std::tuple<std::array<ImageMipArraySlice, 4>, usize> result = {};
         if (!this->intersects(slice))
