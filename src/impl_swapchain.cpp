@@ -42,8 +42,8 @@ namespace daxa
         );
         // We now bump the cpu timeline value.
         impl.cpu_frame_timeline += 1;
-        impl.aquire_semaphore_index = impl.cpu_frame_timeline % impl.info.max_allowed_frames_in_flight;
-        BinarySemaphore & acquire_semaphore = impl.acquire_semaphores[impl.aquire_semaphore_index];
+        impl.acquire_semaphore_index = impl.cpu_frame_timeline % impl.info.max_allowed_frames_in_flight;
+        BinarySemaphore & acquire_semaphore = impl.acquire_semaphores[impl.acquire_semaphore_index];
         VkResult err = vkAcquireNextImageKHR(
             impl.impl_device.as<ImplDevice>()->vk_device, 
             impl.vk_swapchain, UINT64_MAX, 
@@ -171,12 +171,12 @@ namespace daxa
 
         u32 format_count = 0;
 
-        ImplDevice & impl_device = *this->impl_device.as<ImplDevice>();
+        ImplDevice & device_impl = *this->impl_device.as<ImplDevice>();
 
-        vkGetPhysicalDeviceSurfaceFormatsKHR(impl_device.vk_physical_device, this->vk_surface, &format_count, nullptr);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(device_impl.vk_physical_device, this->vk_surface, &format_count, nullptr);
         std::vector<VkSurfaceFormatKHR> surface_formats;
         surface_formats.resize(format_count);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(impl_device.vk_physical_device, this->vk_surface, &format_count, surface_formats.data());
+        vkGetPhysicalDeviceSurfaceFormatsKHR(device_impl.vk_physical_device, this->vk_surface, &format_count, surface_formats.data());
         DAXA_DBG_ASSERT_TRUE_M(format_count > 0, "No formats found");
 
         auto format_comparator = [&](auto const & a, auto const & b) -> bool

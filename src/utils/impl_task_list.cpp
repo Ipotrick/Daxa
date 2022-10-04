@@ -479,7 +479,7 @@ namespace daxa
             impl_task_buffer.latest_access_submit_scope_index = current_submit_scope_index;
         }
         // Now we insert image dependent sync
-        for (auto const & [used_image_t_id, used_image_t_access, used_image_slice] : info.used_images)
+        for (auto const & [used_image_t_id, used_image_t_access, initial_used_image_slice] : info.used_images)
         {
             ImplTaskImage & impl_task_image = impl.impl_task_images[used_image_t_id.index];
             auto [current_image_layout, current_image_access] = task_image_access_to_layout_access(used_image_t_access);
@@ -487,7 +487,7 @@ namespace daxa
             // This is because when we intersect this slice with the tracked slices, we get an intersection and a rest.
             // We need to then test the rest against all the remaining tracked uses,
             // as the intersected part is already beeing handled in the following code.
-            tl_new_use_slices.push_back(used_image_slice);
+            tl_new_use_slices.push_back(initial_used_image_slice);
             // This is the tracked slice we will insert after we finished analyzing the current used image.
             TaskImageTrackedSlice ret_new_use_tracked_slice{
                 .latest_access = current_image_access,
@@ -495,7 +495,7 @@ namespace daxa
                 .latest_access_batch_index = batch_index,
                 .latest_access_submit_scope_index = current_submit_scope_index,
                 .latest_access_read_barrier_index = {}, // This is a dummy value (either set later or ignored entirely).
-                .slice = used_image_slice,
+                .slice = initial_used_image_slice,
             };
             // As image subresources can be in different layouts and also different synchronization scopes,
             // we need to track these image ranges individually.
@@ -1001,7 +1001,7 @@ namespace daxa
 
         dot_file << "digraph TaskGraph {\nrankdir=\"LR\"\nnode [style=filled, shape=box, color=\"#d3f4ff\"]\n";
 
-        usize scope_index = 0;
+        // usize scope_index = 0;
         for (auto const & scope : batch_submit_scopes)
         {
             usize batch_index = 0;
@@ -1098,7 +1098,7 @@ namespace daxa
 
                 ++batch_index;
             }
-            ++scope_index;
+            // ++scope_index;
         }
 
         // for (auto & buffer_link : compiled_graph.buffer_links)
