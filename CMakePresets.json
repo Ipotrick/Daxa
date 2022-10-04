@@ -23,6 +23,7 @@
         {
             "name": "defaults-windows",
             "hidden": true,
+            "generator": "Ninja Multi-Config",
             "inherits": [
                 "defaults"
             ],
@@ -32,7 +33,6 @@
                 "rhs": "Windows"
             },
             "cacheVariables": {
-                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/clang-x86_64-windows-msvc.cmake",
                 "DAXA_TESTS_DISABLE_WINDOWS_CONSOLE": false
             }
         },
@@ -46,10 +46,16 @@
                 "type": "equals",
                 "lhs": "${hostSystemName}",
                 "rhs": "Linux"
-            },
+            }
+        },
+        {
+            "name": "defaults-gcc-linux",
+            "hidden": true,
+            "inherits": [
+                "defaults-linux"
+            ],
             "cacheVariables": {
-                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/gnu-x86_64-linux-gnu.cmake",
-                "DAXA_TESTS_DISABLE_WINDOWS_CONSOLE": false
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/gcc-x86_64-linux-gnu.cmake"
             }
         },
         {
@@ -74,34 +80,30 @@
             }
         },
         {
-            "name": "release-windows",
-            "displayName": "release",
+            "name": "clang-x86_64-windows-msvc",
+            "displayName": "Clang x86_64 Windows (MSVC ABI)",
             "inherits": [
-                "defaults-windows",
-                "defaults-release"
-            ]
+                "defaults-windows"
+            ],
+            "cacheVariables": {
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/clang-x86_64-windows-msvc.cmake"
+            }
         },
         {
-            "name": "relwithdebinfo-windows",
-            "displayName": "relwithdebinfo",
+            "name": "cl-x86_64-windows-msvc",
+            "displayName": "CL.exe x86_64 Windows (MSVC ABI)",
             "inherits": [
-                "defaults-windows",
-                "defaults-relwithdebinfo"
-            ]
-        },
-        {
-            "name": "debug-windows",
-            "displayName": "debug",
-            "inherits": [
-                "defaults-windows",
-                "defaults-debug"
-            ]
+                "defaults-windows"
+            ],
+            "cacheVariables": {
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/cl-x86_64-windows-msvc.cmake"
+            }
         },
         {
             "name": "release-linux",
             "displayName": "release",
             "inherits": [
-                "defaults-linux",
+                "defaults-gcc-linux",
                 "defaults-release"
             ]
         },
@@ -109,7 +111,7 @@
             "name": "relwithdebinfo-linux",
             "displayName": "relwithdebinfo",
             "inherits": [
-                "defaults-linux",
+                "defaults-gcc-linux",
                 "defaults-relwithdebinfo"
             ]
         },
@@ -117,9 +119,47 @@
             "name": "debug-linux",
             "displayName": "debug",
             "inherits": [
-                "defaults-linux",
+                "defaults-gcc-linux",
                 "defaults-debug"
             ]
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "clang-x86_64-windows-msvc-debug",
+            "displayName": "Clang x86_64 Windows (MSVC ABI) Debug",
+            "configurePreset": "clang-x86_64-windows-msvc",
+            "configuration": "Debug"
+        },
+        {
+            "name": "clang-x86_64-windows-msvc-relwithdebinfo",
+            "displayName": "Clang x86_64 Windows (MSVC ABI) RelWithDebInfo",
+            "configurePreset": "clang-x86_64-windows-msvc",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "clang-x86_64-windows-msvc-release",
+            "displayName": "Clang x86_64 Windows (MSVC ABI) Release",
+            "configurePreset": "clang-x86_64-windows-msvc",
+            "configuration": "Release"
+        },
+        {
+            "name": "cl-x86_64-windows-msvc-debug",
+            "displayName": "CL.exe x86_64 Windows (MSVC ABI) Debug",
+            "configurePreset": "cl-x86_64-windows-msvc",
+            "configuration": "Debug"
+        },
+        {
+            "name": "cl-x86_64-windows-msvc-relwithdebinfo",
+            "displayName": "CL.exe x86_64 Windows (MSVC ABI) RelWithDebInfo",
+            "configurePreset": "cl-x86_64-windows-msvc",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "cl-x86_64-windows-msvc-release",
+            "displayName": "CL.exe x86_64 Windows (MSVC ABI) Release",
+            "configurePreset": "cl-x86_64-windows-msvc",
+            "configuration": "Release"
         }
     ]
 }

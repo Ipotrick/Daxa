@@ -118,10 +118,14 @@ namespace daxa
             pages[page]->at(offset).second = std::max<u8>(pages[page]->at(index).second, 1); // make sure the version is at least one
 
             u8 version = pages[page]->at(offset).second;
+#if defined(__GNUG__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion"
+#endif
             return {GPUResourceId{.index = index, .version = version}, pages[page]->at(offset).first};
+#if defined(__GNUG__)
 #pragma GCC diagnostic pop
+#endif
         }
 
         auto return_slot(GPUResourceId id)
