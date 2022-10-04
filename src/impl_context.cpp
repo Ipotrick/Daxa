@@ -62,8 +62,8 @@ namespace daxa
         return Device{ManagedPtr{new ImplDevice(device_info, device_vulkan_info, this->make_weak(), physical_device)}};
     }
 
-    ImplContext::ImplContext(ContextInfo info)
-        : info{std::move(info)}
+    ImplContext::ImplContext(ContextInfo a_info)
+        : info{std::move(a_info)}
     {
         std::vector<char const *> enabled_layers{};
         std::vector<char const *> extension_names{};
@@ -124,6 +124,7 @@ namespace daxa
             VkInstanceCreateInfo const instance_ci = {
                 .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
                 .pNext = nullptr,
+                .flags = {},
                 .pApplicationInfo = &app_info,
                 .enabledLayerCount = static_cast<u32>(enabled_layers.size()),
                 .ppEnabledLayerNames = enabled_layers.data(),
@@ -137,6 +138,8 @@ namespace daxa
         {
             VkDebugUtilsMessengerCreateInfoEXT const dbg_utils_messenger_ci = {
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+                .pNext = {},
+                .flags = {},
                 .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
                 .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT,
                 .pfnUserCallback = debug_utils_messenger_callback,

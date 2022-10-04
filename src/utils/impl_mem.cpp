@@ -4,12 +4,12 @@
 
 namespace daxa
 {
-    MemoryUploader::MemoryUploader(Device device, usize capacity)
-        : device{std::move(device)},
+    MemoryUploader::MemoryUploader(Device a_device, usize a_capacity)
+        : device{std::move(a_device)},
           gpu_timeline{this->device.create_timeline_semaphore({.initial_value = 0, .debug_name = "MemoryUploader"})},
           current_command_list{this->device.create_command_list({.debug_name = "MemoryUploader CommandList Nr. 0"})},
           claimed_sizes{ClaimedSize{.timeline_value = 1, .size = 0}},
-          capacity{capacity}
+          capacity{a_capacity}
     {
     }
 
@@ -43,7 +43,7 @@ namespace daxa
         };
 
         this->current_command_list = this->device.create_command_list({
-            .debug_name = std::string("MemoryUploader CommandList Nr. " + std::to_string(timeline_value)),
+            .debug_name = std::string("MemoryUploader CommandList Nr. ") + std::to_string(timeline_value),
         });
 
         this->timeline_value += 1;

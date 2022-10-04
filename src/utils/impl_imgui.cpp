@@ -465,8 +465,8 @@ namespace daxa
         }
     }
 
-    ImplImGuiRenderer::ImplImGuiRenderer(ImGuiRendererInfo const & info)
-        : info{info},
+    ImplImGuiRenderer::ImplImGuiRenderer(ImGuiRendererInfo const & a_info)
+        : info{a_info},
           // clang-format off
         raster_pipeline{this->info.pipeline_compiler.create_raster_pipeline({
             .vertex_shader_info = {.source = daxa::ShaderSPIRV{.data = imgui_vert_spv.data(), .size = imgui_vert_spv.size()}, .compile_options = {.entry_point = "vs_main"}},

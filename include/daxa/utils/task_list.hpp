@@ -130,7 +130,7 @@ namespace daxa
       private:
         friend struct ImplTaskRuntime;
         friend struct TaskList;
-        TaskRuntime(void * backend);
+        TaskRuntime(void * a_backend);
         void * backend;
     };
 

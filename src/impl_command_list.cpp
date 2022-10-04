@@ -84,8 +84,8 @@ namespace daxa
 
         VkBufferImageCopy const vk_buffer_image_copy{
             .bufferOffset = info.buffer_offset,
-            .bufferRowLength = static_cast<u32>(info.image_extent.x * info.image_extent.z),
-            .bufferImageHeight = static_cast<u32>(info.image_extent.y),
+            .bufferRowLength = info.image_extent.x * info.image_extent.z,
+            .bufferImageHeight = info.image_extent.y,
             .imageSubresource = *reinterpret_cast<VkImageSubresourceLayers const *>(&info.image_slice),
             .imageOffset = *reinterpret_cast<VkOffset3D const *>(&info.image_offset),
             .imageExtent = *reinterpret_cast<VkExtent3D const *>(&info.image_extent),
@@ -108,7 +108,7 @@ namespace daxa
 
         VkBufferImageCopy const vk_buffer_image_copy{
             .bufferOffset = info.buffer_offset,
-            .bufferRowLength = static_cast<u32>(info.image_extent.x * info.image_extent.y * info.image_extent.z),
+            .bufferRowLength = info.image_extent.x * info.image_extent.y * info.image_extent.z,
             .bufferImageHeight = 1u,
             .imageSubresource = *reinterpret_cast<VkImageSubresourceLayers const *>(&info.image_slice),
             .imageOffset = *reinterpret_cast<VkOffset3D const *>(&info.image_offset),
@@ -577,7 +577,7 @@ namespace daxa
         case 4: vk_index_type = VK_INDEX_TYPE_UINT32; break;
         default: DAXA_DBG_ASSERT_TRUE_M(false, "only index byte sizes 2 and 4 are supported");
         }
-        vkCmdBindIndexBuffer(impl.vk_cmd_buffer, impl.impl_device.as<ImplDevice>()->slot(id).vk_buffer, static_cast<VkDeviceSize>(offset), vk_index_type);
+        vkCmdBindIndexBuffer(impl.vk_cmd_buffer, impl.impl_device.as<ImplDevice>()->slot(id).vk_buffer, offset, vk_index_type);
     }
 
     void CommandList::draw(DrawInfo const & info)
@@ -708,6 +708,7 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
             .pNext = nullptr,
             .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+            .pInheritanceInfo = {},
         };
 
         vkBeginCommandBuffer(this->vk_cmd_buffer, &vk_command_buffer_begin_info);

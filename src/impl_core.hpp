@@ -25,8 +25,8 @@
 using namespace Microsoft::WRL;
 #include <dxcapi.h>
 #else
-#define SCARD_E_FILE_NOT_FOUND 0x80100024
-#define SCARD_E_INVALID_PARAMETER 0x80100004
+#define SCARD_E_FILE_NOT_FOUND static_cast<HRESULT>(0x80100024)
+#define SCARD_E_INVALID_PARAMETER static_cast<HRESULT>(0x80100004)
 #include <dxc/dxcapi.h>
 template <typename T>
 using ComPtr = CComPtr<T>;

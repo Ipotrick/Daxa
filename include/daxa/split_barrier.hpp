@@ -41,7 +41,7 @@ namespace daxa
       private:
         friend struct Device;
         friend struct CommandList;
-        SplitBarrierState(ManagedWeakPtr device, SplitBarrierInfo info);
+        SplitBarrierState(ManagedWeakPtr a_impl_device, SplitBarrierInfo a_info);
         void cleanup();
 
         ManagedWeakPtr device = {};
