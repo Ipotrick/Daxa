@@ -52,9 +52,9 @@ namespace daxa
     enum struct NativeWindowPlatform
     {
         UNKNOWN,
-        WIN32,
-        XLIB,
-        WAYLAND,
+        WIN32_API,
+        XLIB_API,
+        WAYLAND_API,
     };
 } // namespace daxa
 
