@@ -153,7 +153,7 @@ namespace daxa
             .pResults = {},
         };
 
-        VkResult err = vkQueuePresentKHR(impl.main_queue_vk_queue, &present_info);
+        [[maybe_unused]] VkResult err = vkQueuePresentKHR(impl.main_queue_vk_queue, &present_info);
         // We currently ignore VK_ERROR_OUT_OF_DATE_KHR, VK_ERROR_SURFACE_LOST_KHR and VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT
         // because supposedly these kinds of things are not specified within the spec. This is also handled in Swapchain::acquire_next_image()
         DAXA_DBG_ASSERT_TRUE_M(err == VK_SUCCESS || err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_ERROR_SURFACE_LOST_KHR || err == VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT, "Daxa should never be in a situation where Present fails");
@@ -688,7 +688,7 @@ namespace daxa
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_zombies_mtx});
 
         u64 gpu_timeline_value = std::numeric_limits<u64>::max();
-        auto vk_result = vkGetSemaphoreCounterValue(this->vk_device, this->vk_main_queue_gpu_timeline_semaphore, &gpu_timeline_value);
+        [[maybe_unused]] auto vk_result = vkGetSemaphoreCounterValue(this->vk_device, this->vk_main_queue_gpu_timeline_semaphore, &gpu_timeline_value);
         DAXA_DBG_ASSERT_TRUE_M(vk_result != VK_ERROR_DEVICE_LOST, "device lost");
 
         auto check_and_cleanup_gpu_resources = [&](auto & zombies, auto const & cleanup_fn)
