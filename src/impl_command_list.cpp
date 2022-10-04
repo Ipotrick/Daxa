@@ -361,8 +361,8 @@ namespace daxa
     };
 
     inline static thread_local std::vector<SplitBarrierDependencyInfoBuffer> tl_split_barrier_dependency_infos_aux_buffer = {}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-    inline static thread_local std::vector<VkDependencyInfo> tl_split_barrier_dependency_infos_buffer = {}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-    inline static thread_local std::vector<VkEvent> tl_split_barrier_events_buffer = {}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+    inline static thread_local std::vector<VkDependencyInfo> tl_split_barrier_dependency_infos_buffer = {};                     // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+    inline static thread_local std::vector<VkEvent> tl_split_barrier_events_buffer = {};                                        // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
     void CommandList::wait_split_barriers(std::span<SplitBarrierWaitInfo const> const & infos)
     {
         auto & impl = *this->as<ImplCommandList>();
