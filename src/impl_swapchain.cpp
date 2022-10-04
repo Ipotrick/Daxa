@@ -36,30 +36,26 @@ namespace daxa
             static_cast<u64>(
                 std::max<i64>(
                     0,
-                    static_cast<i64>(impl.cpu_frame_timeline) - static_cast<i64>(impl.info.max_allowed_frames_in_flight)
-                )
-            )
-        );
+                    static_cast<i64>(impl.cpu_frame_timeline) - static_cast<i64>(impl.info.max_allowed_frames_in_flight))));
         // We now bump the cpu timeline value.
         impl.cpu_frame_timeline += 1;
         impl.acquire_semaphore_index = impl.cpu_frame_timeline % impl.info.max_allowed_frames_in_flight;
         BinarySemaphore & acquire_semaphore = impl.acquire_semaphores[impl.acquire_semaphore_index];
         VkResult err = vkAcquireNextImageKHR(
-            impl.impl_device.as<ImplDevice>()->vk_device, 
-            impl.vk_swapchain, UINT64_MAX, 
-            acquire_semaphore.as<ImplBinarySemaphore>()->vk_semaphore, 
-            nullptr, 
-            &impl.current_image_index
-        );
+            impl.impl_device.as<ImplDevice>()->vk_device,
+            impl.vk_swapchain, UINT64_MAX,
+            acquire_semaphore.as<ImplBinarySemaphore>()->vk_semaphore,
+            nullptr,
+            &impl.current_image_index);
         DAXA_DBG_ASSERT_TRUE_M(
-            err == VK_SUCCESS || 
-            err == VK_ERROR_OUT_OF_DATE_KHR || 
-            err == VK_ERROR_SURFACE_LOST_KHR || 
-            err == VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT,
+            err == VK_SUCCESS ||
+                err == VK_ERROR_OUT_OF_DATE_KHR ||
+                err == VK_ERROR_SURFACE_LOST_KHR ||
+                err == VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT,
             "Daxa should never be in a situation where Acquire fails");
 
-        if (err == VK_ERROR_OUT_OF_DATE_KHR || 
-            err == VK_ERROR_SURFACE_LOST_KHR || 
+        if (err == VK_ERROR_OUT_OF_DATE_KHR ||
+            err == VK_ERROR_SURFACE_LOST_KHR ||
             err == VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT)
         {
             // The swapchain needs recreation, we can only return a null ImageId here.
@@ -67,19 +63,19 @@ namespace daxa
         }
         return impl.images[impl.current_image_index];
     }
-    
+
     auto Swapchain::get_acquire_semaphore() -> BinarySemaphore &
     {
         auto & impl = *as<ImplSwapchain>();
         return impl.acquire_semaphores[impl.acquire_semaphore_index];
     }
-    
+
     auto Swapchain::get_present_semaphore() -> BinarySemaphore &
     {
         auto & impl = *as<ImplSwapchain>();
         return impl.present_semaphores[impl.current_image_index];
     }
-    
+
     auto Swapchain::get_gpu_timeline_semaphore() -> TimelineSemaphore &
     {
         auto & impl = *as<ImplSwapchain>();
@@ -163,9 +159,9 @@ namespace daxa
     }
 
     ImplSwapchain::ImplSwapchain(ManagedWeakPtr a_impl_device, SwapchainInfo info)
-        : impl_device{std::move(a_impl_device)}
-        , info{std::move(info)}
-        , gpu_frame_timeline{ TimelineSemaphore{ ManagedPtr(new ImplTimelineSemaphore{ impl_device, TimelineSemaphoreInfo{ .initial_value = 0, .debug_name = info.debug_name + " gpu timeline" }})}}
+        : impl_device{std::move(a_impl_device)},
+          info{std::move(info)},
+          gpu_frame_timeline{TimelineSemaphore{ManagedPtr(new ImplTimelineSemaphore{impl_device, TimelineSemaphoreInfo{.initial_value = 0, .debug_name = info.debug_name + " gpu timeline"}})}}
     {
         recreate_surface();
 
@@ -190,19 +186,29 @@ namespace daxa
 
         recreate();
 
-        // We have an aquire semaphore for each frame in flight.
+        // We have an acquire semaphore for each frame in flight.
         for (u32 i = 0; i < this->info.max_allowed_frames_in_flight; i++)
         {
-            acquire_semaphores.push_back(BinarySemaphore{ManagedPtr(new ImplBinarySemaphore{this->impl_device, BinarySemaphoreInfo{
-                .debug_name =  this->info.debug_name + ", image " + std::to_string(i) + " acquire semaphore",
-            }})});
+            acquire_semaphores.push_back(BinarySemaphore{
+                ManagedPtr(new ImplBinarySemaphore{
+                    this->impl_device,
+                    BinarySemaphoreInfo{
+                        .debug_name = this->info.debug_name + ", image " + std::to_string(i) + " acquire semaphore",
+                    },
+                }),
+            });
         }
         // We have a present semaphore for each swapchain image.
         for (u32 i = 0; i < this->images.size(); i++)
         {
-            present_semaphores.push_back(BinarySemaphore{ManagedPtr(new ImplBinarySemaphore{this->impl_device, BinarySemaphoreInfo{
-                .debug_name =  this->info.debug_name + ", image " + std::to_string(i) + " present semaphore",
-            }})});
+            present_semaphores.push_back(BinarySemaphore{
+                ManagedPtr(new ImplBinarySemaphore{
+                    this->impl_device,
+                    BinarySemaphoreInfo{
+                        .debug_name = this->info.debug_name + ", image " + std::to_string(i) + " present semaphore",
+                    },
+                }),
+            });
         }
     }
 

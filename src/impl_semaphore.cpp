@@ -8,12 +8,10 @@ namespace daxa
 {
     BinarySemaphore::BinarySemaphore(ManagedPtr impl) : ManagedPtr{std::move(impl)}
     {
-
     }
 
-    BinarySemaphore::BinarySemaphore() : ManagedPtr{} 
+    BinarySemaphore::BinarySemaphore() : ManagedPtr{}
     {
-
     }
 
     auto BinarySemaphore::info() const -> BinarySemaphoreInfo const &

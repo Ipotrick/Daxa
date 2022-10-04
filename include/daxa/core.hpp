@@ -49,7 +49,8 @@
 namespace daxa
 {
     using NativeWindowHandle = void *;
-    enum struct NativeWindowPlatform {
+    enum struct NativeWindowPlatform
+    {
         UNKNOWN,
         WIN32,
         XLIB,
