@@ -477,7 +477,6 @@ namespace daxa
         auto fill_rendering_attachment_info = [&](RenderAttachmentInfo const & in, VkRenderingAttachmentInfo & out)
         {
             DAXA_DBG_ASSERT_TRUE_M(!in.image_view.is_empty(), "must provide either image view to render attachment");
-            VkImageView vk_image_view = VK_NULL_HANDLE;
 
             out = VkRenderingAttachmentInfo{
                 .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,

@@ -5,7 +5,11 @@
 namespace daxa
 {
     MemoryUploader::MemoryUploader(Device device, usize capacity)
-        : device{std::move(device)}, gpu_timeline{this->device.create_timeline_semaphore({.initial_value = 0, .debug_name = "MemoryUploader"})}, current_command_list{this->device.create_command_list({.debug_name = "MemoryUploader CommandList Nr. 0"})}, capacity{capacity}, claimed_sizes{ClaimedSize{.timeline_value = 1, .size = 0}}
+        : device{std::move(device)},
+          gpu_timeline{this->device.create_timeline_semaphore({.initial_value = 0, .debug_name = "MemoryUploader"})},
+          current_command_list{this->device.create_command_list({.debug_name = "MemoryUploader CommandList Nr. 0"})},
+          claimed_sizes{ClaimedSize{.timeline_value = 1, .size = 0}},
+          capacity{capacity}
     {
     }
 
