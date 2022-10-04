@@ -537,7 +537,7 @@ namespace daxa
                     auto [tracked_slice_rest, tracked_slice_rest_count] = tracked_slice.slice.subtract(intersection);
                     auto [new_use_slice_rest, new_use_slice_rest_count] = used_image_slice.subtract(intersection);
                     // We now remove the old tracked slice from the list of tracked slices, as we just split it.
-                    // We need to know if the iterator was advaned. This erase advances the iterator.
+                    // We need to know if the iterator was advanced. This erase advances the iterator.
                     // If the iterator got not advanced by this we need to advance it ourself manually later.
                     advanced_tracked_slice_iterator = true;
                     tracked_slice_iter = impl_task_image.slices_last_uses.erase(tracked_slice_iter);
@@ -614,7 +614,7 @@ namespace daxa
                 }
                 if (!advanced_tracked_slice_iterator)
                 {
-                    // If we didnt find any intersections, we dont remove the tracked slice.
+                    // If we didn't find any intersections, we dont remove the tracked slice.
                     // Erasing a tracked slice "advances" iterator. As we did not remove,
                     // we need to advance it manually.
                     ++tracked_slice_iter;
@@ -906,7 +906,7 @@ namespace daxa
                 submit_info.command_lists.insert(submit_info.command_lists.end(), impl_runtime.command_lists.begin(), impl_runtime.command_lists.end());
                 if (impl.info.swapchain.has_value())
                 {
-                    Swapchain & swapchain = impl.info.swapchain.value(); 
+                    Swapchain & swapchain = impl.info.swapchain.value();
                     if (submit_scope_index == impl.swapchain_image_first_use_submit_scope_index)
                     {
                         submit_info.wait_binary_semaphores.push_back(swapchain.get_acquire_semaphore());
