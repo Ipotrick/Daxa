@@ -76,6 +76,16 @@
             "cacheVariables": {
                 "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/gcc-x86_64-linux-gnu.cmake"
             }
+        },
+        {
+            "name": "clang-x86_64-linux-gnu",
+            "displayName": "Clang x86_64 Linux (GNU ABI)",
+            "inherits": [
+                "defaults-linux"
+            ],
+            "cacheVariables": {
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/clang-x86_64-linux-gnu.cmake"
+            }
         }
     ],
     "buildPresets": [
@@ -131,6 +141,24 @@
             "name": "gcc-x86_64-linux-gnu-release",
             "displayName": "G++ x86_64 Linux (GNU ABI) Release",
             "configurePreset": "gcc-x86_64-linux-gnu",
+            "configuration": "Release"
+        },
+        {
+            "name": "clang-x86_64-linux-gnu-debug",
+            "displayName": "Clang x86_64 Linux (GNU ABI) Debug",
+            "configurePreset": "clang-x86_64-linux-gnu",
+            "configuration": "Debug"
+        },
+        {
+            "name": "clang-x86_64-linux-gnu-relwithdebinfo",
+            "displayName": "Clang x86_64 Linux (GNU ABI) RelWithDebInfo",
+            "configurePreset": "clang-x86_64-linux-gnu",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "clang-x86_64-linux-gnu-release",
+            "displayName": "Clang x86_64 Linux (GNU ABI) Release",
+            "configurePreset": "clang-x86_64-linux-gnu",
             "configuration": "Release"
         }
     ]
