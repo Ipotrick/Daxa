@@ -38,11 +38,11 @@ namespace daxa
     {
         if (this->data != 0u)
         {
-            auto * device = this->device.as<ImplDevice>();
-            DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{device->main_queue_zombies_mtx});
-            u64 const main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(device->main_queue_cpu_timeline);
+            auto * device_impl = this->device.as<ImplDevice>();
+            DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{device_impl->main_queue_zombies_mtx});
+            u64 const main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(device_impl->main_queue_cpu_timeline);
 
-            device->main_queue_split_barrier_zombies.emplace_back(
+            device_impl->main_queue_split_barrier_zombies.emplace_back(
                 main_queue_cpu_timeline,
                 SplitBarrierZombie{
                     .vk_event = reinterpret_cast<VkEvent>(this->data),

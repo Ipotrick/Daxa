@@ -309,7 +309,7 @@ namespace daxa
         impl.record_commands(draw_data, cmd_list, target_image, size_x, size_y);
     }
 
-    void ImGuiRenderer::record_task(ImDrawData * draw_data, TaskList & task_list, TaskImageId task_swapchain_image, u32 size_x, u32 size_y)
+    void ImGuiRenderer::record_task(ImDrawData * /* draw_data */, TaskList & /* task_list */, TaskImageId /* task_swapchain_image */, u32 /* size_x */, u32 /* size_y */)
     {
     }
 
@@ -334,9 +334,9 @@ namespace daxa
         if ((draw_data != nullptr) && draw_data->TotalIdxCount > 0)
         {
             auto vbuffer_current_size = info.device.info_buffer(vbuffer).size;
-            auto vbuffer_needed_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
+            auto vbuffer_needed_size = static_cast<usize>(draw_data->TotalVtxCount) * sizeof(ImDrawVert);
             auto ibuffer_current_size = info.device.info_buffer(ibuffer).size;
-            auto ibuffer_needed_size = draw_data->TotalIdxCount * sizeof(ImDrawIdx);
+            auto ibuffer_needed_size = static_cast<usize>(draw_data->TotalIdxCount) * sizeof(ImDrawIdx);
 
             if (vbuffer_needed_size > vbuffer_current_size)
             {
@@ -360,7 +360,7 @@ namespace daxa
             for (i32 n = 0; n < draw_data->CmdListsCount; n++)
             {
                 ImDrawList const * draws = draw_data->CmdLists[n];
-                std::memcpy(vtx_dst, draws->VtxBuffer.Data, draws->VtxBuffer.Size * sizeof(ImDrawVert));
+                std::memcpy(vtx_dst, draws->VtxBuffer.Data, static_cast<usize>(draws->VtxBuffer.Size) * sizeof(ImDrawVert));
                 vtx_dst += draws->VtxBuffer.Size;
             }
             info.device.unmap_memory(staging_vbuffer);
@@ -374,7 +374,7 @@ namespace daxa
             for (i32 n = 0; n < draw_data->CmdListsCount; n++)
             {
                 ImDrawList const * draws = draw_data->CmdLists[n];
-                std::memcpy(idx_dst, draws->IdxBuffer.Data, draws->IdxBuffer.Size * sizeof(ImDrawIdx));
+                std::memcpy(idx_dst, draws->IdxBuffer.Data, static_cast<usize>(draws->IdxBuffer.Size) * sizeof(ImDrawIdx));
                 idx_dst += draws->IdxBuffer.Size;
             }
             info.device.unmap_memory(staging_ibuffer);
@@ -420,7 +420,6 @@ namespace daxa
             for (i32 n = 0; n < draw_data->CmdListsCount; n++)
             {
                 ImDrawList const * draws = draw_data->CmdLists[n];
-                usize const last_tex_id = 0;
                 for (i32 cmd_i = 0; cmd_i < draws->CmdBuffer.Size; cmd_i++)
                 {
                     ImDrawCmd const * pcmd = &draws->CmdBuffer[cmd_i];
@@ -448,13 +447,13 @@ namespace daxa
                     // Draw
                     push.texture0_id = *reinterpret_cast<daxa::ImageViewId const *>(&pcmd->TextureId);
 
-                    push.vbuffer_offset = pcmd->VtxOffset + global_vtx_offset;
-                    push.ibuffer_offset = pcmd->IdxOffset + global_idx_offset;
+                    push.vbuffer_offset = pcmd->VtxOffset + static_cast<u32>(global_vtx_offset);
+                    push.ibuffer_offset = pcmd->IdxOffset + static_cast<u32>(global_idx_offset);
 
                     cmd_list.push_constant(push);
                     cmd_list.draw_indexed({
                         .index_count = pcmd->ElemCount,
-                        .first_index = pcmd->IdxOffset + global_idx_offset,
+                        .first_index = pcmd->IdxOffset + static_cast<u32>(global_idx_offset),
                         .vertex_offset = static_cast<i32>(pcmd->VtxOffset) + global_vtx_offset,
                     });
                 }
@@ -500,7 +499,7 @@ namespace daxa
         i32 width = 0;
         i32 height = 0;
         io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-        usize const upload_size = width * height * 4 * sizeof(u8);
+        usize const upload_size = static_cast<usize>(width) * static_cast<usize>(height) * 4 * sizeof(u8);
         font_sheet = this->info.device.create_image({
             .size = {static_cast<u32>(width), static_cast<u32>(height), 1},
             .usage = ImageUsageFlagBits::TRANSFER_DST | ImageUsageFlagBits::SHADER_READ_ONLY,

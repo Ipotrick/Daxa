@@ -21,8 +21,8 @@ namespace daxa
         void * scratch_buffer = {};
         bool initialized = {};
 
-        void resize(UpscaleSizeInfo const & info);
-        void upscale(CommandList & command_list, UpscaleInfo const & info);
+        void resize(UpscaleSizeInfo const & resize_info);
+        void upscale(CommandList & command_list, UpscaleInfo const & upscale_info);
 
         void create_resizable_resources();
         void destroy_resizable_resources();

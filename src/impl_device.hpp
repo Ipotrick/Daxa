@@ -64,11 +64,11 @@ namespace daxa
         auto validate_image_slice(ImageMipArraySlice const & slice, ImageId id) -> ImageMipArraySlice;
         auto validate_image_slice(ImageMipArraySlice const & slice, ImageViewId id) -> ImageMipArraySlice;
 
-        auto new_buffer(BufferInfo const & info) -> BufferId;
+        auto new_buffer(BufferInfo const & buffer_info) -> BufferId;
         auto new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, ImageInfo const & info) -> ImageId;
-        auto new_image(ImageInfo const & info) -> ImageId;
-        auto new_image_view(ImageViewInfo const & info) -> ImageViewId;
-        auto new_sampler(SamplerInfo const & info) -> SamplerId;
+        auto new_image(ImageInfo const & image_info) -> ImageId;
+        auto new_image_view(ImageViewInfo const & image_view_info) -> ImageViewId;
+        auto new_sampler(SamplerInfo const & sampler_info) -> SamplerId;
 
         auto slot(BufferId id) -> ImplBufferSlot &;
         auto slot(ImageId id) -> ImplImageSlot &;
