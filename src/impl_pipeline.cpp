@@ -262,7 +262,7 @@ namespace daxa
             {
                 // Return empty string blob if this file has been included before
                 static char const * const null_str = " ";
-                impl_pipeline_compiler->dxc_backend.dxc_utils->CreateBlob(null_str, strlen(null_str), CP_UTF8, &dxc_blob_encoding);
+                impl_pipeline_compiler->dxc_backend.dxc_utils->CreateBlob(null_str, static_cast<u32>(strlen(null_str)), CP_UTF8, &dxc_blob_encoding);
                 *include_source = dxc_blob_encoding.Detach();
                 return S_OK;
             }

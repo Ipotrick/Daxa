@@ -69,9 +69,9 @@ struct AppWindow
         // TODO(grundlett): switch which to return based on the window "platform"
         switch (get_native_platform())
         {
-        case daxa::NativeWindowPlatform::WAYLAND:
+        case daxa::NativeWindowPlatform::WAYLAND_API:
             return nullptr; // reinterpret_cast<daxa::NativeWindowHandle>(glfwGetWaylandWindow(glfw_window_ptr));
-        case daxa::NativeWindowPlatform::XLIB:
+        case daxa::NativeWindowPlatform::XLIB_API:
         default:
             return reinterpret_cast<daxa::NativeWindowHandle>(glfwGetX11Window(glfw_window_ptr));
         }
@@ -82,9 +82,9 @@ struct AppWindow
     {
         // switch(glfwGetPlatform())
         // {
-        // case GLFW_PLATFORM_WIN32: return daxa::NativeWindowPlatform::WIN32;
-        // case GLFW_PLATFORM_X11: return daxa::NativeWindowPlatform::XLIB;
-        // case GLFW_PLATFORM_WAYLAND: return daxa::NativeWindowPlatform::WAYLAND;
+        // case GLFW_PLATFORM_WIN32: return daxa::NativeWindowPlatform::WIN32_API;
+        // case GLFW_PLATFORM_X11: return daxa::NativeWindowPlatform::XLIB_API;
+        // case GLFW_PLATFORM_WAYLAND: return daxa::NativeWindowPlatform::WAYLAND_API;
         // default: return daxa::NativeWindowPlatform::UNKNOWN;
         // }
         return daxa::NativeWindowPlatform::UNKNOWN;
