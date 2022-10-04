@@ -96,6 +96,7 @@ static constexpr TBuiltInResource DAXA_DEFAULT_BUILTIN_RESOURCE = {
     .maxTaskWorkGroupSizeY_NV = 1,
     .maxTaskWorkGroupSizeZ_NV = 1,
     .maxMeshViewCountNV = 4,
+    .maxDualSourceDrawBuffersEXT = {},
     .limits{
         .nonInductiveForLoops = true,
         .whileLoops = true,
@@ -396,6 +397,7 @@ namespace daxa
                 VkShaderModuleCreateInfo const vk_shader_module_create_info{
                     .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
                     .pNext = nullptr,
+                    .flags = {},
                     .codeSize = static_cast<u32>(spirv.size() * sizeof(u32)),
                     .pCode = spirv.data(),
                 };
@@ -440,6 +442,7 @@ namespace daxa
         constexpr VkPipelineVertexInputStateCreateInfo vk_vertex_input_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
             .pNext = nullptr,
+            .flags = {},
             .vertexBindingDescriptionCount = 0,
             .pVertexBindingDescriptions = nullptr,
             .vertexAttributeDescriptionCount = 0,
@@ -448,18 +451,28 @@ namespace daxa
         constexpr VkPipelineInputAssemblyStateCreateInfo vk_input_assembly_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
             .pNext = nullptr,
+            .flags = {},
             .topology = VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+            .primitiveRestartEnable = {},
         };
         constexpr VkPipelineMultisampleStateCreateInfo vk_multisample_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
             .pNext = nullptr,
+            .flags = {},
             .rasterizationSamples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT,
+            .sampleShadingEnable = VK_FALSE,
             .minSampleShading = 1.0f,
+            .pSampleMask = {},
+            .alphaToCoverageEnable = {},
+            .alphaToOneEnable = {},
         };
 
         VkPipelineRasterizationStateCreateInfo const vk_raster_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
             .pNext = nullptr,
+            .flags = {},
+            .depthClampEnable = {},
+            .rasterizerDiscardEnable = {},
             .polygonMode = *reinterpret_cast<VkPolygonMode const *>(&info.raster.polygon_mode),
             .cullMode = *reinterpret_cast<VkCullModeFlags const *>(&info.raster.face_culling),
             .frontFace = VkFrontFace::VK_FRONT_FACE_CLOCKWISE,
@@ -501,6 +514,7 @@ namespace daxa
         VkPipelineColorBlendStateCreateInfo const vk_color_blend_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
             .pNext = nullptr,
+            .flags = {},
             .logicOpEnable = VK_FALSE,
             .logicOp = {},
             .attachmentCount = static_cast<u32>(modified_info.color_attachments.size()),
@@ -508,12 +522,13 @@ namespace daxa
             .blendConstants = {1.0f, 1.0f, 1.0f, 1.0f},
         };
 
-        constexpr VkViewport DEFAULT_VIEWPORT{.width = 1, .height = 1};
-        constexpr VkRect2D DEFAULT_SCISSOR{.extent = {1, 1}};
+        constexpr VkViewport DEFAULT_VIEWPORT{.x = 0, .y = 0, .width = 1, .height = 1, .minDepth = 0, .maxDepth = 0};
+        constexpr VkRect2D DEFAULT_SCISSOR{.offset = {0, 0}, .extent = {1, 1}};
 
         VkPipelineViewportStateCreateInfo const vk_viewport_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
             .pNext = nullptr,
+            .flags = {},
             .viewportCount = 1,
             .pViewports = &DEFAULT_VIEWPORT,
             .scissorCount = 1,
@@ -527,6 +542,7 @@ namespace daxa
         VkPipelineDynamicStateCreateInfo const vk_dynamic_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
             .pNext = nullptr,
+            .flags = {},
             .dynamicStateCount = static_cast<u32>(dynamic_state.size()),
             .pDynamicStates = dynamic_state.data(),
         };
@@ -534,9 +550,11 @@ namespace daxa
         VkPipelineRenderingCreateInfo vk_pipeline_rendering{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
             .pNext = nullptr,
+            .viewMask = {},
             .colorAttachmentCount = static_cast<u32>(modified_info.color_attachments.size()),
             .pColorAttachmentFormats = vk_pipeline_color_attachment_formats.data(),
             .depthAttachmentFormat = static_cast<VkFormat>(modified_info.depth_test.depth_attachment_format),
+            .stencilAttachmentFormat = {},
         };
 
         VkGraphicsPipelineCreateInfo const vk_graphics_pipeline_create_info{
@@ -547,6 +565,7 @@ namespace daxa
             .pStages = vk_pipeline_shader_stage_create_infos.data(),
             .pVertexInputState = &vk_vertex_input_state,
             .pInputAssemblyState = &vk_input_assembly_state,
+            .pTessellationState = {},
             .pViewportState = &vk_viewport_state,
             .pRasterizationState = &vk_raster_state,
             .pMultisampleState = &vk_multisample_state,
@@ -621,6 +640,7 @@ namespace daxa
         VkShaderModuleCreateInfo const shader_module_ci{
             .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
             .pNext = nullptr,
+            .flags = {},
             .codeSize = static_cast<u32>(spirv.size() * sizeof(u32)),
             .pCode = spirv.data(),
         };
@@ -772,8 +792,8 @@ namespace daxa
         return reload;
     }
 
-    ImplPipelineCompiler::ImplPipelineCompiler(ManagedWeakPtr device_impl, PipelineCompilerInfo info)
-        : impl_device{std::move(device_impl)}, info{std::move(info)}
+    ImplPipelineCompiler::ImplPipelineCompiler(ManagedWeakPtr a_device_impl, PipelineCompilerInfo a_info)
+        : impl_device{std::move(a_device_impl)}, info{std::move(a_info)}
     {
         if (!this->info.shader_compile_options.entry_point.has_value())
         {
@@ -1192,18 +1212,18 @@ namespace daxa
 #endif
     }
 
-    ImplRasterPipeline::ImplRasterPipeline(ManagedWeakPtr impl_device, RasterPipelineInfo info)
-        : ImplPipeline(ManagedWeakPtr(std::move(impl_device))), info{std::move(info)}
+    ImplRasterPipeline::ImplRasterPipeline(ManagedWeakPtr a_impl_device, RasterPipelineInfo a_info)
+        : ImplPipeline(std::move(a_impl_device)), info{std::move(a_info)}
     {
     }
 
-    ImplComputePipeline::ImplComputePipeline(ManagedWeakPtr impl_device, ComputePipelineInfo info)
-        : ImplPipeline(ManagedWeakPtr(std::move(impl_device))), info{std::move(info)}
+    ImplComputePipeline::ImplComputePipeline(ManagedWeakPtr a_impl_device, ComputePipelineInfo a_info)
+        : ImplPipeline(std::move(a_impl_device)), info{std::move(a_info)}
     {
     }
 
-    ImplPipeline::ImplPipeline(ManagedWeakPtr impl_device)
-        : impl_device{std::move(std::move(impl_device))}
+    ImplPipeline::ImplPipeline(ManagedWeakPtr a_impl_device)
+        : impl_device{std::move(std::move(a_impl_device))}
     {
     }
 

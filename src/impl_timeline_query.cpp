@@ -6,7 +6,7 @@
 
 namespace daxa
 {
-    TimelineQueryPool::TimelineQueryPool(ManagedPtr impl) : ManagedPtr(std::move(impl)){};
+    TimelineQueryPool::TimelineQueryPool(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
     auto TimelineQueryPool::info() const -> TimelineQueryPoolInfo const &
     {
@@ -34,8 +34,8 @@ namespace daxa
         return results;
     }
 
-    ImplTimelineQueryPool::ImplTimelineQueryPool(ManagedWeakPtr a_impl_device, TimelineQueryPoolInfo const & info)
-        : info{info}, impl_device{std::move(std::move(a_impl_device))}
+    ImplTimelineQueryPool::ImplTimelineQueryPool(ManagedWeakPtr a_impl_device, TimelineQueryPoolInfo const & a_info)
+        : info{a_info}, impl_device{std::move(std::move(a_impl_device))}
     {
         // TODO(msakmary) Should Add a check for support of timeline queries
         //                here or earlier (during device creation/section) I'm not sure...
@@ -44,7 +44,9 @@ namespace daxa
             .pNext = nullptr,
             .flags = 0,
             .queryType = VK_QUERY_TYPE_TIMESTAMP,
-            .queryCount = info.query_count};
+            .queryCount = info.query_count,
+            .pipelineStatistics = {},
+        };
 
         vkCreateQueryPool(impl_device.as<ImplDevice>()->vk_device, &vk_query_pool_create_info, nullptr, &vk_timeline_query_pool);
         vkResetQueryPool(impl_device.as<ImplDevice>()->vk_device, vk_timeline_query_pool, 0, info.query_count);

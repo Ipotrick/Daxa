@@ -136,7 +136,7 @@ namespace daxa
                 .window = reinterpret_cast<Window>(this->info.native_window),
             };
             {
-                auto func = (PFN_vkCreateXlibSurfaceKHR)vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, "vkCreateXlibSurfaceKHR");
+                auto func = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, "vkCreateXlibSurfaceKHR"));
                 func(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, &surface_ci, nullptr, &this->vk_surface);
             }
         }
@@ -158,9 +158,9 @@ namespace daxa
         return std::numeric_limits<usize>::max();
     }
 
-    ImplSwapchain::ImplSwapchain(ManagedWeakPtr a_impl_device, SwapchainInfo info)
+    ImplSwapchain::ImplSwapchain(ManagedWeakPtr a_impl_device, SwapchainInfo a_info)
         : impl_device{std::move(a_impl_device)},
-          info{std::move(info)},
+          info{std::move(a_info)},
           gpu_frame_timeline{TimelineSemaphore{ManagedPtr(new ImplTimelineSemaphore{impl_device, TimelineSemaphoreInfo{.initial_value = 0, .debug_name = this->info.debug_name + " gpu timeline"}})}}
     {
         recreate_surface();
