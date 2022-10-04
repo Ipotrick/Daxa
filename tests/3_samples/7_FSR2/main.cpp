@@ -316,7 +316,7 @@ struct App : AppWindow<App>
         }
         if (ImGui::Button("Clear Console"))
         {
-            system("CLS");
+            [[maybe_unused]] i32 system_ret = system("CLS");
         }
         ImGui::Checkbox("Enable FSR", &fsr_enabled);
         ImGui::End();

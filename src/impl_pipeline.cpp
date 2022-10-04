@@ -579,7 +579,7 @@ namespace daxa
             .basePipelineIndex = 0,
         };
 
-        auto pipeline_result = vkCreateGraphicsPipelines(
+        [[maybe_unused]] auto pipeline_result = vkCreateGraphicsPipelines(
             impl.impl_device.as<ImplDevice>()->vk_device,
             VK_NULL_HANDLE,
             1u,
@@ -666,7 +666,7 @@ namespace daxa
             .basePipelineIndex = 0,
         };
 
-        auto pipeline_result = vkCreateComputePipelines(
+        [[maybe_unused]] auto pipeline_result = vkCreateComputePipelines(
             impl.impl_device.as<ImplDevice>()->vk_device,
             VK_NULL_HANDLE,
             1u,
@@ -820,9 +820,9 @@ namespace daxa
 
 #if DAXA_BUILT_WITH_DXC
         {
-            HRESULT dxc_utils_result = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&this->dxc_backend.dxc_utils));
+            [[maybe_unused]] HRESULT dxc_utils_result = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&this->dxc_backend.dxc_utils));
             DAXA_DBG_ASSERT_TRUE_M(SUCCEEDED(dxc_utils_result), "Failed to create DXC utils");
-            HRESULT dxc_compiler_result = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&this->dxc_backend.dxc_compiler));
+            [[maybe_unused]] HRESULT dxc_compiler_result = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&this->dxc_backend.dxc_compiler));
             DAXA_DBG_ASSERT_TRUE_M(SUCCEEDED(dxc_compiler_result), "Failed to create DXC compiler");
             ComPtr<DxcCustomIncluder> dxc_includer = new DxcCustomIncluder();
             dxc_includer->impl_pipeline_compiler = this;
