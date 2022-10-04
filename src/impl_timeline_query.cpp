@@ -24,7 +24,7 @@ namespace daxa
         vkGetQueryPoolResults(
             impl.impl_device.as<ImplDevice>()->vk_device,
             impl.vk_timeline_query_pool,
-            0,
+            start_index,
             count,
             count * sizeof(u64),
             results.data(),

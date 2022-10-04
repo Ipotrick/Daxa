@@ -89,7 +89,7 @@ namespace daxa
             {
                 for (auto & required_layer_name : required_names)
                 {
-                    bool found = false;
+                    [[maybe_unused]] bool found = false;
                     for (auto & existing_layer_prop : layer_props)
                     {
                         if (!strcmp(required_layer_name, existing_layer_prop.layerName))
