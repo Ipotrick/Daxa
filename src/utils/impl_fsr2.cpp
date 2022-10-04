@@ -35,8 +35,8 @@ namespace daxa
         return result;
     }
 
-    ImplFsr2Context::ImplFsr2Context(UpscaleContextInfo info)
-        : info{std::move(info)}
+    ImplFsr2Context::ImplFsr2Context(UpscaleContextInfo a_info)
+        : info{std::move(a_info)}
     {
     }
 

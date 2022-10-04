@@ -169,8 +169,8 @@ namespace daxa
         return "invalid";
     }
 
-    TaskRuntime::TaskRuntime(void * backend)
-        : backend{backend}
+    TaskRuntime::TaskRuntime(void * a_backend)
+        : backend{a_backend}
     {
     }
 
@@ -986,8 +986,8 @@ namespace daxa
         return result;
     }
 
-    ImplTaskList::ImplTaskList(TaskListInfo info)
-        : info{std::move(info)}
+    ImplTaskList::ImplTaskList(TaskListInfo a_info)
+        : info{std::move(a_info)}
     {
     }
 

@@ -27,7 +27,7 @@ namespace daxa
         void create_resizable_resources();
         void destroy_resizable_resources();
 
-        ImplFsr2Context(UpscaleContextInfo info);
+        ImplFsr2Context(UpscaleContextInfo a_info);
         virtual ~ImplFsr2Context() override final;
     };
 } // namespace daxa

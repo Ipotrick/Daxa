@@ -55,7 +55,7 @@ namespace daxa
 
         auto get_index_of_image(ImageId image) const -> usize;
 
-        ImplSwapchain(ManagedWeakPtr device_impl, SwapchainInfo info);
+        ImplSwapchain(ManagedWeakPtr device_impl, SwapchainInfo a_info);
         ~ImplSwapchain();
 
         void recreate();

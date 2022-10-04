@@ -21,7 +21,7 @@ namespace daxa
         VkSemaphore vk_semaphore = {};
         BinarySemaphoreInfo info = {};
 
-        ImplBinarySemaphore(ManagedWeakPtr a_impl_device, BinarySemaphoreInfo const & info);
+        ImplBinarySemaphore(ManagedWeakPtr a_impl_device, BinarySemaphoreInfo const & a_info);
         ~ImplBinarySemaphore();
 
         void initialize(BinarySemaphoreInfo const & a_info);

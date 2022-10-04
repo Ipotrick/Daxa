@@ -139,7 +139,7 @@ namespace daxa
         void execute_barriers();
         void output_graphviz();
 
-        ImplTaskList(TaskListInfo info);
+        ImplTaskList(TaskListInfo a_info);
         virtual ~ImplTaskList() override final;
     };
 

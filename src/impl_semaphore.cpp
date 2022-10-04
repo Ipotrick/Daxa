@@ -20,7 +20,7 @@ namespace daxa
         return impl.info;
     }
 
-    ImplBinarySemaphore::ImplBinarySemaphore(ManagedWeakPtr a_impl_device, BinarySemaphoreInfo const & info)
+    ImplBinarySemaphore::ImplBinarySemaphore(ManagedWeakPtr a_impl_device, BinarySemaphoreInfo const & a_info)
         : impl_device{std::move(std::move(a_impl_device))}
     {
         VkSemaphoreCreateInfo const vk_semaphore_create_info{
@@ -31,7 +31,7 @@ namespace daxa
 
         vkCreateSemaphore(impl_device.as<ImplDevice>()->vk_device, &vk_semaphore_create_info, nullptr, &this->vk_semaphore);
 
-        initialize(info);
+        initialize(a_info);
     }
 
     ImplBinarySemaphore::~ImplBinarySemaphore() // NOLINT(bugprone-exception-escape)
