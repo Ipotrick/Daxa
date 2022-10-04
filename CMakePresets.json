@@ -11,7 +11,7 @@
             "hidden": true,
             "binaryDir": "${sourceDir}/build/${presetName}",
             "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-            "generator": "Ninja",
+            "generator": "Ninja Multi-Config",
             "cacheVariables": {
                 "DAXA_ENABLE_GLSLANG": true,
                 "DAXA_ENABLE_DXC": true,
@@ -23,7 +23,6 @@
         {
             "name": "defaults-windows",
             "hidden": true,
-            "generator": "Ninja Multi-Config",
             "inherits": [
                 "defaults"
             ],
@@ -49,37 +48,6 @@
             }
         },
         {
-            "name": "defaults-gcc-linux",
-            "hidden": true,
-            "inherits": [
-                "defaults-linux"
-            ],
-            "cacheVariables": {
-                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/gcc-x86_64-linux-gnu.cmake"
-            }
-        },
-        {
-            "name": "defaults-release",
-            "hidden": true,
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release"
-            }
-        },
-        {
-            "name": "defaults-relwithdebinfo",
-            "hidden": true,
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
-            }
-        },
-        {
-            "name": "defaults-debug",
-            "hidden": true,
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug"
-            }
-        },
-        {
             "name": "clang-x86_64-windows-msvc",
             "displayName": "Clang x86_64 Windows (MSVC ABI)",
             "inherits": [
@@ -100,28 +68,14 @@
             }
         },
         {
-            "name": "release-linux",
-            "displayName": "release",
+            "name": "gcc-x86_64-linux-gnu",
+            "displayName": "G++ x86_64 Linux (GNU ABI)",
             "inherits": [
-                "defaults-gcc-linux",
-                "defaults-release"
-            ]
-        },
-        {
-            "name": "relwithdebinfo-linux",
-            "displayName": "relwithdebinfo",
-            "inherits": [
-                "defaults-gcc-linux",
-                "defaults-relwithdebinfo"
-            ]
-        },
-        {
-            "name": "debug-linux",
-            "displayName": "debug",
-            "inherits": [
-                "defaults-gcc-linux",
-                "defaults-debug"
-            ]
+                "defaults-linux"
+            ],
+            "cacheVariables": {
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/gcc-x86_64-linux-gnu.cmake"
+            }
         }
     ],
     "buildPresets": [
@@ -159,6 +113,24 @@
             "name": "cl-x86_64-windows-msvc-release",
             "displayName": "CL.exe x86_64 Windows (MSVC ABI) Release",
             "configurePreset": "cl-x86_64-windows-msvc",
+            "configuration": "Release"
+        },
+        {
+            "name": "gcc-x86_64-linux-gnu-debug",
+            "displayName": "G++ x86_64 Linux (GNU ABI) Debug",
+            "configurePreset": "gcc-x86_64-linux-gnu",
+            "configuration": "Debug"
+        },
+        {
+            "name": "gcc-x86_64-linux-gnu-relwithdebinfo",
+            "displayName": "G++ x86_64 Linux (GNU ABI) RelWithDebInfo",
+            "configurePreset": "gcc-x86_64-linux-gnu",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "gcc-x86_64-linux-gnu-release",
+            "displayName": "G++ x86_64 Linux (GNU ABI) Release",
+            "configurePreset": "gcc-x86_64-linux-gnu",
             "configuration": "Release"
         }
     ]
