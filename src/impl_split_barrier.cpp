@@ -51,8 +51,8 @@ namespace daxa
         }
     }
 
-    SplitBarrierState::SplitBarrierState(ManagedWeakPtr device, SplitBarrierInfo info)
-        : device{std::move(device)}, create_info{std::move(info)}
+    SplitBarrierState::SplitBarrierState(ManagedWeakPtr a_impl_device, SplitBarrierInfo a_info)
+        : device{std::move(a_impl_device)}, create_info{std::move(a_info)}
     {
         auto * impl_device = this->device.as<ImplDevice>();
         VkEventCreateInfo const vk_event_create_info{

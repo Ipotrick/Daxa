@@ -150,6 +150,7 @@ namespace daxa
             .swapchainCount = static_cast<u32>(1),
             .pSwapchains = &swapchain_impl.vk_swapchain,
             .pImageIndices = &swapchain_impl.current_image_index,
+            .pResults = {},
         };
 
         VkResult err = vkQueuePresentKHR(impl.main_queue_vk_queue, &present_info);
@@ -457,6 +458,8 @@ namespace daxa
         VkPhysicalDeviceRobustness2FeaturesEXT REQUIRED_PHYSICAL_DEVICE_FEATURES_ROBUSTNESS_2{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT,
             .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SYNCHRONIZATION_2),
+            .robustBufferAccess2 = {},
+            .robustImageAccess2 = {},
             .nullDescriptor = VK_TRUE,
         };
 
@@ -487,6 +490,7 @@ namespace daxa
         VkDeviceCreateInfo const device_ci = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
             .pNext = &physical_device_features_2,
+            .flags = {},
             .queueCreateInfoCount = static_cast<u32>(1),
             .pQueueCreateInfos = &queue_ci,
             .enabledLayerCount = static_cast<u32>(enabled_layers.size()),
@@ -522,9 +526,42 @@ namespace daxa
 
         vkCreateSemaphore(this->vk_device, &vk_semaphore_create_info, nullptr, &this->vk_main_queue_gpu_timeline_semaphore);
 
-        VmaVulkanFunctions const vma_vulkan_functions{
+        VmaVulkanFunctions const vma_vulkan_functions
+        {
             .vkGetInstanceProcAddr = vkGetInstanceProcAddr,
             .vkGetDeviceProcAddr = vkGetDeviceProcAddr,
+            .vkGetPhysicalDeviceProperties = {},
+            .vkGetPhysicalDeviceMemoryProperties = {},
+            .vkAllocateMemory = {},
+            .vkFreeMemory = {},
+            .vkMapMemory = {},
+            .vkUnmapMemory = {},
+            .vkFlushMappedMemoryRanges = {},
+            .vkInvalidateMappedMemoryRanges = {},
+            .vkBindBufferMemory = {},
+            .vkBindImageMemory = {},
+            .vkGetBufferMemoryRequirements = {},
+            .vkGetImageMemoryRequirements = {},
+            .vkCreateBuffer = {},
+            .vkDestroyBuffer = {},
+            .vkCreateImage = {},
+            .vkDestroyImage = {},
+            .vkCmdCopyBuffer = {},
+#if VMA_DEDICATED_ALLOCATION || VMA_VULKAN_VERSION >= 1001000
+            .vkGetBufferMemoryRequirements2KHR = {},
+            .vkGetImageMemoryRequirements2KHR = {},
+#endif
+#if VMA_BIND_MEMORY2 || VMA_VULKAN_VERSION >= 1001000
+            .vkBindBufferMemory2KHR = {},
+            .vkBindImageMemory2KHR = {},
+#endif
+#if VMA_MEMORY_BUDGET || VMA_VULKAN_VERSION >= 1001000
+            .vkGetPhysicalDeviceMemoryProperties2KHR = {},
+#endif
+#if VMA_VULKAN_VERSION >= 1003000
+            .vkGetDeviceBufferMemoryRequirements = {},
+            .vkGetDeviceImageMemoryRequirements = {},
+#endif
         };
 
         VmaAllocatorCreateInfo const vma_allocator_create_info{
@@ -538,6 +575,7 @@ namespace daxa
             .pVulkanFunctions = &vma_vulkan_functions,
             .instance = this->impl_ctx.as<ImplContext>()->vk_instance,
             .vulkanApiVersion = VK_API_VERSION_1_3,
+            .pTypeExternalMemoryHandleTypes = {},
         };
 
         vmaCreateAllocator(&vma_allocator_create_info, &this->vma_allocator);
@@ -573,7 +611,7 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},
-            .size = static_cast<VkDeviceSize>(max_buffers * sizeof(u64)),
+            .size = max_buffers * sizeof(u64),
             .usage = usage_flags,
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
             .queueFamilyIndexCount = 1,
@@ -583,6 +621,8 @@ namespace daxa
         VmaAllocationCreateInfo const vma_allocation_create_info{
             .flags = static_cast<VmaAllocationCreateFlags>(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT),
             .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+            .requiredFlags = {},
+            .preferredFlags = {},
             .memoryTypeBits = std::numeric_limits<u32>::max(),
             .pool = nullptr,
             .pUserData = nullptr,
@@ -676,7 +716,7 @@ namespace daxa
             this->main_queue_command_list_zombies,
             [&](auto & command_list_zombie)
             {
-                DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{this->main_queue_command_pool_buffer_recycle_mtx});
+                DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const l_lock{this->main_queue_command_pool_buffer_recycle_mtx});
                 this->buffer_pool_pool.put_back({command_list_zombie.vk_cmd_pool, command_list_zombie.vk_cmd_buffer});
             });
         check_and_cleanup_gpu_resources(
@@ -772,6 +812,8 @@ namespace daxa
         VmaAllocationCreateInfo const vma_allocation_create_info{
             .flags = static_cast<VmaAllocationCreateFlags>(buffer_info.memory_flags.data),
             .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+            .requiredFlags = {},
+            .preferredFlags = {},
             .memoryTypeBits = std::numeric_limits<u32>::max(),
             .pool = nullptr,
             .pUserData = nullptr,
@@ -962,6 +1004,8 @@ namespace daxa
         VmaAllocationCreateInfo const vma_allocation_create_info{
             .flags = static_cast<VmaAllocationCreateFlags>(image_info.memory_flags.data),
             .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+            .requiredFlags = {},
+            .preferredFlags = {},
             .memoryTypeBits = std::numeric_limits<u32>::max(),
             .pool = nullptr,
             .pUserData = nullptr,

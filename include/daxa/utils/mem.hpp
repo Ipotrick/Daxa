@@ -22,7 +22,7 @@ namespace daxa
     // No automatic gpu synchronization
     struct MemoryUploader
     {
-        MemoryUploader(Device device, usize capacity = 1 << 25);
+        MemoryUploader(Device a_device, usize a_capacity = 1 << 25);
 
         auto upload_to_buffer(BufferId dst_buffer, usize dst_offset, usize upload_size) -> void *;
         auto get_commands() -> MemoryUploadCommandSubmitInfo;

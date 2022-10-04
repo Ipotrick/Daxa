@@ -13,7 +13,7 @@ namespace daxa
         VkDebugUtilsMessengerEXT vk_debug_utils_messenger = {};
         bool enable_debug_names = true;
 
-        explicit ImplContext(ContextInfo info);
+        explicit ImplContext(ContextInfo a_info);
         virtual ~ImplContext() override final;
     };
 } // namespace daxa
