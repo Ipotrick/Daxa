@@ -109,7 +109,7 @@ namespace daxa
 #elif defined(__linux__)
         switch (this->info.native_window_platform)
         {
-        case NativeWindowPlatform::WAYLAND:
+        case NativeWindowPlatform::WAYLAND_API:
         {
             // TODO(grundlett): figure out how to link Wayland
             // VkWaylandSurfaceCreateInfoKHR surface_ci{
@@ -125,7 +125,7 @@ namespace daxa
             // }
         }
         break;
-        case NativeWindowPlatform::XLIB:
+        case NativeWindowPlatform::XLIB_API:
         default:
         {
             VkXlibSurfaceCreateInfoKHR surface_ci{
@@ -161,7 +161,7 @@ namespace daxa
     ImplSwapchain::ImplSwapchain(ManagedWeakPtr a_impl_device, SwapchainInfo info)
         : impl_device{std::move(a_impl_device)},
           info{std::move(info)},
-          gpu_frame_timeline{TimelineSemaphore{ManagedPtr(new ImplTimelineSemaphore{impl_device, TimelineSemaphoreInfo{.initial_value = 0, .debug_name = info.debug_name + " gpu timeline"}})}}
+          gpu_frame_timeline{TimelineSemaphore{ManagedPtr(new ImplTimelineSemaphore{impl_device, TimelineSemaphoreInfo{.initial_value = 0, .debug_name = this->info.debug_name + " gpu timeline"}})}}
     {
         recreate_surface();
 
