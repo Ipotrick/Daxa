@@ -84,6 +84,12 @@ if(DAXA_ENABLE_GLSLANG)
     )
 endif()
 
+target_compile_definitions(daxa
+    PUBLIC
+    DAXA_SHADERLANG_GLSL=1
+    DAXA_SHADERLANG_HLSL=2
+)
+
 if(DAXA_ENABLE_DXC)
     find_package(dxc CONFIG REQUIRED)
 
