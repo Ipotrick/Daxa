@@ -841,7 +841,7 @@ namespace daxa
 #endif
     }
 
-    auto ImplPipelineCompiler::get_spirv(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage) -> Result<std::vector<u32>>
+    auto ImplPipelineCompiler::get_spirv(ShaderInfo const & shader_info, [[maybe_unused]] VkShaderStageFlagBits shader_stage) -> Result<std::vector<u32>>
     {
         std::vector<u32> spirv = {};
         if (std::holds_alternative<ShaderSPIRV>(shader_info.source))
@@ -959,7 +959,7 @@ namespace daxa
         return Result<ShaderCode>(err);
     }
 
-    auto ImplPipelineCompiler::gen_spirv_from_glslang(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
+    auto ImplPipelineCompiler::gen_spirv_from_glslang([[maybe_unused]] ShaderInfo const & shader_info, [[maybe_unused]] VkShaderStageFlagBits shader_stage, [[maybe_unused]] ShaderCode const & code) -> Result<std::vector<u32>>
     {
 #if DAXA_BUILT_WITH_GLSLANG
         auto translate_shader_stage = [](VkShaderStageFlagBits stage) -> EShLanguage
@@ -1084,7 +1084,7 @@ namespace daxa
 #endif
     }
 
-    auto ImplPipelineCompiler::gen_spirv_from_dxc(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
+    auto ImplPipelineCompiler::gen_spirv_from_dxc([[maybe_unused]] ShaderInfo const & shader_info, [[maybe_unused]] VkShaderStageFlagBits shader_stage, [[maybe_unused]] ShaderCode const & code) -> Result<std::vector<u32>>
     {
 #if DAXA_BUILT_WITH_DXC
         auto u8_ascii_to_wstring = [](char const * str) -> std::wstring
