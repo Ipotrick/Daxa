@@ -19,7 +19,7 @@ f32vec3 mandelbrot_colored(f32vec2 pixel_p)
     f32vec2 uv = pixel_p / f32vec2(push_constant.frame_dim.xy);
     uv = (uv - 0.5) * f32vec2(f32(push_constant.frame_dim.x) / f32(push_constant.frame_dim.y), 1);
 
-    f32 time = push_constant.compute_input.time;
+    f32 time = push_constant.gpu_input.time;
     f32 scale = 12.0 / (exp(time) + 0.0001);
     f32vec2 z = uv * scale * 2 + CENTER;
     f32vec2 c = z;

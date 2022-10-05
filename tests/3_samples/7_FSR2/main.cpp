@@ -7,7 +7,7 @@
 #include <daxa/utils/task_list.hpp>
 
 #include <daxa/utils/imgui.hpp>
-#include <0_common/imgui/imgui_impl_glfw.h>
+#include <imgui_impl_glfw.h>
 
 #include <daxa/utils/math_operators.hpp>
 

@@ -994,7 +994,7 @@ namespace daxa
 
         // preamble += "#version 450\n";
         preamble += "#define DAXA_SHADER 1\n";
-        preamble += "#define DAXA_GLSL 1\n";
+        preamble += "#define DAXA_SHADERLANG 1\n";
         preamble += "#extension GL_GOOGLE_include_directive : enable\n";
         preamble += "#extension GL_EXT_nonuniform_qualifier : enable\n";
         preamble += "#extension GL_EXT_buffer_reference : enable\n";
@@ -1115,7 +1115,7 @@ namespace daxa
             args.push_back(wstring_buffer.back().c_str());
         }
         args.push_back(L"-DDAXA_SHADER");
-        args.push_back(L"-DDAXA_HLSL");
+        args.push_back(L"-DDAXA_SHADERLANG=2");
 
         if (std::holds_alternative<ShaderFile>(shader_info.source))
         {

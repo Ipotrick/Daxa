@@ -1,6 +1,7 @@
 #pragma once
-
 #if defined(DAXA_SHADER)
+#define DAXA_SHADERLANG_GLSL 1
+#define DAXA_SHADERLANG_HLSL 2
 #define DAXA_STORAGE_BUFFER_BINDING 0
 #define DAXA_STORAGE_IMAGE_BINDING 1
 #define DAXA_SAMPLED_IMAGE_BINDING 2
@@ -8,9 +9,9 @@
 #define DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING 4
 #define DAXA_ID_INDEX_MASK (0x00FFFFFF)
 #define DAXA_SHARED_TYPE(x) x
-#if defined(DAXA_GLSL)
+#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
 #include <daxa/daxa.glsl>
-#elif defined(DAXA_HLSL)
+#elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
 #include "daxa/daxa.hlsl"
 #endif
 #elif defined(__cplusplus)
