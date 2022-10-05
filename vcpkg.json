@@ -38,7 +38,13 @@
                 "glfw3",
                 "glm",
                 "stb",
-                "cgltf"
+                "cgltf",
+                {
+                    "name": "imgui",
+                    "features": [
+                        "glfw-binding"
+                    ]
+                }
             ]
         }
     }

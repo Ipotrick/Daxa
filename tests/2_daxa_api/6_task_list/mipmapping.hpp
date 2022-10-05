@@ -67,7 +67,7 @@ namespace tests
             daxa::TaskImageId task_swapchain_image = {};
             daxa::TaskImageId task_render_image = {};
 
-            MipmappingComputeInput compute_input = {
+            MipmappingGpuInput gpu_input = {
                 .mouse_x = {},
                 .mouse_y = {},
                 .p_mouse_x = {},
@@ -75,14 +75,14 @@ namespace tests
                 .paint_radius = 5.0f,
                 .paint_col = {1.0f, 0.0f, 0.0f},
             };
-            daxa::BufferId mipmapping_compute_input_buffer = device.create_buffer({
-                .size = sizeof(MipmappingComputeInput),
-                .debug_name = APPNAME_PREFIX("mipmapping_compute_input_buffer"),
+            daxa::BufferId mipmapping_gpu_input_buffer = device.create_buffer({
+                .size = sizeof(MipmappingGpuInput),
+                .debug_name = APPNAME_PREFIX("mipmapping_gpu_input_buffer"),
             });
-            daxa::TaskBufferId task_mipmapping_compute_input_buffer;
-            daxa::TaskBufferId task_staging_mipmapping_compute_input_buffer;
+            daxa::TaskBufferId task_mipmapping_gpu_input_buffer;
+            daxa::TaskBufferId task_staging_mipmapping_gpu_input_buffer;
 
-            bool mouse_drawing = false, gen_mipmaps = false;
+            bool mouse_drawing = false;
 
             daxa::TaskList task_list = record_tasks();
 
@@ -91,7 +91,7 @@ namespace tests
             {
                 device.wait_idle();
                 device.collect_garbage();
-                device.destroy_buffer(mipmapping_compute_input_buffer);
+                device.destroy_buffer(mipmapping_gpu_input_buffer);
                 device.destroy_image(render_image);
             }
 
@@ -120,10 +120,8 @@ namespace tests
                 ImGui_ImplGlfw_NewFrame();
                 ImGui::NewFrame();
                 ImGui::Begin("Settings");
-                ImGui::SliderFloat("Brush Radius", &compute_input.paint_radius, 1.0f, 15.0f);
-                ImGui::ColorEdit3("Brush Color", reinterpret_cast<f32 *>(&compute_input.paint_col));
-                if (ImGui::Button("Gen Mip-maps"))
-                    gen_mipmaps = true;
+                ImGui::SliderFloat("Brush Radius", &gpu_input.paint_radius, 1.0f, 15.0f);
+                ImGui::ColorEdit3("Brush Color", reinterpret_cast<f32 *>(&gpu_input.paint_col));
                 ImGui::End();
                 ImGui::Render();
             }
@@ -154,11 +152,17 @@ namespace tests
 
             void on_mouse_move(f32 x, f32 y)
             {
-                compute_input.mouse_x = x / static_cast<f32>(size_x) * (1.5f) * 128.0f;
-                compute_input.mouse_y = y / static_cast<f32>(size_y) * 128.0f;
+                auto & io = ImGui::GetIO();
+                if (io.WantCaptureMouse || io.WantCaptureKeyboard)
+                    return;
+                gpu_input.mouse_x = x / static_cast<f32>(size_x) * (1.5f) * 128.0f;
+                gpu_input.mouse_y = y / static_cast<f32>(size_y) * 128.0f;
             }
             void on_mouse_button(i32 button, i32 action)
             {
+                auto & io = ImGui::GetIO();
+                if (io.WantCaptureMouse || io.WantCaptureKeyboard)
+                    return;
                 if (button == GLFW_MOUSE_BUTTON_1)
                     mouse_drawing = action != GLFW_RELEASE;
             }
@@ -179,20 +183,20 @@ namespace tests
             {
                 auto staging_buffer = device.create_buffer({
                     .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-                    .size = sizeof(MipmappingComputeInput),
-                    .debug_name = APPNAME_PREFIX("staging_mipmapping_compute_input_buffer"),
+                    .size = sizeof(MipmappingGpuInput),
+                    .debug_name = APPNAME_PREFIX("staging_mipmapping_gpu_input_buffer"),
                 });
-                MipmappingComputeInput * buffer_ptr = device.map_memory_as<MipmappingComputeInput>(staging_buffer);
-                *buffer_ptr = this->compute_input;
-                this->compute_input.p_mouse_x = this->compute_input.mouse_x;
-                this->compute_input.p_mouse_y = this->compute_input.mouse_y;
+                MipmappingGpuInput * buffer_ptr = device.map_memory_as<MipmappingGpuInput>(staging_buffer);
+                *buffer_ptr = this->gpu_input;
+                this->gpu_input.p_mouse_x = this->gpu_input.mouse_x;
+                this->gpu_input.p_mouse_y = this->gpu_input.mouse_y;
                 device.unmap_memory(staging_buffer);
                 cmd_list.destroy_buffer_deferred(staging_buffer);
 
                 cmd_list.copy_buffer_to_buffer({
                     .src_buffer = staging_buffer,
                     .dst_buffer = input_buffer,
-                    .size = sizeof(MipmappingComputeInput),
+                    .size = sizeof(MipmappingGpuInput),
                 });
             }
             void paint(daxa::CommandList & cmd_list, daxa::ImageId render_target_id, daxa::BufferId input_buffer)
@@ -203,8 +207,8 @@ namespace tests
                     cmd_list.set_pipeline(compute_pipeline);
                     auto const push = MipmappingComputePushConstant{
                         .image_id = render_target_id.default_view(),
-                        .compute_input = input_buffer,
-                        // .compute_input = this->device.buffer_reference(input_buffer),
+                        .gpu_input = input_buffer,
+                        // .gpu_input = this->device.buffer_reference(input_buffer),
                         .frame_dim = {render_target_size[0], render_target_size[1]},
                     };
                     cmd_list.push_constant(push);
@@ -293,12 +297,12 @@ namespace tests
                     .awaited_pipeline_access = daxa::AccessConsts::NONE,
                     .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
                 });
-                // update_gpu_input(staging_mipmapping_compute_input_buffer);
+                // update_gpu_input(staging_mipmapping_gpu_input_buffer);
                 cmd_list.pipeline_barrier({
                     .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
                     .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
                 });
-                update_gpu_input(cmd_list, mipmapping_compute_input_buffer);
+                update_gpu_input(cmd_list, mipmapping_gpu_input_buffer);
                 cmd_list.pipeline_barrier_image_transition({
                     .awaited_pipeline_access = daxa::AccessConsts::NONE,
                     .waiting_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
@@ -310,7 +314,7 @@ namespace tests
                     .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
                     .waiting_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_READ,
                 });
-                paint(cmd_list, render_image, mipmapping_compute_input_buffer);
+                paint(cmd_list, render_image, mipmapping_gpu_input_buffer);
                 {
                     auto image_info = device.info_image(render_image);
                     std::array<i32, 3> mip_size = {static_cast<i32>(image_info.size[0]), static_cast<i32>(image_info.size[1]), static_cast<i32>(image_info.size[2])};
@@ -439,15 +443,15 @@ namespace tests
                     .image = &render_image,
                     .debug_name = APPNAME_PREFIX("Task Render Image"),
                 });
-                task_mipmapping_compute_input_buffer = new_task_list.create_task_buffer({.buffer = &mipmapping_compute_input_buffer});
+                task_mipmapping_gpu_input_buffer = new_task_list.create_task_buffer({.buffer = &mipmapping_gpu_input_buffer});
                 new_task_list.add_task({
                     .used_buffers = {
-                        {task_mipmapping_compute_input_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE},
+                        {task_mipmapping_gpu_input_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE},
                     },
                     .task = [this](daxa::TaskRuntime runtime)
                     {
                         auto cmd_list = runtime.get_command_list();
-                        auto input_buffer = runtime.get_buffer(task_mipmapping_compute_input_buffer);
+                        auto input_buffer = runtime.get_buffer(task_mipmapping_gpu_input_buffer);
                         cmd_list.pipeline_barrier({
                             .awaited_pipeline_access = daxa::AccessConsts::READ_WRITE,
                             .waiting_pipeline_access = daxa::AccessConsts::READ_WRITE,
@@ -462,7 +466,7 @@ namespace tests
                 });
                 new_task_list.add_task(daxa::TaskInfo{
                     .used_buffers = {
-                        {task_mipmapping_compute_input_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY},
+                        {task_mipmapping_gpu_input_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY},
                     },
                     .used_images = {
                         {task_render_image, daxa::TaskImageAccess::COMPUTE_SHADER_READ_WRITE, daxa::ImageMipArraySlice{}},
@@ -473,7 +477,7 @@ namespace tests
                         {
                             auto cmd_list = runtime.get_command_list();
                             auto render_target_id = runtime.get_image(task_render_image);
-                            auto input_buffer = runtime.get_buffer(task_mipmapping_compute_input_buffer);
+                            auto input_buffer = runtime.get_buffer(task_mipmapping_gpu_input_buffer);
                             paint(cmd_list, render_target_id, input_buffer);
                         }
                     },
