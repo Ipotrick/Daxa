@@ -843,6 +843,7 @@ namespace daxa
 
     auto ImplPipelineCompiler::get_spirv(ShaderInfo const & shader_info, [[maybe_unused]] VkShaderStageFlagBits shader_stage) -> Result<std::vector<u32>>
     {
+        current_shader_info = &shader_info;
         std::vector<u32> spirv = {};
         if (std::holds_alternative<ShaderSPIRV>(shader_info.source))
         {
@@ -894,10 +895,12 @@ namespace daxa
 
             if (ret.is_err())
             {
+                current_shader_info = nullptr;
                 return Result<std::vector<u32>>(ret.message());
             }
             spirv = ret.value();
         }
+        current_shader_info = nullptr;
         return Result<std::vector<u32>>(spirv);
     }
 
@@ -908,13 +911,28 @@ namespace daxa
             return Result<std::filesystem::path>(path);
         }
         std::filesystem::path potential_path;
-        for (auto & root : this->current_shader_info->compile_options.root_paths)
+        if (this->current_shader_info)
         {
-            potential_path.clear();
-            potential_path = root / path;
-            if (std::filesystem::exists(potential_path))
+            for (auto & root : this->current_shader_info->compile_options.root_paths)
             {
-                return Result<std::filesystem::path>(potential_path);
+                potential_path.clear();
+                potential_path = root / path;
+                if (std::filesystem::exists(potential_path))
+                {
+                    return Result<std::filesystem::path>(potential_path);
+                }
+            }
+        }
+        else
+        {
+            for (auto & root : this->info.shader_compile_options.root_paths)
+            {
+                potential_path.clear();
+                potential_path = root / path;
+                if (std::filesystem::exists(potential_path))
+                {
+                    return Result<std::filesystem::path>(potential_path);
+                }
             }
         }
         std::string error_msg = {};
@@ -1076,9 +1094,7 @@ namespace daxa
         spv::SpvBuildLogger logger;
         glslang::SpvOptions spv_options;
         std::vector<u32> spv;
-        current_shader_info = &shader_info;
         glslang::GlslangToSpv(*intermediary, spv, &logger, &spv_options);
-        current_shader_info = nullptr;
         return Result<std::vector<u32>>(spv);
 #else
         return Result<std::vector<u32>>("Asked for glslang compilation without enabling glslang");
