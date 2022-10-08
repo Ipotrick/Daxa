@@ -39,6 +39,8 @@ struct App : BaseApp<App>
         .debug_name = "timeline_query",
     });
 
+    daxa::TaskList loop_task_list = record_loop_task_list();
+
     ~App()
     {
         device.wait_idle();
@@ -59,7 +61,11 @@ struct App : BaseApp<App>
         gpu_input.delta_time = delta_time;
         reload_pipeline(compute_pipeline);
         ui_update();
-        submit_task_list();
+
+        swapchain_image = swapchain.acquire_next_image();
+        if (swapchain_image.is_empty())
+            return;
+        loop_task_list.execute();
 
         auto query_results = timeline_query_pool.get_query_results(0, 2);
         if (query_results[1] && query_results[3])
