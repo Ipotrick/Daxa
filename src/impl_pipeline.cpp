@@ -908,8 +908,7 @@ namespace daxa
             return Result<std::filesystem::path>(path);
         }
         std::filesystem::path potential_path;
-        // TODO: FIX THIS!! URGENT. Root paths should be got from the shader
-        for (auto & root : this->info.shader_compile_options.root_paths)
+        for (auto & root : this->current_shader_info->compile_options.root_paths)
         {
             potential_path.clear();
             potential_path = root / path;
@@ -1077,7 +1076,9 @@ namespace daxa
         spv::SpvBuildLogger logger;
         glslang::SpvOptions spv_options;
         std::vector<u32> spv;
+        current_shader_info = &shader_info;
         glslang::GlslangToSpv(*intermediary, spv, &logger, &spv_options);
+        current_shader_info = nullptr;
         return Result<std::vector<u32>>(spv);
 #else
         return Result<std::vector<u32>>("Asked for glslang compilation without enabling glslang");

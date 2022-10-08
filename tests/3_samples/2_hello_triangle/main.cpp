@@ -29,6 +29,8 @@ struct App : BaseApp<App>
     });
     daxa::TaskBufferId task_vertex_buffer;
 
+    daxa::TaskList loop_task_list = record_loop_task_list();
+
     ~App()
     {
         device.wait_idle();
@@ -49,7 +51,11 @@ struct App : BaseApp<App>
     {
         reload_pipeline(raster_pipeline);
         ui_update();
-        submit_task_list();
+
+        swapchain_image = swapchain.acquire_next_image();
+        if (swapchain_image.is_empty())
+            return;
+        loop_task_list.execute();
     }
 
     void on_mouse_move(f32, f32) {}
