@@ -37,6 +37,7 @@ namespace daxa
 
         std::vector<std::filesystem::path> current_seen_shader_files = {};
         ShaderFileTimeSet * current_observed_hotload_files = nullptr;
+        ShaderInfo const * current_shader_info = nullptr;
 
 #if DAXA_BUILT_WITH_GLSLANG
         struct GlslangBackend
