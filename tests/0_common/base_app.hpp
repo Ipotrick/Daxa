@@ -62,6 +62,7 @@ struct BaseApp : AppWindow<T>
         .shader_compile_options = {
             .root_paths = {
                 DAXA_SAMPLE_PATH "/shaders",
+                "tests/0_common/shaders",
                 DAXA_SHADER_INCLUDE_DIR,
             },
 #if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
@@ -92,7 +93,6 @@ struct BaseApp : AppWindow<T>
 
     daxa::ImageId swapchain_image;
     daxa::TaskImageId task_swapchain_image;
-    daxa::TaskList loop_task_list = record_loop_task_list();
 
     BaseApp() : AppWindow<T>(APPNAME)
     {
@@ -160,14 +160,6 @@ struct BaseApp : AppWindow<T>
             }
         }
         return false;
-    }
-
-    void submit_task_list()
-    {
-        swapchain_image = swapchain.acquire_next_image();
-        if (swapchain_image.is_empty())
-            return;
-        loop_task_list.execute();
     }
 
     auto record_loop_task_list() -> daxa::TaskList

@@ -27,6 +27,8 @@ struct App : BaseApp<App>
     });
     daxa::TaskImageId task_render_image;
 
+    daxa::TaskList loop_task_list = record_loop_task_list();
+
     ~App()
     {
         device.wait_idle();
@@ -44,7 +46,11 @@ struct App : BaseApp<App>
     {
         reload_pipeline(compute_pipeline);
         ui_update();
-        submit_task_list();
+
+        swapchain_image = swapchain.acquire_next_image();
+        if (swapchain_image.is_empty())
+            return;
+        loop_task_list.execute();
     }
 
     void on_mouse_move(f32, f32) {}
@@ -80,7 +86,7 @@ struct App : BaseApp<App>
             {
                 auto cmd_list = runtime.get_command_list();
                 cmd_list.set_pipeline(compute_pipeline);
-                cmd_list.push_constant(ComputePush {
+                cmd_list.push_constant(ComputePush{
                     .image_id = render_image.default_view(),
                     .frame_dim = {size_x, size_y},
                 });
