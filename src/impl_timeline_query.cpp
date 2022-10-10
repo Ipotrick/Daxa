@@ -35,7 +35,7 @@ namespace daxa
     }
 
     ImplTimelineQueryPool::ImplTimelineQueryPool(ManagedWeakPtr a_impl_device, TimelineQueryPoolInfo const & a_info)
-        : info{a_info}, impl_device{std::move(std::move(a_impl_device))}
+        : info{a_info}, impl_device{std::move(a_impl_device)}
     {
         // TODO(msakmary) Should Add a check for support of timeline queries
         //                here or earlier (during device creation/section) I'm not sure...
