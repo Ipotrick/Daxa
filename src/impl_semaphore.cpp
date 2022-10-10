@@ -21,7 +21,7 @@ namespace daxa
     }
 
     ImplBinarySemaphore::ImplBinarySemaphore(ManagedWeakPtr a_impl_device, BinarySemaphoreInfo const & a_info)
-        : impl_device{std::move(std::move(a_impl_device))}
+        : impl_device{std::move(a_impl_device)}
     {
         VkSemaphoreCreateInfo const vk_semaphore_create_info{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
@@ -114,7 +114,7 @@ namespace daxa
     }
 
     ImplTimelineSemaphore::ImplTimelineSemaphore(ManagedWeakPtr a_impl_device, TimelineSemaphoreInfo a_info)
-        : impl_device{std::move(std::move(a_impl_device))}, info{std::move(a_info)}
+        : impl_device{std::move(a_impl_device)}, info{std::move(a_info)}
     {
         VkSemaphoreTypeCreateInfo timeline_vk_semaphore{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,

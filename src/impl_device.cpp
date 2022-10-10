@@ -298,7 +298,7 @@ namespace daxa
     }
 
     ImplDevice::ImplDevice(DeviceInfo a_info, DeviceProperties const & a_vk_info, ManagedWeakPtr a_impl_ctx, VkPhysicalDevice a_physical_device)
-        : impl_ctx{std::move(std::move(a_impl_ctx))},
+        : impl_ctx{std::move(a_impl_ctx)},
           vk_physical_device{a_physical_device},
           vk_info{a_vk_info},
           info{std::move(a_info)},

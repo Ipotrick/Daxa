@@ -698,22 +698,14 @@ namespace daxa
     {
         auto const & impl_pipeline = *pipeline.as<ImplRasterPipeline>();
         auto result = create_raster_pipeline(impl_pipeline.info);
-        if (result.is_ok())
-        {
-            return Result<RasterPipeline>(std::move(result.value()));
-        }
-        return Result<RasterPipeline>(result.message());
+        return result;
     }
 
     auto PipelineCompiler::recreate_compute_pipeline(ComputePipeline const & pipeline) -> Result<ComputePipeline>
     {
         auto const & impl_pipeline = *pipeline.as<ImplComputePipeline>();
         auto result = create_compute_pipeline(impl_pipeline.info);
-        if (result.is_ok())
-        {
-            return Result<ComputePipeline>(std::move(result.value()));
-        }
-        return Result<ComputePipeline>(result.message());
+        return result;
     }
 
     using namespace std::chrono_literals;
@@ -1240,7 +1232,7 @@ namespace daxa
     }
 
     ImplPipeline::ImplPipeline(ManagedWeakPtr a_impl_device)
-        : impl_device{std::move(std::move(a_impl_device))}
+        : impl_device{std::move(a_impl_device)}
     {
     }
 
