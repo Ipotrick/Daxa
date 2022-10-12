@@ -183,6 +183,8 @@ namespace daxa
 
     struct Device : ManagedPtr
     {
+        Device() = default;
+
         auto create_buffer(BufferInfo const & info) -> BufferId;
         auto create_image(ImageInfo const & info) -> ImageId;
         auto create_image_view(ImageViewInfo const & info) -> ImageViewId;
