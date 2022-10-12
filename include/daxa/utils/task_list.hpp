@@ -192,6 +192,8 @@ namespace daxa
 
     struct TaskList : ManagedPtr
     {
+        TaskList() = default;
+
         TaskList(TaskListInfo const & info);
         ~TaskList();
 
