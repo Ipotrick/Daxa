@@ -10,10 +10,6 @@ namespace daxa
     {
     }
 
-    BinarySemaphore::BinarySemaphore() : ManagedPtr{}
-    {
-    }
-
     auto BinarySemaphore::info() const -> BinarySemaphoreInfo const &
     {
         auto const & impl = *as<ImplBinarySemaphore>();

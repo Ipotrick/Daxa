@@ -35,6 +35,8 @@ namespace daxa
 
     struct Swapchain : ManagedPtr
     {
+        Swapchain() = default;
+
         auto info() const -> SwapchainInfo const &;
         auto get_format() const -> Format;
         void resize();
