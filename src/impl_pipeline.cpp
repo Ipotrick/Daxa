@@ -323,7 +323,19 @@ namespace daxa
 
     RasterPipeline::RasterPipeline(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
+    auto RasterPipeline::info() const -> RasterPipelineInfo const &
+    {
+        auto const & impl = *as<ImplRasterPipeline>();
+        return impl.info;
+    }
+
     ComputePipeline::ComputePipeline(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
+
+    auto ComputePipeline::info() const -> ComputePipelineInfo const &
+    {
+        auto const & impl = *as<ImplComputePipeline>();
+        return impl.info;
+    }
 
     PipelineCompiler::PipelineCompiler(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
