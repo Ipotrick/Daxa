@@ -138,7 +138,7 @@ namespace daxa
 
     struct PipelineCompiler : ManagedPtr
     {
-        PipelineCompiler();
+        PipelineCompiler() = default;
 
         auto create_raster_pipeline(RasterPipelineInfo const & info) -> Result<RasterPipeline>;
         auto recreate_raster_pipeline(RasterPipeline const & pipeline) -> Result<RasterPipeline>;
