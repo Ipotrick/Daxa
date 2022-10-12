@@ -10,6 +10,8 @@ namespace daxa
 {
     struct Fsr2Context : ManagedPtr
     {
+        Fsr2Context() = default;
+
         Fsr2Context(UpscaleContextInfo const & info);
         ~Fsr2Context();
 

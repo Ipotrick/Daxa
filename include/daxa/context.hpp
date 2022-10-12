@@ -29,6 +29,8 @@ namespace daxa
 
     struct Context : ManagedPtr
     {
+        Context() = default;
+
         auto create_device(DeviceInfo const & device_info) -> Device;
 
       private:
