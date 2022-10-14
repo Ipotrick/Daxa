@@ -133,10 +133,28 @@ target_include_directories(daxa
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_package(X11)
-    target_link_libraries(daxa
-        PUBLIC
-        ${X11_LIBRARIES}
-    )
+    if(X11_FOUND)
+        target_compile_definitions(daxa
+            PUBLIC
+            DAXA_BUILT_WITH_X11=true
+        )
+        target_link_libraries(daxa
+            PUBLIC
+            ${X11_LIBRARIES}
+        )
+    endif()
+
+    find_package(Wayland)
+    if(Wayland_FOUND)
+        target_compile_definitions(daxa
+            PUBLIC
+            DAXA_BUILT_WITH_WAYLAND=true
+        )
+        target_link_libraries(daxa
+            PUBLIC
+            ${Wayland_LIBRARIES}
+        )
+    endif()
 endif()
 
 set_project_warnings(daxa)
