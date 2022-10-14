@@ -95,7 +95,7 @@ struct AppWindow
 #if defined(_WIN32)
         return daxa::NativeWindowPlatform::WIN32_API;
 #elif defined(__linux__)
-        return daxa::NativeWindowPlatform::WAYLAND_API;
+        return daxa::NativeWindowPlatform::XLIB_API;
 #endif
     }
 
