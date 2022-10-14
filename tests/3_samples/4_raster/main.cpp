@@ -23,7 +23,7 @@ struct VoxelFace
         data |= (static_cast<u32>(y) & 0x1f) << 5;
         data |= (static_cast<u32>(z) & 0x1f) << 10;
         data |= (side & 0x7) << 15;
-        data |= (static_cast<u32>(id) & 0x3fff) << 18;
+        data |= (id & 0x3fff) << 18;
     }
 };
 struct Voxel
