@@ -223,7 +223,9 @@ namespace daxa
         : ManagedPtr{new ImplTaskList(info)}
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
-        impl.batch_submit_scopes.push_back({});
+        impl.batch_submit_scopes.push_back({
+            .present_info = {},
+        });
     }
 
     TaskList::~TaskList() = default;
@@ -660,7 +662,9 @@ namespace daxa
         // We provide the user submit info to the submit batch.
         submit_scope.user_submit_info = info;
         // Start a new batch.
-        impl.batch_submit_scopes.push_back({});
+        impl.batch_submit_scopes.push_back({
+            .present_info = {},
+        });
     }
 
     void TaskList::present(TaskPresentInfo const & info)

@@ -1,54 +1,17 @@
-#include <0_common/window.hpp>
-#include <thread>
-#include <iostream>
+#define DAXA_SHADERLANG DAXA_SHADERLANG_HLSL
+#define APPNAME "Daxa Sample: Mandelbrot"
+#include <0_common/base_app.hpp>
 
-#define DAXA_GLSL 1
-#define DAXA_HLSL 0
-
+using namespace daxa::types;
 #include "shaders/shared.inl"
 
-#define APPNAME "Daxa Sample: Mandelbrot"
-#define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
-
-using Clock = std::chrono::high_resolution_clock;
-
-struct App : AppWindow<App>
+struct App : BaseApp<App>
 {
-    daxa::Context daxa_ctx = daxa::create_context({
-        .enable_validation = true,
-    });
-    daxa::Device device = daxa_ctx.create_device({
-        .debug_name = APPNAME_PREFIX("device"),
-    });
-
-    daxa::Swapchain swapchain = device.create_swapchain({
-        .native_window = get_native_handle(),
-        .native_window_platform = get_native_platform(),
-        .present_mode = daxa::PresentMode::DO_NOT_WAIT_FOR_VBLANK,
-        .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-        .debug_name = APPNAME_PREFIX("swapchain"),
-    });
-
-    daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
-        .shader_compile_options = {
-            .root_paths = {
-                "tests/3_samples/1_mandelbrot/shaders",
-                "include",
-            },
-            .opt_level = 2,
-#if DAXA_GLSL
-            .language = daxa::ShaderLanguage::GLSL,
-#elif DAXA_HLSL
-            .language = daxa::ShaderLanguage::HLSL,
-#endif
-        },
-        .debug_name = APPNAME_PREFIX("pipeline_compiler"),
-    });
     // clang-format off
     daxa::ComputePipeline compute_pipeline = pipeline_compiler.create_compute_pipeline({
-#if DAXA_GLSL
+#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
         .shader_info = {.source = daxa::ShaderFile{"compute.glsl"}},
-#elif DAXA_HLSL
+#elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
         .shader_info = {.source = daxa::ShaderFile{"compute.hlsl"}},
 #endif
         .push_constant_size = sizeof(ComputePush),
@@ -56,11 +19,12 @@ struct App : AppWindow<App>
     }).value();
     // clang-format on
 
-    daxa::BufferId compute_input_buffer = device.create_buffer(daxa::BufferInfo{
-        .size = sizeof(ComputeInput),
-        .debug_name = APPNAME_PREFIX("compute_input_buffer"),
+    daxa::BufferId gpu_input_buffer = device.create_buffer(daxa::BufferInfo{
+        .size = sizeof(GpuInput),
+        .debug_name = APPNAME_PREFIX("gpu_input_buffer"),
     });
-    ComputeInput compute_input = {};
+    GpuInput gpu_input = {};
+    daxa::TaskBufferId task_gpu_input_buffer;
 
     daxa::ImageId render_image = device.create_image(daxa::ImageInfo{
         .format = daxa::Format::R8G8B8A8_UNORM,
@@ -68,193 +32,40 @@ struct App : AppWindow<App>
         .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
         .debug_name = APPNAME_PREFIX("render_image"),
     });
+    daxa::TaskImageId task_render_image;
 
     daxa::TimelineQueryPool timeline_query_pool = device.create_timeline_query_pool({
         .query_count = 2,
         .debug_name = "timeline_query",
     });
 
-    Clock::time_point start = Clock::now();
-
-    App() : AppWindow<App>(APPNAME) {}
+    daxa::TaskList loop_task_list = record_loop_task_list();
 
     ~App()
     {
         device.wait_idle();
         device.collect_garbage();
-        device.destroy_buffer(compute_input_buffer);
+        device.destroy_buffer(gpu_input_buffer);
         device.destroy_image(render_image);
     }
 
-    bool update()
+    void ui_update()
     {
-        glfwPollEvents();
-        if (glfwWindowShouldClose(glfw_window_ptr))
-        {
-            return true;
-        }
-
-        if (!minimized)
-        {
-            draw();
-        }
-        else
-        {
-            using namespace std::literals;
-            std::this_thread::sleep_for(1ms);
-        }
-
-        return false;
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        ImGui::Render();
     }
-
-    void draw()
+    void on_update()
     {
-        if (pipeline_compiler.check_if_sources_changed(compute_pipeline))
-        {
-            auto new_pipeline = pipeline_compiler.recreate_compute_pipeline(compute_pipeline);
-            std::cout << new_pipeline.to_string() << std::endl;
-            if (new_pipeline.is_ok())
-            {
-                compute_pipeline = new_pipeline.value();
-            }
-        }
+        gpu_input.time = time;
+        gpu_input.delta_time = delta_time;
+        reload_pipeline(compute_pipeline);
+        ui_update();
 
-        auto swapchain_image = swapchain.acquire_next_image();
+        swapchain_image = swapchain.acquire_next_image();
         if (swapchain_image.is_empty())
-        {
             return;
-        }
-
-        auto cmd_list = device.create_command_list({
-            .debug_name = APPNAME_PREFIX("cmd_list"),
-        });
-
-        auto now = Clock::now();
-
-        cmd_list.reset_timestamps({
-            .query_pool = timeline_query_pool,
-            .start_index = 0,
-            .count = timeline_query_pool.info().query_count,
-        });
-
-        cmd_list.write_timestamp({
-            .query_pool = timeline_query_pool,
-            .pipeline_stage = daxa::PipelineStageFlagBits::BOTTOM_OF_PIPE,
-            .query_index = 0,
-        });
-
-        auto elapsed = std::chrono::duration<f32>(now - start).count();
-
-        auto compute_input_staging_buffer = device.create_buffer({
-            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-            .size = sizeof(ComputeInput),
-            .debug_name = APPNAME_PREFIX("compute_input_staging_buffer"),
-        });
-        cmd_list.destroy_buffer_deferred(compute_input_staging_buffer);
-
-        compute_input.time = elapsed;
-        auto buffer_ptr = device.map_memory_as<ComputeInput>(compute_input_staging_buffer);
-        *buffer_ptr = compute_input;
-        device.unmap_memory(compute_input_staging_buffer);
-
-        cmd_list.pipeline_barrier({
-            .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
-            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
-        });
-
-        cmd_list.copy_buffer_to_buffer({
-            .src_buffer = compute_input_staging_buffer,
-            .dst_buffer = compute_input_buffer,
-            .size = sizeof(ComputeInput),
-        });
-
-        cmd_list.pipeline_barrier({
-            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .waiting_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_READ,
-        });
-
-        cmd_list.pipeline_barrier_image_transition({
-            .waiting_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
-            .before_layout = daxa::ImageLayout::UNDEFINED,
-            .after_layout = daxa::ImageLayout::GENERAL,
-            .image_id = render_image,
-        });
-
-        cmd_list.set_pipeline(compute_pipeline);
-        cmd_list.push_constant(ComputePush {
-            .image_id = render_image.default_view(),
-#if DAXA_GLSL
-            .compute_input = this->device.buffer_reference(compute_input_buffer),
-#elif DAXA_HLSL
-                .input_buffer_id = compute_input_buffer,
-#endif
-            .frame_dim = {size_x, size_y},
-        });
-        cmd_list.dispatch((size_x + 7) / 8, (size_y + 7) / 8);
-
-        cmd_list.pipeline_barrier({
-            .waiting_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
-        });
-
-        cmd_list.pipeline_barrier_image_transition({
-            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .before_layout = daxa::ImageLayout::UNDEFINED,
-            .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-            .image_id = swapchain_image,
-        });
-
-        cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
-            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
-            .before_layout = daxa::ImageLayout::GENERAL,
-            .after_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
-            .image_id = render_image,
-        });
-
-        cmd_list.blit_image_to_image({
-            .src_image = render_image,
-            .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
-            .dst_image = swapchain_image,
-            .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-            .src_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
-            .src_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
-            .dst_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
-            .dst_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
-        });
-
-        cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .before_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-            .after_layout = daxa::ImageLayout::PRESENT_SRC,
-            .image_id = swapchain_image,
-        });
-
-        cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
-            .before_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
-            .after_layout = daxa::ImageLayout::GENERAL,
-            .image_id = render_image,
-        });
-
-        cmd_list.write_timestamp({
-            .query_pool = timeline_query_pool,
-            .pipeline_stage = daxa::PipelineStageFlagBits::BOTTOM_OF_PIPE,
-            .query_index = 1,
-        });
-
-        cmd_list.complete();
-
-        device.submit_commands({
-            .command_lists = {std::move(cmd_list)},
-            .wait_binary_semaphores = {swapchain.get_acquire_semaphore()},
-            .signal_binary_semaphores = {swapchain.get_present_semaphore()},
-            .signal_timeline_semaphores = {{swapchain.get_gpu_timeline_semaphore(), swapchain.get_cpu_timeline_value()}},
-        });
-
-        device.present_frame({
-            .wait_binary_semaphores = {swapchain.get_present_semaphore()},
-            .swapchain = swapchain,
-        });
+        loop_task_list.execute();
 
         auto query_results = timeline_query_pool.get_query_results(0, 2);
         if (query_results[1] && query_results[3])
@@ -266,7 +77,6 @@ struct App : AppWindow<App>
     void on_mouse_move(f32, f32) {}
     void on_mouse_button(i32, i32) {}
     void on_key(i32, i32) {}
-
     void on_resize(u32 sx, u32 sy)
     {
         minimized = (sx == 0 || sy == 0);
@@ -281,8 +91,100 @@ struct App : AppWindow<App>
                 .size = {size_x, size_y, 1},
                 .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             });
-            draw();
+            base_on_update();
         }
+    }
+
+    void record_tasks(daxa::TaskList & new_task_list)
+    {
+        task_render_image = new_task_list.create_task_image({.image = &render_image, .debug_name = APPNAME_PREFIX("task_render_image")});
+        task_gpu_input_buffer = new_task_list.create_task_buffer({.buffer = &gpu_input_buffer, .debug_name = APPNAME_PREFIX("task_gpu_input_buffer")});
+
+        new_task_list.add_task({
+            .used_buffers = {
+                {task_gpu_input_buffer, daxa::TaskBufferAccess::HOST_TRANSFER_WRITE},
+            },
+            .task = [this](daxa::TaskRuntime runtime)
+            {
+                auto cmd_list = runtime.get_command_list();
+                cmd_list.reset_timestamps({
+                    .query_pool = timeline_query_pool,
+                    .start_index = 0,
+                    .count = timeline_query_pool.info().query_count,
+                });
+                cmd_list.write_timestamp({
+                    .query_pool = timeline_query_pool,
+                    .pipeline_stage = daxa::PipelineStageFlagBits::BOTTOM_OF_PIPE,
+                    .query_index = 0,
+                });
+                auto staging_gpu_input_buffer = device.create_buffer({
+                    .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                    .size = sizeof(GpuInput),
+                    .debug_name = APPNAME_PREFIX("staging_gpu_input_buffer"),
+                });
+                cmd_list.destroy_buffer_deferred(staging_gpu_input_buffer);
+                auto buffer_ptr = device.map_memory_as<GpuInput>(staging_gpu_input_buffer);
+                *buffer_ptr = gpu_input;
+                device.unmap_memory(staging_gpu_input_buffer);
+                cmd_list.copy_buffer_to_buffer({
+                    .src_buffer = staging_gpu_input_buffer,
+                    .dst_buffer = gpu_input_buffer,
+                    .size = sizeof(GpuInput),
+                });
+            },
+            .debug_name = APPNAME_PREFIX("Upload Input"),
+        });
+        new_task_list.add_task({
+            .used_buffers = {
+                {task_gpu_input_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY},
+            },
+            .used_images = {
+                {task_render_image, daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY, daxa::ImageMipArraySlice{}},
+            },
+            .task = [this](daxa::TaskRuntime runtime)
+            {
+                auto cmd_list = runtime.get_command_list();
+                cmd_list.set_pipeline(compute_pipeline);
+                cmd_list.push_constant(ComputePush {
+                    .image_id = render_image.default_view(),
+#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
+                    .gpu_input = this->device.buffer_reference(gpu_input_buffer),
+#elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
+                    .input_buffer_id = gpu_input_buffer,
+#endif
+                    .frame_dim = {size_x, size_y},
+                });
+                cmd_list.dispatch((size_x + 7) / 8, (size_y + 7) / 8);
+            },
+            .debug_name = APPNAME_PREFIX("Draw (Compute)"),
+        });
+        new_task_list.add_task({
+            .used_images = {
+                {task_render_image, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{}},
+                {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{}},
+            },
+            .task = [this](daxa::TaskRuntime runtime)
+            {
+                auto cmd_list = runtime.get_command_list();
+                cmd_list.blit_image_to_image({
+                    .src_image = render_image,
+                    .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
+                    .dst_image = swapchain_image,
+                    .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+                    .src_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
+                    .src_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
+                    .dst_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
+                    .dst_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
+                });
+
+                cmd_list.write_timestamp({
+                    .query_pool = timeline_query_pool,
+                    .pipeline_stage = daxa::PipelineStageFlagBits::BOTTOM_OF_PIPE,
+                    .query_index = 1,
+                });
+            },
+            .debug_name = APPNAME_PREFIX("Blit (render to swapchain)"),
+        });
     }
 };
 

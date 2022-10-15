@@ -3,7 +3,7 @@
 #include <daxa/daxa.inl>
 
 DAXA_DECL_BUFFER_STRUCT(
-    MipmappingComputeInput,
+    MipmappingGpuInput,
     {
         f32 mouse_x;
         f32 mouse_y;
@@ -16,7 +16,7 @@ DAXA_DECL_BUFFER_STRUCT(
 struct MipmappingComputePushConstant
 {
     ImageViewId image_id;
-    BufferId compute_input;
-    // BufferRef(MipmappingComputeInput) compute_input;
+    BufferId gpu_input;
+    // BufferRef(MipmappingGpuInput) gpu_input;
     u32vec2 frame_dim;
 };

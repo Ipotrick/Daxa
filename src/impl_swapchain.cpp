@@ -109,22 +109,25 @@ namespace daxa
 #elif defined(__linux__)
         switch (this->info.native_window_platform)
         {
+#if DAXA_BUILT_WITH_WAYLAND
         case NativeWindowPlatform::WAYLAND_API:
         {
             // TODO(grundlett): figure out how to link Wayland
-            // VkWaylandSurfaceCreateInfoKHR surface_ci{
-            //     .sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
-            //     .pNext = nullptr,
-            //     .flags = 0,
-            //     .display = wl_display_connect(nullptr),
-            //     .surface = static_cast<wl_surface *>(this->info.native_window),
-            // };
-            // {
-            //     auto func = (PFN_vkCreateWaylandSurfaceKHR)vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, "vkCreateWaylandSurfaceKHR");
-            //     func(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, &surface_ci, nullptr, &this->vk_surface);
-            // }
+            VkWaylandSurfaceCreateInfoKHR surface_ci{
+                .sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR,
+                .pNext = nullptr,
+                .flags = 0,
+                .display = wl_display_connect(nullptr),
+                .surface = static_cast<wl_surface *>(this->info.native_window),
+            };
+            {
+                auto func = reinterpret_cast<PFN_vkCreateWaylandSurfaceKHR>(vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, "vkCreateWaylandSurfaceKHR"));
+                func(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, &surface_ci, nullptr, &this->vk_surface);
+            }
         }
         break;
+#endif
+#if DAXA_BUILT_WITH_X11
         case NativeWindowPlatform::XLIB_API:
         default:
         {
@@ -142,6 +145,7 @@ namespace daxa
         }
         break;
         }
+#endif
 #endif
     }
 

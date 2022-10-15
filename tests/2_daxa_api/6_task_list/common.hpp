@@ -14,7 +14,7 @@ using namespace daxa::types;
 #include "shaders/shared.inl"
 
 #include <daxa/utils/imgui.hpp>
-#include <0_common/imgui/imgui_impl_glfw.h>
+#include <imgui_impl_glfw.h>
 
 struct AppContext
 {
