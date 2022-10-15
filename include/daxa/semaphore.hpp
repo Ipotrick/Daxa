@@ -11,7 +11,8 @@ namespace daxa
 
     struct BinarySemaphore : ManagedPtr
     {
-        explicit BinarySemaphore();
+        BinarySemaphore() = default;
+
         auto info() const -> BinarySemaphoreInfo const &;
 
       private:
@@ -28,6 +29,8 @@ namespace daxa
 
     struct TimelineSemaphore : ManagedPtr
     {
+        TimelineSemaphore() = default;
+
         auto info() const -> TimelineSemaphoreInfo const &;
 
         auto value() const -> u64;

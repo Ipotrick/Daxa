@@ -12,6 +12,8 @@ namespace daxa
 
     struct TimelineQueryPool : ManagedPtr
     {
+        TimelineQueryPool() = default;
+
         auto info() const -> TimelineQueryPoolInfo const &;
 
         auto get_query_results(u32 start_index, u32 count) -> std::vector<u64>;

@@ -323,7 +323,19 @@ namespace daxa
 
     RasterPipeline::RasterPipeline(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
+    auto RasterPipeline::info() const -> RasterPipelineInfo const &
+    {
+        auto const & impl = *as<ImplRasterPipeline>();
+        return impl.info;
+    }
+
     ComputePipeline::ComputePipeline(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
+
+    auto ComputePipeline::info() const -> ComputePipelineInfo const &
+    {
+        auto const & impl = *as<ImplComputePipeline>();
+        return impl.info;
+    }
 
     PipelineCompiler::PipelineCompiler(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
@@ -698,22 +710,14 @@ namespace daxa
     {
         auto const & impl_pipeline = *pipeline.as<ImplRasterPipeline>();
         auto result = create_raster_pipeline(impl_pipeline.info);
-        if (result.is_ok())
-        {
-            return Result<RasterPipeline>(std::move(result.value()));
-        }
-        return Result<RasterPipeline>(result.message());
+        return result;
     }
 
     auto PipelineCompiler::recreate_compute_pipeline(ComputePipeline const & pipeline) -> Result<ComputePipeline>
     {
         auto const & impl_pipeline = *pipeline.as<ImplComputePipeline>();
         auto result = create_compute_pipeline(impl_pipeline.info);
-        if (result.is_ok())
-        {
-            return Result<ComputePipeline>(std::move(result.value()));
-        }
-        return Result<ComputePipeline>(result.message());
+        return result;
     }
 
     using namespace std::chrono_literals;
@@ -841,8 +845,9 @@ namespace daxa
 #endif
     }
 
-    auto ImplPipelineCompiler::get_spirv(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage) -> Result<std::vector<u32>>
+    auto ImplPipelineCompiler::get_spirv(ShaderInfo const & shader_info, [[maybe_unused]] VkShaderStageFlagBits shader_stage) -> Result<std::vector<u32>>
     {
+        current_shader_info = &shader_info;
         std::vector<u32> spirv = {};
         if (std::holds_alternative<ShaderSPIRV>(shader_info.source))
         {
@@ -894,10 +899,12 @@ namespace daxa
 
             if (ret.is_err())
             {
+                current_shader_info = nullptr;
                 return Result<std::vector<u32>>(ret.message());
             }
             spirv = ret.value();
         }
+        current_shader_info = nullptr;
         return Result<std::vector<u32>>(spirv);
     }
 
@@ -908,14 +915,28 @@ namespace daxa
             return Result<std::filesystem::path>(path);
         }
         std::filesystem::path potential_path;
-        // TODO: FIX THIS!! URGENT. Root paths should be got from the shader
-        for (auto & root : this->info.shader_compile_options.root_paths)
+        if (this->current_shader_info)
         {
-            potential_path.clear();
-            potential_path = root / path;
-            if (std::filesystem::exists(potential_path))
+            for (auto & root : this->current_shader_info->compile_options.root_paths)
             {
-                return Result<std::filesystem::path>(potential_path);
+                potential_path.clear();
+                potential_path = root / path;
+                if (std::filesystem::exists(potential_path))
+                {
+                    return Result<std::filesystem::path>(potential_path);
+                }
+            }
+        }
+        else
+        {
+            for (auto & root : this->info.shader_compile_options.root_paths)
+            {
+                potential_path.clear();
+                potential_path = root / path;
+                if (std::filesystem::exists(potential_path))
+                {
+                    return Result<std::filesystem::path>(potential_path);
+                }
             }
         }
         std::string error_msg = {};
@@ -959,7 +980,7 @@ namespace daxa
         return Result<ShaderCode>(err);
     }
 
-    auto ImplPipelineCompiler::gen_spirv_from_glslang(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
+    auto ImplPipelineCompiler::gen_spirv_from_glslang([[maybe_unused]] ShaderInfo const & shader_info, [[maybe_unused]] VkShaderStageFlagBits shader_stage, [[maybe_unused]] ShaderCode const & code) -> Result<std::vector<u32>>
     {
 #if DAXA_BUILT_WITH_GLSLANG
         auto translate_shader_stage = [](VkShaderStageFlagBits stage) -> EShLanguage
@@ -994,7 +1015,7 @@ namespace daxa
 
         // preamble += "#version 450\n";
         preamble += "#define DAXA_SHADER 1\n";
-        preamble += "#define DAXA_GLSL 1\n";
+        preamble += "#define DAXA_SHADERLANG 1\n";
         preamble += "#extension GL_GOOGLE_include_directive : enable\n";
         preamble += "#extension GL_EXT_nonuniform_qualifier : enable\n";
         preamble += "#extension GL_EXT_buffer_reference : enable\n";
@@ -1084,7 +1105,7 @@ namespace daxa
 #endif
     }
 
-    auto ImplPipelineCompiler::gen_spirv_from_dxc(ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
+    auto ImplPipelineCompiler::gen_spirv_from_dxc([[maybe_unused]] ShaderInfo const & shader_info, [[maybe_unused]] VkShaderStageFlagBits shader_stage, [[maybe_unused]] ShaderCode const & code) -> Result<std::vector<u32>>
     {
 #if DAXA_BUILT_WITH_DXC
         auto u8_ascii_to_wstring = [](char const * str) -> std::wstring
@@ -1115,7 +1136,7 @@ namespace daxa
             args.push_back(wstring_buffer.back().c_str());
         }
         args.push_back(L"-DDAXA_SHADER");
-        args.push_back(L"-DDAXA_HLSL");
+        args.push_back(L"-DDAXA_SHADERLANG=2");
 
         if (std::holds_alternative<ShaderFile>(shader_info.source))
         {
@@ -1223,7 +1244,7 @@ namespace daxa
     }
 
     ImplPipeline::ImplPipeline(ManagedWeakPtr a_impl_device)
-        : impl_device{std::move(std::move(a_impl_device))}
+        : impl_device{std::move(a_impl_device)}
     {
     }
 

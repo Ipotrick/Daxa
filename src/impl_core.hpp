@@ -13,9 +13,13 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
-#else
+#elif defined(__linux__)
+#if DAXA_BUILT_WITH_X11
 #define VK_USE_PLATFORM_XLIB_KHR
-// #define VK_USE_PLATFORM_WAYLAND_KHR
+#endif
+#if DAXA_BUILT_WITH_WAYLAND
+#define VK_USE_PLATFORM_WAYLAND_KHR
+#endif
 #endif
 
 #if DAXA_BUILT_WITH_DXC
