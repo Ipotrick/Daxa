@@ -136,11 +136,6 @@ namespace daxa
         u32 stride = {};
     };
 
-    struct SignalSplitBarrierInfo
-    {
-        SplitBarrierState & split_barrier;
-    };
-
     struct ResetSplitBarriersInfo
     {
         SplitBarrierState & split_barrier;
