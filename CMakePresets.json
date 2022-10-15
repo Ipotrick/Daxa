@@ -13,6 +13,7 @@
             "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
             "generator": "Ninja Multi-Config",
             "cacheVariables": {
+                "CMAKE_MODULE_PATH": "${sourceDir}/cmake/modules",
                 "DAXA_ENABLE_GLSLANG": true,
                 "DAXA_ENABLE_DXC": true,
                 "DAXA_ENABLE_UTILS": true,

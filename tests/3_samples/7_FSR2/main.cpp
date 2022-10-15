@@ -1,13 +1,13 @@
 #include <0_common/window.hpp>
 #include <0_common/player.hpp>
-#include <0_common/hlsl_util.hpp>
+#include <0_common/noise.hpp>
 #include <thread>
 #include <iostream>
 
 #include <daxa/utils/task_list.hpp>
 
 #include <daxa/utils/imgui.hpp>
-#include <0_common/imgui/imgui_impl_glfw.h>
+#include <imgui_impl_glfw.h>
 
 #include <daxa/utils/math_operators.hpp>
 
