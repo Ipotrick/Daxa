@@ -14,6 +14,7 @@ function(DAXA_CREATE_TEST)
     )
     target_link_libraries(daxa_test_${FOLDER_NAME} PRIVATE daxa::daxa ${DCT_LIBS})
     target_include_directories(daxa_test_${FOLDER_NAME} PRIVATE "${CMAKE_CURRENT_LIST_DIR}")
+    target_compile_definitions(daxa_test_${FOLDER_NAME} PRIVATE DAXA_SAMPLE_PATH="${CMAKE_CURRENT_LIST_DIR}/${FOLDER_PATH}")
 
     if(DAXA_TESTS_DISABLE_WINDOWS_CONSOLE)
         if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
@@ -28,9 +29,6 @@ find_package(glfw3 CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_path(STB_INCLUDE_DIRS "stb_image.h" REQUIRED)
 find_path(CGLTF_INCLUDE_DIRS "cgltf.h" REQUIRED)
-
-add_library(imgui_impl_glfw STATIC "0_common/imgui/imgui_impl_glfw.cpp")
-target_link_libraries(imgui_impl_glfw PRIVATE imgui::imgui glfw)
 
 add_library(stb_interface INTERFACE)
 target_include_directories(stb_interface INTERFACE ${STB_INCLUDE_DIRS})
@@ -65,12 +63,12 @@ DAXA_CREATE_TEST(
 )
 DAXA_CREATE_TEST(
     FOLDER 2_daxa_api 6_task_list
-    LIBS glfw imgui_impl_glfw
+    LIBS glfw
 )
 
 DAXA_CREATE_TEST(
     FOLDER 3_samples 0_playground
-    LIBS glfw imgui_impl_glfw
+    LIBS glfw
 )
 DAXA_CREATE_TEST(
     FOLDER 3_samples 1_mandelbrot
@@ -78,7 +76,7 @@ DAXA_CREATE_TEST(
 )
 DAXA_CREATE_TEST(
     FOLDER 3_samples 2_hello_triangle
-    LIBS glfw imgui_impl_glfw
+    LIBS glfw
 )
 DAXA_CREATE_TEST(
     FOLDER 3_samples 3_hello_triangle_compute
@@ -94,9 +92,9 @@ DAXA_CREATE_TEST(
 )
 # DAXA_CREATE_TEST(
 #     FOLDER 3_samples 6_sponza
-#     LIBS glfw imgui_impl_glfw cgltf_interface
+#     LIBS glfw cgltf_interface
 # )
 DAXA_CREATE_TEST(
     FOLDER 3_samples 7_FSR2
-    LIBS glfw imgui_impl_glfw stb_interface
+    LIBS glfw stb_interface
 )

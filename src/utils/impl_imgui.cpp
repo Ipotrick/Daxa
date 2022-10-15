@@ -559,7 +559,8 @@ namespace daxa
         });
         this->info.device.destroy_buffer(texture_staging_buffer);
         auto image_view = font_sheet.default_view();
-        io.Fonts->SetTexID(*reinterpret_cast<ImTextureID *>(&image_view));
+        ImTextureID imgui_texid = reinterpret_cast<ImTextureID>(static_cast<usize>(*reinterpret_cast<u32*>(&image_view)));
+        io.Fonts->SetTexID(imgui_texid);
     }
 
     ImplImGuiRenderer::~ImplImGuiRenderer()

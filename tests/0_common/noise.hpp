@@ -124,7 +124,7 @@ struct FractalNoiseConfig
     u32 octaves;
 };
 
-f32 fractal_noise(glm::vec3 pos, FractalNoiseConfig config)
+f32 fractal_noise(f32vec3 a_pos, FractalNoiseConfig config)
 {
     f32 value = 0.0f;
     f32 max_value = 0.0f;
@@ -133,6 +133,7 @@ f32 fractal_noise(glm::vec3 pos, FractalNoiseConfig config)
         0.2184223f, -0.5347182f, 0.8163137f,
         0.9079879f, -0.1951438f, -0.3707788f,
         0.3575608f, 0.8221893f, 0.4428939f);
+    glm::vec3 pos = {a_pos.x, a_pos.y, a_pos.z};
     for (u32 i = 0; i < config.octaves; ++i)
     {
         pos = (pos * rot_mat) + glm::vec3(71.444f, 25.170f, -54.766f);

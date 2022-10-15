@@ -15,9 +15,9 @@ DAXA_DECL_BUFFER_STRUCT(
 
 struct DrawPush
 {
-#if DAXA_GLSL
+#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
     BufferRef(DrawVertexBuffer) face_buffer;
-#elif DAXA_HLSL
+#elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
     BufferId vertex_buffer_id;
 #endif
     // u32vec2 frame_dim;

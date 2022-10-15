@@ -22,6 +22,8 @@ namespace daxa
 
     struct ImGuiRenderer : ManagedPtr
     {
+        ImGuiRenderer() = default;
+
         ImGuiRenderer(ImGuiRendererInfo const & info);
         ~ImGuiRenderer();
 

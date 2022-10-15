@@ -19,8 +19,8 @@ void main()
     if (pixel_i.x >= push_constant.frame_dim.x || pixel_i.y >= push_constant.frame_dim.y)
         return;
 
-    MipmappingComputeInput INPUT = daxa_GetBuffer(MipmappingComputeInput, push_constant.compute_input);
-    // #define INPUT push_constant.compute_input
+    MipmappingGpuInput INPUT = daxa_GetBuffer(MipmappingGpuInput, push_constant.gpu_input);
+    // #define INPUT push_constant.gpu_input
 
     f32vec2 render_size = push_constant.frame_dim;
     f32vec2 inv_render_size = f32vec2(1.0) / render_size;
