@@ -79,24 +79,13 @@ struct AppWindow
 
     auto get_native_platform() -> daxa::NativeWindowPlatform
     {
-        // TODO(grundlett): This `glfwGetPlatform()` function was added to the official
-        // GLFW repo 15 months ago, but isn't in the latest release from 2 months ago...
-        // For now, we'll just hardcode it. For users who want to use Wayland, you must
-        // explicitly change the return line below
-
-        // switch(glfwGetPlatform())
-        // {
-        // case GLFW_PLATFORM_WIN32: return daxa::NativeWindowPlatform::WIN32_API;
-        // case GLFW_PLATFORM_X11: return daxa::NativeWindowPlatform::XLIB_API;
-        // case GLFW_PLATFORM_WAYLAND: return daxa::NativeWindowPlatform::WAYLAND_API;
-        // default: return daxa::NativeWindowPlatform::UNKNOWN;
-        // }
-
-#if defined(_WIN32)
-        return daxa::NativeWindowPlatform::WIN32_API;
-#elif defined(__linux__)
-        return daxa::NativeWindowPlatform::XLIB_API;
-#endif
+        switch(glfwGetPlatform())
+        {
+        case GLFW_PLATFORM_WIN32: return daxa::NativeWindowPlatform::WIN32_API;
+        case GLFW_PLATFORM_X11: return daxa::NativeWindowPlatform::XLIB_API;
+        case GLFW_PLATFORM_WAYLAND: return daxa::NativeWindowPlatform::WAYLAND_API;
+        default: return daxa::NativeWindowPlatform::UNKNOWN;
+        }
     }
 
     inline void set_mouse_pos(f32 x, f32 y)
