@@ -35,6 +35,13 @@
         "tests": {
             "description": "Build Tests",
             "dependencies": [
+                {
+                    "name": "glfw3",
+                    "features": [
+                        "xlib",
+                        "wayland"
+                    ]
+                },
                 "glfw3",
                 "glm",
                 "stb",
@@ -47,5 +54,12 @@
                 }
             ]
         }
-    }
+    },
+    "builtin-baseline": "a1737683a6f8ec5d8673890581c2a8c55838d411",
+    "overrides": [
+        {
+            "name": "glfw3",
+            "version-string": "custom"
+        }
+    ]
 }
