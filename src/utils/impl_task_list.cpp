@@ -530,12 +530,12 @@ namespace daxa
             bool const is_current_access_read = current_buffer_access.type == AccessTypeFlagBits::READ;
             if (is_last_access_read && is_current_access_read)
             {
-                if (LastReadBarrierIndex* index = std::get_if<LastReadBarrierIndex>(&impl_task_buffer.latest_access_read_barrier_index))
+                if (LastReadSplitBarrierIndex const* index = std::get_if<LastReadSplitBarrierIndex>(&impl_task_buffer.latest_access_read_barrier_index))
                 {
                     auto & last_read_split_barrier = impl.split_barriers[index->index];
                     last_read_split_barrier.dst_access = last_read_split_barrier.dst_access | current_buffer_access;
                 }
-                else if (LastReadSplitBarrierIndex* index = std::get_if<LastReadSplitBarrierIndex>(&impl_task_buffer.latest_access_read_barrier_index))
+                else if (LastReadBarrierIndex const* index = std::get_if<LastReadBarrierIndex>(&impl_task_buffer.latest_access_read_barrier_index))
                 {
                     auto & last_read_barrier = impl.barriers[index->index];
                     last_read_barrier.dst_access = last_read_barrier.dst_access | current_buffer_access;
@@ -561,7 +561,7 @@ namespace daxa
                         .src_batch = impl_task_buffer.latest_access_batch_index,
                         .dst_batch = batch_index,
                     });
-                    // And we also insert the split barrier index into the waits of the current tasks batch.
+                    // And we insert the barrier index into the list of pipeline barriers of the current tasks batch.
                     batch.pipeline_barrier_indices.push_back(barrier_index);
                     if (current_buffer_access.type == AccessTypeFlagBits::READ)
                     {
@@ -697,15 +697,31 @@ namespace daxa
                     bool const are_layouts_identical = tracked_slice.latest_layout == current_image_layout;
                     if (is_last_access_read && is_current_access_read && are_layouts_identical)
                     {
-                        auto & last_read_split_barrier = impl.split_barriers[tracked_slice.latest_access_read_barrier_index];
-                        last_read_split_barrier.dst_access = last_read_split_barrier.dst_access | current_image_access;
+                        if (LastReadSplitBarrierIndex const* index = std::get_if<LastReadSplitBarrierIndex>(&tracked_slice.latest_access_read_barrier_index))
+                        {
+                            auto & last_read_split_barrier = impl.split_barriers[index->index];
+                            last_read_split_barrier.dst_access = last_read_split_barrier.dst_access | tracked_slice.latest_access;
+                        }
+                        else if (LastReadBarrierIndex const* index = std::get_if<LastReadBarrierIndex>(&tracked_slice.latest_access_read_barrier_index))
+                        {
+                            auto & last_read_barrier = impl.barriers[index->index];
+                            last_read_barrier.dst_access = last_read_barrier.dst_access | tracked_slice.latest_access;
+                        }
+                        else
+                        {
+                            DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
+                        }
                     }
                     else
                     {
                         // When the uses are incompatible (no read on read, or no identical layout) we need to insert a new barrier.
-                        usize const split_barrier_index = impl.split_barriers.size();
-                        impl.split_barriers.push_back(TaskSplitBarrier{
-                            {
+                        // When the distance between src and dst batch is one, we can replace the split barrier with a normal barrier.
+                        const bool use_pipeline_barrier = tracked_slice.latest_access_batch_index + 1 == batch_index &&
+                            current_submit_scope_index == tracked_slice.latest_access_submit_scope_index;
+                        if (use_pipeline_barrier)
+                        {
+                            usize const barrier_index = impl.barriers.size();
+                            impl.barriers.push_back(TaskBarrier{
                                 .image_id = used_image_t_id,
                                 .slice = intersection,
                                 .layout_before = tracked_slice.latest_layout,
@@ -714,22 +730,46 @@ namespace daxa
                                 .dst_access = current_image_access,
                                 .src_batch = tracked_slice.latest_access_batch_index,
                                 .dst_batch = batch_index,
-                            },
-                            /* .split_barrier_state = */ impl.info.device.create_split_barrier({
-                                .debug_name = std::string("TaskList \"") + impl.info.debug_name + "\" SplitBarrier (Image) Nr. " + std::to_string(split_barrier_index),
-                            }),
-                        });
-                        // Now we give the src batch the index of this barrier to signal.
-                        TaskBatchSubmitScope & src_scope = impl.batch_submit_scopes[tracked_slice.latest_access_submit_scope_index];
-                        TaskBatch & src_batch = src_scope.task_batches[tracked_slice.latest_access_batch_index];
-                        src_batch.signal_split_barrier_indices.push_back(split_barrier_index);
-                        // And we also insert the split barrier index into the waits of the current tasks batch.
-                        batch.wait_split_barrier_indices.push_back(split_barrier_index);
-                        if (current_image_access.type == AccessTypeFlagBits::READ)
+                            });
+                            // And we insert the barrier index into the list of pipeline barriers of the current tasks batch.
+                            batch.pipeline_barrier_indices.push_back(barrier_index);
+                            if (current_image_access.type == AccessTypeFlagBits::READ)
+                            {
+                                // As the new access is a read we remember our barrier index,
+                                // So that potential future reads after this can reuse this barrier.
+                                ret_new_use_tracked_slice.latest_access_read_barrier_index = LastReadBarrierIndex{ barrier_index };
+                            }
+                        }
+                        else
                         {
-                            // As the new access is a read we remember our barrier index,
-                            // So that potential future reads after this can reuse this barrier.
-                            ret_new_use_tracked_slice.latest_access_read_barrier_index = split_barrier_index;
+                            usize const split_barrier_index = impl.split_barriers.size();
+                            impl.split_barriers.push_back(TaskSplitBarrier{
+                                {
+                                    .image_id = used_image_t_id,
+                                    .slice = intersection,
+                                    .layout_before = tracked_slice.latest_layout,
+                                    .layout_after = current_image_layout,
+                                    .src_access = tracked_slice.latest_access,
+                                    .dst_access = current_image_access,
+                                    .src_batch = tracked_slice.latest_access_batch_index,
+                                    .dst_batch = batch_index,
+                                },
+                                /* .split_barrier_state = */ impl.info.device.create_split_barrier({
+                                    .debug_name = std::string("TaskList \"") + impl.info.debug_name + "\" SplitBarrier (Image) Nr. " + std::to_string(split_barrier_index),
+                                }),
+                            });
+                            // Now we give the src batch the index of this barrier to signal.
+                            TaskBatchSubmitScope & src_scope = impl.batch_submit_scopes[tracked_slice.latest_access_submit_scope_index];
+                            TaskBatch & src_batch = src_scope.task_batches[tracked_slice.latest_access_batch_index];
+                            src_batch.signal_split_barrier_indices.push_back(split_barrier_index);
+                            // And we also insert the split barrier index into the waits of the current tasks batch.
+                            batch.wait_split_barrier_indices.push_back(split_barrier_index);
+                            if (current_image_access.type == AccessTypeFlagBits::READ)
+                            {
+                                // As the new access is a read we remember our barrier index,
+                                // So that potential future reads after this can reuse this barrier.
+                                ret_new_use_tracked_slice.latest_access_read_barrier_index = LastReadSplitBarrierIndex{ split_barrier_index };
+                            }
                         }
                     }
                     // Make sure we have any tracked slices to intersect with left.
