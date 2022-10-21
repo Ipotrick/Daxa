@@ -20,8 +20,8 @@
 
 struct Boid
 {
-    f32vec2 position;
-    f32vec2 direction;
+    daxa_f32vec2 position;
+    daxa_f32vec2 direction;
 };
 
 DAXA_DECL_BUFFER_STRUCT(
@@ -33,13 +33,13 @@ DAXA_DECL_BUFFER_STRUCT(
 DAXA_DECL_BUFFER_STRUCT(
     GpuOutput,
     {
-        f32 data;
+        daxa_f32 data;
     });
 
 struct DrawPushConstant
 {
     daxa_BufferRef(Boids) boids_buffer;
-    f32vec2 axis_scaling;
+    daxa_f32vec2 axis_scaling;
 };
 
 struct UpdateBoidsPushConstant

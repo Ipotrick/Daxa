@@ -149,6 +149,13 @@ namespace daxa
         void execute_barriers();
         void output_graphviz();
 
+        void add_runtime_buffer(TaskBufferId tid, BufferId id);
+        void add_runtime_image(TaskImageId tid, ImageId id);
+        void remove_runtime_buffer(TaskBufferId tid, BufferId id);
+        void remove_runtime_image(TaskImageId tid, ImageId id);
+        void clear_runtime_buffers(TaskBufferId tid);
+        void clear_runtime_images(TaskImageId tid);
+
         ImplTaskList(TaskListInfo a_info);
         virtual ~ImplTaskList() override final;
     };
