@@ -439,7 +439,7 @@ namespace daxa
         vkCmdResetEvent2(
             impl.vk_cmd_buffer,
             reinterpret_cast<VkEvent>(info.barrier.data),
-            info.stage_masks.data);
+            info.stage_masks.data & ~VK_PIPELINE_STAGE_HOST_BIT);
     }
 
     void CommandList::pipeline_barrier_image_transition(ImageBarrierInfo const & info)
