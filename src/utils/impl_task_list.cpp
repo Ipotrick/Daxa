@@ -855,7 +855,7 @@ namespace daxa
                         // executed and saw the split barrier signaled, before we reset them.
                         impl_runtime.command_lists.back().reset_split_barrier({
                             .barrier = impl.split_barriers[barrier_index].split_barrier_state,
-                            .stage_masks = impl.split_barriers[barrier_index].dst_access.stages,
+                            .stage_masks = impl.split_barriers[barrier_index].dst_access.stages & ~PipelineStageFlagBits::HOST,
                         });
                     }
                     // Signal all signal split barriers after batch execution.
