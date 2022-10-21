@@ -1,4 +1,5 @@
-#include "shared.inl"
+#define DAXA_SHADER_NO_NAMESPACE
+#include <shared.inl>
 
 [[vk::push_constant]] const DrawPush p;
 

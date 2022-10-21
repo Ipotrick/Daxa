@@ -4,7 +4,7 @@
 
 struct DrawVertex
 {
-    f32vec4 pos, col;
+    daxa_f32vec4 pos, col;
 };
 
 // clang-format off
@@ -44,27 +44,27 @@ struct DrawVertex
 
 struct UnpackedFace
 {
-    f32vec3 block_pos;
-    f32vec3 pos;
-    f32vec3 nrm;
-    f32vec2 uv;
-    u32 block_id;
-    u32 block_face;
-    u32 tex_id;
-    u32 vert_id;
+    daxa_f32vec3 block_pos;
+    daxa_f32vec3 pos;
+    daxa_f32vec3 nrm;
+    daxa_f32vec2 uv;
+    daxa_u32 block_id;
+    daxa_u32 block_face;
+    daxa_u32 tex_id;
+    daxa_u32 vert_id;
 };
 
 DAXA_DECL_BUFFER_STRUCT(
     DrawVertexBuffer,
     {
-        u32 data[32 * 32 * 32 * 6];
+        daxa_u32 data[32 * 32 * 32 * 6];
     });
 
 struct DrawPush
 {
-    f32mat4x4 vp_mat;
-    f32vec3 chunk_pos;
+    daxa_f32mat4x4 vp_mat;
+    daxa_f32vec3 chunk_pos;
     daxa_BufferRef(DrawVertexBuffer) face_buffer;
-    ImageViewId atlas_texture;
-    SamplerId atlas_sampler;
+    daxa_ImageViewId atlas_texture;
+    daxa_SamplerId atlas_sampler;
 };

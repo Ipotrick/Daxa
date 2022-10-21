@@ -75,7 +75,8 @@ struct App : BaseApp<App>
 
     void record_tasks(daxa::TaskList & new_task_list)
     {
-        task_vertex_buffer = new_task_list.create_task_buffer({.buffer = &vertex_buffer, .debug_name = APPNAME_PREFIX("task_vertex_buffer")});
+        task_vertex_buffer = new_task_list.create_task_buffer({.debug_name = APPNAME_PREFIX("task_vertex_buffer")});
+        new_task_list.add_runtime_buffer(task_vertex_buffer, vertex_buffer);
         new_task_list.add_task({
             .used_buffers = {
                 {task_vertex_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
