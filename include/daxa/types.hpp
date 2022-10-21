@@ -452,6 +452,10 @@ namespace daxa
             data ^= other.data;
             return *this;
         }
+        inline constexpr auto operator~() const -> Flags
+        {
+            return {~data};
+        }
         inline constexpr auto operator|(Flags const & other) const -> Flags
         {
             return {data | other.data};
