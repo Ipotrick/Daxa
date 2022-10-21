@@ -171,10 +171,10 @@ struct BaseApp : AppWindow<T>
             .debug_name = APPNAME_PREFIX("task_list"),
         });
         task_swapchain_image = new_task_list.create_task_image({
-            .image = &swapchain_image,
             .swapchain_image = true,
             .debug_name = APPNAME_PREFIX("task_swapchain_image"),
         });
+        new_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
 
         reinterpret_cast<T *>(this)->record_tasks(new_task_list);
 
