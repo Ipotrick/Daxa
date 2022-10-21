@@ -308,7 +308,8 @@ struct RenderableVoxelWorld
 
     void record_load_textures_tasks(daxa::TaskList & new_task_list)
     {
-        task_atlas_texture_array = new_task_list.create_task_image({.image = &atlas_texture_array, .debug_name = APPNAME_PREFIX("task_atlas_texture_array")});
+        task_atlas_texture_array = new_task_list.create_task_image({.debug_name = APPNAME_PREFIX("task_atlas_texture_array")});
+        new_task_list.add_runtime_image(task_atlas_texture_array, atlas_texture_array);
 
         new_task_list.add_task({
             .used_images = {

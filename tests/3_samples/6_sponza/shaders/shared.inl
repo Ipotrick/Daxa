@@ -5,19 +5,19 @@
 DAXA_DECL_BUFFER_STRUCT(
     DrawVertex,
     {
-        f32 x;
-        f32 y;
-        f32 z;
+        daxa_f32 x;
+        daxa_f32 y;
+        daxa_f32 z;
     });
 
 DAXA_DECL_BUFFER_STRUCT(
     GpuInput,
     {
-        f32mat4x4 view_mat;
+        daxa_f32mat4x4 view_mat;
     });
 
 struct DrawPush
 {
-    BufferRef(GpuInput) input_buffer;
-    u64 vbuffer;
+    daxa_BufferRef(GpuInput) input_buffer;
+    daxa_u64 vbuffer;
 };
