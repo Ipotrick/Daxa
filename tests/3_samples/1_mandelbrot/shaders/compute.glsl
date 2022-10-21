@@ -1,5 +1,3 @@
-#version 450
-
 #define DAXA_SHADER_NO_NAMESPACE
 #include <shared.inl>
 

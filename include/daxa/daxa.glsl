@@ -54,31 +54,31 @@ struct daxa_SamplerId
 
 layout(scalar, binding = DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, set = 0) readonly buffer daxa_BufferDeviceAddressBuffer
 {
-    u64 addresses[];
+    daxa_u64 addresses[];
 }
 daxa_buffer_device_address_buffer;
 
-#define DAXA_DECL_BUFFER_STRUCT(NAME, BODY)                                                                             \
-    struct NAME BODY;                                                                                                   \
-    layout(scalar, binding = DAXA_STORAGE_BUFFER_BINDING, set = 0) buffer daxa_BufferTableObject##NAME                  \
-    {                                                                                                                   \
-        NAME value;                                                                                                     \
-    }                                                                                                                   \
-    daxa_BufferTable##NAME[];                                                                                           \
-    layout(scalar, binding = DAXA_STORAGE_BUFFER_BINDING, set = 0) coherent buffer daxa_CoherentBufferTableBlock##NAME  \
-    {                                                                                                                   \
-        NAME value;                                                                                                     \
-    }                                                                                                                   \
-    daxa_CoherentBufferTable##NAME[];                                                                                   \
-    layout(scalar, buffer_reference, buffer_reference_align = 4) buffer NAME##BufferRef BODY;                           \
-    layout(scalar, buffer_reference, buffer_reference_align = 4) coherent buffer NAME##CoherentBufferRef BODY;          \
-    layout(scalar, buffer_reference, buffer_reference_align = 4) buffer NAME##WrappedBufferRef                          \
-    {                                                                                                                   \
-        NAME value;                                                                                                     \
-    };                                                                                                                  \
-    layout(scalar, buffer_reference, buffer_reference_align = 4) coherent buffer NAME##WrappedCoherentBufferRef(        \
-    {                                                                                                                   \
-        NAME value;                                                                                                     \
+#define DAXA_DECL_BUFFER_STRUCT(NAME, BODY)                                                                            \
+    struct NAME BODY;                                                                                                  \
+    layout(scalar, binding = DAXA_STORAGE_BUFFER_BINDING, set = 0) buffer daxa_BufferTableObject##NAME                 \
+    {                                                                                                                  \
+        NAME value;                                                                                                    \
+    }                                                                                                                  \
+    daxa_BufferTable##NAME[];                                                                                          \
+    layout(scalar, binding = DAXA_STORAGE_BUFFER_BINDING, set = 0) coherent buffer daxa_CoherentBufferTableBlock##NAME \
+    {                                                                                                                  \
+        NAME value;                                                                                                    \
+    }                                                                                                                  \
+    daxa_CoherentBufferTable##NAME[];                                                                                  \
+    layout(scalar, buffer_reference, buffer_reference_align = 4) buffer NAME##BufferRef BODY;                          \
+    layout(scalar, buffer_reference, buffer_reference_align = 4) coherent buffer NAME##CoherentBufferRef BODY;         \
+    layout(scalar, buffer_reference, buffer_reference_align = 4) buffer NAME##WrappedBufferRef                         \
+    {                                                                                                                  \
+        NAME value;                                                                                                    \
+    };                                                                                                                 \
+    layout(scalar, buffer_reference, buffer_reference_align = 4) coherent buffer NAME##WrappedCoherentBufferRef        \
+    {                                                                                                                  \
+        NAME value;                                                                                                    \
     }
 
 #define DAXA_USE_PUSH_CONSTANT(NAME)                          \
@@ -90,7 +90,7 @@ daxa_buffer_device_address_buffer;
 #define daxa_BufferRef(STRUCT_TYPE) STRUCT_TYPE##BufferRef
 #define daxa_WrappedBufferRef(STRUCT_TYPE) STRUCT_TYPE##WrappedBufferRef
 #define daxa_CoherentBufferRef(STRUCT_TYPE) STRUCT_TYPE##CoherentBufferRef
-#define daxa_WrappedCoherentBufferRef((STRUCT_TYPE) STRUCT_TYPE##WrappedCoherentBufferRef(
+#define daxa_WrappedCoherentBufferRef(STRUCT_TYPE) STRUCT_TYPE##WrappedCoherentBufferRef
 
 #define daxa_buffer_ref_to_address(buffer_reference) u64(buffer_reference)
 #define daxa_buffer_id_to_address(id) daxa_buffer_device_address_buffer.addresses[(DAXA_ID_INDEX_MASK & id.buffer_id_value)]
