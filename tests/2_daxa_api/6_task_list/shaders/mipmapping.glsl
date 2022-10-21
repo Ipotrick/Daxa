@@ -19,7 +19,7 @@ void main()
     if (pixel_i.x >= push_constant.frame_dim.x || pixel_i.y >= push_constant.frame_dim.y)
         return;
 
-    MipmappingGpuInput INPUT = daxa_GetBuffer(MipmappingGpuInput, push_constant.gpu_input);
+    MipmappingGpuInput INPUT = daxa_access_Buffer(MipmappingGpuInput, push_constant.gpu_input);
     // #define INPUT push_constant.gpu_input
 
     f32vec2 render_size = push_constant.frame_dim;
@@ -37,7 +37,7 @@ void main()
         f32vec3 col = INPUT.paint_col;
 
         imageStore(
-            daxa_GetRWImage(image2D, rgba32f, push_constant.image_id),
+            daxa_access_RWImage(image2D, rgba32f, push_constant.image_id),
             i32vec2(pixel_i.xy),
             f32vec4(col, 1));
     }

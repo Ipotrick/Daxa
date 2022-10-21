@@ -64,7 +64,7 @@ struct DrawPush
 {
     f32mat4x4 vp_mat;
     f32vec3 chunk_pos;
-    BufferRef(DrawVertexBuffer) face_buffer;
+    daxa_BufferRef(DrawVertexBuffer) face_buffer;
     ImageViewId atlas_texture;
     SamplerId atlas_sampler;
 };

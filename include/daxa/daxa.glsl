@@ -1,60 +1,60 @@
 #pragma once
 
-#define b32 bool
-#define i32 int
-#define u32 uint
-#define f32 float
+#define daxa_b32 bool
+#define daxa_i32 int
+#define daxa_u32 uint
+#define daxa_f32 float
 
-#define b32vec2 bvec2
-#define b32vec3 bvec3
-#define b32vec4 bvec4
-#define f32 float
-#define f32vec2 vec2
-#define f32mat2x2 mat2x2
-#define f32mat2x3 mat2x3
-#define f32mat2x4 mat2x4
-#define f32vec3 vec3
-#define f32mat3x2 mat3x2
-#define f32mat3x3 mat3x3
-#define f32mat3x4 mat3x4
-#define f32vec4 vec4
-#define f32mat4x2 mat4x2
-#define f32mat4x3 mat4x3
-#define f32mat4x4 mat4x4
-#define i32 int
-#define u32 uint
-#define i64 int64_t
-#define u64 uint64_t
-#define i32vec2 ivec2
-#define u32vec2 uvec2
-#define i32vec3 ivec3
-#define u32vec3 uvec3
-#define i32vec4 ivec4
-#define u32vec4 uvec4
+#define daxa_b32vec2 bvec2
+#define daxa_b32vec3 bvec3
+#define daxa_b32vec4 bvec4
+#define daxa_f32 float
+#define daxa_f32vec2 vec2
+#define daxa_f32mat2x2 mat2x2
+#define daxa_f32mat2x3 mat2x3
+#define daxa_f32mat2x4 mat2x4
+#define daxa_f32vec3 vec3
+#define daxa_f32mat3x2 mat3x2
+#define daxa_f32mat3x3 mat3x3
+#define daxa_f32mat3x4 mat3x4
+#define daxa_f32vec4 vec4
+#define daxa_f32mat4x2 mat4x2
+#define daxa_f32mat4x3 mat4x3
+#define daxa_f32mat4x4 mat4x4
+#define daxa_i32 int
+#define daxa_u32 uint
+#define daxa_i64 int64_t
+#define daxa_u64 uint64_t
+#define daxa_i32vec2 ivec2
+#define daxa_u32vec2 uvec2
+#define daxa_i32vec3 ivec3
+#define daxa_u32vec3 uvec3
+#define daxa_i32vec4 ivec4
+#define daxa_u32vec4 uvec4
 
-struct BufferId
+struct daxa_BufferId
 {
-    u32 buffer_id_value;
+    daxa_u32 buffer_id_value;
 };
 
-struct ImageViewId
+struct daxa_ImageViewId
 {
-    u32 image_view_id_value;
+    daxa_u32 image_view_id_value;
 };
 
-struct ImageId
+struct daxa_ImageId
 {
-    u32 image_view_id_value;
+    daxa_u32 image_view_id_value;
 };
 
-struct SamplerId
+struct daxa_SamplerId
 {
-    u32 sampler_id_value;
+    daxa_u32 sampler_id_value;
 };
 
-layout(scalar, binding = DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, set = 0) readonly buffer DaxaBufferDeviceAddressBuffer
+layout(scalar, binding = DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, set = 0) readonly buffer daxa_BufferDeviceAddressBuffer
 {
-    u64 addresses[1000];
+    u64 addresses[];
 }
 daxa_buffer_device_address_buffer;
 
@@ -65,7 +65,7 @@ daxa_buffer_device_address_buffer;
         NAME value;                                                                                                     \
     }                                                                                                                   \
     daxa_BufferTable##NAME[];                                                                                           \
-    layout(scalar, binding = DAXA_STORAGE_BUFFER_BINDING, set = 0) coherent buffer daxa_CoherentBufferTableObject##NAME \
+    layout(scalar, binding = DAXA_STORAGE_BUFFER_BINDING, set = 0) coherent buffer daxa_CoherentBufferTableBlock##NAME  \
     {                                                                                                                   \
         NAME value;                                                                                                     \
     }                                                                                                                   \
@@ -76,7 +76,7 @@ daxa_buffer_device_address_buffer;
     {                                                                                                                   \
         NAME value;                                                                                                     \
     };                                                                                                                  \
-    layout(scalar, buffer_reference, buffer_reference_align = 4) coherent buffer NAME##CoherentWrappedBufferRef         \
+    layout(scalar, buffer_reference, buffer_reference_align = 4) coherent buffer NAME##WrappedCoherentBufferRef(        \
     {                                                                                                                   \
         NAME value;                                                                                                     \
     }
@@ -87,10 +87,10 @@ daxa_buffer_device_address_buffer;
         NAME push_constant;                                   \
     };
 
-#define BufferRef(STRUCT_TYPE) STRUCT_TYPE##BufferRef
-#define WrappedBufferRef(STRUCT_TYPE) STRUCT_TYPE##CoherentBufferRef
-#define CoherentBufferRef(STRUCT_TYPE) STRUCT_TYPE##WrappedBufferRef
-#define WrappedCoherentBufferRef(STRUCT_TYPE) STRUCT_TYPE##CoherentWrappedBufferRef
+#define daxa_BufferRef(STRUCT_TYPE) STRUCT_TYPE##BufferRef
+#define daxa_WrappedBufferRef(STRUCT_TYPE) STRUCT_TYPE##WrappedBufferRef
+#define daxa_CoherentBufferRef(STRUCT_TYPE) STRUCT_TYPE##CoherentBufferRef
+#define daxa_WrappedCoherentBufferRef((STRUCT_TYPE) STRUCT_TYPE##WrappedCoherentBufferRef(
 
 #define daxa_buffer_ref_to_address(buffer_reference) u64(buffer_reference)
 #define daxa_buffer_id_to_address(id) daxa_buffer_device_address_buffer.addresses[(DAXA_ID_INDEX_MASK & id.buffer_id_value)]
@@ -224,10 +224,43 @@ DAXA_REGISTER_SAMPLER_TYPE(samplerCubeShadow)
 DAXA_REGISTER_SAMPLER_TYPE(sampler1DArrayShadow)
 DAXA_REGISTER_SAMPLER_TYPE(sampler2DArrayShadow)
 
-#define daxa_GetBuffer(STRUCT_TYPE, buffer_id) daxa_BufferTable##STRUCT_TYPE[(DAXA_ID_INDEX_MASK & buffer_id.buffer_id_value)].value
-#define daxa_GetCoherentBuffer(STRUCT_TYPE, buffer_id) daxa_CoherentBufferTable##STRUCT_TYPE[(DAXA_ID_INDEX_MASK & buffer_id.buffer_id_value)].value
-#define daxa_GetRWImage(IMAGE_TYPE, IMAGE_FORMAT, image_view_id) daxa_ReadWriteImageTable_##IMAGE_FORMAT##_##IMAGE_TYPE[(DAXA_ID_INDEX_MASK & image_view_id.image_view_id_value)]
-#define daxa_GetCoherentRWImage(IMAGE_TYPE, FORMAT, image_view_id) daxa_CoherentReadWriteImageTable_##IMAGE_FORMAT##_##IMAGE_TYPE[(DAXA_ID_INDEX_MASK & image_view_id.image_view_id_value)]
-#define daxa_GetImage(IMAGE_TYPE, image_view_id) daxa_ReadOnlyImageTable_##IMAGE_TYPE[(DAXA_ID_INDEX_MASK & image_view_id.image_view_id_value)]
-#define daxa_GetCoherentImage(IMAGE_TYPE, image_view_id) daxa_CoherentReadOnlyImageTable_##IMAGE_TYPE[(DAXA_ID_INDEX_MASK & image_view_id.image_view_id_value)]
-#define daxa_GetSampler(SAMPLER_TYPE, sampler_id) daxa_SamplerTable##SAMPLER_TYPE[(DAXA_ID_INDEX_MASK & sampler_id.sampler_id_value)]
+#define daxa_access_Buffer(STRUCT_TYPE, buffer_id) daxa_BufferTable##STRUCT_TYPE[(DAXA_ID_INDEX_MASK & buffer_id.buffer_id_value)].value
+#define daxa_access_CoherentBuffer(STRUCT_TYPE, buffer_id) daxa_CoherentBufferTable##STRUCT_TYPE[(DAXA_ID_INDEX_MASK & buffer_id.buffer_id_value)].value
+#define daxa_access_RWImage(IMAGE_TYPE, IMAGE_FORMAT, image_view_id) daxa_ReadWriteImageTable_##IMAGE_FORMAT##_##IMAGE_TYPE[(DAXA_ID_INDEX_MASK & image_view_id.image_view_id_value)]
+#define daxa_access_CoherentRWImage(IMAGE_TYPE, FORMAT, image_view_id) daxa_CoherentReadWriteImageTable_##IMAGE_FORMAT##_##IMAGE_TYPE[(DAXA_ID_INDEX_MASK & image_view_id.image_view_id_value)]
+#define daxa_access_Image(IMAGE_TYPE, image_view_id) daxa_ReadOnlyImageTable_##IMAGE_TYPE[(DAXA_ID_INDEX_MASK & image_view_id.image_view_id_value)]
+#define daxa_access_CoherentImage(IMAGE_TYPE, image_view_id) daxa_CoherentReadOnlyImageTable_##IMAGE_TYPE[(DAXA_ID_INDEX_MASK & image_view_id.image_view_id_value)]
+#define daxa_access_Sampler(SAMPLER_TYPE, sampler_id) daxa_SamplerTable##SAMPLER_TYPE[(DAXA_ID_INDEX_MASK & sampler_id.sampler_id_value)]
+
+#ifdef DAXA_SHADER_NO_NAMESPACE_PRIMITIVES
+#define b32 daxa_b32
+#define i32 daxa_i32
+#define u32 daxa_u32
+#define f32 daxa_f32
+#define b32vec2 daxa_b32vec2
+#define b32vec3 daxa_b32vec3
+#define b32vec4 daxa_b32vec4
+#define f32 daxa_f32
+#define f32vec2 daxa_f32vec2
+#define f32mat2x2 daxa_f32mat2x2
+#define f32mat2x3 daxa_f32mat2x3
+#define f32mat2x4 daxa_f32mat2x4
+#define f32vec3 daxa_f32vec3
+#define f32mat3x2 daxa_f32mat3x2
+#define f32mat3x3 daxa_f32mat3x3
+#define f32mat3x4 daxa_f32mat3x4
+#define f32vec4 daxa_f32vec4
+#define f32mat4x2 daxa_f32mat4x2
+#define f32mat4x3 daxa_f32mat4x3
+#define f32mat4x4 daxa_f32mat4x4
+#define i32 daxa_i32
+#define u32 daxa_u32
+#define i64 daxa_i64
+#define u64 daxa_u64
+#define i32vec2 daxa_i32vec2
+#define u32vec2 daxa_u32vec2
+#define i32vec3 daxa_i32vec3
+#define u32vec3 daxa_u32vec3
+#define i32vec4 daxa_i32vec4
+#define u32vec4 daxa_u32vec4
+#endif

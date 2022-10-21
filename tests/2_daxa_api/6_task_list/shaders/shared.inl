@@ -17,6 +17,6 @@ struct MipmappingComputePushConstant
 {
     ImageViewId image_id;
     BufferId gpu_input;
-    // BufferRef(MipmappingGpuInput) gpu_input;
+    // daxa_BufferRef(MipmappingGpuInput) gpu_input;
     u32vec2 frame_dim;
 };

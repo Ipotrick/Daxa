@@ -1,5 +1,6 @@
 #version 450
 
+#define DAXA_SHADER_NO_NAMESPACE
 #include <shared.inl>
 
 DAXA_USE_PUSH_CONSTANT(ComputePush)
@@ -63,7 +64,7 @@ void main()
     col *= 1.0 / f32(SUBSAMPLES * SUBSAMPLES);
 
     imageStore(
-        daxa_GetRWImage(image2D, rgba32f, push_constant.image_id),
+        daxa_access_RWImage(image2D, rgba32f, push_constant.image_id),
         i32vec2(pixel_i.xy),
         f32vec4(col, 1));
 }
