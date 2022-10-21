@@ -476,36 +476,73 @@ namespace daxa
             bool const is_current_access_read = current_buffer_access.type == AccessTypeFlagBits::READ;
             if (is_last_access_read && is_current_access_read)
             {
-                auto & last_read_split_barrier = impl.split_barriers[impl_task_buffer.latest_access_read_barrier_index];
-                last_read_split_barrier.dst_access = last_read_split_barrier.dst_access | current_buffer_access;
+                if (LastReadBarrierIndex* index = std::get_if<LastReadBarrierIndex>(&impl_task_buffer.latest_access_read_barrier_index))
+                {
+                    auto & last_read_split_barrier = impl.split_barriers[index->index];
+                    last_read_split_barrier.dst_access = last_read_split_barrier.dst_access | current_buffer_access;
+                }
+                else if (LastReadSplitBarrierIndex* index = std::get_if<LastReadSplitBarrierIndex>(&impl_task_buffer.latest_access_read_barrier_index))
+                {
+                    auto & last_read_barrier = impl.barriers[index->index];
+                    last_read_barrier.dst_access = last_read_barrier.dst_access | current_buffer_access;
+                }
+                else
+                {
+                    DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
+                }
             }
             else
             {
                 // When the uses are incompatible (no read on read) we need to insert a new barrier.
-                usize const split_barrier_index = impl.split_barriers.size();
-                impl.split_barriers.push_back(TaskSplitBarrier{
-                    {
+                // When the distance between src and dst batch is one, we can replace the split barrier with a normal barrier.
+                const bool use_pipeline_barrier = impl_task_buffer.latest_access_batch_index + 1 == batch_index &&
+                    current_submit_scope_index == impl_task_buffer.latest_access_submit_scope_index;
+                if (use_pipeline_barrier)
+                {
+                    usize const barrier_index = impl.barriers.size();
+                    impl.barriers.push_back(TaskBarrier{
                         .image_id = {}, // {} signals that this is not an image barrier.
                         .src_access = impl_task_buffer.latest_access,
                         .dst_access = current_buffer_access,
                         .src_batch = impl_task_buffer.latest_access_batch_index,
                         .dst_batch = batch_index,
-                    },
-                    /* .split_barrier_state = */ impl.info.device.create_split_barrier({
-                        .debug_name = std::string("TaskList \"") + impl.info.debug_name + "\" SplitBarrier Nr. " + std::to_string(split_barrier_index),
-                    }),
-                });
-                // Now we give the src batch the index of this barrier to signal.
-                TaskBatchSubmitScope & src_scope = impl.batch_submit_scopes[impl_task_buffer.latest_access_submit_scope_index];
-                TaskBatch & src_batch = src_scope.task_batches[impl_task_buffer.latest_access_batch_index];
-                src_batch.signal_split_barrier_indices.push_back(split_barrier_index);
-                // And we also insert the split barrier index into the waits of the current tasks batch.
-                batch.wait_split_barrier_indices.push_back(split_barrier_index);
-                if (current_buffer_access.type == AccessTypeFlagBits::READ)
+                    });
+                    // And we also insert the split barrier index into the waits of the current tasks batch.
+                    batch.pipeline_barrier_indices.push_back(barrier_index);
+                    if (current_buffer_access.type == AccessTypeFlagBits::READ)
+                    {
+                        // As the new access is a read we remember our barrier index,
+                        // So that potential future reads after this can reuse this barrier.
+                        impl_task_buffer.latest_access_read_barrier_index = LastReadBarrierIndex{ barrier_index };
+                    }
+                }
+                else
                 {
-                    // As the new access is a read we remember our barrier index,
-                    // So that potential future reads after this can reuse this barrier.
-                    impl_task_buffer.latest_access_read_barrier_index = split_barrier_index;
+                    usize const split_barrier_index = impl.split_barriers.size();
+                    impl.split_barriers.push_back(TaskSplitBarrier{
+                        {
+                            .image_id = {}, // {} signals that this is not an image barrier.
+                            .src_access = impl_task_buffer.latest_access,
+                            .dst_access = current_buffer_access,
+                            .src_batch = impl_task_buffer.latest_access_batch_index,
+                            .dst_batch = batch_index,
+                        },
+                        /* .split_barrier_state = */ impl.info.device.create_split_barrier({
+                            .debug_name = std::string("TaskList \"") + impl.info.debug_name + "\" SplitBarrier Nr. " + std::to_string(split_barrier_index),
+                        }),
+                    });
+                    // Now we give the src batch the index of this barrier to signal.
+                    TaskBatchSubmitScope & src_scope = impl.batch_submit_scopes[impl_task_buffer.latest_access_submit_scope_index];
+                    TaskBatch & src_batch = src_scope.task_batches[impl_task_buffer.latest_access_batch_index];
+                    src_batch.signal_split_barrier_indices.push_back(split_barrier_index);
+                    // And we also insert the split barrier index into the waits of the current tasks batch.
+                    batch.wait_split_barrier_indices.push_back(split_barrier_index);
+                    if (current_buffer_access.type == AccessTypeFlagBits::READ)
+                    {
+                        // As the new access is a read we remember our barrier index,
+                        // So that potential future reads after this can reuse this barrier.
+                        impl_task_buffer.latest_access_read_barrier_index = LastReadSplitBarrierIndex{ split_barrier_index };
+                    }
                 }
             }
             // Now that we inserted/updated the synchronization, we update the latest access.
