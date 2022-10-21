@@ -1,5 +1,4 @@
-#version 450
-
+#define DAXA_SHADER_NO_NAMESPACE
 #include <shared.inl>
 
 DAXA_USE_PUSH_CONSTANT(UpdateBoidsPushConstant)

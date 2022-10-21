@@ -261,34 +261,88 @@ namespace daxa
     void TaskList::add_runtime_buffer(TaskBufferId tid, BufferId id)
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
-        impl.impl_task_buffers.at(tid.index).buffers.push_back(id);
+        impl.add_runtime_buffer(tid, id);
     }
-
     void TaskList::add_runtime_image(TaskImageId tid, ImageId id)
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
-        impl.impl_task_images.at(tid.index).images.push_back(id);
+        impl.add_runtime_image(tid, id);
     }
-
     void TaskList::remove_runtime_buffer(TaskBufferId tid, BufferId id)
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
-        impl.impl_task_buffers[tid.index].buffers.erase(std::remove(impl.impl_task_buffers[tid.index].buffers.begin(), impl.impl_task_buffers[tid.index].buffers.end(), id), impl.impl_task_buffers[tid.index].buffers.end());
+        impl.remove_runtime_buffer(tid, id);
     }
     void TaskList::remove_runtime_image(TaskImageId tid, ImageId id)
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
-        impl.impl_task_images[tid.index].images.erase(std::remove(impl.impl_task_images[tid.index].images.begin(), impl.impl_task_images[tid.index].images.end(), id), impl.impl_task_images[tid.index].images.end());
+        impl.remove_runtime_image(tid, id);
     }
     void TaskList::clear_runtime_buffers(TaskBufferId tid)
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
-        impl.impl_task_buffers.at(tid.index).buffers.clear();
+        impl.clear_runtime_buffers(tid);
     }
     void TaskList::clear_runtime_images(TaskImageId tid)
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
-        impl.impl_task_images.at(tid.index).images.clear();
+        impl.clear_runtime_images(tid);
+    }
+
+    void TaskRuntime::add_runtime_buffer(TaskBufferId tid, BufferId id)
+    {
+        auto & impl = *static_cast<ImplTaskRuntime *>(this->backend);
+        impl.task_list.add_runtime_buffer(tid, id);
+    }
+    void TaskRuntime::add_runtime_image(TaskImageId tid, ImageId id)
+    {
+        auto & impl = *static_cast<ImplTaskRuntime *>(this->backend);
+        impl.task_list.add_runtime_image(tid, id);
+    }
+    void TaskRuntime::remove_runtime_buffer(TaskBufferId tid, BufferId id)
+    {
+        auto & impl = *static_cast<ImplTaskRuntime *>(this->backend);
+        impl.task_list.remove_runtime_buffer(tid, id);
+    }
+    void TaskRuntime::remove_runtime_image(TaskImageId tid, ImageId id)
+    {
+        auto & impl = *static_cast<ImplTaskRuntime *>(this->backend);
+        impl.task_list.remove_runtime_image(tid, id);
+    }
+    void TaskRuntime::clear_runtime_buffers(TaskBufferId tid)
+    {
+        auto & impl = *static_cast<ImplTaskRuntime *>(this->backend);
+        impl.task_list.clear_runtime_buffers(tid);
+    }
+    void TaskRuntime::clear_runtime_images(TaskImageId tid)
+    {
+        auto & impl = *static_cast<ImplTaskRuntime *>(this->backend);
+        impl.task_list.clear_runtime_images(tid);
+    }
+
+    void ImplTaskList::add_runtime_buffer(TaskBufferId tid, BufferId id)
+    {
+        impl_task_buffers.at(tid.index).buffers.push_back(id);
+    }
+    void ImplTaskList::add_runtime_image(TaskImageId tid, ImageId id)
+    {
+        impl_task_images.at(tid.index).images.push_back(id);
+    }
+    void ImplTaskList::remove_runtime_buffer(TaskBufferId tid, BufferId id)
+    {
+        impl_task_buffers[tid.index].buffers.erase(std::remove(impl_task_buffers[tid.index].buffers.begin(), impl_task_buffers[tid.index].buffers.end(), id), impl_task_buffers[tid.index].buffers.end());
+    }
+    void ImplTaskList::remove_runtime_image(TaskImageId tid, ImageId id)
+    {
+        impl_task_images[tid.index].images.erase(std::remove(impl_task_images[tid.index].images.begin(), impl_task_images[tid.index].images.end(), id), impl_task_images[tid.index].images.end());
+    }
+    void ImplTaskList::clear_runtime_buffers(TaskBufferId tid)
+    {
+        impl_task_buffers.at(tid.index).buffers.clear();
+    }
+    void ImplTaskList::clear_runtime_images(TaskImageId tid)
+    {
+        impl_task_images.at(tid.index).images.clear();
     }
 
     void check_for_overlapping_use(TaskInfo const & info)

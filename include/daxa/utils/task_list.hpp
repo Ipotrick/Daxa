@@ -127,6 +127,13 @@ namespace daxa
         auto get_buffers(TaskBufferId const & task_resource_id) const -> std::span<BufferId>;
         auto get_images(TaskImageId const & task_resource_id) const -> std::span<ImageId>;
 
+        void add_runtime_buffer(TaskBufferId tid, BufferId id);
+        void add_runtime_image(TaskImageId tid, ImageId id);
+        void remove_runtime_buffer(TaskBufferId tid, BufferId id);
+        void remove_runtime_image(TaskImageId tid, ImageId id);
+        void clear_runtime_buffers(TaskBufferId tid);
+        void clear_runtime_images(TaskImageId tid);
+
       private:
         friend struct ImplTaskRuntime;
         friend struct TaskList;
