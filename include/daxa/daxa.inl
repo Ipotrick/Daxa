@@ -1,14 +1,21 @@
 #pragma once
+
+#ifdef DAXA_SHADER_NO_NAMESPACE
+
+#define DAXA_SHADER_NO_NAMESPACE_PRIMITIVES
+
+#endif
+
 #if defined(DAXA_SHADER)
-#define DAXA_SHADERLANG_GLSL 1
-#define DAXA_SHADERLANG_HLSL 2
-#define DAXA_STORAGE_BUFFER_BINDING 0
-#define DAXA_STORAGE_IMAGE_BINDING 1
-#define DAXA_SAMPLED_IMAGE_BINDING 2
-#define DAXA_SAMPLER_BINDING 3
-#define DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING 4
+#define daxa_SHADERLANG_GLSL daxa::types::SHADERLANG_GLSL
+#define daxa_SHADERLANG_HLSL daxa::types::SHADERLANG_HLSL
+#define daxa_STORAGE_BUFFER_BINDING daxa::types::STORAGE_BUFFER_BINDING
+#define daxa_STORAGE_IMAGE_BINDING daxa::types::STORAGE_IMAGE_BINDING
+#define daxa_SAMPLED_IMAGE_BINDING daxa::types::SAMPLED_IMAGE_BINDING
+#define daxa_SAMPLER_BINDING daxa::types::SAMPLER_BINDING
+#define daxa_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING daxa::types::BUFFER_DEVICE_ADDRESS_BUFFER_BINDING
 #define DAXA_ID_INDEX_MASK (0x00FFFFFF)
-#define DAXA_SHARED_TYPE(x) x
+#define DAXA_NAMESPACE(x) daxa_##x
 #if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
 #include <daxa/daxa.glsl>
 #elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
@@ -19,15 +26,54 @@
 #define DAXA_REGISTER_READ_ONLY_IMAGE_TYPE(IMAGE_TYPE)
 #define DAXA_REGISTER_SAMPLER_TYPE(SAMPLER_TYPE)
 #define DAXA_PUSH_CONSTANT(STRUCT_TYPE)
-#define DAXA_SHARED_TYPE(x) daxa::types::x
+#define DAXA_NAMESPACE(x) daxa_##x
 #define DAXA_DECL_BUFFER_STRUCT(NAME, BODY)     \
     using NAME##BufferRef = u64;                \
     using NAME##WrappedBufferRef = u64;         \
     using NAME##CoherentBufferRef = u64;        \
-    using NAME##CoherentWrappedBufferRef = u64; \
+    using NAME##WrappedCoherentBufferRef = u64; \
     struct NAME BODY
-#define BufferRef(x) u64
-#define WrappedBufferRef(x) u64
-#define CoherentBufferRef(x) u64
-#define WrappedCoherentBufferRef(x) u64
+#define daxa_BufferRef(x) u64
+#define daxa_WrappedBufferRef(x) u64
+#define daxa_CoherentBufferRef(x) u64
+#define daxa_WrappedCoherentBufferRef(x) u64
+
+using daxa_b32 = daxa::types::b32;
+using daxa_i32 = daxa::types::i32;
+using daxa_u32 = daxa::types::u32;
+using daxa_f32 = daxa::types::f32;
+using daxa_b32vec2 = daxa::types::b32vec2;
+using daxa_b32vec3 = daxa::types::b32vec3;
+using daxa_b32vec4 = daxa::types::b32vec4;
+using daxa_f32 = daxa::types::f32;
+using daxa_f32vec2 = daxa::types::f32vec2;
+using daxa_f32mat2x2 = daxa::types::f32mat2x2;
+using daxa_f32mat2x3 = daxa::types::f32mat2x3;
+using daxa_f32mat2x4 = daxa::types::f32mat2x4;
+using daxa_f32vec3 = daxa::types::f32vec3;
+using daxa_f32mat3x2 = daxa::types::f32mat3x2;
+using daxa_f32mat3x3 = daxa::types::f32mat3x3;
+using daxa_f32mat3x4 = daxa::types::f32mat3x4;
+using daxa_f32vec4 = daxa::types::f32vec4;
+using daxa_f32mat4x2 = daxa::types::f32mat4x2;
+using daxa_f32mat4x3 = daxa::types::f32mat4x3;
+using daxa_f32mat4x4 = daxa::types::f32mat4x4;
+using daxa_i32 = daxa::types::i32;
+using daxa_u32 = daxa::types::u32;
+using daxa_i64 = daxa::types::i64;
+using daxa_u64 = daxa::types::u64;
+using daxa_i32vec2 = daxa::types::i32vec2;
+using daxa_u32vec2 = daxa::types::u32vec2;
+using daxa_i32vec3 = daxa::types::i32vec3;
+using daxa_u32vec3 = daxa::types::u32vec3;
+using daxa_i32vec4 = daxa::types::i32vec4;
+using daxa_u32vec4 = daxa::types::u32vec4;
+using daxa_BufferId = daxa::types::BufferId;
+using daxa_ImageViewId = daxa::types::ImageViewId;
+using daxa_ImageId = daxa::types::ImageId;
+using daxa_SamplerId = daxa::types::SamplerId;
+
+#if defined(DAXA_SHADER_NO_NAMESPACE_PRIMITIVES)
+using namespace daxa::types;
+#endif
 #endif

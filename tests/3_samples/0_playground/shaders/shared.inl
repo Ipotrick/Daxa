@@ -15,5 +15,5 @@ DAXA_DECL_BUFFER_STRUCT(
 
 struct DrawPush
 {
-    BufferRef(DrawVertexBuffer) face_buffer;
+    daxa_BufferRef(DrawVertexBuffer) face_buffer;
 };
