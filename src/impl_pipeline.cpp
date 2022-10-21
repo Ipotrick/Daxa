@@ -449,7 +449,7 @@ namespace daxa
             }
         }
 
-        impl_pipeline->vk_pipeline_layout = impl.impl_device.as<ImplDevice>()->gpu_table.pipeline_layouts.at((modified_info.push_constant_size + 3) / 4);
+        impl_pipeline->vk_pipeline_layout = impl.impl_device.as<ImplDevice>()->gpu_shader_resource_table.pipeline_layouts.at((modified_info.push_constant_size + 3) / 4);
 
         constexpr VkPipelineVertexInputStateCreateInfo vk_vertex_input_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -658,7 +658,7 @@ namespace daxa
         };
         vkCreateShaderModule(impl.impl_device.as<ImplDevice>()->vk_device, &shader_module_ci, nullptr, &vk_shader_module);
 
-        impl_pipeline->vk_pipeline_layout = impl.impl_device.as<ImplDevice>()->gpu_table.pipeline_layouts.at((modified_info.push_constant_size + 3) / 4);
+        impl_pipeline->vk_pipeline_layout = impl.impl_device.as<ImplDevice>()->gpu_shader_resource_table.pipeline_layouts.at((modified_info.push_constant_size + 3) / 4);
 
         VkComputePipelineCreateInfo const vk_compute_pipeline_create_info{
             .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,

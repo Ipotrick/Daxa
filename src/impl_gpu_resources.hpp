@@ -44,18 +44,18 @@ namespace daxa
     };
 
     /**
-     * @brief GpuResourcePool is intended to be used akin to a specialized memory allocator, specific to gpu resource types (like image views).
+     * @brief GpuShaderResourcePool is intended to be used akin to a specialized memory allocator, specific to gpu resource types (like image views).
      *
      * This struct is threadsafe if the following assumptions are met:
      * * never dereference a deleted resource
      * * never delete a resource twice
      * That means the function dereference_id can be used without synchronization, even calling get_new_slot or return_old_slot in parallel is safe.
      *
-     * To check if these assumptions are met at runtime, the debug define DAXA_GPU_ID_VALIDATION can be used.
+     * To check if these assumptions are met at runtime, the debug define DAXA_GPU_ID_VALIDATION can be enabled.
      * The define enables runtime checking to detect use after free and double free at the cost of performance.
      */
     template <typename ResourceT, usize MAX_RESOURCE_COUNT = 1u << 20u>
-    struct GpuResourcePool
+    struct GpuShaderResourcePool
     {
         static constexpr inline usize PAGE_BITS = 12u;
         static constexpr inline usize PAGE_SIZE = 1u << PAGE_BITS;
@@ -174,11 +174,11 @@ namespace daxa
         }
     };
 
-    struct GPUResourceTable
+    struct GPUShaderResourceTable
     {
-        GpuResourcePool<ImplBufferSlot> buffer_slots = {};
-        GpuResourcePool<ImplImageSlot> image_slots = {};
-        GpuResourcePool<ImplSamplerSlot> sampler_slots = {};
+        GpuShaderResourcePool<ImplBufferSlot> buffer_slots = {};
+        GpuShaderResourcePool<ImplImageSlot> image_slots = {};
+        GpuShaderResourcePool<ImplSamplerSlot> sampler_slots = {};
 
         VkDescriptorSetLayout vk_descriptor_set_layout = {};
         VkDescriptorSet vk_descriptor_set = {};
