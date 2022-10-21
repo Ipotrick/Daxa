@@ -245,7 +245,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
-        vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_layout, 0, 1, &impl.impl_device.as<ImplDevice>()->gpu_table.vk_descriptor_set, 0, nullptr);
+        vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_layout, 0, 1, &impl.impl_device.as<ImplDevice>()->gpu_shader_resource_table.vk_descriptor_set, 0, nullptr);
 
         vkCmdBindPipeline(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline);
     }
@@ -257,7 +257,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
-        vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline_layout, 0, 1, &impl.impl_device.as<ImplDevice>()->gpu_table.vk_descriptor_set, 0, nullptr);
+        vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline_layout, 0, 1, &impl.impl_device.as<ImplDevice>()->gpu_shader_resource_table.vk_descriptor_set, 0, nullptr);
 
         vkCmdBindPipeline(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline);
     }
@@ -697,7 +697,7 @@ namespace daxa
           info{std::move(a_info)},
           vk_cmd_buffer{buffer},
           vk_cmd_pool{pool},
-          pipeline_layouts{&(impl_device.as<ImplDevice>()->gpu_table.pipeline_layouts)}
+          pipeline_layouts{&(impl_device.as<ImplDevice>()->gpu_shader_resource_table.pipeline_layouts)}
     {
         initialize();
     }

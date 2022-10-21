@@ -580,6 +580,9 @@ namespace daxa
 
         vmaCreateAllocator(&vma_allocator_create_info, &this->vma_allocator);
 
+        // Images and buffers can be set to be a null descriptor.
+        // Null descriptors are no available for samples, but we still want to have one to overwrite dead resources with.
+        // So we create a default sampler that acts as the "null sampler".
         VkSamplerCreateInfo const vk_sampler_create_info{
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
             .pNext = nullptr,
@@ -600,7 +603,7 @@ namespace daxa
             .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK,
             .unnormalizedCoordinates = VK_FALSE,
         };
-        vkCreateSampler(vk_device, &vk_sampler_create_info, nullptr, &this->vk_dummy_sampler);
+        vkCreateSampler(vk_device, &vk_sampler_create_info, nullptr, &this->vk_null_sampler);
 
         VkBufferUsageFlags const usage_flags =
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
@@ -674,7 +677,7 @@ namespace daxa
             this->vkSetDebugUtilsObjectNameEXT(vk_device, &device_main_queue_timeline_buffer_device_address_buffer_name_info);
         }
 
-        gpu_table.initialize(
+        gpu_shader_resource_table.initialize(
             max_buffers,
             max_images,
             max_samplers,
@@ -774,7 +777,7 @@ namespace daxa
 
     auto ImplDevice::new_buffer(BufferInfo const & buffer_info) -> BufferId
     {
-        auto [id, ret] = gpu_table.buffer_slots.new_slot();
+        auto [id, ret] = gpu_shader_resource_table.buffer_slots.new_slot();
 
         DAXA_DBG_ASSERT_TRUE_M(buffer_info.size > 0, "can not create buffers of size zero");
 
@@ -848,7 +851,7 @@ namespace daxa
             this->vkSetDebugUtilsObjectNameEXT(vk_device, &buffer_name_info);
         }
 
-        write_descriptor_set_buffer(this->vk_device, this->gpu_table.vk_descriptor_set, ret.vk_buffer, 0, static_cast<VkDeviceSize>(buffer_info.size), id.index);
+        write_descriptor_set_buffer(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, ret.vk_buffer, 0, static_cast<VkDeviceSize>(buffer_info.size), id.index);
 
         return BufferId{id};
     }
@@ -886,7 +889,7 @@ namespace daxa
 
     auto ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, ImageInfo const & image_info) -> ImageId
     {
-        auto [id, image_slot] = gpu_table.image_slots.new_slot();
+        auto [id, image_slot] = gpu_shader_resource_table.image_slots.new_slot();
 
         ImplImageSlot ret;
         ret.vk_image = swapchain_image;
@@ -938,7 +941,7 @@ namespace daxa
             this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &swapchain_image_view_name_info);
         }
 
-        write_descriptor_set_image(this->vk_device, this->gpu_table.vk_descriptor_set, ret.view_slot.vk_image_view, usage, id.index);
+        write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, ret.view_slot.vk_image_view, usage, id.index);
 
         image_slot = ret;
 
@@ -947,7 +950,7 @@ namespace daxa
 
     auto ImplDevice::new_image(ImageInfo const & image_info) -> ImageId
     {
-        auto [id, image_slot_variant] = gpu_table.image_slots.new_slot();
+        auto [id, image_slot_variant] = gpu_shader_resource_table.image_slots.new_slot();
 
         ImplImageSlot ret = {};
         ret.info = image_info;
@@ -1072,7 +1075,7 @@ namespace daxa
             this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &swapchain_image_view_name_info);
         }
 
-        write_descriptor_set_image(this->vk_device, this->gpu_table.vk_descriptor_set, ret.view_slot.vk_image_view, image_info.usage, id.index);
+        write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, ret.view_slot.vk_image_view, image_info.usage, id.index);
 
         image_slot_variant = ret;
 
@@ -1081,7 +1084,7 @@ namespace daxa
 
     auto ImplDevice::new_image_view(ImageViewInfo const & image_view_info) -> ImageViewId
     {
-        auto [id, image_slot] = gpu_table.image_slots.new_slot();
+        auto [id, image_slot] = gpu_shader_resource_table.image_slots.new_slot();
 
         image_slot = {};
 
@@ -1124,7 +1127,7 @@ namespace daxa
             this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &name_info);
         }
 
-        write_descriptor_set_image(this->vk_device, this->gpu_table.vk_descriptor_set, ret.vk_image_view, parent_image_slot.info.usage, id.index);
+        write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, ret.vk_image_view, parent_image_slot.info.usage, id.index);
 
         image_slot.view_slot = ret;
 
@@ -1133,7 +1136,7 @@ namespace daxa
 
     auto ImplDevice::new_sampler(SamplerInfo const & sampler_info) -> SamplerId
     {
-        auto [id, ret] = gpu_table.sampler_slots.new_slot();
+        auto [id, ret] = gpu_shader_resource_table.sampler_slots.new_slot();
 
         ret.info = sampler_info;
 
@@ -1173,34 +1176,34 @@ namespace daxa
             this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &sampler_name_info);
         }
 
-        write_descriptor_set_sampler(this->vk_device, this->gpu_table.vk_descriptor_set, ret.vk_sampler, id.index);
+        write_descriptor_set_sampler(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, ret.vk_sampler, id.index);
 
         return SamplerId{id};
     }
 
     void ImplDevice::cleanup_buffer(BufferId id)
     {
-        ImplBufferSlot & buffer_slot = this->gpu_table.buffer_slots.dereference_id(id);
+        ImplBufferSlot & buffer_slot = this->gpu_shader_resource_table.buffer_slots.dereference_id(id);
 
         u64 * mem = nullptr;
         vmaMapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation, reinterpret_cast<void **>(&mem));
         mem[id.index] = 0;
         vmaUnmapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation);
 
-        write_descriptor_set_buffer(this->vk_device, this->gpu_table.vk_descriptor_set, VK_NULL_HANDLE, 0, VK_WHOLE_SIZE, id.index);
+        write_descriptor_set_buffer(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, VK_NULL_HANDLE, 0, VK_WHOLE_SIZE, id.index);
 
         vmaDestroyBuffer(this->vma_allocator, buffer_slot.vk_buffer, buffer_slot.vma_allocation);
 
         buffer_slot = {};
 
-        gpu_table.buffer_slots.return_slot(id);
+        gpu_shader_resource_table.buffer_slots.return_slot(id);
     }
 
     void ImplDevice::cleanup_image(ImageId id)
     {
-        ImplImageSlot & image_slot = gpu_table.image_slots.dereference_id(id);
+        ImplImageSlot & image_slot = gpu_shader_resource_table.image_slots.dereference_id(id);
 
-        write_descriptor_set_image(this->vk_device, this->gpu_table.vk_descriptor_set, VK_NULL_HANDLE, image_slot.info.usage, id.index);
+        write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, VK_NULL_HANDLE, image_slot.info.usage, id.index);
 
         vkDestroyImageView(vk_device, image_slot.view_slot.vk_image_view, nullptr);
 
@@ -1211,35 +1214,35 @@ namespace daxa
 
         image_slot = {};
 
-        gpu_table.image_slots.return_slot(id);
+        gpu_shader_resource_table.image_slots.return_slot(id);
     }
 
     void ImplDevice::cleanup_image_view(ImageViewId id)
     {
-        DAXA_DBG_ASSERT_TRUE_M(gpu_table.image_slots.dereference_id(id).vk_image == VK_NULL_HANDLE, "can not destroy default image view of image");
+        DAXA_DBG_ASSERT_TRUE_M(gpu_shader_resource_table.image_slots.dereference_id(id).vk_image == VK_NULL_HANDLE, "can not destroy default image view of image");
 
-        ImplImageViewSlot & image_slot = gpu_table.image_slots.dereference_id(id).view_slot;
+        ImplImageViewSlot & image_slot = gpu_shader_resource_table.image_slots.dereference_id(id).view_slot;
 
-        write_descriptor_set_image(this->vk_device, this->gpu_table.vk_descriptor_set, VK_NULL_HANDLE, slot(image_slot.info.image).info.usage, id.index);
+        write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, VK_NULL_HANDLE, slot(image_slot.info.image).info.usage, id.index);
 
         vkDestroyImageView(vk_device, image_slot.vk_image_view, nullptr);
 
         image_slot = {};
 
-        gpu_table.image_slots.return_slot(id);
+        gpu_shader_resource_table.image_slots.return_slot(id);
     }
 
     void ImplDevice::cleanup_sampler(SamplerId id)
     {
-        ImplSamplerSlot & sampler_slot = this->gpu_table.sampler_slots.dereference_id(id);
+        ImplSamplerSlot & sampler_slot = this->gpu_shader_resource_table.sampler_slots.dereference_id(id);
 
-        write_descriptor_set_sampler(this->vk_device, this->gpu_table.vk_descriptor_set, this->vk_dummy_sampler, id.index);
+        write_descriptor_set_sampler(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, this->vk_null_sampler, id.index);
 
         vkDestroySampler(this->vk_device, sampler_slot.vk_sampler, nullptr);
 
         sampler_slot = {};
 
-        gpu_table.sampler_slots.return_slot(id);
+        gpu_shader_resource_table.sampler_slots.return_slot(id);
     }
 
     ImplDevice::~ImplDevice() // NOLINT(bugprone-exception-escape)
@@ -1251,8 +1254,8 @@ namespace daxa
         vmaDestroyBuffer(this->vma_allocator, this->buffer_device_address_buffer, this->buffer_device_address_buffer_allocation);
 
         vmaDestroyAllocator(this->vma_allocator);
-        this->gpu_table.cleanup(this->vk_device);
-        vkDestroySampler(vk_device, this->vk_dummy_sampler, nullptr);
+        this->gpu_shader_resource_table.cleanup(this->vk_device);
+        vkDestroySampler(vk_device, this->vk_null_sampler, nullptr);
         vkDestroySemaphore(this->vk_device, this->vk_main_queue_gpu_timeline_semaphore, nullptr);
         vkDestroyDevice(this->vk_device, nullptr);
     }
@@ -1287,41 +1290,41 @@ namespace daxa
 
     auto ImplDevice::slot(BufferId id) -> ImplBufferSlot &
     {
-        return gpu_table.buffer_slots.dereference_id(id);
+        return gpu_shader_resource_table.buffer_slots.dereference_id(id);
     }
 
     auto ImplDevice::slot(ImageId id) -> ImplImageSlot &
     {
-        return gpu_table.image_slots.dereference_id(id);
+        return gpu_shader_resource_table.image_slots.dereference_id(id);
     }
 
     auto ImplDevice::slot(ImageViewId id) -> ImplImageViewSlot &
     {
-        return gpu_table.image_slots.dereference_id(id).view_slot;
+        return gpu_shader_resource_table.image_slots.dereference_id(id).view_slot;
     }
 
     auto ImplDevice::slot(SamplerId id) -> ImplSamplerSlot &
     {
-        return gpu_table.sampler_slots.dereference_id(id);
+        return gpu_shader_resource_table.sampler_slots.dereference_id(id);
     }
 
     auto ImplDevice::slot(BufferId id) const -> ImplBufferSlot const &
     {
-        return gpu_table.buffer_slots.dereference_id(id);
+        return gpu_shader_resource_table.buffer_slots.dereference_id(id);
     }
 
     auto ImplDevice::slot(ImageId id) const -> ImplImageSlot const &
     {
-        return gpu_table.image_slots.dereference_id(id);
+        return gpu_shader_resource_table.image_slots.dereference_id(id);
     }
 
     auto ImplDevice::slot(ImageViewId id) const -> ImplImageViewSlot const &
     {
-        return gpu_table.image_slots.dereference_id(id).view_slot;
+        return gpu_shader_resource_table.image_slots.dereference_id(id).view_slot;
     }
 
     auto ImplDevice::slot(SamplerId id) const -> ImplSamplerSlot const &
     {
-        return gpu_table.sampler_slots.dereference_id(id);
+        return gpu_shader_resource_table.sampler_slots.dereference_id(id);
     }
 } // namespace daxa
