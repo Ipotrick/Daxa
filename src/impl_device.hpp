@@ -27,12 +27,12 @@ namespace daxa
         VmaAllocator vma_allocator = {};
         DeviceProperties vk_info = {};
         DeviceInfo info = {};
-        VkSampler vk_dummy_sampler = {};
+        VkSampler vk_null_sampler = {};
         VkBuffer buffer_device_address_buffer = {};
         VmaAllocation buffer_device_address_buffer_allocation = {};
 
         // Gpu resource table:
-        GPUResourceTable gpu_table = {};
+        GPUShaderResourceTable gpu_shader_resource_table = {};
 
         // Resource recycling:
         DAXA_ONLY_IF_THREADSAFETY(std::mutex main_queue_command_pool_buffer_recycle_mtx = {});

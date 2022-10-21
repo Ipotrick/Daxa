@@ -28,7 +28,7 @@ namespace daxa
         return ret;
     }
 
-    void GPUResourceTable::initialize(usize max_buffers, usize max_images, usize max_samplers, usize /*max_timeline_query_pools*/,
+    void GPUShaderResourceTable::initialize(usize max_buffers, usize max_images, usize max_samplers, usize /*max_timeline_query_pools*/,
                                       VkDevice device, VkBuffer device_address_buffer)
     {
         buffer_slots.max_resources = max_buffers;
@@ -202,7 +202,7 @@ namespace daxa
         vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
     }
 
-    void GPUResourceTable::cleanup(VkDevice device)
+    void GPUShaderResourceTable::cleanup(VkDevice device)
     {
         for (usize i = 0; i < PIPELINE_LAYOUT_COUNT; ++i)
         {
