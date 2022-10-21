@@ -4,7 +4,7 @@
 
 struct DrawVertex
 {
-    f32vec4 pos, col;
+    daxa_f32vec4 pos, col;
 };
 
 DAXA_DECL_BUFFER_STRUCT(

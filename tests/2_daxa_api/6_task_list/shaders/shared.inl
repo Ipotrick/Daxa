@@ -5,18 +5,18 @@
 DAXA_DECL_BUFFER_STRUCT(
     MipmappingGpuInput,
     {
-        f32 mouse_x;
-        f32 mouse_y;
-        f32 p_mouse_x;
-        f32 p_mouse_y;
-        f32 paint_radius;
-        f32vec3 paint_col;
+        daxa_f32 mouse_x;
+        daxa_f32 mouse_y;
+        daxa_f32 p_mouse_x;
+        daxa_f32 p_mouse_y;
+        daxa_f32 paint_radius;
+        daxa_f32vec3 paint_col;
     });
 
 struct MipmappingComputePushConstant
 {
-    ImageViewId image_id;
-    BufferId gpu_input;
+    daxa_ImageViewId image_id;
+    daxa_BufferId gpu_input;
     // daxa_BufferRef(MipmappingGpuInput) gpu_input;
-    u32vec2 frame_dim;
+    daxa_u32vec2 frame_dim;
 };
