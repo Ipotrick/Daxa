@@ -62,7 +62,9 @@ struct App : BaseApp<App>
         reload_pipeline(compute_pipeline);
         ui_update();
 
+        loop_task_list.remove_runtime_image(task_swapchain_image, swapchain_image);
         swapchain_image = swapchain.acquire_next_image();
+        loop_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
         if (swapchain_image.is_empty())
             return;
         loop_task_list.execute();
@@ -86,19 +88,23 @@ struct App : BaseApp<App>
             size_x = swapchain.info().width;
             size_y = swapchain.info().height;
             device.destroy_image(render_image);
+            loop_task_list.remove_runtime_image(task_render_image, render_image);
             render_image = device.create_image({
                 .format = daxa::Format::R8G8B8A8_UNORM,
                 .size = {size_x, size_y, 1},
                 .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             });
+            loop_task_list.add_runtime_image(task_render_image, render_image);
             base_on_update();
         }
     }
 
     void record_tasks(daxa::TaskList & new_task_list)
     {
-        task_render_image = new_task_list.create_task_image({.image = &render_image, .debug_name = APPNAME_PREFIX("task_render_image")});
-        task_gpu_input_buffer = new_task_list.create_task_buffer({.buffer = &gpu_input_buffer, .debug_name = APPNAME_PREFIX("task_gpu_input_buffer")});
+        task_render_image = new_task_list.create_task_image({.debug_name = APPNAME_PREFIX("task_render_image")});
+        new_task_list.add_runtime_image(task_render_image, render_image);
+        task_gpu_input_buffer = new_task_list.create_task_buffer({.debug_name = APPNAME_PREFIX("task_gpu_input_buffer")});
+        new_task_list.add_runtime_buffer(task_gpu_input_buffer, gpu_input_buffer);
 
         new_task_list.add_task({
             .used_buffers = {

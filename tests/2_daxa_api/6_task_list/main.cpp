@@ -58,11 +58,11 @@ namespace tests
                                          .debug_name = APPNAME_PREFIX("task_list (create-write-read image)")});
         // CREATE IMAGE
         auto task_image = task_list.create_task_image({
-            .image = &image,
             .initial_access = {daxa::PipelineStageFlagBits::ALL_GRAPHICS, daxa::AccessTypeFlagBits::WRITE},
             .initial_layout = daxa::ImageLayout::GENERAL,
             .debug_name = "task list image",
         });
+        task_list.add_runtime_image(task_image, image);
         // WRITE IMAGE 1
         task_list.add_task({
             .used_buffers = {},
@@ -127,8 +127,10 @@ namespace tests
             .debug_name = APPNAME_PREFIX("image (image_upload)"),
         });
 
-        auto task_image = task_list.create_task_image({.image = &image});
-        auto upload_buffer = task_list.create_task_buffer({.buffer = &buffer});
+        auto task_image = task_list.create_task_image({});
+        task_list.add_runtime_image(task_image, image);
+        auto upload_buffer = task_list.create_task_buffer({});
+        task_list.add_runtime_buffer(upload_buffer, buffer);
 
         task_list.add_task({
             .used_buffers = {{upload_buffer, daxa::TaskBufferAccess::TRANSFER_READ}},
@@ -324,7 +326,8 @@ namespace tests
                 //     .image = &swapchain_image,
                 //     .swapchain_parent = {swapchain, present_semaphore},
                 // });
-                task_render_image = new_task_list.create_task_image({.image = &render_image});
+                task_render_image = new_task_list.create_task_image({});
+                new_task_list.add_runtime_image(task_render_image, render_image);
 
                 // new_task_list.add_clear_image({
                 //     .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
@@ -399,7 +402,11 @@ namespace tests
                         raster_pipeline = new_pipeline.value();
                     }
                 }
+
+                task_list.remove_runtime_image(task_swapchain_image, swapchain_image);
                 swapchain_image = swapchain.acquire_next_image();
+                task_list.add_runtime_image(task_swapchain_image, swapchain_image);
+
                 if (swapchain_image.is_empty())
                 {
                     return;

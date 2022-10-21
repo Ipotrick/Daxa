@@ -124,8 +124,8 @@ namespace daxa
         auto get_command_list() const -> CommandList;
         auto get_used_task_buffers() const -> UsedTaskBuffers const &;
         auto get_used_task_images() const -> UsedTaskImages const &;
-        auto get_buffer(TaskBufferId const & task_resource_id) const -> BufferId;
-        auto get_image(TaskImageId const & task_resource_id) const -> ImageId;
+        auto get_buffers(TaskBufferId const & task_resource_id) const -> std::span<BufferId>;
+        auto get_images(TaskImageId const & task_resource_id) const -> std::span<ImageId>;
 
       private:
         friend struct ImplTaskRuntime;
@@ -138,14 +138,12 @@ namespace daxa
 
     struct TaskBufferInfo
     {
-        BufferId * buffer = {};
         Access initial_access = AccessConsts::NONE;
         std::string debug_name = {};
     };
 
     struct TaskImageInfo
     {
-        ImageId * image = {};
         Access initial_access = AccessConsts::NONE;
         ImageLayout initial_layout = ImageLayout::UNDEFINED;
         bool swapchain_image = false;
@@ -199,6 +197,13 @@ namespace daxa
 
         auto create_task_buffer(TaskBufferInfo const & info) -> TaskBufferId;
         auto create_task_image(TaskImageInfo const & info) -> TaskImageId;
+
+        void add_runtime_buffer(TaskBufferId tid, BufferId id);
+        void add_runtime_image(TaskImageId tid, ImageId id);
+        void remove_runtime_buffer(TaskBufferId tid, BufferId id);
+        void remove_runtime_image(TaskImageId tid, ImageId id);
+        void clear_runtime_buffers(TaskBufferId tid);
+        void clear_runtime_images(TaskImageId tid);
 
         void add_task(TaskInfo const & info);
 

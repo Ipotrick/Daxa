@@ -207,16 +207,16 @@ namespace daxa
         return impl.current_task->info.used_images;
     }
 
-    auto TaskRuntime::get_buffer(TaskBufferId const & task_resource_id) const -> BufferId
+    auto TaskRuntime::get_buffers(TaskBufferId const & task_resource_id) const -> std::span<BufferId>
     {
         auto & impl = *static_cast<ImplTaskRuntime *>(this->backend);
-        return *(impl.task_list.impl_task_buffers[task_resource_id.index].info.buffer);
+        return impl.task_list.impl_task_buffers[task_resource_id.index].buffers;
     }
 
-    auto TaskRuntime::get_image(TaskImageId const & task_resource_id) const -> ImageId
+    auto TaskRuntime::get_images(TaskImageId const & task_resource_id) const -> std::span<ImageId>
     {
         auto & impl = *static_cast<ImplTaskRuntime *>(this->backend);
-        return *(impl.task_list.impl_task_images[task_resource_id.index].info.image);
+        return impl.task_list.impl_task_images[task_resource_id.index].images;
     }
 
     TaskList::TaskList(TaskListInfo const & info)
@@ -256,6 +256,39 @@ namespace daxa
             impl.swapchain_image = task_image_id;
         }
         return task_image_id;
+    }
+
+    void TaskList::add_runtime_buffer(TaskBufferId tid, BufferId id)
+    {
+        auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
+        impl.impl_task_buffers.at(tid.index).buffers.push_back(id);
+    }
+
+    void TaskList::add_runtime_image(TaskImageId tid, ImageId id)
+    {
+        auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
+        impl.impl_task_images.at(tid.index).images.push_back(id);
+    }
+
+    void TaskList::remove_runtime_buffer(TaskBufferId tid, BufferId id)
+    {
+        auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
+        impl.impl_task_buffers[tid.index].buffers.erase(std::remove(impl.impl_task_buffers[tid.index].buffers.begin(), impl.impl_task_buffers[tid.index].buffers.end(), id), impl.impl_task_buffers[tid.index].buffers.end());
+    }
+    void TaskList::remove_runtime_image(TaskImageId tid, ImageId id)
+    {
+        auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
+        impl.impl_task_images[tid.index].images.erase(std::remove(impl.impl_task_images[tid.index].images.begin(), impl.impl_task_images[tid.index].images.end(), id), impl.impl_task_images[tid.index].images.end());
+    }
+    void TaskList::clear_runtime_buffers(TaskBufferId tid)
+    {
+        auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
+        impl.impl_task_buffers.at(tid.index).buffers.clear();
+    }
+    void TaskList::clear_runtime_images(TaskImageId tid)
+    {
+        auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
+        impl.impl_task_images.at(tid.index).images.clear();
     }
 
     void check_for_overlapping_use(TaskInfo const & info)
@@ -740,14 +773,17 @@ namespace daxa
         }
         else
         {
-            command_list.pipeline_barrier_image_transition({
-                .awaited_pipeline_access = barrier.src_access,
-                .waiting_pipeline_access = barrier.dst_access,
-                .before_layout = barrier.layout_before,
-                .after_layout = barrier.layout_after,
-                .image_slice = barrier.slice,
-                .image_id = *task_images[barrier.image_id.index].info.image,
-            });
+            for (auto & image : task_images[barrier.image_id.index].images)
+            {
+                command_list.pipeline_barrier_image_transition({
+                    .awaited_pipeline_access = barrier.src_access,
+                    .waiting_pipeline_access = barrier.dst_access,
+                    .before_layout = barrier.layout_before,
+                    .after_layout = barrier.layout_after,
+                    .image_slice = barrier.slice,
+                    .image_id = image,
+                });
+            }
         }
     }
 
@@ -792,11 +828,18 @@ namespace daxa
                 }
                 else
                 {
-                    // Currently it is guaranteed, that each split barrier in task list only contain either
-                    // one image barrier or one memory barrier.
+                    usize needed_image_barriers = 0;
+                    for (auto barrier_index : task_batch.wait_split_barrier_indices)
+                    {
+                        TaskSplitBarrier & split_barrier = impl.split_barriers[barrier_index];
+                        if (!split_barrier.image_id.is_empty())
+                        {
+                            needed_image_barriers += impl.impl_task_images[split_barrier.image_id.index].images.size();
+                        }
+                    }
                     tl_split_barrier_wait_infos.reserve(task_batch.wait_split_barrier_indices.size());
-                    tl_image_barrier_infos.reserve(task_batch.wait_split_barrier_indices.size());
                     tl_memory_barrier_infos.reserve(task_batch.wait_split_barrier_indices.size());
+                    tl_image_barrier_infos.reserve(needed_image_barriers);
                     for (auto barrier_index : task_batch.wait_split_barrier_indices)
                     {
                         TaskSplitBarrier & split_barrier = impl.split_barriers[barrier_index];
@@ -813,16 +856,22 @@ namespace daxa
                         }
                         else
                         {
-                            tl_image_barrier_infos.push_back(ImageBarrierInfo{
-                                .awaited_pipeline_access = split_barrier.src_access,
-                                .waiting_pipeline_access = split_barrier.dst_access,
-                                .before_layout = split_barrier.layout_before,
-                                .after_layout = split_barrier.layout_after,
-                                .image_slice = split_barrier.slice,
-                                .image_id = *impl.impl_task_images[split_barrier.image_id.index].info.image,
-                            });
+                            usize img_bar_vec_start_size = tl_image_barrier_infos.size();
+                            for (auto image : impl.impl_task_images[split_barrier.image_id.index].images)
+                            {
+                                tl_image_barrier_infos.push_back(ImageBarrierInfo{
+                                    .awaited_pipeline_access = split_barrier.src_access,
+                                    .waiting_pipeline_access = split_barrier.dst_access,
+                                    .before_layout = split_barrier.layout_before,
+                                    .after_layout = split_barrier.layout_after,
+                                    .image_slice = split_barrier.slice,
+                                    .image_id = image,
+                                });
+                            }
+                            usize img_bar_vec_end_size = tl_image_barrier_infos.size();
+                            usize img_bar_count = img_bar_vec_end_size - img_bar_vec_start_size;
                             tl_split_barrier_wait_infos.push_back(SplitBarrierWaitInfo{
-                                .image_barriers = std::span{&tl_image_barrier_infos.back(), 1},
+                                .image_barriers = std::span{tl_image_barrier_infos.data() + img_bar_vec_start_size, img_bar_count},
                                 .split_barrier = split_barrier.split_barrier_state,
                             });
                         }
@@ -875,18 +924,22 @@ namespace daxa
                         }
                         else
                         {
-                            ImageBarrierInfo image_barrier{
-                                .awaited_pipeline_access = task_split_barrier.src_access,
-                                .waiting_pipeline_access = task_split_barrier.dst_access,
-                                .before_layout = task_split_barrier.layout_before,
-                                .after_layout = task_split_barrier.layout_after,
-                                .image_slice = task_split_barrier.slice,
-                                .image_id = *impl.impl_task_images[task_split_barrier.image_id.index].info.image,
-                            };
+                            for (auto image : impl.impl_task_images[task_split_barrier.image_id.index].images)
+                            {
+                                tl_image_barrier_infos.push_back({
+                                    .awaited_pipeline_access = task_split_barrier.src_access,
+                                    .waiting_pipeline_access = task_split_barrier.dst_access,
+                                    .before_layout = task_split_barrier.layout_before,
+                                    .after_layout = task_split_barrier.layout_after,
+                                    .image_slice = task_split_barrier.slice,
+                                    .image_id = image,
+                                });
+                            }
                             impl_runtime.command_lists.back().signal_split_barrier({
-                                .image_barriers = std::span{&image_barrier, 1},
+                                .image_barriers = tl_image_barrier_infos,
                                 .split_barrier = task_split_barrier.split_barrier_state,
                             });
+                            tl_image_barrier_infos.clear();
                         }
                     }
                 }
@@ -1153,20 +1206,17 @@ namespace daxa
         else
         {
             ImplTaskImage const & impl_task_image = impl_task_images[barrier.image_id.index];
-            std::string image_debug_name = "ERROR, IMAGE POINTER NOT ASSIGNED";
-            std::string image_id_string = "ERROR, IMAGE POINTER NOT ASSIGNED";
-            if ((impl_task_images[barrier.image_id.index].info.image != nullptr) &&
-                !impl_task_images[barrier.image_id.index].info.image->is_empty())
-            {
-                image_debug_name = info.device.info_image(*impl_task_image.info.image).debug_name;
-                image_id_string = to_string(*impl_task_images[barrier.image_id.index].info.image);
-            }
             std::cout << prefix << "Begin image memory barrier\n";
             std::cout << prefix << "\tbarrier index: " << index << "\n";
             std::cout << prefix << "\ttask_image_id: " << barrier.image_id.index << " \n";
             std::cout << prefix << "\ttask image debug name: " << impl_task_image.info.debug_name << " \n";
-            std::cout << prefix << "\timage id: " << image_id_string << " \n";
-            std::cout << prefix << "\timage debug name: " << image_debug_name << " \n";
+            std::cout << prefix << "\tBegin bound images\n";
+            for (auto image : impl_task_images[barrier.image_id.index].images)
+            {
+                std::cout << prefix << "\timage id: " << to_string(image)
+                          << prefix << "\timage debug name: " << info.device.info_image(image).debug_name << " \n";
+            }
+            std::cout << prefix << "\tEnd   bound images \n";
             std::cout << prefix << "\tsrc access: " << to_string(barrier.src_access) << "\n";
             std::cout << prefix << "\tdst access: " << to_string(barrier.dst_access) << "\n";
             std::cout << prefix << "\timage mip array slice: " << to_string(barrier.slice) << "\n";
@@ -1188,32 +1238,28 @@ namespace daxa
             std::cout << prefix << "split barrier index: " << index << "\n";
             std::cout << prefix << "\tsrc_access = " << to_string(barrier.src_access) << "\n";
             std::cout << prefix << "\tdst_access = " << to_string(barrier.dst_access) << "\n";
-            std::cout << prefix << "End   split memory barrier"
-                      << "\n";
+            std::cout << prefix << "End   split memory barrier\n";
         }
         else
         {
             ImplTaskImage const & impl_task_image = impl_task_images[barrier.image_id.index];
-            std::string image_debug_name = "ERROR, IMAGE POINTER NOT ASSIGNED";
-            std::string image_id_string = "ERROR, IMAGE POINTER NOT ASSIGNED";
-            if ((impl_task_images[barrier.image_id.index].info.image != nullptr) &&
-                !impl_task_images[barrier.image_id.index].info.image->is_empty())
-            {
-                image_debug_name = info.device.info_image(*impl_task_image.info.image).debug_name;
-                image_id_string = to_string(*impl_task_images[barrier.image_id.index].info.image);
-            }
             std::cout << prefix << "Begin image memory barrier\n";
             std::cout << prefix << "\tbarrier index: " << index << "\n";
             std::cout << prefix << "\ttask_image_id: " << barrier.image_id.index << " \n";
             std::cout << prefix << "\ttask image debug name: " << impl_task_image.info.debug_name << " \n";
-            std::cout << prefix << "\timage id: " << image_id_string << " \n";
-            std::cout << prefix << "\timage debug name: " << image_debug_name << " \n";
-            std::cout << prefix << "\tsrc_access: " << to_string(barrier.src_access) << "\n";
-            std::cout << prefix << "\tdst_access: " << to_string(barrier.dst_access) << "\n";
-            std::cout << prefix << "\timage_mip_array_slice: " << to_string(barrier.slice) << "\n";
-            std::cout << prefix << "\tbefore_layout: " << to_string(barrier.layout_before) << "\n";
-            std::cout << prefix << "\tafter_layout: " << to_string(barrier.layout_after) << "\n";
-            std::cout << prefix << "End   split image memory barrier\n";
+            std::cout << prefix << "\tBegin bound images\n";
+            for (auto image : impl_task_images[barrier.image_id.index].images)
+            {
+                std::cout << prefix << "\timage id: " << to_string(image)
+                          << prefix << "\timage debug name: " << info.device.info_image(image).debug_name << " \n";
+            }
+            std::cout << prefix << "\tEnd   bound images \n";
+            std::cout << prefix << "\tsrc access: " << to_string(barrier.src_access) << "\n";
+            std::cout << prefix << "\tdst access: " << to_string(barrier.dst_access) << "\n";
+            std::cout << prefix << "\timage mip array slice: " << to_string(barrier.slice) << "\n";
+            std::cout << prefix << "\tbefore layout: " << to_string(barrier.layout_before) << "\n";
+            std::cout << prefix << "\tafter layout: " << to_string(barrier.layout_after) << "\n";
+            std::cout << prefix << "End   image memory barrier\n";
         }
 #endif // #ifdef DAXA_TASK_LIST_DEBUG
     }
@@ -1225,20 +1271,17 @@ namespace daxa
         for (auto [task_image_id, task_image_access, slice] : task.info.used_images)
         {
             ImplTaskImage const & impl_task_image = impl_task_images[task_image_id.index];
-            std::string image_debug_name = "ERROR, IMAGE POINTER NOT ASSIGNED";
-            std::string image_id_string = "ERROR, IMAGE POINTER NOT ASSIGNED";
-            if ((impl_task_images[task_image_id.index].info.image != nullptr) &&
-                !impl_task_images[task_image_id.index].info.image->is_empty())
-            {
-                image_debug_name = info.device.info_image(*impl_task_image.info.image).debug_name;
-                image_id_string = to_string(*impl_task_images[task_image_id.index].info.image);
-            }
             auto [layout, access] = task_image_access_to_layout_access(task_image_access);
             std::cout << prefix << "\tBegin task image use " << task_image_id.index << "\n";
             std::cout << prefix << "\ttask_image_id: " << task_image_id.index << " \n";
             std::cout << prefix << "\ttask image debug name: " << impl_task_image.info.debug_name << " \n";
-            std::cout << prefix << "\timage id: " << image_id_string << " \n";
-            std::cout << prefix << "\timage debug name: " << image_debug_name << " \n";
+            std::cout << prefix << "\tBegin bound images\n";
+            for (auto image : impl_task_images[task_image_id.index].images)
+            {
+                std::cout << prefix << "\timage id: " << to_string(image)
+                          << prefix << "\timage debug name: " << info.device.info_image(image).debug_name << " \n";
+            }
+            std::cout << prefix << "\tEnd   bound images \n";
             std::cout << prefix << "\t\trequired layout: " << to_string(layout) << "\n";
             std::cout << prefix << "\t\tslice: " << to_string(slice) << "\n";
             std::cout << prefix << "\t\tstage access: " << to_string(access) << "\n";
@@ -1247,19 +1290,16 @@ namespace daxa
         for (auto [task_buffer_id, task_buffer_access] : task.info.used_buffers)
         {
             ImplTaskBuffer const & impl_task_buffer = impl_task_buffers[task_buffer_id.index];
-            std::string buffer_id_string = "ERROR, BUFFER POINTER NOT ASSIGNED";
-            std::string buffer_debug_name = "ERROR, BUFFER POINTER NOT ASSIGNED";
-            if ((impl_task_buffers[task_buffer_id.index].info.buffer != nullptr) &&
-                !impl_task_buffers[task_buffer_id.index].info.buffer->is_empty())
-            {
-                buffer_debug_name = info.device.info_buffer(*impl_task_buffers[task_buffer_id.index].info.buffer).debug_name;
-                buffer_id_string = to_string(*impl_task_buffers[task_buffer_id.index].info.buffer);
-            }
             auto access = task_buffer_access_to_access(task_buffer_access);
             std::cout << prefix << "\tBegin task buffer use " << task_buffer_id.index << "\n";
             std::cout << prefix << "\t\task buffer debug name: " << impl_task_buffer.info.debug_name << "\n";
-            std::cout << prefix << "\t\tbuffer id: " << buffer_id_string << "\n";
-            std::cout << prefix << "\t\tbuffer debug name: " << buffer_debug_name << "\n";
+            std::cout << prefix << "\tBegin bound buffers\n";
+            for (auto image : impl_task_images[task_buffer_id.index].images)
+            {
+                std::cout << prefix << "\tbuffers id: " << to_string(image)
+                          << prefix << "\tbuffers debug name: " << info.device.info_image(image).debug_name << " \n";
+            }
+            std::cout << prefix << "\tEnd   bound buffers \n";
             std::cout << prefix << "\t\tstage access: " << to_string(access) << "\n";
             std::cout << prefix << "\tEnd   task buffer use\n";
         }

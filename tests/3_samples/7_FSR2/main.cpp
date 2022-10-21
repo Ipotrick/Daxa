@@ -330,14 +330,23 @@ struct App : AppWindow<App>
             .swapchain = swapchain,
             .debug_name = APPNAME_PREFIX("task_list"),
         });
-        task_swapchain_image = new_task_list.create_task_image({.image = &swapchain_image, .swapchain_image = true});
-        task_color_image = new_task_list.create_task_image({.image = &color_image});
-        task_display_image = new_task_list.create_task_image({.image = &display_image});
-        task_motion_vectors_image = new_task_list.create_task_image({.image = &motion_vectors_image});
-        task_depth_image = new_task_list.create_task_image({.image = &depth_image});
+        task_swapchain_image = new_task_list.create_task_image({.swapchain_image = true});
+        task_color_image = new_task_list.create_task_image({});
+        task_display_image = new_task_list.create_task_image({});
+        task_motion_vectors_image = new_task_list.create_task_image({});
+        task_depth_image = new_task_list.create_task_image({});
 
-        task_raster_input_buffer = new_task_list.create_task_buffer({.buffer = &raster_input_buffer});
-        task_staging_raster_input_buffer = new_task_list.create_task_buffer({.buffer = &staging_raster_input_buffer});
+        new_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
+        new_task_list.add_runtime_image(task_color_image, color_image);
+        new_task_list.add_runtime_image(task_display_image, display_image);
+        new_task_list.add_runtime_image(task_motion_vectors_image, motion_vectors_image);
+        new_task_list.add_runtime_image(task_depth_image, depth_image);
+
+        task_raster_input_buffer = new_task_list.create_task_buffer({});
+        task_staging_raster_input_buffer = new_task_list.create_task_buffer({});
+
+        new_task_list.add_runtime_buffer(task_raster_input_buffer, raster_input_buffer);
+        new_task_list.add_runtime_buffer(task_staging_raster_input_buffer, staging_raster_input_buffer);
 
         new_task_list.add_task({
             .used_buffers = {
