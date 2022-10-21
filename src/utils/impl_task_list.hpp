@@ -25,6 +25,7 @@ namespace daxa
 
     struct ImplTaskBuffer
     {
+        std::vector<BufferId> buffers = {};
         TaskBufferInfo info = {};
         Access latest_access = AccessConsts::NONE;
         usize latest_access_batch_index = {};
@@ -67,6 +68,7 @@ namespace daxa
 
     struct ImplTaskImage
     {
+        std::vector<ImageId> images = {};
         TaskImageInfo info = {};
         bool swapchain_semaphore_waited_upon = {};
         std::vector<TaskImageTrackedSlice> slices_last_uses = {};
