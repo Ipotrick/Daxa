@@ -597,6 +597,10 @@ namespace daxa
                         // So that potential future reads after this can reuse this barrier.
                         impl_task_buffer.latest_access_read_barrier_index = LastReadSplitBarrierIndex{ split_barrier_index };
                     }
+                    else
+                    {
+                        impl_task_buffer.latest_access_read_barrier_index = {};
+                    }
                 }
             }
             // Now that we inserted/updated the synchronization, we update the latest access.
@@ -769,6 +773,10 @@ namespace daxa
                                 // As the new access is a read we remember our barrier index,
                                 // So that potential future reads after this can reuse this barrier.
                                 ret_new_use_tracked_slice.latest_access_read_barrier_index = LastReadSplitBarrierIndex{ split_barrier_index };
+                            }
+                            else
+                            {
+                                ret_new_use_tracked_slice.latest_access_read_barrier_index = {};
                             }
                         }
                     }
