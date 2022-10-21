@@ -70,7 +70,7 @@ namespace daxa
         usize latest_access_submit_scope_index = {};
         // When the last index was a read and an additional read is followed after,
         // we will combine all barriers into one, which is the first barrier that the first read generates.
-        usize latest_access_read_barrier_index = {};
+        std::variant<LastReadSplitBarrierIndex, LastReadBarrierIndex, std::monostate> latest_access_read_barrier_index = {};
         ImageMipArraySlice slice = {};
     };
 
