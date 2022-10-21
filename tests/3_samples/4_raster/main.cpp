@@ -380,7 +380,7 @@ struct RenderableVoxelWorld
                 .task = [=, this](daxa::TaskRuntime const & runtime)
                 {
                     auto cmd_list = runtime.get_command_list();
-                    auto image_id = runtime.get_image(task_atlas_texture_array);
+                    auto image_id = runtime.get_images(task_atlas_texture_array)[0];
                     cmd_list.blit_image_to_image({
                         .src_image = image_id,
                         .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL, // TODO: get from TaskRuntime
@@ -537,14 +537,17 @@ struct App : BaseApp<App>
 
     void record_tasks(daxa::TaskList & new_task_list)
     {
-        task_depth_image = new_task_list.create_task_image({.image = &depth_image, .debug_name = APPNAME_PREFIX("task_depth_image")});
+        task_depth_image = new_task_list.create_task_image({.debug_name = APPNAME_PREFIX("task_depth_image")});
+        new_task_list.add_runtime_image(task_depth_image, depth_image);
         renderable_world.record_load_textures_tasks(new_task_list);
         std::vector<daxa::TaskBufferUse> upload_used_buffers;
         std::vector<daxa::TaskBufferUse> draw_used_buffers;
         for (auto & chunk : renderable_world.renderable_chunks)
         {
-            chunk.task_face_buffer = new_task_list.create_task_buffer({.buffer = &chunk.face_buffer, .debug_name = APPNAME_PREFIX("chunk.task_face_buffer")});
-            chunk.task_water_face_buffer = new_task_list.create_task_buffer({.buffer = &chunk.water_face_buffer, .debug_name = APPNAME_PREFIX("chunk.task_water_face_buffer")});
+            chunk.task_face_buffer = new_task_list.create_task_buffer({.debug_name = APPNAME_PREFIX("chunk.task_face_buffer")});
+            chunk.task_water_face_buffer = new_task_list.create_task_buffer({.debug_name = APPNAME_PREFIX("chunk.task_water_face_buffer")});
+            new_task_list.add_runtime_buffer(chunk.task_face_buffer, chunk.face_buffer);
+            new_task_list.add_runtime_buffer(chunk.task_water_face_buffer, chunk.water_face_buffer);
             upload_used_buffers.push_back({chunk.task_face_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE});
             upload_used_buffers.push_back({chunk.task_water_face_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE});
             draw_used_buffers.push_back({chunk.task_face_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY});

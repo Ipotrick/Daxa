@@ -141,7 +141,9 @@ namespace tests
 
                 // non_task_list_execute();
 
+                task_list.remove_runtime_image(task_swapchain_image, swapchain_image);
                 swapchain_image = swapchain.acquire_next_image();
+                task_list.add_runtime_image(task_swapchain_image, swapchain_image);
                 if (swapchain_image.is_empty())
                 {
                     return;
@@ -435,15 +437,16 @@ namespace tests
                     .debug_name = APPNAME_PREFIX("main task list"),
                 });
                 task_swapchain_image = new_task_list.create_task_image({
-                    .image = &swapchain_image,
                     .swapchain_image = true,
                     .debug_name = APPNAME_PREFIX("Task Swapchain Image"),
                 });
+                new_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
                 task_render_image = new_task_list.create_task_image({
-                    .image = &render_image,
                     .debug_name = APPNAME_PREFIX("Task Render Image"),
                 });
-                task_mipmapping_gpu_input_buffer = new_task_list.create_task_buffer({.buffer = &mipmapping_gpu_input_buffer});
+                new_task_list.add_runtime_image(task_render_image, render_image);
+                task_mipmapping_gpu_input_buffer = new_task_list.create_task_buffer({});
+                new_task_list.add_runtime_buffer(task_mipmapping_gpu_input_buffer, mipmapping_gpu_input_buffer);
                 new_task_list.add_task({
                     .used_buffers = {
                         {task_mipmapping_gpu_input_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE},
@@ -451,7 +454,7 @@ namespace tests
                     .task = [this](daxa::TaskRuntime runtime)
                     {
                         auto cmd_list = runtime.get_command_list();
-                        auto input_buffer = runtime.get_buffer(task_mipmapping_gpu_input_buffer);
+                        auto input_buffer = runtime.get_buffers(task_mipmapping_gpu_input_buffer)[0];
                         cmd_list.pipeline_barrier({
                             .awaited_pipeline_access = daxa::AccessConsts::READ_WRITE,
                             .waiting_pipeline_access = daxa::AccessConsts::READ_WRITE,
@@ -476,21 +479,16 @@ namespace tests
                         if (mouse_drawing)
                         {
                             auto cmd_list = runtime.get_command_list();
-                            auto render_target_id = runtime.get_image(task_render_image);
-                            auto input_buffer = runtime.get_buffer(task_mipmapping_gpu_input_buffer);
+                            auto render_target_id = runtime.get_images(task_render_image)[0];
+                            auto input_buffer = runtime.get_buffers(task_mipmapping_gpu_input_buffer)[0];
                             paint(cmd_list, render_target_id, input_buffer);
                         }
                     },
                     .debug_name = "mouse paint",
                 });
-                // TODO: HOW TO GENERATE MIPS?
-                // new_task_list.add_generate_mipmaps_task({
-                //     .image = task_render_image,
-                //     .filter = daxa::Filter::LINEAR,
-                // });
                 {
                     auto image_info = device.info_image(render_image);
-                    std::array<i32, 3> mip_size = {static_cast<i32>(image_info.size[0]), static_cast<i32>(image_info.size[1]), static_cast<i32>(image_info.size[2])};
+                    std::array<i32, 3> mip_size = {std::max<i32>(1, static_cast<i32>(image_info.size[0])), std::max<i32>(1, static_cast<i32>(image_info.size[1])), std::max<i32>(1, static_cast<i32>(image_info.size[2]))};
                     for (u32 i = 0; i < image_info.mip_level_count - 1; ++i)
                     {
                         std::array<i32, 3> next_mip_size = {std::max<i32>(1, mip_size[0] / 2), std::max<i32>(1, mip_size[1] / 2), std::max<i32>(1, mip_size[2] / 2)};
@@ -502,7 +500,7 @@ namespace tests
                             .task = [=, this](daxa::TaskRuntime const & runtime)
                             {
                                 auto cmd_list = runtime.get_command_list();
-                                auto image_id = runtime.get_image(task_render_image);
+                                auto image_id = runtime.get_images(task_render_image)[0];
                                 cmd_list.blit_image_to_image({
                                     .src_image = image_id,
                                     .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL, // TODO: get from TaskRuntime
@@ -553,8 +551,8 @@ namespace tests
                     .task = [=, this](daxa::TaskRuntime const & runtime)
                     {
                         auto cmd_list = runtime.get_command_list();
-                        auto src_image_id = runtime.get_image(task_render_image);
-                        auto dst_image_id = runtime.get_image(task_swapchain_image);
+                        auto src_image_id = runtime.get_images(task_render_image)[0];
+                        auto dst_image_id = runtime.get_images(task_swapchain_image)[0];
                         blit_image_to_swapchain(cmd_list, src_image_id, dst_image_id);
                     },
                     .debug_name = "blit to swapchain",
@@ -566,16 +564,8 @@ namespace tests
                     .task = [=, this](daxa::TaskRuntime const & runtime)
                     {
                         auto cmd_list = runtime.get_command_list();
-                        auto render_target_id = runtime.get_image(task_swapchain_image);
-                        // cmd_list.pipeline_barrier({
-                        //     .awaited_pipeline_access = daxa::AccessConsts::READ_WRITE,
-                        //     .waiting_pipeline_access = daxa::AccessConsts::READ_WRITE,
-                        // });
+                        auto render_target_id = runtime.get_images(task_swapchain_image)[0];
                         draw_ui(cmd_list, render_target_id);
-                        // cmd_list.pipeline_barrier({
-                        //     .awaited_pipeline_access = daxa::AccessConsts::READ_WRITE,
-                        //     .waiting_pipeline_access = daxa::AccessConsts::READ_WRITE,
-                        // });
                     },
                     .debug_name = "Imgui",
                 });

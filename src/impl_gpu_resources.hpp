@@ -78,7 +78,7 @@ namespace daxa
         void verify_resource_id(GPUResourceId id) const
         {
             usize page = id.index >> PAGE_BITS;
-            // usize offset = id.index & PAGE_MASK;
+            DAXA_DBG_ASSERT_TRUE_M(page < pages.size(), "detected invalid resource id");
             DAXA_DBG_ASSERT_TRUE_M(pages[page] != nullptr, "detected invalid resource id");
             DAXA_DBG_ASSERT_TRUE_M(id.version != 0, "detected invalid resource id");
         }
