@@ -548,9 +548,18 @@ namespace daxa
             else
             {
                 // When the uses are incompatible (no read on read) we need to insert a new barrier.
+                // Host access needs to be handeled in a specialized way.
+                bool const src_host_only_access = impl_task_buffer.latest_access.stages == PipelineStageFlagBits::HOST;
+                bool const dst_host_only_access = current_buffer_access.stages == PipelineStageFlagBits::HOST;
+                DAXA_DBG_ASSERT_TRUE_M(!(src_host_only_access && dst_host_only_access), "direct sync between two host accesses on gpu are not allowed");
+                bool const is_host_barrier = src_host_only_access || dst_host_only_access;
                 // When the distance between src and dst batch is one, we can replace the split barrier with a normal barrier.
-                const bool use_pipeline_barrier = impl_task_buffer.latest_access_batch_index + 1 == batch_index &&
-                    current_submit_scope_index == impl_task_buffer.latest_access_submit_scope_index;
+                // We also need to make sure we do not use split barriers when the src or dst stage exclusively uses the host stage.
+                // This is because the host stage does not declare an execution dependency on the cpu but only a memory dependency.
+                bool const use_pipeline_barrier = 
+                    (impl_task_buffer.latest_access_batch_index + 1 == batch_index &&
+                    current_submit_scope_index == impl_task_buffer.latest_access_submit_scope_index) ||
+                    is_host_barrier;
                 if (use_pipeline_barrier)
                 {
                     usize const barrier_index = impl.barriers.size();
@@ -719,9 +728,18 @@ namespace daxa
                     else
                     {
                         // When the uses are incompatible (no read on read, or no identical layout) we need to insert a new barrier.
+                        // Host access needs to be handeled in a specialized way.
+                        bool const src_host_only_access = tracked_slice.latest_access.stages == PipelineStageFlagBits::HOST;
+                        bool const dst_host_only_access = current_image_access.stages == PipelineStageFlagBits::HOST;
+                        DAXA_DBG_ASSERT_TRUE_M(!(src_host_only_access && dst_host_only_access), "direct sync between two host accesses on gpu are not allowed");
+                        bool const is_host_barrier = src_host_only_access || dst_host_only_access;
                         // When the distance between src and dst batch is one, we can replace the split barrier with a normal barrier.
-                        const bool use_pipeline_barrier = tracked_slice.latest_access_batch_index + 1 == batch_index &&
-                            current_submit_scope_index == tracked_slice.latest_access_submit_scope_index;
+                        // We also need to make sure we do not use split barriers when the src or dst stage exclusively uses the host stage.
+                        // This is because the host stage does not declare an execution dependency on the cpu but only a memory dependency.
+                        bool const use_pipeline_barrier = 
+                            (tracked_slice.latest_access_batch_index + 1 == batch_index &&
+                            current_submit_scope_index == tracked_slice.latest_access_submit_scope_index) ||
+                            is_host_barrier;
                         if (use_pipeline_barrier)
                         {
                             usize const barrier_index = impl.barriers.size();
@@ -1043,7 +1061,7 @@ namespace daxa
                         // executed and saw the split barrier signaled, before we reset them.
                         impl_runtime.command_lists.back().reset_split_barrier({
                             .barrier = impl.split_barriers[barrier_index].split_barrier_state,
-                            .stage_masks = impl.split_barriers[barrier_index].dst_access.stages & ~PipelineStageFlagBits::HOST,
+                            .stage_masks = impl.split_barriers[barrier_index].dst_access.stages,
                         });
                     }
                     // Signal all signal split barriers after batch execution.
