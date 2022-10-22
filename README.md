@@ -1,5 +1,3 @@
-# This repo is the home of the Daxa GPU API
-
 ## What is Daxa?
 Daxa is a GPU api built on Vulkan.
 
