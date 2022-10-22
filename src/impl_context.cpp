@@ -40,6 +40,10 @@ namespace daxa
         {
             VkPhysicalDeviceProperties vk_device_properties;
             vkGetPhysicalDeviceProperties(physical_device, &vk_device_properties);
+            if (vk_device_properties.apiVersion < VK_API_VERSION_1_3) {
+                // NOTE: Found device with incompatible API version. Skipping this device...
+                return 0;
+            }
             return device_info.selector(*reinterpret_cast<DeviceProperties *>(&vk_device_properties));
         };
 
