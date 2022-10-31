@@ -1097,7 +1097,7 @@ namespace daxa
 
         spv::SpvBuildLogger logger;
         glslang::SpvOptions spv_options{};
-        spv_options.generateDebugInfo = true;
+        // spv_options.generateDebugInfo = true;
         std::vector<u32> spv;
         glslang::GlslangToSpv(*intermediary, spv, &logger, &spv_options);
         return Result<std::vector<u32>>(spv);
