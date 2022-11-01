@@ -479,7 +479,9 @@ struct App : BaseApp<App>
         player.camera.set_rot(player.rot.x, player.rot.y);
         player.update(delta_time);
 
+        loop_task_list.remove_runtime_image(task_swapchain_image, swapchain_image);
         swapchain_image = swapchain.acquire_next_image();
+        loop_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
         if (swapchain_image.is_empty())
             return;
         loop_task_list.execute();
