@@ -132,8 +132,8 @@ namespace tests
                 if (!minimized)
                 {
                     swapchain.resize();
-                    size_x = swapchain.info().width;
-                    size_y = swapchain.info().height;
+                    size_x = swapchain.get_surface_extent().x;
+                    size_y = swapchain.get_surface_extent().y;
                     draw();
                 }
             }

@@ -64,8 +64,8 @@ struct App : BaseApp<App>
         if (!minimized)
         {
             swapchain.resize();
-            size_x = swapchain.info().width;
-            size_y = swapchain.info().height;
+            size_x = swapchain.get_surface_extent().x;
+            size_y = swapchain.get_surface_extent().y;
             device.destroy_image(render_image);
             loop_task_list.remove_runtime_image(task_render_image, render_image);
             render_image = device.create_image({
