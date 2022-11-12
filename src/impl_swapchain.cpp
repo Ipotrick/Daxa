@@ -20,6 +20,12 @@ namespace daxa
         return impl.info;
     }
 
+    auto Swapchain::get_surface_extent() -> Extent2D
+    {
+        auto const & impl = *as<ImplSwapchain>();
+        return impl.surface_extent;
+    }
+
     auto Swapchain::get_format() const -> Format
     {
         auto const & impl = *as<ImplSwapchain>();
@@ -231,15 +237,15 @@ namespace daxa
 
         VkSurfaceCapabilitiesKHR surface_capabilities;
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(this->impl_device.as<ImplDevice>()->vk_physical_device, this->vk_surface, &surface_capabilities);
-        if (info.width == surface_capabilities.currentExtent.width &&
-            info.height == surface_capabilities.currentExtent.height &&
+        if (surface_extent.x == surface_capabilities.currentExtent.width &&
+            surface_extent.y == surface_capabilities.currentExtent.height &&
             this->vk_swapchain != VK_NULL_HANDLE)
         {
             return;
         }
 
-        info.width = surface_capabilities.currentExtent.width;
-        info.height = surface_capabilities.currentExtent.height;
+        surface_extent.x = surface_capabilities.currentExtent.width;
+        surface_extent.y = surface_capabilities.currentExtent.height;
 
 #if __linux__
         // TODO: I (grundlett) am too lazy to find out why the other present modes
@@ -266,7 +272,7 @@ namespace daxa
             .minImageCount = 3,
             .imageFormat = this->vk_surface_format.format,
             .imageColorSpace = this->vk_surface_format.colorSpace,
-            .imageExtent = VkExtent2D{info.width, info.height},
+            .imageExtent = VkExtent2D{surface_extent.x, surface_extent.y},
             .imageArrayLayers = 1,
             .imageUsage = usage.data,
             .imageSharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
@@ -300,7 +306,7 @@ namespace daxa
         {
             ImageInfo const image_info = {
                 .format = static_cast<Format>(this->vk_surface_format.format),
-                .size = {this->info.width, this->info.height, 1},
+                .size = {this->surface_extent.x, this->surface_extent.y, 1},
                 .usage = usage,
                 .debug_name = this->info.debug_name + " Image #" + std::to_string(i),
             };
