@@ -1030,11 +1030,7 @@ namespace daxa
         preamble += "#extension GL_KHR_shader_subgroup_shuffle_relative : enable\n";
         preamble += "#extension GL_KHR_shader_subgroup_clustered : enable\n";
         preamble += "#extension GL_KHR_shader_subgroup_quad : enable\n";
-
-        if (this->impl_device.as<ImplDevice>()->info.use_scalar_layout)
-        {
-            preamble += "#extension GL_EXT_scalar_block_layout : require\n";
-        }
+        preamble += "#extension GL_EXT_scalar_block_layout : require\n";
         for (auto const & shader_define : shader_info.compile_options.defines)
         {
             if (!shader_define.value.empty())
@@ -1172,11 +1168,7 @@ namespace daxa
         args.push_back(L"-E");
         auto entry_point_wstr = u8_ascii_to_wstring(shader_info.compile_options.entry_point.value().c_str());
         args.push_back(entry_point_wstr.c_str());
-
-        if (this->impl_device.as<ImplDevice>()->info.use_scalar_layout)
-        {
-            args.push_back(L"-fvk-use-scalar-layout");
-        }
+        args.push_back(L"-fvk-use-scalar-layout");
 
         // set shader model
         args.push_back(L"-T");

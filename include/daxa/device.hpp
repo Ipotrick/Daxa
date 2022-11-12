@@ -161,7 +161,6 @@ namespace daxa
     struct DeviceInfo
     {
         std::function<i32(DeviceProperties const &)> selector = default_device_score;
-        bool use_scalar_layout = true;
         std::string debug_name = {};
     };
 
