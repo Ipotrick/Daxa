@@ -39,6 +39,7 @@ namespace daxa
         VkSwapchainKHR vk_swapchain = VK_NULL_HANDLE;
         VkSurfaceKHR vk_surface = {};
         VkSurfaceFormatKHR vk_surface_format = {};
+        Extent2D surface_extent = {};
         std::vector<ImageId> images = {};
         std::vector<BinarySemaphore> acquire_semaphores = {};
         std::vector<BinarySemaphore> present_semaphores = {};

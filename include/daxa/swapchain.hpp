@@ -23,8 +23,6 @@ namespace daxa
     {
         NativeWindowHandle native_window;
         NativeWindowPlatform native_window_platform;
-        u32 width = 0;
-        u32 height = 0;
         std::function<i32(Format)> surface_format_selector = default_format_score;
         PresentMode present_mode = PresentMode::DOUBLE_BUFFER_WAIT_FOR_VBLANK;
         PresentOp present_operation = PresentOp::IDENTITY;
@@ -38,6 +36,7 @@ namespace daxa
         Swapchain() = default;
 
         auto info() const -> SwapchainInfo const &;
+        auto get_surface_extent() -> Extent2D;
         auto get_format() const -> Format;
         void resize();
         /// @brief The ImageId may change between calls. This must be called to obtain a new swapchain image to be used for rendering.
