@@ -185,6 +185,7 @@ namespace daxa
             .offset = 0,
             .range = VK_WHOLE_SIZE,
         };
+        
 
         VkWriteDescriptorSet const write{
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
