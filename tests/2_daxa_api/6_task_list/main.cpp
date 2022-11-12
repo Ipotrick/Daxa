@@ -456,8 +456,8 @@ namespace tests
                 if (!minimized)
                 {
                     swapchain.resize();
-                    size_x = swapchain.info().width;
-                    size_y = swapchain.info().height;
+                    size_x = swapchain.get_surface_extent().x;
+                    size_y = swapchain.get_surface_extent().y;
                     task_list = record_task_list();
                     device.destroy_image(render_image);
                     render_image = create_render_image(sx, sy);

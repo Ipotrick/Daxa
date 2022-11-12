@@ -674,6 +674,14 @@ namespace daxa
         friend auto operator<=>(Offset3D const &, Offset3D const &) = default;
     };
 
+    struct Extent2D
+    {
+        u32 x = {};
+        u32 y = {};
+
+        friend auto operator<=>(Extent2D const &, Extent2D const &) = default;
+    };
+
     struct Extent3D
     {
         u32 x = {};
