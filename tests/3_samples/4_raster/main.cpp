@@ -369,7 +369,7 @@ struct RenderableVoxelWorld
         });
 
         auto image_info = device.info_image(atlas_texture_array);
-        std::array<i32, 3> mip_size = {static_cast<i32>(image_info.size[0]), static_cast<i32>(image_info.size[1]), static_cast<i32>(image_info.size[2])};
+        std::array<i32, 3> mip_size = {static_cast<i32>(image_info.size.x), static_cast<i32>(image_info.size.y), static_cast<i32>(image_info.size.z)};
         for (u32 i = 0; i < image_info.mip_level_count - 1; ++i)
         {
             std::array<i32, 3> next_mip_size = {std::max<i32>(1, mip_size[0] / 2), std::max<i32>(1, mip_size[1] / 2), std::max<i32>(1, mip_size[2] / 2)};

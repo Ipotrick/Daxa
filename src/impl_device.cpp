@@ -975,7 +975,7 @@ namespace daxa
 
         VkImageCreateFlags vk_image_create_flags = {};
 
-        if (image_info.dimensions == 2 && image_info.size[0] == image_info.size[1] && image_info.array_layer_count % 6 == 0)
+        if (image_info.dimensions == 2 && image_info.size.x == image_info.size.y && image_info.array_layer_count % 6 == 0)
         {
             vk_image_create_flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
         }
