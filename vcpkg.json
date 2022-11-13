@@ -1,65 +1,65 @@
 {
-    "name": "daxa",
-    "version": "1.0.0",
-    "description": "Daxa C++ Vulkan Abstraction",
-    "homepage": "https://github.com/Ipotrick/Daxa",
-    "dependencies": [
-        "vulkan-memory-allocator",
-        "vulkan"
-    ],
-    "features": {
-        "glslang": {
-            "description": "Build with glslang",
-            "dependencies": [
-                "glslang"
-            ]
-        },
-        "dxc": {
-            "description": "Build with dxc",
-            "dependencies": [
-                "dxc"
-            ]
-        },
-        "utils": {
-            "description": "Build with core utils",
-            "dependencies": [
-                "imgui",
-                {
-                    "name": "fsr2",
-                    "features": [
-                        "vulkan"
-                    ]
-                }
-            ]
-        },
-        "tests": {
-            "description": "Build Tests",
-            "dependencies": [
-                {
-                    "name": "glfw3",
-                    "features": [
-                        "xlib",
-                        "wayland"
-                    ]
-                },
-                "glfw3",
-                "glm",
-                "stb",
-                "cgltf",
-                {
-                    "name": "imgui",
-                    "features": [
-                        "glfw-binding"
-                    ]
-                }
-            ]
-        }
+  "name": "daxa",
+  "version": "1.0.0",
+  "description": "Daxa C++ Vulkan Abstraction",
+  "homepage": "https://github.com/Ipotrick/Daxa",
+  "dependencies": [
+    "vulkan-memory-allocator",
+    "vulkan"
+  ],
+  "features": {
+    "glslang": {
+      "description": "Build with glslang",
+      "dependencies": [
+        "glslang"
+      ]
     },
-    "builtin-baseline": "a1737683a6f8ec5d8673890581c2a8c55838d411",
-    "overrides": [
+    "dxc": {
+      "description": "Build with dxc",
+      "dependencies": [
+        "dxc"
+      ]
+    },
+    "utils": {
+      "description": "Build with core utils",
+      "dependencies": [
+        "imgui",
         {
-            "name": "glfw3",
-            "version-string": "custom"
+          "name": "fsr2",
+          "features": [
+            "vulkan"
+          ]
         }
-    ]
+      ]
+    },
+    "tests": {
+      "description": "Build Tests",
+      "dependencies": [
+        {
+          "name": "glfw3",
+          "features": [
+            "xlib",
+            "wayland"
+          ]
+        },
+        "glfw3",
+        "glm",
+        "stb",
+        "cgltf",
+        {
+          "name": "imgui",
+          "features": [
+            "glfw-binding"
+          ]
+        }
+      ]
+    }
+  },
+  "builtin-baseline": "51685e17d6982871e1e8bab164edfe16f7ae6866",
+  "overrides": [
+    {
+      "name": "glfw3",
+      "version-string": "custom"
+    }
+  ]
 }

@@ -183,9 +183,9 @@ void generate_mip_levels(daxa::Device & device, daxa::CommandList & cmd_list, Mi
 {
     auto image_info = device.info_image(info.image);
     std::array<i32, 3> mip_size = {
-        static_cast<i32>(image_info.size[0]),
-        static_cast<i32>(image_info.size[1]),
-        static_cast<i32>(image_info.size[2]),
+        static_cast<i32>(image_info.size.x),
+        static_cast<i32>(image_info.size.y),
+        static_cast<i32>(image_info.size.z),
     };
     for (u32 i = 0; i < image_info.mip_level_count - 1; ++i)
     {
