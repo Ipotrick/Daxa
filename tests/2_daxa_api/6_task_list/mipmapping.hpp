@@ -210,7 +210,7 @@ namespace tests
                     auto const push = MipmappingComputePushConstant{
                         .image_id = render_target_id.default_view(),
                         .gpu_input = input_buffer,
-                        // .gpu_input = this->device.buffer_reference(input_buffer),
+                        // .gpu_input = this->device.get_device_address(input_buffer),
                         .frame_dim = {render_target_size.x, render_target_size.y},
                     };
                     cmd_list.push_constant(push);

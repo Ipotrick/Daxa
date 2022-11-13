@@ -635,7 +635,7 @@ struct App : BaseApp<App>
                         cmd_list.push_constant(DrawPush{
                             .vp_mat = *reinterpret_cast<f32mat4x4 *>(&mat),
                             .chunk_pos = chunk.chunk->pos,
-                            .face_buffer = this->device.buffer_reference(chunk.face_buffer),
+                            .face_buffer = this->device.get_device_address(chunk.face_buffer),
                             .atlas_texture = this->renderable_world.atlas_texture_array.default_view(),
                             .atlas_sampler = this->renderable_world.atlas_sampler,
                         });

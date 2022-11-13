@@ -123,7 +123,7 @@ struct App : BaseApp<App>
                 cmd_list.set_pipeline(raster_pipeline);
                 cmd_list.push_constant(DrawPush {
 #if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
-                    .face_buffer = this->device.buffer_reference(vertex_buffer),
+                    .face_buffer = this->device.get_device_address(vertex_buffer),
 #elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
                     .vertex_buffer_id = vertex_buffer,
 #endif

@@ -259,10 +259,10 @@ namespace daxa
         return impl.slot(id).info;
     }
 
-    auto Device::buffer_reference(BufferId id) const -> u64
+    auto Device::get_device_address(BufferId id) const -> BufferDeviceAddress
     {
         auto const & impl = *as<ImplDevice>();
-        return static_cast<u64>(impl.slot(id).device_address);
+        return BufferDeviceAddress{ static_cast<u64>(impl.slot(id).device_address) };
     }
 
     auto Device::info_image(ImageId id) const -> ImageInfo

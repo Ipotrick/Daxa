@@ -196,7 +196,7 @@ namespace daxa
         void destroy_sampler(SamplerId id);
 
         auto info_buffer(BufferId id) const -> BufferInfo;
-        auto buffer_reference(BufferId id) const -> u64;
+        auto get_device_address(BufferId id) const -> BufferDeviceAddress;
         auto info_image(ImageId id) const -> ImageInfo;
         auto info_image_view(ImageViewId id) const -> ImageViewInfo;
         auto info_sampler(SamplerId id) const -> SamplerInfo;
