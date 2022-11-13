@@ -61,25 +61,13 @@ daxa_buffer_device_address_buffer;
 #define DAXA_DECL_BUFFER_STRUCT(NAME, BODY)                                                                            \
     struct NAME BODY;                                                                                                  \
     layout(scalar, binding = DAXA_STORAGE_BUFFER_BINDING, set = 0) buffer daxa_BufferTableObject##NAME                 \
-    {                                                                                                                  \
-        NAME value;                                                                                                    \
-    }                                                                                                                  \
+    BODY                                                                                                               \
     daxa_BufferTable##NAME[];                                                                                          \
-    layout(scalar, binding = DAXA_STORAGE_BUFFER_BINDING, set = 0) coherent buffer daxa_CoherentBufferTableBlock##NAME \
-    {                                                                                                                  \
-        NAME value;                                                                                                    \
-    }                                                                                                                  \
-    daxa_CoherentBufferTable##NAME[];                                                                                  \
+    layout(scalar, binding = DAXA_STORAGE_BUFFER_BINDING, set = 0) readonly buffer daxa_ROBufferTableBlock##NAME       \
+    BODY                                                                                                               \
+    daxa_ROBufferTable##NAME[];                                                                                        \
     layout(scalar, buffer_reference, buffer_reference_align = 4) buffer NAME##BufferRef BODY;                          \
-    layout(scalar, buffer_reference, buffer_reference_align = 4) coherent buffer NAME##CoherentBufferRef BODY;         \
-    layout(scalar, buffer_reference, buffer_reference_align = 4) buffer NAME##WrappedBufferRef                         \
-    {                                                                                                                  \
-        NAME value;                                                                                                    \
-    };                                                                                                                 \
-    layout(scalar, buffer_reference, buffer_reference_align = 4) coherent buffer NAME##WrappedCoherentBufferRef        \
-    {                                                                                                                  \
-        NAME value;                                                                                                    \
-    }
+    layout(scalar, buffer_reference, buffer_reference_align = 4) readonly buffer NAME##ROBufferRef BODY
 
 #define DAXA_USE_PUSH_CONSTANT(NAME)                          \
     layout(scalar, push_constant) uniform _DAXA_PUSH_CONSTANT \
@@ -88,14 +76,14 @@ daxa_buffer_device_address_buffer;
     };
 
 #define daxa_BufferRef(STRUCT_TYPE) STRUCT_TYPE##BufferRef
-#define daxa_WrappedBufferRef(STRUCT_TYPE) STRUCT_TYPE##WrappedBufferRef
-#define daxa_CoherentBufferRef(STRUCT_TYPE) STRUCT_TYPE##CoherentBufferRef
-#define daxa_WrappedCoherentBufferRef(STRUCT_TYPE) STRUCT_TYPE##WrappedCoherentBufferRef
+#define daxa_ROBufferRef(STRUCT_TYPE) STRUCT_TYPE##ROBufferRef
 
 #define daxa_buffer_ref_to_address(buffer_reference) u64(buffer_reference)
 #define daxa_buffer_id_to_address(id) daxa_buffer_device_address_buffer.addresses[(DAXA_ID_INDEX_MASK & id.buffer_id_value)]
-#define daxa_buffer_address_to_ref(STRUCT_TYPE, REFERENCE_TYPE, address) STRUCT_TYPE##REFERENCE_TYPE(address)
-#define daxa_buffer_id_to_ref(STRUCT_TYPE, REFERENCE_TYPE, id) daxa_buffer_address_to_ref(STRUCT_TYPE, REFERENCE_TYPE, daxa_buffer_id_to_address(id))
+#define daxa_buffer_address_to_ref(STRUCT_TYPE, address) STRUCT_TYPE##BufferRef(address)
+#define daxa_buffer_id_to_ref(STRUCT_TYPE, id) daxa_buffer_address_to_ref(STRUCT_TYPE, daxa_buffer_id_to_address(id))
+#define daxa_buffer_address_to_roref(STRUCT_TYPE, address) STRUCT_TYPE##ROBufferRef(address)
+#define daxa_buffer_id_to_roref(STRUCT_TYPE, id) daxa_buffer_address_to_roref(STRUCT_TYPE, daxa_buffer_id_to_address(id))
 
 #define _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, IMAGE_FORMAT)                                                                          \
     layout(binding = DAXA_STORAGE_IMAGE_BINDING, set = 0, IMAGE_FORMAT) uniform IMAGE_TYPE daxa_ReadWriteImageTable_##IMAGE_FORMAT##_##IMAGE_TYPE[]; \
@@ -224,8 +212,8 @@ DAXA_REGISTER_SAMPLER_TYPE(samplerCubeShadow)
 DAXA_REGISTER_SAMPLER_TYPE(sampler1DArrayShadow)
 DAXA_REGISTER_SAMPLER_TYPE(sampler2DArrayShadow)
 
-#define daxa_access_Buffer(STRUCT_TYPE, buffer_id) daxa_BufferTable##STRUCT_TYPE[(DAXA_ID_INDEX_MASK & buffer_id.buffer_id_value)].value
-#define daxa_access_CoherentBuffer(STRUCT_TYPE, buffer_id) daxa_CoherentBufferTable##STRUCT_TYPE[(DAXA_ID_INDEX_MASK & buffer_id.buffer_id_value)].value
+#define daxa_access_Buffer(STRUCT_TYPE, buffer_id) daxa_BufferTable##STRUCT_TYPE[(DAXA_ID_INDEX_MASK & buffer_id.buffer_id_value)]
+#define daxa_access_ROBuffer(STRUCT_TYPE, buffer_id) daxa_ROBufferTable##STRUCT_TYPE[(DAXA_ID_INDEX_MASK & buffer_id.buffer_id_value)]
 #define daxa_access_RWImage(IMAGE_TYPE, IMAGE_FORMAT, image_view_id) daxa_ReadWriteImageTable_##IMAGE_FORMAT##_##IMAGE_TYPE[(DAXA_ID_INDEX_MASK & image_view_id.image_view_id_value)]
 #define daxa_access_CoherentRWImage(IMAGE_TYPE, FORMAT, image_view_id) daxa_CoherentReadWriteImageTable_##IMAGE_FORMAT##_##IMAGE_TYPE[(DAXA_ID_INDEX_MASK & image_view_id.image_view_id_value)]
 #define daxa_access_Image(IMAGE_TYPE, image_view_id) daxa_ReadOnlyImageTable_##IMAGE_TYPE[(DAXA_ID_INDEX_MASK & image_view_id.image_view_id_value)]
