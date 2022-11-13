@@ -57,9 +57,8 @@ layout(scalar, binding = DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, set = 0) rea
     daxa_u64 addresses[];
 }
 daxa_buffer_device_address_buffer;
-
-#define DAXA_DECL_BUFFER_STRUCT(NAME, BODY)                                                                            \
-    struct NAME BODY;                                                                                                  \
+    
+#define DAXA_DECL_BUFFER(NAME, BODY) \
     layout(scalar, binding = DAXA_STORAGE_BUFFER_BINDING, set = 0) buffer daxa_BufferTableObject##NAME                 \
     BODY                                                                                                               \
     daxa_BufferTable##NAME[];                                                                                          \
@@ -68,6 +67,10 @@ daxa_buffer_device_address_buffer;
     daxa_ROBufferTable##NAME[];                                                                                        \
     layout(scalar, buffer_reference, buffer_reference_align = 4) buffer NAME##BufferRef BODY;                          \
     layout(scalar, buffer_reference, buffer_reference_align = 4) readonly buffer NAME##ROBufferRef BODY
+
+#define DAXA_DECL_BUFFER_STRUCT(NAME, BODY)                                                                            \
+    struct NAME BODY;                                                                                                  \
+    DAXA_DECL_BUFFER(NAME, BODY)
 
 #define DAXA_USE_PUSH_CONSTANT(NAME)                          \
     layout(scalar, push_constant) uniform _DAXA_PUSH_CONSTANT \
