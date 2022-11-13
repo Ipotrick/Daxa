@@ -393,8 +393,8 @@ struct App : AppWindow<App>
         for (auto const & model : models)
         {
             cmd_list.push_constant(DrawPush{
-                .input_buffer = this->device.buffer_reference(gpu_input_buffer),
-                .vbuffer = this->device.buffer_reference(model.vbuffer),
+                .input_buffer = this->device.get_device_address(gpu_input_buffer),
+                .vbuffer = this->device.get_device_address(model.vbuffer),
             });
             // cmd_list.draw({.vertex_count = 3});
             cmd_list.set_index_buffer(model.ibuffer, 0);
