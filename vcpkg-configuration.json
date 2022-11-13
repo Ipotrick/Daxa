@@ -1,14 +1,14 @@
 {
-    "registries": [
-        {
-            "kind": "git",
-            "repository": "https://github.com/GabeRundlett/vcpkg-registry",
-            "baseline": "d0cbaba3d8b27c4b2c7b4c7d9ed20601ef13e8a9",
-            "packages": [
-                "dxc",
-                "fsr2",
-                "glfw3"
-            ]
-        }
-    ]
+  "registries": [
+    {
+      "kind": "git",
+      "baseline": "727911abad70dd2699a80134ff3f9869e7b61dae",
+      "repository": "https://github.com/GabeRundlett/vcpkg-registry",
+      "packages": [
+        "dxc",
+        "fsr2",
+        "glfw3"
+      ]
+    }
+  ]
 }
