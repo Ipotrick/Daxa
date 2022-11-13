@@ -57,16 +57,19 @@ layout(scalar, binding = DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, set = 0) rea
     daxa_u64 addresses[];
 }
 daxa_buffer_device_address_buffer;
+
+#define DAXA_BUFFER_LAYOUT layout(scalar, binding = DAXA_STORAGE_BUFFER_BINDING, set = 0)
+#define DAXA_BUFFER_REFERENCE_LAYOUT layout(scalar, buffer_reference, buffer_reference_align = 4)
     
 #define DAXA_DECL_BUFFER(NAME, BODY) \
-    layout(scalar, binding = DAXA_STORAGE_BUFFER_BINDING, set = 0) buffer daxa_BufferTableObject##NAME                 \
+    DAXA_BUFFER_LAYOUT buffer daxa_BufferTableObject##NAME                                                             \
     BODY                                                                                                               \
     daxa_BufferTable##NAME[];                                                                                          \
-    layout(scalar, binding = DAXA_STORAGE_BUFFER_BINDING, set = 0) readonly buffer daxa_ROBufferTableBlock##NAME       \
+    DAXA_BUFFER_LAYOUT readonly buffer daxa_ROBufferTableBlock##NAME                                                   \
     BODY                                                                                                               \
     daxa_ROBufferTable##NAME[];                                                                                        \
-    layout(scalar, buffer_reference, buffer_reference_align = 4) buffer NAME##BufferRef BODY;                          \
-    layout(scalar, buffer_reference, buffer_reference_align = 4) readonly buffer NAME##ROBufferRef BODY
+    DAXA_BUFFER_REFERENCE_LAYOUT buffer NAME##BufferRef BODY;                                                          \
+    DAXA_BUFFER_REFERENCE_LAYOUT readonly buffer NAME##ROBufferRef BODY
 
 #define DAXA_DECL_BUFFER_STRUCT(NAME, BODY)                                                                            \
     struct NAME BODY;                                                                                                  \
