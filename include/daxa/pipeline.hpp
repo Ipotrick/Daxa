@@ -120,7 +120,7 @@ namespace daxa
 
     struct RasterPipeline : ManagedPtr
     {
-        RasterPipeline();
+        RasterPipeline() = default;
 
         auto info() const -> RasterPipelineInfo const &;
 
