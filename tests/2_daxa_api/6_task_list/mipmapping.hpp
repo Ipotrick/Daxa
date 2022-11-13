@@ -211,16 +211,16 @@ namespace tests
                         .image_id = render_target_id.default_view(),
                         .gpu_input = input_buffer,
                         // .gpu_input = this->device.buffer_reference(input_buffer),
-                        .frame_dim = {render_target_size[0], render_target_size[1]},
+                        .frame_dim = {render_target_size.x, render_target_size.y},
                     };
                     cmd_list.push_constant(push);
-                    cmd_list.dispatch((render_target_size[0] + 7) / 8, (render_target_size[1] + 7) / 8);
+                    cmd_list.dispatch((render_target_size.x + 7) / 8, (render_target_size.y + 7) / 8);
                 }
             }
             void draw_ui(daxa::CommandList & cmd_list, daxa::ImageId render_target_id)
             {
                 auto render_size = device.info_image(render_target_id).size;
-                imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, render_target_id, render_size[0], render_size[1]);
+                imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, render_target_id, render_size.x, render_size.y);
             }
             void blit_image_to_swapchain(daxa::CommandList & cmd_list, daxa::ImageId src_image_id, daxa::ImageId dst_image_id)
             {
@@ -233,12 +233,12 @@ namespace tests
                     .dst_image = dst_image_id,
                     .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                     .src_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
-                    .src_offsets = {{{0, 0, 0}, {static_cast<i32>(src_size[0]), static_cast<i32>(src_size[1]), 1}}},
+                    .src_offsets = {{{0, 0, 0}, {static_cast<i32>(src_size.x), static_cast<i32>(src_size.y), 1}}},
                     .dst_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
                     .dst_offsets = {
                         {
                             {0, 0, 0},
-                            {static_cast<i32>(static_cast<f32>(dst_size[0]) * (2.0f / 3.0f)), static_cast<i32>(dst_size[1]), 1},
+                            {static_cast<i32>(static_cast<f32>(dst_size.x) * (2.0f / 3.0f)), static_cast<i32>(dst_size.y), 1},
                         },
                     },
                 });
@@ -255,18 +255,18 @@ namespace tests
                         .dst_image = dst_image_id,
                         .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                         .src_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR, .mip_level = static_cast<u32>(i + 1)},
-                        .src_offsets = {{{0, 0, 0}, {static_cast<i32>(static_cast<f32>(src_size[0]) / scl_2), static_cast<i32>(static_cast<f32>(src_size[1]) / scl_2), 1}}},
+                        .src_offsets = {{{0, 0, 0}, {static_cast<i32>(static_cast<f32>(src_size.x) / scl_2), static_cast<i32>(static_cast<f32>(src_size.y) / scl_2), 1}}},
                         .dst_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
                         .dst_offsets = {
                             {
                                 {
-                                    static_cast<i32>(static_cast<f32>(dst_size[0]) * (2.0f / 3.0f)),
-                                    static_cast<i32>(static_cast<f32>(dst_size[1]) * s1),
+                                    static_cast<i32>(static_cast<f32>(dst_size.x) * (2.0f / 3.0f)),
+                                    static_cast<i32>(static_cast<f32>(dst_size.y) * s1),
                                     0,
                                 },
                                 {
-                                    static_cast<i32>(static_cast<f32>(dst_size[0]) * (2.0f / 3.0f + 1.0f / (s0 * 6.0f))),
-                                    static_cast<i32>(static_cast<f32>(dst_size[1]) * s2),
+                                    static_cast<i32>(static_cast<f32>(dst_size.x) * (2.0f / 3.0f + 1.0f / (s0 * 6.0f))),
+                                    static_cast<i32>(static_cast<f32>(dst_size.y) * s2),
                                     1,
                                 },
                             },
@@ -319,7 +319,7 @@ namespace tests
                 paint(cmd_list, render_image, mipmapping_gpu_input_buffer);
                 {
                     auto image_info = device.info_image(render_image);
-                    std::array<i32, 3> mip_size = {static_cast<i32>(image_info.size[0]), static_cast<i32>(image_info.size[1]), static_cast<i32>(image_info.size[2])};
+                    std::array<i32, 3> mip_size = {static_cast<i32>(image_info.size.x), static_cast<i32>(image_info.size.y), static_cast<i32>(image_info.size.z)};
 
                     cmd_list.pipeline_barrier_image_transition({
                         .awaited_pipeline_access = daxa::AccessConsts::NONE,
@@ -488,7 +488,7 @@ namespace tests
                 });
                 {
                     auto image_info = device.info_image(render_image);
-                    std::array<i32, 3> mip_size = {std::max<i32>(1, static_cast<i32>(image_info.size[0])), std::max<i32>(1, static_cast<i32>(image_info.size[1])), std::max<i32>(1, static_cast<i32>(image_info.size[2]))};
+                    std::array<i32, 3> mip_size = {std::max<i32>(1, static_cast<i32>(image_info.size.x)), std::max<i32>(1, static_cast<i32>(image_info.size.y)), std::max<i32>(1, static_cast<i32>(image_info.size.z))};
                     for (u32 i = 0; i < image_info.mip_level_count - 1; ++i)
                     {
                         std::array<i32, 3> next_mip_size = {std::max<i32>(1, mip_size[0] / 2), std::max<i32>(1, mip_size[1] / 2), std::max<i32>(1, mip_size[2] / 2)};
