@@ -43,9 +43,7 @@ namespace daxa
                 std::max<i64>(
                     0,
                     static_cast<i64>(impl.cpu_frame_timeline) - static_cast<i64>(impl.info.max_allowed_frames_in_flight))));
-        // We now bump the cpu timeline value.
-        impl.cpu_frame_timeline += 1;
-        impl.acquire_semaphore_index = impl.cpu_frame_timeline % impl.info.max_allowed_frames_in_flight;
+        impl.acquire_semaphore_index = (impl.cpu_frame_timeline + 1) % impl.info.max_allowed_frames_in_flight;
         BinarySemaphore & acquire_semaphore = impl.acquire_semaphores[impl.acquire_semaphore_index];
         VkResult err = vkAcquireNextImageKHR(
             impl.impl_device.as<ImplDevice>()->vk_device,
@@ -67,6 +65,8 @@ namespace daxa
             // The swapchain needs recreation, we can only return a null ImageId here.
             return ImageId{};
         }
+        // We only bump the cpu timeline, when the aquire succedes.
+        impl.cpu_frame_timeline += 1;
         return impl.images[impl.current_image_index];
     }
 
