@@ -34,6 +34,8 @@ namespace daxa
         using f32 = float;
         using f64 = double;
 
+        using BufferDeviceAddress = u64;
+
         namespace detail
         {
             template <typename T, usize N>

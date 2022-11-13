@@ -30,10 +30,11 @@
 #define DAXA_PUSH_CONSTANT(STRUCT_TYPE)
 #define DAXA_DECL_BUFFER_STRUCT(NAME, BODY) \
     struct NAME BODY
-#define daxa_BufferRef(x) u64
-#define daxa_WrappedBufferRef(x) u64
-#define daxa_CoherentBufferRef(x) u64
-#define daxa_WrappedCoherentBufferRef(x) u64
+
+#define daxa_BufferRef(x) daxa::types::BufferDeviceAddress
+#define daxa_WrappedBufferRef(x) daxa::types::BufferDeviceAddress
+#define daxa_CoherentBufferRef(x) daxa::types::BufferDeviceAddress
+#define daxa_WrappedCoherentBufferRef(x) daxa::types::BufferDeviceAddress
 
 using daxa_b32 = daxa::types::b32;
 using daxa_i32 = daxa::types::i32;
