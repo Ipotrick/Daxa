@@ -94,66 +94,66 @@ daxa_buffer_device_address_buffer;
 #define daxa_buffer_address_to_roref(BUFFER_STRUCT_TYPE, address) BUFFER_STRUCT_TYPE##ROBufferRef(address)
 #define daxa_buffer_id_to_roref(BUFFER_STRUCT_TYPE, id) daxa_buffer_address_to_roref(BUFFER_STRUCT_TYPE, daxa_buffer_id_to_address(id))
 
-#define DAXA_REGISTER_IMAGE_TYPE(IMAGE_TYPE) \
+#define _DAXA_REGISTER_IMAGE_TYPE(IMAGE_TYPE) \
     DAXA_STORAGE_IMAGE_LAYOUT readonly uniform IMAGE_TYPE daxa_ROImageTable##IMAGE_TYPE[]; \
     DAXA_STORAGE_IMAGE_LAYOUT uniform IMAGE_TYPE daxa_RWImageTable##IMAGE_TYPE[]; 
 
-#define DAXA_REGISTER_TEXTURE_TYPE(TEXTURE_TYPE) \
+#define _DAXA_REGISTER_TEXTURE_TYPE(TEXTURE_TYPE) \
     DAXA_SAMPLED_IMAGE_LAYOUT uniform TEXTURE_TYPE daxa_TextureTable##TEXTURE_TYPE[];
 
-#define DAXA_REGISTER_SAMPLER_TYPE(SAMPLER_TYPE) \
+#define _DAXA_REGISTER_SAMPLER_TYPE(SAMPLER_TYPE) \
     DAXA_SAMPLER_LAYOUT uniform SAMPLER_TYPE daxa_SamplerTable##SAMPLER_TYPE[];
 
-DAXA_REGISTER_IMAGE_TYPE(image1D)
-DAXA_REGISTER_IMAGE_TYPE(image2D)
-DAXA_REGISTER_IMAGE_TYPE(image3D)
-DAXA_REGISTER_IMAGE_TYPE(imageCube)
-DAXA_REGISTER_IMAGE_TYPE(image1DArray)
-DAXA_REGISTER_IMAGE_TYPE(image2DArray)
-DAXA_REGISTER_IMAGE_TYPE(imageBuffer)
-DAXA_REGISTER_IMAGE_TYPE(image1D)
-DAXA_REGISTER_IMAGE_TYPE(image2D)
-DAXA_REGISTER_IMAGE_TYPE(image3D)
-DAXA_REGISTER_IMAGE_TYPE(imageCube)
-DAXA_REGISTER_IMAGE_TYPE(image1DArray)
-DAXA_REGISTER_IMAGE_TYPE(image2DArray)
-DAXA_REGISTER_IMAGE_TYPE(imageBuffer)
-DAXA_REGISTER_IMAGE_TYPE(iimage1D)
-DAXA_REGISTER_IMAGE_TYPE(iimage2D)
-DAXA_REGISTER_IMAGE_TYPE(iimage3D)
-DAXA_REGISTER_IMAGE_TYPE(iimageCube)
-DAXA_REGISTER_IMAGE_TYPE(iimage1DArray)
-DAXA_REGISTER_IMAGE_TYPE(iimage2DArray)
-DAXA_REGISTER_IMAGE_TYPE(iimageBuffer)
-DAXA_REGISTER_IMAGE_TYPE(uimage1D)
-DAXA_REGISTER_IMAGE_TYPE(uimage2D)
-DAXA_REGISTER_IMAGE_TYPE(uimage3D)
-DAXA_REGISTER_IMAGE_TYPE(uimageCube)
-DAXA_REGISTER_IMAGE_TYPE(uimage1DArray)
-DAXA_REGISTER_IMAGE_TYPE(uimage2DArray)
-DAXA_REGISTER_IMAGE_TYPE(uimageBuffer)
+_DAXA_REGISTER_IMAGE_TYPE(image1D)
+_DAXA_REGISTER_IMAGE_TYPE(image2D)
+_DAXA_REGISTER_IMAGE_TYPE(image3D)
+_DAXA_REGISTER_IMAGE_TYPE(imageCube)
+_DAXA_REGISTER_IMAGE_TYPE(image1DArray)
+_DAXA_REGISTER_IMAGE_TYPE(image2DArray)
+_DAXA_REGISTER_IMAGE_TYPE(imageBuffer)
+_DAXA_REGISTER_IMAGE_TYPE(image1D)
+_DAXA_REGISTER_IMAGE_TYPE(image2D)
+_DAXA_REGISTER_IMAGE_TYPE(image3D)
+_DAXA_REGISTER_IMAGE_TYPE(imageCube)
+_DAXA_REGISTER_IMAGE_TYPE(image1DArray)
+_DAXA_REGISTER_IMAGE_TYPE(image2DArray)
+_DAXA_REGISTER_IMAGE_TYPE(imageBuffer)
+_DAXA_REGISTER_IMAGE_TYPE(iimage1D)
+_DAXA_REGISTER_IMAGE_TYPE(iimage2D)
+_DAXA_REGISTER_IMAGE_TYPE(iimage3D)
+_DAXA_REGISTER_IMAGE_TYPE(iimageCube)
+_DAXA_REGISTER_IMAGE_TYPE(iimage1DArray)
+_DAXA_REGISTER_IMAGE_TYPE(iimage2DArray)
+_DAXA_REGISTER_IMAGE_TYPE(iimageBuffer)
+_DAXA_REGISTER_IMAGE_TYPE(uimage1D)
+_DAXA_REGISTER_IMAGE_TYPE(uimage2D)
+_DAXA_REGISTER_IMAGE_TYPE(uimage3D)
+_DAXA_REGISTER_IMAGE_TYPE(uimageCube)
+_DAXA_REGISTER_IMAGE_TYPE(uimage1DArray)
+_DAXA_REGISTER_IMAGE_TYPE(uimage2DArray)
+_DAXA_REGISTER_IMAGE_TYPE(uimageBuffer)
 
-DAXA_REGISTER_TEXTURE_TYPE(texture1D)
-DAXA_REGISTER_TEXTURE_TYPE(texture2D)
-DAXA_REGISTER_TEXTURE_TYPE(texture3D)
-DAXA_REGISTER_TEXTURE_TYPE(textureCube)
-DAXA_REGISTER_TEXTURE_TYPE(texture1DArray)
-DAXA_REGISTER_TEXTURE_TYPE(texture2DArray)
-DAXA_REGISTER_TEXTURE_TYPE(textureBuffer)
-DAXA_REGISTER_TEXTURE_TYPE(itexture1D)
-DAXA_REGISTER_TEXTURE_TYPE(itexture2D)
-DAXA_REGISTER_TEXTURE_TYPE(itexture3D)
-DAXA_REGISTER_TEXTURE_TYPE(itextureCube)
-DAXA_REGISTER_TEXTURE_TYPE(itexture1DArray)
-DAXA_REGISTER_TEXTURE_TYPE(itexture2DArray)
-DAXA_REGISTER_TEXTURE_TYPE(itextureBuffer)
-DAXA_REGISTER_TEXTURE_TYPE(utexture1D)
-DAXA_REGISTER_TEXTURE_TYPE(utexture2D)
-DAXA_REGISTER_TEXTURE_TYPE(utexture3D)
-DAXA_REGISTER_TEXTURE_TYPE(utextureCube)
-DAXA_REGISTER_TEXTURE_TYPE(utexture1DArray)
-DAXA_REGISTER_TEXTURE_TYPE(utexture2DArray)
-DAXA_REGISTER_TEXTURE_TYPE(utextureBuffer)
+_DAXA_REGISTER_TEXTURE_TYPE(texture1D)
+_DAXA_REGISTER_TEXTURE_TYPE(texture2D)
+_DAXA_REGISTER_TEXTURE_TYPE(texture3D)
+_DAXA_REGISTER_TEXTURE_TYPE(textureCube)
+_DAXA_REGISTER_TEXTURE_TYPE(texture1DArray)
+_DAXA_REGISTER_TEXTURE_TYPE(texture2DArray)
+_DAXA_REGISTER_TEXTURE_TYPE(textureBuffer)
+_DAXA_REGISTER_TEXTURE_TYPE(itexture1D)
+_DAXA_REGISTER_TEXTURE_TYPE(itexture2D)
+_DAXA_REGISTER_TEXTURE_TYPE(itexture3D)
+_DAXA_REGISTER_TEXTURE_TYPE(itextureCube)
+_DAXA_REGISTER_TEXTURE_TYPE(itexture1DArray)
+_DAXA_REGISTER_TEXTURE_TYPE(itexture2DArray)
+_DAXA_REGISTER_TEXTURE_TYPE(itextureBuffer)
+_DAXA_REGISTER_TEXTURE_TYPE(utexture1D)
+_DAXA_REGISTER_TEXTURE_TYPE(utexture2D)
+_DAXA_REGISTER_TEXTURE_TYPE(utexture3D)
+_DAXA_REGISTER_TEXTURE_TYPE(utextureCube)
+_DAXA_REGISTER_TEXTURE_TYPE(utexture1DArray)
+_DAXA_REGISTER_TEXTURE_TYPE(utexture2DArray)
+_DAXA_REGISTER_TEXTURE_TYPE(utextureBuffer)
 
 layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform sampler daxa_SamplerTable[];
 
@@ -165,6 +165,41 @@ layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform sampler daxa_SamplerTabl
 #define daxa_access_ROImage(IMAGE_TYPE, image_view_id) daxa_ROImageTable##IMAGE_TYPE[daxa_id_to_index(image_view_id.image_view_id_value)]
 #define daxa_access_Texture(TEXTURE_TYPE, image_view_id) daxa_TextureTable##TEXTURE_TYPE[daxa_id_to_index(image_view_id.image_view_id_value)]
 #define daxa_access_Sampler(sampler_id) daxa_SamplerTable[daxa_id_to_index(sampler_id.sampler_id_value)]
+
+
+#ifdef DAXA_SHADER_NO_NAMESPACE 
+#define DAXA_SHADER_NO_NAMESPACE_PRIMITIVES
+
+#define BufferId daxa_BufferId
+#define ImageViewId daxa_ImageViewId
+#define ImageId daxa_ImageId
+#define SamplerId daxa_SamplerId
+
+#define BUFFER_LAYOUT DAXA_BUFFER_LAYOUT
+#define BUFFER_REFERENCE_LAYOUT DAXA_BUFFER_REFERENCE_LAYOUT
+#define STORAGE_IMAGE_LAYOUT DAXA_STORAGE_IMAGE_LAYOUT
+#define SAMPLED_IMAGE_LAYOUT DAXA_SAMPLED_IMAGE_LAYOUT
+#define SAMPLER_LAYOUT DAXA_SAMPLER_LAYOUT
+
+#define BufferRef daxa_BufferRef
+#define ROBufferRef daxa_ROBufferRef
+
+#define buffer_ref_to_address daxa_buffer_ref_to_address
+#define buffer_id_to_address daxa_buffer_id_to_address
+#define buffer_address_to_ref daxa_buffer_address_to_ref
+#define buffer_id_to_ref daxa_buffer_id_to_ref
+#define buffer_address_to_roref daxa_buffer_address_to_roref
+#define buffer_id_to_roref daxa_buffer_id_to_roref
+
+#define access_Buffer daxa_access_Buffer
+#define access_ROBuffer daxa_access_ROBuffer
+#define access_Image daxa_access_Image
+#define access_ROImage daxa_access_ROImage
+#define access_Texture daxa_access_Texture
+#define access_Sampler daxa_access_Sampler
+
+#endif
+
 
 #ifdef DAXA_SHADER_NO_NAMESPACE_PRIMITIVES
 #define b32 daxa_b32
