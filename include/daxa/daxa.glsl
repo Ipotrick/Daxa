@@ -84,15 +84,15 @@ daxa_buffer_device_address_buffer;
         NAME push_constant;                                   \
     };
 
-#define daxa_BufferRef(STRUCT_TYPE) STRUCT_TYPE##RWBufferRef
-#define daxa_ROBufferRef(STRUCT_TYPE) STRUCT_TYPE##ROBufferRef
+#define daxa_BufferRef(BUFFER_STRUCT_TYPE) BUFFER_STRUCT_TYPE##RWBufferRef
+#define daxa_ROBufferRef(BUFFER_STRUCT_TYPE) BUFFER_STRUCT_TYPE##ROBufferRef
 
 #define daxa_buffer_ref_to_address(buffer_reference) u64(buffer_reference)
 #define daxa_buffer_id_to_address(id) daxa_buffer_device_address_buffer.addresses[(DAXA_ID_INDEX_MASK & id.buffer_id_value)]
-#define daxa_buffer_address_to_ref(STRUCT_TYPE, address) STRUCT_TYPE##RWBufferRef(address)
-#define daxa_buffer_id_to_ref(STRUCT_TYPE, id) daxa_buffer_address_to_ref(STRUCT_TYPE, daxa_buffer_id_to_address(id))
-#define daxa_buffer_address_to_roref(STRUCT_TYPE, address) STRUCT_TYPE##ROBufferRef(address)
-#define daxa_buffer_id_to_roref(STRUCT_TYPE, id) daxa_buffer_address_to_roref(STRUCT_TYPE, daxa_buffer_id_to_address(id))
+#define daxa_buffer_address_to_ref(BUFFER_STRUCT_TYPE, address) BUFFER_STRUCT_TYPE##RWBufferRef(address)
+#define daxa_buffer_id_to_ref(BUFFER_STRUCT_TYPE, id) daxa_buffer_address_to_ref(BUFFER_STRUCT_TYPE, daxa_buffer_id_to_address(id))
+#define daxa_buffer_address_to_roref(BUFFER_STRUCT_TYPE, address) BUFFER_STRUCT_TYPE##ROBufferRef(address)
+#define daxa_buffer_id_to_roref(BUFFER_STRUCT_TYPE, id) daxa_buffer_address_to_roref(BUFFER_STRUCT_TYPE, daxa_buffer_id_to_address(id))
 
 #define DAXA_REGISTER_IMAGE_TYPE(IMAGE_TYPE) \
     DAXA_STORAGE_IMAGE_LAYOUT readonly uniform IMAGE_TYPE daxa_ROImageTable##IMAGE_TYPE[]; \
@@ -159,9 +159,9 @@ layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform sampler daxa_SamplerTabl
 
 #define daxa_id_to_index(ID) (DAXA_ID_INDEX_MASK & ID)
 
-#define daxa_access_Buffer(STRUCT_TYPE, buffer_id) daxa_RWBufferTable##STRUCT_TYPE[]
-#define daxa_access_ROBuffer(STRUCT_TYPE, buffer_id) daxa_ROBufferTable##STRUCT_TYPE[daxa_id_to_index(buffer_id.buffer_id_value)]
-#define daxa_access_RWImage(IMAGE_TYPE, image_view_id) daxa_RWImageTable##IMAGE_TYPE[daxa_id_to_index(image_view_id.image_view_id_value)]
+#define daxa_access_Buffer(BUFFER_STRUCT_TYPE, buffer_id) daxa_RWBufferTable##BUFFER_STRUCT_TYPE[]
+#define daxa_access_ROBuffer(BUFFER_STRUCT_TYPE, buffer_id) daxa_ROBufferTable##BUFFER_STRUCT_TYPE[daxa_id_to_index(buffer_id.buffer_id_value)]
+#define daxa_access_Image(IMAGE_TYPE, image_view_id) daxa_RWImageTable##IMAGE_TYPE[daxa_id_to_index(image_view_id.image_view_id_value)]
 #define daxa_access_ROImage(IMAGE_TYPE, image_view_id) daxa_ROImageTable##IMAGE_TYPE[daxa_id_to_index(image_view_id.image_view_id_value)]
 #define daxa_access_Texture(TEXTURE_TYPE, image_view_id) daxa_TextureTable##TEXTURE_TYPE[daxa_id_to_index(image_view_id.image_view_id_value)]
 #define daxa_access_Sampler(sampler_id) daxa_SamplerTable[daxa_id_to_index(sampler_id.sampler_id_value)]
