@@ -1031,6 +1031,8 @@ namespace daxa
         preamble += "#extension GL_KHR_shader_subgroup_clustered : enable\n";
         preamble += "#extension GL_KHR_shader_subgroup_quad : enable\n";
         preamble += "#extension GL_EXT_scalar_block_layout : require\n";
+        preamble += "#extension GL_EXT_shader_image_load_formatted : require\n";
+        //preamble += "#extension GL_EXT_shader_image_store_formatted : require\n";
         for (auto const & shader_define : shader_info.compile_options.defines)
         {
             if (!shader_define.value.empty())

@@ -11,15 +11,14 @@ f32 segment_distance(f32vec2 p, f32vec2 a, f32vec2 b)
     return length(pa - h * ba);
 }
 
+#define INPUT daxa_access_ROBuffer(MipmappingGpuInput, push_constant.gpu_input)
+
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 void main()
 {
     u32vec3 pixel_i = gl_GlobalInvocationID.xyz;
     if (pixel_i.x >= push_constant.frame_dim.x || pixel_i.y >= push_constant.frame_dim.y)
         return;
-
-    MipmappingGpuInput INPUT = daxa_access_Buffer(MipmappingGpuInput, push_constant.gpu_input);
-    // #define INPUT push_constant.gpu_input
 
     f32vec2 render_size = push_constant.frame_dim;
     f32vec2 inv_render_size = f32vec2(1.0) / render_size;
@@ -36,7 +35,7 @@ void main()
         f32vec3 col = INPUT.paint_col;
 
         imageStore(
-            daxa_access_RWImage(image2D, rgba32f, push_constant.image_id),
+            daxa_access_RWStorageImage(image2D, push_constant.image_id),
             i32vec2(pixel_i.xy),
             f32vec4(col, 1));
     }
