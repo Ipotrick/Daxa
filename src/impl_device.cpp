@@ -372,8 +372,8 @@ namespace daxa
             .shaderImageGatherExtended = VK_FALSE,
             .shaderStorageImageExtendedFormats = VK_FALSE,
             .shaderStorageImageMultisample = VK_FALSE,
-            .shaderStorageImageReadWithoutFormat = VK_FALSE,
-            .shaderStorageImageWriteWithoutFormat = VK_FALSE,
+            .shaderStorageImageReadWithoutFormat = VK_TRUE,         // This allows daxa shaders to not specify image layout for image binding tables and read ops.
+            .shaderStorageImageWriteWithoutFormat = VK_TRUE,        // This allows daxa shaders to not specify image layout for image binding tables and write ops.
             .shaderUniformBufferArrayDynamicIndexing = VK_FALSE,    // This is superseded by descriptor indexing.
             .shaderSampledImageArrayDynamicIndexing = VK_FALSE,     // This is superseded by descriptor indexing.
             .shaderStorageBufferArrayDynamicIndexing = VK_FALSE,    // This is superseded by descriptor indexing.
