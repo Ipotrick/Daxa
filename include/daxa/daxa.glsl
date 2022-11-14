@@ -52,7 +52,7 @@ struct daxa_SamplerId
     daxa_u32 sampler_id_value;
 };
 
-layout(scalar, binding = DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, set = 0) readonly buffer daxa_BufferDeviceAddressBuffer
+layout(scalar, binding = DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, set = 0) readonly buffer daxa_BufferDeviceAddressBufferObject
 {
     daxa_u64 addresses[];
 }
@@ -60,15 +60,18 @@ daxa_buffer_device_address_buffer;
 
 #define DAXA_BUFFER_LAYOUT layout(scalar, binding = DAXA_STORAGE_BUFFER_BINDING, set = 0)
 #define DAXA_BUFFER_REFERENCE_LAYOUT layout(scalar, buffer_reference, buffer_reference_align = 4)
+#define DAXA_STORAGE_IMAGE_LAYOUT layout(binding = DAXA_STORAGE_IMAGE_BINDING, set = 0)
+#define DAXA_SAMPLED_IMAGE_LAYOUT layout(binding = DAXA_SAMPLED_IMAGE_BINDING, set = 0)
+#define DAXA_SAMPLER_LAYOUT layout(binding = DAXA_SAMPLER_BINDING, set = 0)
     
 #define DAXA_DECL_BUFFER(NAME, BODY) \
-    DAXA_BUFFER_LAYOUT buffer daxa_BufferTableObject##NAME                                                             \
+    DAXA_BUFFER_LAYOUT buffer daxa_RWBufferTableBlock##NAME                                                            \
     BODY                                                                                                               \
-    daxa_BufferTable##NAME[];                                                                                          \
+    daxa_RWBufferTable##NAME[];                                                                                        \
     DAXA_BUFFER_LAYOUT readonly buffer daxa_ROBufferTableBlock##NAME                                                   \
     BODY                                                                                                               \
     daxa_ROBufferTable##NAME[];                                                                                        \
-    DAXA_BUFFER_REFERENCE_LAYOUT buffer NAME##BufferRef BODY;                                                          \
+    DAXA_BUFFER_REFERENCE_LAYOUT buffer NAME##RWBufferRef BODY;                                                        \
     DAXA_BUFFER_REFERENCE_LAYOUT readonly buffer NAME##ROBufferRef BODY
 
 #define DAXA_DECL_BUFFER_STRUCT(NAME, BODY)                                                                            \
@@ -81,92 +84,54 @@ daxa_buffer_device_address_buffer;
         NAME push_constant;                                   \
     };
 
-#define daxa_BufferRef(STRUCT_TYPE) STRUCT_TYPE##BufferRef
+#define daxa_BufferRef(STRUCT_TYPE) STRUCT_TYPE##RWBufferRef
 #define daxa_ROBufferRef(STRUCT_TYPE) STRUCT_TYPE##ROBufferRef
 
 #define daxa_buffer_ref_to_address(buffer_reference) u64(buffer_reference)
 #define daxa_buffer_id_to_address(id) daxa_buffer_device_address_buffer.addresses[(DAXA_ID_INDEX_MASK & id.buffer_id_value)]
-#define daxa_buffer_address_to_ref(STRUCT_TYPE, address) STRUCT_TYPE##BufferRef(address)
+#define daxa_buffer_address_to_ref(STRUCT_TYPE, address) STRUCT_TYPE##RWBufferRef(address)
 #define daxa_buffer_id_to_ref(STRUCT_TYPE, id) daxa_buffer_address_to_ref(STRUCT_TYPE, daxa_buffer_id_to_address(id))
 #define daxa_buffer_address_to_roref(STRUCT_TYPE, address) STRUCT_TYPE##ROBufferRef(address)
 #define daxa_buffer_id_to_roref(STRUCT_TYPE, id) daxa_buffer_address_to_roref(STRUCT_TYPE, daxa_buffer_id_to_address(id))
 
-#define _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, IMAGE_FORMAT)                                                                          \
-    layout(binding = DAXA_STORAGE_IMAGE_BINDING, set = 0, IMAGE_FORMAT) uniform IMAGE_TYPE daxa_ReadWriteImageTable_##IMAGE_FORMAT##_##IMAGE_TYPE[]; \
-    layout(binding = DAXA_STORAGE_IMAGE_BINDING, set = 0, IMAGE_FORMAT) coherent uniform IMAGE_TYPE daxa_CoherentReadWriteImageTable_##IMAGE_FORMAT##_##IMAGE_TYPE[];
-
-#define DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_FLOAT(IMAGE_TYPE)             \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rgba32f)        \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rgba16f)        \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rg32f)          \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rg16f)          \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, r11f_g11f_b10f) \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, r32f)           \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, r16f)           \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rgba16)         \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rgb10_a2)       \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rgba8)          \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rg16)           \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rg8)            \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, r16)            \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, r8)             \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rgba16_snorm)   \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rgba8_snorm)    \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rg16_snorm)     \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rg8_snorm)      \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, r16_snorm)      \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, r8_snorm)
-
-#define DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_INT(IMAGE_TYPE)        \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rgba32i) \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rgba16i) \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rgba8i)  \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rg32i)   \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rg16i)   \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rg8i)    \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, r32i)    \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, r16i)    \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, r8i)
-
-#define DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_UINT(IMAGE_TYPE)          \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rgba32ui)   \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rgba16ui)   \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rgb10_a2ui) \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rgba8ui)    \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rg32ui)     \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rg16ui)     \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, rg8ui)      \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, r32ui)      \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, r16ui)      \
-    _DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_IMPL(IMAGE_TYPE, r8ui)
+#define DAXA_REGISTER_READ_WRITE_IMAGE(IMAGE_TYPE) \
+    DAXA_STORAGE_IMAGE_LAYOUT readonly uniform IMAGE_TYPE daxa_ROStorageImageTable##IMAGE_TYPE[]; \
+    DAXA_STORAGE_IMAGE_LAYOUT uniform IMAGE_TYPE daxa_RWStorageImageTable##IMAGE_TYPE[]; 
 
 #define DAXA_REGISTER_READ_ONLY_IMAGE_TYPE(IMAGE_TYPE) \
-    layout(binding = DAXA_SAMPLED_IMAGE_BINDING, set = 0) uniform IMAGE_TYPE daxa_ReadOnlyImageTable_##IMAGE_TYPE[];
+    DAXA_SAMPLED_IMAGE_LAYOUT uniform IMAGE_TYPE daxa_SampledImageTable##IMAGE_TYPE[];
 
 #define DAXA_REGISTER_SAMPLER_TYPE(SAMPLER_TYPE) \
-    layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform SAMPLER_TYPE daxa_SamplerTable##SAMPLER_TYPE[];
+    DAXA_SAMPLER_LAYOUT uniform SAMPLER_TYPE daxa_SamplerTable##SAMPLER_TYPE[];
 
-DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_FLOAT(image1D)
-DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_FLOAT(image2D)
-DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_FLOAT(image3D)
-DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_FLOAT(imageCube)
-DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_FLOAT(image1DArray)
-DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_FLOAT(image2DArray)
-DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_FLOAT(imageBuffer)
-DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_INT(iimage1D)
-DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_INT(iimage2D)
-DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_INT(iimage3D)
-DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_INT(iimageCube)
-DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_INT(iimage1DArray)
-DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_INT(iimage2DArray)
-DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_INT(iimageBuffer)
-DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_UINT(uimage1D)
-DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_UINT(uimage2D)
-DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_UINT(uimage3D)
-DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_UINT(uimageCube)
-DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_UINT(uimage1DArray)
-DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_UINT(uimage2DArray)
-DAXA_REGISTER_READ_WRITE_IMAGE_TYPE_UINT(uimageBuffer)
+DAXA_REGISTER_READ_WRITE_IMAGE(image1D)
+DAXA_REGISTER_READ_WRITE_IMAGE(image2D)
+DAXA_REGISTER_READ_WRITE_IMAGE(image3D)
+DAXA_REGISTER_READ_WRITE_IMAGE(imageCube)
+DAXA_REGISTER_READ_WRITE_IMAGE(image1DArray)
+DAXA_REGISTER_READ_WRITE_IMAGE(image2DArray)
+DAXA_REGISTER_READ_WRITE_IMAGE(imageBuffer)
+DAXA_REGISTER_READ_WRITE_IMAGE(image1D)
+DAXA_REGISTER_READ_WRITE_IMAGE(image2D)
+DAXA_REGISTER_READ_WRITE_IMAGE(image3D)
+DAXA_REGISTER_READ_WRITE_IMAGE(imageCube)
+DAXA_REGISTER_READ_WRITE_IMAGE(image1DArray)
+DAXA_REGISTER_READ_WRITE_IMAGE(image2DArray)
+DAXA_REGISTER_READ_WRITE_IMAGE(imageBuffer)
+DAXA_REGISTER_READ_WRITE_IMAGE(iimage1D)
+DAXA_REGISTER_READ_WRITE_IMAGE(iimage2D)
+DAXA_REGISTER_READ_WRITE_IMAGE(iimage3D)
+DAXA_REGISTER_READ_WRITE_IMAGE(iimageCube)
+DAXA_REGISTER_READ_WRITE_IMAGE(iimage1DArray)
+DAXA_REGISTER_READ_WRITE_IMAGE(iimage2DArray)
+DAXA_REGISTER_READ_WRITE_IMAGE(iimageBuffer)
+DAXA_REGISTER_READ_WRITE_IMAGE(uimage1D)
+DAXA_REGISTER_READ_WRITE_IMAGE(uimage2D)
+DAXA_REGISTER_READ_WRITE_IMAGE(uimage3D)
+DAXA_REGISTER_READ_WRITE_IMAGE(uimageCube)
+DAXA_REGISTER_READ_WRITE_IMAGE(uimage1DArray)
+DAXA_REGISTER_READ_WRITE_IMAGE(uimage2DArray)
+DAXA_REGISTER_READ_WRITE_IMAGE(uimageBuffer)
 
 DAXA_REGISTER_READ_ONLY_IMAGE_TYPE(texture1D)
 DAXA_REGISTER_READ_ONLY_IMAGE_TYPE(texture2D)
@@ -190,41 +155,16 @@ DAXA_REGISTER_READ_ONLY_IMAGE_TYPE(utexture1DArray)
 DAXA_REGISTER_READ_ONLY_IMAGE_TYPE(utexture2DArray)
 DAXA_REGISTER_READ_ONLY_IMAGE_TYPE(utextureBuffer)
 
-DAXA_REGISTER_SAMPLER_TYPE(sampler)
-DAXA_REGISTER_SAMPLER_TYPE(sampler1D)
-DAXA_REGISTER_SAMPLER_TYPE(sampler2D)
-DAXA_REGISTER_SAMPLER_TYPE(sampler3D)
-DAXA_REGISTER_SAMPLER_TYPE(samplerCube)
-DAXA_REGISTER_SAMPLER_TYPE(sampler1DArray)
-DAXA_REGISTER_SAMPLER_TYPE(sampler2DArray)
-DAXA_REGISTER_SAMPLER_TYPE(samplerBuffer)
-DAXA_REGISTER_SAMPLER_TYPE(isampler1D)
-DAXA_REGISTER_SAMPLER_TYPE(isampler2D)
-DAXA_REGISTER_SAMPLER_TYPE(isampler3D)
-DAXA_REGISTER_SAMPLER_TYPE(isamplerCube)
-DAXA_REGISTER_SAMPLER_TYPE(isampler1DArray)
-DAXA_REGISTER_SAMPLER_TYPE(isampler2DArray)
-DAXA_REGISTER_SAMPLER_TYPE(isamplerBuffer)
-DAXA_REGISTER_SAMPLER_TYPE(usampler1D)
-DAXA_REGISTER_SAMPLER_TYPE(usampler2D)
-DAXA_REGISTER_SAMPLER_TYPE(usampler3D)
-DAXA_REGISTER_SAMPLER_TYPE(usamplerCube)
-DAXA_REGISTER_SAMPLER_TYPE(usampler1DArray)
-DAXA_REGISTER_SAMPLER_TYPE(usampler2DArray)
-DAXA_REGISTER_SAMPLER_TYPE(usamplerBuffer)
-DAXA_REGISTER_SAMPLER_TYPE(sampler1DShadow)
-DAXA_REGISTER_SAMPLER_TYPE(sampler2DShadow)
-DAXA_REGISTER_SAMPLER_TYPE(samplerCubeShadow)
-DAXA_REGISTER_SAMPLER_TYPE(sampler1DArrayShadow)
-DAXA_REGISTER_SAMPLER_TYPE(sampler2DArrayShadow)
+layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform sampler daxa_SamplerTable[];
 
-#define daxa_access_Buffer(STRUCT_TYPE, buffer_id) daxa_BufferTable##STRUCT_TYPE[(DAXA_ID_INDEX_MASK & buffer_id.buffer_id_value)]
-#define daxa_access_ROBuffer(STRUCT_TYPE, buffer_id) daxa_ROBufferTable##STRUCT_TYPE[(DAXA_ID_INDEX_MASK & buffer_id.buffer_id_value)]
-#define daxa_access_RWImage(IMAGE_TYPE, IMAGE_FORMAT, image_view_id) daxa_ReadWriteImageTable_##IMAGE_FORMAT##_##IMAGE_TYPE[(DAXA_ID_INDEX_MASK & image_view_id.image_view_id_value)]
-#define daxa_access_CoherentRWImage(IMAGE_TYPE, FORMAT, image_view_id) daxa_CoherentReadWriteImageTable_##IMAGE_FORMAT##_##IMAGE_TYPE[(DAXA_ID_INDEX_MASK & image_view_id.image_view_id_value)]
-#define daxa_access_Image(IMAGE_TYPE, image_view_id) daxa_ReadOnlyImageTable_##IMAGE_TYPE[(DAXA_ID_INDEX_MASK & image_view_id.image_view_id_value)]
-#define daxa_access_CoherentImage(IMAGE_TYPE, image_view_id) daxa_CoherentReadOnlyImageTable_##IMAGE_TYPE[(DAXA_ID_INDEX_MASK & image_view_id.image_view_id_value)]
-#define daxa_access_Sampler(SAMPLER_TYPE, sampler_id) daxa_SamplerTable##SAMPLER_TYPE[(DAXA_ID_INDEX_MASK & sampler_id.sampler_id_value)]
+#define daxa_id_to_index(ID) (DAXA_ID_INDEX_MASK & ID)
+
+#define daxa_access_Buffer(STRUCT_TYPE, buffer_id) daxa_RWBufferTable##STRUCT_TYPE[]
+#define daxa_access_ROBuffer(STRUCT_TYPE, buffer_id) daxa_ROBufferTable##STRUCT_TYPE[daxa_id_to_index(buffer_id.buffer_id_value)]
+#define daxa_access_RWStorageImage(IMAGE_TYPE, image_view_id) daxa_RWStorageImageTable##IMAGE_TYPE[daxa_id_to_index(image_view_id.image_view_id_value)]
+#define daxa_access_ROStorageImage(IMAGE_TYPE, image_view_id) daxa_ROStorageImageTable##IMAGE_TYPE[daxa_id_to_index(image_view_id.image_view_id_value)]
+#define daxa_access_SampledImage(IMAGE_TYPE, image_view_id) daxa_SampledImageTable##IMAGE_TYPE[daxa_id_to_index(image_view_id.image_view_id_value)]
+#define daxa_access_Sampler(sampler_id) daxa_SamplerTable[daxa_id_to_index(sampler_id.sampler_id_value)]
 
 #ifdef DAXA_SHADER_NO_NAMESPACE_PRIMITIVES
 #define b32 daxa_b32

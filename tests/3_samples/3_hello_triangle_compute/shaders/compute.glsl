@@ -54,7 +54,7 @@ void main()
     }
 
     imageStore(
-        daxa_access_RWImage(image2D, rgba32f, push_constant.image_id),
+        daxa_access_RWStorageImage(image2D, push_constant.image_id),
         i32vec2(pixel_i.xy),
         f32vec4(col, 1));
 }
