@@ -218,8 +218,8 @@ void main()
 {
     f32vec4 tex_col = texture(
         sampler2DArray(
-            daxa_access_Image(texture2DArray, push_constant.atlas_texture),
-            daxa_access_Sampler(sampler, push_constant.atlas_sampler)),
+            daxa_access_SampledImage(texture2DArray, push_constant.atlas_texture),
+            daxa_access_Sampler(push_constant.atlas_sampler)),
         v_tex_uv);
     f32vec3 col = tex_col.rgb;
     col *= max(dot(normalize(v_nrm), normalize(f32vec3(1, -3, 2))) * 0.5 + 0.5, 0.0);
