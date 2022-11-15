@@ -530,14 +530,14 @@ namespace daxa
             bool const is_current_access_read = current_buffer_access.type == AccessTypeFlagBits::READ;
             if (is_last_access_read && is_current_access_read)
             {
-                if (LastReadSplitBarrierIndex const* index = std::get_if<LastReadSplitBarrierIndex>(&impl_task_buffer.latest_access_read_barrier_index))
+                if (LastReadSplitBarrierIndex const* index0 = std::get_if<LastReadSplitBarrierIndex>(&impl_task_buffer.latest_access_read_barrier_index))
                 {
-                    auto & last_read_split_barrier = impl.split_barriers[index->index];
+                    auto & last_read_split_barrier = impl.split_barriers[index0->index];
                     last_read_split_barrier.dst_access = last_read_split_barrier.dst_access | current_buffer_access;
                 }
-                else if (LastReadBarrierIndex const* index = std::get_if<LastReadBarrierIndex>(&impl_task_buffer.latest_access_read_barrier_index))
+                else if (LastReadBarrierIndex const* index1 = std::get_if<LastReadBarrierIndex>(&impl_task_buffer.latest_access_read_barrier_index))
                 {
-                    auto & last_read_barrier = impl.barriers[index->index];
+                    auto & last_read_barrier = impl.barriers[index1->index];
                     last_read_barrier.dst_access = last_read_barrier.dst_access | current_buffer_access;
                 }
                 else
@@ -710,14 +710,14 @@ namespace daxa
                     bool const are_layouts_identical = tracked_slice.latest_layout == current_image_layout;
                     if (is_last_access_read && is_current_access_read && are_layouts_identical)
                     {
-                        if (LastReadSplitBarrierIndex const* index = std::get_if<LastReadSplitBarrierIndex>(&tracked_slice.latest_access_read_barrier_index))
+                        if (LastReadSplitBarrierIndex const* index0 = std::get_if<LastReadSplitBarrierIndex>(&tracked_slice.latest_access_read_barrier_index))
                         {
-                            auto & last_read_split_barrier = impl.split_barriers[index->index];
+                            auto & last_read_split_barrier = impl.split_barriers[index0->index];
                             last_read_split_barrier.dst_access = last_read_split_barrier.dst_access | tracked_slice.latest_access;
                         }
-                        else if (LastReadBarrierIndex const* index = std::get_if<LastReadBarrierIndex>(&tracked_slice.latest_access_read_barrier_index))
+                        else if (LastReadBarrierIndex const* index1 = std::get_if<LastReadBarrierIndex>(&tracked_slice.latest_access_read_barrier_index))
                         {
-                            auto & last_read_barrier = impl.barriers[index->index];
+                            auto & last_read_barrier = impl.barriers[index1->index];
                             last_read_barrier.dst_access = last_read_barrier.dst_access | tracked_slice.latest_access;
                         }
                         else
