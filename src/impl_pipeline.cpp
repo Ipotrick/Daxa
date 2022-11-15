@@ -210,16 +210,12 @@ namespace daxa
             impl_pipeline_compiler->current_observed_hotload_files->insert({full_path, std::chrono::file_clock::now()});
             auto shader_code_result = impl_pipeline_compiler->load_shader_source_from_file(full_path);
 
-            process_include(shader_code_result, full_path);
+            return process_include(shader_code_result, full_path);
         }
 
         auto includeSystem(
             char const * header_name, char const * /*includer_name*/, size_t /*inclusion_depth*/) -> IncludeResult * override
         {
-            std::string headerName = {};
-            char const * headerData = nullptr;
-            size_t headerLength = 0;
-
             auto result = impl_pipeline_compiler->full_path_to_file(header_name);
             if (result.is_err())
             {
@@ -241,7 +237,7 @@ namespace daxa
             impl_pipeline_compiler->current_observed_hotload_files->insert({full_path, std::chrono::file_clock::now()});
             auto shader_code_result = impl_pipeline_compiler->load_shader_source_from_file(full_path);
 
-            process_include(shader_code_result, full_path);
+            return process_include(shader_code_result, full_path);
         }
 
         void releaseInclude(IncludeResult * result) override
