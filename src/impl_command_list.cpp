@@ -583,25 +583,67 @@ namespace daxa
     void CommandList::draw(DrawInfo const & info)
     {
         auto & impl = *as<ImplCommandList>();
-        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
-        impl.flush_barriers();
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only record to uncompleted command list");
         vkCmdDraw(impl.vk_cmd_buffer, info.vertex_count, info.instance_count, info.first_vertex, info.first_instance);
     }
 
     void CommandList::draw_indexed(DrawIndexedInfo const & info)
     {
         auto & impl = *as<ImplCommandList>();
-        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
-        impl.flush_barriers();
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only record to uncompleted command list");
         vkCmdDrawIndexed(impl.vk_cmd_buffer, info.index_count, info.instance_count, info.first_index, info.vertex_offset, info.first_instance);
     }
 
     void CommandList::draw_indirect(DrawIndirectInfo const & info)
     {
         auto & impl = *as<ImplCommandList>();
-        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
-        impl.flush_barriers();
-        vkCmdDrawIndirect(impl.vk_cmd_buffer, impl.impl_device.as<ImplDevice>()->slot(info.indirect_buffer).vk_buffer, info.offset, info.draw_count, info.stride);
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only record to uncompleted command list");
+        if (info.is_indexed)
+        {
+            vkCmdDrawIndexedIndirect(
+                impl.vk_cmd_buffer,
+                impl.impl_device.as<ImplDevice>()->slot(info.draw_command_buffer).vk_buffer,
+                info.draw_command_buffer_read_offset,
+                info.draw_count,
+                info.draw_command_stride);
+        }
+        else
+        {
+            vkCmdDrawIndirect(
+                impl.vk_cmd_buffer,
+                impl.impl_device.as<ImplDevice>()->slot(info.draw_command_buffer).vk_buffer,
+                info.draw_command_buffer_read_offset,
+                info.draw_count,
+                info.draw_command_stride);
+        }
+    }
+
+    void CommandList::draw_indirect_count(DrawIndirectCountInfo const & info)
+    {
+        auto & impl = *as<ImplCommandList>();
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only record to uncompleted command list");
+        if (info.is_indexed)
+        {
+            vkCmdDrawIndexedIndirectCount(
+                impl.vk_cmd_buffer,
+                impl.impl_device.as<ImplDevice>()->slot(info.draw_command_buffer).vk_buffer,
+                info.draw_command_buffer_read_offset,
+                impl.impl_device.as<ImplDevice>()->slot(info.draw_count_buffer).vk_buffer,
+                info.draw_count_buffer_read_offset,
+                info.max_draw_count,
+                info.draw_command_stride);
+        }
+        else
+        {
+            vkCmdDrawIndirectCount(
+                impl.vk_cmd_buffer,
+                impl.impl_device.as<ImplDevice>()->slot(info.draw_command_buffer).vk_buffer,
+                info.draw_command_buffer_read_offset,
+                impl.impl_device.as<ImplDevice>()->slot(info.draw_count_buffer).vk_buffer,
+                info.draw_count_buffer_read_offset,
+                info.max_draw_count,
+                info.draw_command_stride);
+        }
     }
 
     void CommandList::write_timestamp(WriteTimestampInfo const & info)

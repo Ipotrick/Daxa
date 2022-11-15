@@ -116,7 +116,7 @@ namespace daxa
         u32 vertex_count = {};
         u32 instance_count = 1;
         u32 first_vertex = {};
-        u32 first_instance = 0;
+        u32 first_instance = {};
     };
 
     struct DrawIndexedInfo
@@ -130,10 +130,22 @@ namespace daxa
 
     struct DrawIndirectInfo
     {
-        BufferId indirect_buffer = {};
-        usize offset = {};
-        u32 draw_count = {};
-        u32 stride = {};
+        BufferId draw_command_buffer = {};
+        usize draw_command_buffer_read_offset = {};
+        u32 draw_count = 1;
+        u32 draw_command_stride = {};
+        bool is_indexed = {};
+    };
+
+    struct DrawIndirectCountInfo
+    {
+        BufferId draw_command_buffer = {};
+        usize draw_command_buffer_read_offset = {};
+        BufferId draw_count_buffer = {};
+        usize draw_count_buffer_read_offset = {};
+        u32 max_draw_count = static_cast<u32>(std::numeric_limits<u16>::max());
+        u32 draw_command_stride = {};
+        bool is_indexed = {};
     };
 
     struct ResetSplitBarriersInfo
@@ -208,9 +220,11 @@ namespace daxa
         void set_viewport(ViewportInfo const & info);
         void set_scissor(Rect2D const & info);
         void set_index_buffer(BufferId id, usize offset, usize index_type_byte_size = sizeof(u32));
+        
         void draw(DrawInfo const & info);
         void draw_indexed(DrawIndexedInfo const & info);
         void draw_indirect(DrawIndirectInfo const & info);
+        void draw_indirect_count(DrawIndirectCountInfo const & info);
 
         void write_timestamp(WriteTimestampInfo const & info);
         void reset_timestamps(ResetTimestampsInfo const & info);
