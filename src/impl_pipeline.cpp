@@ -159,10 +159,58 @@ namespace daxa
 
         ImplPipelineCompiler * impl_pipeline_compiler = nullptr;
 
+        auto process_include(daxa::Result<daxa::ShaderCode> const & shader_code_result, std::filesystem::path const & full_path) -> IncludeResult *
+        {
+            std::string headerName = {};
+            char const * headerData = nullptr;
+            size_t headerLength = 0;
+
+            if (shader_code_result.is_err())
+            {
+                return nullptr;
+            }
+
+            auto & shader_code_str = shader_code_result.value().string;
+            headerLength = shader_code_str.size();
+            char * res_content = new char[headerLength + 1];
+            for (usize i = 0; i < headerLength; ++i)
+            {
+                res_content[i] = shader_code_str[i];
+            }
+            res_content[headerLength] = '\0';
+            headerData = res_content;
+
+            headerName = full_path.string();
+            for (auto & c : headerName)
+            {
+                if (c == '\\')
+                {
+                    c = '/';
+                }
+            }
+
+            return new IncludeResult{headerName, headerData, headerLength, nullptr};
+        }
+
         auto includeLocal(
             char const * header_name, char const * includer_name, size_t inclusion_depth) -> IncludeResult * override
         {
-            return includeSystem(header_name, includer_name, inclusion_depth);
+            if (inclusion_depth > 100)
+            {
+                return nullptr;
+            }
+            auto result = impl_pipeline_compiler->full_path_to_file(includer_name);
+            if (result.is_err())
+            {
+                return nullptr;
+            }
+
+            auto full_path = result.value().parent_path() / header_name;
+
+            impl_pipeline_compiler->current_observed_hotload_files->insert({full_path, std::chrono::file_clock::now()});
+            auto shader_code_result = impl_pipeline_compiler->load_shader_source_from_file(full_path);
+
+            process_include(shader_code_result, full_path);
         }
 
         auto includeSystem(
@@ -193,31 +241,7 @@ namespace daxa
             impl_pipeline_compiler->current_observed_hotload_files->insert({full_path, std::chrono::file_clock::now()});
             auto shader_code_result = impl_pipeline_compiler->load_shader_source_from_file(full_path);
 
-            if (shader_code_result.is_err())
-            {
-                return nullptr;
-            }
-
-            auto & shader_code_str = shader_code_result.value().string;
-            headerLength = shader_code_str.size();
-            char * res_content = new char[headerLength + 1];
-            for (usize i = 0; i < headerLength; ++i)
-            {
-                res_content[i] = shader_code_str[i];
-            }
-            res_content[headerLength] = '\0';
-            headerData = res_content;
-
-            headerName = full_path.string();
-            for (auto & c : headerName)
-            {
-                if (c == '\\')
-                {
-                    c = '/';
-                }
-            }
-
-            return new IncludeResult{headerName, headerData, headerLength, nullptr};
+            process_include(shader_code_result, full_path);
         }
 
         void releaseInclude(IncludeResult * result) override
@@ -1013,6 +1037,10 @@ namespace daxa
 
         auto spirv_stage = translate_shader_stage(shader_stage);
 
+        // NOTE: You can't set #version in the preamble. However,
+        // you can set the version as a `shader.` parameter. This
+        // is unneccessary, though, since it appears to default to
+        // the latest version.
         // preamble += "#version 450\n";
         preamble += "#define DAXA_SHADER 1\n";
         preamble += "#define DAXA_SHADERLANG 1\n";
@@ -1032,7 +1060,7 @@ namespace daxa
         preamble += "#extension GL_KHR_shader_subgroup_quad : enable\n";
         preamble += "#extension GL_EXT_scalar_block_layout : require\n";
         preamble += "#extension GL_EXT_shader_image_load_formatted : require\n";
-        //preamble += "#extension GL_EXT_shader_image_store_formatted : require\n";
+        // preamble += "#extension GL_EXT_shader_image_store_formatted : require\n";
         for (auto const & shader_define : shader_info.compile_options.defines)
         {
             if (!shader_define.value.empty())
@@ -1059,15 +1087,13 @@ namespace daxa
         shader.setPreamble(preamble.c_str());
 
         auto const & source_str = code.string;
+        auto const * source_cstr = source_str.c_str();
+        auto const * name_cstr = debug_name.c_str();
 
-        std::vector<char const *> sources;
-        sources.push_back(source_str.c_str());
-
-        shader.setStrings(sources.data(), static_cast<i32>(sources.size()));
+        shader.setStringsWithLengthsAndNames(&source_cstr, nullptr, &name_cstr, 1);
         shader.setEntryPoint("main");
         shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_3);
         shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_5);
-        // shader.setOverrideVersion(450); // What should this be? I think it might be set by default
 
         GlslangFileIncluder includer;
         includer.impl_pipeline_compiler = this;
