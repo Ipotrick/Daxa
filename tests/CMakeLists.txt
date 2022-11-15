@@ -65,6 +65,10 @@ DAXA_CREATE_TEST(
     FOLDER 2_daxa_api 6_task_list
     LIBS glfw
 )
+DAXA_CREATE_TEST(
+    FOLDER 2_daxa_api 7_pipeline_compiler
+    LIBS
+)
 
 DAXA_CREATE_TEST(
     FOLDER 3_samples 0_playground

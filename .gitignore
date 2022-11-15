@@ -453,5 +453,6 @@ FodyWeavers.xsd
 
 # End of https://www.toptal.com/developers/gitignore/api/linux,windows,visualstudio,c++
 
-.vscode
+.vs*
 _out
+.vscode/launch.json
