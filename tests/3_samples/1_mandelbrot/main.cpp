@@ -129,9 +129,8 @@ struct App : BaseApp<App>
                     .debug_name = APPNAME_PREFIX("staging_gpu_input_buffer"),
                 });
                 cmd_list.destroy_buffer_deferred(staging_gpu_input_buffer);
-                auto buffer_ptr = device.map_memory_as<GpuInput>(staging_gpu_input_buffer);
+                auto buffer_ptr = device.get_host_address_as<GpuInput>(staging_gpu_input_buffer);
                 *buffer_ptr = gpu_input;
-                device.unmap_memory(staging_gpu_input_buffer);
                 cmd_list.copy_buffer_to_buffer({
                     .src_buffer = staging_gpu_input_buffer,
                     .dst_buffer = gpu_input_buffer,
