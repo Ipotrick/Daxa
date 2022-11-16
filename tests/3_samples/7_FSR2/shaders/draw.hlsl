@@ -313,7 +313,7 @@ FragOutput fs_main(VertexOutput vertex_output)
     StructuredBuffer<RasterInput> raster_input = daxa::get_StructuredBuffer<RasterInput>(p.input_buffer_id);
 
     SamplerState atlas_sampler = daxa::get_sampler(raster_input[0].sampler_id);
-    Texture2DArray atlas_texture_array = daxa::get_Texture2DArray<f32vec4>(raster_input[0].texture_array_id);
+    Texture2DArray atlas_texture_array = daxa::get_texture2DArray<f32vec4>(raster_input[0].texture_array_id);
 
     // f32vec4 albedo = atlas_texture_array.Load(i32vec4(vert.uv.x * 16, vert.uv.y * 16, vert.tex_id, 0));
     f32vec4 albedo = atlas_texture_array.Sample(atlas_sampler, f32vec3(vert.uv, vert.tex_id));
