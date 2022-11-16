@@ -156,12 +156,12 @@ layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform sampler daxa_SamplerTabl
 
 #define daxa_id_to_index(ID) (DAXA_ID_INDEX_MASK & ID)
 
-#define daxa_get_Buffer(BUFFER_STRUCT_TYPE, buffer_id) daxa_RWBufferTable##BUFFER_STRUCT_TYPE[]
-#define daxa_get_ROBuffer(BUFFER_STRUCT_TYPE, buffer_id) daxa_ROBufferTable##BUFFER_STRUCT_TYPE[daxa_id_to_index(buffer_id.buffer_id_value)]
-#define daxa_get_Image(IMAGE_TYPE, image_view_id) daxa_RWImageTable##IMAGE_TYPE[daxa_id_to_index(image_view_id.image_view_id_value)]
-#define daxa_get_ROImage(IMAGE_TYPE, image_view_id) daxa_ROImageTable##IMAGE_TYPE[daxa_id_to_index(image_view_id.image_view_id_value)]
-#define daxa_get_Texture(TEXTURE_TYPE, image_view_id) daxa_TextureTable##TEXTURE_TYPE[daxa_id_to_index(image_view_id.image_view_id_value)]
-#define daxa_get_Sampler(sampler_id) daxa_SamplerTable[daxa_id_to_index(sampler_id.sampler_id_value)]
+#define daxa_get_buffer(BUFFER_STRUCT_TYPE, buffer_id) daxa_RWBufferTable##BUFFER_STRUCT_TYPE[]
+#define daxa_get_readonly_buffer(BUFFER_STRUCT_TYPE, buffer_id) daxa_ROBufferTable##BUFFER_STRUCT_TYPE[daxa_id_to_index(buffer_id.buffer_id_value)]
+#define daxa_get_image(IMAGE_TYPE, image_view_id) daxa_RWImageTable##IMAGE_TYPE[daxa_id_to_index(image_view_id.image_view_id_value)]
+#define daxa_get_readonly_image(IMAGE_TYPE, image_view_id) daxa_ROImageTable##IMAGE_TYPE[daxa_id_to_index(image_view_id.image_view_id_value)]
+#define daxa_get_texture(TEXTURE_TYPE, image_view_id) daxa_TextureTable##TEXTURE_TYPE[daxa_id_to_index(image_view_id.image_view_id_value)]
+#define daxa_get_sampler(sampler_id) daxa_SamplerTable[daxa_id_to_index(sampler_id.sampler_id_value)]
 
 
 #ifdef DAXA_SHADER_NO_NAMESPACE 
@@ -188,12 +188,12 @@ layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform sampler daxa_SamplerTabl
 #define buffer_address_to_roref daxa_buffer_address_to_roref
 #define buffer_id_to_roref daxa_buffer_id_to_roref
 
-#define get_Buffer daxa_get_Buffer
-#define get_ROBuffer daxa_get_ROBuffer
-#define get_Image daxa_get_Image
-#define get_ROImage daxa_get_ROImage
-#define get_Texture daxa_get_Texture
-#define get_Sampler daxa_get_Sampler
+#define get_buffer daxa_get_buffer
+#define get_readonly_buffer daxa_get_readonly_buffer
+#define get_image daxa_get_image
+#define get_readonly_image daxa_get_readonly_image
+#define get_texture daxa_get_texture
+#define get_sampler daxa_get_sampler
 
 #endif
 

@@ -54,7 +54,7 @@ void main()
     }
 
     imageStore(
-        daxa_get_Image(image2D, push_constant.image_id),
+        daxa_get_image(image2D, push_constant.image_id),
         i32vec2(pixel_i.xy),
         f32vec4(col, 1));
 }
