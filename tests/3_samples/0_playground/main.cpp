@@ -249,9 +249,8 @@ struct App : AppWindow<App>
         });
         cmd_list.destroy_buffer_deferred(vertex_staging_buffer);
 
-        auto buffer_ptr = device.map_memory_as<DrawVertex>(vertex_staging_buffer);
+        auto buffer_ptr = device.get_host_address_as<DrawVertex>(vertex_staging_buffer);
         construct_scene(buffer_ptr);
-        device.unmap_memory(vertex_staging_buffer);
 
         cmd_list.pipeline_barrier({
             .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,

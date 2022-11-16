@@ -92,14 +92,13 @@ struct App : BaseApp<App>
                     .debug_name = APPNAME_PREFIX("vertex_staging_buffer"),
                 });
                 cmd_list.destroy_buffer_deferred(vertex_staging_buffer);
-                auto buffer_ptr = device.map_memory_as<DrawVertex>(vertex_staging_buffer);
+                auto buffer_ptr = device.get_host_address_as<DrawVertex>(vertex_staging_buffer);
                 *buffer_ptr = DrawVertex{{-0.5f, +0.5f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}};
                 ++buffer_ptr;
                 *buffer_ptr = DrawVertex{{+0.5f, +0.5f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}};
                 ++buffer_ptr;
                 *buffer_ptr = DrawVertex{{+0.0f, -0.5f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f}};
                 ++buffer_ptr;
-                device.unmap_memory(vertex_staging_buffer);
                 cmd_list.copy_buffer_to_buffer({
                     .src_buffer = vertex_staging_buffer,
                     .dst_buffer = vertex_buffer,

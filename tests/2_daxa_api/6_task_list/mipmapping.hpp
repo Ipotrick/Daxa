@@ -188,11 +188,10 @@ namespace tests
                     .size = sizeof(MipmappingGpuInput),
                     .debug_name = APPNAME_PREFIX("staging_mipmapping_gpu_input_buffer"),
                 });
-                MipmappingGpuInput * buffer_ptr = device.map_memory_as<MipmappingGpuInput>(staging_buffer);
+                MipmappingGpuInput * buffer_ptr = device.get_host_address_as<MipmappingGpuInput>(staging_buffer);
                 *buffer_ptr = this->gpu_input;
                 this->gpu_input.p_mouse_x = this->gpu_input.mouse_x;
                 this->gpu_input.p_mouse_y = this->gpu_input.mouse_y;
-                device.unmap_memory(staging_buffer);
                 cmd_list.destroy_buffer_deferred(staging_buffer);
 
                 cmd_list.copy_buffer_to_buffer({

@@ -356,28 +356,26 @@ namespace daxa
                 .size = static_cast<u32>(vbuffer_needed_size),
                 .debug_name = std::string("dear ImGui vertex staging buffer ") + std::to_string(frame_count),
             });
-            auto * vtx_dst = info.device.map_memory_as<ImDrawVert>(staging_vbuffer);
+            auto * vtx_dst = info.device.get_host_address_as<ImDrawVert>(staging_vbuffer);
             for (i32 n = 0; n < draw_data->CmdListsCount; n++)
             {
                 ImDrawList const * draws = draw_data->CmdLists[n];
                 std::memcpy(vtx_dst, draws->VtxBuffer.Data, static_cast<usize>(draws->VtxBuffer.Size) * sizeof(ImDrawVert));
                 vtx_dst += draws->VtxBuffer.Size;
             }
-            info.device.unmap_memory(staging_vbuffer);
             cmd_list.destroy_buffer_deferred(staging_vbuffer);
             auto staging_ibuffer = info.device.create_buffer({
                 .memory_flags = MemoryFlagBits::HOST_ACCESS_RANDOM,
                 .size = static_cast<u32>(ibuffer_needed_size),
                 .debug_name = std::string("dear ImGui index staging buffer ") + std::to_string(frame_count),
             });
-            auto * idx_dst = info.device.map_memory_as<ImDrawIdx>(staging_ibuffer);
+            auto * idx_dst = info.device.get_host_address_as<ImDrawIdx>(staging_ibuffer);
             for (i32 n = 0; n < draw_data->CmdListsCount; n++)
             {
                 ImDrawList const * draws = draw_data->CmdLists[n];
                 std::memcpy(idx_dst, draws->IdxBuffer.Data, static_cast<usize>(draws->IdxBuffer.Size) * sizeof(ImDrawIdx));
                 idx_dst += draws->IdxBuffer.Size;
             }
-            info.device.unmap_memory(staging_ibuffer);
             cmd_list.destroy_buffer_deferred(staging_ibuffer);
             cmd_list.pipeline_barrier({
                 .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
@@ -511,9 +509,8 @@ namespace daxa
             .size = static_cast<u32>(upload_size),
         });
 
-        u8 * staging_buffer_data = this->info.device.map_memory_as<u8>(texture_staging_buffer);
+        u8 * staging_buffer_data = this->info.device.get_host_address_as<u8>(texture_staging_buffer);
         std::memcpy(staging_buffer_data, pixels, upload_size);
-        this->info.device.unmap_memory(texture_staging_buffer);
 
         auto cmd_list = this->info.device.create_command_list({.debug_name = "dear ImGui Font Sheet Upload"});
         cmd_list.pipeline_barrier_image_transition({

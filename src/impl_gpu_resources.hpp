@@ -18,6 +18,7 @@ namespace daxa
         VkBuffer vk_buffer = {};
         VmaAllocation vma_allocation = {};
         VkDeviceAddress device_address = {};
+        void* host_address = {};
     };
 
     static inline constexpr i32 NOT_OWNED_BY_SWAPCHAIN = -1;
@@ -71,7 +72,7 @@ namespace daxa
         DAXA_ONLY_IF_THREADSAFETY(std::mutex page_alloc_mtx = {});
 #if DAXA_GPU_ID_VALIDATION
         mutable std::mutex use_after_free_check_mtx = {};
-#endif
+#endif // #if DAXA_GPU_ID_VALIDATION
         std::array<std::unique_ptr<PageT>, PAGE_COUNT> pages = {};
 
 #if DAXA_GPU_ID_VALIDATION
@@ -82,13 +83,13 @@ namespace daxa
             DAXA_DBG_ASSERT_TRUE_M(pages[page] != nullptr, "detected invalid resource id");
             DAXA_DBG_ASSERT_TRUE_M(id.version != 0, "detected invalid resource id");
         }
-#endif
+#endif // #if DAXA_GPU_ID_VALIDATION
 
         auto new_slot() -> std::pair<GPUResourceId, ResourceT &>
         {
 #if DAXA_GPU_ID_VALIDATION
             std::unique_lock use_after_free_check_lock{use_after_free_check_mtx};
-#endif
+#endif // #if DAXA_GPU_ID_VALIDATION
             DAXA_ONLY_IF_THREADSAFETY(std::unique_lock page_alloc_lock{page_alloc_mtx});
             u32 index;
             if (free_index_stack.empty())
@@ -137,7 +138,7 @@ namespace daxa
             DAXA_ONLY_IF_THREADSAFETY(std::unique_lock use_after_free_check_lock{use_after_free_check_mtx});
             verify_resource_id(id);
             DAXA_DBG_ASSERT_TRUE_M(pages[page]->at(offset).second == id.version, "detected double delete for a resource id");
-#endif
+#endif // #if DAXA_GPU_ID_VALIDATION
             DAXA_ONLY_IF_THREADSAFETY(std::unique_lock page_alloc_lock{page_alloc_mtx});
 
             pages[page]->at(offset).second = std::max<u8>(pages[page]->at(offset).second + 1, 1); // the max is needed, as version = 0 is invalid
@@ -155,7 +156,7 @@ namespace daxa
             verify_resource_id(id);
             u8 version = pages[page]->at(offset).second;
             DAXA_DBG_ASSERT_TRUE_M(version == id.version, "detected use after free for a resource id");
-#endif
+#endif // #if DAXA_GPU_ID_VALIDATION
             return pages[page]->at(offset).first;
         }
 
@@ -169,7 +170,7 @@ namespace daxa
             verify_resource_id(id);
             u8 version = pages[page]->at(offset).second;
             DAXA_DBG_ASSERT_TRUE_M(version == id.version, "detected use after free for a resource id");
-#endif
+#endif // #if DAXA_GPU_ID_VALIDATION
             return pages[page]->at(offset).first;
         }
     };
