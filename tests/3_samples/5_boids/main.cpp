@@ -93,7 +93,7 @@ struct App : AppWindow<App>
         });
         cmd_list.destroy_buffer_deferred(upload_buffer_id);
 
-        Boids * ptr = device.map_memory_as<Boids>(upload_buffer_id);
+        Boids * ptr = device.get_host_address_as<Boids>(upload_buffer_id);
 
         for (usize i = 0; i < MAX_BOIDS; ++i)
         {
@@ -103,8 +103,6 @@ struct App : AppWindow<App>
             ptr->boids[i].direction.x = std::cos(angle);
             ptr->boids[i].direction.y = std::sin(angle);
         }
-
-        device.unmap_memory(upload_buffer_id);
 
         cmd_list.copy_buffer_to_buffer({
             .src_buffer = upload_buffer_id,

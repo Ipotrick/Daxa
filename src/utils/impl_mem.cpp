@@ -27,7 +27,7 @@ namespace daxa
             .size = size,
         });
 
-        return reinterpret_cast<void *>(this->device.map_memory_as<u8>(this->upload_buffer) + src_offset);
+        return reinterpret_cast<void *>(this->device.get_host_address_as<u8>(this->upload_buffer) + src_offset);
     }
 
     auto MemoryUploader::get_commands() -> MemoryUploadCommandSubmitInfo

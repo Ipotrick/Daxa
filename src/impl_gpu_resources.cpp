@@ -205,6 +205,9 @@ namespace daxa
 
     void GPUShaderResourceTable::cleanup(VkDevice device)
     {
+        DAXA_DBG_ASSERT_TRUE_M(buffer_slots.free_index_stack.size() == buffer_slots.next_index, "not all buffers have been destroyed before destroying the device");
+        DAXA_DBG_ASSERT_TRUE_M(image_slots.free_index_stack.size() == image_slots.next_index, "not all images have been destroyed before destroying the device");
+        DAXA_DBG_ASSERT_TRUE_M(sampler_slots.free_index_stack.size() == sampler_slots.next_index, "not all samplers have been destroyed before destroying the device");
         for (usize i = 0; i < PIPELINE_LAYOUT_COUNT; ++i)
         {
             vkDestroyPipelineLayout(device, pipeline_layouts.at(i), nullptr);
