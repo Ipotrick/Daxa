@@ -88,21 +88,21 @@ struct daxa_SamplerId
 namespace daxa
 {
     template <typename T>
-    Buffer<T> get_Buffer(daxa_BufferId buffer_id);
+    Buffer<T> get_buffer(daxa_BufferId buffer_id);
     template <typename T>
     StructuredBuffer<T> get_StructuredBuffer(daxa_BufferId buffer_id);
     template <typename T>
     RWStructuredBuffer<T> get_RWStructuredBuffer(daxa_BufferId buffer_id);
     template <typename T>
-    Texture1D<T> get_Texture1D(daxa_ImageViewId image_id);
+    Texture1D<T> get_texture1D(daxa_ImageViewId image_id);
     template <typename T>
-    Texture2D<T> get_Texture2D(daxa_ImageViewId image_id);
+    Texture2D<T> get_texture2D(daxa_ImageViewId image_id);
     template <typename T>
-    Texture3D<T> get_Texture3D(daxa_ImageViewId image_id);
+    Texture3D<T> get_texture3D(daxa_ImageViewId image_id);
     template <typename T>
-    Texture1DArray<T> get_Texture1DArray(daxa_ImageViewId image_id);
+    Texture1DArray<T> get_texture1DArray(daxa_ImageViewId image_id);
     template <typename T>
-    Texture2DArray<T> get_Texture2DArray(daxa_ImageViewId image_id);
+    Texture2DArray<T> get_texture2DArray(daxa_ImageViewId image_id);
     template <typename T>
     RWTexture1D<T> get_RWTexture1D(daxa_ImageViewId image_id);
     template <typename T>
@@ -157,7 +157,7 @@ namespace daxa
     {                                                                                    \
         [[vk::binding(DAXA_STORAGE_BUFFER_BINDING, 0)]] Buffer<Type> BufferView##Type[]; \
         template <>                                                                      \
-        Buffer<Type> get_Buffer(daxa_BufferId buffer_id)                                 \
+        Buffer<Type> get_buffer(daxa_BufferId buffer_id)                                 \
         {                                                                                \
             return BufferView##Type[DAXA_ID_INDEX_MASK & buffer_id.buffer_id_value];     \
         }                                                                                \
@@ -167,7 +167,7 @@ namespace daxa
     {                                                                                         \
         [[vk::binding(DAXA_SAMPLED_IMAGE_BINDING, 0)]] Texture2D<Type> Texture1DView##Type[]; \
         template <>                                                                           \
-        Texture1D<Type> get_Texture1D<Type>(daxa_ImageViewId image_id)                        \
+        Texture1D<Type> get_texture1D<Type>(daxa_ImageViewId image_id)                        \
         {                                                                                     \
             return Texture1DView##Type[DAXA_ID_INDEX_MASK & image_id.image_view_id_value];    \
         }                                                                                     \
@@ -177,7 +177,7 @@ namespace daxa
     {                                                                                         \
         [[vk::binding(DAXA_SAMPLED_IMAGE_BINDING, 0)]] Texture2D<Type> Texture2DView##Type[]; \
         template <>                                                                           \
-        Texture2D<Type> get_Texture2D<Type>(daxa_ImageViewId image_id)                        \
+        Texture2D<Type> get_texture2D<Type>(daxa_ImageViewId image_id)                        \
         {                                                                                     \
             return Texture2DView##Type[DAXA_ID_INDEX_MASK & image_id.image_view_id_value];    \
         }                                                                                     \
@@ -187,7 +187,7 @@ namespace daxa
     {                                                                                         \
         [[vk::binding(DAXA_SAMPLED_IMAGE_BINDING, 0)]] Texture3D<Type> Texture3DView##Type[]; \
         template <>                                                                           \
-        Texture3D<Type> get_Texture3D<Type>(daxa_ImageViewId image_id)                        \
+        Texture3D<Type> get_texture3D<Type>(daxa_ImageViewId image_id)                        \
         {                                                                                     \
             return Texture3DView##Type[DAXA_ID_INDEX_MASK & image_id.image_view_id_value];    \
         }                                                                                     \
@@ -197,7 +197,7 @@ namespace daxa
     {                                                                                                   \
         [[vk::binding(DAXA_SAMPLED_IMAGE_BINDING, 0)]] Texture1DArray<Type> Texture1DArrayView##Type[]; \
         template <>                                                                                     \
-        Texture1DArray<Type> get_Texture1DArray<Type>(daxa_ImageViewId image_id)                        \
+        Texture1DArray<Type> get_texture1DArray<Type>(daxa_ImageViewId image_id)                        \
         {                                                                                               \
             return Texture1DArrayView##Type[DAXA_ID_INDEX_MASK & image_id.image_view_id_value];         \
         }                                                                                               \
@@ -207,7 +207,7 @@ namespace daxa
     {                                                                                                   \
         [[vk::binding(DAXA_SAMPLED_IMAGE_BINDING, 0)]] Texture2DArray<Type> Texture2DArrayView##Type[]; \
         template <>                                                                                     \
-        Texture2DArray<Type> get_Texture2DArray<Type>(daxa_ImageViewId image_id)                        \
+        Texture2DArray<Type> get_texture2DArray<Type>(daxa_ImageViewId image_id)                        \
         {                                                                                               \
             return Texture2DArrayView##Type[DAXA_ID_INDEX_MASK & image_id.image_view_id_value];         \
         }                                                                                               \
