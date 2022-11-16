@@ -327,7 +327,7 @@ struct RenderableVoxelWorld
                         .debug_name = APPNAME_PREFIX("texture_staging_buffer"),
                     });
                     cmd_list.destroy_buffer_deferred(texture_staging_buffer);
-                    u8 * staging_buffer_data = device.map_memory_as<u8>(texture_staging_buffer);
+                    u8 * staging_buffer_data = device.get_host_address_as<u8>(texture_staging_buffer);
                     for (usize i = 0; i < texture_names.size(); ++i)
                     {
                         stbi_set_flip_vertically_on_load(true);
@@ -362,7 +362,6 @@ struct RenderableVoxelWorld
                             .image_extent = {16, 16, 1},
                         });
                     }
-                    device.unmap_memory(texture_staging_buffer);
                 }
             },
             .debug_name = APPNAME_PREFIX("Upload Textures"),
@@ -574,8 +573,8 @@ struct App : BaseApp<App>
                 u32 i = 0;
                 cmd_list.destroy_buffer_deferred(face_staging_buffer);
                 cmd_list.destroy_buffer_deferred(water_face_staging_buffer);
-                auto face_buffer_ptr = device.map_memory_as<VoxelFace>(face_staging_buffer);
-                auto water_face_buffer_ptr = device.map_memory_as<VoxelFace>(water_face_staging_buffer);
+                auto face_buffer_ptr = device.get_host_address_as<VoxelFace>(face_staging_buffer);
+                auto water_face_buffer_ptr = device.get_host_address_as<VoxelFace>(water_face_staging_buffer);
                 for (auto & chunk : renderable_world.renderable_chunks)
                 {
                     if (chunk.invalid)
@@ -597,8 +596,6 @@ struct App : BaseApp<App>
                     }
                     ++i;
                 }
-                device.unmap_memory(face_staging_buffer);
-                device.unmap_memory(water_face_staging_buffer);
             },
             .debug_name = APPNAME_PREFIX("Upload Chunks"),
         });

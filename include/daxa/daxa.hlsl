@@ -322,6 +322,5 @@ typedef daxa_u32mat4x3 u32mat4x3;
 typedef daxa_u32mat4x4 u32mat4x4;
 typedef daxa_BufferId BufferId;
 typedef daxa_ImageViewId ImageViewId;
-typedef daxa_ImageId ImageId;
 typedef daxa_SamplerId SamplerId;
 #endif
