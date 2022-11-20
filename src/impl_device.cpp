@@ -262,7 +262,16 @@ namespace daxa
     auto Device::get_device_address(BufferId id) const -> BufferDeviceAddress
     {
         auto const & impl = *as<ImplDevice>();
-        return BufferDeviceAddress{ static_cast<u64>(impl.slot(id).device_address) };
+        return BufferDeviceAddress{static_cast<u64>(impl.slot(id).device_address)};
+    }
+    
+    auto Device::get_host_address(BufferId id) const -> void*
+    {
+        auto const & impl = *as<ImplDevice>();
+        DAXA_DBG_ASSERT_TRUE_M(
+            (impl.slot(id).info.memory_flags & (MemoryFlagBits::HOST_ACCESS_RANDOM | MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE)) != MemoryFlagBits::NONE, 
+            "host buffer address is only available if the buffer is created with eithr of the following memory flags: HOST_ACCESS_RANDOM, HOST_ACCESS_SEQUENTIAL_WRITE");
+        return impl.slot(id).host_address;
     }
 
     auto Device::info_image(ImageId id) const -> ImageInfo
@@ -281,20 +290,6 @@ namespace daxa
     {
         auto const & impl = *as<ImplDevice>();
         return impl.slot(id).info;
-    }
-
-    auto Device::map_memory(BufferId id) -> void *
-    {
-        auto & impl = *as<ImplDevice>();
-        void * ret = nullptr;
-        vmaMapMemory(impl.vma_allocator, impl.slot(id).vma_allocation, &ret);
-        return ret;
-    }
-
-    void Device::unmap_memory(BufferId id)
-    {
-        auto & impl = *as<ImplDevice>();
-        vmaUnmapMemory(impl.vma_allocator, impl.slot(id).vma_allocation);
     }
 
     ImplDevice::ImplDevice(DeviceInfo a_info, DeviceProperties const & a_vk_info, ManagedWeakPtr a_impl_ctx, VkPhysicalDevice a_physical_device)
@@ -350,7 +345,7 @@ namespace daxa
             .sampleRateShading = VK_FALSE,
             .dualSrcBlend = VK_FALSE,
             .logicOp = VK_FALSE,
-            .multiDrawIndirect = VK_TRUE,   // Very usefull for gpu driven rendering
+            .multiDrawIndirect = VK_TRUE, // Very usefull for gpu driven rendering
             .drawIndirectFirstInstance = VK_FALSE,
             .depthClamp = VK_FALSE,
             .depthBiasClamp = VK_FALSE,
@@ -360,7 +355,7 @@ namespace daxa
             .largePoints = VK_FALSE,
             .alphaToOne = VK_FALSE,
             .multiViewport = VK_FALSE,
-            .samplerAnisotropy = VK_TRUE,   // Allows for anisotropic filtering.
+            .samplerAnisotropy = VK_TRUE, // Allows for anisotropic filtering.
             .textureCompressionETC2 = VK_FALSE,
             .textureCompressionASTC_LDR = VK_FALSE,
             .textureCompressionBC = VK_FALSE,
@@ -372,16 +367,16 @@ namespace daxa
             .shaderImageGatherExtended = VK_FALSE,
             .shaderStorageImageExtendedFormats = VK_FALSE,
             .shaderStorageImageMultisample = VK_FALSE,
-            .shaderStorageImageReadWithoutFormat = VK_TRUE,         // This allows daxa shaders to not specify image layout for image binding tables and read ops.
-            .shaderStorageImageWriteWithoutFormat = VK_TRUE,        // This allows daxa shaders to not specify image layout for image binding tables and write ops.
-            .shaderUniformBufferArrayDynamicIndexing = VK_FALSE,    // This is superseded by descriptor indexing.
-            .shaderSampledImageArrayDynamicIndexing = VK_FALSE,     // This is superseded by descriptor indexing.
-            .shaderStorageBufferArrayDynamicIndexing = VK_FALSE,    // This is superseded by descriptor indexing.
-            .shaderStorageImageArrayDynamicIndexing = VK_FALSE,     // This is superseded by descriptor indexing.
+            .shaderStorageImageReadWithoutFormat = VK_TRUE,      // This allows daxa shaders to not specify image layout for image binding tables and read ops.
+            .shaderStorageImageWriteWithoutFormat = VK_TRUE,     // This allows daxa shaders to not specify image layout for image binding tables and write ops.
+            .shaderUniformBufferArrayDynamicIndexing = VK_FALSE, // This is superseded by descriptor indexing.
+            .shaderSampledImageArrayDynamicIndexing = VK_FALSE,  // This is superseded by descriptor indexing.
+            .shaderStorageBufferArrayDynamicIndexing = VK_FALSE, // This is superseded by descriptor indexing.
+            .shaderStorageImageArrayDynamicIndexing = VK_FALSE,  // This is superseded by descriptor indexing.
             .shaderClipDistance = VK_FALSE,
             .shaderCullDistance = VK_FALSE,
             .shaderFloat64 = VK_FALSE,
-            .shaderInt64 = VK_TRUE,     // Used for buffer device address math.
+            .shaderInt64 = VK_TRUE, // Used for buffer device address math.
             .shaderInt16 = VK_FALSE,
             .shaderResourceResidency = VK_FALSE,
             .shaderResourceMinLod = VK_FALSE,
@@ -413,22 +408,22 @@ namespace daxa
             .shaderUniformTexelBufferArrayDynamicIndexing = VK_FALSE,
             .shaderStorageTexelBufferArrayDynamicIndexing = VK_FALSE,
             .shaderUniformBufferArrayNonUniformIndexing = VK_FALSE,
-            .shaderSampledImageArrayNonUniformIndexing = VK_TRUE,   // Needed for bindless sampled images.
-            .shaderStorageBufferArrayNonUniformIndexing = VK_TRUE,  // Needed for bindless buffers.
-            .shaderStorageImageArrayNonUniformIndexing = VK_TRUE,   // Needed for bindless storage images.
+            .shaderSampledImageArrayNonUniformIndexing = VK_TRUE,  // Needed for bindless sampled images.
+            .shaderStorageBufferArrayNonUniformIndexing = VK_TRUE, // Needed for bindless buffers.
+            .shaderStorageImageArrayNonUniformIndexing = VK_TRUE,  // Needed for bindless storage images.
             .shaderInputAttachmentArrayNonUniformIndexing = VK_FALSE,
             .shaderUniformTexelBufferArrayNonUniformIndexing = VK_FALSE,
             .shaderStorageTexelBufferArrayNonUniformIndexing = VK_FALSE,
             .descriptorBindingUniformBufferUpdateAfterBind = VK_FALSE,
-            .descriptorBindingSampledImageUpdateAfterBind = VK_TRUE,    // Needed for bindless sampled images.
-            .descriptorBindingStorageImageUpdateAfterBind = VK_TRUE,    // Needed for bindless storage images.
-            .descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE,   // Needed for bindless buffers.
+            .descriptorBindingSampledImageUpdateAfterBind = VK_TRUE,  // Needed for bindless sampled images.
+            .descriptorBindingStorageImageUpdateAfterBind = VK_TRUE,  // Needed for bindless storage images.
+            .descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE, // Needed for bindless buffers.
             .descriptorBindingUniformTexelBufferUpdateAfterBind = VK_FALSE,
             .descriptorBindingStorageTexelBufferUpdateAfterBind = VK_FALSE,
-            .descriptorBindingUpdateUnusedWhilePending = VK_TRUE,   // Needed for bindless table updates.
-            .descriptorBindingPartiallyBound = VK_TRUE,     // Needed for sparse binding in bindless table.
+            .descriptorBindingUpdateUnusedWhilePending = VK_TRUE, // Needed for bindless table updates.
+            .descriptorBindingPartiallyBound = VK_TRUE,           // Needed for sparse binding in bindless table.
             .descriptorBindingVariableDescriptorCount = VK_FALSE,
-            .runtimeDescriptorArray = VK_TRUE,  // Allows shaders to not have a hardcoded descriptor maximum per talbe.
+            .runtimeDescriptorArray = VK_TRUE, // Allows shaders to not have a hardcoded descriptor maximum per talbe.
         };
 
         VkPhysicalDeviceHostQueryResetFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_HOST_QUERY_RESET{
@@ -632,7 +627,11 @@ namespace daxa
             .priority = 0.5f,
         };
 
-        vmaCreateBuffer(this->vma_allocator, &vk_buffer_create_info, &vma_allocation_create_info, &buffer_device_address_buffer, &buffer_device_address_buffer_allocation, nullptr);
+        {
+            VkResult result = vmaCreateBuffer(this->vma_allocator, &vk_buffer_create_info, &vma_allocation_create_info, &buffer_device_address_buffer, &buffer_device_address_buffer_allocation, nullptr);
+            vmaMapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation, reinterpret_cast<void **>(&this->buffer_device_address_buffer_host_ptr));
+            DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create buffer");
+        }
 
         if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !this->info.debug_name.empty())
         {
@@ -833,10 +832,12 @@ namespace daxa
 
         ret.device_address = vkGetBufferDeviceAddress(vk_device, &vk_buffer_device_address_info);
 
-        u64 * mem = nullptr;
-        vmaMapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation, reinterpret_cast<void **>(&mem));
-        mem[id.index] = ret.device_address;
-        vmaUnmapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation);
+        if ((buffer_info.memory_flags & (MemoryFlagBits::HOST_ACCESS_RANDOM | MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE)) != MemoryFlagBits::NONE)
+        {
+            vmaMapMemory(this->vma_allocator, ret.vma_allocation, &ret.host_address);
+        }
+
+        this->buffer_device_address_buffer_host_ptr[id.index] = ret.device_address;
 
         if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !buffer_info.debug_name.empty())
         {
@@ -970,6 +971,13 @@ namespace daxa
 
         DAXA_DBG_ASSERT_TRUE_M(image_info.dimensions >= 1 && image_info.dimensions <= 3, "image dimensions must be a value between 1 to 3(inclusive)");
         DAXA_DBG_ASSERT_TRUE_M(std::popcount(image_info.sample_count) == 1 && image_info.sample_count <= 64, "image samples must be power of two and between 1 and 64(inclusive)");
+        DAXA_DBG_ASSERT_TRUE_M(
+            image_info.size.x > 0 &&
+                image_info.size.y > 0 &&
+                image_info.size.z > 0,
+            "image (x,y,z) dimensions must be greater then 0");
+        DAXA_DBG_ASSERT_TRUE_M(image_info.array_layer_count > 0, "image array layer count must be greater then 0");
+        DAXA_DBG_ASSERT_TRUE_M(image_info.mip_level_count > 0, "image mip level count must be greater then 0");
 
         auto const vk_image_type = static_cast<VkImageType>(image_info.dimensions - 1);
 
@@ -1015,7 +1023,8 @@ namespace daxa
             .priority = 0.5f,
         };
 
-        vmaCreateImage(this->vma_allocator, &vk_image_create_info, &vma_allocation_create_info, &ret.vk_image, &ret.vma_allocation, nullptr);
+        VkResult vk_create_image_result = vmaCreateImage(this->vma_allocator, &vk_image_create_info, &vma_allocation_create_info, &ret.vk_image, &ret.vma_allocation, nullptr);
+        DAXA_DBG_ASSERT_TRUE_M(vk_create_image_result == VK_SUCCESS, "failed to create image");
 
         VkImageViewType vk_image_view_type = {};
         if (image_info.array_layer_count > 1)
@@ -1050,7 +1059,8 @@ namespace daxa
             },
         };
 
-        vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view);
+        VkResult vk_create_image_view_result = vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view);
+        DAXA_DBG_ASSERT_TRUE_M(vk_create_image_view_result == VK_SUCCESS, "failed to create image view");
 
         if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !info.debug_name.empty())
         {
@@ -1112,7 +1122,8 @@ namespace daxa
             .subresourceRange = *reinterpret_cast<VkImageSubresourceRange const *>(&slice),
         };
 
-        vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.vk_image_view);
+        VkResult result = vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.vk_image_view);
+        DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create image view");
 
         if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !image_view_info.debug_name.empty())
         {
@@ -1161,7 +1172,8 @@ namespace daxa
             .unnormalizedCoordinates = static_cast<VkBool32>(sampler_info.enable_unnormalized_coordinates),
         };
 
-        vkCreateSampler(this->vk_device, &vk_sampler_create_info, nullptr, &ret.vk_sampler);
+        VkResult result = vkCreateSampler(this->vk_device, &vk_sampler_create_info, nullptr, &ret.vk_sampler);
+        DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create sampler");
 
         if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !info.debug_name.empty())
         {
@@ -1184,64 +1196,46 @@ namespace daxa
     void ImplDevice::cleanup_buffer(BufferId id)
     {
         ImplBufferSlot & buffer_slot = this->gpu_shader_resource_table.buffer_slots.dereference_id(id);
-
-        u64 * mem = nullptr;
-        vmaMapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation, reinterpret_cast<void **>(&mem));
-        mem[id.index] = 0;
-        vmaUnmapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation);
-
+        if ((buffer_slot.info.memory_flags & (MemoryFlagBits::HOST_ACCESS_RANDOM | MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE)) != MemoryFlagBits::NONE)
+        {
+            vmaUnmapMemory(this->vma_allocator, buffer_slot.vma_allocation);
+        }
+        this->buffer_device_address_buffer_host_ptr[id.index] = 0;
         write_descriptor_set_buffer(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, VK_NULL_HANDLE, 0, VK_WHOLE_SIZE, id.index);
-
         vmaDestroyBuffer(this->vma_allocator, buffer_slot.vk_buffer, buffer_slot.vma_allocation);
-
         buffer_slot = {};
-
         gpu_shader_resource_table.buffer_slots.return_slot(id);
     }
 
     void ImplDevice::cleanup_image(ImageId id)
     {
         ImplImageSlot & image_slot = gpu_shader_resource_table.image_slots.dereference_id(id);
-
         write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, VK_NULL_HANDLE, image_slot.info.usage, id.index);
-
         vkDestroyImageView(vk_device, image_slot.view_slot.vk_image_view, nullptr);
-
         if (image_slot.swapchain_image_index == NOT_OWNED_BY_SWAPCHAIN && image_slot.vma_allocation != nullptr)
         {
             vmaDestroyImage(this->vma_allocator, image_slot.vk_image, image_slot.vma_allocation);
         }
-
         image_slot = {};
-
         gpu_shader_resource_table.image_slots.return_slot(id);
     }
 
     void ImplDevice::cleanup_image_view(ImageViewId id)
     {
         DAXA_DBG_ASSERT_TRUE_M(gpu_shader_resource_table.image_slots.dereference_id(id).vk_image == VK_NULL_HANDLE, "can not destroy default image view of image");
-
         ImplImageViewSlot & image_slot = gpu_shader_resource_table.image_slots.dereference_id(id).view_slot;
-
         write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, VK_NULL_HANDLE, slot(image_slot.info.image).info.usage, id.index);
-
         vkDestroyImageView(vk_device, image_slot.vk_image_view, nullptr);
-
         image_slot = {};
-
         gpu_shader_resource_table.image_slots.return_slot(id);
     }
 
     void ImplDevice::cleanup_sampler(SamplerId id)
     {
         ImplSamplerSlot & sampler_slot = this->gpu_shader_resource_table.sampler_slots.dereference_id(id);
-
         write_descriptor_set_sampler(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, this->vk_null_sampler, id.index);
-
         vkDestroySampler(this->vk_device, sampler_slot.vk_sampler, nullptr);
-
         sampler_slot = {};
-
         gpu_shader_resource_table.sampler_slots.return_slot(id);
     }
 
@@ -1250,11 +1244,10 @@ namespace daxa
         wait_idle();
         main_queue_collect_garbage();
         buffer_pool_pool.cleanup(this);
-
+        vmaUnmapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation);
         vmaDestroyBuffer(this->vma_allocator, this->buffer_device_address_buffer, this->buffer_device_address_buffer_allocation);
-
-        vmaDestroyAllocator(this->vma_allocator);
         this->gpu_shader_resource_table.cleanup(this->vk_device);
+        vmaDestroyAllocator(this->vma_allocator);
         vkDestroySampler(vk_device, this->vk_null_sampler, nullptr);
         vkDestroySemaphore(this->vk_device, this->vk_main_queue_gpu_timeline_semaphore, nullptr);
         vkDestroyDevice(this->vk_device, nullptr);

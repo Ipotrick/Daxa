@@ -475,7 +475,7 @@ struct RenderableVoxelWorld
             .debug_name = APPNAME_PREFIX("texture_staging_buffer"),
         });
 
-        u8 * staging_buffer_data = device.map_memory_as<u8>(texture_staging_buffer);
+        u8 * staging_buffer_data = device.get_host_address_as<u8>(texture_staging_buffer);
         for (usize i = 0; i < texture_names.size(); ++i)
         {
             stbi_set_flip_vertically_on_load(true);
@@ -497,7 +497,6 @@ struct RenderableVoxelWorld
                 staging_buffer_data[offset + data_i + 3] = data[data_i + 3];
             }
         }
-        device.unmap_memory(texture_staging_buffer);
 
         auto cmd_list = device.create_command_list({
             .debug_name = APPNAME_PREFIX("cmd_list"),
@@ -576,7 +575,7 @@ void RenderableChunk::update_chunk_mesh(daxa::CommandList & cmd_list)
         });
         cmd_list.destroy_buffer_deferred(face_staging_buffer);
 
-        Vertex * buffer_ptr = device.map_memory_as<Vertex>(face_staging_buffer);
+        Vertex * buffer_ptr = device.get_host_address_as<Vertex>(face_staging_buffer);
         face_n = 0;
         for (i32 zi = 0; zi < 32; ++zi)
         {
@@ -612,7 +611,6 @@ void RenderableChunk::update_chunk_mesh(daxa::CommandList & cmd_list)
                 }
             }
         }
-        device.unmap_memory(face_staging_buffer);
 
         cmd_list.pipeline_barrier({
             .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
@@ -639,7 +637,7 @@ void RenderableChunk::update_chunk_mesh(daxa::CommandList & cmd_list)
         });
         cmd_list.destroy_buffer_deferred(face_staging_buffer);
 
-        Vertex * buffer_ptr = device.map_memory_as<Vertex>(face_staging_buffer);
+        Vertex * buffer_ptr = device.get_host_address_as<Vertex>(face_staging_buffer);
         water_face_n = 0;
         for (i32 zi = 0; zi < 32; ++zi)
         {
@@ -667,7 +665,6 @@ void RenderableChunk::update_chunk_mesh(daxa::CommandList & cmd_list)
                 }
             }
         }
-        device.unmap_memory(face_staging_buffer);
 
         cmd_list.pipeline_barrier({
             .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
