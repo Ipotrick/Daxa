@@ -32,6 +32,10 @@ jobs:
         with:
           vulkan-query-version: latest
           vulkan-use-cache: true
+      - name: Cache apt-install
+        uses: daaku/gh-action-apt-install@v4
+        with:
+          packages: build-essential xorg-dev libtinfo5 curl zip unzip tar wayland-protocols libxkbcommon-dev
       - name: Configure CMake Clang
         run: cmake --preset=clang-x86_64-linux-gnu -DDAXA_ENABLE_DXC=OFF
       - name: Build Clang Debug
