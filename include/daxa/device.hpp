@@ -194,6 +194,12 @@ namespace daxa
 
         auto info_buffer(BufferId id) const -> BufferInfo;
         auto get_device_address(BufferId id) const -> BufferDeviceAddress;
+        auto get_host_address(BufferId id) const -> void*;
+        template<typename T>
+        auto get_host_address_as(BufferId id) const -> T*
+        {
+            return static_cast<T*>(get_host_address(id));
+        }
         auto info_image(ImageId id) const -> ImageInfo;
         auto info_image_view(ImageViewId id) const -> ImageViewInfo;
         auto info_sampler(SamplerId id) const -> SamplerInfo;
@@ -205,16 +211,9 @@ namespace daxa
         auto create_timeline_semaphore(TimelineSemaphoreInfo const & info) -> TimelineSemaphore;
         auto create_split_barrier(SplitBarrierInfo const & info) -> SplitBarrierState;
 
-        auto map_memory(BufferId id) -> void *;
-        void unmap_memory(BufferId id);
         auto info() const -> DeviceInfo const &;
         auto properties() const -> DeviceProperties const &;
         void wait_idle();
-        template <typename T>
-        auto map_memory_as(BufferId id) -> T *
-        {
-            return reinterpret_cast<T *>(map_memory(id));
-        }
 
         void submit_commands(CommandSubmitInfo const & submit_info);
         void present_frame(PresentInfo const & info);

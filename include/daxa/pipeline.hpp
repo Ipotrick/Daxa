@@ -48,6 +48,7 @@ namespace daxa
         std::optional<ShaderModel> shader_model = {};
         std::optional<ShaderLanguage> language = {};
         std::vector<ShaderDefine> defines = {};
+        std::optional<bool> enable_debug_info = {};
 
         void inherit(ShaderCompileOptions const & other);
     };

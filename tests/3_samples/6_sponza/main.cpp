@@ -112,7 +112,7 @@ struct App : AppWindow<App>
 
         // if (is_vbuffer)
         // {
-        //     auto buffer_ptr = device.map_memory_as<DrawVertex>(staging_buffer);
+        //     auto buffer_ptr = device.get_host_address_as<DrawVertex>(staging_buffer);
         //     *buffer_ptr = DrawVertex{-0.5f, +0.5f, 0.0f};
         //     ++buffer_ptr;
         //     *buffer_ptr = DrawVertex{+0.5f, +0.5f, 0.0f};
@@ -122,7 +122,7 @@ struct App : AppWindow<App>
         // }
         // else
         // {
-        //     auto buffer_ptr = device.map_memory_as<u32>(staging_buffer);
+        //     auto buffer_ptr = device.get_host_address_as<u32>(staging_buffer);
         //     *buffer_ptr = 0;
         //     ++buffer_ptr;
         //     *buffer_ptr = 1;
@@ -131,7 +131,7 @@ struct App : AppWindow<App>
         //     ++buffer_ptr;
         // }
 
-        auto buffer_ptr = device.map_memory_as<u32>(staging_buffer);
+        auto buffer_ptr = device.get_host_address_as<u32>(staging_buffer);
         switch (stride)
         {
         case 1:
@@ -151,8 +151,6 @@ struct App : AppWindow<App>
                 buffer_ptr[i] = static_cast<u32>(reinterpret_cast<u64 *>(cpu_buffer_ptr)[i]);
             break;
         }
-
-        device.unmap_memory(staging_buffer);
 
         cmd_list.pipeline_barrier({
             .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
@@ -357,9 +355,8 @@ struct App : AppWindow<App>
         cmd_list.destroy_buffer_deferred(gpu_input_staging_buffer);
         auto mat = player.camera.get_vp();
         gpu_input.view_mat = *reinterpret_cast<f32mat4x4 *>(&mat);
-        auto buffer_ptr = device.map_memory_as<GpuInput>(gpu_input_staging_buffer);
+        auto buffer_ptr = device.get_host_address_as<GpuInput>(gpu_input_staging_buffer);
         *buffer_ptr = gpu_input;
-        device.unmap_memory(gpu_input_staging_buffer);
 
         cmd_list.pipeline_barrier({
             .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
