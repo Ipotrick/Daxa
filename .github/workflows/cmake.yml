@@ -33,13 +33,13 @@ jobs:
           vulkan-query-version: latest
           vulkan-use-cache: true
       - name: Configure CMake Clang
-        run: cmake --preset=clang-x86_64-linux-gnu
+        run: cmake --preset=clang-x86_64-linux-gnu -DDAXA_ENABLE_DXC=OFF
       - name: Build Clang Debug
         run: cmake --build --preset=clang-x86_64-linux-gnu-debug
       - name: Build Clang Release
         run: cmake --build --preset=clang-x86_64-linux-gnu-release
       - name: Configure CMake GCC
-        run: cmake --preset=gcc-x86_64-linux-gnu
+        run: cmake --preset=gcc-x86_64-linux-gnu -DDAXA_ENABLE_DXC=OFF
       - name: Build GCC Debug
         run: cmake --build --preset=gcc-x86_64-linux-gnu-debug
       - name: Build GCC Release
