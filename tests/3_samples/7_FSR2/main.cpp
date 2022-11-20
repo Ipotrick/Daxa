@@ -369,9 +369,8 @@ struct App : AppWindow<App>
                 this->raster_input.texture_array_id = renderable_world.atlas_texture_array;
                 this->raster_input.sampler_id = renderable_world.atlas_sampler;
 
-                RasterInput * buffer_ptr = device.map_memory_as<RasterInput>(staging_raster_input_buffer);
+                RasterInput * buffer_ptr = device.get_host_address_as<RasterInput>(staging_raster_input_buffer);
                 *buffer_ptr = this->raster_input;
-                device.unmap_memory(staging_raster_input_buffer);
             },
             .debug_name = APPNAME_PREFIX("Input MemMap"),
         });

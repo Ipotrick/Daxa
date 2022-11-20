@@ -336,6 +336,10 @@ namespace daxa
         {
             this->language = other.language;
         }
+        if (!this->enable_debug_info.has_value())
+        {
+            this->enable_debug_info = other.enable_debug_info;
+        }
 
         this->root_paths.insert(this->root_paths.begin(), other.root_paths.begin(), other.root_paths.end());
         this->defines.insert(this->defines.end(), other.defines.begin(), other.defines.end());
@@ -835,6 +839,10 @@ namespace daxa
         {
             this->info.shader_compile_options.language = std::optional<ShaderLanguage>{ShaderLanguage::HLSL};
         }
+        if (!this->info.shader_compile_options.enable_debug_info.has_value())
+        {
+            this->info.shader_compile_options.enable_debug_info = {false};
+        }
 
 #if DAXA_BUILT_WITH_GLSLANG
         {
@@ -1117,6 +1125,8 @@ namespace daxa
 
         spv::SpvBuildLogger logger;
         glslang::SpvOptions spv_options{};
+        spv_options.generateDebugInfo = shader_info.compile_options.enable_debug_info.value();
+        spv_options.stripDebugInfo = !shader_info.compile_options.enable_debug_info.value();
         // spv_options.generateDebugInfo = true;
         std::vector<u32> spv;
         glslang::GlslangToSpv(*intermediary, spv, &logger, &spv_options);

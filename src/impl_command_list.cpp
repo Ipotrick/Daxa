@@ -608,7 +608,7 @@ namespace daxa
                 info.draw_command_stride);
         }
         else
-        {
+        { 
             vkCmdDrawIndirect(
                 impl.vk_cmd_buffer,
                 impl.impl_device.as<ImplDevice>()->slot(info.draw_command_buffer).vk_buffer,
