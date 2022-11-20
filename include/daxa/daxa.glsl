@@ -101,9 +101,6 @@ daxa_buffer_device_address_buffer;
 #define _DAXA_REGISTER_TEXTURE_TYPE(TEXTURE_TYPE) \
     DAXA_SAMPLED_IMAGE_LAYOUT uniform TEXTURE_TYPE daxa_TextureTable##TEXTURE_TYPE[];
 
-#define _DAXA_REGISTER_SAMPLER_TYPE(SAMPLER_TYPE) \
-    DAXA_SAMPLER_LAYOUT uniform SAMPLER_TYPE daxa_SamplerTable##SAMPLER_TYPE[];
-
 _DAXA_REGISTER_IMAGE_TYPE(image1D)
 _DAXA_REGISTER_IMAGE_TYPE(image2D)
 _DAXA_REGISTER_IMAGE_TYPE(image3D)
@@ -159,12 +156,12 @@ layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform sampler daxa_SamplerTabl
 
 #define daxa_id_to_index(ID) (DAXA_ID_INDEX_MASK & ID)
 
-#define daxa_access_Buffer(BUFFER_STRUCT_TYPE, buffer_id) daxa_RWBufferTable##BUFFER_STRUCT_TYPE[]
-#define daxa_access_ROBuffer(BUFFER_STRUCT_TYPE, buffer_id) daxa_ROBufferTable##BUFFER_STRUCT_TYPE[daxa_id_to_index(buffer_id.buffer_id_value)]
-#define daxa_access_Image(IMAGE_TYPE, image_view_id) daxa_RWImageTable##IMAGE_TYPE[daxa_id_to_index(image_view_id.image_view_id_value)]
-#define daxa_access_ROImage(IMAGE_TYPE, image_view_id) daxa_ROImageTable##IMAGE_TYPE[daxa_id_to_index(image_view_id.image_view_id_value)]
-#define daxa_access_Texture(TEXTURE_TYPE, image_view_id) daxa_TextureTable##TEXTURE_TYPE[daxa_id_to_index(image_view_id.image_view_id_value)]
-#define daxa_access_Sampler(sampler_id) daxa_SamplerTable[daxa_id_to_index(sampler_id.sampler_id_value)]
+#define daxa_get_buffer(BUFFER_STRUCT_TYPE, buffer_id) daxa_RWBufferTable##BUFFER_STRUCT_TYPE[]
+#define daxa_get_readonly_buffer(BUFFER_STRUCT_TYPE, buffer_id) daxa_ROBufferTable##BUFFER_STRUCT_TYPE[daxa_id_to_index(buffer_id.buffer_id_value)]
+#define daxa_get_image(IMAGE_TYPE, image_view_id) daxa_RWImageTable##IMAGE_TYPE[daxa_id_to_index(image_view_id.image_view_id_value)]
+#define daxa_get_readonly_image(IMAGE_TYPE, image_view_id) daxa_ROImageTable##IMAGE_TYPE[daxa_id_to_index(image_view_id.image_view_id_value)]
+#define daxa_get_texture(TEXTURE_TYPE, image_view_id) daxa_TextureTable##TEXTURE_TYPE[daxa_id_to_index(image_view_id.image_view_id_value)]
+#define daxa_get_sampler(sampler_id) daxa_SamplerTable[daxa_id_to_index(sampler_id.sampler_id_value)]
 
 
 #ifdef DAXA_SHADER_NO_NAMESPACE 
@@ -191,12 +188,12 @@ layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform sampler daxa_SamplerTabl
 #define buffer_address_to_roref daxa_buffer_address_to_roref
 #define buffer_id_to_roref daxa_buffer_id_to_roref
 
-#define access_Buffer daxa_access_Buffer
-#define access_ROBuffer daxa_access_ROBuffer
-#define access_Image daxa_access_Image
-#define access_ROImage daxa_access_ROImage
-#define access_Texture daxa_access_Texture
-#define access_Sampler daxa_access_Sampler
+#define get_buffer daxa_get_buffer
+#define get_readonly_buffer daxa_get_readonly_buffer
+#define get_image daxa_get_image
+#define get_readonly_image daxa_get_readonly_image
+#define get_texture daxa_get_texture
+#define get_sampler daxa_get_sampler
 
 #endif
 

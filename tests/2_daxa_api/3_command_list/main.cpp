@@ -67,11 +67,9 @@ namespace tests
             .debug_name = "timeline_query",
         });
 
-        auto buffer_ptr = app.device.map_memory_as<std::array<f32, 4>>(staging_upload_buffer);
+        auto buffer_ptr = app.device.get_host_address_as<std::array<f32, 4>>(staging_upload_buffer);
 
         *buffer_ptr = data;
-
-        app.device.unmap_memory(staging_upload_buffer);
 
         cmd_list.reset_timestamps({
             .query_pool = timeline_query_pool,
@@ -195,9 +193,7 @@ namespace tests
             std::cout << "gpu execution took " << static_cast<f64>(query_results[2] - query_results[0]) / 1000000.0 << " ms" << std::endl;
         }
 
-        std::array<f32, 4> readback_data = *app.device.map_memory_as<std::array<f32, 4>>(staging_readback_buffer);
-
-        app.device.unmap_memory(staging_readback_buffer);
+        std::array<f32, 4> readback_data = *app.device.get_host_address_as<std::array<f32, 4>>(staging_readback_buffer);
 
         std::cout << "Original data: " << data[0] << ' ' << data[1] << ' ' << data[2] << ' ' << data[3] << std::endl;
         std::cout << "Readback data: " << readback_data[0] << ' ' << readback_data[1] << ' ' << readback_data[2] << ' ' << readback_data[3] << std::endl;
