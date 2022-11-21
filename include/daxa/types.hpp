@@ -667,6 +667,13 @@ namespace daxa
         CUBIC_IMG = 1000015000,
     };
 
+    enum struct ReductionMode
+    {
+        WEIGHTED_AVERAGE = 0,
+        MIN = 1,
+        MAX = 2,
+    };
+
     struct Offset3D
     {
         i32 x = {};
