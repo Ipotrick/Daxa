@@ -1,4 +1,4 @@
-#define DAXA_ENABLE_SHADER_NO_NAMESPACE
+#define DAXA_ENABLE_SHADER_NO_NAMESPACE 1
 #include "daxa/daxa.inl"
 
 #include "test/test0.glsl"

@@ -1,5 +1,14 @@
 #pragma once
 
+#if !defined(DAXA_STORAGE_BUFFER_BINDING)
+#define DAXA_STORAGE_BUFFER_BINDING 0
+#define DAXA_STORAGE_IMAGE_BINDING 1
+#define DAXA_SAMPLED_IMAGE_BINDING 2
+#define DAXA_SAMPLER_BINDING 3
+#define DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING 4
+#define DAXA_ID_INDEX_MASK (0x00FFFFFF)
+#endif
+
 //
 // Optional defines, activating certain features:
 // * DAXA_ENABLE_IMAGE_OVERLOADS_BASIC
@@ -77,6 +86,8 @@ daxa_buffer_device_address_buffer;
 daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id) { return daxa_buffer_device_address_buffer.addresses[daxa_id_to_index(buffer_id)]; }
 
 // One can get a corresponding glsl object from the bindless tables easily with the following makros:
+#define daxa_id_to_rwbuffer(NAME, buffer_id) daxa_id_to_rwbuffer##NAME(buffer_id)
+#define daxa_id_to_buffer(NAME, buffer_id) daxa_id_to_buffer##NAME(buffer_id)
 #define daxa_get_image(IMAGE_TYPE, image_id) daxa_RWImageTable##IMAGE_TYPE[daxa_id_to_index(image_id)]
 #define daxa_get_texture(TEXTURE_TYPE, image_id) daxa_ImageTable##TEXTURE_TYPE[daxa_id_to_index(image_id)]
 layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform sampler daxa_SamplerTable[];
@@ -99,11 +110,11 @@ layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform sampler daxa_SamplerTabl
 #define DAXA_DECL_BUFFER(NAME, BODY)                                                                          \
     DAXA_BUFFER_REFERENCE_LAYOUT buffer daxa_RWBuffer##NAME BODY;                                             \
     DAXA_BUFFER_REFERENCE_LAYOUT readonly buffer daxa_Buffer##NAME BODY;                                      \
-    daxa_RWBuffer##NAME daxa_id_to_rwbuffer(daxa_BufferId buffer_id)                                          \
+    daxa_RWBuffer##NAME daxa_id_to_rwbuffer##NAME(daxa_BufferId buffer_id)                                          \
     {                                                                                                         \
         return daxa_RWBuffer##NAME(daxa_buffer_device_address_buffer.addresses[daxa_id_to_index(buffer_id)]); \
     }                                                                                                         \
-    daxa_Buffer##NAME daxa_id_to_buffer(daxa_BufferId buffer_id)                                              \
+    daxa_Buffer##NAME daxa_id_to_buffer##NAME(daxa_BufferId buffer_id)                                              \
     {                                                                                                         \
         return daxa_Buffer##NAME(daxa_buffer_device_address_buffer.addresses[daxa_id_to_index(buffer_id)]);   \
     }

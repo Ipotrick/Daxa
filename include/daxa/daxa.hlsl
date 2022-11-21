@@ -1,5 +1,14 @@
 #pragma once
 
+#if !defined(DAXA_STORAGE_BUFFER_BINDING)
+#define DAXA_STORAGE_BUFFER_BINDING 0
+#define DAXA_STORAGE_IMAGE_BINDING 1
+#define DAXA_SAMPLED_IMAGE_BINDING 2
+#define DAXA_SAMPLER_BINDING 3
+#define DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING 4
+#define DAXA_ID_INDEX_MASK (0x00FFFFFF)
+#endif
+
 typedef uint daxa_u32;
 typedef bool daxa_b32;
 typedef int daxa_i32;
@@ -255,72 +264,40 @@ DAXA_DEFINE_GET_RWTEXTURE2D(float4)
 DAXA_DEFINE_GET_RWTEXTURE2D(daxa_u32)
 DAXA_DEFINE_GET_RWTEXTURE2D(daxa_u32vec4)
 
-#ifdef DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES
-typedef daxa_u32 u32;
-typedef daxa_b32 b32;
-typedef daxa_i32 i32;
-typedef daxa_f32 f32;
-typedef daxa_f64 f64;
-typedef daxa_b32 b32;
-typedef daxa_b32vec2 b32vec2;
-typedef daxa_b32vec3 b32vec3;
-typedef daxa_b32vec4 b32vec4;
-typedef daxa_f32 f32;
-typedef daxa_f64 f64;
-typedef daxa_f32vec2 f32vec2;
-typedef daxa_f32mat2x2 f32mat2x2;
-typedef daxa_f32mat2x3 f32mat2x3;
-typedef daxa_f32mat2x4 f32mat2x4;
-typedef daxa_f64vec2 f64vec2;
-typedef daxa_f64mat2x2 f64mat2x2;
-typedef daxa_f64mat2x3 f64mat2x3;
-typedef daxa_f64mat2x4 f64mat2x4;
-typedef daxa_f32vec3 f32vec3;
-typedef daxa_f32mat3x2 f32mat3x2;
-typedef daxa_f32mat3x3 f32mat3x3;
-typedef daxa_f32mat3x4 f32mat3x4;
-typedef daxa_f64vec3 f64vec3;
-typedef daxa_f64mat3x2 f64mat3x2;
-typedef daxa_f64mat3x3 f64mat3x3;
-typedef daxa_f64mat3x4 f64mat3x4;
-typedef daxa_f32vec4 f32vec4;
-typedef daxa_f32mat4x2 f32mat4x2;
-typedef daxa_f32mat4x3 f32mat4x3;
-typedef daxa_f32mat4x4 f32mat4x4;
-typedef daxa_f64vec4 f64vec4;
-typedef daxa_f64mat4x2 f64mat4x2;
-typedef daxa_f64mat4x3 f64mat4x3;
-typedef daxa_f64mat4x4 f64mat4x4;
-typedef daxa_f32vec4 f32vec4;
-typedef daxa_f32mat4x2 f32mat4x2;
-typedef daxa_f32mat4x3 f32mat4x3;
-typedef daxa_f32mat4x4 f32mat4x4;
-typedef daxa_i32 i32;
-typedef daxa_i32vec2 i32vec2;
-typedef daxa_i32mat2x2 i32mat2x2;
-typedef daxa_i32mat2x3 i32mat2x3;
-typedef daxa_i32mat2x4 i32mat2x4;
-typedef daxa_u32vec2 u32vec2;
-typedef daxa_u32mat2x2 u32mat2x2;
-typedef daxa_u32mat2x3 u32mat2x3;
-typedef daxa_u32mat2x4 u32mat2x4;
-typedef daxa_i32vec3 i32vec3;
-typedef daxa_i32mat3x2 i32mat3x2;
-typedef daxa_i32mat3x3 i32mat3x3;
-typedef daxa_i32mat3x4 i32mat3x4;
-typedef daxa_u32vec3 u32vec3;
-typedef daxa_u32mat3x2 u32mat3x2;
-typedef daxa_u32mat3x3 u32mat3x3;
-typedef daxa_u32mat3x4 u32mat3x4;
-typedef daxa_i32vec4 i32vec4;
-typedef daxa_i32mat4x2 i32mat4x2;
-typedef daxa_i32mat4x3 i32mat4x3;
-typedef daxa_i32mat4x4 i32mat4x4;
-typedef daxa_u32vec4 u32vec4;
-typedef daxa_u32mat4x2 u32mat4x2;
-typedef daxa_u32mat4x3 u32mat4x3;
-typedef daxa_u32mat4x4 u32mat4x4;
-typedef daxa_BufferId BufferId;
-typedef daxa_ImageViewId ImageViewId;
-typedef daxa_SamplerId SamplerId;
+#if !defined(DAXA_ENABLE_SHADER_NO_NAMESPACE)
+#define DAXA_ENABLE_SHADER_NO_NAMESPACE 0
+#endif
+#if DAXA_ENABLE_SHADER_NO_NAMESPACE
+#define b32vec1 daxa_b32vec1
+#define b32vec2 daxa_b32vec2
+#define b32vec3 daxa_b32vec3
+#define b32vec4 daxa_b32vec4
+#define f32 daxa_f32
+#define f32vec1 daxa_f32vec1
+#define f32vec2 daxa_f32vec2
+#define f32mat2x2 daxa_f32mat2x2
+#define f32mat2x3 daxa_f32mat2x3
+#define f32mat2x4 daxa_f32mat2x4
+#define f32vec3 daxa_f32vec3
+#define f32mat3x2 daxa_f32mat3x2
+#define f32mat3x3 daxa_f32mat3x3
+#define f32mat3x4 daxa_f32mat3x4
+#define f32vec4 daxa_f32vec4
+#define f32mat4x2 daxa_f32mat4x2
+#define f32mat4x3 daxa_f32mat4x3
+#define f32mat4x4 daxa_f32mat4x4
+#define i32 daxa_i32
+#define i32vec1 daxa_i32vec1
+#define i32vec2 daxa_i32vec2
+#define i32vec3 daxa_i32vec3
+#define i32vec4 daxa_i32vec4
+#define u32 daxa_u32
+#define u32vec1 daxa_u32vec1
+#define u32vec2 daxa_u32vec2
+#define u32vec3 daxa_u32vec3
+#define u32vec4 daxa_u32vec4
+#define i64 daxa_i64
+#define i64vec1 daxa_i64vec1
+#define u64 daxa_u64
+#define u64vec1 daxa_u64
 #endif

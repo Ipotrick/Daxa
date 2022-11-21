@@ -18,6 +18,6 @@ DAXA_DECL_BUFFER_STRUCT(
 
 struct DrawPush
 {
-    daxa_BufferRef(GpuInput) input_buffer;
+    daxa_RWBuffer(GpuInput) input_buffer;
     daxa_u64 vbuffer;
 };

@@ -520,6 +520,7 @@ struct App : BaseApp<App>
             swapchain.resize();
             size_x = swapchain.get_surface_extent().x;
             size_y = swapchain.get_surface_extent().y;
+            loop_task_list.remove_runtime_image(task_depth_image, depth_image);
             device.destroy_image(depth_image);
             depth_image = device.create_image({
                 .format = daxa::Format::D24_UNORM_S8_UINT,
@@ -527,6 +528,7 @@ struct App : BaseApp<App>
                 .size = {size_x, size_y, 1},
                 .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT,
             });
+            loop_task_list.add_runtime_image(task_depth_image, depth_image);
             base_on_update();
         }
     }
