@@ -469,6 +469,7 @@ _DAXA_REGISTER_IMAGE_TYPES_GATHER(2DArray, 3, 2, 3)
 #define DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES 0
 #endif
 #if DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES
+#define b32 daxa_b32
 #define b32vec1 daxa_b32vec1
 #define b32vec2 daxa_b32vec2
 #define b32vec3 daxa_b32vec3
