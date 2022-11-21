@@ -7,7 +7,7 @@
 #include <daxa/utils/imgui.hpp>
 #include <imgui_impl_glfw.h>
 
-#define APPNAME "Daxa Sample: Playground"
+#define APPNAME "Daxa Sample: Rectangle Cutting"
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
 
 #include <daxa/utils/math_operators.hpp>
@@ -40,7 +40,7 @@ struct App : AppWindow<App>
     daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
         .shader_compile_options = {
             .root_paths = {
-                "tests/3_samples/0_playground/shaders",
+                "tests/3_samples/0_rectangle_cutting/shaders",
                 "include",
             },
             .language = daxa::ShaderLanguage::GLSL,

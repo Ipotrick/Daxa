@@ -71,7 +71,7 @@ DAXA_CREATE_TEST(
 )
 
 DAXA_CREATE_TEST(
-    FOLDER 3_samples 0_playground
+    FOLDER 3_samples 0_rectangle_cutting
     LIBS glfw
 )
 DAXA_CREATE_TEST(

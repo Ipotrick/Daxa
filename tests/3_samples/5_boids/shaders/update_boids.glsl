@@ -1,4 +1,4 @@
-#define DAXA_ENABLE_SHADER_NO_NAMESPACE
+#define DAXA_ENABLE_SHADER_NO_NAMESPACE 1
 #include <shared.inl>
 
 DAXA_USE_PUSH_CONSTANT(UpdateBoidsPushConstant)
@@ -76,7 +76,7 @@ void boid_avoid_walls(inout Boid old_boid, inout float steer_angle, inout float 
     }
 }
 
-void update_boid(inout Boid boid, in Boid old_boid, in uint boid_index, BufferRef(Boids) old_boids_buffer)
+void update_boid(inout Boid boid, in Boid old_boid, in uint boid_index, Buffer(Boids) old_boids_buffer)
 {
     float acc_steer_angle = 0.0f;
     float acc_steer_angle_weight = 0.0f;
@@ -126,8 +126,8 @@ void main()
         return;
     }
     update_boid(
-        push_constant.boids_buffer.boids[invocation],
-        push_constant.old_boids_buffer.boids[invocation],
+        daxa_push_constant.boids_buffer.boids[invocation],
+        daxa_push_constant.old_boids_buffer.boids[invocation],
         invocation,
-        push_constant.old_boids_buffer);
+        daxa_push_constant.old_boids_buffer);
 }

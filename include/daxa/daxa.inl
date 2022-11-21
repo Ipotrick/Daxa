@@ -1,14 +1,16 @@
 #pragma once
 
 #if defined(DAXA_SHADER)
-#define DAXA_SHADERLANG_GLSL 1
-#define DAXA_SHADERLANG_HLSL 2
+#if !defined(DAXA_STORAGE_BUFFER_BINDING)
 #define DAXA_STORAGE_BUFFER_BINDING 0
 #define DAXA_STORAGE_IMAGE_BINDING 1
 #define DAXA_SAMPLED_IMAGE_BINDING 2
 #define DAXA_SAMPLER_BINDING 3
 #define DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING 4
 #define DAXA_ID_INDEX_MASK (0x00FFFFFF)
+#endif
+#define DAXA_SHADERLANG_GLSL 1
+#define DAXA_SHADERLANG_HLSL 2
 #if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
 #include <daxa/daxa.glsl>
 #elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
@@ -22,7 +24,12 @@ using daxa_##RWImage##IMAGE_TYPE##f32 = daxa::types::ImageViewId; \
 using daxa_##RWImage##IMAGE_TYPE##i32 = daxa::types::ImageViewId; \
 using daxa_##RWImage##IMAGE_TYPE##u32 = daxa::types::ImageViewId; \
 using daxa_##RWImage##IMAGE_TYPE##i64 = daxa::types::ImageViewId; \
-using daxa_##RWImage##IMAGE_TYPE##u64 = daxa::types::ImageViewId;
+using daxa_##RWImage##IMAGE_TYPE##u64 = daxa::types::ImageViewId; \
+using daxa_##Image##IMAGE_TYPE##f32 = daxa::types::ImageViewId; \
+using daxa_##Image##IMAGE_TYPE##i32 = daxa::types::ImageViewId; \
+using daxa_##Image##IMAGE_TYPE##u32 = daxa::types::ImageViewId; \
+using daxa_##Image##IMAGE_TYPE##i64 = daxa::types::ImageViewId; \
+using daxa_##Image##IMAGE_TYPE##u64 = daxa::types::ImageViewId;
 #define _DAXA_REGISTER_SAMPLER_TYPE(SAMPLER_TYPE)
 #define DAXA_PUSH_CONSTANT(STRUCT_TYPE)
 #define DAXA_DECL_BUFFER_STRUCT(NAME, BODY) \

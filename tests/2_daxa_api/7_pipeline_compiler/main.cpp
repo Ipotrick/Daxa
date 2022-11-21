@@ -1,6 +1,8 @@
 #include <daxa/daxa.hpp>
 using namespace daxa::types;
 
+#include <iostream>
+
 #define APPNAME "Daxa API Sample Pipeline Compiler"
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
 

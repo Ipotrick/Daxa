@@ -1,4 +1,5 @@
-#define DAXA_ENABLE_SHADER_NO_NAMESPACE
+#define DAXA_ENABLE_SHADER_NO_NAMESPACE 1
+#define DAXA_ENABLE_IMAGE_OVERLOADS_BASIC 1
 #include <shared.inl>
 
 DAXA_USE_PUSH_CONSTANT(DrawPush)
@@ -176,7 +177,7 @@ UnpackedFace get_vertex(u32 vert_i)
 {
     u32 data_index = vert_i / 6;
     u32 data_instance = vert_i - data_index * 6;
-    u32 vert_data = push_constant.face_buffer.data[data_index];
+    u32 vert_data = daxa_push_constant.face_buffer.data[data_index];
     UnpackedFace result;
     result.block_pos = f32vec3(
         (vert_data >> 0) & 0x1f,
@@ -202,7 +203,7 @@ void main()
 {
     UnpackedFace vert = get_vertex(gl_VertexIndex);
 
-    gl_Position = push_constant.vp_mat * f32vec4(vert.pos.xyz + push_constant.chunk_pos, 1);
+    gl_Position = daxa_push_constant.vp_mat * f32vec4(vert.pos.xyz + daxa_push_constant.chunk_pos, 1);
     v_tex_uv = f32vec3(vert.uv, vert.tex_id);
     v_nrm = vert.nrm;
 }
@@ -216,11 +217,7 @@ layout(location = 0) out f32vec4 color;
 
 void main()
 {
-    f32vec4 tex_col = texture(
-        sampler2DArray(
-            daxa_get_texture(texture2DArray, push_constant.atlas_texture),
-            daxa_get_sampler(push_constant.atlas_sampler)),
-        v_tex_uv);
+    f32vec4 tex_col = texture(daxa_push_constant.atlas_texture, daxa_push_constant.atlas_sampler, v_tex_uv);
     f32vec3 col = tex_col.rgb;
     col *= max(dot(normalize(v_nrm), normalize(f32vec3(1, -3, 2))) * 0.5 + 0.5, 0.0);
 
