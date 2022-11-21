@@ -1,4 +1,8 @@
-#define DAXA_SHADER_NO_NAMESPACE
+#define DAXA_ENABLE_SHADER_NO_NAMESPACE 1
+#define DAXA_ENABLE_IMAGE_OVERLOADS_BASIC 1
+#define DAXA_ENABLE_IMAGE_OVERLOADS_ATOMIC 1
+#define DAXA_ENABLE_IMAGE_OVERLOADS_MULTISAMPLE 1
+#define DAXA_ENABLE_IMAGE_OVERLOADS_64BIT 1
 #include <shared.inl>
 
 DAXA_USE_PUSH_CONSTANT(MipmappingComputePushConstant)
@@ -11,16 +15,16 @@ f32 segment_distance(f32vec2 p, f32vec2 a, f32vec2 b)
     return length(pa - h * ba);
 }
 
-#define INPUT daxa_get_readonly_buffer(MipmappingGpuInput, push_constant.gpu_input)
+#define INPUT daxa_push_constant.gpu_input
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 void main()
 {
     u32vec3 pixel_i = gl_GlobalInvocationID.xyz;
-    if (pixel_i.x >= push_constant.frame_dim.x || pixel_i.y >= push_constant.frame_dim.y)
+    if (pixel_i.x >= daxa_push_constant.frame_dim.x || pixel_i.y >= daxa_push_constant.frame_dim.y)
         return;
 
-    f32vec2 render_size = push_constant.frame_dim;
+    f32vec2 render_size = daxa_push_constant.frame_dim;
     f32vec2 inv_render_size = f32vec2(1.0) / render_size;
     f32vec2 pixel_pos = pixel_i.xy;
     f32vec2 mouse_pos = f32vec2(INPUT.mouse_x, INPUT.mouse_y);
@@ -34,9 +38,10 @@ void main()
     {
         f32vec3 col = INPUT.paint_col;
 
-        imageStore(
-            daxa_get_image(image2D, push_constant.image_id),
-            i32vec2(pixel_i.xy),
-            f32vec4(col, 1));
+        #if DAXA_ENABLE_IMAGE_OVERLOADS_BASIC
+        imageStore(daxa_push_constant.image, i32vec2(pixel_i.xy), f32vec4(col, 1));
+        #else
+        imageStore(daxa_get_image(image2D, daxa_push_constant.image.id), i32vec2(pixel_i.xy), f32vec4(col, 1));
+        #endif
     }
 }

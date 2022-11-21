@@ -1,14 +1,5 @@
 #pragma once
 
-#ifdef DAXA_SHADER_NO_NAMESPACE
-#define DAXA_SHADER_NO_NAMESPACE_PRIMITIVES
-
-#define BufferRef daxa_BufferRef
-#define WrappedBufferRef daxa_WrappedBufferRef
-#define CoherentBufferRef daxa_CoherentBufferRef
-#define WrappedCoherentBufferRef daxa_WrappedCoherentBufferRef
-#endif
-
 #if defined(DAXA_SHADER)
 #define DAXA_SHADERLANG_GLSL 1
 #define DAXA_SHADERLANG_HLSL 2
@@ -26,13 +17,34 @@
 #elif defined(__cplusplus)
 #include <daxa/daxa.hpp>
 #define _DAXA_REGISTER_TEXTURE_TYPE(IMAGE_TYPE)
+#define _DAXA_REGISTER_IMAGE_TYPE(IMAGE_TYPE) \
+using daxa_##RWImage##IMAGE_TYPE##f32 = daxa::types::ImageViewId; \
+using daxa_##RWImage##IMAGE_TYPE##i32 = daxa::types::ImageViewId; \
+using daxa_##RWImage##IMAGE_TYPE##u32 = daxa::types::ImageViewId; \
+using daxa_##RWImage##IMAGE_TYPE##i64 = daxa::types::ImageViewId; \
+using daxa_##RWImage##IMAGE_TYPE##u64 = daxa::types::ImageViewId;
 #define _DAXA_REGISTER_SAMPLER_TYPE(SAMPLER_TYPE)
 #define DAXA_PUSH_CONSTANT(STRUCT_TYPE)
 #define DAXA_DECL_BUFFER_STRUCT(NAME, BODY) \
-    struct NAME BODY
+    struct NAME BODY; \
+    using daxa_Buffer##NAME = daxa::types::BufferDeviceAddress; \
+    using daxa_RWBuffer##NAME = daxa::types::BufferDeviceAddress;
 #define DAXA_DECL_BUFFER(NAME, BODY)
-#define daxa_BufferRef(x) daxa::types::BufferDeviceAddress
-#define daxa_ROBufferRef(x) daxa::types::BufferDeviceAddress
+#define daxa_RWBuffer(x) daxa::types::BufferDeviceAddress
+#define daxa_Buffer(x) daxa::types::BufferDeviceAddress
+
+_DAXA_REGISTER_IMAGE_TYPE(1D)
+_DAXA_REGISTER_IMAGE_TYPE(2D)
+_DAXA_REGISTER_IMAGE_TYPE(3D)
+_DAXA_REGISTER_IMAGE_TYPE(1DArray)
+_DAXA_REGISTER_IMAGE_TYPE(2DArray)
+_DAXA_REGISTER_IMAGE_TYPE(Cube)
+_DAXA_REGISTER_IMAGE_TYPE(CubeArray)
+_DAXA_REGISTER_IMAGE_TYPE(2DMS)
+_DAXA_REGISTER_IMAGE_TYPE(2DMSArray)
+
+#define daxa_Image(DIM, SCALAR) daxa::types::ImageViewId
+#define daxa_RWImage(DIM, SCALAR) daxa::types::ImageViewId
 
 using daxa_b32 = daxa::types::b32;
 using daxa_i32 = daxa::types::i32;
@@ -69,7 +81,7 @@ using daxa_ImageViewId = daxa::types::ImageViewId;
 using daxa_ImageId = daxa::types::ImageId;
 using daxa_SamplerId = daxa::types::SamplerId;
 
-#if defined(DAXA_SHADER_NO_NAMESPACE_PRIMITIVES)
+#if DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES
 using namespace daxa::types;
 #endif
 #endif
