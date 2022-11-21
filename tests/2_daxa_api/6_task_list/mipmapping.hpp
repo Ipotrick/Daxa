@@ -50,7 +50,7 @@ namespace tests
             // clang-format off
             daxa::ComputePipeline compute_pipeline = [&]() { 
                 auto result = pipeline_compiler.create_compute_pipeline({
-                    .shader_info = {.source = daxa::ShaderFile{"mipmapping.glsl"}, .debug_name = "compute shader", .compile_options = { .enable_debug_info = true, .write_out_preprocessed_code = "." }},
+                    .shader_info = {.source = daxa::ShaderFile{"mipmapping.glsl"}, .debug_name = "compute shader" },
                     .push_constant_size = sizeof(MipmappingComputePushConstant),
                     .debug_name = APPNAME_PREFIX("compute_pipeline"),
                 });

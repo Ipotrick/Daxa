@@ -58,13 +58,14 @@ DAXA_DECL_BUFFER_STRUCT(
     DrawVertexBuffer,
     {
         daxa_u32 data[32 * 32 * 32 * 6];
-    });
+    }
+)
 
 struct DrawPush
 {
     daxa_f32mat4x4 vp_mat;
     daxa_f32vec3 chunk_pos;
-    daxa_BufferRef(DrawVertexBuffer) face_buffer;
-    daxa_ImageViewId atlas_texture;
+    daxa_RWBuffer(DrawVertexBuffer) face_buffer;
+    daxa_Image2DArrayf32 atlas_texture;
     daxa_SamplerId atlas_sampler;
 };
