@@ -72,6 +72,7 @@ namespace daxa
         Filter magnification_filter = Filter::LINEAR;
         Filter minification_filter = Filter::LINEAR;
         Filter mipmap_filter = Filter::LINEAR;
+        ReductionMode reduction_mode = ReductionMode::WEIGHTED_AVERAGE;
         SamplerAddressMode address_mode_u = SamplerAddressMode::CLAMP_TO_EDGE;
         SamplerAddressMode address_mode_v = SamplerAddressMode::CLAMP_TO_EDGE;
         SamplerAddressMode address_mode_w = SamplerAddressMode::CLAMP_TO_EDGE;
