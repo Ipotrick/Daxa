@@ -264,12 +264,12 @@ namespace daxa
         auto const & impl = *as<ImplDevice>();
         return BufferDeviceAddress{static_cast<u64>(impl.slot(id).device_address)};
     }
-    
-    auto Device::get_host_address(BufferId id) const -> void*
+
+    auto Device::get_host_address(BufferId id) const -> void *
     {
         auto const & impl = *as<ImplDevice>();
         DAXA_DBG_ASSERT_TRUE_M(
-            (impl.slot(id).info.memory_flags & (MemoryFlagBits::HOST_ACCESS_RANDOM | MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE)) != MemoryFlagBits::NONE, 
+            (impl.slot(id).info.memory_flags & (MemoryFlagBits::HOST_ACCESS_RANDOM | MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE)) != MemoryFlagBits::NONE,
             "host buffer address is only available if the buffer is created with eithr of the following memory flags: HOST_ACCESS_RANDOM, HOST_ACCESS_SEQUENTIAL_WRITE");
         return impl.slot(id).host_address;
     }
@@ -426,52 +426,45 @@ namespace daxa
             .runtimeDescriptorArray = VK_TRUE, // Allows shaders to not have a hardcoded descriptor maximum per talbe.
         };
 
-        VkPhysicalDeviceHostQueryResetFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_HOST_QUERY_RESET
-        {
+        VkPhysicalDeviceHostQueryResetFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_HOST_QUERY_RESET{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES,
             .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_DESCRIPTOR_INDEXING),
             .hostQueryReset = VK_TRUE,
         };
 
-        VkPhysicalDeviceShaderAtomicInt64Features REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_ATOMIC_INT64
-        {
+        VkPhysicalDeviceShaderAtomicInt64Features REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_ATOMIC_INT64{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES,
             .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_HOST_QUERY_RESET),
             .shaderBufferInt64Atomics = VK_TRUE,
             .shaderSharedInt64Atomics = VK_TRUE,
         };
 
-        VkPhysicalDeviceShaderImageAtomicInt64FeaturesEXT REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_IMAGE_ATOMIC_INT64
-        {
+        VkPhysicalDeviceShaderImageAtomicInt64FeaturesEXT REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_IMAGE_ATOMIC_INT64{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_IMAGE_ATOMIC_INT64_FEATURES_EXT,
             .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_ATOMIC_INT64),
             .shaderImageInt64Atomics = VK_TRUE,
             .sparseImageInt64Atomics = VK_FALSE, // I do not care about sparse images.
         };
 
-        VkPhysicalDeviceDynamicRenderingFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_DYNAMIC_RENDERING
-        {
+        VkPhysicalDeviceDynamicRenderingFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_DYNAMIC_RENDERING{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
             .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_IMAGE_ATOMIC_INT64),
             .dynamicRendering = VK_TRUE,
         };
 
-        VkPhysicalDeviceTimelineSemaphoreFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_TIMELINE_SEMAPHORE
-        {
+        VkPhysicalDeviceTimelineSemaphoreFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_TIMELINE_SEMAPHORE{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES,
             .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_DYNAMIC_RENDERING),
             .timelineSemaphore = VK_TRUE,
         };
 
-        VkPhysicalDeviceSynchronization2Features REQUIRED_PHYSICAL_DEVICE_FEATURES_SYNCHRONIZATION_2
-        {
+        VkPhysicalDeviceSynchronization2Features REQUIRED_PHYSICAL_DEVICE_FEATURES_SYNCHRONIZATION_2{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR,
             .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_TIMELINE_SEMAPHORE),
             .synchronization2 = VK_TRUE,
         };
 
-        VkPhysicalDeviceRobustness2FeaturesEXT REQUIRED_PHYSICAL_DEVICE_FEATURES_ROBUSTNESS_2
-        {
+        VkPhysicalDeviceRobustness2FeaturesEXT REQUIRED_PHYSICAL_DEVICE_FEATURES_ROBUSTNESS_2{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT,
             .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SYNCHRONIZATION_2),
             .robustBufferAccess2 = {},
@@ -479,8 +472,7 @@ namespace daxa
             .nullDescriptor = VK_TRUE,
         };
 
-        VkPhysicalDeviceScalarBlockLayoutFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT
-        {
+        VkPhysicalDeviceScalarBlockLayoutFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES,
             .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_ROBUSTNESS_2),
             .scalarBlockLayout = VK_TRUE,
@@ -488,8 +480,7 @@ namespace daxa
 
         void * REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT);
 
-        VkPhysicalDeviceFeatures2 physical_device_features_2
-        {
+        VkPhysicalDeviceFeatures2 physical_device_features_2{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
             .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .features = REQUIRED_PHYSICAL_DEVICE_FEATURES,
@@ -1175,9 +1166,17 @@ namespace daxa
 
         ret.info = sampler_info;
 
+        VkSamplerReductionModeCreateInfo vk_sampler_reduction_mode_create_info{
+            .sType = VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO,
+            .pNext = nullptr,
+            .reductionMode = static_cast<VkSamplerReductionMode>(sampler_info.reduction_mode),
+        };
+
+        DAXA_DBG_ASSERT_TRUE_M(sampler_info.mipmap_filter != Filter::CUBIC_IMG, "can not use cube addressing for mipmap filtering");
+
         VkSamplerCreateInfo const vk_sampler_create_info{
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-            .pNext = nullptr,
+            .pNext = reinterpret_cast<void*>(&vk_sampler_reduction_mode_create_info),
             .flags = {},
             .magFilter = static_cast<VkFilter>(sampler_info.magnification_filter),
             .minFilter = static_cast<VkFilter>(sampler_info.minification_filter),
