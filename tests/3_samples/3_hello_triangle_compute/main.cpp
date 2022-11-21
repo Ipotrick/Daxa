@@ -92,7 +92,7 @@ struct App : BaseApp<App>
                 auto cmd_list = runtime.get_command_list();
                 cmd_list.set_pipeline(compute_pipeline);
                 cmd_list.push_constant(ComputePush{
-                    .image_id = render_image.default_view(),
+                    .image = render_image.default_view(),
                     .frame_dim = {size_x, size_y},
                 });
                 cmd_list.dispatch((size_x + 7) / 8, (size_y + 7) / 8);

@@ -4,6 +4,6 @@
 
 struct ComputePush
 {
-    daxa_ImageViewId image_id;
+    daxa_RWImage2Df32 image;
     daxa_u32vec2 frame_dim;
 };

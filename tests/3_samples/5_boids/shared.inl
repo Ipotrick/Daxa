@@ -28,22 +28,24 @@ DAXA_DECL_BUFFER_STRUCT(
     Boids,
     {
         Boid boids[MAX_BOIDS];
-    });
+    }
+)
 
 DAXA_DECL_BUFFER_STRUCT(
     GpuOutput,
     {
         daxa_f32 data;
-    });
+    }
+)
 
 struct DrawPushConstant
 {
-    daxa_BufferRef(Boids) boids_buffer;
+    daxa_Buffer(Boids) boids_buffer;
     daxa_f32vec2 axis_scaling;
 };
 
 struct UpdateBoidsPushConstant
 {
-    daxa_BufferRef(Boids) boids_buffer;
-    daxa_BufferRef(Boids) old_boids_buffer;
+    daxa_RWBuffer(Boids) boids_buffer;
+    daxa_Buffer(Boids) old_boids_buffer;
 };
