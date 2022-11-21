@@ -9,7 +9,7 @@ namespace tests
         struct App : AppWindow<App>
         {
             daxa::Context daxa_ctx = daxa::create_context({
-                .enable_validation = true,
+                .enable_validation = false,
             });
             daxa::Device device = daxa_ctx.create_device({
                 .debug_name = APPNAME_PREFIX("device (mipmapping)"),
@@ -48,11 +48,15 @@ namespace tests
             }
 
             // clang-format off
-            daxa::ComputePipeline compute_pipeline = pipeline_compiler.create_compute_pipeline({
-                .shader_info = {.source = daxa::ShaderFile{"mipmapping.glsl"}},
-                .push_constant_size = sizeof(MipmappingComputePushConstant),
-                .debug_name = APPNAME_PREFIX("compute_pipeline"),
-            }).value();
+            daxa::ComputePipeline compute_pipeline = [&]() { 
+                auto result = pipeline_compiler.create_compute_pipeline({
+                    .shader_info = {.source = daxa::ShaderFile{"mipmapping.glsl"}, .debug_name = "compute shader", .compile_options = { .enable_debug_info = true, .write_out_preprocessed_code = "." }},
+                    .push_constant_size = sizeof(MipmappingComputePushConstant),
+                    .debug_name = APPNAME_PREFIX("compute_pipeline"),
+                });
+                std::cout << result.to_string() << std::endl;
+                return result.value();
+            }();
             // clang-format on
 
             daxa::ImageId render_image = device.create_image(daxa::ImageInfo{
@@ -207,8 +211,8 @@ namespace tests
                     auto render_target_size = device.info_image(render_target_id).size;
                     cmd_list.set_pipeline(compute_pipeline);
                     auto const push = MipmappingComputePushConstant{
-                        .image_id = render_target_id.default_view(),
-                        .gpu_input = input_buffer,
+                        .image = render_target_id.default_view(),
+                        .gpu_input = device.get_device_address(input_buffer),
                         // .gpu_input = this->device.get_device_address(input_buffer),
                         .frame_dim = {render_target_size.x, render_target_size.y},
                     };
