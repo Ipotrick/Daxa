@@ -1,4 +1,4 @@
-#define DAXA_SHADER_NO_NAMESPACE
+#define DAXA_ENABLE_SHADER_NO_NAMESPACE
 #include <shared.inl>
 
 DAXA_USE_PUSH_CONSTANT(DrawPush)
@@ -8,7 +8,7 @@ DAXA_USE_PUSH_CONSTANT(DrawPush)
 layout(location = 0) out f32vec4 v_col;
 void main()
 {
-    DrawVertex vert = push_constant.face_buffer.verts[gl_VertexIndex];
+    DrawVertex vert = daxa_push_constant.face_buffer.verts[gl_VertexIndex];
     gl_Position = f32vec4(vert.pos.xy, 0, 1);
     v_col = vert.col;
 }

@@ -1,4 +1,4 @@
-#define DAXA_SHADER_NO_NAMESPACE
+#define DAXA_ENABLE_SHADER_NO_NAMESPACE
 #include <shared.inl>
 
 DAXA_USE_PUSH_CONSTANT(ComputePush)
@@ -15,10 +15,10 @@ f32vec3 hsv2rgb(f32vec3 c)
 
 f32vec3 mandelbrot_colored(f32vec2 pixel_p)
 {
-    f32vec2 uv = pixel_p / f32vec2(push_constant.frame_dim.xy);
-    uv = (uv - 0.5) * f32vec2(f32(push_constant.frame_dim.x) / f32(push_constant.frame_dim.y), 1);
+    f32vec2 uv = pixel_p / f32vec2(daxa_push_constant.frame_dim.xy);
+    uv = (uv - 0.5) * f32vec2(f32(daxa_push_constant.frame_dim.x) / f32(daxa_push_constant.frame_dim.y), 1);
 
-    f32 time = push_constant.gpu_input.time;
+    f32 time = daxa_push_constant.gpu_input.time;
     f32 scale = 12.0 / (exp(time) + 0.0001);
     f32vec2 z = uv * scale * 2 + CENTER;
     f32vec2 c = z;
@@ -47,7 +47,7 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 void main()
 {
     u32vec3 pixel_i = gl_GlobalInvocationID.xyz;
-    if (pixel_i.x >= push_constant.frame_dim.x || pixel_i.y >= push_constant.frame_dim.y)
+    if (pixel_i.x >= daxa_push_constant.frame_dim.x || pixel_i.y >= daxa_push_constant.frame_dim.y)
         return;
 
     f32vec3 col = f32vec3(0, 0, 0);
@@ -62,7 +62,7 @@ void main()
     col *= 1.0 / f32(SUBSAMPLES * SUBSAMPLES);
 
     imageStore(
-        daxa_get_image(image2D, push_constant.image_id),
+        daxa_get_image(image2D, daxa_push_constant.image_id),
         i32vec2(pixel_i.xy),
         f32vec4(col, 1));
 }
