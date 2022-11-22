@@ -68,7 +68,7 @@ struct daxa_BufferId
 {
     daxa_u32 value;
 };
-struct daxa_ImageId
+struct daxa_ImageViewId
 {
     daxa_u32 value;
 };
@@ -79,7 +79,7 @@ struct daxa_SamplerId
 
 // One can get the bindless table index from the id directly in the shader:
 daxa_u32 daxa_id_to_index(daxa_BufferId id) { return (DAXA_ID_INDEX_MASK & id.value); }
-daxa_u32 daxa_id_to_index(daxa_ImageId id) { return (DAXA_ID_INDEX_MASK & id.value); }
+daxa_u32 daxa_id_to_index(daxa_ImageViewId id) { return (DAXA_ID_INDEX_MASK & id.value); }
 daxa_u32 daxa_id_to_index(daxa_SamplerId id) { return (DAXA_ID_INDEX_MASK & id.value); }
 layout(scalar, binding = DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, set = 0) readonly buffer daxa_BufferDeviceAddressBufferBlock { daxa_u64 addresses[]; }
 daxa_buffer_device_address_buffer;
@@ -139,14 +139,14 @@ layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform sampler daxa_SamplerTabl
     DAXA_SAMPLED_IMAGE_LAYOUT uniform GLSL_TEXTURE_NAME daxa_ImageTable##GLSL_TEXTURE_NAME[]; \
     struct daxa_Image##IMAGE_KIND##SCALAR_TYPE                                                \
     {                                                                                         \
-        daxa_ImageId id;                                                                      \
+        daxa_ImageViewId id;                                                                  \
     };
 
 #define _DAXA_DECL_RWIMAGE_KIND(GLSL_IMAGE_NAME, IMAGE_KIND, SCALAR_TYPE)                   \
     DAXA_STORAGE_IMAGE_LAYOUT uniform GLSL_IMAGE_NAME daxa_RWImageTable##GLSL_IMAGE_NAME[]; \
     struct daxa_RWImage##IMAGE_KIND##SCALAR_TYPE                                            \
     {                                                                                       \
-        daxa_ImageId id;                                                                    \
+        daxa_ImageViewId id;                                                                \
     };
 
 #define _DAXA_DECL_IMAGE_TYPE(IMAGE_KIND)                          \
@@ -447,8 +447,7 @@ _DAXA_REGISTER_IMAGE_TYPES_GATHER(2DArray, 3, 2, 3)
 #define SAMPLER_LAYOUT DAXA_SAMPLER_LAYOUT
 
 #define BufferId daxa_BufferId
-#define ImageId daxa_ImageId
-#define ImageId daxa_ImageId
+#define ImageViewId daxa_ImageViewId
 #define SamplerId daxa_SamplerId
 
 #define RWBuffer daxa_RWBuffer
