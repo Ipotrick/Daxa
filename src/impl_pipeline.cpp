@@ -670,9 +670,10 @@ namespace daxa
             return Result<ComputePipeline>(spirv_result.message());
         }
         std::vector<u32> spirv = spirv_result.value();
-        std::ofstream ofs(info.shader_info.debug_name + ".spv", std::ios_base::trunc | std::ios_base::binary );
-        ofs.write(reinterpret_cast<char const*>(spirv.data()), spirv.size() * 4ull);
-        ofs.close();
+
+        // std::ofstream ofs(info.shader_info.debug_name + ".spv", std::ios_base::trunc | std::ios_base::binary );
+        // ofs.write(reinterpret_cast<char const*>(spirv.data()), spirv.size() * 4ull);
+        // ofs.close();
 
         VkShaderModule vk_shader_module = {};
 
