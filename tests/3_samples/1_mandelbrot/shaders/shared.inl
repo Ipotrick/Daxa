@@ -12,7 +12,7 @@ DAXA_DECL_BUFFER_STRUCT(
 
 struct ComputePush
 {
-    daxa_ImageId image_id;
+    daxa_ImageViewId image_id;
 #if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
     daxa_RWBuffer(GpuInput) gpu_input;
 #elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
