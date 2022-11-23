@@ -643,7 +643,7 @@ namespace daxa
         };
 
         {
-            VkResult result = vmaCreateBuffer(this->vma_allocator, &vk_buffer_create_info, &vma_allocation_create_info, &buffer_device_address_buffer, &buffer_device_address_buffer_allocation, nullptr);
+            [[maybe_unused]] VkResult result = vmaCreateBuffer(this->vma_allocator, &vk_buffer_create_info, &vma_allocation_create_info, &buffer_device_address_buffer, &buffer_device_address_buffer_allocation, nullptr);
             vmaMapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation, reinterpret_cast<void **>(&this->buffer_device_address_buffer_host_ptr));
             DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create buffer");
         }
@@ -1038,7 +1038,7 @@ namespace daxa
             .priority = 0.5f,
         };
 
-        VkResult vk_create_image_result = vmaCreateImage(this->vma_allocator, &vk_image_create_info, &vma_allocation_create_info, &ret.vk_image, &ret.vma_allocation, nullptr);
+        [[maybe_unused]] VkResult vk_create_image_result = vmaCreateImage(this->vma_allocator, &vk_image_create_info, &vma_allocation_create_info, &ret.vk_image, &ret.vma_allocation, nullptr);
         DAXA_DBG_ASSERT_TRUE_M(vk_create_image_result == VK_SUCCESS, "failed to create image");
 
         VkImageViewType vk_image_view_type = {};
@@ -1074,7 +1074,7 @@ namespace daxa
             },
         };
 
-        VkResult vk_create_image_view_result = vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view);
+        [[maybe_unused]] VkResult vk_create_image_view_result = vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view);
         DAXA_DBG_ASSERT_TRUE_M(vk_create_image_view_result == VK_SUCCESS, "failed to create image view");
 
         if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !info.debug_name.empty())
@@ -1137,7 +1137,7 @@ namespace daxa
             .subresourceRange = *reinterpret_cast<VkImageSubresourceRange const *>(&slice),
         };
 
-        VkResult result = vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.vk_image_view);
+        [[maybe_unused]] VkResult result = vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.vk_image_view);
         DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create image view");
 
         if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !image_view_info.debug_name.empty())
@@ -1195,7 +1195,7 @@ namespace daxa
             .unnormalizedCoordinates = static_cast<VkBool32>(sampler_info.enable_unnormalized_coordinates),
         };
 
-        VkResult result = vkCreateSampler(this->vk_device, &vk_sampler_create_info, nullptr, &ret.vk_sampler);
+        [[maybe_unused]] VkResult result = vkCreateSampler(this->vk_device, &vk_sampler_create_info, nullptr, &ret.vk_sampler);
         DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create sampler");
 
         if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !info.debug_name.empty())
