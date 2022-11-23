@@ -1146,7 +1146,7 @@ namespace daxa
             std::string preprocessed_result = {};
             shader.preprocess(&DAXA_DEFAULT_BUILTIN_RESOURCE, 450, EProfile::ENoProfile, false, false, messages, &preprocessed_result, includer);
             auto ofs = std::ofstream{filepath, std::ios_base::trunc};
-            ofs.write(preprocessed_result.data(), preprocessed_result.size());
+            ofs.write(preprocessed_result.data(), static_cast<std::streamsize>(preprocessed_result.size()));
             ofs.close();
         }
         return Result<std::vector<u32>>(spv);
