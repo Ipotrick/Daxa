@@ -72,12 +72,12 @@ namespace tests
             daxa::TaskImageId task_render_image = {};
 
             MipmappingGpuInput gpu_input = {
+                .paint_col = {1.0f, 0.0f, 0.0f},
                 .mouse_x = {},
                 .mouse_y = {},
                 .p_mouse_x = {},
                 .p_mouse_y = {},
                 .paint_radius = 5.0f,
-                .paint_col = {1.0f, 0.0f, 0.0f},
             };
             daxa::BufferId mipmapping_gpu_input_buffer = device.create_buffer({
                 .size = sizeof(MipmappingGpuInput),
