@@ -20,7 +20,7 @@ namespace daxa
         return impl.info;
     }
 
-    auto Swapchain::get_surface_extent() -> Extent2D
+    auto Swapchain::get_surface_extent() const -> Extent2D
     {
         auto const & impl = *as<ImplSwapchain>();
         return impl.surface_extent;
@@ -70,25 +70,25 @@ namespace daxa
         return impl.images[impl.current_image_index];
     }
 
-    auto Swapchain::get_acquire_semaphore() -> BinarySemaphore &
+    auto Swapchain::get_acquire_semaphore() const -> BinarySemaphore const &
     {
         auto & impl = *as<ImplSwapchain>();
         return impl.acquire_semaphores[impl.acquire_semaphore_index];
     }
 
-    auto Swapchain::get_present_semaphore() -> BinarySemaphore &
+    auto Swapchain::get_present_semaphore() const -> BinarySemaphore const &
     {
         auto & impl = *as<ImplSwapchain>();
         return impl.present_semaphores[impl.current_image_index];
     }
 
-    auto Swapchain::get_gpu_timeline_semaphore() -> TimelineSemaphore &
+    auto Swapchain::get_gpu_timeline_semaphore() const -> TimelineSemaphore const &
     {
         auto & impl = *as<ImplSwapchain>();
         return impl.gpu_frame_timeline;
     }
 
-    auto Swapchain::get_cpu_timeline_value() -> usize
+    auto Swapchain::get_cpu_timeline_value() const -> usize
     {
         auto const & impl = *as<ImplSwapchain>();
         return impl.cpu_frame_timeline;
