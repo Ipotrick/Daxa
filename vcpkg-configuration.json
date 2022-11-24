@@ -2,7 +2,7 @@
   "registries": [
     {
       "kind": "git",
-      "baseline": "727911abad70dd2699a80134ff3f9869e7b61dae",
+      "baseline": "2c8a76ea780cfe9166ecf1c42a2b7d3d5eea5976",
       "repository": "https://github.com/GabeRundlett/vcpkg-registry",
       "packages": [
         "dxc",
