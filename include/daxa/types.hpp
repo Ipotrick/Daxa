@@ -154,10 +154,6 @@ namespace daxa
         using f64mat4x2 = detail::GenericMatrix<f64, 4, 2>;
         using f64mat4x3 = detail::GenericMatrix<f64, 4, 3>;
         using f64mat4x4 = detail::GenericMatrix<f64, 4, 4>;
-        using f32vec4 = detail::GenericVector<f32, 4>;
-        using f32mat4x2 = detail::GenericMatrix<f32, 4, 2>;
-        using f32mat4x3 = detail::GenericMatrix<f32, 4, 3>;
-        using f32mat4x4 = detail::GenericMatrix<f32, 4, 4>;
         using i32vec2 = detail::GenericVector<i32, 2>;
         using i32mat2x2 = detail::GenericMatrix<i32, 2, 2>;
         using i32mat2x3 = detail::GenericMatrix<i32, 2, 3>;
