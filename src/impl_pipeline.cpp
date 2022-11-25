@@ -489,7 +489,7 @@ namespace daxa
             .pNext = nullptr,
             .flags = {},
             .topology = *reinterpret_cast<VkPrimitiveTopology const *>(&info.raster.primitive_topology),
-            .primitiveRestartEnable = {},
+            .primitiveRestartEnable = static_cast<VkBool32>(info.raster.primitive_restart_enable),
         };
 
         constexpr VkPipelineMultisampleStateCreateInfo vk_multisample_state{
