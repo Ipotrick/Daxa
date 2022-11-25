@@ -14,6 +14,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#include <glm/gtc/type_ptr.hpp>
+
 #define APPNAME "Daxa Sample: FSR2"
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
 
@@ -364,7 +366,7 @@ struct App : AppWindow<App>
                 };
                 auto view_mat = player.camera.get_vp();
                 view_mat = glm::translate(glm::identity<glm::mat4>(), glm::vec3(jitter_vec.x, jitter_vec.y, 0.0f)) * view_mat;
-                this->raster_input.view_mat = *reinterpret_cast<f32mat4x4 *>(&view_mat);
+                this->raster_input.view_mat = mat_from_span<f32, 4, 4>(std::span<f32, 4 * 4>{glm::value_ptr(view_mat), 4 * 4});
                 this->raster_input.jitter = (jitter - prev_jitter) * f32vec2{2.0f / static_cast<f32>(render_size_x), 2.0f / static_cast<f32>(render_size_y)};
                 this->raster_input.texture_array_id = renderable_world.atlas_texture_array;
                 this->raster_input.sampler_id = renderable_world.atlas_sampler;
