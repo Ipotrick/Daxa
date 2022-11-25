@@ -491,7 +491,6 @@ namespace daxa
             .topology = *reinterpret_cast<VkPrimitiveTopology const *>(&info.raster.primitive_topology),
             .primitiveRestartEnable = static_cast<VkBool32>(info.raster.primitive_restart_enable),
         };
-
         constexpr VkPipelineMultisampleStateCreateInfo vk_multisample_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
             .pNext = nullptr,
@@ -671,10 +670,6 @@ namespace daxa
             return Result<ComputePipeline>(spirv_result.message());
         }
         std::vector<u32> spirv = spirv_result.value();
-
-        // std::ofstream ofs(info.shader_info.debug_name + ".spv", std::ios_base::trunc | std::ios_base::binary );
-        // ofs.write(reinterpret_cast<char const*>(spirv.data()), spirv.size() * 4ull);
-        // ofs.close();
 
         VkShaderModule vk_shader_module = {};
 
@@ -938,6 +933,27 @@ namespace daxa
             spirv = ret.value();
         }
         current_shader_info = nullptr;
+
+        std::string debug_name = "unnamed-shader";
+        if (ShaderFile const * shader_file = std::get_if<ShaderFile>(&shader_info.source))
+        {
+            debug_name = shader_file->path.string();
+        }
+        else if (!shader_info.debug_name.empty())
+        {
+            debug_name = shader_info.debug_name;
+        }
+
+        if (shader_info.compile_options.write_out_spirv_binary.has_value())
+        {
+            std::replace(debug_name.begin(), debug_name.end(), '/', '_');
+            std::replace(debug_name.begin(), debug_name.end(), '\\', '_');
+            std::replace(debug_name.begin(), debug_name.end(), ':', '_');
+            debug_name = debug_name + ".spv";
+            std::ofstream ofs(shader_info.compile_options.write_out_spirv_binary.value() / debug_name, std::ios_base::trunc | std::ios_base::binary);
+            ofs.write(reinterpret_cast<char const *>(spirv.data()), spirv.size() * 4ull);
+            ofs.close();
+        }
         return Result<std::vector<u32>>(spirv);
     }
 
@@ -1082,14 +1098,14 @@ namespace daxa
                 preamble += std::string("#define ") + shader_define.name + "\n";
             }
         }
-        std::string debug_name = "unnamed shader";
+        std::string debug_name = "unnamed-shader";
         if (ShaderFile const * shader_file = std::get_if<ShaderFile>(&shader_info.source))
         {
             debug_name = shader_file->path.string();
         }
         else if (!shader_info.debug_name.empty())
         {
-            //debug_name = shader_info.debug_name;
+            debug_name = shader_info.debug_name;
         }
 
         glslang::TShader shader{spirv_stage};
@@ -1132,8 +1148,8 @@ namespace daxa
         spv::SpvBuildLogger logger;
         glslang::SpvOptions spv_options{};
         spv_options.generateDebugInfo = shader_info.compile_options.enable_debug_info.value();
-        spv_options.stripDebugInfo = !shader_info.compile_options.enable_debug_info.value();
-        // spv_options.generateDebugInfo = true;
+        // spv_options.emitNonSemanticShaderDebugInfo = spv_options.generateDebugInfo;
+        spv_options.stripDebugInfo = !spv_options.generateDebugInfo;
         std::vector<u32> spv;
         glslang::GlslangToSpv(*intermediary, spv, &logger, &spv_options);
 
