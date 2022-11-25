@@ -10,6 +10,8 @@
 
 #include <cgltf.h>
 
+#include <glm/gtc/type_ptr.hpp>
+
 #define APPNAME "Daxa Sample: Sponza"
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
 
@@ -354,7 +356,7 @@ struct App : AppWindow<App>
         });
         cmd_list.destroy_buffer_deferred(gpu_input_staging_buffer);
         auto mat = player.camera.get_vp();
-        gpu_input.view_mat = *reinterpret_cast<f32mat4x4 *>(&mat);
+        gpu_input.view_mat = mat_from_span<f32, 4, 4>(std::span<f32, 4 * 4>{glm::value_ptr(mat), 4 * 4});
         auto buffer_ptr = device.get_host_address_as<GpuInput>(gpu_input_staging_buffer);
         *buffer_ptr = gpu_input;
 
