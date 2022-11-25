@@ -92,8 +92,10 @@ namespace daxa
 
     struct RasterizerInfo
     {
+        PrimitiveTopology primitive_topology = PrimitiveTopology::TRIANGLE_LIST;
         PolygonMode polygon_mode = PolygonMode::FILL;
         FaceCullFlags face_culling = FaceCullFlagBits::NONE;
+        FrontFaceWinding front_face_winding = FrontFaceWinding::CLOCKWISE;
         bool depth_clamp_enable = false;
         bool rasterizer_discard_enable = false;
         bool depth_bias_enable = false;
