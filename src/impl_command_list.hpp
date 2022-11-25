@@ -53,8 +53,7 @@ namespace daxa
         usize memory_barrier_batch_count = 0;
         usize split_barrier_batch_count = 0;
         std::array<VkPipelineLayout, PIPELINE_LAYOUT_COUNT> * pipeline_layouts = {};
-        std::array<std::pair<GPUResourceId, u8>, DEFERRED_DESTRUCTION_COUNT_MAX> deferred_destructions = {};
-        usize deferred_destruction_count = {};
+        std::vector<std::pair<GPUResourceId, u8>> deferred_destructions = {};
 
         void flush_barriers();
 
@@ -62,6 +61,5 @@ namespace daxa
         virtual ~ImplCommandList() override final;
 
         void initialize();
-        void reset();
     };
 } // namespace daxa
