@@ -284,10 +284,8 @@ namespace daxa
     {
         auto & impl = *reinterpret_cast<ImplCommandList *>(impl_void);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
-        DAXA_DBG_ASSERT_TRUE_M(impl.deferred_destruction_count < DEFERRED_DESTRUCTION_COUNT_MAX, "can not defer the destruction of more than 32 resources per command list recording");
-        impl.flush_barriers();
-
-        impl.deferred_destructions.at(impl.deferred_destruction_count++) = {id, index};
+        // DAXA_DBG_ASSERT_TRUE_M(impl.deferred_destruction_count < DEFERRED_DESTRUCTION_COUNT_MAX, "can not defer the destruction of more than 32 resources per command list recording");
+        impl.deferred_destructions.push_back({ id, index });
     }
 
     void CommandList::destroy_buffer_deferred(BufferId id)
@@ -777,12 +775,6 @@ namespace daxa
             };
             this->impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &cmd_pool_name_info);
         }
-    }
-
-    void ImplCommandList::reset()
-    {
-        vkResetCommandPool(impl_device.as<ImplDevice>()->vk_device, this->vk_cmd_pool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
-        deferred_destruction_count = 0;
     }
 
     ImplCommandList::~ImplCommandList() // NOLINT(bugprone-exception-escape)

@@ -37,7 +37,7 @@ namespace daxa
         for (auto const & command_list : submit_info.command_lists)
         {
             auto const * cmd_list = command_list.as<ImplCommandList>();
-            for (usize i = 0; i < cmd_list->deferred_destruction_count; ++i)
+            for (usize i = 0; i < cmd_list->deferred_destructions.size(); ++i)
             {
                 auto [id, index] = cmd_list->deferred_destructions.at(i);
                 switch (index)
@@ -729,13 +729,15 @@ namespace daxa
             this->main_queue_submits_zombies,
             [](auto & /* command_lists */) {});
         lock.lock();
-        check_and_cleanup_gpu_resources(
-            this->main_queue_command_list_zombies,
-            [&](auto & command_list_zombie)
-            {
-                DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const l_lock{this->main_queue_command_pool_buffer_recycle_mtx});
-                this->buffer_pool_pool.put_back({command_list_zombie.vk_cmd_pool, command_list_zombie.vk_cmd_buffer});
-            });
+        {
+            DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const l_lock{this->main_queue_command_pool_buffer_recycle_mtx});
+            check_and_cleanup_gpu_resources(
+                this->main_queue_command_list_zombies,
+                [&](auto & command_list_zombie)
+                {
+                    this->buffer_pool_pool.put_back({command_list_zombie.vk_cmd_pool, command_list_zombie.vk_cmd_buffer});
+                });
+        }
         check_and_cleanup_gpu_resources(
             this->main_queue_buffer_zombies,
             [&](auto id)
