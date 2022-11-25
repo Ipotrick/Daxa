@@ -11,6 +11,8 @@ using namespace daxa::types;
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#include <glm/gtc/type_ptr.hpp>
+
 using BlockID = u32;
 struct VoxelFace
 {
@@ -632,7 +634,7 @@ struct App : BaseApp<App>
                     if (!chunk.invalid)
                     {
                         cmd_list.push_constant(DrawPush{
-                            .vp_mat = *reinterpret_cast<f32mat4x4 *>(&mat),
+                            .vp_mat = mat_from_span<f32, 4, 4>(std::span<f32, 4 * 4>{glm::value_ptr(mat), 4 * 4}),
                             .chunk_pos = chunk.chunk->pos,
                             .face_buffer = this->device.get_device_address(chunk.face_buffer),
                             .atlas_texture = this->renderable_world.atlas_texture_array.default_view(),

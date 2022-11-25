@@ -13,6 +13,7 @@
 #include <cstddef>
 #include <array>
 #include <concepts>
+#include <span>
 
 namespace daxa
 {
