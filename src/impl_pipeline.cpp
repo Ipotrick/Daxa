@@ -484,13 +484,14 @@ namespace daxa
             .vertexAttributeDescriptionCount = 0,
             .pVertexAttributeDescriptions = nullptr,
         };
-        constexpr VkPipelineInputAssemblyStateCreateInfo vk_input_assembly_state{
+        VkPipelineInputAssemblyStateCreateInfo const vk_input_assembly_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},
-            .topology = VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+            .topology = *reinterpret_cast<VkPrimitiveTopology const *>(&info.raster.primitive_topology),
             .primitiveRestartEnable = {},
         };
+
         constexpr VkPipelineMultisampleStateCreateInfo vk_multisample_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
             .pNext = nullptr,
@@ -511,7 +512,7 @@ namespace daxa
             .rasterizerDiscardEnable = {},
             .polygonMode = *reinterpret_cast<VkPolygonMode const *>(&info.raster.polygon_mode),
             .cullMode = *reinterpret_cast<VkCullModeFlags const *>(&info.raster.face_culling),
-            .frontFace = VkFrontFace::VK_FRONT_FACE_CLOCKWISE,
+            .frontFace = *reinterpret_cast<VkFrontFace const *>(&info.raster.front_face_winding),
             .depthBiasEnable = static_cast<VkBool32>(info.raster.depth_bias_enable),
             .depthBiasConstantFactor = info.raster.depth_bias_constant_factor,
             .depthBiasClamp = info.raster.depth_bias_clamp,
