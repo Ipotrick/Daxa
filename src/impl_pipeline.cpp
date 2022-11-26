@@ -1072,6 +1072,7 @@ namespace daxa
         preamble += "#extension GL_GOOGLE_include_directive : enable\n";
         preamble += "#extension GL_EXT_nonuniform_qualifier : enable\n";
         preamble += "#extension GL_EXT_buffer_reference : enable\n";
+        preamble += "#extension GL_EXT_buffer_reference2 : enable\n";
         preamble += "#extension GL_EXT_shader_explicit_arithmetic_types_int64 : enable\n";
 
         // TODO(grundlett): Probably expose this as a compile option!
