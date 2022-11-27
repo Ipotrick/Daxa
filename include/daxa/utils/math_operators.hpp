@@ -150,7 +150,7 @@ namespace daxa::math_operators
         for (usize mi = 0; mi < M; ++mi)
         {
             for (usize ni = 0; ni < N; ++ni)
-                result[ni][mi] = x[ni + mi * N];
+                result[ni][mi] = x[ni * N + mi];
         }
         return result;
     }
