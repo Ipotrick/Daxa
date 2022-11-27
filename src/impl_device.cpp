@@ -828,8 +828,20 @@ namespace daxa
             .pQueueFamilyIndices = &this->main_queue_family_index,
         };
 
+        bool host_accessable = false;
+        VmaAllocationCreateFlags vma_allocation_flags = static_cast<VmaAllocationCreateFlags>(buffer_info.memory_flags.data);
+        if (vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT ||
+            vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT ||
+            vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT)
+        {
+            vma_allocation_flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
+            host_accessable = true;
+        }
+
+        VmaAllocationInfo vma_allocation_info = {};
+
         VmaAllocationCreateInfo const vma_allocation_create_info{
-            .flags = static_cast<VmaAllocationCreateFlags>(buffer_info.memory_flags.data),
+            .flags = vma_allocation_flags,
             .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
             .requiredFlags = {},
             .preferredFlags = {},
@@ -839,7 +851,7 @@ namespace daxa
             .priority = 0.5f,
         };
 
-        vmaCreateBuffer(this->vma_allocator, &vk_buffer_create_info, &vma_allocation_create_info, &ret.vk_buffer, &ret.vma_allocation, nullptr);
+        vmaCreateBuffer(this->vma_allocator, &vk_buffer_create_info, &vma_allocation_create_info, &ret.vk_buffer, &ret.vma_allocation, &vma_allocation_info);
 
         VkBufferDeviceAddressInfo const vk_buffer_device_address_info{
             .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
@@ -849,10 +861,7 @@ namespace daxa
 
         ret.device_address = vkGetBufferDeviceAddress(vk_device, &vk_buffer_device_address_info);
 
-        if ((buffer_info.memory_flags & (MemoryFlagBits::HOST_ACCESS_RANDOM | MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE)) != MemoryFlagBits::NONE)
-        {
-            vmaMapMemory(this->vma_allocator, ret.vma_allocation, &ret.host_address);
-        }
+        ret.host_address = host_accessable ? vma_allocation_info.pMappedData : nullptr;
 
         this->buffer_device_address_buffer_host_ptr[id.index] = ret.device_address;
 
@@ -1178,7 +1187,7 @@ namespace daxa
 
         VkSamplerCreateInfo const vk_sampler_create_info{
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-            .pNext = reinterpret_cast<void*>(&vk_sampler_reduction_mode_create_info),
+            .pNext = reinterpret_cast<void *>(&vk_sampler_reduction_mode_create_info),
             .flags = {},
             .magFilter = static_cast<VkFilter>(sampler_info.magnification_filter),
             .minFilter = static_cast<VkFilter>(sampler_info.minification_filter),
@@ -1221,10 +1230,6 @@ namespace daxa
     void ImplDevice::cleanup_buffer(BufferId id)
     {
         ImplBufferSlot & buffer_slot = this->gpu_shader_resource_table.buffer_slots.dereference_id(id);
-        if ((buffer_slot.info.memory_flags & (MemoryFlagBits::HOST_ACCESS_RANDOM | MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE)) != MemoryFlagBits::NONE)
-        {
-            vmaUnmapMemory(this->vma_allocator, buffer_slot.vma_allocation);
-        }
         this->buffer_device_address_buffer_host_ptr[id.index] = 0;
         write_descriptor_set_buffer(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, VK_NULL_HANDLE, 0, VK_WHOLE_SIZE, id.index);
         vmaDestroyBuffer(this->vma_allocator, buffer_slot.vk_buffer, buffer_slot.vma_allocation);
