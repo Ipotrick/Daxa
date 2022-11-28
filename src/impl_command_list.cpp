@@ -781,7 +781,7 @@ namespace daxa
     {
         auto & device = *this->impl_device.as<ImplDevice>();
 
-        vkResetCommandPool(device.vk_device, this->vk_cmd_pool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
+        vkResetCommandPool(device.vk_device, this->vk_cmd_pool, {});
 
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{device.main_queue_zombies_mtx});
         u64 const main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(device.main_queue_cpu_timeline);
