@@ -785,6 +785,7 @@ namespace daxa
 
     auto PipelineCompiler::check_if_sources_changed(ComputePipeline & pipeline) -> bool
     {
+        DAXA_DBG_ASSERT_TRUE_M(pipeline.object != nullptr, "invalid pipline handle - valid handle must be retrieved from the pipeline compiler before use");
         auto & pipeline_impl = *pipeline.as<ImplComputePipeline>();
         auto now = std::chrono::file_clock::now();
         using namespace std::chrono_literals;
