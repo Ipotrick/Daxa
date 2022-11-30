@@ -1371,7 +1371,7 @@ namespace daxa
             for (auto image : impl_task_images[barrier.image_id.index].images)
             {
                 std::cout << prefix << "\timage id: " << to_string(image)
-                          << prefix << "\timage debug name: " << info.device.info_image(image).debug_name << " \n";
+                          << prefix << "\timage debug name: " << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).debug_name) << " \n";
             }
             std::cout << prefix << "\tEnd   bound images \n";
             std::cout << prefix << "\tsrc access: " << to_string(barrier.src_access) << "\n";
@@ -1408,7 +1408,7 @@ namespace daxa
             for (auto image : impl_task_images[barrier.image_id.index].images)
             {
                 std::cout << prefix << "\timage id: " << to_string(image)
-                          << prefix << "\timage debug name: " << info.device.info_image(image).debug_name << " \n";
+                          << prefix << "\timage debug name: " << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).debug_name) << " \n";
             }
             std::cout << prefix << "\tEnd   bound images \n";
             std::cout << prefix << "\tsrc access: " << to_string(barrier.src_access) << "\n";
@@ -1436,7 +1436,7 @@ namespace daxa
             for (auto image : impl_task_images[task_image_id.index].images)
             {
                 std::cout << prefix << "\timage id: " << to_string(image)
-                          << prefix << "\timage debug name: " << info.device.info_image(image).debug_name << " \n";
+                          << prefix << "\timage debug name: " << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).debug_name) << " \n";
             }
             std::cout << prefix << "\tEnd   bound images \n";
             std::cout << prefix << "\t\trequired layout: " << to_string(layout) << "\n";
@@ -1451,10 +1451,10 @@ namespace daxa
             std::cout << prefix << "\tBegin task buffer use " << task_buffer_id.index << "\n";
             std::cout << prefix << "\t\task buffer debug name: " << impl_task_buffer.info.debug_name << "\n";
             std::cout << prefix << "\tBegin bound buffers\n";
-            for (auto image : impl_task_images[task_buffer_id.index].images)
+            for (auto buffer : impl_task_buffers[task_buffer_id.index].buffers)
             {
-                std::cout << prefix << "\tbuffers id: " << to_string(image)
-                          << prefix << "\tbuffers debug name: " << info.device.info_image(image).debug_name << " \n";
+                std::cout << prefix << "\tbuffers id: " << to_string(buffer)
+                          << prefix << "\tbuffers debug name: " << (buffer.is_empty() ? std::string("INVALID ID") : info.device.info_buffer(buffer).debug_name) << " \n";
             }
             std::cout << prefix << "\tEnd   bound buffers \n";
             std::cout << prefix << "\t\tstage access: " << to_string(access) << "\n";

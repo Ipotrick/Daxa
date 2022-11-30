@@ -376,7 +376,7 @@ struct RenderableVoxelWorld
             std::array<i32, 3> next_mip_size = {std::max<i32>(1, mip_size[0] / 2), std::max<i32>(1, mip_size[1] / 2), std::max<i32>(1, mip_size[2] / 2)};
             new_task_list.add_task({
                 .used_images = {
-                    {task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{.base_mip_level = i + 0, .base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
+                    {task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{.base_mip_level = i + 0, .base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
                     {task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{.base_mip_level = i + 1, .base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
                 },
                 .task = [=, this](daxa::TaskRuntime const & runtime)
@@ -385,21 +385,19 @@ struct RenderableVoxelWorld
                     auto image_id = runtime.get_images(task_atlas_texture_array)[0];
                     cmd_list.blit_image_to_image({
                         .src_image = image_id,
-                        .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL, // TODO: get from TaskRuntime
                         .dst_image = image_id,
-                        .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                         .src_slice = {
                             .image_aspect = image_info.aspect,
                             .mip_level = i,
                             .base_array_layer = 0,
-                            .layer_count = 1,
+                            .layer_count = static_cast<u32>(texture_names.size()),
                         },
                         .src_offsets = {{{0, 0, 0}, {mip_size[0], mip_size[1], mip_size[2]}}},
                         .dst_slice = {
                             .image_aspect = image_info.aspect,
                             .mip_level = i + 1,
                             .base_array_layer = 0,
-                            .layer_count = 1,
+                            .layer_count = static_cast<u32>(texture_names.size()),
                         },
                         .dst_offsets = {{{0, 0, 0}, {next_mip_size[0], next_mip_size[1], next_mip_size[2]}}},
                         .filter = daxa::Filter::LINEAR,
@@ -485,6 +483,8 @@ struct App : BaseApp<App>
         loop_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
         if (swapchain_image.is_empty())
             return;
+            
+        loop_task_list.debug_print();
         loop_task_list.execute();
     }
 
@@ -603,13 +603,13 @@ struct App : BaseApp<App>
             },
             .debug_name = APPNAME_PREFIX("Upload Chunks"),
         });
-        auto atlas_image_info = device.info_image(renderable_world.atlas_texture_array);
+        auto whole_atlas_slice = device.info_image_view(renderable_world.atlas_texture_array.default_view()).slice;
         new_task_list.add_task({
             .used_buffers = draw_used_buffers,
             .used_images = {
                 {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
                 {task_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT, daxa::ImageMipArraySlice{}},
-                {renderable_world.task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{.base_mip_level = 0, .level_count = atlas_image_info.mip_level_count, .base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
+                {renderable_world.task_atlas_texture_array, daxa::TaskImageAccess::SHADER_READ_ONLY, whole_atlas_slice},
             },
             .task = [this](daxa::TaskRuntime runtime)
             {
