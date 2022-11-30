@@ -62,9 +62,9 @@ namespace daxa
     struct ImageCopyInfo
     {
         ImageId src_image = {};
-        ImageLayout src_image_layout = {};
+        ImageLayout src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL;
         ImageId dst_image = {};
-        ImageLayout dst_image_layout = {};
+        ImageLayout dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL;
         ImageArraySlice src_slice = {};
         Offset3D src_offset = {};
         ImageArraySlice dst_slice = {};
