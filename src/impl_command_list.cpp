@@ -76,7 +76,7 @@ namespace daxa
             &vk_buffer_copy);
     }
 
-    void CommandList::copy_buffer_to_image(BufferImageCopy const & info)
+    void CommandList::copy_buffer_to_image(BufferImageCopyInfo const & info)
     {
         auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
@@ -100,7 +100,7 @@ namespace daxa
             &vk_buffer_image_copy);
     }
 
-    void CommandList::copy_image_to_buffer(BufferImageCopy const & info)
+    void CommandList::copy_image_to_buffer(ImageBufferCopyInfo const & info)
     {
         auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
