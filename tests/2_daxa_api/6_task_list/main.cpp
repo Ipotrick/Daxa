@@ -319,7 +319,7 @@ namespace tests
             {
                 daxa::TaskList new_task_list = daxa::TaskList({
                     .device = device,
-                    .dont_use_split_barriers = true,
+                    .use_split_barriers = false,
                     .debug_name = APPNAME_PREFIX("task_list (drawing)"),
                 });
                 // task_swapchain_image = new_task_list.create_task_image({

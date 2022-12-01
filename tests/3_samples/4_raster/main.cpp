@@ -529,6 +529,7 @@ struct App : BaseApp<App>
                 .aspect = daxa::ImageAspectFlagBits::DEPTH | daxa::ImageAspectFlagBits::STENCIL,
                 .size = {size_x, size_y, 1},
                 .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT,
+                .debug_name = APPNAME_PREFIX("depth_image")
             });
             loop_task_list.add_runtime_image(task_depth_image, depth_image);
             base_on_update();
@@ -546,21 +547,16 @@ struct App : BaseApp<App>
         task_depth_image = new_task_list.create_task_image({.debug_name = APPNAME_PREFIX("task_depth_image")});
         new_task_list.add_runtime_image(task_depth_image, depth_image);
         renderable_world.record_load_textures_tasks(new_task_list);
-        std::vector<daxa::TaskBufferUse> upload_used_buffers;
-        std::vector<daxa::TaskBufferUse> draw_used_buffers;
+        daxa::TaskBufferId task_vertex_buffers  = new_task_list.create_task_buffer({.debug_name = APPNAME_PREFIX("chunk vertex buffers")});
         for (auto & chunk : renderable_world.renderable_chunks)
         {
             chunk.task_face_buffer = new_task_list.create_task_buffer({.debug_name = APPNAME_PREFIX("chunk.task_face_buffer")});
             chunk.task_water_face_buffer = new_task_list.create_task_buffer({.debug_name = APPNAME_PREFIX("chunk.task_water_face_buffer")});
-            new_task_list.add_runtime_buffer(chunk.task_face_buffer, chunk.face_buffer);
-            new_task_list.add_runtime_buffer(chunk.task_water_face_buffer, chunk.water_face_buffer);
-            upload_used_buffers.push_back({chunk.task_face_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE});
-            upload_used_buffers.push_back({chunk.task_water_face_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE});
-            draw_used_buffers.push_back({chunk.task_face_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY});
-            draw_used_buffers.push_back({chunk.task_water_face_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY});
+            new_task_list.add_runtime_buffer(task_vertex_buffers, chunk.face_buffer);
+            new_task_list.add_runtime_buffer(task_vertex_buffers, chunk.water_face_buffer);
         }
         new_task_list.add_task({
-            .used_buffers = upload_used_buffers,
+            .used_buffers = { { task_vertex_buffers, daxa::TaskBufferAccess::TRANSFER_WRITE } },
             .task = [this](daxa::TaskRuntime runtime)
             {
                 auto cmd_list = runtime.get_command_list();
@@ -605,7 +601,7 @@ struct App : BaseApp<App>
         });
         auto whole_atlas_slice = device.info_image_view(renderable_world.atlas_texture_array.default_view()).slice;
         new_task_list.add_task({
-            .used_buffers = draw_used_buffers,
+            .used_buffers = { { task_vertex_buffers, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY } },
             .used_images = {
                 {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
                 {task_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT, daxa::ImageMipArraySlice{}},
