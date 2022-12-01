@@ -93,7 +93,7 @@ namespace daxa
             .image_aspect = this->image_aspect & slice.image_aspect,
             .base_mip_level = max_mip_p0,
             .level_count = mip_n,
-            .base_array_layer = min_arr_p1,
+            .base_array_layer = max_arr_p0,
             .layer_count = arr_n,
         };
     }
