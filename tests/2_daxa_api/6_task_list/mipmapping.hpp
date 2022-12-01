@@ -436,7 +436,6 @@ namespace tests
                 daxa::TaskList new_task_list = daxa::TaskList({
                     .device = device,
                     .swapchain = swapchain,
-                    //.dont_use_split_barriers = true,
                     .debug_name = APPNAME_PREFIX("main task list"),
                 });
                 task_swapchain_image = new_task_list.create_task_image({
