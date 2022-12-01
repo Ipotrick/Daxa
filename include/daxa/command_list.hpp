@@ -18,9 +18,9 @@ namespace daxa
     struct ImageBlitInfo
     {
         ImageId src_image = {};
-        ImageLayout src_image_layout = {};
+        ImageLayout src_image_layout = ImageLayout::TRANSFER_SRC_OPTIMAL;
         ImageId dst_image = {};
-        ImageLayout dst_image_layout = {};
+        ImageLayout dst_image_layout = ImageLayout::TRANSFER_DST_OPTIMAL;
         ImageArraySlice src_slice = {};
         std::array<Offset3D, 2> src_offsets = {};
         ImageArraySlice dst_slice = {};
@@ -37,21 +37,21 @@ namespace daxa
         usize size = {};
     };
 
-    struct BufferImageCopy
+    struct BufferImageCopyInfo
     {
         BufferId buffer = {};
         usize buffer_offset = {};
         ImageId image = {};
-        ImageLayout image_layout = {};
+        ImageLayout image_layout = ImageLayout::TRANSFER_DST_OPTIMAL;
         ImageArraySlice image_slice = {};
         Offset3D image_offset = {};
         Extent3D image_extent = {};
     };
 
-    struct ImageToBufferInfo
+    struct ImageBufferCopyInfo
     {
         ImageId image = {};
-        ImageLayout image_layout = {};
+        ImageLayout image_layout = ImageLayout::TRANSFER_SRC_OPTIMAL;
         ImageArraySlice image_slice = {};
         Offset3D image_offset = {};
         Extent3D image_extent = {};
@@ -74,7 +74,7 @@ namespace daxa
 
     struct ImageClearInfo
     {
-        ImageLayout dst_image_layout = {};
+        ImageLayout dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL;
         ClearValue clear_value;
         ImageId dst_image = {};
         ImageMipArraySlice dst_slice = {};
@@ -184,8 +184,8 @@ namespace daxa
         CommandList();
 
         void copy_buffer_to_buffer(BufferCopyInfo const & info);
-        void copy_buffer_to_image(BufferImageCopy const & info);
-        void copy_image_to_buffer(BufferImageCopy const & info);
+        void copy_buffer_to_image(BufferImageCopyInfo const & info);
+        void copy_image_to_buffer(ImageBufferCopyInfo const & info);
         void copy_image_to_image(ImageCopyInfo const & info);
         void blit_image_to_image(ImageBlitInfo const & info);
 

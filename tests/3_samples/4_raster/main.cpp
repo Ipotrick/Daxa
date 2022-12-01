@@ -485,7 +485,7 @@ struct App : BaseApp<App>
         if (swapchain_image.is_empty())
             return;
             
-        loop_task_list.debug_print();
+        // loop_task_list.debug_print();
         loop_task_list.execute();
     }
 
