@@ -173,11 +173,11 @@ namespace daxa
         Device device;
         /// @brief Task reordering can drastically improve performance,
         /// yet is it also nice to have sequential callback execution.
-        bool dont_reorder_tasks = false;
+        bool reorder_tasks = true;
         /// @brief Some drivers have bad implementations for split barriers.
         /// If that is the case for you, you can turn off all use of split barriers.
         /// Daxa will use pipeline barriers instead if this is set.
-        bool dont_use_split_barriers = false;
+        bool use_split_barriers = true;
         /// @brief Optionally the user can provide a swapchain. This enables the use of present.
         std::optional<Swapchain> swapchain = {};
         std::string debug_name = {};

@@ -389,7 +389,7 @@ namespace daxa
         TaskInfo const & info) -> usize
     {
         usize first_possible_batch_index = 0;
-        if (impl.info.dont_reorder_tasks)
+        if (!impl.info.reorder_tasks)
         {
             first_possible_batch_index = current_submit_scope.task_batches.size() - 1;
         }
@@ -523,92 +523,99 @@ namespace daxa
         {
             ImplTaskBuffer & impl_task_buffer = impl.impl_task_buffers[used_buffer_t_id.index];
             Access const current_buffer_access = task_buffer_access_to_access(used_buffer_t_access);
-            // Every other access (NONE, READ_WRITE, WRITE) are interpreted as writes in this context.
             // When the last use was a read AND the new use of the buffer is a read AND,
             // we need to add our stage flags to the existing barrier of the last use.
             bool const is_last_access_read = impl_task_buffer.latest_access.type == AccessTypeFlagBits::READ;
             bool const is_current_access_read = current_buffer_access.type == AccessTypeFlagBits::READ;
-            if (is_last_access_read && is_current_access_read)
+            // We only need barriers between two accesses. 
+            // If the previous access is none, the current access is the first access.
+            // Therefore we do not need to insert any synchronization if the previous access is none.
+            // This is buffer specific. Images have a layout that needs to be set from undefined to the current accesses layout.
+            bool const is_last_access_none = impl_task_buffer.latest_access == AccessConsts::NONE;
+            if (!is_last_access_none)
             {
-                if (LastReadSplitBarrierIndex const* index0 = std::get_if<LastReadSplitBarrierIndex>(&impl_task_buffer.latest_access_read_barrier_index))
+                if (is_last_access_read && is_current_access_read)
                 {
-                    auto & last_read_split_barrier = impl.split_barriers[index0->index];
-                    last_read_split_barrier.dst_access = last_read_split_barrier.dst_access | current_buffer_access;
-                }
-                else if (LastReadBarrierIndex const* index1 = std::get_if<LastReadBarrierIndex>(&impl_task_buffer.latest_access_read_barrier_index))
-                {
-                    auto & last_read_barrier = impl.barriers[index1->index];
-                    last_read_barrier.dst_access = last_read_barrier.dst_access | current_buffer_access;
-                }
-                else
-                {
-                    DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
-                }
-            }
-            else
-            {
-                // When the uses are incompatible (no read on read) we need to insert a new barrier.
-                // Host access needs to be handeled in a specialized way.
-                bool const src_host_only_access = impl_task_buffer.latest_access.stages == PipelineStageFlagBits::HOST;
-                bool const dst_host_only_access = current_buffer_access.stages == PipelineStageFlagBits::HOST;
-                DAXA_DBG_ASSERT_TRUE_M(!(src_host_only_access && dst_host_only_access), "direct sync between two host accesses on gpu are not allowed");
-                bool const is_host_barrier = src_host_only_access || dst_host_only_access;
-                // When the distance between src and dst batch is one, we can replace the split barrier with a normal barrier.
-                // We also need to make sure we do not use split barriers when the src or dst stage exclusively uses the host stage.
-                // This is because the host stage does not declare an execution dependency on the cpu but only a memory dependency.
-                bool const use_pipeline_barrier = 
-                    (impl_task_buffer.latest_access_batch_index + 1 == batch_index &&
-                    current_submit_scope_index == impl_task_buffer.latest_access_submit_scope_index) ||
-                    is_host_barrier;
-                if (use_pipeline_barrier)
-                {
-                    usize const barrier_index = impl.barriers.size();
-                    impl.barriers.push_back(TaskBarrier{
-                        .image_id = {}, // {} signals that this is not an image barrier.
-                        .src_access = impl_task_buffer.latest_access,
-                        .dst_access = current_buffer_access,
-                        .src_batch = impl_task_buffer.latest_access_batch_index,
-                        .dst_batch = batch_index,
-                    });
-                    // And we insert the barrier index into the list of pipeline barriers of the current tasks batch.
-                    batch.pipeline_barrier_indices.push_back(barrier_index);
-                    if (current_buffer_access.type == AccessTypeFlagBits::READ)
+                    if (LastReadSplitBarrierIndex const * index0 = std::get_if<LastReadSplitBarrierIndex>(&impl_task_buffer.latest_access_read_barrier_index))
                     {
-                        // As the new access is a read we remember our barrier index,
-                        // So that potential future reads after this can reuse this barrier.
-                        impl_task_buffer.latest_access_read_barrier_index = LastReadBarrierIndex{ barrier_index };
+                        auto & last_read_split_barrier = impl.split_barriers[index0->index];
+                        last_read_split_barrier.dst_access = last_read_split_barrier.dst_access | current_buffer_access;
+                    }
+                    else if (LastReadBarrierIndex const * index1 = std::get_if<LastReadBarrierIndex>(&impl_task_buffer.latest_access_read_barrier_index))
+                    {
+                        auto & last_read_barrier = impl.barriers[index1->index];
+                        last_read_barrier.dst_access = last_read_barrier.dst_access | current_buffer_access;
+                    }
+                    else
+                    {
+                        DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
                     }
                 }
                 else
                 {
-                    usize const split_barrier_index = impl.split_barriers.size();
-                    impl.split_barriers.push_back(TaskSplitBarrier{
-                        {
+                    // When the uses are incompatible (no read on read) we need to insert a new barrier.
+                    // Host access needs to be handeled in a specialized way.
+                    bool const src_host_only_access = impl_task_buffer.latest_access.stages == PipelineStageFlagBits::HOST;
+                    bool const dst_host_only_access = current_buffer_access.stages == PipelineStageFlagBits::HOST;
+                    DAXA_DBG_ASSERT_TRUE_M(!(src_host_only_access && dst_host_only_access), "direct sync between two host accesses on gpu are not allowed");
+                    bool const is_host_barrier = src_host_only_access || dst_host_only_access;
+                    // When the distance between src and dst batch is one, we can replace the split barrier with a normal barrier.
+                    // We also need to make sure we do not use split barriers when the src or dst stage exclusively uses the host stage.
+                    // This is because the host stage does not declare an execution dependency on the cpu but only a memory dependency.
+                    bool const use_pipeline_barrier =
+                        (impl_task_buffer.latest_access_batch_index + 1 == batch_index &&
+                         current_submit_scope_index == impl_task_buffer.latest_access_submit_scope_index) ||
+                        is_host_barrier;
+                    if (use_pipeline_barrier)
+                    {
+                        usize const barrier_index = impl.barriers.size();
+                        impl.barriers.push_back(TaskBarrier{
                             .image_id = {}, // {} signals that this is not an image barrier.
                             .src_access = impl_task_buffer.latest_access,
                             .dst_access = current_buffer_access,
                             .src_batch = impl_task_buffer.latest_access_batch_index,
                             .dst_batch = batch_index,
-                        },
-                        /* .split_barrier_state = */ impl.info.device.create_split_barrier({
-                            .debug_name = std::string("TaskList \"") + impl.info.debug_name + "\" SplitBarrier Nr. " + std::to_string(split_barrier_index),
-                        }),
-                    });
-                    // Now we give the src batch the index of this barrier to signal.
-                    TaskBatchSubmitScope & src_scope = impl.batch_submit_scopes[impl_task_buffer.latest_access_submit_scope_index];
-                    TaskBatch & src_batch = src_scope.task_batches[impl_task_buffer.latest_access_batch_index];
-                    src_batch.signal_split_barrier_indices.push_back(split_barrier_index);
-                    // And we also insert the split barrier index into the waits of the current tasks batch.
-                    batch.wait_split_barrier_indices.push_back(split_barrier_index);
-                    if (current_buffer_access.type == AccessTypeFlagBits::READ)
-                    {
-                        // As the new access is a read we remember our barrier index,
-                        // So that potential future reads after this can reuse this barrier.
-                        impl_task_buffer.latest_access_read_barrier_index = LastReadSplitBarrierIndex{ split_barrier_index };
+                        });
+                        // And we insert the barrier index into the list of pipeline barriers of the current tasks batch.
+                        batch.pipeline_barrier_indices.push_back(barrier_index);
+                        if (current_buffer_access.type == AccessTypeFlagBits::READ)
+                        {
+                            // As the new access is a read we remember our barrier index,
+                            // So that potential future reads after this can reuse this barrier.
+                            impl_task_buffer.latest_access_read_barrier_index = LastReadBarrierIndex{barrier_index};
+                        }
                     }
                     else
                     {
-                        impl_task_buffer.latest_access_read_barrier_index = {};
+                        usize const split_barrier_index = impl.split_barriers.size();
+                        impl.split_barriers.push_back(TaskSplitBarrier{
+                            {
+                                .image_id = {}, // {} signals that this is not an image barrier.
+                                .src_access = impl_task_buffer.latest_access,
+                                .dst_access = current_buffer_access,
+                                .src_batch = impl_task_buffer.latest_access_batch_index,
+                                .dst_batch = batch_index,
+                            },
+                            /* .split_barrier_state = */ impl.info.device.create_split_barrier({
+                                .debug_name = std::string("TaskList \"") + impl.info.debug_name + "\" SplitBarrier Nr. " + std::to_string(split_barrier_index),
+                            }),
+                        });
+                        // Now we give the src batch the index of this barrier to signal.
+                        TaskBatchSubmitScope & src_scope = impl.batch_submit_scopes[impl_task_buffer.latest_access_submit_scope_index];
+                        TaskBatch & src_batch = src_scope.task_batches[impl_task_buffer.latest_access_batch_index];
+                        src_batch.signal_split_barrier_indices.push_back(split_barrier_index);
+                        // And we also insert the split barrier index into the waits of the current tasks batch.
+                        batch.wait_split_barrier_indices.push_back(split_barrier_index);
+                        if (current_buffer_access.type == AccessTypeFlagBits::READ)
+                        {
+                            // As the new access is a read we remember our barrier index,
+                            // So that potential future reads after this can reuse this barrier.
+                            impl_task_buffer.latest_access_read_barrier_index = LastReadSplitBarrierIndex{split_barrier_index};
+                        }
+                        else
+                        {
+                            impl_task_buffer.latest_access_read_barrier_index = {};
+                        }
                     }
                 }
             }
@@ -710,12 +717,12 @@ namespace daxa
                     bool const are_layouts_identical = tracked_slice.latest_layout == current_image_layout;
                     if (is_last_access_read && is_current_access_read && are_layouts_identical)
                     {
-                        if (LastReadSplitBarrierIndex const* index0 = std::get_if<LastReadSplitBarrierIndex>(&tracked_slice.latest_access_read_barrier_index))
+                        if (LastReadSplitBarrierIndex const * index0 = std::get_if<LastReadSplitBarrierIndex>(&tracked_slice.latest_access_read_barrier_index))
                         {
                             auto & last_read_split_barrier = impl.split_barriers[index0->index];
                             last_read_split_barrier.dst_access = last_read_split_barrier.dst_access | tracked_slice.latest_access;
                         }
-                        else if (LastReadBarrierIndex const* index1 = std::get_if<LastReadBarrierIndex>(&tracked_slice.latest_access_read_barrier_index))
+                        else if (LastReadBarrierIndex const * index1 = std::get_if<LastReadBarrierIndex>(&tracked_slice.latest_access_read_barrier_index))
                         {
                             auto & last_read_barrier = impl.barriers[index1->index];
                             last_read_barrier.dst_access = last_read_barrier.dst_access | tracked_slice.latest_access;
@@ -736,9 +743,9 @@ namespace daxa
                         // When the distance between src and dst batch is one, we can replace the split barrier with a normal barrier.
                         // We also need to make sure we do not use split barriers when the src or dst stage exclusively uses the host stage.
                         // This is because the host stage does not declare an execution dependency on the cpu but only a memory dependency.
-                        bool const use_pipeline_barrier = 
+                        bool const use_pipeline_barrier =
                             (tracked_slice.latest_access_batch_index + 1 == batch_index &&
-                            current_submit_scope_index == tracked_slice.latest_access_submit_scope_index) ||
+                             current_submit_scope_index == tracked_slice.latest_access_submit_scope_index) ||
                             is_host_barrier;
                         if (use_pipeline_barrier)
                         {
@@ -759,7 +766,7 @@ namespace daxa
                             {
                                 // As the new access is a read we remember our barrier index,
                                 // So that potential future reads after this can reuse this barrier.
-                                ret_new_use_tracked_slice.latest_access_read_barrier_index = LastReadBarrierIndex{ barrier_index };
+                                ret_new_use_tracked_slice.latest_access_read_barrier_index = LastReadBarrierIndex{barrier_index};
                             }
                         }
                         else
@@ -790,7 +797,7 @@ namespace daxa
                             {
                                 // As the new access is a read we remember our barrier index,
                                 // So that potential future reads after this can reuse this barrier.
-                                ret_new_use_tracked_slice.latest_access_read_barrier_index = LastReadSplitBarrierIndex{ split_barrier_index };
+                                ret_new_use_tracked_slice.latest_access_read_barrier_index = LastReadSplitBarrierIndex{split_barrier_index};
                             }
                             else
                             {
@@ -973,7 +980,7 @@ namespace daxa
                     insert_pipeline_barrier(impl_runtime.command_lists.back(), barrier, impl.impl_task_images);
                 }
                 // Wait on split barriers before batch execution.
-                if (impl.info.dont_use_split_barriers)
+                if (!impl.info.use_split_barriers)
                 {
                     for (auto barrier_index : task_batch.wait_split_barrier_indices)
                     {
@@ -1051,7 +1058,7 @@ namespace daxa
                     impl_runtime.current_task = &task;
                     task.info.task(TaskRuntime(&impl_runtime));
                 }
-                if (!impl.info.dont_use_split_barriers)
+                if (impl.info.use_split_barriers)
                 {
                     // Reset all waited upon split barriers here.
                     for (auto barrier_index : task_batch.wait_split_barrier_indices)
@@ -1371,7 +1378,7 @@ namespace daxa
             for (auto image : impl_task_images[barrier.image_id.index].images)
             {
                 std::cout << prefix << "\timage id: " << to_string(image)
-                          << prefix << "\timage debug name: " << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).debug_name) << " \n";
+                          << "\timage debug name: " << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).debug_name) << " \n";
             }
             std::cout << prefix << "\tEnd   bound images \n";
             std::cout << prefix << "\tsrc access: " << to_string(barrier.src_access) << "\n";
@@ -1390,9 +1397,8 @@ namespace daxa
         // Check if barrier is image barrier or normal barrier (see TaskBarrier struct comments).
         if (barrier.image_id.is_empty())
         {
-            std::cout << prefix << "Begin split memory barrier"
-                      << "\n";
-            std::cout << prefix << "split barrier index: " << index << "\n";
+            std::cout << prefix << "Begin split memory barrier\n";
+            std::cout << prefix << "\tsplit barrier index: " << index << "\n";
             std::cout << prefix << "\tsrc_access = " << to_string(barrier.src_access) << "\n";
             std::cout << prefix << "\tdst_access = " << to_string(barrier.dst_access) << "\n";
             std::cout << prefix << "End   split memory barrier\n";
@@ -1408,7 +1414,7 @@ namespace daxa
             for (auto image : impl_task_images[barrier.image_id.index].images)
             {
                 std::cout << prefix << "\timage id: " << to_string(image)
-                          << prefix << "\timage debug name: " << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).debug_name) << " \n";
+                          << "\timage debug name: " << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).debug_name) << " \n";
             }
             std::cout << prefix << "\tEnd   bound images \n";
             std::cout << prefix << "\tsrc access: " << to_string(barrier.src_access) << "\n";
@@ -1436,7 +1442,7 @@ namespace daxa
             for (auto image : impl_task_images[task_image_id.index].images)
             {
                 std::cout << prefix << "\timage id: " << to_string(image)
-                          << prefix << "\timage debug name: " << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).debug_name) << " \n";
+                          << "\timage debug name: " << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).debug_name) << " \n";
             }
             std::cout << prefix << "\tEnd   bound images \n";
             std::cout << prefix << "\t\trequired layout: " << to_string(layout) << "\n";
@@ -1454,7 +1460,7 @@ namespace daxa
             for (auto buffer : impl_task_buffers[task_buffer_id.index].buffers)
             {
                 std::cout << prefix << "\tbuffers id: " << to_string(buffer)
-                          << prefix << "\tbuffers debug name: " << (buffer.is_empty() ? std::string("INVALID ID") : info.device.info_buffer(buffer).debug_name) << " \n";
+                          << "\tbuffers debug name: " << (buffer.is_empty() ? std::string("INVALID ID") : info.device.info_buffer(buffer).debug_name) << " \n";
             }
             std::cout << prefix << "\tEnd   bound buffers \n";
             std::cout << prefix << "\t\tstage access: " << to_string(access) << "\n";
@@ -1470,8 +1476,8 @@ namespace daxa
         auto & impl = *as<ImplTaskList>();
         std::cout << "Begin TaskList \"" << impl.info.debug_name << "\"\n";
         std::cout << "\tSwapchain: " << (impl.info.swapchain.has_value() ? impl.info.swapchain.value().info().debug_name : "-") << "\n";
-        std::cout << "\tdont reorder tasks: " << std::boolalpha << impl.info.dont_reorder_tasks << "\n";
-        std::cout << "\tdont use split barriers: " << std::boolalpha << impl.info.dont_use_split_barriers << "\n";
+        std::cout << "\treorder tasks: " << std::boolalpha << impl.info.reorder_tasks << "\n";
+        std::cout << "\tuse split barriers: " << std::boolalpha << impl.info.use_split_barriers << "\n";
         usize submit_scope_index = 0;
         for (auto & submit_scope : impl.batch_submit_scopes)
         {
@@ -1487,13 +1493,12 @@ namespace daxa
                     impl.debug_print_task_barrier(impl.barriers[barrier_index], barrier_index, "\t\t\t\t");
                 }
                 std::cout << "\t\t\tEnd   wait pipeline barriers\n";
-                if (impl.info.dont_use_split_barriers)
+                if (!impl.info.use_split_barriers)
                 {
                     std::cout << "\t\t\tBegin wait split barriers (converted to pipeline barriers)\n";
                     for (auto barrier_index : task_batch.wait_split_barrier_indices)
                     {
-                        TaskBarrier task_barrier{};
-                        impl.debug_print_task_barrier(task_barrier, barrier_index, "\t\t\t\t");
+                        impl.debug_print_task_barrier(impl.split_barriers[barrier_index], barrier_index, "\t\t\t\t");
                     }
                     std::cout << "\t\t\tEnd   wait split barriers (converted to pipeline barriers)\n";
                 }
@@ -1513,14 +1518,8 @@ namespace daxa
                     impl.debug_print_task(task, task_id, "\t\t\t\t");
                 }
                 std::cout << "\t\t\tEnd   tasks\n";
-                if (!impl.info.dont_use_split_barriers)
+                if (impl.info.use_split_barriers)
                 {
-                    // std::cout << "\t\t\tBegin reset split barriers\n";
-                    // for (auto barrier_index : task_batch.wait_split_barrier_indices)
-                    // {
-                    //     impl.debug_print_task_split_barrier(impl.split_barriers[barrier_index], barrier_index, "\t\t\t\t");
-                    // }
-                    // std::cout << "\t\t\tEnd   reset split barriers\n";
                     std::cout << "\t\t\tBegin signal split barriers\n";
                     for (usize const barrier_index : task_batch.signal_split_barrier_indices)
                     {
