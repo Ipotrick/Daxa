@@ -364,6 +364,7 @@ struct RenderableVoxelWorld
                             .image_extent = {16, 16, 1},
                         });
                     }
+                    textures_valid = true;
                 }
             },
             .debug_name = APPNAME_PREFIX("Upload Textures"),
