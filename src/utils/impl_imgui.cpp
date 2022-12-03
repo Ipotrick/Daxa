@@ -396,11 +396,11 @@ namespace daxa
                 .waiting_pipeline_access = daxa::AccessConsts::VERTEX_SHADER_READ | daxa::AccessConsts::INDEX_INPUT_READ,
             });
 
+            cmd_list.set_pipeline(raster_pipeline);
             cmd_list.begin_renderpass({
                 .color_attachments = {{.image_view = target_image.default_view(), .load_op = AttachmentLoadOp::LOAD}},
                 .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
             });
-            cmd_list.set_pipeline(raster_pipeline);
 
             cmd_list.set_index_buffer(ibuffer, 0, sizeof(ImDrawIdx));
 
