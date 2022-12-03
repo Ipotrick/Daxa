@@ -32,13 +32,9 @@ using daxa_##Image##IMAGE_TYPE##i64 = daxa::types::ImageViewId; \
 using daxa_##Image##IMAGE_TYPE##u64 = daxa::types::ImageViewId;
 #define _DAXA_REGISTER_SAMPLER_TYPE(SAMPLER_TYPE)
 #define DAXA_PUSH_CONSTANT(STRUCT_TYPE)
-#define DAXA_DECL_BUFFER_STRUCT(NAME, BODY) \
-    struct NAME BODY; \
-    using daxa_Buffer##NAME = daxa::types::BufferDeviceAddress; \
-    using daxa_RWBuffer##NAME = daxa::types::BufferDeviceAddress;
-#define DAXA_DECL_BUFFER(NAME, BODY)
-#define daxa_RWBuffer(x) daxa::types::BufferDeviceAddress
-#define daxa_Buffer(x) daxa::types::BufferDeviceAddress
+#define DAXA_ENABLE_BUFFER_PTR(STRUCT_TYPE)
+#define daxa_RWBufferPtr(x) daxa::types::BufferDeviceAddress
+#define daxa_BufferPtr(x) daxa::types::BufferDeviceAddress
 
 _DAXA_REGISTER_IMAGE_TYPE(1D)
 _DAXA_REGISTER_IMAGE_TYPE(2D)

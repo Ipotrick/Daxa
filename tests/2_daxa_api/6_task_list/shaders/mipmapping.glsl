@@ -12,7 +12,7 @@ f32 segment_distance(f32vec2 p, f32vec2 a, f32vec2 b)
     return length(pa - h * ba);
 }
 
-#define INPUT daxa_push_constant.gpu_input
+#define INPUT deref(daxa_push_constant.gpu_input)
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 void main()

@@ -177,7 +177,7 @@ UnpackedFace get_vertex(u32 vert_i)
 {
     u32 data_index = vert_i / 6;
     u32 data_instance = vert_i - data_index * 6;
-    u32 vert_data = daxa_push_constant.face_buffer.data[data_index];
+    u32 vert_data = deref(daxa_push_constant.face_buffer).data[data_index];
     UnpackedFace result;
     result.block_pos = f32vec3(
         (vert_data >> 0) & 0x1f,
