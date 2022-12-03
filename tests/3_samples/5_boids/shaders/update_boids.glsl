@@ -76,7 +76,7 @@ void boid_avoid_walls(inout Boid old_boid, inout float steer_angle, inout float 
     }
 }
 
-void update_boid(inout Boid boid, in Boid old_boid, in uint boid_index, Buffer(Boids) old_boids_buffer)
+void update_boid(inout Boid boid, in Boid old_boid, in uint boid_index, BufferPtr(Boids) old_boids_buffer)
 {
     float acc_steer_angle = 0.0f;
     float acc_steer_angle_weight = 0.0f;
@@ -87,7 +87,7 @@ void update_boid(inout Boid boid, in Boid old_boid, in uint boid_index, Buffer(B
         if (i == boid_index)
             continue;
 
-        Boid other = old_boids_buffer.boids[i];
+        Boid other = deref(old_boids_buffer).boids[i];
 
         float dst_to_other = length(other.position - old_boid.position);
         float closeness_to_other = 1.0f - (dst_to_other / float(BOID_VIEW_RANGE));
@@ -126,8 +126,8 @@ void main()
         return;
     }
     update_boid(
-        daxa_push_constant.boids_buffer.boids[invocation],
-        daxa_push_constant.old_boids_buffer.boids[invocation],
+        deref(daxa_push_constant.boids_buffer).boids[invocation],
+        deref(daxa_push_constant.old_boids_buffer).boids[invocation],
         invocation,
         daxa_push_constant.old_boids_buffer);
 }

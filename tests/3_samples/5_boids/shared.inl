@@ -24,28 +24,26 @@ struct Boid
     daxa_f32vec2 direction;
 };
 
-DAXA_DECL_BUFFER_STRUCT(
-    Boids,
-    {
-        Boid boids[MAX_BOIDS];
-    }
-)
+struct Boids
+{
+    Boid boids[MAX_BOIDS];
+};
+DAXA_ENABLE_BUFFER_PTR(Boids)
 
-DAXA_DECL_BUFFER_STRUCT(
-    GpuOutput,
-    {
-        daxa_f32 data;
-    }
-)
+struct GpuOutput
+{
+    daxa_f32 data;
+};
+DAXA_ENABLE_BUFFER_PTR(GpuOutput)
 
 struct DrawPushConstant
 {
-    daxa_Buffer(Boids) boids_buffer;
+    daxa_BufferPtr(Boids) boids_buffer;
     daxa_f32vec2 axis_scaling;
 };
 
 struct UpdateBoidsPushConstant
 {
-    daxa_RWBuffer(Boids) boids_buffer;
-    daxa_Buffer(Boids) old_boids_buffer;
+    daxa_RWBufferPtr(Boids) boids_buffer;
+    daxa_BufferPtr(Boids) old_boids_buffer;
 };

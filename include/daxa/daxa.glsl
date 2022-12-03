@@ -95,8 +95,9 @@ layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform sampler daxa_SamplerTabl
 
 // Buffers and images have strongly typed handles:
 // The image types have overloads for the most important glsl access functions.
-#define daxa_RWBuffer(BUFFER_STRUCT_TYPE) daxa_RWBuffer##BUFFER_STRUCT_TYPE
-#define daxa_Buffer(BUFFER_STRUCT_TYPE) daxa_Buffer##BUFFER_STRUCT_TYPE
+#define deref(BUFFER_PTR) BUFFER_PTR.value
+#define daxa_RWBufferPtr(STRUCT_TYPE) daxa_RWBufferPtr##STRUCT_TYPE
+#define daxa_BufferPtr(STRUCT_TYPE) daxa_BufferPtr##STRUCT_TYPE
 #define daxa_RWImage(DIMENSION, SCALAR_TYPE) daxa_RWImage##DIMENSION##SCALAR_TYPE
 #define daxa_Image(DIMENSION, SCALAR_TYPE) daxa_Image##DIMENSION##SCALAR_TYPE
 
@@ -106,15 +107,27 @@ layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform sampler daxa_SamplerTabl
 #define DAXA_SAMPLED_IMAGE_LAYOUT layout(binding = DAXA_SAMPLED_IMAGE_BINDING, set = 0)
 #define DAXA_SAMPLER_LAYOUT layout(binding = DAXA_SAMPLER_BINDING, set = 0)
 
+#define DAXA_ENABLE_BUFFER_PTR(STRUCT_TYPE)                                                                             \
+    DAXA_BUFFER_REFERENCE_LAYOUT buffer daxa_RWBufferPtr##STRUCT_TYPE { STRUCT_TYPE value; };                           \
+    DAXA_BUFFER_REFERENCE_LAYOUT readonly buffer daxa_BufferPtr##STRUCT_TYPE { STRUCT_TYPE value; };                    \
+    daxa_RWBufferPtr##STRUCT_TYPE daxa_id_to_rwbuffer_ptr##STRUCT_TYPE(daxa_BufferId buffer_id)                         \
+    {                                                                                                                   \
+        return daxa_RWBufferPtr##STRUCT_TYPE(daxa_buffer_device_address_buffer.addresses[daxa_id_to_index(buffer_id)]); \
+    }                                                                                                                   \
+    daxa_BufferPtr##STRUCT_TYPE daxa_id_to_buffer_ptr##STRUCT_TYPE(daxa_BufferId buffer_id)                             \
+    {                                                                                                                   \
+        return daxa_BufferPtr##STRUCT_TYPE(daxa_buffer_device_address_buffer.addresses[daxa_id_to_index(buffer_id)]);   \
+    }
+
 // Use this to allow code sharing and daxa's buffer syntax sugar to work:
 #define DAXA_DECL_BUFFER(NAME, BODY)                                                                          \
     DAXA_BUFFER_REFERENCE_LAYOUT buffer daxa_RWBuffer##NAME BODY;                                             \
     DAXA_BUFFER_REFERENCE_LAYOUT readonly buffer daxa_Buffer##NAME BODY;                                      \
-    daxa_RWBuffer##NAME daxa_id_to_rwbuffer##NAME(daxa_BufferId buffer_id)                                          \
+    daxa_RWBuffer##NAME daxa_id_to_rwbuffer##NAME(daxa_BufferId buffer_id)                                    \
     {                                                                                                         \
         return daxa_RWBuffer##NAME(daxa_buffer_device_address_buffer.addresses[daxa_id_to_index(buffer_id)]); \
     }                                                                                                         \
-    daxa_Buffer##NAME daxa_id_to_buffer##NAME(daxa_BufferId buffer_id)                                              \
+    daxa_Buffer##NAME daxa_id_to_buffer##NAME(daxa_BufferId buffer_id)                                        \
     {                                                                                                         \
         return daxa_Buffer##NAME(daxa_buffer_device_address_buffer.addresses[daxa_id_to_index(buffer_id)]);   \
     }
@@ -176,28 +189,28 @@ _DAXA_DECL_IMAGE_TYPE(2DMSArray)
 #define _DAXA_REGISTER_RWIMAGE_KIND(GLSL_IMAGE_NAME, IMAGE_KIND, INDEX_DIMENSION, SIZE_DIMENSION, SCALAR_TYPE)                                                     \
     daxa_##SCALAR_TYPE##vec4 imageLoad(daxa_RWImage##IMAGE_KIND##SCALAR_TYPE image, daxa_i32vec##INDEX_DIMENSION index _DAXA_SAMPLE_PARAM(daxa_i32 s))             \
     {                                                                                                                                                              \
-        return imageLoad(daxa_RWImageTable##GLSL_IMAGE_NAME[daxa_id_to_index(image.id)], index _DAXA_SAMPLE_PARAM(s));                                             \
+        return imageLoad(daxa_get_image(GLSL_IMAGE_NAME, image.id), index _DAXA_SAMPLE_PARAM(s));                                                                  \
     }                                                                                                                                                              \
     void imageStore(daxa_RWImage##IMAGE_KIND##SCALAR_TYPE image, daxa_i32vec##INDEX_DIMENSION index _DAXA_SAMPLE_PARAM(daxa_i32 s), daxa_##SCALAR_TYPE##vec4 data) \
     {                                                                                                                                                              \
-        imageStore(daxa_RWImageTable##GLSL_IMAGE_NAME[daxa_id_to_index(image.id)], index _DAXA_SAMPLE_PARAM(s), data);                                             \
+        imageStore(daxa_get_image(GLSL_IMAGE_NAME, image.id), index _DAXA_SAMPLE_PARAM(s), data);                                                                  \
     }                                                                                                                                                              \
     daxa_i32vec##SIZE_DIMENSION imageSize(daxa_RWImage##IMAGE_KIND##SCALAR_TYPE image)                                                                             \
     {                                                                                                                                                              \
-        return imageSize(daxa_RWImageTable##GLSL_IMAGE_NAME[daxa_id_to_index(image.id)]);                                                                          \
+        return imageSize(daxa_get_image(GLSL_IMAGE_NAME, image.id));                                                                                               \
     }
 
 #define _DAXA_REGISTER_IMAGE_ATOMIC_OP(GLSL_IMAGE_NAME, IMAGE_KIND, DIMENSION, SCALAR_TYPE, OP)                                                                           \
     daxa_##SCALAR_TYPE imageAtomic##OP(daxa_RWImage##IMAGE_KIND##SCALAR_TYPE image, daxa_i32vec##DIMENSION index _DAXA_SAMPLE_PARAM(daxa_i32 s), daxa_##SCALAR_TYPE data) \
     {                                                                                                                                                                     \
-        return imageAtomic##OP(daxa_AtomicImageTable##GLSL_IMAGE_NAME[daxa_id_to_index(image.id)], index _DAXA_SAMPLE_PARAM(s), data);                                    \
+        return imageAtomic##OP(daxa_get_image(GLSL_IMAGE_NAME, image.id), index _DAXA_SAMPLE_PARAM(s), data);                                                             \
     }
 
 #define _DAXA_REGISTER_ATOMIC_IMAGE_KIND(GLSL_IMAGE_NAME, IMAGE_KIND, INDEX_DIMENSION, SCALAR_TYPE, ATOMIC_FORMAT_QUALIFIER)                                                                                    \
     layout(binding = DAXA_STORAGE_IMAGE_BINDING, set = 0, ATOMIC_FORMAT_QUALIFIER) uniform GLSL_IMAGE_NAME daxa_AtomicImageTable##GLSL_IMAGE_NAME[];                                                            \
     daxa_##SCALAR_TYPE imageAtomicCompSwap(daxa_RWImage##IMAGE_KIND##SCALAR_TYPE image, daxa_i32vec##INDEX_DIMENSION index _DAXA_SAMPLE_PARAM(daxa_i32 s), daxa_##SCALAR_TYPE compare, daxa_##SCALAR_TYPE data) \
     {                                                                                                                                                                                                           \
-        return imageAtomicCompSwap(daxa_AtomicImageTable##GLSL_IMAGE_NAME[daxa_id_to_index(image.id)], index _DAXA_SAMPLE_PARAM(s), compare, data);                                                             \
+        return imageAtomicCompSwap(daxa_get_image(GLSL_IMAGE_NAME, image.id), index _DAXA_SAMPLE_PARAM(s), compare, data);                                                                                      \
     }                                                                                                                                                                                                           \
     _DAXA_REGISTER_IMAGE_ATOMIC_OP(GLSL_IMAGE_NAME, IMAGE_KIND, INDEX_DIMENSION, SCALAR_TYPE, Exchange)                                                                                                         \
     _DAXA_REGISTER_IMAGE_ATOMIC_OP(GLSL_IMAGE_NAME, IMAGE_KIND, INDEX_DIMENSION, SCALAR_TYPE, Add)                                                                                                              \
@@ -450,8 +463,8 @@ _DAXA_REGISTER_IMAGE_TYPES_GATHER(2DArray, 3, 2, 3)
 #define ImageViewId daxa_ImageViewId
 #define SamplerId daxa_SamplerId
 
-#define RWBuffer daxa_RWBuffer
-#define Buffer daxa_Buffer
+#define RWBufferPtr daxa_RWBufferPtr
+#define BufferPtr daxa_BufferPtr
 #define RWImage daxa_RWImage
 #define Image daxa_RWImage
 

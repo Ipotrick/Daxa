@@ -7,17 +7,16 @@ struct DrawVertex
     daxa_f32vec4 pos, col;
 };
 
-DAXA_DECL_BUFFER_STRUCT(
-    DrawVertexBuffer,
-    {
-        DrawVertex verts[3];
-    }
-)
+struct DrawVertexBuffer
+{
+    DrawVertex verts[3];
+}; 
+DAXA_ENABLE_BUFFER_PTR(DrawVertexBuffer)
 
-struct DrawPush
+    struct DrawPush
 {
 #if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
-    daxa_RWBuffer(DrawVertexBuffer) face_buffer;
+    daxa_RWBufferPtr(DrawVertexBuffer) face_buffer;
 #elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
     daxa_BufferId vertex_buffer_id;
 #endif
