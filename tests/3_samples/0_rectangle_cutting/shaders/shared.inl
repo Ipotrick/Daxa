@@ -7,14 +7,13 @@ struct DrawVertex
     daxa_f32vec4 pos, col;
 };
 
-DAXA_DECL_BUFFER_STRUCT(
-    DrawVertexBuffer,
-    {
-        DrawVertex verts[3];
-    }
-)
+struct DrawVertexBuffer
+{
+    DrawVertex verts[3];
+};
+DAXA_ENABLE_BUFFER_PTR(DrawVertexBuffer)
 
 struct DrawPush
 {
-    daxa_Buffer(DrawVertexBuffer) face_buffer;
+    daxa_BufferPtr(DrawVertexBuffer) face_buffer;
 };
