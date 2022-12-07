@@ -5,7 +5,7 @@ namespace tests
 {
     void simplest()
     {
-        AppContext app = {};
+        AppContext const app = {};
         auto task_list = daxa::TaskList({
             .device = app.device,
             .debug_name = APPNAME_PREFIX("task_list (simplest)"),
@@ -14,7 +14,7 @@ namespace tests
 
     void execution()
     {
-        AppContext app = {};
+        AppContext const app = {};
         auto task_list = daxa::TaskList({
             .device = app.device,
             .debug_name = APPNAME_PREFIX("task_list (execution)"),
@@ -152,7 +152,7 @@ namespace tests
 
     void output_graph()
     {
-        AppContext app = {};
+        AppContext const app = {};
         auto task_list = daxa::TaskList({
             .device = app.device,
             .debug_name = APPNAME_PREFIX("task_list (output_graph)"),
@@ -307,7 +307,7 @@ namespace tests
             daxa::ImageId render_image = create_render_image(size_x, size_y);
             daxa::TaskImageId task_render_image;
 
-            daxa::ImageId swapchain_image;
+            daxa::ImageId swapchain_image{};
             daxa::TaskImageId task_swapchain_image;
 
             App() : AppWindow<App>("Daxa API: Swapchain (clearcolor)")
@@ -370,10 +370,10 @@ namespace tests
                 device.destroy_image(render_image);
             }
 
-            bool update()
+            auto update() -> bool
             {
                 glfwPollEvents();
-                if (glfwWindowShouldClose(glfw_window_ptr))
+                if (glfwWindowShouldClose(glfw_window_ptr) != 0)
                 {
                     return true;
                 }
@@ -436,9 +436,9 @@ namespace tests
                 });
             }
 
-            void on_mouse_move(f32, f32) {}
-            void on_mouse_button(i32, i32) {}
-            void on_key(i32, i32) {}
+            void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}
+            void on_mouse_button(i32 /*unused*/, i32 /*unused*/) {}
+            void on_key(i32 /*unused*/, i32 /*unused*/) {}
 
             auto create_render_image(u32 sx, u32 sy) -> daxa::ImageId
             {
@@ -470,12 +470,14 @@ namespace tests
         while (true)
         {
             if (app.update())
+            {
                 break;
+            }
         }
     }
 } // namespace tests
 
-int main()
+auto main() -> int
 {
     // tests::write_read_image();
     //  tests::simplest();

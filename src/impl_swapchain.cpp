@@ -72,19 +72,19 @@ namespace daxa
 
     auto Swapchain::get_acquire_semaphore() const -> BinarySemaphore const &
     {
-        auto & impl = *as<ImplSwapchain>();
+        auto const & impl = *as<ImplSwapchain>();
         return impl.acquire_semaphores[impl.acquire_semaphore_index];
     }
 
     auto Swapchain::get_present_semaphore() const -> BinarySemaphore const &
     {
-        auto & impl = *as<ImplSwapchain>();
+        auto const & impl = *as<ImplSwapchain>();
         return impl.present_semaphores[impl.current_image_index];
     }
 
     auto Swapchain::get_gpu_timeline_semaphore() const -> TimelineSemaphore const &
     {
-        auto & impl = *as<ImplSwapchain>();
+        auto const & impl = *as<ImplSwapchain>();
         return impl.gpu_frame_timeline;
     }
 
@@ -177,7 +177,7 @@ namespace daxa
 
         u32 format_count = 0;
 
-        ImplDevice & device_impl = *this->impl_device.as<ImplDevice>();
+        ImplDevice const & device_impl = *this->impl_device.as<ImplDevice>();
 
         vkGetPhysicalDeviceSurfaceFormatsKHR(device_impl.vk_physical_device, this->vk_surface, &format_count, nullptr);
         std::vector<VkSurfaceFormatKHR> surface_formats;

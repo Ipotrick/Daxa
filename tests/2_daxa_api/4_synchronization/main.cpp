@@ -70,7 +70,7 @@ namespace tests
     }
 } // namespace tests
 
-int main()
+auto main() -> int
 {
     App app = {};
     tests::binary_semaphore(app);

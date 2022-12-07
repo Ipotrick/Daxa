@@ -93,15 +93,15 @@ struct App : AppWindow<App>
         });
         cmd_list.destroy_buffer_deferred(upload_buffer_id);
 
-        Boids * ptr = device.get_host_address_as<Boids>(upload_buffer_id);
+        auto * ptr = device.get_host_address_as<Boids>(upload_buffer_id);
 
-        for (usize i = 0; i < MAX_BOIDS; ++i)
+        for (auto & boid : ptr->boids)
         {
-            ptr->boids[i].position.x = static_cast<f32>(rand() % ((FIELD_SIZE)*100)) / 100.0f;
-            ptr->boids[i].position.y = static_cast<f32>(rand() % ((FIELD_SIZE)*100)) / 100.0f;
-            f32 angle = static_cast<f32>(rand() % 3600) * 0.1f;
-            ptr->boids[i].direction.x = std::cos(angle);
-            ptr->boids[i].direction.y = std::sin(angle);
+            boid.position.x = static_cast<f32>(rand() % ((FIELD_SIZE)*100)) / 100.0f;
+            boid.position.y = static_cast<f32>(rand() % ((FIELD_SIZE)*100)) / 100.0f;
+            f32 const angle = static_cast<f32>(rand() % 3600) * 0.1f;
+            boid.direction.x = std::cos(angle);
+            boid.direction.y = std::sin(angle);
         }
 
         cmd_list.copy_buffer_to_buffer({
@@ -134,10 +134,10 @@ struct App : AppWindow<App>
         device.destroy_buffer(old_boid_buffer);
     }
 
-    bool update()
+    auto update() -> bool
     {
         glfwPollEvents();
-        if (glfwWindowShouldClose(glfw_window_ptr))
+        if (glfwWindowShouldClose(glfw_window_ptr) != 0)
         {
             return true;
         }
@@ -155,7 +155,7 @@ struct App : AppWindow<App>
         return false;
     }
 
-    void update_boids(daxa::CommandList & cmd_list, daxa::BufferId boid_buffer_id, daxa::BufferId old_boid_buffer_id)
+    void update_boids(daxa::CommandList & cmd_list, daxa::BufferId boid_buffer_id, daxa::BufferId old_boid_buffer_id) const
     {
         cmd_list.set_pipeline(update_boids_pipeline);
 
@@ -206,7 +206,9 @@ struct App : AppWindow<App>
         auto task_old_boid_buffer = new_task_list.create_task_buffer({});
         new_task_list.add_runtime_buffer(task_old_boid_buffer, this->old_boid_buffer);
 
-        task_swapchain_image = new_task_list.create_task_image({.swapchain_image = true, });
+        task_swapchain_image = new_task_list.create_task_image({
+            .swapchain_image = true,
+        });
         new_task_list.add_runtime_image(task_swapchain_image, this->swapchain_image);
 
         new_task_list.add_task({
@@ -216,8 +218,8 @@ struct App : AppWindow<App>
             },
             .task = [=, this](daxa::TaskRuntime const & runtime)
             {
-                BufferId boid_buffer_id = runtime.get_buffers(task_boid_buffer)[0];
-                BufferId old_boid_buffer_id = runtime.get_buffers(task_old_boid_buffer)[0];
+                BufferId const boid_buffer_id = runtime.get_buffers(task_boid_buffer)[0];
+                BufferId const old_boid_buffer_id = runtime.get_buffers(task_old_boid_buffer)[0];
                 daxa::CommandList cmd_list = runtime.get_command_list();
                 this->update_boids(cmd_list, boid_buffer_id, old_boid_buffer_id);
             },
@@ -233,8 +235,8 @@ struct App : AppWindow<App>
             },
             .task = [=, this](daxa::TaskRuntime const & runtime)
             {
-                ImageId render_target_id = runtime.get_images(task_swapchain_image)[0];
-                BufferId boid_buffer_id = runtime.get_buffers(task_boid_buffer)[0];
+                ImageId const render_target_id = runtime.get_images(task_swapchain_image)[0];
+                BufferId const boid_buffer_id = runtime.get_buffers(task_boid_buffer)[0];
                 daxa::CommandList cmd_list = runtime.get_command_list();
                 this->draw_boids(cmd_list, render_target_id, boid_buffer_id, this->size_x, this->size_y);
             },
@@ -285,9 +287,9 @@ struct App : AppWindow<App>
         task_list.execute();
     }
 
-    void on_mouse_move(f32, f32) {}
-    void on_mouse_button(i32, i32) {}
-    void on_key(i32, i32) {}
+    void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}
+    void on_mouse_button(i32 /*unused*/, i32 /*unused*/) {}
+    void on_key(i32 /*unused*/, i32 /*unused*/) {}
 
     void on_resize(u32 sx, u32 sy)
     {
@@ -303,12 +305,14 @@ struct App : AppWindow<App>
     }
 };
 
-int main()
+auto main() -> int
 {
     App app = {};
     while (true)
     {
         if (app.update())
+        {
             break;
+        }
     }
 }

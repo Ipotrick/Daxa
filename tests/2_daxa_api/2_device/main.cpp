@@ -36,7 +36,7 @@ namespace tests
     }
 } // namespace tests
 
-int main()
+auto main() -> int
 {
     auto daxa_ctx = daxa::create_context({
         .enable_validation = true,

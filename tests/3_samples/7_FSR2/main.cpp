@@ -76,8 +76,8 @@ struct App : AppWindow<App>
         .vertex_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .compile_options = {.entry_point = "vs_main"}},
         .fragment_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .compile_options = {.entry_point = "fs_main"}},
         .color_attachments = {
-            {.format = daxa::Format::R16G16B16A16_SFLOAT, .blend = {.blend_enable = true, .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA, .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA}},
-            {.format = daxa::Format::R16G16_SFLOAT, .blend = {.blend_enable = true, .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA, .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA}},
+            {.format = daxa::Format::R16G16B16A16_SFLOAT, .blend = {.blend_enable = 1u, .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA, .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA}},
+            {.format = daxa::Format::R16G16_SFLOAT, .blend = {.blend_enable = 1u, .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA, .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA}},
         },
         .depth_test = {
             .depth_attachment_format = daxa::Format::D32_SFLOAT,
@@ -115,7 +115,7 @@ struct App : AppWindow<App>
     };
     bool paused = true;
 
-    RasterInput raster_input;
+    RasterInput raster_input{};
     daxa::BufferId raster_input_buffer = device.create_buffer({
         .size = sizeof(RasterInput),
         .debug_name = APPNAME_PREFIX("raster_input_buffer"),
@@ -130,9 +130,9 @@ struct App : AppWindow<App>
 
     UpscaleContext upscale_context = UpscaleContext{{.device = device}};
     f32 render_scl = 1.0f;
-    daxa::ImageId swapchain_image;
-    daxa::ImageId color_image, display_image, motion_vectors_image, depth_image;
-    u32 render_size_x, render_size_y;
+    daxa::ImageId swapchain_image{};
+    daxa::ImageId color_image{}, display_image{}, motion_vectors_image{}, depth_image{};
+    u32 render_size_x{}, render_size_y{};
     f32vec2 jitter = {0.0f, 0.0f};
     daxa::TaskImageId task_swapchain_image;
     daxa::TaskImageId task_color_image, task_display_image, task_motion_vectors_image, task_depth_image;
@@ -204,10 +204,10 @@ struct App : AppWindow<App>
         device.destroy_buffer(staging_raster_input_buffer);
     }
 
-    bool update()
+    auto update() -> bool
     {
         glfwPollEvents();
-        if (glfwWindowShouldClose(glfw_window_ptr))
+        if (glfwWindowShouldClose(glfw_window_ptr) != 0)
         {
             return true;
         }
@@ -260,15 +260,15 @@ struct App : AppWindow<App>
     {
         if (!paused)
         {
-            f32 center_x = static_cast<f32>(size_x / 2);
-            f32 center_y = static_cast<f32>(size_y / 2);
+            f32 const center_x = static_cast<f32>(size_x / 2);
+            f32 const center_y = static_cast<f32>(size_y / 2);
             auto offset = f32vec2{x - center_x, center_y - y};
             player.on_mouse_move(offset.x, offset.y);
             set_mouse_pos(center_x, center_y);
         }
     }
 
-    void on_mouse_button(i32, i32) {}
+    void on_mouse_button(i32 /*unused*/, i32 /*unused*/) {}
 
     void on_key(i32 key, i32 action)
     {
@@ -318,7 +318,7 @@ struct App : AppWindow<App>
         }
         if (ImGui::Button("Clear Console"))
         {
-            [[maybe_unused]] i32 system_ret = system("CLS");
+            [[maybe_unused]] i32 const system_ret = system("CLS");
         }
         ImGui::Checkbox("Enable FSR", &fsr_enabled);
         ImGui::End();
@@ -371,7 +371,7 @@ struct App : AppWindow<App>
                 this->raster_input.texture_array_id = renderable_world.atlas_texture_array;
                 this->raster_input.sampler_id = renderable_world.atlas_sampler;
 
-                RasterInput * buffer_ptr = device.get_host_address_as<RasterInput>(staging_raster_input_buffer);
+                auto * buffer_ptr = device.get_host_address_as<RasterInput>(staging_raster_input_buffer);
                 *buffer_ptr = this->raster_input;
             },
             .debug_name = APPNAME_PREFIX("Input MemMap"),
@@ -534,12 +534,14 @@ struct App : AppWindow<App>
     }
 };
 
-int main()
+auto main() -> int
 {
     App app = {};
     while (true)
     {
         if (app.update())
+        {
             break;
+        }
     }
 }
