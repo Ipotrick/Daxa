@@ -12,15 +12,16 @@ using namespace daxa::types;
 #include <stb_image.h>
 
 #include <glm/gtc/type_ptr.hpp>
+#include <utility>
 
 using BlockID = u32;
 struct VoxelFace
 {
-    u32 data;
+    u32 data{0};
 
     VoxelFace(i32 x, i32 y, i32 z, u32 side, BlockID id)
     {
-        data = 0;
+
         data |= (static_cast<u32>(x) & 0x1f) << 0;
         data |= (static_cast<u32>(y) & 0x1f) << 5;
         data |= (static_cast<u32>(z) & 0x1f) << 10;
@@ -32,7 +33,7 @@ struct Voxel
 {
     BlockID id;
 
-    bool is_occluding()
+    [[nodiscard]] auto is_occluding() const -> bool const
     {
         switch (id)
         {
@@ -43,7 +44,7 @@ struct Voxel
         default: return true;
         }
     }
-    bool is_cross()
+    [[nodiscard]] auto is_cross() const -> bool const
     {
         switch (id)
         {
@@ -53,12 +54,12 @@ struct Voxel
         }
     }
 
-    bool is_occluding_nx() { return is_occluding(); }
-    bool is_occluding_px() { return is_occluding(); }
-    bool is_occluding_ny() { return is_occluding(); }
-    bool is_occluding_py() { return is_occluding(); }
-    bool is_occluding_nz() { return is_occluding(); }
-    bool is_occluding_pz() { return is_occluding(); }
+    auto is_occluding_nx() const -> bool { return is_occluding(); }
+    auto is_occluding_px() const -> bool { return is_occluding(); }
+    auto is_occluding_ny() const -> bool { return is_occluding(); }
+    auto is_occluding_py() const -> bool { return is_occluding(); }
+    auto is_occluding_nz() const -> bool { return is_occluding(); }
+    auto is_occluding_pz() const -> bool { return is_occluding(); }
 };
 
 static inline constexpr u64 CHUNK_SIZE = 32;
@@ -109,24 +110,30 @@ struct VoxelChunk
     Voxel voxels[CHUNK_VOXEL_N];
     f32vec3 pos;
 
-    BlockID generate_block_id(f32vec3 p)
+    static auto generate_block_id(f32vec3 p) -> BlockID
     {
-        FractalNoiseConfig noise_conf{
+        FractalNoiseConfig const noise_conf{
             .amplitude = 1.0f,
             .persistance = 0.5f,
             .scale = 0.04f,
             .lacunarity = 2.0f,
             .octaves = 4,
         };
-        f32 value = fractal_noise(p, noise_conf);
+        f32 const value = fractal_noise(p, noise_conf);
         if (value < 0.0f)
         {
             if (value < -0.2f)
+            {
                 return BlockID_Gravel;
+            }
             else if (value < -0.1f)
+            {
                 return BlockID_Stone;
+            }
             else
+            {
                 return BlockID_Dirt;
+            }
         }
         return BlockID_Air;
     }
@@ -138,8 +145,8 @@ struct VoxelChunk
             {
                 for (u64 xi = 0; xi < CHUNK_SIZE; ++xi)
                 {
-                    u64 i = xi + yi * CHUNK_SIZE + zi * CHUNK_SIZE * CHUNK_SIZE;
-                    f32vec3 block_pos = f32vec3{static_cast<f32>(xi), static_cast<f32>(yi), static_cast<f32>(zi)} + pos;
+                    u64 const i = xi + yi * CHUNK_SIZE + zi * CHUNK_SIZE * CHUNK_SIZE;
+                    f32vec3 const block_pos = f32vec3{static_cast<f32>(xi), static_cast<f32>(yi), static_cast<f32>(zi)} + pos;
                     voxels[i].id = generate_block_id(block_pos);
                 }
             }
@@ -161,12 +168,12 @@ struct RenderableVoxelWorld
     daxa::Device device;
     std::array<RenderableChunk, CHUNK_N> renderable_chunks{};
 
-    daxa::ImageId atlas_texture_array;
-    daxa::SamplerId atlas_sampler;
+    daxa::ImageId atlas_texture_array{};
+    daxa::SamplerId atlas_sampler{};
     daxa::TaskImageId task_atlas_texture_array;
     bool textures_valid = false;
 
-    RenderableVoxelWorld(daxa::Device a_device) : device{a_device}
+    explicit RenderableVoxelWorld(daxa::Device a_device) : device{std::move(std::move(a_device))}
     {
         for (u64 z = 0; z < WORLD_SIZE; ++z)
         {
@@ -217,25 +224,31 @@ struct RenderableVoxelWorld
         device.destroy_sampler(atlas_sampler);
     }
 
-    Voxel get_voxel(i32vec3 p)
+    auto get_voxel(i32vec3 p) -> Voxel
     {
-        i32 x = p.x / static_cast<i32>(CHUNK_SIZE);
-        i32 y = p.y / static_cast<i32>(CHUNK_SIZE);
-        i32 z = p.z / static_cast<i32>(CHUNK_SIZE);
+        i32 const x = p.x / static_cast<i32>(CHUNK_SIZE);
+        i32 const y = p.y / static_cast<i32>(CHUNK_SIZE);
+        i32 const z = p.z / static_cast<i32>(CHUNK_SIZE);
 
         if (p.x < 0 || x >= static_cast<i32>(WORLD_SIZE))
+        {
             return {.id = BlockID_Air};
+        }
         if (p.y < 0 || y >= static_cast<i32>(WORLD_SIZE))
+        {
             return {.id = BlockID_Air};
+        }
         if (p.z < 0 || z >= static_cast<i32>(WORLD_SIZE))
+        {
             return {.id = BlockID_Air};
+        }
 
         auto & chunk = renderable_chunks[static_cast<u64>(x) + static_cast<u64>(y) * WORLD_SIZE + static_cast<u64>(z) * WORLD_SIZE * WORLD_SIZE];
 
-        u64 xi = static_cast<u64>(p.x) % CHUNK_SIZE;
-        u64 yi = static_cast<u64>(p.y) % CHUNK_SIZE;
-        u64 zi = static_cast<u64>(p.z) % CHUNK_SIZE;
-        u64 i = xi + yi * CHUNK_SIZE + zi * CHUNK_SIZE * CHUNK_SIZE;
+        u64 const xi = static_cast<u64>(p.x) % CHUNK_SIZE;
+        u64 const yi = static_cast<u64>(p.y) % CHUNK_SIZE;
+        u64 const zi = static_cast<u64>(p.z) % CHUNK_SIZE;
+        u64 const i = xi + yi * CHUNK_SIZE + zi * CHUNK_SIZE * CHUNK_SIZE;
         return chunk.chunk->voxels[i];
     }
     void construct_chunk_meshes(RenderableChunk & renderable_chunk, VoxelFace * buffer_ptr, VoxelFace * water_buffer_ptr)
@@ -251,22 +264,34 @@ struct RenderableVoxelWorld
             {
                 for (i32 xi = 0; xi < 32; ++xi)
                 {
-                    i32vec3 voxel_pos = i32vec3{xi, yi, zi} + i32vec3{static_cast<i32>(chunk_pos.x), static_cast<i32>(chunk_pos.y), static_cast<i32>(chunk_pos.z)};
-                    Voxel current_voxel = get_voxel(voxel_pos);
+                    i32vec3 const voxel_pos = i32vec3{xi, yi, zi} + i32vec3{static_cast<i32>(chunk_pos.x), static_cast<i32>(chunk_pos.y), static_cast<i32>(chunk_pos.z)};
+                    Voxel const current_voxel = get_voxel(voxel_pos);
                     if (current_voxel.is_occluding())
                     {
                         if (!get_voxel(voxel_pos + i32vec3{+1, 0, 0}).is_occluding_nx())
+                        {
                             *buffer_ptr = VoxelFace(xi, yi, zi, 0, current_voxel.id), ++buffer_ptr, ++face_n;
+                        }
                         if (!get_voxel(voxel_pos + i32vec3{-1, 0, 0}).is_occluding_px())
+                        {
                             *buffer_ptr = VoxelFace(xi, yi, zi, 1, current_voxel.id), ++buffer_ptr, ++face_n;
+                        }
                         if (!get_voxel(voxel_pos + i32vec3{0, +1, 0}).is_occluding_ny())
+                        {
                             *buffer_ptr = VoxelFace(xi, yi, zi, 2, current_voxel.id), ++buffer_ptr, ++face_n;
+                        }
                         if (!get_voxel(voxel_pos + i32vec3{0, -1, 0}).is_occluding_py())
+                        {
                             *buffer_ptr = VoxelFace(xi, yi, zi, 3, current_voxel.id), ++buffer_ptr, ++face_n;
+                        }
                         if (!get_voxel(voxel_pos + i32vec3{0, 0, +1}).is_occluding_nz())
+                        {
                             *buffer_ptr = VoxelFace(xi, yi, zi, 4, current_voxel.id), ++buffer_ptr, ++face_n;
+                        }
                         if (!get_voxel(voxel_pos + i32vec3{0, 0, -1}).is_occluding_pz())
+                        {
                             *buffer_ptr = VoxelFace(xi, yi, zi, 5, current_voxel.id), ++buffer_ptr, ++face_n;
+                        }
                     }
                     else if (current_voxel.is_cross())
                     {
@@ -286,22 +311,34 @@ struct RenderableVoxelWorld
             {
                 for (i32 xi = 0; xi < static_cast<i32>(CHUNK_SIZE); ++xi)
                 {
-                    i32vec3 voxel_pos = i32vec3{xi, yi, zi} + i32vec3{static_cast<i32>(chunk_pos.x), static_cast<i32>(chunk_pos.y), static_cast<i32>(chunk_pos.z)};
-                    Voxel current_voxel = get_voxel(voxel_pos);
+                    i32vec3 const voxel_pos = i32vec3{xi, yi, zi} + i32vec3{static_cast<i32>(chunk_pos.x), static_cast<i32>(chunk_pos.y), static_cast<i32>(chunk_pos.z)};
+                    Voxel const current_voxel = get_voxel(voxel_pos);
                     if (current_voxel.id == BlockID_Water)
                     {
                         if (get_voxel(voxel_pos + i32vec3{+1, 0, 0}).id == BlockID_Air)
+                        {
                             *water_buffer_ptr = VoxelFace(xi, yi, zi, 0, current_voxel.id), ++water_buffer_ptr, ++water_face_n;
+                        }
                         if (get_voxel(voxel_pos + i32vec3{-1, 0, 0}).id == BlockID_Air)
+                        {
                             *water_buffer_ptr = VoxelFace(xi, yi, zi, 1, current_voxel.id), ++water_buffer_ptr, ++water_face_n;
+                        }
                         if (get_voxel(voxel_pos + i32vec3{0, +1, 0}).id == BlockID_Air)
+                        {
                             *water_buffer_ptr = VoxelFace(xi, yi, zi, 2, current_voxel.id), ++water_buffer_ptr, ++water_face_n;
+                        }
                         if (get_voxel(voxel_pos + i32vec3{0, -1, 0}).id == BlockID_Air)
+                        {
                             *water_buffer_ptr = VoxelFace(xi, yi, zi, 3, current_voxel.id), ++water_buffer_ptr, ++water_face_n;
+                        }
                         if (get_voxel(voxel_pos + i32vec3{0, 0, +1}).id == BlockID_Air)
+                        {
                             *water_buffer_ptr = VoxelFace(xi, yi, zi, 4, current_voxel.id), ++water_buffer_ptr, ++water_face_n;
+                        }
                         if (get_voxel(voxel_pos + i32vec3{0, 0, -1}).id == BlockID_Air)
+                        {
                             *water_buffer_ptr = VoxelFace(xi, yi, zi, 5, current_voxel.id), ++water_buffer_ptr, ++water_face_n;
+                        }
                     }
                 }
             }
@@ -322,7 +359,7 @@ struct RenderableVoxelWorld
                 if (!textures_valid)
                 {
                     auto cmd_list = runtime.get_command_list();
-                    usize image_size = 16 * 16 * sizeof(u8) * 4;
+                    usize const image_size = 16 * 16 * sizeof(u8) * 4;
                     auto texture_staging_buffer = device.create_buffer({
                         .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                         .size = static_cast<u32>(image_size * texture_names.size()),
@@ -332,19 +369,21 @@ struct RenderableVoxelWorld
                     u8 * staging_buffer_data = device.get_host_address_as<u8>(texture_staging_buffer);
                     for (usize i = 0; i < texture_names.size(); ++i)
                     {
-                        stbi_set_flip_vertically_on_load(true);
+                        stbi_set_flip_vertically_on_load(1);
                         auto path = textures_filepath / texture_names[i];
-                        i32 size_x, size_y, num_channels;
+                        i32 size_x = 0;
+                        i32 size_y = 0;
+                        i32 num_channels = 0;
                         u8 * data = stbi_load(path.string().c_str(), &size_x, &size_y, &num_channels, 4);
-                        if (!data)
+                        if (data == nullptr)
                         {
                             std::cout << "could not find file: \"" << path << "\"" << std::endl;
                             continue;
                         }
-                        usize offset = i * 16 * 16 * 4;
+                        usize const offset = i * 16 * 16 * 4;
                         for (usize j = 0; j < 16 * 16; ++j)
                         {
-                            usize data_i = j * 4;
+                            usize const data_i = j * 4;
                             staging_buffer_data[offset + data_i + 0] = data[data_i + 0];
                             staging_buffer_data[offset + data_i + 1] = data[data_i + 1];
                             staging_buffer_data[offset + data_i + 2] = data[data_i + 2];
@@ -374,7 +413,7 @@ struct RenderableVoxelWorld
         std::array<i32, 3> mip_size = {static_cast<i32>(image_info.size.x), static_cast<i32>(image_info.size.y), static_cast<i32>(image_info.size.z)};
         for (u32 i = 0; i < image_info.mip_level_count - 1; ++i)
         {
-            std::array<i32, 3> next_mip_size = {std::max<i32>(1, mip_size[0] / 2), std::max<i32>(1, mip_size[1] / 2), std::max<i32>(1, mip_size[2] / 2)};
+            std::array<i32, 3> const next_mip_size = {std::max<i32>(1, mip_size[0] / 2), std::max<i32>(1, mip_size[1] / 2), std::max<i32>(1, mip_size[2] / 2)};
             new_task_list.add_task({
                 .used_images = {
                     {task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{.base_mip_level = i + 0, .base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
@@ -457,7 +496,7 @@ struct App : BaseApp<App>
         device.destroy_image(depth_image);
     }
 
-    void ui_update()
+    void ui_update() const
     {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
@@ -483,8 +522,10 @@ struct App : BaseApp<App>
         swapchain_image = swapchain.acquire_next_image();
         loop_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
         if (swapchain_image.is_empty())
+        {
             return;
-            
+        }
+
         // loop_task_list.debug_print();
         loop_task_list.execute();
     }
@@ -493,22 +534,26 @@ struct App : BaseApp<App>
     {
         if (!paused)
         {
-            f32 center_x = static_cast<f32>(size_x / 2);
-            f32 center_y = static_cast<f32>(size_y / 2);
+            f32 const center_x = static_cast<f32>(size_x / 2);
+            f32 const center_y = static_cast<f32>(size_y / 2);
             auto offset = f32vec2{x - center_x, center_y - y};
             player.on_mouse_move(offset.x, offset.y);
             set_mouse_pos(center_x, center_y);
         }
     }
-    void on_mouse_button(i32, i32) {}
+    void on_mouse_button(i32 /*unused*/, i32 /*unused*/) {}
     void on_key(i32 key_id, i32 action)
     {
         auto & io = ImGui::GetIO();
         if (io.WantCaptureKeyboard)
+        {
             return;
+        }
 
         if (key_id == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+        {
             toggle_pause();
+        }
 
         if (!paused)
         {
@@ -525,13 +570,11 @@ struct App : BaseApp<App>
             size_y = swapchain.get_surface_extent().y;
             loop_task_list.remove_runtime_image(task_depth_image, depth_image);
             device.destroy_image(depth_image);
-            depth_image = device.create_image({
-                .format = daxa::Format::D24_UNORM_S8_UINT,
-                .aspect = daxa::ImageAspectFlagBits::DEPTH | daxa::ImageAspectFlagBits::STENCIL,
-                .size = {size_x, size_y, 1},
-                .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT,
-                .debug_name = APPNAME_PREFIX("depth_image")
-            });
+            depth_image = device.create_image({.format = daxa::Format::D24_UNORM_S8_UINT,
+                                               .aspect = daxa::ImageAspectFlagBits::DEPTH | daxa::ImageAspectFlagBits::STENCIL,
+                                               .size = {size_x, size_y, 1},
+                                               .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT,
+                                               .debug_name = APPNAME_PREFIX("depth_image")});
             loop_task_list.add_runtime_image(task_depth_image, depth_image);
             base_on_update();
         }
@@ -548,7 +591,7 @@ struct App : BaseApp<App>
         task_depth_image = new_task_list.create_task_image({.debug_name = APPNAME_PREFIX("task_depth_image")});
         new_task_list.add_runtime_image(task_depth_image, depth_image);
         renderable_world.record_load_textures_tasks(new_task_list);
-        daxa::TaskBufferId task_vertex_buffers  = new_task_list.create_task_buffer({.debug_name = APPNAME_PREFIX("chunk vertex buffers")});
+        daxa::TaskBufferId task_vertex_buffers = new_task_list.create_task_buffer({.debug_name = APPNAME_PREFIX("chunk vertex buffers")});
         for (auto & chunk : renderable_world.renderable_chunks)
         {
             chunk.task_face_buffer = new_task_list.create_task_buffer({.debug_name = APPNAME_PREFIX("chunk.task_face_buffer")});
@@ -557,7 +600,7 @@ struct App : BaseApp<App>
             new_task_list.add_runtime_buffer(task_vertex_buffers, chunk.water_face_buffer);
         }
         new_task_list.add_task({
-            .used_buffers = { { task_vertex_buffers, daxa::TaskBufferAccess::TRANSFER_WRITE } },
+            .used_buffers = {{task_vertex_buffers, daxa::TaskBufferAccess::TRANSFER_WRITE}},
             .task = [this](daxa::TaskRuntime runtime)
             {
                 auto cmd_list = runtime.get_command_list();
@@ -574,8 +617,8 @@ struct App : BaseApp<App>
                 u32 i = 0;
                 cmd_list.destroy_buffer_deferred(face_staging_buffer);
                 cmd_list.destroy_buffer_deferred(water_face_staging_buffer);
-                auto face_buffer_ptr = device.get_host_address_as<VoxelFace>(face_staging_buffer);
-                auto water_face_buffer_ptr = device.get_host_address_as<VoxelFace>(water_face_staging_buffer);
+                auto * face_buffer_ptr = device.get_host_address_as<VoxelFace>(face_staging_buffer);
+                auto * water_face_buffer_ptr = device.get_host_address_as<VoxelFace>(water_face_staging_buffer);
                 for (auto & chunk : renderable_world.renderable_chunks)
                 {
                     if (chunk.invalid)
@@ -602,7 +645,7 @@ struct App : BaseApp<App>
         });
         auto whole_atlas_slice = device.info_image_view(renderable_world.atlas_texture_array.default_view()).slice;
         new_task_list.add_task({
-            .used_buffers = { { task_vertex_buffers, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY } },
+            .used_buffers = {{task_vertex_buffers, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY}},
             .used_images = {
                 {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
                 {task_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT, daxa::ImageMipArraySlice{}},
@@ -647,12 +690,14 @@ struct App : BaseApp<App>
     }
 };
 
-int main()
+auto main() -> int
 {
     App app = {};
     while (true)
     {
         if (app.update())
+        {
             break;
+        }
     }
 }

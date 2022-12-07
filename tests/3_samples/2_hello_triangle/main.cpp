@@ -38,7 +38,7 @@ struct App : BaseApp<App>
         device.destroy_buffer(vertex_buffer);
     }
 
-    void ui_update()
+    static void ui_update()
     {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
@@ -56,13 +56,15 @@ struct App : BaseApp<App>
         swapchain_image = swapchain.acquire_next_image();
         loop_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
         if (swapchain_image.is_empty())
+        {
             return;
+        }
         loop_task_list.execute();
     }
 
-    void on_mouse_move(f32, f32) {}
-    void on_mouse_button(i32, i32) {}
-    void on_key(i32, i32) {}
+    void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}
+    void on_mouse_button(i32 /*unused*/, i32 /*unused*/) {}
+    void on_key(i32 /*unused*/, i32 /*unused*/) {}
     void on_resize(u32 sx, u32 sy)
     {
         minimized = (sx == 0 || sy == 0);
@@ -92,7 +94,7 @@ struct App : BaseApp<App>
                     .debug_name = APPNAME_PREFIX("vertex_staging_buffer"),
                 });
                 cmd_list.destroy_buffer_deferred(vertex_staging_buffer);
-                auto buffer_ptr = device.get_host_address_as<DrawVertex>(vertex_staging_buffer);
+                auto * buffer_ptr = device.get_host_address_as<DrawVertex>(vertex_staging_buffer);
                 *buffer_ptr = DrawVertex{{-0.5f, +0.5f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}};
                 ++buffer_ptr;
                 *buffer_ptr = DrawVertex{{+0.5f, +0.5f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}};
@@ -135,12 +137,14 @@ struct App : BaseApp<App>
     }
 };
 
-int main()
+auto main() -> int
 {
     App app = {};
     while (true)
     {
         if (app.update())
+        {
             break;
+        }
     }
 }

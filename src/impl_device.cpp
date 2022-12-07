@@ -37,9 +37,8 @@ namespace daxa
         for (auto const & command_list : submit_info.command_lists)
         {
             auto const * cmd_list = command_list.as<ImplCommandList>();
-            for (usize i = 0; i < cmd_list->deferred_destructions.size(); ++i)
+            for (auto [id, index] : cmd_list->deferred_destructions)
             {
-                auto [id, index] = cmd_list->deferred_destructions.at(i);
                 switch (index)
                 {
                 case DEFERRED_DESTRUCTION_BUFFER_INDEX: impl.main_queue_buffer_zombies.push_front({current_main_queue_cpu_timeline_value, BufferId{id}}); break;
@@ -335,7 +334,7 @@ namespace daxa
             .pQueuePriorities = queue_priorities.data(),
         };
 
-        VkPhysicalDeviceFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES{
+        VkPhysicalDeviceFeatures const REQUIRED_PHYSICAL_DEVICE_FEATURES{
             .robustBufferAccess = VK_FALSE,
             .fullDrawIndexUint32 = VK_FALSE,
             .imageCubeArray = VK_TRUE,
@@ -496,6 +495,9 @@ namespace daxa
         extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
         extension_names.push_back(VK_EXT_SHADER_IMAGE_ATOMIC_INT64_EXTENSION_NAME); // might be a problem, intel does not support it at all.
         // extension_names.push_back(VK_EXT_MULTI_DRAW_EXTENSION_NAME);
+
+        // TODO(grundlett): Ask Patrick about this.
+        // extension_names.push_back(VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME);
 
         VkDeviceCreateInfo const device_ci = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -829,10 +831,10 @@ namespace daxa
         };
 
         bool host_accessable = false;
-        VmaAllocationCreateFlags vma_allocation_flags = static_cast<VmaAllocationCreateFlags>(buffer_info.memory_flags.data);
-        if (vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT ||
-            vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT ||
-            vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT)
+        auto vma_allocation_flags = static_cast<VmaAllocationCreateFlags>(buffer_info.memory_flags.data);
+        if (((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT) != 0u) ||
+            ((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT) != 0u) ||
+            ((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT) != 0u))
         {
             vma_allocation_flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
             host_accessable = true;
@@ -1009,7 +1011,8 @@ namespace daxa
 
         VkImageCreateFlags vk_image_create_flags = {};
 
-        if (image_info.dimensions == 2 && image_info.size.x == image_info.size.y && image_info.array_layer_count % 6 == 0)
+        constexpr auto CUBE_FACE_N = 6u;
+        if (image_info.dimensions == 2 && image_info.size.x == image_info.size.y && image_info.array_layer_count % CUBE_FACE_N == 0)
         {
             vk_image_create_flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
         }

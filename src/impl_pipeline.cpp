@@ -159,7 +159,7 @@ namespace daxa
 
         ImplPipelineCompiler * impl_pipeline_compiler = nullptr;
 
-        auto process_include(daxa::Result<daxa::ShaderCode> const & shader_code_result, std::filesystem::path const & full_path) -> IncludeResult *
+        static auto process_include(daxa::Result<daxa::ShaderCode> const & shader_code_result, std::filesystem::path const & full_path) -> IncludeResult *
         {
             std::string headerName = {};
             char const * headerData = nullptr;
@@ -170,7 +170,7 @@ namespace daxa
                 return nullptr;
             }
 
-            auto & shader_code_str = shader_code_result.value().string;
+            auto const & shader_code_str = shader_code_result.value().string;
             headerLength = shader_code_str.size();
             char * res_content = new char[headerLength + 1];
             for (usize i = 0; i < headerLength; ++i)
@@ -195,7 +195,8 @@ namespace daxa
         auto includeLocal(
             char const * header_name, char const * includer_name, size_t inclusion_depth) -> IncludeResult * override
         {
-            if (inclusion_depth > 100)
+            constexpr usize MAX_INCLUSION_DEPTH = 100;
+            if (inclusion_depth > MAX_INCLUSION_DEPTH)
             {
                 return nullptr;
             }
@@ -310,8 +311,8 @@ namespace daxa
             return default_includer->QueryInterface(riid, object);
         }
 
-        unsigned long STDMETHODCALLTYPE AddRef() override { return 0; }
-        unsigned long STDMETHODCALLTYPE Release() override { return 0; }
+        auto STDMETHODCALLTYPE AddRef() -> unsigned long override { return 0; }
+        auto STDMETHODCALLTYPE Release() -> unsigned long override { return 0; }
     };
 #endif
 } // namespace daxa
@@ -965,9 +966,9 @@ namespace daxa
             return Result<std::filesystem::path>(path);
         }
         std::filesystem::path potential_path;
-        if (this->current_shader_info)
+        if (this->current_shader_info != nullptr)
         {
-            for (auto & root : this->current_shader_info->compile_options.root_paths)
+            for (auto const & root : this->current_shader_info->compile_options.root_paths)
             {
                 potential_path.clear();
                 potential_path = root / path;
@@ -1160,7 +1161,7 @@ namespace daxa
             std::replace(debug_name.begin(), debug_name.end(), '/', '_');
             std::replace(debug_name.begin(), debug_name.end(), '\\', '_');
             std::replace(debug_name.begin(), debug_name.end(), ':', '_');
-            std::string name = std::string("preprocessed_") + debug_name + ".glsl";
+            std::string const name = std::string("preprocessed_") + debug_name + ".glsl";
             auto filepath = shader_info.compile_options.write_out_preprocessed_code.value() / name;
             std::string preprocessed_result = {};
             shader.preprocess(&DAXA_DEFAULT_BUILTIN_RESOURCE, 450, EProfile::ENoProfile, false, false, messages, &preprocessed_result, includer);

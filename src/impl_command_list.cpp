@@ -287,7 +287,7 @@ namespace daxa
         auto & impl = *reinterpret_cast<ImplCommandList *>(impl_void);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         // DAXA_DBG_ASSERT_TRUE_M(impl.deferred_destruction_count < DEFERRED_DESTRUCTION_COUNT_MAX, "can not defer the destruction of more than 32 resources per command list recording");
-        impl.deferred_destructions.push_back({ id, index });
+        impl.deferred_destructions.emplace_back(id, index);
     }
 
     void CommandList::destroy_buffer_deferred(BufferId id)
@@ -608,7 +608,7 @@ namespace daxa
                 info.draw_command_stride);
         }
         else
-        { 
+        {
             vkCmdDrawIndirect(
                 impl.vk_cmd_buffer,
                 impl.impl_device.as<ImplDevice>()->slot(info.draw_command_buffer).vk_buffer,
