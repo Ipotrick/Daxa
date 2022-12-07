@@ -29,7 +29,7 @@ namespace tests
     }
 } // namespace tests
 
-int main()
+auto main() -> int
 {
     tests::simplest();
     tests::no_validation();

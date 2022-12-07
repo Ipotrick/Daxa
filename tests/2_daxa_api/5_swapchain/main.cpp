@@ -27,12 +27,12 @@ namespace tests
 
             App() : AppWindow<App>(APPNAME " (simple_creation)") {}
 
-            void on_mouse_move(f32, f32) {}
-            void on_mouse_button(i32, i32) {}
-            void on_key(i32, i32) {}
-            void on_resize(u32, u32) {}
+            void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}
+            void on_mouse_button(i32 /*unused*/, i32 /*unused*/) {}
+            void on_key(i32 /*unused*/, i32 /*unused*/) {}
+            void on_resize(u32 /*unused*/, u32 /*unused*/) {}
         };
-        App app;
+        App const app;
     }
 
     void clearcolor()
@@ -55,10 +55,10 @@ namespace tests
 
             App() : AppWindow<App>(APPNAME " (clearcolor)") {}
 
-            bool update()
+            auto update() -> bool
             {
                 glfwPollEvents();
-                if (glfwWindowShouldClose(glfw_window_ptr))
+                if (glfwWindowShouldClose(glfw_window_ptr) != 0)
                 {
                     return true;
                 }
@@ -122,9 +122,9 @@ namespace tests
                 });
             }
 
-            void on_mouse_move(f32, f32) {}
-            void on_mouse_button(i32, i32) {}
-            void on_key(i32, i32) {}
+            void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}
+            void on_mouse_button(i32 /*unused*/, i32 /*unused*/) {}
+            void on_key(i32 /*unused*/, i32 /*unused*/) {}
 
             void on_resize(u32 sx, u32 sy)
             {
@@ -143,12 +143,14 @@ namespace tests
         while (true)
         {
             if (app.update())
+            {
                 break;
+            }
         }
     }
 } // namespace tests
 
-int main()
+auto main() -> int
 {
     tests::simple_creation();
     tests::clearcolor();

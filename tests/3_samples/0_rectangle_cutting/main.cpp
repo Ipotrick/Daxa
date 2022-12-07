@@ -18,7 +18,10 @@ using Clock = std::chrono::high_resolution_clock;
 i32 const max_layers = 12;
 i32 const max_levels = 16;
 
-#define MAX_VERTS 10000
+enum
+{
+    MAX_VERTS = 10000
+};
 
 struct App : AppWindow<App>
 {
@@ -67,7 +70,7 @@ struct App : AppWindow<App>
         .color_attachments = {{
             .format = swapchain.get_format(),
             .blend = {
-                .blend_enable = true,
+                .blend_enable = 1u,
                 .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA,
                 .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA,
                 .src_alpha_blend_factor = daxa::BlendFactor::ONE,
@@ -111,10 +114,10 @@ struct App : AppWindow<App>
         device.destroy_buffer(vertex_buffer);
     }
 
-    bool update()
+    auto update() -> bool
     {
         glfwPollEvents();
-        if (glfwWindowShouldClose(glfw_window_ptr))
+        if (glfwWindowShouldClose(glfw_window_ptr) != 0)
         {
             return true;
         }
@@ -191,8 +194,8 @@ struct App : AppWindow<App>
         };
         auto add_int_rect = [&](auto xi, auto yi, auto sx, auto sy, f32 scl, f32vec4 col)
         {
-            f32vec2 p0 = f32vec2{static_cast<f32>(xi), static_cast<f32>(yi)} + scl * 0.5f;
-            f32vec2 p1 = p0 + f32vec2{static_cast<f32>(sx), static_cast<f32>(sy)} - scl;
+            f32vec2 const p0 = f32vec2{static_cast<f32>(xi), static_cast<f32>(yi)} + scl * 0.5f;
+            f32vec2 const p1 = p0 + f32vec2{static_cast<f32>(sx), static_cast<f32>(sy)} - scl;
             add_rect(buffer_ptr, view_transform(p0), view_transform(p1), col);
         };
 
@@ -208,7 +211,7 @@ struct App : AppWindow<App>
         add_int_rect(s1.base_mip_level, s1.base_array_layer, s1.level_count, s1.layer_count, 0.0f, {0.9f, 0.3f, 0.3f, 0.9f});
 
         auto [s2_rects, s2_rect_n] = s0.subtract(s1);
-        f32vec4 s2_colors[4] = {
+        f32vec4 const s2_colors[4] = {
             {0.1f, 0.1f, 0.1f, 0.5f},
             {0.1f, 0.1f, 0.1f, 0.5f},
             {0.1f, 0.1f, 0.1f, 0.5f},
@@ -249,7 +252,7 @@ struct App : AppWindow<App>
         });
         cmd_list.destroy_buffer_deferred(vertex_staging_buffer);
 
-        auto buffer_ptr = device.get_host_address_as<DrawVertex>(vertex_staging_buffer);
+        auto * buffer_ptr = device.get_host_address_as<DrawVertex>(vertex_staging_buffer);
         construct_scene(buffer_ptr);
 
         cmd_list.pipeline_barrier({
@@ -310,9 +313,9 @@ struct App : AppWindow<App>
         });
     }
 
-    void on_mouse_move(f32, f32) {}
-    void on_mouse_button(i32, i32) {}
-    void on_key(i32, i32) {}
+    void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}
+    void on_mouse_button(i32 /*unused*/, i32 /*unused*/) {}
+    void on_key(i32 /*unused*/, i32 /*unused*/) {}
 
     void on_resize(u32 sx, u32 sy)
     {
@@ -327,12 +330,14 @@ struct App : AppWindow<App>
     }
 };
 
-int main()
+auto main() -> int
 {
     App app = {};
     while (true)
     {
         if (app.update())
+        {
             break;
+        }
     }
 }

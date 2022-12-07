@@ -6,7 +6,7 @@ using namespace daxa::types;
 #define APPNAME "Daxa API Sample Pipeline Compiler"
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
 
-int main()
+auto main() -> int
 {
     daxa::Context daxa_ctx = daxa::create_context({
         .enable_validation = false,
@@ -40,5 +40,5 @@ int main()
 
     std::cout << "Success!" << std::endl;
 
-    daxa::ComputePipeline compute_pipeline = compilation_result.value();
+    daxa::ComputePipeline const compute_pipeline = compilation_result.value();
 }

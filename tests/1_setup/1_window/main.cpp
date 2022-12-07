@@ -4,12 +4,12 @@
 struct App : AppWindow<App>
 {
     App() : AppWindow<App>("Setup: Test GLFW Window") {}
-    ~App() {}
+    ~App() = default;
 
-    bool update()
+    auto update() -> bool
     {
         glfwPollEvents();
-        if (glfwWindowShouldClose(glfw_window_ptr))
+        if (glfwWindowShouldClose(glfw_window_ptr) != 0)
         {
             return true;
         }
@@ -40,17 +40,19 @@ struct App : AppWindow<App>
         }
     }
 
-    void on_mouse_move(f32, f32) {}
-    void on_mouse_button(i32, i32) {}
-    void on_key(i32, i32) {}
+    void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}
+    void on_mouse_button(i32 /*unused*/, i32 /*unused*/) {}
+    void on_key(i32 /*unused*/, i32 /*unused*/) {}
 };
 
-int main()
+auto main() -> int
 {
     App app = {};
     while (true)
     {
         if (app.update())
+        {
             break;
+        }
     }
 }
