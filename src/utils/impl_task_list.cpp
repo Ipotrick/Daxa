@@ -527,7 +527,7 @@ namespace daxa
             // we need to add our stage flags to the existing barrier of the last use.
             bool const is_last_access_read = impl_task_buffer.latest_access.type == AccessTypeFlagBits::READ;
             bool const is_current_access_read = current_buffer_access.type == AccessTypeFlagBits::READ;
-            // We only need barriers between two accesses. 
+            // We only need barriers between two accesses.
             // If the previous access is none, the current access is the first access.
             // Therefore we do not need to insert any synchronization if the previous access is none.
             // This is buffer specific. Images have a layout that needs to be set from undefined to the current accesses layout.
@@ -995,7 +995,7 @@ namespace daxa
                     usize needed_image_barriers = 0;
                     for (auto barrier_index : task_batch.wait_split_barrier_indices)
                     {
-                        TaskSplitBarrier & split_barrier = impl.split_barriers[barrier_index];
+                        TaskSplitBarrier const & split_barrier = impl.split_barriers[barrier_index];
                         if (!split_barrier.image_id.is_empty())
                         {
                             needed_image_barriers += impl.impl_task_images[split_barrier.image_id.index].images.size();
@@ -1020,7 +1020,7 @@ namespace daxa
                         }
                         else
                         {
-                            usize img_bar_vec_start_size = tl_image_barrier_infos.size();
+                            usize const img_bar_vec_start_size = tl_image_barrier_infos.size();
                             for (auto image : impl.impl_task_images[split_barrier.image_id.index].images)
                             {
                                 tl_image_barrier_infos.push_back(ImageBarrierInfo{
@@ -1032,8 +1032,8 @@ namespace daxa
                                     .image_id = image,
                                 });
                             }
-                            usize img_bar_vec_end_size = tl_image_barrier_infos.size();
-                            usize img_bar_count = img_bar_vec_end_size - img_bar_vec_start_size;
+                            usize const img_bar_vec_end_size = tl_image_barrier_infos.size();
+                            usize const img_bar_count = img_bar_vec_end_size - img_bar_vec_start_size;
                             tl_split_barrier_wait_infos.push_back(SplitBarrierWaitInfo{
                                 .image_barriers = std::span{tl_image_barrier_infos.data() + img_bar_vec_start_size, img_bar_count},
                                 .split_barrier = split_barrier.split_barrier_state,
@@ -1127,7 +1127,7 @@ namespace daxa
                 submit_info.command_lists.insert(submit_info.command_lists.end(), impl_runtime.command_lists.begin(), impl_runtime.command_lists.end());
                 if (impl.info.swapchain.has_value())
                 {
-                    Swapchain & swapchain = impl.info.swapchain.value();
+                    Swapchain const & swapchain = impl.info.swapchain.value();
                     if (submit_scope_index == impl.swapchain_image_first_use_submit_scope_index)
                     {
                         submit_info.wait_binary_semaphores.push_back(swapchain.get_acquire_semaphore());
@@ -1135,10 +1135,9 @@ namespace daxa
                     if (submit_scope_index == impl.swapchain_image_last_use_submit_scope_index)
                     {
                         submit_info.signal_binary_semaphores.push_back(swapchain.get_present_semaphore());
-                        submit_info.signal_timeline_semaphores.push_back({
+                        submit_info.signal_timeline_semaphores.emplace_back(
                             swapchain.get_gpu_timeline_semaphore(),
-                            swapchain.get_cpu_timeline_value(),
-                        });
+                            swapchain.get_cpu_timeline_value());
                     }
                 }
                 if (submit_scope.user_submit_info != nullptr)

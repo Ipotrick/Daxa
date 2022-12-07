@@ -49,7 +49,7 @@ struct App : BaseApp<App>
         device.destroy_image(render_image);
     }
 
-    void ui_update()
+    static void ui_update()
     {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
@@ -66,19 +66,21 @@ struct App : BaseApp<App>
         swapchain_image = swapchain.acquire_next_image();
         loop_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
         if (swapchain_image.is_empty())
+        {
             return;
+        }
         loop_task_list.execute();
 
         auto query_results = timeline_query_pool.get_query_results(0, 2);
-        if (query_results[1] && query_results[3])
+        if ((query_results[1] != 0u) && (query_results[3] != 0u))
         {
             std::cout << "gpu execution took " << static_cast<f64>(query_results[2] - query_results[0]) / 1000000.0 << " ms" << std::endl;
         }
     }
 
-    void on_mouse_move(f32, f32) {}
-    void on_mouse_button(i32, i32) {}
-    void on_key(i32, i32) {}
+    void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}
+    void on_mouse_button(i32 /*unused*/, i32 /*unused*/) {}
+    void on_key(i32 /*unused*/, i32 /*unused*/) {}
     void on_resize(u32 sx, u32 sy)
     {
         minimized = (sx == 0 || sy == 0);
@@ -129,7 +131,7 @@ struct App : BaseApp<App>
                     .debug_name = APPNAME_PREFIX("staging_gpu_input_buffer"),
                 });
                 cmd_list.destroy_buffer_deferred(staging_gpu_input_buffer);
-                auto buffer_ptr = device.get_host_address_as<GpuInput>(staging_gpu_input_buffer);
+                auto * buffer_ptr = device.get_host_address_as<GpuInput>(staging_gpu_input_buffer);
                 *buffer_ptr = gpu_input;
                 cmd_list.copy_buffer_to_buffer({
                     .src_buffer = staging_gpu_input_buffer,
@@ -193,12 +195,14 @@ struct App : BaseApp<App>
     }
 };
 
-int main()
+auto main() -> int
 {
     App app = {};
     while (true)
     {
         if (app.update())
+        {
             break;
+        }
     }
 }

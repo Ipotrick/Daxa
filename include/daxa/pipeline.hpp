@@ -150,8 +150,9 @@ namespace daxa
         auto recreate_raster_pipeline(RasterPipeline const & pipeline) -> Result<RasterPipeline>;
         auto create_compute_pipeline(ComputePipelineInfo const & info) -> Result<ComputePipeline>;
         auto recreate_compute_pipeline(ComputePipeline const & pipeline) -> Result<ComputePipeline>;
-        auto check_if_sources_changed(RasterPipeline & pipeline) -> bool;
-        auto check_if_sources_changed(ComputePipeline & pipeline) -> bool;
+        // TODO(grundlett): Should this be a pipeline method?
+        static auto check_if_sources_changed(RasterPipeline & pipeline) -> bool;
+        static auto check_if_sources_changed(ComputePipeline & pipeline) -> bool;
 
       private:
         friend struct Device;

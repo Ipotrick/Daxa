@@ -3,6 +3,7 @@
 #include "impl_imgui.hpp"
 
 #include <cstring>
+#include <utility>
 
 void set_imgui_style()
 {
@@ -463,8 +464,8 @@ namespace daxa
         }
     }
 
-    ImplImGuiRenderer::ImplImGuiRenderer(ImGuiRendererInfo const & a_info)
-        : info{a_info},
+    ImplImGuiRenderer::ImplImGuiRenderer(ImGuiRendererInfo a_info)
+        : info{std::move(a_info)},
           // clang-format off
         raster_pipeline{this->info.pipeline_compiler.create_raster_pipeline({
             .vertex_shader_info = {.source = daxa::ShaderSPIRV{.data = imgui_vert_spv.data(), .size = imgui_vert_spv.size()}, .compile_options = {.entry_point = "vs_main"}},
@@ -556,7 +557,7 @@ namespace daxa
         });
         this->info.device.destroy_buffer(texture_staging_buffer);
         auto image_view = font_sheet.default_view();
-        ImTextureID imgui_texid = reinterpret_cast<ImTextureID>(static_cast<usize>(*reinterpret_cast<u32*>(&image_view)));
+        auto * imgui_texid = reinterpret_cast<ImTextureID>(static_cast<usize>(*reinterpret_cast<u32 *>(&image_view)));
         io.Fonts->SetTexID(imgui_texid);
     }
 

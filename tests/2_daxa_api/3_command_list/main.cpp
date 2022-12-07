@@ -31,31 +31,31 @@ namespace tests
 
         std::array<f32, 4> data = {0.0f, 1.0f, 2.0f, 3.0f};
 
-        daxa::BufferId staging_upload_buffer = app.device.create_buffer({
+        daxa::BufferId const staging_upload_buffer = app.device.create_buffer({
             .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
             .size = sizeof(decltype(data)),
             .debug_name = "staging_upload_buffer",
         });
 
-        daxa::BufferId device_local_buffer = app.device.create_buffer({
+        daxa::BufferId const device_local_buffer = app.device.create_buffer({
             .size = sizeof(decltype(data)),
             .debug_name = "device_local_buffer",
         });
 
-        daxa::BufferId staging_readback_buffer = app.device.create_buffer({
+        daxa::BufferId const staging_readback_buffer = app.device.create_buffer({
             .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .size = sizeof(decltype(data)),
             .debug_name = "staging_readback_buffer",
         });
 
-        daxa::ImageId image_1 = app.device.create_image({
+        daxa::ImageId const image_1 = app.device.create_image({
             .format = daxa::Format::R32G32B32A32_SFLOAT,
             .size = {1, 1, 1},
             .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             .debug_name = "image_1",
         });
 
-        daxa::ImageId image_2 = app.device.create_image({
+        daxa::ImageId const image_2 = app.device.create_image({
             .format = daxa::Format::R32G32B32A32_SFLOAT,
             .size = {1, 1, 1},
             .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::TRANSFER_SRC,
@@ -67,7 +67,7 @@ namespace tests
             .debug_name = "timeline_query",
         });
 
-        auto buffer_ptr = app.device.get_host_address_as<std::array<f32, 4>>(staging_upload_buffer);
+        auto * buffer_ptr = app.device.get_host_address_as<std::array<f32, 4>>(staging_upload_buffer);
 
         *buffer_ptr = data;
 
@@ -149,10 +149,10 @@ namespace tests
         });
 
         cmd_list.copy_image_to_buffer({
-            .buffer = device_local_buffer,
             .image = image_2,
             .image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
             .image_extent = {1, 1, 1},
+            .buffer = device_local_buffer,
         });
 
         // Barrier to make sure device_local_buffer is has no read after write hazard.
@@ -188,7 +188,7 @@ namespace tests
         app.device.wait_idle();
 
         auto query_results = timeline_query_pool.get_query_results(0, 2);
-        if (query_results[1] && query_results[3])
+        if ((query_results[1] != 0u) && (query_results[3] != 0u))
         {
             std::cout << "gpu execution took " << static_cast<f64>(query_results[2] - query_results[0]) / 1000000.0 << " ms" << std::endl;
         }
@@ -216,13 +216,13 @@ namespace tests
     {
         auto cmd_list = app.device.create_command_list({.debug_name = "deferred_destruction command list"});
 
-        daxa::BufferId buffer = app.device.create_buffer({.size = 4});
-        daxa::ImageId image = app.device.create_image({
+        daxa::BufferId const buffer = app.device.create_buffer({.size = 4});
+        daxa::ImageId const image = app.device.create_image({
             .size = {1, 1, 1},
             .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT,
         });
-        daxa::ImageViewId image_view = app.device.create_image_view({.image = image});
-        daxa::SamplerId sampler = app.device.create_sampler({});
+        daxa::ImageViewId const image_view = app.device.create_image_view({.image = image});
+        daxa::SamplerId const sampler = app.device.create_sampler({});
 
         // The gpu resources are not destroyed here. Their destruction is deferred until the command list completes execution on the gpu.
         cmd_list.destroy_buffer_deferred(buffer);
@@ -246,7 +246,7 @@ namespace tests
     }
 } // namespace tests
 
-int main()
+auto main() -> int
 {
     App app = {};
     tests::simplest(app);
