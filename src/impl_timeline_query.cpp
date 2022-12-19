@@ -26,7 +26,7 @@ namespace daxa
             impl.vk_timeline_query_pool,
             start_index,
             count,
-            count * sizeof(u64),
+            count * 2ul * sizeof(u64),
             results.data(),
             2ul * sizeof(u64),
             VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
