@@ -18,7 +18,7 @@ namespace daxa
         VkBuffer vk_buffer = {};
         VmaAllocation vma_allocation = {};
         VkDeviceAddress device_address = {};
-        void* host_address = {};
+        void * host_address = {};
         bool zombie = {};
     };
 
@@ -132,7 +132,6 @@ namespace daxa
 #endif
         }
 
-
         auto return_slot(GPUResourceId id)
         {
             usize page = id.index >> PAGE_BITS;
@@ -155,13 +154,15 @@ namespace daxa
             usize page = id.index >> PAGE_BITS;
             usize offset = id.index & PAGE_MASK;
 
-            if(!(page < pages.size())){ return false; }
-            if(!(pages[page] != nullptr)){ return false; }
-            if(!(id.version != 0)) {return false;}
-
+            if (!(page < pages.size()) || !(pages[page] != nullptr) || !(id.version != 0))
+            {
+                return false;
+            }
             u8 version = pages[page]->at(offset).second;
-            if(!(version == id.version)) {return false;}
-            if(pages[page]->at(offset).first.zombie) { return false; }
+            if (!(version == id.version) || pages[page]->at(offset).first.zombie)
+            {
+                return false;
+            }
             return true;
         }
 
