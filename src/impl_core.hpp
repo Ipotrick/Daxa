@@ -15,9 +15,13 @@
 #define NOMINMAX
 #elif defined(__linux__)
 #if DAXA_BUILT_WITH_X11
+#include <X11/Xlib.h>
 #define VK_USE_PLATFORM_XLIB_KHR
 #endif
 #if DAXA_BUILT_WITH_WAYLAND
+// NOTE(grundlett) Somehow the Vulkan SDK may not include these
+//    - to fix this we do it manually here
+#include <wayland-client.h>
 #define VK_USE_PLATFORM_WAYLAND_KHR
 #endif
 #endif
