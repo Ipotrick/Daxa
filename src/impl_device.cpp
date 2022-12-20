@@ -291,6 +291,23 @@ namespace daxa
         return impl.slot(id).info;
     }
 
+    auto Device::is_id_valid(ImageId id) const -> bool
+    {
+        auto const & impl = *as<ImplDevice>();
+        return !id.is_empty() && impl.gpu_shader_resource_table.image_slots.is_id_valid(id);
+    }
+
+    auto Device::is_id_valid(BufferId id) const -> bool
+    {
+        auto const & impl = *as<ImplDevice>();
+        return !id.is_empty() && impl.gpu_shader_resource_table.buffer_slots.is_id_valid(id);
+    }
+    auto Device::is_id_valid(SamplerId id) const -> bool
+    {
+        auto const & impl = *as<ImplDevice>();
+        return !id.is_empty() && impl.gpu_shader_resource_table.sampler_slots.is_id_valid(id);
+    }
+
     ImplDevice::ImplDevice(DeviceInfo a_info, DeviceProperties const & a_vk_info, ManagedWeakPtr a_impl_ctx, VkPhysicalDevice a_physical_device)
         : impl_ctx{std::move(a_impl_ctx)},
           vk_physical_device{a_physical_device},
@@ -864,6 +881,7 @@ namespace daxa
         ret.device_address = vkGetBufferDeviceAddress(vk_device, &vk_buffer_device_address_info);
 
         ret.host_address = host_accessable ? vma_allocation_info.pMappedData : nullptr;
+        ret.zombie = false;
 
         this->buffer_device_address_buffer_host_ptr[id.index] = ret.device_address;
 
@@ -982,6 +1000,7 @@ namespace daxa
         auto [id, image_slot_variant] = gpu_shader_resource_table.image_slots.new_slot();
 
         ImplImageSlot ret = {};
+        ret.zombie = false;
         ret.info = image_info;
         ret.view_slot.info = ImageViewInfo{
             .type = static_cast<ImageViewType>(image_info.dimensions),
@@ -1179,6 +1198,7 @@ namespace daxa
         auto [id, ret] = gpu_shader_resource_table.sampler_slots.new_slot();
 
         ret.info = sampler_info;
+        ret.zombie = false;
 
         VkSamplerReductionModeCreateInfo vk_sampler_reduction_mode_create_info{
             .sType = VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO,
@@ -1290,6 +1310,9 @@ namespace daxa
     {
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{this->main_queue_zombies_mtx});
         u64 const main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
+        DAXA_DBG_ASSERT_TRUE_M(gpu_shader_resource_table.buffer_slots.dereference_id(id).zombie == false,
+            "detected free after free - buffer already is a zombie");
+        gpu_shader_resource_table.buffer_slots.dereference_id(id).zombie = true;
         this->main_queue_buffer_zombies.push_front({main_queue_cpu_timeline_value, id});
     }
 
@@ -1297,6 +1320,9 @@ namespace daxa
     {
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{this->main_queue_zombies_mtx});
         u64 const main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
+        DAXA_DBG_ASSERT_TRUE_M(gpu_shader_resource_table.image_slots.dereference_id(id).zombie == false,
+            "detected free after free - image already is a zombie");
+        gpu_shader_resource_table.image_slots.dereference_id(id).zombie = true;
         this->main_queue_image_zombies.push_front({main_queue_cpu_timeline_value, id});
     }
 
@@ -1311,6 +1337,9 @@ namespace daxa
     {
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{this->main_queue_zombies_mtx});
         u64 const main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
+        DAXA_DBG_ASSERT_TRUE_M(gpu_shader_resource_table.sampler_slots.dereference_id(id).zombie == false,
+            "detected free after free - sampler already is a zombie");
+        gpu_shader_resource_table.sampler_slots.dereference_id(id).zombie = true;
         this->main_queue_sampler_zombies.push_front({main_queue_cpu_timeline_value, id});
     }
 
