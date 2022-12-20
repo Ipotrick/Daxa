@@ -115,6 +115,7 @@ namespace daxa
 #elif defined(__linux__)
         switch (this->info.native_window_platform)
         {
+#if 0
 #if DAXA_BUILT_WITH_WAYLAND
         case NativeWindowPlatform::WAYLAND_API:
         {
@@ -132,6 +133,7 @@ namespace daxa
             }
         }
         break;
+#endif
 #endif
 #if DAXA_BUILT_WITH_X11
         case NativeWindowPlatform::XLIB_API:
