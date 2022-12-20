@@ -19,6 +19,7 @@ namespace daxa
         VmaAllocation vma_allocation = {};
         VkDeviceAddress device_address = {};
         void* host_address = {};
+        bool zombie = {};
     };
 
     static inline constexpr i32 NOT_OWNED_BY_SWAPCHAIN = -1;
@@ -36,12 +37,14 @@ namespace daxa
         VkImage vk_image = {};
         VmaAllocation vma_allocation = {};
         i32 swapchain_image_index = NOT_OWNED_BY_SWAPCHAIN;
+        bool zombie = {};
     };
 
     struct ImplSamplerSlot
     {
         SamplerInfo info = {};
         VkSampler vk_sampler = {};
+        bool zombie = {};
     };
 
     /**
@@ -129,6 +132,7 @@ namespace daxa
 #endif
         }
 
+
         auto return_slot(GPUResourceId id)
         {
             usize page = id.index >> PAGE_BITS;
@@ -144,6 +148,21 @@ namespace daxa
             pages[page]->at(offset).second = std::max<u8>(pages[page]->at(offset).second + 1, 1); // the max is needed, as version = 0 is invalid
 
             free_index_stack.push_back(id.index);
+        }
+
+        auto is_id_valid(GPUResourceId id) const -> bool
+        {
+            usize page = id.index >> PAGE_BITS;
+            usize offset = id.index & PAGE_MASK;
+
+            if(!(page < pages.size())){ return false; }
+            if(!(pages[page] != nullptr)){ return false; }
+            if(!(id.version != 0)) {return false;}
+
+            u8 version = pages[page]->at(offset).second;
+            if(!(version == id.version)) {return false;}
+            if(pages[page]->at(offset).first.zombie) { return false; }
+            return true;
         }
 
         auto dereference_id(GPUResourceId id) -> ResourceT &

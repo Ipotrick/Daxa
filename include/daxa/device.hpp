@@ -219,6 +219,10 @@ namespace daxa
         void present_frame(PresentInfo const & info);
         void collect_garbage();
 
+        auto is_id_valid(ImageId id) const -> bool;
+        auto is_id_valid(BufferId id) const -> bool;
+        auto is_id_valid(SamplerId id) const -> bool;
+
       private:
         friend struct Context;
         Device(ManagedPtr impl);
