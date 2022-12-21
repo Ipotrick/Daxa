@@ -14,27 +14,30 @@
 #if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
 #include <daxa/daxa.glsl>
 #elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
-#include "daxa/daxa.hlsl"
+#include <daxa/daxa.hlsl>
 #endif
 #elif defined(__cplusplus)
 #include <daxa/daxa.hpp>
 #define _DAXA_REGISTER_TEXTURE_TYPE(IMAGE_TYPE)
-#define _DAXA_REGISTER_IMAGE_TYPE(IMAGE_TYPE) \
-using daxa_##RWImage##IMAGE_TYPE##f32 = daxa::types::ImageViewId; \
-using daxa_##RWImage##IMAGE_TYPE##i32 = daxa::types::ImageViewId; \
-using daxa_##RWImage##IMAGE_TYPE##u32 = daxa::types::ImageViewId; \
-using daxa_##RWImage##IMAGE_TYPE##i64 = daxa::types::ImageViewId; \
-using daxa_##RWImage##IMAGE_TYPE##u64 = daxa::types::ImageViewId; \
-using daxa_##Image##IMAGE_TYPE##f32 = daxa::types::ImageViewId; \
-using daxa_##Image##IMAGE_TYPE##i32 = daxa::types::ImageViewId; \
-using daxa_##Image##IMAGE_TYPE##u32 = daxa::types::ImageViewId; \
-using daxa_##Image##IMAGE_TYPE##i64 = daxa::types::ImageViewId; \
-using daxa_##Image##IMAGE_TYPE##u64 = daxa::types::ImageViewId;
+#define _DAXA_REGISTER_IMAGE_TYPE(IMAGE_TYPE)                         \
+    using daxa_##RWImage##IMAGE_TYPE##f32 = daxa::types::ImageViewId; \
+    using daxa_##RWImage##IMAGE_TYPE##i32 = daxa::types::ImageViewId; \
+    using daxa_##RWImage##IMAGE_TYPE##u32 = daxa::types::ImageViewId; \
+    using daxa_##RWImage##IMAGE_TYPE##i64 = daxa::types::ImageViewId; \
+    using daxa_##RWImage##IMAGE_TYPE##u64 = daxa::types::ImageViewId; \
+    using daxa_##Image##IMAGE_TYPE##f32 = daxa::types::ImageViewId;   \
+    using daxa_##Image##IMAGE_TYPE##i32 = daxa::types::ImageViewId;   \
+    using daxa_##Image##IMAGE_TYPE##u32 = daxa::types::ImageViewId;   \
+    using daxa_##Image##IMAGE_TYPE##i64 = daxa::types::ImageViewId;   \
+    using daxa_##Image##IMAGE_TYPE##u64 = daxa::types::ImageViewId;
 #define _DAXA_REGISTER_SAMPLER_TYPE(SAMPLER_TYPE)
 #define DAXA_PUSH_CONSTANT(STRUCT_TYPE)
 #define DAXA_ENABLE_BUFFER_PTR(STRUCT_TYPE)
 #define daxa_RWBufferPtr(x) daxa::types::BufferDeviceAddress
 #define daxa_BufferPtr(x) daxa::types::BufferDeviceAddress
+
+// NEEDED FOR HLSL SUPPORT
+#define DAXA_DECL_BUFFER_STRUCT(Type, Body) struct Type Body;
 
 _DAXA_REGISTER_IMAGE_TYPE(1D)
 _DAXA_REGISTER_IMAGE_TYPE(2D)

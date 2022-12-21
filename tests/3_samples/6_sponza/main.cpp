@@ -5,6 +5,8 @@
 
 #include "shaders/shared.inl"
 
+#include <daxa/utils/pipeline_manager.hpp>
+
 #include <daxa/utils/imgui.hpp>
 #include <imgui_impl_glfw.h>
 
@@ -35,7 +37,8 @@ struct App : AppWindow<App>
         .debug_name = APPNAME_PREFIX("swapchain"),
     });
 
-    daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
+    daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
+        .device = device,
         .shader_compile_options = {
             .root_paths = {
                 "tests/3_samples/6_sponza/shaders",
@@ -43,7 +46,7 @@ struct App : AppWindow<App>
             },
             .language = daxa::ShaderLanguage::GLSL,
         },
-        .debug_name = APPNAME_PREFIX("pipeline_compiler"),
+        .debug_name = APPNAME_PREFIX("pipeline_manager"),
     });
 
     // daxa::ImGuiRenderer imgui_renderer = create_imgui_renderer();
@@ -53,13 +56,12 @@ struct App : AppWindow<App>
     //     ImGui_ImplGlfw_InitForVulkan(glfw_window_ptr, true);
     //     return daxa::ImGuiRenderer({
     //         .device = device,
-    //         .pipeline_compiler = pipeline_compiler,
     //         .format = swapchain.get_format(),
     //     });
     // }
 
     // clang-format off
-    daxa::RasterPipeline raster_pipeline = pipeline_compiler.create_raster_pipeline({
+    daxa::RasterPipeline raster_pipeline = pipeline_manager.get_raster_pipeline({
         .vertex_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_VERT"}}}},
         .fragment_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_FRAG"}}}},
         .color_attachments = {{.format = swapchain.get_format()}},
@@ -329,14 +331,10 @@ struct App : AppWindow<App>
         player.camera.set_rot(player.rot.x, player.rot.y);
         player.update(elapsed_s);
 
-        if (pipeline_compiler.check_if_sources_changed(raster_pipeline))
+        auto reloaded_result = pipeline_manager.reload_all();
+        if (reloaded_result.is_err())
         {
-            auto new_pipeline = pipeline_compiler.recreate_raster_pipeline(raster_pipeline);
-            std::cout << new_pipeline.to_string() << std::endl;
-            if (new_pipeline.is_ok())
-            {
-                raster_pipeline = new_pipeline.value();
-            }
+            std::cout << reloaded_result.to_string() << std::endl;
         }
 
         auto swapchain_image = swapchain.acquire_next_image();

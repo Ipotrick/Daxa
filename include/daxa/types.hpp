@@ -923,7 +923,7 @@ namespace daxa
 
         friend auto operator<=>(BlendInfo const &, BlendInfo const &) = default;
     };
-    
+
     enum struct PrimitiveTopology
     {
         POINT_LIST = 0,
