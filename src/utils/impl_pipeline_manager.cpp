@@ -371,6 +371,8 @@ namespace daxa
     ImplPipelineManager::ImplPipelineManager(PipelineManagerInfo && a_info)
         : info{std::move(a_info)}
     {
+        DAXA_DBG_ASSERT_TRUE_M(a_info.device.object != nullptr, "You must provide a valid daxa::Device when creating a PipelineManager");
+
         if (!this->info.shader_compile_options.entry_point.has_value())
         {
             this->info.shader_compile_options.entry_point = std::optional<std::string>{"main"};
@@ -432,7 +434,7 @@ namespace daxa
             .observed_hotload_files = {},
         };
         this->current_observed_hotload_files = &pipe_result.observed_hotload_files;
-        auto spirv_result = get_spirv(pipe_result.info.shader_info, ShaderStage::COMP);
+        auto spirv_result = get_spirv(pipe_result.info.shader_info, pipe_result.info.debug_name, ShaderStage::COMP);
         if (spirv_result.is_err())
         {
             return Result<ComputePipelineState>(spirv_result.message());
@@ -468,12 +470,12 @@ namespace daxa
             .observed_hotload_files = {},
         };
         this->current_observed_hotload_files = &pipe_result.observed_hotload_files;
-        auto vert_spirv_result = get_spirv(pipe_result.info.vertex_shader_info, ShaderStage::VERT);
+        auto vert_spirv_result = get_spirv(pipe_result.info.vertex_shader_info, pipe_result.info.debug_name, ShaderStage::VERT);
         if (vert_spirv_result.is_err())
         {
             return Result<RasterPipelineState>(vert_spirv_result.message());
         }
-        auto frag_spirv_result = get_spirv(pipe_result.info.fragment_shader_info, ShaderStage::FRAG);
+        auto frag_spirv_result = get_spirv(pipe_result.info.fragment_shader_info, pipe_result.info.debug_name, ShaderStage::FRAG);
         if (frag_spirv_result.is_err())
         {
             return Result<RasterPipelineState>(frag_spirv_result.message());
@@ -550,47 +552,47 @@ namespace daxa
         this->raster_pipelines.erase(pipeline_iter);
     }
 
-    auto ImplPipelineManager::reload_all() -> Result<bool>
+    static auto check_if_sources_changed(std::chrono::file_clock::time_point & last_hotload_time, ShaderFileTimeSet & observed_hotload_files) -> bool
     {
-        auto check_if_sources_changed = [&](std::chrono::file_clock::time_point & last_hotload_time, ShaderFileTimeSet & observed_hotload_files) -> bool
-        {
-            using namespace std::chrono_literals;
-            static constexpr auto HOTRELOAD_MIN_TIME = 250ms;
+        using namespace std::chrono_literals;
+        static constexpr auto HOTRELOAD_MIN_TIME = 250ms;
 
-            auto now = std::chrono::file_clock::now();
-            using namespace std::chrono_literals;
-            if (now - last_hotload_time < HOTRELOAD_MIN_TIME)
+        auto now = std::chrono::file_clock::now();
+        using namespace std::chrono_literals;
+        if (now - last_hotload_time < HOTRELOAD_MIN_TIME)
+        {
+            return false;
+        }
+        last_hotload_time = now;
+        bool reload = false;
+        for (auto & [path, recorded_write_time] : observed_hotload_files)
+        {
+            auto ifs = std::ifstream(path);
+            if (ifs.good())
             {
-                return false;
+                auto latest_write_time = std::filesystem::last_write_time(path);
+                if (latest_write_time > recorded_write_time)
+                {
+                    reload = true;
+                }
             }
-            last_hotload_time = now;
-            bool reload = false;
-            for (auto & [path, recorded_write_time] : observed_hotload_files)
+        }
+        if (reload)
+        {
+            for (auto & pair : observed_hotload_files)
             {
-                auto ifs = std::ifstream(path);
+                auto ifs = std::ifstream(pair.first);
                 if (ifs.good())
                 {
-                    auto latest_write_time = std::filesystem::last_write_time(path);
-                    if (latest_write_time > recorded_write_time)
-                    {
-                        reload = true;
-                    }
+                    pair.second = std::filesystem::last_write_time(pair.first);
                 }
             }
-            if (reload)
-            {
-                for (auto & pair : observed_hotload_files)
-                {
-                    auto ifs = std::ifstream(pair.first);
-                    if (ifs.good())
-                    {
-                        pair.second = std::filesystem::last_write_time(pair.first);
-                    }
-                }
-            }
-            return reload;
-        };
+        }
+        return reload;
+    };
 
+    auto ImplPipelineManager::reload_all() -> Result<bool>
+    {
         bool reloaded = false;
 
         for (auto & [pipeline, compile_info, last_hotload_time, observed_hotload_files] : this->compute_pipelines)
@@ -630,7 +632,7 @@ namespace daxa
         return Result<bool>(reloaded);
     }
 
-    auto ImplPipelineManager::get_spirv(ShaderCompileInfo const & shader_info, ShaderStage shader_stage) -> Result<std::vector<u32>>
+    auto ImplPipelineManager::get_spirv(ShaderCompileInfo const & shader_info, std::string const &debug_name_opt, ShaderStage shader_stage) -> Result<std::vector<u32>>
     {
         current_shader_info = &shader_info;
         std::vector<u32> spirv = {};
@@ -671,12 +673,12 @@ namespace daxa
             {
 #if DAXA_BUILT_WITH_GLSLANG
             case ShaderLanguage::GLSL:
-                ret = get_spirv_glslang(shader_info, shader_stage, code);
+                ret = get_spirv_glslang(shader_info, debug_name_opt, shader_stage, code);
                 break;
 #endif
 #if DAXA_BUILT_WITH_DXC
             case ShaderLanguage::HLSL:
-                ret = get_spirv_dxc(shader_info, shader_stage, code);
+                ret = get_spirv_dxc(shader_info, debug_name_opt, shader_stage, code);
                 break;
 #endif
             default: break;
@@ -696,9 +698,9 @@ namespace daxa
         {
             debug_name = shader_file->path.string();
         }
-        else if (!shader_info.debug_name.empty())
+        else if (!debug_name_opt.empty())
         {
-            debug_name = shader_info.debug_name;
+            debug_name = debug_name_opt;
         }
 
         if (shader_info.compile_options.write_out_shader_binary.has_value())
@@ -787,7 +789,7 @@ namespace daxa
         return Result<ShaderCode>(err);
     }
 
-    auto ImplPipelineManager::get_spirv_glslang(ShaderCompileInfo const & shader_info, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
+    auto ImplPipelineManager::get_spirv_glslang(ShaderCompileInfo const & shader_info, std::string const &debug_name_opt, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
     {
 #if DAXA_BUILT_WITH_GLSLANG
         auto translate_shader_stage = [](ShaderStage stage) -> EShLanguage
@@ -849,9 +851,9 @@ namespace daxa
         {
             debug_name = shader_file->path.string();
         }
-        else if (!shader_info.debug_name.empty())
+        else if (!debug_name_opt.empty())
         {
-            debug_name = shader_info.debug_name;
+            debug_name = debug_name_opt;
         }
 
         glslang::TShader shader{spirv_stage};
@@ -928,7 +930,7 @@ namespace daxa
 #endif
     }
 
-    auto ImplPipelineManager::get_spirv_dxc(ShaderCompileInfo const & shader_info, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
+    auto ImplPipelineManager::get_spirv_dxc(ShaderCompileInfo const & shader_info, std::string const &debug_name_opt, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
     {
 #if DAXA_BUILT_WITH_DXC
         auto u8_ascii_to_wstring = [](char const * str) -> std::wstring
