@@ -11,8 +11,8 @@ namespace daxa
               .debug_name = this->info.debug_name + ": timeline semaphore",
           })},
           buffer{this->info.device.create_buffer({
-              .size = this->info.capacity,
               .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+              .size = this->info.capacity,
               .debug_name = this->info.debug_name + ": buffer",
           })}
     {
