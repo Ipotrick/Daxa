@@ -26,27 +26,6 @@
 #endif
 #endif
 
-#if DAXA_BUILT_WITH_DXC
-#if defined(_WIN32)
-#include "Windows.h"
-#include "wrl/client.h"
-using namespace Microsoft::WRL;
-#include <dxcapi.h>
-#else
-#define SCARD_E_FILE_NOT_FOUND static_cast<HRESULT>(0x80100024)
-#define SCARD_E_INVALID_PARAMETER static_cast<HRESULT>(0x80100004)
-#include <dxc/dxcapi.h>
-template <typename T>
-using ComPtr = CComPtr<T>;
-#endif
-#endif
-
-#if DAXA_BUILT_WITH_GLSLANG
-#include <glslang/Public/ShaderLang.h>
-#include <glslang/SPIRV/GlslangToSpv.h>
-#include <glslang/Include/ResourceLimits.h>
-#endif
-
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 

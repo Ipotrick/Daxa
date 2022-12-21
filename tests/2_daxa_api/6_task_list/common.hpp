@@ -4,6 +4,7 @@
 #include <iostream>
 #include <thread>
 
+#include <daxa/utils/pipeline_manager.hpp>
 #include <daxa/utils/task_list.hpp>
 
 #define APPNAME "Daxa API Sample TaskList"

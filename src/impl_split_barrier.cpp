@@ -7,7 +7,7 @@
 namespace daxa
 {
     SplitBarrierState::SplitBarrierState(SplitBarrierState && other) noexcept
-        : device{std::move(other.device)}, create_info{other.create_info}, data{other.data}
+        : device{other.device}, create_info{other.create_info}, data{other.data}
     {
         other.create_info = {};
         other.data = {};

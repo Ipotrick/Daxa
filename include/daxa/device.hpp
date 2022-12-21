@@ -194,17 +194,20 @@ namespace daxa
 
         auto info_buffer(BufferId id) const -> BufferInfo;
         auto get_device_address(BufferId id) const -> BufferDeviceAddress;
-        auto get_host_address(BufferId id) const -> void*;
-        template<typename T>
-        auto get_host_address_as(BufferId id) const -> T*
+        auto get_host_address(BufferId id) const -> void *;
+        template <typename T>
+        auto get_host_address_as(BufferId id) const -> T *
         {
-            return static_cast<T*>(get_host_address(id));
+            return static_cast<T *>(get_host_address(id));
         }
         auto info_image(ImageId id) const -> ImageInfo;
         auto info_image_view(ImageViewId id) const -> ImageViewInfo;
         auto info_sampler(SamplerId id) const -> SamplerInfo;
 
-        auto create_pipeline_compiler(PipelineCompilerInfo const & info) -> PipelineCompiler;
+        // auto create_pipeline_manager(PipelineManagerInfo const & info) -> PipelineManager;
+        auto create_raster_pipeline(RasterPipelineInfo const & info) -> RasterPipeline;
+        auto create_compute_pipeline(ComputePipelineInfo const & info) -> ComputePipeline;
+
         auto create_swapchain(SwapchainInfo const & info) -> Swapchain;
         auto create_command_list(CommandListInfo const & info) -> CommandList;
         auto create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore;

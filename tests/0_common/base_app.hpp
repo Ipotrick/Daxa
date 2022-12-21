@@ -7,6 +7,8 @@ using namespace std::chrono_literals;
 #include <iostream>
 #include <cmath>
 
+#include <daxa/utils/pipeline_manager.hpp>
+
 #include <daxa/utils/imgui.hpp>
 #include <imgui_impl_glfw.h>
 
@@ -58,7 +60,8 @@ struct BaseApp : AppWindow<T>
         .debug_name = APPNAME_PREFIX("swapchain"),
     });
 
-    daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
+    daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
+        .device = device,
         .shader_compile_options = {
             .root_paths = {
                 DAXA_SAMPLE_PATH "/shaders",
@@ -70,8 +73,9 @@ struct BaseApp : AppWindow<T>
 #elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
             .language = daxa::ShaderLanguage::HLSL,
 #endif
+            .enable_debug_info = true,
         },
-        .debug_name = APPNAME_PREFIX("pipeline_compiler"),
+        .debug_name = APPNAME_PREFIX("pipeline_manager"),
     });
 
     daxa::ImGuiRenderer imgui_renderer = create_imgui_renderer();
@@ -81,7 +85,6 @@ struct BaseApp : AppWindow<T>
         ImGui_ImplGlfw_InitForVulkan(AppWindow<T>::glfw_window_ptr, true);
         return daxa::ImGuiRenderer({
             .device = device,
-            .pipeline_compiler = pipeline_compiler,
             .format = swapchain.get_format(),
         });
     }
@@ -129,36 +132,6 @@ struct BaseApp : AppWindow<T>
             std::this_thread::sleep_for(1ms);
         }
 
-        return false;
-    }
-
-    auto reload_pipeline(daxa::ComputePipeline & pipeline) -> bool
-    {
-        if (pipeline_compiler.check_if_sources_changed(pipeline))
-        {
-            auto new_pipeline = pipeline_compiler.recreate_compute_pipeline(pipeline);
-            std::cout << new_pipeline.to_string() << std::endl;
-            if (new_pipeline.is_ok())
-            {
-                pipeline = new_pipeline.value();
-                return true;
-            }
-        }
-        return false;
-    }
-
-    auto reload_pipeline(daxa::RasterPipeline & pipeline) -> bool
-    {
-        if (pipeline_compiler.check_if_sources_changed(pipeline))
-        {
-            auto new_pipeline = pipeline_compiler.recreate_raster_pipeline(pipeline);
-            std::cout << new_pipeline.to_string() << std::endl;
-            if (new_pipeline.is_ok())
-            {
-                pipeline = new_pipeline.value();
-                return true;
-            }
-        }
         return false;
     }
 
