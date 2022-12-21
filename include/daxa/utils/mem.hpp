@@ -11,40 +11,56 @@
 
 namespace daxa
 {
-    struct MemoryUploadCommandSubmitInfo
+    struct TransferMemoryPoolInfo
     {
-        CommandList command_list;
-        TimelineSemaphore timeline;
-        u64 timeline_signal_value;
+        Device device = {};
+        u32 capacity = 1 << 25;
+        bool use_bar_memory = {};
+        std::string debug_name = {};
     };
 
-    // Not threadsafe
-    // No automatic gpu synchronization
-    struct MemoryUploader
+    /// @brief Ring buffer based transfer memory allocator for easy and efficient cpu gpu communication.
+    struct TransferMemoryPool
     {
-        MemoryUploader(Device a_device, usize a_capacity = 1 << 25);
+        TransferMemoryPool(TransferMemoryPoolInfo const & info);
 
-        auto upload_to_buffer(BufferId dst_buffer, usize dst_offset, usize upload_size) -> void *;
-        auto get_commands() -> MemoryUploadCommandSubmitInfo;
-        void reclaim_unused_memory();
+        struct Allocation
+        {
+            daxa::BufferDeviceAddress device_address = {};
+            void * host_address = {};
+            usize size = {};
+            u64 timeline_index = {};
+        };
+        // Returns nullopt if the allocation fails.
+        auto allocate(u32 size) -> std::optional<Allocation>;
+        // Returns current timeline index.
+        auto timeline_value() const -> usize;
+        // Returns timeline semaphore that needs to be signaled with the latest timeline value,
+        // on a queue that uses memory from this pool.
+        auto get_timeline_semaphore() -> TimelineSemaphore;
+        auto get_info() const -> TransferMemoryPoolInfo const &;
 
       private:
-        auto reserve_memory(usize size) -> usize;
-
-        struct ClaimedSize
+        // Reclaim expired memory allocations.
+        void reclaim_unused_memory();
+        struct TrackedAllocation
         {
-            usize timeline_value = {};
-            usize size = {};
+            usize timeline_index = {};
+            u32 size = {};
         };
 
-        Device device;
-        TimelineSemaphore gpu_timeline;
-        CommandList current_command_list = {};
-        usize timeline_value = 1;
-        std::deque<ClaimedSize> claimed_sizes = {};
-        BufferId upload_buffer = {};
-        usize capacity;
-        usize claimed_start = {};
-        usize claimed_size = {};
+        TransferMemoryPoolInfo info = {};
+
+      public:
+        TimelineSemaphore gpu_timeline = {};
+
+      private:
+        u64 current_timeline_value = {};
+        std::deque<TrackedAllocation> live_allocations = {};
+        BufferId buffer = {};
+        daxa::BufferDeviceAddress buffer_device_address = {};
+        u8 * buffer_host_address = {};
+        u32 claimed_start = {};
+        u32 claimed_size = {};
     };
 } // namespace daxa

@@ -194,6 +194,12 @@ UnpackedFace get_vertex(u32 vert_i)
     return result;
 }
 
+struct Test
+{
+    daxa_BufferPtr(Test) next;
+};
+DAXA_ENABLE_BUFFER_PTR(Test)
+
 #if defined(DRAW_VERT)
 
 layout(location = 0) out f32vec3 v_nrm;
