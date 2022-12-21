@@ -523,9 +523,9 @@ namespace daxa
         auto pipeline_iter = std::find_if(
             this->compute_pipelines.begin(),
             this->compute_pipelines.end(),
-            [&pipeline](std::shared_ptr<ComputePipeline> const & other)
+            [&pipeline](ComputePipelineState const & other)
             {
-                return pipeline.get() == other.get();
+                return pipeline.get() == other.pipeline_ptr.get();
             });
         if (pipeline_iter == this->compute_pipelines.end())
         {
@@ -539,9 +539,9 @@ namespace daxa
         auto pipeline_iter = std::find_if(
             this->raster_pipelines.begin(),
             this->raster_pipelines.end(),
-            [&pipeline](std::shared_ptr<RasterPipeline> const & other)
+            [&pipeline](RasterPipelineState const & other)
             {
-                return pipeline.get() == other.get();
+                return pipeline.get() == other.pipeline_ptr.get();
             });
         if (pipeline_iter == this->raster_pipelines.end())
         {
