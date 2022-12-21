@@ -16,7 +16,6 @@ namespace daxa
     struct ImGuiRendererInfo
     {
         Device device;
-        PipelineCompiler pipeline_compiler;
         Format format;
     };
 

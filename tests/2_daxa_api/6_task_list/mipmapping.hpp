@@ -24,16 +24,16 @@ namespace tests
             });
             daxa::ImageId swapchain_image;
 
-            daxa::PipelineCompiler pipeline_compiler = device.create_pipeline_compiler({
+            daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
+                .device = device,
                 .shader_compile_options = {
                     .root_paths = {
                         "tests/2_daxa_api/6_task_list/shaders",
                         "include",
                     },
-                    .opt_level = 2,
                     .language = daxa::ShaderLanguage::GLSL,
                 },
-                .debug_name = APPNAME_PREFIX("pipeline_compiler"),
+                .debug_name = APPNAME_PREFIX("pipeline_manager"),
             });
             daxa::ImGuiRenderer imgui_renderer = create_imgui_renderer();
             auto create_imgui_renderer() -> daxa::ImGuiRenderer
@@ -42,14 +42,13 @@ namespace tests
                 ImGui_ImplGlfw_InitForVulkan(glfw_window_ptr, true);
                 return daxa::ImGuiRenderer({
                     .device = device,
-                    .pipeline_compiler = pipeline_compiler,
                     .format = swapchain.get_format(),
                 });
             }
 
             // clang-format off
-            daxa::ComputePipeline compute_pipeline = [&]() { 
-                auto result = pipeline_compiler.create_compute_pipeline({
+            std::shared_ptr<daxa::ComputePipeline> compute_pipeline = [&]() { 
+                auto result = pipeline_manager.add_compute_pipeline({
                     .shader_info = {.source = daxa::ShaderFile{"mipmapping.glsl"}, .debug_name = "compute shader" },
                     .push_constant_size = sizeof(MipmappingComputePushConstant),
                     .debug_name = APPNAME_PREFIX("compute_pipeline"),
@@ -132,16 +131,7 @@ namespace tests
             void draw()
             {
                 ui_update();
-
-                if (pipeline_compiler.check_if_sources_changed(compute_pipeline))
-                {
-                    auto new_pipeline = pipeline_compiler.recreate_compute_pipeline(compute_pipeline);
-                    std::cout << new_pipeline.to_string() << std::endl;
-                    if (new_pipeline.is_ok())
-                    {
-                        compute_pipeline = new_pipeline.value();
-                    }
-                }
+                pipeline_manager.reload_all();
 
                 // non_task_list_execute();
 
@@ -209,7 +199,7 @@ namespace tests
                 if (mouse_drawing)
                 {
                     auto render_target_size = device.info_image(render_target_id).size;
-                    cmd_list.set_pipeline(compute_pipeline);
+                    cmd_list.set_pipeline(*compute_pipeline);
                     auto const push = MipmappingComputePushConstant{
                         .image = render_target_id.default_view(),
                         .gpu_input = device.get_device_address(input_buffer),

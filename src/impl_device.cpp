@@ -171,9 +171,14 @@ namespace daxa
         return Swapchain{ManagedPtr{new ImplSwapchain(this->make_weak(), info)}};
     }
 
-    auto Device::create_pipeline_compiler(PipelineCompilerInfo const & info) -> PipelineCompiler
+    auto Device::create_raster_pipeline(RasterPipelineInfo const & info) -> RasterPipeline
     {
-        return PipelineCompiler{ManagedPtr{new ImplPipelineCompiler(this->make_weak(), info)}};
+        return RasterPipeline{ManagedPtr{new ImplRasterPipeline(this->make_weak(), info)}};
+    }
+
+    auto Device::create_compute_pipeline(ComputePipelineInfo const & info) -> ComputePipeline
+    {
+        return ComputePipeline{ManagedPtr{new ImplComputePipeline(this->make_weak(), info)}};
     }
 
     auto Device::create_command_list(CommandListInfo const & info) -> CommandList

@@ -4,62 +4,12 @@
 
 namespace daxa
 {
-    struct ShaderFile
-    {
-        std::filesystem::path path;
-    };
-
-    // This string will only work if it is valid GLSL
-    struct ShaderCode
-    {
-        std::string string;
-    };
-
-    struct ShaderSPIRV
-    {
-        u32 const * data;
-        usize size;
-    };
-
-    using ShaderSource = std::variant<std::monostate, ShaderFile, ShaderCode, ShaderSPIRV>;
-
-    struct ShaderDefine
-    {
-        std::string name = {};
-        std::string value = {};
-    };
-
-    enum struct ShaderLanguage
-    {
-        GLSL,
-        HLSL,
-    };
-
-    struct ShaderModel
-    {
-        u32 major, minor;
-    };
-
-    struct ShaderCompileOptions
-    {
-        std::optional<std::string> entry_point = {};
-        std::vector<std::filesystem::path> root_paths = {};
-        std::optional<std::filesystem::path> write_out_preprocessed_code = {};
-        std::optional<std::filesystem::path> write_out_spirv_binary = {};
-        std::optional<u32> opt_level = {};
-        std::optional<ShaderModel> shader_model = {};
-        std::optional<ShaderLanguage> language = {};
-        std::vector<ShaderDefine> defines = {};
-        std::optional<bool> enable_debug_info = {};
-
-        void inherit(ShaderCompileOptions const & other);
-    };
+    using ShaderBinary = std::vector<u32>;
 
     struct ShaderInfo
     {
-        ShaderSource source = std::monostate{};
-        ShaderCompileOptions compile_options = {};
-        std::string debug_name = {};
+        ShaderBinary binary = {};
+        std::optional<std::string> entry_point = {};
     };
 
     struct ComputePipelineInfo
@@ -76,7 +26,7 @@ namespace daxa
         auto info() const -> ComputePipelineInfo const &;
 
       private:
-        friend struct PipelineCompiler;
+        friend struct Device;
         friend struct CommandList;
         explicit ComputePipeline(ManagedPtr impl);
     };
@@ -131,31 +81,8 @@ namespace daxa
         auto info() const -> RasterPipelineInfo const &;
 
       private:
-        friend struct PipelineCompiler;
+        friend struct Device;
         friend struct CommandList;
         explicit RasterPipeline(ManagedPtr impl);
-    };
-
-    struct PipelineCompilerInfo
-    {
-        ShaderCompileOptions shader_compile_options = {};
-        std::string debug_name = {};
-    };
-
-    struct PipelineCompiler : ManagedPtr
-    {
-        PipelineCompiler() = default;
-
-        auto create_raster_pipeline(RasterPipelineInfo const & info) -> Result<RasterPipeline>;
-        auto recreate_raster_pipeline(RasterPipeline const & pipeline) -> Result<RasterPipeline>;
-        auto create_compute_pipeline(ComputePipelineInfo const & info) -> Result<ComputePipeline>;
-        auto recreate_compute_pipeline(ComputePipeline const & pipeline) -> Result<ComputePipeline>;
-        // TODO(grundlett): Should this be a pipeline method?
-        static auto check_if_sources_changed(RasterPipeline & pipeline) -> bool;
-        static auto check_if_sources_changed(ComputePipeline & pipeline) -> bool;
-
-      private:
-        friend struct Device;
-        explicit PipelineCompiler(ManagedPtr impl);
     };
 } // namespace daxa
