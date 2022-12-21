@@ -1,4 +1,4 @@
-#define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
+#define DAXA_SHADERLANG DAXA_SHADERLANG_HLSL
 #define APPNAME "Daxa Sample: HelloTriangle Compute"
 #include <0_common/base_app.hpp>
 
@@ -8,7 +8,7 @@ using namespace daxa::types;
 struct App : BaseApp<App>
 {
     // clang-format off
-    daxa::ComputePipeline compute_pipeline = pipeline_compiler.create_compute_pipeline({
+    std::shared_ptr<daxa::ComputePipeline> compute_pipeline = pipeline_manager.add_compute_pipeline({
 #if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
         .shader_info = {.source = daxa::ShaderFile{"compute.glsl"}},
 #elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
@@ -44,7 +44,11 @@ struct App : BaseApp<App>
     }
     void on_update()
     {
-        reload_pipeline(compute_pipeline);
+        auto reloaded_result = pipeline_manager.reload_all();
+        if (reloaded_result.is_err())
+        {
+            std::cout << reloaded_result.to_string() << std::endl;
+        }
         ui_update();
 
         loop_task_list.remove_runtime_image(task_swapchain_image, swapchain_image);
@@ -92,7 +96,7 @@ struct App : BaseApp<App>
             .task = [this](daxa::TaskRuntime runtime)
             {
                 auto cmd_list = runtime.get_command_list();
-                cmd_list.set_pipeline(compute_pipeline);
+                cmd_list.set_pipeline(*compute_pipeline);
                 cmd_list.push_constant(ComputePush{
                     .image = render_image.default_view(),
                     .frame_dim = {size_x, size_y},

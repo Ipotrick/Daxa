@@ -66,7 +66,7 @@ DAXA_CREATE_TEST(
     LIBS glfw
 )
 DAXA_CREATE_TEST(
-    FOLDER 2_daxa_api 7_pipeline_compiler
+    FOLDER 2_daxa_api 7_pipeline_manager
     LIBS
 )
 
@@ -98,7 +98,7 @@ DAXA_CREATE_TEST(
 #     FOLDER 3_samples 6_sponza
 #     LIBS glfw cgltf_interface
 # )
-DAXA_CREATE_TEST(
-    FOLDER 3_samples 7_FSR2
-    LIBS glfw stb_interface
-)
+# DAXA_CREATE_TEST(
+#     FOLDER 3_samples 7_FSR2
+#     LIBS glfw stb_interface
+# )

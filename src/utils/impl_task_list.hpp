@@ -23,11 +23,13 @@ namespace daxa
 
     using TaskId = usize;
 
-    struct LastReadSplitBarrierIndex{
+    struct LastReadSplitBarrierIndex
+    {
         usize index;
     };
 
-    struct LastReadBarrierIndex{
+    struct LastReadBarrierIndex
+    {
         usize index;
     };
 

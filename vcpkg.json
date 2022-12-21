@@ -55,7 +55,7 @@
       ]
     }
   },
-  "builtin-baseline": "01b29f6d8212bc845da64773b18665d682f5ab66",
+  "builtin-baseline": "44b540607036e0587f6564c91f93663b0212ab98",
   "overrides": [
     {
       "name": "glfw3",
