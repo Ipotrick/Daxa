@@ -55,7 +55,6 @@ namespace daxa
     {
         ShaderSource source = std::monostate{};
         ShaderCompileOptions compile_options = {};
-        std::string debug_name = {};
     };
 
     struct ComputePipelineCompileInfo
