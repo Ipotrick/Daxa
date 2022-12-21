@@ -371,7 +371,7 @@ namespace daxa
     ImplPipelineManager::ImplPipelineManager(PipelineManagerInfo && a_info)
         : info{std::move(a_info)}
     {
-        DAXA_DBG_ASSERT_TRUE_M(a_info.device.object != nullptr, "You must provide a valid daxa::Device when creating a PipelineManager");
+        DAXA_DBG_ASSERT_TRUE_M(this->info.device.object != nullptr, "You must provide a valid daxa::Device when creating a PipelineManager");
 
         if (!this->info.shader_compile_options.entry_point.has_value())
         {
