@@ -1,3 +1,11 @@
+# Daxa
+
+<p align="center">
+  <!-- <a href="https://github.com/Ipotrick/Daxa"> -->
+    <img src="misc/daxa-logo.png" width="512" alt="Daxa logo">
+  <!-- </a> -->
+</p>
+
 ## What is Daxa?
 Daxa is a GPU api built on Vulkan.
 
