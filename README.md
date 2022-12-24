@@ -47,4 +47,4 @@ You must have the following things installed to build the repository
 All dependencies are managed via vcpkg.
 The library and the tests can be built using CMake.
 
-Check out our GitHub wiki for more detailed instructions!
+Check out our [GitHub Wiki](https://github.com/Ipotrick/Daxa/wiki) for more detailed instructions!
