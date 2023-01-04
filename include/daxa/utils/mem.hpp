@@ -28,6 +28,7 @@ namespace daxa
         {
             daxa::BufferDeviceAddress device_address = {};
             void * host_address = {};
+            u32 buffer_offset = {};
             usize size = {};
             u64 timeline_index = {};
         };
@@ -39,6 +40,7 @@ namespace daxa
         // on a queue that uses memory from this pool.
         auto get_timeline_semaphore() -> TimelineSemaphore;
         auto get_info() const -> TransferMemoryPoolInfo const &;
+        auto get_buffer() const -> daxa::BufferId;
 
       private:
         // Reclaim expired memory allocations.
