@@ -63,6 +63,7 @@ namespace daxa
         return Allocation{
             .device_address = this->buffer_device_address + allocation_offset,
             .host_address = reinterpret_cast<void *>(this->buffer_host_address + allocation_offset),
+            .buffer_offset = allocation_offset,
             .size = allocation_size,
             .timeline_index = this->current_timeline_value,
         };
@@ -86,6 +87,11 @@ namespace daxa
     auto TransferMemoryPool::get_info() const -> TransferMemoryPoolInfo const &
     {
         return this->info;
+    }
+
+    auto TransferMemoryPool::get_buffer() const -> daxa::BufferId
+    {
+        return this->buffer;
     }
 } // namespace daxa
 
