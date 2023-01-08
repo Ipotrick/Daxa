@@ -205,9 +205,40 @@ namespace daxa
 
     void GPUShaderResourceTable::cleanup(VkDevice device)
     {
-        DAXA_DBG_ASSERT_TRUE_M(buffer_slots.free_index_stack.size() == buffer_slots.next_index, "not all buffers have been destroyed before destroying the device");
-        DAXA_DBG_ASSERT_TRUE_M(image_slots.free_index_stack.size() == image_slots.next_index, "not all images have been destroyed before destroying the device");
-        DAXA_DBG_ASSERT_TRUE_M(sampler_slots.free_index_stack.size() == sampler_slots.next_index, "not all samplers have been destroyed before destroying the device");
+        auto print_remaining = [&](std::string prefix, auto& pages)
+        {
+            std::string ret{prefix + "\nThis can happen due to not waiting for the gpu to finish executing, as daxa deferres destruction. List of survivors:\n"};
+            for (auto& page : pages)
+            {
+                if (page)
+                {
+                    for (auto& slot : *page)
+                    {
+                        bool handle_invalid = {};
+                        if constexpr (std::is_same_v<decltype(slot.first), ImplBufferSlot>)
+                        {
+                            handle_invalid = slot.first.vk_buffer == VK_NULL_HANDLE;
+                        }
+                        if constexpr (std::is_same_v<decltype(slot.first), ImplImageSlot>)
+                        {
+                            handle_invalid = slot.first.vk_image == VK_NULL_HANDLE;
+                        }
+                        if constexpr (std::is_same_v<decltype(slot.first), ImplSamplerSlot>)
+                        {
+                            handle_invalid = slot.first.vk_sampler == VK_NULL_HANDLE;
+                        }
+                        if (!handle_invalid)
+                        {
+                            ret += std::string("debug name: \"") + std::string(slot.first.info.debug_name) + "\"\n";
+                        }
+                    }
+                }
+            }
+            return ret;
+        };
+        DAXA_DBG_ASSERT_TRUE_M(buffer_slots.free_index_stack.size() == buffer_slots.next_index, print_remaining("Not all buffers have been destroyed before destroying the device.", buffer_slots.pages));
+        DAXA_DBG_ASSERT_TRUE_M(image_slots.free_index_stack.size() == image_slots.next_index, print_remaining("Not all images have been destroyed before destroying the device.", image_slots.pages));
+        DAXA_DBG_ASSERT_TRUE_M(sampler_slots.free_index_stack.size() == sampler_slots.next_index, print_remaining("Not all samplers have been destroyed before destroying the device.", sampler_slots.pages));
         for (usize i = 0; i < PIPELINE_LAYOUT_COUNT; ++i)
         {
             vkDestroyPipelineLayout(device, pipeline_layouts.at(i), nullptr);
