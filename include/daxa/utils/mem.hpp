@@ -23,6 +23,7 @@ namespace daxa
     struct TransferMemoryPool
     {
         TransferMemoryPool(TransferMemoryPoolInfo const & info);
+        ~TransferMemoryPool();
 
         struct Allocation
         {
