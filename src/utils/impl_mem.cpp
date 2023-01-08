@@ -17,6 +17,13 @@ namespace daxa
           })}
     {
     }
+     
+    TransferMemoryPool::~TransferMemoryPool()
+    {
+        this->reclaim_unused_memory();
+        DAXA_DBG_ASSERT_TRUE_M(this->claimed_size == 0, "Used Memory in transient memory pool size is not 0! Please make sure to signal the timeline semaphore before destroying the pool.");
+        this->info.device.destroy_buffer(this->buffer);
+    }
 
     auto TransferMemoryPool::allocate(u32 allocation_size) -> std::optional<TransferMemoryPool::Allocation>
     {
