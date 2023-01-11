@@ -1,4 +1,4 @@
-#if DAXA_BUILT_WITH_UTILS
+#if DAXA_BUILT_WITH_UTILS_IMGUI
 
 #include "impl_imgui.hpp"
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#if !DAXA_BUILT_WITH_UTILS
-#error "[package management error] You must build Daxa with the UTILS option enabled"
+#if !DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG && !DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
+#error "[package management error] You must build Daxa with the DAXA_ENABLE_UTILS_PIPELINE_MANAGER_(GLSLANG|DXC) CMake option enabled, or request the utils-pipeline-manager-(glslang|dxc) feature in vcpkg"
 #endif
 
 #include <daxa/device.hpp>

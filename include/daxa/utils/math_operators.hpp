@@ -1,9 +1,5 @@
 #pragma once
 
-#if !DAXA_BUILT_WITH_UTILS
-#error "[package management error] You must build Daxa with the UTILS option enabled"
-#endif
-
 #include <daxa/types.hpp>
 
 namespace daxa::math_operators

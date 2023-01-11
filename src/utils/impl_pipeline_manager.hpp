@@ -2,7 +2,7 @@
 
 #include <daxa/utils/pipeline_manager.hpp>
 
-#if DAXA_BUILT_WITH_DXC
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
 #if defined(_WIN32)
 #include "Windows.h"
 #include "wrl/client.h"
@@ -17,7 +17,7 @@ using ComPtr = CComPtr<T>;
 #endif
 #endif
 
-#if DAXA_BUILT_WITH_GLSLANG
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
 #include <glslang/Public/ShaderLang.h>
 #include <glslang/SPIRV/GlslangToSpv.h>
 #include <glslang/Include/ResourceLimits.h>
@@ -62,14 +62,14 @@ namespace daxa
         // This is accessed by the includer, which makes that not thread-safe
         ShaderCompileInfo const * current_shader_info = nullptr;
 
-#if DAXA_BUILT_WITH_GLSLANG
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
         struct GlslangBackend
         {
         };
         GlslangBackend glslang_backend = {};
 #endif
 
-#if DAXA_BUILT_WITH_DXC
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
         struct DxcBackend
         {
             IDxcUtils * dxc_utils = nullptr;
