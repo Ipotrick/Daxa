@@ -1,4 +1,4 @@
-#if DAXA_BUILT_WITH_UTILS
+#if DAXA_BUILT_WITH_UTILS_TASK_LIST
 
 #include "impl_fsr2.hpp"
 

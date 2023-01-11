@@ -1,9 +1,9 @@
-#if DAXA_BUILT_WITH_UTILS
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG || DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
 
 #include "../impl_core.hpp"
 #include "impl_pipeline_manager.hpp"
 
-#if DAXA_BUILT_WITH_GLSLANG
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
 static constexpr TBuiltInResource DAXA_DEFAULT_BUILTIN_RESOURCE = {
     .maxLights = 32,
     .maxClipPlanes = 6,
@@ -151,7 +151,7 @@ static void shader_preprocess(std::string & file_str, std::filesystem::path cons
 
 namespace daxa
 {
-#if DAXA_BUILT_WITH_GLSLANG
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
     class GlslangFileIncluder : public glslang::TShader::Includer
     {
       public:
@@ -248,7 +248,7 @@ namespace daxa
     };
 #endif
 
-#if DAXA_BUILT_WITH_DXC
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
     struct DxcCustomIncluder : public IDxcIncludeHandler
     {
         IDxcIncludeHandler * default_includer{};
@@ -386,13 +386,13 @@ namespace daxa
             this->info.shader_compile_options.enable_debug_info = {false};
         }
 
-#if DAXA_BUILT_WITH_GLSLANG
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
         {
             glslang::InitializeProcess();
         }
 #endif
 
-#if DAXA_BUILT_WITH_DXC
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
         {
             [[maybe_unused]] HRESULT dxc_utils_result = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&this->dxc_backend.dxc_utils));
             DAXA_DBG_ASSERT_TRUE_M(SUCCEEDED(dxc_utils_result), "Failed to create DXC utils");
@@ -408,7 +408,7 @@ namespace daxa
 
     ImplPipelineManager::~ImplPipelineManager()
     {
-#if DAXA_BUILT_WITH_GLSLANG
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
         {
             glslang::FinalizeProcess();
         }
@@ -671,12 +671,12 @@ namespace daxa
             DAXA_DBG_ASSERT_TRUE_M(shader_info.compile_options.language.has_value(), "You must have a shader language set when compiling GLSL");
             switch (shader_info.compile_options.language.value())
             {
-#if DAXA_BUILT_WITH_GLSLANG
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
             case ShaderLanguage::GLSL:
                 ret = get_spirv_glslang(shader_info, debug_name_opt, shader_stage, code);
                 break;
 #endif
-#if DAXA_BUILT_WITH_DXC
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
             case ShaderLanguage::HLSL:
                 ret = get_spirv_dxc(shader_info, debug_name_opt, shader_stage, code);
                 break;
@@ -791,7 +791,7 @@ namespace daxa
 
     auto ImplPipelineManager::get_spirv_glslang(ShaderCompileInfo const & shader_info, std::string const &debug_name_opt, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
     {
-#if DAXA_BUILT_WITH_GLSLANG
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
         auto translate_shader_stage = [](ShaderStage stage) -> EShLanguage
         {
             switch (stage)
@@ -932,7 +932,7 @@ namespace daxa
 
     auto ImplPipelineManager::get_spirv_dxc(ShaderCompileInfo const & shader_info, std::string const &debug_name_opt, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
     {
-#if DAXA_BUILT_WITH_DXC
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
         auto u8_ascii_to_wstring = [](char const * str) -> std::wstring
         {
             std::wstring ret = {};

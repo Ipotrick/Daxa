@@ -7,23 +7,16 @@
     "vulkan-memory-allocator",
     "vulkan"
   ],
+  "default-features": [
+    "utils-imgui",
+    "utils-mem",
+    "utils-pipeline-manager-glslang",
+    "utils-task-list"
+  ],
   "features": {
-    "glslang": {
-      "description": "Build with glslang",
+    "utils-fsr2": {
+      "description": "The FSR2 Daxa utility",
       "dependencies": [
-        "glslang"
-      ]
-    },
-    "dxc": {
-      "description": "Build with dxc",
-      "dependencies": [
-        "dxc"
-      ]
-    },
-    "utils": {
-      "description": "Build with core utils",
-      "dependencies": [
-        "imgui",
         {
           "name": "fsr2",
           "features": [
@@ -31,6 +24,30 @@
           ]
         }
       ]
+    },
+    "utils-imgui": {
+      "description": "The ImGUI Daxa utility",
+      "dependencies": [
+        "imgui"
+      ]
+    },
+    "utils-mem": {
+      "description": "The Mem Daxa utility"
+    },
+    "utils-pipeline-manager-glslang": {
+      "description": "Build with glslang",
+      "dependencies": [
+        "glslang"
+      ]
+    },
+    "utils-pipeline-manager-dxc": {
+      "description": "Build with dxc",
+      "dependencies": [
+        "dxc"
+      ]
+    },
+    "utils-task-list": {
+      "description": "The Task-List Daxa utility"
     },
     "tests": {
       "description": "Build Tests",
