@@ -153,6 +153,7 @@ target_link_libraries(daxa
     Vulkan::Vulkan
 )
 
+include(GNUInstallDirs)
 target_include_directories(daxa
     PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
@@ -193,7 +194,6 @@ endif()
 
 # Packaging
 include(CMakePackageConfigHelpers)
-include(GNUInstallDirs)
 file(WRITE ${CMAKE_BINARY_DIR}/config.cmake.in [=[
 @PACKAGE_INIT@
 include(${CMAKE_CURRENT_LIST_DIR}/daxa-targets.cmake)
