@@ -678,7 +678,7 @@ namespace daxa
 #endif
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
             case ShaderLanguage::HLSL:
-                ret = get_spirv_dxc(shader_info, debug_name_opt, shader_stage, code);
+                ret = get_spirv_dxc(shader_info, shader_stage, code);
                 break;
 #endif
             default: break;
@@ -931,7 +931,7 @@ namespace daxa
 #endif
     }
 
-    auto ImplPipelineManager::get_spirv_dxc(ShaderCompileInfo const & shader_info, std::string const &debug_name_opt, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
+    auto ImplPipelineManager::get_spirv_dxc(ShaderCompileInfo const & shader_info, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
     {
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
         auto u8_ascii_to_wstring = [](char const * str) -> std::wstring
