@@ -1,4 +1,4 @@
-#if DAXA_BUILT_WITH_UTILS
+#if DAXA_BUILT_WITH_UTILS_MEM
 
 #include <daxa/utils/mem.hpp>
 
@@ -17,7 +17,7 @@ namespace daxa
           })}
     {
     }
-     
+
     TransferMemoryPool::~TransferMemoryPool()
     {
         this->reclaim_unused_memory();
@@ -102,4 +102,4 @@ namespace daxa
     }
 } // namespace daxa
 
-#endif // #if DAXA_BUILT_WITH_UTILS
+#endif
