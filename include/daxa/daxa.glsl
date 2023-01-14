@@ -108,8 +108,14 @@ layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform sampler daxa_SamplerTabl
 #define DAXA_SAMPLER_LAYOUT layout(binding = DAXA_SAMPLER_BINDING, set = 0)
 
 #define DAXA_ENABLE_BUFFER_PTR(STRUCT_TYPE)                                                                             \
-    DAXA_BUFFER_REFERENCE_LAYOUT buffer daxa_RWBufferPtr##STRUCT_TYPE { STRUCT_TYPE value; };                           \
-    DAXA_BUFFER_REFERENCE_LAYOUT readonly buffer daxa_BufferPtr##STRUCT_TYPE { STRUCT_TYPE value; };                    \
+    DAXA_BUFFER_REFERENCE_LAYOUT buffer daxa_RWBufferPtr##STRUCT_TYPE                                                   \
+    {                                                                                                                   \
+        STRUCT_TYPE value;                                                                                              \
+    };                                                                                                                  \
+    DAXA_BUFFER_REFERENCE_LAYOUT readonly buffer daxa_BufferPtr##STRUCT_TYPE                                            \
+    {                                                                                                                   \
+        STRUCT_TYPE value;                                                                                              \
+    };                                                                                                                  \
     daxa_RWBufferPtr##STRUCT_TYPE daxa_id_to_rwbuffer_ptr##STRUCT_TYPE(daxa_BufferId buffer_id)                         \
     {                                                                                                                   \
         return daxa_RWBufferPtr##STRUCT_TYPE(daxa_buffer_device_address_buffer.addresses[daxa_id_to_index(buffer_id)]); \
@@ -345,20 +351,15 @@ _DAXA_REGISTER_ATOMIC_IMAGE_TYPES_64BIT(2DMSArray, 3, 3)
             dTdx,                                                                                                                                                                                                \
             dTdy);                                                                                                                                                                                               \
     }                                                                                                                                                                                                            \
-    daxa_i32##vec##SIZE_DIMENSION textureSize(daxa_Image##IMAGE_KIND##SCALAR_TYPE image, daxa_SamplerId sampler_id, daxa_i32 lod)                                                                                \
+    daxa_i32##vec##SIZE_DIMENSION textureSize(daxa_Image##IMAGE_KIND##SCALAR_TYPE image, daxa_i32 lod)                                                                                                           \
     {                                                                                                                                                                                                            \
         return textureSize(                                                                                                                                                                                      \
-            GLSL_SAMPLER_NAME(                                                                                                                                                                                   \
-                daxa_get_texture(GLSL_TEXTURE_NAME, image.id),                                                                                                                                                   \
-                daxa_get_sampler(sampler_id)),                                                                                                                                                                   \
+            daxa_get_texture(GLSL_TEXTURE_NAME, image.id),                                                                                                                                                       \
             lod);                                                                                                                                                                                                \
     }                                                                                                                                                                                                            \
-    daxa_i32 textureQueryLevels(daxa_Image##IMAGE_KIND##SCALAR_TYPE image, daxa_SamplerId sampler_id)                                                                                                            \
+    daxa_i32 textureQueryLevels(daxa_Image##IMAGE_KIND##SCALAR_TYPE image)                                                                                                                                       \
     {                                                                                                                                                                                                            \
-        return textureQueryLevels(                                                                                                                                                                               \
-            GLSL_SAMPLER_NAME(                                                                                                                                                                                   \
-                daxa_get_texture(GLSL_TEXTURE_NAME, image.id),                                                                                                                                                   \
-                daxa_get_sampler(sampler_id)));                                                                                                                                                                  \
+        return textureQueryLevels(daxa_get_texture(GLSL_TEXTURE_NAME, image.id));                                                                                                                                \
     }
 
 #define _DAXA_REGISTER_IMAGE_KIND_GATHER(GLSL_TEXTURE_NAME, GLSL_SAMPLER_NAME, IMAGE_KIND, UV_DIMENSION, GRAD_DIMENSION, SIZE_DIMENSION, SCALAR_TYPE) \
@@ -399,15 +400,13 @@ _DAXA_REGISTER_ATOMIC_IMAGE_TYPES_64BIT(2DMSArray, 3, 3)
             3);                                                                                                                                       \
     }
 
-#define _DAXA_REGISTER_IMAGE_KIND_TEXEL_FETCH(GLSL_TEXTURE_NAME, GLSL_SAMPLER_NAME, IMAGE_KIND, UV_DIMENSION, GRAD_DIMENSION, SIZE_DIMENSION, SCALAR_TYPE)             \
-    daxa_##SCALAR_TYPE##vec4 texelFetch(daxa_Image##IMAGE_KIND##SCALAR_TYPE image, daxa_SamplerId sampler_id, daxa_i32vec##UV_DIMENSION index, daxa_i32 sample_or_lod) \
-    {                                                                                                                                                                  \
-        return texelFetch(                                                                                                                                             \
-            GLSL_SAMPLER_NAME(                                                                                                                                         \
-                daxa_get_texture(GLSL_TEXTURE_NAME, image.id),                                                                                                         \
-                daxa_get_sampler(sampler_id)),                                                                                                                         \
-            index,                                                                                                                                                     \
-            sample_or_lod);                                                                                                                                            \
+#define _DAXA_REGISTER_IMAGE_KIND_TEXEL_FETCH(GLSL_TEXTURE_NAME, GLSL_SAMPLER_NAME, IMAGE_KIND, UV_DIMENSION, GRAD_DIMENSION, SIZE_DIMENSION, SCALAR_TYPE) \
+    daxa_##SCALAR_TYPE##vec4 texelFetch(daxa_Image##IMAGE_KIND##SCALAR_TYPE image, daxa_i32vec##UV_DIMENSION index, daxa_i32 sample_or_lod)                \
+    {                                                                                                                                                      \
+        return texelFetch(                                                                                                                                 \
+            daxa_get_texture(GLSL_TEXTURE_NAME, image.id),                                                                                                 \
+            index,                                                                                                                                         \
+            sample_or_lod);                                                                                                                                \
     }
 
 #define _DAXA_REGISTER_IMAGE_TYPES(IMAGE_KIND, UV_DIMENSION, GRAD_DIMENSION, SIZE_DIMENSION)                                             \
