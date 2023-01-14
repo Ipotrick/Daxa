@@ -835,6 +835,7 @@ namespace daxa
         preamble += "#extension GL_EXT_shader_image_load_formatted : require\n";
         preamble += "#extension GL_EXT_control_flow_attributes : require\n";
         preamble += "#extension GL_EXT_shader_image_int64 : require\n";
+        preamble += "#extension GL_EXT_samplerless_texture_functions : require\n";
         for (auto const & shader_define : shader_info.compile_options.defines)
         {
             if (!shader_define.value.empty())
