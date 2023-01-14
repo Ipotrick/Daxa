@@ -95,6 +95,6 @@ namespace daxa
 
         auto get_spirv(ShaderCompileInfo const & shader_info, std::string const &debug_name_opt, ShaderStage shader_stage) -> Result<std::vector<u32>>;
         auto get_spirv_glslang(ShaderCompileInfo const & shader_info, std::string const &debug_name_opt, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>;
-        auto get_spirv_dxc(ShaderCompileInfo const & shader_info, std::string const &debug_name_opt, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>;
+        auto get_spirv_dxc(ShaderCompileInfo const & shader_info, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>;
     };
 } // namespace daxa

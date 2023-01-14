@@ -22,7 +22,7 @@ namespace daxa
     /// @brief Ring buffer based transfer memory allocator for easy and efficient cpu gpu communication.
     struct TransferMemoryPool
     {
-        TransferMemoryPool(TransferMemoryPoolInfo const & info);
+        TransferMemoryPool(TransferMemoryPoolInfo const & a_info);
         ~TransferMemoryPool();
 
         struct Allocation
