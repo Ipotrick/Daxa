@@ -4,8 +4,8 @@
 
 namespace daxa
 {
-    TransferMemoryPool::TransferMemoryPool(TransferMemoryPoolInfo const & info)
-        : info{info},
+    TransferMemoryPool::TransferMemoryPool(TransferMemoryPoolInfo const & a_info)
+        : info{a_info},
           gpu_timeline{this->info.device.create_timeline_semaphore({
               .initial_value = {},
               .debug_name = this->info.debug_name + ": timeline semaphore",
