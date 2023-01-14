@@ -2,14 +2,23 @@ cmake_minimum_required(VERSION 3.21)
 
 include(cmake/warnings.cmake)
 
-if(DAXA_ENABLE_UTILS)
-    if(DAXA_ENABLE_DXC)
-        list(APPEND VCPKG_MANIFEST_FEATURES "dxc")
-    endif()
-    if(DAXA_ENABLE_GLSLANG)
-        list(APPEND VCPKG_MANIFEST_FEATURES "glslang")
-    endif()
-    list(APPEND VCPKG_MANIFEST_FEATURES "utils")
+if(DAXA_ENABLE_UTILS_FSR2)
+    list(APPEND VCPKG_MANIFEST_FEATURES "utils-fsr2")
+endif()
+if(DAXA_ENABLE_UTILS_IMGUI)
+    list(APPEND VCPKG_MANIFEST_FEATURES "utils-imgui")
+endif()
+if(DAXA_ENABLE_UTILS_MEM)
+    list(APPEND VCPKG_MANIFEST_FEATURES "utils-mem")
+endif()
+if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG)
+    list(APPEND VCPKG_MANIFEST_FEATURES "utils-pipeline-manager-glslang")
+endif()
+if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_DXC)
+    list(APPEND VCPKG_MANIFEST_FEATURES "utils-pipeline-manager-dxc")
+endif()
+if(DAXA_ENABLE_UTILS_TASK_LIST)
+    list(APPEND VCPKG_MANIFEST_FEATURES "utils-task-list")
 endif()
 if(DAXA_ENABLE_TESTS)
     list(APPEND VCPKG_MANIFEST_FEATURES "tests")
@@ -77,47 +86,64 @@ target_compile_definitions(daxa
     DAXA_SHADERLANG_HLSL=2
 )
 
-if(DAXA_ENABLE_UTILS)
-    if(DAXA_ENABLE_GLSLANG)
-        find_package(glslang CONFIG REQUIRED)
-        find_package(Threads REQUIRED)
-
-        target_compile_definitions(daxa
-            PUBLIC
-            DAXA_BUILT_WITH_GLSLANG=true
-        )
-        target_link_libraries(daxa
-            PUBLIC
-            glslang::glslang
-            glslang::SPIRV
-            glslang::HLSL
-        )
-    endif()
-
-    if(DAXA_ENABLE_DXC)
-        find_package(dxc CONFIG REQUIRED)
-
-        target_compile_definitions(daxa
-            PUBLIC
-            DAXA_BUILT_WITH_DXC=true
-        )
-        target_link_libraries(daxa
-            PUBLIC
-            dxc::dxc
-        )
-    endif()
-
-    find_package(imgui CONFIG REQUIRED)
-    find_package(fsr2 CONFIG REQUIRED)
+if(DAXA_ENABLE_UTILS_FSR2)
     target_compile_definitions(daxa
         PUBLIC
-        DAXA_BUILT_WITH_UTILS=true
+        DAXA_BUILT_WITH_UTILS_FSR2=true
     )
+    find_package(fsr2 CONFIG REQUIRED)
+    target_link_libraries(daxa
+        PUBLIC
+        fsr2::ffx_fsr2_api
+        fsr2::ffx_fsr2_api_vk
+    )
+endif()
+if(DAXA_ENABLE_UTILS_IMGUI)
+    target_compile_definitions(daxa
+        PUBLIC
+        DAXA_BUILT_WITH_UTILS_IMGUI=true
+    )
+    find_package(imgui CONFIG REQUIRED)
     target_link_libraries(daxa
         PUBLIC
         imgui::imgui
-        fsr2::ffx_fsr2_api
-        fsr2::ffx_fsr2_api_vk
+    )
+endif()
+if(DAXA_ENABLE_UTILS_MEM)
+    target_compile_definitions(daxa
+        PUBLIC
+        DAXA_BUILT_WITH_UTILS_MEM=true
+    )
+endif()
+if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG)
+    target_compile_definitions(daxa
+        PUBLIC
+        DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG=true
+    )
+    find_package(glslang CONFIG REQUIRED)
+    find_package(Threads REQUIRED)
+    target_link_libraries(daxa
+        PUBLIC
+        glslang::glslang
+        glslang::SPIRV
+        glslang::HLSL
+    )
+endif()
+if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_DXC)
+    target_compile_definitions(daxa
+        PUBLIC
+        DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC=true
+    )
+    find_package(dxc CONFIG REQUIRED)
+    target_link_libraries(daxa
+        PUBLIC
+        dxc::dxc
+    )
+endif()
+if(DAXA_ENABLE_UTILS_TASK_LIST)
+    target_compile_definitions(daxa
+        PUBLIC
+        DAXA_BUILT_WITH_UTILS_TASK_LIST=true
     )
 endif()
 
@@ -127,6 +153,7 @@ target_link_libraries(daxa
     Vulkan::Vulkan
 )
 
+include(GNUInstallDirs)
 target_include_directories(daxa
     PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
@@ -167,7 +194,6 @@ endif()
 
 # Packaging
 include(CMakePackageConfigHelpers)
-include(GNUInstallDirs)
 file(WRITE ${CMAKE_BINARY_DIR}/config.cmake.in [=[
 @PACKAGE_INIT@
 include(${CMAKE_CURRENT_LIST_DIR}/daxa-targets.cmake)
@@ -177,24 +203,32 @@ find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
 ]=])
 
-if(DAXA_ENABLE_UTILS)
-    if(DAXA_ENABLE_GLSLANG)
-        file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
+if(DAXA_ENABLE_UTILS_FSR2)
+    file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
+find_package(fsr2 CONFIG REQUIRED)
+]=])
+endif()
+if(DAXA_ENABLE_UTILS_IMGUI)
+    file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
+find_package(imgui CONFIG REQUIRED)
+]=])
+endif()
+if(DAXA_ENABLE_UTILS_MEM)
+# No package management work to do
+endif()
+if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG)
+    file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
 find_package(glslang CONFIG REQUIRED)
 find_package(Threads REQUIRED)
 ]=])
-    endif()
-
-    if(DAXA_ENABLE_DXC)
-        file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
+endif()
+if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_DXC)
+    file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
 find_package(dxc CONFIG REQUIRED)
 ]=])
-    endif()
-
-    file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
-find_package(imgui CONFIG REQUIRED)
-find_package(fsr2 CONFIG REQUIRED)
-]=])
+endif()
+if(DAXA_ENABLE_UTILS_TASK_LIST)
+# No package management work to do
 endif()
 
 configure_package_config_file(${CMAKE_BINARY_DIR}/config.cmake.in
