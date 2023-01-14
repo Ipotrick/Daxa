@@ -14,9 +14,12 @@
             "generator": "Ninja Multi-Config",
             "cacheVariables": {
                 "CMAKE_MODULE_PATH": "${sourceDir}/cmake/modules",
-                "DAXA_ENABLE_GLSLANG": true,
-                "DAXA_ENABLE_DXC": true,
-                "DAXA_ENABLE_UTILS": true,
+                "DAXA_ENABLE_UTILS_FSR2": true,
+                "DAXA_ENABLE_UTILS_IMGUI": true,
+                "DAXA_ENABLE_UTILS_MEM": true,
+                "DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG": true,
+                "DAXA_ENABLE_UTILS_PIPELINE_MANAGER_DXC": true,
+                "DAXA_ENABLE_UTILS_TASK_LIST": true,
                 "DAXA_ENABLE_TESTS": true,
                 "DAXA_ENABLE_STATIC_ANALYSIS": false
             }
