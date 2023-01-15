@@ -507,14 +507,8 @@ _DAXA_REGISTER_IMAGE_TYPES_GATHER(2DArray, 3, 2, 3)
 #define u32vec4 daxa_u32vec4
 #define i64 daxa_i64
 #define i64vec1 daxa_i64vec1
-#define i64vec2 daxa_i64vec2
-#define i64vec3 daxa_i64vec3
-#define i64vec4 daxa_i64vec4
 #define u64 daxa_u64
 #define u64vec1 daxa_u64vec1
-#define u64vec2 daxa_u64vec2
-#define u64vec3 daxa_u64vec3
-#define u64vec4 daxa_u64vec4
 #endif
 
 DAXA_ENABLE_BUFFER_PTR(daxa_b32)
