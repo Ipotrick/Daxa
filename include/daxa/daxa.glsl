@@ -481,6 +481,9 @@ _DAXA_REGISTER_IMAGE_TYPES_GATHER(2DArray, 3, 2, 3)
 #endif
 #if DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES
 #define b32 daxa_b32
+#define f32 daxa_f32
+#define i32 daxa_i32
+#define u32 daxa_u32
 #define b32vec1 daxa_b32vec1
 #define b32vec2 daxa_b32vec2
 #define b32vec3 daxa_b32vec3
@@ -511,6 +514,55 @@ _DAXA_REGISTER_IMAGE_TYPES_GATHER(2DArray, 3, 2, 3)
 #define u32vec4 daxa_u32vec4
 #define i64 daxa_i64
 #define i64vec1 daxa_i64vec1
+#define i64vec2 daxa_i64vec2
+#define i64vec3 daxa_i64vec3
+#define i64vec4 daxa_i64vec4
 #define u64 daxa_u64
-#define u64vec1 daxa_u64
+#define u64vec1 daxa_u64vec1
+#define u64vec2 daxa_u64vec2
+#define u64vec3 daxa_u64vec3
+#define u64vec4 daxa_u64vec4
 #endif
+
+DAXA_ENABLE_BUFFER_PTR(daxa_b32)
+DAXA_ENABLE_BUFFER_PTR(daxa_f32)
+DAXA_ENABLE_BUFFER_PTR(daxa_i32)
+DAXA_ENABLE_BUFFER_PTR(daxa_u32)
+DAXA_ENABLE_BUFFER_PTR(daxa_b32vec1)
+DAXA_ENABLE_BUFFER_PTR(daxa_b32vec2)
+DAXA_ENABLE_BUFFER_PTR(daxa_b32vec3)
+DAXA_ENABLE_BUFFER_PTR(daxa_b32vec4)
+DAXA_ENABLE_BUFFER_PTR(daxa_f32)
+DAXA_ENABLE_BUFFER_PTR(daxa_f32vec1)
+DAXA_ENABLE_BUFFER_PTR(daxa_f32vec2)
+DAXA_ENABLE_BUFFER_PTR(daxa_f32mat2x2)
+DAXA_ENABLE_BUFFER_PTR(daxa_f32mat2x3)
+DAXA_ENABLE_BUFFER_PTR(daxa_f32mat2x4)
+DAXA_ENABLE_BUFFER_PTR(daxa_f32vec3)
+DAXA_ENABLE_BUFFER_PTR(daxa_f32mat3x2)
+DAXA_ENABLE_BUFFER_PTR(daxa_f32mat3x3)
+DAXA_ENABLE_BUFFER_PTR(daxa_f32mat3x4)
+DAXA_ENABLE_BUFFER_PTR(daxa_f32vec4)
+DAXA_ENABLE_BUFFER_PTR(daxa_f32mat4x2)
+DAXA_ENABLE_BUFFER_PTR(daxa_f32mat4x3)
+DAXA_ENABLE_BUFFER_PTR(daxa_f32mat4x4)
+DAXA_ENABLE_BUFFER_PTR(daxa_i32)
+DAXA_ENABLE_BUFFER_PTR(daxa_i32vec1)
+DAXA_ENABLE_BUFFER_PTR(daxa_i32vec2)
+DAXA_ENABLE_BUFFER_PTR(daxa_i32vec3)
+DAXA_ENABLE_BUFFER_PTR(daxa_i32vec4)
+DAXA_ENABLE_BUFFER_PTR(daxa_u32)
+DAXA_ENABLE_BUFFER_PTR(daxa_u32vec1)
+DAXA_ENABLE_BUFFER_PTR(daxa_u32vec2)
+DAXA_ENABLE_BUFFER_PTR(daxa_u32vec3)
+DAXA_ENABLE_BUFFER_PTR(daxa_u32vec4)
+DAXA_ENABLE_BUFFER_PTR(daxa_i64)
+DAXA_ENABLE_BUFFER_PTR(daxa_i64vec1)
+DAXA_ENABLE_BUFFER_PTR(daxa_i64vec2)
+DAXA_ENABLE_BUFFER_PTR(daxa_i64vec3)
+DAXA_ENABLE_BUFFER_PTR(daxa_i64vec4)
+DAXA_ENABLE_BUFFER_PTR(daxa_u64)
+DAXA_ENABLE_BUFFER_PTR(daxa_u64vec1)
+DAXA_ENABLE_BUFFER_PTR(daxa_u64vec2)
+DAXA_ENABLE_BUFFER_PTR(daxa_u64vec3)
+DAXA_ENABLE_BUFFER_PTR(daxa_u64vec4)
