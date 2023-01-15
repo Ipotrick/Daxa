@@ -20,10 +20,6 @@
 //
 
 #define daxa_b32 bool
-#define daxa_f32 float
-#define daxa_i32 int
-#define daxa_u32 uint
-
 #define daxa_b32vec1 daxa_b32
 #define daxa_b32vec2 bvec2
 #define daxa_b32vec3 bvec3
@@ -481,9 +477,6 @@ _DAXA_REGISTER_IMAGE_TYPES_GATHER(2DArray, 3, 2, 3)
 #endif
 #if DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES
 #define b32 daxa_b32
-#define f32 daxa_f32
-#define i32 daxa_i32
-#define u32 daxa_u32
 #define b32vec1 daxa_b32vec1
 #define b32vec2 daxa_b32vec2
 #define b32vec3 daxa_b32vec3
@@ -525,9 +518,6 @@ _DAXA_REGISTER_IMAGE_TYPES_GATHER(2DArray, 3, 2, 3)
 #endif
 
 DAXA_ENABLE_BUFFER_PTR(daxa_b32)
-DAXA_ENABLE_BUFFER_PTR(daxa_f32)
-DAXA_ENABLE_BUFFER_PTR(daxa_i32)
-DAXA_ENABLE_BUFFER_PTR(daxa_u32)
 DAXA_ENABLE_BUFFER_PTR(daxa_b32vec1)
 DAXA_ENABLE_BUFFER_PTR(daxa_b32vec2)
 DAXA_ENABLE_BUFFER_PTR(daxa_b32vec3)
@@ -565,4 +555,7 @@ DAXA_ENABLE_BUFFER_PTR(daxa_u64)
 DAXA_ENABLE_BUFFER_PTR(daxa_u64vec1)
 DAXA_ENABLE_BUFFER_PTR(daxa_u64vec2)
 DAXA_ENABLE_BUFFER_PTR(daxa_u64vec3)
-DAXA_ENABLE_BUFFER_PTR(daxa_u64vec4)
+
+DAXA_ENABLE_BUFFER_PTR(daxa_BufferId)
+DAXA_ENABLE_BUFFER_PTR(daxa_ImageViewId)
+DAXA_ENABLE_BUFFER_PTR(daxa_SamplerId)
