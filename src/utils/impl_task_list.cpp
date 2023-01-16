@@ -531,8 +531,10 @@ namespace daxa
             // If the previous access is none, the current access is the first access.
             // Therefore we do not need to insert any synchronization if the previous access is none.
             // This is buffer specific. Images have a layout that needs to be set from undefined to the current accesses layout.
+            // When the latest access  is a read that did not require a barrier before we also do not need a barrier now.
+            // So skip, if the latest access is read and there is no latest_access_read_barrier_index present. 
             bool const is_last_access_none = impl_task_buffer.latest_access == AccessConsts::NONE;
-            if (!is_last_access_none)
+            if (!is_last_access_none && !(std::holds_alternative<std::monostate>(impl_task_buffer.latest_access_read_barrier_index) && is_last_access_read))
             {
                 if (is_last_access_read && is_current_access_read)
                 {
@@ -545,10 +547,6 @@ namespace daxa
                     {
                         auto & last_read_barrier = impl.barriers[index1->index];
                         last_read_barrier.dst_access = last_read_barrier.dst_access | current_buffer_access;
-                    }
-                    else
-                    {
-                        DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
                     }
                 }
                 else
