@@ -727,7 +727,8 @@ namespace daxa
                         }
                         else
                         {
-                            DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
+                            // TODO(pahrens): THIS IS ACTUALLY REACHABLE WHEN THERE ARE READS FOLLOWING EACH OTHER WITH NO PRIOR BARRIER ENQUEUED FOR THIS RESOURCE!
+                            DAXA_DBG_ASSERT_TRUE_M(false, "NOT IMPLEMENTED, PING Ipotrick TO FIX IT!");
                         }
                     }
                     else
