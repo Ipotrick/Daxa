@@ -469,6 +469,26 @@ struct App : BaseApp<App>
         .push_constant_size = sizeof(DrawPush),
         .debug_name = APPNAME_PREFIX("raster_pipeline"),
     }).value();
+    std::shared_ptr<daxa::RasterPipeline> conservative_raster_pipeline = pipeline_manager.add_raster_pipeline({
+        .vertex_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_VERT"}}}},
+        .fragment_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_FRAG"}}}},
+        .color_attachments = {{.format = swapchain.get_format()}},
+        .depth_test = {
+            .depth_attachment_format = daxa::Format::D24_UNORM_S8_UINT,
+            .enable_depth_test = true,
+            .enable_depth_write = true,
+        },
+        .raster = {
+            .polygon_mode = daxa::PolygonMode::FILL,
+            .face_culling = daxa::FaceCullFlagBits::BACK_BIT,
+            .conservative_raster_info = daxa::ConservativeRasterInfo{
+                .mode = daxa::ConservativeRasterizationMode::OVERESTIMATE,
+                .size = 0.5f,
+            },
+        },
+        .push_constant_size = sizeof(DrawPush),
+        .debug_name = APPNAME_PREFIX("conservative_raster_pipeline"),
+    }).value();
     // clang-format on
 
     daxa::ImageId depth_image = device.create_image({
@@ -486,6 +506,7 @@ struct App : BaseApp<App>
         .rot = {0.75f * std::numbers::pi_v<f32>, -0.5f, 0.0f},
     };
     bool paused = true;
+    bool conservative = false;
 
     daxa::TaskList loop_task_list = record_loop_task_list();
 
@@ -496,15 +517,15 @@ struct App : BaseApp<App>
         device.destroy_image(depth_image);
     }
 
-    void ui_update() const
+    void ui_update()
     {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
         if (paused)
         {
             ImGui::Begin("Debug");
+            ImGui::Checkbox("Conservative", &conservative);
             ImGui::End();
-            ImGui::ShowDemoWindow();
         }
         ImGui::Render();
     }
@@ -574,11 +595,13 @@ struct App : BaseApp<App>
             size_y = swapchain.get_surface_extent().y;
             loop_task_list.remove_runtime_image(task_depth_image, depth_image);
             device.destroy_image(depth_image);
-            depth_image = device.create_image({.format = daxa::Format::D24_UNORM_S8_UINT,
-                                               .aspect = daxa::ImageAspectFlagBits::DEPTH | daxa::ImageAspectFlagBits::STENCIL,
-                                               .size = {size_x, size_y, 1},
-                                               .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT,
-                                               .debug_name = APPNAME_PREFIX("depth_image")});
+            depth_image = device.create_image({
+                .format = daxa::Format::D24_UNORM_S8_UINT,
+                .aspect = daxa::ImageAspectFlagBits::DEPTH | daxa::ImageAspectFlagBits::STENCIL,
+                .size = {size_x, size_y, 1},
+                .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT,
+                .debug_name = APPNAME_PREFIX("depth_image"),
+            });
             loop_task_list.add_runtime_image(task_depth_image, depth_image);
             base_on_update();
         }
@@ -672,7 +695,14 @@ struct App : BaseApp<App>
                     .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
                 });
                 auto mat = player.camera.get_vp();
-                cmd_list.set_pipeline(*raster_pipeline);
+                if (conservative)
+                {
+                    cmd_list.set_pipeline(*conservative_raster_pipeline);
+                }
+                else
+                {
+                    cmd_list.set_pipeline(*raster_pipeline);
+                }
                 for (auto & chunk : renderable_world.renderable_chunks)
                 {
                     if (!chunk.invalid)

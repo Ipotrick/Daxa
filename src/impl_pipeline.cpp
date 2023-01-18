@@ -81,7 +81,7 @@ namespace daxa
             .alphaToCoverageEnable = {},
             .alphaToOneEnable = {},
         };
-        VkPipelineRasterizationStateCreateInfo const vk_raster_state{
+        VkPipelineRasterizationStateCreateInfo vk_raster_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},
@@ -96,6 +96,31 @@ namespace daxa
             .depthBiasSlopeFactor = info.raster.depth_bias_slope_factor,
             .lineWidth = info.raster.line_width,
         };
+        // TODO(grundlett): Ask Patrick why this doesn't work
+        // auto vk_instance = this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance;
+        // PFN_vkGetPhysicalDeviceProperties2KHR vkGetPhysicalDeviceProperties2KHR =
+        //     reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2KHR>(vkGetInstanceProcAddr(vk_instance, "vkGetPhysicalDeviceProperties2KHR"));
+        // DAXA_DBG_ASSERT_TRUE_M(vkGetPhysicalDeviceProperties2KHR != nullptr, "Failed to load this extension function function");
+        // VkPhysicalDeviceProperties2KHR device_props2{};
+        // VkPhysicalDeviceConservativeRasterizationPropertiesEXT conservative_raster_props{};
+        // conservative_raster_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CONSERVATIVE_RASTERIZATION_PROPERTIES_EXT;
+        // device_props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
+        // device_props2.pNext = &conservative_raster_props;
+        // vkGetPhysicalDeviceProperties2KHR(this->impl_device.as<ImplDevice>()->vk_physical_device, &device_props2);
+        auto vk_conservative_raster_state = VkPipelineRasterizationConservativeStateCreateInfoEXT{
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_CONSERVATIVE_STATE_CREATE_INFO_EXT,
+            .pNext = nullptr,
+            .flags = {},
+            .conservativeRasterizationMode = VK_CONSERVATIVE_RASTERIZATION_MODE_OVERESTIMATE_EXT,
+            .extraPrimitiveOverestimationSize = 0.0f,
+        };
+        if (this->info.raster.conservative_raster_info.has_value())
+        {
+            auto const & conservative_raster_info = this->info.raster.conservative_raster_info.value();
+            vk_conservative_raster_state.conservativeRasterizationMode = static_cast<VkConservativeRasterizationModeEXT>(conservative_raster_info.mode);
+            vk_conservative_raster_state.extraPrimitiveOverestimationSize = conservative_raster_info.size;
+            vk_raster_state.pNext = &vk_conservative_raster_state;
+        }
         VkPipelineDepthStencilStateCreateInfo const vk_depth_stencil_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
             .pNext = nullptr,

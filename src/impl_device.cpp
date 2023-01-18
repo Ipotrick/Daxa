@@ -519,7 +519,8 @@ namespace daxa
         // extension_names.push_back(VK_EXT_MULTI_DRAW_EXTENSION_NAME);
 
         // TODO(grundlett): Ask Patrick about this.
-        // extension_names.push_back(VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME);
+        extension_names.push_back(VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME);
+        // extension_names.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
         VkDeviceCreateInfo const device_ci = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -1316,7 +1317,7 @@ namespace daxa
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{this->main_queue_zombies_mtx});
         u64 const main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
         DAXA_DBG_ASSERT_TRUE_M(gpu_shader_resource_table.buffer_slots.dereference_id(id).zombie == false,
-            "detected free after free - buffer already is a zombie");
+                               "detected free after free - buffer already is a zombie");
         gpu_shader_resource_table.buffer_slots.dereference_id(id).zombie = true;
         this->main_queue_buffer_zombies.push_front({main_queue_cpu_timeline_value, id});
     }
@@ -1326,7 +1327,7 @@ namespace daxa
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{this->main_queue_zombies_mtx});
         u64 const main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
         DAXA_DBG_ASSERT_TRUE_M(gpu_shader_resource_table.image_slots.dereference_id(id).zombie == false,
-            "detected free after free - image already is a zombie");
+                               "detected free after free - image already is a zombie");
         gpu_shader_resource_table.image_slots.dereference_id(id).zombie = true;
         this->main_queue_image_zombies.push_front({main_queue_cpu_timeline_value, id});
     }
@@ -1343,7 +1344,7 @@ namespace daxa
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{this->main_queue_zombies_mtx});
         u64 const main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
         DAXA_DBG_ASSERT_TRUE_M(gpu_shader_resource_table.sampler_slots.dereference_id(id).zombie == false,
-            "detected free after free - sampler already is a zombie");
+                               "detected free after free - sampler already is a zombie");
         gpu_shader_resource_table.sampler_slots.dereference_id(id).zombie = true;
         this->main_queue_sampler_zombies.push_front({main_queue_cpu_timeline_value, id});
     }

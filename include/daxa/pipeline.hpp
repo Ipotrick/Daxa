@@ -41,6 +41,19 @@ namespace daxa
         f32 max_depth_bounds = 1.0f;
     };
 
+    enum class ConservativeRasterizationMode
+    {
+        DISABLED = 0,
+        OVERESTIMATE = 1,
+        UNDERESTIMATE = 2,
+    };
+
+    struct ConservativeRasterInfo
+    {
+        ConservativeRasterizationMode mode = {};
+        float size = {};
+    };
+
     struct RasterizerInfo
     {
         PrimitiveTopology primitive_topology = PrimitiveTopology::TRIANGLE_LIST;
@@ -55,6 +68,7 @@ namespace daxa
         f32 depth_bias_clamp = 0.0f;
         f32 depth_bias_slope_factor = 0.0f;
         f32 line_width = 1.0f;
+        std::optional<ConservativeRasterInfo> conservative_raster_info = std::nullopt;
     };
 
     struct RenderAttachment
