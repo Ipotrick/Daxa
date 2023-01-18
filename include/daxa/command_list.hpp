@@ -220,7 +220,7 @@ namespace daxa
         void set_viewport(ViewportInfo const & info);
         void set_scissor(Rect2D const & info);
         void set_index_buffer(BufferId id, usize offset, usize index_type_byte_size = sizeof(u32));
-        
+
         void draw(DrawInfo const & info);
         void draw_indexed(DrawIndexedInfo const & info);
         void draw_indirect(DrawIndirectInfo const & info);
