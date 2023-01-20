@@ -181,7 +181,7 @@ namespace daxa
 
     struct CommandList : ManagedPtr
     {
-        CommandList();
+        CommandList() = default;
 
         void copy_buffer_to_buffer(BufferCopyInfo const & info);
         void copy_buffer_to_image(BufferImageCopyInfo const & info);

@@ -32,6 +32,8 @@ namespace daxa
 
     struct SplitBarrierState
     {
+        SplitBarrierState() = default;
+
         SplitBarrierState(SplitBarrierState && other) noexcept;
         auto operator=(SplitBarrierState && other) noexcept -> SplitBarrierState &;
         ~SplitBarrierState();
