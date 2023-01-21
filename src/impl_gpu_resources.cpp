@@ -29,7 +29,7 @@ namespace daxa
     }
 
     void GPUShaderResourceTable::initialize(usize max_buffers, usize max_images, usize max_samplers, usize /*max_timeline_query_pools*/,
-                                      VkDevice device, VkBuffer device_address_buffer)
+                                            VkDevice device, VkBuffer device_address_buffer)
     {
         buffer_slots.max_resources = max_buffers;
         image_slots.max_resources = max_images;
@@ -185,7 +185,6 @@ namespace daxa
             .offset = 0,
             .range = VK_WHOLE_SIZE,
         };
-        
 
         VkWriteDescriptorSet const write{
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -205,14 +204,14 @@ namespace daxa
 
     void GPUShaderResourceTable::cleanup(VkDevice device)
     {
-        auto print_remaining = [&](std::string prefix, auto& pages)
+        [[maybe_unused]] auto print_remaining = [&](std::string prefix, auto & pages)
         {
             std::string ret{prefix + "\nThis can happen due to not waiting for the gpu to finish executing, as daxa deferres destruction. List of survivors:\n"};
-            for (auto& page : pages)
+            for (auto & page : pages)
             {
                 if (page)
                 {
-                    for (auto& slot : *page)
+                    for (auto & slot : *page)
                     {
                         bool handle_invalid = {};
                         if constexpr (std::is_same_v<decltype(slot.first), ImplBufferSlot>)
