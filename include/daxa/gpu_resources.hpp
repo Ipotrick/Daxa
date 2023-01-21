@@ -1,6 +1,7 @@
 #pragma once
 
 #include <daxa/core.hpp>
+#include <bit>
 
 namespace daxa
 {
@@ -10,7 +11,17 @@ namespace daxa
         u32 version : 8;
 
         auto is_empty() const -> bool;
-        auto operator<=>(GPUResourceId const & other) const = default;
+
+        constexpr auto operator<=>(GPUResourceId const & other) const
+        {
+            return std::bit_cast<u32>(*this) <=> std::bit_cast<u32>(other);
+        }
+        constexpr bool operator==(GPUResourceId const & other) const = default;
+        constexpr bool operator!=(GPUResourceId const & other) const = default;
+        constexpr bool operator<(GPUResourceId const & other) const = default;
+        constexpr bool operator>(GPUResourceId const & other) const = default;
+        constexpr bool operator<=(GPUResourceId const & other) const = default;
+        constexpr bool operator>=(GPUResourceId const & other) const = default;
     };
 
     inline namespace types
