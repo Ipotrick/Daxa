@@ -188,7 +188,7 @@ namespace daxa
 
     struct CommandList : ManagedPtr
     {
-        CommandList();
+        CommandList() = default;
 
         void copy_buffer_to_buffer(BufferCopyInfo const & info);
         void copy_buffer_to_image(BufferImageCopyInfo const & info);
@@ -228,7 +228,7 @@ namespace daxa
         void set_scissor(Rect2D const & info);
         void set_depth_bias(DepthBiasInfo const & info);
         void set_index_buffer(BufferId id, usize offset, usize index_type_byte_size = sizeof(u32));
-        
+
         void draw(DrawInfo const & info);
         void draw_indexed(DrawIndexedInfo const & info);
         void draw_indirect(DrawIndirectInfo const & info);
