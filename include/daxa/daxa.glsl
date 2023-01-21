@@ -87,7 +87,9 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id) { return daxa_buffer_device
 #define daxa_get_image(IMAGE_TYPE, image_id) daxa_RWImageTable##IMAGE_TYPE[daxa_id_to_index(image_id)]
 #define daxa_get_texture(TEXTURE_TYPE, image_id) daxa_ImageTable##TEXTURE_TYPE[daxa_id_to_index(image_id)]
 layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform sampler daxa_SamplerTable[];
+layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform samplerShadow daxa_SamplerShadowTable[];
 #define daxa_get_sampler(sampler_id) daxa_SamplerTable[daxa_id_to_index(sampler_id)]
+#define daxa_get_sampler_shadow(sampler_id) daxa_SamplerShadowTable[daxa_id_to_index(sampler_id)]
 
 // Buffers and images have strongly typed handles:
 // The image types have overloads for the most important glsl access functions.
@@ -405,6 +407,26 @@ _DAXA_REGISTER_ATOMIC_IMAGE_TYPES_64BIT(2DMSArray, 3, 3)
             sample_or_lod);                                                                                                                                \
     }
 
+#define _DAXA_REGISTER_IMAGE_KIND_SHADOW(IMAGE_KIND, UV_DIMENSION, GLSL_FN_UV_DIMENSION, DERIVATIVE_DIMENSION, SCALAR_TYPE)                                                                                                        \
+    daxa_f32 textureShadow(daxa_Image##IMAGE_KIND##SCALAR_TYPE image, daxa_SamplerId sampler_id, daxa_f32vec##UV_DIMENSION uv, daxa_f32 compare)                                                                                   \
+    {                                                                                                                                                                                                                              \
+        return texture(                                                                                                                                                                                                            \
+            sampler##IMAGE_KIND##Shadow(                                                                                                                                                                                           \
+                daxa_get_texture(texture##IMAGE_KIND, image.id),                                                                                                                                                                   \
+                daxa_get_sampler_shadow(sampler_id)),                                                                                                                                                                              \
+            daxa_f32vec##GLSL_FN_UV_DIMENSION(uv, compare));                                                                                                                                                                       \
+    }                                                                                                                                                                                                                              \
+    daxa_f32 textureGradShadow(daxa_Image##IMAGE_KIND##SCALAR_TYPE image, daxa_SamplerId sampler_id, daxa_f32vec##UV_DIMENSION uv, daxa_f32 compare, daxa_f32vec##DERIVATIVE_DIMENSION ddx, daxa_f32vec##DERIVATIVE_DIMENSION ddy) \
+    {                                                                                                                                                                                                                              \
+        return textureGrad(                                                                                                                                                                                                        \
+            sampler##IMAGE_KIND##Shadow(                                                                                                                                                                                           \
+                daxa_get_texture(texture##IMAGE_KIND, image.id),                                                                                                                                                                   \
+                daxa_get_sampler_shadow(sampler_id)),                                                                                                                                                                              \
+            daxa_f32vec##GLSL_FN_UV_DIMENSION(uv, compare),                                                                                                                                                                        \
+            ddx,                                                                                                                                                                                                                   \
+            ddy);                                                                                                                                                                                                                  \
+    }
+
 #define _DAXA_REGISTER_IMAGE_TYPES(IMAGE_KIND, UV_DIMENSION, GRAD_DIMENSION, SIZE_DIMENSION)                                             \
     _DAXA_REGISTER_IMAGE_KIND(texture##IMAGE_KIND, sampler##IMAGE_KIND, IMAGE_KIND, UV_DIMENSION, GRAD_DIMENSION, SIZE_DIMENSION, f32)   \
     _DAXA_REGISTER_IMAGE_KIND(itexture##IMAGE_KIND, isampler##IMAGE_KIND, IMAGE_KIND, UV_DIMENSION, GRAD_DIMENSION, SIZE_DIMENSION, i32) \
@@ -438,6 +460,28 @@ _DAXA_REGISTER_IMAGE_TYPES_GATHER(2D, 2, 2, 2)
 _DAXA_REGISTER_IMAGE_TYPES_GATHER(Cube, 3, 3, 2)
 _DAXA_REGISTER_IMAGE_TYPES_GATHER(CubeArray, 4, 3, 3)
 _DAXA_REGISTER_IMAGE_TYPES_GATHER(2DArray, 3, 2, 3)
+
+_DAXA_REGISTER_IMAGE_KIND_SHADOW(2D, 2, 3, 2, f32)
+_DAXA_REGISTER_IMAGE_KIND_SHADOW(Cube, 3, 4, 3, f32)
+_DAXA_REGISTER_IMAGE_KIND_SHADOW(2DArray, 3, 4, 2, f32)
+daxa_f32 textureShadow(daxa_ImageCubeArrayf32 image, daxa_SamplerId sampler_id, daxa_f32vec4 uv, daxa_f32 compare)
+{
+    return texture(
+        samplerCubeArrayShadow(
+            daxa_get_texture(textureCubeArray, image.id),
+            daxa_get_sampler_shadow(sampler_id)),
+        uv,
+        compare);
+}
+daxa_f32 textureLodShadow(daxa_Image2Df32 image, daxa_SamplerId sampler_id, daxa_f32vec2 uv, daxa_f32 compare, daxa_f32 lod)
+{
+    return textureLod(
+        sampler2DShadow(
+            daxa_get_texture(texture2D, image.id),
+            daxa_get_sampler_shadow(sampler_id)),
+        daxa_f32vec3(uv, compare),
+        lod);
+}
 
 #endif
 

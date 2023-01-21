@@ -179,6 +179,13 @@ namespace daxa
         PipelineStageFlags stage_masks;
     };
 
+    struct DepthBiasInfo
+    {
+        f32 constant_factor = {};
+        f32 clamp = {};
+        f32 slope_factor = {};
+    };
+
     struct CommandList : ManagedPtr
     {
         CommandList();
@@ -219,6 +226,7 @@ namespace daxa
         void end_renderpass();
         void set_viewport(ViewportInfo const & info);
         void set_scissor(Rect2D const & info);
+        void set_depth_bias(DepthBiasInfo const & info);
         void set_index_buffer(BufferId id, usize offset, usize index_type_byte_size = sizeof(u32));
         
         void draw(DrawInfo const & info);
