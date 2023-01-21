@@ -564,6 +564,14 @@ namespace daxa
         vkCmdSetScissor(impl.vk_cmd_buffer, 0, 1, reinterpret_cast<VkRect2D const *>(&info));
     }
 
+    void CommandList::set_depth_bias(DepthBiasInfo const & info)
+    {
+        auto & impl = *as<ImplCommandList>();
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+        impl.flush_barriers();
+        vkCmdSetDepthBias(impl.vk_cmd_buffer, info.constant_factor, info.clamp, info.slope_factor);
+    }
+
     void CommandList::set_index_buffer(BufferId id, usize offset, usize index_type_byte_size)
     {
         auto & impl = *as<ImplCommandList>();
