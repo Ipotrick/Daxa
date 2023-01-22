@@ -27,22 +27,28 @@ namespace daxa
 
     auto TransferMemoryPool::allocate(u32 allocation_size) -> std::optional<TransferMemoryPool::Allocation>
     {
+        // Two allocations are possible:
+        // Tail allocation is when the allocation is placed directly at the end of all other allocations.
+        // Zero offset allocation is possible when there is not enough space left at the tail BUT there is enough space from 0 up to the start of the other allocations.
+        auto calc_tail_allocation_possible = [&](){
+            u32 const tail = (this->claimed_start + this->claimed_size) % this->info.capacity;
+            bool const wrapped = this->claimed_start + this->claimed_size > this->info.capacity;
+            u32 const end = wrapped ? this->claimed_start : this->info.capacity;
+            return tail + allocation_size <= end;
+        };
+        auto calc_zero_offset_allocation_possible = [&](){
+            return this->claimed_start + this->claimed_size <= this->info.capacity;
+        };
         // Firstly, test if there is enough continuous space left to allocate.
-        bool tail_allocation_possible =
-            (this->claimed_start + this->claimed_size + allocation_size) < this->info.capacity;
+        bool tail_allocation_possible = calc_tail_allocation_possible();
         // When there is no tail space left, it may be the case that we can place the allocation at offset 0.
         // Illustration: |XXX ## |; "X": new allocation; "#": used up space; " ": free space.
-        bool zero_offset_allocation_possible =
-            allocation_size < this->claimed_start &&
-            ((this->claimed_start + this->claimed_size) < this->info.capacity);
+        bool zero_offset_allocation_possible = calc_zero_offset_allocation_possible();
         if (!tail_allocation_possible && !zero_offset_allocation_possible)
         {
             this->reclaim_unused_memory();
-            tail_allocation_possible =
-                (this->claimed_start + this->claimed_size + allocation_size) < this->info.capacity;
-            zero_offset_allocation_possible =
-                allocation_size < this->claimed_start &&
-                ((this->claimed_start + this->claimed_size) < this->info.capacity);
+            tail_allocation_possible = calc_tail_allocation_possible();
+            zero_offset_allocation_possible = calc_zero_offset_allocation_possible();
             if (!tail_allocation_possible && !zero_offset_allocation_possible)
             {
                 return std::nullopt;
