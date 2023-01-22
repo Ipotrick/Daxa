@@ -87,6 +87,7 @@ namespace daxa
         while (!live_allocations.empty() && live_allocations.front().timeline_index <= current_gpu_timeline_value)
         {
             this->claimed_start = (this->claimed_start + live_allocations.front().size) % this->info.capacity;
+            this->claimed_size -= live_allocations.front().size;
             live_allocations.pop_front();
         }
     }
