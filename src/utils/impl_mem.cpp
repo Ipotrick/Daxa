@@ -91,6 +91,11 @@ namespace daxa
         }
     }
 
+    auto TransferMemoryPool::get_timeline_semaphore() -> TimelineSemaphore
+    {
+        return this->gpu_timeline;
+    }
+
     auto TransferMemoryPool::get_info() const -> TransferMemoryPoolInfo const &
     {
         return this->info;
