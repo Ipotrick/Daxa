@@ -5,7 +5,7 @@ using namespace daxa::types;
 
 #include <iostream>
 
-static inline constexpr usize ITERATION_COUNT = {100000};
+static inline constexpr usize ITERATION_COUNT = {10000};
 
 auto main() -> int
 {
@@ -28,7 +28,7 @@ auto main() -> int
     for (usize iteration = 0; iteration < ITERATION_COUNT; ++iteration)
     {
         gpu_timeline.wait_for_value(cpu_timeline - 1);
-        [[maybeunused]] auto alloc = tmem.allocate(37).value();
+        [[maybe_unused]] auto alloc = tmem.allocate(37).value();
         daxa::CommandList cmd = device.create_command_list({});
         cmd.complete();
         device.submit_commands({
