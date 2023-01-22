@@ -170,6 +170,7 @@ namespace daxa
         auto dynamic_state = std::array{
             VkDynamicState::VK_DYNAMIC_STATE_VIEWPORT,
             VkDynamicState::VK_DYNAMIC_STATE_SCISSOR,
+            VkDynamicState::VK_DYNAMIC_STATE_DEPTH_BIAS,
         };
         VkPipelineDynamicStateCreateInfo const vk_dynamic_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
