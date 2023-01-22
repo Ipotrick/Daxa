@@ -15,15 +15,13 @@ namespace daxa
               .size = this->info.capacity,
               .debug_name = this->info.debug_name + ": buffer",
           })},
-          buffer_host_address{this->info.device.get_host_address(this->buffer)},
-          buffer_device_address{this->info.device.get_device_address(this->buffer)}
+          buffer_device_address{this->info.device.get_device_address(this->buffer)},
+          buffer_host_address{this->info.device.get_host_address(this->buffer)}
     {
     }
 
     TransferMemoryPool::~TransferMemoryPool()
     {
-        this->reclaim_unused_memory();
-        DAXA_DBG_ASSERT_TRUE_M(this->claimed_size == 0, "Used Memory in transient memory pool size is not 0! Please make sure to signal the timeline semaphore before destroying the pool.");
         this->info.device.destroy_buffer(this->buffer);
     }
 
