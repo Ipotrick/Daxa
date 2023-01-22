@@ -53,8 +53,6 @@ namespace daxa
         };
 
         TransferMemoryPoolInfo info = {};
-
-      public:
         TimelineSemaphore gpu_timeline = {};
 
       private:
