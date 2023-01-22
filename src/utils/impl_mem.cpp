@@ -14,7 +14,9 @@ namespace daxa
               .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
               .size = this->info.capacity,
               .debug_name = this->info.debug_name + ": buffer",
-          })}
+          })},
+          buffer_host_address{this->info.device.get_host_address(this->buffer)},
+          buffer_device_address{this->info.device.get_device_address(this->buffer)}
     {
     }
 
@@ -69,7 +71,7 @@ namespace daxa
         });
         return Allocation{
             .device_address = this->buffer_device_address + allocation_offset,
-            .host_address = reinterpret_cast<void *>(this->buffer_host_address + allocation_offset),
+            .host_address = reinterpret_cast<void *>(reinterpret_cast<u8*>(this->buffer_host_address) + allocation_offset),
             .buffer_offset = allocation_offset,
             .size = allocation_size,
             .timeline_index = this->current_timeline_value,
