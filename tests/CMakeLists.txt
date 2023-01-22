@@ -71,6 +71,11 @@ DAXA_CREATE_TEST(
 )
 
 DAXA_CREATE_TEST(
+    FOLDER 2_daxa_api 8_mem
+    LIBS glfw
+)
+
+DAXA_CREATE_TEST(
     FOLDER 3_samples 0_rectangle_cutting
     LIBS glfw
 )
