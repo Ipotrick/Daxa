@@ -60,7 +60,7 @@ namespace daxa
         std::deque<TrackedAllocation> live_allocations = {};
         BufferId buffer = {};
         daxa::BufferDeviceAddress buffer_device_address = {};
-        u8 * buffer_host_address = {};
+        void * buffer_host_address = {};
         u32 claimed_start = {};
         u32 claimed_size = {};
     };
