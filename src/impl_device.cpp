@@ -1231,7 +1231,7 @@ namespace daxa
             .compareOp = static_cast<VkCompareOp>(sampler_info.compare_op),
             .minLod = sampler_info.min_lod,
             .maxLod = sampler_info.max_lod,
-            .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK,
+            .borderColor = static_cast<VkBorderColor>(sampler_info.border_color),
             .unnormalizedCoordinates = static_cast<VkBool32>(sampler_info.enable_unnormalized_coordinates),
         };
 
