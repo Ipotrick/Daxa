@@ -94,6 +94,7 @@ namespace daxa
         CompareOp compare_op = CompareOp::ALWAYS;
         f32 min_lod = 0.0f;
         f32 max_lod = 1.0f;
+        BorderColor border_color = BorderColor::FLOAT_TRANSPARENT_BLACK;
         bool enable_unnormalized_coordinates = false;
         std::string debug_name = {};
     };
