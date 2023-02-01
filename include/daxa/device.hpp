@@ -158,6 +158,8 @@ namespace daxa
     struct DeviceInfo
     {
         std::function<i32(DeviceProperties const &)> selector = default_device_score;
+        // TODO(grundlett): Remove in favor of a more general solution
+        bool enable_buffer_device_address_capture_replay = true;
         std::string debug_name = {};
     };
 
