@@ -418,7 +418,7 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
             .pNext = nullptr,
             .bufferDeviceAddress = VK_TRUE,
-            .bufferDeviceAddressCaptureReplay = VK_TRUE,
+            .bufferDeviceAddressCaptureReplay = this->info.enable_buffer_device_address_capture_replay,
             .bufferDeviceAddressMultiDevice = VK_FALSE,
         };
 
@@ -515,6 +515,7 @@ namespace daxa
             enabled_layers.push_back("VK_LAYER_KHRONOS_validation");
         }
         extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+        extension_names.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
         extension_names.push_back(VK_EXT_SHADER_IMAGE_ATOMIC_INT64_EXTENSION_NAME); // might be a problem, intel does not support it at all.
         // extension_names.push_back(VK_EXT_MULTI_DRAW_EXTENSION_NAME);
 
