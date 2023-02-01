@@ -86,20 +86,13 @@ function(msvc_inherit_from_vcvars)
             # if it is different, then we'll add it to the list
             list(APPEND CHANGED_VARS ${V})
             # and also we'll cache it as the value from set1.
+            if(V STREQUAL "Path")
+                string(REGEX REPLACE "\\\\" "/" V1 "${V1}")
+            endif()
             set(MSVC_ENV_${V} "${V1}" CACHE STRING "")
         endif()
     endforeach()
     set(MSVC_ENV_VAR_NAMES ${CHANGED_VARS} CACHE STRING "")
-    
-    # Set the environment variables usually set by Visual Studio developer shell that
-    # differ from the default environment. These are stored in the cache as MSVC_ENV_<var>,
-    # so if the vcvarsall changed PATH, then here we set ENV{PATH} to the cache variable
-    # '${MSVC_ENV_PATH}' which was found (and set) by the call to msvc_inherit_from_vcvars() above.
-    foreach(V ${MSVC_ENV_VAR_NAMES})
-        if(NOT ENV{${V}} STREQUAL "${MSVC_ENV_${V}}")
-            set(ENV{${V}} "${MSVC_ENV_${V}}")
-        endif()
-    endforeach()
 endfunction()
 
 if(NOT DEFINED MSVC_ENV_VAR_NAMES)
