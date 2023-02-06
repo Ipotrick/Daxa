@@ -25,11 +25,72 @@ namespace tests
         });
     }
 
+    template <usize SX, usize SY, usize SZ>
+    using ImageArray = std::array<std::array<std::array<std::array<f32, 4>, SX>, SY>, SZ>;
+
     void copy(App & app)
     {
         auto cmd_list = app.device.create_command_list({.debug_name = "copy command list"});
 
-        std::array<f32, 4> data = {0.0f, 1.0f, 2.0f, 3.0f};
+        constexpr u32 SIZE_X = 3;
+        constexpr u32 SIZE_Y = 3;
+        constexpr u32 SIZE_Z = 3;
+
+        auto get_printable_char_buffer = []<usize SX, usize SY, usize SZ>(ImageArray<SX, SY, SZ> const & in_data) -> std::vector<char>
+        {
+            std::vector<char> data;
+            constexpr auto pixel = std::to_array("\033[48;2;000;000;000m  ");
+            constexpr auto line_terminator = std::to_array("\033[0m ");
+            constexpr auto newline_terminator = std::to_array("\033[0m\n");
+            data.resize(SX * SY * SZ * (pixel.size() - 1) + SY * SZ * (line_terminator.size() - 1) + SZ * (newline_terminator.size() - 1) + 1);
+            usize output_index = 0;
+            for (usize zi = 0; zi < SZ; ++zi)
+            {
+                for (usize yi = 0; yi < SY; ++yi)
+                {
+                    for (usize xi = 0; xi < SX; ++xi)
+                    {
+                        u8 r = static_cast<u8>(in_data[zi][yi][xi][0] * 255.0f);
+                        u8 g = static_cast<u8>(in_data[zi][yi][xi][1] * 255.0f);
+                        u8 b = static_cast<u8>(in_data[zi][yi][xi][2] * 255.0f);
+                        auto next_pixel = pixel;
+                        next_pixel[7 + 0 * 4 + 0] = '0' + (r / 100);
+                        next_pixel[7 + 0 * 4 + 1] = '0' + (r % 100) / 10;
+                        next_pixel[7 + 0 * 4 + 2] = '0' + (r % 10);
+                        next_pixel[7 + 1 * 4 + 0] = '0' + (g / 100);
+                        next_pixel[7 + 1 * 4 + 1] = '0' + (g % 100) / 10;
+                        next_pixel[7 + 1 * 4 + 2] = '0' + (g % 10);
+                        next_pixel[7 + 2 * 4 + 0] = '0' + (b / 100);
+                        next_pixel[7 + 2 * 4 + 1] = '0' + (b % 100) / 10;
+                        next_pixel[7 + 2 * 4 + 2] = '0' + (b % 10);
+                        std::copy(next_pixel.begin(), next_pixel.end() - 1, data.data() + output_index);
+                        output_index += pixel.size() - 1;
+                    }
+                    std::copy(line_terminator.begin(), line_terminator.end() - 1, data.data() + output_index);
+                    output_index += line_terminator.size() - 1;
+                }
+                std::copy(newline_terminator.begin(), newline_terminator.end() - 1, data.data() + output_index);
+                output_index += newline_terminator.size() - 1;
+            }
+            data[data.size() - 1] = '\0';
+            return data;
+        };
+
+        auto data = ImageArray<SIZE_X, SIZE_Y, SIZE_Z>{};
+
+        for (usize zi = 0; zi < SIZE_Z; ++zi)
+        {
+            for (usize yi = 0; yi < SIZE_Y; ++yi)
+            {
+                for (usize xi = 0; xi < SIZE_X; ++xi)
+                {
+                    data[zi][yi][xi][0] = static_cast<f32>(xi) / static_cast<f32>(SIZE_X - 1);
+                    data[zi][yi][xi][1] = static_cast<f32>(yi) / static_cast<f32>(SIZE_Y - 1);
+                    data[zi][yi][xi][2] = static_cast<f32>(zi) / static_cast<f32>(SIZE_Z - 1);
+                    data[zi][yi][xi][3] = 1.0f;
+                }
+            }
+        }
 
         daxa::BufferId const staging_upload_buffer = app.device.create_buffer({
             .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
@@ -49,15 +110,17 @@ namespace tests
         });
 
         daxa::ImageId const image_1 = app.device.create_image({
+            .dimensions = 2 + static_cast<u32>(SIZE_Z > 1),
             .format = daxa::Format::R32G32B32A32_SFLOAT,
-            .size = {1, 1, 1},
+            .size = {SIZE_X, SIZE_Y, SIZE_Z},
             .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             .debug_name = "image_1",
         });
 
         daxa::ImageId const image_2 = app.device.create_image({
+            .dimensions = 2 + static_cast<u32>(SIZE_Z > 1),
             .format = daxa::Format::R32G32B32A32_SFLOAT,
-            .size = {1, 1, 1},
+            .size = {SIZE_X, SIZE_Y, SIZE_Z},
             .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             .debug_name = "image_2",
         });
@@ -67,9 +130,9 @@ namespace tests
             .debug_name = "timeline_query",
         });
 
-        auto * buffer_ptr = app.device.get_host_address_as<std::array<f32, 4>>(staging_upload_buffer);
+        auto & buffer_ptr = *app.device.get_host_address_as<ImageArray<SIZE_X, SIZE_Y, SIZE_Z>>(staging_upload_buffer);
 
-        *buffer_ptr = data;
+        buffer_ptr = data;
 
         cmd_list.reset_timestamps({
             .query_pool = timeline_query_pool,
@@ -111,7 +174,7 @@ namespace tests
             .buffer = device_local_buffer,
             .image = image_1,
             .image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-            .image_extent = {1, 1, 1},
+            .image_extent = {SIZE_X, SIZE_Y, SIZE_Z},
         });
 
         cmd_list.pipeline_barrier_image_transition({
@@ -132,7 +195,7 @@ namespace tests
             .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
             .dst_image = image_2,
             .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-            .extent = {1, 1, 1},
+            .extent = {SIZE_X, SIZE_Y, SIZE_Z},
         });
 
         cmd_list.pipeline_barrier_image_transition({
@@ -151,7 +214,7 @@ namespace tests
         cmd_list.copy_image_to_buffer({
             .image = image_2,
             .image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
-            .image_extent = {1, 1, 1},
+            .image_extent = {SIZE_X, SIZE_Y, SIZE_Z},
             .buffer = device_local_buffer,
         });
 
@@ -193,14 +256,32 @@ namespace tests
             std::cout << "gpu execution took " << static_cast<f64>(query_results[2] - query_results[0]) / 1000000.0 << " ms" << std::endl;
         }
 
-        std::array<f32, 4> readback_data = *app.device.get_host_address_as<std::array<f32, 4>>(staging_readback_buffer);
+        auto const & readback_data = *app.device.get_host_address_as<ImageArray<SIZE_X, SIZE_Y, SIZE_Z>>(staging_readback_buffer);
 
-        std::cout << "Original data: " << data[0] << ' ' << data[1] << ' ' << data[2] << ' ' << data[3] << std::endl;
-        std::cout << "Readback data: " << readback_data[0] << ' ' << readback_data[1] << ' ' << readback_data[2] << ' ' << readback_data[3] << std::endl;
-
-        for (usize i = 0; i < 4; ++i)
+        std::cout << "Original data: " << std::endl;
         {
-            DAXA_DBG_ASSERT_TRUE_M(data[i] == readback_data[i], "readback data differs from upload data");
+            auto printable_buffer = get_printable_char_buffer(data);
+            std::cout << printable_buffer.data();
+        }
+
+        std::cout << "Readback data: " << std::endl;
+        {
+            auto printable_buffer = get_printable_char_buffer(readback_data);
+            std::cout << printable_buffer.data();
+        }
+
+        for (usize zi = 0; zi < SIZE_Z; ++zi)
+        {
+            for (usize yi = 0; yi < SIZE_Y; ++yi)
+            {
+                for (usize xi = 0; xi < SIZE_X; ++xi)
+                {
+                    for (usize ci = 0; ci < 4; ++ci)
+                    {
+                        DAXA_DBG_ASSERT_TRUE_M(data[zi][yi][xi][ci] == readback_data[zi][yi][xi][ci], "readback data differs from upload data");
+                    }
+                }
+            }
         }
 
         app.device.destroy_buffer(staging_upload_buffer);
