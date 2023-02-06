@@ -84,8 +84,8 @@ namespace daxa
 
         VkBufferImageCopy const vk_buffer_image_copy{
             .bufferOffset = info.buffer_offset,
-            .bufferRowLength = info.image_extent.x * info.image_extent.z,
-            .bufferImageHeight = info.image_extent.y,
+            .bufferRowLength = 0u, // info.image_extent.x,
+            .bufferImageHeight = 0u, // info.image_extent.y,
             .imageSubresource = *reinterpret_cast<VkImageSubresourceLayers const *>(&info.image_slice),
             .imageOffset = *reinterpret_cast<VkOffset3D const *>(&info.image_offset),
             .imageExtent = *reinterpret_cast<VkExtent3D const *>(&info.image_extent),
@@ -108,8 +108,8 @@ namespace daxa
 
         VkBufferImageCopy const vk_buffer_image_copy{
             .bufferOffset = info.buffer_offset,
-            .bufferRowLength = info.image_extent.x * info.image_extent.y * info.image_extent.z,
-            .bufferImageHeight = 1u,
+            .bufferRowLength = 0u, // info.image_extent.x,
+            .bufferImageHeight = 0u, // info.image_extent.y,
             .imageSubresource = *reinterpret_cast<VkImageSubresourceLayers const *>(&info.image_slice),
             .imageOffset = *reinterpret_cast<VkOffset3D const *>(&info.image_offset),
             .imageExtent = *reinterpret_cast<VkExtent3D const *>(&info.image_extent),
