@@ -5,17 +5,6 @@ on:
   pull_request:
     branches: ["master"]
 jobs:
-  update-package:
-    name: Trigger Package Updates
-    runs-on: ubuntu-latest
-    steps:
-      - name: "Dispatch"
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.REGISTRY_TOKEN }}
-          repository: GabeRundlett/vcpkg-registry
-          event-type: update-all
-          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}"}'
 #   build-linux:
 #     name: Build Linux
 #     runs-on: ubuntu-latest
