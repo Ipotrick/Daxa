@@ -1,6 +1,6 @@
 {
   "name": "daxa",
-  "version": "1.0.0",
+  "version-string": "local",
   "description": "Daxa C++ Vulkan Abstraction",
   "homepage": "https://github.com/Ipotrick/Daxa",
   "dependencies": [
@@ -48,36 +48,14 @@
     },
     "utils-task-list": {
       "description": "The Task-List Daxa utility"
-    },
-    "tests": {
-      "description": "Build Tests",
-      "dependencies": [
-        {
-          "name": "glfw3",
-          "features": [
-            "xlib",
-            "wayland"
-          ]
-        },
-        "glfw3",
-        "glm",
-        "stb",
-        "cgltf",
-        {
-          "name": "imgui",
-          "features": [
-            "glfw-binding"
-          ]
-        }
-      ]
     }
   },
   "builtin-baseline": "739824a6d3179d85820eedc0637e81c0c68b874c",
   "vcpkg-configuration": {
     "overlay-ports": [
-      "./cmake/vcpkg-overlay-ports/dxc",
-      "./cmake/vcpkg-overlay-ports/fsr2",
-      "./cmake/vcpkg-overlay-ports/glfw3"
+      "../vcpkg-overlay-ports/dxc",
+      "../vcpkg-overlay-ports/fsr2",
+      "../vcpkg-overlay-ports/glfw3"
     ]
   }
 }
