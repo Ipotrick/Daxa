@@ -49,13 +49,5 @@
     "utils-task-list": {
       "description": "The Task-List Daxa utility"
     }
-  },
-  "builtin-baseline": "739824a6d3179d85820eedc0637e81c0c68b874c",
-  "vcpkg-configuration": {
-    "overlay-ports": [
-      "../vcpkg-overlay-ports/dxc",
-      "../vcpkg-overlay-ports/fsr2",
-      "../vcpkg-overlay-ports/glfw3"
-    ]
   }
 }
