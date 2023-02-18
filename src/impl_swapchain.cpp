@@ -279,7 +279,7 @@ namespace daxa
             .queueFamilyIndexCount = 1,
             .pQueueFamilyIndices = &this->impl_device.as<ImplDevice>()->main_queue_family_index,
             .preTransform = static_cast<VkSurfaceTransformFlagBitsKHR>(info.present_operation),
-            .compositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
+            .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
             .presentMode = static_cast<VkPresentModeKHR>(info.present_mode),
             .clipped = VK_TRUE,
             .oldSwapchain = old_swapchain,
