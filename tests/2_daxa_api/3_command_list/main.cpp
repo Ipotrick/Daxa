@@ -50,9 +50,9 @@ namespace tests
                 {
                     for (usize xi = 0; xi < SX; ++xi)
                     {
-                        u8 r = static_cast<u8>(in_data[zi][yi][xi][0] * 255.0f);
-                        u8 g = static_cast<u8>(in_data[zi][yi][xi][1] * 255.0f);
-                        u8 b = static_cast<u8>(in_data[zi][yi][xi][2] * 255.0f);
+                        u8 const r = static_cast<u8>(in_data[zi][yi][xi][0] * 255.0f);
+                        u8 const g = static_cast<u8>(in_data[zi][yi][xi][1] * 255.0f);
+                        u8 const b = static_cast<u8>(in_data[zi][yi][xi][2] * 255.0f);
                         auto next_pixel = pixel;
                         next_pixel[7 + 0 * 4 + 0] = '0' + (r / 100);
                         next_pixel[7 + 0 * 4 + 1] = '0' + (r % 100) / 10;
