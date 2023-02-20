@@ -29,7 +29,7 @@ namespace daxa
         DeviceInfo info = {};
         VkSampler vk_null_sampler = {};
         VkBuffer buffer_device_address_buffer = {};
-        u64* buffer_device_address_buffer_host_ptr = {};
+        u64 * buffer_device_address_buffer_host_ptr = {};
         VmaAllocation buffer_device_address_buffer_allocation = {};
 
         // Gpu resource table:

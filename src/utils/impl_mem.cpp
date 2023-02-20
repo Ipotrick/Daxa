@@ -1,11 +1,12 @@
 #if DAXA_BUILT_WITH_UTILS_MEM
 
 #include <daxa/utils/mem.hpp>
+#include <utility>
 
 namespace daxa
 {
-    TransferMemoryPool::TransferMemoryPool(TransferMemoryPoolInfo const & a_info)
-        : info{a_info},
+    TransferMemoryPool::TransferMemoryPool(TransferMemoryPoolInfo a_info)
+        : info{std::move(a_info)},
           gpu_timeline{this->info.device.create_timeline_semaphore({
               .initial_value = {},
               .debug_name = this->info.debug_name + ": timeline semaphore",
@@ -30,13 +31,15 @@ namespace daxa
         // Two allocations are possible:
         // Tail allocation is when the allocation is placed directly at the end of all other allocations.
         // Zero offset allocation is possible when there is not enough space left at the tail BUT there is enough space from 0 up to the start of the other allocations.
-        auto calc_tail_allocation_possible = [&](){
+        auto calc_tail_allocation_possible = [&]()
+        {
             u32 const tail = (this->claimed_start + this->claimed_size) % this->info.capacity;
             bool const wrapped = this->claimed_start + this->claimed_size > this->info.capacity;
             u32 const end = wrapped ? this->claimed_start : this->info.capacity;
             return tail + allocation_size <= end;
         };
-        auto calc_zero_offset_allocation_possible = [&](){
+        auto calc_zero_offset_allocation_possible = [&]()
+        {
             return this->claimed_start + this->claimed_size <= this->info.capacity;
         };
         // Firstly, test if there is enough continuous space left to allocate.
@@ -64,7 +67,7 @@ namespace daxa
         }
         else // Zero offset allocation.
         {
-            u32 left_tail_space = this->info.capacity - (this->claimed_start + this->claimed_size);
+            u32 const left_tail_space = this->info.capacity - (this->claimed_start + this->claimed_size);
             actual_allocation_size = allocation_size + left_tail_space;
             allocation_offset = 0;
         }
@@ -75,7 +78,7 @@ namespace daxa
         });
         return Allocation{
             .device_address = this->buffer_device_address + allocation_offset,
-            .host_address = reinterpret_cast<void *>(reinterpret_cast<u8*>(this->buffer_host_address) + allocation_offset),
+            .host_address = reinterpret_cast<void *>(reinterpret_cast<u8 *>(this->buffer_host_address) + allocation_offset),
             .buffer_offset = allocation_offset,
             .size = allocation_size,
             .timeline_index = this->current_timeline_value,
