@@ -116,8 +116,8 @@ static constexpr TBuiltInResource DAXA_DEFAULT_BUILTIN_RESOURCE = {
 #include <thread>
 #include <utility>
 
-static const std::regex PRAGMA_ONCE_REGEX = std::regex(R"reg(#\s*pragma\s*once\s*)reg");
-static const std::regex REPLACE_REGEX = std::regex(R"reg(\W)reg");
+static const std::regex PRAGMA_ONCE_REGEX = std::regex(R"regex(\s*#\s*pragma\s+once\s*)regex");
+static const std::regex REPLACE_REGEX = std::regex(R"regex(\W)regex");
 static void shader_preprocess(std::string & file_str, std::filesystem::path const & path)
 {
     std::smatch matches = {};
@@ -125,7 +125,11 @@ static void shader_preprocess(std::string & file_str, std::filesystem::path cons
     std::stringstream file_ss{file_str};
     std::stringstream result_ss = {};
     bool has_pragma_once = false;
-    auto abs_path_str = std::filesystem::absolute(path).string();
+    auto abs_path_str = path.string();
+    if (std::filesystem::exists(path))
+    {
+        abs_path_str = std::filesystem::absolute(path).string();
+    }
     while (std::getline(file_ss, line))
     {
         if (std::regex_match(line, matches, PRAGMA_ONCE_REGEX))
@@ -399,10 +403,10 @@ namespace daxa
         return impl.remove_raster_pipeline(pipeline);
     }
 
-    void PipelineManager::set_virtual_include_file(VirtualIncludeInfo const & virtual_info)
+    void PipelineManager::add_virtual_include_file(VirtualIncludeInfo const & virtual_info)
     {
         auto & impl = *reinterpret_cast<ImplPipelineManager *>(this->object);
-        impl.set_virtual_include_file(virtual_info);
+        impl.add_virtual_include_file(virtual_info);
     }
 
     auto PipelineManager::reload_all() -> Result<bool>
@@ -646,12 +650,14 @@ namespace daxa
         return reload;
     };
 
-    void ImplPipelineManager::set_virtual_include_file(VirtualIncludeInfo const & virtual_info)
+    void ImplPipelineManager::add_virtual_include_file(VirtualIncludeInfo const & virtual_info)
     {
         virtual_files[virtual_info.name] = VirtualFileState{
             .contents = virtual_info.contents,
             .timestamp = std::chrono::file_clock::now(),
         };
+        auto & virtual_file = virtual_files.at(virtual_info.name);
+        shader_preprocess(virtual_file.contents, virtual_info.name);
     }
 
     auto ImplPipelineManager::reload_all() -> Result<bool>
