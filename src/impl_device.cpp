@@ -418,7 +418,7 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
             .pNext = nullptr,
             .bufferDeviceAddress = VK_TRUE,
-            .bufferDeviceAddressCaptureReplay = this->info.enable_buffer_device_address_capture_replay,
+            .bufferDeviceAddressCaptureReplay = static_cast<VkBool32>(this->info.enable_buffer_device_address_capture_replay),
             .bufferDeviceAddressMultiDevice = VK_FALSE,
         };
 
