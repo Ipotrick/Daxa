@@ -7,16 +7,44 @@ using namespace daxa::types;
 
 struct App : BaseApp<App>
 {
+    bool my_toggle = true;
+    void update_virtual_shader()
+    {
+        if (my_toggle)
+        {
+            pipeline_manager.set_virtual_include_file({
+                .name = "custom file!!",
+                .contents = R"(
+                    #pragma once
+                    #define MY_TOGGLE 1
+                )",
+            });
+        }
+        else
+        {
+            pipeline_manager.set_virtual_include_file({
+                .name = "custom file!!",
+                .contents = R"(
+                    #pragma once
+                    #define MY_TOGGLE 0
+                )",
+            });
+        }
+    }
+
     // clang-format off
-    std::shared_ptr<daxa::ComputePipeline> compute_pipeline = pipeline_manager.add_compute_pipeline({
+    std::shared_ptr<daxa::ComputePipeline> compute_pipeline = [this]() {
+        update_virtual_shader();
+        return pipeline_manager.add_compute_pipeline({
 #if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
-        .shader_info = {.source = daxa::ShaderFile{"compute.glsl"}},
+            .shader_info = {.source = daxa::ShaderFile{"compute.glsl"}},
 #elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
-        .shader_info = {.source = daxa::ShaderFile{"compute.hlsl"}},
+            .shader_info = {.source = daxa::ShaderFile{"compute.hlsl"}},
 #endif
-        .push_constant_size = sizeof(ComputePush),
-        .debug_name = APPNAME_PREFIX("compute_pipeline"),
-    }).value();
+            .push_constant_size = sizeof(ComputePush),
+            .debug_name = APPNAME_PREFIX("compute_pipeline"),
+        }).value();
+    }();
     // clang-format on
 
     daxa::BufferId gpu_input_buffer = device.create_buffer(daxa::BufferInfo{
@@ -49,10 +77,16 @@ struct App : BaseApp<App>
         device.destroy_image(render_image);
     }
 
-    static void ui_update()
+    void ui_update()
     {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+        ImGui::Begin("Settings");
+        if (ImGui::Checkbox("MY_TOGGLE", &my_toggle))
+        {
+            update_virtual_shader();
+        }
+        ImGui::End();
         ImGui::Render();
     }
     void on_update()
