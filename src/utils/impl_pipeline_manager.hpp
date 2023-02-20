@@ -29,6 +29,14 @@ namespace daxa
 
     using ShaderFileTimeSet = std::map<std::filesystem::path, std::chrono::file_clock::time_point>;
 
+    struct VirtualFileState
+    {
+        std::string contents;
+        std::chrono::file_clock::time_point timestamp;
+    };
+
+    using VirtualFileSet = std::map<std::string, VirtualFileState>;
+
     struct ImplPipelineManager final : ManagedSharedState
     {
         enum class ShaderStage
@@ -42,6 +50,8 @@ namespace daxa
 
         std::vector<std::filesystem::path> current_seen_shader_files = {};
         ShaderFileTimeSet * current_observed_hotload_files = nullptr;
+
+        VirtualFileSet virtual_files = {};
 
         template <typename PipeT, typename InfoT>
         struct PipelineState
@@ -88,13 +98,14 @@ namespace daxa
         auto add_raster_pipeline(RasterPipelineCompileInfo const & a_info) -> Result<std::shared_ptr<RasterPipeline>>;
         void remove_compute_pipeline(std::shared_ptr<ComputePipeline> const & pipeline);
         void remove_raster_pipeline(std::shared_ptr<RasterPipeline> const & pipeline);
+        void set_virtual_include_file(VirtualIncludeInfo const & virtual_info);
         auto reload_all() -> Result<bool>;
 
         auto full_path_to_file(std::filesystem::path const & path) -> Result<std::filesystem::path>;
         auto load_shader_source_from_file(std::filesystem::path const & path) -> Result<ShaderCode>;
 
-        auto get_spirv(ShaderCompileInfo const & shader_info, std::string const &debug_name_opt, ShaderStage shader_stage) -> Result<std::vector<u32>>;
-        auto get_spirv_glslang(ShaderCompileInfo const & shader_info, std::string const &debug_name_opt, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>;
+        auto get_spirv(ShaderCompileInfo const & shader_info, std::string const & debug_name_opt, ShaderStage shader_stage) -> Result<std::vector<u32>>;
+        auto get_spirv_glslang(ShaderCompileInfo const & shader_info, std::string const & debug_name_opt, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>;
         auto get_spirv_dxc(ShaderCompileInfo const & shader_info, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>;
     };
 } // namespace daxa

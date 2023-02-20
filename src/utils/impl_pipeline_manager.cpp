@@ -157,11 +157,23 @@ namespace daxa
       public:
         constexpr static inline size_t DELETE_SOURCE_NAME = 0x1;
         constexpr static inline size_t DELETE_CONTENT = 0x2;
+        constexpr static inline usize MAX_INCLUSION_DEPTH = 100;
 
         ImplPipelineManager * impl_pipeline_manager = nullptr;
 
-        static auto process_include(daxa::Result<daxa::ShaderCode> const & shader_code_result, std::filesystem::path const & full_path) -> IncludeResult *
+        [[nodiscard]] auto process_include(daxa::Result<daxa::ShaderCode> const & shader_code_result, std::filesystem::path const & full_path) const -> IncludeResult *
         {
+            auto search_pred = [&](std::filesystem::path const & p)
+            { return p == full_path; };
+            if (std::find_if(
+                    impl_pipeline_manager->current_seen_shader_files.begin(),
+                    impl_pipeline_manager->current_seen_shader_files.end(),
+                    search_pred) != impl_pipeline_manager->current_seen_shader_files.end())
+            {
+                return nullptr;
+            }
+            impl_pipeline_manager->current_observed_hotload_files->insert({full_path, std::chrono::file_clock::now()});
+
             std::string headerName = {};
             char const * headerData = nullptr;
             size_t headerLength = 0;
@@ -196,10 +208,14 @@ namespace daxa
         auto includeLocal(
             char const * header_name, char const * includer_name, size_t inclusion_depth) -> IncludeResult * override
         {
-            constexpr usize MAX_INCLUSION_DEPTH = 100;
             if (inclusion_depth > MAX_INCLUSION_DEPTH)
             {
                 return nullptr;
+            }
+            auto header_name_str = std::string{header_name};
+            if (impl_pipeline_manager->virtual_files.contains(header_name_str))
+            {
+                return process_include(Result{ShaderCode{impl_pipeline_manager->virtual_files.at(header_name_str).contents}}, header_name_str);
             }
             auto result = impl_pipeline_manager->full_path_to_file(includer_name);
             if (result.is_err())
@@ -207,30 +223,28 @@ namespace daxa
                 return nullptr;
             }
             auto full_path = result.value().parent_path() / header_name;
-            impl_pipeline_manager->current_observed_hotload_files->insert({full_path, std::chrono::file_clock::now()});
             auto shader_code_result = impl_pipeline_manager->load_shader_source_from_file(full_path);
             return process_include(shader_code_result, full_path);
         }
 
         auto includeSystem(
-            char const * header_name, char const * /*includer_name*/, size_t /*inclusion_depth*/) -> IncludeResult * override
+            char const * header_name, char const * /*includer_name*/, size_t inclusion_depth) -> IncludeResult * override
         {
+            if (inclusion_depth > MAX_INCLUSION_DEPTH)
+            {
+                return nullptr;
+            }
+            auto header_name_str = std::string{header_name};
+            if (impl_pipeline_manager->virtual_files.contains(header_name_str))
+            {
+                return process_include(Result{ShaderCode{impl_pipeline_manager->virtual_files.at(header_name_str).contents}}, header_name_str);
+            }
             auto result = impl_pipeline_manager->full_path_to_file(header_name);
             if (result.is_err())
             {
                 return nullptr;
             }
             auto full_path = result.value();
-            auto search_pred = [&](std::filesystem::path const & p)
-            { return p == full_path; };
-            if (std::find_if(
-                    impl_pipeline_manager->current_seen_shader_files.begin(),
-                    impl_pipeline_manager->current_seen_shader_files.end(),
-                    search_pred) != impl_pipeline_manager->current_seen_shader_files.end())
-            {
-                return nullptr;
-            }
-            impl_pipeline_manager->current_observed_hotload_files->insert({full_path, std::chrono::file_clock::now()});
             auto shader_code_result = impl_pipeline_manager->load_shader_source_from_file(full_path);
             return process_include(shader_code_result, full_path);
         }
@@ -257,9 +271,33 @@ namespace daxa
         virtual ~DxcCustomIncluder() = default;
         auto LoadSource(LPCWSTR filename, IDxcBlob ** include_source) -> HRESULT override
         {
+            ComPtr<IDxcBlobEncoding> dxc_blob_encoding = {};
             if (filename[0] == '.')
             {
                 filename += 2;
+            }
+            auto header_name_str = std::filesystem::path{filename}.string();
+            if (impl_pipeline_manager->virtual_files.contains(header_name_str))
+            {
+                auto search_pred = [&](std::filesystem::path const & p)
+                { return p == header_name_str; };
+                if (std::find_if(impl_pipeline_manager->current_seen_shader_files.begin(),
+                                 impl_pipeline_manager->current_seen_shader_files.end(), search_pred) != impl_pipeline_manager->current_seen_shader_files.end())
+                {
+                    // Return empty string blob if this file has been included before
+                    static char const * const null_str = " ";
+                    impl_pipeline_manager->dxc_backend.dxc_utils->CreateBlob(null_str, static_cast<u32>(strlen(null_str)), CP_UTF8, &dxc_blob_encoding);
+                    *include_source = dxc_blob_encoding.Detach();
+                    return S_OK;
+                }
+                else
+                {
+                    impl_pipeline_manager->current_observed_hotload_files->insert({header_name_str, std::chrono::file_clock::now()});
+                    auto & str = impl_pipeline_manager->virtual_files.at(header_name_str).contents;
+                    impl_pipeline_manager->dxc_backend.dxc_utils->CreateBlob(str.c_str(), static_cast<u32>(str.size()), CP_UTF8, &dxc_blob_encoding);
+                    *include_source = dxc_blob_encoding.Detach();
+                    return S_OK;
+                }
             }
             auto result = impl_pipeline_manager->full_path_to_file(filename);
             if (result.is_err())
@@ -270,7 +308,6 @@ namespace daxa
             auto full_path = result.value();
             auto search_pred = [&](std::filesystem::path const & p)
             { return p == full_path; };
-            ComPtr<IDxcBlobEncoding> dxc_blob_encoding = {};
             if (std::find_if(impl_pipeline_manager->current_seen_shader_files.begin(),
                              impl_pipeline_manager->current_seen_shader_files.end(), search_pred) != impl_pipeline_manager->current_seen_shader_files.end())
             {
@@ -360,6 +397,12 @@ namespace daxa
     {
         auto & impl = *reinterpret_cast<ImplPipelineManager *>(this->object);
         return impl.remove_raster_pipeline(pipeline);
+    }
+
+    void PipelineManager::set_virtual_include_file(VirtualIncludeInfo const & virtual_info)
+    {
+        auto & impl = *reinterpret_cast<ImplPipelineManager *>(this->object);
+        impl.set_virtual_include_file(virtual_info);
     }
 
     auto PipelineManager::reload_all() -> Result<bool>
@@ -552,7 +595,7 @@ namespace daxa
         this->raster_pipelines.erase(pipeline_iter);
     }
 
-    static auto check_if_sources_changed(std::chrono::file_clock::time_point & last_hotload_time, ShaderFileTimeSet & observed_hotload_files) -> bool
+    static auto check_if_sources_changed(std::chrono::file_clock::time_point & last_hotload_time, ShaderFileTimeSet & observed_hotload_files, VirtualFileSet & virtual_files) -> bool
     {
         using namespace std::chrono_literals;
         static constexpr auto HOTRELOAD_MIN_TIME = 250ms;
@@ -567,8 +610,16 @@ namespace daxa
         bool reload = false;
         for (auto & [path, recorded_write_time] : observed_hotload_files)
         {
-            auto ifs = std::ifstream(path);
-            if (ifs.good())
+            auto path_str = path.string();
+            if (virtual_files.contains(path_str))
+            {
+                auto latest_write_time = virtual_files[path_str].timestamp;
+                if (latest_write_time > recorded_write_time)
+                {
+                    reload = true;
+                }
+            }
+            else if (std::ifstream(path).good())
             {
                 auto latest_write_time = std::filesystem::last_write_time(path);
                 if (latest_write_time > recorded_write_time)
@@ -581,8 +632,12 @@ namespace daxa
         {
             for (auto & pair : observed_hotload_files)
             {
-                auto ifs = std::ifstream(pair.first);
-                if (ifs.good())
+                auto path_str = pair.first.string();
+                if (virtual_files.contains(path_str))
+                {
+                    pair.second = virtual_files[path_str].timestamp;
+                }
+                else if (std::ifstream(pair.first).good())
                 {
                     pair.second = std::filesystem::last_write_time(pair.first);
                 }
@@ -591,13 +646,21 @@ namespace daxa
         return reload;
     };
 
+    void ImplPipelineManager::set_virtual_include_file(VirtualIncludeInfo const & virtual_info)
+    {
+        virtual_files[virtual_info.name] = VirtualFileState{
+            .contents = virtual_info.contents,
+            .timestamp = std::chrono::file_clock::now(),
+        };
+    }
+
     auto ImplPipelineManager::reload_all() -> Result<bool>
     {
         bool reloaded = false;
 
         for (auto & [pipeline, compile_info, last_hotload_time, observed_hotload_files] : this->compute_pipelines)
         {
-            if (check_if_sources_changed(last_hotload_time, observed_hotload_files))
+            if (check_if_sources_changed(last_hotload_time, observed_hotload_files, virtual_files))
             {
                 auto new_pipeline = create_compute_pipeline(compile_info);
                 if (new_pipeline.is_ok())
@@ -614,7 +677,7 @@ namespace daxa
 
         for (auto & [pipeline, compile_info, last_hotload_time, observed_hotload_files] : this->raster_pipelines)
         {
-            if (check_if_sources_changed(last_hotload_time, observed_hotload_files))
+            if (check_if_sources_changed(last_hotload_time, observed_hotload_files, virtual_files))
             {
                 auto new_pipeline = create_raster_pipeline(compile_info);
                 if (new_pipeline.is_ok())
@@ -632,7 +695,7 @@ namespace daxa
         return Result<bool>(reloaded);
     }
 
-    auto ImplPipelineManager::get_spirv(ShaderCompileInfo const & shader_info, std::string const &debug_name_opt, ShaderStage shader_stage) -> Result<std::vector<u32>>
+    auto ImplPipelineManager::get_spirv(ShaderCompileInfo const & shader_info, std::string const & debug_name_opt, ShaderStage shader_stage) -> Result<std::vector<u32>>
     {
         current_shader_info = &shader_info;
         std::vector<u32> spirv = {};
@@ -789,7 +852,7 @@ namespace daxa
         return Result<ShaderCode>(err);
     }
 
-    auto ImplPipelineManager::get_spirv_glslang(ShaderCompileInfo const & shader_info, std::string const &debug_name_opt, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
+    auto ImplPipelineManager::get_spirv_glslang(ShaderCompileInfo const & shader_info, std::string const & debug_name_opt, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
     {
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
         auto translate_shader_stage = [](ShaderStage stage) -> EShLanguage
@@ -865,7 +928,7 @@ namespace daxa
         auto const * source_cstr = source_str.c_str();
         auto const * name_cstr = debug_name.c_str();
 
-        bool use_debug_info = shader_info.compile_options.enable_debug_info.value_or(false);
+        bool const use_debug_info = shader_info.compile_options.enable_debug_info.value_or(false);
 
         shader.setStringsWithLengthsAndNames(&source_cstr, nullptr, &name_cstr, 1);
         shader.setEntryPoint("main");
