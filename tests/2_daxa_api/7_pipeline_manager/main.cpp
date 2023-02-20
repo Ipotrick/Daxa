@@ -8,40 +8,106 @@ using namespace daxa::types;
 #define APPNAME "Daxa API Sample Pipeline Compiler"
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
 
+namespace tests
+{
+    auto simplest(daxa::Device & device) -> i32
+    {
+        daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
+            .device = device,
+            .shader_compile_options = {
+                .root_paths = {
+                    DAXA_SAMPLE_PATH "/shaders",
+                    "tests/0_common/shaders",
+                    "include",
+                },
+                .language = daxa::ShaderLanguage::GLSL,
+            },
+            .debug_name = APPNAME_PREFIX("pipeline_manager"),
+        });
+
+        auto compilation_result = pipeline_manager.add_compute_pipeline({
+            .shader_info = {.source = daxa::ShaderFile{"main.glsl"}},
+            .debug_name = APPNAME_PREFIX("compute_pipeline"),
+        });
+
+        if (compilation_result.is_err())
+        {
+            std::cerr << "Failed to compile the compute_pipeline!\n";
+            std::cerr << compilation_result.message() << std::endl;
+            return -1;
+        }
+
+        std::shared_ptr<daxa::ComputePipeline> const compute_pipeline = compilation_result.value();
+
+        return 0;
+    }
+
+    auto virtual_includes(daxa::Device & device) -> i32
+    {
+        daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
+            .device = device,
+            .shader_compile_options = {
+                .language = daxa::ShaderLanguage::GLSL,
+            },
+            .debug_name = APPNAME_PREFIX("pipeline_manager"),
+        });
+
+        pipeline_manager.add_virtual_include_file({
+            .name = "my_include",
+            .contents = R"glsl(
+                #pragma once
+                #define MY_INCLUDE_DEFINE
+            )glsl",
+        });
+
+        auto compilation_result = pipeline_manager.add_compute_pipeline({
+            .shader_info = {.source = daxa::ShaderCode{R"glsl(
+                #include <my_include>
+
+                #ifndef MY_INCLUDE_DEFINE
+                #error This should NOT happen
+                #endif
+
+                layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+                void main() {
+                }
+            )glsl"}},
+            .debug_name = APPNAME_PREFIX("compute_pipeline"),
+        });
+
+        if (compilation_result.is_err())
+        {
+            std::cerr << "Failed to compile the compute_pipeline!\n";
+            std::cerr << compilation_result.message() << std::endl;
+            return -1;
+        }
+
+        std::shared_ptr<daxa::ComputePipeline> const compute_pipeline = compilation_result.value();
+
+        return 0;
+    }
+} // namespace tests
+
 auto main() -> int
 {
     daxa::Context daxa_ctx = daxa::create_context({
         .enable_validation = false,
     });
-    daxa::Device const device = daxa_ctx.create_device({
+    daxa::Device device = daxa_ctx.create_device({
         .debug_name = APPNAME_PREFIX("device"),
     });
-    daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
-        .device = device,
-        .shader_compile_options = {
-            .root_paths = {
-                DAXA_SAMPLE_PATH "/shaders",
-                "tests/0_common/shaders",
-                "include",
-            },
-            .language = daxa::ShaderLanguage::GLSL,
-        },
-        .debug_name = APPNAME_PREFIX("pipeline_manager"),
-    });
 
-    auto compilation_result = pipeline_manager.add_compute_pipeline({
-        .shader_info = {.source = daxa::ShaderFile{"main.glsl"}},
-        .debug_name = APPNAME_PREFIX("compute_pipeline"),
-    });
+    i32 ret = 0;
 
-    if (compilation_result.is_err())
+    if ((ret = tests::simplest(device)))
     {
-        std::cerr << "Failed to compile the compute_pipeline!\n";
-        std::cerr << compilation_result.message() << std::endl;
-        return -1;
+        return ret;
+    }
+    if ((ret = tests::virtual_includes(device)))
+    {
+        return ret;
     }
 
     std::cout << "Success!" << std::endl;
-
-    std::shared_ptr<daxa::ComputePipeline> const compute_pipeline = compilation_result.value();
+    return ret;
 }

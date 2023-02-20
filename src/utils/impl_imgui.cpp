@@ -488,7 +488,10 @@ namespace daxa
         })}
     // clang-format on
     {
-        set_imgui_style();
+        if (this->info.use_custom_config)
+        {
+            set_imgui_style();
+        }
         recreate_vbuffer(4096);
         recreate_ibuffer(4096);
         sampler = this->info.device.create_sampler({.debug_name = "dear ImGui sampler"});
