@@ -2,6 +2,8 @@
 #include <daxa/daxa.hlsl>
 #include <shared.inl>
 
+#include "custom file!!"
+
 [[vk::push_constant]] const ComputePush p;
 
 #define CENTER f32vec2(-0.694008, -0.324998)
@@ -40,6 +42,9 @@ f32vec3 mandelbrot_colored(f32vec2 pixel_p)
         f32 sl = l - log2(log2(dot(z, z))) + 4.0;
         sl = pow(sl * 0.01, 1.0);
         col = hsv2rgb(f32vec3(sl, 1, 1));
+#if MY_TOGGLE
+        col = 1 - col;
+#endif
     }
     return col;
 }

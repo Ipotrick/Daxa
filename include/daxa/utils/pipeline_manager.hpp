@@ -82,6 +82,12 @@ namespace daxa
         std::string debug_name = {};
     };
 
+    struct VirtualIncludeInfo
+    {
+        std::string name = {};
+        std::string contents = {};
+    };
+
     struct PipelineManager : ManagedPtr
     {
         PipelineManager() = default;
@@ -92,6 +98,7 @@ namespace daxa
         auto add_raster_pipeline(RasterPipelineCompileInfo const & info) -> Result<std::shared_ptr<RasterPipeline>>;
         void remove_compute_pipeline(std::shared_ptr<ComputePipeline> const & pipeline);
         void remove_raster_pipeline(std::shared_ptr<RasterPipeline> const & pipeline);
+        void set_virtual_include_file(VirtualIncludeInfo const & info);
         auto reload_all() -> Result<bool>;
     };
 } // namespace daxa
