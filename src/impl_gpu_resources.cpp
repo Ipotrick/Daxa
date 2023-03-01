@@ -28,7 +28,7 @@ namespace daxa
         return ret;
     }
 
-    void GPUShaderResourceTable::initialize(usize max_buffers, usize max_images, usize max_samplers, usize /*max_timeline_query_pools*/,
+    void GPUShaderResourceTable::initialize(usize max_buffers, usize max_images, usize max_samplers,
                                             VkDevice device, VkBuffer device_address_buffer)
     {
         buffer_slots.max_resources = max_buffers;
