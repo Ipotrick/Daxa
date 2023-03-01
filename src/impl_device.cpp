@@ -541,12 +541,6 @@ namespace daxa
 
         this->vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetDeviceProcAddr(this->vk_device, "vkSetDebugUtilsObjectNameEXT"));
 
-        u32 const max_buffers = std::min(this->vk_info.limits.max_descriptor_set_storage_buffers, 100'000u);
-        u32 const max_images = std::min(std::min(this->vk_info.limits.max_descriptor_set_sampled_images, this->vk_info.limits.max_descriptor_set_storage_images), 10'000u);
-        u32 const max_samplers = std::min(this->vk_info.limits.max_descriptor_set_samplers, 1'000u);
-        /* If timeline compute and graphics queries are not supported set max_limit to 0 */
-        u32 const max_timeline_query_pools = std::min(this->vk_info.limits.timestamp_compute_and_graphics, 1'000u);
-
         vkGetDeviceQueue(this->vk_device, this->main_queue_family_index, 0, &this->main_queue_vk_queue);
 
         VkSemaphoreTypeCreateInfo timeline_ci{
@@ -563,6 +557,29 @@ namespace daxa
         };
 
         vkCreateSemaphore(this->vk_device, &vk_semaphore_create_info, nullptr, &this->vk_main_queue_gpu_timeline_semaphore);
+
+        DAXA_DBG_ASSERT_TRUE_M(
+            this->info.max_allowed_buffers <= this->vk_info.limits.max_descriptor_set_storage_buffers,
+            std::string("device does not support ") +
+                std::to_string(this->info.max_allowed_buffers) +
+                " buffers, the device supports up to " +
+                std::to_string(this->vk_info.limits.max_descriptor_set_storage_buffers) +
+                "buffers.");
+        auto const max_device_supported_images_in_set = std::min(this->vk_info.limits.max_descriptor_set_sampled_images, this->vk_info.limits.max_descriptor_set_storage_images);
+        DAXA_DBG_ASSERT_TRUE_M(
+            this->info.max_allowed_images <= max_device_supported_images_in_set,
+            std::string("device does not support ") +
+                std::to_string(this->info.max_allowed_images) +
+                " images, the device supports up to " +
+                std::to_string(max_device_supported_images_in_set) +
+                "images.");
+        DAXA_DBG_ASSERT_TRUE_M(
+            this->info.max_allowed_samplers <= this->vk_info.limits.max_descriptor_set_samplers,
+            std::string("device does not support ") +
+                std::to_string(this->info.max_allowed_samplers) +
+                " samplers, the device supports up to " +
+                std::to_string(this->vk_info.limits.max_descriptor_set_samplers) +
+                "samplers.");
 
         VmaVulkanFunctions const vma_vulkan_functions
         {
@@ -652,7 +669,7 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},
-            .size = max_buffers * sizeof(u64),
+            .size = this->info.max_allowed_buffers * sizeof(u64),
             .usage = usage_flags,
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
             .queueFamilyIndexCount = 1,
@@ -720,10 +737,9 @@ namespace daxa
         }
 
         gpu_shader_resource_table.initialize(
-            max_buffers,
-            max_images,
-            max_samplers,
-            max_timeline_query_pools,
+            this->info.max_allowed_buffers,
+            this->info.max_allowed_images,
+            this->info.max_allowed_samplers,
             vk_device,
             buffer_device_address_buffer);
     }
