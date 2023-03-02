@@ -6,8 +6,19 @@
 #define DAXA_SAMPLED_IMAGE_BINDING 2
 #define DAXA_SAMPLER_BINDING 3
 #define DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING 4
+#define DAXA_SHADER_DEBUG_BUFFER_BINDING 5
 #define DAXA_ID_INDEX_MASK (0x00FFFFFF)
+#define DAXA_ID_VERSION_SHIFT (24)
+#define DAXA_DEBUG_MESSAGE_MAX_COUNT 1024
+#define DAXA_DEBUG_MESSAGE_SIZE 4
+#define DAXA_DEBUG_MESSAGE_BUFFER_REPORT 1
+#define DAXA_DEBUG_MESSAGE_IMAGE_REPORT 2
+#define DAXA_DEBUG_MESSAGE_SAMPLER_REPORT 4
 #endif
+
+#if !defined(DAXA_SHADER_GPU_ID_VALIDATION)
+#define DAXA_SHADER_GPU_ID_VALIDATION (0)
+#endif // #if !defined(DAXA_SHADER_GPU_ID_VALIDATION)
 
 //
 // Optional defines, activating certain features:
@@ -73,15 +84,84 @@ struct daxa_SamplerId
     daxa_u32 value;
 };
 
-// One can get the bindless table index from the id directly in the shader:
-daxa_u32 daxa_id_to_index(daxa_BufferId id) { return (DAXA_ID_INDEX_MASK & id.value); }
-daxa_u32 daxa_id_to_index(daxa_ImageViewId id) { return (DAXA_ID_INDEX_MASK & id.value); }
-daxa_u32 daxa_id_to_index(daxa_SamplerId id) { return (DAXA_ID_INDEX_MASK & id.value); }
+#if DAXA_SHADER_GPU_ID_VALIDATION
+
+layout(set = 0, binding = DAXA_SHADER_DEBUG_BUFFER_BINDING) coherent buffer _DAXA_DEBUG_BUFFER_BLOCK
+{
+    daxa_u32 debug_message_count;
+    daxa_u32 messages_offset;
+    daxa_u32 buffer_deb_infos_offset;
+    daxa_u32 image_deb_infos_offset;
+    daxa_u32 sampler_deb_infos_offset;
+    daxa_u32 data[];
+}
+_DAXA_DEBUG_BUFFER;
+
+#define _DAXA_GENERATE_ID_VALIDATION_FUNCTION(TYPE, Type, type)                                                                                                      \
+    void validate_##type##_id(daxa_##Type##Id id)                                                                                                                    \
+    {                                                                                                                                                                \
+        const daxa_u32 index = id.value & DAXA_ID_INDEX_MASK;                                                                                                        \
+        const daxa_u32 version = id.value >> DAXA_ID_VERSION_SHIFT;                                                                                                  \
+        const daxa_u32 deb_info = atomicAdd(_DAXA_DEBUG_##TYPE.data[_DAXA_DEBUG_##TYPE.type##_deb_infos_offset + index], 0);                                         \
+        const daxa_u32 errorRecorded = deb_info != 0xFFFFFFFF;                                                                                                       \
+        if (!errorRecorded)                                                                                                                                          \
+        {                                                                                                                                                            \
+            const daxa_u32 actual_version = deb_info & 0x0000FFFF;                                                                                                   \
+            const bool faulty_id = version != actual_version;                                                                                                        \
+            const daxa_u32 fetch = atomicCompSwap(_DAXA_DEBUG_##TYPE.data[_DAXA_DEBUG_##TYPE.type##_deb_infos_offset + index], deb_info, 0xFFFFFFFF);                \
+            const bool write_successful = fetch == deb_info;                                                                                                         \
+            if (write_successful)                                                                                                                                    \
+            {                                                                                                                                                        \
+                daxa_u32 message_offset = atomicAdd(_DAXA_DEBUG_##TYPE.debug_message_count, 1);                                                                      \
+                const bool allocation_successful = message_offset < DAXA_DEBUG_MESSAGE_MAX_COUNT;                                                                    \
+                if (allocation_successful)                                                                                                                           \
+                {                                                                                                                                                    \
+                    _DAXA_DEBUG_BUFFER.data[_DAXA_DEBUG_##TYPE.messages_offset + message_offset * DAXA_DEBUG_MESSAGE_SIZE + 0] = DAXA_DEBUG_MESSAGE_##TYPE##_REPORT; \
+                    _DAXA_DEBUG_BUFFER.data[_DAXA_DEBUG_##TYPE.messages_offset + message_offset * DAXA_DEBUG_MESSAGE_SIZE + 1] = index;                              \
+                    _DAXA_DEBUG_BUFFER.data[_DAXA_DEBUG_##TYPE.messages_offset + message_offset * DAXA_DEBUG_MESSAGE_SIZE + 2] = version;                            \
+                    _DAXA_DEBUG_BUFFER.data[_DAXA_DEBUG_##TYPE.messages_offset + message_offset * DAXA_DEBUG_MESSAGE_SIZE + 3] = actual_version;                     \
+                }                                                                                                                                                    \
+            }                                                                                                                                                        \
+        }                                                                                                                                                            \
+    }
+
+#else // #if DAXA_SHADER_GPU_ID_VALIDATION
+
+#define _DAXA_GENERATE_ID_VALIDATION_FUNCTION(TYPE, Type, type) \
+    void validate_##type##_id(daxa_##Type##Id id)               \
+    {                                                           \
+    }
+
+#endif // #else // #if DAXA_SHADER_GPU_ID_VALIDATION
+
+_DAXA_GENERATE_ID_VALIDATION_FUNCTION(BUFFER, Buffer, buffer)
+_DAXA_GENERATE_ID_VALIDATION_FUNCTION(IMAGE, ImageView, image)
+_DAXA_GENERATE_ID_VALIDATION_FUNCTION(SAMPLER, Sampler, sampler)
+
+// Accessor functions to gain the indices to the bindless tables from the ressource id:
+daxa_u32 daxa_id_to_index(daxa_BufferId id)
+{
+    validate_buffer_id(id);
+    return (DAXA_ID_INDEX_MASK & id.value);
+}
+daxa_u32 daxa_id_to_index(daxa_ImageViewId id)
+{
+    validate_image_id(id);
+    return (DAXA_ID_INDEX_MASK & id.value);
+}
+daxa_u32 daxa_id_to_index(daxa_SamplerId id)
+{
+    validate_sampler_id(id);
+    return (DAXA_ID_INDEX_MASK & id.value);
+}
 layout(scalar, binding = DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, set = 0) readonly buffer daxa_BufferDeviceAddressBufferBlock { daxa_u64 addresses[]; }
 daxa_buffer_device_address_buffer;
-daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id) { return daxa_buffer_device_address_buffer.addresses[daxa_id_to_index(buffer_id)]; }
+daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
+{
+    return daxa_buffer_device_address_buffer.addresses[daxa_id_to_index(buffer_id)];
+}
 
-// One can get a corresponding glsl object from the bindless tables easily with the following makros:
+// The corresponding glsl object of a ressource id can be aquired by these makros:
 #define daxa_id_to_rwbuffer(NAME, buffer_id) daxa_id_to_rwbuffer##NAME(buffer_id)
 #define daxa_id_to_buffer(NAME, buffer_id) daxa_id_to_buffer##NAME(buffer_id)
 #define daxa_get_image(IMAGE_TYPE, image_id) daxa_RWImageTable##IMAGE_TYPE[daxa_id_to_index(image_id)]
@@ -93,34 +173,44 @@ layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform samplerShadow daxa_Sampl
 
 // Buffers and images have strongly typed handles:
 // The image types have overloads for the most important glsl access functions.
+// Samplers do not need typed ids, as they are generic in vulkan glsl.
 #define deref(BUFFER_PTR) BUFFER_PTR.value
 #define daxa_RWBufferPtr(STRUCT_TYPE) daxa_RWBufferPtr##STRUCT_TYPE
 #define daxa_BufferPtr(STRUCT_TYPE) daxa_BufferPtr##STRUCT_TYPE
+#define daxa_CoherentRWBufferPtr(STRUCT_TYPE) daxa_CoherentRWBufferPtr$$STRUCT_TYPE
 #define daxa_RWImage(DIMENSION, SCALAR_TYPE) daxa_RWImage##DIMENSION##SCALAR_TYPE
 #define daxa_Image(DIMENSION, SCALAR_TYPE) daxa_Image##DIMENSION##SCALAR_TYPE
 
-// One can declare their own table alias by using the predefined layours, or simply use the predefined binding points like here:
+// If daxa does not provice a certain overload for a needed type, it is possible to declare custom overloads for the binding tables with these makros:
 #define DAXA_BUFFER_REFERENCE_LAYOUT layout(buffer_reference, scalar, buffer_reference_align = 4)
 #define DAXA_STORAGE_IMAGE_LAYOUT layout(binding = DAXA_STORAGE_IMAGE_BINDING, set = 0)
 #define DAXA_SAMPLED_IMAGE_LAYOUT layout(binding = DAXA_SAMPLED_IMAGE_BINDING, set = 0)
 #define DAXA_SAMPLER_LAYOUT layout(binding = DAXA_SAMPLER_BINDING, set = 0)
 
-#define DAXA_ENABLE_BUFFER_PTR(STRUCT_TYPE)                                                                             \
-    DAXA_BUFFER_REFERENCE_LAYOUT buffer daxa_RWBufferPtr##STRUCT_TYPE                                                   \
-    {                                                                                                                   \
-        STRUCT_TYPE value;                                                                                              \
-    };                                                                                                                  \
-    DAXA_BUFFER_REFERENCE_LAYOUT readonly buffer daxa_BufferPtr##STRUCT_TYPE                                            \
-    {                                                                                                                   \
-        STRUCT_TYPE value;                                                                                              \
-    };                                                                                                                  \
-    daxa_RWBufferPtr##STRUCT_TYPE daxa_id_to_rwbuffer_ptr##STRUCT_TYPE(daxa_BufferId buffer_id)                         \
-    {                                                                                                                   \
-        return daxa_RWBufferPtr##STRUCT_TYPE(daxa_buffer_device_address_buffer.addresses[daxa_id_to_index(buffer_id)]); \
-    }                                                                                                                   \
-    daxa_BufferPtr##STRUCT_TYPE daxa_id_to_buffer_ptr##STRUCT_TYPE(daxa_BufferId buffer_id)                             \
-    {                                                                                                                   \
-        return daxa_BufferPtr##STRUCT_TYPE(daxa_buffer_device_address_buffer.addresses[daxa_id_to_index(buffer_id)]);   \
+#define DAXA_ENABLE_BUFFER_PTR(STRUCT_TYPE)                                                                                     \
+    DAXA_BUFFER_REFERENCE_LAYOUT buffer daxa_RWBufferPtr##STRUCT_TYPE                                                           \
+    {                                                                                                                           \
+        STRUCT_TYPE value;                                                                                                      \
+    };                                                                                                                          \
+    DAXA_BUFFER_REFERENCE_LAYOUT readonly buffer daxa_BufferPtr##STRUCT_TYPE                                                    \
+    {                                                                                                                           \
+        STRUCT_TYPE value;                                                                                                      \
+    };                                                                                                                          \
+    DAXA_BUFFER_REFERENCE_LAYOUT coherent buffer daxa_CoherentRWBufferPtr##STRUCT_TYPE                                          \
+    {                                                                                                                           \
+        STRUCT_TYPE value;                                                                                                      \
+    };                                                                                                                          \
+    daxa_RWBufferPtr##STRUCT_TYPE daxa_id_to_rwbuffer_ptr##STRUCT_TYPE(daxa_BufferId buffer_id)                                 \
+    {                                                                                                                           \
+        return daxa_RWBufferPtr##STRUCT_TYPE(daxa_buffer_device_address_buffer.addresses[daxa_id_to_index(buffer_id)]);         \
+    }                                                                                                                           \
+    daxa_BufferPtr##STRUCT_TYPE daxa_id_to_buffer_ptr##STRUCT_TYPE(daxa_BufferId buffer_id)                                     \
+    {                                                                                                                           \
+        return daxa_BufferPtr##STRUCT_TYPE(daxa_buffer_device_address_buffer.addresses[daxa_id_to_index(buffer_id)]);           \
+    }                                                                                                                           \
+    daxa_CoherentRWBufferPtr##STRUCT_TYPE daxa_id_to_coherent_rwbuffer_ptr##STRUCT_TYPE(daxa_BufferId buffer_id)                \
+    {                                                                                                                           \
+        return daxa_CoherentRWBufferPtr##STRUCT_TYPE(daxa_buffer_device_address_buffer.addresses[daxa_id_to_index(buffer_id)]); \
     }
 
 // Use this to allow code sharing and daxa's buffer syntax sugar to work:
@@ -504,6 +594,7 @@ daxa_f32 textureLodShadow(daxa_Image2Df32 image, daxa_SamplerId sampler_id, daxa
 
 #define RWBufferPtr daxa_RWBufferPtr
 #define BufferPtr daxa_BufferPtr
+#define CoherentRWBufferPtr daxa_CoherentRWBufferPtr
 #define RWImage daxa_RWImage
 #define Image daxa_RWImage
 
