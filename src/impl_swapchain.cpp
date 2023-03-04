@@ -251,7 +251,7 @@ namespace daxa
         // TODO: I (grundlett) am too lazy to find out why the other present modes
         // fail on Linux. This can be inspected by Linux people and they can
         // submit a PR if they find a fix.
-        info.present_mode = PresentMode::DO_NOT_WAIT_FOR_VBLANK;
+        info.present_mode = PresentMode::IMMEDIATE;
 #endif
 
         auto * old_swapchain = this->vk_swapchain;
