@@ -5,7 +5,12 @@
   "homepage": "https://github.com/Ipotrick/Daxa",
   "dependencies": [
     "vulkan-memory-allocator",
-    "vulkan"
+    "vulkan",
+    {
+      "name": "wayland",
+      "default-features": false,
+      "platform": "linux"
+    }
   ],
   "default-features": [
     "utils-imgui",
