@@ -12,6 +12,16 @@
     {
       "name": "vcpkg-cmake-config",
       "host": true
+    },
+    {
+      "name": "wayland",
+      "default-features": false,
+      "platform": "linux"
+    },
+    {
+      "name": "wayland-protocols",
+      "default-features": false,
+      "platform": "linux"
     }
   ],
   "features": {

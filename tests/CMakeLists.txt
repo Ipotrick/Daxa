@@ -107,3 +107,13 @@ DAXA_CREATE_TEST(
 #     FOLDER 3_samples 7_FSR2
 #     LIBS glfw stb_interface
 # )
+
+DAXA_CREATE_TEST(
+    FOLDER 4_hello_daxa 1_pink_screen
+    LIBS glfw stb_interface
+)
+
+DAXA_CREATE_TEST(
+    FOLDER 4_hello_daxa 2_triangle
+    LIBS glfw stb_interface
+)
