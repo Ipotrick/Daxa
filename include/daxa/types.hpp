@@ -487,10 +487,10 @@ namespace daxa
 
     enum struct PresentMode
     {
-        DO_NOT_WAIT_FOR_VBLANK = 0,
-        TRIPLE_BUFFER_WAIT_FOR_VBLANK = 1,
-        DOUBLE_BUFFER_WAIT_FOR_VBLANK = 2,
-        DOUBLE_BUFFER_WAIT_FOR_VBLANK_RELAXED = 3,
+        IMMEDIATE = 0,
+        MAILBOX = 1,
+        FIFO = 2,
+        FIFO_RELAXED = 3,
     };
 
     enum struct PresentOp

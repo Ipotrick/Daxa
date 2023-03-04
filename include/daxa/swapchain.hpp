@@ -24,7 +24,7 @@ namespace daxa
         NativeWindowHandle native_window;
         NativeWindowPlatform native_window_platform;
         std::function<i32(Format)> surface_format_selector = default_format_score;
-        PresentMode present_mode = PresentMode::DOUBLE_BUFFER_WAIT_FOR_VBLANK;
+        PresentMode present_mode = PresentMode::FIFO;
         PresentOp present_operation = PresentOp::IDENTITY;
         ImageUsageFlags image_usage = {};
         usize max_allowed_frames_in_flight = 2;
