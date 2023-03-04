@@ -103,7 +103,7 @@ namespace daxa
                             break;
                         }
                     }
-                    DAXA_DBG_ASSERT_TRUE_M(found, "Cannot find layer: TODO(grundlett)");
+                    DAXA_DBG_ASSERT_TRUE_M(found, std::string{"Cannot find layer"} + required_layer_name);
                 }
                 return true;
             };

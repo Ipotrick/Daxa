@@ -15,7 +15,7 @@
             },
             "windows": {
                 "type": "cppvsdbg",
-                "console": "integratedTerminal"
+                "console": "internalConsole"
             }
         }
     ]
