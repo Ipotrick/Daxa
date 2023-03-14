@@ -426,7 +426,7 @@ namespace daxa
         }
         if (!this->info.shader_compile_options.language.has_value())
         {
-            this->info.shader_compile_options.language = std::optional<ShaderLanguage>{ShaderLanguage::HLSL};
+            this->info.shader_compile_options.language = std::optional<ShaderLanguage>{ShaderLanguage::GLSL};
         }
         if (!this->info.shader_compile_options.enable_debug_info.has_value())
         {
