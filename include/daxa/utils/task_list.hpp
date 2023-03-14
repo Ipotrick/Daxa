@@ -118,7 +118,7 @@ namespace daxa
     struct TaskList;
     struct Device;
 
-    struct TaskRuntime
+    struct TaskRuntimeInterface
     {
         auto get_device() const -> Device &;
         auto get_command_list() const -> CommandList;
@@ -135,17 +135,19 @@ namespace daxa
         void clear_runtime_images(TaskImageId tid);
 
       private:
-        friend struct ImplTaskRuntime;
+        friend struct ImplTaskRuntimeInterface;
         friend struct TaskList;
-        TaskRuntime(void * a_backend);
+        TaskRuntimeInterface(void * a_backend);
         void * backend;
     };
 
-    using TaskCallback = std::function<void(TaskRuntime const &)>;
+    using TaskCallback = std::function<void(TaskRuntimeInterface const &)>;
 
     struct TaskBufferInfo
     {
         Access initial_access = AccessConsts::NONE;
+        bool execution_persistent = {};
+        std::span<BufferId> execution_buffers = {};
         std::string debug_name = {};
     };
 
@@ -153,7 +155,9 @@ namespace daxa
     {
         Access initial_access = AccessConsts::NONE;
         ImageLayout initial_layout = ImageLayout::UNDEFINED;
-        bool swapchain_image = false;
+        bool execution_persistent = {};
+        bool swapchain_image = {};
+        std::span<ImageId> execution_images = {};
         std::string debug_name = {};
     };
 
@@ -180,6 +184,15 @@ namespace daxa
         bool use_split_barriers = true;
         /// @brief Optionally the user can provide a swapchain. This enables the use of present.
         std::optional<Swapchain> swapchain = {};
+        /// @brief Each condition doubled the number of permutations. 
+        /// For a low number of permutations its is preferable to precompile all permutations.
+        /// For a large number of permutations it might be preferable to only create the permutations actually used on the fly just before they are needed.
+        /// The second option is enabled by using jit (just in time) compilation.
+        bool jit_compile_permutations = {};
+        /// @brief Task list can branch the execution based on conditionals. All conditionals must be set before execution and stay constant while executing.
+        /// This is usefull to create permutations of a task list without having to create a seperate task list. 
+        /// Another benefit is that task list can generate synch between executions of permutations while it can not generate synch between two seperate task lists.
+        usize permutation_condition_count = {};
         std::string debug_name = {};
     };
 
@@ -195,6 +208,18 @@ namespace daxa
         Access access = {};
     };
 
+    struct TaskListConditionalInfo
+    {
+        u32 condition_index = {};
+        std::function<void()> when_true = {};
+        std::function<void()> when_false = {};
+    };
+
+    struct ExecutionInfo
+    {
+        std::span<bool> permutation_condition_values = {};
+    };
+
     struct TaskList : ManagedPtr
     {
         TaskList() = default;
@@ -205,12 +230,7 @@ namespace daxa
         auto create_task_buffer(TaskBufferInfo const & info) -> TaskBufferId;
         auto create_task_image(TaskImageInfo const & info) -> TaskImageId;
 
-        void add_runtime_buffer(TaskBufferId tid, BufferId id);
-        void add_runtime_image(TaskImageId tid, ImageId id);
-        void remove_runtime_buffer(TaskBufferId tid, BufferId id);
-        void remove_runtime_image(TaskImageId tid, ImageId id);
-        void clear_runtime_buffers(TaskBufferId tid);
-        void clear_runtime_images(TaskImageId tid);
+        void conditional(TaskListConditionalInfo const & info);
 
         void add_task(TaskInfo const & info);
 
@@ -218,13 +238,20 @@ namespace daxa
         void present(TaskPresentInfo const & info);
 
         void complete();
-        void execute();
+
+        void add_runtime_buffer(TaskBufferId tid, BufferId id);
+        void add_runtime_image(TaskImageId tid, ImageId id);
+        void remove_runtime_buffer(TaskBufferId tid, BufferId id);
+        void remove_runtime_image(TaskImageId tid, ImageId id);
+        void clear_runtime_buffers(TaskBufferId tid);
+        void clear_runtime_images(TaskImageId tid);
+
+        void execute(ExecutionInfo const & info);
+        // All tasks recorded AFTER a submit will not be executied and submitted.
+        // The resulting command lists can retrieved wit this function.
         auto get_command_lists() -> std::vector<CommandList>;
 
         void output_graphviz();
         void debug_print();
-
-        auto last_access(TaskBufferId buffer) -> Access;
-        auto last_uses(TaskImageId image) -> std::vector<TaskImageLastUse>;
     };
 } // namespace daxa

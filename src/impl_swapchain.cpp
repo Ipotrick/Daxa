@@ -316,7 +316,7 @@ namespace daxa
 
         if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && !this->info.debug_name.empty())
         {
-            auto swapchain_name = this->info.debug_name + std::string(" [Daxa Swapchain]");
+            auto swapchain_name = this->info.debug_name;
             VkDebugUtilsObjectNameInfoEXT const swapchain_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,

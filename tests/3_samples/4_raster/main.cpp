@@ -354,7 +354,7 @@ struct RenderableVoxelWorld
             .used_images = {
                 {task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
             },
-            .task = [this](daxa::TaskRuntime runtime)
+            .task = [this](daxa::TaskRuntimeInterface runtime)
             {
                 if (!textures_valid)
                 {
