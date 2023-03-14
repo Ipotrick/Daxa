@@ -5,6 +5,8 @@
 
 #define DAXA_TASK_LIST_DEBUG 1
 
+#define DAXA_TASKLIST_MAX_CONITIONALS 31
+
 #if defined(DAXA_TASK_LIST_DEBUG)
 #if DAXA_TASK_LIST_DEBUG
 #define DAXA_ONLY_IF_TASK_LIST_DEBUG(x) x
@@ -33,9 +35,11 @@ namespace daxa
         usize index;
     };
 
-    struct ImplTaskBuffer
+    struct TaskBuffer
     {
-        std::vector<BufferId> buffers = {};
+        /// Every permutation always has all buffers but they are not nessecarily valid in that permutation.
+        /// This boolen is used to check this.
+        bool valid = {};
         TaskBufferInfo info = {};
         Access latest_access = AccessConsts::NONE;
         usize latest_access_batch_index = {};
@@ -43,6 +47,15 @@ namespace daxa
         // When the last index was a read and an additional read is followed after,
         // we will combine all barriers into one, which is the first barrier that the first read generates.
         std::variant<std::monostate, LastReadSplitBarrierIndex, LastReadBarrierIndex> latest_access_read_barrier_index = std::monostate{};
+    };
+
+    struct ExecutionTimeTaskBuffer
+    {
+        // One task buffer can back multiple buffers.
+        std::vector<BufferId> actual_buffers = {};
+        // We store execution time information about the previous executions final resource states.
+        // This is important, as whith conditional execution and temporal resources we need to store this infomation to form correct state transitions.
+        std::optional<TaskBufferAccess> previous_execution_last_access = {};
     };
 
     struct TaskBarrier
@@ -76,12 +89,23 @@ namespace daxa
         ImageMipArraySlice slice = {};
     };
 
-    struct ImplTaskImage
+    struct TaskImage
     {
-        std::vector<ImageId> images = {};
+        /// Every permutation always has all buffers but they are not nessecarily valid in that permutation.
+        /// This boolen is used to check this.
+        bool valid = {};
         TaskImageInfo info = {};
         bool swapchain_semaphore_waited_upon = {};
         std::vector<TaskImageTrackedSlice> slices_last_uses = {};
+    };
+
+    struct ExecutionTimeTaskImage
+    {
+        // One task image can be backed by multiple images at execution time.
+        std::vector<ImageId> actual_images = {};
+        // We store runtime information about the previous executions final resource states.
+        // This is important, as whith conditional execution and temporal resources we need to store this infomation to form correct state transitions.
+        std::optional<TaskImageTrackedSlice> previous_execution_last_slices = {};
     };
 
     struct Task
@@ -128,26 +152,59 @@ namespace daxa
     auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access>;
     auto task_buffer_access_to_access(TaskBufferAccess const & access) -> Access;
 
-    struct ImplTaskList final : ManagedSharedState
+    struct TaskListCondition
     {
-        TaskListInfo info;
+        bool * condition = {};
+    };
+
+    struct ImplTaskList;
+
+    struct TaskListPermutation
+    {
+        // record time information:
+        bool active = {};
+        // persistent information:
         TaskImageId swapchain_image = {};
+        std::vector<TaskBuffer> buffer_infos = {};
+        std::vector<TaskImage> image_infos = {};
         std::vector<Task> tasks = {};
         std::vector<TaskSplitBarrier> split_barriers = {};
         std::vector<TaskBarrier> barriers = {};
-        std::vector<ImplTaskBuffer> impl_task_buffers = {};
-        std::vector<ImplTaskImage> impl_task_images = {};
         std::vector<TaskBatchSubmitScope> batch_submit_scopes = {};
         usize swapchain_image_first_use_submit_scope_index = std::numeric_limits<usize>::max();
         usize swapchain_image_last_use_submit_scope_index = std::numeric_limits<usize>::max();
-        bool compiled = false;
-        bool executed = false;
 
+        void add_task(ImplTaskList & task_list_impl, TaskInfo const & info);
+        void submit(CommandSubmitInfo * info);
+        void present(TaskPresentInfo const & info);
+    };
+
+    struct ImplTaskList final : ManagedSharedState
+    {
+        TaskListInfo info;
+        std::vector<ExecutionTimeTaskBuffer> exec_task_buffers = {};
+        std::vector<ExecutionTimeTaskImage> exec_task_images = {};
+        std::vector<TaskListCondition> conditions = {};
+        std::vector<TaskListPermutation> permutations = {};
+
+        // record time information:
+        u32 record_active_conditional_scopes = {};
+        u32 record_conditional_states = {};
+        std::vector<TaskListPermutation*> record_active_permutations = {};
+        bool compiled = {};
+
+        // execution time information:
+        std::array<bool, DAXA_TASKLIST_MAX_CONITIONALS> execution_time_current_conditionals = {};
+
+        // post execution information:
         std::vector<CommandList> left_over_command_lists = {};
+        bool executed_once = {};
+        u32 prev_frame_permutation_index = {};
 
-        void debug_print_task_barrier(TaskBarrier & barrier, usize index, std::string_view prefix);
-        void debug_print_task_split_barrier(TaskSplitBarrier & barrier, usize index, std::string_view prefix);
-        void debug_print_task(Task & task, usize task_id, std::string_view prefix);
+        void update_active_permutations();
+        void debug_print_task_barrier(TaskListPermutation const & permutation, TaskBarrier & barrier, usize index, std::string_view prefix);
+        void debug_print_task_split_barrier(TaskListPermutation const & permutation, TaskSplitBarrier & barrier, usize index, std::string_view prefix);
+        void debug_print_task(TaskListPermutation const & permutation, Task & task, usize task_id, std::string_view prefix);
         void execute_barriers();
         void output_graphviz();
 
@@ -162,10 +219,11 @@ namespace daxa
         virtual ~ImplTaskList() override final;
     };
 
-    struct ImplTaskRuntime
+    struct ImplTaskRuntimeInterface
     {
         // interface:
         ImplTaskList & task_list;
+        TaskListPermutation & permutation;
         Task * current_task = {};
         bool reuse_last_command_list = true;
         std::vector<CommandList> command_lists = {};

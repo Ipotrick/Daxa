@@ -19,3 +19,18 @@ struct MipmappingComputePushConstant
     daxa_RWBufferPtr(MipmappingGpuInput) gpu_input;
     daxa_u32vec2 frame_dim;
 };
+
+struct ConditionalUploadStruct
+{
+    daxa_u32 value;
+};
+
+struct DrawVertex
+{
+    daxa_f32vec4 pos, col;
+};
+DAXA_ENABLE_BUFFER_PTR(DrawVertex)
+struct DrawPush
+{
+    daxa_BufferPtr(DrawVertex) vertex_buffer;
+};

@@ -160,7 +160,6 @@ int main()
     // describe.
     auto loop_task_list = daxa::TaskList({
         .device = device,
-        .use_split_barriers = true,
         .swapchain = swapchain,
         .debug_name = "my task list",
     });
@@ -272,52 +271,56 @@ int main()
 
 void upload_vertex_data(daxa::Device & device, daxa::BufferId buffer_id)
 {
-    auto loop_task_list = daxa::TaskList({
+    auto temp_task_list = daxa::TaskList({
         .device = device,
         .use_split_barriers = true,
         .debug_name = "temp task list",
     });
 
-    auto task_buffer_id = loop_task_list.create_task_buffer({.initial_access = daxa::AccessConsts::VERTEX_SHADER_READ, .debug_name = "my task buffer"});
-    loop_task_list.add_runtime_buffer(task_buffer_id, buffer_id);
+    auto task_buffer_id = temp_task_list.create_task_buffer({.debug_name = "my task buffer"});
+    temp_task_list.add_runtime_buffer(task_buffer_id, buffer_id);
 
-    // We'll first make a task to update the buffer
-    loop_task_list.add_task({
-        .used_buffers = {
-            // Since this task is going to copy a staging buffer to the
-            // actual buffer, we'll say that this task uses the buffer
-            // with a transfer write operation!
-            {task_buffer_id, daxa::TaskBufferAccess::TRANSFER_WRITE},
+    bool cond = false;
+
+    temp_task_list.conditional({
+        .condition = &cond,
+        .when_true = [&](){
+            temp_task_list.set_initial_access(task_buffer_id, access);
+            temp_task_list.add_task({});
+            temp_task_list.add_task({});
+            temp_task_list.add_task({});
+            temp_task_list.conditional({
+                .condition = &cond,
+                .when_true = [&](){
+                    temp_task_list.set_initial_access(task_buffer_id, access);
+                    temp_task_list.add_task({});
+                    temp_task_list.add_task({});
+                    temp_task_list.add_task({});
+                },
+                .when_false = [&](){
+                    temp_task_list.set_initial_access(task_buffer_id, access2);
+                },
+            });
         },
-        .task = [task_buffer_id](daxa::TaskRuntime task_runtime)
-        {
-            auto cmd_list = task_runtime.get_command_list();
-
-            // see upload_vertex_data_task(...) for more info on the
-            // uploading of the data itself.
-
-            // We'll call upload_vertex_data_task(...) with the buffer ID,
-            // which we can query from the task runtime.
-
-            upload_vertex_data_task(task_runtime.get_device(), cmd_list, task_runtime.get_buffers(task_buffer_id)[0]);
+        .when_false = [&](){
+            temp_task_list.set_initial_access(task_buffer_id, access2);
         },
-        .debug_name = "my upload task",
     });
 
     // We'll now just create a dummy task which dictates to the Task Runtime
     // that there must be a memory barrier after this task.
-    loop_task_list.add_task({
+    temp_task_list.add_task({
         .used_buffers = {{task_buffer_id, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY}},
         .task = [](daxa::TaskRuntime) {},
         .debug_name = "my draw task",
     });
 
     auto submit_info = daxa::CommandSubmitInfo{};
-    loop_task_list.submit(&submit_info);
-    loop_task_list.complete();
+    temp_task_list.submit(&submit_info);
+    temp_task_list.complete();
 
     // Now we'll just
-    loop_task_list.execute();
+    temp_task_list.execute();
 }
 
 void upload_vertex_data_task(
