@@ -66,7 +66,7 @@ namespace daxa
 
         if (impl_device->impl_ctx.as<ImplContext>()->enable_debug_names && !this->create_info.debug_name.empty())
         {
-            auto name = this->create_info.debug_name + std::string(" [Daxa Split Barrier]");
+            auto name = this->create_info.debug_name;
             VkDebugUtilsObjectNameInfoEXT const name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,

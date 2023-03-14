@@ -87,6 +87,10 @@ namespace tests
 
             bool mouse_drawing = false;
 
+            enum TASK_CONDITIONS{
+                TASK_CONDITION_MOUSE_DRAWING = 0,
+                TASK_CONDITION_COUNT = 1,
+            };
             daxa::TaskList task_list = record_tasks();
 
             App() : AppWindow<App>(APPNAME, 768 * 2, 512 * 2) {}
@@ -143,7 +147,9 @@ namespace tests
                     return;
                 }
                 // task_list.debug_print();
-                task_list.execute();
+                std::array<bool, TASK_CONDITION_COUNT> conditions = {};
+                conditions[TASK_CONDITION_MOUSE_DRAWING] = mouse_drawing;
+                task_list.execute({.permutation_condition_values = {conditions.data(), conditions.size()} });
             }
 
             void on_mouse_move(f32 x, f32 y)
@@ -426,6 +432,7 @@ namespace tests
                 daxa::TaskList new_task_list = daxa::TaskList({
                     .device = device,
                     .swapchain = swapchain,
+                    .permutation_condition_count = TASK_CONDITION_COUNT,
                     .debug_name = APPNAME_PREFIX("main task list"),
                 });
                 task_swapchain_image = new_task_list.create_task_image({
@@ -441,90 +448,84 @@ namespace tests
                 new_task_list.add_runtime_buffer(task_mipmapping_gpu_input_buffer, mipmapping_gpu_input_buffer);
                 new_task_list.add_task({
                     .used_buffers = {
-                        {task_mipmapping_gpu_input_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE},
+                        {task_mipmapping_gpu_input_buffer, daxa::TaskBufferAccess::HOST_TRANSFER_WRITE},
                     },
-                    .task = [this](daxa::TaskRuntime runtime)
+                    .task = [this](daxa::TaskRuntimeInterface runtime)
                     {
                         auto cmd_list = runtime.get_command_list();
                         auto input_buffer = runtime.get_buffers(task_mipmapping_gpu_input_buffer)[0];
-                        cmd_list.pipeline_barrier({
-                            .awaited_pipeline_access = daxa::AccessConsts::READ_WRITE,
-                            .waiting_pipeline_access = daxa::AccessConsts::READ_WRITE,
-                        });
                         update_gpu_input(cmd_list, input_buffer);
-                        cmd_list.pipeline_barrier({
-                            .awaited_pipeline_access = daxa::AccessConsts::READ_WRITE,
-                            .waiting_pipeline_access = daxa::AccessConsts::READ_WRITE,
-                        });
                     },
                     .debug_name = APPNAME_PREFIX("Input Transfer"),
                 });
-                new_task_list.add_task(daxa::TaskInfo{
-                    .used_buffers = {
-                        {task_mipmapping_gpu_input_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY},
-                    },
-                    .used_images = {
-                        {task_render_image, daxa::TaskImageAccess::COMPUTE_SHADER_READ_WRITE, daxa::ImageMipArraySlice{}},
-                    },
-                    .task = [=, this](daxa::TaskRuntime const & runtime)
-                    {
-                        if (mouse_drawing)
-                        {
-                            auto cmd_list = runtime.get_command_list();
-                            auto render_target_id = runtime.get_images(task_render_image)[0];
-                            auto input_buffer = runtime.get_buffers(task_mipmapping_gpu_input_buffer)[0];
-                            paint(cmd_list, render_target_id, input_buffer);
-                        }
-                    },
-                    .debug_name = "mouse paint",
-                });
-                {
-                    auto image_info = device.info_image(render_image);
-                    std::array<i32, 3> mip_size = {std::max<i32>(1, static_cast<i32>(image_info.size.x)), std::max<i32>(1, static_cast<i32>(image_info.size.y)), std::max<i32>(1, static_cast<i32>(image_info.size.z))};
-                    for (u32 i = 0; i < image_info.mip_level_count - 1; ++i)
-                    {
-                        std::array<i32, 3> next_mip_size = {std::max<i32>(1, mip_size[0] / 2), std::max<i32>(1, mip_size[1] / 2), std::max<i32>(1, mip_size[2] / 2)};
-                        new_task_list.add_task({
-                            .used_images = {
-                                {task_render_image, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{.base_mip_level = i}},
-                                {task_render_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{.base_mip_level = i + 1}},
+                new_task_list.conditional({
+                    .condition_index = TASK_CONDITION_MOUSE_DRAWING,
+                    .when_true = [&]() {
+                        new_task_list.add_task(daxa::TaskInfo{
+                            .used_buffers = {
+                                {task_mipmapping_gpu_input_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY},
                             },
-                            .task = [=, this](daxa::TaskRuntime const & runtime)
+                            .used_images = {
+                                {task_render_image, daxa::TaskImageAccess::COMPUTE_SHADER_READ_WRITE, daxa::ImageMipArraySlice{}},
+                            },
+                            .task = [=, this](daxa::TaskRuntimeInterface const & runtime)
                             {
                                 auto cmd_list = runtime.get_command_list();
-                                auto image_id = runtime.get_images(task_render_image)[0];
-                                cmd_list.blit_image_to_image({
-                                    .src_image = image_id,
-                                    .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL, // TODO: get from TaskRuntime
-                                    .dst_image = image_id,
-                                    .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-                                    .src_slice = {
-                                        .image_aspect = image_info.aspect,
-                                        .mip_level = i,
-                                        .base_array_layer = 0,
-                                        .layer_count = 1,
-                                    },
-                                    .src_offsets = {{{0, 0, 0}, {mip_size[0], mip_size[1], mip_size[2]}}},
-                                    .dst_slice = {
-                                        .image_aspect = image_info.aspect,
-                                        .mip_level = i + 1,
-                                        .base_array_layer = 0,
-                                        .layer_count = 1,
-                                    },
-                                    .dst_offsets = {{{0, 0, 0}, {next_mip_size[0], next_mip_size[1], next_mip_size[2]}}},
-                                    .filter = daxa::Filter::LINEAR,
-                                });
+                                auto render_target_id = runtime.get_images(task_render_image)[0];
+                                auto input_buffer = runtime.get_buffers(task_mipmapping_gpu_input_buffer)[0];
+                                paint(cmd_list, render_target_id, input_buffer);
                             },
-                            .debug_name = "mip_level_" + std::to_string(i),
+                            .debug_name = "mouse paint",
                         });
-                        mip_size = next_mip_size;
-                    }
-                }
+                        {
+                            auto image_info = device.info_image(render_image);
+                            std::array<i32, 3> mip_size = {std::max<i32>(1, static_cast<i32>(image_info.size.x)), std::max<i32>(1, static_cast<i32>(image_info.size.y)), std::max<i32>(1, static_cast<i32>(image_info.size.z))};
+                            for (u32 i = 0; i < image_info.mip_level_count - 1; ++i)
+                            {
+                                std::array<i32, 3> next_mip_size = {std::max<i32>(1, mip_size[0] / 2), std::max<i32>(1, mip_size[1] / 2), std::max<i32>(1, mip_size[2] / 2)};
+                                new_task_list.add_task({
+                                    .used_images = {
+                                        {task_render_image, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{.base_mip_level = i}},
+                                        {task_render_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{.base_mip_level = i + 1}},
+                                    },
+                                    .task = [=, this](daxa::TaskRuntimeInterface const & runtime)
+                                    {
+                                        auto cmd_list = runtime.get_command_list();
+                                        auto image_id = runtime.get_images(task_render_image)[0];
+                                        cmd_list.blit_image_to_image({
+                                            .src_image = image_id,
+                                            .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL, // TODO: get from TaskRuntime
+                                            .dst_image = image_id,
+                                            .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+                                            .src_slice = {
+                                                .image_aspect = image_info.aspect,
+                                                .mip_level = i,
+                                                .base_array_layer = 0,
+                                                .layer_count = 1,
+                                            },
+                                            .src_offsets = {{{0, 0, 0}, {mip_size[0], mip_size[1], mip_size[2]}}},
+                                            .dst_slice = {
+                                                .image_aspect = image_info.aspect,
+                                                .mip_level = i + 1,
+                                                .base_array_layer = 0,
+                                                .layer_count = 1,
+                                            },
+                                            .dst_offsets = {{{0, 0, 0}, {next_mip_size[0], next_mip_size[1], next_mip_size[2]}}},
+                                            .filter = daxa::Filter::LINEAR,
+                                        });
+                                    },
+                                    .debug_name = "mip_level_" + std::to_string(i),
+                                });
+                                mip_size = next_mip_size;
+                            }
+                        }
+                    },
+                });
                 new_task_list.add_task({
                     .used_images = {
                         {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{}},
                     },
-                    .task = [=, this](daxa::TaskRuntime const & runtime)
+                    .task = [=, this](daxa::TaskRuntimeInterface const & runtime)
                     {
                         auto cmd_list = runtime.get_command_list();
                         cmd_list.clear_image({
@@ -540,7 +541,7 @@ namespace tests
                         {task_render_image, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{.level_count = 5}},
                         {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{}},
                     },
-                    .task = [=, this](daxa::TaskRuntime const & runtime)
+                    .task = [=, this](daxa::TaskRuntimeInterface const & runtime)
                     {
                         auto cmd_list = runtime.get_command_list();
                         auto src_image_id = runtime.get_images(task_render_image)[0];
@@ -553,7 +554,7 @@ namespace tests
                     .used_images = {
                         {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
                     },
-                    .task = [=, this](daxa::TaskRuntime const & runtime)
+                    .task = [=, this](daxa::TaskRuntimeInterface const & runtime)
                     {
                         auto cmd_list = runtime.get_command_list();
                         auto render_target_id = runtime.get_images(task_swapchain_image)[0];

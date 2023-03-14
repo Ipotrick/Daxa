@@ -765,7 +765,7 @@ namespace daxa
 
         if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && this->info.debug_name.empty())
         {
-            auto cmd_buffer_name = this->info.debug_name + std::string(" [Daxa CommandBuffer]");
+            auto cmd_buffer_name = this->info.debug_name;
             VkDebugUtilsObjectNameInfoEXT const cmd_buffer_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
@@ -775,7 +775,7 @@ namespace daxa
             };
             this->impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &cmd_buffer_name_info);
 
-            auto cmd_pool_name = this->info.debug_name + std::string(" [Daxa CommandPool]");
+            auto cmd_pool_name = this->info.debug_name;
             VkDebugUtilsObjectNameInfoEXT const cmd_pool_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,

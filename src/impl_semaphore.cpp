@@ -49,7 +49,7 @@ namespace daxa
 
         if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && !this->info.debug_name.empty())
         {
-            auto binary_semaphore_name = this->info.debug_name + std::string(" [Daxa BinarySemaphore]");
+            auto binary_semaphore_name = this->info.debug_name;
             VkDebugUtilsObjectNameInfoEXT const name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
@@ -129,7 +129,7 @@ namespace daxa
 
         if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && !this->info.debug_name.empty())
         {
-            auto timeline_semaphore_name = this->info.debug_name + std::string(" [Daxa TimelineSemaphore]");
+            auto timeline_semaphore_name = this->info.debug_name;
             VkDebugUtilsObjectNameInfoEXT const name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
