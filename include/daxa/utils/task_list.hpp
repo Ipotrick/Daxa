@@ -230,7 +230,7 @@ namespace daxa
         auto create_task_buffer(TaskBufferInfo const & info) -> TaskBufferId;
         auto create_task_image(TaskImageInfo const & info) -> TaskImageId;
 
-        void conditional(TaskListConditionalInfo const & info);
+        void conditional(TaskListConditionalInfo const & conditional_info);
 
         void add_task(TaskInfo const & info);
 

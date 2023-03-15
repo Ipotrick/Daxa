@@ -293,31 +293,34 @@ namespace daxa
         }
     }
 
-    void TaskList::conditional(TaskListConditionalInfo const & info)
+    void TaskList::conditional(TaskListConditionalInfo const & conditional_info)
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can not record to completed command list");
-        bool const already_active = ((impl.record_active_conditional_scopes >> info.condition_index) & 1u) != 0;
+        bool const already_active = ((impl.record_active_conditional_scopes >> conditional_info.condition_index) & 1u) != 0;
         DAXA_DBG_ASSERT_TRUE_M(!already_active, "can not nest scopes of the same condition in itself.");
+        DAXA_DBG_ASSERT_TRUE_M(conditional_info.condition_index < impl.info.permutation_condition_count, 
+            "using conditional index " + std::to_string(conditional_info.condition_index) + 
+            " which is larger than the number of conditions specified during task list creation - " + std::to_string(impl.info.permutation_condition_count));
         // Set conditional scope to active.
-        impl.record_active_conditional_scopes |= 1u << info.condition_index;
+        impl.record_active_conditional_scopes |= 1u << conditional_info.condition_index;
         impl.update_active_permutations();
         // Set the conditional state to active.
-        impl.record_conditional_states |= 1u << info.condition_index;
+        impl.record_conditional_states |= 1u << conditional_info.condition_index;
         impl.update_active_permutations();
-        if (info.when_true)
+        if (conditional_info.when_true)
         {
-            info.when_true();
+            conditional_info.when_true();
         }
         // Set the conditional state to false.
-        impl.record_conditional_states &= ~(1u << info.condition_index);
+        impl.record_conditional_states &= ~(1u << conditional_info.condition_index);
         impl.update_active_permutations();
-        if (info.when_false)
+        if (conditional_info.when_false)
         {
-            info.when_false();
+            conditional_info.when_false();
         }
         // Set conditional scope to inactive.
-        impl.record_active_conditional_scopes &= ~(1u << info.condition_index);
+        impl.record_active_conditional_scopes &= ~(1u << conditional_info.condition_index);
         impl.update_active_permutations();
     }
 
