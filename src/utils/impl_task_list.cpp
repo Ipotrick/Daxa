@@ -241,7 +241,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can not record to completed command list");
         TaskBufferId task_buffer_id{{.index = static_cast<u32>(impl.exec_task_buffers.size())}};
 
-        for (auto& permutation : impl.permutations)
+        for (auto & permutation : impl.permutations)
         {
             permutation.buffer_infos.push_back(TaskBuffer{
                 .valid = permutation.active,
@@ -260,7 +260,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can not record to completed command list");
         TaskImageId task_image_id{{.index = static_cast<u32>(impl.exec_task_images.size())}};
 
-        for (auto& permutation : impl.permutations)
+        for (auto & permutation : impl.permutations)
         {
             permutation.image_infos.push_back(TaskImage{
                 .valid = permutation.active,
@@ -284,7 +284,7 @@ namespace daxa
 
         for (u32 permutation_i = 0; permutation_i < permutations.size(); ++permutation_i)
         {
-            const bool active = (record_active_conditional_scopes & permutation_i) == (record_active_conditional_scopes & record_conditional_states);
+            bool const active = (record_active_conditional_scopes & permutation_i) == (record_active_conditional_scopes & record_conditional_states);
             permutations[permutation_i].active = active;
             if (active)
             {
@@ -292,7 +292,7 @@ namespace daxa
             }
         }
     }
-    
+
     void TaskList::conditional(TaskListConditionalInfo const & info)
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
@@ -550,6 +550,103 @@ namespace daxa
         }
     }
 
+    thread_local std::vector<ImageMipArraySlice> tl_new_access_slices = {};
+    void update_image_initial_access_slices(
+        TaskListPermutation & permutation,
+        TaskImage & task_image,
+        TaskImageTrackedSlice new_access_slice)
+    {
+        // We need to test if a new use adds and or subtracts from initial uses.
+        // To do that, we need to test if the new access slice is accessing a subresource BEFORE all other already stored initial access slices.
+        // We compare all new use slices with already tracked first uses.
+        // We intersect the earlier and later happening slices with the new slice and store the intersection rest or the respective later executing slice access.
+        // This list will contain the remainder of the new access ranges after intersections.
+        tl_new_access_slices.push_back(new_access_slice.slice);
+        // Name shortening:
+        auto & initial_accesses = task_image.initial_access_slices;
+        // Note(pahrens):
+        // NEVER access new_access_slice.slice in this function past this point.
+        // ALWAYS access the new access ImageMipArraySlice's from an iterator or via vector indexing.
+        for (isize new_access_slice_i = 0; new_access_slice_i < tl_new_access_slices.size();)
+        {
+            bool broke_inner_loop = false;
+            for (isize initial_access_i = 0; initial_access_i < task_image.initial_access_slices.size();)
+            {
+                bool const slices_disjoint = !tl_new_access_slices[new_access_slice_i].intersects(initial_accesses[initial_access_i].slice);
+                bool const same_batch =
+                    new_access_slice.latest_access_submit_scope_index == initial_accesses[initial_access_i].latest_access_submit_scope_index &&
+                    new_access_slice.latest_access_batch_index == initial_accesses[initial_access_i].latest_access_batch_index;
+                // We check if the sets are disjoint.
+                // If they are we do not need to do anything and advance to the next test.
+                // When two accesses are in the same batch and scope, they can not overlap.
+                // This is simply forbidden by task list rules!
+                if (same_batch || slices_disjoint)
+                {
+                    ++initial_access_i;
+                    continue;
+                }
+                // Now that we have this edge case out the way, we now need to test which tracked slice is executed earlier.
+                bool const new_use_executes_earlier =
+                    new_access_slice.latest_access_submit_scope_index < initial_accesses[initial_access_i].latest_access_submit_scope_index ||
+                    (new_access_slice.latest_access_submit_scope_index == initial_accesses[initial_access_i].latest_access_submit_scope_index &&
+                     new_access_slice.latest_access_batch_index < initial_accesses[initial_access_i].latest_access_batch_index);
+                // When the new use is executing earlier, we subtract from the current initial access slice.
+                // We then replace the current initial accesss slice with the resulting rest.
+                if (new_use_executes_earlier)
+                {
+                    // When we intersect, we remove the old initial access slice and replace it with the rest of the subtraction.
+                    // We need a copy of this, as we will erase this value from the vector first.
+                    auto const initial_access_slice = initial_accesses[initial_access_i];
+                    // Erase value from vector.
+                    task_image.initial_access_slices.erase(initial_accesses.begin() + initial_access_i);
+                    // Subtract ranges.
+                    auto const [slice_rest, slice_rest_count] = initial_access_slice.slice.subtract(tl_new_access_slices[new_access_slice_i]);
+                    // Now construct new subranges from the rest of the subtraction.
+                    // We advance the iterator each time.
+                    for (usize rest_i = 0; rest_i < slice_rest_count; ++rest_i)
+                    {
+                        auto rest_tracked_slice = initial_access_slice;
+                        rest_tracked_slice.slice = slice_rest[rest_i];
+                        // We insert into the beginning, so we dont recheck these with the current new use slice.
+                        // They are the result of a subtraction therefore disjoint.
+                        task_image.initial_access_slices.insert(initial_accesses.begin(), rest_tracked_slice);
+                    }
+                    // We erased, so we implicitly advanced by an element, as erase moves all elements one to the left past the iterator.
+                    // But as we inserted into the front, we need to move the index accordingly to "stay in place".
+                    initial_access_i += slice_rest_count;
+                }
+                // When the new use is executing AFTER the current inital access slice, we subtract the current initial access slice from the new slice.
+                // We then replace the current new access slice with the resulting rest.
+                else
+                {
+                    // We subtract the initial use from the new use and append the rest.
+                    auto const [slice_rest, slice_rest_count] = new_access_slice.slice.subtract(initial_accesses[initial_access_i].slice);
+                    volatile auto count = slice_rest_count;
+                    // We insert the rest of the subtraction into the new use list.
+                    tl_new_access_slices.insert(tl_new_access_slices.end(), slice_rest.begin(), slice_rest.begin() + slice_rest_count);
+                    // We remove the current new use slice, as it intersects with an initial use slice and is later in the list.
+                    tl_new_access_slices.erase(tl_new_access_slices.begin() + new_access_slice_i);
+                    // If we advance the new use index, we restart the inner loop over the initial accesses.
+                    broke_inner_loop = true;
+                    break;
+                }
+            }
+            // When we broke out the inner loop we want to "restart" iteration of the outer loop at the current index.
+            if (!broke_inner_loop)
+            {
+                ++new_access_slice_i;
+            }
+        }
+        // Add the newly found initial access slices to the list of initial access slices.
+        for (auto const & new_slice : tl_new_access_slices)
+        {
+            auto new_tracked_slice = new_access_slice;
+            new_tracked_slice.slice = new_slice;
+            initial_accesses.push_back(new_tracked_slice);
+        }
+        tl_new_access_slices.clear();
+    }
+
     thread_local std::vector<TaskImageTrackedSlice> tl_tracked_slice_rests = {};
     thread_local std::vector<ImageMipArraySlice> tl_new_use_slices = {};
     void TaskListPermutation::add_task(ImplTaskList & task_list_impl, TaskInfo const & info)
@@ -714,6 +811,8 @@ namespace daxa
                 .latest_access_read_barrier_index = {}, // This is a dummy value (either set later or ignored entirely).
                 .slice = initial_used_image_slice,
             };
+            // We update the initial access slices.
+            update_image_initial_access_slices(*this, task_image, ret_new_use_tracked_slice);
             // As image subresources can be in different layouts and also different synchronization scopes,
             // we need to track these image ranges individually.
             for (
@@ -927,7 +1026,7 @@ namespace daxa
         auto & impl = *as<ImplTaskList>();
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "Can only record to an uncompleted task list");
 
-        for (auto& permutation : impl.record_active_permutations)
+        for (auto & permutation : impl.record_active_permutations)
         {
             permutation->submit(info);
         }
@@ -951,7 +1050,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "Can only record to an uncompleted task list");
         DAXA_DBG_ASSERT_TRUE_M(impl.info.swapchain.has_value(), "Can only present, when a swapchain was provided in creation");
 
-        for (auto& permutation : impl.record_active_permutations)
+        for (auto & permutation : impl.record_active_permutations)
         {
             permutation->present(info);
         }
@@ -1053,7 +1152,7 @@ namespace daxa
             permutation_index |= info.permutation_condition_values[index] ? (1u << index) : 0;
         }
         std::cout << "chosen permutation index: " << permutation_index << std::endl;
-        TaskListPermutation& permutation = impl.permutations[permutation_index];
+        TaskListPermutation & permutation = impl.permutations[permutation_index];
 
         ImplTaskRuntimeInterface impl_runtime{.task_list = impl, .permutation = permutation};
         impl_runtime.command_lists.push_back(impl.info.device.create_command_list({.debug_name = std::string("Task Command List ") + std::to_string(impl_runtime.command_lists.size())}));
@@ -1297,104 +1396,104 @@ namespace daxa
 
         // usize scope_index = 0;
         for (auto const & permutation : this->permutations)
-        for (auto const & scope : permutation.batch_submit_scopes)
-        {
-           usize batch_index = 0;
-           for (auto const & batch : scope.task_batches)
-           {
-               auto batch_name = std::string("b_") + std::to_string(batch_index);
-               auto batch_debug_name = "Batch " + std::to_string(batch_index);
+            for (auto const & scope : permutation.batch_submit_scopes)
+            {
+                usize batch_index = 0;
+                for (auto const & batch : scope.task_batches)
+                {
+                    auto batch_name = std::string("b_") + std::to_string(batch_index);
+                    auto batch_debug_name = "Batch " + std::to_string(batch_index);
 
-               {
-                   dot_file << "subgraph cluster_pb_" << batch_name << " {\n"
-                            //  << "label=\"" << batch_debug_name << "\"\n"
-                            << "style=filled\ncolor=\"#b5bec4\"\n";
+                    {
+                        dot_file << "subgraph cluster_pb_" << batch_name << " {\n"
+                                 //  << "label=\"" << batch_debug_name << "\"\n"
+                                 << "style=filled\ncolor=\"#b5bec4\"\n";
 
-                   for (auto const & barrier_index : batch.pipeline_barrier_indices)
-                   {
-                       auto const & barrier = permutation.barriers[barrier_index];
-                       std::string const name = batch_name + std::string("_pb_") + std::to_string(barrier.src_batch) + std::string("_") + std::to_string(barrier.dst_batch);
-                       dot_file << "node_" << name << " [label=\"" << name << "\", shape=box, color=\"#faaff0\"]\n";
-                   }
-                   for (auto const & barrier_index : batch.wait_split_barrier_indices)
-                   {
-                       auto const & barrier = permutation.split_barriers[barrier_index];
-                       std::string const name0 = std::string("b_") + std::to_string(barrier.src_batch) + std::string("_ssb_") + std::to_string(barrier.src_batch) + std::string("_") + std::to_string(barrier.dst_batch);
-                       std::string const name = batch_name + std::string("_wsb_") + std::to_string(barrier.src_batch) + std::string("_") + std::to_string(barrier.dst_batch);
-                       dot_file << "node_" << name << " [label=\"" << name << "\", shape=box, color=\"#fa8989\"]\n";
-                       dot_file << "node_" << name0 << "->node_" << name << "\n";
-                   }
+                        for (auto const & barrier_index : batch.pipeline_barrier_indices)
+                        {
+                            auto const & barrier = permutation.barriers[barrier_index];
+                            std::string const name = batch_name + std::string("_pb_") + std::to_string(barrier.src_batch) + std::string("_") + std::to_string(barrier.dst_batch);
+                            dot_file << "node_" << name << " [label=\"" << name << "\", shape=box, color=\"#faaff0\"]\n";
+                        }
+                        for (auto const & barrier_index : batch.wait_split_barrier_indices)
+                        {
+                            auto const & barrier = permutation.split_barriers[barrier_index];
+                            std::string const name0 = std::string("b_") + std::to_string(barrier.src_batch) + std::string("_ssb_") + std::to_string(barrier.src_batch) + std::string("_") + std::to_string(barrier.dst_batch);
+                            std::string const name = batch_name + std::string("_wsb_") + std::to_string(barrier.src_batch) + std::string("_") + std::to_string(barrier.dst_batch);
+                            dot_file << "node_" << name << " [label=\"" << name << "\", shape=box, color=\"#fa8989\"]\n";
+                            dot_file << "node_" << name0 << "->node_" << name << "\n";
+                        }
 
-                   dot_file << "node_pb_" << batch_name << " [label=\"" << batch_debug_name << " Barriers\", shape=box]\n";
-                   dot_file << "}\n";
-               }
+                        dot_file << "node_pb_" << batch_name << " [label=\"" << batch_debug_name << " Barriers\", shape=box]\n";
+                        dot_file << "}\n";
+                    }
 
-               {
-                   dot_file << "subgraph cluster_" << batch_name << " {\n"
-                            //  << "label=\"" << batch_debug_name << "\"\n"
-                            << "style=filled\ncolor=\"#b5bec4\"\n";
-                   for (auto const & task_id : batch.tasks)
-                   {
-                       auto task_name = batch_name + std::string("_t_") + std::to_string(task_id);
-                       auto task_debug_name = permutation.tasks[task_id].info.debug_name;
-                       dot_file << "subgraph cluster_" << task_name << " {\n"
-                                << "label=\"" << task_debug_name << "\"\n"
-                                << "style=filled\ncolor=\"#d1e2ed\"\n";
-                       // dot_file << "node_" << task_name << " [label=\"" << task_debug_name << "\", shape=box]\n";
-                       usize resource_index = 0;
+                    {
+                        dot_file << "subgraph cluster_" << batch_name << " {\n"
+                                 //  << "label=\"" << batch_debug_name << "\"\n"
+                                 << "style=filled\ncolor=\"#b5bec4\"\n";
+                        for (auto const & task_id : batch.tasks)
+                        {
+                            auto task_name = batch_name + std::string("_t_") + std::to_string(task_id);
+                            auto task_debug_name = permutation.tasks[task_id].info.debug_name;
+                            dot_file << "subgraph cluster_" << task_name << " {\n"
+                                     << "label=\"" << task_debug_name << "\"\n"
+                                     << "style=filled\ncolor=\"#d1e2ed\"\n";
+                            // dot_file << "node_" << task_name << " [label=\"" << task_debug_name << "\", shape=box]\n";
+                            usize resource_index = 0;
 
-                       resource_index = 0;
-                       for (auto const & [task_buffer_id, task_buffer_access] : permutation.tasks[task_id].info.used_buffers)
-                       {
-                           TaskBuffer const & task_resource = permutation.buffer_infos[task_buffer_id.index];
-                           auto const & resource_debug_name = task_resource.info.debug_name;
-                           dot_file << "node_" << task_name << "_br" << resource_index << " [label=\"" << resource_debug_name << "\", shape=box, color=\"#d3fabe\"]\n";
-                           ++resource_index;
-                       }
+                            resource_index = 0;
+                            for (auto const & [task_buffer_id, task_buffer_access] : permutation.tasks[task_id].info.used_buffers)
+                            {
+                                TaskBuffer const & task_resource = permutation.buffer_infos[task_buffer_id.index];
+                                auto const & resource_debug_name = task_resource.info.debug_name;
+                                dot_file << "node_" << task_name << "_br" << resource_index << " [label=\"" << resource_debug_name << "\", shape=box, color=\"#d3fabe\"]\n";
+                                ++resource_index;
+                            }
 
-                       resource_index = 0;
-                       for (auto const & [task_image_id, task_buffer_access, image_slice] : permutation.tasks[task_id].info.used_images)
-                       {
-                           auto const & task_resource = permutation.image_infos[task_image_id.index];
-                           auto const & resource_debug_name = task_resource.info.debug_name;
-                           dot_file << "node_" << task_name << "_ir" << resource_index << " [label=\"" << resource_debug_name << "\", shape=box, color=\"#fffec2\"]\n";
-                           ++resource_index;
-                       }
+                            resource_index = 0;
+                            for (auto const & [task_image_id, task_buffer_access, image_slice] : permutation.tasks[task_id].info.used_images)
+                            {
+                                auto const & task_resource = permutation.image_infos[task_image_id.index];
+                                auto const & resource_debug_name = task_resource.info.debug_name;
+                                dot_file << "node_" << task_name << "_ir" << resource_index << " [label=\"" << resource_debug_name << "\", shape=box, color=\"#fffec2\"]\n";
+                                ++resource_index;
+                            }
 
-                       dot_file << "}\n";
-                   }
+                            dot_file << "}\n";
+                        }
 
-                   dot_file << "node_" << batch_name << " [label=\"" << batch_debug_name << "\", shape=box]\n";
-                   dot_file << "}\n";
-               }
+                        dot_file << "node_" << batch_name << " [label=\"" << batch_debug_name << "\", shape=box]\n";
+                        dot_file << "}\n";
+                    }
 
-               {
-                   dot_file << "subgraph cluster_ssb_" << batch_name << " {\n"
-                            //  << "label=\"" << batch_debug_name << "\"\n"
-                            << "style=filled\ncolor=\"#b5bec4\"\n";
+                    {
+                        dot_file << "subgraph cluster_ssb_" << batch_name << " {\n"
+                                 //  << "label=\"" << batch_debug_name << "\"\n"
+                                 << "style=filled\ncolor=\"#b5bec4\"\n";
 
-                   for (auto const & barrier_index : batch.signal_split_barrier_indices)
-                   {
-                       auto const & barrier = permutation.split_barriers[barrier_index];
-                       std::string const name = batch_name + std::string("_ssb_") + std::to_string(barrier.src_batch) + std::string("_") + std::to_string(barrier.dst_batch);
-                       dot_file << "node_" << name << " [label=\"" << name << "\", shape=box, color=\"#fcc5c5\"]\n";
-                   }
+                        for (auto const & barrier_index : batch.signal_split_barrier_indices)
+                        {
+                            auto const & barrier = permutation.split_barriers[barrier_index];
+                            std::string const name = batch_name + std::string("_ssb_") + std::to_string(barrier.src_batch) + std::string("_") + std::to_string(barrier.dst_batch);
+                            dot_file << "node_" << name << " [label=\"" << name << "\", shape=box, color=\"#fcc5c5\"]\n";
+                        }
 
-                   dot_file << "node_ssb_" << batch_name << " [label=\"" << batch_debug_name << " Signal Split Barriers \", shape=box]\n";
-                   dot_file << "}\n";
-               }
+                        dot_file << "node_ssb_" << batch_name << " [label=\"" << batch_debug_name << " Signal Split Barriers \", shape=box]\n";
+                        dot_file << "}\n";
+                    }
 
-               if (batch_index > 0)
-               {
-                   dot_file << "node_ssb_b_" << (batch_index - 1) << "->node_pb_b_" << (batch_index) << "\n";
-               }
-               dot_file << "node_pb_b_" << (batch_index) << "->node_b_" << (batch_index) << "\n";
-               dot_file << "node_b_" << (batch_index) << "->node_ssb_b_" << (batch_index) << "\n";
+                    if (batch_index > 0)
+                    {
+                        dot_file << "node_ssb_b_" << (batch_index - 1) << "->node_pb_b_" << (batch_index) << "\n";
+                    }
+                    dot_file << "node_pb_b_" << (batch_index) << "->node_b_" << (batch_index) << "\n";
+                    dot_file << "node_b_" << (batch_index) << "->node_ssb_b_" << (batch_index) << "\n";
 
-               ++batch_index;
-           }
-           // ++scope_index;
-        }
+                    ++batch_index;
+                }
+                // ++scope_index;
+            }
 
         // for (auto & buffer_link : compiled_graph.buffer_links)
         // {
