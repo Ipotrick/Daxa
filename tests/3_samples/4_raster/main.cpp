@@ -419,7 +419,7 @@ struct RenderableVoxelWorld
                     {task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{.base_mip_level = i + 0, .base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
                     {task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{.base_mip_level = i + 1, .base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
                 },
-                .task = [=, this](daxa::TaskRuntime const & runtime)
+                .task = [=, this](daxa::TaskRuntimeInterface const & runtime)
                 {
                     auto cmd_list = runtime.get_command_list();
                     auto image_id = runtime.get_images(task_atlas_texture_array)[0];
@@ -552,7 +552,7 @@ struct App : BaseApp<App>
         }
 
         // loop_task_list.debug_print();
-        loop_task_list.execute();
+        loop_task_list.execute({});
     }
 
     void on_mouse_move(f32 x, f32 y)
@@ -628,7 +628,7 @@ struct App : BaseApp<App>
         }
         new_task_list.add_task({
             .used_buffers = {{task_vertex_buffers, daxa::TaskBufferAccess::TRANSFER_WRITE}},
-            .task = [this](daxa::TaskRuntime runtime)
+            .task = [this](daxa::TaskRuntimeInterface runtime)
             {
                 auto cmd_list = runtime.get_command_list();
                 auto face_staging_buffer = device.create_buffer({
@@ -678,7 +678,7 @@ struct App : BaseApp<App>
                 {task_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT, daxa::ImageMipArraySlice{}},
                 {renderable_world.task_atlas_texture_array, daxa::TaskImageAccess::SHADER_READ_ONLY, whole_atlas_slice},
             },
-            .task = [this](daxa::TaskRuntime runtime)
+            .task = [this](daxa::TaskRuntimeInterface runtime)
             {
                 auto cmd_list = runtime.get_command_list();
                 cmd_list.begin_renderpass({
