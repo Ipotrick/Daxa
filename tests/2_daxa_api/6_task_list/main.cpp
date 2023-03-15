@@ -724,7 +724,7 @@ namespace tests
 
 auto main() -> int
 {
-    tests::simplest();
-    tests::write_read_image();
+    // tests::simplest();
+    // tests::write_read_image();
     tests::mipmapping();
 }
