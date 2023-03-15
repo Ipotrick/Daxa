@@ -620,8 +620,9 @@ namespace daxa
                 else
                 {
                     // We subtract the initial use from the new use and append the rest.
-                    auto const [slice_rest, slice_rest_count] = new_access_slice.slice.subtract(initial_accesses[initial_access_i].slice);
+                    auto const [slice_rest, slice_rest_count] = tl_new_access_slices[new_access_slice_i].subtract(initial_accesses[initial_access_i].slice);
                     volatile auto count = slice_rest_count;
+                    volatile auto slcs = slice_rest[0];
                     // We insert the rest of the subtraction into the new use list.
                     tl_new_access_slices.insert(tl_new_access_slices.end(), slice_rest.begin(), slice_rest.begin() + slice_rest_count);
                     // We remove the current new use slice, as it intersects with an initial use slice and is later in the list.
