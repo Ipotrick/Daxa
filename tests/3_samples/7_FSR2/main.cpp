@@ -251,7 +251,7 @@ struct App : AppWindow<App>
         {
             return;
         }
-        loop_task_list.execute();
+        loop_task_list.execute({});
     }
 
     void on_mouse_move(f32 x, f32 y)
@@ -352,7 +352,7 @@ struct App : AppWindow<App>
             .used_buffers = {
                 {task_staging_raster_input_buffer, daxa::TaskBufferAccess::HOST_TRANSFER_WRITE},
             },
-            .task = [this](daxa::TaskRuntime /* runtime */)
+            .task = [this](daxa::TaskRuntimeInterface /* runtime */)
             {
                 this->raster_input.prev_view_mat = this->raster_input.view_mat;
 
@@ -379,7 +379,7 @@ struct App : AppWindow<App>
                 {task_raster_input_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE},
                 {task_staging_raster_input_buffer, daxa::TaskBufferAccess::TRANSFER_READ},
             },
-            .task = [this](daxa::TaskRuntime runtime)
+            .task = [this](daxa::TaskRuntimeInterface runtime)
             {
                 auto cmd_list = runtime.get_command_list();
                 cmd_list.copy_buffer_to_buffer({
@@ -400,7 +400,7 @@ struct App : AppWindow<App>
                 {task_motion_vectors_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
                 {task_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT, daxa::ImageMipArraySlice{}},
             },
-            .task = [this](daxa::TaskRuntime runtime)
+            .task = [this](daxa::TaskRuntimeInterface runtime)
             {
                 auto cmd_list = runtime.get_command_list();
                 cmd_list.begin_renderpass({
@@ -436,7 +436,7 @@ struct App : AppWindow<App>
                 {task_color_image, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{}},
                 {task_display_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{}},
             },
-            .task = [this](daxa::TaskRuntime runtime)
+            .task = [this](daxa::TaskRuntimeInterface runtime)
             {
                 if (!fsr_enabled)
                 {
@@ -463,7 +463,7 @@ struct App : AppWindow<App>
                 {task_depth_image, daxa::TaskImageAccess::SHADER_READ_ONLY, daxa::ImageMipArraySlice{}},
                 {task_display_image, daxa::TaskImageAccess::SHADER_WRITE_ONLY, daxa::ImageMipArraySlice{}},
             },
-            .task = [this](daxa::TaskRuntime runtime)
+            .task = [this](daxa::TaskRuntimeInterface runtime)
             {
                 if (fsr_enabled)
                 {
@@ -496,7 +496,7 @@ struct App : AppWindow<App>
                 {task_display_image, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{}},
                 {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{}},
             },
-            .task = [this](daxa::TaskRuntime runtime)
+            .task = [this](daxa::TaskRuntimeInterface runtime)
             {
                 auto cmd_list = runtime.get_command_list();
                 cmd_list.blit_image_to_image({
@@ -517,7 +517,7 @@ struct App : AppWindow<App>
             .used_images = {
                 {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
             },
-            .task = [this](daxa::TaskRuntime runtime)
+            .task = [this](daxa::TaskRuntimeInterface runtime)
             {
                 auto cmd_list = runtime.get_command_list();
                 imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, swapchain_image, size_x, size_y);
