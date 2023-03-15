@@ -109,7 +109,7 @@ struct App : BaseApp<App>
         {
             return;
         }
-        loop_task_list.execute();
+        loop_task_list.execute({});
 
         auto query_results = timeline_query_pool.get_query_results(0, 2);
         if ((query_results[1] != 0u) && (query_results[3] != 0u))
@@ -152,7 +152,7 @@ struct App : BaseApp<App>
             .used_buffers = {
                 {task_gpu_input_buffer, daxa::TaskBufferAccess::HOST_TRANSFER_WRITE},
             },
-            .task = [this](daxa::TaskRuntime runtime)
+            .task = [this](daxa::TaskRuntimeInterface runtime)
             {
                 auto cmd_list = runtime.get_command_list();
                 cmd_list.reset_timestamps({
@@ -188,7 +188,7 @@ struct App : BaseApp<App>
             .used_images = {
                 {task_render_image, daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY, daxa::ImageMipArraySlice{}},
             },
-            .task = [this](daxa::TaskRuntime runtime)
+            .task = [this](daxa::TaskRuntimeInterface runtime)
             {
                 auto cmd_list = runtime.get_command_list();
                 cmd_list.set_pipeline(*compute_pipeline);
@@ -210,7 +210,7 @@ struct App : BaseApp<App>
                 {task_render_image, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{}},
                 {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{}},
             },
-            .task = [this](daxa::TaskRuntime runtime)
+            .task = [this](daxa::TaskRuntimeInterface runtime)
             {
                 auto cmd_list = runtime.get_command_list();
                 cmd_list.blit_image_to_image({
