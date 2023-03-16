@@ -64,7 +64,7 @@ struct App : BaseApp<App>
         {
             return;
         }
-        loop_task_list.execute();
+        loop_task_list.execute({});
     }
 
     void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}
@@ -90,7 +90,7 @@ struct App : BaseApp<App>
             .used_buffers = {
                 {task_vertex_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
             },
-            .task = [this](daxa::TaskRuntime runtime)
+            .task = [this](daxa::TaskRuntimeInterface runtime)
             {
                 auto cmd_list = runtime.get_command_list();
                 auto vertex_staging_buffer = device.create_buffer({
@@ -119,7 +119,7 @@ struct App : BaseApp<App>
             .used_images = {
                 {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
             },
-            .task = [this](daxa::TaskRuntime runtime)
+            .task = [this](daxa::TaskRuntimeInterface runtime)
             {
                 auto cmd_list = runtime.get_command_list();
                 cmd_list.begin_renderpass({
