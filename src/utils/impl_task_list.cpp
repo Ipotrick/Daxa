@@ -910,7 +910,7 @@ namespace daxa
                         // Host access needs to be handeled in a specialized way.
                         bool const src_host_only_access = tracked_slice.latest_access.stages == PipelineStageFlagBits::HOST;
                         bool const dst_host_only_access = current_image_access.stages == PipelineStageFlagBits::HOST;
-                        DAXA_DBG_ASSERT_TRUE_M(!(src_host_only_access && dst_host_only_access), "direct sync between two host accesses on gpu are not allowed");
+                        DAXA_DBG_ASSERT_TRUE_M(!(src_host_only_access && dst_host_only_access), "direct sync between two host accesses on gpu is not allowed");
                         bool const is_host_barrier = src_host_only_access || dst_host_only_access;
                         // When the distance between src and dst batch is one, we can replace the split barrier with a normal barrier.
                         // We also need to make sure we do not use split barriers when the src or dst stage exclusively uses the host stage.
@@ -990,24 +990,6 @@ namespace daxa
                     // we need to advance it manually.
                     ++tracked_slice_iter;
                 }
-            }
-            // If we have a remainder left of the used image slices, there was no previous use of those slices.
-            // We need to translate those image slices into the correct layout.
-            for (ImageMipArraySlice const rest_used_slice : tl_new_use_slices)
-            {
-                usize const pipeline_barrier_index = this->barriers.size();
-                this->barriers.push_back(TaskBarrier{
-                    .image_id = used_image_t_id,
-                    .slice = rest_used_slice,
-                    .layout_before = task_image.info.initial_layout,
-                    .layout_after = current_image_layout,
-                    // In the future it may be good to give an initial image state and access.
-                    .src_access = task_image.info.initial_access,
-                    .dst_access = current_image_access,
-                    //.src_batch = task_image.info.creation_batch,
-                    //.dst_batch = batch_index,
-                });
-                batch.pipeline_barrier_indices.push_back(pipeline_barrier_index);
             }
             tl_new_use_slices.clear();
             // Now we need to add the latest use and tracked range of our current access:
@@ -1093,6 +1075,42 @@ namespace daxa
         auto & impl = *as<ImplTaskList>();
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "Can only complete a task list one time");
         impl.compiled = true;
+
+        // Insert static barriers initializing image layouts.
+        // TODO(pahrens): when we respect the create info prior use we MUST also put in barriers for buffer uses!
+        for (auto& permutation : impl.permutations)
+        {
+            auto& first_batch = permutation.batch_submit_scopes[0].task_batches[0];
+            // Insert static initialization barriers for non persistent ressources:
+            // Buffers never need layout initialization, only images.
+            for (u32 task_image_index = 0; task_image_index < permutation.image_infos.size(); ++task_image_index)
+            {
+                TaskImageId task_image_id = { task_image_index };
+                auto& task_image = permutation.image_infos[task_image_index];
+                if (task_image.valid && !task_image.info.execution_persistent)
+                {
+                    // Insert barriers, initializing all the initially accesses subresource ranges to the correct layout.
+                    for (auto& initial_access : task_image.initial_access_slices)
+                    {
+                        // TODO(pahrens): Respect the given prior state from the info.
+                        // TODO(pahrens): Investigate if it makes sense to insert these barriers in the batch in which the initial use appers.
+                        // TODO(pahrens): Investigate if split barriers make sense here.
+                        usize new_barrier_index = permutation.barriers.size();
+                        permutation.barriers.push_back(TaskBarrier{
+                            .image_id = task_image_id,
+                            .slice = initial_access.slice,
+                            .layout_before = {},
+                            .layout_after = initial_access.latest_layout,
+                            .src_access = {},
+                            .dst_access = initial_access.latest_access,
+                            .src_batch = {},
+                            .dst_batch = initial_access.latest_access_batch_index,
+                        });
+                        first_batch.pipeline_barrier_indices.push_back(new_barrier_index);
+                    }
+                }
+            }
+        }
     }
 
     auto TaskList::get_command_lists() -> std::vector<CommandList>
@@ -1158,6 +1176,24 @@ namespace daxa
         ImplTaskRuntimeInterface impl_runtime{.task_list = impl, .permutation = permutation};
         impl_runtime.command_lists.push_back(impl.info.device.create_command_list({.debug_name = std::string("Task Command List ") + std::to_string(impl_runtime.command_lists.size())}));
         // DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "must compile before executing");
+
+        // Insert initial barriers.
+        // These barriers are RUNTIME for persistent ressources.
+        // Non persistent ressources synchronization is statically compiled inserted after recording.
+        for (auto& task_buffer : permutation.buffer_infos)
+        {
+            if (task_buffer.valid && task_buffer.info.execution_persistent)
+            {
+                DAXA_DBG_ASSERT_TRUE_M(false, "unimplemented");
+            }
+        }
+        for (auto& task_image : permutation.image_infos)
+        {
+            if (task_image.valid && task_image.info.execution_persistent)
+            {
+                DAXA_DBG_ASSERT_TRUE_M(false, "unimplemented");
+            }
+        }
 
         //- Go through all TaskBatchSubmitScopes
         //  - Go through all TaskBatches

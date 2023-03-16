@@ -146,7 +146,7 @@ namespace tests
                 {
                     return;
                 }
-                // task_list.debug_print();
+                task_list.debug_print();
                 std::array<bool, TASK_CONDITION_COUNT> conditions = {};
                 conditions[TASK_CONDITION_MOUSE_DRAWING] = mouse_drawing;
                 task_list.execute({.permutation_condition_values = {conditions.data(), conditions.size()} });
