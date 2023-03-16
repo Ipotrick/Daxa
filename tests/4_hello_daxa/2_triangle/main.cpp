@@ -206,7 +206,7 @@ int main()
             // first array slice.
             {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
         },
-        .task = [task_swapchain_image, task_buffer_id, &pipeline, &window_info](daxa::TaskRuntime task_runtime)
+        .task = [task_swapchain_image, task_buffer_id, &pipeline, &window_info](daxa::TaskRuntimeInterface task_runtime)
         {
             auto cmd_list = task_runtime.get_command_list();
             // Here we can just get the buffer and image IDs from the runtime
@@ -262,7 +262,7 @@ int main()
         }
 
         // So, now all we need to do is execute our task list!
-        loop_task_list.execute();
+        loop_task_list.execute({});
     }
 
     device.wait_idle();
@@ -280,38 +280,37 @@ void upload_vertex_data(daxa::Device & device, daxa::BufferId buffer_id)
     auto task_buffer_id = temp_task_list.create_task_buffer({.debug_name = "my task buffer"});
     temp_task_list.add_runtime_buffer(task_buffer_id, buffer_id);
 
-    bool cond = false;
-
-    temp_task_list.conditional({
-        .condition = &cond,
-        .when_true = [&](){
-            temp_task_list.set_initial_access(task_buffer_id, access);
-            temp_task_list.add_task({});
-            temp_task_list.add_task({});
-            temp_task_list.add_task({});
-            temp_task_list.conditional({
-                .condition = &cond,
-                .when_true = [&](){
-                    temp_task_list.set_initial_access(task_buffer_id, access);
-                    temp_task_list.add_task({});
-                    temp_task_list.add_task({});
-                    temp_task_list.add_task({});
-                },
-                .when_false = [&](){
-                    temp_task_list.set_initial_access(task_buffer_id, access2);
-                },
-            });
-        },
-        .when_false = [&](){
-            temp_task_list.set_initial_access(task_buffer_id, access2);
-        },
-    });
+    // bool cond = false;
+    // temp_task_list.conditional({
+    //     .condition = &cond,
+    //     .when_true = [&](){
+    //         temp_task_list.set_initial_access(task_buffer_id, access);
+    //         temp_task_list.add_task({});
+    //         temp_task_list.add_task({});
+    //         temp_task_list.add_task({});
+    //         temp_task_list.conditional({
+    //             .condition = &cond,
+    //             .when_true = [&](){
+    //                 temp_task_list.set_initial_access(task_buffer_id, access);
+    //                 temp_task_list.add_task({});
+    //                 temp_task_list.add_task({});
+    //                 temp_task_list.add_task({});
+    //             },
+    //             .when_false = [&](){
+    //                 temp_task_list.set_initial_access(task_buffer_id, access2);
+    //             },
+    //         });
+    //     },
+    //     .when_false = [&](){
+    //         temp_task_list.set_initial_access(task_buffer_id, access2);
+    //     },
+    // });
 
     // We'll now just create a dummy task which dictates to the Task Runtime
     // that there must be a memory barrier after this task.
     temp_task_list.add_task({
         .used_buffers = {{task_buffer_id, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY}},
-        .task = [](daxa::TaskRuntime) {},
+        .task = [](daxa::TaskRuntimeInterface) {},
         .debug_name = "my draw task",
     });
 
@@ -320,7 +319,7 @@ void upload_vertex_data(daxa::Device & device, daxa::BufferId buffer_id)
     temp_task_list.complete();
 
     // Now we'll just
-    temp_task_list.execute();
+    temp_task_list.execute({});
 }
 
 void upload_vertex_data_task(
