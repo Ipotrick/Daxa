@@ -575,77 +575,6 @@ daxa_f32 textureLodShadow(daxa_Image2Df32 image, daxa_SamplerId sampler_id, daxa
 
 #endif
 
-#if !defined(DAXA_ENABLE_SHADER_NO_NAMESPACE)
-#define DAXA_ENABLE_SHADER_NO_NAMESPACE 0
-#endif
-#if DAXA_ENABLE_SHADER_NO_NAMESPACE
-#if !defined(DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES)
-#define DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES 1
-#endif
-
-#define BUFFER_REFERENCE_LAYOUT DAXA_BUFFER_REFERENCE_LAYOUT
-#define STORAGE_IMAGE_LAYOUT DAXA_STORAGE_IMAGE_LAYOUT
-#define SAMPLED_IMAGE_LAYOUT DAXA_SAMPLED_IMAGE_LAYOUT
-#define SAMPLER_LAYOUT DAXA_SAMPLER_LAYOUT
-
-#define BufferId daxa_BufferId
-#define ImageViewId daxa_ImageViewId
-#define SamplerId daxa_SamplerId
-
-#define RWBufferPtr daxa_RWBufferPtr
-#define BufferPtr daxa_BufferPtr
-#define CoherentRWBufferPtr daxa_CoherentRWBufferPtr
-#define RWImage daxa_RWImage
-#define Image daxa_RWImage
-
-#define get_image daxa_get_image
-#define get_texture daxa_get_texture
-#define get_sampler daxa_get_sampler
-
-#define id_to_address daxa_id_to_address
-#define id_to_index daxa_id_to_index
-
-#endif
-
-#if !defined(DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES)
-#define DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES 0
-#endif
-#if DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES
-#define b32 daxa_b32
-#define b32vec1 daxa_b32vec1
-#define b32vec2 daxa_b32vec2
-#define b32vec3 daxa_b32vec3
-#define b32vec4 daxa_b32vec4
-#define f32 daxa_f32
-#define f32vec1 daxa_f32vec1
-#define f32vec2 daxa_f32vec2
-#define f32mat2x2 daxa_f32mat2x2
-#define f32mat2x3 daxa_f32mat2x3
-#define f32mat2x4 daxa_f32mat2x4
-#define f32vec3 daxa_f32vec3
-#define f32mat3x2 daxa_f32mat3x2
-#define f32mat3x3 daxa_f32mat3x3
-#define f32mat3x4 daxa_f32mat3x4
-#define f32vec4 daxa_f32vec4
-#define f32mat4x2 daxa_f32mat4x2
-#define f32mat4x3 daxa_f32mat4x3
-#define f32mat4x4 daxa_f32mat4x4
-#define i32 daxa_i32
-#define i32vec1 daxa_i32vec1
-#define i32vec2 daxa_i32vec2
-#define i32vec3 daxa_i32vec3
-#define i32vec4 daxa_i32vec4
-#define u32 daxa_u32
-#define u32vec1 daxa_u32vec1
-#define u32vec2 daxa_u32vec2
-#define u32vec3 daxa_u32vec3
-#define u32vec4 daxa_u32vec4
-#define i64 daxa_i64
-#define i64vec1 daxa_i64vec1
-#define u64 daxa_u64
-#define u64vec1 daxa_u64vec1
-#endif
-
 DAXA_ENABLE_BUFFER_PTR(daxa_b32)
 DAXA_ENABLE_BUFFER_PTR(daxa_b32vec1)
 DAXA_ENABLE_BUFFER_PTR(daxa_b32vec2)
@@ -688,3 +617,203 @@ DAXA_ENABLE_BUFFER_PTR(daxa_u64vec3)
 DAXA_ENABLE_BUFFER_PTR(daxa_BufferId)
 DAXA_ENABLE_BUFFER_PTR(daxa_ImageViewId)
 DAXA_ENABLE_BUFFER_PTR(daxa_SamplerId)
+
+#if !defined(DAXA_ENABLE_SHADER_NO_NAMESPACE)
+#define DAXA_ENABLE_SHADER_NO_NAMESPACE 0
+#endif
+#if DAXA_ENABLE_SHADER_NO_NAMESPACE
+#if !defined(DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES)
+#define DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES 1
+#endif
+
+#define BUFFER_REFERENCE_LAYOUT DAXA_BUFFER_REFERENCE_LAYOUT
+#define STORAGE_IMAGE_LAYOUT DAXA_STORAGE_IMAGE_LAYOUT
+#define SAMPLED_IMAGE_LAYOUT DAXA_SAMPLED_IMAGE_LAYOUT
+#define SAMPLER_LAYOUT DAXA_SAMPLER_LAYOUT
+
+#define BufferId daxa_BufferId
+#define ImageViewId daxa_ImageViewId
+#define SamplerId daxa_SamplerId
+
+#define RWBufferPtr daxa_RWBufferPtr
+#define BufferPtr daxa_BufferPtr
+#define CoherentRWBufferPtr daxa_CoherentRWBufferPtr
+#define RWImage daxa_RWImage
+#define Image daxa_RWImage
+
+#define get_image daxa_get_image
+#define get_texture daxa_get_texture
+#define get_sampler daxa_get_sampler
+
+#define id_to_address daxa_id_to_address
+#define id_to_index daxa_id_to_index
+
+#define daxa_BufferPtrBufferId daxa_BufferPtrdaxa_BufferId
+#define daxa_BufferPtrImageId daxa_BufferPtrdaxa_ImageId
+#define daxa_BufferPtrSamplerId daxa_BufferPtrdaxa_SamplerId
+
+#define daxa_RWBufferPtrBufferId daxa_BufferPtrdaxa_BufferId
+#define daxa_RWBufferPtrImageId daxa_BufferPtrdaxa_ImageId
+#define daxa_RWBufferPtrSamplerId daxa_BufferPtrdaxa_SamplerId
+
+#define daxa_CoherentRWBufferPtrBufferId daxa_CoherentRWBufferPtrdaxa_BufferId
+#define daxa_CoherentRWBufferPtrImageId daxa_CoherentRWBufferPtrdaxa_ImageId
+#define daxa_CoherentRWBufferPtrSamplerId daxa_CoherentRWBufferPtrdaxa_SamplerId
+
+#endif
+
+#if !defined(DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES)
+#define DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES 0
+#endif
+#if DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES
+#define b32 daxa_b32
+#define b32vec1 daxa_b32vec1
+#define b32vec2 daxa_b32vec2
+#define b32vec3 daxa_b32vec3
+#define b32vec4 daxa_b32vec4
+#define f32 daxa_f32
+#define f32vec1 daxa_f32vec1
+#define f32vec2 daxa_f32vec2
+#define f32mat2x2 daxa_f32mat2x2
+#define f32mat2x3 daxa_f32mat2x3
+#define f32mat2x4 daxa_f32mat2x4
+#define f32vec3 daxa_f32vec3
+#define f32mat3x2 daxa_f32mat3x2
+#define f32mat3x3 daxa_f32mat3x3
+#define f32mat3x4 daxa_f32mat3x4
+#define f32vec4 daxa_f32vec4
+#define f32mat4x2 daxa_f32mat4x2
+#define f32mat4x3 daxa_f32mat4x3
+#define f32mat4x4 daxa_f32mat4x4
+#define i32 daxa_i32
+#define i32vec1 daxa_i32vec1
+#define i32vec2 daxa_i32vec2
+#define i32vec3 daxa_i32vec3
+#define i32vec4 daxa_i32vec4
+#define u32 daxa_u32
+#define u32vec1 daxa_u32vec1
+#define u32vec2 daxa_u32vec2
+#define u32vec3 daxa_u32vec3
+#define u32vec4 daxa_u32vec4
+#define i64 daxa_i64
+#define i64vec1 daxa_i64vec1
+#define u64 daxa_u64
+#define u64vec1 daxa_u64vec1
+
+#define daxa_RWBufferPtrb32 daxa_RWBufferPtrdaxa_b32
+#define daxa_RWBufferPtrb32vec1 daxa_RWBufferPtrdaxa_b32vec1
+#define daxa_RWBufferPtrb32vec2 daxa_RWBufferPtrdaxa_b32vec2
+#define daxa_RWBufferPtrb32vec3 daxa_RWBufferPtrdaxa_b32vec3
+#define daxa_RWBufferPtrb32vec4 daxa_RWBufferPtrdaxa_b32vec4
+#define daxa_RWBufferPtrf32 daxa_RWBufferPtrdaxa_f32
+#define daxa_RWBufferPtrf32vec1 daxa_RWBufferPtrdaxa_f32vec1
+#define daxa_RWBufferPtrf32vec2 daxa_RWBufferPtrdaxa_f32vec2
+#define daxa_RWBufferPtrf32mat2x2 daxa_RWBufferPtrdaxa_f32mat2x2
+#define daxa_RWBufferPtrf32mat2x3 daxa_RWBufferPtrdaxa_f32mat2x3
+#define daxa_RWBufferPtrf32mat2x4 daxa_RWBufferPtrdaxa_f32mat2x4
+#define daxa_RWBufferPtrf32vec3 daxa_RWBufferPtrdaxa_f32vec3
+#define daxa_RWBufferPtrf32mat3x2 daxa_RWBufferPtrdaxa_f32mat3x2
+#define daxa_RWBufferPtrf32mat3x3 daxa_RWBufferPtrdaxa_f32mat3x3
+#define daxa_RWBufferPtrf32mat3x4 daxa_RWBufferPtrdaxa_f32mat3x4
+#define daxa_RWBufferPtrf32vec4 daxa_RWBufferPtrdaxa_f32vec4
+#define daxa_RWBufferPtrf32mat4x2 daxa_RWBufferPtrdaxa_f32mat4x2
+#define daxa_RWBufferPtrf32mat4x3 daxa_RWBufferPtrdaxa_f32mat4x3
+#define daxa_RWBufferPtrf32mat4x4 daxa_RWBufferPtrdaxa_f32mat4x4
+#define daxa_RWBufferPtri32 daxa_RWBufferPtrdaxa_i32
+#define daxa_RWBufferPtri32vec1 daxa_RWBufferPtrdaxa_i32vec1
+#define daxa_RWBufferPtri32vec2 daxa_RWBufferPtrdaxa_i32vec2
+#define daxa_RWBufferPtri32vec3 daxa_RWBufferPtrdaxa_i32vec3
+#define daxa_RWBufferPtri32vec4 daxa_RWBufferPtrdaxa_i32vec4
+#define daxa_RWBufferPtru32 daxa_RWBufferPtrdaxa_u32
+#define daxa_RWBufferPtru32vec1 daxa_RWBufferPtrdaxa_u32vec1
+#define daxa_RWBufferPtru32vec2 daxa_RWBufferPtrdaxa_u32vec2
+#define daxa_RWBufferPtru32vec3 daxa_RWBufferPtrdaxa_u32vec3
+#define daxa_RWBufferPtru32vec4 daxa_RWBufferPtrdaxa_u32vec4
+#define daxa_RWBufferPtri64 daxa_RWBufferPtrdaxa_i64
+#define daxa_RWBufferPtri64vec1 daxa_RWBufferPtrdaxa_i64vec1
+#define daxa_RWBufferPtri64vec2 daxa_RWBufferPtrdaxa_i64vec2
+#define daxa_RWBufferPtri64vec3 daxa_RWBufferPtrdaxa_i64vec3
+#define daxa_RWBufferPtri64vec4 daxa_RWBufferPtrdaxa_i64vec4
+#define daxa_RWBufferPtru64 daxa_RWBufferPtrdaxa_u64
+#define daxa_RWBufferPtru64vec1 daxa_RWBufferPtrdaxa_u64vec1
+#define daxa_RWBufferPtru64vec2 daxa_RWBufferPtrdaxa_u64vec2
+#define daxa_RWBufferPtru64vec3 daxa_RWBufferPtrdaxa_u64vec3
+
+#define daxa_BufferPtrb32 daxa_BufferPtrdaxa_b32
+#define daxa_BufferPtrb32vec1 daxa_BufferPtrdaxa_b32vec1
+#define daxa_BufferPtrb32vec2 daxa_BufferPtrdaxa_b32vec2
+#define daxa_BufferPtrb32vec3 daxa_BufferPtrdaxa_b32vec3
+#define daxa_BufferPtrb32vec4 daxa_BufferPtrdaxa_b32vec4
+#define daxa_BufferPtrf32 daxa_BufferPtrdaxa_f32
+#define daxa_BufferPtrf32vec1 daxa_BufferPtrdaxa_f32vec1
+#define daxa_BufferPtrf32vec2 daxa_BufferPtrdaxa_f32vec2
+#define daxa_BufferPtrf32mat2x2 daxa_BufferPtrdaxa_f32mat2x2
+#define daxa_BufferPtrf32mat2x3 daxa_BufferPtrdaxa_f32mat2x3
+#define daxa_BufferPtrf32mat2x4 daxa_BufferPtrdaxa_f32mat2x4
+#define daxa_BufferPtrf32vec3 daxa_BufferPtrdaxa_f32vec3
+#define daxa_BufferPtrf32mat3x2 daxa_BufferPtrdaxa_f32mat3x2
+#define daxa_BufferPtrf32mat3x3 daxa_BufferPtrdaxa_f32mat3x3
+#define daxa_BufferPtrf32mat3x4 daxa_BufferPtrdaxa_f32mat3x4
+#define daxa_BufferPtrf32vec4 daxa_BufferPtrdaxa_f32vec4
+#define daxa_BufferPtrf32mat4x2 daxa_BufferPtrdaxa_f32mat4x2
+#define daxa_BufferPtrf32mat4x3 daxa_BufferPtrdaxa_f32mat4x3
+#define daxa_BufferPtrf32mat4x4 daxa_BufferPtrdaxa_f32mat4x4
+#define daxa_BufferPtri32 daxa_BufferPtrdaxa_i32
+#define daxa_BufferPtri32vec1 daxa_BufferPtrdaxa_i32vec1
+#define daxa_BufferPtri32vec2 daxa_BufferPtrdaxa_i32vec2
+#define daxa_BufferPtri32vec3 daxa_BufferPtrdaxa_i32vec3
+#define daxa_BufferPtri32vec4 daxa_BufferPtrdaxa_i32vec4
+#define daxa_BufferPtru32 daxa_BufferPtrdaxa_u32
+#define daxa_BufferPtru32vec1 daxa_BufferPtrdaxa_u32vec1
+#define daxa_BufferPtru32vec2 daxa_BufferPtrdaxa_u32vec2
+#define daxa_BufferPtru32vec3 daxa_BufferPtrdaxa_u32vec3
+#define daxa_BufferPtru32vec4 daxa_BufferPtrdaxa_u32vec4
+#define daxa_BufferPtri64 daxa_BufferPtrdaxa_i64
+#define daxa_BufferPtri64vec1 daxa_BufferPtrdaxa_i64vec1
+#define daxa_BufferPtri64vec2 daxa_BufferPtrdaxa_i64vec2
+#define daxa_BufferPtri64vec3 daxa_BufferPtrdaxa_i64vec3
+#define daxa_BufferPtri64vec4 daxa_BufferPtrdaxa_i64vec4
+#define daxa_BufferPtru64 daxa_BufferPtrdaxa_u64
+#define daxa_BufferPtru64vec1 daxa_BufferPtrdaxa_u64vec1
+#define daxa_BufferPtru64vec2 daxa_BufferPtrdaxa_u64vec2
+#define daxa_BufferPtru64vec3 daxa_BufferPtrdaxa_u64vec3
+
+#define daxa_CoherentRWBufferPtrb32 daxa_CoherentRWBufferPtrdaxa_b32
+#define daxa_CoherentRWBufferPtrb32vec1 daxa_CoherentRWBufferPtrdaxa_b32vec1
+#define daxa_CoherentRWBufferPtrb32vec2 daxa_CoherentRWBufferPtrdaxa_b32vec2
+#define daxa_CoherentRWBufferPtrb32vec3 daxa_CoherentRWBufferPtrdaxa_b32vec3
+#define daxa_CoherentRWBufferPtrb32vec4 daxa_CoherentRWBufferPtrdaxa_b32vec4
+#define daxa_CoherentRWBufferPtrf32 daxa_CoherentRWBufferPtrdaxa_f32
+#define daxa_CoherentRWBufferPtrf32vec1 daxa_CoherentRWBufferPtrdaxa_f32vec1
+#define daxa_CoherentRWBufferPtrf32vec2 daxa_CoherentRWBufferPtrdaxa_f32vec2
+#define daxa_CoherentRWBufferPtrf32mat2x2 daxa_CoherentRWBufferPtrdaxa_f32mat2x2
+#define daxa_CoherentRWBufferPtrf32mat2x3 daxa_CoherentRWBufferPtrdaxa_f32mat2x3
+#define daxa_CoherentRWBufferPtrf32mat2x4 daxa_CoherentRWBufferPtrdaxa_f32mat2x4
+#define daxa_CoherentRWBufferPtrf32vec3 daxa_CoherentRWBufferPtrdaxa_f32vec3
+#define daxa_CoherentRWBufferPtrf32mat3x2 daxa_CoherentRWBufferPtrdaxa_f32mat3x2
+#define daxa_CoherentRWBufferPtrf32mat3x3 daxa_CoherentRWBufferPtrdaxa_f32mat3x3
+#define daxa_CoherentRWBufferPtrf32mat3x4 daxa_CoherentRWBufferPtrdaxa_f32mat3x4
+#define daxa_CoherentRWBufferPtrf32vec4 daxa_CoherentRWBufferPtrdaxa_f32vec4
+#define daxa_CoherentRWBufferPtrf32mat4x2 daxa_CoherentRWBufferPtrdaxa_f32mat4x2
+#define daxa_CoherentRWBufferPtrf32mat4x3 daxa_CoherentRWBufferPtrdaxa_f32mat4x3
+#define daxa_CoherentRWBufferPtrf32mat4x4 daxa_CoherentRWBufferPtrdaxa_f32mat4x4
+#define daxa_CoherentRWBufferPtri32 daxa_CoherentRWBufferPtrdaxa_i32
+#define daxa_CoherentRWBufferPtri32vec1 daxa_CoherentRWBufferPtrdaxa_i32vec1
+#define daxa_CoherentRWBufferPtri32vec2 daxa_CoherentRWBufferPtrdaxa_i32vec2
+#define daxa_CoherentRWBufferPtri32vec3 daxa_CoherentRWBufferPtrdaxa_i32vec3
+#define daxa_CoherentRWBufferPtri32vec4 daxa_CoherentRWBufferPtrdaxa_i32vec4
+#define daxa_CoherentRWBufferPtru32 daxa_CoherentRWBufferPtrdaxa_u32
+#define daxa_CoherentRWBufferPtru32vec1 daxa_CoherentRWBufferPtrdaxa_u32vec1
+#define daxa_CoherentRWBufferPtru32vec2 daxa_CoherentRWBufferPtrdaxa_u32vec2
+#define daxa_CoherentRWBufferPtru32vec3 daxa_CoherentRWBufferPtrdaxa_u32vec3
+#define daxa_CoherentRWBufferPtru32vec4 daxa_CoherentRWBufferPtrdaxa_u32vec4
+#define daxa_CoherentRWBufferPtri64 daxa_CoherentRWBufferPtrdaxa_i64
+#define daxa_CoherentRWBufferPtri64vec1 daxa_CoherentRWBufferPtrdaxa_i64vec1
+#define daxa_CoherentRWBufferPtri64vec2 daxa_CoherentRWBufferPtrdaxa_i64vec2
+#define daxa_CoherentRWBufferPtri64vec3 daxa_CoherentRWBufferPtrdaxa_i64vec3
+#define daxa_CoherentRWBufferPtri64vec4 daxa_CoherentRWBufferPtrdaxa_i64vec4
+#define daxa_CoherentRWBufferPtru64 daxa_CoherentRWBufferPtrdaxa_u64
+#define daxa_CoherentRWBufferPtru64vec1 daxa_CoherentRWBufferPtrdaxa_u64vec1
+#define daxa_CoherentRWBufferPtru64vec2 daxa_CoherentRWBufferPtrdaxa_u64vec2
+#define daxa_CoherentRWBufferPtru64vec3 daxa_CoherentRWBufferPtrdaxa_u64vec3
+#endif
