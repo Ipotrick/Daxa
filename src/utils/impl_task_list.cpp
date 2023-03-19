@@ -260,6 +260,25 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can not record to completed command list");
         TaskImageId task_image_id{{.index = static_cast<u32>(impl.exec_task_images.size())}};
 
+        std::vector<TaskImageTrackedSlice> initial_access_slices; 
+        initial_access_slices.reserve(info.initial_access.size());
+        for(auto & initial_access : info.initial_access)
+        {
+            initial_access_slices.push_back({
+                .latest_access = initial_access.access,
+                .latest_layout = initial_access.layout,
+                .slice = initial_access.slice
+            });
+        }
+        if(initial_access_slices.size() == 0)
+        {
+            initial_access_slices.push_back({
+                .latest_access = AccessConsts::NONE,
+                .latest_layout = ImageLayout::UNDEFINED,
+                .slice = {},
+            });
+        }
+
         for (auto & permutation : impl.permutations)
         {
             permutation.image_infos.push_back(TaskImage{
@@ -267,6 +286,7 @@ namespace daxa
                 .info = info,
                 .swapchain_semaphore_waited_upon = false,
                 .slices_last_uses = {},
+                .initial_access_slices = initial_access_slices
             });
             if (info.swapchain_image)
             {
@@ -570,10 +590,10 @@ namespace daxa
         // Note(pahrens):
         // NEVER access new_access_slice.slice in this function past this point.
         // ALWAYS access the new access ImageMipArraySlice's from an iterator or via vector indexing.
-        for (isize new_access_slice_i = 0; new_access_slice_i < tl_new_access_slices.size();)
+        for (size_t new_access_slice_i = 0; new_access_slice_i < tl_new_access_slices.size();)
         {
             bool broke_inner_loop = false;
-            for (isize initial_access_i = 0; initial_access_i < task_image.initial_access_slices.size();)
+            for (size_t initial_access_i = 0; initial_access_i < task_image.initial_access_slices.size();)
             {
                 bool const slices_disjoint = !tl_new_access_slices[new_access_slice_i].intersects(initial_accesses[initial_access_i].slice);
                 bool const same_batch =
@@ -601,7 +621,7 @@ namespace daxa
                     // We need a copy of this, as we will erase this value from the vector first.
                     auto const initial_access_slice = initial_accesses[initial_access_i];
                     // Erase value from vector.
-                    task_image.initial_access_slices.erase(initial_accesses.begin() + initial_access_i);
+                    task_image.initial_access_slices.erase(initial_accesses.begin() + isize(initial_access_i));
                     // Subtract ranges.
                     auto const [slice_rest, slice_rest_count] = initial_access_slice.slice.subtract(tl_new_access_slices[new_access_slice_i]);
                     // Now construct new subranges from the rest of the subtraction.
@@ -624,12 +644,10 @@ namespace daxa
                 {
                     // We subtract the initial use from the new use and append the rest.
                     auto const [slice_rest, slice_rest_count] = tl_new_access_slices[new_access_slice_i].subtract(initial_accesses[initial_access_i].slice);
-                    auto volatile count = slice_rest_count;
-                    auto volatile slcs = slice_rest[0];
                     // We insert the rest of the subtraction into the new use list.
-                    tl_new_access_slices.insert(tl_new_access_slices.end(), slice_rest.begin(), slice_rest.begin() + slice_rest_count);
+                    tl_new_access_slices.insert(tl_new_access_slices.end(), slice_rest.begin(), slice_rest.begin() + isize(slice_rest_count));
                     // We remove the current new use slice, as it intersects with an initial use slice and is later in the list.
-                    tl_new_access_slices.erase(tl_new_access_slices.begin() + new_access_slice_i);
+                    tl_new_access_slices.erase(tl_new_access_slices.begin() + isize(new_access_slice_i));
                     // If we advance the new use index, we restart the inner loop over the initial accesses.
                     broke_inner_loop = true;
                     break;
