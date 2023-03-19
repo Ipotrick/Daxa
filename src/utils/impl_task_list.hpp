@@ -3,7 +3,7 @@
 #include <stack>
 #include <daxa/utils/task_list.hpp>
 
-#define DAXA_TASK_LIST_DEBUG 1
+#define DAXA_TASK_LIST_DEBUG 0
 
 #define DAXA_TASKLIST_MAX_CONITIONALS 31
 
@@ -194,7 +194,7 @@ namespace daxa
         // record time information:
         u32 record_active_conditional_scopes = {};
         u32 record_conditional_states = {};
-        std::vector<TaskListPermutation*> record_active_permutations = {};
+        std::vector<TaskListPermutation *> record_active_permutations = {};
         bool compiled = {};
 
         // execution time information:
@@ -207,9 +207,9 @@ namespace daxa
         u32 prev_frame_permutation_index = {};
 
         void update_active_permutations();
-        
+
         void debug_print_memory_barrier(MemoryBarrierInfo & barrier, std::string_view prefix);
-        void debug_print_image_memory_barrier(ImageBarrierInfo & barrier, TaskImage& task_image, std::string_view prefix);
+        void debug_print_image_memory_barrier(ImageBarrierInfo & barrier, TaskImage & task_image, std::string_view prefix);
         void debug_print_task_barrier(TaskListPermutation const & permutation, TaskBarrier & barrier, usize index, std::string_view prefix);
         void debug_print_task_split_barrier(TaskListPermutation const & permutation, TaskSplitBarrier & barrier, usize index, std::string_view prefix);
         void debug_print_task(TaskListPermutation const & permutation, Task & task, usize task_id, std::string_view prefix);
