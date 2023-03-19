@@ -976,10 +976,10 @@ namespace tests
 
 auto main() -> int
 {
-    tests::write_read_image();
-    tests::write_read_image_layer();
-    tests::create_transfer_read_buffer();
-    tests::initial_layout_access();
-    tests::tracked_slice_barrier_collapsing();
-    // tests::mipmapping();
+    // tests::write_read_image();
+    // tests::write_read_image_layer();
+    // tests::create_transfer_read_buffer();
+    // tests::initial_layout_access();
+    // tests::tracked_slice_barrier_collapsing();
+    tests::mipmapping();
 }

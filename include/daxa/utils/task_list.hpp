@@ -152,6 +152,9 @@ namespace daxa
 
     struct TaskBufferInfo
     {
+        // For execution_persistent ressources, task list will synch from the initial use to the first use ONCE.
+        // After the FIRST execution, it will use the runtime state of the ressource.
+        // For non-execution_persistent ressources, task list will synch from the initial use to first use EVERY EXECUTION.
         Access initial_access = AccessConsts::NONE;
         bool execution_persistent = {};
         std::span<BufferId> execution_buffers = {};
@@ -160,6 +163,9 @@ namespace daxa
 
     struct TaskImageInfo
     {
+        // For execution_persistent ressources, task list will synch from the initial use to the first use ONCE.
+        // After the FIRST execution, it will use the runtime state of the ressource.
+        // For non-execution_persistent ressources, task list will synch from the initial use to first use EVERY EXECUTION.
         std::span<InitialTaskImageUse> initial_access = {};
         bool execution_persistent = {};
         bool swapchain_image = {};
