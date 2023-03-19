@@ -112,6 +112,13 @@ namespace daxa
         ImageMipArraySlice slice = {};
     };
 
+    struct InitialTaskImageUse
+    {
+        Access access = {};
+        ImageLayout layout = {};
+        ImageMipArraySlice slice = {};
+    };
+
     using UsedTaskBuffers = std::vector<TaskBufferUse>;
     using UsedTaskImages = std::vector<TaskImageUse>;
 
@@ -153,8 +160,7 @@ namespace daxa
 
     struct TaskImageInfo
     {
-        Access initial_access = AccessConsts::NONE;
-        ImageLayout initial_layout = ImageLayout::UNDEFINED;
+        std::span<InitialTaskImageUse> initial_access = {};
         bool execution_persistent = {};
         bool swapchain_image = {};
         std::span<ImageId> execution_images = {};
