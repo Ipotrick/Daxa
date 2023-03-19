@@ -152,9 +152,9 @@ namespace daxa
 
     struct TaskBufferInfo
     {
-        // For execution_persistent ressources, task list will synch from the initial use to the first use ONCE.
-        // After the FIRST execution, it will use the runtime state of the ressource.
-        // For non-execution_persistent ressources, task list will synch from the initial use to first use EVERY EXECUTION.
+        // For execution_persistent resources, task list will synch from the initial use to the first use ONCE.
+        // After the FIRST execution, it will use the runtime state of the resource.
+        // For non-execution_persistent resources, task list will synch from the initial use to first use EVERY EXECUTION.
         Access initial_access = AccessConsts::NONE;
         bool execution_persistent = {};
         std::span<BufferId> execution_buffers = {};
@@ -163,9 +163,9 @@ namespace daxa
 
     struct TaskImageInfo
     {
-        // For execution_persistent ressources, task list will synch from the initial use to the first use ONCE.
-        // After the FIRST execution, it will use the runtime state of the ressource.
-        // For non-execution_persistent ressources, task list will synch from the initial use to first use EVERY EXECUTION.
+        // For execution_persistent resources, task list will synch from the initial use to the first use ONCE.
+        // After the FIRST execution, it will use the runtime state of the resource.
+        // For non-execution_persistent resources, task list will synch from the initial use to first use EVERY EXECUTION.
         std::span<InitialTaskImageUse> initial_access = {};
         bool execution_persistent = {};
         bool swapchain_image = {};
@@ -196,13 +196,13 @@ namespace daxa
         bool use_split_barriers = true;
         /// @brief Optionally the user can provide a swapchain. This enables the use of present.
         std::optional<Swapchain> swapchain = {};
-        /// @brief Each condition doubled the number of permutations. 
+        /// @brief Each condition doubled the number of permutations.
         /// For a low number of permutations its is preferable to precompile all permutations.
         /// For a large number of permutations it might be preferable to only create the permutations actually used on the fly just before they are needed.
         /// The second option is enabled by using jit (just in time) compilation.
         bool jit_compile_permutations = {};
         /// @brief Task list can branch the execution based on conditionals. All conditionals must be set before execution and stay constant while executing.
-        /// This is usefull to create permutations of a task list without having to create a seperate task list. 
+        /// This is usefull to create permutations of a task list without having to create a seperate task list.
         /// Another benefit is that task list can generate synch between executions of permutations while it can not generate synch between two seperate task lists.
         usize permutation_condition_count = {};
         std::string debug_name = {};
