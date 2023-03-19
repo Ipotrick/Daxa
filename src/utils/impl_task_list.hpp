@@ -44,6 +44,9 @@ namespace daxa
         Access latest_access = AccessConsts::NONE;
         usize latest_access_batch_index = {};
         usize latest_access_submit_scope_index = {};
+        Access initial_access = AccessConsts::NONE;
+        usize initial_access_batch_index = {};
+        usize initial_access_submit_scope_index = {};
         // When the last index was a read and an additional read is followed after,
         // we will combine all barriers into one, which is the first barrier that the first read generates.
         std::variant<std::monostate, LastReadSplitBarrierIndex, LastReadBarrierIndex> latest_access_read_barrier_index = std::monostate{};
@@ -55,7 +58,7 @@ namespace daxa
         std::vector<BufferId> actual_buffers = {};
         // We store execution time information about the previous executions final resource states.
         // This is important, as whith conditional execution and temporal resources we need to store this infomation to form correct state transitions.
-        std::optional<TaskBufferAccess> previous_execution_last_access = {};
+        std::optional<Access> previous_execution_last_access = {};
     };
 
     struct TaskBarrier
@@ -106,7 +109,7 @@ namespace daxa
         std::vector<ImageId> actual_images = {};
         // We store runtime information about the previous executions final resource states.
         // This is important, as whith conditional execution and temporal resources we need to store this infomation to form correct state transitions.
-        std::optional<TaskImageTrackedSlice> previous_execution_last_slices = {};
+        std::optional<std::vector<TaskImageTrackedSlice>> previous_execution_last_slices = {};
     };
 
     struct Task
@@ -204,6 +207,8 @@ namespace daxa
 
         void update_active_permutations();
         
+        void debug_print_memory_barrier(MemoryBarrierInfo & barrier, std::string_view prefix);
+        void debug_print_image_memory_barrier(ImageBarrierInfo & barrier, TaskImage& task_image, std::string_view prefix);
         void debug_print_task_barrier(TaskListPermutation const & permutation, TaskBarrier & barrier, usize index, std::string_view prefix);
         void debug_print_task_split_barrier(TaskListPermutation const & permutation, TaskSplitBarrier & barrier, usize index, std::string_view prefix);
         void debug_print_task(TaskListPermutation const & permutation, Task & task, usize task_id, std::string_view prefix);
