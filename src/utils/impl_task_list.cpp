@@ -273,13 +273,14 @@ namespace daxa
 
         for (auto & permutation : impl.permutations)
         {
-            // For non-persistent ressources task list will synch on the initial to fisrt use every execution.
+            // For non-persistent resources task list will synch on the initial to fisrt use every execution.
             permutation.image_infos.push_back(TaskImage{
                 .valid = permutation.active,
                 .info = info,
                 .swapchain_semaphore_waited_upon = false,
                 .slices_last_uses = info.execution_persistent ? std::vector<TaskImageTrackedSlice>{} : initial_accesses,
-                .first_accesses = {}});
+                .first_accesses = {},
+            });
             if (info.swapchain_image)
             {
                 permutation.swapchain_image = task_image_id;
@@ -287,12 +288,12 @@ namespace daxa
         }
 
         impl.exec_task_images.push_back(ExecutionTimeTaskImage{.actual_images = std::vector<ImageId>(info.execution_images.begin(), info.execution_images.end())});
-        // For persistent ressources, the initial access only applies ONCE.
+        // For persistent resources, the initial access only applies ONCE.
         // In the FIRST execution task list will synch from initial access to the first use in the permutation.
         // After the first execution it will not.
         if (info.execution_persistent)
         {
-            impl.exec_task_images.back().previous_execution_last_slices = initial_accesses;
+            impl.exec_task_images.back().previous_execution_last_slices = std::move(initial_accesses);
         }
         return task_image_id;
     }
@@ -1100,7 +1101,7 @@ namespace daxa
         for (auto & permutation : impl.permutations)
         {
             auto & first_batch = permutation.batch_submit_scopes[0].task_batches[0];
-            // Insert static initialization barriers for non persistent ressources:
+            // Insert static initialization barriers for non persistent resources:
             // Buffers never need layout initialization, only images.
             for (u32 task_image_index = 0; task_image_index < permutation.image_infos.size(); ++task_image_index)
             {
@@ -1178,14 +1179,14 @@ namespace daxa
         }
     }
 
-    void generate_persistent_ressource_synch(
+    void generate_persistent_resource_synch(
         ImplTaskList & impl,
         TaskListPermutation & permutation,
         CommandList & cmd_list)
     {
-        // Persistent ressources need just in time synch between executions,
+        // Persistent resources need just in time synch between executions,
         // as pre generating the transitions between all permutations is not managable.
-        std::cout << "\tBegin persistent ressource synchronization memory barriers\n";
+        DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout << "\tBegin persistent resource synchronization memory barriers\n");
         for (usize task_buffer_index = 0; task_buffer_index < permutation.buffer_infos.size(); ++task_buffer_index)
         {
             auto & task_buffer = permutation.buffer_infos[task_buffer_index];
@@ -1197,12 +1198,12 @@ namespace daxa
                     .waiting_pipeline_access = permutation.buffer_infos[task_buffer_index].initial_access,
                 };
                 cmd_list.pipeline_barrier(mem_barrier_info);
-                impl.debug_print_memory_barrier(mem_barrier_info, "\t");
+                DAXA_ONLY_IF_TASK_LIST_DEBUG(impl.debug_print_memory_barrier(mem_barrier_info, "\t"));
                 exec_buffer.previous_execution_last_access = {};
             }
         }
-        std::cout << "\tEnd persistent ressource synchronization memory barriers\n";
-        std::cout << "\tBegin persistent image synchronization image memory barriers\n";
+        DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout << "\tEnd persistent resource synchronization memory barriers\n");
+        DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout << "\tBegin persistent image synchronization image memory barriers\n");
         for (usize task_image_index = 0; task_image_index < permutation.image_infos.size(); ++task_image_index)
         {
             auto & task_image = permutation.image_infos[task_image_index];
@@ -1246,7 +1247,7 @@ namespace daxa
                                 .image_id = execution_image_id,
                             };
                             cmd_list.pipeline_barrier_image_transition(img_barrier_info);
-                            impl.debug_print_image_memory_barrier(img_barrier_info, task_image, "\t");
+                            DAXA_ONLY_IF_TASK_LIST_DEBUG(impl.debug_print_image_memory_barrier(img_barrier_info, task_image, "\t"));
                         }
                         // Put back the non intersecting rest into the previous use list.
                         auto [previous_use_slice_rest, previous_use_slice_rest_count] = previous_access_slices[previous_access_slice_index].slice.subtract(task_image.first_accesses[first_access_slice_index].slice);
@@ -1274,7 +1275,7 @@ namespace daxa
                 }
             }
         }
-        std::cout << "\tEnd persistent image synchronization image memory barriers\n";
+        DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout << "\tEnd persistent image synchronization image memory barriers\n");
     }
 
     void TaskList::execute(ExecutionInfo const & info)
@@ -1294,8 +1295,8 @@ namespace daxa
         ImplTaskRuntimeInterface impl_runtime{.task_list = impl, .permutation = permutation};
         impl_runtime.command_lists.push_back(impl.info.device.create_command_list({.debug_name = std::string("Task Command List ") + std::to_string(impl_runtime.command_lists.size())}));
 
-        // Generate and insert synchronization for persistent ressources:
-        generate_persistent_ressource_synch(impl, permutation, impl_runtime.command_lists.back());
+        // Generate and insert synchronization for persistent resources:
+        generate_persistent_resource_synch(impl, permutation, impl_runtime.command_lists.back());
 
         //- Go through all TaskBatchSubmitScopes
         //  - Go through all TaskBatches
