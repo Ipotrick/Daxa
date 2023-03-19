@@ -138,7 +138,7 @@ _DAXA_GENERATE_ID_VALIDATION_FUNCTION(BUFFER, Buffer, buffer)
 _DAXA_GENERATE_ID_VALIDATION_FUNCTION(IMAGE, ImageView, image)
 _DAXA_GENERATE_ID_VALIDATION_FUNCTION(SAMPLER, Sampler, sampler)
 
-// Accessor functions to gain the indices to the bindless tables from the ressource id:
+// Accessor functions to gain the indices to the bindless tables from the resource id:
 daxa_u32 daxa_id_to_index(daxa_BufferId id)
 {
     validate_buffer_id(id);
@@ -161,7 +161,7 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
     return daxa_buffer_device_address_buffer.addresses[daxa_id_to_index(buffer_id)];
 }
 
-// The corresponding glsl object of a ressource id can be aquired by these makros:
+// The corresponding glsl object of a resource id can be aquired by these makros:
 #define daxa_id_to_rwbuffer(NAME, buffer_id) daxa_id_to_rwbuffer##NAME(buffer_id)
 #define daxa_id_to_buffer(NAME, buffer_id) daxa_id_to_buffer##NAME(buffer_id)
 #define daxa_get_image(IMAGE_TYPE, image_id) daxa_RWImageTable##IMAGE_TYPE[daxa_id_to_index(image_id)]

@@ -99,11 +99,11 @@ auto main() -> int
 
     i32 ret = 0;
 
-    if ((ret = tests::simplest(device)))
+    if (ret = tests::simplest(device); ret != 0)
     {
         return ret;
     }
-    if ((ret = tests::virtual_includes(device)))
+    if (ret = tests::virtual_includes(device); ret != 0)
     {
         return ret;
     }
