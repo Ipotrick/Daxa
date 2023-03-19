@@ -442,6 +442,7 @@ namespace tests
                 new_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
                 task_render_image = new_task_list.create_task_image({
                     .debug_name = APPNAME_PREFIX("Task Render Image"),
+                    .execution_persistent = true,
                 });
                 new_task_list.add_runtime_image(task_render_image, render_image);
                 task_mipmapping_gpu_input_buffer = new_task_list.create_task_buffer({});
