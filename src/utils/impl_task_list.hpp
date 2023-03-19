@@ -100,7 +100,7 @@ namespace daxa
         TaskImageInfo info = {};
         bool swapchain_semaphore_waited_upon = {};
         std::vector<TaskImageTrackedSlice> slices_last_uses = {};
-        std::vector<TaskImageTrackedSlice> initial_access_slices = {};
+        std::vector<TaskImageTrackedSlice> first_accesses = {};
     };
 
     struct ExecutionTimeTaskImage
@@ -201,6 +201,7 @@ namespace daxa
         std::array<bool, DAXA_TASKLIST_MAX_CONITIONALS> execution_time_current_conditionals = {};
 
         // post execution information:
+        u32 chosen_permutation_last_execution = {};
         std::vector<CommandList> left_over_command_lists = {};
         bool executed_once = {};
         u32 prev_frame_permutation_index = {};
