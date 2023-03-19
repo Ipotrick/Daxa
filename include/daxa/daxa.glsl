@@ -657,7 +657,7 @@ DAXA_ENABLE_BUFFER_PTR(daxa_SamplerId)
 #define daxa_RWBufferPtrSamplerId daxa_BufferPtrdaxa_SamplerId
 
 #define daxa_CoherentRWBufferPtrBufferId daxa_CoherentRWBufferPtrdaxa_BufferId
-#define daxa_CoherentRWBufferPtrImageId daxa_CoherentRWBufferPtrdaxa_ImageId
+#define daxa_CoherentRWBufferPtrImageViewId daxa_CoherentRWBufferPtrdaxa_ImageViewId
 #define daxa_CoherentRWBufferPtrSamplerId daxa_CoherentRWBufferPtrdaxa_SamplerId
 
 #endif
