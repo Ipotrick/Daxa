@@ -146,10 +146,10 @@ namespace tests
                 {
                     return;
                 }
-                task_list.debug_print();
                 std::array<bool, TASK_CONDITION_COUNT> conditions = {};
                 conditions[TASK_CONDITION_MOUSE_DRAWING] = mouse_drawing;
-                task_list.execute({.permutation_condition_values = {conditions.data(), conditions.size()} });
+                task_list.execute({.permutation_condition_values = {conditions.data(), conditions.size()}, .record_debug_string = true});
+                std::cout << task_list.get_debug_string() << std::endl;
             }
 
             void on_mouse_move(f32 x, f32 y)
