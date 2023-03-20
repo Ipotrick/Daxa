@@ -3,7 +3,7 @@
 #include <stack>
 #include <daxa/utils/task_list.hpp>
 
-#define DAXA_TASK_LIST_DEBUG 0
+#define DAXA_TASK_LIST_DEBUG 1
 
 #define DAXA_TASKLIST_MAX_CONITIONALS 31
 
