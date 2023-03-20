@@ -3,7 +3,7 @@
 #include <stack>
 #include <daxa/utils/task_list.hpp>
 
-#define DAXA_TASK_LIST_DEBUG 1
+#define DAXA_TASK_LIST_DEBUG 0
 
 #define DAXA_TASKLIST_MAX_CONITIONALS 31
 
@@ -199,12 +199,14 @@ namespace daxa
 
         // execution time information:
         std::array<bool, DAXA_TASKLIST_MAX_CONITIONALS> execution_time_current_conditionals = {};
+        bool enable_debug_print = {};
 
         // post execution information:
         u32 chosen_permutation_last_execution = {};
         std::vector<CommandList> left_over_command_lists = {};
         bool executed_once = {};
         u32 prev_frame_permutation_index = {};
+        std::stringstream debug_string_stream = {};
 
         void update_active_permutations();
 
@@ -213,6 +215,7 @@ namespace daxa
         void debug_print_task_barrier(TaskListPermutation const & permutation, TaskBarrier & barrier, usize index, std::string_view prefix);
         void debug_print_task_split_barrier(TaskListPermutation const & permutation, TaskSplitBarrier & barrier, usize index, std::string_view prefix);
         void debug_print_task(TaskListPermutation const & permutation, Task & task, usize task_id, std::string_view prefix);
+        void debug_print();
         void execute_barriers();
         void output_graphviz();
 

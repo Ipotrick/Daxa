@@ -91,7 +91,6 @@ namespace tests
         });
 
         task_list.complete();
-        task_list.debug_print();
         // task_list.execute();
         app.device.destroy_image(image);
     }
@@ -143,7 +142,6 @@ namespace tests
             .debug_name = APPNAME_PREFIX("read image array layer 1"),
         });
         task_list.complete();
-        task_list.debug_print();
         // task_list.execute();
         app.device.destroy_image(image);
     }
@@ -194,7 +192,6 @@ namespace tests
             .debug_name = APPNAME_PREFIX("read image array layer 1"),
         });
         task_list.complete();
-        task_list.debug_print();
         // task_list.execute();
         app.device.destroy_buffer(buffer);
     }
@@ -259,7 +256,6 @@ namespace tests
         });
 
         task_list.complete();
-        task_list.debug_print();
         // task_list.execute();
         app.device.destroy_image(image);
     }
@@ -358,7 +354,6 @@ namespace tests
         });
 
         task_list.complete();
-        task_list.debug_print();
         // task_list.execute();
         app.device.destroy_image(image);
     }
@@ -480,7 +475,6 @@ namespace tests
         });
 
         task_list.complete();
-        task_list.debug_print();
         task_list.output_graphviz();
     }
 
