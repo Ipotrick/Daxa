@@ -230,6 +230,7 @@ namespace daxa
     struct ExecutionInfo
     {
         std::span<bool> permutation_condition_values = {};
+        bool record_debug_string  = {};
     };
 
     struct TaskList : ManagedPtr
@@ -262,8 +263,9 @@ namespace daxa
         // All tasks recorded AFTER a submit will not be executied and submitted.
         // The resulting command lists can retrieved wit this function.
         auto get_command_lists() -> std::vector<CommandList>;
+        // Returns a debug string describing the used permutation and synch.
+        auto get_debug_string() -> std::string;
 
         void output_graphviz();
-        void debug_print();
     };
 } // namespace daxa
