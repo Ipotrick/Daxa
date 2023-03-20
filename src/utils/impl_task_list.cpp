@@ -1204,10 +1204,14 @@ namespace daxa
         }
         DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout << "\tEnd persistent resource synchronization memory barriers\n");
         DAXA_ONLY_IF_TASK_LIST_DEBUG(std::cout << "\tBegin persistent image synchronization image memory barriers\n");
+        // If parts of the first use slices to not intersect with any previous use,
+        // we must synchronize on undefined layout!
+        std::vector<TaskImageTrackedSlice> remaining_first_accesses = {};
         for (usize task_image_index = 0; task_image_index < permutation.image_infos.size(); ++task_image_index)
         {
             auto & task_image = permutation.image_infos[task_image_index];
             auto & exec_image = impl.exec_task_images[task_image_index];
+            remaining_first_accesses = task_image.first_accesses;
             // Iterate over all persistent images.
             // Find all intersections between tracked slices of first use and previous use.
             // Synch on the intersection and delete the intersected part from the tracked slice of the previous use.
@@ -1217,17 +1221,17 @@ namespace daxa
                 for (usize previous_access_slice_index = 0; previous_access_slice_index < previous_access_slices.size();)
                 {
                     bool broke_inner_loop = false;
-                    for (usize first_access_slice_index = 0; first_access_slice_index < task_image.first_accesses.size(); ++first_access_slice_index)
+                    for (usize first_access_slice_index = 0; first_access_slice_index < remaining_first_accesses.size(); ++first_access_slice_index)
                     {
                         // Dont sync on same accesses following each other.
                         // Dont sync on disjoint subresource uses.
                         bool const both_accesses_read =
-                            task_image.first_accesses[first_access_slice_index].latest_access.type == AccessTypeFlagBits::READ &&
+                            remaining_first_accesses[first_access_slice_index].latest_access.type == AccessTypeFlagBits::READ &&
                             previous_access_slices[previous_access_slice_index].latest_access.type == AccessTypeFlagBits::READ;
                         bool const both_layouts_same =
-                            task_image.first_accesses[first_access_slice_index].latest_layout ==
+                            remaining_first_accesses[first_access_slice_index].latest_layout ==
                             previous_access_slices[previous_access_slice_index].latest_layout;
-                        if (!task_image.first_accesses[first_access_slice_index].slice.intersects(previous_access_slices[previous_access_slice_index].slice) ||
+                        if (!remaining_first_accesses[first_access_slice_index].slice.intersects(previous_access_slices[previous_access_slice_index].slice) ||
                             (both_accesses_read && both_layouts_same))
                         {
                             // Disjoint subresources or read on read with same layout.
@@ -1235,14 +1239,14 @@ namespace daxa
                         }
                         // Intersect previous use and initial use.
                         // Record synchronization for the intersecting part.
-                        auto intersection = previous_access_slices[previous_access_slice_index].slice.intersect(task_image.first_accesses[first_access_slice_index].slice);
+                        auto intersection = previous_access_slices[previous_access_slice_index].slice.intersect(remaining_first_accesses[first_access_slice_index].slice);
                         for (auto execution_image_id : impl.exec_task_images[task_image_index].actual_images)
                         {
                             ImageBarrierInfo img_barrier_info{
                                 .awaited_pipeline_access = previous_access_slices[previous_access_slice_index].latest_access,
-                                .waiting_pipeline_access = task_image.first_accesses[first_access_slice_index].latest_access,
+                                .waiting_pipeline_access = remaining_first_accesses[first_access_slice_index].latest_access,
                                 .before_layout = previous_access_slices[previous_access_slice_index].latest_layout,
-                                .after_layout = task_image.first_accesses[first_access_slice_index].latest_layout,
+                                .after_layout = remaining_first_accesses[first_access_slice_index].latest_layout,
                                 .image_slice = intersection,
                                 .image_id = execution_image_id,
                             };
@@ -1250,15 +1254,25 @@ namespace daxa
                             DAXA_ONLY_IF_TASK_LIST_DEBUG(impl.debug_print_image_memory_barrier(img_barrier_info, task_image, "\t"));
                         }
                         // Put back the non intersecting rest into the previous use list.
-                        auto [previous_use_slice_rest, previous_use_slice_rest_count] = previous_access_slices[previous_access_slice_index].slice.subtract(task_image.first_accesses[first_access_slice_index].slice);
+                        auto [previous_use_slice_rest, previous_use_slice_rest_count] = previous_access_slices[previous_access_slice_index].slice.subtract(remaining_first_accesses[first_access_slice_index].slice);
+                        auto [first_use_slice_rest, first_use_slice_rest_count] = remaining_first_accesses[first_access_slice_index].slice.subtract(previous_access_slices[previous_access_slice_index].slice);
                         for (usize rest_slice_index = 0; rest_slice_index < previous_use_slice_rest_count; ++rest_slice_index)
                         {
                             auto rest_previous_slice = previous_access_slices[previous_access_slice_index];
                             rest_previous_slice.slice = previous_use_slice_rest[rest_slice_index];
                             previous_access_slices.push_back(rest_previous_slice);
                         }
+                        // Append the new rest first uses.
+                        for (usize rest_slice_index = 0; rest_slice_index < previous_use_slice_rest_count; ++rest_slice_index)
+                        {
+                            auto rest_previous_slice = remaining_first_accesses[first_access_slice_index];
+                            rest_previous_slice.slice = first_use_slice_rest[rest_slice_index];
+                            remaining_first_accesses.push_back(rest_previous_slice);
+                        }
                         // Remove the previous use from the list, it is synchronized now.
                         previous_access_slices.erase(std::next(previous_access_slices.begin(), static_cast<ptrdiff_t>(previous_access_slice_index)));
+                        // Remove the first use from the remaining first uses, as it was now synchronized from.
+                        remaining_first_accesses.erase(std::next(remaining_first_accesses.begin(), static_cast<ptrdiff_t>(first_access_slice_index)));
                         // As we removed an element in this place,
                         // we dont need to advance the iterator as in its place there will be a new element alreay that we do not want to skip.
                         broke_inner_loop = true;
@@ -1271,6 +1285,24 @@ namespace daxa
                         // This means that the current element is already a new one,
                         // we do not want to skip it so we wont increment the index here.
                         ++previous_access_slice_index;
+                    }
+                }
+                // For all first uses that did NOT intersect with and previous use,
+                // we need to syncrhonize from an undefined state to initialize the layout of the image. 
+                for (usize remaining_first_uses_index = 0; remaining_first_uses_index < remaining_first_accesses.size(); ++remaining_first_uses_index)
+                {
+                    for (auto execution_image_id : impl.exec_task_images[task_image_index].actual_images)
+                    {
+                        ImageBarrierInfo img_barrier_info{
+                            .awaited_pipeline_access = AccessConsts::NONE,
+                            .waiting_pipeline_access = remaining_first_accesses[remaining_first_uses_index].latest_access,
+                            .before_layout = ImageLayout::UNDEFINED,
+                            .after_layout = remaining_first_accesses[remaining_first_uses_index].latest_layout,
+                            .image_slice = remaining_first_accesses[remaining_first_uses_index].slice,
+                            .image_id = execution_image_id,
+                        };
+                        cmd_list.pipeline_barrier_image_transition(img_barrier_info);
+                        DAXA_ONLY_IF_TASK_LIST_DEBUG(impl.debug_print_image_memory_barrier(img_barrier_info, task_image, "\t"));
                     }
                 }
             }
