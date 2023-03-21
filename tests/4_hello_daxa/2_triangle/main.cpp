@@ -266,6 +266,7 @@ int main()
     }
 
     device.wait_idle();
+    device.collect_garbage();
     device.destroy_buffer(buffer_id);
 }
 
@@ -279,7 +280,7 @@ void upload_vertex_data(daxa::Device & device, daxa::BufferId buffer_id)
 
     auto task_buffer_id = temp_task_list.create_task_buffer({.debug_name = "my task buffer"});
     temp_task_list.add_runtime_buffer(task_buffer_id, buffer_id);
-	
+
     // We'll first make a task to update the buffer
     temp_task_list.add_task({
         .used_buffers = {
