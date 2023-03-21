@@ -153,4 +153,7 @@ int main()
             .swapchain = swapchain,
         });
     }
+
+    device.wait_idle();
+    device.collect_garbage();
 }
