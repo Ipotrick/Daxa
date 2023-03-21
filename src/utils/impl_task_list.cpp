@@ -918,11 +918,6 @@ namespace daxa
                             auto & last_read_barrier = this->barriers[index1->index];
                             last_read_barrier.dst_access = last_read_barrier.dst_access | tracked_slice.latest_access;
                         }
-                        else
-                        {
-                            // TODO(pahrens): THIS IS ACTUALLY REACHABLE WHEN THERE ARE READS FOLLOWING EACH OTHER WITH NO PRIOR BARRIER ENQUEUED FOR THIS RESOURCE!
-                            DAXA_DBG_ASSERT_TRUE_M(false, "NOT IMPLEMENTED, PING Ipotrick TO FIX IT!");
-                        }
                     }
                     else
                     {
