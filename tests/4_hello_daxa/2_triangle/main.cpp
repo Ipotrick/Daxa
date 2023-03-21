@@ -303,32 +303,6 @@ void upload_vertex_data(daxa::Device & device, daxa::BufferId buffer_id)
         .debug_name = "my upload task",
     });
 
-    // bool cond = false;
-    // temp_task_list.conditional({
-    //     .condition = &cond,
-    //     .when_true = [&](){
-    //         temp_task_list.set_initial_access(task_buffer_id, access);
-    //         temp_task_list.add_task({});
-    //         temp_task_list.add_task({});
-    //         temp_task_list.add_task({});
-    //         temp_task_list.conditional({
-    //             .condition = &cond,
-    //             .when_true = [&](){
-    //                 temp_task_list.set_initial_access(task_buffer_id, access);
-    //                 temp_task_list.add_task({});
-    //                 temp_task_list.add_task({});
-    //                 temp_task_list.add_task({});
-    //             },
-    //             .when_false = [&](){
-    //                 temp_task_list.set_initial_access(task_buffer_id, access2);
-    //             },
-    //         });
-    //     },
-    //     .when_false = [&](){
-    //         temp_task_list.set_initial_access(task_buffer_id, access2);
-    //     },
-    // });
-
     // We'll now just create a dummy task which dictates to the Task Runtime
     // that there must be a memory barrier after this task.
     temp_task_list.add_task({
