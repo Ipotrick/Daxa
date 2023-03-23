@@ -186,28 +186,24 @@ namespace daxa
 
             VkClearColorValue color;
 
-            std::visit([&color](auto && clear_value) {
-                using T = std::decay_t<decltype(clear_value)>;
-                if constexpr (std::is_same_v<T, std::array<f32, 4>>)
+            std::visit(
+                [&color](auto && clear_value)
                 {
-                    color = {
-                        .float32 = {clear_value[0], clear_value[1], clear_value[2], clear_value[3]},
-                    };
-                }
-                else if constexpr (std::is_same_v<T, std::array<i32, 4>>)
-                {
-                    color = {
-                        .int32 = {clear_value[0], clear_value[1], clear_value[2], clear_value[3]},
-                    };
-                }
-                else if constexpr (std::is_same_v<T, std::array<u32, 4>>)
-                {
-                    color = {
-                        .uint32 = {clear_value[0], clear_value[1], clear_value[2], clear_value[3]},
-                    };
-                }
-            },
-                       info.clear_value);
+                    using T = std::decay_t<decltype(clear_value)>;
+                    if constexpr (std::is_same_v<T, std::array<f32, 4>>)
+                    {
+                        color = {.float32 = {clear_value[0], clear_value[1], clear_value[2], clear_value[3]}};
+                    }
+                    else if constexpr (std::is_same_v<T, std::array<i32, 4>>)
+                    {
+                        color = {.int32 = {clear_value[0], clear_value[1], clear_value[2], clear_value[3]}};
+                    }
+                    else if constexpr (std::is_same_v<T, std::array<u32, 4>>)
+                    {
+                        color = {.uint32 = {clear_value[0], clear_value[1], clear_value[2], clear_value[3]}};
+                    }
+                },
+                info.clear_value);
 
             vkCmdClearColorImage(
                 impl.vk_cmd_buffer,
@@ -501,8 +497,33 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
-        auto fill_rendering_attachment_info = [&](RenderAttachmentInfo const & in, VkRenderingAttachmentInfo & out) {
+        auto fill_rendering_attachment_info = [&](RenderAttachmentInfo const & in, VkRenderingAttachmentInfo & out)
+        {
             DAXA_DBG_ASSERT_TRUE_M(!in.image_view.is_empty(), "must provide either image view to render attachment");
+
+            VkClearValue clear_value{};
+            std::visit(
+                [&clear_value](auto && daxa_clear_value)
+                {
+                    using T = std::decay_t<decltype(daxa_clear_value)>;
+                    if constexpr (std::is_same_v<T, std::array<f32, 4>>)
+                    {
+                        clear_value = {.color = {.float32 = {daxa_clear_value[0], daxa_clear_value[1], daxa_clear_value[2], daxa_clear_value[3]}}};
+                    }
+                    else if constexpr (std::is_same_v<T, std::array<i32, 4>>)
+                    {
+                        clear_value = {.color = {.int32 = {daxa_clear_value[0], daxa_clear_value[1], daxa_clear_value[2], daxa_clear_value[3]}}};
+                    }
+                    else if constexpr (std::is_same_v<T, std::array<u32, 4>>)
+                    {
+                        clear_value = {.color = {.uint32 = {daxa_clear_value[0], daxa_clear_value[1], daxa_clear_value[2], daxa_clear_value[3]}}};
+                    }
+                    else if constexpr (std::is_same_v<T, DepthValue>)
+                    {
+                        clear_value = {.depthStencil = {.depth = daxa_clear_value.depth, .stencil = daxa_clear_value.stencil}};
+                    }
+                },
+                in.clear_value);
 
             out = VkRenderingAttachmentInfo{
                 .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
@@ -514,7 +535,7 @@ namespace daxa
                 .resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
                 .loadOp = static_cast<VkAttachmentLoadOp>(in.load_op),
                 .storeOp = static_cast<VkAttachmentStoreOp>(in.store_op),
-                .clearValue = *reinterpret_cast<VkClearValue const *>(&in.clear_value),
+                .clearValue = clear_value,
             };
         };
 
