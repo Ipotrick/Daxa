@@ -180,11 +180,34 @@ namespace daxa
 
         if ((info.dst_slice.image_aspect & ImageAspectFlagBits::COLOR) != ImageAspectFlagBits::NONE)
         {
-            // TODO: Also use the other 4 component values: i32 and u32!
-            auto const & clear_value = std::get<std::array<f32, 4>>(info.clear_value);
-            VkClearColorValue const color{
-                .float32 = {clear_value[0], clear_value[1], clear_value[2], clear_value[3]},
-            };
+            DAXA_DBG_ASSERT_TRUE_M(
+                !std::holds_alternative<DepthValue>(info.clear_value),
+                "Provided a depth clear value for an image with a color aspect!");
+
+            VkClearColorValue color;
+
+            std::visit([&color](auto && clear_value) {
+                using T = std::decay_t<decltype(clear_value)>;
+                if constexpr (std::is_same_v<T, std::array<f32, 4>>)
+                {
+                    color = {
+                        .float32 = {clear_value[0], clear_value[1], clear_value[2], clear_value[3]},
+                    };
+                }
+                else if constexpr (std::is_same_v<T, std::array<i32, 4>>)
+                {
+                    color = {
+                        .int32 = {clear_value[0], clear_value[1], clear_value[2], clear_value[3]},
+                    };
+                }
+                else if constexpr (std::is_same_v<T, std::array<u32, 4>>)
+                {
+                    color = {
+                        .uint32 = {clear_value[0], clear_value[1], clear_value[2], clear_value[3]},
+                    };
+                }
+            },
+                       info.clear_value);
 
             vkCmdClearColorImage(
                 impl.vk_cmd_buffer,
@@ -197,6 +220,10 @@ namespace daxa
 
         if ((info.dst_slice.image_aspect & (ImageAspectFlagBits::DEPTH | ImageAspectFlagBits::STENCIL)) != ImageAspectFlagBits::NONE)
         {
+            DAXA_DBG_ASSERT_TRUE_M(
+                std::holds_alternative<DepthValue>(info.clear_value),
+                "Provided a color clear value for an image with a depth / stencil aspect!");
+
             auto const & clear_value = std::get<DepthValue>(info.clear_value);
             VkClearDepthStencilValue const color{
                 .depth = clear_value.depth,
@@ -474,8 +501,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
-        auto fill_rendering_attachment_info = [&](RenderAttachmentInfo const & in, VkRenderingAttachmentInfo & out)
-        {
+        auto fill_rendering_attachment_info = [&](RenderAttachmentInfo const & in, VkRenderingAttachmentInfo & out) {
             DAXA_DBG_ASSERT_TRUE_M(!in.image_view.is_empty(), "must provide either image view to render attachment");
 
             out = VkRenderingAttachmentInfo{
