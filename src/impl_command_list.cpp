@@ -180,11 +180,26 @@ namespace daxa
 
         if ((info.dst_slice.image_aspect & ImageAspectFlagBits::COLOR) != ImageAspectFlagBits::NONE)
         {
-            // TODO: Also use the other 4 component values: i32 and u32!
-            auto const & clear_value = std::get<std::array<f32, 4>>(info.clear_value);
-            VkClearColorValue const color{
-                .float32 = {clear_value[0], clear_value[1], clear_value[2], clear_value[3]},
-            };
+            VkClearColorValue color;
+            
+            std::visit([&color](auto&& clear_value){
+                using T = std::decay_t<decltype(clear_value)>;
+                if constexpr (std::is_same_v<T, std::array<f32, 4>>) {
+                    color = {
+                        .float32 = {clear_value[0], clear_value[1], clear_value[2], clear_value[3]},
+                    };
+                }
+                else if constexpr (std::is_same_v<T, std::array<i32, 4>>) {
+                    color = {
+                        .int32 = {clear_value[0], clear_value[1], clear_value[2], clear_value[3]},
+                    };
+                }
+                else if constexpr (std::is_same_v<T, std::array<u32, 4>>) {
+                    color = {
+                        .uint32 = {clear_value[0], clear_value[1], clear_value[2], clear_value[3]},
+                    };
+                }
+            }, info.clear_value);
 
             vkCmdClearColorImage(
                 impl.vk_cmd_buffer,
