@@ -66,9 +66,9 @@ struct App : AppWindow<App>
         .device = device,
         .shader_compile_options = {
             .root_paths = {
+                DAXA_SHADER_INCLUDE_DIR,
                 "tests/0_common/shaders",
                 "tests/3_samples/7_FSR2/shaders",
-                "include",
             },
         },
         .debug_name = APPNAME_PREFIX("pipeline_manager"),
