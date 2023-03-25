@@ -101,7 +101,7 @@ struct Push
     daxa::SamplerId sampler0_id;
 };
 
-static constexpr auto imgui_vert_spv = std::array{
+static constexpr auto imgui_vert_spv = std::array<daxa::u32, 772>{
     // clang-format off
     0x07230203u, 0x00010300u, 0x000e0000u, 0x00000070u, 0x00000000u, 0x00020011u, 0x00000001u, 0x00020011u,
     0x000014b6u, 0x00020011u, 0x00000031u, 0x0008000au, 0x5f565053u, 0x5f545845u, 0x63736564u, 0x74706972u,
@@ -203,7 +203,7 @@ static constexpr auto imgui_vert_spv = std::array{
     // clang-format on
 };
 
-static constexpr auto imgui_frag_spv = std::array{
+static constexpr auto imgui_frag_spv = std::array<daxa::u32, 695>{
     // clang-format off
     0x07230203u, 0x00010300u, 0x000e0000u, 0x0000005au, 0x00000000u, 0x00020011u, 0x00000001u, 0x00020011u,
     0x000014b6u, 0x00020011u, 0x00000031u, 0x0008000au, 0x5f565053u, 0x5f545845u, 0x63736564u, 0x74706972u,
