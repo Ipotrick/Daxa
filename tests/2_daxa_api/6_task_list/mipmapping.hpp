@@ -28,8 +28,8 @@ namespace tests
                 .device = device,
                 .shader_compile_options = {
                     .root_paths = {
+                        DAXA_SHADER_INCLUDE_DIR,
                         "tests/2_daxa_api/6_task_list/shaders",
-                        "include",
                     },
                     .language = daxa::ShaderLanguage::GLSL,
                 },
@@ -87,7 +87,8 @@ namespace tests
 
             bool mouse_drawing = false;
 
-            enum TASK_CONDITIONS{
+            enum TASK_CONDITIONS
+            {
                 TASK_CONDITION_MOUSE_DRAWING = 0,
                 TASK_CONDITION_COUNT = 1,
             };
@@ -461,7 +462,8 @@ namespace tests
                 });
                 new_task_list.conditional({
                     .condition_index = TASK_CONDITION_MOUSE_DRAWING,
-                    .when_true = [&]() {
+                    .when_true = [&]()
+                    {
                         new_task_list.add_task(daxa::TaskInfo{
                             .used_buffers = {
                                 {task_mipmapping_gpu_input_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY},

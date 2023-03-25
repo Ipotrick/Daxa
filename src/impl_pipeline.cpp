@@ -33,8 +33,8 @@ namespace daxa
                 .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
                 .pNext = nullptr,
                 .flags = {},
-                .codeSize = static_cast<u32>(shader_info.binary.size() * sizeof(u32)),
-                .pCode = shader_info.binary.data(),
+                .codeSize = static_cast<u32>(shader_info.byte_code.size() * sizeof(u32)),
+                .pCode = shader_info.byte_code.data(),
             };
             vkCreateShaderModule(this->impl_device.as<ImplDevice>()->vk_device, &vk_shader_module_create_info, nullptr, &vk_shader_module);
             vk_shader_modules.push_back(vk_shader_module);
@@ -245,8 +245,8 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},
-            .codeSize = static_cast<u32>(this->info.shader_info.binary.size() * sizeof(u32)),
-            .pCode = this->info.shader_info.binary.data(),
+            .codeSize = static_cast<u32>(this->info.shader_info.byte_code.size() * sizeof(u32)),
+            .pCode = this->info.shader_info.byte_code.data(),
         };
         vkCreateShaderModule(this->impl_device.as<ImplDevice>()->vk_device, &shader_module_ci, nullptr, &vk_shader_module);
         this->vk_pipeline_layout = this->impl_device.as<ImplDevice>()->gpu_shader_resource_table.pipeline_layouts.at((this->info.push_constant_size + 3) / 4);

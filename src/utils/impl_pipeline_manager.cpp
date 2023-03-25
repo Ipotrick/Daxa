@@ -488,7 +488,7 @@ namespace daxa
         }
         (*pipe_result.pipeline_ptr) = this->info.device.create_compute_pipeline({
             .shader_info = {
-                .binary = std::move(spirv_result.value()),
+                .byte_code = spirv_result.value(),
                 .entry_point = a_info.shader_info.compile_options.entry_point,
             },
             .push_constant_size = modified_info.push_constant_size,
@@ -529,11 +529,11 @@ namespace daxa
         }
         (*pipe_result.pipeline_ptr) = this->info.device.create_raster_pipeline({
             .vertex_shader_info = {
-                .binary = std::move(vert_spirv_result.value()),
+                .byte_code = vert_spirv_result.value(),
                 .entry_point = a_info.vertex_shader_info.compile_options.entry_point,
             },
             .fragment_shader_info = {
-                .binary = std::move(frag_spirv_result.value()),
+                .byte_code = frag_spirv_result.value(),
                 .entry_point = a_info.fragment_shader_info.compile_options.entry_point,
             },
             .color_attachments = modified_info.color_attachments,
@@ -705,9 +705,10 @@ namespace daxa
     {
         current_shader_info = &shader_info;
         std::vector<u32> spirv = {};
-        if (std::holds_alternative<ShaderBinary>(shader_info.source))
+        if (std::holds_alternative<ShaderByteCode>(shader_info.source))
         {
-            spirv = std::get<ShaderBinary>(shader_info.source);
+            auto byte_code = std::get<ShaderByteCode>(shader_info.source);
+            spirv.assign(byte_code.begin(), byte_code.end());
         }
         else
         {
@@ -883,6 +884,18 @@ namespace daxa
         // is unnecessary, though, since it appears to default to
         // the latest version.
         // preamble += "#version 450\n";
+
+        preamble += "#define DAXA_SHADER_STAGE_COMPUTE 0\n";
+        preamble += "#define DAXA_SHADER_STAGE_VERTEX 1\n";
+        preamble += "#define DAXA_SHADER_STAGE_FRAGMENT 2\n";
+
+        switch (shader_stage)
+        {
+        case ShaderStage::COMP: preamble += "#define DAXA_SHADER_STAGE 0\n"; break;
+        case ShaderStage::VERT: preamble += "#define DAXA_SHADER_STAGE 1\n"; break;
+        case ShaderStage::FRAG: preamble += "#define DAXA_SHADER_STAGE 2\n"; break;
+        }
+
         preamble += "#define DAXA_SHADER 1\n";
         preamble += "#define DAXA_SHADERLANG 1\n";
         preamble += "#extension GL_GOOGLE_include_directive : enable\n";
@@ -1033,6 +1046,17 @@ namespace daxa
         }
         args.push_back(L"-DDAXA_SHADER");
         args.push_back(L"-DDAXA_SHADERLANG=2");
+
+        args.push_back(L"-DDAXA_SHADER_STAGE_COMPUTE=0");
+        args.push_back(L"-DDAXA_SHADER_STAGE_VERTEX=1");
+        args.push_back(L"-DDAXA_SHADER_STAGE_FRAGMENT=2");
+
+        switch (shader_stage)
+        {
+        case ShaderStage::COMP: args.push_back(L"-DDAXA_SHADER_STAGE=0");
+        case ShaderStage::VERT: args.push_back(L"-DDAXA_SHADER_STAGE=1");
+        case ShaderStage::FRAG: args.push_back(L"-DDAXA_SHADER_STAGE=2");
+        }
 
         for (auto const & root : shader_info.compile_options.root_paths)
         {
