@@ -22,10 +22,6 @@ using Clock = std::chrono::high_resolution_clock;
 #endif
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
 
-#if !defined(DAXA_SHADER_INCLUDE_DIR)
-#define DAXA_SHADER_INCLUDE_DIR "include"
-#endif
-
 #if !defined(DAXA_SHADERLANG)
 #define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
 #endif
@@ -64,9 +60,9 @@ struct BaseApp : AppWindow<T>
         .device = device,
         .shader_compile_options = {
             .root_paths = {
+                DAXA_SHADER_INCLUDE_DIR,
                 DAXA_SAMPLE_PATH "/shaders",
                 "tests/0_common/shaders",
-                DAXA_SHADER_INCLUDE_DIR,
             },
 #if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
             .language = daxa::ShaderLanguage::GLSL,

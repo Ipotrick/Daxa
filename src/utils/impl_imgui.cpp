@@ -466,27 +466,28 @@ namespace daxa
 
     ImplImGuiRenderer::ImplImGuiRenderer(ImGuiRendererInfo a_info)
         : info{std::move(a_info)},
-          // clang-format off
-        raster_pipeline{this->info.device.create_raster_pipeline({
-            .vertex_shader_info = {.binary = {imgui_vert_spv.begin(), imgui_vert_spv.end()}, .entry_point = "vs_main"},
-            .fragment_shader_info = {.binary = {imgui_frag_spv.begin(), imgui_frag_spv.end()}, .entry_point = "fs_main"},
-            .color_attachments = {
-                {
-                    .format = info.format,
-                    .blend = {
-                        .blend_enable = 1u,
-                        .src_color_blend_factor = BlendFactor::SRC_ALPHA,
-                        .dst_color_blend_factor = BlendFactor::ONE_MINUS_SRC_ALPHA,
-                        .src_alpha_blend_factor = BlendFactor::ONE,
-                        .dst_alpha_blend_factor = BlendFactor::ONE_MINUS_SRC_ALPHA,
-                    },
-                },
-            },
-            .raster = {},
-            .push_constant_size = sizeof(Push),
-            .debug_name = "ImGui Draw Pipeline",
-        })}
-    // clang-format on
+          raster_pipeline{[this]()
+                          {
+                              return this->info.device.create_raster_pipeline(daxa::RasterPipelineInfo{
+                                  .vertex_shader_info = {.byte_code = ShaderByteCode(imgui_vert_spv.begin(), imgui_vert_spv.end()), .entry_point = "vs_main"},
+                                  .fragment_shader_info = {.byte_code = ShaderByteCode(imgui_frag_spv.begin(), imgui_frag_spv.end()), .entry_point = "fs_main"},
+                                  .color_attachments = {
+                                      {
+                                          .format = info.format,
+                                          .blend = {
+                                              .blend_enable = 1u,
+                                              .src_color_blend_factor = BlendFactor::SRC_ALPHA,
+                                              .dst_color_blend_factor = BlendFactor::ONE_MINUS_SRC_ALPHA,
+                                              .src_alpha_blend_factor = BlendFactor::ONE,
+                                              .dst_alpha_blend_factor = BlendFactor::ONE_MINUS_SRC_ALPHA,
+                                          },
+                                      },
+                                  },
+                                  .raster = {},
+                                  .push_constant_size = sizeof(Push),
+                                  .debug_name = "ImGui Draw Pipeline",
+                              });
+                          }()}
     {
         if (this->info.use_custom_config)
         {
