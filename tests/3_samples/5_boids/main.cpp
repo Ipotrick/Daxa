@@ -35,9 +35,9 @@ struct App : AppWindow<App>
         .device = device,
         .shader_compile_options = {
             .root_paths = {
+                DAXA_SHADER_INCLUDE_DIR,
                 "tests/3_samples/5_boids/shaders",
                 "tests/3_samples/5_boids",
-                "include",
             },
             .language = daxa::ShaderLanguage::GLSL,
         },

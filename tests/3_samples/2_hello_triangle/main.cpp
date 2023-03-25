@@ -10,8 +10,8 @@ struct App : BaseApp<App>
     // clang-format off
     std::shared_ptr<daxa::RasterPipeline> raster_pipeline = pipeline_manager.add_raster_pipeline({
 #if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
-        .vertex_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_VERT"}}}},
-        .fragment_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_FRAG"}}}},
+        .vertex_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}},
+        .fragment_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}},
 #elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
         .vertex_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .compile_options = {.entry_point = "vs_main"}},
         .fragment_shader_info = {.source = daxa::ShaderFile{"draw.hlsl"}, .compile_options = {.entry_point = "fs_main"}},

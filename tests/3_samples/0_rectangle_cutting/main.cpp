@@ -46,8 +46,8 @@ struct App : AppWindow<App>
         .device = device,
         .shader_compile_options = {
             .root_paths = {
+                DAXA_SHADER_INCLUDE_DIR,
                 "tests/3_samples/0_rectangle_cutting/shaders",
-                "include",
             },
             .language = daxa::ShaderLanguage::GLSL,
         },
@@ -67,8 +67,8 @@ struct App : AppWindow<App>
 
     // clang-format off
     std::shared_ptr<daxa::RasterPipeline> raster_pipeline = pipeline_manager.add_raster_pipeline({
-        .vertex_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_VERT"}}}},
-        .fragment_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_FRAG"}}}},
+        .vertex_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}},
+        .fragment_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}},
         .color_attachments = {{
             .format = swapchain.get_format(),
             .blend = {

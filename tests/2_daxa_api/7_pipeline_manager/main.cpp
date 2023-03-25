@@ -16,9 +16,9 @@ namespace tests
             .device = device,
             .shader_compile_options = {
                 .root_paths = {
+                    DAXA_SHADER_INCLUDE_DIR,
                     DAXA_SAMPLE_PATH "/shaders",
                     "tests/0_common/shaders",
-                    "include",
                 },
                 .language = daxa::ShaderLanguage::GLSL,
             },
