@@ -88,8 +88,6 @@ struct BaseApp : AppWindow<T>
     Clock::time_point start = Clock::now(), prev_time = start;
     f32 time = 0.0f, delta_time = 1.0f;
 
-    daxa::CommandSubmitInfo submit_info;
-
     daxa::ImageId swapchain_image;
     daxa::TaskImageId task_swapchain_image;
 
@@ -159,9 +157,9 @@ struct BaseApp : AppWindow<T>
             .debug_name = APPNAME_PREFIX("ImGui Task"),
         });
 
-        new_task_list.submit(&submit_info);
+        new_task_list.submit({});
         new_task_list.present({});
-        new_task_list.complete();
+        new_task_list.complete({});
 
         // new_task_list.output_graphviz();
 
