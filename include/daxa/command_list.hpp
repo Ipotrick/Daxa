@@ -173,6 +173,12 @@ namespace daxa
         u32 count = {};
     };
 
+    struct CommandLabelInfo
+    {
+        std::string label_name = {};
+        std::array<f32, 4> label_color = {0.463f, 0.333f, 0.671f, 1.0f};
+    };
+
     struct ResetSplitBarrierInfo
     {
         SplitBarrierState & barrier;
@@ -236,6 +242,9 @@ namespace daxa
 
         void write_timestamp(WriteTimestampInfo const & info);
         void reset_timestamps(ResetTimestampsInfo const & info);
+
+        void begin_label(CommandLabelInfo const & info);
+        void end_label();
 
         void complete();
         auto is_complete() const -> bool;

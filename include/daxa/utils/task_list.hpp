@@ -205,6 +205,11 @@ namespace daxa
         /// This is usefull to create permutations of a task list without having to create a seperate task list.
         /// Another benefit is that task list can generate synch between executions of permutations while it can not generate synch between two seperate task lists.
         usize permutation_condition_count = {};
+        /// @brief Task list will put performance markers that are used by profilers like nsight around each tasks execution by default.
+        bool enable_command_labels = true;
+        std::array<f32, 4> task_list_label_color = {0.463f, 0.333f, 0.671f, 1.0f};
+        std::array<f32, 4> task_batch_label_color = {0.563f, 0.433f, 0.771f, 1.0f};
+        std::array<f32, 4> task_label_color = {0.663f, 0.533f, 0.871f, 1.0f};
         std::string debug_name = {};
     };
 
