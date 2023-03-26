@@ -1351,8 +1351,8 @@ namespace daxa
             if (impl.info.enable_command_labels)
             {
                 impl_runtime.command_lists.back().begin_label({
-                    .label_color = impl.info.task_list_label_color,
                     .label_name = impl.info.debug_name + std::string(", submit ") + std::to_string(submit_scope_index),
+                    .label_color = impl.info.task_list_label_color,
                 });
             }
             usize batch_index = 0;
@@ -1361,8 +1361,8 @@ namespace daxa
                 if (impl.info.enable_command_labels)
                 {
                     impl_runtime.command_lists.back().begin_label({
-                        .label_color = impl.info.task_batch_label_color,
                         .label_name = impl.info.debug_name  + std::string(", submit ") + std::to_string(submit_scope_index)+ std::string(", batch ") + std::to_string(batch_index),
+                        .label_color = impl.info.task_batch_label_color,
                     });
                 }
                 batch_index += 1;
@@ -1451,8 +1451,8 @@ namespace daxa
                     Task & task = permutation.tasks[task_id];
                     impl_runtime.current_task = &task;
                     impl_runtime.command_lists.back().begin_label({
-                        .label_color = impl.info.task_label_color,
                         .label_name = std::string("task ") + std::to_string(task_index) + std::string(" \"") + task.info.debug_name + std::string("\""),
+                        .label_color = impl.info.task_label_color,
                     });
                     task.info.task(TaskRuntimeInterface(&impl_runtime));
                     impl_runtime.command_lists.back().end_label();
