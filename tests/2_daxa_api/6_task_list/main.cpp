@@ -36,7 +36,7 @@ namespace tests
             .debug_name = APPNAME_PREFIX("task 2 (execution)"),
         });
 
-        task_list.complete();
+        task_list.complete({});
 
         task_list.execute({});
     }
@@ -86,7 +86,7 @@ namespace tests
             .debug_name = APPNAME_PREFIX("read image 1"),
         });
 
-        task_list.complete();
+        task_list.complete({});
         // task_list.execute();
         app.device.destroy_image(image);
     }
@@ -133,7 +133,7 @@ namespace tests
             .task = [](daxa::TaskRuntimeInterface const &) {},
             .debug_name = APPNAME_PREFIX("read image array layer 1"),
         });
-        task_list.complete();
+        task_list.complete({});
         // task_list.execute();
         app.device.destroy_image(image);
     }
@@ -179,7 +179,7 @@ namespace tests
             .task = [](daxa::TaskRuntimeInterface const &) {},
             .debug_name = APPNAME_PREFIX("read image array layer 1"),
         });
-        task_list.complete();
+        task_list.complete({});
         // task_list.execute();
         app.device.destroy_buffer(buffer);
     }
@@ -237,7 +237,7 @@ namespace tests
             .debug_name = APPNAME_PREFIX("write array layer 1"),
         });
 
-        task_list.complete();
+        task_list.complete({});
         // task_list.execute();
         app.device.destroy_image(image);
     }
@@ -326,7 +326,7 @@ namespace tests
             .debug_name = APPNAME_PREFIX("read image layer 1 - 4"),
         });
 
-        task_list.complete();
+        task_list.complete({});
         // task_list.execute();
         app.device.destroy_image(image);
     }
@@ -445,7 +445,7 @@ namespace tests
             .debug_name = APPNAME_PREFIX("task 5 (output_graph)"),
         });
 
-        task_list.complete();
+        task_list.complete({});
         task_list.output_graphviz();
     }
 
@@ -543,7 +543,7 @@ namespace tests
                 //     .dst_image = task_swapchain_image,
                 //     .extent = {size_x, size_y, 1},
                 // });
-                new_task_list.complete();
+                new_task_list.complete({});
 
                 return new_task_list;
             }
@@ -832,7 +832,7 @@ namespace tests
 
                 new_task_list.submit({});
                 new_task_list.present({});
-                new_task_list.complete();
+                new_task_list.complete({});
 
                 return new_task_list;
             }

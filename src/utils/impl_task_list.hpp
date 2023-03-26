@@ -130,8 +130,8 @@ namespace daxa
 
     struct ImplPresentInfo
     {
-        std::vector<BinarySemaphore> * user_binary_semaphores = {};
         std::vector<BinarySemaphore> binary_semaphores = {};
+        std::vector<BinarySemaphore>* additional_binary_semaphores = {};
     };
 
     struct TaskBatch
@@ -145,7 +145,7 @@ namespace daxa
     struct TaskBatchSubmitScope
     {
         CommandSubmitInfo submit_info = {};
-        CommandSubmitInfo * user_submit_info = {};
+        TaskSubmitInfo user_submit_info = {};
         // These barriers are inserted after all batches and their sync.
         std::vector<usize> last_minute_barrier_indices = {};
         std::vector<TaskBatch> task_batches = {};
@@ -179,7 +179,7 @@ namespace daxa
         usize swapchain_image_last_use_submit_scope_index = std::numeric_limits<usize>::max();
 
         void add_task(ImplTaskList & task_list_impl, TaskInfo const & info);
-        void submit(CommandSubmitInfo * info);
+        void submit(TaskSubmitInfo const & info);
         void present(TaskPresentInfo const & info);
     };
 
