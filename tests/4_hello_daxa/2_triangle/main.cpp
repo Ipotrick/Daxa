@@ -273,14 +273,13 @@ int main()
     // order to allow more advanced Vulkan users to do much more complicated
     // things, that we don't care about, and that you can create a whole app
     // without ever touching.
-    auto submit_info = daxa::CommandSubmitInfo{};
-    loop_task_list.submit(&submit_info);
+    loop_task_list.submit({});
 
     // And tell the task list to do the present step.
     loop_task_list.present({});
     // Finally, we complete the task list, which essentially compiles the
     // dependency graph between tasks, and inserts the most optimal synchronization!
-    loop_task_list.complete();
+    loop_task_list.complete({});
 
     // We'll set our task condition states to make sure we use the permutation
     // where we upload the vertex data to the GPU. This will get set to false

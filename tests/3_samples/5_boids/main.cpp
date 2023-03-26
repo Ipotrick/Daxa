@@ -244,9 +244,9 @@ struct App : AppWindow<App>
             },
             .debug_name = "draw boids",
         });
-        new_task_list.submit(&submit_info);
+        new_task_list.submit({});
         new_task_list.present({});
-        new_task_list.complete();
+        new_task_list.complete({});
 
         return new_task_list;
     }

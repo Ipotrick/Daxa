@@ -1019,7 +1019,7 @@ namespace daxa
         }
     }
 
-    void TaskList::submit(CommandSubmitInfo * info)
+    void TaskList::submit(TaskSubmitInfo const & info)
     {
         auto & impl = *as<ImplTaskList>();
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "Can only record to an uncompleted task list");
@@ -1030,7 +1030,7 @@ namespace daxa
         }
     }
 
-    void TaskListPermutation::submit(CommandSubmitInfo * info)
+    void TaskListPermutation::submit(TaskSubmitInfo const & info)
     {
         TaskBatchSubmitScope & submit_scope = this->batch_submit_scopes.back();
         submit_scope.submit_info = {};
@@ -1081,11 +1081,11 @@ namespace daxa
         submit_scope.last_minute_barrier_indices.push_back(barrier_index);
         // Now we need to insert the binary semaphore between submit and present.
         submit_scope.present_info = ImplPresentInfo{
-            .user_binary_semaphores = info.user_binary_semaphores,
+            .additional_binary_semaphores = info.additional_binary_semaphores,
         };
     }
 
-    void TaskList::complete()
+    void TaskList::complete(TaskCompleteInfo const & info)
     {
         auto & impl = *as<ImplTaskList>();
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "Can only complete a task list one time");
@@ -1517,13 +1517,25 @@ namespace daxa
                             swapchain.get_cpu_timeline_value());
                     }
                 }
-                if (submit_scope.user_submit_info != nullptr)
+                if (submit_scope.user_submit_info.additional_command_lists)
                 {
-                    submit_info.command_lists.insert(submit_info.command_lists.end(), submit_scope.user_submit_info->command_lists.begin(), submit_scope.user_submit_info->command_lists.end());
-                    submit_info.wait_binary_semaphores.insert(submit_info.wait_binary_semaphores.end(), submit_scope.user_submit_info->wait_binary_semaphores.begin(), submit_scope.user_submit_info->wait_binary_semaphores.end());
-                    submit_info.signal_binary_semaphores.insert(submit_info.signal_binary_semaphores.end(), submit_scope.user_submit_info->signal_binary_semaphores.begin(), submit_scope.user_submit_info->signal_binary_semaphores.end());
-                    submit_info.wait_timeline_semaphores.insert(submit_info.wait_timeline_semaphores.end(), submit_scope.user_submit_info->wait_timeline_semaphores.begin(), submit_scope.user_submit_info->wait_timeline_semaphores.end());
-                    submit_info.signal_timeline_semaphores.insert(submit_info.signal_timeline_semaphores.end(), submit_scope.user_submit_info->signal_timeline_semaphores.begin(), submit_scope.user_submit_info->signal_timeline_semaphores.end());
+                    submit_info.command_lists.insert(submit_info.command_lists.end(), submit_scope.user_submit_info.additional_command_lists->begin(), submit_scope.user_submit_info.additional_command_lists->end());
+                }
+                if (submit_scope.user_submit_info.additional_wait_binary_semaphores)
+                {
+                    submit_info.wait_binary_semaphores.insert(submit_info.wait_binary_semaphores.end(), submit_scope.user_submit_info.additional_wait_binary_semaphores->begin(), submit_scope.user_submit_info.additional_wait_binary_semaphores->end());
+                }
+                if (submit_scope.user_submit_info.additional_signal_binary_semaphores)
+                {
+                    submit_info.signal_binary_semaphores.insert(submit_info.signal_binary_semaphores.end(), submit_scope.user_submit_info.additional_signal_binary_semaphores->begin(), submit_scope.user_submit_info.additional_signal_binary_semaphores->end());
+                }
+                if (submit_scope.user_submit_info.additional_wait_timeline_semaphores)
+                {
+                    submit_info.wait_timeline_semaphores.insert(submit_info.wait_timeline_semaphores.end(), submit_scope.user_submit_info.additional_wait_timeline_semaphores->begin(), submit_scope.user_submit_info.additional_wait_timeline_semaphores->end()); 
+                }
+                if (submit_scope.user_submit_info.additional_signal_timeline_semaphores)
+                {
+                    submit_info.signal_timeline_semaphores.insert(submit_info.signal_timeline_semaphores.end(), submit_scope.user_submit_info.additional_signal_timeline_semaphores->begin(), submit_scope.user_submit_info.additional_signal_timeline_semaphores->end());
                 }
                 impl.info.device.submit_commands(submit_info);
 
@@ -1532,12 +1544,12 @@ namespace daxa
                     ImplPresentInfo & impl_present_info = submit_scope.present_info.value();
                     std::vector<BinarySemaphore> present_wait_semaphores = impl_present_info.binary_semaphores;
                     present_wait_semaphores.push_back(impl.info.swapchain.value().get_present_semaphore());
-                    if (impl_present_info.user_binary_semaphores != nullptr)
+                    if (impl_present_info.additional_binary_semaphores)
                     {
                         present_wait_semaphores.insert(
                             present_wait_semaphores.end(),
-                            impl_present_info.user_binary_semaphores->begin(),
-                            impl_present_info.user_binary_semaphores->end());
+                            impl_present_info.additional_binary_semaphores->begin(),
+                            impl_present_info.additional_binary_semaphores->end());
                     }
                     impl.info.device.present_frame(PresentInfo{
                         .wait_binary_semaphores = present_wait_semaphores,
