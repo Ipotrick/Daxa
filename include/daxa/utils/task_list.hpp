@@ -208,9 +208,24 @@ namespace daxa
         std::string debug_name = {};
     };
 
+    struct TaskSubmitInfo
+    {
+        PipelineStageFlags* additional_src_stages = {};
+        std::vector<CommandList>* additional_command_lists = {};
+        std::vector<BinarySemaphore>* additional_wait_binary_semaphores = {};
+        std::vector<BinarySemaphore>* additional_signal_binary_semaphores = {};
+        std::vector<std::pair<TimelineSemaphore, u64>>* additional_wait_timeline_semaphores = {};
+        std::vector<std::pair<TimelineSemaphore, u64>>* additional_signal_timeline_semaphores = {};
+    };
+
     struct TaskPresentInfo
     {
-        std::vector<BinarySemaphore> * user_binary_semaphores = {};
+        std::vector<BinarySemaphore>* additional_binary_semaphores = {};
+    };
+
+    struct TaskCompleteInfo
+    {
+        
     };
 
     struct TaskImageLastUse
@@ -247,10 +262,10 @@ namespace daxa
 
         void add_task(TaskInfo const & info);
 
-        void submit(CommandSubmitInfo * info);
+        void submit(TaskSubmitInfo const & info);
         void present(TaskPresentInfo const & info);
 
-        void complete();
+        void complete(TaskCompleteInfo const & info);
 
         void add_runtime_buffer(TaskBufferId tid, BufferId id);
         void add_runtime_image(TaskImageId tid, ImageId id);
