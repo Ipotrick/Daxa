@@ -1348,8 +1348,24 @@ namespace daxa
         usize submit_scope_index = 0;
         for (auto & submit_scope : permutation.batch_submit_scopes)
         {
+            if (impl.info.enable_command_labels)
+            {
+                impl_runtime.command_lists.back().begin_label({
+                    .label_color = impl.info.task_list_label_color,
+                    .label_name = impl.info.debug_name + std::string(", submit ") + std::to_string(submit_scope_index),
+                });
+            }
+            usize batch_index = 0;
             for (auto & task_batch : submit_scope.task_batches)
             {
+                if (impl.info.enable_command_labels)
+                {
+                    impl_runtime.command_lists.back().begin_label({
+                        .label_color = impl.info.task_batch_label_color,
+                        .label_name = impl.info.debug_name  + std::string(", submit ") + std::to_string(submit_scope_index)+ std::string(", batch ") + std::to_string(batch_index),
+                    });
+                }
+                batch_index += 1;
                 // Wait on pipeline barriers before batch execution.
                 for (auto barrier_index : task_batch.pipeline_barrier_indices)
                 {
@@ -1426,6 +1442,7 @@ namespace daxa
                     tl_memory_barrier_infos.clear();
                 }
                 // Execute all tasks in the batch.
+                usize task_index = 0;
                 for (TaskId const task_id : task_batch.tasks)
                 {
                     // We always allow to reuse the last command list ONCE.
@@ -1433,7 +1450,13 @@ namespace daxa
                     impl_runtime.reuse_last_command_list = true;
                     Task & task = permutation.tasks[task_id];
                     impl_runtime.current_task = &task;
+                    impl_runtime.command_lists.back().begin_label({
+                        .label_color = impl.info.task_label_color,
+                        .label_name = std::string("task ") + std::to_string(task_index) + std::string(" \"") + task.info.debug_name + std::string("\""),
+                    });
                     task.info.task(TaskRuntimeInterface(&impl_runtime));
+                    impl_runtime.command_lists.back().end_label();
+                    task_index += 1;
                 }
                 if (impl.info.use_split_barriers)
                 {
@@ -1484,11 +1507,19 @@ namespace daxa
                         }
                     }
                 }
+                if (impl.info.enable_command_labels)
+                {
+                    impl_runtime.command_lists.back().end_label();
+                }
             }
             for (usize const barrier_index : submit_scope.last_minute_barrier_indices)
             {
                 TaskBarrier & barrier = permutation.barriers[barrier_index];
                 insert_pipeline_barrier(impl_runtime.command_lists.back(), barrier, impl.exec_task_images);
+            }
+            if (impl.info.enable_command_labels)
+            {
+                impl_runtime.command_lists.back().end_label();
             }
             for (auto & command_list : impl_runtime.command_lists)
             {

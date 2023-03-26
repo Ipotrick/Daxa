@@ -22,7 +22,9 @@ namespace daxa
         VkPhysicalDevice vk_physical_device = {};
         VkDevice vk_device = {};
 
-        PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT;
+        PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT = {};
+        PFN_vkCmdBeginDebugUtilsLabelEXT vkCmdBeginDebugUtilsLabelEXT = {};
+        PFN_vkCmdEndDebugUtilsLabelEXT vkCmdEndDebugUtilsLabelEXT = {};
 
         VmaAllocator vma_allocator = {};
         DeviceProperties vk_info = {};
