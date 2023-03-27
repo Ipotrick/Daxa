@@ -210,6 +210,8 @@ namespace daxa
         std::array<f32, 4> task_list_label_color = {0.463f, 0.333f, 0.671f, 1.0f};
         std::array<f32, 4> task_batch_label_color = {0.563f, 0.433f, 0.771f, 1.0f};
         std::array<f32, 4> task_label_color = {0.663f, 0.533f, 0.871f, 1.0f};
+        /// @brief Records debug information about the execution if enabled. This string is retrievable with the function get_debug_string.
+        bool record_debug_information = {};
         std::string debug_name = {};
     };
 
