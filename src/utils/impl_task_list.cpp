@@ -1189,7 +1189,10 @@ namespace daxa
     {
         // Persistent resources need just in time synch between executions,
         // as pre generating the transitions between all permutations is not managable.
-        DAXA_ONLY_IF_TASK_LIST_DEBUG(impl.debug_string_stream << "\tBegin persistent resource synchronization memory barriers\n");
+        if (impl.info.record_debug_information)
+        {
+            impl.debug_string_stream << "\tBegin persistent resource synchronization memory barriers\n";
+        }
         for (usize task_buffer_index = 0; task_buffer_index < permutation.buffer_infos.size(); ++task_buffer_index)
         {
             auto & task_buffer = permutation.buffer_infos[task_buffer_index];
@@ -1201,12 +1204,18 @@ namespace daxa
                     .waiting_pipeline_access = permutation.buffer_infos[task_buffer_index].initial_access,
                 };
                 cmd_list.pipeline_barrier(mem_barrier_info);
-                DAXA_ONLY_IF_TASK_LIST_DEBUG(impl.debug_print_memory_barrier(mem_barrier_info, "\t"));
+                if (impl.info.record_debug_information)
+                {
+                    impl.debug_print_memory_barrier(mem_barrier_info, "\t");
+                }
                 exec_buffer.previous_execution_last_access = {};
             }
         }
-        DAXA_ONLY_IF_TASK_LIST_DEBUG(impl.debug_string_stream << "\tEnd persistent resource synchronization memory barriers\n");
-        DAXA_ONLY_IF_TASK_LIST_DEBUG(impl.debug_string_stream << "\tBegin persistent image synchronization image memory barriers\n");
+        if (impl.info.record_debug_information)
+        {
+            impl.debug_string_stream << "\tEnd persistent resource synchronization memory barriers\n";
+            impl.debug_string_stream << "\tBegin persistent image synchronization image memory barriers\n";
+        }
         // If parts of the first use slices to not intersect with any previous use,
         // we must synchronize on undefined layout!
         std::vector<TaskImageTrackedSlice> remaining_first_accesses = {};
@@ -1255,7 +1264,10 @@ namespace daxa
                                     .image_id = execution_image_id,
                                 };
                                 cmd_list.pipeline_barrier_image_transition(img_barrier_info);
-                                DAXA_ONLY_IF_TASK_LIST_DEBUG(impl.debug_print_image_memory_barrier(img_barrier_info, task_image, "\t"));
+                                if (impl.info.record_debug_information)
+                                {
+                                    impl.debug_print_image_memory_barrier(img_barrier_info, task_image, "\t");
+                                }
                             }
                         }
                         // Put back the non intersecting rest into the previous use list.
@@ -1307,12 +1319,18 @@ namespace daxa
                             .image_id = execution_image_id,
                         };
                         cmd_list.pipeline_barrier_image_transition(img_barrier_info);
-                        DAXA_ONLY_IF_TASK_LIST_DEBUG(impl.debug_print_image_memory_barrier(img_barrier_info, task_image, "\t"));
+                        if (impl.info.record_debug_information)
+                        {
+                            impl.debug_print_image_memory_barrier(img_barrier_info, task_image, "\t");
+                        }
                     }
                 }
             }
         }
-        DAXA_ONLY_IF_TASK_LIST_DEBUG(impl.debug_string_stream << "\tEnd persistent image synchronization image memory barriers\n");
+        if (impl.info.record_debug_information)
+        {
+            impl.debug_string_stream << "\tEnd persistent image synchronization image memory barriers\n";
+        }
     }
 
     void TaskList::execute(ExecutionInfo const & info)
@@ -1621,7 +1639,11 @@ namespace daxa
         impl.executed_once = true;
         impl.prev_frame_permutation_index = permutation_index;
 
-        impl.debug_print();
+        
+        if (impl.info.record_debug_information)
+        {
+            impl.debug_print();
+        }
     }
 
     ImplTaskList::ImplTaskList(TaskListInfo a_info)
@@ -1800,7 +1822,6 @@ namespace daxa
 
     void ImplTaskList::debug_print_task_barrier(TaskListPermutation const & permutation, TaskBarrier & barrier, usize index, std::string_view prefix)
     {
-#ifdef DAXA_TASK_LIST_DEBUG
         // Check if barrier is image barrier or normal barrier (see TaskBarrier struct comments).
         if (barrier.image_id.is_empty())
         {
@@ -1831,12 +1852,10 @@ namespace daxa
             this->debug_string_stream << prefix << "\tafter layout: " << to_string(barrier.layout_after) << "\n";
             this->debug_string_stream << prefix << "End   image memory barrier\n";
         }
-#endif // #ifdef DAXA_TASK_LIST_DEBUG
     }
 
     void ImplTaskList::debug_print_task_split_barrier(TaskListPermutation const & permutation, TaskSplitBarrier & barrier, usize index, std::string_view prefix)
     {
-#ifdef DAXA_TASK_LIST_DEBUG
         // Check if barrier is image barrier or normal barrier (see TaskBarrier struct comments).
         if (barrier.image_id.is_empty())
         {
@@ -1867,12 +1886,10 @@ namespace daxa
             this->debug_string_stream << prefix << "\tafter layout: " << to_string(barrier.layout_after) << "\n";
             this->debug_string_stream << prefix << "End   image memory barrier\n";
         }
-#endif // #ifdef DAXA_TASK_LIST_DEBUG
     }
 
     void ImplTaskList::debug_print_task(TaskListPermutation const & permutation, Task & task, usize task_id, std::string_view prefix)
     {
-#ifdef DAXA_TASK_LIST_DEBUG
         this->debug_string_stream << prefix << "Begin task " << task_id << " name: \"" << task.info.debug_name << "\"\n";
         for (auto [task_image_id, task_image_access, slice] : task.info.used_images)
         {
@@ -1910,12 +1927,10 @@ namespace daxa
             this->debug_string_stream << prefix << "\tEnd   task buffer use\n";
         }
         this->debug_string_stream << prefix << "End   task\n";
-#endif // #ifdef DAXA_TASK_LIST_DEBUG
     }
 
     void ImplTaskList::debug_print()
     {
-#ifdef DAXA_TASK_LIST_DEBUG
         this->debug_string_stream << "Begin TaskList \"" << this->info.debug_name << "\"\n";
         this->debug_string_stream << "\tSwapchain: " << (this->info.swapchain.has_value() ? this->info.swapchain.value().info().debug_name : "-") << "\n";
         this->debug_string_stream << "\tReorder tasks: " << std::boolalpha << this->info.reorder_tasks << "\n";
@@ -1996,7 +2011,6 @@ namespace daxa
             this->debug_string_stream << "\tEnd Permutation Nr. " << permutation_index << "\n";
         }
         this->debug_string_stream << "End TaskList\n";
-#endif // #ifdef DAXA_TASK_LIST_DEBUG
     }
 } // namespace daxa
 

@@ -3,19 +3,7 @@
 #include <stack>
 #include <daxa/utils/task_list.hpp>
 
-#define DAXA_TASK_LIST_DEBUG 0
-
 #define DAXA_TASKLIST_MAX_CONITIONALS 31
-
-#if defined(DAXA_TASK_LIST_DEBUG)
-#if DAXA_TASK_LIST_DEBUG
-#define DAXA_ONLY_IF_TASK_LIST_DEBUG(x) x
-#else
-#define DAXA_ONLY_IF_TASK_LIST_DEBUG(x)
-#endif
-#else
-#define DAXA_ONLY_IF_TASK_LIST_DEBUG(x)
-#endif
 
 namespace daxa
 {
