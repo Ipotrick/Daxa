@@ -987,7 +987,7 @@ namespace daxa
         glslang::SpvOptions spv_options{};
         spv_options.generateDebugInfo = use_debug_info;
 
-        spv_options.emitNonSemanticShaderDebugInfo = use_debug_info;
+        // spv_options.emitNonSemanticShaderDebugInfo = use_debug_info;
 
         spv_options.stripDebugInfo = !use_debug_info;
         std::vector<u32> spv;
