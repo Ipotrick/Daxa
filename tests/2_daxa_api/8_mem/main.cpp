@@ -5,7 +5,8 @@ using namespace daxa::types;
 
 #include <iostream>
 
-static inline constexpr usize ITERATION_COUNT = {10000};
+static inline constexpr usize ITERATION_COUNT = {1000};
+static inline constexpr usize ELEMENT_COUNT = {17};
 
 auto main() -> int
 {
@@ -17,20 +18,49 @@ auto main() -> int
     });
     daxa::TransferMemoryPool tmem{daxa::TransferMemoryPoolInfo{
         .device = device,
-        .capacity = 1024,
+        .capacity = 256,
         .debug_name = "transient memory pool",
     }};
     daxa::TimelineSemaphore gpu_timeline = device.create_timeline_semaphore({
         .debug_name = "timeline semaphpore",
     });
     usize cpu_timeline = 1;
+    daxa::BufferId result_buffer = device.create_buffer({
+        .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+        .size = sizeof(u32) * ELEMENT_COUNT * ITERATION_COUNT,
+        .debug_name = "result",
+    });
 
-    for (usize iteration = 0; iteration < ITERATION_COUNT; ++iteration)
+    for (u32 iteration = 0; iteration < ITERATION_COUNT; ++iteration)
     {
         gpu_timeline.wait_for_value(cpu_timeline - 1);
-        [[maybe_unused]] auto alloc = tmem.allocate(37).value();
         daxa::CommandList cmd = device.create_command_list({});
+        cmd.pipeline_barrier({
+            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_READ_WRITE | daxa::AccessConsts::HOST_WRITE,
+            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ_WRITE,
+        });
+
+        // Can allocate anywhere in the frame with imediately available staging memory.
+        daxa::TransferMemoryPool::Allocation alloc = tmem.allocate(ELEMENT_COUNT).value();
+        for (u32 i = 0; i < ELEMENT_COUNT; ++i)
+        {
+            // The Allocation provides a host pointer to the memory.
+            reinterpret_cast<u32*>(alloc.host_address)[i] = iteration * 100 + i;
+        }
+        // ALl the allocations are from a single internal buffer.
+        // The allocation contains an integer offset into that buffer.
+        // It also contains a device address that can be passed to a shader directly.
+        cmd.copy_buffer_to_buffer({
+            .src_buffer = tmem.get_buffer(),
+            .src_offset = alloc.buffer_offset,
+            .dst_buffer = result_buffer,
+            .dst_offset = sizeof(u32) * ELEMENT_COUNT * iteration,
+            .size = sizeof(u32) * ELEMENT_COUNT,
+        });
         cmd.complete();
+
+        // Need to specify give every subnmit using the mme util timeline semaphore and its value on submission.
+        // This is nessecary for internal tracking.
         device.submit_commands({
             .command_lists{std::move(cmd)},
             .signal_timeline_semaphores = {
@@ -40,8 +70,29 @@ auto main() -> int
         });
         cpu_timeline += 1;
     }
-    device.wait_idle();
-    device.collect_garbage();
 
-    std::cout << "Success!" << std::endl;
+    daxa::CommandList cmd = device.create_command_list({});
+    cmd.pipeline_barrier({
+        .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+        .waiting_pipeline_access = daxa::AccessConsts::HOST_READ,
+    });
+    cmd.complete();
+
+    device.submit_commands({
+        .command_lists{std::move(cmd)},
+    });
+
+    device.wait_idle();
+
+    u32 const* elements = device.get_host_address_as<u32>(result_buffer);
+    for (u32 iteration = 0; iteration < ITERATION_COUNT; ++iteration)
+    {
+        for (u32 element = 0; element < ELEMENT_COUNT; ++element)
+        {
+            std::cout << "value: " << elements[iteration * ELEMENT_COUNT + element] / 100 << " " << elements[iteration * ELEMENT_COUNT + element] % 100 << "\n";
+        }
+    }
+    device.destroy_buffer(result_buffer);
+    device.collect_garbage();
+    std::cout << std::flush;
 }
