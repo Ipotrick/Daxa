@@ -13,7 +13,7 @@ function(DAXA_CREATE_TEST)
         "${FOLDER_PATH}/main.cpp"
     )
     target_link_libraries(daxa_test_${FOLDER_NAME} PRIVATE daxa::daxa ${DCT_LIBS})
-    target_include_directories(daxa_test_${FOLDER_NAME} PRIVATE "${CMAKE_CURRENT_LIST_DIR}")
+    target_include_directories(daxa_test_${FOLDER_NAME} PRIVATE "${CMAKE_CURRENT_LIST_DIR}" "${CMAKE_CURRENT_LIST_DIR}/0_common/shared")
     target_compile_definitions(daxa_test_${FOLDER_NAME} PRIVATE DAXA_SAMPLE_PATH="${CMAKE_CURRENT_LIST_DIR}/${FOLDER_PATH}")
 
     if(DAXA_TESTS_DISABLE_WINDOWS_CONSOLE)
@@ -103,10 +103,10 @@ DAXA_CREATE_TEST(
 #     FOLDER 3_samples 6_sponza
 #     LIBS glfw cgltf_interface
 # )
-# DAXA_CREATE_TEST(
-#     FOLDER 3_samples 7_FSR2
-#     LIBS glfw stb_interface
-# )
+DAXA_CREATE_TEST(
+    FOLDER 3_samples 7_FSR2
+    LIBS glfw stb_interface
+)
 
 DAXA_CREATE_TEST(
     FOLDER 4_hello_daxa 1_pink_screen
