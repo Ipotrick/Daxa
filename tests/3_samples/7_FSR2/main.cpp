@@ -214,6 +214,7 @@ int main()
     });
     auto depth_image = device.create_image({
         .format = daxa::Format::D32_SFLOAT,
+        .aspect = daxa::ImageAspectFlagBits::DEPTH,
         .size = {render_size.x, render_size.y, 1},
         .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_ONLY,
         .debug_name = "depth_image",
@@ -536,7 +537,7 @@ int main()
         .used_images = {
             {task_color_image, daxa::TaskImageAccess::SHADER_READ_ONLY, daxa::ImageMipArraySlice{}},
             {task_motion_vectors_image, daxa::TaskImageAccess::SHADER_READ_ONLY, daxa::ImageMipArraySlice{}},
-            {task_depth_image, daxa::TaskImageAccess::SHADER_READ_ONLY, daxa::ImageMipArraySlice{}},
+            {task_depth_image, daxa::TaskImageAccess::SHADER_READ_ONLY, daxa::ImageMipArraySlice{.image_aspect = daxa::ImageAspectFlagBits::DEPTH}},
             {task_display_image, daxa::TaskImageAccess::SHADER_WRITE_ONLY, daxa::ImageMipArraySlice{}},
         },
         .task = [&](daxa::TaskRuntimeInterface runtime)
