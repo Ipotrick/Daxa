@@ -10,6 +10,9 @@
 
 #include <numbers>
 
+#include <daxa/types.hpp>
+using namespace daxa::types;
+
 struct Camera3D
 {
     f32 fov = 98.6f, aspect = 1.0f;

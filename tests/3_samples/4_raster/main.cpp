@@ -1,737 +1,533 @@
-#define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
-#define APPNAME "Daxa Sample: Raster"
-#include <0_common/base_app.hpp>
-
 #include <0_common/player.hpp>
-#include <0_common/noise.hpp>
+#include <0_common/voxels.hpp>
+#include "shared.inl"
 
-using namespace daxa::types;
-#include "shaders/shared.inl"
+#include <daxa/daxa.hpp>
+#include <daxa/utils/pipeline_manager.hpp>
+#include <daxa/utils/math_operators.hpp>
+#include <iostream>
+#include <daxa/utils/task_list.hpp>
+
+#include <glm/gtc/type_ptr.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-#include <glm/gtc/type_ptr.hpp>
-#include <utility>
+#include <GLFW/glfw3.h>
+#if defined(_WIN32)
+#define GLFW_EXPOSE_NATIVE_WIN32
+using HWND = void *;
+#elif defined(__linux__)
+#define GLFW_EXPOSE_NATIVE_X11
+#endif
+#define GLFW_NATIVE_INCLUDE_NONE
+#include <GLFW/glfw3native.h>
 
-using BlockID = u32;
-struct VoxelFace
+#include <set>
+
+daxa::NativeWindowHandle get_native_handle(GLFWwindow * glfw_window_ptr)
 {
-    u32 data{0};
+#if defined(_WIN32)
+    return glfwGetWin32Window(glfw_window_ptr);
+#elif defined(__linux__)
+    return reinterpret_cast<daxa::NativeWindowHandle>(glfwGetX11Window(glfw_window_ptr));
+#endif
+}
 
-    VoxelFace(i32 x, i32 y, i32 z, u32 side, BlockID id)
-    {
-
-        data |= (static_cast<u32>(x) & 0x1f) << 0;
-        data |= (static_cast<u32>(y) & 0x1f) << 5;
-        data |= (static_cast<u32>(z) & 0x1f) << 10;
-        data |= (side & 0x7) << 15;
-        data |= (id & 0x3fff) << 18;
-    }
-};
-struct Voxel
+daxa::NativeWindowPlatform get_native_platform(GLFWwindow *)
 {
-    BlockID id;
+#if defined(_WIN32)
+    return daxa::NativeWindowPlatform::WIN32_API;
+#elif defined(__linux__)
+    return daxa::NativeWindowPlatform::XLIB_API;
+#endif
+}
 
-    [[nodiscard]] auto is_occluding() const -> bool
-    {
-        switch (id)
-        {
-        case BlockID_Air:
-        case BlockID_Rose:
-        case BlockID_TallGrass:
-        case BlockID_Water: return false;
-        default: return true;
-        }
-    }
-    [[nodiscard]] auto is_cross() const -> bool
-    {
-        switch (id)
-        {
-        case BlockID_Rose:
-        case BlockID_TallGrass: return true;
-        default: return false;
-        }
-    }
-
-    [[nodiscard]] auto is_occluding_nx() const -> bool { return is_occluding(); }
-    [[nodiscard]] auto is_occluding_px() const -> bool { return is_occluding(); }
-    [[nodiscard]] auto is_occluding_ny() const -> bool { return is_occluding(); }
-    [[nodiscard]] auto is_occluding_py() const -> bool { return is_occluding(); }
-    [[nodiscard]] auto is_occluding_nz() const -> bool { return is_occluding(); }
-    [[nodiscard]] auto is_occluding_pz() const -> bool { return is_occluding(); }
-};
-
-static inline constexpr u64 CHUNK_SIZE = 32;
-static inline constexpr u64 CHUNK_VOXEL_N = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
-static inline constexpr u64 WORLD_SIZE = 2;
-static inline constexpr u64 CHUNK_N = WORLD_SIZE * WORLD_SIZE * WORLD_SIZE;
-static inline constexpr u64 CHUNK_MAX_VERTS = CHUNK_VOXEL_N * 6;
-static inline constexpr u64 CHUNK_MAX_SIZE = CHUNK_MAX_VERTS * sizeof(VoxelFace);
-
-static const std::filesystem::path textures_filepath = "tests/0_common/assets/textures";
-static const std::array<std::filesystem::path, 32> texture_names{
-    "debug.png",
-    "air.png",
-    "bedrock.png",
-    "brick.png",
-    "cactus.png",
-    "cobblestone.png",
-    "compressed_stone.png",
-    "diamond_ore.png",
-    "dirt.png",
-    "dried_shrub.png",
-    "grass-side.png",
-    "grass-top.png",
-    "gravel.png",
-    "lava_0.png",
-    "lava_1.png",
-    "lava_2.png",
-    "lava_3.png",
-    "lava_4.png",
-    "lava_5.png",
-    "lava_6.png",
-    "lava_7.png",
-    "leaves.png",
-    "bark.png",
-    "log-top.png",
-    "molten_rock.png",
-    "planks.png",
-    "rose.png",
-    "sand.png",
-    "sandstone.png",
-    "stone.png",
-    "tallgrass.png",
-    "water.png",
-};
-
-struct VoxelChunk
+struct AppInfo
 {
-    Voxel voxels[CHUNK_VOXEL_N];
-    f32vec3 pos;
+    daxa::u32 width, height;
+    bool swapchain_out_of_date = false;
 
-    static auto generate_block_id(f32vec3 p) -> BlockID
-    {
-        FractalNoiseConfig const noise_conf{
-            .amplitude = 1.0f,
-            .persistance = 0.5f,
-            .scale = 0.04f,
-            .lacunarity = 2.0f,
-            .octaves = 4,
-        };
-        f32 const value = fractal_noise(p, noise_conf);
-        if (value < 0.0f)
-        {
-            if (value < -0.2f)
-            {
-                return BlockID_Gravel;
-            }
-            else if (value < -0.1f)
-            {
-                return BlockID_Stone;
-            }
-            else
-            {
-                return BlockID_Dirt;
-            }
-        }
-        return BlockID_Air;
-    }
-    void generate()
-    {
-        for (u64 zi = 0; zi < CHUNK_SIZE; ++zi)
-        {
-            for (u64 yi = 0; yi < CHUNK_SIZE; ++yi)
-            {
-                for (u64 xi = 0; xi < CHUNK_SIZE; ++xi)
-                {
-                    u64 const i = xi + yi * CHUNK_SIZE + zi * CHUNK_SIZE * CHUNK_SIZE;
-                    f32vec3 const block_pos = f32vec3{static_cast<f32>(xi), static_cast<f32>(yi), static_cast<f32>(zi)} + pos;
-                    voxels[i].id = generate_block_id(block_pos);
-                }
-            }
-        }
-    }
-};
-struct RenderableChunk
-{
-    std::unique_ptr<VoxelChunk> chunk = std::make_unique<VoxelChunk>();
-    daxa::BufferId face_buffer;
-    daxa::TaskBufferId task_face_buffer;
-    daxa::BufferId water_face_buffer;
-    daxa::TaskBufferId task_water_face_buffer;
-    u32 face_n = 0, water_face_n = 0;
-    bool invalid = true;
-};
-struct RenderableVoxelWorld
-{
-    daxa::Device device;
-    std::array<RenderableChunk, CHUNK_N> renderable_chunks{};
-
-    daxa::ImageId atlas_texture_array{};
-    daxa::SamplerId atlas_sampler{};
-    daxa::TaskImageId task_atlas_texture_array;
-    bool textures_valid = false;
-
-    explicit RenderableVoxelWorld(daxa::Device a_device) : device{std::move(std::move(a_device))}
-    {
-        for (u64 z = 0; z < WORLD_SIZE; ++z)
-        {
-            for (u64 y = 0; y < WORLD_SIZE; ++y)
-            {
-                for (u64 x = 0; x < WORLD_SIZE; ++x)
-                {
-                    auto & renderable_chunk = renderable_chunks[x + y * WORLD_SIZE + z * WORLD_SIZE * WORLD_SIZE];
-                    renderable_chunk.chunk->pos = f32vec3{static_cast<f32>(x * CHUNK_SIZE), static_cast<f32>(y * CHUNK_SIZE), static_cast<f32>(z * CHUNK_SIZE)};
-                    renderable_chunk.face_buffer = device.create_buffer(daxa::BufferInfo{
-                        .size = CHUNK_MAX_SIZE,
-                        .debug_name = APPNAME_PREFIX("face_buffer"),
-                    });
-                    renderable_chunk.water_face_buffer = device.create_buffer(daxa::BufferInfo{
-                        .size = CHUNK_MAX_SIZE,
-                        .debug_name = APPNAME_PREFIX("water_face_buffer"),
-                    });
-                    renderable_chunk.chunk->generate();
-                }
-            }
-        }
-
-        atlas_texture_array = device.create_image({
-            .format = daxa::Format::R8G8B8A8_SRGB,
-            .size = {16, 16, 1},
-            .mip_level_count = 4,
-            .array_layer_count = static_cast<u32>(texture_names.size()),
-            .usage = daxa::ImageUsageFlagBits::SHADER_READ_ONLY | daxa::ImageUsageFlagBits::TRANSFER_SRC | daxa::ImageUsageFlagBits::TRANSFER_DST,
-            .debug_name = APPNAME_PREFIX("atlas_texture_array"),
-        });
-
-        atlas_sampler = device.create_sampler({
-            .magnification_filter = daxa::Filter::NEAREST,
-            .minification_filter = daxa::Filter::LINEAR,
-            .min_lod = 0,
-            .max_lod = 0,
-            .debug_name = APPNAME_PREFIX("atlas_sampler"),
-        });
-    }
-    ~RenderableVoxelWorld()
-    {
-        for (auto & renderable_chunk : renderable_chunks)
-        {
-            device.destroy_buffer(renderable_chunk.face_buffer);
-            device.destroy_buffer(renderable_chunk.water_face_buffer);
-        }
-        device.destroy_image(atlas_texture_array);
-        device.destroy_sampler(atlas_sampler);
-    }
-
-    auto get_voxel(i32vec3 p) -> Voxel
-    {
-        i32 const x = p.x / static_cast<i32>(CHUNK_SIZE);
-        i32 const y = p.y / static_cast<i32>(CHUNK_SIZE);
-        i32 const z = p.z / static_cast<i32>(CHUNK_SIZE);
-
-        if (p.x < 0 || x >= static_cast<i32>(WORLD_SIZE))
-        {
-            return {.id = BlockID_Air};
-        }
-        if (p.y < 0 || y >= static_cast<i32>(WORLD_SIZE))
-        {
-            return {.id = BlockID_Air};
-        }
-        if (p.z < 0 || z >= static_cast<i32>(WORLD_SIZE))
-        {
-            return {.id = BlockID_Air};
-        }
-
-        auto & chunk = renderable_chunks[static_cast<u64>(x) + static_cast<u64>(y) * WORLD_SIZE + static_cast<u64>(z) * WORLD_SIZE * WORLD_SIZE];
-
-        u64 const xi = static_cast<u64>(p.x) % CHUNK_SIZE;
-        u64 const yi = static_cast<u64>(p.y) % CHUNK_SIZE;
-        u64 const zi = static_cast<u64>(p.z) % CHUNK_SIZE;
-        u64 const i = xi + yi * CHUNK_SIZE + zi * CHUNK_SIZE * CHUNK_SIZE;
-        return chunk.chunk->voxels[i];
-    }
-    void construct_chunk_meshes(RenderableChunk & renderable_chunk, VoxelFace * buffer_ptr, VoxelFace * water_buffer_ptr)
-    {
-        auto & chunk_pos = renderable_chunk.chunk->pos;
-        auto & face_n = renderable_chunk.face_n;
-        auto & water_face_n = renderable_chunk.water_face_n;
-
-        face_n = 0;
-        for (i32 zi = 0; zi < 32; ++zi)
-        {
-            for (i32 yi = 0; yi < 32; ++yi)
-            {
-                for (i32 xi = 0; xi < 32; ++xi)
-                {
-                    i32vec3 const voxel_pos = i32vec3{xi, yi, zi} + i32vec3{static_cast<i32>(chunk_pos.x), static_cast<i32>(chunk_pos.y), static_cast<i32>(chunk_pos.z)};
-                    Voxel const current_voxel = get_voxel(voxel_pos);
-                    if (current_voxel.is_occluding())
-                    {
-                        if (!get_voxel(voxel_pos + i32vec3{+1, 0, 0}).is_occluding_nx())
-                        {
-                            *buffer_ptr = VoxelFace(xi, yi, zi, 0, current_voxel.id), ++buffer_ptr, ++face_n;
-                        }
-                        if (!get_voxel(voxel_pos + i32vec3{-1, 0, 0}).is_occluding_px())
-                        {
-                            *buffer_ptr = VoxelFace(xi, yi, zi, 1, current_voxel.id), ++buffer_ptr, ++face_n;
-                        }
-                        if (!get_voxel(voxel_pos + i32vec3{0, +1, 0}).is_occluding_ny())
-                        {
-                            *buffer_ptr = VoxelFace(xi, yi, zi, 2, current_voxel.id), ++buffer_ptr, ++face_n;
-                        }
-                        if (!get_voxel(voxel_pos + i32vec3{0, -1, 0}).is_occluding_py())
-                        {
-                            *buffer_ptr = VoxelFace(xi, yi, zi, 3, current_voxel.id), ++buffer_ptr, ++face_n;
-                        }
-                        if (!get_voxel(voxel_pos + i32vec3{0, 0, +1}).is_occluding_nz())
-                        {
-                            *buffer_ptr = VoxelFace(xi, yi, zi, 4, current_voxel.id), ++buffer_ptr, ++face_n;
-                        }
-                        if (!get_voxel(voxel_pos + i32vec3{0, 0, -1}).is_occluding_pz())
-                        {
-                            *buffer_ptr = VoxelFace(xi, yi, zi, 5, current_voxel.id), ++buffer_ptr, ++face_n;
-                        }
-                    }
-                    else if (current_voxel.is_cross())
-                    {
-                        *buffer_ptr = VoxelFace(xi, yi, zi, 6, current_voxel.id), ++buffer_ptr, ++face_n;
-                        *buffer_ptr = VoxelFace(xi, yi, zi, 6, current_voxel.id), ++buffer_ptr, ++face_n;
-                        *buffer_ptr = VoxelFace(xi, yi, zi, 7, current_voxel.id), ++buffer_ptr, ++face_n;
-                        *buffer_ptr = VoxelFace(xi, yi, zi, 7, current_voxel.id), ++buffer_ptr, ++face_n;
-                    }
-                }
-            }
-        }
-
-        water_face_n = 0;
-        for (i32 zi = 0; zi < static_cast<i32>(CHUNK_SIZE); ++zi)
-        {
-            for (i32 yi = 0; yi < static_cast<i32>(CHUNK_SIZE); ++yi)
-            {
-                for (i32 xi = 0; xi < static_cast<i32>(CHUNK_SIZE); ++xi)
-                {
-                    i32vec3 const voxel_pos = i32vec3{xi, yi, zi} + i32vec3{static_cast<i32>(chunk_pos.x), static_cast<i32>(chunk_pos.y), static_cast<i32>(chunk_pos.z)};
-                    Voxel const current_voxel = get_voxel(voxel_pos);
-                    if (current_voxel.id == BlockID_Water)
-                    {
-                        if (get_voxel(voxel_pos + i32vec3{+1, 0, 0}).id == BlockID_Air)
-                        {
-                            *water_buffer_ptr = VoxelFace(xi, yi, zi, 0, current_voxel.id), ++water_buffer_ptr, ++water_face_n;
-                        }
-                        if (get_voxel(voxel_pos + i32vec3{-1, 0, 0}).id == BlockID_Air)
-                        {
-                            *water_buffer_ptr = VoxelFace(xi, yi, zi, 1, current_voxel.id), ++water_buffer_ptr, ++water_face_n;
-                        }
-                        if (get_voxel(voxel_pos + i32vec3{0, +1, 0}).id == BlockID_Air)
-                        {
-                            *water_buffer_ptr = VoxelFace(xi, yi, zi, 2, current_voxel.id), ++water_buffer_ptr, ++water_face_n;
-                        }
-                        if (get_voxel(voxel_pos + i32vec3{0, -1, 0}).id == BlockID_Air)
-                        {
-                            *water_buffer_ptr = VoxelFace(xi, yi, zi, 3, current_voxel.id), ++water_buffer_ptr, ++water_face_n;
-                        }
-                        if (get_voxel(voxel_pos + i32vec3{0, 0, +1}).id == BlockID_Air)
-                        {
-                            *water_buffer_ptr = VoxelFace(xi, yi, zi, 4, current_voxel.id), ++water_buffer_ptr, ++water_face_n;
-                        }
-                        if (get_voxel(voxel_pos + i32vec3{0, 0, -1}).id == BlockID_Air)
-                        {
-                            *water_buffer_ptr = VoxelFace(xi, yi, zi, 5, current_voxel.id), ++water_buffer_ptr, ++water_face_n;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    void record_load_textures_tasks(daxa::TaskList & new_task_list)
-    {
-        task_atlas_texture_array = new_task_list.create_task_image({.debug_name = APPNAME_PREFIX("task_atlas_texture_array")});
-        new_task_list.add_runtime_image(task_atlas_texture_array, atlas_texture_array);
-
-        new_task_list.add_task({
-            .used_images = {
-                {task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
-            },
-            .task = [this](daxa::TaskRuntimeInterface runtime)
-            {
-                if (!textures_valid)
-                {
-                    auto cmd_list = runtime.get_command_list();
-                    usize const image_size = 16 * 16 * sizeof(u8) * 4;
-                    auto texture_staging_buffer = device.create_buffer({
-                        .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-                        .size = static_cast<u32>(image_size * texture_names.size()),
-                        .debug_name = APPNAME_PREFIX("texture_staging_buffer"),
-                    });
-                    cmd_list.destroy_buffer_deferred(texture_staging_buffer);
-                    u8 * staging_buffer_data = device.get_host_address_as<u8>(texture_staging_buffer);
-                    for (usize i = 0; i < texture_names.size(); ++i)
-                    {
-                        stbi_set_flip_vertically_on_load(1);
-                        auto path = textures_filepath / texture_names[i];
-                        i32 size_x = 0;
-                        i32 size_y = 0;
-                        i32 num_channels = 0;
-                        u8 * data = stbi_load(path.string().c_str(), &size_x, &size_y, &num_channels, 4);
-                        if (data == nullptr)
-                        {
-                            std::cout << "could not find file: \"" << path << "\"" << std::endl;
-                            continue;
-                        }
-                        usize const offset = i * 16 * 16 * 4;
-                        for (usize j = 0; j < 16 * 16; ++j)
-                        {
-                            usize const data_i = j * 4;
-                            staging_buffer_data[offset + data_i + 0] = data[data_i + 0];
-                            staging_buffer_data[offset + data_i + 1] = data[data_i + 1];
-                            staging_buffer_data[offset + data_i + 2] = data[data_i + 2];
-                            staging_buffer_data[offset + data_i + 3] = data[data_i + 3];
-                        }
-                        cmd_list.copy_buffer_to_image({
-                            .buffer = texture_staging_buffer,
-                            .buffer_offset = i * image_size,
-                            .image = atlas_texture_array,
-                            .image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-                            .image_slice = {
-                                .mip_level = 0,
-                                .base_array_layer = static_cast<u32>(i),
-                                .layer_count = 1,
-                            },
-                            .image_offset = {0, 0, 0},
-                            .image_extent = {16, 16, 1},
-                        });
-                    }
-                    textures_valid = true;
-                }
-            },
-            .debug_name = APPNAME_PREFIX("Upload Textures"),
-        });
-
-        auto image_info = device.info_image(atlas_texture_array);
-        std::array<i32, 3> mip_size = {static_cast<i32>(image_info.size.x), static_cast<i32>(image_info.size.y), static_cast<i32>(image_info.size.z)};
-        for (u32 i = 0; i < image_info.mip_level_count - 1; ++i)
-        {
-            std::array<i32, 3> const next_mip_size = {std::max<i32>(1, mip_size[0] / 2), std::max<i32>(1, mip_size[1] / 2), std::max<i32>(1, mip_size[2] / 2)};
-            new_task_list.add_task({
-                .used_images = {
-                    {task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{.base_mip_level = i + 0, .base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
-                    {task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{.base_mip_level = i + 1, .base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
-                },
-                .task = [=, this](daxa::TaskRuntimeInterface const & runtime)
-                {
-                    auto cmd_list = runtime.get_command_list();
-                    auto image_id = runtime.get_images(task_atlas_texture_array)[0];
-                    cmd_list.blit_image_to_image({
-                        .src_image = image_id,
-                        .dst_image = image_id,
-                        .src_slice = {
-                            .image_aspect = image_info.aspect,
-                            .mip_level = i,
-                            .base_array_layer = 0,
-                            .layer_count = static_cast<u32>(texture_names.size()),
-                        },
-                        .src_offsets = {{{0, 0, 0}, {mip_size[0], mip_size[1], mip_size[2]}}},
-                        .dst_slice = {
-                            .image_aspect = image_info.aspect,
-                            .mip_level = i + 1,
-                            .base_array_layer = 0,
-                            .layer_count = static_cast<u32>(texture_names.size()),
-                        },
-                        .dst_offsets = {{{0, 0, 0}, {next_mip_size[0], next_mip_size[1], next_mip_size[2]}}},
-                        .filter = daxa::Filter::LINEAR,
-                    });
-                },
-                .debug_name = APPNAME_PREFIX("Generate Texture Mips ") + std::to_string(i),
-            });
-            mip_size = next_mip_size;
-        }
-    }
-};
-
-struct App : BaseApp<App>
-{
-    // clang-format off
-    std::shared_ptr<daxa::RasterPipeline> raster_pipeline = pipeline_manager.add_raster_pipeline({
-        .vertex_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}},
-        .fragment_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}},
-        .color_attachments = {{.format = swapchain.get_format()}},
-        .depth_test = {
-            .depth_attachment_format = daxa::Format::D24_UNORM_S8_UINT,
-            .enable_depth_test = true,
-            .enable_depth_write = true,
-        },
-        .raster = {
-            .polygon_mode = daxa::PolygonMode::FILL,
-            .face_culling = daxa::FaceCullFlagBits::BACK_BIT,
-        },
-        .push_constant_size = sizeof(DrawPush),
-        .debug_name = APPNAME_PREFIX("raster_pipeline"),
-    }).value();
-    // std::shared_ptr<daxa::RasterPipeline> conservative_raster_pipeline = pipeline_manager.add_raster_pipeline({
-    //     .vertex_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}},
-    //     .fragment_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}},
-    //     .color_attachments = {{.format = swapchain.get_format()}},
-    //     .depth_test = {
-    //         .depth_attachment_format = daxa::Format::D24_UNORM_S8_UINT,
-    //         .enable_depth_test = true,
-    //         .enable_depth_write = true,
-    //     },
-    //     .raster = {
-    //         .polygon_mode = daxa::PolygonMode::FILL,
-    //         .face_culling = daxa::FaceCullFlagBits::BACK_BIT,
-    //         .conservative_raster_info = daxa::ConservativeRasterInfo{
-    //             .mode = daxa::ConservativeRasterizationMode::OVERESTIMATE,
-    //             .size = 0.5f,
-    //         },
-    //     },
-    //     .push_constant_size = sizeof(DrawPush),
-    //     .debug_name = APPNAME_PREFIX("conservative_raster_pipeline"),
-    // }).value();
-    // clang-format on
-
-    daxa::ImageId depth_image = device.create_image({
-        .format = daxa::Format::D24_UNORM_S8_UINT,
-        .aspect = daxa::ImageAspectFlagBits::DEPTH | daxa::ImageAspectFlagBits::STENCIL,
-        .size = {size_x, size_y, 1},
-        .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT,
-    });
-    daxa::TaskImageId task_depth_image;
-
-    RenderableVoxelWorld renderable_world = RenderableVoxelWorld(device);
+    bool is_paused = true;
+    bool mouse_captured = false;
 
     Player3D player = {
-        .pos = {10.0f, 10.0f, 10.0f},
-        .rot = {0.75f * std::numbers::pi_v<f32>, -0.5f, 0.0f},
+        .rot = {2.0f, 0.0f, 0.0f},
     };
-    bool paused = true;
-    bool conservative = false;
+};
 
-    daxa::TaskList loop_task_list = record_loop_task_list();
+int main()
+{
+    auto app_info = AppInfo{.width = 800, .height = 600};
 
-    ~App()
+    auto renderable_world = RenderableWorld{};
+    renderable_world.generate_chunks();
+
+    glfwInit();
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    auto glfw_window_ptr = glfwCreateWindow(
+        static_cast<daxa::i32>(app_info.width),
+        static_cast<daxa::i32>(app_info.height),
+        "Daxa sample window name", nullptr, nullptr);
+    glfwSetWindowUserPointer(glfw_window_ptr, &app_info);
+    glfwSetWindowSizeCallback(
+        glfw_window_ptr,
+        [](GLFWwindow * glfw_window, int width, int height)
+        {
+            auto & app_info_ref = *reinterpret_cast<AppInfo *>(glfwGetWindowUserPointer(glfw_window));
+            app_info_ref.swapchain_out_of_date = true;
+            app_info_ref.width = static_cast<daxa::u32>(width);
+            app_info_ref.height = static_cast<daxa::u32>(height);
+        });
+    glfwSetCursorPosCallback(
+        glfw_window_ptr,
+        [](GLFWwindow * glfw_window, double dx, double dy)
+        {
+            auto & app_info_ref = *reinterpret_cast<AppInfo *>(glfwGetWindowUserPointer(glfw_window));
+            if (!app_info_ref.is_paused)
+            {
+                f32 const x = static_cast<f32>(dx);
+                f32 const y = static_cast<f32>(dy);
+                f32 const center_x = static_cast<f32>(app_info_ref.width / 2);
+                f32 const center_y = static_cast<f32>(app_info_ref.height / 2);
+                auto offset = f32vec2{x - center_x, center_y - y};
+                app_info_ref.player.on_mouse_move(offset.x, offset.y);
+                glfwSetCursorPos(glfw_window, static_cast<f64>(center_x), static_cast<f64>(center_y));
+            }
+        });
+
+    glfwSetKeyCallback(
+        glfw_window_ptr,
+        [](GLFWwindow * glfw_window, i32 key_id, i32, i32 action, i32)
+        {
+            auto & app_info_ref = *reinterpret_cast<AppInfo *>(glfwGetWindowUserPointer(glfw_window));
+
+            if (key_id == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+            {
+                app_info_ref.is_paused = !app_info_ref.is_paused;
+                auto should_capture = !app_info_ref.is_paused;
+                if (app_info_ref.mouse_captured != should_capture)
+                {
+                    glfwSetCursorPos(glfw_window, static_cast<f64>(app_info_ref.width / 2), static_cast<f64>(app_info_ref.height / 2));
+                    app_info_ref.mouse_captured = should_capture;
+                }
+                glfwSetInputMode(glfw_window, GLFW_CURSOR, should_capture ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+                glfwSetInputMode(glfw_window, GLFW_RAW_MOUSE_MOTION, should_capture);
+            }
+
+            if (!app_info_ref.is_paused)
+            {
+                app_info_ref.player.on_key(key_id, action);
+            }
+        });
+
+    auto native_window_handle = get_native_handle(glfw_window_ptr);
+    auto native_window_platform = get_native_platform(glfw_window_ptr);
+
+    daxa::Context context = daxa::create_context({});
+    daxa::Device device = context.create_device({.debug_name = "my device"});
+
+    daxa::Swapchain swapchain = device.create_swapchain({
+        .native_window = native_window_handle,
+        .native_window_platform = native_window_platform,
+        .present_mode = daxa::PresentMode::MAILBOX,
+        .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
+        .debug_name = "my swapchain",
+    });
+
+    auto pipeline_manager = daxa::PipelineManager({
+        .device = device,
+        .shader_compile_options = {
+            .root_paths = {
+                DAXA_SHADER_INCLUDE_DIR,
+                DAXA_SAMPLE_PATH,
+                "tests/0_common/shaders",
+                "tests/0_common/shared",
+            },
+            .language = daxa::ShaderLanguage::GLSL,
+            .enable_debug_info = true,
+        },
+        .debug_name = "my pipeline manager",
+    });
+    std::shared_ptr<daxa::RasterPipeline> pipeline;
     {
-        device.wait_idle();
-        device.collect_garbage();
-        device.destroy_image(depth_image);
+        auto result = pipeline_manager.add_raster_pipeline({
+            .vertex_shader_info = {.source = daxa::ShaderFile{"main.glsl"}},
+            .fragment_shader_info = {.source = daxa::ShaderFile{"main.glsl"}},
+            .color_attachments = {{.format = swapchain.get_format()}},
+            .depth_test = {
+                .depth_attachment_format = daxa::Format::D32_SFLOAT,
+                .enable_depth_test = true,
+                .enable_depth_write = true,
+            },
+            .raster = {
+                .face_culling = daxa::FaceCullFlagBits::BACK_BIT,
+            },
+            .push_constant_size = sizeof(DrawPush),
+            .debug_name = "my pipeline",
+        });
+        if (result.is_err())
+        {
+            std::cerr << result.message() << std::endl;
+            return -1;
+        }
+        pipeline = result.value();
     }
 
-    void ui_update()
-    {
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-        if (paused)
-        {
-            ImGui::Begin("Debug");
-            ImGui::Checkbox("Conservative", &conservative);
-            ImGui::End();
-        }
-        ImGui::Render();
-    }
-    void on_update()
-    {
-        auto reloaded_result = pipeline_manager.reload_all();
-        if (reloaded_result.is_err())
-        {
-            std::cout << reloaded_result.to_string() << std::endl;
-        }
-        ui_update();
+    auto perframe_input_buffer_id = device.create_buffer({
+        .size = sizeof(PerframeInput),
+        .debug_name = "perframe_input_buffer_id",
+    });
 
-        player.camera.resize(static_cast<i32>(size_x), static_cast<i32>(size_y));
-        player.camera.set_pos(player.pos);
-        player.camera.set_rot(player.rot.x, player.rot.y);
-        player.update(delta_time);
+    auto depth_image = device.create_image({
+        .format = daxa::Format::D32_SFLOAT,
+        .size = {app_info.width, app_info.height, 1},
+        .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_ONLY,
+        .debug_name = "depth_image",
+    });
+
+    constexpr auto MIP_COUNT = 4u;
+
+    auto atlas_texture_array = device.create_image({
+        .format = daxa::Format::R8G8B8A8_SRGB,
+        .size = {16, 16, 1},
+        .mip_level_count = MIP_COUNT,
+        .array_layer_count = static_cast<u32>(texture_names.size()),
+        .usage = daxa::ImageUsageFlagBits::SHADER_READ_ONLY | daxa::ImageUsageFlagBits::TRANSFER_SRC | daxa::ImageUsageFlagBits::TRANSFER_DST,
+        .debug_name = "atlas_texture_array",
+    });
+
+    auto atlas_sampler = device.create_sampler({
+        .magnification_filter = daxa::Filter::NEAREST,
+        .minification_filter = daxa::Filter::LINEAR,
+        .min_lod = 0,
+        .max_lod = static_cast<f32>(MIP_COUNT - 1),
+        .debug_name = "atlas_sampler",
+    });
+
+    enum class TaskCondition
+    {
+        VERTICES_UPLOAD,
+        TEXTURES_UPLOAD,
+        COUNT,
+    };
+    std::array<bool, static_cast<daxa::usize>(TaskCondition::COUNT)> task_condition_states{};
+    auto loop_task_list = daxa::TaskList({
+        .device = device,
+        .swapchain = swapchain,
+        .permutation_condition_count = static_cast<daxa::usize>(TaskCondition::COUNT),
+        .debug_name = "my task list",
+    });
+
+    auto swapchain_image = daxa::ImageId{};
+    auto task_swapchain_image = loop_task_list.create_task_image({.swapchain_image = true, .debug_name = "swapchain image"});
+    loop_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
+
+    auto task_depth_image = loop_task_list.create_task_image({.debug_name = "depth image"});
+    loop_task_list.add_runtime_image(task_depth_image, depth_image);
+
+    auto task_atlas_texture_array = loop_task_list.create_task_image({.debug_name = "task_atlas_texture_array"});
+    loop_task_list.add_runtime_image(task_atlas_texture_array, atlas_texture_array);
+
+    auto perframe_input_task_buffer_id = loop_task_list.create_task_buffer({.execution_persistent = true, .debug_name = "perframe_input"});
+    loop_task_list.add_runtime_buffer(perframe_input_task_buffer_id, perframe_input_buffer_id);
+    auto renderable_chunks_task_buffer_id = loop_task_list.create_task_buffer({.execution_persistent = true, .debug_name = "renderable_chunks"});
+
+    auto chunk_update_queue = std::set<usize>{};
+    auto chunk_update_queue_mtx = std::mutex{};
+
+    loop_task_list.conditional({
+        .condition_index = static_cast<daxa::u32>(TaskCondition::VERTICES_UPLOAD),
+        .when_true = [&]()
+        {
+            loop_task_list.add_task({
+                .used_buffers = {{renderable_chunks_task_buffer_id, daxa::TaskBufferAccess::TRANSFER_WRITE}},
+                .task = [&](daxa::TaskRuntimeInterface task_runtime)
+                {
+                    auto cmd_list = task_runtime.get_command_list();
+                    auto threads = std::vector<std::unique_ptr<std::thread>>{};
+                    constexpr auto THREAD_N = 1;
+                    threads.resize(THREAD_N);
+
+                    for (u32 i = 0; i < THREAD_N; ++i)
+                    {
+                        threads[i] = std::make_unique<std::thread>(
+                            [&]()
+                            {
+                                auto staging_buffer_id = device.create_buffer({
+                                    .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                                    .size = sizeof(VoxelFace) * 6 * CHUNK_VOXEL_N,
+                                    .debug_name = "my staging buffer",
+                                });
+                                cmd_list.destroy_buffer_deferred(staging_buffer_id);
+                                auto * buffer_ptr = device.get_host_address_as<VoxelFace>(staging_buffer_id);
+                                usize chunk_index;
+                                {
+                                    auto lock_guard = std::lock_guard{chunk_update_queue_mtx};
+                                    auto chunk_iter = std::min_element(
+                                        chunk_update_queue.begin(), chunk_update_queue.end(),
+                                        [&](usize a, usize b)
+                                        {
+                                            using namespace daxa::math_operators;
+                                            auto & rca = renderable_world.renderable_chunks[a];
+                                            auto & rcb = renderable_world.renderable_chunks[b];
+                                            auto const del_a = rca.chunk->pos * -1.0f - app_info.player.pos;
+                                            auto const del_b = rcb.chunk->pos * -1.0f - app_info.player.pos;
+                                            auto dist2_a = dot(del_a, del_a);
+                                            auto dist2_b = dot(del_b, del_b);
+                                            return dist2_a < dist2_b;
+                                        });
+                                    chunk_index = *chunk_iter;
+                                    chunk_update_queue.erase(chunk_index);
+                                }
+                                auto & renderable_chunk = renderable_world.renderable_chunks[chunk_index];
+                                if (!renderable_chunk.chunk->is_generated)
+                                {
+                                    renderable_chunk.chunk->generate();
+                                    renderable_world.chunk_update(chunk_index);
+                                }
+                                if (!renderable_chunk.face_buffer.is_empty())
+                                {
+                                    device.destroy_buffer(renderable_chunk.face_buffer);
+                                    renderable_chunk.face_buffer = {};
+                                }
+                                renderable_chunk.construct_mesh(
+                                    buffer_ptr,
+                                    [&renderable_world](i32vec3 p)
+                                    {
+                                        return renderable_world.get_voxel(p);
+                                    });
+                                if (renderable_chunk.face_n == 0)
+                                {
+                                    return;
+                                }
+                                renderable_chunk.face_buffer = device.create_buffer({
+                                    .size = static_cast<u32>(sizeof(VoxelFace)) * renderable_chunk.face_n,
+                                    .debug_name = "chunk_buffer_id",
+                                });
+                                cmd_list.copy_buffer_to_buffer({
+                                    .src_buffer = staging_buffer_id,
+                                    .dst_buffer = renderable_chunk.face_buffer,
+                                    .size = static_cast<u32>(sizeof(VoxelFace)) * renderable_chunk.face_n,
+                                });
+                            });
+                    }
+
+                    for (u32 i = 0; i < THREAD_N; ++i)
+                    {
+                        threads[i]->join();
+                    }
+                },
+                .debug_name = "my upload task",
+            });
+        },
+    });
+
+    loop_task_list.conditional({
+        .condition_index = static_cast<daxa::u32>(TaskCondition::TEXTURES_UPLOAD),
+        .when_true = [&]()
+        {
+            loop_task_list.add_task({
+                .used_images = {
+                    {task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
+                },
+                .task = [&](daxa::TaskRuntimeInterface runtime)
+                {
+                    auto cmd_list = runtime.get_command_list();
+                    load_textures_commands(device, cmd_list, runtime.get_images(task_atlas_texture_array)[0]);
+                },
+                .debug_name = "Upload Textures",
+            });
+
+            i32 mip_size = 16;
+            for (u32 i = 0; i < MIP_COUNT - 1; ++i)
+            {
+                i32 next_mip_size = std::max<i32>(1, mip_size / 2);
+                loop_task_list.add_task({
+                    .used_images = {
+                        {task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{.base_mip_level = i + 0, .base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
+                        {task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{.base_mip_level = i + 1, .base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
+                    },
+                    .task = [&, i, mip_size, next_mip_size](daxa::TaskRuntimeInterface const & runtime)
+                    {
+                        auto cmd_list = runtime.get_command_list();
+                        auto image_id = runtime.get_images(task_atlas_texture_array)[0];
+                        cmd_list.blit_image_to_image({
+                            .src_image = image_id,
+                            .dst_image = image_id,
+                            .src_slice = {
+                                .mip_level = i,
+                                .base_array_layer = 0,
+                                .layer_count = static_cast<u32>(texture_names.size()),
+                            },
+                            .src_offsets = {{{0, 0, 0}, {mip_size, mip_size, 1}}},
+                            .dst_slice = {
+                                .mip_level = i + 1,
+                                .base_array_layer = 0,
+                                .layer_count = static_cast<u32>(texture_names.size()),
+                            },
+                            .dst_offsets = {{{0, 0, 0}, {next_mip_size, next_mip_size, 1}}},
+                            .filter = daxa::Filter::LINEAR,
+                        });
+                        if (i == MIP_COUNT - 2)
+                        {
+                            task_condition_states[static_cast<daxa::usize>(TaskCondition::TEXTURES_UPLOAD)] = false;
+                        }
+                    },
+                    .debug_name = "Generate Texture Mips " + std::to_string(i),
+                });
+                mip_size = next_mip_size;
+            }
+        },
+    });
+
+    loop_task_list.add_task({
+        .used_buffers = {
+            {renderable_chunks_task_buffer_id, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
+        },
+        .task = [&device, &pipeline, &app_info, &renderable_world, &perframe_input_task_buffer_id](daxa::TaskRuntimeInterface task_runtime)
+        {
+            auto cmd_list = task_runtime.get_command_list();
+            auto staging_input_buffer = device.create_buffer({
+                .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                .size = sizeof(PerframeInput),
+                .debug_name = "staging_input_buffer",
+            });
+            cmd_list.destroy_buffer_deferred(staging_input_buffer);
+            auto * buffer_ptr = device.get_host_address_as<PerframeInput>(staging_input_buffer);
+            buffer_ptr->vp_mat = daxa::math_operators::mat_from_span<f32, 4, 4>(std::span<f32, 16>{(f32 *)(glm::value_ptr(app_info.player.camera.get_vp())), 16});
+            cmd_list.copy_buffer_to_buffer({
+                .src_buffer = staging_input_buffer,
+                .dst_buffer = task_runtime.get_buffers(perframe_input_task_buffer_id)[0],
+                .size = sizeof(PerframeInput),
+            });
+        },
+        .debug_name = "my draw task",
+    });
+
+    loop_task_list.add_task({
+        .used_buffers = {
+            {renderable_chunks_task_buffer_id, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
+        },
+        .used_images = {
+            {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
+            {task_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT, daxa::ImageMipArraySlice{.image_aspect = daxa::ImageAspectFlagBits::DEPTH}},
+        },
+        .task = [&](daxa::TaskRuntimeInterface task_runtime)
+        {
+            auto cmd_list = task_runtime.get_command_list();
+            auto swapchain_image = task_runtime.get_images(task_swapchain_image)[0];
+            auto depth_image = task_runtime.get_images(task_depth_image)[0];
+            auto perframe_input_ptr = device.get_device_address(task_runtime.get_buffers(perframe_input_task_buffer_id)[0]);
+            cmd_list.begin_renderpass({
+                .color_attachments = {
+                    {
+                        .image_view = swapchain_image.default_view(),
+                        .load_op = daxa::AttachmentLoadOp::CLEAR,
+                        .clear_value = std::array<daxa::f32, 4>{0.1f, 0.0f, 0.5f, 1.0f},
+                    },
+                },
+                .depth_attachment = daxa::RenderAttachmentInfo{
+                    .image_view = depth_image.default_view(),
+                    .load_op = daxa::AttachmentLoadOp::CLEAR,
+                    .clear_value = daxa::DepthValue{1.0f},
+                },
+                .render_area = {.x = 0, .y = 0, .width = app_info.width, .height = app_info.height},
+            });
+            cmd_list.set_pipeline(*pipeline);
+            for (auto & renderable_chunk : renderable_world.renderable_chunks)
+            {
+                if (renderable_chunk.face_n == 0)
+                {
+                    continue;
+                }
+                cmd_list.push_constant(DrawPush{
+                    .packed_faces_ptr = device.get_device_address(renderable_chunk.face_buffer),
+                    .perframe_input_ptr = perframe_input_ptr,
+                    .atlas_texture = task_runtime.get_images(task_atlas_texture_array)[0],
+                    .atlas_sampler = atlas_sampler,
+                    .chunk_pos = renderable_chunk.chunk->pos,
+                });
+                cmd_list.draw({.vertex_count = renderable_chunk.face_n * 6});
+            }
+            cmd_list.end_renderpass();
+        },
+        .debug_name = "my draw task",
+    });
+
+    loop_task_list.submit({});
+    loop_task_list.present({});
+    loop_task_list.complete({});
+    task_condition_states[static_cast<daxa::usize>(TaskCondition::TEXTURES_UPLOAD)] = true;
+
+    using Clock = std::chrono::high_resolution_clock;
+    auto start = Clock::now();
+    auto prev_time = start;
+
+    while (true)
+    {
+        glfwPollEvents();
+        if (glfwWindowShouldClose(glfw_window_ptr))
+        {
+            break;
+        }
+
+        if (app_info.swapchain_out_of_date)
+        {
+            swapchain.resize();
+            app_info.swapchain_out_of_date = false;
+            loop_task_list.remove_runtime_image(task_depth_image, depth_image);
+
+            auto depth_image_info = device.info_image(depth_image);
+            device.destroy_image(depth_image);
+            depth_image_info.size = {app_info.width, app_info.height, 1};
+            depth_image = device.create_image(depth_image_info);
+
+            loop_task_list.add_runtime_image(task_depth_image, depth_image);
+        }
 
         loop_task_list.remove_runtime_image(task_swapchain_image, swapchain_image);
         swapchain_image = swapchain.acquire_next_image();
         loop_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
         if (swapchain_image.is_empty())
         {
-            return;
+            continue;
         }
 
-        // loop_task_list.debug_print();
-        loop_task_list.execute({});
-    }
+        auto now = Clock::now();
+        auto elapsed = now - prev_time;
+        prev_time = now;
+        auto dt = std::chrono::duration<f32>(elapsed).count();
 
-    void on_mouse_move(f32 x, f32 y)
-    {
-        if (!paused)
-        {
-            f32 const center_x = static_cast<f32>(size_x / 2);
-            f32 const center_y = static_cast<f32>(size_y / 2);
-            auto offset = f32vec2{x - center_x, center_y - y};
-            player.on_mouse_move(offset.x, offset.y);
-            set_mouse_pos(center_x, center_y);
-        }
-    }
-    void on_mouse_button(i32 /*unused*/, i32 /*unused*/) {}
-    void on_key(i32 key_id, i32 action)
-    {
-        auto & io = ImGui::GetIO();
-        if (io.WantCaptureKeyboard)
-        {
-            return;
-        }
+        app_info.player.update(dt);
+        app_info.player.camera.resize(app_info.width, app_info.height);
+        app_info.player.camera.set_rot(app_info.player.rot.x, app_info.player.rot.y);
+        app_info.player.camera.set_pos(app_info.player.pos);
 
-        if (key_id == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+        for (usize i = 0; i < renderable_world.renderable_chunks.size(); ++i)
         {
-            toggle_pause();
-        }
-
-        if (!paused)
-        {
-            player.on_key(key_id, action);
-        }
-    }
-    void on_resize(u32 sx, u32 sy)
-    {
-        minimized = (sx == 0 || sy == 0);
-        if (!minimized)
-        {
-            swapchain.resize();
-            size_x = swapchain.get_surface_extent().x;
-            size_y = swapchain.get_surface_extent().y;
-            loop_task_list.remove_runtime_image(task_depth_image, depth_image);
-            device.destroy_image(depth_image);
-            depth_image = device.create_image({
-                .format = daxa::Format::D24_UNORM_S8_UINT,
-                .aspect = daxa::ImageAspectFlagBits::DEPTH | daxa::ImageAspectFlagBits::STENCIL,
-                .size = {size_x, size_y, 1},
-                .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT,
-                .debug_name = APPNAME_PREFIX("depth_image"),
-            });
-            loop_task_list.add_runtime_image(task_depth_image, depth_image);
-            base_on_update();
-        }
-    }
-
-    void toggle_pause()
-    {
-        set_mouse_capture(paused);
-        paused = !paused;
-    }
-
-    void record_tasks(daxa::TaskList & new_task_list)
-    {
-        task_depth_image = new_task_list.create_task_image({.debug_name = APPNAME_PREFIX("task_depth_image")});
-        new_task_list.add_runtime_image(task_depth_image, depth_image);
-        renderable_world.record_load_textures_tasks(new_task_list);
-        daxa::TaskBufferId task_vertex_buffers = new_task_list.create_task_buffer({.debug_name = APPNAME_PREFIX("chunk vertex buffers")});
-        for (auto & chunk : renderable_world.renderable_chunks)
-        {
-            chunk.task_face_buffer = new_task_list.create_task_buffer({.debug_name = APPNAME_PREFIX("chunk.task_face_buffer")});
-            chunk.task_water_face_buffer = new_task_list.create_task_buffer({.debug_name = APPNAME_PREFIX("chunk.task_water_face_buffer")});
-            new_task_list.add_runtime_buffer(task_vertex_buffers, chunk.face_buffer);
-            new_task_list.add_runtime_buffer(task_vertex_buffers, chunk.water_face_buffer);
-        }
-        new_task_list.add_task({
-            .used_buffers = {{task_vertex_buffers, daxa::TaskBufferAccess::TRANSFER_WRITE}},
-            .task = [this](daxa::TaskRuntimeInterface runtime)
+            auto & renderable_chunk = renderable_world.renderable_chunks[i];
+            if (renderable_chunk.mesh_invalid)
             {
-                auto cmd_list = runtime.get_command_list();
-                auto face_staging_buffer = device.create_buffer({
-                    .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-                    .size = static_cast<u32>(CHUNK_MAX_SIZE * renderable_world.renderable_chunks.size()),
-                    .debug_name = APPNAME_PREFIX("face_staging_buffer"),
-                });
-                auto water_face_staging_buffer = device.create_buffer({
-                    .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-                    .size = static_cast<u32>(CHUNK_MAX_SIZE * renderable_world.renderable_chunks.size()),
-                    .debug_name = APPNAME_PREFIX("water_face_staging_buffer"),
-                });
-                u32 i = 0;
-                cmd_list.destroy_buffer_deferred(face_staging_buffer);
-                cmd_list.destroy_buffer_deferred(water_face_staging_buffer);
-                auto * face_buffer_ptr = device.get_host_address_as<VoxelFace>(face_staging_buffer);
-                auto * water_face_buffer_ptr = device.get_host_address_as<VoxelFace>(water_face_staging_buffer);
-                for (auto & chunk : renderable_world.renderable_chunks)
-                {
-                    if (chunk.invalid)
-                    {
-                        renderable_world.construct_chunk_meshes(chunk, face_buffer_ptr + CHUNK_MAX_VERTS * i, water_face_buffer_ptr + CHUNK_MAX_VERTS * i);
-                        cmd_list.copy_buffer_to_buffer({
-                            .src_buffer = face_staging_buffer,
-                            .src_offset = CHUNK_MAX_SIZE * i,
-                            .dst_buffer = chunk.face_buffer,
-                            .size = sizeof(VoxelFace) * chunk.face_n,
-                        });
-                        cmd_list.copy_buffer_to_buffer({
-                            .src_buffer = water_face_staging_buffer,
-                            .src_offset = CHUNK_MAX_SIZE * i,
-                            .dst_buffer = chunk.face_buffer,
-                            .size = sizeof(VoxelFace) * chunk.water_face_n,
-                        });
-                        chunk.invalid = false;
-                    }
-                    ++i;
-                }
-            },
-            .debug_name = APPNAME_PREFIX("Upload Chunks"),
-        });
-        auto whole_atlas_slice = device.info_image_view(renderable_world.atlas_texture_array.default_view()).slice;
-        new_task_list.add_task({
-            .used_buffers = {{task_vertex_buffers, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY}},
-            .used_images = {
-                {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
-                {task_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT, daxa::ImageMipArraySlice{}},
-                {renderable_world.task_atlas_texture_array, daxa::TaskImageAccess::SHADER_READ_ONLY, whole_atlas_slice},
-            },
-            .task = [this](daxa::TaskRuntimeInterface runtime)
-            {
-                auto cmd_list = runtime.get_command_list();
-                cmd_list.begin_renderpass({
-                    .color_attachments = {{
-                        .image_view = swapchain_image.default_view(),
-                        .load_op = daxa::AttachmentLoadOp::CLEAR,
-                        .clear_value = std::array{0.2f, 0.4f, 1.0f, 1.0f},
-                    }},
-                    .depth_attachment = {{
-                        .image_view = depth_image.default_view(),
-                        .load_op = daxa::AttachmentLoadOp::CLEAR,
-                        .clear_value = daxa::DepthValue{1.0f, 0},
-                    }},
-                    .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
-                });
-                auto mat = player.camera.get_vp();
-                // if (conservative)
-                // {
-                //     cmd_list.set_pipeline(*conservative_raster_pipeline);
-                // }
-                // else
-                {
-                    cmd_list.set_pipeline(*raster_pipeline);
-                }
-                for (auto & chunk : renderable_world.renderable_chunks)
-                {
-                    if (!chunk.invalid)
-                    {
-                        cmd_list.push_constant(DrawPush{
-                            .vp_mat = mat_from_span<f32, 4, 4>(std::span<f32, 4 * 4>{glm::value_ptr(mat), 4 * 4}),
-                            .chunk_pos = chunk.chunk->pos,
-                            .face_buffer = this->device.get_device_address(chunk.face_buffer),
-                            .atlas_texture = this->renderable_world.atlas_texture_array.default_view(),
-                            .atlas_sampler = this->renderable_world.atlas_sampler,
-                        });
-                        cmd_list.draw({.vertex_count = chunk.face_n * 6});
-                    }
-                }
-                cmd_list.end_renderpass();
-            },
-            .debug_name = APPNAME_PREFIX("Draw to swapchain"),
-        });
-    }
-};
+                chunk_update_queue.insert(i);
+            }
+        }
 
-auto main() -> int
-{
-    App app = {};
-    while (true)
+        task_condition_states[static_cast<daxa::usize>(TaskCondition::VERTICES_UPLOAD)] = !chunk_update_queue.empty();
+        loop_task_list.execute({.permutation_condition_values = task_condition_states});
+    }
+
+    device.wait_idle();
+    device.collect_garbage();
+    for (auto & renderable_chunk : renderable_world.renderable_chunks)
     {
-        if (app.update())
+        if (!renderable_chunk.face_buffer.is_empty())
         {
-            break;
+            device.destroy_buffer(renderable_chunk.face_buffer);
         }
     }
+    device.destroy_buffer(perframe_input_buffer_id);
+    device.destroy_image(depth_image);
+    device.destroy_image(atlas_texture_array);
+    device.destroy_sampler(atlas_sampler);
 }
