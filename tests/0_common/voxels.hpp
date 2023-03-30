@@ -9,6 +9,9 @@ using namespace daxa::types;
 #include <voxels.inl>
 
 #include <stb_image.h>
+#include <thread>
+#include <mutex>
+#include <memory>
 
 static inline constexpr u64 CHUNK_SIZE = 32;
 static inline constexpr u64 CHUNK_VOXEL_N = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
