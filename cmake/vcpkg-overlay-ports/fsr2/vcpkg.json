@@ -1,12 +1,8 @@
 {
   "name": "fsr2",
-  "version-string": "2.0.0",
-  "description": "Unofficial FSR 2.0 API",
+  "version": "2.2.0",
+  "description": "Unofficial FSR 2.2 API",
   "features": {
-    "directx12": {
-      "description": "Build for D3D12",
-      "dependencies": [ ]
-    },
     "vulkan": {
       "description": "Build for Vulkan",
       "dependencies": [
