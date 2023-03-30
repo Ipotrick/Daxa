@@ -194,7 +194,7 @@ UnpackedFace get_vertex(u32 vert_i)
     return result;
 }
 
-#if defined(DRAW_VERT)
+#if DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_VERTEX
 
 layout(location = 0) out f32vec3 v_nrm;
 layout(location = 1) out f32vec3 v_tex_uv;
@@ -208,7 +208,7 @@ void main()
     v_nrm = vert.nrm;
 }
 
-#elif defined(DRAW_FRAG)
+#elif DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_FRAGMENT
 
 layout(location = 0) in f32vec3 v_nrm;
 layout(location = 1) in f32vec3 v_tex_uv;

@@ -3,7 +3,7 @@
 
 DAXA_USE_PUSH_CONSTANT(DrawPush)
 
-#if defined(DRAW_VERT)
+#if DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_VERTEX
 
 layout(location = 0) out f32vec4 v_col;
 void main()

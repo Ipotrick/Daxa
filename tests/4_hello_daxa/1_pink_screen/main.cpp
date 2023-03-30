@@ -47,14 +47,25 @@ int main()
         [](GLFWwindow * glfw_window_ptr, int width, int height)
         {
             auto & window_info = *reinterpret_cast<WindowInfo *>(glfwGetWindowUserPointer(glfw_window_ptr));
+            // We set this bool because it lets us know we need to resize the swapchain later!
             window_info.swapchain_out_of_date = true;
             window_info.width = static_cast<daxa::u32>(width);
             window_info.height = static_cast<daxa::u32>(height);
         });
     auto native_window_handle = get_native_handle(glfw_window_ptr);
+    auto native_window_platform = get_native_platform(glfw_window_ptr);
 
-    daxa::Context context = daxa::create_context({.enable_validation = false});
+    // First thing we do is create a Daxa context. This essentially exists
+    // to initialize the Vulkan context, and allows for the creation of multiple
+    // devices.
+    daxa::Context context = daxa::create_context({});
 
+    // We then just create a Daxa device by using the context, and providing
+    // the necessary parameters. This is where you'd select different features
+    // and extensions that aren't necessarily present on all GPU's drivers.
+    // A user's computer may have multiple devices, so you can provide a selector
+    // function which just returns to daxa the rating level of each device listed,
+    // ultimately returning a handle to the device which was scored highest!
     daxa::Device device = context.create_device({
         .selector = [](daxa::DeviceProperties const & device_props) -> daxa::i32
         {
@@ -72,9 +83,17 @@ int main()
         .debug_name = "my device",
     });
 
+    // To be able to render to a window, Daxa requires the user to create a swapchain
+    // for a system window. To create a Swapchain, Daxa needs a native window handle
+    // and native platform. Optionally, the user can provide a debug name, surface
+    // format type selector, the additional image uses (image uses will be explained later),
+    // and present mode (this controls sync)
     daxa::Swapchain swapchain = device.create_swapchain({
+        // this handle is given by the windowing API
         .native_window = native_window_handle,
-        .native_window_platform = get_native_platform(glfw_window_ptr),
+        // The platform would also be retrieved from the windowing API,
+        // or by hard-coding it depending on the OS.
+        .native_window_platform = native_window_platform,
         .surface_format_selector = [](daxa::Format format)
         {
             switch (format)
@@ -83,7 +102,7 @@ int main()
             default: return daxa::default_format_score(format);
             }
         },
-        .present_mode = daxa::PresentMode::FIFO,
+        .present_mode = daxa::PresentMode::MAILBOX,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
         .debug_name = "my swapchain",
     });
@@ -96,18 +115,27 @@ int main()
             break;
         }
 
+        // Here's where we handle that variable we set in the resize callback of GLFW,
+        // in order to properly handle resizing of a window!
         if (window_info.swapchain_out_of_date)
         {
             swapchain.resize();
             window_info.swapchain_out_of_date = false;
         }
 
+        // The first thing that is done is retrieving the current swapchain image.
+        // This is the image we are going to clear. If swapchain image acquisition
+        // failed, then the result of this acquire function will be an "empty image",
+        // and thus we want to skip this frame. We do this by saying "continue".
         daxa::ImageId swapchain_image = swapchain.acquire_next_image();
         if (swapchain_image.is_empty())
         {
             continue;
         }
 
+        // Directly after, we define an image slice. As images can be made up of multiple
+        // layers, memory planes, and mip levels, Daxa takes slices in many calls to
+        // specify a slice of an image that should be operated upon.
         daxa::ImageMipArraySlice swapchain_image_full_slice = device.info_image_view(swapchain_image.default_view()).slice;
 
         daxa::CommandList command_list = device.create_command_list({.debug_name = "my command list"});
@@ -153,4 +181,7 @@ int main()
             .swapchain = swapchain,
         });
     }
+
+    device.wait_idle();
+    device.collect_garbage();
 }

@@ -454,8 +454,8 @@ struct App : BaseApp<App>
 {
     // clang-format off
     std::shared_ptr<daxa::RasterPipeline> raster_pipeline = pipeline_manager.add_raster_pipeline({
-        .vertex_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_VERT"}}}},
-        .fragment_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_FRAG"}}}},
+        .vertex_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}},
+        .fragment_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}},
         .color_attachments = {{.format = swapchain.get_format()}},
         .depth_test = {
             .depth_attachment_format = daxa::Format::D24_UNORM_S8_UINT,
@@ -470,8 +470,8 @@ struct App : BaseApp<App>
         .debug_name = APPNAME_PREFIX("raster_pipeline"),
     }).value();
     // std::shared_ptr<daxa::RasterPipeline> conservative_raster_pipeline = pipeline_manager.add_raster_pipeline({
-    //     .vertex_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_VERT"}}}},
-    //     .fragment_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_FRAG"}}}},
+    //     .vertex_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}},
+    //     .fragment_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}},
     //     .color_attachments = {{.format = swapchain.get_format()}},
     //     .depth_test = {
     //         .depth_attachment_format = daxa::Format::D24_UNORM_S8_UINT,
@@ -685,7 +685,7 @@ struct App : BaseApp<App>
                     .color_attachments = {{
                         .image_view = swapchain_image.default_view(),
                         .load_op = daxa::AttachmentLoadOp::CLEAR,
-                        .clear_value = std::array<f32, 4>{0.2f, 0.4f, 1.0f, 1.0f},
+                        .clear_value = std::array{0.2f, 0.4f, 1.0f, 1.0f},
                     }},
                     .depth_attachment = {{
                         .image_view = depth_image.default_view(),

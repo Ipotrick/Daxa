@@ -36,7 +36,7 @@ namespace tests
             .debug_name = APPNAME_PREFIX("task 2 (execution)"),
         });
 
-        task_list.complete();
+        task_list.complete({});
 
         task_list.execute({});
     }
@@ -59,39 +59,34 @@ namespace tests
             .debug_name = APPNAME_PREFIX("create-write-read image"),
         });
         // CREATE IMAGE
-        auto task_image = task_list.create_task_image({ .debug_name = "task list tested image" });
+        auto task_image = task_list.create_task_image({.debug_name = "task list tested image"});
         task_list.add_runtime_image(task_image, image);
         // WRITE IMAGE 1
         task_list.add_task({
             .used_buffers = {},
-            .used_images = 
-            {
+            .used_images =
                 {
-                    task_image,
-                    daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
-                    daxa::ImageMipArraySlice{}
+                    {task_image,
+                     daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
+                     daxa::ImageMipArraySlice{}},
                 },
-            },
             .task = [](daxa::TaskRuntimeInterface const &) {},
             .debug_name = APPNAME_PREFIX("write image 1"),
         });
         // READ_IMAGE 1
         task_list.add_task({
             .used_buffers = {},
-            .used_images = 
-            {
+            .used_images =
                 {
-                    task_image,
-                    daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
-                    daxa::ImageMipArraySlice{}
+                    {task_image,
+                     daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
+                     daxa::ImageMipArraySlice{}},
                 },
-            },
             .task = [](daxa::TaskRuntimeInterface const &) {},
             .debug_name = APPNAME_PREFIX("read image 1"),
         });
 
-        task_list.complete();
-        task_list.debug_print();
+        task_list.complete({});
         // task_list.execute();
         app.device.destroy_image(image);
     }
@@ -114,36 +109,31 @@ namespace tests
             .debug_name = APPNAME_PREFIX("create-write-read array layer"),
         });
         // CREATE IMAGE
-        auto task_image = task_list.create_task_image({ .debug_name = "task list tested image", });
+        auto task_image = task_list.create_task_image({
+            .debug_name = "task list tested image",
+        });
         task_list.add_task({
             .used_buffers = {},
-            .used_images = 
-            {
+            .used_images =
                 {
-                    task_image,
-                    daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
-                    daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = 1}
-                }
-            },
+                    {task_image,
+                     daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
+                     daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = 1}}},
             .task = [](daxa::TaskRuntimeInterface const &) {},
             .debug_name = APPNAME_PREFIX("write image array layer 1"),
         });
         // READ_IMAGE 1
         task_list.add_task({
             .used_buffers = {},
-            .used_images = 
-            {
+            .used_images =
                 {
-                    task_image,
-                    daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
-                    daxa::ImageMipArraySlice{.base_array_layer = 1, .layer_count = 1}
-                }
-            },
+                    {task_image,
+                     daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
+                     daxa::ImageMipArraySlice{.base_array_layer = 1, .layer_count = 1}}},
             .task = [](daxa::TaskRuntimeInterface const &) {},
             .debug_name = APPNAME_PREFIX("read image array layer 1"),
         });
-        task_list.complete();
-        task_list.debug_print();
+        task_list.complete({});
         // task_list.execute();
         app.device.destroy_image(image);
     }
@@ -155,10 +145,8 @@ namespace tests
         //    2) TRANSFER into the image
         //    3) READ from the image
         AppContext app = {};
-        auto buffer = app.device.create_buffer({
-            .size = sizeof(u32),
-            .debug_name = "tested buffer"
-        });
+        auto buffer = app.device.create_buffer({.size = sizeof(u32),
+                                                .debug_name = "tested buffer"});
         auto task_list = daxa::TaskList({
             .device = app.device,
             .debug_name = APPNAME_PREFIX("create-transfer-read buffer"),
@@ -169,32 +157,29 @@ namespace tests
             .debug_name = "task list tested buffer",
         });
         task_list.add_task({
-            .used_buffers = 
-            {
+            .used_buffers =
                 {
-                    task_buffer,
-                    daxa::TaskBufferAccess::HOST_TRANSFER_WRITE
+                    {task_buffer,
+                     daxa::TaskBufferAccess::HOST_TRANSFER_WRITE},
                 },
-            },
             .used_images = {},
             .task = [](daxa::TaskRuntimeInterface const &) {},
             .debug_name = APPNAME_PREFIX("host transfer buffer"),
         });
         // READ_IMAGE 1
         task_list.add_task({
-            .used_buffers = 
-            {
+            .used_buffers =
                 {
-                    task_buffer,
-                    daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY,
+                    {
+                        task_buffer,
+                        daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY,
+                    },
                 },
-            },
             .used_images = {},
             .task = [](daxa::TaskRuntimeInterface const &) {},
             .debug_name = APPNAME_PREFIX("read image array layer 1"),
         });
-        task_list.complete();
-        task_list.debug_print();
+        task_list.complete({});
         // task_list.execute();
         app.device.destroy_buffer(buffer);
     }
@@ -218,48 +203,41 @@ namespace tests
         });
         // CREATE IMAGE
         std::array init_access = {
-            daxa::InitialTaskImageUse {
+            daxa::InitialTaskImageUse{
                 .access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
-                .layout = daxa::ImageLayout::GENERAL
-            }
-        };
+                .layout = daxa::ImageLayout::GENERAL}};
         auto task_image = task_list.create_task_image(
-        {
-            .initial_access = {init_access.begin(), init_access.end()},
-            .debug_name = "task list tested image",
-        });
+            {
+                .initial_access = {init_access.begin(), init_access.end()},
+                .debug_name = "task list tested image",
+            });
         task_list.add_runtime_image(task_image, image);
 
         task_list.add_task({
             .used_buffers = {},
-            .used_images = 
-            {
+            .used_images =
                 {
-                    task_image,
-                    daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
-                    daxa::ImageMipArraySlice{.base_array_layer = 1, .layer_count = 1}
+                    {task_image,
+                     daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
+                     daxa::ImageMipArraySlice{.base_array_layer = 1, .layer_count = 1}},
                 },
-            },
             .task = [](daxa::TaskRuntimeInterface const &) {},
             .debug_name = APPNAME_PREFIX("read array layer 2"),
         });
 
         task_list.add_task({
             .used_buffers = {},
-            .used_images = 
-            {
+            .used_images =
                 {
-                    task_image,
-                    daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
-                    daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = 1}
+                    {task_image,
+                     daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
+                     daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = 1}},
                 },
-            },
             .task = [](daxa::TaskRuntimeInterface const &) {},
             .debug_name = APPNAME_PREFIX("write array layer 1"),
         });
 
-        task_list.complete();
-        task_list.debug_print();
+        task_list.complete({});
         // task_list.execute();
         app.device.destroy_image(image);
     }
@@ -267,7 +245,7 @@ namespace tests
     void tracked_slice_barrier_collapsing()
     {
         // TEST:
-        //    1) CREATE image - set the task image initial access to write from compute 
+        //    1) CREATE image - set the task image initial access to write from compute
         //                      shader for one subresouce and read for the other
         //    2) WRITE into the subsubimage
         //    3) READ from a the subsubimage
@@ -287,17 +265,16 @@ namespace tests
         });
         // CREATE IMAGE
         std::array init_access = {
-            daxa::InitialTaskImageUse {
+            daxa::InitialTaskImageUse{
                 .access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
                 .layout = daxa::ImageLayout::GENERAL,
                 .slice = {.base_array_layer = 0, .layer_count = 2},
             },
-            daxa::InitialTaskImageUse {
+            daxa::InitialTaskImageUse{
                 .access = daxa::AccessConsts::COMPUTE_SHADER_READ,
                 .layout = daxa::ImageLayout::READ_ONLY_OPTIMAL,
                 .slice = {.base_array_layer = 2, .layer_count = 2},
-            }
-        };
+            }};
         auto task_image = task_list.create_task_image({
             .initial_access = {init_access.begin(), init_access.end()},
             .debug_name = "task list tested image",
@@ -306,59 +283,50 @@ namespace tests
 
         task_list.add_task({
             .used_buffers = {},
-            .used_images = 
-            {
+            .used_images =
                 {
-                    task_image,
-                    daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
-                    daxa::ImageMipArraySlice{.base_array_layer = 1, .layer_count = 1}
+                    {task_image,
+                     daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
+                     daxa::ImageMipArraySlice{.base_array_layer = 1, .layer_count = 1}},
                 },
-            },
             .task = [](daxa::TaskRuntimeInterface const &) {},
             .debug_name = APPNAME_PREFIX("read image layer 2"),
         });
         task_list.add_task({
             .used_buffers = {},
-            .used_images = 
-            {
+            .used_images =
                 {
-                    task_image,
-                    daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
-                    daxa::ImageMipArraySlice{.base_array_layer = 3, .layer_count = 1}
+                    {task_image,
+                     daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
+                     daxa::ImageMipArraySlice{.base_array_layer = 3, .layer_count = 1}},
                 },
-            },
             .task = [](daxa::TaskRuntimeInterface const &) {},
             .debug_name = APPNAME_PREFIX("write image layer 4"),
         });
         task_list.add_task({
             .used_buffers = {},
-            .used_images = 
-            {
+            .used_images =
                 {
-                    task_image,
-                    daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
-                    daxa::ImageMipArraySlice{}
+                    {task_image,
+                     daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
+                     daxa::ImageMipArraySlice{}},
                 },
-            },
             .task = [](daxa::TaskRuntimeInterface const &) {},
             .debug_name = APPNAME_PREFIX("write image layer 1 - 4"),
         });
         task_list.add_task({
             .used_buffers = {},
-            .used_images = 
-            {
+            .used_images =
                 {
-                    task_image,
-                    daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
-                    daxa::ImageMipArraySlice{}
+                    {task_image,
+                     daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
+                     daxa::ImageMipArraySlice{}},
                 },
-            },
             .task = [](daxa::TaskRuntimeInterface const &) {},
             .debug_name = APPNAME_PREFIX("read image layer 1 - 4"),
         });
 
-        task_list.complete();
-        task_list.debug_print();
+        task_list.complete({});
         // task_list.execute();
         app.device.destroy_image(image);
     }
@@ -387,9 +355,7 @@ namespace tests
         std::array init_access = {
             daxa::InitialTaskImageUse{
                 .access = daxa::Access{daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
-                .layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL
-            }
-        };
+                .layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL}};
         auto task_image1 = task_list.create_task_image({
             .initial_access = {init_access.begin(), init_access.end()},
             .debug_name = APPNAME_PREFIX("task_image1"),
@@ -479,8 +445,7 @@ namespace tests
             .debug_name = APPNAME_PREFIX("task 5 (output_graph)"),
         });
 
-        task_list.complete();
-        task_list.debug_print();
+        task_list.complete({});
         task_list.output_graphviz();
     }
 
@@ -506,8 +471,8 @@ namespace tests
                 .device = device,
                 .shader_compile_options = {
                     .root_paths = {
+                        DAXA_SHADER_INCLUDE_DIR,
                         "tests/2_daxa_api/6_task_list/shaders",
-                        "include",
                     },
                 },
                 .debug_name = APPNAME_PREFIX("pipeline_manager (drawing)"),
@@ -578,7 +543,7 @@ namespace tests
                 //     .dst_image = task_swapchain_image,
                 //     .extent = {size_x, size_y, 1},
                 // });
-                new_task_list.complete();
+                new_task_list.complete({});
 
                 return new_task_list;
             }
@@ -635,26 +600,26 @@ namespace tests
                 task_list.execute({});
                 auto command_lists = task_list.get_command_lists();
                 auto cmd_list = device.create_command_list({});
-                //auto last_si_use = task_list.last_uses(task_swapchain_image).back();
-                //cmd_list.pipeline_barrier_image_transition({
-                //    .awaited_pipeline_access = last_si_use.access,
-                //    .before_layout = last_si_use.layout,
-                //    .after_layout = daxa::ImageLayout::PRESENT_SRC,
-                //    .image_id = swapchain_image,
-                //});
-                //cmd_list.complete();
-                //command_lists.push_back(cmd_list);
-                //device.submit_commands({
-                //    .command_lists = command_lists,
-                //    .wait_binary_semaphores = {swapchain.get_acquire_semaphore()},
-                //    .signal_binary_semaphores = {swapchain.get_present_semaphore()},
-                //    .signal_timeline_semaphores = {
-                //        {swapchain.get_gpu_timeline_semaphore(), swapchain.get_cpu_timeline_value()}},
-                //});
-                //device.present_frame({
-                //    .wait_binary_semaphores = {swapchain.get_present_semaphore()},
-                //    .swapchain = swapchain,
-                //});
+                // auto last_si_use = task_list.last_uses(task_swapchain_image).back();
+                // cmd_list.pipeline_barrier_image_transition({
+                //     .awaited_pipeline_access = last_si_use.access,
+                //     .before_layout = last_si_use.layout,
+                //     .after_layout = daxa::ImageLayout::PRESENT_SRC,
+                //     .image_id = swapchain_image,
+                // });
+                // cmd_list.complete();
+                // command_lists.push_back(cmd_list);
+                // device.submit_commands({
+                //     .command_lists = command_lists,
+                //     .wait_binary_semaphores = {swapchain.get_acquire_semaphore()},
+                //     .signal_binary_semaphores = {swapchain.get_present_semaphore()},
+                //     .signal_timeline_semaphores = {
+                //         {swapchain.get_gpu_timeline_semaphore(), swapchain.get_cpu_timeline_value()}},
+                // });
+                // device.present_frame({
+                //     .wait_binary_semaphores = {swapchain.get_present_semaphore()},
+                //     .swapchain = swapchain,
+                // });
             }
 
             void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}
@@ -724,16 +689,16 @@ namespace tests
                 .device = device,
                 .shader_compile_options = {
                     .root_paths = {
+                        DAXA_SHADER_INCLUDE_DIR,
                         "tests/2_daxa_api/6_task_list/shaders",
-                        "include",
                     },
                 },
                 .debug_name = APPNAME_PREFIX("conditionals"),
             });
             // clang-format off
             std::shared_ptr<daxa::RasterPipeline> raster_pipeline = pipeline_manager.add_raster_pipeline({
-                .vertex_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_VERT"}}}},
-                .fragment_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_FRAG"}}}},
+                .vertex_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}},
+                .fragment_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}},
                 .color_attachments = {{
                     .format = swapchain.get_format(),
                 }},
@@ -867,7 +832,7 @@ namespace tests
 
                 new_task_list.submit({});
                 new_task_list.present({});
-                new_task_list.complete();
+                new_task_list.complete({});
 
                 return new_task_list;
             }

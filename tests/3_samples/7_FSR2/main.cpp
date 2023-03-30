@@ -66,9 +66,9 @@ struct App : AppWindow<App>
         .device = device,
         .shader_compile_options = {
             .root_paths = {
+                DAXA_SHADER_INCLUDE_DIR,
                 "tests/0_common/shaders",
                 "tests/3_samples/7_FSR2/shaders",
-                "include",
             },
         },
         .debug_name = APPNAME_PREFIX("pipeline_manager"),
@@ -526,7 +526,7 @@ struct App : AppWindow<App>
         });
         new_task_list.submit(&submit_info);
         new_task_list.present({});
-        new_task_list.complete();
+        new_task_list.complete({});
 
         return new_task_list;
     }
