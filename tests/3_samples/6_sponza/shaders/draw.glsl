@@ -3,7 +3,7 @@
 
 DAXA_USE_PUSH_CONSTANT(DrawPush)
 
-#if defined(DRAW_VERT)
+#if DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_VERTEX
 
 layout(location = 0) out f32vec4 v_col;
 void main()
@@ -14,7 +14,7 @@ void main()
     v_col = f32vec4(1, 0, 1, 1);
 }
 
-#elif defined(DRAW_FRAG)
+#elif DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_FRAGMENT
 
 layout(location = 0) in f32vec4 v_col;
 layout(location = 0) out f32vec4 color;

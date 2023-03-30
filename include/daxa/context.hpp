@@ -23,7 +23,7 @@ namespace daxa
 
     struct ContextInfo
     {
-        bool enable_validation = true;
+        bool enable_validation = false;
         std::function<void(MsgSeverity, MsgType, std::string_view)> validation_callback = default_validation_callback;
     };
 

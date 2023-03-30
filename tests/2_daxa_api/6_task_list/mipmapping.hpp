@@ -28,8 +28,8 @@ namespace tests
                 .device = device,
                 .shader_compile_options = {
                     .root_paths = {
+                        DAXA_SHADER_INCLUDE_DIR,
                         "tests/2_daxa_api/6_task_list/shaders",
-                        "include",
                     },
                     .language = daxa::ShaderLanguage::GLSL,
                 },
@@ -87,7 +87,8 @@ namespace tests
 
             bool mouse_drawing = false;
 
-            enum TASK_CONDITIONS{
+            enum TASK_CONDITIONS
+            {
                 TASK_CONDITION_MOUSE_DRAWING = 0,
                 TASK_CONDITION_COUNT = 1,
             };
@@ -146,10 +147,10 @@ namespace tests
                 {
                     return;
                 }
-                task_list.debug_print();
                 std::array<bool, TASK_CONDITION_COUNT> conditions = {};
                 conditions[TASK_CONDITION_MOUSE_DRAWING] = mouse_drawing;
-                task_list.execute({.permutation_condition_values = {conditions.data(), conditions.size()} });
+                task_list.execute({.permutation_condition_values = {conditions.data(), conditions.size()}, .record_debug_string = true});
+                // std::cout << task_list.get_debug_string() << std::endl;
             }
 
             void on_mouse_move(f32 x, f32 y)
@@ -441,8 +442,8 @@ namespace tests
                 });
                 new_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
                 task_render_image = new_task_list.create_task_image({
-                    .debug_name = APPNAME_PREFIX("Task Render Image"),
                     .execution_persistent = true,
+                    .debug_name = APPNAME_PREFIX("Task Render Image"),
                 });
                 new_task_list.add_runtime_image(task_render_image, render_image);
                 task_mipmapping_gpu_input_buffer = new_task_list.create_task_buffer({});
@@ -461,7 +462,8 @@ namespace tests
                 });
                 new_task_list.conditional({
                     .condition_index = TASK_CONDITION_MOUSE_DRAWING,
-                    .when_true = [&]() {
+                    .when_true = [&]()
+                    {
                         new_task_list.add_task(daxa::TaskInfo{
                             .used_buffers = {
                                 {task_mipmapping_gpu_input_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY},
@@ -563,9 +565,9 @@ namespace tests
                     },
                     .debug_name = "Imgui",
                 });
-                new_task_list.submit(&submit_info);
+                new_task_list.submit({});
                 new_task_list.present({});
-                new_task_list.complete();
+                new_task_list.complete({});
                 return new_task_list;
             }
         };

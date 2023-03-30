@@ -22,10 +22,6 @@ using Clock = std::chrono::high_resolution_clock;
 #endif
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
 
-#if !defined(DAXA_SHADER_INCLUDE_DIR)
-#define DAXA_SHADER_INCLUDE_DIR "include"
-#endif
-
 #if !defined(DAXA_SHADERLANG)
 #define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
 #endif
@@ -64,9 +60,9 @@ struct BaseApp : AppWindow<T>
         .device = device,
         .shader_compile_options = {
             .root_paths = {
+                DAXA_SHADER_INCLUDE_DIR,
                 DAXA_SAMPLE_PATH "/shaders",
                 "tests/0_common/shaders",
-                DAXA_SHADER_INCLUDE_DIR,
             },
 #if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
             .language = daxa::ShaderLanguage::GLSL,
@@ -91,8 +87,6 @@ struct BaseApp : AppWindow<T>
 
     Clock::time_point start = Clock::now(), prev_time = start;
     f32 time = 0.0f, delta_time = 1.0f;
-
-    daxa::CommandSubmitInfo submit_info;
 
     daxa::ImageId swapchain_image;
     daxa::TaskImageId task_swapchain_image;
@@ -163,9 +157,9 @@ struct BaseApp : AppWindow<T>
             .debug_name = APPNAME_PREFIX("ImGui Task"),
         });
 
-        new_task_list.submit(&submit_info);
+        new_task_list.submit({});
         new_task_list.present({});
-        new_task_list.complete();
+        new_task_list.complete({});
 
         // new_task_list.output_graphviz();
 
