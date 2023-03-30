@@ -101,7 +101,7 @@ struct Push
     daxa::SamplerId sampler0_id;
 };
 
-static constexpr auto imgui_vert_spv = std::array{
+static constexpr auto imgui_vert_spv = std::array<daxa::u32, 772>{
     // clang-format off
     0x07230203u, 0x00010300u, 0x000e0000u, 0x00000070u, 0x00000000u, 0x00020011u, 0x00000001u, 0x00020011u,
     0x000014b6u, 0x00020011u, 0x00000031u, 0x0008000au, 0x5f565053u, 0x5f545845u, 0x63736564u, 0x74706972u,
@@ -203,7 +203,7 @@ static constexpr auto imgui_vert_spv = std::array{
     // clang-format on
 };
 
-static constexpr auto imgui_frag_spv = std::array{
+static constexpr auto imgui_frag_spv = std::array<daxa::u32, 695>{
     // clang-format off
     0x07230203u, 0x00010300u, 0x000e0000u, 0x0000005au, 0x00000000u, 0x00020011u, 0x00000001u, 0x00020011u,
     0x000014b6u, 0x00020011u, 0x00000031u, 0x0008000au, 0x5f565053u, 0x5f545845u, 0x63736564u, 0x74706972u,
@@ -466,27 +466,28 @@ namespace daxa
 
     ImplImGuiRenderer::ImplImGuiRenderer(ImGuiRendererInfo a_info)
         : info{std::move(a_info)},
-          // clang-format off
-        raster_pipeline{this->info.device.create_raster_pipeline({
-            .vertex_shader_info = {.binary = {imgui_vert_spv.begin(), imgui_vert_spv.end()}, .entry_point = "vs_main"},
-            .fragment_shader_info = {.binary = {imgui_frag_spv.begin(), imgui_frag_spv.end()}, .entry_point = "fs_main"},
-            .color_attachments = {
-                {
-                    .format = info.format,
-                    .blend = {
-                        .blend_enable = 1u,
-                        .src_color_blend_factor = BlendFactor::SRC_ALPHA,
-                        .dst_color_blend_factor = BlendFactor::ONE_MINUS_SRC_ALPHA,
-                        .src_alpha_blend_factor = BlendFactor::ONE,
-                        .dst_alpha_blend_factor = BlendFactor::ONE_MINUS_SRC_ALPHA,
-                    },
-                },
-            },
-            .raster = {},
-            .push_constant_size = sizeof(Push),
-            .debug_name = "ImGui Draw Pipeline",
-        })}
-    // clang-format on
+          raster_pipeline{[this]()
+                          {
+                              return this->info.device.create_raster_pipeline(daxa::RasterPipelineInfo{
+                                  .vertex_shader_info = {.byte_code = ShaderByteCode(imgui_vert_spv.begin(), imgui_vert_spv.end()), .entry_point = "vs_main"},
+                                  .fragment_shader_info = {.byte_code = ShaderByteCode(imgui_frag_spv.begin(), imgui_frag_spv.end()), .entry_point = "fs_main"},
+                                  .color_attachments = {
+                                      {
+                                          .format = info.format,
+                                          .blend = {
+                                              .blend_enable = 1u,
+                                              .src_color_blend_factor = BlendFactor::SRC_ALPHA,
+                                              .dst_color_blend_factor = BlendFactor::ONE_MINUS_SRC_ALPHA,
+                                              .src_alpha_blend_factor = BlendFactor::ONE,
+                                              .dst_alpha_blend_factor = BlendFactor::ONE_MINUS_SRC_ALPHA,
+                                          },
+                                      },
+                                  },
+                                  .raster = {},
+                                  .push_constant_size = sizeof(Push),
+                                  .debug_name = "ImGui Draw Pipeline",
+                              });
+                          }()}
     {
         if (this->info.use_custom_config)
         {

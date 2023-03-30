@@ -3,19 +3,7 @@
 #include <stack>
 #include <daxa/utils/task_list.hpp>
 
-#define DAXA_TASK_LIST_DEBUG 1
-
 #define DAXA_TASKLIST_MAX_CONITIONALS 31
-
-#if defined(DAXA_TASK_LIST_DEBUG)
-#if DAXA_TASK_LIST_DEBUG
-#define DAXA_ONLY_IF_TASK_LIST_DEBUG(x) x
-#else
-#define DAXA_ONLY_IF_TASK_LIST_DEBUG(x)
-#endif
-#else
-#define DAXA_ONLY_IF_TASK_LIST_DEBUG(x)
-#endif
 
 namespace daxa
 {
@@ -130,8 +118,8 @@ namespace daxa
 
     struct ImplPresentInfo
     {
-        std::vector<BinarySemaphore> * user_binary_semaphores = {};
         std::vector<BinarySemaphore> binary_semaphores = {};
+        std::vector<BinarySemaphore>* additional_binary_semaphores = {};
     };
 
     struct TaskBatch
@@ -145,7 +133,7 @@ namespace daxa
     struct TaskBatchSubmitScope
     {
         CommandSubmitInfo submit_info = {};
-        CommandSubmitInfo * user_submit_info = {};
+        TaskSubmitInfo user_submit_info = {};
         // These barriers are inserted after all batches and their sync.
         std::vector<usize> last_minute_barrier_indices = {};
         std::vector<TaskBatch> task_batches = {};
@@ -179,7 +167,7 @@ namespace daxa
         usize swapchain_image_last_use_submit_scope_index = std::numeric_limits<usize>::max();
 
         void add_task(ImplTaskList & task_list_impl, TaskInfo const & info);
-        void submit(CommandSubmitInfo * info);
+        void submit(TaskSubmitInfo const & info);
         void present(TaskPresentInfo const & info);
     };
 
@@ -194,25 +182,28 @@ namespace daxa
         // record time information:
         u32 record_active_conditional_scopes = {};
         u32 record_conditional_states = {};
-        std::vector<TaskListPermutation*> record_active_permutations = {};
+        std::vector<TaskListPermutation *> record_active_permutations = {};
         bool compiled = {};
 
         // execution time information:
         std::array<bool, DAXA_TASKLIST_MAX_CONITIONALS> execution_time_current_conditionals = {};
+        bool enable_debug_print = {};
 
         // post execution information:
         u32 chosen_permutation_last_execution = {};
         std::vector<CommandList> left_over_command_lists = {};
         bool executed_once = {};
         u32 prev_frame_permutation_index = {};
+        std::stringstream debug_string_stream = {};
 
         void update_active_permutations();
-        
+
         void debug_print_memory_barrier(MemoryBarrierInfo & barrier, std::string_view prefix);
-        void debug_print_image_memory_barrier(ImageBarrierInfo & barrier, TaskImage& task_image, std::string_view prefix);
+        void debug_print_image_memory_barrier(ImageBarrierInfo & barrier, TaskImage & task_image, std::string_view prefix);
         void debug_print_task_barrier(TaskListPermutation const & permutation, TaskBarrier & barrier, usize index, std::string_view prefix);
         void debug_print_task_split_barrier(TaskListPermutation const & permutation, TaskSplitBarrier & barrier, usize index, std::string_view prefix);
         void debug_print_task(TaskListPermutation const & permutation, Task & task, usize task_id, std::string_view prefix);
+        void debug_print();
         void execute_barriers();
         void output_graphviz();
 
