@@ -1052,9 +1052,9 @@ namespace daxa
 
         switch (shader_stage)
         {
-        case ShaderStage::COMP: args.push_back(L"-DDAXA_SHADER_STAGE=0");
-        case ShaderStage::VERT: args.push_back(L"-DDAXA_SHADER_STAGE=1");
-        case ShaderStage::FRAG: args.push_back(L"-DDAXA_SHADER_STAGE=2");
+        case ShaderStage::COMP: args.push_back(L"-DDAXA_SHADER_STAGE=0"); break;
+        case ShaderStage::VERT: args.push_back(L"-DDAXA_SHADER_STAGE=1"); break;
+        case ShaderStage::FRAG: args.push_back(L"-DDAXA_SHADER_STAGE=2"); break;
         }
 
         for (auto const & root : shader_info.compile_options.root_paths)
