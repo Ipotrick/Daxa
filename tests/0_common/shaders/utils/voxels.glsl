@@ -1,8 +1,4 @@
-#define DAXA_ENABLE_SHADER_NO_NAMESPACE 1
-#define DAXA_ENABLE_IMAGE_OVERLOADS_BASIC 1
-#include <shared.inl>
-
-DAXA_USE_PUSH_CONSTANT(DrawPush)
+#pragma once
 
 #include <utils/rand.glsl>
 
@@ -148,7 +144,7 @@ u32 tile_texture_index(u32 block_id, u32 face)
         default:                  return 0;
         }
     case BlockID_Gravel:          return 12;
-    case BlockID_Lava:            return 13; // + i32(globals[0].time * 6) % 8;
+    case BlockID_Lava:            return 13;
     case BlockID_Leaves:          return 21;
     case BlockID_Log:
         switch (face) {
@@ -173,11 +169,11 @@ u32 tile_texture_index(u32 block_id, u32 face)
     // clang-format on
 }
 
-UnpackedFace get_vertex(u32 vert_i)
+UnpackedFace get_vertex(daxa_BufferPtr(daxa_u32) packed_faces_ptr, u32 vert_i)
 {
     u32 data_index = vert_i / 6;
     u32 data_instance = vert_i - data_index * 6;
-    u32 vert_data = deref(daxa_push_constant.face_buffer).data[data_index];
+    u32 vert_data = deref(packed_faces_ptr[data_index]);
     UnpackedFace result;
     result.block_pos = f32vec3(
         (vert_data >> 0) & 0x1f,
@@ -193,35 +189,3 @@ UnpackedFace get_vertex(u32 vert_i)
     correct_uv(result, data_index);
     return result;
 }
-
-#if DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_VERTEX
-
-layout(location = 0) out f32vec3 v_nrm;
-layout(location = 1) out f32vec3 v_tex_uv;
-
-void main()
-{
-    UnpackedFace vert = get_vertex(gl_VertexIndex);
-
-    gl_Position = daxa_push_constant.vp_mat * f32vec4(vert.pos.xyz + daxa_push_constant.chunk_pos, 1);
-    v_tex_uv = f32vec3(vert.uv, vert.tex_id);
-    v_nrm = vert.nrm;
-}
-
-#elif DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_FRAGMENT
-
-layout(location = 0) in f32vec3 v_nrm;
-layout(location = 1) in f32vec3 v_tex_uv;
-
-layout(location = 0) out f32vec4 color;
-
-void main()
-{
-    f32vec4 tex_col = texture(daxa_push_constant.atlas_texture, daxa_push_constant.atlas_sampler, v_tex_uv);
-    f32vec3 col = tex_col.rgb;
-    col *= max(dot(normalize(v_nrm), normalize(f32vec3(1, -3, 2))) * 0.5 + 0.5, 0.0);
-
-    color = f32vec4(col, 1);
-}
-
-#endif

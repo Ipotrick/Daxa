@@ -1,7 +1,7 @@
 vcpkg_from_git(
     OUT_SOURCE_PATH SOURCE_PATH
     URL https://github.com/GPUOpen-Effects/FidelityFX-FSR2
-    REF 2e6d42ad0a6822c934ffc6121c1e9541af870777
+    REF 149cf26e1229eaf5fecfb4428e71666cf4aee374
 )
 
 vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
@@ -13,10 +13,10 @@ set(FSR2_DEFINES)
 
 file(WRITE "${SOURCE_PATH}/src/ffx-fsr2-api/CMakeLists.txt" [==[
 cmake_minimum_required(VERSION 3.15)
-project(ffx_fsr2_api VERSION 2.0.1)
+project(ffx_fsr2_api VERSION 2.2.0)
 set(CMAKE_DEBUG_POSTFIX d)
-option(FFX_FSR2_API_DX12 "Build FSR 2.0 DX12 backend" ON)
-option(FFX_FSR2_API_VK "Build FSR 2.0 Vulkan backend" ON)
+option(FFX_FSR2_API_DX12 "Build FSR 2.2 DX12 backend" ON)
+option(FFX_FSR2_API_VK "Build FSR 2.2 Vulkan backend" ON)
 set(FSR2_AUTO_COMPILE_SHADERS ON CACHE BOOL "Compile shaders automatically as a prebuild step.")
 
 if(CMAKE_GENERATOR STREQUAL "Ninja")
@@ -133,10 +133,10 @@ target_link_libraries(ffx_fsr2_api_vk PUBLIC Vulkan::Vulkan)
 target_include_directories(ffx_fsr2_api_vk PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/../shaders/vk>)
 target_include_directories(ffx_fsr2_api_vk PUBLIC ${Vulkan_INCLUDE_DIR})
 
-file(DOWNLOAD "https://github.com/GabeRundlett/fsr2-precompiled-shaders/archive/refs/tags/0.1.0.zip" "${CMAKE_CURRENT_BINARY_DIR}/shaders.zip")
+file(DOWNLOAD "https://github.com/GabeRundlett/fsr2-precompiled-shaders/archive/refs/tags/0.2.0.zip" "${CMAKE_CURRENT_BINARY_DIR}/shaders.zip")
 file(ARCHIVE_EXTRACT INPUT "${CMAKE_CURRENT_BINARY_DIR}/shaders.zip" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/..")
-file(COPY "${CMAKE_CURRENT_BINARY_DIR}/../fsr2-precompiled-shaders-0.1.0/shaders" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/..")
-file(REMOVE_RECURSE "${CMAKE_CURRENT_BINARY_DIR}/../fsr2-precompiled-shaders-0.1.0")
+file(COPY "${CMAKE_CURRENT_BINARY_DIR}/../fsr2-precompiled-shaders-0.2.0/shaders" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/..")
+file(REMOVE_RECURSE "${CMAKE_CURRENT_BINARY_DIR}/../fsr2-precompiled-shaders-0.2.0")
 ]==])
 
 if(WITH_DX12)
