@@ -16,9 +16,9 @@ namespace tests
             .device = device,
             .shader_compile_options = {
                 .root_paths = {
+                    DAXA_SHADER_INCLUDE_DIR,
                     DAXA_SAMPLE_PATH "/shaders",
                     "tests/0_common/shaders",
-                    "include",
                 },
                 .language = daxa::ShaderLanguage::GLSL,
             },
@@ -99,11 +99,11 @@ auto main() -> int
 
     i32 ret = 0;
 
-    if ((ret = tests::simplest(device)))
+    if (ret = tests::simplest(device); ret != 0)
     {
         return ret;
     }
-    if ((ret = tests::virtual_includes(device)))
+    if (ret = tests::virtual_includes(device); ret != 0)
     {
         return ret;
     }

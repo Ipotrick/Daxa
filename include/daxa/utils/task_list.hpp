@@ -152,9 +152,9 @@ namespace daxa
 
     struct TaskBufferInfo
     {
-        // For execution_persistent ressources, task list will synch from the initial use to the first use ONCE.
-        // After the FIRST execution, it will use the runtime state of the ressource.
-        // For non-execution_persistent ressources, task list will synch from the initial use to first use EVERY EXECUTION.
+        // For execution_persistent resources, task list will synch from the initial use to the first use ONCE.
+        // After the FIRST execution, it will use the runtime state of the resource.
+        // For non-execution_persistent resources, task list will synch from the initial use to first use EVERY EXECUTION.
         Access initial_access = AccessConsts::NONE;
         bool execution_persistent = {};
         std::span<BufferId> execution_buffers = {};
@@ -163,9 +163,9 @@ namespace daxa
 
     struct TaskImageInfo
     {
-        // For execution_persistent ressources, task list will synch from the initial use to the first use ONCE.
-        // After the FIRST execution, it will use the runtime state of the ressource.
-        // For non-execution_persistent ressources, task list will synch from the initial use to first use EVERY EXECUTION.
+        // For execution_persistent resources, task list will synch from the initial use to the first use ONCE.
+        // After the FIRST execution, it will use the runtime state of the resource.
+        // For non-execution_persistent resources, task list will synch from the initial use to first use EVERY EXECUTION.
         std::span<InitialTaskImageUse> initial_access = {};
         bool execution_persistent = {};
         bool swapchain_image = {};
@@ -196,21 +196,43 @@ namespace daxa
         bool use_split_barriers = true;
         /// @brief Optionally the user can provide a swapchain. This enables the use of present.
         std::optional<Swapchain> swapchain = {};
-        /// @brief Each condition doubled the number of permutations. 
+        /// @brief Each condition doubled the number of permutations.
         /// For a low number of permutations its is preferable to precompile all permutations.
         /// For a large number of permutations it might be preferable to only create the permutations actually used on the fly just before they are needed.
         /// The second option is enabled by using jit (just in time) compilation.
         bool jit_compile_permutations = {};
         /// @brief Task list can branch the execution based on conditionals. All conditionals must be set before execution and stay constant while executing.
-        /// This is usefull to create permutations of a task list without having to create a seperate task list. 
+        /// This is usefull to create permutations of a task list without having to create a seperate task list.
         /// Another benefit is that task list can generate synch between executions of permutations while it can not generate synch between two seperate task lists.
         usize permutation_condition_count = {};
+        /// @brief Task list will put performance markers that are used by profilers like nsight around each tasks execution by default.
+        bool enable_command_labels = true;
+        std::array<f32, 4> task_list_label_color = {0.463f, 0.333f, 0.671f, 1.0f};
+        std::array<f32, 4> task_batch_label_color = {0.563f, 0.433f, 0.771f, 1.0f};
+        std::array<f32, 4> task_label_color = {0.663f, 0.533f, 0.871f, 1.0f};
+        /// @brief Records debug information about the execution if enabled. This string is retrievable with the function get_debug_string.
+        bool record_debug_information = {};
         std::string debug_name = {};
+    };
+
+    struct TaskSubmitInfo
+    {
+        PipelineStageFlags* additional_src_stages = {};
+        std::vector<CommandList>* additional_command_lists = {};
+        std::vector<BinarySemaphore>* additional_wait_binary_semaphores = {};
+        std::vector<BinarySemaphore>* additional_signal_binary_semaphores = {};
+        std::vector<std::pair<TimelineSemaphore, u64>>* additional_wait_timeline_semaphores = {};
+        std::vector<std::pair<TimelineSemaphore, u64>>* additional_signal_timeline_semaphores = {};
     };
 
     struct TaskPresentInfo
     {
-        std::vector<BinarySemaphore> * user_binary_semaphores = {};
+        std::vector<BinarySemaphore>* additional_binary_semaphores = {};
+    };
+
+    struct TaskCompleteInfo
+    {
+        
     };
 
     struct TaskImageLastUse
@@ -230,6 +252,7 @@ namespace daxa
     struct ExecutionInfo
     {
         std::span<bool> permutation_condition_values = {};
+        bool record_debug_string  = {};
     };
 
     struct TaskList : ManagedPtr
@@ -246,10 +269,10 @@ namespace daxa
 
         void add_task(TaskInfo const & info);
 
-        void submit(CommandSubmitInfo * info);
+        void submit(TaskSubmitInfo const & info);
         void present(TaskPresentInfo const & info);
 
-        void complete();
+        void complete(TaskCompleteInfo const & info);
 
         void add_runtime_buffer(TaskBufferId tid, BufferId id);
         void add_runtime_image(TaskImageId tid, ImageId id);
@@ -262,8 +285,9 @@ namespace daxa
         // All tasks recorded AFTER a submit will not be executied and submitted.
         // The resulting command lists can retrieved wit this function.
         auto get_command_lists() -> std::vector<CommandList>;
+        // Returns a debug string describing the used permutation and synch.
+        auto get_debug_string() -> std::string;
 
         void output_graphviz();
-        void debug_print();
     };
 } // namespace daxa

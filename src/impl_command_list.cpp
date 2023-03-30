@@ -180,11 +180,30 @@ namespace daxa
 
         if ((info.dst_slice.image_aspect & ImageAspectFlagBits::COLOR) != ImageAspectFlagBits::NONE)
         {
-            // TODO: Also use the other 4 component values: i32 and u32!
-            auto const & clear_value = std::get<std::array<f32, 4>>(info.clear_value);
-            VkClearColorValue const color{
-                .float32 = {clear_value[0], clear_value[1], clear_value[2], clear_value[3]},
-            };
+            DAXA_DBG_ASSERT_TRUE_M(
+                !std::holds_alternative<DepthValue>(info.clear_value),
+                "Provided a depth clear value for an image with a color aspect!");
+
+            VkClearColorValue color;
+
+            std::visit(
+                [&color](auto && clear_value)
+                {
+                    using T = std::decay_t<decltype(clear_value)>;
+                    if constexpr (std::is_same_v<T, std::array<f32, 4>>)
+                    {
+                        color = {.float32 = {clear_value[0], clear_value[1], clear_value[2], clear_value[3]}};
+                    }
+                    else if constexpr (std::is_same_v<T, std::array<i32, 4>>)
+                    {
+                        color = {.int32 = {clear_value[0], clear_value[1], clear_value[2], clear_value[3]}};
+                    }
+                    else if constexpr (std::is_same_v<T, std::array<u32, 4>>)
+                    {
+                        color = {.uint32 = {clear_value[0], clear_value[1], clear_value[2], clear_value[3]}};
+                    }
+                },
+                info.clear_value);
 
             vkCmdClearColorImage(
                 impl.vk_cmd_buffer,
@@ -197,6 +216,10 @@ namespace daxa
 
         if ((info.dst_slice.image_aspect & (ImageAspectFlagBits::DEPTH | ImageAspectFlagBits::STENCIL)) != ImageAspectFlagBits::NONE)
         {
+            DAXA_DBG_ASSERT_TRUE_M(
+                std::holds_alternative<DepthValue>(info.clear_value),
+                "Provided a color clear value for an image with a depth / stencil aspect!");
+
             auto const & clear_value = std::get<DepthValue>(info.clear_value);
             VkClearDepthStencilValue const color{
                 .depth = clear_value.depth,
@@ -478,6 +501,30 @@ namespace daxa
         {
             DAXA_DBG_ASSERT_TRUE_M(!in.image_view.is_empty(), "must provide either image view to render attachment");
 
+            VkClearValue clear_value{};
+            std::visit(
+                [&clear_value](auto && daxa_clear_value)
+                {
+                    using T = std::decay_t<decltype(daxa_clear_value)>;
+                    if constexpr (std::is_same_v<T, std::array<f32, 4>>)
+                    {
+                        clear_value = {.color = {.float32 = {daxa_clear_value[0], daxa_clear_value[1], daxa_clear_value[2], daxa_clear_value[3]}}};
+                    }
+                    else if constexpr (std::is_same_v<T, std::array<i32, 4>>)
+                    {
+                        clear_value = {.color = {.int32 = {daxa_clear_value[0], daxa_clear_value[1], daxa_clear_value[2], daxa_clear_value[3]}}};
+                    }
+                    else if constexpr (std::is_same_v<T, std::array<u32, 4>>)
+                    {
+                        clear_value = {.color = {.uint32 = {daxa_clear_value[0], daxa_clear_value[1], daxa_clear_value[2], daxa_clear_value[3]}}};
+                    }
+                    else if constexpr (std::is_same_v<T, DepthValue>)
+                    {
+                        clear_value = {.depthStencil = {.depth = daxa_clear_value.depth, .stencil = daxa_clear_value.stencil}};
+                    }
+                },
+                in.clear_value);
+
             out = VkRenderingAttachmentInfo{
                 .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
                 .pNext = nullptr,
@@ -488,7 +535,7 @@ namespace daxa
                 .resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
                 .loadOp = static_cast<VkAttachmentLoadOp>(in.load_op),
                 .storeOp = static_cast<VkAttachmentStoreOp>(in.store_op),
-                .clearValue = *reinterpret_cast<VkClearValue const *>(&in.clear_value),
+                .clearValue = clear_value,
             };
         };
 
@@ -657,6 +704,7 @@ namespace daxa
     void CommandList::write_timestamp(WriteTimestampInfo const & info)
     {
         auto & impl = *as<ImplCommandList>();
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only record to uncompleted command list");
         DAXA_DBG_ASSERT_TRUE_M(info.query_index < info.query_pool.info().query_count, "query_index is out of bounds for the query pool");
         impl.flush_barriers();
         vkCmdWriteTimestamp(impl.vk_cmd_buffer, static_cast<VkPipelineStageFlagBits>(info.pipeline_stage.data), info.query_pool.as<ImplTimelineQueryPool>()->vk_timeline_query_pool, info.query_index);
@@ -665,9 +713,38 @@ namespace daxa
     void CommandList::reset_timestamps(ResetTimestampsInfo const & info)
     {
         auto & impl = *as<ImplCommandList>();
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only record to uncompleted command list");
         DAXA_DBG_ASSERT_TRUE_M(info.start_index < info.query_pool.info().query_count, "reset index is out of bounds for the query pool");
         impl.flush_barriers();
         vkCmdResetQueryPool(impl.vk_cmd_buffer, info.query_pool.as<ImplTimelineQueryPool>()->vk_timeline_query_pool, info.start_index, info.count);
+    }
+
+    void CommandList::begin_label(CommandLabelInfo const & info)
+    {
+        auto & impl = *as<ImplCommandList>();
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only record to uncompleted command list");
+        impl.flush_barriers();
+        VkDebugUtilsLabelEXT vk_debug_label_info
+        {
+            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+            .pNext = {},
+            .pLabelName = info.label_name.c_str(),
+            .color = {
+                info.label_color[0],
+                info.label_color[1],
+                info.label_color[2],
+                info.label_color[3]
+            },
+        };
+        impl.impl_device.as<ImplDevice>()->vkCmdBeginDebugUtilsLabelEXT(impl.vk_cmd_buffer, &vk_debug_label_info);
+    }
+
+    void CommandList::end_label()
+    {
+        auto & impl = *as<ImplCommandList>();
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only record to uncompleted command list");
+        impl.flush_barriers();
+        impl.impl_device.as<ImplDevice>()->vkCmdEndDebugUtilsLabelEXT(impl.vk_cmd_buffer);
     }
 
     auto CommandBufferPoolPool::get(ImplDevice * device) -> std::pair<VkCommandPool, VkCommandBuffer>

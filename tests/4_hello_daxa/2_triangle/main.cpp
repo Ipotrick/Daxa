@@ -44,7 +44,6 @@ struct WindowInfo
 // We also create a couple files for the shader, the shared.inl and the main.glsl
 #include "shared.inl"
 
-void upload_vertex_data(daxa::Device & device, daxa::BufferId buffer_id);
 void upload_vertex_data_task(daxa::Device & device, daxa::CommandList & cmd_list, daxa::BufferId buffer_id);
 void draw_to_swapchain_task(daxa::Device & device, daxa::CommandList & cmd_list, std::shared_ptr<daxa::RasterPipeline> & pipeline, daxa::ImageId swapchain_image, daxa::BufferId buffer_id, daxa::u32 width, daxa::u32 height);
 
@@ -68,8 +67,9 @@ int main()
             window_info_ref.height = static_cast<daxa::u32>(height);
         });
     auto native_window_handle = get_native_handle(glfw_window_ptr);
+    auto native_window_platform = get_native_platform(glfw_window_ptr);
 
-    daxa::Context context = daxa::create_context({.enable_validation = false});
+    daxa::Context context = daxa::create_context({});
 
     daxa::Device device = context.create_device({
         .selector = [](daxa::DeviceProperties const & device_props) -> daxa::i32
@@ -90,7 +90,7 @@ int main()
 
     daxa::Swapchain swapchain = device.create_swapchain({
         .native_window = native_window_handle,
-        .native_window_platform = get_native_platform(glfw_window_ptr),
+        .native_window_platform = native_window_platform,
         .surface_format_selector = [](daxa::Format format)
         {
             switch (format)
@@ -99,7 +99,7 @@ int main()
             default: return daxa::default_format_score(format);
             }
         },
-        .present_mode = daxa::PresentMode::FIFO,
+        .present_mode = daxa::PresentMode::MAILBOX,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
         .debug_name = "my swapchain",
     });
@@ -110,8 +110,8 @@ int main()
         .device = device,
         .shader_compile_options = {
             .root_paths = {
+                DAXA_SHADER_INCLUDE_DIR,
                 "./tests/4_hello_daxa/2_triangle",
-                "include",
             },
             .language = daxa::ShaderLanguage::GLSL,
             .enable_debug_info = true,
@@ -122,8 +122,8 @@ int main()
     std::shared_ptr<daxa::RasterPipeline> pipeline;
     {
         auto result = pipeline_manager.add_raster_pipeline({
-            .vertex_shader_info = {.source = daxa::ShaderFile{"main.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_VERT"}}}},
-            .fragment_shader_info = {.source = daxa::ShaderFile{"main.glsl"}, .compile_options = {.defines = {daxa::ShaderDefine{"DRAW_FRAG"}}}},
+            .vertex_shader_info = {.source = daxa::ShaderFile{"main.glsl"}},
+            .fragment_shader_info = {.source = daxa::ShaderFile{"main.glsl"}},
             .color_attachments = {{.format = swapchain.get_format()}},
             .raster = {},
             .push_constant_size = sizeof(MyPushConstant),
@@ -149,8 +149,8 @@ int main()
         .debug_name = "my vertex data",
     });
     // Obviously the vertex data is not yet on the GPU, and this buffer
-    // is just empty. We will use a temporary TaskList to upload it.
-    upload_vertex_data(device, buffer_id);
+    // is just empty. We will use conditional TaskList to upload it on
+    // just the first frame. More on this soon!
 
     // While not entirely necessary, we're going to use TaskList, which
     // allows us to compile a list of GPU tasks and their dependencies
@@ -158,9 +158,23 @@ int main()
     // by making different tasks completely self-contained, while also
     // generating the most optimal synchronization for the tasks you
     // describe.
+
+    // TaskList can have permutations, which allow for runtime conditions
+    // to trigger different outcomes. These are identified with indices,
+    // so we'll define an enum representing all the condition indices
+    // since we want to name them and make sure they're all unique.
+    enum class TaskCondition
+    {
+        VERTICES_UPLOAD,
+        COUNT,
+    };
+
+    std::array<bool, static_cast<daxa::usize>(TaskCondition::COUNT)> task_condition_states{};
+
     auto loop_task_list = daxa::TaskList({
         .device = device,
         .swapchain = swapchain,
+        .permutation_condition_count = static_cast<daxa::usize>(TaskCondition::COUNT),
         .debug_name = "my task list",
     });
 
@@ -192,7 +206,41 @@ int main()
 
     // Now we can record our tasks!
 
-    // Our only task is to draw to the screen
+    // We'll first make a task to update the buffer. This doesn't need to be done
+    // every frame, so we'll put it inside a task conditional!
+    loop_task_list.conditional({
+        .condition_index = static_cast<daxa::u32>(TaskCondition::VERTICES_UPLOAD),
+        .when_true = [&loop_task_list, &task_buffer_id, &task_condition_states]()
+        {
+            loop_task_list.add_task({
+                .used_buffers = {
+                    // Since this task is going to copy a staging buffer to the
+                    // actual buffer, we'll say that this task uses the buffer
+                    // with a transfer write operation!
+                    {task_buffer_id, daxa::TaskBufferAccess::TRANSFER_WRITE},
+                },
+                .task = [&task_buffer_id, &task_condition_states](daxa::TaskRuntimeInterface task_runtime)
+                {
+                    auto cmd_list = task_runtime.get_command_list();
+
+                    // see upload_vertex_data_task(...) for more info on the
+                    // uploading of the data itself.
+
+                    // We'll call upload_vertex_data_task(...) with the buffer ID,
+                    // which we can query from the task runtime.
+
+                    upload_vertex_data_task(task_runtime.get_device(), cmd_list, task_runtime.get_buffers(task_buffer_id)[0]);
+
+                    // Now we can reset this task condition, since it should
+                    // only ever be executed when requested!
+                    task_condition_states[static_cast<daxa::usize>(TaskCondition::VERTICES_UPLOAD)] = false;
+                },
+                .debug_name = "my upload task",
+            });
+        },
+    });
+
+    // And a task to draw to the screen
     loop_task_list.add_task({
         .used_buffers = {
             // Now, since we're reading the buffer inside the vertex shader,
@@ -225,14 +273,18 @@ int main()
     // order to allow more advanced Vulkan users to do much more complicated
     // things, that we don't care about, and that you can create a whole app
     // without ever touching.
-    auto submit_info = daxa::CommandSubmitInfo{};
-    loop_task_list.submit(&submit_info);
+    loop_task_list.submit({});
 
     // And tell the task list to do the present step.
     loop_task_list.present({});
     // Finally, we complete the task list, which essentially compiles the
     // dependency graph between tasks, and inserts the most optimal synchronization!
-    loop_task_list.complete();
+    loop_task_list.complete({});
+
+    // We'll set our task condition states to make sure we use the permutation
+    // where we upload the vertex data to the GPU. This will get set to false
+    // when the task is run, so it will only upload the data once!
+    task_condition_states[static_cast<daxa::usize>(TaskCondition::VERTICES_UPLOAD)] = true;
 
     while (true)
     {
@@ -262,64 +314,12 @@ int main()
         }
 
         // So, now all we need to do is execute our task list!
-        loop_task_list.execute({});
+        loop_task_list.execute({.permutation_condition_values = task_condition_states});
     }
 
     device.wait_idle();
+    device.collect_garbage();
     device.destroy_buffer(buffer_id);
-}
-
-void upload_vertex_data(daxa::Device & device, daxa::BufferId buffer_id)
-{
-    auto temp_task_list = daxa::TaskList({
-        .device = device,
-        .use_split_barriers = true,
-        .debug_name = "temp task list",
-    });
-
-    auto task_buffer_id = temp_task_list.create_task_buffer({.debug_name = "my task buffer"});
-    temp_task_list.add_runtime_buffer(task_buffer_id, buffer_id);
-
-    // bool cond = false;
-    // temp_task_list.conditional({
-    //     .condition = &cond,
-    //     .when_true = [&](){
-    //         temp_task_list.set_initial_access(task_buffer_id, access);
-    //         temp_task_list.add_task({});
-    //         temp_task_list.add_task({});
-    //         temp_task_list.add_task({});
-    //         temp_task_list.conditional({
-    //             .condition = &cond,
-    //             .when_true = [&](){
-    //                 temp_task_list.set_initial_access(task_buffer_id, access);
-    //                 temp_task_list.add_task({});
-    //                 temp_task_list.add_task({});
-    //                 temp_task_list.add_task({});
-    //             },
-    //             .when_false = [&](){
-    //                 temp_task_list.set_initial_access(task_buffer_id, access2);
-    //             },
-    //         });
-    //     },
-    //     .when_false = [&](){
-    //         temp_task_list.set_initial_access(task_buffer_id, access2);
-    //     },
-    // });
-
-    // We'll now just create a dummy task which dictates to the Task Runtime
-    // that there must be a memory barrier after this task.
-    temp_task_list.add_task({
-        .used_buffers = {{task_buffer_id, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY}},
-        .task = [](daxa::TaskRuntimeInterface) {},
-        .debug_name = "my draw task",
-    });
-
-    auto submit_info = daxa::CommandSubmitInfo{};
-    temp_task_list.submit(&submit_info);
-    temp_task_list.complete();
-
-    // Now we'll just
-    temp_task_list.execute({});
 }
 
 void upload_vertex_data_task(

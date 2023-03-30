@@ -4,11 +4,11 @@
 
 namespace daxa
 {
-    using ShaderBinary = std::vector<u32>;
+    using ShaderByteCode = std::span<u32 const>;
 
     struct ShaderInfo
     {
-        ShaderBinary binary = {};
+        ShaderByteCode byte_code = {};
         std::optional<std::string> entry_point = {};
     };
 

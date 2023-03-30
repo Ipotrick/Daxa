@@ -80,8 +80,11 @@ target_compile_features(daxa PUBLIC cxx_std_20)
 find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
 
+include(GNUInstallDirs)
+
 target_compile_definitions(daxa
     PUBLIC
+    $<BUILD_INTERFACE:DAXA_SHADER_INCLUDE_DIR="${CMAKE_CURRENT_LIST_DIR}/include">
     DAXA_SHADERLANG_GLSL=1
     DAXA_SHADERLANG_HLSL=2
 )
@@ -153,7 +156,6 @@ target_link_libraries(daxa
     Vulkan::Vulkan
 )
 
-include(GNUInstallDirs)
 target_include_directories(daxa
     PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
@@ -198,6 +200,11 @@ file(WRITE ${CMAKE_BINARY_DIR}/config.cmake.in [=[
 @PACKAGE_INIT@
 include(${CMAKE_CURRENT_LIST_DIR}/daxa-targets.cmake)
 check_required_components(daxa)
+
+get_target_property(DAXA_PREV_DEFINITIONS daxa::daxa INTERFACE_COMPILE_DEFINITIONS)
+set_target_properties(daxa::daxa PROPERTIES
+  INTERFACE_COMPILE_DEFINITIONS "${DAXA_PREV_DEFINITIONS};DAXA_SHADER_INCLUDE_DIR=\"${PACKAGE_PREFIX_DIR}/include\""
+)
 
 find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
