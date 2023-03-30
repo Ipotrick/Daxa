@@ -264,10 +264,13 @@ DAXA_DEFINE_GET_RWTEXTURE2D(float4)
 DAXA_DEFINE_GET_RWTEXTURE2D(daxa_u32)
 DAXA_DEFINE_GET_RWTEXTURE2D(daxa_u32vec4)
 
-#if !defined(DAXA_ENABLE_SHADER_NO_NAMESPACE)
-#define DAXA_ENABLE_SHADER_NO_NAMESPACE 0
-#endif
 #if DAXA_ENABLE_SHADER_NO_NAMESPACE
+#define BufferId daxa_BufferId
+#define ImageViewId daxa_ImageViewId
+#define SamplerId daxa_SamplerId
+#endif
+
+#if DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES
 #define b32vec1 daxa_b32vec1
 #define b32vec2 daxa_b32vec2
 #define b32vec3 daxa_b32vec3
