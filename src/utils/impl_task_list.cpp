@@ -1,6 +1,7 @@
 #if DAXA_BUILT_WITH_UTILS_TASK_LIST
 
 #include "impl_task_list.hpp"
+#include <algorithm>
 #include <iostream>
 
 #include <fstream>
@@ -572,6 +573,114 @@ namespace daxa
             permutation->add_task(impl, info);
         }
     }
+    
+    struct TaskImageSliceStateIntersection
+    {
+        Access src_access = AccessConsts::NONE;
+        Access dst_access = AccessConsts::NONE;
+        ImageLayout src_layout = ImageLayout::UNDEFINED;
+        usize latest_access_batch_index = {};
+        usize latest_access_submit_scope_index = {};
+        std::variant<std::monostate, LastReadSplitBarrierIndex, LastReadBarrierIndex> latest_access_read_barrier_index = std::monostate{};
+        ImageMipArraySlice slice = {};
+    };
+
+    enum class ImageAccessOrder
+    {
+        DST_BEFORE_SRC,
+        SRC_BEFORE_DST
+    };
+
+    struct IntersectSliceStateInfo
+    {
+        ImageAccessOrder ordering = ImageAccessOrder::SRC_BEFORE_DST;
+    };
+#if 0
+    template<IntersectSliceStateInfo INFO>
+    void intersect_slice_lists(std::vector<TaskImageTrackedSlice> & src_slice_states, std::vector<TaskImageTrackedSlice> & dst_slice_states, std::vector<TaskImageSliceStateIntersection> & intersections)
+    {
+        for (usize dst_slice_state_i = 0; dst_slice_state_i < dst_slice_states.size();)
+        {
+            bool broke_inner_loop = false;
+            for (usize src_slice_state_i = 0; src_slice_state_i < src_slice_states.size();)
+            {
+                bool const slices_disjoint = !dst_slice_states[dst_slice_state_i].intersects(src_slice_states[src_slice_state_i].slice);
+                bool const same_batch =
+                    dst_slice_states[dst_slice_state_i].latest_access_submit_scope_index == src_slice_states[src_slice_state_i].latest_access_submit_scope_index &&
+                    dst_slice_states[dst_slice_state_i].latest_access_batch_index == src_slice_states[src_slice_state_i].latest_access_batch_index;
+                // We check if the sets are disjoint.
+                // If they are we do not need to do anything and advance to the next test.
+                // When two accesses are in the same batch and scope, they can not overlap.
+                // This is simply forbidden by task list rules!
+                if (same_batch || slices_disjoint)
+                {
+                    ++src_slice_state_i;
+                    continue;
+                }
+
+                bool 
+
+                // Now that we have this edge case out the way, we now need to test which tracked slice is executed earlier.
+                bool const new_use_executes_earlier =
+                    dst_slice_states[dst_slice_state_i].latest_access_submit_scope_index < src_slice_states[src_slice_state_i].latest_access_submit_scope_index ||
+                    (dst_slice_states[dst_slice_state_i].latest_access_submit_scope_index == src_slice_states[src_slice_state_i].latest_access_submit_scope_index &&
+                     dst_slice_states[dst_slice_state_i].latest_access_batch_index < src_slice_states[src_slice_state_i].latest_access_batch_index);
+                // When the new use is executing earlier, we subtract from the current initial access slice.
+                // We then replace the current initial accesss slice with the resulting rest.
+                if (new_use_executes_earlier)
+                {
+                    // When we intersect, we remove the old initial access slice and replace it with the rest of the subtraction.
+                    // We need a copy of this, as we will erase this value from the vector first.
+                    auto const initial_access_slice = src_slice_states[src_slice_state_i];
+                    // Erase value from vector.
+                    src_slice_states.erase(src_slice_states.begin() + isize(src_slice_state_i));
+                    // Subtract ranges.
+                    auto const [slice_rest, slice_rest_count] = initial_access_slice.slice.subtract(dst_slice_states[dst_slice_state_i]);
+                    // Now construct new subranges from the rest of the subtraction.
+                    // We advance the iterator each time.
+                    for (usize rest_i = 0; rest_i < slice_rest_count; ++rest_i)
+                    {
+                        auto rest_tracked_slice = initial_access_slice;
+                        rest_tracked_slice.slice = slice_rest[rest_i];
+                        // We insert into the beginning, so we dont recheck these with the current new use slice.
+                        // They are the result of a subtraction therefore disjoint.
+                        src_slice_states.insert(src_slice_states.begin(), rest_tracked_slice);
+                    }
+                    // We erased, so we implicitly advanced by an element, as erase moves all elements one to the left past the iterator.
+                    // But as we inserted into the front, we need to move the index accordingly to "stay in place".
+                    src_slice_state_i += slice_rest_count;
+                }
+                // When the new use is executing AFTER the current inital access slice, we subtract the current initial access slice from the new slice.
+                // We then replace the current new access slice with the resulting rest.
+                else
+                {
+                    // We subtract the initial use from the new use and append the rest.
+                    auto const [slice_rest, slice_rest_count] = dst_slice_states[dst_slice_state_i].subtract(src_slice_states[src_slice_state_i].slice);
+                    // We insert the rest of the subtraction into the new use list.
+                    dst_slice_states.insert(dst_slice_states.end(), slice_rest.begin(), slice_rest.begin() + isize(slice_rest_count));
+                    // We remove the current new use slice, as it intersects with an initial use slice and is later in the list.
+                    dst_slice_states.erase(dst_slice_states.begin() + isize(dst_slice_state_i));
+                    // If we advance the new use index, we restart the inner loop over the initial accesses.
+                    broke_inner_loop = true;
+                    break;
+                }
+            }
+            // When we broke out the inner loop we want to "restart" iteration of the outer loop at the current index.
+            if (!broke_inner_loop)
+            {
+                ++dst_slice_state_i;
+            }
+        }
+        // Add the newly found initial access slices to the list of initial access slices.
+        for (auto const & new_slice : dst_slice_states)
+        {
+            auto new_tracked_slice = dst_slice_states[dst_slice_state_i];
+            new_tracked_slice.slice = new_slice;
+            src_slice_states.push_back(new_tracked_slice);
+        }
+        dst_slice_states.clear();
+    }
+#endif
 
     thread_local std::vector<ImageMipArraySlice> tl_new_access_slices = {};
     void update_image_initial_access_slices(
@@ -589,10 +698,10 @@ namespace daxa
         // Note(pahrens):
         // NEVER access new_access_slice.slice in this function past this point.
         // ALWAYS access the new access ImageMipArraySlice's from an iterator or via vector indexing.
-        for (size_t new_access_slice_i = 0; new_access_slice_i < tl_new_access_slices.size();)
+        for (usize new_access_slice_i = 0; new_access_slice_i < tl_new_access_slices.size();)
         {
             bool broke_inner_loop = false;
-            for (size_t initial_access_i = 0; initial_access_i < task_image.first_accesses.size();)
+            for (usize initial_access_i = 0; initial_access_i < task_image.first_accesses.size();)
             {
                 bool const slices_disjoint = !tl_new_access_slices[new_access_slice_i].intersects(initial_accesses[initial_access_i].slice);
                 bool const same_batch =
@@ -1927,6 +2036,73 @@ namespace daxa
             this->debug_string_stream << prefix << "\tEnd   task buffer use\n";
         }
         this->debug_string_stream << prefix << "End   task\n";
+    }
+
+    void ImplTaskList::debug_print_permutation_image(TaskListPermutation const & permutation, TaskImageId const image_id)
+    {
+        // TODO(msakmary) better way to identify permutation (perhaps named conditions or smth idk)
+        auto prefix = std::string();
+        const auto & image = permutation.image_infos.at(image_id.index);
+        this->debug_string_stream << "=================== Task Image " << image.info.debug_name << "===================\n";
+        prefix.append("\t");
+
+        for(const auto & batch_submit_scope : permutation.batch_submit_scopes)
+        {
+            for(const auto & batch : batch_submit_scope.task_batches)
+            {
+                for(const auto task_id : batch.tasks)
+                {
+                    const auto & task = permutation.tasks.at(task_id);
+                    // buffer is not used in this task
+
+                    for(const auto & used_image : task.info.used_images)
+                    {
+                        if(used_image.id == image_id)
+                        {
+                            this->debug_string_stream << prefix << "Task " << task.info.debug_name << "\n";
+                            prefix.append("\t");
+                            auto [layout, access] = task_image_access_to_layout_access(used_image.access);
+                            this->debug_string_stream << prefix << "Access " << to_string(access) << "\n";
+                            this->debug_string_stream << prefix << "Layout " << to_string(layout) << "\n";
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    void ImplTaskList::debug_print_permutation_buffer(TaskListPermutation const & permutation, TaskBufferId const buffer_id)
+    {
+        // TODO(msakmary) better way to identify permutation (perhaps named conditions or smth idk)
+        auto prefix = std::string();
+        const auto & buffer = permutation.buffer_infos.at(buffer_id.index);
+        this->debug_string_stream << "=================== Task Buffer " << buffer.info.debug_name << "===================\n";
+        prefix.append("\t");
+
+        for(const auto & batch_submit_scope : permutation.batch_submit_scopes)
+        {
+            for(const auto & batch : batch_submit_scope.task_batches)
+            {
+                for(const auto task_id : batch.tasks)
+                {
+                    const auto & task = permutation.tasks.at(task_id);
+                    // buffer is not used in this task
+
+                    for(const auto & used_buffer : task.info.used_buffers)
+                    {
+                        if(used_buffer.id == buffer_id)
+                        {
+                            this->debug_string_stream << prefix << "Task " << task.info.debug_name << "\n";
+                            prefix.append("\t");
+                            auto access = task_buffer_access_to_access(used_buffer.access);
+                            this->debug_string_stream << prefix << "Access " << to_string(access) << "\n";
+                            break;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     void ImplTaskList::debug_print()
