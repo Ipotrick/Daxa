@@ -203,6 +203,8 @@ namespace daxa
         void debug_print_task_barrier(TaskListPermutation const & permutation, TaskBarrier & barrier, usize index, std::string_view prefix);
         void debug_print_task_split_barrier(TaskListPermutation const & permutation, TaskSplitBarrier & barrier, usize index, std::string_view prefix);
         void debug_print_task(TaskListPermutation const & permutation, Task & task, usize task_id, std::string_view prefix);
+        void debug_print_permutation_image(TaskListPermutation const & permutation, TaskImageId const image_id);
+        void debug_print_permutation_buffer(TaskListPermutation const & permutation, TaskBufferId const buffer_id);
         void debug_print();
         void execute_barriers();
         void output_graphviz();
