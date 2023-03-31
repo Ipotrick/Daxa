@@ -29,7 +29,8 @@ namespace daxa
     }
 
     void GPUShaderResourceTable::initialize(usize max_buffers, usize max_images, usize max_samplers,
-                                            VkDevice device, VkBuffer device_address_buffer)
+                                            VkDevice device, VkBuffer device_address_buffer,
+                                            PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT)
     {
         buffer_slots.max_resources = max_buffers;
         image_slots.max_resources = max_images;
@@ -168,6 +169,16 @@ namespace daxa
 
         vkCreatePipelineLayout(device, &vk_pipeline_create_info, nullptr, pipeline_layouts.data());
 
+        auto pipeline_layout_name = std::string("push constant size 0 bytes");
+        VkDebugUtilsObjectNameInfoEXT pipeline_layout_name_info{
+            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+            .pNext = nullptr,
+            .objectType = VK_OBJECT_TYPE_PIPELINE_LAYOUT,
+            .objectHandle = reinterpret_cast<uint64_t>(pipeline_layouts.at(0)),
+            .pObjectName = pipeline_layout_name.c_str(),
+        };
+        vkSetDebugUtilsObjectNameEXT(device, &pipeline_layout_name_info);
+
         for (usize i = 1; i < PIPELINE_LAYOUT_COUNT; ++i)
         {
             VkPushConstantRange const vk_push_constant_range{
@@ -178,6 +189,11 @@ namespace daxa
             vk_pipeline_create_info.pushConstantRangeCount = 1;
             vk_pipeline_create_info.pPushConstantRanges = &vk_push_constant_range;
             vkCreatePipelineLayout(device, &vk_pipeline_create_info, nullptr, &pipeline_layouts.at(i));
+
+            pipeline_layout_name_info.objectHandle = reinterpret_cast<uint64_t>(pipeline_layouts.at(i));
+            pipeline_layout_name = std::string("push constant size ") + std::to_string(i * 4) + std::string(" bytes");
+            pipeline_layout_name_info.pObjectName = pipeline_layout_name.c_str();
+            vkSetDebugUtilsObjectNameEXT(device, &pipeline_layout_name_info);
         }
 
         VkDescriptorBufferInfo const write_buffer{

@@ -743,7 +743,8 @@ namespace daxa
             this->info.max_allowed_images,
             this->info.max_allowed_samplers,
             vk_device,
-            buffer_device_address_buffer);
+            buffer_device_address_buffer,
+            vkSetDebugUtilsObjectNameEXT);
     }
 
     void ImplDevice::main_queue_collect_garbage()
