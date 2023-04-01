@@ -51,7 +51,10 @@ namespace daxa
         };
 
         create_shader_module(this->info.vertex_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT);
-        create_shader_module(this->info.fragment_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT);
+        if (this->info.fragment_shader_info.has_value())
+        {
+            create_shader_module(this->info.fragment_shader_info.value(), VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT);
+        }
 
         this->vk_pipeline_layout = this->impl_device.as<ImplDevice>()->gpu_shader_resource_table.pipeline_layouts.at((this->info.push_constant_size + 3) / 4);
         constexpr VkPipelineVertexInputStateCreateInfo vk_vertex_input_state{

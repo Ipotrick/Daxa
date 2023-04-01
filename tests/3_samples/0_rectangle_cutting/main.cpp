@@ -67,8 +67,8 @@ struct App : AppWindow<App>
 
     // clang-format off
     std::shared_ptr<daxa::RasterPipeline> raster_pipeline = pipeline_manager.add_raster_pipeline({
-        .vertex_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}},
-        .fragment_shader_info = {.source = daxa::ShaderFile{"draw.glsl"}},
+        .vertex_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"draw.glsl"}},
+        .fragment_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"draw.glsl"}},
         .color_attachments = {{
             .format = swapchain.get_format(),
             .blend = {
