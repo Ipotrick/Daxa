@@ -25,8 +25,8 @@ namespace daxa
 
     struct TaskBuffer
     {
-        /// Every permutation always has all buffers but they are not nessecarily valid in that permutation.
-        /// This boolen is used to check this.
+        /// Every permutation always has all buffers but they are not necessarily valid in that permutation.
+        /// This boolean is used to check this.
         bool valid = {};
         TaskBufferInfo info = {};
         Access latest_access = AccessConsts::NONE;
@@ -45,7 +45,7 @@ namespace daxa
         // One task buffer can back multiple buffers.
         std::vector<BufferId> actual_buffers = {};
         // We store execution time information about the previous executions final resource states.
-        // This is important, as whith conditional execution and temporal resources we need to store this infomation to form correct state transitions.
+        // This is important, as with conditional execution and temporal resources we need to store this infomation to form correct state transitions.
         std::optional<Access> previous_execution_last_access = {};
     };
 
@@ -80,8 +80,8 @@ namespace daxa
 
     struct TaskImage
     {
-        /// Every permutation always has all buffers but they are not nessecarily valid in that permutation.
-        /// This boolen is used to check this.
+        /// Every permutation always has all buffers but they are not necessarily valid in that permutation.
+        /// This boolean is used to check this.
         bool valid = {};
         TaskImageInfo info = {};
         bool swapchain_semaphore_waited_upon = {};
@@ -94,7 +94,7 @@ namespace daxa
         // One task image can be backed by multiple images at execution time.
         std::vector<ImageId> actual_images = {};
         // We store runtime information about the previous executions final resource states.
-        // This is important, as whith conditional execution and temporal resources we need to store this infomation to form correct state transitions.
+        // This is important, as with conditional execution and temporal resources we need to store this infomation to form correct state transitions.
         std::optional<std::vector<ExtendedImageSliceState>> previous_execution_last_slices = {};
     };
 
@@ -117,7 +117,7 @@ namespace daxa
     struct ImplPresentInfo
     {
         std::vector<BinarySemaphore> binary_semaphores = {};
-        std::vector<BinarySemaphore>* additional_binary_semaphores = {};
+        std::vector<BinarySemaphore> * additional_binary_semaphores = {};
     };
 
     struct TaskBatch
