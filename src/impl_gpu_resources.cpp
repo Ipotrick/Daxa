@@ -222,7 +222,7 @@ namespace daxa
     {
         [[maybe_unused]] auto print_remaining = [&](std::string prefix, auto & pages)
         {
-            std::string ret{prefix + "\nThis can happen due to not waiting for the gpu to finish executing, as daxa deferres destruction. List of survivors:\n"};
+            std::string ret{prefix + "\nThis can happen due to not waiting for the gpu to finish executing, as daxa defers destruction. List of survivors:\n"};
             for (auto & page : pages)
             {
                 if (page)

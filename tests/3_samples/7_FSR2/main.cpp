@@ -26,7 +26,7 @@ using HWND = void *;
 
 #include <set>
 
-daxa::NativeWindowHandle get_native_handle(GLFWwindow * glfw_window_ptr)
+auto get_native_handle(GLFWwindow * glfw_window_ptr) -> daxa::NativeWindowHandle
 {
 #if defined(_WIN32)
     return glfwGetWin32Window(glfw_window_ptr);
@@ -35,7 +35,7 @@ daxa::NativeWindowHandle get_native_handle(GLFWwindow * glfw_window_ptr)
 #endif
 }
 
-daxa::NativeWindowPlatform get_native_platform(GLFWwindow *)
+auto get_native_platform(GLFWwindow * /*unused*/) -> daxa::NativeWindowPlatform
 {
 #if defined(_WIN32)
     return daxa::NativeWindowPlatform::WIN32_API;
@@ -46,7 +46,7 @@ daxa::NativeWindowPlatform get_native_platform(GLFWwindow *)
 
 struct AppInfo
 {
-    daxa::u32 width, height;
+    daxa::u32 width{}, height{};
     bool swapchain_out_of_date = false;
 
     bool is_paused = true;
@@ -56,11 +56,12 @@ struct AppInfo
     f32mat4x4 view_mat{};
 
     Player3D player = {
+        .pos = {-50.0f, -50.0f, -50.0f},
         .rot = {2.0f, 0.0f, 0.0f},
     };
 };
 
-int main()
+auto main() -> int
 {
     auto app_info = AppInfo{.width = 800, .height = 600};
 
@@ -69,7 +70,7 @@ int main()
 
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    auto glfw_window_ptr = glfwCreateWindow(
+    auto *glfw_window_ptr = glfwCreateWindow(
         static_cast<daxa::i32>(app_info.width),
         static_cast<daxa::i32>(app_info.height),
         "Daxa sample window name", nullptr, nullptr);
@@ -116,7 +117,7 @@ int main()
                     app_info_ref.mouse_captured = should_capture;
                 }
                 glfwSetInputMode(glfw_window, GLFW_CURSOR, should_capture ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
-                glfwSetInputMode(glfw_window, GLFW_RAW_MOUSE_MOTION, should_capture);
+                glfwSetInputMode(glfw_window, GLFW_RAW_MOUSE_MOTION, static_cast<int>(should_capture));
             }
 
             if (!app_info_ref.is_paused)
@@ -125,7 +126,7 @@ int main()
             }
         });
 
-    auto native_window_handle = get_native_handle(glfw_window_ptr);
+    auto *native_window_handle = get_native_handle(glfw_window_ptr);
     auto native_window_platform = get_native_platform(glfw_window_ptr);
 
     daxa::Context context = daxa::create_context({});
@@ -158,8 +159,8 @@ int main()
     std::shared_ptr<daxa::RasterPipeline> pipeline;
     {
         auto result = pipeline_manager.add_raster_pipeline({
-            .vertex_shader_info = {.source = daxa::ShaderFile{"main.glsl"}},
-            .fragment_shader_info = {.source = daxa::ShaderFile{"main.glsl"}},
+            .vertex_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"main.glsl"}},
+            .fragment_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"main.glsl"}},
             .color_attachments = {
                 {.format = daxa::Format::R16G16B16A16_SFLOAT},
                 {.format = daxa::Format::R16G16_SFLOAT},
@@ -306,7 +307,7 @@ int main()
                                 });
                                 cmd_list.destroy_buffer_deferred(staging_buffer_id);
                                 auto * buffer_ptr = device.get_host_address_as<VoxelFace>(staging_buffer_id);
-                                usize chunk_index;
+                                usize chunk_index = 0;
                                 {
                                     auto lock_guard = std::lock_guard{chunk_update_queue_mtx};
                                     auto chunk_iter = std::min_element(
@@ -387,7 +388,7 @@ int main()
             i32 mip_size = 16;
             for (u32 i = 0; i < MIP_COUNT - 1; ++i)
             {
-                i32 next_mip_size = std::max<i32>(1, mip_size / RENDER_SCL);
+                i32 next_mip_size = std::max<i32>(1, static_cast<u32>(mip_size) / RENDER_SCL);
                 loop_task_list.add_task({
                     .used_images = {
                         {task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{.base_mip_level = i + 0, .base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
@@ -508,7 +509,7 @@ int main()
                 .depth_attachment = daxa::RenderAttachmentInfo{
                     .image_view = depth_image.default_view(),
                     .load_op = daxa::AttachmentLoadOp::CLEAR,
-                    .clear_value = daxa::DepthValue{1.0f},
+                    .clear_value = daxa::DepthValue{1.0f, 0u},
                 },
                 .render_area = {.x = 0, .y = 0, .width = render_size.x, .height = render_size.y},
             });
@@ -522,7 +523,7 @@ int main()
                 cmd_list.push_constant(DrawPush{
                     .packed_faces_ptr = device.get_device_address(renderable_chunk.face_buffer),
                     .perframe_input_ptr = perframe_input_ptr,
-                    .atlas_texture = task_runtime.get_images(task_atlas_texture_array)[0],
+                    .atlas_texture = task_runtime.get_images(task_atlas_texture_array)[0].default_view(),
                     .atlas_sampler = atlas_sampler,
                     .chunk_pos = renderable_chunk.chunk->pos,
                 });
@@ -600,7 +601,7 @@ int main()
     while (true)
     {
         glfwPollEvents();
-        if (glfwWindowShouldClose(glfw_window_ptr))
+        if (glfwWindowShouldClose(glfw_window_ptr) != 0)
         {
             break;
         }
@@ -658,7 +659,7 @@ int main()
         app_info.dt = std::chrono::duration<f32>(elapsed).count();
 
         app_info.player.update(app_info.dt);
-        app_info.player.camera.resize(app_info.width, app_info.height);
+        app_info.player.camera.resize(static_cast<i32>(app_info.width), static_cast<i32>(app_info.height));
         app_info.player.camera.set_rot(app_info.player.rot.x, app_info.player.rot.y);
         app_info.player.camera.set_pos(app_info.player.pos);
 

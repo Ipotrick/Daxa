@@ -152,7 +152,7 @@ namespace daxa
             .pResults = {},
         };
 
-        [[maybe_unused]] VkResult err = vkQueuePresentKHR(impl.main_queue_vk_queue, &present_info);
+        [[maybe_unused]] VkResult const err = vkQueuePresentKHR(impl.main_queue_vk_queue, &present_info);
         // We currently ignore VK_ERROR_OUT_OF_DATE_KHR, VK_ERROR_SURFACE_LOST_KHR and VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT
         // because supposedly these kinds of things are not specified within the spec. This is also handled in Swapchain::acquire_next_image()
         DAXA_DBG_ASSERT_TRUE_M(err == VK_SUCCESS || err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_ERROR_SURFACE_LOST_KHR || err == VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT, "Daxa should never be in a situation where Present fails");
@@ -274,7 +274,7 @@ namespace daxa
         auto const & impl = *as<ImplDevice>();
         DAXA_DBG_ASSERT_TRUE_M(
             (impl.slot(id).info.memory_flags & (MemoryFlagBits::HOST_ACCESS_RANDOM | MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE)) != MemoryFlagBits::NONE,
-            "host buffer address is only available if the buffer is created with eithr of the following memory flags: HOST_ACCESS_RANDOM, HOST_ACCESS_SEQUENTIAL_WRITE");
+            "host buffer address is only available if the buffer is created with either of the following memory flags: HOST_ACCESS_RANDOM, HOST_ACCESS_SEQUENTIAL_WRITE");
         return impl.slot(id).host_address;
     }
 
@@ -366,7 +366,7 @@ namespace daxa
             .sampleRateShading = VK_FALSE,
             .dualSrcBlend = VK_FALSE,
             .logicOp = VK_FALSE,
-            .multiDrawIndirect = VK_TRUE, // Very usefull for gpu driven rendering
+            .multiDrawIndirect = VK_TRUE, // Very useful for gpu driven rendering
             .drawIndirectFirstInstance = VK_FALSE,
             .depthClamp = VK_FALSE,
             .depthBiasClamp = VK_FALSE,
@@ -387,7 +387,7 @@ namespace daxa
             .shaderTessellationAndGeometryPointSize = VK_FALSE,
             .shaderImageGatherExtended = VK_FALSE,
             .shaderStorageImageExtendedFormats = VK_FALSE,
-            .shaderStorageImageMultisample = VK_TRUE,            // Usefull for software vrs.
+            .shaderStorageImageMultisample = VK_TRUE,            // Useful for software vrs.
             .shaderStorageImageReadWithoutFormat = VK_TRUE,      // This allows daxa shaders to not specify image layout for image binding tables and read ops.
             .shaderStorageImageWriteWithoutFormat = VK_TRUE,     // This allows daxa shaders to not specify image layout for image binding tables and write ops.
             .shaderUniformBufferArrayDynamicIndexing = VK_FALSE, // This is superseded by descriptor indexing.
@@ -444,7 +444,7 @@ namespace daxa
             .descriptorBindingUpdateUnusedWhilePending = VK_TRUE, // Needed for bindless table updates.
             .descriptorBindingPartiallyBound = VK_TRUE,           // Needed for sparse binding in bindless table.
             .descriptorBindingVariableDescriptorCount = VK_FALSE,
-            .runtimeDescriptorArray = VK_TRUE, // Allows shaders to not have a hardcoded descriptor maximum per talbe.
+            .runtimeDescriptorArray = VK_TRUE, // Allows shaders to not have a hardcoded descriptor maximum per table.
         };
 
         VkPhysicalDeviceHostQueryResetFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_HOST_QUERY_RESET{
@@ -567,7 +567,7 @@ namespace daxa
                 " buffers, the device supports up to " +
                 std::to_string(this->vk_info.limits.max_descriptor_set_storage_buffers) +
                 "buffers.");
-        auto const max_device_supported_images_in_set = std::min(this->vk_info.limits.max_descriptor_set_sampled_images, this->vk_info.limits.max_descriptor_set_storage_images);
+        [[maybe_unused]] auto const max_device_supported_images_in_set = std::min(this->vk_info.limits.max_descriptor_set_sampled_images, this->vk_info.limits.max_descriptor_set_storage_images);
         DAXA_DBG_ASSERT_TRUE_M(
             this->info.max_allowed_images <= max_device_supported_images_in_set,
             std::string("device does not support ") +
@@ -690,7 +690,7 @@ namespace daxa
         };
 
         {
-            [[maybe_unused]] VkResult result = vmaCreateBuffer(this->vma_allocator, &vk_buffer_create_info, &vma_allocation_create_info, &buffer_device_address_buffer, &buffer_device_address_buffer_allocation, nullptr);
+            [[maybe_unused]] VkResult const result = vmaCreateBuffer(this->vma_allocator, &vk_buffer_create_info, &vma_allocation_create_info, &buffer_device_address_buffer, &buffer_device_address_buffer_allocation, nullptr);
             vmaMapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation, reinterpret_cast<void **>(&this->buffer_device_address_buffer_host_ptr));
             DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create buffer");
         }
@@ -875,14 +875,14 @@ namespace daxa
             .pQueueFamilyIndices = &this->main_queue_family_index,
         };
 
-        bool host_accessable = false;
+        bool host_accessible = false;
         auto vma_allocation_flags = static_cast<VmaAllocationCreateFlags>(buffer_info.memory_flags.data);
         if (((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT) != 0u) ||
             ((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT) != 0u) ||
             ((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT) != 0u))
         {
             vma_allocation_flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
-            host_accessable = true;
+            host_accessible = true;
         }
 
         VmaAllocationInfo vma_allocation_info = {};
@@ -908,7 +908,7 @@ namespace daxa
 
         ret.device_address = vkGetBufferDeviceAddress(vk_device, &vk_buffer_device_address_info);
 
-        ret.host_address = host_accessable ? vma_allocation_info.pMappedData : nullptr;
+        ret.host_address = host_accessible ? vma_allocation_info.pMappedData : nullptr;
         ret.zombie = false;
 
         this->buffer_device_address_buffer_host_ptr[id.index] = ret.device_address;
@@ -1099,7 +1099,7 @@ namespace daxa
             .priority = 0.5f,
         };
 
-        [[maybe_unused]] VkResult vk_create_image_result = vmaCreateImage(this->vma_allocator, &vk_image_create_info, &vma_allocation_create_info, &ret.vk_image, &ret.vma_allocation, nullptr);
+        [[maybe_unused]] VkResult const vk_create_image_result = vmaCreateImage(this->vma_allocator, &vk_image_create_info, &vma_allocation_create_info, &ret.vk_image, &ret.vma_allocation, nullptr);
         DAXA_DBG_ASSERT_TRUE_M(vk_create_image_result == VK_SUCCESS, "failed to create image");
 
         VkImageViewType vk_image_view_type = {};
@@ -1135,7 +1135,7 @@ namespace daxa
             },
         };
 
-        [[maybe_unused]] VkResult vk_create_image_view_result = vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view);
+        [[maybe_unused]] VkResult const vk_create_image_view_result = vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view);
         DAXA_DBG_ASSERT_TRUE_M(vk_create_image_view_result == VK_SUCCESS, "failed to create image view");
 
         if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !info.debug_name.empty())
@@ -1198,7 +1198,7 @@ namespace daxa
             .subresourceRange = *reinterpret_cast<VkImageSubresourceRange const *>(&slice),
         };
 
-        [[maybe_unused]] VkResult result = vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.vk_image_view);
+        [[maybe_unused]] VkResult const result = vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.vk_image_view);
         DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create image view");
 
         if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !image_view_info.debug_name.empty())
@@ -1257,7 +1257,7 @@ namespace daxa
             .unnormalizedCoordinates = static_cast<VkBool32>(sampler_info.enable_unnormalized_coordinates),
         };
 
-        [[maybe_unused]] VkResult result = vkCreateSampler(this->vk_device, &vk_sampler_create_info, nullptr, &ret.vk_sampler);
+        [[maybe_unused]] VkResult const result = vkCreateSampler(this->vk_device, &vk_sampler_create_info, nullptr, &ret.vk_sampler);
         DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create sampler");
 
         if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !info.debug_name.empty())
