@@ -198,7 +198,7 @@ int main()
     // We do something a little special here, which is that we set the initial access
     // of the buffer to be vertex shader read, and that's because we'll create a task
     // list which will upload the buffer
-    auto task_buffer_id = loop_task_list.create_task_buffer({.initial_access = daxa::AccessConsts::VERTEX_SHADER_READ, .debug_name = "my task buffer"});
+    auto task_buffer_id = loop_task_list.create_task_buffer({.pre_task_list_slice_states = daxa::AccessConsts::VERTEX_SHADER_READ, .debug_name = "my task buffer"});
     // adding this as a real resource just allows us to query it from the Task
     // runtime later, since there's no buffer-specific commands (unlike image
     // layout transitions) that need to happen when synchronizing buffer usages.
