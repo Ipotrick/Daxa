@@ -17,7 +17,7 @@
 #endif
 #include <GLFW/glfw3native.h>
 
-daxa::NativeWindowHandle get_native_handle(GLFWwindow * glfw_window_ptr)
+auto get_native_handle(GLFWwindow * glfw_window_ptr) -> daxa::NativeWindowHandle
 {
 #if defined(_WIN32)
     return glfwGetWin32Window(glfw_window_ptr);
@@ -26,7 +26,7 @@ daxa::NativeWindowHandle get_native_handle(GLFWwindow * glfw_window_ptr)
 #endif
 }
 
-daxa::NativeWindowPlatform get_native_platform(GLFWwindow *)
+auto get_native_platform(GLFWwindow * /*unused*/) -> daxa::NativeWindowPlatform
 {
 #if defined(_WIN32)
     return daxa::NativeWindowPlatform::WIN32_API;
@@ -37,7 +37,7 @@ daxa::NativeWindowPlatform get_native_platform(GLFWwindow *)
 
 struct WindowInfo
 {
-    daxa::u32 width, height;
+    daxa::u32 width{}, height{};
     bool swapchain_out_of_date = false;
 };
 
@@ -47,12 +47,12 @@ struct WindowInfo
 void upload_vertex_data_task(daxa::Device & device, daxa::CommandList & cmd_list, daxa::BufferId buffer_id);
 void draw_to_swapchain_task(daxa::Device & device, daxa::CommandList & cmd_list, std::shared_ptr<daxa::RasterPipeline> & pipeline, daxa::ImageId swapchain_image, daxa::BufferId buffer_id, daxa::u32 width, daxa::u32 height);
 
-int main()
+auto main() -> int
 {
     auto window_info = WindowInfo{.width = 800, .height = 600};
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    auto glfw_window_ptr = glfwCreateWindow(
+    auto *glfw_window_ptr = glfwCreateWindow(
         static_cast<daxa::i32>(window_info.width),
         static_cast<daxa::i32>(window_info.height),
         "Daxa sample window name", nullptr, nullptr);
@@ -66,7 +66,7 @@ int main()
             window_info_ref.width = static_cast<daxa::u32>(width);
             window_info_ref.height = static_cast<daxa::u32>(height);
         });
-    auto native_window_handle = get_native_handle(glfw_window_ptr);
+    auto *native_window_handle = get_native_handle(glfw_window_ptr);
     auto native_window_platform = get_native_platform(glfw_window_ptr);
 
     daxa::Context context = daxa::create_context({});
@@ -122,8 +122,8 @@ int main()
     std::shared_ptr<daxa::RasterPipeline> pipeline;
     {
         auto result = pipeline_manager.add_raster_pipeline({
-            .vertex_shader_info = {.source = daxa::ShaderFile{"main.glsl"}},
-            .fragment_shader_info = {.source = daxa::ShaderFile{"main.glsl"}},
+            .vertex_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"main.glsl"}},
+            .fragment_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"main.glsl"}},
             .color_attachments = {{.format = swapchain.get_format()}},
             .raster = {},
             .push_constant_size = sizeof(MyPushConstant),
@@ -289,7 +289,7 @@ int main()
     while (true)
     {
         glfwPollEvents();
-        if (glfwWindowShouldClose(glfw_window_ptr))
+        if (glfwWindowShouldClose(glfw_window_ptr) != 0)
         {
             break;
         }

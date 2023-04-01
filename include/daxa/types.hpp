@@ -853,7 +853,7 @@ namespace daxa
         MIRROR_CLAMP_TO_EDGE = 4,
     };
 
-    enum struct BorderColor 
+    enum struct BorderColor
     {
         FLOAT_TRANSPARENT_BLACK = 0,
         INT_TRANSPARENT_BLACK = 1,

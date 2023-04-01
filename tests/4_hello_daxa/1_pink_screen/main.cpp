@@ -8,7 +8,7 @@
 #endif
 #include <GLFW/glfw3native.h>
 
-daxa::NativeWindowHandle get_native_handle(GLFWwindow * glfw_window_ptr)
+auto get_native_handle(GLFWwindow * glfw_window_ptr) -> daxa::NativeWindowHandle
 {
 #if defined(_WIN32)
     return glfwGetWin32Window(glfw_window_ptr);
@@ -17,7 +17,7 @@ daxa::NativeWindowHandle get_native_handle(GLFWwindow * glfw_window_ptr)
 #endif
 }
 
-daxa::NativeWindowPlatform get_native_platform(GLFWwindow *)
+auto get_native_platform(GLFWwindow * /*unused*/) -> daxa::NativeWindowPlatform
 {
 #if defined(_WIN32)
     return daxa::NativeWindowPlatform::WIN32_API;
@@ -28,16 +28,16 @@ daxa::NativeWindowPlatform get_native_platform(GLFWwindow *)
 
 struct WindowInfo
 {
-    daxa::u32 width, height;
+    daxa::u32 width{}, height{};
     bool swapchain_out_of_date = false;
 };
 
-int main()
+auto main() -> int
 {
     auto window_info = WindowInfo{.width = 800, .height = 600};
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    auto glfw_window_ptr = glfwCreateWindow(
+    auto *glfw_window_ptr = glfwCreateWindow(
         static_cast<daxa::i32>(window_info.width),
         static_cast<daxa::i32>(window_info.height),
         "Daxa sample window name", nullptr, nullptr);
@@ -52,7 +52,7 @@ int main()
             window_info.width = static_cast<daxa::u32>(width);
             window_info.height = static_cast<daxa::u32>(height);
         });
-    auto native_window_handle = get_native_handle(glfw_window_ptr);
+    auto *native_window_handle = get_native_handle(glfw_window_ptr);
     auto native_window_platform = get_native_platform(glfw_window_ptr);
 
     // First thing we do is create a Daxa context. This essentially exists
@@ -110,7 +110,7 @@ int main()
     while (true)
     {
         glfwPollEvents();
-        if (glfwWindowShouldClose(glfw_window_ptr))
+        if (glfwWindowShouldClose(glfw_window_ptr) != 0)
         {
             break;
         }
@@ -127,7 +127,7 @@ int main()
         // This is the image we are going to clear. If swapchain image acquisition
         // failed, then the result of this acquire function will be an "empty image",
         // and thus we want to skip this frame. We do this by saying "continue".
-        daxa::ImageId swapchain_image = swapchain.acquire_next_image();
+        daxa::ImageId const swapchain_image = swapchain.acquire_next_image();
         if (swapchain_image.is_empty())
         {
             continue;
@@ -136,7 +136,7 @@ int main()
         // Directly after, we define an image slice. As images can be made up of multiple
         // layers, memory planes, and mip levels, Daxa takes slices in many calls to
         // specify a slice of an image that should be operated upon.
-        daxa::ImageMipArraySlice swapchain_image_full_slice = device.info_image_view(swapchain_image.default_view()).slice;
+        daxa::ImageMipArraySlice const swapchain_image_full_slice = device.info_image_view(swapchain_image.default_view()).slice;
 
         daxa::CommandList command_list = device.create_command_list({.debug_name = "my command list"});
 
