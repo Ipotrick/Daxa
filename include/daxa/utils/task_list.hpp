@@ -112,10 +112,10 @@ namespace daxa
         ImageMipArraySlice slice = {};
     };
 
-    struct InitialTaskImageUse
+    struct ImageSliceState
     {
-        Access access = {};
-        ImageLayout layout = {};
+        Access latest_access = {};
+        ImageLayout latest_layout = {};
         ImageMipArraySlice slice = {};
     };
 
@@ -155,7 +155,7 @@ namespace daxa
         // For execution_persistent resources, task list will synch from the initial use to the first use ONCE.
         // After the FIRST execution, it will use the runtime state of the resource.
         // For non-execution_persistent resources, task list will synch from the initial use to first use EVERY EXECUTION.
-        Access initial_access = AccessConsts::NONE;
+        Access pre_task_list_slice_states = AccessConsts::NONE;
         bool execution_persistent = {};
         std::span<BufferId> execution_buffers = {};
         std::string debug_name = {};
@@ -166,7 +166,8 @@ namespace daxa
         // For execution_persistent resources, task list will synch from the initial use to the first use ONCE.
         // After the FIRST execution, it will use the runtime state of the resource.
         // For non-execution_persistent resources, task list will synch from the initial use to first use EVERY EXECUTION.
-        std::span<InitialTaskImageUse> initial_access = {};
+        // This is either empty or contains an initial state FOR ALL USES SLICES of the image.
+        std::span<ImageSliceState> pre_task_list_slice_states = {};
         bool execution_persistent = {};
         bool swapchain_image = {};
         std::span<ImageId> execution_images = {};

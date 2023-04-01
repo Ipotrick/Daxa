@@ -32,7 +32,7 @@ namespace daxa
         Access latest_access = AccessConsts::NONE;
         usize latest_access_batch_index = {};
         usize latest_access_submit_scope_index = {};
-        Access initial_access = AccessConsts::NONE;
+        Access pre_task_list_slice_states = AccessConsts::NONE;
         usize initial_access_batch_index = {};
         usize initial_access_submit_scope_index = {};
         // When the last index was a read and an additional read is followed after,
@@ -68,16 +68,14 @@ namespace daxa
         SplitBarrierState split_barrier_state;
     };
 
-    struct TaskImageTrackedSlice
+    struct ExtendedImageSliceState
     {
-        Access latest_access = AccessConsts::NONE;
-        ImageLayout latest_layout = ImageLayout::UNDEFINED;
+        ImageSliceState state = {};
         usize latest_access_batch_index = {};
         usize latest_access_submit_scope_index = {};
         // When the last index was a read and an additional read is followed after,
         // we will combine all barriers into one, which is the first barrier that the first read generates.
         std::variant<std::monostate, LastReadSplitBarrierIndex, LastReadBarrierIndex> latest_access_read_barrier_index = std::monostate{};
-        ImageMipArraySlice slice = {};
     };
 
     struct TaskImage
@@ -87,8 +85,8 @@ namespace daxa
         bool valid = {};
         TaskImageInfo info = {};
         bool swapchain_semaphore_waited_upon = {};
-        std::vector<TaskImageTrackedSlice> slices_last_uses = {};
-        std::vector<TaskImageTrackedSlice> first_accesses = {};
+        std::vector<ExtendedImageSliceState> last_slice_states = {};
+        std::vector<ExtendedImageSliceState> first_slice_states = {};
     };
 
     struct ExecutionTimeTaskImage
@@ -97,7 +95,7 @@ namespace daxa
         std::vector<ImageId> actual_images = {};
         // We store runtime information about the previous executions final resource states.
         // This is important, as whith conditional execution and temporal resources we need to store this infomation to form correct state transitions.
-        std::optional<std::vector<TaskImageTrackedSlice>> previous_execution_last_slices = {};
+        std::optional<std::vector<ExtendedImageSliceState>> previous_execution_last_slices = {};
     };
 
     struct Task
@@ -162,6 +160,7 @@ namespace daxa
         std::vector<Task> tasks = {};
         std::vector<TaskSplitBarrier> split_barriers = {};
         std::vector<TaskBarrier> barriers = {};
+        std::vector<usize> initial_barriers = {};
         std::vector<TaskBatchSubmitScope> batch_submit_scopes = {};
         usize swapchain_image_first_use_submit_scope_index = std::numeric_limits<usize>::max();
         usize swapchain_image_last_use_submit_scope_index = std::numeric_limits<usize>::max();
