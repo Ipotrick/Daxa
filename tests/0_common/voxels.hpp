@@ -13,11 +13,11 @@ using namespace daxa::types;
 #include <mutex>
 #include <memory>
 
-static inline constexpr u64 CHUNK_SIZE = 32;
-static inline constexpr u64 CHUNK_VOXEL_N = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
-static inline constexpr u64 WORLD_SIZE = 4;
-static inline constexpr u64 CHUNK_N = WORLD_SIZE * WORLD_SIZE * WORLD_SIZE;
-static inline constexpr u64 CHUNK_MAX_VERTS = CHUNK_VOXEL_N * 6;
+static inline constexpr usize CHUNK_SIZE = 32;
+static inline constexpr usize CHUNK_VOXEL_N = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
+static inline constexpr usize WORLD_SIZE = 4;
+static inline constexpr usize CHUNK_N = WORLD_SIZE * WORLD_SIZE * WORLD_SIZE;
+static inline constexpr usize CHUNK_MAX_VERTS = CHUNK_VOXEL_N * 6;
 static const std::filesystem::path textures_filepath = "tests/0_common/assets/textures";
 static const std::array<std::filesystem::path, 32> texture_names{
     "debug.png",
@@ -114,11 +114,11 @@ struct VoxelChunk
         f32 val = std::sin(p.x * 0.05f) * 20.0f + std::sin(p.z * 0.06f) * 16.0f + 40.0f - p.y;
         if (val < 0.0f)
         {
-            return rand() % BlockID_Water;
+            return static_cast<BlockID>(rand() % BlockID_Water);
         }
         else
         {
-            return BlockID_Air;
+            return static_cast<BlockID>(BlockID_Air);
         }
     }
     void generate()
@@ -158,11 +158,11 @@ struct RenderableChunk
 
         auto & chunk_pos = chunk->pos;
         face_n = 0;
-        for (i32 zi = 0; zi < CHUNK_SIZE; ++zi)
+        for (i32 zi = 0; zi < static_cast<i32>(CHUNK_SIZE); ++zi)
         {
-            for (i32 yi = 0; yi < CHUNK_SIZE; ++yi)
+            for (i32 yi = 0; yi < static_cast<i32>(CHUNK_SIZE); ++yi)
             {
-                for (i32 xi = 0; xi < CHUNK_SIZE; ++xi)
+                for (i32 xi = 0; xi < static_cast<i32>(CHUNK_SIZE); ++xi)
                 {
                     i32vec3 const voxel_pos = i32vec3{xi, yi, zi} + i32vec3{static_cast<i32>(chunk_pos.x), static_cast<i32>(chunk_pos.y), static_cast<i32>(chunk_pos.z)};
                     Voxel const current_voxel = get_voxel(voxel_pos);
@@ -213,14 +213,15 @@ struct RenderableWorld
 
     void generate_chunks()
     {
-        for (i32 zi = 0; zi < WORLD_SIZE; ++zi)
+        for (i32 zi = 0; zi < static_cast<i32>(WORLD_SIZE); ++zi)
         {
-            for (i32 yi = 0; yi < WORLD_SIZE; ++yi)
+            for (i32 yi = 0; yi < static_cast<i32>(WORLD_SIZE); ++yi)
             {
-                for (i32 xi = 0; xi < WORLD_SIZE; ++xi)
+                for (i32 xi = 0; xi < static_cast<i32>(WORLD_SIZE); ++xi)
                 {
-                    auto & renderable_chunk = renderable_chunks[xi + yi * WORLD_SIZE + zi * WORLD_SIZE * WORLD_SIZE];
-                    renderable_chunk.chunk->pos = {static_cast<f32>(xi * CHUNK_SIZE), static_cast<f32>(yi * CHUNK_SIZE), static_cast<f32>(zi * CHUNK_SIZE)};
+                    auto const chunk_index = static_cast<usize>(xi) + static_cast<usize>(yi) * WORLD_SIZE + static_cast<usize>(zi) * WORLD_SIZE * WORLD_SIZE;
+                    auto & renderable_chunk = renderable_chunks[chunk_index];
+                    renderable_chunk.chunk->pos = {static_cast<f32>(xi) * CHUNK_SIZE, static_cast<f32>(yi) * CHUNK_SIZE, static_cast<f32>(zi) * CHUNK_SIZE};
                     // renderable_chunk.chunk->generate();
                 }
             }
@@ -269,12 +270,13 @@ struct RenderableWorld
 
         auto update_chunk = [this](i32vec3 i)
         {
-            if (i.x >= 0 && i.x < WORLD_SIZE &&
-                i.y >= 0 && i.y < WORLD_SIZE &&
-                i.z >= 0 && i.z < WORLD_SIZE)
+            if (i.x >= 0 && i.x < static_cast<i32>(WORLD_SIZE) &&
+                i.y >= 0 && i.y < static_cast<i32>(WORLD_SIZE) &&
+                i.z >= 0 && i.z < static_cast<i32>(WORLD_SIZE))
             {
-                auto lock = std::lock_guard{renderable_chunks[i.x + i.y * WORLD_SIZE + i.z * WORLD_SIZE * WORLD_SIZE].update_mtx};
-                renderable_chunks[i.x + i.y * WORLD_SIZE + i.z * WORLD_SIZE * WORLD_SIZE].mesh_invalid = true;
+                auto const chunk_index = static_cast<usize>(i.x) + static_cast<usize>(i.y) * WORLD_SIZE + static_cast<usize>(i.z) * WORLD_SIZE * WORLD_SIZE;
+                auto lock = std::lock_guard{renderable_chunks[chunk_index].update_mtx};
+                renderable_chunks[chunk_index].mesh_invalid = true;
             }
         };
 

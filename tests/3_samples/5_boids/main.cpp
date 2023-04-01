@@ -45,8 +45,8 @@ struct App : AppWindow<App>
     });
     // clang-format off
     std::shared_ptr<daxa::RasterPipeline> draw_pipeline = pipeline_manager.add_raster_pipeline({
-        .vertex_shader_info = {.source = daxa::ShaderFile{"vert.glsl"}},
-        .fragment_shader_info = {.source = daxa::ShaderFile{"frag.glsl"}},
+        .vertex_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"vert.glsl"}},
+        .fragment_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"frag.glsl"}},
         .color_attachments = {{.format = swapchain.get_format()}},
         .raster = {},
         .push_constant_size = sizeof(DrawPushConstant),

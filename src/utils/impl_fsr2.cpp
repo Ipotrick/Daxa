@@ -61,7 +61,7 @@ namespace daxa
         const usize scratch_buffer_size = ffxFsr2GetScratchMemorySizeVK(physical_device);
         scratch_buffer = malloc(scratch_buffer_size);
         {
-            [[maybe_unused]] FfxErrorCode err = ffxFsr2GetInterfaceVK(&fsr2_context_description.callbacks, scratch_buffer, scratch_buffer_size, physical_device, vkGetDeviceProcAddr);
+            [[maybe_unused]] FfxErrorCode const err = ffxFsr2GetInterfaceVK(&fsr2_context_description.callbacks, scratch_buffer, scratch_buffer_size, physical_device, vkGetDeviceProcAddr);
             DAXA_DBG_ASSERT_TRUE_M(err == FFX_OK, "FSR2 Failed to create the Vulkan interface");
         }
 
@@ -70,7 +70,7 @@ namespace daxa
         fsr2_context_description.flags = FFX_FSR2_ENABLE_AUTO_EXPOSURE;
 
         {
-            [[maybe_unused]] FfxErrorCode err = ffxFsr2ContextCreate(&fsr2_context, &fsr2_context_description);
+            [[maybe_unused]] FfxErrorCode const err = ffxFsr2ContextCreate(&fsr2_context, &fsr2_context_description);
             DAXA_DBG_ASSERT_TRUE_M(err == FFX_OK, "FSR2 Failed to create the FSR context");
         }
         initialized = true;
@@ -80,7 +80,7 @@ namespace daxa
     {
         if (initialized)
         {
-            [[maybe_unused]] FfxErrorCode err = ffxFsr2ContextDestroy(&fsr2_context);
+            [[maybe_unused]] FfxErrorCode const err = ffxFsr2ContextDestroy(&fsr2_context);
             DAXA_DBG_ASSERT_TRUE_M(err == FFX_OK, "FSR2 Failed to destroy the FSR context");
             free(scratch_buffer);
         }
@@ -148,7 +148,7 @@ namespace daxa
         dispatch_description.cameraNear = upscale_info.camera_info.near_plane;
         dispatch_description.cameraFovAngleVertical = upscale_info.camera_info.vertical_fov;
 
-        [[maybe_unused]] FfxErrorCode err = ffxFsr2ContextDispatch(&fsr2_context, &dispatch_description);
+        [[maybe_unused]] FfxErrorCode const err = ffxFsr2ContextDispatch(&fsr2_context, &dispatch_description);
         DAXA_DBG_ASSERT_TRUE_M(err == FFX_OK, "FSR2 Failed dispatch");
     }
 } // namespace daxa

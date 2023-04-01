@@ -97,6 +97,16 @@ static constexpr TBuiltInResource DAXA_DEFAULT_BUILTIN_RESOURCE = {
     .maxTaskWorkGroupSizeY_NV = 1,
     .maxTaskWorkGroupSizeZ_NV = 1,
     .maxMeshViewCountNV = 4,
+    // TODO: Verify these values are reasonable:
+    .maxMeshOutputVerticesEXT = 512,
+    .maxMeshOutputPrimitivesEXT = 512,
+    .maxMeshWorkGroupSizeX_EXT = 512,
+    .maxMeshWorkGroupSizeY_EXT = 512,
+    .maxMeshWorkGroupSizeZ_EXT = 512,
+    .maxTaskWorkGroupSizeX_EXT = 512,
+    .maxTaskWorkGroupSizeY_EXT = 512,
+    .maxTaskWorkGroupSizeZ_EXT = 512,
+    .maxMeshViewCountEXT = 2,
     .maxDualSourceDrawBuffersEXT = {},
     .limits{
         .nonInductiveForLoops = true,
@@ -441,9 +451,9 @@ namespace daxa
 
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
         {
-            [[maybe_unused]] HRESULT dxc_utils_result = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&this->dxc_backend.dxc_utils));
+            [[maybe_unused]] HRESULT const dxc_utils_result = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&this->dxc_backend.dxc_utils));
             DAXA_DBG_ASSERT_TRUE_M(SUCCEEDED(dxc_utils_result), "Failed to create DXC utils");
-            [[maybe_unused]] HRESULT dxc_compiler_result = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&this->dxc_backend.dxc_compiler));
+            [[maybe_unused]] HRESULT const dxc_compiler_result = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&this->dxc_backend.dxc_compiler));
             DAXA_DBG_ASSERT_TRUE_M(SUCCEEDED(dxc_compiler_result), "Failed to create DXC compiler");
 
             this->dxc_backend.dxc_includer = std::make_shared<DxcCustomIncluder>();
@@ -501,7 +511,10 @@ namespace daxa
     {
         auto modified_info = a_info;
         modified_info.vertex_shader_info.compile_options.inherit(this->info.shader_compile_options);
-        modified_info.fragment_shader_info.compile_options.inherit(this->info.shader_compile_options);
+        if (modified_info.fragment_shader_info.has_value())
+        {
+            modified_info.fragment_shader_info.value().compile_options.inherit(this->info.shader_compile_options);
+        }
         if (modified_info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
         {
             return Result<RasterPipelineState>(std::string("push constant size of ") + std::to_string(modified_info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(MAX_PUSH_CONSTANT_BYTE_SIZE));
@@ -522,26 +535,32 @@ namespace daxa
         {
             return Result<RasterPipelineState>(vert_spirv_result.message());
         }
-        auto frag_spirv_result = get_spirv(pipe_result.info.fragment_shader_info, pipe_result.info.debug_name, ShaderStage::FRAG);
-        if (frag_spirv_result.is_err())
-        {
-            return Result<RasterPipelineState>(frag_spirv_result.message());
-        }
-        (*pipe_result.pipeline_ptr) = this->info.device.create_raster_pipeline({
-            .vertex_shader_info = {
+        auto raster_pipeline_info = RasterPipelineInfo{
+            .vertex_shader_info = daxa::ShaderInfo{
                 .byte_code = vert_spirv_result.value(),
                 .entry_point = a_info.vertex_shader_info.compile_options.entry_point,
             },
-            .fragment_shader_info = {
-                .byte_code = frag_spirv_result.value(),
-                .entry_point = a_info.fragment_shader_info.compile_options.entry_point,
-            },
+            .fragment_shader_info = {},
             .color_attachments = modified_info.color_attachments,
             .depth_test = modified_info.depth_test,
             .raster = modified_info.raster,
             .push_constant_size = modified_info.push_constant_size,
             .debug_name = modified_info.debug_name,
-        });
+        };
+        auto frag_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
+        if (pipe_result.info.fragment_shader_info.has_value())
+        {
+            frag_spirv_result = get_spirv(pipe_result.info.fragment_shader_info.value(), pipe_result.info.debug_name, ShaderStage::FRAG);
+            if (frag_spirv_result.is_err())
+            {
+                return Result<RasterPipelineState>(frag_spirv_result.message());
+            }
+            raster_pipeline_info.fragment_shader_info = daxa::ShaderInfo{
+                .byte_code = frag_spirv_result.value(),
+                .entry_point = a_info.fragment_shader_info.value().compile_options.entry_point,
+            };
+        }
+        (*pipe_result.pipeline_ptr) = this->info.device.create_raster_pipeline(raster_pipeline_info);
         return Result<RasterPipelineState>(std::move(pipe_result));
     }
 

@@ -108,7 +108,7 @@ namespace daxa::math_operators
     template <typename T, usize N, usize P>
     constexpr auto operator*(detail::GenericVector<T, N> const & v, detail::GenericMatrix<T, N, P> const & b)
     {
-        auto c = detail::GenericVector<T, N>{};
+        auto c = detail::GenericVector<std::remove_cv_t<T>, N>{};
         for (usize j = 0; j < P; ++j)
         {
             c[j] = 0;
@@ -131,18 +131,18 @@ namespace daxa::math_operators
     }
 
     template <typename T, usize N>
-    constexpr auto vec_from_span(std::span<T, N> const x) -> detail::GenericVector<T, N>
+    constexpr auto vec_from_span(std::span<T, N> const x) -> detail::GenericVector<std::remove_cv_t<T>, N>
     {
-        auto result = detail::GenericVector<T, N>{};
+        auto result = detail::GenericVector<std::remove_cv_t<T>, N>{};
         for (usize i = 0; i < N; ++i)
             result[i] = x[i];
         return result;
     }
 
     template <typename T, usize M, usize N>
-    constexpr auto mat_from_span(std::span<T, M * N> const x) -> detail::GenericMatrix<T, M, N>
+    constexpr auto mat_from_span(std::span<T, M * N> const x) -> detail::GenericMatrix<std::remove_cv_t<T>, M, N>
     {
-        auto result = detail::GenericMatrix<T, M, N>{};
+        auto result = detail::GenericMatrix<std::remove_cv_t<T>, M, N>{};
         for (usize mi = 0; mi < M; ++mi)
         {
             for (usize ni = 0; ni < N; ++ni)
