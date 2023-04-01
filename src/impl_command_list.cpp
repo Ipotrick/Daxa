@@ -264,7 +264,7 @@ namespace daxa
     void CommandList::set_pipeline(ComputePipeline const & pipeline)
     {
         auto & impl = *as<ImplCommandList>();
-        DAXA_DBG_ASSERT_TRUE_M(pipeline.object != nullptr, "invalid pipline handle - valid handle must be retrieved from the pipeline compiler before use");
+        DAXA_DBG_ASSERT_TRUE_M(pipeline.object != nullptr, "invalid pipeline handle - valid handle must be retrieved from the pipeline compiler before use");
         auto const & pipeline_impl = *pipeline.as<ImplComputePipeline>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
@@ -277,7 +277,7 @@ namespace daxa
     void CommandList::set_pipeline(RasterPipeline const & pipeline)
     {
         auto & impl = *as<ImplCommandList>();
-        DAXA_DBG_ASSERT_TRUE_M(pipeline.object != nullptr, "invalid pipline handle - valid handle must be retrieved from the pipeline compiler before use");
+        DAXA_DBG_ASSERT_TRUE_M(pipeline.object != nullptr, "invalid pipeline handle - valid handle must be retrieved from the pipeline compiler before use");
         auto const & pipeline_impl = *pipeline.as<ImplRasterPipeline>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
@@ -724,8 +724,7 @@ namespace daxa
         auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only record to uncompleted command list");
         impl.flush_barriers();
-        VkDebugUtilsLabelEXT vk_debug_label_info
-        {
+        VkDebugUtilsLabelEXT const vk_debug_label_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
             .pNext = {},
             .pLabelName = info.label_name.c_str(),
@@ -733,8 +732,7 @@ namespace daxa
                 info.label_color[0],
                 info.label_color[1],
                 info.label_color[2],
-                info.label_color[3]
-            },
+                info.label_color[3]},
         };
         impl.impl_device.as<ImplDevice>()->vkCmdBeginDebugUtilsLabelEXT(impl.vk_cmd_buffer, &vk_debug_label_info);
     }

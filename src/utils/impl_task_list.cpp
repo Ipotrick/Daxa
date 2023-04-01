@@ -275,7 +275,7 @@ namespace daxa
 
         for (auto & permutation : impl.permutations)
         {
-            // For non-persistent resources task list will synch on the initial to fisrt use every execution.
+            // For non-persistent resources task list will synch on the initial to first use every execution.
             permutation.image_infos.push_back(TaskImage{
                 .valid = permutation.active,
                 .info = info,
@@ -319,7 +319,7 @@ namespace daxa
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can not record to completed command list");
-        bool const already_active = ((impl.record_active_conditional_scopes >> conditional_info.condition_index) & 1u) != 0;
+        [[maybe_unused]] bool const already_active = ((impl.record_active_conditional_scopes >> conditional_info.condition_index) & 1u) != 0;
         DAXA_DBG_ASSERT_TRUE_M(!already_active, "can not nest scopes of the same condition in itself.");
         DAXA_DBG_ASSERT_TRUE_M(conditional_info.condition_index < impl.info.permutation_condition_count,
                                "using conditional index " + std::to_string(conditional_info.condition_index) +
@@ -569,7 +569,7 @@ namespace daxa
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can not record to completed command list");
 
-        for (auto permutation : impl.record_active_permutations)
+        for (auto * permutation : impl.record_active_permutations)
         {
             permutation->add_task(impl, info);
         }
@@ -724,7 +724,7 @@ namespace daxa
                     (new_access_slice.latest_access_submit_scope_index == initial_accesses[initial_access_i].latest_access_submit_scope_index &&
                      new_access_slice.latest_access_batch_index < initial_accesses[initial_access_i].latest_access_batch_index);
                 // When the new use is executing earlier, we subtract from the current initial access slice.
-                // We then replace the current initial accesss slice with the resulting rest.
+                // We then replace the current initial access slice with the resulting rest.
                 if (new_use_executes_earlier)
                 {
                     // When we intersect, we remove the old initial access slice and replace it with the rest of the subtraction.
@@ -734,7 +734,7 @@ namespace daxa
                     task_image.first_slice_states.erase(initial_accesses.begin() + isize(initial_access_i));
                     // Subtract ranges.
                     auto const [slice_rest, slice_rest_count] = initial_access_slice.state.slice.subtract(tl_new_access_slices[new_access_slice_i]);
-                    // Now construct new subranges from the rest of the subtraction.
+                    // Now construct new sub-ranges from the rest of the subtraction.
                     // We advance the iterator each time.
                     for (usize rest_i = 0; rest_i < slice_rest_count; ++rest_i)
                     {
@@ -854,7 +854,7 @@ namespace daxa
                 else
                 {
                     // When the uses are incompatible (no read on read) we need to insert a new barrier.
-                    // Host access needs to be handeled in a specialized way.
+                    // Host access needs to be handled in a specialized way.
                     bool const src_host_only_access = task_buffer.latest_access.stages == PipelineStageFlagBits::HOST;
                     bool const dst_host_only_access = current_buffer_access.stages == PipelineStageFlagBits::HOST;
                     DAXA_DBG_ASSERT_TRUE_M(!(src_host_only_access && dst_host_only_access), "direct sync between two host accesses on gpu are not allowed");
@@ -1035,7 +1035,7 @@ namespace daxa
                     else
                     {
                         // When the uses are incompatible (no read on read, or no identical layout) we need to insert a new barrier.
-                        // Host access needs to be handeled in a specialized way.
+                        // Host access needs to be handled in a specialized way.
                         bool const src_host_only_access = tracked_slice.state.latest_access.stages == PipelineStageFlagBits::HOST;
                         bool const dst_host_only_access = current_image_access.stages == PipelineStageFlagBits::HOST;
                         DAXA_DBG_ASSERT_TRUE_M(!(src_host_only_access && dst_host_only_access), "direct sync between two host accesses on gpu is not allowed");
@@ -1175,7 +1175,7 @@ namespace daxa
         this->image_infos[this->swapchain_image.index].swapchain_semaphore_waited_upon = true;
 
         ExtendedImageSliceState const & tracked_slice = this->image_infos[this->swapchain_image.index].last_slice_states.back();
-        usize submit_scope_index = tracked_slice.latest_access_submit_scope_index;
+        usize const submit_scope_index = tracked_slice.latest_access_submit_scope_index;
         DAXA_DBG_ASSERT_TRUE_M(submit_scope_index < this->batch_submit_scopes.size() - 1, "the last swapchain image use MUST be before the last submit when presenting");
         TaskBatchSubmitScope & submit_scope = this->batch_submit_scopes[submit_scope_index];
         usize const batch_index = tracked_slice.latest_access_batch_index;
@@ -1213,7 +1213,7 @@ namespace daxa
             // Buffers never need layout initialization, only images.
             for (u32 task_image_index = 0; task_image_index < permutation.image_infos.size(); ++task_image_index)
             {
-                TaskImageId task_image_id = {task_image_index};
+                TaskImageId const task_image_id = {task_image_index};
                 auto & task_image = permutation.image_infos[task_image_index];
                 if (task_image.valid && !task_image.info.execution_persistent && task_image.info.pre_task_list_slice_states.size() == 0)
                 {
@@ -1221,9 +1221,9 @@ namespace daxa
                     for (auto & first_access : task_image.first_slice_states)
                     {
                         // TODO(pahrens): Respect the given prior state from the info.
-                        // TODO(pahrens): Investigate if it makes sense to insert these barriers in the batch in which the initial use appers.
+                        // TODO(pahrens): Investigate if it makes sense to insert these barriers in the batch in which the initial use appears.
                         // TODO(pahrens): Investigate if split barriers make sense here.
-                        usize new_barrier_index = permutation.barriers.size();
+                        usize const new_barrier_index = permutation.barriers.size();
                         permutation.barriers.push_back(TaskBarrier{
                             .image_id = task_image_id,
                             .slice = first_access.state.slice,
@@ -1301,7 +1301,7 @@ namespace daxa
         CommandList & cmd_list)
     {
         // Persistent resources need just in time synch between executions,
-        // as pre generating the transitions between all permutations is not managable.
+        // as pre generating the transitions between all permutations is not manageable.
         if (impl.info.record_debug_information)
         {
             impl.debug_string_stream << "\tBegin persistent resource synchronization memory barriers\n";
@@ -1404,7 +1404,7 @@ namespace daxa
                         // Remove the first use from the remaining first uses, as it was now synchronized from.
                         remaining_first_accesses.erase(std::next(remaining_first_accesses.begin(), static_cast<ptrdiff_t>(first_access_slice_index)));
                         // As we removed an element in this place,
-                        // we dont need to advance the iterator as in its place there will be a new element alreay that we do not want to skip.
+                        // we dont need to advance the iterator as in its place there will be a new element already that we do not want to skip.
                         broke_inner_loop = true;
                         break;
                     }
@@ -1418,7 +1418,7 @@ namespace daxa
                     }
                 }
                 // For all first uses that did NOT intersect with and previous use,
-                // we need to syncrhonize from an undefined state to initialize the layout of the image.
+                // we need to synchronize from an undefined state to initialize the layout of the image.
                 for (usize remaining_first_uses_index = 0; remaining_first_uses_index < remaining_first_accesses.size(); ++remaining_first_uses_index)
                 {
                     for (auto execution_image_id : impl.exec_task_images[task_image_index].actual_images)
@@ -1679,23 +1679,23 @@ namespace daxa
                             swapchain.get_cpu_timeline_value());
                     }
                 }
-                if (submit_scope.user_submit_info.additional_command_lists)
+                if (submit_scope.user_submit_info.additional_command_lists != nullptr)
                 {
                     submit_info.command_lists.insert(submit_info.command_lists.end(), submit_scope.user_submit_info.additional_command_lists->begin(), submit_scope.user_submit_info.additional_command_lists->end());
                 }
-                if (submit_scope.user_submit_info.additional_wait_binary_semaphores)
+                if (submit_scope.user_submit_info.additional_wait_binary_semaphores != nullptr)
                 {
                     submit_info.wait_binary_semaphores.insert(submit_info.wait_binary_semaphores.end(), submit_scope.user_submit_info.additional_wait_binary_semaphores->begin(), submit_scope.user_submit_info.additional_wait_binary_semaphores->end());
                 }
-                if (submit_scope.user_submit_info.additional_signal_binary_semaphores)
+                if (submit_scope.user_submit_info.additional_signal_binary_semaphores != nullptr)
                 {
                     submit_info.signal_binary_semaphores.insert(submit_info.signal_binary_semaphores.end(), submit_scope.user_submit_info.additional_signal_binary_semaphores->begin(), submit_scope.user_submit_info.additional_signal_binary_semaphores->end());
                 }
-                if (submit_scope.user_submit_info.additional_wait_timeline_semaphores)
+                if (submit_scope.user_submit_info.additional_wait_timeline_semaphores != nullptr)
                 {
                     submit_info.wait_timeline_semaphores.insert(submit_info.wait_timeline_semaphores.end(), submit_scope.user_submit_info.additional_wait_timeline_semaphores->begin(), submit_scope.user_submit_info.additional_wait_timeline_semaphores->end());
                 }
-                if (submit_scope.user_submit_info.additional_signal_timeline_semaphores)
+                if (submit_scope.user_submit_info.additional_signal_timeline_semaphores != nullptr)
                 {
                     submit_info.signal_timeline_semaphores.insert(submit_info.signal_timeline_semaphores.end(), submit_scope.user_submit_info.additional_signal_timeline_semaphores->begin(), submit_scope.user_submit_info.additional_signal_timeline_semaphores->end());
                 }
@@ -1706,7 +1706,7 @@ namespace daxa
                     ImplPresentInfo & impl_present_info = submit_scope.present_info.value();
                     std::vector<BinarySemaphore> present_wait_semaphores = impl_present_info.binary_semaphores;
                     present_wait_semaphores.push_back(impl.info.swapchain.value().get_present_semaphore());
-                    if (impl_present_info.additional_binary_semaphores)
+                    if (impl_present_info.additional_binary_semaphores != nullptr)
                     {
                         present_wait_semaphores.insert(
                             present_wait_semaphores.end(),
@@ -1775,6 +1775,7 @@ namespace daxa
 
         // usize scope_index = 0;
         for (auto const & permutation : this->permutations)
+        {
             for (auto const & scope : permutation.batch_submit_scopes)
             {
                 usize batch_index = 0;
@@ -1873,6 +1874,7 @@ namespace daxa
                 }
                 // ++scope_index;
             }
+        }
 
         // for (auto & buffer_link : compiled_graph.buffer_links)
         // {
