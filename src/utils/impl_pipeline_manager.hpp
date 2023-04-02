@@ -44,6 +44,8 @@ namespace daxa
             COMP,
             VERT,
             FRAG,
+            TESS_CONTROL,
+            TESS_EVAL
         };
 
         PipelineManagerInfo info = {};
