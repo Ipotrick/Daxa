@@ -41,13 +41,6 @@ namespace daxa
         f32 max_depth_bounds = 1.0f;
     };
 
-    enum class ConservativeRasterizationMode
-    {
-        DISABLED = 0,
-        OVERESTIMATE = 1,
-        UNDERESTIMATE = 2,
-    };
-
     struct ConservativeRasterInfo
     {
         ConservativeRasterizationMode mode = {};
@@ -77,13 +70,22 @@ namespace daxa
         BlendInfo blend = {};
     };
 
+    struct TesselationInfo
+    {
+        u32 control_points = 3;
+        TesselationDomainOrigin origin = {};
+    };
+
     struct RasterPipelineInfo
     {
         ShaderInfo vertex_shader_info = {};
+        std::optional<ShaderInfo> tesselation_control_shader_info = {};
+        std::optional<ShaderInfo> tesselation_evaluation_shader_info = {};
         std::optional<ShaderInfo> fragment_shader_info = {};
         std::vector<RenderAttachment> color_attachments = {};
         DepthTestInfo depth_test = {};
         RasterizerInfo raster = {};
+        TesselationInfo tesselation = {};
         u32 push_constant_size = {};
         std::string debug_name = {};
     };
