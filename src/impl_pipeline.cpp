@@ -108,7 +108,7 @@ namespace daxa
             .pNext = nullptr,
             .flags = {},
             .depthClampEnable = {},
-            .rasterizerDiscardEnable = {},
+            .rasterizerDiscardEnable = info.fragment_shader_info.has_value() ? VK_FALSE : VK_TRUE,
             .polygonMode = *reinterpret_cast<VkPolygonMode const *>(&info.raster.polygon_mode),
             .cullMode = *reinterpret_cast<VkCullModeFlags const *>(&info.raster.face_culling),
             .frontFace = *reinterpret_cast<VkFrontFace const *>(&info.raster.front_face_winding),
