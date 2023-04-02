@@ -935,6 +935,19 @@ namespace daxa
         friend auto operator<=>(BlendInfo const &, BlendInfo const &) = default;
     };
 
+    enum struct TesselationDomainOrigin
+    {
+        LOWER_LEFT = 0,
+        UPPER_LEFT = 1
+    };
+
+    enum struct ConservativeRasterizationMode
+    {
+        DISABLED = 0,
+        OVERESTIMATE = 1,
+        UNDERESTIMATE = 2,
+    };
+
     enum struct PrimitiveTopology
     {
         POINT_LIST = 0,

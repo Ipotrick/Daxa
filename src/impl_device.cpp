@@ -362,7 +362,7 @@ namespace daxa
             .imageCubeArray = VK_TRUE,
             .independentBlend = VK_FALSE,
             .geometryShader = VK_FALSE,
-            .tessellationShader = VK_FALSE,
+            .tessellationShader = VK_TRUE,
             .sampleRateShading = VK_FALSE,
             .dualSrcBlend = VK_FALSE,
             .logicOp = VK_FALSE,

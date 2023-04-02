@@ -86,6 +86,41 @@ namespace tests
 
         return 0;
     }
+
+    auto tesselation_shaders(daxa::Device & device) -> i32
+    {
+        daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
+            .device = device,
+            .shader_compile_options = {
+                .root_paths = {
+                    DAXA_SHADER_INCLUDE_DIR,
+                    DAXA_SAMPLE_PATH "/shaders/test",
+                },
+                .language = daxa::ShaderLanguage::GLSL,
+            },
+            .debug_name = APPNAME_PREFIX("pipeline_manager"),
+        });
+
+        auto compilation_result = pipeline_manager.add_raster_pipeline({
+            .vertex_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"tesselation_test.glsl"}},
+            .tesselation_control_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"tesselation_test.glsl"}},
+            .tesselation_evaluation_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"tesselation_test.glsl"}},
+            .fragment_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"tesselation_test.glsl"}},
+            .raster = {.primitive_topology = daxa::PrimitiveTopology::PATCH_LIST},
+            .tesselation = {.control_points = 3},
+        });
+
+        if (compilation_result.is_err())
+        {
+            std::cerr << "Failed to compile the tesselation_test_pipeline!\n";
+            std::cerr << compilation_result.message() << std::endl;
+            return -1;
+        }
+
+        std::shared_ptr<daxa::RasterPipeline> const tesselation_test_pipeline = compilation_result.value();
+
+        return 0;
+    }
 } // namespace tests
 
 auto main() -> int
@@ -104,6 +139,10 @@ auto main() -> int
         return ret;
     }
     if (ret = tests::virtual_includes(device); ret != 0)
+    {
+        return ret;
+    }
+    if (ret = tests::tesselation_shaders(device); ret != 0)
     {
         return ret;
     }
