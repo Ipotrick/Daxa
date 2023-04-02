@@ -515,6 +515,14 @@ namespace daxa
         {
             modified_info.fragment_shader_info.value().compile_options.inherit(this->info.shader_compile_options);
         }
+        if (modified_info.tesselation_control_shader_info.has_value())
+        {
+            modified_info.tesselation_control_shader_info.value().compile_options.inherit(this->info.shader_compile_options);
+        }
+        if (modified_info.tesselation_evaluation_shader_info.has_value())
+        {
+            modified_info.tesselation_evaluation_shader_info.value().compile_options.inherit(this->info.shader_compile_options);
+        }
         if (modified_info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
         {
             return Result<RasterPipelineState>(std::string("push constant size of ") + std::to_string(modified_info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(MAX_PUSH_CONSTANT_BYTE_SIZE));
@@ -558,6 +566,32 @@ namespace daxa
             raster_pipeline_info.fragment_shader_info = daxa::ShaderInfo{
                 .byte_code = frag_spirv_result.value(),
                 .entry_point = a_info.fragment_shader_info.value().compile_options.entry_point,
+            };
+        }
+        auto tess_control_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
+        if (pipe_result.info.tesselation_control_shader_info.has_value())
+        {
+            tess_control_spirv_result = get_spirv(pipe_result.info.tesselation_control_shader_info.value(), pipe_result.info.debug_name, ShaderStage::TESS_CONTROL);
+            if (tess_control_spirv_result.is_err())
+            {
+                return Result<RasterPipelineState>(tess_control_spirv_result.message());
+            }
+            raster_pipeline_info.tesselation_control_shader_info = daxa::ShaderInfo{
+                .byte_code = tess_control_spirv_result.value(),
+                .entry_point = a_info.tesselation_control_shader_info.value().compile_options.entry_point,
+            };
+        }
+        auto tess_eval_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
+        if (pipe_result.info.tesselation_evaluation_shader_info.has_value())
+        {
+            tess_eval_spirv_result = get_spirv(pipe_result.info.tesselation_evaluation_shader_info.value(), pipe_result.info.debug_name, ShaderStage::TESS_EVAL);
+            if (tess_eval_spirv_result.is_err())
+            {
+                return Result<RasterPipelineState>(tess_eval_spirv_result.message());
+            }
+            raster_pipeline_info.tesselation_evaluation_shader_info = daxa::ShaderInfo{
+                .byte_code = tess_eval_spirv_result.value(),
+                .entry_point = a_info.tesselation_evaluation_shader_info.value().compile_options.entry_point,
             };
         }
         (*pipe_result.pipeline_ptr) = this->info.device.create_raster_pipeline(raster_pipeline_info);
@@ -888,6 +922,8 @@ namespace daxa
             case ShaderStage::COMP: return EShLanguage::EShLangCompute;
             case ShaderStage::VERT: return EShLanguage::EShLangVertex;
             case ShaderStage::FRAG: return EShLanguage::EShLangFragment;
+            case ShaderStage::TESS_CONTROL: return EShLanguage::EShLangTessControl;
+            case ShaderStage::TESS_EVAL: return EShLanguage::EShLangTessEvaluation;
             default:
                 DAXA_DBG_ASSERT_TRUE_M(false, "Tried creating shader with unknown shader stage");
                 return EShLanguage::EShLangCount;
@@ -906,13 +942,17 @@ namespace daxa
 
         preamble += "#define DAXA_SHADER_STAGE_COMPUTE 0\n";
         preamble += "#define DAXA_SHADER_STAGE_VERTEX 1\n";
-        preamble += "#define DAXA_SHADER_STAGE_FRAGMENT 2\n";
+        preamble += "#define DAXA_SHADER_STAGE_TESSELATION_CONTROL 2\n";
+        preamble += "#define DAXA_SHADER_STAGE_TESSELATION_EVALUATION 3\n";
+        preamble += "#define DAXA_SHADER_STAGE_FRAGMENT 4\n";
 
         switch (shader_stage)
         {
         case ShaderStage::COMP: preamble += "#define DAXA_SHADER_STAGE 0\n"; break;
         case ShaderStage::VERT: preamble += "#define DAXA_SHADER_STAGE 1\n"; break;
-        case ShaderStage::FRAG: preamble += "#define DAXA_SHADER_STAGE 2\n"; break;
+        case ShaderStage::TESS_CONTROL: preamble += "#define DAXA_SHADER_STAGE 2\n"; break;
+        case ShaderStage::TESS_EVAL: preamble += "#define DAXA_SHADER_STAGE 3\n"; break;
+        case ShaderStage::FRAG: preamble += "#define DAXA_SHADER_STAGE 4\n"; break;
         }
 
         preamble += "#define DAXA_SHADER 1\n";
@@ -1067,13 +1107,17 @@ namespace daxa
 
         args.push_back(L"-DDAXA_SHADER_STAGE_COMPUTE=0");
         args.push_back(L"-DDAXA_SHADER_STAGE_VERTEX=1");
-        args.push_back(L"-DDAXA_SHADER_STAGE_FRAGMENT=2");
+        args.push_back(L"-DDAXA_SHADER_STAGE_TESS_CONTROL=2");
+        args.push_back(L"-DDAXA_SHADER_STAGE_TESS_EVAL=3");
+        args.push_back(L"-DDAXA_SHADER_STAGE_FRAGMENT=4");
 
         switch (shader_stage)
         {
         case ShaderStage::COMP: args.push_back(L"-DDAXA_SHADER_STAGE=0"); break;
         case ShaderStage::VERT: args.push_back(L"-DDAXA_SHADER_STAGE=1"); break;
-        case ShaderStage::FRAG: args.push_back(L"-DDAXA_SHADER_STAGE=2"); break;
+        case ShaderStage::TESS_CONTROL: args.push_back(L"-DDAXA_SHADER_STAGE=2"); break;
+        case ShaderStage::TESS_EVAL: args.push_back(L"-DDAXA_SHADER_STAGE=3"); break;
+        case ShaderStage::FRAG: args.push_back(L"-DDAXA_SHADER_STAGE=4"); break;
         }
 
         for (auto const & root : shader_info.compile_options.root_paths)
@@ -1109,6 +1153,9 @@ namespace daxa
         {
         case ShaderStage::COMP: profile[0] = L'c'; break;
         case ShaderStage::VERT: profile[0] = L'v'; break;
+        // TODO(msakmary) I sort of free styled these two (in DirectX called Hull shader and Domain shader) ask grundlett if corect
+        case ShaderStage::TESS_CONTROL: profile[0] = L'h'; break;
+        case ShaderStage::TESS_EVAL: profile[0] = L'd'; break;
         case ShaderStage::FRAG: profile[0] = L'p'; break;
         default: break;
         }
