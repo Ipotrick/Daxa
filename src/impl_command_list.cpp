@@ -250,7 +250,7 @@ namespace daxa
             info.clear_value);
     }
 
-    void CommandList::push_constant(void const * data, u32 size, u32 offset)
+    void CommandList::push_constant_vptr(void const * data, u32 size, u32 offset)
     {
         auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
