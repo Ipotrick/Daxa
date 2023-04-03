@@ -295,7 +295,7 @@ void load_textures_commands(daxa::Device & device, daxa::CommandList & cmd_list,
     auto texture_staging_buffer = device.create_buffer({
         .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
         .size = static_cast<u32>(image_size * texture_names.size()),
-        .debug_name = "texture_staging_buffer",
+        .name = "texture_staging_buffer",
     });
     cmd_list.destroy_buffer_deferred(texture_staging_buffer);
     u8 * staging_buffer_data = device.get_host_address_as<u8>(texture_staging_buffer);

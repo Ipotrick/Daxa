@@ -16,7 +16,7 @@ namespace daxa
     {
         ShaderInfo shader_info = {};
         u32 push_constant_size = {};
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct ComputePipeline : ManagedPtr
@@ -85,7 +85,7 @@ namespace daxa
         DepthTestInfo depth_test = {};
         RasterizerInfo raster = {};
         u32 push_constant_size = {};
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct RasterPipeline : ManagedPtr

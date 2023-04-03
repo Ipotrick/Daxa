@@ -6,7 +6,7 @@ namespace daxa
 {
     struct BinarySemaphoreInfo
     {
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct BinarySemaphore : ManagedPtr
@@ -24,7 +24,7 @@ namespace daxa
     struct TimelineSemaphoreInfo
     {
         u64 initial_value = {};
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct TimelineSemaphore : ManagedPtr

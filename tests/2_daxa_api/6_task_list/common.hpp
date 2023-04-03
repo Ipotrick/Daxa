@@ -23,6 +23,6 @@ struct AppContext
         .enable_validation = false,
     });
     daxa::Device device = daxa_ctx.create_device({
-        .debug_name = APPNAME_PREFIX("device"),
+        .name = APPNAME_PREFIX("device"),
     });
 };
