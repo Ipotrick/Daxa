@@ -25,7 +25,7 @@ namespace daxa
 
     struct SplitBarrierInfo
     {
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct Device;

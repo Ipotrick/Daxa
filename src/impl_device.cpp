@@ -695,9 +695,9 @@ namespace daxa
             DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create buffer");
         }
 
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !this->info.debug_name.empty())
+        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !this->info.name.empty())
         {
-            auto const device_name = this->info.debug_name;
+            auto const device_name = this->info.name;
             VkDebugUtilsObjectNameInfoEXT const device_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
@@ -707,7 +707,7 @@ namespace daxa
             };
             this->vkSetDebugUtilsObjectNameEXT(vk_device, &device_name_info);
 
-            auto const queue_name = this->info.debug_name;
+            auto const queue_name = this->info.name;
             VkDebugUtilsObjectNameInfoEXT const device_main_queue_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
@@ -717,7 +717,7 @@ namespace daxa
             };
             this->vkSetDebugUtilsObjectNameEXT(vk_device, &device_main_queue_name_info);
 
-            auto const semaphore_name = this->info.debug_name;
+            auto const semaphore_name = this->info.name;
             VkDebugUtilsObjectNameInfoEXT const device_main_queue_timeline_semaphore_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
@@ -727,7 +727,7 @@ namespace daxa
             };
             this->vkSetDebugUtilsObjectNameEXT(vk_device, &device_main_queue_timeline_semaphore_name_info);
 
-            auto const buffer_name = this->info.debug_name;
+            auto const buffer_name = this->info.name;
             VkDebugUtilsObjectNameInfoEXT const device_main_queue_timeline_buffer_device_address_buffer_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
@@ -913,9 +913,9 @@ namespace daxa
 
         this->buffer_device_address_buffer_host_ptr[id.index] = ret.device_address;
 
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !buffer_info.debug_name.empty())
+        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !buffer_info.name.empty())
         {
-            auto const buffer_name = buffer_info.debug_name;
+            auto const buffer_name = buffer_info.name;
             VkDebugUtilsObjectNameInfoEXT const buffer_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
@@ -993,9 +993,9 @@ namespace daxa
         ret.info = image_info;
         vkCreateImageView(vk_device, &view_ci, nullptr, &ret.view_slot.vk_image_view);
 
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !image_info.debug_name.empty())
+        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !image_info.name.empty())
         {
-            auto swapchain_image_name = image_info.debug_name;
+            auto swapchain_image_name = image_info.name;
             VkDebugUtilsObjectNameInfoEXT const swapchain_image_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
@@ -1005,7 +1005,7 @@ namespace daxa
             };
             this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &swapchain_image_name_info);
 
-            auto swapchain_image_view_name = image_info.debug_name;
+            auto swapchain_image_view_name = image_info.name;
             VkDebugUtilsObjectNameInfoEXT const swapchain_image_view_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
@@ -1041,7 +1041,7 @@ namespace daxa
                 .base_array_layer = 0,
                 .layer_count = image_info.array_layer_count,
             },
-            .debug_name = image_info.debug_name,
+            .name = image_info.name,
         };
 
         DAXA_DBG_ASSERT_TRUE_M(image_info.dimensions >= 1 && image_info.dimensions <= 3, "image dimensions must be a value between 1 to 3(inclusive)");
@@ -1138,9 +1138,9 @@ namespace daxa
         [[maybe_unused]] VkResult const vk_create_image_view_result = vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view);
         DAXA_DBG_ASSERT_TRUE_M(vk_create_image_view_result == VK_SUCCESS, "failed to create image view");
 
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !info.debug_name.empty())
+        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !info.name.empty())
         {
-            auto image_name = image_info.debug_name;
+            auto image_name = image_info.name;
             VkDebugUtilsObjectNameInfoEXT const swapchain_image_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
@@ -1150,7 +1150,7 @@ namespace daxa
             };
             this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &swapchain_image_name_info);
 
-            auto image_view_name = image_info.debug_name;
+            auto image_view_name = image_info.name;
             VkDebugUtilsObjectNameInfoEXT const swapchain_image_view_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
@@ -1201,9 +1201,9 @@ namespace daxa
         [[maybe_unused]] VkResult const result = vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.vk_image_view);
         DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create image view");
 
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !image_view_info.debug_name.empty())
+        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !image_view_info.name.empty())
         {
-            auto image_view_name = image_view_info.debug_name;
+            auto image_view_name = image_view_info.name;
             VkDebugUtilsObjectNameInfoEXT const name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
@@ -1260,9 +1260,9 @@ namespace daxa
         [[maybe_unused]] VkResult const result = vkCreateSampler(this->vk_device, &vk_sampler_create_info, nullptr, &ret.vk_sampler);
         DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create sampler");
 
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !info.debug_name.empty())
+        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !info.name.empty())
         {
-            auto sampler_name = info.debug_name;
+            auto sampler_name = info.name;
             VkDebugUtilsObjectNameInfoEXT const sampler_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,

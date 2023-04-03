@@ -318,14 +318,14 @@ namespace daxa
     {
         vbuffer = info.device.create_buffer({
             .size = static_cast<u32>(vbuffer_new_size),
-            .debug_name = std::string("dear ImGui vertex buffer"),
+            .name = std::string("dear ImGui vertex buffer"),
         });
     }
     void ImplImGuiRenderer::recreate_ibuffer(usize ibuffer_new_size)
     {
         ibuffer = info.device.create_buffer({
             .size = static_cast<u32>(ibuffer_new_size),
-            .debug_name = std::string("dear ImGui index buffer"),
+            .name = std::string("dear ImGui index buffer"),
         });
     }
 
@@ -355,7 +355,7 @@ namespace daxa
             auto staging_vbuffer = info.device.create_buffer({
                 .memory_flags = MemoryFlagBits::HOST_ACCESS_RANDOM,
                 .size = static_cast<u32>(vbuffer_needed_size),
-                .debug_name = std::string("dear ImGui vertex staging buffer ") + std::to_string(frame_count),
+                .name = std::string("dear ImGui vertex staging buffer ") + std::to_string(frame_count),
             });
             auto * vtx_dst = info.device.get_host_address_as<ImDrawVert>(staging_vbuffer);
             for (i32 n = 0; n < draw_data->CmdListsCount; n++)
@@ -368,7 +368,7 @@ namespace daxa
             auto staging_ibuffer = info.device.create_buffer({
                 .memory_flags = MemoryFlagBits::HOST_ACCESS_RANDOM,
                 .size = static_cast<u32>(ibuffer_needed_size),
-                .debug_name = std::string("dear ImGui index staging buffer ") + std::to_string(frame_count),
+                .name = std::string("dear ImGui index staging buffer ") + std::to_string(frame_count),
             });
             auto * idx_dst = info.device.get_host_address_as<ImDrawIdx>(staging_ibuffer);
             for (i32 n = 0; n < draw_data->CmdListsCount; n++)
@@ -487,7 +487,7 @@ namespace daxa
                 };
                 create_info.raster = {};
                 create_info.push_constant_size = sizeof(Push);
-                create_info.debug_name = "ImGui Draw Pipeline";
+                create_info.name = "ImGui Draw Pipeline";
                 return this->info.device.create_raster_pipeline(create_info);
               }()}
     {
@@ -497,7 +497,7 @@ namespace daxa
         }
         recreate_vbuffer(4096);
         recreate_ibuffer(4096);
-        sampler = this->info.device.create_sampler({.debug_name = "dear ImGui sampler"});
+        sampler = this->info.device.create_sampler({.name = "dear ImGui sampler"});
 
         ImGuiIO & io = ImGui::GetIO();
         u8 * pixels = nullptr;
@@ -508,7 +508,7 @@ namespace daxa
         font_sheet = this->info.device.create_image({
             .size = {static_cast<u32>(width), static_cast<u32>(height), 1},
             .usage = ImageUsageFlagBits::TRANSFER_DST | ImageUsageFlagBits::SHADER_READ_ONLY,
-            .debug_name = "dear ImGui font sheet",
+            .name = "dear ImGui font sheet",
         });
 
         auto texture_staging_buffer = this->info.device.create_buffer({
@@ -519,7 +519,7 @@ namespace daxa
         u8 * staging_buffer_data = this->info.device.get_host_address_as<u8>(texture_staging_buffer);
         std::memcpy(staging_buffer_data, pixels, upload_size);
 
-        auto cmd_list = this->info.device.create_command_list({.debug_name = "dear ImGui Font Sheet Upload"});
+        auto cmd_list = this->info.device.create_command_list({.name = "dear ImGui Font Sheet Upload"});
         cmd_list.pipeline_barrier_image_transition({
             .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
             .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ_WRITE,

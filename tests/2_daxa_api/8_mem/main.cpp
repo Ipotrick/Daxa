@@ -14,21 +14,21 @@ auto main() -> int
         .enable_validation = false,
     });
     daxa::Device device = daxa_ctx.create_device({
-        .debug_name = "device",
+        .name = "device",
     });
     daxa::TransferMemoryPool tmem{daxa::TransferMemoryPoolInfo{
         .device = device,
         .capacity = 256,
-        .debug_name = "transient memory pool",
+        .name = "transient memory pool",
     }};
     daxa::TimelineSemaphore gpu_timeline = device.create_timeline_semaphore({
-        .debug_name = "timeline semaphpore",
+        .name = "timeline semaphpore",
     });
     usize cpu_timeline = 1;
     daxa::BufferId result_buffer = device.create_buffer({
         .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
         .size = sizeof(u32) * ELEMENT_COUNT * ITERATION_COUNT,
-        .debug_name = "result",
+        .name = "result",
     });
 
     for (u32 iteration = 0; iteration < ITERATION_COUNT; ++iteration)

@@ -12,7 +12,7 @@ namespace daxa
 {
     struct CommandListInfo
     {
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct ImageBlitInfo

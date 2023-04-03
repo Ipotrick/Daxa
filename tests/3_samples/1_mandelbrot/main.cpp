@@ -42,14 +42,14 @@ struct App : BaseApp<App>
             .shader_info = {.source = daxa::ShaderFile{"compute.hlsl"}},
 #endif
             .push_constant_size = sizeof(ComputePush),
-            .debug_name = APPNAME_PREFIX("compute_pipeline"),
+            .name = APPNAME_PREFIX("compute_pipeline"),
         }).value();
     }();
     // clang-format on
 
     daxa::BufferId gpu_input_buffer = device.create_buffer(daxa::BufferInfo{
         .size = sizeof(GpuInput),
-        .debug_name = APPNAME_PREFIX("gpu_input_buffer"),
+        .name = APPNAME_PREFIX("gpu_input_buffer"),
     });
     GpuInput gpu_input = {};
     daxa::TaskBufferId task_gpu_input_buffer;
@@ -58,13 +58,13 @@ struct App : BaseApp<App>
         .format = daxa::Format::R8G8B8A8_UNORM,
         .size = {size_x, size_y, 1},
         .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
-        .debug_name = APPNAME_PREFIX("render_image"),
+        .name = APPNAME_PREFIX("render_image"),
     });
     daxa::TaskImageId task_render_image;
 
     daxa::TimelineQueryPool timeline_query_pool = device.create_timeline_query_pool({
         .query_count = 2,
-        .debug_name = "timeline_query",
+        .name = "timeline_query",
     });
 
     daxa::TaskList loop_task_list = record_loop_task_list();
@@ -143,9 +143,9 @@ struct App : BaseApp<App>
 
     void record_tasks(daxa::TaskList & new_task_list)
     {
-        task_render_image = new_task_list.create_task_image({.debug_name = APPNAME_PREFIX("task_render_image")});
+        task_render_image = new_task_list.create_task_image({.name = APPNAME_PREFIX("task_render_image")});
         new_task_list.add_runtime_image(task_render_image, render_image);
-        task_gpu_input_buffer = new_task_list.create_task_buffer({.debug_name = APPNAME_PREFIX("task_gpu_input_buffer")});
+        task_gpu_input_buffer = new_task_list.create_task_buffer({.name = APPNAME_PREFIX("task_gpu_input_buffer")});
         new_task_list.add_runtime_buffer(task_gpu_input_buffer, gpu_input_buffer);
 
         new_task_list.add_task({
@@ -168,7 +168,7 @@ struct App : BaseApp<App>
                 auto staging_gpu_input_buffer = device.create_buffer({
                     .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .size = sizeof(GpuInput),
-                    .debug_name = APPNAME_PREFIX("staging_gpu_input_buffer"),
+                    .name = APPNAME_PREFIX("staging_gpu_input_buffer"),
                 });
                 cmd_list.destroy_buffer_deferred(staging_gpu_input_buffer);
                 auto * buffer_ptr = device.get_host_address_as<GpuInput>(staging_gpu_input_buffer);
@@ -179,7 +179,7 @@ struct App : BaseApp<App>
                     .size = sizeof(GpuInput),
                 });
             },
-            .debug_name = APPNAME_PREFIX("Upload Input"),
+            .name = APPNAME_PREFIX("Upload Input"),
         });
         new_task_list.add_task({
             .used_buffers = {
@@ -203,7 +203,7 @@ struct App : BaseApp<App>
                 });
                 cmd_list.dispatch((size_x + 7) / 8, (size_y + 7) / 8);
             },
-            .debug_name = APPNAME_PREFIX("Draw (Compute)"),
+            .name = APPNAME_PREFIX("Draw (Compute)"),
         });
         new_task_list.add_task({
             .used_images = {
@@ -230,7 +230,7 @@ struct App : BaseApp<App>
                     .query_index = 1,
                 });
             },
-            .debug_name = APPNAME_PREFIX("Blit (render to swapchain)"),
+            .name = APPNAME_PREFIX("Blit (render to swapchain)"),
         });
     }
 };
