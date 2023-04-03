@@ -1,6 +1,8 @@
 #include "common.hpp"
 #include "mipmapping.hpp"
 
+#include "shaders/shader_integration.inl"
+
 namespace tests
 {
     void simplest()
@@ -283,21 +285,21 @@ namespace tests
         task_list.add_runtime_image(task_image, image);
 
         auto cmd = app.device.create_command_list({.debug_name = "initialization commands"});
-        //cmd.pipeline_barrier_image_transition({
-        //    .waiting_pipeline_access = daxa::AccessConsts::READ_WRITE,
-        //    .image_id = image,
-        //    .after_layout = daxa::ImageLayout::GENERAL,
-        //    .image_slice = {.base_array_layer = 0, .layer_count = 2},
-        //});
-        //cmd.pipeline_barrier_image_transition({
-        //    .waiting_pipeline_access = daxa::AccessConsts::READ_WRITE,
-        //    .image_id = image,
-        //    .after_layout = daxa::ImageLayout::READ_ONLY_OPTIMAL,
-        //    .image_slice = {.base_array_layer = 2, .layer_count = 2},
-        //});
+        // cmd.pipeline_barrier_image_transition({
+        //     .waiting_pipeline_access = daxa::AccessConsts::READ_WRITE,
+        //     .image_id = image,
+        //     .after_layout = daxa::ImageLayout::GENERAL,
+        //     .image_slice = {.base_array_layer = 0, .layer_count = 2},
+        // });
+        // cmd.pipeline_barrier_image_transition({
+        //     .waiting_pipeline_access = daxa::AccessConsts::READ_WRITE,
+        //     .image_id = image,
+        //     .after_layout = daxa::ImageLayout::READ_ONLY_OPTIMAL,
+        //     .image_slice = {.base_array_layer = 2, .layer_count = 2},
+        // });
         cmd.complete();
         app.device.submit_commands({.command_lists = {std::move(cmd)}});
-        
+
         task_list.add_task({
             .used_buffers = {},
             .used_images =
@@ -348,6 +350,80 @@ namespace tests
         std::cout << task_list.get_debug_string() << std::endl;
         app.device.wait_idle();
         app.device.destroy_image(image);
+        app.device.collect_garbage();
+    }
+
+    void shader_integration_inl_use()
+    {
+        // TEST:
+        //  1) Create resources
+        //  2) Use Compute dispatch to write to image
+        //  4) readback and validate
+        AppContext app = {};
+        auto image = app.device.create_image({
+            .size = {16, 16, 1},
+            .array_layer_count = 4,
+            .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+            .debug_name = "underlying image",
+        });
+        auto buffer = app.device.create_buffer({
+            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
+            .size = 16,
+            .debug_name = "underlying buffer",
+        });
+        *app.device.get_host_address_as<float>(buffer) = 0.75f;
+        auto task_list = daxa::TaskList({
+            .device = app.device,
+            .record_debug_information = true,
+            .debug_name = "shader integration test - task list",
+        });
+        
+        auto task_image = task_list.create_task_image({
+            .debug_name = "image",  // This name MUST be identical to the name used in the shader.
+        });
+        task_list.add_runtime_image(task_image, image);
+
+        auto task_buffer = task_list.create_task_buffer({
+            .debug_name = "settings", // This name MUST be identical to the name used in the shader.
+        });
+        task_list.add_runtime_buffer(task_buffer, buffer);
+
+        daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
+            .device = app.device,
+            .shader_compile_options = {
+                .root_paths = {
+                    DAXA_SHADER_INCLUDE_DIR,
+                    "tests/2_daxa_api/6_task_list/shaders",
+                },
+            },
+            .debug_name = "pipeline manager",
+        });
+
+        auto compute_pipeline = pipeline_manager.add_compute_pipeline({
+            .shader_info = {
+                .source = daxa::ShaderFile{"shader_integration.glsl"},
+            },
+            .push_constant_size = daxa::ShaderIntegrationTaskListUses.size,
+            .debug_name = "compute_pipeline",
+        }).value();
+
+        task_list.add_task({
+            .shader_uses = daxa::ShaderIntegrationTaskListUses,
+            .task = [&](daxa::TaskRuntimeInterface const& tri){
+                auto cmd = tri.get_command_list();
+                cmd.set_pipeline(*compute_pipeline);
+                cmd.push_constant_vptr(tri.shader_uses_data(), tri.shader_uses_size());
+                cmd.dispatch(1,1,1);
+            },
+            .debug_name = "write image in compute",
+        });
+
+        task_list.complete({});
+        task_list.execute({});
+        std::cout << task_list.get_debug_string() << std::endl;
+        app.device.wait_idle();
+        app.device.destroy_image(image);
+        app.device.destroy_buffer(buffer);
         app.device.collect_garbage();
     }
 
@@ -965,6 +1041,7 @@ auto main() -> int
     // tests::write_read_image_layer();
     // tests::create_transfer_read_buffer();
     // tests::initial_layout_access();
-    tests::tracked_slice_barrier_collapsing();
+    // tests::tracked_slice_barrier_collapsing();
+    tests::shader_integration_inl_use();
     // tests::mipmapping();
 }

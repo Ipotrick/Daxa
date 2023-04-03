@@ -212,11 +212,11 @@ namespace daxa
         void wait_split_barrier(SplitBarrierWaitInfo const & info);
         void reset_split_barrier(ResetSplitBarrierInfo const & info);
 
-        void push_constant(void const * data, u32 size, u32 offset = 0);
+        void push_constant_vptr(void const * data, u32 size, u32 offset = 0);
         template <typename T>
         void push_constant(T const & constant, usize offset = 0)
         {
-            push_constant(&constant, static_cast<u32>(sizeof(T)), static_cast<u32>(offset));
+            push_constant_vptr(&constant, static_cast<u32>(sizeof(T)), static_cast<u32>(offset));
         }
         void set_pipeline(ComputePipeline const & pipeline);
         void set_pipeline(RasterPipeline const & pipeline);
