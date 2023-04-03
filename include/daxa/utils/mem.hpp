@@ -16,7 +16,7 @@ namespace daxa
         Device device = {};
         u32 capacity = 1 << 25;
         bool use_bar_memory = {};
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     /// @brief Ring buffer based transfer memory allocator for easy and efficient cpu gpu communication.

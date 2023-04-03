@@ -30,7 +30,7 @@ namespace tests
 
     void copy(App & app)
     {
-        auto cmd_list = app.device.create_command_list({.debug_name = "copy command list"});
+        auto cmd_list = app.device.create_command_list({.name = "copy command list"});
 
         constexpr u32 SIZE_X = 3;
         constexpr u32 SIZE_Y = 3;
@@ -95,18 +95,18 @@ namespace tests
         daxa::BufferId const staging_upload_buffer = app.device.create_buffer({
             .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
             .size = sizeof(decltype(data)),
-            .debug_name = "staging_upload_buffer",
+            .name = "staging_upload_buffer",
         });
 
         daxa::BufferId const device_local_buffer = app.device.create_buffer({
             .size = sizeof(decltype(data)),
-            .debug_name = "device_local_buffer",
+            .name = "device_local_buffer",
         });
 
         daxa::BufferId const staging_readback_buffer = app.device.create_buffer({
             .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .size = sizeof(decltype(data)),
-            .debug_name = "staging_readback_buffer",
+            .name = "staging_readback_buffer",
         });
 
         daxa::ImageId const image_1 = app.device.create_image({
@@ -114,7 +114,7 @@ namespace tests
             .format = daxa::Format::R32G32B32A32_SFLOAT,
             .size = {SIZE_X, SIZE_Y, SIZE_Z},
             .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::TRANSFER_SRC,
-            .debug_name = "image_1",
+            .name = "image_1",
         });
 
         daxa::ImageId const image_2 = app.device.create_image({
@@ -122,12 +122,12 @@ namespace tests
             .format = daxa::Format::R32G32B32A32_SFLOAT,
             .size = {SIZE_X, SIZE_Y, SIZE_Z},
             .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::TRANSFER_SRC,
-            .debug_name = "image_2",
+            .name = "image_2",
         });
 
         daxa::TimelineQueryPool timeline_query_pool = app.device.create_timeline_query_pool({
             .query_count = 2,
-            .debug_name = "timeline_query",
+            .name = "timeline_query",
         });
 
         auto & buffer_ptr = *app.device.get_host_address_as<ImageArray<SIZE_X, SIZE_Y, SIZE_Z>>(staging_upload_buffer);
@@ -295,7 +295,7 @@ namespace tests
 
     void deferred_destruction(App & app)
     {
-        auto cmd_list = app.device.create_command_list({.debug_name = "deferred_destruction command list"});
+        auto cmd_list = app.device.create_command_list({.name = "deferred_destruction command list"});
 
         daxa::BufferId const buffer = app.device.create_buffer({.size = 4});
         daxa::ImageId const image = app.device.create_image({

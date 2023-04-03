@@ -52,7 +52,7 @@ namespace daxa
     {
         MemoryFlags memory_flags = {};
         u32 size = {};
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct ImageInfo
@@ -66,7 +66,7 @@ namespace daxa
         u32 sample_count = 1;
         ImageUsageFlags usage = {};
         MemoryFlags memory_flags = {};
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct ImageViewInfo
@@ -75,7 +75,7 @@ namespace daxa
         Format format = Format::R8G8B8A8_UNORM;
         ImageId image = {};
         ImageMipArraySlice slice = {};
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct SamplerInfo
@@ -96,6 +96,6 @@ namespace daxa
         f32 max_lod = 1.0f;
         BorderColor border_color = BorderColor::FLOAT_TRANSPARENT_BLACK;
         bool enable_unnormalized_coordinates = false;
-        std::string debug_name = {};
+        std::string name = {};
     };
 } // namespace daxa

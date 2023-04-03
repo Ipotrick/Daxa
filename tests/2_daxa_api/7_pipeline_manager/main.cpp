@@ -22,12 +22,12 @@ namespace tests
                 },
                 .language = daxa::ShaderLanguage::GLSL,
             },
-            .debug_name = APPNAME_PREFIX("pipeline_manager"),
+            .name = APPNAME_PREFIX("pipeline_manager"),
         });
 
         auto compilation_result = pipeline_manager.add_compute_pipeline({
             .shader_info = {.source = daxa::ShaderFile{"main.glsl"}},
-            .debug_name = APPNAME_PREFIX("compute_pipeline"),
+            .name = APPNAME_PREFIX("compute_pipeline"),
         });
 
         if (compilation_result.is_err())
@@ -49,7 +49,7 @@ namespace tests
             .shader_compile_options = {
                 .language = daxa::ShaderLanguage::GLSL,
             },
-            .debug_name = APPNAME_PREFIX("pipeline_manager"),
+            .name = APPNAME_PREFIX("pipeline_manager"),
         });
 
         pipeline_manager.add_virtual_include_file({
@@ -72,7 +72,7 @@ namespace tests
                 void main() {
                 }
             )glsl"}},
-            .debug_name = APPNAME_PREFIX("compute_pipeline"),
+            .name = APPNAME_PREFIX("compute_pipeline"),
         });
 
         if (compilation_result.is_err())
@@ -94,7 +94,7 @@ auto main() -> int
         .enable_validation = false,
     });
     daxa::Device device = daxa_ctx.create_device({
-        .debug_name = APPNAME_PREFIX("device"),
+        .name = APPNAME_PREFIX("device"),
     });
 
     i32 ret = 0;

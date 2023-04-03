@@ -193,7 +193,7 @@ namespace daxa
         }
         else
         {
-            impl.command_lists.push_back({get_device().create_command_list({.debug_name = std::string("Task Command List ") + std::to_string(impl.command_lists.size())})});
+            impl.command_lists.push_back({get_device().create_command_list({.name = std::string("Task Command List ") + std::to_string(impl.command_lists.size())})});
             return impl.command_lists.back();
         }
     }
@@ -266,7 +266,7 @@ namespace daxa
 
         impl.exec_task_buffers.push_back(ExecutionTimeTaskBuffer{.actual_buffers = std::vector<BufferId>(info.execution_buffers.begin(), info.execution_buffers.end())});
 
-        impl.buffer_name_to_id[info.debug_name] = task_buffer_id;
+        impl.buffer_name_to_id[info.name] = task_buffer_id;
         return task_buffer_id;
     }
 
@@ -312,7 +312,7 @@ namespace daxa
         {
             impl.exec_task_images.back().previous_execution_last_slices = std::move(initial_accesses);
         }
-        impl.image_name_to_id[info.debug_name] = task_image_id;
+        impl.image_name_to_id[info.name] = task_image_id;
         return task_image_id;
     }
 
@@ -944,7 +944,7 @@ namespace daxa
                                 .dst_batch = batch_index,
                             },
                             /* .split_barrier_state = */ task_list_impl.info.device.create_split_barrier({
-                                .debug_name = std::string("TaskList \"") + task_list_impl.info.debug_name + "\" SplitBarrier Nr. " + std::to_string(split_barrier_index),
+                                .name = std::string("TaskList \"") + task_list_impl.info.name + "\" SplitBarrier Nr. " + std::to_string(split_barrier_index),
                             }),
                         });
                         // Now we give the src batch the index of this barrier to signal.
@@ -1131,7 +1131,7 @@ namespace daxa
                                     .dst_batch = batch_index,
                                 },
                                 /* .split_barrier_state = */ task_list_impl.info.device.create_split_barrier({
-                                    .debug_name = std::string("TaskList \"") + task_list_impl.info.debug_name + "\" SplitBarrier (Image) Nr. " + std::to_string(split_barrier_index),
+                                    .name = std::string("TaskList \"") + task_list_impl.info.name + "\" SplitBarrier (Image) Nr. " + std::to_string(split_barrier_index),
                                 }),
                             });
                             // Now we give the src batch the index of this barrier to signal.
@@ -1508,7 +1508,7 @@ namespace daxa
         TaskListPermutation & permutation = impl.permutations[permutation_index];
 
         ImplTaskRuntimeInterface impl_runtime{.task_list = impl, .permutation = permutation};
-        impl_runtime.command_lists.push_back(impl.info.device.create_command_list({.debug_name = std::string("Task Command List ") + std::to_string(impl_runtime.command_lists.size())}));
+        impl_runtime.command_lists.push_back(impl.info.device.create_command_list({.name = std::string("Task Command List ") + std::to_string(impl_runtime.command_lists.size())}));
 
         // Generate and insert synchronization for persistent resources:
         generate_persistent_resource_synch(impl, permutation, impl_runtime.command_lists.back());
@@ -1529,7 +1529,7 @@ namespace daxa
             if (impl.info.enable_command_labels)
             {
                 impl_runtime.command_lists.back().begin_label({
-                    .label_name = impl.info.debug_name + std::string(", submit ") + std::to_string(submit_scope_index),
+                    .label_name = impl.info.name + std::string(", submit ") + std::to_string(submit_scope_index),
                     .label_color = impl.info.task_list_label_color,
                 });
             }
@@ -1539,7 +1539,7 @@ namespace daxa
                 if (impl.info.enable_command_labels)
                 {
                     impl_runtime.command_lists.back().begin_label({
-                        .label_name = impl.info.debug_name + std::string(", submit ") + std::to_string(submit_scope_index) + std::string(", batch ") + std::to_string(batch_index),
+                        .label_name = impl.info.name + std::string(", submit ") + std::to_string(submit_scope_index) + std::string(", batch ") + std::to_string(batch_index),
                         .label_color = impl.info.task_batch_label_color,
                     });
                 }
@@ -1641,7 +1641,7 @@ namespace daxa
                     impl_runtime.shader_uses_blob = task.shader_uses_data_blob.data();
                     impl_runtime.current_task = &task;
                     impl_runtime.command_lists.back().begin_label({
-                        .label_name = std::string("task ") + std::to_string(task_index) + std::string(" \"") + task.info.debug_name + std::string("\""),
+                        .label_name = std::string("task ") + std::to_string(task_index) + std::string(" \"") + task.info.name + std::string("\""),
                         .label_color = impl.info.task_label_color,
                     });
                     task.info.task(TaskRuntimeInterface(&impl_runtime));
@@ -1779,7 +1779,7 @@ namespace daxa
                 }
                 // We need to clear all completed command lists that have been submitted.
                 impl_runtime.command_lists.clear();
-                impl_runtime.command_lists.push_back(impl.info.device.create_command_list({.debug_name = std::string("Task Command List ") + std::to_string(impl_runtime.command_lists.size())}));
+                impl_runtime.command_lists.push_back(impl.info.device.create_command_list({.name = std::string("Task Command List ") + std::to_string(impl_runtime.command_lists.size())}));
             }
             ++submit_scope_index;
         }
@@ -1827,7 +1827,7 @@ namespace daxa
     void ImplTaskList::output_graphviz()
     {
         // TODO(grundlett): Implement this!
-        std::string const filename = this->info.debug_name + ".dot";
+        std::string const filename = this->info.name + ".dot";
         std::ofstream dot_file{filename};
 
         dot_file << "digraph TaskGraph {\nrankdir=\"LR\"\nnode [style=filled, shape=box, color=\"#d3f4ff\"]\n";
@@ -1874,7 +1874,7 @@ namespace daxa
                         for (auto const & task_id : batch.tasks)
                         {
                             auto task_name = batch_name + std::string("_t_") + std::to_string(task_id);
-                            auto task_debug_name = permutation.tasks[task_id].info.debug_name;
+                            auto task_debug_name = permutation.tasks[task_id].info.name;
                             dot_file << "subgraph cluster_" << task_name << " {\n"
                                      << "label=\"" << task_debug_name << "\"\n"
                                      << "style=filled\ncolor=\"#d1e2ed\"\n";
@@ -1885,7 +1885,7 @@ namespace daxa
                             for (auto const & [task_buffer_id, task_buffer_access] : permutation.tasks[task_id].info.used_buffers)
                             {
                                 TaskBuffer const & task_resource = permutation.buffer_infos[task_buffer_id.index];
-                                auto const & resource_debug_name = task_resource.info.debug_name;
+                                auto const & resource_debug_name = task_resource.info.name;
                                 dot_file << "node_" << task_name << "_br" << resource_index << " [label=\"" << resource_debug_name << "\", shape=box, color=\"#d3fabe\"]\n";
                                 ++resource_index;
                             }
@@ -1894,7 +1894,7 @@ namespace daxa
                             for (auto const & [task_image_id, task_buffer_access, image_slice] : permutation.tasks[task_id].info.used_images)
                             {
                                 auto const & task_resource = permutation.image_infos[task_image_id.index];
-                                auto const & resource_debug_name = task_resource.info.debug_name;
+                                auto const & resource_debug_name = task_resource.info.name;
                                 dot_file << "node_" << task_name << "_ir" << resource_index << " [label=\"" << resource_debug_name << "\", shape=box, color=\"#fffec2\"]\n";
                                 ++resource_index;
                             }
@@ -1980,10 +1980,10 @@ namespace daxa
     {
         this->debug_string_stream << prefix << "Begin image memory barrier\n";
         this->debug_string_stream << prefix << "\ttask_image_id: " << barrier.image_id.index << " \n";
-        this->debug_string_stream << prefix << "\ttask image debug name: " << task_image.info.debug_name << " \n";
+        this->debug_string_stream << prefix << "\ttask image debug name: " << task_image.info.name << " \n";
         this->debug_string_stream << prefix << "\tBegin bound images\n";
         this->debug_string_stream << prefix << "\timage id: " << to_string(barrier.image_id)
-                                  << "\timage debug name: " << info.device.info_image(barrier.image_id).debug_name << " \n";
+                                  << "\timage debug name: " << info.device.info_image(barrier.image_id).name << " \n";
         this->debug_string_stream << prefix << "\tEnd   bound images \n";
         this->debug_string_stream << prefix << "\tsrc access: " << to_string(barrier.awaited_pipeline_access) << "\n";
         this->debug_string_stream << prefix << "\tdst access: " << to_string(barrier.waiting_pipeline_access) << "\n";
@@ -2010,12 +2010,12 @@ namespace daxa
             this->debug_string_stream << prefix << "Begin image memory barrier\n";
             this->debug_string_stream << prefix << "\tbarrier index: " << index << "\n";
             this->debug_string_stream << prefix << "\ttask_image_id: " << barrier.image_id.index << " \n";
-            this->debug_string_stream << prefix << "\ttask image debug name: " << task_image.info.debug_name << " \n";
+            this->debug_string_stream << prefix << "\ttask image debug name: " << task_image.info.name << " \n";
             this->debug_string_stream << prefix << "\tBegin bound images\n";
             for (auto image : this->exec_task_images[barrier.image_id.index].actual_images)
             {
                 this->debug_string_stream << prefix << "\timage id: " << to_string(image)
-                                          << "\timage debug name: " << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).debug_name) << " \n";
+                                          << "\timage debug name: " << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).name) << " \n";
             }
             this->debug_string_stream << prefix << "\tEnd   bound images \n";
             this->debug_string_stream << prefix << "\tsrc access: " << to_string(barrier.src_access) << "\n";
@@ -2044,12 +2044,12 @@ namespace daxa
             this->debug_string_stream << prefix << "Begin image memory barrier\n";
             this->debug_string_stream << prefix << "\tbarrier index: " << index << "\n";
             this->debug_string_stream << prefix << "\ttask_image_id: " << barrier.image_id.index << " \n";
-            this->debug_string_stream << prefix << "\ttask image debug name: " << task_image.info.debug_name << " \n";
+            this->debug_string_stream << prefix << "\ttask image debug name: " << task_image.info.name << " \n";
             this->debug_string_stream << prefix << "\tBegin bound images\n";
             for (auto image : this->exec_task_images[barrier.image_id.index].actual_images)
             {
                 this->debug_string_stream << prefix << "\timage id: " << to_string(image)
-                                          << "\timage debug name: " << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).debug_name) << " \n";
+                                          << "\timage debug name: " << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).name) << " \n";
             }
             this->debug_string_stream << prefix << "\tEnd   bound images \n";
             this->debug_string_stream << prefix << "\tsrc access: " << to_string(barrier.src_access) << "\n";
@@ -2063,19 +2063,19 @@ namespace daxa
 
     void ImplTaskList::debug_print_task(TaskListPermutation const & permutation, Task & task, usize task_id, std::string_view prefix)
     {
-        this->debug_string_stream << prefix << "Begin task " << task_id << " name: \"" << task.info.debug_name << "\"\n";
+        this->debug_string_stream << prefix << "Begin task " << task_id << " name: \"" << task.info.name << "\"\n";
         for (auto [task_image_id, task_image_access, slice] : task.info.used_images)
         {
             TaskImage const & task_image = permutation.image_infos[task_image_id.index];
             auto [layout, access] = task_image_access_to_layout_access(task_image_access);
             this->debug_string_stream << prefix << "\tBegin task image use " << task_image_id.index << "\n";
             this->debug_string_stream << prefix << "\ttask_image_id: " << task_image_id.index << " \n";
-            this->debug_string_stream << prefix << "\ttask image debug name: " << task_image.info.debug_name << " \n";
+            this->debug_string_stream << prefix << "\ttask image debug name: " << task_image.info.name << " \n";
             this->debug_string_stream << prefix << "\tBegin bound images\n";
             for (auto image : exec_task_images[task_image_id.index].actual_images)
             {
                 this->debug_string_stream << prefix << "\timage id: " << to_string(image)
-                                          << "\timage debug name: " << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).debug_name) << " \n";
+                                          << "\timage debug name: " << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).name) << " \n";
             }
             this->debug_string_stream << prefix << "\tEnd   bound images \n";
             this->debug_string_stream << prefix << "\t\trequired layout: " << to_string(layout) << "\n";
@@ -2088,12 +2088,12 @@ namespace daxa
             TaskBuffer const & task_buffer = permutation.buffer_infos[task_buffer_id.index];
             auto access = task_buffer_access_to_access(task_buffer_access);
             this->debug_string_stream << prefix << "\tBegin task buffer use " << task_buffer_id.index << "\n";
-            this->debug_string_stream << prefix << "\t\task buffer debug name: " << task_buffer.info.debug_name << "\n";
+            this->debug_string_stream << prefix << "\t\task buffer debug name: " << task_buffer.info.name << "\n";
             this->debug_string_stream << prefix << "\tBegin bound buffers\n";
             for (auto buffer : exec_task_buffers[task_buffer_id.index].actual_buffers)
             {
                 this->debug_string_stream << prefix << "\tbuffers id: " << to_string(buffer)
-                                          << "\tbuffers debug name: " << (buffer.is_empty() ? std::string("INVALID ID") : info.device.info_buffer(buffer).debug_name) << " \n";
+                                          << "\tbuffers debug name: " << (buffer.is_empty() ? std::string("INVALID ID") : info.device.info_buffer(buffer).name) << " \n";
             }
             this->debug_string_stream << prefix << "\tEnd   bound buffers \n";
             this->debug_string_stream << prefix << "\t\tstage access: " << to_string(access) << "\n";
@@ -2107,7 +2107,7 @@ namespace daxa
         // TODO(msakmary) better way to identify permutation (perhaps named conditions or smth idk)
         auto prefix = std::string();
         auto const & image = permutation.image_infos.at(image_id.index);
-        this->debug_string_stream << "=================== Task Image " << image.info.debug_name << "===================\n";
+        this->debug_string_stream << "=================== Task Image " << image.info.name << "===================\n";
         prefix.append("\t");
 
         for (auto const & batch_submit_scope : permutation.batch_submit_scopes)
@@ -2123,7 +2123,7 @@ namespace daxa
                     {
                         if (used_image.id == image_id)
                         {
-                            this->debug_string_stream << prefix << "Task " << task.info.debug_name << "\n";
+                            this->debug_string_stream << prefix << "Task " << task.info.name << "\n";
                             prefix.append("\t");
                             auto [layout, access] = task_image_access_to_layout_access(used_image.access);
                             this->debug_string_stream << prefix << "Access " << to_string(access) << "\n";
@@ -2141,7 +2141,7 @@ namespace daxa
         // TODO(msakmary) better way to identify permutation (perhaps named conditions or smth idk)
         auto prefix = std::string();
         auto const & buffer = permutation.buffer_infos.at(buffer_id.index);
-        this->debug_string_stream << "=================== Task Buffer " << buffer.info.debug_name << "===================\n";
+        this->debug_string_stream << "=================== Task Buffer " << buffer.info.name << "===================\n";
         prefix.append("\t");
 
         for (auto const & batch_submit_scope : permutation.batch_submit_scopes)
@@ -2157,7 +2157,7 @@ namespace daxa
                     {
                         if (used_buffer.id == buffer_id)
                         {
-                            this->debug_string_stream << prefix << "Task " << task.info.debug_name << "\n";
+                            this->debug_string_stream << prefix << "Task " << task.info.name << "\n";
                             prefix.append("\t");
                             auto access = task_buffer_access_to_access(used_buffer.access);
                             this->debug_string_stream << prefix << "Access " << to_string(access) << "\n";
@@ -2171,8 +2171,8 @@ namespace daxa
 
     void ImplTaskList::debug_print()
     {
-        this->debug_string_stream << "Begin TaskList \"" << this->info.debug_name << "\"\n";
-        this->debug_string_stream << "\tSwapchain: " << (this->info.swapchain.has_value() ? this->info.swapchain.value().info().debug_name : "-") << "\n";
+        this->debug_string_stream << "Begin TaskList \"" << this->info.name << "\"\n";
+        this->debug_string_stream << "\tSwapchain: " << (this->info.swapchain.has_value() ? this->info.swapchain.value().info().name : "-") << "\n";
         this->debug_string_stream << "\tReorder tasks: " << std::boolalpha << this->info.reorder_tasks << "\n";
         this->debug_string_stream << "\tUse split barriers: " << std::boolalpha << this->info.use_split_barriers << "\n";
 
