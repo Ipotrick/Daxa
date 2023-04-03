@@ -244,7 +244,7 @@ namespace daxa
                         }
                         if (!handle_invalid)
                         {
-                            ret += std::string("debug name: \"") + std::string(slot.first.info.debug_name) + '\"';
+                            ret += std::string("debug name: \"") + std::string(slot.first.info.name) + '\"';
                             if (slot.first.zombie)
                             {
                                 ret += " (destroy was already called)";

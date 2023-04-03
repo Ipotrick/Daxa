@@ -47,7 +47,7 @@ namespace daxa
         Access pre_task_list_slice_states = AccessConsts::NONE;
         bool execution_persistent = {};
         std::span<BufferId> execution_buffers = {};
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct TaskImageInfo
@@ -60,7 +60,7 @@ namespace daxa
         bool execution_persistent = {};
         bool swapchain_image = {};
         std::span<ImageId> execution_images = {};
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct TaskInfo
@@ -69,7 +69,7 @@ namespace daxa
         UsedTaskBuffers used_buffers = {};
         UsedTaskImages used_images = {};
         TaskCallback task = {};
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct CommandSubmitInfo;
@@ -103,7 +103,7 @@ namespace daxa
         std::array<f32, 4> task_label_color = {0.663f, 0.533f, 0.871f, 1.0f};
         /// @brief Records debug information about the execution if enabled. This string is retrievable with the function get_debug_string.
         bool record_debug_information = {};
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct TaskSubmitInfo

@@ -80,7 +80,7 @@ auto main() -> int
             score += static_cast<daxa::i32>(device_props.limits.max_memory_allocation_count / 100000);
             return score;
         },
-        .debug_name = "my device",
+        .name = "my device",
     });
 
     // To be able to render to a window, Daxa requires the user to create a swapchain
@@ -104,7 +104,7 @@ auto main() -> int
         },
         .present_mode = daxa::PresentMode::MAILBOX,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-        .debug_name = "my swapchain",
+        .name = "my swapchain",
     });
 
     while (true)
@@ -138,7 +138,7 @@ auto main() -> int
         // specify a slice of an image that should be operated upon.
         daxa::ImageMipArraySlice const swapchain_image_full_slice = device.info_image_view(swapchain_image.default_view()).slice;
 
-        daxa::CommandList command_list = device.create_command_list({.debug_name = "my command list"});
+        daxa::CommandList command_list = device.create_command_list({.name = "my command list"});
 
         command_list.pipeline_barrier_image_transition({
             .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,

@@ -19,13 +19,13 @@ struct App : BaseApp<App>
         .color_attachments = {{.format = swapchain.get_format()}},
         .raster = {},
         .push_constant_size = sizeof(DrawPush),
-        .debug_name = APPNAME_PREFIX("raster_pipeline"),
+        .name = APPNAME_PREFIX("raster_pipeline"),
     }).value();
     // clang-format on
 
     daxa::BufferId vertex_buffer = device.create_buffer(daxa::BufferInfo{
         .size = sizeof(DrawVertex) * 3,
-        .debug_name = APPNAME_PREFIX("vertex_buffer"),
+        .name = APPNAME_PREFIX("vertex_buffer"),
     });
     daxa::TaskBufferId task_vertex_buffer;
 
@@ -84,7 +84,7 @@ struct App : BaseApp<App>
 
     void record_tasks(daxa::TaskList & new_task_list)
     {
-        task_vertex_buffer = new_task_list.create_task_buffer({.debug_name = APPNAME_PREFIX("task_vertex_buffer")});
+        task_vertex_buffer = new_task_list.create_task_buffer({.name = APPNAME_PREFIX("task_vertex_buffer")});
         new_task_list.add_runtime_buffer(task_vertex_buffer, vertex_buffer);
         new_task_list.add_task({
             .used_buffers = {
@@ -96,7 +96,7 @@ struct App : BaseApp<App>
                 auto vertex_staging_buffer = device.create_buffer({
                     .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .size = sizeof(DrawVertex) * 3,
-                    .debug_name = APPNAME_PREFIX("vertex_staging_buffer"),
+                    .name = APPNAME_PREFIX("vertex_staging_buffer"),
                 });
                 cmd_list.destroy_buffer_deferred(vertex_staging_buffer);
                 auto * buffer_ptr = device.get_host_address_as<DrawVertex>(vertex_staging_buffer);
@@ -112,7 +112,7 @@ struct App : BaseApp<App>
                     .size = sizeof(DrawVertex) * 3,
                 });
             },
-            .debug_name = APPNAME_PREFIX("Upload vertices"),
+            .name = APPNAME_PREFIX("Upload vertices"),
         });
 
         new_task_list.add_task({
@@ -137,7 +137,7 @@ struct App : BaseApp<App>
                 cmd_list.draw({.vertex_count = 3});
                 cmd_list.end_renderpass();
             },
-            .debug_name = APPNAME_PREFIX("Draw to swapchain"),
+            .name = APPNAME_PREFIX("Draw to swapchain"),
         });
     }
 };

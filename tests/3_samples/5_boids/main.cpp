@@ -20,7 +20,7 @@ struct App : AppWindow<App>
         .enable_validation = true,
     });
     daxa::Device device = daxa_ctx.create_device({
-        .debug_name = APPNAME_PREFIX("device"),
+        .name = APPNAME_PREFIX("device"),
     });
 
     daxa::Swapchain swapchain = device.create_swapchain({
@@ -28,7 +28,7 @@ struct App : AppWindow<App>
         .native_window_platform = get_native_platform(),
         .present_mode = daxa::PresentMode::IMMEDIATE,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-        .debug_name = APPNAME_PREFIX("swapchain"),
+        .name = APPNAME_PREFIX("swapchain"),
     });
 
     daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
@@ -41,7 +41,7 @@ struct App : AppWindow<App>
             },
             .language = daxa::ShaderLanguage::GLSL,
         },
-        .debug_name = APPNAME_PREFIX("pipeline_manager"),
+        .name = APPNAME_PREFIX("pipeline_manager"),
     });
     // clang-format off
     std::shared_ptr<daxa::RasterPipeline> draw_pipeline = pipeline_manager.add_raster_pipeline({
@@ -50,12 +50,12 @@ struct App : AppWindow<App>
         .color_attachments = {{.format = swapchain.get_format()}},
         .raster = {},
         .push_constant_size = sizeof(DrawPushConstant),
-        .debug_name = APPNAME_PREFIX("draw_pipeline"),
+        .name = APPNAME_PREFIX("draw_pipeline"),
     }).value();
     std::shared_ptr<daxa::ComputePipeline> update_boids_pipeline = pipeline_manager.add_compute_pipeline({
         .shader_info = {.source = daxa::ShaderFile{"update_boids.glsl"}},
         .push_constant_size = sizeof(UpdateBoidsPushConstant),
-        .debug_name = APPNAME_PREFIX("draw_pipeline"),
+        .name = APPNAME_PREFIX("draw_pipeline"),
     }).value();
     // clang-format on
 
@@ -69,12 +69,12 @@ struct App : AppWindow<App>
 
     daxa::BufferId boid_buffer = device.create_buffer({
         .size = sizeof(Boids),
-        .debug_name = APPNAME_PREFIX("boid_buffer"),
+        .name = APPNAME_PREFIX("boid_buffer"),
     });
 
     daxa::BufferId old_boid_buffer = device.create_buffer({
         .size = sizeof(Boids),
-        .debug_name = APPNAME_PREFIX("old_boid_buffer"),
+        .name = APPNAME_PREFIX("old_boid_buffer"),
     });
 
     daxa::ImageId swapchain_image = {};
@@ -86,12 +86,12 @@ struct App : AppWindow<App>
 
     App() : AppWindow<App>(APPNAME)
     {
-        auto cmd_list = device.create_command_list({.debug_name = APPNAME_PREFIX("boid buffer init commands")});
+        auto cmd_list = device.create_command_list({.name = APPNAME_PREFIX("boid buffer init commands")});
 
         auto upload_buffer_id = device.create_buffer({
             .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
             .size = sizeof(Boids),
-            .debug_name = APPNAME_PREFIX("voids buffer init staging buffer"),
+            .name = APPNAME_PREFIX("voids buffer init staging buffer"),
         });
         cmd_list.destroy_buffer_deferred(upload_buffer_id);
 
@@ -201,7 +201,7 @@ struct App : AppWindow<App>
 
     auto record_tasks() -> daxa::TaskList
     {
-        daxa::TaskList new_task_list = daxa::TaskList({.device = device, .swapchain = swapchain, .debug_name = APPNAME_PREFIX("main task list")});
+        daxa::TaskList new_task_list = daxa::TaskList({.device = device, .swapchain = swapchain, .name = APPNAME_PREFIX("main task list")});
 
         auto task_boid_buffer = new_task_list.create_task_buffer({});
         new_task_list.add_runtime_buffer(task_boid_buffer, this->boid_buffer);
@@ -225,7 +225,7 @@ struct App : AppWindow<App>
                 daxa::CommandList cmd_list = runtime.get_command_list();
                 this->update_boids(cmd_list, boid_buffer_id, old_boid_buffer_id);
             },
-            .debug_name = "update boids",
+            .name = "update boids",
         });
 
         new_task_list.add_task({
@@ -242,7 +242,7 @@ struct App : AppWindow<App>
                 daxa::CommandList cmd_list = runtime.get_command_list();
                 this->draw_boids(cmd_list, render_target_id, boid_buffer_id, this->size_x, this->size_y);
             },
-            .debug_name = "draw boids",
+            .name = "draw boids",
         });
         new_task_list.submit({});
         new_task_list.present({});

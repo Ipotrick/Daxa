@@ -171,7 +171,7 @@ namespace daxa
     ImplSwapchain::ImplSwapchain(ManagedWeakPtr a_impl_device, SwapchainInfo a_info)
         : impl_device{std::move(a_impl_device)},
           info{std::move(a_info)},
-          gpu_frame_timeline{TimelineSemaphore{ManagedPtr(new ImplTimelineSemaphore{impl_device, TimelineSemaphoreInfo{.initial_value = 0, .debug_name = this->info.debug_name + " gpu timeline"}})}}
+          gpu_frame_timeline{TimelineSemaphore{ManagedPtr(new ImplTimelineSemaphore{impl_device, TimelineSemaphoreInfo{.initial_value = 0, .name = this->info.name + " gpu timeline"}})}}
     {
         recreate_surface();
 
@@ -203,7 +203,7 @@ namespace daxa
                 ManagedPtr(new ImplBinarySemaphore{
                     this->impl_device,
                     BinarySemaphoreInfo{
-                        .debug_name = this->info.debug_name + ", image " + std::to_string(i) + " acquire semaphore",
+                        .name = this->info.name + ", image " + std::to_string(i) + " acquire semaphore",
                     },
                 }),
             });
@@ -215,7 +215,7 @@ namespace daxa
                 ManagedPtr(new ImplBinarySemaphore{
                     this->impl_device,
                     BinarySemaphoreInfo{
-                        .debug_name = this->info.debug_name + ", image " + std::to_string(i) + " present semaphore",
+                        .name = this->info.name + ", image " + std::to_string(i) + " present semaphore",
                     },
                 }),
             });
@@ -308,15 +308,15 @@ namespace daxa
                 .format = static_cast<Format>(this->vk_surface_format.format),
                 .size = {this->surface_extent.x, this->surface_extent.y, 1},
                 .usage = usage,
-                .debug_name = this->info.debug_name + " Image #" + std::to_string(i),
+                .name = this->info.name + " Image #" + std::to_string(i),
             };
             this->images[i] = this->impl_device.as<ImplDevice>()->new_swapchain_image(
                 swapchain_images[i], vk_surface_format.format, i, usage, image_info);
         }
 
-        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && !this->info.debug_name.empty())
+        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && !this->info.name.empty())
         {
-            auto swapchain_name = this->info.debug_name;
+            auto swapchain_name = this->info.name;
             VkDebugUtilsObjectNameInfoEXT const swapchain_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
