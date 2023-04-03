@@ -224,6 +224,18 @@ namespace daxa
         return impl.task_list.exec_task_images[task_resource_id.index].actual_images;
     }
 
+    auto TaskRuntimeInterface::shader_uses_data() const -> void *
+    {
+        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
+        return impl.shader_uses_blob;
+    }
+
+    auto TaskRuntimeInterface::shader_uses_size() const -> u32
+    {
+        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
+        return impl.current_task->info.shader_uses.size;
+    }
+
     TaskList::TaskList(TaskListInfo const & info)
         : ManagedPtr{new ImplTaskList(info)}
     {
@@ -254,6 +266,7 @@ namespace daxa
 
         impl.exec_task_buffers.push_back(ExecutionTimeTaskBuffer{.actual_buffers = std::vector<BufferId>(info.execution_buffers.begin(), info.execution_buffers.end())});
 
+        impl.buffer_name_to_id[info.debug_name] = task_buffer_id;
         return task_buffer_id;
     }
 
@@ -299,6 +312,7 @@ namespace daxa
         {
             impl.exec_task_images.back().previous_execution_last_slices = std::move(initial_accesses);
         }
+        impl.image_name_to_id[info.debug_name] = task_image_id;
         return task_image_id;
     }
 
@@ -783,11 +797,42 @@ namespace daxa
 
     thread_local std::vector<ExtendedImageSliceState> tl_tracked_slice_rests = {};
     thread_local std::vector<ImageMipArraySlice> tl_new_use_slices = {};
-    void TaskListPermutation::add_task(ImplTaskList & task_list_impl, TaskInfo const & info)
+    void TaskListPermutation::add_task(ImplTaskList & task_list_impl, TaskInfo const & initial_info)
     {
+        TaskInfo info = initial_info;
+        std::vector<std::variant<std::pair<TaskImageId, usize>, std::pair<TaskBufferId, usize>, std::monostate>> id_to_offset = {};
+        // Insert shader uses into other uses from info.
+        for (auto & shader_use : info.shader_uses.list)
+        {
+            if (auto * shader_buffer_use = std::get_if<ShaderTaskBufferUse>(&shader_use))
+            {
+                DAXA_DBG_ASSERT_TRUE_M(
+                    task_list_impl.buffer_name_to_id.contains(std::string(shader_buffer_use->name)),
+                    std::string("shader resource use requests buffer with name \"") +
+                        std::string(shader_buffer_use->name) +
+                        std::string("\", there is no task buffer created with that name"));
+                TaskBufferId id = task_list_impl.buffer_name_to_id[std::string(shader_buffer_use->name)];
+                id_to_offset.push_back(std::pair<TaskBufferId, usize>{id, shader_buffer_use->offset});
+                info.used_buffers.push_back(TaskBufferUse{.id = id, .access = shader_buffer_use->access});
+            }
+            else if (auto * shader_image_use = std::get_if<ShaderTaskImageUse>(&shader_use))
+            {
+                DAXA_DBG_ASSERT_TRUE_M(
+                    task_list_impl.image_name_to_id.contains(std::string(shader_image_use->name)),
+                    std::string("shader resource use requests image with name \"") +
+                        std::string(shader_image_use->name) +
+                        std::string("\", there is no task image created with that name"));
+                TaskImageId id = task_list_impl.image_name_to_id[std::string(shader_image_use->name)];
+                id_to_offset.push_back(std::pair<TaskImageId, usize>{id, shader_image_use->offset});
+                info.used_images.push_back(TaskImageUse{.id = id, .access = shader_image_use->access, .slice = shader_image_use->slice});
+            }
+        }
+
         TaskId const task_id = this->tasks.size();
         this->tasks.emplace_back(Task{
             .info = info,
+            .shader_uses_data_blob = std::vector<u8>(info.shader_uses.size),
+            .id_to_offset = std::move(id_to_offset),
         });
 
         usize const current_submit_scope_index = this->batch_submit_scopes.size() - 1;
@@ -1582,6 +1627,18 @@ namespace daxa
                     // when the get command list function is called in a task this is set to false.
                     impl_runtime.reuse_last_command_list = true;
                     Task & task = permutation.tasks[task_id];
+                    for (auto & shader_use_id_mapping : task.id_to_offset)
+                    {
+                        if (auto image_mapping = std::get_if<std::pair<TaskImageId, usize>>(&shader_use_id_mapping))
+                        {
+                            *(reinterpret_cast<ImageViewId*>(&task.shader_uses_data_blob[image_mapping->second])) = impl.exec_task_images[image_mapping->first.index].actual_images[0].default_view();
+                        }
+                        else if (auto buffer_mapping = std::get_if<std::pair<TaskBufferId, usize>>(&shader_use_id_mapping))
+                        {
+                            *(reinterpret_cast<BufferDeviceAddress*>(&task.shader_uses_data_blob[buffer_mapping->second])) = impl.info.device.get_device_address(impl.exec_task_buffers[buffer_mapping->first.index].actual_buffers[0]);
+                        }
+                    }
+                    impl_runtime.shader_uses_blob = task.shader_uses_data_blob.data();
                     impl_runtime.current_task = &task;
                     impl_runtime.command_lists.back().begin_label({
                         .label_name = std::string("task ") + std::to_string(task_index) + std::string(" \"") + task.info.debug_name + std::string("\""),

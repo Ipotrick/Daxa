@@ -101,6 +101,8 @@ namespace daxa
     struct Task
     {
         TaskInfo info = {};
+        std::vector<u8> shader_uses_data_blob = {};
+        std::vector<std::variant<std::pair<TaskImageId, usize>, std::pair<TaskBufferId, usize>, std::monostate>> id_to_offset = {}; 
     };
 
     struct CreateTaskBufferTask
@@ -182,6 +184,8 @@ namespace daxa
         u32 record_active_conditional_scopes = {};
         u32 record_conditional_states = {};
         std::vector<TaskListPermutation *> record_active_permutations = {};
+        std::unordered_map<std::string, TaskBufferId> buffer_name_to_id = {}; 
+        std::unordered_map<std::string, TaskImageId> image_name_to_id = {}; 
         bool compiled = {};
 
         // execution time information:
@@ -225,6 +229,7 @@ namespace daxa
         ImplTaskList & task_list;
         TaskListPermutation & permutation;
         Task * current_task = {};
+        void * shader_uses_blob = {};
         bool reuse_last_command_list = true;
         std::vector<CommandList> command_lists = {};
         std::optional<BinarySemaphore> last_submit_semaphore = {};
