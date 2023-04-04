@@ -229,7 +229,9 @@ namespace daxa
         {
             push_constant_vptr(&constant, static_cast<u32>(sizeof(T)), static_cast<u32>(offset));
         }
-        /// @brief  Binds a buffer range as a uniform buffer to set index.
+        /// @brief  Binds a buffer region to the constant buffer slot.
+        ///         There are constant buffer slots 0-7.
+        ///         The buffer range is user managed, The buffer MUST not die while in use on the gpu!
         ///         Changes to these bindings only become visible to commands AFTER a pipeline is bound!
         /// @param info parameters.
         void set_constant_buffer(SetConstantBufferInfo const & info);

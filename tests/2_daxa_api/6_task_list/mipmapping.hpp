@@ -486,6 +486,7 @@ namespace tests
                             for (u32 i = 0; i < image_info.mip_level_count - 1; ++i)
                             {
                                 std::array<i32, 3> next_mip_size = {std::max<i32>(1, mip_size[0] / 2), std::max<i32>(1, mip_size[1] / 2), std::max<i32>(1, mip_size[2] / 2)};
+
                                 new_task_list.add_task({
                                     .used_images = {
                                         {task_render_image, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{.base_mip_level = i}},
@@ -497,9 +498,7 @@ namespace tests
                                         auto image_id = runtime.get_images(task_render_image)[0];
                                         cmd_list.blit_image_to_image({
                                             .src_image = image_id,
-                                            .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL, // TODO: get from TaskRuntime
                                             .dst_image = image_id,
-                                            .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                                             .src_slice = {
                                                 .image_aspect = image_info.aspect,
                                                 .mip_level = i,

@@ -1027,12 +1027,14 @@ namespace daxa
     auto ImplDevice::new_image(ImageInfo const & image_info) -> ImageId
     {
         auto [id, image_slot_variant] = gpu_shader_resource_table.image_slots.new_slot();
+        
+        DAXA_DBG_ASSERT_TRUE_M(image_info.dimensions >= 1 && image_info.dimensions <= 3, "image dimensions must be a value between 1 to 3(inclusive)");
 
         ImplImageSlot ret = {};
         ret.zombie = false;
         ret.info = image_info;
         ret.view_slot.info = ImageViewInfo{
-            .type = static_cast<ImageViewType>(image_info.dimensions),
+            .type = static_cast<ImageViewType>(image_info.dimensions - 1),
             .format = image_info.format,
             .image = {id},
             .slice = ImageMipArraySlice{
@@ -1045,7 +1047,6 @@ namespace daxa
             .name = image_info.name,
         };
 
-        DAXA_DBG_ASSERT_TRUE_M(image_info.dimensions >= 1 && image_info.dimensions <= 3, "image dimensions must be a value between 1 to 3(inclusive)");
         DAXA_DBG_ASSERT_TRUE_M(std::popcount(image_info.sample_count) == 1 && image_info.sample_count <= 64, "image samples must be power of two and between 1 and 64(inclusive)");
         DAXA_DBG_ASSERT_TRUE_M(
             image_info.size.x > 0 &&
@@ -1306,7 +1307,7 @@ namespace daxa
     {
         DAXA_DBG_ASSERT_TRUE_M(gpu_shader_resource_table.image_slots.dereference_id(id).vk_image == VK_NULL_HANDLE, "can not destroy default image view of image");
         ImplImageViewSlot & image_slot = gpu_shader_resource_table.image_slots.dereference_id(id).view_slot;
-        write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, VK_NULL_HANDLE, slot(image_slot.info.image).info.usage, id.index);
+        write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, VK_NULL_HANDLE, ImageUsageFlagBits::SHADER_READ_WRITE | ImageUsageFlagBits::SHADER_READ_ONLY, id.index);
         vkDestroyImageView(vk_device, image_slot.vk_image_view, nullptr);
         image_slot = {};
         gpu_shader_resource_table.image_slots.return_slot(id);
