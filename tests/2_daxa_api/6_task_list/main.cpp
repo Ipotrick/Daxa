@@ -411,6 +411,8 @@ namespace tests
         task_list.add_runtime_buffer(task_buffer, buffer);
 
         task_list.add_task({
+            // daxa::ShaderIntegrationTaskListUses is a startup time generated constant global.
+            // This global is set from auto generated code in the .inl file.
             .shader_uses = daxa::ShaderIntegrationTaskListUses,
             .task = [&](daxa::TaskRuntimeInterface const& tri){
                 auto cmd = tri.get_command_list();
