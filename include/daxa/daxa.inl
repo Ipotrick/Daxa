@@ -1,7 +1,18 @@
 #pragma once
 
+#define DAXA_SLOT0 0
+#define DAXA_SLOT1 1
+#define DAXA_SLOT2 2
+#define DAXA_SLOT3 3
+#define DAXA_SLOT4 4
+#define DAXA_SLOT5 5
+#define DAXA_SLOT6 6
+#define DAXA_SLOT7 7
+
 #if defined(DAXA_SHADER)
 #if !defined(DAXA_STORAGE_BUFFER_BINDING)
+#define DAXA_GPU_TABLE_SET_BINDING 0
+#define DAXA_CONSTANT_BUFFER_BINDING_SET 1
 #define DAXA_STORAGE_BUFFER_BINDING 0
 #define DAXA_STORAGE_IMAGE_BINDING 1
 #define DAXA_SAMPLED_IMAGE_BINDING 2
@@ -37,6 +48,7 @@
 #endif
 #elif defined(__cplusplus)
 #include <daxa/daxa.hpp>
+#define DAXA_CONSTANT_BUFFER(SLOT)
 #define _DAXA_REGISTER_TEXTURE_TYPE(IMAGE_TYPE)
 #define _DAXA_REGISTER_IMAGE_TYPE(IMAGE_TYPE)                         \
     using daxa_##RWImage##IMAGE_TYPE##f32 = daxa::types::ImageViewId; \
@@ -52,8 +64,8 @@
 #define _DAXA_REGISTER_SAMPLER_TYPE(SAMPLER_TYPE)
 #define DAXA_PUSH_CONSTANT(STRUCT_TYPE)
 #define DAXA_ENABLE_BUFFER_PTR(STRUCT_TYPE)
-#define daxa_RWBufferPtr(x) daxa::types::BufferDeviceAddress
-#define daxa_BufferPtr(x) daxa::types::BufferDeviceAddress
+#define daxa_RWBufferPtr(x) alignas(8) daxa::types::BufferDeviceAddress
+#define daxa_BufferPtr(x) alignas(8) daxa::types::BufferDeviceAddress
 
 // NEEDED FOR HLSL SUPPORT
 #define DAXA_DECL_BUFFER_STRUCT(Type, Body) struct Type Body;
@@ -71,40 +83,40 @@ _DAXA_REGISTER_IMAGE_TYPE(2DMSArray)
 #define daxa_Image(DIM, SCALAR) daxa::types::ImageViewId
 #define daxa_RWImage(DIM, SCALAR) daxa::types::ImageViewId
 
-using daxa_b32 = daxa::types::b32;
-using daxa_i32 = daxa::types::i32;
-using daxa_u32 = daxa::types::u32;
-using daxa_f32 = daxa::types::f32;
-using daxa_b32vec2 = daxa::types::b32vec2;
-using daxa_b32vec3 = daxa::types::b32vec3;
-using daxa_b32vec4 = daxa::types::b32vec4;
-using daxa_f32 = daxa::types::f32;
-using daxa_f32vec2 = daxa::types::f32vec2;
-using daxa_f32mat2x2 = daxa::types::f32mat2x2;
-using daxa_f32mat2x3 = daxa::types::f32mat2x3;
-using daxa_f32mat2x4 = daxa::types::f32mat2x4;
-using daxa_f32vec3 = daxa::types::f32vec3;
-using daxa_f32mat3x2 = daxa::types::f32mat3x2;
-using daxa_f32mat3x3 = daxa::types::f32mat3x3;
-using daxa_f32mat3x4 = daxa::types::f32mat3x4;
-using daxa_f32vec4 = daxa::types::f32vec4;
-using daxa_f32mat4x2 = daxa::types::f32mat4x2;
-using daxa_f32mat4x3 = daxa::types::f32mat4x3;
-using daxa_f32mat4x4 = daxa::types::f32mat4x4;
-using daxa_i32 = daxa::types::i32;
-using daxa_u32 = daxa::types::u32;
-using daxa_i64 = daxa::types::i64;
-using daxa_u64 = daxa::types::u64;
-using daxa_i32vec2 = daxa::types::i32vec2;
-using daxa_u32vec2 = daxa::types::u32vec2;
-using daxa_i32vec3 = daxa::types::i32vec3;
-using daxa_u32vec3 = daxa::types::u32vec3;
-using daxa_i32vec4 = daxa::types::i32vec4;
-using daxa_u32vec4 = daxa::types::u32vec4;
-using daxa_BufferId = daxa::types::BufferId;
-using daxa_ImageViewId = daxa::types::ImageViewId;
-using daxa_ImageId = daxa::types::ImageId;
-using daxa_SamplerId = daxa::types::SamplerId;
+#define daxa_b32 daxa::types::b32
+#define daxa_i32 daxa::types::i32
+#define daxa_u32 daxa::types::u32
+#define daxa_f32 daxa::types::f32
+#define daxa_b32vec2 daxa::types::b32vec2
+#define daxa_b32vec3 daxa::types::b32vec3
+#define daxa_b32vec4 daxa::types::b32vec4
+#define daxa_f32 daxa::types::f32
+#define daxa_f32vec2 daxa::types::f32vec2
+#define daxa_f32mat2x2 daxa::types::f32mat2x2
+#define daxa_f32mat2x3 daxa::types::f32mat2x3
+#define daxa_f32mat2x4 daxa::types::f32mat2x4
+#define daxa_f32vec3 daxa::types::f32vec3
+#define daxa_f32mat3x2 daxa::types::f32mat3x2
+#define daxa_f32mat3x3 daxa::types::f32mat3x3
+#define daxa_f32mat3x4 daxa::types::f32mat3x4
+#define daxa_f32vec4 daxa::types::f32vec4
+#define daxa_f32mat4x2 daxa::types::f32mat4x2
+#define daxa_f32mat4x3 daxa::types::f32mat4x3
+#define daxa_f32mat4x4 daxa::types::f32mat4x4
+#define daxa_i32 daxa::types::i32
+#define daxa_u32 daxa::types::u32
+#define daxa_i64 daxa::types::i64
+#define daxa_u64 alignas(8) daxa::ypes::u64
+#define daxa_i32vec2 daxa::types::i32vec2
+#define daxa_u32vec2 daxa::types::u32vec2
+#define daxa_i32vec3 daxa::types::i32vec3
+#define daxa_u32vec3 daxa::types::u32vec3
+#define daxa_i32vec4 daxa::types::i32vec4
+#define daxa_u32vec4 daxa::types::u32vec4
+#define daxa_BufferId daxa::types::BufferId
+#define daxa_ImageViewId daxa::types::ImageViewId
+#define daxa_ImageId daxa::types::ImageId
+#define daxa_SamplerId daxa::types::SamplerId
 
 #if DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES
 using namespace daxa::types;

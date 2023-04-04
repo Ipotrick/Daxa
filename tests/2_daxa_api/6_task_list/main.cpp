@@ -362,7 +362,7 @@ namespace tests
         AppContext app = {};
         auto image = app.device.create_image({
             .size = {16, 16, 1},
-            .array_layer_count = 4,
+            .array_layer_count = 1,
             .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             .name = "underlying image",
         });
@@ -372,6 +372,28 @@ namespace tests
             .name = "underlying buffer",
         });
         *app.device.get_host_address_as<float>(buffer) = 0.75f;
+
+        daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
+            .device = app.device,
+            .shader_compile_options = {
+                .root_paths = {
+                    DAXA_SHADER_INCLUDE_DIR,
+                    "tests/2_daxa_api/6_task_list/shaders",
+                },
+            },
+            .name = "pipeline manager",
+        });
+
+        auto compute_pipeline = pipeline_manager.add_compute_pipeline({
+            .shader_info = {
+                .source = daxa::ShaderFile{"shader_integration.glsl"},
+                .compile_options{
+                    .enable_debug_info = true,
+                },
+            },
+            .name = "compute_pipeline",
+        }).value();
+
         auto task_list = daxa::TaskList({
             .device = app.device,
             .record_debug_information = true,
@@ -388,35 +410,16 @@ namespace tests
         });
         task_list.add_runtime_buffer(task_buffer, buffer);
 
-        daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
-            .device = app.device,
-            .shader_compile_options = {
-                .root_paths = {
-                    DAXA_SHADER_INCLUDE_DIR,
-                    "tests/2_daxa_api/6_task_list/shaders",
-                },
-            },
-            .name = "pipeline manager",
-        });
-
-        auto compute_pipeline = pipeline_manager.add_compute_pipeline({
-            .shader_info = {
-                .source = daxa::ShaderFile{"shader_integration.glsl"},
-            },
-            .push_constant_size = daxa::ShaderIntegrationTaskListUses.size,
-            .name = "compute_pipeline",
-        }).value();
-
         task_list.add_task({
             .shader_uses = daxa::ShaderIntegrationTaskListUses,
             .task = [&](daxa::TaskRuntimeInterface const& tri){
                 auto cmd = tri.get_command_list();
                 cmd.set_pipeline(*compute_pipeline);
-                cmd.push_constant_vptr(tri.shader_uses_data(), tri.shader_uses_size());
                 cmd.dispatch(1,1,1);
             },
             .name = "write image in compute",
         });
+        task_list.submit({});
 
         task_list.complete({});
         task_list.execute({});

@@ -6,6 +6,8 @@
 #error "[package management error] You must build Daxa with the DAXA_ENABLE_UTILS_TASK_LIST CMake option enabled, or request the utils-task-list feature in vcpkg"
 #endif
 
+#include "mem.hpp"
+
 namespace daxa
 {
     struct TaskList;
@@ -19,9 +21,6 @@ namespace daxa
         auto get_used_task_images() const -> UsedTaskImages const &;
         auto get_buffers(TaskBufferId const & task_resource_id) const -> std::span<BufferId>;
         auto get_images(TaskImageId const & task_resource_id) const -> std::span<ImageId>;
-
-        auto shader_uses_data() const -> void*;
-        auto shader_uses_size() const -> u32;
 
         void add_runtime_buffer(TaskBufferId tid, BufferId id);
         void add_runtime_image(TaskImageId tid, ImageId id);
@@ -103,6 +102,7 @@ namespace daxa
         std::array<f32, 4> task_label_color = {0.663f, 0.533f, 0.871f, 1.0f};
         /// @brief Records debug information about the execution if enabled. This string is retrievable with the function get_debug_string.
         bool record_debug_information = {};
+        u32 staging_memory_pool_size = 4000000;
         std::string name = {};
     };
 
