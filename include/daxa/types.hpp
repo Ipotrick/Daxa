@@ -1006,10 +1006,4 @@ namespace daxa
         u32 width = {};
         u32 height = {};
     };
-
-    enum class PipelineType
-    {
-        RASTER,
-        COMPUTE
-    };
 } // namespace daxa
