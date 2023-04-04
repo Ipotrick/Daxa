@@ -10,6 +10,8 @@
 
 namespace daxa
 {
+    static inline constexpr usize CONSTANT_BUFFER_BINDINGS_COUNT = 8;
+
     struct CommandListInfo
     {
         std::string name = {};
@@ -185,6 +187,15 @@ namespace daxa
         PipelineStageFlags stage_masks;
     };
 
+    struct SetConstantBufferInfo
+    {
+        // Binding slot the buffer will be bound to.
+        u32 slot = {};
+        BufferId buffer = {};
+        usize size = {};
+        usize offset = {};
+    };
+
     struct DepthBiasInfo
     {
         f32 constant_factor = {};
@@ -218,6 +229,10 @@ namespace daxa
         {
             push_constant_vptr(&constant, static_cast<u32>(sizeof(T)), static_cast<u32>(offset));
         }
+        /// @brief  Binds a buffer range as a uniform buffer to set index.
+        ///         Changes to these bindings only become visible to commands AFTER a pipeline is bound!
+        /// @param info parameters.
+        void set_constant_buffer(SetConstantBufferInfo const & info);
         void set_pipeline(ComputePipeline const & pipeline);
         void set_pipeline(RasterPipeline const & pipeline);
         void dispatch(u32 group_x, u32 group_y = 1, u32 group_z = 1);

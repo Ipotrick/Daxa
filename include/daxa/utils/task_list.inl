@@ -2,7 +2,7 @@
 #include "../daxa.inl"
 
 #if DAXA_SHADER
-#define DAXA_TASK_USES_BEGIN(Name) struct Name {
+#define DAXA_TASK_USES_BEGIN(Name, SLOT) DAXA_CONSTANT_BUFFER(SLOT) NAME {
 #define DAXA_TASK_USE_IMAGE(NAME, TYPE, TASK_ACCESS, SLICE) TYPE NAME;
 #define DAXA_TASK_USE_BUFFER(NAME, TYPE, TASK_ACCESS) TYPE NAME;
 #define DAXA_TASK_USES_END() };
@@ -33,20 +33,24 @@ namespace daxa
     struct ShaderTaskUses
     {
         std::vector<std::variant<ShaderTaskImageUse, ShaderTaskBufferUse, std::monostate>> list = {};
+        u32 slot = {};
         u32 size = {};
     };
 
-#define DAXA_TASK_USES_BEGIN(NAME) \
+#define DAXA_TASK_USES_BEGIN(NAME, SLOT) \
 namespace daxa { \
     inline static const ShaderTaskUses NAME = []() -> ShaderTaskUses \
     { \
-        ShaderTaskUses uses = {};
+        ShaderTaskUses uses = {}; \
+        uses.slot = SLOT;
+#define DAXA_TASK_USE_BUFFER(NAME, TYPE, TASK_ACCESS) \
+        /* must align buffer ptrs to 8 bytes */ \
+        uses.size = ((uses.size + 7) / 8) * 8; \
+        uses.list.push_back(ShaderTaskBufferUse{.name = #NAME, .access = daxa::TaskBufferAccess::TASK_ACCESS, .offset = uses.size}); \
+        uses.size += sizeof(daxa::types::BufferDeviceAddress);
 #define DAXA_TASK_USE_IMAGE(NAME, TYPE, TASK_ACCESS, SLICE) \
         uses.list.push_back(ShaderTaskImageUse{.name = #NAME, .access = daxa::TaskImageAccess::TASK_ACCESS, .slice = SLICE, .offset = uses.size}); \
         uses.size += sizeof(daxa::types::ImageViewId);
-#define DAXA_TASK_USE_BUFFER(NAME, TYPE, TASK_ACCESS) \
-        uses.list.push_back(ShaderTaskBufferUse{.name = #NAME, .access = daxa::TaskBufferAccess::TASK_ACCESS, .offset = uses.size}); \
-        uses.size += sizeof(daxa::types::BufferDeviceAddress);
 #define DAXA_TASK_USES_END() \
         return uses; \
     }(); \
