@@ -40,7 +40,7 @@ namespace daxa
         std::variant<std::monostate, LastReadSplitBarrierIndex, LastReadBarrierIndex> latest_access_read_barrier_index = std::monostate{};
     };
 
-    struct ExecutionTimeTaskBuffer
+    struct GlobalTaskBufferInfos
     {
         // One task buffer can back multiple buffers.
         std::vector<BufferId> actual_buffers = {};
@@ -83,14 +83,14 @@ namespace daxa
         /// Every permutation always has all buffers but they are not necessarily valid in that permutation.
         /// This boolean is used to check this.
         bool valid = {};
-        TaskImageInfo info = {};
         bool swapchain_semaphore_waited_upon = {};
         std::vector<ExtendedImageSliceState> last_slice_states = {};
         std::vector<ExtendedImageSliceState> first_slice_states = {};
     };
 
-    struct ExecutionTimeTaskImage
+    struct GlobalTaskImageInfo
     {
+        TaskImageInfo info = {};
         // One task image can be backed by multiple images at execution time.
         std::vector<ImageId> actual_images = {};
         // We store runtime information about the previous executions final resource states.
@@ -101,6 +101,7 @@ namespace daxa
     struct Task
     {
         TaskInfo info = {};
+        std::vector<std::vector<ImageViewId>> image_view_cache = {};
         std::vector<std::variant<std::pair<TaskImageId, usize>, std::pair<TaskBufferId, usize>, std::monostate>> id_to_offset = {}; 
     };
 
@@ -174,8 +175,8 @@ namespace daxa
     struct ImplTaskList final : ManagedSharedState
     {
         TaskListInfo info;
-        std::vector<ExecutionTimeTaskBuffer> exec_task_buffers = {};
-        std::vector<ExecutionTimeTaskImage> exec_task_images = {};
+        std::vector<GlobalTaskBufferInfos> global_buffer_infos = {};
+        std::vector<GlobalTaskImageInfo> global_image_infos = {};
         std::vector<TaskListCondition> conditions = {};
         std::vector<TaskListPermutation> permutations = {};
 
@@ -200,11 +201,12 @@ namespace daxa
         std::stringstream debug_string_stream = {};
 
         void update_active_permutations();
+        void update_image_view_cache(Task & task);
 
         void debug_print_memory_barrier(MemoryBarrierInfo & barrier, std::string_view prefix);
-        void debug_print_image_memory_barrier(ImageBarrierInfo & barrier, TaskImage & task_image, std::string_view prefix);
-        void debug_print_task_barrier(TaskListPermutation const & permutation, TaskBarrier & barrier, usize index, std::string_view prefix);
-        void debug_print_task_split_barrier(TaskListPermutation const & permutation, TaskSplitBarrier & barrier, usize index, std::string_view prefix);
+        void debug_print_image_memory_barrier(ImageBarrierInfo & barrier, GlobalTaskImageInfo & glob_image, std::string_view prefix);
+        void debug_print_task_barrier(TaskBarrier & barrier, usize index, std::string_view prefix);
+        void debug_print_task_split_barrier(TaskSplitBarrier & barrier, usize index, std::string_view prefix);
         void debug_print_task(TaskListPermutation const & permutation, Task & task, usize task_id, std::string_view prefix);
         void debug_print_permutation_image(TaskListPermutation const & permutation, TaskImageId const image_id);
         void debug_print_permutation_buffer(TaskListPermutation const & permutation, TaskBufferId const buffer_id);

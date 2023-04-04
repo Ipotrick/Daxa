@@ -21,6 +21,7 @@ namespace daxa
         auto get_used_task_images() const -> UsedTaskImages const &;
         auto get_buffers(TaskBufferId const & task_resource_id) const -> std::span<BufferId>;
         auto get_images(TaskImageId const & task_resource_id) const -> std::span<ImageId>;
+        auto get_image_views(TaskImageId const & task_resource_id) const -> std::span<ImageViewId>;
 
         void add_runtime_buffer(TaskBufferId tid, BufferId id);
         void add_runtime_image(TaskImageId tid, ImageId id);
@@ -59,6 +60,14 @@ namespace daxa
         bool execution_persistent = {};
         bool swapchain_image = {};
         std::span<ImageId> execution_images = {};
+        std::string name = {};
+    };
+
+    struct TaskImageAliasInfo
+    {
+        TaskImageId parent = {};
+        u32 mip_level_offset = {};
+        u32 array_layer_offset = {};
         std::string name = {};
     };
 
