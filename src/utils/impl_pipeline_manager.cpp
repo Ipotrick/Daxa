@@ -1018,8 +1018,8 @@ namespace daxa
             std::replace(name.begin(), name.end(), '/', '_');
             std::replace(name.begin(), name.end(), '\\', '_');
             std::replace(name.begin(), name.end(), ':', '_');
-            std::string const name = std::string("preprocessed_") + name + ".glsl";
-            auto filepath = shader_info.compile_options.write_out_preprocessed_code.value() / name;
+            std::string const file_name = std::string("preprocessed_") + name + ".glsl";
+            auto filepath = shader_info.compile_options.write_out_preprocessed_code.value() / file_name;
             std::string preprocessed_result = {};
             shader.preprocess(&DAXA_DEFAULT_BUILTIN_RESOURCE, SHADER_VERSION, EProfile::ENoProfile, false, false, messages, &preprocessed_result, includer);
             auto ofs = std::ofstream{filepath, std::ios_base::trunc};

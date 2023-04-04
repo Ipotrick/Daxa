@@ -101,7 +101,6 @@ namespace daxa
     struct Task
     {
         TaskInfo info = {};
-        std::vector<u8> shader_uses_data_blob = {};
         std::vector<std::variant<std::pair<TaskImageId, usize>, std::pair<TaskBufferId, usize>, std::monostate>> id_to_offset = {}; 
     };
 
@@ -189,6 +188,7 @@ namespace daxa
         bool compiled = {};
 
         // execution time information:
+        daxa::TransferMemoryPool staging_memory{TransferMemoryPoolInfo{.device = info.device, .capacity = info.staging_memory_pool_size, .use_bar_memory = true}};
         std::array<bool, DAXA_TASKLIST_MAX_CONITIONALS> execution_time_current_conditionals = {};
         bool enable_debug_print = {};
 
@@ -229,7 +229,6 @@ namespace daxa
         ImplTaskList & task_list;
         TaskListPermutation & permutation;
         Task * current_task = {};
-        void * shader_uses_blob = {};
         bool reuse_last_command_list = true;
         std::vector<CommandList> command_lists = {};
         std::optional<BinarySemaphore> last_submit_semaphore = {};

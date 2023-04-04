@@ -224,18 +224,6 @@ namespace daxa
         return impl.task_list.exec_task_images[task_resource_id.index].actual_images;
     }
 
-    auto TaskRuntimeInterface::shader_uses_data() const -> void *
-    {
-        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
-        return impl.shader_uses_blob;
-    }
-
-    auto TaskRuntimeInterface::shader_uses_size() const -> u32
-    {
-        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
-        return impl.current_task->info.shader_uses.size;
-    }
-
     TaskList::TaskList(TaskListInfo const & info)
         : ManagedPtr{new ImplTaskList(info)}
     {
@@ -831,7 +819,6 @@ namespace daxa
         TaskId const task_id = this->tasks.size();
         this->tasks.emplace_back(Task{
             .info = info,
-            .shader_uses_data_blob = std::vector<u8>(info.shader_uses.size),
             .id_to_offset = std::move(id_to_offset),
         });
 
@@ -1627,18 +1614,25 @@ namespace daxa
                     // when the get command list function is called in a task this is set to false.
                     impl_runtime.reuse_last_command_list = true;
                     Task & task = permutation.tasks[task_id];
+                    auto constant_buffer_alloc = impl.staging_memory.allocate(task.info.shader_uses.size).value();
+                    u8* host_constant_buffer_ptr = reinterpret_cast<u8*>(constant_buffer_alloc.host_address);
                     for (auto & shader_use_id_mapping : task.id_to_offset)
                     {
                         if (auto image_mapping = std::get_if<std::pair<TaskImageId, usize>>(&shader_use_id_mapping))
                         {
-                            *(reinterpret_cast<ImageViewId*>(&task.shader_uses_data_blob[image_mapping->second])) = impl.exec_task_images[image_mapping->first.index].actual_images[0].default_view();
+                            *(reinterpret_cast<ImageViewId*>(host_constant_buffer_ptr + image_mapping->second)) = impl.exec_task_images[image_mapping->first.index].actual_images[0].default_view();
                         }
                         else if (auto buffer_mapping = std::get_if<std::pair<TaskBufferId, usize>>(&shader_use_id_mapping))
                         {
-                            *(reinterpret_cast<BufferDeviceAddress*>(&task.shader_uses_data_blob[buffer_mapping->second])) = impl.info.device.get_device_address(impl.exec_task_buffers[buffer_mapping->first.index].actual_buffers[0]);
+                            *(reinterpret_cast<BufferDeviceAddress*>(host_constant_buffer_ptr + buffer_mapping->second)) = impl.info.device.get_device_address(impl.exec_task_buffers[buffer_mapping->first.index].actual_buffers[0]);
                         }
                     }
-                    impl_runtime.shader_uses_blob = task.shader_uses_data_blob.data();
+                    impl_runtime.command_lists.back().set_constant_buffer({
+                        .slot = task.info.shader_uses.slot,
+                        .buffer = impl.staging_memory.get_buffer(),
+                        .size = constant_buffer_alloc.size,
+                        .offset = constant_buffer_alloc.buffer_offset,
+                    });
                     impl_runtime.current_task = &task;
                     impl_runtime.command_lists.back().begin_label({
                         .label_name = std::string("task ") + std::to_string(task_index) + std::string(" \"") + task.info.name + std::string("\""),
@@ -1758,6 +1752,7 @@ namespace daxa
                 {
                     submit_info.signal_timeline_semaphores.insert(submit_info.signal_timeline_semaphores.end(), submit_scope.user_submit_info.additional_signal_timeline_semaphores->begin(), submit_scope.user_submit_info.additional_signal_timeline_semaphores->end());
                 }
+                submit_info.signal_timeline_semaphores.push_back({impl.staging_memory.get_timeline_semaphore(), impl.staging_memory.timeline_value()});
                 impl.info.device.submit_commands(submit_info);
 
                 if (submit_scope.present_info.has_value())
