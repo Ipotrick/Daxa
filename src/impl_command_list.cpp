@@ -269,7 +269,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
-        impl.flush_constant_bindings(VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_layout);
+        impl.flush_constant_buffer_bindings(VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_layout);
 
         vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_layout, 0, 1, &impl.impl_device.as<ImplDevice>()->gpu_shader_resource_table.vk_descriptor_set, 0, nullptr);
 
@@ -285,7 +285,6 @@ namespace daxa
         [[maybe_unused]] const bool binding_in_range = info.size + info.offset <= buffer_size;
         DAXA_DBG_ASSERT_TRUE_M(binding_in_range, "The given offset and size of the buffer binding is outside of the bounds of the given buffer");
         DAXA_DBG_ASSERT_TRUE_M(info.slot < CONSTANT_BUFFER_BINDINGS_COUNT, "there are only 8 binding slots available for constant buffers");
-        impl.constant_buffer_bindings_diry = true;
         impl.current_constant_buffer_bindings[info.slot] = info;
     }
 
@@ -299,7 +298,7 @@ namespace daxa
 
         vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline_layout, 0, 1, &impl.impl_device.as<ImplDevice>()->gpu_shader_resource_table.vk_descriptor_set, 0, nullptr);
 
-        impl.flush_constant_bindings(VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline_layout);
+        impl.flush_constant_buffer_bindings(VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline_layout);
 
         vkCmdBindPipeline(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline);
     }
@@ -834,7 +833,7 @@ namespace daxa
         }
     }
 
-    void ImplCommandList::flush_constant_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout)
+    void ImplCommandList::flush_constant_buffer_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout)
     {
         auto & device = *this->impl_device.as<ImplDevice>();
         std::array<VkDescriptorBufferInfo, CONSTANT_BUFFER_BINDINGS_COUNT> descriptor_buffer_info = {};

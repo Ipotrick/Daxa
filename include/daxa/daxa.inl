@@ -1,13 +1,13 @@
 #pragma once
 
-#define DAXA_SLOT0 0
-#define DAXA_SLOT1 1
-#define DAXA_SLOT2 2
-#define DAXA_SLOT3 3
-#define DAXA_SLOT4 4
-#define DAXA_SLOT5 5
-#define DAXA_SLOT6 6
-#define DAXA_SLOT7 7
+#define DAXA_CBUFFER_SLOT0 0
+#define DAXA_CBUFFER_SLOT1 1
+#define DAXA_CBUFFER_SLOT2 2
+#define DAXA_CBUFFER_SLOT3 3
+#define DAXA_CBUFFER_SLOT4 4
+#define DAXA_CBUFFER_SLOT5 5
+#define DAXA_CBUFFER_SLOT6 6
+#define DAXA_CBUFFER_SLOT7 7
 
 #if defined(DAXA_SHADER)
 #if !defined(DAXA_STORAGE_BUFFER_BINDING)
@@ -106,7 +106,7 @@ _DAXA_REGISTER_IMAGE_TYPE(2DMSArray)
 #define daxa_i32 daxa::types::i32
 #define daxa_u32 daxa::types::u32
 #define daxa_i64 daxa::types::i64
-#define daxa_u64 alignas(8) daxa::ypes::u64
+#define daxa_u64 alignas(8) daxa::types::u64
 #define daxa_i32vec2 daxa::types::i32vec2
 #define daxa_u32vec2 daxa::types::u32vec2
 #define daxa_i32vec3 daxa::types::i32vec3
