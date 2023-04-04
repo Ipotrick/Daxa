@@ -54,8 +54,11 @@ namespace daxa
         usize split_barrier_batch_count = 0;
         std::array<VkPipelineLayout, PIPELINE_LAYOUT_COUNT> * pipeline_layouts = {};
         std::vector<std::pair<GPUResourceId, u8>> deferred_destructions = {};
+        bool constant_buffer_bindings_diry = {};
+        std::array<SetConstantBufferInfo, CONSTANT_BUFFER_BINDINGS_COUNT> current_constant_buffer_bindings = {};
 
         void flush_barriers();
+        void flush_constant_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout);
 
         ImplCommandList(ManagedWeakPtr device_impl, VkCommandPool pool, VkCommandBuffer buffer, CommandListInfo a_info);
         virtual ~ImplCommandList() override final;
