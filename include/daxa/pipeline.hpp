@@ -16,7 +16,7 @@ namespace daxa
     {
         ShaderInfo shader_info = {};
         u32 push_constant_size = {};
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct ComputePipeline : ManagedPtr
@@ -87,7 +87,7 @@ namespace daxa
         RasterizerInfo raster = {};
         TesselationInfo tesselation = {};
         u32 push_constant_size = {};
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct RasterPipeline : ManagedPtr

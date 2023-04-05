@@ -25,6 +25,7 @@ namespace daxa
         PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT = {};
         PFN_vkCmdBeginDebugUtilsLabelEXT vkCmdBeginDebugUtilsLabelEXT = {};
         PFN_vkCmdEndDebugUtilsLabelEXT vkCmdEndDebugUtilsLabelEXT = {};
+        PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR = {};
 
         VmaAllocator vma_allocator = {};
         DeviceProperties vk_info = {};

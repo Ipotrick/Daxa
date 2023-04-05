@@ -1,6 +1,8 @@
 #pragma once
 
 #if !defined(DAXA_STORAGE_BUFFER_BINDING)
+#define DAXA_GPU_TABLE_SET_BINDING 0
+#define DAXA_CONSTANT_BUFFER_BINDING_SET 1
 #define DAXA_STORAGE_BUFFER_BINDING 0
 #define DAXA_STORAGE_IMAGE_BINDING 1
 #define DAXA_SAMPLED_IMAGE_BINDING 2
@@ -126,6 +128,8 @@ _DAXA_DEBUG_BUFFER;
     }
 
 #else // #if DAXA_SHADER_GPU_ID_VALIDATION
+
+#define DAXA_CONSTANT_BUFFER(SLOT) layout(set = DAXA_CONSTANT_BUFFER_BINDING_SET, binding = SLOT, buffer_reference_align = 4, scalar) uniform
 
 #define _DAXA_GENERATE_ID_VALIDATION_FUNCTION(TYPE, Type, type) \
     void validate_##type##_id(daxa_##Type##Id id)               \

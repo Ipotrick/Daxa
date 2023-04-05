@@ -12,7 +12,7 @@ namespace tests
                 .enable_validation = false,
             });
             daxa::Device device = daxa_ctx.create_device({
-                .debug_name = APPNAME_PREFIX("device (mipmapping)"),
+                .name = APPNAME_PREFIX("device (mipmapping)"),
             });
 
             daxa::Swapchain swapchain = device.create_swapchain({
@@ -20,7 +20,7 @@ namespace tests
                 .native_window_platform = get_native_platform(),
                 .present_mode = daxa::PresentMode::IMMEDIATE,
                 .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-                .debug_name = APPNAME_PREFIX("swapchain"),
+                .name = APPNAME_PREFIX("swapchain"),
             });
             daxa::ImageId swapchain_image;
 
@@ -33,7 +33,7 @@ namespace tests
                     },
                     .language = daxa::ShaderLanguage::GLSL,
                 },
-                .debug_name = APPNAME_PREFIX("pipeline_manager"),
+                .name = APPNAME_PREFIX("pipeline_manager"),
             });
             daxa::ImGuiRenderer imgui_renderer = create_imgui_renderer();
             auto create_imgui_renderer() -> daxa::ImGuiRenderer
@@ -51,7 +51,7 @@ namespace tests
                 auto result = pipeline_manager.add_compute_pipeline({
                     .shader_info = {.source = daxa::ShaderFile{"mipmapping.glsl"}},
                     .push_constant_size = sizeof(MipmappingComputePushConstant),
-                    .debug_name = APPNAME_PREFIX("compute_pipeline"),
+                    .name = APPNAME_PREFIX("compute_pipeline"),
                 });
                 std::cout << result.to_string() << std::endl;
                 return result.value();
@@ -63,7 +63,7 @@ namespace tests
                 .size = {128, 128, 1},
                 .mip_level_count = 5,
                 .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC | daxa::ImageUsageFlagBits::TRANSFER_DST,
-                .debug_name = APPNAME_PREFIX("render_image"),
+                .name = APPNAME_PREFIX("render_image"),
             });
 
             daxa::CommandSubmitInfo submit_info = {};
@@ -80,7 +80,7 @@ namespace tests
             };
             daxa::BufferId mipmapping_gpu_input_buffer = device.create_buffer({
                 .size = sizeof(MipmappingGpuInput),
-                .debug_name = APPNAME_PREFIX("mipmapping_gpu_input_buffer"),
+                .name = APPNAME_PREFIX("mipmapping_gpu_input_buffer"),
             });
             daxa::TaskBufferId task_mipmapping_gpu_input_buffer;
             daxa::TaskBufferId task_staging_mipmapping_gpu_input_buffer;
@@ -187,7 +187,7 @@ namespace tests
                 auto staging_buffer = device.create_buffer({
                     .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .size = sizeof(MipmappingGpuInput),
-                    .debug_name = APPNAME_PREFIX("staging_mipmapping_gpu_input_buffer"),
+                    .name = APPNAME_PREFIX("staging_mipmapping_gpu_input_buffer"),
                 });
                 MipmappingGpuInput * buffer_ptr = device.get_host_address_as<MipmappingGpuInput>(staging_buffer);
                 *buffer_ptr = this->gpu_input;
@@ -434,16 +434,16 @@ namespace tests
                     .device = device,
                     .swapchain = swapchain,
                     .permutation_condition_count = TASK_CONDITION_COUNT,
-                    .debug_name = APPNAME_PREFIX("main task list"),
+                    .name = APPNAME_PREFIX("main task list"),
                 });
                 task_swapchain_image = new_task_list.create_task_image({
                     .swapchain_image = true,
-                    .debug_name = APPNAME_PREFIX("Task Swapchain Image"),
+                    .name = APPNAME_PREFIX("Task Swapchain Image"),
                 });
                 new_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
                 task_render_image = new_task_list.create_task_image({
                     .execution_persistent = true,
-                    .debug_name = APPNAME_PREFIX("Task Render Image"),
+                    .name = APPNAME_PREFIX("Task Render Image"),
                 });
                 new_task_list.add_runtime_image(task_render_image, render_image);
                 task_mipmapping_gpu_input_buffer = new_task_list.create_task_buffer({});
@@ -458,7 +458,7 @@ namespace tests
                         auto input_buffer = runtime.get_buffers(task_mipmapping_gpu_input_buffer)[0];
                         update_gpu_input(cmd_list, input_buffer);
                     },
-                    .debug_name = APPNAME_PREFIX("Input Transfer"),
+                    .name = APPNAME_PREFIX("Input Transfer"),
                 });
                 new_task_list.conditional({
                     .condition_index = TASK_CONDITION_MOUSE_DRAWING,
@@ -478,7 +478,7 @@ namespace tests
                                 auto input_buffer = runtime.get_buffers(task_mipmapping_gpu_input_buffer)[0];
                                 paint(cmd_list, render_target_id, input_buffer);
                             },
-                            .debug_name = "mouse paint",
+                            .name = "mouse paint",
                         });
                         {
                             auto image_info = device.info_image(render_image);
@@ -486,6 +486,7 @@ namespace tests
                             for (u32 i = 0; i < image_info.mip_level_count - 1; ++i)
                             {
                                 std::array<i32, 3> next_mip_size = {std::max<i32>(1, mip_size[0] / 2), std::max<i32>(1, mip_size[1] / 2), std::max<i32>(1, mip_size[2] / 2)};
+
                                 new_task_list.add_task({
                                     .used_images = {
                                         {task_render_image, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{.base_mip_level = i}},
@@ -497,9 +498,7 @@ namespace tests
                                         auto image_id = runtime.get_images(task_render_image)[0];
                                         cmd_list.blit_image_to_image({
                                             .src_image = image_id,
-                                            .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL, // TODO: get from TaskRuntime
                                             .dst_image = image_id,
-                                            .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                                             .src_slice = {
                                                 .image_aspect = image_info.aspect,
                                                 .mip_level = i,
@@ -517,7 +516,7 @@ namespace tests
                                             .filter = daxa::Filter::LINEAR,
                                         });
                                     },
-                                    .debug_name = "mip_level_" + std::to_string(i),
+                                    .name = "mip_level_" + std::to_string(i),
                                 });
                                 mip_size = next_mip_size;
                             }
@@ -537,7 +536,7 @@ namespace tests
                             .dst_image = swapchain_image,
                         });
                     },
-                    .debug_name = "clear swapchain",
+                    .name = "clear swapchain",
                 });
                 new_task_list.add_task({
                     .used_images = {
@@ -551,7 +550,7 @@ namespace tests
                         auto dst_image_id = runtime.get_images(task_swapchain_image)[0];
                         blit_image_to_swapchain(cmd_list, src_image_id, dst_image_id);
                     },
-                    .debug_name = "blit to swapchain",
+                    .name = "blit to swapchain",
                 });
                 new_task_list.add_task({
                     .used_images = {
@@ -563,7 +562,7 @@ namespace tests
                         auto render_target_id = runtime.get_images(task_swapchain_image)[0];
                         draw_ui(cmd_list, render_target_id);
                     },
-                    .debug_name = "Imgui",
+                    .name = "Imgui",
                 });
                 new_task_list.submit({});
                 new_task_list.present({});
