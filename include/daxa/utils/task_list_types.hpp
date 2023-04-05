@@ -111,6 +111,8 @@ namespace daxa
         TaskImageId id = {};
         TaskImageAccess access = {};
         ImageMipArraySlice slice = {};
+        /// @brief  Determines the view type the runtime provides in the TaskRuntimeInterface.
+        ///         If no type is provided, the runtime images default view type is used.
         std::optional<ImageViewType> view_type = {};
     };
 
