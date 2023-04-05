@@ -347,6 +347,40 @@ namespace daxa
         }
     }
 
+    void validate_runtime_image_slice(ImplTaskList & impl, u32 task_image_index, ImageMipArraySlice const & access_slice)
+    {
+        auto const & actual_images = impl.global_image_infos[task_image_index].actual_images;
+        for (u32 index = 0; index < actual_images.size(); ++index)
+        {
+            ImageMipArraySlice const full_slice = impl.info.device.info_image_view(actual_images[index].default_view()).slice;
+            std::string const & name = impl.info.device.info_image(actual_images[index]).name;
+            DAXA_DBG_ASSERT_TRUE_M(
+                access_slice.base_mip_level + access_slice.level_count <= full_slice.base_mip_level + full_slice.level_count,
+                std::string("task image use slice mip levels (") + 
+                std::to_string(access_slice.base_mip_level) + 
+                std::string("-") +
+                std::to_string(access_slice.level_count) +
+                std::string(") exceed the runtime image (\"") + 
+                name +
+                std::string("\") mip level count (") +
+                std::to_string(full_slice.level_count) +
+                std::string("). Please make sure that no image use exceedes their runtime images dimensions!")
+            );
+            DAXA_DBG_ASSERT_TRUE_M(
+                access_slice.base_array_layer + access_slice.layer_count <= full_slice.base_array_layer + full_slice.layer_count,
+                std::string("task image use slice array layers (") + 
+                std::to_string(access_slice.base_array_layer) + 
+                std::string("-") +
+                std::to_string(access_slice.layer_count) +
+                std::string(") exceed the runtime image (\"") + 
+                name +
+                std::string("\") array layer count (") +
+                std::to_string(full_slice.layer_count) +
+                std::string("). Please make sure that no image use exceedes their runtime images dimensions!")
+            );
+        }
+    }
+
     void ImplTaskList::update_image_view_cache(Task & task)
     {
         for (auto const & image_use : task.info.used_images)
@@ -368,6 +402,7 @@ namespace daxa
             }
             if (!cache_valid)
             {
+                validate_runtime_image_slice(*this, tid.index, slice);
                 for (auto & view : view_cache)
                 {
                     info.device.destroy_image_view(view);
@@ -377,9 +412,12 @@ namespace daxa
                 {
                     ImageId parent = actual_images[index];
                     ImageInfo parent_info = info.device.info_image(parent);
-                    // TODO(pahrens):    Maybe extract the view type from the shader declaration and use.
-                    //                   For now simply get the type that most closely relates to the image type.
+                    
                     ImageViewInfo view_info = info.device.info_image_view(parent.default_view());
+                    if (image_use.view_type.has_value())
+                    {
+                        view_info.type = image_use.view_type.value();
+                    }
                     view_info.slice = slice;
                     view_cache.push_back(info.device.create_image_view(view_info));
                 }
@@ -580,7 +618,7 @@ namespace daxa
             }
             first_possible_batch_index = std::max(first_possible_batch_index, current_buffer_first_possible_batch_index);
         }
-        for (auto const & [used_image_t_id, used_image_t_access, used_image_slice] : info.used_images)
+        for (auto const & [used_image_t_id, used_image_t_access, used_image_slice, view_type] : info.used_images)
         {
             TaskImage const & task_image = perm.image_infos[used_image_t_id.index];
             GlobalTaskImageInfo const & glob_task_iamge = impl.global_image_infos[used_image_t_id.index];
@@ -1017,7 +1055,7 @@ namespace daxa
         return offset_table;
     }
 
-    void validate_resource_uses(ImplTaskList const & impl, TaskInfo const & info)
+    void validate_resource_uses(ImplTaskList const &, TaskInfo const & info)
     {
         for (auto const & buffer_use : info.used_buffers)
         {
@@ -1191,7 +1229,7 @@ namespace daxa
             task_buffer.latest_access_submit_scope_index = current_submit_scope_index;
         }
         // Now we insert image dependent sync
-        for (auto const & [used_image_t_id, used_image_t_access, initial_used_image_slice] : info.used_images)
+        for (auto const & [used_image_t_id, used_image_t_access, initial_used_image_slice, view_type] : info.used_images)
         {
             TaskImage & task_image = this->image_infos[used_image_t_id.index];
             auto [current_image_layout, current_image_access] = task_image_access_to_layout_access(used_image_t_access);
@@ -1471,7 +1509,6 @@ namespace daxa
         impl.compiled = true;
 
         // Insert static barriers initializing image layouts.
-        // TODO(pahrens): when we respect the create info prior use we MUST also put in barriers for buffer uses!
         for (auto & permutation : impl.permutations)
         {
             auto & first_batch = permutation.batch_submit_scopes[0].task_batches[0];
@@ -1487,9 +1524,6 @@ namespace daxa
                     // Insert barriers, initializing all the initially accesses subresource ranges to the correct layout.
                     for (auto & first_access : task_image.first_slice_states)
                     {
-                        // TODO(pahrens): Respect the given prior state from the info.
-                        // TODO(pahrens): Investigate if it makes sense to insert these barriers in the batch in which the initial use appears.
-                        // TODO(pahrens): Investigate if split barriers make sense here.
                         usize const new_barrier_index = permutation.barriers.size();
                         permutation.barriers.push_back(TaskBarrier{
                             .image_id = task_image_id,
@@ -2072,7 +2106,6 @@ namespace daxa
 
     void ImplTaskList::output_graphviz()
     {
-        // TODO(grundlett): Implement this!
         std::string const filename = this->info.name + ".dot";
         std::ofstream dot_file{filename};
 
@@ -2136,7 +2169,7 @@ namespace daxa
                             }
 
                             resource_index = 0;
-                            for (auto const & [task_image_id, task_buffer_access, image_slice] : permutation.tasks[task_id].info.used_images)
+                            for (auto const & [task_image_id, task_buffer_access, image_slice, view_type] : permutation.tasks[task_id].info.used_images)
                             {
                                 auto const & glob_task_resource = global_image_infos[task_image_id.index];
                                 auto const & resource_debug_name = glob_task_resource.info.name;
@@ -2309,7 +2342,7 @@ namespace daxa
     void ImplTaskList::debug_print_task(TaskListPermutation const & permutation, Task & task, usize task_id, std::string_view prefix)
     {
         this->debug_string_stream << prefix << "Begin task " << task_id << " name: \"" << task.info.name << "\"\n";
-        for (auto [task_image_id, task_image_access, slice] : task.info.used_images)
+        for (auto [task_image_id, task_image_access, slice, view_type] : task.info.used_images)
         {
             GlobalTaskImageInfo const & glob_image = global_image_infos[task_image_id.index];
             auto [layout, access] = task_image_access_to_layout_access(task_image_access);
@@ -2330,7 +2363,6 @@ namespace daxa
         }
         for (auto [task_buffer_id, task_buffer_access] : task.info.used_buffers)
         {
-            TaskBuffer const & task_buffer = permutation.buffer_infos[task_buffer_id.index];
             auto access = task_buffer_access_to_access(task_buffer_access);
             this->debug_string_stream << prefix << "\tBegin task buffer use " << task_buffer_id.index << "\n";
             this->debug_string_stream << prefix << "\t\task buffer debug name: " << global_buffer_infos[task_buffer_id.index].info.name << "\n";

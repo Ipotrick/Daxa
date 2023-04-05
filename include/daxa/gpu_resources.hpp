@@ -5,6 +5,27 @@
 
 namespace daxa
 {
+    enum struct ImageViewType
+    {
+        REGULAR_1D = 0,
+        REGULAR_2D = 1,
+        REGULAR_3D = 2,
+        CUBE = 3,
+        REGULAR_1D_ARRAY = 4,
+        REGULAR_2D_ARRAY = 5,
+        CUBE_ARRAY = 6,
+    };
+
+    static inline constexpr ImageViewType _ShaderAlias_1D = ImageViewType::REGULAR_1D;
+    static inline constexpr ImageViewType _ShaderAlias_2D = ImageViewType::REGULAR_2D;
+    static inline constexpr ImageViewType _ShaderAlias_3D = ImageViewType::REGULAR_3D;
+    static inline constexpr ImageViewType _ShaderAlias_Cube = ImageViewType::CUBE;
+    static inline constexpr ImageViewType _ShaderAlias_1DArray = ImageViewType::REGULAR_1D_ARRAY;
+    static inline constexpr ImageViewType _ShaderAlias_2DArray = ImageViewType::REGULAR_2D_ARRAY;
+    static inline constexpr ImageViewType _ShaderAlias_CubeArray = ImageViewType::CUBE_ARRAY;
+    static inline constexpr ImageViewType _ShaderAlias_2DMS = ImageViewType::REGULAR_2D;
+    static inline constexpr ImageViewType _ShaderAlias_2DMSArray = ImageViewType::REGULAR_2D_ARRAY;
+
     struct GPUResourceId
     {
         u32 index : 24;
@@ -32,6 +53,12 @@ namespace daxa
 
         struct ImageViewId : public GPUResourceId
         {
+        };
+
+        template<ImageViewType VIEW_TYPE>
+        struct TypedImageViewId : public ImageViewId
+        {
+            static constexpr inline auto view_type() -> ImageViewType { return VIEW_TYPE; }
         };
 
         struct ImageId : public GPUResourceId
