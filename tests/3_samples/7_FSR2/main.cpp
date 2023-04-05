@@ -523,7 +523,7 @@ auto main() -> int
                 cmd_list.push_constant(DrawPush{
                     .packed_faces_ptr = device.get_device_address(renderable_chunk.face_buffer),
                     .perframe_input_ptr = perframe_input_ptr,
-                    .atlas_texture = task_runtime.get_images(task_atlas_texture_array)[0].default_view(),
+                    .atlas_texture = { task_runtime.get_images(task_atlas_texture_array)[0].default_view() },
                     .atlas_sampler = atlas_sampler,
                     .chunk_pos = renderable_chunk.chunk->pos,
                 });
