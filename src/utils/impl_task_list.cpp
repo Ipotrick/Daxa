@@ -223,7 +223,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(impl.task_list.global_image_infos[task_resource_id.index].actual_images.size() > 0, "task image must be backed by execution image(s)!");
         return impl.task_list.global_image_infos[task_resource_id.index].actual_images;
     }
-    
+
     auto TaskRuntimeInterface::get_image_views(TaskImageId const & task_resource_id) const -> std::span<ImageViewId>
     {
         auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
@@ -231,16 +231,17 @@ namespace daxa
         auto iter = std::find_if(
             impl.current_task->info.used_images.begin(),
             impl.current_task->info.used_images.end(),
-            [&](TaskImageUse & image_use) -> bool { return image_use.id == task_resource_id; });
+            [&](TaskImageUse & image_use) -> bool
+            { return image_use.id == task_resource_id; });
         [[maybe_unused]] std::string const name = impl.task_list.global_image_infos[task_resource_id.index].info.name;
         DAXA_DBG_ASSERT_TRUE_M(
-            iter != impl.current_task->info.used_images.end(), 
-            "task image \"" + 
-            name + 
-            std::string("\" is not used in task \"") + 
-            impl.current_task->info.name + 
-            std::string("\""));
-        usize use_index = std::distance(iter,impl.current_task->info.used_images.begin());
+            iter != impl.current_task->info.used_images.end(),
+            "task image \"" +
+                name +
+                std::string("\" is not used in task \"") +
+                impl.current_task->info.name +
+                std::string("\""));
+        usize use_index = std::distance(iter, impl.current_task->info.used_images.begin());
 
         return {impl.current_task->image_view_cache[use_index].data(), impl.current_task->image_view_cache[use_index].size()};
     }
@@ -351,8 +352,8 @@ namespace daxa
             auto const slice = image_use.slice;
             auto const tid = image_use.id;
 
-            auto& actual_images = global_image_infos[tid.index].actual_images;
-            auto& view_cache = task.image_view_cache[tid.index];
+            auto & actual_images = global_image_infos[tid.index].actual_images;
+            auto & view_cache = task.image_view_cache[tid.index];
 
             bool cache_valid = actual_images.size() == view_cache.size();
             if (cache_valid)
@@ -365,7 +366,7 @@ namespace daxa
             }
             if (!cache_valid)
             {
-                for (auto& view : view_cache)
+                for (auto & view : view_cache)
                 {
                     info.device.destroy_image_view(view);
                 }
@@ -374,8 +375,8 @@ namespace daxa
                 {
                     ImageId parent = actual_images[index];
                     ImageInfo parent_info = info.device.info_image(parent);
-                    //TODO(pahrens):    Maybe extract the view type from the shader declaration and use.
-                    //                  For now simply get the type that most closely relates to the image type.
+                    // TODO(pahrens):    Maybe extract the view type from the shader declaration and use.
+                    //                   For now simply get the type that most closely relates to the image type.
                     ImageViewInfo view_info = info.device.info_image_view(parent.default_view());
                     view_info.slice = slice;
                     view_cache.push_back(info.device.create_image_view(view_info));
@@ -855,6 +856,24 @@ namespace daxa
     {
         TaskInfo info = initial_info;
         std::vector<std::variant<std::pair<TaskImageId, usize>, std::pair<TaskBufferId, usize>, std::monostate>> id_to_offset = {};
+        // Validate Aliases:
+        for (auto & alias : info.image_aliases)
+        {
+            TaskImageId alias_id = {};
+            if (TaskImageId * id = std::get_if<TaskImageId>(&alias.aliased_image))
+            {
+                DAXA_DBG_ASSERT_TRUE_M(!id->is_empty(), "invalid alias image id");
+                alias_id = *id;
+            }
+            else if (std::string * name = std::get_if<std::string>(&alias.aliased_image))
+            {
+                DAXA_DBG_ASSERT_TRUE_M(task_list_impl.image_name_to_id.contains(*name), std::string("there is no image with the name \"") + *name + std::string("\""));
+                alias_id = task_list_impl.image_name_to_id.at(*name);
+            }
+            std::string const & image_name = task_list_impl.global_image_infos[alias_id.index].info.name;
+            auto iter = std::find_if(info.used_images.begin(), info.used_images.end(), [&](TaskImageUse const & use) -> bool { return use.id == alias_id; });
+            DAXA_DBG_ASSERT_TRUE_M(iter != info.used_images.end(), std::string("can not alias image \"") + image_name + std::string("\", as this image is not used in this task"));
+        }
         // Insert shader uses into other uses from info.
         for (auto & shader_use : info.shader_uses.list)
         {
@@ -871,14 +890,49 @@ namespace daxa
             }
             else if (auto * shader_image_use = std::get_if<ShaderTaskImageUse>(&shader_use))
             {
-                DAXA_DBG_ASSERT_TRUE_M(
-                    task_list_impl.image_name_to_id.contains(std::string(shader_image_use->name)),
-                    std::string("shader resource use requests image with name \"") +
+                TaskImageId used_image_id = {};
+                u32 mip_offset = {};
+                u32 array_layer_offset = {};
+                if (!task_list_impl.image_name_to_id.contains(std::string(shader_image_use->name)))
+                {
+                    // Try to look for an alias.
+                    auto iter = std::find_if(
+                        info.image_aliases.begin(),
+                        info.image_aliases.end(),
+                        [&](TaskImageAliasInfo const & alias) -> bool
+                        {
+                            return alias.alias == shader_image_use->name;
+                        });
+                    DAXA_DBG_ASSERT_TRUE_M(
+                        iter != info.image_aliases.end(),
+                        std::string("shader resource use requests image with name \"") +
+                            std::string(shader_image_use->name) +
+                            std::string("\", there is no task image with that name and no alias declared for that name"));
+                    if (TaskImageId* id = std::get_if<TaskImageId>(&iter->aliased_image))
+                    {
+                        used_image_id = *id;
+                    }
+                    else if (std::string* name = std::get_if<std::string>(&iter->aliased_image))
+                    {
+                        used_image_id = task_list_impl.image_name_to_id.at(*name);
+                    }
+                    mip_offset = iter->mip_level_offset;
+                    array_layer_offset = iter->array_layer_offset;
+                }
+                else
+                {
+                    DAXA_DBG_ASSERT_TRUE_M(
+                        task_list_impl.image_name_to_id.contains(std::string(shader_image_use->name)),
+                        std::string("shader resource use requests image with name \"") +
                         std::string(shader_image_use->name) +
-                        std::string("\", there is no task image created with that name"));
-                TaskImageId id = task_list_impl.image_name_to_id[std::string(shader_image_use->name)];
-                id_to_offset.push_back(std::pair<TaskImageId, usize>{id, shader_image_use->offset});
-                info.used_images.push_back(TaskImageUse{.id = id, .access = shader_image_use->access, .slice = shader_image_use->slice});
+                        std::string("\", there is no task image with that name and no alias declared for that name"));
+                    used_image_id = task_list_impl.image_name_to_id.at(std::string(shader_image_use->name));
+                }
+                id_to_offset.push_back(std::pair<TaskImageId, usize>{used_image_id, shader_image_use->offset});
+                auto slice = shader_image_use->slice;
+                slice.base_mip_level += mip_offset;
+                slice.base_array_layer += array_layer_offset;
+                info.used_images.push_back(TaskImageUse{.id = used_image_id, .access = shader_image_use->access, .slice = slice});
             }
         }
 
@@ -887,8 +941,8 @@ namespace daxa
         view_cache.resize(info.used_images.size(), {});
         this->tasks.emplace_back(Task{
             .info = info,
-            .id_to_offset = std::move(id_to_offset),
             .image_view_cache = std::move(view_cache),
+            .id_to_offset = std::move(id_to_offset),
         });
 
         usize const current_submit_scope_index = this->batch_submit_scopes.size() - 1;
@@ -1892,13 +1946,13 @@ namespace daxa
 
     ImplTaskList::~ImplTaskList()
     {
-        for (auto& permutation : permutations)
+        for (auto & permutation : permutations)
         {
-            for (auto& task : permutation.tasks)
+            for (auto & task : permutation.tasks)
             {
-                for (auto& view_cache : task.image_view_cache)
+                for (auto & view_cache : task.image_view_cache)
                 {
-                    for (auto& view : view_cache)
+                    for (auto & view : view_cache)
                     {
                         info.device.destroy_image_view(view);
                     }
