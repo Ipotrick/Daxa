@@ -98,7 +98,7 @@ namespace tests
                 },
                 .language = daxa::ShaderLanguage::GLSL,
             },
-            .debug_name = APPNAME_PREFIX("pipeline_manager"),
+            .name = APPNAME_PREFIX("pipeline_manager"),
         });
 
         auto compilation_result = pipeline_manager.add_raster_pipeline({
