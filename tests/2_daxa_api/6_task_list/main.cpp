@@ -401,7 +401,8 @@ namespace tests
         });
         
         auto task_image = task_list.create_task_image({
-            .name = "image",  // This name MUST be identical to the name used in the shader.
+            // In this test, this image name will be "aliased", so the name must not be the same.
+            .name = "image",  
         });
         task_list.add_runtime_image(task_image, image);
 
@@ -415,7 +416,10 @@ namespace tests
             // This global is set from auto generated code in the .inl file.
             .shader_uses = daxa::ShaderIntegrationTaskListUses,
             .image_aliases = {
-                daxa::TaskImageAliasInfo{ .alias = "shader_integration_image", .aliased_image = std::string("image") },
+                daxa::TaskImageAliasInfo{ 
+                    .alias = "shader_integration_image", 
+                    .aliased_image = task_image,
+                },
             },
             .task = [&](daxa::TaskRuntimeInterface const& tri){
                 auto cmd = tri.get_command_list();

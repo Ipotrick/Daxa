@@ -83,40 +83,40 @@ _DAXA_REGISTER_IMAGE_TYPE(2DMSArray)
 #define daxa_Image(DIM, SCALAR) daxa::types::ImageViewId
 #define daxa_RWImage(DIM, SCALAR) daxa::types::ImageViewId
 
-#define daxa_b32 daxa::types::b32
-#define daxa_i32 daxa::types::i32
-#define daxa_u32 daxa::types::u32
-#define daxa_f32 daxa::types::f32
-#define daxa_b32vec2 daxa::types::b32vec2
-#define daxa_b32vec3 daxa::types::b32vec3
-#define daxa_b32vec4 daxa::types::b32vec4
-#define daxa_f32 daxa::types::f32
-#define daxa_f32vec2 daxa::types::f32vec2
-#define daxa_f32mat2x2 daxa::types::f32mat2x2
-#define daxa_f32mat2x3 daxa::types::f32mat2x3
-#define daxa_f32mat2x4 daxa::types::f32mat2x4
-#define daxa_f32vec3 daxa::types::f32vec3
-#define daxa_f32mat3x2 daxa::types::f32mat3x2
-#define daxa_f32mat3x3 daxa::types::f32mat3x3
-#define daxa_f32mat3x4 daxa::types::f32mat3x4
-#define daxa_f32vec4 daxa::types::f32vec4
-#define daxa_f32mat4x2 daxa::types::f32mat4x2
-#define daxa_f32mat4x3 daxa::types::f32mat4x3
-#define daxa_f32mat4x4 daxa::types::f32mat4x4
-#define daxa_i32 daxa::types::i32
-#define daxa_u32 daxa::types::u32
-#define daxa_i64 daxa::types::i64
+#define daxa_b32 alignas(4) daxa::types::b32
+#define daxa_i32 alignas(4) daxa::types::i32
+#define daxa_u32 alignas(4) daxa::types::u32
+#define daxa_f32 alignas(4) daxa::types::f32
+#define daxa_b32vec2 alignas(4) daxa::types::b32vec2
+#define daxa_b32vec3 alignas(4) daxa::types::b32vec3
+#define daxa_b32vec4 alignas(4) daxa::types::b32vec4
+#define daxa_f32 alignas(4) daxa::types::f32
+#define daxa_f32vec2 alignas(4) daxa::types::f32vec2
+#define daxa_f32mat2x2 alignas(4) daxa::types::f32mat2x2
+#define daxa_f32mat2x3 alignas(4) daxa::types::f32mat2x3
+#define daxa_f32mat2x4 alignas(4) daxa::types::f32mat2x4
+#define daxa_f32vec3 alignas(4) daxa::types::f32vec3
+#define daxa_f32mat3x2 alignas(4) daxa::types::f32mat3x2
+#define daxa_f32mat3x3 alignas(4) daxa::types::f32mat3x3
+#define daxa_f32mat3x4 alignas(4) daxa::types::f32mat3x4
+#define daxa_f32vec4 alignas(4) daxa::types::f32vec4
+#define daxa_f32mat4x2 alignas(4) daxa::types::f32mat4x2
+#define daxa_f32mat4x3 alignas(4) daxa::types::f32mat4x3
+#define daxa_f32mat4x4 alignas(4) daxa::types::f32mat4x4
+#define daxa_i32 alignas(4) daxa::types::i32
+#define daxa_u32 alignas(4) daxa::types::u32
+#define daxa_i64 alignas(8) daxa::types::i64
 #define daxa_u64 alignas(8) daxa::types::u64
-#define daxa_i32vec2 daxa::types::i32vec2
-#define daxa_u32vec2 daxa::types::u32vec2
-#define daxa_i32vec3 daxa::types::i32vec3
-#define daxa_u32vec3 daxa::types::u32vec3
-#define daxa_i32vec4 daxa::types::i32vec4
-#define daxa_u32vec4 daxa::types::u32vec4
-#define daxa_BufferId daxa::types::BufferId
-#define daxa_ImageViewId daxa::types::ImageViewId
-#define daxa_ImageId daxa::types::ImageId
-#define daxa_SamplerId daxa::types::SamplerId
+#define daxa_i32vec2 alignas(4) daxa::types::i32vec2
+#define daxa_u32vec2 alignas(4) daxa::types::u32vec2
+#define daxa_i32vec3 alignas(4) daxa::types::i32vec3
+#define daxa_u32vec3 alignas(4) daxa::types::u32vec3
+#define daxa_i32vec4 alignas(4) daxa::types::i32vec4
+#define daxa_u32vec4 alignas(4) daxa::types::u32vec4
+#define daxa_BufferId alignas(4) daxa::types::BufferId
+#define daxa_ImageViewId alignas(4) daxa::types::ImageViewId
+#define daxa_ImageId alignas(4) daxa::types::ImageId
+#define daxa_SamplerId alignas(4) daxa::types::SamplerId
 
 #if DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES
 using namespace daxa::types;

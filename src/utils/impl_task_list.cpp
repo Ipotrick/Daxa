@@ -898,8 +898,8 @@ namespace daxa
                     {
                         used_image_id = task_list_impl.image_name_to_id.at(*name);
                     }
-                    mip_offset = iter->mip_level_offset;
-                    array_layer_offset = iter->array_layer_offset;
+                    mip_offset = iter->base_mip_level_offset;
+                    array_layer_offset = iter->base_array_layer_offset;
                 }
                 else
                 {
