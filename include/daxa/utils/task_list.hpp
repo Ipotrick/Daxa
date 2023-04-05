@@ -71,10 +71,17 @@ namespace daxa
         u32 base_array_layer_offset = {};
     };
 
+    struct TaskBufferAliasInfo
+    {
+        std::string alias = {};
+        std::variant<TaskBufferId, std::string> aliased_buffer = {};
+    };
+
     struct TaskInfo
     {
-        ShaderTaskUses shader_uses = {};
-        std::vector<TaskImageAliasInfo> image_aliases = {};
+        TaskShaderUses shader_uses = {};
+        std::vector<TaskBufferAliasInfo> shader_uses_buffer_aliases = {};
+        std::vector<TaskImageAliasInfo> shader_uses_image_aliases = {};
         UsedTaskBuffers used_buffers = {};
         UsedTaskImages used_images = {};
         TaskCallback task = {};
