@@ -30,7 +30,7 @@ namespace tests
             std::cout << "i7: " << v.i7 << std::endl;
         };
 
-    // TEST:
+        // TEST:
         //  1) Create resources
         //  2) Use Compute dispatch read and write
         //  4) readback and validate
@@ -57,8 +57,8 @@ namespace tests
             .i2 = 2,
             .i3 = 0xF000000000000003ull,
             .i4 = 4,
-            .i5 = { 0xF000000000000051ull, 0x0F00000000000052ull, 0x00F0000000000053ull },
-            .i6 = { 61, 62, 63 },
+            .i5 = {0xF000000000000051ull, 0x0F00000000000052ull, 0x00F0000000000053ull},
+            .i6 = {61, 62, 63},
             .i7 = 7,
         };
         *device.get_host_address_as<Testu6Alignment>(src_buffer) = test_values;
@@ -74,7 +74,7 @@ namespace tests
             .name = "pipeline manager",
         });
 
-        auto compute_pipeline = pipeline_manager.add_compute_pipeline({
+        auto compile_result = pipeline_manager.add_compute_pipeline({
             .shader_info = {
                 .source = daxa::ShaderFile{"alignment_test.glsl"},
                 .compile_options{
@@ -82,7 +82,8 @@ namespace tests
                 },
             },
             .name = "compute_pipeline",
-        }).value();
+        });
+        auto compute_pipeline = compile_result.value();
 
         auto task_list = daxa::TaskList({
             .device = device,
@@ -101,10 +102,14 @@ namespace tests
 
         task_list.add_task({
             .shader_uses = daxa::TestShaderUses,
-            .task = [&](daxa::TaskRuntimeInterface const& tri){
+            .shader_uses_buffer_aliases = {
+                daxa::TaskBufferAliasInfo{.alias = "aligdn_test_dst", .aliased_buffer = dst },
+            },
+            .task = [&](daxa::TaskRuntimeInterface const & tri)
+            {
                 auto cmd = tri.get_command_list();
                 cmd.set_pipeline(*compute_pipeline);
-                cmd.dispatch(1,1,1);
+                cmd.dispatch(1, 1, 1);
             },
             .name = "test alignment",
         });
@@ -112,7 +117,7 @@ namespace tests
         task_list.complete({});
 
         task_list.execute({});
-        
+
         device.wait_idle();
 
         [[maybe_unused]] Testu6Alignment readback_data = *device.get_host_address_as<Testu6Alignment>(dst_buffer);

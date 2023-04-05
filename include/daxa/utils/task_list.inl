@@ -30,7 +30,7 @@ namespace daxa
         daxa::usize offset = {};
     };
 
-    struct ShaderTaskUses
+    struct TaskShaderUses
     {
         std::vector<std::variant<ShaderTaskImageUse, ShaderTaskBufferUse, std::monostate>> list = {};
         u32 slot = {};
@@ -39,9 +39,9 @@ namespace daxa
 
 #define DAXA_TASK_USES_BEGIN(NAME, SLOT) \
 namespace daxa { \
-    inline static const ShaderTaskUses NAME = []() -> ShaderTaskUses \
+    inline static const TaskShaderUses NAME = []() -> TaskShaderUses \
     { \
-        ShaderTaskUses uses = {}; \
+        TaskShaderUses uses = {}; \
         uses.slot = SLOT;
 #define DAXA_TASK_USE_BUFFER(NAME, TYPE, TASK_ACCESS) \
         /* must align buffer ptrs to 8 bytes */ \
