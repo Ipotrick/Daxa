@@ -15,7 +15,7 @@ struct App : BaseApp<App>
         .shader_info = {.source = daxa::ShaderFile{"compute.hlsl"}},
 #endif
         .push_constant_size = sizeof(ComputePush),
-        .debug_name = APPNAME_PREFIX("compute_pipeline"),
+        .name = APPNAME_PREFIX("compute_pipeline"),
     }).value();
     // clang-format on
 
@@ -23,7 +23,7 @@ struct App : BaseApp<App>
         .format = daxa::Format::R8G8B8A8_UNORM,
         .size = {size_x, size_y, 1},
         .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
-        .debug_name = APPNAME_PREFIX("render_image"),
+        .name = APPNAME_PREFIX("render_image"),
     });
     daxa::TaskImageId task_render_image;
 
@@ -86,7 +86,7 @@ struct App : BaseApp<App>
 
     void record_tasks(daxa::TaskList & new_task_list)
     {
-        task_render_image = new_task_list.create_task_image({.debug_name = APPNAME_PREFIX("task_render_image")});
+        task_render_image = new_task_list.create_task_image({.name = APPNAME_PREFIX("task_render_image")});
         new_task_list.add_runtime_image(task_render_image, render_image);
 
         new_task_list.add_task({
@@ -103,7 +103,7 @@ struct App : BaseApp<App>
                 });
                 cmd_list.dispatch((size_x + 7) / 8, (size_y + 7) / 8);
             },
-            .debug_name = APPNAME_PREFIX("Draw (Compute)"),
+            .name = APPNAME_PREFIX("Draw (Compute)"),
         });
         new_task_list.add_task({
             .used_images = {
@@ -124,7 +124,7 @@ struct App : BaseApp<App>
                     .dst_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
                 });
             },
-            .debug_name = APPNAME_PREFIX("Blit (render to swapchain)"),
+            .name = APPNAME_PREFIX("Blit (render to swapchain)"),
         });
     }
 };

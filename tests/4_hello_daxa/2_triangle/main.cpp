@@ -85,7 +85,7 @@ auto main() -> int
             score += static_cast<daxa::i32>(device_props.limits.max_memory_allocation_count / 100000);
             return score;
         },
-        .debug_name = "my device",
+        .name = "my device",
     });
 
     daxa::Swapchain swapchain = device.create_swapchain({
@@ -101,7 +101,7 @@ auto main() -> int
         },
         .present_mode = daxa::PresentMode::MAILBOX,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-        .debug_name = "my swapchain",
+        .name = "my swapchain",
     });
 
     // Create a raster pipeline
@@ -116,7 +116,7 @@ auto main() -> int
             .language = daxa::ShaderLanguage::GLSL,
             .enable_debug_info = true,
         },
-        .debug_name = "my pipeline manager",
+        .name = "my pipeline manager",
     });
     // Then just adding it to the pipeline manager
     std::shared_ptr<daxa::RasterPipeline> pipeline;
@@ -127,7 +127,7 @@ auto main() -> int
             .color_attachments = {{.format = swapchain.get_format()}},
             .raster = {},
             .push_constant_size = sizeof(MyPushConstant),
-            .debug_name = "my pipeline",
+            .name = "my pipeline",
         });
         if (result.is_err())
         {
@@ -146,7 +146,7 @@ auto main() -> int
     // a buffer with the device.
     auto buffer_id = device.create_buffer({
         .size = sizeof(MyVertex) * 3,
-        .debug_name = "my vertex data",
+        .name = "my vertex data",
     });
     // Obviously the vertex data is not yet on the GPU, and this buffer
     // is just empty. We will use conditional TaskList to upload it on
@@ -175,7 +175,7 @@ auto main() -> int
         .device = device,
         .swapchain = swapchain,
         .permutation_condition_count = static_cast<daxa::usize>(TaskCondition::COUNT),
-        .debug_name = "my task list",
+        .name = "my task list",
     });
 
     // When using TaskList, we must create "virtual" resources (we call
@@ -183,7 +183,7 @@ auto main() -> int
     // synchronization for them.
 
     // The first we'll make is the swapchain image task resource
-    auto task_swapchain_image = loop_task_list.create_task_image({.swapchain_image = true, .debug_name = "my task swapchain image"});
+    auto task_swapchain_image = loop_task_list.create_task_image({.swapchain_image = true, .name = "my task swapchain image"});
 
     // We'll also declare a swapchain image, since we're going to be
     // adding and removing it from being tracked by the TaskList.
@@ -198,7 +198,7 @@ auto main() -> int
     // We do something a little special here, which is that we set the initial access
     // of the buffer to be vertex shader read, and that's because we'll create a task
     // list which will upload the buffer
-    auto task_buffer_id = loop_task_list.create_task_buffer({.initial_access = daxa::AccessConsts::VERTEX_SHADER_READ, .debug_name = "my task buffer"});
+    auto task_buffer_id = loop_task_list.create_task_buffer({.pre_task_list_slice_states = daxa::AccessConsts::VERTEX_SHADER_READ, .name = "my task buffer"});
     // adding this as a real resource just allows us to query it from the Task
     // runtime later, since there's no buffer-specific commands (unlike image
     // layout transitions) that need to happen when synchronizing buffer usages.
@@ -235,7 +235,7 @@ auto main() -> int
                     // only ever be executed when requested!
                     task_condition_states[static_cast<daxa::usize>(TaskCondition::VERTICES_UPLOAD)] = false;
                 },
-                .debug_name = "my upload task",
+                .name = "my upload task",
             });
         },
     });
@@ -265,7 +265,7 @@ auto main() -> int
                 task_runtime.get_buffers(task_buffer_id)[0],
                 window_info.width, window_info.height);
         },
-        .debug_name = "my draw task",
+        .name = "my draw task",
     });
 
     // We now need to tell the task list that these commands will be submitted,
@@ -341,7 +341,7 @@ void upload_vertex_data_task(
     auto staging_buffer_id = device.create_buffer({
         .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
         .size = sizeof(data),
-        .debug_name = "my staging buffer",
+        .name = "my staging buffer",
     });
     // We can also ask the command list to destroy this temporary buffer,
     // since we don't care about it living, but we DO need it to survive

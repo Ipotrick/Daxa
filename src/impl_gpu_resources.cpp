@@ -157,12 +157,57 @@ namespace daxa
 
         vkAllocateDescriptorSets(device, &vk_descriptor_set_allocate_info, &this->vk_descriptor_set);
 
+        // Constant buffer set:
+
+        std::array<VkDescriptorSetLayoutBinding, CONSTANT_BUFFER_BINDING_COUNT> constant_buffer_layout_bindings = {};
+        for (u32 binding = 0; binding < CONSTANT_BUFFER_BINDING_COUNT; ++binding)
+        {
+            constant_buffer_layout_bindings[binding] = VkDescriptorSetLayoutBinding
+            {
+                .binding = binding,
+                .descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .descriptorCount = 1,
+                .stageFlags = VkShaderStageFlagBits::VK_SHADER_STAGE_ALL,
+                .pImmutableSamplers = {},
+            };
+        }
+
+        std::array<VkDescriptorBindingFlags, CONSTANT_BUFFER_BINDING_COUNT> const constant_buffer_set_binding_flags = {
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT,
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT,
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT,
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT,
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT,
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT,
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT,
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT,
+        };
+
+        VkDescriptorSetLayoutBindingFlagsCreateInfo constant_buffer_set_binding_flags_info{
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
+            .pNext = nullptr,
+            .bindingCount = static_cast<u32>(constant_buffer_set_binding_flags.size()),
+            .pBindingFlags = constant_buffer_set_binding_flags.data(),
+        };
+
+        VkDescriptorSetLayoutCreateInfo constant_buffer_bindings_set_layout_create_info
+        {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+            .pNext = &constant_buffer_set_binding_flags_info,
+            .flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR,
+            .bindingCount = CONSTANT_BUFFER_BINDING_COUNT,
+            .pBindings = constant_buffer_layout_bindings.data(),
+        };
+
+        vkCreateDescriptorSetLayout(device, &constant_buffer_bindings_set_layout_create_info, nullptr, &this->constant_buffer_binding_set_layout);
+
+        std::array<VkDescriptorSetLayout, 2> vk_descriptor_set_layouts = { this->vk_descriptor_set_layout, this->constant_buffer_binding_set_layout };
         VkPipelineLayoutCreateInfo vk_pipeline_create_info{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},
-            .setLayoutCount = 1,
-            .pSetLayouts = &this->vk_descriptor_set_layout,
+            .setLayoutCount = static_cast<u32>(vk_descriptor_set_layouts.size()),
+            .pSetLayouts = vk_descriptor_set_layouts.data(),
             .pushConstantRangeCount = 0,
             .pPushConstantRanges = nullptr,
         };
@@ -244,7 +289,7 @@ namespace daxa
                         }
                         if (!handle_invalid)
                         {
-                            ret += std::string("debug name: \"") + std::string(slot.first.info.debug_name) + '\"';
+                            ret += std::string("debug name: \"") + std::string(slot.first.info.name) + '\"';
                             if (slot.first.zombie)
                             {
                                 ret += " (destroy was already called)";
@@ -264,6 +309,7 @@ namespace daxa
             vkDestroyPipelineLayout(device, pipeline_layouts.at(i), nullptr);
         }
         vkDestroyDescriptorSetLayout(device, this->vk_descriptor_set_layout, nullptr);
+        vkDestroyDescriptorSetLayout(device, this->constant_buffer_binding_set_layout, nullptr);
         vkResetDescriptorPool(device, this->vk_descriptor_pool, {});
         vkDestroyDescriptorPool(device, this->vk_descriptor_pool, nullptr);
     }

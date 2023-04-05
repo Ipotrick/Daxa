@@ -5,6 +5,27 @@
 
 namespace daxa
 {
+    enum struct ImageViewType
+    {
+        REGULAR_1D = 0,
+        REGULAR_2D = 1,
+        REGULAR_3D = 2,
+        CUBE = 3,
+        REGULAR_1D_ARRAY = 4,
+        REGULAR_2D_ARRAY = 5,
+        CUBE_ARRAY = 6,
+    };
+
+    static inline constexpr ImageViewType _ShaderAlias_1D = ImageViewType::REGULAR_1D;
+    static inline constexpr ImageViewType _ShaderAlias_2D = ImageViewType::REGULAR_2D;
+    static inline constexpr ImageViewType _ShaderAlias_3D = ImageViewType::REGULAR_3D;
+    static inline constexpr ImageViewType _ShaderAlias_Cube = ImageViewType::CUBE;
+    static inline constexpr ImageViewType _ShaderAlias_1DArray = ImageViewType::REGULAR_1D_ARRAY;
+    static inline constexpr ImageViewType _ShaderAlias_2DArray = ImageViewType::REGULAR_2D_ARRAY;
+    static inline constexpr ImageViewType _ShaderAlias_CubeArray = ImageViewType::CUBE_ARRAY;
+    static inline constexpr ImageViewType _ShaderAlias_2DMS = ImageViewType::REGULAR_2D;
+    static inline constexpr ImageViewType _ShaderAlias_2DMSArray = ImageViewType::REGULAR_2D_ARRAY;
+
     struct GPUResourceId
     {
         u32 index : 24;
@@ -34,6 +55,12 @@ namespace daxa
         {
         };
 
+        template<ImageViewType VIEW_TYPE>
+        struct TypedImageViewId : public ImageViewId
+        {
+            static constexpr inline auto view_type() -> ImageViewType { return VIEW_TYPE; }
+        };
+
         struct ImageId : public GPUResourceId
         {
             auto default_view() const -> ImageViewId;
@@ -52,7 +79,7 @@ namespace daxa
     {
         MemoryFlags memory_flags = {};
         u32 size = {};
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct ImageInfo
@@ -66,7 +93,7 @@ namespace daxa
         u32 sample_count = 1;
         ImageUsageFlags usage = {};
         MemoryFlags memory_flags = {};
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct ImageViewInfo
@@ -75,7 +102,7 @@ namespace daxa
         Format format = Format::R8G8B8A8_UNORM;
         ImageId image = {};
         ImageMipArraySlice slice = {};
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct SamplerInfo
@@ -96,6 +123,6 @@ namespace daxa
         f32 max_lod = 1.0f;
         BorderColor border_color = BorderColor::FLOAT_TRANSPARENT_BLACK;
         bool enable_unnormalized_coordinates = false;
-        std::string debug_name = {};
+        std::string name = {};
     };
 } // namespace daxa

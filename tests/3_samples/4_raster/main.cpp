@@ -125,14 +125,14 @@ auto main() -> int
     auto native_window_platform = get_native_platform(glfw_window_ptr);
 
     daxa::Context context = daxa::create_context({});
-    daxa::Device device = context.create_device({.debug_name = "my device"});
+    daxa::Device device = context.create_device({.name = "my device"});
 
     daxa::Swapchain swapchain = device.create_swapchain({
         .native_window = native_window_handle,
         .native_window_platform = native_window_platform,
         .present_mode = daxa::PresentMode::MAILBOX,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-        .debug_name = "my swapchain",
+        .name = "my swapchain",
     });
 
     auto pipeline_manager = daxa::PipelineManager({
@@ -147,7 +147,7 @@ auto main() -> int
             .language = daxa::ShaderLanguage::GLSL,
             .enable_debug_info = true,
         },
-        .debug_name = "my pipeline manager",
+        .name = "my pipeline manager",
     });
     std::shared_ptr<daxa::RasterPipeline> pipeline;
     {
@@ -164,7 +164,7 @@ auto main() -> int
                 .face_culling = daxa::FaceCullFlagBits::BACK_BIT,
             },
             .push_constant_size = sizeof(DrawPush),
-            .debug_name = "my pipeline",
+            .name = "my pipeline",
         });
         if (result.is_err())
         {
@@ -176,14 +176,14 @@ auto main() -> int
 
     auto perframe_input_buffer_id = device.create_buffer({
         .size = sizeof(PerframeInput),
-        .debug_name = "perframe_input_buffer_id",
+        .name = "perframe_input_buffer_id",
     });
 
     auto depth_image = device.create_image({
         .format = daxa::Format::D32_SFLOAT,
         .size = {app_info.width, app_info.height, 1},
         .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_ONLY,
-        .debug_name = "depth_image",
+        .name = "depth_image",
     });
 
     constexpr auto MIP_COUNT = 4u;
@@ -194,7 +194,7 @@ auto main() -> int
         .mip_level_count = MIP_COUNT,
         .array_layer_count = static_cast<u32>(texture_names.size()),
         .usage = daxa::ImageUsageFlagBits::SHADER_READ_ONLY | daxa::ImageUsageFlagBits::TRANSFER_SRC | daxa::ImageUsageFlagBits::TRANSFER_DST,
-        .debug_name = "atlas_texture_array",
+        .name = "atlas_texture_array",
     });
 
     auto atlas_sampler = device.create_sampler({
@@ -202,7 +202,7 @@ auto main() -> int
         .minification_filter = daxa::Filter::LINEAR,
         .min_lod = 0,
         .max_lod = static_cast<f32>(MIP_COUNT - 1),
-        .debug_name = "atlas_sampler",
+        .name = "atlas_sampler",
     });
 
     enum class TaskCondition
@@ -216,22 +216,22 @@ auto main() -> int
         .device = device,
         .swapchain = swapchain,
         .permutation_condition_count = static_cast<daxa::usize>(TaskCondition::COUNT),
-        .debug_name = "my task list",
+        .name = "my task list",
     });
 
     auto swapchain_image = daxa::ImageId{};
-    auto task_swapchain_image = loop_task_list.create_task_image({.swapchain_image = true, .debug_name = "swapchain image"});
+    auto task_swapchain_image = loop_task_list.create_task_image({.swapchain_image = true, .name = "swapchain image"});
     loop_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
 
-    auto task_depth_image = loop_task_list.create_task_image({.debug_name = "depth image"});
+    auto task_depth_image = loop_task_list.create_task_image({.name = "depth image"});
     loop_task_list.add_runtime_image(task_depth_image, depth_image);
 
-    auto task_atlas_texture_array = loop_task_list.create_task_image({.debug_name = "task_atlas_texture_array"});
+    auto task_atlas_texture_array = loop_task_list.create_task_image({.name = "task_atlas_texture_array"});
     loop_task_list.add_runtime_image(task_atlas_texture_array, atlas_texture_array);
 
-    auto perframe_input_task_buffer_id = loop_task_list.create_task_buffer({.execution_persistent = true, .debug_name = "perframe_input"});
+    auto perframe_input_task_buffer_id = loop_task_list.create_task_buffer({.execution_persistent = true, .name = "perframe_input"});
     loop_task_list.add_runtime_buffer(perframe_input_task_buffer_id, perframe_input_buffer_id);
-    auto renderable_chunks_task_buffer_id = loop_task_list.create_task_buffer({.execution_persistent = true, .debug_name = "renderable_chunks"});
+    auto renderable_chunks_task_buffer_id = loop_task_list.create_task_buffer({.execution_persistent = true, .name = "renderable_chunks"});
 
     auto chunk_update_queue = std::set<usize>{};
     auto chunk_update_queue_mtx = std::mutex{};
@@ -257,7 +257,7 @@ auto main() -> int
                                 auto staging_buffer_id = device.create_buffer({
                                     .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                                     .size = sizeof(VoxelFace) * 6 * CHUNK_VOXEL_N,
-                                    .debug_name = "my staging buffer",
+                                    .name = "my staging buffer",
                                 });
                                 cmd_list.destroy_buffer_deferred(staging_buffer_id);
                                 auto * buffer_ptr = device.get_host_address_as<VoxelFace>(staging_buffer_id);
@@ -303,7 +303,7 @@ auto main() -> int
                                 }
                                 renderable_chunk.face_buffer = device.create_buffer({
                                     .size = static_cast<u32>(sizeof(VoxelFace)) * renderable_chunk.face_n,
-                                    .debug_name = "chunk_buffer_id",
+                                    .name = "chunk_buffer_id",
                                 });
                                 cmd_list.copy_buffer_to_buffer({
                                     .src_buffer = staging_buffer_id,
@@ -318,7 +318,7 @@ auto main() -> int
                         threads[i]->join();
                     }
                 },
-                .debug_name = "my upload task",
+                .name = "my upload task",
             });
         },
     });
@@ -336,7 +336,7 @@ auto main() -> int
                     auto cmd_list = runtime.get_command_list();
                     load_textures_commands(device, cmd_list, runtime.get_images(task_atlas_texture_array)[0]);
                 },
-                .debug_name = "Upload Textures",
+                .name = "Upload Textures",
             });
 
             i32 mip_size = 16;
@@ -374,7 +374,7 @@ auto main() -> int
                             task_condition_states[static_cast<daxa::usize>(TaskCondition::TEXTURES_UPLOAD)] = false;
                         }
                     },
-                    .debug_name = "Generate Texture Mips " + std::to_string(i),
+                    .name = "Generate Texture Mips " + std::to_string(i),
                 });
                 mip_size = next_mip_size;
             }
@@ -391,7 +391,7 @@ auto main() -> int
             auto staging_input_buffer = device.create_buffer({
                 .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                 .size = sizeof(PerframeInput),
-                .debug_name = "staging_input_buffer",
+                .name = "staging_input_buffer",
             });
             cmd_list.destroy_buffer_deferred(staging_input_buffer);
             auto * buffer_ptr = device.get_host_address_as<PerframeInput>(staging_input_buffer);
@@ -403,7 +403,7 @@ auto main() -> int
                 .size = sizeof(PerframeInput),
             });
         },
-        .debug_name = "my draw task",
+        .name = "my draw task",
     });
 
     loop_task_list.add_task({
@@ -445,7 +445,7 @@ auto main() -> int
                 cmd_list.push_constant(DrawPush{
                     .packed_faces_ptr = device.get_device_address(renderable_chunk.face_buffer),
                     .perframe_input_ptr = perframe_input_ptr,
-                    .atlas_texture = task_runtime.get_images(task_atlas_texture_array)[0].default_view(),
+                    .atlas_texture = { task_runtime.get_images(task_atlas_texture_array)[0].default_view() },
                     .atlas_sampler = atlas_sampler,
                     .chunk_pos = renderable_chunk.chunk->pos,
                 });
@@ -453,7 +453,7 @@ auto main() -> int
             }
             cmd_list.end_renderpass();
         },
-        .debug_name = "my draw task",
+        .name = "my draw task",
     });
 
     loop_task_list.submit({});

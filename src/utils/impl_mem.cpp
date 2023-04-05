@@ -9,12 +9,12 @@ namespace daxa
         : info{std::move(a_info)},
           gpu_timeline{this->info.device.create_timeline_semaphore({
               .initial_value = {},
-              .debug_name = this->info.debug_name + ": timeline semaphore",
+              .name = this->info.name + ": timeline semaphore",
           })},
           buffer{this->info.device.create_buffer({
               .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
               .size = this->info.capacity,
-              .debug_name = this->info.debug_name + ": buffer",
+              .name = this->info.name + ": buffer",
           })},
           buffer_device_address{this->info.device.get_device_address(this->buffer)},
           buffer_host_address{this->info.device.get_host_address(this->buffer)}
