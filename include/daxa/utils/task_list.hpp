@@ -67,8 +67,8 @@ namespace daxa
     {
         std::string alias = {};
         std::variant<TaskImageId, std::string> aliased_image = {};
-        u32 mip_level_offset = {};
-        u32 array_layer_offset = {};
+        u32 base_mip_level_offset = {};
+        u32 base_array_layer_offset = {};
     };
 
     struct TaskInfo
