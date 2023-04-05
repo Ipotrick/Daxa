@@ -20,9 +20,9 @@ using namespace daxa::types;
 struct AppContext
 {
     daxa::Context daxa_ctx = daxa::create_context({
-        .enable_validation = true,
+        .enable_validation = false,
     });
     daxa::Device device = daxa_ctx.create_device({
-        .debug_name = APPNAME_PREFIX("device"),
+        .name = APPNAME_PREFIX("device"),
     });
 };

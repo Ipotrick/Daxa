@@ -250,7 +250,7 @@ namespace daxa
             info.clear_value);
     }
 
-    void CommandList::push_constant(void const * data, u32 size, u32 offset)
+    void CommandList::push_constant_vptr(void const * data, u32 size, u32 offset)
     {
         auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
@@ -269,9 +269,23 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
+        impl.flush_constant_buffer_bindings(VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_layout);
+
         vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_layout, 0, 1, &impl.impl_device.as<ImplDevice>()->gpu_shader_resource_table.vk_descriptor_set, 0, nullptr);
 
         vkCmdBindPipeline(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline);
+    }
+
+    void CommandList::set_constant_buffer(SetConstantBufferInfo const & info)
+    {
+        auto & impl = *as<ImplCommandList>();
+        auto & impl_device = *impl.impl_device.as<ImplDevice>();
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+        const usize buffer_size = impl_device.slot(info.buffer).info.size;
+        [[maybe_unused]] const bool binding_in_range = info.size + info.offset <= buffer_size;
+        DAXA_DBG_ASSERT_TRUE_M(binding_in_range, "The given offset and size of the buffer binding is outside of the bounds of the given buffer");
+        DAXA_DBG_ASSERT_TRUE_M(info.slot < CONSTANT_BUFFER_BINDINGS_COUNT, "there are only 8 binding slots available for constant buffers");
+        impl.current_constant_buffer_bindings[info.slot] = info;
     }
 
     void CommandList::set_pipeline(RasterPipeline const & pipeline)
@@ -283,6 +297,8 @@ namespace daxa
         impl.flush_barriers();
 
         vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline_layout, 0, 1, &impl.impl_device.as<ImplDevice>()->gpu_shader_resource_table.vk_descriptor_set, 0, nullptr);
+
+        impl.flush_constant_buffer_bindings(VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline_layout);
 
         vkCmdBindPipeline(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline);
     }
@@ -817,6 +833,46 @@ namespace daxa
         }
     }
 
+    void ImplCommandList::flush_constant_buffer_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout)
+    {
+        auto & device = *this->impl_device.as<ImplDevice>();
+        std::array<VkDescriptorBufferInfo, CONSTANT_BUFFER_BINDINGS_COUNT> descriptor_buffer_info = {};
+        std::array<VkWriteDescriptorSet, CONSTANT_BUFFER_BINDINGS_COUNT> descriptor_writes = {};
+        for (u32 index = 0; index < CONSTANT_BUFFER_BINDINGS_COUNT; ++index)
+        {
+            if (this->current_constant_buffer_bindings[index].buffer.is_empty())
+            {
+                descriptor_buffer_info[index] = VkDescriptorBufferInfo{
+                    .buffer = {},
+                    .offset = {},
+                    .range = {},
+                };
+            }
+            else
+            {
+                descriptor_buffer_info[index] = VkDescriptorBufferInfo{
+                    .buffer = device.slot(current_constant_buffer_bindings[index].buffer).vk_buffer,
+                    .offset = current_constant_buffer_bindings[index].offset,
+                    .range = current_constant_buffer_bindings[index].size,
+                };
+            }
+            descriptor_writes[index] = VkWriteDescriptorSet{
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .pNext = {},
+                .dstSet = {}, // Not needed for push descriptors.
+                .dstBinding = index,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .pImageInfo = {},
+                .pBufferInfo = &descriptor_buffer_info[index],
+                .pTexelBufferView = {},
+            };
+        }
+
+        device.vkCmdPushDescriptorSetKHR(this->vk_cmd_buffer, bind_point, pipeline_layout, CONSTANT_BUFFER_BINDING_SET, static_cast<u32>(descriptor_writes.size()), descriptor_writes.data());
+    }
+
     ImplCommandList::ImplCommandList(ManagedWeakPtr device_impl, VkCommandPool pool, VkCommandBuffer buffer, CommandListInfo a_info)
         : impl_device{std::move(device_impl)},
           info{std::move(a_info)},
@@ -838,9 +894,9 @@ namespace daxa
 
         vkBeginCommandBuffer(this->vk_cmd_buffer, &vk_command_buffer_begin_info);
 
-        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && this->info.debug_name.empty())
+        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && this->info.name.empty())
         {
-            auto cmd_buffer_name = this->info.debug_name;
+            auto cmd_buffer_name = this->info.name;
             VkDebugUtilsObjectNameInfoEXT const cmd_buffer_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
@@ -850,7 +906,7 @@ namespace daxa
             };
             this->impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &cmd_buffer_name_info);
 
-            auto cmd_pool_name = this->info.debug_name;
+            auto cmd_pool_name = this->info.name;
             VkDebugUtilsObjectNameInfoEXT const cmd_pool_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,

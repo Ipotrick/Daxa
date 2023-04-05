@@ -1,127 +1,15 @@
 #pragma once
 
+#include "task_list.inl"
+
 #if !DAXA_BUILT_WITH_UTILS_TASK_LIST
 #error "[package management error] You must build Daxa with the DAXA_ENABLE_UTILS_TASK_LIST CMake option enabled, or request the utils-task-list feature in vcpkg"
 #endif
 
-#include <span>
-
-#include <daxa/core.hpp>
-#include <daxa/device.hpp>
+#include "mem.hpp"
 
 namespace daxa
 {
-    enum struct TaskBufferAccess
-    {
-        NONE,
-        SHADER_READ_ONLY,
-        VERTEX_SHADER_READ_ONLY,
-        TESSELLATION_CONTROL_SHADER_READ_ONLY,
-        TESSELLATION_EVALUATION_SHADER_READ_ONLY,
-        GEOMETRY_SHADER_READ_ONLY,
-        FRAGMENT_SHADER_READ_ONLY,
-        COMPUTE_SHADER_READ_ONLY,
-        SHADER_WRITE_ONLY,
-        VERTEX_SHADER_WRITE_ONLY,
-        TESSELLATION_CONTROL_SHADER_WRITE_ONLY,
-        TESSELLATION_EVALUATION_SHADER_WRITE_ONLY,
-        GEOMETRY_SHADER_WRITE_ONLY,
-        FRAGMENT_SHADER_WRITE_ONLY,
-        COMPUTE_SHADER_WRITE_ONLY,
-        SHADER_READ_WRITE,
-        VERTEX_SHADER_READ_WRITE,
-        TESSELLATION_CONTROL_SHADER_READ_WRITE,
-        TESSELLATION_EVALUATION_SHADER_READ_WRITE,
-        GEOMETRY_SHADER_READ_WRITE,
-        FRAGMENT_SHADER_READ_WRITE,
-        COMPUTE_SHADER_READ_WRITE,
-        TRANSFER_READ,
-        TRANSFER_WRITE,
-        HOST_TRANSFER_READ,
-        HOST_TRANSFER_WRITE,
-    };
-
-    auto to_string(TaskBufferAccess const & usage) -> std::string_view;
-
-    enum struct TaskImageAccess
-    {
-        NONE,
-        SHADER_READ_ONLY,
-        VERTEX_SHADER_READ_ONLY,
-        TESSELLATION_CONTROL_SHADER_READ_ONLY,
-        TESSELLATION_EVALUATION_SHADER_READ_ONLY,
-        GEOMETRY_SHADER_READ_ONLY,
-        FRAGMENT_SHADER_READ_ONLY,
-        COMPUTE_SHADER_READ_ONLY,
-        SHADER_WRITE_ONLY,
-        VERTEX_SHADER_WRITE_ONLY,
-        TESSELLATION_CONTROL_SHADER_WRITE_ONLY,
-        TESSELLATION_EVALUATION_SHADER_WRITE_ONLY,
-        GEOMETRY_SHADER_WRITE_ONLY,
-        FRAGMENT_SHADER_WRITE_ONLY,
-        COMPUTE_SHADER_WRITE_ONLY,
-        SHADER_READ_WRITE,
-        VERTEX_SHADER_READ_WRITE,
-        TESSELLATION_CONTROL_SHADER_READ_WRITE,
-        TESSELLATION_EVALUATION_SHADER_READ_WRITE,
-        GEOMETRY_SHADER_READ_WRITE,
-        FRAGMENT_SHADER_READ_WRITE,
-        COMPUTE_SHADER_READ_WRITE,
-        TRANSFER_READ,
-        TRANSFER_WRITE,
-        COLOR_ATTACHMENT,
-        DEPTH_ATTACHMENT,
-        STENCIL_ATTACHMENT,
-        DEPTH_STENCIL_ATTACHMENT,
-        DEPTH_ATTACHMENT_READ_ONLY,
-        STENCIL_ATTACHMENT_READ_ONLY,
-        DEPTH_STENCIL_ATTACHMENT_READ_ONLY,
-        RESOLVE_WRITE,
-        PRESENT,
-    };
-
-    auto to_string(TaskImageAccess const & usage) -> std::string_view;
-
-    struct TaskGPUResourceId
-    {
-        u32 index = std::numeric_limits<u32>::max();
-
-        auto is_empty() const -> bool;
-
-        auto operator<=>(TaskGPUResourceId const & other) const = default;
-    };
-
-    struct TaskBufferId : public TaskGPUResourceId
-    {
-    };
-
-    struct TaskImageId : public TaskGPUResourceId
-    {
-    };
-
-    struct TaskBufferUse
-    {
-        TaskBufferId id = {};
-        TaskBufferAccess access = {};
-    };
-
-    struct TaskImageUse
-    {
-        TaskImageId id = {};
-        TaskImageAccess access = {};
-        ImageMipArraySlice slice = {};
-    };
-
-    struct InitialTaskImageUse
-    {
-        Access access = {};
-        ImageLayout layout = {};
-        ImageMipArraySlice slice = {};
-    };
-
-    using UsedTaskBuffers = std::vector<TaskBufferUse>;
-    using UsedTaskImages = std::vector<TaskImageUse>;
-
     struct TaskList;
     struct Device;
 
@@ -133,6 +21,7 @@ namespace daxa
         auto get_used_task_images() const -> UsedTaskImages const &;
         auto get_buffers(TaskBufferId const & task_resource_id) const -> std::span<BufferId>;
         auto get_images(TaskImageId const & task_resource_id) const -> std::span<ImageId>;
+        auto get_image_views(TaskImageId const & task_resource_id) const -> std::span<ImageViewId>;
 
         void add_runtime_buffer(TaskBufferId tid, BufferId id);
         void add_runtime_image(TaskImageId tid, ImageId id);
@@ -145,7 +34,7 @@ namespace daxa
         friend struct ImplTaskRuntimeInterface;
         friend struct TaskList;
         TaskRuntimeInterface(void * a_backend);
-        void * backend;
+        void * backend = {};
     };
 
     using TaskCallback = std::function<void(TaskRuntimeInterface const &)>;
@@ -155,10 +44,10 @@ namespace daxa
         // For execution_persistent resources, task list will synch from the initial use to the first use ONCE.
         // After the FIRST execution, it will use the runtime state of the resource.
         // For non-execution_persistent resources, task list will synch from the initial use to first use EVERY EXECUTION.
-        Access initial_access = AccessConsts::NONE;
+        Access pre_task_list_slice_states = AccessConsts::NONE;
         bool execution_persistent = {};
         std::span<BufferId> execution_buffers = {};
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct TaskImageInfo
@@ -166,19 +55,37 @@ namespace daxa
         // For execution_persistent resources, task list will synch from the initial use to the first use ONCE.
         // After the FIRST execution, it will use the runtime state of the resource.
         // For non-execution_persistent resources, task list will synch from the initial use to first use EVERY EXECUTION.
-        std::span<InitialTaskImageUse> initial_access = {};
+        // This is either empty or contains an initial state FOR ALL USES SLICES of the image.
+        std::span<ImageSliceState> pre_task_list_slice_states = {};
         bool execution_persistent = {};
         bool swapchain_image = {};
         std::span<ImageId> execution_images = {};
-        std::string debug_name = {};
+        std::string name = {};
+    };
+
+    struct TaskImageAliasInfo
+    {
+        std::string alias = {};
+        std::variant<TaskImageId, std::string> aliased_image = {};
+        u32 base_mip_level_offset = {};
+        u32 base_array_layer_offset = {};
+    };
+
+    struct TaskBufferAliasInfo
+    {
+        std::string alias = {};
+        std::variant<TaskBufferId, std::string> aliased_buffer = {};
     };
 
     struct TaskInfo
     {
+        TaskShaderUses shader_uses = {};
+        std::vector<TaskBufferAliasInfo> shader_uses_buffer_aliases = {};
+        std::vector<TaskImageAliasInfo> shader_uses_image_aliases = {};
         UsedTaskBuffers used_buffers = {};
         UsedTaskImages used_images = {};
         TaskCallback task = {};
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct CommandSubmitInfo;
@@ -212,7 +119,8 @@ namespace daxa
         std::array<f32, 4> task_label_color = {0.663f, 0.533f, 0.871f, 1.0f};
         /// @brief Records debug information about the execution if enabled. This string is retrievable with the function get_debug_string.
         bool record_debug_information = {};
-        std::string debug_name = {};
+        u32 staging_memory_pool_size = 4000000;
+        std::string name = {};
     };
 
     struct TaskSubmitInfo

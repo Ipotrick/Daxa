@@ -45,7 +45,7 @@ struct BaseApp : AppWindow<T>
             }
             return score;
         },
-        .debug_name = APPNAME_PREFIX("device"),
+        .name = APPNAME_PREFIX("device"),
     });
 
     daxa::Swapchain swapchain = device.create_swapchain({
@@ -53,7 +53,7 @@ struct BaseApp : AppWindow<T>
         .native_window_platform = AppWindow<T>::get_native_platform(),
         .present_mode = daxa::PresentMode::IMMEDIATE,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-        .debug_name = APPNAME_PREFIX("swapchain"),
+        .name = APPNAME_PREFIX("swapchain"),
     });
 
     daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
@@ -71,7 +71,7 @@ struct BaseApp : AppWindow<T>
 #endif
             .enable_debug_info = true,
         },
-        .debug_name = APPNAME_PREFIX("pipeline_manager"),
+        .name = APPNAME_PREFIX("pipeline_manager"),
     });
 
     daxa::ImGuiRenderer imgui_renderer = create_imgui_renderer();
@@ -135,11 +135,11 @@ struct BaseApp : AppWindow<T>
             .device = device,
             .use_split_barriers = false,
             .swapchain = swapchain,
-            .debug_name = APPNAME_PREFIX("task_list"),
+            .name = APPNAME_PREFIX("task_list"),
         });
         task_swapchain_image = new_task_list.create_task_image({
             .swapchain_image = true,
-            .debug_name = APPNAME_PREFIX("task_swapchain_image"),
+            .name = APPNAME_PREFIX("task_swapchain_image"),
         });
         new_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
 
@@ -154,7 +154,7 @@ struct BaseApp : AppWindow<T>
                 auto cmd_list = interf.get_command_list();
                 imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, swapchain_image, AppWindow<T>::size_x, AppWindow<T>::size_y);
             },
-            .debug_name = APPNAME_PREFIX("ImGui Task"),
+            .name = APPNAME_PREFIX("ImGui Task"),
         });
 
         new_task_list.submit({});

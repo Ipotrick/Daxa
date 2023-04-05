@@ -61,7 +61,7 @@ namespace daxa
     {
         ShaderCompileInfo shader_info = {};
         u32 push_constant_size = {};
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct RasterPipelineCompileInfo
@@ -75,14 +75,14 @@ namespace daxa
         RasterizerInfo raster = {};
         TesselationInfo tesselation = {};
         u32 push_constant_size = {};
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct PipelineManagerInfo
     {
         Device device;
         ShaderCompileOptions shader_compile_options = {};
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct VirtualIncludeInfo

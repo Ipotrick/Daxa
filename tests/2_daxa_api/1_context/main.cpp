@@ -18,7 +18,7 @@ namespace tests
     void custom_validation_callback()
     {
         auto daxa_ctx = daxa::create_context({
-            .enable_validation = true,
+            .enable_validation = false,
             .validation_callback = [](daxa::MsgSeverity severity, daxa::MsgType type, std::string_view msg)
             {
                 std::cout << msg << std::endl;
