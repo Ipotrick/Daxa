@@ -28,7 +28,6 @@ namespace daxa
         /// Every permutation always has all buffers but they are not necessarily valid in that permutation.
         /// This boolean is used to check this.
         bool valid = {};
-        TaskBufferInfo info = {};
         Access latest_access = AccessConsts::NONE;
         usize latest_access_batch_index = {};
         usize latest_access_submit_scope_index = {};
@@ -42,6 +41,7 @@ namespace daxa
 
     struct GlobalTaskBufferInfos
     {
+        TaskBufferInfo info = {};
         // One task buffer can back multiple buffers.
         std::vector<BufferId> actual_buffers = {};
         // We store execution time information about the previous executions final resource states.

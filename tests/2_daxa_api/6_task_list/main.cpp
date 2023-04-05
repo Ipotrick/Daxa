@@ -384,7 +384,7 @@ namespace tests
             .name = "pipeline manager",
         });
 
-        auto compute_pipeline = pipeline_manager.add_compute_pipeline({
+        auto compile_result = pipeline_manager.add_compute_pipeline({
             .shader_info = {
                 .source = daxa::ShaderFile{"shader_integration.glsl"},
                 .compile_options{
@@ -392,17 +392,18 @@ namespace tests
                 },
             },
             .name = "compute_pipeline",
-        }).value();
+        });
+        auto compute_pipeline = compile_result.value();
 
         auto task_list = daxa::TaskList({
             .device = app.device,
             .record_debug_information = true,
             .name = "shader integration test - task list",
         });
-        
+
         auto task_image = task_list.create_task_image({
             // In this test, this image name will be "aliased", so the name must not be the same.
-            .name = "image",  
+            .name = "image",
         });
         task_list.add_runtime_image(task_image, image);
 
@@ -415,16 +416,14 @@ namespace tests
             // daxa::ShaderIntegrationTaskListUses is a startup time generated constant global.
             // This global is set from auto generated code in the .inl file.
             .shader_uses = daxa::ShaderIntegrationTaskListUses,
-            .image_aliases = {
-                daxa::TaskImageAliasInfo{ 
-                    .alias = "shader_integration_image", 
-                    .aliased_image = task_image,
-                },
+            .shader_uses_image_aliases = {
+                daxa::TaskImageAliasInfo{.alias = "shader_integration_image", .aliased_image = task_image },
             },
-            .task = [&](daxa::TaskRuntimeInterface const& tri){
+            .task = [&](daxa::TaskRuntimeInterface const & tri)
+            {
                 auto cmd = tri.get_command_list();
                 cmd.set_pipeline(*compute_pipeline);
-                cmd.dispatch(1,1,1);
+                cmd.dispatch(1, 1, 1);
             },
             .name = "write image in compute",
         });
