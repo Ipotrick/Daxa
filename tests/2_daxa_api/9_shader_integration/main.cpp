@@ -116,12 +116,12 @@ namespace tests
         device.wait_idle();
 
         [[maybe_unused]] Testu6Alignment readback_data = *device.get_host_address_as<Testu6Alignment>(dst_buffer);
-        DAXA_DBG_ASSERT_TRUE_M(std::memcmp(&readback_data, &test_values, sizeof(Testu6Alignment)) == 0, "values differ");
 
         std::cout << "test values before: \n";
         print_Testu6Alignment(test_values);
         std::cout << "readback values after: \n";
         print_Testu6Alignment(readback_data);
+        DAXA_DBG_ASSERT_TRUE_M(std::memcmp(&readback_data, &test_values, sizeof(Testu6Alignment)) == 0, "values differ");
 
         device.destroy_buffer(src_buffer);
         device.destroy_buffer(dst_buffer);

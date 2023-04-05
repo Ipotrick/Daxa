@@ -115,7 +115,6 @@ _DAXA_REGISTER_IMAGE_TYPE(2DMSArray)
 #define daxa_u32vec4 alignas(4) daxa::types::u32vec4
 #define daxa_BufferId alignas(4) daxa::types::BufferId
 #define daxa_ImageViewId alignas(4) daxa::types::ImageViewId
-#define daxa_ImageId alignas(4) daxa::types::ImageId
 #define daxa_SamplerId alignas(4) daxa::types::SamplerId
 
 #if DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES
