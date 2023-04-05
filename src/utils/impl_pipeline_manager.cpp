@@ -571,7 +571,7 @@ namespace daxa
         auto tess_control_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
         if (pipe_result.info.tesselation_control_shader_info.has_value())
         {
-            tess_control_spirv_result = get_spirv(pipe_result.info.tesselation_control_shader_info.value(), pipe_result.info.debug_name, ShaderStage::TESS_CONTROL);
+            tess_control_spirv_result = get_spirv(pipe_result.info.tesselation_control_shader_info.value(), pipe_result.info.name, ShaderStage::TESS_CONTROL);
             if (tess_control_spirv_result.is_err())
             {
                 return Result<RasterPipelineState>(tess_control_spirv_result.message());
@@ -584,7 +584,7 @@ namespace daxa
         auto tess_eval_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
         if (pipe_result.info.tesselation_evaluation_shader_info.has_value())
         {
-            tess_eval_spirv_result = get_spirv(pipe_result.info.tesselation_evaluation_shader_info.value(), pipe_result.info.debug_name, ShaderStage::TESS_EVAL);
+            tess_eval_spirv_result = get_spirv(pipe_result.info.tesselation_evaluation_shader_info.value(), pipe_result.info.name, ShaderStage::TESS_EVAL);
             if (tess_eval_spirv_result.is_err())
             {
                 return Result<RasterPipelineState>(tess_eval_spirv_result.message());
