@@ -65,15 +65,16 @@ namespace daxa
 
     struct TaskImageAliasInfo
     {
-        TaskImageId parent = {};
+        std::string alias = {};
+        std::variant<TaskImageId, std::string> aliased_image = {};
         u32 mip_level_offset = {};
         u32 array_layer_offset = {};
-        std::string name = {};
     };
 
     struct TaskInfo
     {
         ShaderTaskUses shader_uses = {};
+        std::vector<TaskImageAliasInfo> image_aliases = {};
         UsedTaskBuffers used_buffers = {};
         UsedTaskImages used_images = {};
         TaskCallback task = {};
