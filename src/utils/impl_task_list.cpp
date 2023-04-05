@@ -2339,7 +2339,7 @@ namespace daxa
         }
     }
 
-    void ImplTaskList::debug_print_task(TaskListPermutation const & permutation, Task & task, usize task_id, std::string_view prefix)
+    void ImplTaskList::debug_print_task(TaskListPermutation const &, Task & task, usize task_id, std::string_view prefix)
     {
         this->debug_string_stream << prefix << "Begin task " << task_id << " name: \"" << task.info.name << "\"\n";
         for (auto [task_image_id, task_image_access, slice, view_type] : task.info.used_images)

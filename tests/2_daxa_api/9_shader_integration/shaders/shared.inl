@@ -14,7 +14,7 @@ struct Testu6Alignment
 };
 DAXA_ENABLE_BUFFER_PTR(Testu6Alignment)
 
-DAXA_TASK_USES_BEGIN(TestShaderUses, DAXA_CBUFFER_SLOT0)
-DAXA_TASK_USE_BUFFER(align_test_src, daxa_BufferPtr(Testu6Alignment), COMPUTE_SHADER_READ_ONLY)
-DAXA_TASK_USE_BUFFER(align_test_dst, daxa_RWBufferPtr(Testu6Alignment), COMPUTE_SHADER_READ_WRITE)
-DAXA_TASK_USES_END()
+DAXA_INL_TASK_USES_BEGIN(TestShaderUses, DAXA_CBUFFER_SLOT0)
+DAXA_INL_TASK_USE_BUFFER(align_test_src, daxa_BufferPtr(Testu6Alignment), COMPUTE_SHADER_READ_ONLY)
+DAXA_INL_TASK_USE_BUFFER(align_test_dst, daxa_RWBufferPtr(Testu6Alignment), COMPUTE_SHADER_READ_WRITE)
+DAXA_INL_TASK_USES_END()
