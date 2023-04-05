@@ -102,9 +102,6 @@ namespace tests
 
         task_list.add_task({
             .shader_uses = daxa::TestShaderUses,
-            .shader_uses_buffer_aliases = {
-                daxa::TaskBufferAliasInfo{.alias = "aligdn_test_dst", .aliased_buffer = dst },
-            },
             .task = [&](daxa::TaskRuntimeInterface const & tri)
             {
                 auto cmd = tri.get_command_list();

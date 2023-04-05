@@ -564,17 +564,6 @@ namespace daxa
         DCI_P3_LINEAR = DISPLAY_P3_LINEAR,
     };
 
-    enum struct ImageViewType
-    {
-        REGULAR_1D = 0,
-        REGULAR_2D = 1,
-        REGULAR_3D = 2,
-        CUBE = 3,
-        REGULAR_1D_ARRAY = 4,
-        REGULAR_2D_ARRAY = 5,
-        CUBE_ARRAY = 6,
-    };
-
     struct ImageAspectFlagsProperties
     {
         using Data = u32;

@@ -111,6 +111,7 @@ namespace daxa
         TaskImageId id = {};
         TaskImageAccess access = {};
         ImageMipArraySlice slice = {};
+        std::optional<ImageViewType> view_type = {};
     };
 
     struct ImageSliceState
