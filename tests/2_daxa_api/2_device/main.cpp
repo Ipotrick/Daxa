@@ -26,7 +26,7 @@ namespace tests
                 }
                 return score;
             },
-            .debug_name = "My device",
+            .name = "My device",
         });
 
         // once the device is created, you can query its properties, such

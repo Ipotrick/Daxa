@@ -491,7 +491,7 @@ namespace daxa
             .observed_hotload_files = {},
         };
         this->current_observed_hotload_files = &pipe_result.observed_hotload_files;
-        auto spirv_result = get_spirv(pipe_result.info.shader_info, pipe_result.info.debug_name, ShaderStage::COMP);
+        auto spirv_result = get_spirv(pipe_result.info.shader_info, pipe_result.info.name, ShaderStage::COMP);
         if (spirv_result.is_err())
         {
             return Result<ComputePipelineState>(spirv_result.message());
@@ -502,7 +502,7 @@ namespace daxa
                 .entry_point = a_info.shader_info.compile_options.entry_point,
             },
             .push_constant_size = modified_info.push_constant_size,
-            .debug_name = modified_info.debug_name,
+            .name = modified_info.name,
         });
         return Result<ComputePipelineState>(std::move(pipe_result));
     }
@@ -538,7 +538,7 @@ namespace daxa
             .observed_hotload_files = {},
         };
         this->current_observed_hotload_files = &pipe_result.observed_hotload_files;
-        auto vert_spirv_result = get_spirv(pipe_result.info.vertex_shader_info, pipe_result.info.debug_name, ShaderStage::VERT);
+        auto vert_spirv_result = get_spirv(pipe_result.info.vertex_shader_info, pipe_result.info.name, ShaderStage::VERT);
         if (vert_spirv_result.is_err())
         {
             return Result<RasterPipelineState>(vert_spirv_result.message());
@@ -553,12 +553,12 @@ namespace daxa
             .depth_test = modified_info.depth_test,
             .raster = modified_info.raster,
             .push_constant_size = modified_info.push_constant_size,
-            .debug_name = modified_info.debug_name,
+            .name = modified_info.name,
         };
         auto frag_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
         if (pipe_result.info.fragment_shader_info.has_value())
         {
-            frag_spirv_result = get_spirv(pipe_result.info.fragment_shader_info.value(), pipe_result.info.debug_name, ShaderStage::FRAG);
+            frag_spirv_result = get_spirv(pipe_result.info.fragment_shader_info.value(), pipe_result.info.name, ShaderStage::FRAG);
             if (frag_spirv_result.is_err())
             {
                 return Result<RasterPipelineState>(frag_spirv_result.message());
@@ -600,6 +600,7 @@ namespace daxa
 
     auto ImplPipelineManager::add_compute_pipeline(ComputePipelineCompileInfo const & a_info) -> Result<std::shared_ptr<ComputePipeline>>
     {
+        DAXA_DBG_ASSERT_TRUE_M(!std::holds_alternative<std::monostate>(a_info.shader_info.source), "must provide shader source");
         auto pipe_result = create_compute_pipeline(a_info);
         if (pipe_result.is_err())
         {
@@ -816,23 +817,23 @@ namespace daxa
         }
         current_shader_info = nullptr;
 
-        std::string debug_name = "unnamed-shader";
+        std::string name = "unnamed-shader";
         if (ShaderFile const * shader_file = std::get_if<ShaderFile>(&shader_info.source))
         {
-            debug_name = shader_file->path.string();
+            name = shader_file->path.string();
         }
         else if (!debug_name_opt.empty())
         {
-            debug_name = debug_name_opt;
+            name = debug_name_opt;
         }
 
         if (shader_info.compile_options.write_out_shader_binary.has_value())
         {
-            std::replace(debug_name.begin(), debug_name.end(), '/', '_');
-            std::replace(debug_name.begin(), debug_name.end(), '\\', '_');
-            std::replace(debug_name.begin(), debug_name.end(), ':', '_');
-            debug_name = debug_name + ".spv";
-            std::ofstream ofs(shader_info.compile_options.write_out_shader_binary.value() / debug_name, std::ios_base::trunc | std::ios_base::binary);
+            std::replace(name.begin(), name.end(), '/', '_');
+            std::replace(name.begin(), name.end(), '\\', '_');
+            std::replace(name.begin(), name.end(), ':', '_');
+            name = name + ".spv";
+            std::ofstream ofs(shader_info.compile_options.write_out_shader_binary.value() / name, std::ios_base::trunc | std::ios_base::binary);
             ofs.write(reinterpret_cast<char const *>(spirv.data()), static_cast<std::streamsize>(spirv.size() * 4));
             ofs.close();
         }
@@ -988,14 +989,14 @@ namespace daxa
                 preamble += std::string("#define ") + shader_define.name + "\n";
             }
         }
-        std::string debug_name = "unnamed-shader";
+        std::string name = "unnamed-shader";
         if (ShaderFile const * shader_file = std::get_if<ShaderFile>(&shader_info.source))
         {
-            debug_name = shader_file->path.string();
+            name = shader_file->path.string();
         }
         else if (!debug_name_opt.empty())
         {
-            debug_name = debug_name_opt;
+            name = debug_name_opt;
         }
 
         glslang::TShader shader{spirv_stage};
@@ -1004,7 +1005,7 @@ namespace daxa
 
         auto const & source_str = code.string;
         auto const * source_cstr = source_str.c_str();
-        auto const * name_cstr = debug_name.c_str();
+        auto const * name_cstr = name.c_str();
 
         bool const use_debug_info = shader_info.compile_options.enable_debug_info.value_or(false);
 
@@ -1054,11 +1055,11 @@ namespace daxa
 
         if (shader_info.compile_options.write_out_preprocessed_code.has_value())
         {
-            std::replace(debug_name.begin(), debug_name.end(), '/', '_');
-            std::replace(debug_name.begin(), debug_name.end(), '\\', '_');
-            std::replace(debug_name.begin(), debug_name.end(), ':', '_');
-            std::string const name = std::string("preprocessed_") + debug_name + ".glsl";
-            auto filepath = shader_info.compile_options.write_out_preprocessed_code.value() / name;
+            std::replace(name.begin(), name.end(), '/', '_');
+            std::replace(name.begin(), name.end(), '\\', '_');
+            std::replace(name.begin(), name.end(), ':', '_');
+            std::string const file_name = std::string("preprocessed_") + name + ".glsl";
+            auto filepath = shader_info.compile_options.write_out_preprocessed_code.value() / file_name;
             std::string preprocessed_result = {};
             shader.preprocess(&DAXA_DEFAULT_BUILTIN_RESOURCE, SHADER_VERSION, EProfile::ENoProfile, false, false, messages, &preprocessed_result, includer);
             auto ofs = std::ofstream{filepath, std::ios_base::trunc};

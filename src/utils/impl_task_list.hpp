@@ -28,11 +28,10 @@ namespace daxa
         /// Every permutation always has all buffers but they are not necessarily valid in that permutation.
         /// This boolean is used to check this.
         bool valid = {};
-        TaskBufferInfo info = {};
         Access latest_access = AccessConsts::NONE;
         usize latest_access_batch_index = {};
         usize latest_access_submit_scope_index = {};
-        Access initial_access = AccessConsts::NONE;
+        Access pre_task_list_slice_states = AccessConsts::NONE;
         usize initial_access_batch_index = {};
         usize initial_access_submit_scope_index = {};
         // When the last index was a read and an additional read is followed after,
@@ -40,8 +39,9 @@ namespace daxa
         std::variant<std::monostate, LastReadSplitBarrierIndex, LastReadBarrierIndex> latest_access_read_barrier_index = std::monostate{};
     };
 
-    struct ExecutionTimeTaskBuffer
+    struct GlobalTaskBufferInfos
     {
+        TaskBufferInfo info = {};
         // One task buffer can back multiple buffers.
         std::vector<BufferId> actual_buffers = {};
         // We store execution time information about the previous executions final resource states.
@@ -68,16 +68,14 @@ namespace daxa
         SplitBarrierState split_barrier_state;
     };
 
-    struct TaskImageTrackedSlice
+    struct ExtendedImageSliceState
     {
-        Access latest_access = AccessConsts::NONE;
-        ImageLayout latest_layout = ImageLayout::UNDEFINED;
+        ImageSliceState state = {};
         usize latest_access_batch_index = {};
         usize latest_access_submit_scope_index = {};
         // When the last index was a read and an additional read is followed after,
         // we will combine all barriers into one, which is the first barrier that the first read generates.
         std::variant<std::monostate, LastReadSplitBarrierIndex, LastReadBarrierIndex> latest_access_read_barrier_index = std::monostate{};
-        ImageMipArraySlice slice = {};
     };
 
     struct TaskImage
@@ -85,24 +83,26 @@ namespace daxa
         /// Every permutation always has all buffers but they are not necessarily valid in that permutation.
         /// This boolean is used to check this.
         bool valid = {};
-        TaskImageInfo info = {};
         bool swapchain_semaphore_waited_upon = {};
-        std::vector<TaskImageTrackedSlice> slices_last_uses = {};
-        std::vector<TaskImageTrackedSlice> first_accesses = {};
+        std::vector<ExtendedImageSliceState> last_slice_states = {};
+        std::vector<ExtendedImageSliceState> first_slice_states = {};
     };
 
-    struct ExecutionTimeTaskImage
+    struct GlobalTaskImageInfo
     {
+        TaskImageInfo info = {};
         // One task image can be backed by multiple images at execution time.
         std::vector<ImageId> actual_images = {};
         // We store runtime information about the previous executions final resource states.
         // This is important, as with conditional execution and temporal resources we need to store this infomation to form correct state transitions.
-        std::optional<std::vector<TaskImageTrackedSlice>> previous_execution_last_slices = {};
+        std::optional<std::vector<ExtendedImageSliceState>> previous_execution_last_slices = {};
     };
 
     struct Task
     {
         TaskInfo info = {};
+        std::vector<std::vector<ImageViewId>> image_view_cache = {};
+        std::vector<std::variant<std::pair<TaskImageId, usize>, std::pair<TaskBufferId, usize>, std::monostate>> id_to_offset = {}; 
     };
 
     struct CreateTaskBufferTask
@@ -162,6 +162,7 @@ namespace daxa
         std::vector<Task> tasks = {};
         std::vector<TaskSplitBarrier> split_barriers = {};
         std::vector<TaskBarrier> barriers = {};
+        std::vector<usize> initial_barriers = {};
         std::vector<TaskBatchSubmitScope> batch_submit_scopes = {};
         usize swapchain_image_first_use_submit_scope_index = std::numeric_limits<usize>::max();
         usize swapchain_image_last_use_submit_scope_index = std::numeric_limits<usize>::max();
@@ -174,8 +175,8 @@ namespace daxa
     struct ImplTaskList final : ManagedSharedState
     {
         TaskListInfo info;
-        std::vector<ExecutionTimeTaskBuffer> exec_task_buffers = {};
-        std::vector<ExecutionTimeTaskImage> exec_task_images = {};
+        std::vector<GlobalTaskBufferInfos> global_buffer_infos = {};
+        std::vector<GlobalTaskImageInfo> global_image_infos = {};
         std::vector<TaskListCondition> conditions = {};
         std::vector<TaskListPermutation> permutations = {};
 
@@ -183,9 +184,12 @@ namespace daxa
         u32 record_active_conditional_scopes = {};
         u32 record_conditional_states = {};
         std::vector<TaskListPermutation *> record_active_permutations = {};
+        std::unordered_map<std::string, TaskBufferId> buffer_name_to_id = {}; 
+        std::unordered_map<std::string, TaskImageId> image_name_to_id = {}; 
         bool compiled = {};
 
         // execution time information:
+        daxa::TransferMemoryPool staging_memory{TransferMemoryPoolInfo{.device = info.device, .capacity = info.staging_memory_pool_size, .use_bar_memory = true}};
         std::array<bool, DAXA_TASKLIST_MAX_CONITIONALS> execution_time_current_conditionals = {};
         bool enable_debug_print = {};
 
@@ -197,12 +201,15 @@ namespace daxa
         std::stringstream debug_string_stream = {};
 
         void update_active_permutations();
+        void update_image_view_cache(Task & task);
 
         void debug_print_memory_barrier(MemoryBarrierInfo & barrier, std::string_view prefix);
-        void debug_print_image_memory_barrier(ImageBarrierInfo & barrier, TaskImage & task_image, std::string_view prefix);
-        void debug_print_task_barrier(TaskListPermutation const & permutation, TaskBarrier & barrier, usize index, std::string_view prefix);
-        void debug_print_task_split_barrier(TaskListPermutation const & permutation, TaskSplitBarrier & barrier, usize index, std::string_view prefix);
+        void debug_print_image_memory_barrier(ImageBarrierInfo & barrier, GlobalTaskImageInfo & glob_image, std::string_view prefix);
+        void debug_print_task_barrier(TaskBarrier & barrier, usize index, std::string_view prefix);
+        void debug_print_task_split_barrier(TaskSplitBarrier & barrier, usize index, std::string_view prefix);
         void debug_print_task(TaskListPermutation const & permutation, Task & task, usize task_id, std::string_view prefix);
+        void debug_print_permutation_image(TaskListPermutation const & permutation, TaskImageId const image_id);
+        void debug_print_permutation_buffer(TaskListPermutation const & permutation, TaskBufferId const buffer_id);
         void debug_print();
         void execute_barriers();
         void output_graphviz();

@@ -26,7 +26,7 @@ struct App : AppWindow<App>
         .enable_validation = true,
     });
     daxa::Device device = daxa_ctx.create_device({
-        .debug_name = APPNAME_PREFIX("device"),
+        .name = APPNAME_PREFIX("device"),
     });
 
     daxa::Swapchain swapchain = device.create_swapchain({
@@ -34,7 +34,7 @@ struct App : AppWindow<App>
         .native_window_platform = get_native_platform(),
         .present_mode = daxa::PresentMode::IMMEDIATE,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-        .debug_name = APPNAME_PREFIX("swapchain"),
+        .name = APPNAME_PREFIX("swapchain"),
     });
 
     daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
@@ -46,7 +46,7 @@ struct App : AppWindow<App>
             },
             .language = daxa::ShaderLanguage::GLSL,
         },
-        .debug_name = APPNAME_PREFIX("pipeline_manager"),
+        .name = APPNAME_PREFIX("pipeline_manager"),
     });
 
     // daxa::ImGuiRenderer imgui_renderer = create_imgui_renderer();
@@ -67,7 +67,7 @@ struct App : AppWindow<App>
         .color_attachments = {{.format = swapchain.get_format()}},
         .raster = {},
         .push_constant_size = sizeof(DrawPush),
-        .debug_name = APPNAME_PREFIX("raster_pipeline"),
+        .name = APPNAME_PREFIX("raster_pipeline"),
     }).value();
     // clang-format on
 
@@ -81,7 +81,7 @@ struct App : AppWindow<App>
 
     daxa::BufferId gpu_input_buffer = device.create_buffer(daxa::BufferInfo{
         .size = sizeof(GpuInput),
-        .debug_name = APPNAME_PREFIX("gpu_input_buffer"),
+        .name = APPNAME_PREFIX("gpu_input_buffer"),
     });
     GpuInput gpu_input = {};
 
@@ -102,13 +102,13 @@ struct App : AppWindow<App>
 
         auto result = device.create_buffer(daxa::BufferInfo{
             .size = size,
-            .debug_name = APPNAME_PREFIX("model buffer"),
+            .name = APPNAME_PREFIX("model buffer"),
         });
 
         auto staging_buffer = device.create_buffer({
             .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .size = size,
-            .debug_name = APPNAME_PREFIX("model staging_buffer"),
+            .name = APPNAME_PREFIX("model staging_buffer"),
         });
         cmd_list.destroy_buffer_deferred(staging_buffer);
 
@@ -344,13 +344,13 @@ struct App : AppWindow<App>
         }
 
         auto cmd_list = device.create_command_list({
-            .debug_name = APPNAME_PREFIX("cmd_list"),
+            .name = APPNAME_PREFIX("cmd_list"),
         });
 
         auto gpu_input_staging_buffer = device.create_buffer({
             .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .size = sizeof(GpuInput),
-            .debug_name = APPNAME_PREFIX("gpu_input_staging_buffer"),
+            .name = APPNAME_PREFIX("gpu_input_staging_buffer"),
         });
         cmd_list.destroy_buffer_deferred(gpu_input_staging_buffer);
         auto mat = player.camera.get_vp();

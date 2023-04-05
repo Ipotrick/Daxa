@@ -10,9 +10,11 @@
 
 namespace daxa
 {
+    static inline constexpr usize CONSTANT_BUFFER_BINDINGS_COUNT = 8;
+
     struct CommandListInfo
     {
-        std::string debug_name = {};
+        std::string name = {};
     };
 
     struct ImageBlitInfo
@@ -185,6 +187,15 @@ namespace daxa
         PipelineStageFlags stage_masks;
     };
 
+    struct SetConstantBufferInfo
+    {
+        // Binding slot the buffer will be bound to.
+        u32 slot = {};
+        BufferId buffer = {};
+        usize size = {};
+        usize offset = {};
+    };
+
     struct DepthBiasInfo
     {
         f32 constant_factor = {};
@@ -212,12 +223,18 @@ namespace daxa
         void wait_split_barrier(SplitBarrierWaitInfo const & info);
         void reset_split_barrier(ResetSplitBarrierInfo const & info);
 
-        void push_constant(void const * data, u32 size, u32 offset = 0);
+        void push_constant_vptr(void const * data, u32 size, u32 offset = 0);
         template <typename T>
         void push_constant(T const & constant, usize offset = 0)
         {
-            push_constant(&constant, static_cast<u32>(sizeof(T)), static_cast<u32>(offset));
+            push_constant_vptr(&constant, static_cast<u32>(sizeof(T)), static_cast<u32>(offset));
         }
+        /// @brief  Binds a buffer region to the constant buffer slot.
+        ///         There are constant buffer slots 0-7.
+        ///         The buffer range is user managed, The buffer MUST not die while in use on the gpu!
+        ///         Changes to these bindings only become visible to commands AFTER a pipeline is bound!
+        /// @param info parameters.
+        void set_constant_buffer(SetConstantBufferInfo const & info);
         void set_pipeline(ComputePipeline const & pipeline);
         void set_pipeline(RasterPipeline const & pipeline);
         void dispatch(u32 group_x, u32 group_y = 1, u32 group_z = 1);
