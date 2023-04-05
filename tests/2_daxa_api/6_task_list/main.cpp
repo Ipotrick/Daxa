@@ -414,6 +414,9 @@ namespace tests
             // daxa::ShaderIntegrationTaskListUses is a startup time generated constant global.
             // This global is set from auto generated code in the .inl file.
             .shader_uses = daxa::ShaderIntegrationTaskListUses,
+            .image_aliases = {
+                daxa::TaskImageAliasInfo{ .alias = "shader_integration_image", .aliased_image = std::string("image") },
+            },
             .task = [&](daxa::TaskRuntimeInterface const& tri){
                 auto cmd = tri.get_command_list();
                 cmd.set_pipeline(*compute_pipeline);

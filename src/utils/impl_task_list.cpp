@@ -856,24 +856,6 @@ namespace daxa
     {
         TaskInfo info = initial_info;
         std::vector<std::variant<std::pair<TaskImageId, usize>, std::pair<TaskBufferId, usize>, std::monostate>> id_to_offset = {};
-        // Validate Aliases:
-        for (auto & alias : info.image_aliases)
-        {
-            TaskImageId alias_id = {};
-            if (TaskImageId * id = std::get_if<TaskImageId>(&alias.aliased_image))
-            {
-                DAXA_DBG_ASSERT_TRUE_M(!id->is_empty(), "invalid alias image id");
-                alias_id = *id;
-            }
-            else if (std::string * name = std::get_if<std::string>(&alias.aliased_image))
-            {
-                DAXA_DBG_ASSERT_TRUE_M(task_list_impl.image_name_to_id.contains(*name), std::string("there is no image with the name \"") + *name + std::string("\""));
-                alias_id = task_list_impl.image_name_to_id.at(*name);
-            }
-            std::string const & image_name = task_list_impl.global_image_infos[alias_id.index].info.name;
-            auto iter = std::find_if(info.used_images.begin(), info.used_images.end(), [&](TaskImageUse const & use) -> bool { return use.id == alias_id; });
-            DAXA_DBG_ASSERT_TRUE_M(iter != info.used_images.end(), std::string("can not alias image \"") + image_name + std::string("\", as this image is not used in this task"));
-        }
         // Insert shader uses into other uses from info.
         for (auto & shader_use : info.shader_uses.list)
         {
@@ -934,6 +916,24 @@ namespace daxa
                 slice.base_array_layer += array_layer_offset;
                 info.used_images.push_back(TaskImageUse{.id = used_image_id, .access = shader_image_use->access, .slice = slice});
             }
+        }
+        // Validate Aliases:
+        for (auto & alias : info.image_aliases)
+        {
+            TaskImageId alias_id = {};
+            if (TaskImageId * id = std::get_if<TaskImageId>(&alias.aliased_image))
+            {
+                DAXA_DBG_ASSERT_TRUE_M(!id->is_empty(), "invalid alias image id");
+                alias_id = *id;
+            }
+            else if (std::string * name = std::get_if<std::string>(&alias.aliased_image))
+            {
+                DAXA_DBG_ASSERT_TRUE_M(task_list_impl.image_name_to_id.contains(*name), std::string("there is no image with the name \"") + *name + std::string("\""));
+                alias_id = task_list_impl.image_name_to_id.at(*name);
+            }
+            std::string const & image_name = task_list_impl.global_image_infos[alias_id.index].info.name;
+            auto iter = std::find_if(info.used_images.begin(), info.used_images.end(), [&](TaskImageUse const & use) -> bool { return use.id == alias_id; });
+            DAXA_DBG_ASSERT_TRUE_M(iter != info.used_images.end(), std::string("can not alias image \"") + image_name + std::string("\", as this image is not used in this task"));
         }
 
         TaskId const task_id = this->tasks.size();
