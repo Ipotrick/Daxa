@@ -2094,7 +2094,10 @@ namespace daxa
                 {
                     submit_info.signal_timeline_semaphores.insert(submit_info.signal_timeline_semaphores.end(), submit_scope.user_submit_info.additional_signal_timeline_semaphores->begin(), submit_scope.user_submit_info.additional_signal_timeline_semaphores->end());
                 }
-                submit_info.signal_timeline_semaphores.push_back({impl.staging_memory.get_timeline_semaphore(), impl.staging_memory.timeline_value()});
+                if (impl.staging_memory.timeline_value() > impl.last_execution_staging_timeline_value)
+                {
+                    submit_info.signal_timeline_semaphores.push_back({impl.staging_memory.get_timeline_semaphore(), impl.staging_memory.timeline_value()});
+                }
                 impl.info.device.submit_commands(submit_info);
 
                 if (submit_scope.present_info.has_value())
@@ -2147,6 +2150,7 @@ namespace daxa
         impl.left_over_command_lists = std::move(impl_runtime.command_lists);
         impl.executed_once = true;
         impl.prev_frame_permutation_index = permutation_index;
+        impl.last_execution_staging_timeline_value = impl.staging_memory.timeline_value();
 
         if (impl.info.record_debug_information)
         {

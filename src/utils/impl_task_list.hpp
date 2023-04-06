@@ -194,6 +194,7 @@ namespace daxa
         bool enable_debug_print = {};
 
         // post execution information:
+        usize last_execution_staging_timeline_value = 0;
         u32 chosen_permutation_last_execution = {};
         std::vector<CommandList> left_over_command_lists = {};
         bool executed_once = {};
