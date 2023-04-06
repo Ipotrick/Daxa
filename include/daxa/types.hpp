@@ -234,6 +234,9 @@ namespace daxa
             template<typename ... Args>
             requires (std::is_convertible_v<Args,SCALAR> && ...)
             ShaderAlignedType<detail::GenericVector<SCALAR, DIM>>(Args ... args) : detail::GenericVector<SCALAR, DIM>{args...} {}
+            template<typename ... Args>
+            requires (std::is_convertible_v<Args,SCALAR> && ...)
+            ShaderAlignedType<detail::GenericVector<SCALAR, DIM>> operator=(Args ... args) { detail::GenericVector<SCALAR, DIM>::operator=(args...); return *this; }
 
         };
         template <typename SCALAR, usize DIM0, usize DIM1>
@@ -245,6 +248,9 @@ namespace daxa
             template<typename ... Args>
             requires (std::is_same_v<Args,SCALAR> && ...)
             ShaderAlignedType<detail::GenericMatrix<SCALAR, DIM0, DIM1>>(Args ... args) : GenericMatrix<SCALAR, DIM0, DIM1>{args...} {}
+            template<typename ... Args>
+            requires (std::is_convertible_v<Args,SCALAR> && ...)
+            ShaderAlignedType<detail::GenericMatrix<SCALAR, DIM0, DIM1>> operator=(Args ... args) { GenericMatrix<SCALAR, DIM0, DIM1>::operator=(args...); return *this; }
         };
 
         template <typename T>
