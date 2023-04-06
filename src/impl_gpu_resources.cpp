@@ -201,6 +201,16 @@ namespace daxa
 
         vkCreateDescriptorSetLayout(device, &constant_buffer_bindings_set_layout_create_info, nullptr, &this->constant_buffer_binding_set_layout);
 
+        auto constant_buffer_set_layout_name = std::string("constant buffer descriptor set");
+        VkDebugUtilsObjectNameInfoEXT pipeline_layout_name_info{
+            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+            .pNext = nullptr,
+            .objectType = VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
+            .objectHandle = reinterpret_cast<uint64_t>(constant_buffer_binding_set_layout),
+            .pObjectName = constant_buffer_set_layout_name.c_str(),
+        };
+        vkSetDebugUtilsObjectNameEXT(device, &pipeline_layout_name_info);
+
         std::array<VkDescriptorSetLayout, 2> vk_descriptor_set_layouts = { this->vk_descriptor_set_layout, this->constant_buffer_binding_set_layout };
         VkPipelineLayoutCreateInfo vk_pipeline_create_info{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
