@@ -86,6 +86,7 @@ namespace daxa
         case TaskBufferAccess::HOST_TRANSFER_READ: return {PipelineStageFlagBits::HOST, AccessTypeFlagBits::READ};
         case TaskBufferAccess::HOST_TRANSFER_WRITE: return {PipelineStageFlagBits::HOST, AccessTypeFlagBits::WRITE};
         case TaskBufferAccess::INDEX_READ: return {PipelineStageFlagBits::INDEX_INPUT, AccessTypeFlagBits::READ};
+        case TaskBufferAccess::DRAW_INDIRECT_INFO_READ: return {PipelineStageFlagBits::DRAW_INDIRECT, AccessTypeFlagBits::READ};
         default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
         }
         return {};
@@ -126,6 +127,7 @@ namespace daxa
         case TaskBufferAccess::HOST_TRANSFER_READ: return std::string_view{"HOST_TRANSFER_READ"};
         case TaskBufferAccess::HOST_TRANSFER_WRITE: return std::string_view{"HOST_TRANSFER_WRITE"};
         case TaskBufferAccess::INDEX_READ: return std::string_view{"INDEX_READ"};
+        case TaskBufferAccess::DRAW_INDIRECT_INFO_READ: return std::string_view{"DRAW_INDIRECT_INFO_READ"};
         default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
         }
         return "invalid";
