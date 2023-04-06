@@ -385,13 +385,14 @@ namespace daxa
 
     void ImplTaskList::update_image_view_cache(Task & task)
     {
-        for (auto const & image_use : task.info.used_images)
+        for (usize task_image_use_index = 0; task_image_use_index < task.info.used_images.size(); ++task_image_use_index)
         {
+            auto const & image_use = task.info.used_images[task_image_use_index];
             auto const slice = image_use.slice;
             auto const tid = image_use.id;
 
             auto & actual_images = global_image_infos[tid.index].actual_images;
-            auto & view_cache = task.image_view_cache[tid.index];
+            auto & view_cache = task.image_view_cache[task_image_use_index];
 
             bool cache_valid = actual_images.size() == view_cache.size();
             if (cache_valid)
