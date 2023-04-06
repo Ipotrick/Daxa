@@ -977,6 +977,20 @@ namespace daxa
 
         ImplImageSlot ret;
         ret.vk_image = swapchain_image;
+        ret.view_slot.info = ImageViewInfo{
+            .type = static_cast<ImageViewType>(image_info.dimensions - 1),
+            .format = image_info.format,
+            .image = {id},
+            .slice = ImageMipArraySlice{
+                .image_aspect = image_info.aspect,
+                .base_mip_level = 0,
+                .level_count = image_info.mip_level_count,
+                .base_array_layer = 0,
+                .layer_count = image_info.array_layer_count,
+            },
+            .name = image_info.name,
+        };
+        
         VkImageViewCreateInfo const view_ci{
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .pNext = nullptr,
@@ -1057,7 +1071,7 @@ namespace daxa
 
         DAXA_DBG_ASSERT_TRUE_M(std::popcount(image_info.sample_count) == 1 && image_info.sample_count <= 64, "image samples must be power of two and between 1 and 64(inclusive)");
         DAXA_DBG_ASSERT_TRUE_M(
-            image_info.size.x > 0 &&
+            image_info.size.x > 0 && 
                 image_info.size.y > 0 &&
                 image_info.size.z > 0,
             "image (x,y,z) dimensions must be greater then 0");
