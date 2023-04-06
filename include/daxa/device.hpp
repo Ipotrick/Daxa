@@ -231,6 +231,7 @@ namespace daxa
         void collect_garbage();
 
         auto is_id_valid(ImageId id) const -> bool;
+        auto is_id_valid(ImageViewId id) const -> bool;
         auto is_id_valid(BufferId id) const -> bool;
         auto is_id_valid(SamplerId id) const -> bool;
 
