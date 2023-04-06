@@ -204,8 +204,9 @@ namespace daxa
         {
             T value = T{};
             ShaderAlignedType() = default;
-            template<typename FirstArg, typename... Args>
-            ShaderAlignedType(FirstArg first, Args... args) : value{static_cast<scalar_type_t<T>>(first), static_cast<scalar_type_t<T>>(args)...} {}
+            template<typename ANY_SCALAR>
+            requires (std::is_convertible_v<ANY_SCALAR, scalar_type_t<T>>)
+            ShaderAlignedType(ANY_SCALAR const & v) : value{static_cast<scalar_type_t<T>>(v)} {}
             operator T &()
             {
                 return value;
@@ -231,7 +232,7 @@ namespace daxa
             ShaderAlignedType<detail::GenericVector<SCALAR, DIM>>& operator=(detail::GenericVector<SCALAR, DIM> const & v) { detail::GenericVector<SCALAR, DIM>::operator=(v); return *this; }
             ShaderAlignedType<detail::GenericVector<SCALAR, DIM>>(detail::GenericVector<SCALAR, DIM> const & v) : detail::GenericVector<SCALAR, DIM>{v} {}
             template<typename ... Args>
-            requires (std::is_same_v<Args,SCALAR> && ...)
+            requires (std::is_convertible_v<Args,SCALAR> && ...)
             ShaderAlignedType<detail::GenericVector<SCALAR, DIM>>(Args ... args) : detail::GenericVector<SCALAR, DIM>{args...} {}
 
         };
