@@ -234,6 +234,7 @@ namespace daxa
             template<typename ... Args>
             ShaderAlignedType<detail::GenericVector<SCALAR, DIM>> operator=(Args&& ... args) { detail::GenericVector<SCALAR, DIM>::operator=(args...); return *this; }
         };
+        
         template <typename SCALAR, usize DIM0, usize DIM1>
         struct alignas(sizeof(SCALAR)) ShaderAlignedType<detail::GenericMatrix<SCALAR, DIM0, DIM1>> : public detail::GenericMatrix<SCALAR, DIM0, DIM1>
         {
