@@ -248,6 +248,12 @@ namespace daxa
         return {impl.current_task->image_view_cache[use_index].data(), impl.current_task->image_view_cache[use_index].size()};
     }
 
+    auto TaskRuntimeInterface::get_allocator() const -> TransferMemoryPool &
+    {
+        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
+        return impl.task_list.staging_memory;
+    }
+
     TaskList::TaskList(TaskListInfo const & info)
         : ManagedPtr{new ImplTaskList(info)}
     {
@@ -1944,27 +1950,31 @@ namespace daxa
                     Task & task = permutation.tasks[task_id];
                     validate_runtime_resources(impl, task);
                     impl.update_image_view_cache(task);
-                    auto constant_buffer_alloc = impl.staging_memory.allocate(task.info.shader_uses.size).value();
-                    u8 * host_constant_buffer_ptr = reinterpret_cast<u8 *>(constant_buffer_alloc.host_address);
-                    usize image_use_index = 0;
-                    for (auto & shader_use_id_mapping : task.id_to_offset)
+                    bool const has_shader_uses = task.info.shader_uses.size > 0;
+                    if (has_shader_uses)
                     {
-                        if (auto image_mapping = std::get_if<std::pair<TaskImageId, usize>>(&shader_use_id_mapping))
+                        auto constant_buffer_alloc = impl.staging_memory.allocate(task.info.shader_uses.size).value();
+                        u8 * host_constant_buffer_ptr = reinterpret_cast<u8 *>(constant_buffer_alloc.host_address);
+                        usize image_use_index = 0;
+                        for (auto & shader_use_id_mapping : task.id_to_offset)
                         {
-                            *(reinterpret_cast<ImageViewId *>(host_constant_buffer_ptr + image_mapping->second)) = task.image_view_cache[image_use_index][0];
-                            ++image_use_index;
+                            if (auto image_mapping = std::get_if<std::pair<TaskImageId, usize>>(&shader_use_id_mapping))
+                            {
+                                *(reinterpret_cast<ImageViewId *>(host_constant_buffer_ptr + image_mapping->second)) = task.image_view_cache[image_use_index][0];
+                                ++image_use_index;
+                            }
+                            else if (auto buffer_mapping = std::get_if<std::pair<TaskBufferId, usize>>(&shader_use_id_mapping))
+                            {
+                                *(reinterpret_cast<BufferDeviceAddress *>(host_constant_buffer_ptr + buffer_mapping->second)) = impl.info.device.get_device_address(impl.global_buffer_infos[buffer_mapping->first.index].actual_buffers[0]);
+                            }
                         }
-                        else if (auto buffer_mapping = std::get_if<std::pair<TaskBufferId, usize>>(&shader_use_id_mapping))
-                        {
-                            *(reinterpret_cast<BufferDeviceAddress *>(host_constant_buffer_ptr + buffer_mapping->second)) = impl.info.device.get_device_address(impl.global_buffer_infos[buffer_mapping->first.index].actual_buffers[0]);
-                        }
+                        impl_runtime.command_lists.back().set_constant_buffer({
+                            .slot = task.info.shader_uses.slot,
+                            .buffer = impl.staging_memory.get_buffer(),
+                            .size = constant_buffer_alloc.size,
+                            .offset = constant_buffer_alloc.buffer_offset,
+                        });
                     }
-                    impl_runtime.command_lists.back().set_constant_buffer({
-                        .slot = task.info.shader_uses.slot,
-                        .buffer = impl.staging_memory.get_buffer(),
-                        .size = constant_buffer_alloc.size,
-                        .offset = constant_buffer_alloc.buffer_offset,
-                    });
                     impl_runtime.current_task = &task;
                     impl_runtime.command_lists.back().begin_label({
                         .label_name = std::string("task ") + std::to_string(task_index) + std::string(" \"") + task.info.name + std::string("\""),
