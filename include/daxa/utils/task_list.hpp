@@ -23,6 +23,8 @@ namespace daxa
         auto get_images(TaskImageId const & task_resource_id) const -> std::span<ImageId>;
         auto get_image_views(TaskImageId const & task_resource_id) const -> std::span<ImageViewId>;
 
+        auto get_allocator() const -> TransferMemoryPool &;
+
         void add_runtime_buffer(TaskBufferId tid, BufferId id);
         void add_runtime_image(TaskImageId tid, ImageId id);
         void remove_runtime_buffer(TaskBufferId tid, BufferId id);
