@@ -1622,7 +1622,7 @@ namespace daxa
     thread_local std::vector<SplitBarrierWaitInfo> tl_split_barrier_wait_infos = {};
     thread_local std::vector<ImageBarrierInfo> tl_image_barrier_infos = {};
     thread_local std::vector<MemoryBarrierInfo> tl_memory_barrier_infos = {};
-    void insert_pipeline_barrier(CommandList & command_list, TaskBarrier & barrier, std::vector<daxa::GlobalTaskImageInfo> & execution_images)
+    void insert_pipeline_barrier(ImplTaskList const & impl, CommandList & command_list, TaskBarrier & barrier, std::vector<daxa::GlobalTaskImageInfo> & execution_images)
     {
         // Check if barrier is image barrier or normal barrier (see TaskBarrier struct comments).
         if (barrier.image_id.is_empty())
@@ -1634,8 +1634,17 @@ namespace daxa
         }
         else
         {
-            for (auto & image : execution_images[barrier.image_id.index].actual_images)
+            for (usize index = 0; index < execution_images[barrier.image_id.index].actual_images.size(); ++index)
             {
+                auto & image = execution_images[barrier.image_id.index].actual_images[index];
+                DAXA_DBG_ASSERT_TRUE_M(
+                    impl.info.device.is_id_valid(image),
+                    std::string("detected invalid runtime image id while inserting barriers: the runtime image id at index ") + 
+                    std::to_string(index) +
+                    std::string(" of task image \"") +
+                    impl.global_image_infos[barrier.image_id.index].info.name +
+                    std::string("\" is invalid")
+                );
                 command_list.pipeline_barrier_image_transition({
                     .awaited_pipeline_access = barrier.src_access,
                     .waiting_pipeline_access = barrier.dst_access,
@@ -1854,7 +1863,7 @@ namespace daxa
                 for (auto barrier_index : task_batch.pipeline_barrier_indices)
                 {
                     TaskBarrier & barrier = permutation.barriers[barrier_index];
-                    insert_pipeline_barrier(impl_runtime.command_lists.back(), barrier, impl.global_image_infos);
+                    insert_pipeline_barrier(impl, impl_runtime.command_lists.back(), barrier, impl.global_image_infos);
                 }
                 // Wait on split barriers before batch execution.
                 if (!impl.info.use_split_barriers)
@@ -1864,7 +1873,7 @@ namespace daxa
                         TaskSplitBarrier const & split_barrier = permutation.split_barriers[barrier_index];
                         // Convert split barrier to normal barrier.
                         TaskBarrier barrier = split_barrier;
-                        insert_pipeline_barrier(impl_runtime.command_lists.back(), barrier, impl.global_image_infos);
+                        insert_pipeline_barrier(impl, impl_runtime.command_lists.back(), barrier, impl.global_image_infos);
                     }
                 }
                 else
@@ -2022,7 +2031,7 @@ namespace daxa
             for (usize const barrier_index : submit_scope.last_minute_barrier_indices)
             {
                 TaskBarrier & barrier = permutation.barriers[barrier_index];
-                insert_pipeline_barrier(impl_runtime.command_lists.back(), barrier, impl.global_image_infos);
+                insert_pipeline_barrier(impl, impl_runtime.command_lists.back(), barrier, impl.global_image_infos);
             }
             if (impl.info.enable_command_labels)
             {
