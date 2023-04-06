@@ -358,28 +358,26 @@ namespace daxa
             std::string const & name = impl.info.device.info_image(actual_images[index]).name;
             DAXA_DBG_ASSERT_TRUE_M(
                 access_slice.base_mip_level + access_slice.level_count <= full_slice.base_mip_level + full_slice.level_count,
-                std::string("task image use slice mip levels (") + 
-                std::to_string(access_slice.base_mip_level) + 
-                std::string("-") +
-                std::to_string(access_slice.level_count) +
-                std::string(") exceed the runtime image (\"") + 
-                name +
-                std::string("\") mip level count (") +
-                std::to_string(full_slice.level_count) +
-                std::string("). Please make sure that no image use exceedes their runtime images dimensions!")
-            );
+                std::string("task image use slice mip levels (") +
+                    std::to_string(access_slice.base_mip_level) +
+                    std::string("-") +
+                    std::to_string(access_slice.level_count) +
+                    std::string(") exceed the runtime image (\"") +
+                    name +
+                    std::string("\") mip level count (") +
+                    std::to_string(full_slice.level_count) +
+                    std::string("). Please make sure that no image use exceedes their runtime images dimensions!"));
             DAXA_DBG_ASSERT_TRUE_M(
                 access_slice.base_array_layer + access_slice.layer_count <= full_slice.base_array_layer + full_slice.layer_count,
-                std::string("task image use slice array layers (") + 
-                std::to_string(access_slice.base_array_layer) + 
-                std::string("-") +
-                std::to_string(access_slice.layer_count) +
-                std::string(") exceed the runtime image (\"") + 
-                name +
-                std::string("\") array layer count (") +
-                std::to_string(full_slice.layer_count) +
-                std::string("). Please make sure that no image use exceedes their runtime images dimensions!")
-            );
+                std::string("task image use slice array layers (") +
+                    std::to_string(access_slice.base_array_layer) +
+                    std::string("-") +
+                    std::to_string(access_slice.layer_count) +
+                    std::string(") exceed the runtime image (\"") +
+                    name +
+                    std::string("\") array layer count (") +
+                    std::to_string(full_slice.layer_count) +
+                    std::string("). Please make sure that no image use exceedes their runtime images dimensions!"));
         }
     }
 
@@ -415,7 +413,7 @@ namespace daxa
                 {
                     ImageId parent = actual_images[index];
                     ImageInfo parent_info = info.device.info_image(parent);
-                    
+
                     ImageViewInfo view_info = info.device.info_image_view(parent.default_view());
                     if (image_use.view_type.has_value())
                     {
@@ -426,6 +424,61 @@ namespace daxa
                 }
             }
         }
+    }
+
+    void validate_runtime_resources(ImplTaskList const & impl, Task const & task)
+    {
+#if DAXA_VALIDATION
+        std::string dbg_message_begin = std::string("detected invalid runtime id(s) while trying to execute task \"") +
+                                        task.info.name +
+                                        std::string("\", ");
+        for (usize use_index = 0; use_index < task.info.used_buffers.size(); ++use_index)
+        {
+            auto const & buffer_use = task.info.used_buffers[use_index];
+            std::string dbg_message_continuation = std::string("buffer use index ") +
+                                                                    std::to_string(use_index) +
+                                                                    std::string(", task buffer name \"") +
+                                                                    impl.global_buffer_infos[buffer_use.id.index].info.name +
+                                                                    std::string("\": ");
+            // Use ids are all valid. They are checked on task insertion.
+            auto const & runtime_buffers = impl.global_buffer_infos[buffer_use.id.index].actual_buffers;
+            DAXA_DBG_ASSERT_TRUE_M(
+                runtime_buffers.size() > 0,
+                dbg_message_begin + dbg_message_continuation + "task buffer has 0 runtime buffers"
+            );
+            for (usize buffer_index = 0; buffer_index < runtime_buffers.size(); ++buffer_index)
+            {
+                DAXA_DBG_ASSERT_TRUE_M(
+                    impl.info.device.is_id_valid(runtime_buffers[buffer_index]),
+                    dbg_message_begin + dbg_message_continuation + 
+                    std::string("invalid buffer index ") + 
+                    std::to_string(buffer_index));
+            }
+        }
+        for (usize use_index = 0; use_index < task.info.used_images.size(); ++use_index)
+        {
+            auto const & image_use = task.info.used_images[use_index];
+            std::string dbg_message_continuation = std::string("image use index ") +
+                                                                    std::to_string(use_index) +
+                                                                    std::string(", task image name \"") +
+                                                                    impl.global_image_infos[image_use.id.index].info.name +
+                                                                    std::string("\": ");
+            // Use ids are all valid. They are checked on task insertion.
+            auto const & runtime_images = impl.global_image_infos[image_use.id.index].actual_images;
+            DAXA_DBG_ASSERT_TRUE_M(
+                runtime_images.size() > 0,
+                dbg_message_begin + dbg_message_continuation + "task image has 0 runtime images"
+            );
+            for (usize image_index = 0; image_index < runtime_images.size(); ++image_index)
+            {
+                DAXA_DBG_ASSERT_TRUE_M(
+                    impl.info.device.is_id_valid(runtime_images[image_index]),
+                    dbg_message_begin + dbg_message_continuation + 
+                    std::string("invalid buffer index ") + 
+                    std::to_string(image_index));
+            }
+        }
+#endif // #if DAXA_VALIDATION
     }
 
     void TaskList::conditional(TaskListConditionalInfo const & conditional_info)
@@ -896,7 +949,7 @@ namespace daxa
     // Reuse for rewrite.
     void validate_task_aliases(ImplTaskList & impl, TaskInfo const & info)
     {
-        #if DAXA_VALIDATION
+#if DAXA_VALIDATION
         for (TaskBufferAliasInfo const & buffer_alias : info.shader_uses_buffer_aliases)
         {
             // Check if the aliased buffer is valid:
@@ -905,8 +958,8 @@ namespace daxa
             {
                 DAXA_DBG_ASSERT_TRUE_M(
                     !buffer_id->is_empty() &&
-                    buffer_id->index < impl.global_buffer_infos.size()
-                    , "attempted to alias an invalid buffer id");
+                        buffer_id->index < impl.global_buffer_infos.size(),
+                    "attempted to alias an invalid buffer id");
                 aliased_buffer_name = impl.global_buffer_infos[buffer_id->index].info.name;
             }
             else
@@ -915,15 +968,15 @@ namespace daxa
                 DAXA_DBG_ASSERT_TRUE_M(
                     impl.buffer_name_to_id.contains(aliased_buffer_name),
                     std::string("attempted to alias non existent buffer \"") +
-                    aliased_buffer_name +
-                    std::string("\"")
-                );
+                        aliased_buffer_name +
+                        std::string("\""));
             }
             // Check if the alias is present in the shader uses.
             auto iter = std::find_if(
                 info.shader_uses.list.begin(),
                 info.shader_uses.list.end(),
-                [&](auto const & shader_use) {
+                [&](auto const & shader_use)
+                {
                     if (ShaderTaskBufferUse const * buffer_use = std::get_if<ShaderTaskBufferUse>(&shader_use))
                     {
                         return buffer_use->name == buffer_alias.alias;
@@ -932,10 +985,9 @@ namespace daxa
                 });
             DAXA_DBG_ASSERT_TRUE_M(
                 iter != info.shader_uses.list.end(),
-                std::string("alias \"") + 
-                buffer_alias.alias +
-                std::string("\" does not match the name of any declared shader buffer use. Check if the spelling is correct in alias and shader use.")
-            );
+                std::string("alias \"") +
+                    buffer_alias.alias +
+                    std::string("\" does not match the name of any declared shader buffer use. Check if the spelling is correct in alias and shader use."));
         }
         for (TaskImageAliasInfo const & image_alias : info.shader_uses_image_aliases)
         {
@@ -945,8 +997,8 @@ namespace daxa
             {
                 DAXA_DBG_ASSERT_TRUE_M(
                     !image_id->is_empty() &&
-                    image_id->index < impl.global_image_infos.size()
-                    , "attempted to alias an invalid image id");
+                        image_id->index < impl.global_image_infos.size(),
+                    "attempted to alias an invalid image id");
                 aliased_image_name = impl.global_image_infos[image_id->index].info.name;
             }
             else
@@ -955,15 +1007,15 @@ namespace daxa
                 DAXA_DBG_ASSERT_TRUE_M(
                     impl.image_name_to_id.contains(aliased_image_name),
                     std::string("attempted to alias non existent image \"") +
-                    aliased_image_name +
-                    std::string("\"")
-                );
+                        aliased_image_name +
+                        std::string("\""));
             }
             // Check if the alias is present in the shader uses.
             auto iter = std::find_if(
                 info.shader_uses.list.begin(),
                 info.shader_uses.list.end(),
-                [&](auto const & shader_use) {
+                [&](auto const & shader_use)
+                {
                     if (ShaderTaskImageUse const * image_use = std::get_if<ShaderTaskImageUse>(&shader_use))
                     {
                         return image_use->name == image_alias.alias;
@@ -972,12 +1024,11 @@ namespace daxa
                 });
             DAXA_DBG_ASSERT_TRUE_M(
                 iter != info.shader_uses.list.end(),
-                std::string("alias \"") + 
-                image_alias.alias +
-                std::string("\" does not fit the name of any declared shader image use. Check if the spelling is correct in alias and shader use.")
-            );
+                std::string("alias \"") +
+                    image_alias.alias +
+                    std::string("\" does not fit the name of any declared shader image use. Check if the spelling is correct in alias and shader use."));
         }
-        #endif // #if DAXA_VALIDATION
+#endif // #if DAXA_VALIDATION
     }
 
     using ShaderUseIdOffsetTable = std::vector<std::variant<std::pair<TaskImageId, usize>, std::pair<TaskBufferId, usize>, std::monostate>>;
@@ -1001,7 +1052,7 @@ namespace daxa
                 bool const found_alias = iter != info.shader_uses_buffer_aliases.end();
                 if (found_alias)
                 {
-                    if (TaskBufferId const* alias_id = std::get_if<TaskBufferId>(&iter->aliased_buffer))
+                    if (TaskBufferId const * alias_id = std::get_if<TaskBufferId>(&iter->aliased_buffer))
                     {
                         id = *alias_id;
                     }
@@ -1033,11 +1084,11 @@ namespace daxa
                         {
                             return alias.alias == shader_image_use->name;
                         });
-                    if (TaskImageId* id = std::get_if<TaskImageId>(&iter->aliased_image))
+                    if (TaskImageId * id = std::get_if<TaskImageId>(&iter->aliased_image))
                     {
                         used_image_id = *id;
                     }
-                    else if (std::string* name = std::get_if<std::string>(&iter->aliased_image))
+                    else if (std::string * name = std::get_if<std::string>(&iter->aliased_image))
                     {
                         used_image_id = impl.image_name_to_id.at(*name);
                     }
@@ -1064,15 +1115,13 @@ namespace daxa
         {
             DAXA_DBG_ASSERT_TRUE_M(
                 !buffer_use.id.is_empty(),
-                "invalid buffer id in declared buffer use"
-            );
+                "invalid buffer id in declared buffer use");
         }
         for (auto const & image_use : info.used_images)
         {
             DAXA_DBG_ASSERT_TRUE_M(
                 !image_use.id.is_empty(),
-                "invalid image id in declared image use"
-            );
+                "invalid image id in declared image use");
         }
     }
 
@@ -1884,6 +1933,7 @@ namespace daxa
                     // When the get command list function is called in a task this is set to false.
                     impl_runtime.reuse_last_command_list = true;
                     Task & task = permutation.tasks[task_id];
+                    validate_runtime_resources(impl, task);
                     impl.update_image_view_cache(task);
                     auto constant_buffer_alloc = impl.staging_memory.allocate(task.info.shader_uses.size).value();
                     u8 * host_constant_buffer_ptr = reinterpret_cast<u8 *>(constant_buffer_alloc.host_address);

@@ -301,6 +301,14 @@ namespace daxa
         auto const & impl = *as<ImplDevice>();
         return !id.is_empty() && impl.gpu_shader_resource_table.image_slots.is_id_valid(id);
     }
+    
+    auto Device::is_id_valid(ImageViewId id) const -> bool
+    {
+        auto const & impl = *as<ImplDevice>();
+        bool const slot_valid = !id.is_empty() && impl.gpu_shader_resource_table.image_slots.is_id_valid(id);
+        bool const parent_valid = is_id_valid(impl.slot(id).info.image);
+        return slot_valid && parent_valid;
+    }
 
     auto Device::is_id_valid(BufferId id) const -> bool
     {
