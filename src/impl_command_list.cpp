@@ -281,6 +281,7 @@ namespace daxa
         auto & impl = *as<ImplCommandList>();
         auto & impl_device = *impl.impl_device.as<ImplDevice>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
+        DAXA_DBG_ASSERT_TRUE_M(info.size > 0, "the set constant buffer range must be greater then 0");
         const usize buffer_size = impl_device.slot(info.buffer).info.size;
         [[maybe_unused]] const bool binding_in_range = info.size + info.offset <= buffer_size;
         DAXA_DBG_ASSERT_TRUE_M(binding_in_range, "The given offset and size of the buffer binding is outside of the bounds of the given buffer");
