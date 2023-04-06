@@ -431,6 +431,8 @@ namespace daxa
         PVRTC2_2BPP_SRGB_BLOCK_IMG = 1000054006,
         PVRTC2_4BPP_SRGB_BLOCK_IMG = 1000054007,
     };
+    
+    auto to_string(Format format) -> std::string_view;
 
     template <typename Properties>
     struct Flags final
