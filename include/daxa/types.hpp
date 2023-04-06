@@ -233,17 +233,15 @@ namespace daxa
             ShaderAlignedType<detail::GenericVector<SCALAR, DIM>>(Args&& ... args) : detail::GenericVector<SCALAR, DIM>{args...} {}
             template<typename ... Args>
             ShaderAlignedType<detail::GenericVector<SCALAR, DIM>> operator=(Args&& ... args) { detail::GenericVector<SCALAR, DIM>::operator=(args...); return *this; }
-
         };
         template <typename SCALAR, usize DIM0, usize DIM1>
         struct alignas(sizeof(SCALAR)) ShaderAlignedType<detail::GenericMatrix<SCALAR, DIM0, DIM1>> : public detail::GenericMatrix<SCALAR, DIM0, DIM1>
         {
             ShaderAlignedType<detail::GenericMatrix<SCALAR, DIM0, DIM1>>() = default;
             template<typename ... Args>
-            ShaderAlignedType<detail::GenericMatrix<SCALAR, DIM0, DIM1>>(Args&& ... args) : GenericMatrix<SCALAR, DIM0, DIM1>{static_cast<SCALAR>(args)...} {}
+            ShaderAlignedType<detail::GenericMatrix<SCALAR, DIM0, DIM1>>(Args&& ... args) : detail::GenericMatrix<SCALAR, DIM0, DIM1>{args...} {}
             template<typename ... Args>
-            requires (std::is_convertible_v<Args,SCALAR> && ...)
-            ShaderAlignedType<detail::GenericMatrix<SCALAR, DIM0, DIM1>> operator=(Args&& ... args) { GenericMatrix<SCALAR, DIM0, DIM1>::operator=(args...); return *this; }
+            ShaderAlignedType<detail::GenericMatrix<SCALAR, DIM0, DIM1>> operator=(Args&& ... args) { detail::GenericMatrix<SCALAR, DIM0, DIM1>::operator=(args...); return *this; }
         };
 
         template <typename T>
