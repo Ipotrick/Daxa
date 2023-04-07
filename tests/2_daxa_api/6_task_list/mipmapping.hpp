@@ -82,7 +82,11 @@ namespace tests
                 .size = sizeof(MipmappingGpuInput),
                 .name = APPNAME_PREFIX("mipmapping_gpu_input_buffer"),
             });
-            daxa::TaskBufferId task_mipmapping_gpu_input_buffer;
+            std::array<BufferId, 1> execution_buffers{mipmapping_gpu_input_buffer};
+            daxa::PersistentTaskBuffer task_mipmapping_gpu_input_buffer{daxa::TaskBufferInfo{
+                .execution_buffers = {execution_buffers.data(), execution_buffers.size()},
+                .name = "task_mipmapping_gpu_input_buffer",
+            }};
             daxa::TaskBufferId task_staging_mipmapping_gpu_input_buffer;
 
             bool mouse_drawing = false;
@@ -442,20 +446,18 @@ namespace tests
                 });
                 new_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
                 task_render_image = new_task_list.create_task_image({
-                    .execution_persistent = true,
                     .name = APPNAME_PREFIX("Task Render Image"),
                 });
                 new_task_list.add_runtime_image(task_render_image, render_image);
-                task_mipmapping_gpu_input_buffer = new_task_list.create_task_buffer({});
-                new_task_list.add_runtime_buffer(task_mipmapping_gpu_input_buffer, mipmapping_gpu_input_buffer);
+                new_task_list.use_persistent_buffer(task_mipmapping_gpu_input_buffer);
                 new_task_list.add_task({
                     .used_buffers = {
-                        {task_mipmapping_gpu_input_buffer, daxa::TaskBufferAccess::HOST_TRANSFER_WRITE},
+                        {task_mipmapping_gpu_input_buffer.id(), daxa::TaskBufferAccess::HOST_TRANSFER_WRITE},
                     },
                     .task = [this](daxa::TaskRuntimeInterface runtime)
                     {
                         auto cmd_list = runtime.get_command_list();
-                        auto input_buffer = runtime.get_buffers(task_mipmapping_gpu_input_buffer)[0];
+                        auto input_buffer = runtime.get_buffers(task_mipmapping_gpu_input_buffer.id())[0];
                         update_gpu_input(cmd_list, input_buffer);
                     },
                     .name = APPNAME_PREFIX("Input Transfer"),
@@ -466,7 +468,7 @@ namespace tests
                     {
                         new_task_list.add_task(daxa::TaskInfo{
                             .used_buffers = {
-                                {task_mipmapping_gpu_input_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY},
+                                {task_mipmapping_gpu_input_buffer.id(), daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY},
                             },
                             .used_images = {
                                 {task_render_image, daxa::TaskImageAccess::COMPUTE_SHADER_READ_WRITE, daxa::ImageMipArraySlice{}},
@@ -475,7 +477,7 @@ namespace tests
                             {
                                 auto cmd_list = runtime.get_command_list();
                                 auto render_target_id = runtime.get_images(task_render_image)[0];
-                                auto input_buffer = runtime.get_buffers(task_mipmapping_gpu_input_buffer)[0];
+                                auto input_buffer = runtime.get_buffers(task_mipmapping_gpu_input_buffer.id())[0];
                                 paint(cmd_list, render_target_id, input_buffer);
                             },
                             .name = "mouse paint",
