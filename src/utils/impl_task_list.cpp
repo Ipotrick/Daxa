@@ -221,7 +221,7 @@ namespace daxa
     {
         auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
         TaskBufferId const local_index = impl.task_list.translate_persistent_id(task_resource_id);
-        auto actual_buffers = impl.task_list.global_buffer_infos[local_index.index].get_actual_buffers();
+        auto & actual_buffers = impl.task_list.global_buffer_infos[local_index.index].get_actual_buffers();
         DAXA_DBG_ASSERT_TRUE_M(actual_buffers.size() > 0, "task buffer must be backed by execution buffer(s)!");
         return actual_buffers;
     }
