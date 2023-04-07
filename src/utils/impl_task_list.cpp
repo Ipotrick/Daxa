@@ -220,7 +220,8 @@ namespace daxa
     auto TaskRuntimeInterface::get_buffers(TaskBufferId const & task_resource_id) const -> std::span<BufferId>
     {
         auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
-        auto actual_buffers = impl.task_list.global_buffer_infos[task_resource_id.index].get_actual_buffers();
+        TaskBufferId const local_index = impl.task_list.translate_persistent_id(task_resource_id);
+        auto actual_buffers = impl.task_list.global_buffer_infos[local_index.index].get_actual_buffers();
         DAXA_DBG_ASSERT_TRUE_M(actual_buffers.size() > 0, "task buffer must be backed by execution buffer(s)!");
         return actual_buffers;
     }
@@ -265,7 +266,9 @@ namespace daxa
     {
     }
     ImplPersistentTaskBuffer::ImplPersistentTaskBuffer(TaskBufferInfo info)
-        : info{info}, unique_index{ImplPersistentTaskBuffer::exec_unique_next_index++}
+        : info{info}
+        , actual_buffers{info.execution_buffers.begin(), info.execution_buffers.end()}
+        , unique_index{ImplPersistentTaskBuffer::exec_unique_next_index++}
     {
     }
     ImplPersistentTaskBuffer::~ImplPersistentTaskBuffer() = default;
