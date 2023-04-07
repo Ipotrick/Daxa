@@ -183,7 +183,7 @@ auto main() -> int
     // synchronization for them.
 
     // The first we'll make is the swapchain image task resource
-    auto task_swapchain_image = loop_task_list.create_task_image({.swapchain_image = true, .name = "my task swapchain image"});
+    auto task_swapchain_image = loop_task_list.create_transient_task_image({.swapchain_image = true, .name = "my task swapchain image"});
 
     // We'll also declare a swapchain image, since we're going to be
     // adding and removing it from being tracked by the TaskList.

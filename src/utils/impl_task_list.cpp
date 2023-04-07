@@ -332,6 +332,79 @@ namespace daxa
             impl.actual_buffers.erase(iter);
         }
     }
+    
+    ImplPersistentTaskImage::ImplPersistentTaskImage(TaskImageInfo a_info)
+    {
+
+    }
+
+    ImplPersistentTaskImage::~ImplPersistentTaskImage()
+    {
+
+    }
+
+    PersistentTaskImage::operator TaskImageId() const
+    {
+        return id();
+    }
+
+
+    auto PersistentTaskImage::id() const -> TaskImageId
+    {
+        auto & impl = *this->as<ImplPersistentTaskImage>();
+        return TaskImageId{{.index = (1ull << 63) | impl.unique_index}};
+    }
+
+    auto PersistentTaskImage::info() const -> TaskImageInfo const &
+    {
+        auto & impl = *this->as<ImplPersistentTaskImage>();
+        return impl.info;
+    }
+
+
+    auto PersistentTaskImage::get_image(usize index) -> ImageId &
+    {
+        auto & impl = *this->as<ImplPersistentTaskImage>();
+        return impl.actual_images.at(index);
+    }
+
+    auto PersistentTaskImage::get_image_count() const -> usize
+    {
+        auto & impl = *this->as<ImplPersistentTaskImage>();
+        return impl.actual_images.size();
+    }
+
+    void PersistentTaskImage::add_image(ImageId id)
+    {
+        auto & impl = *this->as<ImplPersistentTaskImage>();
+        return impl.actual_images.push_back(id);
+    }
+
+    void PersistentTaskImage::clear_images()
+    {
+        auto & impl = *this->as<ImplPersistentTaskImage>();
+        impl.actual_images.clear();
+    }
+
+    void PersistentTaskImage::remove_image(ImageId id)
+    {
+        auto & impl = *this->as<ImplPersistentTaskImage>();
+        auto iter = std::find_if(
+            impl.actual_images.begin(),
+            impl.actual_images.end(),
+            [&](auto compare_id)
+            {
+                return id == compare_id;
+            });
+        DAXA_DBG_ASSERT_TRUE_M(
+            iter != impl.actual_images.end(),
+            "persistent task image does not contain given image id");
+        if (iter != impl.actual_images.end())
+        {
+            impl.actual_images.erase(iter);
+        }
+    }
+
 
     TaskList::TaskList(TaskListInfo const & info)
         : ManagedPtr{new ImplTaskList(info)}
@@ -364,7 +437,7 @@ namespace daxa
             .info = buffer.info(),
             .task_buffer_data = PermIndepTaskBufferInfo::Persistent{ManagedWeakPtr{buffer.object}},
         });
-        impl.persistent_index_to_local_index[buffer.id().index] = task_buffer_id.index;
+        impl.persistent_buffer_index_to_local_index[buffer.id().index] = task_buffer_id.index;
         impl.buffer_name_to_id[buffer.info().name] = task_buffer_id;
         return task_buffer_id;
     }
@@ -395,7 +468,7 @@ namespace daxa
         return task_buffer_id;
     }
 
-    auto TaskList::create_task_image(TaskImageInfo const & info) -> TaskImageId
+    auto TaskList::create_transient_task_image(TaskImageInfo const & info) -> TaskImageId
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can not record to completed command list");
@@ -449,13 +522,32 @@ namespace daxa
         if (id.is_persistent())
         {
             DAXA_DBG_ASSERT_TRUE_M(
-                persistent_index_to_local_index.contains(id.index),
-                std::string("detected invalid persistent access of task buffer id ") +
-                    std::to_string(id.index) +
+                persistent_buffer_index_to_local_index.contains(id.index),
+                std::string("detected invalid access of persistent task buffer id ") +
+                    std::to_string(id.index & ~(1ull << 63)) +
                     std::string(" in tasklist \"") +
                     info.name +
-                    std::string("\". Please make sure to declare persistent resource use to each task list with the function use_persistent_resource()!"));
-            return TaskBufferId{{.index = persistent_index_to_local_index.at(id.index)}};
+                    std::string("\". Please make sure to declare persistent resource use to each task list that uses this buffer with the function use_persistent_buffer!"));
+            return TaskBufferId{{.index = persistent_buffer_index_to_local_index.at(id.index)}};
+        }
+        else
+        {
+            return id;
+        }
+    }
+
+    auto ImplTaskList::translate_persistent_id(TaskImageId id) const -> TaskImageId
+    {
+        if (id.is_persistent())
+        {
+            DAXA_DBG_ASSERT_TRUE_M(
+                persistent_image_index_to_local_index.contains(id.index),
+                std::string("detected invalid access of persistent task buffer id ") +
+                    std::to_string(id.index & ~(1ull << 63)) +
+                    std::string(" in tasklist \"") +
+                    info.name +
+                    std::string("\". Please make sure to declare persistent resource use to each task list that uses this image with the function use_persistent_image!"));
+            return TaskImageId{{.index = persistent_image_index_to_local_index.at(id.index)}};
         }
         else
         {
