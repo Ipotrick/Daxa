@@ -39,7 +39,7 @@ namespace daxa
         std::variant<std::monostate, LastReadSplitBarrierIndex, LastReadBarrierIndex> latest_access_read_barrier_index = std::monostate{};
     };
 
-    struct GlobalTaskBufferInfos
+    struct ImplPersistentTaskBuffer final : ManagedSharedState
     {
         TaskBufferInfo info = {};
         // One task buffer can back multiple buffers.
@@ -47,6 +47,52 @@ namespace daxa
         // We store execution time information about the previous executions final resource states.
         // This is important, as with conditional execution and temporal resources we need to store this infomation to form correct state transitions.
         std::optional<Access> previous_execution_last_access = {};
+        
+        // Used to allocate id - because all persistent resources have unique id we need a single point 
+        // from which they are generated
+        static inline std::atomic_uint64_t exec_unique_next_index = 1;
+        usize unique_index = std::numeric_limits<u64>::max();
+
+        ImplPersistentTaskBuffer(TaskBufferInfo a_info);
+        virtual ~ImplPersistentTaskBuffer() override final;
+    };
+
+    struct PermIndepTaskBufferInfo
+    {
+        TaskBufferInfo info = {};
+        struct Persistent
+        {
+            ManagedWeakPtr buffer = {};
+            auto get() -> ImplPersistentTaskBuffer &
+            {
+                return *buffer.as<ImplPersistentTaskBuffer>();
+            }
+        };
+        struct Transient
+        {
+            std::vector<BufferId> actual_buffers = {};
+        };
+        std::variant<Persistent, Transient> task_buffer_data = {};
+
+        inline auto get_actual_buffers() -> std::vector<BufferId> &
+        {
+            if(std::holds_alternative<Persistent>(task_buffer_data))
+            {
+                return std::get<Persistent>(task_buffer_data).buffer.as<ImplPersistentTaskBuffer>()->actual_buffers;
+            } else {
+                return std::get<Transient>(task_buffer_data).actual_buffers; 
+            }
+        }
+        
+        inline auto get_actual_buffers() const -> const std::vector<BufferId> &
+        {
+            if(std::holds_alternative<Persistent>(task_buffer_data))
+            {
+                return std::get<Persistent>(task_buffer_data).buffer.as<ImplPersistentTaskBuffer>()->actual_buffers;
+            } else {
+                return std::get<Transient>(task_buffer_data).actual_buffers; 
+            }
+        }
     };
 
     struct TaskBarrier
@@ -98,11 +144,13 @@ namespace daxa
         std::optional<std::vector<ExtendedImageSliceState>> previous_execution_last_slices = {};
     };
 
+    using ShaderUseIdToOffsetTable = std::vector<std::variant<std::pair<TaskImageId, usize>, std::pair<TaskBufferId, usize>, std::monostate>>;
+
     struct Task
     {
         TaskInfo info = {};
         std::vector<std::vector<ImageViewId>> image_view_cache = {};
-        std::vector<std::variant<std::pair<TaskImageId, usize>, std::pair<TaskBufferId, usize>, std::monostate>> id_to_offset = {}; 
+        ShaderUseIdToOffsetTable id_to_offset = {}; 
     };
 
     struct CreateTaskBufferTask
@@ -167,7 +215,7 @@ namespace daxa
         usize swapchain_image_first_use_submit_scope_index = std::numeric_limits<usize>::max();
         usize swapchain_image_last_use_submit_scope_index = std::numeric_limits<usize>::max();
 
-        void add_task(ImplTaskList & task_list_impl, TaskInfo const & info);
+        void add_task(ImplTaskList & task_list_impl, TaskInfo const & info, ShaderUseIdToOffsetTable const & shader_id_use_to_offset_table);
         void submit(TaskSubmitInfo const & info);
         void present(TaskPresentInfo const & info);
     };
@@ -175,10 +223,11 @@ namespace daxa
     struct ImplTaskList final : ManagedSharedState
     {
         TaskListInfo info;
-        std::vector<GlobalTaskBufferInfos> global_buffer_infos = {};
+        std::vector<PermIndepTaskBufferInfo> global_buffer_infos = {};
         std::vector<GlobalTaskImageInfo> global_image_infos = {};
         std::vector<TaskListCondition> conditions = {};
         std::vector<TaskListPermutation> permutations = {};
+        std::unordered_map<usize, usize> persistent_index_to_local_index;
 
         // record time information:
         u32 record_active_conditional_scopes = {};
@@ -201,6 +250,7 @@ namespace daxa
         u32 prev_frame_permutation_index = {};
         std::stringstream debug_string_stream = {};
 
+        auto translate_persistent_id(TaskBufferId id) const -> TaskBufferId;
         void update_active_permutations();
         void update_image_view_cache(Task & task);
 

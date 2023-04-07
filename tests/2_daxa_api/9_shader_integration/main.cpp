@@ -120,11 +120,11 @@ namespace tests
             .name = "shader integration test - alignment",
         });
 
-        auto src = task_list.create_task_buffer({
+        auto src = task_list.create_transient_task_buffer({
             .name = "align_test_src", // This name MUST be identical to the name used in the shader.
         });
         task_list.add_runtime_buffer(src, src_buffer);
-        auto dst = task_list.create_task_buffer({
+        auto dst = task_list.create_transient_task_buffer({
             .name = "align_test_dst", // This name MUST be identical to the name used in the shader.
         });
         task_list.add_runtime_buffer(dst, dst_buffer);

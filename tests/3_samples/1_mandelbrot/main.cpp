@@ -145,7 +145,7 @@ struct App : BaseApp<App>
     {
         task_render_image = new_task_list.create_task_image({.name = APPNAME_PREFIX("task_render_image")});
         new_task_list.add_runtime_image(task_render_image, render_image);
-        task_gpu_input_buffer = new_task_list.create_task_buffer({.name = APPNAME_PREFIX("task_gpu_input_buffer")});
+        task_gpu_input_buffer = new_task_list.create_transient_task_buffer({.name = APPNAME_PREFIX("task_gpu_input_buffer")});
         new_task_list.add_runtime_buffer(task_gpu_input_buffer, gpu_input_buffer);
 
         new_task_list.add_task({

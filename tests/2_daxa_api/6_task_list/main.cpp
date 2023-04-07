@@ -154,7 +154,7 @@ namespace tests
             .name = APPNAME_PREFIX("create-transfer-read buffer"),
         });
         // CREATE IMAGE
-        auto task_buffer = task_list.create_task_buffer({
+        auto task_buffer = task_list.create_transient_task_buffer({
             .pre_task_list_slice_states = daxa::AccessConsts::NONE,
             .name = "task list tested buffer",
         });
@@ -407,7 +407,7 @@ namespace tests
         });
         task_list.add_runtime_image(task_image, image);
 
-        auto task_buffer = task_list.create_task_buffer({
+        auto task_buffer = task_list.create_transient_task_buffer({
             .name = "settings", // This name MUST be identical to the name used in the shader.
         });
         task_list.add_runtime_buffer(task_buffer, buffer);
@@ -446,15 +446,15 @@ namespace tests
             .name = APPNAME_PREFIX("task_list (output_graph)"),
         });
 
-        auto task_buffer1 = task_list.create_task_buffer({
+        auto task_buffer1 = task_list.create_transient_task_buffer({
             .pre_task_list_slice_states = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
             .name = APPNAME_PREFIX("task_buffer1"),
         });
-        auto task_buffer2 = task_list.create_task_buffer({
+        auto task_buffer2 = task_list.create_transient_task_buffer({
             .pre_task_list_slice_states = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
             .name = APPNAME_PREFIX("task_buffer2"),
         });
-        auto task_buffer3 = task_list.create_task_buffer({
+        auto task_buffer3 = task_list.create_transient_task_buffer({
             .pre_task_list_slice_states = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
             .name = APPNAME_PREFIX("task_buffer3"),
         });
@@ -844,11 +844,11 @@ namespace tests
 
                 t_swapchain_image = new_task_list.create_task_image({.swapchain_image = true, .name = "swapchain image"});
 
-                t_buffer = new_task_list.create_task_buffer({.name = "conditional upload buffer"});
+                t_buffer = new_task_list.create_transient_task_buffer({.name = "conditional upload buffer"});
                 buffer = device.create_buffer({.size = sizeof(ConditionalUploadStruct), .name = "t conditional upload data"});
                 new_task_list.add_runtime_buffer(t_buffer, buffer);
 
-                t_vertex_buffer = new_task_list.create_task_buffer({.name = "vertex buffer"});
+                t_vertex_buffer = new_task_list.create_transient_task_buffer({.name = "vertex buffer"});
                 vertex_buffer = device.create_buffer({.size = sizeof(DrawVertex) * 6, .name = "t vertex buffer"});
                 new_task_list.add_runtime_buffer(t_vertex_buffer, vertex_buffer);
 
@@ -1053,6 +1053,6 @@ auto main() -> int
     // tests::create_transfer_read_buffer();
     // tests::initial_layout_access();
     // tests::tracked_slice_barrier_collapsing();
-    tests::shader_integration_inl_use();
-    // tests::mipmapping();
+    // tests::shader_integration_inl_use();
+    tests::mipmapping();
 }
