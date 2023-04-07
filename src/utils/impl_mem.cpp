@@ -9,12 +9,12 @@ namespace daxa
         : info{std::move(a_info)},
           gpu_timeline{this->info.device.create_timeline_semaphore({
               .initial_value = {},
-              .name = this->info.name + ": timeline semaphore",
+              .name = std::string("TransferMemoryPool") + this->info.name,
           })},
           buffer{this->info.device.create_buffer({
               .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
               .size = this->info.capacity,
-              .name = this->info.name + ": buffer",
+              .name = std::string("TransferMemoryPool") + this->info.name,
           })},
           buffer_device_address{this->info.device.get_device_address(this->buffer)},
           buffer_host_address{this->info.device.get_host_address(this->buffer)}

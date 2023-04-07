@@ -179,6 +179,77 @@ namespace daxa
         using u32mat4x2 = detail::GenericMatrix<u32, 4, 2>;
         using u32mat4x3 = detail::GenericMatrix<u32, 4, 3>;
         using u32mat4x4 = detail::GenericMatrix<u32, 4, 4>;
+
+        template <typename T>
+        struct scalar_type
+        {
+            using type = T;
+        };
+
+        template <typename T>
+        using scalar_type_t = typename scalar_type<T>::type;
+        template <typename SCALAR, usize DIM0, usize DIM1>
+        struct scalar_type<detail::GenericMatrix<SCALAR, DIM0, DIM1>>
+        {
+            using type = SCALAR;
+        };
+        template <typename SCALAR, usize DIM>
+        struct scalar_type<detail::GenericVector<SCALAR, DIM>>
+        {
+            using type = SCALAR;
+        };
+
+        template <typename T>
+        struct alignas(sizeof(scalar_type_t<T>)) ShaderAlignedType
+        {
+            T value = T{};
+            ShaderAlignedType() = default;
+            template<typename ANY_SCALAR>
+            requires (std::is_convertible_v<ANY_SCALAR, scalar_type_t<T>>)
+            ShaderAlignedType(ANY_SCALAR const & v) : value{static_cast<scalar_type_t<T>>(v)} {}
+            operator T &()
+            {
+                return value;
+            }
+            operator T const &() const
+            {
+                return value;
+            }
+            auto operator &() -> T*
+            {
+                return &value;
+            }
+            auto operator &() const -> T const*
+            {
+                return &value;
+            }
+        };
+
+        template <typename SCALAR, usize DIM>
+        struct alignas(sizeof(SCALAR)) ShaderAlignedType<detail::GenericVector<SCALAR, DIM>> : public detail::GenericVector<SCALAR, DIM>
+        {
+            ShaderAlignedType<detail::GenericVector<SCALAR, DIM>>() = default;
+            template<typename ... Args>
+            ShaderAlignedType<detail::GenericVector<SCALAR, DIM>>(Args&& ... args) : detail::GenericVector<SCALAR, DIM>{args...} {}
+            template<typename ... Args>
+            ShaderAlignedType<detail::GenericVector<SCALAR, DIM>> operator=(Args&& ... args) { detail::GenericVector<SCALAR, DIM>::operator=(args...); return *this; }
+        };
+        
+        template <typename SCALAR, usize DIM0, usize DIM1>
+        struct alignas(sizeof(SCALAR)) ShaderAlignedType<detail::GenericMatrix<SCALAR, DIM0, DIM1>> : public detail::GenericMatrix<SCALAR, DIM0, DIM1>
+        {
+            ShaderAlignedType<detail::GenericMatrix<SCALAR, DIM0, DIM1>>() = default;
+            template<typename ... Args>
+            ShaderAlignedType<detail::GenericMatrix<SCALAR, DIM0, DIM1>>(Args&& ... args) : detail::GenericMatrix<SCALAR, DIM0, DIM1>{args...} {}
+            template<typename ... Args>
+            ShaderAlignedType<detail::GenericMatrix<SCALAR, DIM0, DIM1>> operator=(Args&& ... args) { detail::GenericMatrix<SCALAR, DIM0, DIM1>::operator=(args...); return *this; }
+        };
+
+        template <typename T>
+        struct scalar_type<ShaderAlignedType<T>>
+        {
+            using type = scalar_type_t<T>;
+        };
     } // namespace types
 
     enum struct Format
@@ -431,6 +502,8 @@ namespace daxa
         PVRTC2_2BPP_SRGB_BLOCK_IMG = 1000054006,
         PVRTC2_4BPP_SRGB_BLOCK_IMG = 1000054007,
     };
+
+    auto to_string(Format format) -> std::string_view;
 
     template <typename Properties>
     struct Flags final
@@ -922,6 +995,19 @@ namespace daxa
         ColorComponentFlags color_write_mask = ColorComponentFlagBits::R | ColorComponentFlagBits::G | ColorComponentFlagBits::B | ColorComponentFlagBits::A;
 
         friend auto operator<=>(BlendInfo const &, BlendInfo const &) = default;
+    };
+
+    enum struct TesselationDomainOrigin
+    {
+        LOWER_LEFT = 0,
+        UPPER_LEFT = 1
+    };
+
+    enum struct ConservativeRasterizationMode
+    {
+        DISABLED = 0,
+        OVERESTIMATE = 1,
+        UNDERESTIMATE = 2,
     };
 
     enum struct PrimitiveTopology
