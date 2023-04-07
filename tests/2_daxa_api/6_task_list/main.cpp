@@ -61,7 +61,7 @@ namespace tests
             .name = APPNAME_PREFIX("create-write-read image"),
         });
         // CREATE IMAGE
-        auto task_image = task_list.create_task_image({.name = "task list tested image"});
+        auto task_image = task_list.create_transient_task_image({.name = "task list tested image"});
         task_list.add_runtime_image(task_image, image);
         // WRITE IMAGE 1
         task_list.add_task({
@@ -111,7 +111,7 @@ namespace tests
             .name = APPNAME_PREFIX("create-write-read array layer"),
         });
         // CREATE IMAGE
-        auto task_image = task_list.create_task_image({
+        auto task_image = task_list.create_transient_task_image({
             .name = "task list tested image",
         });
         task_list.add_task({
@@ -208,7 +208,7 @@ namespace tests
             daxa::ImageSliceState{
                 .latest_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
                 .latest_layout = daxa::ImageLayout::GENERAL}};
-        auto task_image = task_list.create_task_image(
+        auto task_image = task_list.create_transient_task_image(
             {
                 .pre_task_list_slice_states = {init_access.begin(), init_access.end()},
                 .name = "task list tested image",
@@ -278,7 +278,7 @@ namespace tests
                 .latest_layout = daxa::ImageLayout::READ_ONLY_OPTIMAL,
                 .slice = {.base_array_layer = 2, .layer_count = 2},
             }};
-        auto task_image = task_list.create_task_image({
+        auto task_image = task_list.create_transient_task_image({
             .pre_task_list_slice_states = {init_access.begin(), init_access.end()},
             .name = "task list tested image",
         });
@@ -401,7 +401,7 @@ namespace tests
             .name = "shader integration test - task list",
         });
 
-        auto task_image = task_list.create_task_image({
+        auto task_image = task_list.create_transient_task_image({
             // In this test, this image name will be "aliased", so the name must not be the same.
             .name = "image",
         });
@@ -463,15 +463,15 @@ namespace tests
             daxa::ImageSliceState{
                 .latest_access = daxa::Access{daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
                 .latest_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL}};
-        auto task_image1 = task_list.create_task_image({
+        auto task_image1 = task_list.create_transient_task_image({
             .pre_task_list_slice_states = {init_access.begin(), init_access.end()},
             .name = APPNAME_PREFIX("task_image1"),
         });
-        auto task_image2 = task_list.create_task_image({
+        auto task_image2 = task_list.create_transient_task_image({
             .pre_task_list_slice_states = {init_access.begin(), init_access.end()},
             .name = APPNAME_PREFIX("task_image2"),
         });
-        auto task_image3 = task_list.create_task_image({
+        auto task_image3 = task_list.create_transient_task_image({
             .pre_task_list_slice_states = {init_access.begin(), init_access.end()},
             .name = APPNAME_PREFIX("task_image3"),
         });
@@ -618,7 +618,7 @@ namespace tests
                 //     .image = &swapchain_image,
                 //     .swapchain_parent = {swapchain, present_semaphore},
                 // });
-                task_render_image = new_task_list.create_task_image({});
+                task_render_image = new_task_list.create_transient_task_image({});
                 new_task_list.add_runtime_image(task_render_image, render_image);
 
                 // new_task_list.add_clear_image({
@@ -842,7 +842,7 @@ namespace tests
                     .name = APPNAME_PREFIX("conditionals"),
                 });
 
-                t_swapchain_image = new_task_list.create_task_image({.swapchain_image = true, .name = "swapchain image"});
+                t_swapchain_image = new_task_list.create_transient_task_image({.swapchain_image = true, .name = "swapchain image"});
 
                 t_buffer = new_task_list.create_transient_task_buffer({.name = "conditional upload buffer"});
                 buffer = device.create_buffer({.size = sizeof(ConditionalUploadStruct), .name = "t conditional upload data"});

@@ -137,7 +137,7 @@ struct BaseApp : AppWindow<T>
             .swapchain = swapchain,
             .name = APPNAME_PREFIX("task_list"),
         });
-        task_swapchain_image = new_task_list.create_task_image({
+        task_swapchain_image = new_task_list.create_transient_task_image({
             .swapchain_image = true,
             .name = APPNAME_PREFIX("task_swapchain_image"),
         });

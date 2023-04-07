@@ -208,7 +208,7 @@ struct App : AppWindow<App>
         auto task_old_boid_buffer = new_task_list.create_transient_task_buffer({});
         new_task_list.add_runtime_buffer(task_old_boid_buffer, this->old_boid_buffer);
 
-        task_swapchain_image = new_task_list.create_task_image({
+        task_swapchain_image = new_task_list.create_transient_task_image({
             .swapchain_image = true,
         });
         new_task_list.add_runtime_image(task_swapchain_image, this->swapchain_image);
