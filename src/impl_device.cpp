@@ -260,6 +260,7 @@ namespace daxa
     auto Device::info_buffer(BufferId id) const -> BufferInfo
     {
         auto const & impl = *as<ImplDevice>();
+        DAXA_DBG_ASSERT_TRUE_M(is_id_valid(id), "detected invalid buffer id");
         return impl.slot(id).info;
     }
 
@@ -281,18 +282,21 @@ namespace daxa
     auto Device::info_image(ImageId id) const -> ImageInfo
     {
         auto const & impl = *as<ImplDevice>();
+        DAXA_DBG_ASSERT_TRUE_M(is_id_valid(id), "detected invalid image id");
         return impl.slot(id).info;
     }
 
     auto Device::info_image_view(ImageViewId id) const -> ImageViewInfo
     {
         auto const & impl = *as<ImplDevice>();
+        DAXA_DBG_ASSERT_TRUE_M(is_id_valid(id), "detected invalid image view id");
         return impl.slot(id).info;
     }
 
     auto Device::info_sampler(SamplerId id) const -> SamplerInfo
     {
         auto const & impl = *as<ImplDevice>();
+        DAXA_DBG_ASSERT_TRUE_M(is_id_valid(id), "detected invalid sampler id");
         return impl.slot(id).info;
     }
 
@@ -305,9 +309,7 @@ namespace daxa
     auto Device::is_id_valid(ImageViewId id) const -> bool
     {
         auto const & impl = *as<ImplDevice>();
-        bool const slot_valid = !id.is_empty() && impl.gpu_shader_resource_table.image_slots.is_id_valid(id);
-        bool const parent_valid = is_id_valid(impl.slot(id).info.image);
-        return slot_valid && parent_valid;
+        return !id.is_empty() && impl.gpu_shader_resource_table.image_slots.is_id_valid(id);
     }
 
     auto Device::is_id_valid(BufferId id) const -> bool

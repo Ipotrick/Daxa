@@ -668,7 +668,12 @@ namespace daxa
                 validate_runtime_image_slice(*this, tid.index, slice);
                 for (auto & view : view_cache)
                 {
-                    info.device.destroy_image_view(view);
+                    ImageViewId const parent_image_default_view = info.device.info_image_view(view).image.default_view();
+                    // Can not destroy the default view of an image!!!
+                    if (parent_image_default_view != view)
+                    {
+                        info.device.destroy_image_view(view);
+                    }
                 }
                 view_cache.clear();
                 for (u32 index = 0; index < actual_images.size(); ++index)
@@ -677,12 +682,21 @@ namespace daxa
                     ImageInfo parent_info = info.device.info_image(parent);
 
                     ImageViewInfo view_info = info.device.info_image_view(parent.default_view());
-                    if (image_use.view_type.has_value())
+
+                    // When the use image view parameters match the default view,
+                    // then use the default view id and avoid creating a new id here.
+                    bool const is_use_default_slice = view_info.slice == slice;
+                    bool const is_use_default_view_type = !image_use.view_type.has_value() || (image_use.view_type.value() == view_info.type);
+                    if (is_use_default_slice && is_use_default_view_type)
                     {
-                        view_info.type = image_use.view_type.value();
+                        view_cache.push_back(parent.default_view());
                     }
-                    view_info.slice = slice;
-                    view_cache.push_back(info.device.create_image_view(view_info));
+                    else
+                    {
+                        view_info.type = image_use.view_type.value_or(view_info.type);
+                        view_info.slice = slice;
+                        view_cache.push_back(info.device.create_image_view(view_info));
+                    }
                 }
             }
         }
@@ -908,7 +922,7 @@ namespace daxa
         }
     }
 
-    auto find_first_possible_batch_index(
+    auto shedule_task(
         ImplTaskList & impl,
         TaskListPermutation & perm,
         TaskBatchSubmitScope & current_submit_scope,
@@ -936,6 +950,7 @@ namespace daxa
             bool const is_last_access_read = task_buffer.latest_access.type == AccessTypeFlagBits::READ;
             bool const is_current_access_read = current_buffer_access.type == AccessTypeFlagBits::READ;
 
+            // TODO(msakmarry): improve sheduling here to reorder reads in front of each other, respecting the last to read barrier if present!
             // When a buffer has been read in a previous use AND the current task also reads the buffer,
             // we must insert the task at or after the last use batch.
             usize current_buffer_first_possible_batch_index = task_buffer.latest_access_batch_index;
@@ -1428,6 +1443,27 @@ namespace daxa
 
     using ShaderUseIdOffsetTable = std::vector<std::variant<std::pair<TaskImageId, usize>, std::pair<TaskBufferId, usize>, std::monostate>>;
 
+    void update_buffer_first_access(TaskBuffer & buffer, usize new_access_batch, usize new_access_submit, Access new_access)
+    {
+        if (buffer.first_access.type == AccessTypeFlagBits::NONE)
+        {
+            buffer.first_access =  new_access;
+            buffer.first_access_batch_index = new_access_batch;
+            buffer.first_access_submit_scope_index = new_access_submit;
+        }
+        else if (buffer.first_access.type == AccessTypeFlagBits::READ && new_access.type == AccessTypeFlagBits::READ)
+        {
+            buffer.first_access = buffer.first_access | new_access;
+            bool const new_is_earlier = new_access_submit < buffer.first_access_submit_scope_index ||
+                (new_access_submit == buffer.first_access_submit_scope_index && new_access_batch < buffer.first_access_batch_index);
+            if (new_is_earlier)
+            {
+                buffer.first_access_batch_index = new_access_batch;
+                buffer.first_access_submit_scope_index = new_access_submit;
+            }
+        }
+    }
+
     // I hate this function.
     thread_local std::vector<ExtendedImageSliceState> tl_tracked_slice_rests = {};
     thread_local std::vector<ImageMipArraySlice> tl_new_use_slices = {};
@@ -1460,7 +1496,7 @@ namespace daxa
 
         // At first, we find the batch we need to insert the new task into.
         // To optimize for optimal overlap and minimal pipeline barriers, we try to insert the task as early as possible.
-        const usize batch_index = find_first_possible_batch_index(
+        const usize batch_index = shedule_task(
             task_list_impl,
             *this,
             current_submit_scope,
@@ -1479,6 +1515,7 @@ namespace daxa
         {
             TaskBuffer & task_buffer = this->buffer_infos[used_buffer_t_id.index];
             Access const current_buffer_access = task_buffer_access_to_access(used_buffer_t_access);
+            update_buffer_first_access(task_buffer, batch_index, current_submit_scope_index, current_buffer_access);
             // When the last use was a read AND the new use of the buffer is a read AND,
             // we need to add our stage flags to the existing barrier of the last use.
             bool const is_last_access_read = task_buffer.latest_access.type == AccessTypeFlagBits::READ;
@@ -1970,12 +2007,9 @@ namespace daxa
         {
             auto & task_buffer = permutation.buffer_infos[task_buffer_index];
             auto & glob_buffer_info = impl.global_buffer_infos[task_buffer_index];
-            bool const is_persistent =
-                task_buffer.valid &&
-                std::holds_alternative<PermIndepTaskBufferInfo::Persistent>(impl.global_buffer_infos[task_buffer_index].task_buffer_data);
-            if (is_persistent)
+            if (task_buffer.valid && glob_buffer_info.is_persistent())
             {
-                auto & persistent_data = std::get<PermIndepTaskBufferInfo::Persistent>(glob_buffer_info.task_buffer_data).get();
+                auto & persistent_data = glob_buffer_info.get_persistent();
                 if (!persistent_data.previous_execution_last_access.has_value())
                 {
                     // Skip buffers that have no previous access, as there is nothing to sync on.
@@ -1984,7 +2018,7 @@ namespace daxa
 
                 MemoryBarrierInfo mem_barrier_info{
                     .awaited_pipeline_access = persistent_data.previous_execution_last_access.value(),
-                    .waiting_pipeline_access = permutation.buffer_infos[task_buffer_index].pre_task_list_slice_states,
+                    .waiting_pipeline_access = permutation.buffer_infos[task_buffer_index].first_access,
                 };
                 cmd_list.pipeline_barrier(mem_barrier_info);
                 if (impl.info.record_debug_information)
@@ -2479,7 +2513,15 @@ namespace daxa
                 {
                     for (auto & view : view_cache)
                     {
-                        info.device.destroy_image_view(view);
+                        if (info.device.is_id_valid(view))
+                        {
+                            bool const is_parent_valid = info.device.is_id_valid(info.device.info_image_view(view).image);
+                            bool const is_default_view = is_parent_valid && info.device.info_image_view(view).image.default_view() == view;
+                            if (!is_default_view)
+                            {
+                                info.device.destroy_image_view(view);
+                            }
+                        }
                     }
                 }
             }
