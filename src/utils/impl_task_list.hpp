@@ -31,9 +31,9 @@ namespace daxa
         Access latest_access = AccessConsts::NONE;
         usize latest_access_batch_index = {};
         usize latest_access_submit_scope_index = {};
-        Access pre_task_list_slice_states = AccessConsts::NONE;
-        usize initial_access_batch_index = {};
-        usize initial_access_submit_scope_index = {};
+        usize first_access_batch_index = {};
+        usize first_access_submit_scope_index = {};
+        Access first_access = AccessConsts::NONE;
         // When the last index was a read and an additional read is followed after,
         // we will combine all barriers into one, which is the first barrier that the first read generates.
         std::variant<std::monostate, LastReadSplitBarrierIndex, LastReadBarrierIndex> latest_access_read_barrier_index = std::monostate{};
