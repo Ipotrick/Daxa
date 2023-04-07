@@ -68,7 +68,11 @@ namespace tests
 
             daxa::CommandSubmitInfo submit_info = {};
             daxa::TaskImageId task_swapchain_image = {};
-            daxa::TaskImageId task_render_image = {};
+            daxa::PersistentTaskImage task_render_image{daxa::TaskImageInfo{
+                .execution_images = {&render_image, 1},
+                .name = "persistent render image"
+            }};
+            
 
             MipmappingGpuInput gpu_input = {
                 .paint_col = {1.0f, 0.0f, 0.0f},
@@ -154,9 +158,9 @@ namespace tests
                     return;
                 }
                 std::array<bool, TASK_CONDITION_COUNT> conditions = {};
-                conditions[TASK_CONDITION_MOUSE_DRAWING] = mouse_drawing;
+                conditions[TASK_CONDITION_MOUSE_DRAWING] = true;
                 task_list.execute({.permutation_condition_values = {conditions.data(), conditions.size()}, .record_debug_string = true});
-                // std::cout << task_list.get_debug_string() << std::endl;
+                std::cout << task_list.get_debug_string() << std::endl;
             }
 
             void on_mouse_move(f32 x, f32 y)
@@ -440,18 +444,18 @@ namespace tests
                     .device = device,
                     .swapchain = swapchain,
                     .permutation_condition_count = TASK_CONDITION_COUNT,
+                    .record_debug_information = true,
                     .name = APPNAME_PREFIX("main task list"),
                 });
+
                 task_swapchain_image = new_task_list.create_transient_task_image({
                     .swapchain_image = true,
                     .name = APPNAME_PREFIX("Task Swapchain Image"),
                 });
                 new_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
-                task_render_image = new_task_list.create_transient_task_image({
-                    .name = APPNAME_PREFIX("Task Render Image"),
-                });
-                new_task_list.add_runtime_image(task_render_image, render_image);
-                //new_task_list.use_persistent_buffer(task_mipmapping_gpu_input_buffer);
+                new_task_list.use_persistent_buffer(task_mipmapping_gpu_input_buffer);
+                new_task_list.use_persistent_image(task_render_image);
+
                 new_task_list.add_task({
                     .used_buffers = {
                         {task_mipmapping_gpu_input_buffer.id(), daxa::TaskBufferAccess::HOST_TRANSFER_WRITE},

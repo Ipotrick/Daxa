@@ -58,7 +58,6 @@ namespace daxa
         // For non-execution_persistent resources, task list will synch from the initial use to first use EVERY EXECUTION.
         // This is either empty or contains an initial state FOR ALL USES SLICES of the image.
         std::span<ImageSliceState> pre_task_list_slice_states = {};
-        bool execution_persistent = {};
         bool swapchain_image = {};
         std::span<ImageId> execution_images = {};
         std::string name = {};
