@@ -180,6 +180,23 @@ namespace daxa
         void remove_buffer(BufferId id);
     };
 
+    struct PersistentTaskImage : ManagedPtr
+    {
+        PersistentTaskImage() = default;
+        PersistentTaskImage(TaskImageInfo const & info);
+
+        operator TaskImageId() const;
+
+        auto id() const -> TaskImageId;
+        auto info() const -> TaskImageInfo const &;
+
+        auto get_image(usize index = 0) -> ImageId &;
+        auto get_image_count() const -> usize;
+        void add_image(ImageId id);
+        void clear_images();
+        void remove_image(ImageId id);
+    };
+
     struct TaskList : ManagedPtr
     {
         TaskList() = default;
@@ -189,7 +206,8 @@ namespace daxa
 
         auto create_transient_task_buffer(TaskBufferInfo const & info) -> TaskBufferId;
         auto use_persistent_buffer(PersistentTaskBuffer const & buffer) -> TaskBufferId;
-        auto create_task_image(TaskImageInfo const & info) -> TaskImageId;
+        auto create_transient_task_image(TaskImageInfo const & info) -> TaskImageId;
+        auto use_persistent_image(PersistentTaskImage const & image) -> TaskImageId;
 
         void conditional(TaskListConditionalInfo const & conditional_info);
 

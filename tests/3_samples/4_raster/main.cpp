@@ -220,13 +220,13 @@ auto main() -> int
     });
 
     auto swapchain_image = daxa::ImageId{};
-    auto task_swapchain_image = loop_task_list.create_task_image({.swapchain_image = true, .name = "swapchain image"});
+    auto task_swapchain_image = loop_task_list.create_transient_task_image({.swapchain_image = true, .name = "swapchain image"});
     loop_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
 
-    auto task_depth_image = loop_task_list.create_task_image({.name = "depth image"});
+    auto task_depth_image = loop_task_list.create_transient_task_image({.name = "depth image"});
     loop_task_list.add_runtime_image(task_depth_image, depth_image);
 
-    auto task_atlas_texture_array = loop_task_list.create_task_image({.name = "task_atlas_texture_array"});
+    auto task_atlas_texture_array = loop_task_list.create_transient_task_image({.name = "task_atlas_texture_array"});
     loop_task_list.add_runtime_image(task_atlas_texture_array, atlas_texture_array);
 
     auto perframe_input_task_buffer_id = loop_task_list.create_transient_task_buffer({ .name = "perframe_input"});
