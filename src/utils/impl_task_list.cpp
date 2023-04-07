@@ -94,7 +94,12 @@ namespace daxa
 
     auto TaskGPUResourceId::is_empty() const -> bool
     {
-        return index == std::numeric_limits<u32>::max();
+        return index == std::numeric_limits<u64>::max();
+    }
+
+    auto TaskGPUResourceId::is_persistent() const -> bool
+    {
+        return (index & (1ull << 63)) != 0;
     }
 
     auto to_string(TaskBufferAccess const & usage) -> std::string_view
@@ -215,8 +220,9 @@ namespace daxa
     auto TaskRuntimeInterface::get_buffers(TaskBufferId const & task_resource_id) const -> std::span<BufferId>
     {
         auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
-        DAXA_DBG_ASSERT_TRUE_M(impl.task_list.global_buffer_infos[task_resource_id.index].actual_buffers.size() > 0, "task buffer must be backed by execution buffer(s)!");
-        return impl.task_list.global_buffer_infos[task_resource_id.index].actual_buffers;
+        auto actual_buffers = impl.task_list.global_buffer_infos[task_resource_id.index].get_actual_buffers();
+        DAXA_DBG_ASSERT_TRUE_M(actual_buffers.size() > 0, "task buffer must be backed by execution buffer(s)!");
+        return actual_buffers;
     }
 
     auto TaskRuntimeInterface::get_images(TaskImageId const & task_resource_id) const -> std::span<ImageId>
@@ -254,6 +260,76 @@ namespace daxa
         return impl.task_list.staging_memory;
     }
 
+    PersistentTaskBuffer::PersistentTaskBuffer(TaskBufferInfo const & info)
+        : ManagedPtr{new ImplPersistentTaskBuffer(info)}
+    {
+    }
+    ImplPersistentTaskBuffer::ImplPersistentTaskBuffer(TaskBufferInfo info)
+        : info{info}, unique_index{ImplPersistentTaskBuffer::exec_unique_next_index++}
+    {
+    }
+    ImplPersistentTaskBuffer::~ImplPersistentTaskBuffer() = default;
+
+    auto PersistentTaskBuffer::id() const -> TaskBufferId
+    {
+        auto & impl = *this->as<ImplPersistentTaskBuffer>();
+        return TaskBufferId{{.index = (1ull << 63) | impl.unique_index}};
+    }
+
+    PersistentTaskBuffer::operator TaskBufferId() const
+    {
+        return id();
+    }
+
+    auto PersistentTaskBuffer::info() const -> TaskBufferInfo const &
+    {
+        auto & impl = *this->as<ImplPersistentTaskBuffer>();
+        return impl.info;
+    }
+
+    auto PersistentTaskBuffer::get_buffer(usize index) -> BufferId &
+    {
+        auto & impl = *this->as<ImplPersistentTaskBuffer>();
+        return impl.actual_buffers.at(index);
+    }
+
+    auto PersistentTaskBuffer::get_buffer_count() const -> usize
+    {
+        auto & impl = *this->as<ImplPersistentTaskBuffer>();
+        return impl.actual_buffers.size();
+    }
+
+    void PersistentTaskBuffer::add_buffer(BufferId id)
+    {
+        auto & impl = *this->as<ImplPersistentTaskBuffer>();
+        impl.actual_buffers.push_back(id);
+    }
+
+    void PersistentTaskBuffer::clear_buffers()
+    {
+        auto & impl = *this->as<ImplPersistentTaskBuffer>();
+        impl.actual_buffers.clear();
+    }
+
+    void PersistentTaskBuffer::remove_buffer(BufferId id)
+    {
+        auto & impl = *this->as<ImplPersistentTaskBuffer>();
+        auto iter = std::find_if(
+            impl.actual_buffers.begin(),
+            impl.actual_buffers.end(),
+            [&](auto compare_id)
+            {
+                return id == compare_id;
+            });
+        DAXA_DBG_ASSERT_TRUE_M(
+            iter != impl.actual_buffers.end(),
+            "persistent task buffer does not contain given buffer id");
+        if (iter != impl.actual_buffers.end())
+        {
+            impl.actual_buffers.erase(iter);
+        }
+    }
+
     TaskList::TaskList(TaskListInfo const & info)
         : ManagedPtr{new ImplTaskList(info)}
     {
@@ -265,10 +341,32 @@ namespace daxa
         }
         impl.update_active_permutations();
     }
-
     TaskList::~TaskList() = default;
 
-    auto TaskList::create_task_buffer(TaskBufferInfo const & info) -> TaskBufferId
+    auto TaskList::use_persistent_buffer(PersistentTaskBuffer const & buffer) -> TaskBufferId
+    {
+        auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
+        DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can not record to completed command list");
+        DAXA_DBG_ASSERT_TRUE_M(!impl.buffer_name_to_id.contains(buffer.info().name), "task buffer names msut be unique");
+        TaskBufferId task_buffer_id{{.index = static_cast<u32>(impl.global_buffer_infos.size())}};
+
+        for (auto & permutation : impl.permutations)
+        {
+            permutation.buffer_infos.push_back(TaskBuffer{
+                .valid = permutation.active,
+            });
+        }
+
+        impl.global_buffer_infos.emplace_back(PermIndepTaskBufferInfo{
+            .info = buffer.info(),
+            .task_buffer_data = PermIndepTaskBufferInfo::Persistent{ManagedWeakPtr{buffer.object}},
+        });
+        impl.persistent_index_to_local_index[buffer.id().index] = task_buffer_id.index;
+        impl.buffer_name_to_id[buffer.info().name] = task_buffer_id;
+        return task_buffer_id;
+    }
+
+    auto TaskList::create_transient_task_buffer(TaskBufferInfo const & info) -> TaskBufferId
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can not record to completed command list");
@@ -282,10 +380,13 @@ namespace daxa
             });
         }
 
-        impl.global_buffer_infos.push_back(GlobalTaskBufferInfos{
+        impl.global_buffer_infos.emplace_back(PermIndepTaskBufferInfo{
             .info = info,
-            .actual_buffers = std::vector<BufferId>(info.execution_buffers.begin(), info.execution_buffers.end()),
-        });
+            .task_buffer_data = PermIndepTaskBufferInfo::Transient{
+                .actual_buffers = std::vector<BufferId>(
+                    info.execution_buffers.begin(),
+                    info.execution_buffers.end()),
+            }});
 
         impl.buffer_name_to_id[info.name] = task_buffer_id;
         return task_buffer_id;
@@ -340,6 +441,25 @@ namespace daxa
         return task_image_id;
     }
 
+    auto ImplTaskList::translate_persistent_id(TaskBufferId id) const -> TaskBufferId
+    {
+        if (id.is_persistent())
+        {
+            DAXA_DBG_ASSERT_TRUE_M(
+                persistent_index_to_local_index.contains(id.index),
+                std::string("detected invalid persistent access of task buffer id ") +
+                    std::to_string(id.index) +
+                    std::string(" in tasklist \"") +
+                    info.name +
+                    std::string("\". Please make sure to declare persistent resource use to each task list with the function use_persistent_resource()!"));
+            return TaskBufferId{{.index = persistent_index_to_local_index.at(id.index)}};
+        }
+        else
+        {
+            return id;
+        }
+    }
+
     void ImplTaskList::update_active_permutations()
     {
         record_active_permutations.clear();
@@ -355,7 +475,7 @@ namespace daxa
         }
     }
 
-    void validate_runtime_image_slice(ImplTaskList & impl, u32 task_image_index, ImageMipArraySlice const & access_slice)
+    void validate_runtime_image_slice(ImplTaskList & impl, usize task_image_index, ImageMipArraySlice const & access_slice)
     {
         auto const & actual_images = impl.global_image_infos[task_image_index].actual_images;
         for (u32 index = 0; index < actual_images.size(); ++index)
@@ -447,7 +567,7 @@ namespace daxa
                                                                     impl.global_buffer_infos[buffer_use.id.index].info.name +
                                                                     std::string("\": ");
             // Use ids are all valid. They are checked on task insertion.
-            auto const & runtime_buffers = impl.global_buffer_infos[buffer_use.id.index].actual_buffers;
+            auto const & runtime_buffers = impl.global_buffer_infos[buffer_use.id.index].get_actual_buffers();
             DAXA_DBG_ASSERT_TRUE_M(
                 runtime_buffers.size() > 0,
                 dbg_message_begin + dbg_message_continuation + "task buffer has 0 runtime buffers"
@@ -582,7 +702,7 @@ namespace daxa
 
     void ImplTaskList::add_runtime_buffer(TaskBufferId tid, BufferId id)
     {
-        global_buffer_infos.at(tid.index).actual_buffers.push_back(id);
+        global_buffer_infos.at(tid.index).get_actual_buffers().push_back(id);
     }
     void ImplTaskList::add_runtime_image(TaskImageId tid, ImageId id)
     {
@@ -590,15 +710,25 @@ namespace daxa
     }
     void ImplTaskList::remove_runtime_buffer(TaskBufferId tid, BufferId id)
     {
-        global_buffer_infos[tid.index].actual_buffers.erase(std::remove(global_buffer_infos[tid.index].actual_buffers.begin(), global_buffer_infos[tid.index].actual_buffers.end(), id), global_buffer_infos[tid.index].actual_buffers.end());
+        global_buffer_infos.at(tid.index).get_actual_buffers().erase(
+            std::remove(
+                global_buffer_infos.at(tid.index).get_actual_buffers().begin(),
+                global_buffer_infos.at(tid.index).get_actual_buffers().end(),
+                id),
+            global_buffer_infos.at(tid.index).get_actual_buffers().end());
     }
     void ImplTaskList::remove_runtime_image(TaskImageId tid, ImageId id)
     {
-        global_image_infos[tid.index].actual_images.erase(std::remove(global_image_infos[tid.index].actual_images.begin(), global_image_infos[tid.index].actual_images.end(), id), global_image_infos[tid.index].actual_images.end());
+        global_image_infos.at(tid.index).actual_images.erase(
+            std::remove(
+                global_image_infos.at(tid.index).actual_images.begin(),
+                global_image_infos.at(tid.index).actual_images.end(),
+                id),
+            global_image_infos.at(tid.index).actual_images.end());
     }
     void ImplTaskList::clear_runtime_buffers(TaskBufferId tid)
     {
-        global_buffer_infos.at(tid.index).actual_buffers.clear();
+        global_buffer_infos.at(tid.index).get_actual_buffers().clear();
     }
     void ImplTaskList::clear_runtime_images(TaskImageId tid)
     {
@@ -737,14 +867,204 @@ namespace daxa
         return first_possible_batch_index;
     }
 
+    void validate_task_aliases(ImplTaskList & impl, TaskInfo const & info)
+    {
+#if DAXA_VALIDATION
+        for (TaskBufferAliasInfo const & buffer_alias : info.shader_uses_buffer_aliases)
+        {
+            // Check if the aliased buffer is valid:
+            [[maybe_unused]] std::string aliased_buffer_name = {};
+            if (TaskBufferId const * buffer_id = std::get_if<TaskBufferId>(&buffer_alias.aliased_buffer))
+            {
+                DAXA_DBG_ASSERT_TRUE_M(
+                    !buffer_id->is_empty() &&
+                        buffer_id->index < impl.global_buffer_infos.size(),
+                    "attempted to alias an invalid buffer id");
+                aliased_buffer_name = impl.global_buffer_infos[buffer_id->index].info.name;
+            }
+            else
+            {
+                aliased_buffer_name = std::get<std::string>(buffer_alias.aliased_buffer);
+                DAXA_DBG_ASSERT_TRUE_M(
+                    impl.buffer_name_to_id.contains(aliased_buffer_name),
+                    std::string("attempted to alias non existent buffer \"") +
+                        aliased_buffer_name +
+                        std::string("\""));
+            }
+            // Check if the alias is present in the shader uses.
+            auto iter = std::find_if(
+                info.shader_uses.list.begin(),
+                info.shader_uses.list.end(),
+                [&](auto const & shader_use)
+                {
+                    if (ShaderTaskBufferUse const * buffer_use = std::get_if<ShaderTaskBufferUse>(&shader_use))
+                    {
+                        return buffer_use->name == buffer_alias.alias;
+                    }
+                    return false;
+                });
+            DAXA_DBG_ASSERT_TRUE_M(
+                iter != info.shader_uses.list.end(),
+                std::string("alias \"") +
+                    buffer_alias.alias +
+                    std::string("\" does not match the name of any declared shader buffer use. Check if the spelling is correct in alias and shader use."));
+        }
+        for (TaskImageAliasInfo const & image_alias : info.shader_uses_image_aliases)
+        {
+            // Check if the aliased image is valid:
+            [[maybe_unused]] std::string aliased_image_name = {};
+            if (TaskImageId const * image_id = std::get_if<TaskImageId>(&image_alias.aliased_image))
+            {
+                DAXA_DBG_ASSERT_TRUE_M(
+                    !image_id->is_empty() &&
+                        image_id->index < impl.global_image_infos.size(),
+                    "attempted to alias an invalid image id");
+                aliased_image_name = impl.global_image_infos[image_id->index].info.name;
+            }
+            else
+            {
+                aliased_image_name = std::get<std::string>(image_alias.aliased_image);
+                DAXA_DBG_ASSERT_TRUE_M(
+                    impl.image_name_to_id.contains(aliased_image_name),
+                    std::string("attempted to alias non existent image \"") +
+                        aliased_image_name +
+                        std::string("\""));
+            }
+            // Check if the alias is present in the shader uses.
+            auto iter = std::find_if(
+                info.shader_uses.list.begin(),
+                info.shader_uses.list.end(),
+                [&](auto const & shader_use)
+                {
+                    if (ShaderTaskImageUse const * image_use = std::get_if<ShaderTaskImageUse>(&shader_use))
+                    {
+                        return image_use->name == image_alias.alias;
+                    }
+                    return false;
+                });
+            DAXA_DBG_ASSERT_TRUE_M(
+                iter != info.shader_uses.list.end(),
+                std::string("alias \"") +
+                    image_alias.alias +
+                    std::string("\" does not fit the name of any declared shader image use. Check if the spelling is correct in alias and shader use."));
+        }
+#endif // #if DAXA_VALIDATION
+    }
+
+    void validate_resource_uses(ImplTaskList const &, TaskInfo const & info)
+    {
+        for (auto const & buffer_use : info.used_buffers)
+        {
+            DAXA_DBG_ASSERT_TRUE_M(
+                !buffer_use.id.is_empty(),
+                "invalid buffer id in declared buffer use");
+        }
+        for (auto const & image_use : info.used_images)
+        {
+            DAXA_DBG_ASSERT_TRUE_M(
+                !image_use.id.is_empty(),
+                "invalid image id in declared image use");
+        }
+    }
+
+    void translate_persistent_ids(ImplTaskList const & impl, TaskInfo & info)
+    {
+        for (auto & buffer_use : info.used_buffers)
+        {
+            buffer_use.id = impl.translate_persistent_id(buffer_use.id);
+        }
+    }
+
+    using ShaderUseIdOffsetTable = std::vector<std::variant<std::pair<TaskImageId, usize>, std::pair<TaskBufferId, usize>, std::monostate>>;
+    ShaderUseIdOffsetTable insert_shader_uses(ImplTaskList & impl, TaskInfo & info)
+    {
+        ShaderUseIdOffsetTable offset_table = {};
+        for (auto & shader_use : info.shader_uses.list)
+        {
+            if (auto * shader_buffer_use = std::get_if<ShaderTaskBufferUse>(&shader_use))
+            {
+                TaskBufferId id = {};
+                // Try to look for an alias.
+                auto iter = std::find_if(
+                    info.shader_uses_buffer_aliases.begin(),
+                    info.shader_uses_buffer_aliases.end(),
+                    [&](TaskBufferAliasInfo const & alias) -> bool
+                    {
+                        return alias.alias == shader_buffer_use->name;
+                    });
+                bool const found_alias = iter != info.shader_uses_buffer_aliases.end();
+                if (found_alias)
+                {
+                    if (TaskBufferId const * alias_id = std::get_if<TaskBufferId>(&iter->aliased_buffer))
+                    {
+                        id = *alias_id;
+                    }
+                    else
+                    {
+                        std::string const & aliased_buffer_name = std::get<std::string>(iter->aliased_buffer);
+                        id = impl.buffer_name_to_id[aliased_buffer_name];
+                    }
+                }
+                else
+                {
+                    id = impl.buffer_name_to_id[std::string(shader_buffer_use->name)];
+                }
+                offset_table.push_back(std::pair<TaskBufferId, usize>{id, shader_buffer_use->offset});
+                info.used_buffers.push_back(TaskBufferUse{.id = id, .access = shader_buffer_use->access});
+            }
+            else if (auto * shader_image_use = std::get_if<ShaderTaskImageUse>(&shader_use))
+            {
+                TaskImageId used_image_id = {};
+                u32 mip_offset = {};
+                u32 array_layer_offset = {};
+                if (!impl.image_name_to_id.contains(std::string(shader_image_use->name)))
+                {
+                    // Try to look for an alias.
+                    auto iter = std::find_if(
+                        info.shader_uses_image_aliases.begin(),
+                        info.shader_uses_image_aliases.end(),
+                        [&](TaskImageAliasInfo const & alias) -> bool
+                        {
+                            return alias.alias == shader_image_use->name;
+                        });
+                    if (TaskImageId * id = std::get_if<TaskImageId>(&iter->aliased_image))
+                    {
+                        used_image_id = *id;
+                    }
+                    else if (std::string * name = std::get_if<std::string>(&iter->aliased_image))
+                    {
+                        used_image_id = impl.image_name_to_id.at(*name);
+                    }
+                    mip_offset = iter->base_mip_level_offset;
+                    array_layer_offset = iter->base_array_layer_offset;
+                }
+                else
+                {
+                    used_image_id = impl.image_name_to_id.at(std::string(shader_image_use->name));
+                }
+                offset_table.push_back(std::pair<TaskImageId, usize>{used_image_id, shader_image_use->offset});
+                auto slice = shader_image_use->slice;
+                slice.base_mip_level += mip_offset;
+                slice.base_array_layer += array_layer_offset;
+                info.used_images.push_back(TaskImageUse{.id = used_image_id, .access = shader_image_use->access, .slice = slice});
+            }
+        }
+        return offset_table;
+    }
+
     void TaskList::add_task(TaskInfo const & info)
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can not record to completed command list");
+        TaskInfo updated_info = info;
+        validate_task_aliases(impl, updated_info);
+        validate_resource_uses(impl, updated_info);
+        translate_persistent_ids(impl, updated_info);
+        auto shader_id_use_to_offset_table = insert_shader_uses(impl, updated_info);
 
         for (auto * permutation : impl.record_active_permutations)
         {
-            permutation->add_task(impl, info);
+            permutation->add_task(impl, updated_info, shader_id_use_to_offset_table);
         }
     }
 
@@ -952,202 +1272,20 @@ namespace daxa
         tl_new_access_slices.clear();
     }
 
-    // Reuse for rewrite.
-    void validate_task_aliases(ImplTaskList & impl, TaskInfo const & info)
-    {
-#if DAXA_VALIDATION
-        for (TaskBufferAliasInfo const & buffer_alias : info.shader_uses_buffer_aliases)
-        {
-            // Check if the aliased buffer is valid:
-            [[maybe_unused]] std::string aliased_buffer_name = {};
-            if (TaskBufferId const * buffer_id = std::get_if<TaskBufferId>(&buffer_alias.aliased_buffer))
-            {
-                DAXA_DBG_ASSERT_TRUE_M(
-                    !buffer_id->is_empty() &&
-                        buffer_id->index < impl.global_buffer_infos.size(),
-                    "attempted to alias an invalid buffer id");
-                aliased_buffer_name = impl.global_buffer_infos[buffer_id->index].info.name;
-            }
-            else
-            {
-                aliased_buffer_name = std::get<std::string>(buffer_alias.aliased_buffer);
-                DAXA_DBG_ASSERT_TRUE_M(
-                    impl.buffer_name_to_id.contains(aliased_buffer_name),
-                    std::string("attempted to alias non existent buffer \"") +
-                        aliased_buffer_name +
-                        std::string("\""));
-            }
-            // Check if the alias is present in the shader uses.
-            auto iter = std::find_if(
-                info.shader_uses.list.begin(),
-                info.shader_uses.list.end(),
-                [&](auto const & shader_use)
-                {
-                    if (ShaderTaskBufferUse const * buffer_use = std::get_if<ShaderTaskBufferUse>(&shader_use))
-                    {
-                        return buffer_use->name == buffer_alias.alias;
-                    }
-                    return false;
-                });
-            DAXA_DBG_ASSERT_TRUE_M(
-                iter != info.shader_uses.list.end(),
-                std::string("alias \"") +
-                    buffer_alias.alias +
-                    std::string("\" does not match the name of any declared shader buffer use. Check if the spelling is correct in alias and shader use."));
-        }
-        for (TaskImageAliasInfo const & image_alias : info.shader_uses_image_aliases)
-        {
-            // Check if the aliased image is valid:
-            [[maybe_unused]] std::string aliased_image_name = {};
-            if (TaskImageId const * image_id = std::get_if<TaskImageId>(&image_alias.aliased_image))
-            {
-                DAXA_DBG_ASSERT_TRUE_M(
-                    !image_id->is_empty() &&
-                        image_id->index < impl.global_image_infos.size(),
-                    "attempted to alias an invalid image id");
-                aliased_image_name = impl.global_image_infos[image_id->index].info.name;
-            }
-            else
-            {
-                aliased_image_name = std::get<std::string>(image_alias.aliased_image);
-                DAXA_DBG_ASSERT_TRUE_M(
-                    impl.image_name_to_id.contains(aliased_image_name),
-                    std::string("attempted to alias non existent image \"") +
-                        aliased_image_name +
-                        std::string("\""));
-            }
-            // Check if the alias is present in the shader uses.
-            auto iter = std::find_if(
-                info.shader_uses.list.begin(),
-                info.shader_uses.list.end(),
-                [&](auto const & shader_use)
-                {
-                    if (ShaderTaskImageUse const * image_use = std::get_if<ShaderTaskImageUse>(&shader_use))
-                    {
-                        return image_use->name == image_alias.alias;
-                    }
-                    return false;
-                });
-            DAXA_DBG_ASSERT_TRUE_M(
-                iter != info.shader_uses.list.end(),
-                std::string("alias \"") +
-                    image_alias.alias +
-                    std::string("\" does not fit the name of any declared shader image use. Check if the spelling is correct in alias and shader use."));
-        }
-#endif // #if DAXA_VALIDATION
-    }
-
     using ShaderUseIdOffsetTable = std::vector<std::variant<std::pair<TaskImageId, usize>, std::pair<TaskBufferId, usize>, std::monostate>>;
-
-    ShaderUseIdOffsetTable insert_shader_uses(ImplTaskList & impl, TaskInfo & info)
-    {
-        ShaderUseIdOffsetTable offset_table = {};
-        for (auto & shader_use : info.shader_uses.list)
-        {
-            if (auto * shader_buffer_use = std::get_if<ShaderTaskBufferUse>(&shader_use))
-            {
-                TaskBufferId id = {};
-                // Try to look for an alias.
-                auto iter = std::find_if(
-                    info.shader_uses_buffer_aliases.begin(),
-                    info.shader_uses_buffer_aliases.end(),
-                    [&](TaskBufferAliasInfo const & alias) -> bool
-                    {
-                        return alias.alias == shader_buffer_use->name;
-                    });
-                bool const found_alias = iter != info.shader_uses_buffer_aliases.end();
-                if (found_alias)
-                {
-                    if (TaskBufferId const * alias_id = std::get_if<TaskBufferId>(&iter->aliased_buffer))
-                    {
-                        id = *alias_id;
-                    }
-                    else
-                    {
-                        std::string const & aliased_buffer_name = std::get<std::string>(iter->aliased_buffer);
-                        id = impl.buffer_name_to_id[aliased_buffer_name];
-                    }
-                }
-                else
-                {
-                    id = impl.buffer_name_to_id[std::string(shader_buffer_use->name)];
-                }
-                offset_table.push_back(std::pair<TaskBufferId, usize>{id, shader_buffer_use->offset});
-                info.used_buffers.push_back(TaskBufferUse{.id = id, .access = shader_buffer_use->access});
-            }
-            else if (auto * shader_image_use = std::get_if<ShaderTaskImageUse>(&shader_use))
-            {
-                TaskImageId used_image_id = {};
-                u32 mip_offset = {};
-                u32 array_layer_offset = {};
-                if (!impl.image_name_to_id.contains(std::string(shader_image_use->name)))
-                {
-                    // Try to look for an alias.
-                    auto iter = std::find_if(
-                        info.shader_uses_image_aliases.begin(),
-                        info.shader_uses_image_aliases.end(),
-                        [&](TaskImageAliasInfo const & alias) -> bool
-                        {
-                            return alias.alias == shader_image_use->name;
-                        });
-                    if (TaskImageId * id = std::get_if<TaskImageId>(&iter->aliased_image))
-                    {
-                        used_image_id = *id;
-                    }
-                    else if (std::string * name = std::get_if<std::string>(&iter->aliased_image))
-                    {
-                        used_image_id = impl.image_name_to_id.at(*name);
-                    }
-                    mip_offset = iter->base_mip_level_offset;
-                    array_layer_offset = iter->base_array_layer_offset;
-                }
-                else
-                {
-                    used_image_id = impl.image_name_to_id.at(std::string(shader_image_use->name));
-                }
-                offset_table.push_back(std::pair<TaskImageId, usize>{used_image_id, shader_image_use->offset});
-                auto slice = shader_image_use->slice;
-                slice.base_mip_level += mip_offset;
-                slice.base_array_layer += array_layer_offset;
-                info.used_images.push_back(TaskImageUse{.id = used_image_id, .access = shader_image_use->access, .slice = slice});
-            }
-        }
-        return offset_table;
-    }
-
-    void validate_resource_uses(ImplTaskList const &, TaskInfo const & info)
-    {
-        for (auto const & buffer_use : info.used_buffers)
-        {
-            DAXA_DBG_ASSERT_TRUE_M(
-                !buffer_use.id.is_empty(),
-                "invalid buffer id in declared buffer use");
-        }
-        for (auto const & image_use : info.used_images)
-        {
-            DAXA_DBG_ASSERT_TRUE_M(
-                !image_use.id.is_empty(),
-                "invalid image id in declared image use");
-        }
-    }
 
     // I hate this function.
     thread_local std::vector<ExtendedImageSliceState> tl_tracked_slice_rests = {};
     thread_local std::vector<ImageMipArraySlice> tl_new_use_slices = {};
-    void TaskListPermutation::add_task(ImplTaskList & task_list_impl, TaskInfo const & initial_info)
+    void TaskListPermutation::add_task(ImplTaskList & task_list_impl, TaskInfo const & info, ShaderUseIdToOffsetTable const & shader_id_use_to_offset_table)
     {
-        TaskInfo info = initial_info;
-        validate_task_aliases(task_list_impl, info);
-        validate_resource_uses(task_list_impl, info);
-        auto shader_id_use_to_offset_table = insert_shader_uses(task_list_impl, info);
-
         TaskId const task_id = this->tasks.size();
         std::vector<std::vector<ImageViewId>> view_cache = {};
         view_cache.resize(info.used_images.size(), {});
         this->tasks.emplace_back(Task{
             .info = info,
             .image_view_cache = std::move(view_cache),
-            .id_to_offset = std::move(shader_id_use_to_offset_table),
+            .id_to_offset = shader_id_use_to_offset_table,
         });
 
         usize const current_submit_scope_index = this->batch_submit_scopes.size() - 1;
@@ -1678,10 +1816,20 @@ namespace daxa
         {
             auto & task_buffer = permutation.buffer_infos[task_buffer_index];
             auto & glob_buffer_info = impl.global_buffer_infos[task_buffer_index];
-            if (task_buffer.valid && glob_buffer_info.info.execution_persistent && glob_buffer_info.previous_execution_last_access.has_value())
+            bool const is_persistent =
+                task_buffer.valid &&
+                std::holds_alternative<PermIndepTaskBufferInfo::Persistent>(impl.global_buffer_infos[task_buffer_index].task_buffer_data);
+            if (is_persistent)
             {
+                auto & persistent_data = std::get<PermIndepTaskBufferInfo::Persistent>(glob_buffer_info.task_buffer_data).get();
+                if (!persistent_data.previous_execution_last_access.has_value())
+                {
+                    // Skip buffers that have no previous access, as there is nothing to sync on.
+                    continue;
+                }
+
                 MemoryBarrierInfo mem_barrier_info{
-                    .awaited_pipeline_access = glob_buffer_info.previous_execution_last_access.value(),
+                    .awaited_pipeline_access = persistent_data.previous_execution_last_access.value(),
                     .waiting_pipeline_access = permutation.buffer_infos[task_buffer_index].pre_task_list_slice_states,
                 };
                 cmd_list.pipeline_barrier(mem_barrier_info);
@@ -1689,7 +1837,7 @@ namespace daxa
                 {
                     impl.debug_print_memory_barrier(mem_barrier_info, "\t");
                 }
-                glob_buffer_info.previous_execution_last_access = {};
+                persistent_data.previous_execution_last_access = {};
             }
         }
         if (impl.info.record_debug_information)
@@ -1965,7 +2113,7 @@ namespace daxa
                             }
                             else if (auto buffer_mapping = std::get_if<std::pair<TaskBufferId, usize>>(&shader_use_id_mapping))
                             {
-                                *(reinterpret_cast<BufferDeviceAddress *>(host_constant_buffer_ptr + buffer_mapping->second)) = impl.info.device.get_device_address(impl.global_buffer_infos[buffer_mapping->first.index].actual_buffers[0]);
+                                *(reinterpret_cast<BufferDeviceAddress *>(host_constant_buffer_ptr + buffer_mapping->second)) = impl.info.device.get_device_address(impl.global_buffer_infos[buffer_mapping->first.index].get_actual_buffers()[0]);
                             }
                         }
                         impl_runtime.command_lists.back().set_constant_buffer({
@@ -2127,9 +2275,10 @@ namespace daxa
         // Insert pervious uses into execution info for tje next executions synch.
         for (usize task_buffer_index = 0; task_buffer_index < permutation.buffer_infos.size(); ++task_buffer_index)
         {
-            if (permutation.buffer_infos[task_buffer_index].valid && impl.global_buffer_infos[task_buffer_index].info.execution_persistent)
+            bool const is_persistent = std::holds_alternative<PermIndepTaskBufferInfo::Persistent>(impl.global_buffer_infos[task_buffer_index].task_buffer_data);
+            if (permutation.buffer_infos[task_buffer_index].valid && is_persistent)
             {
-                impl.global_buffer_infos[task_buffer_index].previous_execution_last_access = permutation.buffer_infos[task_buffer_index].latest_access;
+                std::get<PermIndepTaskBufferInfo::Persistent>(impl.global_buffer_infos[task_buffer_index].task_buffer_data).get().previous_execution_last_access = permutation.buffer_infos[task_buffer_index].latest_access;
             }
         }
         for (usize task_image_index = 0; task_image_index < permutation.image_infos.size(); ++task_image_index)
@@ -2443,7 +2592,7 @@ namespace daxa
             this->debug_string_stream << prefix << "\tBegin task buffer use " << task_buffer_id.index << "\n";
             this->debug_string_stream << prefix << "\t\task buffer debug name: " << global_buffer_infos[task_buffer_id.index].info.name << "\n";
             this->debug_string_stream << prefix << "\tBegin bound buffers\n";
-            for (auto buffer : global_buffer_infos[task_buffer_id.index].actual_buffers)
+            for (auto buffer : global_buffer_infos[task_buffer_id.index].get_actual_buffers())
             {
                 this->debug_string_stream << prefix << "\tbuffers id: " << to_string(buffer)
                                           << "\tbuffers debug name: " << (buffer.is_empty() ? std::string("INVALID ID") : info.device.info_buffer(buffer).name) << " \n";

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <daxa/daxa.hpp>
+
 #include "task_list.inl"
 
 #if !DAXA_BUILT_WITH_UTILS_TASK_LIST
@@ -43,11 +45,8 @@ namespace daxa
 
     struct TaskBufferInfo
     {
-        // For execution_persistent resources, task list will synch from the initial use to the first use ONCE.
-        // After the FIRST execution, it will use the runtime state of the resource.
         // For non-execution_persistent resources, task list will synch from the initial use to first use EVERY EXECUTION.
         Access pre_task_list_slice_states = AccessConsts::NONE;
-        bool execution_persistent = {};
         std::span<BufferId> execution_buffers = {};
         std::string name = {};
     };
@@ -164,6 +163,23 @@ namespace daxa
         bool record_debug_string = {};
     };
 
+    struct PersistentTaskBuffer : ManagedPtr
+    {
+        PersistentTaskBuffer() = default;
+        PersistentTaskBuffer(TaskBufferInfo const & info);
+
+        operator TaskBufferId() const;
+
+        auto id() const -> TaskBufferId;
+        auto info() const -> TaskBufferInfo const &;
+
+        auto get_buffer(usize index = 0) -> BufferId &;
+        auto get_buffer_count() const -> usize;
+        void add_buffer(BufferId id);
+        void clear_buffers();
+        void remove_buffer(BufferId id);
+    };
+
     struct TaskList : ManagedPtr
     {
         TaskList() = default;
@@ -171,7 +187,8 @@ namespace daxa
         TaskList(TaskListInfo const & info);
         ~TaskList();
 
-        auto create_task_buffer(TaskBufferInfo const & info) -> TaskBufferId;
+        auto create_transient_task_buffer(TaskBufferInfo const & info) -> TaskBufferId;
+        auto use_persistent_buffer(PersistentTaskBuffer const & buffer) -> TaskBufferId;
         auto create_task_image(TaskImageInfo const & info) -> TaskImageId;
 
         void conditional(TaskListConditionalInfo const & conditional_info);

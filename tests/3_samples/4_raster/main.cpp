@@ -229,9 +229,9 @@ auto main() -> int
     auto task_atlas_texture_array = loop_task_list.create_task_image({.name = "task_atlas_texture_array"});
     loop_task_list.add_runtime_image(task_atlas_texture_array, atlas_texture_array);
 
-    auto perframe_input_task_buffer_id = loop_task_list.create_task_buffer({.execution_persistent = true, .name = "perframe_input"});
+    auto perframe_input_task_buffer_id = loop_task_list.create_transient_task_buffer({ .name = "perframe_input"});
     loop_task_list.add_runtime_buffer(perframe_input_task_buffer_id, perframe_input_buffer_id);
-    auto renderable_chunks_task_buffer_id = loop_task_list.create_task_buffer({.execution_persistent = true, .name = "renderable_chunks"});
+    auto renderable_chunks_task_buffer_id = loop_task_list.create_transient_task_buffer({ .name = "renderable_chunks"});
 
     auto chunk_update_queue = std::set<usize>{};
     auto chunk_update_queue_mtx = std::mutex{};
