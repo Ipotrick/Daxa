@@ -166,6 +166,9 @@ namespace daxa
 
     struct ImplPersistentTaskBuffer final : ManagedSharedState
     {
+        ImplPersistentTaskBuffer(TaskBufferInfo const & a_info);
+        virtual ~ImplPersistentTaskBuffer() override final;
+
         TaskBufferInfo info = {};
         // One task buffer can back multiple buffers.
         std::vector<BufferId> actual_buffers = {};
@@ -177,9 +180,6 @@ namespace daxa
         // from which they are generated
         static inline std::atomic_uint64_t exec_unique_next_index = 1;
         usize unique_index = std::numeric_limits<u64>::max();
-
-        ImplPersistentTaskBuffer(TaskBufferInfo a_info);
-        virtual ~ImplPersistentTaskBuffer() override final;
     };
 
     struct ImplPersistentTaskImage final : ManagedSharedState
@@ -189,14 +189,14 @@ namespace daxa
         std::vector<ImageId> actual_images = {};
         // We store runtime information about the previous executions final resource states.
         // This is important, as with conditional execution and temporal resources we need to store this infomation to form correct state transitions.
-        std::optional<std::vector<ExtendedImageSliceState>> latest_slice_states = {};
+        std::vector<ExtendedImageSliceState> latest_slice_states = {};
 
         // Used to allocate id - because all persistent resources have unique id we need a single point
         // from which they are generated
         static inline std::atomic_uint64_t exec_unique_next_index = 1;
         usize unique_index = std::numeric_limits<u64>::max();
 
-        ImplPersistentTaskImage(TaskImageInfo a_info);
+        ImplPersistentTaskImage(TaskImageInfo const & a_info);
         virtual ~ImplPersistentTaskImage() override final;
     };
 
@@ -227,6 +227,14 @@ namespace daxa
         return std::get<Transient>(task_buffer_data).actual_buffers;                                         \
     }
 
+        inline auto get_persistent() -> ImplPersistentTaskBuffer&
+        {
+            return std::get<Persistent>(task_buffer_data).get();
+        }
+        inline auto is_persistent() const -> bool
+        {
+            return std::holds_alternative<Persistent>(task_buffer_data);
+        }
         inline auto get_actual_buffers() -> std::vector<BufferId> &
         {
             GET_ACTUAL_BUFFERS_BODY
@@ -261,11 +269,19 @@ namespace daxa
         return std::get<Transient>(task_image_data).actual_images;                                       \
     }
 
-        inline auto get_actual_images() -> std::vector<BufferId> &
+        inline auto is_persistent() const -> bool
+        {
+            return std::holds_alternative<Persistent>(task_image_data);
+        }
+        inline auto get_persistent() -> ImplPersistentTaskImage&
+        {
+            return std::get<Persistent>(task_image_data).get();
+        }
+        inline auto get_actual_images() -> std::vector<ImageId> &
         {
             GET_ACTUAL_IMAGES_BODY
         }
-        inline auto get_actual_images() const -> std::vector<BufferId> const & 
+        inline auto get_actual_images() const -> std::vector<ImageId> const & 
         { 
             GET_ACTUAL_IMAGES_BODY
         }
@@ -310,7 +326,7 @@ namespace daxa
         void update_image_view_cache(Task & task);
 
         void debug_print_memory_barrier(MemoryBarrierInfo & barrier, std::string_view prefix);
-        void debug_print_image_memory_barrier(ImageBarrierInfo & barrier, GlobalTaskImageInfo & glob_image, std::string_view prefix);
+        void debug_print_image_memory_barrier(ImageBarrierInfo & barrier, PermIndepTaskImageInfo & glob_image, std::string_view prefix);
         void debug_print_task_barrier(TaskBarrier & barrier, usize index, std::string_view prefix);
         void debug_print_task_split_barrier(TaskSplitBarrier & barrier, usize index, std::string_view prefix);
         void debug_print_task(TaskListPermutation const & permutation, Task & task, usize task_id, std::string_view prefix);
