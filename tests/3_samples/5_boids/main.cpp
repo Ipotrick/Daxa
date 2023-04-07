@@ -203,9 +203,9 @@ struct App : AppWindow<App>
     {
         daxa::TaskList new_task_list = daxa::TaskList({.device = device, .swapchain = swapchain, .name = APPNAME_PREFIX("main task list")});
 
-        auto task_boid_buffer = new_task_list.create_task_buffer({});
+        auto task_boid_buffer = new_task_list.create_transient_task_buffer({});
         new_task_list.add_runtime_buffer(task_boid_buffer, this->boid_buffer);
-        auto task_old_boid_buffer = new_task_list.create_task_buffer({});
+        auto task_old_boid_buffer = new_task_list.create_transient_task_buffer({});
         new_task_list.add_runtime_buffer(task_old_boid_buffer, this->old_boid_buffer);
 
         task_swapchain_image = new_task_list.create_task_image({
