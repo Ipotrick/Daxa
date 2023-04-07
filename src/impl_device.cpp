@@ -301,6 +301,14 @@ namespace daxa
         auto const & impl = *as<ImplDevice>();
         return !id.is_empty() && impl.gpu_shader_resource_table.image_slots.is_id_valid(id);
     }
+    
+    auto Device::is_id_valid(ImageViewId id) const -> bool
+    {
+        auto const & impl = *as<ImplDevice>();
+        bool const slot_valid = !id.is_empty() && impl.gpu_shader_resource_table.image_slots.is_id_valid(id);
+        bool const parent_valid = is_id_valid(impl.slot(id).info.image);
+        return slot_valid && parent_valid;
+    }
 
     auto Device::is_id_valid(BufferId id) const -> bool
     {
@@ -362,7 +370,7 @@ namespace daxa
             .imageCubeArray = VK_TRUE,
             .independentBlend = VK_FALSE,
             .geometryShader = VK_FALSE,
-            .tessellationShader = VK_FALSE,
+            .tessellationShader = VK_TRUE,
             .sampleRateShading = VK_FALSE,
             .dualSrcBlend = VK_FALSE,
             .logicOp = VK_FALSE,
@@ -969,6 +977,20 @@ namespace daxa
 
         ImplImageSlot ret;
         ret.vk_image = swapchain_image;
+        ret.view_slot.info = ImageViewInfo{
+            .type = static_cast<ImageViewType>(image_info.dimensions - 1),
+            .format = image_info.format,
+            .image = {id},
+            .slice = ImageMipArraySlice{
+                .image_aspect = image_info.aspect,
+                .base_mip_level = 0,
+                .level_count = image_info.mip_level_count,
+                .base_array_layer = 0,
+                .layer_count = image_info.array_layer_count,
+            },
+            .name = image_info.name,
+        };
+        
         VkImageViewCreateInfo const view_ci{
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .pNext = nullptr,
@@ -1049,7 +1071,7 @@ namespace daxa
 
         DAXA_DBG_ASSERT_TRUE_M(std::popcount(image_info.sample_count) == 1 && image_info.sample_count <= 64, "image samples must be power of two and between 1 and 64(inclusive)");
         DAXA_DBG_ASSERT_TRUE_M(
-            image_info.size.x > 0 &&
+            image_info.size.x > 0 && 
                 image_info.size.y > 0 &&
                 image_info.size.z > 0,
             "image (x,y,z) dimensions must be greater then 0");

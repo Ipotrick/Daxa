@@ -189,11 +189,12 @@ namespace daxa
         bool compiled = {};
 
         // execution time information:
-        daxa::TransferMemoryPool staging_memory{TransferMemoryPoolInfo{.device = info.device, .capacity = info.staging_memory_pool_size, .use_bar_memory = true}};
+        daxa::TransferMemoryPool staging_memory{TransferMemoryPoolInfo{.device = info.device, .capacity = info.staging_memory_pool_size, .use_bar_memory = true, .name = info.name } };
         std::array<bool, DAXA_TASKLIST_MAX_CONITIONALS> execution_time_current_conditionals = {};
         bool enable_debug_print = {};
 
         // post execution information:
+        usize last_execution_staging_timeline_value = 0;
         u32 chosen_permutation_last_execution = {};
         std::vector<CommandList> left_over_command_lists = {};
         bool executed_once = {};

@@ -51,6 +51,14 @@ namespace daxa
         };
 
         create_shader_module(this->info.vertex_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT);
+        if (this->info.tesselation_control_shader_info.has_value())
+        {
+            create_shader_module(this->info.tesselation_control_shader_info.value(), VkShaderStageFlagBits::VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
+        }
+        if (this->info.tesselation_evaluation_shader_info.has_value())
+        {
+            create_shader_module(this->info.tesselation_evaluation_shader_info.value(), VkShaderStageFlagBits::VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
+        }
         if (this->info.fragment_shader_info.has_value())
         {
             create_shader_module(this->info.fragment_shader_info.value(), VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -73,6 +81,17 @@ namespace daxa
             .topology = *reinterpret_cast<VkPrimitiveTopology const *>(&info.raster.primitive_topology),
             .primitiveRestartEnable = static_cast<VkBool32>(info.raster.primitive_restart_enable),
         };
+        VkPipelineTessellationDomainOriginStateCreateInfo const vk_tesselation_domain_origin_state{
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_DOMAIN_ORIGIN_STATE_CREATE_INFO,
+            .pNext = nullptr,
+            .domainOrigin = *reinterpret_cast<VkTessellationDomainOrigin const *>(&info.tesselation.origin),
+        };
+        VkPipelineTessellationStateCreateInfo const vk_tesselation_state{
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO,
+            .pNext = reinterpret_cast<void const *>(&vk_tesselation_domain_origin_state),
+            .flags = {},
+            .patchControlPoints = info.tesselation.control_points,
+        };
         constexpr VkPipelineMultisampleStateCreateInfo vk_multisample_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
             .pNext = nullptr,
@@ -89,7 +108,7 @@ namespace daxa
             .pNext = nullptr,
             .flags = {},
             .depthClampEnable = {},
-            .rasterizerDiscardEnable = {},
+            .rasterizerDiscardEnable = info.fragment_shader_info.has_value() ? VK_FALSE : VK_TRUE,
             .polygonMode = *reinterpret_cast<VkPolygonMode const *>(&info.raster.polygon_mode),
             .cullMode = *reinterpret_cast<VkCullModeFlags const *>(&info.raster.face_culling),
             .frontFace = *reinterpret_cast<VkFrontFace const *>(&info.raster.front_face_winding),
@@ -200,7 +219,7 @@ namespace daxa
             .pStages = vk_pipeline_shader_stage_create_infos.data(),
             .pVertexInputState = &vk_vertex_input_state,
             .pInputAssemblyState = &vk_input_assembly_state,
-            .pTessellationState = {},
+            .pTessellationState = &vk_tesselation_state,
             .pViewportState = &vk_viewport_state,
             .pRasterizationState = &vk_raster_state,
             .pMultisampleState = &vk_multisample_state,
