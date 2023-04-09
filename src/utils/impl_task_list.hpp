@@ -89,6 +89,8 @@ namespace daxa
         TaskInfo info = {};
         std::vector<std::vector<ImageViewId>> image_view_cache = {};
         ShaderUseIdToOffsetTable id_to_offset = {};
+        std::unordered_map<u32, u32> buffer_alias_hash_to_use_index = {};
+        std::unordered_map<u32, u32> image_alias_hash_to_use_index = {};
     };
 
     struct CreateTaskBufferTask
@@ -153,7 +155,10 @@ namespace daxa
         usize swapchain_image_first_use_submit_scope_index = std::numeric_limits<usize>::max();
         usize swapchain_image_last_use_submit_scope_index = std::numeric_limits<usize>::max();
 
-        void add_task(ImplTaskList & task_list_impl, TaskInfo const & info, ShaderUseIdToOffsetTable const & shader_id_use_to_offset_table);
+        void add_task(ImplTaskList & task_list_impl,
+                      TaskInfo const & info,
+                      ShaderUseIdToOffsetTable const & shader_id_use_to_offset_table,
+                      std::array<std::unordered_map<u32, u32>, 2> const & alias_indirection);
         void submit(TaskSubmitInfo const & info);
         void present(TaskPresentInfo const & info);
     };
@@ -164,11 +169,8 @@ namespace daxa
         virtual ~ImplPersistentTaskBuffer() override final;
 
         TaskBufferInfo info = {};
-        // One task buffer can back multiple buffers.
         std::vector<BufferId> actual_buffers = {};
-        // We store execution time information about the previous executions final resource states.
-        // This is important, as with conditional execution and temporal resources we need to store this infomation to form correct state transitions.
-        std::optional<Access> previous_execution_last_access = {};
+        Access latest_access = {};
 
         // Used to allocate id - because all persistent resources have unique id we need a single point
         // from which they are generated
@@ -186,7 +188,7 @@ namespace daxa
         std::vector<ImageId> actual_images = {};
         // We store runtime information about the previous executions final resource states.
         // This is important, as with conditional execution and temporal resources we need to store this infomation to form correct state transitions.
-        std::vector<ExtendedImageSliceState> latest_slice_states = {};
+        std::vector<ImageSliceState> latest_slice_states = {};
 
         // Used to allocate id - because all persistent resources have unique id we need a single point
         // from which they are generated
@@ -245,7 +247,6 @@ namespace daxa
     {
         struct Persistent
         {
-            TaskImageInfo info = {};
             ManagedWeakPtr image = {};
             auto get() -> ImplPersistentTaskImage &
             {
@@ -316,7 +317,6 @@ namespace daxa
         // execution time information:
         daxa::TransferMemoryPool staging_memory{TransferMemoryPoolInfo{.device = info.device, .capacity = info.staging_memory_pool_size, .use_bar_memory = true, .name = info.name}};
         std::array<bool, DAXA_TASKLIST_MAX_CONITIONALS> execution_time_current_conditionals = {};
-        bool enable_debug_print = {};
 
         // post execution information:
         usize last_execution_staging_timeline_value = 0;
