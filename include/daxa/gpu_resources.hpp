@@ -1,10 +1,11 @@
 #pragma once
 
 #include <daxa/core.hpp>
-#include <bit>
+#include <daxa/memory_block.hpp>
 
 namespace daxa
 {
+
     enum struct ImageViewType
     {
         REGULAR_1D = 0,
@@ -77,8 +78,8 @@ namespace daxa
 
     struct BufferInfo
     {
-        MemoryFlags memory_flags = {};
         u32 size = {};
+        AllocateInfo allocate_info = {};
         std::string name = {};
     };
 
@@ -92,7 +93,7 @@ namespace daxa
         u32 array_layer_count = 1;
         u32 sample_count = 1;
         ImageUsageFlags usage = {};
-        MemoryFlags memory_flags = {};
+        AllocateInfo allocate_info = {};
         std::string name = {};
     };
 

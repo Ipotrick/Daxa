@@ -86,7 +86,8 @@ namespace daxa
     
     struct TaskGPUResourceId
     {
-        usize index = std::numeric_limits<u64>::max();
+        u32 task_list_index = {};
+        u32 index = {};
 
         auto is_empty() const -> bool;
         auto is_persistent() const -> bool;
