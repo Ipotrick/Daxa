@@ -20,7 +20,7 @@ struct MipmappingComputePushConstant
     daxa_u32vec2 frame_dim;
 };
 
-struct ConditionalUploadStruct
+struct CondSettings
 {
     daxa_u32 value;
 };
