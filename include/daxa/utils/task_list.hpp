@@ -21,18 +21,11 @@ namespace daxa
         auto get_command_list() const -> CommandList;
         auto get_used_task_buffers() const -> UsedTaskBuffers const &;
         auto get_used_task_images() const -> UsedTaskImages const &;
-        auto get_buffers(TaskBufferId const & task_resource_id) const -> std::span<BufferId>;
-        auto get_images(TaskImageId const & task_resource_id) const -> std::span<ImageId>;
+        auto get_buffers(TaskBufferId const & task_resource_id) const -> std::span<BufferId const>;
+        auto get_images(TaskImageId const & task_resource_id) const -> std::span<ImageId const>;
         auto get_image_views(TaskImageId const & task_resource_id) const -> std::span<ImageViewId>;
 
         auto get_allocator() const -> TransferMemoryPool &;
-
-        void add_runtime_buffer(TaskBufferId tid, BufferId id);
-        void add_runtime_image(TaskImageId tid, ImageId id);
-        void remove_runtime_buffer(TaskBufferId tid, BufferId id);
-        void remove_runtime_image(TaskImageId tid, ImageId id);
-        void clear_runtime_buffers(TaskBufferId tid);
-        void clear_runtime_images(TaskImageId tid);
 
       private:
         friend struct ImplTaskRuntimeInterface;
@@ -43,23 +36,33 @@ namespace daxa
 
     using TaskCallback = std::function<void(TaskRuntimeInterface const &)>;
 
+    struct TransientBufferInfo
+    {
+        MemoryFlags memory_flags = {};
+        u32 size = {};
+        std::string name = {};
+    };
+
+    struct TransientImageInfo
+    {
+        u32 dimensions = 2;
+        Format format = Format::R8G8B8A8_UNORM;
+        ImageAspectFlags aspect = ImageAspectFlagBits::COLOR;
+        Extent3D size = {0, 0, 0};
+        u32 mip_level_count = 1;
+        u32 array_layer_count = 1;
+        u32 sample_count = 1;
+        MemoryFlags memory_flags = {};
+        std::string name = {};
+    };
     struct TaskBufferInfo
     {
-        // For non-execution_persistent resources, task list will synch from the initial use to first use EVERY EXECUTION.
-        Access pre_task_list_slice_states = AccessConsts::NONE;
-        std::span<BufferId> execution_buffers = {};
         std::string name = {};
     };
 
     struct TaskImageInfo
     {
-        // For execution_persistent resources, task list will synch from the initial use to the first use ONCE.
-        // After the FIRST execution, it will use the runtime state of the resource.
-        // For non-execution_persistent resources, task list will synch from the initial use to first use EVERY EXECUTION.
-        // This is either empty or contains an initial state FOR ALL USES SLICES of the image.
-        std::span<ImageSliceState> pre_task_list_slice_states = {};
         bool swapchain_image = {};
-        std::span<ImageId> execution_images = {};
         std::string name = {};
     };
 
@@ -162,38 +165,47 @@ namespace daxa
         bool record_debug_string = {};
     };
 
-    struct PersistentTaskBuffer : ManagedPtr
+    struct TrackedBuffers
     {
-        PersistentTaskBuffer() = default;
-        PersistentTaskBuffer(TaskBufferInfo const & info);
+        std::span<BufferId> buffers = {};
+        Access latest_access = {};
+    };
+
+    struct TaskBuffer : ManagedPtr
+    {
+        TaskBuffer() = default;
+        TaskBuffer(TaskBufferInfo const & info);
 
         operator TaskBufferId() const;
 
         auto id() const -> TaskBufferId;
         auto info() const -> TaskBufferInfo const &;
+        auto get_buffers() const -> std::pair<std::span<BufferId const>, Access>;
 
-        auto get_buffer(usize index = 0) -> BufferId &;
-        auto get_buffer_count() const -> usize;
-        void add_buffer(BufferId id);
-        void clear_buffers();
-        void remove_buffer(BufferId id);
+        void set_buffers(TrackedBuffers const & buffers);
+        void swap_buffers(TaskBuffer & other);
     };
 
-    struct PersistentTaskImage : ManagedPtr
+    struct TrackedImages
     {
-        PersistentTaskImage() = default;
-        PersistentTaskImage(TaskImageInfo const & info);
+        std::span<ImageId> images = {};
+        // optional:
+        std::span<ImageSliceState> latest_slice_states = {};
+    };
+
+    struct TaskImage : ManagedPtr
+    {
+        TaskImage() = default;
+        TaskImage(TaskImageInfo const & info);
 
         operator TaskImageId() const;
 
         auto id() const -> TaskImageId;
         auto info() const -> TaskImageInfo const &;
+        auto get_images() const -> TrackedImages;
 
-        auto get_image(usize index = 0) -> ImageId &;
-        auto get_image_count() const -> usize;
-        void add_image(ImageId id);
-        void clear_images();
-        void remove_image(ImageId id);
+        void set_images(TrackedImages const & images);
+        void swap_images(TaskImage & other);
     };
 
     struct TaskList : ManagedPtr
@@ -202,35 +214,24 @@ namespace daxa
 
         TaskList(TaskListInfo const & info);
         ~TaskList();
+        
+        auto use_persistent_buffer(TaskBuffer const & buffer) -> TaskBufferId;
+        auto use_persistent_image(TaskImage const & image) -> TaskImageId;
 
-        auto create_transient_task_buffer(TaskBufferInfo const & info) -> TaskBufferId;
-        auto use_persistent_buffer(PersistentTaskBuffer const & buffer) -> TaskBufferId;
-        auto create_transient_task_image(TaskImageInfo const & info) -> TaskImageId;
-        auto use_persistent_image(PersistentTaskImage const & image) -> TaskImageId;
-
-        void conditional(TaskListConditionalInfo const & conditional_info);
+        auto create_transient_buffer(TransientBufferInfo const & info) -> TaskBufferId;
+        auto create_transient_image(TransientImageInfo const & info) -> TaskImageId;
 
         void add_task(TaskInfo const & info);
-
+        void conditional(TaskListConditionalInfo const & conditional_info);
         void submit(TaskSubmitInfo const & info);
         void present(TaskPresentInfo const & info);
 
         void complete(TaskCompleteInfo const & info);
 
-        void add_runtime_buffer(TaskBufferId tid, BufferId id);
-        void add_runtime_image(TaskImageId tid, ImageId id);
-        void remove_runtime_buffer(TaskBufferId tid, BufferId id);
-        void remove_runtime_image(TaskImageId tid, ImageId id);
-        void clear_runtime_buffers(TaskBufferId tid);
-        void clear_runtime_images(TaskImageId tid);
-
         void execute(ExecutionInfo const & info);
-        // All tasks recorded AFTER a submit will not be executied and submitted.
-        // The resulting command lists can retrieved wit this function.
         auto get_command_lists() -> std::vector<CommandList>;
-        // Returns a debug string describing the used permutation and synch.
-        auto get_debug_string() -> std::string;
 
+        auto get_debug_string() -> std::string;
         void output_graphviz();
     };
 } // namespace daxa

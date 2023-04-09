@@ -94,12 +94,12 @@ namespace daxa
 
     auto TaskGPUResourceId::is_empty() const -> bool
     {
-        return index == std::numeric_limits<u64>::max();
+        return index == 0 && task_list_index == 0;
     }
 
     auto TaskGPUResourceId::is_persistent() const -> bool
     {
-        return (index & (1ull << 63)) != 0;
+        return task_list_index == 0;
     }
 
     auto to_string(TaskBufferAccess const & usage) -> std::string_view
@@ -217,20 +217,18 @@ namespace daxa
         return impl.current_task->info.used_images;
     }
 
-    auto TaskRuntimeInterface::get_buffers(TaskBufferId const & task_resource_id) const -> std::span<BufferId>
+    auto TaskRuntimeInterface::get_buffers(TaskBufferId const & task_resource_id) const -> std::span<BufferId const>
     {
         auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
-        TaskBufferId const local_index = impl.task_list.translate_persistent_id(task_resource_id);
-        auto & actual_buffers = impl.task_list.global_buffer_infos[local_index.index].get_actual_buffers();
+        auto actual_buffers = impl.task_list.get_actual_buffers(impl.task_list.id_to_local_id(task_resource_id));
         DAXA_DBG_ASSERT_TRUE_M(actual_buffers.size() > 0, "task buffer must be backed by execution buffer(s)!");
         return actual_buffers;
     }
 
-    auto TaskRuntimeInterface::get_images(TaskImageId const & task_resource_id) const -> std::span<ImageId>
+    auto TaskRuntimeInterface::get_images(TaskImageId const & task_resource_id) const -> std::span<ImageId const>
     {
         auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
-        TaskImageId const local_index = impl.task_list.translate_persistent_id(task_resource_id);
-        auto & actual_images = impl.task_list.global_image_infos[local_index.index].get_actual_images();
+        auto actual_images = impl.task_list.get_actual_images(impl.task_list.id_to_local_id(task_resource_id), impl.permutation);
         DAXA_DBG_ASSERT_TRUE_M(actual_images.size() > 0, "task image must be backed by execution image(s)!");
         return actual_images;
     }
@@ -244,7 +242,7 @@ namespace daxa
             impl.current_task->info.used_images.end(),
             [&](TaskImageUse & image_use) -> bool
             { return image_use.id == task_resource_id; });
-        [[maybe_unused]] std::string const name = impl.task_list.global_image_infos[task_resource_id.index].info.name;
+        [[maybe_unused]] std::string const name = std::string(impl.task_list.global_image_infos[task_resource_id.index].get_name());
         DAXA_DBG_ASSERT_TRUE_M(
             iter != impl.current_task->info.used_images.end(),
             "task image \"" +
@@ -263,159 +261,63 @@ namespace daxa
         return impl.task_list.staging_memory;
     }
 
-    PersistentTaskBuffer::PersistentTaskBuffer(TaskBufferInfo const & info)
+    TaskBuffer::TaskBuffer(TaskBufferInfo const & info)
         : ManagedPtr{new ImplPersistentTaskBuffer(info)}
     {
     }
-    ImplPersistentTaskBuffer::ImplPersistentTaskBuffer(const TaskBufferInfo & info)
-        : info{info}
-        , actual_buffers{info.execution_buffers.begin(), info.execution_buffers.end()}
-        , unique_index{ImplPersistentTaskBuffer::exec_unique_next_index++}
+    ImplPersistentTaskBuffer::ImplPersistentTaskBuffer(TaskBufferInfo const & info)
+        : info{info}, unique_index{ImplPersistentTaskBuffer::exec_unique_next_index++}
     {
     }
     ImplPersistentTaskBuffer::~ImplPersistentTaskBuffer() = default;
 
-    auto PersistentTaskBuffer::id() const -> TaskBufferId
+    auto TaskBuffer::id() const -> TaskBufferId
     {
         auto & impl = *this->as<ImplPersistentTaskBuffer>();
-        return TaskBufferId{{.index = (1ull << 63) | impl.unique_index}};
+        return TaskBufferId{{ .task_list_index = {}, .index = impl.unique_index }};
     }
 
-    PersistentTaskBuffer::operator TaskBufferId() const
+    TaskBuffer::operator TaskBufferId() const
     {
         return id();
     }
 
-    auto PersistentTaskBuffer::info() const -> TaskBufferInfo const &
+    auto TaskBuffer::info() const -> TaskBufferInfo const &
     {
         auto & impl = *this->as<ImplPersistentTaskBuffer>();
         return impl.info;
     }
 
-    auto PersistentTaskBuffer::get_buffer(usize index) -> BufferId &
-    {
-        auto & impl = *this->as<ImplPersistentTaskBuffer>();
-        return impl.actual_buffers.at(index);
-    }
-
-    auto PersistentTaskBuffer::get_buffer_count() const -> usize
-    {
-        auto & impl = *this->as<ImplPersistentTaskBuffer>();
-        return impl.actual_buffers.size();
-    }
-
-    void PersistentTaskBuffer::add_buffer(BufferId id)
-    {
-        auto & impl = *this->as<ImplPersistentTaskBuffer>();
-        impl.actual_buffers.push_back(id);
-    }
-
-    void PersistentTaskBuffer::clear_buffers()
-    {
-        auto & impl = *this->as<ImplPersistentTaskBuffer>();
-        impl.actual_buffers.clear();
-    }
-
-    void PersistentTaskBuffer::remove_buffer(BufferId id)
-    {
-        auto & impl = *this->as<ImplPersistentTaskBuffer>();
-        auto iter = std::find_if(
-            impl.actual_buffers.begin(),
-            impl.actual_buffers.end(),
-            [&](auto compare_id)
-            {
-                return id == compare_id;
-            });
-        DAXA_DBG_ASSERT_TRUE_M(
-            iter != impl.actual_buffers.end(),
-            "persistent task buffer does not contain given buffer id");
-        if (iter != impl.actual_buffers.end())
-        {
-            impl.actual_buffers.erase(iter);
-        }
-    }
-
-    PersistentTaskImage::PersistentTaskImage(TaskImageInfo const & a_info)
+    TaskImage::TaskImage(TaskImageInfo const & a_info)
         : ManagedPtr{new ImplPersistentTaskImage(a_info)}
     {
-
     }
-    
-    ImplPersistentTaskImage::ImplPersistentTaskImage(TaskImageInfo const & a_info)
-        : info{a_info}
-        , actual_images{a_info.execution_images.begin(), a_info.execution_images.end()}
-        , unique_index{ImplPersistentTaskImage::exec_unique_next_index++}
-    {
 
+    ImplPersistentTaskImage::ImplPersistentTaskImage(TaskImageInfo const & a_info)
+        : info{a_info}, actual_images{}, unique_index{ImplPersistentTaskImage::exec_unique_next_index++}
+    {
     }
 
     ImplPersistentTaskImage::~ImplPersistentTaskImage()
     {
-
     }
 
-    PersistentTaskImage::operator TaskImageId() const
+    TaskImage::operator TaskImageId() const
     {
         return id();
     }
 
-
-    auto PersistentTaskImage::id() const -> TaskImageId
+    auto TaskImage::id() const -> TaskImageId
     {
         auto & impl = *this->as<ImplPersistentTaskImage>();
-        return TaskImageId{{.index = (1ull << 63) | impl.unique_index}};
+        return TaskImageId{{ .task_list_index = {}, .index = impl.unique_index}};
     }
 
-    auto PersistentTaskImage::info() const -> TaskImageInfo const &
+    auto TaskImage::info() const -> TaskImageInfo const &
     {
         auto & impl = *this->as<ImplPersistentTaskImage>();
         return impl.info;
     }
-
-
-    auto PersistentTaskImage::get_image(usize index) -> ImageId &
-    {
-        auto & impl = *this->as<ImplPersistentTaskImage>();
-        return impl.actual_images.at(index);
-    }
-
-    auto PersistentTaskImage::get_image_count() const -> usize
-    {
-        auto & impl = *this->as<ImplPersistentTaskImage>();
-        return impl.actual_images.size();
-    }
-
-    void PersistentTaskImage::add_image(ImageId id)
-    {
-        auto & impl = *this->as<ImplPersistentTaskImage>();
-        return impl.actual_images.push_back(id);
-    }
-
-    void PersistentTaskImage::clear_images()
-    {
-        auto & impl = *this->as<ImplPersistentTaskImage>();
-        impl.actual_images.clear();
-    }
-
-    void PersistentTaskImage::remove_image(ImageId id)
-    {
-        auto & impl = *this->as<ImplPersistentTaskImage>();
-        auto iter = std::find_if(
-            impl.actual_images.begin(),
-            impl.actual_images.end(),
-            [&](auto compare_id)
-            {
-                return id == compare_id;
-            });
-        DAXA_DBG_ASSERT_TRUE_M(
-            iter != impl.actual_images.end(),
-            "persistent task image does not contain given image id");
-        if (iter != impl.actual_images.end())
-        {
-            impl.actual_images.erase(iter);
-        }
-    }
-
 
     TaskList::TaskList(TaskListInfo const & info)
         : ManagedPtr{new ImplTaskList(info)}
@@ -430,7 +332,7 @@ namespace daxa
     }
     TaskList::~TaskList() = default;
 
-    auto TaskList::use_persistent_buffer(PersistentTaskBuffer const & buffer) -> TaskBufferId
+    auto TaskList::use_persistent_buffer(TaskBuffer const & buffer) -> TaskBufferId
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can not record to completed command list");
@@ -439,21 +341,21 @@ namespace daxa
 
         for (auto & permutation : impl.permutations)
         {
-            permutation.buffer_infos.push_back(TaskBuffer{
+            permutation.buffer_infos.push_back(PerPermTaskBuffer{
                 .valid = permutation.active,
             });
         }
 
         impl.global_buffer_infos.emplace_back(PermIndepTaskBufferInfo{
-            .info = buffer.info(),
-            .task_buffer_data = PermIndepTaskBufferInfo::Persistent{ManagedWeakPtr{buffer.object}},
-        });
+            .task_buffer_data = PermIndepTaskBufferInfo::Persistent{
+                .buffer = ManagedWeakPtr{buffer.object}
+        }});
         impl.persistent_buffer_index_to_local_index[buffer.id().index] = task_buffer_id.index;
         impl.buffer_name_to_id[buffer.info().name] = task_buffer_id;
         return task_buffer_id;
     }
 
-    auto TaskList::create_transient_task_buffer(TaskBufferInfo const & info) -> TaskBufferId
+    auto TaskList::create_transient_buffer(TransientBufferInfo const & info) -> TaskBufferId
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can not record to completed command list");
@@ -462,24 +364,20 @@ namespace daxa
 
         for (auto & permutation : impl.permutations)
         {
-            permutation.buffer_infos.push_back(TaskBuffer{
+            permutation.buffer_infos.push_back(PerPermTaskBuffer{
                 .valid = permutation.active,
             });
         }
 
         impl.global_buffer_infos.emplace_back(PermIndepTaskBufferInfo{
-            .info = info,
-            .task_buffer_data = PermIndepTaskBufferInfo::Transient{
-                .actual_buffers = std::vector<BufferId>(
-                    info.execution_buffers.begin(),
-                    info.execution_buffers.end()),
-            }});
+            .task_buffer_data = PermIndepTaskBufferInfo::Transient{ .info = info }
+        });
 
         impl.buffer_name_to_id[info.name] = task_buffer_id;
         return task_buffer_id;
     }
 
-    auto TaskList::use_persistent_image(PersistentTaskImage const & image) -> TaskImageId
+    auto TaskList::use_persistent_image(TaskImage const & image) -> TaskImageId
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can not record to completed command list");
@@ -489,7 +387,7 @@ namespace daxa
         for (auto & permutation : impl.permutations)
         {
             // For non-persistent resources task list will synch on the initial to first use every execution.
-            permutation.image_infos.emplace_back(TaskImage{
+            permutation.image_infos.emplace_back(PerPermTaskImage{
                 .valid = permutation.active,
                 .swapchain_semaphore_waited_upon = false,
                 .last_slice_states = {},
@@ -503,96 +401,113 @@ namespace daxa
         }
 
         impl.global_image_infos.emplace_back(PermIndepTaskImageInfo{
-            .info = image.info(),
             .task_image_data = PermIndepTaskImageInfo::Persistent{
                 .image = ManagedWeakPtr{image.object},
-            }
-        });
+            }});
         impl.persistent_image_index_to_local_index[image.id().index] = task_image_id.index;
         impl.image_name_to_id[image.info().name] = task_image_id;
         return task_image_id;
     }
 
-    auto TaskList::create_transient_task_image(TaskImageInfo const & info) -> TaskImageId
+    auto TaskList::create_transient_image(TransientImageInfo const & info) -> TaskImageId
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "can not record to completed command list");
         DAXA_DBG_ASSERT_TRUE_M(!impl.image_name_to_id.contains(info.name), "task image names must be unique");
         TaskImageId task_image_id{{.index = static_cast<u32>(impl.global_image_infos.size())}};
 
-        std::vector<ExtendedImageSliceState> initial_accesses;
-        initial_accesses.reserve(info.pre_task_list_slice_states.size());
-        for (auto & pre_task_list_slice_states : info.pre_task_list_slice_states)
-        {
-            initial_accesses.push_back(ExtendedImageSliceState{
-                {
-                    .latest_access = pre_task_list_slice_states.latest_access,
-                    .latest_layout = pre_task_list_slice_states.latest_layout,
-                    .slice = pre_task_list_slice_states.slice,
-                }});
-        }
-
         for (auto & permutation : impl.permutations)
         {
-            // For non-persistent resources task list will synch on the initial to first use every execution.
-            permutation.image_infos.emplace_back(TaskImage{
+            permutation.image_infos.emplace_back(PerPermTaskImage{
                 .valid = permutation.active,
                 .swapchain_semaphore_waited_upon = false,
-                .last_slice_states = initial_accesses,
+                .last_slice_states = {},
                 .first_slice_states = {},
             });
-            if (info.swapchain_image)
-            {
-                DAXA_DBG_ASSERT_TRUE_M(permutation.swapchain_image.is_empty(), "can only register one swapchain image per task list");
-                permutation.swapchain_image = task_image_id;
-            }
         }
 
         impl.global_image_infos.emplace_back(PermIndepTaskImageInfo{
-            .info = info,
-            .task_image_data = PermIndepTaskImageInfo::Transient{
-                .actual_images = std::vector<ImageId>(info.execution_images.begin(), info.execution_images.end())
-            }
+            .task_image_data = PermIndepTaskImageInfo::Transient{ .info = info }
         });
         impl.image_name_to_id[info.name] = task_image_id;
         return task_image_id;
     }
 
-    auto ImplTaskList::translate_persistent_id(TaskBufferId id) const -> TaskBufferId
+    auto ImplTaskList::get_actual_buffers(TaskBufferId id) const -> std::span<BufferId const>
     {
-        if (id.is_persistent())
+        const auto & global_buffer = global_buffer_infos.at(id.index);
+        if(global_buffer.is_persistent())
         {
-            DAXA_DBG_ASSERT_TRUE_M(
-                persistent_buffer_index_to_local_index.contains(id.index),
-                std::string("detected invalid access of persistent task buffer id ") +
-                    std::to_string(id.index & ~(1ull << 63)) +
-                    std::string(" in tasklist \"") +
-                    info.name +
-                    std::string("\". Please make sure to declare persistent resource use to each task list that uses this buffer with the function use_persistent_buffer!"));
-            return TaskBufferId{{.index = persistent_buffer_index_to_local_index.at(id.index)}};
-        }
-        else
-        {
-            return id;
+            return { global_buffer.get_persistent().actual_buffers.data(),
+                     global_buffer.get_persistent().actual_buffers.size() };
+        } else {
+            return {&std::get<PermIndepTaskBufferInfo::Transient>(global_buffer.task_buffer_data).buffer, 1};
         }
     }
 
-    auto ImplTaskList::translate_persistent_id(TaskImageId id) const -> TaskImageId
+    auto ImplTaskList::get_actual_images(TaskImageId id, TaskListPermutation const & perm) const -> std::span<ImageId const>
+    {
+        const auto & global_image = global_image_infos.at(id.index);
+        if(global_image.is_persistent())
+        {
+            return { global_image.get_persistent().actual_images.data(),
+                     global_image.get_persistent().actual_images.size() };
+        } else {
+            const auto & perm_image = perm.image_infos.at(id.index);
+            DAXA_DBG_ASSERT_TRUE_M(perm_image.valid, "Can not get actual image - image is not valid in this permutation");
+            return {&perm_image.actual_image, 1};
+        }
+    }
+
+    auto ImplTaskList::id_to_local_id(TaskBufferId id) const -> TaskBufferId
+    {
+        if (id.is_persistent())
+        {
+            DAXA_DBG_ASSERT_TRUE_MS(
+                persistent_buffer_index_to_local_index.contains(id.index),
+                << "detected invalid access of persistent task buffer id "
+                << (id.index)
+                << " in tasklist \""
+                << info.name
+                << "\". Please make sure to declare persistent resource use to each task list that uses this buffer with the function use_persistent_buffer!");
+            return TaskBufferId{{ .task_list_index = this->unique_index, .index = persistent_buffer_index_to_local_index.at(id.index) }};
+        }
+        else
+        {
+            DAXA_DBG_ASSERT_TRUE_MS(
+                id.task_list_index == this->unique_index,
+                << "detected invalid access of transient task buffer id "
+                << (id.index)
+                << " in tasklist \""
+                << info.name
+                << "\". Please make sure that you only use transient buffers within the list they are created in!");
+            return TaskBufferId{{ .task_list_index = this->unique_index, .index = id.index }};
+        }
+    }
+
+    auto ImplTaskList::id_to_local_id(TaskImageId id) const -> TaskImageId
     {
         if (id.is_persistent())
         {
             DAXA_DBG_ASSERT_TRUE_M(
                 persistent_image_index_to_local_index.contains(id.index),
                 std::string("detected invalid access of persistent task buffer id ") +
-                    std::to_string(id.index & ~(1ull << 63)) +
+                    std::to_string(id.index) +
                     std::string(" in tasklist \"") +
                     info.name +
                     std::string("\". Please make sure to declare persistent resource use to each task list that uses this image with the function use_persistent_image!"));
-            return TaskImageId{{.index = persistent_image_index_to_local_index.at(id.index)}};
+            return TaskImageId{{ .task_list_index = this->unique_index, .index = persistent_image_index_to_local_index.at(id.index)}};
         }
         else
         {
-            return id;
+            DAXA_DBG_ASSERT_TRUE_MS(
+                id.task_list_index == this->unique_index,
+                << "detected invalid access of transient task image id "
+                << (id.index)
+                << " in tasklist \""
+                << info.name
+                << "\". Please make sure that you only use transient image within the list they are created in!");
+            return TaskImageId{{ .task_list_index = this->unique_index, .index = id.index }};
         }
     }
 
@@ -611,9 +526,9 @@ namespace daxa
         }
     }
 
-    void validate_runtime_image_slice(ImplTaskList & impl, usize task_image_index, ImageMipArraySlice const & access_slice)
+    void validate_runtime_image_slice(ImplTaskList & impl, TaskListPermutation const & perm, usize task_image_index, ImageMipArraySlice const & access_slice)
     {
-        auto const & actual_images = impl.global_image_infos[task_image_index].get_actual_images();
+        auto const actual_images = impl.get_actual_images(TaskImageId{u32(task_image_index)}, perm);
         for (u32 index = 0; index < actual_images.size(); ++index)
         {
             ImageMipArraySlice const full_slice = impl.info.device.info_image_view(actual_images[index].default_view()).slice;
@@ -643,15 +558,17 @@ namespace daxa
         }
     }
 
-    void ImplTaskList::update_image_view_cache(Task & task)
+    void ImplTaskList::update_image_view_cache(Task & task, TaskListPermutation const & permutation)
     {
         for (usize task_image_use_index = 0; task_image_use_index < task.info.used_images.size(); ++task_image_use_index)
         {
             auto const & image_use = task.info.used_images[task_image_use_index];
             auto const slice = image_use.slice;
+            // The image id here is alreadt the task list local id.
+            // The persistent ids are converted to local ids in the add_task function.
             auto const tid = image_use.id;
 
-            auto & actual_images = global_image_infos[tid.index].get_actual_images();
+            auto const actual_images = get_actual_images(tid, permutation);
             auto & view_cache = task.image_view_cache[task_image_use_index];
 
             bool cache_valid = actual_images.size() == view_cache.size();
@@ -659,13 +576,13 @@ namespace daxa
             {
                 for (u32 index = 0; index < actual_images.size(); ++index)
                 {
-                    bool const image_same = info.device.info_image_view(view_cache[index]).image == global_image_infos[tid.index].get_actual_images()[index];
+                    bool const image_same = info.device.info_image_view(view_cache[index]).image == actual_images[index];
                     cache_valid = cache_valid && image_same;
                 }
             }
             if (!cache_valid)
             {
-                validate_runtime_image_slice(*this, tid.index, slice);
+                validate_runtime_image_slice(*this, permutation, tid.index, slice);
                 for (auto & view : view_cache)
                 {
                     ImageViewId const parent_image_default_view = info.device.info_image_view(view).image.default_view();
@@ -702,7 +619,7 @@ namespace daxa
         }
     }
 
-    void validate_runtime_resources(ImplTaskList const & impl, Task const & task)
+    void validate_runtime_resources(ImplTaskList const & impl, TaskListPermutation const & perm, Task const & task)
     {
 #if DAXA_VALIDATION
         std::string dbg_message_begin = std::string("detected invalid runtime id(s) while trying to execute task \"") +
@@ -712,46 +629,44 @@ namespace daxa
         {
             auto const & buffer_use = task.info.used_buffers[use_index];
             std::string dbg_message_continuation = std::string("buffer use index ") +
-                                                                    std::to_string(use_index) +
-                                                                    std::string(", task buffer name \"") +
-                                                                    impl.global_buffer_infos[buffer_use.id.index].info.name +
-                                                                    std::string("\": ");
+                                                   std::to_string(use_index) +
+                                                   std::string(", task buffer name \"") +
+                                                   std::string(impl.global_buffer_infos[buffer_use.id.index].get_name()) +
+                                                   std::string("\": ");
             // Use ids are all valid. They are checked on task insertion.
-            auto const & runtime_buffers = impl.global_buffer_infos[buffer_use.id.index].get_actual_buffers();
+            auto const & runtime_buffers = impl.get_actual_buffers(buffer_use.id);
             DAXA_DBG_ASSERT_TRUE_M(
                 runtime_buffers.size() > 0,
-                dbg_message_begin + dbg_message_continuation + "task buffer has 0 runtime buffers"
-            );
+                dbg_message_begin + dbg_message_continuation + "task buffer has 0 runtime buffers");
             for (usize buffer_index = 0; buffer_index < runtime_buffers.size(); ++buffer_index)
             {
                 DAXA_DBG_ASSERT_TRUE_M(
                     impl.info.device.is_id_valid(runtime_buffers[buffer_index]),
-                    dbg_message_begin + dbg_message_continuation + 
-                    std::string("invalid buffer index ") + 
-                    std::to_string(buffer_index));
+                    dbg_message_begin + dbg_message_continuation +
+                        std::string("invalid buffer index ") +
+                        std::to_string(buffer_index));
             }
         }
         for (usize use_index = 0; use_index < task.info.used_images.size(); ++use_index)
         {
             auto const & image_use = task.info.used_images[use_index];
             std::string dbg_message_continuation = std::string("image use index ") +
-                                                                    std::to_string(use_index) +
-                                                                    std::string(", task image name \"") +
-                                                                    impl.global_image_infos[image_use.id.index].info.name +
-                                                                    std::string("\": ");
+                                                   std::to_string(use_index) +
+                                                   std::string(", task image name \"") +
+                                                   std::string(impl.global_image_infos[image_use.id.index].get_name()) +
+                                                   std::string("\": ");
             // Use ids are all valid. They are checked on task insertion.
-            auto const & runtime_images = impl.global_image_infos[image_use.id.index].get_actual_images();
+            auto const & runtime_images = impl.get_actual_images(image_use.id, perm);
             DAXA_DBG_ASSERT_TRUE_M(
                 runtime_images.size() > 0,
-                dbg_message_begin + dbg_message_continuation + "task image has 0 runtime images"
-            );
+                dbg_message_begin + dbg_message_continuation + "task image has 0 runtime images");
             for (usize image_index = 0; image_index < runtime_images.size(); ++image_index)
             {
                 DAXA_DBG_ASSERT_TRUE_M(
                     impl.info.device.is_id_valid(runtime_images[image_index]),
-                    dbg_message_begin + dbg_message_continuation + 
-                    std::string("invalid buffer index ") + 
-                    std::to_string(image_index));
+                    dbg_message_begin + dbg_message_continuation +
+                        std::string("invalid buffer index ") +
+                        std::to_string(image_index));
             }
         }
 #endif // #if DAXA_VALIDATION
@@ -786,103 +701,6 @@ namespace daxa
         // Set conditional scope to inactive.
         impl.record_active_conditional_scopes &= ~(1u << conditional_info.condition_index);
         impl.update_active_permutations();
-    }
-
-    void TaskList::add_runtime_buffer(TaskBufferId tid, BufferId id)
-    {
-        auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
-        impl.add_runtime_buffer(tid, id);
-    }
-    void TaskList::add_runtime_image(TaskImageId tid, ImageId id)
-    {
-        auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
-        impl.add_runtime_image(tid, id);
-    }
-    void TaskList::remove_runtime_buffer(TaskBufferId tid, BufferId id)
-    {
-        auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
-        impl.remove_runtime_buffer(tid, id);
-    }
-    void TaskList::remove_runtime_image(TaskImageId tid, ImageId id)
-    {
-        auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
-        impl.remove_runtime_image(tid, id);
-    }
-    void TaskList::clear_runtime_buffers(TaskBufferId tid)
-    {
-        auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
-        impl.clear_runtime_buffers(tid);
-    }
-    void TaskList::clear_runtime_images(TaskImageId tid)
-    {
-        auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
-        impl.clear_runtime_images(tid);
-    }
-
-    void TaskRuntimeInterface::add_runtime_buffer(TaskBufferId tid, BufferId id)
-    {
-        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
-        impl.task_list.add_runtime_buffer(tid, id);
-    }
-    void TaskRuntimeInterface::add_runtime_image(TaskImageId tid, ImageId id)
-    {
-        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
-        impl.task_list.add_runtime_image(tid, id);
-    }
-    void TaskRuntimeInterface::remove_runtime_buffer(TaskBufferId tid, BufferId id)
-    {
-        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
-        impl.task_list.remove_runtime_buffer(tid, id);
-    }
-    void TaskRuntimeInterface::remove_runtime_image(TaskImageId tid, ImageId id)
-    {
-        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
-        impl.task_list.remove_runtime_image(tid, id);
-    }
-    void TaskRuntimeInterface::clear_runtime_buffers(TaskBufferId tid)
-    {
-        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
-        impl.task_list.clear_runtime_buffers(tid);
-    }
-    void TaskRuntimeInterface::clear_runtime_images(TaskImageId tid)
-    {
-        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
-        impl.task_list.clear_runtime_images(tid);
-    }
-
-    void ImplTaskList::add_runtime_buffer(TaskBufferId tid, BufferId id)
-    {
-        global_buffer_infos.at(tid.index).get_actual_buffers().push_back(id);
-    }
-    void ImplTaskList::add_runtime_image(TaskImageId tid, ImageId id)
-    {
-        global_image_infos.at(tid.index).get_actual_images().push_back(id);
-    }
-    void ImplTaskList::remove_runtime_buffer(TaskBufferId tid, BufferId id)
-    {
-        global_buffer_infos.at(tid.index).get_actual_buffers().erase(
-            std::remove(
-                global_buffer_infos.at(tid.index).get_actual_buffers().begin(),
-                global_buffer_infos.at(tid.index).get_actual_buffers().end(),
-                id),
-            global_buffer_infos.at(tid.index).get_actual_buffers().end());
-    }
-    void ImplTaskList::remove_runtime_image(TaskImageId tid, ImageId id)
-    {
-        global_image_infos.at(tid.index).get_actual_images().erase(
-            std::remove(
-                global_image_infos.at(tid.index).get_actual_images().begin(),
-                global_image_infos.at(tid.index).get_actual_images().end(),
-                id),
-            global_image_infos.at(tid.index).get_actual_images().end());
-    }
-    void ImplTaskList::clear_runtime_buffers(TaskBufferId tid)
-    {
-        global_buffer_infos.at(tid.index).get_actual_buffers().clear();
-    }
-    void ImplTaskList::clear_runtime_images(TaskImageId tid)
-    {
-        global_image_infos.at(tid.index).get_actual_images().clear();
     }
 
     void check_for_overlapping_use(TaskInfo const & info)
@@ -937,7 +755,7 @@ namespace daxa
 
         for (auto const & [used_buffer_t_id, used_buffer_t_access] : info.used_buffers)
         {
-            TaskBuffer const & task_buffer = perm.buffer_infos[used_buffer_t_id.index];
+            PerPermTaskBuffer const & task_buffer = perm.buffer_infos[used_buffer_t_id.index];
             // If the latest access is in a previous submit scope, the earliest batch we can insert into is
             // the current scopes first batch.
             if (task_buffer.latest_access_submit_scope_index < current_submit_scope_index)
@@ -963,10 +781,10 @@ namespace daxa
         }
         for (auto const & [used_image_t_id, used_image_t_access, used_image_slice, view_type] : info.used_images)
         {
-            TaskImage const & task_image = perm.image_infos[used_image_t_id.index];
+            PerPermTaskImage const & task_image = perm.image_infos[used_image_t_id.index];
             PermIndepTaskImageInfo const & glob_task_image = impl.global_image_infos[used_image_t_id.index];
             DAXA_DBG_ASSERT_TRUE_M(!task_image.swapchain_semaphore_waited_upon, "swapchain image is already presented!");
-            if (glob_task_image.info.swapchain_image)
+            if (glob_task_image.is_persistent() &&  glob_task_image.get_persistent().info.swapchain_image)
             {
                 if (perm.swapchain_image_first_use_submit_scope_index == std::numeric_limits<u64>::max())
                 {
@@ -1031,7 +849,7 @@ namespace daxa
                     !buffer_id->is_empty() &&
                         buffer_id->index < impl.global_buffer_infos.size(),
                     "attempted to alias an invalid buffer id");
-                aliased_buffer_name = impl.global_buffer_infos[buffer_id->index].info.name;
+                aliased_buffer_name = std::string(impl.global_buffer_infos[buffer_id->index].get_name());
             }
             else
             {
@@ -1070,7 +888,7 @@ namespace daxa
                     !image_id->is_empty() &&
                         image_id->index < impl.global_image_infos.size(),
                     "attempted to alias an invalid image id");
-                aliased_image_name = impl.global_image_infos[image_id->index].info.name;
+                aliased_image_name = std::string(impl.global_image_infos[image_id->index].get_name());
             }
             else
             {
@@ -1124,23 +942,23 @@ namespace daxa
         {
             if (auto * task_buffer_id = std::get_if<TaskBufferId>(&buffer_alias.aliased_buffer))
             {
-                *task_buffer_id = impl.translate_persistent_id(*task_buffer_id);
+                *task_buffer_id = impl.id_to_local_id(*task_buffer_id);
             }
         }
         for (auto & image_alias : info.shader_uses_image_aliases)
         {
             if (auto * task_image_id = std::get_if<TaskImageId>(&image_alias.aliased_image))
             {
-                *task_image_id = impl.translate_persistent_id(*task_image_id);
+                *task_image_id = impl.id_to_local_id(*task_image_id);
             }
         }
         for (auto & buffer_use : info.used_buffers)
         {
-            buffer_use.id = impl.translate_persistent_id(buffer_use.id);
+            buffer_use.id = impl.id_to_local_id(buffer_use.id);
         }
         for (auto & image_use : info.used_images)
         {
-            image_use.id = impl.translate_persistent_id(image_use.id);
+            image_use.id = impl.id_to_local_id(image_use.id);
         }
     }
 
@@ -1348,7 +1166,7 @@ namespace daxa
 
     thread_local std::vector<ImageMipArraySlice> tl_new_access_slices = {};
     void update_image_initial_access_slices(
-        TaskImage & task_image,
+        PerPermTaskImage & task_image,
         ExtendedImageSliceState new_access_slice)
     {
         // We need to test if a new use adds and or subtracts from initial uses.
@@ -1443,11 +1261,11 @@ namespace daxa
 
     using ShaderUseIdOffsetTable = std::vector<std::variant<std::pair<TaskImageId, usize>, std::pair<TaskBufferId, usize>, std::monostate>>;
 
-    void update_buffer_first_access(TaskBuffer & buffer, usize new_access_batch, usize new_access_submit, Access new_access)
+    void update_buffer_first_access(PerPermTaskBuffer & buffer, usize new_access_batch, usize new_access_submit, Access new_access)
     {
         if (buffer.first_access.type == AccessTypeFlagBits::NONE)
         {
-            buffer.first_access =  new_access;
+            buffer.first_access = new_access;
             buffer.first_access_batch_index = new_access_batch;
             buffer.first_access_submit_scope_index = new_access_submit;
         }
@@ -1455,12 +1273,62 @@ namespace daxa
         {
             buffer.first_access = buffer.first_access | new_access;
             bool const new_is_earlier = new_access_submit < buffer.first_access_submit_scope_index ||
-                (new_access_submit == buffer.first_access_submit_scope_index && new_access_batch < buffer.first_access_batch_index);
+                                        (new_access_submit == buffer.first_access_submit_scope_index && new_access_batch < buffer.first_access_batch_index);
             if (new_is_earlier)
             {
                 buffer.first_access_batch_index = new_access_batch;
                 buffer.first_access_submit_scope_index = new_access_submit;
             }
+        }
+    }
+
+    auto static constexpr access_to_usage(TaskImageAccess const & access) -> ImageUsageFlags
+    {
+        switch(access)
+        {
+            case TaskImageAccess::SHADER_READ_ONLY: [[fallthrough]];
+            case TaskImageAccess::VERTEX_SHADER_READ_ONLY: [[fallthrough]];
+            case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ_ONLY: [[fallthrough]];
+            case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ_ONLY: [[fallthrough]];
+            case TaskImageAccess::GEOMETRY_SHADER_READ_ONLY: [[fallthrough]];
+            case TaskImageAccess::FRAGMENT_SHADER_READ_ONLY: [[fallthrough]];
+            case TaskImageAccess::COMPUTE_SHADER_READ_ONLY:
+                return ImageUsageFlagBits::SHADER_READ_ONLY;
+            case TaskImageAccess::SHADER_WRITE_ONLY: [[fallthrough]];
+            case TaskImageAccess::VERTEX_SHADER_WRITE_ONLY: [[fallthrough]];
+            case TaskImageAccess::TESSELLATION_CONTROL_SHADER_WRITE_ONLY: [[fallthrough]];
+            case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_WRITE_ONLY: [[fallthrough]];
+            case TaskImageAccess::GEOMETRY_SHADER_WRITE_ONLY: [[fallthrough]];
+            case TaskImageAccess::FRAGMENT_SHADER_WRITE_ONLY: [[fallthrough]];
+            case TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY: [[fallthrough]];
+            case TaskImageAccess::SHADER_READ_WRITE: [[fallthrough]];
+            case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE: [[fallthrough]];
+            case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ_WRITE: [[fallthrough]];
+            case TaskImageAccess::GEOMETRY_SHADER_READ_WRITE: [[fallthrough]];
+            case TaskImageAccess::FRAGMENT_SHADER_READ_WRITE: [[fallthrough]];
+            case TaskImageAccess::COMPUTE_SHADER_READ_WRITE:
+                return ImageUsageFlagBits::SHADER_READ_WRITE;
+            case TaskImageAccess::TRANSFER_READ:
+                return ImageUsageFlagBits::TRANSFER_SRC;
+            case TaskImageAccess::TRANSFER_WRITE:
+                return ImageUsageFlagBits::TRANSFER_DST;
+            // NOTE(msakmary) - not fully sure about the resolve being color attachment usage
+            // this is the best I could deduce from vulkan docs
+            case TaskImageAccess::RESOLVE_WRITE:  [[fallthrough]];
+            case TaskImageAccess::COLOR_ATTACHMENT: 
+                return ImageUsageFlagBits::COLOR_ATTACHMENT;
+            case TaskImageAccess::DEPTH_ATTACHMENT: [[fallthrough]];
+            case TaskImageAccess::STENCIL_ATTACHMENT: [[fallthrough]];
+            case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT:
+                return ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT;
+            case TaskImageAccess::DEPTH_ATTACHMENT_READ_ONLY: [[fallthrough]];
+            case TaskImageAccess::STENCIL_ATTACHMENT_READ_ONLY: [[fallthrough]];
+            case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT_READ_ONLY:
+                return ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT;
+            case TaskImageAccess::PRESENT: [[fallthrough]];
+            case TaskImageAccess::NONE: [[fallthrough]];
+            default:
+                return ImageUsageFlagBits::NONE;
         }
     }
 
@@ -1513,7 +1381,7 @@ namespace daxa
         // are combined into a single unit which is synchronized against other batches.
         for (auto const & [used_buffer_t_id, used_buffer_t_access] : info.used_buffers)
         {
-            TaskBuffer & task_buffer = this->buffer_infos[used_buffer_t_id.index];
+            PerPermTaskBuffer & task_buffer = this->buffer_infos[used_buffer_t_id.index];
             Access const current_buffer_access = task_buffer_access_to_access(used_buffer_t_access);
             update_buffer_first_access(task_buffer, batch_index, current_submit_scope_index, current_buffer_access);
             // When the last use was a read AND the new use of the buffer is a read AND,
@@ -1618,7 +1486,8 @@ namespace daxa
         // Now we insert image dependent sync
         for (auto const & [used_image_t_id, used_image_t_access, initial_used_image_slice, view_type] : info.used_images)
         {
-            TaskImage & task_image = this->image_infos[used_image_t_id.index];
+            PerPermTaskImage & task_image = this->image_infos[used_image_t_id.index];
+            task_image.usage |= access_to_usage(used_image_t_access);
             auto [current_image_layout, current_image_access] = task_image_access_to_layout_access(used_image_t_access);
             // Now this seems strange, why would be need multiple current use slices, as we only have one here.
             // This is because when we intersect this slice with the tracked slices, we get an intersection and a rest.
@@ -1889,15 +1758,66 @@ namespace daxa
         };
     }
 
+    void ImplTaskList::create_transient_runtime_buffers()
+    {
+        for(auto & perm_task_buffer : global_buffer_infos)
+        {
+            // task list manages actual buffers only for transient resources
+            if(!perm_task_buffer.is_persistent())
+            {
+                auto & transient_data = std::get<PermIndepTaskBufferInfo::Transient>(perm_task_buffer.task_buffer_data);
+                transient_data.buffer = info.device.create_buffer(BufferInfo{
+                    .size = transient_data.info.size,
+                    .allocate_info = AutoAllocInfo{transient_data.info.memory_flags},
+                    .name = transient_data.info.name
+                });
+            }
+        }
+    }
+
+    void ImplTaskList::create_transient_runtime_images(TaskListPermutation & permutation)
+    {
+        for(u32 image_info_idx = 0; image_info_idx < u32(global_image_infos.size()); image_info_idx++)
+        {
+            auto const & glob_image = global_image_infos.at(image_info_idx);
+            auto & perm_image = permutation.image_infos.at(image_info_idx);
+
+            if(!glob_image.is_persistent() && perm_image.valid)
+            {
+                DAXA_DBG_ASSERT_TRUE_M(perm_image.usage != ImageUsageFlagBits::NONE,
+                    std::string("Transient image is not used in this permutation but marked as valid either: ") + 
+                    std::string("\t- it was used as PRESENT which is not allowed for transient images") +
+                    std::string("\t- it was used as NONE which makes no sense - just don't mark it as used in the task"));
+                auto const & transient_image_info = std::get<PermIndepTaskImageInfo::Transient>(glob_image.task_image_data).info;
+                perm_image.actual_image = info.device.create_image(ImageInfo{
+                        .dimensions = transient_image_info.dimensions,
+                        .format = transient_image_info.format,
+                        .aspect = transient_image_info.aspect,
+                        .size = transient_image_info.size,
+                        .mip_level_count = transient_image_info.mip_level_count,
+                        .array_layer_count = transient_image_info.array_layer_count,
+                        .sample_count = transient_image_info.sample_count,
+                        .usage = perm_image.usage,
+                        // TODO(pahrens) put correct value here
+                        .allocate_info = AutoAllocInfo{ .flags = MemoryFlagBits::DEDICATED_MEMORY },
+                        .name = transient_image_info.name,
+                });
+            }
+        }
+    }
+
     void TaskList::complete(TaskCompleteInfo const &)
     {
         auto & impl = *as<ImplTaskList>();
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "Can only complete a task list one time");
         impl.compiled = true;
 
+        // because buffers have no intial access we can just create one buffer for all of them to share
+        impl.create_transient_runtime_buffers(); 
         // Insert static barriers initializing image layouts.
         for (auto & permutation : impl.permutations)
         {
+            impl.create_transient_runtime_images(permutation);
             auto & first_batch = permutation.batch_submit_scopes[0].task_batches[0];
             // Insert static initialization barriers for non persistent resources:
             // Buffers never need layout initialization, only images.
@@ -1906,7 +1826,7 @@ namespace daxa
                 TaskImageId const task_image_id = {task_image_index};
                 auto & task_image = permutation.image_infos[task_image_index];
                 PermIndepTaskImageInfo const & glob_task_image = impl.global_image_infos[task_image_index];
-                if (task_image.valid && !glob_task_image.is_persistent() && glob_task_image.info.pre_task_list_slice_states.size() == 0)
+                if (task_image.valid && !glob_task_image.is_persistent())
                 {
                     // Insert barriers, initializing all the initially accesses subresource ranges to the correct layout.
                     for (auto & first_access : task_image.first_slice_states)
@@ -1957,7 +1877,7 @@ namespace daxa
     thread_local std::vector<SplitBarrierWaitInfo> tl_split_barrier_wait_infos = {};
     thread_local std::vector<ImageBarrierInfo> tl_image_barrier_infos = {};
     thread_local std::vector<MemoryBarrierInfo> tl_memory_barrier_infos = {};
-    void insert_pipeline_barrier(ImplTaskList const & impl, CommandList & command_list, TaskBarrier & barrier)
+    void insert_pipeline_barrier(ImplTaskList const & impl, TaskListPermutation & perm, CommandList & command_list, TaskBarrier & barrier)
     {
         // Check if barrier is image barrier or normal barrier (see TaskBarrier struct comments).
         if (barrier.image_id.is_empty())
@@ -1969,17 +1889,17 @@ namespace daxa
         }
         else
         {
-            for (usize index = 0; index < impl.global_image_infos[barrier.image_id.index].get_actual_images().size(); ++index)
+            const auto actual_images = impl.get_actual_images(barrier.image_id, perm);
+            for (usize index = 0; index < actual_images.size(); ++index)
             {
-                auto & image = impl.global_image_infos[barrier.image_id.index].get_actual_images()[index];
+                auto & image = actual_images[index];
                 DAXA_DBG_ASSERT_TRUE_M(
                     impl.info.device.is_id_valid(image),
-                    std::string("detected invalid runtime image id while inserting barriers: the runtime image id at index ") + 
-                    std::to_string(index) +
-                    std::string(" of task image \"") +
-                    impl.global_image_infos[barrier.image_id.index].info.name +
-                    std::string("\" is invalid")
-                );
+                    std::string("detected invalid runtime image id while inserting barriers: the runtime image id at index ") +
+                        std::to_string(index) +
+                        std::string(" of task image \"") +
+                        std::string(impl.global_image_infos[barrier.image_id.index].get_name()) +
+                        std::string("\" is invalid"));
                 command_list.pipeline_barrier_image_transition({
                     .awaited_pipeline_access = barrier.src_access,
                     .waiting_pipeline_access = barrier.dst_access,
@@ -2071,7 +1991,7 @@ namespace daxa
                             previous_access_slices[previous_access_slice_index].state.latest_layout;
                         if (!(both_accesses_read && both_layouts_same))
                         {
-                            for (auto execution_image_id : impl.global_image_infos[task_image_index].get_actual_images())
+                            for (auto execution_image_id : impl.get_actual_images(TaskImageId{u32(task_image_index)}, permutation))
                             {
                                 ImageBarrierInfo img_barrier_info{
                                     .awaited_pipeline_access = previous_access_slices[previous_access_slice_index].state.latest_access,
@@ -2097,7 +2017,7 @@ namespace daxa
                             rest_previous_slice.state.slice = previous_use_slice_rest[rest_slice_index];
                             previous_access_slices.push_back(rest_previous_slice);
                         }
-                        // Append the new rest first uses.nd 
+                        // Append the new rest first uses.nd
                         for (usize rest_slice_index = 0; rest_slice_index < first_use_slice_rest_count; ++rest_slice_index)
                         {
                             auto rest_first_slice = remaining_first_accesses[first_access_slice_index];
@@ -2128,7 +2048,7 @@ namespace daxa
                 impl.debug_string_stream << "sync from undefined begin\n";
                 for (usize remaining_first_uses_index = 0; remaining_first_uses_index < remaining_first_accesses.size(); ++remaining_first_uses_index)
                 {
-                    for (auto execution_image_id : impl.global_image_infos[task_image_index].get_actual_images())
+                    for (auto execution_image_id : impl.get_actual_images(TaskImageId{u32(task_image_index)}, permutation))
                     {
                         ImageBarrierInfo img_barrier_info{
                             .awaited_pipeline_access = AccessConsts::NONE,
@@ -2209,7 +2129,7 @@ namespace daxa
                 for (auto barrier_index : task_batch.pipeline_barrier_indices)
                 {
                     TaskBarrier & barrier = permutation.barriers[barrier_index];
-                    insert_pipeline_barrier(impl, impl_runtime.command_lists.back(), barrier);
+                    insert_pipeline_barrier(impl, permutation, impl_runtime.command_lists.back(), barrier);
                 }
                 // Wait on split barriers before batch execution.
                 if (!impl.info.use_split_barriers)
@@ -2219,7 +2139,7 @@ namespace daxa
                         TaskSplitBarrier const & split_barrier = permutation.split_barriers[barrier_index];
                         // Convert split barrier to normal barrier.
                         TaskBarrier barrier = split_barrier;
-                        insert_pipeline_barrier(impl, impl_runtime.command_lists.back(), barrier);
+                        insert_pipeline_barrier(impl, permutation, impl_runtime.command_lists.back(), barrier);
                     }
                 }
                 else
@@ -2230,7 +2150,7 @@ namespace daxa
                         TaskSplitBarrier const & split_barrier = permutation.split_barriers[barrier_index];
                         if (!split_barrier.image_id.is_empty())
                         {
-                            needed_image_barriers += impl.global_image_infos[split_barrier.image_id.index].get_actual_images().size();
+                            needed_image_barriers += impl.get_actual_images(split_barrier.image_id, permutation).size();
                         }
                     }
                     tl_split_barrier_wait_infos.reserve(task_batch.wait_split_barrier_indices.size());
@@ -2253,7 +2173,7 @@ namespace daxa
                         else
                         {
                             usize const img_bar_vec_start_size = tl_image_barrier_infos.size();
-                            for (auto image : impl.global_image_infos[split_barrier.image_id.index].get_actual_images())
+                            for (auto image : impl.get_actual_images(split_barrier.image_id, permutation))
                             {
                                 tl_image_barrier_infos.push_back(ImageBarrierInfo{
                                     .awaited_pipeline_access = split_barrier.src_access,
@@ -2288,8 +2208,8 @@ namespace daxa
                     // When the get command list function is called in a task this is set to false.
                     impl_runtime.reuse_last_command_list = true;
                     Task & task = permutation.tasks[task_id];
-                    validate_runtime_resources(impl, task);
-                    impl.update_image_view_cache(task);
+                    validate_runtime_resources(impl, permutation, task);
+                    impl.update_image_view_cache(task, permutation);
                     bool const has_shader_uses = task.info.shader_uses.size > 0;
                     if (has_shader_uses)
                     {
@@ -2305,7 +2225,8 @@ namespace daxa
                             }
                             else if (auto buffer_mapping = std::get_if<std::pair<TaskBufferId, usize>>(&shader_use_id_mapping))
                             {
-                                *(reinterpret_cast<BufferDeviceAddress *>(host_constant_buffer_ptr + buffer_mapping->second)) = impl.info.device.get_device_address(impl.global_buffer_infos[buffer_mapping->first.index].get_actual_buffers()[0]);
+                                *(reinterpret_cast<BufferDeviceAddress *>(host_constant_buffer_ptr + buffer_mapping->second)) = 
+                                    impl.info.device.get_device_address(impl.get_actual_buffers(buffer_mapping->first)[0]);
                             }
                         }
                         impl_runtime.command_lists.back().set_constant_buffer({
@@ -2354,7 +2275,7 @@ namespace daxa
                         }
                         else
                         {
-                            for (auto image : impl.global_image_infos[task_split_barrier.image_id.index].get_actual_images())
+                            for (auto image : impl.get_actual_images(task_split_barrier.image_id, permutation))
                             {
                                 tl_image_barrier_infos.push_back({
                                     .awaited_pipeline_access = task_split_barrier.src_access,
@@ -2381,7 +2302,7 @@ namespace daxa
             for (usize const barrier_index : submit_scope.last_minute_barrier_indices)
             {
                 TaskBarrier & barrier = permutation.barriers[barrier_index];
-                insert_pipeline_barrier(impl, impl_runtime.command_lists.back(), barrier);
+                insert_pipeline_barrier(impl, permutation, impl_runtime.command_lists.back(), barrier);
             }
             if (impl.info.enable_command_labels)
             {
@@ -2476,7 +2397,7 @@ namespace daxa
         for (usize task_image_index = 0; task_image_index < permutation.image_infos.size(); ++task_image_index)
         {
             if (
-                permutation.image_infos[task_image_index].valid && 
+                permutation.image_infos[task_image_index].valid &&
                 impl.global_image_infos[task_image_index].is_persistent())
             {
                 auto & persistent_image = impl.global_image_infos[task_image_index].get_persistent();
@@ -2499,14 +2420,34 @@ namespace daxa
     }
 
     ImplTaskList::ImplTaskList(TaskListInfo a_info)
-        : info{std::move(a_info)}
+        : unique_index{ ImplTaskList::exec_unique_next_index++ }
+        , info{std::move(a_info)}
     {
     }
 
     ImplTaskList::~ImplTaskList()
     {
+        // because transient buffers are owned by tasklist we need to destroy them
+        for (u32 image_info_idx = 0; image_info_idx < u32(global_buffer_infos.size()); image_info_idx++)
+        {
+            const auto & global_buffer = global_buffer_infos.at(image_info_idx);
+            if(!global_buffer.is_persistent())
+            {
+                info.device.destroy_buffer(get_actual_buffers(TaskBufferId{image_info_idx})[0]);
+            }
+        }
         for (auto & permutation : permutations)
         {
+            // because transient images are owned by tasklist we need to destroy them
+            for (u32 image_info_idx = 0; image_info_idx < u32(global_image_infos.size()); image_info_idx++)
+            {
+                const auto & global_image = global_image_infos.at(image_info_idx);
+                const auto & perm_image = permutation.image_infos.at(image_info_idx);
+                if(!global_image.is_persistent() && perm_image.valid)
+                {
+                    info.device.destroy_image(get_actual_images(TaskImageId{image_info_idx}, permutation)[0]);
+                }
+            }
             for (auto & task : permutation.tasks)
             {
                 for (auto & view_cache : task.image_view_cache)
@@ -2587,7 +2528,7 @@ namespace daxa
                             resource_index = 0;
                             for (auto const & [task_buffer_id, task_buffer_access] : permutation.tasks[task_id].info.used_buffers)
                             {
-                                auto const & resource_debug_name = global_buffer_infos[task_buffer_id.index].info.name;
+                                auto const & resource_debug_name = global_buffer_infos[task_buffer_id.index].get_name();
                                 dot_file << "node_" << task_name << "_br" << resource_index << " [label=\"" << resource_debug_name << "\", shape=box, color=\"#d3fabe\"]\n";
                                 ++resource_index;
                             }
@@ -2596,7 +2537,7 @@ namespace daxa
                             for (auto const & [task_image_id, task_buffer_access, image_slice, view_type] : permutation.tasks[task_id].info.used_images)
                             {
                                 auto const & glob_task_resource = global_image_infos[task_image_id.index];
-                                auto const & resource_debug_name = glob_task_resource.info.name;
+                                auto const & resource_debug_name = glob_task_resource.get_name();
                                 dot_file << "node_" << task_name << "_ir" << resource_index << " [label=\"" << resource_debug_name << "\", shape=box, color=\"#fffec2\"]\n";
                                 ++resource_index;
                             }
@@ -2682,7 +2623,7 @@ namespace daxa
     {
         this->debug_string_stream << prefix << "Begin image memory barrier\n";
         this->debug_string_stream << prefix << "\ttask_image_id: " << barrier.image_id.index << " \n";
-        this->debug_string_stream << prefix << "\ttask image debug name: " << glob_image.info.name << " \n";
+        this->debug_string_stream << prefix << "\ttask image debug name: " << glob_image.get_name() << " \n";
         this->debug_string_stream << prefix << "\tBegin bound images\n";
         this->debug_string_stream << prefix << "\timage id: " << to_string(barrier.image_id)
                                   << "\timage debug name: " << info.device.info_image(barrier.image_id).name << " \n";
@@ -2695,7 +2636,7 @@ namespace daxa
         this->debug_string_stream << prefix << "End   image memory barrier\n";
     }
 
-    void ImplTaskList::debug_print_task_barrier(TaskBarrier & barrier, usize index, std::string_view prefix)
+    void ImplTaskList::debug_print_task_barrier(TaskBarrier & barrier, TaskListPermutation const & permutation, usize index, std::string_view prefix)
     {
         // Check if barrier is image barrier or normal barrier (see TaskBarrier struct comments).
         if (barrier.image_id.is_empty())
@@ -2712,9 +2653,9 @@ namespace daxa
             this->debug_string_stream << prefix << "Begin image memory barrier\n";
             this->debug_string_stream << prefix << "\tbarrier index: " << index << "\n";
             this->debug_string_stream << prefix << "\ttask_image_id: " << barrier.image_id.index << " \n";
-            this->debug_string_stream << prefix << "\ttask image debug name: " << glob_image.info.name << " \n";
+            this->debug_string_stream << prefix << "\ttask image debug name: " << glob_image.get_name() << " \n";
             this->debug_string_stream << prefix << "\tBegin bound images\n";
-            for (auto image : this->global_image_infos[barrier.image_id.index].get_actual_images())
+            for (auto image : this->get_actual_images(barrier.image_id, permutation))
             {
                 this->debug_string_stream << prefix << "\timage id: " << to_string(image)
                                           << "\timage debug name: " << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).name) << " \n";
@@ -2729,7 +2670,7 @@ namespace daxa
         }
     }
 
-    void ImplTaskList::debug_print_task_split_barrier(TaskSplitBarrier & barrier, usize index, std::string_view prefix)
+    void ImplTaskList::debug_print_task_split_barrier(TaskSplitBarrier & barrier, TaskListPermutation const & permutation, usize index, std::string_view prefix)
     {
         // Check if barrier is image barrier or normal barrier (see TaskBarrier struct comments).
         if (barrier.image_id.is_empty())
@@ -2746,9 +2687,9 @@ namespace daxa
             this->debug_string_stream << prefix << "Begin image memory barrier\n";
             this->debug_string_stream << prefix << "\tbarrier index: " << index << "\n";
             this->debug_string_stream << prefix << "\ttask_image_id: " << barrier.image_id.index << " \n";
-            this->debug_string_stream << prefix << "\ttask image debug name: " << glob_image.info.name << " \n";
+            this->debug_string_stream << prefix << "\ttask image debug name: " << glob_image.get_name() << " \n";
             this->debug_string_stream << prefix << "\tBegin bound images\n";
-            for (auto image : this->global_image_infos[barrier.image_id.index].get_actual_images())
+            for (auto image : this->get_actual_images(barrier.image_id, permutation))
             {
                 this->debug_string_stream << prefix << "\timage id: " << to_string(image)
                                           << "\timage debug name: " << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).name) << " \n";
@@ -2763,7 +2704,7 @@ namespace daxa
         }
     }
 
-    void ImplTaskList::debug_print_task(TaskListPermutation const &, Task & task, usize task_id, std::string_view prefix)
+    void ImplTaskList::debug_print_task(TaskListPermutation const & permutation, Task & task, usize task_id, std::string_view prefix)
     {
         this->debug_string_stream << prefix << "Begin task " << task_id << " name: \"" << task.info.name << "\"\n";
         for (auto [task_image_id, task_image_access, slice, view_type] : task.info.used_images)
@@ -2772,9 +2713,9 @@ namespace daxa
             auto [layout, access] = task_image_access_to_layout_access(task_image_access);
             this->debug_string_stream << prefix << "\tBegin task image use " << task_image_id.index << "\n";
             this->debug_string_stream << prefix << "\ttask_image_id: " << task_image_id.index << " \n";
-            this->debug_string_stream << prefix << "\ttask image debug name: " << glob_image.info.name << " \n";
+            this->debug_string_stream << prefix << "\ttask image debug name: " << glob_image.get_name() << " \n";
             this->debug_string_stream << prefix << "\tBegin bound images\n";
-            for (auto image : global_image_infos[task_image_id.index].get_actual_images())
+            for (auto image : get_actual_images(task_image_id, permutation))
             {
                 this->debug_string_stream << prefix << "\timage id: " << to_string(image)
                                           << "\timage debug name: " << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).name) << " \n";
@@ -2789,9 +2730,9 @@ namespace daxa
         {
             auto access = task_buffer_access_to_access(task_buffer_access);
             this->debug_string_stream << prefix << "\tBegin task buffer use " << task_buffer_id.index << "\n";
-            this->debug_string_stream << prefix << "\t\task buffer debug name: " << global_buffer_infos[task_buffer_id.index].info.name << "\n";
+            this->debug_string_stream << prefix << "\t\task buffer debug name: " << global_buffer_infos[task_buffer_id.index].get_name() << "\n";
             this->debug_string_stream << prefix << "\tBegin bound buffers\n";
-            for (auto buffer : global_buffer_infos[task_buffer_id.index].get_actual_buffers())
+            for (auto buffer : get_actual_buffers(id_to_local_id(task_buffer_id)))
             {
                 this->debug_string_stream << prefix << "\tbuffers id: " << to_string(buffer)
                                           << "\tbuffers debug name: " << (buffer.is_empty() ? std::string("INVALID ID") : info.device.info_buffer(buffer).name) << " \n";
@@ -2808,7 +2749,7 @@ namespace daxa
         // TODO(msakmary) better way to identify permutation (perhaps named conditions or smth idk)
         auto prefix = std::string();
         auto const & glob_image = global_image_infos[image_id.index];
-        this->debug_string_stream << "=================== Task Image " << glob_image.info.name << "===================\n";
+        this->debug_string_stream << "=================== Task Image " << glob_image.get_name() << "===================\n";
         prefix.append("\t");
 
         for (auto const & batch_submit_scope : permutation.batch_submit_scopes)
@@ -2841,7 +2782,7 @@ namespace daxa
     {
         // TODO(msakmary) better way to identify permutation (perhaps named conditions or smth idk)
         auto prefix = std::string();
-        this->debug_string_stream << "=================== Task Buffer " << global_buffer_infos[buffer_id.index].info.name << "===================\n";
+        this->debug_string_stream << "=================== Task Buffer " << global_buffer_infos[buffer_id.index].get_name() << "===================\n";
         prefix.append("\t");
 
         for (auto const & batch_submit_scope : permutation.batch_submit_scopes)
@@ -2893,7 +2834,7 @@ namespace daxa
                     this->debug_string_stream << "\t\t\t\tBegin wait pipeline barriers\n";
                     for (auto barrier_index : task_batch.pipeline_barrier_indices)
                     {
-                        this->debug_print_task_barrier(permutation.barriers[barrier_index], barrier_index, "\t\t\t\t\t");
+                        this->debug_print_task_barrier(permutation.barriers[barrier_index], permutation, barrier_index, "\t\t\t\t\t");
                     }
                     this->debug_string_stream << "\t\t\t\tEnd   wait pipeline barriers\n";
                     if (!this->info.use_split_barriers)
@@ -2901,7 +2842,7 @@ namespace daxa
                         this->debug_string_stream << "\t\t\t\tBegin wait split barriers (converted to pipeline barriers)\n";
                         for (auto barrier_index : task_batch.wait_split_barrier_indices)
                         {
-                            this->debug_print_task_barrier(permutation.split_barriers[barrier_index], barrier_index, "\t\t\t\t\t");
+                            this->debug_print_task_barrier(permutation.split_barriers[barrier_index], permutation, barrier_index, "\t\t\t\t\t");
                         }
                         this->debug_string_stream << "\t\t\t\tEnd   wait split barriers (converted to pipeline barriers)\n";
                     }
@@ -2910,7 +2851,7 @@ namespace daxa
                         this->debug_string_stream << "\t\t\t\tBegin wait split barriers\n";
                         for (auto barrier_index : task_batch.wait_split_barrier_indices)
                         {
-                            this->debug_print_task_split_barrier(permutation.split_barriers[barrier_index], barrier_index, "\t\t\t\t\t");
+                            this->debug_print_task_split_barrier(permutation.split_barriers[barrier_index], permutation, barrier_index, "\t\t\t\t\t");
                         }
                         this->debug_string_stream << "\t\t\t\tEnd   wait split barriers\n";
                     }
@@ -2926,7 +2867,7 @@ namespace daxa
                         this->debug_string_stream << "\t\t\t\tBegin signal split barriers\n";
                         for (usize const barrier_index : task_batch.signal_split_barrier_indices)
                         {
-                            this->debug_print_task_split_barrier(permutation.split_barriers[barrier_index], barrier_index, "\t\t\t\t\t");
+                            this->debug_print_task_split_barrier(permutation.split_barriers[barrier_index], permutation, barrier_index, "\t\t\t\t\t");
                         }
                         this->debug_string_stream << "\t\t\t\tEnd   signal split barriers\n";
                     }
@@ -2935,7 +2876,7 @@ namespace daxa
                 this->debug_string_stream << "\t\t\tBegin last minute pipeline barriers\n";
                 for (usize const barrier_index : submit_scope.last_minute_barrier_indices)
                 {
-                    this->debug_print_task_barrier(permutation.barriers[barrier_index], barrier_index, "\t\t\t\t");
+                    this->debug_print_task_barrier(permutation.barriers[barrier_index], permutation, barrier_index, "\t\t\t\t");
                 }
                 this->debug_string_stream << "\t\t\tEnd   last minute pipeline barriers\n";
                 if (&submit_scope != &permutation.batch_submit_scopes.back())

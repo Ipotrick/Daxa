@@ -12,8 +12,8 @@ namespace daxa
               .name = std::string("TransferMemoryPool") + this->info.name,
           })},
           buffer{this->info.device.create_buffer({
-              .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
               .size = this->info.capacity,
+              .allocate_info = AutoAllocInfo{ daxa::MemoryFlagBits::HOST_ACCESS_RANDOM },
               .name = std::string("TransferMemoryPool") + this->info.name,
           })},
           buffer_device_address{this->info.device.get_device_address(this->buffer)},
