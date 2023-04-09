@@ -107,6 +107,8 @@ namespace daxa
     {
         TaskBufferId id = {};
         TaskBufferAccess access = {};
+        // Redirects in callback and shader use aliases to this use.
+        std::string_view alias = {};
     };
 
     struct TaskImageUse
@@ -117,6 +119,8 @@ namespace daxa
         /// @brief  Determines the view type the runtime provides in the TaskRuntimeInterface.
         ///         If no type is provided, the runtime images default view type is used.
         std::optional<ImageViewType> view_type = {};
+        // Redirects in callback and shader use aliases to this use.
+        std::string_view alias = {};
     };
 
     struct ImageSliceState
