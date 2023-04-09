@@ -19,18 +19,54 @@ namespace daxa
     {
         auto get_device() const -> Device &;
         auto get_command_list() const -> CommandList;
-        auto get_used_task_buffers() const -> UsedTaskBuffers const &;
-        auto get_used_task_images() const -> UsedTaskImages const &;
+        auto get_allocator() const -> TransferMemoryPool &;
+
         auto get_buffers(TaskBufferId const & task_resource_id) const -> std::span<BufferId const>;
         auto get_images(TaskImageId const & task_resource_id) const -> std::span<ImageId const>;
-        auto get_image_views(TaskImageId const & task_resource_id) const -> std::span<ImageViewId>;
+        auto get_image_views(TaskImageId const & task_resource_id) const -> std::span<ImageViewId const>;
+        
+        template<char const * ALIAS>
+        auto get_buffers() const -> std::span<BufferId const>
+        {
+            constexpr u32 hash = compt_hash(ALIAS.data());
+            return get_buffers(hash, ALIAS);
+        }
+        template<char const * ALIAS>
+        auto get_images() const -> std::span<ImageId const>
+        {
+            constexpr u32 hash = compt_hash(ALIAS.data());
+            return get_images(hash, ALIAS);
+        }
+        template<StringLiteralAdapter ALIAS>
+        auto get_image_views() const -> std::span<ImageViewId const>
+        {
+            constexpr u32 hash = compt_hash(ALIAS.value);
+            return get_image_views(hash, ALIAS.value);
+        }
 
-        auto get_allocator() const -> TransferMemoryPool &;
+        template<usize N>
+        auto get_buffers(StringLiteralAdapter<N> alias) const -> std::span<BufferId const>
+        {
+            return get_buffers(compt_hash(alias.value), alias.value);
+        }
+        template<usize N>
+        auto get_images() const -> std::span<ImageId const>
+        {
+            return get_images(compt_hash(alias.value), alias.value);
+        }
+        template<usize N>
+        auto get_image_views() const -> std::span<ImageViewId const>
+        {
+            return get_image_views(compt_hash(alias.value), alias.value);
+        }
 
       private:
         friend struct ImplTaskRuntimeInterface;
         friend struct TaskList;
         TaskRuntimeInterface(void * a_backend);
+        auto get_buffers(u32 const & alias_has, char const * alias) const -> std::span<BufferId const>;
+        auto get_images(u32 const & alias_has, char const * alias) const -> std::span<ImageId const>;
+        auto get_image_views(u32 const & alias_hash, char const * alias) const -> std::span<ImageViewId const>;
         void * backend = {};
     };
 
@@ -53,16 +89,6 @@ namespace daxa
         u32 array_layer_count = 1;
         u32 sample_count = 1;
         MemoryFlags memory_flags = {};
-        std::string name = {};
-    };
-    struct TaskBufferInfo
-    {
-        std::string name = {};
-    };
-
-    struct TaskImageInfo
-    {
-        bool swapchain_image = {};
         std::string name = {};
     };
 
@@ -167,8 +193,14 @@ namespace daxa
 
     struct TrackedBuffers
     {
-        std::span<BufferId> buffers = {};
+        std::span<BufferId const> buffers = {};
         Access latest_access = {};
+    };
+
+    struct TaskBufferInfo
+    {
+        TrackedBuffers initial_buffers = {};
+        std::string name = {};
     };
 
     struct TaskBuffer : ManagedPtr
@@ -180,7 +212,7 @@ namespace daxa
 
         auto id() const -> TaskBufferId;
         auto info() const -> TaskBufferInfo const &;
-        auto get_buffers() const -> std::pair<std::span<BufferId const>, Access>;
+        auto get_buffers() const -> TrackedBuffers;
 
         void set_buffers(TrackedBuffers const & buffers);
         void swap_buffers(TaskBuffer & other);
@@ -188,9 +220,16 @@ namespace daxa
 
     struct TrackedImages
     {
-        std::span<ImageId> images = {};
+        std::span<ImageId const> images = {};
         // optional:
-        std::span<ImageSliceState> latest_slice_states = {};
+        std::span<ImageSliceState const> latest_slice_states = {};
+    };
+
+    struct TaskImageInfo
+    {
+        TrackedImages initial_images = {};
+        bool swapchain_image = {};
+        std::string name = {};
     };
 
     struct TaskImage : ManagedPtr

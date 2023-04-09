@@ -22,51 +22,53 @@ namespace tests
         daxa::Context daxa_ctx = daxa::create_context({ .enable_validation = false, });
         daxa::Device device = daxa_ctx.create_device({ .name = "device", });
         auto buffer = device.create_buffer({
-            .memory_flags = daxa::MemoryFlagBits::DEDICATED_MEMORY,
-            .size = 1,
-            .name = "actual buffer",
+           .size = 1,
+           .allocate_info = daxa::AutoAllocInfo{.flags = daxa::MemoryFlagBits::DEDICATED_MEMORY},
+           .name = "actual buffer",
         });
 
-        daxa::TaskBuffer persistent_task_buffer{{
-            .execution_buffers = {&buffer, 1},
-            .name = "persistent buffer",
-        }};
+        auto persistent_task_buffer = daxa::TaskBuffer(daxa::TaskBufferInfo{
+           .initial_buffers = {.buffers = {&buffer, 1}},
+           .name = "persistent buffer",
+        });
  
         auto task_list_A = daxa::TaskList({
-            .device = device,
-            .record_debug_information = true,
-            .name = "task_list_a",
+           .device = device,
+           .record_debug_information = true,
+           .name = "task_list_a",
         });
 
         auto task_list_B = daxa::TaskList({
-            .device = device,
-            .record_debug_information = true,
-            .name = "task_list_b",
+           .device = device,
+           .record_debug_information = true,
+           .name = "task_list_b",
         });
 
         task_list_A.use_persistent_buffer(persistent_task_buffer);
         task_list_B.use_persistent_buffer(persistent_task_buffer);
         task_list_A.add_task({
-            .used_buffers = {{ .id = persistent_task_buffer.id(), .access = daxa::TaskBufferAccess::SHADER_WRITE_ONLY }},
-            .task = [&](daxa::TaskRuntimeInterface const &) { },
-            .name = "write persistent buffer",
+           .used_buffers = {{ .id = persistent_task_buffer.id(), .access = daxa::TaskBufferAccess::SHADER_WRITE_ONLY }},
+           .task = [&](daxa::TaskRuntimeInterface const &) { },
+           .name = "write persistent buffer",
         });
         task_list_A.submit({});
         task_list_A.complete({});
 
         task_list_B.add_task({
-            .used_buffers = {{ .id = persistent_task_buffer.id(), .access = daxa::TaskBufferAccess::SHADER_READ_ONLY }},
-            .task = [&](daxa::TaskRuntimeInterface const &) { },
-            .name = "read persistent buffer",
+           .used_buffers = {{ .id = persistent_task_buffer.id(), .access = daxa::TaskBufferAccess::SHADER_READ_ONLY }},
+           .task = [&](daxa::TaskRuntimeInterface const &) { },
+           .name = "read persistent buffer",
         });
         task_list_B.submit({});
         task_list_B.complete({});
 
         task_list_A.execute({});
-        task_list_A.execute({});
-        task_list_B.execute({});
-        task_list_B.execute({});
         std::cout << task_list_A.get_debug_string() << std::endl;
+        task_list_A.execute({});
+        std::cout << task_list_A.get_debug_string() << std::endl;
+        task_list_B.execute({});
+        std::cout << task_list_B.get_debug_string() << std::endl;
+        task_list_B.execute({});
         std::cout << task_list_B.get_debug_string() << std::endl;
 
         device.wait_idle();
@@ -94,58 +96,60 @@ namespace tests
         // We need an actual image, as task list will try to populate its image view cache.
         // It will error out when it detects that there are no runtime images for a task image when updating the view cache.
         auto image = device.create_image({
-            .size = {1, 1, 1},
-            .array_layer_count = 1,
-            .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
-            .name = "actual image",
+           .size = {1, 1, 1},
+           .array_layer_count = 1,
+           .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
+           .name = "actual image",
         });
 
-        daxa::TaskImage persistent_task_image{{
-            .swapchain_image = false,
-            .execution_images = {&image, 1},
-            .name = "image",
-        }};
+        auto persistent_task_image = daxa::TaskImage(
+            daxa::TaskImageInfo{
+                .initial_images = {.images = {&image, 1}},
+                .swapchain_image = false,
+                .name = "image",
+        });
  
         auto task_list_A = daxa::TaskList({
-            .device = device,
-            .record_debug_information = true,
-            .name = "task_list_a",
-        });
-
-        auto task_list_B = daxa::TaskList({
-            .device = device,
-            .record_debug_information = true,
-            .name = "task_list_b",
+           .device = device,
+           .record_debug_information = true,
+           .name = "task_list_a",
         });
 
         task_list_A.use_persistent_image(persistent_task_image);
-        task_list_B.use_persistent_image(persistent_task_image);
         task_list_A.add_task({
-            .used_images = {{ .id = persistent_task_image.id(), .access = daxa::TaskImageAccess::SHADER_WRITE_ONLY }},
-            .task = [&](daxa::TaskRuntimeInterface const &) { },
-            .name = "write persistent image",
+           .used_images = {{ .id = persistent_task_image, .access = daxa::TaskImageAccess::SHADER_WRITE_ONLY }},
+           .task = [&](daxa::TaskRuntimeInterface const &) { },
+           .name = "write persistent image",
         });
         task_list_A.add_task({
-            .used_images = {{ .id = persistent_task_image.id(), .access = daxa::TaskImageAccess::COLOR_ATTACHMENT }},
-            .task = [&](daxa::TaskRuntimeInterface const &) { },
-            .name = "persistent image - color attachment",
+           .used_images = {{ .id = persistent_task_image, .access = daxa::TaskImageAccess::COLOR_ATTACHMENT }},
+           .task = [&](daxa::TaskRuntimeInterface const &) { },
+           .name = "persistent image - color attachment",
         });
         task_list_A.submit({});
         task_list_A.complete({});
 
+        auto task_list_B = daxa::TaskList({
+           .device = device,
+           .record_debug_information = true,
+           .name = "task_list_b",
+        });
+        task_list_B.use_persistent_image(persistent_task_image);
         task_list_B.add_task({
-            .used_images = {{ .id = persistent_task_image.id(), .access = daxa::TaskImageAccess::SHADER_READ_ONLY }},
-            .task = [&](daxa::TaskRuntimeInterface const &) { },
-            .name = "read persistent image",
+           .used_images = {{ .id = persistent_task_image, .access = daxa::TaskImageAccess::SHADER_READ_ONLY }},
+           .task = [&](daxa::TaskRuntimeInterface const &) { },
+           .name = "read persistent image",
         });
         task_list_B.submit({});
         task_list_B.complete({});
 
         task_list_A.execute({});
-        task_list_A.execute({});
-        task_list_B.execute({});
-        task_list_B.execute({});
         std::cout << task_list_A.get_debug_string() << std::endl;
+        task_list_A.execute({});
+        std::cout << task_list_A.get_debug_string() << std::endl;
+        task_list_B.execute({});
+        std::cout << task_list_B.get_debug_string() << std::endl;
+        task_list_B.execute({});
         std::cout << task_list_B.get_debug_string() << std::endl;
 
         device.wait_idle();

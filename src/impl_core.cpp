@@ -697,30 +697,35 @@ namespace daxa
     auto to_string(ImageMipArraySlice image_mip_array_slice) -> std::string
     {
         std::string ret = {};
+        ret += "aspect: ";
         ret += to_string(image_mip_array_slice.image_aspect);
-        ret += " base_mip_level: " + std::to_string(image_mip_array_slice.base_mip_level);
-        ret += " level_count: " + std::to_string(image_mip_array_slice.level_count);
-        ret += " base_array_layer: " + std::to_string(image_mip_array_slice.base_array_layer);
-        ret += " layer_count: " + std::to_string(image_mip_array_slice.layer_count);
+        ret += " mips: ";
+        ret += std::to_string(image_mip_array_slice.base_mip_level);
+        ret += "-";
+        ret += std::to_string(image_mip_array_slice.level_count-1);
+        ret += " layers: " + std::to_string(image_mip_array_slice.base_array_layer);
+        ret += "-" + std::to_string(image_mip_array_slice.layer_count-1);
         return ret;
     }
 
     auto to_string(ImageArraySlice image_array_slice) -> std::string
     {
         std::string ret = {};
+        ret += "aspect: ";
         ret += to_string(image_array_slice.image_aspect);
-        ret += " mip_level: " + std::to_string(image_array_slice.mip_level);
-        ret += " base_array_layer: " + std::to_string(image_array_slice.base_array_layer);
-        ret += " layer_count: " + std::to_string(image_array_slice.layer_count);
+        ret += " mip: " + std::to_string(image_array_slice.mip_level);
+        ret += " levels: " + std::to_string(image_array_slice.base_array_layer);
+        ret += "-" + std::to_string(image_array_slice.layer_count-1);
         return ret;
     }
 
     auto to_string(ImageSlice image_slice) -> std::string
     {
         std::string ret = {};
+        ret += "aspect: ";
         ret += to_string(image_slice.image_aspect);
-        ret += " mip_level: " + std::to_string(image_slice.mip_level);
-        ret += " array_layer: " + std::to_string(image_slice.array_layer);
+        ret += " mip: " + std::to_string(image_slice.mip_level);
+        ret += " layer: " + std::to_string(image_slice.array_layer);
         return ret;
     }
 
