@@ -1081,4 +1081,34 @@ namespace daxa
         u32 width = {};
         u32 height = {};
     };
+
+    namespace deail
+    {
+        u32 constexpr const_hash( char const *input )
+        {
+            if (*input == '\0')
+            {
+                return 5381;
+            }
+            return static_cast<unsigned int>(*input) + 33 * const_hash( input + 1 );
+        }
+    }
+
+    u32 constexpr compt_hash( char const* str )
+    {
+        if (str == nullptr)
+        {
+            return 0;
+        }
+        return deail::const_hash( str );
+    }
+
+    template<size_t N>
+    struct StringLiteralAdapter {
+        constexpr StringLiteralAdapter(const char (&str)[N]) {
+            std::copy_n(str, N, value);
+        }
+        
+        char value[N];
+    };
 } // namespace daxa

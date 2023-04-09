@@ -18,6 +18,8 @@
 #define DAXA_DEBUG_MESSAGE_SAMPLER_REPORT 4
 #endif
 
+// TODO(wrap all texture access functions descriptor operands with nonUniformEXT) nano had found a bug in amd drivers with portalrtx
+
 #if !defined(DAXA_SHADER_GPU_ID_VALIDATION)
 #define DAXA_SHADER_GPU_ID_VALIDATION (0)
 #endif // #if !defined(DAXA_SHADER_GPU_ID_VALIDATION)
