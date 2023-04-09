@@ -702,9 +702,9 @@ namespace daxa
         ret += " mips: ";
         ret += std::to_string(image_mip_array_slice.base_mip_level);
         ret += "-";
-        ret += std::to_string(image_mip_array_slice.level_count-1);
+        ret += std::to_string(image_mip_array_slice.base_mip_level + image_mip_array_slice.level_count - 1);
         ret += " layers: " + std::to_string(image_mip_array_slice.base_array_layer);
-        ret += "-" + std::to_string(image_mip_array_slice.layer_count-1);
+        ret += "-" + std::to_string(image_mip_array_slice.base_array_layer + image_mip_array_slice.layer_count - 1);
         return ret;
     }
 
@@ -715,7 +715,7 @@ namespace daxa
         ret += to_string(image_array_slice.image_aspect);
         ret += " mip: " + std::to_string(image_array_slice.mip_level);
         ret += " levels: " + std::to_string(image_array_slice.base_array_layer);
-        ret += "-" + std::to_string(image_array_slice.layer_count-1);
+        ret += "-" + std::to_string(image_array_slice.base_array_layer + image_array_slice.layer_count - 1);
         return ret;
     }
 

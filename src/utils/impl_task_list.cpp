@@ -1,11 +1,13 @@
 #if DAXA_BUILT_WITH_UTILS_TASK_LIST
 
-#include "impl_task_list.hpp"
 #include <algorithm>
 #include <iostream>
 
 #include <fstream>
 #include <utility>
+
+#include "impl_task_list.hpp"
+#include "impl_task_list_debug.hpp"
 
 namespace daxa
 {
@@ -2728,10 +2730,10 @@ namespace daxa
     void ImplTaskList::debug_print_image_memory_barrier(ImageBarrierInfo & barrier, PermIndepTaskImageInfo & glob_image, std::string_view prefix)
     {
         this->debug_string_stream << prefix << "Begin image memory barrier\n";
-        this->debug_string_stream << prefix << "\ttask_image_id: " << barrier.image_id.index << " name: \"" << glob_image.get_name() << " \n";
+        this->debug_string_stream << prefix << "\ttask_image_id: " << barrier.image_id.index << " name: \"" << glob_image.get_name() << "\"\n";
         this->debug_string_stream << prefix << "\tBegin bound images\n";
         this->debug_string_stream << prefix << "\timage id: " << to_string(barrier.image_id)
-                                  << "\timage debug name: " << info.device.info_image(barrier.image_id).name << " \n";
+                                  << "\timage name: \"" << info.device.info_image(barrier.image_id).name << "\"\n";
         this->debug_string_stream << prefix << "\tEnd   bound images \n";
         this->debug_string_stream << prefix << "\tsrc access: " << to_string(barrier.awaited_pipeline_access) << "\n";
         this->debug_string_stream << prefix << "\tdst access: " << to_string(barrier.waiting_pipeline_access) << "\n";
@@ -2758,12 +2760,12 @@ namespace daxa
             this->debug_string_stream << prefix << "Begin image memory barrier\n";
             this->debug_string_stream << prefix << "\tbarrier index: " << index << "\n";
             this->debug_string_stream << prefix << "\ttask_image_id: " << barrier.image_id.index << " \n";
-            this->debug_string_stream << prefix << "\ttask image debug name: " << glob_image.get_name() << " \n";
+            this->debug_string_stream << prefix << "\ttask image name: \"" << glob_image.get_name() << "\"\n";
             this->debug_string_stream << prefix << "\tBegin bound images\n";
             for (auto image : this->get_actual_images(barrier.image_id, permutation))
             {
                 this->debug_string_stream << prefix << "\timage id: " << to_string(image)
-                                          << "\timage debug name: " << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).name) << " \n";
+                                          << "\timage name: \"" << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).name) << "\" \n";
             }
             this->debug_string_stream << prefix << "\tEnd   bound images \n";
             this->debug_string_stream << prefix << "\tsrc access: " << to_string(barrier.src_access) << "\n";
@@ -2792,12 +2794,12 @@ namespace daxa
             this->debug_string_stream << prefix << "Begin image memory barrier\n";
             this->debug_string_stream << prefix << "\tbarrier index: " << index << "\n";
             this->debug_string_stream << prefix << "\ttask_image_id: " << barrier.image_id.index << " \n";
-            this->debug_string_stream << prefix << "\ttask image debug name: " << glob_image.get_name() << " \n";
+            this->debug_string_stream << prefix << "\ttask image name: \"" << glob_image.get_name() << "\" \n";
             this->debug_string_stream << prefix << "\tBegin bound images\n";
             for (auto image : this->get_actual_images(barrier.image_id, permutation))
             {
                 this->debug_string_stream << prefix << "\timage id: " << to_string(image)
-                                          << "\timage debug name: " << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).name) << " \n";
+                                          << "\timage name: \"" << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).name) << "\" \n";
             }
             this->debug_string_stream << prefix << "\tEnd   bound images \n";
             this->debug_string_stream << prefix << "\tsrc access: " << to_string(barrier.src_access) << "\n";
@@ -2818,12 +2820,12 @@ namespace daxa
             auto [layout, access] = task_image_access_to_layout_access(task_image_access);
             this->debug_string_stream << prefix << "\tBegin task image use " << task_image_id.index << "\n";
             this->debug_string_stream << prefix << "\ttask_image_id: " << task_image_id.index << " \n";
-            this->debug_string_stream << prefix << "\ttask image debug name: " << glob_image.get_name() << " \n";
+            this->debug_string_stream << prefix << "\ttask image name: \"" << glob_image.get_name() << "\"\n";
             this->debug_string_stream << prefix << "\tBegin bound images\n";
             for (auto image : get_actual_images(task_image_id, permutation))
             {
                 this->debug_string_stream << prefix << "\timage id: " << to_string(image)
-                                          << "\timage debug name: " << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).name) << " \n";
+                                          << "\timage \"name: " << (image.is_empty() ? std::string("INVALID ID") : info.device.info_image(image).name) << "\" \n";
             }
             this->debug_string_stream << prefix << "\tEnd   bound images \n";
             this->debug_string_stream << prefix << "\t\trequired layout: " << to_string(layout) << "\n";
@@ -2835,12 +2837,12 @@ namespace daxa
         {
             auto access = task_buffer_access_to_access(task_buffer_access);
             this->debug_string_stream << prefix << "\tBegin task buffer use " << task_buffer_id.index << "\n";
-            this->debug_string_stream << prefix << "\t\task buffer debug name: " << global_buffer_infos[task_buffer_id.index].get_name() << "\n";
+            this->debug_string_stream << prefix << "\t\task buffer name: \"" << global_buffer_infos[task_buffer_id.index].get_name() << "\"\n";
             this->debug_string_stream << prefix << "\tBegin bound buffers\n";
             for (auto buffer : get_actual_buffers(task_buffer_id))
             {
                 this->debug_string_stream << prefix << "\tbuffers id: " << to_string(buffer)
-                                          << "\tbuffers debug name: " << (buffer.is_empty() ? std::string("INVALID ID") : info.device.info_buffer(buffer).name) << " \n";
+                                          << "\tbuffers name: \"" << (buffer.is_empty() ? std::string("INVALID ID") : info.device.info_buffer(buffer).name) << "\" \n";
             }
             this->debug_string_stream << prefix << "\tEnd   bound buffers \n";
             this->debug_string_stream << prefix << "\t\tstage access: " << to_string(access) << "\n";

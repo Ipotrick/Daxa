@@ -164,7 +164,7 @@ namespace tests
                     return;
                 }
                 std::array<bool, TASK_CONDITION_COUNT> conditions = {};
-                conditions[TASK_CONDITION_MOUSE_DRAWING] = true;
+                conditions[TASK_CONDITION_MOUSE_DRAWING] = mouse_drawing;
                 task_list.execute({.permutation_condition_values = {conditions.data(), conditions.size()}, .record_debug_string = true});
                 // std::cout << task_list.get_debug_string() << std::endl;
             }
@@ -219,19 +219,16 @@ namespace tests
             }
             void paint(daxa::CommandList & cmd_list, daxa::ImageId render_target_id, daxa::BufferId input_buffer)
             {
-                if (mouse_drawing)
-                {
-                    auto render_target_size = device.info_image(render_target_id).size;
-                    cmd_list.set_pipeline(*compute_pipeline);
-                    auto const push = MipmappingComputePushConstant{
-                        .image = render_target_id.default_view(),
-                        .gpu_input = device.get_device_address(input_buffer),
-                        // .gpu_input = this->device.get_device_address(input_buffer),
-                        .frame_dim = {render_target_size.x, render_target_size.y},
-                    };
-                    cmd_list.push_constant(push);
-                    cmd_list.dispatch((render_target_size.x + 7) / 8, (render_target_size.y + 7) / 8);
-                }
+                auto render_target_size = device.info_image(render_target_id).size;
+                cmd_list.set_pipeline(*compute_pipeline);
+                auto const push = MipmappingComputePushConstant{
+                    .image = render_target_id.default_view(),
+                    .gpu_input = device.get_device_address(input_buffer),
+                    // .gpu_input = this->device.get_device_address(input_buffer),
+                    .frame_dim = {render_target_size.x, render_target_size.y},
+                };
+                cmd_list.push_constant(push);
+                cmd_list.dispatch((render_target_size.x + 7) / 8, (render_target_size.y + 7) / 8);
             }
             void draw_ui(daxa::CommandList & cmd_list, daxa::ImageId render_target_id)
             {
