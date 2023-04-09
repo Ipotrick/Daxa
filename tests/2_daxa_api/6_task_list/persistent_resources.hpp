@@ -27,7 +27,7 @@ namespace tests
             .name = "actual buffer",
         });
 
-        daxa::PersistentTaskBuffer persistent_task_buffer{{
+        daxa::TaskBuffer persistent_task_buffer{{
             .execution_buffers = {&buffer, 1},
             .name = "persistent buffer",
         }};
@@ -100,7 +100,7 @@ namespace tests
             .name = "actual image",
         });
 
-        daxa::PersistentTaskImage persistent_task_image{{
+        daxa::TaskImage persistent_task_image{{
             .swapchain_image = false,
             .execution_images = {&image, 1},
             .name = "image",
