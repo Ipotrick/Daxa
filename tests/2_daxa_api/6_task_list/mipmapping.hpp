@@ -22,7 +22,8 @@ namespace tests
                 .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
                 .name = APPNAME_PREFIX("swapchain"),
             });
-            daxa::ImageId swapchain_image;
+            daxa::TaskImage task_swapchain_image{{.name = "swapchain"}};
+            daxa::ImageId swapchain_image = {};
 
             daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
                 .device = device,
@@ -67,11 +68,13 @@ namespace tests
             });
 
             daxa::CommandSubmitInfo submit_info = {};
-            daxa::TaskImageId task_swapchain_image = {};
-            daxa::PersistentTaskImage task_render_image{daxa::TaskImageInfo{
-                .execution_images = {&render_image, 1},
-                .name = "persistent render image"
-            }};
+            daxa::TaskImage task_render_image = [&](){
+                auto ret = daxa::TaskImage{{
+                    .name = "persistent render image",
+                }};
+                ret.set_images({.images={&render_image, 1}});
+                return ret;
+            }();
             
 
             MipmappingGpuInput gpu_input = {
@@ -88,10 +91,14 @@ namespace tests
             });
 
             std::array<BufferId, 1> execution_buffers{mipmapping_gpu_input_buffer};
-            daxa::PersistentTaskBuffer task_mipmapping_gpu_input_buffer{daxa::TaskBufferInfo{
-                .execution_buffers = {execution_buffers.data(), execution_buffers.size()},
-                .name = "task_mipmapping_gpu_input_buffer",
-            }};
+            daxa::TaskBuffer task_mipmapping_gpu_input_buffer = [&](){
+                auto ret = daxa::TaskBuffer{{
+                    .name = "task_mipmapping_gpu_input_buffer",
+                }};
+                ret.set_buffers(daxa::TrackedBuffers{.buffers = std::span{execution_buffers.data(), execution_buffers.size()}});
+                return ret;
+            }();
+            
 
             daxa::TaskBufferId task_staging_mipmapping_gpu_input_buffer;
 
@@ -150,9 +157,8 @@ namespace tests
 
                 // non_task_list_execute();
 
-                task_list.remove_runtime_image(task_swapchain_image, swapchain_image);
                 swapchain_image = swapchain.acquire_next_image();
-                task_list.add_runtime_image(task_swapchain_image, swapchain_image);
+                task_swapchain_image.set_images({.images=std::span{&swapchain_image,1}});
                 if (swapchain_image.is_empty())
                 {
                     return;
@@ -195,8 +201,8 @@ namespace tests
             void update_gpu_input(daxa::CommandList & cmd_list, daxa::BufferId input_buffer)
             {
                 auto staging_buffer = device.create_buffer({
-                    .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .size = sizeof(MipmappingGpuInput),
+                    .allocate_info = daxa::AutoAllocInfo{daxa::MemoryFlagBits::HOST_ACCESS_RANDOM},
                     .name = APPNAME_PREFIX("staging_mipmapping_gpu_input_buffer"),
                 });
                 MipmappingGpuInput * buffer_ptr = device.get_host_address_as<MipmappingGpuInput>(staging_buffer);
@@ -448,11 +454,7 @@ namespace tests
                     .name = APPNAME_PREFIX("main task list"),
                 });
 
-                task_swapchain_image = new_task_list.create_transient_task_image({
-                    .swapchain_image = true,
-                    .name = APPNAME_PREFIX("Task Swapchain Image"),
-                });
-                new_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
+                new_task_list.use_persistent_image(task_swapchain_image);
                 new_task_list.use_persistent_buffer(task_mipmapping_gpu_input_buffer);
                 new_task_list.use_persistent_image(task_render_image);
 

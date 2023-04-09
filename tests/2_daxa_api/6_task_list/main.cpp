@@ -64,8 +64,7 @@ namespace tests
             .name = APPNAME_PREFIX("create-write-read image"),
         });
         // CREATE IMAGE
-        auto task_image = task_list.create_transient_task_image({.name = "task list tested image"});
-        task_list.add_runtime_image(task_image, image);
+        auto task_image = task_list.create_transient_image({.name = "task list tested image"});
         // WRITE IMAGE 1
         task_list.add_task({
             .used_buffers = {},
@@ -114,7 +113,7 @@ namespace tests
             .name = APPNAME_PREFIX("create-write-read array layer"),
         });
         // CREATE IMAGE
-        auto task_image = task_list.create_transient_task_image({
+        auto task_image = task_list.create_transient_image({
             .name = "task list tested image",
         });
         task_list.add_task({
@@ -157,8 +156,7 @@ namespace tests
             .name = APPNAME_PREFIX("create-transfer-read buffer"),
         });
         // CREATE IMAGE
-        auto task_buffer = task_list.create_transient_task_buffer({
-            .pre_task_list_slice_states = daxa::AccessConsts::NONE,
+        auto task_buffer = task_list.create_transient_buffer({
             .name = "task list tested buffer",
         });
         task_list.add_task({
@@ -211,12 +209,14 @@ namespace tests
             daxa::ImageSliceState{
                 .latest_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
                 .latest_layout = daxa::ImageLayout::GENERAL}};
-        auto task_image = task_list.create_transient_task_image(
-            {
-                .pre_task_list_slice_states = {init_access.begin(), init_access.end()},
-                .name = "task list tested image",
-            });
-        task_list.add_runtime_image(task_image, image);
+        auto task_image = daxa::TaskImage({
+            .swapchain_image = false,
+            .name = "task list tested image",
+        });
+        task_image.set_images({
+            .images = {&image, 1},
+            .latest_slice_states = {init_access.data(), 1} 
+        });
 
         task_list.add_task({
             .used_buffers = {},
@@ -281,11 +281,14 @@ namespace tests
                 .latest_layout = daxa::ImageLayout::READ_ONLY_OPTIMAL,
                 .slice = {.base_array_layer = 2, .layer_count = 2},
             }};
-        auto task_image = task_list.create_transient_task_image({
-            .pre_task_list_slice_states = {init_access.begin(), init_access.end()},
+        auto task_image = daxa::TaskImage({
             .name = "task list tested image",
         });
-        task_list.add_runtime_image(task_image, image);
+
+        task_image.set_image({
+            .images = {&task_image, 1},
+            .latest_slice_states = {init_access.begin(), init_access.end()}
+        });
 
         auto cmd = app.device.create_command_list({.name = "initialization commands"});
         // cmd.pipeline_barrier_image_transition({
@@ -370,7 +373,7 @@ namespace tests
             .name = "underlying image",
         });
         auto buffer = app.device.create_buffer({
-            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
+            .allocate_info = daxa::AutoAllocInfo{.flags = MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE},
             .size = 16,
             .name = "underlying buffer",
         });
@@ -404,16 +407,16 @@ namespace tests
             .name = "shader integration test - task list",
         });
 
-        auto task_image = task_list.create_transient_task_image({
+        auto task_image = daxa::TaskImage({
             // In this test, this image name will be "aliased", so the name must not be the same.
             .name = "image",
         });
-        task_list.add_runtime_image(task_image, image);
+        task_image.set_images({ .images = {&image, 1} });
 
-        auto task_buffer = task_list.create_transient_task_buffer({
+        auto task_buffer = daxa::TaskBuffer({
             .name = "settings", // This name MUST be identical to the name used in the shader.
         });
-        task_list.add_runtime_buffer(task_buffer, buffer);
+        task_list.set_buffers({ .buffers = {&buffer, 1}});
 
         task_list.add_task({
             // daxa::ShaderIntegrationTaskListUses is a startup time generated constant global.
@@ -471,16 +474,16 @@ namespace tests
             .name = "actual_buffer"
         });
 
-        daxa::PersistentTaskImage persistent_task_image{{
+        daxa::TaskImage persistent_task_image{{
             .swapchain_image = false,
-            .execution_images = {&image, 1},
             .name = "image",
         }};
+        persistent_task_image.set_images({.images = {&image, 1}});
 
-        daxa::PersistentTaskBuffer persistent_task_buffer{{
-            .execution_buffers = {&buffer, 1},
+        daxa::TaskBuffer persistent_task_buffer{{
             .name = "buffer",
         }};
+        persistent_task_buffer.set_buffers({.buffers = {&buffer, 1}});
  
         auto task_list = daxa::TaskList({
             .device = device,
@@ -526,7 +529,7 @@ namespace tests
             .name = APPNAME_PREFIX("task_list (output_graph)"),
         });
 
-        auto task_buffer1 = task_list.create_transient_task_buffer({
+        auto task_buffer1 = TaskBuffer({
             .pre_task_list_slice_states = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
             .name = APPNAME_PREFIX("task_buffer1"),
         });

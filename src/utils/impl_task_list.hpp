@@ -23,11 +23,12 @@ namespace daxa
         usize index;
     };
 
-    struct TaskBuffer
+    struct PerPermTaskBuffer
     {
         /// Every permutation always has all buffers but they are not necessarily valid in that permutation.
         /// This boolean is used to check this.
         bool valid = {};
+        BufferId transient_buffer_id = {};
         Access latest_access = AccessConsts::NONE;
         usize latest_access_batch_index = {};
         usize latest_access_submit_scope_index = {};
@@ -68,7 +69,7 @@ namespace daxa
         std::variant<std::monostate, LastReadSplitBarrierIndex, LastReadBarrierIndex> latest_access_read_barrier_index = std::monostate{};
     };
 
-    struct TaskImage
+    struct PerPermTaskImage
     {
         /// Every permutation always has all buffers but they are not necessarily valid in that permutation.
         /// This boolean is used to check this.
@@ -76,16 +77,9 @@ namespace daxa
         bool swapchain_semaphore_waited_upon = {};
         std::vector<ExtendedImageSliceState> last_slice_states = {};
         std::vector<ExtendedImageSliceState> first_slice_states = {};
-    };
-
-    struct GlobalTaskImageInfo
-    {
-        TaskImageInfo info = {};
-        // One task image can be backed by multiple images at execution time.
-        std::vector<ImageId> actual_images = {};
-        // We store runtime information about the previous executions final resource states.
-        // This is important, as with conditional execution and temporal resources we need to store this infomation to form correct state transitions.
-        std::optional<std::vector<ExtendedImageSliceState>> previous_execution_last_slices = {};
+        // only for transient images
+        ImageUsageFlags usage = ImageUsageFlagBits::NONE;
+        ImageId actual_image = {};
     };
 
     using ShaderUseIdToOffsetTable = std::vector<std::variant<std::pair<TaskImageId, usize>, std::pair<TaskBufferId, usize>, std::monostate>>;
@@ -149,8 +143,8 @@ namespace daxa
         bool active = {};
         // persistent information:
         TaskImageId swapchain_image = {};
-        std::vector<TaskBuffer> buffer_infos = {};
-        std::vector<TaskImage> image_infos = {};
+        std::vector<PerPermTaskBuffer> buffer_infos = {};
+        std::vector<PerPermTaskImage> image_infos = {};
         std::vector<Task> tasks = {};
         std::vector<TaskSplitBarrier> split_barriers = {};
         std::vector<TaskBarrier> barriers = {};
@@ -178,12 +172,15 @@ namespace daxa
 
         // Used to allocate id - because all persistent resources have unique id we need a single point
         // from which they are generated
-        static inline std::atomic_uint64_t exec_unique_next_index = 1;
-        usize unique_index = std::numeric_limits<u64>::max();
+        static inline std::atomic_uint32_t exec_unique_next_index = 1;
+        u32 unique_index = std::numeric_limits<u32>::max();
     };
 
     struct ImplPersistentTaskImage final : ManagedSharedState
     {
+        ImplPersistentTaskImage(TaskImageInfo const & a_info);
+        virtual ~ImplPersistentTaskImage() override final;
+
         TaskImageInfo info = {};
         // One task buffer can back multiple buffers.
         std::vector<ImageId> actual_images = {};
@@ -193,41 +190,48 @@ namespace daxa
 
         // Used to allocate id - because all persistent resources have unique id we need a single point
         // from which they are generated
-        static inline std::atomic_uint64_t exec_unique_next_index = 1;
-        usize unique_index = std::numeric_limits<u64>::max();
-
-        ImplPersistentTaskImage(TaskImageInfo const & a_info);
-        virtual ~ImplPersistentTaskImage() override final;
+        static inline std::atomic_uint32_t exec_unique_next_index = 1;
+        u32 unique_index = std::numeric_limits<u32>::max();
     };
 
     struct PermIndepTaskBufferInfo
     {
-        TaskBufferInfo info = {};
         struct Persistent
         {
             ManagedWeakPtr buffer = {};
+
             auto get() -> ImplPersistentTaskBuffer &
+            {
+                return *buffer.as<ImplPersistentTaskBuffer>();
+            }
+            auto get() const -> ImplPersistentTaskBuffer const &
             {
                 return *buffer.as<ImplPersistentTaskBuffer>();
             }
         };
         struct Transient
         {
-            std::vector<BufferId> actual_buffers = {};
+            TransientBufferInfo info = {};
+            BufferId buffer = {};
         };
         std::variant<Persistent, Transient> task_buffer_data = {};
 
-#define GET_ACTUAL_BUFFERS_BODY                                                                              \
-    if (std::holds_alternative<Persistent>(task_buffer_data))                                                \
-    {                                                                                                        \
-        return std::get<Persistent>(task_buffer_data).buffer.as<ImplPersistentTaskBuffer>()->actual_buffers; \
-    }                                                                                                        \
-    else                                                                                                     \
-    {                                                                                                        \
-        return std::get<Transient>(task_buffer_data).actual_buffers;                                         \
-    }
-
-        inline auto get_persistent() -> ImplPersistentTaskBuffer&
+        inline auto get_name() const -> std::string_view
+        {
+            if (is_persistent())
+            {
+                return get_persistent().info.name;
+            }
+            else
+            {
+                return std::get<Transient>(task_buffer_data).info.name;
+            }
+        }
+        inline auto get_persistent() -> ImplPersistentTaskBuffer &
+        {
+            return std::get<Persistent>(task_buffer_data).get();
+        }
+        inline auto get_persistent() const -> ImplPersistentTaskBuffer const &
         {
             return std::get<Persistent>(task_buffer_data).get();
         }
@@ -235,60 +239,62 @@ namespace daxa
         {
             return std::holds_alternative<Persistent>(task_buffer_data);
         }
-        inline auto get_actual_buffers() -> std::vector<BufferId> &
-        {
-            GET_ACTUAL_BUFFERS_BODY
-        }
-        inline auto get_actual_buffers() const -> std::vector<BufferId> const & { GET_ACTUAL_BUFFERS_BODY }
     };
 
     struct PermIndepTaskImageInfo
     {
-        TaskImageInfo info = {};
         struct Persistent
         {
+            TaskImageInfo info = {};
             ManagedWeakPtr image = {};
             auto get() -> ImplPersistentTaskImage &
+            {
+                return *image.as<ImplPersistentTaskImage>();
+            }
+            auto get() const -> ImplPersistentTaskImage const &
             {
                 return *image.as<ImplPersistentTaskImage>();
             }
         };
         struct Transient
         {
-            std::vector<ImageId> actual_images = {};
+            TransientImageInfo info = {};
         };
         std::variant<Persistent, Transient> task_image_data = {};
 
-#define GET_ACTUAL_IMAGES_BODY                                                                           \
-    if (std::holds_alternative<Persistent>(task_image_data))                                             \
-    {                                                                                                    \
-        return std::get<Persistent>(task_image_data).image.as<ImplPersistentTaskImage>()->actual_images; \
-    }                                                                                                    \
-    else                                                                                                 \
-    {                                                                                                    \
-        return std::get<Transient>(task_image_data).actual_images;                                       \
-    }
-
-        inline auto is_persistent() const -> bool
+        inline auto get_name() const -> std::string_view
         {
-            return std::holds_alternative<Persistent>(task_image_data);
+            if (is_persistent())
+            {
+                return get_persistent().info.name;
+            }
+            else
+            {
+                return std::get<Transient>(task_image_data).info.name;
+            }
         }
-        inline auto get_persistent() -> ImplPersistentTaskImage&
+        inline auto get_persistent() -> ImplPersistentTaskImage &
         {
             return std::get<Persistent>(task_image_data).get();
         }
-        inline auto get_actual_images() -> std::vector<ImageId> &
+        inline auto get_persistent() const -> ImplPersistentTaskImage const &
         {
-            GET_ACTUAL_IMAGES_BODY
+            return std::get<Persistent>(task_image_data).get();
         }
-        inline auto get_actual_images() const -> std::vector<ImageId> const & 
-        { 
-            GET_ACTUAL_IMAGES_BODY
+        inline auto is_persistent() const -> bool
+        {
+            return std::holds_alternative<Persistent>(task_image_data);
         }
     };
 
     struct ImplTaskList final : ManagedSharedState
     {
+        ImplTaskList(TaskListInfo a_info);
+        virtual ~ImplTaskList() override final;
+
+        static inline std::atomic_uint32_t exec_unique_next_index = 1;
+        u32 unique_index = {};
+
         TaskListInfo info;
         std::vector<PermIndepTaskBufferInfo> global_buffer_infos = {};
         std::vector<PermIndepTaskImageInfo> global_image_infos = {};
@@ -296,8 +302,8 @@ namespace daxa
         std::vector<TaskListPermutation> permutations = {};
         // TODO: replace with faster hash map.
         /// @brief map the persistent id to a task list local id.
-        std::unordered_map<usize, usize> persistent_buffer_index_to_local_index;
-        std::unordered_map<usize, usize> persistent_image_index_to_local_index;
+        std::unordered_map<u32, u32> persistent_buffer_index_to_local_index;
+        std::unordered_map<u32, u32> persistent_image_index_to_local_index;
 
         // record time information:
         u32 record_active_conditional_scopes = {};
@@ -320,31 +326,25 @@ namespace daxa
         u32 prev_frame_permutation_index = {};
         std::stringstream debug_string_stream = {};
 
-        auto translate_persistent_id(TaskBufferId id) const -> TaskBufferId;
-        auto translate_persistent_id(TaskImageId id) const -> TaskImageId;
+        auto get_actual_buffers(TaskBufferId id) const -> std::span<BufferId const>;
+        auto get_actual_images(TaskImageId id, TaskListPermutation const & perm) const -> std::span<ImageId const>;
+        auto id_to_local_id(TaskBufferId id) const -> TaskBufferId;
+        auto id_to_local_id(TaskImageId id) const -> TaskImageId;
         void update_active_permutations();
-        void update_image_view_cache(Task & task);
+        void update_image_view_cache(Task & task, TaskListPermutation const & permutation);
+
+        void create_transient_runtime_buffers();
+        void create_transient_runtime_images(TaskListPermutation & permutation);
 
         void debug_print_memory_barrier(MemoryBarrierInfo & barrier, std::string_view prefix);
         void debug_print_image_memory_barrier(ImageBarrierInfo & barrier, PermIndepTaskImageInfo & glob_image, std::string_view prefix);
-        void debug_print_task_barrier(TaskBarrier & barrier, usize index, std::string_view prefix);
-        void debug_print_task_split_barrier(TaskSplitBarrier & barrier, usize index, std::string_view prefix);
+        void debug_print_task_barrier(TaskBarrier & barrier, TaskListPermutation const & permutation, usize index, std::string_view prefix);
+        void debug_print_task_split_barrier(TaskSplitBarrier & barrier, TaskListPermutation const & permutation, usize index, std::string_view prefix);
         void debug_print_task(TaskListPermutation const & permutation, Task & task, usize task_id, std::string_view prefix);
         void debug_print_permutation_image(TaskListPermutation const & permutation, TaskImageId const image_id);
         void debug_print_permutation_buffer(TaskListPermutation const & permutation, TaskBufferId const buffer_id);
         void debug_print();
-        void execute_barriers();
         void output_graphviz();
-
-        void add_runtime_buffer(TaskBufferId tid, BufferId id);
-        void add_runtime_image(TaskImageId tid, ImageId id);
-        void remove_runtime_buffer(TaskBufferId tid, BufferId id);
-        void remove_runtime_image(TaskImageId tid, ImageId id);
-        void clear_runtime_buffers(TaskBufferId tid);
-        void clear_runtime_images(TaskImageId tid);
-
-        ImplTaskList(TaskListInfo a_info);
-        virtual ~ImplTaskList() override final;
     };
 
     struct ImplTaskRuntimeInterface
