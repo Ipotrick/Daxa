@@ -5,6 +5,7 @@
 #endif
 
 #include <span>
+#include <format>
 
 #include <daxa/core.hpp>
 #include <daxa/device.hpp>
@@ -83,11 +84,13 @@ namespace daxa
     };
 
     auto to_string(TaskImageAccess const & usage) -> std::string_view;
+
+    using TaskResourceIndex = u32;
     
     struct TaskGPUResourceId
     {
-        u32 task_list_index = {};
-        u32 index = {};
+        TaskResourceIndex task_list_index = {};
+        TaskResourceIndex index = {};
 
         auto is_empty() const -> bool;
         auto is_persistent() const -> bool;
