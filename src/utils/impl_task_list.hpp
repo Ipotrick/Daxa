@@ -69,6 +69,18 @@ namespace daxa
         std::variant<std::monostate, LastReadSplitBarrierIndex, LastReadBarrierIndex> latest_access_read_barrier_index = std::monostate{};
     };
 
+    struct ResourceLifetime
+    {
+        // TODO(msakmary, pahrens) This will not be needed once we make batches linear and not
+        // contained in submit scopes
+        struct CombinedBatchIndex
+        {
+            usize submit_scope_index = std::numeric_limits<u32>::max();
+            usize task_batch_index = std::numeric_limits<u32>::max();
+        };
+        CombinedBatchIndex first_use;
+        CombinedBatchIndex last_use;
+    };
     struct PerPermTaskImage
     {
         /// Every permutation always has all buffers but they are not necessarily valid in that permutation.
@@ -78,8 +90,10 @@ namespace daxa
         std::vector<ExtendedImageSliceState> last_slice_states = {};
         std::vector<ExtendedImageSliceState> first_slice_states = {};
         // only for transient images
+        ResourceLifetime lifetime = {};
         ImageUsageFlags usage = ImageUsageFlagBits::NONE;
         ImageId actual_image = {};
+        u32 allocation_offset = {};
     };
 
     using ShaderUseIdToOffsetTable = std::vector<std::variant<std::pair<TaskImageId, usize>, std::pair<TaskBufferId, usize>, std::monostate>>;
@@ -151,6 +165,9 @@ namespace daxa
         std::vector<TaskSplitBarrier> split_barriers = {};
         std::vector<TaskBarrier> barriers = {};
         std::vector<usize> initial_barriers = {};
+        // TODO(msakmary, pahrens) - Instead of storing batch submit scopes which contain batches
+        // we should make a vector of batches which and a second vector of submit scopes which are 
+        // just offsets into the batches vector
         std::vector<TaskBatchSubmitScope> batch_submit_scopes = {};
         usize swapchain_image_first_use_submit_scope_index = std::numeric_limits<usize>::max();
         usize swapchain_image_last_use_submit_scope_index = std::numeric_limits<usize>::max();
@@ -260,6 +277,7 @@ namespace daxa
         struct Transient
         {
             TransientImageInfo info = {};
+            MemoryRequirements memory_requirements = {};
         };
         std::variant<Persistent, Transient> task_image_data = {};
 
@@ -312,6 +330,7 @@ namespace daxa
         std::vector<TaskListPermutation *> record_active_permutations = {};
         std::unordered_map<std::string, TaskBufferId> buffer_name_to_id = {};
         std::unordered_map<std::string, TaskImageId> image_name_to_id = {};
+        MemoryBlock transient_data_memory_block;
         bool compiled = {};
 
         // execution time information:
@@ -335,12 +354,13 @@ namespace daxa
 
         void create_transient_runtime_buffers();
         void create_transient_runtime_images(TaskListPermutation & permutation);
+        void compute_transient_memory_info();
 
-        void debug_print_memory_barrier(MemoryBarrierInfo & barrier, std::string_view prefix);
-        void debug_print_image_memory_barrier(ImageBarrierInfo & barrier, PermIndepTaskImageInfo & glob_image, std::string_view prefix);
-        void debug_print_task_barrier(TaskBarrier & barrier, TaskListPermutation const & permutation, usize index, std::string_view prefix);
-        void debug_print_task_split_barrier(TaskSplitBarrier & barrier, TaskListPermutation const & permutation, usize index, std::string_view prefix);
-        void debug_print_task(TaskListPermutation const & permutation, Task & task, usize task_id, std::string_view prefix);
+        void debug_print_memory_barrier(MemoryBarrierInfo & barrier, std::string & prefix);
+        void debug_print_image_memory_barrier(ImageBarrierInfo & barrier, PermIndepTaskImageInfo & glob_image, std::string & prefix);
+        void debug_print_task_barrier(TaskBarrier & barrier, TaskListPermutation const & permutation, usize index, std::string & prefix);
+        void debug_print_task_split_barrier(TaskSplitBarrier & barrier, TaskListPermutation const & permutation, usize index, std::string & prefix);
+        void debug_print_task(TaskListPermutation const & permutation, Task & task, usize task_id, std::string & prefix);
         void debug_print_permutation_image(TaskListPermutation const & permutation, TaskImageId const image_id);
         void debug_print_permutation_buffer(TaskListPermutation const & permutation, TaskBufferId const buffer_id);
         void debug_print();

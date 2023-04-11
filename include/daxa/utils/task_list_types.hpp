@@ -98,6 +98,8 @@ namespace daxa
         auto operator<=>(TaskGPUResourceId const & other) const = default;
     };
 
+    auto to_string(TaskGPUResourceId const & id) -> std::string;
+
     struct TaskBufferId : public TaskGPUResourceId
     {
     };
