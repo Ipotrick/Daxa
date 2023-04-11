@@ -330,7 +330,10 @@ namespace daxa
         std::vector<TaskListPermutation *> record_active_permutations = {};
         std::unordered_map<std::string, TaskBufferId> buffer_name_to_id = {};
         std::unordered_map<std::string, TaskImageId> image_name_to_id = {};
-        MemoryBlock transient_data_memory_block;
+
+        usize memory_block_size = {};
+        u32 memory_type_bits = 0xFFFFFFFFu;
+        MemoryBlock transient_data_memory_block = {};
         bool compiled = {};
 
         // execution time information:
@@ -354,7 +357,7 @@ namespace daxa
 
         void create_transient_runtime_buffers();
         void create_transient_runtime_images(TaskListPermutation & permutation);
-        void compute_transient_memory_info();
+        void allocate_transient_resources();
 
         void debug_print_memory_barrier(MemoryBarrierInfo & barrier, std::string & prefix);
         void debug_print_image_memory_barrier(ImageBarrierInfo & barrier, PermIndepTaskImageInfo & glob_image, std::string & prefix);

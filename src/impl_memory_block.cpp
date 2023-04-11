@@ -21,13 +21,6 @@ namespace daxa
     ImplMemoryBlock::~ImplMemoryBlock()
     {
         auto * device = this->impl_device.as<ImplDevice>();
-        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{device->main_queue_zombies_mtx});
-        u64 const main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(device->main_queue_cpu_timeline);
-        device->main_queue_memory_block_zombies.push_front({
-            main_queue_cpu_timeline_value,
-            MemoryBlockZombie{
-                .allocation = this->allocation,
-            },
-        });
+        vmaFreeMemory(device->vma_allocator, this->allocation);
     }
 } // namespace daxa
