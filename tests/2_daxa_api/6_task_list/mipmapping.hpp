@@ -166,7 +166,7 @@ namespace tests
                 std::array<bool, TASK_CONDITION_COUNT> conditions = {};
                 conditions[TASK_CONDITION_MOUSE_DRAWING] = mouse_drawing;
                 task_list.execute({.permutation_condition_values = {conditions.data(), conditions.size()}, .record_debug_string = true});
-                // std::cout << task_list.get_debug_string() << std::endl;
+                std::cout << task_list.get_debug_string() << std::endl;
             }
 
             void on_mouse_move(f32 x, f32 y)
@@ -499,7 +499,7 @@ namespace tests
                                 new_task_list.add_task({
                                     .used_images = {
                                         {.id = task_render_image, .access = IA::TRANSFER_READ,  .slice = {.base_mip_level = i}, .alias = "lower_mip"},
-                                        {.id = task_render_image, .access = IA::TRANSFER_WRITE, .slice = {.base_mip_level = i + 1}, .alias = "higher_mip"},
+                                        {.id = task_render_image, .access = IA::TRANSFER_WRITE, .slice = {.base_mip_level = i + 11}, .alias = "higher_mip"},
                                     },
                                     .task = [=, this](daxa::TaskRuntimeInterface const & runtime)
                                     {
