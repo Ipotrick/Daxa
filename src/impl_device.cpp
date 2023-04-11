@@ -75,11 +75,13 @@ namespace daxa
     {
         auto const & impl = *as<ImplDevice>();
 
+        DAXA_DBG_ASSERT_TRUE_M(info.requirements.memory_type_bits != 0, "memory_type_bits must be non zero");
+
         VkMemoryRequirements requirements = std::bit_cast<VkMemoryRequirements>(info.requirements);
         VmaAllocationCreateFlags const flags = std::bit_cast<VmaAllocationCreateFlags>(info.flags);
         VmaAllocationCreateInfo create_info {
             .flags = flags,
-            .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+            .usage = VMA_MEMORY_USAGE_GPU_ONLY,
             .requiredFlags = {}, // idk what this is...
             .preferredFlags = {},
             .memoryTypeBits = {}, // idk what this is....
@@ -127,7 +129,11 @@ namespace daxa
             .pNext = {},
             .pCreateInfo = &vk_image_create_info,
         };
-        VkMemoryRequirements2 mem_requirements = {};
+        VkMemoryRequirements2 mem_requirements {
+            .sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2,
+            .pNext = {},
+            .memoryRequirements = {},
+        };
         vkGetDeviceImageMemoryRequirements(impl.vk_device, &image_requirement_info, &mem_requirements);
         MemoryRequirements ret = std::bit_cast<MemoryRequirements>(mem_requirements.memoryRequirements);
         return ret;
@@ -968,12 +974,6 @@ namespace daxa
             {
                 vkDestroyQueryPool(this->vk_device, timeline_query_pool_zombie.vk_timeline_query_pool, nullptr);
             });
-        check_and_cleanup_gpu_resources(
-            this->main_queue_memory_block_zombies,
-            [&](auto & main_queue_memory_block_zombie)
-            {
-                vmaFreeMemory(this->vma_allocator, main_queue_memory_block_zombie.allocation);
-            });
     }
 
     void ImplDevice::wait_idle() const
@@ -1436,9 +1436,16 @@ namespace daxa
         ImplImageSlot & image_slot = gpu_shader_resource_table.image_slots.dereference_id(id);
         write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, VK_NULL_HANDLE, image_slot.info.usage, id.index);
         vkDestroyImageView(vk_device, image_slot.view_slot.vk_image_view, nullptr);
-        if (image_slot.swapchain_image_index == NOT_OWNED_BY_SWAPCHAIN && image_slot.vma_allocation != nullptr)
+        if (image_slot.swapchain_image_index == NOT_OWNED_BY_SWAPCHAIN)
         {
-            vmaDestroyImage(this->vma_allocator, image_slot.vk_image, image_slot.vma_allocation);
+            if (std::holds_alternative<AutoAllocInfo>(image_slot.info.allocate_info))
+            {
+                vmaDestroyImage(this->vma_allocator, image_slot.vk_image, image_slot.vma_allocation);
+            }
+            else
+            {
+                vkDestroyImage(this->vk_device, image_slot.vk_image, {});
+            }
         }
         image_slot = {};
         gpu_shader_resource_table.image_slots.return_slot(id);

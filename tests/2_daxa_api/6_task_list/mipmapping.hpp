@@ -495,11 +495,12 @@ namespace tests
                                 std::array<i32, 3> next_mip_size = {std::max<i32>(1, mip_size[0] / 2), std::max<i32>(1, mip_size[1] / 2), std::max<i32>(1, mip_size[2] / 2)};
 
                                 using IA = daxa::TaskImageAccess;
+                                using IS = daxa::ImageMipArraySlice;
 
                                 new_task_list.add_task({
                                     .used_images = {
-                                        {.id = task_render_image, .access = IA::TRANSFER_READ,  .slice = {.base_mip_level = i}, .alias = "lower_mip"},
-                                        {.id = task_render_image, .access = IA::TRANSFER_WRITE, .slice = {.base_mip_level = i + 11}, .alias = "higher_mip"},
+                                        {.id = task_render_image, .access = IA::TRANSFER_READ,  .slice = IS{.base_mip_level = i}, .alias = "lower_mip"},
+                                        {.id = task_render_image, .access = IA::TRANSFER_WRITE, .slice = IS{.base_mip_level = i + 11}, .alias = "higher_mip"},
                                     },
                                     .task = [=, this](daxa::TaskRuntimeInterface const & runtime)
                                     {
