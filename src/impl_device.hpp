@@ -60,7 +60,6 @@ namespace daxa
         std::deque<std::pair<u64, SplitBarrierZombie>> main_queue_split_barrier_zombies = {};
         std::deque<std::pair<u64, PipelineZombie>> main_queue_pipeline_zombies = {};
         std::deque<std::pair<u64, TimelineQueryPoolZombie>> main_queue_timeline_query_pool_zombies = {};
-        std::deque<std::pair<u64, MemoryBlockZombie>> main_queue_memory_block_zombies = {};
         void main_queue_collect_garbage();
         void wait_idle() const;
 
