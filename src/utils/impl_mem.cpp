@@ -40,7 +40,7 @@ namespace daxa
         };
         auto calc_zero_offset_allocation_possible = [&]()
         {
-            return this->claimed_start + this->claimed_size <= this->info.capacity;
+            return this->claimed_start + this->claimed_size <= this->info.capacity && allocation_size < this->claimed_start;
         };
         // Firstly, test if there is enough continuous space left to allocate.
         bool tail_allocation_possible = calc_tail_allocation_possible();

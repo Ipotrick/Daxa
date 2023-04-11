@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <set>
 
 #include <fstream>
 #include <utility>
@@ -251,7 +252,7 @@ namespace daxa
                 std::string("\" is not used in task \"") +
                 impl.current_task->info.name +
                 std::string("\""));
-        usize use_index = static_cast<usize>(std::distance(iter, impl.current_task->info.used_images.begin()));
+        usize use_index = static_cast<usize>(std::distance(impl.current_task->info.used_images.begin(), iter));
 
         return {impl.current_task->image_view_cache[use_index].data(), impl.current_task->image_view_cache[use_index].size()};
     }
@@ -504,8 +505,6 @@ namespace daxa
             permutation.image_infos.emplace_back(PerPermTaskImage{
                 .valid = permutation.active,
                 .swapchain_semaphore_waited_upon = false,
-                .last_slice_states = {},
-                .first_slice_states = {},
             });
         }
 
@@ -828,7 +827,7 @@ namespace daxa
         usize first_possible_batch_index = 0;
         if (!impl.info.reorder_tasks)
         {
-            first_possible_batch_index = current_submit_scope.task_batches.size() - 1;
+            first_possible_batch_index = std::max(current_submit_scope.task_batches.size(), 1ull) - 1ull;
         }
 
         for (auto const & [used_buffer_t_id, used_buffer_t_access, alias] : info.used_buffers)
@@ -1583,14 +1582,15 @@ namespace daxa
                     image_first_use.task_batch_index = std::min(image_first_use.task_batch_index, batch_index);
                 }
 
-                if (current_submit_scope_index > image_last_use.submit_scope_index)
+                if (current_submit_scope_index > image_last_use.submit_scope_index ||
+                    image_last_use.submit_scope_index == std::numeric_limits<u32>::max())
                 {
                     image_last_use.submit_scope_index = current_submit_scope_index;
                     image_last_use.task_batch_index = batch_index;
                 }
                 else if (current_submit_scope_index == image_last_use.submit_scope_index)
                 {
-                    image_last_use.task_batch_index = std::min(image_last_use.task_batch_index, batch_index);
+                    image_last_use.task_batch_index = std::max(image_last_use.task_batch_index, batch_index);
                 }
             }
             task_image.usage |= access_to_usage(used_image_t_access);
@@ -1866,25 +1866,16 @@ namespace daxa
 
     void ImplTaskList::create_transient_runtime_buffers()
     {
-        for (auto & permutation : permutations)
+        for (auto & perm_task_buffer : global_buffer_infos)
         {
-            for (u32 task_buffer_index = 0; task_image_index < global_buffer_infos.size(); ++task_buffer_index)
+            // task list manages actual buffers only for transient resources
+            if (!perm_task_buffer.is_persistent())
             {
-                bool const valid_and_transient = 
-                    global_image_infos[task_buffer_index].is_persistent() &&
-                    
-                // task list manages actual buffers only for transient resources
-                if (!permindep_tbuffer_info.is_persistent())
-                {
-                    auto & transient_data = std::get<PermIndepTaskBufferInfo::Transient>(permindep_tbuffer_info.task_buffer_data);
-                    transient_data.buffer = info.device.create_buffer(BufferInfo{
-                        .size = transient_data.info.size,
-                        .allocate_info = ManualAllocInfo{
-                            .memory_block = {},
-                            .offset = permutation.image_infos[]
-                        },
-                        .name = transient_data.info.name});
-                }
+                auto & transient_data = std::get<PermIndepTaskBufferInfo::Transient>(perm_task_buffer.task_buffer_data);
+                transient_data.buffer = info.device.create_buffer(BufferInfo{
+                    .size = transient_data.info.size,
+                    .allocate_info = AutoAllocInfo{transient_data.info.memory_flags},
+                    .name = transient_data.info.name});
             }
         }
     }
@@ -1898,6 +1889,11 @@ namespace daxa
 
             if (!glob_image.is_persistent() && perm_image.valid)
             {
+                auto const & transient_info = std::get<PermIndepTaskImageInfo::Transient>(glob_image.task_image_data);
+                DAXA_DBG_ASSERT_TRUE_M(transient_info.info.memory_flags == MemoryFlagBits::DEDICATED_MEMORY ||
+                                           transient_info.info.memory_flags == MemoryFlagBits::NONE,
+                                       std::string("Transient resources with memory flags other than DEDICATED_MEMORY or NONE(assumes dedicated memory)") +
+                                           std::string(" are currently not supported (ask msakmary to add the support)"));
                 DAXA_DBG_ASSERT_TRUE_M(perm_image.usage != ImageUsageFlagBits::NONE,
                                        std::string("Transient image is not used in this permutation but marked as valid either: ") +
                                            std::string("\t- it was used as PRESENT which is not allowed for transient images") +
@@ -1912,23 +1908,25 @@ namespace daxa
                     .array_layer_count = transient_image_info.array_layer_count,
                     .sample_count = transient_image_info.sample_count,
                     .usage = perm_image.usage,
-                    // TODO(pahrens) put correct value here
-                    .allocate_info = AutoAllocInfo{.flags = MemoryFlagBits::DEDICATED_MEMORY},
+                    .allocate_info = ManualAllocInfo{
+                        .memory_block = transient_data_memory_block,
+                        .offset = perm_image.allocation_offset},
                     .name = transient_image_info.name,
                 });
             }
         }
     }
 
-    void ImplTaskList::compute_transient_memory_info()
+    void ImplTaskList::allocate_transient_resources()
     {
 
         // figure out transient resource sizes
+        usize max_alignment_requirement = 0;
         for (auto & global_image : global_image_infos)
         {
             if (!global_image.is_persistent())
             {
-                auto transient_image = std::get<PermIndepTaskImageInfo::Transient>(global_image.task_image_data);
+                auto & transient_image = std::get<PermIndepTaskImageInfo::Transient>(global_image.task_image_data);
                 ImageInfo image_info = {
                     .dimensions = transient_image.info.dimensions,
                     .format = transient_image.info.format,
@@ -1942,11 +1940,12 @@ namespace daxa
                     .name = "Dummy to figure mem requirements",
                 };
                 transient_image.memory_requirements = info.device.get_memory_requirements({image_info});
+                max_alignment_requirement = std::max(transient_image.memory_requirements.alignment, max_alignment_requirement);
             }
         }
 
         // for each permutation figure out the max memory requirements
-        for (auto const & permutation : permutations)
+        for (auto & permutation : permutations)
         {
             usize batches = 0;
             std::vector<usize> submit_batch_offsets(permutation.batch_submit_scopes.size());
@@ -1957,6 +1956,15 @@ namespace daxa
             }
             std::vector<usize> per_batch_mem_req(batches, 0);
 
+            struct LifetimeLengthImage
+            {
+                usize start_batch;
+                usize end_batch;
+                usize lifetime_lenght;
+                u32 perm_image_idx;
+            };
+            std::vector<LifetimeLengthImage> lifetime_length_sorted_images;
+
             for (u32 perm_image_idx = 0; perm_image_idx < permutation.image_infos.size(); perm_image_idx++)
             {
                 if (global_image_infos.at(perm_image_idx).is_persistent())
@@ -1964,24 +1972,126 @@ namespace daxa
                     continue;
                 }
 
-                auto mem_requirements = std::get<PermIndepTaskImageInfo::Transient>(
-                    global_image_infos.at(perm_image_idx).task_image_data).memory_requirements;
-
+                auto const & perm_task_image = permutation.image_infos.at(perm_image_idx);
                 usize start_idx = submit_batch_offsets.at(perm_task_image.lifetime.first_use.submit_scope_index) +
-                    perm_task_image.lifetime.first_use.task_batch_index;
-                usize end_idx = submit_batch_offsets.at(perm_task_image.lifetime.last_use.submit_scope_index) + 
-                    perm_task_image.lifetime.last_use.task_batch_index;
+                                  perm_task_image.lifetime.first_use.task_batch_index;
+                usize end_idx = submit_batch_offsets.at(perm_task_image.lifetime.last_use.submit_scope_index) +
+                                perm_task_image.lifetime.last_use.task_batch_index;
 
-                // TODO(msakmary) -- CONTINUE HERE
-                for(usize batch_idx = start_idx ; batch_idx <= end_idx; batch_idx++) 
+                DAXA_DBG_ASSERT_TRUE_M(start_idx != std::numeric_limits<u32>::max() ||
+                                           end_idx != std::numeric_limits<u32>::max(),
+                                       "Detected transient resource created but never used");
+                lifetime_length_sorted_images.emplace_back(LifetimeLengthImage{
+                    .start_batch = start_idx,
+                    .end_batch = end_idx,
+                    .lifetime_lenght = end_idx - start_idx + 1,
+                    .perm_image_idx = perm_image_idx,
+                });
+            }
+            std::sort(lifetime_length_sorted_images.begin(), lifetime_length_sorted_images.end(),
+                      [](LifetimeLengthImage const & first, LifetimeLengthImage const & second) -> bool
+                      {
+                          return first.lifetime_lenght > second.lifetime_lenght;
+                      });
+
+            struct Allocation
+            {
+                usize offset = {};
+                usize size = {};
+                usize start_batch = {};
+                usize end_batch = {};
+                u32 owning_image_idx = {};
+                u32 memory_type_bits = {};
+                ImageMipArraySlice intersection_object = {};
+            };
+            // Sort allocations in the set in the following way
+            //      1) sort by offsets into the memory block
+            //  if equal:
+            //      2) sort by start batch of the allocation
+            //  if equal:
+            //      3) sort by owning image index
+            struct AllocCompare
+            {
+                constexpr auto operator()(Allocation const & first, Allocation const & second) const -> bool
                 {
-                    const usize curr_size = per_batch_mem_req.at(batch_idx);
-                    const usize align_overlap = curr_size % mem_requirements.alignment;
-                    const usize size_to_align = aligned_overlap == 0 ? 0 : mem_requirements.alignment - align_overlap;
-                    per_batch_mem_req.at(batch_idx) = curr_size + size_to_align + mem_requirements.size;
+                    if (first.offset < second.offset)
+                    {
+                        return true;
+                    }
+                    if (first.offset == second.offset)
+                    {
+                        if (first.start_batch < second.start_batch)
+                        {
+                            return true;
+                        }
+                        if (first.start_batch == second.start_batch)
+                        {
+                            return first.owning_image_idx < second.owning_image_idx;
+                        }
+                        // first.offset == second.offset && first.start_batch > second.start_batch
+                        return false;
+                    }
+                    // first.offset > second.offset
+                    return false;
+                };
+            };
+            std::set<Allocation, AllocCompare> allocations = {};
+            // Figure out where to allocate each resource
+            for (auto const & image_lifetime : lifetime_length_sorted_images)
+            {
+                auto mem_requirements = std::get<PermIndepTaskImageInfo::Transient>(
+                                            global_image_infos.at(image_lifetime.perm_image_idx).task_image_data)
+                                            .memory_requirements;
+                // Go through all memory block states in which this resource is alive and try to find a spot for it
+                Allocation new_allocation = Allocation{
+                    .offset = 0,
+                    .size = mem_requirements.size,
+                    .start_batch = image_lifetime.start_batch,
+                    .end_batch = image_lifetime.end_batch,
+                    .owning_image_idx = image_lifetime.perm_image_idx,
+                    .memory_type_bits = mem_requirements.memory_type_bits,
+                    .intersection_object = {
+                        .base_mip_level = static_cast<u32>(image_lifetime.start_batch),
+                        .level_count = static_cast<u32>(image_lifetime.end_batch),
+                        .base_array_layer = 0,
+                        .layer_count = static_cast<u32>(mem_requirements.size),
+                    }};
+
+                // TODO(msakmary) Fix the intersect functionality so that it is general and does not do hacky stuff like constructing
+                // a mip array slice
+                // Find space in memory and time the new allocation fits into.
+                for (auto const & allocation : allocations)
+                {
+                    if (new_allocation.intersection_object.intersects(allocation.intersection_object))
+                    {
+                        // assign new offset into the memory block - we need to guarantee correct allignment
+                        usize curr_offset = allocation.offset + allocation.size;
+                        usize const align = std::max(mem_requirements.alignment, 1ull);
+                        usize const aligned_curr_offset = (curr_offset + align - 1) / align * align;
+                        new_allocation.offset = aligned_curr_offset;
+                        new_allocation.intersection_object.base_array_layer = static_cast<u32>(new_allocation.offset);
+                    }
                 }
+                allocations.insert(new_allocation);
+            }
+            // Once we are done with finding space for all the allocations go through all permutation images and copy over the allocation information
+            usize alloc_block_size = 0;
+            for (auto const & allocation : allocations)
+            {
+                permutation.image_infos.at(allocation.owning_image_idx).allocation_offset = allocation.offset;
+                // find the amount of memory this permutation requires
+                memory_block_size = std::max(memory_block_size, allocation.offset + allocation.size);
+                memory_type_bits = memory_type_bits & allocation.memory_type_bits;
             }
         }
+        transient_data_memory_block = info.device.create_memory({
+            .requirements = {
+                .size = memory_block_size,
+                .alignment = max_alignment_requirement,
+                .memory_type_bits = memory_type_bits,
+            },
+            .flags = MemoryFlagBits::DEDICATED_MEMORY,
+        });
     }
 
     void TaskList::complete(TaskCompleteInfo const &)
@@ -1991,7 +2101,7 @@ namespace daxa
         impl.compiled = true;
 
         // because buffers have no intial access we can just create one buffer for all of them to share
-        impl.compute_transient_memory_info();
+        impl.allocate_transient_resources();
         impl.create_transient_runtime_buffers();
         // Insert static barriers initializing image layouts.
         for (auto & permutation : impl.permutations)
@@ -2625,7 +2735,7 @@ namespace daxa
     ImplTaskList::~ImplTaskList()
     {
         // because transient buffers are owned by tasklist we need to destroy them
-        for (u32 buffer_info_idx = 0; buffer_info_idx < u32(global_buffer_infos.size()); buffer_info_idx++)
+        for (u32 buffer_info_idx = 0; buffer_info_idx < static_cast<u32>(global_buffer_infos.size()); buffer_info_idx++)
         {
             auto const & global_buffer = global_buffer_infos.at(buffer_info_idx);
             if (!global_buffer.is_persistent())
@@ -2636,7 +2746,7 @@ namespace daxa
         for (auto & permutation : permutations)
         {
             // because transient images are owned by tasklist we need to destroy them
-            for (u32 image_info_idx = 0; image_info_idx < u32(global_image_infos.size()); image_info_idx++)
+            for (u32 image_info_idx = 0; image_info_idx < static_cast<u32>(global_image_infos.size()); image_info_idx++)
             {
                 auto const & global_image = global_image_infos.at(image_info_idx);
                 auto const & perm_image = permutation.image_infos.at(image_info_idx);

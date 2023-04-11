@@ -25,17 +25,17 @@ namespace daxa
         auto get_images(TaskImageId const & task_resource_id) const -> std::span<ImageId const>;
         auto get_image_views(TaskImageId const & task_resource_id) const -> std::span<ImageViewId const>;
         
-        template<char const * ALIAS>
+        template<StringLiteralAdapter ALIAS>
         auto get_buffers() const -> std::span<BufferId const>
         {
-            constexpr u32 hash = compt_hash(ALIAS.data());
-            return get_buffers(hash, ALIAS);
+            constexpr u32 hash = compt_hash(ALIAS.value);
+            return get_buffers(hash, ALIAS.value);
         }
-        template<char const * ALIAS>
+        template<StringLiteralAdapter ALIAS>
         auto get_images() const -> std::span<ImageId const>
         {
-            constexpr u32 hash = compt_hash(ALIAS.data());
-            return get_images(hash, ALIAS);
+            constexpr u32 hash = compt_hash(ALIAS.value);
+            return get_images(hash, ALIAS.value);
         }
         template<StringLiteralAdapter ALIAS>
         auto get_image_views() const -> std::span<ImageViewId const>
@@ -50,12 +50,12 @@ namespace daxa
             return get_buffers(compt_hash(alias.value), alias.value);
         }
         template<usize N>
-        auto get_images() const -> std::span<ImageId const>
+        auto get_images(StringLiteralAdapter<N> alias) const -> std::span<ImageId const>
         {
             return get_images(compt_hash(alias.value), alias.value);
         }
         template<usize N>
-        auto get_image_views() const -> std::span<ImageViewId const>
+        auto get_image_views(StringLiteralAdapter<N> alias) const -> std::span<ImageViewId const>
         {
             return get_image_views(compt_hash(alias.value), alias.value);
         }
