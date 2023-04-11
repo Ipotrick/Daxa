@@ -53,6 +53,9 @@ namespace tests
             .command_lists = {cmd_list4},
             .wait_binary_semaphores = {binary_semaphore_1},
         });
+
+        app.device.wait_idle();
+        app.device.collect_garbage();
     }
 
     void memory_barriers(App & app)
@@ -60,13 +63,12 @@ namespace tests
         auto cmd_list = app.device.create_command_list({});
         cmd_list.complete();
 
-        // This semaphore is useful in the future, it will be used to
-        // notify the swapchain that it should wait for this semaphore
-        // before presenting (this is used when the command list interacts
-        // with the swapchain, ie. clearing the surface!)
         app.device.submit_commands({
             .command_lists = {cmd_list},
         });
+
+        app.device.wait_idle();
+        app.device.collect_garbage();
     }
 } // namespace tests
 
@@ -74,4 +76,6 @@ auto main() -> int
 {
     App app = {};
     tests::binary_semaphore(app);
+    // Useless for now
+    tests::memory_barriers(app);
 }
