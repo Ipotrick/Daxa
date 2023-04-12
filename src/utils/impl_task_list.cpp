@@ -2160,13 +2160,6 @@ namespace daxa
         return ret;
     }
 
-    void TaskList::output_graphviz()
-    {
-        auto & impl = *as<ImplTaskList>();
-        DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "must compile before getting graphviz");
-        impl.output_graphviz();
-    }
-
     thread_local std::vector<SplitBarrierWaitInfo> tl_split_barrier_wait_infos = {};
     thread_local std::vector<ImageBarrierInfo> tl_image_barrier_infos = {};
     thread_local std::vector<MemoryBarrierInfo> tl_memory_barrier_infos = {};
@@ -2251,7 +2244,7 @@ namespace daxa
                 cmd_list.pipeline_barrier(mem_barrier_info);
                 if (impl.info.record_debug_information)
                 {
-                    impl.debug_print_memory_barrier(mem_barrier_info, indent);
+                    impl.debug_string_stream << to_string(mem_barrier_info);
                 }
                 persistent_data.latest_access = {};
             }
@@ -2312,7 +2305,7 @@ namespace daxa
                                 cmd_list.pipeline_barrier_image_transition(img_barrier_info);
                                 if (impl.info.record_debug_information)
                                 {
-                                    impl.debug_print_image_memory_barrier(img_barrier_info, impl.global_image_infos[task_image_index], indent);
+                                    // impl.debug_print_image_memory_barrier(img_barrier_info, impl.global_image_infos[task_image_index], indent);
                                 }
                             }
                         }
@@ -2369,7 +2362,7 @@ namespace daxa
                         cmd_list.pipeline_barrier_image_transition(img_barrier_info);
                         if (impl.info.record_debug_information)
                         {
-                            impl.debug_print_image_memory_barrier(img_barrier_info, impl.global_image_infos[task_image_index], indent);
+                            // impl.debug_print_image_memory_barrier(img_barrier_info, impl.global_image_infos[task_image_index], indent);
                         }
                     }
                 }
@@ -2776,265 +2769,106 @@ namespace daxa
         }
     }
 
-    void ImplTaskList::output_graphviz()
+    void ImplTaskList::print_task_image_to(std::string & out, std::string indent, TaskListPermutation const & permutation, TaskImageId local_id)
     {
-        std::string const filename = this->info.name + ".dot";
-        std::ofstream dot_file{filename};
-
-        dot_file << "digraph TaskGraph {\nrankdir=\"LR\"\nnode [style=filled, shape=box, color=\"#d3f4ff\"]\n";
-
-        // usize scope_index = 0;
-        for (auto const & permutation : this->permutations)
+        auto const & glob_image = global_image_infos[local_id.index];
+        std::string persistent_info = "";
+        if (global_image_infos[local_id.index].is_persistent())
         {
-            for (auto const & scope : permutation.batch_submit_scopes)
+            u32 const persistent_index = global_image_infos[local_id.index].get_persistent().unique_index;
+            persistent_info = std::format(", persistent index: {}", persistent_index);
+        }
+        std::format_to(std::back_inserter(out), "{}task image name: \"{}\", id: ({}){}\n", indent, glob_image.get_name(), to_string(local_id), persistent_info);
+        std::format_to(std::back_inserter(out), "{}runtime images:\n", indent);
+        {
+            [[maybe_unused]] FormatIndent d1{out, indent, true};
+            for (u32 child_i = 0; child_i < get_actual_images(local_id, permutation).size(); ++child_i)
             {
-                usize batch_index = 0;
-                for (auto const & batch : scope.task_batches)
+                auto const child_id = get_actual_images(local_id, permutation)[child_i];
+                auto const & child_info = info.device.info_image(child_id);
+                std::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name, to_string(child_id));
+            }
+            print_seperator_to(out, indent);
+        }
+    }
+
+    void ImplTaskList::print_task_buffer_to(std::string & out, std::string indent, TaskListPermutation const &, TaskBufferId local_id)
+    {
+        auto const & glob_image = global_buffer_infos[local_id.index];
+        std::string persistent_info = "";
+        if (global_image_infos[local_id.index].is_persistent())
+        {
+            u32 const persistent_index = global_image_infos[local_id.index].get_persistent().unique_index;
+            persistent_info = std::format(", persistent index: {}", persistent_index);
+        }
+        std::format_to(std::back_inserter(out), "{}task buffer name: \"{}\", id: ({}){}\n", indent, glob_image.get_name(), to_string(local_id), persistent_info);
+        std::format_to(std::back_inserter(out), "{}runtime buffers:\n", indent);
+        {
+            [[maybe_unused]] FormatIndent d2{out, indent, true};
+            for (u32 child_i = 0; child_i < get_actual_buffers(local_id).size(); ++child_i)
+            {
+                auto const child_id = get_actual_buffers(local_id)[child_i];
+                auto const & child_info = info.device.info_buffer(child_id);
+                std::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name, to_string(child_id));
+            }
+            print_seperator_to(out, indent);
+        }
+    }
+
+    void ImplTaskList::print_task_barrier_to(std::string & out, std::string & indent, TaskListPermutation const & permutation, usize index)
+    {
+        TaskBarrier const & barrier = permutation.barriers[index];
+        if (barrier.image_id.is_empty())
+        {
+            MemoryBarrierInfo mem_barrier{
+                .awaited_pipeline_access = barrier.src_access,
+                .waiting_pipeline_access = barrier.dst_access,
+            };
+            out.append(indent).append(to_string(mem_barrier)).push_back('\n');
+        }
+        else
+        {
+            std::format_to(std::back_inserter(out), "{}slice: ({})\n", indent, to_string(barrier.slice));
+            std::format_to(std::back_inserter(out), "{}{}\n", indent, to_string(MemoryBarrierInfo{.awaited_pipeline_access = barrier.src_access, .waiting_pipeline_access = barrier.dst_access}));
+            std::format_to(std::back_inserter(out), "{}layout: ({}) -> ({})\n", indent, to_string(barrier.layout_before), to_string(barrier.layout_after));
+            print_task_image_to(out, indent, permutation, barrier.image_id);
+        }
+    }
+
+    void ImplTaskList::print_task_to(std::string & out, std::string & indent, TaskListPermutation const & permutation, usize task_id)
+    {
+        Task const & task = permutation.tasks[task_id];
+        std::format_to(std::back_inserter(out), "{}task name: \"{}\", id: {}\n", indent, task.info.name, task_id);
+        if (!task.info.used_buffers.empty())
+        {
+            std::format_to(std::back_inserter(out), "{}task buffer uses:\n", indent);
+            {
+                [[maybe_unused]] FormatIndent d2{out, indent, true};
+                for (auto const use : task.info.used_buffers)
                 {
-                    auto batch_name = std::string("b_") + std::to_string(batch_index);
-                    auto batch_debug_name = "Batch " + std::to_string(batch_index);
-
-                    {
-                        dot_file << "subgraph cluster_pb_" << batch_name << " {\n"
-                                 //  << "label=\"" << batch_debug_name << "\"\n"
-                                 << "style=filled\ncolor=\"#b5bec4\"\n";
-
-                        for (auto const & barrier_index : batch.pipeline_barrier_indices)
-                        {
-                            auto const & barrier = permutation.barriers[barrier_index];
-                            std::string const name = batch_name + std::string("_pb_") + std::to_string(barrier.src_batch) + std::string("_") + std::to_string(barrier.dst_batch);
-                            dot_file << "node_" << name << " [label=\"" << name << "\", shape=box, color=\"#faaff0\"]\n";
-                        }
-                        for (auto const & barrier_index : batch.wait_split_barrier_indices)
-                        {
-                            auto const & barrier = permutation.split_barriers[barrier_index];
-                            std::string const name0 = std::string("b_") + std::to_string(barrier.src_batch) + std::string("_ssb_") + std::to_string(barrier.src_batch) + std::string("_") + std::to_string(barrier.dst_batch);
-                            std::string const name = batch_name + std::string("_wsb_") + std::to_string(barrier.src_batch) + std::string("_") + std::to_string(barrier.dst_batch);
-                            dot_file << "node_" << name << " [label=\"" << name << "\", shape=box, color=\"#fa8989\"]\n";
-                            dot_file << "node_" << name0 << "->node_" << name << "\n";
-                        }
-
-                        dot_file << "node_pb_" << batch_name << " [label=\"" << batch_debug_name << " Barriers\", shape=box]\n";
-                        dot_file << "}\n";
-                    }
-
-                    {
-                        dot_file << "subgraph cluster_" << batch_name << " {\n"
-                                 //  << "label=\"" << batch_debug_name << "\"\n"
-                                 << "style=filled\ncolor=\"#b5bec4\"\n";
-                        for (auto const & task_id : batch.tasks)
-                        {
-                            auto task_name = batch_name + std::string("_t_") + std::to_string(task_id);
-                            auto task_debug_name = permutation.tasks[task_id].info.name;
-                            dot_file << "subgraph cluster_" << task_name << " {\n"
-                                     << "label=\"" << task_debug_name << "\"\n"
-                                     << "style=filled\ncolor=\"#d1e2ed\"\n";
-                            // dot_file << "node_" << task_name << " [label=\"" << task_debug_name << "\", shape=box]\n";
-                            usize resource_index = 0;
-
-                            resource_index = 0;
-                            for (auto const & [task_buffer_id, task_buffer_access, alias] : permutation.tasks[task_id].info.used_buffers)
-                            {
-                                auto const & resource_debug_name = global_buffer_infos[task_buffer_id.index].get_name();
-                                dot_file << "node_" << task_name << "_br" << resource_index << " [label=\"" << resource_debug_name << "\", shape=box, color=\"#d3fabe\"]\n";
-                                ++resource_index;
-                            }
-
-                            resource_index = 0;
-                            for (auto const & [task_image_id, task_buffer_access, image_slice, view_type, alias] : permutation.tasks[task_id].info.used_images)
-                            {
-                                auto const & glob_task_resource = global_image_infos[task_image_id.index];
-                                auto const & resource_debug_name = glob_task_resource.get_name();
-                                dot_file << "node_" << task_name << "_ir" << resource_index << " [label=\"" << resource_debug_name << "\", shape=box, color=\"#fffec2\"]\n";
-                                ++resource_index;
-                            }
-
-                            dot_file << "}\n";
-                        }
-
-                        dot_file << "node_" << batch_name << " [label=\"" << batch_debug_name << "\", shape=box]\n";
-                        dot_file << "}\n";
-                    }
-
-                    {
-                        dot_file << "subgraph cluster_ssb_" << batch_name << " {\n"
-                                 //  << "label=\"" << batch_debug_name << "\"\n"
-                                 << "style=filled\ncolor=\"#b5bec4\"\n";
-
-                        for (auto const & barrier_index : batch.signal_split_barrier_indices)
-                        {
-                            auto const & barrier = permutation.split_barriers[barrier_index];
-                            std::string const name = batch_name + std::string("_ssb_") + std::to_string(barrier.src_batch) + std::string("_") + std::to_string(barrier.dst_batch);
-                            dot_file << "node_" << name << " [label=\"" << name << "\", shape=box, color=\"#fcc5c5\"]\n";
-                        }
-
-                        dot_file << "node_ssb_" << batch_name << " [label=\"" << batch_debug_name << " Signal Split Barriers \", shape=box]\n";
-                        dot_file << "}\n";
-                    }
-
-                    if (batch_index > 0)
-                    {
-                        dot_file << "node_ssb_b_" << (batch_index - 1) << "->node_pb_b_" << (batch_index) << "\n";
-                    }
-                    dot_file << "node_pb_b_" << (batch_index) << "->node_b_" << (batch_index) << "\n";
-                    dot_file << "node_b_" << (batch_index) << "->node_ssb_b_" << (batch_index) << "\n";
-
-                    ++batch_index;
+                    auto access = task_buffer_access_to_access(use.access);
+                    std::format_to(std::back_inserter(out), "{}access: ({})\n", indent, to_string(access));
+                    print_task_buffer_to(out, indent, permutation, use.id);
+                    print_seperator_to(out, indent);
                 }
-                // ++scope_index;
             }
         }
-
-        // for (auto & buffer_link : compiled_graph.buffer_links)
-        // {
-        //     auto a = buffer_link.event_a;
-        //     auto b = buffer_link.event_b;
-        //     auto i = buffer_link.resource;
-        //     if (ImplCreateBufferTask * task_ptr = std::get_if<ImplCreateBufferTask>(&events[a].event_variant))
-        //         dot_file << "c_";
-        //     dot_file << "bnode_" << a << "_" << i << "->bnode_" << b << "_" << i;
-        //     dot_file << " [label=\"Sync\", labeltooltip=\"between "
-        //              << to_string(buffer_link.barrier.awaited_pipeline_access.stages) << " "
-        //              << to_string(buffer_link.barrier.awaited_pipeline_access.type) << " and "
-        //              << to_string(buffer_link.barrier.waiting_pipeline_access.stages) << " "
-        //              << to_string(buffer_link.barrier.waiting_pipeline_access.type) << "\"]\n";
-        // }
-
-        // for (auto & image_link : compiled_graph.image_links)
-        // {
-        //     auto a = image_link.event_a;
-        //     auto b = image_link.event_b;
-        //     auto i = image_link.resource;
-        //     if (TaskImageCreateEvent * task_ptr = std::get_if<TaskImageCreateEvent>(&events[a].event_variant))
-        //         dot_file << "c_";
-        //     dot_file << "inode_" << a << "_" << i << "->inode_" << b << "_" << i;
-        //     dot_file << " [label=\"Sync\", labeltooltip=\"between "
-        //              << to_string(image_link.barrier.awaited_pipeline_access.stages) << " "
-        //              << to_string(image_link.barrier.awaited_pipeline_access.type) << " and "
-        //              << to_string(image_link.barrier.waiting_pipeline_access.stages) << " "
-        //              << to_string(image_link.barrier.waiting_pipeline_access.type) << "\"]\n";
-        // }
-
-        dot_file << "}\n";
-    }
-
-    void ImplTaskList::debug_print_memory_barrier(MemoryBarrierInfo & barrier, std::string & prefix)
-    {
-        this->debug_string_stream << prefix << "Begin Memory barrier\n";
-        this->debug_string_stream << prefix << "\t.awaited_pipeline_access = " << to_string(barrier.awaited_pipeline_access) << "\n";
-        this->debug_string_stream << prefix << "\t.waiting_pipeline_access = " << to_string(barrier.waiting_pipeline_access) << "\n";
-        this->debug_string_stream << prefix << "End   Memory barrier\n";
-    }
-
-    void ImplTaskList::debug_print_image_memory_barrier(ImageBarrierInfo & barrier, PermIndepTaskImageInfo & glob_image, std::string & prefix)
-    {
-        this->debug_string_stream << prefix << "Begin image memory barrier\n";
-        this->debug_string_stream << prefix << "\ttask_image_id: " << barrier.image_id.index << " name: \"" << glob_image.get_name() << "\"\n";
-        this->debug_string_stream << prefix << "\tBegin bound images\n";
-        this->debug_string_stream << prefix << "\timage id: " << to_string(barrier.image_id)
-                                  << "\timage name: \"" << info.device.info_image(barrier.image_id).name << "\"\n";
-        this->debug_string_stream << prefix << "\tEnd   bound images \n";
-        this->debug_string_stream << prefix << "\tsrc access: " << to_string(barrier.awaited_pipeline_access) << "\n";
-        this->debug_string_stream << prefix << "\tdst access: " << to_string(barrier.waiting_pipeline_access) << "\n";
-        this->debug_string_stream << prefix << "\timage mip array slice: " << to_string(barrier.image_slice) << "\n";
-        this->debug_string_stream << prefix << "\tbefore layout: " << to_string(barrier.before_layout) << "\n";
-        this->debug_string_stream << prefix << "\tafter layout: " << to_string(barrier.after_layout) << "\n";
-        this->debug_string_stream << prefix << "End   image memory barrier\n";
-    }
-
-    void ImplTaskList::debug_print_task_barrier(TaskBarrier & barrier, TaskListPermutation const & permutation, usize index, std::string & prefix)
-    {
-        // Check if barrier is image barrier or normal barrier (see TaskBarrier struct comments).
-        if (barrier.image_id.is_empty())
+        if (!task.info.used_images.empty())
         {
-            this->debug_string_stream << prefix << "Begin Memory barrier\n";
-            this->debug_string_stream << prefix << "\tbarrier index: " << index << "\n";
-            this->debug_string_stream << prefix << "\t.src_access = " << to_string(barrier.src_access) << "\n";
-            this->debug_string_stream << prefix << "\t.dst_access = " << to_string(barrier.dst_access) << "\n";
-            this->debug_string_stream << prefix << "End   Memory barrier\n";
-        }
-        else
-        {
-            auto const & glob_image = global_image_infos[barrier.image_id.index];
-            this->debug_string_stream << prefix << "Begin image memory barrier\n";
-            this->debug_string_stream << prefix << "\tbarrier index: " << index << "\n";
-            std::string insert = {};
-            print_task_image(insert, prefix, permutation, *this, barrier.image_id.index);
-            this->debug_string_stream << insert;
-            this->debug_string_stream << prefix << "\tEnd   bound images \n";
-            this->debug_string_stream << prefix << "\tsrc access: " << to_string(barrier.src_access) << "\n";
-            this->debug_string_stream << prefix << "\tdst access: " << to_string(barrier.dst_access) << "\n";
-            this->debug_string_stream << prefix << "\timage mip array slice: " << to_string(barrier.slice) << "\n";
-            this->debug_string_stream << prefix << "\tbefore layout: " << to_string(barrier.layout_before) << "\n";
-            this->debug_string_stream << prefix << "\tafter layout: " << to_string(barrier.layout_after) << "\n";
-            this->debug_string_stream << prefix << "End   image memory barrier\n";
-        }
-    }
-
-    void ImplTaskList::debug_print_task_split_barrier(TaskSplitBarrier & barrier, TaskListPermutation const & permutation, usize index, std::string & prefix)
-    {
-        // Check if barrier is image barrier or normal barrier (see TaskBarrier struct comments).
-        if (barrier.image_id.is_empty())
-        {
-            this->debug_string_stream << prefix << "Begin split memory barrier\n";
-            this->debug_string_stream << prefix << "\tsplit barrier index: " << index << "\n";
-            this->debug_string_stream << prefix << "\tsrc_access = " << to_string(barrier.src_access) << "\n";
-            this->debug_string_stream << prefix << "\tdst_access = " << to_string(barrier.dst_access) << "\n";
-            this->debug_string_stream << prefix << "End   split memory barrier\n";
-        }
-        else
-        {
-            auto const & glob_image = global_image_infos[barrier.image_id.index];
-            this->debug_string_stream << prefix << "Begin image memory barrier\n";
-            this->debug_string_stream << prefix << "\tbarrier index: " << index << "\n";
-            std::string insert = {};
-            print_task_image(insert, prefix, permutation, *this, barrier.image_id.index);
-            this->debug_string_stream << insert;
-            this->debug_string_stream << prefix << "\tsrc access: " << to_string(barrier.src_access) << "\n";
-            this->debug_string_stream << prefix << "\tdst access: " << to_string(barrier.dst_access) << "\n";
-            this->debug_string_stream << prefix << "\timage mip array slice: " << to_string(barrier.slice) << "\n";
-            this->debug_string_stream << prefix << "\tbefore layout: " << to_string(barrier.layout_before) << "\n";
-            this->debug_string_stream << prefix << "\tafter layout: " << to_string(barrier.layout_after) << "\n";
-            this->debug_string_stream << prefix << "End   image memory barrier\n";
-        }
-    }
-
-    void ImplTaskList::debug_print_task(TaskListPermutation const & permutation, Task & task, usize task_id, std::string & prefix)
-    {
-        this->debug_string_stream << prefix << "Begin task " << task_id << " name: \"" << task.info.name << "\"\n";
-        for (auto & [task_image_id, task_image_access, slice, view_type, alias] : task.info.used_images)
-        {
-            FormatIndent d0{prefix};
-            auto const & glob_image = global_image_infos[task_image_id.index];
-            auto [layout, access] = task_image_access_to_layout_access(task_image_access);
-            this->debug_string_stream << prefix << "Begin task image use " << task_image_id.index << "\n";
+            std::format_to(std::back_inserter(out), "{}task image uses:\n", indent);
             {
-                FormatIndent d0{prefix};
-                std::string insert = {};
-                print_task_image(insert, prefix, permutation, *this, task_image_id.index);
-                this->debug_string_stream << insert;
-                this->debug_string_stream << prefix << "required layout: " << to_string(layout) << "\n";
-                this->debug_string_stream << prefix << "slice: " << to_string(slice) << "\n";
-                this->debug_string_stream << prefix << "stage access: " << to_string(access) << "\n";
+                [[maybe_unused]] FormatIndent d2{out, indent, true};
+                for (auto const use : task.info.used_images)
+                {
+                    auto [layout, access] = task_image_access_to_layout_access(use.access);
+                    std::format_to(std::back_inserter(out), "{}access: ({})\n", indent, to_string(access));
+                    std::format_to(std::back_inserter(out), "{}layout: {}\n", indent, to_string(layout));
+                    std::format_to(std::back_inserter(out), "{}slice: {}\n", indent, to_string(use.slice));
+                    print_task_image_to(out, indent, permutation, use.id);
+                    print_seperator_to(out, indent);
+                }
             }
-            this->debug_string_stream << prefix << "End   task image use\n";
         }
-        for (auto & [task_buffer_id, task_buffer_access, alias] : task.info.used_buffers)
-        {
-            auto access = task_buffer_access_to_access(task_buffer_access);
-            this->debug_string_stream << prefix << "\tBegin task buffer use " << task_buffer_id.index << "\n";
-            this->debug_string_stream << prefix << "\t\task buffer name: \"" << global_buffer_infos[task_buffer_id.index].get_name() << "\"\n";
-            this->debug_string_stream << prefix << "\tBegin bound buffers\n";
-            for (auto buffer : get_actual_buffers(task_buffer_id))
-            {
-                this->debug_string_stream << prefix << "\tbuffers id: " << to_string(buffer)
-                                          << "\tbuffers name: \"" << (buffer.is_empty() ? std::string("INVALID ID") : info.device.info_buffer(buffer).name) << "\" \n";
-            }
-            this->debug_string_stream << prefix << "\tEnd   bound buffers \n";
-            this->debug_string_stream << prefix << "\t\tstage access: " << to_string(access) << "\n";
-            this->debug_string_stream << prefix << "\tEnd   task buffer use\n";
-        }
-        this->debug_string_stream << prefix << "End   task\n";
     }
 
     void ImplTaskList::debug_print_permutation_image(TaskListPermutation const & permutation, TaskImageId const image_id)
@@ -3105,87 +2939,121 @@ namespace daxa
 
     void ImplTaskList::debug_print()
     {
-        std::string indent = "\t\t\t\t\t";
-        this->debug_string_stream << "Begin TaskList \"" << this->info.name << "\"\n";
-        this->debug_string_stream << "\tSwapchain: " << (this->info.swapchain.has_value() ? this->info.swapchain.value().info().name : "-") << "\n";
-        this->debug_string_stream << "\tReorder tasks: " << std::boolalpha << this->info.reorder_tasks << "\n";
-        this->debug_string_stream << "\tUse split barriers: " << std::boolalpha << this->info.use_split_barriers << "\n";
-
+        std::string out = {};
+        std::string indent = {};
+        std::format_to(std::back_inserter(out), "task list name: {}, id: {}:\n", info.name, unique_index);
+        std::format_to(std::back_inserter(out), "device: {}\n", info.device.info().name);
+        std::format_to(std::back_inserter(out), "swapchain: {}\n", (this->info.swapchain.has_value() ? this->info.swapchain.value().info().name : "-"));
+        std::format_to(std::back_inserter(out), "reorder tasks: {}\n", info.reorder_tasks);
+        std::format_to(std::back_inserter(out), "use split barriers: {}\n", info.use_split_barriers);
+        std::format_to(std::back_inserter(out), "permutation_condition_count: {}\n", info.permutation_condition_count);
+        std::format_to(std::back_inserter(out), "enable_command_labels: {}\n", info.enable_command_labels);
+        std::format_to(std::back_inserter(out), "task_list_label_color: ({},{},{},{})\n",
+                       info.task_list_label_color[0],
+                       info.task_list_label_color[1],
+                       info.task_list_label_color[2],
+                       info.task_list_label_color[3]);
+        std::format_to(std::back_inserter(out), "task_batch_label_color: ({},{},{},{})\n",
+                       info.task_batch_label_color[0],
+                       info.task_batch_label_color[1],
+                       info.task_batch_label_color[2],
+                       info.task_batch_label_color[3]);
+        std::format_to(std::back_inserter(out), "task_label_color: ({},{},{},{})\n",
+                       info.task_label_color[0],
+                       info.task_label_color[1],
+                       info.task_label_color[2],
+                       info.task_label_color[3]);
+        std::format_to(std::back_inserter(out), "record_debug_information: {}\n", info.record_debug_information);
+        std::format_to(std::back_inserter(out), "staging_memory_pool_size: {}\n", info.staging_memory_pool_size);
+        std::format_to(std::back_inserter(out), "executed permutation: {}\n", chosen_permutation_last_execution);
         usize permutation_index = this->chosen_permutation_last_execution;
         auto & permutation = this->permutations[permutation_index];
         {
             permutation_index += 1;
-            this->debug_string_stream << "\tBegin Permutation Nr. " << permutation_index << "\n";
+            std::format_to(std::back_inserter(out), "permutations split barriers: {}\n", info.use_split_barriers);
+            [[maybe_unused]] FormatIndent d0{out, indent, true};
             usize submit_scope_index = 0;
             for (auto & submit_scope : permutation.batch_submit_scopes)
             {
-                this->debug_string_stream << "\t\tBegin submit scope " << submit_scope_index++ << "\n";
+                std::format_to(std::back_inserter(out), "{}submit scope: {}\n", indent, submit_scope_index);
+                [[maybe_unused]] FormatIndent d1{out, indent, true};
                 usize batch_index = 0;
                 for (auto & task_batch : submit_scope.task_batches)
                 {
-                    this->debug_string_stream << "\t\t\tBegin task batch " << batch_index++ << "\n";
-                    // Wait on pipeline barriers before batch execution.
-                    this->debug_string_stream << "\t\t\t\tBegin wait pipeline barriers\n";
-                    for (auto barrier_index : task_batch.pipeline_barrier_indices)
+                    std::format_to(std::back_inserter(out), "{}batch: {}\n", indent, batch_index);
+                    std::format_to(std::back_inserter(out), "{}inserted pipeline barriers:\n", indent);
                     {
-                        this->debug_print_task_barrier(permutation.barriers[barrier_index], permutation, barrier_index, indent);
+                        [[maybe_unused]] FormatIndent d2{out, indent, true};
+                        for (auto barrier_index : task_batch.pipeline_barrier_indices)
+                        {
+                            this->print_task_barrier_to(out, indent, permutation, barrier_index);
+                            print_seperator_to(out, indent);
+                        }
                     }
-                    this->debug_string_stream << "\t\t\t\tEnd   wait pipeline barriers\n";
                     if (!this->info.use_split_barriers)
                     {
-                        this->debug_string_stream << "\t\t\t\tBegin wait split barriers (converted to pipeline barriers)\n";
+                        std::format_to(std::back_inserter(out), "{}inserted pipeline barriers (converted from split barrier):\n", indent);
+                        [[maybe_unused]] FormatIndent d2{out, indent, true};
                         for (auto barrier_index : task_batch.wait_split_barrier_indices)
                         {
-                            this->debug_print_task_barrier(permutation.split_barriers[barrier_index], permutation, barrier_index, indent);
+                            this->print_task_barrier_to(out, indent, permutation, barrier_index);
+                            print_seperator_to(out, indent);
                         }
-                        this->debug_string_stream << "\t\t\t\tEnd   wait split barriers (converted to pipeline barriers)\n";
                     }
                     else
                     {
-                        this->debug_string_stream << "\t\t\t\tBegin wait split barriers\n";
+                        std::format_to(std::back_inserter(out), "{}inserted split pipeline barrier waits:\n", indent);
+                        [[maybe_unused]] FormatIndent d2{out, indent, true};
+                        print_seperator_to(out, indent);
                         for (auto barrier_index : task_batch.wait_split_barrier_indices)
                         {
-                            this->debug_print_task_split_barrier(permutation.split_barriers[barrier_index], permutation, barrier_index, indent);
+                            this->print_task_barrier_to(out, indent, permutation, barrier_index);
+                            print_seperator_to(out, indent);
                         }
-                        this->debug_string_stream << "\t\t\t\tEnd   wait split barriers\n";
                     }
-                    this->debug_string_stream << "\t\t\t\tBegin tasks\n";
-                    for (TaskId const task_id : task_batch.tasks)
+                    std::format_to(std::back_inserter(out), "{}tasks:\n", indent);
                     {
-                        Task & task = permutation.tasks[task_id];
-                        this->debug_print_task(permutation, task, task_id, indent);
+                        [[maybe_unused]] FormatIndent d2{out, indent, true};
+                        for (TaskId const task_id : task_batch.tasks)
+                        {
+                            this->print_task_to(out, indent, permutation, task_id);
+                            print_seperator_to(out, indent);
+                        }
                     }
-                    this->debug_string_stream << "\t\t\t\tEnd   tasks\n";
                     if (this->info.use_split_barriers)
                     {
-                        this->debug_string_stream << "\t\t\t\tBegin signal split barriers\n";
+                        std::format_to(std::back_inserter(out), "{}inserted split barrier signals:\n", indent);
+                        [[maybe_unused]] FormatIndent d2{out, indent, true};
                         for (usize const barrier_index : task_batch.signal_split_barrier_indices)
                         {
-                            this->debug_print_task_split_barrier(permutation.split_barriers[barrier_index], permutation, barrier_index, indent);
+                            this->print_task_barrier_to(out, indent, permutation, barrier_index);
+                            print_seperator_to(out, indent);
                         }
-                        this->debug_string_stream << "\t\t\t\tEnd   signal split barriers\n";
                     }
-                    this->debug_string_stream << "\t\t\tEnd   task batch\n";
                 }
-                this->debug_string_stream << "\t\t\tBegin last minute pipeline barriers\n";
-                for (usize const barrier_index : submit_scope.last_minute_barrier_indices)
+                if (!submit_scope.last_minute_barrier_indices.empty())
                 {
-                    this->debug_print_task_barrier(permutation.barriers[barrier_index], permutation, barrier_index, indent);
+                    std::format_to(std::back_inserter(out), "{}inserted last minute pipeline barriers:\n", indent);
+                    [[maybe_unused]] FormatIndent d2{out, indent, true};
+                    for (usize const barrier_index : submit_scope.last_minute_barrier_indices)
+                    {
+                        this->print_task_barrier_to(out, indent, permutation, barrier_index);
+                        print_seperator_to(out, indent);
+                    }
                 }
-                this->debug_string_stream << "\t\t\tEnd   last minute pipeline barriers\n";
                 if (&submit_scope != &permutation.batch_submit_scopes.back())
                 {
-                    this->debug_string_stream << "\t\t\t<<Submit>>\n";
+                    std::format_to(std::back_inserter(out), "{} -- inserted submit -- \n", indent);
                     if (submit_scope.present_info.has_value())
                     {
-                        this->debug_string_stream << "\t\t\t<<Present>>\n";
+                        std::format_to(std::back_inserter(out), "{} -- inserted present -- \n", indent);
                     }
                 }
-                this->debug_string_stream << "\t\tEnd   submit scope\n";
+                print_seperator_to(out, indent);
             }
-            this->debug_string_stream << "\tEnd Permutation Nr. " << permutation_index << "\n";
+            print_seperator_to(out, indent);
         }
-        this->debug_string_stream << "End TaskList\n";
+        this->debug_string_stream << out;
     }
 } // namespace daxa
 

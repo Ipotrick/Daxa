@@ -123,6 +123,8 @@ namespace daxa
     struct TaskListInfo
     {
         Device device;
+        /// @brief Optionally the user can provide a swapchain. This enables the use of present.
+        std::optional<Swapchain> swapchain = {};
         /// @brief Task reordering can drastically improve performance,
         /// yet is it also nice to have sequential callback execution.
         bool reorder_tasks = true;
@@ -130,8 +132,6 @@ namespace daxa
         /// If that is the case for you, you can turn off all use of split barriers.
         /// Daxa will use pipeline barriers instead if this is set.
         bool use_split_barriers = true;
-        /// @brief Optionally the user can provide a swapchain. This enables the use of present.
-        std::optional<Swapchain> swapchain = {};
         /// @brief Each condition doubled the number of permutations.
         /// For a low number of permutations its is preferable to precompile all permutations.
         /// For a large number of permutations it might be preferable to only create the permutations actually used on the fly just before they are needed.
@@ -271,6 +271,5 @@ namespace daxa
         auto get_command_lists() -> std::vector<CommandList>;
 
         auto get_debug_string() -> std::string;
-        void output_graphviz();
     };
 } // namespace daxa
