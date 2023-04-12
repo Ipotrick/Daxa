@@ -6,6 +6,7 @@
 #include <map>
 #include <deque>
 #include <cstring>
+#include <format>
 
 #include <daxa/core.hpp>
 

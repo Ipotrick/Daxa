@@ -359,15 +359,13 @@ namespace daxa
         void create_transient_runtime_images(TaskListPermutation & permutation);
         void allocate_transient_resources();
 
-        void debug_print_memory_barrier(MemoryBarrierInfo & barrier, std::string & prefix);
-        void debug_print_image_memory_barrier(ImageBarrierInfo & barrier, PermIndepTaskImageInfo & glob_image, std::string & prefix);
-        void debug_print_task_barrier(TaskBarrier & barrier, TaskListPermutation const & permutation, usize index, std::string & prefix);
-        void debug_print_task_split_barrier(TaskSplitBarrier & barrier, TaskListPermutation const & permutation, usize index, std::string & prefix);
-        void debug_print_task(TaskListPermutation const & permutation, Task & task, usize task_id, std::string & prefix);
+        void print_task_buffer_to(std::string & out, std::string indent, TaskListPermutation const & permutation, TaskBufferId local_id);
+        void print_task_image_to(std::string & out, std::string indent, TaskListPermutation const & permutation, TaskImageId image);
+        void print_task_barrier_to(std::string & out, std::string & indent, TaskListPermutation const & permutation, usize index);
+        void print_task_to(std::string & out, std::string & indent, TaskListPermutation const & permutation, usize task_id);
         void debug_print_permutation_image(TaskListPermutation const & permutation, TaskImageId const image_id);
         void debug_print_permutation_buffer(TaskListPermutation const & permutation, TaskBufferId const buffer_id);
         void debug_print();
-        void output_graphviz();
     };
 
     struct ImplTaskRuntimeInterface
