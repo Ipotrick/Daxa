@@ -12,20 +12,9 @@ namespace daxa
         return ImageViewId{{.index = index, .version = version}};
     }
 
-    auto to_string(ImageId image_id) -> std::string
+    auto to_string(GPUResourceId id) -> std::string
     {
-        std::string ret = {};
-        ret += " index: " + std::to_string(image_id.index);
-        ret += " version: " + std::to_string(image_id.version);
-        return ret;
-    }
-
-    auto to_string(types::BufferId buffer_id) -> std::string
-    {
-        std::string ret = {};
-        ret += " index: " + std::to_string(buffer_id.index);
-        ret += " version: " + std::to_string(buffer_id.version);
-        return ret;
+        return std::format("index: {}, version: {}", static_cast<u32>(id.index), static_cast<u32>(id.version));
     }
 
     void GPUShaderResourceTable::initialize(usize max_buffers, usize max_images, usize max_samplers,
