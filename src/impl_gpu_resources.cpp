@@ -12,9 +12,23 @@ namespace daxa
         return ImageViewId{{.index = index, .version = version}};
     }
 
-    auto to_string(GPUResourceId id) -> std::string
+    auto to_string(GPUResourceId const & id) -> std::string
     {
         return std::format("index: {}, version: {}", static_cast<u32>(id.index), static_cast<u32>(id.version));
+    }
+
+    auto to_string(ImageViewType const & type) -> std::string_view
+    {
+        switch(type)
+        {
+        case ImageViewType::REGULAR_1D: return "REGULAR_1D";
+        case ImageViewType::REGULAR_2D: return "REGULAR_2D";
+        case ImageViewType::REGULAR_3D: return "REGULAR_3D";
+        case ImageViewType::CUBE: return "CUBE";
+        case ImageViewType::REGULAR_1D_ARRAY: return "REGULAR_1D_ARRAY";
+        case ImageViewType::REGULAR_2D_ARRAY: return "REGULAR_2D_ARRAY";
+        case ImageViewType::CUBE_ARRAY: return "CUBE_ARRAY";
+        }
     }
 
     void GPUShaderResourceTable::initialize(usize max_buffers, usize max_images, usize max_samplers,
