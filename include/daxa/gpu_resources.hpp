@@ -17,6 +17,8 @@ namespace daxa
         CUBE_ARRAY = 6,
     };
 
+    auto to_string(ImageViewType const & type) -> std::string_view;
+
     static inline constexpr ImageViewType _ShaderAlias_1D = ImageViewType::REGULAR_1D;
     static inline constexpr ImageViewType _ShaderAlias_2D = ImageViewType::REGULAR_2D;
     static inline constexpr ImageViewType _ShaderAlias_3D = ImageViewType::REGULAR_3D;
@@ -72,7 +74,7 @@ namespace daxa
         };
     } // namespace types
 
-    auto to_string(GPUResourceId id) -> std::string;
+    auto to_string(GPUResourceId const & id) -> std::string;
 
     struct BufferInfo
     {

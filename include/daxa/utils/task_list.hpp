@@ -63,6 +63,7 @@ namespace daxa
       private:
         friend struct ImplTaskRuntimeInterface;
         friend struct TaskList;
+        friend struct ImplTaskList;
         TaskRuntimeInterface(void * a_backend);
         auto get_buffers(u32 const & alias_has, char const * alias) const -> std::span<BufferId const>;
         auto get_images(u32 const & alias_has, char const * alias) const -> std::span<ImageId const>;
