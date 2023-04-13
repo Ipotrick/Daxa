@@ -19,28 +19,38 @@ namespace daxa
         indent.back() = last;
     }
 
+    void begin_indent(std::string & out, std::string & indent, bool contained = false)
+    {
+        indent.push_back(' ');
+        indent.push_back(' ');
+        indent.push_back(' ');
+        indent.push_back(contained ? '|' : ' ');
+        if (contained)
+        {
+            print_seperator_to(out, indent);
+        }
+    }
+
+    void end_indent(std::string &, std::string & indent)
+    {
+        indent.pop_back();
+        indent.pop_back();
+        indent.pop_back();
+        indent.pop_back();
+    }
+
     struct FormatIndent
     {
+        std::string & out;
         std::string & indent;
-        FormatIndent(std::string & out, std::string & a_indent, bool contained = false) : indent{ a_indent }
+        FormatIndent(std::string & a_out, std::string & a_indent, bool contained = false) : out{a_out}, indent{a_indent}
         {
-            indent.push_back(' ');
-            indent.push_back(' ');
-            indent.push_back(' ');
-            indent.push_back(contained ? '|' : ' ');
-            if (contained)
-            {
-                print_seperator_to(out, a_indent);
-            }
+            begin_indent(out, indent, contained);
         }
         ~FormatIndent()
         {
-            indent.pop_back();
-            indent.pop_back();
-            indent.pop_back();
-            indent.pop_back();
+            end_indent(out, indent);
         }
     };
 
-
-}
+} // namespace daxa
