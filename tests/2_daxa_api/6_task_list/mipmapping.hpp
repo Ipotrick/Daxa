@@ -499,8 +499,8 @@ namespace tests
 
                                 new_task_list.add_task({
                                     .used_images = {
-                                        {.id = task_render_image, .access = IA::TRANSFER_READ,  .slice = IS{.base_mip_level = i}, .alias = "lower_mip"},
-                                        {.id = task_render_image, .access = IA::TRANSFER_WRITE, .slice = IS{.base_mip_level = i + 11}, .alias = "higher_mip"},
+                                        {.id = task_render_image, .access = IA::TRANSFER_READ, .slice = IS{.base_mip_level = i}, .alias = "lower_mip"},
+                                        {.id = task_render_image, .access = IA::TRANSFER_WRITE, .slice = IS{.base_mip_level = i + 1}, .alias = "higher_mip"},
                                     },
                                     .task = [=, this](daxa::TaskRuntimeInterface const & runtime)
                                     {

@@ -305,6 +305,8 @@ namespace daxa
             return std::holds_alternative<Persistent>(task_image_data);
         }
     };
+    
+    auto to_string(ImplTaskList const & impl, TaskImageUse const & use, usize index) -> std::string;
 
     struct ImplTaskList final : ManagedSharedState
     {
@@ -354,6 +356,10 @@ namespace daxa
         auto id_to_local_id(TaskImageId id) const -> TaskImageId;
         void update_active_permutations();
         void update_image_view_cache(Task & task, TaskListPermutation const & permutation);
+        void execute_task(ImplTaskRuntimeInterface & impl_runtime, TaskListPermutation & permutation, TaskBatchId in_batch_task_index, TaskId task_id);
+        void insert_pre_batch_barriers(TaskListPermutation & permutation);
+
+        void check_for_overlapping_use(TaskInfo const & info);
 
         void create_transient_runtime_buffers();
         void create_transient_runtime_images(TaskListPermutation & permutation);
@@ -362,7 +368,7 @@ namespace daxa
         void print_task_buffer_to(std::string & out, std::string indent, TaskListPermutation const & permutation, TaskBufferId local_id);
         void print_task_image_to(std::string & out, std::string indent, TaskListPermutation const & permutation, TaskImageId image);
         void print_task_barrier_to(std::string & out, std::string & indent, TaskListPermutation const & permutation, usize index);
-        void print_task_to(std::string & out, std::string & indent, TaskListPermutation const & permutation, usize task_id);
+        void print_task_to(std::string & out, std::string & indent, TaskListPermutation const & permutation, TaskId task_id);
         void debug_print_permutation_image(TaskListPermutation const & permutation, TaskImageId const image_id);
         void debug_print_permutation_buffer(TaskListPermutation const & permutation, TaskBufferId const buffer_id);
         void debug_print();

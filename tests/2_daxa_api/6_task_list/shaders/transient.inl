@@ -12,7 +12,7 @@
 #define LONG_LIFE_IMAGE_SIZE daxa_u32vec3(32u,32u,32u)
 
 #define SHORT_LIFE_IMAGE_VALUE (0.25f)
-#define SHORT_LIFE_IMAGE_SIZE daxa_u32vec4(100u, 300u, 4u)
+#define SHORT_LIFE_IMAGE_SIZE daxa_u32vec3(100u, 300u, 4u)
 
 #define SHORT_LIFE_BUFFER_VALUE (12345678)
 #define SHORT_LIFE_BUFFER_SIZE (64u)
