@@ -1094,7 +1094,7 @@ namespace daxa
         }
     }
 
-    u32 constexpr compt_hash( char const* str )
+    auto constexpr compt_hash( char const* str ) -> u32
     {
         if (str == nullptr)
         {
@@ -1103,12 +1103,36 @@ namespace daxa
         return deail::const_hash( str );
     }
 
-    template<size_t N>
+    template<usize N>
     struct StringLiteralAdapter {
+        char value[N];
+
         constexpr StringLiteralAdapter(const char (&str)[N]) {
             std::copy_n(str, N, value);
         }
-        
-        char value[N];
+
+        template<usize INDEX>
+        constexpr auto is_same_at(StringLiteralAdapter<N> const & other) const
+        {
+            return this->value[INDEX] == other.value[INDEX] && is_same_at<INDEX+1>(other);
+        }
+
+        template<>
+        constexpr auto is_same_at<N>(StringLiteralAdapter<N> const &) const
+        {
+            return true;
+        }
+
+        template<usize N2>
+        constexpr auto is_same(StringLiteralAdapter<N2> const &) const
+        {
+            return false;
+        }
+
+        template<>
+        constexpr auto is_same(StringLiteralAdapter<N> const & other) const
+        {
+            return is_same_at<0>(other);
+        }
     };
 } // namespace daxa
