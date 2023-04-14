@@ -15,7 +15,7 @@ namespace daxa
     struct TaskList;
     struct Device;
 
-    struct TaskRuntimeInterface
+    struct GenericTaskInterface
     {
         auto get_device() const -> Device &;
         auto get_command_list() const -> CommandList;
@@ -24,54 +24,48 @@ namespace daxa
         auto get_buffers(TaskBufferId const & task_resource_id) const -> std::span<BufferId const>;
         auto get_images(TaskImageId const & task_resource_id) const -> std::span<ImageId const>;
         auto get_image_views(TaskImageId const & task_resource_id) const -> std::span<ImageViewId const>;
-        
-        template<StringLiteralAdapter ALIAS>
-        auto get_buffers() const -> std::span<BufferId const>
+
+        auto input() const -> std::vector<GenericTaskInput> const &
         {
-            constexpr u32 hash = compt_hash(ALIAS.value);
-            return get_buffers(hash, ALIAS.value);
-        }
-        template<StringLiteralAdapter ALIAS>
-        auto get_images() const -> std::span<ImageId const>
-        {
-            constexpr u32 hash = compt_hash(ALIAS.value);
-            return get_images(hash, ALIAS.value);
-        }
-        template<StringLiteralAdapter ALIAS>
-        auto get_image_views() const -> std::span<ImageViewId const>
-        {
-            constexpr u32 hash = compt_hash(ALIAS.value);
-            return get_image_views(hash, ALIAS.value);
+            return get_task_input();
         }
 
-        template<usize N>
-        auto get_buffers(StringLiteralAdapter<N> alias) const -> std::span<BufferId const>
+        auto operator->() const -> std::vector<GenericTaskInput> const *
         {
-            return get_buffers(compt_hash(alias.value), alias.value);
-        }
-        template<usize N>
-        auto get_images(StringLiteralAdapter<N> alias) const -> std::span<ImageId const>
-        {
-            return get_images(compt_hash(alias.value), alias.value);
-        }
-        template<usize N>
-        auto get_image_views(StringLiteralAdapter<N> alias) const -> std::span<ImageViewId const>
-        {
-            return get_image_views(compt_hash(alias.value), alias.value);
+            return &get_task_input();
         }
 
-      private:
+      protected:
         friend struct ImplTaskRuntimeInterface;
         friend struct TaskList;
         friend struct ImplTaskList;
-        TaskRuntimeInterface(void * a_backend);
-        auto get_buffers(u32 const & alias_has, char const * alias) const -> std::span<BufferId const>;
-        auto get_images(u32 const & alias_has, char const * alias) const -> std::span<ImageId const>;
-        auto get_image_views(u32 const & alias_hash, char const * alias) const -> std::span<ImageViewId const>;
+        template <typename TaskInput>
+        friend struct TaskInterface;
+        GenericTaskInterface(void * a_backend);
+        auto get_task_input() const -> std::vector<GenericTaskInput> const &; 
         void * backend = {};
     };
 
-    using TaskCallback = std::function<void(TaskRuntimeInterface const &)>;
+    template <typename TaskInput>
+    struct TaskInterface : public GenericTaskInterface
+    {
+        TaskInterface(GenericTaskInterface generic_intercace)
+            : GenericTaskInterface(generic_intercace.backend)
+        {
+        }
+
+        auto input() const -> TaskInput const &
+        {
+            return *reinterpret_cast<TaskInput>(get_task_input().data());
+        }
+
+        auto operator->() const -> TaskInput const *
+        {
+            return reinterpret_cast<TaskInput const *>(get_task_input().data());
+        }
+    };
+
+    using TaskCallback = std::function<void(GenericTaskInterface const &)>;
 
     struct TransientBufferInfo
     {
@@ -107,13 +101,21 @@ namespace daxa
         std::variant<TaskBufferId, std::string> aliased_buffer = {};
     };
 
-    struct TaskInfo
+    struct GenericTaskInfo
     {
-        TaskShaderUses shader_uses = {};
         std::vector<TaskBufferAliasInfo> shader_uses_buffer_aliases = {};
         std::vector<TaskImageAliasInfo> shader_uses_image_aliases = {};
-        UsedTaskBuffers used_buffers = {};
-        UsedTaskImages used_images = {};
+        std::vector<GenericTaskInput> task_input = {};
+        TaskCallback task = {};
+        std::string name = {};
+    };
+
+    template <typename TaskInput>
+    struct TaskInfo
+    {
+        std::vector<TaskBufferAliasInfo> shader_uses_buffer_aliases = {};
+        std::vector<TaskImageAliasInfo> shader_uses_image_aliases = {};
+        TaskInput task_input = {};
         TaskCallback task = {};
         std::string name = {};
     };
@@ -254,14 +256,33 @@ namespace daxa
 
         TaskList(TaskListInfo const & info);
         ~TaskList();
-        
+
         auto use_persistent_buffer(TaskBuffer const & buffer) -> TaskBufferId;
         auto use_persistent_image(TaskImage const & image) -> TaskImageId;
 
         auto create_transient_buffer(TransientBufferInfo const & info) -> TaskBufferId;
         auto create_transient_image(TransientImageInfo const & info) -> TaskImageId;
 
-        void add_task(TaskInfo const & info);
+        void add_task(GenericTaskInfo const & info);
+        template <typename TaskInput>
+        void add_task(TaskInfo<TaskInput> const & info)
+        {
+            std::vector<GenericTaskInput> task_input = {};
+            task_input.resize(TaskInputListInfo<TaskInput>::ELEMENT_COUNT, {});
+            std::memcpy(task_input.data(), &info.task_input, sizeof(TaskInput));
+
+            add_task(GenericTaskInfo {
+                .shader_uses_buffer_aliases = info.shader_uses_buffer_aliases,
+                .shader_uses_image_aliases = info.shader_uses_image_aliases,
+                .task_input = task_input,
+                .task = [=](GenericTaskInterface const & generic_interf)
+                {
+                    TaskInterface<TaskInput> interf{generic_interf};
+                    info.task(interf);
+                },
+                .name = info.name,
+            });
+        }
         void conditional(TaskListConditionalInfo const & conditional_info);
         void submit(TaskSubmitInfo const & info);
         void present(TaskPresentInfo const & info);
