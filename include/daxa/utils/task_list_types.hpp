@@ -86,7 +86,7 @@ namespace daxa
     auto to_string(TaskImageAccess const & usage) -> std::string_view;
 
     using TaskResourceIndex = u32;
-    
+
     struct TaskGPUResourceId
     {
         TaskResourceIndex task_list_index = {};
@@ -108,24 +108,24 @@ namespace daxa
     {
     };
 
-    struct TaskBufferUse
+    struct TaskBufferUseInit
     {
         TaskBufferId id = {};
         TaskBufferAccess access = {};
         // Redirects in callback and shader use aliases to this use.
-        std::string_view alias = {};
+        std::string_view name = {};
     };
 
-    struct TaskImageUse
+    struct TaskImageUseInit
     {
         TaskImageId id = {};
         TaskImageAccess access = {};
         ImageMipArraySlice slice = {};
-        /// @brief  Determines the view type the runtime provides in the TaskRuntimeInterface.
+        /// @brief  Determines the view type the runtime provides in the GenericTaskInterface.
         ///         If no type is provided, the runtime images default view type is used.
         std::optional<ImageViewType> view_type = {};
         // Redirects in callback and shader use aliases to this use.
-        std::string_view alias = {};
+        std::string_view name = {};
     };
 
     struct ImageSliceState
@@ -135,6 +135,171 @@ namespace daxa
         ImageMipArraySlice slice = {};
     };
 
-    using UsedTaskBuffers = std::vector<TaskBufferUse>;
-    using UsedTaskImages = std::vector<TaskImageUse>;
-}
+    using UsedTaskBuffers = std::vector<TaskBufferUseInit>;
+    using UsedTaskImages = std::vector<TaskImageUseInit>;
+
+    enum class TaskInputType : u64
+    {
+        NONE = 0,
+        BUFFER = 1,
+        IMAGE = 2,
+        CONSTANT = 3,
+    };
+
+    static inline constexpr usize TASK_INPUT_FIELD_SIZE = 128;
+
+    struct alignas(TASK_INPUT_FIELD_SIZE) TaskInputBuffer
+    {
+      private:
+        [[maybe_unused]] volatile TaskInputType const type = TaskInputType::BUFFER;
+
+      public:
+        std::span<BufferId const> m_buffers = {};
+        TaskBufferId id = {};
+        TaskBufferAccess access = {};
+
+        TaskInputBuffer() = default;
+        TaskInputBuffer(TaskBufferUseInit const & init)
+            : id{init.id},
+              access{init.access}
+        {
+        }
+
+        auto buffer(usize index = 0) const -> BufferId
+        {
+            return m_buffers[index];
+        }
+
+        auto buffers() const -> std::span<BufferId const>
+        {
+            return m_buffers;
+        }
+    };
+
+    struct alignas(TASK_INPUT_FIELD_SIZE) TaskInputImage
+    {
+      private:
+        [[maybe_unused]] volatile TaskInputType const type = TaskInputType::IMAGE;
+
+      public:
+        std::span<ImageId const> m_images = {};
+        std::span<ImageViewId const> m_views = {};
+        TaskImageId id = {};
+        TaskImageAccess access = {};
+        ImageMipArraySlice slice = {};
+        /// @brief  Determines the view type the runtime provides in the GenericTaskInterface.
+        ///         If no type is provided, the runtime images default view type is used.
+        std::optional<ImageViewType> view_type = {};
+
+        TaskInputImage() = default;
+
+        TaskInputImage(TaskImageUseInit const & init)
+            : id{init.id},
+              access{init.access},
+              slice{init.slice},
+              view_type{init.view_type}
+        {
+        }
+
+        auto image(u32 index = 0) const -> ImageId
+        {
+            return m_images[index];
+        }
+
+        auto images() const -> std::span<ImageId const>
+        {
+            return m_images;
+        }
+
+        auto view(u32 index = 0) const -> ImageViewId
+        {
+            return m_views[index];
+        }
+
+        auto views() const -> std::span<ImageViewId const>
+        {
+            return m_views;
+        }
+    };
+
+    template <typename T>
+    struct alignas(TASK_INPUT_FIELD_SIZE) TaskParam
+    {
+        static_assert(sizeof(T) <= (TASK_INPUT_FIELD_SIZE - sizeof(TaskInputType)), "Constant MUST be smaller then 120 bytes!");
+
+        [[maybe_unused]] volatile TaskInputType const type = TaskInputType::CONSTANT;
+        T value = {};
+
+        TaskParam() = default;
+
+        template <typename ANY>
+            requires(std::is_convertible_v<ANY, T>)
+        TaskParam(ANY const & v) : value{static_cast<T>(v)}
+        {
+        }
+
+        template <typename ANY>
+            requires(std::is_convertible_v<ANY, T>)
+        TaskParam & operator=(ANY const & v)
+        {
+            value = static_cast<T>(v);
+            return *this;
+        }
+
+        operator T &()
+        {
+            return value;
+        }
+
+        operator T const &() const
+        {
+            return value;
+        }
+
+        auto operator&() -> T *
+        {
+            return &value;
+        }
+
+        auto operator&() const -> T const *
+        {
+            return &value;
+        }
+    };
+
+    static_assert(sizeof(TaskInputBuffer) <= TASK_INPUT_FIELD_SIZE, "should be impossible! contact Ipotrick");
+    static_assert(sizeof(TaskInputImage) <= TASK_INPUT_FIELD_SIZE, "should be impossible! contact Ipotrick");
+
+    struct alignas(TASK_INPUT_FIELD_SIZE) GenericTaskInput
+    {
+        TaskInputType type = TaskInputType::NONE;
+
+        auto as_buffer_use() -> TaskInputBuffer &
+        {
+            return *reinterpret_cast<TaskInputBuffer *>(this);
+        }
+
+        auto as_image_use() -> TaskInputImage &
+        {
+            return *reinterpret_cast<TaskInputImage *>(this);
+        }
+
+        auto as_buffer_use() const -> TaskInputBuffer const &
+        {
+            return *reinterpret_cast<TaskInputBuffer const *>(this);
+        }
+
+        auto as_image_use() const -> TaskInputImage const &
+        {
+            return *reinterpret_cast<TaskInputImage const *>(this);
+        }
+    };
+
+    template <typename T>
+    struct TaskInputListInfo
+    {
+        static inline constexpr usize ELEMENT_COUNT = {sizeof(T) / TASK_INPUT_FIELD_SIZE};
+        static inline constexpr usize REST = {sizeof(T) % TASK_INPUT_FIELD_SIZE};
+        static_assert(REST == 0, "Task Input Struct contains invalid members!");
+    };
+} // namespace daxa

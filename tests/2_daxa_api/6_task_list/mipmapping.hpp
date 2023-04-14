@@ -455,15 +455,18 @@ namespace tests
                 new_task_list.use_persistent_buffer(task_mipmapping_gpu_input_buffer);
                 new_task_list.use_persistent_image(task_render_image);
 
-                new_task_list.add_task({
-                    .used_buffers = {
-                        {task_mipmapping_gpu_input_buffer, daxa::TaskBufferAccess::HOST_TRANSFER_WRITE},
-                    },
-                    .task = [this](daxa::TaskRuntimeInterface runtime)
+                struct InputTransferIn
+                {
+                    daxa::TaskInputBuffer buffer = {{.access = daxa::TaskBufferAccess::HOST_TRANSFER_WRITE}};
+                    f32 d;
+                } input_transfer_in;
+                input_transfer_in.buffer.id = task_mipmapping_gpu_input_buffer;
+                new_task_list.add_task(daxa::TaskInfo<InputTransferIn>{
+                    .task_input = input_transfer_in,
+                    .task = [this](daxa::TaskInterface<InputTransferIn> ti)
                     {
-                        auto cmd_list = runtime.get_command_list();
-                        auto input_buffer = runtime.get_buffers(task_mipmapping_gpu_input_buffer.id())[0];
-                        update_gpu_input(cmd_list, input_buffer);
+                        auto cmd_list = ti.get_command_list();
+                        update_gpu_input(cmd_list, ti->buffer.buffer());
                     },
                     .name = "Input Transfer",
                 });
@@ -471,19 +474,19 @@ namespace tests
                     .condition_index = TASK_CONDITION_MOUSE_DRAWING,
                     .when_true = [&]()
                     {
-                        new_task_list.add_task(daxa::TaskInfo{
-                            .used_buffers = {
-                                {task_mipmapping_gpu_input_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY},
-                            },
-                            .used_images = {
-                                {task_render_image, daxa::TaskImageAccess::COMPUTE_SHADER_READ_WRITE, daxa::ImageMipArraySlice{}},
-                            },
-                            .task = [=, this](daxa::TaskRuntimeInterface const & runtime)
+                        struct MousePaintIn
+                        {
+                            daxa::TaskInputBuffer buffer = {{.access = daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY}};
+                            daxa::TaskInputImage target = {{.access = daxa::TaskImageAccess::COMPUTE_SHADER_READ_WRITE}};
+                        } mouse_paint_in;
+                        mouse_paint_in.buffer.id = task_mipmapping_gpu_input_buffer;
+                        mouse_paint_in.target.id = task_render_image;
+                        new_task_list.add_task(daxa::TaskInfo<MousePaintIn>{
+                            .task_input = mouse_paint_in,
+                            .task = [=, this](daxa::TaskInterface<MousePaintIn> const & ti)
                             {
-                                auto cmd_list = runtime.get_command_list();
-                                auto render_target_id = runtime.get_images(task_render_image)[0];
-                                auto input_buffer = runtime.get_buffers(task_mipmapping_gpu_input_buffer.id())[0];
-                                paint(cmd_list, render_target_id, input_buffer);
+                                auto cmd_list = ti.get_command_list();
+                                paint(cmd_list, ti->target.image(), ti->buffer.buffer());
                             },
                             .name = "mouse paint",
                         });
@@ -495,31 +498,48 @@ namespace tests
                                 std::array<i32, 3> next_mip_size = {std::max<i32>(1, mip_size[0] / 2), std::max<i32>(1, mip_size[1] / 2), std::max<i32>(1, mip_size[2] / 2)};
 
                                 using IA = daxa::TaskImageAccess;
-                                using IS = daxa::ImageMipArraySlice;
+                                using TIU = daxa::TaskImageUseInit;
+                                
+                                // This removes image slices from uses.
+                                // This removes shader alias list.
+                                // This removes need to alias names in uses.
+                                // This removes the need for image view declaration.
+                                
+                                struct MipInput
+                                {
+                                    daxa::TaskInputImage lower_mip = {{.access = IA::TRANSFER_READ}};
+                                    daxa::TaskInputImage higher_mip = {{.access = IA::TRANSFER_READ}};
+                                    daxa::TaskParam<f32> value = 3;
+                                } input;
 
-                                new_task_list.add_task({
-                                    .used_images = {
-                                        {.id = task_render_image, .access = IA::TRANSFER_READ, .slice = IS{.base_mip_level = i}, .alias = "lower_mip"},
-                                        {.id = task_render_image, .access = IA::TRANSFER_WRITE, .slice = IS{.base_mip_level = i + 1}, .alias = "higher_mip"},
-                                    },
-                                    .task = [=, this](daxa::TaskRuntimeInterface const & runtime)
+                                input.lower_mip.id = task_render_image;
+                                input.lower_mip.slice.base_mip_level = i;
+                                input.value = 3213;
+
+                                input.higher_mip.id = task_render_image;
+                                input.higher_mip.slice.base_mip_level = i + 1;
+
+                                new_task_list.add_task(daxa::TaskInfo<MipInput>{
+                                    .task_input = input,
+                                    .task = [=] (daxa::TaskInterface<MipInput> const & ti)
                                     {
-                                        auto cmd_list = runtime.get_command_list();
-                                        auto image_id = runtime.get_images(task_render_image)[0];
-                                        [[maybe_unused]] auto const lower_mip = runtime.get_image_views<"lower_mip">()[0];
-                                        [[maybe_unused]] auto const higher_mip = runtime.get_image_views<"higher_mip">()[0];
+                                        auto cmd_list = ti.get_command_list();
+                                        
+                                        [[maybe_unused]] auto const lower_mip_view = ti->lower_mip.view();
+                                        [[maybe_unused]] auto const higher_mip_view = ti->higher_mip.view();
+                                        f32 value = ti->value;
                                         cmd_list.blit_image_to_image({
-                                            .src_image = image_id,
-                                            .dst_image = image_id,
+                                            .src_image = ti->lower_mip.image(),
+                                            .dst_image = ti->higher_mip.image(),
                                             .src_slice = {
-                                                .image_aspect = image_info.aspect,
+                                                .image_aspect = ti->lower_mip.slice.image_aspect,
                                                 .mip_level = i,
                                                 .base_array_layer = 0,
                                                 .layer_count = 1,
                                             },
                                             .src_offsets = {{{0, 0, 0}, {mip_size[0], mip_size[1], mip_size[2]}}},
                                             .dst_slice = {
-                                                .image_aspect = image_info.aspect,
+                                                .image_aspect = ti->higher_mip.slice.image_aspect,
                                                 .mip_level = i + 1,
                                                 .base_array_layer = 0,
                                                 .layer_count = 1,
@@ -535,44 +555,51 @@ namespace tests
                         }
                     },
                 });
-                new_task_list.add_task({
-                    .used_images = {
-                        {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{}},
-                    },
-                    .task = [=, this](daxa::TaskRuntimeInterface const & runtime)
+                struct ClearSwapchainIn
+                {
+                    daxa::TaskInputImage swapchain = {{.access = daxa::TaskImageAccess::TRANSFER_WRITE}};
+                } input;
+                input.swapchain.id = task_swapchain_image;
+                new_task_list.add_task(daxa::TaskInfo<ClearSwapchainIn>{
+                    .task_input = input,
+                    .task = [](daxa::TaskInterface<ClearSwapchainIn> const & ti)
                     {
-                        auto cmd_list = runtime.get_command_list();
+                        auto cmd_list = ti.get_command_list();
                         cmd_list.clear_image({
                             .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                             .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
-                            .dst_image = swapchain_image,
+                            .dst_image = ti->swapchain.image(),
                         });
                     },
                     .name = "clear swapchain",
                 });
-                new_task_list.add_task({
-                    .used_images = {
-                        {task_render_image, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{.level_count = 5}},
-                        {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{}},
-                    },
-                    .task = [=, this](daxa::TaskRuntimeInterface const & runtime)
+                struct BlitIn
+                {
+                    daxa::TaskInputImage render_image = {{.access = daxa::TaskImageAccess::TRANSFER_READ, .slice = daxa::ImageMipArraySlice{.level_count = 5}}};
+                    daxa::TaskInputImage swapchain = {{.access = daxa::TaskImageAccess::TRANSFER_WRITE}};
+                } blit_in;
+                blit_in.render_image.id = task_render_image;
+                blit_in.swapchain.id = task_swapchain_image;
+                new_task_list.add_task(daxa::TaskInfo<BlitIn>{
+                    .task_input = blit_in,
+                    .task = [this](daxa::TaskInterface<BlitIn> const & ti)
                     {
-                        auto cmd_list = runtime.get_command_list();
-                        auto src_image_id = runtime.get_images(task_render_image)[0];
-                        auto dst_image_id = runtime.get_images(task_swapchain_image)[0];
-                        blit_image_to_swapchain(cmd_list, src_image_id, dst_image_id);
+                        auto cmd_list = ti.get_command_list();
+                        this->blit_image_to_swapchain(cmd_list, ti->render_image.image(), ti->swapchain.image());
                     },
                     .name = "blit to swapchain",
                 });
-                new_task_list.add_task({
-                    .used_images = {
-                        {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
-                    },
-                    .task = [=, this](daxa::TaskRuntimeInterface const & runtime)
+                struct ImguiIn
+                {
+                    daxa::TaskInputImage swapchain = {{.access = daxa::TaskImageAccess::COLOR_ATTACHMENT}};
+                } im_gui_in;
+                im_gui_in.swapchain.id = task_swapchain_image;
+                new_task_list.add_task(daxa::TaskInfo<ImguiIn>{
+                    .task_input = im_gui_in,
+                    .task = [this](daxa::TaskInterface<ImguiIn> const & ti)
                     {
-                        auto cmd_list = runtime.get_command_list();
-                        auto render_target_id = runtime.get_images(task_swapchain_image)[0];
-                        draw_ui(cmd_list, render_target_id);
+                        auto cmd_list = ti.get_command_list();
+                        this->draw_ui(cmd_list, ti->swapchain.image());
                     },
                     .name = "Imgui",
                 });

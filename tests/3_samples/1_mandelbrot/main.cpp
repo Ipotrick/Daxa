@@ -152,7 +152,7 @@ struct App : BaseApp<App>
             .used_buffers = {
                 {task_gpu_input_buffer, daxa::TaskBufferAccess::HOST_TRANSFER_WRITE},
             },
-            .task = [this](daxa::TaskRuntimeInterface runtime)
+            .task = [this](daxa::GenericTaskInterface runtime)
             {
                 auto cmd_list = runtime.get_command_list();
                 cmd_list.reset_timestamps({
@@ -188,7 +188,7 @@ struct App : BaseApp<App>
             .used_images = {
                 {task_render_image, daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY, daxa::ImageMipArraySlice{}},
             },
-            .task = [this](daxa::TaskRuntimeInterface runtime)
+            .task = [this](daxa::GenericTaskInterface runtime)
             {
                 auto cmd_list = runtime.get_command_list();
                 cmd_list.set_pipeline(*compute_pipeline);
@@ -210,7 +210,7 @@ struct App : BaseApp<App>
                 {task_render_image, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{}},
                 {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{}},
             },
-            .task = [this](daxa::TaskRuntimeInterface runtime)
+            .task = [this](daxa::GenericTaskInterface runtime)
             {
                 auto cmd_list = runtime.get_command_list();
                 cmd_list.blit_image_to_image({
