@@ -14,6 +14,10 @@ namespace daxa
 {
     struct TaskList;
     struct Device;
+    struct CommandSubmitInfo;
+    struct PresentInfo;
+
+    using TaskInputDefaultT = std::span<GenericTaskInput>;
 
     struct GenericTaskInterface
     {
@@ -21,19 +25,9 @@ namespace daxa
         auto get_command_list() const -> CommandList;
         auto get_allocator() const -> TransferMemoryPool &;
 
-        auto get_buffers(TaskBufferId const & task_resource_id) const -> std::span<BufferId const>;
-        auto get_images(TaskImageId const & task_resource_id) const -> std::span<ImageId const>;
-        auto get_image_views(TaskImageId const & task_resource_id) const -> std::span<ImageViewId const>;
-
-        auto input() const -> std::vector<GenericTaskInput> const &
-        {
-            return get_task_input();
-        }
-
-        auto operator->() const -> std::vector<GenericTaskInput> const *
-        {
-            return &get_task_input();
-        }
+        auto buffer(TaskBufferId const & task_resource_id, usize index = 0) const -> BufferId;
+        auto image(TaskImageId const & task_resource_id, usize index = 0) const -> ImageId;
+        auto view(TaskImageId const & task_resource_id, usize index = 0) const -> ImageViewId;
 
       protected:
         friend struct ImplTaskRuntimeInterface;
@@ -42,30 +36,47 @@ namespace daxa
         template <typename TaskInput>
         friend struct TaskInterface;
         GenericTaskInterface(void * a_backend);
-        auto get_task_input() const -> std::vector<GenericTaskInput> const &; 
+        auto get_task_input() const -> std::vector<GenericTaskInput> const &;
         void * backend = {};
     };
 
-    template <typename TaskInput>
-    struct TaskInterface : public GenericTaskInterface
+    template <typename TaskInput = TaskInputDefaultT>
+    struct TaskInterface final : public GenericTaskInterface
     {
-        TaskInterface(GenericTaskInterface generic_intercace)
-            : GenericTaskInterface(generic_intercace.backend)
-        {
-        }
-
         auto input() const -> TaskInput const &
+            requires(!std::is_same_v<TaskInput, TaskInputDefaultT>)
         {
-            return *reinterpret_cast<TaskInput>(get_task_input().data());
+            return *reinterpret_cast<TaskInput const *>(get_task_input().data());
         }
 
-        auto operator->() const -> TaskInput const *
+        template <typename InputType>
+            requires(std::is_same_v<TaskInput, TaskInputDefaultT>)
+        auto input_as(usize index) const -> InputType const &
         {
-            return reinterpret_cast<TaskInput const *>(get_task_input().data());
+            DAXA_DBG_ASSERT_TRUE_M(index < get_task_input().size(), "detected out of bounds input index! all task input indices must be smaller then the count of inputs");
+            DAXA_DBG_ASSERT_TRUE_M(InputType::INPUT_TYPE == get_task_input().at(index).type, "detected invalid input type cast! the cast input type must match the declared input type at any given index.");
+            return *reinterpret_cast<InputType const *>(get_task_input().data() + index);
         }
+
+        auto operator->() const -> TaskInput const * requires(!std::is_same_v<TaskInput, TaskInputDefaultT>) {
+                                                         return reinterpret_cast<TaskInput const *>(get_task_input().data());
+                                                     }
+
+        template <typename T>
+        operator TaskInterface<T> const &() const
+        {
+            return *reinterpret_cast<TaskInterface<T> const *>(this);
+        }
+
+      private:
+        friend struct ImplTaskRuntimeInterface;
+        friend struct TaskList;
+        friend struct ImplTaskList;
+        friend struct TaskInterface;
+        TaskInterface(void * a_backend) : GenericTaskInterface(a_backend) {}
     };
 
-    using TaskCallback = std::function<void(GenericTaskInterface const &)>;
+    using TaskCallback = std::function<void(TaskInterface<> const &)>;
 
     struct TransientBufferInfo
     {
@@ -101,16 +112,9 @@ namespace daxa
         std::variant<TaskBufferId, std::string> aliased_buffer = {};
     };
 
-    struct GenericTaskInfo
-    {
-        std::vector<TaskBufferAliasInfo> shader_uses_buffer_aliases = {};
-        std::vector<TaskImageAliasInfo> shader_uses_image_aliases = {};
-        std::vector<GenericTaskInput> task_input = {};
-        TaskCallback task = {};
-        std::string name = {};
-    };
+    using TaskInfoDefaultT = std::vector<GenericTaskInput>;
 
-    template <typename TaskInput>
+    template <typename TaskInput = TaskInfoDefaultT>
     struct TaskInfo
     {
         std::vector<TaskBufferAliasInfo> shader_uses_buffer_aliases = {};
@@ -119,9 +123,6 @@ namespace daxa
         TaskCallback task = {};
         std::string name = {};
     };
-
-    struct CommandSubmitInfo;
-    struct PresentInfo;
 
     struct TaskListInfo
     {
@@ -263,7 +264,7 @@ namespace daxa
         auto create_transient_buffer(TransientBufferInfo const & info) -> TaskBufferId;
         auto create_transient_image(TransientImageInfo const & info) -> TaskImageId;
 
-        void add_task(GenericTaskInfo const & info);
+        void add_task(TaskInfo<> const & info);
         template <typename TaskInput>
         void add_task(TaskInfo<TaskInput> const & info)
         {
@@ -271,18 +272,15 @@ namespace daxa
             task_input.resize(TaskInputListInfo<TaskInput>::ELEMENT_COUNT, {});
             std::memcpy(task_input.data(), &info.task_input, sizeof(TaskInput));
 
-            add_task(GenericTaskInfo {
+            add_task(TaskInfo<>{
                 .shader_uses_buffer_aliases = info.shader_uses_buffer_aliases,
                 .shader_uses_image_aliases = info.shader_uses_image_aliases,
                 .task_input = task_input,
-                .task = [=](GenericTaskInterface const & generic_interf)
-                {
-                    TaskInterface<TaskInput> interf{generic_interf};
-                    info.task(interf);
-                },
+                .task = info.task,
                 .name = info.name,
             });
         }
+
         void conditional(TaskListConditionalInfo const & conditional_info);
         void submit(TaskSubmitInfo const & info);
         void present(TaskPresentInfo const & info);
