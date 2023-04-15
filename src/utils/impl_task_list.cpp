@@ -613,137 +613,66 @@ namespace daxa
 
     void ImplTaskList::update_image_view_cache(Task & task, TaskListPermutation const & permutation)
     {
-        //usize image_use_index = 0;
-        //usize image_count = 0;
-        //bool cache_valid = true;
-        //// Prepass to make sure vector is large enough to prevent pointer invalidation of the spans.
-        //for (auto & input : task.info.task_input)
-        //{
-        //    if (input.type == TaskInputType::IMAGE)
-        //    {
-        //        auto & image_use = input.as_image_use();
-        //        image_count += get_actual_images(image_use.id, permutation).size();
-        //        
-        //    }
-        //}
-        //for (auto & input : task.info.task_input)
-        //{
-        //    if (input.type == TaskInputType::IMAGE)
-        //    {
-        //        auto & image_use = input.as_image_use();
-        //        auto const slice = image_use.slice;
-        //        // The image id here is alreadt the task list local id.
-        //        // The persistent ids are converted to local ids in the add_task function.
-        //        auto const tid = image_use.id;
-//
-        //        auto const actual_images = get_actual_images(tid, permutation);
-        //        auto & view_cache = task.image_view_cache[task_image_use_index];
-//
-        //        bool cache_valid = actual_images.size() == view_cache.size();
-        //        if (cache_valid)
-        //        {
-        //            for (u32 index = 0; index < actual_images.size(); ++index)
-        //            {
-        //                bool const image_same = info.device.info_image_view(view_cache[index]).image == actual_images[index];
-        //                cache_valid = cache_valid && image_same;
-        //            }
-        //        }
-        //        if (!cache_valid)
-        //        {
-        //            validate_runtime_image_slice(*this, permutation, task_image_use_index, tid.index, slice, task);
-        //            for (auto & view : view_cache)
-        //            {
-        //                ImageViewId const parent_image_default_view = info.device.info_image_view(view).image.default_view();
-        //                // Can not destroy the default view of an image!!!
-        //                if (parent_image_default_view != view)
-        //                {
-        //                    info.device.destroy_image_view(view);
-        //                }
-        //            }
-        //            view_cache.clear();
-        //            for (u32 index = 0; index < actual_images.size(); ++index)
-        //            {
-        //                ImageId parent = actual_images[index];
-        //                ImageInfo parent_info = info.device.info_image(parent);
-//
-        //                ImageViewInfo view_info = info.device.info_image_view(parent.default_view());
-//
-        //                // When the use image view parameters match the default view,
-        //                // then use the default view id and avoid creating a new id here.
-        //                bool const is_use_default_slice = view_info.slice == slice;
-        //                bool const is_use_default_view_type = !image_use.view_type.has_value() || (image_use.view_type.value() == view_info.type);
-        //                if (is_use_default_slice && is_use_default_view_type)
-        //                {
-        //                    view_cache.push_back(parent.default_view());
-        //                }
-        //                else
-        //                {
-        //                    view_info.type = image_use.view_type.value_or(view_info.type);
-        //                    view_info.slice = slice;
-        //                    view_cache.push_back(info.device.create_image_view(view_info));
-        //                }
-        //            }
-        //        }
-        //    }
-        //}
-        // TODO(pahrens) TODO_FIRST
-        // for (u32 task_image_use_index = 0; task_image_use_index < task.info.used_images.size(); ++task_image_use_index)
-        //{
-        //    auto const & image_use = task.info.used_images[task_image_use_index];
-        //    auto const slice = image_use.slice;
-        //    // The image id here is alreadt the task list local id.
-        //    // The persistent ids are converted to local ids in the add_task function.
-        //    auto const tid = image_use.id;
-        //
-        //    auto const actual_images = get_actual_images(tid, permutation);
-        //    auto & view_cache = task.image_view_cache[task_image_use_index];
-        //
-        //    bool cache_valid = actual_images.size() == view_cache.size();
-        //    if (cache_valid)
-        //    {
-        //        for (u32 index = 0; index < actual_images.size(); ++index)
-        //        {
-        //            bool const image_same = info.device.info_image_view(view_cache[index]).image == actual_images[index];
-        //            cache_valid = cache_valid && image_same;
-        //        }
-        //    }
-        //    if (!cache_valid)
-        //    {
-        //        validate_runtime_image_slice(*this, permutation, task_image_use_index, tid.index, slice, task);
-        //        for (auto & view : view_cache)
-        //        {
-        //            ImageViewId const parent_image_default_view = info.device.info_image_view(view).image.default_view();
-        //            // Can not destroy the default view of an image!!!
-        //            if (parent_image_default_view != view)
-        //            {
-        //                info.device.destroy_image_view(view);
-        //            }
-        //        }
-        //        view_cache.clear();
-        //        for (u32 index = 0; index < actual_images.size(); ++index)
-        //        {
-        //            ImageId parent = actual_images[index];
-        //            ImageInfo parent_info = info.device.info_image(parent);
-        //
-        //            ImageViewInfo view_info = info.device.info_image_view(parent.default_view());
-        //
-        //            // When the use image view parameters match the default view,
-        //            // then use the default view id and avoid creating a new id here.
-        //            bool const is_use_default_slice = view_info.slice == slice;
-        //            bool const is_use_default_view_type = !image_use.view_type.has_value() || (image_use.view_type.value() == view_info.type);
-        //            if (is_use_default_slice && is_use_default_view_type)
-        //            {
-        //                view_cache.push_back(parent.default_view());
-        //            }
-        //            else
-        //            {
-        //                view_info.type = image_use.view_type.value_or(view_info.type);
-        //                view_info.slice = slice;
-        //                view_cache.push_back(info.device.create_image_view(view_info));
-        //            }
-        //        }
-        //    }
-        //}
+        for (u32 task_image_use_index = 0; task_image_use_index < task.info.task_input.size(); ++task_image_use_index)
+        {
+            if (task.info.task_input[task_image_use_index].type == TaskInputType::IMAGE)
+            {
+                auto & image_use = task.info.task_input[task_image_use_index].as_image_use();
+                auto const slice = image_use.slice;
+                // The image id here is alreadt the task list local id.
+                // The persistent ids are converted to local ids in the add_task function.
+                auto const tid = image_use.id;
+
+                auto const actual_images = get_actual_images(tid, permutation);
+                auto & view_cache = task.image_view_cache[task_image_use_index];
+
+                bool cache_valid = actual_images.size() == view_cache.size();
+                if (cache_valid)
+                {
+                    for (u32 index = 0; index < actual_images.size(); ++index)
+                    {
+                        bool const image_same = info.device.info_image_view(view_cache[index]).image == actual_images[index];
+                        cache_valid = cache_valid && image_same;
+                    }
+                }
+                if (!cache_valid)
+                {
+                    validate_runtime_image_slice(*this, permutation, task_image_use_index, tid.index, slice, task);
+                    for (auto & view : view_cache)
+                    {
+                        ImageViewId const parent_image_default_view = info.device.info_image_view(view).image.default_view();
+                        // Can not destroy the default view of an image!!!
+                        if (parent_image_default_view != view)
+                        {
+                            info.device.destroy_image_view(view);
+                        }
+                    }
+                    view_cache.clear();
+                    for (u32 index = 0; index < actual_images.size(); ++index)
+                    {
+                        ImageId parent = actual_images[index];
+                        ImageInfo parent_info = info.device.info_image(parent);
+
+                        ImageViewInfo view_info = info.device.info_image_view(parent.default_view());
+
+                        // When the use image view parameters match the default view,
+                        // then use the default view id and avoid creating a new id here.
+                        bool const is_use_default_slice = view_info.slice == slice;
+                        bool const is_use_default_view_type = !image_use.view_type.has_value() || (image_use.view_type.value() == view_info.type);
+                        if (is_use_default_slice && is_use_default_view_type)
+                        {
+                            view_cache.push_back(parent.default_view());
+                        }
+                        else
+                        {
+                            view_info.type = image_use.view_type.value_or(view_info.type);
+                            view_info.slice = slice;
+                            view_cache.push_back(info.device.create_image_view(view_info));
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // Need to validate all runtime resources of persistent resources.
@@ -846,6 +775,7 @@ namespace daxa
         //}
 
 
+        usize input_index = 0;
         for (auto & input : task.info.task_input)
         {
             switch (input.type)
@@ -860,11 +790,13 @@ namespace daxa
             {
                 auto & use = input.as_image_use();
                 use.m_images = get_actual_images(use.id, permutation);
+                use.m_views = std::span{ task.image_view_cache[input_index].data(), task.image_view_cache[input_index].size() };
             }
             break;
             default:
             break;
             }
+            input_index += 1;
         }
         impl_runtime.current_task = &task;
         impl_runtime.command_lists.back().begin_label({
@@ -1449,7 +1381,7 @@ namespace daxa
         ShaderUseIdToOffsetTable const & shader_id_use_to_offset_table)
     {
         TaskId const task_id = this->tasks.size();
-        std::vector<ImageViewId> view_cache = {};
+        std::vector<std::vector<ImageViewId>> view_cache = {};
         view_cache.resize(info.task_input.size(), {});
         this->tasks.emplace_back(Task{
             .info = info,
@@ -2752,45 +2684,45 @@ namespace daxa
     ImplTaskList::~ImplTaskList()
     {
         // because transient buffers are owned by tasklist we need to destroy them
-        //for (u32 buffer_info_idx = 0; buffer_info_idx < static_cast<u32>(global_buffer_infos.size()); buffer_info_idx++)
-        //{
-        //    auto const & global_buffer = global_buffer_infos.at(buffer_info_idx);
-        //    if (!global_buffer.is_persistent())
-        //    {
-        //        info.device.destroy_buffer(get_actual_buffers(TaskBufferId{{.task_list_index = unique_index, .index = buffer_info_idx}})[0]);
-        //    }
-        //}
-        //for (auto & permutation : permutations)
-        //{
-        //    // because transient images are owned by tasklist we need to destroy them
-        //    for (u32 image_info_idx = 0; image_info_idx < static_cast<u32>(global_image_infos.size()); image_info_idx++)
-        //    {
-        //        auto const & global_image = global_image_infos.at(image_info_idx);
-        //        auto const & perm_image = permutation.image_infos.at(image_info_idx);
-        //        if (!global_image.is_persistent() && perm_image.valid)
-        //        {
-        //            info.device.destroy_image(get_actual_images(TaskImageId{{.task_list_index = unique_index, .index = image_info_idx}}, permutation)[0]);
-        //        }
-        //    }
-        //    for (auto & task : permutation.tasks)
-        //    {
-        //        for (auto & view_cache : task.image_view_cache)
-        //        {
-        //            for (auto & view : view_cache)
-        //            {
-        //                if (info.device.is_id_valid(view))
-        //                {
-        //                    bool const is_parent_valid = info.device.is_id_valid(info.device.info_image_view(view).image);
-        //                    bool const is_default_view = is_parent_valid && info.device.info_image_view(view).image.default_view() == view;
-        //                    if (!is_default_view)
-        //                    {
-        //                        info.device.destroy_image_view(view);
-        //                    }
-        //                }
-        //            }
-        //        }
-        //    }
-        //}
+        for (u32 buffer_info_idx = 0; buffer_info_idx < static_cast<u32>(global_buffer_infos.size()); buffer_info_idx++)
+        {
+            auto const & global_buffer = global_buffer_infos.at(buffer_info_idx);
+            if (!global_buffer.is_persistent())
+            {
+                info.device.destroy_buffer(get_actual_buffers(TaskBufferId{{.task_list_index = unique_index, .index = buffer_info_idx}})[0]);
+            }
+        }
+        for (auto & permutation : permutations)
+        {
+            // because transient images are owned by tasklist we need to destroy them
+            for (u32 image_info_idx = 0; image_info_idx < static_cast<u32>(global_image_infos.size()); image_info_idx++)
+            {
+                auto const & global_image = global_image_infos.at(image_info_idx);
+                auto const & perm_image = permutation.image_infos.at(image_info_idx);
+                if (!global_image.is_persistent() && perm_image.valid)
+                {
+                    info.device.destroy_image(get_actual_images(TaskImageId{{.task_list_index = unique_index, .index = image_info_idx}}, permutation)[0]);
+                }
+            }
+            for (auto & task : permutation.tasks)
+            {
+                for (auto & view_cache : task.image_view_cache)
+                {
+                    for (auto & view : view_cache)
+                    {
+                        if (info.device.is_id_valid(view))
+                        {
+                            bool const is_parent_valid = info.device.is_id_valid(info.device.info_image_view(view).image);
+                            bool const is_default_view = is_parent_valid && info.device.info_image_view(view).image.default_view() == view;
+                            if (!is_default_view)
+                            {
+                                info.device.destroy_image_view(view);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     void ImplTaskList::print_task_image_to(std::string & out, std::string indent, TaskListPermutation const & permutation, TaskImageId local_id)
