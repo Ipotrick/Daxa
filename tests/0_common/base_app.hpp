@@ -149,7 +149,7 @@ struct BaseApp : AppWindow<T>
         //    .used_images = {
         //        {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
         //    },
-        //    .task = [this](daxa::GenericTaskInterface interf)
+        //    .task = [this](daxa::TaskInterface<> interf)
         //    {
         //        auto cmd_list = interf.get_command_list();
         //        imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, swapchain_image, AppWindow<T>::size_x, AppWindow<T>::size_y);
