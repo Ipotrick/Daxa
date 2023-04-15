@@ -28,14 +28,14 @@ namespace tests
 //
     //    // This is pointless, but done to show how the task list executes
     //    task_list.add_task({
-    //        .task = [&](daxa::GenericTaskInterface const &)
+    //        .task = [&](daxa::TaskInterface<> const &)
     //        {
     //            std::cout << "Hello, ";
     //        },
     //        .name = APPNAME_PREFIX("task 1 (execution)"),
     //    });
     //    task_list.add_task({
-    //        .task = [&](daxa::GenericTaskInterface const &)
+    //        .task = [&](daxa::TaskInterface<> const &)
     //        {
     //            std::cout << "World!" << std::endl;
     //        },
@@ -70,7 +70,7 @@ namespace tests
     //                 daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
     //                 daxa::ImageMipArraySlice{}},
     //            },
-    //        .task = [](daxa::GenericTaskInterface const &) {},
+    //        .task = [](daxa::TaskInterface<> const &) {},
     //        .name = APPNAME_PREFIX("write image 1"),
     //    });
     //    // READ_IMAGE 1
@@ -82,7 +82,7 @@ namespace tests
     //                 daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
     //                 daxa::ImageMipArraySlice{}},
     //            },
-    //        .task = [](daxa::GenericTaskInterface const &) {},
+    //        .task = [](daxa::TaskInterface<> const &) {},
     //        .name = APPNAME_PREFIX("read image 1"),
     //    });
 //
@@ -116,7 +116,7 @@ namespace tests
     //                {task_image,
     //                 daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
     //                 daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = 1}}},
-    //        .task = [](daxa::GenericTaskInterface const &) {},
+    //        .task = [](daxa::TaskInterface<> const &) {},
     //        .name = APPNAME_PREFIX("write image array layer 1"),
     //    });
     //    // READ_IMAGE 1
@@ -127,7 +127,7 @@ namespace tests
     //                {task_image,
     //                 daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
     //                 daxa::ImageMipArraySlice{.base_array_layer = 1, .layer_count = 1}}},
-    //        .task = [](daxa::GenericTaskInterface const &) {},
+    //        .task = [](daxa::TaskInterface<> const &) {},
     //        .name = APPNAME_PREFIX("read image array layer 1"),
     //    });
     //    task_list.complete({});
@@ -158,7 +158,7 @@ namespace tests
     //            {task_buffer, daxa::TaskBufferAccess::HOST_TRANSFER_WRITE},
     //        },
     //        .used_images = {},
-    //        .task = [](daxa::GenericTaskInterface const &) {},
+    //        .task = [](daxa::TaskInterface<> const &) {},
     //        .name = APPNAME_PREFIX("host transfer buffer"),
     //    });
 //
@@ -170,7 +170,7 @@ namespace tests
     //            },
     //        },
     //        .used_images = {},
-    //        .task = [](daxa::GenericTaskInterface const &) {},
+    //        .task = [](daxa::TaskInterface<> const &) {},
     //        .name = APPNAME_PREFIX("read buffer"),
     //    });
 //
@@ -223,7 +223,7 @@ namespace tests
     //                 daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
     //                 daxa::ImageMipArraySlice{.base_array_layer = 1, .layer_count = 1}},
     //            },
-    //        .task = [](daxa::GenericTaskInterface const &) {},
+    //        .task = [](daxa::TaskInterface<> const &) {},
     //        .name = APPNAME_PREFIX("read array layer 2"),
     //    });
     //    task_list.add_task({
@@ -234,7 +234,7 @@ namespace tests
     //                 daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
     //                 daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = 1}},
     //            },
-    //        .task = [](daxa::GenericTaskInterface const &) {},
+    //        .task = [](daxa::TaskInterface<> const &) {},
     //        .name = APPNAME_PREFIX("write array layer 1"),
     //    });
     //    task_list.complete({});
@@ -295,7 +295,7 @@ namespace tests
     //                 daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
     //                 daxa::ImageMipArraySlice{.base_array_layer = 1, .layer_count = 1}},
     //            },
-    //        .task = [](daxa::GenericTaskInterface const &) {},
+    //        .task = [](daxa::TaskInterface<> const &) {},
     //        .name = APPNAME_PREFIX("read image layer 2"),
     //    });
     //    task_list.add_task({
@@ -306,7 +306,7 @@ namespace tests
     //                 daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
     //                 daxa::ImageMipArraySlice{.base_array_layer = 3, .layer_count = 1}},
     //            },
-    //        .task = [](daxa::GenericTaskInterface const &) {},
+    //        .task = [](daxa::TaskInterface<> const &) {},
     //        .name = APPNAME_PREFIX("write image layer 4"),
     //    });
     //    task_list.add_task({
@@ -317,7 +317,7 @@ namespace tests
     //                 daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
     //                 daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = 4}},
     //            },
-    //        .task = [](daxa::GenericTaskInterface const &) {},
+    //        .task = [](daxa::TaskInterface<> const &) {},
     //        .name = APPNAME_PREFIX("write image layer 1 - 4"),
     //    });
     //    task_list.add_task({
@@ -328,7 +328,7 @@ namespace tests
     //                 daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
     //                 daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = 4}},
     //            },
-    //        .task = [](daxa::GenericTaskInterface const &) {},
+    //        .task = [](daxa::TaskInterface<> const &) {},
     //        .name = APPNAME_PREFIX("read image layer 1 - 4"),
     //    });
 //
@@ -411,7 +411,7 @@ namespace tests
     //        .shader_uses_image_aliases = {
     //            daxa::TaskImageAliasInfo{.alias = "shader_integration_image", .aliased_image = task_image},
     //        },
-    //        .task = [&](daxa::GenericTaskInterface const & tri)
+    //        .task = [&](daxa::TaskInterface<> const & tri)
     //        {
     //            auto cmd = tri.get_command_list();
     //            cmd.set_pipeline(*compute_pipeline);
@@ -486,18 +486,18 @@ namespace tests
     //    task_list.use_persistent_buffer(persistent_task_buffer);
     //    task_list.add_task({
     //        .used_images = {{.id = persistent_task_image, .access = daxa::TaskImageAccess::SHADER_WRITE_ONLY}},
-    //        .task = [&](daxa::GenericTaskInterface const &) {},
+    //        .task = [&](daxa::TaskInterface<> const &) {},
     //        .name = "write persistent image",
     //    });
     //    task_list.add_task({
     //        .used_buffers = {{.id = persistent_task_buffer, .access = daxa::TaskBufferAccess::SHADER_READ_ONLY}},
     //        .used_images = {{.id = persistent_task_image, .access = daxa::TaskImageAccess::SHADER_READ_ONLY}},
-    //        .task = [&](daxa::GenericTaskInterface const &) {},
+    //        .task = [&](daxa::TaskInterface<> const &) {},
     //        .name = "read persistent image, read persistent buffer",
     //    });
     //    task_list.add_task({
     //        .used_buffers = {{.id = persistent_task_buffer, .access = daxa::TaskBufferAccess::SHADER_READ_ONLY}},
-    //        .task = [&](daxa::GenericTaskInterface const &) {},
+    //        .task = [&](daxa::TaskInterface<> const &) {},
     //        .name = "read persistent buffer",
     //    });
     //    task_list.submit({});
@@ -560,7 +560,7 @@ namespace tests
                 {task_image1, daxa::TaskImageAccess::SHADER_WRITE_ONLY, daxa::ImageMipArraySlice{}},
                 {task_image2, daxa::TaskImageAccess::SHADER_READ_ONLY, daxa::ImageMipArraySlice{}},
             },
-            .task = [](daxa::GenericTaskInterface const &) {},
+            .task = [](daxa::TaskInterface<> const &) {},
             .name = APPNAME_PREFIX("task 1 (output_graph)"),
         });
 
@@ -571,7 +571,7 @@ namespace tests
             .used_images = {
                 {task_image2, daxa::TaskImageAccess::SHADER_WRITE_ONLY, daxa::ImageMipArraySlice{}},
             },
-            .task = [](daxa::GenericTaskInterface const &) {},
+            .task = [](daxa::TaskInterface<> const &) {},
             .name = APPNAME_PREFIX("task 2 (output_graph)"),
         });
         task_list.add_task({
@@ -581,7 +581,7 @@ namespace tests
             .used_images = {
                 {task_image3, daxa::TaskImageAccess::SHADER_WRITE_ONLY, daxa::ImageMipArraySlice{}},
             },
-            .task = [](daxa::GenericTaskInterface const &) {},
+            .task = [](daxa::TaskInterface<> const &) {},
             .name = APPNAME_PREFIX("task 3 (output_graph)"),
         });
 
@@ -612,7 +612,7 @@ namespace tests
                     },
                 },
             },
-            .task = [](daxa::GenericTaskInterface const &) {},
+            .task = [](daxa::TaskInterface<> const &) {},
             .name = APPNAME_PREFIX("task 4 (output_graph)"),
         });
 
@@ -623,7 +623,7 @@ namespace tests
             .used_images = {
                 {task_image3, daxa::TaskImageAccess::SHADER_READ_ONLY, daxa::ImageMipArraySlice{}},
             },
-            .task = [](daxa::GenericTaskInterface const &) {},
+            .task = [](daxa::TaskInterface<> const &) {},
             .name = APPNAME_PREFIX("task 5 (output_graph)"),
         });
 
