@@ -11,7 +11,7 @@ namespace tests
     }
 
     void set_initial_buffer_data(
-        daxa::GenericTaskInterface & tri,
+        daxa::TaskInterface<> & tri,
         daxa::CommandList & cmd,
         daxa::TaskBufferId buffer,
         u32 size,
@@ -31,7 +31,7 @@ namespace tests
     }
 
     void validate_buffer_data(
-        daxa::GenericTaskInterface & tri,
+        daxa::TaskInterface<> & tri,
         daxa::CommandList & cmd,
         daxa::TaskBufferId buffer,
         u32 size,
@@ -48,7 +48,7 @@ namespace tests
     }
 
     void set_initial_image_data(
-        daxa::GenericTaskInterface & tri,
+        daxa::TaskInterface<> & tri,
         daxa::CommandList & cmd,
         daxa::TaskImageId image,
         auto size,
@@ -72,7 +72,7 @@ namespace tests
     }
 
     void validate_image_data(
-        daxa::GenericTaskInterface & tri,
+        daxa::TaskInterface<> & tri,
         daxa::CommandList & cmd,
         daxa::TaskImageId image,
         auto size,
@@ -192,7 +192,7 @@ namespace tests
                 .used_buffers = {
                     TBU{.id = long_life_buffer, .access = TBA::TRANSFER_WRITE},
                 },
-                .task = [=](daxa::GenericTaskInterface tri)
+                .task = [=](daxa::TaskInterface<> tri)
                 {
                     auto cmd = tri.get_command_list();
                     set_initial_buffer_data(tri, cmd, long_life_buffer, LONG_LIFE_BUFFER_SIZE, LONG_LIFE_BUFFER_VALUE);
@@ -204,7 +204,7 @@ namespace tests
                 .used_images = {
                     TIU{.id = medium_life_image, .access = TIA::TRANSFER_WRITE},
                 },
-                .task = [=](daxa::GenericTaskInterface tri)
+                .task = [=](daxa::TaskInterface<> tri)
                 {
                     auto cmd = tri.get_command_list();
                     set_initial_image_data(tri, cmd, medium_life_image, MEDIUM_LIFE_IMAGE_SIZE, MEDIUM_LIFE_IMAGE_VALUE);
@@ -218,7 +218,7 @@ namespace tests
                     TIU{.id = medium_life_image, .access = TIA::COMPUTE_SHADER_READ_ONLY, .view_type = daxa::ImageViewType::REGULAR_3D},
                     TIU{.id = long_life_image, .access = TIA::TRANSFER_WRITE},
                 },
-                .task = [=](daxa::GenericTaskInterface tri)
+                .task = [=](daxa::TaskInterface<> tri)
                 {
                     auto cmd = tri.get_command_list();
                     set_initial_image_data(tri, cmd, long_life_image, LONG_LIFE_IMAGE_SIZE, LONG_LIFE_IMAGE_VALUE);
@@ -230,14 +230,14 @@ namespace tests
 
             task_list.add_task({
                 .used_images = {TIU{.id = short_life_image, .access = TIA::COMPUTE_SHADER_READ_WRITE}},
-                .task = [=](daxa::GenericTaskInterface) {},
+                .task = [=](daxa::TaskInterface<>) {},
                 .name = "dummy use short life image",
             });
 
             task_list.add_task({
                 .used_buffers = {TBU{.id = short_life_buffer, .access = TBA::COMPUTE_SHADER_READ_WRITE}},
                 .used_images = {TIU{.id = long_life_image, .access = TIA::COMPUTE_SHADER_READ_ONLY, .view_type = daxa::ImageViewType::REGULAR_3D}},
-                .task = [=](daxa::GenericTaskInterface tri)
+                .task = [=](daxa::TaskInterface<> tri)
                 {
                     auto cmd = tri.get_command_list();
                     validate_image_data(tri, cmd, long_life_image, LONG_LIFE_IMAGE_SIZE, LONG_LIFE_IMAGE_VALUE, *test_image_pipeline);

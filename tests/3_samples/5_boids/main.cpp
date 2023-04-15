@@ -218,7 +218,7 @@ struct App : AppWindow<App>
                 {task_boid_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE},
                 {task_old_boid_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY},
             },
-            .task = [=, this](daxa::GenericTaskInterface const & runtime)
+            .task = [=, this](daxa::TaskInterface<> const & runtime)
             {
                 BufferId const boid_buffer_id = runtime.get_buffers(task_boid_buffer)[0];
                 BufferId const old_boid_buffer_id = runtime.get_buffers(task_old_boid_buffer)[0];
@@ -235,7 +235,7 @@ struct App : AppWindow<App>
             .used_images = {
                 {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
             },
-            .task = [=, this](daxa::GenericTaskInterface const & runtime)
+            .task = [=, this](daxa::TaskInterface<> const & runtime)
             {
                 ImageId const render_target_id = runtime.get_images(task_swapchain_image)[0];
                 BufferId const boid_buffer_id = runtime.get_buffers(task_boid_buffer)[0];

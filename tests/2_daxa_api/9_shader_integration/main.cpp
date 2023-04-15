@@ -131,7 +131,7 @@ namespace tests
 
         task_list.add_task({
             .shader_uses = daxa::TestShaderUses,
-            .task = [&](daxa::GenericTaskInterface const & tri)
+            .task = [&](daxa::TaskInterface<> const & tri)
             {
                 auto cmd = tri.get_command_list();
                 cmd.set_pipeline(*compute_pipeline);

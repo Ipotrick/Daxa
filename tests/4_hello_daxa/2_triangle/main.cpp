@@ -219,7 +219,7 @@ auto main() -> int
                     // with a transfer write operation!
                     {task_buffer_id, daxa::TaskBufferAccess::TRANSFER_WRITE},
                 },
-                .task = [&task_buffer_id, &task_condition_states](daxa::GenericTaskInterface task_runtime)
+                .task = [&task_buffer_id, &task_condition_states](daxa::TaskInterface<> task_runtime)
                 {
                     auto cmd_list = task_runtime.get_command_list();
 
@@ -254,7 +254,7 @@ auto main() -> int
             // first array slice.
             {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
         },
-        .task = [task_swapchain_image, task_buffer_id, &pipeline, &window_info](daxa::GenericTaskInterface task_runtime)
+        .task = [task_swapchain_image, task_buffer_id, &pipeline, &window_info](daxa::TaskInterface<> task_runtime)
         {
             auto cmd_list = task_runtime.get_command_list();
             // Here we can just get the buffer and image IDs from the runtime
