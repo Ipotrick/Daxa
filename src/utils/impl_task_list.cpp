@@ -192,10 +192,10 @@ namespace daxa
     {
     }
 
-    auto GenericTaskInterface::get_task_input() const -> std::vector<GenericTaskInput> const &
+    auto GenericTaskInterface::get_args() const -> std::span<GenericTaskInput>
     {
         auto const & impl = *static_cast<ImplTaskRuntimeInterface const *>(this->backend);
-        return impl.current_task->info.task_input;
+        return impl.current_task->info.task_args.span();
     }
 
     auto GenericTaskInterface::get_device() const -> Device &
@@ -245,8 +245,8 @@ namespace daxa
     {
         auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
         auto const local_id = impl.task_list.id_to_local_id(task_resource_id);
-        auto iter = std::find_if(impl.current_task->info.task_input.begin(),
-                                 impl.current_task->info.task_input.end(),
+        auto iter = std::find_if(impl.current_task->info.task_args.span().begin(),
+                                 impl.current_task->info.task_args.span().end(),
                                  [&](GenericTaskInput const & input)
                                  {
                                      if (input.type == TaskInputType::IMAGE)
@@ -256,8 +256,8 @@ namespace daxa
                                      }
                                      return false;
                                  });
-        DAXA_DBG_ASSERT_TRUE_M(iter != impl.current_task->info.task_input.end(), "detected invalid task image id; all image ids that a view is requested from in a task must be mentioned in the task input!");
-        isize const view_cache_index = std::distance(impl.current_task->info.task_input.begin(), iter);
+        DAXA_DBG_ASSERT_TRUE_M(iter != impl.current_task->info.task_args.span().end(), "detected invalid task image id; all image ids that a view is requested from in a task must be mentioned in the task input!");
+        isize const view_cache_index = std::distance(impl.current_task->info.task_args.span().begin(), iter);
         // TODO(pahrens):
         return impl.current_task->image_view_cache[view_cache_index][index];
     }
@@ -610,11 +610,11 @@ namespace daxa
 
     void ImplTaskList::update_image_view_cache(Task & task, TaskListPermutation const & permutation)
     {
-        for (u32 task_image_use_index = 0; task_image_use_index < task.info.task_input.size(); ++task_image_use_index)
+        for (u32 task_image_use_index = 0; task_image_use_index < task.info.task_args.span().size(); ++task_image_use_index)
         {
-            if (task.info.task_input[task_image_use_index].type == TaskInputType::IMAGE)
+            if (task.info.task_args.span()[task_image_use_index].type == TaskInputType::IMAGE)
             {
-                auto & image_use = TaskImageInput::from(task.info.task_input[task_image_use_index]);
+                auto & image_use = TaskImageInput::from(task.info.task_args.span()[task_image_use_index]);
                 auto const slice = image_use.slice;
                 // The image id here is alreadt the task list local id.
                 // The persistent ids are converted to local ids in the add_task function.
@@ -659,14 +659,14 @@ namespace daxa
                         // When the use image view parameters match the default view,
                         // then use the default view id and avoid creating a new id here.
                         bool const is_use_default_slice = view_info.slice == slice;
-                        bool const is_use_default_view_type = !image_use.view_type.has_value() || (image_use.view_type.value() == view_info.type);
+                        bool const is_use_default_view_type = (image_use.view_type == view_info.type);
                         if (is_use_default_slice && is_use_default_view_type)
                         {
                             view_cache.push_back(parent.default_view());
                         }
                         else
                         {
-                            view_info.type = image_use.view_type.value_or(view_info.type);
+                            view_info.type = (image_use.view_type != ImageViewType::MAX_ENUM) ? image_use.view_type : view_info.type;
                             view_info.slice = slice;
                             view_cache.push_back(info.device.create_image_view(view_info));
                         }
@@ -681,10 +681,10 @@ namespace daxa
     // TODO(pahrens): validate only actually accessed resources within the current permutation!
     void validate_runtime_resources(ImplTaskList const & impl)
     {
+#if DAXA_VALIDATION
         constexpr std::string_view PERSISTENT_RESOURCE_MESSAGE = {
             "when executing a task list, all used persistent resources must be backed by at least one and exclusively "
             "valid runtime resources"};
-#if DAXA_VALIDATION
         for (u32 local_buffer_i = 0; local_buffer_i < impl.global_buffer_infos.size(); ++local_buffer_i)
         {
             if (!impl.global_buffer_infos.at(local_buffer_i).is_persistent())
@@ -776,21 +776,21 @@ namespace daxa
         //}
 
         usize input_index = 0;
-        for (auto & input : task.info.task_input)
+        for (auto & input : task.info.task_args.span())
         {
             switch (input.type)
             {
             case TaskInputType::BUFFER:
             {
                 auto & use = TaskBufferInput::from(input);
-                use.m_buffers = get_actual_buffers(use.id);
+                use.buffers = get_actual_buffers(use.id);
             }
             break;
             case TaskInputType::IMAGE:
             {
                 auto & use = TaskImageInput::from(input);
-                use.m_images = get_actual_images(use.id, permutation);
-                use.m_views = std::span{task.image_view_cache[input_index].data(), task.image_view_cache[input_index].size()};
+                use.images = get_actual_images(use.id, permutation);
+                use.views = std::span{task.image_view_cache[input_index].data(), task.image_view_cache[input_index].size()};
             }
             break;
             default:
@@ -837,14 +837,13 @@ namespace daxa
         impl.update_active_permutations();
     }
 
-    void ImplTaskList::check_for_overlapping_use(TaskInfo<> const & info)
+    void ImplTaskList::check_for_overlapping_use(GenericTaskInfo const & info)
     {
-
         usize input_index_a = 0;
-        for (auto & input_a : info.task_input)
+        for (auto & input_a : info.task_args.span())
         {
             usize input_index_b = 0;
-            for (auto & input_b : info.task_input)
+            for (auto & input_b : info.task_args.span())
             {
                 if (input_a.type == input_b.type && input_index_a != input_index_b)
                 {
@@ -895,7 +894,7 @@ namespace daxa
         TaskListPermutation & perm,
         TaskBatchSubmitScope & current_submit_scope,
         usize const current_submit_scope_index,
-        TaskInfo<> const & info) -> usize
+        GenericTaskInfo const & info) -> usize
     {
         usize first_possible_batch_index = 0;
         if (!impl.info.reorder_tasks)
@@ -903,7 +902,7 @@ namespace daxa
             first_possible_batch_index = std::max(current_submit_scope.task_batches.size(), 1ull) - 1ull;
         }
 
-        for (auto const & input : info.task_input)
+        for (auto const & input : info.task_args.span())
         {
             switch (input.type)
             {
@@ -999,7 +998,7 @@ namespace daxa
         return first_possible_batch_index;
     }
 
-    void validate_task_aliases(ImplTaskList & impl, TaskInfo<> const & info)
+    void validate_task_aliases(ImplTaskList & impl, GenericTaskInfo const & info)
     {
 #if DAXA_VALIDATION
         // TODO(pahrens):
@@ -1078,23 +1077,23 @@ namespace daxa
 #endif // #if DAXA_VALIDATION
     }
 
-    void translate_persistent_ids(ImplTaskList const & impl, TaskInfo<> & info)
+    void translate_persistent_ids(ImplTaskList const & impl, GenericTaskInfo & info)
     {
-        for (auto & buffer_alias : info.shader_uses_buffer_aliases)
-        {
-            if (auto * task_buffer_id = std::get_if<TaskBufferId>(&buffer_alias.aliased_buffer))
-            {
-                *task_buffer_id = impl.id_to_local_id(*task_buffer_id);
-            }
-        }
-        for (auto & image_alias : info.shader_uses_image_aliases)
-        {
-            if (auto * task_image_id = std::get_if<TaskImageId>(&image_alias.aliased_image))
-            {
-                *task_image_id = impl.id_to_local_id(*task_image_id);
-            }
-        }
-        for (auto & input : info.task_input)
+        // for (auto & buffer_alias : info.shader_uses_buffer_aliases)
+        // {
+        //     if (auto * task_buffer_id = std::get_if<TaskBufferId>(&buffer_alias.aliased_buffer))
+        //     {
+        //         *task_buffer_id = impl.id_to_local_id(*task_buffer_id);
+        //     }
+        // }
+        // for (auto & image_alias : info.shader_uses_image_aliases)
+        // {
+        //     if (auto * task_image_id = std::get_if<TaskImageId>(&image_alias.aliased_image))
+        //     {
+        //         *task_image_id = impl.id_to_local_id(*task_image_id);
+        //     }
+        // }
+        for (auto & input : info.task_args.span())
         {
             switch (input.type)
             {
@@ -1117,7 +1116,7 @@ namespace daxa
     }
 
     using ShaderUseIdOffsetTable = std::vector<std::variant<std::pair<TaskImageId, usize>, std::pair<TaskBufferId, usize>, std::monostate>>;
-    ShaderUseIdOffsetTable insert_shader_uses(ImplTaskList & impl, TaskInfo<> & info)
+    ShaderUseIdOffsetTable insert_shader_uses(ImplTaskList & impl, GenericTaskInfo & info)
     {
         // TODO(pahrens)
         ShaderUseIdOffsetTable offset_table = {};
@@ -1194,22 +1193,21 @@ namespace daxa
         return offset_table;
     }
 
-    void TaskList::add_task(TaskInfo<> const & info)
+    void TaskList::add_task(GenericTaskInfo && info)
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "completed task lists can not record new tasks");
-        TaskInfo<> updated_info = info;
-        validate_task_aliases(impl, updated_info);
-        auto const shader_id_use_to_offset_table = insert_shader_uses(impl, updated_info);
-        translate_persistent_ids(impl, updated_info);
+        validate_task_aliases(impl, info);
+        auto const shader_id_use_to_offset_table = insert_shader_uses(impl, info);
+        translate_persistent_ids(impl, info);
         // Overlapping resource uses can be valid in the case of reads in the same layout for example.
         // But in order to make the task list implementation simpler,
         // daxa does not allow for overlapping use of a resource within a task, even when it is a read in the same layout.
-        impl.check_for_overlapping_use(updated_info);
+        impl.check_for_overlapping_use(info);
 
         for (auto * permutation : impl.record_active_permutations)
         {
-            permutation->add_task(impl, updated_info, shader_id_use_to_offset_table);
+            permutation->add_task(impl, info, shader_id_use_to_offset_table);
         }
     }
 
@@ -1386,12 +1384,12 @@ namespace daxa
     thread_local std::vector<ImageMipArraySlice> tl_new_use_slices = {};
     void TaskListPermutation::add_task(
         ImplTaskList & task_list_impl,
-        TaskInfo<> & info,
+        GenericTaskInfo & info,
         ShaderUseIdToOffsetTable const & shader_id_use_to_offset_table)
     {
         TaskId const task_id = this->tasks.size();
         std::vector<std::vector<ImageViewId>> view_cache = {};
-        view_cache.resize(info.task_input.size(), {});
+        view_cache.resize(info.task_args.span().size(), {});
         this->tasks.emplace_back(Task{
             .info = info,
             .image_view_cache = std::move(view_cache),
@@ -1423,7 +1421,7 @@ namespace daxa
         // To simplify and optimize the sync placement daxa only synchronizes between batches.
         // This effectively means that all the resource uses, and their memory and execution dependencies in a batch
         // are combined into a single unit which is synchronized against other batches.
-        for (auto const & input : info.task_input)
+        for (auto const & input : info.task_args.span())
         {
             switch (input.type)
             {
@@ -2767,7 +2765,7 @@ namespace daxa
             impl.global_image_infos.at(use.id.index).get_name(),
             daxa::to_string(use.access),
             daxa::to_string(use.slice),
-            use.view_type.has_value() ? daxa::to_string(use.view_type.value()) : "auto",
+            use.view_type < ImageViewType::MAX_ENUM ? daxa::to_string(use.view_type) : "auto",
             use.name);
     }
 
