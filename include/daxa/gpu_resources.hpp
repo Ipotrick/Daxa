@@ -15,6 +15,8 @@ namespace daxa
         REGULAR_1D_ARRAY = 4,
         REGULAR_2D_ARRAY = 5,
         CUBE_ARRAY = 6,
+        // TODO(grundlet): add the other max values
+        MAX_ENUM = 7,
     };
 
     auto to_string(ImageViewType const & type) -> std::string_view;
@@ -31,8 +33,8 @@ namespace daxa
 
     struct GPUResourceId
     {
-        u32 index : 24;
-        u32 version : 8;
+        u32 index : 24 = {};
+        u32 version : 8 = {};
 
         auto is_empty() const -> bool;
 
