@@ -100,7 +100,7 @@ namespace daxa
 
     struct Task
     {
-        TaskInfo<> info = {};
+        GenericTaskInfo info = {};
         std::vector<std::vector<ImageViewId>> image_view_cache = {};
         ShaderUseIdToOffsetTable id_to_offset = {};
     };
@@ -171,7 +171,7 @@ namespace daxa
         usize swapchain_image_last_use_submit_scope_index = std::numeric_limits<usize>::max();
 
         void add_task(ImplTaskList & task_list_impl,
-                      TaskInfo<> & info,
+                      GenericTaskInfo & info,
                       ShaderUseIdToOffsetTable const & shader_id_use_to_offset_table);
         void submit(TaskSubmitInfo const & info);
         void present(TaskPresentInfo const & info);
@@ -356,7 +356,7 @@ namespace daxa
         void execute_task(ImplTaskRuntimeInterface & impl_runtime, TaskListPermutation & permutation, TaskBatchId in_batch_task_index, TaskId task_id);
         void insert_pre_batch_barriers(TaskListPermutation & permutation);
 
-        void check_for_overlapping_use(TaskInfo<> const & info);
+        void check_for_overlapping_use(GenericTaskInfo const & info);
 
         void create_transient_runtime_buffers();
         void create_transient_runtime_images(TaskListPermutation & permutation);
