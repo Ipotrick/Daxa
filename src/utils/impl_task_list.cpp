@@ -16,6 +16,31 @@ namespace daxa
     {
         return std::format("tlidx: {}, index: {}", id.task_list_index, id.index);
     }
+    
+    auto get_task_arg_shader_alignment(TaskInputType type) -> u32
+    {
+        if (type == TaskInputType::BUFFER)
+        {
+            return 8;
+        }
+        return 4;
+    }
+    
+    auto get_task_arg_shader_offsets_size(std::span<GenericTaskInput> args) -> std::pair<std::vector<u32>, u32>
+    {
+        std::vector<u32> ret = {};
+        ret.reserve(args.size());
+        u32 offset = 0;
+        for (auto const & arg : args)
+        {
+            auto const align = get_task_arg_shader_alignment(arg.type);
+            offset = (offset + align - 1) / align * align;
+            ret.push_back(offset);
+            offset += align;
+        }
+        // Final offset is equal to total size.
+        return {ret, offset};
+    }
 
     auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access>
     {
@@ -747,34 +772,6 @@ namespace daxa
         impl_runtime.reuse_last_command_list = true;
         Task & task = permutation.tasks[task_id];
         update_image_view_cache(task, permutation);
-        // TODO(pahrens)
-        // bool const has_shader_uses = task.info.shader_uses.size > 0;
-        // if (has_shader_uses)
-        //{
-        //    auto constant_buffer_alloc = staging_memory.allocate(task.info.shader_uses.size).value();
-        //    u8 * host_constant_buffer_ptr = reinterpret_cast<u8 *>(constant_buffer_alloc.host_address);
-        //    usize image_use_index = 0;
-        //    for (auto & shader_use_id_mapping : task.id_to_offset)
-        //    {
-        //        if (auto image_mapping = std::get_if<std::pair<TaskImageId, usize>>(&shader_use_id_mapping))
-        //        {
-        //            *(reinterpret_cast<ImageViewId *>(host_constant_buffer_ptr + image_mapping->second)) = task.image_view_cache[image_use_index][0];
-        //            ++image_use_index;
-        //        }
-        //        else if (auto buffer_mapping = std::get_if<std::pair<TaskBufferId, usize>>(&shader_use_id_mapping))
-        //        {
-        //            *(reinterpret_cast<BufferDeviceAddress *>(host_constant_buffer_ptr + buffer_mapping->second)) =
-        //                info.device.get_device_address(get_actual_buffers(buffer_mapping->first)[0]);
-        //        }
-        //    }
-        //    impl_runtime.command_lists.back().set_constant_buffer({
-        //        .slot = task.info.shader_uses.slot,
-        //        .buffer = staging_memory.get_buffer(),
-        //        .size = constant_buffer_alloc.size,
-        //        .offset = constant_buffer_alloc.buffer_offset,
-        //    });
-        //}
-
         usize input_index = 0;
         for (auto & input : task.info.task_args.span())
         {
@@ -797,6 +794,41 @@ namespace daxa
                 break;
             }
             input_index += 1;
+        }
+        bool const upload_args_to_constant_buffer = task.info.shader_binding != -1;
+        if (upload_args_to_constant_buffer)
+        {
+            auto constant_buffer_alloc = staging_memory.allocate(task.info.shader_constant_buffer_size).value();
+            u8 * host_constant_buffer_ptr = reinterpret_cast<u8 *>(constant_buffer_alloc.host_address);
+            usize image_use_index = 0;
+            for (u32 arg_i = 0; arg_i < task.info.task_args.count; ++arg_i)
+            {
+                auto const type = task.info.task_args.span()[arg_i].type;
+                switch (type)
+                {
+                case TaskInputType::BUFFER:
+                {
+                    auto adr = (host_constant_buffer_ptr + task.info.shader_constant_buffer_offsets[arg_i]);
+                    auto & arg = TaskBufferInput::from(task.info.task_args.span()[arg_i]);
+                    *reinterpret_cast<types::BufferDeviceAddress *>(adr) = info.device.get_device_address(arg.buffers[0]);
+                }
+                break;
+                case TaskInputType::IMAGE:
+                {
+                    auto adr = (host_constant_buffer_ptr + task.info.shader_constant_buffer_offsets[arg_i]);
+                    auto & arg = TaskImageInput::from(task.info.task_args.span()[arg_i]);
+                    *reinterpret_cast<types::ImageViewId *>(adr) = arg.views[0];
+                }
+                break;
+                default: break;
+                }
+            }
+            impl_runtime.command_lists.back().set_constant_buffer({
+                .slot = static_cast<u32>(task.info.shader_binding),
+                .buffer = staging_memory.get_buffer(),
+                .size = constant_buffer_alloc.size,
+                .offset = constant_buffer_alloc.buffer_offset,
+            });
         }
         impl_runtime.current_task = &task;
         impl_runtime.command_lists.back().begin_label({
@@ -998,101 +1030,8 @@ namespace daxa
         return first_possible_batch_index;
     }
 
-    void validate_task_aliases(ImplTaskList & impl, GenericTaskInfo const & info)
-    {
-#if DAXA_VALIDATION
-        // TODO(pahrens):
-        // for (TaskBufferAliasInfo const & buffer_alias : info.shader_uses_buffer_aliases)
-        //{
-        //    // Check if the aliased buffer is valid:
-        //    [[maybe_unused]] std::string aliased_buffer_name = {};
-        //    if (TaskBufferId const * buffer_id = std::get_if<TaskBufferId>(&buffer_alias.aliased_buffer))
-        //    {
-        //        auto id = impl.id_to_local_id(*buffer_id);
-        //        aliased_buffer_name = std::string(impl.global_buffer_infos[id.index].get_name());
-        //    }
-        //    else
-        //    {
-        //        aliased_buffer_name = std::get<std::string>(buffer_alias.aliased_buffer);
-        //        DAXA_DBG_ASSERT_TRUE_M(
-        //            impl.buffer_name_to_id.contains(aliased_buffer_name),
-        //            std::string("attempted to alias non existent buffer \"") +
-        //                aliased_buffer_name +
-        //                std::string("\""));
-        //    }
-        //    // Check if the alias is present in the shader uses.
-        //    auto iter = std::find_if(
-        //        info.shader_uses.list.begin(),
-        //        info.shader_uses.list.end(),
-        //        [&](auto const & shader_use)
-        //        {
-        //            if (ShaderTaskBufferUseInit const * buffer_use = std::get_if<ShaderTaskBufferUseInit>(&shader_use))
-        //            {
-        //                return buffer_use->name == buffer_alias.alias;
-        //            }
-        //            return false;
-        //        });
-        //    DAXA_DBG_ASSERT_TRUE_M(
-        //        iter != info.shader_uses.list.end(),
-        //        std::string("alias \"") +
-        //            buffer_alias.alias +
-        //            std::string("\" does not match the name of any declared shader buffer use. Check if the spelling is correct in alias and shader use."));
-        //}
-        // for (TaskImageAliasInfo const & image_alias : info.shader_uses_image_aliases)
-        //{
-        //    // Check if the aliased image is valid:
-        //    [[maybe_unused]] std::string aliased_image_name = {};
-        //    if (TaskImageId const * image_id = std::get_if<TaskImageId>(&image_alias.aliased_image))
-        //    {
-        //        auto id = impl.id_to_local_id(*image_id);
-        //        aliased_image_name = std::string(impl.global_image_infos[id.index].get_name());
-        //    }
-        //    else
-        //    {
-        //        aliased_image_name = std::get<std::string>(image_alias.aliased_image);
-        //        DAXA_DBG_ASSERT_TRUE_M(
-        //            impl.image_name_to_id.contains(aliased_image_name),
-        //            std::string("attempted to alias non existent image \"") +
-        //                aliased_image_name +
-        //                std::string("\""));
-        //    }
-        //    // Check if the alias is present in the shader uses.
-        //    auto iter = std::find_if(
-        //        info.shader_uses.list.begin(),
-        //        info.shader_uses.list.end(),
-        //        [&](auto const & shader_use)
-        //        {
-        //            if (ShaderTaskImageUseInit const * image_use = std::get_if<ShaderTaskImageUseInit>(&shader_use))
-        //            {
-        //                return image_use->name == image_alias.alias;
-        //            }
-        //            return false;
-        //        });
-        //    DAXA_DBG_ASSERT_TRUE_M(
-        //        iter != info.shader_uses.list.end(),
-        //        std::string("alias \"") +
-        //            image_alias.alias +
-        //            std::string("\" does not fit the name of any declared shader image use. Check if the spelling is correct in alias and shader use."));
-        //}
-#endif // #if DAXA_VALIDATION
-    }
-
     void translate_persistent_ids(ImplTaskList const & impl, GenericTaskInfo & info)
     {
-        // for (auto & buffer_alias : info.shader_uses_buffer_aliases)
-        // {
-        //     if (auto * task_buffer_id = std::get_if<TaskBufferId>(&buffer_alias.aliased_buffer))
-        //     {
-        //         *task_buffer_id = impl.id_to_local_id(*task_buffer_id);
-        //     }
-        // }
-        // for (auto & image_alias : info.shader_uses_image_aliases)
-        // {
-        //     if (auto * task_image_id = std::get_if<TaskImageId>(&image_alias.aliased_image))
-        //     {
-        //         *task_image_id = impl.id_to_local_id(*task_image_id);
-        //     }
-        // }
         for (auto & input : info.task_args.span())
         {
             switch (input.type)
@@ -1115,90 +1054,10 @@ namespace daxa
         }
     }
 
-    using ShaderUseIdOffsetTable = std::vector<std::variant<std::pair<TaskImageId, usize>, std::pair<TaskBufferId, usize>, std::monostate>>;
-    ShaderUseIdOffsetTable insert_shader_uses(ImplTaskList & impl, GenericTaskInfo & info)
-    {
-        // TODO(pahrens)
-        ShaderUseIdOffsetTable offset_table = {};
-        // for (auto & shader_use : info.shader_uses.list)
-        //{
-        //     if (auto * shader_buffer_use = std::get_if<ShaderTaskBufferUseInit>(&shader_use))
-        //     {
-        //         TaskBufferId id = {};
-        //         // Try to look for an alias.
-        //         auto iter = std::find_if(
-        //             info.shader_uses_buffer_aliases.begin(),
-        //             info.shader_uses_buffer_aliases.end(),
-        //             [&](TaskBufferAliasInfo const & alias) -> bool
-        //             {
-        //                 return alias.alias == shader_buffer_use->name;
-        //             });
-        //         bool const found_alias = iter != info.shader_uses_buffer_aliases.end();
-        //         if (found_alias)
-        //         {
-        //             if (TaskBufferId const * alias_id = std::get_if<TaskBufferId>(&iter->aliased_buffer))
-        //             {
-        //                 id = *alias_id;
-        //             }
-        //             else
-        //             {
-        //                 std::string const & aliased_buffer_name = std::get<std::string>(iter->aliased_buffer);
-        //                 id = impl.buffer_name_to_id[aliased_buffer_name];
-        //             }
-        //         }
-        //         else
-        //         {
-        //             id = impl.buffer_name_to_id[std::string(shader_buffer_use->name)];
-        //         }
-        //         offset_table.push_back(std::pair<TaskBufferId, usize>{id, shader_buffer_use->offset});
-        //         info.used_buffers.push_back(TaskBufferUseInit{.id = id, .access = shader_buffer_use->access, .name = shader_buffer_use->name});
-        //     }
-        //     else if (auto * shader_image_use = std::get_if<ShaderTaskImageUseInit>(&shader_use))
-        //     {
-        //         TaskImageId used_image_id = {};
-        //         u32 mip_offset = {};
-        //         u32 array_layer_offset = {};
-        //         if (!impl.image_name_to_id.contains(std::string(shader_image_use->name)))
-        //         {
-        //             // Try to look for an alias.
-        //             auto iter = std::find_if(
-        //                 info.shader_uses_image_aliases.begin(),
-        //                 info.shader_uses_image_aliases.end(),
-        //                 [&](TaskImageAliasInfo const & alias) -> bool
-        //                 {
-        //                     return alias.alias == shader_image_use->name;
-        //                 });
-        //             if (TaskImageId * id = std::get_if<TaskImageId>(&iter->aliased_image))
-        //             {
-        //                 used_image_id = *id;
-        //             }
-        //             else if (std::string * name = std::get_if<std::string>(&iter->aliased_image))
-        //             {
-        //                 used_image_id = impl.image_name_to_id.at(*name);
-        //             }
-        //             mip_offset = iter->base_mip_level_offset;
-        //             array_layer_offset = iter->base_array_layer_offset;
-        //         }
-        //         else
-        //         {
-        //             used_image_id = impl.image_name_to_id.at(std::string(shader_image_use->name));
-        //         }
-        //         offset_table.push_back(std::pair<TaskImageId, usize>{used_image_id, shader_image_use->offset});
-        //         auto slice = shader_image_use->slice;
-        //         slice.base_mip_level += mip_offset;
-        //         slice.base_array_layer += array_layer_offset;
-        //         info.used_images.push_back(TaskImageUseInit{.id = used_image_id, .access = shader_image_use->access, .slice = slice, .name = shader_image_use->name});
-        //     }
-        // }
-        return offset_table;
-    }
-
     void TaskList::add_task(GenericTaskInfo && info)
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "completed task lists can not record new tasks");
-        validate_task_aliases(impl, info);
-        auto const shader_id_use_to_offset_table = insert_shader_uses(impl, info);
         translate_persistent_ids(impl, info);
         // Overlapping resource uses can be valid in the case of reads in the same layout for example.
         // But in order to make the task list implementation simpler,
@@ -1207,7 +1066,7 @@ namespace daxa
 
         for (auto * permutation : impl.record_active_permutations)
         {
-            permutation->add_task(impl, info, shader_id_use_to_offset_table);
+            permutation->add_task(impl, info);
         }
     }
 
@@ -1384,8 +1243,7 @@ namespace daxa
     thread_local std::vector<ImageMipArraySlice> tl_new_use_slices = {};
     void TaskListPermutation::add_task(
         ImplTaskList & task_list_impl,
-        GenericTaskInfo & info,
-        ShaderUseIdToOffsetTable const & shader_id_use_to_offset_table)
+        GenericTaskInfo & info)
     {
         TaskId const task_id = this->tasks.size();
         std::vector<std::vector<ImageViewId>> view_cache = {};
@@ -1393,7 +1251,6 @@ namespace daxa
         this->tasks.emplace_back(Task{
             .info = info,
             .image_view_cache = std::move(view_cache),
-            .id_to_offset = shader_id_use_to_offset_table,
         });
 
         usize const current_submit_scope_index = this->batch_submit_scopes.size() - 1;
