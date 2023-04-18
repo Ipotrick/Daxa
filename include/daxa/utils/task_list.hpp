@@ -249,6 +249,9 @@ namespace daxa
 
     struct GenericTaskInfo
     {
+        i32 shader_binding = -1;
+        u32 shader_constant_buffer_size = {};
+        std::vector<u32> shader_constant_buffer_offsets = {};
         GenericTaskArgsContainer task_args = {};
         TaskCallback task = {};
         std::string name = {};
@@ -277,21 +280,28 @@ namespace daxa
         template <typename TaskInput>
         void add_task(TaskInfo<TaskInput> const & info)
             requires requires(TaskInput a) { typename TaskInput::FIRST_DERIVED{}; } and
-                     std::derived_from<TaskInput, TaskUses<typename TaskInput::FIRST_DERIVED>>
+                     requires(TaskInput a) { TaskInput::SHADER_BINDING; } and
+                     std::derived_from<TaskInput, TaskUses<typename TaskInput::FIRST_DERIVED, TaskInput::SHADER_BINDING>>
         {
             GenericTaskArgsContainer args = {};
             args.count = TaskInput::USE_COUNT;
             args.memory.resize(sizeof(TaskInput), 0);
             std::memcpy(args.memory.data(), &info.args, sizeof(TaskInput));
 
+            isize const shader_binding = TaskInput::SHADER_BINDING;
+            auto const shader_offset_size = get_task_arg_shader_offsets_size(args);
+
             add_task(GenericTaskInfo{
+                .shader_binding = shader_binding,
+                .shader_constant_buffer_size = shader_offset_size.second,
+                .shader_constant_buffer_offsets = std::move(shader_offset_size.first),
                 .task_args = std::move(args),
                 .task = info.task,
                 .name = info.name,
             });
         }
 
-        void add_task(InlineTaskInfo const & info)
+        void add_inl_task(InlineTaskInfo const & info)
         {
             auto const size = TASK_INPUT_FIELD_SIZE * info.args.size();
             GenericTaskArgsContainer args = {};
@@ -299,7 +309,7 @@ namespace daxa
             args.count = info.args.size();
             for (usize i = 0; i < info.args.size(); ++i)
             {
-                reinterpret_cast<GenericTaskInput*>(args.memory.data())[i] = *(info.args.begin() + i);
+                reinterpret_cast<GenericTaskInput *>(args.memory.data())[i] = *(info.args.begin() + i);
             }
 
             add_task(GenericTaskInfo{

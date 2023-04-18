@@ -38,24 +38,16 @@ namespace daxa
         u32 size = {};
     };
 
+}
+
 #define DAXA_INL_TASK_USES_BEGIN(NAME, SLOT) \
-namespace daxa { \
-    inline static const TaskShaderUses NAME = []() -> TaskShaderUses \
-    { \
-        TaskShaderUses uses = {}; \
-        uses.slot = SLOT;
+    struct NAME : public daxa::TaskUses<NAME, SLOT> \
+    {
 #define DAXA_INL_TASK_USE_BUFFER(NAME, TYPE, TASK_ACCESS) \
-        /* must align buffer ptrs to 8 bytes */ \
-        uses.size = ((uses.size + 7) / 8) * 8; \
-        uses.list.push_back(ShaderTaskBufferUseInit{.name = #NAME, .access = daxa::TaskBufferAccess::TASK_ACCESS, .offset = uses.size}); \
-        uses.size += sizeof(daxa::types::BufferDeviceAddress);
+        daxa::TaskBufferInput NAME = {{.access = daxa::TaskBufferAccess::TASK_ACCESS}};
 #define DAXA_INL_TASK_USE_IMAGE(NAME, TYPE, TASK_ACCESS, SLICE) \
-        uses.list.push_back(ShaderTaskImageUseInit{.name = #NAME, .access = daxa::TaskImageAccess::TASK_ACCESS, .slice = SLICE, .view_type = TYPE::view_type(), .offset = uses.size}); \
-        uses.size += sizeof(daxa::types::ImageViewId);
+        daxa::TaskImageInput NAME = {{.access = daxa::TaskImageAccess::TASK_ACCESS, .slice = SLICE, .view_type = TYPE::view_type()}};
 #define DAXA_INL_TASK_USES_END() \
-        return uses; \
-    }(); \
-}
-}
+    };
 
 #endif

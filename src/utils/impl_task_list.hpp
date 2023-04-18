@@ -96,13 +96,10 @@ namespace daxa
         u32 allocation_offset = {};
     };
 
-    using ShaderUseIdToOffsetTable = std::vector<std::variant<std::pair<TaskImageId, usize>, std::pair<TaskBufferId, usize>, std::monostate>>;
-
     struct Task
     {
         GenericTaskInfo info = {};
         std::vector<std::vector<ImageViewId>> image_view_cache = {};
-        ShaderUseIdToOffsetTable id_to_offset = {};
     };
 
     struct CreateTaskBufferTask
@@ -171,8 +168,7 @@ namespace daxa
         usize swapchain_image_last_use_submit_scope_index = std::numeric_limits<usize>::max();
 
         void add_task(ImplTaskList & task_list_impl,
-                      GenericTaskInfo & info,
-                      ShaderUseIdToOffsetTable const & shader_id_use_to_offset_table);
+                      GenericTaskInfo & info);
         void submit(TaskSubmitInfo const & info);
         void present(TaskPresentInfo const & info);
     };
