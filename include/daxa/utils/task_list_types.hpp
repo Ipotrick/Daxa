@@ -102,22 +102,6 @@ namespace daxa
                 return *reinterpret_cast<std::span<T> const *>(&raw);
             }
         };
-
-        template <typename T>
-        struct ConstexprCompatibleOptional
-        {
-            std::array<u8, sizeof(std::optional<T>)> raw = {};
-
-            auto get() -> std::optional<T> &
-            {
-                return *reinterpret_cast<std::optional<T> *>(&raw);
-            }
-
-            auto get() const -> std::optional<T> const &
-            {
-                return *reinterpret_cast<std::optional<T> const *>(&raw);
-            }
-        };
     } // namespace detail
 
     using TaskResourceIndex = u32;
@@ -304,10 +288,11 @@ namespace daxa
         TaskInputType type = {};
     };
 
-    template <typename ReflectedT>
+    template <typename ReflectedT, i32 SHADER_BINDING_T = -1>
     struct TaskUses
     {
         using FIRST_DERIVED = ReflectedT;
+        static constexpr i32 SHADER_BINDING = SHADER_BINDING_T;
         static constexpr usize USE_COUNT = []()
         {
             static_assert(sizeof(ReflectedT) != 0, "TaskUse must be non zero size");
@@ -341,4 +326,8 @@ namespace daxa
             return span();
         }
     };
+
+    auto get_task_arg_shader_alignment(TaskInputType type) -> u32;
+
+    auto get_task_arg_shader_offsets_size(std::span<GenericTaskInput> args) -> std::pair<std::vector<u32>, u32>;
 } // namespace daxa
