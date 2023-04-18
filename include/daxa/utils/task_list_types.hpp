@@ -316,6 +316,58 @@ namespace daxa
             return {reinterpret_cast<GenericTaskInput const *>(memory.data()), count};
         }
 
+        template<typename BufFn, typename ImgFn> 
+        void for_each(BufFn&& buf_fn, ImgFn&& img_fn)
+        {
+            auto s = span();
+            for (u32 index = 0; index < s.size(); ++index)
+            {
+                auto type = s[index].type;
+                switch(type)
+                {
+                    case TaskInputType::BUFFER: 
+                    {
+                        auto & arg = TaskBufferInput::from(s[index]);
+                        buf_fn(index, arg); 
+                        break;
+                    }
+                    case TaskInputType::IMAGE: 
+                    {
+                        auto & arg = TaskImageInput::from(s[index]);
+                        img_fn(index, arg); 
+                        break;
+                    }
+                    default: break;
+                }
+            }
+        }
+
+        template<typename BufFn, typename ImgFn> 
+        void for_each(BufFn&& buf_fn, ImgFn&& img_fn) const
+        {
+            auto const s = span();
+            for (u32 index = 0; index < s.size(); ++index)
+            {
+                auto type = s[index].type;
+                switch(type)
+                {
+                    case TaskInputType::BUFFER: 
+                    {
+                        auto const & arg = TaskBufferInput::from(s[index]);
+                        buf_fn(index, arg); 
+                        break;
+                    }
+                    case TaskInputType::IMAGE: 
+                    {
+                        auto const & arg = TaskImageInput::from(s[index]);
+                        img_fn(index, arg); 
+                        break;
+                    }
+                    default: break;
+                }
+            }
+        }
+
         operator std::span<GenericTaskInput>()
         {
             return span();
