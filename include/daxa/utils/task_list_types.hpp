@@ -214,6 +214,11 @@ namespace daxa
         {
             return *reinterpret_cast<GenericTaskInput const *>(this);
         }
+
+        operator GenericTaskInput const &() const
+        {
+            return to_generic();
+        }
     };
 
     struct alignas(TASK_INPUT_FIELD_SIZE) TaskImageInput
