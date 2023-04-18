@@ -3,8 +3,8 @@
 #include "common.hpp"
 #include "mipmapping.hpp"
 #include "shaders/shader_integration.inl"
-// #include "persistent_resources.hpp"
-// #include "transient_overlap.hpp"
+#include "persistent_resources.hpp"
+#include "transient_overlap.hpp"
 
 namespace tests
 {
@@ -395,88 +395,90 @@ namespace tests
         app.device.destroy_buffer(buffer);
         app.device.collect_garbage();
     }
-    //
-    // void correct_read_buffer_task_ordering()
-    //{
-    //    // TEST:
-    //    //  1) Create persistent image and persistent buffer
-    //    //  2) Record two task lists A
-    //    //  3) Task list A has three tasks inserted in listed order:
-    //    //      Task 1) Writes image
-    //    //      Task 2) Reads image and reads buffer
-    //    //      Task 3) Reads buffer
-    //    //  5) Execute task list and check the ordering of tasks in batches
-    //    //  Expected result:
-    //    //      NOTE(msakmary): This does something different currently (task 3 is in batch 2)
-    //    //                      - this is due to limitations of what task list can do without having a proper render graph
-    //    //                      - will be fixed in the future by adding JIRA
-    //    //      Batch 1:
-    //    //          Task 1
-    //    //          Task 3
-    //    //      Batch 2:
-    //    //          Task 2
-    //    daxa::Context daxa_ctx = daxa::create_context({
-    //        .enable_validation = false,
-    //    });
-    //    daxa::Device device = daxa_ctx.create_device({
-    //        .name = "device",
-    //    });
-    //    auto image = device.create_image({
-    //        .size = {1, 1, 1},
-    //        .array_layer_count = 1,
-    //        .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
-    //        .name = "actual image",
-    //    });
-    //
-    //    auto buffer = device.create_buffer({.size = 1,
-    //                                        .name = "actual_buffer"});
-    //
-    //    auto persistent_task_image = daxa::TaskImage(daxa::TaskImageInfo{
-    //        .initial_images = {.images = {&image, 1}},
-    //        .swapchain_image = false,
-    //        .name = "image",
-    //    });
-    //
-    //    auto persistent_task_buffer = daxa::TaskBuffer(daxa::TaskBufferInfo{
-    //        .initial_buffers = {.buffers = {&buffer, 1}},
-    //        .name = "buffer",
-    //    });
-    //
-    //    auto task_list = daxa::TaskList({
-    //        .device = device,
-    //        .record_debug_information = true,
-    //        .name = "task_list",
-    //    });
-    //
-    //    task_list.use_persistent_image(persistent_task_image);
-    //    task_list.use_persistent_buffer(persistent_task_buffer);
-    //    task_list.add_task({
-    //        .used_images = {{.id = persistent_task_image, .access = daxa::TaskImageAccess::SHADER_WRITE_ONLY}},
-    //        .task = [&](daxa::TaskInterface<> const &) {},
-    //        .name = "write persistent image",
-    //    });
-    //    task_list.add_task({
-    //        .used_buffers = {{.id = persistent_task_buffer, .access = daxa::TaskBufferAccess::SHADER_READ_ONLY}},
-    //        .used_images = {{.id = persistent_task_image, .access = daxa::TaskImageAccess::SHADER_READ_ONLY}},
-    //        .task = [&](daxa::TaskInterface<> const &) {},
-    //        .name = "read persistent image, read persistent buffer",
-    //    });
-    //    task_list.add_task({
-    //        .used_buffers = {{.id = persistent_task_buffer, .access = daxa::TaskBufferAccess::SHADER_READ_ONLY}},
-    //        .task = [&](daxa::TaskInterface<> const &) {},
-    //        .name = "read persistent buffer",
-    //    });
-    //    task_list.submit({});
-    //    task_list.complete({});
-    //
-    //    task_list.execute({});
-    //    std::cout << task_list.get_debug_string() << std::endl;
-    //
-    //    device.wait_idle();
-    //    device.destroy_image(image);
-    //    device.destroy_buffer(buffer);
-    //    device.collect_garbage();
-    //}
+
+    void correct_read_buffer_task_ordering()
+    {
+        // TEST:
+        //  1) Create persistent image and persistent buffer
+        //  2) Record two task lists A
+        //  3) Task list A has three tasks inserted in listed order:
+        //      Task 1) Writes image
+        //      Task 2) Reads image and reads buffer
+        //      Task 3) Reads buffer
+        //  5) Execute task list and check the ordering of tasks in batches
+        //  Expected result:
+        //      NOTE(msakmary): This does something different currently (task 3 is in batch 2)
+        //                      - this is due to limitations of what task list can do without having a proper render graph
+        //                      - will be fixed in the future by adding JIRA
+        //      Batch 1:
+        //          Task 1
+        //          Task 3
+        //      Batch 2:
+        //          Task 2
+        daxa::Context daxa_ctx = daxa::create_context({
+            .enable_validation = false,
+        });
+        daxa::Device device = daxa_ctx.create_device({
+            .name = "device",
+        });
+        auto image = device.create_image({
+            .size = {1, 1, 1},
+            .array_layer_count = 1,
+            .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
+            .name = "actual image",
+        });
+
+        auto buffer = device.create_buffer({.size = 1,
+                                            .name = "actual_buffer"});
+
+        auto persistent_task_image = daxa::TaskImage(daxa::TaskImageInfo{
+            .initial_images = {.images = {&image, 1}},
+            .swapchain_image = false,
+            .name = "image",
+        });
+
+        auto persistent_task_buffer = daxa::TaskBuffer(daxa::TaskBufferInfo{
+            .initial_buffers = {.buffers = {&buffer, 1}},
+            .name = "buffer",
+        });
+
+        auto task_list = daxa::TaskList({
+            .device = device,
+            .record_debug_information = true,
+            .name = "task_list",
+        });
+
+        task_list.use_persistent_image(persistent_task_image);
+        task_list.use_persistent_buffer(persistent_task_buffer);
+        task_list.add_task({
+            .args = {daxa::TaskImageInput{{.id = persistent_task_image, .access = daxa::TaskImageAccess::SHADER_WRITE_ONLY}}},
+            .task = [&](daxa::TaskInterface<> const &) {},
+            .name = "write persistent image",
+        });
+        task_list.add_task({
+            .args = {
+                daxa::TaskBufferInput{{.id = persistent_task_buffer, .access = daxa::TaskBufferAccess::SHADER_READ_ONLY}},
+                daxa::TaskImageInput{{.id = persistent_task_image, .access = daxa::TaskImageAccess::SHADER_READ_ONLY}},
+            },
+            .task = [&](daxa::TaskInterface<> const &) {},
+            .name = "read persistent image, read persistent buffer",
+        });
+        task_list.add_task({
+            .args = { daxa::TaskBufferInput{{.id = persistent_task_buffer, .access = daxa::TaskBufferAccess::SHADER_READ_ONLY}}},
+            .task = [&](daxa::TaskInterface<> const &) {},
+            .name = "read persistent buffer",
+        });
+        task_list.submit({});
+        task_list.complete({});
+
+        task_list.execute({});
+        std::cout << task_list.get_debug_string() << std::endl;
+
+        device.wait_idle();
+        device.destroy_image(image);
+        device.destroy_buffer(buffer);
+        device.collect_garbage();
+    }
 
     void output_graph()
     {
@@ -609,9 +611,9 @@ auto main() -> int
     tests::initial_layout_access();
     tests::tracked_slice_barrier_collapsing();
     tests::shader_integration_inl_use();
+    tests::correct_read_buffer_task_ordering();
+    tests::sharing_persistent_image();
+    tests::sharing_persistent_buffer();
+    tests::transient_resources();
     tests::mipmapping();
-    // tests::correct_read_buffer_task_ordering();
-    // tests::sharing_persistent_image();
-    // tests::sharing_persistent_buffer();
-    // tests::transient_resources();
 }
