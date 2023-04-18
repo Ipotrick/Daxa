@@ -1740,7 +1740,7 @@ namespace daxa
             std::vector<usize> submit_batch_offsets(permutation.batch_submit_scopes.size());
             for (u32 submit_scope_idx = 0; submit_scope_idx < permutation.batch_submit_scopes.size(); submit_scope_idx++)
             {
-                submit_batch_offsets.at(submit_scope_idx++) = batches;
+                submit_batch_offsets.at(submit_scope_idx) = batches;
                 batches += permutation.batch_submit_scopes.at(submit_scope_idx).task_batches.size();
             }
             std::vector<usize> per_batch_mem_req(batches, 0);

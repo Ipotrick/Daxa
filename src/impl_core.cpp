@@ -272,13 +272,21 @@ namespace daxa
 
     void ManagedPtr::cleanup()
     {
-        if ((this->object != nullptr) && DAXA_ATOMIC_FETCH_DEC(this->object->strong_count) == 1)
+        if (this->object != nullptr)
         {
-            u64 const weak_count = DAXA_ATOMIC_FETCH(this->object->weak_count);
-            this->object->~ManagedSharedState();
-            if (weak_count == 0)
+            if (DAXA_ATOMIC_FETCH(this->object->strong_count) == 1)
             {
-                free(this->object);
+                u64 const weak_count = DAXA_ATOMIC_FETCH(this->object->weak_count);
+                this->object->~ManagedSharedState();
+                DAXA_ATOMIC_FETCH_DEC(this->object->strong_count);
+                if (weak_count == 0)
+                {
+                    free(this->object);
+                }
+            }
+            else
+            {
+                DAXA_ATOMIC_FETCH_DEC(this->object->strong_count);
             }
             this->object = {};
         }
