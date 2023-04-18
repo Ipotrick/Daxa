@@ -148,7 +148,7 @@ namespace daxa
         std::array<f32, 4> task_label_color = {0.663f, 0.533f, 0.871f, 1.0f};
         /// @brief Records debug information about the execution if enabled. This string is retrievable with the function get_debug_string.
         bool record_debug_information = {};
-        u32 staging_memory_pool_size = 4000000;
+        u32 staging_memory_pool_size = 262'144; // 2^16 bytes.
         std::string name = {};
     };
 

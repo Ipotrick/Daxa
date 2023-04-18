@@ -93,7 +93,8 @@ namespace daxa
         ResourceLifetime lifetime = {};
         ImageUsageFlags usage = ImageUsageFlagBits::NONE;
         ImageId actual_image = {};
-        u32 allocation_offset = {};
+        // TODO(pahrens:msakmary): why the heck is this field here nad not per permutation? I am pretty sure it must be per permutation!
+        usize allocation_offset = {};
     };
 
     struct Task
