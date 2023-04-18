@@ -282,8 +282,7 @@ namespace daxa
                                      return false;
                                  });
         DAXA_DBG_ASSERT_TRUE_M(iter != impl.current_task->info.task_args.span().end(), "detected invalid task image id; all image ids that a view is requested from in a task must be mentioned in the task input!");
-        isize const view_cache_index = std::distance(impl.current_task->info.task_args.span().begin(), iter);
-        // TODO(pahrens):
+        usize const view_cache_index = static_cast<usize>(std::distance(impl.current_task->info.task_args.span().begin(), iter));
         return impl.current_task->image_view_cache[view_cache_index][index];
     }
 
@@ -614,7 +613,7 @@ namespace daxa
         }
     }
 
-    void validate_runtime_image_slice(ImplTaskList & impl, TaskListPermutation const & perm, u32 use_index, u32 task_image_index, ImageMipArraySlice const & access_slice, Task const & task)
+    void validate_runtime_image_slice(ImplTaskList & impl, TaskListPermutation const & perm, u32 use_index, u32 task_image_index, ImageMipArraySlice const & access_slice)
     {
         auto const actual_images = impl.get_actual_images(TaskImageId{{.task_list_index = impl.unique_index, .index = task_image_index}}, perm);
         std::string_view task_name = impl.global_image_infos[task_image_index].get_name();
@@ -659,7 +658,7 @@ namespace daxa
                 }
                 if (!cache_valid)
                 {
-                    validate_runtime_image_slice(*this, permutation, task_image_use_index, tid.index, slice, task);
+                    validate_runtime_image_slice(*this, permutation, task_image_use_index, tid.index, slice);
                     for (auto & view : view_cache)
                     {
                         if (info.device.is_id_valid(view))
@@ -861,13 +860,12 @@ namespace daxa
         impl.update_active_permutations();
     }
 
-    void ImplTaskList::check_for_overlapping_use(GenericTaskInfo const & info)
+    void ImplTaskList::check_for_overlapping_use(GenericTaskInfo const & task_info)
     {
-        usize input_index_a = 0;
-        info.task_args.for_each(
+        task_info.task_args.for_each(
             [&](u32 index_a, TaskBufferInput const & a)
             {
-                info.task_args.for_each(
+                task_info.task_args.for_each(
                     [&](u32 index_b, TaskBufferInput const & b)
                     {
                         if (index_a == index_b)
@@ -881,13 +879,13 @@ namespace daxa
                                 "detected overlapping uses (input index {} and {}) of buffer \"{}\" in task \"{}\"; all buffer task inputs must be disjoint!",
                                 index_a, index_b,
                                 global_buffer_infos[a.id.index].get_name(),
-                                info.name));
+                                task_info.name));
                     },
                     [&](u32, TaskImageInput const &) {});
             },
             [&](u32 index_a, TaskImageInput const & a)
             {
-                info.task_args.for_each(
+                task_info.task_args.for_each(
                     [&](u32, TaskBufferInput const &) {},
                     [&](u32 index_b, TaskImageInput const & b)
                     {
@@ -905,7 +903,7 @@ namespace daxa
                                 index_a, to_string(a.slice),
                                 index_b, to_string(b.slice),
                                 this->global_image_infos.at(b.id.index).get_name(),
-                                info.name,
+                                task_info.name,
                                 to_string(intersection)));
                     });
             });
@@ -2665,10 +2663,9 @@ namespace daxa
             {
                 for (auto const task_id : batch.tasks)
                 {
-                    auto const & task = permutation.tasks.at(task_id);
+                    [[maybe_unused]] auto const & task = permutation.tasks.at(task_id);
                     // buffer is not used in this task
 
-                    // TODO(pahrens)
                     // for (auto const & used_image : task.info.used_images)
                     // {
                     //     if (used_image.id == image_id)
@@ -2700,10 +2697,9 @@ namespace daxa
             {
                 for (auto const task_id : batch.tasks)
                 {
-                    auto const & task = permutation.tasks.at(task_id);
+                    [[maybe_unused]] auto const & task = permutation.tasks.at(task_id);
                     // buffer is not used in this task
 
-                    // TODO(pahrens)
                     // for (auto const & used_buffer : task.info.used_buffers)
                     //{
                     //    if (used_buffer.id == buffer_id)
