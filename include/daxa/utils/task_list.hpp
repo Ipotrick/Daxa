@@ -279,7 +279,7 @@ namespace daxa
 
         template <typename TaskInput>
         void add_task(TaskInfo<TaskInput> const & info)
-            requires requires(TaskInput a) { typename TaskInput::FIRST_DERIVED{}; } and
+            requires requires(TaskInput a) { typename TaskInput::FIRST_DERIVED; } and
                      requires(TaskInput a) { TaskInput::SHADER_BINDING; } and
                      std::derived_from<TaskInput, TaskUses<typename TaskInput::FIRST_DERIVED, TaskInput::SHADER_BINDING>>
         {
@@ -300,24 +300,7 @@ namespace daxa
                 .name = info.name,
             });
         }
-
-        void add_inl_task(InlineTaskInfo const & info)
-        {
-            auto const size = TASK_INPUT_FIELD_SIZE * info.args.size();
-            GenericTaskArgsContainer args = {};
-            args.memory.resize(size, 0);
-            args.count = info.args.size();
-            for (usize i = 0; i < info.args.size(); ++i)
-            {
-                reinterpret_cast<GenericTaskInput *>(args.memory.data())[i] = *(info.args.begin() + i);
-            }
-
-            add_task(GenericTaskInfo{
-                .task_args = std::move(args),
-                .task = info.task,
-                .name = info.name,
-            });
-        }
+        void add_task(InlineTaskInfo const & info);
 
         void conditional(TaskListConditionalInfo const & conditional_info);
         void submit(TaskSubmitInfo const & info);

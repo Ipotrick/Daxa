@@ -575,7 +575,7 @@ namespace tests
                     },
                     .name = "clear swapchain",
                 });
-                new_task_list.add_inl_task({
+                new_task_list.add_task({
                     .args = {
                         daxa::TaskImageInput{{.id = task_render_image, .access = daxa::TaskImageAccess::TRANSFER_READ, .slice = daxa::ImageMipArraySlice{.level_count = 5}}},
                         daxa::TaskImageInput{{.id = task_swapchain_image, .access = daxa::TaskImageAccess::TRANSFER_WRITE}},
