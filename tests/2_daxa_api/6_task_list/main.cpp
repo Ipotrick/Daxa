@@ -66,13 +66,13 @@ namespace tests
         auto task_image = task_list.create_transient_image({.size = {1, 1, 1}, .name = "task list tested image"});
         // WRITE IMAGE 1
         task_list.add_task({
-            .args = {daxa::TaskImageInput{{.id=task_image, .access=daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY}}},
+            .args = {daxa::TaskImageInput{{.id = task_image, .access = daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY}}},
             .task = [](daxa::TaskInterface<> const &) {},
             .name = APPNAME_PREFIX("write image 1"),
         });
         // READ_IMAGE 1
         task_list.add_task({
-            .args = {daxa::TaskImageInput{{.id=task_image, .access=daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY}}},
+            .args = {daxa::TaskImageInput{{.id = task_image, .access = daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY}}},
             .task = [](daxa::TaskInterface<> const &) {},
             .name = APPNAME_PREFIX("read image 1"),
         });
@@ -82,255 +82,232 @@ namespace tests
         std::cout << task_list.get_debug_string() << std::endl;
     }
 
-    // void write_read_image_layer()
-    //{
-    //     // TEST:
-    //     //    1) CREATE image
-    //     //    2) WRITE into array layer 1 of the image
-    //     //    3) READ from array layer 2 of the image
-    //     AppContext app = {};
-    //     auto task_list = daxa::TaskList({
-    //         .device = app.device,
-    //         .record_debug_information = true,
-    //         .name = APPNAME_PREFIX("create-write-read array layer"),
-    //     });
-    //     // CREATE IMAGE
-    //     auto task_image = task_list.create_transient_image({
-    //         .size = {1, 1, 1},
-    //         .array_layer_count = 2,
-    //         .name = "task list tested image",
-    //     });
-    //     task_list.add_task({
-    //         .used_buffers = {},
-    //         .used_images =
-    //             {
-    //                 {task_image,
-    //                  daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
-    //                  daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = 1}}},
-    //         .task = [](daxa::TaskInterface<> const &) {},
-    //         .name = APPNAME_PREFIX("write image array layer 1"),
-    //     });
-    //     // READ_IMAGE 1
-    //     task_list.add_task({
-    //         .used_buffers = {},
-    //         .used_images =
-    //             {
-    //                 {task_image,
-    //                  daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
-    //                  daxa::ImageMipArraySlice{.base_array_layer = 1, .layer_count = 1}}},
-    //         .task = [](daxa::TaskInterface<> const &) {},
-    //         .name = APPNAME_PREFIX("read image array layer 1"),
-    //     });
-    //     task_list.complete({});
-    //     task_list.execute({});
-    //     std::cout << task_list.get_debug_string() << std::endl;
-    // }
-    //
-    // void create_transfer_read_buffer()
-    //{
-    //    // TEST:
-    //    //    1) CREATE buffer
-    //    //    2) TRANSFER into the buffer
-    //    //    3) READ from the buffer
-    //    AppContext app = {};
-    //    auto task_list = daxa::TaskList({
-    //        .device = app.device,
-    //        .record_debug_information = true,
-    //        .name = APPNAME_PREFIX("create-transfer-read buffer"),
-    //    });
-    //
-    //    auto task_buffer = task_list.create_transient_buffer({
-    //        .size = sizeof(u32),
-    //        .name = "task list tested buffer",
-    //    });
-    //
-    //    task_list.add_task({
-    //        .used_buffers = {
-    //            {task_buffer, daxa::TaskBufferAccess::HOST_TRANSFER_WRITE},
-    //        },
-    //        .used_images = {},
-    //        .task = [](daxa::TaskInterface<> const &) {},
-    //        .name = APPNAME_PREFIX("host transfer buffer"),
-    //    });
-    //
-    //    task_list.add_task({
-    //        .used_buffers = {
-    //            {
-    //                task_buffer,
-    //                daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY,
-    //            },
-    //        },
-    //        .used_images = {},
-    //        .task = [](daxa::TaskInterface<> const &) {},
-    //        .name = APPNAME_PREFIX("read buffer"),
-    //    });
-    //
-    //    task_list.complete({});
-    //    task_list.execute({});
-    //    std::cout << task_list.get_debug_string() << std::endl;
-    //}
-    //
-    // void initial_layout_access()
-    //{
-    //    // TEST:
-    //    //    1) CREATE image - set the task image initial access to write from compute shader
-    //    //    2) READ from a the subimage
-    //    //    3) WRITE into the subimage
-    //    AppContext app = {};
-    //    auto image = app.device.create_image({
-    //        .size = {1, 1, 1},
-    //        .array_layer_count = 2,
-    //        .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
-    //        .name = APPNAME_PREFIX("tested image"),
-    //    });
-    //
-    //    std::array init_access = {
-    //        daxa::ImageSliceState{
-    //            .latest_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
-    //            .latest_layout = daxa::ImageLayout::GENERAL,
-    //        },
-    //    };
-    //
-    //    auto task_image = daxa::TaskImage(daxa::TaskImageInfo{
-    //        .initial_images = {
-    //            .images = {&image, 1},
-    //            .latest_slice_states = {init_access.data(), 1}},
-    //        .swapchain_image = false,
-    //        .name = "task list tested image",
-    //    });
-    //
-    //    auto task_list = daxa::TaskList({
-    //        .device = app.device,
-    //        .record_debug_information = true,
-    //        .name = APPNAME_PREFIX("initial layout image"),
-    //    });
-    //    // CREATE IMAGE
-    //    task_list.use_persistent_image(task_image);
-    //    task_list.add_task({
-    //        .used_buffers = {},
-    //        .used_images =
-    //            {
-    //                {task_image,
-    //                 daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
-    //                 daxa::ImageMipArraySlice{.base_array_layer = 1, .layer_count = 1}},
-    //            },
-    //        .task = [](daxa::TaskInterface<> const &) {},
-    //        .name = APPNAME_PREFIX("read array layer 2"),
-    //    });
-    //    task_list.add_task({
-    //        .used_buffers = {},
-    //        .used_images =
-    //            {
-    //                {task_image,
-    //                 daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
-    //                 daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = 1}},
-    //            },
-    //        .task = [](daxa::TaskInterface<> const &) {},
-    //        .name = APPNAME_PREFIX("write array layer 1"),
-    //    });
-    //    task_list.complete({});
-    //    task_list.execute({});
-    //    std::cout << task_list.get_debug_string() << std::endl;
-    //    app.device.destroy_image(image);
-    //}
-    //
-    // void tracked_slice_barrier_collapsing()
-    //{
-    //    // TEST:
-    //    //    1) CREATE image - set the task image initial access to write from compute
-    //    //                      shader for one subresouce and read for the other
-    //    //    2) WRITE into the subsubimage
-    //    //    3) READ from a the subsubimage
-    //    //    4) WRITE into the entire image
-    //    //    5) READ the entire image
-    //    //    Expected: There should only be a single barrier between tests 4 and 5.
-    //    AppContext app = {};
-    //    auto image = app.device.create_image({
-    //        .size = {1, 1, 1},
-    //        .array_layer_count = 4,
-    //        .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
-    //        .name = APPNAME_PREFIX("tested image"),
-    //    });
-    //
-    //    // CREATE IMAGE
-    //    std::array init_access = {
-    //        daxa::ImageSliceState{
-    //            .latest_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
-    //            .latest_layout = daxa::ImageLayout::GENERAL,
-    //            .slice = {.base_array_layer = 0, .layer_count = 2},
-    //        },
-    //        daxa::ImageSliceState{
-    //            .latest_access = daxa::AccessConsts::COMPUTE_SHADER_READ,
-    //            .latest_layout = daxa::ImageLayout::READ_ONLY_OPTIMAL,
-    //            .slice = {.base_array_layer = 2, .layer_count = 2},
-    //        }};
-    //    auto task_image = daxa::TaskImage({
-    //        .name = "task list tested image",
-    //    });
-    //
-    //    auto task_list = daxa::TaskList({
-    //        .device = app.device,
-    //        .record_debug_information = true,
-    //        .name = APPNAME_PREFIX("tracked slice barrier collapsing"),
-    //    });
-    //
-    //    task_image.set_images({.images = {&image, 1}, .latest_slice_states = {init_access.begin(), init_access.end()}});
-    //
-    //    task_list.use_persistent_image(task_image);
-    //
-    //    task_list.add_task({
-    //        .used_buffers = {},
-    //        .used_images =
-    //            {
-    //                {task_image,
-    //                 daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
-    //                 daxa::ImageMipArraySlice{.base_array_layer = 1, .layer_count = 1}},
-    //            },
-    //        .task = [](daxa::TaskInterface<> const &) {},
-    //        .name = APPNAME_PREFIX("read image layer 2"),
-    //    });
-    //    task_list.add_task({
-    //        .used_buffers = {},
-    //        .used_images =
-    //            {
-    //                {task_image,
-    //                 daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
-    //                 daxa::ImageMipArraySlice{.base_array_layer = 3, .layer_count = 1}},
-    //            },
-    //        .task = [](daxa::TaskInterface<> const &) {},
-    //        .name = APPNAME_PREFIX("write image layer 4"),
-    //    });
-    //    task_list.add_task({
-    //        .used_buffers = {},
-    //        .used_images =
-    //            {
-    //                {task_image,
-    //                 daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
-    //                 daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = 4}},
-    //            },
-    //        .task = [](daxa::TaskInterface<> const &) {},
-    //        .name = APPNAME_PREFIX("write image layer 1 - 4"),
-    //    });
-    //    task_list.add_task({
-    //        .used_buffers = {},
-    //        .used_images =
-    //            {
-    //                {task_image,
-    //                 daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
-    //                 daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = 4}},
-    //            },
-    //        .task = [](daxa::TaskInterface<> const &) {},
-    //        .name = APPNAME_PREFIX("read image layer 1 - 4"),
-    //    });
-    //
-    //    task_list.complete({});
-    //    task_list.execute({});
-    //    std::cout << task_list.get_debug_string() << std::endl;
-    //    app.device.wait_idle();
-    //    app.device.destroy_image(image);
-    //    app.device.collect_garbage();
-    //}
-    //
+    void write_read_image_layer()
+    {
+        // TEST:
+        //    1) CREATE image
+        //    2) WRITE into array layer 1 of the image
+        //    3) READ from array layer 2 of the image
+        AppContext app = {};
+        auto task_list = daxa::TaskList({
+            .device = app.device,
+            .record_debug_information = true,
+            .name = APPNAME_PREFIX("create-write-read array layer"),
+        });
+        // CREATE IMAGE
+        auto task_image = task_list.create_transient_image({
+            .size = {1, 1, 1},
+            .array_layer_count = 2,
+            .name = "task list tested image",
+        });
+        task_list.add_task({
+            .args = {daxa::TaskImageInput{{.id = task_image,
+                                           .access = daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
+                                           .slice = daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = 1}}}},
+            .task = [](daxa::TaskInterface<> const &) {},
+            .name = APPNAME_PREFIX("write image array layer 1"),
+        });
+        // READ_IMAGE 1
+        task_list.add_task({
+            .args = {daxa::TaskImageInput{{.id = task_image, .access = daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY, .slice = daxa::ImageMipArraySlice{.base_array_layer = 1, .layer_count = 1}}}},
+            .task = [](daxa::TaskInterface<> const &) {},
+            .name = APPNAME_PREFIX("read image array layer 1"),
+        });
+        task_list.complete({});
+        task_list.execute({});
+        std::cout << task_list.get_debug_string() << std::endl;
+    }
+
+    void create_transfer_read_buffer()
+    {
+        // TEST:
+        //    1) CREATE buffer
+        //    2) TRANSFER into the buffer
+        //    3) READ from the buffer
+        AppContext app = {};
+        auto task_list = daxa::TaskList({
+            .device = app.device,
+            .record_debug_information = true,
+            .name = APPNAME_PREFIX("create-transfer-read buffer"),
+        });
+
+        auto task_buffer = task_list.create_transient_buffer({
+            .size = sizeof(u32),
+            .name = "task list tested buffer",
+        });
+
+        task_list.add_task({
+            .args = {daxa::TaskBufferInput{{.id = task_buffer, .access = daxa::TaskBufferAccess::HOST_TRANSFER_WRITE}}},
+            .task = [](daxa::TaskInterface<> const &) {},
+            .name = APPNAME_PREFIX("host transfer buffer"),
+        });
+
+        task_list.add_task({
+            .args = {daxa::TaskBufferInput{{.id = task_buffer, .access = daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY}}},
+            .task = [](daxa::TaskInterface<> const &) {},
+            .name = APPNAME_PREFIX("read buffer"),
+        });
+
+        task_list.complete({});
+        task_list.execute({});
+        std::cout << task_list.get_debug_string() << std::endl;
+    }
+
+    void initial_layout_access()
+    {
+        // TEST:
+        //    1) CREATE image - set the task image initial access to write from compute shader
+        //    2) READ from a the subimage
+        //    3) WRITE into the subimage
+        AppContext app = {};
+        auto image = app.device.create_image({
+            .size = {1, 1, 1},
+            .array_layer_count = 2,
+            .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
+            .name = APPNAME_PREFIX("tested image"),
+        });
+
+        std::array init_access = {
+            daxa::ImageSliceState{
+                .latest_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
+                .latest_layout = daxa::ImageLayout::GENERAL,
+            },
+        };
+
+        auto task_image = daxa::TaskImage(daxa::TaskImageInfo{
+            .initial_images = {
+                .images = {&image, 1},
+                .latest_slice_states = {init_access.data(), 1}},
+            .swapchain_image = false,
+            .name = "task list tested image",
+        });
+
+        auto task_list = daxa::TaskList({
+            .device = app.device,
+            .record_debug_information = true,
+            .name = APPNAME_PREFIX("initial layout image"),
+        });
+        // CREATE IMAGE
+        task_list.use_persistent_image(task_image);
+        task_list.add_task({
+            .args = {daxa::TaskImageInput{{.id = task_image,
+                                           .access = daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
+                                           .slice = daxa::ImageMipArraySlice{.base_array_layer = 1, .layer_count = 1}}}},
+            .task = [](daxa::TaskInterface<> const &) {},
+            .name = APPNAME_PREFIX("read array layer 2"),
+        });
+        task_list.add_task({
+            .args = {
+                daxa::TaskImageInput{{
+                    .id = task_image,
+                    .access = daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
+                    .slice = daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = 1},
+                }},
+            },
+            .task = [](daxa::TaskInterface<> const &) {},
+            .name = APPNAME_PREFIX("write array layer 1"),
+        });
+        task_list.complete({});
+        task_list.execute({});
+        std::cout << task_list.get_debug_string() << std::endl;
+        app.device.destroy_image(image);
+    }
+
+    void tracked_slice_barrier_collapsing()
+    {
+        // TEST:
+        //    1) CREATE image - set the task image initial access to write from compute
+        //                      shader for one subresouce and read for the other
+        //    2) WRITE into the subsubimage
+        //    3) READ from a the subsubimage
+        //    4) WRITE into the entire image
+        //    5) READ the entire image
+        //    Expected: There should only be a single barrier between tests 4 and 5.
+        AppContext app = {};
+        auto image = app.device.create_image({
+            .size = {1, 1, 1},
+            .array_layer_count = 4,
+            .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
+            .name = APPNAME_PREFIX("tested image"),
+        });
+
+        // CREATE IMAGE
+        std::array init_access = {
+            daxa::ImageSliceState{
+                .latest_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
+                .latest_layout = daxa::ImageLayout::GENERAL,
+                .slice = {.base_array_layer = 0, .layer_count = 2},
+            },
+            daxa::ImageSliceState{
+                .latest_access = daxa::AccessConsts::COMPUTE_SHADER_READ,
+                .latest_layout = daxa::ImageLayout::READ_ONLY_OPTIMAL,
+                .slice = {.base_array_layer = 2, .layer_count = 2},
+            }};
+        auto task_image = daxa::TaskImage({
+            .name = "task list tested image",
+        });
+
+        auto task_list = daxa::TaskList({
+            .device = app.device,
+            .record_debug_information = true,
+            .name = APPNAME_PREFIX("tracked slice barrier collapsing"),
+        });
+
+        task_image.set_images({.images = {&image, 1}, .latest_slice_states = {init_access.begin(), init_access.end()}});
+
+        task_list.use_persistent_image(task_image);
+
+        task_list.add_task({
+            .args = {
+                daxa::TaskImageInput{{
+                    .id = task_image,
+                    .access = daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
+                    .slice = daxa::ImageMipArraySlice{.base_array_layer = 1, .layer_count = 1},
+                }},
+            },
+            .task = [](daxa::TaskInterface<> const &) {},
+            .name = APPNAME_PREFIX("read image layer 2"),
+        });
+        task_list.add_task({
+            .args = {
+                daxa::TaskImageInput{{
+                    .id = task_image,
+                    .access = daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
+                    .slice = daxa::ImageMipArraySlice{.base_array_layer = 3, .layer_count = 1},
+                }},
+            },
+            .task = [](daxa::TaskInterface<> const &) {},
+            .name = APPNAME_PREFIX("write image layer 4"),
+        });
+        task_list.add_task({
+            .args = {
+                daxa::TaskImageInput{{
+                    .id = task_image,
+                    .access = daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
+                    .slice = daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = 4},
+                }},
+            },
+            .task = [](daxa::TaskInterface<> const &) {},
+            .name = APPNAME_PREFIX("write image layer 1 - 4"),
+        });
+        task_list.add_task({
+            .args = {
+                daxa::TaskImageInput{{
+                    .id = task_image,
+                    .access = daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
+                    .slice = daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = 4},
+                }},
+            },
+            .task = [](daxa::TaskInterface<> const &) {},
+            .name = APPNAME_PREFIX("read image layer 1 - 4"),
+        });
+
+        task_list.complete({});
+        task_list.execute({});
+        std::cout << task_list.get_debug_string() << std::endl;
+        app.device.destroy_image(image);
+    }
+
     void shader_integration_inl_use()
     {
         // TEST:
@@ -627,10 +604,10 @@ auto main() -> int
     tests::simplest();
     tests::execution();
     tests::write_read_image();
-    // tests::write_read_image_layer();
-    // tests::create_transfer_read_buffer();
-    // tests::initial_layout_access();
-    // tests::tracked_slice_barrier_collapsing();
+    tests::write_read_image_layer();
+    tests::create_transfer_read_buffer();
+    tests::initial_layout_access();
+    tests::tracked_slice_barrier_collapsing();
     tests::shader_integration_inl_use();
     tests::mipmapping();
     // tests::correct_read_buffer_task_ordering();
