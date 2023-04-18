@@ -2582,14 +2582,14 @@ namespace daxa
 
     void ImplTaskList::print_task_buffer_to(std::string & out, std::string indent, TaskListPermutation const &, TaskBufferId local_id)
     {
-        auto const & glob_image = global_buffer_infos[local_id.index];
+        auto const & glob_buffer = global_buffer_infos[local_id.index];
         std::string persistent_info = "";
-        if (global_image_infos[local_id.index].is_persistent())
+        if (global_buffer_infos[local_id.index].is_persistent())
         {
-            u32 const persistent_index = global_image_infos[local_id.index].get_persistent().unique_index;
+            u32 const persistent_index = global_buffer_infos[local_id.index].get_persistent().unique_index;
             persistent_info = std::format(", persistent index: {}", persistent_index);
         }
-        std::format_to(std::back_inserter(out), "{}task buffer name: \"{}\", id: ({}){}\n", indent, glob_image.get_name(), to_string(local_id), persistent_info);
+        std::format_to(std::back_inserter(out), "{}task buffer name: \"{}\", id: ({}){}\n", indent, glob_buffer.get_name(), to_string(local_id), persistent_info);
         std::format_to(std::back_inserter(out), "{}runtime buffers:\n", indent);
         {
             [[maybe_unused]] FormatIndent d2{out, indent, true};
