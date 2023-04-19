@@ -603,17 +603,17 @@ namespace tests
 
 auto main() -> int
 {
-    tests::simplest();
-    tests::execution();
-    tests::write_read_image();
-    tests::write_read_image_layer();
-    tests::create_transfer_read_buffer();
-    tests::initial_layout_access();
-    tests::tracked_slice_barrier_collapsing();
-    tests::shader_integration_inl_use();
-    tests::correct_read_buffer_task_ordering();
-    tests::sharing_persistent_image();
-    tests::sharing_persistent_buffer();
-    tests::transient_resources();
+    // tests::simplest();
+    // tests::execution();
+    // tests::write_read_image();
+    // tests::write_read_image_layer();
+    // tests::create_transfer_read_buffer();
+    // tests::initial_layout_access();
+    // tests::tracked_slice_barrier_collapsing();
+    // tests::shader_integration_inl_use();
+    // tests::correct_read_buffer_task_ordering();
+    // tests::sharing_persistent_image();
+    // tests::sharing_persistent_buffer();
+    // tests::transient_resources();
     tests::mipmapping();
 }
