@@ -30,6 +30,9 @@ namespace daxa
         auto image(TaskImageId const & task_resource_id, usize index = 0) const -> ImageId;
         auto view(TaskImageId const & task_resource_id, usize index = 0) const -> ImageViewId;
 
+        auto buffer_use_at(usize use_index) const -> TaskBufferUse const &;
+        auto image_use_at(usize use_index) const -> TaskImageUse const &;
+
       protected:
         friend struct ImplTaskRuntimeInterface;
         friend struct TaskList;
