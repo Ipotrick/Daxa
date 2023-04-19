@@ -292,6 +292,19 @@ namespace daxa
         return impl.current_task->image_view_cache[view_cache_index][index];
     }
 
+    auto GenericTaskInterface::buffer_use_at(usize use_index) const -> TaskBufferUse const &
+    {
+        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
+        return TaskBufferUse::from(impl.current_task->info.task_args.span()[use_index]);
+    }
+    
+    auto GenericTaskInterface::image_use_at(usize use_index) const -> TaskImageUse const &
+    {
+        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
+        return TaskImageUse::from(impl.current_task->info.task_args.span()[use_index]);
+    }
+
+
     TaskBuffer::TaskBuffer(TaskBufferInfo const & info)
         : ManagedPtr{new ImplPersistentTaskBuffer(info)}
     {
