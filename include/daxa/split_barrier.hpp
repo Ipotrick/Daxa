@@ -13,6 +13,8 @@ namespace daxa
         Access waiting_pipeline_access = AccessConsts::NONE;
     };
 
+    auto to_string(MemoryBarrierInfo const & info) -> std::string;
+
     struct ImageBarrierInfo
     {
         Access awaited_pipeline_access = AccessConsts::NONE;
@@ -22,6 +24,8 @@ namespace daxa
         ImageMipArraySlice image_slice = {};
         ImageId image_id = {};
     };
+
+    auto to_string(ImageBarrierInfo const & info) -> std::string;
 
     struct SplitBarrierInfo
     {

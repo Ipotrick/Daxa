@@ -10,5 +10,5 @@ void main()
 {
     const ivec3 index = ivec3(gl_GlobalInvocationID);
     const float set_value = deref(settings).set_value;
-    imageStore(shader_integration_image, index, vec4(set_value,0,0,0));
+    imageStore(image, index, vec4(set_value,0,0,0));
 }

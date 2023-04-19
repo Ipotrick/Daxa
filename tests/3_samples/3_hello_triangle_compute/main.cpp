@@ -86,14 +86,14 @@ struct App : BaseApp<App>
 
     void record_tasks(daxa::TaskList & new_task_list)
     {
-        task_render_image = new_task_list.create_task_image({.name = APPNAME_PREFIX("task_render_image")});
+        task_render_image = new_task_list.create_transient_task_image({.name = APPNAME_PREFIX("task_render_image")});
         new_task_list.add_runtime_image(task_render_image, render_image);
 
         new_task_list.add_task({
             .used_images = {
-                {task_render_image, daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY, daxa::ImageMipArraySlice{}},
+                {task_render_image, daxa::TaskImageAccess::COMPUTE_SHADER_WRITE, daxa::ImageMipArraySlice{}},
             },
-            .task = [this](daxa::TaskRuntimeInterface runtime)
+            .task = [this](daxa::TaskInterface<> runtime)
             {
                 auto cmd_list = runtime.get_command_list();
                 cmd_list.set_pipeline(*compute_pipeline);
@@ -110,7 +110,7 @@ struct App : BaseApp<App>
                 {task_render_image, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{}},
                 {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{}},
             },
-            .task = [this](daxa::TaskRuntimeInterface runtime)
+            .task = [this](daxa::TaskInterface<> runtime)
             {
                 auto cmd_list = runtime.get_command_list();
                 cmd_list.blit_image_to_image({

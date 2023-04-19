@@ -88,8 +88,7 @@ struct BaseApp : AppWindow<T>
     Clock::time_point start = Clock::now(), prev_time = start;
     f32 time = 0.0f, delta_time = 1.0f;
 
-    daxa::ImageId swapchain_image;
-    daxa::TaskImageId task_swapchain_image;
+    daxa::TaskImage task_swapchain_image = {};
 
     BaseApp() : AppWindow<T>(APPNAME)
     {
@@ -131,38 +130,38 @@ struct BaseApp : AppWindow<T>
 
     auto record_loop_task_list() -> daxa::TaskList
     {
-        daxa::TaskList new_task_list = daxa::TaskList({
-            .device = device,
-            .use_split_barriers = false,
-            .swapchain = swapchain,
-            .name = APPNAME_PREFIX("task_list"),
-        });
-        task_swapchain_image = new_task_list.create_task_image({
-            .swapchain_image = true,
-            .name = APPNAME_PREFIX("task_swapchain_image"),
-        });
-        new_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
-
-        reinterpret_cast<T *>(this)->record_tasks(new_task_list);
-
-        new_task_list.add_task({
-            .used_images = {
-                {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
-            },
-            .task = [this](daxa::TaskRuntimeInterface interf)
-            {
-                auto cmd_list = interf.get_command_list();
-                imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, swapchain_image, AppWindow<T>::size_x, AppWindow<T>::size_y);
-            },
-            .name = APPNAME_PREFIX("ImGui Task"),
-        });
-
-        new_task_list.submit({});
-        new_task_list.present({});
-        new_task_list.complete({});
-
-        // new_task_list.output_graphviz();
-
-        return new_task_list;
+        //daxa::TaskList new_task_list = daxa::TaskList({
+        //    .device = device,
+        //    .use_split_barriers = false,
+        //    .swapchain = swapchain,
+        //    .name = APPNAME_PREFIX("task_list"),
+        //});
+        //task_swapchain_image = new_task_list.create_transient_task_image({
+        //    .swapchain_image = true,
+        //    .name = APPNAME_PREFIX("task_swapchain_image"),
+        //});
+        //new_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
+//
+        //reinterpret_cast<T *>(this)->record_tasks(new_task_list);
+//
+        //new_task_list.add_task({
+        //    .used_images = {
+        //        {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
+        //    },
+        //    .task = [this](daxa::TaskInterface<> interf)
+        //    {
+        //        auto cmd_list = interf.get_command_list();
+        //        imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, swapchain_image, AppWindow<T>::size_x, AppWindow<T>::size_y);
+        //    },
+        //    .name = APPNAME_PREFIX("ImGui Task"),
+        //});
+//
+        //new_task_list.submit({});
+        //new_task_list.present({});
+        //new_task_list.complete({});
+//
+        //// new_task_list.output_graphviz();
+//
+        //return new_task_list;
     }
 };

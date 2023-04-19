@@ -1,10 +1,11 @@
 #pragma once
 
 #include <daxa/core.hpp>
-#include <bit>
+#include <daxa/memory_block.hpp>
 
 namespace daxa
 {
+
     enum struct ImageViewType
     {
         REGULAR_1D = 0,
@@ -14,7 +15,11 @@ namespace daxa
         REGULAR_1D_ARRAY = 4,
         REGULAR_2D_ARRAY = 5,
         CUBE_ARRAY = 6,
+        // TODO(grundlet): add the other max values
+        MAX_ENUM = 7,
     };
+
+    auto to_string(ImageViewType const & type) -> std::string_view;
 
     static inline constexpr ImageViewType _ShaderAlias_1D = ImageViewType::REGULAR_1D;
     static inline constexpr ImageViewType _ShaderAlias_2D = ImageViewType::REGULAR_2D;
@@ -28,8 +33,8 @@ namespace daxa
 
     struct GPUResourceId
     {
-        u32 index : 24;
-        u32 version : 8;
+        u32 index : 24 = {};
+        u32 version : 8 = {};
 
         auto is_empty() const -> bool;
 
@@ -71,14 +76,12 @@ namespace daxa
         };
     } // namespace types
 
-    auto to_string(types::ImageId image_id) -> std::string;
-
-    auto to_string(types::BufferId buffer_id) -> std::string;
+    auto to_string(GPUResourceId const & id) -> std::string;
 
     struct BufferInfo
     {
-        MemoryFlags memory_flags = {};
         u32 size = {};
+        AllocateInfo allocate_info = {};
         std::string name = {};
     };
 
@@ -92,7 +95,7 @@ namespace daxa
         u32 array_layer_count = 1;
         u32 sample_count = 1;
         ImageUsageFlags usage = {};
-        MemoryFlags memory_flags = {};
+        AllocateInfo allocate_info = {};
         std::string name = {};
     };
 

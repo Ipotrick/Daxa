@@ -65,6 +65,7 @@ add_library(daxa STATIC
     "src/impl_dependencies.cpp"
     "src/impl_split_barrier.cpp"
     "src/impl_timeline_query.cpp"
+    "src/impl_memory_block.cpp"
 
     "src/utils/impl_task_list.cpp"
     "src/utils/impl_imgui.cpp"
