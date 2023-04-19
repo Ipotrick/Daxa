@@ -44,9 +44,9 @@ namespace daxa
     struct NAME : public daxa::TaskUses<NAME, SLOT> \
     {
 #define DAXA_INL_TASK_USE_BUFFER(NAME, TYPE, TASK_ACCESS) \
-        daxa::TaskBufferInput NAME = {{.access = daxa::TaskBufferAccess::TASK_ACCESS}};
+        daxa::TaskBufferUse NAME = {{.access = daxa::TaskBufferAccess::TASK_ACCESS}};
 #define DAXA_INL_TASK_USE_IMAGE(NAME, TYPE, TASK_ACCESS, SLICE) \
-        daxa::TaskImageInput NAME = {{.access = daxa::TaskImageAccess::TASK_ACCESS, .slice = SLICE, .view_type = TYPE::view_type()}};
+        daxa::TaskImageUse NAME = {{.access = daxa::TaskImageAccess::TASK_ACCESS, .slice = SLICE, .view_type = TYPE::view_type()}};
 #define DAXA_INL_TASK_USES_END() \
     };
 

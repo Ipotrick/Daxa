@@ -245,7 +245,7 @@ auto main() -> int
         .used_buffers = {
             // Now, since we're reading the buffer inside the vertex shader,
             // we'll say that we use it as such.
-            {task_buffer_id, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
+            {task_buffer_id, daxa::TaskBufferAccess::VERTEX_SHADER_READ},
         },
         .used_images = {
             // And, we'll denote that we use the swapchain image as a color
