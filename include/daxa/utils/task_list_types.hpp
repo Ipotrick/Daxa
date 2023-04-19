@@ -170,7 +170,7 @@ namespace daxa
     struct GenericTaskResourceUse
     {
         TaskResourceUseType type = TaskResourceUseType::NONE;
-        // This is nessecary for c++ to properly generate copy and move operators.
+        // This is necessary for c++ to properly generate copy and move operators.
         [[maybe_unused]] u8 raw[TASK_INPUT_FIELD_SIZE - sizeof(TaskResourceUseType)] = {};
     };
 
@@ -298,7 +298,7 @@ namespace daxa
     };
 
     template <typename ReflectedT, i32 SHADER_BINDING_T = -1>
-    struct TaskUses
+    struct TaskUses : public ReflectedT
     {
         using FIRST_DERIVED = ReflectedT;
         static constexpr i32 SHADER_BINDING = SHADER_BINDING_T;
@@ -325,54 +325,54 @@ namespace daxa
             return {reinterpret_cast<GenericTaskResourceUse const *>(memory.data()), count};
         }
 
-        template<typename BufFn, typename ImgFn> 
-        void for_each(BufFn&& buf_fn, ImgFn&& img_fn)
+        template <typename BufFn, typename ImgFn>
+        void for_each(BufFn && buf_fn, ImgFn && img_fn)
         {
             auto s = span();
             for (u32 index = 0; index < s.size(); ++index)
             {
                 auto type = s[index].type;
-                switch(type)
+                switch (type)
                 {
-                    case TaskResourceUseType::BUFFER: 
-                    {
-                        auto & arg = TaskBufferUse::from(s[index]);
-                        buf_fn(index, arg); 
-                        break;
-                    }
-                    case TaskResourceUseType::IMAGE: 
-                    {
-                        auto & arg = TaskImageUse::from(s[index]);
-                        img_fn(index, arg); 
-                        break;
-                    }
-                    default: break;
+                case TaskResourceUseType::BUFFER:
+                {
+                    auto & arg = TaskBufferUse::from(s[index]);
+                    buf_fn(index, arg);
+                    break;
+                }
+                case TaskResourceUseType::IMAGE:
+                {
+                    auto & arg = TaskImageUse::from(s[index]);
+                    img_fn(index, arg);
+                    break;
+                }
+                default: break;
                 }
             }
         }
 
-        template<typename BufFn, typename ImgFn> 
-        void for_each(BufFn&& buf_fn, ImgFn&& img_fn) const
+        template <typename BufFn, typename ImgFn>
+        void for_each(BufFn && buf_fn, ImgFn && img_fn) const
         {
             auto const s = span();
             for (u32 index = 0; index < s.size(); ++index)
             {
                 auto type = s[index].type;
-                switch(type)
+                switch (type)
                 {
-                    case TaskResourceUseType::BUFFER: 
-                    {
-                        auto const & arg = TaskBufferUse::from(s[index]);
-                        buf_fn(index, arg); 
-                        break;
-                    }
-                    case TaskResourceUseType::IMAGE: 
-                    {
-                        auto const & arg = TaskImageUse::from(s[index]);
-                        img_fn(index, arg); 
-                        break;
-                    }
-                    default: break;
+                case TaskResourceUseType::BUFFER:
+                {
+                    auto const & arg = TaskBufferUse::from(s[index]);
+                    buf_fn(index, arg);
+                    break;
+                }
+                case TaskResourceUseType::IMAGE:
+                {
+                    auto const & arg = TaskImageUse::from(s[index]);
+                    img_fn(index, arg);
+                    break;
+                }
+                default: break;
                 }
             }
         }

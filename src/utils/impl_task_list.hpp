@@ -222,7 +222,7 @@ namespace daxa
         };
         struct Transient
         {
-            TransientBufferInfo info = {};
+            TaskTransientBufferInfo info = {};
             BufferId buffer = {};
         };
         std::variant<Persistent, Transient> task_buffer_data = {};
@@ -268,7 +268,7 @@ namespace daxa
         };
         struct Transient
         {
-            TransientImageInfo info = {};
+            TaskTransientImageInfo info = {};
             MemoryRequirements memory_requirements = {};
         };
         std::variant<Persistent, Transient> task_image_data = {};
