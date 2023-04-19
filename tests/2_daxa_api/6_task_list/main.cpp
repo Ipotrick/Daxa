@@ -66,13 +66,13 @@ namespace tests
         auto task_image = task_list.create_transient_image({.size = {1, 1, 1}, .name = "task list tested image"});
         // WRITE IMAGE 1
         task_list.add_task({
-            .args = {daxa::TaskImageInput{{.id = task_image, .access = daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY}}},
+            .args = {daxa::TaskImageUse{{.id = task_image, .access = daxa::TaskImageAccess::COMPUTE_SHADER_WRITE}}},
             .task = [](daxa::TaskInterface<> const &) {},
             .name = APPNAME_PREFIX("write image 1"),
         });
         // READ_IMAGE 1
         task_list.add_task({
-            .args = {daxa::TaskImageInput{{.id = task_image, .access = daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY}}},
+            .args = {daxa::TaskImageUse{{.id = task_image, .access = daxa::TaskImageAccess::COMPUTE_SHADER_READ}}},
             .task = [](daxa::TaskInterface<> const &) {},
             .name = APPNAME_PREFIX("read image 1"),
         });
@@ -101,15 +101,15 @@ namespace tests
             .name = "task list tested image",
         });
         task_list.add_task({
-            .args = {daxa::TaskImageInput{{.id = task_image,
-                                           .access = daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
+            .args = {daxa::TaskImageUse{{.id = task_image,
+                                           .access = daxa::TaskImageAccess::COMPUTE_SHADER_WRITE,
                                            .slice = daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = 1}}}},
             .task = [](daxa::TaskInterface<> const &) {},
             .name = APPNAME_PREFIX("write image array layer 1"),
         });
         // READ_IMAGE 1
         task_list.add_task({
-            .args = {daxa::TaskImageInput{{.id = task_image, .access = daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY, .slice = daxa::ImageMipArraySlice{.base_array_layer = 1, .layer_count = 1}}}},
+            .args = {daxa::TaskImageUse{{.id = task_image, .access = daxa::TaskImageAccess::COMPUTE_SHADER_READ, .slice = daxa::ImageMipArraySlice{.base_array_layer = 1, .layer_count = 1}}}},
             .task = [](daxa::TaskInterface<> const &) {},
             .name = APPNAME_PREFIX("read image array layer 1"),
         });
@@ -137,13 +137,13 @@ namespace tests
         });
 
         task_list.add_task({
-            .args = {daxa::TaskBufferInput{{.id = task_buffer, .access = daxa::TaskBufferAccess::HOST_TRANSFER_WRITE}}},
+            .args = {daxa::TaskBufferUse{{.id = task_buffer, .access = daxa::TaskBufferAccess::HOST_TRANSFER_WRITE}}},
             .task = [](daxa::TaskInterface<> const &) {},
             .name = APPNAME_PREFIX("host transfer buffer"),
         });
 
         task_list.add_task({
-            .args = {daxa::TaskBufferInput{{.id = task_buffer, .access = daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY}}},
+            .args = {daxa::TaskBufferUse{{.id = task_buffer, .access = daxa::TaskBufferAccess::COMPUTE_SHADER_READ}}},
             .task = [](daxa::TaskInterface<> const &) {},
             .name = APPNAME_PREFIX("read buffer"),
         });
@@ -190,17 +190,17 @@ namespace tests
         // CREATE IMAGE
         task_list.use_persistent_image(task_image);
         task_list.add_task({
-            .args = {daxa::TaskImageInput{{.id = task_image,
-                                           .access = daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
+            .args = {daxa::TaskImageUse{{.id = task_image,
+                                           .access = daxa::TaskImageAccess::COMPUTE_SHADER_READ,
                                            .slice = daxa::ImageMipArraySlice{.base_array_layer = 1, .layer_count = 1}}}},
             .task = [](daxa::TaskInterface<> const &) {},
             .name = APPNAME_PREFIX("read array layer 2"),
         });
         task_list.add_task({
             .args = {
-                daxa::TaskImageInput{{
+                daxa::TaskImageUse{{
                     .id = task_image,
-                    .access = daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
+                    .access = daxa::TaskImageAccess::COMPUTE_SHADER_WRITE,
                     .slice = daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = 1},
                 }},
             },
@@ -259,9 +259,9 @@ namespace tests
 
         task_list.add_task({
             .args = {
-                daxa::TaskImageInput{{
+                daxa::TaskImageUse{{
                     .id = task_image,
-                    .access = daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
+                    .access = daxa::TaskImageAccess::COMPUTE_SHADER_READ,
                     .slice = daxa::ImageMipArraySlice{.base_array_layer = 1, .layer_count = 1},
                 }},
             },
@@ -270,9 +270,9 @@ namespace tests
         });
         task_list.add_task({
             .args = {
-                daxa::TaskImageInput{{
+                daxa::TaskImageUse{{
                     .id = task_image,
-                    .access = daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
+                    .access = daxa::TaskImageAccess::COMPUTE_SHADER_WRITE,
                     .slice = daxa::ImageMipArraySlice{.base_array_layer = 3, .layer_count = 1},
                 }},
             },
@@ -281,9 +281,9 @@ namespace tests
         });
         task_list.add_task({
             .args = {
-                daxa::TaskImageInput{{
+                daxa::TaskImageUse{{
                     .id = task_image,
-                    .access = daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY,
+                    .access = daxa::TaskImageAccess::COMPUTE_SHADER_WRITE,
                     .slice = daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = 4},
                 }},
             },
@@ -292,9 +292,9 @@ namespace tests
         });
         task_list.add_task({
             .args = {
-                daxa::TaskImageInput{{
+                daxa::TaskImageUse{{
                     .id = task_image,
-                    .access = daxa::TaskImageAccess::COMPUTE_SHADER_READ_ONLY,
+                    .access = daxa::TaskImageAccess::COMPUTE_SHADER_READ,
                     .slice = daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = 4},
                 }},
             },
@@ -373,7 +373,7 @@ namespace tests
         task_list.use_persistent_buffer(task_buffer);
 
         auto args = ShaderIntegrationTaskListUses{};
-        args.shader_integration_image.id = task_image;
+        args.image.id = task_image;
         args.settings.id = task_buffer;
         task_list.add_task(daxa::TaskInfo<ShaderIntegrationTaskListUses>{
             .args = args,
@@ -451,20 +451,20 @@ namespace tests
         task_list.use_persistent_image(persistent_task_image);
         task_list.use_persistent_buffer(persistent_task_buffer);
         task_list.add_task({
-            .args = {daxa::TaskImageInput{{.id = persistent_task_image, .access = daxa::TaskImageAccess::SHADER_WRITE_ONLY}}},
+            .args = {daxa::TaskImageUse{{.id = persistent_task_image, .access = daxa::TaskImageAccess::SHADER_WRITE}}},
             .task = [&](daxa::TaskInterface<> const &) {},
             .name = "write persistent image",
         });
         task_list.add_task({
             .args = {
-                daxa::TaskBufferInput{{.id = persistent_task_buffer, .access = daxa::TaskBufferAccess::SHADER_READ_ONLY}},
-                daxa::TaskImageInput{{.id = persistent_task_image, .access = daxa::TaskImageAccess::SHADER_READ_ONLY}},
+                daxa::TaskBufferUse{{.id = persistent_task_buffer, .access = daxa::TaskBufferAccess::SHADER_READ}},
+                daxa::TaskImageUse{{.id = persistent_task_image, .access = daxa::TaskImageAccess::SHADER_READ}},
             },
             .task = [&](daxa::TaskInterface<> const &) {},
             .name = "read persistent image, read persistent buffer",
         });
         task_list.add_task({
-            .args = { daxa::TaskBufferInput{{.id = persistent_task_buffer, .access = daxa::TaskBufferAccess::SHADER_READ_ONLY}}},
+            .args = { daxa::TaskBufferUse{{.id = persistent_task_buffer, .access = daxa::TaskBufferAccess::SHADER_READ}}},
             .task = [&](daxa::TaskInterface<> const &) {},
             .name = "read persistent buffer",
         });

@@ -189,7 +189,7 @@ namespace tests
             // Record tasks.
             task_list.add_task({
                 .args = {
-                    daxa::TaskBufferInput{{.id = long_life_buffer, .access = TBA::TRANSFER_WRITE}},
+                    daxa::TaskBufferUse{{.id = long_life_buffer, .access = TBA::TRANSFER_WRITE}},
                 },
                 .task = [=](daxa::TaskInterface<> tri)
                 {
@@ -201,7 +201,7 @@ namespace tests
 
             task_list.add_task({
                 .args = {
-                    daxa::TaskImageInput{{.id = medium_life_image, .access = TIA::TRANSFER_WRITE}},
+                    daxa::TaskImageUse{{.id = medium_life_image, .access = TIA::TRANSFER_WRITE}},
                 },
                 .task = [=](daxa::TaskInterface<> tri)
                 {
@@ -213,9 +213,9 @@ namespace tests
 
             task_list.add_task({
                 .args = {
-                    daxa::TaskBufferInput{{.id = long_life_buffer, .access = TBA::COMPUTE_SHADER_READ_ONLY}},
-                    daxa::TaskImageInput{{.id = medium_life_image, .access = TIA::COMPUTE_SHADER_READ_ONLY, .view_type = daxa::ImageViewType::REGULAR_3D}},
-                    daxa::TaskImageInput{{.id = long_life_image, .access = TIA::TRANSFER_WRITE}},
+                    daxa::TaskBufferUse{{.id = long_life_buffer, .access = TBA::COMPUTE_SHADER_READ}},
+                    daxa::TaskImageUse{{.id = medium_life_image, .access = TIA::COMPUTE_SHADER_READ, .view_type = daxa::ImageViewType::REGULAR_3D}},
+                    daxa::TaskImageUse{{.id = long_life_image, .access = TIA::TRANSFER_WRITE}},
                 },
                 .task = [=](daxa::TaskInterface<> tri)
                 {
@@ -228,15 +228,15 @@ namespace tests
             });
 
             task_list.add_task({
-                .args = {daxa::TaskImageInput{{.id = short_life_image, .access = TIA::COMPUTE_SHADER_READ_WRITE}}},
+                .args = {daxa::TaskImageUse{{.id = short_life_image, .access = TIA::COMPUTE_SHADER_READ_WRITE}}},
                 .task = [=](daxa::TaskInterface<>) {},
                 .name = "dummy use short life image",
             });
 
             task_list.add_task({
                 .args = {
-                    daxa::TaskBufferInput{{.id = short_life_buffer, .access = TBA::COMPUTE_SHADER_READ_WRITE}},
-                    daxa::TaskImageInput{{.id = long_life_image, .access = TIA::COMPUTE_SHADER_READ_ONLY, .view_type = daxa::ImageViewType::REGULAR_3D}},
+                    daxa::TaskBufferUse{{.id = short_life_buffer, .access = TBA::COMPUTE_SHADER_READ_WRITE}},
+                    daxa::TaskImageUse{{.id = long_life_image, .access = TIA::COMPUTE_SHADER_READ, .view_type = daxa::ImageViewType::REGULAR_3D}},
                 },
                 .task = [=](daxa::TaskInterface<> tri)
                 {

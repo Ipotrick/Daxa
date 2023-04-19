@@ -17,7 +17,7 @@ namespace daxa
     struct CommandSubmitInfo;
     struct PresentInfo;
 
-    using TaskInputDefaultT = std::span<GenericTaskInput>;
+    using TaskInputDefaultT = std::span<GenericTaskResourceUse>;
 
     struct GenericTaskInterface
     {
@@ -36,7 +36,7 @@ namespace daxa
         template <typename TaskInput>
         friend struct TaskInterface;
         GenericTaskInterface(void * a_backend);
-        auto get_args() const -> std::span<GenericTaskInput>;
+        auto get_args() const -> std::span<GenericTaskResourceUse>;
         void * backend = {};
     };
 
@@ -259,7 +259,7 @@ namespace daxa
 
     struct InlineTaskInfo
     {
-        std::initializer_list<GenericTaskInput> args = {};
+        std::initializer_list<GenericTaskResourceUse> args = {};
         TaskCallback task = {};
         std::string name = {};
     };
