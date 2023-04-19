@@ -457,7 +457,7 @@ namespace tests
                 new_task_list.use_persistent_image(task_render_image);
                 new_task_list.add_task({
                     .args = {
-                        daxa::TaskBufferUse{{task_mipmapping_gpu_input_buffer, BA::HOST_TRANSFER_WRITE}}
+                        daxa::TaskBufferUse{{task_mipmapping_gpu_input_buffer, BA::HOST_TRANSFER_WRITE}},
                     },
                     .task = [this](daxa::TaskInterface<> const & ti)
                     {
@@ -492,11 +492,12 @@ namespace tests
                                 // Demonstration of explicit struct for task resource uses.
                                 // This interface allows tasks to be defined in seperate files very conveniently.
                                 // All fields in these structs MUST be either daxa::TaskBufferUse or daxa::TaskImageUse!
-                                struct MipUses : public daxa::TaskUses<MipUses>
+                                struct MipUsesStruct
                                 {
                                     daxa::TaskImageUse lower_mip = {{{}, IA::TRANSFER_READ}};
                                     daxa::TaskImageUse higher_mip = {{{}, IA::TRANSFER_WRITE}};
                                 };
+                                using MipUses = daxa::TaskUses<MipUsesStruct>;
 
                                 // Constants cann be piggybaged inside of the args by inheriting a use struct.
                                 // This struct can contain any trivially copyable data.
