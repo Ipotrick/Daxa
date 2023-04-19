@@ -82,14 +82,13 @@ namespace daxa
 
     using TaskCallback = std::function<void(TaskInterface<> const &)>;
 
-    struct TransientBufferInfo
+    struct TaskTransientBufferInfo
     {
-        MemoryFlags memory_flags = {};
         u32 size = {};
         std::string name = {};
     };
 
-    struct TransientImageInfo
+    struct TaskTransientImageInfo
     {
         u32 dimensions = 2;
         Format format = Format::R8G8B8A8_UNORM;
@@ -98,7 +97,6 @@ namespace daxa
         u32 mip_level_count = 1;
         u32 array_layer_count = 1;
         u32 sample_count = 1;
-        MemoryFlags memory_flags = {};
         std::string name = {};
     };
 
@@ -263,7 +261,9 @@ namespace daxa
 
     struct InlineTaskInfo
     {
-        std::initializer_list<GenericTaskResourceUse> args = {};
+        // NOTE: MSVC appears to not like initializer lists as members...
+        // TODO(grundlett/pahrens): Change to be an initializer list when MSVC fixes it
+        std::vector<GenericTaskResourceUse> args = {};
         TaskCallback task = {};
         std::string name = {};
     };
@@ -278,8 +278,8 @@ namespace daxa
         auto use_persistent_buffer(TaskBuffer const & buffer) -> TaskBufferId;
         auto use_persistent_image(TaskImage const & image) -> TaskImageId;
 
-        auto create_transient_buffer(TransientBufferInfo const & info) -> TaskBufferId;
-        auto create_transient_image(TransientImageInfo const & info) -> TaskImageId;
+        auto create_transient_buffer(TaskTransientBufferInfo const & info) -> TaskBufferId;
+        auto create_transient_image(TaskTransientImageInfo const & info) -> TaskImageId;
 
         template <typename TaskInput>
         void add_task(TaskInfo<TaskInput> const & info)
@@ -304,7 +304,23 @@ namespace daxa
                 .name = info.name,
             });
         }
-        void add_task(InlineTaskInfo const & info);
+
+        void add_task(InlineTaskInfo const & info)
+        {
+            auto const size = TASK_INPUT_FIELD_SIZE * info.args.size();
+            GenericTaskArgsContainer args = {};
+            args.memory.resize(size, 0);
+            args.count = info.args.size();
+            for (usize i = 0; i < info.args.size(); ++i)
+            {
+                reinterpret_cast<GenericTaskResourceUse *>(args.memory.data())[i] = *(info.args.begin() + i);
+            }
+            add_task(GenericTaskInfo{
+                .task_args = std::move(args),
+                .task = info.task,
+                .name = info.name,
+            });
+        }
 
         void conditional(TaskListConditionalInfo const & conditional_info);
         void submit(TaskSubmitInfo const & info);

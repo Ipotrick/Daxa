@@ -297,13 +297,12 @@ namespace daxa
         auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
         return TaskBufferUse::from(impl.current_task->info.task_args.span()[use_index]);
     }
-    
+
     auto GenericTaskInterface::image_use_at(usize use_index) const -> TaskImageUse const &
     {
         auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
         return TaskImageUse::from(impl.current_task->info.task_args.span()[use_index]);
     }
-
 
     TaskBuffer::TaskBuffer(TaskBufferInfo const & info)
         : ManagedPtr{new ImplPersistentTaskBuffer(info)}
@@ -457,27 +456,6 @@ namespace daxa
         return task_buffer_id;
     }
 
-    auto TaskList::create_transient_buffer(TransientBufferInfo const & info) -> TaskBufferId
-    {
-        auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
-        DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "completed task lists can not record new tasks");
-        DAXA_DBG_ASSERT_TRUE_M(!impl.buffer_name_to_id.contains(info.name), "task buffer names msut be unique");
-        TaskBufferId task_buffer_id{{.task_list_index = impl.unique_index, .index = static_cast<u32>(impl.global_buffer_infos.size())}};
-
-        for (auto & permutation : impl.permutations)
-        {
-            permutation.buffer_infos.push_back(PerPermTaskBuffer{
-                .valid = permutation.active,
-            });
-        }
-
-        impl.global_buffer_infos.emplace_back(PermIndepTaskBufferInfo{
-            .task_buffer_data = PermIndepTaskBufferInfo::Transient{.info = info}});
-
-        impl.buffer_name_to_id[info.name] = task_buffer_id;
-        return task_buffer_id;
-    }
-
     auto TaskList::use_persistent_image(TaskImage const & image) -> TaskImageId
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
@@ -510,7 +488,28 @@ namespace daxa
         return task_image_id;
     }
 
-    auto TaskList::create_transient_image(TransientImageInfo const & info) -> TaskImageId
+    auto TaskList::create_transient_buffer(TaskTransientBufferInfo const & info) -> TaskBufferId
+    {
+        auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
+        DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "completed task lists can not record new tasks");
+        DAXA_DBG_ASSERT_TRUE_M(!impl.buffer_name_to_id.contains(info.name), "task buffer names msut be unique");
+        TaskBufferId task_buffer_id{{.task_list_index = impl.unique_index, .index = static_cast<u32>(impl.global_buffer_infos.size())}};
+
+        for (auto & permutation : impl.permutations)
+        {
+            permutation.buffer_infos.push_back(PerPermTaskBuffer{
+                .valid = permutation.active,
+            });
+        }
+        auto info_copy = info; // NOTE: (HACK) we must do this because msvc designated init bugs causing it to not generate copy constructors.
+        impl.global_buffer_infos.emplace_back(PermIndepTaskBufferInfo{
+            .task_buffer_data = PermIndepTaskBufferInfo::Transient{.info = info_copy}});
+
+        impl.buffer_name_to_id[info.name] = task_buffer_id;
+        return task_buffer_id;
+    }
+
+    auto TaskList::create_transient_image(TaskTransientImageInfo const & info) -> TaskImageId
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "completed task lists can not record new tasks");
@@ -525,9 +524,10 @@ namespace daxa
             });
         }
 
+        auto info_copy = info; // NOTE: (HACK) we must do this because msvc designated init bugs causing it to not generate copy constructors.
         impl.global_image_infos.emplace_back(PermIndepTaskImageInfo{
             .task_image_data = PermIndepTaskImageInfo::Transient{
-                .info = info,
+                .info = info_copy,
             }});
         impl.image_name_to_id[info.name] = task_image_id;
         return task_image_id;
@@ -825,24 +825,6 @@ namespace daxa
         });
         task.info.task(TaskInterface<>(&impl_runtime));
         impl_runtime.command_lists.back().end_label();
-    }
-
-    void TaskList::add_task(InlineTaskInfo const & info)
-    {
-        auto const size = TASK_INPUT_FIELD_SIZE * info.args.size();
-        GenericTaskArgsContainer args = {};
-        args.memory.resize(size, 0);
-        args.count = info.args.size();
-        for (usize i = 0; i < info.args.size(); ++i)
-        {
-            reinterpret_cast<GenericTaskResourceUse *>(args.memory.data())[i] = *(info.args.begin() + i);
-        }
-
-        add_task(GenericTaskInfo{
-            .task_args = std::move(args),
-            .task = info.task,
-            .name = info.name,
-        });
     }
 
     void TaskList::conditional(TaskListConditionalInfo const & conditional_info)
@@ -1678,7 +1660,7 @@ namespace daxa
                 auto & transient_data = std::get<PermIndepTaskBufferInfo::Transient>(perm_task_buffer.task_buffer_data);
                 transient_data.buffer = info.device.create_buffer(BufferInfo{
                     .size = transient_data.info.size,
-                    .allocate_info = AutoAllocInfo{transient_data.info.memory_flags},
+                    .allocate_info = AutoAllocInfo{{}},
                     .name = transient_data.info.name});
             }
         }
@@ -1694,10 +1676,6 @@ namespace daxa
             if (!glob_image.is_persistent() && perm_image.valid)
             {
                 auto const & transient_info = std::get<PermIndepTaskImageInfo::Transient>(glob_image.task_image_data);
-                DAXA_DBG_ASSERT_TRUE_M(transient_info.info.memory_flags == MemoryFlagBits::DEDICATED_MEMORY ||
-                                           transient_info.info.memory_flags == MemoryFlagBits::NONE,
-                                       std::string("Transient resources with memory flags other than DEDICATED_MEMORY or NONE(assumes dedicated memory)") +
-                                           std::string(" are currently not supported (ask msakmary to add the support)"));
                 DAXA_DBG_ASSERT_TRUE_M(perm_image.usage != ImageUsageFlagBits::NONE,
                                        std::string("Transient image is not used in this permutation but marked as valid either: ") +
                                            std::string("\t- it was used as PRESENT which is not allowed for transient images") +
