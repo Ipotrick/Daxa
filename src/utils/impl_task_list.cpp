@@ -258,6 +258,12 @@ namespace daxa
         return actual_buffers[index];
     }
 
+    auto GenericTaskInterface::device_address(TaskBufferId const & task_resource_id, usize index) const -> daxa::BufferDeviceAddress
+    {
+        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
+        return impl.task_list.info.device.get_device_address(buffer(task_resource_id));
+    }
+
     auto GenericTaskInterface::image(TaskImageId const & task_resource_id, usize index) const -> ImageId
     {
         auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
@@ -432,7 +438,7 @@ namespace daxa
 
         impl.global_buffer_infos.emplace_back(PermIndepTaskBufferInfo{
             .task_buffer_data = PermIndepTaskBufferInfo::Persistent{
-                .buffer = ManagedWeakPtr{buffer.object}}});
+                .buffer = ManagedPtr{buffer.object}}});
         impl.persistent_buffer_index_to_local_index[buffer.id().index] = task_buffer_id.index;
         impl.buffer_name_to_id[buffer.info().name] = task_buffer_id;
         return task_buffer_id;
@@ -484,7 +490,7 @@ namespace daxa
 
         impl.global_image_infos.emplace_back(PermIndepTaskImageInfo{
             .task_image_data = PermIndepTaskImageInfo::Persistent{
-                .image = ManagedWeakPtr{image.object},
+                .image = ManagedPtr{image.object},
             }});
         impl.persistent_image_index_to_local_index[image.id().index] = task_image_id.index;
         impl.image_name_to_id[image.info().name] = task_image_id;
