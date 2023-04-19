@@ -439,7 +439,7 @@ auto main() -> int
 
     loop_task_list.add_task({
         .used_buffers = {
-            {renderable_chunks_task_buffer_id, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
+            {renderable_chunks_task_buffer_id, daxa::TaskBufferAccess::VERTEX_SHADER_READ},
         },
         .task = [&](daxa::TaskInterface<> task_runtime)
         {
@@ -479,7 +479,7 @@ auto main() -> int
 
     loop_task_list.add_task({
         .used_buffers = {
-            {renderable_chunks_task_buffer_id, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
+            {renderable_chunks_task_buffer_id, daxa::TaskBufferAccess::VERTEX_SHADER_READ},
         },
         .used_images = {
             {task_color_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
@@ -536,10 +536,10 @@ auto main() -> int
 
     loop_task_list.add_task({
         .used_images = {
-            {task_color_image, daxa::TaskImageAccess::SHADER_READ_ONLY, daxa::ImageMipArraySlice{}},
-            {task_motion_vectors_image, daxa::TaskImageAccess::SHADER_READ_ONLY, daxa::ImageMipArraySlice{}},
-            {task_depth_image, daxa::TaskImageAccess::SHADER_READ_ONLY, daxa::ImageMipArraySlice{.image_aspect = daxa::ImageAspectFlagBits::DEPTH}},
-            {task_display_image, daxa::TaskImageAccess::SHADER_WRITE_ONLY, daxa::ImageMipArraySlice{}},
+            {task_color_image, daxa::TaskImageAccess::SHADER_READ, daxa::ImageMipArraySlice{}},
+            {task_motion_vectors_image, daxa::TaskImageAccess::SHADER_READ, daxa::ImageMipArraySlice{}},
+            {task_depth_image, daxa::TaskImageAccess::SHADER_READ, daxa::ImageMipArraySlice{.image_aspect = daxa::ImageAspectFlagBits::DEPTH}},
+            {task_display_image, daxa::TaskImageAccess::SHADER_WRITE, daxa::ImageMipArraySlice{}},
         },
         .task = [&](daxa::TaskInterface<> runtime)
         {

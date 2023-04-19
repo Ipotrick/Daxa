@@ -47,7 +47,7 @@ namespace tests
         task_list_A.use_persistent_buffer(persistent_task_buffer);
         task_list_B.use_persistent_buffer(persistent_task_buffer);
         task_list_A.add_task({
-           .args = {daxa::TaskBufferInput{{ .id = persistent_task_buffer.id(), .access = daxa::TaskBufferAccess::SHADER_WRITE_ONLY }}},
+           .args = {daxa::TaskBufferUse{{ .id = persistent_task_buffer.id(), .access = daxa::TaskBufferAccess::SHADER_WRITE }}},
            .task = [&](daxa::TaskInterface<> const &) { },
            .name = "write persistent buffer",
         });
@@ -55,7 +55,7 @@ namespace tests
         task_list_A.complete({});
 
         task_list_B.add_task({
-           .args = {daxa::TaskBufferInput{{ .id = persistent_task_buffer.id(), .access = daxa::TaskBufferAccess::SHADER_READ_ONLY }}},
+           .args = {daxa::TaskBufferUse{{ .id = persistent_task_buffer.id(), .access = daxa::TaskBufferAccess::SHADER_READ }}},
            .task = [&](daxa::TaskInterface<> const &) { },
            .name = "read persistent buffer",
         });
@@ -117,12 +117,12 @@ namespace tests
 
         task_list_A.use_persistent_image(persistent_task_image);
         task_list_A.add_task({
-           .args = {daxa::TaskImageInput{{ .id = persistent_task_image, .access = daxa::TaskImageAccess::SHADER_WRITE_ONLY }}},
+           .args = {daxa::TaskImageUse{{ .id = persistent_task_image, .access = daxa::TaskImageAccess::SHADER_WRITE }}},
            .task = [&](daxa::TaskInterface<> const &) { },
            .name = "write persistent image",
         });
         task_list_A.add_task({
-           .args = {daxa::TaskImageInput{{ .id = persistent_task_image, .access = daxa::TaskImageAccess::COLOR_ATTACHMENT }}},
+           .args = {daxa::TaskImageUse{{ .id = persistent_task_image, .access = daxa::TaskImageAccess::COLOR_ATTACHMENT }}},
            .task = [&](daxa::TaskInterface<> const &) { },
            .name = "persistent image - color attachment",
         });
@@ -136,7 +136,7 @@ namespace tests
         });
         task_list_B.use_persistent_image(persistent_task_image);
         task_list_B.add_task({
-           .args = {daxa::TaskImageInput{{ .id = persistent_task_image, .access = daxa::TaskImageAccess::SHADER_READ_ONLY }}},
+           .args = {daxa::TaskImageUse{{ .id = persistent_task_image, .access = daxa::TaskImageAccess::SHADER_READ }}},
            .task = [&](daxa::TaskInterface<> const &) { },
            .name = "read persistent image",
         });

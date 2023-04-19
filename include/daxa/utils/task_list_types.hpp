@@ -15,20 +15,20 @@ namespace daxa
     enum struct TaskBufferAccess
     {
         NONE,
-        SHADER_READ_ONLY,
-        VERTEX_SHADER_READ_ONLY,
-        TESSELLATION_CONTROL_SHADER_READ_ONLY,
-        TESSELLATION_EVALUATION_SHADER_READ_ONLY,
-        GEOMETRY_SHADER_READ_ONLY,
-        FRAGMENT_SHADER_READ_ONLY,
-        COMPUTE_SHADER_READ_ONLY,
-        SHADER_WRITE_ONLY,
-        VERTEX_SHADER_WRITE_ONLY,
-        TESSELLATION_CONTROL_SHADER_WRITE_ONLY,
-        TESSELLATION_EVALUATION_SHADER_WRITE_ONLY,
-        GEOMETRY_SHADER_WRITE_ONLY,
-        FRAGMENT_SHADER_WRITE_ONLY,
-        COMPUTE_SHADER_WRITE_ONLY,
+        SHADER_READ,
+        VERTEX_SHADER_READ,
+        TESSELLATION_CONTROL_SHADER_READ,
+        TESSELLATION_EVALUATION_SHADER_READ,
+        GEOMETRY_SHADER_READ,
+        FRAGMENT_SHADER_READ,
+        COMPUTE_SHADER_READ,
+        SHADER_WRITE,
+        VERTEX_SHADER_WRITE,
+        TESSELLATION_CONTROL_SHADER_WRITE,
+        TESSELLATION_EVALUATION_SHADER_WRITE,
+        GEOMETRY_SHADER_WRITE,
+        FRAGMENT_SHADER_WRITE,
+        COMPUTE_SHADER_WRITE,
         SHADER_READ_WRITE,
         VERTEX_SHADER_READ_WRITE,
         TESSELLATION_CONTROL_SHADER_READ_WRITE,
@@ -49,20 +49,20 @@ namespace daxa
     enum struct TaskImageAccess
     {
         NONE,
-        SHADER_READ_ONLY,
-        VERTEX_SHADER_READ_ONLY,
-        TESSELLATION_CONTROL_SHADER_READ_ONLY,
-        TESSELLATION_EVALUATION_SHADER_READ_ONLY,
-        GEOMETRY_SHADER_READ_ONLY,
-        FRAGMENT_SHADER_READ_ONLY,
-        COMPUTE_SHADER_READ_ONLY,
-        SHADER_WRITE_ONLY,
-        VERTEX_SHADER_WRITE_ONLY,
-        TESSELLATION_CONTROL_SHADER_WRITE_ONLY,
-        TESSELLATION_EVALUATION_SHADER_WRITE_ONLY,
-        GEOMETRY_SHADER_WRITE_ONLY,
-        FRAGMENT_SHADER_WRITE_ONLY,
-        COMPUTE_SHADER_WRITE_ONLY,
+        SHADER_READ,
+        VERTEX_SHADER_READ,
+        TESSELLATION_CONTROL_SHADER_READ,
+        TESSELLATION_EVALUATION_SHADER_READ,
+        GEOMETRY_SHADER_READ,
+        FRAGMENT_SHADER_READ,
+        COMPUTE_SHADER_READ,
+        SHADER_WRITE,
+        VERTEX_SHADER_WRITE,
+        TESSELLATION_CONTROL_SHADER_WRITE,
+        TESSELLATION_EVALUATION_SHADER_WRITE,
+        GEOMETRY_SHADER_WRITE,
+        FRAGMENT_SHADER_WRITE,
+        COMPUTE_SHADER_WRITE,
         SHADER_READ_WRITE,
         VERTEX_SHADER_READ_WRITE,
         TESSELLATION_CONTROL_SHADER_READ_WRITE,
@@ -76,9 +76,9 @@ namespace daxa
         DEPTH_ATTACHMENT,
         STENCIL_ATTACHMENT,
         DEPTH_STENCIL_ATTACHMENT,
-        DEPTH_ATTACHMENT_READ_ONLY,
-        STENCIL_ATTACHMENT_READ_ONLY,
-        DEPTH_STENCIL_ATTACHMENT_READ_ONLY,
+        DEPTH_ATTACHMENT_READ,
+        STENCIL_ATTACHMENT_READ,
+        DEPTH_STENCIL_ATTACHMENT_READ,
         RESOLVE_WRITE,
         PRESENT,
     };
@@ -157,7 +157,7 @@ namespace daxa
     using UsedTaskBuffers = std::vector<TaskBufferUseInit>;
     using UsedTaskImages = std::vector<TaskImageUseInit>;
 
-    enum class TaskInputType : u32
+    enum class TaskResourceUseType : u32
     {
         NONE = 0,
         BUFFER = 1,
@@ -167,31 +167,43 @@ namespace daxa
 
     static inline constexpr size_t TASK_INPUT_FIELD_SIZE = 128;
 
-    struct GenericTaskInput
+    struct GenericTaskResourceUse
     {
-        TaskInputType type = TaskInputType::NONE;
+        TaskResourceUseType type = TaskResourceUseType::NONE;
         // This is nessecary for c++ to properly generate copy and move operators.
-        [[maybe_unused]] u8 raw[TASK_INPUT_FIELD_SIZE - sizeof(TaskInputType)] = {};
+        [[maybe_unused]] u8 raw[TASK_INPUT_FIELD_SIZE - sizeof(TaskResourceUseType)] = {};
     };
 
-    struct alignas(TASK_INPUT_FIELD_SIZE) TaskBufferInput
+    struct alignas(TASK_INPUT_FIELD_SIZE) TaskBufferUse
     {
       private:
         friend struct ImplTaskList;
-        TaskInputType const type = TaskInputType::BUFFER;
-        static constexpr inline TaskInputType INPUT_TYPE = TaskInputType::BUFFER;
+        TaskResourceUseType const type = TaskResourceUseType::BUFFER;
+        static constexpr inline TaskResourceUseType INPUT_TYPE = TaskResourceUseType::BUFFER;
         std::span<BufferId const> buffers = {};
 
       public:
         TaskBufferId id = {};
         TaskBufferAccess access = {};
 
-        constexpr TaskBufferInput() = default;
+        constexpr TaskBufferUse() = default;
 
-        constexpr TaskBufferInput(TaskBufferUseInit const & init)
+        constexpr TaskBufferUse(TaskBufferUseInit const & init)
             : id{init.id},
               access{init.access}
         {
+        }
+
+        static auto from(GenericTaskResourceUse const & input) -> TaskBufferUse const &
+        {
+            DAXA_DBG_ASSERT_TRUE_M(input.type == TaskResourceUseType::BUFFER, "invalid TaskResourceUse cast");
+            return *reinterpret_cast<TaskBufferUse const *>(&input);
+        }
+
+        static auto from(GenericTaskResourceUse & input) -> TaskBufferUse &
+        {
+            DAXA_DBG_ASSERT_TRUE_M(input.type == TaskResourceUseType::BUFFER, "invalid TaskResourceUse cast");
+            return *reinterpret_cast<TaskBufferUse *>(&input);
         }
 
         auto buffer(usize index = 0) const -> BufferId
@@ -200,33 +212,23 @@ namespace daxa
             return buffers[index];
         }
 
-        static auto from(GenericTaskInput const & input) -> TaskBufferInput const &
+        auto to_generic() const -> GenericTaskResourceUse const &
         {
-            return *reinterpret_cast<TaskBufferInput const *>(&input);
+            return *reinterpret_cast<GenericTaskResourceUse const *>(this);
         }
 
-        static auto from(GenericTaskInput & input) -> TaskBufferInput &
-        {
-            return *reinterpret_cast<TaskBufferInput *>(&input);
-        }
-
-        auto to_generic() const -> GenericTaskInput const &
-        {
-            return *reinterpret_cast<GenericTaskInput const *>(this);
-        }
-
-        operator GenericTaskInput const &() const
+        operator GenericTaskResourceUse const &() const
         {
             return to_generic();
         }
     };
 
-    struct alignas(TASK_INPUT_FIELD_SIZE) TaskImageInput
+    struct alignas(TASK_INPUT_FIELD_SIZE) TaskImageUse
     {
       private:
         friend struct ImplTaskList;
-        TaskInputType type = TaskInputType::IMAGE;
-        static constexpr inline TaskInputType INPUT_TYPE = TaskInputType::IMAGE;
+        TaskResourceUseType type = TaskResourceUseType::IMAGE;
+        static constexpr inline TaskResourceUseType INPUT_TYPE = TaskResourceUseType::IMAGE;
         std::span<ImageId const> images = {};
         std::span<ImageViewId const> views = {};
 
@@ -238,14 +240,26 @@ namespace daxa
         ///         If no type is provided, the runtime images default view type is used.
         ImageViewType view_type = ImageViewType::MAX_ENUM;
 
-        constexpr TaskImageInput() = default;
+        constexpr TaskImageUse() = default;
 
-        constexpr TaskImageInput(TaskImageUseInit const & init)
+        constexpr TaskImageUse(TaskImageUseInit const & init)
             : id{init.id},
               access{init.access},
               slice{init.slice},
               view_type{init.view_type}
         {
+        }
+
+        static auto from(GenericTaskResourceUse const & input) -> TaskImageUse const &
+        {
+            DAXA_DBG_ASSERT_TRUE_M(input.type == TaskResourceUseType::IMAGE, "invalid TaskResourceUse cast");
+            return *reinterpret_cast<TaskImageUse const *>(&input);
+        }
+
+        static auto from(GenericTaskResourceUse & input) -> TaskImageUse &
+        {
+            DAXA_DBG_ASSERT_TRUE_M(input.type == TaskResourceUseType::IMAGE, "invalid TaskResourceUse cast");
+            return *reinterpret_cast<TaskImageUse *>(&input);
         }
 
         auto image(u32 index = 0) const -> ImageId
@@ -260,29 +274,19 @@ namespace daxa
             return views[index];
         }
 
-        static auto from(GenericTaskInput const & input) -> TaskImageInput const &
+        auto to_generic() const -> GenericTaskResourceUse const &
         {
-            return *reinterpret_cast<TaskImageInput const *>(&input);
+            return *reinterpret_cast<GenericTaskResourceUse const *>(this);
         }
 
-        static auto from(GenericTaskInput & input) -> TaskImageInput &
-        {
-            return *reinterpret_cast<TaskImageInput *>(&input);
-        }
-
-        auto to_generic() const -> GenericTaskInput const &
-        {
-            return *reinterpret_cast<GenericTaskInput const *>(this);
-        }
-
-        operator GenericTaskInput const &() const
+        operator GenericTaskResourceUse const &() const
         {
             return to_generic();
         }
     };
 
-    static inline constexpr size_t TASK_BUFFER_INPUT_SIZE = sizeof(TaskBufferInput);
-    static inline constexpr size_t TASK_IMAGE_INPUT_SIZE = sizeof(TaskImageInput);
+    static inline constexpr size_t TASK_BUFFER_INPUT_SIZE = sizeof(TaskBufferUse);
+    static inline constexpr size_t TASK_IMAGE_INPUT_SIZE = sizeof(TaskImageUse);
 
     static_assert(TASK_BUFFER_INPUT_SIZE == TASK_IMAGE_INPUT_SIZE, "should be impossible! contact Ipotrick");
     static_assert(TASK_BUFFER_INPUT_SIZE == TASK_INPUT_FIELD_SIZE, "should be impossible! contact Ipotrick");
@@ -290,7 +294,7 @@ namespace daxa
     struct TaskUseOffsetType
     {
         u32 offset = {};
-        TaskInputType type = {};
+        TaskResourceUseType type = {};
     };
 
     template <typename ReflectedT, i32 SHADER_BINDING_T = -1>
@@ -311,14 +315,14 @@ namespace daxa
         std::vector<u8> memory = {};
         usize count = {};
 
-        auto span() -> std::span<GenericTaskInput>
+        auto span() -> std::span<GenericTaskResourceUse>
         {
-            return {reinterpret_cast<GenericTaskInput *>(memory.data()), count};
+            return {reinterpret_cast<GenericTaskResourceUse *>(memory.data()), count};
         }
 
-        auto span() const -> std::span<GenericTaskInput const>
+        auto span() const -> std::span<GenericTaskResourceUse const>
         {
-            return {reinterpret_cast<GenericTaskInput const *>(memory.data()), count};
+            return {reinterpret_cast<GenericTaskResourceUse const *>(memory.data()), count};
         }
 
         template<typename BufFn, typename ImgFn> 
@@ -330,15 +334,15 @@ namespace daxa
                 auto type = s[index].type;
                 switch(type)
                 {
-                    case TaskInputType::BUFFER: 
+                    case TaskResourceUseType::BUFFER: 
                     {
-                        auto & arg = TaskBufferInput::from(s[index]);
+                        auto & arg = TaskBufferUse::from(s[index]);
                         buf_fn(index, arg); 
                         break;
                     }
-                    case TaskInputType::IMAGE: 
+                    case TaskResourceUseType::IMAGE: 
                     {
-                        auto & arg = TaskImageInput::from(s[index]);
+                        auto & arg = TaskImageUse::from(s[index]);
                         img_fn(index, arg); 
                         break;
                     }
@@ -356,15 +360,15 @@ namespace daxa
                 auto type = s[index].type;
                 switch(type)
                 {
-                    case TaskInputType::BUFFER: 
+                    case TaskResourceUseType::BUFFER: 
                     {
-                        auto const & arg = TaskBufferInput::from(s[index]);
+                        auto const & arg = TaskBufferUse::from(s[index]);
                         buf_fn(index, arg); 
                         break;
                     }
-                    case TaskInputType::IMAGE: 
+                    case TaskResourceUseType::IMAGE: 
                     {
-                        auto const & arg = TaskImageInput::from(s[index]);
+                        auto const & arg = TaskImageUse::from(s[index]);
                         img_fn(index, arg); 
                         break;
                     }
@@ -373,18 +377,18 @@ namespace daxa
             }
         }
 
-        operator std::span<GenericTaskInput>()
+        operator std::span<GenericTaskResourceUse>()
         {
             return span();
         }
 
-        operator std::span<GenericTaskInput const> const()
+        operator std::span<GenericTaskResourceUse const> const()
         {
             return span();
         }
     };
 
-    auto get_task_arg_shader_alignment(TaskInputType type) -> u32;
+    auto get_task_arg_shader_alignment(TaskResourceUseType type) -> u32;
 
-    auto get_task_arg_shader_offsets_size(std::span<GenericTaskInput> args) -> std::pair<std::vector<u32>, u32>;
+    auto get_task_arg_shader_offsets_size(std::span<GenericTaskResourceUse> args) -> std::pair<std::vector<u32>, u32>;
 } // namespace daxa

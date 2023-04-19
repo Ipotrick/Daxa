@@ -216,7 +216,7 @@ struct App : AppWindow<App>
         new_task_list.add_task({
             .used_buffers = {
                 {task_boid_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE},
-                {task_old_boid_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY},
+                {task_old_boid_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ},
             },
             .task = [=, this](daxa::TaskInterface<> const & runtime)
             {
@@ -230,7 +230,7 @@ struct App : AppWindow<App>
 
         new_task_list.add_task({
             .used_buffers = {
-                {task_boid_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
+                {task_boid_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ},
             },
             .used_images = {
                 {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
