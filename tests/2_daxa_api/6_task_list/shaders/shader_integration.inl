@@ -9,11 +9,6 @@ DAXA_ENABLE_BUFFER_PTR(Settings)
 
 // Must be in an .inl file for now.
 DAXA_INL_TASK_USES_BEGIN(ShaderIntegrationTaskListUses, DAXA_CBUFFER_SLOT1)
-DAXA_INL_TASK_USE_IMAGE(
-    shader_integration_image, 
-    daxa_RWImage2DArrayf32, 
-    COMPUTE_SHADER_READ_WRITE, 
-    daxa::ImageMipArraySlice{}
-)
-DAXA_INL_TASK_USE_BUFFER(settings, daxa_BufferPtr(Settings), COMPUTE_SHADER_READ_ONLY)
+DAXA_INL_TASK_USE_IMAGE(image, daxa_RWImage2DArrayf32, COMPUTE_SHADER_READ_WRITE, {})
+DAXA_INL_TASK_USE_BUFFER(settings, daxa_BufferPtr(Settings), COMPUTE_SHADER_READ)
 DAXA_INL_TASK_USES_END()

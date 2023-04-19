@@ -203,12 +203,12 @@ struct App : AppWindow<App>
     {
         daxa::TaskList new_task_list = daxa::TaskList({.device = device, .swapchain = swapchain, .name = APPNAME_PREFIX("main task list")});
 
-        auto task_boid_buffer = new_task_list.create_task_buffer({});
+        auto task_boid_buffer = new_task_list.create_transient_task_buffer({});
         new_task_list.add_runtime_buffer(task_boid_buffer, this->boid_buffer);
-        auto task_old_boid_buffer = new_task_list.create_task_buffer({});
+        auto task_old_boid_buffer = new_task_list.create_transient_task_buffer({});
         new_task_list.add_runtime_buffer(task_old_boid_buffer, this->old_boid_buffer);
 
-        task_swapchain_image = new_task_list.create_task_image({
+        task_swapchain_image = new_task_list.create_transient_task_image({
             .swapchain_image = true,
         });
         new_task_list.add_runtime_image(task_swapchain_image, this->swapchain_image);
@@ -216,9 +216,9 @@ struct App : AppWindow<App>
         new_task_list.add_task({
             .used_buffers = {
                 {task_boid_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE},
-                {task_old_boid_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY},
+                {task_old_boid_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ},
             },
-            .task = [=, this](daxa::TaskRuntimeInterface const & runtime)
+            .task = [=, this](daxa::TaskInterface<> const & runtime)
             {
                 BufferId const boid_buffer_id = runtime.get_buffers(task_boid_buffer)[0];
                 BufferId const old_boid_buffer_id = runtime.get_buffers(task_old_boid_buffer)[0];
@@ -230,12 +230,12 @@ struct App : AppWindow<App>
 
         new_task_list.add_task({
             .used_buffers = {
-                {task_boid_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
+                {task_boid_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ},
             },
             .used_images = {
                 {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
             },
-            .task = [=, this](daxa::TaskRuntimeInterface const & runtime)
+            .task = [=, this](daxa::TaskInterface<> const & runtime)
             {
                 ImageId const render_target_id = runtime.get_images(task_swapchain_image)[0];
                 BufferId const boid_buffer_id = runtime.get_buffers(task_boid_buffer)[0];

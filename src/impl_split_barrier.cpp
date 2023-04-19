@@ -6,6 +6,23 @@
 
 namespace daxa
 {
+    auto to_string(MemoryBarrierInfo const & info) -> std::string
+    {
+        return std::format("access: ({}) -> ({})", to_string(info.awaited_pipeline_access), to_string(info.waiting_pipeline_access));
+    }
+
+    auto to_string(ImageBarrierInfo const & info) -> std::string
+    {
+        return std::format("access: ({}) -> ({}), layout: ({}) -> ({}), slice: {}, id: {}", 
+        to_string(info.awaited_pipeline_access), 
+        to_string(info.waiting_pipeline_access),
+        to_string(info.before_layout),
+        to_string(info.after_layout),
+        to_string(info.image_slice),
+        to_string(info.image_id)
+        );
+    }
+
     SplitBarrierState::SplitBarrierState(SplitBarrierState && other) noexcept
         : device{other.device}, create_info{other.create_info}, data{other.data}
     {
