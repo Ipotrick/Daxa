@@ -57,6 +57,7 @@ struct App : BaseApp<App>
 
         ui_update();
 
+        task_swapchain_image
         loop_task_list.remove_runtime_image(task_swapchain_image, swapchain_image);
         swapchain_image = swapchain.acquire_next_image();
         loop_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
@@ -84,13 +85,13 @@ struct App : BaseApp<App>
 
     void record_tasks(daxa::TaskList & new_task_list)
     {
-        task_vertex_buffer = new_task_list.create_task_buffer({.name = APPNAME_PREFIX("task_vertex_buffer")});
+        task_vertex_buffer = new_task_list.create_transient_task_buffer({.name = APPNAME_PREFIX("task_vertex_buffer")});
         new_task_list.add_runtime_buffer(task_vertex_buffer, vertex_buffer);
         new_task_list.add_task({
             .used_buffers = {
-                {task_vertex_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
+                {task_vertex_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ},
             },
-            .task = [this](daxa::TaskRuntimeInterface runtime)
+            .task = [this](daxa::TaskInterface<> runtime)
             {
                 auto cmd_list = runtime.get_command_list();
                 auto vertex_staging_buffer = device.create_buffer({
@@ -116,14 +117,14 @@ struct App : BaseApp<App>
         });
 
         new_task_list.add_task({
-            .used_images = {
-                {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
+            .args = {
+                daxa::TaskImageUse{{task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT}},
             },
-            .task = [this](daxa::TaskRuntimeInterface runtime)
+            .task = [this](daxa::TaskInterface<> ti)
             {
-                auto cmd_list = runtime.get_command_list();
+                auto cmd_list = ti.get_command_list();
                 cmd_list.begin_renderpass({
-                    .color_attachments = {{.image_view = swapchain_image.default_view(), .load_op = daxa::AttachmentLoadOp::CLEAR, .clear_value = std::array<f32, 4>{0.1f, 0.0f, 0.5f, 1.0f}}},
+                    .color_attachments = {{.image_view = ti.view(task_swapchain_image), .load_op = daxa::AttachmentLoadOp::CLEAR, .clear_value = std::array<f32, 4>{0.1f, 0.0f, 0.5f, 1.0f}}},
                     .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
                 });
                 cmd_list.set_pipeline(*raster_pipeline);
