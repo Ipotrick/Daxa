@@ -11,18 +11,9 @@
 #define DAXA_SHADER_DEBUG_BUFFER_BINDING 5
 #define DAXA_ID_INDEX_MASK (0x00FFFFFF)
 #define DAXA_ID_VERSION_SHIFT (24)
-#define DAXA_DEBUG_MESSAGE_MAX_COUNT 1024
-#define DAXA_DEBUG_MESSAGE_SIZE 4
-#define DAXA_DEBUG_MESSAGE_BUFFER_REPORT 1
-#define DAXA_DEBUG_MESSAGE_IMAGE_REPORT 2
-#define DAXA_DEBUG_MESSAGE_SAMPLER_REPORT 4
 #endif
 
 // TODO(wrap all texture access functions descriptor operands with nonUniformEXT) nano had found a bug in amd drivers with portalrtx
-
-#if !defined(DAXA_SHADER_GPU_ID_VALIDATION)
-#define DAXA_SHADER_GPU_ID_VALIDATION (0)
-#endif // #if !defined(DAXA_SHADER_GPU_ID_VALIDATION)
 
 //
 // Optional defines, activating certain features:
@@ -88,76 +79,17 @@ struct daxa_SamplerId
     daxa_u32 value;
 };
 
-#if DAXA_SHADER_GPU_ID_VALIDATION
-
-layout(set = 0, binding = DAXA_SHADER_DEBUG_BUFFER_BINDING) coherent buffer _DAXA_DEBUG_BUFFER_BLOCK
-{
-    daxa_u32 debug_message_count;
-    daxa_u32 messages_offset;
-    daxa_u32 buffer_deb_infos_offset;
-    daxa_u32 image_deb_infos_offset;
-    daxa_u32 sampler_deb_infos_offset;
-    daxa_u32 data[];
-}
-_DAXA_DEBUG_BUFFER;
-
-#define _DAXA_GENERATE_ID_VALIDATION_FUNCTION(TYPE, Type, type)                                                                                                      \
-    void validate_##type##_id(daxa_##Type##Id id)                                                                                                                    \
-    {                                                                                                                                                                \
-        const daxa_u32 index = id.value & DAXA_ID_INDEX_MASK;                                                                                                        \
-        const daxa_u32 version = id.value >> DAXA_ID_VERSION_SHIFT;                                                                                                  \
-        const daxa_u32 deb_info = atomicAdd(_DAXA_DEBUG_##TYPE.data[_DAXA_DEBUG_##TYPE.type##_deb_infos_offset + index], 0);                                         \
-        const daxa_u32 errorRecorded = deb_info != 0xFFFFFFFF;                                                                                                       \
-        if (!errorRecorded)                                                                                                                                          \
-        {                                                                                                                                                            \
-            const daxa_u32 actual_version = deb_info & 0x0000FFFF;                                                                                                   \
-            const bool faulty_id = version != actual_version;                                                                                                        \
-            const daxa_u32 fetch = atomicCompSwap(_DAXA_DEBUG_##TYPE.data[_DAXA_DEBUG_##TYPE.type##_deb_infos_offset + index], deb_info, 0xFFFFFFFF);                \
-            const bool write_successful = fetch == deb_info;                                                                                                         \
-            if (write_successful)                                                                                                                                    \
-            {                                                                                                                                                        \
-                daxa_u32 message_offset = atomicAdd(_DAXA_DEBUG_##TYPE.debug_message_count, 1);                                                                      \
-                const bool allocation_successful = message_offset < DAXA_DEBUG_MESSAGE_MAX_COUNT;                                                                    \
-                if (allocation_successful)                                                                                                                           \
-                {                                                                                                                                                    \
-                    _DAXA_DEBUG_BUFFER.data[_DAXA_DEBUG_##TYPE.messages_offset + message_offset * DAXA_DEBUG_MESSAGE_SIZE + 0] = DAXA_DEBUG_MESSAGE_##TYPE##_REPORT; \
-                    _DAXA_DEBUG_BUFFER.data[_DAXA_DEBUG_##TYPE.messages_offset + message_offset * DAXA_DEBUG_MESSAGE_SIZE + 1] = index;                              \
-                    _DAXA_DEBUG_BUFFER.data[_DAXA_DEBUG_##TYPE.messages_offset + message_offset * DAXA_DEBUG_MESSAGE_SIZE + 2] = version;                            \
-                    _DAXA_DEBUG_BUFFER.data[_DAXA_DEBUG_##TYPE.messages_offset + message_offset * DAXA_DEBUG_MESSAGE_SIZE + 3] = actual_version;                     \
-                }                                                                                                                                                    \
-            }                                                                                                                                                        \
-        }                                                                                                                                                            \
-    }
-
-#else // #if DAXA_SHADER_GPU_ID_VALIDATION
-
-#define DAXA_CONSTANT_BUFFER(SLOT) layout(set = DAXA_CONSTANT_BUFFER_BINDING_SET, binding = SLOT, buffer_reference_align = 4, scalar) uniform
-
-#define _DAXA_GENERATE_ID_VALIDATION_FUNCTION(TYPE, Type, type) \
-    void validate_##type##_id(daxa_##Type##Id id)               \
-    {                                                           \
-    }
-
-#endif // #else // #if DAXA_SHADER_GPU_ID_VALIDATION
-
-_DAXA_GENERATE_ID_VALIDATION_FUNCTION(BUFFER, Buffer, buffer)
-_DAXA_GENERATE_ID_VALIDATION_FUNCTION(IMAGE, ImageView, image)
-_DAXA_GENERATE_ID_VALIDATION_FUNCTION(SAMPLER, Sampler, sampler)
-
 // Accessor functions to gain the indices to the bindless tables from the resource id:
 daxa_u32 daxa_id_to_index(daxa_BufferId id)
 {
-    validate_buffer_id(id);
     return (DAXA_ID_INDEX_MASK & id.value);
 }
 daxa_u32 daxa_id_to_index(daxa_ImageViewId id)
 {
-    validate_image_id(id);
     return (DAXA_ID_INDEX_MASK & id.value);
 }
 daxa_u32 daxa_id_to_index(daxa_SamplerId id)
 {
-    validate_sampler_id(id);
     return (DAXA_ID_INDEX_MASK & id.value);
 }
 layout(scalar, binding = DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, set = 0) readonly buffer daxa_BufferDeviceAddressBufferBlock { daxa_u64 addresses[]; }

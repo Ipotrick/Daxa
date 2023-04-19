@@ -88,8 +88,7 @@ struct BaseApp : AppWindow<T>
     Clock::time_point start = Clock::now(), prev_time = start;
     f32 time = 0.0f, delta_time = 1.0f;
 
-    daxa::ImageId swapchain_image;
-    daxa::TaskImageId task_swapchain_image;
+    daxa::TaskImage task_swapchain_image = {};
 
     BaseApp() : AppWindow<T>(APPNAME)
     {
