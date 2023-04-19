@@ -15,6 +15,10 @@
 
 // TODO(wrap all texture access functions descriptor operands with nonUniformEXT) nano had found a bug in amd drivers with portalrtx
 
+#if !defined(DAXA_SHADER_GPU_ID_VALIDATION)
+#define DAXA_SHADER_GPU_ID_VALIDATION (0)
+#endif // #if !defined(DAXA_SHADER_GPU_ID_VALIDATION)
+
 //
 // Optional defines, activating certain features:
 // * DAXA_ENABLE_IMAGE_OVERLOADS_BASIC
@@ -78,6 +82,8 @@ struct daxa_SamplerId
 {
     daxa_u32 value;
 };
+
+#define DAXA_CONSTANT_BUFFER(SLOT) layout(set = DAXA_CONSTANT_BUFFER_BINDING_SET, binding = SLOT, buffer_reference_align = 4, scalar) uniform
 
 // Accessor functions to gain the indices to the bindless tables from the resource id:
 daxa_u32 daxa_id_to_index(daxa_BufferId id)

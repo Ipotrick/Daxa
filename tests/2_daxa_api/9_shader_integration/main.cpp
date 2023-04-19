@@ -12,13 +12,13 @@ namespace tests
 {
     void aligned_types_templates()
     {
-        daxa_f32vec3 shader_aligned_vec3{ 0.0f, 1.0f, 4.0f };
-        shader_aligned_vec3 = { 0.0f, 1.0f, 4.0f };
+        daxa_f32vec3 shader_aligned_vec3{0.0f, 1.0f, 4.0f};
+        shader_aligned_vec3 = {0.0f, 1.0f, 4.0f};
         shader_aligned_vec3.x = 0.0f;
         shader_aligned_vec3.y = 1.0f;
         shader_aligned_vec3.z = 4.0f;
-        shader_aligned_vec3 = daxa::types::f32vec3{ 0.0f, 1.0f, 4.0f };
-        shader_aligned_vec3 = daxa_f32vec3{ 0.0f, 1.0f, 4.0f };
+        shader_aligned_vec3 = daxa::types::f32vec3{0.0f, 1.0f, 4.0f};
+        shader_aligned_vec3 = daxa_f32vec3{0.0f, 1.0f, 4.0f};
         std::cout << "content of f32vec3: (" << shader_aligned_vec3.x << "," << shader_aligned_vec3.y << "," << shader_aligned_vec3.z << ")" << std::endl;
     }
 
@@ -70,13 +70,13 @@ namespace tests
             .name = "device",
         });
         auto src_buffer = device.create_buffer({
-            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
             .size = sizeof(TestU64Alignment),
+            .allocate_info = daxa::AutoAllocInfo{daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE},
             .name = "align_test_src",
         });
         auto dst_buffer = device.create_buffer({
-            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .size = sizeof(TestU64Alignment),
+            .allocate_info = daxa::AutoAllocInfo{daxa::MemoryFlagBits::HOST_ACCESS_RANDOM},
             .name = "align_test_dst",
         });
 
@@ -120,18 +120,22 @@ namespace tests
             .name = "shader integration test - alignment",
         });
 
-        auto src = task_list.create_transient_task_buffer({
-            .name = "align_test_src", // This name MUST be identical to the name used in the shader.
-        });
-        task_list.add_runtime_buffer(src, src_buffer);
-        auto dst = task_list.create_transient_task_buffer({
-            .name = "align_test_dst", // This name MUST be identical to the name used in the shader.
-        });
-        task_list.add_runtime_buffer(dst, dst_buffer);
-
-        task_list.add_task({
-            .shader_uses = daxa::TestShaderUses,
-            .task = [&](daxa::TaskInterface<> const & tri)
+        auto src = daxa::TaskBuffer{{
+            .initial_buffers = {.buffers = {&src_buffer, 1}},
+            .name = "align_test_src",
+        }};
+        task_list.use_persistent_buffer(src);
+        auto dst = daxa::TaskBuffer{{
+            .initial_buffers = {.buffers = {&dst_buffer, 1}},
+            .name = "align_test_dst",
+        }};
+        task_list.use_persistent_buffer(dst);
+        TestShaderUses args;
+        args.align_test_src.id = src;
+        args.align_test_dst.id = dst;
+        task_list.add_task(daxa::TaskInfo<TestShaderUses>{
+            .args = args,
+            .task = [&](daxa::TaskInterface<TestShaderUses> const & tri)
             {
                 auto cmd = tri.get_command_list();
                 cmd.set_pipeline(*compute_pipeline);
@@ -156,7 +160,119 @@ namespace tests
 
         device.destroy_buffer(src_buffer);
         device.destroy_buffer(dst_buffer);
-        device.collect_garbage();
+    }
+
+    void bindless_handles()
+    {
+        // TEST:
+        //  1) create resources.
+        //  2) pass handles to compute shader.
+        //  3) perform showcase of bindless handle use in the shader.
+        //  4) write handles to buffer.
+        //  5) read and use handles in following compute shader.
+        daxa::Context daxa_ctx = daxa::create_context({
+            .enable_validation = false,
+        });
+        daxa::Device device = daxa_ctx.create_device({
+            .name = "device",
+        });
+        auto sampler = device.create_sampler({.name = "sampler"});
+        
+        daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
+            .device = device,
+            .shader_compile_options = {
+                .root_paths = {
+                    DAXA_SHADER_INCLUDE_DIR,
+                    "tests/2_daxa_api/9_shader_integration/shaders",
+                },
+            },
+            .name = "pipeline manager",
+        });
+        
+        auto compile_result0 = pipeline_manager.add_compute_pipeline({
+            .shader_info = {
+                .source = daxa::ShaderFile{"bindless_access.glsl"},
+                .compile_options{
+                    .enable_debug_info = true,
+                },
+            },
+            .name = "bindless_access",
+        });
+        auto bindless_access = compile_result0.value();
+        auto compile_result1 = pipeline_manager.add_compute_pipeline({
+            .shader_info = {
+                .source = daxa::ShaderFile{"bindless_access_followup.glsl"},
+                .compile_options{
+                    .enable_debug_info = true,
+                },
+            },
+            .name = "bindless_access_followup",
+        });
+        auto bindless_access_followup = compile_result1.value();
+        
+        auto task_list = daxa::TaskList({
+            .device = device,
+            .record_debug_information = true,
+            .name = "shader integration test - alignment",
+        });
+
+        auto handles_buffer = task_list.create_transient_buffer({
+            .size = sizeof(Handles),
+            .name = "handles buffer",
+        });
+        auto f32_image = task_list.create_transient_image({
+            .format = daxa::Format::R32_SFLOAT,
+            .size = {1,1,1},
+            .name = "f32 image",
+        });
+        auto f32_buffer = task_list.create_transient_buffer({
+            .size = sizeof(f32),
+            .name = "f32 buffer",
+        });
+        
+        task_list.add_task({
+            .args = {
+                daxa::TaskBufferUse{{handles_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE}},
+                daxa::TaskBufferUse{{f32_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE}},
+                daxa::TaskImageUse{{f32_image, daxa::TaskImageAccess::COMPUTE_SHADER_WRITE}},
+            },
+            .task = [&](daxa::TaskInterface<> const & ti)
+            {
+                auto cmd = ti.get_command_list();
+                cmd.set_pipeline(*bindless_access);
+                cmd.push_constant(BindlessTestPush{
+                    .handles = {
+                        .my_buffer = ti.device_address(f32_buffer),
+                        .my_image = { ti.view(f32_image) },
+                        .my_sampler = sampler,
+                    },
+                    .next_shader_input = ti.device_address(handles_buffer),
+                });
+                cmd.dispatch(1, 1, 1);
+            },
+            .name = "bindless access",
+        });
+        task_list.add_task({
+            .args = {
+                daxa::TaskBufferUse{{handles_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ}},
+                daxa::TaskBufferUse{{f32_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ}},
+                daxa::TaskImageUse{{f32_image, daxa::TaskImageAccess::COMPUTE_SHADER_READ}},
+            },
+            .task = [&](daxa::TaskInterface<> const & ti)
+            {
+                auto cmd = ti.get_command_list();
+                cmd.set_pipeline(*bindless_access_followup);
+                cmd.push_constant(BindlessTestFollowPush{
+                    .shader_input = ti.device_address(handles_buffer),
+                });
+                cmd.dispatch(1, 1, 1);
+            },
+            .name = "bindless access",
+        });
+        task_list.submit({});
+        task_list.complete({});
+        task_list.execute({});
+        device.destroy_sampler(sampler);
     }
 } // namespace tests
 
@@ -164,4 +280,5 @@ auto main() -> int
 {
     tests::aligned_types_templates();
     tests::alignment();
+    tests::bindless_handles();
 }

@@ -209,7 +209,7 @@ namespace daxa
     {
         struct Persistent
         {
-            ManagedWeakPtr buffer = {};
+            ManagedPtr buffer = {};
 
             auto get() -> ImplPersistentTaskBuffer &
             {
@@ -256,7 +256,7 @@ namespace daxa
     {
         struct Persistent
         {
-            ManagedWeakPtr image = {};
+            ManagedPtr image = {};
             auto get() -> ImplPersistentTaskImage &
             {
                 return *image.as<ImplPersistentTaskImage>();

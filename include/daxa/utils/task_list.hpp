@@ -26,6 +26,7 @@ namespace daxa
         auto get_allocator() const -> TransferMemoryPool &;
 
         auto buffer(TaskBufferId const & task_resource_id, usize index = 0) const -> BufferId;
+        auto device_address(TaskBufferId const & task_resource_id, usize index = 0) const -> daxa::BufferDeviceAddress;
         auto image(TaskImageId const & task_resource_id, usize index = 0) const -> ImageId;
         auto view(TaskImageId const & task_resource_id, usize index = 0) const -> ImageViewId;
 
