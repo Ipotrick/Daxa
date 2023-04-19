@@ -451,7 +451,7 @@ namespace tests
         task_list.use_persistent_image(persistent_task_image);
         task_list.use_persistent_buffer(persistent_task_buffer);
         task_list.add_task({
-            .args = {daxa::TaskImageUse{{.id = persistent_task_image, .access = daxa::TaskImageAccess::SHADER_WRITE}}},
+            .args = {daxa::TaskImageUse{{persistent_task_image, daxa::TaskImageAccess::SHADER_WRITE}}},
             .task = [&](daxa::TaskInterface<> const &) {},
             .name = "write persistent image",
         });
