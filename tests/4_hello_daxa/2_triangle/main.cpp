@@ -52,7 +52,7 @@ auto main() -> int
     auto window_info = WindowInfo{.width = 800, .height = 600};
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    auto *glfw_window_ptr = glfwCreateWindow(
+    auto * glfw_window_ptr = glfwCreateWindow(
         static_cast<daxa::i32>(window_info.width),
         static_cast<daxa::i32>(window_info.height),
         "Daxa sample window name", nullptr, nullptr);
@@ -66,7 +66,7 @@ auto main() -> int
             window_info_ref.width = static_cast<daxa::u32>(width);
             window_info_ref.height = static_cast<daxa::u32>(height);
         });
-    auto *native_window_handle = get_native_handle(glfw_window_ptr);
+    auto * native_window_handle = get_native_handle(glfw_window_ptr);
     auto native_window_platform = get_native_platform(glfw_window_ptr);
 
     daxa::Context context = daxa::create_context({});
@@ -171,6 +171,24 @@ auto main() -> int
 
     std::array<bool, static_cast<daxa::usize>(TaskCondition::COUNT)> task_condition_states{};
 
+    // When using TaskList, we must create "virtual" resources (we call
+    // them task resources) whose usages are tracked, allowing for correct
+    // synchronization for them.
+
+    // The first we'll make is the swapchain image task resource
+    // We could immediately give this task image a image id.
+    // But in the case of the swapchain images we need to reacquire a new image every frame.
+    auto task_swapchain_image = daxa::TaskImage{{.swapchain_image = true, .name = "swapchain image"}};
+
+    // We will also create a buffer task resource, for our MyVertex buffer buffer_id
+    // We do something a little special here, which is that we set the initial access
+    // of the buffer to be vertex shader read, and that's because we'll create a task
+    // list which will upload the buffer
+    auto task_buffer = daxa::TaskBuffer({
+        .initial_buffers = {.buffers = std::span{&buffer_id, 1}},
+        .name = "my task buffer",
+    });
+
     auto loop_task_list = daxa::TaskList({
         .device = device,
         .swapchain = swapchain,
@@ -178,31 +196,9 @@ auto main() -> int
         .name = "my task list",
     });
 
-    // When using TaskList, we must create "virtual" resources (we call
-    // them task resources) whose usages are tracked, allowing for correct
-    // synchronization for them.
-
-    // The first we'll make is the swapchain image task resource
-    auto task_swapchain_image = loop_task_list.create_task_image({.swapchain_image = true, .name = "my task swapchain image"});
-
-    // We'll also declare a swapchain image, since we're going to be
-    // adding and removing it from being tracked by the TaskList.
-    auto swapchain_image = daxa::ImageId{};
-
-    // We then give the real swapchain image to this virtual resource,
-    // in order to allow the TaskList to perform the necessary image
-    // layout transitions on it.
-    loop_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
-
-    // We will also create a buffer task resource, for our MyVertex buffer buffer_id
-    // We do something a little special here, which is that we set the initial access
-    // of the buffer to be vertex shader read, and that's because we'll create a task
-    // list which will upload the buffer
-    auto task_buffer_id = loop_task_list.create_task_buffer({.pre_task_list_slice_states = daxa::AccessConsts::VERTEX_SHADER_READ, .name = "my task buffer"});
-    // adding this as a real resource just allows us to query it from the Task
-    // runtime later, since there's no buffer-specific commands (unlike image
-    // layout transitions) that need to happen when synchronizing buffer usages.
-    loop_task_list.add_runtime_buffer(task_buffer_id, buffer_id);
+    // We need to explicitly declare all uses of persistent task resources!
+    loop_task_list.use_persistent_buffer(task_buffer);
+    loop_task_list.use_persistent_image(task_swapchain_image);
 
     // Now we can record our tasks!
 
@@ -210,26 +206,30 @@ auto main() -> int
     // every frame, so we'll put it inside a task conditional!
     loop_task_list.conditional({
         .condition_index = static_cast<daxa::u32>(TaskCondition::VERTICES_UPLOAD),
-        .when_true = [&loop_task_list, &task_buffer_id, &task_condition_states]()
+        .when_true = [&]()
         {
             loop_task_list.add_task({
-                .used_buffers = {
+                .args = {
                     // Since this task is going to copy a staging buffer to the
                     // actual buffer, we'll say that this task uses the buffer
                     // with a transfer write operation!
-                    {task_buffer_id, daxa::TaskBufferAccess::TRANSFER_WRITE},
+                    daxa::TaskBufferUse{{task_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE}},
                 },
-                .task = [&task_buffer_id, &task_condition_states](daxa::TaskRuntimeInterface task_runtime)
+                .task = [=, &task_condition_states](daxa::TaskInterface<> ti)
                 {
-                    auto cmd_list = task_runtime.get_command_list();
+                    auto cmd_list = ti.get_command_list();
 
                     // see upload_vertex_data_task(...) for more info on the
                     // uploading of the data itself.
 
                     // We'll call upload_vertex_data_task(...) with the buffer ID,
                     // which we can query from the task runtime.
-
-                    upload_vertex_data_task(task_runtime.get_device(), cmd_list, task_runtime.get_buffers(task_buffer_id)[0]);
+                    // With the functions:
+                    //   daxa::TaskInterface<>::buffer(TaskBufferId buffer, u32 index = 0) -> BufferId
+                    //   daxa::TaskInterface<>::image(TaskImageId image, u32 index = 0) -> ImageId
+                    //   daxa::TaskInterface<>::view(TaskImageId image, u32 index = 0) -> ImageViewId
+                    // you can conveniently get the runtime id from the task resource via the interface!
+                    upload_vertex_data_task(ti.get_device(), cmd_list, ti.buffer(task_buffer));
 
                     // Now we can reset this task condition, since it should
                     // only ever be executed when requested!
@@ -242,27 +242,25 @@ auto main() -> int
 
     // And a task to draw to the screen
     loop_task_list.add_task({
-        .used_buffers = {
+        .args = {
             // Now, since we're reading the buffer inside the vertex shader,
             // we'll say that we use it as such.
-            {task_buffer_id, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
-        },
-        .used_images = {
+            daxa::TaskBufferUse{{task_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ}},
             // And, we'll denote that we use the swapchain image as a color
             // attachment. At the end of the line, we default-construct the
             // ImageMipArraySlice, since all we need is the first mip and
             // first array slice.
-            {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
+            daxa::TaskImageUse{{task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}}},
         },
-        .task = [task_swapchain_image, task_buffer_id, &pipeline, &window_info](daxa::TaskRuntimeInterface task_runtime)
+        .task = [task_swapchain_image, task_buffer, &pipeline, &window_info](daxa::TaskInterface<> ti)
         {
-            auto cmd_list = task_runtime.get_command_list();
+            auto cmd_list = ti.get_command_list();
             // Here we can just get the buffer and image IDs from the runtime
             // and just pass them directly.
             draw_to_swapchain_task(
-                task_runtime.get_device(), cmd_list, pipeline,
-                task_runtime.get_images(task_swapchain_image)[0],
-                task_runtime.get_buffers(task_buffer_id)[0],
+                ti.get_device(), cmd_list, pipeline,
+                ti.image(task_swapchain_image),
+                ti.buffer(task_buffer),
                 window_info.width, window_info.height);
         },
         .name = "my draw task",
@@ -300,14 +298,10 @@ auto main() -> int
             window_info.swapchain_out_of_date = false;
         }
 
-        // Using TaskList completely changes what our render loop looks like.
-        // Now, all that we need to do is remove the previous swapchain image
-        // from being the resource to transition by the task swapchain image,
-        loop_task_list.remove_runtime_image(task_swapchain_image, swapchain_image);
         // acquire the next image as usual,
-        swapchain_image = swapchain.acquire_next_image();
-        // and add that new image into the Task Runtime to be handled.
-        loop_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
+        auto swapchain_image = swapchain.acquire_next_image();
+        // We update the image id of the task swapchain image.
+        task_swapchain_image.set_images({.images = std::span{&swapchain_image, 1}});
         if (swapchain_image.is_empty())
         {
             continue;
@@ -339,8 +333,8 @@ void upload_vertex_data_task(
     // issue a command to copy from this buffer to the dedicated
     // GPU memory.
     auto staging_buffer_id = device.create_buffer({
-        .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
         .size = sizeof(data),
+        .allocate_info = daxa::AutoAllocInfo{daxa::MemoryFlagBits::HOST_ACCESS_RANDOM},
         .name = "my staging buffer",
     });
     // We can also ask the command list to destroy this temporary buffer,

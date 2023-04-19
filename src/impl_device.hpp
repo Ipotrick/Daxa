@@ -13,6 +13,7 @@
 #include "impl_gpu_resources.hpp"
 #include "impl_split_barrier.hpp"
 #include "impl_timeline_query.hpp"
+#include "impl_memory_block.hpp"
 
 namespace daxa
 {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <daxa/daxa.hpp>
+
 #include "task_list.inl"
 
 #if !DAXA_BUILT_WITH_UTILS_TASK_LIST
@@ -12,56 +14,88 @@ namespace daxa
 {
     struct TaskList;
     struct Device;
+    struct CommandSubmitInfo;
+    struct PresentInfo;
 
-    struct TaskRuntimeInterface
+    using TaskInputDefaultT = std::span<GenericTaskResourceUse>;
+
+    struct GenericTaskInterface
     {
         auto get_device() const -> Device &;
         auto get_command_list() const -> CommandList;
-        auto get_used_task_buffers() const -> UsedTaskBuffers const &;
-        auto get_used_task_images() const -> UsedTaskImages const &;
-        auto get_buffers(TaskBufferId const & task_resource_id) const -> std::span<BufferId>;
-        auto get_images(TaskImageId const & task_resource_id) const -> std::span<ImageId>;
-        auto get_image_views(TaskImageId const & task_resource_id) const -> std::span<ImageViewId>;
-
         auto get_allocator() const -> TransferMemoryPool &;
 
-        void add_runtime_buffer(TaskBufferId tid, BufferId id);
-        void add_runtime_image(TaskImageId tid, ImageId id);
-        void remove_runtime_buffer(TaskBufferId tid, BufferId id);
-        void remove_runtime_image(TaskImageId tid, ImageId id);
-        void clear_runtime_buffers(TaskBufferId tid);
-        void clear_runtime_images(TaskImageId tid);
+        auto buffer(TaskBufferId const & task_resource_id, usize index = 0) const -> BufferId;
+        auto device_address(TaskBufferId const & task_resource_id, usize index = 0) const -> daxa::BufferDeviceAddress;
+        auto image(TaskImageId const & task_resource_id, usize index = 0) const -> ImageId;
+        auto view(TaskImageId const & task_resource_id, usize index = 0) const -> ImageViewId;
+
+      protected:
+        friend struct ImplTaskRuntimeInterface;
+        friend struct TaskList;
+        friend struct ImplTaskList;
+        template <typename TaskInput>
+        friend struct TaskInterface;
+        GenericTaskInterface(void * a_backend);
+        auto get_args() const -> std::span<GenericTaskResourceUse>;
+        void * backend = {};
+    };
+
+    template <typename TaskInput = TaskInputDefaultT>
+    struct TaskInterface final : public GenericTaskInterface
+    {
+        auto input() const -> TaskInput const &
+            requires(!std::is_same_v<TaskInput, TaskInputDefaultT>)
+        {
+            return *reinterpret_cast<TaskInput const *>(get_args().data());
+        }
+
+        template <typename InputType>
+            requires(std::is_same_v<TaskInput, TaskInputDefaultT>)
+        auto input_as(usize index) const -> InputType const &
+        {
+            DAXA_DBG_ASSERT_TRUE_M(index < get_args().size(), "detected out of bounds input index! all task input indices must be smaller then the count of inputs");
+            DAXA_DBG_ASSERT_TRUE_M(InputType::INPUT_TYPE == get_args().at(index).type, "detected invalid input type cast! the cast input type must match the declared input type at any given index.");
+            return *reinterpret_cast<InputType const *>(get_args().data() + index);
+        }
+
+        auto operator->() const -> TaskInput const * requires(!std::is_same_v<TaskInput, TaskInputDefaultT>) {
+            return reinterpret_cast<TaskInput const *>(get_args().data());
+        }
+
+        template <typename T>
+        operator TaskInterface<T> const &() const
+        {
+            return *reinterpret_cast<TaskInterface<T> const *>(this);
+        }
 
       private:
         friend struct ImplTaskRuntimeInterface;
         friend struct TaskList;
-        TaskRuntimeInterface(void * a_backend);
-        void * backend = {};
+        friend struct ImplTaskList;
+        friend struct TaskInterface;
+        TaskInterface(void * a_backend) : GenericTaskInterface(a_backend) {}
     };
 
-    using TaskCallback = std::function<void(TaskRuntimeInterface const &)>;
+    using TaskCallback = std::function<void(TaskInterface<> const &)>;
 
-    struct TaskBufferInfo
+    struct TransientBufferInfo
     {
-        // For execution_persistent resources, task list will synch from the initial use to the first use ONCE.
-        // After the FIRST execution, it will use the runtime state of the resource.
-        // For non-execution_persistent resources, task list will synch from the initial use to first use EVERY EXECUTION.
-        Access pre_task_list_slice_states = AccessConsts::NONE;
-        bool execution_persistent = {};
-        std::span<BufferId> execution_buffers = {};
+        MemoryFlags memory_flags = {};
+        u32 size = {};
         std::string name = {};
     };
 
-    struct TaskImageInfo
+    struct TransientImageInfo
     {
-        // For execution_persistent resources, task list will synch from the initial use to the first use ONCE.
-        // After the FIRST execution, it will use the runtime state of the resource.
-        // For non-execution_persistent resources, task list will synch from the initial use to first use EVERY EXECUTION.
-        // This is either empty or contains an initial state FOR ALL USES SLICES of the image.
-        std::span<ImageSliceState> pre_task_list_slice_states = {};
-        bool execution_persistent = {};
-        bool swapchain_image = {};
-        std::span<ImageId> execution_images = {};
+        u32 dimensions = 2;
+        Format format = Format::R8G8B8A8_UNORM;
+        ImageAspectFlags aspect = ImageAspectFlagBits::COLOR;
+        Extent3D size = {0, 0, 0};
+        u32 mip_level_count = 1;
+        u32 array_layer_count = 1;
+        u32 sample_count = 1;
+        MemoryFlags memory_flags = {};
         std::string name = {};
     };
 
@@ -79,23 +113,19 @@ namespace daxa
         std::variant<TaskBufferId, std::string> aliased_buffer = {};
     };
 
+    template <typename TaskArgs>
     struct TaskInfo
     {
-        TaskShaderUses shader_uses = {};
-        std::vector<TaskBufferAliasInfo> shader_uses_buffer_aliases = {};
-        std::vector<TaskImageAliasInfo> shader_uses_image_aliases = {};
-        UsedTaskBuffers used_buffers = {};
-        UsedTaskImages used_images = {};
+        TaskArgs args = {};
         TaskCallback task = {};
         std::string name = {};
     };
 
-    struct CommandSubmitInfo;
-    struct PresentInfo;
-
     struct TaskListInfo
     {
         Device device;
+        /// @brief Optionally the user can provide a swapchain. This enables the use of present.
+        std::optional<Swapchain> swapchain = {};
         /// @brief Task reordering can drastically improve performance,
         /// yet is it also nice to have sequential callback execution.
         bool reorder_tasks = true;
@@ -103,8 +133,6 @@ namespace daxa
         /// If that is the case for you, you can turn off all use of split barriers.
         /// Daxa will use pipeline barriers instead if this is set.
         bool use_split_barriers = true;
-        /// @brief Optionally the user can provide a swapchain. This enables the use of present.
-        std::optional<Swapchain> swapchain = {};
         /// @brief Each condition doubled the number of permutations.
         /// For a low number of permutations its is preferable to precompile all permutations.
         /// For a large number of permutations it might be preferable to only create the permutations actually used on the fly just before they are needed.
@@ -121,7 +149,7 @@ namespace daxa
         std::array<f32, 4> task_label_color = {0.663f, 0.533f, 0.871f, 1.0f};
         /// @brief Records debug information about the execution if enabled. This string is retrievable with the function get_debug_string.
         bool record_debug_information = {};
-        u32 staging_memory_pool_size = 4000000;
+        u32 staging_memory_pool_size = 262'144; // 2^16 bytes.
         std::string name = {};
     };
 
@@ -164,6 +192,79 @@ namespace daxa
         bool record_debug_string = {};
     };
 
+    struct TrackedBuffers
+    {
+        std::span<BufferId const> buffers = {};
+        Access latest_access = {};
+    };
+
+    struct TaskBufferInfo
+    {
+        TrackedBuffers initial_buffers = {};
+        std::string name = {};
+    };
+
+    struct TaskBuffer : ManagedPtr
+    {
+        TaskBuffer() = default;
+        TaskBuffer(TaskBufferInfo const & info);
+
+        operator TaskBufferId() const;
+
+        auto id() const -> TaskBufferId;
+        auto info() const -> TaskBufferInfo const &;
+        auto get_buffers() const -> TrackedBuffers;
+
+        void set_buffers(TrackedBuffers const & buffers);
+        void swap_buffers(TaskBuffer & other);
+    };
+
+    struct TrackedImages
+    {
+        std::span<ImageId const> images = {};
+        // optional:
+        std::span<ImageSliceState const> latest_slice_states = {};
+    };
+
+    struct TaskImageInfo
+    {
+        TrackedImages initial_images = {};
+        bool swapchain_image = {};
+        std::string name = {};
+    };
+
+    struct TaskImage : ManagedPtr
+    {
+        TaskImage() = default;
+        TaskImage(TaskImageInfo const & info);
+
+        operator TaskImageId() const;
+
+        auto id() const -> TaskImageId;
+        auto info() const -> TaskImageInfo const &;
+        auto get_images() const -> TrackedImages;
+
+        void set_images(TrackedImages const & images);
+        void swap_images(TaskImage & other);
+    };
+
+    struct GenericTaskInfo
+    {
+        i32 shader_binding = -1;
+        u32 shader_constant_buffer_size = {};
+        std::vector<u32> shader_constant_buffer_offsets = {};
+        GenericTaskArgsContainer task_args = {};
+        TaskCallback task = {};
+        std::string name = {};
+    };
+
+    struct InlineTaskInfo
+    {
+        std::initializer_list<GenericTaskResourceUse> args = {};
+        TaskCallback task = {};
+        std::string name = {};
+    };
+
     struct TaskList : ManagedPtr
     {
         TaskList() = default;
@@ -171,32 +272,49 @@ namespace daxa
         TaskList(TaskListInfo const & info);
         ~TaskList();
 
-        auto create_task_buffer(TaskBufferInfo const & info) -> TaskBufferId;
-        auto create_task_image(TaskImageInfo const & info) -> TaskImageId;
+        auto use_persistent_buffer(TaskBuffer const & buffer) -> TaskBufferId;
+        auto use_persistent_image(TaskImage const & image) -> TaskImageId;
+
+        auto create_transient_buffer(TransientBufferInfo const & info) -> TaskBufferId;
+        auto create_transient_image(TransientImageInfo const & info) -> TaskImageId;
+
+        template <typename TaskInput>
+        void add_task(TaskInfo<TaskInput> const & info)
+            requires requires(TaskInput a) { typename TaskInput::FIRST_DERIVED; } and
+                     requires(TaskInput a) { TaskInput::SHADER_BINDING; } and
+                     std::derived_from<TaskInput, TaskUses<typename TaskInput::FIRST_DERIVED, TaskInput::SHADER_BINDING>>
+        {
+            GenericTaskArgsContainer args = {};
+            args.count = TaskInput::USE_COUNT;
+            args.memory.resize(sizeof(TaskInput), 0);
+            std::memcpy(args.memory.data(), &info.args, sizeof(TaskInput));
+
+            isize const shader_binding = TaskInput::SHADER_BINDING;
+            auto const shader_offset_size = get_task_arg_shader_offsets_size(args);
+
+            add_task(GenericTaskInfo{
+                .shader_binding = shader_binding,
+                .shader_constant_buffer_size = shader_offset_size.second,
+                .shader_constant_buffer_offsets = std::move(shader_offset_size.first),
+                .task_args = std::move(args),
+                .task = info.task,
+                .name = info.name,
+            });
+        }
+        void add_task(InlineTaskInfo const & info);
 
         void conditional(TaskListConditionalInfo const & conditional_info);
-
-        void add_task(TaskInfo const & info);
-
         void submit(TaskSubmitInfo const & info);
         void present(TaskPresentInfo const & info);
 
         void complete(TaskCompleteInfo const & info);
 
-        void add_runtime_buffer(TaskBufferId tid, BufferId id);
-        void add_runtime_image(TaskImageId tid, ImageId id);
-        void remove_runtime_buffer(TaskBufferId tid, BufferId id);
-        void remove_runtime_image(TaskImageId tid, ImageId id);
-        void clear_runtime_buffers(TaskBufferId tid);
-        void clear_runtime_images(TaskImageId tid);
-
         void execute(ExecutionInfo const & info);
-        // All tasks recorded AFTER a submit will not be executied and submitted.
-        // The resulting command lists can retrieved wit this function.
         auto get_command_lists() -> std::vector<CommandList>;
-        // Returns a debug string describing the used permutation and synch.
+
         auto get_debug_string() -> std::string;
 
-        void output_graphviz();
-    };
+      private:
+        void add_task(GenericTaskInfo && generic_info);
+    }; // namespace daxa
 } // namespace daxa

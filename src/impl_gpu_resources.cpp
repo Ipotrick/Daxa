@@ -12,20 +12,24 @@ namespace daxa
         return ImageViewId{{.index = index, .version = version}};
     }
 
-    auto to_string(ImageId image_id) -> std::string
+    auto to_string(GPUResourceId const & id) -> std::string
     {
-        std::string ret = {};
-        ret += " index: " + std::to_string(image_id.index);
-        ret += " version: " + std::to_string(image_id.version);
-        return ret;
+        return std::format("index: {}, version: {}", static_cast<u32>(id.index), static_cast<u32>(id.version));
     }
 
-    auto to_string(types::BufferId buffer_id) -> std::string
+    auto to_string(ImageViewType const & type) -> std::string_view
     {
-        std::string ret = {};
-        ret += " index: " + std::to_string(buffer_id.index);
-        ret += " version: " + std::to_string(buffer_id.version);
-        return ret;
+        switch(type)
+        {
+        case ImageViewType::REGULAR_1D: return "REGULAR_1D";
+        case ImageViewType::REGULAR_2D: return "REGULAR_2D";
+        case ImageViewType::REGULAR_3D: return "REGULAR_3D";
+        case ImageViewType::CUBE: return "CUBE";
+        case ImageViewType::REGULAR_1D_ARRAY: return "REGULAR_1D_ARRAY";
+        case ImageViewType::REGULAR_2D_ARRAY: return "REGULAR_2D_ARRAY";
+        case ImageViewType::CUBE_ARRAY: return "CUBE_ARRAY";
+        default: return "NONE";
+        }
     }
 
     void GPUShaderResourceTable::initialize(usize max_buffers, usize max_images, usize max_samplers,
@@ -277,7 +281,7 @@ namespace daxa
     {
         [[maybe_unused]] auto print_remaining = [&](std::string prefix, auto & pages)
         {
-            std::string ret{prefix + "\nThis can happen due to not waiting for the gpu to finish executing, as daxa defers destruction. List of survivors:\n"};
+            std::string ret{prefix + "\nthis can happen due to not waiting for the gpu to finish executing, as daxa defers destruction. List of survivors:\n"};
             for (auto & page : pages)
             {
                 if (page)
@@ -311,9 +315,9 @@ namespace daxa
             }
             return ret;
         };
-        DAXA_DBG_ASSERT_TRUE_M(buffer_slots.free_index_stack.size() == buffer_slots.next_index, print_remaining("Not all buffers have been destroyed before destroying the device.", buffer_slots.pages));
-        DAXA_DBG_ASSERT_TRUE_M(image_slots.free_index_stack.size() == image_slots.next_index, print_remaining("Not all images have been destroyed before destroying the device.", image_slots.pages));
-        DAXA_DBG_ASSERT_TRUE_M(sampler_slots.free_index_stack.size() == sampler_slots.next_index, print_remaining("Not all samplers have been destroyed before destroying the device.", sampler_slots.pages));
+        DAXA_DBG_ASSERT_TRUE_M(buffer_slots.free_index_stack.size() == buffer_slots.next_index, print_remaining("detected leaked buffers; not all buffers have been destroyed before destroying the device;", buffer_slots.pages));
+        DAXA_DBG_ASSERT_TRUE_M(image_slots.free_index_stack.size() == image_slots.next_index, print_remaining("detected leaked images; not all images have been destroyed before destroying the device;", image_slots.pages));
+        DAXA_DBG_ASSERT_TRUE_M(sampler_slots.free_index_stack.size() == sampler_slots.next_index, print_remaining("detected leaked samplers; not all samplers have been destroyed before destroying the device;", sampler_slots.pages));
         for (usize i = 0; i < PIPELINE_LAYOUT_COUNT; ++i)
         {
             vkDestroyPipelineLayout(device, pipeline_layouts.at(i), nullptr);

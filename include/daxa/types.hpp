@@ -36,97 +36,100 @@ namespace daxa
         using f64 = double;
 
         using BufferDeviceAddress = u64;
+    }
 
-        namespace detail
+    namespace detail
+    {
+        template <typename T, usize N>
+        struct GenericVecMembers
         {
-            template <typename T, usize N>
-            struct GenericVecMembers
-            {
-                std::array<T, N> array;
-                constexpr T & operator[](usize i) noexcept { return array[i]; }
-                constexpr T const & operator[](usize i) const noexcept { return array[i]; }
-            };
+            std::array<T, N> array;
+            constexpr T & operator[](usize i) noexcept { return array[i]; }
+            constexpr T const & operator[](usize i) const noexcept { return array[i]; }
+        };
 
-            template <typename T>
-            struct GenericVecMembers<T, 2>
+        template <typename T>
+        struct GenericVecMembers<T, 2>
+        {
+            T x, y;
+            constexpr T & operator[](usize i) noexcept
             {
-                T x, y;
-                constexpr T & operator[](usize i) noexcept
+                switch (i)
                 {
-                    switch (i)
-                    {
-                    case 1: return y;
-                    default: return x;
-                    }
+                case 1: return y;
+                default: return x;
                 }
-                constexpr T const & operator[](usize i) const noexcept
-                {
-                    switch (i)
-                    {
-                    case 1: return y;
-                    default: return x;
-                    }
-                }
-            };
-            template <typename T>
-            struct GenericVecMembers<T, 3>
+            }
+            constexpr T const & operator[](usize i) const noexcept
             {
-                T x, y, z;
-                constexpr T & operator[](usize i) noexcept
+                switch (i)
                 {
-                    switch (i)
-                    {
-                    case 1: return y;
-                    case 2: return z;
-                    default: return x;
-                    }
+                case 1: return y;
+                default: return x;
                 }
-                constexpr T const & operator[](usize i) const noexcept
-                {
-                    switch (i)
-                    {
-                    case 1: return y;
-                    case 2: return z;
-                    default: return x;
-                    }
-                }
-            };
-            template <typename T>
-            struct GenericVecMembers<T, 4>
+            }
+        };
+        template <typename T>
+        struct GenericVecMembers<T, 3>
+        {
+            T x, y, z;
+            constexpr T & operator[](usize i) noexcept
             {
-                T x, y, z, w;
-                constexpr T & operator[](usize i) noexcept
+                switch (i)
                 {
-                    switch (i)
-                    {
-                    case 1: return y;
-                    case 2: return z;
-                    case 3: return w;
-                    default: return x;
-                    }
+                case 1: return y;
+                case 2: return z;
+                default: return x;
                 }
-                constexpr T const & operator[](usize i) const noexcept
+            }
+            constexpr T const & operator[](usize i) const noexcept
+            {
+                switch (i)
                 {
-                    switch (i)
-                    {
-                    case 1: return y;
-                    case 2: return z;
-                    case 3: return w;
-                    default: return x;
-                    }
+                case 1: return y;
+                case 2: return z;
+                default: return x;
                 }
-            };
+            }
+        };
+        template <typename T>
+        struct GenericVecMembers<T, 4>
+        {
+            T x, y, z, w;
+            constexpr T & operator[](usize i) noexcept
+            {
+                switch (i)
+                {
+                case 1: return y;
+                case 2: return z;
+                case 3: return w;
+                default: return x;
+                }
+            }
+            constexpr T const & operator[](usize i) const noexcept
+            {
+                switch (i)
+                {
+                case 1: return y;
+                case 2: return z;
+                case 3: return w;
+                default: return x;
+                }
+            }
+        };
 
-            template <typename T, usize N>
-            struct GenericVector : GenericVecMembers<T, N>
-            {
-            };
+        template <typename T, usize N>
+        struct GenericVector : GenericVecMembers<T, N>
+        {
+        };
 
-            template <typename T, usize M, usize N>
-            struct GenericMatrix : GenericVector<GenericVector<T, N>, M>
-            {
-            };
-        } // namespace detail
+        template <typename T, usize M, usize N>
+        struct GenericMatrix : GenericVector<GenericVector<T, N>, M>
+        {
+        };
+    } // namespace detail
+
+    inline namespace types {
 
         using b32vec2 = detail::GenericVector<b32, 2>;
         using b32vec3 = detail::GenericVector<b32, 3>;
@@ -1080,5 +1083,59 @@ namespace daxa
         i32 y = {};
         u32 width = {};
         u32 height = {};
+    };
+
+    namespace deail
+    {
+        u32 constexpr const_hash( char const *input )
+        {
+            if (*input == '\0')
+            {
+                return 5381;
+            }
+            return static_cast<unsigned int>(*input) + 33 * const_hash( input + 1 );
+        }
+    }
+
+    auto constexpr compt_hash( char const* str ) -> u32
+    {
+        if (str == nullptr)
+        {
+            return 0;
+        }
+        return deail::const_hash( str );
+    }
+
+    template<usize N>
+    struct StringLiteralAdapter {
+        char value[N];
+
+        constexpr StringLiteralAdapter(const char (&str)[N]) {
+            std::copy_n(str, N, value);
+        }
+
+        template<usize INDEX>
+        constexpr auto is_same_at(StringLiteralAdapter<N> const & other) const
+        {
+            return this->value[INDEX] == other.value[INDEX] && is_same_at<INDEX+1>(other);
+        }
+
+        template<>
+        constexpr auto is_same_at<N>(StringLiteralAdapter<N> const &) const
+        {
+            return true;
+        }
+
+        template<usize N2>
+        constexpr auto is_same(StringLiteralAdapter<N2> const &) const
+        {
+            return false;
+        }
+
+        template<>
+        constexpr auto is_same(StringLiteralAdapter<N> const & other) const
+        {
+            return is_same_at<0>(other);
+        }
     };
 } // namespace daxa
