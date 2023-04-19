@@ -479,141 +479,21 @@ namespace tests
         device.destroy_buffer(buffer);
         device.collect_garbage();
     }
-
-    void output_graph()
-    {
-        /*
-        AppContext const app = {};
-        auto task_list = daxa::TaskList({
-            .device = app.device,
-            .name = APPNAME_PREFIX("task_list (output_graph)"),
-        });
-
-        auto task_buffer1 = daxa::TaskBuffer({
-            .buffers = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
-            .name = APPNAME_PREFIX("task_buffer1"),
-        });
-        auto task_buffer2 = task_list.create_transient_task_buffer({
-            .pre_task_list_slice_states = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
-            .name = APPNAME_PREFIX("task_buffer2"),
-        });
-        auto task_buffer3 = task_list.create_transient_task_buffer({
-            .pre_task_list_slice_states = {daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
-            .name = APPNAME_PREFIX("task_buffer3"),
-        });
-
-        std::array init_access = {
-            daxa::ImageSliceState{
-                .latest_access = daxa::Access{daxa::PipelineStageFlagBits::HOST, daxa::AccessTypeFlagBits::WRITE},
-                .latest_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL}};
-        auto task_image1 = task_list.create_transient_task_image({
-            .pre_task_list_slice_states = {init_access.begin(), init_access.end()},
-            .name = APPNAME_PREFIX("task_image1"),
-        });
-        auto task_image2 = task_list.create_transient_task_image({
-            .pre_task_list_slice_states = {init_access.begin(), init_access.end()},
-            .name = APPNAME_PREFIX("task_image2"),
-        });
-        auto task_image3 = task_list.create_transient_task_image({
-            .pre_task_list_slice_states = {init_access.begin(), init_access.end()},
-            .name = APPNAME_PREFIX("task_image3"),
-        });
-
-        task_list.add_task({
-            .used_buffers = {
-                {task_buffer1, daxa::TaskBufferAccess::SHADER_WRITE_ONLY},
-                {task_buffer2, daxa::TaskBufferAccess::SHADER_READ_ONLY},
-            },
-            .used_images = {
-                {task_image1, daxa::TaskImageAccess::SHADER_WRITE_ONLY, daxa::ImageMipArraySlice{}},
-                {task_image2, daxa::TaskImageAccess::SHADER_READ_ONLY, daxa::ImageMipArraySlice{}},
-            },
-            .task = [](daxa::TaskInterface<> const &) {},
-            .name = APPNAME_PREFIX("task 1 (output_graph)"),
-        });
-
-        task_list.add_task({
-            .used_buffers = {
-                {task_buffer2, daxa::TaskBufferAccess::SHADER_WRITE_ONLY},
-            },
-            .used_images = {
-                {task_image2, daxa::TaskImageAccess::SHADER_WRITE_ONLY, daxa::ImageMipArraySlice{}},
-            },
-            .task = [](daxa::TaskInterface<> const &) {},
-            .name = APPNAME_PREFIX("task 2 (output_graph)"),
-        });
-        task_list.add_task({
-            .used_buffers = {
-                {task_buffer3, daxa::TaskBufferAccess::SHADER_WRITE_ONLY},
-            },
-            .used_images = {
-                {task_image3, daxa::TaskImageAccess::SHADER_WRITE_ONLY, daxa::ImageMipArraySlice{}},
-            },
-            .task = [](daxa::TaskInterface<> const &) {},
-            .name = APPNAME_PREFIX("task 3 (output_graph)"),
-        });
-
-        task_list.add_task({
-            .used_buffers = {
-                {task_buffer2, daxa::TaskBufferAccess::SHADER_WRITE_ONLY},
-                {task_buffer3, daxa::TaskBufferAccess::SHADER_WRITE_ONLY},
-            },
-            .used_images = {
-                {
-                    task_image2,
-                    daxa::TaskImageAccess::SHADER_WRITE_ONLY,
-                    daxa::ImageMipArraySlice{
-                        .base_mip_level = 0,
-                        .level_count = 3,
-                        .base_array_layer = 2,
-                        .layer_count = 2,
-                    },
-                },
-                {
-                    task_image3,
-                    daxa::TaskImageAccess::SHADER_WRITE_ONLY,
-                    daxa::ImageMipArraySlice{
-                        .base_mip_level = 0,
-                        .level_count = 3,
-                        .base_array_layer = 2,
-                        .layer_count = 2,
-                    },
-                },
-            },
-            .task = [](daxa::TaskInterface<> const &) {},
-            .name = APPNAME_PREFIX("task 4 (output_graph)"),
-        });
-
-        task_list.add_task({
-            .used_buffers = {
-                {task_buffer3, daxa::TaskBufferAccess::SHADER_READ_ONLY},
-            },
-            .used_images = {
-                {task_image3, daxa::TaskImageAccess::SHADER_READ_ONLY, daxa::ImageMipArraySlice{}},
-            },
-            .task = [](daxa::TaskInterface<> const &) {},
-            .name = APPNAME_PREFIX("task 5 (output_graph)"),
-        });
-
-        task_list.complete({});
-        task_list.output_graphviz();
-        */
-    }
 } // namespace tests
 
 auto main() -> int
 {
-    // tests::simplest();
-    // tests::execution();
-    // tests::write_read_image();
-    // tests::write_read_image_layer();
-    // tests::create_transfer_read_buffer();
-    // tests::initial_layout_access();
-    // tests::tracked_slice_barrier_collapsing();
-    // tests::shader_integration_inl_use();
-    // tests::correct_read_buffer_task_ordering();
-    // tests::sharing_persistent_image();
-    // tests::sharing_persistent_buffer();
-    // tests::transient_resources();
+    tests::simplest();
+    tests::execution();
+    tests::write_read_image();
+    tests::write_read_image_layer();
+    tests::create_transfer_read_buffer();
+    tests::initial_layout_access();
+    tests::tracked_slice_barrier_collapsing();
+    tests::shader_integration_inl_use();
+    tests::correct_read_buffer_task_ordering();
+    tests::sharing_persistent_image();
+    tests::sharing_persistent_buffer();
+    tests::transient_resources();
     tests::mipmapping();
 }
