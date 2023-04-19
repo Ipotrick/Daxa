@@ -383,7 +383,7 @@ auto main() -> int
 
     loop_task_list.add_task({
         .used_buffers = {
-            {renderable_chunks_task_buffer_id, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
+            {renderable_chunks_task_buffer_id, daxa::TaskBufferAccess::VERTEX_SHADER_READ},
         },
         .task = [&](daxa::TaskInterface<> task_runtime)
         {
@@ -408,7 +408,7 @@ auto main() -> int
 
     loop_task_list.add_task({
         .used_buffers = {
-            {renderable_chunks_task_buffer_id, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
+            {renderable_chunks_task_buffer_id, daxa::TaskBufferAccess::VERTEX_SHADER_READ},
         },
         .used_images = {
             {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},

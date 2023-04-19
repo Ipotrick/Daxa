@@ -11,22 +11,22 @@
 #include "impl_task_list_debug.hpp"
 
 namespace daxa
-{
+{        
     auto to_string(TaskGPUResourceId const & id) -> std::string
     {
         return std::format("tlidx: {}, index: {}", id.task_list_index, id.index);
     }
 
-    auto get_task_arg_shader_alignment(TaskInputType type) -> u32
+    auto get_task_arg_shader_alignment(TaskResourceUseType type) -> u32
     {
-        if (type == TaskInputType::BUFFER)
+        if (type == TaskResourceUseType::BUFFER)
         {
             return 8;
         }
         return 4;
     }
 
-    auto get_task_arg_shader_offsets_size(std::span<GenericTaskInput> args) -> std::pair<std::vector<u32>, u32>
+    auto get_task_arg_shader_offsets_size(std::span<GenericTaskResourceUse> args) -> std::pair<std::vector<u32>, u32>
     {
         std::vector<u32> ret = {};
         ret.reserve(args.size());
@@ -47,20 +47,20 @@ namespace daxa
         switch (access)
         {
         case TaskImageAccess::NONE: return {ImageLayout::UNDEFINED, {PipelineStageFlagBits::NONE, AccessTypeFlagBits::NONE}};
-        case TaskImageAccess::SHADER_READ_ONLY: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::ALL_GRAPHICS | PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::VERTEX_SHADER_READ_ONLY: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ_ONLY: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ_ONLY: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::GEOMETRY_SHADER_READ_ONLY: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::FRAGMENT_SHADER_READ_ONLY: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::COMPUTE_SHADER_READ_ONLY: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::SHADER_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS | PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::WRITE}};
-        case TaskImageAccess::VERTEX_SHADER_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::WRITE}};
-        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::WRITE}};
-        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::WRITE}};
-        case TaskImageAccess::GEOMETRY_SHADER_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::WRITE}};
-        case TaskImageAccess::FRAGMENT_SHADER_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::WRITE}};
-        case TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::WRITE}};
+        case TaskImageAccess::SHADER_READ: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::ALL_GRAPHICS | PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::VERTEX_SHADER_READ: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::GEOMETRY_SHADER_READ: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::FRAGMENT_SHADER_READ: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::COMPUTE_SHADER_READ: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::SHADER_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS | PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::WRITE}};
+        case TaskImageAccess::VERTEX_SHADER_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::WRITE}};
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::WRITE}};
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::WRITE}};
+        case TaskImageAccess::GEOMETRY_SHADER_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::WRITE}};
+        case TaskImageAccess::FRAGMENT_SHADER_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::WRITE}};
+        case TaskImageAccess::COMPUTE_SHADER_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::WRITE}};
         case TaskImageAccess::SHADER_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS | PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ_WRITE}};
         case TaskImageAccess::VERTEX_SHADER_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ_WRITE}};
         case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ_WRITE}};
@@ -76,11 +76,11 @@ namespace daxa
         case TaskImageAccess::STENCIL_ATTACHMENT:
             [[fallthrough]];
         case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT: return {ImageLayout::ATTACHMENT_OPTIMAL, {PipelineStageFlagBits::EARLY_FRAGMENT_TESTS | PipelineStageFlagBits::LATE_FRAGMENT_TESTS, AccessTypeFlagBits::READ_WRITE}};
-        case TaskImageAccess::DEPTH_ATTACHMENT_READ_ONLY:
+        case TaskImageAccess::DEPTH_ATTACHMENT_READ:
             [[fallthrough]];
-        case TaskImageAccess::STENCIL_ATTACHMENT_READ_ONLY:
+        case TaskImageAccess::STENCIL_ATTACHMENT_READ:
             [[fallthrough]];
-        case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT_READ_ONLY: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::EARLY_FRAGMENT_TESTS | PipelineStageFlagBits::LATE_FRAGMENT_TESTS, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT_READ: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::EARLY_FRAGMENT_TESTS | PipelineStageFlagBits::LATE_FRAGMENT_TESTS, AccessTypeFlagBits::READ}};
         case TaskImageAccess::RESOLVE_WRITE: return {ImageLayout::ATTACHMENT_OPTIMAL, {PipelineStageFlagBits::RESOLVE, AccessTypeFlagBits::WRITE}};
         case TaskImageAccess::PRESENT: return {ImageLayout::PRESENT_SRC, {PipelineStageFlagBits::ALL_COMMANDS, AccessTypeFlagBits::READ}};
         default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
@@ -93,20 +93,20 @@ namespace daxa
         switch (access)
         {
         case TaskBufferAccess::NONE: return {PipelineStageFlagBits::NONE, AccessTypeFlagBits::NONE};
-        case TaskBufferAccess::SHADER_READ_ONLY: return {PipelineStageFlagBits::ALL_GRAPHICS | PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ};
-        case TaskBufferAccess::VERTEX_SHADER_READ_ONLY: return {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ};
-        case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ_ONLY: return {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ};
-        case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ_ONLY: return {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ};
-        case TaskBufferAccess::GEOMETRY_SHADER_READ_ONLY: return {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ};
-        case TaskBufferAccess::FRAGMENT_SHADER_READ_ONLY: return {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ};
-        case TaskBufferAccess::COMPUTE_SHADER_READ_ONLY: return {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ};
-        case TaskBufferAccess::SHADER_WRITE_ONLY: return {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS | PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::WRITE};
-        case TaskBufferAccess::VERTEX_SHADER_WRITE_ONLY: return {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::WRITE};
-        case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_WRITE_ONLY: return {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::WRITE};
-        case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_WRITE_ONLY: return {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::WRITE};
-        case TaskBufferAccess::GEOMETRY_SHADER_WRITE_ONLY: return {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::WRITE};
-        case TaskBufferAccess::FRAGMENT_SHADER_WRITE_ONLY: return {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::WRITE};
-        case TaskBufferAccess::COMPUTE_SHADER_WRITE_ONLY: return {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::WRITE};
+        case TaskBufferAccess::SHADER_READ: return {PipelineStageFlagBits::ALL_GRAPHICS | PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ};
+        case TaskBufferAccess::VERTEX_SHADER_READ: return {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ};
+        case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ: return {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ};
+        case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ: return {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ};
+        case TaskBufferAccess::GEOMETRY_SHADER_READ: return {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ};
+        case TaskBufferAccess::FRAGMENT_SHADER_READ: return {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ};
+        case TaskBufferAccess::COMPUTE_SHADER_READ: return {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ};
+        case TaskBufferAccess::SHADER_WRITE: return {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS | PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::WRITE};
+        case TaskBufferAccess::VERTEX_SHADER_WRITE: return {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::WRITE};
+        case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_WRITE: return {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::WRITE};
+        case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_WRITE: return {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::WRITE};
+        case TaskBufferAccess::GEOMETRY_SHADER_WRITE: return {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::WRITE};
+        case TaskBufferAccess::FRAGMENT_SHADER_WRITE: return {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::WRITE};
+        case TaskBufferAccess::COMPUTE_SHADER_WRITE: return {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::WRITE};
         case TaskBufferAccess::SHADER_READ_WRITE: return {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS | PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ_WRITE};
         case TaskBufferAccess::VERTEX_SHADER_READ_WRITE: return {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ_WRITE};
         case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE: return {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ_WRITE};
@@ -139,20 +139,20 @@ namespace daxa
     {
         switch (usage)
         {
-        case TaskBufferAccess::SHADER_READ_ONLY: return std::string_view{"SHADER_READ_ONLY"};
-        case TaskBufferAccess::VERTEX_SHADER_READ_ONLY: return std::string_view{"VERTEX_SHADER_READ_ONLY"};
-        case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ_ONLY: return std::string_view{"TESSELLATION_CONTROL_SHADER_READ_ONLY"};
-        case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ_ONLY: return std::string_view{"TESSELLATION_EVALUATION_SHADER_READ_ONLY"};
-        case TaskBufferAccess::GEOMETRY_SHADER_READ_ONLY: return std::string_view{"GEOMETRY_SHADER_READ_ONLY"};
-        case TaskBufferAccess::FRAGMENT_SHADER_READ_ONLY: return std::string_view{"FRAGMENT_SHADER_READ_ONLY"};
-        case TaskBufferAccess::COMPUTE_SHADER_READ_ONLY: return std::string_view{"COMPUTE_SHADER_READ_ONLY"};
-        case TaskBufferAccess::SHADER_WRITE_ONLY: return std::string_view{"SHADER_WRITE_ONLY"};
-        case TaskBufferAccess::VERTEX_SHADER_WRITE_ONLY: return std::string_view{"VERTEX_SHADER_WRITE_ONLY"};
-        case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_WRITE_ONLY: return std::string_view{"TESSELLATION_CONTROL_SHADER_WRITE_ONLY"};
-        case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_WRITE_ONLY: return std::string_view{"TESSELLATION_EVALUATION_SHADER_WRITE_ONLY"};
-        case TaskBufferAccess::GEOMETRY_SHADER_WRITE_ONLY: return std::string_view{"GEOMETRY_SHADER_WRITE_ONLY"};
-        case TaskBufferAccess::FRAGMENT_SHADER_WRITE_ONLY: return std::string_view{"FRAGMENT_SHADER_WRITE_ONLY"};
-        case TaskBufferAccess::COMPUTE_SHADER_WRITE_ONLY: return std::string_view{"COMPUTE_SHADER_WRITE_ONLY"};
+        case TaskBufferAccess::SHADER_READ: return std::string_view{"SHADER_READ"};
+        case TaskBufferAccess::VERTEX_SHADER_READ: return std::string_view{"VERTEX_SHADER_READ"};
+        case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ: return std::string_view{"TESSELLATION_CONTROL_SHADER_READ"};
+        case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ: return std::string_view{"TESSELLATION_EVALUATION_SHADER_READ"};
+        case TaskBufferAccess::GEOMETRY_SHADER_READ: return std::string_view{"GEOMETRY_SHADER_READ"};
+        case TaskBufferAccess::FRAGMENT_SHADER_READ: return std::string_view{"FRAGMENT_SHADER_READ"};
+        case TaskBufferAccess::COMPUTE_SHADER_READ: return std::string_view{"COMPUTE_SHADER_READ"};
+        case TaskBufferAccess::SHADER_WRITE: return std::string_view{"SHADER_WRITE"};
+        case TaskBufferAccess::VERTEX_SHADER_WRITE: return std::string_view{"VERTEX_SHADER_WRITE"};
+        case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_WRITE: return std::string_view{"TESSELLATION_CONTROL_SHADER_WRITE"};
+        case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_WRITE: return std::string_view{"TESSELLATION_EVALUATION_SHADER_WRITE"};
+        case TaskBufferAccess::GEOMETRY_SHADER_WRITE: return std::string_view{"GEOMETRY_SHADER_WRITE"};
+        case TaskBufferAccess::FRAGMENT_SHADER_WRITE: return std::string_view{"FRAGMENT_SHADER_WRITE"};
+        case TaskBufferAccess::COMPUTE_SHADER_WRITE: return std::string_view{"COMPUTE_SHADER_WRITE"};
         case TaskBufferAccess::SHADER_READ_WRITE: return std::string_view{"SHADER_READ_WRITE"};
         case TaskBufferAccess::VERTEX_SHADER_READ_WRITE: return std::string_view{"VERTEX_SHADER_READ_WRITE"};
         case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE: return std::string_view{"TESSELLATION_CONTROL_SHADER_READ_WRITE"};
@@ -175,20 +175,20 @@ namespace daxa
     {
         switch (usage)
         {
-        case TaskImageAccess::SHADER_READ_ONLY: return std::string_view{"SHADER_READ_ONLY"};
-        case TaskImageAccess::VERTEX_SHADER_READ_ONLY: return std::string_view{"VERTEX_SHADER_READ_ONLY"};
-        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ_ONLY: return std::string_view{"TESSELLATION_CONTROL_SHADER_READ_ONLY"};
-        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ_ONLY: return std::string_view{"TESSELLATION_EVALUATION_SHADER_READ_ONLY"};
-        case TaskImageAccess::GEOMETRY_SHADER_READ_ONLY: return std::string_view{"GEOMETRY_SHADER_READ_ONLY"};
-        case TaskImageAccess::FRAGMENT_SHADER_READ_ONLY: return std::string_view{"FRAGMENT_SHADER_READ_ONLY"};
-        case TaskImageAccess::COMPUTE_SHADER_READ_ONLY: return std::string_view{"COMPUTE_SHADER_READ_ONLY"};
-        case TaskImageAccess::SHADER_WRITE_ONLY: return std::string_view{"SHADER_WRITE_ONLY"};
-        case TaskImageAccess::VERTEX_SHADER_WRITE_ONLY: return std::string_view{"VERTEX_SHADER_WRITE_ONLY"};
-        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_WRITE_ONLY: return std::string_view{"TESSELLATION_CONTROL_SHADER_WRITE_ONLY"};
-        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_WRITE_ONLY: return std::string_view{"TESSELLATION_EVALUATION_SHADER_WRITE_ONLY"};
-        case TaskImageAccess::GEOMETRY_SHADER_WRITE_ONLY: return std::string_view{"GEOMETRY_SHADER_WRITE_ONLY"};
-        case TaskImageAccess::FRAGMENT_SHADER_WRITE_ONLY: return std::string_view{"FRAGMENT_SHADER_WRITE_ONLY"};
-        case TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY: return std::string_view{"COMPUTE_SHADER_WRITE_ONLY"};
+        case TaskImageAccess::SHADER_READ: return std::string_view{"SHADER_READ"};
+        case TaskImageAccess::VERTEX_SHADER_READ: return std::string_view{"VERTEX_SHADER_READ"};
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ: return std::string_view{"TESSELLATION_CONTROL_SHADER_READ"};
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ: return std::string_view{"TESSELLATION_EVALUATION_SHADER_READ"};
+        case TaskImageAccess::GEOMETRY_SHADER_READ: return std::string_view{"GEOMETRY_SHADER_READ"};
+        case TaskImageAccess::FRAGMENT_SHADER_READ: return std::string_view{"FRAGMENT_SHADER_READ"};
+        case TaskImageAccess::COMPUTE_SHADER_READ: return std::string_view{"COMPUTE_SHADER_READ"};
+        case TaskImageAccess::SHADER_WRITE: return std::string_view{"SHADER_WRITE"};
+        case TaskImageAccess::VERTEX_SHADER_WRITE: return std::string_view{"VERTEX_SHADER_WRITE"};
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_WRITE: return std::string_view{"TESSELLATION_CONTROL_SHADER_WRITE"};
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_WRITE: return std::string_view{"TESSELLATION_EVALUATION_SHADER_WRITE"};
+        case TaskImageAccess::GEOMETRY_SHADER_WRITE: return std::string_view{"GEOMETRY_SHADER_WRITE"};
+        case TaskImageAccess::FRAGMENT_SHADER_WRITE: return std::string_view{"FRAGMENT_SHADER_WRITE"};
+        case TaskImageAccess::COMPUTE_SHADER_WRITE: return std::string_view{"COMPUTE_SHADER_WRITE"};
         case TaskImageAccess::SHADER_READ_WRITE: return std::string_view{"SHADER_READ_WRITE"};
         case TaskImageAccess::VERTEX_SHADER_READ_WRITE: return std::string_view{"VERTEX_SHADER_READ_WRITE"};
         case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE: return std::string_view{"TESSELLATION_CONTROL_SHADER_READ_WRITE"};
@@ -202,9 +202,9 @@ namespace daxa
         case TaskImageAccess::DEPTH_ATTACHMENT: return std::string_view{"DEPTH_ATTACHMENT"};
         case TaskImageAccess::STENCIL_ATTACHMENT: return std::string_view{"STENCIL_ATTACHMENT"};
         case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT: return std::string_view{"DEPTH_STENCIL_ATTACHMENT"};
-        case TaskImageAccess::DEPTH_ATTACHMENT_READ_ONLY: return std::string_view{"DEPTH_ATTACHMENT_READ_ONLY"};
-        case TaskImageAccess::STENCIL_ATTACHMENT_READ_ONLY: return std::string_view{"STENCIL_ATTACHMENT_READ_ONLY"};
-        case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT_READ_ONLY: return std::string_view{"DEPTH_STENCIL_ATTACHMENT_READ_ONLY"};
+        case TaskImageAccess::DEPTH_ATTACHMENT_READ: return std::string_view{"DEPTH_ATTACHMENT_READ"};
+        case TaskImageAccess::STENCIL_ATTACHMENT_READ: return std::string_view{"STENCIL_ATTACHMENT_READ"};
+        case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT_READ: return std::string_view{"DEPTH_STENCIL_ATTACHMENT_READ"};
         case TaskImageAccess::RESOLVE_WRITE: return std::string_view{"RESOLVE_WRITE"};
         case TaskImageAccess::PRESENT: return std::string_view{"PRESENT"};
         default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
@@ -217,7 +217,7 @@ namespace daxa
     {
     }
 
-    auto GenericTaskInterface::get_args() const -> std::span<GenericTaskInput>
+    auto GenericTaskInterface::get_args() const -> std::span<GenericTaskResourceUse>
     {
         auto const & impl = *static_cast<ImplTaskRuntimeInterface const *>(this->backend);
         return impl.current_task->info.task_args.span();
@@ -272,11 +272,11 @@ namespace daxa
         auto const local_id = impl.task_list.id_to_local_id(task_resource_id);
         auto iter = std::find_if(impl.current_task->info.task_args.span().begin(),
                                  impl.current_task->info.task_args.span().end(),
-                                 [&](GenericTaskInput const & input)
+                                 [&](GenericTaskResourceUse const & input)
                                  {
-                                     if (input.type == TaskInputType::IMAGE)
+                                     if (input.type == TaskResourceUseType::IMAGE)
                                      {
-                                         auto const & img_use = TaskImageInput::from(input);
+                                         auto const & img_use = TaskImageUse::from(input);
                                          return img_use.id == local_id;
                                      }
                                      return false;
@@ -635,9 +635,9 @@ namespace daxa
     {
         for (u32 task_image_use_index = 0; task_image_use_index < task.info.task_args.span().size(); ++task_image_use_index)
         {
-            if (task.info.task_args.span()[task_image_use_index].type == TaskInputType::IMAGE)
+            if (task.info.task_args.span()[task_image_use_index].type == TaskResourceUseType::IMAGE)
             {
-                auto & image_use = TaskImageInput::from(task.info.task_args.span()[task_image_use_index]);
+                auto & image_use = TaskImageUse::from(task.info.task_args.span()[task_image_use_index]);
                 auto const slice = image_use.slice;
                 // The image id here is alreadt the task list local id.
                 // The persistent ids are converted to local ids in the add_task function.
@@ -771,11 +771,11 @@ namespace daxa
         Task & task = permutation.tasks[task_id];
         update_image_view_cache(task, permutation);
         task.info.task_args.for_each(
-            [&](u32, TaskBufferInput & arg)
+            [&](u32, TaskBufferUse & arg)
             {
                 arg.buffers = this->get_actual_buffers(arg.id);
             },
-            [&](u32 input_index, TaskImageInput & arg)
+            [&](u32 input_index, TaskImageUse & arg)
             {
                 arg.images = this->get_actual_images(arg.id, permutation);
                 arg.views = std::span{task.image_view_cache[input_index].data(), task.image_view_cache[input_index].size()};
@@ -786,12 +786,12 @@ namespace daxa
             auto constant_buffer_alloc = staging_memory.allocate(task.info.shader_constant_buffer_size).value();
             u8 * host_constant_buffer_ptr = reinterpret_cast<u8 *>(constant_buffer_alloc.host_address);
             task.info.task_args.for_each(
-                [&](u32 arg_i, TaskBufferInput & arg)
+                [&](u32 arg_i, TaskBufferUse & arg)
                 {
                     auto adr = (host_constant_buffer_ptr + task.info.shader_constant_buffer_offsets[arg_i]);
                     *reinterpret_cast<types::BufferDeviceAddress *>(adr) = info.device.get_device_address(arg.buffers[0]);
                 },
-                [&](u32 arg_i, TaskImageInput & arg)
+                [&](u32 arg_i, TaskImageUse & arg)
                 {
                     auto adr = (host_constant_buffer_ptr + task.info.shader_constant_buffer_offsets[arg_i]);
                     *reinterpret_cast<types::ImageViewId *>(adr) = arg.views[0];
@@ -820,7 +820,7 @@ namespace daxa
         args.count = info.args.size();
         for (usize i = 0; i < info.args.size(); ++i)
         {
-            reinterpret_cast<GenericTaskInput *>(args.memory.data())[i] = *(info.args.begin() + i);
+            reinterpret_cast<GenericTaskResourceUse *>(args.memory.data())[i] = *(info.args.begin() + i);
         }
 
         add_task(GenericTaskInfo{
@@ -863,10 +863,10 @@ namespace daxa
     void ImplTaskList::check_for_overlapping_use(GenericTaskInfo const & task_info)
     {
         task_info.task_args.for_each(
-            [&](u32 index_a, TaskBufferInput const & a)
+            [&](u32 index_a, TaskBufferUse const & a)
             {
                 task_info.task_args.for_each(
-                    [&](u32 index_b, TaskBufferInput const & b)
+                    [&](u32 index_b, TaskBufferUse const & b)
                     {
                         if (index_a == index_b)
                         {
@@ -881,13 +881,13 @@ namespace daxa
                                 global_buffer_infos[a.id.index].get_name(),
                                 task_info.name));
                     },
-                    [&](u32, TaskImageInput const &) {});
+                    [&](u32, TaskImageUse const &) {});
             },
-            [&](u32 index_a, TaskImageInput const & a)
+            [&](u32 index_a, TaskImageUse const & a)
             {
                 task_info.task_args.for_each(
-                    [&](u32, TaskBufferInput const &) {},
-                    [&](u32 index_b, TaskImageInput const & b)
+                    [&](u32, TaskBufferUse const &) {},
+                    [&](u32 index_b, TaskImageUse const & b)
                     {
                         if (index_a == index_b)
                         {
@@ -924,7 +924,7 @@ namespace daxa
         }
 
         info.task_args.for_each(
-            [&](u32, TaskBufferInput const & buffer_use)
+            [&](u32, TaskBufferUse const & buffer_use)
             {
                 PerPermTaskBuffer const & task_buffer = perm.buffer_infos[buffer_use.id.index];
                 // If the latest access is in a previous submit scope, the earliest batch we can insert into is
@@ -951,7 +951,7 @@ namespace daxa
                 }
                 first_possible_batch_index = std::max(first_possible_batch_index, current_buffer_first_possible_batch_index);
             },
-            [&](u32, TaskImageInput const & image_use)
+            [&](u32, TaskImageUse const & image_use)
             {
                 PerPermTaskImage const & task_image = perm.image_infos[image_use.id.index];
                 PermIndepTaskImageInfo const & glob_task_image = impl.global_image_infos[image_use.id.index];
@@ -1011,9 +1011,9 @@ namespace daxa
     void translate_persistent_ids(ImplTaskList const & impl, GenericTaskInfo & info)
     {
         info.task_args.for_each(
-            [&](u32, TaskBufferInput & arg)
+            [&](u32, TaskBufferUse & arg)
             { arg.id = impl.id_to_local_id(arg.id); },
-            [&](u32, TaskImageInput & arg)
+            [&](u32, TaskImageUse & arg)
             { arg.id = impl.id_to_local_id(arg.id); });
     }
 
@@ -1155,21 +1155,21 @@ namespace daxa
     {
         switch (access)
         {
-        case TaskImageAccess::SHADER_READ_ONLY: [[fallthrough]];
-        case TaskImageAccess::VERTEX_SHADER_READ_ONLY: [[fallthrough]];
-        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ_ONLY: [[fallthrough]];
-        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ_ONLY: [[fallthrough]];
-        case TaskImageAccess::GEOMETRY_SHADER_READ_ONLY: [[fallthrough]];
-        case TaskImageAccess::FRAGMENT_SHADER_READ_ONLY: [[fallthrough]];
-        case TaskImageAccess::COMPUTE_SHADER_READ_ONLY:
+        case TaskImageAccess::SHADER_READ: [[fallthrough]];
+        case TaskImageAccess::VERTEX_SHADER_READ: [[fallthrough]];
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ: [[fallthrough]];
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ: [[fallthrough]];
+        case TaskImageAccess::GEOMETRY_SHADER_READ: [[fallthrough]];
+        case TaskImageAccess::FRAGMENT_SHADER_READ: [[fallthrough]];
+        case TaskImageAccess::COMPUTE_SHADER_READ:
             return ImageUsageFlagBits::SHADER_READ_ONLY;
-        case TaskImageAccess::SHADER_WRITE_ONLY: [[fallthrough]];
-        case TaskImageAccess::VERTEX_SHADER_WRITE_ONLY: [[fallthrough]];
-        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_WRITE_ONLY: [[fallthrough]];
-        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_WRITE_ONLY: [[fallthrough]];
-        case TaskImageAccess::GEOMETRY_SHADER_WRITE_ONLY: [[fallthrough]];
-        case TaskImageAccess::FRAGMENT_SHADER_WRITE_ONLY: [[fallthrough]];
-        case TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY: [[fallthrough]];
+        case TaskImageAccess::SHADER_WRITE: [[fallthrough]];
+        case TaskImageAccess::VERTEX_SHADER_WRITE: [[fallthrough]];
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_WRITE: [[fallthrough]];
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_WRITE: [[fallthrough]];
+        case TaskImageAccess::GEOMETRY_SHADER_WRITE: [[fallthrough]];
+        case TaskImageAccess::FRAGMENT_SHADER_WRITE: [[fallthrough]];
+        case TaskImageAccess::COMPUTE_SHADER_WRITE: [[fallthrough]];
         case TaskImageAccess::SHADER_READ_WRITE: [[fallthrough]];
         case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE: [[fallthrough]];
         case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ_WRITE: [[fallthrough]];
@@ -1190,9 +1190,9 @@ namespace daxa
         case TaskImageAccess::STENCIL_ATTACHMENT: [[fallthrough]];
         case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT:
             return ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT;
-        case TaskImageAccess::DEPTH_ATTACHMENT_READ_ONLY: [[fallthrough]];
-        case TaskImageAccess::STENCIL_ATTACHMENT_READ_ONLY: [[fallthrough]];
-        case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT_READ_ONLY:
+        case TaskImageAccess::DEPTH_ATTACHMENT_READ: [[fallthrough]];
+        case TaskImageAccess::STENCIL_ATTACHMENT_READ: [[fallthrough]];
+        case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT_READ:
             return ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT;
         case TaskImageAccess::PRESENT: [[fallthrough]];
         case TaskImageAccess::NONE: [[fallthrough]];
@@ -1242,7 +1242,7 @@ namespace daxa
         // This effectively means that all the resource uses, and their memory and execution dependencies in a batch
         // are combined into a single unit which is synchronized against other batches.
         info.task_args.for_each(
-            [&](u32, TaskBufferInput const & buffer_use)
+            [&](u32, TaskBufferUse const & buffer_use)
             {
                 PerPermTaskBuffer & task_buffer = this->buffer_infos[buffer_use.id.index];
                 Access const current_buffer_access = task_buffer_access_to_access(buffer_use.access);
@@ -1346,7 +1346,7 @@ namespace daxa
                 task_buffer.latest_access_batch_index = batch_index;
                 task_buffer.latest_access_submit_scope_index = current_submit_scope_index;
             },
-            [&](u32, TaskImageInput const & image_use)
+            [&](u32, TaskImageUse const & image_use)
             {
                 auto const & used_image_t_id = image_use.id;
                 auto const & used_image_t_access = image_use.access;
@@ -2628,7 +2628,7 @@ namespace daxa
         std::format_to(std::back_inserter(out), "{}task arguments:\n", indent);
         [[maybe_unused]] FormatIndent d0{out, indent, true};
         task.info.task_args.for_each(
-            [&](u32, TaskBufferInput const & buf)
+            [&](u32, TaskBufferUse const & buf)
             {
                 auto access = task_buffer_access_to_access(buf.access);
                 std::format_to(std::back_inserter(out), "{}buffer argument:\n", indent);
@@ -2636,7 +2636,7 @@ namespace daxa
                 print_task_buffer_to(out, indent, permutation, buf.id);
                 print_seperator_to(out, indent);
             },
-            [&](u32, TaskImageInput const & img)
+            [&](u32, TaskImageUse const & img)
             {
                 auto [layout, access] = task_image_access_to_layout_access(img.access);
                 std::format_to(std::back_inserter(out), "{}image argument:\n", indent);

@@ -457,7 +457,7 @@ namespace tests
 
                 struct InputTransferIn : public daxa::TaskUses<InputTransferIn>
                 {
-                    daxa::TaskBufferInput buffer = {{.access = daxa::TaskBufferAccess::HOST_TRANSFER_WRITE}};
+                    daxa::TaskBufferUse buffer = {{.access = daxa::TaskBufferAccess::HOST_TRANSFER_WRITE}};
                     f32 d;
                 } input_transfer_in;
 
@@ -478,8 +478,8 @@ namespace tests
                     {
                         struct MousePaintIn : public daxa::TaskUses<MousePaintIn>
                         {
-                            daxa::TaskBufferInput buffer = {{.access = daxa::TaskBufferAccess::COMPUTE_SHADER_READ_ONLY}};
-                            daxa::TaskImageInput target = {{.access = daxa::TaskImageAccess::COMPUTE_SHADER_READ_WRITE}};
+                            daxa::TaskBufferUse buffer = {{.access = daxa::TaskBufferAccess::COMPUTE_SHADER_READ}};
+                            daxa::TaskImageUse target = {{.access = daxa::TaskImageAccess::COMPUTE_SHADER_READ_WRITE}};
                         } mouse_paint_in;
                         mouse_paint_in.buffer.id = task_mipmapping_gpu_input_buffer;
                         mouse_paint_in.target.id = task_render_image;
@@ -501,8 +501,8 @@ namespace tests
                                 
                                 struct MipUses : public daxa::TaskUses<MipUses>
                                 {
-                                    daxa::TaskImageInput lower_mip = {{.access = daxa::TaskImageAccess::TRANSFER_READ}};
-                                    daxa::TaskImageInput higher_mip = {{.access = daxa::TaskImageAccess::TRANSFER_WRITE}};
+                                    daxa::TaskImageUse lower_mip = {{.access = daxa::TaskImageAccess::TRANSFER_READ}};
+                                    daxa::TaskImageUse higher_mip = {{.access = daxa::TaskImageAccess::TRANSFER_WRITE}};
                                 };
 
                                 struct MipArgs : public MipUses
@@ -559,7 +559,7 @@ namespace tests
                 });
                 struct ClearSwapchainIn : public daxa::TaskUses<ClearSwapchainIn>
                 {
-                    daxa::TaskImageInput swapchain = {{.access = daxa::TaskImageAccess::TRANSFER_WRITE}};
+                    daxa::TaskImageUse swapchain = {{.access = daxa::TaskImageAccess::TRANSFER_WRITE}};
                 } input;
                 input.swapchain.id = task_swapchain_image;
                 new_task_list.add_task(daxa::TaskInfo<ClearSwapchainIn>{
@@ -577,8 +577,8 @@ namespace tests
                 });
                 new_task_list.add_task({
                     .args = {
-                        daxa::TaskImageInput{{.id = task_render_image, .access = daxa::TaskImageAccess::TRANSFER_READ, .slice = daxa::ImageMipArraySlice{.level_count = 5}}},
-                        daxa::TaskImageInput{{.id = task_swapchain_image, .access = daxa::TaskImageAccess::TRANSFER_WRITE}},
+                        daxa::TaskImageUse{{.id = task_render_image, .access = daxa::TaskImageAccess::TRANSFER_READ, .slice = daxa::ImageMipArraySlice{.level_count = 5}}},
+                        daxa::TaskImageUse{{.id = task_swapchain_image, .access = daxa::TaskImageAccess::TRANSFER_WRITE}},
                     },
                     .task = [this](daxa::TaskInterface<> const & ti)
                     {
@@ -592,7 +592,7 @@ namespace tests
                 });
                 struct ImguiIn : public daxa::TaskUses<ImguiIn>
                 {
-                    daxa::TaskImageInput swapchain = {{.access = daxa::TaskImageAccess::COLOR_ATTACHMENT}};
+                    daxa::TaskImageUse swapchain = {{.access = daxa::TaskImageAccess::COLOR_ATTACHMENT}};
                 } im_gui_in;
                 im_gui_in.swapchain.id = task_swapchain_image;
                 new_task_list.add_task(daxa::TaskInfo<ImguiIn>{

@@ -91,7 +91,7 @@ struct App : BaseApp<App>
 
         new_task_list.add_task({
             .used_images = {
-                {task_render_image, daxa::TaskImageAccess::COMPUTE_SHADER_WRITE_ONLY, daxa::ImageMipArraySlice{}},
+                {task_render_image, daxa::TaskImageAccess::COMPUTE_SHADER_WRITE, daxa::ImageMipArraySlice{}},
             },
             .task = [this](daxa::TaskInterface<> runtime)
             {
