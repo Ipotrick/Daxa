@@ -675,21 +675,21 @@ namespace daxa
                     for (u32 index = 0; index < actual_images.size(); ++index)
                     {
                         ImageId parent = actual_images[index];
-                        ImageInfo parent_info = info.device.info_image(parent);
-
+                        ImageInfo const & parent_info = info.device.info_image(parent);
                         ImageViewInfo view_info = info.device.info_image_view(parent.default_view());
+                        ImageViewType use_view_type = (image_use.view_type != ImageViewType::MAX_ENUM) ? image_use.view_type : view_info.type;
 
                         // When the use image view parameters match the default view,
                         // then use the default view id and avoid creating a new id here.
                         bool const is_use_default_slice = view_info.slice == slice;
-                        bool const is_use_default_view_type = (image_use.view_type == view_info.type);
+                        bool const is_use_default_view_type = use_view_type == view_info.type;
                         if (is_use_default_slice && is_use_default_view_type)
                         {
                             view_cache.push_back(parent.default_view());
                         }
                         else
                         {
-                            view_info.type = (image_use.view_type != ImageViewType::MAX_ENUM) ? image_use.view_type : view_info.type;
+                            view_info.type = use_view_type;
                             view_info.slice = slice;
                             view_cache.push_back(info.device.create_image_view(view_info));
                         }
@@ -768,7 +768,7 @@ namespace daxa
         // We always allow to reuse the last command list ONCE within the task callback.
         // When the get command list function is called in a task this is set to false.
         impl_runtime.reuse_last_command_list = true;
-        Task & task = permutation.tasks[task_id];
+        Task & task = tasks[task_id];
         update_image_view_cache(task, permutation);
         task.info.task_args.for_each(
             [&](u32, TaskBufferUse & arg)
@@ -1026,10 +1026,18 @@ namespace daxa
         // But in order to make the task list implementation simpler,
         // daxa does not allow for overlapping use of a resource within a task, even when it is a read in the same layout.
         impl.check_for_overlapping_use(info);
+        
+        TaskId const task_id = impl.tasks.size();
+        std::vector<std::vector<ImageViewId>> view_cache = {};
+        view_cache.resize(info.task_args.span().size(), {});
+        impl.tasks.emplace_back(Task{
+            .info = info,
+            .image_view_cache = std::move(view_cache),
+        });
 
         for (auto * permutation : impl.record_active_permutations)
         {
-            permutation->add_task(impl, info);
+            permutation->add_task(task_id, impl, info);
         }
     }
 
@@ -1205,16 +1213,10 @@ namespace daxa
     thread_local std::vector<ExtendedImageSliceState> tl_tracked_slice_rests = {};
     thread_local std::vector<ImageMipArraySlice> tl_new_use_slices = {};
     void TaskListPermutation::add_task(
+        TaskId task_id,
         ImplTaskList & task_list_impl,
         GenericTaskInfo & info)
     {
-        TaskId const task_id = this->tasks.size();
-        std::vector<std::vector<ImageViewId>> view_cache = {};
-        view_cache.resize(info.task_args.span().size(), {});
-        this->tasks.emplace_back(Task{
-            .info = info,
-            .image_view_cache = std::move(view_cache),
-        });
 
         usize const current_submit_scope_index = this->batch_submit_scopes.size() - 1;
         TaskBatchSubmitScope & current_submit_scope = this->batch_submit_scopes[current_submit_scope_index];
@@ -2520,20 +2522,20 @@ namespace daxa
                     info.device.destroy_image(get_actual_images(TaskImageId{{.task_list_index = unique_index, .index = image_info_idx}}, permutation)[0]);
                 }
             }
-            for (auto & task : permutation.tasks)
+        }
+        for (auto & task : tasks)
+        {
+            for (auto & view_cache : task.image_view_cache)
             {
-                for (auto & view_cache : task.image_view_cache)
+                for (auto & view : view_cache)
                 {
-                    for (auto & view : view_cache)
+                    if (info.device.is_id_valid(view))
                     {
-                        if (info.device.is_id_valid(view))
+                        ImageId const parent = info.device.info_image_view(view).image;
+                        bool const is_default_view = parent.default_view() == view;
+                        if (!is_default_view)
                         {
-                            bool const is_parent_valid = info.device.is_id_valid(info.device.info_image_view(view).image);
-                            bool const is_default_view = is_parent_valid && info.device.info_image_view(view).image.default_view() == view;
-                            if (!is_default_view)
-                            {
-                                info.device.destroy_image_view(view);
-                            }
+                            info.device.destroy_image_view(view);
                         }
                     }
                 }
@@ -2623,7 +2625,7 @@ namespace daxa
 
     void ImplTaskList::print_task_to(std::string & out, std::string & indent, TaskListPermutation const & permutation, usize task_id)
     {
-        Task const & task = permutation.tasks[task_id];
+        Task const & task = tasks[task_id];
         std::format_to(std::back_inserter(out), "{}task name: \"{}\", id: {}\n", indent, task.info.name, task_id);
         std::format_to(std::back_inserter(out), "{}task arguments:\n", indent);
         [[maybe_unused]] FormatIndent d0{out, indent, true};
@@ -2663,7 +2665,7 @@ namespace daxa
             {
                 for (auto const task_id : batch.tasks)
                 {
-                    [[maybe_unused]] auto const & task = permutation.tasks.at(task_id);
+                    [[maybe_unused]] auto const & task = tasks.at(task_id);
                     // buffer is not used in this task
 
                     // for (auto const & used_image : task.info.used_images)
@@ -2697,7 +2699,7 @@ namespace daxa
             {
                 for (auto const task_id : batch.tasks)
                 {
-                    [[maybe_unused]] auto const & task = permutation.tasks.at(task_id);
+                    [[maybe_unused]] auto const & task = tasks.at(task_id);
                     // buffer is not used in this task
 
                     // for (auto const & used_buffer : task.info.used_buffers)
