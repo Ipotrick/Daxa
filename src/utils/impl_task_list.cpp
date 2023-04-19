@@ -11,7 +11,7 @@
 #include "impl_task_list_debug.hpp"
 
 namespace daxa
-{        
+{
     auto to_string(TaskGPUResourceId const & id) -> std::string
     {
         return std::format("tlidx: {}, index: {}", id.task_list_index, id.index);
@@ -549,24 +549,20 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(!id.is_empty(), "detected empty task buffer id. Please make sure to only use intialized task buffer ids.");
         if (id.is_persistent())
         {
-            DAXA_DBG_ASSERT_TRUE_MS(
+            DAXA_DBG_ASSERT_TRUE_M(
                 persistent_buffer_index_to_local_index.contains(id.index),
-                << "detected invalid access of persistent task buffer id "
-                << (id.index)
-                << " in tasklist \""
-                << info.name
-                << "\". Please make sure to declare persistent resource use to each task list that uses this buffer with the function use_persistent_buffer!");
+                std::format("detected invalid access of persistent task buffer id ({}) in task list \"{}\"; "
+                            "please make sure to declare persistent resource use to each task list that uses this buffer with the function use_persistent_buffer!",
+                            id.index, info.name));
             return TaskBufferId{{.task_list_index = this->unique_index, .index = persistent_buffer_index_to_local_index.at(id.index)}};
         }
         else
         {
-            DAXA_DBG_ASSERT_TRUE_MS(
+            DAXA_DBG_ASSERT_TRUE_M(
                 id.task_list_index == this->unique_index,
-                << "detected invalid access of transient task buffer id "
-                << (id.index)
-                << " in tasklist \""
-                << info.name
-                << "\". Please make sure that you only use transient buffers within the list they are created in!");
+                std::format("detected invalid access of transient task buffer id ({}) in task list \"{}\"; "
+                            "please make sure that you only use transient buffers within the list they are created in!",
+                            id.index, info.name));
             return TaskBufferId{{.task_list_index = this->unique_index, .index = id.index}};
         }
     }
@@ -1026,7 +1022,7 @@ namespace daxa
         // But in order to make the task list implementation simpler,
         // daxa does not allow for overlapping use of a resource within a task, even when it is a read in the same layout.
         impl.check_for_overlapping_use(info);
-        
+
         TaskId const task_id = impl.tasks.size();
         std::vector<std::vector<ImageViewId>> view_cache = {};
         view_cache.resize(info.task_args.span().size(), {});
@@ -1614,7 +1610,7 @@ namespace daxa
     {
         auto & impl = *as<ImplTaskList>();
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "completed task lists can not record new tasks");
-        DAXA_DBG_ASSERT_TRUE_M(impl.info.swapchain.has_value(), "Can only present, when a swapchain was provided in creation");
+        DAXA_DBG_ASSERT_TRUE_M(impl.info.swapchain.has_value(), "can only present, when a swapchain was provided in creation");
 
         for (auto & permutation : impl.record_active_permutations)
         {
@@ -1624,8 +1620,8 @@ namespace daxa
 
     void TaskListPermutation::present(TaskPresentInfo const & info)
     {
-        DAXA_DBG_ASSERT_TRUE_M(this->batch_submit_scopes.size() > 1, "Can only present if at least one submit was issued before");
-        DAXA_DBG_ASSERT_TRUE_M(!this->swapchain_image.is_empty(), "Can only present when an image was annotated as swapchain image");
+        DAXA_DBG_ASSERT_TRUE_M(this->batch_submit_scopes.size() > 1, "can only present if at least one submit was issued before");
+        DAXA_DBG_ASSERT_TRUE_M(!this->swapchain_image.is_empty(), "can only present when an image was annotated as swapchain image");
         DAXA_DBG_ASSERT_TRUE_M(!this->image_infos[this->swapchain_image.index].swapchain_semaphore_waited_upon, "Can only present once");
         this->image_infos[this->swapchain_image.index].swapchain_semaphore_waited_upon = true;
 
@@ -1708,7 +1704,6 @@ namespace daxa
 
     void ImplTaskList::allocate_transient_resources()
     {
-
         // figure out transient resource sizes
         usize max_alignment_requirement = 0;
         for (auto & global_image : global_image_infos)
