@@ -28,6 +28,7 @@ namespace daxa
         case ImageViewType::REGULAR_1D_ARRAY: return "REGULAR_1D_ARRAY";
         case ImageViewType::REGULAR_2D_ARRAY: return "REGULAR_2D_ARRAY";
         case ImageViewType::CUBE_ARRAY: return "CUBE_ARRAY";
+        default: return "NONE";
         }
     }
 

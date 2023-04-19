@@ -157,19 +157,17 @@ namespace daxa
         TaskImageId swapchain_image = {};
         std::vector<PerPermTaskBuffer> buffer_infos = {};
         std::vector<PerPermTaskImage> image_infos = {};
-        std::vector<Task> tasks = {};
         std::vector<TaskSplitBarrier> split_barriers = {};
         std::vector<TaskBarrier> barriers = {};
         std::vector<usize> initial_barriers = {};
         // TODO(msakmary, pahrens) - Instead of storing batch submit scopes which contain batches
-        // we should make a vector of batches which and a second vector of submit scopes which are 
+        // we should make a vector of batches which and a second vector of submit scopes which are
         // just offsets into the batches vector
         std::vector<TaskBatchSubmitScope> batch_submit_scopes = {};
         usize swapchain_image_first_use_submit_scope_index = std::numeric_limits<usize>::max();
         usize swapchain_image_last_use_submit_scope_index = std::numeric_limits<usize>::max();
 
-        void add_task(ImplTaskList & task_list_impl,
-                      GenericTaskInfo & info);
+        void add_task(TaskId task_id, ImplTaskList & task_list_impl, GenericTaskInfo & info);
         void submit(TaskSubmitInfo const & info);
         void present(TaskPresentInfo const & info);
     };
@@ -299,7 +297,7 @@ namespace daxa
             return std::holds_alternative<Persistent>(task_image_data);
         }
     };
-    
+
     auto to_string(ImplTaskList const & impl, TaskImageUseInit const & use, usize index) -> std::string;
 
     struct ImplTaskList final : ManagedSharedState
@@ -315,8 +313,8 @@ namespace daxa
         std::vector<PermIndepTaskImageInfo> global_image_infos = {};
         std::vector<TaskListCondition> conditions = {};
         std::vector<TaskListPermutation> permutations = {};
+        std::vector<Task> tasks = {};
         // TODO: replace with faster hash map.
-        /// @brief map the persistent id to a task list local id.
         std::unordered_map<u32, u32> persistent_buffer_index_to_local_index;
         std::unordered_map<u32, u32> persistent_image_index_to_local_index;
 
