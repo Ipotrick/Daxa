@@ -20,6 +20,7 @@ Checks: "*,
         -readability-simplify-boolean-expr,
         -hicpp-signed-bitwise,
         -cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers,
+        -readability-function-cognitive-complexity,
 "
 WarningsAsErrors: ''
 HeaderFilterRegex: ''
