@@ -261,7 +261,7 @@ namespace daxa
     auto GenericTaskInterface::device_address(TaskBufferId const & task_resource_id, usize index) const -> daxa::BufferDeviceAddress
     {
         auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
-        return impl.task_list.info.device.get_device_address(buffer(task_resource_id));
+        return impl.task_list.info.device.get_device_address(buffer(task_resource_id, index));
     }
 
     auto GenericTaskInterface::image(TaskImageId const & task_resource_id, usize index) const -> ImageId
@@ -690,7 +690,6 @@ namespace daxa
                     for (u32 index = 0; index < actual_images.size(); ++index)
                     {
                         ImageId parent = actual_images[index];
-                        ImageInfo const & parent_info = info.device.info_image(parent);
                         ImageViewInfo view_info = info.device.info_image_view(parent.default_view());
                         ImageViewType use_view_type = (image_use.view_type != ImageViewType::MAX_ENUM) ? image_use.view_type : view_info.type;
 
@@ -1675,7 +1674,6 @@ namespace daxa
 
             if (!glob_image.is_persistent() && perm_image.valid)
             {
-                auto const & transient_info = std::get<PermIndepTaskImageInfo::Transient>(glob_image.task_image_data);
                 DAXA_DBG_ASSERT_TRUE_M(perm_image.usage != ImageUsageFlagBits::NONE,
                                        std::string("Transient image is not used in this permutation but marked as valid either: ") +
                                            std::string("\t- it was used as PRESENT which is not allowed for transient images") +
