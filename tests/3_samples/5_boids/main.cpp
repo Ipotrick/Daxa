@@ -17,7 +17,7 @@ using Clock = std::chrono::high_resolution_clock;
 struct App : AppWindow<App>
 {
     daxa::Context daxa_ctx = daxa::create_context({
-        .enable_validation = true,
+        .enable_validation = false,
     });
     daxa::Device device = daxa_ctx.create_device({
         .name = APPNAME_PREFIX("device"),
@@ -26,7 +26,7 @@ struct App : AppWindow<App>
     daxa::Swapchain swapchain = device.create_swapchain({
         .native_window = get_native_handle(),
         .native_window_platform = get_native_platform(),
-        .present_mode = daxa::PresentMode::IMMEDIATE,
+        .present_mode = daxa::PresentMode::FIFO,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
         .name = APPNAME_PREFIX("swapchain"),
     });
@@ -103,8 +103,8 @@ struct App : AppWindow<App>
             boid.position.x = static_cast<f32>(rand() % ((FIELD_SIZE)*100)) / 100.0f;
             boid.position.y = static_cast<f32>(rand() % ((FIELD_SIZE)*100)) / 100.0f;
             f32 const angle = static_cast<f32>(rand() % 3600) * 0.1f;
-            boid.direction.x = std::cos(angle);
-            boid.direction.y = std::sin(angle);
+            boid.speed.x = std::cos(angle);
+            boid.speed.y = std::sin(angle);
         }
 
         cmd_list.copy_buffer_to_buffer({
@@ -242,10 +242,6 @@ struct App : AppWindow<App>
     void draw()
     {
         auto now = Clock::now();
-        while (std::chrono::duration<f32>(now - prev_time).count() < SIMULATION_DELTA_TIME_S)
-        {
-            now = Clock::now();
-        }
         prev_time = now;
 
         auto reloaded_result = pipeline_manager.reload_all();
@@ -260,9 +256,9 @@ struct App : AppWindow<App>
         {
             return;
         }
+        task_list.execute({});
         // Switch boids front and back buffers.
         task_boids_current.swap_buffers(task_boids_old);
-        task_list.execute({});
     }
 
     void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}
