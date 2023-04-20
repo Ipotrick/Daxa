@@ -23,9 +23,4 @@
     }                           \
     ;
 
-using D = daxa::TaskUses<struct T>;
-struct T
-{
-};
-
 #endif
