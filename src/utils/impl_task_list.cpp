@@ -1715,7 +1715,7 @@ namespace daxa
                     .array_layer_count = transient_image.info.array_layer_count,
                     .sample_count = transient_image.info.sample_count,
                     .usage = ImageUsageFlagBits::SHADER_READ_WRITE,
-                    .allocate_info = AutoAllocInfo{.flags = MemoryFlagBits::DEDICATED_MEMORY},
+                    .allocate_info = MemoryFlagBits::DEDICATED_MEMORY,
                     .name = "Dummy to figure mem requirements",
                 };
                 transient_image.memory_requirements = info.device.get_memory_requirements({image_info});

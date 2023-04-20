@@ -69,16 +69,17 @@ struct App : AppWindow<App>
 
     daxa::BufferId boid_buffer = device.create_buffer({
         .size = sizeof(Boids),
-        .name = APPNAME_PREFIX("boid_buffer"),
+        .name = APPNAME_PREFIX("boids buffer a"),
     });
 
     daxa::BufferId old_boid_buffer = device.create_buffer({
         .size = sizeof(Boids),
-        .name = APPNAME_PREFIX("old_boid_buffer"),
+        .name = APPNAME_PREFIX("boids buffer b"),
     });
 
-    daxa::ImageId swapchain_image = {};
-    daxa::TaskImageId task_swapchain_image = {};
+    daxa::TaskImage task_swapchain_image{{.swapchain_image = true, .name = "swapchain image"}};
+    daxa::TaskBuffer task_boids_current{{.initial_buffers = {.buffers = {&boid_buffer, 1}}, .name = "task_boids_current"}};
+    daxa::TaskBuffer task_boids_old{{.initial_buffers = {.buffers = {&old_boid_buffer, 1}}, .name = "task_boids_old"}};
 
     daxa::CommandSubmitInfo submit_info;
 
@@ -89,8 +90,8 @@ struct App : AppWindow<App>
         auto cmd_list = device.create_command_list({.name = APPNAME_PREFIX("boid buffer init commands")});
 
         auto upload_buffer_id = device.create_buffer({
-            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
             .size = sizeof(Boids),
+            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
             .name = APPNAME_PREFIX("voids buffer init staging buffer"),
         });
         cmd_list.destroy_buffer_deferred(upload_buffer_id);
@@ -202,45 +203,32 @@ struct App : AppWindow<App>
     auto record_tasks() -> daxa::TaskList
     {
         daxa::TaskList new_task_list = daxa::TaskList({.device = device, .swapchain = swapchain, .name = APPNAME_PREFIX("main task list")});
-
-        auto task_boid_buffer = new_task_list.create_transient_task_buffer({});
-        new_task_list.add_runtime_buffer(task_boid_buffer, this->boid_buffer);
-        auto task_old_boid_buffer = new_task_list.create_transient_task_buffer({});
-        new_task_list.add_runtime_buffer(task_old_boid_buffer, this->old_boid_buffer);
-
-        task_swapchain_image = new_task_list.create_transient_task_image({
-            .swapchain_image = true,
-        });
-        new_task_list.add_runtime_image(task_swapchain_image, this->swapchain_image);
+        new_task_list.use_persistent_image(task_swapchain_image);
+        new_task_list.use_persistent_buffer(task_boids_current);
+        new_task_list.use_persistent_buffer(task_boids_old);
 
         new_task_list.add_task({
-            .used_buffers = {
-                {task_boid_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE},
-                {task_old_boid_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ},
+            .args = {
+                daxa::TaskBufferUse{{task_boids_current, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE}},
+                daxa::TaskBufferUse{{task_boids_old, daxa::TaskBufferAccess::COMPUTE_SHADER_READ}},
             },
-            .task = [=, this](daxa::TaskInterface<> const & runtime)
+            .task = [=, this](daxa::TaskInterface<> const & ti)
             {
-                BufferId const boid_buffer_id = runtime.get_buffers(task_boid_buffer)[0];
-                BufferId const old_boid_buffer_id = runtime.get_buffers(task_old_boid_buffer)[0];
-                daxa::CommandList cmd_list = runtime.get_command_list();
-                this->update_boids(cmd_list, boid_buffer_id, old_boid_buffer_id);
+                daxa::CommandList cmd_list = ti.get_command_list();
+                this->update_boids(cmd_list, ti.buffer(task_boids_current), ti.buffer(task_boids_old));
             },
             .name = "update boids",
         });
 
         new_task_list.add_task({
-            .used_buffers = {
-                {task_boid_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ},
+            .args = {
+                daxa::TaskBufferUse{{task_boids_current, daxa::TaskBufferAccess::VERTEX_SHADER_READ}},
+                daxa::TaskImageUse{{task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT}},
             },
-            .used_images = {
-                {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
-            },
-            .task = [=, this](daxa::TaskInterface<> const & runtime)
+            .task = [=, this](daxa::TaskInterface<> const & ti)
             {
-                ImageId const render_target_id = runtime.get_images(task_swapchain_image)[0];
-                BufferId const boid_buffer_id = runtime.get_buffers(task_boid_buffer)[0];
-                daxa::CommandList cmd_list = runtime.get_command_list();
-                this->draw_boids(cmd_list, render_target_id, boid_buffer_id, this->size_x, this->size_y);
+                daxa::CommandList cmd_list = ti.get_command_list();
+                this->draw_boids(cmd_list, ti.image(task_swapchain_image), ti.buffer(task_boids_current), this->size_x, this->size_y);
             },
             .name = "draw boids",
         });
@@ -266,13 +254,14 @@ struct App : AppWindow<App>
             std::cout << reloaded_result.to_string() << std::endl;
         }
 
-        task_list.remove_runtime_image(task_swapchain_image, swapchain_image);
-        swapchain_image = swapchain.acquire_next_image();
-        task_list.add_runtime_image(task_swapchain_image, swapchain_image);
+        auto swapchain_image = swapchain.acquire_next_image();
+        task_swapchain_image.set_images({.images = {&swapchain_image,1}});
         if (swapchain_image.is_empty())
         {
             return;
         }
+        // Switch boids front and back buffers.
+        task_boids_current.swap_buffers(task_boids_old);
         task_list.execute({});
     }
 

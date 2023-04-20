@@ -1005,7 +1005,7 @@ namespace daxa
         VmaAllocationInfo vma_allocation_info = {};
         if (AutoAllocInfo const* auto_info = std::get_if<AutoAllocInfo>(&buffer_info.allocate_info))
         {
-            auto vma_allocation_flags = static_cast<VmaAllocationCreateFlags>(auto_info->flags.data);
+            auto vma_allocation_flags = static_cast<VmaAllocationCreateFlags>(auto_info->data);
             if (((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT) != 0u) ||
                 ((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT) != 0u) ||
                 ((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT) != 0u))
@@ -1209,7 +1209,7 @@ namespace daxa
         if (AutoAllocInfo const* auto_info = std::get_if<AutoAllocInfo>(&image_info.allocate_info))
         {
             VmaAllocationCreateInfo const vma_allocation_create_info{
-                .flags = static_cast<VmaAllocationCreateFlags>(auto_info->flags.data),
+                .flags = static_cast<VmaAllocationCreateFlags>(auto_info->data),
                 .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
                 .requiredFlags = {},
                 .preferredFlags = {},

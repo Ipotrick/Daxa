@@ -1,7 +1,7 @@
 #define DAXA_ENABLE_SHADER_NO_NAMESPACE 1
 #include <shared.inl>
 
-DAXA_USE_PUSH_CONSTANT(UpdateBoidsPushConstant)
+DAXA_USE_PUSH_CONSTANT(UpdateBoidsPushConstant, push)
 
 float good_sign(float v)
 {
@@ -126,8 +126,8 @@ void main()
         return;
     }
     update_boid(
-        deref(daxa_push_constant.boids_buffer).boids[invocation],
-        deref(daxa_push_constant.old_boids_buffer).boids[invocation],
+        deref(push.boids_buffer).boids[invocation],
+        deref(push.old_boids_buffer).boids[invocation],
         invocation,
-        daxa_push_constant.old_boids_buffer);
+        push.old_boids_buffer);
 }
