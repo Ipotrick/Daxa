@@ -114,7 +114,11 @@ namespace daxa
             .pNext = {},
             .pCreateInfo = &vk_buffer_create_info,
         };
-        VkMemoryRequirements2 mem_requirements = {};
+        VkMemoryRequirements2 mem_requirements = {
+            .sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2,
+            .pNext = {},
+            .memoryRequirements = {},
+        };
         vkGetDeviceBufferMemoryRequirements(impl.vk_device, &buffer_requirement_info, &mem_requirements);
         MemoryRequirements ret = std::bit_cast<MemoryRequirements>(mem_requirements.memoryRequirements);
         return ret;

@@ -23,12 +23,24 @@ namespace daxa
         usize index;
     };
 
+    struct ResourceLifetime
+    {
+        // TODO(msakmary, pahrens) This will not be needed once we make batches linear and not
+        // contained in submit scopes
+        struct CombinedBatchIndex
+        {
+            usize submit_scope_index = std::numeric_limits<u32>::max();
+            usize task_batch_index = std::numeric_limits<u32>::max();
+        };
+        CombinedBatchIndex first_use;
+        CombinedBatchIndex last_use;
+    };
+
     struct PerPermTaskBuffer
     {
         /// Every permutation always has all buffers but they are not necessarily valid in that permutation.
         /// This boolean is used to check this.
         bool valid = {};
-        BufferId transient_buffer_id = {};
         Access latest_access = AccessConsts::NONE;
         usize latest_access_batch_index = {};
         usize latest_access_submit_scope_index = {};
@@ -38,6 +50,34 @@ namespace daxa
         // When the last index was a read and an additional read is followed after,
         // we will combine all barriers into one, which is the first barrier that the first read generates.
         std::variant<std::monostate, LastReadSplitBarrierIndex, LastReadBarrierIndex> latest_access_read_barrier_index = std::monostate{};
+        BufferId actual_buffer = {};
+        ResourceLifetime lifetime = {};
+        usize allocation_offset = {};
+    };
+
+    struct ExtendedImageSliceState
+    {
+        ImageSliceState state = {};
+        usize latest_access_batch_index = {};
+        usize latest_access_submit_scope_index = {};
+        // When the last index was a read and an additional read is followed after,
+        // we will combine all barriers into one, which is the first barrier that the first read generates.
+        std::variant<std::monostate, LastReadSplitBarrierIndex, LastReadBarrierIndex> latest_access_read_barrier_index = std::monostate{};
+    };
+
+    struct PerPermTaskImage
+    {
+        /// Every permutation always has all buffers but they are not necessarily valid in that permutation.
+        /// This boolean is used to check this.
+        bool valid = {};
+        bool swapchain_semaphore_waited_upon = {};
+        std::vector<ExtendedImageSliceState> last_slice_states = {};
+        std::vector<ExtendedImageSliceState> first_slice_states = {};
+        // only for transient images
+        ResourceLifetime lifetime = {};
+        ImageUsageFlags usage = ImageUsageFlagBits::NONE;
+        ImageId actual_image = {};
+        usize allocation_offset = {};
     };
 
     struct TaskBarrier
@@ -59,59 +99,10 @@ namespace daxa
         SplitBarrierState split_barrier_state;
     };
 
-    struct ExtendedImageSliceState
-    {
-        ImageSliceState state = {};
-        usize latest_access_batch_index = {};
-        usize latest_access_submit_scope_index = {};
-        // When the last index was a read and an additional read is followed after,
-        // we will combine all barriers into one, which is the first barrier that the first read generates.
-        std::variant<std::monostate, LastReadSplitBarrierIndex, LastReadBarrierIndex> latest_access_read_barrier_index = std::monostate{};
-    };
-
-    struct ResourceLifetime
-    {
-        // TODO(msakmary, pahrens) This will not be needed once we make batches linear and not
-        // contained in submit scopes
-        struct CombinedBatchIndex
-        {
-            usize submit_scope_index = std::numeric_limits<u32>::max();
-            usize task_batch_index = std::numeric_limits<u32>::max();
-        };
-        CombinedBatchIndex first_use;
-        CombinedBatchIndex last_use;
-    };
-    struct PerPermTaskImage
-    {
-        /// Every permutation always has all buffers but they are not necessarily valid in that permutation.
-        /// This boolean is used to check this.
-        bool valid = {};
-        bool swapchain_semaphore_waited_upon = {};
-        std::vector<ExtendedImageSliceState> last_slice_states = {};
-        std::vector<ExtendedImageSliceState> first_slice_states = {};
-        // only for transient images
-        ResourceLifetime lifetime = {};
-        ImageUsageFlags usage = ImageUsageFlagBits::NONE;
-        ImageId actual_image = {};
-        // TODO(pahrens:msakmary): why the heck is this field here nad not per permutation? I am pretty sure it must be per permutation!
-        usize allocation_offset = {};
-    };
-
     struct Task
     {
         GenericTaskInfo info = {};
         std::vector<std::vector<ImageViewId>> image_view_cache = {};
-    };
-
-    struct CreateTaskBufferTask
-    {
-        TaskBufferId id = {};
-    };
-
-    struct CreateTaskImageTask
-    {
-        std::array<TaskImageId, 2> ids = {};
-        usize id_count = {};
     };
 
     struct ImplPresentInfo
@@ -141,11 +132,6 @@ namespace daxa
 
     auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access>;
     auto task_buffer_access_to_access(TaskBufferAccess const & access) -> Access;
-
-    struct TaskListCondition
-    {
-        bool * condition = {};
-    };
 
     struct ImplTaskList;
 
@@ -223,7 +209,7 @@ namespace daxa
         struct Transient
         {
             TaskTransientBufferInfo info = {};
-            BufferId buffer = {};
+            MemoryRequirements memory_requirements = {};
         };
         std::variant<Persistent, Transient> task_buffer_data = {};
 
@@ -311,7 +297,6 @@ namespace daxa
         TaskListInfo info;
         std::vector<PermIndepTaskBufferInfo> global_buffer_infos = {};
         std::vector<PermIndepTaskImageInfo> global_image_infos = {};
-        std::vector<TaskListCondition> conditions = {};
         std::vector<TaskListPermutation> permutations = {};
         std::vector<Task> tasks = {};
         // TODO: replace with faster hash map.
@@ -342,7 +327,7 @@ namespace daxa
         u32 prev_frame_permutation_index = {};
         std::stringstream debug_string_stream = {};
 
-        auto get_actual_buffers(TaskBufferId id) const -> std::span<BufferId const>;
+        auto get_actual_buffers(TaskBufferId id, TaskListPermutation const & perm) const -> std::span<BufferId const>;
         auto get_actual_images(TaskImageId id, TaskListPermutation const & perm) const -> std::span<ImageId const>;
         auto id_to_local_id(TaskBufferId id) const -> TaskBufferId;
         auto id_to_local_id(TaskImageId id) const -> TaskImageId;
@@ -353,7 +338,7 @@ namespace daxa
 
         void check_for_overlapping_use(GenericTaskInfo const & info);
 
-        void create_transient_runtime_buffers();
+        void create_transient_runtime_buffers(TaskListPermutation & permutation);
         void create_transient_runtime_images(TaskListPermutation & permutation);
         void allocate_transient_resources();
 
