@@ -21,7 +21,7 @@ void main()
     case 2: corner_position = vec2(0.0f, 1.0f); break;
     }
 
-    vec2 direction = deref(push.boids_buffer).boids[boid_index].direction;
+    vec2 direction = normalize(deref(push.boids_buffer).boids[boid_index].speed);
     direction = vec2(-direction.y, direction.x);
     direction = vec2(-direction.y, direction.x);
     direction = vec2(-direction.y, direction.x);
