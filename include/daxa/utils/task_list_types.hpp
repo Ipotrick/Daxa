@@ -1,5 +1,8 @@
 #pragma once
 
+// Disable msvc warning on alignment padding.
+#pragma warning(disable : 4324)
+
 #if !DAXA_BUILT_WITH_UTILS_TASK_LIST
 #error "[package management error] You must build Daxa with the DAXA_ENABLE_UTILS_TASK_LIST CMake option enabled, or request the utils-task-list feature in vcpkg"
 #endif
