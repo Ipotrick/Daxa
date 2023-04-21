@@ -48,7 +48,7 @@ namespace tests
         task_list_B.use_persistent_buffer(persistent_task_buffer);
         task_list_A.add_task({
            .args = {daxa::TaskBufferUse<daxa::TaskBufferAccess::SHADER_WRITE>{persistent_task_buffer}},
-           .task = [&](daxa::TaskInterface<> const &) { },
+           .task = [&](daxa::TaskInterface const &) { },
            .name = "write persistent buffer",
         });
         task_list_A.submit({});
@@ -56,7 +56,7 @@ namespace tests
 
         task_list_B.add_task({
            .args = {daxa::TaskBufferUse<daxa::TaskBufferAccess::SHADER_READ>{persistent_task_buffer}},
-           .task = [&](daxa::TaskInterface<> const &) { },
+           .task = [&](daxa::TaskInterface const &) { },
            .name = "read persistent buffer",
         });
         task_list_B.submit({});
@@ -118,12 +118,12 @@ namespace tests
         task_list_A.use_persistent_image(persistent_task_image);
         task_list_A.add_task({
            .args = {daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_WRITE>{persistent_task_image}},
-           .task = [&](daxa::TaskInterface<> const &) { },
+           .task = [&](daxa::TaskInterface const &) { },
            .name = "write persistent image",
         });
         task_list_A.add_task({
            .args = {daxa::TaskImageUse<daxa::TaskImageAccess::COLOR_ATTACHMENT>{persistent_task_image}},
-           .task = [&](daxa::TaskInterface<> const &) { },
+           .task = [&](daxa::TaskInterface const &) { },
            .name = "persistent image - color attachment",
         });
         task_list_A.submit({});
@@ -137,7 +137,7 @@ namespace tests
         task_list_B.use_persistent_image(persistent_task_image);
         task_list_B.add_task({
            .args = {daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_READ>{persistent_task_image}},
-           .task = [&](daxa::TaskInterface<> const &) { },
+           .task = [&](daxa::TaskInterface const &) { },
            .name = "read persistent image",
         });
         task_list_B.submit({});

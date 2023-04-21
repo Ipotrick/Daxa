@@ -242,7 +242,7 @@ auto main() -> int
         {
             loop_task_list.add_task({
                 .used_buffers = {{renderable_chunks_task_buffer_id, daxa::TaskBufferAccess::TRANSFER_WRITE}},
-                .task = [&](daxa::TaskInterface<> task_runtime)
+                .task = [&](daxa::TaskInterface task_runtime)
                 {
                     auto cmd_list = task_runtime.get_command_list();
                     auto threads = std::vector<std::unique_ptr<std::thread>>{};
@@ -331,7 +331,7 @@ auto main() -> int
                 .used_images = {
                     {task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
                 },
-                .task = [&](daxa::TaskInterface<> runtime)
+                .task = [&](daxa::TaskInterface runtime)
                 {
                     auto cmd_list = runtime.get_command_list();
                     load_textures_commands(device, cmd_list, runtime.get_images(task_atlas_texture_array)[0]);
@@ -348,7 +348,7 @@ auto main() -> int
                         {task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{.base_mip_level = i + 0, .base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
                         {task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{.base_mip_level = i + 1, .base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
                     },
-                    .task = [&, i, mip_size, next_mip_size](daxa::TaskInterface<> const & runtime)
+                    .task = [&, i, mip_size, next_mip_size](daxa::TaskInterface const & runtime)
                     {
                         auto cmd_list = runtime.get_command_list();
                         auto image_id = runtime.get_images(task_atlas_texture_array)[0];
@@ -385,7 +385,7 @@ auto main() -> int
         .used_buffers = {
             {renderable_chunks_task_buffer_id, daxa::TaskBufferAccess::VERTEX_SHADER_READ},
         },
-        .task = [&](daxa::TaskInterface<> task_runtime)
+        .task = [&](daxa::TaskInterface task_runtime)
         {
             auto cmd_list = task_runtime.get_command_list();
             auto staging_input_buffer = device.create_buffer({
@@ -414,7 +414,7 @@ auto main() -> int
             {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
             {task_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT, daxa::ImageMipArraySlice{.image_aspect = daxa::ImageAspectFlagBits::DEPTH}},
         },
-        .task = [&](daxa::TaskInterface<> task_runtime)
+        .task = [&](daxa::TaskInterface task_runtime)
         {
             auto cmd_list = task_runtime.get_command_list();
             auto swapchain_image = task_runtime.get_images(task_swapchain_image)[0];

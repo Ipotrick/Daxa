@@ -19,7 +19,7 @@ namespace daxa
 
     using TaskInputDefaultT = std::span<GenericTaskResourceUse>;
 
-    struct GenericTaskInterface
+    struct TaskInterface
     {
         auto get_device() const -> Device &;
         auto get_command_list() const -> CommandList;
@@ -37,50 +37,13 @@ namespace daxa
         friend struct ImplTaskRuntimeInterface;
         friend struct TaskList;
         friend struct ImplTaskList;
-        template <typename TaskInput>
         friend struct TaskInterface;
-        GenericTaskInterface(void * a_backend);
+        TaskInterface(void * a_backend);
         auto get_args() const -> std::span<GenericTaskResourceUse>;
         void * backend = {};
     };
 
-    template <typename TaskInput = TaskInputDefaultT>
-    struct TaskInterface final : public GenericTaskInterface
-    {
-        auto input() const -> TaskInput const &
-            requires(!std::is_same_v<TaskInput, TaskInputDefaultT>)
-        {
-            return *reinterpret_cast<TaskInput const *>(get_args().data());
-        }
-
-        template <typename InputType>
-            requires(std::is_same_v<TaskInput, TaskInputDefaultT>)
-        auto input_as(usize index) const -> InputType const &
-        {
-            DAXA_DBG_ASSERT_TRUE_M(index < get_args().size(), "detected out of bounds input index! all task input indices must be smaller then the count of inputs");
-            DAXA_DBG_ASSERT_TRUE_M(InputType{}.type == get_args().at(index).type, "detected invalid input type cast! the cast input type must match the declared input type at any given index.");
-            return *reinterpret_cast<InputType const *>(get_args().data() + index);
-        }
-
-        auto operator->() const -> TaskInput const * requires(!std::is_same_v<TaskInput, TaskInputDefaultT>) {
-            return reinterpret_cast<TaskInput const *>(get_args().data());
-        }
-
-        template <typename T>
-        operator TaskInterface<T> const &() const
-        {
-            return *reinterpret_cast<TaskInterface<T> const *>(this);
-        }
-
-      private:
-        friend struct ImplTaskRuntimeInterface;
-        friend struct TaskList;
-        friend struct ImplTaskList;
-        friend struct TaskInterface;
-        TaskInterface(void * a_backend) : GenericTaskInterface(a_backend) {}
-    };
-
-    using TaskCallback = std::function<void(TaskInterface<> const &)>;
+    using TaskCallback = std::function<void(TaskInterface const &)>;
 
     struct TaskTransientBufferInfo
     {
@@ -212,7 +175,7 @@ namespace daxa
 
         operator TaskBufferHandle() const;
 
-        auto id() const -> TaskBufferHandle;
+        auto handle() const -> TaskBufferHandle;
         auto info() const -> TaskBufferInfo const &;
         auto get_buffers() const -> TrackedBuffers;
 
@@ -266,6 +229,7 @@ namespace daxa
         std::vector<GenericTaskResourceUse> args = {};
         TaskCallback task = {};
         std::string name = {};
+        isize uses_constant_buffer_binding = -1;
     };
 
     struct TaskList : ManagedPtr
@@ -275,51 +239,29 @@ namespace daxa
         TaskList(TaskListInfo const & info);
         ~TaskList();
 
-        auto use_persistent_buffer(TaskBuffer const & buffer) -> TaskBufferHandle;
-        auto use_persistent_image(TaskImage const & image) -> TaskImageHandle;
+        void use_persistent_buffer(TaskBuffer const & buffer);
+        void use_persistent_image(TaskImage const & image);
 
         auto create_transient_buffer(TaskTransientBufferInfo const & info) -> TaskBufferHandle;
         auto create_transient_image(TaskTransientImageInfo const & info) -> TaskImageHandle;
 
-        template <typename TaskInput>
-        void add_task(TaskInfo<TaskInput> const & info)
-            requires requires(TaskInput a) { typename TaskInput::FIRST_DERIVED; } and
-                     requires(TaskInput a) { TaskInput::SHADER_BINDING; } and
-                     std::derived_from<TaskInput, TaskUses<typename TaskInput::FIRST_DERIVED, TaskInput::SHADER_BINDING>>
+        template <typename Task>
+        void add_task(Task const & task)
         {
-            GenericTaskArgsContainer args = {};
-            args.count = TaskInput::USE_COUNT;
-            args.memory.resize(sizeof(TaskInput), 0);
-            std::memcpy(args.memory.data(), &info.args, sizeof(TaskInput));
+            std::unique_ptr<BaseTask> base_task = std::make_unique<PredeclaredTask<Task>>(task);
 
-            isize const shader_binding = TaskInput::SHADER_BINDING;
-            auto const shader_offset_size = get_task_arg_shader_offsets_size(args);
-
-            add_task(GenericTaskInfo{
-                .shader_binding = shader_binding,
-                .shader_constant_buffer_size = shader_offset_size.second,
-                .shader_constant_buffer_offsets = std::move(shader_offset_size.first),
-                .task_args = std::move(args),
-                .task = info.task,
-                .name = info.name,
-            });
+            add_task(std::move(base_task));
         }
 
-        void add_task(InlineTaskInfo const & info)
+        void add_task(InlineTaskInfo && info)
         {
-            auto const size = TASK_INPUT_FIELD_SIZE * info.args.size();
-            GenericTaskArgsContainer args = {};
-            args.memory.resize(size, 0);
-            args.count = info.args.size();
-            for (usize i = 0; i < info.args.size(); ++i)
-            {
-                reinterpret_cast<GenericTaskResourceUse *>(args.memory.data())[i] = *(info.args.begin() + i);
-            }
-            add_task(GenericTaskInfo{
-                .task_args = std::move(args),
-                .task = info.task,
-                .name = info.name,
-            });
+            std::unique_ptr<BaseTask> base_task = std::make_unique<InlineTask>(
+                std::move(info.args),
+                std::move(info.task),
+                std::move(info.name),
+                info.uses_constant_buffer_binding
+            );
+            add_task(std::move(base_task));
         }
 
         void conditional(TaskListConditionalInfo const & conditional_info);
@@ -334,6 +276,6 @@ namespace daxa
         auto get_debug_string() -> std::string;
 
       private:
-        void add_task(GenericTaskInfo && generic_info);
+        void add_task(std::unique_ptr<BaseTask> && base_task);
     }; // namespace daxa
 } // namespace daxa
