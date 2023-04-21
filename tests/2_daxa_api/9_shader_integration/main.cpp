@@ -130,18 +130,21 @@ namespace tests
             .name = "align_test_dst",
         }};
         task_list.use_persistent_buffer(dst);
-        TestShaderUses args;
-        args.align_test_src.id = src;
-        args.align_test_dst.id = dst;
-        task_list.add_task(daxa::TaskInfo<TestShaderUses>{
-            .args = args,
-            .task = [&](daxa::TaskInterface<TestShaderUses> const & tri)
+        TestShaderUses::Uses uses
+        {
+            .align_test_src = { src },
+            .align_test_dst = { dst },
+        };
+        task_list.add_task({
+            .args = daxa::to_generic_uses(uses),
+            .task = [&](daxa::TaskInterface const & tri)
             {
                 auto cmd = tri.get_command_list();
                 cmd.set_pipeline(*compute_pipeline);
                 cmd.dispatch(1, 1, 1);
             },
             .name = "test alignment",
+            .uses_constant_buffer_binding = TestShaderUses::SHADER_BINDING,
         });
         task_list.submit({});
         task_list.complete({});
@@ -177,7 +180,7 @@ namespace tests
             .name = "device",
         });
         auto sampler = device.create_sampler({.name = "sampler"});
-        
+
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
             .device = device,
             .shader_compile_options = {
@@ -188,7 +191,7 @@ namespace tests
             },
             .name = "pipeline manager",
         });
-        
+
         auto compile_result0 = pipeline_manager.add_compute_pipeline({
             .shader_info = {
                 .source = daxa::ShaderFile{"bindless_access.glsl"},
@@ -196,6 +199,7 @@ namespace tests
                     .enable_debug_info = true,
                 },
             },
+            .push_constant_size = sizeof(BindlessTestPush),
             .name = "bindless_access",
         });
         auto bindless_access = compile_result0.value();
@@ -206,10 +210,11 @@ namespace tests
                     .enable_debug_info = true,
                 },
             },
+            .push_constant_size = sizeof(BindlessTestFollowPush),
             .name = "bindless_access_followup",
         });
         auto bindless_access_followup = compile_result1.value();
-        
+
         auto task_list = daxa::TaskList({
             .device = device,
             .record_debug_information = true,
@@ -222,28 +227,28 @@ namespace tests
         });
         auto f32_image = task_list.create_transient_image({
             .format = daxa::Format::R32_SFLOAT,
-            .size = {1,1,1},
+            .size = {1, 1, 1},
             .name = "f32 image",
         });
         auto f32_buffer = task_list.create_transient_buffer({
             .size = sizeof(f32),
             .name = "f32 buffer",
         });
-        
+
         task_list.add_task({
             .args = {
-                daxa::TaskBufferUse<>{{handles_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE}},
-                daxa::TaskBufferUse<>{{f32_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE}},
-                daxa::TaskImageUse{{f32_image, daxa::TaskImageAccess::COMPUTE_SHADER_WRITE}},
+                daxa::TaskBufferUse<daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE>{handles_buffer},
+                daxa::TaskBufferUse<daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE>{f32_buffer},
+                daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_WRITE>{f32_image},
             },
-            .task = [&](daxa::TaskInterface<> const & ti)
+            .task = [&](daxa::TaskInterface const & ti)
             {
                 auto cmd = ti.get_command_list();
                 cmd.set_pipeline(*bindless_access);
                 cmd.push_constant(BindlessTestPush{
                     .handles = {
                         .my_buffer = ti.device_address(f32_buffer),
-                        .my_image = { ti.view(f32_image) },
+                        .my_image = {ti.view(f32_image)},
                         .my_sampler = sampler,
                     },
                     .next_shader_input = ti.device_address(handles_buffer),
@@ -254,11 +259,11 @@ namespace tests
         });
         task_list.add_task({
             .args = {
-                daxa::TaskBufferUse<>{{handles_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ}},
-                daxa::TaskBufferUse<>{{f32_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ}},
-                daxa::TaskImageUse{{f32_image, daxa::TaskImageAccess::COMPUTE_SHADER_READ}},
+                daxa::TaskBufferUse<daxa::TaskBufferAccess::COMPUTE_SHADER_READ>{handles_buffer},
+                daxa::TaskBufferUse<daxa::TaskBufferAccess::COMPUTE_SHADER_READ>{f32_buffer},
+                daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_READ>{f32_image},
             },
-            .task = [&](daxa::TaskInterface<> const & ti)
+            .task = [&](daxa::TaskInterface const & ti)
             {
                 auto cmd = ti.get_command_list();
                 cmd.set_pipeline(*bindless_access_followup);
