@@ -8,6 +8,8 @@
 
 namespace tests
 {
+    using namespace daxa::task_resource_uses;
+
     void simplest()
     {
         AppContext const app = {};
@@ -28,7 +30,7 @@ namespace tests
         // This is pointless, but done to show how the task list executes
         task_list.add_task({
             .args = {},
-            .task = [&](daxa::TaskInterface<> const &)
+            .task = [&](daxa::TaskInterface const &)
             {
                 std::cout << "Hello, ";
             },
@@ -36,7 +38,7 @@ namespace tests
         });
         task_list.add_task({
             .args = {},
-            .task = [&](daxa::TaskInterface<> const &)
+            .task = [&](daxa::TaskInterface const &)
             {
                 std::cout << "World!" << std::endl;
             },
@@ -67,13 +69,13 @@ namespace tests
         // WRITE IMAGE 1
         task_list.add_task({
             .args = {daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_WRITE>{task_image}},
-            .task = [](daxa::TaskInterface<> const &) {},
+            .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("write image 1"),
         });
         // READ_IMAGE 1
         task_list.add_task({
             .args = {daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_READ>{task_image}},
-            .task = [](daxa::TaskInterface<> const &) {},
+            .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("read image 1"),
         });
 
@@ -101,14 +103,14 @@ namespace tests
             .name = "task list tested image",
         });
         task_list.add_task({
-            .args = {daxa::ImageComputeShaderWrite{task_image.subslice({.base_array_layer = 0, .layer_count = 1})}},
-            .task = [](daxa::TaskInterface<> const &) {},
+            .args = {ImageComputeShaderWrite{task_image.subslice({.base_array_layer = 0, .layer_count = 1})}},
+            .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("write image array layer 1"),
         });
         // READ_IMAGE 1
         task_list.add_task({
-            .args = {daxa::ImageComputeShaderRead{task_image.subslice({.base_array_layer = 1, .layer_count = 1})}},
-            .task = [](daxa::TaskInterface<> const &) {},
+            .args = {ImageComputeShaderRead{task_image.subslice({.base_array_layer = 1, .layer_count = 1})}},
+            .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("read image array layer 1"),
         });
         task_list.complete({});
@@ -136,13 +138,13 @@ namespace tests
 
         task_list.add_task({
             .args = {daxa::TaskBufferUse<daxa::TaskBufferAccess::HOST_TRANSFER_WRITE>{task_buffer}},
-            .task = [](daxa::TaskInterface<> const &) {},
+            .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("host transfer buffer"),
         });
 
         task_list.add_task({
             .args = {daxa::TaskBufferUse<daxa::TaskBufferAccess::COMPUTE_SHADER_READ>{task_buffer}},
-            .task = [](daxa::TaskInterface<> const &) {},
+            .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("read buffer"),
         });
 
@@ -188,13 +190,13 @@ namespace tests
         // CREATE IMAGE
         task_list.use_persistent_image(task_image);
         task_list.add_task({
-            .args = {daxa::ImageComputeShaderRead{task_image.handle().subslice({.base_array_layer = 1, .layer_count = 1})}},
-            .task = [](daxa::TaskInterface<> const &) {},
+            .args = {ImageComputeShaderRead{task_image.handle().subslice({.base_array_layer = 1, .layer_count = 1})}},
+            .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("read array layer 2"),
         });
         task_list.add_task({
-            .args = { daxa::ImageComputeShaderWrite{task_image.handle().subslice({.base_array_layer = 0, .layer_count = 1})}},
-            .task = [](daxa::TaskInterface<> const &) {},
+            .args = { ImageComputeShaderWrite{task_image.handle().subslice({.base_array_layer = 0, .layer_count = 1})}},
+            .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("write array layer 1"),
         });
         task_list.complete({});
@@ -248,23 +250,23 @@ namespace tests
         task_list.use_persistent_image(task_image);
 
         task_list.add_task({
-            .args = { daxa::ImageComputeShaderRead{task_image.handle().subslice({.base_array_layer = 1, .layer_count = 1})}},
-            .task = [](daxa::TaskInterface<> const &) {},
+            .args = { ImageComputeShaderRead{task_image.handle().subslice({.base_array_layer = 1, .layer_count = 1})}},
+            .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("read image layer 2"),
         });
         task_list.add_task({
-            .args = { daxa::ImageComputeShaderWrite{task_image.handle().subslice({.base_array_layer = 3, .layer_count = 1})}},
-            .task = [](daxa::TaskInterface<> const &) {},
+            .args = { ImageComputeShaderWrite{task_image.handle().subslice({.base_array_layer = 3, .layer_count = 1})}},
+            .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("write image layer 4"),
         });
         task_list.add_task({
-            .args = { daxa::ImageComputeShaderWrite{task_image.handle().subslice({.base_array_layer = 0, .layer_count = 4})}},
-            .task = [](daxa::TaskInterface<> const &) {},
+            .args = { ImageComputeShaderWrite{task_image.handle().subslice({.base_array_layer = 0, .layer_count = 4})}},
+            .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("write image layer 1 - 4"),
         });
         task_list.add_task({
-            .args = { daxa::ImageComputeShaderRead{task_image.handle().subslice({.base_array_layer = 0, .layer_count = 4})}},
-            .task = [](daxa::TaskInterface<> const &) {},
+            .args = { ImageComputeShaderRead{task_image.handle().subslice({.base_array_layer = 0, .layer_count = 4})}},
+            .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("read image layer 1 - 4"),
         });
 
@@ -419,7 +421,7 @@ namespace tests
         task_list.use_persistent_buffer(persistent_task_buffer);
         task_list.add_task({
             .args = {daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_WRITE>{persistent_task_image}},
-            .task = [&](daxa::TaskInterface<> const &) {},
+            .task = [&](daxa::TaskInterface const &) {},
             .name = "write persistent image",
         });
         task_list.add_task({
@@ -427,12 +429,12 @@ namespace tests
                 daxa::TaskBufferUse<daxa::TaskBufferAccess::SHADER_READ>{persistent_task_buffer},
                 daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_READ>{persistent_task_image},
             },
-            .task = [&](daxa::TaskInterface<> const &) {},
+            .task = [&](daxa::TaskInterface const &) {},
             .name = "read persistent image, read persistent buffer",
         });
         task_list.add_task({
             .args = {daxa::TaskBufferUse<daxa::TaskBufferAccess::SHADER_READ>{persistent_task_buffer}},
-            .task = [&](daxa::TaskInterface<> const &) {},
+            .task = [&](daxa::TaskInterface const &) {},
             .name = "read persistent buffer",
         });
         task_list.submit({});

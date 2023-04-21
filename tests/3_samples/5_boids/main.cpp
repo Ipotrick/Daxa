@@ -14,6 +14,11 @@ using Clock = std::chrono::high_resolution_clock;
 
 #include "shared.inl"
 
+namespace daxa
+{
+    using namespace task_resource_uses;
+}
+
 struct App : AppWindow<App>
 {
     daxa::Context daxa_ctx = daxa::create_context({
@@ -159,62 +164,76 @@ struct App : AppWindow<App>
     }
 
     // Update task:
-    struct UpdateBoidsUsesStruct
+    
+    struct UpdateBoidsTask
     {
-        daxa::BufferComputeShaderReadWrite current{};
-        daxa::BufferComputeShaderRead previous{};
+        struct Uses
+        {
+            daxa::BufferComputeShaderReadWrite current{};
+            daxa::BufferComputeShaderRead previous{};
+        } uses = {};
+        std::string_view name = "update boids";
+
+        std::shared_ptr<daxa::ComputePipeline> update_boids_pipeline = {};
+        void callback(daxa::TaskInterface const & ti)
+        {
+            auto cmd_list = ti.get_command_list();
+            cmd_list.set_pipeline(*update_boids_pipeline);
+
+            cmd_list.push_constant(UpdateBoidsPushConstant{
+                .boids_buffer = ti.get_device().get_device_address(uses.current.buffer()),
+                .old_boids_buffer = ti.get_device().get_device_address(uses.previous.buffer()),
+            });
+
+            cmd_list.dispatch((MAX_BOIDS + 63) / 64, 1, 1);
+        }
     };
-    using UpdateBoidsUses = daxa::TaskUses<UpdateBoidsUsesStruct>;
-    void update_boids(daxa::TaskInterface<UpdateBoidsUses> ti) const
-    {
-        auto cmd_list = ti.get_command_list();
-        cmd_list.set_pipeline(*update_boids_pipeline);
-
-        cmd_list.push_constant(UpdateBoidsPushConstant{
-            .boids_buffer = ti.get_device().get_device_address(ti->current.buffer()),
-            .old_boids_buffer = ti.get_device().get_device_address(ti->previous.buffer()),
-        });
-
-        cmd_list.dispatch((MAX_BOIDS + 63) / 64, 1, 1);
-    }
 
     // Draw task:
-    struct DrawBoidsUsesStruct
+    
+    struct DrawBoidsTask
     {
-        daxa::BufferVertexShaderRead boids{};
-        daxa::ImageColorAttachment<> render_image{};
+        struct Uses
+        {
+            daxa::BufferVertexShaderRead boids{};
+            daxa::ImageColorAttachment<> render_image{};
+        } uses = {};
+        std::string_view name = "draw boids";
+
+        std::shared_ptr<daxa::RasterPipeline> draw_pipeline = {};
+        u32 size_x = {};
+        u32 size_y = {};
+        void callback(daxa::TaskInterface const & ti)
+        {
+            auto cmd_list = ti.get_command_list();
+            cmd_list.set_pipeline(*draw_pipeline);
+            cmd_list.begin_renderpass({
+                .color_attachments = {
+                    {
+                        .image_view = uses.render_image.view(),
+                        .layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
+                        .load_op = daxa::AttachmentLoadOp::CLEAR,
+                        .store_op = daxa::AttachmentStoreOp::STORE,
+                        .clear_value = std::array<f32, 4>{1.0f, 1.0f, 1.0f, 1.0f},
+                    }},
+                .render_area = {
+                    .width = size_x,
+                    .height = size_y,
+                },
+            });
+
+            cmd_list.push_constant(DrawPushConstant{
+                .boids_buffer = ti.get_device().get_device_address(uses.boids.buffer()),
+                .axis_scaling = {
+                    std::min(1.0f, static_cast<f32>(this->size_x) / static_cast<f32>(this->size_y)),
+                    std::min(1.0f, static_cast<f32>(this->size_x) / static_cast<f32>(this->size_y)),
+                }});
+
+            cmd_list.draw({.vertex_count = 3 * MAX_BOIDS});
+
+            cmd_list.end_renderpass();
+        }
     };
-    using DrawBoidsUses = daxa::TaskUses<DrawBoidsUsesStruct>;
-    void draw_boids(daxa::TaskInterface<DrawBoidsUses> const & ti)
-    {
-        auto cmd_list = ti.get_command_list();
-        cmd_list.set_pipeline(*draw_pipeline);
-        cmd_list.begin_renderpass({
-            .color_attachments = {
-                {
-                    .image_view = ti->render_image.view(),
-                    .layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
-                    .load_op = daxa::AttachmentLoadOp::CLEAR,
-                    .store_op = daxa::AttachmentStoreOp::STORE,
-                    .clear_value = std::array<f32, 4>{1.0f, 1.0f, 1.0f, 1.0f},
-                }},
-            .render_area = {
-                .width = size_x,
-                .height = size_y,
-            },
-        });
-
-        cmd_list.push_constant(DrawPushConstant{
-            .boids_buffer = device.get_device_address(ti->boids.buffer()),
-            .axis_scaling = {
-                std::min(1.0f, static_cast<f32>(this->size_x) / static_cast<f32>(this->size_y)),
-                std::min(1.0f, static_cast<f32>(this->size_x) / static_cast<f32>(this->size_y)),
-            }});
-
-        cmd_list.draw({.vertex_count = 3 * MAX_BOIDS});
-
-        cmd_list.end_renderpass();
-    }
 
     auto record_tasks() -> daxa::TaskList
     {
@@ -222,24 +241,24 @@ struct App : AppWindow<App>
         new_task_list.use_persistent_image(task_swapchain_image);
         new_task_list.use_persistent_buffer(task_boids_current);
         new_task_list.use_persistent_buffer(task_boids_old);
-
-        UpdateBoidsUses update_boids_args{};
-        update_boids_args.current.handle = task_boids_current;
-        update_boids_args.previous.handle = task_boids_old;
-        new_task_list.add_task(daxa::TaskInfo<UpdateBoidsUses>{
-            update_boids_args,
-            [this](daxa::TaskInterface<UpdateBoidsUses> ti)
-            { this->update_boids(ti); },
-            "update boids"});
-
-        DrawBoidsUses boid_task_args{};
-        boid_task_args.boids.handle = task_boids_current;
-        boid_task_args.render_image.handle = task_swapchain_image;
-        new_task_list.add_task(daxa::TaskInfo<DrawBoidsUses>{
-            boid_task_args,
-            [this](daxa::TaskInterface<DrawBoidsUses> ti)
-            { this->draw_boids(ti); },
-            "draw boids"});
+        
+        new_task_list.add_task(UpdateBoidsTask{
+            .uses = {
+                 .current = {task_boids_current},
+                 .previous = {task_boids_old},
+             },
+            .update_boids_pipeline = update_boids_pipeline,
+        });
+        
+        new_task_list.add_task(DrawBoidsTask{
+            .uses = {
+                .boids = { task_boids_current },
+                .render_image = { task_swapchain_image },
+            },
+            .draw_pipeline = draw_pipeline,
+            .size_x = size_x,
+            .size_y = size_y,
+        });
 
         new_task_list.submit({});
         new_task_list.present({});
