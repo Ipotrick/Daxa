@@ -334,7 +334,7 @@ namespace daxa
         return impl.info;
     }
 
-    auto TaskBuffer::get_buffers() const -> TrackedBuffers
+    auto TaskBuffer::get_state() const -> TrackedBuffers
     {
         auto const & impl = *this->as<ImplPersistentTaskBuffer const>();
         return TrackedBuffers{
@@ -394,7 +394,7 @@ namespace daxa
         return impl.info;
     }
 
-    auto TaskImage::get_images() const -> TrackedImages
+    auto TaskImage::get_state() const -> TrackedImages
     {
         auto const & impl = *this->as<ImplPersistentTaskImage const>();
         return TrackedImages{
