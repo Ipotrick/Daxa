@@ -161,8 +161,8 @@ struct App : AppWindow<App>
     // Update task:
     struct UpdateBoidsUsesStruct
     {
-        daxa::TaskBufferUse current{{{}, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE}};
-        daxa::TaskBufferUse previous{{{}, daxa::TaskBufferAccess::COMPUTE_SHADER_READ}};
+        daxa::BufferComputeShaderReadWrite current{};
+        daxa::BufferComputeShaderRead previous{};
     };
     using UpdateBoidsUses = daxa::TaskUses<UpdateBoidsUsesStruct>;
     void update_boids(daxa::TaskInterface<UpdateBoidsUses> ti) const
@@ -181,19 +181,18 @@ struct App : AppWindow<App>
     // Draw task:
     struct DrawBoidsUsesStruct
     {
-        daxa::TaskBufferUse boids = {{{}, daxa::TaskBufferAccess::VERTEX_SHADER_READ}};
-        daxa::TaskImageUse render_image = {{{}, daxa::TaskImageAccess::COLOR_ATTACHMENT}};
+        daxa::BufferVertexShaderRead boids{};
+        daxa::ImageColorAttachment<> render_image{};
     };
     using DrawBoidsUses = daxa::TaskUses<DrawBoidsUsesStruct>;
     void draw_boids(daxa::TaskInterface<DrawBoidsUses> const & ti)
     {
         auto cmd_list = ti.get_command_list();
         cmd_list.set_pipeline(*draw_pipeline);
-        auto d = ti->render_image.view();
         cmd_list.begin_renderpass({
             .color_attachments = {
                 {
-                    .image_view = d,
+                    .image_view = ti->render_image.view(),
                     .layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
                     .load_op = daxa::AttachmentLoadOp::CLEAR,
                     .store_op = daxa::AttachmentStoreOp::STORE,
@@ -225,8 +224,8 @@ struct App : AppWindow<App>
         new_task_list.use_persistent_buffer(task_boids_old);
 
         UpdateBoidsUses update_boids_args{};
-        update_boids_args.current.id = task_boids_current;
-        update_boids_args.previous.id = task_boids_old;
+        update_boids_args.current.handle = task_boids_current;
+        update_boids_args.previous.handle = task_boids_old;
         new_task_list.add_task(daxa::TaskInfo<UpdateBoidsUses>{
             update_boids_args,
             [this](daxa::TaskInterface<UpdateBoidsUses> ti)
@@ -234,8 +233,8 @@ struct App : AppWindow<App>
             "update boids"});
 
         DrawBoidsUses boid_task_args{};
-        boid_task_args.boids.id = task_boids_current;
-        boid_task_args.render_image.id = task_swapchain_image;
+        boid_task_args.boids.handle = task_boids_current;
+        boid_task_args.render_image.handle = task_swapchain_image;
         new_task_list.add_task(daxa::TaskInfo<DrawBoidsUses>{
             boid_task_args,
             [this](daxa::TaskInterface<DrawBoidsUses> ti)

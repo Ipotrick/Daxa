@@ -232,8 +232,8 @@ namespace tests
         
         task_list.add_task({
             .args = {
-                daxa::TaskBufferUse{{handles_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE}},
-                daxa::TaskBufferUse{{f32_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE}},
+                daxa::TaskBufferUse<>{{handles_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE}},
+                daxa::TaskBufferUse<>{{f32_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE}},
                 daxa::TaskImageUse{{f32_image, daxa::TaskImageAccess::COMPUTE_SHADER_WRITE}},
             },
             .task = [&](daxa::TaskInterface<> const & ti)
@@ -254,8 +254,8 @@ namespace tests
         });
         task_list.add_task({
             .args = {
-                daxa::TaskBufferUse{{handles_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ}},
-                daxa::TaskBufferUse{{f32_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ}},
+                daxa::TaskBufferUse<>{{handles_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ}},
+                daxa::TaskBufferUse<>{{f32_buffer, daxa::TaskBufferAccess::COMPUTE_SHADER_READ}},
                 daxa::TaskImageUse{{f32_image, daxa::TaskImageAccess::COMPUTE_SHADER_READ}},
             },
             .task = [&](daxa::TaskInterface<> const & ti)
