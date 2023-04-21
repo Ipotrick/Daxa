@@ -177,7 +177,7 @@ namespace daxa
 
         auto handle() const -> TaskBufferHandle;
         auto info() const -> TaskBufferInfo const &;
-        auto get_buffers() const -> TrackedBuffers;
+        auto get_state() const -> TrackedBuffers;
 
         void set_buffers(TrackedBuffers const & buffers);
         void swap_buffers(TaskBuffer & other);
@@ -206,7 +206,7 @@ namespace daxa
 
         auto handle() const -> TaskImageHandle;
         auto info() const -> TaskImageInfo const &;
-        auto get_images() const -> TrackedImages;
+        auto get_state() const -> TrackedImages;
 
         void set_images(TrackedImages const & images);
         void swap_images(TaskImage & other);
