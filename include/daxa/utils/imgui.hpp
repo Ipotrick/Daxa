@@ -31,6 +31,6 @@ namespace daxa
         ~ImGuiRenderer();
 
         void record_commands(ImDrawData * draw_data, CommandList & cmd_list, ImageId target_image, u32 size_x, u32 size_y);
-        void record_task(ImDrawData * draw_data, TaskList & task_list, TaskImageId task_swapchain_image, u32 size_x, u32 size_y);
+        void record_task(ImDrawData * draw_data, TaskList & task_list, TaskImageHandle task_swapchain_image, u32 size_x, u32 size_y);
     };
 } // namespace daxa

@@ -52,7 +52,7 @@ struct App : BaseApp<App>
         .name = APPNAME_PREFIX("gpu_input_buffer"),
     });
     GpuInput gpu_input = {};
-    daxa::TaskBufferId task_gpu_input_buffer;
+    daxa::TaskBufferHandle task_gpu_input_buffer;
 
     daxa::ImageId render_image = device.create_image(daxa::ImageInfo{
         .format = daxa::Format::R8G8B8A8_UNORM,
@@ -60,7 +60,7 @@ struct App : BaseApp<App>
         .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
         .name = APPNAME_PREFIX("render_image"),
     });
-    daxa::TaskImageId task_render_image;
+    daxa::TaskImageHandle task_render_image;
 
     daxa::TimelineQueryPool timeline_query_pool = device.create_timeline_query_pool({
         .query_count = 2,

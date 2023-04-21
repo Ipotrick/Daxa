@@ -25,13 +25,13 @@ namespace daxa
         auto get_command_list() const -> CommandList;
         auto get_allocator() const -> TransferMemoryPool &;
 
-        auto buffer(TaskBufferId const & task_resource_id, usize index = 0) const -> BufferId;
-        auto device_address(TaskBufferId const & task_resource_id, usize index = 0) const -> daxa::BufferDeviceAddress;
-        auto image(TaskImageId const & task_resource_id, usize index = 0) const -> ImageId;
-        auto view(TaskImageId const & task_resource_id, usize index = 0) const -> ImageViewId;
+        auto buffer(TaskBufferHandle const & task_resource_id, usize index = 0) const -> BufferId;
+        auto device_address(TaskBufferHandle const & task_resource_id, usize index = 0) const -> daxa::BufferDeviceAddress;
+        auto image(TaskImageHandle const & task_resource_id, usize index = 0) const -> ImageId;
+        auto view(TaskImageHandle const & task_resource_id, usize index = 0) const -> ImageViewId;
 
-        auto buffer_use_at(usize use_index) const -> TaskBufferUse const &;
-        auto image_use_at(usize use_index) const -> TaskImageUse const &;
+        auto buffer_use_at(usize use_index) const -> TaskBufferUse<> const &;
+        auto image_use_at(usize use_index) const -> TaskImageUse<> const &;
 
       protected:
         friend struct ImplTaskRuntimeInterface;
@@ -58,7 +58,7 @@ namespace daxa
         auto input_as(usize index) const -> InputType const &
         {
             DAXA_DBG_ASSERT_TRUE_M(index < get_args().size(), "detected out of bounds input index! all task input indices must be smaller then the count of inputs");
-            DAXA_DBG_ASSERT_TRUE_M(InputType::INPUT_TYPE == get_args().at(index).type, "detected invalid input type cast! the cast input type must match the declared input type at any given index.");
+            DAXA_DBG_ASSERT_TRUE_M(InputType{}.type == get_args().at(index).type, "detected invalid input type cast! the cast input type must match the declared input type at any given index.");
             return *reinterpret_cast<InputType const *>(get_args().data() + index);
         }
 
@@ -103,7 +103,7 @@ namespace daxa
     struct TaskImageAliasInfo
     {
         std::string alias = {};
-        std::variant<TaskImageId, std::string> aliased_image = {};
+        std::variant<TaskImageHandle, std::string> aliased_image = {};
         u32 base_mip_level_offset = {};
         u32 base_array_layer_offset = {};
     };
@@ -111,7 +111,7 @@ namespace daxa
     struct TaskBufferAliasInfo
     {
         std::string alias = {};
-        std::variant<TaskBufferId, std::string> aliased_buffer = {};
+        std::variant<TaskBufferHandle, std::string> aliased_buffer = {};
     };
 
     template <typename TaskArgs>
@@ -210,9 +210,9 @@ namespace daxa
         TaskBuffer() = default;
         TaskBuffer(TaskBufferInfo const & info);
 
-        operator TaskBufferId() const;
+        operator TaskBufferHandle() const;
 
-        auto id() const -> TaskBufferId;
+        auto id() const -> TaskBufferHandle;
         auto info() const -> TaskBufferInfo const &;
         auto get_buffers() const -> TrackedBuffers;
 
@@ -239,9 +239,9 @@ namespace daxa
         TaskImage() = default;
         TaskImage(TaskImageInfo const & info);
 
-        operator TaskImageId() const;
+        operator TaskImageHandle() const;
 
-        auto id() const -> TaskImageId;
+        auto handle() const -> TaskImageHandle;
         auto info() const -> TaskImageInfo const &;
         auto get_images() const -> TrackedImages;
 
@@ -275,11 +275,11 @@ namespace daxa
         TaskList(TaskListInfo const & info);
         ~TaskList();
 
-        auto use_persistent_buffer(TaskBuffer const & buffer) -> TaskBufferId;
-        auto use_persistent_image(TaskImage const & image) -> TaskImageId;
+        auto use_persistent_buffer(TaskBuffer const & buffer) -> TaskBufferHandle;
+        auto use_persistent_image(TaskImage const & image) -> TaskImageHandle;
 
-        auto create_transient_buffer(TaskTransientBufferInfo const & info) -> TaskBufferId;
-        auto create_transient_image(TaskTransientImageInfo const & info) -> TaskImageId;
+        auto create_transient_buffer(TaskTransientBufferInfo const & info) -> TaskBufferHandle;
+        auto create_transient_image(TaskTransientImageInfo const & info) -> TaskImageHandle;
 
         template <typename TaskInput>
         void add_task(TaskInfo<TaskInput> const & info)

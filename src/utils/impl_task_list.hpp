@@ -44,7 +44,7 @@ namespace daxa
     {
         // when this ID is invalid, this barrier is NOT an image memory barrier but just a memory barrier.
         // So when ID invalid => memory barrier, ID valid => image memory barrier.
-        TaskImageId image_id = {};
+        TaskImageHandle image_id = {};
         ImageMipArraySlice slice = {};
         ImageLayout layout_before = {};
         ImageLayout layout_after = {};
@@ -105,12 +105,12 @@ namespace daxa
 
     struct CreateTaskBufferTask
     {
-        TaskBufferId id = {};
+        TaskBufferHandle id = {};
     };
 
     struct CreateTaskImageTask
     {
-        std::array<TaskImageId, 2> ids = {};
+        std::array<TaskImageHandle, 2> ids = {};
         usize id_count = {};
     };
 
@@ -154,7 +154,7 @@ namespace daxa
         // record time information:
         bool active = {};
         // persistent information:
-        TaskImageId swapchain_image = {};
+        TaskImageHandle swapchain_image = {};
         std::vector<PerPermTaskBuffer> buffer_infos = {};
         std::vector<PerPermTaskImage> image_infos = {};
         std::vector<TaskSplitBarrier> split_barriers = {};
@@ -298,8 +298,6 @@ namespace daxa
         }
     };
 
-    auto to_string(ImplTaskList const & impl, TaskImageUseInit const & use, usize index) -> std::string;
-
     struct ImplTaskList final : ManagedSharedState
     {
         ImplTaskList(TaskListInfo a_info);
@@ -322,8 +320,8 @@ namespace daxa
         u32 record_active_conditional_scopes = {};
         u32 record_conditional_states = {};
         std::vector<TaskListPermutation *> record_active_permutations = {};
-        std::unordered_map<std::string, TaskBufferId> buffer_name_to_id = {};
-        std::unordered_map<std::string, TaskImageId> image_name_to_id = {};
+        std::unordered_map<std::string, TaskBufferHandle> buffer_name_to_id = {};
+        std::unordered_map<std::string, TaskImageHandle> image_name_to_id = {};
 
         usize memory_block_size = {};
         u32 memory_type_bits = 0xFFFFFFFFu;
@@ -342,10 +340,10 @@ namespace daxa
         u32 prev_frame_permutation_index = {};
         std::stringstream debug_string_stream = {};
 
-        auto get_actual_buffers(TaskBufferId id) const -> std::span<BufferId const>;
-        auto get_actual_images(TaskImageId id, TaskListPermutation const & perm) const -> std::span<ImageId const>;
-        auto id_to_local_id(TaskBufferId id) const -> TaskBufferId;
-        auto id_to_local_id(TaskImageId id) const -> TaskImageId;
+        auto get_actual_buffers(TaskBufferHandle id) const -> std::span<BufferId const>;
+        auto get_actual_images(TaskImageHandle id, TaskListPermutation const & perm) const -> std::span<ImageId const>;
+        auto id_to_local_id(TaskBufferHandle id) const -> TaskBufferHandle;
+        auto id_to_local_id(TaskImageHandle id) const -> TaskImageHandle;
         void update_active_permutations();
         void update_image_view_cache(Task & task, TaskListPermutation const & permutation);
         void execute_task(ImplTaskRuntimeInterface & impl_runtime, TaskListPermutation & permutation, TaskBatchId in_batch_task_index, TaskId task_id);
@@ -357,12 +355,12 @@ namespace daxa
         void create_transient_runtime_images(TaskListPermutation & permutation);
         void allocate_transient_resources();
 
-        void print_task_buffer_to(std::string & out, std::string indent, TaskListPermutation const & permutation, TaskBufferId local_id);
-        void print_task_image_to(std::string & out, std::string indent, TaskListPermutation const & permutation, TaskImageId image);
+        void print_task_buffer_to(std::string & out, std::string indent, TaskListPermutation const & permutation, TaskBufferHandle local_id);
+        void print_task_image_to(std::string & out, std::string indent, TaskListPermutation const & permutation, TaskImageHandle image);
         void print_task_barrier_to(std::string & out, std::string & indent, TaskListPermutation const & permutation, usize index);
         void print_task_to(std::string & out, std::string & indent, TaskListPermutation const & permutation, TaskId task_id);
-        void debug_print_permutation_image(TaskListPermutation const & permutation, TaskImageId const image_id);
-        void debug_print_permutation_buffer(TaskListPermutation const & permutation, TaskBufferId const buffer_id);
+        void debug_print_permutation_image(TaskListPermutation const & permutation, TaskImageHandle const image_id);
+        void debug_print_permutation_buffer(TaskListPermutation const & permutation, TaskBufferHandle const buffer_id);
         void debug_print();
     };
 
