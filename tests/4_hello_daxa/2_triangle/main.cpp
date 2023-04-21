@@ -213,7 +213,7 @@ auto main() -> int
                     // Since this task is going to copy a staging buffer to the
                     // actual buffer, we'll say that this task uses the buffer
                     // with a transfer write operation!
-                    daxa::TaskBufferUse{{task_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE}},
+                    daxa::TaskBufferUse<>{{task_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE}},
                 },
                 .task = [=, &task_condition_states](daxa::TaskInterface<> ti)
                 {
@@ -245,7 +245,7 @@ auto main() -> int
         .args = {
             // Now, since we're reading the buffer inside the vertex shader,
             // we'll say that we use it as such.
-            daxa::TaskBufferUse{{task_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ}},
+            daxa::TaskBufferUse<>{{task_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ}},
             // And, we'll denote that we use the swapchain image as a color
             // attachment. At the end of the line, we default-construct the
             // ImageMipArraySlice, since all we need is the first mip and

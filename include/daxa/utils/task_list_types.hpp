@@ -109,7 +109,7 @@ namespace daxa
 
     using TaskResourceIndex = u32;
 
-    struct TaskGPUResourceId
+    struct TaskGPUResourceHandle
     {
         TaskResourceIndex task_list_index = {};
         TaskResourceIndex index = {};
@@ -117,37 +117,24 @@ namespace daxa
         auto is_empty() const -> bool;
         auto is_persistent() const -> bool;
 
-        auto operator<=>(TaskGPUResourceId const & other) const = default;
+        auto operator<=>(TaskGPUResourceHandle const & other) const = default;
     };
 
-    auto to_string(TaskGPUResourceId const & id) -> std::string;
+    auto to_string(TaskGPUResourceHandle const & id) -> std::string;
 
-    struct TaskBufferId : public TaskGPUResourceId
+    struct TaskBufferHandle : public TaskGPUResourceHandle
     {
     };
 
-    struct TaskImageId : public TaskGPUResourceId
+    struct TaskImageHandle : public TaskGPUResourceHandle
     {
-    };
-
-    struct TaskBufferUseInit
-    {
-        TaskBufferId id = {};
-        TaskBufferAccess access = {};
-        // Redirects in callback and shader use aliases to this use.
-        std::string_view name = {};
-    };
-
-    struct TaskImageUseInit
-    {
-        TaskImageId id = {};
-        TaskImageAccess access = {};
-        ImageMipArraySlice slice = {};
-        /// @brief  Determines the view type the runtime provides in the TaskInterface<>.
-        ///         If no type is provided, the runtime images default view type is used.
-        ImageViewType view_type = ImageViewType::MAX_ENUM;
-        // Redirects in callback and shader use aliases to this use.
-        std::string_view name = {};
+        daxa::ImageMipArraySlice slice = {};
+        auto subslice(daxa::ImageMipArraySlice const & new_slice) const -> TaskImageHandle
+        {
+            auto ret = *this;
+            ret.slice = new_slice;
+            return ret;
+        }
     };
 
     struct ImageSliceState
@@ -156,9 +143,6 @@ namespace daxa
         ImageLayout latest_layout = {};
         ImageMipArraySlice slice = {};
     };
-
-    using UsedTaskBuffers = std::vector<TaskBufferUseInit>;
-    using UsedTaskImages = std::vector<TaskImageUseInit>;
 
     enum class TaskResourceUseType : u32
     {
@@ -177,36 +161,46 @@ namespace daxa
         [[maybe_unused]] u8 raw[TASK_INPUT_FIELD_SIZE - sizeof(TaskResourceUseType)] = {};
     };
 
+    template<TaskBufferAccess T_ACCESS = TaskBufferAccess::NONE>
     struct alignas(TASK_INPUT_FIELD_SIZE) TaskBufferUse
     {
       private:
         friend struct ImplTaskList;
         TaskResourceUseType const type = TaskResourceUseType::BUFFER;
-        static constexpr inline TaskResourceUseType INPUT_TYPE = TaskResourceUseType::BUFFER;
         std::span<BufferId const> buffers = {};
+        TaskBufferAccess m_access = T_ACCESS;
 
       public:
-        TaskBufferId id = {};
-        TaskBufferAccess access = {};
+        TaskBufferHandle handle = {};
 
         constexpr TaskBufferUse() = default;
 
-        constexpr TaskBufferUse(TaskBufferUseInit const & init)
-            : id{init.id},
-              access{init.access}
+        constexpr TaskBufferUse(TaskBufferHandle const & a_handle)
+            : handle{a_handle}
         {
         }
 
-        static auto from(GenericTaskResourceUse const & input) -> TaskBufferUse const &
+        constexpr TaskBufferUse(TaskBufferHandle const & a_handle, TaskBufferAccess access)
+        requires (T_ACCESS == TaskBufferAccess::NONE)
+            : handle{a_handle}, m_access{access}
         {
-            DAXA_DBG_ASSERT_TRUE_M(input.type == TaskResourceUseType::BUFFER, "invalid TaskResourceUse cast");
-            return *reinterpret_cast<TaskBufferUse const *>(&input);
         }
 
-        static auto from(GenericTaskResourceUse & input) -> TaskBufferUse &
+        static auto from(GenericTaskResourceUse const & input) -> TaskBufferUse<> const &
         {
             DAXA_DBG_ASSERT_TRUE_M(input.type == TaskResourceUseType::BUFFER, "invalid TaskResourceUse cast");
-            return *reinterpret_cast<TaskBufferUse *>(&input);
+            return *reinterpret_cast<TaskBufferUse<> const *>(&input);
+        }
+
+        static auto from(GenericTaskResourceUse & input) -> TaskBufferUse<> &
+        {
+            DAXA_DBG_ASSERT_TRUE_M(input.type == TaskResourceUseType::BUFFER, "invalid TaskResourceUse cast");
+            return *reinterpret_cast<TaskBufferUse<> *>(&input);
+        }
+
+        auto access() const -> TaskBufferAccess
+        {
+            return m_access;
         }
 
         auto buffer(usize index = 0) const -> BufferId
@@ -226,43 +220,53 @@ namespace daxa
         }
     };
 
+    template<TaskImageAccess T_ACCESS = TaskImageAccess::NONE, ImageViewType T_VIEW_TYPE = ImageViewType::MAX_ENUM>
     struct alignas(TASK_INPUT_FIELD_SIZE) TaskImageUse
     {
       private:
         friend struct ImplTaskList;
         TaskResourceUseType type = TaskResourceUseType::IMAGE;
-        static constexpr inline TaskResourceUseType INPUT_TYPE = TaskResourceUseType::IMAGE;
+        TaskImageAccess m_access = T_ACCESS;
+        ImageViewType m_view_type = T_VIEW_TYPE;
         std::span<ImageId const> images = {};
         std::span<ImageViewId const> views = {};
 
       public:
-        TaskImageId id = {};
-        TaskImageAccess access = {};
-        ImageMipArraySlice slice = {};
-        /// @brief  Determines the view type the runtime provides in the TaskInterface<>.
-        ///         If no type is provided, the runtime images default view type is used.
-        ImageViewType view_type = ImageViewType::MAX_ENUM;
+        TaskImageHandle handle = {};
 
         constexpr TaskImageUse() = default;
 
-        constexpr TaskImageUse(TaskImageUseInit const & init)
-            : id{init.id},
-              access{init.access},
-              slice{init.slice},
-              view_type{init.view_type}
+        constexpr TaskImageUse(TaskImageHandle const & a_handle)
+            : handle{a_handle}
         {
         }
 
-        static auto from(GenericTaskResourceUse const & input) -> TaskImageUse const &
+        constexpr TaskImageUse(TaskImageHandle const & a_handle, TaskImageAccess access, ImageViewType view_type = ImageViewType::MAX_ENUM)
+        requires (T_ACCESS == TaskImageAccess::NONE && T_VIEW_TYPE == ImageViewType::MAX_ENUM)
+            : handle{a_handle}, m_access{access}, m_view_type{view_type}
         {
-            DAXA_DBG_ASSERT_TRUE_M(input.type == TaskResourceUseType::IMAGE, "invalid TaskResourceUse cast");
-            return *reinterpret_cast<TaskImageUse const *>(&input);
         }
 
-        static auto from(GenericTaskResourceUse & input) -> TaskImageUse &
+        static auto from(GenericTaskResourceUse const & input) -> TaskImageUse<> const &
         {
             DAXA_DBG_ASSERT_TRUE_M(input.type == TaskResourceUseType::IMAGE, "invalid TaskResourceUse cast");
-            return *reinterpret_cast<TaskImageUse *>(&input);
+            return *reinterpret_cast<TaskImageUse<> const *>(&input);
+        }
+
+        static auto from(GenericTaskResourceUse & input) -> TaskImageUse<> &
+        {
+            DAXA_DBG_ASSERT_TRUE_M(input.type == TaskResourceUseType::IMAGE, "invalid TaskResourceUse cast");
+            return *reinterpret_cast<TaskImageUse<> *>(&input);
+        }
+
+        auto access() const -> TaskImageAccess
+        {
+            return m_access;
+        }
+
+        auto view_type() const -> ImageViewType
+        {
+            return m_view_type;
         }
 
         auto image(u32 index = 0) const -> ImageId
@@ -277,6 +281,13 @@ namespace daxa
             return views[index];
         }
 
+        auto typed_view(u32 index = 0) const -> daxa::types::TypedImageViewId<T_VIEW_TYPE>
+            requires (T_VIEW_TYPE != ImageViewType::MAX_ENUM)
+        {
+            DAXA_DBG_ASSERT_TRUE_M(views.size() > 0, "this function is only allowed to be called within a task callback");
+            return daxa::types::TypedImageViewId<T_VIEW_TYPE>{views[index]};
+        }
+
         auto to_generic() const -> GenericTaskResourceUse const &
         {
             return *reinterpret_cast<GenericTaskResourceUse const *>(this);
@@ -288,8 +299,8 @@ namespace daxa
         }
     };
 
-    static inline constexpr size_t TASK_BUFFER_INPUT_SIZE = sizeof(TaskBufferUse);
-    static inline constexpr size_t TASK_IMAGE_INPUT_SIZE = sizeof(TaskImageUse);
+    static inline constexpr size_t TASK_BUFFER_INPUT_SIZE = sizeof(TaskBufferUse<>);
+    static inline constexpr size_t TASK_IMAGE_INPUT_SIZE = sizeof(TaskImageUse<>);
 
     static_assert(TASK_BUFFER_INPUT_SIZE == TASK_IMAGE_INPUT_SIZE, "should be impossible! contact Ipotrick");
     static_assert(TASK_BUFFER_INPUT_SIZE == TASK_INPUT_FIELD_SIZE, "should be impossible! contact Ipotrick");
@@ -339,13 +350,13 @@ namespace daxa
                 {
                 case TaskResourceUseType::BUFFER:
                 {
-                    auto & arg = TaskBufferUse::from(s[index]);
+                    auto & arg = TaskBufferUse<>::from(s[index]);
                     buf_fn(index, arg);
                     break;
                 }
                 case TaskResourceUseType::IMAGE:
                 {
-                    auto & arg = TaskImageUse::from(s[index]);
+                    auto & arg = TaskImageUse<>::from(s[index]);
                     img_fn(index, arg);
                     break;
                 }
@@ -365,13 +376,13 @@ namespace daxa
                 {
                 case TaskResourceUseType::BUFFER:
                 {
-                    auto const & arg = TaskBufferUse::from(s[index]);
+                    auto const & arg = TaskBufferUse<>::from(s[index]);
                     buf_fn(index, arg);
                     break;
                 }
                 case TaskResourceUseType::IMAGE:
                 {
-                    auto const & arg = TaskImageUse::from(s[index]);
+                    auto const & arg = TaskImageUse<>::from(s[index]);
                     img_fn(index, arg);
                     break;
                 }
@@ -394,4 +405,65 @@ namespace daxa
     auto get_task_arg_shader_alignment(TaskResourceUseType type) -> u32;
 
     auto get_task_arg_shader_offsets_size(std::span<GenericTaskResourceUse> args) -> std::pair<std::vector<u32>, u32>;
+
+    using BufferShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::SHADER_READ>;
+    using BufferVertexShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::VERTEX_SHADER_READ>;
+    using BufferTessellationControlShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ>;
+    using BufferTessellationEvaluationShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ>;
+    using BufferGeometryShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::GEOMETRY_SHADER_READ>;
+    using BufferFragmentShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::FRAGMENT_SHADER_READ>;
+    using BufferComputeShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::COMPUTE_SHADER_READ>;
+    using BufferShaderWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::SHADER_WRITE>;
+    using BufferVertexShaderWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::VERTEX_SHADER_WRITE>;
+    using BufferTessellationControlShaderWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::TESSELLATION_CONTROL_SHADER_WRITE>;
+    using BufferTessellationEvaluationShaderWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_WRITE>;
+    using BufferGeometryShaderWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::GEOMETRY_SHADER_WRITE>;
+    using BufferFragmentShaderWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::FRAGMENT_SHADER_WRITE>;
+    using BufferComputeShaderWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE>;
+    using BufferShaderReadWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::SHADER_READ_WRITE>;
+    using BufferVertexShaderReadWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::VERTEX_SHADER_READ_WRITE>;
+    using BufferTessellationControlShaderReadWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE>;
+    using BufferTessellationEvaluationShaderReadWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ_WRITE>;
+    using BufferGeometryShaderReadWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::GEOMETRY_SHADER_READ_WRITE>;
+    using BufferFragmentShaderReadWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::FRAGMENT_SHADER_READ_WRITE>;
+    using BufferComputeShaderReadWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE>;
+    using BufferIndexRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::INDEX_READ>;
+    using BufferDrawIndirectInfoRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::DRAW_INDIRECT_INFO_READ>;
+    using BufferTransferRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::TRANSFER_READ>;
+    using BufferTransferWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::TRANSFER_WRITE>;
+    using BufferHostTransferRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::HOST_TRANSFER_READ>;
+    using BufferHostTransferWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::HOST_TRANSFER_WRITE>;
+
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageShaderRead = daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_READ, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageVertexShaderRead = daxa::TaskImageUse<daxa::TaskImageAccess::VERTEX_SHADER_READ, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageTessellationControlShaderRead = daxa::TaskImageUse<daxa::TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageTessellationEvaluationShaderRead = daxa::TaskImageUse<daxa::TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageGeometryShaderRead = daxa::TaskImageUse<daxa::TaskImageAccess::GEOMETRY_SHADER_READ, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageFragmentShaderRead = daxa::TaskImageUse<daxa::TaskImageAccess::FRAGMENT_SHADER_READ, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageComputeShaderRead = daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_READ, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageShaderWrite = daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_WRITE, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageVertexShaderWrite = daxa::TaskImageUse<daxa::TaskImageAccess::VERTEX_SHADER_WRITE, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageTessellationControlShaderWrite = daxa::TaskImageUse<daxa::TaskImageAccess::TESSELLATION_CONTROL_SHADER_WRITE, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageTessellationEvaluationShaderWrite = daxa::TaskImageUse<daxa::TaskImageAccess::TESSELLATION_EVALUATION_SHADER_WRITE, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageGeometryShaderWrite = daxa::TaskImageUse<daxa::TaskImageAccess::GEOMETRY_SHADER_WRITE, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageFragmentShaderWrite = daxa::TaskImageUse<daxa::TaskImageAccess::FRAGMENT_SHADER_WRITE, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageComputeShaderWrite = daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_WRITE, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageShaderReadWrite = daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_READ_WRITE, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageVertexShaderReadWrite = daxa::TaskImageUse<daxa::TaskImageAccess::VERTEX_SHADER_READ_WRITE, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageTessellationControlShaderReadWrite = daxa::TaskImageUse<daxa::TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageTessellationEvaluationShaderReadWrite = daxa::TaskImageUse<daxa::TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ_WRITE, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageGeometryShaderReadWrite = daxa::TaskImageUse<daxa::TaskImageAccess::GEOMETRY_SHADER_READ_WRITE, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageFragmentShaderReadWrite = daxa::TaskImageUse<daxa::TaskImageAccess::FRAGMENT_SHADER_READ_WRITE, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageComputeShaderReadWrite = daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_READ_WRITE, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageTransferRead = daxa::TaskImageUse<daxa::TaskImageAccess::TRANSFER_READ, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageTransferWrite = daxa::TaskImageUse<daxa::TaskImageAccess::TRANSFER_WRITE, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageColorAttachment = daxa::TaskImageUse<daxa::TaskImageAccess::COLOR_ATTACHMENT, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageDepthAttachment = daxa::TaskImageUse<daxa::TaskImageAccess::DEPTH_ATTACHMENT, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageStencilAttachment = daxa::TaskImageUse<daxa::TaskImageAccess::STENCIL_ATTACHMENT, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageDepthStencilAttachment = daxa::TaskImageUse<daxa::TaskImageAccess::DEPTH_STENCIL_ATTACHMENT, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageDepthAttachmentRead = daxa::TaskImageUse<daxa::TaskImageAccess::DEPTH_ATTACHMENT_READ, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageStencilAttachmentRead = daxa::TaskImageUse<daxa::TaskImageAccess::STENCIL_ATTACHMENT_READ, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageDepthStencilAttachmentRead = daxa::TaskImageUse<daxa::TaskImageAccess::DEPTH_STENCIL_ATTACHMENT_READ, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImageResolveWrite = daxa::TaskImageUse<daxa::TaskImageAccess::RESOLVE_WRITE, T_VIEW_TYPE>;
+    template<daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM> using ImagePresent = daxa::TaskImageUse<daxa::TaskImageAccess::PRESENT, T_VIEW_TYPE>;
 } // namespace daxa

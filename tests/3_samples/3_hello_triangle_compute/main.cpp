@@ -25,7 +25,7 @@ struct App : BaseApp<App>
         .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
         .name = APPNAME_PREFIX("render_image"),
     });
-    daxa::TaskImageId task_render_image;
+    daxa::TaskImageHandle task_render_image;
 
     daxa::TaskList loop_task_list = record_loop_task_list();
 

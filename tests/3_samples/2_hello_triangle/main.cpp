@@ -27,7 +27,7 @@ struct App : BaseApp<App>
         .size = sizeof(DrawVertex) * 3,
         .name = APPNAME_PREFIX("vertex_buffer"),
     });
-    daxa::TaskBufferId task_vertex_buffer;
+    daxa::TaskBufferHandle task_vertex_buffer;
 
     daxa::TaskList loop_task_list = record_loop_task_list();
 
