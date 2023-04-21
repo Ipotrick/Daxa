@@ -93,7 +93,7 @@ struct App : BaseApp<App>
             .used_images = {
                 {task_render_image, daxa::TaskImageAccess::COMPUTE_SHADER_WRITE, daxa::ImageMipArraySlice{}},
             },
-            .task = [this](daxa::TaskInterface<> runtime)
+            .task = [this](daxa::TaskInterface runtime)
             {
                 auto cmd_list = runtime.get_command_list();
                 cmd_list.set_pipeline(*compute_pipeline);
@@ -110,7 +110,7 @@ struct App : BaseApp<App>
                 {task_render_image, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{}},
                 {task_swapchain_image, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{}},
             },
-            .task = [this](daxa::TaskInterface<> runtime)
+            .task = [this](daxa::TaskInterface runtime)
             {
                 auto cmd_list = runtime.get_command_list();
                 cmd_list.blit_image_to_image({

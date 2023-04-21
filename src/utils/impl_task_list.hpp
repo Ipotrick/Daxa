@@ -97,21 +97,12 @@ namespace daxa
         usize allocation_offset = {};
     };
 
-    struct Task
+    struct ImplTask
     {
-        GenericTaskInfo info = {};
+        std::unique_ptr<BaseTask> base_task = {};
+        u32 constant_buffer_size = {};
+        std::vector<u32> use_offsets = {};
         std::vector<std::vector<ImageViewId>> image_view_cache = {};
-    };
-
-    struct CreateTaskBufferTask
-    {
-        TaskBufferHandle id = {};
-    };
-
-    struct CreateTaskImageTask
-    {
-        std::array<TaskImageHandle, 2> ids = {};
-        usize id_count = {};
     };
 
     struct ImplPresentInfo
@@ -167,7 +158,7 @@ namespace daxa
         usize swapchain_image_first_use_submit_scope_index = std::numeric_limits<usize>::max();
         usize swapchain_image_last_use_submit_scope_index = std::numeric_limits<usize>::max();
 
-        void add_task(TaskId task_id, ImplTaskList & task_list_impl, GenericTaskInfo & info);
+        void add_task(TaskId task_id, ImplTaskList & task_list_impl, BaseTask & task);
         void submit(TaskSubmitInfo const & info);
         void present(TaskPresentInfo const & info);
     };
@@ -311,7 +302,7 @@ namespace daxa
         std::vector<PermIndepTaskImageInfo> global_image_infos = {};
         std::vector<TaskListCondition> conditions = {};
         std::vector<TaskListPermutation> permutations = {};
-        std::vector<Task> tasks = {};
+        std::vector<ImplTask> tasks = {};
         // TODO: replace with faster hash map.
         std::unordered_map<u32, u32> persistent_buffer_index_to_local_index;
         std::unordered_map<u32, u32> persistent_image_index_to_local_index;
@@ -345,11 +336,11 @@ namespace daxa
         auto id_to_local_id(TaskBufferHandle id) const -> TaskBufferHandle;
         auto id_to_local_id(TaskImageHandle id) const -> TaskImageHandle;
         void update_active_permutations();
-        void update_image_view_cache(Task & task, TaskListPermutation const & permutation);
+        void update_image_view_cache(ImplTask & task, TaskListPermutation const & permutation);
         void execute_task(ImplTaskRuntimeInterface & impl_runtime, TaskListPermutation & permutation, TaskBatchId in_batch_task_index, TaskId task_id);
         void insert_pre_batch_barriers(TaskListPermutation & permutation);
 
-        void check_for_overlapping_use(GenericTaskInfo const & info);
+        void check_for_overlapping_use(BaseTask & task);
 
         void create_transient_runtime_buffers();
         void create_transient_runtime_images(TaskListPermutation & permutation);
@@ -369,7 +360,7 @@ namespace daxa
         // interface:
         ImplTaskList & task_list;
         TaskListPermutation & permutation;
-        Task * current_task = {};
+        ImplTask * current_task = {};
         bool reuse_last_command_list = true;
         std::vector<CommandList> command_lists = {};
         std::optional<BinarySemaphore> last_submit_semaphore = {};

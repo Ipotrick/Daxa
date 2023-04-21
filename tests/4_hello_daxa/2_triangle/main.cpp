@@ -215,7 +215,7 @@ auto main() -> int
                     // with a transfer write operation!
                     daxa::TaskBufferUse<>{{task_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE}},
                 },
-                .task = [=, &task_condition_states](daxa::TaskInterface<> ti)
+                .task = [=, &task_condition_states](daxa::TaskInterface ti)
                 {
                     auto cmd_list = ti.get_command_list();
 
@@ -225,9 +225,9 @@ auto main() -> int
                     // We'll call upload_vertex_data_task(...) with the buffer ID,
                     // which we can query from the task runtime.
                     // With the functions:
-                    //   daxa::TaskInterface<>::buffer(TaskBufferId buffer, u32 index = 0) -> BufferId
-                    //   daxa::TaskInterface<>::image(TaskImageId image, u32 index = 0) -> ImageId
-                    //   daxa::TaskInterface<>::view(TaskImageId image, u32 index = 0) -> ImageViewId
+                    //   daxa::TaskInterface::buffer(TaskBufferId buffer, u32 index = 0) -> BufferId
+                    //   daxa::TaskInterface::image(TaskImageId image, u32 index = 0) -> ImageId
+                    //   daxa::TaskInterface::view(TaskImageId image, u32 index = 0) -> ImageViewId
                     // you can conveniently get the runtime id from the task resource via the interface!
                     upload_vertex_data_task(ti.get_device(), cmd_list, ti.buffer(task_buffer));
 
@@ -252,7 +252,7 @@ auto main() -> int
             // first array slice.
             daxa::TaskImageUse{{task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}}},
         },
-        .task = [task_swapchain_image, task_buffer, &pipeline, &window_info](daxa::TaskInterface<> ti)
+        .task = [task_swapchain_image, task_buffer, &pipeline, &window_info](daxa::TaskInterface ti)
         {
             auto cmd_list = ti.get_command_list();
             // Here we can just get the buffer and image IDs from the runtime

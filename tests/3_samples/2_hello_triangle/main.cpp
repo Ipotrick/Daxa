@@ -91,7 +91,7 @@ struct App : BaseApp<App>
             .used_buffers = {
                 {task_vertex_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ},
             },
-            .task = [this](daxa::TaskInterface<> runtime)
+            .task = [this](daxa::TaskInterface runtime)
             {
                 auto cmd_list = runtime.get_command_list();
                 auto vertex_staging_buffer = device.create_buffer({
@@ -120,7 +120,7 @@ struct App : BaseApp<App>
             .args = {
                 daxa::TaskImageUse{{task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT}},
             },
-            .task = [this](daxa::TaskInterface<> ti)
+            .task = [this](daxa::TaskInterface ti)
             {
                 auto cmd_list = ti.get_command_list();
                 cmd_list.begin_renderpass({
