@@ -158,25 +158,42 @@ struct App : AppWindow<App>
         return false;
     }
 
-    void update_boids(daxa::CommandList & cmd_list, daxa::BufferId boid_buffer_id, daxa::BufferId old_boid_buffer_id) const
+    // Update task:
+    struct UpdateBoidsUsesStruct
     {
+        daxa::TaskBufferUse current{{{}, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE}};
+        daxa::TaskBufferUse previous{{{}, daxa::TaskBufferAccess::COMPUTE_SHADER_READ}};
+    };
+    using UpdateBoidsUses = daxa::TaskUses<UpdateBoidsUsesStruct>;
+    void update_boids(daxa::TaskInterface<UpdateBoidsUses> ti) const
+    {
+        auto cmd_list = ti.get_command_list();
         cmd_list.set_pipeline(*update_boids_pipeline);
 
         cmd_list.push_constant(UpdateBoidsPushConstant{
-            .boids_buffer = device.get_device_address(boid_buffer_id),
-            .old_boids_buffer = device.get_device_address(old_boid_buffer_id),
+            .boids_buffer = ti.get_device().get_device_address(ti->current.buffer()),
+            .old_boids_buffer = ti.get_device().get_device_address(ti->previous.buffer()),
         });
 
         cmd_list.dispatch((MAX_BOIDS + 63) / 64, 1, 1);
     }
 
-    void draw_boids(daxa::CommandList & cmd_list, daxa::ImageId render_target, daxa::BufferId boid_buffer_id, u32 sx, u32 sy)
+    // Draw task:
+    struct DrawBoidsUsesStruct
     {
+        daxa::TaskBufferUse boids = {{{}, daxa::TaskBufferAccess::VERTEX_SHADER_READ}};
+        daxa::TaskImageUse render_image = {{{}, daxa::TaskImageAccess::COLOR_ATTACHMENT}};
+    };
+    using DrawBoidsUses = daxa::TaskUses<DrawBoidsUsesStruct>;
+    void draw_boids(daxa::TaskInterface<DrawBoidsUses> const & ti)
+    {
+        auto cmd_list = ti.get_command_list();
         cmd_list.set_pipeline(*draw_pipeline);
+        auto d = ti->render_image.view();
         cmd_list.begin_renderpass({
             .color_attachments = {
                 {
-                    .image_view = render_target.default_view(),
+                    .image_view = d,
                     .layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
                     .load_op = daxa::AttachmentLoadOp::CLEAR,
                     .store_op = daxa::AttachmentStoreOp::STORE,
@@ -189,10 +206,10 @@ struct App : AppWindow<App>
         });
 
         cmd_list.push_constant(DrawPushConstant{
-            .boids_buffer = device.get_device_address(boid_buffer_id),
+            .boids_buffer = device.get_device_address(ti->boids.buffer()),
             .axis_scaling = {
-                std::min(1.0f, static_cast<f32>(sy) / static_cast<f32>(sx)),
-                std::min(1.0f, static_cast<f32>(sx) / static_cast<f32>(sy)),
+                std::min(1.0f, static_cast<f32>(this->size_x) / static_cast<f32>(this->size_y)),
+                std::min(1.0f, static_cast<f32>(this->size_x) / static_cast<f32>(this->size_y)),
             }});
 
         cmd_list.draw({.vertex_count = 3 * MAX_BOIDS});
@@ -207,31 +224,24 @@ struct App : AppWindow<App>
         new_task_list.use_persistent_buffer(task_boids_current);
         new_task_list.use_persistent_buffer(task_boids_old);
 
-        new_task_list.add_task({
-            .args = {
-                daxa::TaskBufferUse{{task_boids_current, daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE}},
-                daxa::TaskBufferUse{{task_boids_old, daxa::TaskBufferAccess::COMPUTE_SHADER_READ}},
-            },
-            .task = [=, this](daxa::TaskInterface<> const & ti)
-            {
-                daxa::CommandList cmd_list = ti.get_command_list();
-                this->update_boids(cmd_list, ti.buffer(task_boids_current), ti.buffer(task_boids_old));
-            },
-            .name = "update boids",
-        });
+        UpdateBoidsUses update_boids_args{};
+        update_boids_args.current.id = task_boids_current;
+        update_boids_args.previous.id = task_boids_old;
+        new_task_list.add_task(daxa::TaskInfo<UpdateBoidsUses>{
+            update_boids_args,
+            [this](daxa::TaskInterface<UpdateBoidsUses> ti)
+            { this->update_boids(ti); },
+            "update boids"});
 
-        new_task_list.add_task({
-            .args = {
-                daxa::TaskBufferUse{{task_boids_current, daxa::TaskBufferAccess::VERTEX_SHADER_READ}},
-                daxa::TaskImageUse{{task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT}},
-            },
-            .task = [=, this](daxa::TaskInterface<> const & ti)
-            {
-                daxa::CommandList cmd_list = ti.get_command_list();
-                this->draw_boids(cmd_list, ti.image(task_swapchain_image), ti.buffer(task_boids_current), this->size_x, this->size_y);
-            },
-            .name = "draw boids",
-        });
+        DrawBoidsUses boid_task_args{};
+        boid_task_args.boids.id = task_boids_current;
+        boid_task_args.render_image.id = task_swapchain_image;
+        new_task_list.add_task(daxa::TaskInfo<DrawBoidsUses>{
+            boid_task_args,
+            [this](daxa::TaskInterface<DrawBoidsUses> ti)
+            { this->draw_boids(ti); },
+            "draw boids"});
+
         new_task_list.submit({});
         new_task_list.present({});
         new_task_list.complete({});
@@ -251,7 +261,7 @@ struct App : AppWindow<App>
         }
 
         auto swapchain_image = swapchain.acquire_next_image();
-        task_swapchain_image.set_images({.images = {&swapchain_image,1}});
+        task_swapchain_image.set_images({.images = {&swapchain_image, 1}});
         if (swapchain_image.is_empty())
         {
             return;
