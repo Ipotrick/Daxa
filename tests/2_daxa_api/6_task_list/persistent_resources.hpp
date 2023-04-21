@@ -23,7 +23,7 @@ namespace tests
         daxa::Device device = daxa_ctx.create_device({ .name = "device", });
         auto buffer = device.create_buffer({
            .size = 1,
-           .allocate_info = daxa::AutoAllocInfo{.flags = daxa::MemoryFlagBits::DEDICATED_MEMORY},
+           .allocate_info = daxa::MemoryFlagBits::DEDICATED_MEMORY,
            .name = "actual buffer",
         });
 
