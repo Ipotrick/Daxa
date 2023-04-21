@@ -334,7 +334,7 @@ namespace tests
         });
         auto buffer = app.device.create_buffer({
             .size = 16,
-            .allocate_info = daxa::AutoAllocInfo{.flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE},
+            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
             .name = "underlying buffer",
         });
         *app.device.get_host_address_as<float>(buffer) = 0.75f;
@@ -383,6 +383,7 @@ namespace tests
             .args = args,
             .task = [&](daxa::TaskInterface<ShaderIntegrationTaskListUses> const & tri)
             {
+                [[maybe_unused]] auto img = tri->image;
                 auto cmd = tri.get_command_list();
                 cmd.set_pipeline(*compute_pipeline);
                 cmd.dispatch(1, 1, 1);
