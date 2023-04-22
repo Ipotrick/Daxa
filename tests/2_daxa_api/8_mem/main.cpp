@@ -26,8 +26,8 @@ auto main() -> int
     });
     usize cpu_timeline = 1;
     daxa::BufferId result_buffer = device.create_buffer({
-        .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
         .size = sizeof(u32) * ELEMENT_COUNT * ITERATION_COUNT,
+        .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
         .name = "result",
     });
 

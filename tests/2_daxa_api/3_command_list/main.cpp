@@ -93,8 +93,8 @@ namespace tests
         }
 
         daxa::BufferId const staging_upload_buffer = app.device.create_buffer({
-            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
             .size = sizeof(decltype(data)),
+            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
             .name = "staging_upload_buffer",
         });
 
@@ -104,8 +104,8 @@ namespace tests
         });
 
         daxa::BufferId const staging_readback_buffer = app.device.create_buffer({
-            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .size = sizeof(decltype(data)),
+            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .name = "staging_readback_buffer",
         });
 

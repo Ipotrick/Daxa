@@ -57,10 +57,8 @@ struct App : BaseApp<App>
 
         ui_update();
 
-        task_swapchain_image
-        loop_task_list.remove_runtime_image(task_swapchain_image, swapchain_image);
-        swapchain_image = swapchain.acquire_next_image();
-        loop_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
+        auto swapchain_image = swapchain.acquire_next_image();
+        task_swapchain_image.set_images({.images=std::array{swapchain_image}});
         if (swapchain_image.is_empty())
         {
             return;
@@ -95,8 +93,8 @@ struct App : BaseApp<App>
             {
                 auto cmd_list = runtime.get_command_list();
                 auto vertex_staging_buffer = device.create_buffer({
-                    .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .size = sizeof(DrawVertex) * 3,
+                    .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = APPNAME_PREFIX("vertex_staging_buffer"),
                 });
                 cmd_list.destroy_buffer_deferred(vertex_staging_buffer);

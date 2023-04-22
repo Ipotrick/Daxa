@@ -301,8 +301,8 @@ auto main() -> int
                                 }
 
                                 auto staging_buffer_id = device.create_buffer({
-                                    .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                                     .size = sizeof(VoxelFace) * 6 * CHUNK_VOXEL_N,
+                                    .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                                     .name = "my staging buffer",
                                 });
                                 cmd_list.destroy_buffer_deferred(staging_buffer_id);
@@ -446,8 +446,8 @@ auto main() -> int
             using namespace daxa::math_operators;
             auto cmd_list = task_runtime.get_command_list();
             auto staging_input_buffer = device.create_buffer({
-                .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                 .size = sizeof(PerframeInput),
+                .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                 .name = "staging_input_buffer",
             });
             cmd_list.destroy_buffer_deferred(staging_input_buffer);
