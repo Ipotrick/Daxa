@@ -993,21 +993,31 @@ namespace daxa
         return first_possible_batch_index;
     }
 
-    void translate_persistent_ids(ImplTaskList const & impl, std::span<GenericTaskResourceUse> uses)
+    void translate_persistent_ids(ImplTaskList const & impl, BaseTask & task)
     {
         for_each(
-            uses,
-            [&](u32, TaskBufferUse<> & arg)
-            { arg.handle = impl.id_to_local_id(arg.handle); },
-            [&](u32, TaskImageUse<> & arg)
-            { arg.handle = impl.id_to_local_id(arg.handle); });
+            task.get_generic_uses(),
+            [&](u32 index, TaskBufferUse<> & arg)
+            {
+                DAXA_DBG_ASSERT_TRUE_M(
+                    !arg.handle.is_empty(),
+                    std::format("detected empty task buffer handle in use (index: {}, access: {}) in task \"{}\"\n", index, to_string(arg.access()), task.get_name()));
+                arg.handle = impl.id_to_local_id(arg.handle);
+            },
+            [&](u32 index, TaskImageUse<> & arg)
+            {
+                DAXA_DBG_ASSERT_TRUE_M(
+                    !arg.handle.is_empty(),
+                    std::format("detected empty task image handle in use (index: {}, access: {}) in task \"{}\"\n", index, to_string(arg.access()), task.get_name()));
+                arg.handle = impl.id_to_local_id(arg.handle);
+            });
     }
 
     void TaskList::add_task(std::unique_ptr<BaseTask> && base_task)
     {
         auto & impl = *reinterpret_cast<ImplTaskList *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "completed task lists can not record new tasks");
-        translate_persistent_ids(impl, base_task->get_generic_uses());
+        translate_persistent_ids(impl, *base_task);
         // Overlapping resource uses can be valid in the case of reads in the same layout for example.
         // But in order to make the task list implementation simpler,
         // daxa does not allow for overlapping use of a resource within a task, even when it is a read in the same layout.
