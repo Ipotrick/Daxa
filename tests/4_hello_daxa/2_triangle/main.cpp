@@ -49,6 +49,8 @@ void draw_to_swapchain_task(daxa::Device & device, daxa::CommandList & cmd_list,
 
 auto main() -> int
 {
+    using namespace daxa::task_resource_uses;
+
     auto window_info = WindowInfo{.width = 800, .height = 600};
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -213,7 +215,7 @@ auto main() -> int
                     // Since this task is going to copy a staging buffer to the
                     // actual buffer, we'll say that this task uses the buffer
                     // with a transfer write operation!
-                    daxa::TaskBufferUse<>{{task_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE}},
+                    BufferTransferWrite{task_buffer},
                 },
                 .task = [=, &task_condition_states](daxa::TaskInterface ti)
                 {
@@ -245,12 +247,12 @@ auto main() -> int
         .args = {
             // Now, since we're reading the buffer inside the vertex shader,
             // we'll say that we use it as such.
-            daxa::TaskBufferUse<>{{task_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ}},
+            BufferVertexShaderRead{task_buffer},
             // And, we'll denote that we use the swapchain image as a color
             // attachment. At the end of the line, we default-construct the
             // ImageMipArraySlice, since all we need is the first mip and
             // first array slice.
-            daxa::TaskImageUse{{task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}}},
+            ImageColorAttachment<>{task_swapchain_image},
         },
         .task = [task_swapchain_image, task_buffer, &pipeline, &window_info](daxa::TaskInterface ti)
         {

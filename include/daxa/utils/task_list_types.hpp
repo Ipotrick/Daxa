@@ -445,7 +445,7 @@ namespace daxa
     {
         virtual auto get_generic_uses() -> std::span<GenericTaskResourceUse> = 0;
         virtual auto get_generic_uses() const -> std::span<GenericTaskResourceUse const> = 0;
-        virtual auto get_uses_shader_binding() const -> isize = 0;
+        virtual auto get_uses_constant_buffer_slot() const -> isize = 0;
         virtual auto get_name() const -> std::string = 0;
         virtual void callback(TaskInterface const & ti) = 0;
         virtual ~BaseTask() {}
@@ -483,11 +483,11 @@ namespace daxa
             return std::span{reinterpret_cast<GenericTaskResourceUse const *>(&task.uses), USE_COUNT};
         }
 
-        virtual auto get_uses_shader_binding() const -> isize override
+        virtual auto get_uses_constant_buffer_slot() const -> isize override
         {
-            if constexpr (requires { T_TASK::SHADER_BINDING; })
+            if constexpr (requires { T_TASK::CONSANT_BUFFER_SLOT; })
             {
-                return T_TASK::SHADER_BINDING;
+                return T_TASK::CONSANT_BUFFER_SLOT;
             }
             else
             {
@@ -511,13 +511,13 @@ namespace daxa
         std::vector<GenericTaskResourceUse> uses = {};
         std::function<void(daxa::TaskInterface const &)> callback_lambda = {};
         std::string name = {};
-        isize uses_constant_buffer_binding = -1;
+        isize constant_buffer_slot = -1;
 
         InlineTask(
             std::vector<GenericTaskResourceUse> && a_uses,
             std::function<void(daxa::TaskInterface const &)> && a_callback_lambda,
-            std::string && a_name, isize a_uses_constant_buffer_binding)
-            : uses{a_uses}, callback_lambda{a_callback_lambda}, name{a_name}, uses_constant_buffer_binding{a_uses_constant_buffer_binding}
+            std::string && a_name, isize a_constant_buffer_slot)
+            : uses{a_uses}, callback_lambda{a_callback_lambda}, name{a_name}, constant_buffer_slot{a_constant_buffer_slot}
         {
         }
 
@@ -533,9 +533,9 @@ namespace daxa
             return std::span{uses.data(), uses.size()};
         }
 
-        virtual auto get_uses_shader_binding() const -> isize override
+        virtual auto get_uses_constant_buffer_slot() const -> isize override
         {
-            return uses_constant_buffer_binding;
+            return constant_buffer_slot;
         }
 
         virtual auto get_name() const -> std::string
