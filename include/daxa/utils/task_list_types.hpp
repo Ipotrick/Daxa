@@ -311,84 +311,6 @@ namespace daxa
         TaskResourceUseType type = {};
     };
 
-    struct GenericTaskArgsContainer
-    {
-        std::vector<u8> memory = {};
-        usize count = {};
-
-        auto span() -> std::span<GenericTaskResourceUse>
-        {
-            return {reinterpret_cast<GenericTaskResourceUse *>(memory.data()), count};
-        }
-
-        auto span() const -> std::span<GenericTaskResourceUse const>
-        {
-            return {reinterpret_cast<GenericTaskResourceUse const *>(memory.data()), count};
-        }
-
-        template <typename BufFn, typename ImgFn>
-        void for_each(BufFn && buf_fn, ImgFn && img_fn)
-        {
-            auto s = span();
-            for (u32 index = 0; index < s.size(); ++index)
-            {
-                auto type = s[index].type;
-                switch (type)
-                {
-                case TaskResourceUseType::BUFFER:
-                {
-                    auto & arg = TaskBufferUse<>::from(s[index]);
-                    buf_fn(index, arg);
-                    break;
-                }
-                case TaskResourceUseType::IMAGE:
-                {
-                    auto & arg = TaskImageUse<>::from(s[index]);
-                    img_fn(index, arg);
-                    break;
-                }
-                default: break;
-                }
-            }
-        }
-
-        template <typename BufFn, typename ImgFn>
-        void for_each(BufFn && buf_fn, ImgFn && img_fn) const
-        {
-            auto const s = span();
-            for (u32 index = 0; index < s.size(); ++index)
-            {
-                auto type = s[index].type;
-                switch (type)
-                {
-                case TaskResourceUseType::BUFFER:
-                {
-                    auto const & arg = TaskBufferUse<>::from(s[index]);
-                    buf_fn(index, arg);
-                    break;
-                }
-                case TaskResourceUseType::IMAGE:
-                {
-                    auto const & arg = TaskImageUse<>::from(s[index]);
-                    img_fn(index, arg);
-                    break;
-                }
-                default: break;
-                }
-            }
-        }
-
-        operator std::span<GenericTaskResourceUse>()
-        {
-            return span();
-        }
-
-        operator std::span<GenericTaskResourceUse const> const()
-        {
-            return span();
-        }
-    };
-
     template <typename BufFn, typename ImgFn>
     void for_each(std::span<GenericTaskResourceUse> uses, BufFn && buf_fn, ImgFn && img_fn)
     {
@@ -452,15 +374,15 @@ namespace daxa
     };
 
     template <typename T>
-    concept UserUses = sizeof(T) % TASK_INPUT_FIELD_SIZE == 0;
+    concept UserUses =
+        (sizeof(T) > 0 and sizeof(T) % TASK_INPUT_FIELD_SIZE == 0);
 
     // TODO(pahrens): Make concept for tasks.
     template <typename T>
     concept UserTask =
         requires { T{}.uses; } and
         UserUses<decltype(T{}.uses)> and
-        (sizeof(decltype(T{}.uses)) != 0) and
-        requires(TaskInterface const & interface) { T{}.callback(interface); };
+        requires(TaskInterface interface) { T{}.callback(interface); };
 
     template <UserTask T_TASK>
     struct PredeclaredTask : public BaseTask
@@ -497,7 +419,14 @@ namespace daxa
 
         virtual auto get_name() const -> std::string
         {
-            return std::string{task.name.data(), task.name.size()};
+            if constexpr (requires { task.name; })
+            {
+                return std::string{task.name.data(), task.name.size()};
+            }
+            else
+            {
+                return std::string{""};
+            }
         }
 
         virtual void callback(TaskInterface const & ti) override

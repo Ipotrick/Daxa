@@ -19,27 +19,32 @@ namespace daxa
 
     using TaskInputDefaultT = std::span<GenericTaskResourceUse>;
 
+    struct TaskInterfaceUses
+    {
+        auto operator[](TaskBufferHandle const & handle) const -> TaskBufferUse<> const &;
+        auto operator[](TaskImageHandle const & handle) const -> TaskImageUse<> const &;
+      protected:
+        friend struct ImplTaskRuntimeInterface;
+        friend struct TaskList;
+        friend struct ImplTaskList;
+        friend struct TaskInterface;
+        TaskInterfaceUses(void * a_backend);
+        void * backend = {};
+    };
+
     struct TaskInterface
     {
         auto get_device() const -> Device &;
         auto get_command_list() const -> CommandList;
         auto get_allocator() const -> TransferMemoryPool &;
 
-        auto buffer(TaskBufferHandle const & task_resource_id, usize index = 0) const -> BufferId;
-        auto device_address(TaskBufferHandle const & task_resource_id, usize index = 0) const -> daxa::BufferDeviceAddress;
-        auto image(TaskImageHandle const & task_resource_id, usize index = 0) const -> ImageId;
-        auto view(TaskImageHandle const & task_resource_id, usize index = 0) const -> ImageViewId;
-
-        auto buffer_use_at(usize use_index) const -> TaskBufferUse<> const &;
-        auto image_use_at(usize use_index) const -> TaskImageUse<> const &;
-
+        TaskInterfaceUses uses;
       protected:
         friend struct ImplTaskRuntimeInterface;
         friend struct TaskList;
         friend struct ImplTaskList;
         friend struct TaskInterface;
         TaskInterface(void * a_backend);
-        auto get_args() const -> std::span<GenericTaskResourceUse>;
         void * backend = {};
     };
 
@@ -212,19 +217,9 @@ namespace daxa
         void swap_images(TaskImage & other);
     };
 
-    struct GenericTaskInfo
-    {
-        i32 constant_buffer_slot = -1;
-        u32 constant_buffer_size = {};
-        std::vector<u32> constant_buffer_offsets = {};
-        GenericTaskArgsContainer task_args = {};
-        TaskCallback task = {};
-        std::string name = {};
-    };
-
     struct InlineTaskInfo
     {
-        std::vector<GenericTaskResourceUse> args = {};
+        std::vector<GenericTaskResourceUse> uses = {};
         TaskCallback task = {};
         isize constant_buffer_slot = -1;
         std::string name = {};
@@ -247,18 +242,16 @@ namespace daxa
         void add_task(Task const & task)
         {
             std::unique_ptr<BaseTask> base_task = std::make_unique<PredeclaredTask<Task>>(task);
-
             add_task(std::move(base_task));
         }
 
         void add_task(InlineTaskInfo && info)
         {
             std::unique_ptr<BaseTask> base_task = std::make_unique<InlineTask>(
-                std::move(info.args),
+                std::move(info.uses),
                 std::move(info.task),
                 std::move(info.name),
-                info.constant_buffer_slot
-            );
+                info.constant_buffer_slot);
             add_task(std::move(base_task));
         }
 
@@ -275,5 +268,5 @@ namespace daxa
 
       private:
         void add_task(std::unique_ptr<BaseTask> && base_task);
-    }; // namespace daxa
+    };
 } // namespace daxa
