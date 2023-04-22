@@ -16,7 +16,7 @@
 #define DAXA_INL_TASK_USE_BEGIN(NAME, SLOT)           \
     struct NAME                                       \
     {                                                 \
-        static constexpr isize SHADER_BINDING = SLOT; \
+        static constexpr isize CONSANT_BUFFER_SLOT = SLOT; \
         std::string name = #NAME;                     \
         struct Uses                                   \
         {

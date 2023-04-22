@@ -791,7 +791,7 @@ namespace daxa
                 arg.images = this->get_actual_images(arg.handle, permutation);
                 arg.views = std::span{task.image_view_cache[input_index].data(), task.image_view_cache[input_index].size()};
             });
-        bool const upload_args_to_constant_buffer = task.base_task->get_uses_shader_binding() != -1;
+        bool const upload_args_to_constant_buffer = task.base_task->get_uses_constant_buffer_slot() != -1;
         if (upload_args_to_constant_buffer)
         {
             auto constant_buffer_alloc = staging_memory.allocate(task.constant_buffer_size).value();
@@ -810,7 +810,7 @@ namespace daxa
                     *reinterpret_cast<types::ImageViewId *>(adr) = arg.views[0];
                 });
             impl_runtime.command_lists.back().set_constant_buffer({
-                .slot = static_cast<u32>(task.base_task->get_uses_shader_binding()),
+                .slot = static_cast<u32>(task.base_task->get_uses_constant_buffer_slot()),
                 .buffer = staging_memory.get_buffer(),
                 .size = constant_buffer_alloc.size,
                 .offset = constant_buffer_alloc.buffer_offset,
@@ -1036,7 +1036,7 @@ namespace daxa
 
         std::vector<u32> constant_buffer_use_offsets = {};
         u32 constant_buffer_size = {};
-        if (base_task->get_uses_shader_binding() != -1)
+        if (base_task->get_uses_constant_buffer_slot() != -1)
         {
             auto offsets_size = get_task_arg_shader_offsets_size(base_task->get_generic_uses());
             constant_buffer_use_offsets = std::move(offsets_size.first);
