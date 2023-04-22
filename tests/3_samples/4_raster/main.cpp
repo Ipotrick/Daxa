@@ -219,19 +219,11 @@ auto main() -> int
         .name = "my task list",
     });
 
-    auto swapchain_image = daxa::ImageId{};
-    auto task_swapchain_image = loop_task_list.create_transient_task_image({.swapchain_image = true, .name = "swapchain image"});
-    loop_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
-
-    auto task_depth_image = loop_task_list.create_transient_task_image({.name = "depth image"});
-    loop_task_list.add_runtime_image(task_depth_image, depth_image);
-
-    auto task_atlas_texture_array = loop_task_list.create_transient_task_image({.name = "task_atlas_texture_array"});
-    loop_task_list.add_runtime_image(task_atlas_texture_array, atlas_texture_array);
-
-    auto perframe_input_task_buffer_id = loop_task_list.create_transient_task_buffer({ .name = "perframe_input"});
-    loop_task_list.add_runtime_buffer(perframe_input_task_buffer_id, perframe_input_buffer_id);
-    auto renderable_chunks_task_buffer_id = loop_task_list.create_transient_task_buffer({ .name = "renderable_chunks"});
+    daxa::TaskImage task_swapchain_image{{.swapchain_image = true,.name = "swapchain image"}};
+    daxa::TaskImage task_depth_image{{.initial_images={.images=std::array{depth_image}}, .name = "depth image"}};
+    daxa::TaskImage task_atlas_texture_array{{.initial_images={.images=std::array{atlas_texture_array}}, .name = "atlas_texture_array"}};
+    daxa::TaskBuffer task_buffer_per_frame{{.initial_buffers={.buffers=std::array{perframe_input_buffer_id}}, .name="task_buffer_per_frame"}};
+    daxa::TaskBuffer task_buffer_renderable_chunks{{.name="task_buffer_renderable_chunks"}};
 
     auto chunk_update_queue = std::set<usize>{};
     auto chunk_update_queue_mtx = std::mutex{};
@@ -241,7 +233,7 @@ auto main() -> int
         .when_true = [&]()
         {
             loop_task_list.add_task({
-                .used_buffers = {{renderable_chunks_task_buffer_id, daxa::TaskBufferAccess::TRANSFER_WRITE}},
+                .uses = {{renderable_chunks_task_buffer_id, daxa::TaskBufferAccess::TRANSFER_WRITE}},
                 .task = [&](daxa::TaskInterface task_runtime)
                 {
                     auto cmd_list = task_runtime.get_command_list();

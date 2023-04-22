@@ -212,15 +212,54 @@ namespace daxa
         return "invalid";
     }
 
-    TaskInterface::TaskInterface(void * a_backend)
+    TaskInterfaceUses::TaskInterfaceUses(void * a_backend)
         : backend{a_backend}
     {
     }
 
-    auto TaskInterface::get_args() const -> std::span<GenericTaskResourceUse>
+    auto TaskInterfaceUses::operator[](TaskBufferHandle const & handle) const -> TaskBufferUse<> const &
     {
-        auto const & impl = *static_cast<ImplTaskRuntimeInterface const *>(this->backend);
-        return impl.current_task->base_task->get_generic_uses();
+        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
+        auto const local_handle = impl.task_list.id_to_local_id(handle);
+        auto iter = std::find_if(impl.current_task->base_task->get_generic_uses().begin(),
+                                 impl.current_task->base_task->get_generic_uses().end(),
+                                 [&](GenericTaskResourceUse const & input)
+                                 {
+                                     if (input.type == TaskResourceUseType::BUFFER)
+                                     {
+                                         auto const & buf_use = TaskBufferUse<>::from(input);
+                                         return buf_use.handle == local_handle;
+                                     }
+                                     return false;
+                                 });
+        DAXA_DBG_ASSERT_TRUE_M(iter != impl.current_task->base_task->get_generic_uses().end(), "Detected invalid task buffer handle! Only handles, that are used in the task are in the list of uses!");
+        usize const buffer_use_index = static_cast<usize>(std::distance(impl.current_task->base_task->get_generic_uses().begin(), iter));
+        return TaskBufferUse<>::from(impl.current_task->base_task->get_generic_uses()[buffer_use_index]);
+    }
+
+    auto TaskInterfaceUses::operator[](TaskImageHandle const & handle) const -> TaskImageUse<> const &
+    {
+        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
+        auto const local_handle = impl.task_list.id_to_local_id(handle);
+        auto iter = std::find_if(impl.current_task->base_task->get_generic_uses().begin(),
+                                 impl.current_task->base_task->get_generic_uses().end(),
+                                 [&](GenericTaskResourceUse const & input)
+                                 {
+                                     if (input.type == TaskResourceUseType::IMAGE)
+                                     {
+                                         auto const & img_use = TaskImageUse<>::from(input);
+                                         return img_use.handle == local_handle;
+                                     }
+                                     return false;
+                                 });
+        DAXA_DBG_ASSERT_TRUE_M(iter != impl.current_task->base_task->get_generic_uses().end(), "Detected invalid task image handle! Only handles, that are used in the task are in the list of uses!");
+        usize const image_use_index = static_cast<usize>(std::distance(impl.current_task->base_task->get_generic_uses().begin(), iter));
+        return TaskImageUse<>::from(impl.current_task->base_task->get_generic_uses()[image_use_index]);
+    }
+
+    TaskInterface::TaskInterface(void * a_backend)
+        : backend{a_backend}, uses{a_backend}
+    {
     }
 
     auto TaskInterface::get_device() const -> Device &
@@ -248,60 +287,6 @@ namespace daxa
     {
         auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
         return impl.task_list.staging_memory;
-    }
-
-    auto TaskInterface::buffer(TaskBufferHandle const & task_resource_id, usize index) const -> BufferId
-    {
-        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
-        auto actual_buffers = impl.task_list.get_actual_buffers(impl.task_list.id_to_local_id(task_resource_id));
-        DAXA_DBG_ASSERT_TRUE_M(actual_buffers.size() > 0, "task buffer must be backed by execution buffer(s)!");
-        return actual_buffers[index];
-    }
-
-    auto TaskInterface::device_address(TaskBufferHandle const & task_resource_id, usize index) const -> daxa::BufferDeviceAddress
-    {
-        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
-        return impl.task_list.info.device.get_device_address(buffer(task_resource_id, index));
-    }
-
-    auto TaskInterface::image(TaskImageHandle const & task_resource_id, usize index) const -> ImageId
-    {
-        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
-        auto actual_images = impl.task_list.get_actual_images(impl.task_list.id_to_local_id(task_resource_id), impl.permutation);
-        DAXA_DBG_ASSERT_TRUE_M(actual_images.size() > 0, "task image must be backed by execution image(s)!");
-        return actual_images[index];
-    }
-
-    auto TaskInterface::view(TaskImageHandle const & task_resource_id, usize index) const -> ImageViewId
-    {
-        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
-        auto const local_id = impl.task_list.id_to_local_id(task_resource_id);
-        auto iter = std::find_if(impl.current_task->base_task->get_generic_uses().begin(),
-                                 impl.current_task->base_task->get_generic_uses().end(),
-                                 [&](GenericTaskResourceUse const & input)
-                                 {
-                                     if (input.type == TaskResourceUseType::IMAGE)
-                                     {
-                                         auto const & img_use = TaskImageUse<>::from(input);
-                                         return img_use.handle == local_id;
-                                     }
-                                     return false;
-                                 });
-        DAXA_DBG_ASSERT_TRUE_M(iter != impl.current_task->base_task->get_generic_uses().end(), "detected invalid task image id; all image ids that a view is requested from in a task must be mentioned in the task input!");
-        usize const view_cache_index = static_cast<usize>(std::distance(impl.current_task->base_task->get_generic_uses().begin(), iter));
-        return impl.current_task->image_view_cache[view_cache_index][index];
-    }
-
-    auto TaskInterface::buffer_use_at(usize use_index) const -> TaskBufferUse<> const &
-    {
-        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
-        return TaskBufferUse<>::from(impl.current_task->base_task->get_generic_uses()[use_index]);
-    }
-
-    auto TaskInterface::image_use_at(usize use_index) const -> TaskImageUse<> const &
-    {
-        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
-        return TaskImageUse<>::from(impl.current_task->base_task->get_generic_uses()[use_index]);
     }
 
     TaskBuffer::TaskBuffer(TaskBufferInfo const & info)
@@ -649,7 +634,8 @@ namespace daxa
         for_each(
             task.base_task->get_generic_uses(),
             [](u32, TaskBufferUse<> &) {},
-            [&](u32 task_image_use_index, TaskImageUse<> & image_use) {
+            [&](u32 task_image_use_index, TaskImageUse<> & image_use)
+            {
                 auto const slice = image_use.handle.slice;
                 // The image id here is alreadt the task list local id.
                 // The persistent ids are converted to local ids in the add_task function.
@@ -912,7 +898,7 @@ namespace daxa
         TaskListPermutation & perm,
         TaskBatchSubmitScope & current_submit_scope,
         usize const current_submit_scope_index,
-        BaseTask& task)
+        BaseTask & task)
         -> usize
     {
         usize first_possible_batch_index = 0;

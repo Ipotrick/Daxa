@@ -136,7 +136,7 @@ namespace tests
             .align_test_dst = { dst },
         };
         task_list.add_task({
-            .args = daxa::to_generic_uses(uses),
+            .uses = daxa::to_generic_uses(uses),
             .task = [&](daxa::TaskInterface const & tri)
             {
                 auto cmd = tri.get_command_list();
@@ -235,11 +235,13 @@ namespace tests
             .name = "f32 buffer",
         });
 
+        using namespace daxa::task_resource_uses;
+
         task_list.add_task({
-            .args = {
-                daxa::TaskBufferUse<daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE>{handles_buffer},
-                daxa::TaskBufferUse<daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE>{f32_buffer},
-                daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_WRITE>{f32_image},
+            .uses = {
+                BufferComputeShaderWrite{handles_buffer},
+                BufferComputeShaderWrite{f32_buffer},
+                ImageComputeShaderWrite{f32_image},
             },
             .task = [&](daxa::TaskInterface const & ti)
             {
@@ -258,10 +260,10 @@ namespace tests
             .name = "bindless access",
         });
         task_list.add_task({
-            .args = {
-                daxa::TaskBufferUse<daxa::TaskBufferAccess::COMPUTE_SHADER_READ>{handles_buffer},
-                daxa::TaskBufferUse<daxa::TaskBufferAccess::COMPUTE_SHADER_READ>{f32_buffer},
-                daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_READ>{f32_image},
+            .uses = {
+                BufferComputeShaderRead{handles_buffer},
+                BufferComputeShaderRead{f32_buffer},
+                ImageComputeShaderRead{f32_image},
             },
             .task = [&](daxa::TaskInterface const & ti)
             {
