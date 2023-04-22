@@ -143,8 +143,8 @@ namespace tests
                 cmd.set_pipeline(*compute_pipeline);
                 cmd.dispatch(1, 1, 1);
             },
-            .name = "test alignment",
             .constant_buffer_slot = TestShaderUses::CONSANT_BUFFER_SLOT,
+            .name = "test alignment",
         });
         task_list.submit({});
         task_list.complete({});
