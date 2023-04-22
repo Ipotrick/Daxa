@@ -214,9 +214,9 @@ namespace daxa
 
     struct GenericTaskInfo
     {
-        i32 shader_binding = -1;
-        u32 shader_constant_buffer_size = {};
-        std::vector<u32> shader_constant_buffer_offsets = {};
+        i32 constant_buffer_slot = -1;
+        u32 constant_buffer_size = {};
+        std::vector<u32> constant_buffer_offsets = {};
         GenericTaskArgsContainer task_args = {};
         TaskCallback task = {};
         std::string name = {};
@@ -224,12 +224,10 @@ namespace daxa
 
     struct InlineTaskInfo
     {
-        // NOTE: MSVC appears to not like initializer lists as members...
-        // TODO(grundlett/pahrens): Change to be an initializer list when MSVC fixes it
         std::vector<GenericTaskResourceUse> args = {};
         TaskCallback task = {};
+        isize constant_buffer_slot = -1;
         std::string name = {};
-        isize uses_constant_buffer_binding = -1;
     };
 
     struct TaskList : ManagedPtr
@@ -259,7 +257,7 @@ namespace daxa
                 std::move(info.args),
                 std::move(info.task),
                 std::move(info.name),
-                info.uses_constant_buffer_binding
+                info.constant_buffer_slot
             );
             add_task(std::move(base_task));
         }

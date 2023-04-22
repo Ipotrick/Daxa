@@ -144,7 +144,7 @@ namespace tests
                 cmd.dispatch(1, 1, 1);
             },
             .name = "test alignment",
-            .uses_constant_buffer_binding = TestShaderUses::SHADER_BINDING,
+            .constant_buffer_slot = TestShaderUses::CONSANT_BUFFER_SLOT,
         });
         task_list.submit({});
         task_list.complete({});
