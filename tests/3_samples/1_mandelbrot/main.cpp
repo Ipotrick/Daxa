@@ -147,7 +147,7 @@ struct App : BaseApp<App>
         new_task_list.use_persistent_buffer(task_gpu_input_buffer);
 
         new_task_list.add_task({
-            .args = {
+            .uses = {
                 BufferHostTransferWrite{task_gpu_input_buffer},
             },
             .task = [this](daxa::TaskInterface runtime)
@@ -180,7 +180,7 @@ struct App : BaseApp<App>
             .name = APPNAME_PREFIX("Upload Input"),
         });
         new_task_list.add_task({
-            .args = {
+            .uses = {
                 BufferComputeShaderRead{task_gpu_input_buffer},
                 ImageComputeShaderWrite{task_render_image},
             },
@@ -202,7 +202,7 @@ struct App : BaseApp<App>
             .name = APPNAME_PREFIX("Draw (Compute)"),
         });
         new_task_list.add_task({
-            .args = {
+            .uses = {
                 ImageTransferRead{task_render_image},
                 ImageTransferWrite{task_swapchain_image},
             },
@@ -210,9 +210,9 @@ struct App : BaseApp<App>
             {
                 auto cmd_list = ti.get_command_list();
                 cmd_list.blit_image_to_image({
-                    .src_image = ti.image(task_render_image),
+                    .src_image = ti.uses[task_render_image].image(),
                     .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
-                    .dst_image = ti.image(task_swapchain_image),
+                    .dst_image = ti.uses[task_swapchain_image].image(),
                     .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                     .src_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
                     .src_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
