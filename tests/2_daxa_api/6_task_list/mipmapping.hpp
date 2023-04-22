@@ -527,7 +527,7 @@ namespace tests
                                 std::array<i32, 3> next_mip_size = {std::max<i32>(1, mip_size[0] / 2), std::max<i32>(1, mip_size[1] / 2), std::max<i32>(1, mip_size[2] / 2)};
                                 new_task_list.add_task(MipMapTask{
                                     .uses = {
-                                        .lower_mip = task_render_image.handle().subslice({.base_mip_level = i}),
+                                        // .lower_mip = task_render_image.handle().subslice({.base_mip_level = i}),
                                         .higher_mip = task_render_image.handle().subslice({.base_mip_level = i+1}),
                                     },
                                     .name = std::string("mip map ") + std::to_string(i),

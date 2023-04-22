@@ -491,7 +491,7 @@ namespace daxa
 
     auto get_task_arg_shader_offsets_size(std::span<GenericTaskResourceUse> args) -> std::pair<std::vector<u32>, u32>;
 
-    namespace task_resource_uses
+    inline namespace task_resource_uses
     {
         using BufferShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::SHADER_READ>;
         using BufferVertexShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::VERTEX_SHADER_READ>;
