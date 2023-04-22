@@ -11,27 +11,27 @@ namespace tests
     }
 
     void set_initial_buffer_data(
-        daxa::TaskInterface & tri,
+        daxa::TaskInterface & ti,
         daxa::CommandList & cmd,
         daxa::TaskBufferHandle buffer,
         u32 size,
         u32 value)
     {
-        auto staging = tri.get_allocator().allocate(size * sizeof(u32)).value();
+        auto staging = ti.get_allocator().allocate(size * sizeof(u32)).value();
         for (u32 x = 0; x < size; ++x)
         {
             reinterpret_cast<u32 *>(staging.host_address)[x] = value;
         }
         cmd.copy_buffer_to_buffer({
-            .src_buffer = tri.get_allocator().get_buffer(),
+            .src_buffer = ti.get_allocator().get_buffer(),
             .src_offset = staging.buffer_offset,
-            .dst_buffer = tri.buffer(buffer),
+            .dst_buffer = ti.uses[buffer].buffer(),
             .size = size * sizeof(u32),
         });
     }
 
     void validate_buffer_data(
-        daxa::TaskInterface & tri,
+        daxa::TaskInterface & ti,
         daxa::CommandList & cmd,
         daxa::TaskBufferHandle buffer,
         u32 size,
@@ -40,7 +40,7 @@ namespace tests
     {
         cmd.set_pipeline(pipeline);
         cmd.push_constant(TestBufferPush{
-            .test_buffer = tri.get_device().get_device_address(tri.buffer(buffer)),
+            .test_buffer = ti.get_device().get_device_address(ti.uses[buffer].buffer()),
             .size = size,
             .value = value,
         });
@@ -48,14 +48,14 @@ namespace tests
     }
 
     void set_initial_image_data(
-        daxa::TaskInterface & tri,
+        daxa::TaskInterface & ti,
         daxa::CommandList & cmd,
         daxa::TaskImageHandle image,
         auto size,
         f32 value)
     {
         u32 const image_size = sizeof(f32) * size.x * size.y * size.z;
-        auto staging = tri.get_allocator().allocate(image_size).value();
+        auto staging = ti.get_allocator().allocate(image_size).value();
         for (u32 x = 0; x < size.x; ++x)
             for (u32 y = 0; y < size.y; ++y)
                 for (u32 z = 0; z < size.z; ++z)
@@ -64,15 +64,15 @@ namespace tests
                     reinterpret_cast<f32 *>(staging.host_address)[index] = value;
                 }
         cmd.copy_buffer_to_image({
-            .buffer = tri.get_allocator().get_buffer(),
+            .buffer = ti.get_allocator().get_buffer(),
             .buffer_offset = staging.buffer_offset,
-            .image = tri.image(image),
+            .image = ti.uses[image].image(),
             .image_extent = {size.x, size.y, size.z},
         });
     }
 
     void validate_image_data(
-        daxa::TaskInterface & tri,
+        daxa::TaskInterface & ti,
         daxa::CommandList & cmd,
         daxa::TaskImageHandle image,
         auto size,
@@ -81,7 +81,7 @@ namespace tests
     {
         cmd.set_pipeline(pipeline);
         cmd.push_constant(TestImagePush{
-            .test_image = {tri.view(image)},
+            .test_image = {ti.uses[image].view()},
             .size = size,
             .value = value,
         });
@@ -188,7 +188,7 @@ namespace tests
 
             // Record tasks.
             task_list.add_task({
-                .args = {
+                .uses = {
                     daxa::TaskBufferUse<TBA::TRANSFER_WRITE>{long_life_buffer},
                 },
                 .task = [=](daxa::TaskInterface tri)
@@ -200,7 +200,7 @@ namespace tests
             });
 
             task_list.add_task({
-                .args = {
+                .uses = {
                     daxa::TaskImageUse<TIA::TRANSFER_WRITE, daxa::ImageViewType::REGULAR_3D>{medium_life_image},
                 },
                 .task = [=](daxa::TaskInterface tri)
@@ -212,7 +212,7 @@ namespace tests
             });
 
             task_list.add_task({
-                .args = {
+                .uses = {
                     daxa::TaskBufferUse<TBA::COMPUTE_SHADER_READ>{long_life_buffer},
                     daxa::TaskImageUse<TIA::COMPUTE_SHADER_READ, daxa::ImageViewType::REGULAR_3D>{medium_life_image},
                     daxa::TaskImageUse<TIA::TRANSFER_WRITE, daxa::ImageViewType::REGULAR_3D>{long_life_image},
@@ -228,13 +228,13 @@ namespace tests
             });
 
             task_list.add_task({
-                .args = {daxa::TaskImageUse<TIA::COMPUTE_SHADER_READ_WRITE>{short_life_image}},
+                .uses = {daxa::TaskImageUse<TIA::COMPUTE_SHADER_READ_WRITE>{short_life_image}},
                 .task = [=](daxa::TaskInterface) {},
                 .name = "dummy use short life image",
             });
 
             task_list.add_task({
-                .args = {
+                .uses = {
                     daxa::TaskBufferUse<TBA::COMPUTE_SHADER_READ_WRITE>{short_life_buffer},
                     daxa::TaskImageUse<TIA::COMPUTE_SHADER_READ, daxa::ImageViewType::REGULAR_3D>{long_life_image},
                 },

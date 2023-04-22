@@ -142,13 +142,13 @@ struct BaseApp : AppWindow<T>
         reinterpret_cast<T *>(this)->record_tasks(new_task_list);
 
         new_task_list.add_task({
-            .args = {
+            .uses = {
                 ImageColorAttachment{task_swapchain_image},
             },
             .task = [this](daxa::TaskInterface ti)
             {
                 auto cmd_list = ti.get_command_list();
-                imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, ti.image(task_swapchain_image), AppWindow<T>::size_x, AppWindow<T>::size_y);
+                imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, ti.uses[task_swapchain_image].image(), AppWindow<T>::size_x, AppWindow<T>::size_y);
             },
             .name = "ImGui Task",
         });

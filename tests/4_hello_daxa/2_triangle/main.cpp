@@ -211,7 +211,7 @@ auto main() -> int
         .when_true = [&]()
         {
             loop_task_list.add_task({
-                .args = {
+                .uses = {
                     // Since this task is going to copy a staging buffer to the
                     // actual buffer, we'll say that this task uses the buffer
                     // with a transfer write operation!
@@ -231,7 +231,8 @@ auto main() -> int
                     //   daxa::TaskInterface::image(TaskImageId image, u32 index = 0) -> ImageId
                     //   daxa::TaskInterface::view(TaskImageId image, u32 index = 0) -> ImageViewId
                     // you can conveniently get the runtime id from the task resource via the interface!
-                    upload_vertex_data_task(ti.get_device(), cmd_list, ti.buffer(task_buffer));
+                    // Each use of a resource is uniquely identified with a handle within each task.
+                    upload_vertex_data_task(ti.get_device(), cmd_list, ti.uses[task_buffer].buffer());
 
                     // Now we can reset this task condition, since it should
                     // only ever be executed when requested!
@@ -244,7 +245,7 @@ auto main() -> int
 
     // And a task to draw to the screen
     loop_task_list.add_task({
-        .args = {
+        .uses = {
             // Now, since we're reading the buffer inside the vertex shader,
             // we'll say that we use it as such.
             BufferVertexShaderRead{task_buffer},
@@ -261,8 +262,8 @@ auto main() -> int
             // and just pass them directly.
             draw_to_swapchain_task(
                 ti.get_device(), cmd_list, pipeline,
-                ti.image(task_swapchain_image),
-                ti.buffer(task_buffer),
+                ti.uses[task_swapchain_image].image(),
+                ti.uses[task_buffer].buffer(),
                 window_info.width, window_info.height);
         },
         .name = "my draw task",
