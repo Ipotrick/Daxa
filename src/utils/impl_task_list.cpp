@@ -427,7 +427,7 @@ namespace daxa
         for (auto & permutation : impl.permutations)
         {
             permutation.buffer_infos.push_back(PerPermTaskBuffer{
-                .valid = permutation.active,
+                .valid = false,
             });
         }
 
@@ -449,7 +449,7 @@ namespace daxa
         {
             // For non-persistent resources task list will synch on the initial to first use every execution.
             permutation.image_infos.emplace_back(PerPermTaskImage{
-                .valid = permutation.active,
+                .valid = false,
                 .swapchain_semaphore_waited_upon = false,
                 .last_slice_states = {},
                 .first_slice_states = {},
@@ -1245,7 +1245,7 @@ namespace daxa
                     image_infos[arg.handle.index].valid = true;
                 }
             });
-            
+
         usize const current_submit_scope_index = this->batch_submit_scopes.size() - 1;
         TaskBatchSubmitScope & current_submit_scope = this->batch_submit_scopes[current_submit_scope_index];
 
