@@ -201,8 +201,8 @@ struct App : AppWindow<App>
         std::string_view name = "draw boids";
 
         std::shared_ptr<daxa::RasterPipeline> draw_pipeline = {};
-        u32 size_x = {};
-        u32 size_y = {};
+        u32* size_x = {};
+        u32* size_y = {};
         void callback(daxa::TaskInterface const & ti)
         {
             auto cmd_list = ti.get_command_list();
@@ -217,16 +217,16 @@ struct App : AppWindow<App>
                         .clear_value = std::array<f32, 4>{1.0f, 1.0f, 1.0f, 1.0f},
                     }},
                 .render_area = {
-                    .width = size_x,
-                    .height = size_y,
+                    .width = *size_x,
+                    .height = *size_y,
                 },
             });
 
             cmd_list.push_constant(DrawPushConstant{
                 .boids_buffer = ti.get_device().get_device_address(uses.boids.buffer()),
                 .axis_scaling = {
-                    std::min(1.0f, static_cast<f32>(this->size_x) / static_cast<f32>(this->size_y)),
-                    std::min(1.0f, static_cast<f32>(this->size_x) / static_cast<f32>(this->size_y)),
+                    std::min(1.0f, static_cast<f32>(*this->size_y) / static_cast<f32>(*this->size_x)),
+                    std::min(1.0f, static_cast<f32>(*this->size_x) / static_cast<f32>(*this->size_y)),
                 }});
 
             cmd_list.draw({.vertex_count = 3 * MAX_BOIDS});
@@ -256,8 +256,8 @@ struct App : AppWindow<App>
                 .render_image = { task_swapchain_image },
             },
             .draw_pipeline = draw_pipeline,
-            .size_x = size_x,
-            .size_y = size_y,
+            .size_x = &size_x,
+            .size_y = &size_y,
         });
 
         new_task_list.submit({});
