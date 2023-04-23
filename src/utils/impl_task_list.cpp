@@ -1228,7 +1228,24 @@ namespace daxa
         ImplTaskList & task_list_impl,
         BaseTask & task)
     {
-
+        // Set persistent task resources to be valid for the permutation.
+        for_each(
+            task.get_generic_uses(),
+            [&](u32 index, TaskBufferUse<> & arg)
+            {
+                if (task_list_impl.global_buffer_infos[arg.handle.index].is_persistent())
+                {
+                    buffer_infos[arg.handle.index].valid = true;
+                }
+            },
+            [&](u32 index, TaskImageUse<> & arg)
+            {
+                if (task_list_impl.global_image_infos[arg.handle.index].is_persistent())
+                {
+                    image_infos[arg.handle.index].valid = true;
+                }
+            });
+            
         usize const current_submit_scope_index = this->batch_submit_scopes.size() - 1;
         TaskBatchSubmitScope & current_submit_scope = this->batch_submit_scopes[current_submit_scope_index];
 
