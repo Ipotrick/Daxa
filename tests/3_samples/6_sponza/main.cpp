@@ -106,8 +106,8 @@ struct App : AppWindow<App>
         });
 
         auto staging_buffer = device.create_buffer({
-            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .size = size,
+            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .name = APPNAME_PREFIX("model staging_buffer"),
         });
         cmd_list.destroy_buffer_deferred(staging_buffer);
@@ -348,8 +348,8 @@ struct App : AppWindow<App>
         });
 
         auto gpu_input_staging_buffer = device.create_buffer({
-            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .size = sizeof(GpuInput),
+            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .name = APPNAME_PREFIX("gpu_input_staging_buffer"),
         });
         cmd_list.destroy_buffer_deferred(gpu_input_staging_buffer);
