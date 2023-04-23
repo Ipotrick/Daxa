@@ -27,10 +27,7 @@ namespace daxa
         MemoryBlock(ManagedPtr);
     };
 
-    struct AutoAllocInfo
-    {
-        MemoryFlags flags = {};
-    };
+    using AutoAllocInfo = MemoryFlags;
 
     struct ManualAllocInfo
     {

@@ -49,6 +49,8 @@ void draw_to_swapchain_task(daxa::Device & device, daxa::CommandList & cmd_list,
 
 auto main() -> int
 {
+    using namespace daxa::task_resource_uses;
+
     auto window_info = WindowInfo{.width = 800, .height = 600};
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -209,13 +211,13 @@ auto main() -> int
         .when_true = [&]()
         {
             loop_task_list.add_task({
-                .args = {
+                .uses = {
                     // Since this task is going to copy a staging buffer to the
                     // actual buffer, we'll say that this task uses the buffer
                     // with a transfer write operation!
-                    daxa::TaskBufferUse{{task_buffer, daxa::TaskBufferAccess::TRANSFER_WRITE}},
+                    BufferTransferWrite{task_buffer},
                 },
-                .task = [=, &task_condition_states](daxa::TaskInterface<> ti)
+                .task = [=, &task_condition_states](daxa::TaskInterface ti)
                 {
                     auto cmd_list = ti.get_command_list();
 
@@ -225,11 +227,12 @@ auto main() -> int
                     // We'll call upload_vertex_data_task(...) with the buffer ID,
                     // which we can query from the task runtime.
                     // With the functions:
-                    //   daxa::TaskInterface<>::buffer(TaskBufferId buffer, u32 index = 0) -> BufferId
-                    //   daxa::TaskInterface<>::image(TaskImageId image, u32 index = 0) -> ImageId
-                    //   daxa::TaskInterface<>::view(TaskImageId image, u32 index = 0) -> ImageViewId
+                    //   daxa::TaskInterface::buffer(TaskBufferId buffer, u32 index = 0) -> BufferId
+                    //   daxa::TaskInterface::image(TaskImageId image, u32 index = 0) -> ImageId
+                    //   daxa::TaskInterface::view(TaskImageId image, u32 index = 0) -> ImageViewId
                     // you can conveniently get the runtime id from the task resource via the interface!
-                    upload_vertex_data_task(ti.get_device(), cmd_list, ti.buffer(task_buffer));
+                    // Each use of a resource is uniquely identified with a handle within each task.
+                    upload_vertex_data_task(ti.get_device(), cmd_list, ti.uses[task_buffer].buffer());
 
                     // Now we can reset this task condition, since it should
                     // only ever be executed when requested!
@@ -242,25 +245,25 @@ auto main() -> int
 
     // And a task to draw to the screen
     loop_task_list.add_task({
-        .args = {
+        .uses = {
             // Now, since we're reading the buffer inside the vertex shader,
             // we'll say that we use it as such.
-            daxa::TaskBufferUse{{task_buffer, daxa::TaskBufferAccess::VERTEX_SHADER_READ}},
+            BufferVertexShaderRead{task_buffer},
             // And, we'll denote that we use the swapchain image as a color
             // attachment. At the end of the line, we default-construct the
             // ImageMipArraySlice, since all we need is the first mip and
             // first array slice.
-            daxa::TaskImageUse{{task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}}},
+            ImageColorAttachment<>{task_swapchain_image},
         },
-        .task = [task_swapchain_image, task_buffer, &pipeline, &window_info](daxa::TaskInterface<> ti)
+        .task = [task_swapchain_image, task_buffer, &pipeline, &window_info](daxa::TaskInterface ti)
         {
             auto cmd_list = ti.get_command_list();
             // Here we can just get the buffer and image IDs from the runtime
             // and just pass them directly.
             draw_to_swapchain_task(
                 ti.get_device(), cmd_list, pipeline,
-                ti.image(task_swapchain_image),
-                ti.buffer(task_buffer),
+                ti.uses[task_swapchain_image].image(),
+                ti.uses[task_buffer].buffer(),
                 window_info.width, window_info.height);
         },
         .name = "my draw task",
