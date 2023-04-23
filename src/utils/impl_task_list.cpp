@@ -340,7 +340,6 @@ namespace daxa
     {
         auto & impl = *this->as<ImplPersistentTaskBuffer>();
         auto & impl_other = *other.as<ImplPersistentTaskBuffer>();
-        std::swap(impl.info, impl_other.info);
         std::swap(impl.actual_buffers, impl_other.actual_buffers);
         std::swap(impl.latest_access, impl_other.latest_access);
     }
@@ -401,7 +400,6 @@ namespace daxa
     {
         auto & impl = *this->as<ImplPersistentTaskImage>();
         auto & impl_other = *other.as<ImplPersistentTaskImage>();
-        std::swap(impl.info, impl_other.info);
         std::swap(impl.actual_images, impl_other.actual_images);
         std::swap(impl.latest_slice_states, impl_other.latest_slice_states);
     }
@@ -695,10 +693,7 @@ namespace daxa
             });
     }
 
-    // Need to validate all runtime resources of persistent resources.
-    // These runtime resources are user settable.
-    // TODO(pahrens): validate only actually accessed resources within the current permutation!
-    void validate_runtime_resources(ImplTaskList const & impl)
+    void validate_runtime_resources(ImplTaskList const & impl, TaskListPermutation const & permutation)
     {
 #if DAXA_VALIDATION
         constexpr std::string_view PERSISTENT_RESOURCE_MESSAGE = {
@@ -706,6 +701,10 @@ namespace daxa
             "valid runtime resources"};
         for (u32 local_buffer_i = 0; local_buffer_i < impl.global_buffer_infos.size(); ++local_buffer_i)
         {
+            if (!permutation.buffer_infos[local_buffer_i].valid)
+            {
+                continue;
+            }
             if (!impl.global_buffer_infos.at(local_buffer_i).is_persistent())
             {
                 continue;
@@ -732,6 +731,10 @@ namespace daxa
         }
         for (u32 local_image_i = 0; local_image_i < impl.global_image_infos.size(); ++local_image_i)
         {
+            if (!permutation.image_infos[local_image_i].valid)
+            {
+                continue;
+            }
             if (!impl.global_image_infos.at(local_image_i).is_persistent())
             {
                 continue;
@@ -2216,7 +2219,7 @@ namespace daxa
         ImplTaskRuntimeInterface impl_runtime{.task_list = impl, .permutation = permutation};
         impl_runtime.command_lists.push_back(impl.info.device.create_command_list({.name = std::string("Task Command List ") + std::to_string(impl_runtime.command_lists.size())}));
 
-        validate_runtime_resources(impl);
+        validate_runtime_resources(impl, permutation);
         // Generate and insert synchronization for persistent resources:
         generate_persistent_resource_synch(impl, permutation, impl_runtime.command_lists.back());
 
