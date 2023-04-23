@@ -1280,10 +1280,10 @@ namespace daxa
                 PerPermTaskBuffer & task_buffer = this->buffer_infos[buffer_use.handle.index];
                 Access const current_buffer_access = task_buffer_access_to_access(buffer_use.access());
                 update_buffer_first_access(task_buffer, batch_index, current_submit_scope_index, current_buffer_access);
-                // For transient images we need to record first and last use so that we can later name their allocations
+                // For transient buffers, we need to record first and last use so that we can later name their allocations.
                 // TODO(msakmary, pahrens) We should think about how to combine this with update_buffer_first_access below since
                 // they both overlap in what they are doing
-                if (!task_list_impl.global_image_infos.at(buffer_use.id.index).is_persistent())
+                if (!task_list_impl.global_buffer_infos.at(buffer_use.handle.index).is_persistent())
                 {
                     auto & buffer_first_use = task_buffer.lifetime.first_use;
                     auto & buffer_last_use = task_buffer.lifetime.last_use;
@@ -1719,7 +1719,7 @@ namespace daxa
             auto const & glob_buffer = global_buffer_infos.at(buffer_info_idx);
             auto & perm_buffer = permutation.buffer_infos.at(buffer_info_idx);
 
-            if(!glob_buffer.is_persistent() && perm_buffer.valid)
+            if (!glob_buffer.is_persistent() && perm_buffer.valid)
             {
                 auto const & transient_info = std::get<PermIndepTaskBufferInfo::Transient>(glob_buffer.task_buffer_data);
 
@@ -1727,9 +1727,8 @@ namespace daxa
                     .size = transient_info.info.size,
                     .allocate_info = ManualAllocInfo{
                         .memory_block = transient_data_memory_block,
-                        .offset = perm_buffer.allocation_offset },
-                    .name = transient_info.info.name
-                });
+                        .offset = perm_buffer.allocation_offset},
+                    .name = transient_info.info.name});
             }
         }
     }
@@ -1747,7 +1746,7 @@ namespace daxa
                                        std::string("Transient image is not used in this permutation but marked as valid either: ") +
                                            std::string("\t- it was used as PRESENT which is not allowed for transient images") +
                                            std::string("\t- it was used as NONE which makes no sense - just don't mark it as used in the task"));
-                auto const & transient_image_info = transient_info.info;
+                auto const & transient_image_info = std::get<PermIndepTaskImageInfo::Transient>(glob_image.task_image_data).info;
                 perm_image.actual_image = info.device.create_image(ImageInfo{
                     .dimensions = transient_image_info.dimensions,
                     .format = transient_image_info.format,
@@ -1793,14 +1792,13 @@ namespace daxa
         }
         for (auto & global_buffer : global_buffer_infos)
         {
-            if(!global_buffer.is_persistent())
+            if (!global_buffer.is_persistent())
             {
                 auto & transient_buffer = std::get<PermIndepTaskBufferInfo::Transient>(global_buffer.task_buffer_data);
                 BufferInfo const buffer_info = {
                     .size = transient_buffer.info.size,
-                    .allocate_info = AutoAllocInfo{.flags = MemoryFlagBits::DEDICATED_MEMORY},
-                    .name = "Dummy to figure mem requirements"
-                };
+                    .allocate_info = MemoryFlagBits::DEDICATED_MEMORY,
+                    .name = "Dummy to figure mem requirements"};
                 transient_buffer.memory_requirements = info.device.get_memory_requirements({buffer_info});
                 max_alignment_requirement = std::max(transient_buffer.memory_requirements.alignment, max_alignment_requirement);
             }
@@ -1867,7 +1865,7 @@ namespace daxa
                                 perm_task_buffer.lifetime.last_use.task_batch_index;
 
                 DAXA_DBG_ASSERT_TRUE_M(start_idx != std::numeric_limits<u32>::max() ||
-                                       end_idx != std::numeric_limits<u32>::max(),
+                                           end_idx != std::numeric_limits<u32>::max(),
                                        "Detected transient resource created but never used");
                 lifetime_length_sorted_resources.emplace_back(LifetimeLengthResource{
                     .start_batch = start_idx,
@@ -1882,8 +1880,7 @@ namespace daxa
                       [](LifetimeLengthResource const & first, LifetimeLengthResource const & second) -> bool
                       {
                           return first.lifetime_lenght > second.lifetime_lenght;
-                      }
-            );
+                      });
 
             struct Allocation
             {
@@ -1932,13 +1929,17 @@ namespace daxa
             for (auto const & resource_lifetime : lifetime_length_sorted_resources)
             {
                 MemoryRequirements mem_requirements;
-                if(resource_lifetime.is_image)
+                if (resource_lifetime.is_image)
                 {
                     mem_requirements = std::get<PermIndepTaskImageInfo::Transient>(
-                        global_image_infos.at(resource_lifetime.resource_idx).task_image_data).memory_requirements;
-                } else {
+                                           global_image_infos.at(resource_lifetime.resource_idx).task_image_data)
+                                           .memory_requirements;
+                }
+                else
+                {
                     mem_requirements = std::get<PermIndepTaskBufferInfo::Transient>(
-                        global_buffer_infos.at(resource_lifetime.resource_idx).task_buffer_data).memory_requirements;
+                                           global_buffer_infos.at(resource_lifetime.resource_idx).task_buffer_data)
+                                           .memory_requirements;
                 }
                 // Go through all memory block states in which this resource is alive and try to find a spot for it
                 Allocation new_allocation = Allocation{
@@ -1976,10 +1977,12 @@ namespace daxa
             // Once we are done with finding space for all the allocations go through all permutation images and copy over the allocation information
             for (auto const & allocation : allocations)
             {
-                if(allocation.is_image)
+                if (allocation.is_image)
                 {
                     permutation.image_infos.at(allocation.owning_resource_idx).allocation_offset = allocation.offset;
-                } else {
+                }
+                else
+                {
                     permutation.buffer_infos.at(allocation.owning_resource_idx).allocation_offset = allocation.offset;
                 }
                 // find the amount of memory this permutation requires
