@@ -177,6 +177,9 @@ namespace daxa
 
         ManagedWeakPtr make_weak() const;
 
+        auto is_valid() const -> bool;
+        operator bool() const;
+
       private:
         void cleanup();
     };

@@ -219,19 +219,11 @@ auto main() -> int
         .name = "my task list",
     });
 
-    auto swapchain_image = daxa::ImageId{};
-    auto task_swapchain_image = loop_task_list.create_transient_task_image({.swapchain_image = true, .name = "swapchain image"});
-    loop_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
-
-    auto task_depth_image = loop_task_list.create_transient_task_image({.name = "depth image"});
-    loop_task_list.add_runtime_image(task_depth_image, depth_image);
-
-    auto task_atlas_texture_array = loop_task_list.create_transient_task_image({.name = "task_atlas_texture_array"});
-    loop_task_list.add_runtime_image(task_atlas_texture_array, atlas_texture_array);
-
-    auto perframe_input_task_buffer_id = loop_task_list.create_transient_task_buffer({ .name = "perframe_input"});
-    loop_task_list.add_runtime_buffer(perframe_input_task_buffer_id, perframe_input_buffer_id);
-    auto renderable_chunks_task_buffer_id = loop_task_list.create_transient_task_buffer({ .name = "renderable_chunks"});
+    daxa::TaskImage task_swapchain_image{{.swapchain_image = true,.name = "swapchain image"}};
+    daxa::TaskImage task_depth_image{{.initial_images={.images=std::array{depth_image}}, .name = "depth image"}};
+    daxa::TaskImage task_atlas_texture_array{{.initial_images={.images=std::array{atlas_texture_array}}, .name = "atlas_texture_array"}};
+    daxa::TaskBuffer task_buffer_per_frame{{.initial_buffers={.buffers=std::array{perframe_input_buffer_id}}, .name="task_buffer_per_frame"}};
+    daxa::TaskBuffer task_buffer_renderable_chunks{{.name="task_buffer_renderable_chunks"}};
 
     auto chunk_update_queue = std::set<usize>{};
     auto chunk_update_queue_mtx = std::mutex{};
@@ -241,8 +233,8 @@ auto main() -> int
         .when_true = [&]()
         {
             loop_task_list.add_task({
-                .used_buffers = {{renderable_chunks_task_buffer_id, daxa::TaskBufferAccess::TRANSFER_WRITE}},
-                .task = [&](daxa::TaskInterface<> task_runtime)
+                .uses = {{renderable_chunks_task_buffer_id, daxa::TaskBufferAccess::TRANSFER_WRITE}},
+                .task = [&](daxa::TaskInterface task_runtime)
                 {
                     auto cmd_list = task_runtime.get_command_list();
                     auto threads = std::vector<std::unique_ptr<std::thread>>{};
@@ -255,8 +247,8 @@ auto main() -> int
                             [&]()
                             {
                                 auto staging_buffer_id = device.create_buffer({
-                                    .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                                     .size = sizeof(VoxelFace) * 6 * CHUNK_VOXEL_N,
+                                    .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                                     .name = "my staging buffer",
                                 });
                                 cmd_list.destroy_buffer_deferred(staging_buffer_id);
@@ -331,7 +323,7 @@ auto main() -> int
                 .used_images = {
                     {task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
                 },
-                .task = [&](daxa::TaskInterface<> runtime)
+                .task = [&](daxa::TaskInterface runtime)
                 {
                     auto cmd_list = runtime.get_command_list();
                     load_textures_commands(device, cmd_list, runtime.get_images(task_atlas_texture_array)[0]);
@@ -348,7 +340,7 @@ auto main() -> int
                         {task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{.base_mip_level = i + 0, .base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
                         {task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{.base_mip_level = i + 1, .base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
                     },
-                    .task = [&, i, mip_size, next_mip_size](daxa::TaskInterface<> const & runtime)
+                    .task = [&, i, mip_size, next_mip_size](daxa::TaskInterface const & runtime)
                     {
                         auto cmd_list = runtime.get_command_list();
                         auto image_id = runtime.get_images(task_atlas_texture_array)[0];
@@ -385,12 +377,12 @@ auto main() -> int
         .used_buffers = {
             {renderable_chunks_task_buffer_id, daxa::TaskBufferAccess::VERTEX_SHADER_READ},
         },
-        .task = [&](daxa::TaskInterface<> task_runtime)
+        .task = [&](daxa::TaskInterface task_runtime)
         {
             auto cmd_list = task_runtime.get_command_list();
             auto staging_input_buffer = device.create_buffer({
-                .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                 .size = sizeof(PerframeInput),
+                .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                 .name = "staging_input_buffer",
             });
             cmd_list.destroy_buffer_deferred(staging_input_buffer);
@@ -414,7 +406,7 @@ auto main() -> int
             {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
             {task_depth_image, daxa::TaskImageAccess::DEPTH_ATTACHMENT, daxa::ImageMipArraySlice{.image_aspect = daxa::ImageAspectFlagBits::DEPTH}},
         },
-        .task = [&](daxa::TaskInterface<> task_runtime)
+        .task = [&](daxa::TaskInterface task_runtime)
         {
             auto cmd_list = task_runtime.get_command_list();
             auto swapchain_image = task_runtime.get_images(task_swapchain_image)[0];

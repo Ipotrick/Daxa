@@ -244,8 +244,8 @@ struct App : AppWindow<App>
         });
 
         auto vertex_staging_buffer = device.create_buffer({
-            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .size = sizeof(DrawVertex) * MAX_VERTS,
+            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .name = APPNAME_PREFIX("vertex_staging_buffer"),
         });
         cmd_list.destroy_buffer_deferred(vertex_staging_buffer);

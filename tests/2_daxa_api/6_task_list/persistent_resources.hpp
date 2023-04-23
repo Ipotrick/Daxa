@@ -23,7 +23,7 @@ namespace tests
         daxa::Device device = daxa_ctx.create_device({ .name = "device", });
         auto buffer = device.create_buffer({
            .size = 1,
-           .allocate_info = daxa::AutoAllocInfo{.flags = daxa::MemoryFlagBits::DEDICATED_MEMORY},
+           .allocate_info = daxa::MemoryFlagBits::DEDICATED_MEMORY,
            .name = "actual buffer",
         });
 
@@ -47,16 +47,16 @@ namespace tests
         task_list_A.use_persistent_buffer(persistent_task_buffer);
         task_list_B.use_persistent_buffer(persistent_task_buffer);
         task_list_A.add_task({
-           .args = {daxa::TaskBufferUse{{ .id = persistent_task_buffer.id(), .access = daxa::TaskBufferAccess::SHADER_WRITE }}},
-           .task = [&](daxa::TaskInterface<> const &) { },
+           .uses = {daxa::TaskBufferUse<daxa::TaskBufferAccess::SHADER_WRITE>{persistent_task_buffer}},
+           .task = [&](daxa::TaskInterface const &) { },
            .name = "write persistent buffer",
         });
         task_list_A.submit({});
         task_list_A.complete({});
 
         task_list_B.add_task({
-           .args = {daxa::TaskBufferUse{{ .id = persistent_task_buffer.id(), .access = daxa::TaskBufferAccess::SHADER_READ }}},
-           .task = [&](daxa::TaskInterface<> const &) { },
+           .uses = {daxa::TaskBufferUse<daxa::TaskBufferAccess::SHADER_READ>{persistent_task_buffer}},
+           .task = [&](daxa::TaskInterface const &) { },
            .name = "read persistent buffer",
         });
         task_list_B.submit({});
@@ -117,13 +117,13 @@ namespace tests
 
         task_list_A.use_persistent_image(persistent_task_image);
         task_list_A.add_task({
-           .args = {daxa::TaskImageUse{{ .id = persistent_task_image, .access = daxa::TaskImageAccess::SHADER_WRITE }}},
-           .task = [&](daxa::TaskInterface<> const &) { },
+           .uses = {daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_WRITE>{persistent_task_image}},
+           .task = [&](daxa::TaskInterface const &) { },
            .name = "write persistent image",
         });
         task_list_A.add_task({
-           .args = {daxa::TaskImageUse{{ .id = persistent_task_image, .access = daxa::TaskImageAccess::COLOR_ATTACHMENT }}},
-           .task = [&](daxa::TaskInterface<> const &) { },
+           .uses = {daxa::TaskImageUse<daxa::TaskImageAccess::COLOR_ATTACHMENT>{persistent_task_image}},
+           .task = [&](daxa::TaskInterface const &) { },
            .name = "persistent image - color attachment",
         });
         task_list_A.submit({});
@@ -136,8 +136,8 @@ namespace tests
         });
         task_list_B.use_persistent_image(persistent_task_image);
         task_list_B.add_task({
-           .args = {daxa::TaskImageUse{{ .id = persistent_task_image, .access = daxa::TaskImageAccess::SHADER_READ }}},
-           .task = [&](daxa::TaskInterface<> const &) { },
+           .uses = {daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_READ>{persistent_task_image}},
+           .task = [&](daxa::TaskInterface const &) { },
            .name = "read persistent image",
         });
         task_list_B.submit({});
