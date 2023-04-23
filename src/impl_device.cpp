@@ -26,9 +26,9 @@ namespace daxa
 
     auto initialize_image_create_info_from_image_info(ImageInfo const & image_info, u32 const * queue_family_index_ptr) -> VkImageCreateInfo
     {
-                DAXA_DBG_ASSERT_TRUE_M(std::popcount(image_info.sample_count) == 1 && image_info.sample_count <= 64, "image samples must be power of two and between 1 and 64(inclusive)");
+        DAXA_DBG_ASSERT_TRUE_M(std::popcount(image_info.sample_count) == 1 && image_info.sample_count <= 64, "image samples must be power of two and between 1 and 64(inclusive)");
         DAXA_DBG_ASSERT_TRUE_M(
-            image_info.size.x > 0 && 
+            image_info.size.x > 0 &&
                 image_info.size.y > 0 &&
                 image_info.size.z > 0,
             "image (x,y,z) dimensions must be greater then 0");
@@ -79,7 +79,7 @@ namespace daxa
 
         VkMemoryRequirements requirements = std::bit_cast<VkMemoryRequirements>(info.requirements);
         VmaAllocationCreateFlags const flags = std::bit_cast<VmaAllocationCreateFlags>(info.flags);
-        VmaAllocationCreateInfo create_info {
+        VmaAllocationCreateInfo create_info{
             .flags = flags,
             .usage = VMA_MEMORY_USAGE_GPU_ONLY,
             .requiredFlags = {}, // idk what this is...
@@ -93,7 +93,7 @@ namespace daxa
         VmaAllocationInfo allocation_info = {};
         vmaAllocateMemory(impl.vma_allocator, &requirements, &create_info, &allocation, &allocation_info);
 
-        return MemoryBlock{ ManagedPtr{ new ImplMemoryBlock(this->make_weak(), info, allocation, allocation_info) } };
+        return MemoryBlock{ManagedPtr{new ImplMemoryBlock(this->make_weak(), info, allocation, allocation_info)}};
     }
 
     auto Device::get_memory_requirements(BufferInfo const & info) -> MemoryRequirements
@@ -109,7 +109,7 @@ namespace daxa
             .queueFamilyIndexCount = 1,
             .pQueueFamilyIndices = &impl.main_queue_family_index,
         };
-        VkDeviceBufferMemoryRequirements buffer_requirement_info {
+        VkDeviceBufferMemoryRequirements buffer_requirement_info{
             .sType = VK_STRUCTURE_TYPE_DEVICE_BUFFER_MEMORY_REQUIREMENTS,
             .pNext = {},
             .pCreateInfo = &vk_buffer_create_info,
@@ -128,12 +128,12 @@ namespace daxa
     {
         auto const & impl = *as<ImplDevice>();
         VkImageCreateInfo vk_image_create_info = initialize_image_create_info_from_image_info(info, &impl.main_queue_family_index);
-        VkDeviceImageMemoryRequirements image_requirement_info {
+        VkDeviceImageMemoryRequirements image_requirement_info{
             .sType = VK_STRUCTURE_TYPE_DEVICE_IMAGE_MEMORY_REQUIREMENTS,
             .pNext = {},
             .pCreateInfo = &vk_image_create_info,
         };
-        VkMemoryRequirements2 mem_requirements {
+        VkMemoryRequirements2 mem_requirements{
             .sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2,
             .pNext = {},
             .memoryRequirements = {},
@@ -442,7 +442,7 @@ namespace daxa
         auto const & impl = *as<ImplDevice>();
         return !id.is_empty() && impl.gpu_shader_resource_table.image_slots.is_id_valid(id);
     }
-    
+
     auto Device::is_id_valid(ImageViewId id) const -> bool
     {
         auto const & impl = *as<ImplDevice>();
@@ -1007,7 +1007,7 @@ namespace daxa
 
         bool host_accessible = false;
         VmaAllocationInfo vma_allocation_info = {};
-        if (AutoAllocInfo const* auto_info = std::get_if<AutoAllocInfo>(&buffer_info.allocate_info))
+        if (AutoAllocInfo const * auto_info = std::get_if<AutoAllocInfo>(&buffer_info.allocate_info))
         {
             auto vma_allocation_flags = static_cast<VmaAllocationCreateFlags>(auto_info->data);
             if (((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT) != 0u) ||
@@ -1033,11 +1033,11 @@ namespace daxa
         }
         else
         {
-            ManualAllocInfo const& manual_info = std::get<ManualAllocInfo>(buffer_info.allocate_info);
-            ImplMemoryBlock const& mem_block = *manual_info.memory_block.as<ImplMemoryBlock const>();
+            ManualAllocInfo const & manual_info = std::get<ManualAllocInfo>(buffer_info.allocate_info);
+            ImplMemoryBlock const & mem_block = *manual_info.memory_block.as<ImplMemoryBlock const>();
 
             // TODO(pahrens): Add validation for memory type requirements.
-            
+
             vkCreateBuffer(this->vk_device, &vk_buffer_create_info, nullptr, &ret.vk_buffer);
 
             vmaBindBufferMemory2(
@@ -1129,7 +1129,7 @@ namespace daxa
             },
             .name = image_info.name,
         };
-        
+
         VkImageViewCreateInfo const view_ci{
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .pNext = nullptr,
@@ -1188,7 +1188,7 @@ namespace daxa
     auto ImplDevice::new_image(ImageInfo const & image_info) -> ImageId
     {
         auto [id, image_slot_variant] = gpu_shader_resource_table.image_slots.new_slot();
-        
+
         DAXA_DBG_ASSERT_TRUE_M(image_info.dimensions >= 1 && image_info.dimensions <= 3, "image dimensions must be a value between 1 to 3(inclusive)");
 
         ImplImageSlot ret = {};
@@ -1210,7 +1210,7 @@ namespace daxa
 
         VkImageCreateInfo const vk_image_create_info = initialize_image_create_info_from_image_info(image_info, &this->main_queue_family_index);
 
-        if (AutoAllocInfo const* auto_info = std::get_if<AutoAllocInfo>(&image_info.allocate_info))
+        if (AutoAllocInfo const * auto_info = std::get_if<AutoAllocInfo>(&image_info.allocate_info))
         {
             VmaAllocationCreateInfo const vma_allocation_create_info{
                 .flags = static_cast<VmaAllocationCreateFlags>(auto_info->data),
@@ -1228,8 +1228,8 @@ namespace daxa
         }
         else
         {
-            ManualAllocInfo const& manual_info = std::get<ManualAllocInfo>(image_info.allocate_info);
-            ImplMemoryBlock const& mem_block = *manual_info.memory_block.as<ImplMemoryBlock const>();
+            ManualAllocInfo const & manual_info = std::get<ManualAllocInfo>(image_info.allocate_info);
+            ImplMemoryBlock const & mem_block = *manual_info.memory_block.as<ImplMemoryBlock const>();
             // TODO(pahrens): Add validation for memory requirements.
             [[maybe_unused]] VkResult const vk_create_image_result = vkCreateImage(this->vk_device, &vk_image_create_info, nullptr, &ret.vk_image);
             DAXA_DBG_ASSERT_TRUE_M(vk_create_image_result == VK_SUCCESS, "failed to create image");
@@ -1238,8 +1238,7 @@ namespace daxa
                 mem_block.allocation,
                 manual_info.offset,
                 ret.vk_image,
-                {}
-            );
+                {});
         }
 
         VkImageViewType vk_image_view_type = {};
