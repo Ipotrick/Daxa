@@ -327,7 +327,7 @@ namespace daxa
         u32 prev_frame_permutation_index = {};
         std::stringstream debug_string_stream = {};
 
-        auto get_actual_buffers(TaskBufferHandle id) const -> std::span<BufferId const>;
+        auto get_actual_buffers(TaskBufferHandle id, TaskListPermutation const & perm) const -> std::span<BufferId const>;
         auto get_actual_images(TaskImageHandle id, TaskListPermutation const & perm) const -> std::span<ImageId const>;
         auto id_to_local_id(TaskBufferHandle id) const -> TaskBufferHandle;
         auto id_to_local_id(TaskImageHandle id) const -> TaskImageHandle;
