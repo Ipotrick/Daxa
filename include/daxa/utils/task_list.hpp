@@ -23,6 +23,7 @@ namespace daxa
     {
         auto operator[](TaskBufferHandle const & handle) const -> TaskBufferUse<> const &;
         auto operator[](TaskImageHandle const & handle) const -> TaskImageUse<> const &;
+
       protected:
         friend struct ImplTaskRuntimeInterface;
         friend struct TaskList;
@@ -39,6 +40,7 @@ namespace daxa
         auto get_allocator() const -> TransferMemoryPool &;
 
         TaskInterfaceUses uses;
+
       protected:
         friend struct ImplTaskRuntimeInterface;
         friend struct TaskList;
