@@ -143,7 +143,7 @@ struct RenderableChunk
 {
     std::unique_ptr<VoxelChunk> chunk = std::make_unique<VoxelChunk>();
     daxa::BufferId face_buffer;
-    daxa::TaskBufferId task_face_buffer;
+    daxa::TaskBufferHandle task_face_buffer;
     std::mutex update_mtx{};
     // daxa::BufferId water_face_buffer;
     // daxa::TaskBufferId task_water_face_buffer;
@@ -293,8 +293,8 @@ void load_textures_commands(daxa::Device & device, daxa::CommandList & cmd_list,
 {
     usize const image_size = 16 * 16 * sizeof(u8) * 4;
     auto texture_staging_buffer = device.create_buffer({
-        .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
         .size = static_cast<u32>(image_size * texture_names.size()),
+        .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
         .name = "texture_staging_buffer",
     });
     cmd_list.destroy_buffer_deferred(texture_staging_buffer);

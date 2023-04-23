@@ -6,8 +6,7 @@ namespace tests
 {
     void mipmapping()
     {
-        using IA = daxa::TaskImageAccess;
-        using BA = daxa::TaskBufferAccess;
+        using namespace daxa::task_resource_uses;
         struct App : AppWindow<App>
         {
             daxa::Context daxa_ctx = daxa::create_context({
@@ -102,7 +101,7 @@ namespace tests
                 return ret;
             }();
 
-            daxa::TaskBufferId task_staging_mipmapping_gpu_input_buffer;
+            daxa::TaskBufferHandle task_staging_mipmapping_gpu_input_buffer;
 
             bool mouse_drawing = false;
 
@@ -444,6 +443,44 @@ namespace tests
 
             auto record_tasks() -> daxa::TaskList
             {
+                struct MipMapTask
+                {
+                    struct Uses
+                    {
+                        ImageTransferRead<> lower_mip{};
+                        ImageTransferWrite<> higher_mip{};
+                    } uses = {};
+                    std::string name = "mip map";
+
+                    u32 mip = {};
+                    std::array<i32, 3> mip_size = {};
+                    std::array<i32, 3> next_mip_size = {};
+                    
+                    void callback(daxa::TaskInterface ti)
+                    {
+                        auto cmd_list = ti.get_command_list();
+                        cmd_list.blit_image_to_image({
+                            .src_image = uses.lower_mip.image(),
+                            .dst_image = uses.higher_mip.image(),
+                            .src_slice = {
+                                .image_aspect = uses.lower_mip.handle.slice.image_aspect,
+                                .mip_level = mip,
+                                .base_array_layer = 0,
+                                .layer_count = 1,
+                            },
+                            .src_offsets = {{{0, 0, 0}, {mip_size[0], mip_size[1], mip_size[2]}}},
+                            .dst_slice = {
+                                .image_aspect = uses.higher_mip.handle.slice.image_aspect,
+                                .mip_level = mip + 1,
+                                .base_array_layer = 0,
+                                .layer_count = 1,
+                            },
+                            .dst_offsets = {{{0, 0, 0}, {next_mip_size[0], next_mip_size[1], next_mip_size[2]}}},
+                            .filter = daxa::Filter::LINEAR,
+                        });
+                    }
+                };
+
                 daxa::TaskList new_task_list = daxa::TaskList({
                     .device = device,
                     .swapchain = swapchain,
@@ -456,13 +493,13 @@ namespace tests
                 new_task_list.use_persistent_buffer(task_mipmapping_gpu_input_buffer);
                 new_task_list.use_persistent_image(task_render_image);
                 new_task_list.add_task({
-                    .args = {
-                        daxa::TaskBufferUse{{task_mipmapping_gpu_input_buffer, BA::HOST_TRANSFER_WRITE}},
+                    .uses = {
+                        BufferHostTransferWrite{task_mipmapping_gpu_input_buffer},
                     },
-                    .task = [this](daxa::TaskInterface<> const & ti)
+                    .task = [this](daxa::TaskInterface const & ti)
                     {
                         auto cmd_list = ti.get_command_list();
-                        update_gpu_input(cmd_list, ti.buffer(task_mipmapping_gpu_input_buffer));
+                        update_gpu_input(cmd_list, ti.uses[task_mipmapping_gpu_input_buffer].buffer());
                     },
                     .name = "Input Transfer",
                 });
@@ -471,14 +508,14 @@ namespace tests
                     .when_true = [&]()
                     {
                         new_task_list.add_task({
-                            .args = {
-                                daxa::TaskBufferUse{{task_mipmapping_gpu_input_buffer, BA::COMPUTE_SHADER_READ}},
-                                daxa::TaskImageUse{{task_render_image, IA::COMPUTE_SHADER_READ_WRITE}},
+                            .uses = {
+                                BufferComputeShaderRead{task_mipmapping_gpu_input_buffer},
+                                ImageComputeShaderReadWrite<>{task_render_image},
                             },
-                            .task = [=, this](daxa::TaskInterface<> const & ti)
+                            .task = [=, this](daxa::TaskInterface const & ti)
                             {
                                 auto cmd_list = ti.get_command_list();
-                                paint(cmd_list, ti.image(task_render_image), ti.buffer(task_mipmapping_gpu_input_buffer));
+                                paint(cmd_list, ti.uses[task_render_image].image(), ti.uses[task_mipmapping_gpu_input_buffer].buffer());
                             },
                             .name = "mouse paint",
                         });
@@ -488,67 +525,15 @@ namespace tests
                             for (u32 i = 0; i < image_info.mip_level_count - 1; ++i)
                             {
                                 std::array<i32, 3> next_mip_size = {std::max<i32>(1, mip_size[0] / 2), std::max<i32>(1, mip_size[1] / 2), std::max<i32>(1, mip_size[2] / 2)};
-
-                                // Demonstration of explicit struct for task resource uses.
-                                // This interface allows tasks to be defined in seperate files very conveniently.
-                                // All fields in these structs MUST be either daxa::TaskBufferUse or daxa::TaskImageUse!
-                                struct MipUsesStruct
-                                {
-                                    daxa::TaskImageUse lower_mip = {{{}, IA::TRANSFER_READ}};
-                                    daxa::TaskImageUse higher_mip = {{{}, IA::TRANSFER_WRITE}};
-                                };
-                                using MipUses = daxa::TaskUses<MipUsesStruct>;
-
-                                // Constants cann be piggybaged inside of the args by inheriting a use struct.
-                                // This struct can contain any trivially copyable data.
-                                struct MipArgs : public MipUses
-                                {
-                                    u32 mip = {};
-                                    std::array<i32, 3> mip_size = {};
-                                    std::array<i32, 3> next_mip_size = {};
-                                } input;
-
-                                input.lower_mip.id = task_render_image;
-                                input.lower_mip.slice.base_mip_level = i;
-
-                                input.higher_mip.id = task_render_image;
-                                input.higher_mip.slice.base_mip_level = i + 1;
-
-                                input.mip = i;
-                                input.mip_size = mip_size;
-                                input.next_mip_size = next_mip_size;
-
-                                new_task_list.add_task(daxa::TaskInfo<MipArgs>{
-                                    .args = input,
-                                    // Note that this lambda does NOT capture!
-                                    // It is using the task args to transport the uses and the constants to the callback.
-                                    .task = [](daxa::TaskInterface<MipArgs> const & ti)
-                                    {
-                                        auto cmd_list = ti.get_command_list();
-
-                                        [[maybe_unused]] auto const lower_mip_view = ti->lower_mip.view();
-                                        [[maybe_unused]] auto const higher_mip_view = ti->higher_mip.view();
-                                        cmd_list.blit_image_to_image({
-                                            .src_image = ti->lower_mip.image(),
-                                            .dst_image = ti->higher_mip.image(),
-                                            .src_slice = {
-                                                .image_aspect = ti->lower_mip.slice.image_aspect,
-                                                .mip_level = ti->mip,
-                                                .base_array_layer = 0,
-                                                .layer_count = 1,
-                                            },
-                                            .src_offsets = {{{0, 0, 0}, {ti->mip_size[0], ti->mip_size[1], ti->mip_size[2]}}},
-                                            .dst_slice = {
-                                                .image_aspect = ti->higher_mip.slice.image_aspect,
-                                                .mip_level = ti->mip + 1,
-                                                .base_array_layer = 0,
-                                                .layer_count = 1,
-                                            },
-                                            .dst_offsets = {{{0, 0, 0}, {ti->next_mip_size[0], ti->next_mip_size[1], ti->next_mip_size[2]}}},
-                                            .filter = daxa::Filter::LINEAR,
-                                        });
+                                new_task_list.add_task(MipMapTask{
+                                    .uses = {
+                                        .lower_mip = task_render_image.handle().subslice({.base_mip_level = i}),
+                                        .higher_mip = task_render_image.handle().subslice({.base_mip_level = i+1}),
                                     },
-                                    .name = "mip_level_" + std::to_string(i),
+                                    .name = std::string("mip map ") + std::to_string(i),
+                                    .mip = i,
+                                    .mip_size = mip_size,
+                                    .next_mip_size = next_mip_size,
                                 });
                                 mip_size = next_mip_size;
                             }
@@ -556,27 +541,27 @@ namespace tests
                     },
                 });
                 new_task_list.add_task({
-                    .args = {daxa::TaskImageUse{{task_swapchain_image, IA::TRANSFER_WRITE}}},
-                    .task = [=](daxa::TaskInterface<> const & ti)
+                    .uses = {ImageTransferWrite{task_swapchain_image}},
+                    .task = [=](daxa::TaskInterface const & ti)
                     {
                         auto cmd_list = ti.get_command_list();
                         cmd_list.clear_image({
                             .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                             .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
-                            .dst_image = ti.image(task_swapchain_image),
+                            .dst_image = ti.uses[task_swapchain_image].image(),
                         });
                     },
                     .name = "clear swapchain",
                 });
                 new_task_list.add_task({
-                    .args = {
-                        daxa::TaskImageUse{{task_render_image, IA::TRANSFER_READ, {.level_count = 5}}},
-                        daxa::TaskImageUse{{task_swapchain_image, IA::TRANSFER_WRITE}},
+                    .uses = {
+                        ImageTransferRead{task_render_image.handle().subslice({.level_count = 5})},
+                        ImageTransferWrite{task_swapchain_image},
                     },
-                    .task = [this](daxa::TaskInterface<> const & ti)
+                    .task = [this](daxa::TaskInterface const & ti)
                     {
-                        daxa::ImageId render_img = ti.image(task_render_image);
-                        daxa::ImageId swapchain_img = ti.image(task_swapchain_image);
+                        daxa::ImageId render_img = ti.uses[task_render_image].image();
+                        daxa::ImageId swapchain_img = ti.uses[task_swapchain_image].image();
 
                         auto cmd_list = ti.get_command_list();
                         this->blit_image_to_swapchain(cmd_list, render_img, swapchain_img);
@@ -584,11 +569,11 @@ namespace tests
                     .name = "blit to swapchain",
                 });
                 new_task_list.add_task({
-                    .args = {daxa::TaskImageUse{{task_swapchain_image, IA::COLOR_ATTACHMENT}}},
-                    .task = [=, this](daxa::TaskInterface<> const & ti)
+                    .uses = {ImageColorAttachment{task_swapchain_image}},
+                    .task = [=, this](daxa::TaskInterface const & ti)
                     {
                         auto cmd_list = ti.get_command_list();
-                        this->draw_ui(cmd_list, ti.image(task_swapchain_image));
+                        this->draw_ui(cmd_list, ti.uses[task_swapchain_image].image());
                     },
                     .name = "Imgui",
                 });

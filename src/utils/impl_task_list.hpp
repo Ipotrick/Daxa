@@ -84,7 +84,7 @@ namespace daxa
     {
         // when this ID is invalid, this barrier is NOT an image memory barrier but just a memory barrier.
         // So when ID invalid => memory barrier, ID valid => image memory barrier.
-        TaskImageId image_id = {};
+        TaskImageHandle image_id = {};
         ImageMipArraySlice slice = {};
         ImageLayout layout_before = {};
         ImageLayout layout_after = {};
@@ -99,9 +99,11 @@ namespace daxa
         SplitBarrierState split_barrier_state;
     };
 
-    struct Task
+    struct ImplTask
     {
-        GenericTaskInfo info = {};
+        std::unique_ptr<BaseTask> base_task = {};
+        u32 constant_buffer_size = {};
+        std::vector<u32> use_offsets = {};
         std::vector<std::vector<ImageViewId>> image_view_cache = {};
     };
 
@@ -140,7 +142,7 @@ namespace daxa
         // record time information:
         bool active = {};
         // persistent information:
-        TaskImageId swapchain_image = {};
+        TaskImageHandle swapchain_image = {};
         std::vector<PerPermTaskBuffer> buffer_infos = {};
         std::vector<PerPermTaskImage> image_infos = {};
         std::vector<TaskSplitBarrier> split_barriers = {};
@@ -153,7 +155,7 @@ namespace daxa
         usize swapchain_image_first_use_submit_scope_index = std::numeric_limits<usize>::max();
         usize swapchain_image_last_use_submit_scope_index = std::numeric_limits<usize>::max();
 
-        void add_task(TaskId task_id, ImplTaskList & task_list_impl, GenericTaskInfo & info);
+        void add_task(TaskId task_id, ImplTaskList & task_list_impl, BaseTask & task);
         void submit(TaskSubmitInfo const & info);
         void present(TaskPresentInfo const & info);
     };
@@ -284,8 +286,6 @@ namespace daxa
         }
     };
 
-    auto to_string(ImplTaskList const & impl, TaskImageUseInit const & use, usize index) -> std::string;
-
     struct ImplTaskList final : ManagedSharedState
     {
         ImplTaskList(TaskListInfo a_info);
@@ -298,7 +298,7 @@ namespace daxa
         std::vector<PermIndepTaskBufferInfo> global_buffer_infos = {};
         std::vector<PermIndepTaskImageInfo> global_image_infos = {};
         std::vector<TaskListPermutation> permutations = {};
-        std::vector<Task> tasks = {};
+        std::vector<ImplTask> tasks = {};
         // TODO: replace with faster hash map.
         std::unordered_map<u32, u32> persistent_buffer_index_to_local_index;
         std::unordered_map<u32, u32> persistent_image_index_to_local_index;
@@ -307,8 +307,8 @@ namespace daxa
         u32 record_active_conditional_scopes = {};
         u32 record_conditional_states = {};
         std::vector<TaskListPermutation *> record_active_permutations = {};
-        std::unordered_map<std::string, TaskBufferId> buffer_name_to_id = {};
-        std::unordered_map<std::string, TaskImageId> image_name_to_id = {};
+        std::unordered_map<std::string, TaskBufferHandle> buffer_name_to_id = {};
+        std::unordered_map<std::string, TaskImageHandle> image_name_to_id = {};
 
         usize memory_block_size = {};
         u32 memory_type_bits = 0xFFFFFFFFu;
@@ -327,27 +327,27 @@ namespace daxa
         u32 prev_frame_permutation_index = {};
         std::stringstream debug_string_stream = {};
 
-        auto get_actual_buffers(TaskBufferId id, TaskListPermutation const & perm) const -> std::span<BufferId const>;
-        auto get_actual_images(TaskImageId id, TaskListPermutation const & perm) const -> std::span<ImageId const>;
-        auto id_to_local_id(TaskBufferId id) const -> TaskBufferId;
-        auto id_to_local_id(TaskImageId id) const -> TaskImageId;
+        auto get_actual_buffers(TaskBufferHandle id) const -> std::span<BufferId const>;
+        auto get_actual_images(TaskImageHandle id, TaskListPermutation const & perm) const -> std::span<ImageId const>;
+        auto id_to_local_id(TaskBufferHandle id) const -> TaskBufferHandle;
+        auto id_to_local_id(TaskImageHandle id) const -> TaskImageHandle;
         void update_active_permutations();
-        void update_image_view_cache(Task & task, TaskListPermutation const & permutation);
+        void update_image_view_cache(ImplTask & task, TaskListPermutation const & permutation);
         void execute_task(ImplTaskRuntimeInterface & impl_runtime, TaskListPermutation & permutation, TaskBatchId in_batch_task_index, TaskId task_id);
         void insert_pre_batch_barriers(TaskListPermutation & permutation);
 
-        void check_for_overlapping_use(GenericTaskInfo const & info);
+        void check_for_overlapping_use(BaseTask & task);
 
         void create_transient_runtime_buffers(TaskListPermutation & permutation);
         void create_transient_runtime_images(TaskListPermutation & permutation);
         void allocate_transient_resources();
 
-        void print_task_buffer_to(std::string & out, std::string indent, TaskListPermutation const & permutation, TaskBufferId local_id);
-        void print_task_image_to(std::string & out, std::string indent, TaskListPermutation const & permutation, TaskImageId image);
+        void print_task_buffer_to(std::string & out, std::string indent, TaskListPermutation const & permutation, TaskBufferHandle local_id);
+        void print_task_image_to(std::string & out, std::string indent, TaskListPermutation const & permutation, TaskImageHandle image);
         void print_task_barrier_to(std::string & out, std::string & indent, TaskListPermutation const & permutation, usize index);
         void print_task_to(std::string & out, std::string & indent, TaskListPermutation const & permutation, TaskId task_id);
-        void debug_print_permutation_image(TaskListPermutation const & permutation, TaskImageId const image_id);
-        void debug_print_permutation_buffer(TaskListPermutation const & permutation, TaskBufferId const buffer_id);
+        void debug_print_permutation_image(TaskListPermutation const & permutation, TaskImageHandle const image_id);
+        void debug_print_permutation_buffer(TaskListPermutation const & permutation, TaskBufferHandle const buffer_id);
         void debug_print();
     };
 
@@ -356,7 +356,7 @@ namespace daxa
         // interface:
         ImplTaskList & task_list;
         TaskListPermutation & permutation;
-        Task * current_task = {};
+        ImplTask * current_task = {};
         bool reuse_last_command_list = true;
         std::vector<CommandList> command_lists = {};
         std::optional<BinarySemaphore> last_submit_semaphore = {};

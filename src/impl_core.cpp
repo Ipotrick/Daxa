@@ -297,6 +297,16 @@ namespace daxa
         return ManagedWeakPtr(this->object);
     }
 
+    auto ManagedPtr::is_valid() const -> bool
+    {
+        return this->object != nullptr;
+    }
+
+    ManagedPtr::operator bool() const
+    {
+        return this->is_valid();
+    }
+
     ManagedWeakPtr::ManagedWeakPtr(ManagedSharedState * ptr) : object{ptr}
     {
         DAXA_ATOMIC_FETCH_INC(object->weak_count);

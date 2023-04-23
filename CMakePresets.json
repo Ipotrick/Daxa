@@ -19,6 +19,7 @@
                 "DAXA_ENABLE_UTILS_MEM": true,
                 "DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG": true,
                 "DAXA_ENABLE_UTILS_PIPELINE_MANAGER_DXC": true,
+                "DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION": true,
                 "DAXA_ENABLE_UTILS_TASK_LIST": true,
                 "DAXA_ENABLE_TESTS": true,
                 "DAXA_ENABLE_STATIC_ANALYSIS": false
