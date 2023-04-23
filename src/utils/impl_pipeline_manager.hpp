@@ -23,6 +23,10 @@ using ComPtr = CComPtr<T>;
 #include <glslang/Include/ResourceLimits.h>
 #endif
 
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION
+#include <spirv-tools/libspirv.hpp>
+#endif
+
 namespace daxa
 {
     struct ImplDevice;
@@ -89,6 +93,10 @@ namespace daxa
             std::shared_ptr<IDxcIncludeHandler> dxc_includer = nullptr;
         };
         DxcBackend dxc_backend = {};
+#endif
+
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION
+        spvtools::SpirvTools spirv_tools = spvtools::SpirvTools{SPV_ENV_VULKAN_1_3};
 #endif
 
         ImplPipelineManager(PipelineManagerInfo && a_info);
