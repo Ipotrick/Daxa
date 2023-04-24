@@ -41,7 +41,7 @@ namespace daxa
     namespace detail
     {
         template <typename T, usize N>
-        struct GenericVecMembers
+        struct GenericVector
         {
             std::array<T, N> array;
             constexpr T & operator[](usize i) noexcept { return array[i]; }
@@ -49,7 +49,7 @@ namespace daxa
         };
 
         template <typename T>
-        struct GenericVecMembers<T, 2>
+        struct GenericVector<T, 2>
         {
             T x, y;
             constexpr T & operator[](usize i) noexcept
@@ -70,7 +70,7 @@ namespace daxa
             }
         };
         template <typename T>
-        struct GenericVecMembers<T, 3>
+        struct GenericVector<T, 3>
         {
             T x, y, z;
             constexpr T & operator[](usize i) noexcept
@@ -93,7 +93,7 @@ namespace daxa
             }
         };
         template <typename T>
-        struct GenericVecMembers<T, 4>
+        struct GenericVector<T, 4>
         {
             T x, y, z, w;
             constexpr T & operator[](usize i) noexcept
@@ -118,15 +118,8 @@ namespace daxa
             }
         };
 
-        template <typename T, usize N>
-        struct GenericVector : GenericVecMembers<T, N>
-        {
-        };
-
         template <typename T, usize M, usize N>
-        struct GenericMatrix : GenericVector<GenericVector<T, N>, M>
-        {
-        };
+        using GenericMatrix = GenericVector<GenericVector<T, N>, M>;
     } // namespace detail
 
     inline namespace types {
@@ -182,77 +175,6 @@ namespace daxa
         using u32mat4x2 = detail::GenericMatrix<u32, 4, 2>;
         using u32mat4x3 = detail::GenericMatrix<u32, 4, 3>;
         using u32mat4x4 = detail::GenericMatrix<u32, 4, 4>;
-
-        template <typename T>
-        struct scalar_type
-        {
-            using type = T;
-        };
-
-        template <typename T>
-        using scalar_type_t = typename scalar_type<T>::type;
-        template <typename SCALAR, usize DIM0, usize DIM1>
-        struct scalar_type<detail::GenericMatrix<SCALAR, DIM0, DIM1>>
-        {
-            using type = SCALAR;
-        };
-        template <typename SCALAR, usize DIM>
-        struct scalar_type<detail::GenericVector<SCALAR, DIM>>
-        {
-            using type = SCALAR;
-        };
-
-        template <typename T>
-        struct alignas(sizeof(scalar_type_t<T>)) ShaderAlignedType
-        {
-            T value = T{};
-            ShaderAlignedType() = default;
-            template<typename ANY_SCALAR>
-            requires (std::is_convertible_v<ANY_SCALAR, scalar_type_t<T>>)
-            ShaderAlignedType(ANY_SCALAR const & v) : value{static_cast<scalar_type_t<T>>(v)} {}
-            operator T &()
-            {
-                return value;
-            }
-            operator T const &() const
-            {
-                return value;
-            }
-            auto operator &() -> T*
-            {
-                return &value;
-            }
-            auto operator &() const -> T const*
-            {
-                return &value;
-            }
-        };
-
-        template <typename SCALAR, usize DIM>
-        struct alignas(sizeof(SCALAR)) ShaderAlignedType<detail::GenericVector<SCALAR, DIM>> : public detail::GenericVector<SCALAR, DIM>
-        {
-            ShaderAlignedType<detail::GenericVector<SCALAR, DIM>>() = default;
-            template<typename ... Args>
-            ShaderAlignedType<detail::GenericVector<SCALAR, DIM>>(Args&& ... args) : detail::GenericVector<SCALAR, DIM>{args...} {}
-            template<typename ... Args>
-            ShaderAlignedType<detail::GenericVector<SCALAR, DIM>> operator=(Args&& ... args) { detail::GenericVector<SCALAR, DIM>::operator=(args...); return *this; }
-        };
-        
-        template <typename SCALAR, usize DIM0, usize DIM1>
-        struct alignas(sizeof(SCALAR)) ShaderAlignedType<detail::GenericMatrix<SCALAR, DIM0, DIM1>> : public detail::GenericMatrix<SCALAR, DIM0, DIM1>
-        {
-            ShaderAlignedType<detail::GenericMatrix<SCALAR, DIM0, DIM1>>() = default;
-            template<typename ... Args>
-            ShaderAlignedType<detail::GenericMatrix<SCALAR, DIM0, DIM1>>(Args&& ... args) : detail::GenericMatrix<SCALAR, DIM0, DIM1>{args...} {}
-            template<typename ... Args>
-            ShaderAlignedType<detail::GenericMatrix<SCALAR, DIM0, DIM1>> operator=(Args&& ... args) { detail::GenericMatrix<SCALAR, DIM0, DIM1>::operator=(args...); return *this; }
-        };
-
-        template <typename T>
-        struct scalar_type<ShaderAlignedType<T>>
-        {
-            using type = scalar_type_t<T>;
-        };
     } // namespace types
 
     enum struct Format
