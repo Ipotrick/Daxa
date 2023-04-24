@@ -243,17 +243,17 @@ namespace tests
                 BufferComputeShaderWrite{f32_buffer},
                 ImageComputeShaderWrite{f32_image},
             },
-            .task = [&](daxa::TaskInterface const & ti)
+            .task = [&](daxa::TaskInterface ti)
             {
                 auto cmd = ti.get_command_list();
                 cmd.set_pipeline(*bindless_access);
                 cmd.push_constant(BindlessTestPush{
                     .handles = {
-                        .my_buffer = ti.device_address(f32_buffer),
-                        .my_image = {ti.view(f32_image)},
+                        .my_buffer = ti.get_device().get_device_address(ti.uses[f32_buffer].buffer()),
+                        .my_image = {ti.uses[f32_image].image()},
                         .my_sampler = sampler,
                     },
-                    .next_shader_input = ti.device_address(handles_buffer),
+                    .next_shader_input = ti.get_device().get_device_address(ti.uses[handles_buffer].buffer()),
                 });
                 cmd.dispatch(1, 1, 1);
             },
@@ -270,7 +270,7 @@ namespace tests
                 auto cmd = ti.get_command_list();
                 cmd.set_pipeline(*bindless_access_followup);
                 cmd.push_constant(BindlessTestFollowPush{
-                    .shader_input = ti.device_address(handles_buffer),
+                    .shader_input = ti.get_device().get_device_address(ti.uses[handles_buffer].buffer()),
                 });
                 cmd.dispatch(1, 1, 1);
             },
