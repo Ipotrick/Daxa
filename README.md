@@ -9,7 +9,7 @@
 ## What is Daxa?
 Daxa is a GPU api built on Vulkan.
 
-Daxa is a lot simpler and much easier to use then vulkan, but retains the great cpu performance increase of vulkan by not introducing large overhead. It also enforces certain new concepts that are rightfully increasing in popularity like bindless resources or statically generated synchroinization with rendergraphs.
+Daxa is a lot simpler and much easier to use then vulkan, but retains the great cpu performance of vulkan by not introducing large overhead. It also enforces certain new concepts that are rightfully increasing in popularity like bindless resources or statically generated synchroinization with rendergraphs.
 
 Daxa is not meant to be the "ultimate Vulkan can-do-anything abstraction"! It exposes the Vulkan features that I personally (and a few other folks) use. Daxa and its internals are meant to stay reasonably simple to keep it managable to maintain. But anyone is invited to contribute to daxa and add features they may like after consideration by the current maintainers.
 
@@ -21,7 +21,7 @@ If you are intrested in daxa check out the wiki page in this repository!
 
 When I started to learn Vulkan, I realized that Vulkan was too verbose and explicit for my liking. Things like descriptor sets, render-passes, resource destruction, and the general lack of defaults annoyed me. 
 Using raw vulkan with little abstraction also led to hard to adapt and error prone code in my experience. 
-But other libraries and apis like OpenGl also did not satisfy me. Many of the are quite old and were designed in a time with difference concerns, making them hold onto a lot of legacy cruft.
+But other libraries and apis like OpenGl also did not satisfy me. Many of them are quite old and were designed in a time with difference concerns, making them hold onto a lot of legacy cruft.
 
 Aside from these problems i really like vulkan! The api design is much improved over older apis like DirectX11 and OpenGl when building an abstraction on top.
 
