@@ -34,7 +34,7 @@ namespace daxa
             u64 timeline_index = {};
         };
         // Returns nullopt if the allocation fails.
-        auto allocate(u32 size) -> std::optional<Allocation>;
+        auto allocate(u32 size, u32 alignment_requirement = 1) -> std::optional<Allocation>;
         // Returns current timeline index.
         auto timeline_value() const -> usize;
         // Returns timeline semaphore that needs to be signaled with the latest timeline value,
@@ -49,6 +49,7 @@ namespace daxa
         struct TrackedAllocation
         {
             usize timeline_index = {};
+            u32 offset = {};
             u32 size = {};
         };
 

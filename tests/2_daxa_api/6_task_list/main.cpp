@@ -103,13 +103,13 @@ namespace tests
             .name = "task list tested image",
         });
         task_list.add_task({
-            .uses = {ImageComputeShaderWrite{task_image.subslice({.base_array_layer = 0, .layer_count = 1})}},
+            .uses = {ImageComputeShaderWrite<>{task_image.subslice({.base_array_layer = 0, .layer_count = 1})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("write image array layer 1"),
         });
         // READ_IMAGE 1
         task_list.add_task({
-            .uses = {ImageComputeShaderRead{task_image.subslice({.base_array_layer = 1, .layer_count = 1})}},
+            .uses = {ImageComputeShaderRead<>{task_image.subslice({.base_array_layer = 1, .layer_count = 1})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("read image array layer 1"),
         });
@@ -190,12 +190,12 @@ namespace tests
         // CREATE IMAGE
         task_list.use_persistent_image(task_image);
         task_list.add_task({
-            .uses = {ImageComputeShaderRead{task_image.handle().subslice({.base_array_layer = 1, .layer_count = 1})}},
+            .uses = {ImageComputeShaderRead<>{task_image.handle().subslice({.base_array_layer = 1, .layer_count = 1})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("read array layer 2"),
         });
         task_list.add_task({
-            .uses = { ImageComputeShaderWrite{task_image.handle().subslice({.base_array_layer = 0, .layer_count = 1})}},
+            .uses = {ImageComputeShaderWrite<>{task_image.handle().subslice({.base_array_layer = 0, .layer_count = 1})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("write array layer 1"),
         });
@@ -250,22 +250,22 @@ namespace tests
         task_list.use_persistent_image(task_image);
 
         task_list.add_task({
-            .uses = { ImageComputeShaderRead{task_image.handle().subslice({.base_array_layer = 1, .layer_count = 1})}},
+            .uses = {ImageComputeShaderRead<>{task_image.handle().subslice({.base_array_layer = 1, .layer_count = 1})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("read image layer 2"),
         });
         task_list.add_task({
-            .uses = { ImageComputeShaderWrite{task_image.handle().subslice({.base_array_layer = 3, .layer_count = 1})}},
+            .uses = {ImageComputeShaderWrite<>{task_image.handle().subslice({.base_array_layer = 3, .layer_count = 1})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("write image layer 4"),
         });
         task_list.add_task({
-            .uses = { ImageComputeShaderWrite{task_image.handle().subslice({.base_array_layer = 0, .layer_count = 4})}},
+            .uses = {ImageComputeShaderWrite<>{task_image.handle().subslice({.base_array_layer = 0, .layer_count = 4})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("write image layer 1 - 4"),
         });
         task_list.add_task({
-            .uses = { ImageComputeShaderRead{task_image.handle().subslice({.base_array_layer = 0, .layer_count = 4})}},
+            .uses = {ImageComputeShaderRead<>{task_image.handle().subslice({.base_array_layer = 0, .layer_count = 4})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("read image layer 1 - 4"),
         });
@@ -283,6 +283,12 @@ namespace tests
         //  2) Use Compute dispatch to write to image
         //  4) readback and validate
         AppContext app = {};
+        auto dummy = app.device.create_image({
+            .size = {16, 16, 1},
+            .array_layer_count = 1,
+            .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+            .name = "dummy",
+        });
         auto image = app.device.create_image({
             .size = {16, 16, 1},
             .array_layer_count = 1,
@@ -342,8 +348,8 @@ namespace tests
 
         task_list.add_task({
             .uses = daxa::to_generic_uses(ShaderIntegrationTask::Uses{
-                .image = { task_image },
-                .settings = { task_buffer },
+                .settings = {task_buffer},
+                .image = {task_image},
             }),
             .task = [&](daxa::TaskInterface const & ti)
             {
@@ -352,7 +358,23 @@ namespace tests
                 cmd.set_pipeline(*compute_pipeline);
                 cmd.dispatch(1, 1, 1);
             },
+            .constant_buffer_slot = ShaderIntegrationTask::CONSANT_BUFFER_SLOT,
             .name = "write image in compute",
+        });
+        task_list.add_task({
+            .uses = daxa::to_generic_uses(ShaderIntegrationTask::Uses{
+                .settings = {task_buffer},
+                .image = {task_image},
+            }),
+            .task = [&](daxa::TaskInterface const & ti)
+            {
+                [[maybe_unused]] auto img = ti.uses[task_image].image();
+                auto cmd = ti.get_command_list();
+                cmd.set_pipeline(*compute_pipeline);
+                cmd.dispatch(1, 1, 1);
+            },
+            .constant_buffer_slot = ShaderIntegrationTask::CONSANT_BUFFER_SLOT,
+            .name = "write image in compute 2",
         });
         task_list.submit({});
 
@@ -361,6 +383,7 @@ namespace tests
         std::cout << task_list.get_debug_string() << std::endl;
         app.device.wait_idle();
         app.device.destroy_image(image);
+        app.device.destroy_image(dummy);
         app.device.destroy_buffer(buffer);
         app.device.collect_garbage();
     }
@@ -452,16 +475,17 @@ namespace tests
 
 auto main() -> int
 {
-    tests::simplest();
-    tests::execution();
-    tests::write_read_image();
-    tests::write_read_image_layer();
-    tests::create_transfer_read_buffer();
-    tests::initial_layout_access();
-    tests::tracked_slice_barrier_collapsing();
-    tests::correct_read_buffer_task_ordering();
-    tests::sharing_persistent_image();
-    tests::sharing_persistent_buffer();
-    tests::transient_resources();
-    tests::mipmapping();
+    // tests::simplest();
+    // tests::execution();
+    // tests::write_read_image();
+    // tests::write_read_image_layer();
+    // tests::create_transfer_read_buffer();
+    // tests::initial_layout_access();
+    // tests::tracked_slice_barrier_collapsing();
+    // tests::correct_read_buffer_task_ordering();
+    // tests::sharing_persistent_image();
+    // tests::sharing_persistent_buffer();
+    // tests::transient_resources();
+    tests::shader_integration_inl_use();
+    // tests::mipmapping();
 }
