@@ -716,10 +716,10 @@ namespace daxa
     {
         return std::format("aspect: {}, mips: {}-{}, layers: {}-{}",
                            to_string(slice.image_aspect),
-                           slice.base_mip_level,
-                           slice.base_mip_level + slice.level_count - 1,
-                           slice.base_array_layer,
-                           slice.base_array_layer + slice.layer_count - 1);
+                           static_cast<u32>(slice.base_mip_level),
+                           static_cast<u32>(slice.base_mip_level + slice.level_count - 1),
+                           static_cast<u32>(slice.base_array_layer),
+                           static_cast<u32>(slice.base_array_layer + slice.layer_count - 1));
     }
 
     auto to_string(ImageArraySlice slice) -> std::string

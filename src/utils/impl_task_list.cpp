@@ -1233,14 +1233,14 @@ namespace daxa
         // Set persistent task resources to be valid for the permutation.
         for_each(
             task.get_generic_uses(),
-            [&](u32 index, TaskBufferUse<> & arg)
+            [&](u32, TaskBufferUse<> & arg)
             {
                 if (task_list_impl.global_buffer_infos[arg.handle.index].is_persistent())
                 {
                     buffer_infos[arg.handle.index].valid = true;
                 }
             },
-            [&](u32 index, TaskImageUse<> & arg)
+            [&](u32, TaskImageUse<> & arg)
             {
                 if (task_list_impl.global_image_infos[arg.handle.index].is_persistent())
                 {
