@@ -617,13 +617,13 @@ namespace daxa
         {
             ImageMipArraySlice const full_slice = impl.info.device.info_image_view(actual_images[index].default_view()).slice;
             std::string const & name = impl.info.device.info_image(actual_images[index]).name;
-            bool const use_withing_runtime_image_counds =
+            bool const use_within_runtime_image_counts =
                 (access_slice.base_mip_level + access_slice.level_count <= full_slice.base_mip_level + full_slice.level_count) &&
                 (access_slice.base_array_layer + access_slice.layer_count <= full_slice.base_array_layer + full_slice.layer_count);
             [[maybe_unused]] std::string const error_message =
                 std::format("task image argument (arg index: {}, task image: \"{}\", slice: {}) exceeds runtime image (index: {}, name: \"{}\") dimensions ({})!",
                             use_index, task_name, to_string(access_slice), index, name, to_string(full_slice));
-            DAXA_DBG_ASSERT_TRUE_M(use_withing_runtime_image_counds, error_message);
+            DAXA_DBG_ASSERT_TRUE_M(use_within_runtime_image_counts, error_message);
         }
     }
 
@@ -783,7 +783,8 @@ namespace daxa
         bool const upload_args_to_constant_buffer = task.base_task->get_uses_constant_buffer_slot() != -1;
         if (upload_args_to_constant_buffer)
         {
-            auto constant_buffer_alloc = staging_memory.allocate(task.constant_buffer_size).value();
+            u32 const alignment = static_cast<u32>(info.device.properties().limits.min_uniform_buffer_offset_alignment);
+            auto constant_buffer_alloc = staging_memory.allocate(task.constant_buffer_size, alignment).value();
             u8 * host_constant_buffer_ptr = reinterpret_cast<u8 *>(constant_buffer_alloc.host_address);
             auto d = task.base_task->get_generic_uses();
             for_each(
@@ -796,7 +797,9 @@ namespace daxa
                 [&](u32 arg_i, TaskImageUse<> & arg)
                 {
                     auto adr = (host_constant_buffer_ptr + task.use_offsets[arg_i]);
-                    *reinterpret_cast<types::ImageViewId *>(adr) = arg.views[0];
+                    auto ptr = reinterpret_cast<types::ImageViewId *>(adr);
+                    *ptr = arg.views[0];
+                    u32 tester = *reinterpret_cast<u32 *>(ptr);
                 });
             impl_runtime.command_lists.back().set_constant_buffer({
                 .slot = static_cast<u32>(task.base_task->get_uses_constant_buffer_slot()),
@@ -1863,10 +1866,10 @@ namespace daxa
                     .owning_image_idx = image_lifetime.perm_image_idx,
                     .memory_type_bits = mem_requirements.memory_type_bits,
                     .intersection_object = {
-                        .base_mip_level = static_cast<u32>(image_lifetime.start_batch),
-                        .level_count = static_cast<u32>(image_lifetime.end_batch),
-                        .base_array_layer = 0,
-                        .layer_count = static_cast<u32>(mem_requirements.size),
+                        .base_mip_level = static_cast<u8>(image_lifetime.start_batch),
+                        .level_count = static_cast<u8>(image_lifetime.end_batch),
+                        .base_array_layer = static_cast<u16>(0),
+                        .layer_count = static_cast<u16>(mem_requirements.size),
                     }};
 
                 // TODO(msakmary) Fix the intersect functionality so that it is general and does not do hacky stuff like constructing
