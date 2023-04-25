@@ -43,9 +43,9 @@
 #endif
 #elif defined(__cplusplus)
 #include <daxa/daxa.hpp>
-#define DAXA_CONSTANT_BUFFER(SLOT)
+#define DAXA_CONSTANT_BUFFER(SLOT) struct
 #define _DAXA_REGISTER_TEXTURE_TYPE(IMAGE_TYPE)
-#define _DAXA_REGISTER_IMAGE_TYPE(IMAGE_TYPE)                         \
+#define _DAXA_REGISTER_IMAGE_TYPE(IMAGE_TYPE)                                                               \
     using daxa_##RWImage##IMAGE_TYPE##f32 = daxa::types::TypedImageViewId<daxa::_ShaderAlias_##IMAGE_TYPE>; \
     using daxa_##RWImage##IMAGE_TYPE##i32 = daxa::types::TypedImageViewId<daxa::_ShaderAlias_##IMAGE_TYPE>; \
     using daxa_##RWImage##IMAGE_TYPE##u32 = daxa::types::TypedImageViewId<daxa::_ShaderAlias_##IMAGE_TYPE>; \

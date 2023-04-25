@@ -541,7 +541,7 @@ namespace tests
                     },
                 });
                 new_task_list.add_task({
-                    .uses = {ImageTransferWrite{task_swapchain_image}},
+                    .uses = {ImageTransferWrite<>{task_swapchain_image}},
                     .task = [=](daxa::TaskInterface const & ti)
                     {
                         auto cmd_list = ti.get_command_list();
@@ -555,8 +555,8 @@ namespace tests
                 });
                 new_task_list.add_task({
                     .uses = {
-                        ImageTransferRead{task_render_image.handle().subslice({.level_count = 5})},
-                        ImageTransferWrite{task_swapchain_image},
+                        ImageTransferRead<>{task_render_image.handle().subslice({.level_count = 5})},
+                        ImageTransferWrite<>{task_swapchain_image},
                     },
                     .task = [this](daxa::TaskInterface const & ti)
                     {
@@ -569,7 +569,7 @@ namespace tests
                     .name = "blit to swapchain",
                 });
                 new_task_list.add_task({
-                    .uses = {ImageColorAttachment{task_swapchain_image}},
+                    .uses = {ImageColorAttachment<>{task_swapchain_image}},
                     .task = [=, this](daxa::TaskInterface const & ti)
                     {
                         auto cmd_list = ti.get_command_list();

@@ -119,7 +119,7 @@ namespace daxa
         };
 
         template <typename T, usize M, usize N>
-        using GenericMatrix = GenericVector<GenericVector<T, N>, M>;
+        struct GenericMatrix : GenericVector<GenericVector<T, N>, M> {};
     } // namespace detail
 
     inline namespace types {
