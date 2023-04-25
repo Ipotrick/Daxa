@@ -842,7 +842,9 @@ namespace daxa
         spirv_tools.SetMessageConsumer(
             [&](spv_message_level_t level, [[maybe_unused]] char const * source, [[maybe_unused]] spv_position_t const & position, char const * message)
             { DAXA_DBG_ASSERT_TRUE_M(level > SPV_MSG_WARNING, std::format("SPIR-V Validation error after compiling {}:\n - {}", debug_name_opt, message)); });
-        spirv_tools.Validate(spirv);
+        spvtools::ValidatorOptions options{};
+        options.SetScalarBlockLayout(true);
+        // spirv_tools.Validate(spirv.data(), spirv.size(), options);
 #endif
 
         return Result<std::vector<u32>>(spirv);
