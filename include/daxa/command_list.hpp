@@ -233,6 +233,8 @@ namespace daxa
         ///         There are constant buffer slots 0-7.
         ///         The buffer range is user managed, The buffer MUST not die while in use on the gpu!
         ///         Changes to these bindings only become visible to commands AFTER a pipeline is bound!
+        ///         Set constant buffer slots are cleared after a pipeline is bound. 
+        ///         Before setting another pipeline, they need to be set again.
         /// @param info parameters.
         void set_constant_buffer(SetConstantBufferInfo const & info);
         void set_pipeline(ComputePipeline const & pipeline);
