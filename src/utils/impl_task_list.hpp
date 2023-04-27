@@ -361,6 +361,8 @@ namespace daxa
         ImplTaskList & task_list;
         TaskListPermutation & permutation;
         ImplTask * current_task = {};
+        std::optional<SetConstantBufferInfo> set_constant_buffer_info = {};
+        types::BufferDeviceAddress device_address = {};
         bool reuse_last_command_list = true;
         std::vector<CommandList> command_lists = {};
         std::optional<BinarySemaphore> last_submit_semaphore = {};

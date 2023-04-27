@@ -873,6 +873,10 @@ namespace daxa
         }
 
         device.vkCmdPushDescriptorSetKHR(this->vk_cmd_buffer, bind_point, pipeline_layout, CONSTANT_BUFFER_BINDING_SET, static_cast<u32>(descriptor_writes.size()), descriptor_writes.data());
+        for (u32 index = 0; index < CONSTANT_BUFFER_BINDINGS_COUNT; ++index)
+        {
+            this->current_constant_buffer_bindings.at(index) = {};
+        }
     }
 
     ImplCommandList::ImplCommandList(ManagedWeakPtr device_impl, VkCommandPool pool, VkCommandBuffer buffer, CommandListInfo a_info)
