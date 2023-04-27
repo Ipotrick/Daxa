@@ -256,6 +256,13 @@ namespace daxa
         usize const image_use_index = static_cast<usize>(std::distance(impl.current_task->base_task->get_generic_uses().begin(), iter));
         return TaskImageUse<>::from(impl.current_task->base_task->get_generic_uses()[image_use_index]);
     }
+    
+    auto TaskInterfaceUses::constant_buffer_set_info() const -> SetConstantBufferInfo
+    {
+        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
+        DAXA_DBG_ASSERT_TRUE_M(impl.set_constant_buffer_info.has_value(), "task must have been created with a constant buffer slot in order to use task list provided constant buffer memory for uses.");
+        return impl.set_constant_buffer_info.value();
+    }
 
     TaskInterface::TaskInterface(void * a_backend)
         : backend{a_backend}, uses{a_backend}
@@ -801,12 +808,13 @@ namespace daxa
                     *ptr = arg.views[0];
                     u32 tester = *reinterpret_cast<u32 *>(ptr);
                 });
-            impl_runtime.command_lists.back().set_constant_buffer({
+            impl_runtime.device_address = constant_buffer_alloc.device_address;
+            impl_runtime.set_constant_buffer_info = SetConstantBufferInfo{
                 .slot = static_cast<u32>(task.base_task->get_uses_constant_buffer_slot()),
                 .buffer = staging_memory.get_buffer(),
                 .size = constant_buffer_alloc.size,
                 .offset = constant_buffer_alloc.buffer_offset,
-            });
+            };
         }
         impl_runtime.current_task = &task;
         impl_runtime.command_lists.back().begin_label({

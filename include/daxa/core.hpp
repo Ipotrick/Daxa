@@ -275,6 +275,11 @@ namespace daxa
         {
         }
 
+        explicit Result(std::string_view message)
+            : v{false}, m{message}
+        {
+        }
+
         bool is_ok() const
         {
             return v;
