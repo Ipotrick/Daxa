@@ -351,10 +351,10 @@ namespace tests
                 .settings = {task_buffer},
                 .image = {task_image},
             }),
-            .task = [&](daxa::TaskInterface const & ti)
+            .task = [&](daxa::TaskInterface ti)
             {
-                [[maybe_unused]] auto img = ti.uses[task_image].image();
                 auto cmd = ti.get_command_list();
+                cmd.set_constant_buffer(ti.uses.constant_buffer_set_info());
                 cmd.set_pipeline(*compute_pipeline);
                 cmd.dispatch(1, 1, 1);
             },
@@ -366,10 +366,15 @@ namespace tests
                 .settings = {task_buffer},
                 .image = {task_image},
             }),
-            .task = [&](daxa::TaskInterface const & ti)
+            .task = [&](daxa::TaskInterface ti)
             {
-                [[maybe_unused]] auto img = ti.uses[task_image].image();
                 auto cmd = ti.get_command_list();
+                // Optionally, the shader uses can still be accessed with the usual task interface for immediate tasks. 
+                [[maybe_unused]] auto img = ti.uses[task_image].image();
+                // Get a constant buffer set info, ready to use for the next pipelines constants.
+                cmd.set_constant_buffer(ti.uses.constant_buffer_set_info());
+                // Optionally, you can also get a buffer device address set to match the translated and filled uses struct in memory.
+                [[maybe_unused]] auto device_address = ti.uses.device_address();
                 cmd.set_pipeline(*compute_pipeline);
                 cmd.dispatch(1, 1, 1);
             },
