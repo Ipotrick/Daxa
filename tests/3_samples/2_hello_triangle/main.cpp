@@ -1,3 +1,0 @@
-auto main() -> int
-{
-}

@@ -232,9 +232,9 @@ struct App : AppWindow<App>
         ui_update();
 
         auto reloaded_result = pipeline_manager.reload_all();
-        if (reloaded_result.is_err())
+        if (reloaded_result.has_value())
         {
-            std::cout << reloaded_result.to_string() << std::endl;
+            std::cout << reloaded_result.value().to_string() << std::endl;
         }
 
         auto swapchain_image = swapchain.acquire_next_image();
