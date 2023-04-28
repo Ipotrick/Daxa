@@ -373,8 +373,6 @@ namespace tests
                 [[maybe_unused]] auto img = ti.uses[task_image].image();
                 // Get a constant buffer set info, ready to use for the next pipelines constants.
                 cmd.set_constant_buffer(ti.uses.constant_buffer_set_info());
-                // Optionally, you can also get a buffer device address set to match the translated and filled uses struct in memory.
-                [[maybe_unused]] auto device_address = ti.uses.device_address();
                 cmd.set_pipeline(*compute_pipeline);
                 cmd.dispatch(1, 1, 1);
             },
@@ -491,6 +489,6 @@ auto main() -> int
     // tests::sharing_persistent_image();
     // tests::sharing_persistent_buffer();
     // tests::transient_resources();
-    tests::shader_integration_inl_use();
-    // tests::mipmapping();
+    // tests::shader_integration_inl_use();
+    tests::mipmapping();
 }
