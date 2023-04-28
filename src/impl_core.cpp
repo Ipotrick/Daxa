@@ -390,6 +390,98 @@ namespace daxa
         return "invalid ImageLayout";
     }
 
+    auto to_string(ImageUsageFlags const & flags) -> std::string
+    {
+        if (flags ==  ImageUsageFlagBits::NONE)
+        {
+            return "NONE";
+        }
+
+        std::string ret = {};
+
+        if ((flags & ImageUsageFlagBits::NONE) != ImageUsageFlagBits::NONE)
+        {
+            if (!ret.empty())
+            {
+                ret += " | ";
+            }
+            ret += "NONE";
+        }
+        if ((flags & ImageUsageFlagBits::TRANSFER_SRC) != ImageUsageFlagBits::NONE)
+        {
+            if (!ret.empty())
+            {
+                ret += " | ";
+            }
+            ret += "TRANSFER_SRC";
+        }
+        if ((flags & ImageUsageFlagBits::TRANSFER_DST) != ImageUsageFlagBits::NONE)
+        {
+            if (!ret.empty())
+            {
+                ret += " | ";
+            }
+            ret += "TRANSFER_DST";
+        }
+        if ((flags & ImageUsageFlagBits::SHADER_READ_ONLY) != ImageUsageFlagBits::NONE)
+        {
+            if (!ret.empty())
+            {
+                ret += " | ";
+            }
+            ret += "SHADER_READ_ONLY";
+        }
+        if ((flags & ImageUsageFlagBits::SHADER_READ_WRITE) != ImageUsageFlagBits::NONE)
+        {
+            if (!ret.empty())
+            {
+                ret += " | ";
+            }
+            ret += "SHADER_READ_WRITE";
+        }
+        if ((flags & ImageUsageFlagBits::COLOR_ATTACHMENT) != ImageUsageFlagBits::NONE)
+        {
+            if (!ret.empty())
+            {
+                ret += " | ";
+            }
+            ret += "COLOR_ATTACHMENT";
+        }
+        if ((flags & ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT) != ImageUsageFlagBits::NONE)
+        {
+            if (!ret.empty())
+            {
+                ret += " | ";
+            }
+            ret += "DEPTH_STENCIL_ATTACHMENT";
+        }
+        if ((flags & ImageUsageFlagBits::TRANSIENT_ATTACHMENT) != ImageUsageFlagBits::NONE)
+        {
+            if (!ret.empty())
+            {
+                ret += " | ";
+            }
+            ret += "TRANSIENT_ATTACHMENT";
+        }
+        if ((flags & ImageUsageFlagBits::FRAGMENT_DENSITY_MAP) != ImageUsageFlagBits::NONE)
+        {
+            if (!ret.empty())
+            {
+                ret += " | ";
+            }
+            ret += "FRAGMENT_DENSITY_MAP";
+        }
+        if ((flags & ImageUsageFlagBits::FRAGMENT_SHADING_RATE_ATTACHMENT) != ImageUsageFlagBits::NONE)
+        {
+            if (!ret.empty())
+            {
+                ret += " | ";
+            }
+            ret += "FRAGMENT_SHADING_RATE_ATTACHMENT";
+        }
+        return ret;
+    }
+
     auto to_string(Format format) -> std::string_view
     {
         switch (format)

@@ -524,6 +524,8 @@ namespace daxa
         static inline constexpr ImageUsageFlags SHADING_RATE_IMAGE = FRAGMENT_SHADING_RATE_ATTACHMENT;
     };
 
+    auto to_string(ImageUsageFlags const &) -> std::string;
+
     struct MemoryFlagsProperties
     {
         using Data = u32;
