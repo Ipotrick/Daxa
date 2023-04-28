@@ -42,6 +42,56 @@ namespace daxa
         return {ret, offset};
     }
 
+    auto static constexpr access_to_usage(TaskImageAccess const & access) -> ImageUsageFlags
+    {
+        switch (access)
+        {
+        case TaskImageAccess::SHADER_READ: [[fallthrough]];
+        case TaskImageAccess::VERTEX_SHADER_READ: [[fallthrough]];
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ: [[fallthrough]];
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ: [[fallthrough]];
+        case TaskImageAccess::GEOMETRY_SHADER_READ: [[fallthrough]];
+        case TaskImageAccess::FRAGMENT_SHADER_READ: [[fallthrough]];
+        case TaskImageAccess::COMPUTE_SHADER_READ:
+            return ImageUsageFlagBits::SHADER_READ_ONLY;
+        case TaskImageAccess::SHADER_WRITE: [[fallthrough]];
+        case TaskImageAccess::VERTEX_SHADER_WRITE: [[fallthrough]];
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_WRITE: [[fallthrough]];
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_WRITE: [[fallthrough]];
+        case TaskImageAccess::GEOMETRY_SHADER_WRITE: [[fallthrough]];
+        case TaskImageAccess::FRAGMENT_SHADER_WRITE: [[fallthrough]];
+        case TaskImageAccess::COMPUTE_SHADER_WRITE: [[fallthrough]];
+        case TaskImageAccess::SHADER_READ_WRITE: [[fallthrough]];
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE: [[fallthrough]];
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ_WRITE: [[fallthrough]];
+        case TaskImageAccess::GEOMETRY_SHADER_READ_WRITE: [[fallthrough]];
+        case TaskImageAccess::FRAGMENT_SHADER_READ_WRITE: [[fallthrough]];
+        case TaskImageAccess::COMPUTE_SHADER_READ_WRITE:
+            return ImageUsageFlagBits::SHADER_READ_WRITE;
+        case TaskImageAccess::TRANSFER_READ:
+            return ImageUsageFlagBits::TRANSFER_SRC;
+        case TaskImageAccess::TRANSFER_WRITE:
+            return ImageUsageFlagBits::TRANSFER_DST;
+        // NOTE(msakmary) - not fully sure about the resolve being color attachment usage
+        // this is the best I could deduce from vulkan docs
+        case TaskImageAccess::RESOLVE_WRITE: [[fallthrough]];
+        case TaskImageAccess::COLOR_ATTACHMENT:
+            return ImageUsageFlagBits::COLOR_ATTACHMENT;
+        case TaskImageAccess::DEPTH_ATTACHMENT: [[fallthrough]];
+        case TaskImageAccess::STENCIL_ATTACHMENT: [[fallthrough]];
+        case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT:
+            return ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT;
+        case TaskImageAccess::DEPTH_ATTACHMENT_READ: [[fallthrough]];
+        case TaskImageAccess::STENCIL_ATTACHMENT_READ: [[fallthrough]];
+        case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT_READ:
+            return ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT;
+        case TaskImageAccess::PRESENT: [[fallthrough]];
+        case TaskImageAccess::NONE: [[fallthrough]];
+        default:
+            return ImageUsageFlagBits::NONE;
+        }
+    }
+
     auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access>
     {
         switch (access)
@@ -256,7 +306,7 @@ namespace daxa
         usize const image_use_index = static_cast<usize>(std::distance(impl.current_task->base_task->get_generic_uses().begin(), iter));
         return TaskImageUse<>::from(impl.current_task->base_task->get_generic_uses()[image_use_index]);
     }
-    
+
     auto TaskInterfaceUses::constant_buffer_set_info() const -> SetConstantBufferInfo
     {
         auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
@@ -634,6 +684,22 @@ namespace daxa
         }
     }
 
+    void validate_image_uses(ImplTaskList & impl, TaskListPermutation const & perm, u32 use_index, u32 task_image_index, TaskImageAccess task_access, std::string_view task_name)
+    {
+        ImageUsageFlags use_flags = access_to_usage(task_access);
+        auto const actual_images = impl.get_actual_images(TaskImageHandle{{.task_list_index = impl.unique_index, .index = task_image_index}}, perm);
+        std::string_view task_image_name = impl.global_image_infos[task_image_index].get_name();
+        for (u32 index = 0; index < actual_images.size(); ++index)
+        {
+            ImageId image = actual_images[index];
+            bool const access_valid = (impl.info.device.info_image(image).usage & use_flags) != ImageUsageFlagBits::NONE;
+            DAXA_DBG_ASSERT_TRUE_M(access_valid, std::format("detected invalid runtime image \"{}\" of task image \"{}\", in use {} of task \"{}\". "
+                                                             "The given runtime image does NOT have the image use flag {} set, but the task use requires this use for all runtime images!",
+                                                                impl.info.device.info_image(image).name, task_image_name, use_index, task_name, daxa::to_string(use_flags)
+                                                             ));
+        }
+    }
+
     void ImplTaskList::update_image_view_cache(ImplTask & task, TaskListPermutation const & permutation)
     {
         for_each(
@@ -662,6 +728,7 @@ namespace daxa
                 if (!cache_valid)
                 {
                     validate_runtime_image_slice(*this, permutation, task_image_use_index, tid.index, slice);
+                    validate_image_uses(*this, permutation, task_image_use_index, tid.index, image_use.access(), task.base_task->get_name());
                     for (auto & view : view_cache)
                     {
                         if (info.device.is_id_valid(view))
@@ -1178,56 +1245,6 @@ namespace daxa
                 buffer.first_access_batch_index = new_access_batch;
                 buffer.first_access_submit_scope_index = new_access_submit;
             }
-        }
-    }
-
-    auto static constexpr access_to_usage(TaskImageAccess const & access) -> ImageUsageFlags
-    {
-        switch (access)
-        {
-        case TaskImageAccess::SHADER_READ: [[fallthrough]];
-        case TaskImageAccess::VERTEX_SHADER_READ: [[fallthrough]];
-        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ: [[fallthrough]];
-        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ: [[fallthrough]];
-        case TaskImageAccess::GEOMETRY_SHADER_READ: [[fallthrough]];
-        case TaskImageAccess::FRAGMENT_SHADER_READ: [[fallthrough]];
-        case TaskImageAccess::COMPUTE_SHADER_READ:
-            return ImageUsageFlagBits::SHADER_READ_ONLY;
-        case TaskImageAccess::SHADER_WRITE: [[fallthrough]];
-        case TaskImageAccess::VERTEX_SHADER_WRITE: [[fallthrough]];
-        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_WRITE: [[fallthrough]];
-        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_WRITE: [[fallthrough]];
-        case TaskImageAccess::GEOMETRY_SHADER_WRITE: [[fallthrough]];
-        case TaskImageAccess::FRAGMENT_SHADER_WRITE: [[fallthrough]];
-        case TaskImageAccess::COMPUTE_SHADER_WRITE: [[fallthrough]];
-        case TaskImageAccess::SHADER_READ_WRITE: [[fallthrough]];
-        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE: [[fallthrough]];
-        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ_WRITE: [[fallthrough]];
-        case TaskImageAccess::GEOMETRY_SHADER_READ_WRITE: [[fallthrough]];
-        case TaskImageAccess::FRAGMENT_SHADER_READ_WRITE: [[fallthrough]];
-        case TaskImageAccess::COMPUTE_SHADER_READ_WRITE:
-            return ImageUsageFlagBits::SHADER_READ_WRITE;
-        case TaskImageAccess::TRANSFER_READ:
-            return ImageUsageFlagBits::TRANSFER_SRC;
-        case TaskImageAccess::TRANSFER_WRITE:
-            return ImageUsageFlagBits::TRANSFER_DST;
-        // NOTE(msakmary) - not fully sure about the resolve being color attachment usage
-        // this is the best I could deduce from vulkan docs
-        case TaskImageAccess::RESOLVE_WRITE: [[fallthrough]];
-        case TaskImageAccess::COLOR_ATTACHMENT:
-            return ImageUsageFlagBits::COLOR_ATTACHMENT;
-        case TaskImageAccess::DEPTH_ATTACHMENT: [[fallthrough]];
-        case TaskImageAccess::STENCIL_ATTACHMENT: [[fallthrough]];
-        case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT:
-            return ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT;
-        case TaskImageAccess::DEPTH_ATTACHMENT_READ: [[fallthrough]];
-        case TaskImageAccess::STENCIL_ATTACHMENT_READ: [[fallthrough]];
-        case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT_READ:
-            return ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT;
-        case TaskImageAccess::PRESENT: [[fallthrough]];
-        case TaskImageAccess::NONE: [[fallthrough]];
-        default:
-            return ImageUsageFlagBits::NONE;
         }
     }
 
