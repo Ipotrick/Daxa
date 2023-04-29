@@ -994,7 +994,7 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},
-            .size = static_cast<VkDeviceSize>(buffer_info.size),
+            .size = static_cast<VkDeviceSize>(buffer_info.size) + 4 /* Workaround for gpuav bugs related to bda oob access. */,
             .usage = BUFFER_USE_FLAGS,
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
             .queueFamilyIndexCount = 1,
