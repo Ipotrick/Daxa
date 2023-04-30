@@ -845,9 +845,9 @@ namespace daxa
             if (this->current_constant_buffer_bindings[index].buffer.is_empty())
             {
                 descriptor_buffer_info[index] = VkDescriptorBufferInfo{
-                    .buffer = {},
+                    .buffer = VK_NULL_HANDLE,
                     .offset = {},
-                    .range = {},
+                    .range = VK_WHOLE_SIZE,
                 };
             }
             else

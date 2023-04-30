@@ -503,7 +503,7 @@ namespace daxa
             .robustBufferAccess = VK_FALSE,
             .fullDrawIndexUint32 = VK_FALSE,
             .imageCubeArray = VK_TRUE,
-            .independentBlend = VK_FALSE,
+            .independentBlend = VK_TRUE,
             .geometryShader = VK_FALSE,
             .tessellationShader = VK_TRUE,
             .sampleRateShading = VK_FALSE,
