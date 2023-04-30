@@ -13,7 +13,7 @@ namespace daxa
           })},
           buffer{this->info.device.create_buffer({
               .size = this->info.capacity,
-              .allocate_info = AutoAllocInfo{ daxa::MemoryFlagBits::HOST_ACCESS_RANDOM },
+              .allocate_info = AutoAllocInfo{ daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE | (a_info.use_bar_memory ? daxa::MemoryFlagBits::DEDICATED_MEMORY : daxa::MemoryFlagBits::NONE) },
               .name = std::string("TransferMemoryPool") + this->info.name,
           })},
           buffer_device_address{this->info.device.get_device_address(this->buffer)},
