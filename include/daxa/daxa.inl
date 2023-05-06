@@ -43,8 +43,10 @@
 #endif
 #elif defined(__cplusplus)
 #include <daxa/daxa.hpp>
+
+/// @brief The c++ equivalent of a constant buffer in a file is simply a struct.
 #define DAXA_CONSTANT_BUFFER(SLOT) struct alignas(64)
-#define _DAXA_REGISTER_TEXTURE_TYPE(IMAGE_TYPE)
+/// Implementation detail:
 #define _DAXA_REGISTER_IMAGE_TYPE(IMAGE_TYPE)                                                               \
     using daxa_##RWImage##IMAGE_TYPE##f32 = daxa::types::TypedImageViewId<daxa::_ShaderAlias_##IMAGE_TYPE>; \
     using daxa_##RWImage##IMAGE_TYPE##i32 = daxa::types::TypedImageViewId<daxa::_ShaderAlias_##IMAGE_TYPE>; \
@@ -57,14 +59,14 @@
     using daxa_##Image##IMAGE_TYPE##i64 = daxa::types::TypedImageViewId<daxa::_ShaderAlias_##IMAGE_TYPE>;   \
     using daxa_##Image##IMAGE_TYPE##u64 = daxa::types::TypedImageViewId<daxa::_ShaderAlias_##IMAGE_TYPE>;
 #define _DAXA_REGISTER_SAMPLER_TYPE(SAMPLER_TYPE)
-#define DAXA_PUSH_CONSTANT(STRUCT_TYPE)
+/// @brief Buffer ptr enable is ignored in c++.
 #define DAXA_ENABLE_BUFFER_PTR(STRUCT_TYPE)
-#define daxa_RWBufferPtr(x) alignas(8) daxa::types::BufferDeviceAddress
-#define daxa_BufferPtr(x) alignas(8) daxa::types::BufferDeviceAddress
+/// @brief Buffer ptr types map to the buffer device address type in daxa.
+#define daxa_RWBufferPtr(x) daxa::types::BufferDeviceAddress
+/// @brief Buffer ptr types map to the buffer device address type in daxa.
+#define daxa_BufferPtr(x) daxa::types::BufferDeviceAddress
 
-// NEEDED FOR HLSL SUPPORT
-#define DAXA_DECL_BUFFER_STRUCT(Type, Body) struct Type Body;
-
+/// Strongly typed image handles can also be used in inline files and c++.
 _DAXA_REGISTER_IMAGE_TYPE(1D)
 _DAXA_REGISTER_IMAGE_TYPE(2D)
 _DAXA_REGISTER_IMAGE_TYPE(3D)
