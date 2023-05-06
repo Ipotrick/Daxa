@@ -1,34 +1,18 @@
 #pragma once
 
-#if !defined(DAXA_STORAGE_BUFFER_BINDING)
-#define DAXA_GPU_TABLE_SET_BINDING 0
-#define DAXA_CONSTANT_BUFFER_BINDING_SET 1
-#define DAXA_STORAGE_BUFFER_BINDING 0
-#define DAXA_STORAGE_IMAGE_BINDING 1
-#define DAXA_SAMPLED_IMAGE_BINDING 2
-#define DAXA_SAMPLER_BINDING 3
-#define DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING 4
-#define DAXA_SHADER_DEBUG_BUFFER_BINDING 5
-#define DAXA_ID_INDEX_MASK (0x00FFFFFF)
-#define DAXA_ID_VERSION_SHIFT (24)
-#endif
-
 // TODO(wrap all texture access functions descriptor operands with nonUniformEXT) nano had found a bug in amd drivers with portalrtx
 
-#if !defined(DAXA_SHADER_GPU_ID_VALIDATION)
-#define DAXA_SHADER_GPU_ID_VALIDATION (0)
-#endif // #if !defined(DAXA_SHADER_GPU_ID_VALIDATION)
-
 //
-// Optional defines, activating certain features:
-// * DAXA_ENABLE_IMAGE_OVERLOADS_BASIC
-// * DAXA_ENABLE_IMAGE_OVERLOADS_ATOMIC
-// * DAXA_ENABLE_IMAGE_OVERLOADS_64BIT
-// * DAXA_ENABLE_IMAGE_OVERLOADS_MULTISAMPLE
-// * DAXA_ENABLE_SHADER_NO_NAMESPACE
-// * DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES
+// Daxa optionally defines overloads for common image accessing functions for daxas image handles:
+// * DAXA_ENABLE_IMAGE_OVERLOADS_BASIC              |   Defines all commonly used function overloads for daxa images like texture(...) or imageStore(...).
+// * DAXA_ENABLE_IMAGE_OVERLOADS_ATOMIC             |   Defines 32 bit int image atomic operations and function overloads.
+// * DAXA_ENABLE_IMAGE_OVERLOADS_64BIT              |   Defines 64 bit int images and their respective function overloads.
+// * DAXA_ENABLE_IMAGE_OVERLOADS_MULTISAMPLE        |   Defines texture function overloads for multisampled images.
+// * DAXA_ENABLE_SHADER_NO_NAMESPACE                |   Defines alternative non-prefixed names for all daxa shader names like daxa_BufferPtr(x).
+// * DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES     |   Defines alternative non-prefixed names for all daxa shader types like daxa_u32.
 //
 
+// Daxa inl file type definitions:
 #define daxa_b32 bool
 #define daxa_b32vec1 daxa_b32
 #define daxa_b32vec2 bvec2
@@ -68,119 +52,182 @@
 #define daxa_u64vec2 u64vec2
 #define daxa_u64vec3 u64vec3
 #define daxa_u64vec4 u64vec4
-
-// The ids on the host side can be brought to the gpu and used directly!
 struct daxa_BufferId
 {
+    // Upper 8 bits contain the version.
+    // Lower 24 bits contain the index.
     daxa_u32 value;
 };
 struct daxa_ImageViewId
 {
+    // Upper 8 bits contain the version.
+    // Lower 24 bits contain the index.
     daxa_u32 value;
 };
 struct daxa_SamplerId
 {
+    // Upper 8 bits contain the version.
+    // Lower 24 bits contain the index.
     daxa_u32 value;
 };
 
-#define DAXA_CONSTANT_BUFFER(SLOT) layout(set = DAXA_CONSTANT_BUFFER_BINDING_SET, binding = SLOT, buffer_reference_align = 4, scalar) uniform
-
-// Accessor functions to gain the indices to the bindless tables from the resource id:
+/// @brief Every resource id contains an index and a version number. The index can be used to access the corresponding resource in the binding arrays/
+/// @param id The id the index is retrieved from.
+/// @return The index the id contains.
 daxa_u32 daxa_id_to_index(daxa_BufferId id)
 {
     return (DAXA_ID_INDEX_MASK & id.value);
 }
+
+/// @brief Every resource id contains an index and a version number. The index can be used to access the corresponding resource in the binding arrays/
+/// @param id The id the index is retrieved from.
+/// @return The index the id contains.
 daxa_u32 daxa_id_to_index(daxa_ImageViewId id)
 {
     return (DAXA_ID_INDEX_MASK & id.value);
 }
+
+/// @brief Every resource id contains an index and a version number. The index can be used to access the corresponding resource in the binding arrays/
+/// @param id The id the index is retrieved from.
+/// @return The index the id contains.
 daxa_u32 daxa_id_to_index(daxa_SamplerId id)
 {
     return (DAXA_ID_INDEX_MASK & id.value);
 }
+
+// Daxa implementation detail begin
 layout(scalar, binding = DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, set = 0) readonly buffer daxa_BufferDeviceAddressBufferBlock { daxa_u64 addresses[]; }
 daxa_buffer_device_address_buffer;
+layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform sampler daxa_SamplerTable[];
+layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform samplerShadow daxa_SamplerShadowTable[];
+// Daxa implementation detail end
+
+/// @brief Retrieves a buffer device address to the start of the buffer of the given buffer id.
+/// @param buffer_id The buffer of which the buffer device address is retrieved for.
+/// @return Buffer device address to the start of the buffer.
 daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 {
     return daxa_buffer_device_address_buffer.addresses[daxa_id_to_index(buffer_id)];
 }
 
-// The corresponding glsl object of a resource id can be aquired by these makros:
-#define daxa_id_to_rwbuffer(NAME, buffer_id) daxa_id_to_rwbuffer##NAME(buffer_id)
-#define daxa_id_to_buffer(NAME, buffer_id) daxa_id_to_buffer##NAME(buffer_id)
+/// @brief Returns a glsl image for an image id.
+/// @param IMAGE_TYPE The glsl image type of the returned image.
+/// @param image_id The image id of which the glsl image is returned for.
+/// @return The glsl image type of the given image and type.
 #define daxa_get_image(IMAGE_TYPE, image_id) daxa_RWImageTable##IMAGE_TYPE[daxa_id_to_index(image_id)]
+/// @brief Returns a glsl texture for an image id.
+/// @param TEXTURE_TYPE The glsl image type of the returned texture.
+/// @param image_id The image id of which the glsl texture is returned for.
+/// @return The glsl texture type of the given image and type.
 #define daxa_get_texture(TEXTURE_TYPE, image_id) daxa_ImageTable##TEXTURE_TYPE[daxa_id_to_index(image_id)]
-layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform sampler daxa_SamplerTable[];
-layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform samplerShadow daxa_SamplerShadowTable[];
+/// @brief Returns a glsl sampler for an sampler id.
+/// @param sampler_id The sampler id of which the glsl sampler is returned for.
+/// @return A glsl sampler for the given sampler id.
 #define daxa_get_sampler(sampler_id) daxa_SamplerTable[daxa_id_to_index(sampler_id)]
+/// @brief For shadow sampling a shadow sampler is needed.
+/// @param sampler_id The sampler id of which the glsl sampler is returned for.
+/// @return A glsl shadow sampler for the given sampler id.
 #define daxa_get_sampler_shadow(sampler_id) daxa_SamplerShadowTable[daxa_id_to_index(sampler_id)]
 
-// Buffers and images have strongly typed handles:
-// The image types have overloads for the most important glsl access functions.
-// Samplers do not need typed ids, as they are generic in vulkan glsl.
-#define deref(BUFFER_PTR) BUFFER_PTR.value
-#define daxa_RWBufferPtr(STRUCT_TYPE) daxa_RWBufferPtr##STRUCT_TYPE
-#define daxa_BufferPtr(STRUCT_TYPE) daxa_BufferPtr##STRUCT_TYPE
-#define daxa_CoherentRWBufferPtr(STRUCT_TYPE) daxa_CoherentRWBufferPtr$$STRUCT_TYPE
+/// @brief  Strongly typed bindless read write image handle.
+///         Correspondes to a glsl image of given dimension and scalar type.
+///         Daxa also defines glsl function overloads strongly typed handles. Examples: imageLoad, imageStore.
+/// @param DIMENSION Dimension of typed image handle. Examples: 2D, Cube, 2DMS.
+/// @param SCALAR_TYPE Scalar return type of read and write operations, Examples: f32, i32, u64.
 #define daxa_RWImage(DIMENSION, SCALAR_TYPE) daxa_RWImage##DIMENSION##SCALAR_TYPE
+/// @brief  Strongly typed bindless read only image handle.
+///         Correspondes to a glsl image of given dimension and scalar type.
+///         Daxa also defines glsl function overloads strongly typed handles. Examples: imageLoad.
+/// @param DIMENSION Dimension of typed image handle. Examples: 2D, Cube, 2DMS.
+/// @param SCALAR_TYPE Scalar return type of read and write operations, Examples: f32, i32, u64.
 #define daxa_Image(DIMENSION, SCALAR_TYPE) daxa_Image##DIMENSION##SCALAR_TYPE
+/// @brief  Redefines sampler ids for a more consisteny syntax with strongly typed images types.
+#define daxa_Sampler daxa_SamplerId
+/// @brief  Pointer like syntax for a read write buffer device address blocks containing the given struct
+///         The buffer reference block contains a single member called value of the given type.
+///         These types are just redefines for bda blocks, so they have all the glsl syntax like casting to a u64 working.
+/// @param STRUCT_TYPE Struct type contained by the buffer device address block / "pointed to type".
+#define daxa_RWBufferPtr(STRUCT_TYPE) daxa_RWBufferPtr##STRUCT_TYPE
+/// @brief  Pointer like syntax for a read only buffer device address blocks containing the given struct
+///         The buffer reference block contains a single member called value of the given type.
+///         These types are just redefines for bda blocks, so they have all the glsl syntax like casting to a u64 working.
+/// @param STRUCT_TYPE Struct type contained by the buffer device address block / "pointed to type".
+#define daxa_BufferPtr(STRUCT_TYPE) daxa_BufferPtr##STRUCT_TYPE
+/// @brief  Pointer like syntax for a read write COHERENT buffer device address blocks containing the given struct
+///         The buffer reference block contains a single member called value of the given type.
+///         These types are just redefines for bda blocks, so they have all the glsl syntax like casting to a u64 working.
+/// @param STRUCT_TYPE Struct type contained by the buffer device address block / "pointed to type".
+#define daxa_CoherentRWBufferPtr(STRUCT_TYPE) daxa_CoherentRWBufferPtr$$STRUCT_TYPE
+/// @brief  Defines a makro for more explicitly visible "dereferencing" of buffer pointers.
+#define deref(BUFFER_PTR) BUFFER_PTR.value
 
-// If daxa does not provice a certain overload for a needed type, it is possible to declare custom overloads for the binding tables with these makros:
+/// @brief Defines the buffer reference layout used in all buffer references in daxa glsl.
 #define DAXA_BUFFER_REFERENCE_LAYOUT layout(buffer_reference, scalar, buffer_reference_align = 4)
+/// @brief Defines the storage image layout used in all buffer references in daxa glsl.
 #define DAXA_STORAGE_IMAGE_LAYOUT layout(binding = DAXA_STORAGE_IMAGE_BINDING, set = 0)
+/// @brief Defines the sampled image layout used in all buffer references in daxa glsl.
 #define DAXA_SAMPLED_IMAGE_LAYOUT layout(binding = DAXA_SAMPLED_IMAGE_BINDING, set = 0)
+/// @brief Defines the sampler layout used in all buffer references in daxa glsl.
 #define DAXA_SAMPLER_LAYOUT layout(binding = DAXA_SAMPLER_BINDING, set = 0)
 
-#define DAXA_ENABLE_BUFFER_PTR(STRUCT_TYPE)                                                                                     \
-    DAXA_BUFFER_REFERENCE_LAYOUT buffer daxa_RWBufferPtr##STRUCT_TYPE                                                           \
-    {                                                                                                                           \
-        STRUCT_TYPE value;                                                                                                      \
-    };                                                                                                                          \
-    DAXA_BUFFER_REFERENCE_LAYOUT readonly buffer daxa_BufferPtr##STRUCT_TYPE                                                    \
-    {                                                                                                                           \
-        STRUCT_TYPE value;                                                                                                      \
-    };                                                                                                                          \
-    DAXA_BUFFER_REFERENCE_LAYOUT coherent buffer daxa_CoherentRWBufferPtr##STRUCT_TYPE                                          \
-    {                                                                                                                           \
-        STRUCT_TYPE value;                                                                                                      \
-    };                                                                                                                          \
-    daxa_RWBufferPtr##STRUCT_TYPE daxa_id_to_rwbuffer_ptr##STRUCT_TYPE(daxa_BufferId buffer_id)                                 \
-    {                                                                                                                           \
-        return daxa_RWBufferPtr##STRUCT_TYPE(daxa_buffer_device_address_buffer.addresses[daxa_id_to_index(buffer_id)]);         \
-    }                                                                                                                           \
-    daxa_BufferPtr##STRUCT_TYPE daxa_id_to_buffer_ptr##STRUCT_TYPE(daxa_BufferId buffer_id)                                     \
-    {                                                                                                                           \
-        return daxa_BufferPtr##STRUCT_TYPE(daxa_buffer_device_address_buffer.addresses[daxa_id_to_index(buffer_id)]);           \
-    }                                                                                                                           \
-    daxa_CoherentRWBufferPtr##STRUCT_TYPE daxa_id_to_coherent_rwbuffer_ptr##STRUCT_TYPE(daxa_BufferId buffer_id)                \
-    {                                                                                                                           \
-        return daxa_CoherentRWBufferPtr##STRUCT_TYPE(daxa_buffer_device_address_buffer.addresses[daxa_id_to_index(buffer_id)]); \
-    }
+/// @brief  Defines three buffer reference using daxas buffer reference layout.
+///         The three blocks are 1. read write, 2. read only, 3. read write coherent.
+///         The name of the buffer reference blocks are daxa_RWBufferPtr##STRUCT_TYPE daxa_BufferPtr##STRUCT_TYPE daxa_CoherentRWBufferPtr##STRUCT_TYPE.
+///         The buffer reference block contains a single field called value with the given struct type.
+/// @param STRUCT_TYPE Struct type of the value field in the buffer reference block.
+/// Usage example:
+///     struct T { daxa_u32 v; };
+///     DAXA_ENABLE_BUFFER_PTR(T)
+///     ...
+///     void main()
+///     {
+///         daxa_BufferPtr(T) t_ptr0 = ...;
+///         daxa_BufferPtrT   t_ptr1 = ...;
+///     }
+#define DAXA_ENABLE_BUFFER_PTR(STRUCT_TYPE)                                            \
+    DAXA_BUFFER_REFERENCE_LAYOUT buffer daxa_RWBufferPtr##STRUCT_TYPE                  \
+    {                                                                                  \
+        STRUCT_TYPE value;                                                             \
+    };                                                                                 \
+    DAXA_BUFFER_REFERENCE_LAYOUT readonly buffer daxa_BufferPtr##STRUCT_TYPE           \
+    {                                                                                  \
+        STRUCT_TYPE value;                                                             \
+    };                                                                                 \
+    DAXA_BUFFER_REFERENCE_LAYOUT coherent buffer daxa_CoherentRWBufferPtr##STRUCT_TYPE \
+    {                                                                                  \
+        STRUCT_TYPE value;                                                             \
+    };
 
-// Use this to allow code sharing and daxa's buffer syntax sugar to work:
-#define DAXA_DECL_BUFFER(NAME, BODY)                                                                          \
-    DAXA_BUFFER_REFERENCE_LAYOUT buffer daxa_RWBuffer##NAME BODY;                                             \
-    DAXA_BUFFER_REFERENCE_LAYOUT readonly buffer daxa_Buffer##NAME BODY;                                      \
-    daxa_RWBuffer##NAME daxa_id_to_rwbuffer##NAME(daxa_BufferId buffer_id)                                    \
-    {                                                                                                         \
-        return daxa_RWBuffer##NAME(daxa_buffer_device_address_buffer.addresses[daxa_id_to_index(buffer_id)]); \
-    }                                                                                                         \
-    daxa_Buffer##NAME daxa_id_to_buffer##NAME(daxa_BufferId buffer_id)                                        \
-    {                                                                                                         \
-        return daxa_Buffer##NAME(daxa_buffer_device_address_buffer.addresses[daxa_id_to_index(buffer_id)]);   \
-    }
-
-// Use this to allow code sharing and daxa's buffer syntax sugar to work:
-#define DAXA_DECL_BUFFER_STRUCT(NAME, BODY) \
-    struct NAME BODY;                       \
-    DAXA_DECL_BUFFER(NAME, BODY)
-
-// Some extra syntax suggar:
+/// @brief Defines a push constant using daxas predefined push constant layout.
+/// @param STRUCT Struct type the push constant contains.
+/// @param NAME Global name of the struct inside the push constant block.
+/// Usage example:
+///     struct T { daxa_u32 v; };
+///     DAXA_USE_PUSH_CONSTANT(T, push)
+///     void main()
+///     {
+///         daxa_u32 v = push.v;
+///     }
 #define DAXA_USE_PUSH_CONSTANT(STRUCT, NAME)                  \
     layout(push_constant, scalar) uniform _DAXA_PUSH_CONSTANT \
     {                                                         \
-        STRUCT NAME;                              \
+        STRUCT NAME;                                          \
     };
+
+/// @brief  Can be used to define a constant buffer in inline or shader files.
+///         Constant buffers are uniform buffers in glsl. 
+///         They can be useful in some cases for example when the gpu has hardware acceleration for uniform buffer bindings.
+/// @param SLOT Represents the constant buffer binding slot used for the constant buffer.
+/// Usage example:
+///     DAXA_CONSTANT_BUFFER(0) ConstantBufferName { daxa_u32 value; };
+///     ...
+///     void main() {
+///         daxa_u32 v = value; // value is globaly available in the shader.
+///     }
+///
+#define DAXA_CONSTANT_BUFFER(SLOT) layout(set = DAXA_CONSTANT_BUFFER_BINDING_SET, binding = SLOT, buffer_reference_align = 4, scalar) uniform
+
+// The rest of this file are implementation details for the features described above.
 
 #if !defined(DAXA_ENABLE_IMAGE_OVERLOADS_BASIC)
 #define DAXA_ENABLE_IMAGE_OVERLOADS_BASIC 0
