@@ -2640,9 +2640,9 @@ namespace daxa
         }
     }
 
-    void ImplTaskList::print_task_barrier_to(std::string & out, std::string & indent, TaskListPermutation const & permutation, usize index)
+    void ImplTaskList::print_task_barrier_to(std::string & out, std::string & indent, TaskListPermutation const & permutation, usize index, bool const split_barrier)
     {
-        TaskBarrier const & barrier = permutation.barriers[index];
+        TaskBarrier const & barrier = split_barrier ? permutation.split_barriers[index] : permutation.barriers[index];
         if (barrier.image_id.is_empty())
         {
             MemoryBarrierInfo mem_barrier{
@@ -2800,12 +2800,13 @@ namespace daxa
                 for (auto & task_batch : submit_scope.task_batches)
                 {
                     std::format_to(std::back_inserter(out), "{}batch: {}\n", indent, batch_index);
+                    batch_index += 1;
                     std::format_to(std::back_inserter(out), "{}inserted pipeline barriers:\n", indent);
                     {
                         [[maybe_unused]] FormatIndent d2{out, indent, true};
                         for (auto barrier_index : task_batch.pipeline_barrier_indices)
                         {
-                            this->print_task_barrier_to(out, indent, permutation, barrier_index);
+                            this->print_task_barrier_to(out, indent, permutation, barrier_index, false);
                             print_seperator_to(out, indent);
                         }
                     }
@@ -2815,7 +2816,7 @@ namespace daxa
                         [[maybe_unused]] FormatIndent d2{out, indent, true};
                         for (auto barrier_index : task_batch.wait_split_barrier_indices)
                         {
-                            this->print_task_barrier_to(out, indent, permutation, barrier_index);
+                            this->print_task_barrier_to(out, indent, permutation, barrier_index, true);
                             print_seperator_to(out, indent);
                         }
                     }
@@ -2826,7 +2827,7 @@ namespace daxa
                         print_seperator_to(out, indent);
                         for (auto barrier_index : task_batch.wait_split_barrier_indices)
                         {
-                            this->print_task_barrier_to(out, indent, permutation, barrier_index);
+                            this->print_task_barrier_to(out, indent, permutation, barrier_index, true);
                             print_seperator_to(out, indent);
                         }
                     }
@@ -2845,10 +2846,11 @@ namespace daxa
                         [[maybe_unused]] FormatIndent d2{out, indent, true};
                         for (usize const barrier_index : task_batch.signal_split_barrier_indices)
                         {
-                            this->print_task_barrier_to(out, indent, permutation, barrier_index);
+                            this->print_task_barrier_to(out, indent, permutation, barrier_index, true);
                             print_seperator_to(out, indent);
                         }
                     }
+                    print_seperator_to(out, indent);
                 }
                 if (!submit_scope.last_minute_barrier_indices.empty())
                 {
@@ -2856,7 +2858,7 @@ namespace daxa
                     [[maybe_unused]] FormatIndent d2{out, indent, true};
                     for (usize const barrier_index : submit_scope.last_minute_barrier_indices)
                     {
-                        this->print_task_barrier_to(out, indent, permutation, barrier_index);
+                        this->print_task_barrier_to(out, indent, permutation, barrier_index, false);
                         print_seperator_to(out, indent);
                     }
                 }
