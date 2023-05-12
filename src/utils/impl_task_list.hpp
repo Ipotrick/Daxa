@@ -346,8 +346,7 @@ namespace daxa
         void print_task_image_to(std::string & out, std::string indent, TaskListPermutation const & permutation, TaskImageHandle image);
         void print_task_barrier_to(std::string & out, std::string & indent, TaskListPermutation const & permutation, usize index, bool const split_barrier);
         void print_task_to(std::string & out, std::string & indent, TaskListPermutation const & permutation, TaskId task_id);
-        void debug_print_permutation_image(TaskListPermutation const & permutation, TaskImageHandle const image_id);
-        void debug_print_permutation_buffer(TaskListPermutation const & permutation, TaskBufferHandle const buffer_id);
+        void print_permutation_aliasing_to(std::string & out, std::string indent, TaskListPermutation const & permutation);
         void debug_print();
     };
 
