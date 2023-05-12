@@ -344,7 +344,7 @@ namespace daxa
 
         void print_task_buffer_to(std::string & out, std::string indent, TaskListPermutation const & permutation, TaskBufferHandle local_id);
         void print_task_image_to(std::string & out, std::string indent, TaskListPermutation const & permutation, TaskImageHandle image);
-        void print_task_barrier_to(std::string & out, std::string & indent, TaskListPermutation const & permutation, usize index);
+        void print_task_barrier_to(std::string & out, std::string & indent, TaskListPermutation const & permutation, usize index, bool const split_barrier);
         void print_task_to(std::string & out, std::string & indent, TaskListPermutation const & permutation, TaskId task_id);
         void debug_print_permutation_image(TaskListPermutation const & permutation, TaskImageHandle const image_id);
         void debug_print_permutation_buffer(TaskListPermutation const & permutation, TaskBufferHandle const buffer_id);
@@ -357,6 +357,8 @@ namespace daxa
         ImplTaskList & task_list;
         TaskListPermutation & permutation;
         ImplTask * current_task = {};
+        std::optional<SetConstantBufferInfo> set_constant_buffer_info = {};
+        types::BufferDeviceAddress device_address = {};
         bool reuse_last_command_list = true;
         std::vector<CommandList> command_lists = {};
         std::optional<BinarySemaphore> last_submit_semaphore = {};

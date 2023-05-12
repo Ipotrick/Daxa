@@ -87,7 +87,7 @@ DAXA_CREATE_TEST(
     LIBS glfw
 )
 DAXA_CREATE_TEST(
-    FOLDER 3_samples 2_hello_triangle
+    FOLDER 3_samples 2_short_code_triangle
     LIBS glfw
 )
 DAXA_CREATE_TEST(
