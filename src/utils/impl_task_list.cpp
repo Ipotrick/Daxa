@@ -42,6 +42,56 @@ namespace daxa
         return {ret, offset};
     }
 
+    auto static constexpr access_to_usage(TaskImageAccess const & access) -> ImageUsageFlags
+    {
+        switch (access)
+        {
+        case TaskImageAccess::SHADER_READ: [[fallthrough]];
+        case TaskImageAccess::VERTEX_SHADER_READ: [[fallthrough]];
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ: [[fallthrough]];
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ: [[fallthrough]];
+        case TaskImageAccess::GEOMETRY_SHADER_READ: [[fallthrough]];
+        case TaskImageAccess::FRAGMENT_SHADER_READ: [[fallthrough]];
+        case TaskImageAccess::COMPUTE_SHADER_READ:
+            return ImageUsageFlagBits::SHADER_READ_ONLY;
+        case TaskImageAccess::SHADER_WRITE: [[fallthrough]];
+        case TaskImageAccess::VERTEX_SHADER_WRITE: [[fallthrough]];
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_WRITE: [[fallthrough]];
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_WRITE: [[fallthrough]];
+        case TaskImageAccess::GEOMETRY_SHADER_WRITE: [[fallthrough]];
+        case TaskImageAccess::FRAGMENT_SHADER_WRITE: [[fallthrough]];
+        case TaskImageAccess::COMPUTE_SHADER_WRITE: [[fallthrough]];
+        case TaskImageAccess::SHADER_READ_WRITE: [[fallthrough]];
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE: [[fallthrough]];
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ_WRITE: [[fallthrough]];
+        case TaskImageAccess::GEOMETRY_SHADER_READ_WRITE: [[fallthrough]];
+        case TaskImageAccess::FRAGMENT_SHADER_READ_WRITE: [[fallthrough]];
+        case TaskImageAccess::COMPUTE_SHADER_READ_WRITE:
+            return ImageUsageFlagBits::SHADER_READ_WRITE;
+        case TaskImageAccess::TRANSFER_READ:
+            return ImageUsageFlagBits::TRANSFER_SRC;
+        case TaskImageAccess::TRANSFER_WRITE:
+            return ImageUsageFlagBits::TRANSFER_DST;
+        // NOTE(msakmary) - not fully sure about the resolve being color attachment usage
+        // this is the best I could deduce from vulkan docs
+        case TaskImageAccess::RESOLVE_WRITE: [[fallthrough]];
+        case TaskImageAccess::COLOR_ATTACHMENT:
+            return ImageUsageFlagBits::COLOR_ATTACHMENT;
+        case TaskImageAccess::DEPTH_ATTACHMENT: [[fallthrough]];
+        case TaskImageAccess::STENCIL_ATTACHMENT: [[fallthrough]];
+        case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT:
+            return ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT;
+        case TaskImageAccess::DEPTH_ATTACHMENT_READ: [[fallthrough]];
+        case TaskImageAccess::STENCIL_ATTACHMENT_READ: [[fallthrough]];
+        case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT_READ:
+            return ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT;
+        case TaskImageAccess::PRESENT: [[fallthrough]];
+        case TaskImageAccess::NONE: [[fallthrough]];
+        default:
+            return ImageUsageFlagBits::NONE;
+        }
+    }
+
     auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access>
     {
         switch (access)
@@ -255,6 +305,13 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(iter != impl.current_task->base_task->get_generic_uses().end(), "Detected invalid task image handle! Only handles, that are used in the task are in the list of uses!");
         usize const image_use_index = static_cast<usize>(std::distance(impl.current_task->base_task->get_generic_uses().begin(), iter));
         return TaskImageUse<>::from(impl.current_task->base_task->get_generic_uses()[image_use_index]);
+    }
+
+    auto TaskInterfaceUses::constant_buffer_set_info() const -> SetConstantBufferInfo
+    {
+        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
+        DAXA_DBG_ASSERT_TRUE_M(impl.set_constant_buffer_info.has_value(), "task must have been created with a constant buffer slot in order to use task list provided constant buffer memory for uses.");
+        return impl.set_constant_buffer_info.value();
     }
 
     TaskInterface::TaskInterface(void * a_backend)
@@ -619,13 +676,29 @@ namespace daxa
         {
             ImageMipArraySlice const full_slice = impl.info.device.info_image_view(actual_images[index].default_view()).slice;
             std::string const & name = impl.info.device.info_image(actual_images[index]).name;
-            bool const use_withing_runtime_image_counds =
+            bool const use_within_runtime_image_counts =
                 (access_slice.base_mip_level + access_slice.level_count <= full_slice.base_mip_level + full_slice.level_count) &&
                 (access_slice.base_array_layer + access_slice.layer_count <= full_slice.base_array_layer + full_slice.layer_count);
             [[maybe_unused]] std::string const error_message =
                 std::format("task image argument (arg index: {}, task image: \"{}\", slice: {}) exceeds runtime image (index: {}, name: \"{}\") dimensions ({})!",
                             use_index, task_name, to_string(access_slice), index, name, to_string(full_slice));
-            DAXA_DBG_ASSERT_TRUE_M(use_withing_runtime_image_counds, error_message);
+            DAXA_DBG_ASSERT_TRUE_M(use_within_runtime_image_counts, error_message);
+        }
+    }
+
+    void validate_image_uses(ImplTaskList & impl, TaskListPermutation const & perm, u32 use_index, u32 task_image_index, TaskImageAccess task_access, std::string_view task_name)
+    {
+        ImageUsageFlags use_flags = access_to_usage(task_access);
+        auto const actual_images = impl.get_actual_images(TaskImageHandle{{.task_list_index = impl.unique_index, .index = task_image_index}}, perm);
+        std::string_view task_image_name = impl.global_image_infos[task_image_index].get_name();
+        for (u32 index = 0; index < actual_images.size(); ++index)
+        {
+            ImageId image = actual_images[index];
+            bool const access_valid = (impl.info.device.info_image(image).usage & use_flags) != ImageUsageFlagBits::NONE;
+            DAXA_DBG_ASSERT_TRUE_M(access_valid, std::format("detected invalid runtime image \"{}\" of task image \"{}\", in use {} of task \"{}\". "
+                                                             "The given runtime image does NOT have the image use flag {} set, but the task use requires this use for all runtime images!",
+                                                                impl.info.device.info_image(image).name, task_image_name, use_index, task_name, daxa::to_string(use_flags)
+                                                             ));
         }
     }
 
@@ -657,6 +730,7 @@ namespace daxa
                 if (!cache_valid)
                 {
                     validate_runtime_image_slice(*this, permutation, task_image_use_index, tid.index, slice);
+                    validate_image_uses(*this, permutation, task_image_use_index, tid.index, image_use.access(), task.base_task->get_name());
                     for (auto & view : view_cache)
                     {
                         if (info.device.is_id_valid(view))
@@ -785,7 +859,8 @@ namespace daxa
         bool const upload_args_to_constant_buffer = task.base_task->get_uses_constant_buffer_slot() != -1;
         if (upload_args_to_constant_buffer)
         {
-            auto constant_buffer_alloc = staging_memory.allocate(task.constant_buffer_size).value();
+            u32 const alignment = static_cast<u32>(info.device.properties().limits.min_uniform_buffer_offset_alignment);
+            auto constant_buffer_alloc = staging_memory.allocate(task.constant_buffer_size, alignment).value();
             u8 * host_constant_buffer_ptr = reinterpret_cast<u8 *>(constant_buffer_alloc.host_address);
             auto d = task.base_task->get_generic_uses();
             for_each(
@@ -798,14 +873,17 @@ namespace daxa
                 [&](u32 arg_i, TaskImageUse<> & arg)
                 {
                     auto adr = (host_constant_buffer_ptr + task.use_offsets[arg_i]);
-                    *reinterpret_cast<types::ImageViewId *>(adr) = arg.views[0];
+                    auto ptr = reinterpret_cast<types::ImageViewId *>(adr);
+                    *ptr = arg.views[0];
+                    u32 tester = *reinterpret_cast<u32 *>(ptr);
                 });
-            impl_runtime.command_lists.back().set_constant_buffer({
+            impl_runtime.device_address = constant_buffer_alloc.device_address;
+            impl_runtime.set_constant_buffer_info = SetConstantBufferInfo{
                 .slot = static_cast<u32>(task.base_task->get_uses_constant_buffer_slot()),
                 .buffer = staging_memory.get_buffer(),
                 .size = constant_buffer_alloc.size,
                 .offset = constant_buffer_alloc.buffer_offset,
-            });
+            };
         }
         impl_runtime.current_task = &task;
         impl_runtime.command_lists.back().begin_label({
@@ -1169,56 +1247,6 @@ namespace daxa
                 buffer.first_access_batch_index = new_access_batch;
                 buffer.first_access_submit_scope_index = new_access_submit;
             }
-        }
-    }
-
-    auto static constexpr access_to_usage(TaskImageAccess const & access) -> ImageUsageFlags
-    {
-        switch (access)
-        {
-        case TaskImageAccess::SHADER_READ: [[fallthrough]];
-        case TaskImageAccess::VERTEX_SHADER_READ: [[fallthrough]];
-        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ: [[fallthrough]];
-        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ: [[fallthrough]];
-        case TaskImageAccess::GEOMETRY_SHADER_READ: [[fallthrough]];
-        case TaskImageAccess::FRAGMENT_SHADER_READ: [[fallthrough]];
-        case TaskImageAccess::COMPUTE_SHADER_READ:
-            return ImageUsageFlagBits::SHADER_READ_ONLY;
-        case TaskImageAccess::SHADER_WRITE: [[fallthrough]];
-        case TaskImageAccess::VERTEX_SHADER_WRITE: [[fallthrough]];
-        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_WRITE: [[fallthrough]];
-        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_WRITE: [[fallthrough]];
-        case TaskImageAccess::GEOMETRY_SHADER_WRITE: [[fallthrough]];
-        case TaskImageAccess::FRAGMENT_SHADER_WRITE: [[fallthrough]];
-        case TaskImageAccess::COMPUTE_SHADER_WRITE: [[fallthrough]];
-        case TaskImageAccess::SHADER_READ_WRITE: [[fallthrough]];
-        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE: [[fallthrough]];
-        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_READ_WRITE: [[fallthrough]];
-        case TaskImageAccess::GEOMETRY_SHADER_READ_WRITE: [[fallthrough]];
-        case TaskImageAccess::FRAGMENT_SHADER_READ_WRITE: [[fallthrough]];
-        case TaskImageAccess::COMPUTE_SHADER_READ_WRITE:
-            return ImageUsageFlagBits::SHADER_READ_WRITE;
-        case TaskImageAccess::TRANSFER_READ:
-            return ImageUsageFlagBits::TRANSFER_SRC;
-        case TaskImageAccess::TRANSFER_WRITE:
-            return ImageUsageFlagBits::TRANSFER_DST;
-        // NOTE(msakmary) - not fully sure about the resolve being color attachment usage
-        // this is the best I could deduce from vulkan docs
-        case TaskImageAccess::RESOLVE_WRITE: [[fallthrough]];
-        case TaskImageAccess::COLOR_ATTACHMENT:
-            return ImageUsageFlagBits::COLOR_ATTACHMENT;
-        case TaskImageAccess::DEPTH_ATTACHMENT: [[fallthrough]];
-        case TaskImageAccess::STENCIL_ATTACHMENT: [[fallthrough]];
-        case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT:
-            return ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT;
-        case TaskImageAccess::DEPTH_ATTACHMENT_READ: [[fallthrough]];
-        case TaskImageAccess::STENCIL_ATTACHMENT_READ: [[fallthrough]];
-        case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT_READ:
-            return ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT;
-        case TaskImageAccess::PRESENT: [[fallthrough]];
-        case TaskImageAccess::NONE: [[fallthrough]];
-        default:
-            return ImageUsageFlagBits::NONE;
         }
     }
 
@@ -1951,10 +1979,10 @@ namespace daxa
                     .owning_resource_idx = resource_lifetime.resource_idx,
                     .memory_type_bits = mem_requirements.memory_type_bits,
                     .intersection_object = {
-                        .base_mip_level = static_cast<u32>(resource_lifetime.start_batch),
-                        .level_count = static_cast<u32>(resource_lifetime.end_batch),
-                        .base_array_layer = 0,
-                        .layer_count = static_cast<u32>(mem_requirements.size),
+                        .base_mip_level = static_cast<u8>(image_lifetime.start_batch),
+                        .level_count = static_cast<u8>(image_lifetime.end_batch),
+                        .base_array_layer = static_cast<u16>(0),
+                        .layer_count = static_cast<u16>(mem_requirements.size),
                     }};
 
                 // TODO(msakmary) Fix the intersect functionality so that it is general and does not do hacky stuff like constructing
@@ -2707,9 +2735,9 @@ namespace daxa
         }
     }
 
-    void ImplTaskList::print_task_barrier_to(std::string & out, std::string & indent, TaskListPermutation const & permutation, usize index)
+    void ImplTaskList::print_task_barrier_to(std::string & out, std::string & indent, TaskListPermutation const & permutation, usize index, bool const split_barrier)
     {
-        TaskBarrier const & barrier = permutation.barriers[index];
+        TaskBarrier const & barrier = split_barrier ? permutation.split_barriers[index] : permutation.barriers[index];
         if (barrier.image_id.is_empty())
         {
             MemoryBarrierInfo mem_barrier{
@@ -2867,12 +2895,13 @@ namespace daxa
                 for (auto & task_batch : submit_scope.task_batches)
                 {
                     std::format_to(std::back_inserter(out), "{}batch: {}\n", indent, batch_index);
+                    batch_index += 1;
                     std::format_to(std::back_inserter(out), "{}inserted pipeline barriers:\n", indent);
                     {
                         [[maybe_unused]] FormatIndent d2{out, indent, true};
                         for (auto barrier_index : task_batch.pipeline_barrier_indices)
                         {
-                            this->print_task_barrier_to(out, indent, permutation, barrier_index);
+                            this->print_task_barrier_to(out, indent, permutation, barrier_index, false);
                             print_seperator_to(out, indent);
                         }
                     }
@@ -2882,7 +2911,7 @@ namespace daxa
                         [[maybe_unused]] FormatIndent d2{out, indent, true};
                         for (auto barrier_index : task_batch.wait_split_barrier_indices)
                         {
-                            this->print_task_barrier_to(out, indent, permutation, barrier_index);
+                            this->print_task_barrier_to(out, indent, permutation, barrier_index, true);
                             print_seperator_to(out, indent);
                         }
                     }
@@ -2893,7 +2922,7 @@ namespace daxa
                         print_seperator_to(out, indent);
                         for (auto barrier_index : task_batch.wait_split_barrier_indices)
                         {
-                            this->print_task_barrier_to(out, indent, permutation, barrier_index);
+                            this->print_task_barrier_to(out, indent, permutation, barrier_index, true);
                             print_seperator_to(out, indent);
                         }
                     }
@@ -2912,10 +2941,11 @@ namespace daxa
                         [[maybe_unused]] FormatIndent d2{out, indent, true};
                         for (usize const barrier_index : task_batch.signal_split_barrier_indices)
                         {
-                            this->print_task_barrier_to(out, indent, permutation, barrier_index);
+                            this->print_task_barrier_to(out, indent, permutation, barrier_index, true);
                             print_seperator_to(out, indent);
                         }
                     }
+                    print_seperator_to(out, indent);
                 }
                 if (!submit_scope.last_minute_barrier_indices.empty())
                 {
@@ -2923,7 +2953,7 @@ namespace daxa
                     [[maybe_unused]] FormatIndent d2{out, indent, true};
                     for (usize const barrier_index : submit_scope.last_minute_barrier_indices)
                     {
-                        this->print_task_barrier_to(out, indent, permutation, barrier_index);
+                        this->print_task_barrier_to(out, indent, permutation, barrier_index, false);
                         print_seperator_to(out, indent);
                     }
                 }

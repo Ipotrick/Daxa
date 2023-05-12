@@ -419,7 +419,7 @@ namespace daxa
         impl.add_virtual_include_file(virtual_info);
     }
 
-    auto PipelineManager::reload_all() -> Result<bool>
+    auto PipelineManager::reload_all() -> std::optional<Result<void>>
     {
         auto & impl = *reinterpret_cast<ImplPipelineManager *>(this->object);
         return impl.reload_all();
@@ -714,7 +714,7 @@ namespace daxa
         shader_preprocess(virtual_file.contents, virtual_info.name);
     }
 
-    auto ImplPipelineManager::reload_all() -> Result<bool>
+    auto ImplPipelineManager::reload_all() -> std::optional<Result<void>>
     {
         bool reloaded = false;
 
@@ -722,15 +722,15 @@ namespace daxa
         {
             if (check_if_sources_changed(last_hotload_time, observed_hotload_files, virtual_files))
             {
+                reloaded = true;
                 auto new_pipeline = create_compute_pipeline(compile_info);
                 if (new_pipeline.is_ok())
                 {
                     *pipeline = std::move(*new_pipeline.value().pipeline_ptr);
-                    reloaded = true;
                 }
                 else
                 {
-                    return Result<bool>(new_pipeline.m);
+                    return { Result<void>(new_pipeline.m) };
                 }
             }
         }
@@ -739,20 +739,27 @@ namespace daxa
         {
             if (check_if_sources_changed(last_hotload_time, observed_hotload_files, virtual_files))
             {
+                reloaded = true;
                 auto new_pipeline = create_raster_pipeline(compile_info);
                 if (new_pipeline.is_ok())
                 {
                     *pipeline = std::move(*new_pipeline.value().pipeline_ptr);
-                    reloaded = true;
                 }
                 else
                 {
-                    return Result<bool>(new_pipeline.m);
+                    return { Result<void>(new_pipeline.m) };
                 }
             }
         }
 
-        return Result<bool>(reloaded);
+        if (reloaded)
+        {
+            return { Result<void>{true} };
+        }
+        else
+        {
+            return std::nullopt;
+        }
     }
 
     auto ImplPipelineManager::get_spirv(ShaderCompileInfo const & shader_info, std::string const & debug_name_opt, ShaderStage shader_stage) -> Result<std::vector<u32>>
@@ -842,7 +849,9 @@ namespace daxa
         spirv_tools.SetMessageConsumer(
             [&](spv_message_level_t level, [[maybe_unused]] char const * source, [[maybe_unused]] spv_position_t const & position, char const * message)
             { DAXA_DBG_ASSERT_TRUE_M(level > SPV_MSG_WARNING, std::format("SPIR-V Validation error after compiling {}:\n - {}", debug_name_opt, message)); });
-        spirv_tools.Validate(spirv);
+        spvtools::ValidatorOptions options{};
+        options.SetScalarBlockLayout(true);
+        // spirv_tools.Validate(spirv.data(), spirv.size(), options);
 #endif
 
         return Result<std::vector<u32>>(spirv);

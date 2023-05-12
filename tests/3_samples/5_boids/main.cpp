@@ -164,7 +164,7 @@ struct App : AppWindow<App>
     }
 
     // Update task:
-    
+
     struct UpdateBoidsTask
     {
         struct Uses
@@ -175,7 +175,7 @@ struct App : AppWindow<App>
         std::string_view name = "update boids";
 
         std::shared_ptr<daxa::ComputePipeline> update_boids_pipeline = {};
-        void callback(daxa::TaskInterface const & ti)
+        void callback(daxa::TaskInterface ti)
         {
             auto cmd_list = ti.get_command_list();
             cmd_list.set_pipeline(*update_boids_pipeline);
@@ -190,7 +190,7 @@ struct App : AppWindow<App>
     };
 
     // Draw task:
-    
+
     struct DrawBoidsTask
     {
         struct Uses
@@ -201,9 +201,9 @@ struct App : AppWindow<App>
         std::string_view name = "draw boids";
 
         std::shared_ptr<daxa::RasterPipeline> draw_pipeline = {};
-        u32* size_x = {};
-        u32* size_y = {};
-        void callback(daxa::TaskInterface const & ti)
+        u32 * size_x = {};
+        u32 * size_y = {};
+        void callback(daxa::TaskInterface ti)
         {
             auto cmd_list = ti.get_command_list();
             cmd_list.set_pipeline(*draw_pipeline);
@@ -215,7 +215,8 @@ struct App : AppWindow<App>
                         .load_op = daxa::AttachmentLoadOp::CLEAR,
                         .store_op = daxa::AttachmentStoreOp::STORE,
                         .clear_value = std::array<f32, 4>{1.0f, 1.0f, 1.0f, 1.0f},
-                    }},
+                    },
+                },
                 .render_area = {
                     .width = *size_x,
                     .height = *size_y,
@@ -227,7 +228,8 @@ struct App : AppWindow<App>
                 .axis_scaling = {
                     std::min(1.0f, static_cast<f32>(*this->size_y) / static_cast<f32>(*this->size_x)),
                     std::min(1.0f, static_cast<f32>(*this->size_x) / static_cast<f32>(*this->size_y)),
-                }});
+                },
+            });
 
             cmd_list.draw({.vertex_count = 3 * MAX_BOIDS});
 
@@ -241,19 +243,19 @@ struct App : AppWindow<App>
         new_task_list.use_persistent_image(task_swapchain_image);
         new_task_list.use_persistent_buffer(task_boids_current);
         new_task_list.use_persistent_buffer(task_boids_old);
-        
+
         new_task_list.add_task(UpdateBoidsTask{
             .uses = {
-                 .current = {task_boids_current},
-                 .previous = {task_boids_old},
-             },
+                .current = {task_boids_current},
+                .previous = {task_boids_old},
+            },
             .update_boids_pipeline = update_boids_pipeline,
         });
-        
+
         new_task_list.add_task(DrawBoidsTask{
             .uses = {
-                .boids = { task_boids_current },
-                .render_image = { task_swapchain_image },
+                .boids = {task_boids_current},
+                .render_image = {task_swapchain_image},
             },
             .draw_pipeline = draw_pipeline,
             .size_x = &size_x,
@@ -273,9 +275,9 @@ struct App : AppWindow<App>
         prev_time = now;
 
         auto reloaded_result = pipeline_manager.reload_all();
-        if (reloaded_result.is_err())
+        if (reloaded_result.has_value())
         {
-            std::cout << reloaded_result.to_string() << std::endl;
+            std::cout << reloaded_result.value().to_string() << std::endl;
         }
 
         auto swapchain_image = swapchain.acquire_next_image();
