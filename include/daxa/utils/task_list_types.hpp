@@ -467,7 +467,7 @@ namespace daxa
             return constant_buffer_slot;
         }
 
-        virtual auto get_name() const -> std::string
+        virtual auto get_name() const -> std::string override
         {
             return name;
         }
