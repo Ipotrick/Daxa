@@ -315,7 +315,7 @@ namespace daxa
     }
 
     TaskInterface::TaskInterface(void * a_backend)
-        : backend{a_backend}, uses{a_backend}
+        : uses{a_backend}, backend{a_backend}
     {
     }
 
@@ -697,8 +697,7 @@ namespace daxa
             bool const access_valid = (impl.info.device.info_image(image).usage & use_flags) != ImageUsageFlagBits::NONE;
             DAXA_DBG_ASSERT_TRUE_M(access_valid, std::format("detected invalid runtime image \"{}\" of task image \"{}\", in use {} of task \"{}\". "
                                                              "The given runtime image does NOT have the image use flag {} set, but the task use requires this use for all runtime images!",
-                                                                impl.info.device.info_image(image).name, task_image_name, use_index, task_name, daxa::to_string(use_flags)
-                                                             ));
+                                                             impl.info.device.info_image(image).name, task_image_name, use_index, task_name, daxa::to_string(use_flags)));
         }
     }
 
@@ -1970,6 +1969,7 @@ namespace daxa
                                            .memory_requirements;
                 }
                 // Go through all memory block states in which this resource is alive and try to find a spot for it
+                const u8 resource_lifetime_duration = resource_lifetime.end_batch - resource_lifetime.start_batch + 1;
                 Allocation new_allocation = Allocation{
                     .offset = 0,
                     .size = mem_requirements.size,
@@ -1979,10 +1979,10 @@ namespace daxa
                     .owning_resource_idx = resource_lifetime.resource_idx,
                     .memory_type_bits = mem_requirements.memory_type_bits,
                     .intersection_object = {
-                        .base_mip_level = static_cast<u8>(image_lifetime.start_batch),
-                        .level_count = static_cast<u8>(image_lifetime.end_batch),
+                        .base_mip_level = static_cast<u8>(resource_lifetime.start_batch),
+                        .level_count = resource_lifetime_duration,
                         .base_array_layer = static_cast<u16>(0),
-                        .layer_count = static_cast<u16>(mem_requirements.size),
+                        .layer_count = static_cast<u32>(mem_requirements.size),
                     }};
 
                 // TODO(msakmary) Fix the intersect functionality so that it is general and does not do hacky stuff like constructing
@@ -2783,71 +2783,82 @@ namespace daxa
             });
     }
 
-    // TODO(msakmary)
-    void ImplTaskList::debug_print_permutation_image(TaskListPermutation const & permutation, TaskImageHandle const image_id)
+    void ImplTaskList::print_permutation_aliasing_to(std::string & out, std::string indent, TaskListPermutation const & permutation)
     {
-        // TODO(msakmary) better way to identify permutation (perhaps named conditions or smth idk)
-        auto prefix = std::string();
-        auto const & glob_image = global_image_infos[image_id.index];
-        this->debug_string_stream << "=================== Task Image " << glob_image.get_name() << "===================\n";
-        prefix.append("\t");
-
-        for (auto const & batch_submit_scope : permutation.batch_submit_scopes)
+        usize batches = 0;
+        std::vector<usize> submit_batch_offsets(permutation.batch_submit_scopes.size());
+        for (u32 submit_scope_idx = 0; submit_scope_idx < permutation.batch_submit_scopes.size(); submit_scope_idx++)
         {
-            for (auto const & batch : batch_submit_scope.task_batches)
-            {
-                for (auto const task_id : batch.tasks)
-                {
-                    [[maybe_unused]] auto const & task = tasks.at(task_id);
-                    // buffer is not used in this task
-
-                    // for (auto const & used_image : task.info.used_images)
-                    // {
-                    //     if (used_image.id == image_id)
-                    //     {
-                    //         this->debug_string_stream << prefix << "Task " << task.info.name << "\n";
-                    //         prefix.append("\t");
-                    //         auto [layout, access] = task_image_access_to_layout_access(used_image.access);
-                    //         this->debug_string_stream << prefix << "Access " << to_string(access) << "\n";
-                    //         this->debug_string_stream << prefix << "Layout " << to_string(layout) << "\n";
-                    //         break;
-                    //     }
-                    // }
-                }
-            }
+            submit_batch_offsets.at(submit_scope_idx) = batches;
+            batches += permutation.batch_submit_scopes.at(submit_scope_idx).task_batches.size();
         }
-    }
-
-    // TODO(msakmary)
-    void ImplTaskList::debug_print_permutation_buffer(TaskListPermutation const & permutation, TaskBufferHandle const buffer_id)
-    {
-        // TODO(msakmary) better way to identify permutation (perhaps named conditions or smth idk)
-        auto prefix = std::string();
-        this->debug_string_stream << "=================== Task Buffer " << global_buffer_infos[buffer_id.index].get_name() << "===================\n";
-        prefix.append("\t");
-
-        for (auto const & batch_submit_scope : permutation.batch_submit_scopes)
+        auto print_lifetime = [&](usize start_idx, usize end_idx)
         {
-            for (auto const & batch : batch_submit_scope.task_batches)
+            for (usize i = 0; i < batches; i++)
             {
-                for (auto const task_id : batch.tasks)
+                if (i >= start_idx && i < end_idx)
                 {
-                    [[maybe_unused]] auto const & task = tasks.at(task_id);
-                    // buffer is not used in this task
-
-                    // for (auto const & used_buffer : task.info.used_buffers)
-                    //{
-                    //    if (used_buffer.id == buffer_id)
-                    //    {
-                    //        this->debug_string_stream << prefix << "Task " << task.info.name << "\n";
-                    //        prefix.append("\t");
-                    //        auto access = task_buffer_access_to_access(used_buffer.access);
-                    //        this->debug_string_stream << prefix << "Access " << to_string(access) << "\n";
-                    //        break;
-                    //    }
-                    //}
+                    std::format_to(std::back_inserter(out), "{}===", i);
+                }
+                else if (i == end_idx && end_idx != batches - 1)
+                {
+                    std::format_to(std::back_inserter(out), "{}---", i);
+                }
+                else if (i != batches - 1)
+                {
+                    std::format_to(std::back_inserter(out), "----", i);
+                }
+                else
+                {
+                    if (end_idx == batches - 1)
+                    {
+                        std::format_to(std::back_inserter(out), "{}", i);
+                    }
+                    else
+                    {
+                        std::format_to(std::back_inserter(out), "-");
+                    }
                 }
             }
+        };
+        std::format_to(std::back_inserter(out), "{}Resource lifetimes and aliasing:\n", indent);
+        for (u32 perm_image_idx = 0; perm_image_idx < permutation.image_infos.size(); perm_image_idx++)
+        {
+            if (global_image_infos.at(perm_image_idx).is_persistent())
+            {
+                continue;
+            }
+
+            auto const & perm_task_image = permutation.image_infos.at(perm_image_idx);
+            usize start_idx = submit_batch_offsets.at(perm_task_image.lifetime.first_use.submit_scope_index) +
+                              perm_task_image.lifetime.first_use.task_batch_index;
+            usize end_idx = submit_batch_offsets.at(perm_task_image.lifetime.last_use.submit_scope_index) +
+                            perm_task_image.lifetime.last_use.task_batch_index;
+            std::format_to(std::back_inserter(out), "{}", indent);
+            print_lifetime(start_idx, end_idx);
+            std::format_to(std::back_inserter(out), "  allocation offset: {} allocation size: {} task resource name: {}\n",
+                           perm_task_image.allocation_offset,
+                           std::get<PermIndepTaskImageInfo::Transient>(global_image_infos.at(perm_image_idx).task_image_data).memory_requirements.size,
+                           global_image_infos.at(perm_image_idx).get_name());
+        }
+        for (u32 perm_buffer_idx = 0; perm_buffer_idx < permutation.buffer_infos.size(); perm_buffer_idx++)
+        {
+            if (global_buffer_infos.at(perm_buffer_idx).is_persistent())
+            {
+                continue;
+            }
+
+            auto const & perm_task_buffer = permutation.buffer_infos.at(perm_buffer_idx);
+            usize start_idx = submit_batch_offsets.at(perm_task_buffer.lifetime.first_use.submit_scope_index) +
+                              perm_task_buffer.lifetime.first_use.task_batch_index;
+            usize end_idx = submit_batch_offsets.at(perm_task_buffer.lifetime.last_use.submit_scope_index) +
+                            perm_task_buffer.lifetime.last_use.task_batch_index;
+            std::format_to(std::back_inserter(out), "{}", indent);
+            print_lifetime(start_idx, end_idx);
+            std::format_to(std::back_inserter(out), "  allocation offset: {} allocation size: {} task resource name: {}\n",
+                           perm_task_buffer.allocation_offset,
+                           std::get<PermIndepTaskBufferInfo::Transient>(global_buffer_infos.at(perm_buffer_idx).task_buffer_data).memory_requirements.size,
+                           global_buffer_infos.at(perm_buffer_idx).get_name());
         }
     }
 
@@ -2883,6 +2894,7 @@ namespace daxa
         usize permutation_index = this->chosen_permutation_last_execution;
         auto & permutation = this->permutations[permutation_index];
         {
+            this->print_permutation_aliasing_to(out, indent, permutation);
             permutation_index += 1;
             std::format_to(std::back_inserter(out), "permutations split barriers: {}\n", info.use_split_barriers);
             [[maybe_unused]] FormatIndent d0{out, indent, true};
