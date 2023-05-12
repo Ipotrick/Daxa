@@ -95,9 +95,9 @@ struct App : BaseApp<App>
         gpu_input.delta_time = delta_time;
 
         auto reloaded_result = pipeline_manager.reload_all();
-        if (reloaded_result.is_err())
+        if (reloaded_result.has_value())
         {
-            std::cout << reloaded_result.to_string() << std::endl;
+            std::cout << reloaded_result.value().to_string() << std::endl;
         }
 
         ui_update();

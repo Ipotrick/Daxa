@@ -119,7 +119,7 @@ namespace daxa
         };
 
         template <typename T, usize M, usize N>
-        using GenericMatrix = GenericVector<GenericVector<T, N>, M>;
+        struct GenericMatrix : GenericVector<GenericVector<T, N>, M> {};
     } // namespace detail
 
     inline namespace types {
@@ -523,6 +523,8 @@ namespace daxa
         static inline constexpr ImageUsageFlags FRAGMENT_SHADING_RATE_ATTACHMENT = {0x00000100};
         static inline constexpr ImageUsageFlags SHADING_RATE_IMAGE = FRAGMENT_SHADING_RATE_ATTACHMENT;
     };
+
+    auto to_string(ImageUsageFlags const &) -> std::string;
 
     struct MemoryFlagsProperties
     {

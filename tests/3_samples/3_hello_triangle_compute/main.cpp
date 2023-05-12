@@ -25,7 +25,7 @@ struct App : BaseApp<App>
         .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
         .name = "render_image",
     });
-    daxa::TaskImage task_render_image{{.initial_images={.images=std::array{render_image}}, .name="task_render_image"}};
+    daxa::TaskImage task_render_image{{.initial_images = {.images = std::array{render_image}}, .name = "task_render_image"}};
 
     daxa::TaskList loop_task_list = record_loop_task_list();
 
@@ -45,14 +45,14 @@ struct App : BaseApp<App>
     void on_update()
     {
         auto reloaded_result = pipeline_manager.reload_all();
-        if (reloaded_result.is_err())
+        if (reloaded_result.has_value())
         {
-            std::cout << reloaded_result.to_string() << std::endl;
+            std::cout << reloaded_result.value().to_string() << std::endl;
         }
         ui_update();
 
         auto swapchain_image = swapchain.acquire_next_image();
-        task_swapchain_image.set_images({.images=std::array{swapchain_image}});
+        task_swapchain_image.set_images({.images = std::array{swapchain_image}});
         if (swapchain_image.is_empty())
         {
             return;
@@ -77,7 +77,7 @@ struct App : BaseApp<App>
                 .size = {size_x, size_y, 1},
                 .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             });
-            task_render_image.set_images({.images=std::array{render_image}});
+            task_render_image.set_images({.images = std::array{render_image}});
             base_on_update();
         }
     }
