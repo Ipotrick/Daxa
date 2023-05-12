@@ -1855,7 +1855,7 @@ namespace daxa
 
             for (u32 perm_image_idx = 0; perm_image_idx < permutation.image_infos.size(); perm_image_idx++)
             {
-                if (global_image_infos.at(perm_image_idx).is_persistent())
+                if (global_image_infos.at(perm_image_idx).is_persistent() || !permutation.image_infos.at(perm_image_idx).valid)
                 {
                     continue;
                 }
@@ -2824,7 +2824,7 @@ namespace daxa
         std::format_to(std::back_inserter(out), "{}Resource lifetimes and aliasing:\n", indent);
         for (u32 perm_image_idx = 0; perm_image_idx < permutation.image_infos.size(); perm_image_idx++)
         {
-            if (global_image_infos.at(perm_image_idx).is_persistent())
+            if (global_image_infos.at(perm_image_idx).is_persistent() || !permutation.image_infos.at(perm_image_idx).valid)
             {
                 continue;
             }
