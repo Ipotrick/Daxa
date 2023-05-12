@@ -176,7 +176,6 @@ namespace tests
             });
 
             // ========================================== Record tasks =======================================================
-            using TIA = daxa::TaskImageAccess;
             using namespace daxa::task_resource_uses;
 
             task_list.add_task({
@@ -241,6 +240,178 @@ namespace tests
             std::cout << task_list.get_debug_string() << std::endl;
         }
 
+    }
+
+    void permutation_aliasing()
+    {
+        // TEST
+        // Tests whether transient images alias across permutations
+        // Resources:
+        //      Image Base - transient image shared by both permutations
+        //      Image A, B - transient images for true and false permutations respectively
+        // Tasks:
+        //      Task 0 - Set Base image data
+        //      Conditional True - Task 1 - writes into image A
+        //      Conditional True - Task 2 - checks contents of image A
+        //      Conditional False - Task 1 - writes into image B
+        //      Conditional False - Task 2 - checks contents of image B
+        //      Task 3 - Check Base image data
+        // Expected:
+        //      Images A and B are aliased - they both start at the same offset
+
+        daxa::Context daxa_ctx = daxa::create_context({ .enable_validation = false, });
+        daxa::Device device = daxa_ctx.create_device({ .name = "device", });
+
+        daxa::PipelineManager pipeline_manager = daxa::PipelineManager{{
+            .device = device,
+            .shader_compile_options = {
+                .root_paths = {
+                    DAXA_SHADER_INCLUDE_DIR,
+                    "tests/2_daxa_api/6_task_list/shaders",
+                },
+                .language = daxa::ShaderLanguage::GLSL,
+            },
+            .name = "pipeline manager",
+        }};
+
+        daxa::ComputePipelineCompileInfo const test_image_pipeline_info = {
+            .shader_info = {
+                .source = daxa::ShaderFile{"transient.glsl"},
+                .compile_options = {
+                    .defines = std::vector{daxa::ShaderDefine{"TEST_IMAGE", "1"}}},
+            },
+            .push_constant_size = sizeof(TestImagePush),
+            .name = "test image pipeline",
+        };
+
+        auto test_image_pipeline = pipeline_manager.add_compute_pipeline(test_image_pipeline_info).value();
+
+        {
+            const f32 IMAGE_A_VALUE = 1.0f;
+            const f32 IMAGE_B_VALUE = 2.0f;
+            const f32 IMAGE_BASE_VALUE = 2.0f;
+            const u32vec3 IMAGE_A_SIZE = {128, 128, 1};
+            const u32vec3 IMAGE_B_SIZE = {256, 256, 1};
+            const u32vec3 IMAGE_BASE_SIZE = {64, 64, 1};
+
+            auto task_list = daxa::TaskList({
+                .device = device,
+                .permutation_condition_count = 1,
+                .record_debug_information = true,
+                .staging_memory_pool_size = 4'000'000,
+                .name = "task_list",
+            });
+
+
+            // ========================================== Record tasks =======================================================
+            using namespace daxa::task_resource_uses;
+            auto image_base = task_list.create_transient_image({
+                .dimensions = 3,
+                .format = daxa::Format::R32_SFLOAT,
+                .size = {IMAGE_BASE_SIZE.x, IMAGE_BASE_SIZE.y, IMAGE_BASE_SIZE.z},
+                .name = "Image Base"
+            });
+
+            task_list.add_task({
+                .uses = {
+                    ImageTransferWrite<daxa::ImageViewType::REGULAR_3D>{image_base},
+                },
+                .task = [=](daxa::TaskInterface ti)
+                {
+                    auto cmd = ti.get_command_list();
+                    set_initial_image_data(ti, cmd, image_base, IMAGE_BASE_SIZE, IMAGE_BASE_VALUE);
+                },
+                .name = "Task 0 - write base image value",
+            });
+
+            task_list.conditional({
+                .condition_index = 0,
+                .when_true = [&](){
+                    auto image_A = task_list.create_transient_image({
+                        .dimensions = 3,
+                        .format = daxa::Format::R32_SFLOAT,
+                        .size = {IMAGE_A_SIZE.x, IMAGE_A_SIZE.y, IMAGE_A_SIZE.z},
+                        .name = "Image A"
+                    });
+                    task_list.add_task({
+                        .uses = {
+                            ImageTransferWrite<daxa::ImageViewType::REGULAR_3D>{image_A},
+                        },
+                        .task = [=](daxa::TaskInterface ti)
+                        {
+                            auto cmd = ti.get_command_list();
+                            set_initial_image_data(ti, cmd, image_A, IMAGE_A_SIZE, IMAGE_A_VALUE);
+                        },
+                        .name = "Perm True - Task 1 - write image A",
+                    });
+
+                    task_list.add_task({
+                        .uses = {
+                            ImageComputeShaderRead<daxa::ImageViewType::REGULAR_3D>{image_A},
+                        },
+                        .task = [=](daxa::TaskInterface ti)
+                        {
+                            auto cmd = ti.get_command_list();
+                            validate_image_data(ti, cmd, image_A, IMAGE_A_SIZE, IMAGE_A_VALUE, *test_image_pipeline);
+                        },
+                        .name = "Perm True - Task 2 - check image A",
+                    });
+                },
+                .when_false = [&](){
+                    auto image_B = task_list.create_transient_image({
+                        .dimensions = 3,
+                        .format = daxa::Format::R32_SFLOAT,
+                        .size = {IMAGE_B_SIZE.x, IMAGE_B_SIZE.y, IMAGE_B_SIZE.z},
+                        .name = "Image B"
+                    });
+
+                    task_list.add_task({
+                        .uses = {
+                            ImageTransferWrite<daxa::ImageViewType::REGULAR_3D>{image_B},
+                        },
+                        .task = [=](daxa::TaskInterface ti)
+                        {
+                            auto cmd = ti.get_command_list();
+                            set_initial_image_data(ti, cmd, image_B, IMAGE_B_SIZE, IMAGE_B_VALUE);
+                        },
+                        .name = "Perm False - Task 1 - write image B",
+                    });
+
+                    task_list.add_task({
+                        .uses = {
+                            ImageComputeShaderRead<daxa::ImageViewType::REGULAR_3D>{image_B},
+                        },
+                        .task = [=](daxa::TaskInterface ti)
+                        {
+                            auto cmd = ti.get_command_list();
+                            validate_image_data(ti, cmd, image_B, IMAGE_B_SIZE, IMAGE_B_VALUE, *test_image_pipeline);
+                        },
+                        .name = "Perm False - Task 2 - check image B",
+                    });
+                }
+            });
+
+            task_list.add_task({
+                .uses = {
+                    ImageComputeShaderRead<daxa::ImageViewType::REGULAR_3D>{image_base},
+                },
+                .task = [=](daxa::TaskInterface ti)
+                {
+                    auto cmd = ti.get_command_list();
+                    validate_image_data(ti, cmd, image_base, IMAGE_BASE_SIZE, IMAGE_BASE_VALUE, *test_image_pipeline);
+                },
+                .name = "Task 3 - validate base image data",
+            });
+
+            task_list.submit({});
+            task_list.complete({});
+            bool perm_condition = true;
+            task_list.execute({.permutation_condition_values = {&perm_condition, 1}});
+            std::cout << task_list.get_debug_string() << std::endl;
+            perm_condition = false;
+            task_list.execute({.permutation_condition_values = {&perm_condition, 1}});
+            std::cout << task_list.get_debug_string() << std::endl;
+        }
     }
 
     void transient_resources()
