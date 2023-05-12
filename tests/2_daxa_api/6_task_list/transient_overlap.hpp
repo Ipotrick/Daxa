@@ -57,12 +57,16 @@ namespace tests
         u32 const image_size = sizeof(f32) * size.x * size.y * size.z;
         auto staging = ti.get_allocator().allocate(image_size).value();
         for (u32 x = 0; x < size.x; ++x)
+        {
             for (u32 y = 0; y < size.y; ++y)
+            {
                 for (u32 z = 0; z < size.z; ++z)
                 {
                     usize index = (x + y * size.x + z * size.x * size.y);
                     reinterpret_cast<f32 *>(staging.host_address)[index] = value;
                 }
+            }
+        }
         cmd.copy_buffer_to_image({
             .buffer = ti.get_allocator().get_buffer(),
             .buffer_offset = staging.buffer_offset,
@@ -89,6 +93,154 @@ namespace tests
             div_round_up(size.x, 4),
             div_round_up(size.y, 4),
             div_round_up(size.z, 4));
+    }
+
+    void transient_write_aliasing()
+    {
+        // TEST
+        // Tests whether two transient images are aliased in memory correctly
+        // Resources:
+        //      Image A, B, C - all are transient
+        // Tasks:
+        //      Task 1 - writes into image A and B
+        //      Task 2 - validate image A and B
+        //      Task 3 - writes into image A and C 
+        //          - Note(msakmary) both tasks writing image A creates a dependency between task 1 so that 
+        //            they are not inserted into the same batch and we can actually test if aliasing occurs
+        //      Task 4 - validate image A and C
+        // Expected:
+        //      Images B and C are aliased and the content is correct after execution of each of the tasks
+
+        daxa::Context daxa_ctx = daxa::create_context({ .enable_validation = false, });
+        daxa::Device device = daxa_ctx.create_device({ .name = "device", });
+
+        daxa::PipelineManager pipeline_manager = daxa::PipelineManager{{
+            .device = device,
+            .shader_compile_options = {
+                .root_paths = {
+                    DAXA_SHADER_INCLUDE_DIR,
+                    "tests/2_daxa_api/6_task_list/shaders",
+                },
+                .language = daxa::ShaderLanguage::GLSL,
+            },
+            .name = "pipeline manager",
+        }};
+
+        daxa::ComputePipelineCompileInfo const test_image_pipeline_info = {
+            .shader_info = {
+                .source = daxa::ShaderFile{"transient.glsl"},
+                .compile_options = {
+                    .defines = std::vector{daxa::ShaderDefine{"TEST_IMAGE", "1"}}},
+            },
+            .push_constant_size = sizeof(TestImagePush),
+            .name = "test image pipeline",
+        };
+
+        auto test_image_pipeline = pipeline_manager.add_compute_pipeline(test_image_pipeline_info).value();
+
+        {
+            const f32 IMAGE_A_VALUE = 1.0f;
+            const f32 IMAGE_B_VALUE = 2.0f;
+            const f32 IMAGE_C_VALUE = 3.0f;
+            const u32vec3 IMAGE_A_SIZE = {2, 2, 1};
+            const u32vec3 IMAGE_B_SIZE = {2, 2, 1};
+            const u32vec3 IMAGE_C_SIZE = {2, 2, 1};
+
+            auto task_list = daxa::TaskList({
+                .device = device,
+                .record_debug_information = true,
+                .staging_memory_pool_size = 4'000'000,
+                .name = "task_list",
+            });
+
+            // ========================================== Create resources ====================================================
+            auto image_A = task_list.create_transient_image({
+                .dimensions = 3,
+                .format = daxa::Format::R32_SFLOAT,
+                .size = {IMAGE_A_SIZE.x, IMAGE_A_SIZE.y, IMAGE_A_SIZE.z},
+                .name = "Image A"
+            });
+
+            auto image_B = task_list.create_transient_image({
+                .dimensions = 3,
+                .format = daxa::Format::R32_SFLOAT,
+                .size = {IMAGE_B_SIZE.x, IMAGE_B_SIZE.y, IMAGE_B_SIZE.z},
+                .name = "Image B"
+            });
+
+            auto image_C = task_list.create_transient_image({
+                .dimensions = 3,
+                .format = daxa::Format::R32_SFLOAT,
+                .size = {IMAGE_C_SIZE.x, IMAGE_C_SIZE.y, IMAGE_C_SIZE.z},
+                .name = "Image C"
+            });
+
+            // ========================================== Record tasks =======================================================
+            using TIA = daxa::TaskImageAccess;
+            using namespace daxa::task_resource_uses;
+
+            task_list.add_task({
+                .uses = {
+                    ImageTransferWrite<daxa::ImageViewType::REGULAR_3D>{image_A},
+                    ImageTransferWrite<daxa::ImageViewType::REGULAR_3D>{image_B},
+                },
+                .task = [=](daxa::TaskInterface ti)
+                {
+                    auto cmd = ti.get_command_list();
+                    set_initial_image_data(ti, cmd, image_A, IMAGE_A_SIZE, IMAGE_A_VALUE);
+                    set_initial_image_data(ti, cmd, image_B, IMAGE_B_SIZE, IMAGE_B_VALUE);
+                },
+                .name = "Task 1 - write image A and B",
+            });
+
+            task_list.add_task({
+                .uses = {
+                    ImageComputeShaderRead<daxa::ImageViewType::REGULAR_3D>{image_A},
+                    ImageComputeShaderRead<daxa::ImageViewType::REGULAR_3D>{image_B},
+                },
+                .task = [=](daxa::TaskInterface ti)
+                {
+                    auto cmd = ti.get_command_list();
+                    validate_image_data(ti, cmd, image_A, IMAGE_A_SIZE, IMAGE_A_VALUE, *test_image_pipeline);
+                    validate_image_data(ti, cmd, image_B, IMAGE_B_SIZE, IMAGE_B_VALUE, *test_image_pipeline);
+                },
+                .name = "Task 2 - test contents of image A and B",
+            });
+
+            task_list.add_task({
+                .uses = {
+                    ImageTransferWrite<daxa::ImageViewType::REGULAR_3D>{image_A},
+                    ImageTransferWrite<daxa::ImageViewType::REGULAR_3D>{image_C},
+                },
+                .task = [=](daxa::TaskInterface ti)
+                {
+                    auto cmd = ti.get_command_list();
+                    set_initial_image_data(ti, cmd, image_A, IMAGE_A_SIZE, IMAGE_C_VALUE);
+                    set_initial_image_data(ti, cmd, image_C, IMAGE_C_SIZE, IMAGE_C_VALUE);
+                },
+                .name = "Task 3 - write image A and C",
+            });
+
+            task_list.add_task({
+                .uses = {
+                    ImageComputeShaderRead<daxa::ImageViewType::REGULAR_3D>{image_A},
+                    ImageComputeShaderRead<daxa::ImageViewType::REGULAR_3D>{image_C},
+                },
+                .task = [=](daxa::TaskInterface ti)
+                {
+                    auto cmd = ti.get_command_list();
+                    validate_image_data(ti, cmd, image_A, IMAGE_A_SIZE, IMAGE_C_VALUE, *test_image_pipeline);
+                    validate_image_data(ti, cmd, image_C, IMAGE_C_SIZE, IMAGE_C_VALUE, *test_image_pipeline);
+                },
+                .name = "Task 4 - test contents of image A and C",
+            });
+            task_list.submit({});
+            task_list.complete({});
+            task_list.execute({});
+
+            std::cout << task_list.get_debug_string() << std::endl;
+        }
+
     }
 
     void transient_resources()
@@ -157,7 +309,7 @@ namespace tests
                 task_list.create_transient_image({
                     .dimensions = 3,
                     .format = daxa::Format::R32_SFLOAT,
-                    .size = {MEDIUM_LIFE_IMAGE_SIZE.x, MEDIUM_LIFE_IMAGE_SIZE.y, MEDIUM_LIFE_IMAGE_SIZE.z},
+                    .size = daxa::Extent3D{MEDIUM_LIFE_IMAGE_SIZE.x, MEDIUM_LIFE_IMAGE_SIZE.y, MEDIUM_LIFE_IMAGE_SIZE.z},
                     .name = "medium life image",
                 });
 
@@ -221,7 +373,7 @@ namespace tests
                 {
                     auto cmd = tri.get_command_list();
                     set_initial_image_data(tri, cmd, long_life_image, LONG_LIFE_IMAGE_SIZE, LONG_LIFE_IMAGE_VALUE);
-                    validate_image_data(tri, cmd, long_life_image, LONG_LIFE_IMAGE_SIZE, LONG_LIFE_IMAGE_VALUE, *test_image_pipeline);
+                    validate_image_data(tri, cmd, medium_life_image, MEDIUM_LIFE_IMAGE_SIZE, MEDIUM_LIFE_IMAGE_VALUE, *test_image_pipeline);
                     validate_buffer_data(tri, cmd, long_life_buffer, LONG_LIFE_BUFFER_SIZE, LONG_LIFE_BUFFER_VALUE, *test_buffer_pipeline);
                 },
                 .name = "validate long life buffer, validate medium life image, populate long life image",
