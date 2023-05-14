@@ -61,6 +61,7 @@
 #define _DAXA_REGISTER_SAMPLER_TYPE(SAMPLER_TYPE)
 /// @brief Buffer ptr enable is ignored in c++.
 #define DAXA_ENABLE_BUFFER_PTR(STRUCT_TYPE)
+#define DAXA_ENABLE_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN)
 /// @brief Buffer ptr types map to the buffer device address type in daxa.
 #define daxa_RWBufferPtr(x) daxa::types::BufferDeviceAddress
 /// @brief Buffer ptr types map to the buffer device address type in daxa.

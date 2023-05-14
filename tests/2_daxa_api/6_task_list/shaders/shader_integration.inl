@@ -5,7 +5,7 @@ struct Settings
 {
     daxa_f32 set_value;
 };
-DAXA_ENABLE_BUFFER_PTR(Settings)
+DAXA_ENABLE_BUFFER_PTR_ALIGN(Settings, 4)
 
 // Must be in an .inl file for now.
 DAXA_INL_TASK_USE_BEGIN(ShaderIntegrationTask, DAXA_CBUFFER_SLOT1)
