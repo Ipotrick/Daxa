@@ -38,7 +38,7 @@ void main()
         #if DAXA_ENABLE_IMAGE_OVERLOADS_BASIC
         imageStore(push.image, i32vec2(pixel_i.xy), f32vec4(col, 1));
         #else
-        imageStore(daxa_get_image(image2D, push.image.id), i32vec2(pixel_i.xy), f32vec4(col, 1));
+        imageStore(daxa_image2D(push.image.id), i32vec2(pixel_i.xy), f32vec4(col, 1));
         #endif
     }
 }
