@@ -1715,19 +1715,28 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(!this->image_infos[this->swapchain_image.index].swapchain_semaphore_waited_upon, "Can only present once");
         this->image_infos[this->swapchain_image.index].swapchain_semaphore_waited_upon = true;
 
-        ExtendedImageSliceState const & tracked_slice = this->image_infos[this->swapchain_image.index].last_slice_states.back();
-        usize const submit_scope_index = tracked_slice.latest_access_submit_scope_index;
+        ExtendedImageSliceState default_slice;
+        ExtendedImageSliceState const * tracked_slice = {};
+        if (this->image_infos[this->swapchain_image.index].last_slice_states.empty())
+        {
+            tracked_slice = &default_slice;
+        }
+        else
+        {
+            tracked_slice = &this->image_infos[this->swapchain_image.index].last_slice_states.back();
+        }
+        usize const submit_scope_index = tracked_slice->latest_access_submit_scope_index;
         DAXA_DBG_ASSERT_TRUE_M(submit_scope_index < this->batch_submit_scopes.size() - 1, "the last swapchain image use MUST be before the last submit when presenting");
         TaskBatchSubmitScope & submit_scope = this->batch_submit_scopes[submit_scope_index];
-        usize const batch_index = tracked_slice.latest_access_batch_index;
+        usize const batch_index = tracked_slice->latest_access_batch_index;
         // We need to insert a pipeline barrier to transition the swapchain image layout to present src optimal.
         usize const barrier_index = this->barriers.size();
         this->barriers.push_back(TaskBarrier{
             .image_id = this->swapchain_image,
-            .slice = tracked_slice.state.slice,
-            .layout_before = tracked_slice.state.latest_layout,
+            .slice = tracked_slice->state.slice,
+            .layout_before = tracked_slice->state.latest_layout,
             .layout_after = ImageLayout::PRESENT_SRC,
-            .src_access = tracked_slice.state.latest_access,
+            .src_access = tracked_slice->state.latest_access,
             .dst_access = {.stages = PipelineStageFlagBits::BOTTOM_OF_PIPE},
             .src_batch = batch_index,
             .dst_batch = batch_index + 1,
