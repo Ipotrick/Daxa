@@ -1871,8 +1871,8 @@ namespace daxa
 
                 auto const & perm_task_image = permutation.image_infos.at(perm_image_idx);
 
-                if (perm_task_image.lifetime.first_use.submit_scope_index != std::numeric_limits<u32>::max() ||
-                    perm_task_image.lifetime.last_use.submit_scope_index != std::numeric_limits<u32>::max())
+                if (perm_task_image.lifetime.first_use.submit_scope_index == std::numeric_limits<u32>::max() ||
+                    perm_task_image.lifetime.last_use.submit_scope_index == std::numeric_limits<u32>::max())
                 {
                     permutation.image_infos.at(perm_image_idx).valid = false;
                     continue;
