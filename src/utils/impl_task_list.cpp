@@ -1870,14 +1870,19 @@ namespace daxa
                 }
 
                 auto const & perm_task_image = permutation.image_infos.at(perm_image_idx);
+
+                if (perm_task_image.lifetime.first_use.submit_scope_index != std::numeric_limits<u32>::max() ||
+                    perm_task_image.lifetime.last_use.submit_scope_index != std::numeric_limits<u32>::max())
+                {
+                    permutation.image_infos.at(perm_image_idx).valid = false;
+                    continue;
+                }
+
                 usize start_idx = submit_batch_offsets.at(perm_task_image.lifetime.first_use.submit_scope_index) +
                                   perm_task_image.lifetime.first_use.task_batch_index;
                 usize end_idx = submit_batch_offsets.at(perm_task_image.lifetime.last_use.submit_scope_index) +
                                 perm_task_image.lifetime.last_use.task_batch_index;
 
-                DAXA_DBG_ASSERT_TRUE_M(start_idx != std::numeric_limits<u32>::max() ||
-                                           end_idx != std::numeric_limits<u32>::max(),
-                                       "Detected transient resource created but never used");
                 lifetime_length_sorted_resources.emplace_back(LifetimeLengthResource{
                     .start_batch = start_idx,
                     .end_batch = end_idx,
