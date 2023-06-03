@@ -2,7 +2,7 @@
 #define DAXA_ENABLE_IMAGE_OVERLOADS_BASIC 1
 #include <shared.inl>
 
-DAXA_USE_PUSH_CONSTANT(MipmappingComputePushConstant, push)
+DAXA_DECL_PUSH_CONSTANT(MipmappingComputePushConstant, push)
 
 f32 segment_distance(f32vec2 p, f32vec2 a, f32vec2 b)
 {
@@ -34,11 +34,6 @@ void main()
     if (dist < INPUT.paint_radius)
     {
         f32vec3 col = INPUT.paint_col;
-
-        #if DAXA_ENABLE_IMAGE_OVERLOADS_BASIC
-        imageStore(push.image, i32vec2(pixel_i.xy), f32vec4(col, 1));
-        #else
-        imageStore(daxa_image2D(push.image.id), i32vec2(pixel_i.xy), f32vec4(col, 1));
-        #endif
+        imageStore(daxa_image2D(push.image), i32vec2(pixel_i.xy), f32vec4(col, 1));
     }
 }

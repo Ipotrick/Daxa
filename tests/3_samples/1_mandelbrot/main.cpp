@@ -182,7 +182,7 @@ struct App : BaseApp<App>
         new_task_list.add_task({
             .uses = {
                 BufferComputeShaderRead{task_gpu_input_buffer},
-                ImageComputeShaderWrite{task_render_image},
+                ImageComputeShaderWrite<>{task_render_image},
             },
             .task = [this](daxa::TaskInterface runtime)
             {
@@ -203,8 +203,8 @@ struct App : BaseApp<App>
         });
         new_task_list.add_task({
             .uses = {
-                ImageTransferRead{task_render_image},
-                ImageTransferWrite{task_swapchain_image},
+                ImageTransferRead<>{task_render_image},
+                ImageTransferWrite<>{task_swapchain_image},
             },
             .task = [this](daxa::TaskInterface ti)
             {

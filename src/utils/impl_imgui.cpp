@@ -379,8 +379,8 @@ namespace daxa
             }
             cmd_list.destroy_buffer_deferred(staging_ibuffer);
             cmd_list.pipeline_barrier({
-                .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
-                .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
+                .src_access = daxa::AccessConsts::HOST_WRITE,
+                .dst_access = daxa::AccessConsts::TRANSFER_READ,
             });
             cmd_list.copy_buffer_to_buffer({
                 .src_buffer = staging_ibuffer,
@@ -393,8 +393,8 @@ namespace daxa
                 .size = vbuffer_needed_size,
             });
             cmd_list.pipeline_barrier({
-                .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-                .waiting_pipeline_access = daxa::AccessConsts::VERTEX_SHADER_READ | daxa::AccessConsts::INDEX_INPUT_READ,
+                .src_access = daxa::AccessConsts::TRANSFER_WRITE,
+                .dst_access = daxa::AccessConsts::VERTEX_SHADER_READ | daxa::AccessConsts::INDEX_INPUT_READ,
             });
 
             cmd_list.set_pipeline(raster_pipeline);
@@ -520,9 +520,9 @@ namespace daxa
 
         auto cmd_list = this->info.device.create_command_list({.name = "dear ImGui Font Sheet Upload"});
         cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
-            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ_WRITE,
-            .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+            .src_access = daxa::AccessConsts::HOST_WRITE,
+            .dst_access = daxa::AccessConsts::TRANSFER_READ_WRITE,
+            .dst_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .image_slice = {
                 .base_mip_level = 0,
                 .level_count = 1,
@@ -544,10 +544,10 @@ namespace daxa
             .image_extent = {static_cast<u32>(width), static_cast<u32>(height), 1},
         });
         cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .waiting_pipeline_access = daxa::AccessConsts::FRAGMENT_SHADER_READ,
-            .before_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-            .after_layout = daxa::ImageLayout::READ_ONLY_OPTIMAL,
+            .src_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .dst_access = daxa::AccessConsts::FRAGMENT_SHADER_READ,
+            .src_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+            .dst_layout = daxa::ImageLayout::READ_ONLY_OPTIMAL,
             .image_slice = {
                 .base_mip_level = 0,
                 .level_count = 1,
