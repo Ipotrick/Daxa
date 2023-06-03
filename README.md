@@ -14,7 +14,7 @@ The original goal of daxa was to have a gpu library that was as easy or easier t
 I am happy to say that for me it achieves that goal now.
 
 ## Key features and abstractions
-- [x] Simple setup and object creation, no more 1000 loc file to get a triangle to draw.
+- [x] Simple setup and object creation, no more 1000 loc file to get a triangle to draw (https://github.com/Ipotrick/Daxa/wiki/Tutorial).
 - [x] Automatic deferring of resource destruction to wait on possible use on the gpu.
 - [x] Powerfull and flexible rendergraph implementation. (https://github.com/Ipotrick/Daxa/wiki/TaskList)
 - [x] Bindless shader resource model. (https://github.com/Ipotrick/Daxa/wiki/Bindless-in-daxa)
