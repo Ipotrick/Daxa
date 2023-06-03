@@ -17,7 +17,7 @@ I am happy to say that for me it achieves that goal now.
 - [x] Simple setup and object creation. No more 1000 LOC file to get a triangle drawn (https://github.com/Ipotrick/Daxa/wiki/Tutorial).
 - [x] Automatic deferred resource destruction, waiting on possible use from the GPU.
 - [x] Powerful and flexible render-graph implementation. (https://github.com/Ipotrick/Daxa/wiki/TaskList)
-- [x] Bindless shader resource model. (https://github.com/Ipotrick/Daxa/wiki/Bindless-in-Daxa)
+- [x] Bindless shader resource model. (https://github.com/Ipotrick/Daxa/wiki/Bindless-in-daxa)
 - [x] C++ and shader code sharing utilities. (https://github.com/Ipotrick/Daxa/wiki/Shader-Integration)
 - [x] Shader build system, including features like `#include` management and shader hot-reloading. (PipelineManager)
 
