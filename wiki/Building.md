@@ -1,3 +1,5 @@
+# Building
+
 The tools needed are as follows:
  - C++ Compiler
       (I highly recommend clang on Windows, but it appears G++ is the only thing that works for Linux at the moment)
