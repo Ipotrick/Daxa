@@ -72,6 +72,7 @@ namespace daxa
     {
         std::vector<char const *> enabled_layers{};
         std::vector<char const *> extension_names{};
+        this->info.enable_validation = false;
         {
             if (this->info.enable_validation)
             {

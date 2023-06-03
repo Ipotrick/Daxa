@@ -281,13 +281,6 @@ namespace daxa
             return views[index];
         }
 
-        auto typed_view(u32 index = 0) const -> daxa::types::TypedImageViewId<T_VIEW_TYPE>
-            requires(T_VIEW_TYPE != ImageViewType::MAX_ENUM)
-        {
-            DAXA_DBG_ASSERT_TRUE_M(views.size() > 0, "this function is only allowed to be called within a task callback");
-            return daxa::types::TypedImageViewId<T_VIEW_TYPE>{views[index]};
-        }
-
         auto to_generic() const -> GenericTaskResourceUse const &
         {
             return *reinterpret_cast<GenericTaskResourceUse const *>(this);

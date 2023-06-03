@@ -12,12 +12,12 @@ namespace daxa
         return VkImageMemoryBarrier2{
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
             .pNext = nullptr,
-            .srcStageMask = image_barrier.awaited_pipeline_access.stages.data,
-            .srcAccessMask = image_barrier.awaited_pipeline_access.type.data,
-            .dstStageMask = image_barrier.waiting_pipeline_access.stages.data,
-            .dstAccessMask = image_barrier.waiting_pipeline_access.type.data,
-            .oldLayout = static_cast<VkImageLayout>(image_barrier.before_layout),
-            .newLayout = static_cast<VkImageLayout>(image_barrier.after_layout),
+            .srcStageMask = image_barrier.src_access.stages.data,
+            .srcAccessMask = image_barrier.src_access.type.data,
+            .dstStageMask = image_barrier.dst_access.stages.data,
+            .dstAccessMask = image_barrier.dst_access.type.data,
+            .oldLayout = static_cast<VkImageLayout>(image_barrier.src_layout),
+            .newLayout = static_cast<VkImageLayout>(image_barrier.dst_layout),
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .image = vk_image,
@@ -30,10 +30,10 @@ namespace daxa
         return VkMemoryBarrier2{
             .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
             .pNext = nullptr,
-            .srcStageMask = memory_barrier.awaited_pipeline_access.stages.data,
-            .srcAccessMask = memory_barrier.awaited_pipeline_access.type.data,
-            .dstStageMask = memory_barrier.waiting_pipeline_access.stages.data,
-            .dstAccessMask = memory_barrier.waiting_pipeline_access.type.data,
+            .srcStageMask = memory_barrier.src_access.stages.data,
+            .srcAccessMask = memory_barrier.src_access.type.data,
+            .dstStageMask = memory_barrier.dst_access.stages.data,
+            .dstAccessMask = memory_barrier.dst_access.type.data,
         };
     }
 
@@ -276,7 +276,7 @@ namespace daxa
         vkCmdBindPipeline(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline);
     }
 
-    void CommandList::set_constant_buffer(SetConstantBufferInfo const & info)
+    void CommandList::set_uniform_buffer(SetConstantBufferInfo const & info)
     {
         auto & impl = *as<ImplCommandList>();
         auto & impl_device = *impl.impl_device.as<ImplDevice>();
@@ -388,10 +388,10 @@ namespace daxa
         impl.memory_barrier_batch.at(impl.memory_barrier_batch_count++) = {
             .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
             .pNext = nullptr,
-            .srcStageMask = info.awaited_pipeline_access.stages.data,
-            .srcAccessMask = info.awaited_pipeline_access.type.data,
-            .dstStageMask = info.waiting_pipeline_access.stages.data,
-            .dstAccessMask = info.waiting_pipeline_access.type.data,
+            .srcStageMask = info.src_access.stages.data,
+            .srcAccessMask = info.src_access.type.data,
+            .dstStageMask = info.dst_access.stages.data,
+            .dstAccessMask = info.dst_access.type.data,
         };
     }
 
@@ -496,12 +496,12 @@ namespace daxa
         impl.image_barrier_batch.at(impl.image_barrier_batch_count++) = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
             .pNext = nullptr,
-            .srcStageMask = info.awaited_pipeline_access.stages.data,
-            .srcAccessMask = info.awaited_pipeline_access.type.data,
-            .dstStageMask = info.waiting_pipeline_access.stages.data,
-            .dstAccessMask = info.waiting_pipeline_access.type.data,
-            .oldLayout = static_cast<VkImageLayout>(info.before_layout),
-            .newLayout = static_cast<VkImageLayout>(info.after_layout),
+            .srcStageMask = info.src_access.stages.data,
+            .srcAccessMask = info.src_access.type.data,
+            .dstStageMask = info.dst_access.stages.data,
+            .dstAccessMask = info.dst_access.type.data,
+            .oldLayout = static_cast<VkImageLayout>(info.src_layout),
+            .newLayout = static_cast<VkImageLayout>(info.dst_layout),
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .image = impl.impl_device.as<ImplDevice>()->slot(info.image_id).vk_image,
