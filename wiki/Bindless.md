@@ -28,7 +28,7 @@ Intrestingly all images are created with a default image view, that can be retri
 daxa::ImageViewId image_view_id = image_id.default_view();
 ```
 
-This is very handy, as most of the time one only really needs one view of the image. But daxa image views are a bit special compared to vulkan image views. In vulkan an image view is either a sampled image OR a storage image. Daxa always creates two image descriptors for each daxa::ImageViewId, one for storage image and one for sampled image, as long as the image type and format allows for each access.
+This is very handy, as most of the time one only really needs one view of the image. But daxa image views are a bit special compared to vulkan image views. In vulkan an image view is either a sampled image OR a storage image. Daxa always creates two image descriptors for each daxa::ImageViewId, one for storage image (in layout GENERAL) and one for sampled image (in layout SHADER_READ_ONLY_OPTIMAL), as long as the image type and format allows for each access.
 
 ### Image Shader Access
 
