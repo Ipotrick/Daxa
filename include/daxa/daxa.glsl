@@ -121,7 +121,7 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 
 /// @brief Defines the buffer reference layout used in all buffer references in daxa glsl.
 #define DAXA_BUFFER_REFERENCE_LAYOUT layout(buffer_reference, scalar, buffer_reference_align = 4)
-#define DAXA_BUFFER_REFERENCE_LAYOUT_ALIGN(ALIGN) layout(buffer_reference, scalar, buffer_reference_align = ALIGN)
+#define DAXA_DECL_BUFFER_REFERENCE(ALIGN) layout(buffer_reference, scalar, buffer_reference_align = ALIGN)
 /// @brief Defines the storage image layout used in all buffer references in daxa glsl.
 #define DAXA_STORAGE_IMAGE_LAYOUT layout(binding = DAXA_STORAGE_IMAGE_BINDING, set = 0)
 /// @brief Defines the sampled image layout used in all buffer references in daxa glsl.
@@ -158,17 +158,17 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
     };
 
 #define DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN)    \
-    DAXA_BUFFER_REFERENCE_LAYOUT_ALIGN(ALIGN)             \
+    DAXA_DECL_BUFFER_REFERENCE(ALIGN)                     \
     buffer daxa_RWBufferPtr##STRUCT_TYPE                  \
     {                                                     \
         STRUCT_TYPE value;                                \
     };                                                    \
-    DAXA_BUFFER_REFERENCE_LAYOUT_ALIGN(ALIGN)             \
+    DAXA_DECL_BUFFER_REFERENCE(ALIGN)                     \
     readonly buffer daxa_BufferPtr##STRUCT_TYPE           \
     {                                                     \
         STRUCT_TYPE value;                                \
     };                                                    \
-    DAXA_BUFFER_REFERENCE_LAYOUT_ALIGN(ALIGN)             \
+    DAXA_DECL_BUFFER_REFERENCE(ALIGN)                     \
     coherent buffer daxa_CoherentRWBufferPtr##STRUCT_TYPE \
     {                                                     \
         STRUCT_TYPE value;                                \
