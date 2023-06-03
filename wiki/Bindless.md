@@ -100,7 +100,7 @@ DAXA_DECL_BUFFER_REFERENCE(4) BufferReferenceBlock
 };
 ```
 
-Alternatively daxa provides a makro (`DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT, ALIGNMENT)` and `DAXA_DECL_BUFFER_PTR(STRUCT)`) to declare a set of buffer references from a struct. This is very helpfull for shader integration and code sharing, as you can declare the shared struct and then simply apply the makro to generate a set of buffer references to that struct automatically. The `daxa_BufferPtr(STRUCT)` makro also works with shader integration. Used in a shared file, a `daxa_BufferPtr` will be translated to `daxa::types::BufferDeviceAddress` in c++ code.
+Alternatively daxa provides a makro (`DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT, ALIGNMENT)` and `DAXA_DECL_BUFFER_PTR(STRUCT)`) to declare a set of buffer references from a struct. This is very helpfull for shader integration and code sharing, as you can declare the shared struct and then simply apply the makro to generate a set of buffer references to that struct automatically. Used in a shared file, a `daxa_BufferPtr(STRUCT)` makro will be translated to `daxa::types::BufferDeviceAddress` in c++ code, making code sharing easy.
 
 Example:
 ```glsl
