@@ -11,7 +11,7 @@ struct DrawVertexBuffer
 {
     DrawVertex verts[3];
 };
-DAXA_ENABLE_BUFFER_PTR(DrawVertexBuffer)
+DAXA_DECL_BUFFER_PTR(DrawVertexBuffer)
 
 struct DrawPush
 {

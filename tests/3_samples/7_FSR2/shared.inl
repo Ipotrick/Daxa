@@ -12,7 +12,7 @@ struct PerframeInput
     daxa_f32mat4x4 prev_view_mat;
     daxa_f32vec2 jitter;
 };
-DAXA_ENABLE_BUFFER_PTR(PerframeInput)
+DAXA_DECL_BUFFER_PTR(PerframeInput)
 
 struct DrawPush
 {

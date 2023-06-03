@@ -8,16 +8,16 @@ namespace daxa
 {
     auto to_string(MemoryBarrierInfo const & info) -> std::string
     {
-        return std::format("access: ({}) -> ({})", to_string(info.awaited_pipeline_access), to_string(info.waiting_pipeline_access));
+        return std::format("access: ({}) -> ({})", to_string(info.src_access), to_string(info.dst_access));
     }
 
     auto to_string(ImageBarrierInfo const & info) -> std::string
     {
         return std::format("access: ({}) -> ({}), layout: ({}) -> ({}), slice: {}, id: {}", 
-        to_string(info.awaited_pipeline_access), 
-        to_string(info.waiting_pipeline_access),
-        to_string(info.before_layout),
-        to_string(info.after_layout),
+        to_string(info.src_access), 
+        to_string(info.dst_access),
+        to_string(info.src_layout),
+        to_string(info.dst_layout),
         to_string(info.image_slice),
         to_string(info.image_id)
         );
