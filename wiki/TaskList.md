@@ -1,4 +1,4 @@
-# What is TaskList?
+# TaskList
 
 As vulkan and daxa require manual synchronization, using daxa and vulkan can become quite complex and error prone.
 
@@ -78,4 +78,8 @@ Tasks can also optionally have a name. This name is used in error messages in ta
 
 ## Task uses
 
+TODO
+
 ## Task interface
+
+TODO
