@@ -14,12 +14,12 @@ The original goal of Daxa was to have a GPU library that was as easy (or easier)
 I am happy to say that for me it achieves that goal now.
 
 ## Key features and abstractions
-- [x] Simple setup and object creation. No more 1000 LOC file to get a triangle drawn (https://github.com/Ipotrick/Daxa/wiki/Tutorial).
+- [x] Simple setup and object creation. No more 1000 LOC file to get a triangle drawn (https://github.com/Ipotrick/Daxa/tree/master/wiki/Tutorial.md).
 - [x] Automatic deferred resource destruction, waiting on possible use from the GPU.
-- [x] Powerful and flexible render-graph implementation. (https://github.com/Ipotrick/Daxa/wiki/TaskList)
-- [x] Bindless shader resource model. (https://github.com/Ipotrick/Daxa/wiki/Bindless-in-daxa)
-- [x] C++ and shader code sharing utilities. (https://github.com/Ipotrick/Daxa/wiki/Shader-Integration)
-- [x] Shader build system, including features like `#include` management and shader hot-reloading. (PipelineManager)
+- [x] Powerful and flexible render-graph implementation. (https://github.com/Ipotrick/Daxa/tree/master/wiki/TaskList.md)
+- [x] Bindless shader resource model. (https://github.com/Ipotrick/Daxa/tree/master/wiki/Bindless.md)
+- [x] C++ and shader code sharing utilities. (https://github.com/Ipotrick/Daxa/tree/master/wiki/ShaderIntegration.md)
+- [x] Shader build system, including features like `#include` management and shader hot-reloading. (https://github.com/Ipotrick/Daxa/tree/master/wiki/PipelineManager.md)
 
 ## Getting started
 
@@ -29,7 +29,7 @@ The GitHub wiki also contains pages on all bigger Daxa features like TaskList an
 
 In addition to that, the Daxa repository has a set of example projects using Daxa in the tests folder.
 
-Daxa also has a [tutorial wiki page](https://github.com/Ipotrick/Daxa/wiki/Tutorial).
+Daxa also has a [tutorial wiki page](https://github.com/Ipotrick/Daxa/tree/master/wiki/Tutorial.md).
 
 ## Design Goals
 
