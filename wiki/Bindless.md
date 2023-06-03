@@ -79,12 +79,22 @@ Binding a buffer to a uniform buffer slot:
 command_list.set_uniform_buffer({.slot = 0, .buffer=buffer_id});
 ```
 
+Uniform buffers are globally declared in shaders with a specific binding slot with the makro `DAXA_DECL_UNIFORM_BUFFER(SLOT)`:
+```glsl
+DAXA_DECL_UNIFORM_BUFFER(0) UniformBufferBlock
+{
+    uint field;
+};
+```
+
+Very importantly i note here that these bindings are updated and get visible on the gpu ONLY when a new pipeline is bound. So you can NOT change them between drawcalls or similar. This is intentional as binding is slow and against daxas bindless philosophy. Yet some hardware really benefits from direct uniform buffer bindings like nvidia. In daxa uniform buffers are meant to be usedONLY for larger uniformly accessed data across all invocations in the shader. For any any changes between dispatches and draws use push constants!
+
 ## Buffer References In Shaders
 
 Daxa required Buffer References to be declared in a very specific way. You must use the daxa provided makro (`DAXA_DECL_BUFFER_REFERENCE(ALIGNMENT)`) to set the layout of the reference:
 
 ```glsl
-DAXA_DECL_BUFFER_REFERENCE(4) BufferRef
+DAXA_DECL_BUFFER_REFERENCE(4) BufferReferenceBlock
 {
     uint field;
 };
