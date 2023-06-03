@@ -37,7 +37,9 @@ Now comes the magical part. All the created image, image view and sampler ids ca
 You never need to bind any resources, they are simply always available and accessible in shaders. 
 > Keep in mind that you still need to make sure you have the correct image layout and sync for each resource!
 
-The shader acceess works by transforming an `daxa_ImageViewId` with or without a `daxa_SamplerId` into a glsl `texture`, `image` or `sampler` locally. An example of glsl code:
+The shader acceess works by transforming an `daxa_ImageViewId` with or without a `daxa_SamplerId` into a glsl `texture`, `image` or `sampler` locally. 
+
+Example:
 
 ```glsl
 ...
