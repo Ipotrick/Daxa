@@ -8,13 +8,13 @@ struct DrawVertex
     daxa_f32 y;
     daxa_f32 z;
 };
-DAXA_ENABLE_BUFFER_PTR(DrawVertex)
+DAXA_DECL_BUFFER_PTR(DrawVertex)
 
 struct GpuInput
 {
     daxa_f32mat4x4 view_mat;
 };
-DAXA_ENABLE_BUFFER_PTR(GpuInput)
+DAXA_DECL_BUFFER_PTR(GpuInput)
 
 struct DrawPush
 {

@@ -9,18 +9,18 @@ namespace daxa
     struct Device;
     struct MemoryBarrierInfo
     {
-        Access awaited_pipeline_access = AccessConsts::NONE;
-        Access waiting_pipeline_access = AccessConsts::NONE;
+        Access src_access = AccessConsts::NONE;
+        Access dst_access = AccessConsts::NONE;
     };
 
     auto to_string(MemoryBarrierInfo const & info) -> std::string;
 
     struct ImageBarrierInfo
     {
-        Access awaited_pipeline_access = AccessConsts::NONE;
-        Access waiting_pipeline_access = AccessConsts::NONE;
-        ImageLayout before_layout = ImageLayout::UNDEFINED;
-        ImageLayout after_layout = ImageLayout::UNDEFINED;
+        Access src_access = AccessConsts::NONE;
+        Access dst_access = AccessConsts::NONE;
+        ImageLayout src_layout = ImageLayout::UNDEFINED;
+        ImageLayout dst_layout = ImageLayout::UNDEFINED;
         ImageMipArraySlice image_slice = {};
         ImageId image_id = {};
     };

@@ -1,7 +1,7 @@
 #define DAXA_ENABLE_SHADER_NO_NAMESPACE 1
 #include <shared.inl>
 
-DAXA_USE_PUSH_CONSTANT(UpdateBoidsPushConstant, push)
+DAXA_DECL_PUSH_CONSTANT(UpdateBoidsPushConstant, push)
 
 // Based in pseudo code from: https://people.ece.cornell.edu/land/courses/ece4760/labs/s2021/Boids/Boids.html
 void update_boid(inout Boid boid, in const Boid old_boid, in uint boid_index, BufferPtr(Boids) old_boids_buffer)

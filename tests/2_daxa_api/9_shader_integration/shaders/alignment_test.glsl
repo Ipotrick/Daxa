@@ -1,5 +1,6 @@
 #include <daxa/daxa.inl>
 #include "shared.inl"
+#extension GL_EXT_debug_printf : enable
 
 layout(local_size_x = 1) in;
 void main()
