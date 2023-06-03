@@ -1,10 +1,10 @@
+# Shader Integration
+
 One of Daxas goals is making shader development easier.
 
 Daxa achieves this in multiple ways, for example the [bindless integration](https://github.com/Ipotrick/Daxa/tree/master/wiki/Bindless.md) on the cpu and gpu side. But as a basis for this daxa also provides tools for easy code sharing between shaders and c++.
 
 The details on code sharing and general shader integration will be described in this file.
-
-## Code Sharing
 
 ## C++/Shader Code Sharing
 
