@@ -130,7 +130,7 @@ cmake --build --preset=gcc-x86_64-linux-gnu-debug
 ```
 
 ### Common issues
-see [our page on common issues](https://github.com/Ipotrick/Daxa/wiki/Platform-support-and-potential-Problems#building)
+see [our page on common issues](https://github.com/Ipotrick/Daxa/tree/master/wiki/CommonProblems.md)
 
 ### How I recommend building and running
 
