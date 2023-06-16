@@ -69,7 +69,7 @@ Each buffer is created with a buffer device address and a mapped host pointer, a
 The host and device pointers can be retrieved:
 ```c++
 void* host_ptr                              = device.get_buffer_host_address(buffer_id);
-daxa::types::BufferDeviceAddress* device    = device.get_buffer_device_address(buffer_id);
+daxa::types::BufferDeviceAddress device_ptr = device.get_buffer_device_address(buffer_id);
 ```
 
 ## Buffer Shader Access
