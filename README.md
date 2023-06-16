@@ -31,6 +31,9 @@ In addition to that, the Daxa repository has a set of example projects using Dax
 
 Daxa also has a [tutorial wiki page](https://github.com/Ipotrick/Daxa/tree/master/wiki/Tutorial.md).
 
+If you prefer to interact in discord over github issues, daxa has a [discord server](
+https://discord.gg/MJPJvZ4FK5).
+
 ## Design Goals
 
 Daxa is meant to be internally very simple and clean. This is important as I and the other maintainers ([Gabe](https://www.github.com/GabeRundlett) and [Saky](https://github.com/MatejSakmary)) want to be able to easily keep it clean bug free and maintainable. Having a smaller codebase makes all these things much easier. Because of this, Daxa routinely completely removes unused features and reworks parts to keep clean.
