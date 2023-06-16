@@ -21,11 +21,14 @@ Steps of working with a task list:
 * Complete task list
 * Execute task list
 
-Here the task list has two phases, the record and exectue phases. In the record phase it is mutable and can record commands. After completing it can no longer record new commands. Completing a list compiles and optimizes tasks and their sync. When completed a list can be executed. A list can be executed multiple times and reused.
+Here the task list has two phases, the record and exectue phase. In the record phase the task list is mutable, new tasks can be added to the list. After completing a list, it can no longer record new tasks. Completing a list is an important step, as it "compiles" the list. In the task list compilation, the tasks are analyzed for dependencies, reordered for optimal barrier placement and optimized sync between tasks are generated next to the optimized execution plan. 
+
+Importantly completed task lists can be reused! All resources within a task list are virtualized (as seen later), meaning you can change the represented image/buffer for a task image/buffer between executions of a completed task list (for example change the swapchain image or a temporal resource).
+Re-using completed task lists can significantly reduce cpu overhead by avoiding redundant computations every frame.
 
 # Task Resources
 
-In daxa i want task lists to be reusable. This means recording the list once and then executing the compiled list multiple times. This is very beneficial, as the recording and completion costs cpu time. 
+Task list has virtual resource handles (`TaskImageId` and `TaskBufferId`. This is important for the following reasons.
 
 If we would use the plain resource ids we would have a problem achieving high reusability. This is because after completing a list its contents are constant, so all resource ids are backed and cant change. This forces us to rerecord any list that can change its resource ids between executions. 
 
@@ -43,21 +46,29 @@ As said earlier the represented buffers and images can be set between executions
 
 ## Handles
 
-Task uses take handles as parameters to identify what part of a resource they actually use.
+In essence handles are simply a TaskResourceId + a subresource range of the given id. 
+
+All tasks take handles as parameters to their uses and not ids themselves. This is because with handles you can specify a more specific part of a resource, like a mip level or array layer of an image.
 
 Task resources implicitly cast to handles. A task handle is used to identify a part of a task resource. In the case of a buffer it is just identifying the whole buffer. But for images it identifies a slice of the image. 
 
-This is very useful when declaring that a task only uses a part of an image. Daxa can use this information to generate more optimal synchronization. 
-
-Another example where this is very useful is mip mapping. In mip mapping you would have two uses on the same image that specify different slices of that image. This is easily achieved with handles.
+An example where this is very useful is mip mapping. In mip mapping you would have two uses on the same image that specify different slices of that image. This is easily achieved with handles.
 
 # Task
 
-A task represents a small portion of your program that does not require any synchronization within it. For example a part of a renderer that would write and then read to an image in two different pipelines will require a pipeline barrier. This means these two parts of the renderer must be in different tasks. Any task must only have disjoint and unique accessing to any particular resource.
+The core part about any rendergraph is the nodes in the graph. In the case of daxa these nodes are called tasks.
 
-As daxa must infer synchronization and ordering requirements from tasks, you must declare all resources that are accessed witing the task. Note that this excludes all purely constant resources, as those have no synchronization requirements. 
+Each task as a set of used resources (the tasks uses), a callback that describes rendering operations on those resources at execution time and a name.
 
-So a task in task list might look like this:
+Each task therefore is practically describing a meta function as a part of a renderer. The uses beeing the function parameters and the callback beeing the function body.
+
+To construct a task list, you define a set of tasks, each describing a small portion of your renderer.
+
+You then record a high level describtion of your renderer in form of a task list. To record a task list you add tasks, to extend the list.
+
+Each time you add a task it is like a function call where you pass in the virtual task resources into the tasks uses. Task list will use the input tasks and resources to analyze and generate optimal execution order and synchronization for a given list.
+
+There are two ways to declare a task. You can declare tasks inline, directly inside the add_task function:
 ```cpp
 using namespace daxa::task_resource_uses;
 list.add_task({
@@ -73,6 +84,10 @@ list.add_task({
   .name = "example task",
 });
 ```
+This is convenient for smaller tasks or quick additions that dont nessecarily need shaders.
+
+And the second way:
+TODO
 
 Tasks can also optionally have a name. This name is used in error messages in task list.
 
