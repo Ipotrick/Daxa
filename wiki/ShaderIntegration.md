@@ -29,6 +29,9 @@ struct MyStruct
 
 The full list of defined data types in daxa can be found in the `daxa.inl` file. 
 
+Daxa always declares the alignment of buffer references to be in [scalar block layout](https://github.com/KhronosGroup/GLSL/blob/master/extensions/ext/GL_EXT_scalar_block_layout.txt).
+This layout causes shared structs containing daxa_ types to have the alignment rules within c++ and glsl buffers. This means that the c++ and glsl version of the struct will be abi compatible. You do not need to worry about padding or the behavior of alignment with the usua lglsl format layouts like  std 140 or std430.
+
 ## Utility Makros
 
 For the shared structs to properly work in other situations daxa also provides some utility makros to make it easier to write shaders.
