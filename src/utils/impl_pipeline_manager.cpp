@@ -425,6 +425,9 @@ namespace daxa
         return impl.reload_all();
     }
 
+    static std::mutex glslang_init_mtx;
+    static i32 pipeline_manager_count = 0;
+
     ImplPipelineManager::ImplPipelineManager(PipelineManagerInfo && a_info)
         : info{std::move(a_info)}
     {
@@ -445,7 +448,12 @@ namespace daxa
 
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
         {
-            glslang::InitializeProcess();
+            auto lock = std::lock_guard{glslang_init_mtx};
+            if (pipeline_manager_count == 0)
+            {
+                glslang::InitializeProcess();
+            }
+            ++pipeline_manager_count;
         }
 #endif
 
@@ -467,7 +475,12 @@ namespace daxa
     {
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
         {
-            glslang::FinalizeProcess();
+            auto lock = std::lock_guard{glslang_init_mtx};
+            --pipeline_manager_count;
+            if (pipeline_manager_count == 0)
+            {
+                glslang::FinalizeProcess();
+            }
         }
 #endif
     }
@@ -730,7 +743,7 @@ namespace daxa
                 }
                 else
                 {
-                    return { Result<void>(new_pipeline.m) };
+                    return {Result<void>(new_pipeline.m)};
                 }
             }
         }
@@ -747,14 +760,14 @@ namespace daxa
                 }
                 else
                 {
-                    return { Result<void>(new_pipeline.m) };
+                    return {Result<void>(new_pipeline.m)};
                 }
             }
         }
 
         if (reloaded)
         {
-            return { Result<void>{true} };
+            return {Result<void>{true}};
         }
         else
         {
