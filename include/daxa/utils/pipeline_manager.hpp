@@ -31,6 +31,7 @@ namespace daxa
     {
         GLSL,
         HLSL,
+        MAX_ENUM = 0x7fffffff,
     };
 
     struct ShaderModel

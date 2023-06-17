@@ -8,7 +8,8 @@ namespace daxa
     {
         BASIC,
         DETAILED,
-        VERBOSE
+        VERBOSE,
+        MAX_ENUM = 0x7fffffff,
     };
 
     void print_seperator_to(std::string & out, std::string & indent)
