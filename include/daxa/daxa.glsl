@@ -1,7 +1,5 @@
 #pragma once
 
-// TODO(wrap all texture access functions descriptor operands with nonUniformEXT) nano found a bug in amd drivers with portalrtx
-
 // Daxa inl file type definitions:
 #define daxa_b32 bool
 #define daxa_b32vec1 daxa_b32
@@ -204,29 +202,29 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 #define DAXA_DECL_UNIFORM_BUFFER(SLOT) layout(set = DAXA_DECL_UNIFORM_BUFFER_BINDING_SET, binding = SLOT, buffer_reference_align = 4, scalar) uniform
 
 /// ONLY USED BY IMPLEMENTATION!
-#define _DAXA_GET_IMAGE(DIMENSION, image_id) nonuniformEXT(daxa_image##DIMENSION##Table[daxa_id_to_index(image_id)])
-#define _DAXA_GET_IIMAGE(DIMENSION, image_id) nonuniformEXT(daxa_iimage##DIMENSION##Table[daxa_id_to_index(image_id)])
-#define _DAXA_GET_UIMAGE(DIMENSION, image_id) nonuniformEXT(daxa_uimage##DIMENSION##Table[daxa_id_to_index(image_id)])
-#define _DAXA_GET_I64IMAGE(DIMENSION, image_id) nonuniformEXT(daxa_i64image##DIMENSION##Table[daxa_id_to_index(image_id)])
-#define _DAXA_GET_U64IMAGE(DIMENSION, image_id) nonuniformEXT(daxa_u64image##DIMENSION##Table[daxa_id_to_index(image_id)])
-#define _DAXA_GET_COHERENT_IMAGE(DIMENSION, image_id) nonuniformEXT(daxa_coherent_image##DIMENSION##Table[daxa_id_to_index(image_id)])
-#define _DAXA_GET_COHERENT_IIMAGE(DIMENSION, image_id) nonuniformEXT(daxa_coherent_iimage##DIMENSION##Table[daxa_id_to_index(image_id)])
-#define _DAXA_GET_COHERENT_UIMAGE(DIMENSION, image_id) nonuniformEXT(daxa_coherent_uimage##DIMENSION##Table[daxa_id_to_index(image_id)])
-#define _DAXA_GET_COHERENT_I64IMAGE(DIMENSION, image_id) nonuniformEXT(daxa_coherent_i64image##DIMENSION##Table[daxa_id_to_index(image_id)])
-#define _DAXA_GET_COHERENT_U64IMAGE(DIMENSION, image_id) nonuniformEXT(daxa_coherent_u64image##DIMENSION##Table[daxa_id_to_index(image_id)])
+#define _DAXA_GET_IMAGE(DIMENSION, image_id) daxa_image##DIMENSION##Table[daxa_id_to_index(image_id)]
+#define _DAXA_GET_IIMAGE(DIMENSION, image_id) daxa_iimage##DIMENSION##Table[daxa_id_to_index(image_id)]
+#define _DAXA_GET_UIMAGE(DIMENSION, image_id) daxa_uimage##DIMENSION##Table[daxa_id_to_index(image_id)]
+#define _DAXA_GET_I64IMAGE(DIMENSION, image_id) daxa_i64image##DIMENSION##Table[daxa_id_to_index(image_id)]
+#define _DAXA_GET_U64IMAGE(DIMENSION, image_id) daxa_u64image##DIMENSION##Table[daxa_id_to_index(image_id)]
+#define _DAXA_GET_COHERENT_IMAGE(DIMENSION, image_id) daxa_coherent_image##DIMENSION##Table[daxa_id_to_index(image_id)]
+#define _DAXA_GET_COHERENT_IIMAGE(DIMENSION, image_id) daxa_coherent_iimage##DIMENSION##Table[daxa_id_to_index(image_id)]
+#define _DAXA_GET_COHERENT_UIMAGE(DIMENSION, image_id) daxa_coherent_uimage##DIMENSION##Table[daxa_id_to_index(image_id)]
+#define _DAXA_GET_COHERENT_I64IMAGE(DIMENSION, image_id) daxa_coherent_i64image##DIMENSION##Table[daxa_id_to_index(image_id)]
+#define _DAXA_GET_COHERENT_U64IMAGE(DIMENSION, image_id) daxa_coherent_u64image##DIMENSION##Table[daxa_id_to_index(image_id)]
 
 /// ONLY USED BY IMPLEMENTATION!
-#define _DAXA_GET_TEXTURE(DIMENSION, image_id) nonuniformEXT(daxa_texture##DIMENSION##Table[daxa_id_to_index(image_id)])
-#define _DAXA_GET_ITEXTURE(DIMENSION, image_id) nonuniformEXT(daxa_itexture##DIMENSION##Table[daxa_id_to_index(image_id)])
-#define _DAXA_GET_UTEXTURE(DIMENSION, image_id) nonuniformEXT(daxa_utexture##DIMENSION##Table[daxa_id_to_index(image_id)])
+#define _DAXA_GET_TEXTURE(DIMENSION, image_id) daxa_texture##DIMENSION##Table[daxa_id_to_index(image_id)]
+#define _DAXA_GET_ITEXTURE(DIMENSION, image_id) daxa_itexture##DIMENSION##Table[daxa_id_to_index(image_id)]
+#define _DAXA_GET_UTEXTURE(DIMENSION, image_id) daxa_utexture##DIMENSION##Table[daxa_id_to_index(image_id)]
 
 /// ONLY USED BY IMPLEMENTATION!
-#define _DAXA_GET_SAMPLER(DIMENSION, image_id, sampler_id) nonuniformEXT(sampler##DIMENSION(_DAXA_GET_TEXTURE(DIMENSION, image_id), daxa_samplerTable[daxa_id_to_index(sampler_id)]))
-#define _DAXA_GET_ISAMPLER(DIMENSION, image_id, sampler_id) nonuniformEXT(isampler##DIMENSION(_DAXA_GET_ITEXTURE(DIMENSION, image_id), daxa_samplerTable[daxa_id_to_index(sampler_id)]))
-#define _DAXA_GET_USAMPLER(DIMENSION, image_id, sampler_id) nonuniformEXT(usampler##DIMENSION(_DAXA_GET_UTEXTURE(DIMENSION, image_id), daxa_samplerTable[daxa_id_to_index(sampler_id)]))
-#define _DAXA_GET_SAMPLERSHADOW(DIMENSION, image_id, sampler_id) nonuniformEXT(sampler##DIMENSION(_DAXA_GET_TEXTURE(DIMENSION, image_id), daxa_samplerShadowTable[daxa_id_to_index(sampler_id)]))
-#define _DAXA_GET_ISAMPLERSHADOW(DIMENSION, image_id, sampler_id) nonuniformEXT(sampler##DIMENSION##Shadow(_DAXA_GET_ITEXTURE(DIMENSION, image_id), daxa_samplerShadowTable[daxa_id_to_index(sampler_id)]))
-#define _DAXA_GET_USAMPLERSHADOW(DIMENSION, image_id, sampler_id) nonuniformEXT(sampler##DIMENSION##Shadow(_DAXA_GET_UTEXTURE(DIMENSION, image_id), daxa_samplerShadowTable[daxa_id_to_index(sampler_id)]))
+#define _DAXA_GET_SAMPLER(DIMENSION, image_id, sampler_id) sampler##DIMENSION(_DAXA_GET_TEXTURE(DIMENSION, image_id), daxa_samplerTable[daxa_id_to_index(sampler_id)])
+#define _DAXA_GET_ISAMPLER(DIMENSION, image_id, sampler_id) isampler##DIMENSION(_DAXA_GET_ITEXTURE(DIMENSION, image_id), daxa_samplerTable[daxa_id_to_index(sampler_id)])
+#define _DAXA_GET_USAMPLER(DIMENSION, image_id, sampler_id) usampler##DIMENSION(_DAXA_GET_UTEXTURE(DIMENSION, image_id), daxa_samplerTable[daxa_id_to_index(sampler_id)])
+#define _DAXA_GET_SAMPLERSHADOW(DIMENSION, image_id, sampler_id) sampler##DIMENSION(_DAXA_GET_TEXTURE(DIMENSION, image_id), daxa_samplerShadowTable[daxa_id_to_index(sampler_id)])
+#define _DAXA_GET_ISAMPLERSHADOW(DIMENSION, image_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_ITEXTURE(DIMENSION, image_id), daxa_samplerShadowTable[daxa_id_to_index(sampler_id)])
+#define _DAXA_GET_USAMPLERSHADOW(DIMENSION, image_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_UTEXTURE(DIMENSION, image_id), daxa_samplerShadowTable[daxa_id_to_index(sampler_id)])
 
 /// ONLY USED BY IMPLEMENTATION!
 #define _DAXA_DECL_IMAGE(DIMENSION)                                                                            \
