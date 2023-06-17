@@ -1171,7 +1171,6 @@ namespace daxa
         {
         case ShaderStage::COMP: profile[0] = L'c'; break;
         case ShaderStage::VERT: profile[0] = L'v'; break;
-        // TODO(msakmary) I sort of free styled these two (in DirectX called Hull shader and Domain shader) ask grundlett if corect
         case ShaderStage::TESS_CONTROL: profile[0] = L'h'; break;
         case ShaderStage::TESS_EVAL: profile[0] = L'd'; break;
         case ShaderStage::FRAG: profile[0] = L'p'; break;

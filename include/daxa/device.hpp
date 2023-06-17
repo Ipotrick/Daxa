@@ -19,6 +19,7 @@ namespace daxa
         DISCRETE_GPU = 2,
         VIRTUAL_GPU = 3,
         CPU = 4,
+        MAX_ENUM = 0x7fffffff,
     };
 
     struct DeviceLimits
