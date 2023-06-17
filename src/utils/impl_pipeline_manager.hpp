@@ -74,8 +74,10 @@ namespace daxa
         std::vector<ComputePipelineState> compute_pipelines;
         std::vector<RasterPipelineState> raster_pipelines;
 
-        // TODO: Make the pipeline compiler thread-safe!
-        // This is accessed by the includer, which makes that not thread-safe
+        // TODO(grundlett): Maybe make the pipeline compiler *internally* thread-safe!
+        // This variable is accessed by the includer, which makes that not thread-safe
+        // PipelineManager is still externally thread-safe. You can create as many
+        // PipelineManagers from as many threads as you'd like!
         ShaderCompileInfo const * current_shader_info = nullptr;
 
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
