@@ -4,6 +4,7 @@ using namespace daxa::types;
 #include <daxa/utils/pipeline_manager.hpp>
 
 #include <iostream>
+#include <thread>
 
 #define APPNAME "Daxa API Sample Pipeline Compiler"
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
@@ -121,6 +122,50 @@ namespace tests
 
         return 0;
     }
+
+    auto multi_thread(daxa::Device & device) -> i32
+    {
+        auto test_wrapper_0 = [](daxa::Device & device, i32 & ret)
+        {
+            ret = tests::simplest(device);
+        };
+        auto test_wrapper_1 = [](daxa::Device & device, i32 & ret)
+        {
+            ret = tests::virtual_includes(device);
+        };
+        auto test_wrapper_2 = [](daxa::Device & device, i32 & ret)
+        {
+            ret = tests::tesselation_shaders(device);
+        };
+
+        std::array<int, 9> ret_vals;
+        auto threads = std::array{
+            std::thread{test_wrapper_0, std::ref(device), std::ref(ret_vals[0])},
+            std::thread{test_wrapper_1, std::ref(device), std::ref(ret_vals[1])},
+            std::thread{test_wrapper_2, std::ref(device), std::ref(ret_vals[2])},
+            std::thread{test_wrapper_0, std::ref(device), std::ref(ret_vals[3])},
+            std::thread{test_wrapper_1, std::ref(device), std::ref(ret_vals[4])},
+            std::thread{test_wrapper_2, std::ref(device), std::ref(ret_vals[5])},
+            std::thread{test_wrapper_0, std::ref(device), std::ref(ret_vals[6])},
+            std::thread{test_wrapper_1, std::ref(device), std::ref(ret_vals[7])},
+            std::thread{test_wrapper_2, std::ref(device), std::ref(ret_vals[8])},
+        };
+
+        for (auto & thread : threads)
+        {
+            thread.join();
+        }
+
+        for (auto const & ret : ret_vals)
+        {
+            if (ret != 0)
+            {
+                return ret;
+            }
+        }
+
+        return 0;
+    }
 } // namespace tests
 
 auto main() -> int
@@ -143,6 +188,10 @@ auto main() -> int
         return ret;
     }
     if (ret = tests::tesselation_shaders(device); ret != 0)
+    {
+        return ret;
+    }
+    if (ret = tests::multi_thread(device); ret != 0)
     {
         return ret;
     }
