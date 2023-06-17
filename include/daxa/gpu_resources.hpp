@@ -15,8 +15,7 @@ namespace daxa
         REGULAR_1D_ARRAY = 4,
         REGULAR_2D_ARRAY = 5,
         CUBE_ARRAY = 6,
-        // TODO(grundlet): add the other max values
-        MAX_ENUM = 7,
+        MAX_ENUM = 0x7fffffff,
     };
 
     auto to_string(ImageViewType const & type) -> std::string_view;
