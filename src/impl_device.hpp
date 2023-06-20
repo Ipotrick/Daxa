@@ -31,10 +31,21 @@ namespace daxa
         VmaAllocator vma_allocator = {};
         DeviceProperties vk_info = {};
         DeviceInfo info = {};
-        VkSampler vk_null_sampler = {};
         VkBuffer buffer_device_address_buffer = {};
         u64 * buffer_device_address_buffer_host_ptr = {};
         VmaAllocation buffer_device_address_buffer_allocation = {};
+
+        // 'Null' resources, used to fill empty slots in the resource table after a resource is destroyed.
+        // This is not necessary, as it is valid to have "garbage" in the descriptor slots given our enabled features.
+        // BUT, accessing garbage descriptors normally causes a device lost immediately, making debugging much harder.
+        // So instead of leaving dead descriptors dangle, daxa overwrites them with 'null' descriptors that just contain some debug value (pink 0xFF00FFFF).
+        // This in particular prevents device hang in the case of a use after free if the device does not encounter a race condition on the descriptor update before.
+        VkBuffer vk_null_buffer = {};
+        VkImage vk_null_image = {};
+        VkImageView vk_null_image_view = {};
+        VkSampler vk_null_sampler = {};
+        VmaAllocation vk_null_buffer_vma_allocation = {};
+        VmaAllocation vk_null_image_vma_allocation = {};
 
         // Gpu resource table:
         GPUShaderResourceTable gpu_shader_resource_table = {};
