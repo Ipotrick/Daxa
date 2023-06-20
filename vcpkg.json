@@ -51,6 +51,12 @@
         "dxc"
       ]
     },
+    "utils-pipeline-manager-spirv-validation": {
+      "description": "Build with SPIR-V validation",
+      "dependencies": [
+        "spirv-tools"
+      ]
+    },
     "utils-task-list": {
       "description": "The Task-List Daxa utility"
     },

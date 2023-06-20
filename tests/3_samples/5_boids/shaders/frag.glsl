@@ -1,7 +1,7 @@
 #define DAXA_ENABLE_SHADER_NO_NAMESPACE 1
 #include <shared.inl>
 
-DAXA_USE_PUSH_CONSTANT(DrawPushConstant)
+DAXA_DECL_PUSH_CONSTANT(DrawPushConstant, push)
 
 layout(location = 0) out vec4 color;
 

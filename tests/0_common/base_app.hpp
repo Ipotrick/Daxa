@@ -45,7 +45,7 @@ struct BaseApp : AppWindow<T>
             }
             return score;
         },
-        .name = APPNAME_PREFIX("device"),
+        .name = "device",
     });
 
     daxa::Swapchain swapchain = device.create_swapchain({
@@ -53,7 +53,7 @@ struct BaseApp : AppWindow<T>
         .native_window_platform = AppWindow<T>::get_native_platform(),
         .present_mode = daxa::PresentMode::IMMEDIATE,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-        .name = APPNAME_PREFIX("swapchain"),
+        .name = "swapchain",
     });
 
     daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
@@ -71,7 +71,7 @@ struct BaseApp : AppWindow<T>
 #endif
             .enable_debug_info = true,
         },
-        .name = APPNAME_PREFIX("pipeline_manager"),
+        .name = "pipeline_manager",
     });
 
     daxa::ImGuiRenderer imgui_renderer = create_imgui_renderer();
@@ -88,8 +88,7 @@ struct BaseApp : AppWindow<T>
     Clock::time_point start = Clock::now(), prev_time = start;
     f32 time = 0.0f, delta_time = 1.0f;
 
-    daxa::ImageId swapchain_image;
-    daxa::TaskImageId task_swapchain_image;
+    daxa::TaskImage task_swapchain_image{{.swapchain_image = true, .name="swapchain_image"}};
 
     BaseApp() : AppWindow<T>(APPNAME)
     {
@@ -131,30 +130,27 @@ struct BaseApp : AppWindow<T>
 
     auto record_loop_task_list() -> daxa::TaskList
     {
+        using namespace daxa::task_resource_uses;
         daxa::TaskList new_task_list = daxa::TaskList({
             .device = device,
-            .use_split_barriers = false,
             .swapchain = swapchain,
-            .name = APPNAME_PREFIX("task_list"),
+            .use_split_barriers = false,
+            .name = "main_task_list",
         });
-        task_swapchain_image = new_task_list.create_task_image({
-            .swapchain_image = true,
-            .name = APPNAME_PREFIX("task_swapchain_image"),
-        });
-        new_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
+        new_task_list.use_persistent_image(task_swapchain_image);
 
         reinterpret_cast<T *>(this)->record_tasks(new_task_list);
 
         new_task_list.add_task({
-            .used_images = {
-                {task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
+            .uses = {
+                ImageColorAttachment<>{task_swapchain_image},
             },
-            .task = [this](daxa::TaskRuntimeInterface interf)
+            .task = [this](daxa::TaskInterface ti)
             {
-                auto cmd_list = interf.get_command_list();
-                imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, swapchain_image, AppWindow<T>::size_x, AppWindow<T>::size_y);
+                auto cmd_list = ti.get_command_list();
+                imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, ti.uses[task_swapchain_image].image(), AppWindow<T>::size_x, AppWindow<T>::size_y);
             },
-            .name = APPNAME_PREFIX("ImGui Task"),
+            .name = "ImGui Task",
         });
 
         new_task_list.submit({});

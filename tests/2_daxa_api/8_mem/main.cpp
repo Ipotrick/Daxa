@@ -26,8 +26,8 @@ auto main() -> int
     });
     usize cpu_timeline = 1;
     daxa::BufferId result_buffer = device.create_buffer({
-        .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
         .size = sizeof(u32) * ELEMENT_COUNT * ITERATION_COUNT,
+        .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
         .name = "result",
     });
 
@@ -36,12 +36,12 @@ auto main() -> int
         gpu_timeline.wait_for_value(cpu_timeline - 1);
         daxa::CommandList cmd = device.create_command_list({});
         cmd.pipeline_barrier({
-            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_READ_WRITE | daxa::AccessConsts::HOST_WRITE,
-            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ_WRITE,
+            .src_access = daxa::AccessConsts::TRANSFER_READ_WRITE | daxa::AccessConsts::HOST_WRITE,
+            .dst_access = daxa::AccessConsts::TRANSFER_READ_WRITE,
         });
 
         // Can allocate anywhere in the frame with imediately available staging memory.
-        daxa::TransferMemoryPool::Allocation alloc = tmem.allocate(ELEMENT_COUNT).value();
+        daxa::TransferMemoryPool::Allocation alloc = tmem.allocate(ELEMENT_COUNT, 8).value();
         for (u32 i = 0; i < ELEMENT_COUNT; ++i)
         {
             // The Allocation provides a host pointer to the memory.
@@ -73,8 +73,8 @@ auto main() -> int
 
     daxa::CommandList cmd = device.create_command_list({});
     cmd.pipeline_barrier({
-        .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-        .waiting_pipeline_access = daxa::AccessConsts::HOST_READ,
+        .src_access = daxa::AccessConsts::TRANSFER_WRITE,
+        .dst_access = daxa::AccessConsts::HOST_READ,
     });
     cmd.complete();
 

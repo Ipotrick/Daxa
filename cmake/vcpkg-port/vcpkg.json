@@ -1,7 +1,7 @@
 {
   "name": "daxa",
   "version-string": "local",
-  "port-version": 2,
+  "port-version": 17,
   "description": "Daxa C++ Vulkan Abstraction",
   "homepage": "https://github.com/Ipotrick/Daxa",
   "dependencies": [
@@ -45,6 +45,12 @@
       "description": "Build with dxc",
       "dependencies": [
         "dxc"
+      ]
+    },
+    "utils-pipeline-manager-spirv-validation": {
+      "description": "Build with SPIR-V validation",
+      "dependencies": [
+        "spirv-tools"
       ]
     },
     "utils-task-list": {

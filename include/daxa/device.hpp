@@ -8,6 +8,7 @@
 #include <daxa/semaphore.hpp>
 #include <daxa/split_barrier.hpp>
 #include <daxa/timeline_query.hpp>
+#include <daxa/memory_block.hpp>
 
 namespace daxa
 {
@@ -18,6 +19,7 @@ namespace daxa
         DISCRETE_GPU = 2,
         VIRTUAL_GPU = 3,
         CPU = 4,
+        MAX_ENUM = 0x7fffffff,
     };
 
     struct DeviceLimits
@@ -190,6 +192,10 @@ namespace daxa
     {
         Device() = default;
 
+        auto create_memory(MemoryBlockInfo const & info) -> MemoryBlock;
+        auto get_memory_requirements(BufferInfo const & info) -> MemoryRequirements;
+        auto get_memory_requirements(ImageInfo const & info) -> MemoryRequirements;
+
         auto create_buffer(BufferInfo const & info) -> BufferId;
         auto create_image(ImageInfo const & info) -> ImageId;
         auto create_image_view(ImageViewInfo const & info) -> ImageViewId;
@@ -201,7 +207,6 @@ namespace daxa
         void destroy_image_view(ImageViewId id);
         void destroy_sampler(SamplerId id);
 
-        auto info_buffer(BufferId id) const -> BufferInfo;
         auto get_device_address(BufferId id) const -> BufferDeviceAddress;
         auto get_host_address(BufferId id) const -> void *;
         template <typename T>
@@ -209,11 +214,11 @@ namespace daxa
         {
             return static_cast<T *>(get_host_address(id));
         }
+        auto info_buffer(BufferId id) const -> BufferInfo;
         auto info_image(ImageId id) const -> ImageInfo;
         auto info_image_view(ImageViewId id) const -> ImageViewInfo;
         auto info_sampler(SamplerId id) const -> SamplerInfo;
 
-        // auto create_pipeline_manager(PipelineManagerInfo const & info) -> PipelineManager;
         auto create_raster_pipeline(RasterPipelineInfo const & info) -> RasterPipeline;
         auto create_compute_pipeline(ComputePipelineInfo const & info) -> ComputePipeline;
 

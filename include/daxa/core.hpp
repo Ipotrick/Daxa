@@ -4,6 +4,7 @@
 #include <optional>
 #include <concepts>
 #include <span>
+#include <bit>
 
 #include <daxa/types.hpp>
 
@@ -36,9 +37,18 @@
             throw std::runtime_error("DAXA DEBUG ASSERTION FAILURE");             \
         }                                                                         \
     }()
+#define DAXA_DBG_ASSERT_TRUE_MS(x, STREAM)                                        \
+    [&] {                                                                         \
+        if (!(x))                                                                 \
+        {                                                                         \
+            std::cerr << DAXA_DBG_ASSERT_FAIL_STRING << ": " STREAM << std::endl; \
+            throw std::runtime_error("DAXA DEBUG ASSERTION FAILURE");             \
+        }                                                                         \
+    }()
 #else
 
 #define DAXA_DBG_ASSERT_TRUE_M(x, m)
+#define DAXA_DBG_ASSERT_TRUE_MS(x, m)
 
 #endif
 
@@ -56,6 +66,7 @@ namespace daxa
         XLIB_API,
         WAYLAND_API,
         COCOA_API,
+        MAX_ENUM = 0x7fffffff,
     };
 } // namespace daxa
 
@@ -168,6 +179,9 @@ namespace daxa
 
         ManagedWeakPtr make_weak() const;
 
+        auto is_valid() const -> bool;
+        operator bool() const;
+
       private:
         void cleanup();
     };
@@ -260,6 +274,11 @@ namespace daxa
 
         explicit Result(bool opt)
             : v{opt}, m{opt ? "" : "default error message"}
+        {
+        }
+
+        explicit Result(std::string_view message)
+            : v{false}, m{message}
         {
         }
 

@@ -36,97 +36,93 @@ namespace daxa
         using f64 = double;
 
         using BufferDeviceAddress = u64;
+    }
 
-        namespace detail
+    namespace detail
+    {
+        template <typename T, usize N>
+        struct GenericVector
         {
-            template <typename T, usize N>
-            struct GenericVecMembers
-            {
-                std::array<T, N> array;
-                constexpr T & operator[](usize i) noexcept { return array[i]; }
-                constexpr T const & operator[](usize i) const noexcept { return array[i]; }
-            };
+            std::array<T, N> array;
+            constexpr T & operator[](usize i) noexcept { return array[i]; }
+            constexpr T const & operator[](usize i) const noexcept { return array[i]; }
+        };
 
-            template <typename T>
-            struct GenericVecMembers<T, 2>
+        template <typename T>
+        struct GenericVector<T, 2>
+        {
+            T x, y;
+            constexpr T & operator[](usize i) noexcept
             {
-                T x, y;
-                constexpr T & operator[](usize i) noexcept
+                switch (i)
                 {
-                    switch (i)
-                    {
-                    case 1: return y;
-                    default: return x;
-                    }
+                case 1: return y;
+                default: return x;
                 }
-                constexpr T const & operator[](usize i) const noexcept
-                {
-                    switch (i)
-                    {
-                    case 1: return y;
-                    default: return x;
-                    }
-                }
-            };
-            template <typename T>
-            struct GenericVecMembers<T, 3>
+            }
+            constexpr T const & operator[](usize i) const noexcept
             {
-                T x, y, z;
-                constexpr T & operator[](usize i) noexcept
+                switch (i)
                 {
-                    switch (i)
-                    {
-                    case 1: return y;
-                    case 2: return z;
-                    default: return x;
-                    }
+                case 1: return y;
+                default: return x;
                 }
-                constexpr T const & operator[](usize i) const noexcept
-                {
-                    switch (i)
-                    {
-                    case 1: return y;
-                    case 2: return z;
-                    default: return x;
-                    }
-                }
-            };
-            template <typename T>
-            struct GenericVecMembers<T, 4>
+            }
+        };
+        template <typename T>
+        struct GenericVector<T, 3>
+        {
+            T x, y, z;
+            constexpr T & operator[](usize i) noexcept
             {
-                T x, y, z, w;
-                constexpr T & operator[](usize i) noexcept
+                switch (i)
                 {
-                    switch (i)
-                    {
-                    case 1: return y;
-                    case 2: return z;
-                    case 3: return w;
-                    default: return x;
-                    }
+                case 1: return y;
+                case 2: return z;
+                default: return x;
                 }
-                constexpr T const & operator[](usize i) const noexcept
+            }
+            constexpr T const & operator[](usize i) const noexcept
+            {
+                switch (i)
                 {
-                    switch (i)
-                    {
-                    case 1: return y;
-                    case 2: return z;
-                    case 3: return w;
-                    default: return x;
-                    }
+                case 1: return y;
+                case 2: return z;
+                default: return x;
                 }
-            };
+            }
+        };
+        template <typename T>
+        struct GenericVector<T, 4>
+        {
+            T x, y, z, w;
+            constexpr T & operator[](usize i) noexcept
+            {
+                switch (i)
+                {
+                case 1: return y;
+                case 2: return z;
+                case 3: return w;
+                default: return x;
+                }
+            }
+            constexpr T const & operator[](usize i) const noexcept
+            {
+                switch (i)
+                {
+                case 1: return y;
+                case 2: return z;
+                case 3: return w;
+                default: return x;
+                }
+            }
+        };
 
-            template <typename T, usize N>
-            struct GenericVector : GenericVecMembers<T, N>
-            {
-            };
+        template <typename T, usize M, usize N>
+        struct GenericMatrix : GenericVector<GenericVector<T, N>, M> {};
+    } // namespace detail
 
-            template <typename T, usize M, usize N>
-            struct GenericMatrix : GenericVector<GenericVector<T, N>, M>
-            {
-            };
-        } // namespace detail
+    inline namespace types {
 
         using b32vec2 = detail::GenericVector<b32, 2>;
         using b32vec3 = detail::GenericVector<b32, 3>;
@@ -179,77 +175,6 @@ namespace daxa
         using u32mat4x2 = detail::GenericMatrix<u32, 4, 2>;
         using u32mat4x3 = detail::GenericMatrix<u32, 4, 3>;
         using u32mat4x4 = detail::GenericMatrix<u32, 4, 4>;
-
-        template <typename T>
-        struct scalar_type
-        {
-            using type = T;
-        };
-
-        template <typename T>
-        using scalar_type_t = typename scalar_type<T>::type;
-        template <typename SCALAR, usize DIM0, usize DIM1>
-        struct scalar_type<detail::GenericMatrix<SCALAR, DIM0, DIM1>>
-        {
-            using type = SCALAR;
-        };
-        template <typename SCALAR, usize DIM>
-        struct scalar_type<detail::GenericVector<SCALAR, DIM>>
-        {
-            using type = SCALAR;
-        };
-
-        template <typename T>
-        struct alignas(sizeof(scalar_type_t<T>)) ShaderAlignedType
-        {
-            T value = T{};
-            ShaderAlignedType() = default;
-            template<typename ANY_SCALAR>
-            requires (std::is_convertible_v<ANY_SCALAR, scalar_type_t<T>>)
-            ShaderAlignedType(ANY_SCALAR const & v) : value{static_cast<scalar_type_t<T>>(v)} {}
-            operator T &()
-            {
-                return value;
-            }
-            operator T const &() const
-            {
-                return value;
-            }
-            auto operator &() -> T*
-            {
-                return &value;
-            }
-            auto operator &() const -> T const*
-            {
-                return &value;
-            }
-        };
-
-        template <typename SCALAR, usize DIM>
-        struct alignas(sizeof(SCALAR)) ShaderAlignedType<detail::GenericVector<SCALAR, DIM>> : public detail::GenericVector<SCALAR, DIM>
-        {
-            ShaderAlignedType<detail::GenericVector<SCALAR, DIM>>() = default;
-            template<typename ... Args>
-            ShaderAlignedType<detail::GenericVector<SCALAR, DIM>>(Args&& ... args) : detail::GenericVector<SCALAR, DIM>{args...} {}
-            template<typename ... Args>
-            ShaderAlignedType<detail::GenericVector<SCALAR, DIM>> operator=(Args&& ... args) { detail::GenericVector<SCALAR, DIM>::operator=(args...); return *this; }
-        };
-        
-        template <typename SCALAR, usize DIM0, usize DIM1>
-        struct alignas(sizeof(SCALAR)) ShaderAlignedType<detail::GenericMatrix<SCALAR, DIM0, DIM1>> : public detail::GenericMatrix<SCALAR, DIM0, DIM1>
-        {
-            ShaderAlignedType<detail::GenericMatrix<SCALAR, DIM0, DIM1>>() = default;
-            template<typename ... Args>
-            ShaderAlignedType<detail::GenericMatrix<SCALAR, DIM0, DIM1>>(Args&& ... args) : detail::GenericMatrix<SCALAR, DIM0, DIM1>{args...} {}
-            template<typename ... Args>
-            ShaderAlignedType<detail::GenericMatrix<SCALAR, DIM0, DIM1>> operator=(Args&& ... args) { detail::GenericMatrix<SCALAR, DIM0, DIM1>::operator=(args...); return *this; }
-        };
-
-        template <typename T>
-        struct scalar_type<ShaderAlignedType<T>>
-        {
-            using type = scalar_type_t<T>;
-        };
     } // namespace types
 
     enum struct Format
@@ -501,6 +426,7 @@ namespace daxa
         PVRTC1_4BPP_SRGB_BLOCK_IMG = 1000054005,
         PVRTC2_2BPP_SRGB_BLOCK_IMG = 1000054006,
         PVRTC2_4BPP_SRGB_BLOCK_IMG = 1000054007,
+        MAX_ENUM = 0x7fffffff,
     };
 
     auto to_string(Format format) -> std::string_view;
@@ -549,6 +475,7 @@ namespace daxa
         INFO = 0x00000010,
         WARNING = 0x00000100,
         FAILURE = 0x00001000,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct MsgType
@@ -556,6 +483,7 @@ namespace daxa
         GENERAL = 0x00000001,
         VALIDATION = 0x00000002,
         PERFORMANCE = 0x00000004,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct PresentMode
@@ -564,6 +492,7 @@ namespace daxa
         MAILBOX = 1,
         FIFO = 2,
         FIFO_RELAXED = 3,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct PresentOp
@@ -577,6 +506,7 @@ namespace daxa
         HORIZONTAL_MIRROR_ROTATE_180 = 0x00000040,
         HORIZONTAL_MIRROR_ROTATE_270 = 0x00000080,
         INHERIT = 0x00000100,
+        MAX_ENUM = 0x7fffffff,
     };
 
     struct ImageUsageFlagsProperties
@@ -598,6 +528,8 @@ namespace daxa
         static inline constexpr ImageUsageFlags FRAGMENT_SHADING_RATE_ATTACHMENT = {0x00000100};
         static inline constexpr ImageUsageFlags SHADING_RATE_IMAGE = FRAGMENT_SHADING_RATE_ATTACHMENT;
     };
+
+    auto to_string(ImageUsageFlags const &) -> std::string;
 
     struct MemoryFlagsProperties
     {
@@ -635,6 +567,7 @@ namespace daxa
         DISPLAY_NATIVE = 1000213000,
         RGB_NONLINEAR = EXTENDED_SRGB_NONLINEAR,
         DCI_P3_LINEAR = DISPLAY_P3_LINEAR,
+        MAX_ENUM = 0x7fffffff,
     };
 
     struct ImageAspectFlagsProperties
@@ -665,6 +598,7 @@ namespace daxa
         READ_ONLY_OPTIMAL = 1000314000,
         ATTACHMENT_OPTIMAL = 1000314001,
         PRESENT_SRC = 1000001002,
+        MAX_ENUM = 0x7fffffff,
     };
 
     auto to_string(ImageLayout layout) -> std::string_view;
@@ -724,6 +658,7 @@ namespace daxa
         NEAREST = 0,
         LINEAR = 1,
         CUBIC_IMG = 1000015000,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct ReductionMode
@@ -731,6 +666,7 @@ namespace daxa
         WEIGHTED_AVERAGE = 0,
         MIN = 1,
         MAX = 2,
+        MAX_ENUM = 0x7fffffff,
     };
 
     struct Offset3D
@@ -913,6 +849,7 @@ namespace daxa
         CLAMP_TO_EDGE = 2,
         CLAMP_TO_BORDER = 3,
         MIRROR_CLAMP_TO_EDGE = 4,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct BorderColor
@@ -923,6 +860,7 @@ namespace daxa
         INT_OPAQUE_BLACK = 3,
         FLOAT_OPAQUE_WHITE = 4,
         INT_OPAQUE_WHITE = 5,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct CompareOp
@@ -935,6 +873,7 @@ namespace daxa
         NOT_EQUAL = 5,
         GREATER_OR_EQUAL = 6,
         ALWAYS = 7,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct BlendFactor
@@ -958,6 +897,7 @@ namespace daxa
         ONE_MINUS_SRC1_COLOR = 16,
         SRC1_ALPHA = 17,
         ONE_MINUS_SRC1_ALPHA = 18,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct BlendOp
@@ -967,6 +907,7 @@ namespace daxa
         REVERSE_SUBTRACT = 2,
         MIN = 3,
         MAX = 4,
+        MAX_ENUM = 0x7fffffff,
     };
 
     struct ColorComponentFlagsProperties
@@ -1000,7 +941,8 @@ namespace daxa
     enum struct TesselationDomainOrigin
     {
         LOWER_LEFT = 0,
-        UPPER_LEFT = 1
+        UPPER_LEFT = 1,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct ConservativeRasterizationMode
@@ -1008,6 +950,7 @@ namespace daxa
         DISABLED = 0,
         OVERESTIMATE = 1,
         UNDERESTIMATE = 2,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct PrimitiveTopology
@@ -1023,6 +966,7 @@ namespace daxa
         TRIANGLE_LIST_WITH_ADJACENCY = 8,
         TRIANGLE_STRIP_WITH_ADJACENCY = 9,
         PATCH_LIST = 10,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct PolygonMode
@@ -1030,12 +974,14 @@ namespace daxa
         FILL = 0,
         LINE = 1,
         POINT = 2,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct FrontFaceWinding
     {
         COUNTER_CLOCKWISE = 0,
         CLOCKWISE = 1,
+        MAX_ENUM = 0x7fffffff,
     };
 
     struct FaceCullFlagsProperties
@@ -1056,12 +1002,14 @@ namespace daxa
         LOAD = 0,
         CLEAR = 1,
         DONT_CARE = 2,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct AttachmentStoreOp
     {
         STORE = 0,
         DONT_CARE = 1,
+        MAX_ENUM = 0x7fffffff,
     };
 
     struct ViewportInfo
@@ -1080,5 +1028,59 @@ namespace daxa
         i32 y = {};
         u32 width = {};
         u32 height = {};
+    };
+
+    namespace deail
+    {
+        u32 constexpr const_hash( char const *input )
+        {
+            if (*input == '\0')
+            {
+                return 5381;
+            }
+            return static_cast<unsigned int>(*input) + 33 * const_hash( input + 1 );
+        }
+    }
+
+    auto constexpr compt_hash( char const* str ) -> u32
+    {
+        if (str == nullptr)
+        {
+            return 0;
+        }
+        return deail::const_hash( str );
+    }
+
+    template<usize N>
+    struct StringLiteralAdapter {
+        char value[N];
+
+        constexpr StringLiteralAdapter(const char (&str)[N]) {
+            std::copy_n(str, N, value);
+        }
+
+        template<usize INDEX>
+        constexpr auto is_same_at(StringLiteralAdapter<N> const & other) const
+        {
+            return this->value[INDEX] == other.value[INDEX] && is_same_at<INDEX+1>(other);
+        }
+
+        template<>
+        constexpr auto is_same_at<N>(StringLiteralAdapter<N> const &) const
+        {
+            return true;
+        }
+
+        template<usize N2>
+        constexpr auto is_same(StringLiteralAdapter<N2> const &) const
+        {
+            return false;
+        }
+
+        template<>
+        constexpr auto is_same(StringLiteralAdapter<N> const & other) const
+        {
+            return is_same_at<0>(other);
+        }
     };
 } // namespace daxa

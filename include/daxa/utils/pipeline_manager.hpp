@@ -31,6 +31,7 @@ namespace daxa
     {
         GLSL,
         HLSL,
+        MAX_ENUM = 0x7fffffff,
     };
 
     struct ShaderModel
@@ -102,6 +103,6 @@ namespace daxa
         void remove_compute_pipeline(std::shared_ptr<ComputePipeline> const & pipeline);
         void remove_raster_pipeline(std::shared_ptr<RasterPipeline> const & pipeline);
         void add_virtual_include_file(VirtualIncludeInfo const & info);
-        auto reload_all() -> Result<bool>;
+        auto reload_all() -> std::optional<Result<void>>;
     };
 } // namespace daxa

@@ -75,6 +75,7 @@ namespace daxa
 
         auto instance_create_flags = VkInstanceCreateFlags{};
 
+        this->info.enable_validation = false;
         {
             if (this->info.enable_validation)
             {

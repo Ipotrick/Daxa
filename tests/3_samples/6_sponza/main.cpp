@@ -106,8 +106,8 @@ struct App : AppWindow<App>
         });
 
         auto staging_buffer = device.create_buffer({
-            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .size = size,
+            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .name = APPNAME_PREFIX("model staging_buffer"),
         });
         cmd_list.destroy_buffer_deferred(staging_buffer);
@@ -157,8 +157,8 @@ struct App : AppWindow<App>
         }
 
         cmd_list.pipeline_barrier({
-            .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
-            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
+            .src_access = daxa::AccessConsts::HOST_WRITE,
+            .dst_access = daxa::AccessConsts::TRANSFER_READ,
         });
         cmd_list.copy_buffer_to_buffer({
             .src_buffer = staging_buffer,
@@ -166,8 +166,8 @@ struct App : AppWindow<App>
             .size = size,
         });
         cmd_list.pipeline_barrier({
-            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .waiting_pipeline_access = daxa::AccessConsts::VERTEX_SHADER_READ,
+            .src_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .dst_access = daxa::AccessConsts::VERTEX_SHADER_READ,
         });
 
         return result;
@@ -348,8 +348,8 @@ struct App : AppWindow<App>
         });
 
         auto gpu_input_staging_buffer = device.create_buffer({
-            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .size = sizeof(GpuInput),
+            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .name = APPNAME_PREFIX("gpu_input_staging_buffer"),
         });
         cmd_list.destroy_buffer_deferred(gpu_input_staging_buffer);
@@ -359,8 +359,8 @@ struct App : AppWindow<App>
         *buffer_ptr = gpu_input;
 
         cmd_list.pipeline_barrier({
-            .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
-            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
+            .src_access = daxa::AccessConsts::HOST_WRITE,
+            .dst_access = daxa::AccessConsts::TRANSFER_READ,
         });
 
         cmd_list.copy_buffer_to_buffer({
@@ -370,14 +370,14 @@ struct App : AppWindow<App>
         });
 
         cmd_list.pipeline_barrier({
-            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .waiting_pipeline_access = daxa::AccessConsts::VERTEX_SHADER_READ,
+            .src_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .dst_access = daxa::AccessConsts::VERTEX_SHADER_READ,
         });
 
         cmd_list.pipeline_barrier_image_transition({
-            .waiting_pipeline_access = daxa::AccessConsts::COLOR_ATTACHMENT_OUTPUT_WRITE,
-            .before_layout = daxa::ImageLayout::UNDEFINED,
-            .after_layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
+            .dst_access = daxa::AccessConsts::COLOR_ATTACHMENT_OUTPUT_WRITE,
+            .src_layout = daxa::ImageLayout::UNDEFINED,
+            .dst_layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
             .image_id = swapchain_image,
         });
 
@@ -405,9 +405,9 @@ struct App : AppWindow<App>
         // imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, swapchain_image, size_x, size_y);
 
         cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::AccessConsts::ALL_GRAPHICS_READ_WRITE,
-            .before_layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
-            .after_layout = daxa::ImageLayout::PRESENT_SRC,
+            .src_access = daxa::AccessConsts::ALL_GRAPHICS_READ_WRITE,
+            .src_layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
+            .dst_layout = daxa::ImageLayout::PRESENT_SRC,
             .image_id = swapchain_image,
         });
 

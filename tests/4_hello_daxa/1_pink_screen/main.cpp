@@ -151,9 +151,9 @@ auto main() -> int
         daxa::CommandList command_list = device.create_command_list({.name = "my command list"});
 
         command_list.pipeline_barrier_image_transition({
-            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .before_layout = daxa::ImageLayout::UNDEFINED,
-            .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+            .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .src_layout = daxa::ImageLayout::UNDEFINED,
+            .dst_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .image_slice = swapchain_image_full_slice,
             .image_id = swapchain_image,
         });
@@ -166,9 +166,9 @@ auto main() -> int
         });
 
         command_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .before_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-            .after_layout = daxa::ImageLayout::PRESENT_SRC,
+            .src_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .src_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+            .dst_layout = daxa::ImageLayout::PRESENT_SRC,
             .image_slice = swapchain_image_full_slice,
             .image_id = swapchain_image,
         });

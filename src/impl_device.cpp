@@ -6,6 +6,143 @@ namespace daxa
 {
     Device::Device(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
+    static VkBufferUsageFlags const BUFFER_USE_FLAGS =
+        VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+        VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT |
+        VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT |
+        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+        VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+        VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT |
+        VK_BUFFER_USAGE_TRANSFORM_FEEDBACK_BUFFER_BIT_EXT |
+        VK_BUFFER_USAGE_TRANSFORM_FEEDBACK_COUNTER_BUFFER_BIT_EXT |
+        VK_BUFFER_USAGE_CONDITIONAL_RENDERING_BIT_EXT |
+        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
+        VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
+
+    auto initialize_image_create_info_from_image_info(ImageInfo const & image_info, u32 const * queue_family_index_ptr) -> VkImageCreateInfo
+    {
+        DAXA_DBG_ASSERT_TRUE_M(std::popcount(image_info.sample_count) == 1 && image_info.sample_count <= 64, "image samples must be power of two and between 1 and 64(inclusive)");
+        DAXA_DBG_ASSERT_TRUE_M(
+            image_info.size.x > 0 &&
+                image_info.size.y > 0 &&
+                image_info.size.z > 0,
+            "image (x,y,z) dimensions must be greater then 0");
+        DAXA_DBG_ASSERT_TRUE_M(image_info.array_layer_count > 0, "image array layer count must be greater then 0");
+        DAXA_DBG_ASSERT_TRUE_M(image_info.mip_level_count > 0, "image mip level count must be greater then 0");
+
+        auto const vk_image_type = static_cast<VkImageType>(image_info.dimensions - 1);
+
+        VkImageCreateFlags vk_image_create_flags = {};
+
+        constexpr auto CUBE_FACE_N = 6u;
+        if (image_info.dimensions == 2 && image_info.size.x == image_info.size.y && image_info.array_layer_count % CUBE_FACE_N == 0)
+        {
+            vk_image_create_flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+        }
+        if (image_info.dimensions == 3)
+        {
+            // TODO(grundlett): Figure out if there are cases where a 3D image CAN'T be used
+            // as a 2D array image view.
+            vk_image_create_flags |= VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
+        }
+
+        VkImageCreateInfo const vk_image_create_info{
+            .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = vk_image_create_flags,
+            .imageType = vk_image_type,
+            .format = static_cast<VkFormat>(image_info.format),
+            .extent = std::bit_cast<VkExtent3D>(image_info.size),
+            .mipLevels = image_info.mip_level_count,
+            .arrayLayers = image_info.array_layer_count,
+            .samples = static_cast<VkSampleCountFlagBits>(image_info.sample_count),
+            .tiling = VK_IMAGE_TILING_OPTIMAL,
+            .usage = image_info.usage.data,
+            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+            .queueFamilyIndexCount = 1,
+            .pQueueFamilyIndices = queue_family_index_ptr,
+            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        };
+        return vk_image_create_info;
+    }
+
+    auto Device::create_memory(MemoryBlockInfo const & info) -> MemoryBlock
+    {
+        auto const & impl = *as<ImplDevice>();
+
+        DAXA_DBG_ASSERT_TRUE_M(info.requirements.memory_type_bits != 0, "memory_type_bits must be non zero");
+
+        VkMemoryRequirements requirements = std::bit_cast<VkMemoryRequirements>(info.requirements);
+        VmaAllocationCreateFlags const flags = std::bit_cast<VmaAllocationCreateFlags>(info.flags);
+        VmaAllocationCreateInfo create_info{
+            .flags = flags,
+            .usage = VMA_MEMORY_USAGE_GPU_ONLY,
+            .requiredFlags = {}, // idk what this is...
+            .preferredFlags = {},
+            .memoryTypeBits = {}, // idk what this is....
+            .pool = {},
+            .pUserData = {},
+            .priority = 0.5f,
+        };
+        VmaAllocation allocation = {};
+        VmaAllocationInfo allocation_info = {};
+        vmaAllocateMemory(impl.vma_allocator, &requirements, &create_info, &allocation, &allocation_info);
+
+        return MemoryBlock{ManagedPtr{new ImplMemoryBlock(this->make_weak(), info, allocation, allocation_info)}};
+    }
+
+    auto Device::get_memory_requirements(BufferInfo const & info) -> MemoryRequirements
+    {
+        auto const & impl = *as<ImplDevice>();
+        VkBufferCreateInfo const vk_buffer_create_info{
+            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = {},
+            .size = static_cast<VkDeviceSize>(info.size),
+            .usage = BUFFER_USE_FLAGS,
+            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+            .queueFamilyIndexCount = 1,
+            .pQueueFamilyIndices = &impl.main_queue_family_index,
+        };
+        VkDeviceBufferMemoryRequirements buffer_requirement_info{
+            .sType = VK_STRUCTURE_TYPE_DEVICE_BUFFER_MEMORY_REQUIREMENTS,
+            .pNext = {},
+            .pCreateInfo = &vk_buffer_create_info,
+        };
+        VkMemoryRequirements2 mem_requirements = {
+            .sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2,
+            .pNext = {},
+            .memoryRequirements = {},
+        };
+        vkGetDeviceBufferMemoryRequirements(impl.vk_device, &buffer_requirement_info, &mem_requirements);
+        MemoryRequirements ret = std::bit_cast<MemoryRequirements>(mem_requirements.memoryRequirements);
+        return ret;
+    }
+
+    auto Device::get_memory_requirements(ImageInfo const & info) -> MemoryRequirements
+    {
+        auto const & impl = *as<ImplDevice>();
+        VkImageCreateInfo vk_image_create_info = initialize_image_create_info_from_image_info(info, &impl.main_queue_family_index);
+        VkDeviceImageMemoryRequirements image_requirement_info{
+            .sType = VK_STRUCTURE_TYPE_DEVICE_IMAGE_MEMORY_REQUIREMENTS,
+            .pNext = {},
+            .pCreateInfo = &vk_image_create_info,
+        };
+        VkMemoryRequirements2 mem_requirements{
+            .sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2,
+            .pNext = {},
+            .memoryRequirements = {},
+        };
+        vkGetDeviceImageMemoryRequirements(impl.vk_device, &image_requirement_info, &mem_requirements);
+        MemoryRequirements ret = std::bit_cast<MemoryRequirements>(mem_requirements.memoryRequirements);
+        return ret;
+    }
+
     auto Device::info() const -> DeviceInfo const &
     {
         auto const & impl = *as<ImplDevice>();
@@ -260,6 +397,7 @@ namespace daxa
     auto Device::info_buffer(BufferId id) const -> BufferInfo
     {
         auto const & impl = *as<ImplDevice>();
+        DAXA_DBG_ASSERT_TRUE_M(is_id_valid(id), "detected invalid buffer id");
         return impl.slot(id).info;
     }
 
@@ -273,7 +411,7 @@ namespace daxa
     {
         auto const & impl = *as<ImplDevice>();
         DAXA_DBG_ASSERT_TRUE_M(
-            (impl.slot(id).info.memory_flags & (MemoryFlagBits::HOST_ACCESS_RANDOM | MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE)) != MemoryFlagBits::NONE,
+            impl.slot(id).host_address != nullptr,
             "host buffer address is only available if the buffer is created with either of the following memory flags: HOST_ACCESS_RANDOM, HOST_ACCESS_SEQUENTIAL_WRITE");
         return impl.slot(id).host_address;
     }
@@ -281,18 +419,21 @@ namespace daxa
     auto Device::info_image(ImageId id) const -> ImageInfo
     {
         auto const & impl = *as<ImplDevice>();
+        DAXA_DBG_ASSERT_TRUE_M(is_id_valid(id), "detected invalid image id");
         return impl.slot(id).info;
     }
 
     auto Device::info_image_view(ImageViewId id) const -> ImageViewInfo
     {
         auto const & impl = *as<ImplDevice>();
+        DAXA_DBG_ASSERT_TRUE_M(is_id_valid(id), "detected invalid image view id");
         return impl.slot(id).info;
     }
 
     auto Device::info_sampler(SamplerId id) const -> SamplerInfo
     {
         auto const & impl = *as<ImplDevice>();
+        DAXA_DBG_ASSERT_TRUE_M(is_id_valid(id), "detected invalid sampler id");
         return impl.slot(id).info;
     }
 
@@ -305,9 +446,7 @@ namespace daxa
     auto Device::is_id_valid(ImageViewId id) const -> bool
     {
         auto const & impl = *as<ImplDevice>();
-        bool const slot_valid = !id.is_empty() && impl.gpu_shader_resource_table.image_slots.is_id_valid(id);
-        bool const parent_valid = is_id_valid(impl.slot(id).info.image);
-        return slot_valid && parent_valid;
+        return !id.is_empty() && impl.gpu_shader_resource_table.image_slots.is_id_valid(id);
     }
 
     auto Device::is_id_valid(BufferId id) const -> bool
@@ -368,7 +507,7 @@ namespace daxa
             .robustBufferAccess = VK_FALSE,
             .fullDrawIndexUint32 = VK_FALSE,
             .imageCubeArray = VK_TRUE,
-            .independentBlend = VK_FALSE,
+            .independentBlend = VK_TRUE,
             .geometryShader = VK_FALSE,
             .tessellationShader = VK_TRUE,
             .sampleRateShading = VK_FALSE,
@@ -902,59 +1041,59 @@ namespace daxa
 
         ret.info = buffer_info;
 
-        VkBufferUsageFlags const usage_flags =
-            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-            VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-            VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT |
-            VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT |
-            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
-            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-            VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
-            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-            VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT |
-            VK_BUFFER_USAGE_TRANSFORM_FEEDBACK_BUFFER_BIT_EXT |
-            VK_BUFFER_USAGE_TRANSFORM_FEEDBACK_COUNTER_BUFFER_BIT_EXT |
-            VK_BUFFER_USAGE_CONDITIONAL_RENDERING_BIT_EXT |
-            VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
-            VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
-            VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
-
         VkBufferCreateInfo const vk_buffer_create_info{
             .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},
-            .size = static_cast<VkDeviceSize>(buffer_info.size),
-            .usage = usage_flags,
+            .size = static_cast<VkDeviceSize>(buffer_info.size) + 4 /* Workaround for gpuav bugs related to bda oob access. */,
+            .usage = BUFFER_USE_FLAGS,
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
             .queueFamilyIndexCount = 1,
             .pQueueFamilyIndices = &this->main_queue_family_index,
         };
 
         bool host_accessible = false;
-        auto vma_allocation_flags = static_cast<VmaAllocationCreateFlags>(buffer_info.memory_flags.data);
-        if (((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT) != 0u) ||
-            ((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT) != 0u) ||
-            ((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT) != 0u))
-        {
-            vma_allocation_flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
-            host_accessible = true;
-        }
-
         VmaAllocationInfo vma_allocation_info = {};
+        if (AutoAllocInfo const * auto_info = std::get_if<AutoAllocInfo>(&buffer_info.allocate_info))
+        {
+            auto vma_allocation_flags = static_cast<VmaAllocationCreateFlags>(auto_info->data);
+            if (((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT) != 0u) ||
+                ((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT) != 0u) ||
+                ((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT) != 0u))
+            {
+                vma_allocation_flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
+                host_accessible = true;
+            }
 
-        VmaAllocationCreateInfo const vma_allocation_create_info{
-            .flags = vma_allocation_flags,
-            .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
-            .requiredFlags = {},
-            .preferredFlags = {},
-            .memoryTypeBits = std::numeric_limits<u32>::max(),
-            .pool = nullptr,
-            .pUserData = nullptr,
-            .priority = 0.5f,
-        };
+            VmaAllocationCreateInfo const vma_allocation_create_info{
+                .flags = vma_allocation_flags,
+                .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+                .requiredFlags = {},
+                .preferredFlags = {},
+                .memoryTypeBits = std::numeric_limits<u32>::max(),
+                .pool = nullptr,
+                .pUserData = nullptr,
+                .priority = 0.5f,
+            };
 
-        vmaCreateBuffer(this->vma_allocator, &vk_buffer_create_info, &vma_allocation_create_info, &ret.vk_buffer, &ret.vma_allocation, &vma_allocation_info);
+            vmaCreateBuffer(this->vma_allocator, &vk_buffer_create_info, &vma_allocation_create_info, &ret.vk_buffer, &ret.vma_allocation, &vma_allocation_info);
+        }
+        else
+        {
+            ManualAllocInfo const & manual_info = std::get<ManualAllocInfo>(buffer_info.allocate_info);
+            ImplMemoryBlock const & mem_block = *manual_info.memory_block.as<ImplMemoryBlock const>();
+
+            // TODO(pahrens): Add validation for memory type requirements.
+
+            vkCreateBuffer(this->vk_device, &vk_buffer_create_info, nullptr, &ret.vk_buffer);
+
+            vmaBindBufferMemory2(
+                this->vma_allocator,
+                mem_block.allocation,
+                manual_info.offset,
+                ret.vk_buffer,
+                {});
+        }
 
         VkBufferDeviceAddressInfo const vk_buffer_device_address_info{
             .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
@@ -1124,54 +1263,38 @@ namespace daxa
             "image (x,y,z) dimensions must be greater then 0");
         DAXA_DBG_ASSERT_TRUE_M(image_info.array_layer_count > 0, "image array layer count must be greater then 0");
         DAXA_DBG_ASSERT_TRUE_M(image_info.mip_level_count > 0, "image mip level count must be greater then 0");
+        VkImageCreateInfo const vk_image_create_info = initialize_image_create_info_from_image_info(image_info, &this->main_queue_family_index);
 
-        auto const vk_image_type = static_cast<VkImageType>(image_info.dimensions - 1);
-
-        VkImageCreateFlags vk_image_create_flags = {};
-
-        constexpr auto CUBE_FACE_N = 6u;
-        if (image_info.dimensions == 2 && image_info.size.x == image_info.size.y && image_info.array_layer_count % CUBE_FACE_N == 0)
+        if (AutoAllocInfo const * auto_info = std::get_if<AutoAllocInfo>(&image_info.allocate_info))
         {
-            vk_image_create_flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+            VmaAllocationCreateInfo const vma_allocation_create_info{
+                .flags = static_cast<VmaAllocationCreateFlags>(auto_info->data),
+                .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+                .requiredFlags = {},
+                .preferredFlags = {},
+                .memoryTypeBits = std::numeric_limits<u32>::max(),
+                .pool = nullptr,
+                .pUserData = nullptr,
+                .priority = 0.5f,
+            };
+
+            [[maybe_unused]] VkResult const vk_create_image_result = vmaCreateImage(this->vma_allocator, &vk_image_create_info, &vma_allocation_create_info, &ret.vk_image, &ret.vma_allocation, nullptr);
+            DAXA_DBG_ASSERT_TRUE_M(vk_create_image_result == VK_SUCCESS, "failed to create image");
         }
-        if (image_info.dimensions == 3)
+        else
         {
-            // TODO(grundlett): Figure out if there are cases where a 3D image CAN'T be used
-            // as a 2D array image view.
-            vk_image_create_flags |= VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
+            ManualAllocInfo const & manual_info = std::get<ManualAllocInfo>(image_info.allocate_info);
+            ImplMemoryBlock const & mem_block = *manual_info.memory_block.as<ImplMemoryBlock const>();
+            // TODO(pahrens): Add validation for memory requirements.
+            [[maybe_unused]] VkResult const vk_create_image_result = vkCreateImage(this->vk_device, &vk_image_create_info, nullptr, &ret.vk_image);
+            DAXA_DBG_ASSERT_TRUE_M(vk_create_image_result == VK_SUCCESS, "failed to create image");
+            vmaBindImageMemory2(
+                this->vma_allocator,
+                mem_block.allocation,
+                manual_info.offset,
+                ret.vk_image,
+                {});
         }
-
-        VkImageCreateInfo const vk_image_create_info{
-            .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-            .pNext = nullptr,
-            .flags = vk_image_create_flags,
-            .imageType = vk_image_type,
-            .format = *reinterpret_cast<VkFormat const *>(&image_info.format),
-            .extent = *reinterpret_cast<VkExtent3D const *>(&image_info.size),
-            .mipLevels = image_info.mip_level_count,
-            .arrayLayers = image_info.array_layer_count,
-            .samples = static_cast<VkSampleCountFlagBits>(image_info.sample_count),
-            .tiling = VK_IMAGE_TILING_OPTIMAL,
-            .usage = image_info.usage.data,
-            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-            .queueFamilyIndexCount = 1,
-            .pQueueFamilyIndices = &this->main_queue_family_index,
-            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-        };
-
-        VmaAllocationCreateInfo const vma_allocation_create_info{
-            .flags = static_cast<VmaAllocationCreateFlags>(image_info.memory_flags.data),
-            .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
-            .requiredFlags = {},
-            .preferredFlags = {},
-            .memoryTypeBits = std::numeric_limits<u32>::max(),
-            .pool = nullptr,
-            .pUserData = nullptr,
-            .priority = 0.5f,
-        };
-
-        [[maybe_unused]] VkResult const vk_create_image_result = vmaCreateImage(this->vma_allocator, &vk_image_create_info, &vma_allocation_create_info, &ret.vk_image, &ret.vma_allocation, nullptr);
-        DAXA_DBG_ASSERT_TRUE_M(vk_create_image_result == VK_SUCCESS, "failed to create image");
 
         VkImageViewType vk_image_view_type = {};
         if (image_info.array_layer_count > 1)
@@ -1354,7 +1477,14 @@ namespace daxa
         ImplBufferSlot & buffer_slot = this->gpu_shader_resource_table.buffer_slots.dereference_id(id);
         this->buffer_device_address_buffer_host_ptr[id.index] = 0;
         write_descriptor_set_buffer(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, VK_NULL_HANDLE, 0, VK_WHOLE_SIZE, id.index);
-        vmaDestroyBuffer(this->vma_allocator, buffer_slot.vk_buffer, buffer_slot.vma_allocation);
+        if (std::holds_alternative<AutoAllocInfo>(buffer_slot.info.allocate_info))
+        {
+            vmaDestroyBuffer(this->vma_allocator, buffer_slot.vk_buffer, buffer_slot.vma_allocation);
+        }
+        else
+        {
+            vkDestroyBuffer(this->vk_device, buffer_slot.vk_buffer, {});
+        }
         buffer_slot = {};
         gpu_shader_resource_table.buffer_slots.return_slot(id);
     }
@@ -1364,9 +1494,16 @@ namespace daxa
         ImplImageSlot & image_slot = gpu_shader_resource_table.image_slots.dereference_id(id);
         write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, VK_NULL_HANDLE, image_slot.info.usage, id.index);
         vkDestroyImageView(vk_device, image_slot.view_slot.vk_image_view, nullptr);
-        if (image_slot.swapchain_image_index == NOT_OWNED_BY_SWAPCHAIN && image_slot.vma_allocation != nullptr)
+        if (image_slot.swapchain_image_index == NOT_OWNED_BY_SWAPCHAIN)
         {
-            vmaDestroyImage(this->vma_allocator, image_slot.vk_image, image_slot.vma_allocation);
+            if (std::holds_alternative<AutoAllocInfo>(image_slot.info.allocate_info))
+            {
+                vmaDestroyImage(this->vma_allocator, image_slot.vk_image, image_slot.vma_allocation);
+            }
+            else
+            {
+                vkDestroyImage(this->vk_device, image_slot.vk_image, {});
+            }
         }
         image_slot = {};
         gpu_shader_resource_table.image_slots.return_slot(id);

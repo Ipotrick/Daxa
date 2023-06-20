@@ -12,8 +12,8 @@ namespace daxa
               .name = std::string("TransferMemoryPool") + this->info.name,
           })},
           buffer{this->info.device.create_buffer({
-              .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
               .size = this->info.capacity,
+              .allocate_info = AutoAllocInfo{ daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE | (a_info.use_bar_memory ? daxa::MemoryFlagBits::DEDICATED_MEMORY : daxa::MemoryFlagBits::NONE) },
               .name = std::string("TransferMemoryPool") + this->info.name,
           })},
           buffer_device_address{this->info.device.get_device_address(this->buffer)},
@@ -26,21 +26,27 @@ namespace daxa
         this->info.device.destroy_buffer(this->buffer);
     }
 
-    auto TransferMemoryPool::allocate(u32 allocation_size) -> std::optional<TransferMemoryPool::Allocation>
+    auto TransferMemoryPool::allocate(u32 allocation_size, u32 alignment_requirement) -> std::optional<TransferMemoryPool::Allocation>
     {
+        u32 const tail_alloc_offset = (this->claimed_start + this->claimed_size) % this->info.capacity;
+        auto upalign_offset = [](auto value, auto alignment){
+            return (value + alignment - 1) / alignment * alignment;
+        };
+        u32 const tail_alloc_offset_aligned = upalign_offset(tail_alloc_offset, alignment_requirement);
+        u32 const tail_alloc_align_padding = tail_alloc_offset_aligned - tail_alloc_offset;
         // Two allocations are possible:
         // Tail allocation is when the allocation is placed directly at the end of all other allocations.
         // Zero offset allocation is possible when there is not enough space left at the tail BUT there is enough space from 0 up to the start of the other allocations.
         auto calc_tail_allocation_possible = [&]()
         {
-            u32 const tail = (this->claimed_start + this->claimed_size) % this->info.capacity;
+            u32 const tail = tail_alloc_offset_aligned;
             bool const wrapped = this->claimed_start + this->claimed_size > this->info.capacity;
             u32 const end = wrapped ? this->claimed_start : this->info.capacity;
             return tail + allocation_size <= end;
         };
         auto calc_zero_offset_allocation_possible = [&]()
         {
-            return this->claimed_start + this->claimed_size <= this->info.capacity;
+            return this->claimed_start + this->claimed_size <= this->info.capacity && allocation_size < this->claimed_start;
         };
         // Firstly, test if there is enough continuous space left to allocate.
         bool tail_allocation_possible = calc_tail_allocation_possible();
@@ -58,28 +64,32 @@ namespace daxa
             }
         }
         current_timeline_value += 1;
+        u32 returned_allocation_offset = {};
+        u32 actual_allocation_offset = {};
         u32 actual_allocation_size = {};
-        u32 allocation_offset = {};
         if (tail_allocation_possible)
         {
-            actual_allocation_size = allocation_size;
-            allocation_offset = (this->claimed_start + this->claimed_size) % this->info.capacity;
+            actual_allocation_size = allocation_size + tail_alloc_align_padding;
+            returned_allocation_offset = tail_alloc_offset_aligned;
+            actual_allocation_offset = tail_alloc_offset;
         }
         else // Zero offset allocation.
         {
             u32 const left_tail_space = this->info.capacity - (this->claimed_start + this->claimed_size);
             actual_allocation_size = allocation_size + left_tail_space;
-            allocation_offset = 0;
+            returned_allocation_offset = {};
+            actual_allocation_offset = {};
         }
         this->claimed_size += actual_allocation_size;
         live_allocations.push_back(TrackedAllocation{
             .timeline_index = this->current_timeline_value,
+            .offset = actual_allocation_offset,
             .size = actual_allocation_size,
         });
         return Allocation{
-            .device_address = this->buffer_device_address + allocation_offset,
-            .host_address = reinterpret_cast<void *>(reinterpret_cast<u8 *>(this->buffer_host_address) + allocation_offset),
-            .buffer_offset = allocation_offset,
+            .device_address = this->buffer_device_address + returned_allocation_offset,
+            .host_address = reinterpret_cast<void *>(reinterpret_cast<u8 *>(this->buffer_host_address) + returned_allocation_offset),
+            .buffer_offset = returned_allocation_offset,
             .size = allocation_size,
             .timeline_index = this->current_timeline_value,
         };

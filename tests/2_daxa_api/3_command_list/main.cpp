@@ -96,8 +96,8 @@ namespace tests
         }
 
         daxa::BufferId const staging_upload_buffer = app.device.create_buffer({
-            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
             .size = sizeof(decltype(data)),
+            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
             .name = "staging_upload_buffer",
         });
 
@@ -107,8 +107,8 @@ namespace tests
         });
 
         daxa::BufferId const staging_readback_buffer = app.device.create_buffer({
-            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .size = sizeof(decltype(data)),
+            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .name = "staging_readback_buffer",
         });
 
@@ -150,8 +150,8 @@ namespace tests
         });
 
         cmd_list.pipeline_barrier({
-            .awaited_pipeline_access = daxa::AccessConsts::HOST_WRITE,
-            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
+            .src_access = daxa::AccessConsts::HOST_WRITE,
+            .dst_access = daxa::AccessConsts::TRANSFER_READ,
         });
 
         cmd_list.copy_buffer_to_buffer({
@@ -162,14 +162,14 @@ namespace tests
 
         // Barrier to make sure device_local_buffer is has no read after write hazard.
         cmd_list.pipeline_barrier({
-            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
+            .src_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .dst_access = daxa::AccessConsts::TRANSFER_READ,
         });
 
         cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+            .src_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .dst_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .image_id = image_1,
         });
 
@@ -181,15 +181,15 @@ namespace tests
         });
 
         cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
-            .after_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
+            .src_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .dst_access = daxa::AccessConsts::TRANSFER_READ,
+            .dst_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
             .image_id = image_1,
         });
 
         cmd_list.pipeline_barrier_image_transition({
-            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+            .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .dst_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .image_id = image_2,
         });
 
@@ -202,16 +202,16 @@ namespace tests
         });
 
         cmd_list.pipeline_barrier_image_transition({
-            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
-            .after_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
+            .src_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .dst_access = daxa::AccessConsts::TRANSFER_READ,
+            .dst_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
             .image_id = image_2,
         });
 
         // Barrier to make sure device_local_buffer is has no write after read hazard.
         cmd_list.pipeline_barrier({
-            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
-            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .src_access = daxa::AccessConsts::TRANSFER_READ,
+            .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
         });
 
         cmd_list.copy_image_to_buffer({
@@ -223,8 +223,8 @@ namespace tests
 
         // Barrier to make sure device_local_buffer is has no read after write hazard.
         cmd_list.pipeline_barrier({
-            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ,
+            .src_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .dst_access = daxa::AccessConsts::TRANSFER_READ,
         });
 
         cmd_list.copy_buffer_to_buffer({
@@ -235,8 +235,8 @@ namespace tests
 
         // Barrier to make sure staging_readback_buffer is has no read after write hazard.
         cmd_list.pipeline_barrier({
-            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .waiting_pipeline_access = daxa::AccessConsts::HOST_READ,
+            .src_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .dst_access = daxa::AccessConsts::HOST_READ,
         });
 
         cmd_list.write_timestamp({

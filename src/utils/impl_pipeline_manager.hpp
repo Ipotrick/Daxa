@@ -23,6 +23,10 @@ using ComPtr = CComPtr<T>;
 #include <glslang/Include/ResourceLimits.h>
 #endif
 
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION
+#include <spirv-tools/libspirv.hpp>
+#endif
+
 namespace daxa
 {
     struct ImplDevice;
@@ -70,8 +74,10 @@ namespace daxa
         std::vector<ComputePipelineState> compute_pipelines;
         std::vector<RasterPipelineState> raster_pipelines;
 
-        // TODO: Make the pipeline compiler thread-safe!
-        // This is accessed by the includer, which makes that not thread-safe
+        // TODO(grundlett): Maybe make the pipeline compiler *internally* thread-safe!
+        // This variable is accessed by the includer, which makes that not thread-safe
+        // PipelineManager is still externally thread-safe. You can create as many
+        // PipelineManagers from as many threads as you'd like!
         ShaderCompileInfo const * current_shader_info = nullptr;
 
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
@@ -91,6 +97,10 @@ namespace daxa
         DxcBackend dxc_backend = {};
 #endif
 
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION
+        spvtools::SpirvTools spirv_tools = spvtools::SpirvTools{SPV_ENV_VULKAN_1_3};
+#endif
+
         ImplPipelineManager(PipelineManagerInfo && a_info);
         ~ImplPipelineManager();
 
@@ -101,7 +111,7 @@ namespace daxa
         void remove_compute_pipeline(std::shared_ptr<ComputePipeline> const & pipeline);
         void remove_raster_pipeline(std::shared_ptr<RasterPipeline> const & pipeline);
         void add_virtual_include_file(VirtualIncludeInfo const & virtual_info);
-        auto reload_all() -> Result<bool>;
+        auto reload_all() -> std::optional<Result<void>>;
 
         auto full_path_to_file(std::filesystem::path const & path) -> Result<std::filesystem::path>;
         auto load_shader_source_from_file(std::filesystem::path const & path) -> Result<ShaderCode>;

@@ -127,7 +127,7 @@ namespace daxa
         u32 instance_count = 1;
         u32 first_index = {};
         i32 vertex_offset = {};
-        u32 first_instance = 0;
+        u32 first_instance = {};
     };
 
     struct DrawIndirectInfo
@@ -153,12 +153,12 @@ namespace daxa
     struct ResetSplitBarriersInfo
     {
         SplitBarrierState & split_barrier;
-        PipelineStageFlags stage;
+        PipelineStageFlags stage = {};
     };
 
     struct WaitSplitBarriersInfo
     {
-        std::span<SplitBarrierState> split_barriers;
+        std::span<SplitBarrierState> split_barriers = {};
     };
 
     struct WriteTimestampInfo
@@ -184,7 +184,7 @@ namespace daxa
     struct ResetSplitBarrierInfo
     {
         SplitBarrierState & barrier;
-        PipelineStageFlags stage_masks;
+        PipelineStageFlags stage_masks = {};
     };
 
     struct SetConstantBufferInfo
@@ -229,12 +229,14 @@ namespace daxa
         {
             push_constant_vptr(&constant, static_cast<u32>(sizeof(T)), static_cast<u32>(offset));
         }
-        /// @brief  Binds a buffer region to the constant buffer slot.
-        ///         There are constant buffer slots 0-7.
+        /// @brief  Binds a buffer region to the uniform buffer slot.
+        ///         There are uniform buffer slots 0-7.
         ///         The buffer range is user managed, The buffer MUST not die while in use on the gpu!
         ///         Changes to these bindings only become visible to commands AFTER a pipeline is bound!
+        ///         Set uniform buffer slots are cleared after a pipeline is bound. 
+        ///         Before setting another pipeline, they need to be set again.
         /// @param info parameters.
-        void set_constant_buffer(SetConstantBufferInfo const & info);
+        void set_uniform_buffer(SetConstantBufferInfo const & info);
         void set_pipeline(ComputePipeline const & pipeline);
         void set_pipeline(RasterPipeline const & pipeline);
         void dispatch(u32 group_x, u32 group_y = 1, u32 group_z = 1);

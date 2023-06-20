@@ -17,6 +17,9 @@ endif()
 if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_DXC)
     list(APPEND VCPKG_MANIFEST_FEATURES "utils-pipeline-manager-dxc")
 endif()
+if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
+    list(APPEND VCPKG_MANIFEST_FEATURES "utils-pipeline-manager-spirv-validation")
+endif()
 if(DAXA_ENABLE_UTILS_TASK_LIST)
     list(APPEND VCPKG_MANIFEST_FEATURES "utils-task-list")
 endif()
@@ -65,6 +68,7 @@ add_library(daxa STATIC
     "src/impl_dependencies.cpp"
     "src/impl_split_barrier.cpp"
     "src/impl_timeline_query.cpp"
+    "src/impl_memory_block.cpp"
 
     "src/utils/impl_task_list.cpp"
     "src/utils/impl_imgui.cpp"
@@ -141,6 +145,17 @@ if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_DXC)
     target_link_libraries(daxa
         PUBLIC
         dxc::dxc
+    )
+endif()
+if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
+    target_compile_definitions(daxa
+        PUBLIC
+        DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION=true
+    )
+    find_package(SPIRV-Tools CONFIG REQUIRED)
+    target_link_libraries(daxa
+        PUBLIC
+        SPIRV-Tools-static
     )
 endif()
 if(DAXA_ENABLE_UTILS_TASK_LIST)
@@ -232,6 +247,11 @@ endif()
 if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_DXC)
     file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
 find_package(dxc CONFIG REQUIRED)
+]=])
+endif()
+if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
+    file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
+find_package(SPIRV-Tools CONFIG REQUIRED)
 ]=])
 endif()
 if(DAXA_ENABLE_UTILS_TASK_LIST)

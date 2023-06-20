@@ -8,14 +8,8 @@ struct GpuInput
     daxa_f32 time;
     daxa_f32 delta_time;
 };
-DAXA_ENABLE_BUFFER_PTR(GpuInput)
+DAXA_DECL_BUFFER_PTR(GpuInput)
 #elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
-DAXA_DECL_BUFFER_STRUCT(
-    GpuInput,
-    {
-        daxa_f32 time;
-        daxa_f32 delta_time;
-    })
 #endif
 struct ComputePush
 {
