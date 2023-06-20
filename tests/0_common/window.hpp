@@ -79,7 +79,8 @@ struct AppWindow
             return reinterpret_cast<daxa::NativeWindowHandle>(glfwGetX11Window(glfw_window_ptr));
         }
 #elif defined(__APPLE__)
-        return glfwGetCocoaWindow(glfw_window_ptr);
+        return glfw_window_ptr;
+        // return glfwGetCocoaWindow(glfw_window_ptr);
 #else
         return {};
 #endif
@@ -92,6 +93,7 @@ struct AppWindow
         case GLFW_PLATFORM_WIN32: return daxa::NativeWindowPlatform::WIN32_API;
         case GLFW_PLATFORM_X11: return daxa::NativeWindowPlatform::XLIB_API;
         case GLFW_PLATFORM_WAYLAND: return daxa::NativeWindowPlatform::WAYLAND_API;
+        case GLFW_PLATFORM_COCOA: return daxa::NativeWindowPlatform::COCOA_API;
         default: return daxa::NativeWindowPlatform::UNKNOWN;
         }
     }

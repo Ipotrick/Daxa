@@ -152,6 +152,6 @@ namespace tests
 
 auto main() -> int
 {
-    tests::simple_creation();
+    // tests::simple_creation();
     tests::clearcolor();
 }

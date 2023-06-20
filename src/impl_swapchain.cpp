@@ -4,6 +4,10 @@
 
 #include "impl_device.hpp"
 
+#if defined(__APPLE__)
+#include <GLFW/glfw3.h>
+#endif
+
 namespace daxa
 {
     Swapchain::Swapchain(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
@@ -153,16 +157,18 @@ namespace daxa
         }
 #endif
 #elif defined(__APPLE__)
-        VkMacOSSurfaceCreateInfoMVK const surface_ci{
-            .sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK,
-            .pNext = nullptr,
-            .flags = 0,
-            .pView = info.native_window,
-        };
-        {
-            auto func = reinterpret_cast<PFN_vkCreateMacOSSurfaceMVK>(vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, "vkCreateMacOSSurfaceMVK"));
-            func(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, &surface_ci, nullptr, &this->vk_surface);
-        }
+        auto vk_instance = impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance;
+        glfwCreateWindowSurface(vk_instance, reinterpret_cast<GLFWwindow*>(info.native_window), nullptr, &this->vk_surface);
+        // VkMacOSSurfaceCreateInfoMVK const surface_ci{
+        //     .sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK,
+        //     .pNext = nullptr,
+        //     .flags = 0,
+        //     .pView = info.native_window,
+        // };
+        // {
+        //     auto func = reinterpret_cast<PFN_vkCreateMacOSSurfaceMVK>(vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, "vkCreateMacOSSurfaceMVK"));
+        //     func(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, &surface_ci, nullptr, &this->vk_surface);
+        // }
 #endif
     }
 

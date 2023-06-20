@@ -11,6 +11,11 @@
       "name": "wayland",
       "default-features": false,
       "platform": "linux"
+    },
+    {
+      "name": "glfw3",
+      "default-features": false,
+      "platform": "darwin"
     }
   ],
   "default-features": [
