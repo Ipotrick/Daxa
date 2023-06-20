@@ -460,13 +460,16 @@ namespace daxa
         return !id.is_empty() && impl.gpu_shader_resource_table.sampler_slots.is_id_valid(id);
     }
 
-    ImplDevice::ImplDevice(DeviceInfo a_info, DeviceProperties const & a_vk_info, ManagedWeakPtr a_impl_ctx, VkPhysicalDevice a_physical_device)
+    ImplDevice::ImplDevice(DeviceInfo a_info, ManagedWeakPtr a_impl_ctx, VkPhysicalDevice a_physical_device)
         : impl_ctx{std::move(a_impl_ctx)},
           vk_physical_device{a_physical_device},
-          vk_info{a_vk_info},
           info{std::move(a_info)},
           main_queue_family_index(std::numeric_limits<u32>::max())
     {
+        VkPhysicalDeviceProperties vk_device_properties;
+        vkGetPhysicalDeviceProperties(vk_physical_device, &vk_device_properties);
+        vk_info = *reinterpret_cast<DeviceProperties *>(&vk_device_properties);
+
         // SELECT QUEUE
 
         u32 queue_family_props_count = 0;
@@ -561,17 +564,20 @@ namespace daxa
             .inheritedQueries = VK_FALSE,
         };
 
+        void * REQUIRED_DEVICE_FEATURE_P_CHAIN = nullptr;
+
         VkPhysicalDeviceBufferDeviceAddressFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_BUFFER_DEVICE_ADDRESS{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
-            .pNext = nullptr,
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .bufferDeviceAddress = VK_TRUE,
             .bufferDeviceAddressCaptureReplay = static_cast<VkBool32>(this->info.enable_buffer_device_address_capture_replay),
             .bufferDeviceAddressMultiDevice = VK_FALSE,
         };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_BUFFER_DEVICE_ADDRESS);
 
         VkPhysicalDeviceDescriptorIndexingFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_DESCRIPTOR_INDEXING{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_BUFFER_DEVICE_ADDRESS),
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .shaderInputAttachmentArrayDynamicIndexing = VK_FALSE,
             .shaderUniformTexelBufferArrayDynamicIndexing = VK_FALSE,
             .shaderStorageTexelBufferArrayDynamicIndexing = VK_FALSE,
@@ -593,58 +599,58 @@ namespace daxa
             .descriptorBindingVariableDescriptorCount = VK_FALSE,
             .runtimeDescriptorArray = VK_TRUE, // Allows shaders to not have a hardcoded descriptor maximum per table.
         };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_DESCRIPTOR_INDEXING);
 
         VkPhysicalDeviceHostQueryResetFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_HOST_QUERY_RESET{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_DESCRIPTOR_INDEXING),
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .hostQueryReset = VK_TRUE,
         };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_HOST_QUERY_RESET);
 
         VkPhysicalDeviceShaderAtomicInt64Features REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_ATOMIC_INT64{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_HOST_QUERY_RESET),
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .shaderBufferInt64Atomics = VK_TRUE,
             .shaderSharedInt64Atomics = VK_TRUE,
         };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_ATOMIC_INT64);
 
         VkPhysicalDeviceShaderImageAtomicInt64FeaturesEXT REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_IMAGE_ATOMIC_INT64{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_IMAGE_ATOMIC_INT64_FEATURES_EXT,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_ATOMIC_INT64),
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .shaderImageInt64Atomics = VK_TRUE,
             .sparseImageInt64Atomics = VK_FALSE, // I do not care about sparse images.
         };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_IMAGE_ATOMIC_INT64);
 
         VkPhysicalDeviceDynamicRenderingFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_DYNAMIC_RENDERING{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_IMAGE_ATOMIC_INT64),
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .dynamicRendering = VK_TRUE,
         };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_DYNAMIC_RENDERING);
 
         VkPhysicalDeviceTimelineSemaphoreFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_TIMELINE_SEMAPHORE{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_DYNAMIC_RENDERING),
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .timelineSemaphore = VK_TRUE,
         };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_TIMELINE_SEMAPHORE);
 
         VkPhysicalDeviceSynchronization2Features REQUIRED_PHYSICAL_DEVICE_FEATURES_SYNCHRONIZATION_2{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_TIMELINE_SEMAPHORE),
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .synchronization2 = VK_TRUE,
         };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SYNCHRONIZATION_2);
 
         VkPhysicalDeviceScalarBlockLayoutFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SYNCHRONIZATION_2),
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .scalarBlockLayout = VK_TRUE,
         };
-
-        void * REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT);
-
-        VkPhysicalDeviceFeatures2 physical_device_features_2{
-            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
-            .features = REQUIRED_PHYSICAL_DEVICE_FEATURES,
-        };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT);
 
         std::vector<char const *> extension_names;
         std::vector<char const *> enabled_layers;
@@ -664,9 +670,16 @@ namespace daxa
             // extension_names.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
         }
 
+        VkPhysicalDeviceFeatures2 physical_device_features_2{
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
+            .features = REQUIRED_PHYSICAL_DEVICE_FEATURES,
+        };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&physical_device_features_2);
+
         VkDeviceCreateInfo const device_ci = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-            .pNext = &physical_device_features_2,
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .flags = {},
             .queueCreateInfoCount = static_cast<u32>(1),
             .pQueueCreateInfos = &queue_ci,
