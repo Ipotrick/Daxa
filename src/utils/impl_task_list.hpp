@@ -287,6 +287,21 @@ namespace daxa
         }
     };
 
+    struct ImplTaskList;
+
+    struct ImplTaskRuntimeInterface
+    {
+        // interface:
+        ImplTaskList & task_list;
+        TaskListPermutation & permutation;
+        ImplTask * current_task = {};
+        std::optional<SetConstantBufferInfo> set_uniform_buffer_info = {};
+        types::BufferDeviceAddress device_address = {};
+        bool reuse_last_command_list = true;
+        std::vector<CommandList> command_lists = {};
+        std::optional<BinarySemaphore> last_submit_semaphore = {};
+    };
+
     struct ImplTaskList final : ManagedSharedState
     {
         ImplTaskList(TaskListInfo a_info);
@@ -349,18 +364,5 @@ namespace daxa
         void print_task_to(std::string & out, std::string & indent, TaskListPermutation const & permutation, TaskId task_id);
         void print_permutation_aliasing_to(std::string & out, std::string indent, TaskListPermutation const & permutation);
         void debug_print();
-    };
-
-    struct ImplTaskRuntimeInterface
-    {
-        // interface:
-        ImplTaskList & task_list;
-        TaskListPermutation & permutation;
-        ImplTask * current_task = {};
-        std::optional<SetConstantBufferInfo> set_uniform_buffer_info = {};
-        types::BufferDeviceAddress device_address = {};
-        bool reuse_last_command_list = true;
-        std::vector<CommandList> command_lists = {};
-        std::optional<BinarySemaphore> last_submit_semaphore = {};
     };
 } // namespace daxa
