@@ -55,6 +55,7 @@ namespace daxa
         WIN32_API,
         XLIB_API,
         WAYLAND_API,
+        COCOA_API,
     };
 } // namespace daxa
 

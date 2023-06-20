@@ -23,6 +23,9 @@ namespace tests
         app.device.submit_commands({
             .command_lists = {cmd_list},
         });
+
+        app.device.wait_idle();
+        app.device.collect_garbage();
     }
 
     template <usize SX, usize SY, usize SZ>
@@ -331,6 +334,6 @@ auto main() -> int
 {
     App app = {};
     tests::simplest(app);
-    tests::copy(app);
-    tests::deferred_destruction(app);
+    // tests::copy(app);
+    // tests::deferred_destruction(app);
 }

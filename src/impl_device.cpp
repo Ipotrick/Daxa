@@ -301,7 +301,7 @@ namespace daxa
         auto const & impl = *as<ImplDevice>();
         return !id.is_empty() && impl.gpu_shader_resource_table.image_slots.is_id_valid(id);
     }
-    
+
     auto Device::is_id_valid(ImageViewId id) const -> bool
     {
         auto const & impl = *as<ImplDevice>();
@@ -380,7 +380,7 @@ namespace daxa
             .depthBiasClamp = VK_FALSE,
             .fillModeNonSolid = VK_TRUE,
             .depthBounds = VK_FALSE,
-            .wideLines = VK_TRUE,
+            // .wideLines = VK_TRUE,
             .largePoints = VK_FALSE,
             .alphaToOne = VK_FALSE,
             .multiViewport = VK_FALSE,
@@ -395,7 +395,7 @@ namespace daxa
             .shaderTessellationAndGeometryPointSize = VK_FALSE,
             .shaderImageGatherExtended = VK_FALSE,
             .shaderStorageImageExtendedFormats = VK_FALSE,
-            .shaderStorageImageMultisample = VK_TRUE,            // Useful for software vrs.
+            // .shaderStorageImageMultisample = VK_TRUE,            // Useful for software vrs.
             .shaderStorageImageReadWithoutFormat = VK_TRUE,      // This allows daxa shaders to not specify image layout for image binding tables and read ops.
             .shaderStorageImageWriteWithoutFormat = VK_TRUE,     // This allows daxa shaders to not specify image layout for image binding tables and write ops.
             .shaderUniformBufferArrayDynamicIndexing = VK_FALSE, // This is superseded by descriptor indexing.
@@ -422,23 +422,51 @@ namespace daxa
             .inheritedQueries = VK_FALSE,
         };
 
+        void * REQUIRED_DEVICE_FEATURE_P_CHAIN = nullptr;
+
         VkPhysicalDeviceBufferDeviceAddressFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_BUFFER_DEVICE_ADDRESS{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
-            .pNext = nullptr,
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .bufferDeviceAddress = VK_TRUE,
+#if !defined(__APPLE__)
             .bufferDeviceAddressCaptureReplay = static_cast<VkBool32>(this->info.enable_buffer_device_address_capture_replay),
+#endif
             .bufferDeviceAddressMultiDevice = VK_FALSE,
         };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_BUFFER_DEVICE_ADDRESS);
+
+#if defined(__APPLE__)
+        VkPhysicalDevicePortabilitySubsetFeaturesKHR REQUIRED_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES{
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR,
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
+            .constantAlphaColorBlendFactors = {},
+            .events = {},
+            .imageViewFormatReinterpretation = {},
+            .imageViewFormatSwizzle = {},
+            // .imageView2DOn3DImage = VK_TRUE, // NOT SUPPORTED
+            .multisampleArrayImage = {},
+            .mutableComparisonSamplers = {},
+            .pointPolygons = {},
+            .samplerMipLodBias = {},
+            .separateStencilMaskRef = {},
+            .shaderSampleRateInterpolationFunctions = {},
+            .tessellationIsolines = {},
+            .tessellationPointMode = {},
+            .triangleFans = {},
+            .vertexAttributeAccessBeyondStride = {},
+        };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES);
+#endif
 
         VkPhysicalDeviceDescriptorIndexingFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_DESCRIPTOR_INDEXING{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_BUFFER_DEVICE_ADDRESS),
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .shaderInputAttachmentArrayDynamicIndexing = VK_FALSE,
             .shaderUniformTexelBufferArrayDynamicIndexing = VK_FALSE,
             .shaderStorageTexelBufferArrayDynamicIndexing = VK_FALSE,
             .shaderUniformBufferArrayNonUniformIndexing = VK_FALSE,
             .shaderSampledImageArrayNonUniformIndexing = VK_TRUE,  // Needed for bindless sampled images.
-            .shaderStorageBufferArrayNonUniformIndexing = VK_TRUE, // Needed for bindless buffers.
+            // .shaderStorageBufferArrayNonUniformIndexing = VK_TRUE, // Needed for bindless buffers.
             .shaderStorageImageArrayNonUniformIndexing = VK_TRUE,  // Needed for bindless storage images.
             .shaderInputAttachmentArrayNonUniformIndexing = VK_FALSE,
             .shaderUniformTexelBufferArrayNonUniformIndexing = VK_FALSE,
@@ -454,60 +482,70 @@ namespace daxa
             .descriptorBindingVariableDescriptorCount = VK_FALSE,
             .runtimeDescriptorArray = VK_TRUE, // Allows shaders to not have a hardcoded descriptor maximum per table.
         };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_DESCRIPTOR_INDEXING);
 
         VkPhysicalDeviceHostQueryResetFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_HOST_QUERY_RESET{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_DESCRIPTOR_INDEXING),
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .hostQueryReset = VK_TRUE,
         };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_HOST_QUERY_RESET);
 
-        VkPhysicalDeviceShaderAtomicInt64Features REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_ATOMIC_INT64{
-            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_HOST_QUERY_RESET),
-            .shaderBufferInt64Atomics = VK_TRUE,
-            .shaderSharedInt64Atomics = VK_TRUE,
-        };
+        // VkPhysicalDeviceShaderAtomicInt64Features REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_ATOMIC_INT64{
+        //     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES,
+        //     .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
+        //     .shaderBufferInt64Atomics = VK_TRUE,
+        //     .shaderSharedInt64Atomics = VK_TRUE,
+        // };
+        // REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_ATOMIC_INT64);
 
-        VkPhysicalDeviceShaderImageAtomicInt64FeaturesEXT REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_IMAGE_ATOMIC_INT64{
-            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_IMAGE_ATOMIC_INT64_FEATURES_EXT,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_ATOMIC_INT64),
-            .shaderImageInt64Atomics = VK_TRUE,
-            .sparseImageInt64Atomics = VK_FALSE, // I do not care about sparse images.
-        };
+        if (this->info.enable_shader_image_atomic_int64)
+        {
+            VkPhysicalDeviceShaderImageAtomicInt64FeaturesEXT REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_IMAGE_ATOMIC_INT64{
+                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_IMAGE_ATOMIC_INT64_FEATURES_EXT,
+                .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
+                .shaderImageInt64Atomics = VK_TRUE,
+                .sparseImageInt64Atomics = VK_FALSE, // I do not care about sparse images.
+            };
+            REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_IMAGE_ATOMIC_INT64);
+        }
 
         VkPhysicalDeviceDynamicRenderingFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_DYNAMIC_RENDERING{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_IMAGE_ATOMIC_INT64),
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .dynamicRendering = VK_TRUE,
         };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_DYNAMIC_RENDERING);
 
         VkPhysicalDeviceTimelineSemaphoreFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_TIMELINE_SEMAPHORE{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_DYNAMIC_RENDERING),
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .timelineSemaphore = VK_TRUE,
         };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_TIMELINE_SEMAPHORE);
 
         VkPhysicalDeviceSynchronization2Features REQUIRED_PHYSICAL_DEVICE_FEATURES_SYNCHRONIZATION_2{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_TIMELINE_SEMAPHORE),
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .synchronization2 = VK_TRUE,
         };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SYNCHRONIZATION_2);
 
-        VkPhysicalDeviceRobustness2FeaturesEXT REQUIRED_PHYSICAL_DEVICE_FEATURES_ROBUSTNESS_2{
-            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SYNCHRONIZATION_2),
-            .robustBufferAccess2 = {},
-            .robustImageAccess2 = {},
-            .nullDescriptor = VK_TRUE,
-        };
+        // VkPhysicalDeviceRobustness2FeaturesEXT REQUIRED_PHYSICAL_DEVICE_FEATURES_ROBUSTNESS_2{
+        //     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT,
+        //     .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
+        //     .robustBufferAccess2 = {},
+        //     .robustImageAccess2 = {},
+        //     .nullDescriptor = VK_TRUE,
+        // };
+        // REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_ROBUSTNESS_2);
 
         VkPhysicalDeviceScalarBlockLayoutFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_ROBUSTNESS_2),
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .scalarBlockLayout = VK_TRUE,
         };
-
-        void * REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT);
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT);
 
         VkPhysicalDeviceFeatures2 physical_device_features_2{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
@@ -524,14 +562,23 @@ namespace daxa
         }
         extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
         extension_names.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
-        extension_names.push_back(VK_EXT_SHADER_IMAGE_ATOMIC_INT64_EXTENSION_NAME); // might be a problem, intel does not support it at all.
         extension_names.push_back(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
 
         if (this->info.enable_conservative_rasterization)
         {
             extension_names.push_back(VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME);
-            // extension_names.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
         }
+
+        if (this->info.enable_shader_image_atomic_int64)
+        {
+            // might be a problem, intel does not support it at all.
+            extension_names.push_back(VK_EXT_SHADER_IMAGE_ATOMIC_INT64_EXTENSION_NAME);
+        }
+
+#if defined(__APPLE__)
+        // Needed for MoltenVK.
+        extension_names.push_back("VK_KHR_portability_subset");
+#endif
 
         VkDeviceCreateInfo const device_ci = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -990,7 +1037,7 @@ namespace daxa
             },
             .name = image_info.name,
         };
-        
+
         VkImageViewCreateInfo const view_ci{
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .pNext = nullptr,
@@ -1049,7 +1096,7 @@ namespace daxa
     auto ImplDevice::new_image(ImageInfo const & image_info) -> ImageId
     {
         auto [id, image_slot_variant] = gpu_shader_resource_table.image_slots.new_slot();
-        
+
         DAXA_DBG_ASSERT_TRUE_M(image_info.dimensions >= 1 && image_info.dimensions <= 3, "image dimensions must be a value between 1 to 3(inclusive)");
 
         ImplImageSlot ret = {};
@@ -1071,7 +1118,7 @@ namespace daxa
 
         DAXA_DBG_ASSERT_TRUE_M(std::popcount(image_info.sample_count) == 1 && image_info.sample_count <= 64, "image samples must be power of two and between 1 and 64(inclusive)");
         DAXA_DBG_ASSERT_TRUE_M(
-            image_info.size.x > 0 && 
+            image_info.size.x > 0 &&
                 image_info.size.y > 0 &&
                 image_info.size.z > 0,
             "image (x,y,z) dimensions must be greater then 0");

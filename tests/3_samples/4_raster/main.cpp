@@ -16,11 +16,13 @@
 #include <GLFW/glfw3.h>
 #if defined(_WIN32)
 #define GLFW_EXPOSE_NATIVE_WIN32
+#define GLFW_NATIVE_INCLUDE_NONE
 using HWND = void *;
 #elif defined(__linux__)
 #define GLFW_EXPOSE_NATIVE_X11
+#elif defined(__APPLE__)
+#define GLFW_EXPOSE_NATIVE_COCOA
 #endif
-#define GLFW_NATIVE_INCLUDE_NONE
 #include <GLFW/glfw3native.h>
 
 #include <set>
@@ -31,6 +33,10 @@ auto get_native_handle(GLFWwindow * glfw_window_ptr) -> daxa::NativeWindowHandle
     return glfwGetWin32Window(glfw_window_ptr);
 #elif defined(__linux__)
     return reinterpret_cast<daxa::NativeWindowHandle>(glfwGetX11Window(glfw_window_ptr));
+#elif defined(__APPLE__)
+    return glfwGetCocoaWindow(glfw_window_ptr);
+#else
+    return {};
 #endif
 }
 
@@ -40,6 +46,10 @@ auto get_native_platform(GLFWwindow * /*unused*/) -> daxa::NativeWindowPlatform
     return daxa::NativeWindowPlatform::WIN32_API;
 #elif defined(__linux__)
     return daxa::NativeWindowPlatform::XLIB_API;
+#elif defined(__APPLE__)
+    return daxa::NativeWindowPlatform::COCOA_API;
+#else
+    return daxa::NativeWindowPlatform::UNKNOWN;
 #endif
 }
 

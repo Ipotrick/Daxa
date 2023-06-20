@@ -72,6 +72,9 @@ namespace daxa
     {
         std::vector<char const *> enabled_layers{};
         std::vector<char const *> extension_names{};
+
+        auto instance_create_flags = VkInstanceCreateFlags{};
+
         {
             if (this->info.enable_validation)
             {
@@ -84,6 +87,12 @@ namespace daxa
             extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #elif defined(__linux__)
             extension_names.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+#elif defined(__APPLE__)
+            extension_names.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
+            // Needed for MoltenVK.
+            extension_names.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+            extension_names.push_back("VK_EXT_metal_surface");
+            instance_create_flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
 #else
 // no surface extension
 #endif
@@ -129,14 +138,15 @@ namespace daxa
             VkInstanceCreateInfo const instance_ci = {
                 .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
                 .pNext = nullptr,
-                .flags = {},
+                .flags = instance_create_flags,
                 .pApplicationInfo = &app_info,
                 .enabledLayerCount = static_cast<u32>(enabled_layers.size()),
                 .ppEnabledLayerNames = enabled_layers.data(),
                 .enabledExtensionCount = static_cast<u32>(extension_names.size()),
                 .ppEnabledExtensionNames = extension_names.data(),
             };
-            vkCreateInstance(&instance_ci, nullptr, &vk_instance);
+            auto result = vkCreateInstance(&instance_ci, nullptr, &vk_instance);
+            DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS && vk_instance != nullptr, "Failed to create a valid vk instance!");
         }
 
         if (this->info.enable_validation)

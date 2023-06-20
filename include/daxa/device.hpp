@@ -162,10 +162,11 @@ namespace daxa
         // TODO(grundlett): Remove these in favor of a more general solution
         bool enable_buffer_device_address_capture_replay = true;
         bool enable_conservative_rasterization = false;
+        bool enable_shader_image_atomic_int64 = false;
         // Make sure your device actually supports the max numbers, as device creation will fail otherwise.
-        u32 max_allowed_images = 10'000;
-        u32 max_allowed_buffers = 10'000;
-        u32 max_allowed_samplers = 1'000;
+        u32 max_allowed_images = 8; // 10'000;
+        u32 max_allowed_buffers = 30; // 10'000;
+        u32 max_allowed_samplers = 16; // 1'000;
         std::string name = {};
     };
 

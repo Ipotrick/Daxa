@@ -14,11 +14,11 @@
             "generator": "Ninja Multi-Config",
             "cacheVariables": {
                 "CMAKE_MODULE_PATH": "${sourceDir}/cmake/modules",
-                "DAXA_ENABLE_UTILS_FSR2": true,
+                "DAXA_ENABLE_UTILS_FSR2": false,
                 "DAXA_ENABLE_UTILS_IMGUI": true,
                 "DAXA_ENABLE_UTILS_MEM": true,
                 "DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG": true,
-                "DAXA_ENABLE_UTILS_PIPELINE_MANAGER_DXC": true,
+                "DAXA_ENABLE_UTILS_PIPELINE_MANAGER_DXC": false,
                 "DAXA_ENABLE_UTILS_TASK_LIST": true,
                 "DAXA_ENABLE_TESTS": true,
                 "DAXA_ENABLE_STATIC_ANALYSIS": false
@@ -49,6 +49,18 @@
                 "type": "equals",
                 "lhs": "${hostSystemName}",
                 "rhs": "Linux"
+            }
+        },
+        {
+            "name": "defaults-macos",
+            "hidden": true,
+            "inherits": [
+                "defaults"
+            ],
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Darwin"
             }
         },
         {
@@ -89,6 +101,16 @@
             ],
             "cacheVariables": {
                 "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/clang-x86_64-linux-gnu.cmake"
+            }
+        },
+        {
+            "name": "clang-aarch64-macos-gnu",
+            "displayName": "Clang AArch64 MacOS (GNU ABI?)",
+            "inherits": [
+                "defaults-macos"
+            ],
+            "cacheVariables": {
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/clang-aarch64-macos-gnu.cmake"
             }
         }
     ],
@@ -163,6 +185,24 @@
             "name": "clang-x86_64-linux-gnu-release",
             "displayName": "Clang x86_64 Linux (GNU ABI) Release",
             "configurePreset": "clang-x86_64-linux-gnu",
+            "configuration": "Release"
+        },
+        {
+            "name": "clang-aarch64-macos-gnu-debug",
+            "displayName": "Clang AArch64 MacOS (GNU ABI?) Debug",
+            "configurePreset": "clang-aarch64-macos-gnu",
+            "configuration": "Debug"
+        },
+        {
+            "name": "clang-aarch64-macos-gnu-relwithdebinfo",
+            "displayName": "Clang AArch64 MacOS (GNU ABI?) RelWithDebInfo",
+            "configurePreset": "clang-aarch64-macos-gnu",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "clang-aarch64-macos-gnu-release",
+            "displayName": "Clang AArch64 MacOS (GNU ABI?) Release",
+            "configurePreset": "clang-aarch64-macos-gnu",
             "configuration": "Release"
         }
     ]

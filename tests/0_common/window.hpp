@@ -1,6 +1,8 @@
 #include <daxa/daxa.hpp>
 using namespace daxa::types;
 
+#include <vulkan/vulkan.h>
+
 #include <GLFW/glfw3.h>
 #if defined(_WIN32)
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -9,6 +11,8 @@ using HWND = void *;
 #elif defined(__linux__)
 #define GLFW_EXPOSE_NATIVE_X11
 #define GLFW_EXPOSE_NATIVE_WAYLAND
+#elif defined(__APPLE__)
+#define GLFW_EXPOSE_NATIVE_COCOA
 #endif
 #include <GLFW/glfw3native.h>
 
@@ -74,12 +78,16 @@ struct AppWindow
         default:
             return reinterpret_cast<daxa::NativeWindowHandle>(glfwGetX11Window(glfw_window_ptr));
         }
+#elif defined(__APPLE__)
+        return glfwGetCocoaWindow(glfw_window_ptr);
+#else
+        return {};
 #endif
     }
 
     auto get_native_platform() -> daxa::NativeWindowPlatform
     {
-        switch(glfwGetPlatform())
+        switch (glfwGetPlatform())
         {
         case GLFW_PLATFORM_WIN32: return daxa::NativeWindowPlatform::WIN32_API;
         case GLFW_PLATFORM_X11: return daxa::NativeWindowPlatform::XLIB_API;

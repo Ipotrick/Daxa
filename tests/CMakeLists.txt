@@ -106,10 +106,12 @@ DAXA_CREATE_TEST(
 #     FOLDER 3_samples 6_sponza
 #     LIBS glfw cgltf_interface
 # )
-DAXA_CREATE_TEST(
-    FOLDER 3_samples 7_FSR2
-    LIBS glfw stb_interface
-)
+if(DAXA_ENABLE_UTILS_FSR2)
+    DAXA_CREATE_TEST(
+        FOLDER 3_samples 7_FSR2
+        LIBS glfw stb_interface
+    )
+endif()
 
 DAXA_CREATE_TEST(
     FOLDER 4_hello_daxa 1_pink_screen

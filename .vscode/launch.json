@@ -6,12 +6,16 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${command:cmake.launchTargetPath}",
-            "args": [],
+            "args": [ ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
-            "environment": [],
+            "environment": [ ],
             "linux": {
                 "type": "lldb"
+            },
+            "osx": {
+                "type": "lldb",
+                "console": "internalConsole"
             },
             "windows": {
                 "type": "cppvsdbg",

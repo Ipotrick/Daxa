@@ -152,6 +152,17 @@ namespace daxa
         break;
         }
 #endif
+#elif defined(__APPLE__)
+        VkMacOSSurfaceCreateInfoMVK const surface_ci{
+            .sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK,
+            .pNext = nullptr,
+            .flags = 0,
+            .pView = info.native_window,
+        };
+        {
+            auto func = reinterpret_cast<PFN_vkCreateMacOSSurfaceMVK>(vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, "vkCreateMacOSSurfaceMVK"));
+            func(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, &surface_ci, nullptr, &this->vk_surface);
+        }
 #endif
     }
 

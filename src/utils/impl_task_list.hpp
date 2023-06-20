@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stack>
+#include <sstream>
 #include <daxa/utils/task_list.hpp>
 
 #define DAXA_TASKLIST_MAX_CONITIONALS 31

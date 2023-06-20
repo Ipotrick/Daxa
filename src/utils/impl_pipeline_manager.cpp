@@ -125,6 +125,7 @@ static constexpr TBuiltInResource DAXA_DEFAULT_BUILTIN_RESOURCE = {
 #include <regex>
 #include <thread>
 #include <utility>
+#include <sstream>
 
 static const std::regex PRAGMA_ONCE_REGEX = std::regex(R"regex(\s*#\s*pragma\s+once\s*)regex");
 static const std::regex REPLACE_REGEX = std::regex(R"regex(\W)regex");
@@ -913,7 +914,7 @@ namespace daxa
         return Result<ShaderCode>(err);
     }
 
-    auto ImplPipelineManager::get_spirv_glslang(ShaderCompileInfo const & shader_info, std::string const & debug_name_opt, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
+    auto ImplPipelineManager::get_spirv_glslang([[maybe_unused]] ShaderCompileInfo const & shader_info, [[maybe_unused]] std::string const & debug_name_opt, [[maybe_unused]] ShaderStage shader_stage, [[maybe_unused]] ShaderCode const & code) -> Result<std::vector<u32>>
     {
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
         auto translate_shader_stage = [](ShaderStage stage) -> EShLanguage
@@ -1072,7 +1073,7 @@ namespace daxa
 #endif
     }
 
-    auto ImplPipelineManager::get_spirv_dxc(ShaderCompileInfo const & shader_info, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
+    auto ImplPipelineManager::get_spirv_dxc([[maybe_unused]] ShaderCompileInfo const & shader_info, [[maybe_unused]] ShaderStage shader_stage, [[maybe_unused]] ShaderCode const & code) -> Result<std::vector<u32>>
     {
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
         auto u8_ascii_to_wstring = [](char const * str) -> std::wstring
