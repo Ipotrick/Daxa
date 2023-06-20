@@ -74,7 +74,7 @@ namespace daxa
         void main_queue_collect_garbage();
         void wait_idle() const;
 
-        ImplDevice(DeviceInfo info, DeviceProperties const & vk_info, ManagedWeakPtr impl_ctx, VkPhysicalDevice physical_device);
+        ImplDevice(DeviceInfo info, ManagedWeakPtr impl_ctx, VkPhysicalDevice physical_device);
         virtual ~ImplDevice() override final;
 
         auto validate_image_slice(ImageMipArraySlice const & slice, ImageId id) -> ImageMipArraySlice;
