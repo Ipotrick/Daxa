@@ -74,16 +74,16 @@ struct BaseApp : AppWindow<T>
         .name = "pipeline_manager",
     });
 
-    daxa::ImGuiRenderer imgui_renderer = create_imgui_renderer();
-    auto create_imgui_renderer() -> daxa::ImGuiRenderer
-    {
-        ImGui::CreateContext();
-        ImGui_ImplGlfw_InitForVulkan(AppWindow<T>::glfw_window_ptr, true);
-        return daxa::ImGuiRenderer({
-            .device = device,
-            .format = swapchain.get_format(),
-        });
-    }
+    // daxa::ImGuiRenderer imgui_renderer = create_imgui_renderer();
+    // auto create_imgui_renderer() -> daxa::ImGuiRenderer
+    // {
+    //     ImGui::CreateContext();
+    //     ImGui_ImplGlfw_InitForVulkan(AppWindow<T>::glfw_window_ptr, true);
+    //     return daxa::ImGuiRenderer({
+    //         .device = device,
+    //         .format = swapchain.get_format(),
+    //     });
+    // }
 
     Clock::time_point start = Clock::now(), prev_time = start;
     f32 time = 0.0f, delta_time = 1.0f;
@@ -96,7 +96,7 @@ struct BaseApp : AppWindow<T>
 
     ~BaseApp()
     {
-        ImGui_ImplGlfw_Shutdown();
+        // ImGui_ImplGlfw_Shutdown();
     }
 
     void base_on_update()
@@ -141,17 +141,17 @@ struct BaseApp : AppWindow<T>
 
         reinterpret_cast<T *>(this)->record_tasks(new_task_list);
 
-        new_task_list.add_task({
-            .uses = {
-                ImageColorAttachment<>{task_swapchain_image},
-            },
-            .task = [this](daxa::TaskInterface ti)
-            {
-                auto cmd_list = ti.get_command_list();
-                imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, ti.uses[task_swapchain_image].image(), AppWindow<T>::size_x, AppWindow<T>::size_y);
-            },
-            .name = "ImGui Task",
-        });
+        // new_task_list.add_task({
+        //     .uses = {
+        //         ImageColorAttachment<>{task_swapchain_image},
+        //     },
+        //     .task = [this](daxa::TaskInterface ti)
+        //     {
+        //         auto cmd_list = ti.get_command_list();
+        //         imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, ti.uses[task_swapchain_image].image(), AppWindow<T>::size_x, AppWindow<T>::size_y);
+        //     },
+        //     .name = "ImGui Task",
+        // });
 
         new_task_list.submit({});
         new_task_list.present({});

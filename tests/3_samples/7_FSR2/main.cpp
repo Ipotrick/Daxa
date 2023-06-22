@@ -32,6 +32,9 @@ auto get_native_handle(GLFWwindow * glfw_window_ptr) -> daxa::NativeWindowHandle
     return glfwGetWin32Window(glfw_window_ptr);
 #elif defined(__linux__)
     return reinterpret_cast<daxa::NativeWindowHandle>(glfwGetX11Window(glfw_window_ptr));
+#elif defined(__APPLE__)
+    return glfw_window_ptr;
+    // return glfwGetCocoaWindow(glfw_window_ptr);
 #endif
 }
 

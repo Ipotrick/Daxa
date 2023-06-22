@@ -1,4 +1,4 @@
-#define DAXA_SHADERLANG DAXA_SHADERLANG_HLSL
+#define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
 #define APPNAME "Daxa Sample: HelloTriangle Compute"
 #include <0_common/base_app.hpp>
 
@@ -38,9 +38,9 @@ struct App : BaseApp<App>
 
     static void ui_update()
     {
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-        ImGui::Render();
+        // ImGui_ImplGlfw_NewFrame();
+        // ImGui::NewFrame();
+        // ImGui::Render();
     }
     void on_update()
     {

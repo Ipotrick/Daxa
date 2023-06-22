@@ -79,15 +79,15 @@ struct App : BaseApp<App>
 
     void ui_update()
     {
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-        ImGui::Begin("Settings");
-        if (ImGui::Checkbox("MY_TOGGLE", &my_toggle))
-        {
-            update_virtual_shader();
-        }
-        ImGui::End();
-        ImGui::Render();
+        // ImGui_ImplGlfw_NewFrame();
+        // ImGui::NewFrame();
+        // ImGui::Begin("Settings");
+        // if (ImGui::Checkbox("MY_TOGGLE", &my_toggle))
+        // {
+        //     update_virtual_shader();
+        // }
+        // ImGui::End();
+        // ImGui::Render();
     }
     void on_update()
     {

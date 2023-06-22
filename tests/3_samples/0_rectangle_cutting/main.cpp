@@ -54,16 +54,16 @@ struct App : AppWindow<App>
         .name = APPNAME_PREFIX("pipeline_manager"),
     });
 
-    daxa::ImGuiRenderer imgui_renderer = create_imgui_renderer();
-    auto create_imgui_renderer() -> daxa::ImGuiRenderer
-    {
-        ImGui::CreateContext();
-        ImGui_ImplGlfw_InitForVulkan(glfw_window_ptr, true);
-        return daxa::ImGuiRenderer({
-            .device = device,
-            .format = swapchain.get_format(),
-        });
-    }
+    // daxa::ImGuiRenderer imgui_renderer = create_imgui_renderer();
+    // auto create_imgui_renderer() -> daxa::ImGuiRenderer
+    // {
+    //     ImGui::CreateContext();
+    //     ImGui_ImplGlfw_InitForVulkan(glfw_window_ptr, true);
+    //     return daxa::ImGuiRenderer({
+    //         .device = device,
+    //         .format = swapchain.get_format(),
+    //     });
+    // }
 
     // clang-format off
     std::shared_ptr<daxa::RasterPipeline> raster_pipeline = pipeline_manager.add_raster_pipeline({
@@ -112,7 +112,7 @@ struct App : AppWindow<App>
     {
         device.wait_idle();
         device.collect_garbage();
-        ImGui_ImplGlfw_Shutdown();
+        // ImGui_ImplGlfw_Shutdown();
         device.destroy_buffer(vertex_buffer);
     }
 
@@ -154,35 +154,35 @@ struct App : AppWindow<App>
 
     void ui_update()
     {
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-        ImGui::Begin("Debug");
-        {
-            i32 mips[2] = {static_cast<i32>(s0.base_mip_level), static_cast<i32>(s0.level_count)};
-            ImGui::SliderInt("Mip Base 0", &mips[0], 0, max_levels - 1);
-            ImGui::SliderInt("Mip Count 0", &mips[1], 1, max_levels - mips[0]);
-            s0.base_mip_level = static_cast<u32>(mips[0]);
-            s0.level_count = static_cast<u32>(mips[1]);
-            i32 arrs[2] = {static_cast<i32>(s0.base_array_layer), static_cast<i32>(s0.layer_count)};
-            ImGui::SliderInt("Array Base 0", &arrs[0], 0, max_layers - 1);
-            ImGui::SliderInt("Array Count 0", &arrs[1], 1, max_layers - arrs[0]);
-            s0.base_array_layer = static_cast<u32>(arrs[0]);
-            s0.layer_count = static_cast<u32>(arrs[1]);
-        }
-        {
-            i32 mips[2] = {static_cast<i32>(s1.base_mip_level), static_cast<i32>(s1.level_count)};
-            ImGui::SliderInt("Mip Base 1", &mips[0], 0, max_levels - 1);
-            ImGui::SliderInt("Mip Count 1", &mips[1], 1, max_levels - mips[0]);
-            s1.base_mip_level = static_cast<u32>(mips[0]);
-            s1.level_count = static_cast<u32>(mips[1]);
-            i32 arrs[2] = {static_cast<i32>(s1.base_array_layer), static_cast<i32>(s1.layer_count)};
-            ImGui::SliderInt("Array Base 1", &arrs[0], 0, max_layers - 1);
-            ImGui::SliderInt("Array Count 1", &arrs[1], 1, max_layers - arrs[0]);
-            s1.base_array_layer = static_cast<u32>(arrs[0]);
-            s1.layer_count = static_cast<u32>(arrs[1]);
-        }
-        ImGui::End();
-        ImGui::Render();
+        // ImGui_ImplGlfw_NewFrame();
+        // ImGui::NewFrame();
+        // ImGui::Begin("Debug");
+        // {
+        //     i32 mips[2] = {static_cast<i32>(s0.base_mip_level), static_cast<i32>(s0.level_count)};
+        //     ImGui::SliderInt("Mip Base 0", &mips[0], 0, max_levels - 1);
+        //     ImGui::SliderInt("Mip Count 0", &mips[1], 1, max_levels - mips[0]);
+        //     s0.base_mip_level = static_cast<u32>(mips[0]);
+        //     s0.level_count = static_cast<u32>(mips[1]);
+        //     i32 arrs[2] = {static_cast<i32>(s0.base_array_layer), static_cast<i32>(s0.layer_count)};
+        //     ImGui::SliderInt("Array Base 0", &arrs[0], 0, max_layers - 1);
+        //     ImGui::SliderInt("Array Count 0", &arrs[1], 1, max_layers - arrs[0]);
+        //     s0.base_array_layer = static_cast<u32>(arrs[0]);
+        //     s0.layer_count = static_cast<u32>(arrs[1]);
+        // }
+        // {
+        //     i32 mips[2] = {static_cast<i32>(s1.base_mip_level), static_cast<i32>(s1.level_count)};
+        //     ImGui::SliderInt("Mip Base 1", &mips[0], 0, max_levels - 1);
+        //     ImGui::SliderInt("Mip Count 1", &mips[1], 1, max_levels - mips[0]);
+        //     s1.base_mip_level = static_cast<u32>(mips[0]);
+        //     s1.level_count = static_cast<u32>(mips[1]);
+        //     i32 arrs[2] = {static_cast<i32>(s1.base_array_layer), static_cast<i32>(s1.layer_count)};
+        //     ImGui::SliderInt("Array Base 1", &arrs[0], 0, max_layers - 1);
+        //     ImGui::SliderInt("Array Count 1", &arrs[1], 1, max_layers - arrs[0]);
+        //     s1.base_array_layer = static_cast<u32>(arrs[0]);
+        //     s1.layer_count = static_cast<u32>(arrs[1]);
+        // }
+        // ImGui::End();
+        // ImGui::Render();
     }
 
     void construct_scene(DrawVertex *& buffer_ptr)
@@ -287,7 +287,7 @@ struct App : AppWindow<App>
         cmd_list.draw({.vertex_count = vert_n});
         cmd_list.end_renderpass();
 
-        imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, swapchain_image, size_x, size_y);
+        // imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, swapchain_image, size_x, size_y);
 
         cmd_list.pipeline_barrier_image_transition({
             .src_access = daxa::AccessConsts::ALL_GRAPHICS_READ_WRITE,

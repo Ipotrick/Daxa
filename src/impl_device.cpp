@@ -48,7 +48,9 @@ namespace daxa
         {
             // TODO(grundlett): Figure out if there are cases where a 3D image CAN'T be used
             // as a 2D array image view.
+#if !defined(__APPLE__)
             vk_image_create_flags |= VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
+#endif
         }
 
         VkImageCreateInfo const vk_image_create_info{
@@ -694,6 +696,7 @@ namespace daxa
         extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
         extension_names.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
         extension_names.push_back(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
+        extension_names.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
 
         if (this->info.enable_conservative_rasterization)
         {

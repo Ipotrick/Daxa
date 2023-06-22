@@ -816,19 +816,49 @@ namespace daxa
     {
         if (memory_barrier_batch_count > 0 || image_barrier_batch_count > 0)
         {
-            VkDependencyInfo const vk_dependency_info{
-                .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-                .pNext = nullptr,
-                .dependencyFlags = {},
-                .memoryBarrierCount = static_cast<u32>(memory_barrier_batch_count),
-                .pMemoryBarriers = memory_barrier_batch.data(),
-                .bufferMemoryBarrierCount = 0,
-                .pBufferMemoryBarriers = nullptr,
-                .imageMemoryBarrierCount = static_cast<u32>(image_barrier_batch_count),
-                .pImageMemoryBarriers = image_barrier_batch.data(),
-            };
+            for (u32 i = 0; i < memory_barrier_batch_count; ++i) {
+                auto const &memory_barrier = memory_barrier_batch[i];
+                VkMemoryBarrier barrier_1{
+                    .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
+                    .pNext = {},
+                    .srcAccessMask = static_cast<VkFlags>(memory_barrier.srcAccessMask),
+                    .dstAccessMask = static_cast<VkFlags>(memory_barrier.dstAccessMask),
+                };
+                vkCmdPipelineBarrier(vk_cmd_buffer, memory_barrier.srcStageMask, memory_barrier.dstStageMask, {}, 1, &barrier_1, 0, nullptr, 0, nullptr);
+            }
+            for (u32 i = 0; i < image_barrier_batch_count; ++i) {
+                auto const &img_memory_barrier = image_barrier_batch[i];
+                if (!img_memory_barrier.image) {
+                    continue;
+                }
+                VkImageMemoryBarrier barrier_1{
+                    .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+                    .pNext = {},
+                    .srcAccessMask = static_cast<VkFlags>(img_memory_barrier.srcAccessMask),
+                    .dstAccessMask = static_cast<VkFlags>(img_memory_barrier.dstAccessMask),
+                    .oldLayout = img_memory_barrier.oldLayout,
+                    .newLayout = img_memory_barrier.newLayout,
+                    .srcQueueFamilyIndex = img_memory_barrier.srcQueueFamilyIndex,
+                    .dstQueueFamilyIndex = img_memory_barrier.dstQueueFamilyIndex,
+                    .image = img_memory_barrier.image,
+                    .subresourceRange = img_memory_barrier.subresourceRange,
+                };
+                vkCmdPipelineBarrier(vk_cmd_buffer, img_memory_barrier.srcStageMask, img_memory_barrier.dstStageMask, {}, 0, nullptr, 0, nullptr, 1, &barrier_1);
+            }
 
-            vkCmdPipelineBarrier2(vk_cmd_buffer, &vk_dependency_info);
+            // VkDependencyInfo const vk_dependency_info{
+            //     .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+            //     .pNext = nullptr,
+            //     .dependencyFlags = {},
+            //     .memoryBarrierCount = static_cast<u32>(memory_barrier_batch_count),
+            //     .pMemoryBarriers = memory_barrier_batch.data(),
+            //     .bufferMemoryBarrierCount = 0,
+            //     .pBufferMemoryBarriers = nullptr,
+            //     .imageMemoryBarrierCount = static_cast<u32>(image_barrier_batch_count),
+            //     .pImageMemoryBarriers = image_barrier_batch.data(),
+            // };
+
+            // vkCmdPipelineBarrier2(vk_cmd_buffer, &vk_dependency_info);
 
             memory_barrier_batch_count = 0;
             image_barrier_batch_count = 0;

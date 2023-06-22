@@ -334,6 +334,6 @@ auto main() -> int
 {
     App app = {};
     tests::simplest(app);
-    // tests::copy(app);
-    // tests::deferred_destruction(app);
+    tests::copy(app);
+    tests::deferred_destruction(app);
 }
