@@ -8,7 +8,7 @@
 
 Daxa is my personal opinionated GPU API abstraction over Vulkan.
 
-Daxas interface is close but to but simpler then Vulkan. Some central abstractions make it much more convenient to use. 
+Daxas interface is close to but simpler then Vulkan. Some central abstractions make it much more convenient to use. 
 Daxa is made for modern desktop gpus. This is done to limit daxas scope, keeping it managably small and allowing me to be less restricted by older and mobile hardware capabilities.
 
 Probably the two most intresting abstractions that set daxa appart from other abstractions is the fully bindless shader resource model and the c++/glsl shader integration.
