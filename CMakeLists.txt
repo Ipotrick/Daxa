@@ -83,6 +83,7 @@ target_compile_features(daxa PUBLIC cxx_std_20)
 
 find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
+find_package(fmt CONFIG REQUIRED)
 
 include(GNUInstallDirs)
 
@@ -169,6 +170,7 @@ target_link_libraries(daxa
     PUBLIC
     unofficial::vulkan-memory-allocator::vulkan-memory-allocator
     Vulkan::Vulkan
+    fmt::fmt
 )
 
 target_include_directories(daxa
@@ -223,6 +225,7 @@ set_target_properties(daxa::daxa PROPERTIES
 
 find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
+find_package(fmt CONFIG REQUIRED)
 ]=])
 
 if(DAXA_ENABLE_UTILS_FSR2)

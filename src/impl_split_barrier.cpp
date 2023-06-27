@@ -8,12 +8,12 @@ namespace daxa
 {
     auto to_string(MemoryBarrierInfo const & info) -> std::string
     {
-        return std::format("access: ({}) -> ({})", to_string(info.src_access), to_string(info.dst_access));
+        return fmt::format("access: ({}) -> ({})", to_string(info.src_access), to_string(info.dst_access));
     }
 
     auto to_string(ImageBarrierInfo const & info) -> std::string
     {
-        return std::format("access: ({}) -> ({}), layout: ({}) -> ({}), slice: {}, id: {}", 
+        return fmt::format("access: ({}) -> ({}), layout: ({}) -> ({}), slice: {}, id: {}", 
         to_string(info.src_access), 
         to_string(info.dst_access),
         to_string(info.src_layout),
