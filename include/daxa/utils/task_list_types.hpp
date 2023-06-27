@@ -8,7 +8,6 @@
 #endif
 
 #include <span>
-#include <format>
 
 #include <daxa/core.hpp>
 #include <daxa/device.hpp>
