@@ -986,7 +986,7 @@ namespace daxa
         usize first_possible_batch_index = 0;
         if (!impl.info.reorder_tasks)
         {
-            first_possible_batch_index = std::max(static_cast<unsigned long long>(current_submit_scope.task_batches.size()), 1ull) - 1ull;
+            first_possible_batch_index = std::max(current_submit_scope.task_batches.size(), static_cast<size_t>(1ull)) - 1ull;
         }
 
         for_each(
@@ -2008,7 +2008,7 @@ namespace daxa
                     {
                         // assign new offset into the memory block - we need to guarantee correct allignment
                         usize curr_offset = allocation.offset + allocation.size;
-                        usize const align = std::max(static_cast<unsigned long long>(mem_requirements.alignment), 1ull);
+                        usize const align = std::max(mem_requirements.alignment, static_cast<size_t>(1ull));
                         usize const aligned_curr_offset = (curr_offset + align - 1) / align * align;
                         new_allocation.offset = aligned_curr_offset;
                         new_allocation.intersection_object.base_array_layer = static_cast<u32>(new_allocation.offset);
