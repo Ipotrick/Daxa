@@ -426,6 +426,7 @@ namespace daxa
         PVRTC1_4BPP_SRGB_BLOCK_IMG = 1000054005,
         PVRTC2_2BPP_SRGB_BLOCK_IMG = 1000054006,
         PVRTC2_4BPP_SRGB_BLOCK_IMG = 1000054007,
+        MAX_ENUM = 0x7fffffff,
     };
 
     auto to_string(Format format) -> std::string_view;
@@ -474,6 +475,7 @@ namespace daxa
         INFO = 0x00000010,
         WARNING = 0x00000100,
         FAILURE = 0x00001000,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct MsgType
@@ -481,6 +483,7 @@ namespace daxa
         GENERAL = 0x00000001,
         VALIDATION = 0x00000002,
         PERFORMANCE = 0x00000004,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct PresentMode
@@ -489,6 +492,7 @@ namespace daxa
         MAILBOX = 1,
         FIFO = 2,
         FIFO_RELAXED = 3,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct PresentOp
@@ -502,6 +506,7 @@ namespace daxa
         HORIZONTAL_MIRROR_ROTATE_180 = 0x00000040,
         HORIZONTAL_MIRROR_ROTATE_270 = 0x00000080,
         INHERIT = 0x00000100,
+        MAX_ENUM = 0x7fffffff,
     };
 
     struct ImageUsageFlagsProperties
@@ -562,6 +567,7 @@ namespace daxa
         DISPLAY_NATIVE = 1000213000,
         RGB_NONLINEAR = EXTENDED_SRGB_NONLINEAR,
         DCI_P3_LINEAR = DISPLAY_P3_LINEAR,
+        MAX_ENUM = 0x7fffffff,
     };
 
     struct ImageAspectFlagsProperties
@@ -592,6 +598,7 @@ namespace daxa
         READ_ONLY_OPTIMAL = 1000314000,
         ATTACHMENT_OPTIMAL = 1000314001,
         PRESENT_SRC = 1000001002,
+        MAX_ENUM = 0x7fffffff,
     };
 
     auto to_string(ImageLayout layout) -> std::string_view;
@@ -651,6 +658,7 @@ namespace daxa
         NEAREST = 0,
         LINEAR = 1,
         CUBIC_IMG = 1000015000,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct ReductionMode
@@ -658,6 +666,7 @@ namespace daxa
         WEIGHTED_AVERAGE = 0,
         MIN = 1,
         MAX = 2,
+        MAX_ENUM = 0x7fffffff,
     };
 
     struct Offset3D
@@ -840,6 +849,7 @@ namespace daxa
         CLAMP_TO_EDGE = 2,
         CLAMP_TO_BORDER = 3,
         MIRROR_CLAMP_TO_EDGE = 4,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct BorderColor
@@ -850,6 +860,7 @@ namespace daxa
         INT_OPAQUE_BLACK = 3,
         FLOAT_OPAQUE_WHITE = 4,
         INT_OPAQUE_WHITE = 5,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct CompareOp
@@ -862,6 +873,7 @@ namespace daxa
         NOT_EQUAL = 5,
         GREATER_OR_EQUAL = 6,
         ALWAYS = 7,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct BlendFactor
@@ -885,6 +897,7 @@ namespace daxa
         ONE_MINUS_SRC1_COLOR = 16,
         SRC1_ALPHA = 17,
         ONE_MINUS_SRC1_ALPHA = 18,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct BlendOp
@@ -894,6 +907,7 @@ namespace daxa
         REVERSE_SUBTRACT = 2,
         MIN = 3,
         MAX = 4,
+        MAX_ENUM = 0x7fffffff,
     };
 
     struct ColorComponentFlagsProperties
@@ -927,7 +941,8 @@ namespace daxa
     enum struct TesselationDomainOrigin
     {
         LOWER_LEFT = 0,
-        UPPER_LEFT = 1
+        UPPER_LEFT = 1,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct ConservativeRasterizationMode
@@ -935,6 +950,7 @@ namespace daxa
         DISABLED = 0,
         OVERESTIMATE = 1,
         UNDERESTIMATE = 2,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct PrimitiveTopology
@@ -950,6 +966,7 @@ namespace daxa
         TRIANGLE_LIST_WITH_ADJACENCY = 8,
         TRIANGLE_STRIP_WITH_ADJACENCY = 9,
         PATCH_LIST = 10,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct PolygonMode
@@ -957,12 +974,14 @@ namespace daxa
         FILL = 0,
         LINE = 1,
         POINT = 2,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct FrontFaceWinding
     {
         COUNTER_CLOCKWISE = 0,
         CLOCKWISE = 1,
+        MAX_ENUM = 0x7fffffff,
     };
 
     struct FaceCullFlagsProperties
@@ -983,12 +1002,14 @@ namespace daxa
         LOAD = 0,
         CLEAR = 1,
         DONT_CARE = 2,
+        MAX_ENUM = 0x7fffffff,
     };
 
     enum struct AttachmentStoreOp
     {
         STORE = 0,
         DONT_CARE = 1,
+        MAX_ENUM = 0x7fffffff,
     };
 
     struct ViewportInfo

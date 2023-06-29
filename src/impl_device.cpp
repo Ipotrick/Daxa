@@ -460,13 +460,16 @@ namespace daxa
         return !id.is_empty() && impl.gpu_shader_resource_table.sampler_slots.is_id_valid(id);
     }
 
-    ImplDevice::ImplDevice(DeviceInfo a_info, DeviceProperties const & a_vk_info, ManagedWeakPtr a_impl_ctx, VkPhysicalDevice a_physical_device)
+    ImplDevice::ImplDevice(DeviceInfo a_info, ManagedWeakPtr a_impl_ctx, VkPhysicalDevice a_physical_device)
         : impl_ctx{std::move(a_impl_ctx)},
           vk_physical_device{a_physical_device},
-          vk_info{a_vk_info},
           info{std::move(a_info)},
           main_queue_family_index(std::numeric_limits<u32>::max())
     {
+        VkPhysicalDeviceProperties vk_device_properties;
+        vkGetPhysicalDeviceProperties(vk_physical_device, &vk_device_properties);
+        vk_info = *reinterpret_cast<DeviceProperties *>(&vk_device_properties);
+
         // SELECT QUEUE
 
         u32 queue_family_props_count = 0;
@@ -561,17 +564,20 @@ namespace daxa
             .inheritedQueries = VK_FALSE,
         };
 
+        void * REQUIRED_DEVICE_FEATURE_P_CHAIN = nullptr;
+
         VkPhysicalDeviceBufferDeviceAddressFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_BUFFER_DEVICE_ADDRESS{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
-            .pNext = nullptr,
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .bufferDeviceAddress = VK_TRUE,
             .bufferDeviceAddressCaptureReplay = static_cast<VkBool32>(this->info.enable_buffer_device_address_capture_replay),
             .bufferDeviceAddressMultiDevice = VK_FALSE,
         };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_BUFFER_DEVICE_ADDRESS);
 
         VkPhysicalDeviceDescriptorIndexingFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_DESCRIPTOR_INDEXING{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_BUFFER_DEVICE_ADDRESS),
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .shaderInputAttachmentArrayDynamicIndexing = VK_FALSE,
             .shaderUniformTexelBufferArrayDynamicIndexing = VK_FALSE,
             .shaderStorageTexelBufferArrayDynamicIndexing = VK_FALSE,
@@ -593,66 +599,58 @@ namespace daxa
             .descriptorBindingVariableDescriptorCount = VK_FALSE,
             .runtimeDescriptorArray = VK_TRUE, // Allows shaders to not have a hardcoded descriptor maximum per table.
         };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_DESCRIPTOR_INDEXING);
 
         VkPhysicalDeviceHostQueryResetFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_HOST_QUERY_RESET{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_DESCRIPTOR_INDEXING),
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .hostQueryReset = VK_TRUE,
         };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_HOST_QUERY_RESET);
 
         VkPhysicalDeviceShaderAtomicInt64Features REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_ATOMIC_INT64{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_HOST_QUERY_RESET),
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .shaderBufferInt64Atomics = VK_TRUE,
             .shaderSharedInt64Atomics = VK_TRUE,
         };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_ATOMIC_INT64);
 
         VkPhysicalDeviceShaderImageAtomicInt64FeaturesEXT REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_IMAGE_ATOMIC_INT64{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_IMAGE_ATOMIC_INT64_FEATURES_EXT,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_ATOMIC_INT64),
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .shaderImageInt64Atomics = VK_TRUE,
             .sparseImageInt64Atomics = VK_FALSE, // I do not care about sparse images.
         };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_IMAGE_ATOMIC_INT64);
 
         VkPhysicalDeviceDynamicRenderingFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_DYNAMIC_RENDERING{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SHADER_IMAGE_ATOMIC_INT64),
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .dynamicRendering = VK_TRUE,
         };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_DYNAMIC_RENDERING);
 
         VkPhysicalDeviceTimelineSemaphoreFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_TIMELINE_SEMAPHORE{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_DYNAMIC_RENDERING),
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .timelineSemaphore = VK_TRUE,
         };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_TIMELINE_SEMAPHORE);
 
         VkPhysicalDeviceSynchronization2Features REQUIRED_PHYSICAL_DEVICE_FEATURES_SYNCHRONIZATION_2{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_TIMELINE_SEMAPHORE),
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .synchronization2 = VK_TRUE,
         };
-
-        VkPhysicalDeviceRobustness2FeaturesEXT REQUIRED_PHYSICAL_DEVICE_FEATURES_ROBUSTNESS_2{
-            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SYNCHRONIZATION_2),
-            .robustBufferAccess2 = {},
-            .robustImageAccess2 = {},
-            .nullDescriptor = VK_TRUE,
-        };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SYNCHRONIZATION_2);
 
         VkPhysicalDeviceScalarBlockLayoutFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES,
-            .pNext = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_ROBUSTNESS_2),
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .scalarBlockLayout = VK_TRUE,
         };
-
-        void * REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT);
-
-        VkPhysicalDeviceFeatures2 physical_device_features_2{
-            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
-            .features = REQUIRED_PHYSICAL_DEVICE_FEATURES,
-        };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT);
 
         std::vector<char const *> extension_names;
         std::vector<char const *> enabled_layers;
@@ -672,9 +670,16 @@ namespace daxa
             // extension_names.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
         }
 
+        VkPhysicalDeviceFeatures2 physical_device_features_2{
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
+            .features = REQUIRED_PHYSICAL_DEVICE_FEATURES,
+        };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&physical_device_features_2);
+
         VkDeviceCreateInfo const device_ci = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-            .pNext = &physical_device_features_2,
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .flags = {},
             .queueCreateInfoCount = static_cast<u32>(1),
             .pQueueCreateInfos = &queue_ci,
@@ -692,6 +697,35 @@ namespace daxa
         this->vkCmdPushDescriptorSetKHR = reinterpret_cast<PFN_vkCmdPushDescriptorSetKHR>(vkGetDeviceProcAddr(this->vk_device, "vkCmdPushDescriptorSetKHR"));
 
         vkGetDeviceQueue(this->vk_device, this->main_queue_family_index, 0, &this->main_queue_vk_queue);
+
+        VkCommandPool init_cmd_pool = {};
+        VkCommandBuffer init_cmd_buffer = {};
+        VkCommandPoolCreateInfo const vk_command_pool_create_info{
+            .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+            .queueFamilyIndex = this->main_queue_family_index,
+        };
+
+        vkCreateCommandPool(this->vk_device, &vk_command_pool_create_info, nullptr, &init_cmd_pool);
+
+        VkCommandBufferAllocateInfo const vk_command_buffer_allocate_info{
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            .pNext = nullptr,
+            .commandPool = init_cmd_pool,
+            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            .commandBufferCount = 1,
+        };
+
+        vkAllocateCommandBuffers(this->vk_device, &vk_command_buffer_allocate_info, &init_cmd_buffer);
+
+        VkCommandBufferBeginInfo const vk_command_buffer_begin_info{
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .pNext = nullptr,
+            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+            .pInheritanceInfo = {},
+        };
+        vkBeginCommandBuffer(init_cmd_buffer, &vk_command_buffer_begin_info);
 
         VkSemaphoreTypeCreateInfo timeline_ci{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
@@ -785,59 +819,191 @@ namespace daxa
 
         vmaCreateAllocator(&vma_allocator_create_info, &this->vma_allocator);
 
-        // Images and buffers can be set to be a null descriptor.
-        // Null descriptors are no available for samples, but we still want to have one to overwrite dead resources with.
-        // So we create a default sampler that acts as the "null sampler".
-        VkSamplerCreateInfo const vk_sampler_create_info{
-            .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-            .pNext = nullptr,
-            .flags = {},
-            .magFilter = VkFilter::VK_FILTER_LINEAR,
-            .minFilter = VkFilter::VK_FILTER_LINEAR,
-            .mipmapMode = VkSamplerMipmapMode::VK_SAMPLER_MIPMAP_MODE_LINEAR,
-            .addressModeU = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-            .addressModeV = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-            .addressModeW = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-            .mipLodBias = 0.0f,
-            .anisotropyEnable = VK_FALSE,
-            .maxAnisotropy = 0,
-            .compareEnable = VK_FALSE,
-            .compareOp = VkCompareOp::VK_COMPARE_OP_ALWAYS,
-            .minLod = 0,
-            .maxLod = 0,
-            .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK,
-            .unnormalizedCoordinates = VK_FALSE,
-        };
-        vkCreateSampler(vk_device, &vk_sampler_create_info, nullptr, &this->vk_null_sampler);
+        {
+            auto buffer_data = std::array<u8, 4>{0xff, 0x00, 0xff, 0xff};
 
-        VkBufferUsageFlags const usage_flags =
-            VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+            VkBufferCreateInfo const vk_buffer_create_info{
+                .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = {},
+                .size = static_cast<VkDeviceSize>(sizeof(u8) * 4),
+                .usage = BUFFER_USE_FLAGS,
+                .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+                .queueFamilyIndexCount = 1,
+                .pQueueFamilyIndices = &this->main_queue_family_index,
+            };
 
-        VkBufferCreateInfo const vk_buffer_create_info{
-            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            .pNext = nullptr,
-            .flags = {},
-            .size = this->info.max_allowed_buffers * sizeof(u64),
-            .usage = usage_flags,
-            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-            .queueFamilyIndexCount = 1,
-            .pQueueFamilyIndices = &this->main_queue_family_index,
-        };
+            VmaAllocationInfo vma_allocation_info = {};
 
-        VmaAllocationCreateInfo const vma_allocation_create_info{
-            .flags = static_cast<VmaAllocationCreateFlags>(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT),
-            .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
-            .requiredFlags = {},
-            .preferredFlags = {},
-            .memoryTypeBits = std::numeric_limits<u32>::max(),
-            .pool = nullptr,
-            .pUserData = nullptr,
-            .priority = 0.5f,
-        };
+            auto vma_allocation_flags = static_cast<VmaAllocationCreateFlags>(
+                VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT |
+                VMA_ALLOCATION_CREATE_MAPPED_BIT |
+                VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
+
+            VmaAllocationCreateInfo const vma_allocation_create_info{
+                .flags = vma_allocation_flags,
+                .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+                .requiredFlags = {},
+                .preferredFlags = {},
+                .memoryTypeBits = std::numeric_limits<u32>::max(),
+                .pool = nullptr,
+                .pUserData = nullptr,
+                .priority = 0.5f,
+            };
+
+            [[maybe_unused]] VkResult const vk_create_buffer_result = vmaCreateBuffer(this->vma_allocator, &vk_buffer_create_info, &vma_allocation_create_info, &this->vk_null_buffer, &this->vk_null_buffer_vma_allocation, &vma_allocation_info);
+            DAXA_DBG_ASSERT_TRUE_M(vk_create_buffer_result == VK_SUCCESS, "failed to create vk null buffer");
+
+            *static_cast<decltype(buffer_data) *>(vma_allocation_info.pMappedData) = buffer_data;
+        }
 
         {
+            auto image_info = ImageInfo{
+                .dimensions = 2,
+                .format = Format::R8G8B8A8_UNORM,
+                .aspect = ImageAspectFlagBits::COLOR,
+                .size = {1, 1, 1},
+                .mip_level_count = 1,
+                .array_layer_count = 1,
+                .sample_count = 1,
+                .usage = ImageUsageFlagBits::SHADER_READ_ONLY | ImageUsageFlagBits::SHADER_READ_WRITE | ImageUsageFlagBits::TRANSFER_DST,
+                .allocate_info = MemoryFlagBits::DEDICATED_MEMORY,
+            };
+            VkImageCreateInfo const vk_image_create_info = initialize_image_create_info_from_image_info(image_info, &this->main_queue_family_index);
+
+            VmaAllocationCreateInfo const vma_allocation_create_info{
+                .flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+                .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+                .requiredFlags = {},
+                .preferredFlags = {},
+                .memoryTypeBits = std::numeric_limits<u32>::max(),
+                .pool = nullptr,
+                .pUserData = nullptr,
+                .priority = 0.5f,
+            };
+
+            [[maybe_unused]] VkResult const vk_create_image_result = vmaCreateImage(this->vma_allocator, &vk_image_create_info, &vma_allocation_create_info, &this->vk_null_image, &this->vk_null_image_vma_allocation, nullptr);
+            DAXA_DBG_ASSERT_TRUE_M(vk_create_image_result == VK_SUCCESS, "failed to create vk null image");
+
+            VkImageViewCreateInfo const vk_image_view_create_info{
+                .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = {},
+                .image = this->vk_null_image,
+                .viewType = VK_IMAGE_VIEW_TYPE_2D,
+                .format = *reinterpret_cast<VkFormat const *>(&image_info.format),
+                .components = VkComponentMapping{
+                    .r = VK_COMPONENT_SWIZZLE_IDENTITY,
+                    .g = VK_COMPONENT_SWIZZLE_IDENTITY,
+                    .b = VK_COMPONENT_SWIZZLE_IDENTITY,
+                    .a = VK_COMPONENT_SWIZZLE_IDENTITY,
+                },
+                .subresourceRange = {
+                    .aspectMask = static_cast<VkImageAspectFlags>(image_info.aspect.data),
+                    .baseMipLevel = 0,
+                    .levelCount = image_info.mip_level_count,
+                    .baseArrayLayer = 0,
+                    .layerCount = image_info.array_layer_count,
+                },
+            };
+
+            [[maybe_unused]] VkResult const vk_create_image_view_result = vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &this->vk_null_image_view);
+            DAXA_DBG_ASSERT_TRUE_M(vk_create_image_view_result == VK_SUCCESS, "failed to create vk null image view");
+
+            VkImageMemoryBarrier vk_image_mem_barrier = {
+                .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+                .pNext = {},
+                .srcAccessMask = VK_ACCESS_HOST_WRITE_BIT,
+                .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+                .oldLayout = {},
+                .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = vk_null_image,
+                .subresourceRange = {
+                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1,
+                },
+            };
+            vkCmdPipelineBarrier(init_cmd_buffer, VK_PIPELINE_STAGE_HOST_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, {}, {}, {}, {}, {}, 1, &vk_image_mem_barrier);
+            VkBufferImageCopy const vk_buffer_image_copy{
+                .bufferOffset = 0u,
+                .bufferRowLength = 0u,
+                .bufferImageHeight = 0u,
+                .imageSubresource = {
+                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                    .mipLevel = 0,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1,
+                },
+                .imageOffset = VkOffset3D{0, 0, 0},
+                .imageExtent = VkExtent3D{1, 1, 1},
+            };
+            vkCmdCopyBufferToImage(init_cmd_buffer, vk_null_buffer, vk_null_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &vk_buffer_image_copy);
+            vk_image_mem_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+            vk_image_mem_barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
+            vk_image_mem_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            vk_image_mem_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL,
+            vk_image_mem_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            vk_image_mem_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            vkCmdPipelineBarrier(init_cmd_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, {}, {}, {}, {}, {}, 1, &vk_image_mem_barrier);
+        }
+
+        {
+            VkSamplerCreateInfo const vk_sampler_create_info{
+                .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = {},
+                .magFilter = VkFilter::VK_FILTER_LINEAR,
+                .minFilter = VkFilter::VK_FILTER_LINEAR,
+                .mipmapMode = VkSamplerMipmapMode::VK_SAMPLER_MIPMAP_MODE_LINEAR,
+                .addressModeU = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+                .addressModeV = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+                .addressModeW = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+                .mipLodBias = 0.0f,
+                .anisotropyEnable = VK_FALSE,
+                .maxAnisotropy = 0,
+                .compareEnable = VK_FALSE,
+                .compareOp = VkCompareOp::VK_COMPARE_OP_ALWAYS,
+                .minLod = 0,
+                .maxLod = 0,
+                .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK,
+                .unnormalizedCoordinates = VK_FALSE,
+            };
+            vkCreateSampler(vk_device, &vk_sampler_create_info, nullptr, &this->vk_null_sampler);
+        }
+
+        {
+            VkBufferUsageFlags const usage_flags =
+                VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+
+            VkBufferCreateInfo const vk_buffer_create_info{
+                .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = {},
+                .size = this->info.max_allowed_buffers * sizeof(u64),
+                .usage = usage_flags,
+                .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+                .queueFamilyIndexCount = 1,
+                .pQueueFamilyIndices = &this->main_queue_family_index,
+            };
+
+            VmaAllocationCreateInfo const vma_allocation_create_info{
+                .flags = static_cast<VmaAllocationCreateFlags>(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT),
+                .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+                .requiredFlags = {},
+                .preferredFlags = {},
+                .memoryTypeBits = std::numeric_limits<u32>::max(),
+                .pool = nullptr,
+                .pUserData = nullptr,
+                .priority = 0.5f,
+            };
+
             [[maybe_unused]] VkResult const result = vmaCreateBuffer(this->vma_allocator, &vk_buffer_create_info, &vma_allocation_create_info, &buffer_device_address_buffer, &buffer_device_address_buffer_allocation, nullptr);
             vmaMapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation, reinterpret_cast<void **>(&this->buffer_device_address_buffer_host_ptr));
             DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create buffer");
@@ -893,6 +1059,25 @@ namespace daxa
             vk_device,
             buffer_device_address_buffer,
             vkSetDebugUtilsObjectNameEXT);
+
+        vkEndCommandBuffer(init_cmd_buffer);
+        // Submit initial commands to set up the daxa device.
+        constexpr VkPipelineStageFlags wait_stage_mask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        VkSubmitInfo init_submit{
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            .pNext = {},
+            .waitSemaphoreCount = {},
+            .pWaitSemaphores = {},
+            .pWaitDstStageMask = &wait_stage_mask,
+            .commandBufferCount = 1,
+            .pCommandBuffers = &init_cmd_buffer,
+            .signalSemaphoreCount = {},
+            .pSignalSemaphores = {},
+        };
+        vkQueueSubmit(this->main_queue_vk_queue, 1, &init_submit, {});
+        // Wait for commands in from the init cmd list to complete.
+        vkDeviceWaitIdle(this->vk_device);
+        vkDestroyCommandPool(this->vk_device, init_cmd_pool, {});
     }
 
     void ImplDevice::main_queue_collect_garbage()
@@ -990,7 +1175,7 @@ namespace daxa
     {
         auto [id, ret] = gpu_shader_resource_table.buffer_slots.new_slot();
 
-        DAXA_DBG_ASSERT_TRUE_M(buffer_info.size > 0, "can not create buffers of size zero");
+        DAXA_DBG_ASSERT_TRUE_M(buffer_info.size > 0, "can not create buffers with size zero");
 
         ret.info = buffer_info;
 
@@ -998,7 +1183,7 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},
-            .size = static_cast<VkDeviceSize>(buffer_info.size) + 4 /* Workaround for gpuav bugs related to bda oob access. */,
+            .size = static_cast<VkDeviceSize>(buffer_info.size) + 4 /* Workaround for gpuav bugs related to bda oob access. */, // TODO: Remove this 'workaround'. It's fixed in the newest SDK
             .usage = BUFFER_USE_FLAGS,
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
             .queueFamilyIndexCount = 1,
@@ -1029,7 +1214,8 @@ namespace daxa
                 .priority = 0.5f,
             };
 
-            vmaCreateBuffer(this->vma_allocator, &vk_buffer_create_info, &vma_allocation_create_info, &ret.vk_buffer, &ret.vma_allocation, &vma_allocation_info);
+            [[maybe_unused]] VkResult const vk_create_buffer_result = vmaCreateBuffer(this->vma_allocator, &vk_buffer_create_info, &vma_allocation_create_info, &ret.vk_buffer, &ret.vma_allocation, &vma_allocation_info);
+            DAXA_DBG_ASSERT_TRUE_M(vk_create_buffer_result == VK_SUCCESS, "failed to create buffer");
         }
         else
         {
@@ -1421,7 +1607,7 @@ namespace daxa
     {
         ImplBufferSlot & buffer_slot = this->gpu_shader_resource_table.buffer_slots.dereference_id(id);
         this->buffer_device_address_buffer_host_ptr[id.index] = 0;
-        write_descriptor_set_buffer(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, VK_NULL_HANDLE, 0, VK_WHOLE_SIZE, id.index);
+        write_descriptor_set_buffer(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, this->vk_null_buffer, 0, VK_WHOLE_SIZE, id.index);
         if (std::holds_alternative<AutoAllocInfo>(buffer_slot.info.allocate_info))
         {
             vmaDestroyBuffer(this->vma_allocator, buffer_slot.vk_buffer, buffer_slot.vma_allocation);
@@ -1437,7 +1623,7 @@ namespace daxa
     void ImplDevice::cleanup_image(ImageId id)
     {
         ImplImageSlot & image_slot = gpu_shader_resource_table.image_slots.dereference_id(id);
-        write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, VK_NULL_HANDLE, image_slot.info.usage, id.index);
+        write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, this->vk_null_image_view, image_slot.info.usage, id.index);
         vkDestroyImageView(vk_device, image_slot.view_slot.vk_image_view, nullptr);
         if (image_slot.swapchain_image_index == NOT_OWNED_BY_SWAPCHAIN)
         {
@@ -1458,7 +1644,7 @@ namespace daxa
     {
         DAXA_DBG_ASSERT_TRUE_M(gpu_shader_resource_table.image_slots.dereference_id(id).vk_image == VK_NULL_HANDLE, "can not destroy default image view of image");
         ImplImageViewSlot & image_slot = gpu_shader_resource_table.image_slots.dereference_id(id).view_slot;
-        write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, VK_NULL_HANDLE, ImageUsageFlagBits::SHADER_READ_WRITE | ImageUsageFlagBits::SHADER_READ_ONLY, id.index);
+        write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, this->vk_null_image_view, ImageUsageFlagBits::SHADER_READ_WRITE | ImageUsageFlagBits::SHADER_READ_ONLY, id.index);
         vkDestroyImageView(vk_device, image_slot.vk_image_view, nullptr);
         image_slot = {};
         gpu_shader_resource_table.image_slots.return_slot(id);
@@ -1481,8 +1667,11 @@ namespace daxa
         vmaUnmapMemory(this->vma_allocator, this->buffer_device_address_buffer_allocation);
         vmaDestroyBuffer(this->vma_allocator, this->buffer_device_address_buffer, this->buffer_device_address_buffer_allocation);
         this->gpu_shader_resource_table.cleanup(this->vk_device);
+        vmaDestroyImage(this->vma_allocator, this->vk_null_image, this->vk_null_image_vma_allocation);
+        vmaDestroyBuffer(this->vma_allocator, this->vk_null_buffer, this->vk_null_buffer_vma_allocation);
         vmaDestroyAllocator(this->vma_allocator);
         vkDestroySampler(vk_device, this->vk_null_sampler, nullptr);
+        vkDestroyImageView(this->vk_device, this->vk_null_image_view, nullptr);
         vkDestroySemaphore(this->vk_device, this->vk_main_queue_gpu_timeline_semaphore, nullptr);
         vkDestroyDevice(this->vk_device, nullptr);
     }

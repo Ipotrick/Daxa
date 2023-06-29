@@ -14,7 +14,7 @@ namespace daxa
 
     auto to_string(GPUResourceId const & id) -> std::string
     {
-        return std::format("index: {}, version: {}", static_cast<u32>(id.index), static_cast<u32>(id.version));
+        return fmt::format("index: {}, version: {}", static_cast<u32>(id.index), static_cast<u32>(id.version));
     }
 
     auto to_string(ImageViewType const & type) -> std::string_view
