@@ -15,21 +15,10 @@ namespace daxa
         REGULAR_1D_ARRAY = 4,
         REGULAR_2D_ARRAY = 5,
         CUBE_ARRAY = 6,
-        // TODO(grundlet): add the other max values
-        MAX_ENUM = 7,
+        MAX_ENUM = 0x7fffffff,
     };
 
     auto to_string(ImageViewType const & type) -> std::string_view;
-
-    static inline constexpr ImageViewType _ShaderAlias_1D = ImageViewType::REGULAR_1D;
-    static inline constexpr ImageViewType _ShaderAlias_2D = ImageViewType::REGULAR_2D;
-    static inline constexpr ImageViewType _ShaderAlias_3D = ImageViewType::REGULAR_3D;
-    static inline constexpr ImageViewType _ShaderAlias_Cube = ImageViewType::CUBE;
-    static inline constexpr ImageViewType _ShaderAlias_1DArray = ImageViewType::REGULAR_1D_ARRAY;
-    static inline constexpr ImageViewType _ShaderAlias_2DArray = ImageViewType::REGULAR_2D_ARRAY;
-    static inline constexpr ImageViewType _ShaderAlias_CubeArray = ImageViewType::CUBE_ARRAY;
-    static inline constexpr ImageViewType _ShaderAlias_2DMS = ImageViewType::REGULAR_2D;
-    static inline constexpr ImageViewType _ShaderAlias_2DMSArray = ImageViewType::REGULAR_2D_ARRAY;
 
     struct GPUResourceId
     {

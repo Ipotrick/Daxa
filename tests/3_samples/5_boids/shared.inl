@@ -31,13 +31,13 @@ struct Boids
 {
     Boid boids[MAX_BOIDS];
 };
-DAXA_ENABLE_BUFFER_PTR(Boids)
+DAXA_DECL_BUFFER_PTR(Boids)
 
 struct GpuOutput
 {
     daxa_f32 data;
 };
-DAXA_ENABLE_BUFFER_PTR(GpuOutput)
+DAXA_DECL_BUFFER_PTR(GpuOutput)
 
 struct DrawPushConstant
 {

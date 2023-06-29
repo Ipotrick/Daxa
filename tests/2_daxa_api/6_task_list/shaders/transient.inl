@@ -21,7 +21,7 @@ static constexpr daxa_u32vec3 SHORT_LIFE_IMAGE_SIZE = daxa_u32vec3{100u, 300u, 4
 
 struct TestImagePush
 {
-    daxa_Image3Df32 test_image;
+    daxa_ImageViewId test_image;
     daxa_u32vec3 size;
     daxa_f32 value;
 };

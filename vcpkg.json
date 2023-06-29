@@ -6,6 +6,7 @@
   "dependencies": [
     "vulkan-memory-allocator",
     "vulkan",
+    "fmt",
     {
       "name": "wayland",
       "default-features": false,

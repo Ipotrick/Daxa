@@ -65,6 +65,7 @@ namespace daxa
         WIN32_API,
         XLIB_API,
         WAYLAND_API,
+        MAX_ENUM = 0x7fffffff,
     };
 } // namespace daxa
 
