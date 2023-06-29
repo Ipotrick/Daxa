@@ -2,7 +2,7 @@
 
 #include <shared.inl>
 
-DAXA_USE_PUSH_CONSTANT(MyPushConstant, push)
+DAXA_DECL_PUSH_CONSTANT(MyPushConstant, push)
 
 #if DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_VERTEX
 

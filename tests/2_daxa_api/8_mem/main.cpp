@@ -36,8 +36,8 @@ auto main() -> int
         gpu_timeline.wait_for_value(cpu_timeline - 1);
         daxa::CommandList cmd = device.create_command_list({});
         cmd.pipeline_barrier({
-            .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_READ_WRITE | daxa::AccessConsts::HOST_WRITE,
-            .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_READ_WRITE,
+            .src_access = daxa::AccessConsts::TRANSFER_READ_WRITE | daxa::AccessConsts::HOST_WRITE,
+            .dst_access = daxa::AccessConsts::TRANSFER_READ_WRITE,
         });
 
         // Can allocate anywhere in the frame with imediately available staging memory.
@@ -73,8 +73,8 @@ auto main() -> int
 
     daxa::CommandList cmd = device.create_command_list({});
     cmd.pipeline_barrier({
-        .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-        .waiting_pipeline_access = daxa::AccessConsts::HOST_READ,
+        .src_access = daxa::AccessConsts::TRANSFER_WRITE,
+        .dst_access = daxa::AccessConsts::HOST_READ,
     });
     cmd.complete();
 

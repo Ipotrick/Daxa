@@ -10,7 +10,7 @@ struct MyVertex
 };
 
 // Allows the shader to use pointers to MyVertex
-DAXA_ENABLE_BUFFER_PTR(MyVertex)
+DAXA_DECL_BUFFER_PTR(MyVertex)
 
 struct MyPushConstant
 {
