@@ -552,6 +552,7 @@ namespace daxa
             .color_attachments = modified_info.color_attachments,
             .depth_test = modified_info.depth_test,
             .raster = modified_info.raster,
+            .tesselation = modified_info.tesselation,
             .push_constant_size = modified_info.push_constant_size,
             .name = modified_info.name,
         };
