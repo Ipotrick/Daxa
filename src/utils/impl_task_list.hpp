@@ -213,7 +213,7 @@ namespace daxa
             TaskTransientBufferInfo info = {};
             MemoryRequirements memory_requirements = {};
         };
-        std::variant<Persistent, Transient> task_buffer_data = {};
+        std::variant<Persistent, Transient> task_buffer_data;
 
         inline auto get_name() const -> std::string_view
         {
@@ -259,7 +259,7 @@ namespace daxa
             TaskTransientImageInfo info = {};
             MemoryRequirements memory_requirements = {};
         };
-        std::variant<Persistent, Transient> task_image_data = {};
+        std::variant<Persistent, Transient> task_image_data;
 
         inline auto get_name() const -> std::string_view
         {
@@ -284,6 +284,19 @@ namespace daxa
         {
             return std::holds_alternative<Persistent>(task_image_data);
         }
+    };
+
+    struct ImplTaskRuntimeInterface
+    {
+        // interface:
+        ImplTaskList & task_list;
+        TaskListPermutation & permutation;
+        ImplTask * current_task = {};
+        std::optional<SetConstantBufferInfo> set_uniform_buffer_info = {};
+        types::BufferDeviceAddress device_address = {};
+        bool reuse_last_command_list = true;
+        std::vector<CommandList> command_lists = {};
+        std::optional<BinarySemaphore> last_submit_semaphore = {};
     };
 
     struct ImplTaskList final : ManagedSharedState
@@ -350,16 +363,4 @@ namespace daxa
         void debug_print();
     };
 
-    struct ImplTaskRuntimeInterface
-    {
-        // interface:
-        ImplTaskList & task_list;
-        TaskListPermutation & permutation;
-        ImplTask * current_task = {};
-        std::optional<SetConstantBufferInfo> set_uniform_buffer_info = {};
-        types::BufferDeviceAddress device_address = {};
-        bool reuse_last_command_list = true;
-        std::vector<CommandList> command_lists = {};
-        std::optional<BinarySemaphore> last_submit_semaphore = {};
-    };
 } // namespace daxa
