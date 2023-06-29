@@ -45,7 +45,6 @@ namespace daxa
         friend struct ImplTaskRuntimeInterface;
         friend struct TaskList;
         friend struct ImplTaskList;
-        friend struct TaskInterface;
         TaskInterface(void * a_backend);
         void * backend = {};
     };

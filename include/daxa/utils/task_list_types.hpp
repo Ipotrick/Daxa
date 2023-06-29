@@ -385,7 +385,7 @@ namespace daxa
         using T_USES = decltype(T_TASK{}.uses);
         static constexpr usize USE_COUNT = sizeof(T_USES) / TASK_INPUT_FIELD_SIZE;
 
-        PredeclaredTask(T_TASK const & task) : task{task} {}
+        PredeclaredTask(T_TASK const & a_task) : task{a_task} {}
 
         virtual ~PredeclaredTask() override = default;
 
