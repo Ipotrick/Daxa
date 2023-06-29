@@ -143,7 +143,7 @@ struct BaseApp : AppWindow<T>
 
         new_task_list.add_task({
             .uses = {
-                ImageColorAttachment{task_swapchain_image},
+                ImageColorAttachment<>{task_swapchain_image},
             },
             .task = [this](daxa::TaskInterface ti)
             {

@@ -19,6 +19,7 @@ namespace daxa
         DISCRETE_GPU = 2,
         VIRTUAL_GPU = 3,
         CPU = 4,
+        MAX_ENUM = 0x7fffffff,
     };
 
     struct DeviceLimits
@@ -217,7 +218,6 @@ namespace daxa
         auto info_image_view(ImageViewId id) const -> ImageViewInfo;
         auto info_sampler(SamplerId id) const -> SamplerInfo;
 
-        // auto create_pipeline_manager(PipelineManagerInfo const & info) -> PipelineManager;
         auto create_raster_pipeline(RasterPipelineInfo const & info) -> RasterPipeline;
         auto create_compute_pipeline(ComputePipelineInfo const & info) -> ComputePipeline;
 

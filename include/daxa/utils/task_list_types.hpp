@@ -8,7 +8,6 @@
 #endif
 
 #include <span>
-#include <format>
 
 #include <daxa/core.hpp>
 #include <daxa/device.hpp>
@@ -45,6 +44,7 @@ namespace daxa
         TRANSFER_WRITE,
         HOST_TRANSFER_READ,
         HOST_TRANSFER_WRITE,
+        MAX_ENUM = 0x7fffffff,
     };
 
     auto to_string(TaskBufferAccess const & usage) -> std::string_view;
@@ -84,6 +84,7 @@ namespace daxa
         DEPTH_STENCIL_ATTACHMENT_READ,
         RESOLVE_WRITE,
         PRESENT,
+        MAX_ENUM = 0x7fffffff,
     };
 
     auto to_string(TaskImageAccess const & usage) -> std::string_view;
@@ -144,12 +145,13 @@ namespace daxa
         ImageMipArraySlice slice = {};
     };
 
-    enum class TaskResourceUseType : u32
+    enum struct TaskResourceUseType : u32
     {
         NONE = 0,
         BUFFER = 1,
         IMAGE = 2,
         CONSTANT = 3,
+        MAX_ENUM = 0xffffffff,
     };
 
     static inline constexpr size_t TASK_INPUT_FIELD_SIZE = 128;
@@ -281,13 +283,6 @@ namespace daxa
             return views[index];
         }
 
-        auto typed_view(u32 index = 0) const -> daxa::types::TypedImageViewId<T_VIEW_TYPE>
-            requires(T_VIEW_TYPE != ImageViewType::MAX_ENUM)
-        {
-            DAXA_DBG_ASSERT_TRUE_M(views.size() > 0, "this function is only allowed to be called within a task callback");
-            return daxa::types::TypedImageViewId<T_VIEW_TYPE>{views[index]};
-        }
-
         auto to_generic() const -> GenericTaskResourceUse const &
         {
             return *reinterpret_cast<GenericTaskResourceUse const *>(this);
@@ -377,7 +372,6 @@ namespace daxa
     concept UserUses =
         (sizeof(T) > 0 and sizeof(T) % TASK_INPUT_FIELD_SIZE == 0);
 
-    // TODO(pahrens): Make concept for tasks.
     template <typename T>
     concept UserTask =
         requires { T{}.uses; } and

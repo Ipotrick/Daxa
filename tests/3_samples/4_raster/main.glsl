@@ -2,7 +2,7 @@
 
 #include <utils/voxels.glsl>
 
-DAXA_USE_PUSH_CONSTANT(DrawPush)
+DAXA_DECL_PUSH_CONSTANT(DrawPush)
 
 #if DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_VERTEX
 

@@ -137,9 +137,10 @@ namespace tests
         };
         task_list.add_task({
             .uses = daxa::to_generic_uses(uses),
-            .task = [&](daxa::TaskInterface const & tri)
+            .task = [&](daxa::TaskInterface const & ti)
             {
-                auto cmd = tri.get_command_list();
+                auto cmd = ti.get_command_list();
+                cmd.set_uniform_buffer(ti.uses.get_uniform_buffer_info());
                 cmd.set_pipeline(*compute_pipeline);
                 cmd.dispatch(1, 1, 1);
             },
@@ -241,7 +242,7 @@ namespace tests
             .uses = {
                 BufferComputeShaderWrite{handles_buffer},
                 BufferComputeShaderWrite{f32_buffer},
-                ImageComputeShaderWrite{f32_image},
+                ImageComputeShaderWrite<>{f32_image},
             },
             .task = [&](daxa::TaskInterface ti)
             {
@@ -263,7 +264,7 @@ namespace tests
             .uses = {
                 BufferComputeShaderRead{handles_buffer},
                 BufferComputeShaderRead{f32_buffer},
-                ImageComputeShaderRead{f32_image},
+                ImageComputeShaderRead<>{f32_image},
             },
             .task = [&](daxa::TaskInterface const & ti)
             {

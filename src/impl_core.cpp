@@ -806,7 +806,7 @@ namespace daxa
 
     auto to_string(ImageMipArraySlice slice) -> std::string
     {
-        return std::format("aspect: {}, mips: {}-{}, layers: {}-{}",
+        return fmt::format("aspect: {}, mips: {}-{}, layers: {}-{}",
                            to_string(slice.image_aspect),
                            static_cast<u32>(slice.base_mip_level),
                            static_cast<u32>(slice.base_mip_level + slice.level_count - 1),
@@ -816,7 +816,7 @@ namespace daxa
 
     auto to_string(ImageArraySlice slice) -> std::string
     {
-        return std::format("aspect: {}, mip: {}, layers: {}-{}",
+        return fmt::format("aspect: {}, mip: {}, layers: {}-{}",
                            to_string(slice.image_aspect),
                            slice.mip_level,
                            slice.base_array_layer,
@@ -825,7 +825,7 @@ namespace daxa
 
     auto to_string(ImageSlice slice) -> std::string
     {
-        return std::format("aspect: {}, mip: {}, layer: {}",
+        return fmt::format("aspect: {}, mip: {}, layer: {}",
                            to_string(slice.image_aspect),
                            slice.mip_level,
                            slice.array_layer);
@@ -1017,6 +1017,6 @@ namespace daxa
 
     auto to_string(Access access) -> std::string
     {
-        return std::format("stages: {}, type: {}", to_string(access.stages), to_string(access.type));
+        return fmt::format("stages: {}, type: {}", to_string(access.stages), to_string(access.type));
     }
 } // namespace daxa

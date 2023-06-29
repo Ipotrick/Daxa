@@ -3,7 +3,7 @@
 
 #include <custom file!!>
 
-DAXA_USE_PUSH_CONSTANT(ComputePush, p)
+DAXA_DECL_PUSH_CONSTANT(ComputePush, p)
 
 #define CENTER f32vec2(-0.694008, -0.324998)
 #define SUBSAMPLES 2
@@ -67,7 +67,7 @@ void main()
     col *= 1.0 / f32(SUBSAMPLES * SUBSAMPLES);
 
     imageStore(
-        daxa_get_image(image2D, p.image_id),
+        daxa_image2D(p.image_id),
         i32vec2(pixel_i.xy),
         f32vec4(col, 1));
 }

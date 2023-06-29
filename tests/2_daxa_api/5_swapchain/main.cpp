@@ -88,9 +88,9 @@ namespace tests
                 });
 
                 cmd_list.pipeline_barrier_image_transition({
-                    .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-                    .before_layout = daxa::ImageLayout::UNDEFINED,
-                    .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+                    .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
+                    .src_layout = daxa::ImageLayout::UNDEFINED,
+                    .dst_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                     .image_id = swapchain_image,
                 });
 
@@ -101,9 +101,9 @@ namespace tests
                 });
 
                 cmd_list.pipeline_barrier_image_transition({
-                    .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
-                    .before_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-                    .after_layout = daxa::ImageLayout::PRESENT_SRC,
+                    .src_access = daxa::AccessConsts::TRANSFER_WRITE,
+                    .src_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+                    .dst_layout = daxa::ImageLayout::PRESENT_SRC,
                     .image_id = swapchain_image,
                 });
 

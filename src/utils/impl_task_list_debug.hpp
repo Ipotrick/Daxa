@@ -1,21 +1,22 @@
 #pragma once
 
 #include "impl_task_list.hpp"
-#include <format>
+#include <fmt/format.h>
 namespace daxa
 {
     enum struct Level
     {
         BASIC,
         DETAILED,
-        VERBOSE
+        VERBOSE,
+        MAX_ENUM = 0x7fffffff,
     };
 
     void print_seperator_to(std::string & out, std::string & indent)
     {
         char const last = indent.back();
         indent.back() = '#';
-        std::format_to(std::back_inserter(out), "{}--------------------------------\n", indent);
+        fmt::format_to(std::back_inserter(out), "{}--------------------------------\n", indent);
         indent.back() = last;
     }
 

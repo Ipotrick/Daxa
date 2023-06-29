@@ -6,14 +6,14 @@
 
 #if defined(TEST_IMAGE)
 
-DAXA_USE_PUSH_CONSTANT(TestImagePush, push)
+DAXA_DECL_PUSH_CONSTANT(TestImagePush, push)
 layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
 void main()
 {
     const uvec3 gindex = gl_GlobalInvocationID;
     if (gindex.x < push.size.x && gindex.y < push.size.y && gindex.z < push.size.z)
     {
-        const float fetch = texelFetch(push.test_image, ivec3(gindex), 0).x;
+        const float fetch = texelFetch(daxa_texture2D(push.test_image), ivec3(gindex), 0).x;
         const bool correct = fetch == push.value;
         if (!correct)
         {
@@ -24,7 +24,7 @@ void main()
 
 #else
 
-DAXA_USE_PUSH_CONSTANT(TestBufferPush, push)
+DAXA_DECL_PUSH_CONSTANT(TestBufferPush, push)
 layout(local_size_x = 128) in;
 void main()
 {
