@@ -247,7 +247,7 @@ auto main() -> int
         COUNT,
     };
     std::array<bool, static_cast<daxa::usize>(TaskCondition::COUNT)> task_condition_states{};
-    auto loop_task_list = daxa::TaskList({
+    auto loop_task_list = daxa::TaskGraph({
         .device = device,
         .swapchain = swapchain,
         .permutation_condition_count = static_cast<daxa::usize>(TaskCondition::COUNT),

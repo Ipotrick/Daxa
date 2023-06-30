@@ -13,7 +13,7 @@ namespace tests
     void simplest()
     {
         AppContext const app = {};
-        auto task_list = daxa::TaskList({
+        auto task_list = daxa::TaskGraph({
             .device = app.device,
             .name = APPNAME_PREFIX("task_list (simplest)"),
         });
@@ -22,7 +22,7 @@ namespace tests
     void execution()
     {
         AppContext const app = {};
-        auto task_list = daxa::TaskList({
+        auto task_list = daxa::TaskGraph({
             .device = app.device,
             .name = APPNAME_PREFIX("task_list (execution)"),
         });
@@ -59,7 +59,7 @@ namespace tests
         AppContext app = {};
         // Need to scope the task lists lifetime.
         // Task list MUST die before we call wait_idle and collect_garbage.
-        auto task_list = daxa::TaskList({
+        auto task_list = daxa::TaskGraph({
             .device = app.device,
             .record_debug_information = true,
             .name = APPNAME_PREFIX("create-write-read image"),
@@ -91,7 +91,7 @@ namespace tests
         //    2) WRITE into array layer 1 of the image
         //    3) READ from array layer 2 of the image
         AppContext app = {};
-        auto task_list = daxa::TaskList({
+        auto task_list = daxa::TaskGraph({
             .device = app.device,
             .record_debug_information = true,
             .name = APPNAME_PREFIX("create-write-read array layer"),
@@ -125,7 +125,7 @@ namespace tests
         //    2) TRANSFER into the buffer
         //    3) READ from the buffer
         AppContext app = {};
-        auto task_list = daxa::TaskList({
+        auto task_list = daxa::TaskGraph({
             .device = app.device,
             .record_debug_information = true,
             .name = APPNAME_PREFIX("create-transfer-read buffer"),
@@ -182,7 +182,7 @@ namespace tests
             .name = "task list tested image",
         });
 
-        auto task_list = daxa::TaskList({
+        auto task_list = daxa::TaskGraph({
             .device = app.device,
             .record_debug_information = true,
             .name = APPNAME_PREFIX("initial layout image"),
@@ -239,7 +239,7 @@ namespace tests
             .name = "task list tested image",
         });
 
-        auto task_list = daxa::TaskList({
+        auto task_list = daxa::TaskGraph({
             .device = app.device,
             .record_debug_information = true,
             .name = APPNAME_PREFIX("tracked slice barrier collapsing"),
@@ -338,7 +338,7 @@ namespace tests
         });
         auto compute_pipeline = compile_result.value();
 
-        auto task_list = daxa::TaskList({
+        auto task_list = daxa::TaskGraph({
             .device = app.device,
             .record_debug_information = true,
             .name = "shader integration test - task list",
@@ -437,7 +437,7 @@ namespace tests
             .name = "buffer",
         });
 
-        auto task_list = daxa::TaskList({
+        auto task_list = daxa::TaskGraph({
             .device = device,
             .record_debug_information = true,
             .name = "task_list",

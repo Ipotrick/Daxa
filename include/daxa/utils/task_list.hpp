@@ -12,7 +12,7 @@
 
 namespace daxa
 {
-    struct TaskList;
+    struct TaskGraph;
     struct Device;
     struct CommandSubmitInfo;
     struct PresentInfo;
@@ -26,8 +26,8 @@ namespace daxa
         auto get_uniform_buffer_info() const -> SetConstantBufferInfo;
       protected:
         friend struct ImplTaskRuntimeInterface;
-        friend struct TaskList;
-        friend struct ImplTaskList;
+        friend struct TaskGraph;
+        friend struct ImplTaskGraph;
         friend struct TaskInterface;
         TaskInterfaceUses(void * a_backend);
         void * backend = {};
@@ -43,8 +43,8 @@ namespace daxa
 
       protected:
         friend struct ImplTaskRuntimeInterface;
-        friend struct TaskList;
-        friend struct ImplTaskList;
+        friend struct TaskGraph;
+        friend struct ImplTaskGraph;
         TaskInterface(void * a_backend);
         void * backend = {};
     };
@@ -91,7 +91,7 @@ namespace daxa
         std::string name = {};
     };
 
-    struct TaskListInfo
+    struct TaskGraphInfo
     {
         Device device;
         /// @brief Optionally the user can provide a swapchain. This enables the use of present.
@@ -149,7 +149,7 @@ namespace daxa
         Access access = {};
     };
 
-    struct TaskListConditionalInfo
+    struct TaskGraphConditionalInfo
     {
         u32 condition_index = {};
         std::function<void()> when_true = {};
@@ -226,12 +226,12 @@ namespace daxa
         std::string name = {};
     };
 
-    struct TaskList : ManagedPtr
+    struct TaskGraph : ManagedPtr
     {
-        TaskList() = default;
+        TaskGraph() = default;
 
-        TaskList(TaskListInfo const & info);
-        ~TaskList();
+        TaskGraph(TaskGraphInfo const & info);
+        ~TaskGraph();
 
         void use_persistent_buffer(TaskBuffer const & buffer);
         void use_persistent_image(TaskImage const & image);
@@ -256,7 +256,7 @@ namespace daxa
             add_task(std::move(base_task));
         }
 
-        void conditional(TaskListConditionalInfo const & conditional_info);
+        void conditional(TaskGraphConditionalInfo const & conditional_info);
         void submit(TaskSubmitInfo const & info);
         void present(TaskPresentInfo const & info);
 

@@ -128,10 +128,10 @@ struct BaseApp : AppWindow<T>
         return false;
     }
 
-    auto record_loop_task_list() -> daxa::TaskList
+    auto record_loop_task_list() -> daxa::TaskGraph
     {
         using namespace daxa::task_resource_uses;
-        daxa::TaskList new_task_list = daxa::TaskList({
+        daxa::TaskGraph new_task_list = daxa::TaskGraph({
             .device = device,
             .swapchain = swapchain,
             .use_split_barriers = false,

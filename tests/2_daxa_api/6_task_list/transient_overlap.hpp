@@ -146,7 +146,7 @@ namespace tests
             const u32vec3 IMAGE_B_SIZE = {2, 2, 1};
             const u32vec3 IMAGE_C_SIZE = {2, 2, 1};
 
-            auto task_list = daxa::TaskList({
+            auto task_list = daxa::TaskGraph({
                 .device = device,
                 .record_debug_information = true,
                 .staging_memory_pool_size = 4'000'000,
@@ -294,7 +294,7 @@ namespace tests
             const u32vec3 IMAGE_B_SIZE = {256, 256, 1};
             const u32vec3 IMAGE_BASE_SIZE = {64, 64, 1};
 
-            auto task_list = daxa::TaskList({
+            auto task_list = daxa::TaskGraph({
                 .device = device,
                 .permutation_condition_count = 1,
                 .record_debug_information = true,
@@ -461,7 +461,7 @@ namespace tests
         auto test_buffer_pipeline = pipeline_manager.add_compute_pipeline(test_buffer_pipeline_info).value();
 
         {
-            auto task_list = daxa::TaskList({
+            auto task_list = daxa::TaskGraph({
                 .device = device,
                 .reorder_tasks = false, // Disable reordering for testing purposes.
                 .record_debug_information = true,
