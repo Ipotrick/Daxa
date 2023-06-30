@@ -6,7 +6,7 @@
 #include <daxa/utils/pipeline_manager.hpp>
 #include <daxa/utils/math_operators.hpp>
 #include <iostream>
-#include <daxa/utils/task_list.hpp>
+#include <daxa/utils/task_graph.hpp>
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -212,11 +212,11 @@ auto main() -> int
         COUNT,
     };
     std::array<bool, static_cast<daxa::usize>(TaskCondition::COUNT)> task_condition_states{};
-    auto loop_task_list = daxa::TaskGraph({
+    auto loop_task_graph = daxa::TaskGraph({
         .device = device,
         .swapchain = swapchain,
         .permutation_condition_count = static_cast<daxa::usize>(TaskCondition::COUNT),
-        .name = "my task list",
+        .name = "my task graph",
     });
 
     daxa::TaskImage task_swapchain_image{{.swapchain_image = true,.name = "swapchain image"}};
@@ -228,11 +228,11 @@ auto main() -> int
     auto chunk_update_queue = std::set<usize>{};
     auto chunk_update_queue_mtx = std::mutex{};
 
-    loop_task_list.conditional({
+    loop_task_graph.conditional({
         .condition_index = static_cast<daxa::u32>(TaskCondition::VERTICES_UPLOAD),
         .when_true = [&]()
         {
-            loop_task_list.add_task({
+            loop_task_graph.add_task({
                 .uses = {{renderable_chunks_task_buffer_id, daxa::TaskBufferAccess::TRANSFER_WRITE}},
                 .task = [&](daxa::TaskInterface task_runtime)
                 {
@@ -315,11 +315,11 @@ auto main() -> int
         },
     });
 
-    loop_task_list.conditional({
+    loop_task_graph.conditional({
         .condition_index = static_cast<daxa::u32>(TaskCondition::TEXTURES_UPLOAD),
         .when_true = [&]()
         {
-            loop_task_list.add_task({
+            loop_task_graph.add_task({
                 .used_images = {
                     {task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{.base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
                 },
@@ -335,7 +335,7 @@ auto main() -> int
             for (u32 i = 0; i < MIP_COUNT - 1; ++i)
             {
                 i32 next_mip_size = std::max<i32>(1, mip_size / 2);
-                loop_task_list.add_task({
+                loop_task_graph.add_task({
                     .used_images = {
                         {task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_READ, daxa::ImageMipArraySlice{.base_mip_level = i + 0, .base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
                         {task_atlas_texture_array, daxa::TaskImageAccess::TRANSFER_WRITE, daxa::ImageMipArraySlice{.base_mip_level = i + 1, .base_array_layer = 0, .layer_count = static_cast<u32>(texture_names.size())}},
@@ -373,7 +373,7 @@ auto main() -> int
         },
     });
 
-    loop_task_list.add_task({
+    loop_task_graph.add_task({
         .used_buffers = {
             {renderable_chunks_task_buffer_id, daxa::TaskBufferAccess::VERTEX_SHADER_READ},
         },
@@ -398,7 +398,7 @@ auto main() -> int
         .name = "my draw task",
     });
 
-    loop_task_list.add_task({
+    loop_task_graph.add_task({
         .used_buffers = {
             {renderable_chunks_task_buffer_id, daxa::TaskBufferAccess::VERTEX_SHADER_READ},
         },
@@ -448,9 +448,9 @@ auto main() -> int
         .name = "my draw task",
     });
 
-    loop_task_list.submit({});
-    loop_task_list.present({});
-    loop_task_list.complete({});
+    loop_task_graph.submit({});
+    loop_task_graph.present({});
+    loop_task_graph.complete({});
     task_condition_states[static_cast<daxa::usize>(TaskCondition::TEXTURES_UPLOAD)] = true;
 
     using Clock = std::chrono::high_resolution_clock;
@@ -469,19 +469,19 @@ auto main() -> int
         {
             swapchain.resize();
             app_info.swapchain_out_of_date = false;
-            loop_task_list.remove_runtime_image(task_depth_image, depth_image);
+            loop_task_graph.remove_runtime_image(task_depth_image, depth_image);
 
             auto depth_image_info = device.info_image(depth_image);
             device.destroy_image(depth_image);
             depth_image_info.size = {app_info.width, app_info.height, 1};
             depth_image = device.create_image(depth_image_info);
 
-            loop_task_list.add_runtime_image(task_depth_image, depth_image);
+            loop_task_graph.add_runtime_image(task_depth_image, depth_image);
         }
 
-        loop_task_list.remove_runtime_image(task_swapchain_image, swapchain_image);
+        loop_task_graph.remove_runtime_image(task_swapchain_image, swapchain_image);
         swapchain_image = swapchain.acquire_next_image();
-        loop_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
+        loop_task_graph.add_runtime_image(task_swapchain_image, swapchain_image);
         if (swapchain_image.is_empty())
         {
             continue;
@@ -507,7 +507,7 @@ auto main() -> int
         }
 
         task_condition_states[static_cast<daxa::usize>(TaskCondition::VERTICES_UPLOAD)] = !chunk_update_queue.empty();
-        loop_task_list.execute({.permutation_condition_values = task_condition_states});
+        loop_task_graph.execute({.permutation_condition_values = task_condition_states});
     }
 
     device.wait_idle();

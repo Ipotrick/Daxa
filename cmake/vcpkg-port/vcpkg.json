@@ -13,7 +13,7 @@
     "utils-imgui",
     "utils-mem",
     "utils-pipeline-manager-glslang",
-    "utils-task-list"
+    "utils-task-graph"
   ],
   "features": {
     "utils-fsr2": {
@@ -54,8 +54,8 @@
         "spirv-tools"
       ]
     },
-    "utils-task-list": {
-      "description": "The Task-List Daxa utility"
+    "utils-task-graph": {
+      "description": "The Task-Graph Daxa utility"
     }
   }
 }

@@ -7,7 +7,7 @@
 
 // We're going to use another optional feature of Daxa,
 // called TaskGraph. We'll explain more below.
-#include <daxa/utils/task_list.hpp>
+#include <daxa/utils/task_graph.hpp>
 
 #include <GLFW/glfw3.h>
 #if defined(_WIN32)
@@ -279,27 +279,27 @@ auto main() -> int
         .name = "my task buffer",
     });
 
-    auto loop_task_list = daxa::TaskGraph({
+    auto loop_task_graph = daxa::TaskGraph({
         .device = device,
         .swapchain = swapchain,
         .permutation_condition_count = static_cast<daxa::usize>(TaskCondition::COUNT),
-        .name = "my task list",
+        .name = "my task graph",
     });
 
     // We need to explicitly declare all uses of persistent task resources!
-    loop_task_list.use_persistent_buffer(task_buffer);
-    loop_task_list.use_persistent_image(task_swapchain_image);
+    loop_task_graph.use_persistent_buffer(task_buffer);
+    loop_task_graph.use_persistent_image(task_swapchain_image);
 
     // Now we can record our tasks!
 
     // We'll first make a task to update the buffer. This doesn't need to be done
     // every frame, so we'll put it inside a task conditional!
-    loop_task_list.conditional({
+    loop_task_graph.conditional({
         .condition_index = static_cast<daxa::u32>(TaskCondition::VERTICES_UPLOAD),
         .when_true = [&]()
         {
             // We conditionally execute the upload vertex data task.
-            loop_task_list.add_task(UploadVertexDataTask{
+            loop_task_graph.add_task(UploadVertexDataTask{
                 .uses = {
                     .vertex_buffer = task_buffer.handle(),
                 },
@@ -308,7 +308,7 @@ auto main() -> int
     });
 
     // And a task to draw to the screen
-    loop_task_list.add_task(DrawToSwapchainTask{
+    loop_task_graph.add_task(DrawToSwapchainTask{
         .uses = {
             .vertex_buffer = task_buffer.handle(),
             .color_target = task_swapchain_image.handle(),
@@ -316,18 +316,18 @@ auto main() -> int
         .pipeline = pipeline.get(),
     });
 
-    // We now need to tell the task list that these commands will be submitted,
+    // We now need to tell the task graph that these commands will be submitted,
     // and that we have no additional information to provide. This exists in
     // order to allow more advanced Vulkan users to do much more complicated
     // things, that we don't care about, and that you can create a whole app
     // without ever touching.
-    loop_task_list.submit({});
+    loop_task_graph.submit({});
 
-    // And tell the task list to do the present step.
-    loop_task_list.present({});
-    // Finally, we complete the task list, which essentially compiles the
+    // And tell the task graph to do the present step.
+    loop_task_graph.present({});
+    // Finally, we complete the task graph, which essentially compiles the
     // dependency graph between tasks, and inserts the most optimal synchronization!
-    loop_task_list.complete({});
+    loop_task_graph.complete({});
 
     // We'll set our task condition states to make sure we use the permutation
     // where we upload the vertex data to the GPU. This will get set to false
@@ -357,8 +357,8 @@ auto main() -> int
             continue;
         }
 
-        // So, now all we need to do is execute our task list!
-        loop_task_list.execute({.permutation_condition_values = task_condition_states});
+        // So, now all we need to do is execute our task graph!
+        loop_task_graph.execute({.permutation_condition_values = task_condition_states});
     }
 
     device.wait_idle();
