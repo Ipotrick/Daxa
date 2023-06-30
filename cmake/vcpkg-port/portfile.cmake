@@ -12,7 +12,7 @@ vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
     utils-pipeline-manager-glslang WITH_UTILS_PIPELINE_MANAGER_GLSLANG
     utils-pipeline-manager-dxc WITH_UTILS_PIPELINE_MANAGER_DXC
     utils-pipeline-manager-spirv-validation WITH_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION
-    utils-task-list WITH_UTILS_TASK_LIST
+    utils-task-graph WITH_UTILS_TASK_GRAPH
 )
 set(DAXA_DEFINES)
 
@@ -34,8 +34,8 @@ endif()
 if(WITH_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
     list(APPEND DAXA_DEFINES "-DDAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION=true")
 endif()
-if(WITH_UTILS_TASK_LIST)
-    list(APPEND DAXA_DEFINES "-DDAXA_ENABLE_UTILS_TASK_LIST=true")
+if(WITH_UTILS_TASK_GRAPH)
+    list(APPEND DAXA_DEFINES "-DDAXA_ENABLE_UTILS_TASK_GRAPH=true")
 endif()
 
 vcpkg_configure_cmake(

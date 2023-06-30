@@ -2,10 +2,10 @@
 
 #include <daxa/daxa.hpp>
 
-#include "task_list.inl"
+#include "task_graph.inl"
 
-#if !DAXA_BUILT_WITH_UTILS_TASK_LIST
-#error "[package management error] You must build Daxa with the DAXA_ENABLE_UTILS_TASK_LIST CMake option enabled, or request the utils-task-list feature in vcpkg"
+#if !DAXA_BUILT_WITH_UTILS_TASK_GRAPH
+#error "[package management error] You must build Daxa with the DAXA_ENABLE_UTILS_TASK_GRAPH CMake option enabled, or request the utils-task-graph feature in vcpkg"
 #endif
 
 #include "mem.hpp"
@@ -108,13 +108,13 @@ namespace daxa
         /// For a large number of permutations it might be preferable to only create the permutations actually used on the fly just before they are needed.
         /// The second option is enabled by using jit (just in time) compilation.
         bool jit_compile_permutations = {};
-        /// @brief Task list can branch the execution based on conditionals. All conditionals must be set before execution and stay constant while executing.
-        /// This is usefull to create permutations of a task list without having to create a seperate task list.
-        /// Another benefit is that task list can generate synch between executions of permutations while it can not generate synch between two seperate task lists.
+        /// @brief Task graph can branch the execution based on conditionals. All conditionals must be set before execution and stay constant while executing.
+        /// This is usefull to create permutations of a task graph without having to create a seperate task graph.
+        /// Another benefit is that task graph can generate synch between executions of permutations while it can not generate synch between two seperate task graphs.
         usize permutation_condition_count = {};
-        /// @brief Task list will put performance markers that are used by profilers like nsight around each tasks execution by default.
+        /// @brief Task graph will put performance markers that are used by profilers like nsight around each tasks execution by default.
         bool enable_command_labels = true;
-        std::array<f32, 4> task_list_label_color = {0.463f, 0.333f, 0.671f, 1.0f};
+        std::array<f32, 4> task_graph_label_color = {0.463f, 0.333f, 0.671f, 1.0f};
         std::array<f32, 4> task_batch_label_color = {0.563f, 0.433f, 0.771f, 1.0f};
         std::array<f32, 4> task_label_color = {0.663f, 0.533f, 0.871f, 1.0f};
         /// @brief Records debug information about the execution if enabled. This string is retrievable with the function get_debug_string.

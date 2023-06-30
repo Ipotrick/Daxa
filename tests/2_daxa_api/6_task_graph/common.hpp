@@ -5,7 +5,7 @@
 #include <thread>
 
 #include <daxa/utils/pipeline_manager.hpp>
-#include <daxa/utils/task_list.hpp>
+#include <daxa/utils/task_graph.hpp>
 
 #define APPNAME "Daxa API Sample TaskGraph"
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)

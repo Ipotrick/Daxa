@@ -13,22 +13,22 @@ namespace tests
     void simplest()
     {
         AppContext const app = {};
-        auto task_list = daxa::TaskGraph({
+        auto task_graph = daxa::TaskGraph({
             .device = app.device,
-            .name = APPNAME_PREFIX("task_list (simplest)"),
+            .name = APPNAME_PREFIX("task_graph (simplest)"),
         });
     }
 
     void execution()
     {
         AppContext const app = {};
-        auto task_list = daxa::TaskGraph({
+        auto task_graph = daxa::TaskGraph({
             .device = app.device,
-            .name = APPNAME_PREFIX("task_list (execution)"),
+            .name = APPNAME_PREFIX("task_graph (execution)"),
         });
 
-        // This is pointless, but done to show how the task list executes
-        task_list.add_task({
+        // This is pointless, but done to show how the task graph executes
+        task_graph.add_task({
             .uses = {},
             .task = [&](daxa::TaskInterface const &)
             {
@@ -36,7 +36,7 @@ namespace tests
             },
             .name = APPNAME_PREFIX("task 1 (execution)"),
         });
-        task_list.add_task({
+        task_graph.add_task({
             .uses = {},
             .task = [&](daxa::TaskInterface const &)
             {
@@ -45,9 +45,9 @@ namespace tests
             .name = APPNAME_PREFIX("task 2 (execution)"),
         });
 
-        task_list.complete({});
+        task_graph.complete({});
 
-        task_list.execute({});
+        task_graph.execute({});
     }
 
     void write_read_image()
@@ -57,31 +57,31 @@ namespace tests
         //    2) WRITE image
         //    3) READ image
         AppContext app = {};
-        // Need to scope the task lists lifetime.
-        // Task list MUST die before we call wait_idle and collect_garbage.
-        auto task_list = daxa::TaskGraph({
+        // Need to scope the task graphs lifetime.
+        // Task graph MUST die before we call wait_idle and collect_garbage.
+        auto task_graph = daxa::TaskGraph({
             .device = app.device,
             .record_debug_information = true,
             .name = APPNAME_PREFIX("create-write-read image"),
         });
         // CREATE IMAGE
-        auto task_image = task_list.create_transient_image(daxa::TaskTransientImageInfo{.size = {1, 1, 1}, .name = "task list tested image"});
+        auto task_image = task_graph.create_transient_image(daxa::TaskTransientImageInfo{.size = {1, 1, 1}, .name = "task graph tested image"});
         // WRITE IMAGE 1
-        task_list.add_task({
+        task_graph.add_task({
             .uses = {daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_WRITE>{task_image}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("write image 1"),
         });
         // READ_IMAGE 1
-        task_list.add_task({
+        task_graph.add_task({
             .uses = {daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_READ>{task_image}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("read image 1"),
         });
 
-        task_list.complete({});
-        task_list.execute({});
-        std::cout << task_list.get_debug_string() << std::endl;
+        task_graph.complete({});
+        task_graph.execute({});
+        std::cout << task_graph.get_debug_string() << std::endl;
     }
 
     void write_read_image_layer()
@@ -91,31 +91,31 @@ namespace tests
         //    2) WRITE into array layer 1 of the image
         //    3) READ from array layer 2 of the image
         AppContext app = {};
-        auto task_list = daxa::TaskGraph({
+        auto task_graph = daxa::TaskGraph({
             .device = app.device,
             .record_debug_information = true,
             .name = APPNAME_PREFIX("create-write-read array layer"),
         });
         // CREATE IMAGE
-        auto task_image = task_list.create_transient_image({
+        auto task_image = task_graph.create_transient_image({
             .size = {1, 1, 1},
             .array_layer_count = 2,
-            .name = "task list tested image",
+            .name = "task graph tested image",
         });
-        task_list.add_task({
+        task_graph.add_task({
             .uses = {ImageComputeShaderWrite<>{task_image.subslice({.base_array_layer = 0, .layer_count = 1})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("write image array layer 1"),
         });
         // READ_IMAGE 1
-        task_list.add_task({
+        task_graph.add_task({
             .uses = {ImageComputeShaderRead<>{task_image.subslice({.base_array_layer = 1, .layer_count = 1})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("read image array layer 1"),
         });
-        task_list.complete({});
-        task_list.execute({});
-        std::cout << task_list.get_debug_string() << std::endl;
+        task_graph.complete({});
+        task_graph.execute({});
+        std::cout << task_graph.get_debug_string() << std::endl;
     }
 
     void create_transfer_read_buffer()
@@ -125,32 +125,32 @@ namespace tests
         //    2) TRANSFER into the buffer
         //    3) READ from the buffer
         AppContext app = {};
-        auto task_list = daxa::TaskGraph({
+        auto task_graph = daxa::TaskGraph({
             .device = app.device,
             .record_debug_information = true,
             .name = APPNAME_PREFIX("create-transfer-read buffer"),
         });
 
-        auto task_buffer = task_list.create_transient_buffer({
+        auto task_buffer = task_graph.create_transient_buffer({
             .size = sizeof(u32),
-            .name = "task list tested buffer",
+            .name = "task graph tested buffer",
         });
 
-        task_list.add_task({
+        task_graph.add_task({
             .uses = {daxa::TaskBufferUse<daxa::TaskBufferAccess::HOST_TRANSFER_WRITE>{task_buffer}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("host transfer buffer"),
         });
 
-        task_list.add_task({
+        task_graph.add_task({
             .uses = {daxa::TaskBufferUse<daxa::TaskBufferAccess::COMPUTE_SHADER_READ>{task_buffer}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("read buffer"),
         });
 
-        task_list.complete({});
-        task_list.execute({});
-        std::cout << task_list.get_debug_string() << std::endl;
+        task_graph.complete({});
+        task_graph.execute({});
+        std::cout << task_graph.get_debug_string() << std::endl;
     }
 
     void initial_layout_access()
@@ -179,29 +179,29 @@ namespace tests
                 .images = {&image, 1},
                 .latest_slice_states = {init_access.data(), 1}},
             .swapchain_image = false,
-            .name = "task list tested image",
+            .name = "task graph tested image",
         });
 
-        auto task_list = daxa::TaskGraph({
+        auto task_graph = daxa::TaskGraph({
             .device = app.device,
             .record_debug_information = true,
             .name = APPNAME_PREFIX("initial layout image"),
         });
         // CREATE IMAGE
-        task_list.use_persistent_image(task_image);
-        task_list.add_task({
+        task_graph.use_persistent_image(task_image);
+        task_graph.add_task({
             .uses = {ImageComputeShaderRead<>{task_image.handle().subslice({.base_array_layer = 1, .layer_count = 1})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("read array layer 2"),
         });
-        task_list.add_task({
+        task_graph.add_task({
             .uses = {ImageComputeShaderWrite<>{task_image.handle().subslice({.base_array_layer = 0, .layer_count = 1})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("write array layer 1"),
         });
-        task_list.complete({});
-        task_list.execute({});
-        std::cout << task_list.get_debug_string() << std::endl;
+        task_graph.complete({});
+        task_graph.execute({});
+        std::cout << task_graph.get_debug_string() << std::endl;
         app.device.destroy_image(image);
     }
 
@@ -236,10 +236,10 @@ namespace tests
                 .slice = {.base_array_layer = 2, .layer_count = 2},
             }};
         auto task_image = daxa::TaskImage({
-            .name = "task list tested image",
+            .name = "task graph tested image",
         });
 
-        auto task_list = daxa::TaskGraph({
+        auto task_graph = daxa::TaskGraph({
             .device = app.device,
             .record_debug_information = true,
             .name = APPNAME_PREFIX("tracked slice barrier collapsing"),
@@ -247,32 +247,32 @@ namespace tests
 
         task_image.set_images({.images = {&image, 1}, .latest_slice_states = {init_access.begin(), init_access.end()}});
 
-        task_list.use_persistent_image(task_image);
+        task_graph.use_persistent_image(task_image);
 
-        task_list.add_task({
+        task_graph.add_task({
             .uses = {ImageComputeShaderRead<>{task_image.handle().subslice({.base_array_layer = 1, .layer_count = 1})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("read image layer 2"),
         });
-        task_list.add_task({
+        task_graph.add_task({
             .uses = {ImageComputeShaderWrite<>{task_image.handle().subslice({.base_array_layer = 3, .layer_count = 1})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("write image layer 4"),
         });
-        task_list.add_task({
+        task_graph.add_task({
             .uses = {ImageComputeShaderWrite<>{task_image.handle().subslice({.base_array_layer = 0, .layer_count = 4})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("write image layer 1 - 4"),
         });
-        task_list.add_task({
+        task_graph.add_task({
             .uses = {ImageComputeShaderRead<>{task_image.handle().subslice({.base_array_layer = 0, .layer_count = 4})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("read image layer 1 - 4"),
         });
 
-        task_list.complete({});
-        task_list.execute({});
-        std::cout << task_list.get_debug_string() << std::endl;
+        task_graph.complete({});
+        task_graph.execute({});
+        std::cout << task_graph.get_debug_string() << std::endl;
         app.device.destroy_image(image);
     }
 
@@ -321,7 +321,7 @@ namespace tests
             .shader_compile_options = {
                 .root_paths = {
                     DAXA_SHADER_INCLUDE_DIR,
-                    "tests/2_daxa_api/6_task_list/shaders",
+                    "tests/2_daxa_api/6_task_graph/shaders",
                 },
             },
             .name = "pipeline manager",
@@ -338,15 +338,15 @@ namespace tests
         });
         auto compute_pipeline = compile_result.value();
 
-        auto task_list = daxa::TaskGraph({
+        auto task_graph = daxa::TaskGraph({
             .device = app.device,
             .record_debug_information = true,
-            .name = "shader integration test - task list",
+            .name = "shader integration test - task graph",
         });
-        task_list.use_persistent_image(task_image);
-        task_list.use_persistent_buffer(task_buffer);
+        task_graph.use_persistent_image(task_image);
+        task_graph.use_persistent_buffer(task_buffer);
 
-        task_list.add_task({
+        task_graph.add_task({
             .uses = daxa::to_generic_uses(ShaderIntegrationTask::Uses{
                 .settings = {task_buffer},
                 .image = {task_image},
@@ -361,7 +361,7 @@ namespace tests
             .constant_buffer_slot = ShaderIntegrationTask::CONSANT_BUFFER_SLOT,
             .name = "write image in compute",
         });
-        task_list.add_task({
+        task_graph.add_task({
             .uses = daxa::to_generic_uses(ShaderIntegrationTask::Uses{
                 .settings = {task_buffer},
                 .image = {task_image},
@@ -379,11 +379,11 @@ namespace tests
             .constant_buffer_slot = ShaderIntegrationTask::CONSANT_BUFFER_SLOT,
             .name = "write image in compute 2",
         });
-        task_list.submit({});
+        task_graph.submit({});
 
-        task_list.complete({});
-        task_list.execute({});
-        std::cout << task_list.get_debug_string() << std::endl;
+        task_graph.complete({});
+        task_graph.execute({});
+        std::cout << task_graph.get_debug_string() << std::endl;
         app.device.wait_idle();
         app.device.destroy_image(image);
         app.device.destroy_image(dummy);
@@ -395,15 +395,15 @@ namespace tests
     {
         // TEST:
         //  1) Create persistent image and persistent buffer
-        //  2) Record two task lists A
-        //  3) Task list A has three tasks inserted in listed order:
+        //  2) Record two task graphs A
+        //  3) Task graph A has three tasks inserted in listed order:
         //      Task 1) Writes image
         //      Task 2) Reads image and reads buffer
         //      Task 3) Reads buffer
-        //  5) Execute task list and check the ordering of tasks in batches
+        //  5) Execute task graph and check the ordering of tasks in batches
         //  Expected result:
         //      NOTE(msakmary): This does something different currently (task 3 is in batch 2)
-        //                      - this is due to limitations of what task list can do without having a proper render graph
+        //                      - this is due to limitations of what task graph can do without having a proper render graph
         //                      - will be fixed in the future by adding JIRA
         //      Batch 1:
         //          Task 1
@@ -437,20 +437,20 @@ namespace tests
             .name = "buffer",
         });
 
-        auto task_list = daxa::TaskGraph({
+        auto task_graph = daxa::TaskGraph({
             .device = device,
             .record_debug_information = true,
-            .name = "task_list",
+            .name = "task_graph",
         });
 
-        task_list.use_persistent_image(persistent_task_image);
-        task_list.use_persistent_buffer(persistent_task_buffer);
-        task_list.add_task({
+        task_graph.use_persistent_image(persistent_task_image);
+        task_graph.use_persistent_buffer(persistent_task_buffer);
+        task_graph.add_task({
             .uses = {daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_WRITE>{persistent_task_image}},
             .task = [&](daxa::TaskInterface const &) {},
             .name = "write persistent image",
         });
-        task_list.add_task({
+        task_graph.add_task({
             .uses = {
                 daxa::TaskBufferUse<daxa::TaskBufferAccess::SHADER_READ>{persistent_task_buffer},
                 daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_READ>{persistent_task_image},
@@ -458,16 +458,16 @@ namespace tests
             .task = [&](daxa::TaskInterface const &) {},
             .name = "read persistent image, read persistent buffer",
         });
-        task_list.add_task({
+        task_graph.add_task({
             .uses = {daxa::TaskBufferUse<daxa::TaskBufferAccess::SHADER_READ>{persistent_task_buffer}},
             .task = [&](daxa::TaskInterface const &) {},
             .name = "read persistent buffer",
         });
-        task_list.submit({});
-        task_list.complete({});
+        task_graph.submit({});
+        task_graph.complete({});
 
-        task_list.execute({});
-        std::cout << task_list.get_debug_string() << std::endl;
+        task_graph.execute({});
+        std::cout << task_graph.get_debug_string() << std::endl;
 
         device.wait_idle();
         device.destroy_image(image);

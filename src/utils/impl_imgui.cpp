@@ -310,8 +310,8 @@ namespace daxa
         impl.record_commands(draw_data, cmd_list, target_image, size_x, size_y);
     }
 
-#if DAXA_BUILT_WITH_UTILS_TASK_LIST
-    void ImGuiRenderer::record_task(ImDrawData * /* draw_data */, TaskGraph & /* task_list */, TaskImageHandle /* task_swapchain_image */, u32 /* size_x */, u32 /* size_y */)
+#if DAXA_BUILT_WITH_UTILS_TASK_GRAPH
+    void ImGuiRenderer::record_task(ImDrawData * /* draw_data */, TaskGraph & /* task_graph */, TaskImageHandle /* task_swapchain_image */, u32 /* size_x */, u32 /* size_y */)
     {
     }
 #endif

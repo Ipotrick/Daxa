@@ -1,9 +1,9 @@
 #pragma once
 
 #include <stack>
-#include <daxa/utils/task_list.hpp>
+#include <daxa/utils/task_graph.hpp>
 
-#define DAXA_TASKLIST_MAX_CONITIONALS 31
+#define DAXA_TASK_GRAPH_MAX_CONDITIONALS 31
 
 namespace daxa
 {
@@ -155,7 +155,7 @@ namespace daxa
         usize swapchain_image_first_use_submit_scope_index = std::numeric_limits<usize>::max();
         usize swapchain_image_last_use_submit_scope_index = std::numeric_limits<usize>::max();
 
-        void add_task(TaskId task_id, ImplTaskGraph & task_list_impl, BaseTask & task);
+        void add_task(TaskId task_id, ImplTaskGraph & task_graph_impl, BaseTask & task);
         void submit(TaskSubmitInfo const & info);
         void present(TaskPresentInfo const & info);
     };
@@ -289,7 +289,7 @@ namespace daxa
     struct ImplTaskRuntimeInterface
     {
         // interface:
-        ImplTaskGraph & task_list;
+        ImplTaskGraph & task_graph;
         TaskGraphPermutation & permutation;
         ImplTask * current_task = {};
         std::optional<SetConstantBufferInfo> set_uniform_buffer_info = {};
@@ -330,7 +330,7 @@ namespace daxa
 
         // execution time information:
         daxa::TransferMemoryPool staging_memory{TransferMemoryPoolInfo{.device = info.device, .capacity = info.staging_memory_pool_size, .use_bar_memory = true, .name = info.name}};
-        std::array<bool, DAXA_TASKLIST_MAX_CONITIONALS> execution_time_current_conditionals = {};
+        std::array<bool, DAXA_TASK_GRAPH_MAX_CONDITIONALS> execution_time_current_conditionals = {};
 
         // post execution information:
         usize last_execution_staging_timeline_value = 0;

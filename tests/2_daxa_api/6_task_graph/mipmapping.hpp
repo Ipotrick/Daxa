@@ -31,7 +31,7 @@ namespace tests
                 .shader_compile_options = {
                     .root_paths = {
                         DAXA_SHADER_INCLUDE_DIR,
-                        "tests/2_daxa_api/6_task_list/shaders",
+                        "tests/2_daxa_api/6_task_graph/shaders",
                     },
                     .language = daxa::ShaderLanguage::GLSL,
                 },
@@ -110,7 +110,7 @@ namespace tests
                 TASK_CONDITION_MOUSE_DRAWING = 0,
                 TASK_CONDITION_COUNT = 1,
             };
-            daxa::TaskGraph task_list = record_tasks();
+            daxa::TaskGraph task_graph = record_tasks();
 
             App() : AppWindow<App>(APPNAME, 768 * 2, 512 * 2) {}
             ~App()
@@ -156,7 +156,7 @@ namespace tests
                 ui_update();
                 pipeline_manager.reload_all();
 
-                // non_task_list_execute();
+                // non_task_graph_execute();
 
                 swapchain_image = swapchain.acquire_next_image();
                 task_swapchain_image.set_images({.images = std::span{&swapchain_image, 1}});
@@ -166,8 +166,8 @@ namespace tests
                 }
                 std::array<bool, TASK_CONDITION_COUNT> conditions = {};
                 conditions[TASK_CONDITION_MOUSE_DRAWING] = mouse_drawing;
-                task_list.execute({.permutation_condition_values = {conditions.data(), conditions.size()}, .record_debug_string = true});
-                std::cout << task_list.get_debug_string() << std::endl;
+                task_graph.execute({.permutation_condition_values = {conditions.data(), conditions.size()}, .record_debug_string = true});
+                std::cout << task_graph.get_debug_string() << std::endl;
             }
 
             void on_mouse_move(f32 x, f32 y)
@@ -288,7 +288,7 @@ namespace tests
                 }
             }
 
-            void non_task_list_execute()
+            void non_task_graph_execute()
             {
                 swapchain_image = swapchain.acquire_next_image();
                 if (swapchain_image.is_empty())
@@ -481,18 +481,18 @@ namespace tests
                     }
                 };
 
-                daxa::TaskGraph new_task_list = daxa::TaskGraph({
+                daxa::TaskGraph new_task_graph = daxa::TaskGraph({
                     .device = device,
                     .swapchain = swapchain,
                     .permutation_condition_count = TASK_CONDITION_COUNT,
                     .record_debug_information = true,
-                    .name = "main task list",
+                    .name = "main task graph",
                 });
 
-                new_task_list.use_persistent_image(task_swapchain_image);
-                new_task_list.use_persistent_buffer(task_mipmapping_gpu_input_buffer);
-                new_task_list.use_persistent_image(task_render_image);
-                new_task_list.add_task({
+                new_task_graph.use_persistent_image(task_swapchain_image);
+                new_task_graph.use_persistent_buffer(task_mipmapping_gpu_input_buffer);
+                new_task_graph.use_persistent_image(task_render_image);
+                new_task_graph.add_task({
                     .uses = {
                         BufferHostTransferWrite{task_mipmapping_gpu_input_buffer},
                     },
@@ -503,11 +503,11 @@ namespace tests
                     },
                     .name = "Input Transfer",
                 });
-                new_task_list.conditional({
+                new_task_graph.conditional({
                     .condition_index = TASK_CONDITION_MOUSE_DRAWING,
                     .when_true = [&]()
                     {
-                        new_task_list.add_task({
+                        new_task_graph.add_task({
                             .uses = {
                                 BufferComputeShaderRead{task_mipmapping_gpu_input_buffer},
                                 ImageComputeShaderReadWrite<>{task_render_image},
@@ -525,7 +525,7 @@ namespace tests
                             for (u32 i = 0; i < image_info.mip_level_count - 1; ++i)
                             {
                                 std::array<i32, 3> next_mip_size = {std::max<i32>(1, mip_size[0] / 2), std::max<i32>(1, mip_size[1] / 2), std::max<i32>(1, mip_size[2] / 2)};
-                                new_task_list.add_task(MipMapTask{
+                                new_task_graph.add_task(MipMapTask{
                                     .uses = {
                                         .lower_mip = task_render_image.handle().subslice({.base_mip_level = i}),
                                         .higher_mip = task_render_image.handle().subslice({.base_mip_level = i+1}),
@@ -540,7 +540,7 @@ namespace tests
                         }
                     },
                 });
-                new_task_list.add_task({
+                new_task_graph.add_task({
                     .uses = {ImageTransferWrite<>{task_swapchain_image}},
                     .task = [=](daxa::TaskInterface const & ti)
                     {
@@ -553,7 +553,7 @@ namespace tests
                     },
                     .name = "clear swapchain",
                 });
-                new_task_list.add_task({
+                new_task_graph.add_task({
                     .uses = {
                         ImageTransferRead<>{task_render_image.handle().subslice({.level_count = 5})},
                         ImageTransferWrite<>{task_swapchain_image},
@@ -568,7 +568,7 @@ namespace tests
                     },
                     .name = "blit to swapchain",
                 });
-                new_task_list.add_task({
+                new_task_graph.add_task({
                     .uses = {ImageColorAttachment<>{task_swapchain_image}},
                     .task = [=, this](daxa::TaskInterface const & ti)
                     {
@@ -577,10 +577,10 @@ namespace tests
                     },
                     .name = "Imgui",
                 });
-                new_task_list.submit({});
-                new_task_list.present({});
-                new_task_list.complete({});
-                return new_task_list;
+                new_task_graph.submit({});
+                new_task_graph.present({});
+                new_task_graph.complete({});
+                return new_task_graph;
             }
         };
 

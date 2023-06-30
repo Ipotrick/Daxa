@@ -7,8 +7,8 @@
 #include <daxa/core.hpp>
 #include <daxa/device.hpp>
 
-#if DAXA_BUILT_WITH_UTILS_TASK_LIST
-#include <daxa/utils/task_list.hpp>
+#if DAXA_BUILT_WITH_UTILS_TASK_GRAPH
+#include <daxa/utils/task_graph.hpp>
 #endif
 
 #include <imgui.h>
@@ -33,8 +33,8 @@ namespace daxa
         ~ImGuiRenderer();
 
         void record_commands(ImDrawData * draw_data, CommandList & cmd_list, ImageId target_image, u32 size_x, u32 size_y);
-#if DAXA_BUILT_WITH_UTILS_TASK_LIST
-        void record_task(ImDrawData * draw_data, TaskGraph & task_list, TaskImageHandle task_swapchain_image, u32 size_x, u32 size_y);
+#if DAXA_BUILT_WITH_UTILS_TASK_GRAPH
+        void record_task(ImDrawData * draw_data, TaskGraph & task_graph, TaskImageHandle task_swapchain_image, u32 size_x, u32 size_y);
 #endif
     };
 } // namespace daxa
