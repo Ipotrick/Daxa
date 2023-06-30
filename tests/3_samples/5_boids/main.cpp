@@ -88,7 +88,7 @@ struct App : AppWindow<App>
 
     daxa::CommandSubmitInfo submit_info;
 
-    daxa::TaskList task_list = record_tasks();
+    daxa::TaskGraph task_list = record_tasks();
 
     App() : AppWindow<App>(APPNAME)
     {
@@ -237,9 +237,9 @@ struct App : AppWindow<App>
         }
     };
 
-    auto record_tasks() -> daxa::TaskList
+    auto record_tasks() -> daxa::TaskGraph
     {
-        daxa::TaskList new_task_list = daxa::TaskList({.device = device, .swapchain = swapchain, .name = APPNAME_PREFIX("main task list")});
+        daxa::TaskGraph new_task_list = daxa::TaskGraph({.device = device, .swapchain = swapchain, .name = APPNAME_PREFIX("main task list")});
         new_task_list.use_persistent_image(task_swapchain_image);
         new_task_list.use_persistent_buffer(task_boids_current);
         new_task_list.use_persistent_buffer(task_boids_old);
@@ -275,10 +275,10 @@ struct App : AppWindow<App>
         prev_time = now;
 
         auto reloaded_result = pipeline_manager.reload_all();
-        if (reloaded_result.has_value())
-        {
-            std::cout << reloaded_result.value().to_string() << std::endl;
-        }
+        if (auto reload_err = std::get_if<daxa::PipelineReloadError>(&reloaded_result))
+            std::cout << "Failed to reload " << reload_err->message << '\n';
+        if (auto _ = std::get_if<daxa::PipelineReloadSuccess>(&reloaded_result))
+            std::cout << "Successfully reloaded!\n";
 
         auto swapchain_image = swapchain.acquire_next_image();
         task_swapchain_image.set_images({.images = {&swapchain_image, 1}});

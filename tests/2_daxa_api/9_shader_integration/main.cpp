@@ -114,7 +114,7 @@ namespace tests
         });
         auto compute_pipeline = compile_result.value();
 
-        auto task_list = daxa::TaskList({
+        auto task_list = daxa::TaskGraph({
             .device = device,
             .record_debug_information = true,
             .name = "shader integration test - alignment",
@@ -216,7 +216,7 @@ namespace tests
         });
         auto bindless_access_followup = compile_result1.value();
 
-        auto task_list = daxa::TaskList({
+        auto task_list = daxa::TaskGraph({
             .device = device,
             .record_debug_information = true,
             .name = "shader integration test - alignment",

@@ -67,7 +67,7 @@ struct App : BaseApp<App>
         .name = "timeline_query",
     });
 
-    daxa::TaskList loop_task_list = record_loop_task_list();
+    daxa::TaskGraph loop_task_list = record_loop_task_list();
 
     ~App()
     {
@@ -95,10 +95,10 @@ struct App : BaseApp<App>
         gpu_input.delta_time = delta_time;
 
         auto reloaded_result = pipeline_manager.reload_all();
-        if (reloaded_result.has_value())
-        {
-            std::cout << reloaded_result.value().to_string() << std::endl;
-        }
+        if (auto reload_err = std::get_if<daxa::PipelineReloadError>(&reloaded_result))
+            std::cout << "Failed to reload " << reload_err->message << '\n';
+        if (auto _ = std::get_if<daxa::PipelineReloadSuccess>(&reloaded_result))
+            std::cout << "Successfully reloaded!\n";
 
         ui_update();
 
@@ -139,7 +139,7 @@ struct App : BaseApp<App>
         }
     }
 
-    void record_tasks(daxa::TaskList & new_task_list)
+    void record_tasks(daxa::TaskGraph & new_task_list)
     {
         using namespace daxa::task_resource_uses;
 

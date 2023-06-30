@@ -8,7 +8,7 @@ The details on code sharing and general shader integration will be described in 
 
 ## C++/Shader Code Sharing
 
-The main motivation behind code sharing is defining things like structs stored in buffers a single time and then using them in c++ and shaders seemlessly. This concept extends to other parts of the api as well, for example [TaskList use lists can be declared in shared files](https://github.com/Ipotrick/Daxa/tree/master/wiki/TaskList.md) to reduce code duplication as well.
+The main motivation behind code sharing is defining things like structs stored in buffers a single time and then using them in c++ and shaders seemlessly. This concept extends to other parts of the api as well, for example [TaskGraph use lists can be declared in shared files](https://github.com/Ipotrick/Daxa/tree/master/wiki/TaskGraph.md) to reduce code duplication as well.
 
 Code is shared by creating header files that get included in c++ and glsl. THe trick is that these files MUST include the `<daxa/daxa.inl>` file. This file contains variations of makros that are switched based on the compiled language. So in essence the code sharing in daxa relies in the shared glsl and c++ preprocessor.
 

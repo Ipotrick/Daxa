@@ -1,10 +1,10 @@
-# TaskList
+# TaskGraph
 
 As vulkan and daxa require manual synchronization, using daxa and vulkan can become quite complex and error prone.
 
-A common way to abstract and improve synchronization with low level apis is the use of a rendergraph. Daxa provides a rendergraph called TaskList.
+A common way to abstract and improve synchronization with low level apis is the use of a rendergraph. Daxa provides a rendergraph called TaskGraph.
 
-With TaskList you can create task resource handles and names for resources you have in your program. You can then list a series of tasks.
+With TaskGraph you can create task resource handles and names for resources you have in your program. You can then list a series of tasks.
 Each task contains a list of used resources and a callback to the operations the task should perform.
 
 A core idea of task list and other rendergraphs is, that you record a high level description of a series of operations and execute these operations later. In task list, you record tasks, then complete and later execute it. The callbacks in each task are called during execution.

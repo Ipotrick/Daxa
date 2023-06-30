@@ -167,7 +167,7 @@ namespace daxa
     struct alignas(TASK_INPUT_FIELD_SIZE) TaskBufferUse
     {
       private:
-        friend struct ImplTaskList;
+        friend struct ImplTaskGraph;
         TaskResourceUseType const type = TaskResourceUseType::BUFFER;
         std::span<BufferId const> buffers = {};
         TaskBufferAccess m_access = T_ACCESS;
@@ -226,7 +226,7 @@ namespace daxa
     struct alignas(TASK_INPUT_FIELD_SIZE) TaskImageUse
     {
       private:
-        friend struct ImplTaskList;
+        friend struct ImplTaskGraph;
         TaskResourceUseType type = TaskResourceUseType::IMAGE;
         TaskImageAccess m_access = T_ACCESS;
         ImageViewType m_view_type = T_VIEW_TYPE;
@@ -411,7 +411,7 @@ namespace daxa
             }
         }
 
-        virtual auto get_name() const -> std::string
+        virtual auto get_name() const -> std::string override
         {
             if constexpr (requires { task.name; })
             {

@@ -6,7 +6,7 @@
 #include <iostream>
 
 // We're going to use another optional feature of Daxa,
-// called TaskList. We'll explain more below.
+// called TaskGraph. We'll explain more below.
 #include <daxa/utils/task_list.hpp>
 
 #include <GLFW/glfw3.h>
@@ -239,17 +239,17 @@ auto main() -> int
         .name = "my vertex data",
     });
     // Obviously the vertex data is not yet on the GPU, and this buffer
-    // is just empty. We will use conditional TaskList to upload it on
+    // is just empty. We will use conditional TaskGraph to upload it on
     // just the first frame. More on this soon!
 
-    // While not entirely necessary, we're going to use TaskList, which
+    // While not entirely necessary, we're going to use TaskGraph, which
     // allows us to compile a list of GPU tasks and their dependencies
     // into a synchronized set of commands. This simplifies your code
     // by making different tasks completely self-contained, while also
     // generating the most optimal synchronization for the tasks you
     // describe.
 
-    // TaskList can have permutations, which allow for runtime conditions
+    // TaskGraph can have permutations, which allow for runtime conditions
     // to trigger different outcomes. These are identified with indices,
     // so we'll define an enum representing all the condition indices
     // since we want to name them and make sure they're all unique.
@@ -261,7 +261,7 @@ auto main() -> int
 
     std::array<bool, static_cast<daxa::usize>(TaskCondition::COUNT)> task_condition_states{};
 
-    // When using TaskList, we must create "virtual" resources (we call
+    // When using TaskGraph, we must create "virtual" resources (we call
     // them task resources) whose usages are tracked, allowing for correct
     // synchronization for them.
 
@@ -279,7 +279,7 @@ auto main() -> int
         .name = "my task buffer",
     });
 
-    auto loop_task_list = daxa::TaskList({
+    auto loop_task_list = daxa::TaskGraph({
         .device = device,
         .swapchain = swapchain,
         .permutation_condition_count = static_cast<daxa::usize>(TaskCondition::COUNT),
