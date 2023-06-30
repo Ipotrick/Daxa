@@ -8,13 +8,13 @@ namespace tests
     {
         // TEST:
         //  1) Create single persistent buffer
-        //  2) Record two task lists (A, B)
-        //  3) Task list A:
+        //  2) Record two task graphs (A, B)
+        //  3) Task graph A:
         //      writes persistent buffer
-        //  4) Task list B:
+        //  4) Task graph B:
         //      reads persistent buffer
-        //  6) Call execute task lists in this order - A -> A -> B -> B
-        //  5) Check persistent synch of task lists A and B 
+        //  6) Call execute task graphs in this order - A -> A -> B -> B
+        //  5) Check persistent synch of task graphs A and B 
         //      1) INIT -> A - Expected - First execution of A syncs on nothing
         //      2) A    -> A - Expected - Second execution of A syncs on SHADER_WRITE -> SHADER_WRITE
         //      3) A    -> B - Expected - First execution of B syncs on SHADER_WRITE -> SHADER_READ
@@ -32,44 +32,44 @@ namespace tests
            .name = "persistent buffer",
         });
  
-        auto task_list_A = daxa::TaskGraph({
+        auto task_graph_A = daxa::TaskGraph({
            .device = device,
            .record_debug_information = true,
-           .name = "task_list_a",
+           .name = "task_graph_a",
         });
 
-        auto task_list_B = daxa::TaskGraph({
+        auto task_graph_B = daxa::TaskGraph({
            .device = device,
            .record_debug_information = true,
-           .name = "task_list_b",
+           .name = "task_graph_b",
         });
 
-        task_list_A.use_persistent_buffer(persistent_task_buffer);
-        task_list_B.use_persistent_buffer(persistent_task_buffer);
-        task_list_A.add_task({
+        task_graph_A.use_persistent_buffer(persistent_task_buffer);
+        task_graph_B.use_persistent_buffer(persistent_task_buffer);
+        task_graph_A.add_task({
            .uses = {daxa::TaskBufferUse<daxa::TaskBufferAccess::SHADER_WRITE>{persistent_task_buffer}},
            .task = [&](daxa::TaskInterface const &) { },
            .name = "write persistent buffer",
         });
-        task_list_A.submit({});
-        task_list_A.complete({});
+        task_graph_A.submit({});
+        task_graph_A.complete({});
 
-        task_list_B.add_task({
+        task_graph_B.add_task({
            .uses = {daxa::TaskBufferUse<daxa::TaskBufferAccess::SHADER_READ>{persistent_task_buffer}},
            .task = [&](daxa::TaskInterface const &) { },
            .name = "read persistent buffer",
         });
-        task_list_B.submit({});
-        task_list_B.complete({});
+        task_graph_B.submit({});
+        task_graph_B.complete({});
 
-        task_list_A.execute({});
-        std::cout << task_list_A.get_debug_string() << std::endl;
-        task_list_A.execute({});
-        std::cout << task_list_A.get_debug_string() << std::endl;
-        task_list_B.execute({});
-        std::cout << task_list_B.get_debug_string() << std::endl;
-        task_list_B.execute({});
-        std::cout << task_list_B.get_debug_string() << std::endl;
+        task_graph_A.execute({});
+        std::cout << task_graph_A.get_debug_string() << std::endl;
+        task_graph_A.execute({});
+        std::cout << task_graph_A.get_debug_string() << std::endl;
+        task_graph_B.execute({});
+        std::cout << task_graph_B.get_debug_string() << std::endl;
+        task_graph_B.execute({});
+        std::cout << task_graph_B.get_debug_string() << std::endl;
 
         device.wait_idle();
         device.destroy_buffer(buffer);
@@ -79,21 +79,21 @@ namespace tests
     {
         // TEST:
         //  1) Create single persistent image
-        //  2) Record two task lists (A, B)
-        //  3) Task list A:
+        //  2) Record two task graphs (A, B)
+        //  3) Task graph A:
         //      writes persistent image
         //      uses persistent image as color attachment
-        //  4) Task list B:
+        //  4) Task graph B:
         //      reads persistent image
-        //  6) Call execute task lists in this order - A -> A -> B -> B
-        //  5) Check persistent synch of task lists A and B 
+        //  6) Call execute task graphs in this order - A -> A -> B -> B
+        //  5) Check persistent synch of task graphs A and B 
         //      1) INIT -> A - Expected - First execution of A transitions image from UNDEFINED to WRITE
         //      2) A    -> A - Expected - Second execution of  A transitions image from COLOR_ATTACHMENT to WRITE
         //      3) A    -> B - Expected - First execution of B transitions image from WRITE to READ
         //      4) B    -> B - Expected - Second execution of B has no transitions
         daxa::Context daxa_ctx = daxa::create_context({ .enable_validation = false, });
         daxa::Device device = daxa_ctx.create_device({ .name = "device", });
-        // We need an actual image, as task list will try to populate its image view cache.
+        // We need an actual image, as task graph will try to populate its image view cache.
         // It will error out when it detects that there are no runtime images for a task image when updating the view cache.
         auto image = device.create_image({
            .size = {1, 1, 1},
@@ -109,48 +109,48 @@ namespace tests
                 .name = "image",
         });
  
-        auto task_list_A = daxa::TaskGraph({
+        auto task_graph_A = daxa::TaskGraph({
            .device = device,
            .record_debug_information = true,
-           .name = "task_list_a",
+           .name = "task_graph_a",
         });
 
-        task_list_A.use_persistent_image(persistent_task_image);
-        task_list_A.add_task({
+        task_graph_A.use_persistent_image(persistent_task_image);
+        task_graph_A.add_task({
            .uses = {daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_WRITE>{persistent_task_image}},
            .task = [&](daxa::TaskInterface const &) { },
            .name = "write persistent image",
         });
-        task_list_A.add_task({
+        task_graph_A.add_task({
            .uses = {daxa::TaskImageUse<daxa::TaskImageAccess::COLOR_ATTACHMENT>{persistent_task_image}},
            .task = [&](daxa::TaskInterface const &) { },
            .name = "persistent image - color attachment",
         });
-        task_list_A.submit({});
-        task_list_A.complete({});
+        task_graph_A.submit({});
+        task_graph_A.complete({});
 
-        auto task_list_B = daxa::TaskGraph({
+        auto task_graph_B = daxa::TaskGraph({
            .device = device,
            .record_debug_information = true,
-           .name = "task_list_b",
+           .name = "task_graph_b",
         });
-        task_list_B.use_persistent_image(persistent_task_image);
-        task_list_B.add_task({
+        task_graph_B.use_persistent_image(persistent_task_image);
+        task_graph_B.add_task({
            .uses = {daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_READ>{persistent_task_image}},
            .task = [&](daxa::TaskInterface const &) { },
            .name = "read persistent image",
         });
-        task_list_B.submit({});
-        task_list_B.complete({});
+        task_graph_B.submit({});
+        task_graph_B.complete({});
 
-        task_list_A.execute({});
-        std::cout << task_list_A.get_debug_string() << std::endl;
-        task_list_A.execute({});
-        std::cout << task_list_A.get_debug_string() << std::endl;
-        task_list_B.execute({});
-        std::cout << task_list_B.get_debug_string() << std::endl;
-        task_list_B.execute({});
-        std::cout << task_list_B.get_debug_string() << std::endl;
+        task_graph_A.execute({});
+        std::cout << task_graph_A.get_debug_string() << std::endl;
+        task_graph_A.execute({});
+        std::cout << task_graph_A.get_debug_string() << std::endl;
+        task_graph_B.execute({});
+        std::cout << task_graph_B.get_debug_string() << std::endl;
+        task_graph_B.execute({});
+        std::cout << task_graph_B.get_debug_string() << std::endl;
 
         device.wait_idle();
         device.destroy_image(image);

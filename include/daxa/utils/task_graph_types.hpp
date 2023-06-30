@@ -3,8 +3,8 @@
 // Disable msvc warning on alignment padding.
 #pragma warning(disable : 4324)
 
-#if !DAXA_BUILT_WITH_UTILS_TASK_LIST
-#error "[package management error] You must build Daxa with the DAXA_ENABLE_UTILS_TASK_LIST CMake option enabled, or request the utils-task-list feature in vcpkg"
+#if !DAXA_BUILT_WITH_UTILS_TASK_GRAPH
+#error "[package management error] You must build Daxa with the DAXA_ENABLE_UTILS_TASK_GRAPH CMake option enabled, or request the utils-task-graph feature in vcpkg"
 #endif
 
 #include <span>
@@ -112,7 +112,7 @@ namespace daxa
 
     struct TaskGPUResourceHandle
     {
-        TaskResourceIndex task_list_index = {};
+        TaskResourceIndex task_graph_index = {};
         TaskResourceIndex index = {};
 
         auto is_empty() const -> bool;

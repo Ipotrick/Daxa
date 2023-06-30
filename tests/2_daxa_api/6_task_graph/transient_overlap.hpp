@@ -119,7 +119,7 @@ namespace tests
             .shader_compile_options = {
                 .root_paths = {
                     DAXA_SHADER_INCLUDE_DIR,
-                    "tests/2_daxa_api/6_task_list/shaders",
+                    "tests/2_daxa_api/6_task_graph/shaders",
                 },
                 .language = daxa::ShaderLanguage::GLSL,
             },
@@ -146,29 +146,29 @@ namespace tests
             const u32vec3 IMAGE_B_SIZE = {2, 2, 1};
             const u32vec3 IMAGE_C_SIZE = {2, 2, 1};
 
-            auto task_list = daxa::TaskGraph({
+            auto task_graph = daxa::TaskGraph({
                 .device = device,
                 .record_debug_information = true,
                 .staging_memory_pool_size = 4'000'000,
-                .name = "task_list",
+                .name = "task_graph",
             });
 
             // ========================================== Create resources ====================================================
-            auto image_A = task_list.create_transient_image({
+            auto image_A = task_graph.create_transient_image({
                 .dimensions = 3,
                 .format = daxa::Format::R32_SFLOAT,
                 .size = {IMAGE_A_SIZE.x, IMAGE_A_SIZE.y, IMAGE_A_SIZE.z},
                 .name = "Image A"
             });
 
-            auto image_B = task_list.create_transient_image({
+            auto image_B = task_graph.create_transient_image({
                 .dimensions = 3,
                 .format = daxa::Format::R32_SFLOAT,
                 .size = {IMAGE_B_SIZE.x, IMAGE_B_SIZE.y, IMAGE_B_SIZE.z},
                 .name = "Image B"
             });
 
-            auto image_C = task_list.create_transient_image({
+            auto image_C = task_graph.create_transient_image({
                 .dimensions = 3,
                 .format = daxa::Format::R32_SFLOAT,
                 .size = {IMAGE_C_SIZE.x, IMAGE_C_SIZE.y, IMAGE_C_SIZE.z},
@@ -178,7 +178,7 @@ namespace tests
             // ========================================== Record tasks =======================================================
             using namespace daxa::task_resource_uses;
 
-            task_list.add_task({
+            task_graph.add_task({
                 .uses = {
                     ImageTransferWrite<daxa::ImageViewType::REGULAR_3D>{image_A},
                     ImageTransferWrite<daxa::ImageViewType::REGULAR_3D>{image_B},
@@ -192,7 +192,7 @@ namespace tests
                 .name = "Task 1 - write image A and B",
             });
 
-            task_list.add_task({
+            task_graph.add_task({
                 .uses = {
                     ImageComputeShaderRead<daxa::ImageViewType::REGULAR_3D>{image_A},
                     ImageComputeShaderRead<daxa::ImageViewType::REGULAR_3D>{image_B},
@@ -206,7 +206,7 @@ namespace tests
                 .name = "Task 2 - test contents of image A and B",
             });
 
-            task_list.add_task({
+            task_graph.add_task({
                 .uses = {
                     ImageTransferWrite<daxa::ImageViewType::REGULAR_3D>{image_A},
                     ImageTransferWrite<daxa::ImageViewType::REGULAR_3D>{image_C},
@@ -220,7 +220,7 @@ namespace tests
                 .name = "Task 3 - write image A and C",
             });
 
-            task_list.add_task({
+            task_graph.add_task({
                 .uses = {
                     ImageComputeShaderRead<daxa::ImageViewType::REGULAR_3D>{image_A},
                     ImageComputeShaderRead<daxa::ImageViewType::REGULAR_3D>{image_C},
@@ -233,11 +233,11 @@ namespace tests
                 },
                 .name = "Task 4 - test contents of image A and C",
             });
-            task_list.submit({});
-            task_list.complete({});
-            task_list.execute({});
+            task_graph.submit({});
+            task_graph.complete({});
+            task_graph.execute({});
 
-            std::cout << task_list.get_debug_string() << std::endl;
+            std::cout << task_graph.get_debug_string() << std::endl;
         }
 
     }
@@ -267,7 +267,7 @@ namespace tests
             .shader_compile_options = {
                 .root_paths = {
                     DAXA_SHADER_INCLUDE_DIR,
-                    "tests/2_daxa_api/6_task_list/shaders",
+                    "tests/2_daxa_api/6_task_graph/shaders",
                 },
                 .language = daxa::ShaderLanguage::GLSL,
             },
@@ -294,25 +294,25 @@ namespace tests
             const u32vec3 IMAGE_B_SIZE = {256, 256, 1};
             const u32vec3 IMAGE_BASE_SIZE = {64, 64, 1};
 
-            auto task_list = daxa::TaskGraph({
+            auto task_graph = daxa::TaskGraph({
                 .device = device,
                 .permutation_condition_count = 1,
                 .record_debug_information = true,
                 .staging_memory_pool_size = 4'000'000,
-                .name = "task_list",
+                .name = "task_graph",
             });
 
 
             // ========================================== Record tasks =======================================================
             using namespace daxa::task_resource_uses;
-            auto image_base = task_list.create_transient_image({
+            auto image_base = task_graph.create_transient_image({
                 .dimensions = 3,
                 .format = daxa::Format::R32_SFLOAT,
                 .size = {IMAGE_BASE_SIZE.x, IMAGE_BASE_SIZE.y, IMAGE_BASE_SIZE.z},
                 .name = "Image Base"
             });
 
-            task_list.add_task({
+            task_graph.add_task({
                 .uses = {
                     ImageTransferWrite<daxa::ImageViewType::REGULAR_3D>{image_base},
                 },
@@ -324,16 +324,16 @@ namespace tests
                 .name = "Task 0 - write base image value",
             });
 
-            task_list.conditional({
+            task_graph.conditional({
                 .condition_index = 0,
                 .when_true = [&](){
-                    auto image_A = task_list.create_transient_image({
+                    auto image_A = task_graph.create_transient_image({
                         .dimensions = 3,
                         .format = daxa::Format::R32_SFLOAT,
                         .size = {IMAGE_A_SIZE.x, IMAGE_A_SIZE.y, IMAGE_A_SIZE.z},
                         .name = "Image A"
                     });
-                    task_list.add_task({
+                    task_graph.add_task({
                         .uses = {
                             ImageTransferWrite<daxa::ImageViewType::REGULAR_3D>{image_A},
                         },
@@ -345,7 +345,7 @@ namespace tests
                         .name = "Perm True - Task 1 - write image A",
                     });
 
-                    task_list.add_task({
+                    task_graph.add_task({
                         .uses = {
                             ImageComputeShaderRead<daxa::ImageViewType::REGULAR_3D>{image_A},
                         },
@@ -358,14 +358,14 @@ namespace tests
                     });
                 },
                 .when_false = [&](){
-                    auto image_B = task_list.create_transient_image({
+                    auto image_B = task_graph.create_transient_image({
                         .dimensions = 3,
                         .format = daxa::Format::R32_SFLOAT,
                         .size = {IMAGE_B_SIZE.x, IMAGE_B_SIZE.y, IMAGE_B_SIZE.z},
                         .name = "Image B"
                     });
 
-                    task_list.add_task({
+                    task_graph.add_task({
                         .uses = {
                             ImageTransferWrite<daxa::ImageViewType::REGULAR_3D>{image_B},
                         },
@@ -377,7 +377,7 @@ namespace tests
                         .name = "Perm False - Task 1 - write image B",
                     });
 
-                    task_list.add_task({
+                    task_graph.add_task({
                         .uses = {
                             ImageComputeShaderRead<daxa::ImageViewType::REGULAR_3D>{image_B},
                         },
@@ -391,7 +391,7 @@ namespace tests
                 }
             });
 
-            task_list.add_task({
+            task_graph.add_task({
                 .uses = {
                     ImageComputeShaderRead<daxa::ImageViewType::REGULAR_3D>{image_base},
                 },
@@ -403,14 +403,14 @@ namespace tests
                 .name = "Task 3 - validate base image data",
             });
 
-            task_list.submit({});
-            task_list.complete({});
+            task_graph.submit({});
+            task_graph.complete({});
             bool perm_condition = true;
-            task_list.execute({.permutation_condition_values = {&perm_condition, 1}});
-            std::cout << task_list.get_debug_string() << std::endl;
+            task_graph.execute({.permutation_condition_values = {&perm_condition, 1}});
+            std::cout << task_graph.get_debug_string() << std::endl;
             perm_condition = false;
-            task_list.execute({.permutation_condition_values = {&perm_condition, 1}});
-            std::cout << task_list.get_debug_string() << std::endl;
+            task_graph.execute({.permutation_condition_values = {&perm_condition, 1}});
+            std::cout << task_graph.get_debug_string() << std::endl;
         }
     }
 
@@ -433,7 +433,7 @@ namespace tests
             .shader_compile_options = {
                 .root_paths = {
                     DAXA_SHADER_INCLUDE_DIR,
-                    "tests/2_daxa_api/6_task_list/shaders",
+                    "tests/2_daxa_api/6_task_graph/shaders",
                 },
                 .language = daxa::ShaderLanguage::GLSL,
             },
@@ -461,23 +461,23 @@ namespace tests
         auto test_buffer_pipeline = pipeline_manager.add_compute_pipeline(test_buffer_pipeline_info).value();
 
         {
-            auto task_list = daxa::TaskGraph({
+            auto task_graph = daxa::TaskGraph({
                 .device = device,
                 .reorder_tasks = false, // Disable reordering for testing purposes.
                 .record_debug_information = true,
                 .staging_memory_pool_size = 4'000'000,
-                .name = "task_list",
+                .name = "task_graph",
             });
 
             // Declare transient resources.
             auto long_life_buffer =
-                task_list.create_transient_buffer({
+                task_graph.create_transient_buffer({
                     .size = LONG_LIFE_BUFFER_SIZE * sizeof(daxa::u32),
                     .name = "long life buffer",
                 });
 
             auto medium_life_image =
-                task_list.create_transient_image({
+                task_graph.create_transient_image({
                     .dimensions = 3,
                     .format = daxa::Format::R32_SFLOAT,
                     .size = daxa::Extent3D{MEDIUM_LIFE_IMAGE_SIZE.x, MEDIUM_LIFE_IMAGE_SIZE.y, MEDIUM_LIFE_IMAGE_SIZE.z},
@@ -485,7 +485,7 @@ namespace tests
                 });
 
             auto long_life_image =
-                task_list.create_transient_image({
+                task_graph.create_transient_image({
                     .dimensions = 3,
                     .format = daxa::Format::R32_SFLOAT,
                     .size = {LONG_LIFE_IMAGE_SIZE.x, LONG_LIFE_IMAGE_SIZE.y, LONG_LIFE_IMAGE_SIZE.z},
@@ -493,7 +493,7 @@ namespace tests
                 });
 
             auto short_life_image =
-                task_list.create_transient_image({
+                task_graph.create_transient_image({
                     .dimensions = 3,
                     .format = daxa::Format::R32_SFLOAT,
                     .size = {SHORT_LIFE_IMAGE_SIZE.x, SHORT_LIFE_IMAGE_SIZE.y, SHORT_LIFE_IMAGE_SIZE.z},
@@ -501,7 +501,7 @@ namespace tests
                 });
 
             auto short_life_buffer =
-                task_list.create_transient_buffer({
+                task_graph.create_transient_buffer({
                     .size = SHORT_LIFE_BUFFER_SIZE * sizeof(daxa::u32),
                     .name = "tiny size short life buffer",
                 });
@@ -510,7 +510,7 @@ namespace tests
             using TIA = daxa::TaskImageAccess;
 
             // Record tasks.
-            task_list.add_task({
+            task_graph.add_task({
                 .uses = {
                     daxa::TaskBufferUse<TBA::TRANSFER_WRITE>{long_life_buffer},
                 },
@@ -522,7 +522,7 @@ namespace tests
                 .name = "populate long life buffer",
             });
 
-            task_list.add_task({
+            task_graph.add_task({
                 .uses = {
                     daxa::TaskImageUse<TIA::TRANSFER_WRITE, daxa::ImageViewType::REGULAR_3D>{medium_life_image},
                 },
@@ -534,7 +534,7 @@ namespace tests
                 .name = "populate medium life image",
             });
 
-            task_list.add_task({
+            task_graph.add_task({
                 .uses = {
                     daxa::TaskBufferUse<TBA::COMPUTE_SHADER_READ>{long_life_buffer},
                     daxa::TaskImageUse<TIA::COMPUTE_SHADER_READ, daxa::ImageViewType::REGULAR_3D>{medium_life_image},
@@ -550,13 +550,13 @@ namespace tests
                 .name = "validate long life buffer, validate medium life image, populate long life image",
             });
 
-            task_list.add_task({
+            task_graph.add_task({
                 .uses = {daxa::TaskImageUse<TIA::COMPUTE_SHADER_READ_WRITE>{short_life_image}},
                 .task = [=](daxa::TaskInterface) {},
                 .name = "dummy use short life image",
             });
 
-            task_list.add_task({
+            task_graph.add_task({
                 .uses = {
                     daxa::TaskBufferUse<TBA::COMPUTE_SHADER_READ_WRITE>{short_life_buffer},
                     daxa::TaskImageUse<TIA::COMPUTE_SHADER_READ, daxa::ImageViewType::REGULAR_3D>{long_life_image},
@@ -569,11 +569,11 @@ namespace tests
                 .name = "validate long life image, dummy access short life buffer",
             });
 
-            task_list.submit({});
-            task_list.complete({});
-            task_list.execute({});
+            task_graph.submit({});
+            task_graph.complete({});
+            task_graph.execute({});
 
-            std::cout << task_list.get_debug_string() << std::endl;
+            std::cout << task_graph.get_debug_string() << std::endl;
         }
         device.wait_idle();
         device.collect_garbage();

@@ -62,7 +62,7 @@ DAXA_CREATE_TEST(
     LIBS glfw
 )
 DAXA_CREATE_TEST(
-    FOLDER 2_daxa_api 6_task_list
+    FOLDER 2_daxa_api 6_task_graph
     LIBS glfw
 )
 DAXA_CREATE_TEST(

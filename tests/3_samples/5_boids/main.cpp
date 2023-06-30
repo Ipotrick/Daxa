@@ -4,7 +4,7 @@
 #include <cmath>
 
 #include <daxa/utils/pipeline_manager.hpp>
-#include <daxa/utils/task_list.hpp>
+#include <daxa/utils/task_graph.hpp>
 
 #define APPNAME "Daxa Sample: Boids"
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
@@ -88,7 +88,7 @@ struct App : AppWindow<App>
 
     daxa::CommandSubmitInfo submit_info;
 
-    daxa::TaskGraph task_list = record_tasks();
+    daxa::TaskGraph task_graph = record_tasks();
 
     App() : AppWindow<App>(APPNAME)
     {
@@ -239,12 +239,12 @@ struct App : AppWindow<App>
 
     auto record_tasks() -> daxa::TaskGraph
     {
-        daxa::TaskGraph new_task_list = daxa::TaskGraph({.device = device, .swapchain = swapchain, .name = APPNAME_PREFIX("main task list")});
-        new_task_list.use_persistent_image(task_swapchain_image);
-        new_task_list.use_persistent_buffer(task_boids_current);
-        new_task_list.use_persistent_buffer(task_boids_old);
+        daxa::TaskGraph new_task_graph = daxa::TaskGraph({.device = device, .swapchain = swapchain, .name = APPNAME_PREFIX("main task graph")});
+        new_task_graph.use_persistent_image(task_swapchain_image);
+        new_task_graph.use_persistent_buffer(task_boids_current);
+        new_task_graph.use_persistent_buffer(task_boids_old);
 
-        new_task_list.add_task(UpdateBoidsTask{
+        new_task_graph.add_task(UpdateBoidsTask{
             .uses = {
                 .current = {task_boids_current},
                 .previous = {task_boids_old},
@@ -252,7 +252,7 @@ struct App : AppWindow<App>
             .update_boids_pipeline = update_boids_pipeline,
         });
 
-        new_task_list.add_task(DrawBoidsTask{
+        new_task_graph.add_task(DrawBoidsTask{
             .uses = {
                 .boids = {task_boids_current},
                 .render_image = {task_swapchain_image},
@@ -262,11 +262,11 @@ struct App : AppWindow<App>
             .size_y = &size_y,
         });
 
-        new_task_list.submit({});
-        new_task_list.present({});
-        new_task_list.complete({});
+        new_task_graph.submit({});
+        new_task_graph.present({});
+        new_task_graph.complete({});
 
-        return new_task_list;
+        return new_task_graph;
     }
 
     void draw()
@@ -286,7 +286,7 @@ struct App : AppWindow<App>
         {
             return;
         }
-        task_list.execute({});
+        task_graph.execute({});
         // Switch boids front and back buffers.
         task_boids_current.swap_buffers(task_boids_old);
     }

@@ -463,16 +463,16 @@ enum class TaskCondition
 
 std::array<bool, static_cast<daxa::usize>(TaskCondition::COUNT)> task_condition_states{};
 
-auto loop_task_list = daxa::TaskGraph({
+auto loop_task_graph = daxa::TaskGraph({
     .device = device,
     .swapchain = swapchain,
     .permutation_condition_count = static_cast<daxa::usize>(TaskCondition::COUNT),
-    .debug_name = "my task list",
+    .debug_name = "my task graph",
 });
 ```
 
 TaskGraph works by recording tasks, completing the list and then repeatedly using this completed list over multiple frames.
-Alternatively the user can re record the task list every frame when the rendering changes. Re recording takes time, so it is better to record once and reuse TaskGraphs as much as possible.
+Alternatively the user can re record the task graph every frame when the rendering changes. Re recording takes time, so it is better to record once and reuse TaskGraphs as much as possible.
 
 Because reuse is desired, a single TaskGraph can have permutations. 
 Permutations allow for runtime conditions to trigger different outcomes. Permutations are generated for a set of conditionals, that can be set at runtime between executions. 
@@ -480,28 +480,28 @@ Permutations allow for runtime conditions to trigger different outcomes. Permuta
 For our example we only have one condition, which is whether or not its the first frame or not. In the first frame we want to do some initialization, which we do not want to do every frame.
 
 ```cpp
-auto task_swapchain_image = loop_task_list.create_task_image({.swapchain_image = true, .debug_name = "my task swapchain image"});
+auto task_swapchain_image = loop_task_graph.create_task_image({.swapchain_image = true, .debug_name = "my task swapchain image"});
 auto swapchain_image = daxa::ImageId{};
-loop_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
+loop_task_graph.add_runtime_image(task_swapchain_image, swapchain_image);
 
-auto task_buffer_id = loop_task_list.create_task_buffer({.initial_access = daxa::AccessConsts::VERTEX_SHADER_READ, .debug_name = "my task buffer"});
-loop_task_list.add_runtime_buffer(task_buffer_id, buffer_id);
+auto task_buffer_id = loop_task_graph.create_task_buffer({.initial_access = daxa::AccessConsts::VERTEX_SHADER_READ, .debug_name = "my task buffer"});
+loop_task_graph.add_runtime_buffer(task_buffer_id, buffer_id);
 ```
 
-In TaskGraph we need "virtual" resources at record time, they are called TaskBufferId and TaskImageId. The reason for this is, that between executions the images and buffers might get recreated or reassigned. To avoid having to rerecord the whole task list, task list will take TaskResources instead which are backed by runtime resources on execution.
+In TaskGraph we need "virtual" resources at record time, they are called TaskBufferId and TaskImageId. The reason for this is, that between executions the images and buffers might get recreated or reassigned. To avoid having to rerecord the whole task graph, task graph will take TaskResources instead which are backed by runtime resources on execution.
 
 Here we create a `task_swapchain_image` to represent the swapchain image. We also create a TaskBuffer that represents our vertex buffer.
 
-TaskGraph only needs to have virtual handles for resources involved in any synchronization. This means when you are sure that you only ever read from a resource in tasks, you will not need to mention them to task list. A common example of this would be to have a separated texture system that does its own synchronization and provides constant images that don't change. As these images never change they will never require any synchronization, they do not need to be mentioned in the main task list. 
+TaskGraph only needs to have virtual handles for resources involved in any synchronization. This means when you are sure that you only ever read from a resource in tasks, you will not need to mention them to task graph. A common example of this would be to have a separated texture system that does its own synchronization and provides constant images that don't change. As these images never change they will never require any synchronization, they do not need to be mentioned in the main task graph. 
 
 We also bind a "read" Buffer and Image Id to the task `resources with add_runtime_buffer` and `add_runtime_image`. All task resources must have at least one runtime buffer/image on execution, but they may be changed between executions.
 
 ```cpp
-loop_task_list.conditional({
+loop_task_graph.conditional({
     .condition_index = static_cast<daxa::u32>(TaskCondition::VERTICES_UPLOAD),
-    .when_true = [&loop_task_list, &task_buffer_id, &task_condition_states]()
+    .when_true = [&loop_task_graph, &task_buffer_id, &task_condition_states]()
     {
-        loop_task_list.add_task({
+        loop_task_graph.add_task({
             .used_buffers = {
                 {task_buffer_id, daxa::TaskBufferAccess::TRANSFER_WRITE},
             },
@@ -534,7 +534,7 @@ The task callback takes in a `daxa::TaskRuntimeInterface` which provides access 
 The runtime can also provide the runtime resource of the virtual task resource ids at runtime with `daxa::TaskRuntimeInterface::get_buffers` and `daxa::TaskRuntimeInterface::get_images`, as seen above.
 
 ```cpp
-loop_task_list.add_task({
+loop_task_graph.add_task({
 	.used_buffers = {
 		{task_buffer_id, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
 	},
@@ -560,11 +560,11 @@ We then unconditionally record a task to draw to the screen. The used resources 
 For used images you also need to provide the accessed image slice. Having this granularity allows daxa to understand subresource access synchronization for things like mip map generation or down-sampling.
 
 ```cpp
-loop_task_list.submit({});
-loop_task_list.present({});
-loop_task_list.complete({});
+loop_task_graph.submit({});
+loop_task_graph.present({});
+loop_task_graph.complete({});
 ```
 
-Now we record submit, present and complete the list. As task list handles all synchronization, we DO NOT have to specify any semaphores here, not even for the swapchain!
+Now we record submit, present and complete the list. As task graph handles all synchronization, we DO NOT have to specify any semaphores here, not even for the swapchain!
 
 > Note: If you want to inject your own semaphores or other synch in these commands, you can by providing pointers to vectors for the relevant primitives in the info `struct`s of these functions.
