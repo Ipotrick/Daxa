@@ -232,10 +232,10 @@ struct App : AppWindow<App>
         ui_update();
 
         auto reloaded_result = pipeline_manager.reload_all();
-        if (reloaded_result.has_value())
-        {
-            std::cout << reloaded_result.value().to_string() << std::endl;
-        }
+        if (auto reload_err = std::get_if<daxa::PipelineReloadError>(&reloaded_result))
+            std::cout << "Failed to reload " << reload_err->message << '\n';
+        if (auto _ = std::get_if<daxa::PipelineReloadSuccess>(&reloaded_result))
+            std::cout << "Successfully reloaded!\n";
 
         auto swapchain_image = swapchain.acquire_next_image();
 

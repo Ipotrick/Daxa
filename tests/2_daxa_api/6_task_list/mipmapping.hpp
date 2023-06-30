@@ -110,7 +110,7 @@ namespace tests
                 TASK_CONDITION_MOUSE_DRAWING = 0,
                 TASK_CONDITION_COUNT = 1,
             };
-            daxa::TaskList task_list = record_tasks();
+            daxa::TaskGraph task_list = record_tasks();
 
             App() : AppWindow<App>(APPNAME, 768 * 2, 512 * 2) {}
             ~App()
@@ -441,7 +441,7 @@ namespace tests
                 });
             }
 
-            auto record_tasks() -> daxa::TaskList
+            auto record_tasks() -> daxa::TaskGraph
             {
                 struct MipMapTask
                 {
@@ -481,7 +481,7 @@ namespace tests
                     }
                 };
 
-                daxa::TaskList new_task_list = daxa::TaskList({
+                daxa::TaskGraph new_task_list = daxa::TaskGraph({
                     .device = device,
                     .swapchain = swapchain,
                     .permutation_condition_count = TASK_CONDITION_COUNT,

@@ -32,13 +32,13 @@ namespace tests
            .name = "persistent buffer",
         });
  
-        auto task_list_A = daxa::TaskList({
+        auto task_list_A = daxa::TaskGraph({
            .device = device,
            .record_debug_information = true,
            .name = "task_list_a",
         });
 
-        auto task_list_B = daxa::TaskList({
+        auto task_list_B = daxa::TaskGraph({
            .device = device,
            .record_debug_information = true,
            .name = "task_list_b",
@@ -109,7 +109,7 @@ namespace tests
                 .name = "image",
         });
  
-        auto task_list_A = daxa::TaskList({
+        auto task_list_A = daxa::TaskGraph({
            .device = device,
            .record_debug_information = true,
            .name = "task_list_a",
@@ -129,7 +129,7 @@ namespace tests
         task_list_A.submit({});
         task_list_A.complete({});
 
-        auto task_list_B = daxa::TaskList({
+        auto task_list_B = daxa::TaskGraph({
            .device = device,
            .record_debug_information = true,
            .name = "task_list_b",

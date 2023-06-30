@@ -419,7 +419,7 @@ namespace daxa
         impl.add_virtual_include_file(virtual_info);
     }
 
-    auto PipelineManager::reload_all() -> std::optional<Result<void>>
+    auto PipelineManager::reload_all() -> PipelineReloadResult
     {
         auto & impl = *reinterpret_cast<ImplPipelineManager *>(this->object);
         return impl.reload_all();
@@ -728,7 +728,7 @@ namespace daxa
         shader_preprocess(virtual_file.contents, virtual_info.name);
     }
 
-    auto ImplPipelineManager::reload_all() -> std::optional<Result<void>>
+    auto ImplPipelineManager::reload_all() -> PipelineReloadResult
     {
         bool reloaded = false;
 
@@ -744,7 +744,7 @@ namespace daxa
                 }
                 else
                 {
-                    return {Result<void>(new_pipeline.m)};
+                    return PipelineReloadError{new_pipeline.m};
                 }
             }
         }
@@ -761,18 +761,18 @@ namespace daxa
                 }
                 else
                 {
-                    return {Result<void>(new_pipeline.m)};
+                    return PipelineReloadError{new_pipeline.m};
                 }
             }
         }
 
         if (reloaded)
         {
-            return {Result<void>{true}};
+            return PipelineReloadSuccess{};
         }
         else
         {
-            return std::nullopt;
+            return NoPipelineChanged{};
         }
     }
 
