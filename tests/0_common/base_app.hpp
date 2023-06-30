@@ -128,20 +128,20 @@ struct BaseApp : AppWindow<T>
         return false;
     }
 
-    auto record_loop_task_list() -> daxa::TaskGraph
+    auto record_loop_task_graph() -> daxa::TaskGraph
     {
         using namespace daxa::task_resource_uses;
-        daxa::TaskGraph new_task_list = daxa::TaskGraph({
+        daxa::TaskGraph new_task_graph = daxa::TaskGraph({
             .device = device,
             .swapchain = swapchain,
             .use_split_barriers = false,
-            .name = "main_task_list",
+            .name = "main_task_graph",
         });
-        new_task_list.use_persistent_image(task_swapchain_image);
+        new_task_graph.use_persistent_image(task_swapchain_image);
 
-        reinterpret_cast<T *>(this)->record_tasks(new_task_list);
+        reinterpret_cast<T *>(this)->record_tasks(new_task_graph);
 
-        new_task_list.add_task({
+        new_task_graph.add_task({
             .uses = {
                 ImageColorAttachment<>{task_swapchain_image},
             },
@@ -153,12 +153,12 @@ struct BaseApp : AppWindow<T>
             .name = "ImGui Task",
         });
 
-        new_task_list.submit({});
-        new_task_list.present({});
-        new_task_list.complete({});
+        new_task_graph.submit({});
+        new_task_graph.present({});
+        new_task_graph.complete({});
 
-        // new_task_list.output_graphviz();
+        // new_task_graph.output_graphviz();
 
-        return new_task_list;
+        return new_task_graph;
     }
 };

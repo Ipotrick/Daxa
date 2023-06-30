@@ -20,8 +20,8 @@ endif()
 if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
     list(APPEND VCPKG_MANIFEST_FEATURES "utils-pipeline-manager-spirv-validation")
 endif()
-if(DAXA_ENABLE_UTILS_TASK_LIST)
-    list(APPEND VCPKG_MANIFEST_FEATURES "utils-task-list")
+if(DAXA_ENABLE_UTILS_TASK_GRAPH)
+    list(APPEND VCPKG_MANIFEST_FEATURES "utils-task-graph")
 endif()
 if(DAXA_ENABLE_TESTS)
     list(APPEND VCPKG_MANIFEST_FEATURES "tests")
@@ -70,7 +70,7 @@ add_library(daxa STATIC
     "src/impl_timeline_query.cpp"
     "src/impl_memory_block.cpp"
 
-    "src/utils/impl_task_list.cpp"
+    "src/utils/impl_task_graph.cpp"
     "src/utils/impl_imgui.cpp"
     "src/utils/impl_fsr2.cpp"
     "src/utils/impl_mem.cpp"
@@ -159,10 +159,10 @@ if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
         SPIRV-Tools-static
     )
 endif()
-if(DAXA_ENABLE_UTILS_TASK_LIST)
+if(DAXA_ENABLE_UTILS_TASK_GRAPH)
     target_compile_definitions(daxa
         PUBLIC
-        DAXA_BUILT_WITH_UTILS_TASK_LIST=true
+        DAXA_BUILT_WITH_UTILS_TASK_GRAPH=true
     )
 endif()
 
@@ -257,7 +257,7 @@ if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
 find_package(SPIRV-Tools CONFIG REQUIRED)
 ]=])
 endif()
-if(DAXA_ENABLE_UTILS_TASK_LIST)
+if(DAXA_ENABLE_UTILS_TASK_GRAPH)
 # No package management work to do
 endif()
 

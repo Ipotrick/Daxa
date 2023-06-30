@@ -12,7 +12,7 @@
     }                             \
     ;
 #else
-#include "task_list_types.hpp"
+#include "task_graph_types.hpp"
 #define DAXA_DECL_TASK_USES_BEGIN(TASK_NAME, SLOT)           \
     struct TASK_NAME                                         \
     {                                                        \
