@@ -2,12 +2,12 @@
 
 The tools needed are as follows:
  - C++ Compiler
-      (I highly recommend clang on Windows, but it appears G++ is the only thing that works for Linux at the moment)
+     (I highly recommend clang on Windows)
  - CMake
  - Ninja
  - vcpkg
  - Vulkan SDK
- 
+
 installing these things isn't too complicated, but I'll walk through the process for both Windows and Linux, for the sake of completeness
 
 ***
@@ -136,7 +136,7 @@ see [our page on common issues](https://github.com/Ipotrick/Daxa/tree/master/wik
 
 I recommend using VSCode with the official Microsoft C++ extension pack
 
-Daxa comes with a launch script for launching samples with the VSCode debugger. First you need to select a build configuration. There should be the option of debug/release. To just build it without launching, you can press F7. This will make vcpkg pull in all the dependencies (build them if not already installed), build daxa itself, and will build all the samples. To run a sample, you select which one from the bottom, and press F5. If the code hasn’t already been built, this will also trigger a build step identical to pressing F7.
+Daxa comes with a launch script for launching samples with the VSCode debugger. First you need to select a build configuration. There should be the option of debug/release. To just build it without launching, you can press F7. This will make vcpkg pull in all the dependencies (build them if not already installed), build Daxa itself, and will build all the samples. To run a sample, you select which one from the bottom, and press F5. If the code hasn’t already been built, this will also trigger a build step identical to pressing F7.
 
 ## Custom Validation (Only really applicable to Daxa developers):
 
@@ -149,7 +149,7 @@ Open up Vulkan Configurator and add a new layer profile
 Add a user-defined path
 ![Screenshot 2022-10-02 110800](https://user-images.githubusercontent.com/28205981/193466859-19dc5cdc-6dce-4a0f-bf67-aabd36a55003.png)
 
-For me, it's at `C:/dev/projects/c++/Vulkan-ValidationLayers/build/debug-windows/layers`
+For me, it's at `C:/dev/projects/cpp/Vulkan-ValidationLayers/build/debug-windows/layers`
 ![Screenshot 2022-10-02 110934](https://user-images.githubusercontent.com/28205981/193466910-7e0c6be9-7eb2-4d99-b60e-2fe5b38b64bb.png)
 
 And then force override the validation layer

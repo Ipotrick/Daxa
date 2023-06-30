@@ -114,7 +114,7 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 ///         These types are just redefines for bda blocks, so they have all the glsl syntax like casting to a u64 working.
 /// @param STRUCT_TYPE Struct type contained by the buffer device address block / "pointed to type".
 #define daxa_CoherentRWBufferPtr(STRUCT_TYPE) daxa_CoherentRWBufferPtr$$STRUCT_TYPE
-/// @brief  Defines a makro for more explicitly visible "dereferencing" of buffer pointers.
+/// @brief  Defines a macro for more explicitly visible "dereferencing" of buffer pointers.
 #define deref(BUFFER_PTR) BUFFER_PTR.value
 
 /// @brief Defines the buffer reference layout used in all buffer references in daxa glsl.
@@ -127,7 +127,7 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 /// @brief Defines the sampler layout used in all buffer references in daxa glsl.
 #define DAXA_SAMPLER_LAYOUT layout(binding = DAXA_SAMPLER_BINDING, set = 0)
 
-/// @brief  Defines three buffer reference using daxas buffer reference layout.
+/// @brief  Defines three buffer reference using daxa's buffer reference layout.
 ///         The three blocks are 1. read write, 2. read only, 3. read write coherent.
 ///         The name of the buffer reference blocks are daxa_RWBufferPtr##STRUCT_TYPE daxa_BufferPtr##STRUCT_TYPE daxa_CoherentRWBufferPtr##STRUCT_TYPE.
 ///         The buffer reference block contains a single field called value with the given struct type.
@@ -172,7 +172,7 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
         STRUCT_TYPE value;                                \
     };
 
-/// @brief Defines a push constant using daxas predefined push constant layout.
+/// @brief Defines a push constant using daxa's predefined push constant layout.
 /// @param STRUCT Struct type the push constant contains.
 /// @param NAME Global name of the struct inside the push constant block.
 /// Usage example:
