@@ -208,7 +208,7 @@ To see a full implementation go ahead to the daxa samples and look into the 4_he
 
 In the next step we will render a triangle.
 
-We will also introduce a few utils: the PipelineManager and the TaskList.
+We will also introduce a few utils: the PipelineManager and the TaskGraph.
 
 ## Pipelines
 
@@ -444,15 +444,15 @@ cmd_list.copy_buffer_to_buffer({
 });
 ```
 
-## TaskList
+## TaskGraph
 
 Manual synchronization is very error prone and difficult to optimize and maintain. Writing some automatic synchronization abstraction is mandatory for any complex program using vulkan.
 
-Daxa provides a util called TaskList. TaskList allows us to compile a list of GPU tasks and their dependencies into a synchronized set of commands.
+Daxa provides a util called TaskGraph. TaskGraph allows us to compile a list of GPU tasks and their dependencies into a synchronized set of commands.
 This simplifies your code by making different tasks completely self-contained, while also reordering and generating optimized synchronization for the given tasks automatically.
-TaskList is a simple auto-synch abstraction that can be used "as is" or as a reference to design your own auto-synch on top of daxa.
+TaskGraph is a simple auto-synch abstraction that can be used "as is" or as a reference to design your own auto-synch on top of daxa.
 
-We are going to use TaskList here, as a showcase of how it is used and to keep this tutorial shorter.
+We are going to use TaskGraph here, as a showcase of how it is used and to keep this tutorial shorter.
 
 ```cpp
 enum class TaskCondition
@@ -463,7 +463,7 @@ enum class TaskCondition
 
 std::array<bool, static_cast<daxa::usize>(TaskCondition::COUNT)> task_condition_states{};
 
-auto loop_task_list = daxa::TaskList({
+auto loop_task_list = daxa::TaskGraph({
     .device = device,
     .swapchain = swapchain,
     .permutation_condition_count = static_cast<daxa::usize>(TaskCondition::COUNT),
@@ -471,10 +471,10 @@ auto loop_task_list = daxa::TaskList({
 });
 ```
 
-TaskList works by recording tasks, completing the list and then repeatedly using this completed list over multiple frames.
-Alternatively the user can re record the task list every frame when the rendering changes. Re recording takes time, so it is better to record once and reuse TaskLists as much as possible.
+TaskGraph works by recording tasks, completing the list and then repeatedly using this completed list over multiple frames.
+Alternatively the user can re record the task list every frame when the rendering changes. Re recording takes time, so it is better to record once and reuse TaskGraphs as much as possible.
 
-Because reuse is desired, a single TaskList can have permutations. 
+Because reuse is desired, a single TaskGraph can have permutations. 
 Permutations allow for runtime conditions to trigger different outcomes. Permutations are generated for a set of conditionals, that can be set at runtime between executions. 
 
 For our example we only have one condition, which is whether or not its the first frame or not. In the first frame we want to do some initialization, which we do not want to do every frame.
@@ -488,11 +488,11 @@ auto task_buffer_id = loop_task_list.create_task_buffer({.initial_access = daxa:
 loop_task_list.add_runtime_buffer(task_buffer_id, buffer_id);
 ```
 
-In TaskList we need "virtual" resources at record time, they are called TaskBufferId and TaskImageId. The reason for this is, that between executions the images and buffers might get recreated or reassigned. To avoid having to rerecord the whole task list, task list will take TaskResources instead which are backed by runtime resources on execution.
+In TaskGraph we need "virtual" resources at record time, they are called TaskBufferId and TaskImageId. The reason for this is, that between executions the images and buffers might get recreated or reassigned. To avoid having to rerecord the whole task list, task list will take TaskResources instead which are backed by runtime resources on execution.
 
 Here we create a `task_swapchain_image` to represent the swapchain image. We also create a TaskBuffer that represents our vertex buffer.
 
-TaskList only needs to have virtual handles for resources involved in any synchronization. This means when you are sure that you only ever read from a resource in tasks, you will not need to mention them to task list. A common example of this would be to have a separated texture system that does its own synchronization and provides constant images that don't change. As these images never change they will never require any synchronization, they do not need to be mentioned in the main task list. 
+TaskGraph only needs to have virtual handles for resources involved in any synchronization. This means when you are sure that you only ever read from a resource in tasks, you will not need to mention them to task list. A common example of this would be to have a separated texture system that does its own synchronization and provides constant images that don't change. As these images never change they will never require any synchronization, they do not need to be mentioned in the main task list. 
 
 We also bind a "read" Buffer and Image Id to the task `resources with add_runtime_buffer` and `add_runtime_image`. All task resources must have at least one runtime buffer/image on execution, but they may be changed between executions.
 

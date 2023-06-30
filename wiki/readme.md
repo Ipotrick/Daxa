@@ -9,7 +9,7 @@ Be sure to also check out the code samples inside the tests folder!
 
 Feature documentation:
 
-* [TaskList (rendergraph)](https://github.com/Ipotrick/Daxa/tree/master/wiki/TaskList.md)
+* [TaskGraph (rendergraph)](https://github.com/Ipotrick/Daxa/tree/master/wiki/TaskGraph.md)
 * [Bindless sharer resources](https://github.com/Ipotrick/Daxa/tree/master/wiki/Bindless.md)
 * [C++/shader integration](https://github.com/Ipotrick/Daxa/tree/master/wiki/ShaderIntegration.md)
 * [PipelineManager (shader build system)](https://github.com/Ipotrick/Daxa/tree/master/wiki/PipelineManager.md)

@@ -92,6 +92,17 @@ namespace daxa
         std::string contents = {};
     };
 
+    struct PipelineReloadSuccess
+    {
+    };
+    struct PipelineReloadError
+    {
+        std::string message;
+    };
+    using NoPipelineChanged = std::monostate;
+
+    using PipelineReloadResult = std::variant<NoPipelineChanged, PipelineReloadSuccess, PipelineReloadError>;
+
     struct PipelineManager : ManagedPtr
     {
         PipelineManager() = default;
@@ -103,6 +114,6 @@ namespace daxa
         void remove_compute_pipeline(std::shared_ptr<ComputePipeline> const & pipeline);
         void remove_raster_pipeline(std::shared_ptr<RasterPipeline> const & pipeline);
         void add_virtual_include_file(VirtualIncludeInfo const & info);
-        auto reload_all() -> std::optional<Result<void>>;
+        auto reload_all() -> PipelineReloadResult;
     };
 } // namespace daxa

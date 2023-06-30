@@ -311,7 +311,7 @@ namespace daxa
     }
 
 #if DAXA_BUILT_WITH_UTILS_TASK_LIST
-    void ImGuiRenderer::record_task(ImDrawData * /* draw_data */, TaskList & /* task_list */, TaskImageHandle /* task_swapchain_image */, u32 /* size_x */, u32 /* size_y */)
+    void ImGuiRenderer::record_task(ImDrawData * /* draw_data */, TaskGraph & /* task_list */, TaskImageHandle /* task_swapchain_image */, u32 /* size_x */, u32 /* size_y */)
     {
     }
 #endif
