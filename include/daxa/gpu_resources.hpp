@@ -112,7 +112,7 @@ namespace daxa
         bool enable_compare = false;
         CompareOp compare_op = CompareOp::ALWAYS;
         f32 min_lod = 0.0f;
-        f32 max_lod = 1.0f;
+        f32 max_lod = 0.0f;
         BorderColor border_color = BorderColor::FLOAT_TRANSPARENT_BLACK;
         bool enable_unnormalized_coordinates = false;
         std::string name = {};
