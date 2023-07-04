@@ -23,7 +23,8 @@ I am happy to say that for me (and others) it achieves that goal.
 - [x] Bindless shader resource model (much simpler and naturally gpu driven friendly descriptor management). (https://github.com/Ipotrick/Daxa/tree/master/wiki/Bindless.md)
 - [x] C++ and shader code sharing utilities (no need for shader reflection, simply share source files). (https://github.com/Ipotrick/Daxa/tree/master/wiki/ShaderIntegration.md)
 - [x] Shader build system, including features like `#include` management and shader hot-reloading. (https://github.com/Ipotrick/Daxa/tree/master/wiki/PipelineManager.md)
-other, less noteworthy features: [Other Features](https://github.com/Ipotrick/Daxa/tree/master/wiki/Features.md)
+      
+List of other noteworthy features: [Other Features](https://github.com/Ipotrick/Daxa/tree/master/wiki/Features.md)
 
 ## Getting started
 
