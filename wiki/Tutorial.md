@@ -18,7 +18,7 @@ To do any Daxa API calls, one needs to create a `daxa::Instance`.
 
 int main()
 {
-    daxa::Instance context = daxa::create_instance({});
+    daxa::Instance instance = daxa::create_instance({});
 }
 ```
 
@@ -37,7 +37,7 @@ As it is possible to have multiple GPUs in a system, one can create multiple `da
 To choose a device from the available devices, one can optionally provide Daxa with a callback rating a device's suitability.
 
 ```cpp
-daxa::Device device = context.create_device({
+daxa::Device device = instance.create_device({
     .selector = [](daxa::DeviceProperties const & device_props) -> daxa::i32
     {
         daxa::i32 score = 0;

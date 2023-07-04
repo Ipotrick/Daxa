@@ -92,14 +92,12 @@ struct App : AppWindow<App>
     u32 vert_n = 0;
 
     daxa::ImageMipArraySlice s0 = {
-        .image_aspect = daxa::ImageAspectFlagBits::COLOR | daxa::ImageAspectFlagBits::DEPTH,
         .base_mip_level = 3,
         .level_count = 5,
         .base_array_layer = 2,
         .layer_count = 4,
     };
     daxa::ImageMipArraySlice s1 = {
-        .image_aspect = daxa::ImageAspectFlagBits::COLOR,
         .base_mip_level = 5,
         .level_count = 2,
         .base_array_layer = 3,

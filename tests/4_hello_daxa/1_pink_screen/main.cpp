@@ -55,18 +55,18 @@ auto main() -> int
     auto *native_window_handle = get_native_handle(glfw_window_ptr);
     auto native_window_platform = get_native_platform(glfw_window_ptr);
 
-    // First thing we do is create a Daxa context. This essentially exists
-    // to initialize the Vulkan context, and allows for the creation of multiple
+    // First thing we do is create a Daxa instance. This essentially exists
+    // to initialize the Vulkan instance, and allows for the creation of multiple
     // devices.
-    daxa::Instance context = daxa::create_instance({});
+    daxa::Instance instance = daxa::create_instance({});
 
-    // We then just create a Daxa device by using the context, and providing
+    // We then just create a Daxa device by using the instance, and providing
     // the necessary parameters. This is where you'd select different features
     // and extensions that aren't necessarily present on all GPU's drivers.
     // A user's computer may have multiple devices, so you can provide a selector
     // function which just returns to daxa the rating level of each device listed,
     // ultimately returning a handle to the device which was scored highest!
-    daxa::Device device = context.create_device({
+    daxa::Device device = instance.create_device({
         .selector = [](daxa::DeviceProperties const & device_props) -> daxa::i32
         {
             daxa::i32 score = 0;

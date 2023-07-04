@@ -42,7 +42,7 @@ DAXA_CREATE_TEST(
 )
 
 DAXA_CREATE_TEST(
-    FOLDER 2_daxa_api 1_context
+    FOLDER 2_daxa_api 1_instance
     LIBS
 )
 DAXA_CREATE_TEST(
