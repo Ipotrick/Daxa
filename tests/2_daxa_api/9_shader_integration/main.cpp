@@ -63,7 +63,7 @@ namespace tests
         //  1) Create resources
         //  2) Use Compute dispatch read and write
         //  4) readback and validate
-        daxa::Context daxa_ctx = daxa::create_context({
+        daxa::Instance daxa_ctx = daxa::create_instance({
             .enable_validation = false,
         });
         daxa::Device device = daxa_ctx.create_device({
@@ -174,7 +174,7 @@ namespace tests
         //  3) perform showcase of bindless handle use in the shader.
         //  4) write handles to buffer.
         //  5) read and use handles in following compute shader.
-        daxa::Context daxa_ctx = daxa::create_context({
+        daxa::Instance daxa_ctx = daxa::create_instance({
             .enable_validation = false,
         });
         daxa::Device device = daxa_ctx.create_device({

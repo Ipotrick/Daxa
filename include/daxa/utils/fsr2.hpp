@@ -12,7 +12,7 @@ namespace daxa
     {
         Fsr2Context() = default;
 
-        Fsr2Context(UpscaleContextInfo const & info);
+        Fsr2Context(UpscaleInstanceInfo const & info);
         ~Fsr2Context();
 
         void resize(UpscaleSizeInfo const & info);

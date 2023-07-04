@@ -21,22 +21,22 @@ namespace daxa
 #endif
     }
 
-    struct ContextInfo
+    struct InstanceInfo
     {
         bool enable_validation = false;
         std::function<void(MsgSeverity, MsgType, std::string_view)> validation_callback = default_validation_callback;
     };
 
-    struct Context : ManagedPtr
+    struct Instance : ManagedPtr
     {
-        Context() = default;
+        Instance() = default;
 
         auto create_device(DeviceInfo const & device_info) -> Device;
 
       private:
-        friend auto create_context(ContextInfo const & info) -> Context;
-        explicit Context(ManagedPtr impl);
+        friend auto create_instance(InstanceInfo const & info) -> Instance;
+        explicit Instance(ManagedPtr impl);
     };
 
-    auto create_context(ContextInfo const & info) -> Context;
+    auto create_instance(InstanceInfo const & info) -> Instance;
 } // namespace daxa

@@ -13,20 +13,20 @@ namespace daxa
         VkDebugUtilsMessengerCallbackDataEXT const * p_callback_data,
         void * p_user_data) -> VkBool32
     {
-        ContextInfo const & info = *reinterpret_cast<ContextInfo const *>(p_user_data);
+        InstanceInfo const & info = *reinterpret_cast<InstanceInfo const *>(p_user_data);
         std::string_view const msg = p_callback_data->pMessage;
         info.validation_callback(static_cast<MsgSeverity>(msg_severity), static_cast<MsgType>(msg_type), msg);
         return VK_TRUE;
     }
 
-    auto create_context(ContextInfo const & info) -> Context
+    auto create_instance(InstanceInfo const & info) -> Instance
     {
-        return Context{ManagedPtr{new ImplContext(info)}};
+        return Instance{ManagedPtr{new ImplContext(info)}};
     }
 
-    Context::Context(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
+    Instance::Instance(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
-    auto Context::create_device(DeviceInfo const & device_info) -> Device
+    auto Instance::create_device(DeviceInfo const & device_info) -> Device
     {
         auto & impl = *as<ImplContext>();
 
@@ -63,7 +63,7 @@ namespace daxa
         return Device{ManagedPtr{new ImplDevice(device_info, this->make_weak(), physical_device)}};
     }
 
-    ImplContext::ImplContext(ContextInfo a_info)
+    ImplContext::ImplContext(InstanceInfo a_info)
         : info{std::move(a_info)}
     {
         std::vector<char const *> enabled_layers{};
