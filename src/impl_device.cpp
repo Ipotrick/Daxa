@@ -37,19 +37,7 @@ namespace daxa
 
         auto const vk_image_type = static_cast<VkImageType>(image_info.dimensions - 1);
 
-        VkImageCreateFlags vk_image_create_flags = {};
-
-        constexpr auto CUBE_FACE_N = 6u;
-        if (image_info.dimensions == 2 && image_info.size.x == image_info.size.y && image_info.array_layer_count % CUBE_FACE_N == 0)
-        {
-            vk_image_create_flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-        }
-        if (image_info.dimensions == 3)
-        {
-            // TODO(grundlett): Figure out if there are cases where a 3D image CAN'T be used
-            // as a 2D array image view.
-            vk_image_create_flags |= VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
-        }
+        VkImageCreateFlags vk_image_create_flags = static_cast<VkImageCreateFlags>(image_info.flags.data);
 
         VkImageCreateInfo const vk_image_create_info{
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
