@@ -21,8 +21,8 @@ namespace daxa
 
     struct TaskInterfaceUses
     {
-        auto operator[](TaskBufferHandle const & handle) const -> TaskBufferUse<> const &;
-        auto operator[](TaskImageHandle const & handle) const -> TaskImageUse<> const &;
+        auto operator[](TaskBufferSlice const & handle) const -> TaskBufferUse<> const &;
+        auto operator[](TaskImageSlice const & handle) const -> TaskImageUse<> const &;
         auto get_uniform_buffer_info() const -> SetConstantBufferInfo;
       protected:
         friend struct ImplTaskRuntimeInterface;
@@ -71,7 +71,7 @@ namespace daxa
     struct TaskImageAliasInfo
     {
         std::string alias = {};
-        std::variant<TaskImageHandle, std::string> aliased_image = {};
+        std::variant<TaskImageSlice, std::string> aliased_image = {};
         u32 base_mip_level_offset = {};
         u32 base_array_layer_offset = {};
     };
@@ -79,7 +79,7 @@ namespace daxa
     struct TaskBufferAliasInfo
     {
         std::string alias = {};
-        std::variant<TaskBufferHandle, std::string> aliased_buffer = {};
+        std::variant<TaskBufferSlice, std::string> aliased_buffer = {};
     };
 
     template <typename TaskArgs>
@@ -178,9 +178,9 @@ namespace daxa
         TaskBuffer() = default;
         TaskBuffer(TaskBufferInfo const & info);
 
-        operator TaskBufferHandle() const;
+        operator TaskBufferSlice() const;
 
-        auto handle() const -> TaskBufferHandle;
+        auto handle() const -> TaskBufferSlice;
         auto info() const -> TaskBufferInfo const &;
         auto get_state() const -> TrackedBuffers;
 
@@ -207,9 +207,9 @@ namespace daxa
         TaskImage() = default;
         TaskImage(TaskImageInfo const & info);
 
-        operator TaskImageHandle() const;
+        operator TaskImageSlice() const;
 
-        auto handle() const -> TaskImageHandle;
+        auto handle() const -> TaskImageSlice;
         auto info() const -> TaskImageInfo const &;
         auto get_state() const -> TrackedImages;
 
@@ -235,8 +235,8 @@ namespace daxa
         void use_persistent_buffer(TaskBuffer const & buffer);
         void use_persistent_image(TaskImage const & image);
 
-        auto create_transient_buffer(TaskTransientBufferInfo const & info) -> TaskBufferHandle;
-        auto create_transient_image(TaskTransientImageInfo const & info) -> TaskImageHandle;
+        auto create_transient_buffer(TaskTransientBufferInfo const & info) -> TaskBufferSlice;
+        auto create_transient_image(TaskTransientImageInfo const & info) -> TaskImageSlice;
 
         template <typename Task>
         void add_task(Task const & task)
