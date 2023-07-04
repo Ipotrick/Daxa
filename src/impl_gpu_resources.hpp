@@ -37,6 +37,7 @@ namespace daxa
         VkImage vk_image = {};
         VmaAllocation vma_allocation = {};
         i32 swapchain_image_index = NOT_OWNED_BY_SWAPCHAIN;
+        VkImageAspectFlags aspect_flags = {}; // Inferred from format.
         bool zombie = {};
     };
 

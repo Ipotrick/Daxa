@@ -51,7 +51,7 @@ namespace daxa
         vkCreateQueryPool(impl_device.as<ImplDevice>()->vk_device, &vk_query_pool_create_info, nullptr, &vk_timeline_query_pool);
         vkResetQueryPool(impl_device.as<ImplDevice>()->vk_device, vk_timeline_query_pool, 0, info.query_count);
 
-        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && !info.name.empty())
+        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->enable_debug_names && !info.name.empty())
         {
             VkDebugUtilsObjectNameInfoEXT const query_pool_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,

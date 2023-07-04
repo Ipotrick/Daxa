@@ -1,5 +1,5 @@
 #include "impl_core.hpp"
-#include "impl_context.hpp"
+#include "impl_instance.hpp"
 #include "impl_device.hpp"
 
 #include <chrono>
@@ -21,14 +21,14 @@ namespace daxa
 
     auto create_instance(InstanceInfo const & info) -> Instance
     {
-        return Instance{ManagedPtr{new ImplContext(info)}};
+        return Instance{ManagedPtr{new ImplInstance(info)}};
     }
 
     Instance::Instance(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
     auto Instance::create_device(DeviceInfo const & device_info) -> Device
     {
-        auto & impl = *as<ImplContext>();
+        auto & impl = *as<ImplInstance>();
 
         u32 physical_device_n = 0;
         vkEnumeratePhysicalDevices(impl.vk_instance, &physical_device_n, nullptr);
@@ -63,7 +63,7 @@ namespace daxa
         return Device{ManagedPtr{new ImplDevice(device_info, this->make_weak(), physical_device)}};
     }
 
-    ImplContext::ImplContext(InstanceInfo a_info)
+    ImplInstance::ImplInstance(InstanceInfo a_info)
         : info{std::move(a_info)}
     {
         std::vector<char const *> enabled_layers{};
@@ -154,7 +154,7 @@ namespace daxa
         }
     }
 
-    ImplContext::~ImplContext() // NOLINT(bugprone-exception-escape)
+    ImplInstance::~ImplInstance() // NOLINT(bugprone-exception-escape)
     {
         if (this->info.enable_validation)
         {

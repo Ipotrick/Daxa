@@ -8,5 +8,5 @@
 #include <daxa/swapchain.hpp>
 #include <daxa/command_list.hpp>
 #include <daxa/device.hpp>
-#include <daxa/context.hpp>
+#include <daxa/instance.hpp>
 #include <daxa/timeline_query.hpp>
