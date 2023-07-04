@@ -58,7 +58,7 @@ auto main() -> int
     // First thing we do is create a Daxa context. This essentially exists
     // to initialize the Vulkan context, and allows for the creation of multiple
     // devices.
-    daxa::Context context = daxa::create_context({});
+    daxa::Instance context = daxa::create_instance({});
 
     // We then just create a Daxa device by using the context, and providing
     // the necessary parameters. This is where you'd select different features

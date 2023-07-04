@@ -241,7 +241,7 @@ namespace daxa
         auto is_id_valid(SamplerId id) const -> bool;
 
       private:
-        friend struct Context;
+        friend struct Instance;
         Device(ManagedPtr impl);
     };
 } // namespace daxa
