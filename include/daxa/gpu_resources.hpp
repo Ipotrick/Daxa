@@ -49,7 +49,7 @@ namespace daxa
         {
         };
 
-        template<ImageViewType VIEW_TYPE>
+        template <ImageViewType VIEW_TYPE>
         struct TypedImageViewId : public ImageViewId
         {
             static constexpr inline auto view_type() -> ImageViewType { return VIEW_TYPE; }
@@ -74,8 +74,23 @@ namespace daxa
         std::string name = {};
     };
 
+    struct ImageCreateFlagsProperties
+    {
+        using Data = u32;
+    };
+    using ImageCreateFlags = Flags<ImageCreateFlagsProperties>;
+    struct ImageCreateFlagBits
+    {
+        static inline constexpr ImageCreateFlags NONE = {0x00000000};
+        static inline constexpr ImageCreateFlags ALLOW_MUTABLE_FORMAT = {0x00000008};
+        static inline constexpr ImageCreateFlags COMPATIBLE_CUBE = {0x00000010};
+        static inline constexpr ImageCreateFlags COMPATIBLE_2D_ARRAY = {0x00000020};
+        static inline constexpr ImageCreateFlags ALLOW_ALIAS = {0x00000400};
+    };
+
     struct ImageInfo
     {
+        ImageCreateFlags flags = ImageCreateFlagBits::NONE;
         u32 dimensions = 2;
         Format format = Format::R8G8B8A8_UNORM;
         Extent3D size = {0, 0, 0};
