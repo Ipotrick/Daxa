@@ -410,7 +410,7 @@ namespace tests
         //          Task 3
         //      Batch 2:
         //          Task 2
-        daxa::Context daxa_ctx = daxa::create_context({
+        daxa::Instance daxa_ctx = daxa::create_instance({
             .enable_validation = false,
         });
         daxa::Device device = daxa_ctx.create_device({

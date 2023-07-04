@@ -11,7 +11,7 @@ namespace daxa
         u32 display_size_x, display_size_y;
     };
 
-    struct UpscaleContextInfo
+    struct UpscaleInstanceInfo
     {
         Device device;
         UpscaleSizeInfo size_info = {};
