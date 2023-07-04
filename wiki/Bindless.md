@@ -22,13 +22,13 @@ daxa::SamplerId sampler_id = device.create_image_sampler({...});
 
 Daxa only supports separate images and samplers, so no combined image samplers. This is for simplicity and also possible future D3D12 compatibility (D3D12 only supports separated images and samplers).
 
-Interestingly, all images are created with a default image view, that can be retrieved like this:
+Notably, all images are created with a default image view, that can be retrieved like this:
 
 ```c++
 daxa::ImageViewId image_view_id = image_id.default_view();
 ```
 
-This is very handy, as most of the time one only really needs one view of the image. But Daxa image views are a bit special compared to Vulkan image views. In Vulkan, an image view is either a sampled image OR a storage image. Daxa always creates two image descriptors for each daxa::ImageViewId, one for storage image (in layout GENERAL) and one for sampled image (in layout SHADER_READ_ONLY_OPTIMAL), as long as the image type and format allows for each access.
+This is very handy, as most of the time one only really needs one view of the whole image. But Daxa image views are a bit special compared to Vulkan image views. In Vulkan, an image view is either a sampled image OR a storage image. Daxa always creates two image descriptors for each daxa::ImageViewId, one for storage image (in layout GENERAL) and one for sampled image (in layout SHADER_READ_ONLY_OPTIMAL), as long as the image type and format allows for each access.
 
 ### Image Shader Access
 
@@ -56,6 +56,10 @@ uvec2 size = textureSize(daxa_texture1DArray(img));
 ```
 
 For each image access, the image view ID must be cast to the corresponding GLSL type with Daxa's macros. Daxa defines macros for all normal image/texture/sampler types and even for some commonly used extensions like 64 bit images.
+
+You do NOT need to interact with any binding logic. No descriptor sets, descriptor layouts, pipeline layouts binding, set numbers or shader reflection. Daxa Ddes all the descriptor management behind the scenes.
+
+When an image or image view is created, the image views are immediately added to the bindless table. When an image (-view) gets destroyed it is removed from the table. Note that resource desctruction is deferred to the end of all currently running gpu work, so you do not need to write a zombie queue or similar in most cases.
 
 ## Buffers In Daxa
 
