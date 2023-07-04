@@ -101,7 +101,7 @@ namespace tests
                 return ret;
             }();
 
-            daxa::TaskBufferHandle task_staging_mipmapping_gpu_input_buffer;
+            daxa::TaskBufferSlice task_staging_mipmapping_gpu_input_buffer;
 
             bool mouse_drawing = false;
 
@@ -263,11 +263,11 @@ namespace tests
                     cmd_list.blit_image_to_image({
                         .src_image = src_image_id,
                         .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
+                        .dst_image = dst_image_id,
+                        .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                         .src_slice = {
                             .mip_level = static_cast<u32>(i),
                         },
-                        .dst_image = dst_image_id,
-                        .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                         .src_offsets = {{{0, 0, 0}, {static_cast<i32>(static_cast<f32>(src_size.x) / scl_2), static_cast<i32>(static_cast<f32>(src_size.y) / scl_2), 1}}},
                         .dst_offsets = {
                             {

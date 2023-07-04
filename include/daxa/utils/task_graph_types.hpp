@@ -123,14 +123,14 @@ namespace daxa
 
     auto to_string(TaskGPUResourceHandle const & id) -> std::string;
 
-    struct TaskBufferHandle : public TaskGPUResourceHandle
+    struct TaskBufferSlice : public TaskGPUResourceHandle
     {
     };
 
-    struct TaskImageHandle : public TaskGPUResourceHandle
+    struct TaskImageSlice : public TaskGPUResourceHandle
     {
         daxa::ImageMipArraySlice slice = {};
-        auto subslice(daxa::ImageMipArraySlice const & new_slice) const -> TaskImageHandle
+        auto subslice(daxa::ImageMipArraySlice const & new_slice) const -> TaskImageSlice
         {
             auto ret = *this;
             ret.slice = new_slice;
@@ -173,16 +173,16 @@ namespace daxa
         TaskBufferAccess m_access = T_ACCESS;
 
       public:
-        TaskBufferHandle handle = {};
+        TaskBufferSlice handle = {};
 
         constexpr TaskBufferUse() = default;
 
-        constexpr TaskBufferUse(TaskBufferHandle const & a_handle)
+        constexpr TaskBufferUse(TaskBufferSlice const & a_handle)
             : handle{a_handle}
         {
         }
 
-        constexpr TaskBufferUse(TaskBufferHandle const & a_handle, TaskBufferAccess access)
+        constexpr TaskBufferUse(TaskBufferSlice const & a_handle, TaskBufferAccess access)
             requires(T_ACCESS == TaskBufferAccess::NONE)
             : handle{a_handle}, m_access{access}
         {
@@ -234,16 +234,16 @@ namespace daxa
         std::span<ImageViewId const> views = {};
 
       public:
-        TaskImageHandle handle = {};
+        TaskImageSlice handle = {};
 
         constexpr TaskImageUse() = default;
 
-        constexpr TaskImageUse(TaskImageHandle const & a_handle)
+        constexpr TaskImageUse(TaskImageSlice const & a_handle)
             : handle{a_handle}
         {
         }
 
-        constexpr TaskImageUse(TaskImageHandle const & a_handle, TaskImageAccess access, ImageViewType view_type = ImageViewType::MAX_ENUM)
+        constexpr TaskImageUse(TaskImageSlice const & a_handle, TaskImageAccess access, ImageViewType view_type = ImageViewType::MAX_ENUM)
             requires(T_ACCESS == TaskImageAccess::NONE && T_VIEW_TYPE == ImageViewType::MAX_ENUM)
             : handle{a_handle}, m_access{access}, m_view_type{view_type}
         {
