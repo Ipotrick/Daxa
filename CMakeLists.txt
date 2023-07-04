@@ -58,7 +58,7 @@ endif()
 
 add_library(daxa STATIC
     "src/impl_device.cpp"
-    "src/impl_context.cpp"
+    "src/impl_instance.cpp"
     "src/impl_core.cpp"
     "src/impl_pipeline.cpp"
     "src/impl_swapchain.cpp"

@@ -1784,7 +1784,6 @@ namespace daxa
                 perm_image.actual_image = info.device.create_image(ImageInfo{
                     .dimensions = transient_image_info.dimensions,
                     .format = transient_image_info.format,
-                    .aspect = transient_image_info.aspect,
                     .size = transient_image_info.size,
                     .mip_level_count = transient_image_info.mip_level_count,
                     .array_layer_count = transient_image_info.array_layer_count,
@@ -1811,7 +1810,6 @@ namespace daxa
                 ImageInfo const image_info = {
                     .dimensions = transient_image.info.dimensions,
                     .format = transient_image.info.format,
-                    .aspect = transient_image.info.aspect,
                     .size = transient_image.info.size,
                     .mip_level_count = transient_image.info.mip_level_count,
                     .array_layer_count = transient_image.info.array_layer_count,

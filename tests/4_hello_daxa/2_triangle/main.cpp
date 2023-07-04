@@ -159,9 +159,9 @@ auto main() -> int
     auto * native_window_handle = get_native_handle(glfw_window_ptr);
     auto native_window_platform = get_native_platform(glfw_window_ptr);
 
-    daxa::Instance context = daxa::create_instance({});
+    daxa::Instance instance = daxa::create_instance({});
 
-    daxa::Device device = context.create_device({
+    daxa::Device device = instance.create_device({
         .selector = [](daxa::DeviceProperties const & device_props) -> daxa::i32
         {
             daxa::i32 score = 0;

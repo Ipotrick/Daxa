@@ -570,25 +570,6 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
-    struct ImageAspectFlagsProperties
-    {
-        using Data = u32;
-    };
-    using ImageAspectFlags = Flags<ImageAspectFlagsProperties>;
-    struct ImageAspectFlagBits
-    {
-        static inline constexpr ImageAspectFlags NONE = {};
-        static inline constexpr ImageAspectFlags COLOR = {0x00000001};
-        static inline constexpr ImageAspectFlags DEPTH = {0x00000002};
-        static inline constexpr ImageAspectFlags STENCIL = {0x00000004};
-        static inline constexpr ImageAspectFlags METADATA = {0x00000008};
-        static inline constexpr ImageAspectFlags PLANE_0 = {0x00000010};
-        static inline constexpr ImageAspectFlags PLANE_1 = {0x00000020};
-        static inline constexpr ImageAspectFlags PLANE_2 = {0x00000040};
-    };
-
-    auto to_string(ImageAspectFlags aspect_flags) -> std::string;
-
     enum struct ImageLayout
     {
         UNDEFINED = 0,
@@ -605,7 +586,6 @@ namespace daxa
 
     struct ImageMipArraySlice
     {
-        ImageAspectFlags image_aspect = ImageAspectFlagBits::COLOR;
         u32 base_mip_level = 0;
         u32 level_count = 1;
         u32 base_array_layer = 0;
@@ -623,7 +603,6 @@ namespace daxa
 
     struct ImageArraySlice
     {
-        ImageAspectFlags image_aspect = ImageAspectFlagBits::COLOR;
         u32 mip_level = 0;
         u32 base_array_layer = 0;
         u32 layer_count = 1;
@@ -639,7 +618,6 @@ namespace daxa
 
     struct ImageSlice
     {
-        ImageAspectFlags image_aspect = ImageAspectFlagBits::COLOR;
         u32 mip_level = 0;
         u32 array_layer = 0;
 

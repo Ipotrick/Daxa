@@ -4,7 +4,7 @@
 #include <daxa/device.hpp>
 
 #include "impl_core.hpp"
-#include "impl_context.hpp"
+#include "impl_instance.hpp"
 
 #include "impl_pipeline.hpp"
 #include "impl_command_list.hpp"

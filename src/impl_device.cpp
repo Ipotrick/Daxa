@@ -655,7 +655,7 @@ namespace daxa
         std::vector<char const *> extension_names;
         std::vector<char const *> enabled_layers;
 
-        if (impl_ctx.as<ImplContext>()->info.enable_validation)
+        if (impl_ctx.as<ImplInstance>()->info.enable_validation)
         {
             enabled_layers.push_back("VK_LAYER_KHRONOS_validation");
         }
@@ -812,7 +812,7 @@ namespace daxa
             .pDeviceMemoryCallbacks = nullptr,
             .pHeapSizeLimit = nullptr,
             .pVulkanFunctions = &vma_vulkan_functions,
-            .instance = this->impl_ctx.as<ImplContext>()->vk_instance,
+            .instance = this->impl_ctx.as<ImplInstance>()->vk_instance,
             .vulkanApiVersion = VK_API_VERSION_1_3,
             .pTypeExternalMemoryHandleTypes = {},
         };
@@ -861,7 +861,6 @@ namespace daxa
             auto image_info = ImageInfo{
                 .dimensions = 2,
                 .format = Format::R8G8B8A8_UNORM,
-                .aspect = ImageAspectFlagBits::COLOR,
                 .size = {1, 1, 1},
                 .mip_level_count = 1,
                 .array_layer_count = 1,
@@ -899,7 +898,7 @@ namespace daxa
                     .a = VK_COMPONENT_SWIZZLE_IDENTITY,
                 },
                 .subresourceRange = {
-                    .aspectMask = static_cast<VkImageAspectFlags>(image_info.aspect.data),
+                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                     .baseMipLevel = 0,
                     .levelCount = image_info.mip_level_count,
                     .baseArrayLayer = 0,
@@ -1009,7 +1008,7 @@ namespace daxa
             DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create buffer");
         }
 
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !this->info.name.empty())
+        if (this->impl_ctx.as<ImplInstance>()->enable_debug_names && !this->info.name.empty())
         {
             auto const device_name = this->info.name;
             VkDebugUtilsObjectNameInfoEXT const device_name_info{
@@ -1247,7 +1246,7 @@ namespace daxa
 
         this->buffer_device_address_buffer_host_ptr[id.index] = ret.device_address;
 
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !buffer_info.name.empty())
+        if (this->impl_ctx.as<ImplInstance>()->enable_debug_names && !buffer_info.name.empty())
         {
             auto const buffer_name = buffer_info.name;
             VkDebugUtilsObjectNameInfoEXT const buffer_name_info{
@@ -1271,7 +1270,6 @@ namespace daxa
         {
             auto & image_info = this->slot(id).info;
             return ImageMipArraySlice{
-                .image_aspect = image_info.aspect,
                 .base_mip_level = 0,
                 .level_count = image_info.mip_level_count,
                 .base_array_layer = 0,
@@ -1307,7 +1305,6 @@ namespace daxa
             .format = image_info.format,
             .image = {id},
             .slice = ImageMipArraySlice{
-                .image_aspect = image_info.aspect,
                 .base_mip_level = 0,
                 .level_count = image_info.mip_level_count,
                 .base_array_layer = 0,
@@ -1315,6 +1312,7 @@ namespace daxa
             },
             .name = image_info.name,
         };
+        ret.aspect_flags = infer_aspect_from_format(image_info.format);
 
         VkImageViewCreateInfo const view_ci{
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -1341,7 +1339,7 @@ namespace daxa
         ret.info = image_info;
         vkCreateImageView(vk_device, &view_ci, nullptr, &ret.view_slot.vk_image_view);
 
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !image_info.name.empty())
+        if (this->impl_ctx.as<ImplInstance>()->enable_debug_names && !image_info.name.empty())
         {
             auto swapchain_image_name = image_info.name;
             VkDebugUtilsObjectNameInfoEXT const swapchain_image_name_info{
@@ -1374,9 +1372,7 @@ namespace daxa
     auto ImplDevice::new_image(ImageInfo const & image_info) -> ImageId
     {
         auto [id, image_slot_variant] = gpu_shader_resource_table.image_slots.new_slot();
-
         DAXA_DBG_ASSERT_TRUE_M(image_info.dimensions >= 1 && image_info.dimensions <= 3, "image dimensions must be a value between 1 to 3(inclusive)");
-
         ImplImageSlot ret = {};
         ret.zombie = false;
         ret.info = image_info;
@@ -1385,7 +1381,6 @@ namespace daxa
             .format = image_info.format,
             .image = {id},
             .slice = ImageMipArraySlice{
-                .image_aspect = image_info.aspect,
                 .base_mip_level = 0,
                 .level_count = image_info.mip_level_count,
                 .base_array_layer = 0,
@@ -1393,9 +1388,8 @@ namespace daxa
             },
             .name = image_info.name,
         };
-
+        ret.aspect_flags = infer_aspect_from_format(image_info.format);
         VkImageCreateInfo const vk_image_create_info = initialize_image_create_info_from_image_info(image_info, &this->main_queue_family_index);
-
         if (AutoAllocInfo const * auto_info = std::get_if<AutoAllocInfo>(&image_info.allocate_info))
         {
             VmaAllocationCreateInfo const vma_allocation_create_info{
@@ -1452,7 +1446,7 @@ namespace daxa
                 .a = VK_COMPONENT_SWIZZLE_IDENTITY,
             },
             .subresourceRange = {
-                .aspectMask = static_cast<VkImageAspectFlags>(image_info.aspect.data),
+                .aspectMask = ret.aspect_flags,
                 .baseMipLevel = 0,
                 .levelCount = image_info.mip_level_count,
                 .baseArrayLayer = 0,
@@ -1463,7 +1457,7 @@ namespace daxa
         [[maybe_unused]] VkResult const vk_create_image_view_result = vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view);
         DAXA_DBG_ASSERT_TRUE_M(vk_create_image_view_result == VK_SUCCESS, "failed to create image view");
 
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !info.name.empty())
+        if (this->impl_ctx.as<ImplInstance>()->enable_debug_names && !info.name.empty())
         {
             auto image_name = image_info.name;
             VkDebugUtilsObjectNameInfoEXT const swapchain_image_name_info{
@@ -1496,17 +1490,12 @@ namespace daxa
     auto ImplDevice::new_image_view(ImageViewInfo const & image_view_info) -> ImageViewId
     {
         auto [id, image_slot] = gpu_shader_resource_table.image_slots.new_slot();
-
         image_slot = {};
-
         ImplImageSlot const & parent_image_slot = slot(image_view_info.image);
-
         ImplImageViewSlot ret = {};
         ret.info = image_view_info;
-
         ImageMipArraySlice slice = this->validate_image_slice(image_view_info.slice, image_view_info.image);
         ret.info.slice = slice;
-
         VkImageViewCreateInfo const vk_image_view_create_info{
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .pNext = nullptr,
@@ -1520,13 +1509,11 @@ namespace daxa
                 .b = VK_COMPONENT_SWIZZLE_IDENTITY,
                 .a = VK_COMPONENT_SWIZZLE_IDENTITY,
             },
-            .subresourceRange = *reinterpret_cast<VkImageSubresourceRange const *>(&slice),
+            .subresourceRange = make_subressource_range(slice,parent_image_slot.aspect_flags),
         };
-
         [[maybe_unused]] VkResult const result = vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.vk_image_view);
         DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create image view");
-
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !image_view_info.name.empty())
+        if (this->impl_ctx.as<ImplInstance>()->enable_debug_names && !image_view_info.name.empty())
         {
             auto image_view_name = image_view_info.name;
             VkDebugUtilsObjectNameInfoEXT const name_info{
@@ -1538,11 +1525,8 @@ namespace daxa
             };
             this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &name_info);
         }
-
         write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, ret.vk_image_view, parent_image_slot.info.usage, id.index);
-
         image_slot.view_slot = ret;
-
         return ImageViewId{id};
     }
 
@@ -1585,7 +1569,7 @@ namespace daxa
         [[maybe_unused]] VkResult const result = vkCreateSampler(this->vk_device, &vk_sampler_create_info, nullptr, &ret.vk_sampler);
         DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create sampler");
 
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !info.name.empty())
+        if (this->impl_ctx.as<ImplInstance>()->enable_debug_names && !info.name.empty())
         {
             auto sampler_name = info.name;
             VkDebugUtilsObjectNameInfoEXT const sampler_name_info{

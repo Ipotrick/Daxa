@@ -5,19 +5,19 @@ namespace tests
 {
     void simplest()
     {
-        auto daxa_ctx = daxa::create_instance({});
+        auto instance = daxa::create_instance({});
     }
 
     void no_validation()
     {
-        auto daxa_ctx = daxa::create_instance({
+        auto instance = daxa::create_instance({
             .enable_validation = false,
         });
     }
 
     void custom_validation_callback()
     {
-        auto daxa_ctx = daxa::create_instance({
+        auto instance = daxa::create_instance({
             .enable_validation = false,
             .validation_callback = [](daxa::MsgSeverity severity, daxa::MsgType type, std::string_view msg)
             {
