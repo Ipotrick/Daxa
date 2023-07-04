@@ -7,7 +7,7 @@
 
 namespace daxa
 {
-    Fsr2Context::Fsr2Context(UpscaleContextInfo const & info)
+    Fsr2Context::Fsr2Context(UpscaleInstanceInfo const & info)
         : ManagedPtr{new ImplFsr2Context(info)}
     {
     }
@@ -35,7 +35,7 @@ namespace daxa
         return result;
     }
 
-    ImplFsr2Context::ImplFsr2Context(UpscaleContextInfo a_info)
+    ImplFsr2Context::ImplFsr2Context(UpscaleInstanceInfo a_info)
         : info{std::move(a_info)}
     {
     }

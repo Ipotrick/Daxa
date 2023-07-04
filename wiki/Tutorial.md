@@ -9,16 +9,16 @@ The Daxa repo provides several samples that show Daxa use and also serve as test
 In the fist part of this tutorial you will see how to setup Daxa.
 
 This part will introduce the most basic parts of the API, up to the point of having a loop and clearing the window to a certain color.
-## Creating a daxa::Context
+## Creating a daxa::Instance
 
-To do any Daxa API calls, one needs to create a `daxa::Context`.
+To do any Daxa API calls, one needs to create a `daxa::Instance`.
 
 ```cpp
 #include <daxa/daxa.hpp>
 
 int main()
 {
-    daxa::Context context = daxa::create_context({});
+    daxa::Instance context = daxa::create_instance({});
 }
 ```
 

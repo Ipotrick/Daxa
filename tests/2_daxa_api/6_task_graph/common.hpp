@@ -19,7 +19,7 @@ using namespace daxa::types;
 
 struct AppContext
 {
-    daxa::Context daxa_ctx = daxa::create_context({
+    daxa::Instance daxa_ctx = daxa::create_instance({
         .enable_validation = false,
     });
     daxa::Device device = daxa_ctx.create_device({
