@@ -67,30 +67,89 @@ Each time you add a task, it is like a function call where you pass in the virtu
 There are two ways to declare a task. You can declare tasks inline, directly inside the add_task function:
 ```cpp
 using namespace daxa::task_resource_uses; // For ImageTransfer(Read|Write)
+int blur_width = ...;
 graph.add_task({
   .uses = {
-    ImageTransferRead{task_image0},
-    ImageTransferWrite{task_image1},
+    ImageTransferRead<>{task_image0},
+    ImageTransferWrite<>{task_image1},
   },
   .task = [=](daxa::TaskInterface ti)
   {
     auto cmd = ti.get_command_list();
-    // perform some transfer operation
+    copy_image_to_image(ti.uses[task_image0].image(), ti.uses[task_image1].image(), blur_width);
   },
   .name = "example task",
 });
 ```
 This is convenient for smaller tasks or quick additions that don't necessarily need shaders.
 
-And the second way:
-TODO
+And the general way, the persisstent declaration:
 
-Tasks can also optionally have a name. This name is used in error messages in task graph.
+```cpp
+struct MyTask
+{
+  struct Uses {
+    ImageTransferRead<> src;
+    ImageTransferWrite<> dst;
+  } uses;  // Field will be statically reflected by daxa. 
+  static constexpr std::string_view name = "example task"; // Field will be statically reflected by daxa. 
+  int blur_width = {};
+  void callback(daxa::TaskInterface ti)
+  {
+    auto cmd = ti.get_command_list();
+    copy_image_to_image(uses.src.image(), uses.dst.image(), blur_width);
+  }
+};
+```
+
+Daxa uses limited static reflection to analyze task structs with templates and concepts. The Uses field must be called uses and the struct type needs to be called Uses as well.
+Optionally daxa can also reflect the name field to give the task a name.
 
 ## Task uses
 
-TODO
+The use of a resource is declared with either a TaskImageUse or a TaskBufferUse. Daxa predefines a set of shortened names for these uses under the namespace `daxa::task_resource_uses`. It is adivsed to use these.
 
-## Task interface
+A declared resource use describes a pipeline stage, the access (read and/or write) and for images optionally an image view type.
+Uses may be predeclared for persistent task structs or listed in a vector for inline tasks.
 
-TODO
+When a task is added to the graph, a resource must be assigned to each use of the added task.
+For inline tasks these are immediately assigned as they are listed in the uses. For persistent resources, the uses struct must be instantiated, then all resources asigned to the uses and finally passed to the add task function.
+
+Inside the tasks callback, the uses provide an interface to access the underlying resource at execution time as well as metadata about it.
+For inline tasks, the uses can be retrieved with the task interface:
+```cpp
+  .task = [=](daxa::TaskInterface ti)
+  {
+    ImageTransferRead<> img_use & = ti.uses[task_image0];
+  },
+```
+While with persistent tasks, the uses are stored in the `Uses` struct and can be directly accessed in the callback:
+```cpp
+  void callback(daxa::TaskInterface ti)
+  {
+    ImageTransferRead<> img_use & = uses.src;
+  },
+```
+The uses provide a runtime interface:
+```cpp
+auto access() const -> TaskImageAccess;
+auto view_type() const -> ImageViewType;
+auto image(u32 index = 0) const -> ImageId;
+auto view(u32 index = 0) const -> ImageViewId;
+```
+Daxa creates these image views for all used images and caches them. If the view is the default view the graph will not create new views but simply use the default view.
+
+BufferUses have a similar interface:
+```cpp
+auto access() const -> TaskBufferAccess;
+auto buffer(usize index = 0) const -> BufferId;
+```
+
+With this interface, you can query all nessecary information about the images and buffers inside the callbacks with a similar interface for inline and persistently declared tasks.
+
+### Rules
+- ImageUses of the same image can never overlap
+- Multiple BufferUses may not reference the same buffer twice
+- All uses must have a valid task resource id assigned to them when adding the task
+- ImageViewType is optional, if none is provided the default view type of the image is used.
+- All resources that may require and/or influence the sync must be listed in the uses list. Avoid mentioning fully constant resources that do not require sync.
