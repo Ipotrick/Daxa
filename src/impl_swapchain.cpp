@@ -98,7 +98,7 @@ namespace daxa
     {
         if (this->vk_surface != nullptr)
         {
-            vkDestroySurfaceKHR(this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, this->vk_surface, nullptr);
+            vkDestroySurfaceKHR(this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->vk_instance, this->vk_surface, nullptr);
         }
 #if defined(_WIN32)
         VkWin32SurfaceCreateInfoKHR const surface_ci{
@@ -109,8 +109,8 @@ namespace daxa
             .hwnd = static_cast<HWND>(info.native_window),
         };
         {
-            auto func = reinterpret_cast<PFN_vkCreateWin32SurfaceKHR>(vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, "vkCreateWin32SurfaceKHR"));
-            func(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, &surface_ci, nullptr, &this->vk_surface);
+            auto func = reinterpret_cast<PFN_vkCreateWin32SurfaceKHR>(vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->vk_instance, "vkCreateWin32SurfaceKHR"));
+            func(impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->vk_instance, &surface_ci, nullptr, &this->vk_surface);
         }
 #elif defined(__linux__)
         switch (this->info.native_window_platform)
@@ -127,8 +127,8 @@ namespace daxa
                 .surface = static_cast<wl_surface *>(this->info.native_window),
             };
             {
-                auto func = reinterpret_cast<PFN_vkCreateWaylandSurfaceKHR>(vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, "vkCreateWaylandSurfaceKHR"));
-                func(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, &surface_ci, nullptr, &this->vk_surface);
+                auto func = reinterpret_cast<PFN_vkCreateWaylandSurfaceKHR>(vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->vk_instance, "vkCreateWaylandSurfaceKHR"));
+                func(impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->vk_instance, &surface_ci, nullptr, &this->vk_surface);
             }
         }
         break;
@@ -145,8 +145,8 @@ namespace daxa
                 .window = reinterpret_cast<Window>(this->info.native_window),
             };
             {
-                auto func = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, "vkCreateXlibSurfaceKHR"));
-                func(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, &surface_ci, nullptr, &this->vk_surface);
+                auto func = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->vk_instance, "vkCreateXlibSurfaceKHR"));
+                func(impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->vk_instance, &surface_ci, nullptr, &this->vk_surface);
             }
         }
         break;
@@ -227,7 +227,7 @@ namespace daxa
         cleanup();
 
         vkDestroySwapchainKHR(this->impl_device.as<ImplDevice>()->vk_device, this->vk_swapchain, nullptr);
-        vkDestroySurfaceKHR(impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance, this->vk_surface, nullptr);
+        vkDestroySurfaceKHR(impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->vk_instance, this->vk_surface, nullptr);
     }
 
     void ImplSwapchain::recreate()
@@ -314,7 +314,7 @@ namespace daxa
                 swapchain_images[i], vk_surface_format.format, i, usage, image_info);
         }
 
-        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && !this->info.name.empty())
+        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->enable_debug_names && !this->info.name.empty())
         {
             auto swapchain_name = this->info.name;
             VkDebugUtilsObjectNameInfoEXT const swapchain_name_info{

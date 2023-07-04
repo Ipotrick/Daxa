@@ -6,8 +6,8 @@
 #include "impl_device.hpp"
 
 namespace daxa
-{
-    auto get_vk_image_memory_barrier(ImageBarrierInfo const & image_barrier, VkImage vk_image) -> VkImageMemoryBarrier2
+{    
+    auto get_vk_image_memory_barrier(ImageBarrierInfo const & image_barrier, VkImage vk_image, VkImageAspectFlags aspect_flags) -> VkImageMemoryBarrier2
     {
         return VkImageMemoryBarrier2{
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
@@ -21,7 +21,7 @@ namespace daxa
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .image = vk_image,
-            .subresourceRange = *reinterpret_cast<VkImageSubresourceRange const *>(&image_barrier.image_slice),
+            .subresourceRange = make_subressource_range(image_barrier.image_slice, aspect_flags),
         };
     }
 
@@ -81,20 +81,19 @@ namespace daxa
         auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
-
+        auto const & img_slot = impl.impl_device.as<ImplDevice>()->slot(info.image);
         VkBufferImageCopy const vk_buffer_image_copy{
             .bufferOffset = info.buffer_offset,
             .bufferRowLength = 0u,   // info.image_extent.x,
             .bufferImageHeight = 0u, // info.image_extent.y,
-            .imageSubresource = *reinterpret_cast<VkImageSubresourceLayers const *>(&info.image_slice),
+            .imageSubresource = make_subresource_layers(info.image_slice, img_slot.aspect_flags),
             .imageOffset = *reinterpret_cast<VkOffset3D const *>(&info.image_offset),
             .imageExtent = *reinterpret_cast<VkExtent3D const *>(&info.image_extent),
         };
-
         vkCmdCopyBufferToImage(
             impl.vk_cmd_buffer,
             impl.impl_device.as<ImplDevice>()->slot(info.buffer).vk_buffer,
-            impl.impl_device.as<ImplDevice>()->slot(info.image).vk_image,
+            img_slot.vk_image,
             static_cast<VkImageLayout>(info.image_layout),
             1,
             &vk_buffer_image_copy);
@@ -105,19 +104,18 @@ namespace daxa
         auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
-
+        auto const & img_slot = impl.impl_device.as<ImplDevice>()->slot(info.image);
         VkBufferImageCopy const vk_buffer_image_copy{
             .bufferOffset = info.buffer_offset,
             .bufferRowLength = 0u,   // info.image_extent.x,
             .bufferImageHeight = 0u, // info.image_extent.y,
-            .imageSubresource = *reinterpret_cast<VkImageSubresourceLayers const *>(&info.image_slice),
+            .imageSubresource = make_subresource_layers(info.image_slice, img_slot.aspect_flags),
             .imageOffset = *reinterpret_cast<VkOffset3D const *>(&info.image_offset),
             .imageExtent = *reinterpret_cast<VkExtent3D const *>(&info.image_extent),
         };
-
         vkCmdCopyImageToBuffer(
             impl.vk_cmd_buffer,
-            impl.impl_device.as<ImplDevice>()->slot(info.image).vk_image,
+            img_slot.vk_image,
             static_cast<VkImageLayout>(info.image_layout),
             impl.impl_device.as<ImplDevice>()->slot(info.buffer).vk_buffer,
             1,
@@ -129,19 +127,19 @@ namespace daxa
         auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
         impl.flush_barriers();
-
+        auto const & src_slot = impl.impl_device.as<ImplDevice>()->slot(info.src_image);
+        auto const & dst_slot = impl.impl_device.as<ImplDevice>()->slot(info.dst_image);
         VkImageBlit const vk_blit{
-            .srcSubresource = *reinterpret_cast<VkImageSubresourceLayers const *>(&info.src_slice),
+            .srcSubresource = make_subresource_layers(info.src_slice, src_slot.aspect_flags),
             .srcOffsets = {*reinterpret_cast<VkOffset3D const *>(info.src_offsets.data()), *reinterpret_cast<VkOffset3D const *>(&info.src_offsets[1])},
-            .dstSubresource = *reinterpret_cast<VkImageSubresourceLayers const *>(&info.dst_slice),
+            .dstSubresource = make_subresource_layers(info.dst_slice, dst_slot.aspect_flags),
             .dstOffsets = {*reinterpret_cast<VkOffset3D const *>(info.dst_offsets.data()), *reinterpret_cast<VkOffset3D const *>(&info.dst_offsets[1])},
         };
-
         vkCmdBlitImage(
             impl.vk_cmd_buffer,
-            impl.impl_device.as<ImplDevice>()->slot(info.src_image).vk_image,
+            src_slot.vk_image,
             static_cast<VkImageLayout>(info.src_image_layout),
-            impl.impl_device.as<ImplDevice>()->slot(info.dst_image).vk_image,
+            dst_slot.vk_image,
             static_cast<VkImageLayout>(info.dst_image_layout),
             1,
             &vk_blit,
@@ -153,20 +151,21 @@ namespace daxa
         auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
         impl.flush_barriers();
-
+        auto const & src_slot = impl.impl_device.as<ImplDevice>()->slot(info.src_image);
+        auto const & dst_slot = impl.impl_device.as<ImplDevice>()->slot(info.dst_image);
         VkImageCopy const vk_image_copy{
-            .srcSubresource = *reinterpret_cast<VkImageSubresourceLayers const *>(&info.src_slice),
+            .srcSubresource = make_subresource_layers(info.src_slice, src_slot.aspect_flags),
             .srcOffset = {*reinterpret_cast<VkOffset3D const *>(&info.src_offset)},
-            .dstSubresource = *reinterpret_cast<VkImageSubresourceLayers const *>(&info.dst_slice),
+            .dstSubresource = make_subresource_layers(info.dst_slice, dst_slot.aspect_flags),
             .dstOffset = {*reinterpret_cast<VkOffset3D const *>(&info.dst_offset)},
             .extent = {*reinterpret_cast<VkExtent3D const *>(&info.extent)},
         };
 
         vkCmdCopyImage(
             impl.vk_cmd_buffer,
-            impl.impl_device.as<ImplDevice>()->slot(info.src_image).vk_image,
+            src_slot.vk_image,
             static_cast<VkImageLayout>(info.src_image_layout),
-            impl.impl_device.as<ImplDevice>()->slot(info.dst_image).vk_image,
+            dst_slot.vk_image,
             static_cast<VkImageLayout>(info.dst_image_layout),
             1,
             &vk_image_copy);
@@ -175,17 +174,35 @@ namespace daxa
     void CommandList::clear_image(ImageClearInfo const & info)
     {
         auto & impl = *as<ImplCommandList>();
+        auto & img_slot = impl.impl_device.as<ImplDevice>()->slot(info.dst_image);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
         impl.flush_barriers();
+        if (is_depth_format(img_slot.info.format) || is_stencil_format(img_slot.info.format))
+        {
+            DAXA_DBG_ASSERT_TRUE_M(
+                std::holds_alternative<DepthValue>(info.clear_value),
+                "provided a color clear value for an image with a depth / stencil format!");
 
-        if ((info.dst_slice.image_aspect & ImageAspectFlagBits::COLOR) != ImageAspectFlagBits::NONE)
+            auto const & clear_value = std::get<DepthValue>(info.clear_value);
+            VkClearDepthStencilValue const color{
+                .depth = clear_value.depth,
+                .stencil = clear_value.stencil,
+            };
+            VkImageSubresourceRange sub_range = make_subressource_range(info.dst_slice, img_slot.aspect_flags);
+            vkCmdClearDepthStencilImage(
+                impl.vk_cmd_buffer,
+                impl.impl_device.as<ImplDevice>()->slot(info.dst_image).vk_image,
+                static_cast<VkImageLayout>(info.dst_image_layout),
+                &color,
+                1,
+                &sub_range);
+        }
+        else
         {
             DAXA_DBG_ASSERT_TRUE_M(
                 !std::holds_alternative<DepthValue>(info.clear_value),
-                "Provided a depth clear value for an image with a color aspect!");
-
+                "provided a depth clear value for an image with a color format!");
             VkClearColorValue color;
-
             std::visit(
                 [&color](auto && clear_value)
                 {
@@ -205,34 +222,14 @@ namespace daxa
                 },
                 info.clear_value);
 
+            VkImageSubresourceRange sub_range = make_subressource_range(info.dst_slice, img_slot.aspect_flags);
             vkCmdClearColorImage(
                 impl.vk_cmd_buffer,
-                impl.impl_device.as<ImplDevice>()->slot(info.dst_image).vk_image,
+                img_slot.vk_image,
                 static_cast<VkImageLayout>(info.dst_image_layout),
                 &color,
                 1,
-                reinterpret_cast<VkImageSubresourceRange const *>(&info.dst_slice));
-        }
-
-        if ((info.dst_slice.image_aspect & (ImageAspectFlagBits::DEPTH | ImageAspectFlagBits::STENCIL)) != ImageAspectFlagBits::NONE)
-        {
-            DAXA_DBG_ASSERT_TRUE_M(
-                std::holds_alternative<DepthValue>(info.clear_value),
-                "Provided a color clear value for an image with a depth / stencil aspect!");
-
-            auto const & clear_value = std::get<DepthValue>(info.clear_value);
-            VkClearDepthStencilValue const color{
-                .depth = clear_value.depth,
-                .stencil = clear_value.stencil,
-            };
-
-            vkCmdClearDepthStencilImage(
-                impl.vk_cmd_buffer,
-                impl.impl_device.as<ImplDevice>()->slot(info.dst_image).vk_image,
-                static_cast<VkImageLayout>(info.dst_image_layout),
-                &color,
-                1,
-                reinterpret_cast<VkImageSubresourceRange const *>(&info.dst_slice));
+                &sub_range);
         }
     }
 
@@ -417,7 +414,7 @@ namespace daxa
             for (auto & image_barrier : end_info.image_barriers)
             {
                 dependency_infos_aux_buffer.vk_image_memory_barriers.push_back(
-                    get_vk_image_memory_barrier(image_barrier, device.slot(image_barrier.image_id).vk_image));
+                    get_vk_image_memory_barrier(image_barrier, device.slot(image_barrier.image_id).vk_image, device.slot(image_barrier.image_id).aspect_flags));
             }
             for (auto const & memory_barrier : end_info.memory_barriers)
             {
@@ -457,7 +454,8 @@ namespace daxa
         for (auto & image_barrier : info.image_barriers)
         {
             dependency_infos_aux_buffer.vk_image_memory_barriers.push_back(
-                get_vk_image_memory_barrier(image_barrier, device.slot(image_barrier.image_id).vk_image));
+                get_vk_image_memory_barrier(image_barrier, device.slot(image_barrier.image_id).vk_image, device.slot(image_barrier.image_id).aspect_flags)
+            );
         }
         for (auto & memory_barrier : info.memory_barriers)
         {
@@ -492,7 +490,7 @@ namespace daxa
         {
             impl.flush_barriers();
         }
-
+        auto const & img_slot = impl.impl_device.as<ImplDevice>()->slot(info.image_id);
         impl.image_barrier_batch.at(impl.image_barrier_batch_count++) = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
             .pNext = nullptr,
@@ -504,8 +502,8 @@ namespace daxa
             .newLayout = static_cast<VkImageLayout>(info.dst_layout),
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = impl.impl_device.as<ImplDevice>()->slot(info.image_id).vk_image,
-            .subresourceRange = *reinterpret_cast<VkImageSubresourceRange const *>(&info.image_slice),
+            .image = img_slot.vk_image,
+            .subresourceRange = make_subressource_range(info.image_slice, img_slot.aspect_flags),
         };
     }
 
@@ -900,7 +898,7 @@ namespace daxa
 
         vkBeginCommandBuffer(this->vk_cmd_buffer, &vk_command_buffer_begin_info);
 
-        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && this->info.name.empty())
+        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->enable_debug_names && this->info.name.empty())
         {
             auto cmd_buffer_name = this->info.name;
             VkDebugUtilsObjectNameInfoEXT const cmd_buffer_name_info{

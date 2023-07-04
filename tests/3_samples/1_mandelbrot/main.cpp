@@ -214,9 +214,7 @@ struct App : BaseApp<App>
                     .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
                     .dst_image = ti.uses[task_swapchain_image].image(),
                     .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-                    .src_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
                     .src_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
-                    .dst_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
                     .dst_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
                 });
 

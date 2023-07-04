@@ -245,9 +245,7 @@ namespace tests
                     .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
                     .dst_image = dst_image_id,
                     .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-                    .src_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
                     .src_offsets = {{{0, 0, 0}, {static_cast<i32>(src_size.x), static_cast<i32>(src_size.y), 1}}},
-                    .dst_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
                     .dst_offsets = {
                         {
                             {0, 0, 0},
@@ -267,9 +265,7 @@ namespace tests
                         .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
                         .dst_image = dst_image_id,
                         .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-                        .src_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR, .mip_level = static_cast<u32>(i + 1)},
                         .src_offsets = {{{0, 0, 0}, {static_cast<i32>(static_cast<f32>(src_size.x) / scl_2), static_cast<i32>(static_cast<f32>(src_size.y) / scl_2), 1}}},
-                        .dst_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
                         .dst_offsets = {
                             {
                                 {
@@ -340,7 +336,6 @@ namespace tests
                         .src_layout = daxa::ImageLayout::UNDEFINED,
                         .dst_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                         .image_slice = {
-                            .image_aspect = image_info.aspect,
                             .base_mip_level = 1,
                             .level_count = 4,
                             .base_array_layer = 0,
@@ -357,7 +352,6 @@ namespace tests
                             .src_layout = (i == 0 ? daxa::ImageLayout::GENERAL : daxa::ImageLayout::TRANSFER_DST_OPTIMAL),
                             .dst_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
                             .image_slice = {
-                                .image_aspect = image_info.aspect,
                                 .base_mip_level = i,
                                 .level_count = 1,
                                 .base_array_layer = 0,
@@ -372,14 +366,12 @@ namespace tests
                             .dst_image = render_image,
                             .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                             .src_slice = {
-                                .image_aspect = image_info.aspect,
                                 .mip_level = i,
                                 .base_array_layer = 0,
                                 .layer_count = 1,
                             },
                             .src_offsets = {{{0, 0, 0}, {mip_size[0], mip_size[1], mip_size[2]}}},
                             .dst_slice = {
-                                .image_aspect = image_info.aspect,
                                 .mip_level = i + 1,
                                 .base_array_layer = 0,
                                 .layer_count = 1,
@@ -395,7 +387,6 @@ namespace tests
                         .src_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                         .dst_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
                         .image_slice = {
-                            .image_aspect = image_info.aspect,
                             .base_mip_level = 4,
                             .level_count = 1,
                             .base_array_layer = 0,
@@ -463,14 +454,12 @@ namespace tests
                             .src_image = uses.lower_mip.image(),
                             .dst_image = uses.higher_mip.image(),
                             .src_slice = {
-                                .image_aspect = uses.lower_mip.handle.slice.image_aspect,
                                 .mip_level = mip,
                                 .base_array_layer = 0,
                                 .layer_count = 1,
                             },
                             .src_offsets = {{{0, 0, 0}, {mip_size[0], mip_size[1], mip_size[2]}}},
                             .dst_slice = {
-                                .image_aspect = uses.higher_mip.handle.slice.image_aspect,
                                 .mip_level = mip + 1,
                                 .base_array_layer = 0,
                                 .layer_count = 1,

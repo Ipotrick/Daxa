@@ -1,19 +1,19 @@
 #pragma once
 
-#include <daxa/context.hpp>
+#include <daxa/instance.hpp>
 
 #include "impl_core.hpp"
 
 namespace daxa
 {
-    struct ImplContext final : ManagedSharedState
+    struct ImplInstance final : ManagedSharedState
     {
         InstanceInfo info;
         VkInstance vk_instance = {};
         VkDebugUtilsMessengerEXT vk_debug_utils_messenger = {};
         bool enable_debug_names = true;
 
-        explicit ImplContext(InstanceInfo a_info);
-        virtual ~ImplContext() override final;
+        explicit ImplInstance(InstanceInfo a_info);
+        virtual ~ImplInstance() override final;
     };
 } // namespace daxa

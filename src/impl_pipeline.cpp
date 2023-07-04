@@ -129,7 +129,7 @@ namespace daxa
         {
             DAXA_DBG_ASSERT_TRUE_M(this->impl_device.as<ImplDevice>()->info.enable_conservative_rasterization, "You must enable conservative rasterization in the device to use this feature");
             // TODO(grundlett): Ask Patrick why this doesn't work
-            // auto vk_instance = this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance;
+            // auto vk_instance = this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->vk_instance;
             // PFN_vkGetPhysicalDeviceProperties2KHR vkGetPhysicalDeviceProperties2KHR =
             //     reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2KHR>(vkGetInstanceProcAddr(vk_instance, "vkGetPhysicalDeviceProperties2KHR"));
             // DAXA_DBG_ASSERT_TRUE_M(vkGetPhysicalDeviceProperties2KHR != nullptr, "Failed to load this extension function function");
@@ -245,7 +245,7 @@ namespace daxa
         {
             vkDestroyShaderModule(this->impl_device.as<ImplDevice>()->vk_device, vk_shader_module, nullptr);
         }
-        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && !this->info.name.empty())
+        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->enable_debug_names && !this->info.name.empty())
         {
             auto raster_pipeline_name = this->info.name;
             VkDebugUtilsObjectNameInfoEXT const name_info{
@@ -298,7 +298,7 @@ namespace daxa
             &this->vk_pipeline);
         DAXA_DBG_ASSERT_TRUE_M(pipeline_result == VK_SUCCESS, "failed to create compute pipeline");
         vkDestroyShaderModule(this->impl_device.as<ImplDevice>()->vk_device, vk_shader_module, nullptr);
-        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && !info.name.empty())
+        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->enable_debug_names && !info.name.empty())
         {
             auto raster_pipeline_name = this->info.name;
             VkDebugUtilsObjectNameInfoEXT const name_info{
