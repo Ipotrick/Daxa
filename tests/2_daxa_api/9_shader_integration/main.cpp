@@ -136,7 +136,7 @@ namespace tests
             .align_test_dst = { dst },
         };
         task_graph.add_task({
-            .uses = daxa::to_generic_uses(uses),
+            .uses = daxa::detail::to_generic_uses(uses),
             .task = [&](daxa::TaskInterface const & ti)
             {
                 auto cmd = ti.get_command_list();

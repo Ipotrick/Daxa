@@ -347,7 +347,7 @@ namespace tests
         task_graph.use_persistent_buffer(task_buffer);
 
         task_graph.add_task({
-            .uses = daxa::to_generic_uses(ShaderIntegrationTask::Uses{
+            .uses = daxa::detail::to_generic_uses(ShaderIntegrationTask::Uses{
                 .settings = {task_buffer},
                 .image = {task_image},
             }),
@@ -362,7 +362,7 @@ namespace tests
             .name = "write image in compute",
         });
         task_graph.add_task({
-            .uses = daxa::to_generic_uses(ShaderIntegrationTask::Uses{
+            .uses = daxa::detail::to_generic_uses(ShaderIntegrationTask::Uses{
                 .settings = {task_buffer},
                 .image = {task_image},
             }),

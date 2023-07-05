@@ -12,35 +12,41 @@
 
 namespace daxa
 {
+
     auto to_string(TaskGPUResourceHandle const & id) -> std::string
     {
         return fmt::format("tlidx: {}, index: {}", id.task_graph_index, id.index);
     }
 
-    auto get_task_arg_shader_alignment(TaskResourceUseType type) -> u32
+    namespace detail
     {
-        if (type == TaskResourceUseType::BUFFER)
+        auto get_task_arg_shader_alignment(TaskResourceUseType type) -> u32
         {
-            return 8;
+            if (type == TaskResourceUseType::BUFFER)
+            {
+                return 8;
+            }
+            return 4;
         }
-        return 4;
+
+        auto get_task_arg_shader_offsets_size(std::span<GenericTaskResourceUse> args) -> std::pair<std::vector<u32>, u32>
+        {
+            std::vector<u32> ret = {};
+            ret.reserve(args.size());
+            u32 offset = 0;
+            for (auto const & arg : args)
+            {
+                auto const align = get_task_arg_shader_alignment(arg.type);
+                offset = (offset + align - 1) / align * align;
+                ret.push_back(offset);
+                offset += align;
+            }
+            // Final offset is equal to total size.
+            return {ret, offset};
+        }
     }
 
-    auto get_task_arg_shader_offsets_size(std::span<GenericTaskResourceUse> args) -> std::pair<std::vector<u32>, u32>
-    {
-        std::vector<u32> ret = {};
-        ret.reserve(args.size());
-        u32 offset = 0;
-        for (auto const & arg : args)
-        {
-            auto const align = get_task_arg_shader_alignment(arg.type);
-            offset = (offset + align - 1) / align * align;
-            ret.push_back(offset);
-            offset += align;
-        }
-        // Final offset is equal to total size.
-        return {ret, offset};
-    }
+    using namespace daxa::detail;
 
     auto static constexpr access_to_usage(TaskImageAccess const & access) -> ImageUsageFlags
     {
@@ -1432,7 +1438,7 @@ namespace daxa
                 task_buffer.latest_access_batch_index = batch_index;
                 task_buffer.latest_access_submit_scope_index = current_submit_scope_index;
             },
-            [&](u32, TaskImageUse<> const & image_use)
+            [&](u32, TaskImageUse<> & image_use)
             {
                 auto const & used_image_t_id = image_use.handle;
                 auto const & used_image_t_access = image_use.access();
@@ -1468,6 +1474,7 @@ namespace daxa
                 }
                 task_image.usage |= access_to_usage(used_image_t_access);
                 auto [current_image_layout, current_image_access] = task_image_access_to_layout_access(used_image_t_access);
+                image_use.m_layout = current_image_layout;
                 // Now this seems strange, why would be need multiple current use slices, as we only have one here.
                 // This is because when we intersect this slice with the tracked slices, we get an intersection and a rest.
                 // We need to then test the rest against all the remaining tracked uses,
