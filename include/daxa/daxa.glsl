@@ -222,7 +222,7 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 #define _DAXA_GET_SAMPLER(DIMENSION, image_id, sampler_id) sampler##DIMENSION(_DAXA_GET_TEXTURE(DIMENSION, image_id), daxa_samplerTable[daxa_id_to_index(sampler_id)])
 #define _DAXA_GET_ISAMPLER(DIMENSION, image_id, sampler_id) isampler##DIMENSION(_DAXA_GET_ITEXTURE(DIMENSION, image_id), daxa_samplerTable[daxa_id_to_index(sampler_id)])
 #define _DAXA_GET_USAMPLER(DIMENSION, image_id, sampler_id) usampler##DIMENSION(_DAXA_GET_UTEXTURE(DIMENSION, image_id), daxa_samplerTable[daxa_id_to_index(sampler_id)])
-#define _DAXA_GET_SAMPLERSHADOW(DIMENSION, image_id, sampler_id) sampler##DIMENSION(_DAXA_GET_TEXTURE(DIMENSION, image_id), daxa_samplerShadowTable[daxa_id_to_index(sampler_id)])
+#define _DAXA_GET_SAMPLERSHADOW(DIMENSION, image_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_TEXTURE(DIMENSION, image_id), daxa_samplerShadowTable[daxa_id_to_index(sampler_id)])
 #define _DAXA_GET_ISAMPLERSHADOW(DIMENSION, image_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_ITEXTURE(DIMENSION, image_id), daxa_samplerShadowTable[daxa_id_to_index(sampler_id)])
 #define _DAXA_GET_USAMPLERSHADOW(DIMENSION, image_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_UTEXTURE(DIMENSION, image_id), daxa_samplerShadowTable[daxa_id_to_index(sampler_id)])
 
