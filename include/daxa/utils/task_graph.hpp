@@ -241,13 +241,13 @@ namespace daxa
         template <typename Task>
         void add_task(Task const & task)
         {
-            std::unique_ptr<BaseTask> base_task = std::make_unique<PredeclaredTask<Task>>(task);
+            std::unique_ptr<detail::BaseTask> base_task = std::make_unique<detail::PredeclaredTask<Task>>(task);
             add_task(std::move(base_task));
         }
 
         void add_task(InlineTaskInfo && info)
         {
-            std::unique_ptr<BaseTask> base_task = std::make_unique<InlineTask>(
+            std::unique_ptr<detail::BaseTask> base_task = std::make_unique<detail::InlineTask>(
                 std::move(info.uses),
                 std::move(info.task),
                 std::move(info.name),
@@ -267,6 +267,6 @@ namespace daxa
         auto get_debug_string() -> std::string;
 
       private:
-        void add_task(std::unique_ptr<BaseTask> && base_task);
+        void add_task(std::unique_ptr<detail::BaseTask> && base_task);
     };
 } // namespace daxa

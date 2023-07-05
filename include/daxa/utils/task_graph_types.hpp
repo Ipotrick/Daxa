@@ -227,11 +227,13 @@ namespace daxa
     {
       private:
         friend struct ImplTaskGraph;
+        friend struct TaskGraphPermutation;
         TaskResourceUseType type = TaskResourceUseType::IMAGE;
         TaskImageAccess m_access = T_ACCESS;
         ImageViewType m_view_type = T_VIEW_TYPE;
         std::span<ImageId const> images = {};
         std::span<ImageViewId const> views = {};
+        ImageLayout m_layout = {};
 
       public:
         TaskImageSlice handle = {};
@@ -249,62 +251,82 @@ namespace daxa
         {
         }
 
+        // Used to up-cast generic image uses to typed image uses.
         static auto from(GenericTaskResourceUse const & input) -> TaskImageUse<> const &
         {
             DAXA_DBG_ASSERT_TRUE_M(input.type == TaskResourceUseType::IMAGE, "invalid TaskResourceUse cast");
             return *reinterpret_cast<TaskImageUse<> const *>(&input);
         }
 
+        // Used to up-cast generic image uses to typed image uses.
         static auto from(GenericTaskResourceUse & input) -> TaskImageUse<> &
         {
             DAXA_DBG_ASSERT_TRUE_M(input.type == TaskResourceUseType::IMAGE, "invalid TaskResourceUse cast");
             return *reinterpret_cast<TaskImageUse<> *>(&input);
         }
 
+        // Used to cast typed image uses to generic image uses for inline tasks.
+        auto to_generic() const -> GenericTaskResourceUse const &
+        {
+            return *reinterpret_cast<GenericTaskResourceUse const *>(this);
+        }
+
+        // Used to cast typed image uses to generic image uses for inline tasks.
+        operator GenericTaskResourceUse const &() const
+        {
+            return to_generic();
+        }
+
+        /// @brief Each use has an access specified on creation.
+        /// @return The access type of the use.
         auto access() const -> TaskImageAccess
         {
             return m_access;
         }
 
+        /// @brief  The layout of images is controlled and changed by task graph. 
+        ///         They can change between tasks at any time. 
+        ///         Within each task callback the imagelayout for each used image is not changing.
+        ///         The stable layout of a used image can be queryed with this function.
+        /// @return the image layout of the used image at the time of the task.
+        auto layout() const -> ImageLayout
+        {
+            return m_layout;
+        }
+
+        /// @brief  Each image use has an optional image view type.
+        ///         If the view type is not the default view daxa will create a new view and cache it.
+        ///         If the view type is the default view type, daxa will simply use the default view when the slice fits the default views.
+        /// @return View type of use cached image view.
         auto view_type() const -> ImageViewType
         {
             return m_view_type;
         }
 
+        /// @brief  Each used task image is backed by a real daxa::ImageId at callback-time.
+        /// @param index Each image use can be backed by multiple images, the index sets the index into the array of backed images.
+        /// @return Backed image at given index
         auto image(u32 index = 0) const -> ImageId
         {
             DAXA_DBG_ASSERT_TRUE_M(images.size() > 0, "this function is only allowed to be called within a task callback");
             return images[index];
         }
 
+        /// @brief  If the use is not the default slice and view type, daxa creates new image views and caches them.
+        ///         These image views fit exactly the uses slice and image view type.
+        /// @param index Each image use can be backed by multiple images, the index sets the index into the array of backed images.
+        /// @return A cached image view that fits the uses slice and view type at the given image index.
         auto view(u32 index = 0) const -> ImageViewId
         {
             DAXA_DBG_ASSERT_TRUE_M(views.size() > 0, "this function is only allowed to be called within a task callback");
             return views[index];
         }
-
-        auto to_generic() const -> GenericTaskResourceUse const &
-        {
-            return *reinterpret_cast<GenericTaskResourceUse const *>(this);
-        }
-
-        operator GenericTaskResourceUse const &() const
-        {
-            return to_generic();
-        }
     };
 
     static inline constexpr size_t TASK_BUFFER_INPUT_SIZE = sizeof(TaskBufferUse<>);
     static inline constexpr size_t TASK_IMAGE_INPUT_SIZE = sizeof(TaskImageUse<>);
-
     static_assert(TASK_BUFFER_INPUT_SIZE == TASK_IMAGE_INPUT_SIZE, "should be impossible! contact Ipotrick");
     static_assert(TASK_BUFFER_INPUT_SIZE == TASK_INPUT_FIELD_SIZE, "should be impossible! contact Ipotrick");
-
-    struct TaskUseOffsetType
-    {
-        u32 offset = {};
-        TaskResourceUseType type = {};
-    };
 
     template <typename BufFn, typename ImgFn>
     void for_each(std::span<GenericTaskResourceUse> uses, BufFn && buf_fn, ImgFn && img_fn)
@@ -357,133 +379,137 @@ namespace daxa
     }
 
     struct TaskInterface;
-
-    struct BaseTask
+    
+    // Namespace containing implementation details
+    namespace detail
     {
-        virtual auto get_generic_uses() -> std::span<GenericTaskResourceUse> = 0;
-        virtual auto get_generic_uses() const -> std::span<GenericTaskResourceUse const> = 0;
-        virtual auto get_uses_constant_buffer_slot() const -> isize = 0;
-        virtual auto get_name() const -> std::string = 0;
-        virtual void callback(TaskInterface const & ti) = 0;
-        virtual ~BaseTask() {}
-    };
-
-    template <typename T>
-    concept UserUses =
-        (sizeof(T) > 0 and sizeof(T) % TASK_INPUT_FIELD_SIZE == 0);
-
-    template <typename T>
-    concept UserTask =
-        requires { T{}.uses; } and
-        UserUses<decltype(T{}.uses)> and
-        requires(TaskInterface interface) { T{}.callback(interface); };
-
-    template <UserTask T_TASK>
-    struct PredeclaredTask : public BaseTask
-    {
-        T_TASK task = {};
-        using T_USES = decltype(T_TASK{}.uses);
-        static constexpr usize USE_COUNT = sizeof(T_USES) / TASK_INPUT_FIELD_SIZE;
-
-        PredeclaredTask(T_TASK const & a_task) : task{a_task} {}
-
-        virtual ~PredeclaredTask() override = default;
-
-        virtual auto get_generic_uses() -> std::span<GenericTaskResourceUse> override
+        struct BaseTask
         {
-            return std::span{reinterpret_cast<GenericTaskResourceUse *>(&task.uses), USE_COUNT};
-        }
+            virtual auto get_generic_uses() -> std::span<GenericTaskResourceUse> = 0;
+            virtual auto get_generic_uses() const -> std::span<GenericTaskResourceUse const> = 0;
+            virtual auto get_uses_constant_buffer_slot() const -> isize = 0;
+            virtual auto get_name() const -> std::string = 0;
+            virtual void callback(TaskInterface const & ti) = 0;
+            virtual ~BaseTask() {}
+        };
 
-        virtual auto get_generic_uses() const -> std::span<GenericTaskResourceUse const> override
-        {
-            return std::span{reinterpret_cast<GenericTaskResourceUse const *>(&task.uses), USE_COUNT};
-        }
+        template <typename T>
+        concept UserUses =
+            (sizeof(T) > 0 and sizeof(T) % TASK_INPUT_FIELD_SIZE == 0);
 
-        virtual auto get_uses_constant_buffer_slot() const -> isize override
+        template <typename T>
+        concept UserTask =
+            requires { T{}.uses; } and
+            UserUses<decltype(T{}.uses)> and
+            requires(TaskInterface interface) { T{}.callback(interface); };
+
+        template <UserTask T_TASK>
+        struct PredeclaredTask : public BaseTask
         {
-            if constexpr (requires { T_TASK::CONSANT_BUFFER_SLOT; })
+            T_TASK task = {};
+            using T_USES = decltype(T_TASK{}.uses);
+            static constexpr usize USE_COUNT = sizeof(T_USES) / TASK_INPUT_FIELD_SIZE;
+
+            PredeclaredTask(T_TASK const & a_task) : task{a_task} {}
+
+            virtual ~PredeclaredTask() override = default;
+
+            virtual auto get_generic_uses() -> std::span<GenericTaskResourceUse> override
             {
-                return T_TASK::CONSANT_BUFFER_SLOT;
+                return std::span{reinterpret_cast<GenericTaskResourceUse *>(&task.uses), USE_COUNT};
             }
-            else
+
+            virtual auto get_generic_uses() const -> std::span<GenericTaskResourceUse const> override
             {
-                return -1;
+                return std::span{reinterpret_cast<GenericTaskResourceUse const *>(&task.uses), USE_COUNT};
             }
-        }
 
-        virtual auto get_name() const -> std::string override
-        {
-            if constexpr (requires { task.name; })
+            virtual auto get_uses_constant_buffer_slot() const -> isize override
             {
-                return std::string{task.name.data(), task.name.size()};
+                if constexpr (requires { T_TASK::CONSANT_BUFFER_SLOT; })
+                {
+                    return T_TASK::CONSANT_BUFFER_SLOT;
+                }
+                else
+                {
+                    return -1;
+                }
             }
-            else
+
+            virtual auto get_name() const -> std::string override
             {
-                return std::string{""};
+                if constexpr (requires { task.name; })
+                {
+                    return std::string{task.name.data(), task.name.size()};
+                }
+                else
+                {
+                    return std::string{""};
+                }
             }
-        }
 
-        virtual void callback(TaskInterface const & ti) override
+            virtual void callback(TaskInterface const & ti) override
+            {
+                task.callback(ti);
+            }
+        };
+
+        struct InlineTask : public BaseTask
         {
-            task.callback(ti);
-        }
-    };
+            std::vector<GenericTaskResourceUse> uses = {};
+            std::function<void(daxa::TaskInterface const &)> callback_lambda = {};
+            std::string name = {};
+            isize constant_buffer_slot = -1;
 
-    struct InlineTask : public BaseTask
-    {
-        std::vector<GenericTaskResourceUse> uses = {};
-        std::function<void(daxa::TaskInterface const &)> callback_lambda = {};
-        std::string name = {};
-        isize constant_buffer_slot = -1;
+            InlineTask(
+                std::vector<GenericTaskResourceUse> && a_uses,
+                std::function<void(daxa::TaskInterface const &)> && a_callback_lambda,
+                std::string && a_name, isize a_constant_buffer_slot)
+                : uses{a_uses}, callback_lambda{a_callback_lambda}, name{a_name}, constant_buffer_slot{a_constant_buffer_slot}
+            {
+            }
 
-        InlineTask(
-            std::vector<GenericTaskResourceUse> && a_uses,
-            std::function<void(daxa::TaskInterface const &)> && a_callback_lambda,
-            std::string && a_name, isize a_constant_buffer_slot)
-            : uses{a_uses}, callback_lambda{a_callback_lambda}, name{a_name}, constant_buffer_slot{a_constant_buffer_slot}
+            virtual ~InlineTask() = default;
+
+            virtual auto get_generic_uses() -> std::span<GenericTaskResourceUse> override
+            {
+                return std::span{uses.data(), uses.size()};
+            }
+
+            virtual auto get_generic_uses() const -> std::span<GenericTaskResourceUse const> override
+            {
+                return std::span{uses.data(), uses.size()};
+            }
+
+            virtual auto get_uses_constant_buffer_slot() const -> isize override
+            {
+                return constant_buffer_slot;
+            }
+
+            virtual auto get_name() const -> std::string override
+            {
+                return name;
+            }
+
+            virtual void callback(TaskInterface const & ti) override
+            {
+                callback_lambda(ti);
+            }
+        };
+
+        template <UserUses T>
+        auto to_generic_uses(T const & uses_struct) -> std::vector<GenericTaskResourceUse>
         {
+            std::vector<GenericTaskResourceUse> uses = {};
+            uses.resize(sizeof(T) / sizeof(GenericTaskResourceUse), {});
+            std::memcpy(uses.data(), &uses_struct, sizeof(T));
+            return uses;
         }
 
-        virtual ~InlineTask() = default;
+        auto get_task_arg_shader_alignment(TaskResourceUseType type) -> u32;
 
-        virtual auto get_generic_uses() -> std::span<GenericTaskResourceUse> override
-        {
-            return std::span{uses.data(), uses.size()};
-        }
-
-        virtual auto get_generic_uses() const -> std::span<GenericTaskResourceUse const> override
-        {
-            return std::span{uses.data(), uses.size()};
-        }
-
-        virtual auto get_uses_constant_buffer_slot() const -> isize override
-        {
-            return constant_buffer_slot;
-        }
-
-        virtual auto get_name() const -> std::string override
-        {
-            return name;
-        }
-
-        virtual void callback(TaskInterface const & ti) override
-        {
-            callback_lambda(ti);
-        }
-    };
-
-    template <UserUses T>
-    auto to_generic_uses(T const & uses_struct) -> std::vector<GenericTaskResourceUse>
-    {
-        std::vector<GenericTaskResourceUse> uses = {};
-        uses.resize(sizeof(T) / sizeof(GenericTaskResourceUse), {});
-        std::memcpy(uses.data(), &uses_struct, sizeof(T));
-        return uses;
+        auto get_task_arg_shader_offsets_size(std::span<GenericTaskResourceUse> args) -> std::pair<std::vector<u32>, u32>;
     }
-
-    auto get_task_arg_shader_alignment(TaskResourceUseType type) -> u32;
-
-    auto get_task_arg_shader_offsets_size(std::span<GenericTaskResourceUse> args) -> std::pair<std::vector<u32>, u32>;
 
     inline namespace task_resource_uses
     {
