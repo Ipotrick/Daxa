@@ -266,7 +266,7 @@ namespace tests
                         .dst_image = dst_image_id,
                         .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                         .src_slice = {
-                            .mip_level = static_cast<u32>(i),
+                            .mip_level = static_cast<u32>(i + 1),
                         },
                         .src_offsets = {{{0, 0, 0}, {static_cast<i32>(static_cast<f32>(src_size.x) / scl_2), static_cast<i32>(static_cast<f32>(src_size.y) / scl_2), 1}}},
                         .dst_offsets = {
