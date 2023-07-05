@@ -136,8 +136,11 @@ auto access() const -> TaskImageAccess;
 auto view_type() const -> ImageViewType;
 auto image(u32 index = 0) const -> ImageId;
 auto view(u32 index = 0) const -> ImageViewId;
+auto layout() const -> ImageLayout;
 ```
-Daxa creates these image views for all used images and caches them. If the view is the default view the graph will not create new views but simply use the default view.
+If the slice and image view type of the use do not fit the default view, daxa will create and cache image views that exactly match the image view type and slice of the use.
+As the layout can change at any time between tasks it is hard to know in what layout the image slice of the use currently is.
+Daxa allows you to query the image layout via the interface. The image layout is guaranteed to stay the same for the given use-slice for the duration of the task on the gpu timeline. 
 
 BufferUses have a similar interface:
 ```cpp
