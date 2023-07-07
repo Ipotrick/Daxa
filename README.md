@@ -10,7 +10,7 @@ Daxa is my opinionated GPU API abstraction over Vulkan.
 
 Daxa's interface is quite close to Vulkan but much simplified. Some central abstractions make it much more convenient to use. 
 
-The two most intresting features that set daxa appart from other abstractions the fully bindless shader ressources and its render graph.
+The two most intresting features that set daxa appart from other abstractions are the fully bindless shader ressources and the render graph.
 
 The original goal of Daxa was to have a GPU library that was as easy (or easier) to use than OpenGL, while gaining access the great power of the Vulkan API for gpu driven work.
 I am happy to say that for me (and others) it achieves that goal.
@@ -18,9 +18,9 @@ I am happy to say that for me (and others) it achieves that goal.
 ## Key features and abstractions
 - [x] Simple setup and object creation. No more 1000 LOC file to get a triangle drawn. (https://github.com/Ipotrick/Daxa/tree/master/wiki/Tutorial.md)
 - [x] Much simplified api surface compared to vulkan. Daxa abstracts away much of the vulkan api, only exposing those concepts that are crucial for good control and performance.
-- [x] Automatic deferred resource destruction. Daxa deferres resource destruction until all work in flight at the time of the destruction call is finished.
+- [x] Automatic deferred resource destruction. Daxa deferres resource destruction until all work in flight at the time of the destruction call is finished to avoidbdestroying resources currently in use on the gpu.
 - [x] Powerful and flexible render-graph. While manual sync is exposed in daxa for best control, it also provides an optional render-graph. (https://github.com/Ipotrick/Daxa/tree/master/wiki/TaskGraph.md)
-- [x] Bindless shader resource model. Resources are accessed via an id (or address) in shaders instead of descriptor set bindings. This drastically simplifies the api while also beeing a very powerful tool for gpu driven rendering. (https://github.com/Ipotrick/Daxa/tree/master/wiki/Bindless.md)
+- [x] Bindless shader resource model. Resources are exclusively accessed via an id (or address) in shaders instead of descriptor set bindings. This drastically simplifies the api while also beeing a very powerful tool for gpu driven rendering. (https://github.com/Ipotrick/Daxa/tree/master/wiki/Bindless.md)
 - [x] C++ and shader code sharing utilities. This combined with other simplifications means you will never need shader reflection for convenience. (https://github.com/Ipotrick/Daxa/tree/master/wiki/ShaderIntegration.md)
 - [x] Shader build system, including features like `#include` management and shader hot-reloading. (https://github.com/Ipotrick/Daxa/tree/master/wiki/PipelineManager.md)
       
