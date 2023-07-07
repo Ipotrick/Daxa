@@ -6,29 +6,29 @@
 
 # Daxa
 
-Daxa is my personal opinionated GPU API abstraction over Vulkan.
+Daxa is my opinionated GPU API abstraction over Vulkan.
 
-Daxa's interface is close to but simpler then Vulkan. Some central abstractions make it much more convenient to use. 
+Daxa's interface is quite close Vulkan but much simplified. Some central abstractions make it much more convenient to use. 
 
-Probably the two most intresting abstractions that set daxa appart from other abstractions is the fully bindless shader resource model and the c++/glsl shader integration.
+The two most intresting features that set daxa appart from other abstractions the fully bindless shader ressources and its render graph.
 
 The original goal of Daxa was to have a GPU library that was as easy (or easier) to use than OpenGL, while gaining access the great power of the Vulkan API for gpu driven work.
 I am happy to say that for me (and others) it achieves that goal.
 
 ## Key features and abstractions
-- [x] Simple setup and object creation. No more 1000 LOC file to get a triangle drawn (https://github.com/Ipotrick/Daxa/tree/master/wiki/Tutorial.md).
-- [x] Much simplified api surface compared to vulkan. Daxa abstracts away vulkan concepts like VkDescriptorSet, VkDescriptorSetLayout, VkPipelineLayout and others completely. 
-- [x] Automatic deferred resource destruction, automatic waiting on possible use from the GPU.
-- [x] Powerful and flexible render-graph implementation (automatic synch and frame sheduling). (https://github.com/Ipotrick/Daxa/tree/master/wiki/TaskGraph.md)
-- [x] Bindless shader resource model (much simpler and naturally gpu driven friendly descriptor management). (https://github.com/Ipotrick/Daxa/tree/master/wiki/Bindless.md)
-- [x] C++ and shader code sharing utilities (no need for shader reflection, simply share source files). (https://github.com/Ipotrick/Daxa/tree/master/wiki/ShaderIntegration.md)
+- [x] Simple setup and object creation. No more 1000 LOC file to get a triangle drawn. (https://github.com/Ipotrick/Daxa/tree/master/wiki/Tutorial.md)
+- [x] Much simplified api surface compared to vulkan. Daxa abstracts away much of the vulkan api, only exposing those concepts that are crucial for good control and performance.
+- [x] Automatic deferred resource destruction. Daxa deferres resource destruction until all work in flight at the time of the destruction call is finished.
+- [x] Powerful and flexible render-graph. While manual sync is exposed in daxa for best control, it also provides an optional render-graph. (https://github.com/Ipotrick/Daxa/tree/master/wiki/TaskGraph.md)
+- [x] Bindless shader resource model. Resources are accessed via an id (or address) in shaders instead of descriptor set bindings. This drastically simplifies the api while also beeing a very powerful tool for gpu driven rendering. (https://github.com/Ipotrick/Daxa/tree/master/wiki/Bindless.md)
+- [x] C++ and shader code sharing utilities. This combined with other simplifications means you will never need shader reflection for convenience. (https://github.com/Ipotrick/Daxa/tree/master/wiki/ShaderIntegration.md)
 - [x] Shader build system, including features like `#include` management and shader hot-reloading. (https://github.com/Ipotrick/Daxa/tree/master/wiki/PipelineManager.md)
       
 List of other noteworthy features: [Other Features](https://github.com/Ipotrick/Daxa/tree/master/wiki/Features.md)
 
 ## Getting started
 
-Daxa has a GitHub wiki explaining how to build it [here](https://github.com/Ipotrick/Daxa/tree/master/wiki/Building).
+Daxa has a GitHub wiki explaining how to build Daxa [here](https://github.com/Ipotrick/Daxa/tree/master/wiki/Building).
 
 The GitHub wiki also contains pages on all bigger Daxa features like TaskGraph and the shader integration.
 
@@ -41,13 +41,15 @@ https://discord.gg/MJPJvZ4FK5).
 
 ## Design Philosophy
 
-- While other vulkan abstactions aim to be quite generalized, daxa is (while still very general for a vulkan abstraction) aiming to be a desktop first abstraction.
+- Daxa should be convenient and easy to use. Iteration times are King, the peogrammer should be empowered and not hindered by boilderplate and legacy. It is important to make Daxa simple and easy ro use even if that has a small performance cost.
 
-- Daxa is made for gpu driven applications. This is due to me [Patrick](https://www.github.com/Ipotrick) and [Gabe](https://www.github.com/GabeRundlett) beeing very intrested in these types of gpu workloads. This is reflected in Daxa's shader integration, render graph api and bindless resource model, all of which make gpu driven much simpler and easier to employ over any other vulkan abstraction we tried.
+- While other vulkan abstactions aim to be overly generalized, daxa is aiming to be more focused on modern desktop gpus. This allows daxa to make tradeoffs better suited for modern gpus and modern techniques while also staying simpler.
 
-- Daxa is meant to be internally very simple and clean. This is important as I and the other maintainers ([Gabe](https://www.github.com/GabeRundlett) and [Saky](https://github.com/MatejSakmary)) want to be able to easily keep it bug free and maintainable. Having a smaller, cleaner codebase makes for much more beautiful code in my opinion.
+- Daxa is made for gpu driven applications. This is due to me [Patrick](https://www.github.com/Ipotrick) and [Gabe](https://www.github.com/GabeRundlett) beeing very intrested in these types of gpu workloads. Other abstractions simply did not satisfy us for our needs in this area.
 
-- Daxa's internals are very efficient and impose very low overhead. Its whole design is with cpu performance in mind. Daxa does very little tracking in the api itself and is also very restrictive on quickly accumulating costs like frequent hash map lookups.
-Daxa imposes as minimal overhead in most parts of the API, compared to raw Vulkan it is practically always under 1% overhead compared to raw vulkan calls in the tested applications.
+- Daxa is meant to be internally very simple and should not have multiple ways of doing the same thing. If a feature is used very little it will be axed. Having less code means less bugs while also making it easier to understand and maintain.
 
-- Daxa is made in two layers. The core API and the utils. The utils contain things like the ImGui integration, PipelineManager and TaskGraph. This split is made to keep the responsibilities of the different parts of Daxa strictly separated.
+- Daxa's internals are meant to be efficient and impose very low overhead. Its design is with cpu performance in mind. Daxa does very little tracking in the api itself and is also very restrictive on quickly accumulating costs like frequent hash map lookups or spamming reference count in/decrements.
+Daxa currently imposes as minimal overhead in most parts of the API, compared to raw Vulkan it is practically always under 1% overhead compared to raw vulkan calls in the tested applications.
+
+- Daxa is made in two layers. The core API and the utils. The utils contain things like the ImGui integration, PipelineManager and TaskGraph. This split is made to keep the responsibilities of the different parts of Daxa strict
