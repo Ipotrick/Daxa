@@ -143,7 +143,7 @@ struct RenderableChunk
 {
     std::unique_ptr<VoxelChunk> chunk = std::make_unique<VoxelChunk>();
     daxa::BufferId face_buffer;
-    daxa::TaskBufferSlice task_face_buffer;
+    daxa::TaskBuffer task_face_buffer;
     std::mutex update_mtx{};
     // daxa::BufferId water_face_buffer;
     // daxa::TaskBufferId task_water_face_buffer;

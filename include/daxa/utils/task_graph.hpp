@@ -21,8 +21,8 @@ namespace daxa
 
     struct TaskInterfaceUses
     {
-        auto operator[](TaskBufferSlice const & handle) const -> TaskBufferUse<> const &;
-        auto operator[](TaskImageSlice const & handle) const -> TaskImageUse<> const &;
+        auto operator[](TaskBufferView const & handle) const -> TaskBufferUse<> const &;
+        auto operator[](TaskImageView const & handle) const -> TaskImageUse<> const &;
         auto get_uniform_buffer_info() const -> SetConstantBufferInfo;
       protected:
         friend struct ImplTaskRuntimeInterface;
@@ -71,7 +71,7 @@ namespace daxa
     struct TaskImageAliasInfo
     {
         std::string alias = {};
-        std::variant<TaskImageSlice, std::string> aliased_image = {};
+        std::variant<TaskImageView, std::string> aliased_image = {};
         u32 base_mip_level_offset = {};
         u32 base_array_layer_offset = {};
     };
@@ -79,7 +79,7 @@ namespace daxa
     struct TaskBufferAliasInfo
     {
         std::string alias = {};
-        std::variant<TaskBufferSlice, std::string> aliased_buffer = {};
+        std::variant<TaskBufferView, std::string> aliased_buffer = {};
     };
 
     template <typename TaskArgs>
@@ -93,31 +93,34 @@ namespace daxa
     struct TaskGraphInfo
     {
         Device device;
-        /// @brief Optionally the user can provide a swapchain. This enables the use of present.
+        /// @brief  Optionally the user can provide a swapchain. This enables the use of present.
         std::optional<Swapchain> swapchain = {};
-        /// @brief Task reordering can drastically improve performance,
-        /// yet is it also nice to have sequential callback execution.
+        /// @brief  Task reordering can drastically improve performance,
+        ///         yet is it also nice to have sequential callback execution.
         bool reorder_tasks = true;
-        /// @brief Some drivers have bad implementations for split barriers.
-        /// If that is the case for you, you can turn off all use of split barriers.
-        /// Daxa will use pipeline barriers instead if this is set.
+        /// @brief  Some drivers have bad implementations for split barriers.
+        ///         If that is the case for you, you can turn off all use of split barriers.
+        ///         Daxa will use pipeline barriers instead if this is set.
         bool use_split_barriers = true;
-        /// @brief Each condition doubled the number of permutations.
-        /// For a low number of permutations its is preferable to precompile all permutations.
-        /// For a large number of permutations it might be preferable to only create the permutations actually used on the fly just before they are needed.
-        /// The second option is enabled by using jit (just in time) compilation.
+        /// @brief  Each condition doubled the number of permutations.
+        ///         For a low number of permutations its is preferable to precompile all permutations.
+        ///         For a large number of permutations it might be preferable to only create the permutations actually used on the fly just before they are needed.
+        ///         The second option is enabled by using jit (just in time) compilation.
         bool jit_compile_permutations = {};
-        /// @brief Task graph can branch the execution based on conditionals. All conditionals must be set before execution and stay constant while executing.
-        /// This is usefull to create permutations of a task graph without having to create a seperate task graph.
-        /// Another benefit is that task graph can generate synch between executions of permutations while it can not generate synch between two seperate task graphs.
+        /// @brief  Task graph can branch the execution based on conditionals. All conditionals must be set before execution and stay constant while executing.
+        ///         This is usefull to create permutations of a task graph without having to create a seperate task graph.
+        ///         Another benefit is that task graph can generate synch between executions of permutations while it can not generate synch between two seperate task graphs.
         usize permutation_condition_count = {};
-        /// @brief Task graph will put performance markers that are used by profilers like nsight around each tasks execution by default.
+        /// @brief  Task graph will put performance markers that are used by profilers like nsight around each tasks execution by default.
         bool enable_command_labels = true;
         std::array<f32, 4> task_graph_label_color = {0.463f, 0.333f, 0.671f, 1.0f};
         std::array<f32, 4> task_batch_label_color = {0.563f, 0.433f, 0.771f, 1.0f};
         std::array<f32, 4> task_label_color = {0.663f, 0.533f, 0.871f, 1.0f};
-        /// @brief Records debug information about the execution if enabled. This string is retrievable with the function get_debug_string.
+        /// @brief  Records debug information about the execution if enabled. This string is retrievable with the function get_debug_string.
         bool record_debug_information = {};
+        /// @brief  Sets the size of the linear allocator of device local, host visible memory used by the linear staging allocator.
+        ///         This memory is used internally as well as by tasks via the TaskInterface::get_allocator().
+        ///         Setting the size to 0, disables a few task list features but also eliminates the memory allocation.
         u32 staging_memory_pool_size = 262'144; // 2^16 bytes.
         std::string name = {};
     };
@@ -161,62 +164,6 @@ namespace daxa
         bool record_debug_string = {};
     };
 
-    struct TrackedBuffers
-    {
-        std::span<BufferId const> buffers = {};
-        Access latest_access = {};
-    };
-
-    struct TaskBufferInfo
-    {
-        TrackedBuffers initial_buffers = {};
-        std::string name = {};
-    };
-
-    struct TaskBuffer : ManagedPtr
-    {
-        TaskBuffer() = default;
-        TaskBuffer(TaskBufferInfo const & info);
-
-        operator TaskBufferSlice() const;
-
-        auto handle() const -> TaskBufferSlice;
-        auto info() const -> TaskBufferInfo const &;
-        auto get_state() const -> TrackedBuffers;
-
-        void set_buffers(TrackedBuffers const & buffers);
-        void swap_buffers(TaskBuffer & other);
-    };
-
-    struct TrackedImages
-    {
-        std::span<ImageId const> images = {};
-        // optional:
-        std::span<ImageSliceState const> latest_slice_states = {};
-    };
-
-    struct TaskImageInfo
-    {
-        TrackedImages initial_images = {};
-        bool swapchain_image = {};
-        std::string name = {};
-    };
-
-    struct TaskImage : ManagedPtr
-    {
-        TaskImage() = default;
-        TaskImage(TaskImageInfo const & info);
-
-        operator TaskImageSlice() const;
-
-        auto handle() const -> TaskImageSlice;
-        auto info() const -> TaskImageInfo const &;
-        auto get_state() const -> TrackedImages;
-
-        void set_images(TrackedImages const & images);
-        void swap_images(TaskImage & other);
-    };
-
     struct InlineTaskInfo
     {
         std::vector<GenericTaskResourceUse> uses = {};
@@ -235,8 +182,8 @@ namespace daxa
         void use_persistent_buffer(TaskBuffer const & buffer);
         void use_persistent_image(TaskImage const & image);
 
-        auto create_transient_buffer(TaskTransientBufferInfo const & info) -> TaskBufferSlice;
-        auto create_transient_image(TaskTransientImageInfo const & info) -> TaskImageSlice;
+        auto create_transient_buffer(TaskTransientBufferInfo const & info) -> TaskBufferView;
+        auto create_transient_image(TaskTransientImageInfo const & info) -> TaskImageView;
 
         template <typename Task>
         void add_task(Task const & task)

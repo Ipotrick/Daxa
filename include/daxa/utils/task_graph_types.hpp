@@ -110,7 +110,7 @@ namespace daxa
 
     using TaskResourceIndex = u32;
 
-    struct TaskGPUResourceHandle
+    struct TaskGPUResourceView
     {
         TaskResourceIndex task_graph_index = {};
         TaskResourceIndex index = {};
@@ -118,19 +118,19 @@ namespace daxa
         auto is_empty() const -> bool;
         auto is_persistent() const -> bool;
 
-        auto operator<=>(TaskGPUResourceHandle const & other) const = default;
+        auto operator<=>(TaskGPUResourceView const & other) const = default;
     };
 
-    auto to_string(TaskGPUResourceHandle const & id) -> std::string;
+    auto to_string(TaskGPUResourceView const & id) -> std::string;
 
-    struct TaskBufferSlice : public TaskGPUResourceHandle
+    struct TaskBufferView : public TaskGPUResourceView
     {
     };
 
-    struct TaskImageSlice : public TaskGPUResourceHandle
+    struct TaskImageView : public TaskGPUResourceView
     {
         daxa::ImageMipArraySlice slice = {};
-        auto subslice(daxa::ImageMipArraySlice const & new_slice) const -> TaskImageSlice
+        auto view(daxa::ImageMipArraySlice const & new_slice) const -> TaskImageView
         {
             auto ret = *this;
             ret.slice = new_slice;
@@ -163,6 +163,62 @@ namespace daxa
         [[maybe_unused]] u8 raw[TASK_INPUT_FIELD_SIZE - sizeof(TaskResourceUseType)] = {};
     };
 
+    struct TrackedBuffers
+    {
+        std::span<BufferId const> buffers = {};
+        Access latest_access = {};
+    };
+
+    struct TaskBufferInfo
+    {
+        TrackedBuffers initial_buffers = {};
+        std::string name = {};
+    };
+
+    struct TaskBuffer : ManagedPtr
+    {
+        TaskBuffer() = default;
+        TaskBuffer(TaskBufferInfo const & info);
+
+        operator TaskBufferView() const;
+
+        auto view() const -> TaskBufferView;
+        auto info() const -> TaskBufferInfo const &;
+        auto get_state() const -> TrackedBuffers;
+
+        void set_buffers(TrackedBuffers const & buffers);
+        void swap_buffers(TaskBuffer & other);
+    };
+
+    struct TrackedImages
+    {
+        std::span<ImageId const> images = {};
+        // optional:
+        std::span<ImageSliceState const> latest_slice_states = {};
+    };
+
+    struct TaskImageInfo
+    {
+        TrackedImages initial_images = {};
+        bool swapchain_image = {};
+        std::string name = {};
+    };
+
+    struct TaskImage : ManagedPtr
+    {
+        TaskImage() = default;
+        TaskImage(TaskImageInfo const & info);
+
+        operator TaskImageView() const;
+
+        auto view() const -> TaskImageView;
+        auto info() const -> TaskImageInfo const &;
+        auto get_state() const -> TrackedImages;
+
+        void set_images(TrackedImages const & images);
+        void swap_images(TaskImage & other);
+    };
+
     template <TaskBufferAccess T_ACCESS = TaskBufferAccess::NONE>
     struct alignas(TASK_INPUT_FIELD_SIZE) TaskBufferUse
     {
@@ -173,16 +229,21 @@ namespace daxa
         TaskBufferAccess m_access = T_ACCESS;
 
       public:
-        TaskBufferSlice handle = {};
+        TaskBufferView handle = {};
 
         constexpr TaskBufferUse() = default;
 
-        constexpr TaskBufferUse(TaskBufferSlice const & a_handle)
+        constexpr TaskBufferUse(TaskBufferView const & a_handle)
             : handle{a_handle}
         {
         }
 
-        constexpr TaskBufferUse(TaskBufferSlice const & a_handle, TaskBufferAccess access)
+        TaskBufferUse(TaskBuffer const & a_handle)
+            : handle{a_handle}
+        {
+        }
+
+        constexpr TaskBufferUse(TaskBufferView const & a_handle, TaskBufferAccess access)
             requires(T_ACCESS == TaskBufferAccess::NONE)
             : handle{a_handle}, m_access{access}
         {
@@ -236,16 +297,21 @@ namespace daxa
         ImageLayout m_layout = {};
 
       public:
-        TaskImageSlice handle = {};
+        TaskImageView handle = {};
 
         constexpr TaskImageUse() = default;
 
-        constexpr TaskImageUse(TaskImageSlice const & a_handle)
+        constexpr TaskImageUse(TaskImageView const & a_handle)
             : handle{a_handle}
         {
         }
 
-        constexpr TaskImageUse(TaskImageSlice const & a_handle, TaskImageAccess access, ImageViewType view_type = ImageViewType::MAX_ENUM)
+        TaskImageUse(TaskImage const & a_handle)
+            : handle{a_handle}
+        {
+        }
+
+        constexpr TaskImageUse(TaskImageView const & a_handle, TaskImageAccess access, ImageViewType view_type = ImageViewType::MAX_ENUM)
             requires(T_ACCESS == TaskImageAccess::NONE && T_VIEW_TYPE == ImageViewType::MAX_ENUM)
             : handle{a_handle}, m_access{access}, m_view_type{view_type}
         {
