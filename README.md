@@ -8,7 +8,7 @@
 
 Daxa is my opinionated GPU API abstraction over Vulkan.
 
-Daxa's interface is quite close Vulkan but much simplified. Some central abstractions make it much more convenient to use. 
+Daxa's interface is quite close to Vulkan but much simplified. Some central abstractions make it much more convenient to use. 
 
 The two most intresting features that set daxa appart from other abstractions the fully bindless shader ressources and its render graph.
 
