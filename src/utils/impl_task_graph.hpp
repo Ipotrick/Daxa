@@ -84,7 +84,7 @@ namespace daxa
     {
         // when this ID is invalid, this barrier is NOT an image memory barrier but just a memory barrier.
         // So when ID invalid => memory barrier, ID valid => image memory barrier.
-        TaskImageSlice image_id = {};
+        TaskImageView image_id = {};
         ImageMipArraySlice slice = {};
         ImageLayout layout_before = {};
         ImageLayout layout_after = {};
@@ -142,7 +142,7 @@ namespace daxa
         // record time information:
         bool active = {};
         // persistent information:
-        TaskImageSlice swapchain_image = {};
+        TaskImageView swapchain_image = {};
         std::vector<PerPermTaskBuffer> buffer_infos = {};
         std::vector<PerPermTaskImage> image_infos = {};
         std::vector<TaskSplitBarrier> split_barriers = {};
@@ -320,8 +320,8 @@ namespace daxa
         u32 record_active_conditional_scopes = {};
         u32 record_conditional_states = {};
         std::vector<TaskGraphPermutation *> record_active_permutations = {};
-        std::unordered_map<std::string, TaskBufferSlice> buffer_name_to_id = {};
-        std::unordered_map<std::string, TaskImageSlice> image_name_to_id = {};
+        std::unordered_map<std::string, TaskBufferView> buffer_name_to_id = {};
+        std::unordered_map<std::string, TaskImageView> image_name_to_id = {};
 
         usize memory_block_size = {};
         u32 memory_type_bits = 0xFFFFFFFFu;
@@ -329,7 +329,7 @@ namespace daxa
         bool compiled = {};
 
         // execution time information:
-        daxa::TransferMemoryPool staging_memory{TransferMemoryPoolInfo{.device = info.device, .capacity = info.staging_memory_pool_size, .use_bar_memory = true, .name = info.name}};
+        std::optional<daxa::TransferMemoryPool> staging_memory = {};
         std::array<bool, DAXA_TASK_GRAPH_MAX_CONDITIONALS> execution_time_current_conditionals = {};
 
         // post execution information:
@@ -340,10 +340,10 @@ namespace daxa
         u32 prev_frame_permutation_index = {};
         std::stringstream debug_string_stream = {};
 
-        auto get_actual_buffers(TaskBufferSlice id, TaskGraphPermutation const & perm) const -> std::span<BufferId const>;
-        auto get_actual_images(TaskImageSlice id, TaskGraphPermutation const & perm) const -> std::span<ImageId const>;
-        auto id_to_local_id(TaskBufferSlice id) const -> TaskBufferSlice;
-        auto id_to_local_id(TaskImageSlice id) const -> TaskImageSlice;
+        auto get_actual_buffers(TaskBufferView id, TaskGraphPermutation const & perm) const -> std::span<BufferId const>;
+        auto get_actual_images(TaskImageView id, TaskGraphPermutation const & perm) const -> std::span<ImageId const>;
+        auto id_to_local_id(TaskBufferView id) const -> TaskBufferView;
+        auto id_to_local_id(TaskImageView id) const -> TaskImageView;
         void update_active_permutations();
         void update_image_view_cache(ImplTask & task, TaskGraphPermutation const & permutation);
         void execute_task(ImplTaskRuntimeInterface & impl_runtime, TaskGraphPermutation & permutation, TaskBatchId in_batch_task_index, TaskId task_id);
@@ -355,8 +355,8 @@ namespace daxa
         void create_transient_runtime_images(TaskGraphPermutation & permutation);
         void allocate_transient_resources();
 
-        void print_task_buffer_to(std::string & out, std::string indent, TaskGraphPermutation const & permutation, TaskBufferSlice local_id);
-        void print_task_image_to(std::string & out, std::string indent, TaskGraphPermutation const & permutation, TaskImageSlice image);
+        void print_task_buffer_to(std::string & out, std::string indent, TaskGraphPermutation const & permutation, TaskBufferView local_id);
+        void print_task_image_to(std::string & out, std::string indent, TaskGraphPermutation const & permutation, TaskImageView image);
         void print_task_barrier_to(std::string & out, std::string & indent, TaskGraphPermutation const & permutation, usize index, bool const split_barrier);
         void print_task_to(std::string & out, std::string & indent, TaskGraphPermutation const & permutation, TaskId task_id);
         void print_permutation_aliasing_to(std::string & out, std::string indent, TaskGraphPermutation const & permutation);

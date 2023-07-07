@@ -538,7 +538,7 @@ auto upload_task_graph = daxa::TaskGraph({
 });
 ```
 
-In TaskGraph we need "virtual" resources at record time, they are called TaskBuffer and TaskImage. The reason for this is, that between executions the images and buffers might get recreated or reassigned. To avoid having to rerecord the whole task graph, task graph will take TaskResources instead which are backed by runtime resources on execution.
+In TaskGraph we need "virtual" resources at record time, they are called TaskBufferView and TaskImage. The reason for this is, that between executions the images and buffers might get recreated or reassigned. To avoid having to rerecord the whole task graph, task graph will take TaskResources instead which are backed by runtime resources on execution.
 
 ```cpp
 auto task_swapchain_image = daxa::TaskImage{{.swapchain_image = true, .name = "swapchain image"}};
@@ -548,7 +548,7 @@ auto task_buffer = daxa::TaskBuffer({
 });
 ```
 
-Here we create a `task_swapchain_image` to represent the swapchain image. We also create a TaskBuffer `task_buffer` that represents our vertex buffer. We have to register these resources with the TaskGraphs we have, so that they track and modify their state.
+Here we create a `task_swapchain_image` to represent the swapchain image. We also create a TaskBufferView `task_buffer` that represents our vertex buffer. We have to register these resources with the TaskGraphs we have, so that they track and modify their state.
 
 ```cpp
 loop_task_graph.use_persistent_buffer(task_buffer);
@@ -562,7 +562,7 @@ TaskGraph only needs to have virtual handles for resources involved in any synch
 ```cpp
 upload_task_graph.add_task(UploadVertexDataTask{
     .uses = {
-        .vertex_buffer = task_buffer.handle(),
+        .vertex_buffer = task_buffer.view(),
     },
 });
 ```
@@ -578,8 +578,8 @@ Other then the list of used resources a task has a task callback which will be c
 ```cpp
 loop_task_graph.add_task(DrawToSwapchainTask{
     .uses = {
-        .vertex_buffer = task_buffer.handle(),
-        .color_target = task_swapchain_image.handle(),
+        .vertex_buffer = task_buffer.view(),
+        .color_target = task_swapchain_image.view(),
     },
     .pipeline = pipeline.get(),
 });

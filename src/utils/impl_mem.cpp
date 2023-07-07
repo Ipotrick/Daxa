@@ -20,10 +20,44 @@ namespace daxa
           buffer_host_address{this->info.device.get_host_address(this->buffer)}
     {
     }
+    
+    TransferMemoryPool::TransferMemoryPool(TransferMemoryPool && other)
+    {
+        std::swap(this->info, other.info);
+        std::swap(this->gpu_timeline, other.gpu_timeline);
+        std::swap(this->current_timeline_value, other.current_timeline_value); 
+        std::swap(this->live_allocations, other.live_allocations); 
+        std::swap(this->buffer, other.buffer); 
+        std::swap(this->buffer_device_address, other.buffer_device_address); 
+        std::swap(this->buffer_host_address, other.buffer_host_address); 
+        std::swap(this->claimed_start, other.claimed_start); 
+        std::swap(this->claimed_size, other.claimed_size); 
+    }
+
+    TransferMemoryPool& TransferMemoryPool::operator=(TransferMemoryPool && other)
+    {
+        if (!this->buffer.is_empty())
+        {
+            this->info.device.destroy_buffer(this->buffer);
+        }
+        std::swap(this->info, other.info);
+        std::swap(this->gpu_timeline, other.gpu_timeline);
+        std::swap(this->current_timeline_value, other.current_timeline_value); 
+        std::swap(this->live_allocations, other.live_allocations); 
+        std::swap(this->buffer, other.buffer); 
+        std::swap(this->buffer_device_address, other.buffer_device_address); 
+        std::swap(this->buffer_host_address, other.buffer_host_address); 
+        std::swap(this->claimed_start, other.claimed_start); 
+        std::swap(this->claimed_size, other.claimed_size); 
+        return *this;
+    }
 
     TransferMemoryPool::~TransferMemoryPool()
     {
-        this->info.device.destroy_buffer(this->buffer);
+        if (!this->buffer.is_empty())
+        {
+            this->info.device.destroy_buffer(this->buffer);
+        }
     }
 
     auto TransferMemoryPool::allocate(u32 allocation_size, u32 alignment_requirement) -> std::optional<TransferMemoryPool::Allocation>

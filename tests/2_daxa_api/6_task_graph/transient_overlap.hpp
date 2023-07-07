@@ -13,7 +13,7 @@ namespace tests
     void set_initial_buffer_data(
         daxa::TaskInterface & ti,
         daxa::CommandList & cmd,
-        daxa::TaskBufferSlice buffer,
+        daxa::TaskBufferView buffer,
         u32 size,
         u32 value)
     {
@@ -33,7 +33,7 @@ namespace tests
     void validate_buffer_data(
         daxa::TaskInterface & ti,
         daxa::CommandList & cmd,
-        daxa::TaskBufferSlice buffer,
+        daxa::TaskBufferView buffer,
         u32 size,
         u32 value,
         daxa::ComputePipeline & pipeline)
@@ -50,7 +50,7 @@ namespace tests
     void set_initial_image_data(
         daxa::TaskInterface & ti,
         daxa::CommandList & cmd,
-        daxa::TaskImageSlice image,
+        daxa::TaskImageView image,
         auto size,
         f32 value)
     {
@@ -78,7 +78,7 @@ namespace tests
     void validate_image_data(
         daxa::TaskInterface & ti,
         daxa::CommandList & cmd,
-        daxa::TaskImageSlice image,
+        daxa::TaskImageView image,
         auto size,
         f32 value,
         daxa::ComputePipeline & pipeline)
