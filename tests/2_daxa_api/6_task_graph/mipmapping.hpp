@@ -101,7 +101,7 @@ namespace tests
                 return ret;
             }();
 
-            daxa::TaskBufferSlice task_staging_mipmapping_gpu_input_buffer;
+            daxa::TaskBuffer task_staging_mipmapping_gpu_input_buffer;
 
             bool mouse_drawing = false;
 
@@ -519,8 +519,8 @@ namespace tests
                                 std::array<i32, 3> next_mip_size = {std::max<i32>(1, mip_size[0] / 2), std::max<i32>(1, mip_size[1] / 2), std::max<i32>(1, mip_size[2] / 2)};
                                 new_task_graph.add_task(MipMapTask{
                                     .uses = {
-                                        .lower_mip = task_render_image.handle().subslice({.base_mip_level = i}),
-                                        .higher_mip = task_render_image.handle().subslice({.base_mip_level = i+1}),
+                                        .lower_mip = task_render_image.view().view({.base_mip_level = i}),
+                                        .higher_mip = task_render_image.view().view({.base_mip_level = i+1}),
                                     },
                                     .name = std::string("mip map ") + std::to_string(i),
                                     .mip = i,
@@ -547,7 +547,7 @@ namespace tests
                 });
                 new_task_graph.add_task({
                     .uses = {
-                        ImageTransferRead<>{task_render_image.handle().subslice({.level_count = 5})},
+                        ImageTransferRead<>{task_render_image.view().view({.level_count = 5})},
                         ImageTransferWrite<>{task_swapchain_image},
                     },
                     .task = [this](daxa::TaskInterface const & ti)

@@ -309,7 +309,7 @@ auto main() -> int
     // want to change the vertex data.
     upload_task_graph.add_task(UploadVertexDataTask{
         .uses = {
-            .vertex_buffer = task_buffer.handle(),
+            .vertex_buffer = task_buffer.view(),
         },
     });
 
@@ -323,7 +323,7 @@ auto main() -> int
     //         // We conditionally execute the upload vertex data task.
     //         loop_task_graph.add_task(UploadVertexDataTask{
     //             .uses = {
-    //                 .vertex_buffer = task_buffer.handle(),
+    //                 .vertex_buffer = task_buffer.view(),
     //             },
     //         });
     //     },
@@ -335,8 +335,8 @@ auto main() -> int
     // And a task to draw to the screen
     loop_task_graph.add_task(DrawToSwapchainTask{
         .uses = {
-            .vertex_buffer = task_buffer.handle(),
-            .color_target = task_swapchain_image.handle(),
+            .vertex_buffer = task_buffer.view(),
+            .color_target = task_swapchain_image.view(),
         },
         .pipeline = pipeline.get(),
     });
