@@ -12,4 +12,6 @@
 * General simplifications everywhere. Many function calls and objects are simpler to manage then in raw vulkan.
 * Abstraction of image aspect. In 99% of cases (daxa has no sparse image support) daxa can infer the perfect image aspect for an operation, which is why its abstracted to reduce boilerplate.
 * Abstracted Command buffer and pool. Daxa internally reuses command pools for you.
-* Abstraction of descriptor set layout and pipeline layout. Daxa makes a few key abstractions that allow for very simple and efficient abstraction of these layouts.
+* Simplified pipelines. Pipelines do not need any knowledge of descriptor set layouts, do not need a pipeline layout and also do not need any information about the renderpass it is used in.
+* Simplified queue interface. The device contains the (currently) only queue. In the future there will optionally be separate compute and transfer queus.
+* Next to bindless, daxa also provides simplified uniform buffer bindings. 

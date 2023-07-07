@@ -1,5 +1,7 @@
 # Bindless Shader Resources
 
+## Why Bindless?
+
 As GPUs become more generalized and programmable, they deviated from the old OpenGL style binding slot model which limited the user to only a handful of resources per shader.
 
 In modern APIs like Vulkan/D3D12/Metal/CUDA, it is common to have abstractions that can bind thousands of shader resources at once. Better yet, in many of these APIs it is trivial to bind a massive table of resources - say all your model textures at once - and then dynamically index this table in the shader.
@@ -8,11 +10,13 @@ This way of accessing resources by an index, a plain pointer, or other handle is
 
 In addition to the additional freedom and flexibility, bindless can make resource management much simpler as well. Anyone that has ever dealt with Vulkan descriptor sets, layouts, and pools knows how mentally taxing it can be to try to write an efficient and easy to use abstraction in Vulkan. Bindless makes all this much simpler.
 
-For the latest GPUs bindless resource access is very efficient and has practically no overhead. It is also where all APIs are headed to and I confidently believe it is the future. This is why Daxa forces the user to use bindless resource handles only.
+For the latest GPUs bindless resource access is very efficient and has practically no overhead on modern GPUs. It is also where all APIs are headed to and I confidently believe it is the future. This is why Daxa forces the user to use bindless resource handles only.
+
+In addition to the benefits in flexibility and convenience, bindless can have great CPU side performance benefits. Relatively speaking descriptor set updates and binds are quite expensive compared to draw and compute dispatch calls. With bindless it is possible to eliminate most descriptor set updates and reducing the binding call count to the number of pipeline binding calls. This reduction in set update and bind calls can greatly benefit CPU performance.
 
 ## Images In Daxa
 
-In Daxa you can create images, image views and samplers from a device like so:
+In Daxa you can create images, image views, and samplers from a device like so:
 
 ```c++
 daxa::ImageId image_id = device.create_image({...});
@@ -28,7 +32,7 @@ Notably, all images are created with a default image view, that can be retrieved
 daxa::ImageViewId image_view_id = image_id.default_view();
 ```
 
-This is very handy, as most of the time one only really needs one view of the whole image. But Daxa image views are a bit special compared to Vulkan image views. In Vulkan, an image view is either a sampled image OR a storage image. Daxa always creates two image descriptors for each daxa::ImageViewId, one for storage image (in layout GENERAL) and one for sampled image (in layout SHADER_READ_ONLY_OPTIMAL), as long as the image type and format allows for each access.
+This is very handy, as most of the time one only really needs one view of the whole image. But Daxa image views are a bit special compared to Vulkan image views. In Vulkan, an image view is either a sampled image OR a storage image. Daxa always creates two image descriptors for each daxa::ImageViewId, one for storage image (in layout GENERAL) and one for sampled image (in layout SHADER_READ_ONLY_OPTIMAL), as long as the image type and format allow for each access.
 
 ### Image Shader Access
 
@@ -37,7 +41,7 @@ Now comes the magical part. All the created image, image view, and sampler IDs c
 You never need to bind any resources, they are simply always available and accessible in shaders.
 > Keep in mind that you still need to make sure you have the correct image layout and sync for each resource!
 
-The shader access works by transforming a `daxa_ImageViewId` with or without a `daxa_SamplerId` into a GLSL `texture`, `image` or `sampler` locally.
+The shader access works by transforming a `daxa_ImageViewId` with or without a `daxa_SamplerId` into a GLSL `texture`, `image`, or `sampler` locally.
 
 Example:
 
@@ -55,11 +59,11 @@ uvec2 size = textureSize(daxa_texture1DArray(img));
 ...
 ```
 
-For each image access, the image view ID must be cast to the corresponding GLSL type with Daxa's macros. Daxa defines macros for all normal image/texture/sampler types and even for some commonly used extensions like 64 bit images.
+For each image access, the image view ID must be cast to the corresponding GLSL type with Daxa's macros. Daxa defines macros for all normal image/texture/sampler types and even for some commonly used extensions like 64-bit images.
 
-You do NOT need to interact with any binding logic. No descriptor sets, descriptor layouts, pipeline layouts binding, set numbers or shader reflection. Daxa Ddes all the descriptor management behind the scenes.
+You do NOT need to interact with any binding logic. No descriptor sets, descriptor layouts, pipeline layouts binding, set numbers, or shader reflection. Daxa Ddes all the descriptor management behind the scenes.
 
-When an image or image view is created, the image views are immediately added to the bindless table. When an image (-view) gets destroyed it is removed from the table. Note that resource desctruction is deferred to the end of all currently running gpu work, so you do not need to write a zombie queue or similar in most cases.
+When an image or image view is created, the image views are immediately added to the bindless table. When an image (-view) gets destroyed it is removed from the table. Note that resource destruction is deferred to the end of all currently running GPU work, so you do not need to write a zombie queue or similar in most cases.
 
 ## Buffers In Daxa
 
@@ -68,7 +72,7 @@ Buffers are created similarly to images:
 daxa::BufferId buffer_id = device.create_buffer({...});
 ```
 
-Each buffer is created with a buffer device address and a mapped host pointer, as long as the memory requirements allow for it.
+Each buffer is created with a buffer device address and optionally a mapped host pointer, as long as the memory requirements allow for it.
 
 The host and device pointers can be retrieved:
 ```c++
@@ -127,5 +131,15 @@ These macros generate buffer references under the following names:
 
 The RW variants are declared to be read and writable, the non-rw variants are READ ONLY. The coherent variants declare coherent memory access.
 
-The Daxa buffer ptr types are simply a buffer reference containing one field names `value` of the given struct type.
-Daxa also provides the `deref(BUFFER_PTR)` macro, that simply translates to `BUFFER_PTR.value`. This is some optional syntax sugar for those who prefer to be clear and want to avoid using the name `value` here.
+The Daxa buffer ptr types are simply a buffer reference containing one field named `value` of the given struct type.
+Daxa also provides the `deref(BUFFER_PTR)` macro, which simply translates to `BUFFER_PTR.value`. This is some optional syntax sugar for those who prefer to be clear and want to avoid using the name `value` here.
+
+# Host-Device resource transport
+
+As buffers, images, and samplers are not written to sets that get bounds how do you give the GPU the bindless ids and addresses to the shader in order to use it?
+
+As described in the [shader integration wiki page](https://github.com/Ipotrick/Daxa/tree/master/wiki/ShaderIntegration.md), Daxa still has two other ways to set resources for shaders appart from the bindless access: uniform buffers and push constants. 
+Push constants are an extreamly efficient and simple way to transport data to the gpu for any scenario, be it setting daxa for a compute dispatch or giving each drawcall new bindless handles to access, so naturally daxa provides push constants.
+Uniform buffers on the other hand are not nessecary, yet they are exposed in daxa, as some hw like nvidia gpus have specialized hardware for dealing with these buffer bindings. For this reason daxa also provides uniform buffer bindings.
+
+To transport ids and buffer device addresses, simply write them to a push constant or buffer and then read them in the shader. Daxa makes it very easy to [declare c++/shader-shared structs](https://github.com/Ipotrick/Daxa/tree/master/wiki/ShaderIntegration.md).

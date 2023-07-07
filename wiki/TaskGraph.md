@@ -40,15 +40,13 @@ These act as placeholders for the resources that are used in the graph at execut
 
 As said earlier, the represented buffers and images can be set between executions of task graphs that access said resources. So for example a task image representing a swapchain could get a new `ImageId` from the swapchain every frame before executing the task graph. This is done by using the `set_buffers` and `set_images` functions.
 
-## Handles
+## Task Ressource Views
 
-In essence, handles are simply a TaskResourceId + a subresource range of the given ID.
+Many times it can be quite convenient to refer to only a part of an image or buffer. For example to specify specific mip levels in an image in a mip map generator.
 
-All tasks take handles as parameters to their uses, not IDs themselves. This is because with handles you can specify a more specific part of a resource, like a mip level or array layer of an image.
+For this purpose daxa has TaskImageViews. A TaskImageView similarly to an ImageView contains of a slice of the TaskImage, specifying the subresource.
 
-Task resources implicitly cast to handles. A task handle is used to identify a part of a task resource. In the case of a buffer, it is just identifying the whole buffer. But for images it identifies a slice of the image.
-
-An example where this is very useful is mip mapping. In mip mapping you would have two uses on the same image that specify different slices of that image. This is easily achieved with handles.
+All Tasks take in views instead of the ressources themselves. Ressources implicitly cast to the views, but also have the explicit conversion function `.view()`. Views themselves also have a `.view()` function to create a new view from an existing one.
 
 # Task
 
