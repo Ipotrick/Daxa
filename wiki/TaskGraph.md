@@ -13,68 +13,54 @@ This "two phase" design allows render graphs to optimize the operations not unli
 In addition, task graphs are reusable. You can, for example record your main render loop as a task graph and let task graph optimize the tasks only once and then reuse the optimized execution plan every frame. 
 All in all, this allows for automatically optimized, low CPU cost synchronization generation.
 
-# Quick Overview
-Steps of working with a task graph:
+Overview of the workflow for task graph:
+* Create tasks
 * Create task resources
-* Create task graph
-* Record tasks into graph
+* Add tasks to graph
 * Complete task graph
 * Execute task graph
-
-Here the task graph has two phases, the record and execute phase. In the record phase, the task graph is mutable. New tasks can be added to the graph. After completing a graph, it can no longer record new tasks. Completing a graph is an important step, as it "compiles" the graph. In the task graph compilation, the tasks are analyzed for dependencies, reordered for optimal barrier placement, and optimized sync operations between tasks are generated along side the optimized execution plan.
-
-Importantly, completed task graphs can be reused! All resources within a task graph are virtualized (as seen later), meaning you can change the represented image/buffer for a task image/buffer between executions of a completed task graph (for example change the swapchain image or a temporal resource).
-Re-using completed task graphs can significantly reduce CPU overhead by avoiding redundant computations every frame.
+* (optional) Repeatedly reassign resources to task resources
+* (optional) Repeatedly execute task graph
 
 # Task Resources
 
-Task graph has virtual resource handles (`TaskImageId` and `TaskBufferId`). This is important for the following reasons:
+When construction a task graph its important to not use the real resource ids used in execution but virtual; representatives at record time. This has the simple reason that the task graph is reusable between executions. Making the reusability viable is only possible when resources can change between executions. To do this the graph takes virtual resources, TaskImage and TaskBuffer. ImageId and BufferIds can be assigned to these TaskImages and Taskbuffers and changed between executions of task graphs.
 
-- If we would use the plain resource IDs we would have a problem achieving high reusability. This is because after completing a graph, its contents are constant. All resource IDs are backed and can't change. This forces us to re-record any graph that can change its resource IDs between executions. As this makes it very difficult to reuse graphs, Daxa uses "fake" handles that represent resources used in task graphs. What resources these task resources actually represent can be changed between executions. This allows you to reuse task graphs in many more cases. An example for this is recording a graph for most of the rendering and accessing the swapchain. The swapchain image changes every frame, so we must make sure that we have a placeholder handle for the swapchain at record time, to be able to reuse the same graph without recreating it every frame.
-
-- Another reason for these virtual IDs is that tracking of resource state between task graph executions is possible. This allows you to use resources in multiple task graphs in any order freely. This is possible as Daxa can track the state the resources are in, and can correctly transition states between separate graphs. 
-
-There are only two shader resource types that require any synchronization in Daxa: buffers and images. There are two corresponding types in task graph: `daxa::TaskBuffer` and `daxa::TaskImage`. 
-
-These act as placeholders for the resources that are used in the graph at execution when recording the graph. What resources they represent can be set either in creation of the task resource with the fields `initial_buffer`, `initial_images` or set with the functions `set_buffers` and `set_images`. Each task resource can actually represent multiple resources at once! This is useful as it may be that some resources have the exact same access pattern. Using one task resource handle to represent multiple resources makes the recording more efficient and more readable.
-
-As said earlier, the represented buffers and images can be set between executions of task graphs that access said resources. So for example a task image representing a swapchain could get a new `ImageId` from the swapchain every frame before executing the task graph. This is done by using the `set_buffers` and `set_images` functions.
-
-## Task Ressource Views
+## Task Resource Views
 
 Many times it can be quite convenient to refer to only a part of an image or buffer. For example to specify specific mip levels in an image in a mip map generator.
 
 For this purpose daxa has TaskImageViews. A TaskImageView similarly to an ImageView contains of a slice of the TaskImage, specifying the subresource.
 
-All Tasks take in views instead of the ressources themselves. Ressources implicitly cast to the views, but also have the explicit conversion function `.view()`. Views themselves also have a `.view()` function to create a new view from an existing one.
+All Tasks take in views instead of the resources themselves. Resources implicitly cast to the views, but also have the explicit conversion function `.view()`. Views themselves also have a `.view()` function to create a new view from an existing one.
 
 # Task
 
 The core part about any render graph is the nodes in the graph. In the case of Daxa these nodes are called tasks.
 
-Each task as a set of used resources (the tasks uses), a callback that describes rendering operations on those resources at execution time and a name.
+A task is a unit of work. It mainly consists of the used task resources (akin to parameters in a function) and a callback (akin to a function body). So one could think of a task as a meta function inside the graph.
 
-Each task therefore is practically describing a meta function as a part of a renderer. The 'uses' being the function parameters and the callback being the function body.
-
-To construct a task graph, you define a set of tasks, each describing a small portion of your renderer.
-
-You then record a high level description of your renderer in form of a task graph. To record a task graph you add tasks, to extend the graph.
+To construct a task graph, you define a set of task resources (virtual representatives for the real resources when recording the graph) and a list of tasks using those task resources.
 
 Each time you add a task, it is like a function call where you pass in the virtual task resources into the task's uses. Task graph will use the input tasks and resources to analyze and generate optimal execution order and synchronization for a given graph.
+
+Importantly the graph works in two phases, the recording and the execution. The callbacks of tasks are only ever called in the execution of the graph, not the recording.
 
 There are two ways to declare a task. You can declare tasks inline, directly inside the add_task function:
 ```cpp
 using namespace daxa::task_resource_uses; // For ImageTransfer(Read|Write)
+daxa::TaskImage src = ...;
+daxa::TaskImage dst = ...;
 int blur_width = ...;
 graph.add_task({
   .uses = {
-    ImageTransferRead<>{task_image0},
-    ImageTransferWrite<>{task_image1},
+    ImageTransferRead<>{src},
+    ImageTransferWrite<>{dst},
   },
   .task = [=](daxa::TaskInterface ti)
   {
     auto cmd = ti.get_command_list();
-    copy_image_to_image(ti.uses[task_image0].image(), ti.uses[task_image1].image(), blur_width);
+    copy_image_to_image(ti.uses[src].image(), ti.uses[dst].image(), blur_width);
   },
   .name = "example task",
 });
@@ -86,11 +72,13 @@ And the general way, the persisstent declaration:
 ```cpp
 struct MyTask
 {
+  // The 'uses' field will be statically reflected by daxa. 
   struct Uses {
     ImageTransferRead<> src;
     ImageTransferWrite<> dst;
-  } uses;  // Field will be statically reflected by daxa. 
-  static constexpr std::string_view name = "example task"; // Field will be statically reflected by daxa. 
+  } uses;  
+  // The 'name' will be statically reflected by daxa. 
+  static constexpr std::string_view name = "example task"; 
   int blur_width = {};
   void callback(daxa::TaskInterface ti)
   {
@@ -103,7 +91,7 @@ struct MyTask
 Daxa uses limited static reflection to analyze task structs with templates and concepts. The Uses field must be called uses and the struct type needs to be called Uses as well.
 Optionally daxa can also reflect the name field to give the task a name.
 
-## Task uses
+## Task Resource Uses
 
 The use of a resource is declared with either a TaskImageUse or a TaskBufferUse. Daxa predefines a set of shortened names for these uses under the namespace `daxa::task_resource_uses`. It is adivsed to use these.
 
@@ -118,29 +106,29 @@ For inline tasks, the uses can be retrieved with the task interface:
 ```cpp
   .task = [=](daxa::TaskInterface ti)
   {
-    ImageTransferRead<> img_use & = ti.uses[task_image0];
+    ImageTransferRead<> const & img_use = ti.uses[src];
   },
 ```
 While with persistent tasks, the uses are stored in the `Uses` struct and can be directly accessed in the callback:
 ```cpp
   void callback(daxa::TaskInterface ti)
   {
-    ImageTransferRead<> img_use & = uses.src;
+    ImageTransferRead<> const & img_use = uses.src;
   },
 ```
-The uses provide a runtime interface:
+ImageUse's provide a runtime interface:
 ```cpp
-auto access() const -> TaskImageAccess;
-auto view_type() const -> ImageViewType;
+auto access()             const -> TaskImageAccess;
+auto view_type()          const -> ImageViewType;
 auto image(u32 index = 0) const -> ImageId;
-auto view(u32 index = 0) const -> ImageViewId;
-auto layout() const -> ImageLayout;
+auto view(u32 index = 0)  const -> ImageViewId;
+auto layout()             const -> ImageLayout;
 ```
 If the slice and image view type of the use do not fit the default view, daxa will create and cache image views that exactly match the image view type and slice of the use.
 As the layout can change at any time between tasks it is hard to know in what layout the image slice of the use currently is.
 Daxa allows you to query the image layout via the interface. The image layout is guaranteed to stay the same for the given use-slice for the duration of the task on the gpu timeline. 
 
-BufferUses have a similar interface:
+BufferUse's have a similar interface:
 ```cpp
 auto access() const -> TaskBufferAccess;
 auto buffer(usize index = 0) const -> BufferId;
@@ -148,9 +136,19 @@ auto buffer(usize index = 0) const -> BufferId;
 
 With this interface, you can query all nessecary information about the images and buffers inside the callbacks with a similar interface for inline and persistently declared tasks.
 
-### Rules
-- ImageUses of the same image can never overlap
-- Multiple BufferUses may not reference the same buffer twice
-- All uses must have a valid task resource id assigned to them when adding the task
-- ImageViewType is optional, if none is provided the default view type of the image is used.
-- All resources that may require and/or influence the sync must be listed in the uses list. Avoid mentioning fully constant resources that do not require sync.
+## TaskInterface
+
+The task interface is the main way to interact with the task graph from within a task callback.
+
+It provides access to task uses, command lists, a linear memory allocator, and a few other graph related resources:
+
+```cpp
+
+```
+
+## Task Graph Valid Use Rules
+- A task may use the same image multiple times, as long as the TaskImagView's slices dont overlap.
+- A task may only ever have one use of a TaskBuffer
+- All task uses must have a valid TaskResource or TaskResourceView assigned to them when adding a task.
+- All task resources must have valid image and buffer ids assigned to them on execution.
+
