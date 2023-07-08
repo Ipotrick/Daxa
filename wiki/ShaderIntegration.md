@@ -10,7 +10,7 @@ The details on code sharing and general shader integration will be described in 
 
 The main motivation behind code sharing is defining things like structs stored in buffers a single time and then using them in C++ and shaders seamlessly. This concept extends to other parts of the API as well, for example [TaskGraph *`uses`* lists can be declared in shared files](https://github.com/Ipotrick/Daxa/tree/master/wiki/TaskGraph.md) to reduce code duplication as well.
 
-Code is shared by creating header files that get included in C++ and GLSL. THe trick is that these files MUST include the `<daxa/daxa.inl>` file. This file contains variations of macros that are switched based on the compiled language. So in essence the code sharing in Daxa relies in the shared GLSL and C++ preprocessor.
+Code is shared by creating header files that get included in C++ and GLSL. Any shared files must include the `<daxa/daxa.inl>` header. This file contains variations of macros that are switched based on the compiled language. So in essence the code sharing in Daxa relies in the shared GLSL and C++ preprocessor translating daxas makros to the correct type per language.
 
 The macros in `<daxa/daxa.inl>` are mainly primitive data types as well as Daxa structs and helper utilities.
 
@@ -30,7 +30,7 @@ struct MyStruct
 The full list of defined data types in Daxa can be found in the `daxa.inl` file. 
 
 Daxa always declares the alignment of buffer references to be in [scalar block layout](https://github.com/KhronosGroup/GLSL/blob/master/extensions/ext/GL_EXT_scalar_block_layout.txt).
-This layout causes shared structs containing daxa_ types to have the alignment rules within C++ and GLSL buffers. This means that the C++ and GLSL version of the struct will be abi compatible. You do not need to worry about padding or the behavior of alignment with the usual GLSL format layouts like  std 140 or std430.
+This layout causes shared structs containing daxa_ types to have the alignment rules C++ and GLSL. This means that the C++ and GLSL version of the struct will be abi compatible. You do not need to worry about padding or the behavior of alignment with the usual GLSL format layouts like  std140 or std430.
 
 ## Utility Macros
 
