@@ -53,7 +53,7 @@ namespace tests
             .name = APPNAME_PREFIX("pipeline_manager"),
         });
 
-        pipeline_manager.add_virtual_include_file({
+        pipeline_manager.add_virtual_file({
             .name = "my_include",
             .contents = R"glsl(
                 #pragma once
@@ -61,8 +61,9 @@ namespace tests
             )glsl",
         });
 
-        auto compilation_result = pipeline_manager.add_compute_pipeline({
-            .shader_info = {.source = daxa::ShaderCode{R"glsl(
+        pipeline_manager.add_virtual_file({
+            .name = "my_file",
+            .contents = R"glsl(
                 #include <my_include>
 
                 #ifndef MY_INCLUDE_DEFINE
@@ -72,7 +73,11 @@ namespace tests
                 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
                 void main() {
                 }
-            )glsl"}},
+            )glsl",
+        });
+
+        auto compilation_result = pipeline_manager.add_compute_pipeline({
+            .shader_info = {.source = daxa::ShaderFile{"my_file"}},
             .name = APPNAME_PREFIX("compute_pipeline"),
         });
 

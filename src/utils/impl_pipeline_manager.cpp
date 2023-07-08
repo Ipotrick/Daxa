@@ -413,10 +413,10 @@ namespace daxa
         return impl.remove_raster_pipeline(pipeline);
     }
 
-    void PipelineManager::add_virtual_include_file(VirtualIncludeInfo const & virtual_info)
+    void PipelineManager::add_virtual_file(VirtualFileInfo const & virtual_info)
     {
         auto & impl = *reinterpret_cast<ImplPipelineManager *>(this->object);
-        impl.add_virtual_include_file(virtual_info);
+        impl.add_virtual_file(virtual_info);
     }
 
     auto PipelineManager::reload_all() -> PipelineReloadResult
@@ -718,7 +718,7 @@ namespace daxa
         return reload;
     };
 
-    void ImplPipelineManager::add_virtual_include_file(VirtualIncludeInfo const & virtual_info)
+    void ImplPipelineManager::add_virtual_file(VirtualFileInfo const & virtual_info)
     {
         virtual_files[virtual_info.name] = VirtualFileState{
             .contents = virtual_info.contents,
@@ -790,7 +790,17 @@ namespace daxa
             ShaderCode code;
             if (auto const * shader_source = std::get_if<ShaderFile>(&shader_info.source))
             {
-                auto ret = full_path_to_file(shader_source->path);
+                auto ret = [this, &shader_source]() -> daxa::Result<std::filesystem::path>
+                {
+                    if (this->virtual_files.contains(shader_source->path.string()))
+                    {
+                        return daxa::Result<std::filesystem::path>(shader_source->path);
+                    }
+                    else
+                    {
+                        return full_path_to_file(shader_source->path);
+                    }
+                }();
                 if (ret.is_err())
                 {
                     return Result<std::vector<u32>>(ret.message());
