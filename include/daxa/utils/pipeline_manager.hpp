@@ -86,7 +86,7 @@ namespace daxa
         std::string name = {};
     };
 
-    struct VirtualIncludeInfo
+    struct VirtualFileInfo
     {
         std::string name = {};
         std::string contents = {};
@@ -113,7 +113,7 @@ namespace daxa
         auto add_raster_pipeline(RasterPipelineCompileInfo const & info) -> Result<std::shared_ptr<RasterPipeline>>;
         void remove_compute_pipeline(std::shared_ptr<ComputePipeline> const & pipeline);
         void remove_raster_pipeline(std::shared_ptr<RasterPipeline> const & pipeline);
-        void add_virtual_include_file(VirtualIncludeInfo const & info);
+        void add_virtual_file(VirtualFileInfo const & info);
         auto reload_all() -> PipelineReloadResult;
     };
 } // namespace daxa

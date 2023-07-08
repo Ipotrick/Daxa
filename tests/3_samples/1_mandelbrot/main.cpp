@@ -12,7 +12,7 @@ struct App : BaseApp<App>
     {
         if (my_toggle)
         {
-            pipeline_manager.add_virtual_include_file({
+            pipeline_manager.add_virtual_file({
                 .name = "custom file!!",
                 .contents = R"(
                     #pragma once
@@ -22,7 +22,7 @@ struct App : BaseApp<App>
         }
         else
         {
-            pipeline_manager.add_virtual_include_file({
+            pipeline_manager.add_virtual_file({
                 .name = "custom file!!",
                 .contents = R"(
                     #pragma once
