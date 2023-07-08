@@ -171,6 +171,8 @@ pipeline_manager.add_virtual_file({
 
 To make an update to the virtual file's contents, all you need to do is `.add_virtual_file()` with the same exact name string.
 
+Here's what it would look like if we had both a virtual file for the main source file (`my_file`), as well as a virtual include file (`my_include`)!
+
 ```cpp
 pipeline_manager.add_virtual_file({
     .name = "my_include",
