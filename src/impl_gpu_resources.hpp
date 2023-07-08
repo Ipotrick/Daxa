@@ -203,7 +203,7 @@ namespace daxa
         GpuShaderResourcePool<ImplSamplerSlot> sampler_slots = {};
 
         VkDescriptorSetLayout vk_descriptor_set_layout = {};
-        VkDescriptorSetLayout constant_buffer_binding_set_layout = {};
+        VkDescriptorSetLayout uniform_buffer_descriptor_set_layout = {};
         VkDescriptorSet vk_descriptor_set = {};
         VkDescriptorPool vk_descriptor_pool = {};
 
