@@ -110,7 +110,7 @@ namespace daxa
         auto add_raster_pipeline(RasterPipelineCompileInfo const & a_info) -> Result<std::shared_ptr<RasterPipeline>>;
         void remove_compute_pipeline(std::shared_ptr<ComputePipeline> const & pipeline);
         void remove_raster_pipeline(std::shared_ptr<RasterPipeline> const & pipeline);
-        void add_virtual_include_file(VirtualIncludeInfo const & virtual_info);
+        void add_virtual_file(VirtualFileInfo const & virtual_info);
         auto reload_all() -> PipelineReloadResult;
 
         auto full_path_to_file(std::filesystem::path const & path) -> Result<std::filesystem::path>;
