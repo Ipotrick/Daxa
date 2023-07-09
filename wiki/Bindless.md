@@ -143,3 +143,11 @@ Push constants are an extreamly efficient and simple way to transport data to th
 Uniform buffers on the other hand are not nessecary, yet they are exposed in daxa, as some hw like nvidia gpus have specialized hardware for dealing with these buffer bindings. For this reason daxa also provides uniform buffer bindings.
 
 To transport ids and buffer device addresses, simply write them to a push constant or buffer and then read them in the shader. Daxa makes it very easy to [declare c++/shader-shared structs](https://github.com/Ipotrick/Daxa/tree/master/wiki/ShaderIntegration.md).
+Normally you would declare a struct and push it in a push constant:
+```cpp
+struct PushData
+{
+  daxa_ImageViewId image;
+};
+```
+You then write your image id to the push constant and read and access it like described above.
