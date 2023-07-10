@@ -1,25 +1,59 @@
-## A list of other features of daxa:
-* Extensive debug checks for any number of cases with sensible error messages detailing what could have gone wrong.
-* Thread safety that can optionally be disabled via a preprocessor makro define.
-  * Calls to CommandList from multiple threads is NOT threadsafe.
-  * Utils generally are not threadsafe.
-  * All Other objects are generally threadsafe to access from multiple threads simultaneously.
-* Shader integration for task definitions.
-* Automatically managed memory allocations with VMA. Optionally exposed manual management.
-* Integrated object naming (used by tooling validation layers and daxa itself)
-* Ergonomic Swapchain abstraction. Present, aquire and a timeline semaphore are integrated and owned by the swapchain. This reduces builderplate and groups these connected objects.
-* Rasterized rendering is exposed with the dynamic rendering extension. Daxa mostly matches this interface. This removes the need to unergonimoc objects like framebuffers and renderpasses and their annoying coupling with pipelines.
-* Common shader extensions are already enabled and integrated into daxa. Shader int64 for images buffers and in general is exposed, buffer references are the default in glsl, etc. .
-* Simplified pipeline barrier interface. Multiple memory and image memory barrier calls are merged into single pipeline barrier calls. Access mask and stage masks are combined.
-* Daxa stores and lets you get the info structs used in object creation. Very useful, as you do not need to store the objects metadata yourself.
-* Full vulkan abstraction. Vulkan.h does not leak into daxas namespace. This has several up and downsides. Biggest upside beeing proper full integration for all exposed features, as well as greater control and freedom in the abstractions daxa has.
-* Abstraction of image aspect. In 99% of cases (daxa has no sparse image support) daxa can infer the perfect image aspect for an operation, which is why its abstracted to reduce boilerplate.
-* Abstracted Command buffer and pool. Daxa internally reuses command pools for you.
-* Simplified pipelines. Pipelines do not need any knowledge of descriptor set layouts, do not need a pipeline layout and also do not need any information about the renderpass it is used in.
-* Simplified queue interface. The device contains the (currently) only queue. In the future there will optionally be separate compute and transfer queus.
-* Next to bindless, daxa also provides simplified uniform buffer bindings. 
-* Simple vector and matrix math library. Integrated with daxa types for shader integration.
-* FSR 2.1 integration
-* ImGUI backend
-* Staging memory allocator utility. Provides a fast linear staging memory allocator for small per frame uploads.
-* A kick ass logo
+## Easy Resource Lifetimes:
+- Most resources are reference counted in daxa (Instance, Device, Swapchain, CommandList, Semaphore, ...) for convenience.
+- For shader resources (Buffer, Image, ImageView, Sampler) however, daxa does not reference count, because  :
+  - Bindless shader resources ids/addresses can be stored in buffers and other memory, making daxa unable to consistently track them.
+  - In api calls, they are mentioned in much higher frequency compared to other objects, making their tracking with reference counts much more expensive.
+  - In contrast to other objects it is very common to build other more specialized lifetime management for shader resources (eg. static, cached, streamed, dynamically created, ...).
+- The destruction of any resource is deferred until all submits, currently running at the time of the destroy call, are finished. This makes it safe to call destroy on ressources in most cases.
+- CommandLists have a convenience function to defer the destruction of a shader resource until after the command list has finished execution on the gpu.
+  - Very helpful to destroy things like staging or scratch buffers.
+  - Nessecary as it is not legal to destroy objects that are used in commands that are not yet submitted to the gpu.
+- Extensive debug checks for any number of cases with sensible error messages detailing what could have gone wrong.
+- Thread safety that can optionally be disabled via a preprocessor makro define.
+  - Calls to CommandList from multiple threads is NOT threadsafe.
+  - Utils generally are not threadsafe.
+  - All Other objects are generally threadsafe to access from multiple threads simultaneously.
+
+## Ergonomic Swapchain:
+- Swapchain contains its own semaphores for timing:
+  - aquire semaphores, one for each frame in flight,
+  - present semaphores, one per swapchain image,
+  - a timeline semaphore, used to limit frames in flight.
+- The correct set of seamphores can be queryied with member functions, they are changed after every acquire call.
+- The swapchain integrates frame in flight limiting, as it is natural for it to handle this.
+- Easy to use interface for recreating the swapchain.
+
+## Simple Renderpasses:
+- Daxa does not have the concept of a precreated renderpass nor framebuffers.
+- To render, you begin and end a renderpass section directly within a command list.
+- This can be done very efficiently, daxa does not cache or lazy create anything for this behind the users back, as vulkan 1.3 has a feature mapping directly to this interface.
+- This drastically simplifies rendering and removes a lot of object coupling. Pipelines are completely decoupled of framebuffers or renderpass objects.
+
+## Powerful CommandLists:
+- The vulkan command pool is abstracted. Daxa maintains a pool pool inside each device.
+- CommandLists simplify the command buffer api by a lot. All functions take default initialized parameter structs
+- PipelineBarrier api is made more ergonomic:
+  - CommandList does not take arrays of memory barriers and image memory barriers, it takes them individually.
+  - As long as only pipeline barrier commands are recorded in sequence, they will be batched into arrays.
+  - As soon as a non-pipeline barrier command is recorded, all memory barriers are recorded to the command buffer.
+  - This effectively is mostly syntax suggar, but can be quite nice to reduce vulkan api calls if the barrier insertion is segmented into multiple functions.
+- As mentioned above in the lifetime section, CommandLists can record a list of shader resources to destroy after the command list has finished execution on the gpu.
+
+## Tiny Pipelines:
+- Pipelines are much simpler in daxa compared to normal vulkan, they are created with parameter structs that have sensible defaults set for all parameters.
+- Because of the full bindless interface and full descriptor set and descriptor set layout abstraction, you do not need to specify anything about descriptors at pipeline creation.
+- Daxa again does this very efficiently with no on the fly creation, caching or similar, all cost is fixed and on creation time.
+- As Renderpasses and framebuffers are abstracted, those also do not need to be mentioned, pipelines are decoupled.
+- The pipeline manager utility makes pipeline management very simple and convenient.
+
+## Other Features:
+- Automatically managed memory allocations with VMA. Optionally exposed manual management.
+- Integrated object naming (used by tooling validation layers and daxa itself).
+- Daxa stores and lets you get the info structs used in object creation. Very useful, as you do not need to store the objects metadata yourself.
+- Abstraction of image aspect. In 99% of cases (daxa has no sparse image support) daxa can infer the perfect image aspect for an operation, which is why its abstracted to reduce boilerplate.
+- Next to bindless, daxa also provides simplified uniform buffer bindings, as some hardware can still profit from these greatly. 
+- Simple vector and matrix math library. Integrated with daxa types for shader integration.
+- FSR 2.1 integration
+- ImGUI backend
+- Staging memory allocator utility. Provides a fast linear staging memory allocator for small per frame uploads.
+- A kick ass logo
