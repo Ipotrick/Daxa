@@ -13,3 +13,4 @@ Feature documentation:
 * [Bindless shader resources](https://github.com/Ipotrick/Daxa/tree/master/wiki/Bindless.md)
 * [C++/shader integration](https://github.com/Ipotrick/Daxa/tree/master/wiki/ShaderIntegration.md)
 * [PipelineManager (shader build system)](https://github.com/Ipotrick/Daxa/tree/master/wiki/PipelineManager.md)
+* [List of other features](https://github.com/Ipotrick/Daxa/tree/master/wiki/Features.md)
