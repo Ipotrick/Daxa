@@ -199,12 +199,21 @@ namespace daxa
         auto create_image(ImageInfo const & info) -> ImageId;
         auto create_image_view(ImageViewInfo const & info) -> ImageViewId;
         auto create_sampler(SamplerInfo const & info) -> SamplerId;
-        auto create_timeline_query_pool(TimelineQueryPoolInfo const & info) -> TimelineQueryPool;
 
         void destroy_buffer(BufferId id);
         void destroy_image(ImageId id);
         void destroy_image_view(ImageViewId id);
         void destroy_sampler(SamplerId id);
+        
+        auto info_buffer(BufferId id) const -> BufferInfo;
+        auto info_image(ImageId id) const -> ImageInfo;
+        auto info_image_view(ImageViewId id) const -> ImageViewInfo;
+        auto info_sampler(SamplerId id) const -> SamplerInfo;
+
+        auto is_id_valid(ImageId id) const -> bool;
+        auto is_id_valid(ImageViewId id) const -> bool;
+        auto is_id_valid(BufferId id) const -> bool;
+        auto is_id_valid(SamplerId id) const -> bool;
 
         auto get_device_address(BufferId id) const -> BufferDeviceAddress;
         auto get_host_address(BufferId id) const -> void *;
@@ -213,10 +222,6 @@ namespace daxa
         {
             return static_cast<T *>(get_host_address(id));
         }
-        auto info_buffer(BufferId id) const -> BufferInfo;
-        auto info_image(ImageId id) const -> ImageInfo;
-        auto info_image_view(ImageViewId id) const -> ImageViewInfo;
-        auto info_sampler(SamplerId id) const -> SamplerInfo;
 
         auto create_raster_pipeline(RasterPipelineInfo const & info) -> RasterPipeline;
         auto create_compute_pipeline(ComputePipelineInfo const & info) -> ComputePipeline;
@@ -226,6 +231,7 @@ namespace daxa
         auto create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore;
         auto create_timeline_semaphore(TimelineSemaphoreInfo const & info) -> TimelineSemaphore;
         auto create_split_barrier(SplitBarrierInfo const & info) -> SplitBarrierState;
+        auto create_timeline_query_pool(TimelineQueryPoolInfo const & info) -> TimelineQueryPool;
 
         auto info() const -> DeviceInfo const &;
         auto properties() const -> DeviceProperties const &;
@@ -234,11 +240,6 @@ namespace daxa
         void submit_commands(CommandSubmitInfo const & submit_info);
         void present_frame(PresentInfo const & info);
         void collect_garbage();
-
-        auto is_id_valid(ImageId id) const -> bool;
-        auto is_id_valid(ImageViewId id) const -> bool;
-        auto is_id_valid(BufferId id) const -> bool;
-        auto is_id_valid(SamplerId id) const -> bool;
 
       private:
         friend struct Instance;

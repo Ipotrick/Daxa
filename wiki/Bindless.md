@@ -134,6 +134,25 @@ The RW variants are declared to be read and writable, the non-rw variants are RE
 The Daxa buffer ptr types are simply a buffer reference containing one field named `value` of the given struct type.
 Daxa also provides the `deref(BUFFER_PTR)` macro, which simply translates to `BUFFER_PTR.value`. This is some optional syntax sugar for those who prefer to be clear and want to avoid using the name `value` here.
 
+```c
+struct MyStruct
+{
+    daxa_u32 field;
+};
+DAXA_DECL_BUFFER_PTR(MyStruct)
+
+...
+
+daxa_BufferPtr(MyStruct) ptr = ...;
+MyStruct strct = ptr.value;
+// alternatively:
+MyStruct strct = deref(ptr);
+// As this is just a buffer reference, you can also just access the fields directly:
+uint i = ptr.value.field;
+// alternatively:
+uint i = deref(ptr).field;
+```
+
 # Host-Device resource transport
 
 As buffers, images, and samplers are not written to sets that get bounds how do you give the GPU the bindless ids and addresses to the shader in order to use it?

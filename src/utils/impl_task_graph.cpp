@@ -454,18 +454,22 @@ namespace daxa
     void TaskImage::set_images(TrackedImages const & images)
     {
         auto & impl = *this->as<ImplPersistentTaskImage>();
+        DAXA_DBG_ASSERT_TRUE_M(!impl.info.swapchain_image || (images.images.size() == 1), "swapchain task image can only have at most one runtime image");
         impl.actual_images.clear();
         impl.actual_images.insert(impl.actual_images.end(), images.images.begin(), images.images.end());
         impl.latest_slice_states.clear();
         impl.latest_slice_states.insert(impl.latest_slice_states.end(), images.latest_slice_states.begin(), images.latest_slice_states.end());
+        impl.waited_on_aquire = {};
     }
 
     void TaskImage::swap_images(TaskImage & other)
     {
         auto & impl = *this->as<ImplPersistentTaskImage>();
         auto & impl_other = *other.as<ImplPersistentTaskImage>();
+        DAXA_DBG_ASSERT_TRUE_M(!impl.info.swapchain_image || (impl_other.actual_images.size() <= 1), "swapchain task image can only have at most one runtime image");
         std::swap(impl.actual_images, impl_other.actual_images);
         std::swap(impl.latest_slice_states, impl_other.latest_slice_states);
+        std::swap(impl.waited_on_aquire, impl_other.waited_on_aquire);
     }
 
     TaskGraph::TaskGraph(TaskGraphInfo const & info)
@@ -2564,11 +2568,30 @@ namespace daxa
                     Swapchain const & swapchain = impl.info.swapchain.value();
                     if (submit_scope_index == permutation.swapchain_image_first_use_submit_scope_index)
                     {
-                        submit_info.wait_binary_semaphores.push_back(swapchain.get_acquire_semaphore());
+                        ImplPersistentTaskImage & swapchain_image = impl.global_image_infos.at(permutation.swapchain_image.index).get_persistent();
+                        // It can happen, that a previous task graph accessed the swapchain image.
+                        // In that case the aquire semaphore is already waited upon and by extension we wait on the porevious access and therefore on the aquire.
+                        // So we must not wait in the case that the semaphore is already waited upon.
+                        if (!swapchain_image.waited_on_aquire)
+                        {
+                            swapchain_image.waited_on_aquire = true;
+                            submit_info.wait_binary_semaphores.push_back(swapchain.get_acquire_semaphore());
+                        }
                     }
                     if (submit_scope_index == permutation.swapchain_image_last_use_submit_scope_index)
                     {
                         submit_info.signal_binary_semaphores.push_back(swapchain.get_present_semaphore());
+                        submit_info.signal_timeline_semaphores.emplace_back(
+                            swapchain.get_gpu_timeline_semaphore(),
+                            swapchain.get_cpu_timeline_value());
+                    }
+                    if (permutation.swapchain_image_first_use_submit_scope_index == std::numeric_limits<u64>::max() &&
+                        submit_scope.present_info.has_value())
+                    {
+                        // It can be the case, that the only use of the swapchain is the present itself.
+                        // If so, simply signal the timeline sema of the swapchain with the latest submit.
+                        // TODO: this is a hack until we get timeline semaphores for presenting.
+                        // TODO: im noit sure about this deisgn, maybe just remove this explicit signaling completely.
                         submit_info.signal_timeline_semaphores.emplace_back(
                             swapchain.get_gpu_timeline_semaphore(),
                             swapchain.get_cpu_timeline_value());
@@ -2599,12 +2622,26 @@ namespace daxa
                     submit_info.signal_timeline_semaphores.push_back({impl.staging_memory->get_timeline_semaphore(), impl.staging_memory->timeline_value()});
                 }
                 impl.info.device.submit_commands(submit_info);
-
+ 
                 if (submit_scope.present_info.has_value())
                 {
                     ImplPresentInfo & impl_present_info = submit_scope.present_info.value();
                     std::vector<BinarySemaphore> present_wait_semaphores = impl_present_info.binary_semaphores;
-                    present_wait_semaphores.push_back(impl.info.swapchain.value().get_present_semaphore());
+                    DAXA_DBG_ASSERT_TRUE_M(impl.info.swapchain.has_value(), "must have swapchain registered in info on creation in order to use present.");
+                    ImplPersistentTaskImage & swapchain_image = impl.global_image_infos.at(permutation.swapchain_image.index).get_persistent();
+                    // It can happen, that the swapchain image was never touched before. 
+                    // If that is the case we must signal the present with the aquire semaphore instead of the present semaphore.
+                    // This is because the present semaphore is signaled by the first submission using the image.
+                    // As this never happenes, it remains unsignaled. 
+                    if (swapchain_image.waited_on_aquire)
+                    {
+                        present_wait_semaphores.push_back(impl.info.swapchain.value().get_present_semaphore());
+                    }
+                    else
+                    {
+                        swapchain_image.waited_on_aquire = true;
+                        present_wait_semaphores.push_back(impl.info.swapchain.value().get_acquire_semaphore());
+                    }
                     if (impl_present_info.additional_binary_semaphores != nullptr)
                     {
                         present_wait_semaphores.insert(
