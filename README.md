@@ -15,12 +15,10 @@ The feature that sets Daxa apart from other abstractions is its fully bindless s
 Daxa’s goal is to be as convenient to use as OpenGL while being very modern. Daxa gives access to the latest features and trends, while not being held down by years of tech debt.
 I am happy to say that for me (and others) it achieves that goal.
 
-## Key features and abstractions
-- [x] Simple setup and object creation. No more 1000 LOC files to get a triangle drawn. (https://github.com/Ipotrick/Daxa/tree/master/wiki/Tutorial.md)
-- [x] Greatly simplified API surface compared to Vulkan. Daxa abstracts away much of the Vulkan API, only exposing those concepts that are crucial for good control and performance.
+## Biggest features and abstractions:
+- [x] Greatly simplified API surface compared to Vulkan. Daxa is only surfacing those concepts that are crucial for good control and performance. [No more 1k LOC files to get a triangle](https://github.com/Ipotrick/Daxa/tree/master/wiki/Tutorial.md)
 - [x] Bindless shader resource model. Resources are exclusively accessed via an ID (or address) instead of descriptor set bindings in shaders. This drastically simplifies the API while also being a very powerful tool for GPU-driven rendering. (https://github.com/Ipotrick/Daxa/tree/master/wiki/Bindless.md)
 - [x] Powerful and flexible render graph. While manual sync is exposed in Daxa for best control, it also provides an optional render graph. (https://github.com/Ipotrick/Daxa/tree/master/wiki/TaskGraph.md)
-- [x] Automatic deferred resource destruction. Daxa defers resource destruction until all work in flight at the time of the destruction call is finished to avoid destroying resources currently in use on the GPU.
 - [x] C++ and shader code sharing utilities. This, combined with other simplifications, means you will never need shader reflection for convenience. (https://github.com/Ipotrick/Daxa/tree/master/wiki/ShaderIntegration.md)
 - [x] Shader build system, including features like `#include` management and shader hot-reloading. (https://github.com/Ipotrick/Daxa/tree/master/wiki/PipelineManager.md)
 
