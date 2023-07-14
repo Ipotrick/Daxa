@@ -2595,6 +2595,10 @@ namespace daxa
                         submit_info.signal_timeline_semaphores.emplace_back(
                             swapchain.get_gpu_timeline_semaphore(),
                             swapchain.get_cpu_timeline_value());
+                        ImplPersistentTaskImage & swapchain_image = impl.global_image_infos.at(permutation.swapchain_image.index).get_persistent();
+                        swapchain_image.waited_on_aquire = true;
+                        submit_info.wait_binary_semaphores.push_back(impl.info.swapchain.value().get_acquire_semaphore());
+                        submit_info.signal_binary_semaphores.push_back(impl.info.swapchain.value().get_present_semaphore());
                     }
                 }
                 if (submit_scope.user_submit_info.additional_command_lists != nullptr)
@@ -2628,20 +2632,7 @@ namespace daxa
                     ImplPresentInfo & impl_present_info = submit_scope.present_info.value();
                     std::vector<BinarySemaphore> present_wait_semaphores = impl_present_info.binary_semaphores;
                     DAXA_DBG_ASSERT_TRUE_M(impl.info.swapchain.has_value(), "must have swapchain registered in info on creation in order to use present.");
-                    ImplPersistentTaskImage & swapchain_image = impl.global_image_infos.at(permutation.swapchain_image.index).get_persistent();
-                    // It can happen, that the swapchain image was never touched before. 
-                    // If that is the case we must signal the present with the aquire semaphore instead of the present semaphore.
-                    // This is because the present semaphore is signaled by the first submission using the image.
-                    // As this never happenes, it remains unsignaled. 
-                    if (swapchain_image.waited_on_aquire)
-                    {
-                        present_wait_semaphores.push_back(impl.info.swapchain.value().get_present_semaphore());
-                    }
-                    else
-                    {
-                        swapchain_image.waited_on_aquire = true;
-                        present_wait_semaphores.push_back(impl.info.swapchain.value().get_acquire_semaphore());
-                    }
+                    present_wait_semaphores.push_back(impl.info.swapchain.value().get_present_semaphore());
                     if (impl_present_info.additional_binary_semaphores != nullptr)
                     {
                         present_wait_semaphores.insert(
