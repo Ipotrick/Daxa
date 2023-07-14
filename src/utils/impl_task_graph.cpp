@@ -1976,6 +1976,7 @@ namespace daxa
             };
             std::set<Allocation, AllocCompare> allocations = {};
             // Figure out where to allocate each resource
+            u32 no_alias_back_offset = {};
             for (auto const & resource_lifetime : lifetime_length_sorted_resources)
             {
                 MemoryRequirements mem_requirements;
@@ -2007,21 +2008,30 @@ namespace daxa
                         .base_array_layer = static_cast<u16>(0),
                         .layer_count = static_cast<u32>(mem_requirements.size),
                     }};
+                usize const align = std::max(mem_requirements.alignment, static_cast<size_t>(1ull));
 
-                // TODO(msakmary) Fix the intersect functionality so that it is general and does not do hacky stuff like constructing
-                // a mip array slice
-                // Find space in memory and time the new allocation fits into.
-                for (auto const & allocation : allocations)
+                if (info.alias_transients)
                 {
-                    if (new_allocation.intersection_object.intersects(allocation.intersection_object))
+                    // TODO(msakmary) Fix the intersect functionality so that it is general and does not do hacky stuff like constructing
+                    // a mip array slice
+                    // Find space in memory and time the new allocation fits into.
+                    for (auto const & allocation : allocations)
                     {
-                        // assign new offset into the memory block - we need to guarantee correct allignment
-                        usize curr_offset = allocation.offset + allocation.size;
-                        usize const align = std::max(mem_requirements.alignment, static_cast<size_t>(1ull));
-                        usize const aligned_curr_offset = (curr_offset + align - 1) / align * align;
-                        new_allocation.offset = aligned_curr_offset;
-                        new_allocation.intersection_object.base_array_layer = static_cast<u32>(new_allocation.offset);
+                        if (new_allocation.intersection_object.intersects(allocation.intersection_object))
+                        {
+                            // assign new offset into the memory block - we need to guarantee correct allignment
+                            usize curr_offset = allocation.offset + allocation.size;
+                            usize const aligned_curr_offset = (curr_offset + align - 1) / align * align;
+                            new_allocation.offset = aligned_curr_offset;
+                            new_allocation.intersection_object.base_array_layer = static_cast<u32>(new_allocation.offset);
+                        }
                     }
+                }
+                else
+                {
+                    usize const aligned_curr_offset = (no_alias_back_offset + align - 1) / align * align;
+                    new_allocation.offset = aligned_curr_offset;
+                    no_alias_back_offset = new_allocation.offset + new_allocation.size;
                 }
                 allocations.insert(new_allocation);
             }

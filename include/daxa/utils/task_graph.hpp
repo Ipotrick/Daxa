@@ -98,6 +98,8 @@ namespace daxa
         /// @brief  Task reordering can drastically improve performance,
         ///         yet is it also nice to have sequential callback execution.
         bool reorder_tasks = true;
+        /// @brief  Allows task graph to alias transient resources memory (ofc only when that wont break the program) 
+        bool alias_transients = {};
         /// @brief  Some drivers have bad implementations for split barriers.
         ///         If that is the case for you, you can turn off all use of split barriers.
         ///         Daxa will use pipeline barriers instead if this is set.
