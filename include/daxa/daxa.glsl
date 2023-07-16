@@ -63,7 +63,7 @@ struct daxa_SamplerId
 /// @brief Every resource id contains an index and a version number. The index can be used to access the corresponding resource in the binding arrays/
 /// @param id The id the index is retrieved from.
 /// @return The index the id contains.
-daxa_u32 daxa_id_to_index(daxa_BufferId id)
+daxa_u32 daxa_buffer_id_to_index(daxa_BufferId id)
 {
     return (DAXA_ID_INDEX_MASK & id.value);
 }
@@ -71,7 +71,7 @@ daxa_u32 daxa_id_to_index(daxa_BufferId id)
 /// @brief Every resource id contains an index and a version number. The index can be used to access the corresponding resource in the binding arrays/
 /// @param id The id the index is retrieved from.
 /// @return The index the id contains.
-daxa_u32 daxa_id_to_index(daxa_ImageViewId id)
+daxa_u32 daxa_image_view_id_to_index(daxa_ImageViewId id)
 {
     return (DAXA_ID_INDEX_MASK & id.value);
 }
@@ -79,7 +79,7 @@ daxa_u32 daxa_id_to_index(daxa_ImageViewId id)
 /// @brief Every resource id contains an index and a version number. The index can be used to access the corresponding resource in the binding arrays/
 /// @param id The id the index is retrieved from.
 /// @return The index the id contains.
-daxa_u32 daxa_id_to_index(daxa_SamplerId id)
+daxa_u32 daxa_sampler_id_to_index(daxa_SamplerId id)
 {
     return (DAXA_ID_INDEX_MASK & id.value);
 }
@@ -96,7 +96,7 @@ layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform samplerShadow daxa_Sampl
 /// @return Buffer device address to the start of the buffer.
 daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 {
-    return daxa_buffer_device_address_buffer.addresses[daxa_id_to_index(buffer_id)];
+    return daxa_buffer_device_address_buffer.addresses[daxa_buffer_id_to_index(buffer_id)];
 }
 
 /// @brief  Pointer like syntax for a read write buffer device address blocks containing the given struct
@@ -202,29 +202,29 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 #define DAXA_DECL_UNIFORM_BUFFER(SLOT) layout(set = DAXA_DECL_UNIFORM_BUFFER_BINDING_SET, binding = SLOT, buffer_reference_align = 4, scalar) uniform
 
 /// ONLY USED BY IMPLEMENTATION!
-#define _DAXA_GET_IMAGE(DIMENSION, image_id) daxa_image##DIMENSION##Table[daxa_id_to_index(image_id)]
-#define _DAXA_GET_IIMAGE(DIMENSION, image_id) daxa_iimage##DIMENSION##Table[daxa_id_to_index(image_id)]
-#define _DAXA_GET_UIMAGE(DIMENSION, image_id) daxa_uimage##DIMENSION##Table[daxa_id_to_index(image_id)]
-#define _DAXA_GET_I64IMAGE(DIMENSION, image_id) daxa_i64image##DIMENSION##Table[daxa_id_to_index(image_id)]
-#define _DAXA_GET_U64IMAGE(DIMENSION, image_id) daxa_u64image##DIMENSION##Table[daxa_id_to_index(image_id)]
-#define _DAXA_GET_COHERENT_IMAGE(DIMENSION, image_id) daxa_coherent_image##DIMENSION##Table[daxa_id_to_index(image_id)]
-#define _DAXA_GET_COHERENT_IIMAGE(DIMENSION, image_id) daxa_coherent_iimage##DIMENSION##Table[daxa_id_to_index(image_id)]
-#define _DAXA_GET_COHERENT_UIMAGE(DIMENSION, image_id) daxa_coherent_uimage##DIMENSION##Table[daxa_id_to_index(image_id)]
-#define _DAXA_GET_COHERENT_I64IMAGE(DIMENSION, image_id) daxa_coherent_i64image##DIMENSION##Table[daxa_id_to_index(image_id)]
-#define _DAXA_GET_COHERENT_U64IMAGE(DIMENSION, image_id) daxa_coherent_u64image##DIMENSION##Table[daxa_id_to_index(image_id)]
+#define _DAXA_GET_IMAGE(DIMENSION, image_id) daxa_image##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
+#define _DAXA_GET_IIMAGE(DIMENSION, image_id) daxa_iimage##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
+#define _DAXA_GET_UIMAGE(DIMENSION, image_id) daxa_uimage##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
+#define _DAXA_GET_I64IMAGE(DIMENSION, image_id) daxa_i64image##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
+#define _DAXA_GET_U64IMAGE(DIMENSION, image_id) daxa_u64image##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
+#define _DAXA_GET_COHERENT_IMAGE(DIMENSION, image_id) daxa_coherent_image##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
+#define _DAXA_GET_COHERENT_IIMAGE(DIMENSION, image_id) daxa_coherent_iimage##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
+#define _DAXA_GET_COHERENT_UIMAGE(DIMENSION, image_id) daxa_coherent_uimage##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
+#define _DAXA_GET_COHERENT_I64IMAGE(DIMENSION, image_id) daxa_coherent_i64image##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
+#define _DAXA_GET_COHERENT_U64IMAGE(DIMENSION, image_id) daxa_coherent_u64image##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
 
 /// ONLY USED BY IMPLEMENTATION!
-#define _DAXA_GET_TEXTURE(DIMENSION, image_id) daxa_texture##DIMENSION##Table[daxa_id_to_index(image_id)]
-#define _DAXA_GET_ITEXTURE(DIMENSION, image_id) daxa_itexture##DIMENSION##Table[daxa_id_to_index(image_id)]
-#define _DAXA_GET_UTEXTURE(DIMENSION, image_id) daxa_utexture##DIMENSION##Table[daxa_id_to_index(image_id)]
+#define _DAXA_GET_TEXTURE(DIMENSION, image_id) daxa_texture##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
+#define _DAXA_GET_ITEXTURE(DIMENSION, image_id) daxa_itexture##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
+#define _DAXA_GET_UTEXTURE(DIMENSION, image_id) daxa_utexture##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
 
 /// ONLY USED BY IMPLEMENTATION!
-#define _DAXA_GET_SAMPLER(DIMENSION, image_id, sampler_id) sampler##DIMENSION(_DAXA_GET_TEXTURE(DIMENSION, image_id), daxa_samplerTable[daxa_id_to_index(sampler_id)])
-#define _DAXA_GET_ISAMPLER(DIMENSION, image_id, sampler_id) isampler##DIMENSION(_DAXA_GET_ITEXTURE(DIMENSION, image_id), daxa_samplerTable[daxa_id_to_index(sampler_id)])
-#define _DAXA_GET_USAMPLER(DIMENSION, image_id, sampler_id) usampler##DIMENSION(_DAXA_GET_UTEXTURE(DIMENSION, image_id), daxa_samplerTable[daxa_id_to_index(sampler_id)])
-#define _DAXA_GET_SAMPLERSHADOW(DIMENSION, image_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_TEXTURE(DIMENSION, image_id), daxa_samplerShadowTable[daxa_id_to_index(sampler_id)])
-#define _DAXA_GET_ISAMPLERSHADOW(DIMENSION, image_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_ITEXTURE(DIMENSION, image_id), daxa_samplerShadowTable[daxa_id_to_index(sampler_id)])
-#define _DAXA_GET_USAMPLERSHADOW(DIMENSION, image_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_UTEXTURE(DIMENSION, image_id), daxa_samplerShadowTable[daxa_id_to_index(sampler_id)])
+#define _DAXA_GET_SAMPLER(DIMENSION, image_id, sampler_id) sampler##DIMENSION(_DAXA_GET_TEXTURE(DIMENSION, image_id), daxa_samplerTable[daxa_sampler_id_to_index(sampler_id)])
+#define _DAXA_GET_ISAMPLER(DIMENSION, image_id, sampler_id) isampler##DIMENSION(_DAXA_GET_ITEXTURE(DIMENSION, image_id), daxa_samplerTable[daxa_sampler_id_to_index(sampler_id)])
+#define _DAXA_GET_USAMPLER(DIMENSION, image_id, sampler_id) usampler##DIMENSION(_DAXA_GET_UTEXTURE(DIMENSION, image_id), daxa_samplerTable[daxa_sampler_id_to_index(sampler_id)])
+#define _DAXA_GET_SAMPLERSHADOW(DIMENSION, image_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_TEXTURE(DIMENSION, image_id), daxa_samplerShadowTable[daxa_sampler_id_to_index(sampler_id)])
+#define _DAXA_GET_ISAMPLERSHADOW(DIMENSION, image_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_ITEXTURE(DIMENSION, image_id), daxa_samplerShadowTable[daxa_sampler_id_to_index(sampler_id)])
+#define _DAXA_GET_USAMPLERSHADOW(DIMENSION, image_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_UTEXTURE(DIMENSION, image_id), daxa_samplerShadowTable[daxa_sampler_id_to_index(sampler_id)])
 
 /// ONLY USED BY IMPLEMENTATION!
 #define _DAXA_DECL_IMAGE(DIMENSION)                                                                            \
@@ -246,8 +246,8 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 DAXA_SAMPLER_LAYOUT uniform sampler daxa_samplerTable[];
 DAXA_SAMPLER_LAYOUT uniform samplerShadow daxa_samplerShadowTable[];
 
-#define daxa_sampler(sampler_id) daxa_samplerTable[daxa_id_to_index(sampler_id)]
-#define daxa_samplerShadow(sampler_id) daxa_samplerShadowTable[daxa_id_to_index(sampler_id)]
+#define daxa_sampler(sampler_id) daxa_samplerTable[daxa_sampler_id_to_index(sampler_id)]
+#define daxa_samplerShadow(sampler_id) daxa_samplerShadowTable[daxa_sampler_id_to_index(sampler_id)]
 
 _DAXA_DECL_IMAGE(1D)
 #define daxa_coherent_image1D(image_id) _DAXA_GET_COHERENT_IMAGE(1D, image_id)
@@ -497,7 +497,9 @@ DAXA_DECL_BUFFER_PTR(daxa_SamplerId)
 #define CoherentRWBufferPtr(STRUCT) daxa_CoherentRWBufferPtr##STRUCT
 
 #define id_to_address daxa_id_to_address
-#define id_to_index daxa_id_to_index
+#define buffer_id_to_index daxa_buffer_id_to_index
+#define image_view_id_to_index daxa_image_view_id_to_index
+#define sampler_id_to_index daxa_sampler_id_to_index
 
 #define b32 daxa_b32
 #define b32vec1 daxa_b32vec1
