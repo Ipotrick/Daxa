@@ -507,7 +507,16 @@ namespace daxa
         auto spirv_result = get_spirv(pipe_result.info.shader_info, pipe_result.info.name, ShaderStage::COMP);
         if (spirv_result.is_err())
         {
-            return Result<ComputePipelineState>(spirv_result.message());
+            if (this->info.register_null_pipelines_when_first_compile_fails)
+            {
+                auto result = Result<ComputePipelineState>(pipe_result);
+                result.m = std::move(spirv_result.message());
+                return result;
+            }
+            else
+            {
+                return Result<ComputePipelineState>(spirv_result.message());
+            }
         }
         (*pipe_result.pipeline_ptr) = this->info.device.create_compute_pipeline({
             .shader_info = {
@@ -554,7 +563,16 @@ namespace daxa
         auto vert_spirv_result = get_spirv(pipe_result.info.vertex_shader_info, pipe_result.info.name, ShaderStage::VERT);
         if (vert_spirv_result.is_err())
         {
-            return Result<RasterPipelineState>(vert_spirv_result.message());
+            if (this->info.register_null_pipelines_when_first_compile_fails)
+            {
+                auto result = Result<RasterPipelineState>(pipe_result);
+                result.m = std::move(vert_spirv_result.message());
+                return result;
+            }
+            else
+            {
+                return Result<RasterPipelineState>(vert_spirv_result.message());
+            }
         }
         auto raster_pipeline_info = RasterPipelineInfo{
             .vertex_shader_info = daxa::ShaderInfo{
@@ -575,7 +593,16 @@ namespace daxa
             frag_spirv_result = get_spirv(pipe_result.info.fragment_shader_info.value(), pipe_result.info.name, ShaderStage::FRAG);
             if (frag_spirv_result.is_err())
             {
-                return Result<RasterPipelineState>(frag_spirv_result.message());
+                if (this->info.register_null_pipelines_when_first_compile_fails)
+                {
+                    auto result = Result<RasterPipelineState>(pipe_result);
+                    result.m = std::move(frag_spirv_result.message());
+                    return result;
+                }
+                else
+                {
+                    return Result<RasterPipelineState>(frag_spirv_result.message());
+                }
             }
             raster_pipeline_info.fragment_shader_info = daxa::ShaderInfo{
                 .byte_code = frag_spirv_result.value(),
@@ -588,7 +615,16 @@ namespace daxa
             tess_control_spirv_result = get_spirv(pipe_result.info.tesselation_control_shader_info.value(), pipe_result.info.name, ShaderStage::TESS_CONTROL);
             if (tess_control_spirv_result.is_err())
             {
-                return Result<RasterPipelineState>(tess_control_spirv_result.message());
+                if (this->info.register_null_pipelines_when_first_compile_fails)
+                {
+                    auto result = Result<RasterPipelineState>(pipe_result);
+                    result.m = std::move(tess_control_spirv_result.message());
+                    return result;
+                }
+                else
+                {
+                    return Result<RasterPipelineState>(tess_control_spirv_result.message());
+                }
             }
             raster_pipeline_info.tesselation_control_shader_info = daxa::ShaderInfo{
                 .byte_code = tess_control_spirv_result.value(),
@@ -601,7 +637,16 @@ namespace daxa
             tess_eval_spirv_result = get_spirv(pipe_result.info.tesselation_evaluation_shader_info.value(), pipe_result.info.name, ShaderStage::TESS_EVAL);
             if (tess_eval_spirv_result.is_err())
             {
-                return Result<RasterPipelineState>(tess_eval_spirv_result.message());
+                if (this->info.register_null_pipelines_when_first_compile_fails)
+                {
+                    auto result = Result<RasterPipelineState>(pipe_result);
+                    result.m = std::move(tess_eval_spirv_result.message());
+                    return result;
+                }
+                else
+                {
+                    return Result<RasterPipelineState>(tess_eval_spirv_result.message());
+                }
             }
             raster_pipeline_info.tesselation_evaluation_shader_info = daxa::ShaderInfo{
                 .byte_code = tess_eval_spirv_result.value(),
@@ -621,7 +666,16 @@ namespace daxa
             return Result<std::shared_ptr<ComputePipeline>>(pipe_result.m);
         }
         this->compute_pipelines.push_back(pipe_result.value());
-        return Result<std::shared_ptr<ComputePipeline>>(std::move(pipe_result.value().pipeline_ptr));
+        if (this->info.register_null_pipelines_when_first_compile_fails)
+        {
+            auto result = Result<std::shared_ptr<ComputePipeline>>(std::move(pipe_result.value().pipeline_ptr));
+            result.m = std::move(pipe_result.m);
+            return result;
+        }
+        else
+        {
+            return Result<std::shared_ptr<ComputePipeline>>(std::move(pipe_result.value().pipeline_ptr));
+        }
     }
 
     auto ImplPipelineManager::add_raster_pipeline(RasterPipelineCompileInfo const & a_info) -> Result<std::shared_ptr<RasterPipeline>>
@@ -632,7 +686,16 @@ namespace daxa
             return Result<std::shared_ptr<RasterPipeline>>(pipe_result.m);
         }
         this->raster_pipelines.push_back(pipe_result.value());
-        return Result<std::shared_ptr<RasterPipeline>>(std::move(pipe_result.value().pipeline_ptr));
+        if (this->info.register_null_pipelines_when_first_compile_fails)
+        {
+            auto result = Result<std::shared_ptr<RasterPipeline>>(std::move(pipe_result.value().pipeline_ptr));
+            result.m = std::move(pipe_result.m);
+            return result;
+        }
+        else
+        {
+            return Result<std::shared_ptr<RasterPipeline>>(std::move(pipe_result.value().pipeline_ptr));
+        }
     }
 
     void ImplPipelineManager::remove_compute_pipeline(std::shared_ptr<ComputePipeline> const & pipeline)
@@ -738,7 +801,16 @@ namespace daxa
             {
                 reloaded = true;
                 auto new_pipeline = create_compute_pipeline(compile_info);
-                if (new_pipeline.is_ok())
+                bool is_valid = true;
+                if (this->info.register_null_pipelines_when_first_compile_fails)
+                {
+                    is_valid = new_pipeline.is_ok() && new_pipeline.value().pipeline_ptr->is_valid();
+                }
+                else
+                {
+                    is_valid = new_pipeline.is_ok();
+                }
+                if (is_valid)
                 {
                     *pipeline = std::move(*new_pipeline.value().pipeline_ptr);
                 }
